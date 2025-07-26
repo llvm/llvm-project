@@ -555,3 +555,396 @@ loop.latch:
 exit:
   ret void
 }
+
+; The start access is SCEV with non-constant offset because of the pre-loop before the main
+; loop.
+define void @deref_assumption_loop_access_start_variable(i8 %v, ptr noundef %P, i64 range(i64 0, 2000) %N, ptr noalias %b, ptr noalias %c) nofree nosync {
+; CHECK-LABEL: define void @deref_assumption_loop_access_start_variable(
+; CHECK-SAME: i8 [[V:%.*]], ptr noundef [[P:%.*]], i64 range(i64 0, 2000) [[N:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[NONNEG:%.*]] = icmp sgt i64 [[N]], 0
+; CHECK-NEXT:    [[A:%.*]] = getelementptr i8, ptr [[P]], i64 16
+; CHECK-NEXT:    br i1 [[NONNEG]], label %[[PREHEADER:.*]], label %[[EXIT2:.*]]
+; CHECK:       [[PREHEADER]]:
+; CHECK-NEXT:    [[EXIT_PRELOOP_AT:%.*]] = call i64 @padding_call(ptr [[A]], i64 [[N]], i64 4, i64 1), !range [[RNG14:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i64 0, [[EXIT_PRELOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[LOOP_PRELOOP_PREHEADER:.*]], label %[[PRELOOP_PSEUDO_EXIT:.*]]
+; CHECK:       [[LOOP_PRELOOP_PREHEADER]]:
+; CHECK-NEXT:    br label %[[LOOP_PRELOOP:.*]]
+; CHECK:       [[LOOP_PRELOOP]]:
+; CHECK-NEXT:    [[IV_PRELOOP:%.*]] = phi i64 [ [[IV_NEXT_PRELOOP:%.*]], %[[LOOP_LATCH_PRELOOP:.*]] ], [ 0, %[[LOOP_PRELOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[GEP_A_PRELOOP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV_PRELOOP]]
+; CHECK-NEXT:    [[GEP_B_PRELOOP:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV_PRELOOP]]
+; CHECK-NEXT:    [[L_B_PRELOOP:%.*]] = load i32, ptr [[GEP_B_PRELOOP]], align 1
+; CHECK-NEXT:    [[C_1_PRELOOP:%.*]] = icmp sge i32 [[L_B_PRELOOP]], 0
+; CHECK-NEXT:    br i1 [[C_1_PRELOOP]], label %[[LOOP_LATCH_PRELOOP]], label %[[LOOP_THEN_PRELOOP:.*]]
+; CHECK:       [[LOOP_THEN_PRELOOP]]:
+; CHECK-NEXT:    [[L_A_PRELOOP:%.*]] = load i32, ptr [[GEP_A_PRELOOP]], align 1
+; CHECK-NEXT:    br label %[[LOOP_LATCH_PRELOOP]]
+; CHECK:       [[LOOP_LATCH_PRELOOP]]:
+; CHECK-NEXT:    [[MERGE_PRELOOP:%.*]] = phi i32 [ [[L_A_PRELOOP]], %[[LOOP_THEN_PRELOOP]] ], [ [[L_B_PRELOOP]], %[[LOOP_PRELOOP]] ]
+; CHECK-NEXT:    [[GEP_C_PRELOOP:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[IV_PRELOOP]]
+; CHECK-NEXT:    store i32 [[MERGE_PRELOOP]], ptr [[GEP_C_PRELOOP]], align 1
+; CHECK-NEXT:    [[IV_NEXT_PRELOOP]] = add nuw nsw i64 [[IV_PRELOOP]], 1
+; CHECK-NEXT:    [[DOTNOT1_I_US245_US_PRELOOP:%.*]] = icmp slt i64 [[IV_NEXT_PRELOOP]], [[N]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i64 [[IV_NEXT_PRELOOP]], [[EXIT_PRELOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOOP_PRELOOP]], label %[[PRELOOP_EXIT_SELECTOR:.*]], !llvm.loop [[LOOP15:![0-9]+]], !loop_constrainer.loop.clone [[META18:![0-9]+]]
+; CHECK:       [[PRELOOP_EXIT_SELECTOR]]:
+; CHECK-NEXT:    [[IV_NEXT_PRELOOP_LCSSA:%.*]] = phi i64 [ [[IV_NEXT_PRELOOP]], %[[LOOP_LATCH_PRELOOP]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i64 [[IV_NEXT_PRELOOP_LCSSA]], [[N]]
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRELOOP_PSEUDO_EXIT]], label %[[EXIT:.*]]
+; CHECK:       [[PRELOOP_PSEUDO_EXIT]]:
+; CHECK-NEXT:    [[IV_PRELOOP_COPY:%.*]] = phi i64 [ 0, %[[PREHEADER]] ], [ [[IV_NEXT_PRELOOP_LCSSA]], %[[PRELOOP_EXIT_SELECTOR]] ]
+; CHECK-NEXT:    [[INDVAR_END:%.*]] = phi i64 [ 0, %[[PREHEADER]] ], [ [[IV_NEXT_PRELOOP_LCSSA]], %[[PRELOOP_EXIT_SELECTOR]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV_PRELOOP_COPY]], [[N]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[N]], 4
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[MUL]], 16
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 [[ADD]]) ]
+; CHECK-NEXT:    br label %[[MAINLOOP:.*]]
+; CHECK:       [[MAINLOOP]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[N]], [[IV_PRELOOP_COPY]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[IV_PRELOOP_COPY]], [[N_VEC]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[IV_PRELOOP_COPY]], [[INDEX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[A]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp sge <2 x i32> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[TMP5]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i32>, ptr [[TMP9]], align 1
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP8]], <2 x i32> [[WIDE_LOAD]], <2 x i32> [[WIDE_LOAD1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i32 0
+; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT_LOOPEXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ [[IV_PRELOOP_COPY]], %[[MAINLOOP]] ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
+; CHECK-NEXT:    [[L_B:%.*]] = load i32, ptr [[GEP_B]], align 1
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[L_B]], 0
+; CHECK-NEXT:    br i1 [[C_1]], label %[[LOOP_LATCH]], label %[[LOOP_THEN:.*]]
+; CHECK:       [[LOOP_THEN]]:
+; CHECK-NEXT:    [[L_A:%.*]] = load i32, ptr [[GEP_A]], align 1
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ [[L_A]], %[[LOOP_THEN]] ], [ [[L_B]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_C:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[IV]]
+; CHECK-NEXT:    store i32 [[MERGE]], ptr [[GEP_C]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[DOTNOT1_I_US245_US:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[DOTNOT1_I_US245_US]], label %[[LOOP]], label %[[EXIT_LOOPEXIT]], !llvm.loop [[LOOP20:![0-9]+]]
+; CHECK:       [[EXIT_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[EXIT2]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %nonneg = icmp sgt i64 %N, 0
+  %a = getelementptr i8, ptr %P, i64 16
+  br i1 %nonneg, label %preheader, label %exit2
+
+preheader:                                        ; preds = %entry
+  %exit.preloop.at = call i64 @padding_call(ptr %a, i64 %N, i64 4, i64 1), !range !12
+  %0 = icmp slt i64 0, %exit.preloop.at
+  br i1 %0, label %loop.preloop.preheader, label %preloop.pseudo.exit
+
+loop.preloop.preheader:                           ; preds = %preheader
+  br label %loop.preloop
+
+loop.preloop:                                     ; preds = %loop.preloop.preheader, %loop.latch.preloop
+  %iv.preloop = phi i64 [ %iv.next.preloop, %loop.latch.preloop ], [ 0, %loop.preloop.preheader ]
+  %gep.a.preloop = getelementptr inbounds i32, ptr %a, i64 %iv.preloop
+  %gep.b.preloop = getelementptr inbounds i32, ptr %b, i64 %iv.preloop
+  %l.b.preloop = load i32, ptr %gep.b.preloop, align 1
+  %c.1.preloop = icmp sge i32 %l.b.preloop, 0
+  br i1 %c.1.preloop, label %loop.latch.preloop, label %loop.then.preloop
+
+loop.then.preloop:                                ; preds = %loop.preloop
+  %l.a.preloop = load i32, ptr %gep.a.preloop, align 1
+  br label %loop.latch.preloop
+
+loop.latch.preloop:                               ; preds = %loop.then.preloop, %loop.preloop
+  %merge.preloop = phi i32 [ %l.a.preloop, %loop.then.preloop ], [ %l.b.preloop, %loop.preloop ]
+  %gep.c.preloop = getelementptr inbounds i32, ptr %c, i64 %iv.preloop
+  store i32 %merge.preloop, ptr %gep.c.preloop, align 1
+  %iv.next.preloop = add nuw nsw i64 %iv.preloop, 1
+  %.not1.i.us245.us.preloop = icmp slt i64 %iv.next.preloop, %N
+  %1 = icmp slt i64 %iv.next.preloop, %exit.preloop.at
+  br i1 %1, label %loop.preloop, label %preloop.exit.selector, !llvm.loop !0, !loop_constrainer.loop.clone !5
+
+preloop.exit.selector:                            ; preds = %loop.latch.preloop
+  %iv.next.preloop.lcssa = phi i64 [ %iv.next.preloop, %loop.latch.preloop ]
+  %2 = icmp slt i64 %iv.next.preloop.lcssa, %N
+  br i1 %2, label %preloop.pseudo.exit, label %exit
+
+preloop.pseudo.exit:                              ; preds = %preloop.exit.selector, %preheader
+  %iv.preloop.copy = phi i64 [ 0, %preheader ], [ %iv.next.preloop.lcssa, %preloop.exit.selector ]
+  %indvar.end = phi i64 [ 0, %preheader ], [ %iv.next.preloop.lcssa, %preloop.exit.selector ]
+  %cmp = icmp slt i64 %iv.preloop.copy, %N
+  call void @llvm.assume(i1 %cmp)
+  %mul = mul i64 %N, 4
+  %add = add i64 %mul, 16
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %P, i64 %add) ]
+  br label %mainloop
+
+mainloop:                                         ; preds = %preloop.pseudo.exit
+  br label %loop
+
+loop:                                             ; preds = %mainloop, %loop.latch
+  %iv = phi i64 [ %iv.next, %loop.latch ], [ %iv.preloop.copy, %mainloop ]
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  %l.b = load i32, ptr %gep.b, align 1
+  %c.1 = icmp sge i32 %l.b, 0
+  br i1 %c.1, label %loop.latch, label %loop.then
+
+loop.then:                                        ; preds = %loop
+  %l.a = load i32, ptr %gep.a, align 1
+  br label %loop.latch
+
+loop.latch:                                       ; preds = %loop.then, %loop
+  %merge = phi i32 [ %l.a, %loop.then ], [ %l.b, %loop ]
+  %gep.c = getelementptr inbounds i32, ptr %c, i64 %iv
+  store i32 %merge, ptr %gep.c, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %.not1.i.us245.us = icmp slt i64 %iv.next, %N
+  br i1 %.not1.i.us245.us, label %loop, label %exit.loopexit
+
+exit.loopexit:                                    ; preds = %loop.latch
+  br label %exit
+
+exit:                                             ; preds = %exit.loopexit, %preloop.exit.selector
+  ret void
+
+exit2:                                            ; preds = %entry
+  ret void
+}
+
+; Same as previous test, but the preloop exit value `exit.preloop.at` is not known nonnegative.
+define void @deref_assumption_loop_access_start_variable_preloop_unknown_range(i8 %v, ptr noundef %P, i64 range(i64 0, 2000) %N, ptr noalias %b, ptr noalias %c) nofree nosync {
+; CHECK-LABEL: define void @deref_assumption_loop_access_start_variable_preloop_unknown_range(
+; CHECK-SAME: i8 [[V:%.*]], ptr noundef [[P:%.*]], i64 range(i64 0, 2000) [[N:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[NONNEG:%.*]] = icmp sgt i64 [[N]], 0
+; CHECK-NEXT:    [[A:%.*]] = getelementptr i8, ptr [[P]], i64 16
+; CHECK-NEXT:    br i1 [[NONNEG]], label %[[PREHEADER:.*]], label %[[EXIT2:.*]]
+; CHECK:       [[PREHEADER]]:
+; CHECK-NEXT:    [[EXIT_PRELOOP_AT:%.*]] = call i64 @padding_call(ptr [[A]], i64 [[N]], i64 4, i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i64 0, [[EXIT_PRELOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[LOOP_PRELOOP_PREHEADER:.*]], label %[[PRELOOP_PSEUDO_EXIT:.*]]
+; CHECK:       [[LOOP_PRELOOP_PREHEADER]]:
+; CHECK-NEXT:    br label %[[LOOP_PRELOOP:.*]]
+; CHECK:       [[LOOP_PRELOOP]]:
+; CHECK-NEXT:    [[IV_PRELOOP:%.*]] = phi i64 [ [[IV_NEXT_PRELOOP:%.*]], %[[LOOP_LATCH_PRELOOP:.*]] ], [ 0, %[[LOOP_PRELOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[GEP_A_PRELOOP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV_PRELOOP]]
+; CHECK-NEXT:    [[GEP_B_PRELOOP:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV_PRELOOP]]
+; CHECK-NEXT:    [[L_B_PRELOOP:%.*]] = load i32, ptr [[GEP_B_PRELOOP]], align 1
+; CHECK-NEXT:    [[C_1_PRELOOP:%.*]] = icmp sge i32 [[L_B_PRELOOP]], 0
+; CHECK-NEXT:    br i1 [[C_1_PRELOOP]], label %[[LOOP_LATCH_PRELOOP]], label %[[LOOP_THEN_PRELOOP:.*]]
+; CHECK:       [[LOOP_THEN_PRELOOP]]:
+; CHECK-NEXT:    [[L_A_PRELOOP:%.*]] = load i32, ptr [[GEP_A_PRELOOP]], align 1
+; CHECK-NEXT:    br label %[[LOOP_LATCH_PRELOOP]]
+; CHECK:       [[LOOP_LATCH_PRELOOP]]:
+; CHECK-NEXT:    [[MERGE_PRELOOP:%.*]] = phi i32 [ [[L_A_PRELOOP]], %[[LOOP_THEN_PRELOOP]] ], [ [[L_B_PRELOOP]], %[[LOOP_PRELOOP]] ]
+; CHECK-NEXT:    [[GEP_C_PRELOOP:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[IV_PRELOOP]]
+; CHECK-NEXT:    store i32 [[MERGE_PRELOOP]], ptr [[GEP_C_PRELOOP]], align 1
+; CHECK-NEXT:    [[IV_NEXT_PRELOOP]] = add nuw nsw i64 [[IV_PRELOOP]], 1
+; CHECK-NEXT:    [[DOTNOT1_I_US245_US_PRELOOP:%.*]] = icmp slt i64 [[IV_NEXT_PRELOOP]], [[N]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i64 [[IV_NEXT_PRELOOP]], [[EXIT_PRELOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOOP_PRELOOP]], label %[[PRELOOP_EXIT_SELECTOR:.*]], !llvm.loop [[LOOP15]], !loop_constrainer.loop.clone [[META18]]
+; CHECK:       [[PRELOOP_EXIT_SELECTOR]]:
+; CHECK-NEXT:    [[IV_NEXT_PRELOOP_LCSSA:%.*]] = phi i64 [ [[IV_NEXT_PRELOOP]], %[[LOOP_LATCH_PRELOOP]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i64 [[IV_NEXT_PRELOOP_LCSSA]], [[N]]
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRELOOP_PSEUDO_EXIT]], label %[[EXIT:.*]]
+; CHECK:       [[PRELOOP_PSEUDO_EXIT]]:
+; CHECK-NEXT:    [[IV_PRELOOP_COPY:%.*]] = phi i64 [ 0, %[[PREHEADER]] ], [ [[IV_NEXT_PRELOOP_LCSSA]], %[[PRELOOP_EXIT_SELECTOR]] ]
+; CHECK-NEXT:    [[INDVAR_END:%.*]] = phi i64 [ 0, %[[PREHEADER]] ], [ [[IV_NEXT_PRELOOP_LCSSA]], %[[PRELOOP_EXIT_SELECTOR]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV_PRELOOP_COPY]], [[N]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[N]], 4
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[MUL]], 16
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 [[ADD]]) ]
+; CHECK-NEXT:    br label %[[MAINLOOP:.*]]
+; CHECK:       [[MAINLOOP]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[N]], [[IV_PRELOOP_COPY]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[IV_PRELOOP_COPY]], [[N_VEC]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE2:.*]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[IV_PRELOOP_COPY]], [[INDEX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP6]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp sge <2 x i32> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = xor <2 x i1> [[TMP7]], splat (i1 true)
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[TMP8]], i32 0
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
+; CHECK:       [[PRED_LOAD_IF]]:
+; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[OFFSET_IDX]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i32> poison, i32 [[TMP12]], i32 0
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
+; CHECK:       [[PRED_LOAD_CONTINUE]]:
+; CHECK-NEXT:    [[TMP14:%.*]] = phi <2 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP13]], %[[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i1> [[TMP8]], i32 1
+; CHECK-NEXT:    br i1 [[TMP15]], label %[[PRED_LOAD_IF1:.*]], label %[[PRED_LOAD_CONTINUE2]]
+; CHECK:       [[PRED_LOAD_IF1]]:
+; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[OFFSET_IDX]], 1
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[TMP17]], align 1
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i32> [[TMP14]], i32 [[TMP18]], i32 1
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE2]]
+; CHECK:       [[PRED_LOAD_CONTINUE2]]:
+; CHECK-NEXT:    [[TMP20:%.*]] = phi <2 x i32> [ [[TMP14]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP19]], %[[PRED_LOAD_IF1]] ]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP7]], <2 x i32> [[WIDE_LOAD]], <2 x i32> [[TMP20]]
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[TMP21]], i32 0
+; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP22]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT_LOOPEXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ [[IV_PRELOOP_COPY]], %[[MAINLOOP]] ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
+; CHECK-NEXT:    [[L_B:%.*]] = load i32, ptr [[GEP_B]], align 1
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[L_B]], 0
+; CHECK-NEXT:    br i1 [[C_1]], label %[[LOOP_LATCH]], label %[[LOOP_THEN:.*]]
+; CHECK:       [[LOOP_THEN]]:
+; CHECK-NEXT:    [[L_A:%.*]] = load i32, ptr [[GEP_A]], align 1
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ [[L_A]], %[[LOOP_THEN]] ], [ [[L_B]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_C:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[IV]]
+; CHECK-NEXT:    store i32 [[MERGE]], ptr [[GEP_C]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[DOTNOT1_I_US245_US:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[DOTNOT1_I_US245_US]], label %[[LOOP]], label %[[EXIT_LOOPEXIT]], !llvm.loop [[LOOP22:![0-9]+]]
+; CHECK:       [[EXIT_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[EXIT2]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %nonneg = icmp sgt i64 %N, 0
+  %a = getelementptr i8, ptr %P, i64 16
+  br i1 %nonneg, label %preheader, label %exit2
+
+preheader:                                        ; preds = %entry
+  %exit.preloop.at = call i64 @padding_call(ptr %a, i64 %N, i64 4, i64 1)
+  %0 = icmp slt i64 0, %exit.preloop.at
+  br i1 %0, label %loop.preloop.preheader, label %preloop.pseudo.exit
+
+loop.preloop.preheader:                           ; preds = %preheader
+  br label %loop.preloop
+
+loop.preloop:                                     ; preds = %loop.preloop.preheader, %loop.latch.preloop
+  %iv.preloop = phi i64 [ %iv.next.preloop, %loop.latch.preloop ], [ 0, %loop.preloop.preheader ]
+  %gep.a.preloop = getelementptr inbounds i32, ptr %a, i64 %iv.preloop
+  %gep.b.preloop = getelementptr inbounds i32, ptr %b, i64 %iv.preloop
+  %l.b.preloop = load i32, ptr %gep.b.preloop, align 1
+  %c.1.preloop = icmp sge i32 %l.b.preloop, 0
+  br i1 %c.1.preloop, label %loop.latch.preloop, label %loop.then.preloop
+
+loop.then.preloop:                                ; preds = %loop.preloop
+  %l.a.preloop = load i32, ptr %gep.a.preloop, align 1
+  br label %loop.latch.preloop
+
+loop.latch.preloop:                               ; preds = %loop.then.preloop, %loop.preloop
+  %merge.preloop = phi i32 [ %l.a.preloop, %loop.then.preloop ], [ %l.b.preloop, %loop.preloop ]
+  %gep.c.preloop = getelementptr inbounds i32, ptr %c, i64 %iv.preloop
+  store i32 %merge.preloop, ptr %gep.c.preloop, align 1
+  %iv.next.preloop = add nuw nsw i64 %iv.preloop, 1
+  %.not1.i.us245.us.preloop = icmp slt i64 %iv.next.preloop, %N
+  %1 = icmp slt i64 %iv.next.preloop, %exit.preloop.at
+  br i1 %1, label %loop.preloop, label %preloop.exit.selector, !llvm.loop !0, !loop_constrainer.loop.clone !5
+
+preloop.exit.selector:                            ; preds = %loop.latch.preloop
+  %iv.next.preloop.lcssa = phi i64 [ %iv.next.preloop, %loop.latch.preloop ]
+  %2 = icmp slt i64 %iv.next.preloop.lcssa, %N
+  br i1 %2, label %preloop.pseudo.exit, label %exit
+
+preloop.pseudo.exit:                              ; preds = %preloop.exit.selector, %preheader
+  %iv.preloop.copy = phi i64 [ 0, %preheader ], [ %iv.next.preloop.lcssa, %preloop.exit.selector ]
+  %indvar.end = phi i64 [ 0, %preheader ], [ %iv.next.preloop.lcssa, %preloop.exit.selector ]
+  %cmp = icmp slt i64 %iv.preloop.copy, %N
+  call void @llvm.assume(i1 %cmp)
+  %mul = mul i64 %N, 4
+  %add = add i64 %mul, 16
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %P, i64 %add) ]
+  br label %mainloop
+
+mainloop:                                         ; preds = %preloop.pseudo.exit
+  br label %loop
+
+loop:                                             ; preds = %mainloop, %loop.latch
+  %iv = phi i64 [ %iv.next, %loop.latch ], [ %iv.preloop.copy, %mainloop ]
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  %l.b = load i32, ptr %gep.b, align 1
+  %c.1 = icmp sge i32 %l.b, 0
+  br i1 %c.1, label %loop.latch, label %loop.then
+
+loop.then:                                        ; preds = %loop
+  %l.a = load i32, ptr %gep.a, align 1
+  br label %loop.latch
+
+loop.latch:                                       ; preds = %loop.then, %loop
+  %merge = phi i32 [ %l.a, %loop.then ], [ %l.b, %loop ]
+  %gep.c = getelementptr inbounds i32, ptr %c, i64 %iv
+  store i32 %merge, ptr %gep.c, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %.not1.i.us245.us = icmp slt i64 %iv.next, %N
+  br i1 %.not1.i.us245.us, label %loop, label %exit.loopexit
+
+exit.loopexit:                                    ; preds = %loop.latch
+  br label %exit
+
+exit:                                             ; preds = %exit.loopexit, %preloop.exit.selector
+  ret void
+
+exit2:                                            ; preds = %entry
+  ret void
+}
+declare i64 @padding_call(ptr, i64, i64, i64) #0
+
+attributes #0 = { nofree nosync nounwind willreturn memory(none) }
+!0 = distinct !{!0, !1, !2 }
+!1 = !{!"llvm.loop.unroll.disable"}
+!2 = !{!"llvm.loop.vectorize.enable", i1 false}
+!5 = !{}
+!12 = !{ i64 0, i64 2000 }
