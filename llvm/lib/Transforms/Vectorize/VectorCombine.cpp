@@ -3866,8 +3866,9 @@ bool VectorCombine::run() {
 
   LLVM_DEBUG(dbgs() << "\n\nVECTORCOMBINE on " << F.getName() << "\n");
 
+  const bool isSPIRV = F.getParent()->getTargetTriple().isSPIRV();
   bool MadeChange = false;
-  auto FoldInst = [this, &MadeChange](Instruction &I) {
+  auto FoldInst = [this, &MadeChange, isSPIRV](Instruction &I) {
     Builder.SetInsertPoint(&I);
     bool IsVectorType = isa<VectorType>(I.getType());
     bool IsFixedVectorType = isa<FixedVectorType>(I.getType());
@@ -3896,13 +3897,15 @@ bool VectorCombine::run() {
     // TODO: Identify and allow other scalable transforms
     if (IsVectorType) {
       MadeChange |= scalarizeOpOrCmp(I);
-      MadeChange |= scalarizeLoadExtract(I);
-      MadeChange |= scalarizeExtExtract(I);
+      if (!isSPIRV) {
+        MadeChange |= scalarizeLoadExtract(I);
+        MadeChange |= scalarizeExtExtract(I);
+      }
       MadeChange |= scalarizeVPIntrinsic(I);
       MadeChange |= foldInterleaveIntrinsics(I);
     }
 
-    if (Opcode == Instruction::Store)
+    if (Opcode == Instruction::Store && !isSPIRV)
       MadeChange |= foldSingleElementStore(I);
 
     // If this is an early pipeline invocation of this pass, we are done.
