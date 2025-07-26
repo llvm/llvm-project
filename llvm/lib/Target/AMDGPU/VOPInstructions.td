@@ -401,6 +401,10 @@ class VOP3Interp_vi <bits<10> op, VOPProfile P> : VOP3e_vi <op, P> {
   let Inst{49-41} = src0;
 }
 
+class VOP3Interp_OpSel_gfx9<bits<10> op, VOPProfile p> : VOP3Interp_vi<op, p> {
+  let Inst{14} = !if(p.HasDst,  src0_modifiers{3}, 0);
+}
+
 class VOP3Interp_gfx10<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p> {
   bits<6> attr;
   bits<2> attrchan;
