@@ -4588,13 +4588,13 @@ struct ExprEvalResult {
     unsigned long long unsignedVal;
     long long intVal;
     double floatVal;
-    char *stringVal;
+    CXString stringVal;
   } EvalData;
   bool IsUnsignedInt;
   ~ExprEvalResult() {
     if (EvalType != CXEval_UnExposed && EvalType != CXEval_Float &&
         EvalType != CXEval_Int) {
-      delete[] EvalData.stringVal;
+      clang_disposeString(EvalData.stringVal);
     }
   }
 };
@@ -4650,7 +4650,15 @@ const char *clang_EvalResult_getAsStr(CXEvalResult E) {
   if (!E) {
     return nullptr;
   }
-  return ((ExprEvalResult *)E)->EvalData.stringVal;
+  return clang_getCString(((ExprEvalResult *)E)->EvalData.stringVal);
+}
+
+CXString clang_EvalResult_getAsCXString(CXEvalResult E) {
+  if (!E) {
+    return cxstring::createNull();
+  }
+  auto data = clang_getCStringInfo(((ExprEvalResult *)E)->EvalData.stringVal);
+  return cxstring::createDup(StringRef(data.string, data.length));
 }
 
 static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
@@ -4714,11 +4722,7 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
         result->EvalType = CXEval_StrLiteral;
       }
 
-      std::string strRef(StrE->getString().str());
-      result->EvalData.stringVal = new char[strRef.size() + 1];
-      strncpy((char *)result->EvalData.stringVal, strRef.c_str(),
-              strRef.size());
-      result->EvalData.stringVal[strRef.size()] = '\0';
+      result->EvalData.stringVal = cxstring::createDup(StrE->getString());
       return result.release();
     }
   } else if (expr->getStmtClass() == Stmt::ObjCStringLiteralClass ||
@@ -4735,10 +4739,7 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
       result->EvalType = CXEval_StrLiteral;
     }
 
-    std::string strRef(StrE->getString().str());
-    result->EvalData.stringVal = new char[strRef.size() + 1];
-    strncpy((char *)result->EvalData.stringVal, strRef.c_str(), strRef.size());
-    result->EvalData.stringVal[strRef.size()] = '\0';
+    result->EvalData.stringVal = cxstring::createDup(StrE->getString());
     return result.release();
   }
 
@@ -4752,13 +4753,8 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
       callExpr = static_cast<CallExpr *>(CC->getSubExpr());
       StringLiteral *S = getCFSTR_value(callExpr);
       if (S) {
-        std::string strLiteral(S->getString().str());
         result->EvalType = CXEval_CFStr;
-
-        result->EvalData.stringVal = new char[strLiteral.size() + 1];
-        strncpy((char *)result->EvalData.stringVal, strLiteral.c_str(),
-                strLiteral.size());
-        result->EvalData.stringVal[strLiteral.size()] = '\0';
+        result->EvalData.stringVal = cxstring::createDup(S->getString());
         return result.release();
       }
     }
@@ -4778,12 +4774,8 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
 
       StringLiteral *S = getCFSTR_value(callExpr);
       if (S) {
-        std::string strLiteral(S->getString().str());
         result->EvalType = CXEval_CFStr;
-        result->EvalData.stringVal = new char[strLiteral.size() + 1];
-        strncpy((char *)result->EvalData.stringVal, strLiteral.c_str(),
-                strLiteral.size());
-        result->EvalData.stringVal[strLiteral.size()] = '\0';
+        result->EvalData.stringVal = cxstring::createDup(S->getString());
         return result.release();
       }
     }
@@ -4791,11 +4783,9 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
     DeclRefExpr *D = static_cast<DeclRefExpr *>(expr);
     ValueDecl *V = D->getDecl();
     if (V->getKind() == Decl::Function) {
-      std::string strName = V->getNameAsString();
       result->EvalType = CXEval_Other;
-      result->EvalData.stringVal = new char[strName.size() + 1];
-      strncpy(result->EvalData.stringVal, strName.c_str(), strName.size());
-      result->EvalData.stringVal[strName.size()] = '\0';
+      result->EvalData.stringVal =
+          cxstring::createDup(StringRef(V->getNameAsString()));
       return result.release();
     }
   }
