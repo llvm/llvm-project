@@ -4,11 +4,6 @@
 ; RUN: llc -mtriple=mips64 < %s | FileCheck %s -check-prefixes=SOFT-FLOAT-64
 
 define { half, i32 } @test_frexp_f16_i32(half %a) nounwind {
-; CHECK-LABEL: test_frexp_f16_i32:
-; CHECK: bl __extendhfsf2
-; CHECK: bl frexpf
-; CHECK: ldw r{{[0-9]+}}, sp[1]
-; CHECK: bl __truncsfhf2
 ; MIPSEL-LABEL: test_frexp_f16_i32:
 ; MIPSEL:       # %bb.0:
 ; MIPSEL-NEXT:    addiu $sp, $sp, -24
@@ -61,9 +56,6 @@ define { half, i32 } @test_frexp_f16_i32(half %a) nounwind {
 }
 
 define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) nounwind {
-; CHECK-LABEL: test_frexp_v2f16_v2i32:
-; CHECK: bl frexpf
-; CHECK: bl frexpf
 ; MIPSEL-LABEL: test_frexp_v2f16_v2i32:
 ; MIPSEL:       # %bb.0:
 ; MIPSEL-NEXT:    addiu $sp, $sp, -32
@@ -168,8 +160,6 @@ define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) nounwind
 }
 
 define { float, i32 } @test_frexp_f32_i32(float %a) nounwind {
-; CHECK-LABEL: test_frexp_f32_i32:
-; CHECK: bl frexpf
 ; MIPSEL-LABEL: test_frexp_f32_i32:
 ; MIPSEL:       # %bb.0:
 ; MIPSEL-NEXT:    addiu $sp, $sp, -24
@@ -207,8 +197,6 @@ define { float, i32 } @test_frexp_f32_i32(float %a) nounwind {
 }
 
 define { float, i32 } @test_frexp_f32_i32_tailcall(float %a) nounwind {
-; CHECK-LABEL: test_frexp_f32_i32_tailcall:
-; CHECK: bl frexpf
 ; MIPSEL-LABEL: test_frexp_f32_i32_tailcall:
 ; MIPSEL:       # %bb.0:
 ; MIPSEL-NEXT:    addiu $sp, $sp, -24
@@ -246,9 +234,6 @@ define { float, i32 } @test_frexp_f32_i32_tailcall(float %a) nounwind {
 }
 
 define { <2 x float>, <2 x i32> } @test_frexp_v2f32_v2i32(<2 x float> %a) nounwind {
-; CHECK-LABEL: test_frexp_v2f32_v2i32:
-; CHECK: bl frexpf
-; CHECK: bl frexpf
 ; MIPSEL-LABEL: test_frexp_v2f32_v2i32:
 ; MIPSEL:       # %bb.0:
 ; MIPSEL-NEXT:    addiu $sp, $sp, -32
@@ -329,8 +314,6 @@ define { <2 x float>, <2 x i32> } @test_frexp_v2f32_v2i32(<2 x float> %a) nounwi
 }
 
 define { double, i32 } @test_frexp_f64_i32(double %a) nounwind {
-; CHECK-LABEL: test_frexp_f64_i32:
-; CHECK: bl frexp
 ; MIPSEL-LABEL: test_frexp_f64_i32:
 ; MIPSEL:       # %bb.0:
 ; MIPSEL-NEXT:    addiu $sp, $sp, -24
@@ -368,9 +351,6 @@ define { double, i32 } @test_frexp_f64_i32(double %a) nounwind {
 }
 
 define { <2 x double>, <2 x i32> } @test_frexp_v2f64_v2i32(<2 x double> %a) nounwind {
-; CHECK-LABEL: test_frexp_v2f64_v2i32:
-; CHECK: bl frexp
-; CHECK: bl frexp
 ; MIPSEL-LABEL: test_frexp_v2f64_v2i32:
 ; MIPSEL:       # %bb.0:
 ; MIPSEL-NEXT:    addiu $sp, $sp, -48
@@ -459,8 +439,6 @@ define { <2 x double>, <2 x i32> } @test_frexp_v2f64_v2i32(<2 x double> %a) noun
 }
 
 define { fp128, i32 } @test_frexp_fp128_i32(fp128 %a) nounwind {
-; CHECK-LABEL: test_frexp_fp128_i32:
-; CHECK: bl frexpl
 ; MIPSEL-LABEL: test_frexp_fp128_i32:
 ; MIPSEL:       # %bb.0:
 ; MIPSEL-NEXT:    addiu $sp, $sp, -40
@@ -528,9 +506,6 @@ define { fp128, i32 } @test_frexp_fp128_i32(fp128 %a) nounwind {
 }
 
 define { <2 x fp128>, <2 x i32> } @test_frexp_v2fp128_v2i32(<2 x fp128> %a) nounwind {
-; CHECK-LABEL: test_frexp_v2fp128_v2i32:
-; CHECK: bl frexpl
-; CHECK: bl frexpl
 ; MIPSEL-LABEL: test_frexp_v2fp128_v2i32:
 ; MIPSEL:       # %bb.0:
 ; MIPSEL-NEXT:    addiu $sp, $sp, -48
