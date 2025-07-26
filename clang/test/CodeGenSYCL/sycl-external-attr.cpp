@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsycl-is-device -triple spir64-unknown-unknown -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s
+
 // This test code generation when sycl_external attribute is used
 
 // Function defined and not used - symbols emitted
@@ -60,9 +61,13 @@ void tFunc2(T arg) {}
 template void tFunc2<int>(int arg); // emit code for this
 template<> void tFunc2<char>(char arg) {} // and this
 
+// Test that symbols are not emitted without the sycl_external attribute
+int squareNoAttr(int x) { return x*x; }
+// CHECK-NOT: define {{.*}} i32 @_Z12squareNoAttri
+
 int main() {
   declused(4);
   int i = squareUsed(5);
+  int j = squareNoAttr(6);
   return 0;
 }
-
