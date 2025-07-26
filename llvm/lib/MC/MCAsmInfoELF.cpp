@@ -28,6 +28,10 @@ MCSection *MCAsmInfoELF::getNonexecutableStackSection(MCContext &Ctx) const {
   return Ctx.getELFSection(".note.GNU-stack", ELF::SHT_PROGBITS, 0);
 }
 
+bool MCAsmInfoELF::useCodeAlign(const MCSection &Sec) const {
+  return static_cast<const MCSectionELF &>(Sec).getFlags() & ELF::SHF_EXECINSTR;
+}
+
 MCAsmInfoELF::MCAsmInfoELF() {
   HasIdentDirective = true;
   WeakRefDirective = "\t.weak\t";

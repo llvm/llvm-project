@@ -130,5 +130,3 @@ void MCSectionXCOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
 
   report_fatal_error("Printing for this SectionKind is unimplemented.");
 }
-
-bool MCSectionXCOFF::useCodeAlign() const { return getKind().isText(); }

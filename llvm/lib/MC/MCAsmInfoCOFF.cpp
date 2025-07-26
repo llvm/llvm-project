@@ -13,6 +13,7 @@
 
 #include "llvm/MC/MCAsmInfoCOFF.h"
 #include "llvm/MC/MCDirectives.h"
+#include "llvm/MC/MCSection.h"
 
 using namespace llvm;
 
@@ -47,6 +48,10 @@ MCAsmInfoCOFF::MCAsmInfoCOFF() {
   // but in order not to create null typed symbols, we actually need to
   // make them global symbols as well.
   HasCOFFComdatConstants = true;
+}
+
+bool MCAsmInfoCOFF::useCodeAlign(const MCSection &Sec) const {
+  return Sec.isText();
 }
 
 void MCAsmInfoMicrosoft::anchor() {}

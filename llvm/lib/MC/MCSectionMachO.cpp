@@ -169,10 +169,6 @@ void MCSectionMachO::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   OS << '\n';
 }
 
-bool MCSectionMachO::useCodeAlign() const {
-  return hasAttribute(MachO::S_ATTR_PURE_INSTRUCTIONS);
-}
-
 /// ParseSectionSpecifier - Parse the section specifier indicated by "Spec".
 /// This is a string that can appear after a .section directive in a mach-o
 /// flavored .s file.  If successful, this fills in the specified Out

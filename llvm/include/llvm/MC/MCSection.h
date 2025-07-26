@@ -652,10 +652,6 @@ public:
                                     raw_ostream &OS,
                                     uint32_t Subsection) const = 0;
 
-  /// Return true if a .align directive should use "optimized nops" to fill
-  /// instead of 0s.
-  virtual bool useCodeAlign() const { return false; }
-
   /// Check whether this section is "virtual", that is has no actual object
   /// file contents.
   bool isBssSection() const { return IsBss; }
