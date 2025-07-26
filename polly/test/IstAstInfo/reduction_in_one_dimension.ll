@@ -1,13 +1,10 @@
 ; RUN: opt %loadPolly -polly-print-ast -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -print-polyhedral-info -polly-check-parallel -disable-output < %s | FileCheck %s -check-prefix=PINFO
 ;
 ; Verify that we won't privatize anything in the outer dimension
 ;
 ; CHECK:    #pragma known-parallel
-; PINFO:    for.cond: Loop is parallel.
 ; CHECK:    for (int c0 = 0; c0 < 2 * n; c0 += 1)
 ; CHECK:      #pragma simd reduction
-; PINFO-NEXT: for.cond1: Loop is not parallel.
 ; CHECK:      for (int c1 = 0; c1 <= 1023; c1 += 1)
 ; CHECK:        Stmt_for_body3(c0, c1);
 ;
