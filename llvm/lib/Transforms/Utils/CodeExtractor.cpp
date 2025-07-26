@@ -1220,10 +1220,8 @@ void CodeExtractor::calculateNewCallTerminatorWeights(
 /// \p F.
 static void eraseDebugIntrinsicsWithNonLocalRefs(Function &F) {
   for (Instruction &I : instructions(F)) {
-    SmallVector<DbgVariableIntrinsic *, 4> DbgUsers;
     SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
-    findDbgUsers(DbgUsers, &I, &DbgVariableRecords);
-    assert(DbgUsers.empty());
+    findDbgUsers(&I, DbgVariableRecords);
     for (DbgVariableRecord *DVR : DbgVariableRecords)
       if (DVR->getFunction() != &F)
         DVR->eraseFromParent();
@@ -1285,10 +1283,8 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
         NewFunc.getEntryBlock().getTerminator()->getIterator());
   };
   for (auto [Input, NewVal] : zip_equal(Inputs, NewValues)) {
-    SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
     SmallVector<DbgVariableRecord *, 1> DPUsers;
-    findDbgUsers(DbgUsers, Input, &DPUsers);
-    assert(DbgUsers.empty());
+    findDbgUsers(Input, DPUsers);
     DIExpression *Expr = DIB.createExpression();
 
     // Iterate the debud users of the Input values. If they are in the extracted
