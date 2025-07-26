@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 #include <set>
@@ -321,6 +322,7 @@ private:
   bool insertMissingCallerSavedSpills();
   bool removeMayGotoZero();
   bool addExitAfterUnreachable();
+  bool convertBAToConstantArray();
 
 public:
 
@@ -338,6 +340,7 @@ public:
     Changed |= insertMissingCallerSavedSpills();
     Changed |= removeMayGotoZero();
     Changed |= addExitAfterUnreachable();
+    Changed |= convertBAToConstantArray();
     return Changed;
   }
 };
@@ -748,6 +751,58 @@ bool BPFMIPreEmitPeephole::addExitAfterUnreachable() {
 
   BuildMI(&MBB, MI.getDebugLoc(), TII->get(BPF::RET));
   return true;
+}
+
+bool BPFMIPreEmitPeephole::convertBAToConstantArray() {
+  DenseMap<const BasicBlock *, MachineBasicBlock *> AddressTakenBBs;
+  bool Changed = false;
+
+  for (MachineBasicBlock &MBB : *MF) {
+    if (!MBB.getBasicBlock())
+      continue;
+    if (!MBB.getBasicBlock()->hasAddressTaken())
+      continue;
+    AddressTakenBBs[MBB.getBasicBlock()] = &MBB;
+  }
+
+  for (MachineBasicBlock &MBB : *MF) {
+    for (MachineInstr &MI : make_early_inc_range(MBB)) {
+      if (MI.getOpcode() != BPF::LD_imm64)
+        continue;
+
+      MachineOperand &MO = MI.getOperand(1);
+      if (!MO.isBlockAddress())
+        continue;
+
+      MCRegister ResultReg = MI.getOperand(0).getReg();
+
+      // Construct an array with size 1 and the only array element is a
+      // BloackAddress, and then generate a global variable based on this array.
+      // This will allow generating a jump table later.
+      const BlockAddress *OldBA = MO.getBlockAddress();
+      MachineBasicBlock *TgtMBB = AddressTakenBBs[OldBA->getBasicBlock()];
+      std::vector<MachineBasicBlock *> Targets;
+      Targets.push_back(TgtMBB);
+      unsigned JTI = MF->getOrCreateJumpTableInfo(
+                           MachineJumpTableInfo::EK_LabelDifference64)
+                         ->createJumpTableIndex(Targets);
+
+      // From 'reg = LD_imm64 <blockaddress>' to 'reg = LD_imm64 ba2gv_<idx>;
+      // reg = *(u64 *)(reg + 0)'.
+      BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(BPF::LD_imm64))
+          .addReg(ResultReg)
+          .addJumpTableIndex(JTI);
+      BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(BPF::LDD))
+          .addReg(ResultReg)
+          .addReg(ResultReg)
+          .addImm(0);
+
+      MI.eraseFromParent();
+      Changed = true;
+    }
+  }
+
+  return Changed;
 }
 
 } // end default namespace
