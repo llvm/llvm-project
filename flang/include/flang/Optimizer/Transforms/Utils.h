@@ -13,6 +13,8 @@
 #ifndef FORTRAN_OPTIMIZER_TRANSFORMS_UTILS_H
 #define FORTRAN_OPTIMIZER_TRANSFORMS_UTILS_H
 
+#include "flang/Optimizer/Dialect/FIROps.h"
+
 namespace fir {
 
 using MinlocBodyOpGeneratorTy = llvm::function_ref<mlir::Value(
@@ -32,6 +34,10 @@ void genMinMaxlocReductionLoop(fir::FirOpBuilder &builder, mlir::Value array,
                                mlir::Type elementType, mlir::Location loc,
                                mlir::Type maskElemType, mlir::Value resultArr,
                                bool maskMayBeLogicalScalar);
+
+std::pair<mlir::Block *, mlir::Block *>
+convertDoLoopToCFG(DoLoopOp loop, mlir::PatternRewriter &rewriter, bool setNSW,
+                   bool forceLoopToExecuteOnce);
 
 } // namespace fir
 
