@@ -1,0 +1,30 @@
+################################################################################
+##
+## omptest cmake configuration file.
+## Enable support for find_package(omptest).
+##
+################################################################################
+
+# Compute LLVM installation prefix (root) relative to this file.
+# Subsequent get_filename_component calls move up one directory level. (cf. /..)
+get_filename_component(LLVM_INSTALL_PREFIX "${CMAKE_CURRENT_LIST_FILE}" REALPATH)
+get_filename_component(LLVM_INSTALL_PREFIX "${LLVM_INSTALL_PREFIX}"     PATH)
+get_filename_component(LLVM_INSTALL_PREFIX "${LLVM_INSTALL_PREFIX}"     PATH)
+get_filename_component(LLVM_INSTALL_PREFIX "${LLVM_INSTALL_PREFIX}"     PATH)
+get_filename_component(LLVM_INSTALL_PREFIX "${LLVM_INSTALL_PREFIX}"     PATH)
+get_filename_component(LLVM_INSTALL_PREFIX "${LLVM_INSTALL_PREFIX}"     PATH)
+get_filename_component(LLVM_INSTALL_PREFIX "${LLVM_INSTALL_PREFIX}"     PATH)
+
+# Provide header and library paths.
+set(LIBOMP_HEADERS_INSTALL_PATH "${LLVM_INSTALL_PREFIX}/@LIBOMP_HEADERS_INSTALL_PATH@")
+set(LIBOMP_LIBRARY_INSTALL_PATH "${LLVM_INSTALL_PREFIX}/@OPENMP_INSTALL_LIBDIR@")
+set(omptest_INCLUDE_DIR         "${LIBOMP_HEADERS_INSTALL_PATH}/omptest/include")
+set(omptest_LIBRARY_DIR         "${LIBOMP_LIBRARY_INSTALL_PATH}")
+
+# Provide compiler default values.
+set(LLVM_BIN_INSTALL_DIR "${LLVM_INSTALL_PREFIX}/bin")
+set(omptest_C_COMPILER   "${LLVM_BIN_INSTALL_DIR}/clang")
+set(omptest_CXX_COMPILER "${LLVM_BIN_INSTALL_DIR}/clang++")
+
+# Provide information, if ompTest has been built 'standalone'.
+set(LIBOMPTEST_BUILD_STANDALONE "@LIBOMPTEST_BUILD_STANDALONE@")
