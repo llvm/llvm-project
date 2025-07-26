@@ -9980,12 +9980,19 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   }
 
   // fold (not (sub Y, X)) -> (add X, ~Y) if Y is a constant.
-  // FIXME: We can also do this with single-use sub, but this causes an infinite
-  // loop
-  if (isAllOnesConstant(N1) && N0.getOpcode() == ISD::SUB) {
+  // fold (not (sub Y, X)) -> (add X, ~Y) for targets with efficient AND-NOT
+  // when Y is single-use and not constant.
+  // FIXME: We cannot do this whenever the target has a hasAndNot, or any other
+  // instruction where the backend will prefer that. Currently, this is only
+  // really a problem for ARM and AArch64, which will have the same rules for
+  // when it has And Not for, in specifically AArch64's case, also xor-not and
+  // or-not Otherwise we end up with an infinite loop.
+  if (N0.getOpcode() == ISD::SUB && isAllOnesConstant(N1) && N0.hasOneUse()) {
     SDValue N00 = N0.getOperand(0), N01 = N0.getOperand(1);
-    if (isa<ConstantSDNode>(N00)) {
-      SDValue NotY = DAG.getNOT(DL, N00, VT); // N00 = ~N00
+    if (isa<ConstantSDNode>(N00) || (N00.hasOneUse() && !TLI.hasAndNot(N01))) {
+      SDValue NotY =
+          DAG.getNode(ISD::XOR, SDLoc(N00), VT, N00, N1); // N00 = ~N00
+      AddToWorklist(NotY.getNode());
       return DAG.getNode(ISD::ADD, DL, VT, N01, NotY);
     }
   }
