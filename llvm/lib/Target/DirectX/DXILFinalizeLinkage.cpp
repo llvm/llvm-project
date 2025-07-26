@@ -28,6 +28,14 @@ static bool finalizeLinkage(Module &M) {
     }
   }
 
+  // Remove unused global variables.
+  for (GlobalVariable &GV : make_early_inc_range(M.globals())) {
+    if (GV.use_empty()) {
+      GV.eraseFromParent();
+      MadeChange = true;
+    }
+  }
+
   SmallVector<Function *> Funcs;
 
   // Collect non-entry and non-exported functions to set to internal linkage.
