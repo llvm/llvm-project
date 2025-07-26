@@ -5610,6 +5610,7 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     // inverting the compare condition, swapping 'less' and 'greater') and
     // sometimes need to swap the operands to the VSEL (which inverts the
     // condition in the sense of firing whenever the previous condition didn't)
+    bool CanUsePL = true;
     if (Subtarget->hasFPARMv8Base() && (TrueVal.getValueType() == MVT::f16 ||
                                         TrueVal.getValueType() == MVT::f32 ||
                                         TrueVal.getValueType() == MVT::f64)) {
@@ -5619,12 +5620,13 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
         CC = ISD::getSetCCInverse(CC, LHS.getValueType());
         std::swap(TrueVal, FalseVal);
       }
+      CanUsePL = false;
     }
 
     SDValue ARMcc;
     SDValue Cmp = getARMCmp(LHS, RHS, CC, ARMcc, DAG, dl);
     // Choose GE over PL, which vsel does now support
-    if (ARMcc->getAsZExtVal() == ARMCC::PL)
+    if (!CanUsePL && ARMcc->getAsZExtVal() == ARMCC::PL)
       ARMcc = DAG.getConstant(ARMCC::GE, dl, MVT::i32);
     return getCMOV(dl, VT, FalseVal, TrueVal, ARMcc, Cmp, DAG);
   }
