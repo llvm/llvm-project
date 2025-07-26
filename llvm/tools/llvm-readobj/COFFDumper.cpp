@@ -412,6 +412,7 @@ const EnumEntry<COFF::DLLCharacteristics> PEDLLCharacteristics[] = {
   LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE),
 };
 
+// clang-format off
 static const EnumEntry<COFF::ExtendedDLLCharacteristics>
     PEExtendedDLLCharacteristics[] = {
         LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT                                ),
@@ -423,6 +424,7 @@ static const EnumEntry<COFF::ExtendedDLLCharacteristics>
         LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_EX_FORWARD_CFI_COMPAT                        ),
         LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_EX_HOTPATCH_COMPATIBLE                       ),
 };
+// clang-format on
 
 static const EnumEntry<COFF::SectionCharacteristics>
 ImageSectionCharacteristics[] = {
