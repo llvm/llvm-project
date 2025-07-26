@@ -192,6 +192,7 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
                         .Default(OMPC_THREADSET_unknown);
     if (LangOpts.OpenMP < 60)
       return OMPC_THREADSET_unknown;
+    return Type;
   }
   case OMPC_num_threads: {
     unsigned Type = llvm::StringSwitch<unsigned>(Str)

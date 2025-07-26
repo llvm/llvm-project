@@ -672,6 +672,8 @@ public:
   NODE_ENUM(OmpOrderingModifier, Value)
   NODE(parser, OmpSectionBlocks)
   NODE(parser, OmpSectionsDirective)
+  NODE(parser, OmpThreadsetClause)
+  NODE_ENUM(OmpThreadsetClause, ThreadsetPolicy)
   NODE(parser, OmpToClause)
   NODE(OmpToClause, Modifier)
   NODE(parser, Only)
