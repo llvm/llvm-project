@@ -653,56 +653,38 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
   }
 }
 
-bool VPlanTransforms::handleFMaxReductionsWithoutFastMath(VPlan &Plan) {
+static bool handleOrderedFCmpSelect(VPlan &Plan,
+                                    VPReductionPHIRecipe *RedPhiR) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  VPReductionPHIRecipe *RedPhiR = nullptr;
-  VPRecipeWithIRFlags *MaxOp = nullptr;
   VPWidenIntOrFpInductionRecipe *WideIV = nullptr;
 
-  // Check if there are any OrderedFCmpSelect reductions using wide selects that
-  // we can fix up. To do so, we also need a wide canonical IV to keep track of
-  // the indices of the max values.
+  // MaxOp feeding the reduction phi must be a select (either wide or a
+  // replicate recipe), where the phi is the last operand, and the compare
+  // predicate is strict. This ensures NaNs won't get propagated unless the
+  // initial value is NaN
+  auto *MaxOp = dyn_cast<VPRecipeWithIRFlags>(
+      RedPhiR->getBackedgeValue()->getDefiningRecipe());
+  if (!MaxOp)
+    return false;
+  auto *RepR = dyn_cast<VPReplicateRecipe>(MaxOp);
+  if (!isa<VPWidenSelectRecipe>(MaxOp) &&
+      !(RepR && (isa<SelectInst>(RepR->getUnderlyingInstr()))))
+    return false;
+
+  auto *Cmp = cast<VPRecipeWithIRFlags>(MaxOp->getOperand(0));
+  if (MaxOp->getOperand(1) == RedPhiR ||
+      !CmpInst::isStrictPredicate(Cmp->getPredicate()))
+    return false;
+
   for (auto &R : LoopRegion->getEntryBasicBlock()->phis()) {
     // We need a wide canonical IV
     if (auto *CurIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
-      if (!CurIV->isCanonical())
-        continue;
-      WideIV = CurIV;
-      continue;
+      if (CurIV->isCanonical()) {
+        WideIV = CurIV;
+        break;
+      }
     }
-
-    // And a single OrderedFCmpSelect reduction phi.
-    // TODO: Support FMin reductions as well.
-    auto *CurRedPhiR = dyn_cast<VPReductionPHIRecipe>(&R);
-    if (!CurRedPhiR)
-      continue;
-    if (RedPhiR)
-      return false;
-    if (CurRedPhiR->getRecurrenceKind() != RecurKind::OrderedFCmpSelect ||
-        CurRedPhiR->isInLoop() || CurRedPhiR->isOrdered())
-      continue;
-    RedPhiR = CurRedPhiR;
-
-    // MaxOp feeding the reduction phi must be a select (either wide or a
-    // replicate recipe), where the phi is the last operand, and the compare
-    // predicate is strict. This ensures NaNs won't get propagated unless the
-    // initial value is NaN
-    VPRecipeBase *Inc = RedPhiR->getBackedgeValue()->getDefiningRecipe();
-    auto *RepR = dyn_cast<VPReplicateRecipe>(Inc);
-    if (!isa<VPWidenSelectRecipe>(Inc) &&
-        !(RepR && (isa<SelectInst>(RepR->getUnderlyingInstr()))))
-      return false;
-
-    MaxOp = cast<VPRecipeWithIRFlags>(Inc);
-    auto *Cmp = cast<VPRecipeWithIRFlags>(MaxOp->getOperand(0));
-    if (MaxOp->getOperand(1) == RedPhiR ||
-        !CmpInst::isStrictPredicate(Cmp->getPredicate()))
-      return false;
   }
-
-  // Nothing to do.
-  if (!RedPhiR)
-    return true;
 
   // A wide canonical IV is currently required.
   // TODO: Create an induction if no suitable existing one is available.
@@ -768,7 +750,8 @@ bool VPlanTransforms::handleFMaxReductionsWithoutFastMath(VPlan &Plan) {
   return true;
 }
 
-bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
+bool VPlanTransforms::handleMaxMinNumAndOrderedFCmpSelectReductions(
+    VPlan &Plan) {
   auto GetMinMaxCompareValue = [](VPReductionPHIRecipe *RedPhiR) -> VPValue * {
     auto *MinMaxR = dyn_cast<VPRecipeWithIRFlags>(
         RedPhiR->getBackedgeValue()->getDefiningRecipe());
@@ -818,7 +801,8 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
     if (RedPhiR)
       return false;
     if (Cur->getRecurrenceKind() != RecurKind::FMaxNum &&
-        Cur->getRecurrenceKind() != RecurKind::FMinNum) {
+        Cur->getRecurrenceKind() != RecurKind::FMinNum &&
+        Cur->getRecurrenceKind() != RecurKind::OrderedFCmpSelect) {
       HasUnsupportedPhi = true;
       continue;
     }
@@ -827,6 +811,15 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
 
   if (!RedPhiR)
     return true;
+
+  if (HasUnsupportedPhi)
+    return false;
+
+  if (RedPhiR->getRecurrenceKind() == RecurKind::OrderedFCmpSelect)
+    return handleOrderedFCmpSelect(Plan, RedPhiR);
+
+  // Try to update the vector loop to exit early if any input is NaN and resume
+  // executing in the scalar loop to handle the NaNs there.
 
   // We won't be able to resume execution in the scalar tail, if there are
   // unsupported header phis or there is no scalar tail at all, due to

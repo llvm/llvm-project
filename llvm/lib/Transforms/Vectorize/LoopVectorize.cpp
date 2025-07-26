@@ -8817,14 +8817,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
 
   // Adjust the recipes for any inloop reductions.
   adjustRecipesForReductions(Plan, RecipeBuilder, Range.Start);
+  // Apply mandatory transformation to handle FP maxnum/minnum/OrderedFCmpSelect
+  // reduction with NaNs and signed-zeros if possible, bail out otherwise.
   if (!VPlanTransforms::runPass(
-          VPlanTransforms::handleFMaxReductionsWithoutFastMath, *Plan))
-    return nullptr;
-
-  // Apply mandatory transformation to handle FP maxnum/minnum reduction with
-  // NaNs if possible, bail out otherwise.
-  if (!VPlanTransforms::runPass(VPlanTransforms::handleMaxMinNumReductions,
-                                *Plan))
+          VPlanTransforms::handleMaxMinNumAndOrderedFCmpSelectReductions,
+          *Plan))
     return nullptr;
 
   // Transform recipes to abstract recipes if it is legal and beneficial and
