@@ -2021,6 +2021,9 @@ public:
   /// Retrieves the MemCheckCond and MemCheckBlock that were generated as IR
   /// outside VPlan.
   std::pair<Value *, BasicBlock *> getMemRuntimeChecks() {
+    using namespace llvm::PatternMatch;
+    if (MemRuntimeCheckCond && match(MemRuntimeCheckCond, m_ZeroInt()))
+      return {nullptr, nullptr};
     return {MemRuntimeCheckCond, MemCheckBlock};
   }
 
