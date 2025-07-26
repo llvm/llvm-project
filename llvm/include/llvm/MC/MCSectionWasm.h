@@ -51,7 +51,7 @@ class MCSectionWasm final : public MCSection {
   friend class MCContext;
   MCSectionWasm(StringRef Name, SectionKind K, unsigned SegmentFlags,
                 const MCSymbolWasm *Group, unsigned UniqueID, MCSymbol *Begin)
-      : MCSection(SV_Wasm, Name, K.isText(), /*IsVirtual=*/false, Begin),
+      : MCSection(Name, K.isText(), /*IsVirtual=*/false, Begin),
         UniqueID(UniqueID), Group(Group),
         IsWasmData(K.isReadOnly() || K.isWriteable()),
         IsMetadata(K.isMetadata()), SegmentFlags(SegmentFlags) {}
@@ -89,7 +89,6 @@ public:
     assert(isWasmData());
     IsPassive = V;
   }
-  static bool classof(const MCSection *S) { return S->getVariant() == SV_Wasm; }
 };
 
 } // end namespace llvm
