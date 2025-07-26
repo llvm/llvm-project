@@ -105,12 +105,6 @@ MPFRNumber MPFRNumber::asinh() const {
   return result;
 }
 
-MPFRNumber MPFRNumber::asinpi() const {
-  MPFRNumber result(*this);
-  mpfr_asinpi(result.value, value, mpfr_rounding);
-  return result;
-}
-
 MPFRNumber MPFRNumber::atan() const {
   MPFRNumber result(*this);
   mpfr_atan(result.value, value, mpfr_rounding);
