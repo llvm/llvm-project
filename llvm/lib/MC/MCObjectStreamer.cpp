@@ -19,7 +19,6 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
 using namespace llvm;
@@ -58,10 +57,12 @@ void MCObjectStreamer::insert(MCFragment *F) {
   newFragment();
 }
 
-void MCObjectStreamer::addFixup(const MCExpr *Value, MCFixupKind Kind,
-                                uint32_t Offset) {
-  CurFrag->addFixup(
-      MCFixup::create(CurFrag->getFixedSize() + Offset, Value, Kind));
+void MCObjectStreamer::appendContents(size_t Num, char Elt) {
+  CurFrag->appendContents(Num, Elt);
+}
+
+void MCObjectStreamer::addFixup(const MCExpr *Value, MCFixupKind Kind) {
+  CurFrag->addFixup(MCFixup::create(CurFrag->getFixedSize(), Value, Kind));
 }
 
 // As a compile-time optimization, avoid allocating and evaluating an MCExpr
@@ -128,10 +129,11 @@ void MCObjectStreamer::visitUsedSymbol(const MCSymbol &Sym) {
   Assembler->registerSymbol(Sym);
 }
 
-void MCObjectStreamer::emitCFISections(bool EH, bool Debug) {
-  MCStreamer::emitCFISections(EH, Debug);
+void MCObjectStreamer::emitCFISections(bool EH, bool Debug, bool SFrame) {
+  MCStreamer::emitCFISections(EH, Debug, SFrame);
   EmitEHFrame = EH;
   EmitDebugFrame = Debug;
+  EmitSFrame = SFrame;
 }
 
 void MCObjectStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
@@ -183,10 +185,10 @@ void MCObjectStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 
   getAssembler().registerSymbol(*Symbol);
 
-  // If there is a current fragment, mark the symbol as pointing into it.
-  // Otherwise queue the label and set its fragment pointer when we emit the
-  // next fragment.
-  MCFragment *F = getCurrentFragment();
+  // Set the fragment and offset. This function might be called by
+  // changeSection, when the section stack top hasn't been changed to the new
+  // section.
+  MCFragment *F = CurFrag;
   Symbol->setFragment(F);
   Symbol->setOffset(F->getContents().size());
 
@@ -245,6 +247,15 @@ void MCObjectStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   assert(Section && "Cannot switch to a null section!");
   getContext().clearDwarfLocSeen();
 
+  // Register the section and create an initial fragment for subsection 0
+  // if `Subsection` is non-zero.
+  bool NewSec = getAssembler().registerSection(*Section);
+  MCFragment *F0 = nullptr;
+  if (NewSec && Subsection) {
+    changeSection(Section, 0);
+    F0 = CurFrag;
+  }
+
   auto &Subsections = Section->Subsections;
   size_t I = 0, E = Subsections.size();
   while (I != E && Subsections[I].first < Subsection)
@@ -260,7 +271,13 @@ void MCObjectStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   Section->CurFragList = &Subsections[I].second;
   CurFrag = Section->CurFragList->Tail;
 
-  getAssembler().registerSection(*Section);
+  // Define the section symbol at subsection 0's initial fragment if required.
+  if (!NewSec)
+    return;
+  if (auto *Sym = Section->getBeginSymbol()) {
+    Sym->setFragment(Subsection ? F0 : CurFrag);
+    getAssembler().registerSymbol(*Sym);
+  }
 }
 
 void MCObjectStreamer::switchSectionNoPrint(MCSection *Section) {

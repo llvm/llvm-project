@@ -14,6 +14,7 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Iterators.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Rewrite/PatternApplicator.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -1502,7 +1503,7 @@ ValueRange ConversionPatternRewriterImpl::buildUnresolvedMaterialization(
   OpBuilder builder(outputTypes.front().getContext());
   builder.setInsertionPoint(ip.getBlock(), ip.getPoint());
   auto convertOp =
-      builder.create<UnrealizedConversionCastOp>(loc, outputTypes, inputs);
+      UnrealizedConversionCastOp::create(builder, loc, outputTypes, inputs);
   if (!valuesToMap.empty())
     mapping.map(valuesToMap, convertOp.getResults());
   if (castOp)
@@ -2092,8 +2093,9 @@ OperationLegalizer::legalize(Operation *op,
 
     // If the operation has no regions, just print it here.
     if (!isIgnored && op->getNumRegions() == 0) {
-      op->print(logger.startLine(), OpPrintingFlags().printGenericOpForm());
-      logger.getOStream() << "\n\n";
+      logger.startLine() << OpWithFlags(op,
+                                        OpPrintingFlags().printGenericOpForm())
+                         << "\n";
     }
   });
 
