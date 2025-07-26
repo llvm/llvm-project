@@ -4769,6 +4769,78 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  // Approximately handle AVX Galois Field Affine Transformation
+  //
+  // e.g.,
+  //     <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8>, <16 x i8>, i8)
+  //     <32 x i8> @llvm.x86.vgf2p8affineqb.256(<32 x i8>, <32 x i8>, i8)
+  //     <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8>, <64 x i8>, i8)
+  //      Out                                    A          x          b
+  // where Out = A * x + b in GF(2) (but A and x are packed)
+  //
+  // Multiplication in GF(2) is equivalent to bitwise AND. However, the matrix
+  // computation also includes a parity calculation.
+  //
+  // For the bitwise AND of bits V1 and V2, the exact shadow is:
+  //     Out_Shadow =   (V1_Shadow & V2_Shadow)
+  //                  | (V1 & V2_Shadow)
+  //                  | (V1_Shadow & V2_Shadow)
+  //
+  // We approximate the shadow of gf2p8affine using:
+  //     Out_Shadow =   _mm512_gf2p8affine_epi64_epi8(x_Shadow, A_shadow, 0)
+  //                  | _mm512_gf2p8affine_epi64_epi8(x, A_shadow, 0)
+  //                  | _mm512_gf2p8affine_epi64_epi8(x_Shadow, A, 0)
+  //                  | _mm512_set1_epi8(b_Shadow)
+  //
+  // This approximation has false negatives: if an intermediate dot-product
+  // contains an even number of 1's, the parity is 0.
+  // It has no false positives.
+  void handleAVXGF2P8Affine(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+
+    assert(I.arg_size() == 3);
+    Value *A = I.getOperand(0);
+    Value *x = I.getOperand(1);
+    Value *b = I.getOperand(2);
+
+    assert(isFixedIntVector(A));
+    assert(cast<VectorType>(A->getType())
+               ->getElementType()
+               ->getScalarSizeInBits() == 8);
+
+    assert(A->getType() == x->getType());
+
+    assert(b->getType()->isIntegerTy());
+    assert(b->getType()->getScalarSizeInBits() == 8);
+
+    assert(I.getType() == A->getType());
+
+    Value *AShadow = getShadow(A);
+    Value *xShadow = getShadow(x);
+    Value *bZeroShadow = getCleanShadow(b);
+
+    CallInst *xShadowAShadow = IRB.CreateIntrinsic(
+        I.getType(), I.getIntrinsicID(), {xShadow, AShadow, bZeroShadow});
+    CallInst *xAShadow = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
+                                             {x, AShadow, bZeroShadow});
+    CallInst *xShadowA = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
+                                             {xShadow, A, bZeroShadow});
+
+    unsigned NumElements = cast<FixedVectorType>(I.getType())->getNumElements();
+    Value *bShadow = getShadow(b);
+    Value *bBroadcastShadow = getCleanShadow(AShadow);
+    // There is no LLVM IR intrinsic for _mm512_set1_epi8.
+    // This loop generates a lot of LLVM IR, which we expect that CodeGen will
+    // lower appropriately (e.g., VPBROADCASTB).
+    // Besides, b is often a constant, in which case it is fully initialized.
+    for (unsigned i = 0; i < NumElements; i++)
+      bBroadcastShadow = IRB.CreateInsertElement(bBroadcastShadow, bShadow, i);
+
+    setShadow(&I, IRB.CreateOr(
+                      {xShadowAShadow, xAShadow, xShadowA, bBroadcastShadow}));
+    setOriginForNaryOp(I);
+  }
+
   // Handle Arm NEON vector load intrinsics (vld*).
   //
   // The WithLane instructions (ld[234]lane) are similar to:
@@ -5601,6 +5673,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512fp16_mask_max_sh_round:
     case Intrinsic::x86_avx512fp16_mask_min_sh_round: {
       visitGenericScalarHalfwordInst(I);
+      break;
+    }
+
+    // AVX Galois Field New Instructions
+    case Intrinsic::x86_vgf2p8affineqb_128:
+    case Intrinsic::x86_vgf2p8affineqb_256:
+    case Intrinsic::x86_vgf2p8affineqb_512: {
+      handleAVXGF2P8Affine(I);
       break;
     }
 
