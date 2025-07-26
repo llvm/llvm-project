@@ -113,5 +113,3 @@ void MCSectionCOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
 
   OS << '\n';
 }
-
-bool MCSectionCOFF::useCodeAlign() const { return isText(); }

@@ -114,7 +114,6 @@ public:
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
                             uint32_t Subsection) const override;
-  bool useCodeAlign() const override;
   StringRef getSymbolTableName() const { return SymbolTableName; }
   void setSymbolTableName(StringRef STN) { SymbolTableName = STN; }
   bool isMultiSymbolsAllowed() const { return MultiSymbolsAllowed; }

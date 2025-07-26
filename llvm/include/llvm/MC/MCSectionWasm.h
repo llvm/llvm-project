@@ -67,7 +67,6 @@ public:
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
                             uint32_t Subsection) const override;
-  bool useCodeAlign() const override;
 
   bool isWasmData() const { return IsWasmData; }
   bool isMetadata() const { return IsMetadata; }
