@@ -744,8 +744,14 @@ void SPIRV::RequirementHandler::checkSatisfiable(
     IsSatisfiable = false;
   }
 
+  AvoidCapabilitiesSet AvoidCaps;
+  if (!ST.isShader())
+    AvoidCaps.S.insert(SPIRV::Capability::Shader);
+  else
+    AvoidCaps.S.insert(SPIRV::Capability::Kernel);
+
   for (auto Cap : MinimalCaps) {
-    if (AvailableCaps.contains(Cap))
+    if (AvailableCaps.contains(Cap) && !AvoidCaps.S.contains(Cap))
       continue;
     LLVM_DEBUG(dbgs() << "Capability not supported: "
                       << getSymbolicOperandMnemonic(
