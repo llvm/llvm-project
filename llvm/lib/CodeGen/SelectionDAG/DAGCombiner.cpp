@@ -4099,12 +4099,12 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   // (sub x, ([v]select (uge x, y), y, 0)) -> (umin x, (sub x, y))
   if (N1.hasOneUse() && hasUMin(VT)) {
     SDValue Y;
-    if (sd_match(N1, m_Select(m_SetCC(m_Specific(N0), m_Value(Y),
-                                      m_SpecificCondCode(ISD::SETULT)),
-                              m_Zero(), m_Deferred(Y))) ||
-        sd_match(N1, m_Select(m_SetCC(m_Specific(N0), m_Value(Y),
-                                      m_SpecificCondCode(ISD::SETUGE)),
-                              m_Deferred(Y), m_Zero())) ||
+    if (sd_match(N1, m_SelectCCLike(m_Specific(N0), m_Value(Y), m_Zero(),
+                                    m_Deferred(Y),
+                                    m_SpecificCondCode(ISD::SETULT))) ||
+        sd_match(N1,
+                 m_SelectCCLike(m_Specific(N0), m_Value(Y), m_Deferred(Y),
+                                m_Zero(), m_SpecificCondCode(ISD::SETUGE))) ||
         sd_match(N1, m_VSelect(m_SetCC(m_Specific(N0), m_Value(Y),
                                        m_SpecificCondCode(ISD::SETULT)),
                                m_Zero(), m_Deferred(Y))) ||
