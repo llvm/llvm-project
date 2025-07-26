@@ -39,6 +39,26 @@ set(core_files
   varargs.h
   )
 
+set(aix_wrapper_files
+  dbm.h
+  locale.h
+  stdio.h
+  stdlib.h
+  string.h
+  time.h
+  unistd.h
+  wchar.h
+  )
+set(aix_sys_subdir_wrapper_files
+  sys/dir.h
+  sys/param.h
+  sys/types.h
+  )
+set(aix_files
+  ${aix_wrapper_files}
+  ${aix_sys_subdir_wrapper_files}
+  )
+
 set(arm_common_files
   # Headers shared by Arm and AArch64
   arm_acle.h
@@ -312,6 +332,7 @@ set(utility_files
 
 set(files
   ${core_files}
+  ${aix_files}
   ${arm_common_files}
   ${arm_only_files}
   ${aarch64_only_files}
@@ -529,6 +550,7 @@ set_target_properties("clang-resource-headers" PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${output_dir}")
 add_dependencies("clang-resource-headers"
                  "core-resource-headers"
+		 "aix-resource-headers"
                  "arm-common-resource-headers"
                  "arm-resource-headers"
                  "aarch64-resource-headers"
@@ -557,6 +579,7 @@ add_header_target("core-resource-headers" ${core_files})
 add_header_target("arm-common-resource-headers" "${arm_common_files};${arm_common_generated_files}")
 
 # Architecture/platform specific targets
+add_header_target("aix-resource-headers" "${aix_files}")
 add_header_target("arm-resource-headers" "${arm_only_files};${arm_only_generated_files}")
 add_header_target("aarch64-resource-headers" "${aarch64_only_files};${aarch64_only_generated_files}")
 add_header_target("cuda-resource-headers" "${cuda_files};${cuda_wrapper_files};${cuda_wrapper_bits_files};${cuda_wrapper_utility_files}")
@@ -643,6 +666,18 @@ install(
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
   COMPONENT core-resource-headers)
+
+install(
+  FILES ${aix_wrapper_files}
+  DESTINATION ${header_install_dir}
+  EXCLUDE_FROM_ALL
+  COMPONENT aix-resource-headers)
+
+install(
+  FILES ${aix_sys_subdir_wrapper_files}
+  DESTINATION ${header_install_dir}/sys
+  EXCLUDE_FROM_ALL
+  COMPONENT aix-resource-headers)
 
 install(
   FILES ${arm_common_files} ${arm_common_generated_files}
@@ -837,6 +872,9 @@ if (NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets(install-core-resource-headers
                            DEPENDS core-resource-headers
                            COMPONENT core-resource-headers)
+  add_llvm_install_targets(install-aix-resource-headers
+                           DEPENDS aix-resource-headers
+                           COMPONENT aix-resource-headers)
   add_llvm_install_targets(install-arm-common-resource-headers
                            DEPENDS arm-common-resource-headers
                            COMPONENT arm-common-resource-headers)
