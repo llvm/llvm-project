@@ -1593,12 +1593,6 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
             // since both llvm.lifetime.start and llvm.lifetime.end intrinsics
             // practically fill all the bytes of the alloca with an undefined
             // value, although conceptually marked as alive/dead.
-            // We don't currently track GEP offsets and sizes, so we don't have
-            // a way to check whether this lifetime marker affects the relevant
-            // memory regions.
-            // While we only really need to delete lifetime.end from Src and
-            // lifetime.begin from Dst, those are often implied by the memcpy
-            // anyways so hopefully not much is lost by removing all of them.
             LifetimeMarkers.push_back(UI);
             continue;
           }
