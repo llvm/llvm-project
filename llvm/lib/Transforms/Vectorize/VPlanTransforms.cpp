@@ -3157,19 +3157,20 @@ static bool isAlreadyNarrow(VPValue *VPV) {
   return RepR && RepR->isSingleScalar();
 }
 
-void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
-                                             unsigned VectorRegWidth) {
+std::unique_ptr<VPlan>
+VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, unsigned VectorRegWidth,
+                                        VFRange &Range) {
   using namespace llvm::VPlanPatternMatch;
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
-  if (VF.isScalable() || !VectorLoop)
-    return;
+  if (Plan.hasScalableVF() || !VectorLoop)
+    return nullptr;
 
   VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
   Type *CanonicalIVType = CanonicalIV->getScalarType();
   VPTypeAnalysis TypeInfo(CanonicalIVType);
 
-  unsigned FixedVF = VF.getFixedValue();
   SmallVector<VPInterleaveRecipe *> StoreGroups;
+  std::optional<unsigned> VFToOptimize;
   for (auto &R : *VectorLoop->getEntryBasicBlock()) {
     if (isa<VPCanonicalIVPHIRecipe>(&R) ||
         match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())))
@@ -3184,11 +3185,11 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     //  * recipes writing to memory except interleave groups
     // Only support plans with a canonical induction phi.
     if (R.isPhi())
-      return;
+      return nullptr;
 
     auto *InterleaveR = dyn_cast<VPInterleaveRecipe>(&R);
     if (R.mayWriteToMemory() && !InterleaveR)
-      return;
+      return nullptr;
 
     // Do not narrow interleave groups if there are VectorPointer recipes and
     // the plan was unrolled. The recipe implicitly uses VF from
@@ -3196,18 +3197,35 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     // TODO: Remove restriction once the VF for the VectorPointer offset is
     // modeled explicitly as operand.
     if (isa<VPVectorPointerRecipe>(&R) && Plan.getUF() > 1)
-      return;
+      return nullptr;
 
     // All other ops are allowed, but we reject uses that cannot be converted
     // when checking all allowed consumers (store interleave groups) below.
     if (!InterleaveR)
       continue;
 
-    // Bail out on non-consecutive interleave groups.
-    if (!isConsecutiveInterleaveGroup(InterleaveR, FixedVF, TypeInfo,
-                                      VectorRegWidth))
-      return;
-
+    // Try to find a single VF, where all interleave groups are consecutive and
+    // saturate the full vector width. If we already have a candidate VF, check
+    // if it is applicable for the current InterleaveR, otherwise look for a
+    // suitable VF across the Plans VFs.
+    //
+    if (VFToOptimize) {
+      if (!isConsecutiveInterleaveGroup(InterleaveR, *VFToOptimize, TypeInfo,
+                                        VectorRegWidth))
+        return nullptr;
+    } else {
+      for (ElementCount VF : Plan.vectorFactors()) {
+        if (!VF.isFixed())
+          continue;
+        if (isConsecutiveInterleaveGroup(InterleaveR, VF.getFixedValue(),
+                                         TypeInfo, VectorRegWidth)) {
+          VFToOptimize = VF.getFixedValue();
+          break;
+        }
+      }
+      if (!VFToOptimize)
+        return nullptr;
+    }
     // Skip read interleave groups.
     if (InterleaveR->getStoredValues().empty())
       continue;
@@ -3243,24 +3261,44 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     auto *WideMember0 = dyn_cast_or_null<VPWidenRecipe>(
         InterleaveR->getStoredValues()[0]->getDefiningRecipe());
     if (!WideMember0)
-      return;
+      return nullptr;
     for (const auto &[I, V] : enumerate(InterleaveR->getStoredValues())) {
       auto *R = dyn_cast_or_null<VPWidenRecipe>(V->getDefiningRecipe());
       if (!R || R->getOpcode() != WideMember0->getOpcode() ||
           R->getNumOperands() > 2)
-        return;
+        return nullptr;
       if (any_of(enumerate(R->operands()),
                  [WideMember0, Idx = I](const auto &P) {
                    const auto &[OpIdx, OpV] = P;
                    return !canNarrowLoad(WideMember0, OpIdx, OpV, Idx);
                  }))
-        return;
+        return nullptr;
     }
     StoreGroups.push_back(InterleaveR);
   }
 
   if (StoreGroups.empty())
-    return;
+    return nullptr;
+
+  // All interleave groups in Plan can be narrowed for VFToOptimize. Split the
+  // original Plan into 2: a) a new clone which contains all VFs of Plan, except
+  // VFToOptimize, and b) the original Plan with VFToOptimize as single VF.
+  std::unique_ptr<VPlan> NewPlan;
+  if (size(Plan.vectorFactors()) != 1) {
+    NewPlan = std::unique_ptr<VPlan>(Plan.duplicate());
+    Plan.setVF(ElementCount::getFixed(*VFToOptimize));
+    bool First = true;
+    for (ElementCount VF : NewPlan->vectorFactors()) {
+      if (VF.isFixed() && VF.getFixedValue() == *VFToOptimize)
+        continue;
+      if (First) {
+        NewPlan->setVF(VF);
+        First = false;
+        continue;
+      }
+      NewPlan->addVF(VF);
+    }
+  }
 
   // Convert InterleaveGroup \p R to a single VPWidenLoadRecipe.
   auto NarrowOp = [](VPValue *V) -> VPValue * {
@@ -3325,11 +3363,11 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   // original iteration.
   auto *CanIV = Plan.getCanonicalIV();
   auto *Inc = cast<VPInstruction>(CanIV->getBackedgeValue());
-  Inc->setOperand(1, Plan.getOrAddLiveIn(ConstantInt::get(
-                         CanIV->getScalarType(), 1 * Plan.getUF())));
+  Inc->setOperand(1, &Plan.getSymbolicUF());
   Plan.getVF().replaceAllUsesWith(
       Plan.getOrAddLiveIn(ConstantInt::get(CanIV->getScalarType(), 1)));
   removeDeadRecipes(Plan);
+  return NewPlan;
 }
 
 /// Add branch weight metadata, if the \p Plan's middle block is terminated by a
