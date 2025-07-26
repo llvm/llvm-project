@@ -5203,6 +5203,32 @@ static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
       TrackUse = true;
     return 0;
   }
+  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+    if (II->getIntrinsicID() == Intrinsic::ptrmask) {
+      auto *ConstVals = A.getAAFor<AAPotentialConstantValues>(
+          QueryingAA, IRPosition::value(*(II->getOperand(1))),
+          DepClassTy::NONE);
+      const AAAlign *AlignAA = A.getAAFor<AAAlign>(
+          QueryingAA, IRPosition::value(*(II)), DepClassTy::NONE);
+      if (ConstVals && ConstVals->isValidState()) {
+        if (ConstVals->isAtFixpoint()) {
+          uint64_t TrailingZeros = 64;
+          for (const auto &It : ConstVals->getAssumedSet())
+            if (It.countTrailingZeros() < TrailingZeros)
+              TrailingZeros = It.countTrailingZeros();
+          if (TrailingZeros < 64) {
+            uint64_t Mask = 1 << TrailingZeros;
+            if (Mask >= AlignAA->getKnownAlign().value()) {
+              return 0;
+            }
+          }
+          return AlignAA->getKnownAlign().value();
+        }
+      } else if (AlignAA) {
+        return AlignAA->getKnownAlign().value();
+      }
+    }
+  }
 
   MaybeAlign MA;
   if (const auto *CB = dyn_cast<CallBase>(I)) {
@@ -5502,6 +5528,42 @@ struct AAAlignCallSiteReturned final
   AAAlignCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 
+  ChangeStatus updateImpl(Attributor &A) override {
+    Instruction *I = getIRPosition().getCtxI();
+    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      if (II->getIntrinsicID() == Intrinsic::ptrmask) {
+        const AAPotentialConstantValues *ConstVals =
+            A.getAAFor<AAPotentialConstantValues>(
+                *this, IRPosition::value(*(II->getOperand(1))),
+                DepClassTy::REQUIRED);
+        const AAAlign *AlignAA =
+            A.getAAFor<AAAlign>(*this, IRPosition::value(*(II->getOperand(0))),
+                                DepClassTy::REQUIRED);
+        uint64_t Alignment = 0;
+        if (ConstVals && ConstVals->isValidState()) {
+          unsigned TrailingZeros = 64;
+          for (const auto &It : ConstVals->getAssumedSet())
+            if (It.countTrailingZeros() < TrailingZeros)
+              TrailingZeros = It.countTrailingZeros();
+          if (TrailingZeros < 64)
+            Alignment = 1 << TrailingZeros;
+        }
+        if (AlignAA && AlignAA->isValidState() &&
+            Alignment < AlignAA->getAssumedAlign().value())
+          Alignment = AlignAA->getAssumedAlign().value();
+
+        if (Alignment != 0) {
+          uint64_t OldAssumed = getAssumed();
+          takeAssumedMinimum(Alignment);
+          return OldAssumed == getAssumed() ? ChangeStatus::UNCHANGED
+                                            : ChangeStatus::CHANGED;
+        } else {
+          return ChangeStatus::UNCHANGED;
+        }
+      }
+    }
+    return Base::updateImpl(A);
+  };
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(align); }
 };
