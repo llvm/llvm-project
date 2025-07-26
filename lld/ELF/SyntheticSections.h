@@ -429,11 +429,6 @@ public:
     /// The resulting dynamic relocation references symbol #sym from the dynamic
     /// symbol table and uses #addend as the value of computeAddend(ctx).
     AgainstSymbol,
-    /// The resulting dynamic relocation references symbol #sym from the dynamic
-    /// symbol table and uses InputSection::getRelocTargetVA() + #addend for the
-    /// final addend. It can be used for relocations that write the symbol VA as
-    // the addend (e.g. R_MIPS_TLS_TPREL64) but still reference the symbol.
-    AgainstSymbolWithTargetVA,
     /// This is used by the MIPS multi-GOT implementation. It relocates
     /// addresses of 64kb pages that lie inside the output section.
     MipsMultiGotPage,
@@ -460,9 +455,7 @@ public:
 
   uint64_t getOffset() const;
   uint32_t getSymIndex(SymbolTableBaseSection *symTab) const;
-  bool needsDynSymIndex() const {
-    return kind == AgainstSymbol || kind == AgainstSymbolWithTargetVA;
-  }
+  bool needsDynSymIndex() const { return kind == AgainstSymbol; }
 
   /// Computes the addend of the dynamic relocation. Note that this is not the
   /// same as the #addend member variable as it may also include the symbol
