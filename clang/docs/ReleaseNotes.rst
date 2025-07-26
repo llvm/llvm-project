@@ -113,6 +113,19 @@ Improvements to Clang's diagnostics
   Added a new warning in this group for the case where the attribute is missing/implicit on
   an override of a virtual method.
 
+- ``-Wpointer-bool-conversion`` will now also warn in the following case
+
+  .. code-block:: c
+
+    struct B {
+      B(bool V) {}
+    };
+    void test(const B& b);
+    void test0(B* b) {
+      test(b); // this will call B::B(bool) and create a new B
+    }
+
+
 Improvements to Clang's time-trace
 ----------------------------------
 
