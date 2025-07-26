@@ -1239,32 +1239,21 @@ struct FoldReshapeWithProducerPadOpByCollapsing
     auto resultType = collapseOp.getResultType();
 
     ArrayRef<int64_t> finalShape = collapseOp.getResultType().getShape();
-
-    SmallVector<OpFoldResult> collapsedShape;
-    for (int64_t dimSize : finalShape) {
-      if (dimSize == ShapedType::kDynamic) {
-        collapsedShape.push_back(OpFoldResult{});
-      } else {
-        collapsedShape.push_back(rewriter.getI64IntegerAttr(dimSize));
-      }
-    }
-
+    SmallVector<int64_t> collapsedShape(finalShape.begin(), finalShape.end());
     for (auto [inDimIdx, reInd] : llvm::enumerate(reassociations)) {
       OpFoldResult l = low[reInd[0]];
       OpFoldResult h = high[reInd[0]];
-
       if (!isConstantIntValue(l, 0) || !isConstantIntValue(h, 0)) {
-        collapsedShape[inDimIdx] =
+        auto mixedSize =
             tensor::getMixedSize(rewriter, loc, padOp.getSource(), reInd[0]);
+        auto dimSize = getConstantIntValue(mixedSize);
+        assert(dimSize.has_value() && "Expected static dimension");
+        collapsedShape[inDimIdx] = *dimSize;
       }
     }
 
-    SmallVector<int64_t> staticCollapsedShape;
-    std::tie(staticCollapsedShape, std::ignore) =
-        decomposeMixedValues(collapsedShape);
-
     auto newCollapseType = RankedTensorType::get(
-        staticCollapsedShape, padOp.getSource().getType().getElementType());
+        collapsedShape, padOp.getSource().getType().getElementType());
     auto newCollapseOp = rewriter.create<tensor::CollapseShapeOp>(
         loc, newCollapseType, padOp.getSource(), reassociations);
 
