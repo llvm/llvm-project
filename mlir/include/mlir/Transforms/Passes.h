@@ -26,6 +26,7 @@
 namespace mlir {
 
 class GreedyRewriteConfig;
+class RuntimeVerifiableOpInterface;
 
 //===----------------------------------------------------------------------===//
 // Passes
@@ -76,6 +77,13 @@ std::unique_ptr<Pass> createPrintIRPass(const PrintIRPassOptions & = {});
 
 /// Creates a pass that generates IR to verify ops at runtime.
 std::unique_ptr<Pass> createGenerateRuntimeVerificationPass();
+
+/// Create an instance of the generate runtime verification pass, and
+/// use the provided filter function to skip certain verifiable ops.
+/// The default implementation does not filter any ops.
+std::unique_ptr<Pass> createGenerateRuntimeVerificationPass(
+    std::function<bool(RuntimeVerifiableOpInterface)>
+        shouldHandleVerifiableOpFn);
 
 /// Creates a loop invariant code motion pass that hoists loop invariant
 /// instructions out of the loop.
