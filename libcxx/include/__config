@@ -1076,16 +1076,19 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_NO_DESTROY
 #  endif
 
-#  if __has_attribute(__diagnose_if__)
-#    define _LIBCPP_DIAGNOSE_WARNING(...) __attribute__((__diagnose_if__(__VA_ARGS__, "warning")))
-#  else
-#    define _LIBCPP_DIAGNOSE_WARNING(...)
-#  endif
-
+// TODO: Remove _LIBCPP_LEGACY_DIAGNOSE_IF once all compilers are based on at least Clang 20
 #  if __has_attribute(__diagnose_if__) && !defined(_LIBCPP_APPLE_CLANG_VER) &&                                         \
       (!defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER >= 2001)
 #    define _LIBCPP_DIAGNOSE_IF(...) __attribute__((__diagnose_if__(__VA_ARGS__)))
+#    define _LIBCPP_LEGACY_DIAGNOSE_IF(warning_group, default_severity, message, ...)                                  \
+      __attribute__((__diagnose_if__(__VA_ARGS__, message, default_severity, warning_group)))
 #  else
+#    if __has_attribute(__diagnose_if__)
+#      define _LIBCPP_LEGACY_DIAGNOSE_IF(warning_group, default_severity, message, ...)                                \
+        __attribute__((__diagnose_if__(__VA_ARGS__, message, "warning")))
+#    else
+#      define _LIBCPP_LEGACY_DIAGNOSE_IF(warning_group, default_severity, message, ...)
+#    endif
 #    define _LIBCPP_DIAGNOSE_IF(...)
 #  endif
 
