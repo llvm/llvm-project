@@ -21,6 +21,10 @@ define i64 @pr62565_incoming_value_known_undef(i64 %a, ptr %src) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 32
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[TMP2]])
+; CHECK-NEXT:    [[TMP5:%.*]] = freeze i1 [[TMP4]]
+; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP5]], i64 [[A]], i64 undef
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ undef, [[ENTRY]] ]
@@ -77,6 +81,10 @@ define i64 @pr62565_incoming_value_known_poison(i64 %a, ptr %src) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 32
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[TMP2]])
+; CHECK-NEXT:    [[TMP5:%.*]] = freeze i1 [[TMP4]]
+; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP5]], i64 [[A]], i64 poison
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ poison, [[ENTRY]] ]
@@ -133,6 +141,10 @@ define i64 @pr62565_incoming_value_may_be_poison(i64 %a, ptr %src, i64 %start) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 32
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[TMP2]])
+; CHECK-NEXT:    [[TMP5:%.*]] = freeze i1 [[TMP4]]
+; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP5]], i64 [[A]], i64 [[START]]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[START]], [[ENTRY]] ]

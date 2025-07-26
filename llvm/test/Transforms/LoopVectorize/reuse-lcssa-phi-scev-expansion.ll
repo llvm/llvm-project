@@ -417,10 +417,8 @@ define void @scev_exp_reuse_const_add(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR_IV_1_NEXT_LCSSA]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i16, ptr [[TMP5]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i16>, ptr [[TMP6]], align 2
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i32 0
-; CHECK-NEXT:    store <2 x i16> [[WIDE_LOAD]], ptr [[TMP7]], align 2
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i16>, ptr [[TMP5]], align 2
+; CHECK-NEXT:    store <2 x i16> [[WIDE_LOAD]], ptr [[NEXT_GEP]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 40
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]

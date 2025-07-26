@@ -1282,6 +1282,7 @@ define i32 @iv_ext_used_outside( ptr %dst) {
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VEC-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
 ; VEC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i16 [[OFFSET_IDX]]
+; VEC-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP1]], align 4
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; VEC-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 128
 ; VEC-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}

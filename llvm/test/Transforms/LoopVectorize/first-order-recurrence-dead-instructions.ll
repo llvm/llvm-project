@@ -6,6 +6,12 @@ define i8 @recurrence_phi_with_same_incoming_values_after_simplifications(i8 %fo
 ; CHECK-LABEL: define i8 @recurrence_phi_with_same_incoming_values_after_simplifications(
 ; CHECK-SAME: i8 [[FOR_START:%.*]], ptr [[DST:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[FOR:%.*]] = phi i8 [ [[FOR_START]], %[[ENTRY]] ], [ [[FOR_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[FOR_NEXT]] = and i8 [[FOR_START]], -1
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[IV]]
 ; CHECK-NEXT:    store i8 [[FOR]], ptr [[GEP_DST]], align 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 0

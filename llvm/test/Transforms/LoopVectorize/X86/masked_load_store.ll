@@ -1132,6 +1132,14 @@ define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX512:       vec.epilog.vector.body:
 ; AVX512-NEXT:    [[INDEX12:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT15:%.*]], [[FOR_BODY]] ]
 ; AVX512-NEXT:    [[TMP41:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER]], i64 [[INDEX12]]
+; AVX512-NEXT:    [[WIDE_LOAD13:%.*]] = load <8 x i32>, ptr [[TMP41]], align 4, !alias.scope [[META11]]
+; AVX512-NEXT:    [[TMP31:%.*]] = icmp slt <8 x i32> [[WIDE_LOAD13]], splat (i32 100)
+; AVX512-NEXT:    [[TMP32:%.*]] = getelementptr double, ptr [[B]], i64 [[INDEX12]]
+; AVX512-NEXT:    [[WIDE_MASKED_LOAD14:%.*]] = call <8 x double> @llvm.masked.load.v8f64.p0(ptr [[TMP32]], i32 8, <8 x i1> [[TMP31]], <8 x double> poison), !alias.scope [[META14]]
+; AVX512-NEXT:    [[TMP33:%.*]] = sitofp <8 x i32> [[WIDE_LOAD13]] to <8 x double>
+; AVX512-NEXT:    [[TMP34:%.*]] = fadd <8 x double> [[WIDE_MASKED_LOAD14]], [[TMP33]]
+; AVX512-NEXT:    [[TMP35:%.*]] = getelementptr double, ptr [[A]], i64 [[INDEX12]]
+; AVX512-NEXT:    call void @llvm.masked.store.v8f64.p0(<8 x double> [[TMP34]], ptr [[TMP35]], i32 8, <8 x i1> [[TMP31]]), !alias.scope [[META16]], !noalias [[META18]]
 ; AVX512-NEXT:    [[INDEX_NEXT15]] = add nuw i64 [[INDEX12]], 8
 ; AVX512-NEXT:    [[TMP39:%.*]] = icmp eq i64 [[INDEX_NEXT15]], 10000
 ; AVX512-NEXT:    br i1 [[TMP39]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
@@ -1283,6 +1291,7 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX512:       for.inc:
 ; AVX512-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 16
 ; AVX512-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INDVARS_IV_NEXT]], 10000
+; AVX512-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]], !llvm.loop [[LOOP31:![0-9]+]]
 ; AVX512:       for.end:
 ; AVX512-NEXT:    ret void
 ;

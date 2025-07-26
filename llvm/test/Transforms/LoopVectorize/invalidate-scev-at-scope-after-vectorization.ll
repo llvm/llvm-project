@@ -54,6 +54,15 @@ define void @test_invalidate_scevs_at_scope(ptr %p) {
 ; CHECK-NEXT:    [[INDEX_NEXT8]] = add nuw i64 [[INDEX5]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT7]] = add <4 x i64> [[VEC_IND6]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT8]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK6:.*]], label %[[VECTOR_BODY3]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK6]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP7]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT_2:.*]], label %[[SCALAR_PH1]]
+; CHECK:       [[SCALAR_PH1]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL7:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK6]] ], [ 0, %[[EXIT_1]] ]
+; CHECK-NEXT:    br label %[[LOOP_2:.*]]
+; CHECK:       [[LOOP_2]]:
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i64 [ [[BC_RESUME_VAL7]], %[[SCALAR_PH1]] ], [ [[IV_2_NEXT:%.*]], %[[LOOP_2]] ]
 ; CHECK-NEXT:    [[IV_2_TRUNC:%.*]] = trunc i64 [[IV_2]] to i32
 ; CHECK-NEXT:    [[IV_2_NEXT]] = add i64 [[IV_2]], 1
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 [[IV_2]]

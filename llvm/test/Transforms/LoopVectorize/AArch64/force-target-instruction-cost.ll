@@ -102,7 +102,15 @@ define void @test_iv_cost(ptr %ptr.start, i8 %a, i64 %b) {
 ; CHECK-NEXT:    [[IND_END5:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[N_VEC3]]
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX4:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT10:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX4:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT6:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[NEXT_GEP5:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[INDEX4]]
+; CHECK-NEXT:    store <4 x i8> zeroinitializer, ptr [[NEXT_GEP5]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT6]] = add nuw i64 [[INDEX4]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT6]], [[N_VEC3]]
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N7:%.*]] = icmp eq i64 [[START]], [[N_VEC3]]
+; CHECK-NEXT:    br i1 [[CMP_N7]], label %[[EXIT_LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END1]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[START]], %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi ptr [ [[IND_END5]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END2]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[PTR_START]], %[[ITER_CHECK]] ]
