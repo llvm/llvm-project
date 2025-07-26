@@ -4776,21 +4776,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //     <32 x i8> @llvm.x86.vgf2p8affineqb.256(<32 x i8>, <32 x i8>, i8)
   //     <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8>, <64 x i8>, i8)
   //      Out                                    A          x          b
-  // where Out = A * x + b in GF(2) (but A and x are packed)
+  // where Out = A * x + b in GF(2) (N.B. Out, A and x are packed)
   //
   // Multiplication in GF(2) is equivalent to bitwise AND. However, the matrix
   // computation also includes a parity calculation.
   //
   // For the bitwise AND of bits V1 and V2, the exact shadow is:
   //     Out_Shadow =   (V1_Shadow & V2_Shadow)
-  //                  | (V1 & V2_Shadow)
+  //                  | (V1        & V2_Shadow)
   //                  | (V1_Shadow & V2_Shadow)
   //
-  // We approximate the shadow of gf2p8affine using:
-  //     Out_Shadow =   _mm512_gf2p8affine_epi64_epi8(x_Shadow, A_shadow, 0)
-  //                  | _mm512_gf2p8affine_epi64_epi8(x, A_shadow, 0)
-  //                  | _mm512_gf2p8affine_epi64_epi8(x_Shadow, A, 0)
-  //                  | _mm512_set1_epi8(b_Shadow)
+  // We approximate the shadow of gf2p8affineqb using:
+  //     Out_Shadow =   gf2p8affineqb(x_Shadow, A_shadow, 0)
+  //                  | gf2p8affineqb(x,        A_shadow, 0)
+  //                  | gf2p8affineqb(x_Shadow, A,        0)
+  //                  | set1_epi8(b_Shadow)
   //
   // This approximation has false negatives: if an intermediate dot-product
   // contains an even number of 1's, the parity is 0.
