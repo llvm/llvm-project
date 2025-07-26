@@ -23,9 +23,9 @@ define void @f1() {
 ; CHECK-NEXT:    store <2 x ptr> <ptr @a, ptr @a>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[BB3:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 2, [[MIDDLE_BLOCK]] ], [ 0, [[BB1:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, [[BB1:%.*]] ]
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[C_1_0:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[_TMP9:%.*]], [[BB2]] ]
