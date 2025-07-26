@@ -20,5 +20,8 @@ void bar(volatile int a) __attribute__((optnone)) {
 // CHECK: [[LOC]] = !DILocation(line: 0
 
 // With optimisations disabled the traps are not merged and retain accurate debug locations
-// CHECK: [[LOC2]] = !DILocation(line: 15, column: 9
-// CHECK: [[LOC3]] = !DILocation(line: 16, column: 9
+ // CHECK-DAG: [[SRC2:![0-9]+]] = !DILocation(line: 15, column: 9,
+ // CHECK-DAG: [[SRC3:![0-9]+]] = !DILocation(line: 16, column: 9,
+ // CHECK-DAG: [[LOC2]] = !DILocation(line: 0, scope: [[SCOPE2:![0-9]+]], inlinedAt: [[SRC2]])
+ // CHECK-DAG: [[LOC3]] = !DILocation(line: 0, scope: [[SCOPE3:![0-9]+]], inlinedAt: [[SRC3]])
+
