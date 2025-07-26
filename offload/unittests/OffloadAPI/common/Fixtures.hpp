@@ -9,6 +9,7 @@
 #include <OffloadAPI.h>
 #include <OffloadPrint.hpp>
 #include <gtest/gtest.h>
+#include <thread>
 
 #include "Environment.hpp"
 
@@ -55,6 +56,23 @@ inline std::string SanitizeString(const std::string &Str) {
       NewStr.begin(), NewStr.end(), [](char C) { return !std::isalnum(C); },
       '_');
   return NewStr;
+}
+
+template <typename Fn> inline void threadify(Fn body) {
+  std::vector<std::thread> Threads;
+  for (size_t I = 0; I < 20; I++) {
+    Threads.emplace_back(
+        [&body](size_t I) {
+          std::string ScopeMsg{"Thread #"};
+          ScopeMsg.append(std::to_string(I));
+          SCOPED_TRACE(ScopeMsg);
+          body(I);
+        },
+        I);
+  }
+  for (auto &T : Threads) {
+    T.join();
+  }
 }
 
 struct OffloadTest : ::testing::Test {
