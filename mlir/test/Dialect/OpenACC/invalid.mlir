@@ -483,15 +483,6 @@ acc.loop gang({static=%i64Value: i64, ) control(%iv : i32) = (%1 : i32) to (%2 :
 
 // -----
 
-func.func @fct1(%0 : !llvm.ptr) -> () {
-  // expected-error@+1 {{expected symbol reference @privatization_i32 to point to a private declaration}}
-  acc.serial private(@privatization_i32 -> %0 : !llvm.ptr) {
-  }
-  return
-}
-
-// -----
-
 // expected-error@+1 {{expect at least one of num, dim or static values}}
 acc.loop gang({}) {
   "test.openacc_dummy_op"() : () -> ()
@@ -831,3 +822,73 @@ func.func @acc_loop_container() {
 %value = memref.alloc() : memref<f32>
 // expected-error @below {{invalid data clause modifiers: readonly}}
 %0 = acc.create varPtr(%value : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier readonly,zero,capture,always>}
+
+// -----
+
+func.func @fct1(%0 : !llvm.ptr) -> () {
+  // expected-error @below {{expected symbol reference @privatization_i32 to point to a private declaration}}
+  %priv = acc.private varPtr(%0 : !llvm.ptr) varType(i32) recipe(@privatization_i32) -> !llvm.ptr
+  return
+}
+
+// -----
+
+acc.private.recipe @privatization_i32 : !llvm.ptr init {
+^bb0(%arg0: !llvm.ptr):
+  %c1 = arith.constant 1 : i32
+  %c0 = arith.constant 0 : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  llvm.store %c0, %0 : i32, !llvm.ptr
+  acc.yield %0 : !llvm.ptr
+}
+
+func.func @fct1(%0 : !llvm.ptr) -> () {
+  %priv = acc.private varPtr(%0 : !llvm.ptr) varType(i32) recipe(@privatization_i32) -> !llvm.ptr
+  // expected-error @below {{expected firstprivate as defining op}}
+  acc.serial firstprivate(%priv : !llvm.ptr) {
+  }
+  return
+}
+
+// -----
+
+acc.private.recipe @privatization_i32 : !llvm.ptr init {
+^bb0(%arg0: !llvm.ptr):
+  %c1 = arith.constant 1 : i32
+  %c0 = arith.constant 0 : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  llvm.store %c0, %0 : i32, !llvm.ptr
+  acc.yield %0 : !llvm.ptr
+}
+
+func.func @fct1(%0 : !llvm.ptr) -> () {
+  %priv = acc.private varPtr(%0 : !llvm.ptr) varType(i32) recipe(@privatization_i32) -> !llvm.ptr
+  // expected-error @below {{op private operand appears more than once}}
+  acc.serial private(%priv, %priv : !llvm.ptr, !llvm.ptr) {
+  }
+  return
+}
+
+// -----
+
+func.func @fct1(%0 : !llvm.ptr) -> () {
+  // expected-error @below {{op recipe expected for private}}
+  %priv = acc.private varPtr(%0 : !llvm.ptr) varType(i32) -> !llvm.ptr
+  return
+}
+
+// -----
+
+func.func @fct1(%0 : !llvm.ptr) -> () {
+  // expected-error @below {{op recipe expected for firstprivate}}
+  %priv = acc.firstprivate varPtr(%0 : !llvm.ptr) varType(i32) -> !llvm.ptr
+  return
+}
+
+// -----
+
+func.func @fct1(%0 : !llvm.ptr) -> () {
+  // expected-error @below {{op recipe expected for reduction}}
+  %priv = acc.reduction varPtr(%0 : !llvm.ptr) varType(i32) -> !llvm.ptr
+  return
+}
