@@ -72,6 +72,7 @@
 #  define _LIBCPP_ABI_NO_FILESYSTEM_INLINE_NAMESPACE
 #  define _LIBCPP_ABI_NO_ITERATOR_BASES
 #  define _LIBCPP_ABI_NO_RANDOM_DEVICE_COMPATIBILITY_LAYOUT
+#  define _LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER
 #  define _LIBCPP_ABI_OPTIMIZED_FUNCTION
 #  define _LIBCPP_ABI_REGEX_CONSTANTS_NONZERO
 #  define _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION
@@ -95,6 +96,15 @@
 // are deprecated.
 #  if defined(__FreeBSD__)
 #    define _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
+#  endif
+#endif
+
+// TODO(LLVM 22): Remove this check
+#if defined(_LIBCPP_ABI_NO_ITERATOR_BASES) && !defined(_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER)
+#  ifndef _LIBCPP_ONLY_NO_ITERATOR_BASES
+#    error "You probably want to define _LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER. This has been split out from"   \
+ " _LIBCPP_ABI_NO_ITERATOR_BASES to allow only removing the second iterator member, since they aren't really related." \
+ "If you actually want this ABI configuration, please define _LIBCPP_ONLY_NO_ITERATOR_BASES instead."
 #  endif
 #endif
 
