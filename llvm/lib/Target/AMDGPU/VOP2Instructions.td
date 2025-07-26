@@ -1904,7 +1904,7 @@ multiclass VOP2_Real_FULL_with_name_gfx11_gfx12<bits<6> op, string opName,
   VOP2_Real_FULL_with_name<GFX12Gen, op, opName, asmName>;
 
 multiclass VOP2_Real_e32_gfx11_gfx12<bits<6> op> :
-  VOP2Only_Real<GFX11Gen, op>, VOP2Only_Real<GFX12Gen, op>;
+  VOP2Only_Real_e32<GFX11Gen, op>, VOP2Only_Real_e32<GFX12Gen, op>;
 
 multiclass VOP3Only_Realtriple_gfx11_gfx12<bits<10> op> :
   VOP3Only_Realtriple<GFX11Gen, op>, VOP3Only_Realtriple<GFX12Gen, op>;
