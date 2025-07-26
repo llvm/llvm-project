@@ -270,14 +270,13 @@ define i32 @neg_range_int_comp(i32 %a, i32 %b, i32 %c, i32 %d) {
 ;
 ; GISEL-LABEL: neg_range_int_comp:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    orr w8, w3, #0x1
 ; GISEL-NEXT:    cmp w0, w2
-; GISEL-NEXT:    neg w8, w8
-; GISEL-NEXT:    ccmp w1, w8, #4, lt
+; GISEL-NEXT:    orr w8, w3, #0x1
+; GISEL-NEXT:    ccmn w1, w8, #4, lt
 ; GISEL-NEXT:    csel w0, w1, w0, gt
 ; GISEL-NEXT:    ret
   %dor = or i32 %d, 1
-  %negd = sub i32 0, %dor
+  %negd = sub nsw i32 0, %dor
   %cmp = icmp sgt i32 %b, %negd
   %cmp1 = icmp slt i32 %a, %c
   %or.cond = and i1 %cmp, %cmp1
@@ -373,14 +372,13 @@ define i32 @neg_range_int_comp2(i32 %a, i32 %b, i32 %c, i32 %d) {
 ;
 ; GISEL-LABEL: neg_range_int_comp2:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    orr w8, w3, #0x1
 ; GISEL-NEXT:    cmp w0, w2
-; GISEL-NEXT:    neg w8, w8
-; GISEL-NEXT:    ccmp w1, w8, #0, ge
+; GISEL-NEXT:    orr w8, w3, #0x1
+; GISEL-NEXT:    ccmn w1, w8, #0, ge
 ; GISEL-NEXT:    csel w0, w1, w0, lt
 ; GISEL-NEXT:    ret
   %dor = or i32 %d, 1
-  %negd = sub i32 0, %dor
+  %negd = sub nsw i32 0, %dor
   %cmp = icmp slt i32 %b, %negd
   %cmp1 = icmp sge i32 %a, %c
   %or.cond = and i1 %cmp, %cmp1
@@ -407,7 +405,7 @@ define i32 @neg_range_int_comp_u2(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; GISEL-NEXT:    csel w0, w1, w0, lo
 ; GISEL-NEXT:    ret
   %dor = or i32 %d, 1
-  %negd = sub i32 0, %dor
+  %negd = sub nsw i32 0, %dor
   %cmp = icmp ult i32 %b, %negd
   %cmp1 = icmp sgt i32 %a, %c
   %or.cond = and i1 %cmp, %cmp1
