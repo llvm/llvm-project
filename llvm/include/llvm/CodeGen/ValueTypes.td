@@ -330,6 +330,7 @@ def untyped   : ValueType<8,    231> { // Produces an untyped value
 }
 def funcref   : ValueType<0,    232>;  // WebAssembly's funcref type
 def externref : ValueType<0,    233>;  // WebAssembly's externref type
+def externref_nn : ValueType<0, 242>;  // WebAssembly's nonnull externref type
 def exnref    : ValueType<0,    234>;  // WebAssembly's exnref type
 def x86amx    : ValueType<8192, 235>;  // X86 AMX value
 def i64x8     : ValueType<512,  236>;  // 8 Consecutive GPRs (AArch64)
