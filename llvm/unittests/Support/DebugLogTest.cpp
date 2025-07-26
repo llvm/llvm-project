@@ -62,6 +62,27 @@ TEST(DebugLogTest, Basic) {
     EXPECT_THAT(count, Eq(1));
   }
 }
+
+TEST(DebugLogTest, StreamPrefix) {
+  llvm::DebugFlag = true;
+  static const char *DT[] = {"A", "B"};
+  setCurrentDebugTypes(DT, 2);
+
+  std::string str;
+  raw_string_ostream os(str);
+  std::string expected = "[Prefix] A:1 1\n[Prefix] A:1 2\n[Prefix] B:1 "
+                         "3\n[Prefix] B:1 4\n[Prefix] A:1 5";
+  {
+    llvm::impl::LogWithNewline ldbg_osB("Prefix", "B", 1, os);
+    llvm::impl::LogWithNewline ldbg_osA("Prefix", "A", 1, os);
+    ldbg_osA.stream() << "1\n2\n";
+    ldbg_osB.stream() << "3\n4\n";
+    ldbg_osA.stream() << "5";
+    EXPECT_EQ(os.str(), expected);
+  }
+  // After destructors, there was a pending newline for stream B.
+  EXPECT_EQ(os.str(), expected + "\n[Prefix] B:1 \n");
+}
 #else
 TEST(DebugLogTest, Basic) {
   // LDBG should be compiled out in NDEBUG, so just check it compiles and has
