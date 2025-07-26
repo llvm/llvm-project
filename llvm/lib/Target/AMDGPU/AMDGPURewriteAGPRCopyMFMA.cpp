@@ -206,19 +206,19 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
         continue;
 
       MachineOperand *Src2 = TII.getNamedOperand(*MFMA, AMDGPU::OpName::src2);
-      if (!Src2->isReg())
-        continue;
-
-      Register Src2Reg = Src2->getReg();
-      if (!Src2Reg.isVirtual())
-        continue;
+      Register Src2Reg;
+      if (Src2->isReg()) {
+        Src2Reg = Src2->getReg();
+        if (!Src2Reg.isVirtual())
+          continue;
+      }
 
       // FIXME: getMinimalPhysRegClass returns a nonsense AV_* subclass instead
       // of an AGPR or VGPR subclass, so we can't simply use the result on the
       // assignment.
 
       LLVM_DEBUG({
-        Register Src2PhysReg = VRM.getPhys(Src2->getReg());
+        Register Src2PhysReg = VRM.getPhys(Src2Reg);
         dbgs() << "Attempting to replace VGPR MFMA with AGPR version:"
                << " Dst=[" << printReg(VReg) << " => "
                << printReg(PhysReg, &TRI) << "], Src2=["
@@ -226,7 +226,7 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
                << printReg(Src2PhysReg, &TRI) << "]: " << *MFMA;
       });
 
-      const TargetRegisterClass *DstVirtRegRC = MRI.getRegClass(Src2->getReg());
+      const TargetRegisterClass *DstVirtRegRC = MRI.getRegClass(MFMADstReg);
       const TargetRegisterClass *NewDstConstraintRC =
           TII.getRegClass(TII.get(AGPROp), 0, &TRI, MF);
       const TargetRegisterClass *NewSrc2ConstraintRC = NewDstConstraintRC;
@@ -236,8 +236,8 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
                                                     MF) &&
              "expected src2 and dst to have same class constraint");
 
-      const TargetRegisterClass *Src2RC = MRI.getRegClass(Src2Reg);
-
+      // src2 and dst have the same physical class constraint; try to preserve
+      // the original src2 subclass if one were to exist.
       SmallVector<MachineInstr *, 4> DstRewriteCandidates;
 
       // We've found av = COPY (MFMA), and need to verify that we can trivially
@@ -267,8 +267,10 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
 
       // If the inputs are tied and the same register, we can shortcut and
       // directly replace the register.
-      if (Src2->getReg() != MFMADstReg ||
-          Src2->getSubReg() != DefMI->getOperand(1).getSubReg()) {
+      if (Src2Reg && (Src2Reg != MFMADstReg ||
+                      Src2->getSubReg() != DefMI->getOperand(1).getSubReg())) {
+        const TargetRegisterClass *Src2RC = MRI.getRegClass(Src2Reg);
+
         // If src2 and dst are different registers, we need to also reassign the
         // input to an available AGPR if it is compatible with all other uses.
         //
