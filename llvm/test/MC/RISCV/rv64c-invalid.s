@@ -13,7 +13,7 @@ c.ldsp  zero, 4(sp) # CHECK: :[[@LINE]]:9: error: register must be a GPR excludi
 
 # Out of range immediates
 
-## uimmlog2xlennonzero
+## uimmlog2xlen
 c.slli t0, 64 # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [0, 63]
 c.srli a0, -1 # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [0, 63]
 
