@@ -72,9 +72,9 @@ This document describes the available MLIR passes and their contracts.
 
 [include "MemRefPasses.md"]
 
-## 'mesh' Dialect Passes
+## 'shard' Dialect Passes
 
-[include "MeshPasses.md"]
+[include "ShardPasses.md"]
 
 ## 'ml\_program' Dialect Passes
 

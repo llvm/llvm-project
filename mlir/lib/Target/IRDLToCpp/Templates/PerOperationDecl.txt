@@ -175,6 +175,17 @@ public:
                     ::mlir::TypeRange resultTypes, 
                     ::mlir::ValueRange operands, 
                     ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
+
+  static __OP_CPP_NAME__ create(::mlir::OpBuilder &odsBuilder,
+                                ::mlir::Location location,
+                                ::mlir::TypeRange resultTypes,
+                                ::mlir::ValueRange operands,
+                                ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
+
+  static __OP_CPP_NAME__ create(::mlir::ImplicitLocOpBuilder &odsBuilder,
+                                ::mlir::TypeRange resultTypes,
+                                ::mlir::ValueRange operands,
+                                ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
 };
 
 

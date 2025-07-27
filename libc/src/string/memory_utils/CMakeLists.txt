@@ -9,6 +9,7 @@ add_header_library(
     aarch64/inline_memset.h
     arm/common.h
     arm/inline_memcpy.h
+    arm/inline_memset.h
     generic/aligned_access.h
     generic/byte_per_byte.h
     inline_bcmp.h
@@ -33,6 +34,7 @@ add_header_library(
     x86_64/inline_memmove.h
     x86_64/inline_memset.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.cstddef

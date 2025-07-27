@@ -248,9 +248,7 @@ void InstrInfoEmitter::emitOperandNameMappings(
   /// scan of the instructions below.
 
   // Map of operand names to their ID.
-  std::map<StringRef, unsigned> OperandNameToID;
-  // Map from operand name enum value -> ID.
-  std::vector<unsigned> OperandEnumToID;
+  MapVector<StringRef, unsigned> OperandNameToID;
 
   /// The keys of this map is a map which have OpName ID values as their keys
   /// and instruction operand indices as their values. The values of this map
@@ -278,16 +276,13 @@ void InstrInfoEmitter::emitOperandNameMappings(
   }
 
   const size_t NumOperandNames = OperandNameToID.size();
-  OperandEnumToID.reserve(NumOperandNames);
-  for (const auto &Op : OperandNameToID)
-    OperandEnumToID.push_back(Op.second);
 
   OS << "#ifdef GET_INSTRINFO_OPERAND_ENUM\n";
   OS << "#undef GET_INSTRINFO_OPERAND_ENUM\n";
   OS << "namespace llvm::" << Namespace << " {\n";
   OS << "enum class OpName {\n";
-  for (const auto &[I, Op] : enumerate(OperandNameToID))
-    OS << "  " << Op.first << " = " << I << ",\n";
+  for (const auto &[Op, I] : OperandNameToID)
+    OS << "  " << Op << " = " << I << ",\n";
   OS << "  NUM_OPERAND_NAMES = " << NumOperandNames << ",\n";
   OS << "}; // enum class OpName\n\n";
   OS << "LLVM_READONLY\n";
@@ -312,7 +307,7 @@ void InstrInfoEmitter::emitOperandNameMappings(
 
       // Emit a row of the OperandMap table.
       OS << "    {";
-      for (unsigned ID : OperandEnumToID) {
+      for (unsigned ID = 0; ID < NumOperandNames; ++ID) {
         auto Iter = OpList.find(ID);
         OS << (Iter != OpList.end() ? (int)Iter->second : -1) << ", ";
       }

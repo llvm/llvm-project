@@ -13,6 +13,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_ARM_INLINE_MEMCPY_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_ARM_INLINE_MEMCPY_H
 
+#include "src/__support/CPP/type_traits.h"     // always_false
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
 #include "src/__support/macros/optimization.h" // LIBC_LOOP_NOUNROLL
 #include "src/string/memory_utils/arm/common.h" // LIBC_ATTR_LIKELY, LIBC_ATTR_UNLIKELY
@@ -36,7 +37,7 @@ LIBC_INLINE void copy(void *dst, const void *src) {
   } else if constexpr (access == AssumeAccess::kUnknown) {
     memcpy_inline<bytes>(dst, src);
   } else {
-    static_assert(false);
+    static_assert(cpp::always_false<decltype(access)>, "Invalid AssumeAccess");
   }
 }
 
@@ -54,7 +55,7 @@ LIBC_INLINE void copy_block_and_bump_pointers(Ptr &dst, CPtr &src) {
       copy<kWordSize, access>(dst + offset, src + offset);
     }
   } else {
-    static_assert(false, "Invalid BlockOp");
+    static_assert(cpp::always_false<decltype(block_op)>, "Invalid BlockOp");
   }
   // In the 1, 2, 4 byte copy case, the compiler can fold pointer offsetting
   // into the load/store instructions.
@@ -102,6 +103,7 @@ copy_bytes_and_bump_pointers(Ptr &dst, CPtr &src, size_t size) {
         copy_bytes_and_bump_pointers(dst, src, offset);
         size -= offset;
       }
+    constexpr AssumeAccess kAligned = AssumeAccess::kAligned;
     const auto src_alignment = distance_to_align_down<kWordSize>(src);
     if (src_alignment == 0)
       LIBC_ATTR_LIKELY {
@@ -110,14 +112,11 @@ copy_bytes_and_bump_pointers(Ptr &dst, CPtr &src, size_t size) {
         // load/store multiple (LDM, STM), each of 4 words. This requires more
         // registers so additional push/pop are needed but the speedup is worth
         // it.
-        consume_by_block<64, BlockOp::kFull, AssumeAccess::kAligned>(dst, src,
-                                                                     size);
+        consume_by_block<64, BlockOp::kFull, kAligned>(dst, src, size);
         // Then we use blocks of 4 word load/store.
-        consume_by_block<16, BlockOp::kByWord, AssumeAccess::kAligned>(dst, src,
-                                                                       size);
+        consume_by_block<16, BlockOp::kByWord, kAligned>(dst, src, size);
         // Then we use word by word copy.
-        consume_by_block<4, BlockOp::kByWord, AssumeAccess::kAligned>(dst, src,
-                                                                      size);
+        consume_by_block<4, BlockOp::kByWord, kAligned>(dst, src, size);
       }
     else {
       // `dst` is aligned but `src` is not.
@@ -128,7 +127,7 @@ copy_bytes_and_bump_pointers(Ptr &dst, CPtr &src, size_t size) {
             src_alignment == 2
                 ? load_aligned<uint32_t, uint16_t, uint16_t>(src)
                 : load_aligned<uint32_t, uint8_t, uint16_t, uint8_t>(src);
-        copy<kWordSize, AssumeAccess::kAligned>(dst, &value);
+        copy<kWordSize, kAligned>(dst, &value);
         dst += kWordSize;
         src += kWordSize;
         size -= kWordSize;
@@ -173,7 +172,7 @@ copy_bytes_and_bump_pointers(Ptr &dst, CPtr &src, size_t size) {
   // accesses through the use of load/store multiple (LDM, STM) and load/store
   // double (LDRD, STRD) instructions are generally not supported and can fault.
   // By forcing decomposition of 64 bytes copy into word by word copy, the
-  // compiler can use the first load to prefetch memory:
+  // compiler uses a load to prefetch the next cache line:
   //   ldr  r3, [r1, #64]!  <- prefetch next cache line
   //   str  r3, [r0]
   //   ldr  r3, [r1, #0x4]
@@ -183,11 +182,10 @@ copy_bytes_and_bump_pointers(Ptr &dst, CPtr &src, size_t size) {
   //   str  r3, [r0, #0x3c]
   // This is a bit detrimental for sizes between 64 and 256 (less than 10%
   // penalty) but the prefetch yields better throughput for larger copies.
-  consume_by_block<64, BlockOp::kByWord, AssumeAccess::kUnknown>(dst, src,
-                                                                 size);
-  consume_by_block<16, BlockOp::kByWord, AssumeAccess::kUnknown>(dst, src,
-                                                                 size);
-  consume_by_block<4, BlockOp::kByWord, AssumeAccess::kUnknown>(dst, src, size);
+  constexpr AssumeAccess kUnknown = AssumeAccess::kUnknown;
+  consume_by_block<64, BlockOp::kByWord, kUnknown>(dst, src, size);
+  consume_by_block<16, BlockOp::kByWord, kUnknown>(dst, src, size);
+  consume_by_block<4, BlockOp::kByWord, kUnknown>(dst, src, size);
   if (size & 1)
     copy_block_and_bump_pointers<1>(dst, src);
   if (size & 2)

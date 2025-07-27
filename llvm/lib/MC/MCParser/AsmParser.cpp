@@ -3079,7 +3079,6 @@ bool AsmParser::parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated) {
 bool AsmParser::parseDirectiveReloc(SMLoc DirectiveLoc) {
   const MCExpr *Offset;
   const MCExpr *Expr = nullptr;
-  SMLoc OffsetLoc = Lexer.getTok().getLoc();
 
   if (parseExpression(Offset))
     return true;
@@ -3105,13 +3104,7 @@ bool AsmParser::parseDirectiveReloc(SMLoc DirectiveLoc) {
   if (parseEOL())
     return true;
 
-  const MCTargetAsmParser &MCT = getTargetParser();
-  const MCSubtargetInfo &STI = MCT.getSTI();
-  if (std::optional<std::pair<bool, std::string>> Err =
-          getStreamer().emitRelocDirective(*Offset, Name, Expr, DirectiveLoc,
-                                           STI))
-    return Error(Err->first ? NameLoc : OffsetLoc, Err->second);
-
+  getStreamer().emitRelocDirective(*Offset, Name, Expr, NameLoc);
   return false;
 }
 
@@ -3411,17 +3404,16 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, uint8_t ValueSize) {
   const MCSection *Section = getStreamer().getCurrentSectionOnly();
   assert(Section && "must have section to emit alignment");
 
-  if (HasFillExpr && FillExpr != 0 && Section->isVirtualSection()) {
+  if (HasFillExpr && FillExpr != 0 && Section->isBssSection()) {
     ReturnVal |=
-        Warning(FillExprLoc, "ignoring non-zero fill value in " +
-                                 Section->getVirtualSectionKind() +
-                                 " section '" + Section->getName() + "'");
+        Warning(FillExprLoc, "ignoring non-zero fill value in BSS section '" +
+                                 Section->getName() + "'");
     FillExpr = 0;
   }
 
   // Check whether we should use optimal code alignment for this .align
   // directive.
-  if (Section->useCodeAlign() && !HasFillExpr) {
+  if (MAI.useCodeAlign(*Section) && !HasFillExpr) {
     getStreamer().emitCodeAlignment(
         Align(Alignment), &getTargetParser().getSTI(), MaxBytesToFill);
   } else {
@@ -4101,27 +4093,30 @@ bool AsmParser::parseDirectiveCVFPOData() {
 }
 
 /// parseDirectiveCFISections
-/// ::= .cfi_sections section [, section]
+/// ::= .cfi_sections section [, section][, section]
 bool AsmParser::parseDirectiveCFISections() {
   StringRef Name;
   bool EH = false;
   bool Debug = false;
+  bool SFrame = false;
 
   if (!parseOptionalToken(AsmToken::EndOfStatement)) {
     for (;;) {
       if (parseIdentifier(Name))
-        return TokError("expected .eh_frame or .debug_frame");
+        return TokError("expected .eh_frame, .debug_frame, or .sframe");
       if (Name == ".eh_frame")
         EH = true;
       else if (Name == ".debug_frame")
         Debug = true;
+      else if (Name == ".sframe")
+        SFrame = true;
       if (parseOptionalToken(AsmToken::EndOfStatement))
         break;
       if (parseComma())
         return true;
     }
   }
-  getStreamer().emitCFISections(EH, Debug);
+  getStreamer().emitCFISections(EH, Debug, SFrame);
   return false;
 }
 
