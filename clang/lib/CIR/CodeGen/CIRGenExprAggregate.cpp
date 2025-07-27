@@ -438,8 +438,7 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
     // Push a destructor if necessary.
     // FIXME: if we have an array of structures, all explicitly
     // initialized, we can end up pushing a linear number of cleanups.
-    if (QualType::DestructionKind dtorKind =
-            field->getType().isDestructedType()) {
+    if (field->getType().isDestructedType()) {
       cgf.cgm.errorNYI(e->getSourceRange(),
                        "visitCXXParenListOrInitListExpr destructor");
       return;
