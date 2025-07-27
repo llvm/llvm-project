@@ -93,6 +93,10 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- The :program:`check_clang_tidy.py` tool now recognizes the ``-std`` argument
+  when run over C files. If ``-std`` is not specified, it defaults to
+  ``c99-or-later``.
+
 - The :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` scripts
   now run checks in parallel by default using all available hardware threads.
   Both scripts display the number of threads being used in their output.
