@@ -361,7 +361,9 @@ void MCObjectStreamer::emitInstToData(const MCInst &Inst,
     // instruction cannot be resolved at assemble-time.
     if (!MarkedLinkerRelaxable) {
       MarkedLinkerRelaxable = true;
-      getCurrentSectionOnly()->setLinkerRelaxable();
+      auto *Sec = getCurrentSectionOnly();
+      if (!Sec->isLinkerRelaxable())
+        Sec->setFirstLinkerRelaxable(F->getLayoutOrder());
       newFragment();
     }
   }
