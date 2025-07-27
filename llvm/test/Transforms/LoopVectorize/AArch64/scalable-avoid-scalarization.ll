@@ -41,11 +41,9 @@ define void @test_no_scalarization(ptr %a, ptr noalias %b, i32 %idx, i32 %n) #0 
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[IDX]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i64, ptr [[A:%.*]], <vscale x 2 x i32> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 2 x ptr> [[TMP15]], i32 0
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr double, ptr [[TMP16]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x double>, ptr [[TMP17]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x double>, ptr [[TMP16]], align 8
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i64, ptr [[B:%.*]], i32 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr double, ptr [[TMP18]], i32 0
-; CHECK-NEXT:    store <vscale x 2 x double> [[WIDE_LOAD]], ptr [[TMP19]], align 8
+; CHECK-NEXT:    store <vscale x 2 x double> [[WIDE_LOAD]], ptr [[TMP18]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP7]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i32> [[VEC_IND]], [[DOTSPLAT2]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]

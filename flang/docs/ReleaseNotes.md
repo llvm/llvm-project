@@ -24,6 +24,8 @@ page](https://llvm.org/releases/).
 
 ## Major New Features
 
+* Support for LOWER= argument for C_F_POINTER.
+
 ## Bug Fixes
 
 ## Non-comprehensive list of changes in this release
