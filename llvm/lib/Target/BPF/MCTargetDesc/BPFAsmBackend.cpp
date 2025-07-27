@@ -34,6 +34,7 @@ public:
   createObjectTargetWriter() const override;
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
+  std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
@@ -52,6 +53,18 @@ MCFixupKindInfo BPFAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   assert(unsigned(Kind - FirstTargetFixupKind) < BPF::NumTargetFixupKinds &&
          "Invalid kind!");
   return Infos[Kind - FirstTargetFixupKind];
+}
+
+std::optional<MCFixupKind> BPFAsmBackend::getFixupKind(StringRef Name) const {
+  if (Name == "FK_SecRel_8")
+    return FK_SecRel_8;
+  if (Name == "FK_BPF_PCRel_4")
+    return BPF::FK_BPF_PCRel_4;
+  if (Name == "FK_Data_8")
+    return FK_Data_8;
+  if (Name == "FK_Data_4")
+    return FK_Data_4;
+  return std::nullopt;
 }
 
 bool BPFAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
