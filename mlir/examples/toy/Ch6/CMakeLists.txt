@@ -39,7 +39,6 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include/)
 target_link_libraries(toyc-ch6
   PRIVATE
-    MLIRRegisterEverything
     MLIRAnalysis
     MLIRBuiltinToLLVMIRTranslation
     MLIRCallInterfaces
@@ -53,8 +52,11 @@ target_link_libraries(toyc-ch6
     MLIRMemRefDialect
     MLIRParser
     MLIRPass
+    MLIRRegisterAllDialects
+    MLIRRegisterAllExtensions
+    MLIRRegisterAllPasses
     MLIRSideEffectInterfaces
     MLIRSupport
     MLIRTargetLLVMIRExport
     MLIRTransforms
-    )
+  )

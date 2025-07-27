@@ -11,7 +11,7 @@ llvm_update_compile_flags(mlir-query)
 mlir_target_link_libraries(mlir-query
   PRIVATE
   MLIRQueryLib
-  MLIRRegisterEverything
+  MLIRRegisterAllDialects
   )
 target_link_libraries(mlir-query PRIVATE ${test_libs})
 

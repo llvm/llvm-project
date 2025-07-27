@@ -16,7 +16,7 @@ mlir_target_link_libraries(MLIRExecutionEngineTests
   MLIRArithToLLVM
   MLIRMemRefToLLVM
   MLIRReconcileUnrealizedCasts
-  MLIRRegisterEverything
+  MLIRRegisterAllDialects
 )
 target_link_libraries(MLIRExecutionEngineTests
   PRIVATE

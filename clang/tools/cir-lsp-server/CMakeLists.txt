@@ -5,18 +5,19 @@ set(LIBS
   ${test_libs}
   clangCIR
   clangCIRLoweringDirectToLLVM
-  MLIRCIR
   MLIRAffineAnalysis
   MLIRAnalysis
+  MLIRCIR
   MLIRDialect
+  MLIRIR
   MLIRLspServerLib
   MLIRParser
   MLIRPass
-  MLIRTransforms
-  MLIRTransformUtils
+  MLIRRegisterAllDialects
+  MLIRRegisterAllPasses
   MLIRSupport
-  MLIRIR
-  MLIRRegisterEverything
+  MLIRTransformUtils
+  MLIRTransforms
   )
 
 add_mlir_tool(cir-lsp-server

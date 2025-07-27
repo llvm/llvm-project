@@ -25,13 +25,30 @@ get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
 get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
 
-add_mlir_library(MLIRRegisterEverything
-  InitAllDialects.cpp
-  InitAllExtensions.cpp
-  InitAllPasses.cpp
+add_mlir_library(MLIRRegisterAllDialects
+  RegisterAllDialects.cpp
+
+  PARTIAL_SOURCES_INTENDED
 
   LINK_LIBS PUBLIC
   ${dialect_libs}
+  )
+
+add_mlir_library(MLIRRegisterAllPasses
+  RegisterAllPasses.cpp
+
+  PARTIAL_SOURCES_INTENDED
+
+  LINK_LIBS PUBLIC
+  ${dialect_libs} # Some passes are part of the dialect libs
   ${conversion_libs}
+  )
+
+add_mlir_library(MLIRRegisterAllExtensions
+  RegisterAllExtensions.cpp
+
+  PARTIAL_SOURCES_INTENDED
+
+  LINK_LIBS PUBLIC
   ${extension_libs}
   )

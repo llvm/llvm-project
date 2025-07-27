@@ -64,7 +64,9 @@ endif()
 set(LIBS
 
   MLIROptLib
-  MLIRRegisterEverything
+  MLIRRegisterAllDialects
+  MLIRRegisterAllExtensions
+  MLIRRegisterAllPasses
 
   # TODO: Remove when registerAllGPUToLLVMIRTranslations is no longer
   # registered directly in mlir-opt.cpp.

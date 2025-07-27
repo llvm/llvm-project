@@ -5,7 +5,7 @@ add_mlir_unittest(MLIRTargetLLVMTests
   SerializeROCDLTarget.cpp
   SerializeToLLVMBitcode.cpp
 DEPENDS
-  MLIRRegisterEverything
+  MLIRRegisterAllDialects
 )
 
 mlir_target_link_libraries(MLIRTargetLLVMTests

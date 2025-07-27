@@ -7,13 +7,13 @@ set(LIBS
   MLIRAnalysis
   MLIRCastInterfaces
   MLIRDialect
+  MLIRIR
   MLIRParser
   MLIRPass
-  MLIRTransforms
-  MLIRTransformUtils
+  MLIRRegisterAllDialects
   MLIRSupport
-  MLIRIR
-  MLIRRegisterEverything
+  MLIRTransformUtils
+  MLIRTransforms
   )
 
 include_directories(../../../clang/include)

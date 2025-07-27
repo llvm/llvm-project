@@ -8,7 +8,9 @@ add_mlir_upstream_c_api_library(MLIRCAPIRegisterEverything
 
   MLIRBuiltinToLLVMIRTranslation
   MLIRCAPIIR
-  MLIRLLVMToLLVMIRTranslation
   MLIRCAPITransforms
-  MLIRRegisterEverything
+  MLIRLLVMToLLVMIRTranslation
+  MLIRRegisterAllDialects
+  MLIRRegisterAllExtensions
+  MLIRRegisterAllPasses
 )

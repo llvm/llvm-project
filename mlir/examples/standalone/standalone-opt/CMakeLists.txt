@@ -1,9 +1,10 @@
 set(LIBS
-        MLIRArithDialect
-        MLIROptLib
-        MLIRStandalone
-        MLIRRegisterEverything
-        )
+    MLIRArithDialect
+    MLIROptLib
+    MLIRRegisterAllDialects
+    MLIRRegisterAllPasses
+    MLIRStandalone
+  )
 add_llvm_executable(standalone-opt standalone-opt.cpp)
 
 llvm_update_compile_flags(standalone-opt)

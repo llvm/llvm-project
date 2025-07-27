@@ -2,11 +2,13 @@ set(LIBS
   MLIRAnalysis
   MLIRIR
   MLIRParser
+  MLIRRegisterAllDialects
+  MLIRRegisterAllExtensions
+  MLIRRegisterAllPasses
   MLIRSupport
   MLIRTransformDialect
   MLIRTransformDialectTransforms
   MLIRTransforms
-  MLIRRegisterEverything
 )
 
 add_mlir_tool(mlir-transform-opt

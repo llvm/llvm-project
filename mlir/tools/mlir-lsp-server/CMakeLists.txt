@@ -35,7 +35,9 @@ endif()
 set(LIBS
   MLIRLspServerLib
 
-  MLIRRegisterEverything
+  MLIRRegisterAllDialects
+  MLIRRegisterAllExtensions
+  MLIRRegisterAllPasses
   )
 
 add_mlir_tool(mlir-lsp-server

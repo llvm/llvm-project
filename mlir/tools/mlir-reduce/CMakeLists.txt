@@ -6,7 +6,8 @@ endif()
 
 set(LIBS
   MLIRReduceLib
-  MLIRRegisterEverything
+  MLIRRegisterAllDialects
+  MLIRRegisterAllPasses
   )
 
 add_mlir_tool(mlir-reduce
