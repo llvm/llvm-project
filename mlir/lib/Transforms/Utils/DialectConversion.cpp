@@ -1759,6 +1759,12 @@ void ConversionPatternRewriter::replaceOp(Operation *op, ValueRange newValues) {
     impl->logger.startLine()
         << "** Replace : '" << op->getName() << "'(" << op << ")\n";
   });
+
+  // If the current insertion point is before the erased operation, we adjust
+  // the insertion point to be after the operation.
+  if (getInsertionPoint() == op->getIterator())
+    setInsertionPointAfter(op);
+
   SmallVector<SmallVector<Value>> newVals =
       llvm::map_to_vector(newValues, [](Value v) -> SmallVector<Value> {
         return v ? SmallVector<Value>{v} : SmallVector<Value>();
@@ -1774,6 +1780,12 @@ void ConversionPatternRewriter::replaceOpWithMultiple(
     impl->logger.startLine()
         << "** Replace : '" << op->getName() << "'(" << op << ")\n";
   });
+
+  // If the current insertion point is before the erased operation, we adjust
+  // the insertion point to be after the operation.
+  if (getInsertionPoint() == op->getIterator())
+    setInsertionPointAfter(op);
+
   impl->replaceOp(op, std::move(newValues));
 }
 
@@ -1782,6 +1794,12 @@ void ConversionPatternRewriter::eraseOp(Operation *op) {
     impl->logger.startLine()
         << "** Erase   : '" << op->getName() << "'(" << op << ")\n";
   });
+
+  // If the current insertion point is before the erased operation, we adjust
+  // the insertion point to be after the operation.
+  if (getInsertionPoint() == op->getIterator())
+    setInsertionPointAfter(op);
+
   SmallVector<SmallVector<Value>> nullRepls(op->getNumResults(), {});
   impl->replaceOp(op, std::move(nullRepls));
 }
@@ -1887,6 +1905,11 @@ void ConversionPatternRewriter::inlineBlockBefore(Block *source, Block *dest,
     while (!source->empty())
       moveOpBefore(&source->front(), dest, before);
   }
+
+  // If the current insertion point is within the source block, adjust the
+  // insertion point to the destination block.
+  if (getInsertionBlock() == source)
+    setInsertionPoint(dest, getInsertionPoint());
 
   // Erase the source block.
   eraseBlock(source);
