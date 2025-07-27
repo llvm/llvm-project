@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_BLOCKSTORE_H
 #define LLVM_LIBC_SRC___SUPPORT_BLOCKSTORE_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/type_traits.h"
@@ -16,7 +17,6 @@
 #include "src/__support/macros/config.h"
 
 #include <stddef.h>
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

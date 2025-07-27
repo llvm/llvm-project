@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,OPT %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,OPT %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=iceland -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,OPT %s
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,OPTNONE %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji < %s | FileCheck -enable-var-scope --check-prefixes=GCN,OPT %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=hawaii < %s | FileCheck -enable-var-scope --check-prefixes=GCN,OPT %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=iceland < %s | FileCheck -enable-var-scope --check-prefixes=GCN,OPT %s
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa -mcpu=fiji < %s | FileCheck -enable-var-scope --check-prefixes=GCN,OPTNONE %s
 
 ; There are no stack objects, but still a private memory access. The
 ; private access regiters need to be correctly initialized anyway, and

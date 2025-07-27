@@ -75,6 +75,12 @@ public:
     return getConstant(loc, cir::IntAttr::get(ty, value));
   }
 
+  mlir::Value getUnsignedInt(mlir::Location loc, uint64_t val,
+                             unsigned numBits) {
+    auto type = cir::IntType::get(getContext(), numBits, /*isSigned=*/false);
+    return getConstAPInt(loc, type, llvm::APInt(numBits, val));
+  }
+
   // Creates constant null value for integral type ty.
   cir::ConstantOp getNullValue(mlir::Type ty, mlir::Location loc) {
     return getConstant(loc, getZeroInitAttr(ty));
