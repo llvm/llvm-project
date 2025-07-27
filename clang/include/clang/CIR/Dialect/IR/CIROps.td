@@ -2823,6 +2823,47 @@ def CIR_ComplexSubOp : CIR_Op<"complex.sub", [
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// ComplexMulOp
+//===----------------------------------------------------------------------===//
+
+def CIR_ComplexRangeKind : CIR_I32EnumAttr<
+  "ComplexRangeKind", "complex multiplication and division implementation", [
+    I32EnumAttrCase<"Full", 0, "full">,
+    I32EnumAttrCase<"Improved", 1, "improved">,
+    I32EnumAttrCase<"Promoted", 2, "promoted">,
+    I32EnumAttrCase<"Basic", 3, "basic">,
+    I32EnumAttrCase<"None", 4, "none">
+]>;
+
+def CIR_ComplexMulOp : CIR_Op<"complex.mul", [
+  Pure, SameOperandsAndResultType
+]> {
+  let summary = "Complex multiplication";
+  let description = [{
+    The `cir.complex.mul` operation takes two complex numbers and returns
+    their product.
+
+    Example:
+
+    ```mlir
+    %2 = cir.complex.mul %0, %1 range(basic) : !cir.complex<!cir.float>
+    %2 = cir.complex.mul %0, %1 range(full) : !cir.complex<!cir.float>
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_ComplexType:$lhs,
+    CIR_ComplexType:$rhs,
+    CIR_ComplexRangeKind:$range
+  );
+
+  let results = (outs CIR_ComplexType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs `range` `(` $range `)` `:` qualified(type($result)) attr-dict
+  }];
+}
 
 //===----------------------------------------------------------------------===//
 // Bit Manipulation Operations
