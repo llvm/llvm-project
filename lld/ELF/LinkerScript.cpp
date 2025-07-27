@@ -46,12 +46,6 @@ static bool isSectionPrefix(StringRef prefix, StringRef name) {
   return name.consume_front(prefix) && (name.empty() || name[0] == '.');
 }
 
-// If name starts with prefix, trim the prefix and return true.
-// Otherwise, leave the name unchanged and return false.
-static bool trimSectionPrefix(StringRef prefix, StringRef &name) {
-  return name.consume_front(prefix) && (name.empty() || name[0] == '.');
-}
-
 StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
   // This is for --emit-relocs and -r. If .text.foo is emitted as .text.bar, we
   // want to emit .rela.text.foo as .rela.text.bar for consistency (this is not
@@ -117,28 +111,34 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
 
   for (auto [index, v] : llvm::enumerate(dataSectionPrefixes)) {
     StringRef secName = s->name;
-    if (trimSectionPrefix(v, secName)) {
-      if (!ctx.arg.zKeepDataSectionPrefix)
-        return v;
-      if (isSectionPrefix(".hot", secName))
-        return s->name.substr(0, v.size() + 4);
-      if (isSectionPrefix(".unlikely", secName))
-        return s->name.substr(0, v.size() + 9);
-      // For .rodata,  a section could be`.rodata.cst<N>.hot.` for constant
-      // pool or  `rodata.str<N>.hot.` for string literals.
-      if (index == 2) {
-        // The reason to specialize this path is to spell out .rodata.hot and
-        // .rodata.unlikely as string literals for StringRef lifetime
-        // considerations. We cannot use the pattern above to get substr from
-        // section names.
-        if (s->name.ends_with(".hot."))
-          return ".rodata.hot";
-
-        if (s->name.ends_with(".unlikely."))
-          return ".rodata.unlikely";
-      }
-      return v;
+    if (!secName.consume_front(v))
+      continue;
+    if (!secName.empty() && secName[0] != '.') {
+      continue;
     }
+
+    // The section name starts with 'v', and the remaining string is either
+    // empty or starts with a '.' character. If keep-data-section-prefix is
+    // false, map s to output section with name 'v'.
+    if (!ctx.arg.zKeepDataSectionPrefix)
+      return v;
+    // Preserve .hot or .unlikely suffixes in data sections with
+    // keep-data-section-prefix=true.
+    if (isSectionPrefix(".hot", secName))
+      return s->name.substr(0, v.size() + 4);
+    if (isSectionPrefix(".unlikely", secName))
+      return s->name.substr(0, v.size() + 9);
+    if (index == 2) {
+      // Place input .rodata.str<N>.hot. or .rodata.cst<N>.hot. into the
+      // .rodata.hot section.
+      if (s->name.ends_with(".hot."))
+        return ".rodata.hot";
+      // Place input .rodata.str<N>.hot. or .rodata.cst<N>.unlikely. into the
+      // .rodata.unlikely section.
+      if (s->name.ends_with(".unlikely."))
+        return ".rodata.unlikely";
+    }
+    return v;
   }
 
   for (StringRef v :

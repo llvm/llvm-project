@@ -77,8 +77,8 @@
 # BASIC:         [Nr] Name              Type            {{.*}}   Size              
 # BASIC:         [ 1] .text       
 # BASIC-NEXT:    [ 2] .data.rel.ro      PROGBITS        {{.*}}   00000f
-# BASIC-NEXT:    [ 3] .bss.rel.ro       NOBITS          {{.*}}   000008
-# BASIC-NEXT:    [ 4] .relro_padding    NOBITS          {{.*}}   000e20
+# BASIC-NEXT:    [ 3] .bss.rel.ro       NOBITS          {{.*}}   000002
+# BASIC-NEXT:    [ 4] .relro_padding    NOBITS          {{.*}}   000e26
 # BASIC-NEXT:    [ 5] .rodata           PROGBITS        {{.*}}   000006
 # BASIC-NEXT:    [ 6] .data             PROGBITS        {{.*}}   000004
 # BASIC-NEXT:    [ 7] .bss              NOBITS          {{.*}}  000004
@@ -88,8 +88,8 @@
 # KEEP-NEXT:  [ 2] .data.rel.ro             PROGBITS        {{.*}} 000009
 # KEEP-NEXT:  [ 3] .data.rel.ro.hot         PROGBITS        {{.*}} 000004
 # KEEP-NEXT:  [ 4] .data.rel.ro.unlikely    PROGBITS        {{.*}} 000002
-# KEEP-NEXT:  [ 5] .bss.rel.ro              NOBITS          {{.*}} 000008
-# KEEP-NEXT:  [ 6] .relro_padding           NOBITS          {{.*}} 000e20
+# KEEP-NEXT:  [ 5] .bss.rel.ro              NOBITS          {{.*}} 000002
+# KEEP-NEXT:  [ 6] .relro_padding           NOBITS          {{.*}} 000e26
 # KEEP-NEXT:  [ 7] .rodata                  PROGBITS        {{.*}} 000002
 # KEEP-NEXT:  [ 8] .rodata.hot              PROGBITS        {{.*}} 000002
 # KEEP-NEXT:  [ 9] .rodata.unlikely         PROGBITS        {{.*}} 000002
@@ -165,12 +165,6 @@ _start:
 .section .bss.split.d,"aw"
   .byte 0
 
-.section .bss.rel.ro, "aw"
-  .space 2
-.section .bss.rel.ro, "aw"
-  .space 2
-.section .bss.rel.ro, "aw"
-  .space 2
 .section .bss.rel.ro, "aw"
   .space 2
 
