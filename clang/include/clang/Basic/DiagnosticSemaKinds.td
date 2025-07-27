@@ -12910,6 +12910,15 @@ def err_sycl_special_type_num_init_method : Error<
   "types with 'sycl_special_class' attribute must have one and only one '__init' "
   "method defined">;
 
+// SYCL external attribute diagnostics
+def err_sycl_attribute_invalid_linkage : Error<
+  "'clang::sycl_external' can only be applied to functions with external"
+  " linkage">;
+def err_sycl_attribute_invalid_main : Error<
+  "'clang::sycl_external' cannot be applied to the 'main' function">;
+def err_sycl_attribute_invalid_deleted_function : Error<
+  "'clang::sycl_external' cannot be applied to an explicitly deleted function">;
+
 // SYCL kernel entry point diagnostics
 def err_sycl_entry_point_invalid : Error<
   "'sycl_kernel_entry_point' attribute cannot be applied to a"
