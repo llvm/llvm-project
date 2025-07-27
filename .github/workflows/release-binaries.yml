@@ -23,6 +23,7 @@ on:
           - ubuntu-22.04-arm
           - macos-13
           - macos-14
+          - windows-2022
 
   workflow_call:
     inputs:
