@@ -22,21 +22,18 @@ define void @fmin32(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4096 x float], ptr [[INPUT1]], i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw float, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw float, ptr [[TMP2]], i32 4
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x float>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [4096 x float], ptr [[INPUT2]], i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw float, ptr [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw float, ptr [[TMP5]], i32 4
-; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x float>, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x float> @llvm.minimumnum.v4f32(<4 x float> [[WIDE_LOAD]], <4 x float> [[WIDE_LOAD6]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <4 x float> @llvm.minimumnum.v4f32(<4 x float> [[WIDE_LOAD5]], <4 x float> [[WIDE_LOAD7]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [4096 x float], ptr [[OUTPUT]], i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw float, ptr [[TMP10]], i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw float, ptr [[TMP10]], i32 4
-; CHECK-NEXT:    store <4 x float> [[TMP8]], ptr [[TMP11]], align 4
+; CHECK-NEXT:    store <4 x float> [[TMP8]], ptr [[TMP10]], align 4
 ; CHECK-NEXT:    store <4 x float> [[TMP9]], ptr [[TMP12]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
@@ -103,21 +100,18 @@ define void @fmax32(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4096 x float], ptr [[INPUT1]], i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw float, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw float, ptr [[TMP2]], i32 4
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x float>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [4096 x float], ptr [[INPUT2]], i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw float, ptr [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw float, ptr [[TMP5]], i32 4
-; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x float>, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x float> @llvm.maximumnum.v4f32(<4 x float> [[WIDE_LOAD]], <4 x float> [[WIDE_LOAD6]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <4 x float> @llvm.maximumnum.v4f32(<4 x float> [[WIDE_LOAD5]], <4 x float> [[WIDE_LOAD7]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [4096 x float], ptr [[OUTPUT]], i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw float, ptr [[TMP10]], i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw float, ptr [[TMP10]], i32 4
-; CHECK-NEXT:    store <4 x float> [[TMP8]], ptr [[TMP11]], align 4
+; CHECK-NEXT:    store <4 x float> [[TMP8]], ptr [[TMP10]], align 4
 ; CHECK-NEXT:    store <4 x float> [[TMP9]], ptr [[TMP12]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
@@ -184,21 +178,18 @@ define void @fmin64(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4096 x double], ptr [[INPUT1]], i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw double, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw double, ptr [[TMP2]], i32 2
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <2 x double>, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [4096 x double], ptr [[INPUT2]], i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw double, ptr [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw double, ptr [[TMP5]], i32 2
-; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x double>, ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x double>, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <2 x double>, ptr [[TMP7]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> [[WIDE_LOAD]], <2 x double> [[WIDE_LOAD6]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> [[WIDE_LOAD5]], <2 x double> [[WIDE_LOAD7]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [4096 x double], ptr [[OUTPUT]], i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw double, ptr [[TMP10]], i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw double, ptr [[TMP10]], i32 2
-; CHECK-NEXT:    store <2 x double> [[TMP8]], ptr [[TMP11]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP8]], ptr [[TMP10]], align 8
 ; CHECK-NEXT:    store <2 x double> [[TMP9]], ptr [[TMP12]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
@@ -265,21 +256,18 @@ define void @fmax64(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4096 x double], ptr [[INPUT1]], i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw double, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw double, ptr [[TMP2]], i32 2
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <2 x double>, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [4096 x double], ptr [[INPUT2]], i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw double, ptr [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw double, ptr [[TMP5]], i32 2
-; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x double>, ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x double>, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <2 x double>, ptr [[TMP7]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> [[WIDE_LOAD]], <2 x double> [[WIDE_LOAD6]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> [[WIDE_LOAD5]], <2 x double> [[WIDE_LOAD7]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [4096 x double], ptr [[OUTPUT]], i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw double, ptr [[TMP10]], i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw double, ptr [[TMP10]], i32 2
-; CHECK-NEXT:    store <2 x double> [[TMP8]], ptr [[TMP11]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP8]], ptr [[TMP10]], align 8
 ; CHECK-NEXT:    store <2 x double> [[TMP9]], ptr [[TMP12]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
@@ -346,15 +334,12 @@ define void @fmin16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[INPUT1]], i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw half, ptr [[TMP2]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x half>, ptr [[TMP3]], align 2
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x half>, ptr [[TMP2]], align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[INPUT2]], i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw half, ptr [[TMP4]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <8 x half>, ptr [[TMP5]], align 2
+; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <8 x half>, ptr [[TMP4]], align 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x half> @llvm.minimumnum.v8f16(<8 x half> [[WIDE_LOAD]], <8 x half> [[WIDE_LOAD5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[OUTPUT]], i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw half, ptr [[TMP7]], i32 0
-; CHECK-NEXT:    store <8 x half> [[TMP6]], ptr [[TMP8]], align 2
+; CHECK-NEXT:    store <8 x half> [[TMP6]], ptr [[TMP7]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
@@ -420,15 +405,12 @@ define void @fmax16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[INPUT1]], i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw half, ptr [[TMP2]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x half>, ptr [[TMP3]], align 2
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x half>, ptr [[TMP2]], align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[INPUT2]], i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw half, ptr [[TMP4]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <8 x half>, ptr [[TMP5]], align 2
+; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <8 x half>, ptr [[TMP4]], align 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x half> @llvm.maximumnum.v8f16(<8 x half> [[WIDE_LOAD]], <8 x half> [[WIDE_LOAD5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[OUTPUT]], i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw half, ptr [[TMP7]], i32 0
-; CHECK-NEXT:    store <8 x half> [[TMP6]], ptr [[TMP8]], align 2
+; CHECK-NEXT:    store <8 x half> [[TMP6]], ptr [[TMP7]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
