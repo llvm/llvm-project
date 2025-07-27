@@ -1299,6 +1299,7 @@ void Writer::createImportTables() {
                    << file->symtab.printSymbol(impSym);
       delayIdata.add(impSym);
     } else {
+      Log(ctx) << "populating import entry for " << impSym->getName();
       idata.add(impSym);
     }
   }

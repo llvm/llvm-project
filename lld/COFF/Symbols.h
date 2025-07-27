@@ -56,7 +56,7 @@ public:
     DefinedAbsoluteKind,
     DefinedSyntheticKind,
 
-    UndefinedKind,
+    UndefinedKind, // = 7
     LazyArchiveKind,
     LazyObjectKind,
     LazyDLLSymbolKind,

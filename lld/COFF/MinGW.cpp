@@ -226,6 +226,8 @@ void lld::coff::addWrappedSymbols(SymbolTable &symtab,
     Symbol *sym = symtab.findUnderscore(name);
     if (!sym)
       continue;
+    Log(symtab.ctx) << "adding wrapped symbol entry for: " << name << ": "
+                    << sym->kind() << ',' << !!sym->isUsedInRegularObj;
 
     Symbol *real =
         symtab.addUndefined(mangle("__real_" + name, symtab.machine));
@@ -269,6 +271,7 @@ void lld::coff::wrapSymbols(SymbolTable &symtab) {
       // (We can't easily distinguish whether any object file actually
       // referenced it or not, though.)
       if (imp) {
+        Log(symtab.ctx) << "wrapping imported symbol: " << imp->getName();
         DefinedLocalImport *wrapimp = make<DefinedLocalImport>(
             symtab.ctx, saver().save("__imp_" + w.wrap->getName()), d);
         symtab.localImportChunks.push_back(wrapimp->getChunk());
@@ -281,7 +284,10 @@ void lld::coff::wrapSymbols(SymbolTable &symtab) {
   parallelForEach(symtab.ctx.objFileInstances, [&](ObjFile *file) {
     MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
     for (auto &sym : syms)
-      if (Symbol *s = map.lookup(sym))
+      if (Symbol *s = map.lookup(sym)) {
+        Log(symtab.ctx) << "overriding " << sym->getName() << " by "
+                        << s->getName() << " (in " << file->getName() << ")";
         sym = s;
+      }
   });
 }
