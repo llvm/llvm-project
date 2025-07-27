@@ -466,6 +466,8 @@ TYPE_PARSER(construct<OmpDeviceModifier>(
     "ANCESTOR" >> pure(OmpDeviceModifier::Value::Ancestor) ||
     "DEVICE_NUM" >> pure(OmpDeviceModifier::Value::Device_Num)))
 
+TYPE_PARSER(construct<OmpDirectiveNameModifier>(OmpDirectiveNameParser{}))
+
 TYPE_PARSER(construct<OmpExpectation>( //
     "PRESENT" >> pure(OmpExpectation::Value::Present)))
 
@@ -609,7 +611,8 @@ TYPE_PARSER(sourced(construct<OmpFromClause::Modifier>(
 TYPE_PARSER(sourced(
     construct<OmpGrainsizeClause::Modifier>(Parser<OmpPrescriptiveness>{})))
 
-TYPE_PARSER(sourced(construct<OmpIfClause::Modifier>(OmpDirectiveNameParser{})))
+TYPE_PARSER(sourced(
+    construct<OmpIfClause::Modifier>(Parser<OmpDirectiveNameModifier>{})))
 
 TYPE_PARSER(sourced(
     construct<OmpInitClause::Modifier>(
