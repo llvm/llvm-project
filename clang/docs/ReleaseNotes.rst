@@ -216,6 +216,9 @@ AST Matchers
 - Ensure ``hasBitWidth`` doesn't crash on bit widths that are dependent on template
   parameters.
 
+- Fixed `isStaticStorageClass` not matching the definition if the definition was
+  not marked `static` as well.
+
 clang-format
 ------------
 
