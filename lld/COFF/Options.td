@@ -353,6 +353,12 @@ def fastfail : F<"fastfail">;
 def kernel : F<"kernel">;
 def pdbcompress : F<"pdbcompress">;
 def emitpogophaseinfo : F<"emitpogophaseinfo">;
+defm emittoolversioninfo: B<
+    "emittoolversioninfo",
+    "Emit a tool version info after DOS header (so-called Rich header, default)",
+    "Do not emit a tool version info after DOS header (so-scalled Ricb header)">;
+def novcfeature: F<"novcfeature">;
+def nocoffgrpinfo: F<"nocoffgrpinfo">;
 def noexp : F<"noexp">;
 
 def delay : P_priv<"delay">;
