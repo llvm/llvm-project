@@ -667,9 +667,11 @@ Inliner::Impl::inlineCallsInSCC(InlinerInterfaceImpl &inlinerIface,
     auto historyToString = [](InlineHistoryT h) {
       return h.has_value() ? std::to_string(*h) : "root";
     };
+#ifndef NDEBUG
     LDBG() << "* new inlineHistory entry: " << newInlineHistoryID << ". ["
            << getNodeName(call) << ", " << historyToString(inlineHistoryID)
            << "]";
+#endif
 
     for (unsigned k = prevSize; k != calls.size(); ++k) {
       callHistory.push_back(newInlineHistoryID);
