@@ -3320,7 +3320,8 @@ static bool isZerosVector(const SDNode *N) {
 
 /// changeIntCCToAArch64CC - Convert a DAG integer condition code to an AArch64
 /// CC
-static AArch64CC::CondCode changeIntCCToAArch64CC(ISD::CondCode CC) {
+static AArch64CC::CondCode changeIntCCToAArch64CC(ISD::CondCode CC, SDValue RHS,
+                                                  bool canUsePLOrMI = true) {
   switch (CC) {
   default:
     llvm_unreachable("Unknown condition code!");
@@ -3331,9 +3332,9 @@ static AArch64CC::CondCode changeIntCCToAArch64CC(ISD::CondCode CC) {
   case ISD::SETGT:
     return AArch64CC::GT;
   case ISD::SETGE:
-    return AArch64CC::GE;
+    return canUsePLOrMI && isNullConstant(RHS) ? AArch64CC::PL : AArch64CC::GE;
   case ISD::SETLT:
-    return AArch64CC::LT;
+    return canUsePLOrMI && isNullConstant(RHS) ? AArch64CC::MI : AArch64CC::LT;
   case ISD::SETLE:
     return AArch64CC::LE;
   case ISD::SETUGT:
@@ -3776,7 +3777,7 @@ static SDValue emitConjunctionRec(SelectionDAG &DAG, SDValue Val,
     SDLoc DL(Val);
     // Determine OutCC and handle FP special case.
     if (isInteger) {
-      OutCC = changeIntCCToAArch64CC(CC);
+      OutCC = changeIntCCToAArch64CC(CC, RHS);
     } else {
       assert(LHS.getValueType().isFloatingPoint());
       AArch64CC::CondCode ExtraCC;
@@ -4059,7 +4060,7 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
         Cmp = emitComparison(
             SExt, DAG.getSignedConstant(ValueofRHS, DL, RHS.getValueType()), CC,
             DL, DAG);
-        AArch64CC = changeIntCCToAArch64CC(CC);
+        AArch64CC = changeIntCCToAArch64CC(CC, RHS);
       }
     }
 
@@ -4073,7 +4074,7 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
 
   if (!Cmp) {
     Cmp = emitComparison(LHS, RHS, CC, DL, DAG);
-    AArch64CC = changeIntCCToAArch64CC(CC);
+    AArch64CC = changeIntCCToAArch64CC(CC, RHS);
   }
   AArch64cc = DAG.getConstant(AArch64CC, DL, MVT_CC);
   return Cmp;
@@ -10640,10 +10641,10 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
     // Try to emit Armv9.6 CB instructions. We prefer tb{n}z/cb{n}z due to their
     // larger branch displacement but do prefer CB over cmp + br.
     if (Subtarget->hasCMPBR() &&
-        AArch64CC::isValidCBCond(changeIntCCToAArch64CC(CC)) &&
+        AArch64CC::isValidCBCond(changeIntCCToAArch64CC(CC, RHS, false)) &&
         ProduceNonFlagSettingCondBr) {
-      SDValue Cond =
-          DAG.getTargetConstant(changeIntCCToAArch64CC(CC), DL, MVT::i32);
+      SDValue Cond = DAG.getTargetConstant(
+          changeIntCCToAArch64CC(CC, RHS, false), DL, MVT::i32);
       return DAG.getNode(AArch64ISD::CB, DL, MVT::Other, Chain, Cond, LHS, RHS,
                          Dest);
     }
@@ -11200,8 +11201,8 @@ SDValue AArch64TargetLowering::LowerSETCCCARRY(SDValue Op,
 
   ISD::CondCode Cond = cast<CondCodeSDNode>(Op.getOperand(3))->get();
   ISD::CondCode CondInv = ISD::getSetCCInverse(Cond, VT);
-  SDValue CCVal =
-      DAG.getConstant(changeIntCCToAArch64CC(CondInv), DL, MVT::i32);
+  SDValue CCVal = DAG.getConstant(changeIntCCToAArch64CC(CondInv, RHS, false),
+                                  DL, MVT::i32);
   // Inputs are swapped because the condition is inverted. This will allow
   // matching with a single CSINC instruction.
   return DAG.getNode(AArch64ISD::CSEL, DL, OpVT, FVal, TVal, CCVal,
@@ -11479,7 +11480,7 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
     ConstantSDNode *RHSVal = dyn_cast<ConstantSDNode>(RHS);
     if (Opcode == AArch64ISD::CSEL && RHSVal && !RHSVal->isOne() &&
         !RHSVal->isZero() && !RHSVal->isAllOnes()) {
-      AArch64CC::CondCode AArch64CC = changeIntCCToAArch64CC(CC);
+      AArch64CC::CondCode AArch64CC = changeIntCCToAArch64CC(CC, RHS);
       // Transform "a == C ? C : x" to "a == C ? a : x" and "a != C ? x : C" to
       // "a != C ? x : a" to avoid materializing C.
       if (CTVal && CTVal == RHSVal && AArch64CC == AArch64CC::EQ)
@@ -11490,7 +11491,7 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
       assert (CTVal && CFVal && "Expected constant operands for CSNEG.");
       // Use a CSINV to transform "a == C ? 1 : -1" to "a == C ? a : -1" to
       // avoid materializing C.
-      AArch64CC::CondCode AArch64CC = changeIntCCToAArch64CC(CC);
+      AArch64CC::CondCode AArch64CC = changeIntCCToAArch64CC(CC, RHS);
       if (CTVal == RHSVal && AArch64CC == AArch64CC::EQ) {
         Opcode = AArch64ISD::CSINV;
         TVal = LHS;

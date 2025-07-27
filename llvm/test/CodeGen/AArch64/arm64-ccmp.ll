@@ -600,7 +600,7 @@ define i64 @select_noccmp1(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
 ; SDISEL-LABEL: select_noccmp1:
 ; SDISEL:       ; %bb.0:
 ; SDISEL-NEXT:    cmp x0, #0
-; SDISEL-NEXT:    ccmp x0, #13, #4, lt
+; SDISEL-NEXT:    ccmp x0, #13, #4, mi
 ; SDISEL-NEXT:    cset w8, gt
 ; SDISEL-NEXT:    cmp x2, #2
 ; SDISEL-NEXT:    ccmp x2, #4, #4, lt
@@ -630,7 +630,7 @@ define i64 @select_noccmp2(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
 ; SDISEL-LABEL: select_noccmp2:
 ; SDISEL:       ; %bb.0:
 ; SDISEL-NEXT:    cmp x0, #0
-; SDISEL-NEXT:    ccmp x0, #13, #0, ge
+; SDISEL-NEXT:    ccmp x0, #13, #0, pl
 ; SDISEL-NEXT:    cset w8, gt
 ; SDISEL-NEXT:    cmp w8, #0
 ; SDISEL-NEXT:    csel x0, xzr, x3, ne
@@ -664,7 +664,7 @@ define i32 @select_noccmp3(i32 %v0, i32 %v1, i32 %v2) {
 ; SDISEL-LABEL: select_noccmp3:
 ; SDISEL:       ; %bb.0:
 ; SDISEL-NEXT:    cmp w0, #0
-; SDISEL-NEXT:    ccmp w0, #13, #0, ge
+; SDISEL-NEXT:    ccmp w0, #13, #0, pl
 ; SDISEL-NEXT:    cset w8, gt
 ; SDISEL-NEXT:    cmp w0, #22
 ; SDISEL-NEXT:    mov w9, #44 ; =0x2c
@@ -937,11 +937,11 @@ define i32 @f128_select_and_olt_oge(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, 
 ; SDISEL-NEXT:    stp q2, q3, [sp] ; 32-byte Folded Spill
 ; SDISEL-NEXT:    bl ___lttf2
 ; SDISEL-NEXT:    cmp w0, #0
-; SDISEL-NEXT:    cset w21, lt
+; SDISEL-NEXT:    cset w21, mi
 ; SDISEL-NEXT:    ldp q0, q1, [sp] ; 32-byte Folded Reload
 ; SDISEL-NEXT:    bl ___getf2
 ; SDISEL-NEXT:    cmp w0, #0
-; SDISEL-NEXT:    cset w8, ge
+; SDISEL-NEXT:    cset w8, pl
 ; SDISEL-NEXT:    tst w8, w21
 ; SDISEL-NEXT:    csel w0, w20, w19, ne
 ; SDISEL-NEXT:    ldp x29, x30, [sp, #64] ; 16-byte Folded Reload
@@ -964,8 +964,8 @@ define i32 @f128_select_and_olt_oge(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, 
 ; GISEL-NEXT:    ldp q1, q0, [sp] ; 32-byte Folded Reload
 ; GISEL-NEXT:    bl ___getf2
 ; GISEL-NEXT:    cmp w21, #0
-; GISEL-NEXT:    ccmp w0, #0, #8, lt
-; GISEL-NEXT:    csel w0, w19, w20, ge
+; GISEL-NEXT:    ccmp w0, #0, #8, mi
+; GISEL-NEXT:    csel w0, w19, w20, pl
 ; GISEL-NEXT:    ldp x29, x30, [sp, #64] ; 16-byte Folded Reload
 ; GISEL-NEXT:    ldp x20, x19, [sp, #48] ; 16-byte Folded Reload
 ; GISEL-NEXT:    ldp x22, x21, [sp, #32] ; 16-byte Folded Reload
