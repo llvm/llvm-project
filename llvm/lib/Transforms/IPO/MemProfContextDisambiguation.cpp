@@ -2070,7 +2070,9 @@ static unsigned getMemProfCloneNum(const Function &F) {
   auto Pos = F.getName().find_last_of('.');
   assert(Pos > 0);
   unsigned CloneNo;
-  F.getName().drop_front(Pos + 1).getAsInteger(10, CloneNo);
+  auto Error = F.getName().drop_front(Pos + 1).getAsInteger(10, CloneNo);
+  assert(!Error);
+  (void)Error;
   return CloneNo;
 }
 
@@ -4025,7 +4027,7 @@ void IndexCallsiteContextGraph::updateCall(CallInfo &CallerCall,
          "Caller cannot be an allocation which should not have profiled calls");
   assert(CI->Clones.size() > CallerCall.cloneNo());
   auto NewCalleeCloneNo = CalleeFunc.cloneNo();
-  auto CurCalleeCloneNo = CI->Clones[CallerCall.cloneNo()];
+  auto &CurCalleeCloneNo = CI->Clones[CallerCall.cloneNo()];
   // If we already assigned this callsite to call a specific non-default
   // clone (i.e. not the original function which is clone 0), ensure that we
   // aren't trying to now update it to call a different clone, which is
@@ -4036,7 +4038,7 @@ void IndexCallsiteContextGraph::updateCall(CallInfo &CallerCall,
                       << "\n");
     MismatchedCloneAssignments++;
   }
-  CI->Clones[CallerCall.cloneNo()] = NewCalleeCloneNo;
+  CurCalleeCloneNo = NewCalleeCloneNo;
 }
 
 // Update the debug information attached to NewFunc to use the clone Name. Note
@@ -4753,7 +4755,8 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
             if (!FuncCloneToCurNodeCloneMap.count(CF.first))
               return CF.first;
           }
-          assert(false);
+          assert(false &&
+                 "Expected an available func clone for this callsite clone");
         };
 
         // See if we can use existing function clone. Walk through
@@ -4900,12 +4903,16 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
         // easily distinguish between callsites explicitly assigned to clone 0
         // vs those never assigned, which can lead to multiple updates of the
         // calls when invoking updateCall below, with mismatched clone values.
+        // TODO: Add a flag to the callsite nodes or some other mechanism to
+        // better distinguish and identify callsite clones that are not getting
+        // assigned to function clones as expected.
         if (!FuncCloneAssignedToCurCallsiteClone) {
           FuncCloneAssignedToCurCallsiteClone = FindFirstAvailFuncClone();
-          assert(FuncCloneAssignedToCurCallsiteClone);
+          assert(FuncCloneAssignedToCurCallsiteClone &&
+                 "No available func clone for this callsite clone");
           AssignCallsiteCloneToFuncClone(
               FuncCloneAssignedToCurCallsiteClone, Call, Clone,
-              AllocationCallToContextNodeMap.count(Call));
+              /*IsAlloc=*/AllocationCallToContextNodeMap.contains(Call));
         }
       }
       if (VerifyCCG) {
