@@ -160,7 +160,7 @@ private:
 
   struct VD {
     /// The VarDecl, FieldDecl, or BindingDecl being initialized.
-    ValueDecl *VariableOrMember;
+    NamedDecl *VariableOrMember;
 
     /// When Kind == EK_Member, whether this is an implicit member
     /// initialization in a copy or move constructor. These can perform array
@@ -291,8 +291,8 @@ public:
   }
 
   /// Create the initialization entity for a template parameter.
-  static InitializedEntity
-  InitializeTemplateParameter(QualType T, NonTypeTemplateParmDecl *Param) {
+  static InitializedEntity InitializeTemplateParameter(QualType T,
+                                                       NamedDecl *Param) {
     InitializedEntity Entity;
     Entity.Kind = EK_TemplateParameter;
     Entity.Type = T;

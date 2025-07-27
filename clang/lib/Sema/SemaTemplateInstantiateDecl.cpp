@@ -3784,13 +3784,13 @@ TemplateDeclInstantiator::VisitTemplateTemplateParmDecl(
     Param = TemplateTemplateParmDecl::Create(
         SemaRef.Context, Owner, D->getLocation(),
         D->getDepth() - TemplateArgs.getNumSubstitutedLevels(),
-        D->getPosition(), D->getIdentifier(), D->wasDeclaredWithTypename(),
-        InstParams, ExpandedParams);
+        D->getPosition(), D->getIdentifier(), D->kind(),
+        D->wasDeclaredWithTypename(), InstParams, ExpandedParams);
   else
     Param = TemplateTemplateParmDecl::Create(
         SemaRef.Context, Owner, D->getLocation(),
         D->getDepth() - TemplateArgs.getNumSubstitutedLevels(),
-        D->getPosition(), D->isParameterPack(), D->getIdentifier(),
+        D->getPosition(), D->isParameterPack(), D->getIdentifier(), D->kind(),
         D->wasDeclaredWithTypename(), InstParams);
   if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited()) {
     NestedNameSpecifierLoc QualifierLoc =

@@ -1608,6 +1608,9 @@ namespace {
                           QualType ObjectType = QualType(),
                           NamedDecl *FirstQualifierInScope = nullptr,
                           bool AllowInjectedClassName = false);
+    TemplateArgument
+    TransformNamedTemplateTemplateArgument(CXXScopeSpec &SS, TemplateName Name,
+                                           SourceLocation NameLoc);
 
     const AnnotateAttr *TransformAnnotateAttr(const AnnotateAttr *AA);
     const CXXAssumeAttr *TransformCXXAssumeAttr(const CXXAssumeAttr *AA);
@@ -1899,8 +1902,7 @@ namespace {
 
   private:
     ExprResult
-    transformNonTypeTemplateParmRef(Decl *AssociatedDecl,
-                                    const NonTypeTemplateParmDecl *parm,
+    transformNonTypeTemplateParmRef(Decl *AssociatedDecl, const NamedDecl *parm,
                                     SourceLocation loc, TemplateArgument arg,
                                     UnsignedOrNone PackIndex, bool Final);
   };
@@ -2187,6 +2189,27 @@ TemplateName TemplateInstantiator::TransformTemplateName(
                                           AllowInjectedClassName);
 }
 
+TemplateArgument TemplateInstantiator::TransformNamedTemplateTemplateArgument(
+    CXXScopeSpec &SS, TemplateName Name, SourceLocation NameLoc) {
+  if (TemplateTemplateParmDecl *TTP =
+          dyn_cast_or_null<TemplateTemplateParmDecl>(
+              Name.getAsTemplateDecl())) {
+    if (TTP->getDepth() < TemplateArgs.getNumLevels()) {
+      // If the corresponding template argument is NULL or non-existent, it's
+      // because we are performing instantiation from explicitly-specified
+      // template arguments in a function template, but there were some
+      // arguments left unspecified.
+      if (!TemplateArgs.hasTemplateArgument(TTP->getDepth(),
+                                            TTP->getPosition()))
+        return TemplateArgument(Name);
+    }
+  }
+  TemplateName TN = getDerived().TransformTemplateName(SS, Name, NameLoc);
+  if (!TN.isNull())
+    return TN;
+  return TemplateArgument();
+}
+
 ExprResult
 TemplateInstantiator::TransformPredefinedExpr(PredefinedExpr *E) {
   if (!E->isTypeDependent())
@@ -2343,22 +2366,25 @@ TemplateInstantiator::TransformOpenACCRoutineDeclAttr(
 }
 
 ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
-    Decl *AssociatedDecl, const NonTypeTemplateParmDecl *parm,
-    SourceLocation loc, TemplateArgument arg, UnsignedOrNone PackIndex,
-    bool Final) {
+    Decl *AssociatedDecl, const NamedDecl *parm, SourceLocation loc,
+    TemplateArgument arg, UnsignedOrNone PackIndex, bool Final) {
   ExprResult result;
 
   // Determine the substituted parameter type. We can usually infer this from
   // the template argument, but not always.
   auto SubstParamType = [&] {
-    QualType T;
-    if (parm->isExpandedParameterPack())
-      T = parm->getExpansionType(*SemaRef.ArgPackSubstIndex);
-    else
-      T = parm->getType();
-    if (parm->isParameterPack() && isa<PackExpansionType>(T))
-      T = cast<PackExpansionType>(T)->getPattern();
-    return SemaRef.SubstType(T, TemplateArgs, loc, parm->getDeclName());
+    if (auto NTTP = dyn_cast<NonTypeTemplateParmDecl>(parm)) {
+      QualType T;
+      if (NTTP->isExpandedParameterPack())
+        T = NTTP->getExpansionType(*SemaRef.ArgPackSubstIndex);
+      else
+        T = NTTP->getType();
+      if (parm->isParameterPack() && isa<PackExpansionType>(T))
+        T = cast<PackExpansionType>(T)->getPattern();
+      return SemaRef.SubstType(T, TemplateArgs, loc, parm->getDeclName());
+    }
+    return SemaRef.SubstType(arg.getAsExpr()->getType(), TemplateArgs, loc,
+                             parm->getDeclName());
   };
 
   bool refParam = false;
@@ -2413,7 +2439,9 @@ ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
   Expr *resultExpr = result.get();
   return new (SemaRef.Context) SubstNonTypeTemplateParmExpr(
       resultExpr->getType(), resultExpr->getValueKind(), loc, resultExpr,
-      AssociatedDecl, parm->getIndex(), PackIndex, refParam, Final);
+      AssociatedDecl,
+      clang::getDepthAndIndex(const_cast<NamedDecl *>(parm)).second, PackIndex,
+      refParam, Final);
 }
 
 ExprResult
