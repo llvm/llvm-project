@@ -863,6 +863,31 @@ Value *VPInstruction::generate(VPTransformState &State) {
       Res = Builder.CreateOr(Res, State.get(Op));
     return State.VF.isScalar() ? Res : Builder.CreateOrReduce(Res);
   }
+  case VPInstruction::ExtractLane: {
+    Value *LaneToExtract = State.get(getOperand(0), true);
+    Type *IdxTy = State.TypeAnalysis.inferScalarType(getOperand(0));
+    Value *Res = nullptr;
+    Value *RuntimeVF = getRuntimeVF(State.Builder, IdxTy, State.VF);
+
+    for (unsigned Idx = 1; Idx != getNumOperands(); ++Idx) {
+      Value *VectorStart =
+          Builder.CreateMul(RuntimeVF, ConstantInt::get(IdxTy, Idx - 1));
+      Value *VectorIdx = Idx == 1
+                             ? LaneToExtract
+                             : Builder.CreateSub(LaneToExtract, VectorStart);
+      Value *Ext = State.VF.isScalar()
+                       ? State.get(getOperand(Idx))
+                       : Builder.CreateExtractElement(
+                             State.get(getOperand(Idx)), VectorIdx);
+      if (Res) {
+        Value *Cmp = Builder.CreateICmpUGE(LaneToExtract, VectorStart);
+        Res = Builder.CreateSelect(Cmp, Ext, Res);
+      } else {
+        Res = Ext;
+      }
+    }
+    return Res;
+  }
   case VPInstruction::FirstActiveLane: {
     if (getNumOperands() == 1) {
       Value *Mask = State.get(getOperand(0));
@@ -921,7 +946,8 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   }
 
   switch (getOpcode()) {
-  case Instruction::ExtractElement: {
+  case Instruction::ExtractElement:
+  case VPInstruction::ExtractLane: {
     // Add on the cost of extracting the element.
     auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
     return Ctx.TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy,
@@ -983,6 +1009,7 @@ bool VPInstruction::isVectorToScalar() const {
   return getOpcode() == VPInstruction::ExtractLastElement ||
          getOpcode() == VPInstruction::ExtractPenultimateElement ||
          getOpcode() == Instruction::ExtractElement ||
+         getOpcode() == VPInstruction::ExtractLane ||
          getOpcode() == VPInstruction::FirstActiveLane ||
          getOpcode() == VPInstruction::ComputeAnyOfResult ||
          getOpcode() == VPInstruction::ComputeFindIVResult ||
@@ -1048,6 +1075,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::BuildVector:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
+  case VPInstruction::ExtractLane:
   case VPInstruction::ExtractLastElement:
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::FirstActiveLane:
@@ -1097,6 +1125,8 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::ComputeAnyOfResult:
   case VPInstruction::ComputeFindIVResult:
     return Op == getOperand(1);
+  case VPInstruction::ExtractLane:
+    return Op == getOperand(0);
   };
   llvm_unreachable("switch should return");
 }
@@ -1175,6 +1205,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::BuildVector:
     O << "buildvector";
+    break;
+  case VPInstruction::ExtractLane:
+    O << "extract-lane";
     break;
   case VPInstruction::ExtractLastElement:
     O << "extract-last-element";
