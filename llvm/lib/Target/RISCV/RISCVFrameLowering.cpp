@@ -1581,7 +1581,8 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
     // Set the register and all its subregisters.
     if (!MRI.def_empty(CSReg) || MRI.getUsedPhysRegsMask().test(CSReg)) {
       SavedRegs.set(CSReg);
-      llvm::for_each(SubRegs, [&](unsigned Reg) { return SavedRegs.set(Reg); });
+      for (unsigned Reg : SubRegs)
+        SavedRegs.set(Reg);
     }
 
     // Combine to super register if all of its subregisters are marked.
