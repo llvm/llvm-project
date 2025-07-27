@@ -102,7 +102,6 @@ struct DeviceTy {
   // operations if necessary for the device.
   int32_t dataFence(AsyncInfoTy &AsyncInfo);
 
-
   /// Notify the plugin about a new mapping starting at the host address
   /// \p HstPtr and \p Size bytes.
   int32_t notifyDataMapped(void *HstPtr, int64_t Size);
