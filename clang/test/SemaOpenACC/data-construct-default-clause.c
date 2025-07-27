@@ -10,7 +10,7 @@ void use() {
 #pragma acc data default(none)
   ;
   // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'data' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'default' clause is here}}
 #pragma acc data default(none) default(present)
   ;
   // expected-error@+2{{OpenACC 'enter data' construct must have at least one 'attach', 'copyin', or 'create' clause}}

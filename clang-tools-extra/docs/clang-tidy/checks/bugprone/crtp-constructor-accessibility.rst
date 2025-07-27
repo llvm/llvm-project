@@ -9,7 +9,7 @@ can be constructed outside itself and the derived class.
 The CRTP is an idiom, in which a class derives from a template class, where 
 itself is the template argument. It should be ensured that if a class is
 intended to be a base class in this idiom, it can only be instantiated if
-the derived class is it's template argument.
+the derived class is its template argument.
 
 Example:
 
@@ -65,7 +65,8 @@ Example:
 To ensure that no accidental instantiation happens, the best practice is to 
 make the constructor private and declare the derived class as friend. Note
 that as a tradeoff, this also gives the derived class access to every other
-private members of the CRTP.
+private members of the CRTP. However, constructors can still be public or
+protected if they are deleted.
 
 Example:
 

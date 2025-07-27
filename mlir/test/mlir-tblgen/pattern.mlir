@@ -584,6 +584,42 @@ func.func @testMatchMultiVariadicSubSymbol(%arg0: i32, %arg1: i32, %arg2: i32, %
   return
 }
 
+// CHECK-LABEL: @testMatchMixedVaradicOptional
+func.func @testMatchMixedVaradicOptional(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> () {
+  // CHECK: "test.mixed_variadic_in6"(%arg0, %arg1, %arg2) <{attr1 = 2 : i32}> : (i32, i32, i32) -> ()
+  "test.mixed_variadic_optional_in7"(%arg0, %arg1, %arg2) {attr1 = 2 : i32, operandSegmentSizes = array<i32: 2, 1>} : (i32, i32, i32) -> ()
+  // CHECK: test.mixed_variadic_optional_in7
+  "test.mixed_variadic_optional_in7"(%arg0, %arg1) {attr1 = 2 : i32, operandSegmentSizes = array<i32: 2, 0>} : (i32, i32) -> ()
+
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// Test patterns that operate on properties
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @testSimplePropertyRewrite
+func.func @testSimplePropertyRewrite() {
+  // CHECK-NEXT: test.prop_pattern_op_1 "o1" 2 true
+  test.prop_pattern_op_1 "o1" 1 false
+  // Pattern not applied when predicate not met
+  // CHECK-NEXT: test.prop_pattern_op_1 "o2" -1 false
+  test.prop_pattern_op_1 "o2" -1 false
+  // Pattern not applied when constant doesn't match
+  // CHCEK-NEXT: test.prop_pattern_op_1 "o3" 1 true
+  test.prop_pattern_op_1 "o3" 1 true
+  return
+}
+
+// CHECK-LABEL: @testNestedPropertyRewrite
+func.func @testNestedPropertyRewrite() {
+  // CHECK: %[[v:.*]] = test.prop_pattern_op_1 "s1" -2 false
+  // CHECK: test.prop_pattern_op_2 %[[v]] "s1.t1"
+  %v = test.prop_pattern_op_1 "s1" 1 false
+  test.prop_pattern_op_2 %v "t1"
+  return
+}
+
 //===----------------------------------------------------------------------===//
 // Test that natives calls are only called once during rewrites.
 //===----------------------------------------------------------------------===//
@@ -599,8 +635,8 @@ func.func @redundantTest(%arg0: i32) -> i32 {
 // Test either directive
 //===----------------------------------------------------------------------===//
 
-// CHECK: @either_dag_leaf_only
-func.func @either_dag_leaf_only_1(%arg0 : i32, %arg1 : i16, %arg2 : i8) -> () {
+// CHECK-LABEL: @eitherDagLeafOnly
+func.func @eitherDagLeafOnly(%arg0 : i32, %arg1 : i16, %arg2 : i8) -> () {
   // CHECK: "test.either_op_b"(%arg1, %arg2) : (i16, i8) -> i32
   %0 = "test.either_op_a"(%arg0, %arg1, %arg2) : (i32, i16, i8) -> i32
   // CHECK: "test.either_op_b"(%arg1, %arg2) : (i16, i8) -> i32
@@ -608,8 +644,8 @@ func.func @either_dag_leaf_only_1(%arg0 : i32, %arg1 : i16, %arg2 : i8) -> () {
   return
 }
 
-// CHECK: @either_dag_leaf_dag_node
-func.func @either_dag_leaf_dag_node(%arg0 : i32, %arg1 : i16, %arg2 : i8) -> () {
+// CHECK-LABEL: @eitherDagLeafDagNode
+func.func @eitherDagLeafDagNode(%arg0 : i32, %arg1 : i16, %arg2 : i8) -> () {
   %0 = "test.either_op_b"(%arg0, %arg0) : (i32, i32) -> i32
   // CHECK: "test.either_op_b"(%arg1, %arg2) : (i16, i8) -> i32
   %1 = "test.either_op_a"(%0, %arg1, %arg2) : (i32, i16, i8) -> i32
@@ -618,8 +654,8 @@ func.func @either_dag_leaf_dag_node(%arg0 : i32, %arg1 : i16, %arg2 : i8) -> () 
   return
 }
 
-// CHECK: @either_dag_node_dag_node
-func.func @either_dag_node_dag_node(%arg0 : i32, %arg1 : i16, %arg2 : i8) -> () {
+// CHECK-LABEL: @eitherDagNodeDagNode
+func.func @eitherDagNodeDagNode(%arg0 : i32, %arg1 : i16, %arg2 : i8) -> () {
   %0 = "test.either_op_b"(%arg0, %arg0) : (i32, i32) -> i32
   %1 = "test.either_op_b"(%arg1, %arg1) : (i16, i16) -> i32
   // CHECK: "test.either_op_b"(%arg1, %arg2) : (i16, i8) -> i32
@@ -629,10 +665,22 @@ func.func @either_dag_node_dag_node(%arg0 : i32, %arg1 : i16, %arg2 : i8) -> () 
   return
 }
 
+// CHECK-LABEL: @testEitherOpWithAttr
+func.func @testEitherOpWithAttr(%arg0 : i32, %arg1 : i16) -> () {
+  // CHECK: "test.either_op_b"(%arg1, %arg0) : (i16, i32) -> i32
+  %0 = "test.either_op_c"(%arg0, %arg1) {attr = 0 : i32} : (i32, i16) -> i32
+  // CHECK: "test.either_op_b"(%arg1, %arg0) : (i16, i32) -> i32
+  %1 = "test.either_op_c"(%arg1, %arg0) {attr = 0 : i32} : (i16, i32) -> i32
+  // CHECK: "test.either_op_c"(%arg0, %arg1) <{attr = 1 : i32}> : (i32, i16) -> i32
+  %2 = "test.either_op_c"(%arg0, %arg1) {attr = 1 : i32} : (i32, i16) -> i32
+  return
+}
+
 //===----------------------------------------------------------------------===//
 // Test that ops without type deduction can be created with type builders.
 //===----------------------------------------------------------------------===//
 
+// CHECK-LABEL: @explicitReturnTypeTest
 func.func @explicitReturnTypeTest(%arg0 : i64) -> i8 {
   %0 = "test.source_op"(%arg0) {tag = 11 : i32} : (i64) -> i8
   // CHECK: "test.op_x"(%arg0) : (i64) -> i32
@@ -640,6 +688,7 @@ func.func @explicitReturnTypeTest(%arg0 : i64) -> i8 {
   return %0 : i8
 }
 
+// CHECK-LABEL: @returnTypeBuilderTest
 func.func @returnTypeBuilderTest(%arg0 : i1) -> i8 {
   %0 = "test.source_op"(%arg0) {tag = 22 : i32} : (i1) -> i8
   // CHECK: "test.op_x"(%arg0) : (i1) -> i1
@@ -647,6 +696,7 @@ func.func @returnTypeBuilderTest(%arg0 : i1) -> i8 {
   return %0 : i8
 }
 
+// CHECK-LABEL: @multipleReturnTypeBuildTest
 func.func @multipleReturnTypeBuildTest(%arg0 : i1) -> i1 {
   %0 = "test.source_op"(%arg0) {tag = 33 : i32} : (i1) -> i1
   // CHECK: "test.one_to_two"(%arg0) : (i1) -> (i64, i32)
@@ -656,6 +706,7 @@ func.func @multipleReturnTypeBuildTest(%arg0 : i1) -> i1 {
   return %0 : i1
 }
 
+// CHECK-LABEL: @copyValueType
 func.func @copyValueType(%arg0 : i8) -> i32 {
   %0 = "test.source_op"(%arg0) {tag = 44 : i32} : (i8) -> i32
   // CHECK: "test.op_x"(%arg0) : (i8) -> i8
@@ -663,6 +714,7 @@ func.func @copyValueType(%arg0 : i8) -> i32 {
   return %0 : i32
 }
 
+// CHECK-LABEL: @multipleReturnTypeDifferent
 func.func @multipleReturnTypeDifferent(%arg0 : i1) -> i64 {
   %0 = "test.source_op"(%arg0) {tag = 55 : i32} : (i1) -> i64
   // CHECK: "test.one_to_two"(%arg0) : (i1) -> (i1, i64)
@@ -674,6 +726,7 @@ func.func @multipleReturnTypeDifferent(%arg0 : i1) -> i64 {
 // Test that multiple trailing directives can be mixed in patterns.
 //===----------------------------------------------------------------------===//
 
+// CHECK-LABEL: @returnTypeAndLocation
 func.func @returnTypeAndLocation(%arg0 : i32) -> i1 {
   %0 = "test.source_op"(%arg0) {tag = 66 : i32} : (i32) -> i1
   // CHECK: "test.op_x"(%arg0) : (i32) -> i32 loc("loc1")
@@ -686,6 +739,7 @@ func.func @returnTypeAndLocation(%arg0 : i32) -> i1 {
 // Test that patterns can create ConstantStrAttr
 //===----------------------------------------------------------------------===//
 
+// CHECK-LABEL: @testConstantStrAttr
 func.func @testConstantStrAttr() -> () {
   // CHECK: test.has_str_value {value = "foo"}
   test.no_str_value {value = "bar"}
@@ -696,6 +750,7 @@ func.func @testConstantStrAttr() -> () {
 // Test that patterns with variadics propagate sizes
 //===----------------------------------------------------------------------===//
 
+// CHECK-LABEL: @testVariadic
 func.func @testVariadic(%arg_0: i32, %arg_1: i32, %brg: i64,
     %crg_0: f32, %crg_1: f32, %crg_2: f32, %crg_3: f32) -> () {
   // CHECK: "test.variadic_rewrite_dst_op"(%arg2, %arg3, %arg4, %arg5, %arg6, %arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 4, 2>}> : (i64, f32, f32, f32, f32, i32, i32) -> ()

@@ -3,7 +3,7 @@
 /// Test that .gnu.sgstubs is size 0 when no linker synthesized secure gateway veneers are created.
 
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj --triple=thumbv8m.main %s -I %S/Inputs -o %t.o
-// RUN: ld.lld --cmse-implib -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 %t.o -o %t --out-implib=%t.lib
+// RUN: ld.lld --cmse-implib --image-base=0x8000 -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 %t.o -o %t --out-implib=%t.lib
 // RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 // RUN: llvm-readelf -S %t | FileCheck %s --check-prefixes=SGSTUBSSIZE
 // RUN: llvm-readelf -s %t.lib | FileCheck %s --check-prefixes=IMPLIBSYMS

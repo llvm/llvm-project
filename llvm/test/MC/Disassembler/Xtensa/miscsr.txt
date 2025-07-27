@@ -1,0 +1,22 @@
+# RUN: llvm-mc -triple=xtensa -mattr=+miscsr -disassemble %s | FileCheck -check-prefixes=CHECK-MISCSR %s
+# RUN: not llvm-mc -triple=xtensa -disassemble %s 2>&1 | FileCheck --implicit-check-not=warning: -check-prefixes=CHECK-CORE %s
+
+## Verify that binary code is correctly disassembled with
+## miscr option enabled. Also verify that dissasembling without
+## miscr option generates warnings.
+
+[0x30,0xf4,0x61]
+# CHECK-MISCSR: xsr a3, misc0
+# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x30,0xf5,0x61]
+# CHECK-MISCSR: xsr a3, misc1
+# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x30,0xf6,0x61]
+# CHECK-MISCSR: xsr a3, misc2
+# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x30,0xf7,0x61]
+# CHECK-MISCSR: xsr a3, misc3
+# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding

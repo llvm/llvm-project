@@ -18,6 +18,10 @@
 # RUN: ld.lld --section-start=.note=0x200300 a.o -z lrodata-after-bss -o a3
 # RUN: llvm-readelf -S -l -sX a3 | FileCheck %s --check-prefix=CHECK3
 
+# RUN: llvm-mc -filetype=obj -triple=x86_64 c.s -o c.o
+# RUN: ld.lld c.o -o c
+# RUN: llvm-readelf -S -l c | FileCheck %s --check-prefix=CHECK4
+
 # CHECK:       Name              Type            Address          Off    Size   ES Flg Lk Inf Al
 # CHECK-NEXT:                    NULL            0000000000000000 000000 000000 00      0   0  0
 # CHECK-NEXT:  .note             NOTE            0000000000200300 000300 000001 00   A  0   0  1
@@ -116,6 +120,18 @@
 # CHECK3-NEXT:  0000000000203307     0 NOTYPE  GLOBAL DEFAULT [[#]] (.data)   _edata
 # CHECK3-NEXT:  0000000000207d0d     0 NOTYPE  GLOBAL DEFAULT [[#]] (.ldata2) _end
 
+# CHECK4:      .note      NOTE
+# CHECK4-NEXT: .ltext     PROGBITS
+# CHECK4-NEXT: .lrodata   PROGBITS
+# CHECK4-NEXT: .rodata    PROGBITS
+# CHECK4-NEXT: .text      PROGBITS
+# CHECK4-NEXT: .data      PROGBITS
+# CHECK4-NEXT: .bss       NOBITS
+# CHECK4-NEXT: .ldata     PROGBITS
+# CHECK4-NEXT: .lbss      NOBITS
+# CHECK4-NEXT: .ltext_w   PROGBITS
+# CHECK4-NEXT: .comment   PROGBITS
+
 #--- a.s
 .globl _start, _etext, _edata, _end
 _start:
@@ -155,3 +171,28 @@ SECTIONS {
   .ldata2 : {}
   .lbss : { *(.lbss .lbss.*) }
 }
+
+#--- c.s
+## Test .ltext layout
+.section .ltext,"axl",@progbits
+.globl f
+f:
+  ret
+
+.section .ltext_w,"awxl",@progbits
+.globl g
+g:
+  ret
+
+.section .text,"ax",@progbits
+.globl h
+h:
+  ret
+
+.section .note,"a",@note; .space 1
+.section .rodata,"a",@progbits; .space 1
+.section .data,"aw",@progbits; .space 1
+.section .bss,"aw",@nobits; .space 1
+.section .lrodata,"al"; .space 1
+.section .ldata,"awl"; .space 1
+.section .lbss,"awl",@nobits; .space 1

@@ -9,11 +9,8 @@
 #include "PredicateTree.h"
 #include "RootOrdering.h"
 
-#include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
-#include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -52,7 +49,7 @@ static void getTreePredicates(std::vector<PositionalPredicate> &predList,
   assert(isa<pdl::AttributeType>(val.getType()) && "expected attribute type");
   predList.emplace_back(pos, builder.getIsNotNull());
 
-  if (auto attr = dyn_cast<pdl::AttributeOp>(val.getDefiningOp())) {
+  if (auto attr = val.getDefiningOp<pdl::AttributeOp>()) {
     // If the attribute has a type or value, add a constraint.
     if (Value type = attr.getValueType())
       getTreePredicates(predList, type, builder, inputs, builder.getType(pos));
@@ -173,7 +170,7 @@ getTreePredicates(std::vector<PositionalPredicate> &predList, Value val,
 
       // Ignore the specified operand, usually because this position was
       // visited in an upward traversal via an iterative choice.
-      if (ignoreOperand && *ignoreOperand == operandIt.index())
+      if (ignoreOperand == operandIt.index())
         continue;
 
       Position *pos =

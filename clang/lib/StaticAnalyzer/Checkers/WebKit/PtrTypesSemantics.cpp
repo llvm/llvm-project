@@ -46,8 +46,18 @@ hasPublicMethodInBase(const CXXBaseSpecifier *Base, StringRef NameToMatch) {
     return std::nullopt;
 
   const CXXRecordDecl *R = T->getAsCXXRecordDecl();
-  if (!R)
-    return std::nullopt;
+  if (!R) {
+    auto CT = Base->getType().getCanonicalType();
+    if (auto *TST = dyn_cast<TemplateSpecializationType>(CT)) {
+      auto TmplName = TST->getTemplateName();
+      if (!TmplName.isNull()) {
+        if (auto *TD = TmplName.getAsTemplateDecl())
+          R = dyn_cast_or_null<CXXRecordDecl>(TD->getTemplatedDecl());
+      }
+    }
+    if (!R)
+      return std::nullopt;
+  }
   if (!R->hasDefinition())
     return std::nullopt;
 
@@ -226,6 +236,7 @@ std::optional<bool> isUnchecked(const QualType T) {
 void RetainTypeChecker::visitTranslationUnitDecl(
     const TranslationUnitDecl *TUD) {
   IsARCEnabled = TUD->getLangOpts().ObjCAutoRefCount;
+  DefaultSynthProperties = TUD->getLangOpts().ObjCDefaultSynthProperties;
 }
 
 void RetainTypeChecker::visitTypedef(const TypedefDecl *TD) {
@@ -360,8 +371,6 @@ std::optional<bool> isUnsafePtr(const QualType T, bool IsArcEnabled) {
 std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
   assert(M);
 
-  std::optional<RetainTypeChecker> RTC;
-
   if (isa<CXXMethodDecl>(M)) {
     const CXXRecordDecl *calleeMethodsClass = M->getParent();
     auto className = safeGetName(calleeMethodsClass);
@@ -452,13 +461,25 @@ bool isPtrConversion(const FunctionDecl *F) {
   const auto FunctionName = safeGetName(F);
   if (FunctionName == "getPtr" || FunctionName == "WeakPtr" ||
       FunctionName == "dynamicDowncast" || FunctionName == "downcast" ||
-      FunctionName == "checkedDowncast" ||
+      FunctionName == "checkedDowncast" || FunctionName == "bit_cast" ||
       FunctionName == "uncheckedDowncast" || FunctionName == "bitwise_cast" ||
       FunctionName == "bridge_cast" || FunctionName == "bridge_id_cast" ||
       FunctionName == "dynamic_cf_cast" || FunctionName == "checked_cf_cast" ||
       FunctionName == "dynamic_objc_cast" ||
       FunctionName == "checked_objc_cast")
     return true;
+
+  auto ReturnType = F->getReturnType();
+  if (auto *Type = ReturnType.getTypePtrOrNull()) {
+    if (auto *AttrType = dyn_cast<AttributedType>(Type)) {
+      if (auto *Attr = AttrType->getAttr()) {
+        if (auto *AnnotateType = dyn_cast<AnnotateTypeAttr>(Attr)) {
+          if (AnnotateType->getAnnotation() == "webkit.pointerconversion")
+            return true;
+        }
+      }
+    }
+  }
 
   return false;
 }
@@ -635,6 +656,10 @@ public:
     auto *Callee = CE->getDirectCallee();
     if (!Callee)
       return false;
+
+    if (isPtrConversion(Callee))
+      return true;
+
     const auto &Name = safeGetName(Callee);
 
     if (Callee->isInStdNamespace() &&
@@ -648,7 +673,7 @@ public:
         Name == "isMainThreadOrGCThread" || Name == "isMainRunLoop" ||
         Name == "isWebThread" || Name == "isUIThread" ||
         Name == "mayBeGCThread" || Name == "compilerFenceForCrash" ||
-        Name == "bitwise_cast" || isTrivialBuiltinFunction(Callee))
+        isTrivialBuiltinFunction(Callee))
       return true;
 
     return IsFunctionTrivial(Callee);

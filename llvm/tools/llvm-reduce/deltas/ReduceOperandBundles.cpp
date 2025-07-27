@@ -18,8 +18,6 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <iterator>
 #include <vector>
 

@@ -11,8 +11,9 @@
 #include <gtest/gtest.h>
 
 using olCreateProgramTest = OffloadDeviceTest;
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olCreateProgramTest);
 
-TEST_F(olCreateProgramTest, Success) {
+TEST_P(olCreateProgramTest, Success) {
 
   std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
   ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Device, DeviceBin));

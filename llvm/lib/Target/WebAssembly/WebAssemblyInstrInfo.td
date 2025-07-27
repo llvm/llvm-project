@@ -76,6 +76,9 @@ def HasReferenceTypes :
     Predicate<"Subtarget->hasReferenceTypes()">,
     AssemblerPredicate<(all_of FeatureReferenceTypes), "reference-types">;
 
+def HasGC : Predicate<"Subtarget->hasGC()">,
+            AssemblerPredicate<(all_of FeatureGC), "gc">;
+
 def HasRelaxedSIMD :
     Predicate<"Subtarget->hasRelaxedSIMD()">,
     AssemblerPredicate<(all_of FeatureRelaxedSIMD), "relaxed-simd">;
@@ -239,7 +242,7 @@ def TypeIndex : Operand<i32>;
 
 // TODO: Find more places to use this.
 def bool_node : PatLeaf<(i32 I32:$cond), [{
-  return CurDAG->computeKnownBits(SDValue(N, 0)).countMinLeadingZeros() == 31;
+  return CurDAG->computeKnownBits(Op).countMinLeadingZeros() == 31;
 }]>;
 
 //===----------------------------------------------------------------------===//

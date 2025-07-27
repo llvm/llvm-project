@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SwitchMissingDefaultCaseCheck.h"
-#include "clang/AST/ASTContext.h"
 
 using namespace clang::ast_matchers;
 

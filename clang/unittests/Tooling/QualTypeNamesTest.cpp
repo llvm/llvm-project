@@ -265,6 +265,102 @@ TEST(QualTypeNameTest, InlineNamespace) {
                           TypeNameVisitor::Lang_CXX11);
 }
 
+TEST(QualTypeNameTest, TemplatedClass) {
+  std::unique_ptr<ASTUnit> AST =
+      tooling::buildASTFromCode("template <unsigned U1> struct A {\n"
+                                "  template <unsigned U2> struct B {};\n"
+                                "};\n"
+                                "template struct A<1>;\n"
+                                "template struct A<2u>;\n"
+                                "template struct A<1>::B<3>;\n"
+                                "template struct A<2u>::B<4u>;\n");
+
+  auto &Context = AST->getASTContext();
+  auto &Policy = Context.getPrintingPolicy();
+  auto getFullyQualifiedName = [&](QualType QT) {
+    return TypeName::getFullyQualifiedName(QT, Context, Policy);
+  };
+
+  auto *A = Context.getTranslationUnitDecl()
+                ->lookup(&Context.Idents.get("A"))
+                .find_first<ClassTemplateDecl>();
+  ASSERT_NE(A, nullptr);
+
+  // A has two explicit instantiations: A<1> and A<2u>
+  auto ASpec = A->spec_begin();
+  ASSERT_NE(ASpec, A->spec_end());
+  auto *A1 = *ASpec;
+  ASpec++;
+  ASSERT_NE(ASpec, A->spec_end());
+  auto *A2 = *ASpec;
+
+  // Their type names follow the records.
+  QualType A1RecordTy = Context.getRecordType(A1);
+  EXPECT_EQ(getFullyQualifiedName(A1RecordTy), "A<1>");
+  QualType A2RecordTy = Context.getRecordType(A2);
+  EXPECT_EQ(getFullyQualifiedName(A2RecordTy), "A<2U>");
+
+  // getTemplateSpecializationType() gives types that print the integral
+  // argument directly.
+  TemplateArgument Args1[] = {
+      {Context, llvm::APSInt::getUnsigned(1u), Context.UnsignedIntTy}};
+  QualType A1TemplateSpecTy = Context.getTemplateSpecializationType(
+      TemplateName(A), Args1, Args1, A1RecordTy);
+  EXPECT_EQ(A1TemplateSpecTy.getAsString(), "A<1>");
+
+  TemplateArgument Args2[] = {
+      {Context, llvm::APSInt::getUnsigned(2u), Context.UnsignedIntTy}};
+  QualType A2TemplateSpecTy = Context.getTemplateSpecializationType(
+      TemplateName(A), Args2, Args2, A2RecordTy);
+  EXPECT_EQ(A2TemplateSpecTy.getAsString(), "A<2>");
+
+  // Find A<1>::B and its specialization B<3>.
+  auto *A1B =
+      A1->lookup(&Context.Idents.get("B")).find_first<ClassTemplateDecl>();
+  ASSERT_NE(A1B, nullptr);
+  auto A1BSpec = A1B->spec_begin();
+  ASSERT_NE(A1BSpec, A1B->spec_end());
+  auto *A1B3 = *A1BSpec;
+  QualType A1B3RecordTy = Context.getRecordType(A1B3);
+  EXPECT_EQ(getFullyQualifiedName(A1B3RecordTy), "A<1>::B<3>");
+
+  // Construct A<1>::B<3> and check name.
+  TemplateArgument Args3[] = {
+      {Context, llvm::APSInt::getUnsigned(3u), Context.UnsignedIntTy}};
+  QualType A1B3TemplateSpecTy = Context.getTemplateSpecializationType(
+      TemplateName(A1B), Args3, Args3, A1B3RecordTy);
+  EXPECT_EQ(A1B3TemplateSpecTy.getAsString(), "B<3>");
+
+  NestedNameSpecifier *A1Nested = NestedNameSpecifier::Create(
+      Context, nullptr, A1TemplateSpecTy.getTypePtr());
+  QualType A1B3ElaboratedTy = Context.getElaboratedType(
+      ElaboratedTypeKeyword::None, A1Nested, A1B3TemplateSpecTy);
+  EXPECT_EQ(A1B3ElaboratedTy.getAsString(), "A<1>::B<3>");
+
+  // Find A<2u>::B and its specialization B<4u>.
+  auto *A2B =
+      A2->lookup(&Context.Idents.get("B")).find_first<ClassTemplateDecl>();
+  ASSERT_NE(A2B, nullptr);
+  auto A2BSpec = A2B->spec_begin();
+  ASSERT_NE(A2BSpec, A2B->spec_end());
+  auto *A2B4 = *A2BSpec;
+  QualType A2B4RecordTy = Context.getRecordType(A2B4);
+  EXPECT_EQ(getFullyQualifiedName(A2B4RecordTy), "A<2U>::B<4U>");
+
+  // Construct A<2>::B<4> and check name.
+  TemplateArgument Args4[] = {
+      {Context, llvm::APSInt::getUnsigned(4u), Context.UnsignedIntTy}};
+  QualType A2B4TemplateSpecTy = Context.getTemplateSpecializationType(
+      TemplateName(A2B), Args4, Args4, A2B4RecordTy);
+  EXPECT_EQ(A2B4TemplateSpecTy.getAsString(), "B<4>");
+
+  NestedNameSpecifier *A2Nested = NestedNameSpecifier::Create(
+      Context, nullptr, A2TemplateSpecTy.getTypePtr());
+  QualType A2B4ElaboratedTy = Context.getElaboratedType(
+      ElaboratedTypeKeyword::None, A2Nested, A2B4TemplateSpecTy);
+  EXPECT_EQ(A2B4ElaboratedTy.getAsString(), "A<2>::B<4>");
+}
+
 TEST(QualTypeNameTest, AnonStrucs) {
   TypeNameVisitor AnonStrucs;
   AnonStrucs.ExpectedQualTypeNames["a"] = "short";

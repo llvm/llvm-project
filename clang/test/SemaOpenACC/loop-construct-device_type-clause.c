@@ -116,7 +116,7 @@ void uses() {
 #pragma acc loop device_type(*) present(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'private' may not follow a 'device_type' clause in a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc loop device_type(*) private(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'copyout' clause is not valid on 'loop' directive}}
@@ -147,7 +147,7 @@ void uses() {
 #pragma acc loop device_type(*) present_or_create(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'reduction' may not follow a 'device_type' clause in a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc loop device_type(*) reduction(+:Var)
   for(int i = 0; i < 5; ++i);
 #pragma acc loop device_type(*) collapse(1)

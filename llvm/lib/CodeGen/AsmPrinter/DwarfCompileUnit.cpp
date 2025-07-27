@@ -429,7 +429,7 @@ DIE *DwarfCompileUnit::getOrCreateCommonBlock(
   addString(NDie, dwarf::DW_AT_name, Name);
   addGlobalName(Name, NDie, CB->getScope());
   if (CB->getFile())
-    addSourceLine(NDie, CB->getLineNo(), CB->getFile());
+    addSourceLine(NDie, CB->getLineNo(), /*Column*/ 0, CB->getFile());
   if (DIGlobalVariable *V = CB->getDecl())
     getCU().addLocationAttribute(&NDie, V, GlobalExprs);
   return &NDie;
@@ -782,6 +782,8 @@ DIE *DwarfCompileUnit::constructLexicalScopeDIE(LexicalScope *Scope) {
     assert(!LexicalBlockDIEs.count(DS) &&
            "Concrete out-of-line DIE for this scope exists!");
     LexicalBlockDIEs[DS] = ScopeDIE;
+  } else {
+    InlinedLocalScopeDIEs[DS].push_back(ScopeDIE);
   }
 
   attachRangesOrLowHighPC(*ScopeDIE, Scope->getRanges());
@@ -1377,7 +1379,7 @@ void DwarfCompileUnit::constructCallSiteParmEntryDIEs(
 
 DIE *DwarfCompileUnit::constructImportedEntityDIE(
     const DIImportedEntity *Module) {
-  DIE *IMDie = DIE::get(DIEValueAllocator, (dwarf::Tag)Module->getTag());
+  DIE *IMDie = DIE::get(DIEValueAllocator, Module->getTag());
   insertDIE(Module, IMDie);
   DIE *EntityDie;
   auto *Entity = Module->getEntity();
@@ -1402,7 +1404,7 @@ DIE *DwarfCompileUnit::constructImportedEntityDIE(
   else
     EntityDie = getDIE(Entity);
   assert(EntityDie);
-  addSourceLine(*IMDie, Module->getLine(), Module->getFile());
+  addSourceLine(*IMDie, Module->getLine(), /*Column*/ 0, Module->getFile());
   addDIEEntry(*IMDie, dwarf::DW_AT_import, *EntityDie);
   StringRef Name = Module->getName();
   if (!Name.empty()) {
@@ -1489,6 +1491,19 @@ void DwarfCompileUnit::finishEntityDefinition(const DbgEntity *Entity) {
   // A TAG_label with a name and an AT_low_pc must be placed in debug_names.
   if (StringRef Name = Label->getName(); !Name.empty())
     getDwarfDebug().addAccelName(*this, CUNode->getNameTableKind(), Name, *Die);
+}
+
+void DwarfCompileUnit::attachLexicalScopesAbstractOrigins() {
+  auto AttachAO = [&](const DILocalScope *LS, DIE *ScopeDIE) {
+    if (auto *AbsLSDie = getAbstractScopeDIEs().lookup(LS))
+      addDIEEntry(*ScopeDIE, dwarf::DW_AT_abstract_origin, *AbsLSDie);
+  };
+
+  for (auto [LScope, ScopeDIE] : LexicalBlockDIEs)
+    AttachAO(LScope, ScopeDIE);
+  for (auto &[LScope, ScopeDIEs] : InlinedLocalScopeDIEs)
+    for (auto *ScopeDIE : ScopeDIEs)
+      AttachAO(LScope, ScopeDIE);
 }
 
 DbgEntity *DwarfCompileUnit::getExistingAbstractEntity(const DINode *Node) {
@@ -1686,6 +1701,11 @@ void DwarfCompileUnit::applyLabelAttributes(const DbgLabel &Label,
     addString(LabelDie, dwarf::DW_AT_name, Name);
   const auto *DILabel = Label.getLabel();
   addSourceLine(LabelDie, DILabel);
+  if (DILabel->isArtificial())
+    addFlag(LabelDie, dwarf::DW_AT_artificial);
+  if (DILabel->getCoroSuspendIdx())
+    addUInt(LabelDie, dwarf::DW_AT_LLVM_coro_suspend_idx, std::nullopt,
+            *DILabel->getCoroSuspendIdx());
 }
 
 /// Add a Dwarf expression attribute data and value.

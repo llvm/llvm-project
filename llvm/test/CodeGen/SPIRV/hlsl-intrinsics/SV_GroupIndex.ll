@@ -1,8 +1,5 @@
-; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-vulkan-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan-unknown %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
-
-; TODO(#136344): This test currently fails when --target-env vulkan1.3 is specified.
-; XFAIL: spirv-tools
+; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-vulkan1.3-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan1.3-unknown %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
 ; CHECK-DAG:        %[[#int:]] = OpTypeInt 32 0
 ; CHECK-DAG:        %[[#ptr_Input_int:]] = OpTypePointer Input %[[#int]]
@@ -14,7 +11,10 @@
 
 target triple = "spirv-unknown-vulkan-library"
 
-declare void @local_index_user(i32)
+define internal void @local_index_user(i32) {
+entry:
+  ret void
+}
 
 ; Function Attrs: convergent noinline norecurse
 define void @main() #1 {
