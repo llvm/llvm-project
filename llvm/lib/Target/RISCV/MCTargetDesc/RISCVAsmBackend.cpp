@@ -320,6 +320,7 @@ bool RISCVAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
   MCFixup Fixup =
       MCFixup::create(0, Expr, FirstLiteralRelocationKind + ELF::R_RISCV_ALIGN);
   F.setVarFixups({Fixup});
+  F.setLinkerRelaxable();
   F.getParent()->setLinkerRelaxable();
   return true;
 }
