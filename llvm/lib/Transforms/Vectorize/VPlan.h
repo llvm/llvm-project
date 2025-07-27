@@ -1841,6 +1841,10 @@ public:
                                      getGEPNoWrapFlags(), getDebugLoc());
   }
 
+  /// Return true if this VPVectorPointerRecipe corresponds to part 0. Note that
+  /// this is only accurate after the VPlan has been unrolled.
+  bool isFirstPart() const { return getUnrollPart(*this) == 0; }
+
   /// Return the cost of this VPHeaderPHIRecipe.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override {
@@ -2308,14 +2312,15 @@ public:
   /// respective masks, ordered [I0, M0, I1, M1, I2, M2, ...]. Note that M0 can
   /// be omitted (implied by passing an odd number of operands) in which case
   /// all other incoming values are merged into it.
-  VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands)
-      : VPSingleDefRecipe(VPDef::VPBlendSC, Operands, Phi, Phi->getDebugLoc()) {
+  VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands, DebugLoc DL)
+      : VPSingleDefRecipe(VPDef::VPBlendSC, Operands, Phi, DL) {
     assert(Operands.size() > 0 && "Expected at least one operand!");
   }
 
   VPBlendRecipe *clone() override {
     SmallVector<VPValue *> Ops(operands());
-    return new VPBlendRecipe(cast<PHINode>(getUnderlyingValue()), Ops);
+    return new VPBlendRecipe(cast_or_null<PHINode>(getUnderlyingValue()), Ops,
+                             getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPBlendSC)
@@ -4059,6 +4064,10 @@ public:
 
   /// Returns VF * UF of the vector loop region.
   VPValue &getVFxUF() { return VFxUF; }
+
+  LLVMContext &getContext() const {
+    return getScalarHeader()->getIRBasicBlock()->getContext();
+  }
 
   void addVF(ElementCount VF) { VFs.insert(VF); }
 
