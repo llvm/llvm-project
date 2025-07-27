@@ -566,7 +566,7 @@ void VPlanTransforms::prepareForVectorization(
   // the corresponding compare because they may have ended up with different
   // line numbers and we want to avoid awkward line stepping while debugging.
   // E.g., if the compare has got a line number inside the loop.
-  DebugLoc LatchDL = TheLoop->getLoopLatch()->getTerminator()->getDebugLoc();
+  DebugLoc LatchDL = LatchVPBB->getTerminator()->getDebugLoc();
   VPBuilder Builder(MiddleVPBB);
   VPValue *Cmp;
   if (!RequiresScalarEpilogueCheck)
