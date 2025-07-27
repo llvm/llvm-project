@@ -1012,6 +1012,10 @@ public:
     ReductionStartVector,
     // Creates a step vector starting from 0 to VF with a step of 1.
     StepVector,
+    /// Extracts a single lane (first operand) from a set of vector operands.
+    /// The lane specifies an index into a vector formed by combining all vector
+    /// operands (all operands after the first one).
+    ExtractLane,
 
   };
 
