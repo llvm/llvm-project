@@ -108,7 +108,7 @@ public:
 
     // Generate a call to printf for the current element of the loop.
     auto elementLoad =
-        memref::LoadOp::create(rewriter, loc, adaptor.getInput(), loopIvs);
+        memref::LoadOp::create(rewriter, loc, op.getInput(), loopIvs);
     LLVM::CallOp::create(rewriter, loc, getPrintfType(context), printfRef,
                          ArrayRef<Value>({formatSpecifierCst, elementLoad}));
 
@@ -221,11 +221,8 @@ void ToyToLLVMLoweringPass::runOnOperation() {
   populateFuncToLLVMConversionPatterns(typeConverter, patterns);
 
   // The only remaining operation to lower from the `toy` dialect, is the
-  // PrintOp. An identity converter is needed because the PrintOp lowering
-  // operates on MemRefType instead of the lowered LLVM struct type.
-  TypeConverter identityConverter;
-  identityConverter.addConversion([](Type type) { return type; });
-  patterns.add<PrintOpLowering>(identityConverter, &getContext());
+  // PrintOp.
+  patterns.add<PrintOpLowering>(&getContext());
 
   // We want to completely lower to LLVM, so we use a `FullConversion`. This
   // ensures that only legal operations will remain after the conversion.
