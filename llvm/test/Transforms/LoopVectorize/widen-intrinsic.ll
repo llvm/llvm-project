@@ -12,10 +12,9 @@ define void @powi_only_first_lane_used_of_second_arg(ptr %p, i32 %pow) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[P]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[TMP0]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[WIDE_LOAD]], i32 [[POW]])
-; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[TMP1]], align 4
+; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
