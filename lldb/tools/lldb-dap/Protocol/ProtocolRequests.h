@@ -175,6 +175,24 @@ struct Configuration {
   /// attach.
   std::chrono::seconds timeout = std::chrono::seconds(30);
 
+  /// Network-related performance optimization timeouts.
+  /// @{
+
+  /// Timeout for debuginfod symbol server requests in milliseconds.
+  /// Defaults to 2000ms (2 seconds) instead of system default (often 30s).
+  /// Set to 0 to disable debuginfod entirely.
+  std::optional<int> debuginfodTimeoutMs = 2000;
+
+  /// Timeout for other symbol server requests in milliseconds.
+  /// Defaults to 2000ms (2 seconds).
+  std::optional<int> symbolServerTimeoutMs = 2000;
+
+  /// Disable all network-based symbol loading for offline debugging.
+  /// When enabled, skips debuginfod and other network symbol services.
+  std::optional<bool> disableNetworkSymbols = false;
+
+  /// @}
+
   /// The escape prefix to use for executing regular LLDB commands in the Debug
   /// Console, instead of printing variables. Defaults to a backtick. If it's an
   /// empty string, then all expression in the Debug Console are treated as

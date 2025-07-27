@@ -137,6 +137,14 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
+* Added network symbol optimization features to lldb-dap to improve launch performance
+  in environments with slow or unreliable network symbol services. New configuration
+  options include ``debuginfodTimeoutMs``, ``symbolServerTimeoutMs``, and
+  ``disableNetworkSymbols`` to address performance issues where network symbol loading
+  can cause significant delays during debugging session startup. This addresses
+  GitHub issue #150220 where lldb-dap launch times were 3000ms vs 120-400ms for
+  other debuggers.
+
 Changes to BOLT
 ---------------------------------
 

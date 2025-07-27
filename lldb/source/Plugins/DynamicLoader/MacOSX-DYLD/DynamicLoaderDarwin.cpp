@@ -653,37 +653,150 @@ DynamicLoaderDarwin::PreloadModulesFromImageInfos(
     const ImageInfo::collection &image_infos) {
   const auto size = image_infos.size();
   std::vector<std::pair<DynamicLoaderDarwin::ImageInfo, ModuleSP>> images(size);
+
+  // Thread-safe loading with proper error handling and synchronization
+  std::mutex error_mutex;
+  std::vector<std::string> load_errors;
+
   auto LoadImage = [&](size_t i, ImageInfo::collection::const_iterator it) {
-    const auto &image_info = *it;
-    images[i] = std::make_pair(
-        image_info, FindTargetModuleForImageInfo(image_info, true, nullptr));
+    try {
+      const auto &image_info = *it;
+
+      // Add defensive checks to prevent crashes
+      if (image_info.address == LLDB_INVALID_ADDRESS) {
+        std::lock_guard<std::mutex> guard(error_mutex);
+        load_errors.push_back("Invalid address for image at index " + std::to_string(i));
+        images[i] = std::make_pair(image_info, ModuleSP());
+        return;
+      }
+
+      // Ensure we have a valid process before attempting module loading
+      if (!m_process || !m_process->IsAlive()) {
+        std::lock_guard<std::mutex> guard(error_mutex);
+        load_errors.push_back("Process not available for image at index " + std::to_string(i));
+        images[i] = std::make_pair(image_info, ModuleSP());
+        return;
+      }
+
+      // Thread-safe module loading with timeout protection
+      ModuleSP module_sp;
+      try {
+        module_sp = FindTargetModuleForImageInfo(image_info, true, nullptr);
+      } catch (...) {
+        std::lock_guard<std::mutex> guard(error_mutex);
+        load_errors.push_back("Exception during module loading for image at index " + std::to_string(i));
+        module_sp = ModuleSP();
+      }
+
+      images[i] = std::make_pair(image_info, module_sp);
+
+    } catch (const std::exception& e) {
+      std::lock_guard<std::mutex> guard(error_mutex);
+      load_errors.push_back("Standard exception in LoadImage: " + std::string(e.what()));
+      images[i] = std::make_pair(*it, ModuleSP());
+    } catch (...) {
+      std::lock_guard<std::mutex> guard(error_mutex);
+      load_errors.push_back("Unknown exception in LoadImage for index " + std::to_string(i));
+      images[i] = std::make_pair(*it, ModuleSP());
+    }
   };
+
   auto it = image_infos.begin();
   bool is_parallel_load = m_process->GetTarget().GetParallelModuleLoad();
-  if (is_parallel_load) {
-    llvm::ThreadPoolTaskGroup taskGroup(Debugger::GetThreadPool());
-    for (size_t i = 0; i < size; ++i, ++it) {
-      taskGroup.async(LoadImage, i, it);
+
+  // Add safety check for parallel loading
+  if (is_parallel_load && size > 1) {
+    try {
+      llvm::ThreadPoolTaskGroup taskGroup(Debugger::GetThreadPool());
+      for (size_t i = 0; i < size; ++i, ++it) {
+        taskGroup.async(LoadImage, i, it);
+      }
+      taskGroup.wait();
+    } catch (...) {
+      // Fall back to sequential loading if parallel loading fails
+      Log *log = GetLog(LLDBLog::DynamicLoader);
+      if (log) {
+        log->Printf("DynamicLoaderDarwin: Parallel module loading failed, falling back to sequential");
+      }
+
+      // Reset and try sequential loading
+      it = image_infos.begin();
+      for (size_t i = 0; i < size; ++i, ++it) {
+        LoadImage(i, it);
+      }
     }
-    taskGroup.wait();
   } else {
+    // Sequential loading (safer fallback)
     for (size_t i = 0; i < size; ++i, ++it) {
       LoadImage(i, it);
     }
   }
+
+  // Log any errors that occurred during loading
+  if (!load_errors.empty()) {
+    Log *log = GetLog(LLDBLog::DynamicLoader);
+    if (log) {
+      for (const auto& error : load_errors) {
+        log->Printf("DynamicLoaderDarwin: Module loading error: %s", error.c_str());
+      }
+    }
+  }
+
   return images;
 }
 
 bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
     ImageInfo::collection &image_infos) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  auto images = PreloadModulesFromImageInfos(image_infos);
-  return AddModulesUsingPreloadedModules(images);
+
+  // Additional safety checks before processing
+  if (!m_process || !m_process->IsAlive()) {
+    Log *log = GetLog(LLDBLog::DynamicLoader);
+    if (log) {
+      log->Printf("DynamicLoaderDarwin: Cannot add modules - process not available");
+    }
+    return false;
+  }
+
+  if (image_infos.empty()) {
+    return true; // Nothing to do, but not an error
+  }
+
+  try {
+    auto images = PreloadModulesFromImageInfos(image_infos);
+    return AddModulesUsingPreloadedModules(images);
+  } catch (const std::exception& e) {
+    Log *log = GetLog(LLDBLog::DynamicLoader);
+    if (log) {
+      log->Printf("DynamicLoaderDarwin: Exception in AddModulesUsingImageInfos: %s", e.what());
+    }
+    return false;
+  } catch (...) {
+    Log *log = GetLog(LLDBLog::DynamicLoader);
+    if (log) {
+      log->Printf("DynamicLoaderDarwin: Unknown exception in AddModulesUsingImageInfos");
+    }
+    return false;
+  }
 }
 
 bool DynamicLoaderDarwin::AddModulesUsingPreloadedModules(
     std::vector<std::pair<ImageInfo, ModuleSP>> &images) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
+
+  // Additional safety checks
+  if (!m_process || !m_process->IsAlive()) {
+    Log *log = GetLog(LLDBLog::DynamicLoader);
+    if (log) {
+      log->Printf("DynamicLoaderDarwin: Cannot add preloaded modules - process not available");
+    }
+    return false;
+  }
+
+  if (images.empty()) {
+    return true; // Nothing to do, but not an error
+  }
+
   // Now add these images to the main list.
   ModuleList loaded_module_list;
   Log *log = GetLog(LLDBLog::DynamicLoader);

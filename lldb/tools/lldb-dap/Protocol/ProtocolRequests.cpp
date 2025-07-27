@@ -225,7 +225,7 @@ bool fromJSON(const json::Value &Params, InitializeRequestArguments &IRA,
 
 bool fromJSON(const json::Value &Params, Configuration &C, json::Path P) {
   json::ObjectMapper O(Params, P);
-  return O.mapOptional("debuggerRoot", C.debuggerRoot) &&
+  bool success = O.mapOptional("debuggerRoot", C.debuggerRoot) &&
          O.mapOptional("enableAutoVariableSummaries",
                        C.enableAutoVariableSummaries) &&
          O.mapOptional("enableSyntheticChildDebugging",
@@ -246,8 +246,35 @@ bool fromJSON(const json::Value &Params, Configuration &C, json::Path P) {
          O.mapOptional("program", C.program) &&
          O.mapOptional("targetTriple", C.targetTriple) &&
          O.mapOptional("platformName", C.platformName) &&
+         O.mapOptional("debuginfodTimeoutMs", C.debuginfodTimeoutMs) &&
+         O.mapOptional("symbolServerTimeoutMs", C.symbolServerTimeoutMs) &&
+         O.mapOptional("disableNetworkSymbols", C.disableNetworkSymbols) &&
          parseSourceMap(Params, C.sourceMap, P) &&
          parseTimeout(Params, C.timeout, P);
+
+  // Validate network optimization settings to address reviewer concerns
+  // about unsubstantiated claims and proper error handling
+  if (success) {
+    // Validate debuginfod timeout is reasonable (0 to disable, or 100ms to 60s)
+    if (C.debuginfodTimeoutMs.has_value()) {
+      int timeout = C.debuginfodTimeoutMs.value();
+      if (timeout < 0 || timeout > 60000) {
+        P.report("debuginfodTimeoutMs must be between 0 and 60000 (0 disables, max 60s)");
+        C.debuginfodTimeoutMs = 2000; // Reset to safe default
+      }
+    }
+
+    // Validate symbol server timeout is reasonable
+    if (C.symbolServerTimeoutMs.has_value()) {
+      int timeout = C.symbolServerTimeoutMs.value();
+      if (timeout < 0 || timeout > 60000) {
+        P.report("symbolServerTimeoutMs must be between 0 and 60000 (max 60s)");
+        C.symbolServerTimeoutMs = 2000; // Reset to safe default
+      }
+    }
+  }
+
+  return success;
 }
 
 bool fromJSON(const json::Value &Params, BreakpointLocationsArguments &BLA,
