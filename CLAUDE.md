@@ -170,13 +170,18 @@ llvm-lit --filter="NamePattern" test/directory/
 
 **LLDB Build Configuration for Development:**
 ```bash
-# Minimal LLDB build for language plugin development
+# Recommended LLDB build for language plugin development
 cmake -S llvm -B build -G Ninja \
   -DLLVM_ENABLE_PROJECTS="clang;lldb;flang" \
   -DLLVM_TARGETS_TO_BUILD="X86" \
-  -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_BUILD_TYPE=RelWithDebInfo \
   -DLLVM_ENABLE_ASSERTIONS=ON \
-  -DLLDB_INCLUDE_TESTS=ON
+  -DLLDB_INCLUDE_TESTS=ON \
+  -DLLVM_INSTALL_UTILS=ON \
+  -DLLVM_USE_LINKER=lld
+
+# For debugging LLDB itself, use Debug instead of RelWithDebInfo
+# cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug ...
 ```
 
 **LLDB Testing:**
@@ -198,9 +203,11 @@ lldb-dotest lldb/test/API/functionalities/breakpoint/
 **Language Plugin Development Pattern:**
 1. Create plugin directory: `lldb/source/Plugins/Language/LanguageName/`
 2. Implement `LanguageName.h` and `LanguageName.cpp` inheriting from `Language`
-3. Register plugin in `lldb/source/Plugins/Language/CMakeLists.txt`
-4. Add plugin initialization in appropriate registry
-5. Create tests in `lldb/test/API/lang/languagename/`
+3. Use `LLDB_PLUGIN_DEFINE(LanguageName)` macro for plugin definition
+4. Register with PluginManager in Initialize/Terminate methods
+5. Add to `lldb/source/Plugins/Language/CMakeLists.txt` using `add_subdirectory()`
+6. Create tests in `lldb/test/API/lang/languagename/` with proper Python test classes
+7. Follow LLVM coding standards: C++17, CamelCase types, lowerCamelCase variables
 
 **Key LLDB Classes for Language Plugins:**
 - `Language`: Base class for language-specific functionality
@@ -212,5 +219,14 @@ lldb-dotest lldb/test/API/functionalities/breakpoint/
 **Fortran Development Workflow:**
 - Use TDD: Write failing test first, implement to pass, refactor
 - Build only LLDB components: `ninja -C build lldb lldb-test`
-- Test frequently: `ninja -C build check-lldb-api-lang-fortran`
+- Test frequently: `llvm-lit lldb/test/API/lang/fortran/`
+- Format code: `git clang-format HEAD~1` before committing
+- Follow LLVM conventions: single commit per PR, no unrelated changes
 - Use selective building to save time on large codebase
+
+**LLVM Contribution Guidelines:**
+- Base patches on recent `main` branch commit
+- Include test cases with all patches
+- Format code with clang-format
+- Follow C++17 standards and LLVM data structures (SmallVector, DenseMap)
+- Use LLVM error handling (Expected<T>, Error) over exceptions

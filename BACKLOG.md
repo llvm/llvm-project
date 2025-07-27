@@ -22,8 +22,9 @@
 
 ### Story 1.2: Test Infrastructure Foundation
 - [ ] Set up basic test structure in `lldb/test/API/lang/fortran/`
-- [ ] Create simple Fortran test programs (.f90 files)
-- [ ] Establish lit test configuration
+- [ ] Create simple Fortran test programs (.f90 files) with Makefile
+- [ ] Add Python test classes inheriting from `lldbsuite.test.TestBase`
+- [ ] Configure lit test discovery for Fortran API tests
 - [ ] Add CMake integration for Fortran tests
 
 **Acceptance Criteria**:
@@ -55,23 +56,27 @@
 
 ### Story 2.1: Plugin Registration Infrastructure (RED)
 - [ ] Create `lldb/source/Plugins/Language/Fortran/` directory structure
-- [ ] Implement basic `FortranLanguage.h` class declaration
-- [ ] Add plugin registration in PluginManager
+- [ ] Implement basic `FortranLanguage.h` class declaration inheriting from `Language`
+- [ ] Add `LLDB_PLUGIN_DEFINE(FortranLanguage)` macro
+- [ ] Register plugin with PluginManager using standard pattern
+- [ ] Add to `lldb/source/Plugins/Language/CMakeLists.txt`
 - [ ] Write failing test for language recognition
 
 **Acceptance Criteria**:
 - LLDB recognizes Fortran as a supported language
 - No "unsupported language" warnings for Fortran files
 - Plugin loads without errors
+- Follows LLVM coding standards (C++17, proper includes, naming)
 
 **Test Cases (RED phase)**:
 ```python
-# Test: test_fortran_language_recognition.py
-def test_fortran_language_detected(self):
-    """Test that LLDB recognizes Fortran source files"""
-    # This should FAIL initially
-    self.expect("settings show target.language", 
-                substrs=["fortran"])
+# Test: test_fortran_language_recognition.py (in lldb/test/API/lang/fortran/)
+class FortranLanguageTestCase(TestBase):
+    def test_fortran_language_detected(self):
+        """Test that LLDB recognizes Fortran source files"""
+        # This should FAIL initially
+        self.expect("settings show target.language", 
+                    substrs=["fortran"])
 ```
 
 ### Story 2.2: Language Type Recognition (GREEN)

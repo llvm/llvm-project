@@ -56,10 +56,10 @@ lldb/source/Plugins/Language/Fortran/
 ├── CMakeLists.txt
 ├── FortranLanguage.h
 ├── FortranLanguage.cpp
-├── FortranFormatters.h
-├── FortranFormatters.cpp
-└── FortranExpressionParser.h
+└── FortranFormatters.cpp
 ```
+
+**Plugin Registration**: Use `LLDB_PLUGIN_DEFINE(FortranLanguage)` macro and register with PluginManager following the pattern from CPlusPlusLanguage and ObjCLanguage.
 
 ### DWARF Integration Points
 
@@ -127,17 +127,21 @@ Leverage existing Fortran-specific DWARF features:
 ## Build System Integration
 
 ### Selective Building Strategy
-Given the massive LLVM codebase, we need a minimal build configuration:
+Following LLVM best practices for focused development:
 
 ```bash
-# Minimal LLDB build for Fortran development
+# Recommended LLDB build for Fortran development
 cmake -S llvm -B build -G Ninja \
   -DLLVM_ENABLE_PROJECTS="clang;lldb;flang" \
   -DLLVM_TARGETS_TO_BUILD="X86" \
-  -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_BUILD_TYPE=RelWithDebInfo \
   -DLLVM_ENABLE_ASSERTIONS=ON \
-  -DLLDB_INCLUDE_TESTS=ON
+  -DLLDB_INCLUDE_TESTS=ON \
+  -DLLVM_INSTALL_UTILS=ON \
+  -DLLVM_USE_LINKER=lld
 ```
+
+**Note**: Using `RelWithDebInfo` provides better performance than `Debug` while maintaining debug symbols. Use `Debug` only when debugging LLDB itself.
 
 ### Test-Driven Development Workflow
 1. Write failing test for new functionality
