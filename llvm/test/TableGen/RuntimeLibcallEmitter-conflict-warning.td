@@ -25,6 +25,11 @@ def dup1 : RuntimeLibcallImpl<ANOTHER_DUP>;
 // func_a and func_b both provide SOME_FUNC.
 
 // CHECK: if (isTargetArchA()) {
+// CHECK-NEXT: static constexpr LibcallImplBitset SystemAvailableImpls({
+// CHECK-NEXT:   0x00000000000018
+// CHECK-NEXT: });
+// CHECK-NEXT: AvailableLibcallImpls = SystemAvailableImpls;
+// CHECK-EMPTY:
 // CHECK-NEXT: setLibcallsImpl({
 // CHECK-NEXT:   {RTLIB::SOME_FUNC, RTLIB::func_b}, // func_b
 // CHECK-NEXT: });
@@ -35,6 +40,11 @@ def TheSystemLibraryA : SystemRuntimeLibrary<isTargetArchA,
 >;
 
 // CHECK: if (isTargetArchB()) {
+// CHECK-NEXT: static constexpr LibcallImplBitset SystemAvailableImpls({
+// CHECK-NEXT:   0x00000000000058
+// CHECK-NEXT: });
+// CHECK-NEXT: AvailableLibcallImpls = SystemAvailableImpls;
+// CHECK-EMPTY:
 // CHECK-NEXT: setLibcallsImpl({
 // CHECK-NEXT:   {RTLIB::OTHER_FUNC, RTLIB::other_func}, // other_func
 // CHECK-NEXT:   {RTLIB::SOME_FUNC, RTLIB::func_a}, // func_a
@@ -46,6 +56,11 @@ def TheSystemLibraryB : SystemRuntimeLibrary<isTargetArchB,
 >;
 
 // CHECK: if (isTargetArchC()) {
+// CHECK-NEXT: static constexpr LibcallImplBitset SystemAvailableImpls({
+// CHECK-NEXT:   0x0000000000007e
+// CHECK-NEXT: });
+// CHECK-NEXT: AvailableLibcallImpls = SystemAvailableImpls;
+// CHECK-EMPTY:
 // CHECK-NEXT: setLibcallsImpl({
 // CHECK-NEXT:   {RTLIB::ANOTHER_DUP, RTLIB::dup1}, // dup1
 // CHECK-NEXT:   {RTLIB::OTHER_FUNC, RTLIB::other_func}, // other_func

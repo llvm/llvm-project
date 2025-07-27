@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
@@ -363,10 +364,10 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
         "  };\n"
         "  auto setLibcallsImpl = [this](\n"
         "    ArrayRef<LibcallImplPair> Libcalls,\n"
-        "    std::optional<llvm::CallingConv::ID> CC = {})\n"
-        "  {\n"
+        "    std::optional<llvm::CallingConv::ID> CC = {}) {\n"
         "    for (const auto [Func, Impl] : Libcalls) {\n"
         "      setLibcallImpl(Func, Impl);\n"
+        "      setAvailable(Impl);\n"
         "      if (CC)\n"
         "        setLibcallImplCallingConv(Impl, *CC);\n"
         "    }\n"
@@ -412,6 +413,10 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
         PredicateWithCC()); // No predicate or CC override first.
 
     DenseMap<PredicateWithCC, LibcallsWithCC> Pred2Funcs;
+
+    SmallVector<uint64_t, 32> BitsetValues(
+        divideCeil(RuntimeLibcallImplDefList.size(), 64));
+
     for (const Record *Elt : *Elements) {
       const RuntimeLibcallImpl *LibCallImpl = getRuntimeLibcallImpl(Elt);
       if (!LibCallImpl) {
@@ -420,22 +425,46 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
         continue;
       }
 
+      size_t BitIdx = LibCallImpl->getEnumVal();
+      uint64_t BitmaskVal = uint64_t(1) << (BitIdx % 64);
+      size_t BitsetIdx = BitIdx / 64;
+
       auto It = Func2Preds.find(LibCallImpl);
       if (It == Func2Preds.end()) {
+        BitsetValues[BitsetIdx] |= BitmaskVal;
         Pred2Funcs[PredicateWithCC()].LibcallImpls.push_back(LibCallImpl);
         continue;
       }
 
       for (const Record *Pred : It->second.first) {
         const Record *CC = It->second.second;
-        PredicateWithCC Key(Pred, CC);
+        AvailabilityPredicate SubsetPredicate(Pred);
+        if (SubsetPredicate.isAlwaysAvailable())
+          BitsetValues[BitsetIdx] |= BitmaskVal;
 
+        PredicateWithCC Key(Pred, CC);
         auto &Entry = Pred2Funcs[Key];
         Entry.LibcallImpls.push_back(LibCallImpl);
         Entry.CallingConv = It->second.second;
         PredicateSorter.insert(Key);
       }
     }
+
+    OS << "    static constexpr LibcallImplBitset SystemAvailableImpls({\n"
+       << indent(6);
+
+    ListSeparator LS;
+    unsigned EntryCount = 0;
+    for (uint64_t Bits : BitsetValues) {
+      if (EntryCount++ == 4) {
+        EntryCount = 1;
+        OS << ",\n" << indent(6);
+      } else
+        OS << LS;
+      OS << format_hex(Bits, 16);
+    }
+    OS << "\n    });\n"
+          "    AvailableLibcallImpls = SystemAvailableImpls;\n\n";
 
     SmallVector<PredicateWithCC, 0> SortedPredicates =
         PredicateSorter.takeVector();
@@ -500,7 +529,7 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
         OS << indent(IndentDepth + 4);
         LibCallImpl->emitTableEntry(OS);
       }
-      OS << indent(IndentDepth + 2) << "}";
+      OS << indent(IndentDepth + 2) << '}';
       if (FuncsWithCC.CallingConv) {
         StringRef CCEnum =
             FuncsWithCC.CallingConv->getValueAsString("CallingConv");
