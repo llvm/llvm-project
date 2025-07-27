@@ -2967,14 +2967,14 @@ static bool isX86CCUnsigned(X86::CondCode X86CC) {
   case X86::COND_BE:
   case X86::COND_AE:
     return true;
+  default:
+    llvm_unreachable("Invalid integer condition!");
   case X86::COND_E:
   case X86::COND_NE:
   case X86::COND_G:
   case X86::COND_GE:
   case X86::COND_L:
   case X86::COND_LE:
-  default:
-    llvm_unreachable("Invalid integer condition!");
     return false;
   }
 }
