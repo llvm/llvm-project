@@ -1579,20 +1579,20 @@ llvm/ADT/SmallVector.h
 ``SmallVector<Type, N>`` is a simple class that looks and smells just like
 ``vector<Type>``: it supports efficient iteration, lays out elements in memory
 order (so you can do pointer arithmetic between elements), supports efficient
-push_back/pop_back operations, supports efficient random access to its elements,
+``push_back``/``pop_back`` operations, supports efficient random access to its elements,
 etc.
 
-The main advantage of SmallVector is that it allocates space for some number of
-elements (N) **in the object itself**.  Because of this, if the SmallVector is
+The main advantage of ``SmallVector`` is that it allocates space for some number of
+elements (N) **in the object itself**.  Because of this, if the ``SmallVector`` is
 dynamically smaller than N, no malloc is performed.  This can be a big win in
 cases where the malloc/free call is far more expensive than the code that
 fiddles around with the elements.
 
 This is good for vectors that are "usually small" (e.g. the number of
 predecessors/successors of a block is usually less than 8).  On the other hand,
-this makes the size of the SmallVector itself large, so you don't want to
+this makes the size of the ``SmallVector`` itself large, so you don't want to
 allocate lots of them (doing so will waste a lot of space).  As such,
-SmallVectors are most useful when on the stack.
+``SmallVector``s are most useful when on the stack.
 
 In the absence of a well-motivated choice for the number of
 inlined elements ``N``, it is recommended to use ``SmallVector<T>`` (that is,
@@ -1600,10 +1600,10 @@ omitting the ``N``). This will choose a default number of
 inlined elements reasonable for allocation on the stack (for example, trying
 to keep ``sizeof(SmallVector<T>)`` around 64 bytes).
 
-SmallVector also provides a nice portable and efficient replacement for
+``SmallVector`` also provides a nice portable and efficient replacement for
 ``alloca``.
 
-SmallVector has grown a few other minor advantages over ``std::vector``, causing
+``SmallVector`` has grown a few other minor advantages over ``std::vector``, causing
 ``SmallVector<Type, 0>`` to be preferred over ``std::vector<Type>``.
 
 #. ``std::vector`` is exception-safe, and some implementations have pessimizations
@@ -1895,7 +1895,7 @@ Note that it is generally preferred to *not* pass strings around as ``const
 char*``'s.  These have a number of problems, including the fact that they
 cannot represent embedded nul ("\0") characters, and do not have a length
 available efficiently.  The general replacement for '``const char*``' is
-StringRef.
+``StringRef``.
 
 For more information on choosing string containers for APIs, please see
 :ref:`Passing Strings <string_apis>`.
@@ -1905,7 +1905,7 @@ For more information on choosing string containers for APIs, please see
 llvm/ADT/StringRef.h
 ^^^^^^^^^^^^^^^^^^^^
 
-The StringRef class is a simple value class that contains a pointer to a
+The ``StringRef`` class is a simple value class that contains a pointer to a
 character and a length, and is quite related to the :ref:`ArrayRef
 <dss_arrayref>` class (but specialized for arrays of characters).  Because
 ``StringRef`` carries a length with it, it safely handles strings with embedded nul
@@ -1915,14 +1915,14 @@ represents.
 
 ``StringRef`` is ideal for passing simple strings around that are known to be live,
 either because they are C string literals, ``std::string``, a C array, or a
-SmallVector.  Each of these cases has an efficient implicit conversion to
-StringRef, which doesn't result in a dynamic strlen being executed.
+``SmallVector``.  Each of these cases has an efficient implicit conversion to
+``StringRef``, which doesn't result in a dynamic ``strlen`` being executed.
 
-StringRef has a few major limitations which make more powerful string containers
+``StringRef`` has a few major limitations which make more powerful string containers
 useful:
 
 #. You cannot directly convert a ``StringRef`` to a 'const char*' because there is
-   no way to add a trailing nul (unlike the .c_str() method on various stronger
+   no way to add a trailing nul (unlike the ``.c_str()`` method on various stronger
    classes).
 
 #. ``StringRef`` doesn't own or keep alive the underlying string bytes.
