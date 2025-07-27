@@ -22,24 +22,47 @@
 template <typename T>
 struct TestConvert {
   void operator()() const {
-    T x(T(1));
+    using Unqualified = std::remove_cv_t<T>;
+    static_assert(std::is_nothrow_convertible_v<std::atomic_ref<T>, Unqualified>);
 
-    T copy = x;
-    std::atomic_ref<T> const a(copy);
+    {
+      T x(Unqualified(1));
 
-    T converted = a;
-    assert(converted == x);
+      T copy = const_cast<Unqualified const&>(x);
+      std::atomic_ref<T> const a(copy);
 
-    ASSERT_NOEXCEPT(T(a));
-    static_assert(std::is_nothrow_convertible_v<std::atomic_ref<T>, T>);
+      Unqualified converted = a;
+      assert(converted == const_cast<Unqualified const&>(x));
 
-    auto store = [](std::atomic_ref<T> const& y, T, T new_val) { y.store(new_val); };
-    auto load  = [](std::atomic_ref<T> const& y) { return static_cast<T>(y); };
-    test_seq_cst<T>(store, load);
+      ASSERT_NOEXCEPT(T(a));
+    }
+
+    if constexpr (!std::is_const_v<T>) { // FIXME
+      auto store = [](std::atomic_ref<T> const& y, T const&, T const& new_val) {
+        y.store(const_cast<Unqualified const&>(new_val));
+      };
+      auto load = [](std::atomic_ref<T> const& y) { return static_cast<Unqualified>(y); };
+      test_seq_cst<T>(store, load);
+    }
   }
 };
 
+template <template <class...> class F>
+struct CallWithCVQualifiers {
+  template <class T>
+  struct apply {
+    void operator()() const {
+      F<T>()();
+      F<T const>()();
+      if constexpr (std::atomic_ref<T>::is_always_lock_free) {
+        F<T volatile>()();
+        F<T const volatile>()();
+      }
+    }
+  };
+};
+
 int main(int, char**) {
-  TestEachAtomicType<TestConvert>()();
+  TestEachAtomicType<CallWithCVQualifiers<TestConvert>::apply>()();
   return 0;
 }

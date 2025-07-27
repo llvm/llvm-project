@@ -71,6 +71,8 @@ int main(int, char**) {
   TestOperatorMinusEquals<double>()();
 
   TestEachPointerType<TestOperatorMinusEquals>()();
+  TestDoesNotHaveOperatorMinusEquals<void*>()();
+  TestDoesNotHaveOperatorMinusEquals<void const*>()();
 
   TestDoesNotHaveOperatorMinusEquals<bool>()();
   TestDoesNotHaveOperatorMinusEquals<UserAtomicType>()();

@@ -37,7 +37,7 @@ void check_member_types() {
   if constexpr ((std::is_integral_v<T> && !std::is_same_v<T, bool>) || std::is_floating_point_v<T>) {
     ASSERT_SAME_TYPE(typename std::atomic_ref<T>::value_type, T);
     ASSERT_SAME_TYPE(typename std::atomic_ref<T>::difference_type, T);
-  } else if constexpr (std::is_pointer_v<T>) {
+  } else if constexpr (std::is_pointer_v<T> && std::is_object_v<std::remove_pointer_t<T>>) {
     ASSERT_SAME_TYPE(typename std::atomic_ref<T>::value_type, T);
     ASSERT_SAME_TYPE(typename std::atomic_ref<T>::difference_type, std::ptrdiff_t);
   } else {
@@ -70,9 +70,12 @@ void testall() {
   };
   test<Trivial>();
   test<bool>();
-
-  // Partial specialization for pointer types
   test<void*>();
+  test<void const*>();
+
+  // Partial specialization for pointer-to-object types
+  test<int*>();
+  test<int const*>();
 
   // Specialization for integral types
   // + character types
