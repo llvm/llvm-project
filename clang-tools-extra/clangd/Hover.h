@@ -74,6 +74,8 @@ struct HoverInfo {
   std::optional<Range> SymRange;
   index::SymbolKind Kind = index::SymbolKind::Unknown;
   std::string Documentation;
+  // required to create a comments::CommandTraits object without the ASTContext
+  CommentOptions CommentOpts;
   /// Source code containing the definition of the symbol.
   std::string Definition;
   const char *DefinitionLanguage = "cpp";
@@ -118,10 +120,15 @@ struct HoverInfo {
   // alphabetical order.
   std::vector<std::string> UsedSymbolNames;
 
-  /// Produce a user-readable information.
-  markup::Document present() const;
-
+  /// Produce a user-readable information based on the specified markup kind.
   std::string present(MarkupKind Kind) const;
+
+private:
+  /// Parse and render the hover information as Doxygen documentation.
+  markup::Document presentDoxygen() const;
+
+  /// Render the hover information as a default documentation.
+  markup::Document presentDefault() const;
 };
 
 inline bool operator==(const HoverInfo::PrintedType &LHS,
