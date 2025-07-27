@@ -2282,6 +2282,7 @@ system_error typeinfo
 system_error utility
 system_error variant
 system_error version
+text_encoding version
 thread algorithm
 thread array
 thread atomic
