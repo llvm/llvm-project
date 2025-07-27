@@ -179,7 +179,7 @@ define void @test3(ptr noalias writable sret(%0) %agg.result) nounwind  {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[AGG_RESULT:%.*]], ptr align 16 @x, i32 32, i1 false)
 ; CHECK-NEXT:    ret void
 ;
-  %x.0 = alloca %0
+  %x.0 = alloca %0, align 16
   call void @llvm.memcpy.p0.p0.i32(ptr align 16 %x.0, ptr align 16 @x, i32 32, i1 false)
   call void @llvm.memcpy.p0.p0.i32(ptr align 16 %agg.result, ptr align 16 %x.0, i32 32, i1 false)
   ret void
@@ -192,7 +192,7 @@ define void @test4(ptr %P) {
 ; CHECK-NEXT:    call void @test4a(ptr byval(i8) align 1 [[P:%.*]])
 ; CHECK-NEXT:    ret void
 ;
-  %A = alloca %1
+  %A = alloca %1, align 4
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %A, ptr align 4 %P, i64 8, i1 false)
   call void @test4a(ptr align 1 byval(i8) %A)
   ret void
@@ -201,12 +201,12 @@ define void @test4(ptr %P) {
 ; Make sure we don't remove the memcpy if the source address space doesn't match the byval argument
 define void @test4_addrspace(ptr addrspace(1) %P) {
 ; CHECK-LABEL: @test4_addrspace(
-; CHECK-NEXT:    [[A1:%.*]] = alloca [[TMP1:%.*]], align 8
+; CHECK-NEXT:    [[A1:%.*]] = alloca [[TMP1:%.*]], align 4
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr align 4 [[A1]], ptr addrspace(1) align 4 [[P:%.*]], i64 8, i1 false)
 ; CHECK-NEXT:    call void @test4a(ptr byval(i8) align 1 [[A1]])
 ; CHECK-NEXT:    ret void
 ;
-  %a1 = alloca %1
+  %a1 = alloca %1, align 4
   call void @llvm.memcpy.p0.p1.i64(ptr align 4 %a1, ptr addrspace(1) align 4 %P, i64 8, i1 false)
   call void @test4a(ptr align 1 byval(i8) %a1)
   ret void
@@ -214,13 +214,13 @@ define void @test4_addrspace(ptr addrspace(1) %P) {
 
 define void @test4_write_between(ptr %P) {
 ; CHECK-LABEL: @test4_write_between(
-; CHECK-NEXT:    [[A1:%.*]] = alloca [[TMP1:%.*]], align 8
+; CHECK-NEXT:    [[A1:%.*]] = alloca [[TMP1:%.*]], align 4
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[A1]], ptr align 4 [[P:%.*]], i64 8, i1 false)
 ; CHECK-NEXT:    store i8 0, ptr [[A1]], align 1
 ; CHECK-NEXT:    call void @test4a(ptr byval(i8) align 1 [[A1]])
 ; CHECK-NEXT:    ret void
 ;
-  %a1 = alloca %1
+  %a1 = alloca %1, align 4
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %a1, ptr align 4 %P, i64 8, i1 false)
   store i8 0, ptr %a1
   call void @test4a(ptr align 1 byval(i8) %a1)
@@ -229,15 +229,13 @@ define void @test4_write_between(ptr %P) {
 
 define i8 @test4_read_between(ptr %P) {
 ; CHECK-LABEL: @test4_read_between(
-; CHECK-NEXT:    [[A1:%.*]] = alloca [[TMP1:%.*]], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[A1]], ptr align 4 [[P:%.*]], i64 8, i1 false)
-; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[A1]], align 1
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    call void @test4a(ptr byval(i8) align 1 [[P]])
 ; CHECK-NEXT:    ret i8 [[X]]
 ;
-  %a1 = alloca %1
+  %a1 = alloca %1, align 4
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %a1, ptr align 4 %P, i64 8, i1 false)
-  %x = load i8, ptr %a1
+  %x = load i8, ptr %a1, align 1
   call void @test4a(ptr align 1 byval(i8) %a1)
   ret i8 %x
 }
@@ -251,7 +249,7 @@ define void @test4_non_local(ptr %P, i1 %c) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
-  %a1 = alloca %1
+  %a1 = alloca %1, align 4
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %a1, ptr align 4 %P, i64 8, i1 false)
   br i1 %c, label %call, label %exit
 
