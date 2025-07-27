@@ -1,11 +1,8 @@
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 set(LLVM_LINK_COMPONENTS
   Support
   )
 
 set(LIBS
-  ${dialect_libs}
-
   MLIRAffineAnalysis
   MLIRAnalysis
   MLIRCastInterfaces
@@ -16,6 +13,7 @@ set(LIBS
   MLIRTransformUtils
   MLIRSupport
   MLIRIR
+  MLIRRegisterEverything
   )
 
 include_directories(../../../clang/include)

@@ -20,3 +20,18 @@ add_subdirectory(Target)
 add_subdirectory(Tools)
 add_subdirectory(Transforms)
 add_subdirectory(ExecutionEngine)
+
+get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
+get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
+
+add_mlir_library(MLIRRegisterEverything
+  InitAllDialects.cpp
+  InitAllExtensions.cpp
+  InitAllPasses.cpp
+
+  LINK_LIBS PUBLIC
+  ${dialect_libs}
+  ${conversion_libs}
+  ${extension_libs}
+  )
