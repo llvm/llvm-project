@@ -35,25 +35,25 @@ LIBC_INLINE static constexpr float16 asinhf16(float16 x) {
   constexpr size_t N_EXCEPTS = 8;
 
   constexpr fputil::ExceptValues<float16, N_EXCEPTS> ASINHF16_EXCEPTS{{
-    // (input, RZ output, RU offset, RD offset, RN offset)
+      // (input, RZ output, RU offset, RD offset, RN offset)
 
-    // x = 0x1.da4p-2, asinhf16(x) = 0x1.ca8p-2 (RZ)
-    {0x3769, 0x372a, 1, 0, 1},
-    // x = 0x1.d6cp-1, asinhf16(x) = 0x1.a58p-1 (RZ)
-    {0x3b5b, 0x3a96, 1, 0, 0},
-    // x = 0x1.c7cp+3, asinhf16(x) = 0x1.accp+1 (RZ)
-    {0x4b1f, 0x42b3, 1, 0, 0},
-    // x = 0x1.26cp+4, asinhf16(x) = 0x1.cd8p+1 (RZ)
-    {0x4c9b, 0x4336, 1, 0, 1},
-    // x = -0x1.da4p-2, asinhf16(x) = -0x1.ca8p-2 (RZ)
-    {0xb769, 0xb72a, 0, 1, 1},
-    // x = -0x1.d6cp-1, asinhf16(x) = -0x1.a58p-1 (RZ)
-    {0xbb5b, 0xba96, 0, 1, 0},
-    // x = -0x1.c7cp+3, asinhf16(x) = -0x1.accp+1 (RZ)
-    {0xcb1f, 0xc2b3, 0, 1, 0},
-    // x = -0x1.26cp+4, asinhf16(x) = -0x1.cd8p+1 (RZ)
-    {0xcc9b, 0xc336, 0, 1, 1},
-}};
+      // x = 0x1.da4p-2, asinhf16(x) = 0x1.ca8p-2 (RZ)
+      {0x3769, 0x372a, 1, 0, 1},
+      // x = 0x1.d6cp-1, asinhf16(x) = 0x1.a58p-1 (RZ)
+      {0x3b5b, 0x3a96, 1, 0, 0},
+      // x = 0x1.c7cp+3, asinhf16(x) = 0x1.accp+1 (RZ)
+      {0x4b1f, 0x42b3, 1, 0, 0},
+      // x = 0x1.26cp+4, asinhf16(x) = 0x1.cd8p+1 (RZ)
+      {0x4c9b, 0x4336, 1, 0, 1},
+      // x = -0x1.da4p-2, asinhf16(x) = -0x1.ca8p-2 (RZ)
+      {0xb769, 0xb72a, 0, 1, 1},
+      // x = -0x1.d6cp-1, asinhf16(x) = -0x1.a58p-1 (RZ)
+      {0xbb5b, 0xba96, 0, 1, 0},
+      // x = -0x1.c7cp+3, asinhf16(x) = -0x1.accp+1 (RZ)
+      {0xcb1f, 0xc2b3, 0, 1, 0},
+      // x = -0x1.26cp+4, asinhf16(x) = -0x1.cd8p+1 (RZ)
+      {0xcc9b, 0xc336, 0, 1, 1},
+  }};
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   using namespace acoshf_internal;
@@ -110,8 +110,6 @@ LIBC_INLINE static constexpr float16 asinhf16(float16 x) {
   float sqrt_term = fputil::sqrt<float>(fputil::multiply_add(xf, xf, 1.0f));
   return fputil::cast<float16>(
       x_sign * log_eval(fputil::multiply_add(xf, x_sign, sqrt_term)));
-
-
 }
 
 } // namespace math
