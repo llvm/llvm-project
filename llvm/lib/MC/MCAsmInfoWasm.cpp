@@ -12,13 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCAsmInfoWasm.h"
-#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/Support/raw_ostream.h"
-using namespace llvm;
 
-void MCAsmInfoWasm::anchor() {}
+using namespace llvm;
 
 MCAsmInfoWasm::MCAsmInfoWasm() {
   HasIdentDirective = true;
@@ -26,13 +24,6 @@ MCAsmInfoWasm::MCAsmInfoWasm() {
   WeakRefDirective = "\t.weak\t";
   PrivateGlobalPrefix = ".L";
   PrivateLabelPrefix = ".L";
-}
-
-// Decides whether a '.section' directive
-// should be printed before the section name.
-bool MCSectionWasm::shouldOmitSectionDirective(StringRef Name,
-                                               const MCAsmInfo &MAI) const {
-  return MAI.shouldOmitSectionDirective(Name);
 }
 
 static void printName(raw_ostream &OS, StringRef Name) {
@@ -58,12 +49,12 @@ static void printName(raw_ostream &OS, StringRef Name) {
   OS << '"';
 }
 
-void MCSectionWasm::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
-                                         raw_ostream &OS,
-                                         uint32_t Subsection) const {
-
-  if (shouldOmitSectionDirective(getName(), MAI)) {
-    OS << '\t' << getName();
+void MCAsmInfoWasm::printSwitchToSection(const MCSection &Section,
+                                         uint32_t Subsection, const Triple &T,
+                                         raw_ostream &OS) const {
+  auto &Sec = static_cast<const MCSectionWasm &>(Section);
+  if (shouldOmitSectionDirective(Sec.getName())) {
+    OS << '\t' << Sec.getName();
     if (Subsection)
       OS << '\t' << Subsection;
     OS << '\n';
@@ -71,18 +62,18 @@ void MCSectionWasm::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   }
 
   OS << "\t.section\t";
-  printName(OS, getName());
+  printName(OS, Sec.getName());
   OS << ",\"";
 
-  if (IsPassive)
+  if (Sec.IsPassive)
     OS << 'p';
-  if (Group)
+  if (Sec.Group)
     OS << 'G';
-  if (SegmentFlags & wasm::WASM_SEG_FLAG_STRINGS)
+  if (Sec.SegmentFlags & wasm::WASM_SEG_FLAG_STRINGS)
     OS << 'S';
-  if (SegmentFlags & wasm::WASM_SEG_FLAG_TLS)
+  if (Sec.SegmentFlags & wasm::WASM_SEG_FLAG_TLS)
     OS << 'T';
-  if (SegmentFlags & wasm::WASM_SEG_FLAG_RETAIN)
+  if (Sec.SegmentFlags & wasm::WASM_SEG_FLAG_RETAIN)
     OS << 'R';
 
   OS << '"';
@@ -90,21 +81,21 @@ void MCSectionWasm::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   OS << ',';
 
   // If comment string is '@', e.g. as on ARM - use '%' instead
-  if (MAI.getCommentString()[0] == '@')
+  if (getCommentString()[0] == '@')
     OS << '%';
   else
     OS << '@';
 
   // TODO: Print section type.
 
-  if (Group) {
+  if (Sec.Group) {
     OS << ",";
-    printName(OS, Group->getName());
+    printName(OS, Sec.Group->getName());
     OS << ",comdat";
   }
 
-  if (isUnique())
-    OS << ",unique," << UniqueID;
+  if (Sec.isUnique())
+    OS << ",unique," << Sec.UniqueID;
 
   OS << '\n';
 
