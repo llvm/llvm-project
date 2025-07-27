@@ -540,17 +540,6 @@ public:
   friend class MCFragment;
   static constexpr unsigned NonUniqueID = ~0U;
 
-  enum SectionVariant {
-    SV_COFF = 0,
-    SV_ELF,
-    SV_GOFF,
-    SV_MachO,
-    SV_Wasm,
-    SV_XCOFF,
-    SV_SPIRV,
-    SV_DXContainer,
-  };
-
   struct iterator {
     MCFragment *F = nullptr;
     iterator() = default;
@@ -606,12 +595,8 @@ private:
 protected:
   // TODO Make Name private when possible.
   StringRef Name;
-  SectionVariant Variant;
 
-  MCSection(SectionVariant V, StringRef Name, bool IsText, bool IsBss,
-            MCSymbol *Begin);
-  // Protected non-virtual dtor prevents destroy through a base class pointer.
-  ~MCSection() {}
+  MCSection(StringRef Name, bool IsText, bool IsBss, MCSymbol *Begin);
 
 public:
   MCSection(const MCSection &) = delete;
@@ -619,8 +604,6 @@ public:
 
   StringRef getName() const { return Name; }
   bool isText() const { return IsText; }
-
-  SectionVariant getVariant() const { return Variant; }
 
   MCSymbol *getBeginSymbol() { return Begin; }
   const MCSymbol *getBeginSymbol() const {
@@ -662,14 +645,6 @@ public:
 
   void dump(DenseMap<const MCFragment *, SmallVector<const MCSymbol *, 0>>
                 *FragToSyms = nullptr) const;
-
-  virtual void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
-                                    raw_ostream &OS,
-                                    uint32_t Subsection) const = 0;
-
-  /// Return true if a .align directive should use "optimized nops" to fill
-  /// instead of 0s.
-  virtual bool useCodeAlign() const = 0;
 
   /// Check whether this section is "virtual", that is has no actual object
   /// file contents.

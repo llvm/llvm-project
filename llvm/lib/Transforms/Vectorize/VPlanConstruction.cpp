@@ -437,9 +437,12 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
 
   // We are about to replace the branch to exit the region. Remove the original
   // BranchOnCond, if there is any.
+  DebugLoc LatchDL = DL;
   if (!LatchVPBB->empty() &&
-      match(&LatchVPBB->back(), m_BranchOnCond(m_VPValue())))
+      match(&LatchVPBB->back(), m_BranchOnCond(m_VPValue()))) {
+    LatchDL = LatchVPBB->getTerminator()->getDebugLoc();
     LatchVPBB->getTerminator()->eraseFromParent();
+  }
 
   VPBuilder Builder(LatchVPBB);
   // Add a VPInstruction to increment the scalar canonical IV by VF * UF.
@@ -452,7 +455,8 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
 
   // Add the BranchOnCount VPInstruction to the latch.
   Builder.createNaryOp(VPInstruction::BranchOnCount,
-                       {CanonicalIVIncrement, &Plan.getVectorTripCount()}, DL);
+                       {CanonicalIVIncrement, &Plan.getVectorTripCount()},
+                       LatchDL);
 }
 
 void VPlanTransforms::prepareForVectorization(

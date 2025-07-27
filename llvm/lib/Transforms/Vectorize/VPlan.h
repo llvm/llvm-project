@@ -1016,6 +1016,7 @@ public:
     /// The lane specifies an index into a vector formed by combining all vector
     /// operands (all operands after the first one).
     ExtractLane,
+
   };
 
 private:

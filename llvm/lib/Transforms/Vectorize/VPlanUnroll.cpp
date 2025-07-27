@@ -370,7 +370,6 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
         R.addOperand(getValueForPart(Op1, Part));
       continue;
     }
-
     if (match(&R, m_VPInstruction<VPInstruction::ExtractLastElement>(
                       m_VPValue(Op0))) ||
         match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
