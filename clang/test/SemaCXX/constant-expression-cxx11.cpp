@@ -2010,7 +2010,7 @@ namespace ConstexprConstructorRecovery {
   constexpr X x{}; // cxx11-error {{constant expression}} cxx11-note {{not initialized}}
 }
 
-namespace Lifetime {
+namespace Lifetime { // FIXME: Fix the error messages quality regression introduced by GH95474.
   void f() {
     constexpr int &n = n; // expected-error {{constant expression}} cxx23-note {{reference to 'n' is not a constant expression}} cxx23-note {{address of non-static constexpr variable 'n' may differ}} expected-warning {{not yet bound to a value}}
                           // cxx11_20-note@-1 {{use of reference outside its lifetime is not allowed in a constant expression}}
@@ -2428,7 +2428,7 @@ namespace PR41854 {
   unsigned b = d.c;
 }
 
-namespace array_size {
+namespace array_size { // FIXME: P2280R4 should be backported, and these cases should be accepted in C++11 and later.
   template<int N> struct array {
     static constexpr int size() { return N; }
   };
