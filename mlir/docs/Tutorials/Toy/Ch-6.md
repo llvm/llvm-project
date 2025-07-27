@@ -81,6 +81,14 @@ enough for our use case.
   LLVMTypeConverter typeConverter(&getContext());
 ```
 
+For the `toy.print` lowering, we need a special type converter to ensure that
+the pattern receives a `memref` value in its adaptor. If we were to use the
+LLVM type converter, it would receive an `llvm.struct`, which is the normal
+lowering of a `memref` type to LLVM. If we were to use no type converter at
+all, it would receive a value with the original tensor type. (Note: The dialect
+conversion driver currently passes the "most recently mapped value", i.e., a
+value of unspecified type. This is a bug in the conversion driver.)
+
 ### Conversion Patterns
 
 Now that the conversion target has been defined, we need to provide the patterns
