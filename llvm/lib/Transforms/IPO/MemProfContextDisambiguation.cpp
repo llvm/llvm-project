@@ -2070,9 +2070,9 @@ static unsigned getMemProfCloneNum(const Function &F) {
   auto Pos = F.getName().find_last_of('.');
   assert(Pos > 0);
   unsigned CloneNo;
-  auto Error = F.getName().drop_front(Pos + 1).getAsInteger(10, CloneNo);
-  assert(!Error);
-  (void)Error;
+  bool Err = F.getName().drop_front(Pos + 1).getAsInteger(10, CloneNo);
+  assert(!Err);
+  (void)Err;
   return CloneNo;
 }
 
