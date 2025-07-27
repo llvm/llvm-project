@@ -76,18 +76,15 @@ declare void @decompose(ptr nocapture)
 define void @test5(ptr %ptr) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[EARLY_DATA:%.*]] = alloca [128 x i8], align 8
-; CHECK-NEXT:    [[TMP:%.*]] = alloca [[T:%.*]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr [[EARLY_DATA]])
+; CHECK-NEXT:    [[TMP:%.*]] = alloca i8, i32 8224, align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    call fastcc void @decompose(ptr [[TMP]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[EARLY_DATA]], ptr [[TMP]], i64 32, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %early_data = alloca [128 x i8], align 8
   %tmp = alloca %t, align 8
-  call void @llvm.lifetime.start.p0(i64 32, ptr %early_data)
+  call void @llvm.lifetime.start.p0(i64 128, ptr %early_data)
   %0 = load i32, ptr %ptr, align 8
   call fastcc void @decompose(ptr %tmp)
   call void @llvm.memcpy.p0.p0.i64(ptr %early_data, ptr %tmp, i64 32, i1 false)
