@@ -113,8 +113,14 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     LoadInst *LI, GetElementPtrInst *GEP, GlobalVariable *GV, CmpInst &ICI,
     ConstantInt *AndCst) {
   if (LI->isVolatile() || LI->getType() != GEP->getResultElementType() ||
-      GV->getValueType() != GEP->getSourceElementType() || !GV->isConstant() ||
+      !GV->getValueType()->isArrayTy() || !GV->isConstant() ||
       !GV->hasDefinitiveInitializer())
+    return nullptr;
+
+  Type *GEPSrcEltTy = GEP->getSourceElementType();
+  if (GEPSrcEltTy->isArrayTy())
+    GEPSrcEltTy = GEPSrcEltTy->getArrayElementType();
+  if (GV->getValueType()->getArrayElementType() != GEPSrcEltTy)
     return nullptr;
 
   Constant *Init = GV->getInitializer();
@@ -127,21 +133,27 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     return nullptr;
 
   // There are many forms of this optimization we can handle, for now, just do
-  // the simple index into a single-dimensional array.
+  // the simple index into a single-dimensional array or elements of equal size.
   //
-  // Require: GEP GV, 0, i {{, constant indices}}
-  if (GEP->getNumOperands() < 3 || !isa<ConstantInt>(GEP->getOperand(1)) ||
-      !cast<ConstantInt>(GEP->getOperand(1))->isZero() ||
-      isa<Constant>(GEP->getOperand(2)))
+  // Require: GEP [n x i8] GV, 0, Idx {{, constant indices}}
+  //      Or: GEP i8 GV, Idx
+
+  SmallVector<unsigned, 4> LaterIndices;
+  unsigned GEPIdxOp = 1;
+  if (GEP->getSourceElementType()->isArrayTy()) {
+    GEPIdxOp = 2;
+    if (!match(GEP->getOperand(1), m_ZeroInt()))
+      return nullptr;
+  }
+  if (GEP->getNumOperands() < GEPIdxOp + 1 ||
+      isa<Constant>(GEP->getOperand(GEPIdxOp)))
     return nullptr;
 
   // Check that indices after the variable are constants and in-range for the
   // type they index.  Collect the indices.  This is typically for arrays of
   // structs.
-  SmallVector<unsigned, 4> LaterIndices;
-
   Type *EltTy = Init->getType()->getArrayElementType();
-  for (unsigned i = 3, e = GEP->getNumOperands(); i != e; ++i) {
+  for (unsigned i = GEPIdxOp + 1, e = GEP->getNumOperands(); i != e; ++i) {
     ConstantInt *Idx = dyn_cast<ConstantInt>(GEP->getOperand(i));
     if (!Idx)
       return nullptr; // Variable index.
@@ -290,7 +302,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
 
   // Now that we've scanned the entire array, emit our new comparison(s).  We
   // order the state machines in complexity of the generated code.
-  Value *Idx = GEP->getOperand(2);
+  Value *Idx = GEP->getOperand(GEPIdxOp);
 
   // If the index is larger than the pointer offset size of the target, truncate
   // the index down like the GEP would do implicitly.  We don't have to do this
