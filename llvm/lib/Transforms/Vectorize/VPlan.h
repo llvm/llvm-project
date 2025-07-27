@@ -1841,6 +1841,10 @@ public:
                                      getGEPNoWrapFlags(), getDebugLoc());
   }
 
+  /// Return true if this VPVectorPointerRecipe corresponds to part 0. Note that
+  /// this is only accurate after the VPlan has been unrolled.
+  bool isFirstPart() const { return getUnrollPart(*this) == 0; }
+
   /// Return the cost of this VPHeaderPHIRecipe.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override {

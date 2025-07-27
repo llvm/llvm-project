@@ -21,8 +21,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:   EMIT-SCALAR vp<[[CAN_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[CAN_IV_NEXT:%.+]]>, default.2 ]
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, ir<2>
 ; CHECK-NEXT:   EMIT vp<[[PTR:%.+]]> = ptradd ir<%start>, vp<[[STEPS]]>
-; CHECK-NEXT:   vp<[[WIDE_PTR:%.+]]> = vector-pointer vp<[[PTR]]>
-; CHECK-NEXT:   WIDEN ir<%l> = load vp<[[WIDE_PTR]]>
+; CHECK-NEXT:   WIDEN ir<%l> = load vp<[[PTR]]>
 ; CHECK-NEXT:   EMIT vp<[[C1:%.+]]> = icmp eq ir<%l>, ir<-12>
 ; CHECK-NEXT:   EMIT vp<[[C2:%.+]]> = icmp eq ir<%l>, ir<13>
 ; CHECK-NEXT:   EMIT vp<[[OR_CASES:%.+]]> = or vp<[[C1]]>, vp<[[C2]]>

@@ -17,11 +17,10 @@ define void @test_remove_vector_loop_region_epilogue(ptr %dst, i1 %c)  {
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TC]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DST]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DST]], i32 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[DST]], i32 32
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[DST]], i32 48
-; CHECK-NEXT:    store <16 x i8> zeroinitializer, ptr [[TMP1]], align 4
+; CHECK-NEXT:    store <16 x i8> zeroinitializer, ptr [[DST]], align 4
 ; CHECK-NEXT:    store <16 x i8> zeroinitializer, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store <16 x i8> zeroinitializer, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    store <16 x i8> zeroinitializer, ptr [[TMP4]], align 4
@@ -40,8 +39,7 @@ define void @test_remove_vector_loop_region_epilogue(ptr %dst, i1 %c)  {
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DST]], i64 [[VEC_EPILOG_RESUME_VAL]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP5]], i32 0
-; CHECK-NEXT:    store <8 x i8> zeroinitializer, ptr [[TMP6]], align 4
+; CHECK-NEXT:    store <8 x i8> zeroinitializer, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N4:%.*]] = icmp eq i64 [[TC]], [[N_VEC3]]
