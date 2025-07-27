@@ -1592,7 +1592,7 @@ This is good for vectors that are "usually small" (e.g. the number of
 predecessors/successors of a block is usually less than 8).  On the other hand,
 this makes the size of the ``SmallVector`` itself large, so you don't want to
 allocate lots of them (doing so will waste a lot of space).  As such,
-``SmallVector``s are most useful when on the stack.
+SmallVectors are most useful when on the stack.
 
 In the absence of a well-motivated choice for the number of
 inlined elements ``N``, it is recommended to use ``SmallVector<T>`` (that is,
