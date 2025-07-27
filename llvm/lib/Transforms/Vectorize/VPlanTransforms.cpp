@@ -774,10 +774,10 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
   using namespace VPlanPatternMatch;
 
   VPValue *Incoming, *Mask;
-  if (!match(Op, m_VPInstruction<Instruction::ExtractElement>(
-                     m_VPValue(Incoming),
+  if (!match(Op, m_VPInstruction<VPInstruction::ExtractLane>(
                      m_VPInstruction<VPInstruction::FirstActiveLane>(
-                         m_VPValue(Mask)))))
+                         m_VPValue(Mask)),
+                     m_VPValue(Incoming))))
     return nullptr;
 
   auto *WideIV = getOptimizableIVOf(Incoming);
@@ -2837,7 +2837,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
           VPInstruction::FirstActiveLane, {CondToEarlyExit}, nullptr,
           "first.active.lane");
       IncomingFromEarlyExit = EarlyExitB.createNaryOp(
-          Instruction::ExtractElement, {IncomingFromEarlyExit, FirstActiveLane},
+          VPInstruction::ExtractLane, {FirstActiveLane, IncomingFromEarlyExit},
           nullptr, "early.exit.value");
       ExitIRI->setOperand(EarlyExitIdx, IncomingFromEarlyExit);
     }
