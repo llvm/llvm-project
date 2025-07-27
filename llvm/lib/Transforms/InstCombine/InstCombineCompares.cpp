@@ -5863,6 +5863,12 @@ static void collectOffsetOp(Value *V, SmallVectorImpl<OffsetOp> &Offsets,
     Offsets.emplace_back(Instruction::Xor, Inst->getOperand(1));
     Offsets.emplace_back(Instruction::Xor, Inst->getOperand(0));
     break;
+  case Instruction::Shl:
+    if (match(Inst, m_NSWShl(m_Value(), m_Value())))
+      Offsets.emplace_back(Instruction::AShr, Inst->getOperand(1));
+    if (match(Inst, m_NUWShl(m_Value(), m_Value())))
+      Offsets.emplace_back(Instruction::LShr, Inst->getOperand(1));
+    break;
   case Instruction::Select:
     if (AllowRecursion) {
       collectOffsetOp(Inst->getOperand(1), Offsets, /*AllowRecursion=*/false);
@@ -5919,6 +5925,29 @@ static Instruction *foldICmpEqualityWithOffset(ICmpInst &I,
   collectOffsetOp(Op1, OffsetOps, /*AllowRecursion=*/true);
 
   auto ApplyOffsetImpl = [&](Value *V, unsigned BinOpc, Value *RHS) -> Value * {
+    switch (BinOpc) {
+    // V = shl nsw X, RHS => X = ashr V, RHS
+    case Instruction::AShr: {
+      const APInt *CV, *CRHS;
+      if (!(match(V, m_APInt(CV)) && match(RHS, m_APInt(CRHS)) &&
+            CV->ashr(*CRHS).shl(*CRHS) == *CV) &&
+          !match(V, m_NSWShl(m_Value(), m_Specific(RHS))))
+        return nullptr;
+      break;
+    }
+    // V = shl nuw X, RHS => X = lshr V, RHS
+    case Instruction::LShr: {
+      const APInt *CV, *CRHS;
+      if (!(match(V, m_APInt(CV)) && match(RHS, m_APInt(CRHS)) &&
+            CV->lshr(*CRHS).shl(*CRHS) == *CV) &&
+          !match(V, m_NUWShl(m_Value(), m_Specific(RHS))))
+        return nullptr;
+      break;
+    }
+    default:
+      break;
+    }
+
     Value *Simplified = simplifyBinOp(BinOpc, V, RHS, SQ);
     // Avoid infinite loops by checking if RHS is an identity for the BinOp.
     if (!Simplified || Simplified == V)
