@@ -8,10 +8,20 @@ declare float @llvm.minnum.f32(float, float)
 declare float @llvm.maxnum.f32(float, float)
 declare float @llvm.minimum.f32(float, float)
 declare float @llvm.maximum.f32(float, float)
+declare float @llvm.minimumnum.f32(float, float)
+declare float @llvm.maximumnum.f32(float, float)
 declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>)
 declare <2 x float> @llvm.maxnum.v2f32(<2 x float>, <2 x float>)
 declare <2 x float> @llvm.minimum.v2f32(<2 x float>, <2 x float>)
 declare <2 x float> @llvm.maximum.v2f32(<2 x float>, <2 x float>)
+declare <2 x float> @llvm.minimumnum.v2f32(<2 x float>, <2 x float>)
+declare <2 x float> @llvm.maximumnum.v2f32(<2 x float>, <2 x float>)
+declare <3 x float> @llvm.minnum.v3f32(<3 x float>, <3 x float>)
+declare <3 x float> @llvm.maxnum.v3f32(<3 x float>, <3 x float>)
+declare <3 x float> @llvm.minimum.v3f32(<3 x float>, <3 x float>)
+declare <3 x float> @llvm.maximum.v3f32(<3 x float>, <3 x float>)
+declare <3 x float> @llvm.minimumnum.v3f32(<3 x float>, <3 x float>)
+declare <3 x float> @llvm.maximumnum.v3f32(<3 x float>, <3 x float>)
 
 declare double @llvm.minnum.f64(double, double)
 declare double @llvm.maxnum.f64(double, double)
@@ -21,6 +31,10 @@ declare double @llvm.minimum.f64(double, double)
 declare double @llvm.maximum.f64(double, double)
 declare <2 x double> @llvm.minimum.v2f64(<2 x double>, <2 x double>)
 declare <2 x double> @llvm.maximum.v2f64(<2 x double>, <2 x double>)
+declare double @llvm.minimumnum.f64(double, double)
+declare double @llvm.maximumnum.f64(double, double)
+declare <2 x double> @llvm.minimumnum.v2f64(<2 x double>, <2 x double>)
+declare <2 x double> @llvm.maximumnum.v2f64(<2 x double>, <2 x double>)
 
 define float @test_minnum_const_nan(float %x) {
 ; CHECK-LABEL: @test_minnum_const_nan(
@@ -51,6 +65,70 @@ define float @test_minimum_const_nan(float %x) {
 ; CHECK-NEXT:    ret float 0x7FFF000000000000
 ;
   %r = call float @llvm.minimum.f32(float %x, float 0x7fff000000000000)
+  ret float %r
+}
+
+define float @test_maximumnum_const_nan(float %x) {
+; CHECK-LABEL: @test_maximumnum_const_nan(
+; CHECK-NEXT:    ret float [[R:%.*]]
+;
+  %r = call float @llvm.maximumnum.f32(float %x, float 0x7fff000000000000)
+  ret float %r
+}
+
+define float @test_minimumnum_const_nan(float %x) {
+; CHECK-LABEL: @test_minimumnum_const_nan(
+; CHECK-NEXT:    ret float [[R:%.*]]
+;
+  %r = call float @llvm.minimumnum.f32(float %x, float 0x7fff000000000000)
+  ret float %r
+}
+
+define float @test_minnum_const_snan(float %x) {
+; CHECK-LABEL: @test_minnum_const_snan(
+; CHECK-NEXT:    ret float 0x7FFC000000000000
+;
+  %r = call float @llvm.minnum.f32(float %x, float 0x7ff4000000000000)
+  ret float %r
+}
+
+define float @test_maxnum_const_snan(float %x) {
+; CHECK-LABEL: @test_maxnum_const_snan(
+; CHECK-NEXT:    ret float 0x7FFC000000000000
+;
+  %r = call float @llvm.maxnum.f32(float %x, float 0x7ff4000000000000)
+  ret float %r
+}
+
+define float @test_maximum_const_snan(float %x) {
+; CHECK-LABEL: @test_maximum_const_snan(
+; CHECK-NEXT:    ret float 0x7FFC000000000000
+;
+  %r = call float @llvm.maximum.f32(float %x, float 0x7ff4000000000000)
+  ret float %r
+}
+
+define float @test_minimum_const_snan(float %x) {
+; CHECK-LABEL: @test_minimum_const_snan(
+; CHECK-NEXT:    ret float 0x7FFC000000000000
+;
+  %r = call float @llvm.minimum.f32(float %x, float 0x7ff4000000000000)
+  ret float %r
+}
+
+define float @test_maximumnum_const_snan(float %x) {
+; CHECK-LABEL: @test_maximumnum_const_snan(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %r = call float @llvm.maximumnum.f32(float %x, float 0x7ff4000000000000)
+  ret float %r
+}
+
+define float @test_minimumnum_const_snan(float %x) {
+; CHECK-LABEL: @test_minimumnum_const_snan(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %r = call float @llvm.minimumnum.f32(float %x, float 0x7ff4000000000000)
   ret float %r
 }
 
@@ -88,6 +166,223 @@ define float @test_minimum_const_inf(float %x) {
   ret float %r
 }
 
+define float @test_maximumnum_const_inf(float %x) {
+; CHECK-LABEL: @test_maximumnum_const_inf(
+; CHECK-NEXT:    ret float 0x7FF0000000000000
+;
+  %r = call float @llvm.maximumnum.f32(float %x, float 0x7ff0000000000000)
+  ret float %r
+}
+
+define float @test_minimumnum_const_inf(float %x) {
+; CHECK-LABEL: @test_minimumnum_const_inf(
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.minimumnum.f32(float [[X:%.*]], float 0x7FF0000000000000)
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call float @llvm.minimumnum.f32(float %x, float 0x7ff0000000000000)
+  ret float %r
+}
+
+define <2 x float> @test_minnum_const_inf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minnum_const_inf_vec(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x float> @llvm.minnum.v2f32(<2 x float> [[X1:%.*]], <2 x float> splat (float 0x7FF0000000000000))
+; CHECK-NEXT:    ret <2 x float> [[X]]
+;
+  %r = call <2 x float> @llvm.minnum.v2f32(<2 x float> %x, <2 x float> <float 0x7ff0000000000000, float 0x7ff0000000000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maxnum_const_inf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maxnum_const_inf_vec(
+; CHECK-NEXT:    ret <2 x float> splat (float 0x7FF0000000000000)
+;
+  %r = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %x, <2 x float> <float 0x7ff0000000000000, float 0x7ff0000000000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maximum_const_inf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maximum_const_inf_vec(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.maximum.v2f32(<2 x float> [[X:%.*]], <2 x float> splat (float 0x7FF0000000000000))
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %r = call <2 x float> @llvm.maximum.v2f32(<2 x float> %x, <2 x float> <float 0x7ff0000000000000, float 0x7ff0000000000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimum_const_inf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minimum_const_inf_vec(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %r = call <2 x float> @llvm.minimum.v2f32(<2 x float> %x, <2 x float> <float 0x7ff0000000000000, float 0x7ff0000000000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maximumnum_const_inf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maximumnum_const_inf_vec(
+; CHECK-NEXT:    ret <2 x float> splat (float 0x7FF0000000000000)
+;
+  %r = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> %x, <2 x float> <float 0x7ff0000000000000, float 0x7ff0000000000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimumnum_const_inf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minimumnum_const_inf_vec(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> [[X1:%.*]], <2 x float> splat (float 0x7FF0000000000000))
+; CHECK-NEXT:    ret <2 x float> [[X]]
+;
+  %r = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> %x, <2 x float> <float 0x7ff0000000000000, float 0x7ff0000000000000>)
+  ret <2 x float> %r
+}
+
+define <vscale x 2 x float> @test_minnum_const_snan_scalable_vec(<vscale x 2 x float> %x) {
+; CHECK-LABEL: @test_minnum_const_snan_scalable_vec(
+; CHECK-NEXT:    ret <vscale x 2 x float> splat (float 0x7FFC000000000000)
+;
+  %r = call <vscale x 2 x float> @llvm.minnum.nxv2f32(<vscale x 2 x float> %x, <vscale x 2 x float> splat (float 0x7ff4000000000000))
+  ret <vscale x 2 x float> %r
+}
+
+define <vscale x 2 x float> @test_maxnum_const_snan_scalable_vec(<vscale x 2 x float> %x) {
+; CHECK-LABEL: @test_maxnum_const_snan_scalable_vec(
+; CHECK-NEXT:    ret <vscale x 2 x float> splat (float 0x7FFC000000000000)
+;
+  %r = call <vscale x 2 x float> @llvm.maxnum.nxv2f32(<vscale x 2 x float> %x, <vscale x 2 x float> splat (float 0x7ff4000000000000))
+  ret <vscale x 2 x float> %r
+}
+
+define <vscale x 2 x float> @test_maximum_const_snan_scalable_vec(<vscale x 2 x float> %x) {
+; CHECK-LABEL: @test_maximum_const_snan_scalable_vec(
+; CHECK-NEXT:    ret <vscale x 2 x float> splat (float 0x7FFC000000000000)
+;
+  %r = call <vscale x 2 x float> @llvm.maximum.nxv2f32(<vscale x 2 x float> %x, <vscale x 2 x float> splat (float 0x7ff4000000000000))
+  ret <vscale x 2 x float> %r
+}
+
+define <vscale x 2 x float> @test_minimum_const_snan_scalable_vec(<vscale x 2 x float> %x) {
+; CHECK-LABEL: @test_minimum_const_snan_scalable_vec(
+; CHECK-NEXT:    ret <vscale x 2 x float> splat (float 0x7FFC000000000000)
+;
+  %r = call <vscale x 2 x float> @llvm.minimum.nxv2f32(<vscale x 2 x float> %x, <vscale x 2 x float> splat (float 0x7ff4000000000000))
+  ret <vscale x 2 x float> %r
+}
+
+define <vscale x 2 x float> @test_maximumnum_const_snan_scalable_vec(<vscale x 2 x float> %x) {
+; CHECK-LABEL: @test_maximumnum_const_snan_scalable_vec(
+; CHECK-NEXT:    ret <vscale x 2 x float> [[R:%.*]]
+;
+  %r = call <vscale x 2 x float> @llvm.maximumnum.nxv2f32(<vscale x 2 x float> %x, <vscale x 2 x float> splat (float 0x7ff4000000000000))
+  ret <vscale x 2 x float> %r
+}
+
+define <vscale x 2 x float> @test_minimumnum_const_snan_scalable_vec(<vscale x 2 x float> %x) {
+; CHECK-LABEL: @test_minimumnum_const_snan_scalable_vec(
+; CHECK-NEXT:    ret <vscale x 2 x float> [[X:%.*]]
+;
+  %r = call <vscale x 2 x float> @llvm.minimumnum.nxv2f32(<vscale x 2 x float> %x, <vscale x 2 x float> splat (float 0x7ff4000000000000))
+  ret <vscale x 2 x float> %r
+}
+
+define <2 x float> @test_minnum_const_inf_poison_vec_nnan(<2 x float> %x) {
+; CHECK-LABEL: @test_minnum_const_inf_poison_vec_nnan(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %r = call nnan <2 x float> @llvm.minnum.v2f32(<2 x float> %x, <2 x float> <float 0x7ff0000000000000, float poison>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maxnum_const_inf_poison_vec_nnan(<2 x float> %x) {
+; CHECK-LABEL: @test_maxnum_const_inf_poison_vec_nnan(
+; CHECK-NEXT:    ret <2 x float> <float 0x7FF0000000000000, float poison>
+;
+  %r = call nnan <2 x float> @llvm.maxnum.v2f32(<2 x float> %x, <2 x float> <float 0x7ff0000000000000, float poison>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maximum_const_inf_poison_vec_nnan(<2 x float> %x) {
+; CHECK-LABEL: @test_maximum_const_inf_poison_vec_nnan(
+; CHECK-NEXT:    ret <2 x float> <float 0x7FF0000000000000, float poison>
+;
+  %r = call nnan <2 x float> @llvm.maximum.v2f32(<2 x float> %x, <2 x float> <float 0x7ff0000000000000, float poison>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimum_const_inf_poison_vec_nnan(<2 x float> %x) {
+; CHECK-LABEL: @test_minimum_const_inf_poison_vec_nnan(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %r = call nnan <2 x float> @llvm.minimum.v2f32(<2 x float> %x, <2 x float> <float 0x7ff0000000000000, float poison>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maximumnum_const_inf_poison_vec_nnan(<2 x float> %x) {
+; CHECK-LABEL: @test_maximumnum_const_inf_poison_vec_nnan(
+; CHECK-NEXT:    ret <2 x float> <float 0x7FF0000000000000, float poison>
+;
+  %r = call nnan <2 x float> @llvm.maximumnum.v2f32(<2 x float> %x, <2 x float> <float 0x7ff0000000000000, float poison>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimumnum_const_inf_poison_vec_nnan(<2 x float> %x) {
+; CHECK-LABEL: @test_minimumnum_const_inf_poison_vec_nnan(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %r = call nnan <2 x float> @llvm.minimumnum.v2f32(<2 x float> %x, <2 x float> <float 0x7ff0000000000000, float poison>)
+  ret <2 x float> %r
+}
+
+define <3 x float> @test_minnum_const_inf_poison_snan_vec(<3 x float> %x) {
+; CHECK-LABEL: @test_minnum_const_inf_poison_snan_vec(
+; CHECK-NEXT:    [[X:%.*]] = call <3 x float> @llvm.minnum.v3f32(<3 x float> [[X1:%.*]], <3 x float> <float 0x7FF0000000000000, float poison, float 0x7FF4000000000000>)
+; CHECK-NEXT:    ret <3 x float> [[X]]
+;
+  %r = call <3 x float> @llvm.minnum.v3f32(<3 x float> %x, <3 x float> <float 0x7ff0000000000000, float poison, float 0x7ff4000000000000>)
+  ret <3 x float> %r
+}
+
+define <3 x float> @test_maxnum_const_inf_poison_snan_vec(<3 x float> %x) {
+; CHECK-LABEL: @test_maxnum_const_inf_poison_snan_vec(
+; CHECK-NEXT:    ret <3 x float> <float 0x7FF0000000000000, float poison, float 0x7FFC000000000000>
+;
+  %r = call <3 x float> @llvm.maxnum.v3f32(<3 x float> %x, <3 x float> <float 0x7ff0000000000000, float poison, float 0x7ff4000000000000>)
+  ret <3 x float> %r
+}
+
+define <3 x float> @test_maximum_const_inf_poison_snan_vec(<3 x float> %x) {
+; CHECK-LABEL: @test_maximum_const_inf_poison_snan_vec(
+; CHECK-NEXT:    [[R:%.*]] = call <3 x float> @llvm.maximum.v3f32(<3 x float> [[X:%.*]], <3 x float> <float 0x7FF0000000000000, float poison, float 0x7FF4000000000000>)
+; CHECK-NEXT:    ret <3 x float> [[R]]
+;
+  %r = call <3 x float> @llvm.maximum.v3f32(<3 x float> %x, <3 x float> <float 0x7ff0000000000000, float poison, float 0x7ff4000000000000>)
+  ret <3 x float> %r
+}
+
+define <3 x float> @test_minimum_const_inf_poison_snan_vec(<3 x float> %x) {
+; CHECK-LABEL: @test_minimum_const_inf_poison_snan_vec(
+; CHECK-NEXT:    [[X:%.*]] = call <3 x float> @llvm.minimum.v3f32(<3 x float> [[X1:%.*]], <3 x float> <float 0x7FF0000000000000, float poison, float 0x7FF4000000000000>)
+; CHECK-NEXT:    ret <3 x float> [[X]]
+;
+  %r = call <3 x float> @llvm.minimum.v3f32(<3 x float> %x, <3 x float> <float 0x7ff0000000000000, float poison, float 0x7ff4000000000000>)
+  ret <3 x float> %r
+}
+
+define <3 x float> @test_maximumnum_const_inf_poison_snan_vec(<3 x float> %x) {
+; CHECK-LABEL: @test_maximumnum_const_inf_poison_snan_vec(
+; CHECK-NEXT:    [[R:%.*]] = call <3 x float> @llvm.maximumnum.v3f32(<3 x float> [[X:%.*]], <3 x float> <float 0x7FF0000000000000, float poison, float 0x7FF4000000000000>)
+; CHECK-NEXT:    ret <3 x float> [[R]]
+;
+  %r = call <3 x float> @llvm.maximumnum.v3f32(<3 x float> %x, <3 x float> <float 0x7ff0000000000000, float poison, float 0x7ff4000000000000>)
+  ret <3 x float> %r
+}
+
+define <3 x float> @test_minimumnum_const_inf_poison_snan_vec(<3 x float> %x) {
+; CHECK-LABEL: @test_minimumnum_const_inf_poison_snan_vec(
+; CHECK-NEXT:    [[X:%.*]] = call <3 x float> @llvm.minimumnum.v3f32(<3 x float> [[X1:%.*]], <3 x float> <float 0x7FF0000000000000, float poison, float 0x7FF4000000000000>)
+; CHECK-NEXT:    ret <3 x float> [[X]]
+;
+  %r = call <3 x float> @llvm.minimumnum.v3f32(<3 x float> %x, <3 x float> <float 0x7ff0000000000000, float poison, float 0x7ff4000000000000>)
+  ret <3 x float> %r
+}
+
 define float @test_minnum_const_neg_inf(float %x) {
 ; CHECK-LABEL: @test_minnum_const_neg_inf(
 ; CHECK-NEXT:    ret float 0xFFF0000000000000
@@ -122,6 +417,74 @@ define float @test_minimum_const_neg_inf(float %x) {
   ret float %r
 }
 
+define float @test_maximumnum_const_neg_inf(float %x) {
+; CHECK-LABEL: @test_maximumnum_const_neg_inf(
+; CHECK-NEXT:    [[X:%.*]] = call float @llvm.maximumnum.f32(float [[X1:%.*]], float 0xFFF0000000000000)
+; CHECK-NEXT:    ret float [[X]]
+;
+  %r = call float @llvm.maximumnum.f32(float %x, float 0xfff0000000000000)
+  ret float %r
+}
+
+define float @test_minimumnum_const_neg_inf(float %x) {
+; CHECK-LABEL: @test_minimumnum_const_neg_inf(
+; CHECK-NEXT:    ret float 0xFFF0000000000000
+;
+  %r = call float @llvm.minimumnum.f32(float %x, float 0xfff0000000000000)
+  ret float %r
+}
+
+define <2 x float> @test_minnum_const_neg_inf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minnum_const_neg_inf_vec(
+; CHECK-NEXT:    ret <2 x float> splat (float 0xFFF0000000000000)
+;
+  %r = call <2 x float> @llvm.minnum.v2f32(<2 x float> %x, <2 x float> <float 0xfff0000000000000, float 0xfff0000000000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maxnum_const_neg_inf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maxnum_const_neg_inf_vec(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.maxnum.v2f32(<2 x float> [[X:%.*]], <2 x float> splat (float 0xFFF0000000000000))
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %r = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %x, <2 x float> <float 0xfff0000000000000, float 0xfff0000000000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maximum_const_neg_inf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maximum_const_neg_inf_vec(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %r = call <2 x float> @llvm.maximum.v2f32(<2 x float> %x, <2 x float> <float 0xfff0000000000000, float 0xfff0000000000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimum_const_neg_inf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minimum_const_neg_inf_vec(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x float> @llvm.minimum.v2f32(<2 x float> [[X1:%.*]], <2 x float> splat (float 0xFFF0000000000000))
+; CHECK-NEXT:    ret <2 x float> [[X]]
+;
+  %r = call <2 x float> @llvm.minimum.v2f32(<2 x float> %x, <2 x float> <float 0xfff0000000000000, float 0xfff0000000000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maximumnum_const_neg_inf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maximumnum_const_neg_inf_vec(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[X:%.*]], <2 x float> splat (float 0xFFF0000000000000))
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %r = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> %x, <2 x float> <float 0xfff0000000000000, float 0xfff0000000000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimumnum_const_neg_inf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minimumnum_const_neg_inf_vec(
+; CHECK-NEXT:    ret <2 x float> splat (float 0xFFF0000000000000)
+;
+  %r = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> %x, <2 x float> <float 0xfff0000000000000, float 0xfff0000000000000>)
+  ret <2 x float> %r
+}
+
 define float @test_minnum_const_inf_nnan(float %x) {
 ; CHECK-LABEL: @test_minnum_const_inf_nnan(
 ; CHECK-NEXT:    ret float [[X:%.*]]
@@ -154,6 +517,70 @@ define float @test_minimum_const_inf_nnan(float %x) {
   ret float %r
 }
 
+define float @test_maximumnum_const_inf_nnan(float %x) {
+; CHECK-LABEL: @test_maximumnum_const_inf_nnan(
+; CHECK-NEXT:    ret float 0x7FF0000000000000
+;
+  %r = call nnan float @llvm.maximumnum.f32(float %x, float 0x7ff0000000000000)
+  ret float %r
+}
+
+define float @test_minimumnum_const_inf_nnan(float %x) {
+; CHECK-LABEL: @test_minimumnum_const_inf_nnan(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %r = call nnan float @llvm.minimumnum.f32(float %x, float 0x7ff0000000000000)
+  ret float %r
+}
+
+define <2 x float> @test_minnum_const_inf_nnan_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minnum_const_inf_nnan_vec(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %r = call nnan <2 x float> @llvm.minnum.v2f32(<2 x float> %x, <2 x float> <float 0x7ff0000000000000, float 0x7ff0000000000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maxnum_const_inf_nnan_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maxnum_const_inf_nnan_vec(
+; CHECK-NEXT:    ret <2 x float> splat (float 0x7FF0000000000000)
+;
+  %r = call nnan <2 x float> @llvm.maxnum.v2f32(<2 x float> %x, <2 x float> <float 0x7ff0000000000000, float 0x7ff0000000000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maximum_const_inf_nnan_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maximum_const_inf_nnan_vec(
+; CHECK-NEXT:    ret <2 x float> splat (float 0x7FF0000000000000)
+;
+  %r = call nnan <2 x float> @llvm.maximum.v2f32(<2 x float> %x, <2 x float> <float 0x7ff0000000000000, float 0x7ff0000000000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimum_const_inf_nnan_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minimum_const_inf_nnan_vec(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %r = call nnan <2 x float> @llvm.minimum.v2f32(<2 x float> %x, <2 x float> <float 0x7ff0000000000000, float 0x7ff0000000000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maximumnum_const_inf_nnan_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maximumnum_const_inf_nnan_vec(
+; CHECK-NEXT:    ret <2 x float> splat (float 0x7FF0000000000000)
+;
+  %r = call nnan <2 x float> @llvm.maximumnum.v2f32(<2 x float> %x, <2 x float> <float 0x7ff0000000000000, float 0x7ff0000000000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimumnum_const_inf_nnan_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minimumnum_const_inf_nnan_vec(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %r = call nnan <2 x float> @llvm.minimumnum.v2f32(<2 x float> %x, <2 x float> <float 0x7ff0000000000000, float 0x7ff0000000000000>)
+  ret <2 x float> %r
+}
+
 define float @test_minnum_const_inf_nnan_comm(float %x) {
 ; CHECK-LABEL: @test_minnum_const_inf_nnan_comm(
 ; CHECK-NEXT:    ret float [[X:%.*]]
@@ -183,6 +610,22 @@ define float @test_minimum_const_inf_nnan_comm(float %x) {
 ; CHECK-NEXT:    ret float [[X:%.*]]
 ;
   %r = call nnan float @llvm.minimum.f32(float 0x7ff0000000000000, float %x)
+  ret float %r
+}
+
+define float @test_maximumnum_const_inf_nnan_comm(float %x) {
+; CHECK-LABEL: @test_maximumnum_const_inf_nnan_comm(
+; CHECK-NEXT:    ret float 0x7FF0000000000000
+;
+  %r = call nnan float @llvm.maximumnum.f32(float 0x7ff0000000000000, float %x)
+  ret float %r
+}
+
+define float @test_minimumnum_const_inf_nnan_comm(float %x) {
+; CHECK-LABEL: @test_minimumnum_const_inf_nnan_comm(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %r = call nnan float @llvm.minimumnum.f32(float 0x7ff0000000000000, float %x)
   ret float %r
 }
 
@@ -218,6 +661,22 @@ define <2 x float> @test_minimum_const_inf_nnan_comm_vec(<2 x float> %x) {
   ret <2 x float> %r
 }
 
+define <2 x float> @test_maximumnum_const_inf_nnan_comm_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maximumnum_const_inf_nnan_comm_vec(
+; CHECK-NEXT:    ret <2 x float> splat (float 0x7FF0000000000000)
+;
+  %r = call nnan <2 x float> @llvm.maximumnum.v2f32(<2 x float> <float 0x7ff0000000000000, float 0x7ff0000000000000>, <2 x float> %x)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimumnum_const_inf_nnan_comm_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minimumnum_const_inf_nnan_comm_vec(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %r = call nnan <2 x float> @llvm.minimumnum.v2f32(<2 x float> <float 0x7ff0000000000000, float 0x7ff0000000000000>, <2 x float> %x)
+  ret <2 x float> %r
+}
+
 define float @test_minnum_const_neg_inf_nnan(float %x) {
 ; CHECK-LABEL: @test_minnum_const_neg_inf_nnan(
 ; CHECK-NEXT:    ret float 0xFFF0000000000000
@@ -248,6 +707,70 @@ define float @test_minimum_const_neg_inf_nnan(float %x) {
 ;
   %r = call nnan float @llvm.minimum.f32(float %x, float 0xfff0000000000000)
   ret float %r
+}
+
+define float @test_maximumnum_const_neg_inf_nnan(float %x) {
+; CHECK-LABEL: @test_maximumnum_const_neg_inf_nnan(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %r = call nnan float @llvm.maximumnum.f32(float %x, float 0xfff0000000000000)
+  ret float %r
+}
+
+define float @test_minimumnum_const_neg_inf_nnan(float %x) {
+; CHECK-LABEL: @test_minimumnum_const_neg_inf_nnan(
+; CHECK-NEXT:    ret float 0xFFF0000000000000
+;
+  %r = call nnan float @llvm.minimumnum.f32(float %x, float 0xfff0000000000000)
+  ret float %r
+}
+
+define <2 x float> @test_minnum_const_neg_inf_nnan_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minnum_const_neg_inf_nnan_vec(
+; CHECK-NEXT:    ret <2 x float> splat (float 0xFFF0000000000000)
+;
+  %r = call nnan <2 x float> @llvm.minnum.v2f32(<2 x float> %x, <2 x float> <float 0xfff0000000000000, float 0xfff0000000000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maxnum_const_neg_inf_nnan_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maxnum_const_neg_inf_nnan_vec(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %r = call nnan <2 x float> @llvm.maxnum.v2f32(<2 x float> %x, <2 x float> <float 0xfff0000000000000, float 0xfff0000000000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maximum_const_neg_inf_nnan_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maximum_const_neg_inf_nnan_vec(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %r = call nnan <2 x float> @llvm.maximum.v2f32(<2 x float> %x, <2 x float> <float 0xfff0000000000000, float 0xfff0000000000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimum_const_neg_inf_nnan_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minimum_const_neg_inf_nnan_vec(
+; CHECK-NEXT:    ret <2 x float> splat (float 0xFFF0000000000000)
+;
+  %r = call nnan <2 x float> @llvm.minimum.v2f32(<2 x float> %x, <2 x float> <float 0xfff0000000000000, float 0xfff0000000000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maximumnum_const_neg_inf_nnan_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maximumnum_const_neg_inf_nnan_vec(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %r = call nnan <2 x float> @llvm.maximumnum.v2f32(<2 x float> %x, <2 x float> <float 0xfff0000000000000, float 0xfff0000000000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimumnum_const_neg_inf_nnan_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minimumnum_const_neg_inf_nnan_vec(
+; CHECK-NEXT:    ret <2 x float> splat (float 0xFFF0000000000000)
+;
+  %r = call nnan <2 x float> @llvm.minimumnum.v2f32(<2 x float> %x, <2 x float> <float 0xfff0000000000000, float 0xfff0000000000000>)
+  ret <2 x float> %r
 }
 
 define float @test_minnum_const_max(float %x) {
@@ -286,6 +809,78 @@ define float @test_minimum_const_max(float %x) {
   ret float %r
 }
 
+define float @test_maximumnum_const_max(float %x) {
+; CHECK-LABEL: @test_maximumnum_const_max(
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.maximumnum.f32(float [[X:%.*]], float 0x47EFFFFFE0000000)
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call float @llvm.maximumnum.f32(float %x, float 0x47efffffe0000000)
+  ret float %r
+}
+
+define float @test_minimumnum_const_max(float %x) {
+; CHECK-LABEL: @test_minimumnum_const_max(
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.minimumnum.f32(float [[X:%.*]], float 0x47EFFFFFE0000000)
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call float @llvm.minimumnum.f32(float %x, float 0x47efffffe0000000)
+  ret float %r
+}
+
+define <2 x float> @test_minnum_const_max_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minnum_const_max_vec(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x float> @llvm.minnum.v2f32(<2 x float> [[X1:%.*]], <2 x float> splat (float 0x47EFFFFFE0000000))
+; CHECK-NEXT:    ret <2 x float> [[X]]
+;
+  %r = call <2 x float> @llvm.minnum.v2f32(<2 x float> %x, <2 x float> <float 0x47efffffe0000000, float 0x47efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maxnum_const_max_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maxnum_const_max_vec(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.maxnum.v2f32(<2 x float> [[X:%.*]], <2 x float> splat (float 0x47EFFFFFE0000000))
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %r = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %x, <2 x float> <float 0x47efffffe0000000, float 0x47efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maximum_const_max_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maximum_const_max_vec(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.maximum.v2f32(<2 x float> [[X:%.*]], <2 x float> splat (float 0x47EFFFFFE0000000))
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %r = call <2 x float> @llvm.maximum.v2f32(<2 x float> %x, <2 x float> <float 0x47efffffe0000000, float 0x47efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimum_const_max_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minimum_const_max_vec(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x float> @llvm.minimum.v2f32(<2 x float> [[X1:%.*]], <2 x float> splat (float 0x47EFFFFFE0000000))
+; CHECK-NEXT:    ret <2 x float> [[X]]
+;
+  %r = call <2 x float> @llvm.minimum.v2f32(<2 x float> %x, <2 x float> <float 0x47efffffe0000000, float 0x47efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maximumnum_const_max_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maximumnum_const_max_vec(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[X:%.*]], <2 x float> splat (float 0x47EFFFFFE0000000))
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %r = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> %x, <2 x float> <float 0x47efffffe0000000, float 0x47efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimumnum_const_max_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minimumnum_const_max_vec(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> [[X1:%.*]], <2 x float> splat (float 0x47EFFFFFE0000000))
+; CHECK-NEXT:    ret <2 x float> [[X]]
+;
+  %r = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> %x, <2 x float> <float 0x47efffffe0000000, float 0x47efffffe0000000>)
+  ret <2 x float> %r
+}
+
 define float @test_minnum_const_neg_max(float %x) {
 ; CHECK-LABEL: @test_minnum_const_neg_max(
 ; CHECK-NEXT:    [[R:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float 0xC7EFFFFFE0000000)
@@ -322,6 +917,78 @@ define float @test_minimum_const_neg_max(float %x) {
   ret float %r
 }
 
+define float @test_maximumnum_const_neg_max(float %x) {
+; CHECK-LABEL: @test_maximumnum_const_neg_max(
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.maximumnum.f32(float [[X:%.*]], float 0xC7EFFFFFE0000000)
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call float @llvm.maximumnum.f32(float %x, float 0xc7efffffe0000000)
+  ret float %r
+}
+
+define float @test_minimumnum_const_neg_max(float %x) {
+; CHECK-LABEL: @test_minimumnum_const_neg_max(
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.minimumnum.f32(float [[X:%.*]], float 0xC7EFFFFFE0000000)
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call float @llvm.minimumnum.f32(float %x, float 0xc7efffffe0000000)
+  ret float %r
+}
+
+define <2 x float> @test_minnum_const_neg_max_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minnum_const_neg_max_vec(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x float> @llvm.minnum.v2f32(<2 x float> [[X1:%.*]], <2 x float> splat (float 0xC7EFFFFFE0000000))
+; CHECK-NEXT:    ret <2 x float> [[X]]
+;
+  %r = call <2 x float> @llvm.minnum.v2f32(<2 x float> %x, <2 x float> <float 0xc7efffffe0000000, float 0xc7efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maxnum_const_neg_max_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maxnum_const_neg_max_vec(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.maxnum.v2f32(<2 x float> [[X:%.*]], <2 x float> splat (float 0xC7EFFFFFE0000000))
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %r = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %x, <2 x float> <float 0xc7efffffe0000000, float 0xc7efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maximum_const_neg_max_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maximum_const_neg_max_vec(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.maximum.v2f32(<2 x float> [[X:%.*]], <2 x float> splat (float 0xC7EFFFFFE0000000))
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %r = call <2 x float> @llvm.maximum.v2f32(<2 x float> %x, <2 x float> <float 0xc7efffffe0000000, float 0xc7efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimum_const_neg_max_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minimum_const_neg_max_vec(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x float> @llvm.minimum.v2f32(<2 x float> [[X1:%.*]], <2 x float> splat (float 0xC7EFFFFFE0000000))
+; CHECK-NEXT:    ret <2 x float> [[X]]
+;
+  %r = call <2 x float> @llvm.minimum.v2f32(<2 x float> %x, <2 x float> <float 0xc7efffffe0000000, float 0xc7efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maximumnum_const_neg_max_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maximumnum_const_neg_max_vec(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[X:%.*]], <2 x float> splat (float 0xC7EFFFFFE0000000))
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %r = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> %x, <2 x float> <float 0xc7efffffe0000000, float 0xc7efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimumnum_const_neg_max_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minimumnum_const_neg_max_vec(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> [[X1:%.*]], <2 x float> splat (float 0xC7EFFFFFE0000000))
+; CHECK-NEXT:    ret <2 x float> [[X]]
+;
+  %r = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> %x, <2 x float> <float 0xc7efffffe0000000, float 0xc7efffffe0000000>)
+  ret <2 x float> %r
+}
+
 define float @test_minnum_const_max_ninf(float %x) {
 ; CHECK-LABEL: @test_minnum_const_max_ninf(
 ; CHECK-NEXT:    [[R:%.*]] = call ninf float @llvm.minnum.f32(float [[X:%.*]], float 0x47EFFFFFE0000000)
@@ -354,6 +1021,74 @@ define float @test_minimum_const_max_ninf(float %x) {
 ;
   %r = call ninf float @llvm.minimum.f32(float %x, float 0x47efffffe0000000)
   ret float %r
+}
+
+define float @test_maximumnum_const_max_ninf(float %x) {
+; CHECK-LABEL: @test_maximumnum_const_max_ninf(
+; CHECK-NEXT:    ret float 0x47EFFFFFE0000000
+;
+  %r = call ninf float @llvm.maximumnum.f32(float %x, float 0x47efffffe0000000)
+  ret float %r
+}
+
+define float @test_minimumnum_const_max_ninf(float %x) {
+; CHECK-LABEL: @test_minimumnum_const_max_ninf(
+; CHECK-NEXT:    [[R:%.*]] = call ninf float @llvm.minimumnum.f32(float [[X:%.*]], float 0x47EFFFFFE0000000)
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call ninf float @llvm.minimumnum.f32(float %x, float 0x47efffffe0000000)
+  ret float %r
+}
+
+define <2 x float> @test_minnum_const_max_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minnum_const_max_ninf_vec(
+; CHECK-NEXT:    [[X:%.*]] = call ninf <2 x float> @llvm.minnum.v2f32(<2 x float> [[X1:%.*]], <2 x float> splat (float 0x47EFFFFFE0000000))
+; CHECK-NEXT:    ret <2 x float> [[X]]
+;
+  %r = call ninf <2 x float> @llvm.minnum.v2f32(<2 x float> %x, <2 x float> <float 0x47efffffe0000000, float 0x47efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maxnum_const_max_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maxnum_const_max_ninf_vec(
+; CHECK-NEXT:    ret <2 x float> splat (float 0x47EFFFFFE0000000)
+;
+  %r = call ninf <2 x float> @llvm.maxnum.v2f32(<2 x float> %x, <2 x float> <float 0x47efffffe0000000, float 0x47efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maximum_const_max_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maximum_const_max_ninf_vec(
+; CHECK-NEXT:    [[R:%.*]] = call ninf <2 x float> @llvm.maximum.v2f32(<2 x float> [[X:%.*]], <2 x float> splat (float 0x47EFFFFFE0000000))
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %r = call ninf <2 x float> @llvm.maximum.v2f32(<2 x float> %x, <2 x float> <float 0x47efffffe0000000, float 0x47efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimum_const_max_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minimum_const_max_ninf_vec(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %r = call ninf <2 x float> @llvm.minimum.v2f32(<2 x float> %x, <2 x float> <float 0x47efffffe0000000, float 0x47efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maximumnum_const_max_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maximumnum_const_max_ninf_vec(
+; CHECK-NEXT:    ret <2 x float> splat (float 0x47EFFFFFE0000000)
+;
+  %r = call ninf <2 x float> @llvm.maximumnum.v2f32(<2 x float> %x, <2 x float> <float 0x47efffffe0000000, float 0x47efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimumnum_const_max_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minimumnum_const_max_ninf_vec(
+; CHECK-NEXT:    [[X:%.*]] = call ninf <2 x float> @llvm.minimumnum.v2f32(<2 x float> [[X1:%.*]], <2 x float> splat (float 0x47EFFFFFE0000000))
+; CHECK-NEXT:    ret <2 x float> [[X]]
+;
+  %r = call ninf <2 x float> @llvm.minimumnum.v2f32(<2 x float> %x, <2 x float> <float 0x47efffffe0000000, float 0x47efffffe0000000>)
+  ret <2 x float> %r
 }
 
 define float @test_minnum_const_neg_max_ninf(float %x) {
@@ -390,6 +1125,74 @@ define float @test_minimum_const_neg_max_ninf(float %x) {
   ret float %r
 }
 
+define float @test_maximumnum_const_neg_max_ninf(float %x) {
+; CHECK-LABEL: @test_maximumnum_const_neg_max_ninf(
+; CHECK-NEXT:    [[X:%.*]] = call ninf float @llvm.maximumnum.f32(float [[X1:%.*]], float 0xC7EFFFFFE0000000)
+; CHECK-NEXT:    ret float [[X]]
+;
+  %r = call ninf float @llvm.maximumnum.f32(float %x, float 0xc7efffffe0000000)
+  ret float %r
+}
+
+define float @test_minimumnum_const_neg_max_ninf(float %x) {
+; CHECK-LABEL: @test_minimumnum_const_neg_max_ninf(
+; CHECK-NEXT:    ret float 0xC7EFFFFFE0000000
+;
+  %r = call ninf float @llvm.minimumnum.f32(float %x, float 0xc7efffffe0000000)
+  ret float %r
+}
+
+define <2 x float> @test_minnum_const_neg_max_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minnum_const_neg_max_ninf_vec(
+; CHECK-NEXT:    ret <2 x float> splat (float 0xC7EFFFFFE0000000)
+;
+  %r = call ninf <2 x float> @llvm.minnum.v2f32(<2 x float> %x, <2 x float> <float 0xc7efffffe0000000, float 0xc7efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maxnum_const_neg_max_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maxnum_const_neg_max_ninf_vec(
+; CHECK-NEXT:    [[R:%.*]] = call ninf <2 x float> @llvm.maxnum.v2f32(<2 x float> [[X:%.*]], <2 x float> splat (float 0xC7EFFFFFE0000000))
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %r = call ninf <2 x float> @llvm.maxnum.v2f32(<2 x float> %x, <2 x float> <float 0xc7efffffe0000000, float 0xc7efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maximum_const_neg_max_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maximum_const_neg_max_ninf_vec(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %r = call ninf <2 x float> @llvm.maximum.v2f32(<2 x float> %x, <2 x float> <float 0xc7efffffe0000000, float 0xc7efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimum_const_neg_max_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minimum_const_neg_max_ninf_vec(
+; CHECK-NEXT:    [[X:%.*]] = call ninf <2 x float> @llvm.minimum.v2f32(<2 x float> [[X1:%.*]], <2 x float> splat (float 0xC7EFFFFFE0000000))
+; CHECK-NEXT:    ret <2 x float> [[X]]
+;
+  %r = call ninf <2 x float> @llvm.minimum.v2f32(<2 x float> %x, <2 x float> <float 0xc7efffffe0000000, float 0xc7efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maximumnum_const_neg_max_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maximumnum_const_neg_max_ninf_vec(
+; CHECK-NEXT:    [[R:%.*]] = call ninf <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[X:%.*]], <2 x float> splat (float 0xC7EFFFFFE0000000))
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %r = call ninf <2 x float> @llvm.maximumnum.v2f32(<2 x float> %x, <2 x float> <float 0xc7efffffe0000000, float 0xc7efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimumnum_const_neg_max_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minimumnum_const_neg_max_ninf_vec(
+; CHECK-NEXT:    ret <2 x float> splat (float 0xC7EFFFFFE0000000)
+;
+  %r = call ninf <2 x float> @llvm.minimumnum.v2f32(<2 x float> %x, <2 x float> <float 0xc7efffffe0000000, float 0xc7efffffe0000000>)
+  ret <2 x float> %r
+}
+
 define float @test_minnum_const_max_nnan_ninf(float %x) {
 ; CHECK-LABEL: @test_minnum_const_max_nnan_ninf(
 ; CHECK-NEXT:    ret float [[X:%.*]]
@@ -420,6 +1223,70 @@ define float @test_minimum_const_max_nnan_ninf(float %x) {
 ;
   %r = call nnan ninf float @llvm.minimum.f32(float %x, float 0x47efffffe0000000)
   ret float %r
+}
+
+define float @test_maximumnum_const_max_nnan_ninf(float %x) {
+; CHECK-LABEL: @test_maximumnum_const_max_nnan_ninf(
+; CHECK-NEXT:    ret float 0x47EFFFFFE0000000
+;
+  %r = call nnan ninf float @llvm.maximumnum.f32(float %x, float 0x47efffffe0000000)
+  ret float %r
+}
+
+define float @test_minimumnum_const_max_nnan_ninf(float %x) {
+; CHECK-LABEL: @test_minimumnum_const_max_nnan_ninf(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %r = call nnan ninf float @llvm.minimumnum.f32(float %x, float 0x47efffffe0000000)
+  ret float %r
+}
+
+define <2 x float> @test_minnum_const_max_nnan_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minnum_const_max_nnan_ninf_vec(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %r = call nnan ninf <2 x float> @llvm.minnum.v2f32(<2 x float> %x, <2 x float> <float 0x47efffffe0000000, float 0x47efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maxnum_const_max_nnan_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maxnum_const_max_nnan_ninf_vec(
+; CHECK-NEXT:    ret <2 x float> splat (float 0x47EFFFFFE0000000)
+;
+  %r = call nnan ninf <2 x float> @llvm.maxnum.v2f32(<2 x float> %x, <2 x float> <float 0x47efffffe0000000, float 0x47efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maximum_const_max_nnan_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maximum_const_max_nnan_ninf_vec(
+; CHECK-NEXT:    ret <2 x float> splat (float 0x47EFFFFFE0000000)
+;
+  %r = call nnan ninf <2 x float> @llvm.maximum.v2f32(<2 x float> %x, <2 x float> <float 0x47efffffe0000000, float 0x47efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimum_const_max_nnan_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minimum_const_max_nnan_ninf_vec(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %r = call nnan ninf <2 x float> @llvm.minimum.v2f32(<2 x float> %x, <2 x float> <float 0x47efffffe0000000, float 0x47efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maximumnum_const_max_nnan_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maximumnum_const_max_nnan_ninf_vec(
+; CHECK-NEXT:    ret <2 x float> splat (float 0x47EFFFFFE0000000)
+;
+  %r = call nnan ninf <2 x float> @llvm.maximumnum.v2f32(<2 x float> %x, <2 x float> <float 0x47efffffe0000000, float 0x47efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimumnum_const_max_nnan_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minimumnum_const_max_nnan_ninf_vec(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %r = call nnan ninf <2 x float> @llvm.minimumnum.v2f32(<2 x float> %x, <2 x float> <float 0x47efffffe0000000, float 0x47efffffe0000000>)
+  ret <2 x float> %r
 }
 
 define float @test_minnum_const_neg_max_nnan_ninf(float %x) {
@@ -454,8 +1321,72 @@ define float @test_minimum_const_neg_max_nnan_ninf(float %x) {
   ret float %r
 }
 
+define float @test_maximumnum_const_neg_max_nnan_ninf(float %x) {
+; CHECK-LABEL: @test_maximumnum_const_neg_max_nnan_ninf(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %r = call nnan ninf float @llvm.maximumnum.f32(float %x, float 0xc7efffffe0000000)
+  ret float %r
+}
+
+define float @test_minimumnum_const_neg_max_nnan_ninf(float %x) {
+; CHECK-LABEL: @test_minimumnum_const_neg_max_nnan_ninf(
+; CHECK-NEXT:    ret float 0xC7EFFFFFE0000000
+;
+  %r = call nnan ninf float @llvm.minimumnum.f32(float %x, float 0xc7efffffe0000000)
+  ret float %r
+}
+
+define <2 x float> @test_minnum_const_neg_max_nnan_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minnum_const_neg_max_nnan_ninf_vec(
+; CHECK-NEXT:    ret <2 x float> splat (float 0xC7EFFFFFE0000000)
+;
+  %r = call nnan ninf <2 x float> @llvm.minnum.v2f32(<2 x float> %x, <2 x float> <float 0xc7efffffe0000000, float 0xc7efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maxnum_const_neg_max_nnan_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maxnum_const_neg_max_nnan_ninf_vec(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %r = call nnan ninf <2 x float> @llvm.maxnum.v2f32(<2 x float> %x, <2 x float> <float 0xc7efffffe0000000, float 0xc7efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maximum_const_neg_max_nnan_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maximum_const_neg_max_nnan_ninf_vec(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %r = call nnan ninf <2 x float> @llvm.maximum.v2f32(<2 x float> %x, <2 x float> <float 0xc7efffffe0000000, float 0xc7efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimum_const_neg_max_nnan_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minimum_const_neg_max_nnan_ninf_vec(
+; CHECK-NEXT:    ret <2 x float> splat (float 0xC7EFFFFFE0000000)
+;
+  %r = call nnan ninf <2 x float> @llvm.minimum.v2f32(<2 x float> %x, <2 x float> <float 0xc7efffffe0000000, float 0xc7efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_maximumnum_const_neg_max_nnan_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_maximumnum_const_neg_max_nnan_ninf_vec(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %r = call nnan ninf <2 x float> @llvm.maximumnum.v2f32(<2 x float> %x, <2 x float> <float 0xc7efffffe0000000, float 0xc7efffffe0000000>)
+  ret <2 x float> %r
+}
+
+define <2 x float> @test_minimumnum_const_neg_max_nnan_ninf_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_minimumnum_const_neg_max_nnan_ninf_vec(
+; CHECK-NEXT:    ret <2 x float> splat (float 0xC7EFFFFFE0000000)
+;
+  %r = call nnan ninf <2 x float> @llvm.minimumnum.v2f32(<2 x float> %x, <2 x float> <float 0xc7efffffe0000000, float 0xc7efffffe0000000>)
+  ret <2 x float> %r
+}
+
 ; From the LangRef for minnum/maxnum:
-; "If either operand is a NaN, returns the other non-NaN operand."
+; "If either operand is a qNaN, returns the other non-NaN operand. Returns NaN only if both operands are NaN or if either operand is sNaN."
 
 define double @maxnum_nan_op0(double %x) {
 ; CHECK-LABEL: @maxnum_nan_op0(
@@ -518,6 +1449,106 @@ define <2 x double> @minnum_nan_op1_vec(<2 x double> %x) {
 ; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
 ;
   %r = call <2 x double> @llvm.minnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff800dead00dead, double 0x7ff800dead00dead>)
+  ret <2 x double> %r
+}
+
+define double @maxnum_snan_op0(double %x) {
+; CHECK-LABEL: @maxnum_snan_op0(
+; CHECK-NEXT:    ret double 0x7FFC000000000000
+;
+  %r = call double @llvm.maxnum.f64(double 0x7ff4000000000000, double %x)
+  ret double %r
+}
+
+define double @maxnum_snan_op1(double %x) {
+; CHECK-LABEL: @maxnum_snan_op1(
+; CHECK-NEXT:    ret double 0x7FFC00000000DEAD
+;
+  %r = call double @llvm.maxnum.f64(double %x, double 0x7ff400000000dead)
+  ret double %r
+}
+
+define double @minnum_snan_op0(double %x) {
+; CHECK-LABEL: @minnum_snan_op0(
+; CHECK-NEXT:    ret double 0x7FFC000DEAD00000
+;
+  %r = call double @llvm.minnum.f64(double 0x7ff4000dead00000, double %x)
+  ret double %r
+}
+
+define double @minnum_snan_op1(double %x) {
+; CHECK-LABEL: @minnum_snan_op1(
+; CHECK-NEXT:    ret double 0x7FFC00DEAD00DEAD
+;
+  %r = call double @llvm.minnum.f64(double %x, double 0x7ff400dead00dead)
+  ret double %r
+}
+
+define <2 x double> @maxnum_snan_op0_vec(<2 x double> %x) {
+; CHECK-LABEL: @maxnum_snan_op0_vec(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FFC000000000000, double poison>
+;
+  %r = call <2 x double> @llvm.maxnum.v2f64(<2 x double> <double 0x7ff4000000000000, double poison>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maxnum_snan_op1_vec(<2 x double> %x) {
+; CHECK-LABEL: @maxnum_snan_op1_vec(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FFC00000000DEAD, double 0x7FFCFFFFFFFFFFFF>
+;
+  %r = call <2 x double> @llvm.maxnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff400000000dead, double 0x7ff4ffffffffffff>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minnum_snan_op0_vec(<2 x double> %x) {
+; CHECK-LABEL: @minnum_snan_op0_vec(
+; CHECK-NEXT:    ret <2 x double> <double poison, double 0x7FFC000DEAD00000>
+;
+  %r = call <2 x double> @llvm.minnum.v2f64(<2 x double> <double poison, double 0x7ff4000dead00000>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minnum_snan_op1_vec(<2 x double> %x) {
+; CHECK-LABEL: @minnum_snan_op1_vec(
+; CHECK-NEXT:    ret <2 x double> splat (double 0x7FFC00DEAD00DEAD)
+;
+  %r = call <2 x double> @llvm.minnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff400dead00dead, double 0x7ff400dead00dead>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maxnum_snan_qnan_op0_vec(<2 x double> %x) {
+; CHECK-LABEL: @maxnum_snan_qnan_op0_vec(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x double> @llvm.maxnum.v2f64(<2 x double> <double 0x7FF4000000000000, double 0x7FFF000000000000>, <2 x double> [[X1:%.*]])
+; CHECK-NEXT:    ret <2 x double> [[X]]
+;
+  %r = call <2 x double> @llvm.maxnum.v2f64(<2 x double> <double 0x7ff4000000000000, double 0x7fff000000000000>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maxnum_snan_qnan_op1_vec(<2 x double> %x) {
+; CHECK-LABEL: @maxnum_snan_qnan_op1_vec(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x double> @llvm.maxnum.v2f64(<2 x double> [[X1:%.*]], <2 x double> <double 0x7FF400000000DEAD, double 0x7FFF000000000000>)
+; CHECK-NEXT:    ret <2 x double> [[X]]
+;
+  %r = call <2 x double> @llvm.maxnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff400000000dead, double 0x7fff000000000000>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minnum_snan_qnan_op0_vec(<2 x double> %x) {
+; CHECK-LABEL: @minnum_snan_qnan_op0_vec(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x double> @llvm.minnum.v2f64(<2 x double> <double 0x7FF4000DEAD00000, double 0x7FFF000000000000>, <2 x double> [[X1:%.*]])
+; CHECK-NEXT:    ret <2 x double> [[X]]
+;
+  %r = call <2 x double> @llvm.minnum.v2f64(<2 x double> <double 0x7ff4000dead00000, double 0x7fff000000000000>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minnum_snan_qnan_op1_vec(<2 x double> %x) {
+; CHECK-LABEL: @minnum_snan_qnan_op1_vec(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x double> @llvm.minnum.v2f64(<2 x double> [[X1:%.*]], <2 x double> <double 0x7FF400DEAD00DEAD, double 0x7FFF00DEAD00DEAD>)
+; CHECK-NEXT:    ret <2 x double> [[X]]
+;
+  %r = call <2 x double> @llvm.minnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff400dead00dead, double 0x7fff00dead00dead>)
   ret <2 x double> %r
 }
 
@@ -609,6 +1640,14 @@ define float @minnum_undef_poison(float %x) {
   ret float %val
 }
 
+define float @minnum_poison_poison(float %x) {
+; CHECK-LABEL: @minnum_poison_poison(
+; CHECK-NEXT:    ret float poison
+;
+  %val = call float @llvm.minnum.f32(float poison, float poison)
+  ret float %val
+}
+
 define float @maxnum_undef_undef(float %x) {
 ; CHECK-LABEL: @maxnum_undef_undef(
 ; CHECK-NEXT:    ret float undef
@@ -630,6 +1669,14 @@ define float @maxnum_undef_poison(float %x) {
 ; CHECK-NEXT:    ret float poison
 ;
   %val = call float @llvm.maxnum.f32(float undef, float poison)
+  ret float %val
+}
+
+define float @maxnum_poison_poison(float %x) {
+; CHECK-LABEL: @maxnum_poison_poison(
+; CHECK-NEXT:    ret float poison
+;
+  %val = call float @llvm.maxnum.f32(float poison, float poison)
   ret float %val
 }
 
@@ -743,6 +1790,7 @@ define float @minnum_inf(float %x) {
   %val = call float @llvm.minnum.f32(float 0x7FF0000000000000, float %x)
   ret float %val
 }
+
 define float @maxnum_x_maxnum_x_y(float %x, float %y) {
 ; CHECK-LABEL: @maxnum_x_maxnum_x_y(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
@@ -921,6 +1969,118 @@ define <2 x double> @minimum_nan_op1_vec(<2 x double> %x) {
   ret <2 x double> %r
 }
 
+define double @maximum_snan_op0(double %x) {
+; CHECK-LABEL: @maximum_snan_op0(
+; CHECK-NEXT:    ret double 0x7FFC000000000000
+;
+  %r = call double @llvm.maximum.f64(double 0x7ff4000000000000, double %x)
+  ret double %r
+}
+
+define double @maximum_snan_op1(double %x) {
+; CHECK-LABEL: @maximum_snan_op1(
+; CHECK-NEXT:    ret double 0x7FFC00000000DEAD
+;
+  %r = call double @llvm.maximum.f64(double %x, double 0x7ff400000000dead)
+  ret double %r
+}
+
+define double @minimum_snan_op0(double %x) {
+; CHECK-LABEL: @minimum_snan_op0(
+; CHECK-NEXT:    ret double 0x7FFC000DEAD00000
+;
+  %r = call double @llvm.minimum.f64(double 0x7ff4000dead00000, double %x)
+  ret double %r
+}
+
+define double @minimum_snan_op1(double %x) {
+; CHECK-LABEL: @minimum_snan_op1(
+; CHECK-NEXT:    ret double 0x7FFC00DEAD00DEAD
+;
+  %r = call double @llvm.minimum.f64(double %x, double 0x7ff400dead00dead)
+  ret double %r
+}
+
+define <2 x double> @maximum_snan_op0_vec_partial_poison(<2 x double> %x) {
+; CHECK-LABEL: @maximum_snan_op0_vec_partial_poison(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FFC000000000000, double poison>
+;
+  %r = call <2 x double> @llvm.maximum.v2f64(<2 x double> <double 0x7ff4000000000000, double poison>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maximum_snan_op1_vec_partial_poison(<2 x double> %x) {
+; CHECK-LABEL: @maximum_snan_op1_vec_partial_poison(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FFC000000000000, double poison>
+;
+  %r = call <2 x double> @llvm.maximum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff4000000000000, double poison>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maximum_snan_op1_vec(<2 x double> %x) {
+; CHECK-LABEL: @maximum_snan_op1_vec(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FFC00000000DEAD, double 0x7FFCFFFFFFFFFFFF>
+;
+  %r = call <2 x double> @llvm.maximum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff400000000dead, double 0x7ff4ffffffffffff>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimum_snan_op0_vec_partial_poison(<2 x double> %x) {
+; CHECK-LABEL: @minimum_snan_op0_vec_partial_poison(
+; CHECK-NEXT:    ret <2 x double> <double poison, double 0x7FFC000DEAD00000>
+;
+  %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> <double poison, double 0x7ff4000dead00000>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimum_snan_op1_vec_partial_poison(<2 x double> %x) {
+; CHECK-LABEL: @minimum_snan_op1_vec_partial_poison(
+; CHECK-NEXT:    ret <2 x double> <double poison, double 0x7FFC000DEAD00000>
+;
+  %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> %x, <2 x double> <double poison, double 0x7ff4000dead00000>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimum_snan_op1_vec(<2 x double> %x) {
+; CHECK-LABEL: @minimum_snan_op1_vec(
+; CHECK-NEXT:    ret <2 x double> splat (double 0x7FFC00DEAD00DEAD)
+;
+  %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff400dead00dead, double 0x7ff400dead00dead>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maximum_snan_qnan_op0_vec(<2 x double> %x) {
+; CHECK-LABEL: @maximum_snan_qnan_op0_vec(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FFC000000000000, double 0x7FFF000000000000>
+;
+  %r = call <2 x double> @llvm.maximum.v2f64(<2 x double> <double 0x7ff4000000000000, double 0x7fff000000000000>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maximum_snan_qnan_op1_vec(<2 x double> %x) {
+; CHECK-LABEL: @maximum_snan_qnan_op1_vec(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FFC00000000DEAD, double 0x7FFF000000000000>
+;
+  %r = call <2 x double> @llvm.maximum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff400000000dead, double 0x7fff000000000000>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimum_snan_qnan_op0_vec(<2 x double> %x) {
+; CHECK-LABEL: @minimum_snan_qnan_op0_vec(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FFC000DEAD00000, double 0x7FFF000000000000>
+;
+  %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> <double 0x7ff4000dead00000, double 0x7fff000000000000>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimum_snan_qnan_op1_vec(<2 x double> %x) {
+; CHECK-LABEL: @minimum_snan_qnan_op1_vec(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FFC00DEAD00DEAD, double 0x7FFF00DEAD00DEAD>
+;
+  %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff400dead00dead, double 0x7fff00dead00dead>)
+  ret <2 x double> %r
+}
+
 define float @maximum_undef_op1(float %x) {
 ; CHECK-LABEL: @maximum_undef_op1(
 ; CHECK-NEXT:    ret float [[X:%.*]]
@@ -998,6 +2158,22 @@ define float @maximum_undef_undef(float %x) {
 ; CHECK-NEXT:    ret float undef
 ;
   %val = call float @llvm.maximum.f32(float undef, float undef)
+  ret float %val
+}
+
+define float @minimum_poison_poison(float %x) {
+; CHECK-LABEL: @minimum_poison_poison(
+; CHECK-NEXT:    ret float poison
+;
+  %val = call float @llvm.minimum.f32(float poison, float poison)
+  ret float %val
+}
+
+define float @maximum_poison_poison(float %x) {
+; CHECK-LABEL: @maximum_poison_poison(
+; CHECK-NEXT:    ret float poison
+;
+  %val = call float @llvm.maximum.f32(float poison, float poison)
   ret float %val
 }
 
@@ -1171,8 +2347,6 @@ define <2 x double> @minimum_neginf_commute_vec(<2 x double> %x) {
   ret <2 x double> %r
 }
 
-; TODO: minimum(INF, X) --> X
-
 define float @minimum_inf(float %x) {
 ; CHECK-LABEL: @minimum_inf(
 ; CHECK-NEXT:    ret float [[X:%.*]]
@@ -1317,8 +2491,8 @@ define <2 x float> @maxnum_minnum_maxnum(<2 x float> %x, <2 x float> %y) {
   ret <2 x float> %val
 }
 
-define <2 x double> @maxnum_minnum_minmum(<2 x double> %x, <2 x double> %y) {
-; CHECK-LABEL: @maxnum_minnum_minmum(
+define <2 x double> @maxnum_minnum_minnum(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: @maxnum_minnum_minnum(
 ; CHECK-NEXT:    [[MIN1:%.*]] = call <2 x double> @llvm.minnum.v2f64(<2 x double> [[X:%.*]], <2 x double> [[Y:%.*]])
 ; CHECK-NEXT:    [[MIN2:%.*]] = call <2 x double> @llvm.minnum.v2f64(<2 x double> [[X]], <2 x double> [[Y]])
 ; CHECK-NEXT:    [[VAL:%.*]] = call <2 x double> @llvm.maxnum.v2f64(<2 x double> [[MIN1]], <2 x double> [[MIN2]])
@@ -1376,13 +2550,579 @@ define <2 x float> @minnum_maxnum_maxnum(<2 x float> %x, <2 x float> %y) {
   ret <2 x float> %val
 }
 
-define <2 x double> @minnum_minnum_minmum(<2 x double> %x, <2 x double> %y) {
-; CHECK-LABEL: @minnum_minnum_minmum(
+define <2 x double> @minnum_minnum_minnum(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: @minnum_minnum_minnum(
 ; CHECK-NEXT:    [[MIN1:%.*]] = call <2 x double> @llvm.minnum.v2f64(<2 x double> [[X:%.*]], <2 x double> [[Y:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[MIN1]]
 ;
   %min1 = call <2 x double> @llvm.minnum.v2f64(<2 x double> %x, <2 x double> %y)
   %min2 = call <2 x double> @llvm.minnum.v2f64(<2 x double> %x, <2 x double> %y)
   %val = call <2 x double> @llvm.minnum.v2f64(<2 x double> %min1, <2 x double> %min2)
+  ret <2 x double> %val
+}
+
+; From the LangRef for minimumnum/maximumnum:
+; "If both operands are NaNs (including sNaN), returns qNaN.
+;  If one operand is NaN (including sNaN) and another operand is a number, return the number."
+
+define double @maximumnum_nan_op0(double %x) {
+; CHECK-LABEL: @maximumnum_nan_op0(
+; CHECK-NEXT:    ret double [[X:%.*]]
+;
+  %r = call double @llvm.maximumnum.f64(double 0x7ff8000000000000, double %x)
+  ret double %r
+}
+
+define double @maximumnum_nan_op1(double %x) {
+; CHECK-LABEL: @maximumnum_nan_op1(
+; CHECK-NEXT:    ret double [[X:%.*]]
+;
+  %r = call double @llvm.maximumnum.f64(double %x, double 0x7ff800000000dead)
+  ret double %r
+}
+
+define double @minimumnum_nan_op0(double %x) {
+; CHECK-LABEL: @minimumnum_nan_op0(
+; CHECK-NEXT:    ret double [[X:%.*]]
+;
+  %r = call double @llvm.minimumnum.f64(double 0x7ff8000dead00000, double %x)
+  ret double %r
+}
+
+define double @minimumnum_nan_op1(double %x) {
+; CHECK-LABEL: @minimumnum_nan_op1(
+; CHECK-NEXT:    ret double [[X:%.*]]
+;
+  %r = call double @llvm.minimumnum.f64(double %x, double 0x7ff800dead00dead)
+  ret double %r
+}
+
+define <2 x double> @maximumnum_nan_op0_vec(<2 x double> %x) {
+; CHECK-LABEL: @maximumnum_nan_op0_vec(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> <double 0x7ff8000000000000, double poison>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maximumnum_nan_op1_vec(<2 x double> %x) {
+; CHECK-LABEL: @maximumnum_nan_op1_vec(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff800000000dead, double 0x7ff8ffffffffffff>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimumnum_nan_op0_vec(<2 x double> %x) {
+; CHECK-LABEL: @minimumnum_nan_op0_vec(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> <double poison, double 0x7ff8000dead00000>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimumnum_nan_op1_vec(<2 x double> %x) {
+; CHECK-LABEL: @minimumnum_nan_op1_vec(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff800dead00dead, double 0x7ff800dead00dead>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maximumnum_nan_op0_vec_partial_poison(<2 x double> %x) {
+; CHECK-LABEL: @maximumnum_nan_op0_vec_partial_poison(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> <double 0x7ff8000000000000, double poison>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maximumnum_nan_op1_vec_partial_poison(<2 x double> %x) {
+; CHECK-LABEL: @maximumnum_nan_op1_vec_partial_poison(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff8000000000000, double poison>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimumnum_nan_op1_vec_partial_poison(<2 x double> %x) {
+; CHECK-LABEL: @minimumnum_nan_op1_vec_partial_poison(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> %x, <2 x double> <double poison, double 0x7ff8000dead00000>)
+  ret <2 x double> %r
+}
+
+define double @maximumnum_snan_op0(double %x) {
+; CHECK-LABEL: @maximumnum_snan_op0(
+; CHECK-NEXT:    ret double [[X:%.*]]
+;
+  %r = call double @llvm.maximumnum.f64(double 0x7ff4000000000000, double %x)
+  ret double %r
+}
+
+define double @maximumnum_snan_op1(double %x) {
+; CHECK-LABEL: @maximumnum_snan_op1(
+; CHECK-NEXT:    ret double [[X:%.*]]
+;
+  %r = call double @llvm.maximumnum.f64(double %x, double 0x7ff400000000dead)
+  ret double %r
+}
+
+define double @minimumnum_snan_op0(double %x) {
+; CHECK-LABEL: @minimumnum_snan_op0(
+; CHECK-NEXT:    ret double [[X:%.*]]
+;
+  %r = call double @llvm.minimumnum.f64(double 0x7ff4000dead00000, double %x)
+  ret double %r
+}
+
+define double @minimumnum_snan_op1(double %x) {
+; CHECK-LABEL: @minimumnum_snan_op1(
+; CHECK-NEXT:    ret double [[X:%.*]]
+;
+  %r = call double @llvm.minimumnum.f64(double %x, double 0x7ff400dead00dead)
+  ret double %r
+}
+
+define <2 x double> @maximumnum_snan_op0_vec(<2 x double> %x) {
+; CHECK-LABEL: @maximumnum_snan_op0_vec(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> <double 0x7ff4000000000000, double poison>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maximumnum_snan_op1_vec(<2 x double> %x) {
+; CHECK-LABEL: @maximumnum_snan_op1_vec(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff400000000dead, double 0x7ff4ffffffffffff>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimumnum_snan_op0_vec(<2 x double> %x) {
+; CHECK-LABEL: @minimumnum_snan_op0_vec(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> <double poison, double 0x7ff4000dead00000>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimumnum_snan_op1_vec(<2 x double> %x) {
+; CHECK-LABEL: @minimumnum_snan_op1_vec(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff400dead00dead, double 0x7ff400dead00dead>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maximumnum_snan_op0_vec_partial_poison(<2 x double> %x) {
+; CHECK-LABEL: @maximumnum_snan_op0_vec_partial_poison(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> <double 0x7ff4000000000000, double poison>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maximumnum_snan_op1_vec_partial_poison(<2 x double> %x) {
+; CHECK-LABEL: @maximumnum_snan_op1_vec_partial_poison(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff4000000000000, double poison>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimumnum_snan_op0_vec_partial_poison(<2 x double> %x) {
+; CHECK-LABEL: @minimumnum_snan_op0_vec_partial_poison(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> <double poison, double 0x7ff4000dead00000>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimumnum_snan_op1_vec_partial_poison(<2 x double> %x) {
+; CHECK-LABEL: @minimumnum_snan_op1_vec_partial_poison(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> %x, <2 x double> <double poison, double 0x7ff4000dead00000>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maximumnum_snan_qnan_op0_vec(<2 x double> %x) {
+; CHECK-LABEL: @maximumnum_snan_qnan_op0_vec(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> <double 0x7ff4000000000000, double 0x7fff000000000000>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maximumnum_snan_qnan_op1_vec(<2 x double> %x) {
+; CHECK-LABEL: @maximumnum_snan_qnan_op1_vec(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff400000000dead, double 0x7fff000000000000>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimumnum_snan_qnan_op0_vec(<2 x double> %x) {
+; CHECK-LABEL: @minimumnum_snan_qnan_op0_vec(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> <double 0x7ff4000dead00000, double 0x7fff000000000000>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimumnum_snan_qnan_op1_vec(<2 x double> %x) {
+; CHECK-LABEL: @minimumnum_snan_qnan_op1_vec(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff400dead00dead, double 0x7fff00dead00dead>)
+  ret <2 x double> %r
+}
+
+define float @maximumnum_poison_op1(float %x) {
+; CHECK-LABEL: @maximumnum_poison_op1(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %val = call float @llvm.maximumnum.f32(float %x, float poison)
+  ret float %val
+}
+
+define float @maximumnum_poison_op0(float %x) {
+; CHECK-LABEL: @maximumnum_poison_op0(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %val = call float @llvm.maximumnum.f32(float poison, float %x)
+  ret float %val
+}
+
+define float @minimumnum_poison_op1(float %x) {
+; CHECK-LABEL: @minimumnum_poison_op1(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %val = call float @llvm.minimumnum.f32(float %x, float poison)
+  ret float %val
+}
+
+define float @minimumnum_poison_op0(float %x) {
+; CHECK-LABEL: @minimumnum_poison_op0(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %val = call float @llvm.minimumnum.f32(float poison, float %x)
+  ret float %val
+}
+
+define float @minimumnum_poison_poison(float %x) {
+; CHECK-LABEL: @minimumnum_poison_poison(
+; CHECK-NEXT:    ret float poison
+;
+  %val = call float @llvm.minimumnum.f32(float poison, float poison)
+  ret float %val
+}
+
+define float @maximumnum_poison_poison(float %x) {
+; CHECK-LABEL: @maximumnum_poison_poison(
+; CHECK-NEXT:    ret float poison
+;
+  %val = call float @llvm.maximumnum.f32(float poison, float poison)
+  ret float %val
+}
+
+define float @minimumnum_same_args(float %x) {
+; CHECK-LABEL: @minimumnum_same_args(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %y = call float @llvm.minimumnum.f32(float %x, float %x)
+  ret float %y
+}
+
+define float @maximumnum_same_args(float %x) {
+; CHECK-LABEL: @maximumnum_same_args(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %y = call float @llvm.maximumnum.f32(float %x, float %x)
+  ret float %y
+}
+
+define float @minimumnum_x_minimumnum_x_y(float %x, float %y) {
+; CHECK-LABEL: @minimumnum_x_minimumnum_x_y(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.minimumnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[A]]
+;
+  %a = call float @llvm.minimumnum.f32(float %x, float %y)
+  %b = call float @llvm.minimumnum.f32(float %x, float %a)
+  ret float %b
+}
+
+define float @minimumnum_y_minimumnum_x_y(float %x, float %y) {
+; CHECK-LABEL: @minimumnum_y_minimumnum_x_y(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.minimumnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[A]]
+;
+  %a = call float @llvm.minimumnum.f32(float %x, float %y)
+  %b = call float @llvm.minimumnum.f32(float %y, float %a)
+  ret float %b
+}
+
+define float @minimumnum_x_y_minimumnum_x(float %x, float %y) {
+; CHECK-LABEL: @minimumnum_x_y_minimumnum_x(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.minimumnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[A]]
+;
+  %a = call float @llvm.minimumnum.f32(float %x, float %y)
+  %b = call float @llvm.minimumnum.f32(float %a, float %x)
+  ret float %b
+}
+
+define float @minimumnum_x_y_minimumnum_y(float %x, float %y) {
+; CHECK-LABEL: @minimumnum_x_y_minimumnum_y(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.minimumnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[A]]
+;
+  %a = call float @llvm.minimumnum.f32(float %x, float %y)
+  %b = call float @llvm.minimumnum.f32(float %a, float %y)
+  ret float %b
+}
+
+; negative test
+
+define float @minimumnum_z_minimumnum_x_y(float %x, float %y, float %z) {
+; CHECK-LABEL: @minimumnum_z_minimumnum_x_y(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.minimumnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    [[B:%.*]] = call float @llvm.minimumnum.f32(float [[Z:%.*]], float [[A]])
+; CHECK-NEXT:    ret float [[B]]
+;
+  %a = call float @llvm.minimumnum.f32(float %x, float %y)
+  %b = call float @llvm.minimumnum.f32(float %z, float %a)
+  ret float %b
+}
+
+; negative test
+
+define float @minimumnum_x_y_minimumnum_z(float %x, float %y, float %z) {
+; CHECK-LABEL: @minimumnum_x_y_minimumnum_z(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.minimumnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    [[B:%.*]] = call float @llvm.minimumnum.f32(float [[A]], float [[Z:%.*]])
+; CHECK-NEXT:    ret float [[B]]
+;
+  %a = call float @llvm.minimumnum.f32(float %x, float %y)
+  %b = call float @llvm.minimumnum.f32(float %a, float %z)
+  ret float %b
+}
+
+; minimumnum(X, -INF) --> -INF
+
+define float @minimumnum_neginf(float %x) {
+; CHECK-LABEL: @minimumnum_neginf(
+; CHECK-NEXT:    ret float 0xFFF0000000000000
+;
+  %val = call float @llvm.minimumnum.f32(float %x, float 0xFFF0000000000000)
+  ret float %val
+}
+
+define <2 x double> @minimumnum_neginf_commute_vec(<2 x double> %x) {
+; CHECK-LABEL: @minimumnum_neginf_commute_vec(
+; CHECK-NEXT:    ret <2 x double> splat (double 0xFFF0000000000000)
+;
+  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> <double 0xFFF0000000000000, double 0xFFF0000000000000>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+; negative test
+
+define float @minimumnum_inf(float %x) {
+; CHECK-LABEL: @minimumnum_inf(
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.minimumnum.f32(float 0x7FF0000000000000, float [[X:%.*]])
+; CHECK-NEXT:    ret float [[VAL]]
+;
+  %val = call float @llvm.minimumnum.f32(float 0x7FF0000000000000, float %x)
+  ret float %val
+}
+
+define float @maximumnum_x_maximumnum_x_y(float %x, float %y) {
+; CHECK-LABEL: @maximumnum_x_maximumnum_x_y(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.maximumnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[A]]
+;
+  %a = call float @llvm.maximumnum.f32(float %x, float %y)
+  %b = call float @llvm.maximumnum.f32(float %x, float %a)
+  ret float %b
+}
+
+define float @maximumnum_y_maximumnum_x_y(float %x, float %y) {
+; CHECK-LABEL: @maximumnum_y_maximumnum_x_y(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.maximumnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[A]]
+;
+  %a = call float @llvm.maximumnum.f32(float %x, float %y)
+  %b = call float @llvm.maximumnum.f32(float %y, float %a)
+  ret float %b
+}
+
+define float @maximumnum_x_y_maximumnum_x(float %x, float %y) {
+; CHECK-LABEL: @maximumnum_x_y_maximumnum_x(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.maximumnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[A]]
+;
+  %a = call float @llvm.maximumnum.f32(float %x, float %y)
+  %b = call float @llvm.maximumnum.f32(float %a, float %x)
+  ret float %b
+}
+
+define float @maximumnum_x_y_maximumnum_y(float %x, float %y) {
+; CHECK-LABEL: @maximumnum_x_y_maximumnum_y(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.maximumnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[A]]
+;
+  %a = call float @llvm.maximumnum.f32(float %x, float %y)
+  %b = call float @llvm.maximumnum.f32(float %a, float %y)
+  ret float %b
+}
+
+; negative test
+
+define float @maximumnum_z_maximumnum_x_y(float %x, float %y, float %z) {
+; CHECK-LABEL: @maximumnum_z_maximumnum_x_y(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.maximumnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    [[B:%.*]] = call float @llvm.maximumnum.f32(float [[Z:%.*]], float [[A]])
+; CHECK-NEXT:    ret float [[B]]
+;
+  %a = call float @llvm.maximumnum.f32(float %x, float %y)
+  %b = call float @llvm.maximumnum.f32(float %z, float %a)
+  ret float %b
+}
+
+; negative test
+
+define float @maximumnum_x_y_maximumnum_z(float %x, float %y, float %z) {
+; CHECK-LABEL: @maximumnum_x_y_maximumnum_z(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.maximumnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    [[B:%.*]] = call float @llvm.maximumnum.f32(float [[A]], float [[Z:%.*]])
+; CHECK-NEXT:    ret float [[B]]
+;
+  %a = call float @llvm.maximumnum.f32(float %x, float %y)
+  %b = call float @llvm.maximumnum.f32(float %a, float %z)
+  ret float %b
+}
+
+; maximumnum(X, INF) --> INF
+
+define <2 x double> @maximumnum_inf(<2 x double> %x) {
+; CHECK-LABEL: @maximumnum_inf(
+; CHECK-NEXT:    ret <2 x double> splat (double 0x7FF0000000000000)
+;
+  %val = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> %x, <2 x double><double 0x7FF0000000000000, double 0x7FF0000000000000>)
+  ret <2 x double> %val
+}
+
+define float @maximumnum_inf_commute(float %x) {
+; CHECK-LABEL: @maximumnum_inf_commute(
+; CHECK-NEXT:    ret float 0x7FF0000000000000
+;
+  %val = call float @llvm.maximumnum.f32(float 0x7FF0000000000000, float %x)
+  ret float %val
+}
+
+; negative test
+
+define float @maximumnum_neginf(float %x) {
+; CHECK-LABEL: @maximumnum_neginf(
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.maximumnum.f32(float 0xFFF0000000000000, float [[X:%.*]])
+; CHECK-NEXT:    ret float [[VAL]]
+;
+  %val = call float @llvm.maximumnum.f32(float 0xFFF0000000000000, float %x)
+  ret float %val
+}
+
+define double @maximumnum_maximumnum_minimumnum(double %x, double %y) {
+; CHECK-LABEL: @maximumnum_maximumnum_minimumnum(
+; CHECK-NEXT:    [[MAX:%.*]] = call double @llvm.maximumnum.f64(double [[X:%.*]], double [[Y:%.*]])
+; CHECK-NEXT:    ret double [[MAX]]
+;
+  %max = call double @llvm.maximumnum.f64(double %x, double %y)
+  %min = call double @llvm.minimumnum.f64(double %x, double %y)
+  %val = call double @llvm.maximumnum.f64(double %max, double %min)
+  ret double %val
+}
+
+define <2 x float> @maximumnum_minimumnum_maximumnum(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @maximumnum_minimumnum_maximumnum(
+; CHECK-NEXT:    [[MAX:%.*]] = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[X:%.*]], <2 x float> [[Y:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[MAX]]
+;
+  %max = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> %x, <2 x float> %y)
+  %min = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> %x, <2 x float> %y)
+  %val = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> %min, <2 x float> %max)
+  ret <2 x float> %val
+}
+
+define <2 x double> @maximumnum_minimumnum_minimumnum(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: @maximumnum_minimumnum_minimumnum(
+; CHECK-NEXT:    [[MIN1:%.*]] = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> [[X:%.*]], <2 x double> [[Y:%.*]])
+; CHECK-NEXT:    [[MIN2:%.*]] = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> [[X]], <2 x double> [[Y]])
+; CHECK-NEXT:    [[VAL:%.*]] = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> [[MIN1]], <2 x double> [[MIN2]])
+; CHECK-NEXT:    ret <2 x double> [[VAL]]
+;
+  %min1 = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> %x, <2 x double> %y)
+  %min2 = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> %x, <2 x double> %y)
+  %val = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> %min1, <2 x double> %min2)
+  ret <2 x double> %val
+}
+
+define float @maximumnum_maximumnum_maximumnum(float %x, float %y) {
+; CHECK-LABEL: @maximumnum_maximumnum_maximumnum(
+; CHECK-NEXT:    [[MAX1:%.*]] = call float @llvm.maximumnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[MAX1]]
+;
+  %max1 = call float @llvm.maximumnum.f32(float %x, float %y)
+  %max2 = call float @llvm.maximumnum.f32(float %x, float %y)
+  %val = call float @llvm.maximumnum.f32(float %max1, float %max2)
+  ret float %val
+}
+
+define double @minimumnum_maximumnum_minimumnum(double %x, double %y) {
+; CHECK-LABEL: @minimumnum_maximumnum_minimumnum(
+; CHECK-NEXT:    [[MIN:%.*]] = call double @llvm.minimumnum.f64(double [[X:%.*]], double [[Y:%.*]])
+; CHECK-NEXT:    ret double [[MIN]]
+;
+  %max = call double @llvm.maximumnum.f64(double %x, double %y)
+  %min = call double @llvm.minimumnum.f64(double %x, double %y)
+  %val = call double @llvm.minimumnum.f64(double %max, double %min)
+  ret double %val
+}
+
+define float @minimumnum_minimumnum_maximumnum(float %x, float %y) {
+; CHECK-LABEL: @minimumnum_minimumnum_maximumnum(
+; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minimumnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[MIN]]
+;
+  %max = call float @llvm.maximumnum.f32(float %x, float %y)
+  %min = call float @llvm.minimumnum.f32(float %x, float %y)
+  %val = call float @llvm.minimumnum.f32(float %min, float %max)
+  ret float %val
+}
+
+define <2 x float> @minimumnum_maximumnum_maximumnum(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @minimumnum_maximumnum_maximumnum(
+; CHECK-NEXT:    [[MAX1:%.*]] = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[X:%.*]], <2 x float> [[Y:%.*]])
+; CHECK-NEXT:    [[MAX2:%.*]] = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[X]], <2 x float> [[Y]])
+; CHECK-NEXT:    [[VAL:%.*]] = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> [[MAX1]], <2 x float> [[MAX2]])
+; CHECK-NEXT:    ret <2 x float> [[VAL]]
+;
+  %max1 = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> %x, <2 x float> %y)
+  %max2 = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> %x, <2 x float> %y)
+  %val = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> %max1, <2 x float> %max2)
+  ret <2 x float> %val
+}
+
+define <2 x double> @minimumnum_minimumnum_minimumnum(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: @minimumnum_minimumnum_minimumnum(
+; CHECK-NEXT:    [[MIN1:%.*]] = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> [[X:%.*]], <2 x double> [[Y:%.*]])
+; CHECK-NEXT:    ret <2 x double> [[MIN1]]
+;
+  %min1 = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> %x, <2 x double> %y)
+  %min2 = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> %x, <2 x double> %y)
+  %val = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> %min1, <2 x double> %min2)
   ret <2 x double> %val
 }
