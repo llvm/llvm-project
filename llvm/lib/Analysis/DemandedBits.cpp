@@ -76,6 +76,15 @@ void DemandedBits::determineLiveOperandBits(
           computeKnownBits(V2, Known2, DL, &AC, UserI, &DT);
         }
       };
+  auto GetShiftedRange = [&](unsigned Min, unsigned Max, bool ShiftLeft) {
+    using ShiftFn = APInt (APInt::*)(unsigned) const;
+    auto Shift = ShiftLeft ? static_cast<ShiftFn>(&APInt::shl)
+                           : static_cast<ShiftFn>(&APInt::lshr);
+    AB = APInt::getZero(BitWidth);
+    for (unsigned ShiftAmount = Min; ShiftAmount <= Max; ++ShiftAmount) {
+      AB |= (AOut.*Shift)(ShiftAmount);
+    }
+  };
 
   switch (UserI->getOpcode()) {
   default: break;
@@ -183,6 +192,17 @@ void DemandedBits::determineLiveOperandBits(
           AB |= APInt::getHighBitsSet(BitWidth, ShiftAmt+1);
         else if (S->hasNoUnsignedWrap())
           AB |= APInt::getHighBitsSet(BitWidth, ShiftAmt);
+      } else {
+        ComputeKnownBits(BitWidth, UserI->getOperand(1), nullptr);
+        unsigned Min = Known.getMinValue().getLimitedValue(BitWidth - 1);
+        unsigned Max = Known.getMaxValue().getLimitedValue(BitWidth - 1);
+        // similar to Lshr case
+        GetShiftedRange(Min, Max, /*ShiftLeft=*/false);
+        const auto *S = cast<ShlOperator>(UserI);
+        if (S->hasNoSignedWrap())
+          AB |= APInt::getHighBitsSet(BitWidth, Max + 1);
+        else if (S->hasNoUnsignedWrap())
+          AB |= APInt::getHighBitsSet(BitWidth, Max);
       }
     }
     break;
@@ -197,6 +217,20 @@ void DemandedBits::determineLiveOperandBits(
         // (they must be zero).
         if (cast<LShrOperator>(UserI)->isExact())
           AB |= APInt::getLowBitsSet(BitWidth, ShiftAmt);
+      } else {
+        ComputeKnownBits(BitWidth, UserI->getOperand(1), nullptr);
+        unsigned Min = Known.getMinValue().getLimitedValue(BitWidth - 1);
+        unsigned Max = Known.getMaxValue().getLimitedValue(BitWidth - 1);
+        // Suppose AOut == 0b0000 1001
+        // [min, max] = [1, 3]
+        // shift by 1 we get 0b0001 0010
+        // shift by 2 we get 0b0010 0100
+        // shift by 3 we get 0b0100 1000
+        // we take the or for every shift to cover all the positions.
+        //
+        GetShiftedRange(Min, Max, /*ShiftLeft=*/true);
+        if (cast<LShrOperator>(UserI)->isExact())
+          AB |= APInt::getLowBitsSet(BitWidth, Max);
       }
     }
     break;
@@ -217,6 +251,26 @@ void DemandedBits::determineLiveOperandBits(
         // (they must be zero).
         if (cast<AShrOperator>(UserI)->isExact())
           AB |= APInt::getLowBitsSet(BitWidth, ShiftAmt);
+      } else {
+        ComputeKnownBits(BitWidth, UserI->getOperand(1), nullptr);
+        unsigned Min = Known.getMinValue().getLimitedValue(BitWidth - 1);
+        unsigned Max = Known.getMaxValue().getLimitedValue(BitWidth - 1);
+        GetShiftedRange(Min, Max, /*ShiftLeft=*/true);
+        if (Max) {
+          // Suppose AOut = 0011 1100
+          // [min, max] = [1, 3]
+          // ShiftAmount = 1 : Mask is 1000 0000
+          // ShiftAmount = 2 : Mask is 1100 0000
+          // ShiftAmount = 3 : Mask is 1110 0000
+          // The Mask with Max covers every case in [min, max],
+          // so we are done
+          if ((AOut & APInt::getHighBitsSet(BitWidth, Max)).getBoolValue())
+            AB.setSignBit();
+        }
+        // If the shift is exact, then the low bits are not dead
+        // (they must be zero).
+        if (cast<AShrOperator>(UserI)->isExact())
+          AB |= APInt::getLowBitsSet(BitWidth, Max);
       }
     }
     break;
