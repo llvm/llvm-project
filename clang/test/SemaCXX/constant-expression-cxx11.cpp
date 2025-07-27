@@ -1210,6 +1210,24 @@ namespace MemberPointer {
     return (a.*f)();
   }
   static_assert(apply(A(2), &A::f) == 5, "");
+
+  struct C { };
+  struct D : C {
+    constexpr int f() const { return 1; };
+  };
+  struct E : C { };
+  struct F : D { };
+  constexpr C c1, c2[2];
+  constexpr D d1, d2[2];
+  constexpr E e1, e2[2];
+  constexpr F f;
+  static_assert((c1.*(static_cast<int (C::*)() const>(&D::f)))() == 1, ""); // expected-error {{constant expression}}
+  static_assert((d1.*(static_cast<int (C::*)() const>(&D::f)))() == 1, "");
+  static_assert((e1.*(static_cast<int (C::*)() const>(&D::f)))() == 1, ""); // expected-error {{constant expression}}
+  static_assert((f.*(static_cast<int (C::*)() const>(&D::f)))() == 1, "");
+  static_assert((c2[0].*(static_cast<int (C::*)() const>(&D::f)))() == 1, ""); // expected-error {{constant expression}}
+  static_assert((d2[0].*(static_cast<int (C::*)() const>(&D::f)))() == 1, "");
+  static_assert((e2[0].*(static_cast<int (C::*)() const>(&D::f)))() == 1, ""); // expected-error {{constant expression}}
 }
 
 namespace ArrayBaseDerived {

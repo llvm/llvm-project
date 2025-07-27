@@ -5051,6 +5051,16 @@ static const ValueDecl *HandleMemberPointerAccess(EvalInfo &Info,
         return nullptr;
       }
     }
+    // Consider member in a sibling.
+    const CXXRecordDecl *LastLVDecl =
+        (PathLengthToMember > LV.Designator.MostDerivedPathLength)
+            ? getAsBaseClass(LV.Designator.Entries[PathLengthToMember - 1])
+            : LV.Designator.MostDerivedType->getAsCXXRecordDecl();
+    const CXXRecordDecl *LastMPDecl = MemPtr.getContainingRecord();
+    if (LastLVDecl->getCanonicalDecl() != LastMPDecl->getCanonicalDecl()) {
+      Info.FFDiag(RHS);
+      return nullptr;
+    }
 
     // Truncate the lvalue to the appropriate derived class.
     if (!CastToDerivedClass(Info, RHS, LV, MemPtr.getContainingRecord(),
