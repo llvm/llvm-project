@@ -61,7 +61,10 @@ include "MSP430CallingConv.td"
 
 include "MSP430InstrInfo.td"
 
-def MSP430InstrInfo : InstrInfo;
+def MSP430InstrInfo : InstrInfo {
+  // FIXME: Migrate MPS430 disassembler to work with non-templated decoder.
+  let GenerateTemplatedDecoder = true;
+}
 
 //===---------------------------------------------------------------------===//
 // Assembly Printers

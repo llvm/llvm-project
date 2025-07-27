@@ -24,7 +24,10 @@ include "ARCRegisterInfo.td"
 include "ARCInstrInfo.td"
 include "ARCCallingConv.td"
 
-def ARCInstrInfo : InstrInfo;
+def ARCInstrInfo : InstrInfo {
+  // FIXME: Migrate ARC disassembler to work with non-templated decoder.
+  let GenerateTemplatedDecoder = true;
+}
 
 class Proc<string Name, list<SubtargetFeature> Features>
  : Processor<Name, NoItineraries, Features>;

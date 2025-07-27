@@ -229,6 +229,8 @@ include "MipsScheduleP5600.td"
 include "MipsScheduleGeneric.td"
 
 def MipsInstrInfo : InstrInfo {
+  // FIXME: Migrate MIPS disassembler to work with non-templated decoder.
+  let GenerateTemplatedDecoder = true;
 }
 
 //===----------------------------------------------------------------------===//
