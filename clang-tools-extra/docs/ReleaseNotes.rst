@@ -142,6 +142,10 @@ Changes in existing checks
   <clang-tidy/checks/portability/template-virtual-member-function>` check to
   avoid false positives on pure virtual member functions.
 
+- Improved :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` to avoid processing system
+  macros (unless the `SystemHeaders` option is enabled).
+
 Removed checks
 ^^^^^^^^^^^^^^
 

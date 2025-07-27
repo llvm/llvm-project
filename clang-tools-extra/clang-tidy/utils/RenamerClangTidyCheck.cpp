@@ -194,6 +194,9 @@ public:
       return;
     if (SM.isWrittenInCommandLineFile(MacroNameTok.getLocation()))
       return;
+    if (Check->skipSystemMacros() &&
+        SM.isInSystemHeader(MacroNameTok.getLocation()))
+      return;
     Check->checkMacro(MacroNameTok, Info, SM);
   }
 
@@ -398,7 +401,8 @@ RenamerClangTidyCheck::RenamerClangTidyCheck(StringRef CheckName,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(CheckName, Context),
       AggressiveDependentMemberLookup(
-          Options.get("AggressiveDependentMemberLookup", false)) {}
+          Options.get("AggressiveDependentMemberLookup", false)),
+      SkipSystemMacros(!Context->getOptions().SystemHeaders.value_or(false)) {}
 RenamerClangTidyCheck::~RenamerClangTidyCheck() = default;
 
 void RenamerClangTidyCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
