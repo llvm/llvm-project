@@ -165,6 +165,7 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
   auto *file = new (ac)
       LinuxFile(fd, buffer, File::DEFAULT_BUFFER_SIZE, _IOFBF, true, modeflags);
   if (!ac) {
+    free(buffer);
     return Error(ENOMEM);
   }
   if (do_seek) {
