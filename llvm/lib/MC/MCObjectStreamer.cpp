@@ -340,31 +340,33 @@ void MCObjectStreamer::emitInstToData(const MCInst &Inst,
   MCFragment *F = getCurrentFragment();
 
   // Append the instruction to the data fragment.
-  size_t FixupStartIndex = F->getFixups().size();
   size_t CodeOffset = F->getContents().size();
   SmallVector<MCFixup, 1> Fixups;
   getAssembler().getEmitter().encodeInstruction(
       Inst, F->getContentsForAppending(), Fixups, STI);
   F->doneAppending();
-  if (!Fixups.empty())
-    F->appendFixups(Fixups);
   F->setHasInstructions(STI);
 
+  if (Fixups.empty())
+    return;
   bool MarkedLinkerRelaxable = false;
-  for (auto &Fixup : MutableArrayRef(F->getFixups()).slice(FixupStartIndex)) {
+  for (auto &Fixup : Fixups) {
     Fixup.setOffset(Fixup.getOffset() + CodeOffset);
-    if (!Fixup.isLinkerRelaxable())
+    if (!Fixup.isLinkerRelaxable() || MarkedLinkerRelaxable)
       continue;
-    F->setLinkerRelaxable();
+    MarkedLinkerRelaxable = true;
+    // Set the fragment's order within the subsection for use by
+    // MCAssembler::relaxAlign.
+    auto *Sec = F->getParent();
+    if (!Sec->isLinkerRelaxable())
+      Sec->setLinkerRelaxable();
     // Do not add data after a linker-relaxable instruction. The difference
     // between a new label and a label at or before the linker-relaxable
     // instruction cannot be resolved at assemble-time.
-    if (!MarkedLinkerRelaxable) {
-      MarkedLinkerRelaxable = true;
-      getCurrentSectionOnly()->setLinkerRelaxable();
-      newFragment();
-    }
+    F->setLinkerRelaxable();
+    newFragment();
   }
+  F->appendFixups(Fixups);
 }
 
 void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
