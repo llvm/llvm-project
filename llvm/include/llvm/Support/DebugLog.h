@@ -26,55 +26,107 @@ namespace llvm {
 //              << "] " << "Bitset contains: " << Bitset << "\n");
 #define LDBG() DEBUGLOG_WITH_STREAM_AND_TYPE(llvm::dbgs(), DEBUG_TYPE)
 
+#define DEBUGLOG_WITH_STREAM_TYPE_AND_FILE(STREAM, TYPE, FILE)                 \
+  for (bool _c = (::llvm::DebugFlag && ::llvm::isCurrentDebugType(TYPE)); _c;  \
+       _c = false)                                                             \
+  ::llvm::impl::raw_ldbg_ostream{                                              \
+      ::llvm::impl::computePrefix(TYPE, FILE, __LINE__), (STREAM)}             \
+      .asLvalue()
+// When __SHORT_FILE__ is not defined, the File is the full path,
+// otherwise __SHORT_FILE__ is defined in CMake to provide the file name
+// without the path prefix.
 #if defined(__SHORT_FILE__)
 #define DEBUGLOG_WITH_STREAM_AND_TYPE(STREAM, TYPE)                            \
-  for (bool _c = (::llvm::DebugFlag && ::llvm::isCurrentDebugType(TYPE)); _c;  \
-       _c = false)                                                             \
-  ::llvm::impl::LogWithNewline(TYPE, __SHORT_FILE__, __LINE__, (STREAM))
+  DEBUGLOG_WITH_STREAM_TYPE_AND_FILE(STREAM, TYPE, __SHORT_FILE__)
 #else
 #define DEBUGLOG_WITH_STREAM_AND_TYPE(STREAM, TYPE)                            \
-  for (bool _c = (::llvm::DebugFlag && ::llvm::isCurrentDebugType(TYPE)); _c;  \
-       _c = false)                                                             \
-  ::llvm::impl::LogWithNewline(TYPE, __FILE__, __LINE__, (STREAM))
+  DEBUGLOG_WITH_STREAM_TYPE_AND_FILE(                                          \
+      STREAM, TYPE, ::llvm::impl::LogWithNewline::getShortFileName(__FILE__))
 #endif
 
 namespace impl {
-class LogWithNewline {
-public:
-  LogWithNewline(const char *debug_type, const char *file, int line,
-                 raw_ostream &os)
-      : os(os) {
-#if !defined(__SHORT_FILE__)
-    file = ::llvm::impl::LogWithNewline::getShortFileName(file);
-#endif
-    if (debug_type)
-      os << "[" << debug_type << "] ";
-    os << file << ":" << line << " ";
-  }
-  ~LogWithNewline() { os << '\n'; }
-  template <typename T> raw_ostream &operator<<(const T &t) && {
-    return os << t;
-  }
 
-  // Prevent copying, as this class manages newline responsibility and is
-  // intended for use as a temporary.
-  LogWithNewline(const LogWithNewline &) = delete;
-  LogWithNewline &operator=(const LogWithNewline &) = delete;
-  LogWithNewline &operator=(LogWithNewline &&) = delete;
-  static constexpr const char *getShortFileName(const char *path) {
-    // Remove the path prefix from the file name.
-    const char *filename = path;
-    for (const char *p = path; *p != '\0'; ++p) {
-      if (*p == '/' || *p == '\\') {
-        filename = p + 1;
-      }
+/// A raw_ostream that tracks `\n` and print the prefix.
+class LLVM_ABI raw_ldbg_ostream final : public raw_ostream {
+  std::string Prefix;
+  raw_ostream &Os;
+  bool HasPendingNewline = true;
+
+  /// Split the line on newlines and insert the prefix before each newline.
+  /// Forward everything to the underlying stream.
+  void write_impl(const char *Ptr, size_t Size) final {
+    auto Str = StringRef(Ptr, Size);
+    // Handle the initial prefix.
+    if (!Str.empty())
+      writeWithPrefix(StringRef());
+
+    auto Eol = Str.find('\n');
+    while (Eol != StringRef::npos) {
+      StringRef Line = Str.take_front(Eol + 1);
+      if (!Line.empty())
+        writeWithPrefix(Line);
+      HasPendingNewline = true;
+      Str = Str.drop_front(Eol + 1);
+      Eol = Str.find('\n');
     }
-    return filename;
+    if (!Str.empty())
+      writeWithPrefix(Str);
+  }
+  void emitPrefix() { Os.write(Prefix.c_str(), Prefix.size()); }
+  void writeWithPrefix(StringRef Str) {
+    if (HasPendingNewline) {
+      emitPrefix();
+      HasPendingNewline = false;
+    }
+    Os.write(Str.data(), Str.size());
   }
 
-private:
-  raw_ostream &os;
+public:
+  explicit raw_ldbg_ostream(std::string Prefix, raw_ostream &Os)
+      : Prefix(std::move(Prefix)), Os(Os) {
+    SetUnbuffered();
+  }
+  ~raw_ldbg_ostream() final {
+    flushEol();
+    Os << '\n';
+  }
+  void flushEol() {
+    if (HasPendingNewline) {
+      emitPrefix();
+      HasPendingNewline = false;
+    }
+  }
+
+  /// Forward the current_pos method to the underlying stream.
+  uint64_t current_pos() const final { return Os.tell(); }
+
+  /// Some of the `<<` operators expect an lvalue, so we trick the type system.
+  raw_ldbg_ostream &asLvalue() { return *this; }
 };
+
+/// Remove the path prefix from the file name.
+static LLVM_ATTRIBUTE_UNUSED constexpr const char *
+getShortFileName(const char *path) {
+  const char *filename = path;
+  for (const char *p = path; *p != '\0'; ++p) {
+    if (*p == '/' || *p == '\\')
+      filename = p + 1;
+  }
+  return filename;
+}
+
+/// Compute the prefix for the debug log in the form of:
+/// "[DebugType] File:Line "
+/// Where the File is the file name without the path prefix.
+static LLVM_ATTRIBUTE_UNUSED std::string
+computePrefix(const char *DebugType, const char *File, int Line) {
+  std::string Prefix;
+  raw_string_ostream OsPrefix(Prefix);
+  if (DebugType)
+    OsPrefix << "[" << DebugType << "] ";
+  OsPrefix << File << ":" << Line << " ";
+  return OsPrefix.str();
+}
 } // end namespace impl
 #else
 // As others in Debug, When compiling without assertions, the -debug-* options
