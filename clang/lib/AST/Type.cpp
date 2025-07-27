@@ -647,6 +647,10 @@ template <> const CountAttributedType *Type::getAs() const {
   return getAsSugar<CountAttributedType>(this);
 }
 
+template <> const OverflowBehaviorType *Type::getAs() const {
+  return getAsSugar<OverflowBehaviorType>(this);
+}
+
 /// getUnqualifiedDesugaredType - Pull any qualifiers and syntactic
 /// sugar off the given type.  This should produce an object of the
 /// same dynamic type as the canonical type.
@@ -1153,6 +1157,18 @@ public:
 
     return Ctx.getConstantMatrixType(elementType, T->getNumRows(),
                                      T->getNumColumns());
+  }
+
+  QualType VisitOverflowBehaviorType(const OverflowBehaviorType *T) {
+    QualType UnderlyingType = recurse(T->getUnderlyingType());
+    if (UnderlyingType.isNull())
+      return {};
+
+    if (UnderlyingType.getAsOpaquePtr() ==
+        T->getUnderlyingType().getAsOpaquePtr())
+      return QualType(T, 0);
+
+    return Ctx.getOverflowBehaviorType(T->getBehaviorKind(), UnderlyingType);
   }
 
   QualType VisitFunctionNoProtoType(const FunctionNoProtoType *T) {
@@ -2049,6 +2065,10 @@ public:
     return Visit(T->getUnderlyingType());
   }
 
+  Type *VisitOverflowBehaviorType(const OverflowBehaviorType *T) {
+    return Visit(T->getUnderlyingType());
+  }
+
   Type *VisitAdjustedType(const AdjustedType *T) {
     return Visit(T->getOriginalType());
   }
@@ -2112,9 +2132,14 @@ bool Type::isIntegralType(const ASTContext &Ctx) const {
     return BT->isInteger();
 
   // Complete enum types are integral in C.
-  if (!Ctx.getLangOpts().CPlusPlus)
+  if (!Ctx.getLangOpts().CPlusPlus) {
     if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
       return ET->getDecl()->isComplete();
+
+    if (const OverflowBehaviorType *OBT =
+            dyn_cast<OverflowBehaviorType>(CanonicalType))
+      return OBT->getUnderlyingType()->isIntegralOrEnumerationType();
+  }
 
   return isBitIntType();
 }
@@ -2122,6 +2147,10 @@ bool Type::isIntegralType(const ASTContext &Ctx) const {
 bool Type::isIntegralOrUnscopedEnumerationType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->isInteger();
+
+  if (const OverflowBehaviorType *OBT =
+          dyn_cast<OverflowBehaviorType>(CanonicalType))
+    return OBT->getUnderlyingType()->isIntegralOrUnscopedEnumerationType();
 
   if (isBitIntType())
     return true;
@@ -2225,6 +2254,9 @@ bool Type::isSignedIntegerType() const {
   if (const auto *IT = dyn_cast<DependentBitIntType>(CanonicalType))
     return IT->isSigned();
 
+  if (const auto *OBT = dyn_cast<OverflowBehaviorType>(CanonicalType))
+    return OBT->getUnderlyingType()->isSignedIntegerType();
+
   return false;
 }
 
@@ -2240,6 +2272,9 @@ bool Type::isSignedIntegerOrEnumerationType() const {
     return IT->isSigned();
   if (const auto *IT = dyn_cast<DependentBitIntType>(CanonicalType))
     return IT->isSigned();
+
+  if (const auto *OBT = dyn_cast<OverflowBehaviorType>(CanonicalType))
+    return OBT->getUnderlyingType()->isSignedIntegerOrEnumerationType();
 
   return false;
 }
@@ -2270,6 +2305,9 @@ bool Type::isUnsignedIntegerType() const {
   if (const auto *IT = dyn_cast<DependentBitIntType>(CanonicalType))
     return IT->isUnsigned();
 
+  if (const auto *OBT = dyn_cast<OverflowBehaviorType>(CanonicalType))
+    return OBT->getUnderlyingType()->isUnsignedIntegerType();
+
   return false;
 }
 
@@ -2285,6 +2323,9 @@ bool Type::isUnsignedIntegerOrEnumerationType() const {
     return IT->isUnsigned();
   if (const auto *IT = dyn_cast<DependentBitIntType>(CanonicalType))
     return IT->isUnsigned();
+
+  if (const auto *OBT = dyn_cast<OverflowBehaviorType>(CanonicalType))
+    return OBT->getUnderlyingType()->isUnsignedIntegerOrEnumerationType();
 
   return false;
 }
@@ -2345,6 +2386,10 @@ bool Type::isArithmeticType() const {
     // false for scoped enumerations since that will disable any
     // unwanted implicit conversions.
     return !ET->getDecl()->isScoped() && ET->getDecl()->isComplete();
+
+  if (isOverflowBehaviorType() &&
+      getAs<OverflowBehaviorType>()->getUnderlyingType()->isArithmeticType())
+    return true;
   return isa<ComplexType>(CanonicalType) || isBitIntType();
 }
 
@@ -2392,6 +2437,8 @@ Type::ScalarTypeKind Type::getScalarTypeKind() const {
       return STK_FloatingComplex;
     return STK_IntegralComplex;
   } else if (isBitIntType()) {
+    return STK_Integral;
+  } else if (isa<OverflowBehaviorType>(T)) {
     return STK_Integral;
   }
 
@@ -2733,6 +2780,7 @@ bool QualType::isCXX98PODType(const ASTContext &Context) const {
   case Type::Vector:
   case Type::ExtVector:
   case Type::BitInt:
+  case Type::OverflowBehavior:
     return true;
 
   case Type::Enum:
@@ -2934,6 +2982,22 @@ bool QualType::isWebAssemblyFuncrefType() const {
          getAddressSpace() == LangAS::wasm_funcref;
 }
 
+bool QualType::isWrapType() const {
+  if (const auto *OBT = getCanonicalType()->getAs<OverflowBehaviorType>())
+    return OBT->getBehaviorKind() ==
+           OverflowBehaviorType::OverflowBehaviorKind::Wrap;
+
+  return false;
+}
+
+bool QualType::isNoWrapType() const {
+  if (const auto *OBT = getCanonicalType()->getAs<OverflowBehaviorType>())
+    return OBT->getBehaviorKind() ==
+           OverflowBehaviorType::OverflowBehaviorKind::NoWrap;
+
+  return false;
+}
+
 QualType::PrimitiveDefaultInitializeKind
 QualType::isNonTrivialToPrimitiveDefaultInitialize() const {
   if (const auto *RT =
@@ -3031,6 +3095,9 @@ bool Type::isLiteralType(const ASTContext &Ctx) const {
   // We treat _Atomic T as a literal type if T is a literal type.
   if (const auto *AT = BaseTy->getAs<AtomicType>())
     return AT->getValueType()->isLiteralType(Ctx);
+
+  if (const auto *OBT = BaseTy->getAs<OverflowBehaviorType>())
+    return OBT->getUnderlyingType()->isLiteralType(Ctx);
 
   // If this type hasn't been deduced yet, then conservatively assume that
   // it'll work out to be a literal type.
@@ -3969,6 +4036,12 @@ void TypeCoupledDeclRefInfo::setFromOpaqueValue(void *V) {
   Data.setFromOpaqueValue(V);
 }
 
+OverflowBehaviorType::OverflowBehaviorType(
+    QualType Canon, QualType Underlying,
+    OverflowBehaviorType::OverflowBehaviorKind Kind)
+    : Type(OverflowBehavior, Canon, Underlying->getDependence()),
+      UnderlyingType(Underlying), BehaviorKind(Kind) {}
+
 BoundsAttributedType::BoundsAttributedType(TypeClass TC, QualType Wrapped,
                                            QualType Canon)
     : Type(TC, Canon, Wrapped->getDependence()), WrappedTy(Wrapped) {}
@@ -4770,6 +4843,8 @@ static CachedProperties computeCachedProperties(const Type *T) {
     return Cache::get(cast<HLSLAttributedResourceType>(T)->getWrappedType());
   case Type::HLSLInlineSpirv:
     return CachedProperties(Linkage::External, false);
+  case Type::OverflowBehavior:
+    return Cache::get(cast<OverflowBehaviorType>(T)->getUnderlyingType());
   }
 
   llvm_unreachable("unhandled type class");
@@ -4864,6 +4939,9 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
     return computeTypeLinkageInfo(cast<AtomicType>(T)->getValueType());
   case Type::Pipe:
     return computeTypeLinkageInfo(cast<PipeType>(T)->getElementType());
+  case Type::OverflowBehavior:
+    return computeTypeLinkageInfo(
+        cast<OverflowBehaviorType>(T)->getUnderlyingType());
   case Type::HLSLAttributedResource:
     return computeTypeLinkageInfo(cast<HLSLAttributedResourceType>(T)
                                       ->getContainedType()
@@ -5058,6 +5136,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::ArrayParameter:
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
+  case Type::OverflowBehavior:
     return false;
   }
   llvm_unreachable("bad type kind!");

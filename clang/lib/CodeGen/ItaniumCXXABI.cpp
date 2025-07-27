@@ -3974,6 +3974,8 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty,
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
     llvm_unreachable("HLSL doesn't support virtual functions");
+  case Type::OverflowBehavior:
+    llvm_unreachable("NoSanitize not supported for virtual functions");
   }
 
   llvm::Constant *VTable = nullptr;
@@ -4245,6 +4247,9 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
 
   case Type::Atomic:
     // No fields, at least for the moment.
+    break;
+
+  case Type::OverflowBehavior:
     break;
 
   case Type::HLSLAttributedResource:

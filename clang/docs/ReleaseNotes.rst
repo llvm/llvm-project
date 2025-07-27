@@ -102,6 +102,22 @@ New Compiler Flags
 ------------------
 - New option ``-fno-sanitize-annotate-debug-info-traps`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
 
+- New option ``-Wundef-true`` added and enabled by default to warn when `true` is used in the C preprocessor without being defined before C23.
+
+- New option ``-fprofile-continuous`` added to enable continuous profile syncing to file (#GH124353, `docs <https://clang.llvm.org/docs/UsersManual.html#cmdoption-fprofile-continuous>`_).
+  The feature has `existed <https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program>`_)
+  for a while and this is just a user facing option.
+
+- New option ``-ftime-report-json`` added which outputs the same timing data as ``-ftime-report`` but formatted as JSON.
+
+- New option ``-Wnrvo`` added and disabled by default to warn about missed NRVO opportunities.
+
+- New option ``-ignore-pch`` added to disable precompiled headers. It overrides ``-emit-pch`` and ``-include-pch``. (#GH142409, `PCHDocs <https://clang.llvm.org/docs/UsersManual.html#ignoring-a-pch-file>`_).
+
+- New options ``-g[no-]key-instructions`` added, disabled by default. Reduces jumpiness of debug stepping for optimized code in some debuggers (not LLDB at this time). Not recommended for use without optimizations. DWARF only. Note both the positive and negative flags imply ``-g``.
+
+- New option ``-foverflow-behavior-types`` added to enable parsing of the ``overflow_behavior`` type attribute.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -113,6 +129,10 @@ Removed Compiler Flags
 
 Attribute Changes in Clang
 --------------------------
+
+- Introduced a new type attribute ``__attribute__((overflow_behavior))`` which
+  currently accepts either ``wrap`` or ``no_wrap`` as an argument, enabling
+  type-level control over overflow behavior.
 
 Improvements to Clang's diagnostics
 -----------------------------------

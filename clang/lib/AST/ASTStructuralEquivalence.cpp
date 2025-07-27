@@ -1140,6 +1140,13 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
     break;
 
+  case Type::OverflowBehavior:
+    if (!IsStructurallyEquivalent(
+            Context, cast<OverflowBehaviorType>(T1)->getUnderlyingType(),
+            cast<OverflowBehaviorType>(T2)->getUnderlyingType()))
+      return false;
+    break;
+
   case Type::HLSLAttributedResource:
     if (!IsStructurallyEquivalent(
             Context, cast<HLSLAttributedResourceType>(T1)->getWrappedType(),

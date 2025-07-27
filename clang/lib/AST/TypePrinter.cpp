@@ -289,6 +289,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::PackExpansion:
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
+    case Type::OverflowBehavior:
     case Type::CountAttributed:
       CanPrefixQualifiers = false;
       break;
@@ -2067,6 +2068,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::PreserveAll:
   case attr::PreserveMost:
   case attr::PreserveNone:
+  case attr::OverflowBehavior:
     llvm_unreachable("This attribute should have been handled already");
 
   case attr::NSReturnsRetained:
@@ -2142,6 +2144,26 @@ void TypePrinter::printBTFTagAttributedBefore(const BTFTagAttributedType *T,
 void TypePrinter::printBTFTagAttributedAfter(const BTFTagAttributedType *T,
                                              raw_ostream &OS) {
   printAfter(T->getWrappedType(), OS);
+}
+
+void TypePrinter::printOverflowBehaviorBefore(const OverflowBehaviorType *T,
+                                              raw_ostream &OS) {
+  StringRef KindName;
+  switch (T->getBehaviorKind()) {
+  case clang::OverflowBehaviorType::OverflowBehaviorKind::Wrap:
+    KindName = "__wrap";
+    break;
+  case clang::OverflowBehaviorType::OverflowBehaviorKind::NoWrap:
+    KindName = "__no_wrap";
+    break;
+  }
+  OS << KindName << " ";
+  printBefore(T->getUnderlyingType(), OS);
+}
+
+void TypePrinter::printOverflowBehaviorAfter(const OverflowBehaviorType *T,
+                                             raw_ostream &OS) {
+  printAfter(T->getUnderlyingType(), OS);
 }
 
 void TypePrinter::printHLSLAttributedResourceBefore(

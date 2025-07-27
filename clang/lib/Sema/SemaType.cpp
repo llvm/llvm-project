@@ -299,6 +299,14 @@ namespace {
       return sema.Context.getBTFTagAttributedType(BTFAttr, WrappedType);
     }
 
+    /// Get a OverflowBehaviorType type for the overflow_behavior type
+    /// attribute.
+    QualType
+    getOverflowBehaviorType(OverflowBehaviorType::OverflowBehaviorKind Kind,
+                            QualType UnderlyingType) {
+      return sema.Context.getOverflowBehaviorType(Kind, UnderlyingType);
+    }
+
     /// Completely replace the \c auto in \p TypeWithAuto by
     /// \p Replacement. Also replace \p TypeWithAuto in \c TypeAttrPair if
     /// necessary.
@@ -5883,6 +5891,9 @@ namespace {
     void VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
       Visit(TL.getWrappedLoc());
     }
+    void VisitOverflowBehaviorTypeLoc(OverflowBehaviorTypeLoc TL) {
+      Visit(TL.getWrappedLoc());
+    }
     void VisitHLSLAttributedResourceTypeLoc(HLSLAttributedResourceTypeLoc TL) {
       Visit(TL.getWrappedLoc());
       fillHLSLAttributedResourceTypeLoc(TL, State);
@@ -6136,6 +6147,9 @@ namespace {
       // nothing
     }
     void VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
+      // nothing
+    }
+    void VisitOverflowBehaviorTypeLoc(OverflowBehaviorTypeLoc TL) {
       // nothing
     }
     void VisitAdjustedTypeLoc(AdjustedTypeLoc TL) {
@@ -6586,6 +6600,73 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
 
     Type = S.Context.getAddrSpaceQualType(Type, ASIdx);
   }
+}
+
+static void HandleOverflowBehaviorAttr(QualType &Type, const ParsedAttr &Attr,
+                                       TypeProcessingState &State) {
+  Sema &S = State.getSema();
+
+  // Check for -foverflow-behavior-types
+  if (!S.getLangOpts().OverflowBehaviorTypes) {
+    S.Diag(Attr.getLoc(), diag::warn_overflow_behavior_attribute_disabled)
+        << Attr << 1;
+    Attr.setInvalid();
+    return;
+  }
+
+  // Check the number of attribute arguments.
+  if (Attr.getNumArgs() != 1) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
+        << Attr << 1;
+    Attr.setInvalid();
+    return;
+  }
+
+  // Check that the underlying type is an integer type
+  if (!Type->isIntegerType()) {
+    S.Diag(Attr.getLoc(), diag::warn_overflow_behavior_non_integer_type)
+        << Attr << Type.getAsString();
+    Attr.setInvalid();
+    return;
+  }
+
+  StringRef KindName = "";
+  IdentifierInfo *Ident = nullptr;
+
+  if (Attr.isArgIdent(0)) {
+    Ident = Attr.getArgAsIdent(0)->getIdentifierInfo();
+    KindName = Ident->getName();
+  }
+
+  // Support identifier or string argument types. Failure to provide one of
+  // these two types results in a diagnostic that hints towards using string
+  // arguments (either "wrap" or "no_wrap") as this is the most common use
+  // pattern.
+  if (!Ident) {
+    auto *Str = dyn_cast<StringLiteral>(Attr.getArgAsExpr(0));
+    if (Str)
+      KindName = Str->getString();
+    else {
+      S.Diag(Attr.getLoc(), diag::err_attribute_argument_type)
+          << Attr << AANT_ArgumentString;
+      Attr.setInvalid();
+      return;
+    }
+  }
+
+  OverflowBehaviorType::OverflowBehaviorKind Kind;
+  if (KindName == "wrap") {
+    Kind = OverflowBehaviorType::OverflowBehaviorKind::Wrap;
+  } else if (KindName == "no_wrap") {
+    Kind = OverflowBehaviorType::OverflowBehaviorKind::NoWrap;
+  } else {
+    S.Diag(Attr.getLoc(), diag::err_overflow_behavior_unknown_ident)
+        << KindName << Attr;
+    Attr.setInvalid();
+    return;
+  }
+
+  Type = State.getOverflowBehaviorType(Kind, Type);
 }
 
 /// handleObjCOwnershipTypeAttr - Process an objc_ownership
@@ -8902,6 +8983,10 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_LifetimeCaptureBy:
       if (TAL == TAL_DeclChunk)
         HandleLifetimeCaptureByAttr(state, type, attr);
+      break;
+    case ParsedAttr::AT_OverflowBehavior:
+      HandleOverflowBehaviorAttr(type, attr, state);
+      attr.setUsedAsTypeAttr();
       break;
 
     case ParsedAttr::AT_NoDeref: {

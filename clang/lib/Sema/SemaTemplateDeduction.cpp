@@ -2475,6 +2475,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     case Type::ArrayParameter:
     case Type::HLSLAttributedResource:
     case Type::HLSLInlineSpirv:
+    case Type::OverflowBehavior:
       // No template argument deduction for these types
       return TemplateDeductionResult::Success;
 
@@ -7039,6 +7040,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
   case Type::Pipe:
   case Type::BitInt:
   case Type::HLSLInlineSpirv:
+  case Type::OverflowBehavior:
 #define TYPE(Class, Base)
 #define ABSTRACT_TYPE(Class, Base)
 #define DEPENDENT_TYPE(Class, Base)

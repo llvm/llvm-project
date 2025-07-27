@@ -8217,6 +8217,10 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
     ExprTy = TET->getUnderlyingExpr()->getType();
   }
 
+  if (const OverflowBehaviorType *OBT =
+          dyn_cast<OverflowBehaviorType>(ExprTy.getCanonicalType()))
+    ExprTy = OBT->getUnderlyingType();
+
   // When using the format attribute in C++, you can receive a function or an
   // array that will necessarily decay to a pointer when passed to the final
   // format consumer. Apply decay before type comparison.
@@ -10463,6 +10467,8 @@ struct IntRange {
       T = CT->getElementType().getTypePtr();
     if (const auto *AT = dyn_cast<AtomicType>(T))
       T = AT->getValueType().getTypePtr();
+    if (const OverflowBehaviorType *OBT = dyn_cast<OverflowBehaviorType>(T))
+      T = OBT->getUnderlyingType().getTypePtr();
 
     if (!C.getLangOpts().CPlusPlus) {
       // For enum types in C code, use the underlying datatype.
@@ -10513,6 +10519,8 @@ struct IntRange {
       T = AT->getValueType().getTypePtr();
     if (const EnumType *ET = dyn_cast<EnumType>(T))
       T = C.getCanonicalType(ET->getDecl()->getIntegerType()).getTypePtr();
+    if (const OverflowBehaviorType *OBT = dyn_cast<OverflowBehaviorType>(T))
+      T = OBT->getUnderlyingType().getTypePtr();
 
     if (const auto *EIT = dyn_cast<BitIntType>(T))
       return IntRange(EIT->getNumBits(), EIT->isUnsigned());
@@ -12132,6 +12140,28 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
       // Warn on pointer to bool conversion that is always true.
       DiagnoseAlwaysNonNullPointer(E, Expr::NPCK_NotNull, /*IsEqual*/ false,
                                    SourceRange(CC));
+    }
+  }
+
+  // Diagnose potentially problematic implicit casts from an overflow behavior
+  // type to an integer type.
+  if (const auto *OBT = Source->getAs<OverflowBehaviorType>()) {
+    bool DiscardedDuringAssignment = false;
+    if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E))
+      DiscardedDuringAssignment = DRE->isOverflowBehaviorDiscarded();
+
+    if (Target->isIntegerType() && !Target->isOverflowBehaviorType()) {
+      // Implicit casts from unsigned wrap types to unsigned types are less
+      // problematic but still warrant some diagnostic.
+      if (OBT->isUnsignedIntegerType() && OBT->isWrapKind() &&
+          Target->isUnsignedIntegerType())
+        return DiagnoseImpCast(*this, E, T, CC,
+                               diag::warn_impcast_overflow_behavior_pedantic);
+      if (DiscardedDuringAssignment)
+        return DiagnoseImpCast(*this, E, T, CC,
+                               diag::warn_impcast_overflow_behavior_assignment);
+      return DiagnoseImpCast(*this, E, T, CC,
+                             diag::warn_impcast_overflow_behavior);
     }
   }
 

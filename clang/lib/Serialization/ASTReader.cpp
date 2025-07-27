@@ -7458,6 +7458,10 @@ void TypeLocReader::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   // Nothing to do.
 }
 
+void TypeLocReader::VisitOverflowBehaviorTypeLoc(OverflowBehaviorTypeLoc TL) {
+  // Nothing to do.
+}
+
 void TypeLocReader::VisitHLSLAttributedResourceTypeLoc(
     HLSLAttributedResourceTypeLoc TL) {
   // Nothing to do.

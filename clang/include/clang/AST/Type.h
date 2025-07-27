@@ -70,6 +70,7 @@ class TagDecl;
 class TemplateParameterList;
 class Type;
 class Attr;
+class NoSanitizeAttr;
 
 enum {
   TypeAlignmentInBits = 4,
@@ -1147,6 +1148,12 @@ public:
 
   /// Returns true if it is a WebAssembly Funcref Type.
   bool isWebAssemblyFuncrefType() const;
+
+  /// Returns true if it is a OverflowBehaviorType of Wrap kind.
+  bool isWrapType() const;
+
+  /// Returns true if it is a OverflowBehaviorType of NoWrap kind.
+  bool isNoWrapType() const;
 
   // Don't promise in the API that anything besides 'const' can be
   // easily added.
@@ -2632,6 +2639,7 @@ public:
   bool isSubscriptableVectorType() const;
   bool isMatrixType() const;                    // Matrix type.
   bool isConstantMatrixType() const;            // Constant matrix type.
+  bool isOverflowBehaviorType() const;          // __attribute__((no_sanitize))
   bool isDependentAddressSpaceType() const;     // value-dependent address space qualifier
   bool isObjCObjectPointerType() const;         // pointer to ObjC object
   bool isObjCRetainableType() const;            // ObjC object or block pointer
@@ -3099,6 +3107,10 @@ template <> const BoundsAttributedType *Type::getAs() const;
 /// This will check for a CountAttributedType by removing any existing
 /// sugar until it reaches an CountAttributedType or a non-sugared type.
 template <> const CountAttributedType *Type::getAs() const;
+
+/// This will check for a OverflowBehaviorType by removing any existing
+/// sugar until it reaches an OverflowBehaviorType or a non-sugared type.
+template <> const OverflowBehaviorType *Type::getAs() const;
 
 // We can do canonical leaf types faster, because we don't have to
 // worry about preserving child type decoration.
@@ -6334,6 +6346,51 @@ public:
   }
 };
 
+class OverflowBehaviorType : public Type, public llvm::FoldingSetNode {
+public:
+  enum OverflowBehaviorKind { Wrap, NoWrap };
+
+private:
+  friend class ASTContext; // ASTContext creates these
+
+  QualType UnderlyingType;
+  OverflowBehaviorKind BehaviorKind;
+
+  OverflowBehaviorType(QualType Canon, QualType Underlying,
+                       OverflowBehaviorKind Kind);
+
+public:
+  QualType getUnderlyingType() const { return UnderlyingType; }
+  OverflowBehaviorKind getBehaviorKind() const { return BehaviorKind; }
+
+  bool isWrapKind() const { return BehaviorKind == OverflowBehaviorKind::Wrap; }
+  bool isNoWrapKind() const {
+    return BehaviorKind == OverflowBehaviorKind::NoWrap;
+  }
+
+  OverflowBehaviorKind setBehaviorKind(OverflowBehaviorKind Kind) {
+    BehaviorKind = Kind;
+    return BehaviorKind;
+  }
+
+  bool isSugared() const { return false; }
+  QualType desugar() const { return getUnderlyingType(); }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, UnderlyingType, BehaviorKind);
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType Underlying,
+                      OverflowBehaviorKind Kind) {
+    ID.AddPointer(Underlying.getAsOpaquePtr());
+    ID.AddInteger((int)Kind);
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == OverflowBehavior;
+  }
+};
+
 class HLSLAttributedResourceType : public Type, public llvm::FoldingSetNode {
 public:
   struct Attributes {
@@ -8574,6 +8631,10 @@ inline bool Type::isConstantMatrixType() const {
   return isa<ConstantMatrixType>(CanonicalType);
 }
 
+inline bool Type::isOverflowBehaviorType() const {
+  return isa<OverflowBehaviorType>(CanonicalType);
+}
+
 inline bool Type::isDependentAddressSpaceType() const {
   return isa<DependentAddressSpaceType>(CanonicalType);
 }
@@ -8818,6 +8879,12 @@ inline bool Type::isIntegerType() const {
     return IsEnumDeclComplete(ET->getDecl()) &&
       !IsEnumDeclScoped(ET->getDecl());
   }
+
+  if (isOverflowBehaviorType())
+    return cast<OverflowBehaviorType>(CanonicalType)
+        ->getUnderlyingType()
+        ->isIntegerType();
+
   return isBitIntType();
 }
 
@@ -8880,7 +8947,7 @@ inline bool Type::isScalarType() const {
          isa<MemberPointerType>(CanonicalType) ||
          isa<ComplexType>(CanonicalType) ||
          isa<ObjCObjectPointerType>(CanonicalType) ||
-         isBitIntType();
+         isa<OverflowBehaviorType>(CanonicalType) || isBitIntType();
 }
 
 inline bool Type::isIntegralOrEnumerationType() const {
@@ -8891,6 +8958,10 @@ inline bool Type::isIntegralOrEnumerationType() const {
   // enumeration type in the sense required here.
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
     return IsEnumDeclComplete(ET->getDecl());
+
+  if (const OverflowBehaviorType *OBT =
+          dyn_cast<OverflowBehaviorType>(CanonicalType))
+    return OBT->getUnderlyingType()->isIntegralOrEnumerationType();
 
   return isBitIntType();
 }
@@ -9024,6 +9095,8 @@ template <typename T> const T *Type::getAsAdjusted() const {
       Ty = A->getModifiedType().getTypePtr();
     else if (const auto *A = dyn_cast<BTFTagAttributedType>(Ty))
       Ty = A->getWrappedType().getTypePtr();
+    // else if (const auto *A = dyn_cast<OverflowBehaviorType>(Ty))
+    //   Ty = A->getWrappedType().getTypePtr();
     else if (const auto *A = dyn_cast<HLSLAttributedResourceType>(Ty))
       Ty = A->getWrappedType().getTypePtr();
     else if (const auto *E = dyn_cast<ElaboratedType>(Ty))
