@@ -1,4 +1,4 @@
-; RUN: llc -mtriple aarch64-unknown-unknown -global-isel \
+; RUN: llc -optimize-ssp=false -mtriple aarch64-unknown-unknown -global-isel \
 ; RUN:     -no-stack-coloring=false -pass-remarks-missed=gisel* < %s \
 ; RUN:      2>&1 | FileCheck %s
 
