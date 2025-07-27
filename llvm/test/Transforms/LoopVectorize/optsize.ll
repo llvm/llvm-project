@@ -200,11 +200,10 @@ define i32 @foo_pgso() !prof !14 {
 ; NPGSO:       [[VECTOR_BODY]]:
 ; NPGSO-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; NPGSO-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[TMP0]]
-; NPGSO-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 0
-; NPGSO-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP2]], align 1
+; NPGSO-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
 ; NPGSO-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
 ; NPGSO-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x i8> splat (i8 2), <4 x i8> splat (i8 1)
-; NPGSO-NEXT:    store <4 x i8> [[TMP4]], ptr [[TMP2]], align 1
+; NPGSO-NEXT:    store <4 x i8> [[TMP4]], ptr [[TMP1]], align 1
 ; NPGSO-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[TMP0]], 4
 ; NPGSO-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 200
 ; NPGSO-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
@@ -479,8 +478,7 @@ define void @pr43371_pgso() !prof !14 {
 ; NPGSO-NEXT:    [[TMP1:%.*]] = add i16 undef, [[OFFSET_IDX]]
 ; NPGSO-NEXT:    [[TMP2:%.*]] = zext i16 [[TMP1]] to i32
 ; NPGSO-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
-; NPGSO-NEXT:    [[TMP4:%.*]] = getelementptr i16, ptr [[TMP3]], i32 0
-; NPGSO-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP4]], align 1
+; NPGSO-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP3]], align 1
 ; NPGSO-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; NPGSO-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 756
 ; NPGSO-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
@@ -840,8 +838,7 @@ define void @stride1_pgso(ptr noalias %B, i32 %BStride) !prof !14 {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    store <2 x i16> splat (i16 42), ptr [[TMP2]], align 4
+; CHECK-NEXT:    store <2 x i16> splat (i16 42), ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
@@ -873,8 +870,7 @@ define void @stride1_pgso(ptr noalias %B, i32 %BStride) !prof !14 {
 ; PGSO:       [[VECTOR_BODY]]:
 ; PGSO-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; PGSO-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP0]]
-; PGSO-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 0
-; PGSO-NEXT:    store <2 x i16> splat (i16 42), ptr [[TMP2]], align 4
+; PGSO-NEXT:    store <2 x i16> splat (i16 42), ptr [[TMP1]], align 4
 ; PGSO-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[TMP0]], 2
 ; PGSO-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
 ; PGSO-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
@@ -906,8 +902,7 @@ define void @stride1_pgso(ptr noalias %B, i32 %BStride) !prof !14 {
 ; NPGSO:       [[VECTOR_BODY]]:
 ; NPGSO-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; NPGSO-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP0]]
-; NPGSO-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 0
-; NPGSO-NEXT:    store <2 x i16> splat (i16 42), ptr [[TMP2]], align 4
+; NPGSO-NEXT:    store <2 x i16> splat (i16 42), ptr [[TMP1]], align 4
 ; NPGSO-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[TMP0]], 2
 ; NPGSO-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
 ; NPGSO-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]

@@ -148,8 +148,7 @@ define void @single_wide_load_store_interleave_group(ptr noalias %src, ptr noali
 ; VF2-NEXT:    [[TMP7:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP9:%.*]] = shl nsw i64 [[TMP7]], 1
 ; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP7]]
-; VF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; VF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i64>, ptr [[TMP3]], align 8
+; VF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i64>, ptr [[TMP2]], align 8
 ; VF2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP9]]
 ; VF2-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i64> [[WIDE_LOAD1]], <2 x i64> [[WIDE_LOAD1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; VF2-NEXT:    [[INTERLEAVED_VEC2:%.*]] = shufflevector <4 x i64> [[TMP10]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
@@ -171,8 +170,7 @@ define void @single_wide_load_store_interleave_group(ptr noalias %src, ptr noali
 ; VF4-NEXT:    [[TMP7:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[TMP9:%.*]] = shl nsw i64 [[TMP7]], 1
 ; VF4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP7]]
-; VF4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; VF4-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
+; VF4-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
 ; VF4-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP9]]
 ; VF4-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i64> [[WIDE_LOAD1]], <4 x i64> [[WIDE_LOAD1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; VF4-NEXT:    [[INTERLEAVED_VEC2:%.*]] = shufflevector <8 x i64> [[TMP10]], <8 x i64> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>

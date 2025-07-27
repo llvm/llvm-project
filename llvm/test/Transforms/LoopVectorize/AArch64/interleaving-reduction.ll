@@ -29,11 +29,10 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-4-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-4-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 [[INDEX]]
-; INTERLEAVE-4-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 0
 ; INTERLEAVE-4-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 4
 ; INTERLEAVE-4-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 8
 ; INTERLEAVE-4-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 12
-; INTERLEAVE-4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP8]], align 1
+; INTERLEAVE-4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP4]], align 1
 ; INTERLEAVE-4-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i32>, ptr [[TMP9]], align 1
 ; INTERLEAVE-4-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i32>, ptr [[TMP10]], align 1
 ; INTERLEAVE-4-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i32>, ptr [[TMP11]], align 1
@@ -66,8 +65,7 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-4-NEXT:    [[INDEX12:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT15:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; INTERLEAVE-4-NEXT:    [[VEC_PHI13:%.*]] = phi <4 x i32> [ [[TMP18]], [[VEC_EPILOG_PH]] ], [ [[TMP22:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; INTERLEAVE-4-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX12]]
-; INTERLEAVE-4-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[TMP20]], i32 0
-; INTERLEAVE-4-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x i32>, ptr [[TMP21]], align 1
+; INTERLEAVE-4-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x i32>, ptr [[TMP20]], align 1
 ; INTERLEAVE-4-NEXT:    [[TMP22]] = add <4 x i32> [[VEC_PHI13]], [[WIDE_LOAD14]]
 ; INTERLEAVE-4-NEXT:    [[INDEX_NEXT15]] = add nuw i64 [[INDEX12]], 4
 ; INTERLEAVE-4-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT15]], [[N_VEC11]]
@@ -106,9 +104,8 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-2-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-2-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 [[INDEX]]
-; INTERLEAVE-2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 0
 ; INTERLEAVE-2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 4
-; INTERLEAVE-2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP4]], align 1
+; INTERLEAVE-2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 1
 ; INTERLEAVE-2-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP5]], align 1
 ; INTERLEAVE-2-NEXT:    [[TMP6]] = add <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
 ; INTERLEAVE-2-NEXT:    [[TMP7]] = add <4 x i32> [[VEC_PHI1]], [[WIDE_LOAD2]]
@@ -138,10 +135,69 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-2-NEXT:    ret i32 [[RED_NEXT_LCSSA]]
 ;
 ; INTERLEAVE-4-VLA-LABEL: @interleave_integer_reduction(
-; INTERLEAVE-4-VLA:       add <vscale x 4 x i32>
-; INTERLEAVE-4-VLA-NEXT:  add <vscale x 4 x i32>
-; INTERLEAVE-4-VLA-NEXT:  add <vscale x 4 x i32>
-; INTERLEAVE-4-VLA-NEXT:  add <vscale x 4 x i32>
+; INTERLEAVE-4-VLA-NEXT:  entry:
+; INTERLEAVE-4-VLA-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; INTERLEAVE-4-VLA-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
+; INTERLEAVE-4-VLA-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP1]]
+; INTERLEAVE-4-VLA-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; INTERLEAVE-4-VLA:       vector.ph:
+; INTERLEAVE-4-VLA-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; INTERLEAVE-4-VLA-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 16
+; INTERLEAVE-4-VLA-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; INTERLEAVE-4-VLA-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; INTERLEAVE-4-VLA-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
+; INTERLEAVE-4-VLA-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 16
+; INTERLEAVE-4-VLA-NEXT:    br label [[VECTOR_BODY:%.*]]
+; INTERLEAVE-4-VLA:       vector.body:
+; INTERLEAVE-4-VLA-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; INTERLEAVE-4-VLA-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP16:%.*]], [[VECTOR_BODY]] ]
+; INTERLEAVE-4-VLA-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
+; INTERLEAVE-4-VLA-NEXT:    [[VEC_PHI2:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
+; INTERLEAVE-4-VLA-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
+; INTERLEAVE-4-VLA-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 [[INDEX]]
+; INTERLEAVE-4-VLA-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
+; INTERLEAVE-4-VLA-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
+; INTERLEAVE-4-VLA-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 [[TMP8]]
+; INTERLEAVE-4-VLA-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
+; INTERLEAVE-4-VLA-NEXT:    [[TMP11:%.*]] = mul nuw i64 [[TMP10]], 8
+; INTERLEAVE-4-VLA-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 [[TMP11]]
+; INTERLEAVE-4-VLA-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
+; INTERLEAVE-4-VLA-NEXT:    [[TMP14:%.*]] = mul nuw i64 [[TMP13]], 12
+; INTERLEAVE-4-VLA-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 [[TMP14]]
+; INTERLEAVE-4-VLA-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP6]], align 1
+; INTERLEAVE-4-VLA-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 4 x i32>, ptr [[TMP9]], align 1
+; INTERLEAVE-4-VLA-NEXT:    [[WIDE_LOAD5:%.*]] = load <vscale x 4 x i32>, ptr [[TMP12]], align 1
+; INTERLEAVE-4-VLA-NEXT:    [[WIDE_LOAD6:%.*]] = load <vscale x 4 x i32>, ptr [[TMP15]], align 1
+; INTERLEAVE-4-VLA-NEXT:    [[TMP16]] = add <vscale x 4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
+; INTERLEAVE-4-VLA-NEXT:    [[TMP17]] = add <vscale x 4 x i32> [[VEC_PHI1]], [[WIDE_LOAD4]]
+; INTERLEAVE-4-VLA-NEXT:    [[TMP18]] = add <vscale x 4 x i32> [[VEC_PHI2]], [[WIDE_LOAD5]]
+; INTERLEAVE-4-VLA-NEXT:    [[TMP19]] = add <vscale x 4 x i32> [[VEC_PHI3]], [[WIDE_LOAD6]]
+; INTERLEAVE-4-VLA-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; INTERLEAVE-4-VLA-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; INTERLEAVE-4-VLA-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; INTERLEAVE-4-VLA:       middle.block:
+; INTERLEAVE-4-VLA-NEXT:    [[BIN_RDX:%.*]] = add <vscale x 4 x i32> [[TMP17]], [[TMP16]]
+; INTERLEAVE-4-VLA-NEXT:    [[BIN_RDX7:%.*]] = add <vscale x 4 x i32> [[TMP18]], [[BIN_RDX]]
+; INTERLEAVE-4-VLA-NEXT:    [[BIN_RDX8:%.*]] = add <vscale x 4 x i32> [[TMP19]], [[BIN_RDX7]]
+; INTERLEAVE-4-VLA-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[BIN_RDX8]])
+; INTERLEAVE-4-VLA-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; INTERLEAVE-4-VLA-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; INTERLEAVE-4-VLA:       scalar.ph:
+; INTERLEAVE-4-VLA-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; INTERLEAVE-4-VLA-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP21]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; INTERLEAVE-4-VLA-NEXT:    br label [[LOOP:%.*]]
+; INTERLEAVE-4-VLA:       loop:
+; INTERLEAVE-4-VLA-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; INTERLEAVE-4-VLA-NEXT:    [[RED:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], [[LOOP]] ]
+; INTERLEAVE-4-VLA-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[IV]]
+; INTERLEAVE-4-VLA-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 1
+; INTERLEAVE-4-VLA-NEXT:    [[RED_NEXT]] = add i32 [[RED]], [[L]]
+; INTERLEAVE-4-VLA-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; INTERLEAVE-4-VLA-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; INTERLEAVE-4-VLA-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; INTERLEAVE-4-VLA:       exit:
+; INTERLEAVE-4-VLA-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi i32 [ [[RED_NEXT]], [[LOOP]] ], [ [[TMP21]], [[MIDDLE_BLOCK]] ]
+; INTERLEAVE-4-VLA-NEXT:    ret i32 [[RED_NEXT_LCSSA]]
 ;
 entry:
   br label %loop

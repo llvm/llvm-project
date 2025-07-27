@@ -190,8 +190,7 @@ define void @ptr_doesnt_depend_on_poison_or_ub(ptr noalias %dst, i16 noundef %of
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i16> [[VEC_IND]], splat (i16 10)
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i16 [[OFFSET_IDX]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr @src, i16 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[TMP4]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
@@ -340,8 +339,7 @@ define void @ptr_depends_on_noundef_load(ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i16 [[TMP2]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i16 [[OFFSET_IDX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr @src, i16 [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[TMP5]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP6]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:

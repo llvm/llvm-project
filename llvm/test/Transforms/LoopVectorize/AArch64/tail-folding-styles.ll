@@ -30,8 +30,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; NONE:       vector.body:
 ; NONE-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
 ; NONE-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[INDEX1]]
-; NONE-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[TMP5]], i32 0
-; NONE-NEXT:    store <vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP6]], align 4
+; NONE-NEXT:    store <vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP5]], align 4
 ; NONE-NEXT:    [[INDEX_NEXT2]] = add nuw i64 [[INDEX1]], [[TMP8]]
 ; NONE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT2]], [[N_VEC]]
 ; NONE-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -71,8 +70,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
 ; DATA-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX1]], i64 [[UMAX]])
 ; DATA-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[INDEX1]]
-; DATA-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[TMP10]], i32 0
-; DATA-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP11]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
+; DATA-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP10]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
 ; DATA-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX1]], [[TMP13]]
 ; DATA-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT2]], [[N_VEC]]
 ; DATA-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -119,8 +117,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_NO_LANEMASK-NEXT:    [[VEC_IV:%.*]] = add <vscale x 4 x i64> [[BROADCAST_SPLAT3]], [[TMP11]]
 ; DATA_NO_LANEMASK-NEXT:    [[TMP12:%.*]] = icmp ule <vscale x 4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT]]
 ; DATA_NO_LANEMASK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[INDEX1]]
-; DATA_NO_LANEMASK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[TMP13]], i32 0
-; DATA_NO_LANEMASK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT5]], ptr [[TMP14]], i32 4, <vscale x 4 x i1> [[TMP12]])
+; DATA_NO_LANEMASK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT5]], ptr [[TMP13]], i32 4, <vscale x 4 x i1> [[TMP12]])
 ; DATA_NO_LANEMASK-NEXT:    [[INDEX_NEXT6]] = add i64 [[INDEX1]], [[TMP16]]
 ; DATA_NO_LANEMASK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT6]], [[N_VEC]]
 ; DATA_NO_LANEMASK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -160,8 +157,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
 ; DATA_AND_CONTROL-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; DATA_AND_CONTROL-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[INDEX1]]
-; DATA_AND_CONTROL-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[TMP10]], i32 0
-; DATA_AND_CONTROL-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP11]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
+; DATA_AND_CONTROL-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP10]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
 ; DATA_AND_CONTROL-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX1]], [[TMP13]]
 ; DATA_AND_CONTROL-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_NEXT2]], i64 [[UMAX]])
 ; DATA_AND_CONTROL-NEXT:    [[TMP14:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], splat (i1 true)
@@ -208,8 +204,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[INDEX1]]
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP11]], i32 0
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP12]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
+; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP11]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX1]], [[TMP14]]
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX1]], i64 [[TMP9]])
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP15:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], splat (i1 true)

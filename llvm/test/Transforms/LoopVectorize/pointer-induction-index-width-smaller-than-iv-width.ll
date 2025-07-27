@@ -22,14 +22,12 @@ define void @wide_ptr_induction_index_width_smaller_than_iv_width(ptr noalias %s
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[TMP5]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP6]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[DST_0]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[DST_0]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[DST_0]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[DST_0]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[TMP7]], i32 0
-; CHECK-NEXT:    store <4 x i64> [[WIDE_LOAD]], ptr [[TMP11]], align 8
+; CHECK-NEXT:    store <4 x i64> [[WIDE_LOAD]], ptr [[TMP7]], align 8
 ; CHECK-NEXT:    store ptr [[TMP5]], ptr [[TMP7]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 1
 ; CHECK-NEXT:    store ptr [[TMP12]], ptr [[TMP8]], align 8
