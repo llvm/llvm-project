@@ -1,4 +1,4 @@
-//===-- Single-precision asinh function -----------------------------------===//
+//===-- Shared asinhf function ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/asinhf.h"
+#ifndef LLVM_LIBC_SHARED_MATH_ASINHF_H
+#define LLVM_LIBC_SHARED_MATH_ASINHF_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/asinhf.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float, asinhf, (float x)) { return math::asinhf(x); }
+using math::asinhf;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_ASINHF_H
