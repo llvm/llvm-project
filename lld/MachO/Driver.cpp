@@ -31,6 +31,7 @@
 #include "lld/Common/Reproduce.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -41,11 +42,14 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TextAPI/Architecture.h"
@@ -282,11 +286,122 @@ static void saveThinArchiveToRepro(ArchiveFile const *file) {
           ": Archive::children failed: " + toString(std::move(e)));
 }
 
-static InputFile *addFile(StringRef path, LoadType loadType,
-                          bool isLazy = false, bool isExplicit = true,
-                          bool isBundleLoader = false,
-                          bool isForceHidden = false) {
-  std::optional<MemoryBufferRef> buffer = readFile(path);
+class DeferredFile {
+public:
+  DeferredFile(StringRef path, bool isLazy, MemoryBufferRef buffer)
+      : path(path), isLazy(isLazy), buffer(buffer) {}
+  StringRef path;
+  bool isLazy;
+  MemoryBufferRef buffer;
+};
+using DeferredFiles = std::vector<DeferredFile>;
+
+class SerialBackgroundQueue {
+  std::deque<std::function<void()>> queue;
+  std::thread *running;
+  std::mutex mutex;
+
+public:
+  void queueWork(std::function<void()> work, bool reap) {
+    mutex.lock();
+    if (running && (queue.empty() || reap)) {
+      mutex.unlock();
+      running->join();
+      mutex.lock();
+      delete running;
+      running = nullptr;
+    }
+
+    if (!reap) {
+      queue.emplace_back(std::move(work));
+      if (!running)
+        running = new std::thread([&]() {
+          bool shouldPop = false;
+          while (true) {
+            mutex.lock();
+            if (shouldPop)
+              queue.pop_front();
+            if (queue.empty()) {
+              mutex.unlock();
+              break;
+            }
+            auto work = std::move(queue.front());
+            shouldPop = true;
+            mutex.unlock();
+            work();
+          }
+        });
+    }
+    mutex.unlock();
+  }
+};
+
+#ifndef NDEBUG
+#include <iomanip>
+#include <iostream>
+#endif
+
+// Most input files have been mapped but not yet paged in.
+// This code forces the page-ins on multiple threads so
+// the process is not stalled waiting on disk buffer i/o.
+void multiThreadedPageInBackground(DeferredFiles &deferred) {
+  using namespace std::chrono;
+  static const size_t pageSize = Process::getPageSizeEstimate();
+  static const size_t largeArchive = 10 * 1024 * 1024;
+  std::atomic_int index = 0;
+#ifndef NDEBUG
+  std::atomic_int numDeferedFilesTouched = 0;
+  static std::atomic_uint64_t totalBytes = 0;
+  auto t0 = high_resolution_clock::now();
+#endif
+
+  parallelFor(0, config->readThreads, [&](size_t I) {
+    while (true) {
+      int localIndex = index.fetch_add(1);
+      if (localIndex >= (int)deferred.size())
+        break;
+      const StringRef &buff = deferred[localIndex].buffer.getBuffer();
+      if (buff.size() > largeArchive)
+        continue;
+#ifndef NDEBUG
+      totalBytes += buff.size();
+      numDeferedFilesTouched += 1;
+#endif
+
+      // Reference all file's mmap'd pages to load them into memory.
+      for (const char *page = buff.data(), *end = page + buff.size();
+           page < end; page += pageSize)
+        LLVM_ATTRIBUTE_UNUSED volatile char t = *page;
+    }
+  });
+
+#ifndef NDEBUG
+  auto dt = high_resolution_clock::now() - t0;
+  if (Process::GetEnv("LLD_MULTI_THREAD_PAGE"))
+    std::cerr << "multiThreadedPageIn " << totalBytes << "/"
+              << numDeferedFilesTouched << "/" << deferred.size() << "/"
+              << std::setprecision(4)
+              << duration_cast<milliseconds>(dt).count() / 1000. << "\n";
+#endif
+}
+
+static void multiThreadedPageIn(const DeferredFiles &deferred,
+                                bool reap = false) {
+  static SerialBackgroundQueue pageInQueue;
+  pageInQueue.queueWork(
+      [=]() {
+        DeferredFiles files = deferred;
+        multiThreadedPageInBackground(files);
+      },
+      reap);
+}
+
+static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
+                              DeferredFiles *archiveContents, StringRef path,
+                              LoadType loadType, bool isLazy = false,
+                              bool isExplicit = true,
+                              bool isBundleLoader = false,
+                              bool isForceHidden = false) {
   if (!buffer)
     return nullptr;
   MemoryBufferRef mbref = *buffer;
@@ -379,6 +494,8 @@ static InputFile *addFile(StringRef path, LoadType loadType,
             continue;
           }
 
+          if (archiveContents)
+            archiveContents->emplace_back(path, isLazy, *mb);
           if (!hasObjCSection(*mb))
             continue;
           if (Error e = file->fetch(c, "-ObjC"))
@@ -390,7 +507,8 @@ static InputFile *addFile(StringRef path, LoadType loadType,
                 ": Archive::children failed: " + toString(std::move(e)));
       }
     }
-    file->addLazySymbols();
+    if (!archiveContents || archiveContents->empty())
+      file->addLazySymbols();
     loadedArchives[path] = ArchiveFileInfo{file, isCommandLineLoad};
     newFile = file;
     break;
@@ -439,6 +557,24 @@ static InputFile *addFile(StringRef path, LoadType loadType,
     inputFiles.insert(newFile);
   }
   return newFile;
+}
+
+static InputFile *addFile(StringRef path, LoadType loadType,
+                          bool isLazy = false, bool isExplicit = true,
+                          bool isBundleLoader = false,
+                          bool isForceHidden = false) {
+  return processFile(readFile(path), nullptr, path, loadType, isLazy,
+                     isExplicit, isBundleLoader, isForceHidden);
+}
+
+static void deferFile(StringRef path, bool isLazy, DeferredFiles &deferred) {
+  std::optional<MemoryBufferRef> buffer = readFile(path);
+  if (!buffer)
+    return;
+  if (config->readThreads)
+    deferred.emplace_back(path, isLazy, *buffer);
+  else
+    processFile(buffer, nullptr, path, LoadType::CommandLine, isLazy);
 }
 
 static std::vector<StringRef> missingAutolinkWarnings;
@@ -564,13 +700,14 @@ void macho::resolveLCLinkerOptions() {
   }
 }
 
-static void addFileList(StringRef path, bool isLazy) {
+static void addFileList(StringRef path, bool isLazy,
+                        DeferredFiles &deferredFiles) {
   std::optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return;
   MemoryBufferRef mbref = *buffer;
   for (StringRef path : args::getLines(mbref))
-    addFile(rerootPath(path), LoadType::CommandLine, isLazy);
+    deferFile(rerootPath(path), isLazy, deferredFiles);
 }
 
 // We expect sub-library names of the form "libfoo", which will match a dylib
@@ -1222,6 +1359,8 @@ static void createFiles(const InputArgList &args) {
   bool isLazy = false;
   // If we've processed an opening --start-lib, without a matching --end-lib
   bool inLib = false;
+  DeferredFiles deferredFiles;
+
   for (const Arg *arg : args) {
     const Option &opt = arg->getOption();
     warnIfDeprecatedOption(opt);
@@ -1229,7 +1368,7 @@ static void createFiles(const InputArgList &args) {
 
     switch (opt.getID()) {
     case OPT_INPUT:
-      addFile(rerootPath(arg->getValue()), LoadType::CommandLine, isLazy);
+      deferFile(rerootPath(arg->getValue()), isLazy, deferredFiles);
       break;
     case OPT_needed_library:
       if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
@@ -1249,7 +1388,7 @@ static void createFiles(const InputArgList &args) {
         dylibFile->forceWeakImport = true;
       break;
     case OPT_filelist:
-      addFileList(arg->getValue(), isLazy);
+      addFileList(arg->getValue(), isLazy, deferredFiles);
       break;
     case OPT_force_load:
       addFile(rerootPath(arg->getValue()), LoadType::CommandLineForce);
@@ -1294,6 +1433,24 @@ static void createFiles(const InputArgList &args) {
     default:
       break;
     }
+  }
+
+  if (config->readThreads) {
+    multiThreadedPageIn(deferredFiles);
+
+    DeferredFiles archiveContents;
+    std::vector<ArchiveFile *> archives;
+    for (auto &file : deferredFiles) {
+      auto inputFile = processFile(file.buffer, &archiveContents, file.path,
+                                   LoadType::CommandLine, file.isLazy);
+      if (ArchiveFile *archive = dyn_cast<ArchiveFile>(inputFile))
+        archives.push_back(archive);
+    }
+
+    if (!archiveContents.empty())
+      multiThreadedPageIn(archiveContents);
+    for (auto *archive : archives)
+      archive->addLazySymbols();
   }
 }
 
@@ -1687,6 +1844,14 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     }
   }
 
+  if (auto *arg = args.getLastArg(OPT_read_threads)) {
+    StringRef v(arg->getValue());
+    unsigned threads = 0;
+    if (!llvm::to_integer(v, threads, 0) || threads < 0)
+      error(arg->getSpelling() + ": expected a positive integer, but got '" +
+            arg->getValue() + "'");
+    config->readThreads = threads;
+  }
   if (auto *arg = args.getLastArg(OPT_threads_eq)) {
     StringRef v(arg->getValue());
     unsigned threads = 0;
