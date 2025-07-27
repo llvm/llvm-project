@@ -145,7 +145,7 @@ static inline constexpr bool is_pow2(uint64_t x) {
 // Where this chunk size should start looking in the global array. Small
 // allocations are much more likely than large ones, so we give them the most
 // space. We use a cubic easing function normalized on the possible chunks.
-static inline constexpr uint32_t start_index(uint32_t chunk_size) {
+static inline constexpr uint32_t get_start_index(uint32_t chunk_size) {
   constexpr uint32_t max_chunk = impl::get_chunk_id(SLAB_SIZE / 2);
   uint64_t norm =
       (1 << 16) - (impl::get_chunk_id(chunk_size) << 16) / max_chunk;
@@ -270,10 +270,10 @@ struct Slab {
         continue;
 
       // We try using any known empty bits from the previous attempt first.
-      uint32_t start = gpu::shuffle(mask, cpp::countr_zero(uniform & mask),
-                                    ~after ? (old_index & ~(BITS_IN_WORD - 1)) +
-                                                 cpp::countr_zero(~after)
-                                           : impl::xorshift32(state));
+      uint32_t start = gpu::shuffle(
+          mask, cpp::countr_zero(uniform & mask),
+          ~after ? (old_index & ~(BITS_IN_WORD - 1)) + cpp::countr_zero(~after)
+                 : __builtin_align_down(impl::xorshift32(state), BITS_IN_WORD));
 
       uint32_t id = impl::lane_count(uniform & mask);
       uint32_t index = (start + id) % usable_bits(chunk_size);
@@ -475,7 +475,7 @@ static GuardPtr slots[ARRAY_SIZE] = {};
 // Keep a cache of the last successful slot for each chunk size. Initialize it
 // to an even spread of the total size. Must be updated if the chunking scheme
 // changes.
-#define S(X) (impl::start_index(X))
+#define S(X) (impl::get_start_index(X))
 static cpp::Atomic<uint32_t> indices[] = {
     S(16),     S(32),     S(48),     S(64),     S(96),     S(112),    S(128),
     S(192),    S(224),    S(256),    S(384),    S(448),    S(512),    S(768),
@@ -487,18 +487,18 @@ static cpp::Atomic<uint32_t> indices[] = {
 #undef S
 
 // Tries to find a slab in the table that can support the given chunk size.
-static Slab *find_slab(uint32_t chunk_size) {
+static Slab *find_slab(uint32_t chunk_size, uint64_t &uniform) {
   // We start at the index of the last successful allocation for this kind.
   uint32_t chunk_id = impl::get_chunk_id(chunk_size);
   uint32_t start = indices[chunk_id].load(cpp::MemoryOrder::RELAXED);
-  uint64_t uniform = gpu::match_any(gpu::get_lane_mask(), chunk_size);
 
   for (uint32_t offset = 0; offset <= ARRAY_SIZE; ++offset) {
     uint32_t index =
         !offset ? start
-                : (impl::start_index(chunk_size) + offset - 1) % ARRAY_SIZE;
+                : (impl::get_start_index(chunk_size) + offset - 1) % ARRAY_SIZE;
 
-    if (slots[index].use_count() < Slab::available_chunks(chunk_size)) {
+    if (!offset ||
+        slots[index].use_count() < Slab::available_chunks(chunk_size)) {
       uint64_t lane_mask = gpu::get_lane_mask();
       uint64_t reserved = 0;
 
@@ -521,13 +521,17 @@ static Slab *find_slab(uint32_t chunk_size) {
           slab->get_chunk_size() == chunk_size) {
         if (index != start)
           indices[chunk_id].store(index, cpp::MemoryOrder::RELAXED);
+        uniform = uniform & gpu::get_lane_mask();
         return slab;
       } else if (slab && (reserved > Slab::available_chunks(chunk_size) ||
                           slab->get_chunk_size() != chunk_size)) {
         slots[index].unlock(gpu::get_lane_mask(),
                             gpu::get_lane_mask() & uniform);
       } else if (!slab && reserved == SENTINEL) {
+        uniform = uniform & gpu::get_lane_mask();
         return nullptr;
+      } else {
+        sleep_briefly();
       }
     }
   }
@@ -554,12 +558,12 @@ void *allocate(uint64_t size) {
 
   // Try to find a slab for the rounded up chunk size and allocate from it.
   uint32_t chunk_size = impl::get_chunk_size(static_cast<uint32_t>(size));
-  Slab *slab = find_slab(chunk_size);
+  uint64_t uniform = gpu::match_any(gpu::get_lane_mask(), chunk_size);
+  Slab *slab = find_slab(chunk_size, uniform);
   if (!slab || slab == reinterpret_cast<Slab *>(SENTINEL))
     return nullptr;
 
   uint64_t lane_mask = gpu::get_lane_mask();
-  uint64_t uniform = gpu::match_any(lane_mask, slab->get_global_index());
   void *ptr = slab->allocate(lane_mask, uniform);
   return ptr;
 }
