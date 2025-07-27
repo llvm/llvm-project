@@ -1629,6 +1629,10 @@ Error GenericDeviceTy::syncEvent(void *EventPtr) {
 
 bool GenericDeviceTy::useAutoZeroCopy() { return useAutoZeroCopyImpl(); }
 
+bool GenericDeviceTy::supportsUnifiedMemory() {
+  return supportsUnifiedMemoryImpl();
+}
+
 Error GenericPluginTy::init() {
   if (Initialized)
     return Plugin::success();
@@ -2179,6 +2183,10 @@ int32_t GenericPluginTy::set_device_identifier(int32_t UserId,
 
 int32_t GenericPluginTy::use_auto_zero_copy(int32_t DeviceId) {
   return getDevice(DeviceId).useAutoZeroCopy();
+}
+
+int32_t GenericPluginTy::supports_unified_memory(int32_t DeviceId) {
+  return getDevice(DeviceId).supportsUnifiedMemory();
 }
 
 int32_t GenericPluginTy::get_global(__tgt_device_binary Binary, uint64_t Size,
