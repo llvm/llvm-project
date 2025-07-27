@@ -1764,8 +1764,8 @@ LogicalResult ModuleTranslation::convertArgAndResultAttrs(
   // Convert the argument attributes.
   if (ArrayAttr argAttrsArray = attrsOp.getArgAttrsAttr()) {
     unsigned argAttrIdx = 0;
-    llvm::DenseSet<unsigned> immArgPositionsSet(immArgPositions.begin(),
-                                                immArgPositions.end());
+    llvm::SmallDenseSet<unsigned> immArgPositionsSet(immArgPositions.begin(),
+                                                     immArgPositions.end());
     for (unsigned argIdx : llvm::seq<unsigned>(call->arg_size())) {
       if (argAttrIdx >= argAttrsArray.size())
         break;
