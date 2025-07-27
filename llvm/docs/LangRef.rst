@@ -650,47 +650,135 @@ literal types are uniqued in recent versions of LLVM.
 
 .. _nointptrtype:
 
-Non-Integral Pointer Type
--------------------------
+Non-Integral and Unstable Pointer Types
+---------------------------------------
 
-Note: non-integral pointer types are a work in progress, and they should be
-considered experimental at this time.
+Note: non-integral/unstable pointer types are a work in progress, and they
+should be considered experimental at this time.
 
 LLVM IR optionally allows the frontend to denote pointers in certain address
-spaces as "non-integral" via the :ref:`datalayout string<langref_datalayout>`.
-Non-integral pointer types represent pointers that have an *unspecified* bitwise
-representation; that is, the integral representation may be target dependent or
-unstable (not backed by a fixed integer).
+spaces as "unstable", "non-integral", or "non-integral with external state"
+(or combinations of these) via the :ref:`datalayout string<langref_datalayout>`.
+
+The exact implications of these properties are target-specific, but the
+following IR semantics and restrictions to optimization passes apply:
+
+Unstable pointer representation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Pointers in this address space have an *unspecified* bitwise representation
+(i.e. not backed by a fixed integer). The bitwise pattern of such pointers is
+allowed to change in a target-specific way. For example, this could be a pointer
+type used with copying garbage collection where the garbage collector could
+update the pointer at any time in the collection sweep.
 
 ``inttoptr`` and ``ptrtoint`` instructions have the same semantics as for
 integral (i.e. normal) pointers in that they convert integers to and from
-corresponding pointer types, but there are additional implications to be
-aware of.  Because the bit-representation of a non-integral pointer may
-not be stable, two identical casts of the same operand may or may not
-return the same value.  Said differently, the conversion to or from the
-non-integral type depends on environmental state in an implementation
-defined manner.
+corresponding pointer types, but there are additional implications to be aware
+of.
 
+For "unstable" pointer representations, the bit-representation of the pointer
+may not be stable, so two identical casts of the same operand may or may not
+return the same value.  Said differently, the conversion to or from the
+"unstable" pointer type depends on environmental state in an implementation
+defined manner.
 If the frontend wishes to observe a *particular* value following a cast, the
 generated IR must fence with the underlying environment in an implementation
 defined manner. (In practice, this tends to require ``noinline`` routines for
 such operations.)
 
 From the perspective of the optimizer, ``inttoptr`` and ``ptrtoint`` for
-non-integral types are analogous to ones on integral types with one
+"unstable" pointer types are analogous to ones on integral types with one
 key exception: the optimizer may not, in general, insert new dynamic
 occurrences of such casts.  If a new cast is inserted, the optimizer would
 need to either ensure that a) all possible values are valid, or b)
 appropriate fencing is inserted.  Since the appropriate fencing is
 implementation defined, the optimizer can't do the latter.  The former is
 challenging as many commonly expected properties, such as
-``ptrtoint(v)-ptrtoint(v) == 0``, don't hold for non-integral types.
+``ptrtoint(v)-ptrtoint(v) == 0``, don't hold for "unstable" pointer types.
 Similar restrictions apply to intrinsics that might examine the pointer bits,
 such as :ref:`llvm.ptrmask<int_ptrmask>`.
 
-The alignment information provided by the frontend for a non-integral pointer
+The alignment information provided by the frontend for an "unstable" pointer
 (typically using attributes or metadata) must be valid for every possible
 representation of the pointer.
+
+Non-integral pointer representation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Pointers are not represented as just an address, but may instead include
+additional metadata such as bounds information or a temporal identifier.
+Examples include AMDGPU buffer descriptors with a 128-bit fat pointer and a
+32-bit offset, or CHERI capabilities that contain bounds, permissions and a
+type field (as well as an out-of-band validity bit, see next section).
+
+In most cases pointers with a non-integral representation behave exactly the
+same as an integral pointer, the only difference is that it is not possible to
+create a pointer just from an address unless all the metadata bits were
+also recreated correctly.
+
+"Non-integral" pointers also impose restrictions on transformation passes, but
+in general these are less restrictive than for "unstable" pointers. The main
+difference compared to integral pointers is that the address width of a
+non-integral pointer is not equal to the bitwise representation, so extracting
+the address needs to truncate to the index width of the pointer.
+
+Note: Currently all supported targets require that truncating the ``ptrtoint``
+result to address width yields the memory address of the pointer but this may
+not hold for all future targets so optimizations should not rely on this.
+
+Unlike "unstable" pointers, the bit-wise representation is stable and
+``ptrtoint(x)`` always yields a deterministic value.
+This means transformation passes are still permitted to insert new ``ptrtoint``
+instructions.
+
+Non-integral pointers with external state
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A special case of non-integral pointers is ones that include external state
+(such as implicit bounds information or a type tag) with a target-defined size.
+An example of such a type is a CHERI capability, where there is an additional
+validity bit that is part of all pointer-typed registers, but is located in
+memory at an implementation-defined address separate from the pointer itself.
+Another example would be a fat-pointer scheme where pointers remain plain
+integers, but the associated bounds are stored in an out-of-band table.
+
+The following restrictions apply to IR level optimization passes:
+
+The ``inttoptr`` instruction does not recreate the external state and therefore
+it is target dependent whether it can be used to create a dereferenceable
+pointer. In general passes should assume that the result of such an inttoptr
+is not dereferenceable. For example, on CHERI targets an ``inttoptr`` will
+yield a capability with the external state (the validity tag bit) set to zero,
+which will cause any dereference to trap.
+The ``ptrtoint`` instruction also only returns the "in-band" state and omits
+all external  state.
+These two properties mean that ``inttoptr(ptrtoint(x))`` cannot be folded to
+``x`` since the ``ptrtoint`` operation does not include the external state
+needed to reconstruct the original pointer and ``inttoptr`` cannot set it.
+
+When a ``store ptr addrspace(N) %p, ptr @dst`` of such a non-integral pointer
+is performed, the external metadata is also stored to an implementation-defined
+location. Similarly, a ``%val = load ptr addrspace(N), ptr @dst`` will fetch the
+external metadata and make it available for all uses of ``%val``.
+Similarly, the ``llvm.memcpy`` and ``llvm.memmove`` intrinsics also transfer the
+external state. This is essential to allow frontends to efficiently emit copies
+of structures containing such pointers, since expanding all these copies as
+individual loads and stores would affect compilation speed and inhibit
+optimizations.
+
+Notionally, these external bits are part of the pointer, but since
+``inttoptr`` / ``ptrtoint``` only operate on the "in-band" bits of the pointer
+and the external bits are not explicitly exposed, they are not included in the
+size specified in the :ref:`datalayout string<langref_datalayout>`.
+
+When a pointer type has external state, all roundtrips via memory must
+be performed as loads and stores of the correct type since stores of other
+types may not propagate the external data.
+Therefore it is not legal to convert an existing load/store (or a ``llvm.memcpy`` /
+``llvm.memmove`` intrinsic) of pointer types with external state to a load/store
+of an integer type with same bitwidth, as that may drop the external state.
+
 
 .. _globalvars:
 
@@ -3167,8 +3255,8 @@ as follows:
 ``A<address space>``
     Specifies the address space of objects created by '``alloca``'.
     Defaults to the default address space of 0.
-``p[n]:<size>:<abi>[:<pref>[:<idx>]]``
-    This specifies the properties of a pointer in address space ``n``.
+``p[<flags>][<as>]:<size>:<abi>[:<pref>[:<idx>]]``
+    This specifies the properties of a pointer in address space ``as``.
     The ``<size>`` parameter specifies the size of the bitwise representation.
     For :ref:`non-integral pointers <nointptrtype>` the representation size may
     be larger than the address width of the underlying address space (e.g. to
@@ -3181,9 +3269,14 @@ as follows:
     default index size is equal to the pointer size.
     The index size also specifies the width of addresses in this address space.
     All sizes are in bits.
-    The address space, ``n``, is optional, and if not specified,
-    denotes the default address space 0. The value of ``n`` must be
-    in the range [1,2^24).
+    The address space, ``<as>``, is optional, and if not specified, denotes the
+    default address space 0. The value of ``<as>`` must be in the range [1,2^24).
+    The optional ``<flags>`` are used to specify properties of pointers in this
+    address space: the character ``u`` marks pointers as having an unstable
+    representation, ``n`` marks pointers as non-integral (i.e. having
+    additional metadata), ``e`` marks pointers having external state
+    (``n`` must also be set). See :ref:`Non-Integral Pointer Types <nointptrtype>`.
+
 ``i<size>:<abi>[:<pref>]``
     This specifies the alignment for an integer type of a given bit
     ``<size>``. The value of ``<size>`` must be in the range [1,2^24).
@@ -3236,9 +3329,11 @@ as follows:
     this set are considered to support most general arithmetic operations
     efficiently.
 ``ni:<address space0>:<address space1>:<address space2>...``
-    This specifies pointer types with the specified address spaces
-    as :ref:`Non-Integral Pointer Type <nointptrtype>` s.  The ``0``
-    address space cannot be specified as non-integral.
+    This marks pointer types with the specified address spaces
+    as :ref:`non-integral and unstable <nointptrtype>`.
+    The ``0`` address space cannot be specified as non-integral.
+    It is only supported for backwards compatibility, the flags of the ``p``
+    specifier should be used instead for new code.
 
 ``<abi>`` is a lower bound on what is required for a type to be considered
 aligned. This is used in various places, such as:
