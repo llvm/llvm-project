@@ -749,22 +749,22 @@ The ``inttoptr`` instruction does not recreate the external state and therefore
 it is target dependent whether it can be used to create a dereferenceable
 pointer. In general passes should assume that the result of such an inttoptr
 is not dereferenceable. For example, on CHERI targets an ``inttoptr`` will
-yield a capability the external state (the validity tag bit) set to zero,
+yield a capability with the external state (the validity tag bit) set to zero,
 which will cause any dereference to trap.
-The ``ptrtotint`` instruction also only returns the "in-band" state and omit
+The ``ptrtoint`` instruction also only returns the "in-band" state and omits
 all external  state.
 These two properties mean that ``inttoptr(ptrtoint(x))`` cannot be folded to
 ``x`` since the ``ptrtoint`` operation does not include the external state
 needed to reconstruct the original pointer and ``inttoptr`` cannot set it.
 
-When a ``store ptr addrspace(N) %p, ptr @dst`` of such a non-integral pointers
-is performed, the external metadata is also stored to the implementation-defined
+When a ``store ptr addrspace(N) %p, ptr @dst`` of such a non-integral pointer
+is performed, the external metadata is also stored to an implementation-defined
 location. Similarly, a ``%val = load ptr addrspace(N), ptr @dst`` will fetch the
 external metadata and make it available for all uses of ``%val``.
 Similarly, the ``llvm.memcpy`` and ``llvm.memmove`` intrinsics also transfer the
-external state. This is essential to allow frontends to efficiently emit of
-copies of structures containing such pointers, since expanding all these copies
-as individual loads and stores would affect compilation speed and inhibit
+external state. This is essential to allow frontends to efficiently emit copies
+of structures containing such pointers, since expanding all these copies as
+individual loads and stores would affect compilation speed and inhibit
 optimizations.
 
 Notionally, these external bits are part of the pointer, but since
