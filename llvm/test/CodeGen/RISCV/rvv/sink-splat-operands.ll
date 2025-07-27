@@ -2087,13 +2087,13 @@ define void @sink_splat_fma_scalable(ptr noalias nocapture %a, ptr noalias nocap
 ; CHECK-NEXT:    mv a6, a0
 ; CHECK-NEXT:    mv a7, a1
 ; CHECK-NEXT:    mv t0, a3
+; CHECK-NEXT:    vsetvli t1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:  .LBB34_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vl1re32.v v8, (a6)
 ; CHECK-NEXT:    vl1re32.v v9, (a7)
 ; CHECK-NEXT:    sub t0, t0, a4
 ; CHECK-NEXT:    add a7, a7, a2
-; CHECK-NEXT:    vsetvli t1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmacc.vf v9, fa0, v8
 ; CHECK-NEXT:    vs1r.v v9, (a6)
 ; CHECK-NEXT:    add a6, a6, a2
@@ -2187,13 +2187,13 @@ define void @sink_splat_fma_commute_scalable(ptr noalias nocapture %a, ptr noali
 ; CHECK-NEXT:    mv a6, a0
 ; CHECK-NEXT:    mv a7, a1
 ; CHECK-NEXT:    mv t0, a3
+; CHECK-NEXT:    vsetvli t1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:  .LBB35_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vl1re32.v v8, (a6)
 ; CHECK-NEXT:    vl1re32.v v9, (a7)
 ; CHECK-NEXT:    sub t0, t0, a4
 ; CHECK-NEXT:    add a7, a7, a2
-; CHECK-NEXT:    vsetvli t1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmacc.vf v9, fa0, v8
 ; CHECK-NEXT:    vs1r.v v9, (a6)
 ; CHECK-NEXT:    add a6, a6, a2
