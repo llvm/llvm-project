@@ -251,8 +251,9 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
       }
       OperandsWithMask.push_back(EdgeMask);
     }
-    PHINode *IRPhi = cast<PHINode>(PhiR->getUnderlyingValue());
-    auto *Blend = new VPBlendRecipe(IRPhi, OperandsWithMask);
+    PHINode *IRPhi = cast_or_null<PHINode>(PhiR->getUnderlyingValue());
+    auto *Blend =
+        new VPBlendRecipe(IRPhi, OperandsWithMask, PhiR->getDebugLoc());
     Builder.insert(Blend);
     PhiR->replaceAllUsesWith(Blend);
     PhiR->eraseFromParent();
