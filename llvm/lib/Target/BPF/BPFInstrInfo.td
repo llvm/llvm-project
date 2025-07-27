@@ -61,6 +61,7 @@ def BPFNoMovsx : Predicate<"!Subtarget->hasMovsx()">;
 def BPFNoBswap : Predicate<"!Subtarget->hasBswap()">;
 def BPFHasStoreImm : Predicate<"Subtarget->hasStoreImm()">;
 def BPFHasLoadAcqStoreRel : Predicate<"Subtarget->hasLoadAcqStoreRel()">;
+def BPFHasGotox : Predicate<"Subtarget->hasGotox()">;
 
 class ImmediateAsmOperand<string name> : AsmOperandClass {
   let Name = name;
@@ -294,8 +295,10 @@ defm JSLE : J<BPF_JSLE, "s<=", BPF_CC_LE, BPF_CC_LE_32>;
 defm JSET : J<BPF_JSET, "&", NoCond, NoCond>;
 def JCOND : JMP_JCOND<BPF_JCOND, "may_goto", []>;
 
-let isIndirectBranch = 1, isBarrier = 1 in {
-  def JX : JMP_IND<BPF_JA, "gotox", [(brind i64:$dst)]>;
+let Predicates = [BPFHasGotox] in {
+  let isIndirectBranch = 1, isBarrier = 1 in {
+    def JX : JMP_IND<BPF_JA, "gotox", [(brind i64:$dst)]>;
+  }
 }
 }
 

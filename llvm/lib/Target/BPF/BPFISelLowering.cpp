@@ -74,10 +74,14 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
   setOperationAction(ISD::BRCOND, MVT::Other, Expand);
 
+  if (!STI.hasGotox())
+    setOperationAction(ISD::BRIND, MVT::Other, Expand);
+
   setOperationAction(ISD::TRAP, MVT::Other, Custom);
 
   setOperationAction({ISD::GlobalAddress, ISD::ConstantPool}, MVT::i64, Custom);
-  setOperationAction({ISD::JumpTable, ISD::BlockAddress}, MVT::i64, Custom);
+  if (STI.hasGotox())
+    setOperationAction({ISD::JumpTable, ISD::BlockAddress}, MVT::i64, Custom);
 
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64, Custom);
   setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
