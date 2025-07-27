@@ -466,28 +466,27 @@ void VPlanTransforms::prepareForVectorization(
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
 
-  VPBlockBase *HeaderVPB = Plan.getEntry()->getSingleSuccessor();
-  canonicalHeaderAndLatch(HeaderVPB, VPDT);
-  VPBlockBase *LatchVPB = HeaderVPB->getPredecessors()[1];
+  auto *HeaderVPBB = cast<VPBasicBlock>(Plan.getEntry()->getSingleSuccessor());
+  canonicalHeaderAndLatch(HeaderVPBB, VPDT);
+  auto *LatchVPBB = cast<VPBasicBlock>(HeaderVPBB->getPredecessors()[1]);
 
   VPBasicBlock *VecPreheader = Plan.createVPBasicBlock("vector.ph");
   VPBlockUtils::insertBlockAfter(VecPreheader, Plan.getEntry());
 
   VPBasicBlock *MiddleVPBB = Plan.createVPBasicBlock("middle.block");
-  // The canonical LatchVPB has the header block as last successor. If it has
+  // The canonical LatchVPBB has the header block as last successor. If it has
   // another successor, this successor is an exit block - insert middle block on
   // its edge. Otherwise, add middle block as another successor retaining header
   // as last.
-  if (LatchVPB->getNumSuccessors() == 2) {
-    VPBlockBase *LatchExitVPB = LatchVPB->getSuccessors()[0];
-    VPBlockUtils::insertOnEdge(LatchVPB, LatchExitVPB, MiddleVPBB);
+  if (LatchVPBB->getNumSuccessors() == 2) {
+    VPBlockBase *LatchExitVPB = LatchVPBB->getSuccessors()[0];
+    VPBlockUtils::insertOnEdge(LatchVPBB, LatchExitVPB, MiddleVPBB);
   } else {
-    VPBlockUtils::connectBlocks(LatchVPB, MiddleVPBB);
-    LatchVPB->swapSuccessors();
+    VPBlockUtils::connectBlocks(LatchVPBB, MiddleVPBB);
+    LatchVPBB->swapSuccessors();
   }
 
-  addCanonicalIVRecipes(Plan, cast<VPBasicBlock>(HeaderVPB),
-                        cast<VPBasicBlock>(LatchVPB), InductionTy, IVDL);
+  addCanonicalIVRecipes(Plan, HeaderVPBB, LatchVPBB, InductionTy, IVDL);
 
   [[maybe_unused]] bool HandledUncountableEarlyExit = false;
   // Disconnect all early exits from the loop leaving it with a single exit from
@@ -503,8 +502,7 @@ void VPlanTransforms::prepareForVectorization(
         assert(!HandledUncountableEarlyExit &&
                "can handle exactly one uncountable early exit");
         handleUncountableEarlyExit(cast<VPBasicBlock>(Pred), EB, Plan,
-                                   cast<VPBasicBlock>(HeaderVPB),
-                                   cast<VPBasicBlock>(LatchVPB), Range);
+                                   HeaderVPBB, LatchVPBB, Range);
         HandledUncountableEarlyExit = true;
       } else {
         for (VPRecipeBase &R : EB->phis())
