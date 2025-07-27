@@ -102,6 +102,12 @@ New Compiler Flags
 ------------------
 - New option ``-fno-sanitize-annotate-debug-info-traps`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
 
+New Compiler Builtins
+---------------------
+
+- The new ``__has_target_builtin`` macro can be used to check if a builtin is available
+  on the current target.
+
 Deprecated Compiler Flags
 -------------------------
 

@@ -357,6 +357,7 @@ void Preprocessor::RegisterBuiltinMacros() {
   Ident__has_builtin = RegisterBuiltinMacro("__has_builtin");
   Ident__has_constexpr_builtin =
       RegisterBuiltinMacro("__has_constexpr_builtin");
+  Ident__has_target_builtin = RegisterBuiltinMacro("__has_target_builtin");
   Ident__has_attribute = RegisterBuiltinMacro("__has_attribute");
   if (!getLangOpts().CPlusPlus)
     Ident__has_c_attribute = RegisterBuiltinMacro("__has_c_attribute");
@@ -1752,16 +1753,18 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
                                            diag::err_feature_check_malformed);
         return II && HasExtension(*this, II->getName());
       });
-  } else if (II == Ident__has_builtin) {
+  } else if (II == Ident__has_builtin || II == Ident__has_target_builtin) {
+    bool IsHasTargetBuiltin = II == Ident__has_target_builtin;
     EvaluateFeatureLikeBuiltinMacro(
         OS, Tok, II, *this, false,
-        [this](Token &Tok, bool &HasLexedNextToken) -> int {
+        [this, IsHasTargetBuiltin](Token &Tok, bool &HasLexedNextToken) -> int {
           IdentifierInfo *II = ExpectFeatureIdentifierInfo(
               Tok, *this, diag::err_feature_check_malformed);
           if (!II)
             return false;
-          else if (II->getBuiltinID() != 0) {
-            switch (II->getBuiltinID()) {
+          unsigned BuiltinID = II->getBuiltinID();
+          if (BuiltinID != 0) {
+            switch (BuiltinID) {
             case Builtin::BI__builtin_cpu_is:
               return getTargetInfo().supportsCpuIs();
             case Builtin::BI__builtin_cpu_init:
@@ -1774,8 +1777,14 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
               // usual allocation and deallocation functions. Required by libc++
               return 201802;
             default:
+              // __has_target_builtin should return false for aux builtins.
+              // isAuxBuiltinID only returns true if the builtin is
+              // supported by the aux target alone.
+              if (IsHasTargetBuiltin &&
+                  getBuiltinInfo().isAuxBuiltinID(BuiltinID))
+                return false;
               return Builtin::evaluateRequiredTargetFeatures(
-                  getBuiltinInfo().getRequiredFeatures(II->getBuiltinID()),
+                  getBuiltinInfo().getRequiredFeatures(BuiltinID),
                   getTargetInfo().getTargetOpts().FeatureMap);
             }
             return true;
