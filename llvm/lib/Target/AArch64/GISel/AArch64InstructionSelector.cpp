@@ -352,7 +352,7 @@ private:
   MachineInstr *emitConditionalComparison(Register LHS, Register RHS,
                                           CmpInst::Predicate CC,
                                           AArch64CC::CondCode Predicate,
-                                          AArch64CC::CondCode OutCC,
+                                          AArch64CC::CondCode &OutCC,
                                           MachineIRBuilder &MIB) const;
   MachineInstr *emitConjunctionRec(Register Val, AArch64CC::CondCode &OutCC,
                                    bool Negate, Register CCOp,
@@ -4868,16 +4868,61 @@ static bool canEmitConjunction(Register Val, bool &CanNegate, bool &MustBeFirst,
 
 MachineInstr *AArch64InstructionSelector::emitConditionalComparison(
     Register LHS, Register RHS, CmpInst::Predicate CC,
-    AArch64CC::CondCode Predicate, AArch64CC::CondCode OutCC,
+    AArch64CC::CondCode Predicate, AArch64CC::CondCode &OutCC,
     MachineIRBuilder &MIB) const {
   auto &MRI = *MIB.getMRI();
   LLT OpTy = MRI.getType(LHS);
   unsigned CCmpOpc;
   std::optional<ValueAndVReg> C;
+  bool Adjusted = false;
   if (CmpInst::isIntPredicate(CC)) {
     assert(OpTy.getSizeInBits() == 32 || OpTy.getSizeInBits() == 64);
     C = getIConstantVRegValWithLookThrough(RHS, MRI);
-    if (!C || C->Value.sgt(31) || C->Value.slt(-31))
+    if (!C) {
+      CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWr : AArch64::CCMPXr;
+    } else if (C->Value.getZExtValue() == 32 &&
+               (CC == CmpInst::ICMP_SLT || CC == CmpInst::ICMP_SGE ||
+                CC == CmpInst::ICMP_ULT || CC == CmpInst::ICMP_UGE)) {
+      CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWi : AArch64::CCMPXi;
+      switch (CC) {
+      case CmpInst::ICMP_SLT:
+        OutCC = AArch64CC::LE;
+        break;
+      case CmpInst::ICMP_SGE:
+        OutCC = AArch64CC::GT;
+        break;
+      case CmpInst::ICMP_ULT:
+        OutCC = AArch64CC::LS;
+        break;
+      case CmpInst::ICMP_UGE:
+        OutCC = AArch64CC::HI;
+        break;
+      default:
+        llvm_unreachable("Cannot adjust 32 to 31");
+      }
+      Adjusted = true;
+    } else if (C->Value.getSExtValue() == -32 &&
+               (CC == CmpInst::ICMP_SLE || CC == CmpInst::ICMP_SGT ||
+                CC == CmpInst::ICMP_ULE || CC == CmpInst::ICMP_UGT)) {
+      CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMNWi : AArch64::CCMNXi;
+      switch (CC) {
+      case CmpInst::ICMP_SLE:
+        OutCC = AArch64CC::LT;
+        break;
+      case CmpInst::ICMP_SGT:
+        OutCC = AArch64CC::GE;
+        break;
+      case CmpInst::ICMP_ULE:
+        OutCC = AArch64CC::LO;
+        break;
+      case CmpInst::ICMP_UGT:
+        OutCC = AArch64CC::HS;
+        break;
+      default:
+        llvm_unreachable("Cannot adjust -32 to -31");
+      }
+      Adjusted = true;
+    } else if (C->Value.sgt(31) || C->Value.slt(-31))
       CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWr : AArch64::CCMPXr;
     else if (C->Value.ule(31))
       CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWi : AArch64::CCMPXi;
@@ -4905,7 +4950,9 @@ MachineInstr *AArch64InstructionSelector::emitConditionalComparison(
   unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(InvOutCC);
   auto CCmp =
       MIB.buildInstr(CCmpOpc, {}, {LHS});
-  if (CCmpOpc == AArch64::CCMPWi || CCmpOpc == AArch64::CCMPXi)
+  if (Adjusted) {
+    CCmp.addImm(31);
+  } else if (CCmpOpc == AArch64::CCMPWi || CCmpOpc == AArch64::CCMPXi)
     CCmp.addImm(C->Value.getZExtValue());
   else if (CCmpOpc == AArch64::CCMNWi || CCmpOpc == AArch64::CCMNXi)
     CCmp.addImm(C->Value.abs().getZExtValue());
