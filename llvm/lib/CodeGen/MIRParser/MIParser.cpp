@@ -3482,6 +3482,11 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
       if (parseMDNode(AAInfo.NoAlias))
         return true;
       break;
+    case MIToken::md_noalias_addrspace:
+      lex();
+      if (parseMDNode(AAInfo.NoAliasAddrSpace))
+        return true;
+      break;
     case MIToken::md_range:
       lex();
       if (parseMDNode(Range))
