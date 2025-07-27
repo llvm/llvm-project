@@ -106,7 +106,8 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
   Name.clear();
 }
 
-static HMODULE LoadSystemModuleSecure(LPCWSTR lpModuleName) {
+namespace llvm::sys::windows {
+HMODULE loadSystemModuleSecure(LPCWSTR lpModuleName) {
   // Ensure we load indeed a module from system32 path.
   // As per GetModuleHandle documentation:
   // "If lpModuleName does not include a path and there is more than one loaded
@@ -126,16 +127,17 @@ static HMODULE LoadSystemModuleSecure(LPCWSTR lpModuleName) {
   } while (Size > Buf.size());
 
   Buf.truncate(Size);
-  Buf.push_back(TEXT('\\'));
+  Buf.push_back(L'\\');
   Buf.append(lpModuleName, lpModuleName + std::wcslen(lpModuleName));
   Buf.push_back(0);
 
   return ::GetModuleHandleW(Buf.data());
 }
+} // namespace llvm::sys::windows
 
 SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
-  HMODULE kernelMod = LoadSystemModuleSecure(TEXT("kernel32.dll"));
-  if (kernelMod) {
+  HMODULE kernelM = llvm::sys::windows::loadSystemModuleSecure(L"kernel32.dll");
+  if (kernelM) {
     // SetThreadInformation is only available on Windows 8 and later. Since we
     // still support compilation on Windows 7, we load the function dynamically.
     typedef BOOL(WINAPI * SetThreadInformation_t)(
@@ -143,9 +145,8 @@ SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
         _In_reads_bytes_(ThreadInformationSize) PVOID ThreadInformation,
         ULONG ThreadInformationSize);
     static const auto pfnSetThreadInformation =
-        (SetThreadInformation_t)::GetProcAddress(kernelMod,
+        (SetThreadInformation_t)::GetProcAddress(kernelM,
                                                  "SetThreadInformation");
-
     if (pfnSetThreadInformation) {
       auto setThreadInformation = [](ULONG ControlMaskAndStateMask) {
         THREAD_POWER_THROTTLING_STATE state{};
