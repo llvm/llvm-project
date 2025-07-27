@@ -2959,26 +2959,6 @@ static bool isX86CCSigned(X86::CondCode X86CC) {
   }
 }
 
-/// Return true if the condition is an unsigned comparison operation.
-static bool isX86CCUnsigned(X86::CondCode X86CC) {
-  switch (X86CC) {
-  case X86::COND_B:
-  case X86::COND_A:
-  case X86::COND_BE:
-  case X86::COND_AE:
-    return true;
-  default:
-    llvm_unreachable("Invalid integer condition!");
-  case X86::COND_E:
-  case X86::COND_NE:
-  case X86::COND_G:
-  case X86::COND_GE:
-  case X86::COND_L:
-  case X86::COND_LE:
-    return false;
-  }
-}
-
 static X86::CondCode TranslateIntegerX86CC(ISD::CondCode SetCCOpcode) {
   switch (SetCCOpcode) {
   // clang-format off
@@ -23508,9 +23488,9 @@ static SDValue EmitCmp(SDValue Op0, SDValue Op1, X86::CondCode X86CC,
     Op1 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op1);
   }
 
-  // Try to shrink signed i64 compares if the inputs are representable as signed
+  // Try to shrink all i64 compares if the inputs are representable as signed
   // i32.
-  if (CmpVT == MVT::i64 && !isX86CCUnsigned(X86CC) &&
+  if (CmpVT == MVT::i64 &&
       Op0.hasOneUse() && // Hacky way to not break CSE opportunities with sub.
       DAG.ComputeNumSignBits(Op1) > 32 && DAG.ComputeNumSignBits(Op0) > 32) {
     CmpVT = MVT::i32;
