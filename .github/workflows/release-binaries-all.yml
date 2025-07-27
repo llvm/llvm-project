@@ -92,7 +92,7 @@ jobs:
           - ubuntu-22.04-arm
           - macos-13
           - macos-14
-          - windows-2019
+          - windows-2022
 
     uses: ./.github/workflows/release-binaries.yml
     with:

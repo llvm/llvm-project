@@ -161,6 +161,7 @@ jobs:
         echo "build-flang=$build_flang" >> $GITHUB_OUTPUT
         case "${{ inputs.runs-on }}" in
           ubuntu-22.04*)
+          windows-2022)
             build_runs_on="depot-${{ inputs.runs-on }}-16"
             test_runs_on=$build_runs_on
             ;;
@@ -179,10 +180,6 @@ jobs:
               build_runs_on="depot-macos-14"
             fi
             test_runs_on="${{ inputs.runs-on }}"
-            ;;
-          windows-2019)
-            build_runs_on="llvm-premerge-windows-runners"
-            test_runs_on="$build_runs_on"
             ;;
           *)
             test_runs_on="${{ inputs.runs-on }}"
