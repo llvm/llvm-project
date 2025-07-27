@@ -197,6 +197,13 @@ Comments:
    clang-repl> // Comments in Clang-Repl
    clang-repl> /* Comments in Clang-Repl */
 
+Undo:
+=====
+
+.. code-block:: text
+
+   clang-repl>%undo
+
 
 Closure or Termination:
 =======================
