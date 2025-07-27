@@ -47,7 +47,6 @@ namespace llvm {
 
 class CodeViewContext;
 class MCAsmInfo;
-class MCDataFragment;
 class MCInst;
 class MCLabel;
 class MCObjectFileInfo;
@@ -175,8 +174,8 @@ private:
   /// for the LocalLabelVal and adds it to the map if needed.
   unsigned GetInstance(unsigned LocalLabelVal);
 
-  /// LLVM_BB_ADDR_MAP version to emit.
-  uint8_t BBAddrMapVersion = 2;
+  /// SHT_LLVM_BB_ADDR_MAP version to emit.
+  uint8_t BBAddrMapVersion = 3;
 
   /// The file name of the log file from the environment variable
   /// AS_SECURE_LOG_FILE.  Which must be set before the .secure_log_unique
@@ -333,8 +332,6 @@ private:
 
   void reportCommon(SMLoc Loc,
                     std::function<void(SMDiagnostic &, const SourceMgr *)>);
-
-  MCDataFragment *allocInitialFragment(MCSection &Sec);
 
   MCSymbolTableEntry &getSymbolTableEntry(StringRef Name);
 

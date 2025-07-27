@@ -1192,7 +1192,6 @@ def OpFuncRef : TEST_Op<"op_funcref"> {
   let description = [{
     The "test.op_funcref" is a test op with a reference to a function symbol.
   }];
-  let builders = [OpBuilder<(ins "::mlir::func::FuncOp":$function)>];
 }
 
 // Pattern add the argument plus a increasing static number hidden in
@@ -2036,7 +2035,7 @@ def IllegalOpWithRegion : TEST_Op<"illegal_op_with_region"> {
        OpBuilder::InsertionGuard g($_builder);
        Block *body = $_builder.createBlock(bodyRegion);
        $_builder.setInsertionPointToEnd(body);
-       $_builder.create<IllegalOpTerminator>($_state.location);
+       IllegalOpTerminator::create($_builder,$_state.location);
     }]>];
 }
 def IllegalOpWithRegionAnchor : TEST_Op<"illegal_op_with_region_anchor">;
@@ -2739,7 +2738,7 @@ def TestLinalgConvOp :
     static void regionBuilder(mlir::ImplicitLocOpBuilder &b, mlir::Block &block,
                               mlir::ArrayRef<mlir::NamedAttribute> attrs,
                               llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
-      b.create<mlir::linalg::YieldOp>(block.getArguments().back());
+      mlir::linalg::YieldOp::create(b,block.getArguments().back());
     }
 
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
@@ -2802,7 +2801,7 @@ def TestLinalgFillOp :
     static void regionBuilder(mlir::ImplicitLocOpBuilder &b, mlir::Block &block,
                               mlir::ArrayRef<mlir::NamedAttribute> attrs,
                               llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
-      b.create<mlir::linalg::YieldOp>(block.getArguments().back());
+      mlir::linalg::YieldOp::create(b,block.getArguments().back());
     }
 
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,

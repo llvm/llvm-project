@@ -2274,9 +2274,9 @@ void PPCAIXAsmPrinter::emitLinkage(const GlobalValue *GV,
 
 void PPCAIXAsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   // Setup CurrentFnDescSym and its containing csect.
-  MCSectionXCOFF *FnDescSec =
-      cast<MCSectionXCOFF>(getObjFileLowering().getSectionForFunctionDescriptor(
-          &MF.getFunction(), TM));
+  auto *FnDescSec = static_cast<MCSectionXCOFF *>(
+      getObjFileLowering().getSectionForFunctionDescriptor(&MF.getFunction(),
+                                                           TM));
   FnDescSec->setAlignment(Align(Subtarget->isPPC64() ? 8 : 4));
 
   CurrentFnDescSym = FnDescSec->getQualNameSymbol();
@@ -2425,8 +2425,7 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
   // Set the 4th byte of the mandatory field.
   FirstHalfOfMandatoryField |= TracebackTable::IsFunctionNamePresentMask;
 
-  const PPCRegisterInfo *RegInfo =
-      static_cast<const PPCRegisterInfo *>(Subtarget->getRegisterInfo());
+  const PPCRegisterInfo *RegInfo = Subtarget->getRegisterInfo();
   Register FrameReg = RegInfo->getFrameRegister(*MF);
   if (FrameReg == (Subtarget->isPPC64() ? PPC::X31 : PPC::R31))
     FirstHalfOfMandatoryField |= TracebackTable::IsAllocaUsedMask;
@@ -2670,9 +2669,9 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
     MCSymbol *EHInfoSym =
         TargetLoweringObjectFileXCOFF::getEHInfoTableSymbol(MF);
     MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(EHInfoSym, TOCType_EHBlock);
-    const MCSymbol *TOCBaseSym =
-        cast<MCSectionXCOFF>(getObjFileLowering().getTOCBaseSection())
-            ->getQualNameSymbol();
+    const MCSymbol *TOCBaseSym = static_cast<const MCSectionXCOFF *>(
+                                     getObjFileLowering().getTOCBaseSection())
+                                     ->getQualNameSymbol();
     const MCExpr *Exp =
         MCBinaryExpr::createSub(MCSymbolRefExpr::create(TOCEntry, Ctx),
                                 MCSymbolRefExpr::create(TOCBaseSym, Ctx), Ctx);
@@ -2789,7 +2788,7 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
     }
   }
 
-  MCSectionXCOFF *Csect = cast<MCSectionXCOFF>(
+  auto *Csect = static_cast<MCSectionXCOFF *>(
       getObjFileLowering().SectionForGlobal(GV, GVKind, TM));
 
   // Switch to the containing csect.
@@ -2870,9 +2869,9 @@ void PPCAIXAsmPrinter::emitFunctionDescriptor() {
   OutStreamer->emitValue(MCSymbolRefExpr::create(CurrentFnSym, OutContext),
                          PointerSize);
   // Emit TOC base address.
-  const MCSymbol *TOCBaseSym =
-      cast<MCSectionXCOFF>(getObjFileLowering().getTOCBaseSection())
-          ->getQualNameSymbol();
+  const MCSymbol *TOCBaseSym = static_cast<const MCSectionXCOFF *>(
+                                   getObjFileLowering().getTOCBaseSection())
+                                   ->getQualNameSymbol();
   OutStreamer->emitValue(MCSymbolRefExpr::create(TOCBaseSym, OutContext),
                          PointerSize);
   // Emit a null environment pointer.
@@ -2997,10 +2996,10 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
       Name += Prefix;
       Name += cast<MCSymbolXCOFF>(I.first.first)->getSymbolTableName();
       MCSymbol *S = OutContext.getOrCreateSymbol(Name);
-      TCEntry = cast<MCSectionXCOFF>(
+      TCEntry = static_cast<MCSectionXCOFF *>(
           getObjFileLowering().getSectionForTOCEntry(S, TM));
     } else {
-      TCEntry = cast<MCSectionXCOFF>(
+      TCEntry = static_cast<MCSectionXCOFF *>(
           getObjFileLowering().getSectionForTOCEntry(I.first.first, TM));
     }
     OutStreamer->switchSection(TCEntry);
@@ -3055,7 +3054,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
       return;
 
     SectionKind GOKind = getObjFileLowering().getKindForGlobal(GO, TM);
-    MCSectionXCOFF *Csect = cast<MCSectionXCOFF>(
+    auto *Csect = static_cast<MCSectionXCOFF *>(
         getObjFileLowering().SectionForGlobal(GO, GOKind, TM));
 
     Align GOAlign = getGVAlignment(GO, GO->getDataLayout());
@@ -3317,9 +3316,9 @@ void PPCAIXAsmPrinter::emitTTypeReference(const GlobalValue *GV,
       GlobalType = TOCType_GlobalExternal;
     MCSymbol *TypeInfoSym = TM.getSymbol(GV);
     MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(TypeInfoSym, GlobalType);
-    const MCSymbol *TOCBaseSym =
-        cast<MCSectionXCOFF>(getObjFileLowering().getTOCBaseSection())
-            ->getQualNameSymbol();
+    const MCSymbol *TOCBaseSym = static_cast<const MCSectionXCOFF *>(
+                                     getObjFileLowering().getTOCBaseSection())
+                                     ->getQualNameSymbol();
     auto &Ctx = OutStreamer->getContext();
     const MCExpr *Exp =
         MCBinaryExpr::createSub(MCSymbolRefExpr::create(TOCEntry, Ctx),
