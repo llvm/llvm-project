@@ -1513,21 +1513,17 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
 /// this is geared to catch the common case of a fixed length vsetvl in a single
 /// block loop when it could execute once in the preheader instead.
 void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
-  // Only works for either one predecessor, or two predecessors if it's a loop
-  if (MBB.pred_empty() && MBB.pred_size() > 2)
+  // We need a prepredecessor to move the VSETVLI to
+  if (MBB.pred_empty())
     return;
 
   if (!BlockInfo[MBB.getNumber()].Pred.isUnknown())
     return;
 
-  bool isLoop = false;
-
   MachineBasicBlock *UnavailablePred = nullptr;
   VSETVLIInfo AvailableInfo;
   MachineBasicBlock *PreviousPred = nullptr;
   for (MachineBasicBlock *P : MBB.predecessors()) {
-    isLoop |= (P == &MBB);
-
     const VSETVLIInfo &PredInfo = BlockInfo[P->getNumber()].Exit;
     if (PredInfo.isUnknown()) {
       if (UnavailablePred)
@@ -1536,9 +1532,6 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
     } else if (!AvailableInfo.isValid()) {
       AvailableInfo = PredInfo;
     } else if (AvailableInfo != PredInfo) {
-      if (!isLoop)
-        return;
-
       DemandedFields PREDemands;
       PREDemands.demandVTYPE();
 
@@ -1553,7 +1546,17 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
       }
     }
 
-    PreviousPred = P;
+    // Filter out loops
+    SmallVector<MachineBasicBlock *, 4> Preds = {MBB.predecessors().begin(),
+                                                MBB.predecessors().end()};
+    Preds.erase(std::remove_if(Preds.begin(), Preds.end(),
+                              [&](MachineBasicBlock *P) { return P == &MBB; }),
+                Preds.end());
+
+    // Only works for one Pred for now
+    if (Preds.size() != 1)
+      return;
+    PreviousPred = *Preds.begin();
   }
 
   // Unreachable, single pred, or full redundancy. Note that FRE is handled by
@@ -1570,7 +1573,7 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
     return;
 
   // Critical edge - TODO: consider splitting?
-  if (UnavailablePred->succ_size() != 1 && !isLoop)
+  if (UnavailablePred->succ_size() != 1)
     return;
 
   // If the AVL value is a register (other than our VLMAX sentinel),
