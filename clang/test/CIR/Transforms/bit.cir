@@ -25,6 +25,26 @@ module {
   // CHECK-NEXT:    cir.return %[[R]] : !u32i
   // CHECK-NEXT:  }
 
+  cir.func @fold_clz_zero_poison() -> !u32i {
+    %0 = cir.const #cir.int<0> : !u32i
+    %1 = cir.clz %0 poison_zero : !u32i
+    cir.return %1 : !u32i
+  }
+  // CHECK-LABEL: @fold_clz_zero_poison
+  // CHECK-NEXT:    %[[R:.+]] = cir.const #cir.poison : !u32i
+  // CHECK-NEXT:    cir.return %[[R]] : !u32i
+  // CHECK-NEXT:  }
+
+  cir.func @fold_clz_zero_no_poison() -> !u32i {
+    %0 = cir.const #cir.int<0> : !u32i
+    %1 = cir.clz %0 : !u32i
+    cir.return %1 : !u32i
+  }
+  // CHECK-LABEL: @fold_clz_zero_no_poison
+  // CHECK-NEXT:    %[[R:.+]] = cir.const #cir.int<32> : !u32i
+  // CHECK-NEXT:    cir.return %[[R]] : !u32i
+  // CHECK-NEXT:  }
+
   cir.func @fold_ctz() -> !u32i {
     %0 = cir.const #cir.int<2> : !u32i
     %1 = cir.ctz %0 : !u32i
@@ -32,6 +52,26 @@ module {
   }
   // CHECK-LABEL: @fold_ctz
   // CHECK-NEXT:    %[[R:.+]] = cir.const #cir.int<1> : !u32i
+  // CHECK-NEXT:    cir.return %[[R]] : !u32i
+  // CHECK-NEXT:  }
+
+  cir.func @fold_ctz_zero_poison() -> !u32i {
+    %0 = cir.const #cir.int<0> : !u32i
+    %1 = cir.ctz %0 poison_zero : !u32i
+    cir.return %1 : !u32i
+  }
+  // CHECK-LABEL: @fold_ctz_zero_poison
+  // CHECK-NEXT:    %[[R:.+]] = cir.const #cir.poison : !u32i
+  // CHECK-NEXT:    cir.return %[[R]] : !u32i
+  // CHECK-NEXT:  }
+
+  cir.func @fold_ctz_zero_no_poison() -> !u32i {
+    %0 = cir.const #cir.int<0> : !u32i
+    %1 = cir.ctz %0 : !u32i
+    cir.return %1 : !u32i
+  }
+  // CHECK-LABEL: @fold_ctz_zero_no_poison
+  // CHECK-NEXT:    %[[R:.+]] = cir.const #cir.int<32> : !u32i
   // CHECK-NEXT:    cir.return %[[R]] : !u32i
   // CHECK-NEXT:  }
 
@@ -80,6 +120,16 @@ module {
   // 4022250974 is 0xefbeadde
   // CHECK-NEXT:    %[[R:.+]] = cir.const #cir.int<4022250974> : !u32i
   // CHECK-NEXT:    cir.return %[[R]] : !u32i
+  // CHECK-NEXT:  }
+
+  cir.func @fold_input_poison() -> !s32i {
+    %0 = cir.const #cir.poison : !s32i
+    %1 = cir.clrsb %0 : !s32i
+    cir.return %1 : !s32i
+  }
+  // CHECK-LABEL: @fold_input_poison
+  // CHECK-NEXT:    %[[P:.+]] = cir.const #cir.poison : !s32i
+  // CHECK-NEXT:    cir.return %[[P]] : !s32i
   // CHECK-NEXT:  }
 
   cir.func @fold_rotate_input_all_zeros(%arg0 : !u32i) -> !u32i {
@@ -137,5 +187,25 @@ module {
   // 4260027374 is 0b1110_1111_1101_1110_1010_1101_1011_1110
   // CHECK-NEXT:    %[[R:.+]] = cir.const #cir.int<4024348094> : !u32i
   // CHECK-NEXT:    cir.return %[[R]] : !u32i
+  // CHECK-NEXT:  }
+
+  cir.func @fold_rotate_input_poison(%arg0 : !u32i) -> !u32i {
+    %0 = cir.const #cir.poison : !u32i
+    %1 = cir.rotate left %0, %arg0 : !u32i
+    cir.return %1 : !u32i
+  }
+  // CHECK-LABEL: @fold_rotate_input_poison
+  // CHECK-NEXT:    %[[P:.+]] = cir.const #cir.poison : !u32i
+  // CHECK-NEXT:    cir.return %[[P]] : !u32i
+  // CHECK-NEXT:  }
+
+  cir.func @fold_rotate_amount_poison(%arg0 : !u32i) -> !u32i {
+    %0 = cir.const #cir.poison : !u32i
+    %1 = cir.rotate left %arg0, %0 : !u32i
+    cir.return %1 : !u32i
+  }
+  // CHECK-LABEL: @fold_rotate_amount_poison
+  // CHECK-NEXT:    %[[P:.+]] = cir.const #cir.poison : !u32i
+  // CHECK-NEXT:    cir.return %[[P]] : !u32i
   // CHECK-NEXT:  }
 }
