@@ -886,11 +886,11 @@ static void addPltEntry(Ctx &ctx, PltSection &plt, GotPltSection &gotPlt,
   plt.addEntry(sym);
   gotPlt.addEntry(sym);
   if (sym.isPreemptible)
-    rel.addReloc({type, &gotPlt, sym.getGotPltOffset(ctx),
-                  DynamicReloc::AgainstSymbol, sym, 0, R_ADDEND});
+    rel.addReloc(
+        {type, &gotPlt, sym.getGotPltOffset(ctx), true, sym, 0, R_ADDEND});
   else
-    rel.addReloc({type, &gotPlt, sym.getGotPltOffset(ctx),
-                  DynamicReloc::AddendOnly, sym, 0, R_ABS});
+    rel.addReloc(
+        {type, &gotPlt, sym.getGotPltOffset(ctx), false, sym, 0, R_ABS});
 }
 
 void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
@@ -899,9 +899,8 @@ void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
 
   // If preemptible, emit a GLOB_DAT relocation.
   if (sym.isPreemptible) {
-    ctx.mainPart->relaDyn->addReloc({ctx.target->gotRel, ctx.in.got.get(), off,
-                                     DynamicReloc::AgainstSymbol, sym, 0,
-                                     R_ADDEND});
+    ctx.mainPart->relaDyn->addReloc(
+        {ctx.target->gotRel, ctx.in.got.get(), off, true, sym, 0, R_ADDEND});
     return;
   }
 
@@ -922,15 +921,13 @@ static void addGotAuthEntry(Ctx &ctx, Symbol &sym) {
   // If preemptible, emit a GLOB_DAT relocation.
   if (sym.isPreemptible) {
     ctx.mainPart->relaDyn->addReloc({R_AARCH64_AUTH_GLOB_DAT, ctx.in.got.get(),
-                                     off, DynamicReloc::AgainstSymbol, sym, 0,
-                                     R_ADDEND});
+                                     off, true, sym, 0, R_ADDEND});
     return;
   }
 
   // Signed GOT requires dynamic relocation.
   ctx.in.got->getPartition(ctx).relaDyn->addReloc(
-      {R_AARCH64_AUTH_RELATIVE, ctx.in.got.get(), off, DynamicReloc::AddendOnly,
-       sym, 0, R_ABS});
+      {R_AARCH64_AUTH_RELATIVE, ctx.in.got.get(), off, false, sym, 0, R_ABS});
 }
 
 static void addTpOffsetGotEntry(Ctx &ctx, Symbol &sym) {
@@ -1161,9 +1158,8 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
           sec->addReloc({expr, type, offset, addend, &sym});
           part.relrAuthDyn->relocs.push_back({sec, sec->relocs().size() - 1});
         } else {
-          part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset,
-                                  DynamicReloc::AddendOnly, sym, addend,
-                                  R_ABS});
+          part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset, false,
+                                  sym, addend, R_ABS});
         }
         return;
       }
