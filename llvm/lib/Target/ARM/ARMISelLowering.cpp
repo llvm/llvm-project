@@ -802,6 +802,12 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::BSWAP, VT, Expand);
   }
 
+  if (!Subtarget->isThumb1Only() && !Subtarget->hasMVEIntegerOps())
+    setOperationAction(ISD::SCMP, MVT::i32, Custom);
+
+  if (!Subtarget->hasMVEIntegerOps())
+    setOperationAction(ISD::UCMP, MVT::i32, Custom);
+
   setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
   setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
 
@@ -1626,6 +1632,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
 bool ARMTargetLowering::useSoftFloat() const {
   return Subtarget->useSoftFloat();
+}
+
+bool ARMTargetLowering::shouldExpandCmpUsingSelects(EVT VT) const {
+  return (!Subtarget->isThumb1Only() && VT.getSizeInBits() <= 32);
 }
 
 // FIXME: It might make sense to define the representative register class as the
@@ -10613,6 +10623,181 @@ SDValue ARMTargetLowering::LowerFP_TO_BF16(SDValue Op,
   return DAG.getBitcast(MVT::i32, Res);
 }
 
+SDValue ARMTargetLowering::LowerSCMP(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc dl(Op);
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+
+  // For the ARM assembly pattern:
+  // subs r0, r0, r1   ; subtract RHS from LHS and set flags
+  // movgt r0, #1      ; if LHS > RHS, set result to 1
+  // mvnlt r0, #0      ; if LHS < RHS, set result to -1 (mvn #0 = -1)
+  //                   ; if LHS == RHS, result remains 0 from the subs
+
+  // Optimization: if RHS is a subtraction against 0, use ADDC instead of SUBC
+  // Check if RHS is (0 - something), and if so use ADDC with LHS + something
+  SDValue SubResult, Flags;
+  bool CanUseAdd = false;
+  SDValue AddOperand;
+
+  // Check if RHS is a subtraction against 0: (0 - X)
+  if (RHS.getOpcode() == ISD::SUB) {
+    SDValue SubLHS = RHS.getOperand(0);
+    SDValue SubRHS = RHS.getOperand(1);
+
+    // Check if it's 0 - X
+    if (isNullConstant(SubLHS)) {
+      // For SCMP: only if X is known to never be INT_MIN (to avoid overflow)
+      if (RHS->getFlags().hasNoSignedWrap() || !DAG.computeKnownBits(SubRHS)
+                                                    .getSignedMinValue()
+                                                    .isMinSignedValue()) {
+        CanUseAdd = true;
+        AddOperand = SubRHS; // Replace RHS with X, so we do LHS + X instead of
+                             // LHS - (0 - X)
+      }
+    }
+  }
+
+  if (CanUseAdd) {
+    // Use ADDC: LHS + AddOperand (where RHS was 0 - AddOperand)
+    SDValue AddWithFlags = DAG.getNode(
+        ARMISD::ADDC, dl, DAG.getVTList(MVT::i32, FlagsVT), LHS, AddOperand);
+    SubResult = AddWithFlags.getValue(0); // The addition result
+    Flags = AddWithFlags.getValue(1);     // The flags from ADDS
+  } else {
+    // Use ARMISD::SUBC to generate SUBS instruction (subtract with flags)
+    SDValue SubWithFlags = DAG.getNode(
+        ARMISD::SUBC, dl, DAG.getVTList(MVT::i32, FlagsVT), LHS, RHS);
+    SubResult = SubWithFlags.getValue(0); // The subtraction result
+    Flags = SubWithFlags.getValue(1);     // The flags from SUBS
+  }
+
+  // Constants for conditional moves
+  SDValue One = DAG.getConstant(1, dl, MVT::i32);
+  SDValue MinusOne = DAG.getAllOnesConstant(dl, MVT::i32);
+
+  // movgt: if greater than, set to 1
+  SDValue GTCond = DAG.getConstant(ARMCC::GT, dl, MVT::i32);
+  SDValue Result1 =
+      DAG.getNode(ARMISD::CMOV, dl, MVT::i32, SubResult, One, GTCond, Flags);
+
+  // mvnlt: if less than, set to -1 (equivalent to mvn #0)
+  SDValue LTCond = DAG.getConstant(ARMCC::LT, dl, MVT::i32);
+  SDValue Result2 =
+      DAG.getNode(ARMISD::CMOV, dl, MVT::i32, Result1, MinusOne, LTCond, Flags);
+
+  if (Op.getValueType() != MVT::i32)
+    Result2 = DAG.getSExtOrTrunc(Result2, dl, Op.getValueType());
+
+  return Result2;
+}
+
+SDValue ARMTargetLowering::LowerUCMP(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc dl(Op);
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+
+  if (Subtarget->isThumb1Only()) {
+    // For Thumb unsigned comparison, use this sequence:
+    // subs r2, r0, r1   ; r2 = LHS - RHS, sets flags
+    // sbc r2, r2        ; r2 = r2 - r2 - !carry
+    // cmp r1, r0        ; compare RHS with LHS
+    // sbc r1, r1        ; r1 = r1 - r1 - !carry
+    // subs r0, r2, r1   ; r0 = r2 - r1 (final result)
+
+    // First subtraction: LHS - RHS
+    SDValue Sub1WithFlags = DAG.getNode(
+        ARMISD::SUBC, dl, DAG.getVTList(MVT::i32, FlagsVT), LHS, RHS);
+    SDValue Sub1Result = Sub1WithFlags.getValue(0);
+    SDValue Flags1 = Sub1WithFlags.getValue(1);
+
+    // SUBE: Sub1Result - Sub1Result - !carry
+    // This gives 0 if LHS >= RHS (unsigned), -1 if LHS < RHS (unsigned)
+    SDValue Sbc1 =
+        DAG.getNode(ARMISD::SUBE, dl, DAG.getVTList(MVT::i32, FlagsVT),
+                    Sub1Result, Sub1Result, Flags1);
+    SDValue Sbc1Result = Sbc1.getValue(0);
+
+    // Second comparison: RHS vs LHS (reverse comparison)
+    SDValue CmpFlags = DAG.getNode(ARMISD::CMP, dl, FlagsVT, RHS, LHS);
+
+    // SUBE: RHS - RHS - !carry
+    // This gives 0 if RHS <= LHS (unsigned), -1 if RHS > LHS (unsigned)
+    SDValue Sbc2 = DAG.getNode(
+        ARMISD::SUBE, dl, DAG.getVTList(MVT::i32, FlagsVT), RHS, RHS, CmpFlags);
+    SDValue Sbc2Result = Sbc2.getValue(0);
+
+    // Final subtraction: Sbc1Result - Sbc2Result (no flags needed)
+    SDValue Result =
+        DAG.getNode(ISD::SUB, dl, MVT::i32, Sbc1Result, Sbc2Result);
+    if (Op.getValueType() != MVT::i32)
+      Result = DAG.getSExtOrTrunc(Result, dl, Op.getValueType());
+
+    return Result;
+  }
+
+  // For the ARM assembly pattern (unsigned version):
+  // subs r0, r0, r1   ; subtract RHS from LHS and set flags
+  // movhi r0, #1      ; if LHS > RHS (unsigned), set result to 1
+  // mvnlo r0, #0      ; if LHS < RHS (unsigned), set result to -1
+  //                   ; if LHS == RHS, result remains 0 from the subs
+
+  // Optimization: if RHS is a subtraction against 0, use ADDC instead of SUBC
+  // Check if RHS is (0 - something), and if so use ADDC with LHS + something
+  SDValue SubResult, Flags;
+  bool CanUseAdd = false;
+  SDValue AddOperand;
+
+  // Check if RHS is a subtraction against 0: (0 - X)
+  if (RHS.getOpcode() == ISD::SUB) {
+    SDValue SubLHS = RHS.getOperand(0);
+    SDValue SubRHS = RHS.getOperand(1);
+
+    // Check if it's 0 - X
+    if (isNullConstant(SubLHS)) {
+      // For UCMP: only if X is known to never be zero
+      if (DAG.isKnownNeverZero(SubRHS)) {
+        CanUseAdd = true;
+        AddOperand = SubRHS; // Replace RHS with X, so we do LHS + X instead of
+                             // LHS - (0 - X)
+      }
+    }
+  }
+
+  if (CanUseAdd) {
+    // Use ADDC: LHS + AddOperand (where RHS was 0 - AddOperand)
+    SDValue AddWithFlags = DAG.getNode(
+        ARMISD::ADDC, dl, DAG.getVTList(MVT::i32, FlagsVT), LHS, AddOperand);
+    SubResult = AddWithFlags.getValue(0); // The addition result
+    Flags = AddWithFlags.getValue(1);     // The flags from ADDS
+  } else {
+    // Use ARMISD::SUBC to generate SUBS instruction (subtract with flags)
+    SDValue SubWithFlags = DAG.getNode(
+        ARMISD::SUBC, dl, DAG.getVTList(MVT::i32, FlagsVT), LHS, RHS);
+    SubResult = SubWithFlags.getValue(0); // The subtraction result
+    Flags = SubWithFlags.getValue(1);     // The flags from SUBS
+  }
+
+  // Constants for conditional moves
+  SDValue One = DAG.getConstant(1, dl, MVT::i32);
+  SDValue MinusOne = DAG.getAllOnesConstant(dl, MVT::i32);
+
+  // movhi: if higher (unsigned greater than), set to 1
+  SDValue HICond = DAG.getConstant(ARMCC::HI, dl, MVT::i32);
+  SDValue Result1 =
+      DAG.getNode(ARMISD::CMOV, dl, MVT::i32, SubResult, One, HICond, Flags);
+
+  // mvnlo: if lower (unsigned less than), set to -1
+  SDValue LOCond = DAG.getConstant(ARMCC::LO, dl, MVT::i32);
+  SDValue Result2 =
+      DAG.getNode(ARMISD::CMOV, dl, MVT::i32, Result1, MinusOne, LOCond, Flags);
+
+  if (Op.getValueType() != MVT::i32)
+    Result2 = DAG.getSExtOrTrunc(Result2, dl, Op.getValueType());
+
+  return Result2;
+}
+
 SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Lowering node: "; Op.dump());
   switch (Op.getOpcode()) {
@@ -10741,6 +10926,10 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FP_TO_BF16:
     return LowerFP_TO_BF16(Op, DAG);
   case ARMISD::WIN__DBZCHK: return SDValue();
+  case ISD::SCMP:
+    return LowerSCMP(Op, DAG);
+  case ISD::UCMP:
+    return LowerUCMP(Op, DAG);
   }
 }
 
