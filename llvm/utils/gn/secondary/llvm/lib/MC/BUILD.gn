@@ -58,7 +58,6 @@ static_library("MC") {
     "MCSchedule.cpp",
     "MCSection.cpp",
     "MCSectionCOFF.cpp",
-    "MCSectionDXContainer.cpp",
     "MCSectionELF.cpp",
     "MCSectionGOFF.cpp",
     "MCSectionMachO.cpp",
