@@ -227,7 +227,10 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
       (Options.UnsafeFPMath || isTargetDarwin()))
     HasNEONForFP = true;
 
-  if (isRWPI())
+  if (isRWPI() ||
+      (isTargetIOS() &&
+       ARM::parseArch(TargetTriple.getArchName()) == ARM::ArchKind::ARMV6K &&
+       TargetTriple.isOSVersionLT(3, 0)))
     ReserveR9 = true;
 
   // If MVEVectorCostFactor is still 0 (has not been set to anything else), default it to 2
