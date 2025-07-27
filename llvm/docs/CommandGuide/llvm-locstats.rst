@@ -13,7 +13,7 @@ DESCRIPTION
 
 :program:`llvm-locstats` works like a wrapper around :program:`llvm-dwarfdump`.
 It parses :program:`llvm-dwarfdump` statistics regarding debug location by
-pretty printing it in a more human readable way.
+pretty printing it in a more human-readable way.
 
 The line 0% shows the number and the percentage of DIEs with no location
 information, but the line 100% shows the information for DIEs where there is

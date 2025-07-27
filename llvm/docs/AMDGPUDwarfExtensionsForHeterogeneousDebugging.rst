@@ -1187,7 +1187,7 @@ There are five kinds of location storage:
   operations. It would specify the debugger information entry and byte offset
   provided by the operations.
 
-*Location descriptions are a language independent representation of addressing
+*Location descriptions are a language-independent representation of addressing
 rules.*
 
 * *They can be the result of evaluating a debugger information entry attribute
@@ -1523,8 +1523,8 @@ expression.
       states that relocation of references from one executable or shared object
       file to another must be performed by the consumer. But given that DR is
       defined as an offset in a ``.debug_info`` section this seems impossible.
-      If DR was defined as an implementation defined value, then the consumer
-      could choose to interpret the value in an implementation defined manner to
+      If DR was defined as an implementation-defined value, then the consumer
+      could choose to interpret the value in an implementation-defined manner to
       reference a debug information in another executable or shared object.
 
       In ELF the ``.debug_info`` section is in a non-\ ``PT_LOAD`` segment so
@@ -4188,7 +4188,7 @@ The register rules are:
     conversion as the bit contents of the register is simply interpreted as a
     value of the address.
 
-    GDB has a per register hook that allows a target specific conversion on a
+    GDB has a per register hook that allows a target-specific conversion on a
     register by register basis. It defaults to truncation of bigger registers,
     and to actually reading bytes from the next register (or reads out of bounds
     for the last register) for smaller registers. There are no GDB tests that
