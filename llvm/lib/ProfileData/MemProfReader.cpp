@@ -166,6 +166,39 @@ readMemInfoBlocksV4(const char *Ptr) {
   return Items;
 }
 
+llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
+readMemInfoBlocksV5(const char *Ptr) {
+  using namespace support;
+
+  const uint64_t NumItemsToRead =
+      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+
+  llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>> Items;
+  for (uint64_t I = 0; I < NumItemsToRead; I++) {
+    const uint64_t Id =
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+
+    MemInfoBlock MIB = *reinterpret_cast<const MemInfoBlock *>(Ptr);
+    Ptr += sizeof(MemInfoBlock);
+
+    if (MIB.AccessHistogramSize > 0) {
+      // The in-memory representation uses uint64_t for histogram entries.
+      MIB.AccessHistogram =
+          (uintptr_t)malloc(MIB.AccessHistogramSize * sizeof(uint64_t));
+      for (uint64_t J = 0; J < MIB.AccessHistogramSize; J++) {
+        // The on-disk format for V5 uses uint16_t which is then decoded to
+        // uint64_t.
+        const uint16_t Val =
+            endian::readNext<uint16_t, llvm::endianness::little, unaligned>(
+                Ptr);
+        ((uint64_t *)MIB.AccessHistogram)[J] = decodeHistogramCount(Val);
+      }
+    }
+    Items.push_back({Id, MIB});
+  }
+  return Items;
+}
+
 CallStackMap readStackInfo(const char *Ptr) {
   using namespace support;
 
@@ -658,6 +691,8 @@ RawMemProfReader::readMemInfoBlocks(const char *Ptr) {
     return readMemInfoBlocksV3(Ptr);
   if (MemprofRawVersion == 4ULL)
     return readMemInfoBlocksV4(Ptr);
+  if (MemprofRawVersion == 5ULL)
+    return readMemInfoBlocksV5(Ptr);
   llvm_unreachable(
       "Panic: Unsupported version number when reading MemInfoBlocks");
 }
