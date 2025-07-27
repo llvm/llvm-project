@@ -12,6 +12,8 @@ jobs:
     runs-on: depot-windows-2022-16
     if: github.repository_owner == 'llvm'
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1A
+        with:
+          ref: llvmorg-20.1.8
       - run: |
-          llvm\utils\release\build_llvm_release.bat --x64 --version 20.1.8 --local-python
+          llvm\utils\release\build_llvm_release.bat --x64 --version 20.1.8 --skip-checkout --local-python
