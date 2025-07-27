@@ -46,6 +46,12 @@ static bool isSectionPrefix(StringRef prefix, StringRef name) {
   return name.consume_front(prefix) && (name.empty() || name[0] == '.');
 }
 
+// If name starts with prefix, trim the prefix and return true.
+// Otherwise, leave the name unchanged and return false.
+static bool trimSectionPrefix(StringRef prefix, StringRef &name) {
+  return name.consume_front(prefix) && (name.empty() || name[0] == '.');
+}
+
 StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
   // This is for --emit-relocs and -r. If .text.foo is emitted as .text.bar, we
   // want to emit .rela.text.foo as .rela.text.bar for consistency (this is not
@@ -103,13 +109,42 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
     return ".text";
   }
 
-  for (StringRef v : {".data.rel.ro", ".data",       ".rodata",
-                      ".bss.rel.ro",  ".bss",        ".ldata",
-                      ".lrodata",     ".lbss",       ".gcc_except_table",
-                      ".init_array",  ".fini_array", ".tbss",
-                      ".tdata",       ".ARM.exidx",  ".ARM.extab",
-                      ".ctors",       ".dtors",      ".sbss",
-                      ".sdata",       ".srodata"})
+  // When zKeepDataSectionPrefix is true, keep .hot and .unlikely suffixes
+  // in data sections.
+  static constexpr StringRef dataSectionPrefixes[] = {
+      ".data.rel.ro", ".data", ".rodata", ".bss.rel.ro", ".bss",
+  };
+
+  for (auto [index, v] : llvm::enumerate(dataSectionPrefixes)) {
+    StringRef secName = s->name;
+    if (trimSectionPrefix(v, secName)) {
+      if (!ctx.arg.zKeepDataSectionPrefix)
+        return v;
+      if (isSectionPrefix(".hot", secName))
+        return s->name.substr(0, v.size() + 4);
+      if (isSectionPrefix(".unlikely", secName))
+        return s->name.substr(0, v.size() + 9);
+      // For .rodata,  a section could be`.rodata.cst<N>.hot.` for constant
+      // pool or  `rodata.str<N>.hot.` for string literals.
+      if (index == 2) {
+        // The reason to specialize this path is to spell out .rodata.hot and
+        // .rodata.unlikely as string literals for StringRef lifetime
+        // considerations. We cannot use the pattern above to get substr from
+        // section names.
+        if (s->name.ends_with(".hot."))
+          return ".rodata.hot";
+
+        if (s->name.ends_with(".unlikely."))
+          return ".rodata.unlikely";
+      }
+      return v;
+    }
+  }
+
+  for (StringRef v :
+       {".ldata", ".lrodata", ".lbss", ".gcc_except_table", ".init_array",
+        ".fini_array", ".tbss", ".tdata", ".ARM.exidx", ".ARM.extab", ".ctors",
+        ".dtors", ".sbss", ".sdata", ".srodata"})
     if (isSectionPrefix(v, s->name))
       return v;
 
