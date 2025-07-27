@@ -566,6 +566,12 @@ def right_identity_one_int: GICombineRule<
   (apply (GIReplaceReg $dst, $x))
 >;
 
+def right_identity_neg_one_int: GICombineRule<
+  (defs root:$dst),
+  (match (G_AND $dst, $x, -1)),
+  (apply (GIReplaceReg $dst, $x))
+>;
+
 def right_identity_one_fp: GICombineRule<
   (defs root:$dst),
   (match (G_FMUL $dst, $x, $y):$root,
@@ -2003,7 +2009,8 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         trunc_lshr_buildvector_fold,
                                         bitcast_bitcast_fold, fptrunc_fpext_fold,
                                         right_identity_neg_zero_fp,
-                                        right_identity_neg_one_fp]>;
+                                        right_identity_neg_one_fp,
+                                        right_identity_neg_one_int]>;
 
 def const_combines : GICombineGroup<[constant_fold_fp_ops, const_ptradd_to_i2p,
                                      overlapping_and, mulo_by_2, mulo_by_0,
