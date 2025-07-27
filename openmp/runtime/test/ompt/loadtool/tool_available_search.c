@@ -1,9 +1,10 @@
-// RUN: %clang %flags -shared -fPIC %s -o %T/first_tool.so
-// RUN: %clang %flags -DTOOL -DSECOND_TOOL -shared -fPIC %s -o %T/second_tool.so
-// RUN: %clang %flags -DTOOL -DTHIRD_TOOL -shared -fPIC %s -o %T/third_tool.so
+// RUN: mkdir -p %t.tool_dir
+// RUN: %clang %flags -shared -fPIC %s -o %t.tool_dir/first_tool.so
+// RUN: %clang %flags -DTOOL -DSECOND_TOOL -shared -fPIC %s -o %t.tool_dir/second_tool.so
+// RUN: %clang %flags -DTOOL -DTHIRD_TOOL -shared -fPIC %s -o %t.tool_dir/third_tool.so
 // RUN: %libomp-compile -DCODE
-// RUN: env OMP_TOOL_LIBRARIES=%T/non_existing_file.so:%T/first_tool.so:%T/second_tool.so:%T/third_tool.so \
-// RUN: OMP_TOOL_VERBOSE_INIT=stdout %libomp-run | FileCheck %s -DPARENTPATH=%T
+// RUN: env OMP_TOOL_LIBRARIES=%t.tool_dir/non_existing_file.so:%t.tool_dir/first_tool.so:%t.tool_dir/second_tool.so:%t.tool_dir/third_tool.so \
+// RUN: OMP_TOOL_VERBOSE_INIT=stdout %libomp-run | FileCheck %s -DPARENTPATH=%t.tool_dir
 
 // REQUIRES: ompt
 // XFAIL: darwin

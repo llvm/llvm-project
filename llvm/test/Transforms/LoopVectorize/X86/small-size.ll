@@ -39,7 +39,7 @@ define void @example1() optsize {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[TMP7:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[TMP7:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[TMP6:%.*]]
 ; CHECK:       6:
@@ -418,7 +418,7 @@ define void @example23b(ptr noalias nocapture %src, ptr noalias nocapture %dst) 
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[TMP5:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[TMP5:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[TMP4:%.*]]
 ; CHECK:       4:

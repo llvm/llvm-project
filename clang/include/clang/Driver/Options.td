@@ -2597,6 +2597,16 @@ def fsanitize_undefined_trap_on_error
 def fno_sanitize_undefined_trap_on_error
     : Flag<["-"], "fno-sanitize-undefined-trap-on-error">, Group<f_clang_Group>,
       Alias<fno_sanitize_trap_EQ>, AliasArgs<["undefined"]>;
+defm sanitize_debug_trap_reasons
+    : BoolFOption<
+          "sanitize-debug-trap-reasons",
+          CodeGenOpts<"SanitizeDebugTrapReasons">, DefaultTrue,
+          PosFlag<SetTrue, [], [ClangOption, CC1Option],
+                  "Annotate trap blocks in debug info with UBSan trap reasons">,
+          NegFlag<SetFalse, [], [ClangOption, CC1Option],
+                  "Do not annotate trap blocks in debug info with UBSan trap "
+                  "reasons">>;
+
 defm sanitize_minimal_runtime : BoolOption<"f", "sanitize-minimal-runtime",
   CodeGenOpts<"SanitizeMinimalRuntime">, DefaultFalse,
   PosFlag<SetTrue>,

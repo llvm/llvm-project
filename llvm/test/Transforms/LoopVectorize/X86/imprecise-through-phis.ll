@@ -91,10 +91,10 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; SSE:       middle.block:
 ; SSE-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x double> [[PREDPHI3]], [[PREDPHI]]
 ; SSE-NEXT:    [[TMP11:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[BIN_RDX]])
-; SSE-NEXT:    br i1 true, label [[DONE:%.*]], label [[SCALAR_PH]]
+; SSE-NEXT:    br label [[DONE:%.*]]
 ; SSE:       scalar.ph:
-; SSE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 32, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; SSE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[TMP11]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
+; SSE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
+; SSE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ]
 ; SSE-NEXT:    br label [[LOOP:%.*]]
 ; SSE:       loop:
 ; SSE-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[NEXT_ITER:%.*]] ]
@@ -157,10 +157,10 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; AVX-NEXT:    [[BIN_RDX10:%.*]] = fadd fast <4 x double> [[PREDPHI8]], [[BIN_RDX]]
 ; AVX-NEXT:    [[BIN_RDX11:%.*]] = fadd fast <4 x double> [[PREDPHI9]], [[BIN_RDX10]]
 ; AVX-NEXT:    [[TMP21:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[BIN_RDX11]])
-; AVX-NEXT:    br i1 true, label [[DONE:%.*]], label [[SCALAR_PH]]
+; AVX-NEXT:    br label [[DONE:%.*]]
 ; AVX:       scalar.ph:
-; AVX-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 32, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; AVX-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[TMP21]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
+; AVX-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
+; AVX-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ]
 ; AVX-NEXT:    br label [[LOOP:%.*]]
 ; AVX:       loop:
 ; AVX-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[NEXT_ITER:%.*]] ]

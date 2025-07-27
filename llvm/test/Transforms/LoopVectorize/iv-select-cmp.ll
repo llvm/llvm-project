@@ -1692,7 +1692,7 @@ define i64 @select_icmp_unsigned_iv_range(ptr %a, ptr %b, i64 %rdx.start) {
 ; CHECK-VF4IC1-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vector.reduce.umax.v4i64(<4 x i64> [[TMP5]])
 ; CHECK-VF4IC1-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[TMP7]], 0
 ; CHECK-VF4IC1-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP7]], i64 [[RDX_START]]
-; CHECK-VF4IC1-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-VF4IC1-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK-VF4IC1:       [[SCALAR_PH]]:
 ; CHECK-VF4IC1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ -4, %[[MIDDLE_BLOCK]] ], [ -9223372036854775808, %[[ENTRY]] ]
 ; CHECK-VF4IC1-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i64 [ 9223372036854775804, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
@@ -1711,9 +1711,9 @@ define i64 @select_icmp_unsigned_iv_range(ptr %a, ptr %b, i64 %rdx.start) {
 ; CHECK-VF4IC1-NEXT:    [[INC]] = add nuw nsw i64 [[IV_I]], 1
 ; CHECK-VF4IC1-NEXT:    [[INC3]] = add nsw i64 [[IV_J]], 1
 ; CHECK-VF4IC1-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], 9223372036854775806
-; CHECK-VF4IC1-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
+; CHECK-VF4IC1-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK-VF4IC1:       [[EXIT]]:
-; CHECK-VF4IC1-NEXT:    [[COND_LCSSA:%.*]] = phi i64 [ [[COND]], %[[FOR_BODY]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
+; CHECK-VF4IC1-NEXT:    [[COND_LCSSA:%.*]] = phi i64 [ [[COND]], %[[FOR_BODY]] ]
 ; CHECK-VF4IC1-NEXT:    ret i64 [[COND_LCSSA]]
 ;
 ; CHECK-VF4IC4-LABEL: define i64 @select_icmp_unsigned_iv_range(
@@ -1769,7 +1769,7 @@ define i64 @select_icmp_unsigned_iv_range(ptr %a, ptr %b, i64 %rdx.start) {
 ; CHECK-VF4IC4-NEXT:    [[TMP19:%.*]] = call i64 @llvm.vector.reduce.umax.v4i64(<4 x i64> [[RDX_MINMAX12]])
 ; CHECK-VF4IC4-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[TMP19]], 0
 ; CHECK-VF4IC4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP19]], i64 [[RDX_START]]
-; CHECK-VF4IC4-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-VF4IC4-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK-VF4IC4:       [[SCALAR_PH]]:
 ; CHECK-VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ -16, %[[MIDDLE_BLOCK]] ], [ -9223372036854775808, %[[ENTRY]] ]
 ; CHECK-VF4IC4-NEXT:    [[BC_RESUME_VAL13:%.*]] = phi i64 [ 9223372036854775792, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
@@ -1788,9 +1788,9 @@ define i64 @select_icmp_unsigned_iv_range(ptr %a, ptr %b, i64 %rdx.start) {
 ; CHECK-VF4IC4-NEXT:    [[INC]] = add nuw nsw i64 [[IV_I]], 1
 ; CHECK-VF4IC4-NEXT:    [[INC3]] = add nsw i64 [[IV_J]], 1
 ; CHECK-VF4IC4-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], 9223372036854775806
-; CHECK-VF4IC4-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
+; CHECK-VF4IC4-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK-VF4IC4:       [[EXIT]]:
-; CHECK-VF4IC4-NEXT:    [[COND_LCSSA:%.*]] = phi i64 [ [[COND]], %[[FOR_BODY]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
+; CHECK-VF4IC4-NEXT:    [[COND_LCSSA:%.*]] = phi i64 [ [[COND]], %[[FOR_BODY]] ]
 ; CHECK-VF4IC4-NEXT:    ret i64 [[COND_LCSSA]]
 ;
 ; CHECK-VF1IC4-LABEL: define i64 @select_icmp_unsigned_iv_range(
@@ -1845,7 +1845,7 @@ define i64 @select_icmp_unsigned_iv_range(ptr %a, ptr %b, i64 %rdx.start) {
 ; CHECK-VF1IC4-NEXT:    [[RDX_MINMAX5:%.*]] = call i64 @llvm.umax.i64(i64 [[RDX_MINMAX4]], i64 [[TMP29]])
 ; CHECK-VF1IC4-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[RDX_MINMAX5]], 0
 ; CHECK-VF1IC4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[RDX_MINMAX5]], i64 [[RDX_START]]
-; CHECK-VF1IC4-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-VF1IC4-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK-VF1IC4:       [[SCALAR_PH]]:
 ; CHECK-VF1IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ -4, %[[MIDDLE_BLOCK]] ], [ -9223372036854775808, %[[ENTRY]] ]
 ; CHECK-VF1IC4-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i64 [ 9223372036854775804, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
@@ -1864,9 +1864,9 @@ define i64 @select_icmp_unsigned_iv_range(ptr %a, ptr %b, i64 %rdx.start) {
 ; CHECK-VF1IC4-NEXT:    [[INC]] = add nuw nsw i64 [[IV_I1]], 1
 ; CHECK-VF1IC4-NEXT:    [[INC3]] = add nsw i64 [[IV_J]], 1
 ; CHECK-VF1IC4-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], 9223372036854775806
-; CHECK-VF1IC4-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
+; CHECK-VF1IC4-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK-VF1IC4:       [[EXIT]]:
-; CHECK-VF1IC4-NEXT:    [[COND_LCSSA:%.*]] = phi i64 [ [[COND]], %[[FOR_BODY]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
+; CHECK-VF1IC4-NEXT:    [[COND_LCSSA:%.*]] = phi i64 [ [[COND]], %[[FOR_BODY]] ]
 ; CHECK-VF1IC4-NEXT:    ret i64 [[COND_LCSSA]]
 ;
 entry:

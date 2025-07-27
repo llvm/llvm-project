@@ -414,8 +414,8 @@ define void @splatvar_funnel_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 
 ;
 ; AVX1-LABEL: 'splatvar_funnel_i64'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <2 x i64> %c128, <2 x i64> undef, <2 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found costs of 2 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found costs of 2 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:13 SizeLat:11 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> %u128)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:21 Lat:23 SizeLat:30 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> %u256)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:42 Lat:46 SizeLat:60 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %u512)
@@ -423,8 +423,8 @@ define void @splatvar_funnel_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 
 ;
 ; AVX2-LABEL: 'splatvar_funnel_i64'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <2 x i64> %c128, <2 x i64> undef, <2 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:11 SizeLat:11 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> %u128)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:7 Lat:14 SizeLat:14 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> %u256)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:14 Lat:28 SizeLat:28 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %u512)
@@ -432,8 +432,8 @@ define void @splatvar_funnel_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 
 ;
 ; AVX512F-LABEL: 'splatvar_funnel_i64'
 ; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <2 x i64> %c128, <2 x i64> undef, <2 x i32> zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:9 SizeLat:9 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> %u128)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:13 SizeLat:10 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> %u256)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:13 SizeLat:9 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %u512)
@@ -441,8 +441,8 @@ define void @splatvar_funnel_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 
 ;
 ; AVX512BW-LABEL: 'splatvar_funnel_i64'
 ; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <2 x i64> %c128, <2 x i64> undef, <2 x i32> zeroinitializer
-; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
-; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:9 SizeLat:9 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> %u128)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:13 SizeLat:9 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> %u256)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:13 SizeLat:9 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %u512)
@@ -450,8 +450,8 @@ define void @splatvar_funnel_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 
 ;
 ; AVX512DQ-LABEL: 'splatvar_funnel_i64'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <2 x i64> %c128, <2 x i64> undef, <2 x i32> zeroinitializer
-; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
-; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:9 SizeLat:9 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> %u128)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:13 SizeLat:10 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> %u256)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:13 SizeLat:9 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %u512)
@@ -459,8 +459,8 @@ define void @splatvar_funnel_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 
 ;
 ; AVX512VBMI2-LABEL: 'splatvar_funnel_i64'
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <2 x i64> %c128, <2 x i64> undef, <2 x i32> zeroinitializer
-; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
-; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
+; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
+; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> %u128)
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> %u256)
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %u512)
@@ -486,8 +486,8 @@ define void @splatvar_funnel_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 
 ;
 ; XOP-LABEL: 'splatvar_funnel_i64'
 ; XOP-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <2 x i64> %c128, <2 x i64> undef, <2 x i32> zeroinitializer
-; XOP-NEXT:  Cost Model: Found costs of 2 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
-; XOP-NEXT:  Cost Model: Found costs of 2 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
+; XOP-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
+; XOP-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
 ; XOP-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:12 SizeLat:10 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> %u128)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:21 Lat:23 SizeLat:30 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> %u256)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:42 Lat:46 SizeLat:60 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %u512)
@@ -495,8 +495,8 @@ define void @splatvar_funnel_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 
 ;
 ; AVX512GFNI-LABEL: 'splatvar_funnel_i64'
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <2 x i64> %c128, <2 x i64> undef, <2 x i32> zeroinitializer
-; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
-; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> %u128)
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> %u256)
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %u512)
@@ -532,8 +532,8 @@ define void @splatvar_funnel_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 ;
 ; AVX1-LABEL: 'splatvar_funnel_i32'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <4 x i32> %c128, <4 x i32> undef, <4 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found costs of 2 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found costs of 2 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:12 SizeLat:10 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> %u128)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:23 Lat:23 SizeLat:32 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> %u256)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:46 Lat:46 SizeLat:64 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> %u512)
@@ -541,8 +541,8 @@ define void @splatvar_funnel_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 ;
 ; AVX2-LABEL: 'splatvar_funnel_i32'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <4 x i32> %c128, <4 x i32> undef, <4 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:10 SizeLat:10 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> %u128)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:9 Lat:14 SizeLat:16 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> %u256)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:18 Lat:28 SizeLat:32 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> %u512)
@@ -550,8 +550,8 @@ define void @splatvar_funnel_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 ;
 ; AVX512F-LABEL: 'splatvar_funnel_i32'
 ; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <4 x i32> %c128, <4 x i32> undef, <4 x i32> zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:9 SizeLat:9 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> %u128)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:9 Lat:13 SizeLat:12 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> %u256)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:9 Lat:13 SizeLat:11 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> %u512)
@@ -559,8 +559,8 @@ define void @splatvar_funnel_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 ;
 ; AVX512BW-LABEL: 'splatvar_funnel_i32'
 ; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <4 x i32> %c128, <4 x i32> undef, <4 x i32> zeroinitializer
-; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
-; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:9 SizeLat:9 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> %u128)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:9 Lat:13 SizeLat:11 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> %u256)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:9 Lat:13 SizeLat:11 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> %u512)
@@ -568,8 +568,8 @@ define void @splatvar_funnel_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 ;
 ; AVX512DQ-LABEL: 'splatvar_funnel_i32'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <4 x i32> %c128, <4 x i32> undef, <4 x i32> zeroinitializer
-; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
-; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:9 SizeLat:9 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> %u128)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:9 Lat:13 SizeLat:12 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> %u256)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:9 Lat:13 SizeLat:11 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> %u512)
@@ -577,8 +577,8 @@ define void @splatvar_funnel_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 ;
 ; AVX512VBMI2-LABEL: 'splatvar_funnel_i32'
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <4 x i32> %c128, <4 x i32> undef, <4 x i32> zeroinitializer
-; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
-; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
+; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> %u128)
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> %u256)
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> %u512)
@@ -604,8 +604,8 @@ define void @splatvar_funnel_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 ;
 ; XOP-LABEL: 'splatvar_funnel_i32'
 ; XOP-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <4 x i32> %c128, <4 x i32> undef, <4 x i32> zeroinitializer
-; XOP-NEXT:  Cost Model: Found costs of 2 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
-; XOP-NEXT:  Cost Model: Found costs of 2 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
+; XOP-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
+; XOP-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
 ; XOP-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:12 SizeLat:10 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> %u128)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:23 Lat:23 SizeLat:32 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> %u256)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:46 Lat:46 SizeLat:64 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> %u512)
@@ -613,8 +613,8 @@ define void @splatvar_funnel_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 ;
 ; AVX512GFNI-LABEL: 'splatvar_funnel_i32'
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <4 x i32> %c128, <4 x i32> undef, <4 x i32> zeroinitializer
-; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
-; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> %u128)
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> %u256)
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> %u512)
@@ -631,108 +631,108 @@ define void @splatvar_funnel_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 
 define void @splatvar_funnel_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <32 x i16> %a512, i16 %b16, <8 x i16> %b128, <16 x i16> %b256, <32 x i16> %b512, i16 %c16, <8 x i16> %c128, <16 x i16> %c256, <32 x i16> %c512) {
 ; SSSE3-LABEL: 'splatvar_funnel_i16'
-; SSSE3-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:9 Lat:10 SizeLat:11 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> %u128)
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:17 Lat:19 SizeLat:21 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> %u256)
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:33 Lat:37 SizeLat:41 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> %u512)
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSE42-LABEL: 'splatvar_funnel_i16'
-; SSE42-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; SSE42-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; SSE42-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; SSE42-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; SSE42-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; SSE42-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:7 Lat:10 SizeLat:10 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> %u128)
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:13 Lat:19 SizeLat:19 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> %u256)
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:25 Lat:37 SizeLat:37 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> %u512)
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'splatvar_funnel_i16'
-; AVX1-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found costs of 3 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found costs of 3 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:4 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:4 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:12 SizeLat:10 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> %u128)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:25 Lat:23 SizeLat:33 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> %u256)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:50 Lat:46 SizeLat:66 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> %u512)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'splatvar_funnel_i16'
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:10 SizeLat:10 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> %u128)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:9 Lat:14 SizeLat:16 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> %u256)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:18 Lat:28 SizeLat:32 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> %u512)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512F-LABEL: 'splatvar_funnel_i16'
-; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:9 SizeLat:9 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> %u128)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:9 Lat:13 SizeLat:13 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> %u256)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:26 Lat:38 SizeLat:30 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> %u512)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BW-LABEL: 'splatvar_funnel_i16'
-; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:9 SizeLat:9 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> %u128)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:9 Lat:13 SizeLat:11 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> %u256)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:9 Lat:13 SizeLat:11 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> %u512)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQ-LABEL: 'splatvar_funnel_i16'
-; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:9 SizeLat:9 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> %u128)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:9 Lat:13 SizeLat:13 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> %u256)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:26 Lat:38 SizeLat:30 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> %u512)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMI2-LABEL: 'splatvar_funnel_i16'
-; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> %u128)
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> %u256)
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> %u512)
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SLM-LABEL: 'splatvar_funnel_i16'
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; SLM-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:7 Lat:12 SizeLat:11 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> %u128)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:13 Lat:23 SizeLat:21 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> %u256)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:25 Lat:45 SizeLat:41 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> %u512)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GLM-LABEL: 'splatvar_funnel_i16'
-; GLM-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; GLM-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; GLM-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; GLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; GLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; GLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; GLM-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:7 Lat:10 SizeLat:10 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> %u128)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:13 Lat:19 SizeLat:19 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> %u256)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:25 Lat:37 SizeLat:37 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> %u512)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'splatvar_funnel_i16'
-; XOP-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; XOP-NEXT:  Cost Model: Found costs of 3 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; XOP-NEXT:  Cost Model: Found costs of 3 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; XOP-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; XOP-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:4 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; XOP-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:4 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; XOP-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:12 SizeLat:10 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> %u128)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:25 Lat:23 SizeLat:33 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> %u256)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:50 Lat:46 SizeLat:66 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> %u512)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512GFNI-LABEL: 'splatvar_funnel_i16'
-; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> %u128)
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> %u256)
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> %u512)
@@ -749,108 +749,108 @@ define void @splatvar_funnel_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <3
 
 define void @splatvar_funnel_i8(i8 %a8, <16 x i8> %a128, <32 x i8> %a256, <64 x i8> %a512, i8 %b8, <16 x i8> %b128, <32 x i8> %b256, <64 x i8> %b512, i8 %c8, <16 x i8> %c128, <32 x i8> %c256, <64 x i8> %c512) {
 ; SSSE3-LABEL: 'splatvar_funnel_i8'
-; SSSE3-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:18 Lat:29 SizeLat:25 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> %u128)
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:35 Lat:57 SizeLat:49 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> %u256)
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:96 CodeSize:69 Lat:113 SizeLat:97 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> %u512)
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSE42-LABEL: 'splatvar_funnel_i8'
-; SSE42-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; SSE42-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; SSE42-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; SSE42-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; SSE42-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; SSE42-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:16 Lat:29 SizeLat:24 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> %u128)
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:31 Lat:57 SizeLat:47 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> %u256)
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:96 CodeSize:61 Lat:113 SizeLat:93 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> %u512)
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'splatvar_funnel_i8'
-; AVX1-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found costs of 2 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found costs of 2 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:4 SizeLat:6 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:4 SizeLat:6 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:16 Lat:18 SizeLat:22 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> %u128)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:27 CodeSize:36 Lat:26 SizeLat:47 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> %u256)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:54 CodeSize:72 Lat:52 SizeLat:94 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> %u512)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'splatvar_funnel_i8'
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:15 Lat:20 SizeLat:21 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> %u128)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:18 Lat:21 SizeLat:27 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> %u256)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:36 Lat:42 SizeLat:54 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> %u512)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512F-LABEL: 'splatvar_funnel_i8'
-; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:15 Lat:19 SizeLat:20 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> %u128)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:18 Lat:20 SizeLat:24 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> %u256)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:73 Lat:56 SizeLat:85 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> %u512)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BW-LABEL: 'splatvar_funnel_i8'
-; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:15 Lat:20 SizeLat:20 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> %u128)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:18 Lat:20 SizeLat:22 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> %u256)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:18 Lat:20 SizeLat:23 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> %u512)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQ-LABEL: 'splatvar_funnel_i8'
-; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:15 Lat:19 SizeLat:20 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> %u128)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:18 Lat:20 SizeLat:24 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> %u256)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:73 Lat:56 SizeLat:85 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> %u512)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMI2-LABEL: 'splatvar_funnel_i8'
-; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:15 Lat:20 SizeLat:20 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> %u128)
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:18 Lat:20 SizeLat:22 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> %u256)
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:18 Lat:20 SizeLat:23 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> %u512)
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SLM-LABEL: 'splatvar_funnel_i8'
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; SLM-NEXT:  Cost Model: Found costs of RThru:26 CodeSize:16 Lat:31 SizeLat:25 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> %u128)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:52 CodeSize:31 Lat:61 SizeLat:49 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> %u256)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:104 CodeSize:61 Lat:121 SizeLat:97 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> %u512)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GLM-LABEL: 'splatvar_funnel_i8'
-; GLM-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; GLM-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; GLM-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; GLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; GLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; GLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; GLM-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:16 Lat:29 SizeLat:24 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> %u128)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:31 Lat:57 SizeLat:47 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> %u256)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:96 CodeSize:61 Lat:113 SizeLat:93 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> %u512)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'splatvar_funnel_i8'
-; XOP-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; XOP-NEXT:  Cost Model: Found costs of 2 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; XOP-NEXT:  Cost Model: Found costs of 2 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; XOP-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; XOP-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:4 SizeLat:6 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; XOP-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:4 SizeLat:6 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; XOP-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:7 Lat:12 SizeLat:8 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> %u128)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:23 CodeSize:25 Lat:23 SizeLat:31 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> %u256)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:46 CodeSize:50 Lat:46 SizeLat:62 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> %u512)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512GFNI-LABEL: 'splatvar_funnel_i8'
-; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:15 Lat:20 SizeLat:20 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> %u128)
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:18 Lat:20 SizeLat:22 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> %u256)
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:18 Lat:20 SizeLat:23 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> %u512)
@@ -1934,8 +1934,8 @@ define void @splatvar_rotate_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 
 ;
 ; AVX1-LABEL: 'splatvar_rotate_i64'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <2 x i64> %c128, <2 x i64> undef, <2 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found costs of 2 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found costs of 2 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:9 SizeLat:7 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> %u128)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:15 Lat:18 SizeLat:22 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> %u256)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:30 Lat:36 SizeLat:44 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> %u512)
@@ -1943,8 +1943,8 @@ define void @splatvar_rotate_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 
 ;
 ; AVX2-LABEL: 'splatvar_rotate_i64'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <2 x i64> %c128, <2 x i64> undef, <2 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:7 SizeLat:7 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> %u128)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:11 SizeLat:10 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> %u256)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:10 Lat:22 SizeLat:20 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> %u512)
@@ -1952,8 +1952,8 @@ define void @splatvar_rotate_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 
 ;
 ; AVX512-LABEL: 'splatvar_rotate_i64'
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <2 x i64> %c128, <2 x i64> undef, <2 x i32> zeroinitializer
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> %u128)
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> %u256)
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> %u512)
@@ -1979,8 +1979,8 @@ define void @splatvar_rotate_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 
 ;
 ; XOP-LABEL: 'splatvar_rotate_i64'
 ; XOP-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <2 x i64> %c128, <2 x i64> undef, <2 x i32> zeroinitializer
-; XOP-NEXT:  Cost Model: Found costs of 2 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
-; XOP-NEXT:  Cost Model: Found costs of 2 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
+; XOP-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
+; XOP-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
 ; XOP-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:3 Lat:3 SizeLat:3 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> %u128)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:8 Lat:7 SizeLat:9 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> %u256)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:16 Lat:14 SizeLat:18 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> %u512)
@@ -2007,8 +2007,8 @@ define void @splatvar_rotate_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 ;
 ; AVX1-LABEL: 'splatvar_rotate_i32'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <4 x i32> %c128, <4 x i32> undef, <4 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found costs of 2 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found costs of 2 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:9 SizeLat:7 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> %u128)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:17 Lat:18 SizeLat:24 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> %u256)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:34 Lat:36 SizeLat:48 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> %u512)
@@ -2016,8 +2016,8 @@ define void @splatvar_rotate_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 ;
 ; AVX2-LABEL: 'splatvar_rotate_i32'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <4 x i32> %c128, <4 x i32> undef, <4 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:7 SizeLat:7 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> %u128)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:11 SizeLat:12 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> %u256)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:14 Lat:22 SizeLat:24 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> %u512)
@@ -2025,8 +2025,8 @@ define void @splatvar_rotate_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 ;
 ; AVX512-LABEL: 'splatvar_rotate_i32'
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <4 x i32> %c128, <4 x i32> undef, <4 x i32> zeroinitializer
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> %u128)
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> %u256)
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> %u512)
@@ -2052,8 +2052,8 @@ define void @splatvar_rotate_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 ;
 ; XOP-LABEL: 'splatvar_rotate_i32'
 ; XOP-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <4 x i32> %c128, <4 x i32> undef, <4 x i32> zeroinitializer
-; XOP-NEXT:  Cost Model: Found costs of 2 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
-; XOP-NEXT:  Cost Model: Found costs of 2 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
+; XOP-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
+; XOP-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
 ; XOP-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:3 Lat:3 SizeLat:3 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> %u128)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:8 Lat:7 SizeLat:9 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> %u256)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:16 Lat:14 SizeLat:18 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> %u512)
@@ -2070,99 +2070,99 @@ define void @splatvar_rotate_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 
 define void @splatvar_rotate_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <32 x i16> %a512, i16 %c16, <8 x i16> %c128, <16 x i16> %c256, <32 x i16> %c512) {
 ; SSE-LABEL: 'splatvar_rotate_i16'
-; SSE-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; SSE-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; SSE-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; SSE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; SSE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; SSE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; SSE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:7 SizeLat:7 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> %u128)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:9 Lat:13 SizeLat:13 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> %u256)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:17 Lat:25 SizeLat:25 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> %u512)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'splatvar_rotate_i16'
-; AVX1-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found costs of 3 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found costs of 3 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:4 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:4 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:9 SizeLat:7 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> %u128)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:17 Lat:18 SizeLat:24 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> %u256)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:34 Lat:36 SizeLat:48 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> %u512)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'splatvar_rotate_i16'
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:7 SizeLat:7 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> %u128)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:11 SizeLat:12 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> %u256)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:14 Lat:22 SizeLat:24 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> %u512)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512F-LABEL: 'splatvar_rotate_i16'
-; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:7 SizeLat:7 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> %u128)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:11 SizeLat:10 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> %u256)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:17 Lat:29 SizeLat:21 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> %u512)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BW-LABEL: 'splatvar_rotate_i16'
-; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:6 Lat:7 SizeLat:7 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> %u128)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:6 Lat:8 SizeLat:7 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> %u256)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:6 Lat:8 SizeLat:8 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> %u512)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQ-LABEL: 'splatvar_rotate_i16'
-; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:7 SizeLat:7 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> %u128)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:11 SizeLat:10 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> %u256)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:17 Lat:29 SizeLat:21 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> %u512)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMI2-LABEL: 'splatvar_rotate_i16'
-; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> %u128)
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> %u256)
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> %u512)
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SLM-LABEL: 'splatvar_rotate_i16'
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; SLM-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:7 SizeLat:7 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> %u128)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:9 Lat:13 SizeLat:13 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> %u256)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:17 Lat:25 SizeLat:25 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> %u512)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GLM-LABEL: 'splatvar_rotate_i16'
-; GLM-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; GLM-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; GLM-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; GLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; GLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; GLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; GLM-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:7 SizeLat:7 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> %u128)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:9 Lat:13 SizeLat:13 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> %u256)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:17 Lat:25 SizeLat:25 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> %u512)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'splatvar_rotate_i16'
-; XOP-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; XOP-NEXT:  Cost Model: Found costs of 3 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; XOP-NEXT:  Cost Model: Found costs of 3 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; XOP-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; XOP-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:4 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; XOP-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:4 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; XOP-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:3 Lat:3 SizeLat:3 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> %u128)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:8 Lat:7 SizeLat:9 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> %u256)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:16 Lat:14 SizeLat:18 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> %u512)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512GFNI-LABEL: 'splatvar_rotate_i16'
-; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
-; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
-; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> %u128)
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> %u256)
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> %u512)
@@ -2179,99 +2179,99 @@ define void @splatvar_rotate_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <3
 
 define void @splatvar_rotate_i8(i8 %a8, <16 x i8> %a128, <32 x i8> %a256, <64 x i8> %a512, i8 %c8, <16 x i8> %c128, <32 x i8> %c256, <64 x i8> %c512) {
 ; SSE-LABEL: 'splatvar_rotate_i8'
-; SSE-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; SSE-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; SSE-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; SSE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; SSE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; SSE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; SSE-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:14 Lat:26 SizeLat:21 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> %u128)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:42 CodeSize:27 Lat:51 SizeLat:41 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> %u256)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:84 CodeSize:53 Lat:101 SizeLat:81 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> %u512)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'splatvar_rotate_i8'
-; AVX1-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found costs of 2 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found costs of 2 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:4 SizeLat:6 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:4 SizeLat:6 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:14 Lat:15 SizeLat:19 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> %u128)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:28 Lat:21 SizeLat:38 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> %u256)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:56 Lat:42 SizeLat:76 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> %u512)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'splatvar_rotate_i8'
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:13 Lat:17 SizeLat:18 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> %u128)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:16 Lat:18 SizeLat:23 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> %u256)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:32 Lat:36 SizeLat:46 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> %u512)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512F-LABEL: 'splatvar_rotate_i8'
-; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:13 Lat:17 SizeLat:18 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> %u128)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:16 Lat:18 SizeLat:21 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> %u256)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:35 CodeSize:64 Lat:47 SizeLat:76 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> %u512)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BW-LABEL: 'splatvar_rotate_i8'
-; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:6 Lat:14 SizeLat:9 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> %u128)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:6 Lat:14 SizeLat:9 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> %u256)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:12 Lat:6 SizeLat:14 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> %u512)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQ-LABEL: 'splatvar_rotate_i8'
-; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:13 Lat:17 SizeLat:18 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> %u128)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:16 Lat:18 SizeLat:21 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> %u256)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:35 CodeSize:64 Lat:47 SizeLat:76 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> %u512)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMI2-LABEL: 'splatvar_rotate_i8'
-; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; AVX512VBMI2-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:6 Lat:14 SizeLat:9 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> %u128)
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:6 Lat:14 SizeLat:9 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> %u256)
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:12 Lat:6 SizeLat:14 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> %u512)
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SLM-LABEL: 'splatvar_rotate_i8'
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; SLM-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:14 Lat:26 SizeLat:21 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> %u128)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:42 CodeSize:27 Lat:51 SizeLat:41 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> %u256)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:84 CodeSize:53 Lat:101 SizeLat:81 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> %u512)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GLM-LABEL: 'splatvar_rotate_i8'
-; GLM-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; GLM-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; GLM-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; GLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; GLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; GLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; GLM-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:14 Lat:26 SizeLat:21 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> %u128)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:42 CodeSize:27 Lat:51 SizeLat:41 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> %u256)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:84 CodeSize:53 Lat:101 SizeLat:81 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> %u512)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'splatvar_rotate_i8'
-; XOP-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; XOP-NEXT:  Cost Model: Found costs of 2 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; XOP-NEXT:  Cost Model: Found costs of 2 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; XOP-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; XOP-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:4 SizeLat:6 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; XOP-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:4 SizeLat:6 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; XOP-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:3 Lat:3 SizeLat:3 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> %u128)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:8 Lat:7 SizeLat:9 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> %u256)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:16 Lat:14 SizeLat:18 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> %u512)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512GFNI-LABEL: 'splatvar_rotate_i8'
-; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
-; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
-; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u128 = shufflevector <16 x i8> %c128, <16 x i8> undef, <16 x i32> zeroinitializer
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u256 = shufflevector <32 x i8> %c256, <32 x i8> undef, <32 x i32> zeroinitializer
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %u512 = shufflevector <64 x i8> %c512, <64 x i8> undef, <64 x i32> zeroinitializer
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:6 Lat:14 SizeLat:9 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> %u128)
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:6 Lat:14 SizeLat:9 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> %u256)
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:12 Lat:6 SizeLat:14 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> %u512)

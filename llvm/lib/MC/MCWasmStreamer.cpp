@@ -58,7 +58,7 @@ void MCWasmStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCFragment &F,
 
 void MCWasmStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   MCAssembler &Asm = getAssembler();
-  auto *SectionWasm = cast<MCSectionWasm>(Section);
+  auto *SectionWasm = static_cast<const MCSectionWasm *>(Section);
   const MCSymbol *Grp = SectionWasm->getGroup();
   if (Grp)
     Asm.registerSymbol(*Grp);

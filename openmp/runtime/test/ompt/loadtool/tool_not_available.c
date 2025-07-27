@@ -1,5 +1,7 @@
 // The OpenMP standard defines 3 ways of providing ompt_start_tool:
 
+// RUN: mkdir -p %t.tool_dir
+
 // 1. "statically-linking the tool’s definition of ompt_start_tool into an
 // OpenMP application"
 
@@ -10,20 +12,20 @@
 // Note: We should compile the tool without -fopenmp as other tools developer
 //      would do. Otherwise this test may pass for the wrong reasons on Darwin.
 
-// RUN: %clang %flags -DTOOL -shared -fPIC %s -o %T/tool.so
+// RUN: %clang %flags -DTOOL -shared -fPIC %s -o %t.tool_dir/tool.so
 
 // 2. "introducing a dynamically-linked library that includes the tool’s 
 //    definition of ompt_start_tool into the application’s address space"
 
 // 2.1 Link with tool during compilation
 
-// RUN: %libomp-compile -DCODE %no-as-needed-flag %T/tool.so && \
+// RUN: %libomp-compile -DCODE %no-as-needed-flag %t.tool_dir/tool.so && \
 // RUN:    env OMP_TOOL_VERBOSE_INIT=stdout %libomp-run | \
 // RUN:    FileCheck %s --check-prefixes CHECK,ADDRSPACE
 
 // 2.2 Link with tool during compilation, but AFTER the runtime
 
-// RUN: %libomp-compile -DCODE -lomp %no-as-needed-flag %T/tool.so && \
+// RUN: %libomp-compile -DCODE -lomp %no-as-needed-flag %t.tool_dir/tool.so && \
 // RUN:    env OMP_TOOL_VERBOSE_INIT=stdout %libomp-run | \
 // RUN:    FileCheck %s --check-prefixes CHECK,ADDRSPACE 
 
@@ -37,9 +39,9 @@
 //    architecture and operating system used by the application in the 
 //    tool-libraries-var ICV"
 
-// RUN: %libomp-compile -DCODE && env OMP_TOOL_LIBRARIES=%T/tool.so \
+// RUN: %libomp-compile -DCODE && env OMP_TOOL_LIBRARIES=%t.tool_dir/tool.so \
 // RUN:    OMP_TOOL_VERBOSE_INIT=stdout %libomp-run | \
-// RUN:    FileCheck %s -DPARENTPATH=%T --check-prefixes CHECK,TOOLLIB
+// RUN:    FileCheck %s -DPARENTPATH=%t.tool_dir --check-prefixes CHECK,TOOLLIB
 
 // REQUIRES: ompt
 

@@ -74,9 +74,9 @@ define void @vector_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; FIXED-NEXT:    br label [[FOR_END:%.*]]
 ; FIXED:       scalar.ph:
-; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; FIXED-NEXT:    br label [[FOR_BODY:%.*]]
 ; FIXED:       for.body:
 ; FIXED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -174,9 +174,9 @@ define void @vector_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; FIXED-NEXT:    br label [[FOR_END:%.*]]
 ; FIXED:       scalar.ph:
-; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; FIXED-NEXT:    br label [[FOR_BODY:%.*]]
 ; FIXED:       for.body:
 ; FIXED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -274,9 +274,9 @@ define void @vector_urem(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; FIXED-NEXT:    br label [[FOR_END:%.*]]
 ; FIXED:       scalar.ph:
-; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; FIXED-NEXT:    br label [[FOR_BODY:%.*]]
 ; FIXED:       for.body:
 ; FIXED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -374,9 +374,9 @@ define void @vector_srem(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; FIXED-NEXT:    br label [[FOR_END:%.*]]
 ; FIXED:       scalar.ph:
-; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; FIXED-NEXT:    br label [[FOR_BODY:%.*]]
 ; FIXED:       for.body:
 ; FIXED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -487,9 +487,9 @@ define void @predicated_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; FIXED-NEXT:    br label [[FOR_END:%.*]]
 ; FIXED:       scalar.ph:
-; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; FIXED-NEXT:    br label [[FOR_BODY:%.*]]
 ; FIXED:       for.body:
 ; FIXED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
@@ -612,9 +612,9 @@ define void @predicated_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; FIXED-NEXT:    br label [[FOR_END:%.*]]
 ; FIXED:       scalar.ph:
-; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; FIXED-NEXT:    br label [[FOR_BODY:%.*]]
 ; FIXED:       for.body:
 ; FIXED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
@@ -732,9 +732,9 @@ define void @predicated_udiv_by_constant(ptr noalias nocapture %a, i64 %n) {
 ; FIXED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; FIXED-NEXT:    br label [[FOR_END:%.*]]
 ; FIXED:       scalar.ph:
-; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; FIXED-NEXT:    br label [[FOR_BODY:%.*]]
 ; FIXED:       for.body:
 ; FIXED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
@@ -852,9 +852,9 @@ define void @predicated_sdiv_by_constant(ptr noalias nocapture %a, i64 %n) {
 ; FIXED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; FIXED-NEXT:    br label [[FOR_END:%.*]]
 ; FIXED:       scalar.ph:
-; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; FIXED-NEXT:    br label [[FOR_BODY:%.*]]
 ; FIXED:       for.body:
 ; FIXED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
@@ -975,9 +975,9 @@ define void @predicated_sdiv_by_minus_one(ptr noalias nocapture %a, i64 %n) {
 ; FIXED-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; FIXED-NEXT:    br label [[FOR_END:%.*]]
 ; FIXED:       scalar.ph:
-; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; FIXED-NEXT:    br label [[FOR_BODY:%.*]]
 ; FIXED:       for.body:
 ; FIXED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]

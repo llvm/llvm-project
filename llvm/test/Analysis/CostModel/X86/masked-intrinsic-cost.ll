@@ -2032,7 +2032,7 @@ define <16 x float> @test_gather_16f32_const_mask2(ptr %base, <16 x i32> %ind) {
 ;
 ; AVX1-LABEL: 'test_gather_16f32_const_mask2'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %broadcast.splatinsert = insertelement <16 x ptr> undef, ptr %base, i32 0
-; AVX1-NEXT:  Cost Model: Found costs of 2 for: %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> undef, <16 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> undef, <16 x i32> zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:1 SizeLat:1 for: %sext_ind = sext <16 x i32> %ind to <16 x i64>
 ; AVX1-NEXT:  Cost Model: Found costs of 0 for: %gep.random = getelementptr float, <16 x ptr> %broadcast.splat, <16 x i64> %sext_ind
 ; AVX1-NEXT:  Cost Model: Found costs of 50 for: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> %gep.random, i32 4, <16 x i1> splat (i1 true), <16 x float> undef)
@@ -2040,7 +2040,7 @@ define <16 x float> @test_gather_16f32_const_mask2(ptr %base, <16 x i32> %ind) {
 ;
 ; AVX2-LABEL: 'test_gather_16f32_const_mask2'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %broadcast.splatinsert = insertelement <16 x ptr> undef, ptr %base, i32 0
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> undef, <16 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> undef, <16 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %sext_ind = sext <16 x i32> %ind to <16 x i64>
 ; AVX2-NEXT:  Cost Model: Found costs of 0 for: %gep.random = getelementptr float, <16 x ptr> %broadcast.splat, <16 x i64> %sext_ind
 ; AVX2-NEXT:  Cost Model: Found costs of 50 for: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> %gep.random, i32 4, <16 x i1> splat (i1 true), <16 x float> undef)
@@ -2048,7 +2048,7 @@ define <16 x float> @test_gather_16f32_const_mask2(ptr %base, <16 x i32> %ind) {
 ;
 ; SKL-LABEL: 'test_gather_16f32_const_mask2'
 ; SKL-NEXT:  Cost Model: Found costs of 1 for: %broadcast.splatinsert = insertelement <16 x ptr> undef, ptr %base, i32 0
-; SKL-NEXT:  Cost Model: Found costs of 1 for: %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> undef, <16 x i32> zeroinitializer
+; SKL-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> undef, <16 x i32> zeroinitializer
 ; SKL-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %sext_ind = sext <16 x i32> %ind to <16 x i64>
 ; SKL-NEXT:  Cost Model: Found costs of 0 for: %gep.random = getelementptr float, <16 x ptr> %broadcast.splat, <16 x i64> %sext_ind
 ; SKL-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:4 Lat:24 SizeLat:24 for: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> %gep.random, i32 4, <16 x i1> splat (i1 true), <16 x float> undef)
@@ -2056,7 +2056,7 @@ define <16 x float> @test_gather_16f32_const_mask2(ptr %base, <16 x i32> %ind) {
 ;
 ; AVX512-LABEL: 'test_gather_16f32_const_mask2'
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %broadcast.splatinsert = insertelement <16 x ptr> undef, ptr %base, i32 0
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> undef, <16 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> undef, <16 x i32> zeroinitializer
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %sext_ind = sext <16 x i32> %ind to <16 x i64>
 ; AVX512-NEXT:  Cost Model: Found costs of 0 for: %gep.random = getelementptr float, <16 x ptr> %broadcast.splat, <16 x i64> %sext_ind
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:1 Lat:18 SizeLat:18 for: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> %gep.random, i32 4, <16 x i1> splat (i1 true), <16 x float> undef)
@@ -2091,7 +2091,7 @@ define void @test_scatter_16i32(ptr %base, <16 x i32> %ind, i16 %mask, <16 x i32
 ;
 ; AVX1-LABEL: 'test_scatter_16i32'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %broadcast.splatinsert = insertelement <16 x ptr> undef, ptr %base, i32 0
-; AVX1-NEXT:  Cost Model: Found costs of 2 for: %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> undef, <16 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> undef, <16 x i32> zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found costs of 0 for: %gep.random = getelementptr i32, <16 x ptr> %broadcast.splat, <16 x i32> %ind
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %imask = bitcast i16 %mask to <16 x i1>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:55 CodeSize:71 Lat:71 SizeLat:71 for: call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> %val, <16 x ptr> %gep.random, i32 4, <16 x i1> %imask)
@@ -2099,7 +2099,7 @@ define void @test_scatter_16i32(ptr %base, <16 x i32> %ind, i16 %mask, <16 x i32
 ;
 ; AVX2-LABEL: 'test_scatter_16i32'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %broadcast.splatinsert = insertelement <16 x ptr> undef, ptr %base, i32 0
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> undef, <16 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> undef, <16 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found costs of 0 for: %gep.random = getelementptr i32, <16 x ptr> %broadcast.splat, <16 x i32> %ind
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %imask = bitcast i16 %mask to <16 x i1>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:55 CodeSize:71 Lat:71 SizeLat:71 for: call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> %val, <16 x ptr> %gep.random, i32 4, <16 x i1> %imask)
@@ -2107,7 +2107,7 @@ define void @test_scatter_16i32(ptr %base, <16 x i32> %ind, i16 %mask, <16 x i32
 ;
 ; SKL-LABEL: 'test_scatter_16i32'
 ; SKL-NEXT:  Cost Model: Found costs of 1 for: %broadcast.splatinsert = insertelement <16 x ptr> undef, ptr %base, i32 0
-; SKL-NEXT:  Cost Model: Found costs of 1 for: %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> undef, <16 x i32> zeroinitializer
+; SKL-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> undef, <16 x i32> zeroinitializer
 ; SKL-NEXT:  Cost Model: Found costs of 0 for: %gep.random = getelementptr i32, <16 x ptr> %broadcast.splat, <16 x i32> %ind
 ; SKL-NEXT:  Cost Model: Found costs of 1 for: %imask = bitcast i16 %mask to <16 x i1>
 ; SKL-NEXT:  Cost Model: Found costs of RThru:55 CodeSize:71 Lat:71 SizeLat:71 for: call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> %val, <16 x ptr> %gep.random, i32 4, <16 x i1> %imask)
@@ -2115,7 +2115,7 @@ define void @test_scatter_16i32(ptr %base, <16 x i32> %ind, i16 %mask, <16 x i32
 ;
 ; AVX512-LABEL: 'test_scatter_16i32'
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %broadcast.splatinsert = insertelement <16 x ptr> undef, ptr %base, i32 0
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> undef, <16 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> undef, <16 x i32> zeroinitializer
 ; AVX512-NEXT:  Cost Model: Found costs of 0 for: %gep.random = getelementptr i32, <16 x ptr> %broadcast.splat, <16 x i32> %ind
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %imask = bitcast i16 %mask to <16 x i1>
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:1 Lat:18 SizeLat:18 for: call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> %val, <16 x ptr> %gep.random, i32 4, <16 x i1> %imask)

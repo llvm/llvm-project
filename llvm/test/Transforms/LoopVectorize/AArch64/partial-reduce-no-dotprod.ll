@@ -39,7 +39,7 @@ define i32 @not_dotp(ptr %a, ptr %b) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <16 x i32> [[TMP14]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[BIN_RDX]])
-; CHECK-NEXT:    br i1 false, [[FOR_EXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ;
 entry:
@@ -69,7 +69,7 @@ for.exit:                        ; preds = %for.body
 define i40 @partial_reduce_not_known_factor(i32 %a, i32 %b, i16 %N) {
 ; CHECK-LABEL: define i40 @partial_reduce_not_known_factor(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i16 [[N:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[N]], i16 0)
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i16 [[SMAX]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[TMP0]], 1
@@ -100,7 +100,9 @@ define i40 @partial_reduce_not_known_factor(i32 %a, i32 %b, i16 %N) {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <2 x i40> [[TMP8]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i40 @llvm.vector.reduce.or.v2i40(<2 x i40> [[BIN_RDX]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+;
 entry:
   br label %for.body
 

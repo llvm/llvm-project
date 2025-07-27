@@ -30,11 +30,11 @@ int** f(const char *a, const char **b) {
 // UNGENERALIZED-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.type.test(ptr [[FP]], metadata !"_ZTSFPPiPKcPS2_E"), !dbg [[DBG34:![0-9]+]], !nosanitize [[META38:![0-9]+]]
 // UNGENERALIZED-NEXT:    br i1 [[TMP0]], label %[[CONT:.*]], label %[[TRAP:.*]], !dbg [[DBG34]], !prof [[PROF39:![0-9]+]], !nosanitize [[META38]]
 // UNGENERALIZED:       [[TRAP]]:
-// UNGENERALIZED-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4:[0-9]+]], !dbg [[DBG34]], !nosanitize [[META38]]
-// UNGENERALIZED-NEXT:    unreachable, !dbg [[DBG34]], !nosanitize [[META38]]
+// UNGENERALIZED-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4:[0-9]+]], !dbg [[DBGTRAP:![0-9]+]], !nosanitize [[META38]]
+// UNGENERALIZED-NEXT:    unreachable, !dbg [[DBGTRAP]], !nosanitize [[META38]]
 // UNGENERALIZED:       [[CONT]]:
 // UNGENERALIZED-NEXT:    [[CALL:%.*]] = tail call ptr [[FP]](ptr noundef null, ptr noundef null) #[[ATTR5:[0-9]+]], !dbg [[DBG37:![0-9]+]]
-// UNGENERALIZED-NEXT:    ret void, !dbg [[DBG40:![0-9]+]]
+// UNGENERALIZED-NEXT:    ret void, !dbg [[DBG42:![0-9]+]]
 //
 // GENERALIZED-LABEL: define dso_local void @g(
 // GENERALIZED-SAME: ptr noundef [[FP:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] !dbg [[DBG25:![0-9]+]] !type [[META31:![0-9]+]] !type [[META32:![0-9]+]] {
@@ -43,11 +43,11 @@ int** f(const char *a, const char **b) {
 // GENERALIZED-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.type.test(ptr [[FP]], metadata !"_ZTSFPvPKvS_E.generalized"), !dbg [[DBG34:![0-9]+]], !nosanitize [[META38:![0-9]+]]
 // GENERALIZED-NEXT:    br i1 [[TMP0]], label %[[CONT:.*]], label %[[TRAP:.*]], !dbg [[DBG34]], !prof [[PROF39:![0-9]+]], !nosanitize [[META38]]
 // GENERALIZED:       [[TRAP]]:
-// GENERALIZED-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4:[0-9]+]], !dbg [[DBG34]], !nosanitize [[META38]]
-// GENERALIZED-NEXT:    unreachable, !dbg [[DBG34]], !nosanitize [[META38]]
+// GENERALIZED-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4:[0-9]+]], !dbg [[DBGTRAP:![0-9]+]], !nosanitize [[META38]]
+// GENERALIZED-NEXT:    unreachable, !dbg [[DBGTRAP]], !nosanitize [[META38]]
 // GENERALIZED:       [[CONT]]:
 // GENERALIZED-NEXT:    [[CALL:%.*]] = tail call ptr [[FP]](ptr noundef null, ptr noundef null) #[[ATTR5:[0-9]+]], !dbg [[DBG37:![0-9]+]]
-// GENERALIZED-NEXT:    ret void, !dbg [[DBG40:![0-9]+]]
+// GENERALIZED-NEXT:    ret void, !dbg [[DBG42:![0-9]+]]
 //
 void g(int** (*fp)(const char *, const char **)) {
   fp(0, 0);
@@ -90,7 +90,9 @@ void g(int** (*fp)(const char *, const char **)) {
 // UNGENERALIZED: [[DBG37]] = !DILocation(line: 53, column: 3, scope: [[DBG25]])
 // UNGENERALIZED: [[META38]] = !{}
 // UNGENERALIZED: [[PROF39]] = !{!"branch_weights", i32 1048575, i32 1}
-// UNGENERALIZED: [[DBG40]] = !DILocation(line: 54, column: 1, scope: [[DBG25]])
+// UNGENERALIZED: [[DBGTRAP]] = !DILocation(line: 0, scope: [[TRAPMSG:![0-9]+]], inlinedAt: [[DBG34]])
+// UNGENERALIZED: [[TRAPMSG]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Control flow integrity check failed", scope: [[META11]], file: [[META11]], type: [[META36]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// UNGENERALIZED: [[DBG42]] = !DILocation(line: 54, column: 1, scope: [[DBG25]])
 //.
 // GENERALIZED: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, retainedTypes: [[META2:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
 // GENERALIZED: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
@@ -128,5 +130,7 @@ void g(int** (*fp)(const char *, const char **)) {
 // GENERALIZED: [[DBG37]] = !DILocation(line: 53, column: 3, scope: [[DBG25]])
 // GENERALIZED: [[META38]] = !{}
 // GENERALIZED: [[PROF39]] = !{!"branch_weights", i32 1048575, i32 1}
-// GENERALIZED: [[DBG40]] = !DILocation(line: 54, column: 1, scope: [[DBG25]])
+// GENERALIZED: [[DBGTRAP]] = !DILocation(line: 0, scope: [[TRAPMSG:![0-9]+]], inlinedAt: [[DBG34]])
+// GENERALIZED: [[TRAPMSG]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Control flow integrity check failed", scope: [[META11]], file: [[META11]], type: [[META36]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// GENERALIZED: [[DBG42]] = !DILocation(line: 54, column: 1, scope: [[DBG25]])
 //.

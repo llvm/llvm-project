@@ -266,7 +266,7 @@ class Bcz<bits<3> funct3, string OpcodeStr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class Shift_right<bits<2> funct2, string OpcodeStr>
     : RVInst16CB<0b100, 0b01, (outs GPRC:$rd),
-                 (ins GPRC:$rs1, uimmlog2xlennonzero:$imm),
+                 (ins GPRC:$rs1, uimmlog2xlen:$imm),
                  OpcodeStr, "$rs1, $imm"> {
   let Constraints = "$rs1 = $rd";
   let Inst{12} = imm{5};
@@ -494,7 +494,7 @@ def C_BNEZ : Bcz<0b111, "c.bnez">, Sched<[WriteJmp, ReadJmp]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_SLLI : RVInst16CI<0b000, 0b10, (outs GPR:$rd_wb),
-                        (ins GPR:$rd, uimmlog2xlennonzero:$imm),
+                        (ins GPR:$rd, uimmlog2xlen:$imm),
                         "c.slli", "$rd, $imm">,
              Sched<[WriteShiftImm, ReadShiftImm]> {
   let Constraints = "$rd = $rd_wb";
@@ -612,39 +612,19 @@ def C_NOP_HINT : RVInst16CI<0b000, 0b01, (outs), (ins simm6nonzero:$imm),
   let rd = 0;
 }
 
-def C_SLLI64_HINT : RVInst16CI<0b000, 0b10, (outs GPR:$rd_wb), (ins GPR:$rd),
-                               "c.slli64", "$rd">,
-                    Sched<[WriteShiftImm, ReadShiftImm]> {
-  let Constraints = "$rd = $rd_wb";
-  let imm = 0;
-}
-
-def C_SRLI64_HINT : RVInst16CB<0b100, 0b01, (outs GPRC:$rd),
-                               (ins GPRC:$rs1),
-                               "c.srli64", "$rs1">,
-                    Sched<[WriteShiftImm, ReadShiftImm]> {
-  let Constraints = "$rs1 = $rd";
-  let Inst{6-2} = 0;
-  let Inst{11-10} = 0b00;
-  let Inst{12} = 0;
-}
-
-def C_SRAI64_HINT : RVInst16CB<0b100, 0b01, (outs GPRC:$rd),
-                               (ins GPRC:$rs1),
-                               "c.srai64", "$rs1">,
-                    Sched<[WriteShiftImm, ReadShiftImm]> {
-  let Constraints = "$rs1 = $rd";
-  let Inst{6-2} = 0;
-  let Inst{11-10} = 0b01;
-  let Inst{12} = 0;
-}
-
 } // Predicates = [HasStdExtZca], hasSideEffects = 0, mayLoad = 0,
   // mayStore = 0
 
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions
 //===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtZca] in {
+// Legacy aliases.
+def : InstAlias<"c.slli64 $rd", (C_SLLI GPR:$rd, 0), 0>;
+def : InstAlias<"c.srli64 $rs1", (C_SRLI GPRC:$rs1, 0), 0>;
+def : InstAlias<"c.srai64 $rs1", (C_SRAI GPRC:$rs1, 0), 0>;
+}
 
 let Predicates = [HasStdExtC, HasStdExtZihintntl] in {
 def : InstAlias<"c.ntl.p1", (C_ADD X0, X2)>;

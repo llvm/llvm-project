@@ -149,10 +149,6 @@ public:
   /// number of threads!
   unsigned getMaxConcurrency() const override { return MaxThreadCount; }
 
-  // TODO: Remove, misleading legacy name warning!
-  LLVM_DEPRECATED("Use getMaxConcurrency instead", "getMaxConcurrency")
-  unsigned getThreadCount() const { return MaxThreadCount; }
-
   /// Returns true if the current thread is a worker thread of this thread pool.
   bool isWorkerThread() const;
 
@@ -232,10 +228,6 @@ public:
 
   /// Returns always 1: there is no concurrency.
   unsigned getMaxConcurrency() const override { return 1; }
-
-  // TODO: Remove, misleading legacy name warning!
-  LLVM_DEPRECATED("Use getMaxConcurrency instead", "getMaxConcurrency")
-  unsigned getThreadCount() const { return 1; }
 
   /// Returns true if the current thread is a worker thread of this thread pool.
   bool isWorkerThread() const;

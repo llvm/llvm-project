@@ -157,7 +157,8 @@ void MCWinCOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   // Ensure that the first and the second symbols relative to the section are
   // the section symbol and the COMDAT symbol.
   getAssembler().registerSymbol(*Section->getBeginSymbol());
-  if (auto *Sym = cast<MCSectionCOFF>(Section)->getCOMDATSymbol())
+  if (auto *Sym =
+          static_cast<const MCSectionCOFF *>(Section)->getCOMDATSymbol())
     getAssembler().registerSymbol(*Sym);
 }
 
