@@ -3177,6 +3177,18 @@ bool RISCVAsmParser::parseDirectiveOption() {
     if (Parser.parseEOL())
       return true;
 
+    auto &Streamer = getTargetStreamer().getStreamer();
+    auto *Assembler = Streamer.getAssemblerPtr();
+    auto *Section = Streamer.getCurrentSectionOnly();
+    // Update RVCEver status only if any instruction emitted.
+    if (Section->hasInstructions() && Assembler != nullptr &&
+        (getSTI().hasFeature(RISCV::FeatureStdExtC) ||
+         getSTI().hasFeature(RISCV::FeatureStdExtZca))) {
+      RISCVAsmBackend &MAB =
+          static_cast<RISCVAsmBackend &>(Assembler->getBackend());
+      MAB.setRVCEver(Section);
+    }
+
     getTargetStreamer().emitDirectiveOptionNoRVC();
     clearFeatureBits(RISCV::FeatureStdExtC, "c");
     clearFeatureBits(RISCV::FeatureStdExtZca, "zca");
@@ -3213,6 +3225,17 @@ bool RISCVAsmParser::parseDirectiveOption() {
   if (Option == "norelax") {
     if (Parser.parseEOL())
       return true;
+
+    auto &Streamer = getTargetStreamer().getStreamer();
+    auto *Assembler = Streamer.getAssemblerPtr();
+    auto *Section = Streamer.getCurrentSectionOnly();
+    // Update RelaxEver status only if any instruction emitted.
+    if (Assembler != nullptr && Section->hasInstructions() &&
+        getSTI().hasFeature(RISCV::FeatureRelax)) {
+      RISCVAsmBackend &MAB =
+          static_cast<RISCVAsmBackend &>(Assembler->getBackend());
+      MAB.setRelaxEver(Section);
+    }
 
     getTargetStreamer().emitDirectiveOptionNoRelax();
     clearFeatureBits(RISCV::FeatureRelax, "relax");
