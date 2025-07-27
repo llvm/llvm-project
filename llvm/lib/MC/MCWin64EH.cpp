@@ -318,6 +318,8 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
 
   // Emit the epilog instructions.
   if (EnableUnwindV2) {
+    OS->ensureHeadroom(info->EpilogMap.size() * 2);
+
     bool IsLast = true;
     for (const auto &Epilog : llvm::reverse(info->EpilogMap)) {
       if (IsLast) {
