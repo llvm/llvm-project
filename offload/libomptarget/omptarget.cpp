@@ -333,23 +333,23 @@ int targetDataMapper(ident_t *Loc, DeviceTy &Device, void *ArgBase, void *Arg,
 /// Utility function to perform a pointer attachment operation.
 ///
 /// For something like:
-/// \code
+/// ```cpp
 ///  int *p;
 ///  ...
 ///  #pragma omp target enter data map(to:p[10:10])
-/// \endcode
+/// ```
 ///
 /// for which the attachment operation gets represented using:
-/// \code
+/// ```
 ///   &p, &p[10], sizeof(p), ATTACH
-/// \endcode
+/// ```
 ///
 /// (Hst|Tgt)PtrAddr   represents &p
 /// (Hst|Tgt)PteeBase  represents &p[0]
 /// (Hst|Tgt)PteeBegin represents &p[10]
 ///
 /// This function first computes the expected TgtPteeBase using:
-///   TgtPteeBase = TgtPteeBegin - (HstPteeBegin - HstPteeBase)
+///   `<Select>TgtPteeBase = TgtPteeBegin - (HstPteeBegin - HstPteeBase)`
 ///
 /// and then attaches TgtPteeBase to TgtPtrAddr.
 ///
@@ -362,14 +362,14 @@ int targetDataMapper(ident_t *Loc, DeviceTy &Device, void *ArgBase, void *Arg,
 /// information such as lower-bound/upper-bound etc in their subsequent fields.
 ///
 /// For example, for the following:
-/// \code
+/// ```fortran
 ///   integer, allocatable :: x(:)
 ///   integer, pointer :: p(:)
 ///   ...
 ///   p => x(10: 19)
 ///   ...
 ///   !$omp target enter data map(to:p(:))
-/// \endcode
+/// ```
 ///
 /// The map should trigger a pointer-attachment (assuming the pointer-attachment
 /// conditions as noted on processAttachEntries are met) between the descriptor
@@ -384,10 +384,10 @@ int targetDataMapper(ident_t *Loc, DeviceTy &Device, void *ArgBase, void *Arg,
 ///
 /// The function also handles pointer-attachment portion of PTR_AND_OBJ maps,
 /// like:
-/// \code
+/// ```
 ///   &p, &p[10], 10 * sizeof(p[10]), PTR_AND_OBJ
-/// \endcoe
-/// by using "sizeof(void*)" as \p HstPtrSize.
+/// ```
+/// by using `sizeof(void*)` as \p HstPtrSize.
 static int performPointerAttachment(DeviceTy &Device, AsyncInfoTy &AsyncInfo,
                                     void **HstPtrAddr, void *HstPteeBase,
                                     void *HstPteeBegin, void **TgtPtrAddr,
@@ -405,8 +405,9 @@ static int performPointerAttachment(DeviceTy &Device, AsyncInfoTy &AsyncInfo,
   // Add shadow pointer tracking
   // TODO: Support shadow-tracking of larger than VoidPtrSize pointers,
   // to support restoration of Fortran descriptors. Currently, this check
-  // would return false, even if the host Fortran descriptor was, and we
-  // should have done an update of the device descriptor. e.g.
+  // would return false, even if the host Fortran descriptor had been
+  // updated since its previous map, and we should have updated its
+  // device counterpart. e.g.
   //
   //   !$omp target enter data map(x(1:100)) !             (1)
   //   p => x(10: 19)
@@ -472,30 +473,6 @@ static int performPointerAttachment(DeviceTy &Device, AsyncInfoTy &AsyncInfo,
      DPxPTR(HstDescriptorFieldsAddr));
 
   // Submit the entire buffer to device
-  // FIXME: When handling ATTACH map-type, pointer attachment needs to happen
-  // after the other mapping operations are done, to avoid possibility of
-  // pending transfers clobbering the attachment, for example:
-  //
-  //   int *p = ...;
-  //   int **pp = &p;
-  //   map(to: pp[0], p[0])
-  //
-  // Which would be represented by:
-  // &pp[0], &pp[0], sizeof(pp[0]), TO (1)
-  // &p[0], &p[0], sizeof(p[0]), TO    (2)
-  //
-  // &pp, &pp[0], sizeof(pp), ATTACH   (3)
-  // &p, &p[0], sizeof(p), ATTACH      (4)
-  //
-  // (4) and (1) are both trying to modify the device memory corresponding to
-  // &p. We need to ensure that (4) happens last.
-  //
-  // One possible solution to this could be to insert a "device barrier" before
-  // the first ATTACH submitData call, so that every subsequent submitData waits
-  // for any prior operations to finish. Like:
-  //   Device.submitData(..., /*InOrder=*/IsFirstAttachEntry)
-  // Where the boolean InOrder being true means that this submission should
-  // wait for prior memory submissions to finish.
   int SubmitResult = Device.submitData(TgtPtrAddr, DataBuffer, HstPtrSize,
                                        AsyncInfo, PtrTPR.getEntry());
 
@@ -702,10 +679,10 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 ///
 /// From OpenMP's perspective, when mapping something that has a base pointer,
 /// such as:
-/// \code
+/// ```cpp
 ///   int *p;
 ///   #pragma omp enter target data map(to: p[10:20])
-/// \endcode
+/// ```
 ///
 /// a pointer-attachment between p and &p[10] should occur if both p and
 /// p[10] are present on the device after doing all allocations for all maps
@@ -718,6 +695,33 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 /// That's why we collect all attach entries and new memory allocations during
 /// targetDataBegin, and use that information to make the decision of whether
 /// to perform a pointer-attachment or not here, after maps have been handled.
+///
+/// Additionally, once we decide that a pointer-attachment should be performed,
+/// we need to make sure that it happens after any previously submitted data
+/// transfers have completed, to avoid the possibility of the pending transfers
+/// clobbering the attachment. For example:
+///
+/// ```cpp
+///   int *p = ...;
+///   int **pp = &p;
+///   map(to: pp[0], p[0])
+/// ```
+///
+/// Which would be represented by:
+/// ```
+/// &pp[0], &pp[0], sizeof(pp[0]), TO (1)
+/// &p[0], &p[0], sizeof(p[0]), TO    (2)
+///
+/// &pp, &pp[0], sizeof(pp), ATTACH   (3)
+/// &p, &p[0], sizeof(p), ATTACH      (4)
+/// ```
+///
+/// (4) and (1) are both trying to modify the device memory corresponding to
+/// `&p`. So, if we decide that (4) should do an attachment, we also need to
+/// ensure that (4) happens after (1) is complete.
+///
+/// For this purpose, we insert a data_fence before the first
+/// pointer-attachment, (3), to ensure that all pending transfers finish first.
 int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
                          AsyncInfoTy &AsyncInfo) {
   // Report all tracked allocations from both main loop and ATTACH processing
@@ -736,6 +740,8 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
   DP("Processing %zu deferred ATTACH map entries\n",
      AttachInfo.AttachEntries.size());
 
+  int Ret = OFFLOAD_SUCCESS;
+  bool IsFirstPointerAttachment = true;
   for (size_t EntryIdx = 0; EntryIdx < AttachInfo.AttachEntries.size();
        ++EntryIdx) {
     const auto &AttachEntry = AttachInfo.AttachEntries[EntryIdx];
@@ -825,10 +831,22 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
       continue;
     void *TgtPteeBegin = PteeTPROpt->TargetPointer;
 
-    // Update the device pointer to point to device pointee.
-    int Ret = performPointerAttachment(Device, AsyncInfo, HstPtr, HstPteeBase,
-                                       HstPteeBegin, TgtPtrBase, TgtPteeBegin,
-                                       PtrSize, PtrTPR);
+    // Insert a data-fence before the first pointer-attachment.
+    if (IsFirstPointerAttachment) {
+      IsFirstPointerAttachment = false;
+      DP("Inserting a data fence before the first pointer attachment.\n");
+      Ret = Device.dataFence(AsyncInfo);
+      if (Ret != OFFLOAD_SUCCESS) {
+        REPORT("Failed to insert data fence.\n");
+        return OFFLOAD_FAIL;
+      }
+    }
+
+    // Do the pointer-attachment, i.e. update the device pointer to point to
+    // device pointee.
+    Ret = performPointerAttachment(Device, AsyncInfo, HstPtr, HstPteeBase,
+                                   HstPteeBegin, TgtPtrBase, TgtPteeBegin,
+                                   PtrSize, PtrTPR);
     if (Ret != OFFLOAD_SUCCESS)
       return OFFLOAD_FAIL;
 
