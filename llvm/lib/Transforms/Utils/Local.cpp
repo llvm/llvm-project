@@ -1007,7 +1007,7 @@ CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
                                 BasicBlock *&CommonPred) {
 
   // There must be phis in BB, otherwise BB will be merged into Succ directly
-  if (BB->phis().empty() || Succ->phis().empty())
+  if (BB->phis().empty() && Succ->phis().empty())
     return false;
 
   // BB must have predecessors not shared that can be redirected to Succ
@@ -1067,7 +1067,8 @@ static bool introduceTooManyPhiEntries(BasicBlock *BB, BasicBlock *Succ) {
 /// \param BBPreds The predecessors of BB.
 /// \param PN The phi that we are updating.
 /// \param CommonPred The common predecessor of BB and PN's BasicBlock
-static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
+/// \return True if at least one Value has been redirected.
+static bool redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
                                                 const PredBlockVector &BBPreds,
                                                 PHINode *PN,
                                                 BasicBlock *CommonPred) {
@@ -1075,6 +1076,7 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
   assert(OldVal && "No entry in PHI for Pred BB!");
 
   IncomingValueMap IncomingValues;
+  auto Changed = false;
 
   // We are merging two blocks - BB, and the block containing PN - and
   // as a result we need to redirect edges from the predecessors of BB
@@ -1109,6 +1111,7 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
       // And add a new incoming value for this predecessor for the
       // newly retargeted branch.
       PN->addIncoming(Selected, PredBB);
+      Changed = true;
     }
     if (CommonPred)
       PN->addIncoming(OldValPN->getIncomingValueForBlock(CommonPred), BB);
@@ -1126,12 +1129,15 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
       // And add a new incoming value for this predecessor for the
       // newly retargeted branch.
       PN->addIncoming(Selected, PredBB);
+      Changed = true;
     }
     if (CommonPred)
       PN->addIncoming(OldVal, BB);
   }
 
   replaceUndefValuesInPhi(PN, IncomingValues);
+
+  return Changed;
 }
 
 bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
@@ -1307,10 +1313,17 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     const PredBlockVector BBPreds(predecessors(BB));
 
     // Loop over all of the PHI nodes in the successor of BB.
+    auto HasBeenRedirected = false;
     for (BasicBlock::iterator I = Succ->begin(); isa<PHINode>(I); ++I) {
       PHINode *PN = cast<PHINode>(I);
-      redirectValuesFromPredecessorsToPhi(BB, BBPreds, PN, CommonPred);
+      HasBeenRedirected |=
+          redirectValuesFromPredecessorsToPhi(BB, BBPreds, PN, CommonPred);
     }
+
+    // If no value has been redirected from the predecessors then
+    // return false to avoid an infinity loop.
+    if (!HasBeenRedirected)
+      return false;
   }
 
   if (Succ->getSinglePredecessor()) {
