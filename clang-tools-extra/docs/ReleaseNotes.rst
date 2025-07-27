@@ -106,6 +106,12 @@ New checks
   Checks for uses of MLIR's old/to be deprecated ``OpBuilder::create<T>`` form
   and suggests using ``T::create`` instead.
 
+- New :doc:`misc-visibility-change-to-virtual-function
+  <clang-tidy/checks/misc/visibility-change-to-virtual-function>` check.
+
+  Finds virtual function overrides with different visibility than the function
+  in the base class.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
