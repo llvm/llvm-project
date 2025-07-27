@@ -100,6 +100,10 @@ set(OPENMP_TEST_FLAGS "" CACHE STRING
 set(OPENMP_TEST_OPENMP_FLAGS ${OPENMP_TEST_COMPILER_OPENMP_FLAGS} CACHE STRING
   "OpenMP compiler flag to use for testing OpenMP runtime libraries.")
 
+if (LLVM_RUNTIMES_BUILD)
+  flang_module_fortran_enable()
+endif ()
+
 set(ENABLE_LIBOMPTARGET ON)
 # Currently libomptarget cannot be compiled on Windows or MacOS X.
 # Since the device plugins are only supported on Linux anyway,
