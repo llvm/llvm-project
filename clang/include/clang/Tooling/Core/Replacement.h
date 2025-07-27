@@ -260,6 +260,10 @@ public:
   /// category of replacements.
   llvm::Error add(const Replacement &R);
 
+  /// Adds a replacement `R` into `Replaces` or merges it into `Replaces` by
+  /// applying all existing Replaces first if there is conflict.
+  llvm::Error addOrMerge(const Replacement &R);
+
   /// Merges \p Replaces into the current replacements. \p Replaces
   /// refers to code after applying the current replacements.
   [[nodiscard]] Replacements merge(const Replacements &Replaces) const;
