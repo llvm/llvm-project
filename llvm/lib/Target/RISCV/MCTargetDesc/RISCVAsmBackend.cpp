@@ -307,12 +307,12 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
 // the padding size in the addend.
 bool RISCVAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
   // Alignments before the first linker-relaxable instruction have fixed sizes
-  // and do not require relocations. Alignments following a linker-relaxable
+  // and do not require relocations. Alignments after a linker-relaxable
   // instruction require a relocation, even if the STI specifies norelax.
   //
-  // firstLinkerRelaxable represents the layout order within the subsection,
-  // which may be smaller than the section's order. Therefore, alignments in
-  // an earlier subsection may be unnecessarily treated as linker-relaxable.
+  // firstLinkerRelaxable is the layout order within the subsection, which may
+  // be smaller than the section's order. Therefore, alignments in a
+  // lower-numbered subsection may be unnecessarily treated as linker-relaxable.
   auto *Sec = F.getParent();
   if (F.getLayoutOrder() <= Sec->firstLinkerRelaxable())
     return false;
@@ -329,8 +329,6 @@ bool RISCVAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
       MCFixup::create(0, Expr, FirstLiteralRelocationKind + ELF::R_RISCV_ALIGN);
   F.setVarFixups({Fixup});
   F.setLinkerRelaxable();
-  if (!Sec->isLinkerRelaxable())
-    Sec->setFirstLinkerRelaxable(F.getLayoutOrder());
   return true;
 }
 

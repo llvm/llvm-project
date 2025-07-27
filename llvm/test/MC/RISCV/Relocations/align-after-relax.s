@@ -12,7 +12,7 @@
 # CHECK:           20: c.nop
 # CHECK-NEXT:                R_RISCV_ALIGN        *ABS*+0x6
 
-## Alignment directives in a smaller-number subsection might be conservatively treated as linker-relaxable.
+## Alignment directives in a lower-numbered subsection may be conservatively treated as linker-relaxable.
 # CHECK0:           6: c.nop
 # CHECK0-NEXT:               R_RISCV_ALIGN        *ABS*+0x6
 # CHECK0:          20: c.nop
@@ -21,7 +21,7 @@
 .text 2
 .option push
 .option norelax
-## R_RISCV_ALIGN is required even if norelax, because there is a preceding linker-relaxable instruction.
+## R_RISCV_ALIGN is required even if norelax, because it is after a linker-relaxable instruction.
 .balign 8
 l2:
   .word 0x12345678
