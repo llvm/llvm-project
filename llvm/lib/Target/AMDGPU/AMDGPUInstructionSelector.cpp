@@ -2100,7 +2100,7 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
 
   unsigned CPol = MI.getOperand(ArgOffset + Intr->CachePolicyIndex).getImm();
   // Keep GLC only when the atomic's result is actually used.
-  if (BaseOpcode->Atomic && VDataOut && !MRI->use_empty(VDataOut))
+  if (BaseOpcode->Atomic && VDataOut && !MRI->use_nodbg_empty(VDataOut))
     CPol |= AMDGPU::CPol::GLC;
 
   if (CPol & ~((IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12) |
@@ -2192,11 +2192,7 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
       }
 
     } else {
-      // If VDataOut is unused, mark it as dead to avoid unnecessary VGPR usage.
-      if (BaseOpcode->Atomic && MRI->use_empty(VDataOut))
-        MIB.addDef(VDataOut, RegState::Dead);
-      else
-        MIB.addDef(VDataOut);
+      MIB.addDef(VDataOut); // vdata output
     }
   }
 
