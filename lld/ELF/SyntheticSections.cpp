@@ -769,10 +769,6 @@ void GotSection::writeTo(uint8_t *buf) {
   }
 }
 
-static uint64_t getMipsPageAddr(uint64_t addr) {
-  return (addr + 0x8000) & ~0xffff;
-}
-
 static uint64_t getMipsPageCount(uint64_t size) {
   return (size + 0xfffe) / 0xffff + 1;
 }
@@ -790,7 +786,7 @@ void MipsGotSection::addEntry(InputFile &file, Symbol &sym, int64_t addend,
   FileGot &g = getGot(file);
   if (expr == RE_MIPS_GOT_LOCAL_PAGE) {
     if (const OutputSection *os = sym.getOutputSection())
-      g.pagesMap.insert({os, {}});
+      g.pagesMap.insert({os, {&sym}});
     else
       g.local16.insert({{nullptr, getMipsPageAddr(sym.getVA(ctx, addend))}, 0});
   } else if (sym.isTls())
@@ -1061,8 +1057,9 @@ void MipsGotSection::build() {
 
   // Create relocations.
   //
-  // NB: GOT 'page address' entries have their VAs handled in writeTo as they
-  // reference an OutputSection not a Symbol.
+  // Note the primary GOT's local and global relocations are implicit, and the
+  // MIPS ABI requires the VA be written even for the global entries, so we
+  // treat both as constants here.
   for (FileGot &got : gots) {
     // Create relocations for TLS entries.
     for (std::pair<Symbol *, size_t> &p : got.tls) {
@@ -1109,57 +1106,39 @@ void MipsGotSection::build() {
       }
     }
 
-    // Primary GOT's local and global relocations are implicit; write out VA as
-    // a constant for both (note MIPS requires the VA be written even for the
-    // global entries).
-    if (&got == primGot) {
-      // Relocations for "global" entries.
-      for (const std::pair<Symbol *, size_t> &p : got.global) {
-        uint64_t offset = p.second * ctx.arg.wordsize;
-        addConstant({R_ABS, ctx.target->relativeRel, offset, 0, p.first});
-      }
-      for (const std::pair<Symbol *, size_t> &p : got.relocs) {
-        uint64_t offset = p.second * ctx.arg.wordsize;
-        addConstant({R_ABS, ctx.target->relativeRel, offset, 0, p.first});
-      }
-
-      // Relocations for "local" entries
-      for (const std::pair<GotEntry, size_t> &p : got.local16) {
-        uint64_t offset = p.second * ctx.arg.wordsize;
-        if (p.first.first == nullptr)
-          addConstant({R_ADDEND, ctx.target->relativeRel, offset,
-                       p.first.second, ctx.dummySym});
-        else
-          addConstant({R_ABS, ctx.target->relativeRel, offset, p.first.second,
-                       p.first.first});
-      }
-
-      continue;
-    }
-
     // Relocations for "global" entries.
     for (const std::pair<Symbol *, size_t> &p : got.global) {
       uint64_t offset = p.second * ctx.arg.wordsize;
-      ctx.mainPart->relaDyn->addSymbolReloc(ctx.target->relativeRel, *this,
-                                            offset, *p.first);
+      if (&got == primGot)
+        addConstant({R_ABS, ctx.target->relativeRel, offset, 0, p.first});
+      else
+        ctx.mainPart->relaDyn->addSymbolReloc(ctx.target->relativeRel, *this,
+                                              offset, *p.first);
     }
     // Relocation-only entries exist as dummy entries for dynamic symbols that
     // aren't otherwise in the primary GOT, as the ABI requires an entry for
     // each dynamic symbol. Secondary GOTs have no need for them.
-    assert(got.relocs.empty() &&
+    assert((got.relocs.empty() || &got == primGot) &&
            "Relocation-only entries should only be in the primary GOT");
+    for (const std::pair<Symbol *, size_t> &p : got.relocs) {
+      uint64_t offset = p.second * ctx.arg.wordsize;
+      addConstant({R_ABS, ctx.target->relativeRel, offset, 0, p.first});
+    }
 
     // Relocations for "local" entries
-    if (ctx.arg.isPic) {
-      for (const std::pair<const OutputSection *, FileGot::PageBlock> &l :
-           got.pagesMap) {
-        size_t pageCount = l.second.count;
-        for (size_t pi = 0; pi < pageCount; ++pi) {
-          uint64_t offset = (l.second.firstIndex + pi) * ctx.arg.wordsize;
-          ctx.mainPart->relaDyn->addReloc({ctx.target->relativeRel, this,
-                                           offset, l.first,
-                                           int64_t(pi * 0x10000)});
-        }
+    for (const std::pair<const OutputSection *, FileGot::PageBlock> &l :
+         got.pagesMap) {
+      size_t pageCount = l.second.count;
+      for (size_t pi = 0; pi < pageCount; ++pi) {
+        uint64_t offset = (l.second.firstIndex + pi) * ctx.arg.wordsize;
+        int64_t addend = int64_t(pi * 0x10000);
+        if (!ctx.arg.isPic || &got == primGot)
+          addConstant({RE_MIPS_OSEC_LOCAL_PAGE, ctx.target->relativeRel, offset,
+                       addend, l.second.repSym});
+        else
+          ctx.mainPart->relaDyn->addRelativeReloc(
+              ctx.target->relativeRel, *this, offset, *l.second.repSym, addend,
+              ctx.target->relativeRel, RE_MIPS_OSEC_LOCAL_PAGE);
       }
     }
     for (const std::pair<GotEntry, size_t> &p : got.local16) {
@@ -1167,7 +1146,7 @@ void MipsGotSection::build() {
       if (p.first.first == nullptr)
         addConstant({R_ADDEND, ctx.target->relativeRel, offset, p.first.second,
                      ctx.dummySym});
-      else if (!ctx.arg.isPic)
+      else if (!ctx.arg.isPic || &got == primGot)
         addConstant({R_ABS, ctx.target->relativeRel, offset, p.first.second,
                      p.first.first});
       else
@@ -1211,17 +1190,6 @@ void MipsGotSection::writeTo(uint8_t *buf) {
   writeUint(ctx, buf + ctx.arg.wordsize,
             (uint64_t)1 << (ctx.arg.wordsize * 8 - 1));
   ctx.target->relocateAlloc(*this, buf);
-  for (const FileGot &g : gots) {
-    // Write 'page address' entries to the local part of the GOT.
-    for (const std::pair<const OutputSection *, FileGot::PageBlock> &l :
-         g.pagesMap) {
-      size_t pageCount = l.second.count;
-      uint64_t firstPageAddr = getMipsPageAddr(l.first->addr);
-      for (size_t pi = 0; pi < pageCount; ++pi)
-        writeUint(ctx, buf + (l.second.firstIndex + pi) * ctx.arg.wordsize,
-                  firstPageAddr + pi * 0x10000);
-    }
-  }
 }
 
 // On PowerPC the .plt section is used to hold the table of function addresses
@@ -1663,20 +1631,10 @@ uint64_t DynamicReloc::getOffset() const {
 }
 
 int64_t DynamicReloc::computeAddend(Ctx &ctx) const {
-  switch (kind) {
-  case Computed:
-    llvm_unreachable("addend already computed");
-  case AddendOnly:
-  case AgainstSymbol: {
-    uint64_t ca = inputSec->getRelocTargetVA(
-        ctx, Relocation{expr, type, 0, addend, sym}, getOffset());
-    return ctx.arg.is64 ? ca : SignExtend64<32>(ca);
-  }
-  case MipsMultiGotPage:
-    assert(sym == nullptr);
-    return getMipsPageAddr(outputSec->addr) + addend;
-  }
-  llvm_unreachable("Unknown DynamicReloc::Kind enum");
+  assert(!isFinal && "addend already computed");
+  uint64_t ca = inputSec->getRelocTargetVA(
+      ctx, Relocation{expr, type, 0, addend, sym}, getOffset());
+  return ctx.arg.is64 ? ca : SignExtend64<32>(ca);
 }
 
 uint32_t DynamicReloc::getSymIndex(SymbolTableBaseSection *symTab) const {
@@ -1704,8 +1662,8 @@ RelocationBaseSection::RelocationBaseSection(Ctx &ctx, StringRef name,
 void RelocationBaseSection::addSymbolReloc(
     RelType dynType, InputSectionBase &isec, uint64_t offsetInSec, Symbol &sym,
     int64_t addend, std::optional<RelType> addendRelType) {
-  addReloc(DynamicReloc::AgainstSymbol, dynType, isec, offsetInSec, sym, addend,
-           R_ADDEND, addendRelType ? *addendRelType : ctx.target->noneRel);
+  addReloc(true, dynType, isec, offsetInSec, sym, addend, R_ADDEND,
+           addendRelType ? *addendRelType : ctx.target->noneRel);
 }
 
 void RelocationBaseSection::addAddendOnlyRelocIfNonPreemptible(
@@ -1713,11 +1671,9 @@ void RelocationBaseSection::addAddendOnlyRelocIfNonPreemptible(
     RelType addendRelType) {
   // No need to write an addend to the section for preemptible symbols.
   if (sym.isPreemptible)
-    addReloc({dynType, &isec, offsetInSec, DynamicReloc::AgainstSymbol, sym, 0,
-              R_ADDEND});
+    addReloc({dynType, &isec, offsetInSec, true, sym, 0, R_ADDEND});
   else
-    addReloc(DynamicReloc::AddendOnly, dynType, isec, offsetInSec, sym, 0,
-             R_ABS, addendRelType);
+    addReloc(false, dynType, isec, offsetInSec, sym, 0, R_ABS, addendRelType);
 }
 
 void RelocationBaseSection::mergeRels() {
@@ -1757,17 +1713,17 @@ void RelocationBaseSection::finalizeContents() {
   }
 }
 
-void DynamicReloc::computeRaw(Ctx &ctx, SymbolTableBaseSection *symt) {
+void DynamicReloc::finalize(Ctx &ctx, SymbolTableBaseSection *symt) {
   r_offset = getOffset();
   r_sym = getSymIndex(symt);
   addend = computeAddend(ctx);
-  kind = Computed; // Catch errors
+  isFinal = true; // Catch errors
 }
 
 void RelocationBaseSection::computeRels() {
   SymbolTableBaseSection *symTab = getPartition(ctx).dynSymTab.get();
   parallelForEach(relocs, [&ctx = ctx, symTab](DynamicReloc &rel) {
-    rel.computeRaw(ctx, symTab);
+    rel.finalize(ctx, symTab);
   });
 
   auto irelative = std::stable_partition(
