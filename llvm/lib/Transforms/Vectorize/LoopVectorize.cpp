@@ -4382,13 +4382,15 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
 
 bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
     ElementCount VF) const {
-  // Cross iteration phis such as fixed-order recurrences and OrderedFCmpSelect/FMaxNum/FMinNum
-  // reductions need special handling and are currently unsupported.
+  // Cross iteration phis such as fixed-order recurrences and
+  // OrderedFCmpSelect/FMaxNum/FMinNum reductions need special handling and are
+  // currently unsupported.
   if (any_of(OrigLoop->getHeader()->phis(), [&](PHINode &Phi) {
         if (!Legal->isReductionVariable(&Phi))
           return Legal->isFixedOrderRecurrence(&Phi);
         RecurKind RK = Legal->getRecurrenceDescriptor(&Phi).getRecurrenceKind();
-        return RK == RecurKind::OrderedFCmpSelect || RK == RecurKind::FMinNum || RK == RecurKind::FMaxNum;
+        return RK == RecurKind::OrderedFCmpSelect || RK == RecurKind::FMinNum ||
+               RK == RecurKind::FMaxNum;
       }))
     return false;
 
