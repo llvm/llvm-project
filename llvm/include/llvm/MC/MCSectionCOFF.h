@@ -51,6 +51,7 @@ class MCSectionCOFF final : public MCSection {
 
 private:
   friend class MCContext;
+  friend class MCAsmInfoCOFF;
   // The storage of Name is owned by MCContext's COFFUniquingMap.
   MCSectionCOFF(StringRef Name, unsigned Characteristics,
                 MCSymbol *COMDATSymbol, int Selection, unsigned UniqueID,
@@ -67,7 +68,7 @@ private:
 public:
   /// Decides whether a '.section' directive should be printed before the
   /// section name
-  bool shouldOmitSectionDirective(StringRef Name, const MCAsmInfo &MAI) const;
+  bool shouldOmitSectionDirective(StringRef Name) const;
 
   unsigned getCharacteristics() const { return Characteristics; }
   MCSymbol *getCOMDATSymbol() const { return COMDATSymbol; }
@@ -77,10 +78,6 @@ public:
 
   bool isUnique() const { return UniqueID != NonUniqueID; }
   unsigned getUniqueID() const { return UniqueID; }
-
-  void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
-                            raw_ostream &OS,
-                            uint32_t Subsection) const override;
 
   unsigned getOrAssignWinCFISectionID(unsigned *NextID) const {
     if (WinCFISectionID == ~0U)
