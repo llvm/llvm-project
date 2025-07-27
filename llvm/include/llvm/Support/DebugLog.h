@@ -30,37 +30,95 @@ namespace llvm {
 #define DEBUGLOG_WITH_STREAM_AND_TYPE(STREAM, TYPE)                            \
   for (bool _c = (::llvm::DebugFlag && ::llvm::isCurrentDebugType(TYPE)); _c;  \
        _c = false)                                                             \
-  ::llvm::impl::LogWithNewline(TYPE, __SHORT_FILE__, __LINE__, (STREAM))
+  ::llvm::impl::LogWithNewline(TYPE, __SHORT_FILE__, __LINE__, (STREAM))       \
+      .stream()
 #else
 #define DEBUGLOG_WITH_STREAM_AND_TYPE(STREAM, TYPE)                            \
   for (bool _c = (::llvm::DebugFlag && ::llvm::isCurrentDebugType(TYPE)); _c;  \
        _c = false)                                                             \
-  ::llvm::impl::LogWithNewline(TYPE, __FILE__, __LINE__, (STREAM))
+  ::llvm::impl::LogWithNewline(TYPE, __FILE__, __LINE__, (STREAM)).stream()
 #endif
 
 namespace impl {
+
+/// A raw_ostream that tracks `\n` and print the prefix.
+class LLVM_ABI raw_ldbg_ostream final : public raw_ostream {
+  std::string Prefix;
+  raw_ostream &Os;
+  bool HasPendingNewline = true;
+
+  /// Split the line on newlines and insert the prefix before each newline.
+  /// Forward everything to the underlying stream.
+  void write_impl(const char *Ptr, size_t Size) final {
+    auto Str = StringRef(Ptr, Size);
+    if (!Str.empty()) {
+      if (HasPendingNewline) {
+        emitPrefix();
+        HasPendingNewline = false;
+      }
+    }
+    auto Eol = Str.find('\n');
+    while (Eol != StringRef::npos) {
+      StringRef Line = Str.take_front(Eol + 1);
+      if (!Line.empty()) {
+        if (HasPendingNewline) {
+          emitPrefix();
+          HasPendingNewline = false;
+        }
+        Os.write(Line.data(), Line.size());
+      }
+      HasPendingNewline = true;
+      Str = Str.drop_front(Eol + 1);
+      Eol = Str.find('\n');
+    }
+    if (!Str.empty()) {
+      if (HasPendingNewline) {
+        emitPrefix();
+        HasPendingNewline = false;
+      }
+      Os.write(Str.data(), Str.size());
+    }
+  }
+  void emitPrefix() { Os.write(Prefix.c_str(), Prefix.size()); }
+
+public:
+  explicit raw_ldbg_ostream(std::string Prefix, raw_ostream &Os)
+      : Prefix(std::move(Prefix)), Os(Os) {
+    SetUnbuffered();
+  }
+  ~raw_ldbg_ostream() final { flushEol(); }
+  void flushEol() {
+    if (HasPendingNewline) {
+      emitPrefix();
+      HasPendingNewline = false;
+    }
+  }
+
+  raw_ostream &getOs() { return Os; }
+
+  /// Forward the current_pos method to the underlying stream.
+  uint64_t current_pos() const final { return Os.tell(); }
+};
+
 class LogWithNewline {
 public:
-  LogWithNewline(const char *debug_type, const char *file, int line,
-                 raw_ostream &os)
-      : os(os) {
-#if !defined(__SHORT_FILE__)
-    file = ::llvm::impl::LogWithNewline::getShortFileName(file);
-#endif
-    if (debug_type)
-      os << "[" << debug_type << "] ";
-    os << file << ":" << line << " ";
+  LogWithNewline(const char *DebugType, const char *File, int Line,
+                 raw_ostream &Os)
+      : Os(computePrefix(DebugType, File, Line), Os) {}
+  ~LogWithNewline() {
+    Os.flushEol();
+    Os.getOs() << '\n';
   }
-  ~LogWithNewline() { os << '\n'; }
-  template <typename T> raw_ostream &operator<<(const T &t) && {
-    return os << t;
-  }
+
+  raw_ostream &stream() { return Os; }
 
   // Prevent copying, as this class manages newline responsibility and is
   // intended for use as a temporary.
   LogWithNewline(const LogWithNewline &) = delete;
   LogWithNewline &operator=(const LogWithNewline &) = delete;
   LogWithNewline &operator=(LogWithNewline &&) = delete;
+
+private:
   static constexpr const char *getShortFileName(const char *path) {
     // Remove the path prefix from the file name.
     const char *filename = path;
@@ -71,9 +129,19 @@ public:
     }
     return filename;
   }
-
-private:
-  raw_ostream &os;
+  static std::string computePrefix(const char *DebugType, const char *File,
+                                   int Line) {
+    std::string Prefix;
+    raw_string_ostream OsPrefix(Prefix);
+#if !defined(__SHORT_FILE__)
+    File = ::llvm::impl::LogWithNewline::getShortFileName(File);
+#endif
+    if (DebugType)
+      OsPrefix << "[" << DebugType << "] ";
+    OsPrefix << File << ":" << Line << " ";
+    return OsPrefix.str();
+  }
+  raw_ldbg_ostream Os;
 };
 } // end namespace impl
 #else
