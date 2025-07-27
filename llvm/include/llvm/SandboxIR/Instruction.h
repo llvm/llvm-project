@@ -1892,6 +1892,7 @@ public:
   using CaseIt = llvm::SwitchInst::CaseIteratorImpl<CaseHandle>;
   using ConstCaseIt = llvm::SwitchInst::CaseIteratorImpl<ConstCaseHandle>;
 
+  ConstantInt *const *case_values() const { return nullptr; } // XXX
   /// Returns a read/write iterator that points to the first case in the
   /// SwitchInst.
   CaseIt case_begin() { return CaseIt(this, 0); }
