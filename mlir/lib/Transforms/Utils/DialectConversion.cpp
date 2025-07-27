@@ -1700,6 +1700,7 @@ void ConversionPatternRewriterImpl::notifyBlockInserted(
       });
   assert(!wasOpReplaced(newParentOp) &&
          "attempting to insert into a region within a replaced/erased op");
+  (void)newParentOp;
 
   patternInsertedBlocks.insert(block);
 
