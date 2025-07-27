@@ -38,6 +38,7 @@ endif()
 include(LLDBConfig)
 include(AddLLDB)
 include(LLDBLayeringCheck)
+include(LLDBConfigFortran)
 
 set(LLDB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
