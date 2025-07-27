@@ -35,11 +35,7 @@ define float @fmax_ogt_with_select_1(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[TMP8]])
 ; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[TMP9]], -1
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP9]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x i64> poison, i64 [[RDX_SELECT]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT2]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = urem <4 x i64> [[BROADCAST_SPLAT3]], splat (i64 4)
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP10]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 [[TMP11]], 0
+; CHECK-NEXT:    [[TMP12:%.*]] = urem i64 [[RDX_SELECT]], 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x float> [[TMP3]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -187,11 +183,7 @@ define float @fmax_olt_with_select_2(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[TMP8]])
 ; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[TMP9]], -1
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP9]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x i64> poison, i64 [[RDX_SELECT]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT2]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = urem <4 x i64> [[BROADCAST_SPLAT3]], splat (i64 4)
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP10]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 [[TMP11]], 0
+; CHECK-NEXT:    [[TMP12:%.*]] = urem i64 [[RDX_SELECT]], 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x float> [[TMP3]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -273,11 +265,7 @@ define float @fmax_ogt_with_select_store_result(ptr %src, ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[TMP9]])
 ; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[TMP10]], -1
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP10]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x i64> poison, i64 [[RDX_SELECT]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT3]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = urem <4 x i64> [[BROADCAST_SPLAT4]], splat (i64 4)
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[TMP11]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP12]], 0
+; CHECK-NEXT:    [[TMP13:%.*]] = urem i64 [[RDX_SELECT]], 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x float> [[TMP4]], i64 [[TMP13]]
 ; CHECK-NEXT:    store float [[TMP14]], ptr [[DST]], align 8, !alias.scope [[META10:![0-9]+]], !noalias [[META6]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
@@ -740,11 +728,7 @@ define float @fmax_with_select_and_load_store(ptr %src, ptr noalias %dst, i64 %n
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[TMP13]])
 ; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[TMP14]], -1
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP14]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x i64> poison, i64 [[RDX_SELECT]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT3]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP15:%.*]] = urem <4 x i64> [[BROADCAST_SPLAT4]], splat (i64 4)
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i64> [[TMP15]], i32 0
-; CHECK-NEXT:    [[TMP17:%.*]] = sub i64 [[TMP16]], 0
+; CHECK-NEXT:    [[TMP17:%.*]] = urem i64 [[RDX_SELECT]], 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x float> [[TMP8]], i64 [[TMP17]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]

@@ -48,15 +48,11 @@ define float @fmax_ogt_with_select(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[RDX_MINMAX]])
 ; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[TMP15]], -1
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP15]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <4 x i64> poison, i64 [[RDX_SELECT]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT5]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP16:%.*]] = urem <4 x i64> [[BROADCAST_SPLAT6]], splat (i64 8)
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i64> [[TMP16]], i32 0
-; CHECK-NEXT:    [[TMP18:%.*]] = sub i64 [[TMP17]], 0
+; CHECK-NEXT:    [[TMP18:%.*]] = urem i64 [[RDX_SELECT]], 8
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x float> [[TMP5]], i64 [[TMP18]]
-; CHECK-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP17]], 4
+; CHECK-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP18]], 4
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x float> [[TMP6]], i64 [[TMP20]]
-; CHECK-NEXT:    [[TMP22:%.*]] = icmp uge i64 [[TMP17]], 4
+; CHECK-NEXT:    [[TMP22:%.*]] = icmp uge i64 [[TMP18]], 4
 ; CHECK-NEXT:    [[TMP23:%.*]] = select i1 [[TMP22]], float [[TMP21]], float [[TMP19]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]

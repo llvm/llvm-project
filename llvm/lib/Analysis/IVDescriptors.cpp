@@ -963,13 +963,14 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
                "unexpected recurrence kind for minnum");
         return InstDesc(I, RecurKind::FMinNum);
       }
-      if (isa<SelectInst>(I) && Kind == RecurKind::OrderedFCmpSelect)
-        return InstDesc(I, RecurKind::OrderedFCmpSelect);
-      auto *Cmp = dyn_cast<FCmpInst>(I);
-      if (Kind == RecurKind::FMax && Cmp &&
-          FCmpInst::isOrdered(Cmp->getPredicate()) &&
-          isMinMaxPattern(I, Kind, Prev).isRecurrence())
-        return InstDesc(I, RecurKind::OrderedFCmpSelect);
+      if (Kind == RecurKind::FMax || Kind == RecurKind::OrderedFCmpSelect) {
+        if (isa<SelectInst>(I))
+          return InstDesc(I, RecurKind::OrderedFCmpSelect);
+        auto *Cmp = dyn_cast<FCmpInst>(I);
+        if (Cmp && FCmpInst::isOrdered(Cmp->getPredicate()) &&
+            isMinMaxPattern(I, Kind, Prev).isRecurrence())
+          return InstDesc(I, RecurKind::OrderedFCmpSelect);
+      }
       return InstDesc(false, I);
     }
     if (isFMulAddIntrinsic(I))
