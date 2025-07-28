@@ -436,8 +436,12 @@ void AccStructureChecker::CheckAtomicUpdateStmt(
       context_.Say(expr.source,
           "Invalid atomic update operation, can only use: *, +, -, *, /, and, or, eqv, neqv, max, min, iand, ior, ieor"_err_en_US,
           construct);
+    } else {
       // TODO: Check that the updateVar is referenced in the args.
       // TODO: Check that the captureVar is not referenced in the args.
+      // TODO: I ran into a case where equality gave me a backtrace...
+      // TODO: Seems like captureVar must be checked for equality module
+      // conversion too.
     }
   }
 }
@@ -567,6 +571,7 @@ void AccStructureChecker::Enter(const parser::AccAtomicCapture &capture) {
       context_.Say(std::get<parser::Verbatim>(capture.t).source,
           "The assignments in this atomic capture construct do not update a variable and capture either its initial or final value"_err_en_US);
       // TODO: Add attatchment that x = x is not considered an update.
+      // TODO: Add attatchment that y = x seems to be a capture.
     } else if (omp::IsSubexpressionOf(*lhs2, *rhs2)) {
       // Take y = x; x = <expr w/ x> as capture; update
       const auto &updateVar{*lhs2};
@@ -586,6 +591,7 @@ void AccStructureChecker::Enter(const parser::AccAtomicCapture &capture) {
       context_.Say(var1.GetSource(),
           "The first assignment in this atomic capture construct doesn't perform a valid update"_err_en_US);
       // TODO: Add attatchment that x = x is not considered an update.
+      // TODO: Add attatchment that y = x seems to be a capture.
       return;
     } else {
       // Take x = <expr>; y = x; as update; capture
@@ -598,10 +604,12 @@ void AccStructureChecker::Enter(const parser::AccAtomicCapture &capture) {
     // x1 = x2; x2 = x1; Doesn't fit the spec;
     context_.Say(std::get<parser::Verbatim>(capture.t).source,
         "The assignments in this atomic capture construct do not update a variable and capture either its initial or final value"_err_en_US);
+    // TODO: Add attatchment that both assignments seem to be captures.
   } else {
     // y1 = <expr != y2>; y2 = <expr != y1>; Doesn't fit the spec
     context_.Say(std::get<parser::Verbatim>(capture.t).source,
         "The assignments in this atomic capture construct do not update a variable and capture either its initial or final value"_err_en_US);
+    // TODO: Add attatchment that neither assignment seems to be a capture.
   }
   return;
 }
