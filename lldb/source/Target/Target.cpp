@@ -36,6 +36,7 @@
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedStopHookInterface.h"
 #include "lldb/Interpreter/OptionGroupWatchpoint.h"
 #include "lldb/Interpreter/OptionValues.h"
