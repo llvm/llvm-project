@@ -4457,14 +4457,24 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
     CallsiteToCalleeFuncCloneMap[Caller] = CalleeFunc;
   };
 
+  // Information for a single clone of this Func.
+  struct FuncCloneInfo {
+    // The function clone.
+    FuncInfo FuncClone;
+    // Remappings of each call of interest (from original uncloned call to the
+    // corresponding cloned call in this function clone).
+    std::map<CallInfo, CallInfo> CallMap;
+  };
+
   // Walk all functions for which we saw calls with memprof metadata, and handle
   // cloning for each of its calls.
   for (auto &[Func, CallsWithMetadata] : FuncToCallsWithMetadata) {
     FuncInfo OrigFunc(Func);
-    // Map from each clone of OrigFunc to a map of remappings of each call of
-    // interest (from original uncloned call to the corresponding cloned call in
-    // that function clone).
-    std::map<FuncInfo, std::map<CallInfo, CallInfo>> FuncClonesToCallMap;
+    // Map from each clone number of OrigFunc to information about that function
+    // clone (the function clone FuncInfo and call remappings). The index into
+    // the vector is the clone number, as function clones are created and
+    // numbered sequentially.
+    std::vector<FuncCloneInfo> FuncCloneInfos;
     for (auto &Call : CallsWithMetadata) {
       ContextNode *Node = getNodeForInst(Call);
       // Skip call if we do not have a node for it (all uses of its stack ids
@@ -4488,8 +4498,9 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
         // Record the clone of callsite node assigned to this function clone.
         FuncCloneToCurNodeCloneMap[FuncClone] = CallsiteClone;
 
-        assert(FuncClonesToCallMap.count(FuncClone));
-        std::map<CallInfo, CallInfo> &CallMap = FuncClonesToCallMap[FuncClone];
+        assert(FuncCloneInfos.size() > FuncClone.cloneNo());
+        std::map<CallInfo, CallInfo> &CallMap =
+            FuncCloneInfos[FuncClone.cloneNo()].CallMap;
         CallInfo CallClone(Call);
         if (auto It = CallMap.find(Call); It != CallMap.end())
           CallClone = It->second;
@@ -4528,10 +4539,10 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
         // than existing function clones, which would have been assigned to an
         // earlier clone in the list (we assign callsite clones to function
         // clones greedily).
-        if (FuncClonesToCallMap.size() < NodeCloneCount) {
+        if (FuncCloneInfos.size() < NodeCloneCount) {
           // If this is the first callsite copy, assign to original function.
           if (NodeCloneCount == 1) {
-            // Since FuncClonesToCallMap is empty in this case, no clones have
+            // Since FuncCloneInfos is empty in this case, no clones have
             // been created for this function yet, and no callers should have
             // been assigned a function clone for this callee node yet.
             assert(llvm::none_of(
@@ -4540,7 +4551,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
                 }));
             // Initialize with empty call map, assign Clone to original function
             // and its callers, and skip to the next clone.
-            FuncClonesToCallMap[OrigFunc] = {};
+            FuncCloneInfos.push_back({OrigFunc, {}});
             AssignCallsiteCloneToFuncClone(
                 OrigFunc, Call, Clone,
                 AllocationCallToContextNodeMap.count(Call));
@@ -4572,14 +4583,14 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
           }
 
           // Clone function and save it along with the CallInfo map created
-          // during cloning in the FuncClonesToCallMap.
+          // during cloning in the FuncCloneInfos.
           std::map<CallInfo, CallInfo> NewCallMap;
-          unsigned CloneNo = FuncClonesToCallMap.size();
+          unsigned CloneNo = FuncCloneInfos.size();
           assert(CloneNo > 0 && "Clone 0 is the original function, which "
                                 "should already exist in the map");
           FuncInfo NewFuncClone = cloneFunctionForCallsite(
               OrigFunc, Call, NewCallMap, CallsWithMetadata, CloneNo);
-          FuncClonesToCallMap.emplace(NewFuncClone, std::move(NewCallMap));
+          FuncCloneInfos.push_back({NewFuncClone, std::move(NewCallMap)});
           FunctionClonesAnalysis++;
           Changed = true;
 
@@ -4681,7 +4692,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
               CallInfo OrigCall(Callee->getOrigNode()->Call);
               OrigCall.setCloneNo(0);
               std::map<CallInfo, CallInfo> &CallMap =
-                  FuncClonesToCallMap[NewFuncClone];
+                  FuncCloneInfos[NewFuncClone.cloneNo()].CallMap;
               assert(CallMap.count(OrigCall));
               CallInfo NewCall(CallMap[OrigCall]);
               assert(NewCall);
@@ -4819,13 +4830,13 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
             // clone of OrigFunc for another caller during this iteration over
             // its caller edges.
             if (!FuncCloneAssignedToCurCallsiteClone) {
-              // Find first function in FuncClonesToCallMap without an assigned
+              // Find first function in FuncCloneInfos without an assigned
               // clone of this callsite Node. We should always have one
               // available at this point due to the earlier cloning when the
-              // FuncClonesToCallMap size was smaller than the clone number.
-              for (auto &CF : FuncClonesToCallMap) {
-                if (!FuncCloneToCurNodeCloneMap.count(CF.first)) {
-                  FuncCloneAssignedToCurCallsiteClone = CF.first;
+              // FuncCloneInfos size was smaller than the clone number.
+              for (auto &CF : FuncCloneInfos) {
+                if (!FuncCloneToCurNodeCloneMap.count(CF.FuncClone)) {
+                  FuncCloneAssignedToCurCallsiteClone = CF.FuncClone;
                   break;
                 }
               }
