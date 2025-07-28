@@ -10,9 +10,9 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ; We expect the branch weight computations after vectorisation to use
 ; vscale=2 for neoverse-v1 and vscale=1 for neoverse-v2.
-define void @_Z3foov() {
+define void @_Z3foov(i64 %n) {
 ; CHECK-V1-IC1-LABEL: define void @_Z3foov(
-; CHECK-V1-IC1-SAME: ) #[[ATTR0:[0-9]+]] {
+; CHECK-V1-IC1-SAME: i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-V1-IC1:  [[ENTRY:.*:]]
 ; CHECK-V1-IC1:    br i1 [[MIN_ITERS_CHECK:%.*]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK-V1-IC1:  [[VECTOR_PH]]:
@@ -28,41 +28,41 @@ define void @_Z3foov() {
 ; CHECK-V1-IC1:  [[FOR_COND_CLEANUP]]:
 ;
 ; CHECK-V2-IC1-LABEL: define void @_Z3foov(
-; CHECK-V2-IC1-SAME: ) #[[ATTR0:[0-9]+]] {
+; CHECK-V2-IC1-SAME: i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-V2-IC1:  [[ENTRY:.*:]]
-; CHECK-V2-IC1:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF0:![0-9]+]]
+; CHECK-V2-IC1:    br i1 [[MIN_ITERS_CHECK:%.*]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK-V2-IC1:  [[VECTOR_PH]]:
 ; CHECK-V2-IC1:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-V2-IC1:  [[VECTOR_BODY]]:
 ; CHECK-V2-IC1:    br i1 [[TMP4:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK-V2-IC1:  [[MIDDLE_BLOCK]]:
-; CHECK-V2-IC1:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]], !prof [[PROF5:![0-9]+]]
+; CHECK-V2-IC1:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]], !prof [[PROF5:![0-9]+]]
 ; CHECK-V2-IC1:  [[SCALAR_PH]]:
 ; CHECK-V2-IC1:    br label %[[FOR_BODY:.*]]
 ; CHECK-V2-IC1:  [[FOR_BODY]]:
-; CHECK-V2-IC1:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF6:![0-9]+]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-V2-IC1:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF5:![0-9]+]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK-V2-IC1:  [[FOR_COND_CLEANUP]]:
 ;
 ; CHECK-V2-IC4-LABEL: define void @_Z3foov(
-; CHECK-V2-IC4-SAME: ) #[[ATTR0:[0-9]+]] {
+; CHECK-V2-IC4-SAME: i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-V2-IC4:  [[VEC_EPILOG_VECTOR_BODY1:.*:]]
 ; CHECK-V2-IC4:    br i1 [[MIN_ITERS_CHECK:%.*]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK-V2-IC4:  [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; CHECK-V2-IC4:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF0]]
+; CHECK-V2-IC4:    br i1 [[MIN_ITERS_CHECK1:%.*]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF0]]
 ; CHECK-V2-IC4:  [[VECTOR_PH]]:
 ; CHECK-V2-IC4:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-V2-IC4:  [[VECTOR_BODY]]:
-; CHECK-V2-IC4:    br i1 [[TMP12:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[TMP10:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK-V2-IC4:  [[MIDDLE_BLOCK]]:
-; CHECK-V2-IC4:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]], !prof [[PROF5:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]], !prof [[PROF5:![0-9]+]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_ITER_CHECK]]:
 ; CHECK-V2-IC4:    br i1 [[MIN_EPILOG_ITERS_CHECK:%.*]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF6:![0-9]+]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_PH]]:
 ; CHECK-V2-IC4:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-V2-IC4:    br i1 [[TMP23:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[TMP15:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-V2-IC4:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF8:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[CMP_N10:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF8:![0-9]+]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-V2-IC4:    br label %[[FOR_BODY:.*]]
 ; CHECK-V2-IC4:  [[FOR_BODY]]:
@@ -79,7 +79,7 @@ for.body:                                         ; preds = %for.body, %entry
   %arrayidx2 = getelementptr inbounds [1024 x i32], ptr @a, i64 0, i64 %iv
   store i32 %load, ptr %arrayidx2, align 4
   %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond = icmp eq i64 %iv.next, 1024
+  %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !prof !0
 
 for.cond.cleanup:                                 ; preds = %for.body
@@ -101,9 +101,8 @@ for.cond.cleanup:                                 ; preds = %for.body
 ; CHECK-V2-IC1: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]], [[META4:![0-9]+]]}
 ; CHECK-V2-IC1: [[META3]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK-V2-IC1: [[META4]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-V2-IC1: [[PROF5]] = !{!"branch_weights", i32 1, i32 3}
-; CHECK-V2-IC1: [[PROF6]] = !{!"branch_weights", i32 0, i32 0}
-; CHECK-V2-IC1: [[LOOP7]] = distinct !{[[LOOP7]], [[META4]], [[META3]]}
+; CHECK-V2-IC1: [[PROF5]] = !{!"branch_weights", i32 0, i32 0}
+; CHECK-V2-IC1: [[LOOP6]] = distinct !{[[LOOP6]], [[META4]], [[META3]]}
 ;.
 ; CHECK-V2-IC4: [[PROF0]] = !{!"branch_weights", i32 1, i32 127}
 ; CHECK-V2-IC4: [[PROF1]] = !{!"branch_weights", i32 1, i32 63}
@@ -111,9 +110,9 @@ for.cond.cleanup:                                 ; preds = %for.body
 ; CHECK-V2-IC4: [[META3]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK-V2-IC4: [[META4]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK-V2-IC4: [[PROF5]] = !{!"branch_weights", i32 1, i32 15}
-; CHECK-V2-IC4: [[PROF6]] = !{!"branch_weights", i32 2, i32 0}
+; CHECK-V2-IC4: [[PROF6]] = !{!"branch_weights", i32 4, i32 0}
 ; CHECK-V2-IC4: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]], [[META4]]}
-; CHECK-V2-IC4: [[PROF8]] = !{!"branch_weights", i32 1, i32 1}
+; CHECK-V2-IC4: [[PROF8]] = !{!"branch_weights", i32 1, i32 3}
 ; CHECK-V2-IC4: [[PROF9]] = !{!"branch_weights", i32 0, i32 0}
 ; CHECK-V2-IC4: [[LOOP10]] = distinct !{[[LOOP10]], [[META4]], [[META3]]}
 ;.
