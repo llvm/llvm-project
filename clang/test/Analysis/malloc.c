@@ -1970,7 +1970,7 @@ void gh149754(void *p) {
   // was since then removed for the codebase.
   if (!realloc(p, 8)) {
     realloc(p, 8);
-    free(p); // expected-warning {{Attempt to free released memory}}
+    free(p); // expected-warning {{Attempt to release already released memory}}
   }
   // expected-warning@+1 {{Potential memory leak}}
 }
