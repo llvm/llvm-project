@@ -168,6 +168,9 @@ private:
   bool SelectGlobalSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
                          SDValue &VOffset, SDValue &Offset,
                          SDValue &CPol) const;
+  bool SelectGlobalSAddrCPol(SDNode *N, SDValue Addr, SDValue &SAddr,
+                             SDValue &VOffset, SDValue &Offset,
+                             SDValue &CPol) const;
   bool SelectGlobalSAddrGLC(SDNode *N, SDValue Addr, SDValue &SAddr,
                             SDValue &VOffset, SDValue &Offset,
                             SDValue &CPol) const;
