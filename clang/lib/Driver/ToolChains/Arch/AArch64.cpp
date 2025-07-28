@@ -467,3 +467,18 @@ void aarch64::setPAuthABIInTriple(const Driver &D, const ArgList &Args,
     break;
   }
 }
+
+/// Is the triple {aarch64.aarch64_be}-none-elf?
+bool aarch64::isAArch64BareMetal(const llvm::Triple &Triple) {
+  if (Triple.getArch() != llvm::Triple::aarch64 &&
+      Triple.getArch() != llvm::Triple::aarch64_be)
+    return false;
+
+  if (Triple.getVendor() != llvm::Triple::UnknownVendor)
+    return false;
+
+  if (Triple.getOS() != llvm::Triple::UnknownOS)
+    return false;
+
+  return Triple.getEnvironmentName() == "elf";
+}

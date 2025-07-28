@@ -12,6 +12,7 @@
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/InputInfo.h"
 
+#include "Arch/AArch64.h"
 #include "Arch/ARM.h"
 #include "Arch/RISCV.h"
 #include "clang/Driver/Compilation.h"
@@ -30,21 +31,6 @@ using namespace clang;
 using namespace clang::driver;
 using namespace clang::driver::tools;
 using namespace clang::driver::toolchains;
-
-/// Is the triple {aarch64.aarch64_be}-none-elf?
-static bool isAArch64BareMetal(const llvm::Triple &Triple) {
-  if (Triple.getArch() != llvm::Triple::aarch64 &&
-      Triple.getArch() != llvm::Triple::aarch64_be)
-    return false;
-
-  if (Triple.getVendor() != llvm::Triple::UnknownVendor)
-    return false;
-
-  if (Triple.getOS() != llvm::Triple::UnknownOS)
-    return false;
-
-  return Triple.getEnvironmentName() == "elf";
-}
 
 static bool isRISCVBareMetal(const llvm::Triple &Triple) {
   if (!Triple.isRISCV())
@@ -363,8 +349,9 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
 }
 
 bool BareMetal::handlesTarget(const llvm::Triple &Triple) {
-  return arm::isARMEABIBareMetal(Triple) || isAArch64BareMetal(Triple) ||
-         isRISCVBareMetal(Triple) || isPPCBareMetal(Triple);
+  return arm::isARMEABIBareMetal(Triple) ||
+         aarch64::isAArch64BareMetal(Triple) || isRISCVBareMetal(Triple) ||
+         isPPCBareMetal(Triple);
 }
 
 Tool *BareMetal::buildLinker() const {
