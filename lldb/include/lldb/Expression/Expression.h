@@ -102,7 +102,7 @@ protected:
 ///
 /// The format being:
 ///
-///   <prefix>:<module uid>:<symbol uid>:<mangled name>
+///   <prefix>:<module uid>:<symbol uid>:<name>
 ///
 /// The label string needs to stay valid for the entire lifetime
 /// of this object.
