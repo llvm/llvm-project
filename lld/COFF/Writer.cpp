@@ -1240,25 +1240,20 @@ void Writer::createMiscChunks() {
   }
 
   uint16_t ex_characteristics_flags = 0;
-  if (config->cetCompat) {
+  if (config->cetCompat)
     ex_characteristics_flags |= IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT;
-  }
-  if (config->cetCompatStrict) {
+  if (config->cetCompatStrict)
     ex_characteristics_flags |=
         IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT_STRICT_MODE;
-  }
-  if (config->cetCompatIpValidationRelaxed) {
+  if (config->cetCompatIpValidationRelaxed)
     ex_characteristics_flags |=
         IMAGE_DLL_CHARACTERISTICS_EX_CET_SET_CONTEXT_IP_VALIDATION_RELAXED_MODE;
-  }
-  if (config->cetCompatDynamicApisInProcOnly) {
+  if (config->cetCompatDynamicApisInProcOnly)
     ex_characteristics_flags |=
         IMAGE_DLL_CHARACTERISTICS_EX_CET_DYNAMIC_APIS_ALLOW_IN_PROC_ONLY;
-  }
-  if (config->hotpatchCompat) {
+  if (config->hotpatchCompat)
     ex_characteristics_flags |=
         IMAGE_DLL_CHARACTERISTICS_EX_HOTPATCH_COMPATIBLE;
-  }
 
   if (ex_characteristics_flags) {
     debugRecords.emplace_back(
