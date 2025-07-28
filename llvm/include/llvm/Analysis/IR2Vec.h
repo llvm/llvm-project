@@ -153,6 +153,7 @@ class Vocabulary {
                     static_cast<unsigned>(OperandKind::MaxOperandKind),
                 "OperandKindNames array size must match MaxOperandKind");
 
+public:
   /// Vocabulary layout constants
 #define LAST_OTHER_INST(NUM) static constexpr unsigned MaxOpcodes = NUM;
 #include "llvm/IR/Instruction.def"
@@ -162,7 +163,6 @@ class Vocabulary {
   static constexpr unsigned MaxOperandKinds =
       static_cast<unsigned>(OperandKind::MaxOperandKind);
 
-public:
   Vocabulary() = default;
   Vocabulary(VocabVector &&Vocab);
 
