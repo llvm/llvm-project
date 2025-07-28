@@ -299,6 +299,7 @@ entry:
   ret i32 %conv
 }
 
+; This is the same a ctz2 (i16 table) with an i8 gep making the indices invalid
 define i32 @ctz2_with_i8_gep(i32 %x) {
 ; CHECK-LABEL: @ctz2_with_i8_gep(
 ; CHECK-NEXT:  entry:
@@ -308,7 +309,7 @@ define i32 @ctz2_with_i8_gep(i32 %x) {
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[MUL]], 26
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[SHR]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [64 x i8], ptr @ctz2.table, i64 0, i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP0]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
@@ -319,7 +320,84 @@ entry:
   %shr = lshr i32 %mul, 26
   %idxprom = zext i32 %shr to i64
   %arrayidx = getelementptr inbounds [64 x i8], ptr @ctz2.table, i64 0, i64 %idxprom
-  %0 = load i16, ptr %arrayidx, align 2
+  %0 = load i16, ptr %arrayidx, align 1
   %conv = sext i16 %0 to i32
   ret i32 %conv
+}
+
+; This is the same a ctz2_with_i8_gep but with the gep index multiplied by 2.
+define i32 @ctz2_with_i8_gep_fixed(i32 %x) {
+; CHECK-LABEL: @ctz2_with_i8_gep_fixed(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], [[SUB]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[AND]], 72416175
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[MUL]], 25
+; CHECK-NEXT:    [[SHR2:%.*]] = and i32 [[SHR]], 126
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[SHR2]] to i64
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr @ctz2.table, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP2]] to i32
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+  %sub = sub i32 0, %x
+  %and = and i32 %x, %sub
+  %mul = mul i32 %and, 72416175
+  %shr = lshr i32 %mul, 25
+  %shr2 = and i32 %shr, 126
+  %1 = zext nneg i32 %shr2 to i64
+  %arrayidx = getelementptr inbounds nuw i8, ptr @ctz2.table, i64 %1
+  %2 = load i16, ptr %arrayidx, align 2
+  %conv = sext i16 %2 to i32
+  ret i32 %conv
+}
+
+; This is a i16 input with the debruijn table stored in a single i128.
+@tablei128 = internal unnamed_addr constant i128 16018378897745984667142067713738932480, align 16
+define i32 @cttz_i16_via_i128(i16 noundef %x) {
+; CHECK-LABEL: @cttz_i16_via_i128(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i16 [[X]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP3]], i16 0, i16 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i16 [[TMP2]] to i8
+; CHECK-NEXT:    [[CONV6:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[CONV6]]
+;
+entry:
+  %sub = sub i16 0, %x
+  %and = and i16 %x, %sub
+  %mul = mul i16 %and, 2479
+  %0 = lshr i16 %mul, 12
+  %idxprom = zext nneg i16 %0 to i64
+  %arrayidx = getelementptr inbounds nuw i8, ptr @tablei128, i64 %idxprom
+  %1 = load i8, ptr %arrayidx, align 1
+  %conv6 = zext i8 %1 to i32
+  ret i32 %conv6
+}
+
+; Same as above but the table is a little off
+@tablei128b = internal unnamed_addr constant i128 16018378897745984667142068813250560256, align 16
+define i32 @cttz_i16_via_i128_incorrecttable(i16 noundef %x) {
+; CHECK-LABEL: @cttz_i16_via_i128_incorrecttable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i16 0, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[X]], [[SUB]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i16 [[AND]], 2479
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr i16 [[MUL]], 12
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext nneg i16 [[TMP0]] to i64
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr @tablei128b, i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[CONV6:%.*]] = zext i8 [[TMP3]] to i32
+; CHECK-NEXT:    ret i32 [[CONV6]]
+;
+entry:
+  %sub = sub i16 0, %x
+  %and = and i16 %x, %sub
+  %mul = mul i16 %and, 2479
+  %0 = lshr i16 %mul, 12
+  %idxprom = zext nneg i16 %0 to i64
+  %arrayidx = getelementptr inbounds nuw i8, ptr @tablei128b, i64 %idxprom
+  %1 = load i8, ptr %arrayidx, align 1
+  %conv6 = zext i8 %1 to i32
+  ret i32 %conv6
 }

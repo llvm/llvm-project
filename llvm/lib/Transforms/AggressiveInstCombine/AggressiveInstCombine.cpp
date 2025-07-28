@@ -457,30 +457,20 @@ static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
 
 // Check if this array of constants represents a cttz table.
 // Iterate over the elements from \p Table by trying to find/match all
-// the numbers from 0 to \p InputBits that should represent cttz results.
-static bool isCTTZTable(const ConstantDataArray &Table, uint64_t Mul,
-                        uint64_t Shift, uint64_t InputBits) {
-  unsigned Length = Table.getNumElements();
-  if (Length < InputBits || Length > InputBits * 2)
-    return false;
-
-  APInt Mask = APInt::getBitsSetFrom(InputBits, Shift);
-  unsigned Matched = 0;
-
-  for (unsigned i = 0; i < Length; i++) {
-    uint64_t Element = Table.getElementAsInteger(i);
-    if (Element >= InputBits)
-      continue;
-
-    // Check if \p Element matches a concrete answer. It could fail for some
-    // elements that are never accessed, so we keep iterating over each element
-    // from the table. The number of matched elements should be equal to the
-    // number of potential right answers which is \p InputBits actually.
-    if ((((Mul << Element) & Mask.getZExtValue()) >> Shift) == i)
-      Matched++;
+// the numbers from 0 to \p InputTy->getSizeInBits() that should represent cttz
+// results.
+static bool isCTTZTable(Constant *Table, uint64_t Mul, uint64_t Shift,
+                        Type *AccessTy, unsigned InputBits,
+                        unsigned GEPIdxFactor, const DataLayout &DL) {
+  for (unsigned Idx = 0; Idx < InputBits; Idx++) {
+    APInt Index = (APInt(InputBits, 1ull << Idx) * Mul).lshr(Shift);
+    ConstantInt *C = dyn_cast_or_null<ConstantInt>(
+        ConstantFoldLoadFromConst(Table, AccessTy, Index * GEPIdxFactor, DL));
+    if (!C || C->getZExtValue() != Idx)
+      return false;
   }
 
-  return Matched == InputBits;
+  return true;
 }
 
 // Try to recognize table-based ctz implementation.
@@ -537,7 +527,7 @@ static bool isCTTZTable(const ConstantDataArray &Table, uint64_t Mul,
 // %0 = load i8, i8* %arrayidx, align 1, !tbaa !8
 //
 // All this can be lowered to @llvm.cttz.i32/64 intrinsic.
-static bool tryToRecognizeTableBasedCttz(Instruction &I) {
+static bool tryToRecognizeTableBasedCttz(Instruction &I, const DataLayout &DL) {
   LoadInst *LI = dyn_cast<LoadInst>(&I);
   if (!LI)
     return false;
@@ -567,11 +557,6 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I) {
   if (!GVTable || !GVTable->hasInitializer() || !GVTable->isConstant())
     return false;
 
-  ConstantDataArray *ConstData =
-      dyn_cast<ConstantDataArray>(GVTable->getInitializer());
-  if (!ConstData || ConstData->getElementType() != GEPSrcEltTy)
-    return false;
-
   Value *X1;
   uint64_t MulConst, ShiftConst;
   // FIXME: 64-bit targets have `i64` type for the GEP index, so this match will
@@ -583,19 +568,21 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I) {
     return false;
 
   unsigned InputBits = X1->getType()->getScalarSizeInBits();
-  if (InputBits != 32 && InputBits != 64)
+  if (InputBits != 16 && InputBits != 32 && InputBits != 64)
     return false;
 
-  // Shift should extract top 5..7 bits.
+  // Shift should extract top 4..7 bits.
   if (InputBits - Log2_32(InputBits) != ShiftConst &&
       InputBits - Log2_32(InputBits) - 1 != ShiftConst)
     return false;
 
-  if (!isCTTZTable(*ConstData, MulConst, ShiftConst, InputBits))
+  if (!isCTTZTable(GVTable->getInitializer(), MulConst, ShiftConst, AccessType,
+                   InputBits, GEPSrcEltTy->getScalarSizeInBits() / 8, DL))
     return false;
 
-  auto ZeroTableElem = ConstData->getElementAsInteger(0);
-  bool DefinedForZero = ZeroTableElem == InputBits;
+  ConstantInt *ZeroTableElem = cast<ConstantInt>(
+      ConstantFoldLoadFromConst(GVTable->getInitializer(), AccessType, DL));
+  bool DefinedForZero = ZeroTableElem->getZExtValue() == InputBits;
 
   IRBuilder<> B(LI);
   ConstantInt *BoolConst = B.getInt1(!DefinedForZero);
@@ -609,8 +596,7 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I) {
     // If the value in elem 0 isn't the same as InputBits, we still want to
     // produce the value from the table.
     auto Cmp = B.CreateICmpEQ(X1, ConstantInt::get(XType, 0));
-    auto Select =
-        B.CreateSelect(Cmp, ConstantInt::get(XType, ZeroTableElem), Cttz);
+    auto Select = B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Cttz);
 
     // NOTE: If the table[0] is 0, but the cttz(0) is defined by the Target
     // it should be handled as: `cttz(x) & (typeSize - 1)`.
@@ -1479,7 +1465,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= foldGuardedFunnelShift(I, DT);
       MadeChange |= tryToRecognizePopCount(I);
       MadeChange |= tryToFPToSat(I, TTI);
-      MadeChange |= tryToRecognizeTableBasedCttz(I);
+      MadeChange |= tryToRecognizeTableBasedCttz(I, DL);
       MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA, DT);
       MadeChange |= foldPatternedLoads(I, DL);
       MadeChange |= foldICmpOrChain(I, DL, TTI, AA, DT);
