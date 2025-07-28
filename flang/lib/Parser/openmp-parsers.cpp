@@ -1627,7 +1627,7 @@ static constexpr auto StandaloneDirectiveLookahead{//
     "TARGET UPDATE"_sptok || "TARGET_UPDATE"_sptok};
 
 // Directives enclosing structured-block
-TYPE_PARSER(!StandaloneDirectiveLookahead >=
+TYPE_PARSER((!StandaloneDirectiveLookahead) >=
     construct<OmpBlockDirective>(first(
         "MASKED" >> pure(llvm::omp::Directive::OMPD_masked),
         "MASTER" >> pure(llvm::omp::Directive::OMPD_master),
