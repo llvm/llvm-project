@@ -44,6 +44,14 @@
 // CHECK-XCVMAC-EXT: __riscv_xcvmac 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32ixcvmem -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XCVMEM-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64ixcvmem -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XCVMEM-EXT %s
+// CHECK-XCVMEM-EXT: __riscv_xcvmem 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32ixcvsimd -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-XCVSIMD-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
