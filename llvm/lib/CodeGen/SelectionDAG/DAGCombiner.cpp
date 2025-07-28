@@ -9985,13 +9985,25 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     }
   }
 
-  // fold (not (neg x)) -> (add X, -1)
-  // FIXME: This can be generalized to (not (sub Y, X)) -> (add X, ~Y) if
-  // Y is a constant or the subtract has a single use.
-  if (isAllOnesConstant(N1) && N0.getOpcode() == ISD::SUB &&
-      isNullConstant(N0.getOperand(0))) {
-    return DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(1),
-                       DAG.getAllOnesConstant(DL, VT));
+  // fold (not (sub Y, X)) -> (add X, ~Y) if Y is a constant.
+  // fold (not (sub Y, X)) -> (add X, ~Y) for targets with efficient AND-NOT
+  // when Y is single-use and not constant.
+  // FIXME: We cannot do this whenever the target has a hasAndNot, or any other
+  // instruction where the backend will prefer that. Currently, this is only
+  // really a problem for ARM and AArch64, which will have the same rules for
+  // when it has And Not-Or, in specifically AArch64's case, also xor-not and
+  // or-not Otherwise we end up with an infinite loop.
+  // This is very conservative, and prevents this from being done at all on ARM
+  // and AArch64 and possibly others, but without this check, they will go in an
+  // infinite loop.
+  if (N0.getOpcode() == ISD::SUB && isAllOnesConstant(N1)) {
+    SDValue N00 = N0.getOperand(0), N01 = N0.getOperand(1);
+    if (isa<ConstantSDNode>(N00) || (N00.hasOneUse() && !TLI.hasAndNot(N01))) {
+      SDValue NotY =
+          DAG.getNode(ISD::XOR, SDLoc(N00), VT, N00, N1); // N00 = ~N00
+      AddToWorklist(NotY.getNode());
+      return DAG.getNode(ISD::ADD, DL, VT, N01, NotY);
+    }
   }
 
   // fold (not (add X, -1)) -> (neg X)
