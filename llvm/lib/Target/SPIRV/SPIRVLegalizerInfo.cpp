@@ -401,17 +401,6 @@ bool SPIRVLegalizerInfo::legalizeIsFPClass(
   auto &MF = MIRBuilder.getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  if (Mask == fcNone) {
-    MIRBuilder.buildConstant(DstReg, 0);
-    MI.eraseFromParent();
-    return true;
-  }
-  if (Mask == fcAllFlags) {
-    MIRBuilder.buildConstant(DstReg, 1);
-    MI.eraseFromParent();
-    return true;
-  }
-
   Type *LLVMDstTy =
       IntegerType::get(MIRBuilder.getContext(), DstTy.getScalarSizeInBits());
   if (DstTy.isVector())
@@ -448,9 +437,28 @@ bool SPIRVLegalizerInfo::legalizeIsFPClass(
   };
 
   // Helper to build and assign a constant in one go
-  const auto buildSPIRVConstant = [&](LLT Ty, auto &&C) {
-    return assignSPIRVTy(MIRBuilder.buildConstant(Ty, C));
+  const auto buildSPIRVConstant = [&](LLT Ty, auto &&C) -> MachineInstrBuilder {
+    if (!Ty.isFixedVector())
+      return assignSPIRVTy(MIRBuilder.buildConstant(Ty, C));
+    auto ScalarC = MIRBuilder.buildConstant(Ty.getScalarType(), C);
+    SPIRVType *SPIRVIntEltTy =
+        GR->getOrCreateSPIRVType(LLVMIntTy->getScalarType(), MIRBuilder,
+                                 SPIRV::AccessQualifier::ReadWrite,
+                                 /*EmitIR*/ true);
+    GR->assignSPIRVTypeToVReg(SPIRVIntEltTy, ScalarC.getReg(0), MF);
+    return assignSPIRVTy(MIRBuilder.buildSplatBuildVector(Ty, ScalarC));
   };
+
+  if (Mask == fcNone) {
+    MIRBuilder.buildCopy(DstReg, buildSPIRVConstant(DstTy, 0));
+    MI.eraseFromParent();
+    return true;
+  }
+  if (Mask == fcAllFlags) {
+    MIRBuilder.buildCopy(DstReg, buildSPIRVConstant(DstTy, 1));
+    MI.eraseFromParent();
+    return true;
+  }
 
   // Note that rather than creating a COPY here (between a floating-point and
   // integer type of the same size) we create a SPIR-V bitcast immediately. We

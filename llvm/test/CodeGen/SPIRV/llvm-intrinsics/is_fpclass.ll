@@ -12,6 +12,10 @@
 ; CHECK-DAG: %[[#I64Ty:]] = OpTypeInt 64 0
 ; CHECK-DAG: %[[#I16Ty:]] = OpTypeInt 16 0
 
+; CHECK-DAG: %[[#V4I32Ty:]] = OpTypeVector %[[#I32Ty]] 4
+; CHECK-DAG: %[[#V4FP32Ty:]] = OpTypeVector %[[#FP32Ty]] 4
+; CHECK-DAG: %[[#V4BoolTy:]] = OpTypeVector %[[#BoolTy]] 4
+
 ; CHECK-DAG: %[[#MaxExpMinus1:]] = OpConstant %[[#I32Ty]] 2130706432
 ; CHECK-DAG: %[[#ExpLSB:]] = OpConstant %[[#I32Ty]] 8388608
 ; CHECK-DAG: %[[#True:]] = OpConstantTrue %[[#BoolTy]]
@@ -29,6 +33,10 @@
 ; CHECK-DAG: %[[#InfFP64:]] = OpConstant %[[#I64Ty]] 9218868437227405312
 ; CHECK-DAG: %[[#NegInfFP64:]] = OpConstant %[[#I64Ty]] 18442240474082181120
 
+; CHECK-DAG: %[[#FalseV4:]] = OpConstantComposite %[[#V4BoolTy]] %[[#Zero]] %[[#Zero]] %[[#Zero]] %[[#Zero]]
+; CHECK-DAG: %[[#ValueMaskV4:]] = OpConstantComposite %[[#V4I32Ty]] %[[#ValueMask]] %[[#ValueMask]] %[[#ValueMask]] %[[#ValueMask]]
+; CHECK-DAG: %[[#InfV4:]] = OpConstantComposite %[[#V4I32Ty]] %[[#Inf]] %[[#Inf]] %[[#Inf]] %[[#Inf]]
+; CHECK-DAG: %[[#InfWithQnanBitV4:]] = OpConstantComposite %[[#V4I32Ty]] %[[#InfWithQnanBit]] %[[#InfWithQnanBit]] %[[#InfWithQnanBit]] %[[#InfWithQnanBit]]
 ; CHECK-DAG: %[[#ValueMaskFP16:]] = OpConstant %[[#I16Ty]] 32767
 ; CHECK-DAG: %[[#InfFP16:]] = OpConstant %[[#I16Ty]] 31744
 ; CHECK-DAG: %[[#NegInfFP16:]] = OpConstant %[[#I16Ty]] 64512
@@ -56,6 +64,22 @@ define i1 @isfpclass_0_none(float %a) {
 define i1 @isfpclass_1_issnan(float %a) {
   %v = call i1 @llvm.is.fpclass.f32(float %a, i32 1)
   ret i1 %v
+}
+
+; CHECK: OpFunction %[[#V4BoolTy]]
+; CHECK: %[[#A:]] = OpFunctionParameter %[[#V4FP32Ty]]
+; CHECK: %[[#T0:]] = OpBitcast %[[#V4I32Ty]] %[[#A]]
+; CHECK: %[[#T1:]] = OpBitwiseAnd %[[#V4I32Ty]] %[[#T0]] %[[#ValueMaskV4]]
+; CHECK: %[[#T2:]] = OpUGreaterThan %[[#V4BoolTy]] %[[#T1]] %[[#InfV4]]
+; CHECK: %[[#T3:]] = OpULessThan %[[#V4BoolTy]] %[[#T1]] %[[#InfWithQnanBitV4]]
+; CHECK: %[[#T4:]] = OpLogicalAnd %[[#V4BoolTy]] %[[#T2]] %[[#T3]]
+; CHECK: %[[#T5:]] = OpLogicalOr %[[#V4BoolTy]] %[[#FalseV4]] %[[#T4]]
+; CHECK: OpReturnValue %[[#T5]]
+; CHECK: OpFunctionEnd
+
+define <4 x i1> @isfpclass_1_issnan_v4f32(<4 x float> %a) {
+  %v = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %a, i32 1)
+  ret <4 x i1> %v
 }
 
 ; CHECK: OpFunction %[[#BoolTy]]
@@ -165,6 +189,22 @@ define i1 @isfpclass_isnegnormal(float %a) {
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_isnormal(float %a) {
   %v = call i1 @llvm.is.fpclass.f32(float %a, i32 264)
+  ret i1 %v
+}
+
+; CHECK: OpFunction %[[#BoolTy]]
+; CHECK: %[[#A:]] = OpFunctionParameter %[[#FP32Ty]]
+; CHECK: %[[#T0:]] = OpBitcast %[[#I32Ty]] %[[#A]]
+; CHECK: %[[#T1:]] = OpBitwiseAnd %[[#I32Ty]] %[[#T0]] %[[#ValueMask]]
+; CHECK: %[[#T2:]] = OpUGreaterThan %[[#BoolTy]] %[[#T1]] %[[#Inf]]
+; CHECK: %[[#T3:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T2]]
+; CHECK: %[[#T4:]] = OpISub %[[#I32Ty]] %[[#T1]] %[[#ExpLSB]]
+; CHECK: %[[#T5:]] = OpULessThan %[[#BoolTy]] %[[#T4]] %[[#MaxExpMinus1]]
+; CHECK: %[[#T6:]] = OpLogicalOr %[[#BoolTy]] %[[#T3]] %[[#T5]]
+; CHECK: OpReturnValue %[[#T6]]
+; CHECK: OpFunctionEnd
+define i1 @isfpclass_1_isnan_or_normal(float %a) {
+  %v = call i1 @llvm.is.fpclass.f32(float %a, i32 267)
   ret i1 %v
 }
 
@@ -363,5 +403,6 @@ define i1 @isfpclass_f16_isnegative(half %a) {
 }
 
 declare i1 @llvm.is.fpclass.f32(float, i32)
+declare <4 x i1> @llvm.is.fpclass.v4f32(<4 x float>, i32)
 declare i1 @llvm.is.fpclass.f64(double, i32)
 declare i1 @llvm.is.fpclass.f16(half, i32)
