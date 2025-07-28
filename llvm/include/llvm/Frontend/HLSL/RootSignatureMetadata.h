@@ -33,11 +33,11 @@ class RootSignatureValidationError
     : public ErrorInfo<RootSignatureValidationError<T>> {
 public:
   static char ID;
-  std::string ParamName;
+  StringRef ParamName;
   T Value;
 
   RootSignatureValidationError(StringRef ParamName, T Value)
-      : ParamName(ParamName.str()), Value(Value) {}
+      : ParamName(ParamName), Value(Value) {}
 
   void log(raw_ostream &OS) const override {
     OS << "Invalid value for " << ParamName << ": " << Value;
@@ -51,10 +51,10 @@ public:
 class GenericRSMetadataError : public ErrorInfo<GenericRSMetadataError> {
 public:
   static char ID;
-  Twine Message;
+  StringRef Message;
   MDNode *MD;
 
-  GenericRSMetadataError(Twine Message, MDNode *MD)
+  GenericRSMetadataError(StringRef Message, MDNode *MD)
       : Message(Message), MD(MD) {}
 
   void log(raw_ostream &OS) const override {
@@ -89,9 +89,9 @@ public:
 class InvalidRSMetadataValue : public ErrorInfo<InvalidRSMetadataValue> {
 public:
   static char ID;
-  std::string ParamName;
+  StringRef ParamName;
 
-  InvalidRSMetadataValue(StringRef ParamName) : ParamName(ParamName.str()) {}
+  InvalidRSMetadataValue(StringRef ParamName) : ParamName(ParamName) {}
 
   void log(raw_ostream &OS) const override {
     OS << "Invalid value for " << ParamName;

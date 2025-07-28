@@ -348,8 +348,8 @@ Error MetadataParser::parseDescriptorRange(mcdxbc::DescriptorTable &Table,
           .Default(~0U);
 
   if (Range.RangeType == ~0U)
-    return make_error<GenericRSMetadataError>(
-        "Invalid Descriptor Range type: " + *ElementText, RangeDescriptorNode);
+    return make_error<GenericRSMetadataError>("Invalid Descriptor Range type.",
+                                              RangeDescriptorNode);
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 1))
     Range.NumDescriptors = *Val;
@@ -519,8 +519,8 @@ Error MetadataParser::parseRootSignatureElement(mcdxbc::RootSignatureDesc &RSD,
   case RootSignatureElementKind::StaticSamplers:
     return parseStaticSampler(RSD, Element);
   case RootSignatureElementKind::Error:
-    return make_error<GenericRSMetadataError>(
-        "Invalid Root Signature Element: " + *ElementText, Element);
+    return make_error<GenericRSMetadataError>("Invalid Root Signature Element",
+                                              Element);
   }
 
   llvm_unreachable("Unhandled RootSignatureElementKind enum.");
@@ -708,9 +708,8 @@ MetadataParser::ParseRootSignature(uint32_t Version) {
                         make_error<GenericRSMetadataError>(
                             "Missing Root Element Metadata Node.", nullptr));
 
-    if (auto Err = parseRootSignatureElement(RSD, Element)) {
+    if (auto Err = parseRootSignatureElement(RSD, Element))
       DeferredErrs = joinErrors(std::move(DeferredErrs), std::move(Err));
-    }
   }
 
   if (auto Err = validateRootSignature(RSD))
