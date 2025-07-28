@@ -14497,6 +14497,35 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(customLegalizeToWOp(N, DAG, ExtOpc));
     break;
   }
+  case ISD::SSUBO: {
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+
+    // If the RHS is a constant, we can simplify the below. Otherwise
+    // use the default legalization.
+    if (!isa<ConstantSDNode>(N->getOperand(1)))
+      return;
+
+    SDValue LHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, N->getOperand(0));
+    SDValue RHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, N->getOperand(1));
+    SDValue Res = DAG.getNode(ISD::SUB, DL, MVT::i64, LHS, RHS);
+    Res = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, Res,
+                      DAG.getValueType(MVT::i32));
+
+    SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+
+    // For subtraction, overflow occurs when the signed comparison of operands
+    // doesn't match the sign of the result
+    EVT OType = N->getValueType(1);
+    SDValue LHSLessThanRHS = DAG.getSetCC(DL, OType, LHS, RHS, ISD::SETLT);
+    SDValue ResultNegative = DAG.getSetCC(DL, OType, Res, Zero, ISD::SETLT);
+    SDValue Overflow =
+        DAG.getNode(ISD::XOR, DL, OType, LHSLessThanRHS, ResultNegative);
+
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+    Results.push_back(Overflow);
+    return;
+  }
   case ISD::SADDO: {
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");

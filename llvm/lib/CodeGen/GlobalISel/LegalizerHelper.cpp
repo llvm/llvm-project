@@ -8874,18 +8874,24 @@ LegalizerHelper::lowerSADDO_SSUBO(MachineInstr &MI) {
 
   auto Zero = MIRBuilder.buildConstant(Ty, 0);
 
-  // For an addition, the result should be less than one of the operands (LHS)
-  // if and only if the other operand (RHS) is negative, otherwise there will
-  // be overflow.
-  // For a subtraction, the result should be less than one of the operands
-  // (LHS) if and only if the other operand (RHS) is (non-zero) positive,
-  // otherwise there will be overflow.
-  auto ResultLowerThanLHS =
-      MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, NewDst0, LHS);
-  auto ConditionRHS = MIRBuilder.buildICmp(
-      IsAdd ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGT, BoolTy, RHS, Zero);
-
-  MIRBuilder.buildXor(Dst1, ConditionRHS, ResultLowerThanLHS);
+  if (IsAdd) {
+    // For addition, the result should be less than one of the operands (LHS)
+    // if and only if the other operand (RHS) is negative, otherwise there will
+    // be overflow.
+    auto ResultLowerThanLHS =
+        MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, NewDst0, LHS);
+    auto RHSNegative =
+        MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, RHS, Zero);
+    MIRBuilder.buildXor(Dst1, RHSNegative, ResultLowerThanLHS);
+  } else {
+    // For subtraction, overflow occurs when the signed comparison of operands
+    // doesn't match the sign of the result
+    auto LHSLessThanRHS =
+        MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, LHS, RHS);
+    auto ResultNegative =
+        MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, NewDst0, Zero);
+    MIRBuilder.buildXor(Dst1, LHSLessThanRHS, ResultNegative);
+  }
 
   MIRBuilder.buildCopy(Dst0, NewDst0);
   MI.eraseFromParent();
