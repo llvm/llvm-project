@@ -237,7 +237,7 @@ public:
   /// `resetDebugValue(Idx, NewDebugValue)` should be used instead.
   LLVM_ABI void handleChangedValue(void *Old, Metadata *NewDebugValue);
   DebugValueUser() = default;
-  explicit DebugValueUser(std::array<Metadata *, 3> DebugValues)
+  explicit DebugValueUser(const std::array<Metadata *, 3> &DebugValues)
       : DebugValues(DebugValues) {
     trackDebugValues();
   }

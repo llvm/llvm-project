@@ -5497,4 +5497,29 @@ TEST_F(MDTupleAllocationDeathTest, ResizeRejected) {
 }
 #endif
 
+typedef MetadataTest DebugValueUserTest;
+
+namespace {
+struct DebugValueUserTestHelper: public llvm::DebugValueUser {
+  using llvm::DebugValueUser::DebugValueUser;
+  using llvm::DebugValueUser::getDebugValues;
+};
+}
+
+TEST_F(DebugValueUserTest, GetDebugValues) {
+  auto *V = getConstantAsMetadata();
+  auto *V2 = getConstantAsMetadata();
+  auto *V3 = getConstantAsMetadata();
+  std::array<Metadata *, 3> Debugs = {V, V2, V3};
+  DebugValueUserTestHelper User(Debugs);
+  ArrayRef<Metadata *> Result = User.getDebugValues();
+
+  // Verify the size of the returned array is correct,
+  // and each element is correctly stored and returned.
+  EXPECT_EQ(Result.size(), 3u);
+  EXPECT_EQ(Result[0], V);
+  EXPECT_EQ(Result[1], V2);
+  EXPECT_EQ(Result[2], V3);
+}
+
 } // end namespace
