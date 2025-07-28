@@ -15343,6 +15343,7 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     case Intrinsic::amdgcn_rcp_legacy:
     case Intrinsic::amdgcn_rsq_legacy:
     case Intrinsic::amdgcn_trig_preop:
+    case Intrinsic::amdgcn_tanh:
     case Intrinsic::amdgcn_log:
     case Intrinsic::amdgcn_exp2:
     case Intrinsic::amdgcn_sqrt:
