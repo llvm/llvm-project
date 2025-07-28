@@ -5276,7 +5276,8 @@ static SDValue PerformADDCombine(SDNode *N,
   SDValue N1 = N->getOperand(1);
 
   // Skip non-integer, non-scalar case
-  if (N->getValueType(0).isVector() || N->getValueType(0) != MVT::i32)
+  EVT VT = N0.getValueType();
+  if (VT.isVector() || VT != MVT::i32)
     return SDValue();
 
   // First try with the default operand order.
@@ -5409,46 +5410,35 @@ static SDValue PerformREMCombine(SDNode *N,
 }
 
 // (any_extend|sign_extend|zero_extend (mul|shl) x, y) -> (mul.wide x, y)
-static SDValue
-PerformExtendMULWIDECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
-  unsigned ExtOpcode = N->getOpcode();
-  assert(ExtOpcode == ISD::ANY_EXTEND || ExtOpcode == ISD::SIGN_EXTEND ||
-         ExtOpcode == ISD::ZERO_EXTEND);
-  EVT ToVT = N->getValueType(0);
-  if (!(ToVT == MVT::i32 || ToVT == MVT::i64))
+static SDValue combineMulWide(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                              CodeGenOptLevel OptLevel) {
+  if (OptLevel == CodeGenOptLevel::None)
     return SDValue();
+
   SDValue Op = N->getOperand(0);
-  if (!(Op.getOpcode() == ISD::MUL || Op.getOpcode() == ISD::SHL))
+  if (!Op.hasOneUse())
     return SDValue();
-  if (Op.getOpcode() == ISD::SHL && !isa<ConstantSDNode>(Op.getOperand(1)))
-    return SDValue();
+  EVT ToVT = N->getValueType(0);
   EVT FromVT = Op.getValueType();
-  if (!(FromVT == MVT::i16 || FromVT == MVT::i32))
+  if (!((ToVT == MVT::i32 && FromVT == MVT::i16) ||
+        (ToVT == MVT::i64 && FromVT == MVT::i32)))
     return SDValue();
-  if (ExtOpcode == ISD::SIGN_EXTEND && !Op->getFlags().hasNoSignedWrap())
-    return SDValue();
-  if (ExtOpcode == ISD::ZERO_EXTEND && !Op->getFlags().hasNoUnsignedWrap())
-    return SDValue();
-  if (ExtOpcode == ISD::ANY_EXTEND && !Op->getFlags().hasNoSignedWrap() &&
-      !Op->getFlags().hasNoUnsignedWrap())
+  if (!(Op.getOpcode() == ISD::MUL ||
+        (Op.getOpcode() == ISD::SHL && isa<ConstantSDNode>(Op.getOperand(1)))))
     return SDValue();
 
   SDLoc DL(N);
+  unsigned ExtOpcode = N->getOpcode();
   unsigned Opcode = 0;
-  if (ExtOpcode == ISD::SIGN_EXTEND)
+  if (ExtOpcode == ISD::SIGN_EXTEND && Op->getFlags().hasNoSignedWrap())
     Opcode = NVPTXISD::MUL_WIDE_SIGNED;
-  else if (ExtOpcode == ISD::ZERO_EXTEND)
+  else if (ExtOpcode == ISD::ZERO_EXTEND && Op->getFlags().hasNoUnsignedWrap())
     Opcode = NVPTXISD::MUL_WIDE_UNSIGNED;
-  else if (ExtOpcode == ISD::ANY_EXTEND && Op->getFlags().hasNoUnsignedWrap())
-    Opcode = NVPTXISD::MUL_WIDE_UNSIGNED;
-  else if (ExtOpcode == ISD::ANY_EXTEND && Op->getFlags().hasNoSignedWrap())
-    Opcode = NVPTXISD::MUL_WIDE_SIGNED;
   else
-    assert(false);
+    return SDValue();
   SDValue RHS = Op.getOperand(1);
   if (Op.getOpcode() == ISD::SHL) {
-    const auto ShiftAmt =
-        cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+    const auto ShiftAmt = Op.getConstantOperandVal(1);
     const auto MulVal = APInt(ToVT.getSizeInBits(), 1) << ShiftAmt;
     RHS = DCI.DAG.getConstant(MulVal, DL, ToVT);
   }
@@ -5977,10 +5967,9 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     return combineADDRSPACECAST(N, DCI);
   case ISD::AND:
     return PerformANDCombine(N, DCI);
-  case ISD::ANY_EXTEND:
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
-    return PerformExtendMULWIDECombine(N, DCI);
+    return combineMulWide(N, DCI, OptLevel);
   case ISD::BUILD_VECTOR:
     return PerformBUILD_VECTORCombine(N, DCI);
   case ISD::EXTRACT_VECTOR_ELT:
