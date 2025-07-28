@@ -321,8 +321,7 @@ public:
                                               bool IsNonTemporal,
                                               bool IsLastUse = false) const = 0;
 
-  virtual bool finalizeStore(MachineBasicBlock::iterator &MI,
-                             bool Atomic) const {
+  virtual bool finalizeStore(MachineInstr &MI, bool Atomic) const {
     return false;
   };
 
@@ -603,8 +602,7 @@ public:
                                       bool IsVolatile, bool IsNonTemporal,
                                       bool IsLastUse) const override;
 
-  bool finalizeStore(MachineBasicBlock::iterator &MI,
-                     bool Atomic) const override;
+  bool finalizeStore(MachineInstr &MI, bool Atomic) const override;
 
   bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
@@ -2538,9 +2536,6 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
   if (IsVolatile) {
     Changed |= setScope(MI, AMDGPU::CPol::SCOPE_SYS);
 
-    if (Op == SIMemOp::STORE)
-      Changed |= insertWaitsBeforeSystemScopeStore(MI);
-
     // Ensure operation has completed at system scope to cause all volatile
     // operations to be visible outside the program in a global order. Do not
     // request cross address space as only the global address space can be
@@ -2553,9 +2548,8 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
   return Changed;
 }
 
-bool SIGfx12CacheControl::finalizeStore(MachineBasicBlock::iterator &MI,
-                                        bool Atomic) const {
-  MachineOperand *CPol = TII->getNamedOperand(*MI, OpName::cpol);
+bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
+  MachineOperand *CPol = TII->getNamedOperand(MI, OpName::cpol);
   if (!CPol)
     return false;
 
@@ -2570,7 +2564,7 @@ bool SIGfx12CacheControl::finalizeStore(MachineBasicBlock::iterator &MI,
 
   // GFX12.5 only: Require SCOPE_SE on stores that may hit the scratch address
   // space.
-  if (TII->mayAccessScratchThroughFlat(*MI) && Scope == CPol::SCOPE_CU)
+  if (TII->mayAccessScratchThroughFlat(MI) && Scope == CPol::SCOPE_CU)
     return setScope(MI, CPol::SCOPE_SE);
 
   return false;
@@ -2674,6 +2668,8 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
   assert(!MI->mayLoad() && MI->mayStore());
 
   bool Changed = false;
+  // FIXME: Necessary hack because iterator can lose track of the store.
+  MachineInstr &StoreMI = *MI;
 
   if (MOI.isAtomic()) {
     if (MOI.getOrdering() == AtomicOrdering::Monotonic ||
@@ -2690,7 +2686,7 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
                                    MOI.getIsCrossAddressSpaceOrdering(),
                                    Position::BEFORE);
 
-    Changed |= CC->finalizeStore(MI, /*Atomic=*/true);
+    Changed |= CC->finalizeStore(StoreMI, /*Atomic=*/true);
     return Changed;
   }
 
@@ -2703,7 +2699,7 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
 
   // GFX12 specific, scope(desired coherence domain in cache hierarchy) is
   // instruction field, do not confuse it with atomic scope.
-  Changed |= CC->finalizeStore(MI, /*Atomic=*/false);
+  Changed |= CC->finalizeStore(StoreMI, /*Atomic=*/false);
   return Changed;
 }
 
