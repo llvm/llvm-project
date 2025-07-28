@@ -70,15 +70,15 @@ Named maintainers, if available, should be contacted first, as they're more acti
 
 #### Linear Algebra Dialects
 * ‘linalg’ Dialect (tensor)
-* Tensor Operator Set Architecture (TOSA) Dialect (sjarus)
+* Tensor Operator Set Architecture (TOSA) Dialect (@sjarus)
 
 #### Type Dialects
 * ‘tensor’ Dialect (tensor)
 * ‘memref’ Dialect (tensor)
-* ‘vector’ Dialect (tensor + dcaballe, groverkss)
-* ‘sparse_tensor’ Dialect (aartbik, matthias-springer)
+* ‘vector’ Dialect (tensor + @dcaballe, @Groverkss)
+* ‘sparse_tensor’ Dialect (@aartbik, @matthias-springer)
 
 #### Accessory Dialects
-* ‘bufferization’ Dialect (tensor, matthias-springer)
-* ‘ml_program’ Dialect (jpienaar)
+* ‘bufferization’ Dialect (tensor, @matthias-springer)
+* ‘ml_program’ Dialect (@jpienaar)
 * ‘quant’ Dialect (unmaintained)
