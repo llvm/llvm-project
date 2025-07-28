@@ -121,6 +121,21 @@ struct FunctionCallLabel {
   /// perform the function call. For example, for DWARF this would
   /// be the DIE UID.
   lldb::user_id_t symbol_id;
+
+  /// Decodes the specified function \c label into a \c FunctionCallLabel.
+  static llvm::Expected<FunctionCallLabel> fromString(llvm::StringRef label);
+
+  /// Encode this FunctionCallLabel into it's string representation.
+  ///
+  /// The representation roundtrips through \c fromString:
+  /// \code{.cpp}
+  /// llvm::StringRef encoded = "$__lldb_func:_Z3foov:0x0:0x0";
+  /// FunctionCallLabel label = *fromString(label);
+  ///
+  /// assert (label.toString() == encoded);
+  /// assert (*fromString(label.toString()) == label);
+  /// \endcode
+  std::string toString() const;
 };
 
 /// LLDB attaches this prefix to mangled names of functions that it get called
@@ -133,10 +148,6 @@ inline constexpr llvm::StringRef FunctionCallLabelPrefix = "$__lldb_func";
 /// The label prefix is not one of the components.
 llvm::Expected<llvm::SmallVector<llvm::StringRef, 3>>
 splitFunctionCallLabel(llvm::StringRef label);
-
-// Decodes the function label into a \c FunctionCallLabel.
-llvm::Expected<FunctionCallLabel>
-makeFunctionCallLabel(llvm::StringRef label);
 
 } // namespace lldb_private
 

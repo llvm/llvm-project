@@ -790,7 +790,7 @@ ResolveFunctionCallLabel(llvm::StringRef name,
   if (!sc.target_sp)
     return llvm::createStringError("target not available.");
 
-  auto label_or_err = makeFunctionCallLabel(name);
+  auto label_or_err = FunctionCallLabel::fromString(name);
   if (!label_or_err)
     return llvm::joinErrors(
         llvm::createStringError("failed to create FunctionCallLabel from: %s",

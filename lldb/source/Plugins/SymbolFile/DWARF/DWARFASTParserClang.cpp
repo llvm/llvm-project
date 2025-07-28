@@ -267,9 +267,10 @@ static std::optional<std::string> MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
   if (die_id == LLDB_INVALID_UID)
     return std::nullopt;
 
-  return llvm::formatv("{0}:{1}:{2:x}:{3:x}", FunctionCallLabelPrefix, name,
-                       module_id, die_id)
-      .str();
+  return FunctionCallLabel{/*.lookup_name=*/name,
+                           /*module_id=*/module_id,
+                           /*symbol_id=*/die_id}
+      .toString();
 }
 
 TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,

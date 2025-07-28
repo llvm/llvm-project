@@ -51,7 +51,7 @@ lldb_private::splitFunctionCallLabel(llvm::StringRef label) {
 }
 
 llvm::Expected<FunctionCallLabel>
-lldb_private::makeFunctionCallLabel(llvm::StringRef label) {
+lldb_private::FunctionCallLabel::fromString(llvm::StringRef label) {
   auto components_or_err = splitFunctionCallLabel(label);
   if (!components_or_err)
     return llvm::joinErrors(
@@ -75,4 +75,10 @@ lldb_private::makeFunctionCallLabel(llvm::StringRef label) {
 
   return FunctionCallLabel{/*.lookup_name=*/components[0],
                            /*.module_id=*/module_id, /*.symbol_id=*/die_id};
+}
+
+std::string lldb_private::FunctionCallLabel::toString() const {
+  return llvm::formatv("{0}:{1}:{2:x}:{3:x}", FunctionCallLabelPrefix,
+                       lookup_name, module_id, symbol_id)
+      .str();
 }
