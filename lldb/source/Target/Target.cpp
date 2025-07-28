@@ -2487,9 +2487,9 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
 
           ModuleList found_modules;
           m_images.FindModules(module_spec_copy, found_modules);
-          found_modules.ForEach([&](const ModuleSP &found_module) -> bool {
+          found_modules.ForEach([&](const ModuleSP &found_module) {
             old_modules.push_back(found_module);
-            return true;
+            return IterationAction::Continue;
           });
         }
 
