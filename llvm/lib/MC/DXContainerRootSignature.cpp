@@ -36,7 +36,6 @@ size_t RootSignatureDesc::getSize() const {
       StaticSamplers.size() * sizeof(dxbc::RTS0::v1::StaticSampler);
 
   for (const RootParameterInfo &I : ParametersContainer) {
-    // Invalid parameters are allowed while writing.
     if (!dxbc::isValidParameterType(I.Header.ParameterType))
       continue;
 
