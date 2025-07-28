@@ -1175,8 +1175,7 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
   // SIInsertWaitcnts will later replace this with a vmcnt().
   if (ST.hasVMemToLDSLoad() && isReleaseOrStronger(Order) &&
       Scope == SIAtomicScope::WORKGROUP &&
-      ((SIAtomicAddrSpace)AddrSpace & SIAtomicAddrSpace::LDS) !=
-          SIAtomicAddrSpace::NONE) {
+      (AddrSpace & SIAtomicAddrSpace::LDS) != SIAtomicAddrSpace::NONE) {
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_lds_direct));
     Changed = true;
   }
@@ -2094,8 +2093,7 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
   // SIInsertWaitcnts will later replace this with a vmcnt().
   if (ST.hasVMemToLDSLoad() && isReleaseOrStronger(Order) &&
       Scope == SIAtomicScope::WORKGROUP &&
-      ((SIAtomicAddrSpace)AddrSpace & SIAtomicAddrSpace::LDS) !=
-          SIAtomicAddrSpace::NONE) {
+      (AddrSpace & SIAtomicAddrSpace::LDS) != SIAtomicAddrSpace::NONE) {
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_lds_direct));
     Changed = true;
   }
