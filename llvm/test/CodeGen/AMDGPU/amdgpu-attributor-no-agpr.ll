@@ -251,6 +251,205 @@ define amdgpu_kernel void @indirect_calls_none_agpr(i1 %cond) {
   ret void
 }
 
+define amdgpu_kernel void @kernel_uses_asm_virtreg_def_struct_0() {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_virtreg_def_struct_0(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[DEF:%.*]] = call { i32, i32 } asm sideeffect "
+; CHECK-NEXT:    ret void
+;
+  %def = call {i32, i32} asm sideeffect "; def $0", "=a,=a"()
+  ret void
+}
+
+define amdgpu_kernel void @kernel_uses_asm_virtreg_use_struct_1() {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_virtreg_use_struct_1(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[DEF:%.*]] = call { i32, <2 x i32> } asm sideeffect "
+; CHECK-NEXT:    ret void
+;
+  %def = call {i32, <2 x i32>} asm sideeffect "; def $0", "=a,=a"()
+  ret void
+}
+
+define amdgpu_kernel void @kernel_uses_asm_virtreg_use_struct_2() {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_virtreg_use_struct_2(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[DEF:%.*]] = call { i32, <2 x i32> } asm sideeffect "
+; CHECK-NEXT:    ret void
+;
+  %def = call {i32, <2 x i32>} asm sideeffect "; def $0", "=a,=v"()
+  ret void
+}
+
+define amdgpu_kernel void @kernel_uses_asm_virtreg_ptr_ty() {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_virtreg_ptr_ty(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; use $0", "a"(ptr poison)
+  ret void
+}
+
+define amdgpu_kernel void @kernel_uses_asm_virtreg_def_ptr_ty() {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_virtreg_def_ptr_ty(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[DEF:%.*]] = call ptr asm sideeffect "
+; CHECK-NEXT:    ret void
+;
+  %def = call ptr asm sideeffect "; def $0", "=a"()
+  ret void
+}
+
+define amdgpu_kernel void @kernel_uses_asm_virtreg_def_vector_ptr_ty() {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_virtreg_def_vector_ptr_ty(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[DEF:%.*]] = call <2 x ptr> asm sideeffect "
+; CHECK-NEXT:    ret void
+;
+  %def = call <2 x ptr> asm sideeffect "; def $0", "=a"()
+  ret void
+}
+
+define amdgpu_kernel void @kernel_uses_asm_physreg_def_struct_0() {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_physreg_def_struct_0(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[DEF:%.*]] = call { i32, i32 } asm sideeffect "
+; CHECK-NEXT:    ret void
+;
+  %def = call {i32, i32} asm sideeffect "; def $0", "={a0},={a[4:5]}"()
+  ret void
+}
+
+define amdgpu_kernel void @kernel_uses_asm_clobber() {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_clobber(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; clobber $0", "~{a4}"()
+  ret void
+}
+
+define amdgpu_kernel void @kernel_uses_asm_clobber_tuple() {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_clobber_tuple(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; clobber $0", "~{a[10:13]}"()
+  ret void
+}
+
+define amdgpu_kernel void @kernel_uses_asm_clobber_oob() {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_clobber_oob(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; clobber $0", "~{a256}"()
+  ret void
+}
+
+define amdgpu_kernel void @kernel_uses_asm_clobber_max() {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_clobber_max(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; clobber $0", "~{a255}"()
+  ret void
+}
+
+define amdgpu_kernel void @kernel_uses_asm_physreg_oob() {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_physreg_oob(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; use $0", "{a256}"(i32 poison)
+  ret void
+}
+
+define amdgpu_kernel void @kernel_uses_asm_virtreg_def_max_ty() {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_virtreg_def_max_ty(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[DEF:%.*]] = call <32 x i32> asm sideeffect "
+; CHECK-NEXT:    ret void
+;
+  %def = call <32 x i32> asm sideeffect "; def $0", "=a"()
+  ret void
+}
+
+define amdgpu_kernel void @kernel_uses_asm_virtreg_use_max_ty() {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_virtreg_use_max_ty(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; use $0", "a"(<32 x i32> poison)
+  ret void
+}
+
+define amdgpu_kernel void @kernel_uses_asm_virtreg_use_def_max_ty() {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_virtreg_use_def_max_ty(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[DEF:%.*]] = call <32 x i32> asm sideeffect "
+; CHECK-NEXT:    ret void
+;
+  %def = call <32 x i32> asm sideeffect "; use $0", "=a,a"(<32 x i32> poison)
+  ret void
+}
+
+define amdgpu_kernel void @vreg_use_exceeds_register_file() {
+; CHECK-LABEL: define amdgpu_kernel void @vreg_use_exceeds_register_file(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; use $0", "a"(<257 x i32> poison)
+  ret void
+}
+
+define amdgpu_kernel void @vreg_def_exceeds_register_file() {
+; CHECK-LABEL: define amdgpu_kernel void @vreg_def_exceeds_register_file(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[DEF:%.*]] = call <257 x i32> asm sideeffect "
+; CHECK-NEXT:    ret void
+;
+  %def = call <257 x i32> asm sideeffect "; def $0", "=a"()
+  ret void
+}
+
+define amdgpu_kernel void @multiple() {
+; CHECK-LABEL: define amdgpu_kernel void @multiple(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[DEF:%.*]] = call { <16 x i32>, <8 x i32>, <8 x i32> } asm sideeffect "
+; CHECK-NEXT:    ret void
+;
+  %def = call {<16 x i32>, <8 x i32>, <8 x i32>} asm sideeffect "; def $0", "=a,=a,=a,a,a,a"(<4 x i32> splat (i32 0), <8 x i32> splat (i32 1), i64 999)
+  ret void
+}
+
+define amdgpu_kernel void @earlyclobber_0() {
+; CHECK-LABEL: define amdgpu_kernel void @earlyclobber_0(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[DEF:%.*]] = call <8 x i32> asm sideeffect "
+; CHECK-NEXT:    ret void
+;
+  %def = call <8 x i32> asm sideeffect "; def $0", "=&a,a"(i32 0)
+  ret void
+}
+
+define amdgpu_kernel void @earlyclobber_1() {
+; CHECK-LABEL: define amdgpu_kernel void @earlyclobber_1(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[DEF:%.*]] = call { <8 x i32>, <16 x i32> } asm sideeffect "
+; CHECK-NEXT:    ret void
+;
+  %def = call { <8 x i32>, <16 x i32 > } asm sideeffect "; def $0, $1", "=&a,=&a,a,a"(i32 0, <16 x i32> splat (i32 1))
+  ret void
+}
 
 attributes #0 = { "amdgpu-agpr-alloc"="0" }
 ;.
