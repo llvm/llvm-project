@@ -13,6 +13,7 @@ let WantsRoot = true in {
 
   def GlobalSAddr : ComplexPattern<iPTR, 4, "SelectGlobalSAddr", [], [], -10>;
   def GlobalSAddrGLC : ComplexPattern<iPTR, 4, "SelectGlobalSAddrGLC", [], [], -10>;
+  def GlobalSAddrCPol : ComplexPattern<iPTR, 4, "SelectGlobalSAddrCPol", [], [], -10>;
   def ScratchSAddr : ComplexPattern<iPTR, 2, "SelectScratchSAddr", [], [], -10>;
   def ScratchSVAddr : ComplexPattern<iPTR, 4, "SelectScratchSVAddr", [], [], -10>;
 }
@@ -462,6 +463,37 @@ class FLAT_Global_Invalidate_Writeback<string opName, SDPatternOperator node = n
   let has_sve = 0;
   let lds = 0;
   let sve = 0;
+}
+
+class FLAT_Prefetch_Pseudo<string opName, dag addr = (ins VReg_64:$vaddr), string asm = " $vaddr"> :
+  FLAT_Pseudo<opName, (outs), !con(addr, (ins flat_offset:$offset, CPol_0:$cpol)), asm#"$offset$cpol"> {
+  let has_vdst = 0;
+  let has_data = 0;
+  let mayLoad = 1;
+  let mayStore = 1;
+  let VM_CNT = 0;
+  let LGKM_CNT = 0;
+}
+
+multiclass FLAT_Flat_Prefetch_Pseudo<string opName> {
+  def "" : FLAT_Prefetch_Pseudo<opName>,
+    GlobalSaddrTable<0, opName>;
+  def _SADDR : FLAT_Prefetch_Pseudo<opName, (ins SReg_64:$saddr, VGPR_32:$vaddr), " $vaddr, $saddr">,
+    GlobalSaddrTable<1, opName> {
+    let OtherPredicates = [HasFlatGVSMode];
+    let enabled_saddr = 1;
+  }
+}
+
+multiclass FLAT_Global_Prefetch_Pseudo<string opName> {
+  let is_flat_global = 1, has_saddr = 1 in {
+    def "" : FLAT_Prefetch_Pseudo<opName, (ins VReg_64:$vaddr), " $vaddr, off">,
+      GlobalSaddrTable<0, opName>;
+    def _SADDR : FLAT_Prefetch_Pseudo<opName, (ins SReg_64:$saddr, VGPR_32:$vaddr), " $vaddr, $saddr">,
+      GlobalSaddrTable<1, opName> {
+      let enabled_saddr = 1;
+    }
+  }
 }
 
 class FlatScratchInst <string sv_op, string mode> {
@@ -1162,6 +1194,16 @@ defm SCRATCH_LOAD_LDS_USHORT : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_u
 defm SCRATCH_LOAD_LDS_SSHORT : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_sshort">;
 defm SCRATCH_LOAD_LDS_DWORD  : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_dword">;
 
+let SubtargetPredicate = isGFX125xOnly in {
+defm FLAT_LOAD_MONITOR_B32    : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b32",  VGPR_32>;
+defm FLAT_LOAD_MONITOR_B64    : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b64",  VReg_64>;
+defm FLAT_LOAD_MONITOR_B128   : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b128", VReg_128>;
+
+defm GLOBAL_LOAD_MONITOR_B32  : FLAT_Global_Load_Pseudo <"global_load_monitor_b32",  VGPR_32>;
+defm GLOBAL_LOAD_MONITOR_B64  : FLAT_Global_Load_Pseudo <"global_load_monitor_b64",  VReg_64>;
+defm GLOBAL_LOAD_MONITOR_B128 : FLAT_Global_Load_Pseudo <"global_load_monitor_b128", VReg_128>;
+} // End SubtargetPredicate = isGFX125xOnly
+
 let SubtargetPredicate = isGFX12Plus in {
   let Uses = [EXEC, M0] in {
     defm GLOBAL_LOAD_BLOCK  : FLAT_Global_Load_Pseudo <"global_load_block", VReg_1024>;
@@ -1218,6 +1260,11 @@ let OtherPredicates = [HasAtomicBufferGlobalPkAddF16Insts] in
     "global_atomic_pk_add_f16", VGPR_32, v2f16
   >;
 
+let SubtargetPredicate = HasVmemPrefInsts in {
+  defm FLAT_PREFETCH_B8   : FLAT_Flat_Prefetch_Pseudo<"flat_prefetch_b8">;
+  defm GLOBAL_PREFETCH_B8 : FLAT_Global_Prefetch_Pseudo<"global_prefetch_b8">;
+}
+
 //===----------------------------------------------------------------------===//
 // Flat Patterns
 //===----------------------------------------------------------------------===//
@@ -1226,6 +1273,11 @@ let OtherPredicates = [HasAtomicBufferGlobalPkAddF16Insts] in
 class FlatLoadPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (FlatOffset i64:$vaddr, i32:$offset))),
   (inst $vaddr, $offset)
+>;
+
+class FlatLoadPat_CPOL <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (FlatOffset i64:$vaddr, i32:$offset), (i32 timm:$cpol))),
+  (inst $vaddr, $offset, $cpol)
 >;
 
 class FlatLoadPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
@@ -1249,8 +1301,8 @@ class FlatSignedLoadPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, Value
 >;
 
 class GlobalLoadSaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), vt:$in)),
-  (inst $saddr, $voffset, $offset, 0, $in)
+  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), vt:$in)),
+  (inst $saddr, $voffset, $offset, $cpol, $in)
 >;
 
 class FlatLoadSaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
@@ -1264,8 +1316,8 @@ class FlatLoadSaddrPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueT
 >;
 
 class GlobalLoadSaddrPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset))),
-  (inst $saddr, $voffset, $offset, (i32 0))
+  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol))),
+  (inst $saddr, $voffset, $offset, $cpol)
 >;
 
 class FlatLoadSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
@@ -1275,6 +1327,16 @@ class FlatLoadSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt>
 
 class FlatLoadSaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol))),
+  (inst $saddr, $voffset, $offset, $cpol)
+>;
+
+class FlatLoadSignedPat_CPOL <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), (i32 timm:$cpol))),
+  (inst $vaddr, $offset, $cpol)
+>;
+
+class GlobalLoadSaddrPat_CPOL <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (GlobalSAddrCPol (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), (i32 timm))),
   (inst $saddr, $voffset, $offset, $cpol)
 >;
 
@@ -1459,8 +1521,8 @@ class ScratchLoadSVaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueT
 >;
 
 class ScratchLoadSVaddrPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i32:$offset))),
-  (inst $vaddr, $saddr, $offset, 0)
+  (vt (node (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i32:$offset, CPol:$cpol))),
+  (inst $vaddr, $saddr, $offset, $cpol)
 >;
 
 multiclass GlobalFLATLoadPats<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
@@ -1469,6 +1531,16 @@ multiclass GlobalFLATLoadPats<FLAT_Pseudo inst, SDPatternOperator node, ValueTyp
   }
 
   def : FlatLoadSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+    let AddedComplexity = 11;
+  }
+}
+
+multiclass GlobalFLATLoadPats_CPOL<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
+  def : FlatLoadSignedPat_CPOL<inst, node, vt> {
+    let AddedComplexity = 10;
+  }
+
+  def : GlobalLoadSaddrPat_CPOL<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
     let AddedComplexity = 11;
   }
 }
@@ -2009,6 +2081,16 @@ let WaveSizePredicate = isWave32,  OtherPredicates = [HasTransposeLoadF4F6Insts]
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR6_B96, int_amdgcn_global_load_tr6_b96, v3i32>;
 }
 
+let OtherPredicates = [isGFX125xOnly] in {
+  def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B32,  int_amdgcn_flat_load_monitor_b32,  i32>;
+  def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B64,  int_amdgcn_flat_load_monitor_b64,  v2i32>;
+  def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B128, int_amdgcn_flat_load_monitor_b128, v4i32>;
+
+  defm : GlobalFLATLoadPats_CPOL <GLOBAL_LOAD_MONITOR_B32,  int_amdgcn_global_load_monitor_b32,  i32>;
+  defm : GlobalFLATLoadPats_CPOL <GLOBAL_LOAD_MONITOR_B64,  int_amdgcn_global_load_monitor_b64,  v2i32>;
+  defm : GlobalFLATLoadPats_CPOL <GLOBAL_LOAD_MONITOR_B128, int_amdgcn_global_load_monitor_b128, v4i32>;
+} // End SubtargetPredicate = isGFX125xOnly
+
 let SubtargetPredicate = HasAtomicFMinFMaxF32GlobalInsts, OtherPredicates = [HasFlatGlobalInsts] in {
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_FMIN", "atomic_load_fmin_global", f32>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_FMAX", "atomic_load_fmax_global", f32>;
@@ -2137,6 +2219,77 @@ defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SHORT_D16, load_d16_lo_private, v2f
 }
 
 } // End OtherPredicates = [HasFlatScratchInsts,EnableFlatScratch]
+
+def PrefetchLoc: SDNodeXForm<timm, [{
+  uint32_t V = N->getZExtValue();
+  V = (AMDGPU::CPol::SCOPE_MASK - (V & AMDGPU::CPol::SCOPE_MASK)) << AMDGPU::CPol::SCOPE_SHIFT;
+  if (!Subtarget->hasSafeCUPrefetch())
+    V = std::max(V, (uint32_t)AMDGPU::CPol::SCOPE_SE); // CU scope is unsafe
+  return CurDAG->getTargetConstant(V, SDLoc(N), MVT::i32);
+}]>;
+
+def prefetch_flat : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
+                             (prefetch node:$ptr, node:$rw, node:$loc, node:$type),
+                             [{ return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::FLAT_ADDRESS; }]> {
+  let GISelPredicateCode = [{
+    return (*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS;
+  }];
+}
+
+def prefetch_global : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
+                               (prefetch node:$ptr, node:$rw, node:$loc, node:$type),
+                               [{ return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
+                                         (cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS &&
+                                          !Subtarget->hasSafeSmemPrefetch()); }]> {
+  let GISelPredicateCode = [{
+    return (*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
+            ((*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::CONSTANT_ADDRESS &&
+             !Subtarget->hasSafeSmemPrefetch());
+  }];
+}
+
+multiclass FlatPrefetchPats<string inst, SDPatternOperator prefetch_kind, SDPatternOperator rw> {
+  def : GCNPat <
+    (prefetch_kind (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), rw, (i32 timm:$loc), i32imm_one),
+    (!cast<FLAT_Pseudo>(inst) $vaddr, $offset, (i32 (PrefetchLoc $loc)))
+  > {
+    let AddedComplexity = !if(!eq(rw, i32imm_zero), 0, 25);
+  }
+
+  def : GCNPat <
+    (prefetch_kind (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), rw, (i32 timm:$loc), i32imm_one),
+    (!cast<FLAT_Pseudo>(inst#"_SADDR") $saddr, $voffset, $offset, (i32 (PrefetchLoc $loc)))
+  > {
+    let AddedComplexity = !if(!eq(rw, i32imm_zero), 11, 30);
+  }
+}
+
+multiclass FlatIntrPrefetchPats<string inst, SDPatternOperator intr> {
+  def : GCNPat <
+    (intr (FlatOffset i64:$vaddr, i32:$offset), timm:$cpol),
+    (!cast<FLAT_Pseudo>(inst) $vaddr, $offset, $cpol)
+  >;
+
+  def : GCNPat <
+    (intr (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), timm:$cpol),
+    (!cast<FLAT_Pseudo>(inst#"_SADDR") $saddr, $voffset, $offset, $cpol)> {
+      let AddedComplexity = 11;
+    }
+}
+
+let SubtargetPredicate = HasVmemPrefInsts in {
+  defm : FlatPrefetchPats<"FLAT_PREFETCH_B8", prefetch_flat, i32imm_zero>;
+  defm : FlatPrefetchPats<"GLOBAL_PREFETCH_B8", prefetch_global, i32imm_zero>;
+
+  // Patterns for forced vector prefetch with rw = 1.
+  defm : FlatPrefetchPats<"FLAT_PREFETCH_B8", prefetch_flat, i32imm_one>;
+  defm : FlatPrefetchPats<"GLOBAL_PREFETCH_B8", prefetch_global, i32imm_one>;
+
+
+  // Patterns for target intrinsics
+  defm : FlatIntrPrefetchPats<"FLAT_PREFETCH_B8", int_amdgcn_flat_prefetch>;
+  defm : FlatIntrPrefetchPats<"GLOBAL_PREFETCH_B8", int_amdgcn_global_prefetch>;
+} // End SubtargetPredicate = HasVmemPrefInsts
 
 //===----------------------------------------------------------------------===//
 // Target
@@ -3209,6 +3362,17 @@ multiclass VFLAT_Real_Atomics_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME
 
 defm TENSOR_SAVE                      : VFLAT_Real_gfx1250<0x06e>;
 defm TENSOR_STOP                      : VFLAT_Real_gfx1250<0x06f>;
+
+defm FLAT_PREFETCH_B8                 : VFLAT_Real_AllAddr_gfx1250<0x05d>;
+defm GLOBAL_PREFETCH_B8               : VFLAT_Real_AllAddr_gfx1250<0x05d>;
+
+defm FLAT_LOAD_MONITOR_B32            : VFLAT_Real_AllAddr_gfx1250<0x070>;
+defm FLAT_LOAD_MONITOR_B64            : VFLAT_Real_AllAddr_gfx1250<0x071>;
+defm FLAT_LOAD_MONITOR_B128           : VFLAT_Real_AllAddr_gfx1250<0x072>;
+
+defm GLOBAL_LOAD_MONITOR_B32          : VFLAT_Real_AllAddr_gfx1250<0x070>;
+defm GLOBAL_LOAD_MONITOR_B64          : VFLAT_Real_AllAddr_gfx1250<0x071>;
+defm GLOBAL_LOAD_MONITOR_B128         : VFLAT_Real_AllAddr_gfx1250<0x072>;
 
 defm GLOBAL_LOAD_TR_B128_w32          : VFLAT_Real_AllAddr_gfx1250<0x057, "global_load_tr16_b128">;
 defm GLOBAL_LOAD_TR_B64_w32           : VFLAT_Real_AllAddr_gfx1250<0x058, "global_load_tr8_b64">;

@@ -232,8 +232,8 @@ struct FatRawBufferCastLowering
     Value result = MemRefDescriptor::poison(
         rewriter, loc,
         getTypeConverter()->convertType(op.getResult().getType()));
-    result = LLVM::InsertValueOp::create(rewriter, loc, result, fatPtr,
-                                         kAllocatedPtrPosInMemRefDescriptor);
+    SmallVector<int64_t> pos{kAllocatedPtrPosInMemRefDescriptor};
+    result = LLVM::InsertValueOp::create(rewriter, loc, result, fatPtr, pos);
     result = LLVM::InsertValueOp::create(rewriter, loc, result, fatPtr,
                                          kAlignedPtrPosInMemRefDescriptor);
     result = LLVM::InsertValueOp::create(rewriter, loc, result, offset,
@@ -481,16 +481,16 @@ struct MemoryCounterWaitOpLowering
     if (chipset.majorVersion >= 12) {
       Location loc = op.getLoc();
       if (std::optional<int> ds = adaptor.getDs())
-        rewriter.create<ROCDL::WaitDscntOp>(loc, *ds);
+        ROCDL::WaitDscntOp::create(rewriter, loc, *ds);
 
       if (std::optional<int> load = adaptor.getLoad())
-        rewriter.create<ROCDL::WaitLoadcntOp>(loc, *load);
+        ROCDL::WaitLoadcntOp::create(rewriter, loc, *load);
 
       if (std::optional<int> store = adaptor.getStore())
-        rewriter.create<ROCDL::WaitStorecntOp>(loc, *store);
+        ROCDL::WaitStorecntOp::create(rewriter, loc, *store);
 
       if (std::optional<int> exp = adaptor.getExp())
-        rewriter.create<ROCDL::WaitExpcntOp>(loc, *exp);
+        ROCDL::WaitExpcntOp::create(rewriter, loc, *exp);
 
       rewriter.eraseOp(op);
       return success();
