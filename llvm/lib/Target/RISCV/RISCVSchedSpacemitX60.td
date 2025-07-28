@@ -13,6 +13,56 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Giving a startMx and a Value, this class calculates returns the result of
+// doubling Value until we hit tartetMx, everything before that is BaseValue.
+class GetDoublingValueFromLMUL<string startMx, int Value, string targetMx> {
+  int pos_MF8 = 0;
+  int pos_MF4 = 1;
+  int pos_MF2 = 2;
+  int pos_M1 = 3;
+  int pos_M2 = 4;
+  int pos_M4 = 5;
+  int pos_M8 = 6;
+
+  // Get position of start multiplier
+  int startPos = !cond(
+    !eq(startMx, "MF8") : pos_MF8,
+    !eq(startMx, "MF4") : pos_MF4,
+    !eq(startMx, "MF2") : pos_MF2,
+    !eq(startMx, "M1") : pos_M1,
+    !eq(startMx, "M2") : pos_M2,
+    !eq(startMx, "M4") : pos_M4,
+    !eq(startMx, "M8") : pos_M8,
+  );
+
+  // Get position of target multiplier
+  int targetPos = !cond(
+    !eq(targetMx, "MF8") : pos_MF8,
+    !eq(targetMx, "MF4") : pos_MF4,
+    !eq(targetMx, "MF2") : pos_MF2,
+    !eq(targetMx, "M1") : pos_M1,
+    !eq(targetMx, "M2") : pos_M2,
+    !eq(targetMx, "M4") : pos_M4,
+    !eq(targetMx, "M8") : pos_M8,
+    true: 0
+  );
+
+  // Calculate the difference in positions
+  int posDiff = !sub(targetPos, startPos);
+
+  // Otherwise calculate Value * (2^posDiff)
+  int c = !cond(
+    !eq(posDiff, 0) : Value,
+    !eq(posDiff, 1) : !mul(Value, 2),
+    !eq(posDiff, 2) : !mul(Value, 4),
+    !eq(posDiff, 3) : !mul(Value, 8),
+    !eq(posDiff, 4) : !mul(Value, 16),
+    !eq(posDiff, 5) : !mul(Value, 32),
+    !eq(posDiff, 6) : !mul(Value, 64),
+    true: Value
+  );
+}
+
 class SMX60IsWorstCaseMX<string mx, list<string> MxList> {
   string LLMUL = LargestLMUL<MxList>.r;
   bit c = !eq(mx, LLMUL);
@@ -26,6 +76,9 @@ class SMX60IsWorstCaseMXSEW<string mx, int sew, list<string> MxList, bit isF = 0
 
 defvar SMX60VLEN = 256;
 defvar SMX60DLEN = !div(SMX60VLEN, 2);
+
+//===----------------------------------------------------------------------===//
+// Latency helpers
 
 class Get1248Latency<string mx> {
   int c = !cond(
@@ -100,6 +153,21 @@ class Get781632Latency<string mx> {
     !eq(mx, "M8") : 32,
     true: 7
   );
+}
+
+//===----------------------------------------------------------------------===//
+// ReleaseAtCycles (Occupancy) helpers
+
+class GetOneMF4AndDouble<string mx> {
+  int c = GetDoublingValueFromLMUL<"MF4", 1, mx>.c;
+}
+
+class GetOneMF2AndDouble<string mx> {
+  int c = GetDoublingValueFromLMUL<"MF2", 1, mx>.c;
+}
+
+class GetOneM1AndDouble<string mx> {
+  int c = GetDoublingValueFromLMUL<"M1", 1, mx>.c;
 }
 
 def SpacemitX60Model : SchedMachineModel {
