@@ -4919,13 +4919,14 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
   }
 
   // HIP code in device-only non-RDC mode will bundle the output if it invoked
-  // the linker.
+  // the linker or if the user explicitly requested it.
   bool ShouldBundleHIP =
-      HIPNoRDC && offloadDeviceOnly() &&
       Args.hasFlag(options::OPT_gpu_bundle_output,
-                   options::OPT_no_gpu_bundle_output, true) &&
-      !llvm::any_of(OffloadActions,
-                    [](Action *A) { return A->getType() != types::TY_Image; });
+                   options::OPT_no_gpu_bundle_output, false) ||
+      (HIPNoRDC && offloadDeviceOnly() &&
+       llvm::none_of(OffloadActions, [](Action *A) {
+         return A->getType() != types::TY_Image;
+       }));
 
   // All kinds exit now in device-only mode except for non-RDC mode HIP.
   if (offloadDeviceOnly() && !ShouldBundleHIP)
