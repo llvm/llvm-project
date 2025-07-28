@@ -1,4 +1,3 @@
-
 # REQUIRES: shell
 # UNSUPPORTED: system-windows
 
@@ -16,7 +15,7 @@
 # RUN: | FileCheck %s --check-prefix=CHECK-ERROR
 # CHECK-ERROR: error: paths must be relative but "/include" starts with "/"
 
-
+---
 MultilibVersion: 1.0
 Variants:
 - Dir: aarch64-none-elf/aarch64a_exn_rtti_unaligned
@@ -26,3 +25,5 @@ Variants:
   IncludeDirs:
   - /include
   - aarch64-none-elf/include
+
+...
