@@ -29,6 +29,7 @@
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -396,7 +397,7 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
   auto SourceBuffer = getSourceFile(SourceFile);
   if (!SourceBuffer)
     return nullptr;
-  auto FileCoverage = Coverage.getCoverageForFile(SourceFile);
+  auto FileCoverage = Coverage.getCoverageForFile(SourceFile, ViewOpts.ShowArchExecutables);
   if (FileCoverage.empty())
     return nullptr;
 

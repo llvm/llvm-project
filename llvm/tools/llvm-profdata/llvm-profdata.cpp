@@ -731,10 +731,10 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   //ANDRES CODE
   std::string ExecutableName;
   std::string ProfileFile = Input.Filename;
-  std::string ObjectFilename = "";
+  StringRef ObjectFilename = "";
 
   StringRef FilenameRef = Filename;
-  if(!ObjectFilename.empty()){
+  if(!ObjectAwareHashing.empty()){
     // StringRef ExeRef, ProfRef;
     // std::tie(ExeRef, ProfRef) = FilenameRef.split(':');
     // if(!ExeRef.empty() && !ProfRef.empty()){

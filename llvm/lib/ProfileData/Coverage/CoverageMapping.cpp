@@ -14,6 +14,7 @@
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -23,10 +24,12 @@
 #include "llvm/ProfileData/Coverage/CoverageMappingReader.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -1106,30 +1109,65 @@ Error CoverageMapping::loadFunctionRecord(
   if(ShowArchExecutables){
     HashStr += ":" + Arch.str();
   }else{
+    //THIS ALGORITHM NEEDS TO BE FIXED!!!
     auto LogicalFuncKey = std::make_pair(FilenamesHash, hash_value(OrigFuncName));
     auto It = RecordIndices.find(LogicalFuncKey);
-    std::vector<llvm::coverage::CountedRegion> RegionsToAdd;
 
     if (It != RecordIndices.end()) {
       auto &ExistingFunction = Functions[It->second];
 
-      // Step 1: Build a set of existing ObjectFilenames
-      std::unordered_set<std::string> ExistingFilenames;
-      for (const auto &ExistingRegion : ExistingFunction.CountedRegions) {
-        ExistingFilenames.insert(ExistingRegion.ObjectFilename.str());
+
+      // Create a map of existing regions for efficient lookup.
+      // The key uniquely identifies the source region.
+      using RegionKey = std::tuple<unsigned, unsigned, unsigned, unsigned, unsigned>;
+      std::map<RegionKey, CountedRegion *> ExistingRegionsMap;
+      for (auto &ExistingRegion : ExistingFunction.CountedRegions) {
+        RegionKey Key = {ExistingRegion.FileID, ExistingRegion.LineStart,
+                         ExistingRegion.ColumnStart, ExistingRegion.LineEnd,
+                         ExistingRegion.ColumnEnd};
+        ExistingRegionsMap[Key] = &ExistingRegion;
       }
 
-      // Step 2: Only add NewRegions with unique ObjectFilenames
+      for (auto NewRegion : Function.CountedRegions) {
+        AllFunctionRegions[It->second].CountedRegions.push_back(NewRegion);
+      }
+
+      // Merge the new regions into the existing function's regions.
       for (const auto &NewRegion : Function.CountedRegions) {
-        if (ExistingFilenames.find(NewRegion.ObjectFilename.str()) == ExistingFilenames.end()) {
+        RegionKey Key = {NewRegion.FileID, NewRegion.LineStart,
+                         NewRegion.ColumnStart, NewRegion.LineEnd,
+                         NewRegion.ColumnEnd};
+        auto MapIt = ExistingRegionsMap.find(Key);
+        if (MapIt != ExistingRegionsMap.end()) {
+          // Region already exists, merge counts by taking the max.
+          CountedRegion *ExistingRegion = MapIt->second;
+          // llvm::errs() << "EXECUTION COUNTS BEFORE: " +  to_string(ExistingRegion->ExecutionCount) << "\n";
+          // llvm::errs() << "(" << ExistingRegion->LineStart << ", " << ExistingRegion->LineEnd << ")" << "\n";
+          ExistingRegion->ExecutionCount += NewRegion.ExecutionCount;
+          // llvm::errs() << "EXECUTION COUNTS AFTER: " +  to_string(ExistingRegion->ExecutionCount) << "\n";
+          // DebugCount++;
+        } else {
+          // llvm::errs() << "ENTERS ELSE STATEMENT HERE" << "\n";
+          // llvm::errs() << "(" << NewRegion.LineStart << ", " << NewRegion.LineEnd << ")" << "\n";
           ExistingFunction.CountedRegions.push_back(NewRegion);
         }
-        
       }
+      // Since we modified an existing function, we don't add a new one.
+      // We just need to make sure we don't add the new 'Function' object later.
+      // The logic below this block needs to be adjusted to handle this.
+      return Error::success();
     }
-    RecordIndices[LogicalFuncKey] = Functions.size();
+    // llvm::errs() << "ENTERS ELSE STATEMENT HERE" << "\n";
+    RecordIndices.insert({LogicalFuncKey, Functions.size()});
+    //THIS ALGORITHM NEEDS TO BE FIXED!!!
   }
   //CHANGES MADE HERE
+
+  // if(DebugCount == 29){
+  //   llvm::errs() << "ENTERS ELSE STATEMENT HERE" << "\n";
+  // }
+
+
 
   // Don't create records for (filenames, function) pairs we've already seen.
   StringRef Hash(HashStr);
@@ -1137,8 +1175,8 @@ Error CoverageMapping::loadFunctionRecord(
     return Error::success();
   }
 
+  AllFunctionRegions.push_back(Function);
   Functions.push_back(std::move(Function));
-
   // Performance optimization: keep track of the indices of the function records
   // which correspond to each filename. This can be used to substantially speed
   // up queries for coverage info in a file.
@@ -1594,6 +1632,59 @@ public:
 
     sortNestedRegions(Regions);
 
+    // // This map is used to efficiently check for the existence of a specific region
+    // // from a specific binary, which is the purpose of the innermost loop in the
+    // // original code.
+    // // Key: A tuple uniquely identifying a region's location and its binary of origin.
+    // // Value: A boolean indicating if the region is NOT a SkippedRegion.
+    // using RegionKey = std::tuple<LineColPair, LineColPair, StringRef>;
+    // std::map<RegionKey, bool> RegionExistenceMap;
+    // for (const auto &R : Regions) {
+    //   RegionKey Key = {R.startLoc(), R.endLoc(), R.ObjectFilename};
+    //   // Only insert if it's a more "valid" region than what might already be there.
+    //   if (R.Kind != CounterMappingRegion::SkippedRegion)
+    //     RegionExistenceMap[Key] = true;
+    //   else
+    //     RegionExistenceMap.try_emplace(Key, false);
+    // }
+
+    // for (auto &I : Regions) {
+    //   // We are only interested in patching SkippedRegions.
+    //   if (I.Kind != CounterMappingRegion::SkippedRegion)
+    //     continue;
+
+    //   for (auto &J : Regions) {
+    //     // Find a non-skipped region 'J' from a different binary that contains 'I'.
+    //     if (I.ObjectFilename == J.ObjectFilename ||
+    //         J.Kind == CounterMappingRegion::SkippedRegion ||
+    //         !(I.startLoc() >= J.startLoc() && I.endLoc() <= J.endLoc())) {
+    //       continue;
+    //     }
+
+    //     // Check if a non-skipped region already exists at I's exact location
+    //     // coming from J's binary. This replaces the O(N) inner loop.
+    //     RegionKey KeyToFind = {I.startLoc(), I.endLoc(), J.ObjectFilename};
+    //     auto It = RegionExistenceMap.find(KeyToFind);
+
+    //     // If no region from J's binary exists at I's location, or if it does
+    //     // but it's a SkippedRegion, we can patch I with J's data.
+    //     if (It == RegionExistenceMap.end() || It->second == false) {
+    //       I.Kind = J.Kind;
+    //       I.ExecutionCount = J.ExecutionCount;
+    //       // We found a patch, no need to check other containing regions.
+    //       break;
+    //     }
+    //   }
+    // }
+
+    // llvm::errs() << "START HERE" << "\n";
+    // for(auto *I = Regions.begin(); I != Regions.end(); ++I){
+    //   llvm::errs() << "(" << to_string(I->startLoc().first) << ", " << to_string(I->endLoc().first) << ")" << "\n";
+    //   llvm::errs() << "Execution Count: " << I->ExecutionCount << "\n";
+    // }
+    // llvm::errs() << "END HERE" << "\n";
+
+
     for(auto *I = Regions.begin(); I != Regions.end(); ++I){
       bool FoundMatchInOtherBinary = false;
       for(auto *J = I + 1; J != Regions.end(); ++J){
@@ -1601,6 +1692,7 @@ public:
             J->Kind == CounterMappingRegion::SkippedRegion 
             && I->Kind != CounterMappingRegion::SkippedRegion &&
             J->startLoc() >= I->startLoc() && J->endLoc() <= I->endLoc()){
+          // llvm::errs() << "(" << to_string(J->startLoc().first) << ", " << to_string(J->endLoc().first) << ")" << "\n";
           for(auto *K = J + 1; K != Regions.end(); ++K){
             if(K->ObjectFilename == I->ObjectFilename &&
               J->startLoc() == K->startLoc() && J->endLoc() == K->endLoc()){
@@ -1614,6 +1706,13 @@ public:
         }
       }
     }
+
+    // llvm::errs() << "START HERE" << "\n";
+    // for(auto *I = Regions.begin(); I != Regions.end(); ++I){
+    //   llvm::errs() << "(" << to_string(I->startLoc().first) << ", " << to_string(I->endLoc().first) << ")" << "\n";
+    //   llvm::errs() << "Execution Count: " << I->ExecutionCount << "\n";
+    // }
+    // llvm::errs() << "END HERE" << "\n";
     
 
     ArrayRef<CountedRegion> CombinedRegions = combineRegions(Regions);
@@ -1671,9 +1770,15 @@ static SmallBitVector gatherFileIDs(StringRef SourceFile,
 static std::optional<unsigned>
 findMainViewFileID(const FunctionRecord &Function) {
   SmallBitVector IsNotExpandedFile(Function.Filenames.size(), true);
-  for (const auto &CR : Function.CountedRegions)
+  uint64_t counter = 0;
+  for (const auto &CR : Function.CountedRegions){
+    // counter++;
+    // if(counter == 245){
+    //   llvm::errs() << counter << "\n";
+    // }
     if (CR.Kind == CounterMappingRegion::ExpansionRegion)
       IsNotExpandedFile[CR.ExpandedFileID] = false;
+  }
   int I = IsNotExpandedFile.find_first();
   if (I == -1)
     return std::nullopt;
@@ -1695,17 +1800,26 @@ static bool isExpansion(const CountedRegion &R, unsigned FileID) {
   return R.Kind == CounterMappingRegion::ExpansionRegion && R.FileID == FileID;
 }
 
-CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
+CoverageData CoverageMapping::getCoverageForFile(StringRef Filename, bool ShowArchExecutables) const {
   assert(SingleByteCoverage);
   CoverageData FileCoverage(*SingleByteCoverage, Filename);
   std::vector<CountedRegion> Regions;
 
   // Look up the function records in the given file. Due to hash collisions on
   // the filename, we may get back some records that are not in the file.
+  // DenseSet<CountedRegion> DeDuplicationSet;
   ArrayRef<unsigned> RecordIndices =
       getImpreciseRecordIndicesForFilename(Filename);
+  // for (unsigned RecordIndex : RecordIndices) {
+  //   const FunctionRecord &Function = AllFunctionRegions[RecordIndex];
+  //   for(const auto &I : Function.CountedRegions){
+  //     llvm::errs() << "(" << to_string(I.startLoc().first) << ", " << to_string(I.endLoc().first) << ")" << "\n";
+  //   }
+  // }
+  // ArrayRef<unsigned> RecordIndices =
+  //     getImpreciseRecordIndicesForFilename(Filename);
   for (unsigned RecordIndex : RecordIndices) {
-    const FunctionRecord &Function = Functions[RecordIndex];
+    const FunctionRecord &Function = ShowArchExecutables ? Functions[RecordIndex] : AllFunctionRegions[RecordIndex];
     auto MainFileID = findMainViewFileID(Filename, Function);
     auto FileIDs = gatherFileIDs(Filename, Function);
     for (const auto &CR : Function.CountedRegions)
@@ -1723,6 +1837,8 @@ CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
       if (FileIDs.test(MR.getDecisionRegion().FileID))
         FileCoverage.MCDCRecords.push_back(MR);
   }
+
+
 
   LLVM_DEBUG(dbgs() << "Emitting segments for file: " << Filename << "\n");
   FileCoverage.Segments = SegmentBuilder::buildSegments(Regions);

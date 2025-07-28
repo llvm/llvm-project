@@ -748,6 +748,16 @@ struct FunctionRecord {
   FunctionRecord(FunctionRecord &&FR) = default;
   FunctionRecord &operator=(FunctionRecord &&) = default;
 
+  FunctionRecord(const FunctionRecord &FR)
+    : Name(FR.Name),
+      Filenames(FR.Filenames),
+      CountedRegions(FR.CountedRegions),
+      CountedBranchRegions(FR.CountedBranchRegions),
+      MCDCRecords(FR.MCDCRecords),
+      ExecutionCount(FR.ExecutionCount),
+      ObjectFilename(FR.ObjectFilename) {}
+
+
   void pushMCDCRecord(MCDCRecord &&Record) {
     MCDCRecords.push_back(std::move(Record));
   }
@@ -1006,7 +1016,9 @@ class CoverageMapping {
   std::vector<std::pair<std::string, uint64_t>> FuncHashMismatches;
   StringRef Arch;
   DenseMap<std::pair<size_t, hash_code>, unsigned> RecordIndices;
-  uint64_t Counter = 0;
+  uint64_t DebugCount = 0;
+  std::vector<FunctionRecord> AllFunctionRegions;
+
 
   std::map<std::pair<std::string, std::string>, std::vector<uint64_t>> AggregatedCounts;
 
@@ -1103,7 +1115,7 @@ public:
   /// The given filename must be the name as recorded in the coverage
   /// information. That is, only names returned from getUniqueSourceFiles will
   /// yield a result.
-  LLVM_ABI CoverageData getCoverageForFile(StringRef Filename) const;
+  LLVM_ABI CoverageData getCoverageForFile(StringRef Filename, bool ShowArchExecutables = false) const;
 
   /// Get the coverage for a particular function.
   LLVM_ABI CoverageData
