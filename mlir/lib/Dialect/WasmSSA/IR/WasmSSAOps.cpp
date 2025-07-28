@@ -258,19 +258,16 @@ void GlobalOp::print(OpAsmPrinter &printer) {
 // GlobalGetOp
 //===----------------------------------------------------------------------===//
 
-// Custom interface overrides
-LogicalResult GlobalGetOp::CheckValidInConstantExpr() {
+LogicalResult
+GlobalGetOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // If the parent requires a constant context, verify that global.get is a constant
+  // as defined per the wasm standard.
+  if(!this->getOperation()->getParentWithTrait<ConstantExpressionInitializerOpTrait>())
+    return success();
+  Operation *symTabOp = SymbolTable::getNearestSymbolTable(*this);
   StringRef referencedSymbol = getGlobal();
-  Operation *symTableOp =
-      getOperation()->getParentWithTrait<OpTrait::SymbolTable>();
-  if (!symTableOp)
-    return emitError(
-        "cannot find the symbol table associated with this operation");
-  // NOTE: Having to lookup the symbol inside the symbol table anytime the verifier
-  // is called can be costly. This may be improved with caching or another architecture
-  // for the constant checking mechanism.
-  Operation *definitionOp =
-      SymbolTable::lookupSymbolIn(symTableOp, referencedSymbol);
+  Operation *definitionOp = symbolTable.lookupSymbolIn(
+      symTabOp, StringAttr::get(this->getContext(), referencedSymbol));
   if (!definitionOp)
     return emitError() << "symbol @" << referencedSymbol << " is undefined";
   auto definitionImport = llvm::dyn_cast<GlobalImportOp>(definitionOp);

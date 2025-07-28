@@ -16,29 +16,3 @@
 namespace mlir::wasmssa {
 #include "mlir/Dialect/WasmSSA/IR/WasmSSATypeConstraints.cpp.inc"
 } // namespace mlir::wasmssa
-
-using namespace mlir;
-using namespace mlir::wasmssa;
-
-Type LimitType::parse(::mlir::AsmParser &parser) {
-  auto res = parser.parseLSquare();
-  uint32_t minLimit{0};
-  std::optional<uint32_t> maxLimit{std::nullopt};
-  res = parser.parseInteger(minLimit);
-  res = parser.parseColon();
-  uint32_t maxValue{0};
-  auto maxParseRes = parser.parseOptionalInteger(maxValue);
-  if (maxParseRes.has_value() && (*maxParseRes).succeeded())
-    maxLimit = maxValue;
-
-  res = parser.parseRSquare();
-  return LimitType::get(parser.getContext(), minLimit, maxLimit);
-}
-
-void LimitType::print(AsmPrinter &printer) const {
-  printer << '[' << getMin() << ':';
-  std::optional<uint32_t> maxLim = getMax();
-  if (maxLim)
-    printer << *maxLim;
-  printer << ']';
-}

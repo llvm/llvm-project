@@ -131,31 +131,7 @@ def ConstantExpressionInitializerOpTrait : NativeOpTrait<"ConstantExpressionInit
   let cppNamespace = "::mlir::wasmssa";
 }
 
-def ConstantExprCheckOpInterface :
-          OpInterface<"ConstantExprCheckOpInterface"> {
-  let cppNamespace = "::mlir::wasmssa";
-  let description = [{
-    Interface for allowing to verify that operations can be used in a Wasm Constant Expression.
-  }];
-
-  let methods = [
-    InterfaceMethod<
-      /*desc=*/        [{
-        Returns success if the current operation is valid in a constant expression context.
-        A diagnostic is emitted on error.
-      }],
-      /*returnType=*/  "::mlir::LogicalResult",
-      /*methodName=*/  "CheckValidInConstantExpr",
-      /*args=*/        (ins)
-      >
-  ];
-}
-
-def AlwaysValidInConstantExprOpTrait : NativeOpTrait<"AlwaysValidConstantExprOpTrait", [], [{
-    ::mlir::LogicalResult CheckValidInConstantExpr() {
-      return success();
-    }
-  }]> {
+def ConstantExprOpTrait : NativeOpTrait<"ConstantExprOpTrait"> {
   let cppNamespace = "::mlir::wasmssa";
 }
 

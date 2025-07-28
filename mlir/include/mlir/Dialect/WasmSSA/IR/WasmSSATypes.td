@@ -52,17 +52,18 @@ def WasmSSA_FuncType : TypeAlias<FunctionType>;
 def WasmSSA_LimitType : WasmSSA_Type<"Limit", "limit"> {
   let summary = "Wasm limit type";
   let parameters = (ins "uint32_t":$min,
-                        "std::optional<uint32_t>":$max);
-  let hasCustomAssemblyFormat = 1;
+                        OptionalParameter<"std::optional<uint32_t>">:$max);
+  let assemblyFormat = "`[` $min `` `:` ($max^)? `]`";
 }
 
 def WasmSSA_LocalRef : WasmSSA_Type<"LocalRef", "local"> {
   let summary = "Type of a local variable";
   let parameters = (ins WasmSSA_ValType: $elementType);
   let assemblyFormat = "`ref` `to` $elementType";
-   let builders = [TypeBuilderWithInferredContext<(ins "Type":$typeParam), [{
+  let builders = [TypeBuilderWithInferredContext<(ins "Type":$typeParam), [{
       return get(typeParam.getContext(), typeParam);
     }]>,];
+
 }
 
 def WasmSSA_TableType : WasmSSA_Type<"Table", "tabletype"> {

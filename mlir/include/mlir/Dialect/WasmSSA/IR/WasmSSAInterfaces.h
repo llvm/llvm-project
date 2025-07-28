@@ -40,18 +40,20 @@ LogicalResult verifyLabelLevelInterface(Operation *op);
 } // namespace detail
 
 /// Operations implementing this trait are considered as valid
-/// constant expressions in any context (In contrast of ConstantExprCheckOpInterface
-/// which are sometimes considered valid constant expressions.
+/// constant expressions in any context (In contrast of
+/// ConstantExprCheckOpInterface which are sometimes considered valid constant
+/// expressions.
 template <class OperationType>
-struct AlwaysValidConstantExprOpTrait
-    : public OpTrait::TraitBase<OperationType, AlwaysValidConstantExprOpTrait> {};
+struct ConstantExprOpTrait
+    : public OpTrait::TraitBase<OperationType, ConstantExprOpTrait> {};
 
 /// Trait used to verify operations that need a constant expression initializer.
-template<typename OpType>
-struct ConstantExpressionInitializerOpTrait : public OpTrait::TraitBase<OpType, ConstantExpressionInitializerOpTrait>{
-    static LogicalResult verifyTrait(Operation* op) {
-        return detail::verifyConstantExpressionInterface(op);
-    }
+template <typename OpType>
+struct ConstantExpressionInitializerOpTrait
+    : public OpTrait::TraitBase<OpType, ConstantExpressionInitializerOpTrait> {
+  static LogicalResult verifyTrait(Operation *op) {
+    return detail::verifyConstantExpressionInterface(op);
+  }
 };
 
 } // namespace mlir::wasmssa

@@ -70,8 +70,7 @@ def WasmSSA_BranchIfOp : WasmSSA_Op<"branch_if", [
 
 def WasmSSA_ConstOp : WasmSSA_Op<"const", [
     AllTypesMatch<["value", "result"]>,
-    ConstantExprCheckOpInterface,
-    AlwaysValidInConstantExprOpTrait]> {
+    ConstantExprOpTrait]> {
   let summary = "Operator that represents a constant value";
   let arguments = (ins TypedAttrInterface: $value);
   let results = (outs WasmSSA_NumericType: $result);
@@ -218,10 +217,10 @@ def WasmSSA_GlobalImportOp : WasmSSA_Op<"import_global", [
                    "bool": $isMutable)>
   ];
   let hasCustomAssemblyFormat = 1;
-  //let assemblyFormat = "$importName `from` $moduleName `as` $sym_name oilist (`mutable` $isMutable | `vis` $sym_visibility) `:` $type attr-dict";
 }
 
-def WasmSSA_GlobalGetOp : WasmSSA_Op<"global_get", [DeclareOpInterfaceMethods<ConstantExprCheckOpInterface>]> {
+def WasmSSA_GlobalGetOp : WasmSSA_Op<"global_get", [DeclareOpInterfaceMethods<SymbolUserOpInterface>,
+  ConstantExprOpTrait]> {
   let summary = "Returns the value of the global passed as argument.";
   let arguments = (ins FlatSymbolRefAttr: $global);
   let results = (outs WasmSSA_ValType: $global_val);

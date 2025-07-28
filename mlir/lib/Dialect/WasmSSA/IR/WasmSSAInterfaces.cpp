@@ -33,13 +33,9 @@ LogicalResult verifyConstantExpressionInterface(Operation *op) {
   Region &initializerRegion = op->getRegion(0);
   WalkResult resultState =
       initializerRegion.walk([&](Operation *currentOp) -> WalkResult {
-        if (isa<ReturnOp>(currentOp))
+        if (isa<ReturnOp>(currentOp) ||
+            currentOp->hasTrait<ConstantExprOpTrait>())
           return WalkResult::advance();
-        if (auto interfaceOp =
-                dyn_cast<ConstantExprCheckOpInterface>(currentOp)) {
-          if (interfaceOp.CheckValidInConstantExpr().succeeded())
-            return WalkResult::advance();
-        }
         op->emitError("expected a constant initializer for this operator, got ")
             << currentOp;
         return WalkResult::interrupt();
@@ -48,8 +44,8 @@ LogicalResult verifyConstantExpressionInterface(Operation *op) {
 }
 
 LogicalResult verifyLabelLevelInterface(Operation *op) {
-  Block* target = cast<LabelLevelOpInterface>(op).getLabelTarget();
-  Region* targetRegion = target->getParent();
+  Block *target = cast<LabelLevelOpInterface>(op).getLabelTarget();
+  Region *targetRegion = target->getParent();
   if (targetRegion != op->getParentRegion() ||
       targetRegion->getParentOp() != op)
     return op->emitError("target should be a block defined in same level than "
@@ -60,7 +56,7 @@ LogicalResult verifyLabelLevelInterface(Operation *op) {
 
 llvm::FailureOr<LabelLevelOpInterface>
 LabelBranchingOpInterface::getTargetOpFromBlock(::mlir::Block *block,
-                                                     uint32_t breakLevel) {
+                                                uint32_t breakLevel) {
   LabelLevelOpInterface res{};
   for (size_t curLevel{0}; curLevel <= breakLevel; curLevel++) {
     res = dyn_cast_or_null<LabelLevelOpInterface>(block->getParentOp());
