@@ -8,6 +8,7 @@ void test_global_const() {
 }
 
 // String literal
+// NOTE: This only works in C++, not in C, as the analyzer treats string literals as non-const char arrays in C mode.
 void test_string_literal() {
   char *str = (char *)"hello";
   str[0] = 'H'; // warn: Writing to immutable memory
