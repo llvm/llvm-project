@@ -162,10 +162,13 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
 
     opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskTLS);
 
+    std::optional<uint64_t> auxv_at_hwcap3 =
+        process.GetAuxValue(AuxVector::AUXV_AT_HWCAP3);
     std::lock_guard<std::mutex> lock(g_register_flags_detector_mutex);
     if (!g_register_flags_detector.HasDetected())
       g_register_flags_detector.DetectFields(auxv_at_hwcap.value_or(0),
-                                             auxv_at_hwcap2.value_or(0));
+                                             auxv_at_hwcap2.value_or(0),
+                                             auxv_at_hwcap3.value_or(0));
 
     auto register_info_up =
         std::make_unique<RegisterInfoPOSIX_arm64>(target_arch, opt_regsets);
