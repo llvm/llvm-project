@@ -16184,10 +16184,12 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     // 2^N - 3/5/9 --> (sub (shl X, C1), (shXadd X, x))
     for (uint64_t Offset : {3, 5, 9}) {
       if (isPowerOf2_64(MulAmt + Offset)) {
+        unsigned ShAmt = Log2_64(MulAmt + Offset);
+        if (ShAmt >= VT.getSizeInBits())
+          continue;
         SDLoc DL(N);
         SDValue Shift1 =
-            DAG.getNode(ISD::SHL, DL, VT, X,
-                        DAG.getConstant(Log2_64(MulAmt + Offset), DL, VT));
+            DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShAmt, DL, VT));
         SDValue Mul359 =
             DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
                         DAG.getConstant(Log2_64(Offset - 1), DL, VT), X);
