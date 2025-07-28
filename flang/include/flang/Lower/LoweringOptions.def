@@ -74,5 +74,11 @@ ENUM_LOWERINGOPT(SkipExternalRttiDefinition, unsigned, 1, 0)
 /// If false, lower to the complex dialect of MLIR.
 /// On by default.
 ENUM_LOWERINGOPT(ComplexDivisionToRuntime, unsigned, 1, 1)
+
+/// Initialization for logical type
+/// 	-1  : No initialization
+///	 0  : Initialized to .FALSE.
+///	 1  : Initialized to .TRUE.
+ENUM_LOWERINGOPT(LogicalInit, signed, 2, -1)
 #undef LOWERINGOPT
 #undef ENUM_LOWERINGOPT

@@ -6960,6 +6960,7 @@ def A_DASH : Joined<["-"], "A-">, Group<gfortran_Group>;
 def static_libgfortran : Flag<["-"], "static-libgfortran">, Group<gfortran_Group>;
 
 // "f" options with values for gfortran.
+// Some of these options are visible for LLVM Flang too.
 def fblas_matmul_limit_EQ : Joined<["-"], "fblas-matmul-limit=">, Group<gfortran_Group>;
 def fcheck_EQ : Joined<["-"], "fcheck=">, Group<gfortran_Group>;
 def fcoarray_EQ : Joined<["-"], "fcoarray=">, Group<gfortran_Group>;
@@ -6967,7 +6968,10 @@ def ffpe_trap_EQ : Joined<["-"], "ffpe-trap=">, Group<gfortran_Group>;
 def ffree_line_length_VALUE : Joined<["-"], "ffree-line-length-">, Group<gfortran_Group>;
 def finit_character_EQ : Joined<["-"], "finit-character=">, Group<gfortran_Group>;
 def finit_integer_EQ : Joined<["-"], "finit-integer=">, Group<gfortran_Group>;
-def finit_logical_EQ : Joined<["-"], "finit-logical=">, Group<gfortran_Group>;
+def finit_logical_EQ : Joined<["-"], "finit-logical=">,
+                       Group<gfortran_Group>,
+                       Visibility<[FlangOption, FC1Option]>,
+                       HelpText<"Initialize logical type.">;
 def finit_real_EQ : Joined<["-"], "finit-real=">, Group<gfortran_Group>;
 def fmax_array_constructor_EQ : Joined<["-"], "fmax-array-constructor=">, Group<gfortran_Group>;
 def fmax_errors_EQ : Joined<["-"], "fmax-errors=">, Group<gfortran_Group>;

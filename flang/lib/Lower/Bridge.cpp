@@ -5720,6 +5720,79 @@ private:
   void instantiateVar(const Fortran::lower::pft::Variable &var,
                       Fortran::lower::AggregateStoreMap &storeMap) {
     Fortran::lower::instantiateVariable(*this, var, localSymbols, storeMap);
+
+    /// Implicit assignment is defined by the `-finit-*` family of flags.
+    /// These options do not initialize:
+    ///   1) Any variable already initialized
+    ///   2) objects with the POINTER attribute
+    ///   3) allocatable arrays
+    ///   4) variables that appear in an EQUIVALENCE statement
+
+    auto isEligibleForImplicitAssignment = [&var]() -> bool {
+      if (!var.hasSymbol())
+        return false;
+
+      const Fortran::semantics::Symbol &sym = var.getSymbol();
+      if (const auto *details =
+              sym.detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
+        if (details->init())
+          return false;
+      }
+
+      if (sym.attrs().test(Fortran::semantics::Attr::POINTER))
+        return false;
+
+      if (sym.Rank() > 0 &&
+          sym.attrs().test(Fortran::semantics::Attr::ALLOCATABLE))
+        return false;
+
+      if (Fortran::lower::pft::getDependentVariableList(sym).size() > 1)
+        return false;
+
+      return true;
+    };
+
+    auto processImplicitAssignment = [&]() -> void {
+      const Fortran::semantics::Symbol &sym = var.getSymbol();
+      const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType();
+      bool isInitLogicalFlagDefined =
+          (getLoweringOptions().getLogicalInit() == 1 ||
+           getLoweringOptions().getLogicalInit() == 0);
+
+      /*
+       * Process -finit-logical=true|false
+       * Create an implicit assignment of form `var = value`,
+       * where `value` is either true or false, and generically
+       * build the assignment.
+       */
+      if (isInitLogicalFlagDefined &&
+          declTy->category() ==
+              Fortran::semantics::DeclTypeSpec::Category::Logical) {
+        Fortran::parser::Expr expr =
+            Fortran::parser::Expr{Fortran::parser::LiteralConstant{
+                Fortran::parser::LogicalLiteralConstant{
+                    (getLoweringOptions().getLogicalInit() == 0) ? false : true,
+                    std::optional<Fortran::parser::KindParam>{}}}};
+        Fortran::parser::Designator designator = Fortran::parser::Designator{
+            Fortran::parser::DataRef{Fortran::parser::Name{
+                Fortran::parser::FindSourceLocation(sym.name()),
+                const_cast<Fortran::semantics::Symbol *>(&sym)}}};
+        designator.source = Fortran::parser::FindSourceLocation(sym.name());
+        Fortran::parser::Variable variable = Fortran::parser::Variable{
+            Fortran::common::Indirection<Fortran::parser::Designator>{
+                std::move(designator)}};
+        Fortran::parser::AssignmentStmt stmt = Fortran::parser::AssignmentStmt{
+            std::make_tuple(std::move(variable), std::move(expr))};
+        Fortran::evaluate::ExpressionAnalyzer ea{bridge.getSemanticsContext()};
+        const Fortran::evaluate::Assignment *assign = ea.Analyze(stmt);
+        if (assign)
+          genAssignment(*assign);
+      }
+    };
+
+    if (isEligibleForImplicitAssignment())
+      processImplicitAssignment();
+
     if (var.hasSymbol())
       genOpenMPSymbolProperties(*this, var);
   }
