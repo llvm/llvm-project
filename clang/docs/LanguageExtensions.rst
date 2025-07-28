@@ -68,6 +68,9 @@ It can be used like this:
   ``__has_builtin`` should not be used to detect support for a builtin macro;
   use ``#ifdef`` instead.
 
+  When compiling with target offloading, ``__has_builtin`` only considers the
+  currently active target.
+
 ``__has_constexpr_builtin``
 ---------------------------
 
