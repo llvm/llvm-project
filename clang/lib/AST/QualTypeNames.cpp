@@ -491,5 +491,12 @@ std::string getFullyQualifiedName(QualType QT,
   return FQQT.getAsString(Policy);
 }
 
+NestedNameSpecifier getFullyQualifiedDeclaredContext(const ASTContext &Ctx,
+                                                     const Decl *Decl,
+                                                     bool WithGlobalNsPrefix) {
+  return createNestedNameSpecifierForScopeOf(Ctx, Decl, /*FullyQualified=*/true,
+                                             WithGlobalNsPrefix);
+}
+
 }  // end namespace TypeName
 }  // end namespace clang
