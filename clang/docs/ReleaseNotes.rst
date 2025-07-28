@@ -37,6 +37,8 @@ Potentially Breaking Changes
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
+- The ``__has_builtin`` function now only considers the currently active target when being used with target offloading.
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 - For C++20 modules, the Reduced BMI mode will be the default option. This may introduce
@@ -89,9 +91,18 @@ Non-comprehensive list of changes in this release
 -------------------------------------------------
 - Added ``__builtin_elementwise_minnumnum`` and ``__builtin_elementwise_maxnumnum``.
 
+- Trapping UBSan (e.g. ``-fsanitize-trap=undefined``) now emits a string describing the reason for 
+  trapping into the generated debug info. This feature allows debuggers (e.g. LLDB) to display 
+  the reason for trapping if the trap is reached. The string is currently encoded in the debug 
+  info as an artificial frame that claims to be inlined at the trap location. The function used 
+  for the artificial frame is an artificial function whose name encodes the reason for trapping. 
+  The encoding used is currently the same as ``__builtin_verbose_trap`` but might change in the future. 
+  This feature is enabled by default but can be disabled by compiling with 
+  ``-fno-sanitize-annotate-debug-info-traps``.
 
 New Compiler Flags
 ------------------
+- New option ``-fno-sanitize-annotate-debug-info-traps`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
 
 Deprecated Compiler Flags
 -------------------------
@@ -129,6 +140,9 @@ Bug Fixes to Compiler Builtins
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- ``[[nodiscard]]`` is now respected on Objective-C and Objective-C++ methods.
+  (#GH141504)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
