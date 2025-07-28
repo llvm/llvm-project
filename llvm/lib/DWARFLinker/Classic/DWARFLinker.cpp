@@ -43,12 +43,6 @@ namespace llvm {
 using namespace dwarf_linker;
 using namespace dwarf_linker::classic;
 
-enum InvalidStmtSeqOffset {
-  MaxStmtSeqOffset = UINT64_MAX,
-  OrigOffsetMissing = MaxStmtSeqOffset - 1,
-  NewOffsetMissing = MaxStmtSeqOffset - 2,
-};
-
 /// Hold the input and output of the debug info size in bytes.
 struct DebugInfoSize {
   uint64_t Input;
@@ -2321,7 +2315,7 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
           // Some sequences are discarded by the DWARFLinker if they are invalid
           // (empty).
           if (OrigRowIter == SeqOffToOrigRow.end()) {
-            StmtSeq.set(OrigOffsetMissing);
+            StmtSeq.set(UINT64_MAX);
             continue;
           }
           size_t OrigRowIndex = OrigRowIter->second;
@@ -2331,7 +2325,7 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
           if (NewRowIter == OrigRowToNewRow.end()) {
             // If the original row index is not found in the map, update the
             // stmt_sequence attribute to the 'invalid offset' magic value.
-            StmtSeq.set(NewOffsetMissing);
+            StmtSeq.set(UINT64_MAX);
             continue;
           }
 
