@@ -11,7 +11,7 @@
 ;; Verify that fwdArgRegs is not set, calleeTypeIds is set.
 ;; Verify the exact calleeTypeIds value to ensure it is not garbage but the value
 ;; computed as the type id from the callee_type metadata.
-; RUN: llc --call-graph-section %s -stop-after=finalize-isel -o %t1.mir
+; RUN: llc -mtriple=x86_64 --call-graph-section %s -stop-after=finalize-isel -o %t1.mir
 ; RUN: cat %t1.mir | FileCheck %s --check-prefix=PRINTER_CGS
 ; PRINTER_CGS: name: main
 ; PRINTER_CGS: callSites:
@@ -21,7 +21,7 @@
 
 ;; Test parser.
 ;; Verify that we get the same result.
-; RUN: llc --call-graph-section %t1.mir -run-pass=finalize-isel -o - \
+; RUN: llc -mtriple=x86_64 --call-graph-section %t1.mir -run-pass=finalize-isel -o - \
 ; RUN: | FileCheck %s --check-prefix=PARSER_CGS
 ; PARSER_CGS: name: main
 ; PARSER_CGS: callSites:
@@ -33,7 +33,7 @@
 
 ;; Test printer.
 ;; Verify that fwdArgRegs is set, calleeTypeIds is not set.
-; RUN: llc -emit-call-site-info %s -stop-after=finalize-isel -o %t2.mir
+; RUN: llc -mtriple=x86_64 -emit-call-site-info %s -stop-after=finalize-isel -o %t2.mir
 ; RUN: cat %t2.mir | FileCheck %s --check-prefix=PRINTER_CSI
 ; PRINTER_CSI: name: main
 ; PRINTER_CSI: callSites:
@@ -44,7 +44,7 @@
 
 ;; Test parser.
 ;; Verify that we get the same result.
-; RUN: llc -emit-call-site-info %t2.mir -run-pass=finalize-isel -o - \
+; RUN: llc -mtriple=x86_64 -emit-call-site-info %t2.mir -run-pass=finalize-isel -o - \
 ; RUN: | FileCheck %s --check-prefix=PARSER_CSI
 ; PARSER_CSI: name: main
 ; PARSER_CSI: callSites:
@@ -59,7 +59,7 @@
 ;; Verify both fwdArgRegs and calleeTypeIds are set.
 ;; Verify the exact calleeTypeIds value to ensure it is not garbage but the value
 ;; computed as the type id from the callee_type metadata.
-; RUN: llc --call-graph-section -emit-call-site-info %s -stop-after=finalize-isel -o %t2.mir
+; RUN: llc -mtriple=x86_64 --call-graph-section -emit-call-site-info %s -stop-after=finalize-isel -o %t2.mir
 ; RUN: cat %t2.mir | FileCheck %s --check-prefix=PRINTER_CGS_CSI
 ; PRINTER_CGS_CSI: name: main
 ; PRINTER_CGS_CSI: callSites:
@@ -70,7 +70,7 @@
 
 ;; Test parser.
 ;; Verify that we get the same result.
-; RUN: llc --call-graph-section -emit-call-site-info %t2.mir -run-pass=finalize-isel -o - \
+; RUN: llc -mtriple=x86_64 --call-graph-section -emit-call-site-info %t2.mir -run-pass=finalize-isel -o - \
 ; RUN: | FileCheck %s --check-prefix=PARSER_CGS_CSI
 ; PARSER_CGS_CSI: name: main
 ; PARSER_CGS_CSI: callSites:

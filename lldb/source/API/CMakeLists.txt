@@ -302,7 +302,7 @@ list(REMOVE_ITEM root_public_headers ${root_private_headers})
 
 find_program(unifdef_EXECUTABLE unifdef)
 
-add_custom_target(liblldb-header-staging DEPENDS ${lldb_staged_headers} ${lldb_header_staging_dir}/lldb-defines.h)
+add_custom_target(liblldb-header-staging)
 
 if (LLDB_BUILD_FRAMEWORK)
   add_custom_target(lldb-framework-fixup-all-headers)
@@ -326,6 +326,8 @@ foreach(header
     set(copy_command ${CMAKE_COMMAND} -E copy ${header} ${staged_header})
   endif()
 
+  add_custom_target(liblldb-stage-header-${basename} DEPENDS ${staged_header})
+  add_dependencies(liblldb-header-staging liblldb-stage-header-${basename})
   add_custom_command(
     DEPENDS ${header} OUTPUT ${staged_header}
     COMMAND ${copy_command}

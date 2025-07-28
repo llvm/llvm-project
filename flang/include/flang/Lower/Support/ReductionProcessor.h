@@ -142,8 +142,8 @@ ReductionProcessor::getReductionOperation(fir::FirOpBuilder &builder,
   assert(type.isIntOrIndexOrFloat() &&
          "only integer, float and complex types are currently supported");
   if (type.isIntOrIndex())
-    return builder.create<IntegerOp>(loc, op1, op2);
-  return builder.create<FloatOp>(loc, op1, op2);
+    return IntegerOp::create(builder, loc, op1, op2);
+  return FloatOp::create(builder, loc, op1, op2);
 }
 
 template <typename FloatOp, typename IntegerOp, typename ComplexOp>
@@ -154,10 +154,10 @@ ReductionProcessor::getReductionOperation(fir::FirOpBuilder &builder,
   assert((type.isIntOrIndexOrFloat() || fir::isa_complex(type)) &&
          "only integer, float and complex types are currently supported");
   if (type.isIntOrIndex())
-    return builder.create<IntegerOp>(loc, op1, op2);
+    return IntegerOp::create(builder, loc, op1, op2);
   if (fir::isa_real(type))
-    return builder.create<FloatOp>(loc, op1, op2);
-  return builder.create<ComplexOp>(loc, op1, op2);
+    return FloatOp::create(builder, loc, op1, op2);
+  return ComplexOp::create(builder, loc, op1, op2);
 }
 
 } // namespace omp
