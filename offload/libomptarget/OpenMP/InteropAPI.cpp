@@ -442,7 +442,9 @@ void syncImplicitInterops(int Gtid, void *Event) {
       iop->sync_barrier(IOPDevice);
       iop->markClean();
 
-      // TODO: Alternate implementation option
+      // Alternate implementation option in case using barriers is not
+      // efficient enough:
+      //
       // Instead of using a synchronous barrier, queue an asynchronous
       // barrier and create a proxy task associated to the event to handle
       // OpenMP synchronizations.
