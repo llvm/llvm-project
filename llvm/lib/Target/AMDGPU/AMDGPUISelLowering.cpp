@@ -391,8 +391,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   // Library functions.  These default to Expand, but we have instructions
   // for them.
   setOperationAction({ISD::FCEIL, ISD::FPOW, ISD::FABS, ISD::FFLOOR,
-                      ISD::FROUNDEVEN, ISD::FTRUNC, ISD::FMINNUM, ISD::FMAXNUM},
-                     MVT::f32, Legal);
+                      ISD::FROUNDEVEN, ISD::FTRUNC},
+                     {MVT::f16, MVT::f32}, Legal);
+  setOperationAction({ISD::FMINNUM, ISD::FMAXNUM}, MVT::f32, Legal);
 
   setOperationAction(ISD::FLOG2, MVT::f32, Custom);
   setOperationAction(ISD::FROUND, {MVT::f32, MVT::f64}, Custom);
@@ -412,9 +413,10 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::FREM, {MVT::f16, MVT::f32, MVT::f64}, Custom);
 
-  if (Subtarget->has16BitInsts())
+  if (Subtarget->has16BitInsts()) {
     setOperationAction(ISD::IS_FPCLASS, {MVT::f16, MVT::f32, MVT::f64}, Legal);
-  else {
+    setOperationAction({ISD::FLOG2, ISD::FEXP2}, MVT::f16, Legal);
+  } else {
     setOperationAction(ISD::IS_FPCLASS, {MVT::f32, MVT::f64}, Legal);
     setOperationAction({ISD::FLOG2, ISD::FEXP2}, MVT::f16, Custom);
   }
