@@ -175,7 +175,7 @@ ASM_FUNCTION_ARM_DARWIN_RE = re.compile(
 )
 
 ASM_FUNCTION_ARM_MACHO_RE = re.compile(
-    r'^_(?P<func>[^:]+):[ \t]*@[ \t]@"?(?P=func)"?\n'
+    r'^_(?P<func>[^:]+):[ \t]*(@[ \t]@"?(?P=func)"?)?\n'
     r"([ \t]*.cfi_startproc\n[ \t]*)?"
     r"(?P<body>.*?)\n"
     r"[ \t]*\.cfi_endproc\n",
@@ -190,14 +190,14 @@ ASM_FUNCTION_THUMBS_DARWIN_RE = re.compile(
 )
 
 ASM_FUNCTION_THUMB_DARWIN_RE = re.compile(
-    r'^_(?P<func>[^:]+):[ \t]*@[ \t]@"?(?P=func)"?\n'
+    r'^_(?P<func>[^:]+):[ \t]*(@[ \t]@"?(?P=func)"?)?\n'
     r"(?P<body>.*?)\n"
     r"^[ \t]*@[ \t]--[ \t]End[ \t]function",
     flags=(re.M | re.S),
 )
 
 ASM_FUNCTION_ARM_IOS_RE = re.compile(
-    r'^_(?P<func>[^:]+):[ \t]*@[ \t]@"?(?P=func)"?\n'
+    r'^_(?P<func>[^:]+):[ \t]*(@[ \t]@"?(?P=func)"?)?\n'
     r"(?P<body>.*?)"
     r"^[ \t]*@[ \t]--[ \t]End[ \t]function",
     flags=(re.M | re.S),
