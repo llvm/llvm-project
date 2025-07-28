@@ -2292,8 +2292,8 @@ Speculation::Speculatability BroadcastOp::getSpeculatability() {
   return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
 }
 
-/// Fold broadcast with broadcast.
-struct FoldBroadcastWithBroadcast : OpRewritePattern<linalg::BroadcastOp> {
+/// Fold back-to-back broadcasts together.
+struct FoldBroadcasts : OpRewritePattern<linalg::BroadcastOp> {
   using OpRewritePattern<linalg::BroadcastOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(linalg::BroadcastOp broadcastOp,
@@ -2324,8 +2324,7 @@ struct FoldBroadcastWithBroadcast : OpRewritePattern<linalg::BroadcastOp> {
 
 void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.add<EraseIdentityLinalgOp<BroadcastOp>, FoldBroadcastWithBroadcast>(
-      context);
+  results.add<EraseIdentityLinalgOp<BroadcastOp>, FoldBroadcasts>(context);
 }
 
 //===----------------------------------------------------------------------===//
