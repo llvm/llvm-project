@@ -1904,6 +1904,14 @@ defm bounds_safety : BoolFOption<
   BothFlags<[], [CC1Option],
           " experimental bounds safety extension for C">>;
 
+defm lifetime_safety : BoolFOption<
+  "experimental-lifetime-safety",
+  LangOpts<"EnableLifetimeSafety">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [CC1Option], "Disable">,
+  BothFlags<[], [CC1Option],
+          " experimental lifetime safety for C++">>;
+
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Emit">,
