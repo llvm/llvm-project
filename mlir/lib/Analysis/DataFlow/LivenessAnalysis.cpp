@@ -21,7 +21,6 @@
 #include <mlir/Support/LLVM.h>
 
 #define DEBUG_TYPE "liveness-analysis"
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
 
 using namespace mlir;
 using namespace mlir::dataflow;
@@ -80,9 +79,8 @@ ChangeResult Liveness::meet(const AbstractSparseLattice &other) {
 LogicalResult
 LivenessAnalysis::visitOperation(Operation *op, ArrayRef<Liveness *> operands,
                                  ArrayRef<const Liveness *> results) {
-  LLVM_DEBUG(DBGS() << "[visitOperation] Enter: ";
-             op->print(llvm::dbgs(), OpPrintingFlags().skipRegions());
-             llvm::dbgs() << "\n");
+  LDBG() << "[visitOperation] Enter: "
+         << OpWithFlags(op, OpPrintingFlags().skipRegions());
   // This marks values of type (1.a) and (4) liveness as "live".
   if (!isMemoryEffectFree(op) || op->hasTrait<OpTrait::ReturnLike>()) {
     LDBG() << "[visitOperation] Operation has memory effects or is "
@@ -296,7 +294,7 @@ RunLivenessAnalysis::RunLivenessAnalysis(Operation *op) {
   solver.load<LivenessAnalysis>(symbolTable);
   LDBG() << "Initializing and running solver";
   (void)solver.initializeAndRun(op);
-  LDBG() << "Dumping liveness state for op";
+  LDBG() << "RunLivenessAnalysis initialized for op: " << op->getName();
 }
 
 const Liveness *RunLivenessAnalysis::getLiveness(Value val) {

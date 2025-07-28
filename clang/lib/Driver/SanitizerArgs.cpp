@@ -181,11 +181,11 @@ static void validateSpecialCaseListFormat(const Driver &D,
   if (SCLFiles.empty())
     return;
 
-  std::pair<unsigned, std::string> BLError;
+  std::string BLError;
   std::unique_ptr<llvm::SpecialCaseList> SCL(
       llvm::SpecialCaseList::create(SCLFiles, D.getVFS(), BLError));
   if (!SCL && DiagnoseErrors)
-    D.Diag(MalformedSCLErrorDiagID) << BLError.first << BLError.second;
+    D.Diag(MalformedSCLErrorDiagID) << BLError;
 }
 
 static void addDefaultIgnorelists(const Driver &D, SanitizerMask Kinds,
@@ -1381,6 +1381,12 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (!AnnotateDebugInfo.empty())
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-annotate-debug-info=" +
                                          toString(AnnotateDebugInfo)));
+
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_fsanitize_debug_trap_reasons,
+                          options::OPT_fno_sanitize_debug_trap_reasons)) {
+    CmdArgs.push_back(Args.MakeArgString(A->getAsString(Args)));
+  }
 
   addSpecialCaseListOpt(Args, CmdArgs,
                         "-fsanitize-ignorelist=", UserIgnorelistFiles);
