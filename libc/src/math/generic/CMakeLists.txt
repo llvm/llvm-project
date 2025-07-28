@@ -694,6 +694,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
 )
 
 add_entrypoint_object(
