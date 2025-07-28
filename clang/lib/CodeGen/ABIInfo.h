@@ -133,9 +133,9 @@ public:
   getOptimalVectorMemoryType(llvm::FixedVectorType *T,
                              const LangOptions &Opt) const;
 
-  virtual llvm::Value *CreateCoercedLoad(Address SrcAddr, const ABIArgInfo &AI,
+  virtual llvm::Value *createCoercedLoad(Address SrcAddr, const ABIArgInfo &AI,
                                          CodeGenFunction &CGF) const;
-  virtual void CreateCoercedStore(llvm::Value *Val, Address DstAddr,
+  virtual void createCoercedStore(llvm::Value *Val, Address DstAddr,
                                   const ABIArgInfo &AI, bool DestIsVolatile,
                                   CodeGenFunction &CGF) const;
 };

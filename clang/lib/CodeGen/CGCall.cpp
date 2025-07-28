@@ -3486,7 +3486,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
       Address Alloca =
           CreateMemTemp(Ty, getContext().getDeclAlign(Arg), Arg->getName());
       Address Ptr = emitAddressAtOffset(*this, Alloca, ArgI);
-      CGM.getABIInfo().CreateCoercedStore(AI, Ptr, ArgI, false, *this);
+      CGM.getABIInfo().createCoercedStore(AI, Ptr, ArgI, false, *this);
       if (CodeGenFunction::hasScalarEvaluationKind(Ty)) {
         llvm::Value *V =
             EmitLoadOfScalar(Alloca, false, Ty, Arg->getBeginLoc());
@@ -4129,7 +4129,7 @@ void CodeGenFunction::EmitFunctionEpilog(
   }
   case ABIArgInfo::TargetSpecific: {
     Address V = emitAddressAtOffset(*this, ReturnValue, RetAI);
-    RV = CGM.getABIInfo().CreateCoercedLoad(V, RetAI, *this);
+    RV = CGM.getABIInfo().createCoercedLoad(V, RetAI, *this);
     break;
   }
   case ABIArgInfo::Expand:
@@ -5723,7 +5723,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       // If the value is offset in memory, apply the offset now.
       Src = emitAddressAtOffset(*this, Src, ArgInfo);
       llvm::Value *Load =
-          CGM.getABIInfo().CreateCoercedLoad(Src, ArgInfo, *this);
+          CGM.getABIInfo().createCoercedLoad(Src, ArgInfo, *this);
       IRCallArgs[FirstIRArg] = Load;
       break;
     }
@@ -6221,7 +6221,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           DestPtr = CreateMemTemp(RetTy, "target_coerce");
           DestIsVolatile = false;
         }
-        CGM.getABIInfo().CreateCoercedStore(CI, StorePtr, RetAI, DestIsVolatile,
+        CGM.getABIInfo().createCoercedStore(CI, StorePtr, RetAI, DestIsVolatile,
                                             *this);
         return convertTempToRValue(DestPtr, RetTy, SourceLocation());
       }

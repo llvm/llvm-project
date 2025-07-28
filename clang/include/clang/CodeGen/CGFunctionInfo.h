@@ -78,7 +78,8 @@ public:
     CoerceAndExpand,
 
     /// TargetSpecific - Some argument types are passed as target specific types
-    /// such as RISCV's tuple type, these need to be handled in the target hook.
+    /// such as RISC-V's tuple type, these need to be handled in the target
+    /// hook.
     TargetSpecific,
 
     /// InAlloca - Pass the argument directly using the LLVM inalloca attribute.

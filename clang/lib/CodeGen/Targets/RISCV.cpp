@@ -74,9 +74,9 @@ public:
                                raw_ostream &Out) const override;
   void appendAttributeMangling(StringRef AttrStr,
                                raw_ostream &Out) const override;
-  llvm::Value *CreateCoercedLoad(Address SrcAddr, const ABIArgInfo &AI,
+  llvm::Value *createCoercedLoad(Address SrcAddr, const ABIArgInfo &AI,
                                  CodeGenFunction &CGF) const override;
-  void CreateCoercedStore(llvm::Value *Val, Address DstAddr,
+  void createCoercedStore(llvm::Value *Val, Address DstAddr,
                           const ABIArgInfo &AI, bool DestIsVolatile,
                           CodeGenFunction &CGF) const override;
 };
@@ -786,12 +786,11 @@ ABIArgInfo RISCVABIInfo::extendType(QualType Ty, llvm::Type *CoerceTy) const {
   return ABIArgInfo::getExtend(Ty, CoerceTy);
 }
 
-llvm::Value *RISCVABIInfo::CreateCoercedLoad(Address Src, const ABIArgInfo &AI,
+llvm::Value *RISCVABIInfo::createCoercedLoad(Address Src, const ABIArgInfo &AI,
                                              CodeGenFunction &CGF) const {
   llvm::Type *Ty = AI.getCoerceToType();
   llvm::Type *SrcTy = Src.getElementType();
-  llvm::StructType *SrcSTy = dyn_cast<llvm::StructType>(SrcTy);
-  assert(SrcSTy && "Source should be struct type");
+  llvm::StructType *SrcSTy = cast<llvm::StructType>(SrcTy);
   assert((Ty->isScalableTy() || Ty->isTargetExtTy()) &&
          "Only scalable vector type and vector tuple type are allowed for load "
          "type.");
@@ -819,7 +818,7 @@ llvm::Value *RISCVABIInfo::CreateCoercedLoad(Address Src, const ABIArgInfo &AI,
       Src = Src.withElementType(ArrayTy);
 
     // Perform extract element and load
-    llvm::Value *PoisonTuple = llvm::PoisonValue::get(Ty);
+    llvm::Value *TupleVal = llvm::PoisonValue::get(Ty);
     auto *Load = CGF.Builder.CreateLoad(Src);
     for (unsigned i = 0; i < NumElts; ++i) {
       // Extract from struct
@@ -829,17 +828,17 @@ llvm::Value *RISCVABIInfo::CreateCoercedLoad(Address Src, const ABIArgInfo &AI,
       EltTy =
           cast<llvm::ScalableVectorType>(llvm::VectorType::getWithSizeAndScalar(
               cast<llvm::VectorType>(EltTy), ExtractFromLoad->getType()));
-      llvm::Value *PoisonVec = llvm::PoisonValue::get(EltTy);
+      llvm::Value *VectorVal = llvm::PoisonValue::get(EltTy);
       // Insert to scalable vector
-      PoisonVec = CGF.Builder.CreateInsertVector(
-          EltTy, PoisonVec, ExtractFromLoad, uint64_t(0), "cast.scalable");
+      VectorVal = CGF.Builder.CreateInsertVector(
+          EltTy, VectorVal, ExtractFromLoad, uint64_t(0), "cast.scalable");
       // Insert scalable vector to vector tuple
-      llvm::Value *Idx = llvm::ConstantInt::get(CGF.Builder.getInt32Ty(), i);
-      PoisonTuple = CGF.Builder.CreateIntrinsic(
-          llvm::Intrinsic::riscv_tuple_insert, {Ty, EltTy},
-          {PoisonTuple, PoisonVec, Idx});
+      llvm::Value *Idx = CGF.Builder.getInt32(i);
+      TupleVal =
+          CGF.Builder.CreateIntrinsic(llvm::Intrinsic::riscv_tuple_insert,
+                                      {Ty, EltTy}, {TupleVal, VectorVal, Idx});
     }
-    return PoisonTuple;
+    return TupleVal;
   }
 
   // In RISC-V VLS calling convention, struct of fixed vector or struct of
@@ -861,22 +860,20 @@ llvm::Value *RISCVABIInfo::CreateCoercedLoad(Address Src, const ABIArgInfo &AI,
   if (auto *ArrayTy = dyn_cast<llvm::ArrayType>(SrcTy))
     SrcTy = ArrayTy->getElementType();
   Src = Src.withElementType(SrcTy);
-  auto *FixedSrcTy = dyn_cast<llvm::FixedVectorType>(SrcTy);
-  assert(FixedSrcTy);
+  auto *FixedSrcTy = cast<llvm::FixedVectorType>(SrcTy);
   assert(ScalableDstTy->getElementType() == FixedSrcTy->getElementType());
   auto *Load = CGF.Builder.CreateLoad(Src);
-  auto *PoisonVec = llvm::PoisonValue::get(ScalableDstTy);
+  auto *VectorVal = llvm::PoisonValue::get(ScalableDstTy);
   llvm::Value *Result = CGF.Builder.CreateInsertVector(
-      ScalableDstTy, PoisonVec, Load, uint64_t(0), "cast.scalable");
+      ScalableDstTy, VectorVal, Load, uint64_t(0), "cast.scalable");
   return Result;
 }
 
-void RISCVABIInfo::CreateCoercedStore(llvm::Value *Val, Address Dst,
+void RISCVABIInfo::createCoercedStore(llvm::Value *Val, Address Dst,
                                       const ABIArgInfo &AI, bool DestIsVolatile,
                                       CodeGenFunction &CGF) const {
   llvm::Type *SrcTy = Val->getType();
-  llvm::StructType *DstSTy = dyn_cast<llvm::StructType>(Dst.getElementType());
-  assert(DstSTy && "Destination should be struct type");
+  llvm::StructType *DstSTy = cast<llvm::StructType>(Dst.getElementType());
   assert((SrcTy->isScalableTy() || SrcTy->isTargetExtTy()) &&
          "Only scalable vector type and vector tuple type are allowed for "
          "store value.");
@@ -914,7 +911,7 @@ void RISCVABIInfo::CreateCoercedStore(llvm::Value *Val, Address Dst,
           cast<llvm::ScalableVectorType>(llvm::VectorType::getWithSizeAndScalar(
               cast<llvm::VectorType>(EltTy), FixedVecTy));
       // Extract scalable vector from tuple
-      llvm::Value *Idx = llvm::ConstantInt::get(CGF.Builder.getInt32Ty(), i);
+      llvm::Value *Idx = CGF.Builder.getInt32(i);
       auto *TupleElement = CGF.Builder.CreateIntrinsic(
           llvm::Intrinsic::riscv_tuple_extract, {EltTy, TupTy}, {Val, Idx});
 
