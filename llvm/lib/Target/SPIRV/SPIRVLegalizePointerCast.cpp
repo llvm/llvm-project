@@ -74,17 +74,17 @@ class SPIRVLegalizePointerCast : public FunctionPass {
   // Returns the loaded value.
   Value *loadVectorFromVector(IRBuilder<> &B, FixedVectorType *SourceType,
                               FixedVectorType *TargetType, Value *Source) {
-    // We expect the codegen to avoid doing implicit bitcast from a load.
-    assert(TargetType->getElementType() == SourceType->getElementType());
-    assert(TargetType->getNumElements() < SourceType->getNumElements());
-
+    assert(TargetType->getNumElements() <= SourceType->getNumElements());
     LoadInst *NewLoad = B.CreateLoad(SourceType, Source);
-    buildAssignType(B, SourceType, NewLoad);
+    Value *AssignType = NewLoad;
+    if (TargetType->getElementType() != SourceType->getElementType())
+      AssignType = B.CreateBitCast(NewLoad, TargetType);
+    buildAssignType(B, SourceType, AssignType);
 
     SmallVector<int> Mask(/* Size= */ TargetType->getNumElements());
     for (unsigned I = 0; I < TargetType->getNumElements(); ++I)
       Mask[I] = I;
-    Value *Output = B.CreateShuffleVector(NewLoad, NewLoad, Mask);
+    Value *Output = B.CreateShuffleVector(AssignType, AssignType, Mask);
     buildAssignType(B, TargetType, Output);
     return Output;
   }
