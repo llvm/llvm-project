@@ -31,12 +31,24 @@ void InitializePlatformInterceptors();
 // really defined to replace libc functions.
 #if !SANITIZER_FUCHSIA
 
+// AIX currently can't retrieve the address of longjmp
+#  if !SANITIZER_AIX
+#    define ASAN_INTERCEPT_LONGJMP 1
+#  else
+#    define ASAN_INTERCEPT_LONGJMP 0
+#  endif
+
 // Use macro to describe if specific function should be
 // intercepted on a given platform.
 #if !SANITIZER_WINDOWS
-# define ASAN_INTERCEPT__LONGJMP 1
-# define ASAN_INTERCEPT_INDEX 1
-# define ASAN_INTERCEPT_PTHREAD_CREATE 1
+   // AIX currently can't retrieve the address of _longjmp
+#    if !SANITIZER_AIX
+#      define ASAN_INTERCEPT__LONGJMP 1
+#    else
+#      define ASAN_INTERCEPT__LONGJMP 0
+#    endif
+#    define ASAN_INTERCEPT_INDEX 1
+#    define ASAN_INTERCEPT_PTHREAD_CREATE 1
 #else
 # define ASAN_INTERCEPT__LONGJMP 0
 # define ASAN_INTERCEPT_INDEX 0
@@ -56,73 +68,90 @@ void InitializePlatformInterceptors();
 # define ASAN_INTERCEPT_SWAPCONTEXT 0
 #endif
 
-#if !SANITIZER_WINDOWS
-# define ASAN_INTERCEPT_SIGLONGJMP 1
-#else
-# define ASAN_INTERCEPT_SIGLONGJMP 0
-#endif
+// AIX currently can't retrieve the address of siglongjmp
+#  if !SANITIZER_WINDOWS && !SANITIZER_AIX
+#    define ASAN_INTERCEPT_SIGLONGJMP 1
+#  else
+#    define ASAN_INTERCEPT_SIGLONGJMP 0
+#  endif
 
-#if SANITIZER_GLIBC
-# define ASAN_INTERCEPT___LONGJMP_CHK 1
-#else
-# define ASAN_INTERCEPT___LONGJMP_CHK 0
-#endif
+#  if SANITIZER_GLIBC
+#    define ASAN_INTERCEPT___LONGJMP_CHK 1
+#  else
+#    define ASAN_INTERCEPT___LONGJMP_CHK 0
+#  endif
 
-#if ASAN_HAS_EXCEPTIONS && !SANITIZER_SOLARIS && !SANITIZER_NETBSD && \
-    (!SANITIZER_WINDOWS || (defined(__MINGW32__) && defined(__i386__)))
-# define ASAN_INTERCEPT___CXA_THROW 1
-# define ASAN_INTERCEPT___CXA_RETHROW_PRIMARY_EXCEPTION 1
-# if defined(_GLIBCXX_SJLJ_EXCEPTIONS) || (SANITIZER_IOS && defined(__arm__))
-#  define ASAN_INTERCEPT__UNWIND_SJLJ_RAISEEXCEPTION 1
-# else
-#  define ASAN_INTERCEPT__UNWIND_RAISEEXCEPTION 1
-# endif
-#else
-# define ASAN_INTERCEPT___CXA_THROW 0
-# define ASAN_INTERCEPT___CXA_RETHROW_PRIMARY_EXCEPTION 0
-# define ASAN_INTERCEPT__UNWIND_RAISEEXCEPTION 0
-# define ASAN_INTERCEPT__UNWIND_SJLJ_RAISEEXCEPTION 0
-#endif
+#  if ASAN_HAS_EXCEPTIONS && !SANITIZER_SOLARIS && !SANITIZER_NETBSD && \
+      (!SANITIZER_WINDOWS || (defined(__MINGW32__) && defined(__i386__)))
+#    define ASAN_INTERCEPT___CXA_THROW 1
+#    define ASAN_INTERCEPT___CXA_RETHROW_PRIMARY_EXCEPTION 1
+#    if defined(_GLIBCXX_SJLJ_EXCEPTIONS) || (SANITIZER_IOS && defined(__arm__))
+#      define ASAN_INTERCEPT__UNWIND_SJLJ_RAISEEXCEPTION 1
+#    else
+#      define ASAN_INTERCEPT__UNWIND_RAISEEXCEPTION 1
+#    endif
+#  else
+#    define ASAN_INTERCEPT___CXA_THROW 0
+#    define ASAN_INTERCEPT___CXA_RETHROW_PRIMARY_EXCEPTION 0
+#    define ASAN_INTERCEPT__UNWIND_RAISEEXCEPTION 0
+#    define ASAN_INTERCEPT__UNWIND_SJLJ_RAISEEXCEPTION 0
+#  endif
 
-#if !SANITIZER_WINDOWS
-# define ASAN_INTERCEPT___CXA_ATEXIT 1
-#else
-# define ASAN_INTERCEPT___CXA_ATEXIT 0
-#endif
+// AIX currently can't retrieve the address of __cxa_atexit
+#  if !SANITIZER_WINDOWS && !SANITIZER_AIX
+#    define ASAN_INTERCEPT___CXA_ATEXIT 1
+#  else
+#    define ASAN_INTERCEPT___CXA_ATEXIT 0
+#  endif
 
-#if SANITIZER_NETBSD
-# define ASAN_INTERCEPT_ATEXIT 1
-#else
-# define ASAN_INTERCEPT_ATEXIT 0
-#endif
+#  if SANITIZER_AIX
+#    define ASAN_INTERCEPT_EXIT 1
+#  else
+#    define ASAN_INTERCEPT_EXIT 0
+#  endif
 
-#if SANITIZER_GLIBC
-# define ASAN_INTERCEPT___STRDUP 1
-#else
-# define ASAN_INTERCEPT___STRDUP 0
-#endif
+#  if SANITIZER_NETBSD
+#    define ASAN_INTERCEPT_ATEXIT 1
+#  else
+#    define ASAN_INTERCEPT_ATEXIT 0
+#  endif
 
-#if SANITIZER_GLIBC && ASAN_INTERCEPT_PTHREAD_CREATE
-# define ASAN_INTERCEPT_TIMEDJOIN 1
-# define ASAN_INTERCEPT_TRYJOIN 1
-#else
-# define ASAN_INTERCEPT_TIMEDJOIN 0
-# define ASAN_INTERCEPT_TRYJOIN 0
-#endif
+#  if SANITIZER_GLIBC
+#    define ASAN_INTERCEPT___STRDUP 1
+#  else
+#    define ASAN_INTERCEPT___STRDUP 0
+#  endif
 
-#if SANITIZER_LINUX &&                                                \
-    (defined(__arm__) || defined(__aarch64__) || defined(__i386__) || \
-     defined(__x86_64__) || SANITIZER_RISCV64 || SANITIZER_LOONGARCH64)
-# define ASAN_INTERCEPT_VFORK 1
-#else
-# define ASAN_INTERCEPT_VFORK 0
-#endif
+#  if SANITIZER_GLIBC && ASAN_INTERCEPT_PTHREAD_CREATE
+#    define ASAN_INTERCEPT_TIMEDJOIN 1
+#    define ASAN_INTERCEPT_TRYJOIN 1
+#  else
+#    define ASAN_INTERCEPT_TIMEDJOIN 0
+#    define ASAN_INTERCEPT_TRYJOIN 0
+#  endif
 
-#if SANITIZER_NETBSD
-# define ASAN_INTERCEPT_PTHREAD_ATFORK 1
-#else
-# define ASAN_INTERCEPT_PTHREAD_ATFORK 0
-#endif
+// AIX currently can't retrieve the address of strcat or strcpy
+#  if SANITIZER_AIX
+#    define ASAN_INTERCEPT_STRCAT 0
+#    define ASAN_INTERCEPT_STRCPY 0
+#  else
+#    define ASAN_INTERCEPT_STRCAT 1
+#    define ASAN_INTERCEPT_STRCPY 1
+#  endif
+
+#  if SANITIZER_LINUX &&                                                \
+      (defined(__arm__) || defined(__aarch64__) || defined(__i386__) || \
+       defined(__x86_64__) || SANITIZER_RISCV64 || SANITIZER_LOONGARCH64)
+#    define ASAN_INTERCEPT_VFORK 1
+#  else
+#    define ASAN_INTERCEPT_VFORK 0
+#  endif
+
+#  if SANITIZER_NETBSD
+#    define ASAN_INTERCEPT_PTHREAD_ATFORK 1
+#  else
+#    define ASAN_INTERCEPT_PTHREAD_ATFORK 0
+#  endif
 
 DECLARE_REAL(int, memcmp, const void *a1, const void *a2, SIZE_T size)
 DECLARE_REAL(char*, strchr, const char *str, int c)
