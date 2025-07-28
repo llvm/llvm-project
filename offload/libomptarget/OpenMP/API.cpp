@@ -221,7 +221,7 @@ EXTERN int omp_target_is_accessible(const void *Ptr, size_t Size,
     return true;
   }
 
-  // the device number must refer to a valid device
+  // The device number must refer to a valid device
   auto DeviceOrErr = PM->getDevice(DeviceNum);
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
