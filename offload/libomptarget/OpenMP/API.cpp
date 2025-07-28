@@ -226,7 +226,7 @@ EXTERN int omp_target_is_accessible(const void *Ptr, size_t Size,
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  // for OpenMP 5.1 the routine checks whether a host pointer is accessible from
+  // For OpenMP 5.1 the routine checks whether a host pointer is accessible from
   // the device this requires for the device to support unified shared memory
   if (DeviceOrErr->supportsUnifiedMemory()) {
     DP("Device %d supports unified memory, returning true\n", DeviceNum);
