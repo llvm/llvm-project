@@ -174,6 +174,8 @@ public:
 
 // This function is not user observable, so it can directly use the non-standard types of the "variant".
 // See __arg_t for more details. For direct visitation, see https://reviews.llvm.org/D138052.
+// TODO: Investigate why GCC 15 hangs if something like std::__visit_format_arg<__direct::__yes>(...) is used, and fuse
+// __visit_format_arg and __directly_visit_format_arg once GCC no longer hangs.
 template <class _Visitor, class _Context>
 _LIBCPP_HIDE_FROM_ABI decltype(auto) __directly_visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
   switch (__arg.__type_) {
@@ -226,8 +228,6 @@ _LIBCPP_HIDE_FROM_ABI decltype(auto) __directly_visit_format_arg(_Visitor&& __vi
 // __visit_format_arg is same as __directly_visit_format_arg except for indirectly visitation of 128-bit integers.
 // Per [format.arg], the variant alternative types are fully specified, so we need to avoid direct visitation of 128-bit
 // extended integer types when the visitor is user-provided.
-// TODO: Investigate why GCC 15 hangs if something like std::__visit_format_arg<__direct::__yes>(...) is used, and fuse
-// __visit_format_arg and __directly_visit_format_arg once GCC no longer hangs.
 template <class _Visitor, class _Context>
 _LIBCPP_HIDE_FROM_ABI decltype(auto) __visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
   switch (__arg.__type_) {
