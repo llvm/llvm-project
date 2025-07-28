@@ -356,7 +356,7 @@ def emitpogophaseinfo : F<"emitpogophaseinfo">;
 defm emittoolversioninfo: B<
     "emittoolversioninfo",
     "Emit a tool version info after DOS header (so-called Rich header, default)",
-    "Do not emit a tool version info after DOS header (so-scalled Ricb header)">;
+    "Do not emit a tool version info after DOS header (so-called Rich header)">;
 def nocoffgrpinfo: F<"nocoffgrpinfo">;
 def noexp : F<"noexp">;
 def novcfeature: F<"novcfeature">;
