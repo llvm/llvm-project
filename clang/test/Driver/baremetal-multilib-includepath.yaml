@@ -1,8 +1,8 @@
 # REQUIRES: shell
 # UNSUPPORTED: system-windows
 
-# This test demonstrates the new "IncludePath" field.
-# This field allows specifying include paths through
+# This test demonstrates the new "IncludeDirs" field.
+# This field allows specifying include directories through
 # multilib.yaml configuration. When this field is present
 # it is appended to the sysroot during header path
 # resolution ignoring the default bare-metal assumptions.
@@ -24,7 +24,7 @@ Variants:
 - Dir: soft
   Flags:
     - -mfloat-abi=soft
-  IncludePath:
+  IncludeDirs:
     - include
     - include-libunwind
     - soft/include
