@@ -26,8 +26,7 @@ define void @truncate_to_minimal_bitwidths_widen_cast_recipe(ptr %src) {
 ; CHECK-NEXT:    [[AVL:%.*]] = sub i64 9, [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[EVL_BASED_IV]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP5]], i32 0
-; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 8 x i8> @llvm.vp.load.nxv8i8.p0(ptr align 1 [[TMP6]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP7]])
+; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 8 x i8> @llvm.vp.load.nxv8i8.p0(ptr align 1 [[TMP5]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP7]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <vscale x 8 x i8> [[VP_OP_LOAD]] to <vscale x 8 x i16>
 ; CHECK-NEXT:    [[TMP12:%.*]] = mul <vscale x 8 x i16> zeroinitializer, [[TMP8]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = lshr <vscale x 8 x i16> [[TMP12]], splat (i16 1)

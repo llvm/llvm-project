@@ -39,6 +39,16 @@ module {
   // CHECK:      cir.func{{.*}} @unary_not(%arg0: !cir.bool) -> !cir.bool
   // CHECK-NEXT:   cir.return %arg0 : !cir.bool
 
+  cir.func @unary_poison() -> !s32i {
+    %0 = cir.const #cir.poison : !s32i
+    %1 = cir.unary(inc, %0) : !s32i, !s32i
+    cir.return %1 : !s32i
+  }
+  // CHECK:      @unary_poison
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.poison : !s32i
+  // CHECK-NEXT:   cir.return %[[P]] : !s32i
+  // CHECK-NEXT: }
+
   cir.func @cast1(%arg0: !cir.bool) -> !cir.bool {
     %0 = cir.cast(bool_to_int, %arg0 : !cir.bool), !s32i
     %1 = cir.cast(int_to_bool, %0 : !s32i), !cir.bool
@@ -69,5 +79,15 @@ module {
   // CHECK-NEXT:   %[[CAST2:.*]] = cir.cast(bool_to_int, %[[CAST]] : !cir.bool), !s32i
   // CHECK-NEXT:   %[[CAST3:.*]] = cir.cast(integral, %[[CAST2]] : !s32i), !s64i
   // CHECK-NEXT:   cir.return %[[CAST3]] : !s64i
+
+  cir.func @cast_poison() -> !s64i {
+    %0 = cir.const #cir.poison : !s32i
+    %1 = cir.cast(integral, %0 : !s32i), !s64i
+    cir.return %1 : !s64i
+  }
+  // CHECK:      @cast_poison
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.poison : !s64i
+  // CHECK-NEXT:   cir.return %[[P]] : !s64i
+  // CHECK-NEXT: }
 
 }

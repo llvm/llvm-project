@@ -23,7 +23,6 @@
 #define DEBUG_TYPE "transform-dialect"
 #define DEBUG_TYPE_FULL "transform-dialect-full"
 #define DEBUG_PRINT_AFTER_ALL "transform-dialect-print-top-level-after-all"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "] ")
 #ifndef NDEBUG
 #define FULL_LDBG(X)                                                           \
   DEBUGLOG_WITH_STREAM_AND_TYPE(llvm::dbgs(), DEBUG_TYPE_FULL)
@@ -818,16 +817,14 @@ void transform::TransformState::compactOpHandles() {
 
 DiagnosedSilenceableFailure
 transform::TransformState::applyTransform(TransformOpInterface transform) {
-  LLVM_DEBUG({
-    DBGS() << "applying: ";
-    transform->print(llvm::dbgs(), OpPrintingFlags().skipRegions());
-    llvm::dbgs() << "\n";
-  });
+  LDBG() << "applying: "
+         << OpWithFlags(transform, OpPrintingFlags().skipRegions());
   FULL_LDBG() << "Top-level payload before application:\n" << *getTopLevel();
   auto printOnFailureRAII = llvm::make_scope_exit([this] {
     (void)this;
-    LLVM_DEBUG(DBGS() << "Failing Top-level payload:\n"; getTopLevel()->print(
-        llvm::dbgs(), mlir::OpPrintingFlags().printGenericOpForm()););
+    LDBG() << "Failing Top-level payload:\n"
+           << OpWithFlags(getTopLevel(),
+                          OpPrintingFlags().printGenericOpForm());
   });
 
   // Set current transform op.
@@ -995,8 +992,7 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
 
   printOnFailureRAII.release();
   DEBUG_WITH_TYPE(DEBUG_PRINT_AFTER_ALL, {
-    DBGS() << "Top-level payload:\n";
-    getTopLevel()->print(llvm::dbgs());
+    LDBG() << "Top-level payload:\n" << *getTopLevel();
   });
   return result;
 }
@@ -1273,7 +1269,7 @@ void transform::TrackingListener::notifyMatchFailure(
   LLVM_DEBUG({
     Diagnostic diag(loc, DiagnosticSeverity::Remark);
     reasonCallback(diag);
-    DBGS() << "Match Failure : " << diag.str();
+    LDBG() << "Match Failure : " << diag.str();
   });
 }
 

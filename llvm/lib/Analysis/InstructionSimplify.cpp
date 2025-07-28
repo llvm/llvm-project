@@ -5366,7 +5366,7 @@ static Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
     Type *MidTy = CI->getType();
     Type *DstTy = Ty;
     if (Src->getType() == Ty) {
-      auto FirstOp = static_cast<Instruction::CastOps>(CI->getOpcode());
+      auto FirstOp = CI->getOpcode();
       auto SecondOp = static_cast<Instruction::CastOps>(CastOpc);
       Type *SrcIntPtrTy =
           SrcTy->isPtrOrPtrVectorTy() ? Q.DL.getIntPtrType(SrcTy) : nullptr;

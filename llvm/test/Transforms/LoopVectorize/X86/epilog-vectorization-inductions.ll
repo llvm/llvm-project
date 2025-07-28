@@ -44,8 +44,7 @@ define void @test_pr59459(i64 %iv.start, ptr %arr) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = trunc <16 x i32> [[TMP14]] to <16 x i16>
 ; CHECK-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP12]] to i64
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i16, ptr [[ARR:%.*]], i64 [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i16, ptr [[TMP17]], i32 0
-; CHECK-NEXT:    store <16 x i16> [[TMP15]], ptr [[TMP18]], align 2
+; CHECK-NEXT:    store <16 x i16> [[TMP15]], ptr [[TMP17]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <16 x i32> [[VEC_IND]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -80,8 +79,7 @@ define void @test_pr59459(i64 %iv.start, ptr %arr) {
 ; CHECK-NEXT:    [[TMP26:%.*]] = trunc <4 x i32> [[TMP25]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP27:%.*]] = zext i32 [[TMP23]] to i64
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i16, ptr [[ARR]], i64 [[TMP27]]
-; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i16, ptr [[TMP28]], i32 0
-; CHECK-NEXT:    store <4 x i16> [[TMP26]], ptr [[TMP29]], align 2
+; CHECK-NEXT:    store <4 x i16> [[TMP26]], ptr [[TMP28]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT15]] = add nuw i64 [[INDEX8]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT13]] = add <4 x i32> [[VEC_IND12]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT15]], [[N_VEC4]]
@@ -166,11 +164,10 @@ define void @test_induction_step_needs_expansion(ptr noalias %j, ptr %k, i64 %l,
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub <16 x i16> [[STEP_ADD_2]], [[BROADCAST_SPLAT3]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub <16 x i16> [[STEP_ADD_3]], [[BROADCAST_SPLAT3]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[K:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i16, ptr [[TMP8]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i16, ptr [[TMP8]], i32 16
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i16, ptr [[TMP8]], i32 32
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr [[TMP8]], i32 48
-; CHECK-NEXT:    store <16 x i16> [[TMP4]], ptr [[TMP9]], align 2
+; CHECK-NEXT:    store <16 x i16> [[TMP4]], ptr [[TMP8]], align 2
 ; CHECK-NEXT:    store <16 x i16> [[TMP5]], ptr [[TMP10]], align 2
 ; CHECK-NEXT:    store <16 x i16> [[TMP6]], ptr [[TMP21]], align 2
 ; CHECK-NEXT:    store <16 x i16> [[TMP7]], ptr [[TMP12]], align 2
@@ -211,8 +208,7 @@ define void @test_induction_step_needs_expansion(ptr noalias %j, ptr %k, i64 %l,
 ; CHECK-NEXT:    [[VEC_IND20:%.*]] = phi <8 x i16> [ [[INDUCTION17]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT21:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP17:%.*]] = sub <8 x i16> [[VEC_IND20]], [[DOTSPLAT14]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i16, ptr [[K]], i64 [[INDEX12]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i16, ptr [[TMP18]], i32 0
-; CHECK-NEXT:    store <8 x i16> [[TMP17]], ptr [[TMP19]], align 2
+; CHECK-NEXT:    store <8 x i16> [[TMP17]], ptr [[TMP18]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT24]] = add nuw i64 [[INDEX12]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT21]] = add <8 x i16> [[VEC_IND20]], [[BROADCAST_SPLAT23]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT24]], [[N_VEC5]]

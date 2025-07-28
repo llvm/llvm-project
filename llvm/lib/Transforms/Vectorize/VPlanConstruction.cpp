@@ -466,28 +466,27 @@ void VPlanTransforms::prepareForVectorization(
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
 
-  VPBlockBase *HeaderVPB = Plan.getEntry()->getSingleSuccessor();
-  canonicalHeaderAndLatch(HeaderVPB, VPDT);
-  VPBlockBase *LatchVPB = HeaderVPB->getPredecessors()[1];
+  auto *HeaderVPBB = cast<VPBasicBlock>(Plan.getEntry()->getSingleSuccessor());
+  canonicalHeaderAndLatch(HeaderVPBB, VPDT);
+  auto *LatchVPBB = cast<VPBasicBlock>(HeaderVPBB->getPredecessors()[1]);
 
   VPBasicBlock *VecPreheader = Plan.createVPBasicBlock("vector.ph");
   VPBlockUtils::insertBlockAfter(VecPreheader, Plan.getEntry());
 
   VPBasicBlock *MiddleVPBB = Plan.createVPBasicBlock("middle.block");
-  // The canonical LatchVPB has the header block as last successor. If it has
+  // The canonical LatchVPBB has the header block as last successor. If it has
   // another successor, this successor is an exit block - insert middle block on
   // its edge. Otherwise, add middle block as another successor retaining header
   // as last.
-  if (LatchVPB->getNumSuccessors() == 2) {
-    VPBlockBase *LatchExitVPB = LatchVPB->getSuccessors()[0];
-    VPBlockUtils::insertOnEdge(LatchVPB, LatchExitVPB, MiddleVPBB);
+  if (LatchVPBB->getNumSuccessors() == 2) {
+    VPBlockBase *LatchExitVPB = LatchVPBB->getSuccessors()[0];
+    VPBlockUtils::insertOnEdge(LatchVPBB, LatchExitVPB, MiddleVPBB);
   } else {
-    VPBlockUtils::connectBlocks(LatchVPB, MiddleVPBB);
-    LatchVPB->swapSuccessors();
+    VPBlockUtils::connectBlocks(LatchVPBB, MiddleVPBB);
+    LatchVPBB->swapSuccessors();
   }
 
-  addCanonicalIVRecipes(Plan, cast<VPBasicBlock>(HeaderVPB),
-                        cast<VPBasicBlock>(LatchVPB), InductionTy, IVDL);
+  addCanonicalIVRecipes(Plan, HeaderVPBB, LatchVPBB, InductionTy, IVDL);
 
   [[maybe_unused]] bool HandledUncountableEarlyExit = false;
   // Disconnect all early exits from the loop leaving it with a single exit from
@@ -503,8 +502,7 @@ void VPlanTransforms::prepareForVectorization(
         assert(!HandledUncountableEarlyExit &&
                "can handle exactly one uncountable early exit");
         handleUncountableEarlyExit(cast<VPBasicBlock>(Pred), EB, Plan,
-                                   cast<VPBasicBlock>(HeaderVPB),
-                                   cast<VPBasicBlock>(LatchVPB), Range);
+                                   HeaderVPBB, LatchVPBB, Range);
         HandledUncountableEarlyExit = true;
       } else {
         for (VPRecipeBase &R : EB->phis())
@@ -568,15 +566,15 @@ void VPlanTransforms::prepareForVectorization(
   // the corresponding compare because they may have ended up with different
   // line numbers and we want to avoid awkward line stepping while debugging.
   // E.g., if the compare has got a line number inside the loop.
-  DebugLoc LatchDL = TheLoop->getLoopLatch()->getTerminator()->getDebugLoc();
+  DebugLoc LatchDL = LatchVPBB->getTerminator()->getDebugLoc();
   VPBuilder Builder(MiddleVPBB);
   VPValue *Cmp;
   if (!RequiresScalarEpilogueCheck)
-    Cmp = Plan.getOrAddLiveIn(ConstantInt::getFalse(
-        IntegerType::getInt1Ty(TripCount->getType()->getContext())));
+    Cmp = Plan.getOrAddLiveIn(
+        ConstantInt::getFalse(IntegerType::getInt1Ty(Plan.getContext())));
   else if (TailFolded)
-    Cmp = Plan.getOrAddLiveIn(ConstantInt::getTrue(
-        IntegerType::getInt1Ty(TripCount->getType()->getContext())));
+    Cmp = Plan.getOrAddLiveIn(
+        ConstantInt::getTrue(IntegerType::getInt1Ty(Plan.getContext())));
   else
     Cmp = Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),
                              &Plan.getVectorTripCount(), LatchDL, "cmp.n");
@@ -650,7 +648,7 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
                    .createNaryOp(VPInstruction::BranchOnCond, {CondVPV},
                                  Plan.getCanonicalIV()->getDebugLoc());
   if (AddBranchWeights) {
-    MDBuilder MDB(Plan.getScalarHeader()->getIRBasicBlock()->getContext());
+    MDBuilder MDB(Plan.getContext());
     MDNode *BranchWeights =
         MDB.createBranchWeights(CheckBypassWeights, /*IsExpected=*/false);
     Term->addMetadata(LLVMContext::MD_prof, BranchWeights);

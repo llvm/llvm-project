@@ -19,8 +19,7 @@ define void @f1() {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i16 0 to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [2 x ptr], ptr @b, i16 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr ptr, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    store <2 x ptr> <ptr @a, ptr @a>, ptr [[TMP2]], align 8
+; CHECK-NEXT:    store <2 x ptr> <ptr @a, ptr @a>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
