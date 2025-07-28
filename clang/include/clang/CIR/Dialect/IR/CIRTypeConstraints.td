@@ -166,6 +166,12 @@ def CIR_AnyIntOrFloatType : AnyTypeOf<[CIR_AnyFloatType, CIR_AnyIntType],
 def CIR_AnyComplexType : CIR_TypeBase<"::cir::ComplexType", "complex type">;
 
 //===----------------------------------------------------------------------===//
+// Array Type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_AnyArrayType : CIR_TypeBase<"::cir::ArrayType", "array type">;
+
+//===----------------------------------------------------------------------===//
 // Pointer Type predicates
 //===----------------------------------------------------------------------===//
 
@@ -215,6 +221,8 @@ class CIR_PtrToType<Type type> : CIR_PtrToAnyOf<[type]>;
 def CIR_PtrToIntOrFloatType : CIR_PtrToType<CIR_AnyIntOrFloatType>;
 
 def CIR_PtrToComplexType : CIR_PtrToType<CIR_AnyComplexType>;
+
+def CIR_PtrToArray : CIR_PtrToType<CIR_AnyArrayType>;
 
 //===----------------------------------------------------------------------===//
 // Vector Type predicates

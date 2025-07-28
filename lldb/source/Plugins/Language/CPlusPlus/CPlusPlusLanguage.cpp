@@ -1363,6 +1363,28 @@ static void RegisterStdStringSummaryProvider(
       summary_sp);
 }
 
+static void RegisterStdStringViewSummaryProvider(
+    const lldb::TypeCategoryImplSP &category_sp, llvm::StringRef string_ty,
+    llvm::StringRef char_ty, lldb::TypeSummaryImplSP summary_sp) {
+  // std::string_view
+  category_sp->AddTypeSummary(
+      std::make_shared<lldb_private::TypeNameSpecifierImpl>(
+          string_ty, eFormatterMatchExact),
+      summary_sp);
+
+  // std::basic_string_view<char, std::char_traits<char>>
+  // NativePDB has spaces at different positions compared to PDB and DWARF, so
+  // use a regex and make them optional.
+  category_sp->AddTypeSummary(
+      std::make_shared<lldb_private::TypeNameSpecifierImpl>(
+          llvm::formatv(
+              "^std::basic_string_view<{0}, ?std::char_traits<{0}> ?>$",
+              char_ty)
+              .str(),
+          eFormatterMatchRegex),
+      summary_sp);
+}
+
 static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   if (!cpp_category_sp)
     return;
@@ -1414,7 +1436,7 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           stl_synth_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider")));
   cpp_category_sp->AddTypeSynthetic(
-      "^std::(__debug)?deque<.+>(( )?&)?$", eFormatterMatchRegex,
+      "^std::__debug::deque<.+>(( )?&)?$", eFormatterMatchRegex,
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_deref_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdDequeSynthProvider")));
@@ -1472,10 +1494,9 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "libstdc++ debug std::set summary provider",
                 "^std::__debug::set<.+> >(( )?&)?$", stl_summary_flags, true);
 
-  AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
-      "libstdc++ std::deque summary provider",
-      "^std::(__debug::)?deque<.+>(( )?&)?$", stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "libstdc++ debug std::deque summary provider",
+                "^std::__debug::deque<.+>(( )?&)?$", stl_summary_flags, true);
 
   AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
@@ -1684,6 +1705,18 @@ GenericMapLikeSyntheticFrontEndCreator(CXXSyntheticChildren *children,
       "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider", *valobj_sp);
 }
 
+static SyntheticChildrenFrontEnd *
+GenericDequeSyntheticFrontEndCreator(CXXSyntheticChildren *children,
+                                     ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+
+  if (IsMsvcStlDeque(*valobj_sp))
+    return MsvcStlDequeSyntheticFrontEndCreator(children, valobj_sp);
+  return new ScriptedSyntheticChildren::FrontEnd(
+      "lldb.formatters.cpp.gnu_libstdcpp.StdDequeSynthProvider", *valobj_sp);
+}
+
 /// Load formatters that are formatting types from more than one STL
 static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   if (!cpp_category_sp)
@@ -1761,6 +1794,10 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSynthetic(cpp_category_sp, GenericOptionalSyntheticFrontEndCreator,
                   "std::optional synthetic children",
                   "^std::optional<.+>(( )?&)?$", stl_deref_flags, true);
+  AddCXXSynthetic(cpp_category_sp, GenericDequeSyntheticFrontEndCreator,
+                  "std::deque container synthetic children",
+                  "^std::deque<.+>(( )?&)?$", stl_deref_flags, true);
+
   AddCXXSynthetic(cpp_category_sp, GenericMapLikeSyntheticFrontEndCreator,
                   "std::(multi)?map/set synthetic children",
                   "^std::(multi)?(map|set)<.+>(( )?&)?$", stl_synth_flags,
@@ -1806,6 +1843,9 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "MSVC STL/libstdc++ std::(multi)?map/set summary provider",
                 "^std::(multi)?(map|set)<.+>(( )?&)?$", stl_summary_flags,
                 true);
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "MSVC STL/libstd++ std::deque summary provider",
+                "^std::deque<.+>(( )?&)?$", stl_summary_flags, true);
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
@@ -1844,6 +1884,36 @@ static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           stl_summary_flags,
           MsvcStlStringSummaryProvider<StringElementType::UTF32>,
           "MSVC STL std::u32string summary provider"));
+
+  RegisterStdStringViewSummaryProvider(
+      cpp_category_sp, "std::string_view", "char",
+      std::make_shared<CXXFunctionSummaryFormat>(
+          stl_summary_flags,
+          MsvcStlStringViewSummaryProvider<StringElementType::ASCII>,
+          "MSVC STL std::string_view summary provider"));
+  RegisterStdStringViewSummaryProvider(
+      cpp_category_sp, "std::u8string_view", "char8_t",
+      std::make_shared<CXXFunctionSummaryFormat>(
+          stl_summary_flags,
+          MsvcStlStringViewSummaryProvider<StringElementType::UTF8>,
+          "MSVC STL std::u8string_view summary provider"));
+  RegisterStdStringViewSummaryProvider(
+      cpp_category_sp, "std::u16string_view", "char16_t",
+      std::make_shared<CXXFunctionSummaryFormat>(
+          stl_summary_flags,
+          MsvcStlStringViewSummaryProvider<StringElementType::UTF16>,
+          "MSVC STL std::u16string_view summary provider"));
+  RegisterStdStringViewSummaryProvider(
+      cpp_category_sp, "std::u32string_view", "char32_t",
+      std::make_shared<CXXFunctionSummaryFormat>(
+          stl_summary_flags,
+          MsvcStlStringViewSummaryProvider<StringElementType::UTF32>,
+          "MSVC STL std::u32string_view summary provider"));
+  RegisterStdStringViewSummaryProvider(
+      cpp_category_sp, "std::wstring_view", "wchar_t",
+      std::make_shared<CXXFunctionSummaryFormat>(
+          stl_summary_flags, MsvcStlWStringViewSummaryProvider,
+          "MSVC STL std::wstring_view summary provider"));
 
   stl_summary_flags.SetDontShowChildren(false);
 

@@ -372,7 +372,7 @@ define { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @vector_deint
 ; CHECK-LABEL: vector_deinterleave_load_factor3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vlseg3e8.v v6, (a0)
+; CHECK-NEXT:    vlseg3e8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 24 x i8>, ptr %p
   %d0 = call {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} @llvm.vector.deinterleave3(<vscale x 24 x i8> %vec)
@@ -380,8 +380,8 @@ define { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @vector_deint
   %t1 = extractvalue {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} %d0, 1
   %t2 = extractvalue {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} %d0, 2
   %res0 = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison, <vscale x 8 x i8> %t0, 0
-  %res1 = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %res0, <vscale x 8 x i8> %t1, 0
-  %res2 = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %res1, <vscale x 8 x i8> %t2, 0
+  %res1 = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %res0, <vscale x 8 x i8> %t1, 1
+  %res2 = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %res1, <vscale x 8 x i8> %t2, 2
   ret { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %res2
 }
 
@@ -633,4 +633,20 @@ define {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i
   %vec = call <vscale x 32 x i8> @llvm.masked.load(ptr %p, i32 4, <vscale x 32 x i1> %interleaved.mask, <vscale x 32 x i8> %passthru)
   %deinterleaved.results = call {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} @llvm.vector.deinterleave4.nxv32i8(<vscale x 32 x i8> %vec)
   ret {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} %deinterleaved.results
+}
+
+define { <8 x float>, <8 x float> } @deinterleave_unrelated(<16 x float> %arg) {
+; CHECK-LABEL: deinterleave_unrelated:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vfabs.v v12, v8
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vnsrl.wx v10, v12, a0
+; CHECK-NEXT:    vnsrl.wi v8, v12, 0
+; CHECK-NEXT:    ret
+entry:
+  %abs = call <16 x float> @llvm.fabs(<16 x float> %arg)
+  %res = call { <8 x float>, <8 x float> } @llvm.vector.deinterleave2.v16f32(<16 x float> %abs)
+  ret { <8 x float>, <8 x float> } %res
 }

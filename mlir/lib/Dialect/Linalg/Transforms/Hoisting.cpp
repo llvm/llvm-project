@@ -53,9 +53,9 @@ static scf::ForOp replaceWithDifferentYield(RewriterBase &rewriter,
   assert(index < inits.size());
   inits[index] = newInitOperand;
 
-  scf::ForOp newLoop = rewriter.create<scf::ForOp>(
-      loop.getLoc(), loop.getLowerBound(), loop.getUpperBound(), loop.getStep(),
-      inits, [](OpBuilder &, Location, Value, ValueRange) {});
+  scf::ForOp newLoop = scf::ForOp::create(
+      rewriter, loop.getLoc(), loop.getLowerBound(), loop.getUpperBound(),
+      loop.getStep(), inits, [](OpBuilder &, Location, Value, ValueRange) {});
 
   // Generate the new yield with the replaced operand.
   auto yieldOp = cast<scf::YieldOp>(loop.getBody()->getTerminator());
@@ -165,8 +165,7 @@ static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
   Value source = transferRead.getBase();
 
   // Skip view-like Ops and retrive the actual soruce Operation
-  while (auto srcOp =
-             dyn_cast_or_null<ViewLikeOpInterface>(source.getDefiningOp()))
+  while (auto srcOp = source.getDefiningOp<ViewLikeOpInterface>())
     source = srcOp.getViewSource();
 
   llvm::SmallVector<Operation *, 32> users(source.getUsers().begin(),

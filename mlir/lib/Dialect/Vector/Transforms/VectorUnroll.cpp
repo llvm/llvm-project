@@ -16,13 +16,11 @@
 #include "mlir/Interfaces/VectorInterfaces.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/InterleavedRange.h"
 #include <optional>
 
 #define DEBUG_TYPE "vector-unroll"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -90,10 +88,9 @@ static Operation *cloneOpWithOperandsAndTypes(OpBuilder &builder, Location loc,
 /// std::nullopt if the op shouldn't be or cannot be unrolled.
 static std::optional<SmallVector<int64_t>>
 getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
-  LDBG("");
-  LDBG("Get unroll shape for op " << op->getName().getStringRef());
+  LDBG() << "Get unroll shape for op " << op->getName().getStringRef();
   if (options.filterConstraint && failed(options.filterConstraint(op))) {
-    LDBG("--no filter constraint -> BAIL");
+    LDBG() << "--no filter constraint -> BAIL";
     return std::nullopt;
   }
   assert(options.nativeShape &&
@@ -101,33 +98,33 @@ getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
          "shape call back function to be set");
   auto unrollableVectorOp = dyn_cast<VectorUnrollOpInterface>(op);
   if (!unrollableVectorOp) {
-    LDBG("--not an unrollable op -> BAIL");
+    LDBG() << "--not an unrollable op -> BAIL";
     return std::nullopt;
   }
   auto maybeUnrollShape = unrollableVectorOp.getShapeForUnroll();
   if (!maybeUnrollShape) {
-    LDBG("--could not get shape of op " << *op << " -> BAIL");
+    LDBG() << "--could not get shape of op " << *op << " -> BAIL";
     return std::nullopt;
   }
-  LDBG("--vector op shape: " << llvm::interleaved(*maybeUnrollShape));
+  LDBG() << "--vector op shape: " << llvm::interleaved(*maybeUnrollShape);
 
   std::optional<SmallVector<int64_t>> targetShape = options.nativeShape(op);
   if (!targetShape) {
-    LDBG("--no unrolling target shape defined " << *op << "-> SKIP");
+    LDBG() << "--no unrolling target shape defined " << *op << "-> SKIP";
     return std::nullopt;
   }
-  LDBG("--target shape: " << llvm::interleaved(*targetShape));
+  LDBG() << "--target shape: " << llvm::interleaved(*targetShape);
 
   auto maybeShapeRatio = computeShapeRatio(*maybeUnrollShape, *targetShape);
   if (!maybeShapeRatio) {
-    LDBG("--could not compute integral shape ratio -> BAIL");
+    LDBG() << "--could not compute integral shape ratio -> BAIL";
     return std::nullopt;
   }
   if (llvm::all_of(*maybeShapeRatio, [](int64_t v) { return v == 1; })) {
-    LDBG("--no unrolling needed -> SKIP");
+    LDBG() << "--no unrolling needed -> SKIP";
     return std::nullopt;
   }
-  LDBG("--found an integral shape ratio to unroll to -> SUCCESS");
+  LDBG() << "--found an integral shape ratio to unroll to -> SUCCESS";
   return targetShape;
 }
 
@@ -169,7 +166,7 @@ struct UnrollTransferReadPattern
     auto sourceVectorType = readOp.getVectorType();
     SmallVector<int64_t> strides(targetShape->size(), 1);
     Location loc = readOp.getLoc();
-    ArrayRef<int64_t> originalSize = readOp.getVectorType().getShape();
+    ArrayRef<int64_t> originalSize = sourceVectorType.getShape();
 
     // Prepare the result vector;
     Value result =
@@ -225,6 +222,14 @@ struct UnrollTransferWritePattern
     SmallVector<int64_t> strides(targetShape->size(), 1);
     Location loc = writeOp.getLoc();
     ArrayRef<int64_t> originalSize = sourceVectorType.getShape();
+    // Bail-out if rank(source) != rank(target). The main limitation here is the
+    // fact that `ExtractStridedSlice` requires the rank for the input and
+    // output to match. If needed, we can relax this later.
+    if (originalSize.size() != targetShape->size())
+      return rewriter.notifyMatchFailure(
+          writeOp,
+          "expected source input vector rank to match target shape rank");
+
     SmallVector<Value> originalIndices(writeOp.getIndices().begin(),
                                        writeOp.getIndices().end());
     SmallVector<int64_t> loopOrder =
