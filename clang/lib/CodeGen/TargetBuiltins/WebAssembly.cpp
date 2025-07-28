@@ -246,9 +246,10 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     llvm::FunctionType *LLVMFuncTy =
         cast<llvm::FunctionType>(ConvertType(QualType(FuncTy, 0)));
 
+    bool VarArg = LLVMFuncTy->isVarArg();
     unsigned NParams = LLVMFuncTy->getNumParams();
     std::vector<Value *> Args;
-    Args.reserve(NParams + 3);
+    Args.reserve(NParams + 3 + VarArg);
     // The only real argument is the FuncRef
     Args.push_back(FuncRef);
 
@@ -262,6 +263,9 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Args.push_back(PoisonValue::get(llvm::Type::getTokenTy(getLLVMContext())));
     for (unsigned i = 0; i < NParams; i++) {
       Args.push_back(PoisonValue::get(LLVMFuncTy->getParamType(i)));
+    }
+    if (VarArg) {
+      Args.push_back(PoisonValue::get(Builder.getPtrTy()));
     }
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_ref_test_func);
     return Builder.CreateCall(Callee, Args);
