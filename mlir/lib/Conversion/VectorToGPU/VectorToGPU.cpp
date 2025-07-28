@@ -482,14 +482,12 @@ struct CombineTransferReadOpTranspose final
         permutationMap.compose(transferReadOp.getPermutationMap());
 
     auto loc = op.getLoc();
-    Value result =
-        rewriter
-            .create<vector::TransferReadOp>(
-                loc, resultType, transferReadOp.getBase(),
-                transferReadOp.getIndices(), AffineMapAttr::get(newMap),
-                transferReadOp.getPadding(), transferReadOp.getMask(),
-                transferReadOp.getInBoundsAttr())
-            .getResult();
+    Value result = vector::TransferReadOp::create(
+                       rewriter, loc, resultType, transferReadOp.getBase(),
+                       transferReadOp.getIndices(), AffineMapAttr::get(newMap),
+                       transferReadOp.getPadding(), transferReadOp.getMask(),
+                       transferReadOp.getInBoundsAttr())
+                       .getResult();
 
     // Fuse through the integer extend op.
     if (extOp) {

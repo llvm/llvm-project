@@ -784,8 +784,8 @@ struct PadOpInterface
     auto toValue = [&](OpFoldResult ofr) {
       if (auto value = dyn_cast<Value>(ofr))
         return value;
-      return rewriter
-          .create<arith::ConstantIndexOp>(loc, *getConstantIntValue(ofr))
+      return arith::ConstantIndexOp::create(rewriter, loc,
+                                            *getConstantIntValue(ofr))
           .getResult();
     };
 
@@ -919,9 +919,8 @@ struct ReshapeOpInterface
       auto memrefType = MemRefType::get(
           srcType.getShape(), srcType.getElementType(), AffineMap(),
           cast<BaseMemRefType>(srcBuffer->getType()).getMemorySpace());
-      srcBuffer = rewriter
-                      .create<bufferization::ToBufferOp>(
-                          op->getLoc(), memrefType, *tensorAlloc)
+      srcBuffer = bufferization::ToBufferOp::create(rewriter, op->getLoc(),
+                                                    memrefType, *tensorAlloc)
                       .getResult();
     }
 
