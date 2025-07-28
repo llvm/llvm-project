@@ -4918,8 +4918,8 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
   bool ShouldBundleHIP =
       Args.hasFlag(options::OPT_gpu_bundle_output,
                    options::OPT_no_gpu_bundle_output, false) ||
-      (HIPNoRDC && offloadDeviceOnly() &&
-       llvm::none_of(OffloadActions, [](Action *A) {
+      (!Args.getLastArg(options::OPT_no_gpu_bundle_output) && HIPNoRDC &&
+       offloadDeviceOnly() && llvm::none_of(OffloadActions, [](Action *A) {
          return A->getType() != types::TY_Image;
        }));
 
@@ -5092,8 +5092,13 @@ Action *Driver::ConstructPhaseAction(
           Args.hasArg(options::OPT_S) ? types::TY_LTO_IR : types::TY_LTO_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
+
+    bool IsAMDGCNSPIRV = Input->getOffloadingToolChain() &&
+                         Input->getOffloadingToolChain()->getTriple().getOS() ==
+                             llvm::Triple::OSType::AMDHSA &&
+                         Input->getOffloadingToolChain()->getTriple().isSPIRV();
     if (Args.hasArg(options::OPT_emit_llvm) ||
-        TargetDeviceOffloadKind == Action::OFK_SYCL ||
+        TargetDeviceOffloadKind == Action::OFK_SYCL || IsAMDGCNSPIRV ||
         (((Input->getOffloadingToolChain() &&
            Input->getOffloadingToolChain()->getTriple().isAMDGPU()) ||
           TargetDeviceOffloadKind == Action::OFK_HIP) &&
