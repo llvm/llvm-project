@@ -7118,12 +7118,21 @@ SDValue AArch64TargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABS_MERGE_PASSTHRU);
 
   SDLoc DL(Op);
-  SDValue Neg = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
-                            Op.getOperand(0));
-  // Generate SUBS & CSEL.
-  SDValue Cmp = DAG.getNode(AArch64ISD::SUBS, DL, DAG.getVTList(VT, FlagsVT),
-                            Op.getOperand(0), DAG.getConstant(0, DL, VT));
-  return DAG.getNode(AArch64ISD::CSEL, DL, VT, Op.getOperand(0), Neg,
+  SDValue Val = Op.getOperand(0);
+  SDValue Neg = DAG.getNegative(Val, DL, VT);
+  SDValue Cmp;
+
+  // For abs(sub(lhs, rhs)), we can compare lhs and rhs directly. This allows
+  // reusing the subs operation for the calculation and comparison.
+  if (Val.getOpcode() == ISD::SUB)
+    Cmp = DAG.getNode(AArch64ISD::SUBS, DL, DAG.getVTList(VT, FlagsVT),
+                      Val.getOperand(0), Val.getOperand(1));
+  else
+    // Otherwise, compare with zero.
+    Cmp = DAG.getNode(AArch64ISD::SUBS, DL, DAG.getVTList(VT, FlagsVT), Val,
+                      DAG.getConstant(0, DL, VT));
+
+  return DAG.getNode(AArch64ISD::CSEL, DL, VT, Val, Neg,
                      DAG.getConstant(AArch64CC::PL, DL, MVT::i32),
                      Cmp.getValue(1));
 }
@@ -20851,11 +20860,17 @@ static SDValue performNegCSelCombine(SDNode *N, SelectionDAG &DAG) {
   if (!isNegatedInteger(N0) && !isNegatedInteger(N1))
     return SDValue();
 
-  SDValue N0N = getNegatedInteger(N0, DAG);
-  SDValue N1N = getNegatedInteger(N1, DAG);
-
   SDLoc DL(N);
   EVT VT = CSel.getValueType();
+
+  // If the operands are negations of each other, reverse them.
+  if ((isNegatedInteger(N0) && N0.getOperand(1) == N1) ||
+      (isNegatedInteger(N1) && N1.getOperand(1) == N0))
+    return DAG.getNode(AArch64ISD::CSEL, DL, VT, N1, N0, CSel.getOperand(2),
+                       CSel.getOperand(3));
+
+  SDValue N0N = getNegatedInteger(N0, DAG);
+  SDValue N1N = getNegatedInteger(N1, DAG);
   return DAG.getNode(AArch64ISD::CSEL, DL, VT, N0N, N1N, CSel.getOperand(2),
                      CSel.getOperand(3));
 }

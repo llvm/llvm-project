@@ -8,9 +8,9 @@
 define i8 @abd_ext_i8(i8 %a, i8 %b) nounwind {
 ; CHECK-LABEL: abd_ext_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    sub w8, w8, w1, uxtb
-; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    and w8, w1, #0xff
+; CHECK-NEXT:    and w9, w0, #0xff
+; CHECK-NEXT:    subs w8, w9, w8
 ; CHECK-NEXT:    cneg w0, w8, pl
 ; CHECK-NEXT:    ret
   %aext = zext i8 %a to i64
@@ -25,9 +25,9 @@ define i8 @abd_ext_i8(i8 %a, i8 %b) nounwind {
 define i8 @abd_ext_i8_i16(i8 %a, i16 %b) nounwind {
 ; CHECK-LABEL: abd_ext_i8_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    sub w8, w8, w1, uxth
-; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    and w8, w1, #0xffff
+; CHECK-NEXT:    and w9, w0, #0xff
+; CHECK-NEXT:    subs w8, w9, w8
 ; CHECK-NEXT:    cneg w0, w8, pl
 ; CHECK-NEXT:    ret
   %aext = zext i8 %a to i64
@@ -42,9 +42,9 @@ define i8 @abd_ext_i8_i16(i8 %a, i16 %b) nounwind {
 define i8 @abd_ext_i8_undef(i8 %a, i8 %b) nounwind {
 ; CHECK-LABEL: abd_ext_i8_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    sub w8, w8, w1, uxtb
-; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    and w8, w1, #0xff
+; CHECK-NEXT:    and w9, w0, #0xff
+; CHECK-NEXT:    subs w8, w9, w8
 ; CHECK-NEXT:    cneg w0, w8, pl
 ; CHECK-NEXT:    ret
   %aext = zext i8 %a to i64
@@ -59,9 +59,9 @@ define i8 @abd_ext_i8_undef(i8 %a, i8 %b) nounwind {
 define i16 @abd_ext_i16(i16 %a, i16 %b) nounwind {
 ; CHECK-LABEL: abd_ext_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xffff
-; CHECK-NEXT:    sub w8, w8, w1, uxth
-; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    and w8, w1, #0xffff
+; CHECK-NEXT:    and w9, w0, #0xffff
+; CHECK-NEXT:    subs w8, w9, w8
 ; CHECK-NEXT:    cneg w0, w8, pl
 ; CHECK-NEXT:    ret
   %aext = zext i16 %a to i64
@@ -92,9 +92,9 @@ define i16 @abd_ext_i16_i32(i16 %a, i32 %b) nounwind {
 define i16 @abd_ext_i16_undef(i16 %a, i16 %b) nounwind {
 ; CHECK-LABEL: abd_ext_i16_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xffff
-; CHECK-NEXT:    sub w8, w8, w1, uxth
-; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    and w8, w1, #0xffff
+; CHECK-NEXT:    and w9, w0, #0xffff
+; CHECK-NEXT:    subs w8, w9, w8
 ; CHECK-NEXT:    cneg w0, w8, pl
 ; CHECK-NEXT:    ret
   %aext = zext i16 %a to i64
