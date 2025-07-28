@@ -5,6 +5,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -amdgpu-early-ifcvt=1 -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefixes=GCN,GFX1064 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefixes=GCN,GFX1032,GFX10DEFWAVE %s
 
+
 define amdgpu_kernel void @test_vopc_i32(ptr addrspace(1) %arg) {
 ; GFX1032-LABEL: test_vopc_i32:
 ; GFX1032:       ; %bb.0:
@@ -872,8 +873,8 @@ define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
 ; GFX1032-NEXT:    s_cmp_ge_u32 s2, s0
 ; GFX1032-NEXT:    s_cselect_b32 s8, s3, s1
 ; GFX1032-NEXT:  .LBB15_3:
-; GFX1032-NEXT:    v_mov_b32_e32 v0, s8
 ; GFX1032-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1032-NEXT:    v_mov_b32_e32 v0, s8
 ; GFX1032-NEXT:    v_mov_b32_e32 v1, s9
 ; GFX1032-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7] offset:16
 ; GFX1032-NEXT:    s_endpgm
@@ -1024,8 +1025,8 @@ define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
 ; GFX1064-NEXT:    s_cmp_ge_u32 s2, s0
 ; GFX1064-NEXT:    s_cselect_b32 s4, s3, s1
 ; GFX1064-NEXT:  .LBB15_3:
-; GFX1064-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1064-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1064-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1064-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX1064-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7] offset:16
 ; GFX1064-NEXT:    s_endpgm

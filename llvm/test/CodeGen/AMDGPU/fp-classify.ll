@@ -28,8 +28,8 @@ define amdgpu_kernel void @test_isinf_pattern(ptr addrspace(1) nocapture %out, f
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x204
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_cmp_class_f32_e32 vcc, s2, v0
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
@@ -74,8 +74,8 @@ define amdgpu_kernel void @test_not_isinf_pattern_0(ptr addrspace(1) nocapture %
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x7f800000
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_cmp_nlg_f32_e64 s[2:3], |s2|, v0
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[2:3]
+; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
@@ -155,8 +155,8 @@ define amdgpu_kernel void @test_isfinite_pattern_0(ptr addrspace(1) nocapture %o
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x1f8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_cmp_class_f32_e32 vcc, s2, v0
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
@@ -203,8 +203,8 @@ define amdgpu_kernel void @test_isfinite_pattern_1(ptr addrspace(1) nocapture %o
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x1f8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_cmp_class_f32_e32 vcc, s2, v0
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
@@ -248,8 +248,8 @@ define amdgpu_kernel void @test_isfinite_not_pattern_0(ptr addrspace(1) nocaptur
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_cmp_o_f32_e64 s[2:3], s2, s2
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[2:3]
+; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
@@ -301,8 +301,8 @@ define amdgpu_kernel void @test_isfinite_not_pattern_1(ptr addrspace(1) nocaptur
 ; VI-NEXT:    v_cmp_o_f32_e64 s[2:3], s6, s6
 ; VI-NEXT:    v_cmp_neq_f32_e32 vcc, s6, v0
 ; VI-NEXT:    s_and_b64 s[2:3], s[2:3], vcc
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[2:3]
+; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
@@ -355,8 +355,8 @@ define amdgpu_kernel void @test_isfinite_not_pattern_2(ptr addrspace(1) nocaptur
 ; VI-NEXT:    v_cmp_o_f32_e64 s[4:5], s2, s2
 ; VI-NEXT:    v_cmp_neq_f32_e64 s[2:3], |s3|, v0
 ; VI-NEXT:    s_and_b64 s[2:3], s[4:5], s[2:3]
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[2:3]
+; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
@@ -408,8 +408,8 @@ define amdgpu_kernel void @test_isfinite_not_pattern_3(ptr addrspace(1) nocaptur
 ; VI-NEXT:    v_cmp_u_f32_e64 s[2:3], s6, s6
 ; VI-NEXT:    v_cmp_neq_f32_e64 s[4:5], |s6|, v0
 ; VI-NEXT:    s_and_b64 s[2:3], s[2:3], s[4:5]
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[2:3]
+; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
@@ -458,8 +458,8 @@ define amdgpu_kernel void @test_isfinite_pattern_4(ptr addrspace(1) nocapture %o
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x1f8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_cmp_class_f32_e32 vcc, s2, v0
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
@@ -506,8 +506,8 @@ define amdgpu_kernel void @test_isfinite_pattern_4_commute_and(ptr addrspace(1) 
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x1f8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_cmp_class_f32_e32 vcc, s2, v0
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
@@ -562,8 +562,8 @@ define amdgpu_kernel void @test_not_isfinite_pattern_4_wrong_ord_test(ptr addrsp
 ; VI-NEXT:    v_cmp_class_f32_e32 vcc, s1, v0
 ; VI-NEXT:    v_cmp_o_f32_e64 s[0:1], s1, v1
 ; VI-NEXT:    s_and_b64 s[0:1], s[0:1], vcc
-; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[0:1]
+; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
@@ -614,8 +614,8 @@ define amdgpu_kernel void @test_isinf_pattern_f16(ptr addrspace(1) nocapture %ou
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x204
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_cmp_class_f16_e32 vcc, s2, v0
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
@@ -664,8 +664,8 @@ define amdgpu_kernel void @test_isfinite_pattern_0_f16(ptr addrspace(1) nocaptur
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x1f8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_cmp_class_f16_e32 vcc, s2, v0
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
@@ -713,8 +713,8 @@ define amdgpu_kernel void @test_isfinite_pattern_4_f16(ptr addrspace(1) nocaptur
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x1f8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_cmp_class_f16_e32 vcc, s2, v0
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm

@@ -1664,10 +1664,10 @@ define amdgpu_kernel void @multiple_uses_fneg_select_f64(double %x, double %y, i
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; GFX7-NEXT:    s_cselect_b32 s0, s0, s2
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
-; GFX7-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX7-NEXT:    v_cndmask_b32_e64 v1, v1, -v0, vcc
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
+; GFX7-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX7-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX7-NEXT:    s_endpgm

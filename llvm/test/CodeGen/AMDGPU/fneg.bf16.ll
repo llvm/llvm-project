@@ -5,6 +5,7 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=gfx1100 -mattr=+real-true16 -mtriple=amdgcn--amdhsa < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-TRUE16 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=gfx1100 -mattr=-real-true16 -mtriple=amdgcn--amdhsa < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-FAKE16 %s
 
+
 define amdgpu_kernel void @s_fneg_bf16(ptr addrspace(1) %out, bfloat %in) #0 {
 ; CI-LABEL: s_fneg_bf16:
 ; CI:       ; %bb.0:
@@ -416,8 +417,8 @@ define amdgpu_kernel void @s_fneg_v2bf16(ptr addrspace(1) %out, <2 x bfloat> %in
 define amdgpu_kernel void @s_fneg_v2bf16_nonload(ptr addrspace(1) %out) #0 {
 ; CI-LABEL: s_fneg_v2bf16_nonload:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    s_add_i32 s12, s12, s17
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    ;;#ASMSTART
 ; CI-NEXT:    ; def s2
 ; CI-NEXT:    ;;#ASMEND
@@ -426,10 +427,10 @@ define amdgpu_kernel void @s_fneg_v2bf16_nonload(ptr addrspace(1) %out) #0 {
 ; CI-NEXT:    s_and_b32 s2, s2, 0xffff
 ; CI-NEXT:    s_or_b32 s2, s2, s3
 ; CI-NEXT:    s_add_i32 s2, s2, 0x80000000
-; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    v_mov_b32_e32 v0, s0
 ; CI-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; CI-NEXT:    s_waitcnt lgkmcnt(0)
+; CI-NEXT:    v_mov_b32_e32 v0, s0
 ; CI-NEXT:    v_mov_b32_e32 v1, s1
 ; CI-NEXT:    v_mov_b32_e32 v2, s2
 ; CI-NEXT:    flat_store_dword v[0:1], v2
@@ -444,9 +445,9 @@ define amdgpu_kernel void @s_fneg_v2bf16_nonload(ptr addrspace(1) %out) #0 {
 ; GFX8-NEXT:    ;;#ASMEND
 ; GFX8-NEXT:    s_xor_b32 s2, s2, 0x80008000
 ; GFX8-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX8-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
-; GFX8-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX8-NEXT:    flat_store_dword v[0:1], v2

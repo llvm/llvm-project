@@ -363,9 +363,9 @@ define void @s_usubo_usube(i64 inreg %a, i64 inreg %b, ptr addrspace(1) %res, pt
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_sub_u32 s4, s16, s18
 ; GFX7-NEXT:    s_subb_u32 s5, s17, s19
-; GFX7-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX7-NEXT:    s_mov_b32 s6, 0
 ; GFX7-NEXT:    s_cselect_b32 s8, 1, 0
+; GFX7-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
@@ -380,8 +380,8 @@ define void @s_usubo_usube(i64 inreg %a, i64 inreg %b, ptr addrspace(1) %res, pt
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_sub_u32 s4, s16, s18
 ; GFX9-NEXT:    s_subb_u32 s5, s17, s19
-; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX9-NEXT:    global_store_dwordx2 v[0:1], v[4:5], off
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s6
@@ -394,8 +394,8 @@ define void @s_usubo_usube(i64 inreg %a, i64 inreg %b, ptr addrspace(1) %res, pt
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_sub_u32 s4, s16, s18
 ; GFX8-NEXT:    s_subb_u32 s5, s17, s19
-; GFX8-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX8-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX8-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX8-NEXT:    flat_store_dwordx2 v[0:1], v[4:5]
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6

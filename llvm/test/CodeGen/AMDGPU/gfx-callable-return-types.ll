@@ -1990,10 +1990,10 @@ define amdgpu_gfx <512 x i32> @return_512xi32() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s0, 0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_mov_b32 s3, s0
 ; GFX11-NEXT:    s_mov_b32 s1, s0
 ; GFX11-NEXT:    s_mov_b32 s2, s0
-; GFX11-NEXT:    v_dual_mov_b32 v4, s3 :: v_dual_mov_b32 v3, s2
+; GFX11-NEXT:    s_mov_b32 s3, s0
+; GFX11-NEXT:    v_dual_mov_b32 v3, s2 :: v_dual_mov_b32 v4, s3
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
 ; GFX11-NEXT:    s_clause 0x1f
 ; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:2032

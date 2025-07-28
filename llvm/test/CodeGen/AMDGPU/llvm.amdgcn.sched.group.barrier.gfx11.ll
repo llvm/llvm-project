@@ -12,43 +12,45 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_WMMA_cluster(ptr ad
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_add_nc_u32_e32 v32, s0, v40
 ; GCN-NEXT:    v_dual_mov_b32 v81, s1 :: v_dual_add_nc_u32 v80, s1, v40
+; GCN-NEXT:    ds_load_b128 v[0:3], v32
 ; GCN-NEXT:    ds_load_b128 v[4:7], v32 offset:16
 ; GCN-NEXT:    ds_load_b128 v[12:15], v32 offset:2064
-; GCN-NEXT:    ds_load_b128 v[20:23], v32 offset:6160
-; GCN-NEXT:    ds_load_b128 v[28:31], v32 offset:12304
-; GCN-NEXT:    ds_load_b128 v[36:39], v32 offset:20496
-; GCN-NEXT:    ds_load_b128 v[0:3], v32
 ; GCN-NEXT:    ds_load_b128 v[8:11], v32 offset:2048
+; GCN-NEXT:    ds_load_b128 v[20:23], v32 offset:6160
 ; GCN-NEXT:    ds_load_b128 v[16:19], v32 offset:6144
+; GCN-NEXT:    ds_load_b128 v[28:31], v32 offset:12304
 ; GCN-NEXT:    ds_load_b128 v[24:27], v32 offset:12288
+; GCN-NEXT:    ds_load_b128 v[36:39], v32 offset:20496
 ; GCN-NEXT:    ds_load_b128 v[32:35], v32 offset:20480
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000100) size(10) SyncID(0)
-; GCN-NEXT:    s_waitcnt lgkmcnt(4)
-; GCN-NEXT:    v_mov_b32_e32 v47, v7
-; GCN-NEXT:    s_waitcnt lgkmcnt(3)
-; GCN-NEXT:    v_mov_b32_e32 v55, v15
-; GCN-NEXT:    s_waitcnt lgkmcnt(2)
-; GCN-NEXT:    v_mov_b32_e32 v63, v23
-; GCN-NEXT:    s_waitcnt lgkmcnt(1)
-; GCN-NEXT:    v_mov_b32_e32 v71, v31
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_dual_mov_b32 v79, v39 :: v_dual_mov_b32 v46, v6
+; GCN-NEXT:    s_waitcnt lgkmcnt(9)
+; GCN-NEXT:    v_mov_b32_e32 v43, v3
+; GCN-NEXT:    s_waitcnt lgkmcnt(8)
+; GCN-NEXT:    v_dual_mov_b32 v47, v7 :: v_dual_mov_b32 v46, v6
 ; GCN-NEXT:    v_dual_mov_b32 v45, v5 :: v_dual_mov_b32 v44, v4
-; GCN-NEXT:    v_dual_mov_b32 v43, v3 :: v_dual_mov_b32 v42, v2
-; GCN-NEXT:    v_dual_mov_b32 v41, v1 :: v_dual_mov_b32 v40, v0
+; GCN-NEXT:    v_dual_mov_b32 v42, v2 :: v_dual_mov_b32 v41, v1
+; GCN-NEXT:    s_waitcnt lgkmcnt(7)
+; GCN-NEXT:    v_dual_mov_b32 v40, v0 :: v_dual_mov_b32 v55, v15
 ; GCN-NEXT:    v_dual_mov_b32 v54, v14 :: v_dual_mov_b32 v53, v13
+; GCN-NEXT:    s_waitcnt lgkmcnt(6)
 ; GCN-NEXT:    v_dual_mov_b32 v52, v12 :: v_dual_mov_b32 v51, v11
 ; GCN-NEXT:    v_dual_mov_b32 v50, v10 :: v_dual_mov_b32 v49, v9
-; GCN-NEXT:    v_mov_b32_e32 v48, v8
+; GCN-NEXT:    s_waitcnt lgkmcnt(5)
+; GCN-NEXT:    v_dual_mov_b32 v48, v8 :: v_dual_mov_b32 v63, v23
 ; GCN-NEXT:    v_dual_mov_b32 v62, v22 :: v_dual_mov_b32 v61, v21
+; GCN-NEXT:    s_waitcnt lgkmcnt(4)
 ; GCN-NEXT:    v_dual_mov_b32 v60, v20 :: v_dual_mov_b32 v59, v19
 ; GCN-NEXT:    v_dual_mov_b32 v58, v18 :: v_dual_mov_b32 v57, v17
-; GCN-NEXT:    v_mov_b32_e32 v56, v16
+; GCN-NEXT:    s_waitcnt lgkmcnt(3)
+; GCN-NEXT:    v_dual_mov_b32 v56, v16 :: v_dual_mov_b32 v71, v31
 ; GCN-NEXT:    v_dual_mov_b32 v70, v30 :: v_dual_mov_b32 v69, v29
+; GCN-NEXT:    s_waitcnt lgkmcnt(2)
 ; GCN-NEXT:    v_dual_mov_b32 v68, v28 :: v_dual_mov_b32 v67, v27
 ; GCN-NEXT:    v_dual_mov_b32 v66, v26 :: v_dual_mov_b32 v65, v25
-; GCN-NEXT:    v_mov_b32_e32 v64, v24
+; GCN-NEXT:    s_waitcnt lgkmcnt(1)
+; GCN-NEXT:    v_dual_mov_b32 v64, v24 :: v_dual_mov_b32 v79, v39
 ; GCN-NEXT:    v_dual_mov_b32 v78, v38 :: v_dual_mov_b32 v77, v37
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_dual_mov_b32 v76, v36 :: v_dual_mov_b32 v75, v35
 ; GCN-NEXT:    v_dual_mov_b32 v74, v34 :: v_dual_mov_b32 v73, v33
 ; GCN-NEXT:    v_mov_b32_e32 v72, v32
@@ -80,43 +82,45 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_WMMA_cluster(ptr ad
 ; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; EXACTCUTOFF-NEXT:    v_add_nc_u32_e32 v32, s0, v40
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v81, s1 :: v_dual_add_nc_u32 v80, s1, v40
+; EXACTCUTOFF-NEXT:    ds_load_b128 v[0:3], v32
 ; EXACTCUTOFF-NEXT:    ds_load_b128 v[4:7], v32 offset:16
 ; EXACTCUTOFF-NEXT:    ds_load_b128 v[12:15], v32 offset:2064
-; EXACTCUTOFF-NEXT:    ds_load_b128 v[20:23], v32 offset:6160
-; EXACTCUTOFF-NEXT:    ds_load_b128 v[28:31], v32 offset:12304
-; EXACTCUTOFF-NEXT:    ds_load_b128 v[36:39], v32 offset:20496
-; EXACTCUTOFF-NEXT:    ds_load_b128 v[0:3], v32
 ; EXACTCUTOFF-NEXT:    ds_load_b128 v[8:11], v32 offset:2048
+; EXACTCUTOFF-NEXT:    ds_load_b128 v[20:23], v32 offset:6160
 ; EXACTCUTOFF-NEXT:    ds_load_b128 v[16:19], v32 offset:6144
+; EXACTCUTOFF-NEXT:    ds_load_b128 v[28:31], v32 offset:12304
 ; EXACTCUTOFF-NEXT:    ds_load_b128 v[24:27], v32 offset:12288
+; EXACTCUTOFF-NEXT:    ds_load_b128 v[36:39], v32 offset:20496
 ; EXACTCUTOFF-NEXT:    ds_load_b128 v[32:35], v32 offset:20480
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000100) size(10) SyncID(0)
-; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(4)
-; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v47, v7
-; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(3)
-; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v55, v15
-; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(2)
-; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v63, v23
-; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(1)
-; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v71, v31
-; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
-; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v79, v39 :: v_dual_mov_b32 v46, v6
+; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(9)
+; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v43, v3
+; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(8)
+; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v47, v7 :: v_dual_mov_b32 v46, v6
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v45, v5 :: v_dual_mov_b32 v44, v4
-; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v43, v3 :: v_dual_mov_b32 v42, v2
-; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v41, v1 :: v_dual_mov_b32 v40, v0
+; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v42, v2 :: v_dual_mov_b32 v41, v1
+; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(7)
+; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v40, v0 :: v_dual_mov_b32 v55, v15
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v54, v14 :: v_dual_mov_b32 v53, v13
+; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(6)
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v52, v12 :: v_dual_mov_b32 v51, v11
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v50, v10 :: v_dual_mov_b32 v49, v9
-; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v48, v8
+; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(5)
+; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v48, v8 :: v_dual_mov_b32 v63, v23
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v62, v22 :: v_dual_mov_b32 v61, v21
+; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(4)
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v60, v20 :: v_dual_mov_b32 v59, v19
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v58, v18 :: v_dual_mov_b32 v57, v17
-; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v56, v16
+; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(3)
+; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v56, v16 :: v_dual_mov_b32 v71, v31
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v70, v30 :: v_dual_mov_b32 v69, v29
+; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(2)
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v68, v28 :: v_dual_mov_b32 v67, v27
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v66, v26 :: v_dual_mov_b32 v65, v25
-; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v64, v24
+; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(1)
+; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v64, v24 :: v_dual_mov_b32 v79, v39
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v78, v38 :: v_dual_mov_b32 v77, v37
+; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v76, v36 :: v_dual_mov_b32 v75, v35
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v74, v34 :: v_dual_mov_b32 v73, v33
 ; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v72, v32
@@ -184,14 +188,16 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_WMMA_interleave(ptr
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_add_nc_u32_e32 v17, s0, v16
 ; GCN-NEXT:    v_add_nc_u32_e32 v16, s1, v16
-; GCN-NEXT:    ds_load_b128 v[4:7], v17 offset:16
 ; GCN-NEXT:    ds_load_b128 v[0:3], v17
+; GCN-NEXT:    ds_load_b128 v[4:7], v17 offset:16
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000100) size(2) SyncID(0)
+; GCN-NEXT:    s_waitcnt lgkmcnt(1)
+; GCN-NEXT:    v_mov_b32_e32 v11, v3
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_dual_mov_b32 v15, v7 :: v_dual_mov_b32 v14, v6
 ; GCN-NEXT:    v_dual_mov_b32 v13, v5 :: v_dual_mov_b32 v12, v4
-; GCN-NEXT:    v_dual_mov_b32 v11, v3 :: v_dual_mov_b32 v10, v2
-; GCN-NEXT:    v_dual_mov_b32 v9, v1 :: v_dual_mov_b32 v8, v0
+; GCN-NEXT:    v_dual_mov_b32 v10, v2 :: v_dual_mov_b32 v9, v1
+; GCN-NEXT:    v_mov_b32_e32 v8, v0
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GCN-NEXT:    v_wmma_f16_16x16x16_f16 v[8:15], v[0:7], v[0:7], v[8:15]
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
@@ -202,9 +208,10 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_WMMA_interleave(ptr
 ; GCN-NEXT:    v_mov_b32_e32 v16, s1
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000200) size(2) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000100) size(2) SyncID(0)
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt lgkmcnt(1)
 ; GCN-NEXT:    v_dual_mov_b32 v15, v7 :: v_dual_mov_b32 v14, v6
 ; GCN-NEXT:    v_dual_mov_b32 v13, v5 :: v_dual_mov_b32 v12, v4
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_dual_mov_b32 v11, v3 :: v_dual_mov_b32 v10, v2
 ; GCN-NEXT:    v_dual_mov_b32 v9, v1 :: v_dual_mov_b32 v8, v0
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -216,9 +223,10 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_WMMA_interleave(ptr
 ; GCN-NEXT:    ds_load_b128 v[0:3], v17 offset:6144
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000200) size(2) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000100) size(2) SyncID(0)
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt lgkmcnt(1)
 ; GCN-NEXT:    v_dual_mov_b32 v15, v7 :: v_dual_mov_b32 v14, v6
 ; GCN-NEXT:    v_dual_mov_b32 v13, v5 :: v_dual_mov_b32 v12, v4
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_dual_mov_b32 v11, v3 :: v_dual_mov_b32 v10, v2
 ; GCN-NEXT:    v_dual_mov_b32 v9, v1 :: v_dual_mov_b32 v8, v0
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -230,9 +238,10 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_WMMA_interleave(ptr
 ; GCN-NEXT:    ds_load_b128 v[0:3], v17 offset:12288
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000200) size(2) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000100) size(2) SyncID(0)
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt lgkmcnt(1)
 ; GCN-NEXT:    v_dual_mov_b32 v15, v7 :: v_dual_mov_b32 v14, v6
 ; GCN-NEXT:    v_dual_mov_b32 v13, v5 :: v_dual_mov_b32 v12, v4
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_dual_mov_b32 v11, v3 :: v_dual_mov_b32 v10, v2
 ; GCN-NEXT:    v_dual_mov_b32 v9, v1 :: v_dual_mov_b32 v8, v0
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -244,9 +253,10 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_WMMA_interleave(ptr
 ; GCN-NEXT:    ds_load_b128 v[0:3], v17 offset:20480
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000200) size(2) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000100) size(2) SyncID(0)
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt lgkmcnt(1)
 ; GCN-NEXT:    v_dual_mov_b32 v15, v7 :: v_dual_mov_b32 v14, v6
 ; GCN-NEXT:    v_dual_mov_b32 v13, v5 :: v_dual_mov_b32 v12, v4
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_dual_mov_b32 v11, v3 :: v_dual_mov_b32 v10, v2
 ; GCN-NEXT:    v_dual_mov_b32 v9, v1 :: v_dual_mov_b32 v8, v0
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -266,14 +276,16 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_WMMA_interleave(ptr
 ; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; EXACTCUTOFF-NEXT:    v_add_nc_u32_e32 v17, s0, v16
 ; EXACTCUTOFF-NEXT:    v_add_nc_u32_e32 v16, s1, v16
-; EXACTCUTOFF-NEXT:    ds_load_b128 v[4:7], v17 offset:16
 ; EXACTCUTOFF-NEXT:    ds_load_b128 v[0:3], v17
+; EXACTCUTOFF-NEXT:    ds_load_b128 v[4:7], v17 offset:16
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000100) size(2) SyncID(0)
+; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(1)
+; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v11, v3
 ; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v15, v7 :: v_dual_mov_b32 v14, v6
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v13, v5 :: v_dual_mov_b32 v12, v4
-; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v11, v3 :: v_dual_mov_b32 v10, v2
-; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v9, v1 :: v_dual_mov_b32 v8, v0
+; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v10, v2 :: v_dual_mov_b32 v9, v1
+; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v8, v0
 ; EXACTCUTOFF-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; EXACTCUTOFF-NEXT:    v_wmma_f16_16x16x16_f16 v[8:15], v[0:7], v[0:7], v[8:15]
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
@@ -284,9 +296,10 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_WMMA_interleave(ptr
 ; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v16, s1
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000200) size(2) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000100) size(2) SyncID(0)
-; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
+; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(1)
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v15, v7 :: v_dual_mov_b32 v14, v6
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v13, v5 :: v_dual_mov_b32 v12, v4
+; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v11, v3 :: v_dual_mov_b32 v10, v2
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v9, v1 :: v_dual_mov_b32 v8, v0
 ; EXACTCUTOFF-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -298,9 +311,10 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_WMMA_interleave(ptr
 ; EXACTCUTOFF-NEXT:    ds_load_b128 v[0:3], v17 offset:6144
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000200) size(2) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000100) size(2) SyncID(0)
-; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
+; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(1)
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v15, v7 :: v_dual_mov_b32 v14, v6
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v13, v5 :: v_dual_mov_b32 v12, v4
+; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v11, v3 :: v_dual_mov_b32 v10, v2
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v9, v1 :: v_dual_mov_b32 v8, v0
 ; EXACTCUTOFF-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -312,9 +326,10 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_WMMA_interleave(ptr
 ; EXACTCUTOFF-NEXT:    ds_load_b128 v[0:3], v17 offset:12288
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000200) size(2) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000100) size(2) SyncID(0)
-; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
+; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(1)
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v15, v7 :: v_dual_mov_b32 v14, v6
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v13, v5 :: v_dual_mov_b32 v12, v4
+; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v11, v3 :: v_dual_mov_b32 v10, v2
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v9, v1 :: v_dual_mov_b32 v8, v0
 ; EXACTCUTOFF-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -326,9 +341,10 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_WMMA_interleave(ptr
 ; EXACTCUTOFF-NEXT:    ds_load_b128 v[0:3], v17 offset:20480
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000200) size(2) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000100) size(2) SyncID(0)
-; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
+; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(1)
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v15, v7 :: v_dual_mov_b32 v14, v6
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v13, v5 :: v_dual_mov_b32 v12, v4
+; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v11, v3 :: v_dual_mov_b32 v10, v2
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v9, v1 :: v_dual_mov_b32 v8, v0
 ; EXACTCUTOFF-NEXT:    s_delay_alu instid0(VALU_DEP_1)

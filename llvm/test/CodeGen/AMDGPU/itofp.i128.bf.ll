@@ -98,10 +98,10 @@ define bfloat @sitofp_i128_to_bf16(i128 %x) {
 ; GCN-NEXT:    v_or_b32_e32 v1, v1, v5
 ; GCN-NEXT:    v_or_b32_e32 v0, v0, v4
 ; GCN-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
+; GCN-NEXT:    v_mov_b32_e32 v1, v9
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GCN-NEXT:    v_or_b32_e32 v8, v15, v0
 ; GCN-NEXT:    v_mov_b32_e32 v0, v8
-; GCN-NEXT:    v_mov_b32_e32 v1, v9
 ; GCN-NEXT:  .LBB0_7: ; %Flow1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; GCN-NEXT:  .LBB0_8: ; %Flow2
@@ -227,10 +227,10 @@ define bfloat @uitofp_i128_to_bf16(i128 %x) {
 ; GCN-NEXT:    v_or_b32_e32 v1, v1, v3
 ; GCN-NEXT:    v_or_b32_e32 v0, v0, v2
 ; GCN-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
+; GCN-NEXT:    v_mov_b32_e32 v1, v8
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GCN-NEXT:    v_or_b32_e32 v7, v14, v0
 ; GCN-NEXT:    v_mov_b32_e32 v0, v7
-; GCN-NEXT:    v_mov_b32_e32 v1, v8
 ; GCN-NEXT:  .LBB1_7: ; %Flow1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; GCN-NEXT:  .LBB1_8: ; %Flow2

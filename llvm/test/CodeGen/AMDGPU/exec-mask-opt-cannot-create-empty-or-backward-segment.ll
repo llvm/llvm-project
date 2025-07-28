@@ -4,9 +4,9 @@
 define amdgpu_kernel void @cannot_create_empty_or_backwards_segment(i1 %arg, i1 %arg1, i1 %arg2, i1 %arg3, i1 %arg4, i1 %arg5) {
 ; CHECK-LABEL: cannot_create_empty_or_backwards_segment:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_mov_b64 s[26:27], s[2:3]
 ; CHECK-NEXT:    s_mov_b64 s[24:25], s[0:1]
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; CHECK-NEXT:    s_mov_b64 s[26:27], s[2:3]
 ; CHECK-NEXT:    s_add_u32 s24, s24, s17
 ; CHECK-NEXT:    s_addc_u32 s25, s25, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)

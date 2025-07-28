@@ -134,9 +134,9 @@ define amdgpu_kernel void @fnearbyint_v2f32(ptr addrspace(1) %out, <2 x float> %
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_rndne_f32_e32 v1, s3
 ; VI-NEXT:    v_rndne_f32_e32 v0, s2
+; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
@@ -177,10 +177,10 @@ define amdgpu_kernel void @fnearbyint_v4f32(ptr addrspace(1) %out, <4 x float> %
 ; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_rndne_f32_e32 v3, s3
-; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    v_rndne_f32_e32 v2, s2
 ; VI-NEXT:    v_rndne_f32_e32 v1, s1
 ; VI-NEXT:    v_rndne_f32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    v_mov_b32_e32 v5, s5
 ; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-NEXT:    s_endpgm
@@ -417,8 +417,8 @@ define amdgpu_kernel void @nearbyint_v4f64(ptr addrspace(1) %out, <4 x double> %
 ; VI-NEXT:    s_add_u32 s2, s0, 16
 ; VI-NEXT:    s_addc_u32 s3, s1, 0
 ; VI-NEXT:    v_mov_b32_e32 v11, s3
-; VI-NEXT:    v_mov_b32_e32 v9, s1
 ; VI-NEXT:    v_mov_b32_e32 v10, s2
+; VI-NEXT:    v_mov_b32_e32 v9, s1
 ; VI-NEXT:    v_mov_b32_e32 v8, s0
 ; VI-NEXT:    flat_store_dwordx4 v[10:11], v[4:7]
 ; VI-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]

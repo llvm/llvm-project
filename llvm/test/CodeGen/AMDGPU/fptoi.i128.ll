@@ -119,8 +119,8 @@ define i128 @fptosi_f64_to_i128(double %x) {
 ; SDAG-NEXT:    v_bfrev_b32_e32 v1, -2
 ; SDAG-NEXT:    v_cndmask_b32_e32 v2, v0, v1, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc
-; SDAG-NEXT:    v_mov_b32_e32 v3, v2
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v1
+; SDAG-NEXT:    v_mov_b32_e32 v3, v2
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v1
 ; SDAG-NEXT:  ; %bb.9: ; %Flow3
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
@@ -484,8 +484,8 @@ define i128 @fptoui_f64_to_i128(double %x) {
 ; SDAG-NEXT:    v_bfrev_b32_e32 v1, -2
 ; SDAG-NEXT:    v_cndmask_b32_e32 v2, v0, v1, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc
-; SDAG-NEXT:    v_mov_b32_e32 v3, v2
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v1
+; SDAG-NEXT:    v_mov_b32_e32 v3, v2
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v1
 ; SDAG-NEXT:  ; %bb.9: ; %Flow3
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
@@ -843,8 +843,8 @@ define i128 @fptosi_f32_to_i128(float %x) {
 ; SDAG-NEXT:    v_bfrev_b32_e32 v1, -2
 ; SDAG-NEXT:    v_cndmask_b32_e32 v2, v0, v1, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc
-; SDAG-NEXT:    v_mov_b32_e32 v3, v2
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v1
+; SDAG-NEXT:    v_mov_b32_e32 v3, v2
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v1
 ; SDAG-NEXT:  ; %bb.9: ; %Flow3
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
@@ -1197,8 +1197,8 @@ define i128 @fptoui_f32_to_i128(float %x) {
 ; SDAG-NEXT:    v_bfrev_b32_e32 v1, -2
 ; SDAG-NEXT:    v_cndmask_b32_e32 v2, v0, v1, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc
-; SDAG-NEXT:    v_mov_b32_e32 v3, v2
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v1
+; SDAG-NEXT:    v_mov_b32_e32 v3, v2
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v1
 ; SDAG-NEXT:  ; %bb.9: ; %Flow3
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
@@ -1586,8 +1586,8 @@ define i128 @fptosi_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:    v_bfrev_b32_e32 v1, -2
 ; SDAG-NEXT:    v_cndmask_b32_e32 v2, v0, v1, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc
-; SDAG-NEXT:    v_mov_b32_e32 v3, v2
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v1
+; SDAG-NEXT:    v_mov_b32_e32 v3, v2
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v1
 ; SDAG-NEXT:  ; %bb.9: ; %Flow3
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
@@ -1934,8 +1934,8 @@ define i128 @fptoui_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:    v_bfrev_b32_e32 v1, -2
 ; SDAG-NEXT:    v_cndmask_b32_e32 v2, v0, v1, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc
-; SDAG-NEXT:    v_mov_b32_e32 v3, v2
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v1
+; SDAG-NEXT:    v_mov_b32_e32 v3, v2
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v1
 ; SDAG-NEXT:  ; %bb.9: ; %Flow3
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]

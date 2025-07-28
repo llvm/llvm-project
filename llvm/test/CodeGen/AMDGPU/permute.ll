@@ -292,10 +292,10 @@ define amdgpu_kernel void @known_ffff0500(ptr addrspace(1) nocapture %arg, i32 %
 ; GCN-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN-NEXT:    flat_load_dword v4, v[0:1]
 ; GCN-NEXT:    s_bitset1_b32 s2, 15
-; GCN-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    s_and_b32 s0, s2, 0xff00
 ; GCN-NEXT:    s_or_b32 s0, s0, 0xffff0000
+; GCN-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_or_b32_e32 v4, 4, v4
 ; GCN-NEXT:    v_and_b32_e32 v4, 0xff00ff, v4

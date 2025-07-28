@@ -613,9 +613,9 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f32_dyn
 ; GFX678-NEXT:    s_mov_b32 s2, 0x7fffff
 ; GFX678-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX678-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GFX678-NEXT:    v_mul_f32_e64 v2, 1.0, s2
 ; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX678-NEXT:    v_mov_b32_e32 v0, s0
-; GFX678-NEXT:    v_mul_f32_e64 v2, 1.0, s2
 ; GFX678-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX678-NEXT:    flat_store_dword v[0:1], v2
 ; GFX678-NEXT:    s_endpgm
@@ -660,9 +660,9 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f32_dyn
 ; GFX678-NEXT:    s_mov_b32 s2, 0x7fffff
 ; GFX678-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX678-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GFX678-NEXT:    v_mul_f32_e64 v2, 1.0, s2
 ; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX678-NEXT:    v_mov_b32_e32 v0, s0
-; GFX678-NEXT:    v_mul_f32_e64 v2, 1.0, s2
 ; GFX678-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX678-NEXT:    flat_store_dword v[0:1], v2
 ; GFX678-NEXT:    s_endpgm
@@ -707,9 +707,9 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f32_dyn
 ; GFX678-NEXT:    s_mov_b32 s2, 0x7fffff
 ; GFX678-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX678-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GFX678-NEXT:    v_mul_f32_e64 v2, 1.0, s2
 ; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX678-NEXT:    v_mov_b32_e32 v0, s0
-; GFX678-NEXT:    v_mul_f32_e64 v2, 1.0, s2
 ; GFX678-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX678-NEXT:    flat_store_dword v[0:1], v2
 ; GFX678-NEXT:    s_endpgm
@@ -1464,9 +1464,9 @@ define amdgpu_kernel void @test_fold_canonicalize_p0_f64(ptr addrspace(1) %out) 
 ; GFX678-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX678-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX678-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GFX678-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX678-NEXT:    v_mov_b32_e32 v3, s1
-; GFX678-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX678-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX678-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX678-NEXT:    s_endpgm
@@ -1512,9 +1512,9 @@ define amdgpu_kernel void @test_fold_canonicalize_n0_f64(ptr addrspace(1) %out) 
 ; GFX678-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX678-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX678-NEXT:    v_mov_b32_e32 v0, 0
+; GFX678-NEXT:    v_bfrev_b32_e32 v1, 1
 ; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX678-NEXT:    v_mov_b32_e32 v3, s1
-; GFX678-NEXT:    v_bfrev_b32_e32 v1, 1
 ; GFX678-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX678-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX678-NEXT:    s_endpgm
@@ -1558,9 +1558,9 @@ define amdgpu_kernel void @test_fold_canonicalize_p1_f64(ptr addrspace(1) %out) 
 ; GFX678-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX678-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX678-NEXT:    v_mov_b32_e32 v0, 0
+; GFX678-NEXT:    v_mov_b32_e32 v1, 0x3ff00000
 ; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX678-NEXT:    v_mov_b32_e32 v3, s1
-; GFX678-NEXT:    v_mov_b32_e32 v1, 0x3ff00000
 ; GFX678-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX678-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX678-NEXT:    s_endpgm
@@ -1602,9 +1602,9 @@ define amdgpu_kernel void @test_fold_canonicalize_n1_f64(ptr addrspace(1) %out) 
 ; GFX678-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX678-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX678-NEXT:    v_mov_b32_e32 v0, 0
+; GFX678-NEXT:    v_mov_b32_e32 v1, 0xbff00000
 ; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX678-NEXT:    v_mov_b32_e32 v3, s1
-; GFX678-NEXT:    v_mov_b32_e32 v1, 0xbff00000
 ; GFX678-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX678-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX678-NEXT:    s_endpgm
@@ -1646,9 +1646,9 @@ define amdgpu_kernel void @test_fold_canonicalize_literal_f64(ptr addrspace(1) %
 ; GFX678-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX678-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX678-NEXT:    v_mov_b32_e32 v0, 0
+; GFX678-NEXT:    v_mov_b32_e32 v1, 0x40300000
 ; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX678-NEXT:    v_mov_b32_e32 v3, s1
-; GFX678-NEXT:    v_mov_b32_e32 v1, 0x40300000
 ; GFX678-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX678-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX678-NEXT:    s_endpgm
@@ -1690,9 +1690,9 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f64(ptr
 ; GFX678-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX678-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX678-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GFX678-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX678-NEXT:    v_mov_b32_e32 v3, s1
-; GFX678-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX678-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX678-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX678-NEXT:    s_endpgm
@@ -1738,9 +1738,9 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f64(ptr ad
 ; GFX678-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX678-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX678-NEXT:    v_mov_b32_e32 v0, -1
+; GFX678-NEXT:    v_mov_b32_e32 v1, 0xfffff
 ; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX678-NEXT:    v_mov_b32_e32 v3, s1
-; GFX678-NEXT:    v_mov_b32_e32 v1, 0xfffff
 ; GFX678-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX678-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX678-NEXT:    s_endpgm
@@ -1785,9 +1785,9 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_f64(ptr
 ; GFX678-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX678-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX678-NEXT:    v_mov_b32_e32 v0, 0
+; GFX678-NEXT:    v_bfrev_b32_e32 v1, 1
 ; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX678-NEXT:    v_mov_b32_e32 v3, s1
-; GFX678-NEXT:    v_bfrev_b32_e32 v1, 1
 ; GFX678-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX678-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX678-NEXT:    s_endpgm
@@ -1831,9 +1831,9 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_f64(ptr ad
 ; GFX678-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX678-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX678-NEXT:    v_mov_b32_e32 v0, -1
+; GFX678-NEXT:    v_mov_b32_e32 v1, 0x800fffff
 ; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX678-NEXT:    v_mov_b32_e32 v3, s1
-; GFX678-NEXT:    v_mov_b32_e32 v1, 0x800fffff
 ; GFX678-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX678-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX678-NEXT:    s_endpgm
@@ -1878,9 +1878,9 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_f64(ptr addrspace(1) %out
 ; GFX678-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX678-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX678-NEXT:    v_mov_b32_e32 v0, 0
+; GFX678-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
 ; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX678-NEXT:    v_mov_b32_e32 v3, s1
-; GFX678-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
 ; GFX678-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX678-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX678-NEXT:    s_endpgm
@@ -1922,9 +1922,9 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_f64(ptr addrsp
 ; GFX678-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX678-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX678-NEXT:    v_mov_b32_e32 v0, 0
+; GFX678-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
 ; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX678-NEXT:    v_mov_b32_e32 v3, s1
-; GFX678-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
 ; GFX678-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX678-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX678-NEXT:    s_endpgm
@@ -1966,9 +1966,9 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_f64(ptr addrsp
 ; GFX678-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX678-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX678-NEXT:    v_mov_b32_e32 v0, 0
+; GFX678-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
 ; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX678-NEXT:    v_mov_b32_e32 v3, s1
-; GFX678-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
 ; GFX678-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX678-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX678-NEXT:    s_endpgm
@@ -2010,9 +2010,9 @@ define amdgpu_kernel void @test_fold_canonicalize_snan0_value_f64(ptr addrspace(
 ; GFX678-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX678-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX678-NEXT:    v_mov_b32_e32 v0, 0
+; GFX678-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
 ; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX678-NEXT:    v_mov_b32_e32 v3, s1
-; GFX678-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
 ; GFX678-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX678-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX678-NEXT:    s_endpgm
@@ -2054,9 +2054,9 @@ define amdgpu_kernel void @test_fold_canonicalize_snan1_value_f64(ptr addrspace(
 ; GFX678-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX678-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX678-NEXT:    v_mov_b32_e32 v0, 0
+; GFX678-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
 ; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX678-NEXT:    v_mov_b32_e32 v3, s1
-; GFX678-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
 ; GFX678-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX678-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX678-NEXT:    s_endpgm
@@ -2098,9 +2098,9 @@ define amdgpu_kernel void @test_fold_canonicalize_snan2_value_f64(ptr addrspace(
 ; GFX678-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX678-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX678-NEXT:    v_mov_b32_e32 v0, 0
+; GFX678-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
 ; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX678-NEXT:    v_mov_b32_e32 v3, s1
-; GFX678-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
 ; GFX678-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX678-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX678-NEXT:    s_endpgm
@@ -2142,9 +2142,9 @@ define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f64(ptr addrspace(
 ; GFX678-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX678-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX678-NEXT:    v_mov_b32_e32 v0, 0
+; GFX678-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
 ; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX678-NEXT:    v_mov_b32_e32 v3, s1
-; GFX678-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
 ; GFX678-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX678-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX678-NEXT:    s_endpgm

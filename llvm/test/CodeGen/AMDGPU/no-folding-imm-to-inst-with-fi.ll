@@ -10,9 +10,9 @@ define protected amdgpu_kernel void @no_folding_imm_to_inst_with_fi(<4 x i64> %v
 ; CHECK-NEXT:    s_load_b512 s[0:15], s[4:5], 0xa4
 ; CHECK-NEXT:    s_mov_b64 s[34:35], src_private_base
 ; CHECK-NEXT:    s_movk_i32 s34, 0x80
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_dual_mov_b32 v27, s35 :: v_dual_mov_b32 v26, s34
 ; CHECK-NEXT:    s_add_nc_u64 s[44:45], s[34:35], 0x70
-; CHECK-NEXT:    v_dual_mov_b32 v26, s34 :: v_dual_mov_b32 v27, s35
 ; CHECK-NEXT:    v_dual_mov_b32 v20, s44 :: v_dual_mov_b32 v21, s45
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_dual_mov_b32 v0, s40 :: v_dual_mov_b32 v1, s41

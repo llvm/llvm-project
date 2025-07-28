@@ -568,19 +568,19 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:  ; %bb.3: ; %bb14
 ; GFX908-NEXT:    ; in Loop: Header=BB3_2 Depth=1
 ; GFX908-NEXT:    global_load_dwordx2 v[2:3], v[0:1], off
-; GFX908-NEXT:    v_cmp_gt_i64_e64 s[2:3], s[10:11], -1
 ; GFX908-NEXT:    s_mov_b32 s13, s12
-; GFX908-NEXT:    v_cndmask_b32_e64 v6, 0, 1, s[2:3]
-; GFX908-NEXT:    v_mov_b32_e32 v4, s12
-; GFX908-NEXT:    v_cmp_ne_u32_e64 s[2:3], 1, v6
-; GFX908-NEXT:    v_mov_b32_e32 v6, s12
-; GFX908-NEXT:    v_mov_b32_e32 v8, s12
 ; GFX908-NEXT:    v_mov_b32_e32 v5, s13
 ; GFX908-NEXT:    v_mov_b32_e32 v7, s13
 ; GFX908-NEXT:    v_mov_b32_e32 v9, s13
+; GFX908-NEXT:    v_cmp_gt_i64_e64 s[2:3], s[10:11], -1
 ; GFX908-NEXT:    v_cmp_lt_i64_e64 s[18:19], s[10:11], 0
-; GFX908-NEXT:    v_mov_b32_e32 v11, v5
+; GFX908-NEXT:    v_cndmask_b32_e64 v6, 0, 1, s[2:3]
+; GFX908-NEXT:    v_mov_b32_e32 v4, s12
 ; GFX908-NEXT:    s_mov_b64 s[20:21], s[14:15]
+; GFX908-NEXT:    v_cmp_ne_u32_e64 s[2:3], 1, v6
+; GFX908-NEXT:    v_mov_b32_e32 v6, s12
+; GFX908-NEXT:    v_mov_b32_e32 v8, s12
+; GFX908-NEXT:    v_mov_b32_e32 v11, v5
 ; GFX908-NEXT:    v_mov_b32_e32 v10, v4
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_readfirstlane_b32 s9, v2

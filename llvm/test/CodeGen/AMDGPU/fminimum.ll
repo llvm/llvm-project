@@ -806,9 +806,9 @@ define amdgpu_ps <8 x float> @test_fminimum_v4f64_ss(<4 x double> inreg %a, <4 x
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, s9
 ; GFX9-SDAG-NEXT:    v_min_f64 v[2:3], s[0:1], v[0:1]
 ; GFX9-SDAG-NEXT:    v_cmp_u_f64_e32 vcc, s[0:1], v[0:1]
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, s10
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v10, 0x7ff80000
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, s10
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, s11
 ; GFX9-SDAG-NEXT:    v_min_f64 v[4:5], s[2:3], v[1:2]
 ; GFX9-SDAG-NEXT:    v_cmp_u_f64_e64 s[0:1], s[2:3], v[1:2]

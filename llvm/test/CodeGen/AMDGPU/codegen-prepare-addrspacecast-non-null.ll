@@ -3,6 +3,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck %s --check-prefixes=ASM,DAGISEL-ASM
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -global-isel -mcpu=gfx900 < %s | FileCheck %s --check-prefixes=ASM,GISEL-ASM
 
+
 ; Tests that we can avoid nullptr checks for addrspacecasts from/to priv/local.
 ;
 ; Whenever a testcase is successful, we should see the addrspacecast replaced with the intrinsic
@@ -228,8 +229,8 @@ define void @private_alloca_to_flat(ptr %ptr) {
 ; GISEL-ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-ASM-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; GISEL-ASM-NEXT:    s_lshr_b32 s4, s32, 6
-; GISEL-ASM-NEXT:    v_mov_b32_e32 v0, s4
 ; GISEL-ASM-NEXT:    v_mov_b32_e32 v2, 7
+; GISEL-ASM-NEXT:    v_mov_b32_e32 v0, s4
 ; GISEL-ASM-NEXT:    v_mov_b32_e32 v1, s5
 ; GISEL-ASM-NEXT:    flat_store_dword v[0:1], v2
 ; GISEL-ASM-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

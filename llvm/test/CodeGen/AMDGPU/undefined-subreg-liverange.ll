@@ -103,9 +103,6 @@ define amdgpu_kernel void @partially_undef_copy() #0 {
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 6
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v5
-; CHECK-NEXT:    v_mov_b32_e32 v1, v6
-; CHECK-NEXT:    v_mov_b32_e32 v2, v7
-; CHECK-NEXT:    v_mov_b32_e32 v3, v8
 ; CHECK-NEXT:    s_mov_b32 s3, 0xf000
 ; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v6

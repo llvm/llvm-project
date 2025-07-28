@@ -41,8 +41,8 @@ define amdgpu_kernel void @uniform_value_float(ptr addrspace(1) %out, float %in)
 ; GFX8GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8GISEL-NEXT:    v_mul_f32_e32 v0, s2, v0
 ; GFX8GISEL-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX8GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX8GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8GISEL-NEXT:    flat_store_dword v[0:1], v2
 ; GFX8GISEL-NEXT:    s_endpgm

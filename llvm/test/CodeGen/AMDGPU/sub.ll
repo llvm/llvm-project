@@ -321,8 +321,8 @@ define amdgpu_kernel void @test_sub_v4i32(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s2
-; GFX8-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8-NEXT:    s_add_u32 s2, s2, 16
+; GFX8-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8-NEXT:    s_addc_u32 s3, s3, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s2
@@ -666,8 +666,8 @@ define amdgpu_kernel void @s_sub_i64(ptr addrspace(1) noalias %out, i64 %a, i64 
 ; GFX8-NEXT:    s_sub_u32 s0, s0, s2
 ; GFX8-NEXT:    s_subb_u32 s1, s1, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s4
-; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s5
+; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX8-NEXT:    s_endpgm
@@ -692,8 +692,9 @@ define amdgpu_kernel void @s_sub_i64(ptr addrspace(1) noalias %out, i64 %a, i64 
 ; GFX12-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_sub_nc_u64 s[0:1], s[0:1], s[2:3]
-; GFX12-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s1
+; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
 ; GFX12-NEXT:    s_endpgm
   %result = sub i64 %a, %b
@@ -944,9 +945,9 @@ define amdgpu_kernel void @v_test_sub_v4i64(ptr addrspace(1) %out, ptr addrspace
 ; GFX8-NEXT:    v_addc_u32_e32 v13, vcc, 0, v13, vcc
 ; GFX8-NEXT:    flat_load_dwordx4 v[8:11], v[8:9]
 ; GFX8-NEXT:    flat_load_dwordx4 v[12:15], v[12:13]
-; GFX8-NEXT:    v_mov_b32_e32 v17, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v16, s0
 ; GFX8-NEXT:    s_add_u32 s0, s0, 16
+; GFX8-NEXT:    v_mov_b32_e32 v17, s1
 ; GFX8-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX8-NEXT:    s_waitcnt vmcnt(2)
 ; GFX8-NEXT:    v_sub_u32_e32 v2, vcc, v2, v6
@@ -958,8 +959,8 @@ define amdgpu_kernel void @v_test_sub_v4i64(ptr addrspace(1) %out, ptr addrspace
 ; GFX8-NEXT:    v_sub_u32_e32 v6, vcc, v10, v14
 ; GFX8-NEXT:    v_subb_u32_e32 v7, vcc, v11, v15, vcc
 ; GFX8-NEXT:    v_sub_u32_e32 v4, vcc, v8, v12
-; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_subb_u32_e32 v5, vcc, v9, v13, vcc
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
 ; GFX8-NEXT:    s_endpgm

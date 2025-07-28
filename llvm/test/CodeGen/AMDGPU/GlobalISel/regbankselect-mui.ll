@@ -570,8 +570,8 @@ define amdgpu_cs void @loop_with_2breaks(ptr addrspace(1) %x, ptr addrspace(1) %
 ; NEW_RBS-NEXT:    s_ashr_i32 s1, s0, 31
 ; NEW_RBS-NEXT:    s_lshl_b64 s[2:3], s[0:1], 2
 ; NEW_RBS-NEXT:    s_andn2_b32 s1, s5, exec_lo
-; NEW_RBS-NEXT:    v_mov_b32_e32 v7, s3
 ; NEW_RBS-NEXT:    v_mov_b32_e32 v6, s2
+; NEW_RBS-NEXT:    v_mov_b32_e32 v7, s3
 ; NEW_RBS-NEXT:    s_and_b32 s5, exec_lo, exec_lo
 ; NEW_RBS-NEXT:    s_or_b32 s5, s1, s5
 ; NEW_RBS-NEXT:    v_add_co_u32 v6, vcc_lo, v2, v6
@@ -583,8 +583,8 @@ define amdgpu_cs void @loop_with_2breaks(ptr addrspace(1) %x, ptr addrspace(1) %
 ; NEW_RBS-NEXT:    s_cbranch_execz .LBB16_2
 ; NEW_RBS-NEXT:  ; %bb.4: ; %B
 ; NEW_RBS-NEXT:    ; in Loop: Header=BB16_3 Depth=1
-; NEW_RBS-NEXT:    v_mov_b32_e32 v7, s3
 ; NEW_RBS-NEXT:    v_mov_b32_e32 v6, s2
+; NEW_RBS-NEXT:    v_mov_b32_e32 v7, s3
 ; NEW_RBS-NEXT:    s_mov_b32 s6, exec_lo
 ; NEW_RBS-NEXT:    v_add_co_u32 v6, vcc_lo, v4, v6
 ; NEW_RBS-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, v5, v7, vcc_lo
@@ -595,8 +595,8 @@ define amdgpu_cs void @loop_with_2breaks(ptr addrspace(1) %x, ptr addrspace(1) %
 ; NEW_RBS-NEXT:    s_cbranch_execz .LBB16_1
 ; NEW_RBS-NEXT:  ; %bb.5: ; %loop.body
 ; NEW_RBS-NEXT:    ; in Loop: Header=BB16_3 Depth=1
-; NEW_RBS-NEXT:    v_mov_b32_e32 v7, s3
 ; NEW_RBS-NEXT:    v_mov_b32_e32 v6, s2
+; NEW_RBS-NEXT:    v_mov_b32_e32 v7, s3
 ; NEW_RBS-NEXT:    s_add_i32 s2, s0, 1
 ; NEW_RBS-NEXT:    s_cmpk_lt_u32 s0, 0x64
 ; NEW_RBS-NEXT:    s_cselect_b32 s0, exec_lo, 0
@@ -604,8 +604,8 @@ define amdgpu_cs void @loop_with_2breaks(ptr addrspace(1) %x, ptr addrspace(1) %
 ; NEW_RBS-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, v1, v7, vcc_lo
 ; NEW_RBS-NEXT:    s_andn2_b32 s3, s6, exec_lo
 ; NEW_RBS-NEXT:    s_and_b32 s0, exec_lo, s0
-; NEW_RBS-NEXT:    s_or_b32 s6, s3, s0
 ; NEW_RBS-NEXT:    global_load_dword v8, v[6:7], off
+; NEW_RBS-NEXT:    s_or_b32 s6, s3, s0
 ; NEW_RBS-NEXT:    s_mov_b32 s0, s2
 ; NEW_RBS-NEXT:    s_waitcnt vmcnt(0)
 ; NEW_RBS-NEXT:    v_add_nc_u32_e32 v8, 1, v8

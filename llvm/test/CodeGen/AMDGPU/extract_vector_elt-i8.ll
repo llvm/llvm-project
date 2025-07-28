@@ -69,8 +69,8 @@ define amdgpu_kernel void @extract_vector_elt_v2i8(ptr addrspace(1) %out, <2 x i
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s3, s2, 8
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    s_add_u32 s0, s0, 1
+; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s3
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
 ; VI-NEXT:    flat_store_byte v[0:1], v2
@@ -123,8 +123,8 @@ define amdgpu_kernel void @extract_vector_elt_v3i8(ptr addrspace(1) %out, <3 x i
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s3, s2, 16
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    s_add_u32 s0, s0, 1
+; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s3
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
 ; VI-NEXT:    flat_store_byte v[0:1], v2
@@ -177,8 +177,8 @@ define amdgpu_kernel void @extract_vector_elt_v4i8(ptr addrspace(1) %out, <4 x i
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s3, s2, 16
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    s_add_u32 s0, s0, 1
+; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s3
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
 ; VI-NEXT:    flat_store_byte v[0:1], v2
@@ -274,8 +274,8 @@ define amdgpu_kernel void @extract_vector_elt_v16i8(ptr addrspace(1) %out, <16 x
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s3, s2, 16
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    s_add_u32 s0, s0, 1
+; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s3
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
 ; VI-NEXT:    flat_store_byte v[0:1], v2
@@ -371,8 +371,8 @@ define amdgpu_kernel void @extract_vector_elt_v64i8(ptr addrspace(1) %out, <64 x
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s3, s2, 16
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    s_add_u32 s0, s0, 1
+; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s3
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
 ; VI-NEXT:    flat_store_byte v[0:1], v2
@@ -427,8 +427,8 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v2i8(ptr addrspace(1) %out
 ; VI-NEXT:    s_lshl_b32 s2, s2, 3
 ; VI-NEXT:    s_and_b32 s3, s3, 0xffff
 ; VI-NEXT:    s_lshr_b32 s2, s3, s2
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    flat_store_byte v[0:1], v2
@@ -468,8 +468,8 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v3i8(ptr addrspace(1) %out
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshl_b32 s2, s2, 3
 ; VI-NEXT:    s_lshr_b32 s2, s3, s2
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    flat_store_byte v[0:1], v2

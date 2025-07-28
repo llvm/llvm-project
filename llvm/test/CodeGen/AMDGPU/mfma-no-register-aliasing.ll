@@ -408,7 +408,6 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32(ptr addrspace(1) %arg) #0 {
 ; GREEDY90A-GISEL-NEXT:    s_load_dwordx16 s[16:31], s[34:35], 0x40
 ; GREEDY90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GREEDY90A-GISEL-NEXT:    v_accvgpr_write_b32 a0, s0
-; GREEDY90A-GISEL-NEXT:    v_accvgpr_write_b32 a16, s16
 ; GREEDY90A-GISEL-NEXT:    v_accvgpr_write_b32 a1, s1
 ; GREEDY90A-GISEL-NEXT:    v_accvgpr_write_b32 a2, s2
 ; GREEDY90A-GISEL-NEXT:    v_accvgpr_write_b32 a3, s3
@@ -424,6 +423,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32(ptr addrspace(1) %arg) #0 {
 ; GREEDY90A-GISEL-NEXT:    v_accvgpr_write_b32 a13, s13
 ; GREEDY90A-GISEL-NEXT:    v_accvgpr_write_b32 a14, s14
 ; GREEDY90A-GISEL-NEXT:    v_accvgpr_write_b32 a15, s15
+; GREEDY90A-GISEL-NEXT:    v_accvgpr_write_b32 a16, s16
 ; GREEDY90A-GISEL-NEXT:    v_accvgpr_write_b32 a17, s17
 ; GREEDY90A-GISEL-NEXT:    v_accvgpr_write_b32 a18, s18
 ; GREEDY90A-GISEL-NEXT:    v_accvgpr_write_b32 a19, s19

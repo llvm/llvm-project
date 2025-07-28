@@ -51,8 +51,8 @@ define amdgpu_kernel void @sgpr_isnan_f16(ptr addrspace(1) %out, half %x) {
 ; GFX8SELDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX8SELDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8SELDAG-NEXT:    v_cmp_class_f16_e64 s[2:3], s2, 3
-; GFX8SELDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8SELDAG-NEXT:    v_cndmask_b32_e64 v2, 0, -1, s[2:3]
+; GFX8SELDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8SELDAG-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8SELDAG-NEXT:    flat_store_dword v[0:1], v2
 ; GFX8SELDAG-NEXT:    s_endpgm
@@ -68,8 +68,8 @@ define amdgpu_kernel void @sgpr_isnan_f16(ptr addrspace(1) %out, half %x) {
 ; GFX8GLISEL-NEXT:    s_and_b32 s2, s2, 1
 ; GFX8GLISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX8GLISEL-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX8GLISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8GLISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX8GLISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8GLISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8GLISEL-NEXT:    flat_store_dword v[0:1], v2
 ; GFX8GLISEL-NEXT:    s_endpgm

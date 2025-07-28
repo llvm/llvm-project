@@ -244,9 +244,9 @@ define amdgpu_kernel void @test_scc_quadmask_64(i32 %val0, i64 %val1, ptr addrsp
 ; GFX11-SDAG-NEXT:    s_and_b32 s4, s6, 1
 ; GFX11-SDAG-NEXT:    s_quadmask_b64 s[0:1], s[0:1]
 ; GFX11-SDAG-NEXT:    s_cmp_eq_u32 s4, 0
-; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v3, s1
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX11-SDAG-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v3, s1
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v5, 0, 1, s0
 ; GFX11-SDAG-NEXT:    global_store_b64 v4, v[2:3], s[2:3]

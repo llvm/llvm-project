@@ -135,8 +135,8 @@ define amdgpu_kernel void @non_entry_trap(ptr addrspace(1) nocapture readonly %a
 ; HSA-TRAP-GFX803-NEXT:    v_cmp_eq_u32_e32 vcc, -1, v0
 ; HSA-TRAP-GFX803-NEXT:    s_cbranch_vccz .LBB1_2
 ; HSA-TRAP-GFX803-NEXT:  ; %bb.1: ; %ret
-; HSA-TRAP-GFX803-NEXT:    v_mov_b32_e32 v0, s0
 ; HSA-TRAP-GFX803-NEXT:    v_mov_b32_e32 v2, 3
+; HSA-TRAP-GFX803-NEXT:    v_mov_b32_e32 v0, s0
 ; HSA-TRAP-GFX803-NEXT:    v_mov_b32_e32 v1, s1
 ; HSA-TRAP-GFX803-NEXT:    flat_store_dword v[0:1], v2
 ; HSA-TRAP-GFX803-NEXT:    s_waitcnt vmcnt(0)
@@ -423,9 +423,9 @@ define amdgpu_kernel void @debugtrap(ptr addrspace(1) nocapture readonly %arg0) 
 ; HSA-TRAP-GFX803-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; HSA-TRAP-GFX803-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; HSA-TRAP-GFX803-NEXT:    v_mov_b32_e32 v2, 1
+; HSA-TRAP-GFX803-NEXT:    v_mov_b32_e32 v3, 2
 ; HSA-TRAP-GFX803-NEXT:    s_waitcnt lgkmcnt(0)
 ; HSA-TRAP-GFX803-NEXT:    v_mov_b32_e32 v0, s0
-; HSA-TRAP-GFX803-NEXT:    v_mov_b32_e32 v3, 2
 ; HSA-TRAP-GFX803-NEXT:    v_mov_b32_e32 v1, s1
 ; HSA-TRAP-GFX803-NEXT:    flat_store_dword v[0:1], v2
 ; HSA-TRAP-GFX803-NEXT:    s_waitcnt vmcnt(0)

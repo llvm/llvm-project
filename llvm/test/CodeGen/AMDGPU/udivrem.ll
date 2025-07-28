@@ -218,6 +218,7 @@ define amdgpu_kernel void @test_udivrem_v2(ptr addrspace(1) %out, <2 x i32> %x, 
 ; GFX8-NEXT:    v_cvt_f32_u32_e32 v0, s2
 ; GFX8-NEXT:    s_sub_i32 s6, 0, s2
 ; GFX8-NEXT:    v_cvt_f32_u32_e32 v2, s3
+; GFX8-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX8-NEXT:    v_rcp_iflag_f32_e32 v0, v0
 ; GFX8-NEXT:    v_rcp_iflag_f32_e32 v2, v2
 ; GFX8-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
@@ -240,7 +241,6 @@ define amdgpu_kernel void @test_udivrem_v2(ptr addrspace(1) %out, <2 x i32> %x, 
 ; GFX8-NEXT:    s_cselect_b32 s0, s6, s0
 ; GFX8-NEXT:    s_sub_i32 s2, 0, s3
 ; GFX8-NEXT:    v_mul_lo_u32 v0, s2, v1
-; GFX8-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX8-NEXT:    v_mul_hi_u32 v0, v1, v0
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v1, v0
 ; GFX8-NEXT:    v_mul_hi_u32 v1, s1, v0

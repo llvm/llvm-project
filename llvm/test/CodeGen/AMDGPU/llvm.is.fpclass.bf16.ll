@@ -36,8 +36,8 @@ define amdgpu_kernel void @sgpr_isnan_bf16(ptr addrspace(1) %out, bfloat %x) {
 ; GFX8CHECK-NEXT:    s_and_b32 s2, s2, 0x7fff
 ; GFX8CHECK-NEXT:    s_cmpk_gt_i32 s2, 0x7f80
 ; GFX8CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, -1, s[2:3]
+; GFX8CHECK-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8CHECK-NEXT:    flat_store_dword v[0:1], v2
 ; GFX8CHECK-NEXT:    s_endpgm

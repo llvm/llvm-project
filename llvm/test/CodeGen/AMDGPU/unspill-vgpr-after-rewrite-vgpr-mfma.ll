@@ -64,6 +64,22 @@ define void @eliminate_spill_after_mfma_rewrite(i32 %x, i32 %y, <4 x i32> %arg, 
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v[32:63], v[0:31]
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_accvgpr_write_b32 a32, v0
+; CHECK-NEXT:    v_accvgpr_write_b32 a41, v9
+; CHECK-NEXT:    v_accvgpr_write_b32 a40, v8
+; CHECK-NEXT:    v_accvgpr_write_b32 a39, v7
+; CHECK-NEXT:    v_accvgpr_write_b32 a38, v6
+; CHECK-NEXT:    v_accvgpr_read_b32 v0, a0
+; CHECK-NEXT:    v_accvgpr_write_b32 a35, v3
+; CHECK-NEXT:    v_accvgpr_write_b32 a34, v2
+; CHECK-NEXT:    v_accvgpr_write_b32 a33, v1
+; CHECK-NEXT:    v_accvgpr_read_b32 v1, a1
+; CHECK-NEXT:    v_accvgpr_read_b32 v2, a2
+; CHECK-NEXT:    v_accvgpr_read_b32 v3, a3
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def v[6:9]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a63, v31
 ; CHECK-NEXT:    v_accvgpr_write_b32 a62, v30
 ; CHECK-NEXT:    v_accvgpr_write_b32 a61, v29
@@ -86,24 +102,8 @@ define void @eliminate_spill_after_mfma_rewrite(i32 %x, i32 %y, <4 x i32> %arg, 
 ; CHECK-NEXT:    v_accvgpr_write_b32 a44, v12
 ; CHECK-NEXT:    v_accvgpr_write_b32 a43, v11
 ; CHECK-NEXT:    v_accvgpr_write_b32 a42, v10
-; CHECK-NEXT:    v_accvgpr_write_b32 a41, v9
-; CHECK-NEXT:    v_accvgpr_write_b32 a40, v8
-; CHECK-NEXT:    v_accvgpr_write_b32 a39, v7
-; CHECK-NEXT:    v_accvgpr_write_b32 a38, v6
 ; CHECK-NEXT:    v_accvgpr_write_b32 a37, v5
 ; CHECK-NEXT:    v_accvgpr_write_b32 a36, v4
-; CHECK-NEXT:    v_accvgpr_write_b32 a35, v3
-; CHECK-NEXT:    v_accvgpr_write_b32 a34, v2
-; CHECK-NEXT:    v_accvgpr_write_b32 a33, v1
-; CHECK-NEXT:    v_accvgpr_write_b32 a32, v0
-; CHECK-NEXT:    v_accvgpr_read_b32 v0, a0
-; CHECK-NEXT:    v_accvgpr_read_b32 v1, a1
-; CHECK-NEXT:    v_accvgpr_read_b32 v2, a2
-; CHECK-NEXT:    v_accvgpr_read_b32 v3, a3
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[6:9]
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a[0:31]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -268,6 +268,8 @@ define void @eliminate_spill_after_mfma_rewrite_x2(i32 %x, i32 %y, <4 x i32> %ar
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v[32:63], v[0:31]
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_accvgpr_write_b32 a32, v0
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a63, v31
 ; CHECK-NEXT:    v_accvgpr_write_b32 a62, v30
 ; CHECK-NEXT:    v_accvgpr_write_b32 a61, v29
@@ -299,9 +301,7 @@ define void @eliminate_spill_after_mfma_rewrite_x2(i32 %x, i32 %y, <4 x i32> %ar
 ; CHECK-NEXT:    v_accvgpr_write_b32 a35, v3
 ; CHECK-NEXT:    v_accvgpr_write_b32 a34, v2
 ; CHECK-NEXT:    v_accvgpr_write_b32 a33, v1
-; CHECK-NEXT:    v_accvgpr_write_b32 a32, v0
 ; CHECK-NEXT:    v_accvgpr_read_b32 v7, a3
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_accvgpr_read_b32 v6, a2
 ; CHECK-NEXT:    v_accvgpr_read_b32 v5, a1
 ; CHECK-NEXT:    v_accvgpr_read_b32 v4, a0

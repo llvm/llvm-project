@@ -34,8 +34,8 @@ define amdgpu_kernel void @fcmp_uniform_select(float %a, i32 %b, i32 %c, ptr add
 ; GFX8-NEXT:    s_and_b32 s0, s0, 1
 ; GFX8-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX8-NEXT:    s_cselect_b32 s0, s1, s6
-; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
+; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8-NEXT:    flat_store_dword v[0:1], v2
 ; GFX8-NEXT:    s_endpgm

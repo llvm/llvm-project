@@ -5321,9 +5321,9 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_offset(ptr addrspace(1) %out, i32 
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    s_mov_b32 s4, s0
 ; VI-NEXT:    s_mov_b32 s5, s1
+; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -5345,9 +5345,9 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_offset(ptr addrspace(1) %out, i32 
 ; GFX11-LABEL: atomic_cmpxchg_i32_offset:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s3
+; GFX11-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-NEXT:    global_atomic_cmpswap_b32 v2, v[0:1], s[0:1] offset:16
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_gl1_inv
@@ -5387,10 +5387,10 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_ret_offset(ptr addrspace(1) %out, 
 ; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s4, s2
-; VI-NEXT:    v_mov_b32_e32 v0, s8
 ; VI-NEXT:    s_mov_b32 s5, s3
 ; VI-NEXT:    s_mov_b32 s2, s6
 ; VI-NEXT:    s_mov_b32 s3, s7
+; VI-NEXT:    v_mov_b32_e32 v0, s8
 ; VI-NEXT:    v_mov_b32_e32 v1, s9
 ; VI-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[0:3], 0 offset:16 glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -5417,9 +5417,9 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_ret_offset(ptr addrspace(1) %out, 
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
+; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s7
+; GFX11-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX11-NEXT:    global_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] offset:16 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl1_inv
@@ -5467,8 +5467,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_addr64_offset(ptr addrspace(1) %ou
 ; VI-NEXT:    s_addc_u32 s1, s3, s1
 ; VI-NEXT:    s_add_u32 s0, s0, 16
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
-; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
+; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_atomic_cmpswap v[2:3], v[0:1]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -5556,8 +5556,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_ret_addr64_offset(ptr addrspace(1)
 ; VI-NEXT:    s_addc_u32 s1, s1, s5
 ; VI-NEXT:    s_add_u32 s0, s0, 16
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
-; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v1, s9
+; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_atomic_cmpswap v0, v[2:3], v[0:1] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -5638,9 +5638,9 @@ define amdgpu_kernel void @atomic_cmpxchg_i32(ptr addrspace(1) %out, i32 %in, i3
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    s_mov_b32 s4, s0
 ; VI-NEXT:    s_mov_b32 s5, s1
+; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -5662,9 +5662,9 @@ define amdgpu_kernel void @atomic_cmpxchg_i32(ptr addrspace(1) %out, i32 %in, i3
 ; GFX11-LABEL: atomic_cmpxchg_i32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s3
+; GFX11-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-NEXT:    global_atomic_cmpswap_b32 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_gl1_inv
@@ -5703,8 +5703,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_ret(ptr addrspace(1) %out, ptr add
 ; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s4, s0
-; VI-NEXT:    v_mov_b32_e32 v0, s8
 ; VI-NEXT:    s_mov_b32 s5, s1
+; VI-NEXT:    v_mov_b32_e32 v0, s8
 ; VI-NEXT:    v_mov_b32_e32 v1, s9
 ; VI-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -5733,9 +5733,9 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_ret(ptr addrspace(1) %out, ptr add
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
+; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s7
+; GFX11-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX11-NEXT:    global_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl1_inv
@@ -5780,8 +5780,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_addr64(ptr addrspace(1) %out, i32 
 ; VI-NEXT:    v_mov_b32_e32 v0, s6
 ; VI-NEXT:    s_add_u32 s0, s2, s0
 ; VI-NEXT:    s_addc_u32 s1, s3, s1
-; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
+; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_atomic_cmpswap v[2:3], v[0:1]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -5866,8 +5866,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_ret_addr64(ptr addrspace(1) %out, 
 ; VI-NEXT:    v_mov_b32_e32 v0, s8
 ; VI-NEXT:    s_add_u32 s0, s0, s4
 ; VI-NEXT:    s_addc_u32 s1, s1, s5
-; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v1, s9
+; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_atomic_cmpswap v0, v[2:3], v[0:1] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)

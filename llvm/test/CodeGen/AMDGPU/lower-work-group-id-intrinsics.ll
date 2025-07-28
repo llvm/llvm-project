@@ -104,11 +104,11 @@ define amdgpu_cs void @_amdgpu_cs_main() {
 ; GFX1250-GISEL-NEXT:    s_add_co_i32 s3, s3, 1
 ; GFX1250-GISEL-NEXT:    s_bfe_u32 s5, ttmp6, 0x40008
 ; GFX1250-GISEL-NEXT:    s_mul_i32 s3, s4, s3
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1250-GISEL-NEXT:    s_add_co_i32 s5, s5, s3
 ; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s2, 0
 ; GFX1250-GISEL-NEXT:    s_cselect_b32 s2, s4, s5
-; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX1250-GISEL-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
 ; GFX1250-GISEL-NEXT:    s_endpgm

@@ -544,11 +544,11 @@ define void @flat_atomic_cmpxchg_i64_ret_a_a__a(ptr %ptr) #0 {
 ; CHECK-NEXT:    ; def a[2:3]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_accvgpr_read_b32 v5, a3
+; CHECK-NEXT:    v_accvgpr_read_b32 v4, a2
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a[4:5]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_accvgpr_read_b32 v2, a4
-; CHECK-NEXT:    v_accvgpr_read_b32 v4, a2
 ; CHECK-NEXT:    v_accvgpr_read_b32 v3, a5
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; CHECK-NEXT:    ; implicit-def: $agpr0_agpr1
@@ -614,11 +614,11 @@ define void @flat_atomic_cmpxchg_i64_ret_a_a__v(ptr %ptr) #0 {
 ; CHECK-NEXT:    ; def a[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_accvgpr_read_b32 v5, a1
+; CHECK-NEXT:    v_accvgpr_read_b32 v4, a0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a[2:3]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_accvgpr_read_b32 v7, a3
-; CHECK-NEXT:    v_accvgpr_read_b32 v4, a0
 ; CHECK-NEXT:    v_accvgpr_read_b32 v6, a2
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3

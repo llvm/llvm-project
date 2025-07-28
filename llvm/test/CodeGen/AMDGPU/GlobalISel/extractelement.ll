@@ -3183,10 +3183,10 @@ define amdgpu_kernel void @dyn_extract_v5f64_s_s(ptr addrspace(1) %out, i32 %sel
 ; MOVREL-NEXT:    s_cselect_b64 s[4:5], 4.0, s[4:5]
 ; MOVREL-NEXT:    s_cmp_eq_u32 s8, 4
 ; MOVREL-NEXT:    s_cselect_b64 s[2:3], s[2:3], s[4:5]
-; MOVREL-NEXT:    v_mov_b32_e32 v0, s2
-; MOVREL-NEXT:    v_mov_b32_e32 v3, s1
 ; MOVREL-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; MOVREL-NEXT:    v_mov_b32_e32 v0, s2
 ; MOVREL-NEXT:    v_mov_b32_e32 v1, s3
+; MOVREL-NEXT:    v_mov_b32_e32 v3, s1
 ; MOVREL-NEXT:    v_mov_b32_e32 v2, s0
 ; MOVREL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; MOVREL-NEXT:    s_endpgm
@@ -4189,8 +4189,8 @@ define amdgpu_kernel void @dyn_extract_v4f32_s_s_s(ptr addrspace(1) %out, i32 %s
 ; MOVREL-NEXT:    s_cselect_b32 s3, 0x40400000, s3
 ; MOVREL-NEXT:    s_cmp_eq_u32 s2, 3
 ; MOVREL-NEXT:    s_cselect_b32 s2, 4.0, s3
-; MOVREL-NEXT:    v_mov_b32_e32 v0, s0
 ; MOVREL-NEXT:    v_mov_b32_e32 v2, s2
+; MOVREL-NEXT:    v_mov_b32_e32 v0, s0
 ; MOVREL-NEXT:    v_mov_b32_e32 v1, s1
 ; MOVREL-NEXT:    flat_store_dword v[0:1], v2
 ; MOVREL-NEXT:    s_endpgm
@@ -4541,10 +4541,10 @@ define amdgpu_kernel void @dyn_extract_v4f64_s_s_s(ptr addrspace(1) %out, i32 %s
 ; MOVREL-NEXT:    s_cselect_b64 s[2:3], s[2:3], s[4:5]
 ; MOVREL-NEXT:    s_cmp_eq_u32 s6, 3
 ; MOVREL-NEXT:    s_cselect_b64 s[2:3], 4.0, s[2:3]
-; MOVREL-NEXT:    v_mov_b32_e32 v0, s2
-; MOVREL-NEXT:    v_mov_b32_e32 v3, s1
 ; MOVREL-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; MOVREL-NEXT:    v_mov_b32_e32 v0, s2
 ; MOVREL-NEXT:    v_mov_b32_e32 v1, s3
+; MOVREL-NEXT:    v_mov_b32_e32 v3, s1
 ; MOVREL-NEXT:    v_mov_b32_e32 v2, s0
 ; MOVREL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; MOVREL-NEXT:    s_endpgm

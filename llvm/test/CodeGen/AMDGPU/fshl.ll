@@ -6,6 +6,7 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 | FileCheck %s --check-prefix=GFX10
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 | FileCheck %s --check-prefix=GFX11
 
+
 declare i32 @llvm.fshl.i32(i32, i32, i32) nounwind readnone
 declare <2 x i32> @llvm.fshl.v2i32(<2 x i32>, <2 x i32>, <2 x i32>) nounwind readnone
 declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>) nounwind readnone
@@ -256,9 +257,9 @@ define amdgpu_kernel void @fshl_v2i32(ptr addrspace(1) %in, <2 x i32> %x, <2 x i
 ; VI-NEXT:    s_mov_b32 s1, s5
 ; VI-NEXT:    s_and_b32 s2, s2, 31
 ; VI-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
-; VI-NEXT:    v_mov_b32_e32 v2, s6
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s8
+; VI-NEXT:    v_mov_b32_e32 v2, s6
 ; VI-NEXT:    v_mov_b32_e32 v3, s7
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
@@ -397,9 +398,9 @@ define amdgpu_kernel void @fshl_v2i32_imm(ptr addrspace(1) %in, <2 x i32> %x, <2
 ; VI-NEXT:    s_mov_b32 s3, s0
 ; VI-NEXT:    s_lshr_b64 s[0:1], s[6:7], 23
 ; VI-NEXT:    s_lshr_b64 s[2:3], s[2:3], 25
-; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    v_mov_b32_e32 v1, s0
+; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
@@ -555,11 +556,11 @@ define amdgpu_kernel void @fshl_v4i32(ptr addrspace(1) %in, <4 x i32> %x, <4 x i
 ; VI-NEXT:    s_mov_b32 s9, s1
 ; VI-NEXT:    s_and_b32 s0, s0, 31
 ; VI-NEXT:    s_lshr_b64 s[0:1], s[8:9], s0
-; VI-NEXT:    v_mov_b32_e32 v4, s6
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s10
 ; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    v_mov_b32_e32 v3, s4
+; VI-NEXT:    v_mov_b32_e32 v4, s6
 ; VI-NEXT:    v_mov_b32_e32 v5, s7
 ; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-NEXT:    s_endpgm
@@ -768,11 +769,11 @@ define amdgpu_kernel void @fshl_v4i32_imm(ptr addrspace(1) %in, <4 x i32> %x, <4
 ; VI-NEXT:    s_lshr_b64 s[4:5], s[14:15], 23
 ; VI-NEXT:    s_lshr_b64 s[6:7], s[6:7], 25
 ; VI-NEXT:    s_lshr_b64 s[8:9], s[12:13], 31
-; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    v_mov_b32_e32 v0, s8
 ; VI-NEXT:    v_mov_b32_e32 v1, s6
 ; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    v_mov_b32_e32 v3, s2
+; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    v_mov_b32_e32 v4, s0
 ; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-NEXT:    s_endpgm

@@ -4793,8 +4793,8 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX12-GISEL:       ; %bb.0: ; %bb
 ; GFX12-GISEL-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-GISEL-NEXT:  .LBB132_1: ; %bb3
 ; GFX12-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -4913,8 +4913,8 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg
 ; GFX12-GISEL:       ; %bb.0: ; %bb
 ; GFX12-GISEL-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-GISEL-NEXT:  .LBB133_1: ; %bb3
 ; GFX12-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1

@@ -1760,8 +1760,8 @@ define amdgpu_kernel void @v_udiv_i23(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    s_add_u32 s6, s2, 2
 ; GCN-NEXT:    s_addc_u32 s7, s3, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s6
-; GCN-NEXT:    v_mov_b32_e32 v1, s7
 ; GCN-NEXT:    s_add_u32 s6, s2, 6
+; GCN-NEXT:    v_mov_b32_e32 v1, s7
 ; GCN-NEXT:    s_addc_u32 s7, s3, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, s6
 ; GCN-NEXT:    v_mov_b32_e32 v3, s7
@@ -1960,8 +1960,8 @@ define amdgpu_kernel void @v_udiv_i24(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    s_add_u32 s6, s2, 2
 ; GCN-NEXT:    s_addc_u32 s7, s3, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s6
-; GCN-NEXT:    v_mov_b32_e32 v1, s7
 ; GCN-NEXT:    s_add_u32 s6, s2, 6
+; GCN-NEXT:    v_mov_b32_e32 v1, s7
 ; GCN-NEXT:    s_addc_u32 s7, s3, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, s6
 ; GCN-NEXT:    v_mov_b32_e32 v3, s7

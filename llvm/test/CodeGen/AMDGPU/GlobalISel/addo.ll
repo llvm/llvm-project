@@ -676,8 +676,8 @@ define amdgpu_ps i64 @s_saddo_i64(i64 inreg %a, i64 inreg %b) {
 ; GFX7-LABEL: s_saddo_i64:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_add_u32 s4, s0, s2
-; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    s_addc_u32 s5, s1, s3
+; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX7-NEXT:    v_cmp_lt_i64_e32 vcc, s[4:5], v[0:1]
 ; GFX7-NEXT:    v_cmp_lt_i64_e64 s[0:1], s[2:3], 0
@@ -693,8 +693,8 @@ define amdgpu_ps i64 @s_saddo_i64(i64 inreg %a, i64 inreg %b) {
 ; GFX8-LABEL: s_saddo_i64:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_add_u32 s4, s0, s2
-; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    s_addc_u32 s5, s1, s3
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    v_cmp_lt_i64_e32 vcc, s[4:5], v[0:1]
 ; GFX8-NEXT:    v_cmp_lt_i64_e64 s[0:1], s[2:3], 0
@@ -710,8 +710,8 @@ define amdgpu_ps i64 @s_saddo_i64(i64 inreg %a, i64 inreg %b) {
 ; GFX9-LABEL: s_saddo_i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_add_u32 s4, s0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    s_addc_u32 s5, s1, s3
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    v_cmp_lt_i64_e32 vcc, s[4:5], v[0:1]
 ; GFX9-NEXT:    v_cmp_lt_i64_e64 s[0:1], s[2:3], 0

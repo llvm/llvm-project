@@ -96,22 +96,29 @@ define amdgpu_kernel void @test_rewrite_mfma_copy_to_agpr_phi_loop(ptr addrspace
 ; CHECK-NEXT:    v_mov_b32_e32 v65, 2.0
 ; CHECK-NEXT:  .LBB1_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_waitcnt vmcnt(7)
 ; CHECK-NEXT:    s_nop 15
 ; CHECK-NEXT:    v_mov_b64_e32 v[62:63], v[30:31]
 ; CHECK-NEXT:    v_mov_b64_e32 v[60:61], v[28:29]
+; CHECK-NEXT:    s_waitcnt vmcnt(6)
 ; CHECK-NEXT:    v_mov_b64_e32 v[58:59], v[26:27]
 ; CHECK-NEXT:    v_mov_b64_e32 v[56:57], v[24:25]
+; CHECK-NEXT:    s_waitcnt vmcnt(5)
 ; CHECK-NEXT:    v_mov_b64_e32 v[54:55], v[22:23]
 ; CHECK-NEXT:    v_mov_b64_e32 v[52:53], v[20:21]
+; CHECK-NEXT:    s_waitcnt vmcnt(4)
 ; CHECK-NEXT:    v_mov_b64_e32 v[50:51], v[18:19]
 ; CHECK-NEXT:    v_mov_b64_e32 v[48:49], v[16:17]
+; CHECK-NEXT:    s_waitcnt vmcnt(3)
 ; CHECK-NEXT:    v_mov_b64_e32 v[46:47], v[14:15]
 ; CHECK-NEXT:    v_mov_b64_e32 v[44:45], v[12:13]
+; CHECK-NEXT:    s_waitcnt vmcnt(2)
 ; CHECK-NEXT:    v_mov_b64_e32 v[42:43], v[10:11]
 ; CHECK-NEXT:    v_mov_b64_e32 v[40:41], v[8:9]
+; CHECK-NEXT:    s_waitcnt vmcnt(1)
 ; CHECK-NEXT:    v_mov_b64_e32 v[38:39], v[6:7]
 ; CHECK-NEXT:    v_mov_b64_e32 v[36:37], v[4:5]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mov_b64_e32 v[34:35], v[2:3]
 ; CHECK-NEXT:    v_mov_b64_e32 v[32:33], v[0:1]
 ; CHECK-NEXT:    s_add_i32 s1, s1, 1

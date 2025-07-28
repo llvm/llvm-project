@@ -254,7 +254,7 @@ define amdgpu_ps void @s_fneg_v2f32(<2 x float> inreg %in, ptr addrspace(1) %out
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
+; GFX11-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_mov_b32 v3, s1
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -263,7 +263,7 @@ define amdgpu_ps void @s_fneg_v2f32(<2 x float> inreg %in, ptr addrspace(1) %out
 ; GFX12-NEXT:    s_xor_b32 s0, s0, 0x80000000
 ; GFX12-NEXT:    s_xor_b32 s1, s1, 0x80000000
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
+; GFX12-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_mov_b32 v3, s1
 ; GFX12-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX12-NEXT:    s_endpgm
   %fneg = fneg <2 x float> %in

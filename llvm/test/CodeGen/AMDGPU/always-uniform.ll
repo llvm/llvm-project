@@ -19,8 +19,8 @@ define amdgpu_kernel void @readfirstlane_uniform(ptr addrspace(1) noalias nocapt
 ; GCN-NEXT:    s_load_dword s4, s[0:1], 0x0
 ; GCN-NEXT:    s_add_u32 s0, s2, 40
 ; GCN-NEXT:    s_addc_u32 s1, s3, 0
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v2, s4

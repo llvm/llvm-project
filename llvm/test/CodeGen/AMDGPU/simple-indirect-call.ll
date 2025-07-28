@@ -30,17 +30,17 @@ define amdgpu_kernel void @test_simple_indirect_call() {
 ; GFX9-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; GFX9-NEXT:    s_add_u32 s0, s0, s17
 ; GFX9-NEXT:    s_addc_u32 s1, s1, 0
-; GFX9-NEXT:    s_getpc_b64 s[18:19]
-; GFX9-NEXT:    s_add_u32 s18, s18, indirect@rel32@lo+4
-; GFX9-NEXT:    s_addc_u32 s19, s19, indirect@rel32@hi+12
 ; GFX9-NEXT:    s_mov_b32 s13, s15
 ; GFX9-NEXT:    s_mov_b32 s12, s14
 ; GFX9-NEXT:    s_mov_b64 s[14:15], src_private_base
-; GFX9-NEXT:    v_mov_b32_e32 v5, s18
+; GFX9-NEXT:    s_getpc_b64 s[18:19]
+; GFX9-NEXT:    s_add_u32 s18, s18, indirect@rel32@lo+4
+; GFX9-NEXT:    s_addc_u32 s19, s19, indirect@rel32@hi+12
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v4, s15
+; GFX9-NEXT:    v_mov_b32_e32 v5, s18
 ; GFX9-NEXT:    v_mov_b32_e32 v6, s19
 ; GFX9-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX9-NEXT:    s_mov_b32 s14, s16

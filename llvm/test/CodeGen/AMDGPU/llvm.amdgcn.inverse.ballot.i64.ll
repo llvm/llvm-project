@@ -315,8 +315,8 @@ define amdgpu_cs void @inverse_ballot_branch(i64 inreg %s0_1, i64 inreg %s2, ptr
 ; SDAG_W64-NEXT:  ; %bb.1: ; %if
 ; SDAG_W64-NEXT:    s_add_u32 s0, s0, 1
 ; SDAG_W64-NEXT:    s_addc_u32 s1, s1, 0
-; SDAG_W64-NEXT:    v_mov_b32_e32 v3, s1
 ; SDAG_W64-NEXT:    v_mov_b32_e32 v2, s0
+; SDAG_W64-NEXT:    v_mov_b32_e32 v3, s1
 ; SDAG_W64-NEXT:  ; %bb.2: ; %endif
 ; SDAG_W64-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; SDAG_W64-NEXT:    global_store_b64 v[0:1], v[2:3], off
@@ -343,7 +343,7 @@ define amdgpu_cs void @inverse_ballot_branch(i64 inreg %s0_1, i64 inreg %s2, ptr
 ; SDAG_W32-NEXT:  ; %bb.1: ; %if
 ; SDAG_W32-NEXT:    s_add_u32 s0, s0, 1
 ; SDAG_W32-NEXT:    s_addc_u32 s1, s1, 0
-; SDAG_W32-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
+; SDAG_W32-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_mov_b32 v3, s1
 ; SDAG_W32-NEXT:  ; %bb.2: ; %endif
 ; SDAG_W32-NEXT:    s_or_b32 exec_lo, exec_lo, s2
 ; SDAG_W32-NEXT:    global_store_b64 v[0:1], v[2:3], off

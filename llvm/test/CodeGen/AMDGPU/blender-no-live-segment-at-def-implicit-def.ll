@@ -29,11 +29,11 @@ define amdgpu_kernel void @blender_no_live_segment_at_def_error(<4 x float> %ext
 ; CHECK-NEXT:    s_mov_b32 s18, 0
 ; CHECK-NEXT:    s_branch .LBB0_6
 ; CHECK-NEXT:  .LBB0_4:
+; CHECK-NEXT:    s_mov_b32 s13, s12
 ; CHECK-NEXT:    s_mov_b32 s14, s12
 ; CHECK-NEXT:    s_mov_b32 s15, s12
-; CHECK-NEXT:    s_mov_b32 s13, s12
-; CHECK-NEXT:    s_mov_b64 s[50:51], s[14:15]
 ; CHECK-NEXT:    s_mov_b64 s[48:49], s[12:13]
+; CHECK-NEXT:    s_mov_b64 s[50:51], s[14:15]
 ; CHECK-NEXT:    s_branch .LBB0_8
 ; CHECK-NEXT:  .LBB0_5: ; %if.then263.i.i
 ; CHECK-NEXT:    v_cmp_lt_f32_e64 s12, s53, 0
@@ -80,8 +80,8 @@ define amdgpu_kernel void @blender_no_live_segment_at_def_error(<4 x float> %ext
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CHECK-NEXT:  .LBB0_9: ; %kernel_direct_lighting.exit
 ; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x20
-; CHECK-NEXT:    v_mov_b32_e32 v0, s48
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, s48
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s49
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s50
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s51

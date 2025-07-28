@@ -66,15 +66,13 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_v4f32_xyzw_tfe(<8 x i32> inreg %r
 ; GFX9-LABEL: load_2darraymsaa_v4f32_xyzw_tfe:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX9-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-NEXT:    v_lshl_or_b32 v10, v1, 16, v0
 ; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v2
-; GFX9-NEXT:    v_mov_b32_e32 v5, 0
-; GFX9-NEXT:    v_lshl_or_b32 v11, v3, 16, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX9-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX9-NEXT:    v_mov_b32_e32 v8, v5
 ; GFX9-NEXT:    v_mov_b32_e32 v9, v5
-; GFX9-NEXT:    v_mov_b32_e32 v0, v5
 ; GFX9-NEXT:    s_mov_b32 s0, s2
 ; GFX9-NEXT:    s_mov_b32 s1, s3
 ; GFX9-NEXT:    s_mov_b32 s2, s4
@@ -83,6 +81,8 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_v4f32_xyzw_tfe(<8 x i32> inreg %r
 ; GFX9-NEXT:    s_mov_b32 s5, s7
 ; GFX9-NEXT:    s_mov_b32 s6, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s9
+; GFX9-NEXT:    v_lshl_or_b32 v11, v3, 16, v0
+; GFX9-NEXT:    v_mov_b32_e32 v0, v5
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v6
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v7
 ; GFX9-NEXT:    v_mov_b32_e32 v3, v8
@@ -190,15 +190,13 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_v4f32_xyzw_tfe_lwe(<8 x i32> inre
 ; GFX9-LABEL: load_2darraymsaa_v4f32_xyzw_tfe_lwe:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX9-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-NEXT:    v_lshl_or_b32 v10, v1, 16, v0
 ; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v2
-; GFX9-NEXT:    v_mov_b32_e32 v5, 0
-; GFX9-NEXT:    v_lshl_or_b32 v11, v3, 16, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX9-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX9-NEXT:    v_mov_b32_e32 v8, v5
 ; GFX9-NEXT:    v_mov_b32_e32 v9, v5
-; GFX9-NEXT:    v_mov_b32_e32 v0, v5
 ; GFX9-NEXT:    s_mov_b32 s0, s2
 ; GFX9-NEXT:    s_mov_b32 s1, s3
 ; GFX9-NEXT:    s_mov_b32 s2, s4
@@ -207,6 +205,8 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_v4f32_xyzw_tfe_lwe(<8 x i32> inre
 ; GFX9-NEXT:    s_mov_b32 s5, s7
 ; GFX9-NEXT:    s_mov_b32 s6, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s9
+; GFX9-NEXT:    v_lshl_or_b32 v11, v3, 16, v0
+; GFX9-NEXT:    v_mov_b32_e32 v0, v5
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v6
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v7
 ; GFX9-NEXT:    v_mov_b32_e32 v3, v8

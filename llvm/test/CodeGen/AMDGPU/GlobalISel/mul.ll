@@ -3247,8 +3247,8 @@ define amdgpu_kernel void @s_mul_u64_sext_with_sregs(ptr addrspace(1) %out, ptr 
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mul_hi_u32 v0, s2, v0
 ; GFX8-NEXT:    s_ashr_i32 s3, s2, 31
-; GFX8-NEXT:    s_mulk_i32 s2, 0x50
 ; GFX8-NEXT:    s_mulk_i32 s3, 0x50
+; GFX8-NEXT:    s_mulk_i32 s2, 0x50
 ; GFX8-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX8-NEXT:    s_add_u32 s3, s3, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s2

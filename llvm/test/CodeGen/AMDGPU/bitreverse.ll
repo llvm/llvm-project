@@ -54,8 +54,8 @@ define amdgpu_kernel void @s_brev_i16(ptr addrspace(1) noalias %out, i16 %val) #
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    s_brev_b32 s2, s2
 ; GISEL-NEXT:    s_lshr_b32 s2, s2, 16
-; GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GISEL-NEXT:    flat_store_short v[0:1], v2
 ; GISEL-NEXT:    s_endpgm
@@ -150,11 +150,11 @@ define amdgpu_kernel void @v_brev_i16(ptr addrspace(1) noalias %out, ptr addrspa
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s3
 ; GISEL-NEXT:    flat_load_ushort v0, v[0:1]
+; GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    v_bfrev_b32_e32 v0, v0
 ; GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GISEL-NEXT:    flat_store_short v[0:1], v2
 ; GISEL-NEXT:    s_endpgm
 ;
@@ -233,8 +233,8 @@ define amdgpu_kernel void @s_brev_i32(ptr addrspace(1) noalias %out, i32 %val) #
 ; GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    s_brev_b32 s2, s2
-; GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GISEL-NEXT:    flat_store_dword v[0:1], v2
 ; GISEL-NEXT:    s_endpgm
@@ -316,10 +316,10 @@ define amdgpu_kernel void @v_brev_i32(ptr addrspace(1) noalias %out, ptr addrspa
 ; GISEL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GISEL-NEXT:    flat_load_dword v0, v[0:1]
+; GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    v_bfrev_b32_e32 v2, v0
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GISEL-NEXT:    flat_store_dword v[0:1], v2
 ; GISEL-NEXT:    s_endpgm
 ;
@@ -394,8 +394,8 @@ define amdgpu_kernel void @s_brev_v2i32(ptr addrspace(1) noalias %out, <2 x i32>
 ; GISEL-NEXT:    s_brev_b32 s2, s2
 ; GISEL-NEXT:    s_brev_b32 s3, s3
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GISEL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GISEL-NEXT:    s_endpgm
@@ -558,8 +558,8 @@ define amdgpu_kernel void @s_brev_i64(ptr addrspace(1) noalias %out, i64 %val) #
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    s_brev_b64 s[2:3], s[2:3]
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GISEL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GISEL-NEXT:    s_endpgm
@@ -725,10 +725,10 @@ define amdgpu_kernel void @s_brev_v2i64(ptr addrspace(1) noalias %out, <2 x i64>
 ; GISEL-NEXT:    s_brev_b64 s[0:1], s[0:1]
 ; GISEL-NEXT:    s_brev_b64 s[2:3], s[2:3]
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GISEL-NEXT:    v_mov_b32_e32 v4, s4
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GISEL-NEXT:    v_mov_b32_e32 v4, s4
 ; GISEL-NEXT:    v_mov_b32_e32 v5, s5
 ; GISEL-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GISEL-NEXT:    s_endpgm
@@ -821,9 +821,9 @@ define amdgpu_kernel void @v_brev_v2i64(ptr addrspace(1) noalias %out, ptr addrs
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    v_bfrev_b32_e32 v4, v1
 ; GISEL-NEXT:    v_bfrev_b32_e32 v5, v0
-; GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GISEL-NEXT:    v_bfrev_b32_e32 v6, v3
 ; GISEL-NEXT:    v_bfrev_b32_e32 v7, v2
+; GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GISEL-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
 ; GISEL-NEXT:    s_endpgm

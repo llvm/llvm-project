@@ -108,14 +108,14 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_10
 ; CHECK-NEXT:  ; %bb.9: ; %.preheader1856.preheader.i.i.i3325
 ; CHECK-NEXT:    ; in Loop: Header=BB0_7 Depth=2
-; CHECK-NEXT:    v_accvgpr_write_b32 a0, v28
 ; CHECK-NEXT:    s_mov_b64 s[24:25], 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v28
 ; CHECK-NEXT:    v_accvgpr_write_b32 a1, v29
 ; CHECK-NEXT:    s_mov_b64 s[8:9], 0
 ; CHECK-NEXT:    s_branch .LBB0_6
 ; CHECK-NEXT:  .LBB0_10: ; in Loop: Header=BB0_7 Depth=2
-; CHECK-NEXT:    v_accvgpr_write_b32 a0, v30
 ; CHECK-NEXT:    s_mov_b64 s[24:25], -1
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v30
 ; CHECK-NEXT:    v_accvgpr_write_b32 a1, v31
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[18:19]
 ; CHECK-NEXT:    s_branch .LBB0_6

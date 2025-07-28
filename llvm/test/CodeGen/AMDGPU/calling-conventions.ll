@@ -245,14 +245,14 @@ define amdgpu_kernel void @call_coldcc() #0 {
 ; VI-NEXT:    s_addc_u32 s5, s5, coldcc@gotpcrel32@hi+12
 ; VI-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
-; VI-NEXT:    s_mov_b32 s14, s10
-; VI-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v1
+; VI-NEXT:    s_mov_b32 s14, s10
+; VI-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; VI-NEXT:    v_or_b32_e32 v31, v0, v2
 ; VI-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; VI-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; VI-NEXT:    s_mov_b64 s[0:1], s[88:89]
-; VI-NEXT:    v_or_b32_e32 v31, v0, v2
 ; VI-NEXT:    s_mov_b64 s[2:3], s[90:91]
 ; VI-NEXT:    v_mov_b32_e32 v0, 1.0
 ; VI-NEXT:    s_mov_b32 s32, 0
@@ -357,14 +357,14 @@ define amdgpu_kernel void @call_fastcc() #0 {
 ; VI-NEXT:    s_addc_u32 s5, s5, fastcc@gotpcrel32@hi+12
 ; VI-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
-; VI-NEXT:    s_mov_b32 s14, s10
-; VI-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v1
+; VI-NEXT:    s_mov_b32 s14, s10
+; VI-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; VI-NEXT:    v_or_b32_e32 v31, v0, v2
 ; VI-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; VI-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; VI-NEXT:    s_mov_b64 s[0:1], s[88:89]
-; VI-NEXT:    v_or_b32_e32 v31, v0, v2
 ; VI-NEXT:    s_mov_b64 s[2:3], s[90:91]
 ; VI-NEXT:    v_mov_b32_e32 v0, 1.0
 ; VI-NEXT:    s_mov_b32 s32, 0
