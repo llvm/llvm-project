@@ -12,6 +12,7 @@
 #undef __SHORT_FILE__
 
 #include "llvm/Support/DebugLog.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -31,7 +32,7 @@ TEST(DebugLogTest, Basic) {
   {
     std::string str;
     raw_string_ostream os(str);
-    DEBUGLOG_WITH_STREAM_AND_TYPE(os, nullptr) << "NoType";
+    DEBUGLOG_WITH_STREAM_AND_TYPE(os, 0, nullptr) << "NoType";
     EXPECT_FALSE(StringRef(os.str()).starts_with('['));
     EXPECT_TRUE(StringRef(os.str()).ends_with("NoType\n"));
   }
@@ -40,8 +41,8 @@ TEST(DebugLogTest, Basic) {
   {
     std::string str;
     raw_string_ostream os(str);
-    DEBUGLOG_WITH_STREAM_AND_TYPE(os, "A") << "A";
-    DEBUGLOG_WITH_STREAM_AND_TYPE(os, "B") << "B";
+    DEBUGLOG_WITH_STREAM_AND_TYPE(os, 0, "A") << "A";
+    DEBUGLOG_WITH_STREAM_AND_TYPE(os, 0, "B") << "B";
     EXPECT_TRUE(StringRef(os.str()).starts_with('['));
     EXPECT_THAT(os.str(), AllOf(HasSubstr("A\n"), HasSubstr("B\n")));
   }
@@ -52,20 +53,53 @@ TEST(DebugLogTest, Basic) {
     raw_string_ostream os(str);
     // Just check that the macro doesn't result in dangling else.
     if (true)
-      DEBUGLOG_WITH_STREAM_AND_TYPE(os, "A") << "A";
+      DEBUGLOG_WITH_STREAM_AND_TYPE(os, 0, "A") << "A";
     else
-      DEBUGLOG_WITH_STREAM_AND_TYPE(os, "A") << "B";
-    DEBUGLOG_WITH_STREAM_AND_TYPE(os, "B") << "B";
+      DEBUGLOG_WITH_STREAM_AND_TYPE(os, 0, "A") << "B";
+    DEBUGLOG_WITH_STREAM_AND_TYPE(os, 0, "B") << "B";
     EXPECT_THAT(os.str(), AllOf(HasSubstr("A\n"), Not(HasSubstr("B\n"))));
 
     int count = 0;
     auto inc = [&]() { return ++count; };
     EXPECT_THAT(count, Eq(0));
-    DEBUGLOG_WITH_STREAM_AND_TYPE(os, "A") << inc();
+    DEBUGLOG_WITH_STREAM_AND_TYPE(os, 0, "A") << inc();
     EXPECT_THAT(count, Eq(1));
-    DEBUGLOG_WITH_STREAM_AND_TYPE(os, "B") << inc();
+    DEBUGLOG_WITH_STREAM_AND_TYPE(os, 0, "B") << inc();
     EXPECT_THAT(count, Eq(1));
   }
+}
+
+TEST(DebugLogTest, BasicWithLevel) {
+  llvm::DebugFlag = true;
+  // We expect A to be always printed, B to be printed only when level is 1 or
+  // below, and C to be printed only when level is 0 or below.
+  static const char *DT[] = {"A", "B:1", "C:"};
+
+  setCurrentDebugTypes(DT, sizeof(DT) / sizeof(DT[0]));
+  std::string str;
+  raw_string_ostream os(str);
+  for (auto type : {"A", "B", "C", "D"})
+    for (int level : llvm::seq<int>(0, 4))
+      DEBUGLOG_WITH_STREAM_TYPE_FILE_AND_LINE(os, level, type, type, level)
+          << level;
+  EXPECT_EQ(os.str(), "[A:0] A:0 0\n[A:1] A:1 1\n[A:2] A:2 2\n[A:3] A:3 "
+                      "3\n[B:0] B:0 0\n[B:1] B:1 1\n[C:0] C:0 0\n");
+}
+
+TEST(DebugLogTest, NegativeLevel) {
+  llvm::DebugFlag = true;
+  // Test the special behavior when all the levels are 0.
+  // In this case we expect all the debug types to be printed.
+  static const char *DT[] = {"A:"};
+
+  setCurrentDebugTypes(DT, sizeof(DT) / sizeof(DT[0]));
+  std::string str;
+  raw_string_ostream os(str);
+  for (auto type : {"A", "B"})
+    for (int level : llvm::seq<int>(0, 2))
+      DEBUGLOG_WITH_STREAM_TYPE_FILE_AND_LINE(os, level, type, type, level)
+          << level;
+  EXPECT_EQ(os.str(), "[A:0] A:0 0\n[B:0] B:0 0\n[B:1] B:1 1\n");
 }
 
 TEST(DebugLogTest, StreamPrefix) {
