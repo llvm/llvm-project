@@ -177,101 +177,78 @@ define dso_local amdgpu_kernel void @test_kernel_1() local_unnamed_addr #1 !reqd
 ; CHECK-NEXT:    .type test_kernel_1$local,@function
 ; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_getreg_b32 s9, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_mul_i32 s33, s9, s8
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s10, s9, 0
-; CHECK-NEXT:    s_add_co_u32 s33, s33, 16
+; CHECK-NEXT:    s_mul_i32 s33, s9, s8
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s10
+; CHECK-NEXT:    s_add_co_u32 s33, s33, 16
 ; CHECK-NEXT:    s_add_co_u32 s32, s33, 0
 ; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
 ; CHECK-NEXT:    s_getreg_b32 s9, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_mov_b32 s10, -1
-; CHECK-NEXT:    s_cmp_lg_u32 s9, 1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB5_3
-; CHECK-NEXT:  ; %bb.1: ; %Flow
-; CHECK-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s10
-; CHECK-NEXT:    s_cbranch_vccz .LBB5_18
-; CHECK-NEXT:  .LBB5_2: ; %common.ret
-; CHECK-NEXT:    s_endpgm
-; CHECK-NEXT:  .LBB5_3: ; %bb.rank_0_2_3_4_5_6_7
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, 0
 ; CHECK-NEXT:    s_cmp_eq_u32 s9, 0
-; CHECK-NEXT:    s_cbranch_scc0 .LBB5_5
-; CHECK-NEXT:  ; %bb.4:
+; CHECK-NEXT:    s_cbranch_scc0 .LBB5_2
+; CHECK-NEXT:  ; %bb.1:
 ; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_0_2_3_4_5_6_7@rel64-8
-; CHECK-NEXT:  .LBB5_5: ; %bb.rank_0_2_3_4_5_6_7
+; CHECK-NEXT:  .LBB5_2: ; %entry
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(32, dummy_store.num_vgpr)
+; CHECK-NEXT:    s_cmp_eq_u32 s9, 1
+; CHECK-NEXT:    s_cbranch_scc0 .LBB5_4
+; CHECK-NEXT:  ; %bb.3:
+; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_1@rel64-8
+; CHECK-NEXT:  .LBB5_4: ; %entry
+; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(32, dummy_store.num_vgpr, dummy_rank1a.num_vgpr, dummy_rank1b.num_vgpr)
 ; CHECK-NEXT:    s_cmp_eq_u32 s9, 2
-; CHECK-NEXT:    s_cbranch_scc0 .LBB5_7
-; CHECK-NEXT:  ; %bb.6:
+; CHECK-NEXT:    s_cbranch_scc0 .LBB5_6
+; CHECK-NEXT:  ; %bb.5:
 ; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_0_2_3_4_5_6_7@rel64-8
-; CHECK-NEXT:  .LBB5_7: ; %bb.rank_0_2_3_4_5_6_7
+; CHECK-NEXT:  .LBB5_6: ; %entry
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(32, dummy_store.num_vgpr)
 ; CHECK-NEXT:    s_cmp_eq_u32 s9, 3
-; CHECK-NEXT:    s_cbranch_scc0 .LBB5_9
-; CHECK-NEXT:  ; %bb.8:
+; CHECK-NEXT:    s_cbranch_scc0 .LBB5_8
+; CHECK-NEXT:  ; %bb.7:
 ; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_0_2_3_4_5_6_7@rel64-8
-; CHECK-NEXT:  .LBB5_9: ; %bb.rank_0_2_3_4_5_6_7
+; CHECK-NEXT:  .LBB5_8: ; %entry
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(32, dummy_store.num_vgpr)
 ; CHECK-NEXT:    s_cmp_eq_u32 s9, 4
-; CHECK-NEXT:    s_cbranch_scc0 .LBB5_11
-; CHECK-NEXT:  ; %bb.10:
+; CHECK-NEXT:    s_cbranch_scc0 .LBB5_10
+; CHECK-NEXT:  ; %bb.9:
 ; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_0_2_3_4_5_6_7@rel64-8
-; CHECK-NEXT:  .LBB5_11: ; %bb.rank_0_2_3_4_5_6_7
+; CHECK-NEXT:  .LBB5_10: ; %entry
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(32, dummy_store.num_vgpr)
 ; CHECK-NEXT:    s_cmp_eq_u32 s9, 5
-; CHECK-NEXT:    s_cbranch_scc0 .LBB5_13
-; CHECK-NEXT:  ; %bb.12:
+; CHECK-NEXT:    s_cbranch_scc0 .LBB5_12
+; CHECK-NEXT:  ; %bb.11:
 ; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_0_2_3_4_5_6_7@rel64-8
-; CHECK-NEXT:  .LBB5_13: ; %bb.rank_0_2_3_4_5_6_7
+; CHECK-NEXT:  .LBB5_12: ; %entry
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(32, dummy_store.num_vgpr)
 ; CHECK-NEXT:    s_cmp_eq_u32 s9, 6
-; CHECK-NEXT:    s_cbranch_scc0 .LBB5_15
-; CHECK-NEXT:  ; %bb.14:
+; CHECK-NEXT:    s_cbranch_scc0 .LBB5_14
+; CHECK-NEXT:  ; %bb.13:
 ; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_0_2_3_4_5_6_7@rel64-8
-; CHECK-NEXT:  .LBB5_15: ; %bb.rank_0_2_3_4_5_6_7
+; CHECK-NEXT:  .LBB5_14: ; %entry
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(32, dummy_store.num_vgpr)
 ; CHECK-NEXT:    s_cmp_eq_u32 s9, 7
-; CHECK-NEXT:    s_cbranch_scc0 .LBB5_17
-; CHECK-NEXT:  ; %bb.16:
+; CHECK-NEXT:    s_cbranch_scc0 .LBB5_16
+; CHECK-NEXT:  ; %bb.15:
 ; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_0_2_3_4_5_6_7@rel64-8
-; CHECK-NEXT:  .LBB5_17: ; %bb.rank_0_2_3_4_5_6_7
+; CHECK-NEXT:  .LBB5_16: ; %entry
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(32, dummy_store.num_vgpr)
-; CHECK-NEXT:    s_cbranch_execnz .LBB5_2
-; CHECK-NEXT:  .LBB5_18: ; %bb.rank_1
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, 0
-; CHECK-NEXT:    s_cmp_eq_u32 s9, 1
-; CHECK-NEXT:    s_cbranch_scc0 .LBB5_20
-; CHECK-NEXT:  ; %bb.19:
-; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_1@rel64-8
-; CHECK-NEXT:  .LBB5_20: ; %bb.rank_1
-; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(32, dummy_store.num_vgpr, dummy_rank1a.num_vgpr, dummy_rank1b.num_vgpr)
 ; CHECK-NEXT:    s_endpgm
 entry:
-  %0 = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
-  %cond = icmp eq i32 %0, 1
-  br i1 %cond, label %bb.rank_1, label %bb.rank_0_2_3_4_5_6_7
-
-common.ret:                                       ; preds = %bb.rank_1, %bb.rank_0_2_3_4_5_6_7
-  ret void
-
-bb.rank_0_2_3_4_5_6_7:                            ; preds = %entry
   call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr @test_kernel_1.rank_0_2_3_4_5_6_7)
+  call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr @test_kernel_1.rank_1)
   call void @llvm.amdgcn.wavegroup.rank.p0(i32 2, ptr @test_kernel_1.rank_0_2_3_4_5_6_7)
   call void @llvm.amdgcn.wavegroup.rank.p0(i32 3, ptr @test_kernel_1.rank_0_2_3_4_5_6_7)
   call void @llvm.amdgcn.wavegroup.rank.p0(i32 4, ptr @test_kernel_1.rank_0_2_3_4_5_6_7)
   call void @llvm.amdgcn.wavegroup.rank.p0(i32 5, ptr @test_kernel_1.rank_0_2_3_4_5_6_7)
   call void @llvm.amdgcn.wavegroup.rank.p0(i32 6, ptr @test_kernel_1.rank_0_2_3_4_5_6_7)
   call void @llvm.amdgcn.wavegroup.rank.p0(i32 7, ptr @test_kernel_1.rank_0_2_3_4_5_6_7)
-  br label %common.ret
-
-bb.rank_1:                                        ; preds = %entry
-  call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr @test_kernel_1.rank_1)
-  br label %common.ret
+  ret void
 }
 
-; KERNEL:	.set test_kernel_1.private_seg_size, max(0, 0+max(.Ltest_kernel_1.rank_0_2_3_4_5_6_7.private_seg_size, .Ltest_kernel_1.rank_0_2_3_4_5_6_7.private_seg_size, .Ltest_kernel_1.rank_0_2_3_4_5_6_7.private_seg_size, .Ltest_kernel_1.rank_0_2_3_4_5_6_7.private_seg_size, .Ltest_kernel_1.rank_0_2_3_4_5_6_7.private_seg_size, .Ltest_kernel_1.rank_0_2_3_4_5_6_7.private_seg_size, .Ltest_kernel_1.rank_0_2_3_4_5_6_7.private_seg_size, .Ltest_kernel_1.rank_1.private_seg_size))
-; KERNEL:	.set test_kernel_1.num_vgpr_rank_sum, 0+.Ltest_kernel_1.rank_0_2_3_4_5_6_7.num_vgpr+.Ltest_kernel_1.rank_0_2_3_4_5_6_7.num_vgpr+.Ltest_kernel_1.rank_0_2_3_4_5_6_7.num_vgpr+.Ltest_kernel_1.rank_0_2_3_4_5_6_7.num_vgpr+.Ltest_kernel_1.rank_0_2_3_4_5_6_7.num_vgpr+.Ltest_kernel_1.rank_0_2_3_4_5_6_7.num_vgpr+.Ltest_kernel_1.rank_0_2_3_4_5_6_7.num_vgpr+.Ltest_kernel_1.rank_1.num_vgpr
+; KERNEL:	.set test_kernel_1.private_seg_size, max(0, 0+max(.Ltest_kernel_1.rank_0_2_3_4_5_6_7.private_seg_size, .Ltest_kernel_1.rank_1.private_seg_size, .Ltest_kernel_1.rank_0_2_3_4_5_6_7.private_seg_size, .Ltest_kernel_1.rank_0_2_3_4_5_6_7.private_seg_size, .Ltest_kernel_1.rank_0_2_3_4_5_6_7.private_seg_size, .Ltest_kernel_1.rank_0_2_3_4_5_6_7.private_seg_size, .Ltest_kernel_1.rank_0_2_3_4_5_6_7.private_seg_size, .Ltest_kernel_1.rank_0_2_3_4_5_6_7.private_seg_size))
+; KERNEL:	.set test_kernel_1.num_vgpr_rank_sum, 0+.Ltest_kernel_1.rank_0_2_3_4_5_6_7.num_vgpr+.Ltest_kernel_1.rank_1.num_vgpr+.Ltest_kernel_1.rank_0_2_3_4_5_6_7.num_vgpr+.Ltest_kernel_1.rank_0_2_3_4_5_6_7.num_vgpr+.Ltest_kernel_1.rank_0_2_3_4_5_6_7.num_vgpr+.Ltest_kernel_1.rank_0_2_3_4_5_6_7.num_vgpr+.Ltest_kernel_1.rank_0_2_3_4_5_6_7.num_vgpr+.Ltest_kernel_1.rank_0_2_3_4_5_6_7.num_vgpr
 
 declare !callback !0 void @llvm.amdgcn.wavegroup.rank.p0(i32 immarg, ptr)
 !1 = !{i64 1, i1 false}

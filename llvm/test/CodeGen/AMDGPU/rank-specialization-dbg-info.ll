@@ -10,29 +10,15 @@ define dso_local amdgpu_kernel void @test_kernel() #0 !dbg !9 !reqd_work_group_s
 ; CHECK-LABEL: define dso_local amdgpu_kernel void @test_kernel(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] !dbg [[DBG4:![0-9]+]] !reqd_work_group_size [[META31:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
-; CHECK-NEXT:    switch i32 [[TMP0]], label %[[BB_RANK_0_1:.*]] [
-; CHECK-NEXT:      i32 7, label %[[BB_RANK_2_3_4_5_6_7:.*]]
-; CHECK-NEXT:      i32 6, label %[[BB_RANK_2_3_4_5_6_7]]
-; CHECK-NEXT:      i32 2, label %[[BB_RANK_2_3_4_5_6_7]]
-; CHECK-NEXT:      i32 3, label %[[BB_RANK_2_3_4_5_6_7]]
-; CHECK-NEXT:      i32 4, label %[[BB_RANK_2_3_4_5_6_7]]
-; CHECK-NEXT:      i32 5, label %[[BB_RANK_2_3_4_5_6_7]]
-; CHECK-NEXT:    ]
-; CHECK:       [[COMMON_RET:.*]]:
-; CHECK-NEXT:    ret void
-; CHECK:       [[BB_RANK_0_1]]:
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel.rank_0_1)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel.rank_0_1)
-; CHECK-NEXT:    br label %[[COMMON_RET]]
-; CHECK:       [[BB_RANK_2_3_4_5_6_7]]:
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 2, ptr nonnull @test_kernel.rank_2_3_4_5_6_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 3, ptr nonnull @test_kernel.rank_2_3_4_5_6_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 4, ptr nonnull @test_kernel.rank_2_3_4_5_6_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 5, ptr nonnull @test_kernel.rank_2_3_4_5_6_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 6, ptr nonnull @test_kernel.rank_2_3_4_5_6_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 7, ptr nonnull @test_kernel.rank_2_3_4_5_6_7)
-; CHECK-NEXT:    br label %[[COMMON_RET]]
+; CHECK-NEXT:    ret void
 ;
 entry:
   %wid = call i32 @llvm.amdgcn.wave.id.in.wavegroup()

@@ -184,7 +184,7 @@ void AMDGPURankSpecializationImpl::buildSpecializations(Function &Kernel) {
   // Create the clones
   SmallVector<Function *> Specializations;
   ValueToValueMapTy VMap;
-
+  SmallDenseMap<unsigned, Function *> RankToSpecialization;
   for (unsigned i = 0; i != DisjointMasks.size(); ++i) {
     RankMask Mask = DisjointMasks[i];
 
@@ -245,6 +245,11 @@ void AMDGPURankSpecializationImpl::buildSpecializations(Function &Kernel) {
       if (Switch->getCondition() == CloneWaveID)
         Switch->setCondition(ConstantInt::get(WaveID->getType(), *getFirstRank(Mask)));
     }
+
+    // Keep track of which rank gets mapped to which specialization.
+    for (unsigned r = 0; r < MAX_WAVES_PER_WAVEGROUP; r++)
+      if (Mask.test(r))
+        RankToSpecialization[r] = Specialization;
   }
 
   // Kernel was already cloned for each specialization, so clear its body to use
@@ -262,47 +267,29 @@ void AMDGPURankSpecializationImpl::buildSpecializations(Function &Kernel) {
   for (Value &Arg : Kernel.args())
     Args.push_back(&Arg);
 
-  for (unsigned i = 0; i != DisjointMasks.size(); ++i) {
-    RankMask Mask = DisjointMasks[i];
-    BasicBlock *BB = BasicBlock::Create(
-        Kernel.getContext(), "bb" + getRankMaskSuffix(Mask), &Kernel);
-    Builder.SetInsertPoint(BB);
-
-    for (unsigned Rank = 0; Rank < MAX_WAVES_PER_WAVEGROUP; Rank++)
-      if (Mask[Rank]) {
-        // Intrinsic handles proper set up of calls to rank funcs.
-        auto *Callee = Builder.CreateIntrinsic(
-            Builder.getVoidTy(), Intrinsic::amdgcn_wavegroup_rank,
-            {ConstantInt::get(Builder.getInt32Ty(), Rank), Specializations[i]});
-
-        // Callback metadata is necessary for propagating intrinsic call through
-        // call graph.
-        auto *WGRFIntrinsic = Callee->getCalledFunction();
-        if (!WGRFIntrinsic->hasMetadata(LLVMContext::MD_callback)) {
-          LLVMContext &Ctx = WGRFIntrinsic->getContext();
-          MDBuilder MDB(Ctx);
-          WGRFIntrinsic->addMetadata(
-              LLVMContext::MD_callback,
-              *MDNode::get(Ctx, {MDB.createCallbackEncoding(
-                                    1, {},
-                                    /* VarArgsArePassed */ false)}));
-        }
-      }
-    Builder.CreateRetVoid();
-    Cases.push_back(BB);
-  }
-
   Builder.SetInsertPoint(Entry);
-  WaveID = Builder.CreateIntrinsic(Intrinsic::amdgcn_wave_id_in_wavegroup, {});
-  SwitchInst *Switch = Builder.CreateSwitch(WaveID, Cases[0], MAX_WAVES_PER_WAVEGROUP);
 
-  for (unsigned i = 0; i != DisjointMasks.size(); ++i) {
-    RankMask Mask = DisjointMasks[i];
-    for (int Rank = 0; Rank != MAX_WAVES_PER_WAVEGROUP; ++Rank) {
-      if (Mask[Rank])
-        Switch->addCase(ConstantInt::get(Builder.getInt32Ty(), Rank), Cases[i]);
+  for (unsigned r = 0; r < MAX_WAVES_PER_WAVEGROUP; r++) {
+    // Intrinsic handles proper set up of calls to rank funcs.
+    auto *Callee = Builder.CreateIntrinsic(
+        Builder.getVoidTy(), Intrinsic::amdgcn_wavegroup_rank,
+        {ConstantInt::get(Builder.getInt32Ty(), r), RankToSpecialization[r]});
+
+    // Callback metadata is necessary for propagating intrinsic call through
+    // call graph.
+    auto *WGRFIntrinsic = Callee->getCalledFunction();
+    if (!WGRFIntrinsic->hasMetadata(LLVMContext::MD_callback)) {
+      LLVMContext &Ctx = WGRFIntrinsic->getContext();
+      MDBuilder MDB(Ctx);
+      WGRFIntrinsic->addMetadata(
+          LLVMContext::MD_callback,
+          *MDNode::get(
+              Ctx, {MDB.createCallbackEncoding(1, {},
+                                               /* VarArgsArePassed */ false)}));
     }
   }
+
+  Builder.CreateRetVoid();
 }
 
 // Analyze all users of WaveID to:
