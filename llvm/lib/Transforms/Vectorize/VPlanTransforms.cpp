@@ -2717,20 +2717,21 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R,
   VPBuilder Builder(R);
   DebugLoc DL = R->getDebugLoc();
 
-  // Build a pointer phi
-  VPPhi *Phi;
+  // Build a pointer phi.
+  VPPhi *ScalarPtrPhi;
   if (CurrentPart == 0) {
-    Phi = Builder.createScalarPhi({R->getStartValue()}, DL, "pointer.phi");
+    ScalarPtrPhi =
+        Builder.createScalarPhi({R->getStartValue()}, DL, "pointer.phi");
   } else {
     // The recipe has been unrolled. In that case, fetch the single pointer phi
     // shared among all unrolled parts of the recipe.
     auto *PtrAdd = cast<VPInstruction>(R->getFirstUnrolledPartOperand());
-    Phi = cast<VPPhi>(PtrAdd->getOperand(0)->getDefiningRecipe());
+    ScalarPtrPhi = cast<VPPhi>(PtrAdd->getOperand(0)->getDefiningRecipe());
   }
 
   Builder.setInsertPoint(R->getParent(), R->getParent()->getFirstNonPhi());
 
-  // A pointer induction, performed by using a gep
+  // A pointer induction, performed by using a gep.
   Type *PhiType = TypeInfo.inferScalarType(R->getStepValue());
   VPValue *RuntimeVF = Builder.createScalarZExtOrTrunc(
       &Plan->getVF(), PhiType, TypeInfo.inferScalarType(&Plan->getVF()), DL);
@@ -2749,8 +2750,9 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R,
     Builder.setInsertPoint(ExitingBB,
                            ExitingBB->getTerminator()->getIterator());
 
-    VPValue *InductionGEP = Builder.createPtrAdd(Phi, Offset, DL, "ptr.ind");
-    Phi->addOperand(InductionGEP);
+    VPValue *InductionGEP =
+        Builder.createPtrAdd(ScalarPtrPhi, Offset, DL, "ptr.ind");
+    ScalarPtrPhi->addOperand(InductionGEP);
   }
 
   VPValue *CurrentPartV =
@@ -2762,14 +2764,14 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R,
       Builder.createNaryOp(Instruction::Mul, {RuntimeVF, CurrentPartV});
   VPValue *StartOffset =
       Builder.createNaryOp(VPInstruction::Broadcast, StartOffsetScalar);
-  // Create a vector of consecutive numbers from zero to VF.
+  // Create a vector of consecutive numbers from StartOffset to StartOffset+VF.
   StartOffset = Builder.createNaryOp(
       Instruction::Add,
       {StartOffset,
        Builder.createNaryOp(VPInstruction::StepVector, {}, PhiType)});
 
   VPValue *PtrAdd = Builder.createWidePtrAdd(
-      Phi,
+      ScalarPtrPhi,
       Builder.createNaryOp(Instruction::Mul, {StartOffset, R->getStepValue()}),
       DL, "vector.gep");
 
