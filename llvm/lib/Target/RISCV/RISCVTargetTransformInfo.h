@@ -265,7 +265,7 @@ public:
     if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
       return false;
 
-    return TLI->isLegalElementTypeForRVV(ElemType);
+    return TLI->isLegalLoadStoreElementTypeForRVV(ElemType);
   }
 
   bool isLegalMaskedLoad(Type *DataType, Align Alignment,
@@ -297,7 +297,7 @@ public:
     if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
       return false;
 
-    return TLI->isLegalElementTypeForRVV(ElemType);
+    return TLI->isLegalLoadStoreElementTypeForRVV(ElemType);
   }
 
   bool isLegalMaskedGather(Type *DataType, Align Alignment) const override {

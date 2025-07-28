@@ -2739,6 +2739,27 @@ bool RISCVTargetLowering::isLegalElementTypeForRVV(EVT ScalarTy) const {
   }
 }
 
+bool RISCVTargetLowering::isLegalLoadStoreElementTypeForRVV(
+    EVT ScalarTy) const {
+  if (!ScalarTy.isSimple())
+    return false;
+  switch (ScalarTy.getSimpleVT().SimpleTy) {
+  case MVT::iPTR:
+    return Subtarget.is64Bit() ? Subtarget.hasVInstructionsI64() : true;
+  case MVT::i8:
+  case MVT::i16:
+  case MVT::i32:
+  case MVT::f16:
+  case MVT::bf16:
+  case MVT::f32:
+    return true;
+  case MVT::i64:
+  case MVT::f64:
+    return Subtarget.hasVInstructionsI64();
+  default:
+    return false;
+  }
+}
 
 unsigned RISCVTargetLowering::combineRepeatedFPDivisors() const {
   return NumRepeatedDivisors;
@@ -24239,7 +24260,7 @@ bool RISCVTargetLowering::isLegalStridedLoadStore(EVT DataType,
     return false;
 
   EVT ScalarType = DataType.getScalarType();
-  if (!isLegalElementTypeForRVV(ScalarType))
+  if (!isLegalLoadStoreElementTypeForRVV(ScalarType))
     return false;
 
   if (!Subtarget.enableUnalignedVectorMem() &&
