@@ -13,6 +13,7 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 #include "src/__support/wchar/mbsnrtowcs.h"
 #include "src/__support/wchar/mbstate.h"
 
@@ -21,6 +22,7 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(size_t, mbstowcs,
                    (wchar_t *__restrict pwcs, const char *__restrict s,
                     size_t n)) {
+  LIBC_CRASH_ON_NULLPTR(s);
   // If destination is null, ignore n
   n = pwcs == nullptr ? SIZE_MAX : n;
   static internal::mbstate internal_mbstate;
