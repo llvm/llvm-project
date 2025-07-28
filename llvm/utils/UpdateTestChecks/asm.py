@@ -183,7 +183,7 @@ ASM_FUNCTION_ARM_MACHO_RE = re.compile(
 )
 
 ASM_FUNCTION_THUMBS_DARWIN_RE = re.compile(
-    r'^_(?P<func>[^:]+):[ \t]*@[ \t]@"?(?P=func)"?\n'
+    r'^_(?P<func>[^:]+):[ \t]*(@[ \t]@"?(?P=func)"?)?\n'
     r"(?P<body>.*?)\n"
     r"[ \t]*\.data_region\n",
     flags=(re.M | re.S),
