@@ -57,10 +57,10 @@ void fun_pointer_assignment(struct struct_data_const_count *sp, void *__bidi_ind
 // CHECK: |     | |   |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
 // CHECK: |     | |   |     `-OpaqueValueExpr [[ove]] {{.*}} 'int *__bidi_indexable'
 // CHECK: |     | |   `-BinaryOperator {{.+}} 'int' '<='
-// CHECK: |     | |     |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: |     | |     |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: |     | |     | `-ImplicitCastExpr {{.+}} 'unsigned int' <LValueToRValue>
 // CHECK: |     | |     |   `-DeclRefExpr {{.+}} [[var_data_const_count]]
-// CHECK: |     | |     `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |     | |     `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |     | |       |-GetBoundExpr {{.+}} upper
 // CHECK: |     | |       | `-OpaqueValueExpr [[ove]] {{.*}} 'int *__bidi_indexable'
 // CHECK: |     | |       `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
@@ -101,10 +101,10 @@ void fun_pointer_assignment2(struct struct_data_const_count *sp, void *__bidi_in
 // CHECK:      {{^}}|   | | |   |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
 // CHECK-NEXT: {{^}}|   | | |   |     `-OpaqueValueExpr [[ove_1]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}|   | | |   `-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}|   | | |     |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}|   | | |     |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}|   | | |     | `-ImplicitCastExpr {{.+}} 'unsigned int' <LValueToRValue>
 // CHECK-NEXT: {{^}}|   | | |     |   `-DeclRefExpr {{.+}} [[var_data_const_count]]
-// CHECK-NEXT: {{^}}|   | | |     `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: {{^}}|   | | |     `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}|   | | |       |-GetBoundExpr {{.+}} upper
 // CHECK-NEXT: {{^}}|   | | |       | `-OpaqueValueExpr [[ove_1]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}|   | | |       `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>

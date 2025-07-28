@@ -42,9 +42,9 @@ void test(int *__bidi_indexable arg) {
 // CHECK:   | |     | |-IntegerLiteral {{.+}} 0
 // CHECK:   | |     | `-OpaqueValueExpr [[ove]] {{.*}} 'int'
 // CHECK:   | |     `-BinaryOperator {{.+}} 'int' '<='
-// CHECK:   | |       |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:   | |       |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:   | |       | `-OpaqueValueExpr [[ove]] {{.*}} 'int'
-// CHECK:   | |       `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:   | |       `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK:   | |         |-GetBoundExpr {{.+}} upper
 // CHECK:   | |         | `-OpaqueValueExpr [[ove_1]] {{.*}} 'int *__bidi_indexable'
 // CHECK:   | |         `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>

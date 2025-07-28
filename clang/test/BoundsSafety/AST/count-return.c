@@ -57,9 +57,9 @@ int Test() {
 // CHECK: {{^}}    |     | | |   `-OpaqueValueExpr [[ove_3]] {{.*}} 'int'
 // CHECK: {{^}}    |     | |-OpaqueValueExpr [[ove_3]]
 // CHECK: {{^}}    |     | | `-ImplicitCastExpr {{.+}} 'int' <IntegralCast>
-// CHECK: {{^}}    |     | |   `-BinaryOperator {{.+}} 'unsigned long' '*'
+// CHECK: {{^}}    |     | |   `-BinaryOperator {{.+}} '__size_t':'unsigned long' '*'
 // CHECK: {{^}}    |     | |     |-UnaryExprOrTypeTraitExpr
-// CHECK: {{^}}    |     | |     `-ImplicitCastExpr {{.+}} 'unsigned long' <IntegralCast>
+// CHECK: {{^}}    |     | |     `-ImplicitCastExpr {{.+}} '__size_t':'unsigned long' <IntegralCast>
 // CHECK: {{^}}    |     | |       `-IntegerLiteral {{.+}} 10
 // CHECK: {{^}}    |     | `-OpaqueValueExpr [[ove_2]]
 // CHECK: {{^}}    |     |   `-CallExpr

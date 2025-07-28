@@ -66,9 +66,9 @@ void foo(int *__counted_by(len) elems, int len, int idx) {
 // CHECK:     | |   |     `-OpaqueValueExpr [[ove]] {{.*}} 'void *__bidi_indexable'
 // CHECK:     | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK:     | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK:     | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:     | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:     | |     | | `-OpaqueValueExpr [[ove_3]] {{.*}} 'int'
-// CHECK:     | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:     | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK:     | |     |   |-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // CHECK:     | |     |   | `-CStyleCastExpr {{.+}} 'char *__bidi_indexable' <BitCast>
 // CHECK:     | |     |   |   `-GetBoundExpr {{.+}} upper

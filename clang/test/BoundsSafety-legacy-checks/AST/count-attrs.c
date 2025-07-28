@@ -83,9 +83,9 @@ int *__sized_by(len) byte_frob_body(int len) { return 0; }
 // CHECK-NEXT:|   |-DeclStmt {{.*}}
 // CHECK-NEXT:|   | `-VarDecl {{.*}} used n3 'int' cinit
 // CHECK-NEXT:|   |   |-ImplicitCastExpr {{.*}} 'int' <IntegralCast>
-// CHECK-NEXT:|   |   | `-BinaryOperator {{.*}} 'unsigned long' '*'
-// CHECK-NEXT:|   |   |   |-UnaryExprOrTypeTraitExpr {{.*}} 'unsigned long' sizeof 'int'
-// CHECK-NEXT:|   |   |   `-ImplicitCastExpr {{.*}} 'unsigned long' <IntegralCast>
+// CHECK-NEXT:|   |   | `-BinaryOperator {{.*}} '__size_t':'unsigned long' '*'
+// CHECK-NEXT:|   |   |   |-UnaryExprOrTypeTraitExpr {{.*}} '__size_t':'unsigned long' sizeof 'int'
+// CHECK-NEXT:|   |   |   `-ImplicitCastExpr {{.*}} '__size_t':'unsigned long' <IntegralCast>
 // CHECK-NEXT:|   |   |     `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT:|   |   |       `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'n' 'int'
 // CHECK-NEXT:|   |   `-DependerDeclsAttr {{.*}} Implicit {{.*}} 0
@@ -94,9 +94,9 @@ int *__sized_by(len) byte_frob_body(int len) { return 0; }
 // CHECK-NEXT:|   |-DeclStmt {{.*}}
 // CHECK-NEXT:|   | `-VarDecl {{.*}} used n4 'int' cinit
 // CHECK-NEXT:|   |   |-ImplicitCastExpr {{.*}} 'int' <IntegralCast>
-// CHECK-NEXT:|   |   | `-BinaryOperator {{.*}} 'unsigned long' '*'
-// CHECK-NEXT:|   |   |   |-UnaryExprOrTypeTraitExpr {{.*}} 'unsigned long' sizeof 'int'
-// CHECK-NEXT:|   |   |   `-ImplicitCastExpr {{.*}} 'unsigned long' <IntegralCast>
+// CHECK-NEXT:|   |   | `-BinaryOperator {{.*}} '__size_t':'unsigned long' '*'
+// CHECK-NEXT:|   |   |   |-UnaryExprOrTypeTraitExpr {{.*}} '__size_t':'unsigned long' sizeof 'int'
+// CHECK-NEXT:|   |   |   `-ImplicitCastExpr {{.*}} '__size_t':'unsigned long' <IntegralCast>
 // CHECK-NEXT:|   |   |     `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT:|   |   |       `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'n2' 'int'
 // CHECK-NEXT:|   |   `-DependerDeclsAttr {{.*}} Implicit {{.*}} 0

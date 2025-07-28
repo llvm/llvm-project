@@ -35,9 +35,9 @@ void TestCountedPtr(int *__counted_by(*len) *ptr, unsigned *len) {
 // CHECK: |   | |   |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
 // CHECK: |   | |   |     `-OpaqueValueExpr [[ove_2]] {{.*}} 'int *__bidi_indexable'
 // CHECK: |   | |   `-BinaryOperator {{.+}} 'int' '<='
-// CHECK: |   | |     |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: |   | |     |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: |   | |     | `-OpaqueValueExpr [[ove_5:0x[^ ]+]] {{.*}} 'unsigned int'
-// CHECK: |   | |     `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |   | |     `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |   | |       |-GetBoundExpr {{.+}} upper
 // CHECK: |   | |       | `-OpaqueValueExpr [[ove_2]] {{.*}} 'int *__bidi_indexable'
 // CHECK: |   | |       `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
@@ -127,16 +127,16 @@ void TestCount(int *__counted_by(len) ptr, unsigned len) {
 // CHECK: |   |     | |     `-OpaqueValueExpr [[ove_6]] {{.*}} 'int *__bidi_indexable'
 // CHECK: |   |     | `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK: |   |     |   |-BinaryOperator {{.+}} 'int' '<='
-// CHECK: |   |     |   | |-OpaqueValueExpr [[ove_9:0x[^ ]+]] {{.*}} 'long'
-// CHECK: |   |     |   | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |   |     |   | |-OpaqueValueExpr [[ove_9:0x[^ ]+]] {{.*}} '__ptrdiff_t':'long'
+// CHECK: |   |     |   | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |   |     |   |   |-GetBoundExpr {{.+}} upper
 // CHECK: |   |     |   |   | `-OpaqueValueExpr [[ove_6]] {{.*}} 'int *__bidi_indexable'
 // CHECK: |   |     |   |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
 // CHECK: |   |     |   |     `-OpaqueValueExpr [[ove_6]] {{.*}} 'int *__bidi_indexable'
 // CHECK: |   |     |   `-BinaryOperator {{.+}} 'int' '<='
-// CHECK: |   |     |     |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: |   |     |     |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: |   |     |     | `-IntegerLiteral {{.+}} 0
-// CHECK: |   |     |     `-OpaqueValueExpr [[ove_9]] {{.*}} 'long'
+// CHECK: |   |     |     `-OpaqueValueExpr [[ove_9]] {{.*}} '__ptrdiff_t':'long'
 // CHECK: |   |     |-OpaqueValueExpr [[ove_6]]
 // CHECK: |   |     | `-MaterializeSequenceExpr {{.+}} <Unbind>
 // CHECK: |   |     |   |-MaterializeSequenceExpr {{.+}} <Bind>
@@ -155,7 +155,7 @@ void TestCount(int *__counted_by(len) ptr, unsigned len) {
 // CHECK: |   |     |   |-OpaqueValueExpr [[ove_7]] {{.*}} 'int *__single __counted_by(len)':'int *__single'
 // CHECK: |   |     |   `-OpaqueValueExpr [[ove_8]] {{.*}} 'unsigned int'
 // CHECK: |   |     `-OpaqueValueExpr [[ove_9]]
-// CHECK: |   |       `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: |   |       `-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: |   |         `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK: |   |           `-DeclRefExpr {{.+}} [[var_len2]]
 // CHECK: |   |-MaterializeSequenceExpr {{.+}} <Bind>
@@ -180,11 +180,11 @@ void TestCount(int *__counted_by(len) ptr, unsigned len) {
 // CHECK: |   | |   |     `-OpaqueValueExpr [[ove_10]] {{.*}} 'int *__bidi_indexable'
 // CHECK: |   | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK: |   | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK: |   | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: |   | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: |   | |     | | `-OpaqueValueExpr [[ove_13:0x[^ ]+]] {{.*}} 'int'
 // CHECK: |   | |     | |     | `-OpaqueValueExpr [[ove_14:0x[^ ]+]] {{.*}} lvalue
 // CHECK: |   | |     | |     `-OpaqueValueExpr [[ove_15:0x[^ ]+]] {{.*}} 'int'
-// CHECK: |   | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |   | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |   | |     |   |-GetBoundExpr {{.+}} upper
 // CHECK: |   | |     |   | `-OpaqueValueExpr [[ove_10]] {{.*}} 'int *__bidi_indexable'
 // CHECK: |   | |     |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>

@@ -159,10 +159,10 @@
 // CHECK-NEXT: |     | | | |         `-IntegerLiteral {{.+}} 'unsigned long' 1
 // CHECK-NEXT: |     | | | `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |     | | |   |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |     | | |   | |-OpaqueValueExpr {{.+}} 'long'
-// CHECK-NEXT: |     | | |   | | `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |     | | |   | |-OpaqueValueExpr {{.+}} '__ptrdiff_t':'long'
+// CHECK-NEXT: |     | | |   | | `-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |     | | |   | |   `-IntegerLiteral {{.+}} 'int' 3
-// CHECK-NEXT: |     | | |   | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |     | | |   | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |     | | |   |   |-GetBoundExpr {{.+}} 'int *' upper
 // CHECK-NEXT: |     | | |   |   | `-OpaqueValueExpr {{.+}} 'int *__bidi_indexable'
 // CHECK-NEXT: |     | | |   |   |   `-BinaryOperator {{.+}} 'int *__bidi_indexable' '+'
@@ -228,13 +228,13 @@
 // CHECK-NEXT: |     | | |   |         |   `-IntegerLiteral {{.+}} 'int' 3
 // CHECK-NEXT: |     | | |   |         `-IntegerLiteral {{.+}} 'unsigned long' 1
 // CHECK-NEXT: |     | | |   `-BinaryOperator {{.+}} <<invalid sloc>, line:{{.+}}> 'int' '<='
-// CHECK-NEXT: |     | | |     |-ImplicitCastExpr {{.+}} <<invalid sloc>> 'long' <IntegralCast>
+// CHECK-NEXT: |     | | |     |-ImplicitCastExpr {{.+}} <<invalid sloc>> '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |     | | |     | `-IntegerLiteral {{.+}} <<invalid sloc>> 'int' 0
-// CHECK-NEXT: |     | | |     `-OpaqueValueExpr {{.+}} 'long'
-// CHECK-NEXT: |     | | |       `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |     | | |     `-OpaqueValueExpr {{.+}} '__ptrdiff_t':'long'
+// CHECK-NEXT: |     | | |       `-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |     | | |         `-IntegerLiteral {{.+}} 'int' 3
-// CHECK-NEXT: |     | | `-OpaqueValueExpr {{.+}} 'long'
-// CHECK-NEXT: |     | |   `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |     | | `-OpaqueValueExpr {{.+}} '__ptrdiff_t':'long'
+// CHECK-NEXT: |     | |   `-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |     | |     `-IntegerLiteral {{.+}} 'int' 3
 // CHECK-NEXT: |     | |-OpaqueValueExpr {{.+}} 'int *__single __counted_by(3)':'int *__single' lvalue
 // CHECK-NEXT: |     | | `-DeclRefExpr {{.+}} 'int *__single __counted_by(3)':'int *__single' lvalue ParmVar {{.+}} 'p' 'int *__single __counted_by(3)':'int *__single'
@@ -457,10 +457,10 @@ void test_cb_unary(int* __counted_by(3) p) { // expected-note{{__counted_by attr
 // CHECK-NEXT:       | | | |           `-IntegerLiteral {{.+}} 'int' 1
 // CHECK-NEXT:       | | | `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT:       | | |   |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT:       | | |   | |-OpaqueValueExpr {{.+}} 'long'
-// CHECK-NEXT:       | | |   | | `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT:       | | |   | |-OpaqueValueExpr {{.+}} '__ptrdiff_t':'long'
+// CHECK-NEXT:       | | |   | | `-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT:       | | |   | |   `-IntegerLiteral {{.+}} 'int' 3
-// CHECK-NEXT:       | | |   | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT:       | | |   | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT:       | | |   |   |-GetBoundExpr {{.+}} 'int *' upper
 // CHECK-NEXT:       | | |   |   | `-OpaqueValueExpr {{.+}} 'int *__bidi_indexable'
 // CHECK-NEXT:       | | |   |   |   `-BinaryOperator {{.+}} 'int *__bidi_indexable' '+'
@@ -528,13 +528,13 @@ void test_cb_unary(int* __counted_by(3) p) { // expected-note{{__counted_by attr
 // CHECK-NEXT:       | | |   |         `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT:       | | |   |           `-IntegerLiteral {{.+}} 'int' 1
 // CHECK-NEXT:       | | |   `-BinaryOperator {{.+}} <<invalid sloc>, line:{{.+}}> 'int' '<='
-// CHECK-NEXT:       | | |     |-ImplicitCastExpr {{.+}} <<invalid sloc>> 'long' <IntegralCast>
+// CHECK-NEXT:       | | |     |-ImplicitCastExpr {{.+}} <<invalid sloc>> '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT:       | | |     | `-IntegerLiteral {{.+}} <<invalid sloc>> 'int' 0
-// CHECK-NEXT:       | | |     `-OpaqueValueExpr {{.+}} 'long'
-// CHECK-NEXT:       | | |       `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT:       | | |     `-OpaqueValueExpr {{.+}} '__ptrdiff_t':'long'
+// CHECK-NEXT:       | | |       `-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT:       | | |         `-IntegerLiteral {{.+}} 'int' 3
-// CHECK-NEXT:       | | `-OpaqueValueExpr {{.+}} 'long'
-// CHECK-NEXT:       | |   `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT:       | | `-OpaqueValueExpr {{.+}} '__ptrdiff_t':'long'
+// CHECK-NEXT:       | |   `-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT:       | |     `-IntegerLiteral {{.+}} 'int' 3
 // CHECK-NEXT:       | |-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT:       | | `-IntegerLiteral {{.+}} 'int' 1

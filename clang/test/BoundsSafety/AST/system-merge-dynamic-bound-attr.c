@@ -126,7 +126,7 @@ void Test(unsigned siz) {
 // CHECK: {{^}}      |     |   `-BinaryOperator {{.+}} 'int' '<='
 // CHECK: {{^}}      |     |     |-OpaqueValueExpr [[ove_7]] {{.*}} 'unsigned long long'
 // CHECK: {{^}}      |     |     `-ImplicitCastExpr {{.+}} 'unsigned long long' <IntegralCast>
-// CHECK: {{^}}      |     |       `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: {{^}}      |     |       `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: {{^}}      |     |         |-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // CHECK: {{^}}      |     |         | `-CStyleCastExpr {{.+}} 'char *__bidi_indexable' <BitCast>
 // CHECK: {{^}}      |     |         |   `-GetBoundExpr {{.+}} upper
@@ -151,7 +151,7 @@ void Test(unsigned siz) {
 // CHECK: {{^}}      |       `-BinaryOperator {{.+}} 'int' '<='
 // CHECK: {{^}}      |         |-OpaqueValueExpr [[ove_7]] {{.*}} 'unsigned long long'
 // CHECK: {{^}}      |         `-ImplicitCastExpr {{.+}} 'unsigned long long' <IntegralCast>
-// CHECK: {{^}}      |           `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: {{^}}      |           `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: {{^}}      |             |-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // CHECK: {{^}}      |             | `-CStyleCastExpr {{.+}} 'char *__bidi_indexable' <BitCast>
 // CHECK: {{^}}      |             |   `-GetBoundExpr {{.+}} upper

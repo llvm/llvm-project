@@ -40,12 +40,12 @@ void Test(struct T *t, int amt) {
 // CHECK:   | |   |     `-OpaqueValueExpr [[ove_3]] {{.*}} 'int *__bidi_indexable'
 // CHECK:   | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK:   | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK:   | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:   | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:   | |     | | `-OpaqueValueExpr [[ove_6:0x[^ ]+]] {{.*}} 'int'
 // CHECK:   | |     | |     | `-OpaqueValueExpr [[ove_7:0x[^ ]+]] {{.*}} lvalue
 // CHECK:   | |     | |     |     `-OpaqueValueExpr [[ove_8:0x[^ ]+]] {{.*}} 'struct T *__single'
 // CHECK:   | |     | |     `-OpaqueValueExpr [[ove_9:0x[^ ]+]] {{.*}} 'int'
-// CHECK:   | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:   | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK:   | |     |   |-GetBoundExpr {{.+}} upper
 // CHECK:   | |     |   | `-OpaqueValueExpr [[ove_3]] {{.*}} 'int *__bidi_indexable'
 // CHECK:   | |     |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>

@@ -52,30 +52,30 @@ void calls(void) {
 // CHECK:     | | |   |     `-OpaqueValueExpr [[ove]] {{.*}} 'int *__bidi_indexable'
 // CHECK:     | | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK:     | | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK:     | | |     | |-OpaqueValueExpr [[ove_2:0x[^ ]+]] {{.*}} 'long'
-// CHECK:     | | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:     | | |     | |-OpaqueValueExpr [[ove_2:0x[^ ]+]] {{.*}} '__ptrdiff_t':'long'
+// CHECK:     | | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK:     | | |     |   |-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
 // CHECK:     | | |     |   | `-GetBoundExpr {{.+}} upper
 // CHECK:     | | |     |   |   `-OpaqueValueExpr [[ove]] {{.*}} 'int *__bidi_indexable'
 // CHECK:     | | |     |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
 // CHECK:     | | |     |     `-OpaqueValueExpr [[ove]] {{.*}} 'int *__bidi_indexable'
 // CHECK:     | | |     `-BinaryOperator {{.+}} 'int' '<='
-// CHECK:     | | |       |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:     | | |       |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:     | | |       | `-IntegerLiteral {{.+}} 0
-// CHECK:     | | |       `-OpaqueValueExpr [[ove_2]] {{.*}} 'long'
+// CHECK:     | | |       `-OpaqueValueExpr [[ove_2]] {{.*}} '__ptrdiff_t':'long'
 // CHECK:     | | |-OpaqueValueExpr [[ove]]
 // CHECK:     | | | `-ImplicitCastExpr {{.+}} 'int *__bidi_indexable' <ArrayToPointerDecay>
 // CHECK:     | | |   `-DeclRefExpr {{.+}} [[var_arr]]
 // CHECK:     | | |-OpaqueValueExpr [[ove_1]]
 // CHECK:     | | | `-IntegerLiteral {{.+}} 12
 // CHECK:     | | `-OpaqueValueExpr [[ove_2]]
-// CHECK:     | |   `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:     | |   `-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:     | |     `-BinaryOperator {{.+}} 'int' '-'
 // CHECK:     | |       |-OpaqueValueExpr [[ove_1]] {{.*}} 'int'
 // CHECK:     | |       `-IntegerLiteral {{.+}} 2
 // CHECK:     | |-OpaqueValueExpr [[ove]] {{.*}} 'int *__bidi_indexable'
 // CHECK:     | |-OpaqueValueExpr [[ove_1]] {{.*}} 'int'
-// CHECK:     | `-OpaqueValueExpr [[ove_2]] {{.*}} 'long'
+// CHECK:     | `-OpaqueValueExpr [[ove_2]] {{.*}} '__ptrdiff_t':'long'
 // CHECK:     `-DeclStmt
 // CHECK:       `-VarDecl [[var_buf_1:0x[^ ]+]]
 // CHECK:         `-ImplicitCastExpr {{.+}} 'int *__bidi_indexable' <BitCast>

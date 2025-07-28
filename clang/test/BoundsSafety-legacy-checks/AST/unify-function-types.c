@@ -73,9 +73,9 @@ char test1(char src_buf[__counted_by(src_len)], int src_len, int src_len2) {
 // CHECK: |       | |   |     `-OpaqueValueExpr [[ove]] {{.*}} 'char *__bidi_indexable'
 // CHECK: |       | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK: |       | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK: |       | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: |       | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: |       | |     | | `-OpaqueValueExpr [[ove_3]] {{.*}} 'int'
-// CHECK: |       | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |       | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |       | |     |   |-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // CHECK: |       | |     |   | `-GetBoundExpr {{.+}} upper
 // CHECK: |       | |     |   |   `-OpaqueValueExpr [[ove]] {{.*}} 'char *__bidi_indexable'
@@ -221,9 +221,9 @@ char * __counted_by(src_len) test3(char src_buf[__counted_by(src_len)], int src_
 // CHECK: |         |       |     `-OpaqueValueExpr [[ove_6]] {{.*}} 'char *__bidi_indexable'
 // CHECK: |         |       `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK: |         |         |-BinaryOperator {{.+}} 'int' '<='
-// CHECK: |         |         | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: |         |         | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: |         |         | | `-OpaqueValueExpr [[ove_9]] {{.*}} 'int'
-// CHECK: |         |         | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |         |         | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |         |         |   |-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // CHECK: |         |         |   | `-GetBoundExpr {{.+}} upper
 // CHECK: |         |         |   |   `-OpaqueValueExpr [[ove_6]] {{.*}} 'char *__bidi_indexable'

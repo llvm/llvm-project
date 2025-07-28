@@ -35,6 +35,8 @@ static inline void funcInSDK(int size, int arr[size]) {
 // CHECK: |   | | | | |-ImplicitCastExpr {{.+}} 'void (*__single)(int, int *__single __counted_by(size))' <FunctionToPointerDecay>
 // CHECK: |   | | | | | `-DeclRefExpr {{.+}} [[func_extFunc]]
 // CHECK: |   | | | | |-OpaqueValueExpr [[ove:0x[^ ]+]] {{.*}} 'int'
+// CHECK: |   | | | | | `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
+// CHECK: |   | | | | |   `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'size' 'int'
 // CHECK: |   | | | | `-ImplicitCastExpr {{.+}} 'int *__single __counted_by(size)':'int *__single' <BoundsSafetyPointerCast>
 // CHECK: |   | | | |   `-OpaqueValueExpr [[ove_1:0x[^ ]+]] {{.*}} 'int *__bidi_indexable'
 // CHECK: |   | | | |       | | |-OpaqueValueExpr [[ove_2:0x[^ ]+]] {{.*}} 'int *__single __counted_by(size)':'int *__single'
@@ -55,9 +57,9 @@ static inline void funcInSDK(int size, int arr[size]) {
 // CHECK: |   | | |   |     `-OpaqueValueExpr [[ove_1]] {{.*}} 'int *__bidi_indexable'
 // CHECK: |   | | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK: |   | | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK: |   | | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: |   | | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: |   | | |     | | `-OpaqueValueExpr [[ove]] {{.*}} 'int'
-// CHECK: |   | | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |   | | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |   | | |     |   |-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
 // CHECK: |   | | |     |   | `-GetBoundExpr {{.+}} upper
 // CHECK: |   | | |     |   |   `-OpaqueValueExpr [[ove_1]] {{.*}} 'int *__bidi_indexable'
@@ -158,6 +160,10 @@ static inline void funcInSDK3(int size, int arr[size]) {
 // CHECK: |   | | | | |-ImplicitCastExpr {{.+}} 'void (*__single)(int, int *__single __counted_by(size))' <FunctionToPointerDecay>
 // CHECK: |   | | | | | `-DeclRefExpr {{.+}} [[func_static]]
 // CHECK: |   | | | | |-OpaqueValueExpr [[ove_8:0x[^ ]+]] {{.*}} 'int'
+// CHECK: |   | | | | | `-BinaryOperator {{.+}} 'int' '+'
+// CHECK: |   | | | | |   |-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
+// CHECK: |   | | | | |   | `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'size' 'int'
+// CHECK: |   | | | | |   `-IntegerLiteral {{.+}} 'int' 1
 // CHECK: |   | | | | `-ImplicitCastExpr {{.+}} 'int *__single __counted_by(size)':'int *__single' <BoundsSafetyPointerCast>
 // CHECK: |   | | | |   `-OpaqueValueExpr [[ove_9:0x[^ ]+]] {{.*}} 'int *__bidi_indexable'
 // CHECK: |   | | | |       | | |-OpaqueValueExpr [[ove_10:0x[^ ]+]] {{.*}} 'int *__single __counted_by(size)':'int *__single'
@@ -178,9 +184,9 @@ static inline void funcInSDK3(int size, int arr[size]) {
 // CHECK: |   | | |   |     `-OpaqueValueExpr [[ove_9]] {{.*}} 'int *__bidi_indexable'
 // CHECK: |   | | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK: |   | | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK: |   | | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: |   | | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: |   | | |     | | `-OpaqueValueExpr [[ove_8]] {{.*}} 'int'
-// CHECK: |   | | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |   | | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |   | | |     |   |-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
 // CHECK: |   | | |     |   | `-GetBoundExpr {{.+}} upper
 // CHECK: |   | | |     |   |   `-OpaqueValueExpr [[ove_9]] {{.*}} 'int *__bidi_indexable'

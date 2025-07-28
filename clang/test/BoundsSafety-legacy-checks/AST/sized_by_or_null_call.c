@@ -36,9 +36,9 @@ void foo(int *__sized_by_or_null(len) p, int len) {}
 // CHECK-NEXT: {{^}}|     | |     | `-OpaqueValueExpr [[ove]] {{.*}} 'int *__single __sized_by_or_null(len)':'int *__single'
 // CHECK:      {{^}}|     | |     `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}|     | |       |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}|     | |       | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}|     | |       | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}|     | |       | | `-OpaqueValueExpr [[ove_1]] {{.*}} 'int'
-// CHECK:      {{^}}|     | |       | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}|     | |       | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}|     | |       |   |-CStyleCastExpr {{.+}} 'char *__single' <BitCast>
 // CHECK-NEXT: {{^}}|     | |       |   | `-OpaqueValueExpr [[ove]] {{.*}} 'int *__single __sized_by_or_null(len)':'int *__single'
 // CHECK:      {{^}}|     | |       |   `-CStyleCastExpr {{.+}} 'char *__single' <BitCast>
@@ -83,9 +83,9 @@ void caller_1() {
 // CHECK-NEXT: {{^}}|     | |     | `-OpaqueValueExpr [[ove_2]] {{.*}} 'int *__single __sized_by_or_null(len)':'int *__single'
 // CHECK:      {{^}}|     | |     `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}|     | |       |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}|     | |       | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}|     | |       | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}|     | |       | | `-OpaqueValueExpr [[ove_3]] {{.*}} 'int'
-// CHECK:      {{^}}|     | |       | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}|     | |       | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}|     | |       |   |-CStyleCastExpr {{.+}} 'char *__single' <BitCast>
 // CHECK-NEXT: {{^}}|     | |       |   | `-OpaqueValueExpr [[ove_2]] {{.*}} 'int *__single __sized_by_or_null(len)':'int *__single'
 // CHECK:      {{^}}|     | |       |   `-CStyleCastExpr {{.+}} 'char *__single' <BitCast>
@@ -139,9 +139,9 @@ void caller_2() {
 // CHECK: {{^}}|      | |     | `-OpaqueValueExpr [[ove_4]] {{.*}} 'int *__bidi_indexable'
 // CHECK: {{^}}|      | |     `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK: {{^}}|      | |       |-BinaryOperator {{.+}} 'int' '<='
-// CHECK: {{^}}|      | |       | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: {{^}}|      | |       | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: {{^}}|      | |       | | `-OpaqueValueExpr [[ove_7]] {{.*}} 'int'
-// CHECK: {{^}}|      | |       | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: {{^}}|      | |       | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: {{^}}|      | |       |   |-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // CHECK: {{^}}|      | |       |   | `-CStyleCastExpr {{.+}} 'char *__bidi_indexable' <BitCast>
 // CHECK: {{^}}|      | |       |   |   `-GetBoundExpr {{.+}} upper
@@ -213,9 +213,9 @@ void caller_3(int *__sized_by_or_null(len) p, int len) {
 // CHECK: {{^}}|     | |     | `-OpaqueValueExpr [[ove_8]] {{.*}} 'int *__bidi_indexable'
 // CHECK: {{^}}|     | |     `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK: {{^}}|     | |       |-BinaryOperator {{.+}} 'int' '<='
-// CHECK: {{^}}|     | |       | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: {{^}}|     | |       | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: {{^}}|     | |       | | `-OpaqueValueExpr [[ove_9]] {{.*}} 'int'
-// CHECK: {{^}}|     | |       | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: {{^}}|     | |       | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: {{^}}|     | |       |   |-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // CHECK: {{^}}|     | |       |   | `-CStyleCastExpr {{.+}} 'char *__bidi_indexable' <BitCast>
 // CHECK: {{^}}|     | |       |   |   `-GetBoundExpr {{.+}} upper
@@ -272,9 +272,9 @@ void caller_4() {
 // CHECK: {{^}}|     | |     | `-OpaqueValueExpr [[ove_10]] {{.*}} 'int *__bidi_indexable'
 // CHECK: {{^}}|     | |     `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK: {{^}}|     | |       |-BinaryOperator {{.+}} 'int' '<='
-// CHECK: {{^}}|     | |       | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: {{^}}|     | |       | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: {{^}}|     | |       | | `-OpaqueValueExpr [[ove_11]] {{.*}} 'int'
-// CHECK: {{^}}|     | |       | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: {{^}}|     | |       | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: {{^}}|     | |       |   |-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // CHECK: {{^}}|     | |       |   | `-CStyleCastExpr {{.+}} 'char *__bidi_indexable' <BitCast>
 // CHECK: {{^}}|     | |       |   |   `-GetBoundExpr {{.+}} upper
@@ -332,9 +332,9 @@ void caller_5() {
 // CHECK: {{^}}|     | |     | `-OpaqueValueExpr [[ove_12]] {{.*}} 'int *__bidi_indexable'
 // CHECK: {{^}}|     | |     `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK: {{^}}|     | |       |-BinaryOperator {{.+}} 'int' '<='
-// CHECK: {{^}}|     | |       | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: {{^}}|     | |       | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: {{^}}|     | |       | | `-OpaqueValueExpr [[ove_15]] {{.*}} 'int'
-// CHECK: {{^}}|     | |       | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: {{^}}|     | |       | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: {{^}}|     | |       |   |-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // CHECK: {{^}}|     | |       |   | `-CStyleCastExpr {{.+}} 'char *__bidi_indexable' <BitCast>
 // CHECK: {{^}}|     | |       |   |   `-GetBoundExpr {{.+}} upper
@@ -405,9 +405,9 @@ void caller_6(int *__sized_by(len) p, int len) {
 // CHECK: {{^}}|     | |     | `-OpaqueValueExpr [[ove_16]] {{.*}} 'int *__bidi_indexable'
 // CHECK: {{^}}|     | |     `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK: {{^}}|     | |       |-BinaryOperator {{.+}} 'int' '<='
-// CHECK: {{^}}|     | |       | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: {{^}}|     | |       | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: {{^}}|     | |       | | `-OpaqueValueExpr [[ove_17]] {{.*}} 'int'
-// CHECK: {{^}}|     | |       | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: {{^}}|     | |       | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: {{^}}|     | |       |   |-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // CHECK: {{^}}|     | |       |   | `-CStyleCastExpr {{.+}} 'char *__bidi_indexable' <BitCast>
 // CHECK: {{^}}|     | |       |   |   `-GetBoundExpr {{.+}} upper
@@ -461,9 +461,9 @@ void caller_7(int *__bidi_indexable p, int len) {
 // CHECK: {{^}}|     | |     | `-OpaqueValueExpr [[ove_18]] {{.*}} 'int *__single'
 // CHECK: {{^}}|     | |     `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK: {{^}}|     | |       |-BinaryOperator {{.+}} 'int' '<='
-// CHECK: {{^}}|     | |       | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: {{^}}|     | |       | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: {{^}}|     | |       | | `-OpaqueValueExpr [[ove_19]] {{.*}} 'int'
-// CHECK: {{^}}|     | |       | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: {{^}}|     | |       | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: {{^}}|     | |       |   |-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // CHECK: {{^}}|     | |       |   | `-CStyleCastExpr {{.+}} 'char *__bidi_indexable' <BitCast>
 // CHECK: {{^}}|     | |       |   |   `-GetBoundExpr {{.+}} upper
@@ -566,9 +566,9 @@ void caller_9(int *__sized_by(*len) *out, int *len){
 // CHECK: {{^}}    | |     | `-OpaqueValueExpr [[ove_24]] {{.*}} 'int *__bidi_indexable'
 // CHECK: {{^}}    | |     `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK: {{^}}    | |       |-BinaryOperator {{.+}} 'int' '<='
-// CHECK: {{^}}    | |       | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: {{^}}    | |       | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: {{^}}    | |       | | `-OpaqueValueExpr [[ove_27:0x[^ ]+]] {{.*}} 'int'
-// CHECK: {{^}}    | |       | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: {{^}}    | |       | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: {{^}}    | |       |   |-CStyleCastExpr {{.+}} 'char *' <BitCast>
 // CHECK: {{^}}    | |       |   | `-GetBoundExpr {{.+}} upper
 // CHECK: {{^}}    | |       |   |   `-OpaqueValueExpr [[ove_24]] {{.*}} 'int *__bidi_indexable'

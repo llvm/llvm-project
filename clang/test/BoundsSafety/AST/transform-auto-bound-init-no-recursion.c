@@ -46,6 +46,6 @@ void m(void) {
 // CHECK:     | `-VarDecl {{.+}} referenced g 'struct d *__bidi_indexable'{{.*}} cinit
 // CHECK:     |   `-UnaryOperator {{.+}} 'd *__bidi_indexable' prefix '&' cannot overflow
 // CHECK:     |     `-DeclRefExpr {{.+}} 'd' lvalue Var {{.+}} 'j' 'd'
-// CHECK:     `-UnaryExprOrTypeTraitExpr {{.+}} 'unsigned long' sizeof
+// CHECK:     `-UnaryExprOrTypeTraitExpr {{.+}} '__size_t':'unsigned long' sizeof
 // CHECK:       `-ParenExpr {{.+}} 'struct d *__bidi_indexable'
 // CHECK:         `-DeclRefExpr {{.+}} 'struct d *__bidi_indexable'{{.*}} 'g' 'struct d *__bidi_indexable'{{.*}} non_odr_use_unevaluated

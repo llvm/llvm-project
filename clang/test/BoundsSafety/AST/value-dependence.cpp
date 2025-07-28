@@ -180,7 +180,7 @@ T bar(int x) {
 // BOUNDS-CHECK: |             | | |   |       `-DeclRefExpr {{.*}} 'p' 'int *__single __sized_by_or_null(4UL * y)':'int *__single'
 // BOUNDS-CHECK: |             | | |   `-AssumptionExpr
 // BOUNDS-CHECK: |             | | |     `-BinaryOperator {{.*}} 'bool' '>='
-// BOUNDS-CHECK: |             | | |       | `-BinaryOperator {{.*}} 'unsigned long' '*'
+// BOUNDS-CHECK: |             | | |       | `-BinaryOperator {{.*}} '__size_t':'unsigned long' '*'
 // BOUNDS-CHECK: |             | | |       |   |-IntegerLiteral {{.*}} 4
 // BOUNDS-CHECK: |             | | |       |   `-DeclRefExpr {{.*}} 'y'
 // BOUNDS-CHECK: |             | | |       `-IntegerLiteral {{.*}} 0

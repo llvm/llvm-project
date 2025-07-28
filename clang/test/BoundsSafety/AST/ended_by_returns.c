@@ -394,7 +394,7 @@ struct DataWithCountedBy {
 // CHECK:      {{^}}|   | |   `-BinaryOperator {{.+}} 'int' '<='
 // CHECK-NEXT: {{^}}|   | |     |-OpaqueValueExpr [[ove_17:0x[^ ]+]] {{.*}} 'unsigned long long'
 // CHECK:      {{^}}|   | |     `-ImplicitCastExpr {{.+}} 'unsigned long long' <IntegralCast>
-// CHECK-NEXT: {{^}}|   | |       `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: {{^}}|   | |       `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}|   | |         |-GetBoundExpr {{.+}} upper
 // CHECK-NEXT: {{^}}|   | |         | `-OpaqueValueExpr [[ove_14]] {{.*}} 'long *__bidi_indexable'
 // CHECK:      {{^}}|   | |         `-ImplicitCastExpr {{.+}} 'long *' <BoundsSafetyPointerCast>
@@ -493,7 +493,7 @@ void baz(struct DataWithCountedBy *data, int len) {
 // CHECK:      {{^}}    | |   `-BinaryOperator {{.+}} 'int' '<='
 // CHECK-NEXT: {{^}}    | |     |-OpaqueValueExpr [[ove_21:0x[^ ]+]] {{.*}} 'unsigned long long'
 // CHECK:      {{^}}    | |     `-ImplicitCastExpr {{.+}} 'unsigned long long' <IntegralCast>
-// CHECK-NEXT: {{^}}    | |       `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: {{^}}    | |       `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}    | |         |-GetBoundExpr {{.+}} upper
 // CHECK-NEXT: {{^}}    | |         | `-OpaqueValueExpr [[ove_18]] {{.*}} 'long *__bidi_indexable'
 // CHECK:      {{^}}    | |         `-ImplicitCastExpr {{.+}} 'long *' <BoundsSafetyPointerCast>

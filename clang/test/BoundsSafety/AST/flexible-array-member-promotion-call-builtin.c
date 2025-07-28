@@ -24,17 +24,17 @@ typedef struct {
 // CHECK:     | | |   | | `-OpaqueValueExpr [[ove_1:0x[^ ]+]] {{.*}} 'void *__bidi_indexable'
 // CHECK:     | | |   | |       | | |-OpaqueValueExpr [[ove_2:0x[^ ]+]] {{.*}} 'flex_t *__single'
 // CHECK:     | | |   | |-OpaqueValueExpr [[ove_3:0x[^ ]+]] {{.*}} 'int'
-// CHECK:     | | |   | `-OpaqueValueExpr [[ove_4:0x[^ ]+]] {{.*}} 'unsigned long'
+// CHECK:     | | |   | `-OpaqueValueExpr [[ove_4:0x[^ ]+]] {{.*}} '__size_t':'unsigned long'
 // CHECK:     | | |-ImplicitCastExpr {{.+}} 'void *' <BitCast>
 // CHECK:     | | | `-BinaryOperator {{.+}} 'char *' '+'
 // CHECK:     | | |   |-CStyleCastExpr {{.+}} 'char *' <BitCast>
 // CHECK:     | | |   | `-ImplicitCastExpr {{.+}} 'void *' <BoundsSafetyPointerCast>
 // CHECK:     | | |   |   `-OpaqueValueExpr [[ove]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK:     | | |   `-AssumptionExpr
-// CHECK:     | | |     |-OpaqueValueExpr [[ove_4]] {{.*}} 'unsigned long'
+// CHECK:     | | |     |-OpaqueValueExpr [[ove_4]] {{.*}} '__size_t':'unsigned long'
 // CHECK:     | | |     `-BinaryOperator {{.+}} 'int' '>='
 // CHECK:     | | |       |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
-// CHECK:     | | |       | `-OpaqueValueExpr [[ove_4]] {{.*}} 'unsigned long'
+// CHECK:     | | |       | `-OpaqueValueExpr [[ove_4]] {{.*}} '__size_t':'unsigned long'
 // CHECK:     | | |       `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
 // CHECK:     | | |         `-IntegerLiteral {{.+}} 0
 // CHECK:     | |-OpaqueValueExpr [[ove_1]]
@@ -57,18 +57,18 @@ typedef struct {
 // CHECK:     | |-OpaqueValueExpr [[ove_3]]
 // CHECK:     | | `-IntegerLiteral {{.+}} 0
 // CHECK:     | |-OpaqueValueExpr [[ove_4]]
-// CHECK:     | | `-ImplicitCastExpr {{.+}} 'unsigned long' <IntegralCast>
+// CHECK:     | | `-ImplicitCastExpr {{.+}} '__size_t':'unsigned long' <IntegralCast>
 // CHECK:     | |   `-ImplicitCastExpr {{.+}} 'unsigned int' <LValueToRValue>
 // CHECK:     | |     `-DeclRefExpr {{.+}} [[var_size]]
 // CHECK:     | `-OpaqueValueExpr [[ove]]
 // CHECK:     |   `-BoundsCheckExpr {{.+}} 'flex <= __builtin_get_pointer_upper_bound(flex) && __builtin_get_pointer_lower_bound(flex) <= flex && size <= (char *)__builtin_get_pointer_upper_bound(flex) - (char *)flex'
 // CHECK:     |     |-CallExpr
-// CHECK:     |     | |-ImplicitCastExpr {{.+}} 'void *__single __sized_by(function-parameter-0-2)(*)(void *__single __sized_by(function-parameter-0-2), int, unsigned long)' <BuiltinFnToFnPtr>
+// CHECK:     |     | |-ImplicitCastExpr {{.+}} 'void *__single __sized_by(function-parameter-0-2)(*)(void *__single __sized_by(function-parameter-0-2), int, __size_t)' <BuiltinFnToFnPtr>
 // CHECK:     |     | | `-DeclRefExpr {{.+}}
 // CHECK:     |     | |-ImplicitCastExpr {{.+}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single' <BoundsSafetyPointerCast>
 // CHECK:     |     | | `-OpaqueValueExpr [[ove_1]] {{.*}} 'void *__bidi_indexable'
 // CHECK:     |     | |-OpaqueValueExpr [[ove_3]] {{.*}} 'int'
-// CHECK:     |     | `-OpaqueValueExpr [[ove_4]] {{.*}} 'unsigned long'
+// CHECK:     |     | `-OpaqueValueExpr [[ove_4]] {{.*}} '__size_t':'unsigned long'
 // CHECK:     |     `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK:     |       |-BinaryOperator {{.+}} 'int' '&&'
 // CHECK:     |       | |-BinaryOperator {{.+}} 'int' '<='
@@ -84,9 +84,9 @@ typedef struct {
 // CHECK:     |       |   `-ImplicitCastExpr {{.+}} 'void *' <BoundsSafetyPointerCast>
 // CHECK:     |       |     `-OpaqueValueExpr [[ove_1]] {{.*}} 'void *__bidi_indexable'
 // CHECK:     |       `-BinaryOperator {{.+}} 'int' '<='
-// CHECK:     |         |-OpaqueValueExpr [[ove_4]] {{.*}} 'unsigned long'
-// CHECK:     |         `-ImplicitCastExpr {{.+}} 'unsigned long' <IntegralCast>
-// CHECK:     |           `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:     |         |-OpaqueValueExpr [[ove_4]] {{.*}} '__size_t':'unsigned long'
+// CHECK:     |         `-ImplicitCastExpr {{.+}} '__size_t':'unsigned long' <IntegralCast>
+// CHECK:     |           `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK:     |             |-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // CHECK:     |             | `-CStyleCastExpr {{.+}} 'char *__bidi_indexable' <BitCast>
 // CHECK:     |             |   `-GetBoundExpr {{.+}} upper
@@ -96,7 +96,7 @@ typedef struct {
 // CHECK:     |                 `-OpaqueValueExpr [[ove_1]] {{.*}} 'void *__bidi_indexable'
 // CHECK:     |-OpaqueValueExpr [[ove_1]] {{.*}} 'void *__bidi_indexable'
 // CHECK:     |-OpaqueValueExpr [[ove_3]] {{.*}} 'int'
-// CHECK:     |-OpaqueValueExpr [[ove_4]] {{.*}} 'unsigned long'
+// CHECK:     |-OpaqueValueExpr [[ove_4]] {{.*}} '__size_t':'unsigned long'
 // CHECK:     `-OpaqueValueExpr [[ove]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 void foo(flex_t *flex, unsigned size) {
   __builtin_memset(flex, 0, size);
@@ -174,8 +174,8 @@ void foo(flex_t *flex, unsigned size) {
 // CHECK:     |       |     `-OpaqueValueExpr [[ove_6]] {{.*}} 'void *__bidi_indexable'
 // CHECK:     |       `-BinaryOperator {{.+}} 'int' '<='
 // CHECK:     |         |-OpaqueValueExpr [[ove_9]] {{.*}} 'unsigned long'
-// CHECK:     |         `-ImplicitCastExpr {{.+}} 'unsigned long' <IntegralCast>
-// CHECK:     |           `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:     |         `-ImplicitCastExpr {{.+}} '__size_t':'unsigned long' <IntegralCast>
+// CHECK:     |           `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK:     |             |-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // CHECK:     |             | `-CStyleCastExpr {{.+}} 'char *__bidi_indexable' <BitCast>
 // CHECK:     |             |   `-GetBoundExpr {{.+}} upper

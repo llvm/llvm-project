@@ -42,7 +42,7 @@ void binop(int *__indexable p, int index) {
   // CHECK-NEXT:   `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'index' 'int'
   (void)(p - index);
 
-  // CHECK:      BinaryOperator {{.+}} 'long' '-'
+  // CHECK:      BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
   // CHECK-NEXT: |-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
   // CHECK-NEXT: | `-ImplicitCastExpr {{.+}} 'int *__indexable' <LValueToRValue>
   // CHECK-NEXT: |   `-DeclRefExpr {{.+}} 'int *__indexable' lvalue ParmVar {{.+}} 'p' 'int *__indexable'

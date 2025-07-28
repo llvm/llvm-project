@@ -39,7 +39,7 @@ void preincdec_init(char *__sized_by(len) p, unsigned long long len) {
 // CHECK: |             | |   `-BinaryOperator {{.+}} 'int' '<='
 // CHECK: |             | |     |-OpaqueValueExpr [[ove_5:0x[^ ]+]] {{.*}} 'unsigned long long'
 // CHECK: |             | |     `-ImplicitCastExpr {{.+}} 'unsigned long long' <IntegralCast>
-// CHECK: |             | |       `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |             | |       `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |             | |         |-CStyleCastExpr {{.+}} 'char *' <NoOp>
 // CHECK: |             | |         | `-GetBoundExpr {{.+}} upper
 // CHECK: |             | |         |   `-OpaqueValueExpr [[ove_1]] {{.*}} 'char *__bidi_indexable'
@@ -119,7 +119,7 @@ void postincdec(char *__sized_by(len) p, unsigned long long len) {
 // CHECK: |     | |     |-OpaqueValueExpr [[ove_4:0x[^ ]+]] {{.*}} 'unsigned long long'
 // CHECK: |     | |     |   | `-OpaqueValueExpr [[ove_5:0x[^ ]+]] {{.*}} lvalue
 // CHECK: |     | |     `-ImplicitCastExpr {{.+}} 'unsigned long long' <IntegralCast>
-// CHECK: |     | |       `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |     | |       `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |     | |         |-CStyleCastExpr {{.+}} 'char *' <NoOp>
 // CHECK: |     | |         | `-GetBoundExpr {{.+}} upper
 // CHECK: |     | |         |   `-OpaqueValueExpr [[ove_1]] {{.*}} 'char *__bidi_indexable'
@@ -203,7 +203,7 @@ void postincdec_init(char *__sized_by(len) p, unsigned long long len) {
 // CHECK: |             | |   `-BinaryOperator {{.+}} 'int' '<='
 // CHECK: |             | |     |-OpaqueValueExpr [[ove_11:0x[^ ]+]] {{.*}} 'unsigned long long'
 // CHECK: |             | |     `-ImplicitCastExpr {{.+}} 'unsigned long long' <IntegralCast>
-// CHECK: |             | |       `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |             | |       `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |             | |         |-CStyleCastExpr {{.+}} 'char *' <NoOp>
 // CHECK: |             | |         | `-GetBoundExpr {{.+}} upper
 // CHECK: |             | |         |   `-OpaqueValueExpr [[ove_7]] {{.*}} 'char *__bidi_indexable'
@@ -288,7 +288,7 @@ void compound_assign_init(char *__sized_by(len) p, unsigned long long len) {
 // CHECK: |           | |     |   | `-OpaqueValueExpr [[ove_18:0x[^ ]+]] {{.*}} lvalue
 // CHECK: |           | |     |   `-OpaqueValueExpr [[ove_19:0x[^ ]+]] {{.*}} 'unsigned long long'
 // CHECK: |           | |     `-ImplicitCastExpr {{.+}} 'unsigned long long' <IntegralCast>
-// CHECK: |           | |       `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |           | |       `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |           | |         |-CStyleCastExpr {{.+}} 'char *' <NoOp>
 // CHECK: |           | |         | `-GetBoundExpr {{.+}} upper
 // CHECK: |           | |         |   `-OpaqueValueExpr [[ove_14]] {{.*}} 'char *__bidi_indexable'
@@ -384,7 +384,7 @@ void compound_assign_assign(char *__sized_by(len) p, unsigned long long len) {
 // CHECK: |         | |     |   | `-OpaqueValueExpr [[ove_26:0x[^ ]+]] {{.*}} lvalue
 // CHECK: |         | |     |   `-OpaqueValueExpr [[ove_27:0x[^ ]+]] {{.*}} 'unsigned long long'
 // CHECK: |         | |     `-ImplicitCastExpr {{.+}} 'unsigned long long' <IntegralCast>
-// CHECK: |         | |       `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |         | |       `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |         | |         |-CStyleCastExpr {{.+}} 'char *' <NoOp>
 // CHECK: |         | |         | `-GetBoundExpr {{.+}} upper
 // CHECK: |         | |         |   `-OpaqueValueExpr [[ove_22]] {{.*}} 'char *__bidi_indexable'
@@ -511,7 +511,7 @@ void assign_init(char *__sized_by(len) p, unsigned long long len,
 // CHECK: |           | |   `-BinaryOperator {{.+}} 'int' '<='
 // CHECK: |           | |     |-OpaqueValueExpr [[ove_31:0x[^ ]+]] {{.*}} 'unsigned long long'
 // CHECK: |           | |     `-ImplicitCastExpr {{.+}} 'unsigned long long' <IntegralCast>
-// CHECK: |           | |       `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |           | |       `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |           | |         |-CStyleCastExpr {{.+}} 'char *' <NoOp>
 // CHECK: |           | |         | `-GetBoundExpr {{.+}} upper
 // CHECK: |           | |         |   `-OpaqueValueExpr [[ove_30]] {{.*}} 'char *__bidi_indexable'
@@ -582,7 +582,7 @@ void assign_assign(char *__sized_by(len) p, unsigned long long len,
 // CHECK: |   | |   `-BinaryOperator {{.+}} 'int' '<='
 // CHECK: |   | |     |-OpaqueValueExpr [[ove_35:0x[^ ]+]] {{.*}} 'unsigned long long'
 // CHECK: |   | |     `-ImplicitCastExpr {{.+}} 'unsigned long long' <IntegralCast>
-// CHECK: |   | |       `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |   | |       `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |   | |         |-CStyleCastExpr {{.+}} 'char *' <NoOp>
 // CHECK: |   | |         | `-GetBoundExpr {{.+}} upper
 // CHECK: |   | |         |   `-ImplicitCastExpr {{.+}} 'char *__bidi_indexable' <BoundsSafetyPointerCast>
@@ -612,7 +612,7 @@ void assign_assign(char *__sized_by(len) p, unsigned long long len,
 // CHECK: |   | |     | |   `-BinaryOperator {{.+}} 'int' '<='
 // CHECK: |   | |     | |     |-OpaqueValueExpr [[ove_33]] {{.*}} 'unsigned long long'
 // CHECK: |   | |     | |     `-ImplicitCastExpr {{.+}} 'unsigned long long' <IntegralCast>
-// CHECK: |   | |     | |       `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |   | |     | |       `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |   | |     | |         |-CStyleCastExpr {{.+}} 'char *' <NoOp>
 // CHECK: |   | |     | |         | `-GetBoundExpr {{.+}} upper
 // CHECK: |   | |     | |         |   `-OpaqueValueExpr [[ove_34]] {{.*}} 'char *__bidi_indexable'
@@ -702,7 +702,7 @@ char for_cond_inc(char *__sized_by(len) p, unsigned long long len) {
 // CHECK:   | | | |     |-OpaqueValueExpr [[ove_42:0x[^ ]+]] {{.*}} 'unsigned long long'
 // CHECK:   | | | |     |   | `-OpaqueValueExpr [[ove_43:0x[^ ]+]] {{.*}} lvalue
 // CHECK:   | | | |     `-ImplicitCastExpr {{.+}} 'unsigned long long' <IntegralCast>
-// CHECK:   | | | |       `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:   | | | |       `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK:   | | | |         |-CStyleCastExpr {{.+}} 'char *' <NoOp>
 // CHECK:   | | | |         | `-GetBoundExpr {{.+}} upper
 // CHECK:   | | | |         |   `-OpaqueValueExpr [[ove_39]] {{.*}} 'char *__bidi_indexable'
@@ -778,7 +778,7 @@ char for_cond_inc(char *__sized_by(len) p, unsigned long long len) {
 // CHECK:   | | | |     |-OpaqueValueExpr [[ove_48:0x[^ ]+]] {{.*}} 'unsigned long long'
 // CHECK:   | | | |     |   | `-OpaqueValueExpr [[ove_49:0x[^ ]+]] {{.*}} lvalue
 // CHECK:   | | | |     `-ImplicitCastExpr {{.+}} 'unsigned long long' <IntegralCast>
-// CHECK:   | | | |       `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:   | | | |       `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK:   | | | |         |-CStyleCastExpr {{.+}} 'char *' <NoOp>
 // CHECK:   | | | |         | `-GetBoundExpr {{.+}} upper
 // CHECK:   | | | |         |   `-OpaqueValueExpr [[ove_45]] {{.*}} 'char *__bidi_indexable'

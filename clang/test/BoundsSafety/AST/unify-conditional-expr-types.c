@@ -71,16 +71,16 @@ char testFunc2(int pred, char * __counted_by(cc) c, char * __single d, int cc, i
 // CHECK: |   |     | |     `-OpaqueValueExpr [[ove]] {{.*}} 'char *__bidi_indexable'
 // CHECK: |   |     | `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK: |   |     |   |-BinaryOperator {{.+}} 'int' '<='
-// CHECK: |   |     |   | |-OpaqueValueExpr [[ove_3:0x[^ ]+]] {{.*}} 'long'
-// CHECK: |   |     |   | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |   |     |   | |-OpaqueValueExpr [[ove_3:0x[^ ]+]] {{.*}} '__ptrdiff_t':'long'
+// CHECK: |   |     |   | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |   |     |   |   |-GetBoundExpr {{.+}} upper
 // CHECK: |   |     |   |   | `-OpaqueValueExpr [[ove]] {{.*}} 'char *__bidi_indexable'
 // CHECK: |   |     |   |   `-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // CHECK: |   |     |   |     `-OpaqueValueExpr [[ove]] {{.*}} 'char *__bidi_indexable'
 // CHECK: |   |     |   `-BinaryOperator {{.+}} 'int' '<='
-// CHECK: |   |     |     |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: |   |     |     |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: |   |     |     | `-IntegerLiteral {{.+}} 0
-// CHECK: |   |     |     `-OpaqueValueExpr [[ove_3]] {{.*}} 'long'
+// CHECK: |   |     |     `-OpaqueValueExpr [[ove_3]] {{.*}} '__ptrdiff_t':'long'
 // CHECK: |   |     |-OpaqueValueExpr [[ove]]
 // CHECK: |   |     | `-ConditionalOperator {{.+}} <col:34, col:45> 'char *__bidi_indexable'
 // CHECK: |   |     |   |-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
@@ -105,7 +105,7 @@ char testFunc2(int pred, char * __counted_by(cc) c, char * __single d, int cc, i
 // CHECK: |   |     |     `-ImplicitCastExpr {{.+}} 'char *__single' <LValueToRValue>
 // CHECK: |   |     |       `-DeclRefExpr {{.+}} [[var_d]]
 // CHECK: |   |     `-OpaqueValueExpr [[ove_3]]
-// CHECK: |   |       `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: |   |       `-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: |   |         `-IntegerLiteral {{.+}} 5
 // CHECK: |   `-ReturnStmt
 // CHECK: |     `-ImplicitCastExpr {{.+}} 'char' <LValueToRValue>
@@ -223,17 +223,17 @@ char testFunc5(int pred, char * __bidi_indexable * __counted_by(7) c, char * __b
 // CHECK: |       | |   |     `-OpaqueValueExpr [[ove_10]] {{.*}} 'char *__bidi_indexable'
 // CHECK: |       | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK: |       | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK: |       | |     | |-OpaqueValueExpr [[ove_15:0x[^ ]+]] {{.*}} 'long'
-// CHECK: |       | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |       | |     | |-OpaqueValueExpr [[ove_15:0x[^ ]+]] {{.*}} '__ptrdiff_t':'long'
+// CHECK: |       | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |       | |     |   |-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // CHECK: |       | |     |   | `-GetBoundExpr {{.+}} upper
 // CHECK: |       | |     |   |   `-OpaqueValueExpr [[ove_10]] {{.*}} 'char *__bidi_indexable'
 // CHECK: |       | |     |   `-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // CHECK: |       | |     |     `-OpaqueValueExpr [[ove_10]] {{.*}} 'char *__bidi_indexable'
 // CHECK: |       | |     `-BinaryOperator {{.+}} 'int' '<='
-// CHECK: |       | |       |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: |       | |       |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: |       | |       | `-IntegerLiteral {{.+}} 0
-// CHECK: |       | |       `-OpaqueValueExpr [[ove_15]] {{.*}} 'long'
+// CHECK: |       | |       `-OpaqueValueExpr [[ove_15]] {{.*}} '__ptrdiff_t':'long'
 // CHECK: |       | |-OpaqueValueExpr [[ove_10]]
 // CHECK: |       | | `-ImplicitCastExpr {{.+}} 'char *__bidi_indexable' <LValueToRValue>
 // CHECK: |       | |   `-ArraySubscriptExpr
@@ -273,10 +273,10 @@ char testFunc5(int pred, char * __bidi_indexable * __counted_by(7) c, char * __b
 // CHECK: |       | |     |     `-OpaqueValueExpr [[ove_14]] {{.*}} 'int'
 // CHECK: |       | |     `-IntegerLiteral {{.+}} 8
 // CHECK: |       | `-OpaqueValueExpr [[ove_15]]
-// CHECK: |       |   `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: |       |   `-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: |       |     `-IntegerLiteral {{.+}} 8
 // CHECK: |       |-OpaqueValueExpr [[ove_10]] {{.*}} 'char *__bidi_indexable'
-// CHECK: |       `-OpaqueValueExpr [[ove_15]] {{.*}} 'long'
+// CHECK: |       `-OpaqueValueExpr [[ove_15]] {{.*}} '__ptrdiff_t':'long'
 
 char testFunc6(int pred, char * __bidi_indexable * __indexable c, char * __bidi_indexable * __counted_by(10) d) {
     char * __bidi_indexable *__indexable tmp = pred ? c : d;
@@ -337,17 +337,17 @@ char testFunc6(int pred, char * __bidi_indexable * __indexable c, char * __bidi_
 // CHECK: |       | |   |     `-OpaqueValueExpr [[ove_18]] {{.*}} 'char *__bidi_indexable'
 // CHECK: |       | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK: |       | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK: |       | |     | |-OpaqueValueExpr [[ove_19:0x[^ ]+]] {{.*}} 'long'
-// CHECK: |       | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |       | |     | |-OpaqueValueExpr [[ove_19:0x[^ ]+]] {{.*}} '__ptrdiff_t':'long'
+// CHECK: |       | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |       | |     |   |-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // CHECK: |       | |     |   | `-GetBoundExpr {{.+}} upper
 // CHECK: |       | |     |   |   `-OpaqueValueExpr [[ove_18]] {{.*}} 'char *__bidi_indexable'
 // CHECK: |       | |     |   `-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // CHECK: |       | |     |     `-OpaqueValueExpr [[ove_18]] {{.*}} 'char *__bidi_indexable'
 // CHECK: |       | |     `-BinaryOperator {{.+}} 'int' '<='
-// CHECK: |       | |       |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: |       | |       |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: |       | |       | `-IntegerLiteral {{.+}} 0
-// CHECK: |       | |       `-OpaqueValueExpr [[ove_19]] {{.*}} 'long'
+// CHECK: |       | |       `-OpaqueValueExpr [[ove_19]] {{.*}} '__ptrdiff_t':'long'
 // CHECK: |       | |-OpaqueValueExpr [[ove_18]]
 // CHECK: |       | | `-ImplicitCastExpr {{.+}} 'char *__bidi_indexable' <LValueToRValue>
 // CHECK: |       | |   `-ArraySubscriptExpr
@@ -356,10 +356,10 @@ char testFunc6(int pred, char * __bidi_indexable * __indexable c, char * __bidi_
 // CHECK: |       | |     |   `-DeclRefExpr {{.+}} [[var_tmp]]
 // CHECK: |       | |     `-IntegerLiteral {{.+}} 11
 // CHECK: |       | `-OpaqueValueExpr [[ove_19]]
-// CHECK: |       |   `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: |       |   `-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: |       |     `-IntegerLiteral {{.+}} 8
 // CHECK: |       |-OpaqueValueExpr [[ove_18]] {{.*}} 'char *__bidi_indexable'
-// CHECK: |       `-OpaqueValueExpr [[ove_19]] {{.*}} 'long'
+// CHECK: |       `-OpaqueValueExpr [[ove_19]] {{.*}} '__ptrdiff_t':'long'
 
 char testFunc7(int pred, char * __unsafe_indexable * __single c, char * __single * __indexable d) {
     // expected-error@+1{{conditional expression evaluates values with incompatible pointee types 'char *__unsafe_indexable*__indexable' and 'char *__single*__indexable'; use explicit casts to perform this conversion}}

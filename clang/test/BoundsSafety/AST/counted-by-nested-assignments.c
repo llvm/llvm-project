@@ -31,10 +31,10 @@
 // CHECK: |   | |   |   |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
 // CHECK: |   | |   |   |     `-OpaqueValueExpr [[ove_1]] {{.*}} 'int *__bidi_indexable'
 // CHECK: |   | |   |   `-BinaryOperator {{.+}} 'int' '<='
-// CHECK: |   | |   |     |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: |   | |   |     |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: |   | |   |     | `-OpaqueValueExpr [[ove_4:0x[^ ]+]] {{.*}} 'unsigned int'
 // CHECK: |   | |   |     |     | `-OpaqueValueExpr [[ove_5:0x[^ ]+]] {{.*}} lvalue
-// CHECK: |   | |   |     `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |   | |   |     `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |   | |   |       |-GetBoundExpr {{.+}} upper
 // CHECK: |   | |   |       | `-OpaqueValueExpr [[ove_1]] {{.*}} 'int *__bidi_indexable'
 // CHECK: |   | |   |       `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
@@ -122,9 +122,9 @@ void foo(int *__counted_by(count) x, unsigned count) {
 // CHECK-NEXT: {{^}}    | |   |     `-OpaqueValueExpr [[ove_7]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}    | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}    | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}    | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}    | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}    | |     | | `-OpaqueValueExpr [[ove_6]] {{.*}} 'int'
-// CHECK:      {{^}}    | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}    | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}    | |     |   |-GetBoundExpr {{.+}} upper
 // CHECK-NEXT: {{^}}    | |     |   | `-OpaqueValueExpr [[ove_7]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}    | |     |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>

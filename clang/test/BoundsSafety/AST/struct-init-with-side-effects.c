@@ -76,9 +76,9 @@ int *__counted_by(len) getcountptr(int len);
 // CHECK: |   |     | |     `-OpaqueValueExpr [[ove_1]] {{.*}} 'int *__bidi_indexable'
 // CHECK: |   |     | `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK: |   |     |   |-BinaryOperator {{.+}} 'int' '<='
-// CHECK: |   |     |   | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: |   |     |   | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: |   |     |   | | `-OpaqueValueExpr [[ove]] {{.*}} 'int'
-// CHECK: |   |     |   | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |   |     |   | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |   |     |   |   |-GetBoundExpr {{.+}} upper
 // CHECK: |   |     |   |   | `-OpaqueValueExpr [[ove_1]] {{.*}} 'int *__bidi_indexable'
 // CHECK: |   |     |   |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>

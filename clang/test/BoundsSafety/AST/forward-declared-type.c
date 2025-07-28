@@ -41,8 +41,8 @@ void unsizedSizedByToSizedBy(struct unsized * __sized_by(len) p, int len) {
 // CHECK: |         | |     `-OpaqueValueExpr [[ove]] {{.*}} 'struct unsized *__bidi_indexable'
 // CHECK: |         | `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK: |         |   |-BinaryOperator {{.+}} 'int' '<='
-// CHECK: |         |   | |-OpaqueValueExpr [[ove_3:0x[^ ]+]] {{.*}} 'long'
-// CHECK: |         |   | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |         |   | |-OpaqueValueExpr [[ove_3:0x[^ ]+]] {{.*}} '__ptrdiff_t':'long'
+// CHECK: |         |   | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |         |   |   |-CStyleCastExpr {{.+}} 'char *' <BitCast>
 // CHECK: |         |   |   | `-GetBoundExpr {{.+}} upper
 // CHECK: |         |   |   |   `-OpaqueValueExpr [[ove]] {{.*}} 'struct unsized *__bidi_indexable'
@@ -50,9 +50,9 @@ void unsizedSizedByToSizedBy(struct unsized * __sized_by(len) p, int len) {
 // CHECK: |         |   |     `-CStyleCastExpr {{.+}} 'char *__bidi_indexable' <BitCast>
 // CHECK: |         |   |       `-OpaqueValueExpr [[ove]] {{.*}} 'struct unsized *__bidi_indexable'
 // CHECK: |         |   `-BinaryOperator {{.+}} 'int' '<='
-// CHECK: |         |     |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: |         |     |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: |         |     | `-IntegerLiteral {{.+}} 0
-// CHECK: |         |     `-OpaqueValueExpr [[ove_3]] {{.*}} 'long'
+// CHECK: |         |     `-OpaqueValueExpr [[ove_3]] {{.*}} '__ptrdiff_t':'long'
 // CHECK: |         |-OpaqueValueExpr [[ove]]
 // CHECK: |         | `-MaterializeSequenceExpr {{.+}} <Unbind>
 // CHECK: |         |   |-MaterializeSequenceExpr {{.+}} <Bind>
@@ -73,7 +73,7 @@ void unsizedSizedByToSizedBy(struct unsized * __sized_by(len) p, int len) {
 // CHECK: |         |   |-OpaqueValueExpr [[ove_1]] {{.*}} 'struct unsized *__single __sized_by(len)':'struct unsized *__single'
 // CHECK: |         |   `-OpaqueValueExpr [[ove_2]] {{.*}} 'int'
 // CHECK: |         `-OpaqueValueExpr [[ove_3]]
-// CHECK: |           `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: |           `-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: |             `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK: |               `-DeclRefExpr {{.+}} [[var_size]]
     struct unsized * __single __sized_by(size) p2 = p;
@@ -115,9 +115,9 @@ void structMemberUnsizedSizedBy(struct unsized * p, int len) {
 // CHECK:     |     | |   `-OpaqueValueExpr [[ove_5]] {{.*}} 'struct unsized *__single'
 // CHECK:     |     | `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK:     |     |   |-BinaryOperator {{.+}} 'int' '<='
-// CHECK:     |     |   | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:     |     |   | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:     |     |   | | `-OpaqueValueExpr [[ove_4]] {{.*}} 'int'
-// CHECK:     |     |   | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:     |     |   | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK:     |     |   |   |-CStyleCastExpr {{.+}} 'char *' <BitCast>
 // CHECK:     |     |   |   | `-GetBoundExpr {{.+}} upper
 // CHECK:     |     |   |   |   `-ImplicitCastExpr {{.+}} 'struct unsized *__bidi_indexable' <BoundsSafetyPointerCast>
@@ -168,9 +168,9 @@ void structMemberUnsizedSizedBy(struct unsized * p, int len) {
 // CHECK:     |     | |     `-OpaqueValueExpr [[ove_7]] {{.*}} 'struct unsized *__bidi_indexable'
 // CHECK:     |     | `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK:     |     |   |-BinaryOperator {{.+}} 'int' '<='
-// CHECK:     |     |   | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:     |     |   | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:     |     |   | | `-OpaqueValueExpr [[ove_6]] {{.*}} 'int'
-// CHECK:     |     |   | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:     |     |   | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK:     |     |   |   |-CStyleCastExpr {{.+}} 'char *' <BitCast>
 // CHECK:     |     |   |   | `-GetBoundExpr {{.+}} upper
 // CHECK:     |     |   |   |   `-OpaqueValueExpr [[ove_7]] {{.*}} 'struct unsized *__bidi_indexable'
@@ -300,8 +300,8 @@ void unsizedSizedByToSizedByTypecast(struct unsized * __sized_by(len) p, int len
 // CHECK:           | |     `-OpaqueValueExpr [[ove_18]] {{.*}} 'struct other *__bidi_indexable'
 // CHECK:           | `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK:           |   |-BinaryOperator {{.+}} 'int' '<='
-// CHECK:           |   | |-OpaqueValueExpr [[ove_21:0x[^ ]+]] {{.*}} 'long'
-// CHECK:           |   | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:           |   | |-OpaqueValueExpr [[ove_21:0x[^ ]+]] {{.*}} '__ptrdiff_t':'long'
+// CHECK:           |   | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK:           |   |   |-CStyleCastExpr {{.+}} 'char *' <BitCast>
 // CHECK:           |   |   | `-GetBoundExpr {{.+}} upper
 // CHECK:           |   |   |   `-OpaqueValueExpr [[ove_18]] {{.*}} 'struct other *__bidi_indexable'
@@ -309,9 +309,9 @@ void unsizedSizedByToSizedByTypecast(struct unsized * __sized_by(len) p, int len
 // CHECK:           |   |     `-CStyleCastExpr {{.+}} 'char *__bidi_indexable' <BitCast>
 // CHECK:           |   |       `-OpaqueValueExpr [[ove_18]] {{.*}} 'struct other *__bidi_indexable'
 // CHECK:           |   `-BinaryOperator {{.+}} 'int' '<='
-// CHECK:           |     |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:           |     |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:           |     | `-IntegerLiteral {{.+}} 0
-// CHECK:           |     `-OpaqueValueExpr [[ove_21]] {{.*}} 'long'
+// CHECK:           |     `-OpaqueValueExpr [[ove_21]] {{.*}} '__ptrdiff_t':'long'
 // CHECK:           |-OpaqueValueExpr [[ove_18]]
 // CHECK:           | `-ImplicitCastExpr {{.+}} 'struct other *__bidi_indexable' <BitCast>
 // CHECK:           |   `-MaterializeSequenceExpr {{.+}} <Unbind>
@@ -333,7 +333,7 @@ void unsizedSizedByToSizedByTypecast(struct unsized * __sized_by(len) p, int len
 // CHECK:           |     |-OpaqueValueExpr [[ove_19]] {{.*}} 'struct unsized *__single __sized_by(len)':'struct unsized *__single'
 // CHECK:           |     `-OpaqueValueExpr [[ove_20]] {{.*}} 'int'
 // CHECK:           `-OpaqueValueExpr [[ove_21]]
-// CHECK:             `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:             `-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:               `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK:                 `-DeclRefExpr {{.+}} [[var_size_1]]
     struct other * __single __sized_by(size) p2 = p; // expected-warning{{incompatible pointer types initializing 'struct other *__single' with an expression of type 'struct unsized *__single __sized_by(len)' (aka 'struct unsized *__single')}} (This warning is redundant and missing __sized_by annotation rdar://112409995)
@@ -376,8 +376,8 @@ void voidSizedByToVoidSizedBy(void * __sized_by(len) p, int len) {
 // CHECK:           | |     `-OpaqueValueExpr [[ove_22]] {{.*}} 'void *__bidi_indexable'
 // CHECK:           | `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK:           |   |-BinaryOperator {{.+}} 'int' '<='
-// CHECK:           |   | |-OpaqueValueExpr [[ove_25:0x[^ ]+]] {{.*}} 'long'
-// CHECK:           |   | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:           |   | |-OpaqueValueExpr [[ove_25:0x[^ ]+]] {{.*}} '__ptrdiff_t':'long'
+// CHECK:           |   | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK:           |   |   |-CStyleCastExpr {{.+}} 'char *' <BitCast>
 // CHECK:           |   |   | `-GetBoundExpr {{.+}} upper
 // CHECK:           |   |   |   `-OpaqueValueExpr [[ove_22]] {{.*}} 'void *__bidi_indexable'
@@ -385,9 +385,9 @@ void voidSizedByToVoidSizedBy(void * __sized_by(len) p, int len) {
 // CHECK:           |   |     `-CStyleCastExpr {{.+}} 'char *__bidi_indexable' <BitCast>
 // CHECK:           |   |       `-OpaqueValueExpr [[ove_22]] {{.*}} 'void *__bidi_indexable'
 // CHECK:           |   `-BinaryOperator {{.+}} 'int' '<='
-// CHECK:           |     |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:           |     |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:           |     | `-IntegerLiteral {{.+}} 0
-// CHECK:           |     `-OpaqueValueExpr [[ove_25]] {{.*}} 'long'
+// CHECK:           |     `-OpaqueValueExpr [[ove_25]] {{.*}} '__ptrdiff_t':'long'
 // CHECK:           |-OpaqueValueExpr [[ove_22]]
 // CHECK:           | `-MaterializeSequenceExpr {{.+}} <Unbind>
 // CHECK:           |   |-MaterializeSequenceExpr {{.+}} <Bind>
@@ -408,7 +408,7 @@ void voidSizedByToVoidSizedBy(void * __sized_by(len) p, int len) {
 // CHECK:           |   |-OpaqueValueExpr [[ove_23]] {{.*}} 'void *__single __sized_by(len)':'void *__single'
 // CHECK:           |   `-OpaqueValueExpr [[ove_24]] {{.*}} 'int'
 // CHECK:           `-OpaqueValueExpr [[ove_25]]
-// CHECK:             `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:             `-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:               `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK:                 `-DeclRefExpr {{.+}} [[var_size_2]]
 
@@ -422,7 +422,7 @@ void unsizedBidiForgedNull() {
 // CHECK: |           `-ForgePtrExpr
 // CHECK: |             |-ParenExpr
 // CHECK: |             | `-IntegerLiteral {{.+}} 0
-// CHECK: |             |-ImplicitCastExpr {{.+}} 'unsigned long' <IntegralCast>
+// CHECK: |             |-ImplicitCastExpr {{.+}} '__size_t':'unsigned long' <IntegralCast>
 // CHECK: |             | `-ParenExpr
 // CHECK: |             |   `-IntegerLiteral {{.+}} 10
     struct unsized * __bidi_indexable p2 = __unsafe_forge_bidi_indexable(struct unsized *, 0, 10);
@@ -458,7 +458,7 @@ void unsizedBidiForgedDyn(struct unsized * __sized_by(len) p, int len) {
 // CHECK: |             | |     `-DeclRefExpr {{.+}} [[var_len_5]]
 // CHECK: |             | |-OpaqueValueExpr [[ove_26]] {{.*}} 'struct unsized *__single __sized_by(len)':'struct unsized *__single'
 // CHECK: |             | `-OpaqueValueExpr [[ove_27]] {{.*}} 'int'
-// CHECK: |             |-ImplicitCastExpr {{.+}} 'unsigned long' <IntegralCast>
+// CHECK: |             |-ImplicitCastExpr {{.+}} '__size_t':'unsigned long' <IntegralCast>
 // CHECK: |             | `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK: |             |   `-ParenExpr
 // CHECK: |             |     `-DeclRefExpr {{.+}} [[var_len_5]]
@@ -476,7 +476,7 @@ void unsizedBidiForgedTypecast() {
 // CHECK: |             `-ForgePtrExpr
 // CHECK: |               |-ParenExpr
 // CHECK: |               | `-IntegerLiteral {{.+}} 0
-// CHECK: |               |-ImplicitCastExpr {{.+}} 'unsigned long' <IntegralCast>
+// CHECK: |               |-ImplicitCastExpr {{.+}} '__size_t':'unsigned long' <IntegralCast>
 // CHECK: |               | `-ParenExpr
 // CHECK: |               |   `-IntegerLiteral {{.+}} 10
     struct other * __bidi_indexable p2 = __unsafe_forge_bidi_indexable(struct unsized *, 0, 10); // expected-warning{{incompatible pointer types initializing 'struct other *__bidi_indexable' with an expression of type 'struct unsized *__bidi_indexable'}}
@@ -493,7 +493,7 @@ void unsizedBidiForgedTypecastToInt() {
 // CHECK: |             `-ForgePtrExpr
 // CHECK: |               |-ParenExpr
 // CHECK: |               | `-IntegerLiteral {{.+}} 0
-// CHECK: |               |-ImplicitCastExpr {{.+}} 'unsigned long' <IntegralCast>
+// CHECK: |               |-ImplicitCastExpr {{.+}} '__size_t':'unsigned long' <IntegralCast>
 // CHECK: |               | `-ParenExpr
 // CHECK: |               |   `-IntegerLiteral {{.+}} 10
     int * __bidi_indexable p2 = __unsafe_forge_bidi_indexable(struct unsized *, 0, 10); // expected-warning{{incompatible pointer types initializing 'int *__bidi_indexable' with an expression of type 'struct unsized *__bidi_indexable'}}
@@ -532,8 +532,8 @@ void unsizedBidiForgedToSizedBy(struct unsized * __sized_by(len) p, int len) {
 // CHECK:           | |     `-OpaqueValueExpr [[ove_28]] {{.*}} 'struct unsized *__bidi_indexable'
 // CHECK:           | `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK:           |   |-BinaryOperator {{.+}} 'int' '<='
-// CHECK:           |   | |-OpaqueValueExpr [[ove_31:0x[^ ]+]] {{.*}} 'long'
-// CHECK:           |   | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:           |   | |-OpaqueValueExpr [[ove_31:0x[^ ]+]] {{.*}} '__ptrdiff_t':'long'
+// CHECK:           |   | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK:           |   |   |-CStyleCastExpr {{.+}} 'char *' <BitCast>
 // CHECK:           |   |   | `-GetBoundExpr {{.+}} upper
 // CHECK:           |   |   |   `-OpaqueValueExpr [[ove_28]] {{.*}} 'struct unsized *__bidi_indexable'
@@ -541,9 +541,9 @@ void unsizedBidiForgedToSizedBy(struct unsized * __sized_by(len) p, int len) {
 // CHECK:           |   |     `-CStyleCastExpr {{.+}} 'char *__bidi_indexable' <BitCast>
 // CHECK:           |   |       `-OpaqueValueExpr [[ove_28]] {{.*}} 'struct unsized *__bidi_indexable'
 // CHECK:           |   `-BinaryOperator {{.+}} 'int' '<='
-// CHECK:           |     |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:           |     |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:           |     | `-IntegerLiteral {{.+}} 0
-// CHECK:           |     `-OpaqueValueExpr [[ove_31]] {{.*}} 'long'
+// CHECK:           |     `-OpaqueValueExpr [[ove_31]] {{.*}} '__ptrdiff_t':'long'
 // CHECK:           |-OpaqueValueExpr [[ove_28]]
 // CHECK:           | `-ParenExpr
 // CHECK:           |   `-CStyleCastExpr {{.+}} 'struct unsized *__bidi_indexable' <BitCast>
@@ -567,12 +567,12 @@ void unsizedBidiForgedToSizedBy(struct unsized * __sized_by(len) p, int len) {
 // CHECK:           |       | |     `-DeclRefExpr {{.+}} [[var_len_6]]
 // CHECK:           |       | |-OpaqueValueExpr [[ove_29]] {{.*}} 'struct unsized *__single __sized_by(len)':'struct unsized *__single'
 // CHECK:           |       | `-OpaqueValueExpr [[ove_30]] {{.*}} 'int'
-// CHECK:           |       |-ImplicitCastExpr {{.+}} 'unsigned long' <IntegralCast>
+// CHECK:           |       |-ImplicitCastExpr {{.+}} '__size_t':'unsigned long' <IntegralCast>
 // CHECK:           |       | `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK:           |       |   `-ParenExpr
 // CHECK:           |       |     `-DeclRefExpr {{.+}} [[var_len_6]]
 // CHECK:           `-OpaqueValueExpr [[ove_31]]
-// CHECK:             `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:             `-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:               `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK:                 `-DeclRefExpr {{.+}} [[var_size_3]]
     struct unsized * __single __sized_by(size) p2 = __unsafe_forge_bidi_indexable(struct unsized *, p, len);
@@ -653,8 +653,8 @@ void unsizedSingleForgedToSizedBy(int p, int len) {
 // CHECK:          | |   `-OpaqueValueExpr [[ove_32]] {{.*}} 'struct unsized *__single'
 // CHECK:          | `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK:          |   |-BinaryOperator {{.+}} 'int' '<='
-// CHECK:          |   | |-OpaqueValueExpr [[ove_33:0x[^ ]+]] {{.*}} 'long'
-// CHECK:          |   | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:          |   | |-OpaqueValueExpr [[ove_33:0x[^ ]+]] {{.*}} '__ptrdiff_t':'long'
+// CHECK:          |   | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK:          |   |   |-CStyleCastExpr {{.+}} 'char *' <BitCast>
 // CHECK:          |   |   | `-GetBoundExpr {{.+}} upper
 // CHECK:          |   |   |   `-ImplicitCastExpr {{.+}} 'struct unsized *__bidi_indexable' <BoundsSafetyPointerCast>
@@ -662,9 +662,9 @@ void unsizedSingleForgedToSizedBy(int p, int len) {
 // CHECK:          |   |   `-CStyleCastExpr {{.+}} 'char *__single' <BitCast>
 // CHECK:          |   |     `-OpaqueValueExpr [[ove_32]] {{.*}} 'struct unsized *__single'
 // CHECK:          |   `-BinaryOperator {{.+}} 'int' '<='
-// CHECK:          |     |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:          |     |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:          |     | `-IntegerLiteral {{.+}} 0
-// CHECK:          |     `-OpaqueValueExpr [[ove_33]] {{.*}} 'long'
+// CHECK:          |     `-OpaqueValueExpr [[ove_33]] {{.*}} '__ptrdiff_t':'long'
 // CHECK:          |-OpaqueValueExpr [[ove_32]]
 // CHECK:          | `-CStyleCastExpr {{.+}} 'struct unsized *__single' <BitCast>
 // CHECK:          |   `-ForgePtrExpr
@@ -672,7 +672,7 @@ void unsizedSingleForgedToSizedBy(int p, int len) {
 // CHECK:          |     | `-ParenExpr
 // CHECK:          |     |   `-DeclRefExpr {{.+}} [[var_p_10]]
 // CHECK:          `-OpaqueValueExpr [[ove_33]]
-// CHECK:            `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:            `-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:              `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK:                `-DeclRefExpr {{.+}} [[var_size_4]]
     struct unsized * __single __sized_by(size) p2 = __unsafe_forge_single(struct unsized *, p); // expected-warning{{size value is not statically known: initializing 'p2' of type 'struct unsized *__single __sized_by(size)' (aka 'struct unsized *__single') with 'struct unsized *__single' is invalid for any size greater than 0}}
@@ -747,8 +747,8 @@ void unsizedSingleToSizedByToBidiVoid(void * p) { // rdar://112462891
 // CHECK:     |     | |   `-OpaqueValueExpr [[ove_36]] {{.*}} 'void *__single'
 // CHECK:     |     | `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK:     |     |   |-BinaryOperator {{.+}} 'int' '<='
-// CHECK:     |     |   | |-OpaqueValueExpr [[ove_37:0x[^ ]+]] {{.*}} 'long'
-// CHECK:     |     |   | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:     |     |   | |-OpaqueValueExpr [[ove_37:0x[^ ]+]] {{.*}} '__ptrdiff_t':'long'
+// CHECK:     |     |   | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK:     |     |   |   |-CStyleCastExpr {{.+}} 'char *' <BitCast>
 // CHECK:     |     |   |   | `-GetBoundExpr {{.+}} upper
 // CHECK:     |     |   |   |   `-ImplicitCastExpr {{.+}} 'void *__bidi_indexable' <BoundsSafetyPointerCast>
@@ -756,14 +756,14 @@ void unsizedSingleToSizedByToBidiVoid(void * p) { // rdar://112462891
 // CHECK:     |     |   |   `-CStyleCastExpr {{.+}} 'char *__single' <BitCast>
 // CHECK:     |     |   |     `-OpaqueValueExpr [[ove_36]] {{.*}} 'void *__single'
 // CHECK:     |     |   `-BinaryOperator {{.+}} 'int' '<='
-// CHECK:     |     |     |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:     |     |     |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:     |     |     | `-IntegerLiteral {{.+}} 0
-// CHECK:     |     |     `-OpaqueValueExpr [[ove_37]] {{.*}} 'long'
+// CHECK:     |     |     `-OpaqueValueExpr [[ove_37]] {{.*}} '__ptrdiff_t':'long'
 // CHECK:     |     |-OpaqueValueExpr [[ove_36]]
 // CHECK:     |     | `-ImplicitCastExpr {{.+}} 'void *__single' <LValueToRValue>
 // CHECK:     |     |   `-DeclRefExpr {{.+}} [[var_p_13]]
 // CHECK:     |     `-OpaqueValueExpr [[ove_37]]
-// CHECK:     |       `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:     |       `-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:     |         `-IntegerLiteral {{.+}} 0
     void * __single __sized_by(0) p2 = p;
 // CHECK:     `-DeclStmt

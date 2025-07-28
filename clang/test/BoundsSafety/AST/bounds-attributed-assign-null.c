@@ -569,9 +569,9 @@ void receive_cb(int* __counted_by(count), int count);
 // CHECK:      {{^}}    | | |   |   `-OpaqueValueExpr [[ove_30]] {{.*}} 'int *'
 // CHECK:      {{^}}    | | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}    | | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}    | | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}    | | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}    | | |     | | `-OpaqueValueExpr [[ove_31]] {{.*}} 'int'
-// CHECK:      {{^}}    | | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}    | | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}    | | |     |   |-OpaqueValueExpr [[ove_30]] {{.*}} 'int *'
 // CHECK:      {{^}}    | | |     |   `-OpaqueValueExpr [[ove_30]] {{.*}} 'int *'
 // CHECK:      {{^}}    | | |     `-BinaryOperator {{.+}} 'int' '<='
@@ -608,9 +608,9 @@ void receive_cb(int* __counted_by(count), int count);
 // CHECK:      {{^}}    | | |   |   `-OpaqueValueExpr [[ove_32]] {{.*}} 'int *__single __counted_by(count)':'int *__single'
 // CHECK:      {{^}}    | | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}    | | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}    | | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}    | | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}    | | |     | | `-OpaqueValueExpr [[ove_33]] {{.*}} 'int'
-// CHECK:      {{^}}    | | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}    | | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}    | | |     |   |-OpaqueValueExpr [[ove_32]] {{.*}} 'int *__single __counted_by(count)':'int *__single'
 // CHECK:      {{^}}    | | |     |   `-OpaqueValueExpr [[ove_32]] {{.*}} 'int *__single __counted_by(count)':'int *__single'
 // CHECK:      {{^}}    | | |     `-BinaryOperator {{.+}} 'int' '<='
@@ -646,9 +646,9 @@ void receive_cb(int* __counted_by(count), int count);
 // CHECK:      {{^}}    | | |   |   `-OpaqueValueExpr [[ove_34]] {{.*}} 'int *'
 // CHECK:      {{^}}    | | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}    | | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}    | | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}    | | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}    | | |     | | `-OpaqueValueExpr [[ove_35]] {{.*}} 'int'
-// CHECK:      {{^}}    | | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}    | | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}    | | |     |   |-OpaqueValueExpr [[ove_34]] {{.*}} 'int *'
 // CHECK:      {{^}}    | | |     |   `-OpaqueValueExpr [[ove_34]] {{.*}} 'int *'
 // CHECK:      {{^}}    | | |     `-BinaryOperator {{.+}} 'int' '<='
@@ -684,9 +684,9 @@ void receive_cb(int* __counted_by(count), int count);
 // CHECK:      {{^}}    | | |   |   `-OpaqueValueExpr [[ove_36]] {{.*}} 'int *'
 // CHECK:      {{^}}    | | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}    | | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}    | | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}    | | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}    | | |     | | `-OpaqueValueExpr [[ove_37]] {{.*}} 'int'
-// CHECK:      {{^}}    | | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}    | | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}    | | |     |   |-OpaqueValueExpr [[ove_36]] {{.*}} 'int *'
 // CHECK:      {{^}}    | | |     |   `-OpaqueValueExpr [[ove_36]] {{.*}} 'int *'
 // CHECK:      {{^}}    | | |     `-BinaryOperator {{.+}} 'int' '<='
@@ -725,9 +725,9 @@ void receive_cb(int* __counted_by(count), int count);
 // CHECK:      {{^}}      | |   |   `-OpaqueValueExpr [[ove_38]] {{.*}} 'int *__single __counted_by(count)':'int *__single'
 // CHECK:      {{^}}      | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}      | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}      | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}      | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}      | |     | | `-OpaqueValueExpr [[ove_39]] {{.*}} 'int'
-// CHECK:      {{^}}      | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}      | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}      | |     |   |-OpaqueValueExpr [[ove_38]] {{.*}} 'int *__single __counted_by(count)':'int *__single'
 // CHECK:      {{^}}      | |     |   `-OpaqueValueExpr [[ove_38]] {{.*}} 'int *__single __counted_by(count)':'int *__single'
 // CHECK:      {{^}}      | |     `-BinaryOperator {{.+}} 'int' '<='

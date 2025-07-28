@@ -39,23 +39,23 @@ void Test(void) {
 // CHECK: {{^}}    |     | |     `-OpaqueValueExpr [[ove]] {{.*}} 'char *__bidi_indexable'
 // CHECK: {{^}}    |     | `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK: {{^}}    |     |   |-BinaryOperator {{.+}} 'int' '<='
-// CHECK: {{^}}    |     |   | |-OpaqueValueExpr [[ove_1:0x[^ ]+]] {{.*}} 'long'
-// CHECK: {{^}}    |     |   | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: {{^}}    |     |   | |-OpaqueValueExpr [[ove_1:0x[^ ]+]] {{.*}} '__ptrdiff_t':'long'
+// CHECK: {{^}}    |     |   | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: {{^}}    |     |   |   |-GetBoundExpr {{.+}} upper
 // CHECK: {{^}}    |     |   |   | `-OpaqueValueExpr [[ove]] {{.*}} 'char *__bidi_indexable'
 // CHECK: {{^}}    |     |   |   `-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // CHECK: {{^}}    |     |   |     `-OpaqueValueExpr [[ove]] {{.*}} 'char *__bidi_indexable'
 // CHECK: {{^}}    |     |   `-BinaryOperator {{.+}} 'int' '<='
-// CHECK: {{^}}    |     |     |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: {{^}}    |     |     |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: {{^}}    |     |     | `-IntegerLiteral {{.+}} 0
-// CHECK: {{^}}    |     |     `-OpaqueValueExpr [[ove_1]] {{.*}} 'long'
+// CHECK: {{^}}    |     |     `-OpaqueValueExpr [[ove_1]] {{.*}} '__ptrdiff_t':'long'
 // CHECK: {{^}}    |     |-OpaqueValueExpr [[ove]]
 // CHECK: {{^}}    |     | `-ImplicitCastExpr {{.+}} 'char *__bidi_indexable' <BitCast>
 // CHECK: {{^}}    |     |   `-ImplicitCastExpr {{.+}} 'int *__bidi_indexable' <BoundsSafetyPointerCast>
 // CHECK: {{^}}    |     |     `-ImplicitCastExpr {{.+}} 'int *__single' <LValueToRValue>
 // CHECK: {{^}}    |     |       `-DeclRefExpr {{.+}} [[var_iptr]]
 // CHECK: {{^}}    |     `-OpaqueValueExpr [[ove_1]]
-// CHECK: {{^}}    |       `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: {{^}}    |       `-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: {{^}}    |         `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK: {{^}}    |           `-DeclRefExpr {{.+}} [[var_len]]
 // CHECK: {{^}}    |-DeclStmt
@@ -82,16 +82,16 @@ void Test(void) {
 // CHECK: {{^}}    |     | |     `-OpaqueValueExpr [[ove_2]] {{.*}} 'long *__bidi_indexable'
 // CHECK: {{^}}    |     | `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK: {{^}}    |     |   |-BinaryOperator {{.+}} 'int' '<='
-// CHECK: {{^}}    |     |   | |-OpaqueValueExpr [[ove_5:0x[^ ]+]] {{.*}} 'long'
-// CHECK: {{^}}    |     |   | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: {{^}}    |     |   | |-OpaqueValueExpr [[ove_5:0x[^ ]+]] {{.*}} '__ptrdiff_t':'long'
+// CHECK: {{^}}    |     |   | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: {{^}}    |     |   |   |-GetBoundExpr {{.+}} upper
 // CHECK: {{^}}    |     |   |   | `-OpaqueValueExpr [[ove_2]] {{.*}} 'long *__bidi_indexable'
 // CHECK: {{^}}    |     |   |   `-ImplicitCastExpr {{.+}} 'long *' <BoundsSafetyPointerCast>
 // CHECK: {{^}}    |     |   |     `-OpaqueValueExpr [[ove_2]] {{.*}} 'long *__bidi_indexable'
 // CHECK: {{^}}    |     |   `-BinaryOperator {{.+}} 'int' '<='
-// CHECK: {{^}}    |     |     |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: {{^}}    |     |     |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: {{^}}    |     |     | `-IntegerLiteral {{.+}} 0
-// CHECK: {{^}}    |     |     `-OpaqueValueExpr [[ove_5]] {{.*}} 'long'
+// CHECK: {{^}}    |     |     `-OpaqueValueExpr [[ove_5]] {{.*}} '__ptrdiff_t':'long'
 // CHECK: {{^}}    |     |-OpaqueValueExpr [[ove_2]]
 // CHECK: {{^}}    |     | `-ImplicitCastExpr {{.+}} 'long *__bidi_indexable' <BitCast>
 // CHECK: {{^}}    |     |   `-MaterializeSequenceExpr {{.+}} <Unbind>
@@ -111,6 +111,6 @@ void Test(void) {
 // CHECK: {{^}}    |     |     |-OpaqueValueExpr [[ove_3]] {{.*}} 'char *__single __counted_by(len)':'char *__single'
 // CHECK: {{^}}    |     |     `-OpaqueValueExpr [[ove_4]] {{.*}} 'int'
 // CHECK: {{^}}    |     `-OpaqueValueExpr [[ove_5]]
-// CHECK: {{^}}    |       `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: {{^}}    |       `-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: {{^}}    |         `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK: {{^}}    |           `-DeclRefExpr {{.+}} [[var_len2]]

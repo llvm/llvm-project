@@ -49,9 +49,9 @@ assignment:
 // CHECK:    |   |   |     `-OpaqueValueExpr [[ove_5]] {{.*}} 'int *__bidi_indexable'
 // CHECK:    |   |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK:    |   |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK:    |   |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:    |   |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:    |   |     | | `-OpaqueValueExpr [[ove_4]] {{.*}} 'int'
-// CHECK:    |   |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:    |   |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK:    |   |     |   |-GetBoundExpr {{.+}} upper
 // CHECK:    |   |     |   | `-OpaqueValueExpr [[ove_5]] {{.*}} 'int *__bidi_indexable'
 // CHECK:    |   |     |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>

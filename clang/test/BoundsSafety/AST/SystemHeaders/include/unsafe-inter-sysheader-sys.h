@@ -209,8 +209,8 @@ void funcInSDK4(int * __single safePointer) {
 // STRICT: |   | | |   |   `-OpaqueValueExpr [[ove]] {{.*}} 'int *__single'
 // STRICT: |   | | |   `-BinaryOperator {{.+}} 'int' '&&'
 // STRICT: |   | | |     |-BinaryOperator {{.+}} 'int' '<='
-// STRICT: |   | | |     | |-OpaqueValueExpr [[ove_1:0x[^ ]+]] {{.*}} 'long'
-// STRICT: |   | | |     | `-BinaryOperator {{.+}} 'long' '-'
+// STRICT: |   | | |     | |-OpaqueValueExpr [[ove_1:0x[^ ]+]] {{.*}} '__ptrdiff_t':'long'
+// STRICT: |   | | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // STRICT: |   | | |     |   |-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // STRICT: |   | | |     |   | `-CStyleCastExpr {{.+}} 'char *__bidi_indexable' <BitCast>
 // STRICT: |   | | |     |   |   `-GetBoundExpr {{.+}} upper
@@ -219,17 +219,17 @@ void funcInSDK4(int * __single safePointer) {
 // STRICT: |   | | |     |   `-ImplicitCastExpr {{.+}} 'int *__single' <LValueToRValue>
 // STRICT: |   | | |     |     `-DeclRefExpr {{.+}} 'int *__single' lvalue ParmVar {{.+}} 'safePointer' 'int *__single'
 // STRICT: |   | | |     `-BinaryOperator {{.+}} 'int' '<='
-// STRICT: |   | | |       |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// STRICT: |   | | |       |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // STRICT: |   | | |       | `-IntegerLiteral {{.+}} 0
-// STRICT: |   | | |       `-OpaqueValueExpr [[ove_1]] {{.*}} 'long'
+// STRICT: |   | | |       `-OpaqueValueExpr [[ove_1]] {{.*}} '__ptrdiff_t':'long'
 // STRICT: |   | | |-OpaqueValueExpr [[ove]]
 // STRICT: |   | | | `-ImplicitCastExpr {{.+}} 'int *__single' <LValueToRValue>
 // STRICT: |   | | |   `-DeclRefExpr {{.+}} [[var_safePointer_1]]
 // STRICT: |   | | `-OpaqueValueExpr [[ove_1]]
-// STRICT: |   | |   `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// STRICT: |   | |   `-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // STRICT: |   | |     `-IntegerLiteral {{.+}} 4
 // STRICT: |   | |-OpaqueValueExpr [[ove]] {{.*}} 'int *__single'
-// STRICT: |   | `-OpaqueValueExpr [[ove_1]] {{.*}} 'long'
+// STRICT: |   | `-OpaqueValueExpr [[ove_1]] {{.*}} '__ptrdiff_t':'long'
 // STRICT: |   `-CallExpr
 // STRICT: |     |-ImplicitCastExpr {{.+}} 'void (*__single)(int *)' <FunctionToPointerDecay>
 // STRICT: |     | `-DeclRefExpr {{.+}} [[func_funcWithoutAnnotation]]

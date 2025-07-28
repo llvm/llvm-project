@@ -25,17 +25,17 @@ char * __counted_by(len) func(char * __counted_by(len) src_str, int len) {
 // CHECK-NEXT: {{^}}|     | | |-OpaqueValueExpr [[ove:0x[^ ]+]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK:      {{^}}|     | | |   | `-OpaqueValueExpr [[ove_1:0x[^ ]+]] {{.*}} 'void *'
 // CHECK:      {{^}}|     | | |   | `-OpaqueValueExpr [[ove_2:0x[^ ]+]] {{.*}} 'void *'
-// CHECK:      {{^}}|     | | |   `-OpaqueValueExpr [[ove_3:0x[^ ]+]] {{.*}} 'unsigned long'
+// CHECK:      {{^}}|     | | |   `-OpaqueValueExpr [[ove_3:0x[^ ]+]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}|     | | |-ImplicitCastExpr {{.+}} 'void *' <BitCast>
 // CHECK-NEXT: {{^}}|     | | | `-BinaryOperator {{.+}} 'char *' '+'
 // CHECK-NEXT: {{^}}|     | | |   |-CStyleCastExpr {{.+}} 'char *' <BitCast>
 // CHECK-NEXT: {{^}}|     | | |   | `-ImplicitCastExpr {{.+}} 'void *' <BoundsSafetyPointerCast>
 // CHECK-NEXT: {{^}}|     | | |   |   `-OpaqueValueExpr [[ove]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK:      {{^}}|     | | |   `-AssumptionExpr
-// CHECK-NEXT: {{^}}|     | | |     |-OpaqueValueExpr [[ove_3]] {{.*}} 'unsigned long'
+// CHECK-NEXT: {{^}}|     | | |     |-OpaqueValueExpr [[ove_3]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}|     | | |     `-BinaryOperator {{.+}} 'int' '>='
 // CHECK-NEXT: {{^}}|     | | |       |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
-// CHECK-NEXT: {{^}}|     | | |       | `-OpaqueValueExpr [[ove_3]] {{.*}} 'unsigned long'
+// CHECK-NEXT: {{^}}|     | | |       | `-OpaqueValueExpr [[ove_3]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}|     | | |       `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
 // CHECK-NEXT: {{^}}|     | | |         `-IntegerLiteral {{.+}} 0
 // CHECK:      {{^}}|     | |-OpaqueValueExpr [[ove_1]]
@@ -45,21 +45,21 @@ char * __counted_by(len) func(char * __counted_by(len) src_str, int len) {
 // CHECK-NEXT: {{^}}|     | | `-ImplicitCastExpr {{.+}} 'void *' <LValueToRValue>
 // CHECK-NEXT: {{^}}|     | |   `-DeclRefExpr {{.+}} [[var_src]]
 // CHECK-NEXT: {{^}}|     | |-OpaqueValueExpr [[ove_3]]
-// CHECK-NEXT: {{^}}|     | | `-ImplicitCastExpr {{.+}} 'unsigned long' <IntegralCast>
+// CHECK-NEXT: {{^}}|     | | `-ImplicitCastExpr {{.+}} '__size_t':'unsigned long' <IntegralCast>
 // CHECK-NEXT: {{^}}|     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: {{^}}|     | |     `-DeclRefExpr {{.+}} [[var_size]]
 // CHECK-NEXT: {{^}}|     | `-OpaqueValueExpr [[ove]]
 // CHECK-NEXT: {{^}}|     |   `-CallExpr
-// CHECK-NEXT: {{^}}|     |     |-ImplicitCastExpr {{.+}} 'void *__single __sized_by(function-parameter-0-2)(*)(void *__single __sized_by(function-parameter-0-2), const void *__single __sized_by(function-parameter-0-2), unsigned long)' <BuiltinFnToFnPtr>
+// CHECK-NEXT: {{^}}|     |     |-ImplicitCastExpr {{.+}} 'void *__single __sized_by(function-parameter-0-2)(*)(void *__single __sized_by(function-parameter-0-2), const void *__single __sized_by(function-parameter-0-2), __size_t)' <BuiltinFnToFnPtr>
 // CHECK-NEXT: {{^}}|     |     | `-DeclRefExpr {{.+}}
 // CHECK-NEXT: {{^}}|     |     |-ImplicitCastExpr {{.+}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single' <BoundsSafetyPointerCast>
 // CHECK-NEXT: {{^}}|     |     | `-OpaqueValueExpr [[ove_1]] {{.*}} 'void *'
 // CHECK:      {{^}}|     |     |-ImplicitCastExpr {{.+}} 'const void *__single __sized_by(function-parameter-0-2)':'const void *__single' <BoundsSafetyPointerCast>
 // CHECK-NEXT: {{^}}|     |     | `-OpaqueValueExpr [[ove_2]] {{.*}} 'void *'
-// CHECK:      {{^}}|     |     `-OpaqueValueExpr [[ove_3]] {{.*}} 'unsigned long'
+// CHECK:      {{^}}|     |     `-OpaqueValueExpr [[ove_3]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}|     |-OpaqueValueExpr [[ove_1]] {{.*}} 'void *'
 // CHECK:      {{^}}|     |-OpaqueValueExpr [[ove_2]] {{.*}} 'void *'
-// CHECK:      {{^}}|     |-OpaqueValueExpr [[ove_3]] {{.*}} 'unsigned long'
+// CHECK:      {{^}}|     |-OpaqueValueExpr [[ove_3]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}|     `-OpaqueValueExpr [[ove]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK:      {{^}}|-FunctionDecl [[func_static_1:0x[^ ]+]] {{.+}} static
 // CHECK-NEXT: {{^}}| |-ParmVarDecl [[var_dst_1:0x[^ ]+]]
@@ -74,17 +74,17 @@ char * __counted_by(len) func(char * __counted_by(len) src_str, int len) {
 // CHECK-NEXT: {{^}}|         | | |-OpaqueValueExpr [[ove_4:0x[^ ]+]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK:      {{^}}|         | | |   | `-OpaqueValueExpr [[ove_5:0x[^ ]+]] {{.*}} 'void *'
 // CHECK:      {{^}}|         | | |   | `-OpaqueValueExpr [[ove_6:0x[^ ]+]] {{.*}} 'void *'
-// CHECK:      {{^}}|         | | |   `-OpaqueValueExpr [[ove_7:0x[^ ]+]] {{.*}} 'unsigned long'
+// CHECK:      {{^}}|         | | |   `-OpaqueValueExpr [[ove_7:0x[^ ]+]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}|         | | |-ImplicitCastExpr {{.+}} 'void *' <BitCast>
 // CHECK-NEXT: {{^}}|         | | | `-BinaryOperator {{.+}} 'char *' '+'
 // CHECK-NEXT: {{^}}|         | | |   |-CStyleCastExpr {{.+}} 'char *' <BitCast>
 // CHECK-NEXT: {{^}}|         | | |   | `-ImplicitCastExpr {{.+}} 'void *' <BoundsSafetyPointerCast>
 // CHECK-NEXT: {{^}}|         | | |   |   `-OpaqueValueExpr [[ove_4]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK:      {{^}}|         | | |   `-AssumptionExpr
-// CHECK-NEXT: {{^}}|         | | |     |-OpaqueValueExpr [[ove_7]] {{.*}} 'unsigned long'
+// CHECK-NEXT: {{^}}|         | | |     |-OpaqueValueExpr [[ove_7]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}|         | | |     `-BinaryOperator {{.+}} 'int' '>='
 // CHECK-NEXT: {{^}}|         | | |       |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
-// CHECK-NEXT: {{^}}|         | | |       | `-OpaqueValueExpr [[ove_7]] {{.*}} 'unsigned long'
+// CHECK-NEXT: {{^}}|         | | |       | `-OpaqueValueExpr [[ove_7]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}|         | | |       `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
 // CHECK-NEXT: {{^}}|         | | |         `-IntegerLiteral {{.+}} 0
 // CHECK:      {{^}}|         | |-OpaqueValueExpr [[ove_5]]
@@ -94,21 +94,21 @@ char * __counted_by(len) func(char * __counted_by(len) src_str, int len) {
 // CHECK-NEXT: {{^}}|         | | `-ImplicitCastExpr {{.+}} 'void *' <LValueToRValue>
 // CHECK-NEXT: {{^}}|         | |   `-DeclRefExpr {{.+}} [[var_src_1]]
 // CHECK-NEXT: {{^}}|         | |-OpaqueValueExpr [[ove_7]]
-// CHECK-NEXT: {{^}}|         | | `-ImplicitCastExpr {{.+}} 'unsigned long' <IntegralCast>
+// CHECK-NEXT: {{^}}|         | | `-ImplicitCastExpr {{.+}} '__size_t':'unsigned long' <IntegralCast>
 // CHECK-NEXT: {{^}}|         | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: {{^}}|         | |     `-DeclRefExpr {{.+}} [[var_size_1]]
 // CHECK-NEXT: {{^}}|         | `-OpaqueValueExpr [[ove_4]]
 // CHECK-NEXT: {{^}}|         |   `-CallExpr
-// CHECK-NEXT: {{^}}|         |     |-ImplicitCastExpr {{.+}} 'void *__single __sized_by(function-parameter-0-2)(*)(void *__single __sized_by(function-parameter-0-2), const void *__single __sized_by(function-parameter-0-2), unsigned long)' <BuiltinFnToFnPtr>
+// CHECK-NEXT: {{^}}|         |     |-ImplicitCastExpr {{.+}} 'void *__single __sized_by(function-parameter-0-2)(*)(void *__single __sized_by(function-parameter-0-2), const void *__single __sized_by(function-parameter-0-2), __size_t)' <BuiltinFnToFnPtr>
 // CHECK-NEXT: {{^}}|         |     | `-DeclRefExpr {{.+}}
 // CHECK-NEXT: {{^}}|         |     |-ImplicitCastExpr {{.+}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single' <BoundsSafetyPointerCast>
 // CHECK-NEXT: {{^}}|         |     | `-OpaqueValueExpr [[ove_5]] {{.*}} 'void *'
 // CHECK:      {{^}}|         |     |-ImplicitCastExpr {{.+}} 'const void *__single __sized_by(function-parameter-0-2)':'const void *__single' <BoundsSafetyPointerCast>
 // CHECK-NEXT: {{^}}|         |     | `-OpaqueValueExpr [[ove_6]] {{.*}} 'void *'
-// CHECK:      {{^}}|         |     `-OpaqueValueExpr [[ove_7]] {{.*}} 'unsigned long'
+// CHECK:      {{^}}|         |     `-OpaqueValueExpr [[ove_7]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}|         |-OpaqueValueExpr [[ove_5]] {{.*}} 'void *'
 // CHECK:      {{^}}|         |-OpaqueValueExpr [[ove_6]] {{.*}} 'void *'
-// CHECK:      {{^}}|         |-OpaqueValueExpr [[ove_7]] {{.*}} 'unsigned long'
+// CHECK:      {{^}}|         |-OpaqueValueExpr [[ove_7]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}|         `-OpaqueValueExpr [[ove_4]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK:      {{^}}|-FunctionDecl [[func_static_2:0x[^ ]+]] {{.+}} static
 // CHECK-NEXT: {{^}}| |-ParmVarDecl [[var_dst_2:0x[^ ]+]]
@@ -124,17 +124,17 @@ char * __counted_by(len) func(char * __counted_by(len) src_str, int len) {
 // CHECK-NEXT: {{^}}|   |       | | |-OpaqueValueExpr [[ove_8:0x[^ ]+]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK:      {{^}}|   |       | | |   | `-OpaqueValueExpr [[ove_9:0x[^ ]+]] {{.*}} 'void *'
 // CHECK:      {{^}}|   |       | | |   | `-OpaqueValueExpr [[ove_10:0x[^ ]+]] {{.*}} 'void *'
-// CHECK:      {{^}}|   |       | | |   `-OpaqueValueExpr [[ove_11:0x[^ ]+]] {{.*}} 'unsigned long'
+// CHECK:      {{^}}|   |       | | |   `-OpaqueValueExpr [[ove_11:0x[^ ]+]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}|   |       | | |-ImplicitCastExpr {{.+}} 'void *' <BitCast>
 // CHECK-NEXT: {{^}}|   |       | | | `-BinaryOperator {{.+}} 'char *' '+'
 // CHECK-NEXT: {{^}}|   |       | | |   |-CStyleCastExpr {{.+}} 'char *' <BitCast>
 // CHECK-NEXT: {{^}}|   |       | | |   | `-ImplicitCastExpr {{.+}} 'void *' <BoundsSafetyPointerCast>
 // CHECK-NEXT: {{^}}|   |       | | |   |   `-OpaqueValueExpr [[ove_8]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK:      {{^}}|   |       | | |   `-AssumptionExpr
-// CHECK-NEXT: {{^}}|   |       | | |     |-OpaqueValueExpr [[ove_11]] {{.*}} 'unsigned long'
+// CHECK-NEXT: {{^}}|   |       | | |     |-OpaqueValueExpr [[ove_11]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}|   |       | | |     `-BinaryOperator {{.+}} 'int' '>='
 // CHECK-NEXT: {{^}}|   |       | | |       |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
-// CHECK-NEXT: {{^}}|   |       | | |       | `-OpaqueValueExpr [[ove_11]] {{.*}} 'unsigned long'
+// CHECK-NEXT: {{^}}|   |       | | |       | `-OpaqueValueExpr [[ove_11]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}|   |       | | |       `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
 // CHECK-NEXT: {{^}}|   |       | | |         `-IntegerLiteral {{.+}} 0
 // CHECK:      {{^}}|   |       | |-OpaqueValueExpr [[ove_9]]
@@ -144,21 +144,21 @@ char * __counted_by(len) func(char * __counted_by(len) src_str, int len) {
 // CHECK-NEXT: {{^}}|   |       | | `-ImplicitCastExpr {{.+}} 'void *' <LValueToRValue>
 // CHECK-NEXT: {{^}}|   |       | |   `-DeclRefExpr {{.+}} [[var_src_2]]
 // CHECK-NEXT: {{^}}|   |       | |-OpaqueValueExpr [[ove_11]]
-// CHECK-NEXT: {{^}}|   |       | | `-ImplicitCastExpr {{.+}} 'unsigned long' <IntegralCast>
+// CHECK-NEXT: {{^}}|   |       | | `-ImplicitCastExpr {{.+}} '__size_t':'unsigned long' <IntegralCast>
 // CHECK-NEXT: {{^}}|   |       | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: {{^}}|   |       | |     `-DeclRefExpr {{.+}} [[var_size_2]]
 // CHECK-NEXT: {{^}}|   |       | `-OpaqueValueExpr [[ove_8]]
 // CHECK-NEXT: {{^}}|   |       |   `-CallExpr
-// CHECK-NEXT: {{^}}|   |       |     |-ImplicitCastExpr {{.+}} 'void *__single __sized_by(function-parameter-0-2)(*)(void *__single __sized_by(function-parameter-0-2), const void *__single __sized_by(function-parameter-0-2), unsigned long)' <BuiltinFnToFnPtr>
+// CHECK-NEXT: {{^}}|   |       |     |-ImplicitCastExpr {{.+}} 'void *__single __sized_by(function-parameter-0-2)(*)(void *__single __sized_by(function-parameter-0-2), const void *__single __sized_by(function-parameter-0-2), __size_t)' <BuiltinFnToFnPtr>
 // CHECK-NEXT: {{^}}|   |       |     | `-DeclRefExpr {{.+}}
 // CHECK-NEXT: {{^}}|   |       |     |-ImplicitCastExpr {{.+}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single' <BoundsSafetyPointerCast>
 // CHECK-NEXT: {{^}}|   |       |     | `-OpaqueValueExpr [[ove_9]] {{.*}} 'void *'
 // CHECK:      {{^}}|   |       |     |-ImplicitCastExpr {{.+}} 'const void *__single __sized_by(function-parameter-0-2)':'const void *__single' <BoundsSafetyPointerCast>
 // CHECK-NEXT: {{^}}|   |       |     | `-OpaqueValueExpr [[ove_10]] {{.*}} 'void *'
-// CHECK:      {{^}}|   |       |     `-OpaqueValueExpr [[ove_11]] {{.*}} 'unsigned long'
+// CHECK:      {{^}}|   |       |     `-OpaqueValueExpr [[ove_11]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}|   |       |-OpaqueValueExpr [[ove_9]] {{.*}} 'void *'
 // CHECK:      {{^}}|   |       |-OpaqueValueExpr [[ove_10]] {{.*}} 'void *'
-// CHECK:      {{^}}|   |       |-OpaqueValueExpr [[ove_11]] {{.*}} 'unsigned long'
+// CHECK:      {{^}}|   |       |-OpaqueValueExpr [[ove_11]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}|   |       `-OpaqueValueExpr [[ove_8]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK:      {{^}}|   `-ReturnStmt
 // CHECK-NEXT: {{^}}|     `-ImplicitCastExpr {{.+}} 'void *' <LValueToRValue>
@@ -168,9 +168,9 @@ char * __counted_by(len) func(char * __counted_by(len) src_str, int len) {
 // CHECK-NEXT: {{^}}| `-CompoundStmt
 // CHECK-NEXT: {{^}}|   `-ReturnStmt
 // CHECK-NEXT: {{^}}|     `-CallExpr
-// CHECK-NEXT: {{^}}|       |-ImplicitCastExpr {{.+}} 'void *(*)(unsigned long)' <BuiltinFnToFnPtr>
+// CHECK-NEXT: {{^}}|       |-ImplicitCastExpr {{.+}} 'void *(*)(__size_t)' <BuiltinFnToFnPtr>
 // CHECK-NEXT: {{^}}|       | `-DeclRefExpr {{.+}}
-// CHECK-NEXT: {{^}}|       `-ImplicitCastExpr {{.+}} 'unsigned long' <IntegralCast>
+// CHECK-NEXT: {{^}}|       `-ImplicitCastExpr {{.+}} '__size_t':'unsigned long' <IntegralCast>
 // CHECK-NEXT: {{^}}|         `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: {{^}}|           `-DeclRefExpr {{.+}} [[var_size_3]]
 // CHECK:      {{^}}|-FunctionDecl [[func_static_4:0x[^ ]+]] {{.+}} static
@@ -179,9 +179,9 @@ char * __counted_by(len) func(char * __counted_by(len) src_str, int len) {
 // CHECK-NEXT: {{^}}|   |-DeclStmt
 // CHECK-NEXT: {{^}}|   | `-VarDecl [[var_tmp_1:0x[^ ]+]]
 // CHECK-NEXT: {{^}}|   |   `-CallExpr
-// CHECK-NEXT: {{^}}|   |     |-ImplicitCastExpr {{.+}} 'void *(*)(unsigned long)' <BuiltinFnToFnPtr>
+// CHECK-NEXT: {{^}}|   |     |-ImplicitCastExpr {{.+}} 'void *(*)(__size_t)' <BuiltinFnToFnPtr>
 // CHECK-NEXT: {{^}}|   |     | `-DeclRefExpr {{.+}}
-// CHECK-NEXT: {{^}}|   |     `-ImplicitCastExpr {{.+}} 'unsigned long' <IntegralCast>
+// CHECK-NEXT: {{^}}|   |     `-ImplicitCastExpr {{.+}} '__size_t':'unsigned long' <IntegralCast>
 // CHECK-NEXT: {{^}}|   |       `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: {{^}}|   |         `-DeclRefExpr {{.+}} [[var_size_4]]
 // CHECK-NEXT: {{^}}|   `-ReturnStmt
@@ -218,9 +218,9 @@ char * __counted_by(len) func(char * __counted_by(len) src_str, int len) {
 // CHECK-NEXT: {{^}}    | |   |     `-OpaqueValueExpr [[ove_12]] {{.*}} 'char *__bidi_indexable'
 // CHECK:      {{^}}    | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}    | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}    | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}    | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}    | |     | | `-OpaqueValueExpr [[ove_13:0x[^ ]+]] {{.*}} 'int'
-// CHECK:      {{^}}    | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}    | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}    | |     |   |-GetBoundExpr {{.+}} upper
 // CHECK-NEXT: {{^}}    | |     |   | `-OpaqueValueExpr [[ove_12]] {{.*}} 'char *__bidi_indexable'
 // CHECK:      {{^}}    | |     |   `-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
@@ -238,7 +238,7 @@ char * __counted_by(len) func(char * __counted_by(len) src_str, int len) {
 // CHECK-NEXT: {{^}}    | |       |   | `-DeclRefExpr {{.+}} [[func_static_3]]
 // CHECK-NEXT: {{^}}    | |       |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: {{^}}    | |       |     `-DeclRefExpr {{.+}} [[var_len]]
-// CHECK-NEXT: {{^}}    | |       |-ImplicitCastExpr {{.+}} 'unsigned long' <IntegralCast>
+// CHECK-NEXT: {{^}}    | |       |-ImplicitCastExpr {{.+}} '__size_t':'unsigned long' <IntegralCast>
 // CHECK-NEXT: {{^}}    | |       | `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: {{^}}    | |       |   `-ParenExpr
 // CHECK-NEXT: {{^}}    | |       |     `-DeclRefExpr {{.+}} [[var_len]]
@@ -312,9 +312,9 @@ char * __counted_by(len) func(char * __counted_by(len) src_str, int len) {
 // CHECK-NEXT: {{^}}        | |     `-OpaqueValueExpr [[ove_18]] {{.*}} 'char *__bidi_indexable'
 // CHECK:      {{^}}        | `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}        |   |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}        |   | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}        |   | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}        |   | | `-OpaqueValueExpr [[ove_21:0x[^ ]+]] {{.*}} 'int'
-// CHECK:      {{^}}        |   | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}        |   | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}        |   |   |-GetBoundExpr {{.+}} upper
 // CHECK-NEXT: {{^}}        |   |   | `-OpaqueValueExpr [[ove_18]] {{.*}} 'char *__bidi_indexable'
 // CHECK:      {{^}}        |   |   `-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>

@@ -138,9 +138,9 @@ void shared_no_flexbase_update(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT: {{^}}|   | |   |     `-OpaqueValueExpr [[ove_6]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}|   | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}|   | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}|   | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}|   | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}|   | |     | | `-OpaqueValueExpr [[ove_5]] {{.*}} 'int'
-// CHECK:      {{^}}|   | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}|   | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}|   | |     |   |-GetBoundExpr {{.+}} upper
 // CHECK-NEXT: {{^}}|   | |     |   | `-OpaqueValueExpr [[ove_6]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}|   | |     |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
@@ -194,9 +194,9 @@ void shared_no_flexbase_update_reverse(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT: {{^}}|   | |   |     `-OpaqueValueExpr [[ove_7]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}|   | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}|   | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}|   | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}|   | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}|   | |     | | `-OpaqueValueExpr [[ove_10:0x[^ ]+]] {{.*}} 'int'
-// CHECK:      {{^}}|   | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}|   | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}|   | |     |   |-GetBoundExpr {{.+}} upper
 // CHECK-NEXT: {{^}}|   | |     |   | `-OpaqueValueExpr [[ove_7]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}|   | |     |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
@@ -288,9 +288,9 @@ void shared_flexbase_update(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT: {{^}}|   | |   |     `-OpaqueValueExpr [[ove_13]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}|   | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}|   | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}|   | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}|   | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}|   | |     | | `-OpaqueValueExpr [[ove_14:0x[^ ]+]] {{.*}} 'int'
-// CHECK:      {{^}}|   | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}|   | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}|   | |     |   |-GetBoundExpr {{.+}} upper
 // CHECK-NEXT: {{^}}|   | |     |   | `-OpaqueValueExpr [[ove_13]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}|   | |     |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
@@ -366,9 +366,9 @@ void shared_flexbase_update_reverse(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT: {{^}}|   | |   |     `-OpaqueValueExpr [[ove_18]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}|   | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}|   | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}|   | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}|   | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}|   | |     | | `-OpaqueValueExpr [[ove_17]] {{.*}} 'int'
-// CHECK:      {{^}}|   | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}|   | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}|   | |     |   |-GetBoundExpr {{.+}} upper
 // CHECK-NEXT: {{^}}|   | |     |   | `-OpaqueValueExpr [[ove_18]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}|   | |     |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
@@ -446,9 +446,9 @@ void shared_flexbase_self_assign(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT: {{^}}|   | |   |     `-OpaqueValueExpr [[ove_21]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}|   | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}|   | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}|   | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}|   | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}|   | |     | | `-OpaqueValueExpr [[ove_22:0x[^ ]+]] {{.*}} 'int'
-// CHECK:      {{^}}|   | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}|   | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}|   | |     |   |-GetBoundExpr {{.+}} upper
 // CHECK-NEXT: {{^}}|   | |     |   | `-OpaqueValueExpr [[ove_21]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}|   | |     |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
@@ -524,9 +524,9 @@ void shared_flexbase_self_assign_reverse(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT: {{^}}|   | |   |     `-OpaqueValueExpr [[ove_26]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}|   | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}|   | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}|   | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}|   | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}|   | |     | | `-OpaqueValueExpr [[ove_25]] {{.*}} 'int'
-// CHECK:      {{^}}|   | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}|   | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}|   | |     |   |-GetBoundExpr {{.+}} upper
 // CHECK-NEXT: {{^}}|   | |     |   | `-OpaqueValueExpr [[ove_26]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}|   | |     |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
@@ -586,9 +586,9 @@ void shared_flexbase_self_assign_fr(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT: {{^}}|   | |   |     `-OpaqueValueExpr [[ove_27]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}|   | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}|   | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}|   | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}|   | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}|   | |     | | `-OpaqueValueExpr [[ove_31:0x[^ ]+]] {{.*}} 'int'
-// CHECK:      {{^}}|   | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}|   | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}|   | |     |   |-GetBoundExpr {{.+}} upper
 // CHECK-NEXT: {{^}}|   | |     |   | `-OpaqueValueExpr [[ove_27]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}|   | |     |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
@@ -666,9 +666,9 @@ void shared_flexbase_self_assign_fr_reverse(struct Shared * __bidi_indexable p) 
 // CHECK-NEXT: {{^}}|   | |   |     `-OpaqueValueExpr [[ove_33]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}|   | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}|   | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}|   | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}|   | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}|   | |     | | `-OpaqueValueExpr [[ove_32]] {{.*}} 'int'
-// CHECK:      {{^}}|   | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}|   | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}|   | |     |   |-GetBoundExpr {{.+}} upper
 // CHECK-NEXT: {{^}}|   | |     |   | `-OpaqueValueExpr [[ove_33]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}|   | |     |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>

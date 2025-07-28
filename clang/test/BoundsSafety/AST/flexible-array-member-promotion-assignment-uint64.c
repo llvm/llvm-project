@@ -177,7 +177,7 @@ void promote_to_sized_by(struct flexible *flex) {
 // CHECK:   |   | |   `-BinaryOperator {{.+}} 'int' '<='
 // CHECK:   |   | |     |-OpaqueValueExpr [[ove_6]] {{.*}} 'unsigned long long'
 // CHECK:   |   | |     `-ImplicitCastExpr {{.+}} 'unsigned long long' <IntegralCast>
-// CHECK:   |   | |       `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:   |   | |       `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK:   |   | |         |-CStyleCastExpr {{.+}} 'char *' <BitCast>
 // CHECK:   |   | |         | `-GetBoundExpr {{.+}} upper
 // CHECK:   |   | |         |   `-OpaqueValueExpr [[ove_7]] {{.*}} 'struct flexible *__bidi_indexable'

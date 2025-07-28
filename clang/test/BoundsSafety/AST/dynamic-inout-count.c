@@ -33,9 +33,9 @@
 // CHECK:     | |   |     `-OpaqueValueExpr [[ove_1]] {{.*}} 'int *__bidi_indexable'
 // CHECK:     | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK:     | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK:     | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:     | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:     | |     | | `-OpaqueValueExpr [[ove]] {{.*}} 'int'
-// CHECK:     | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:     | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK:     | |     |   |-GetBoundExpr {{.+}} upper
 // CHECK:     | |     |   | `-OpaqueValueExpr [[ove_1]] {{.*}} 'int *__bidi_indexable'
 // CHECK:     | |     |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
@@ -103,17 +103,17 @@ void foo(int *__counted_by(*len) buf, int *len) {
 // CHECK:     | |   |     `-OpaqueValueExpr [[ove_4]] {{.*}} 'int *__bidi_indexable'
 // CHECK:     | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK:     | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK:     | |     | |-OpaqueValueExpr [[ove_6:0x[^ ]+]] {{.*}} 'long'
-// CHECK:     | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:     | |     | |-OpaqueValueExpr [[ove_6:0x[^ ]+]] {{.*}} '__ptrdiff_t':'long'
+// CHECK:     | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK:     | |     |   |-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
 // CHECK:     | |     |   | `-GetBoundExpr {{.+}} upper
 // CHECK:     | |     |   |   `-OpaqueValueExpr [[ove_4]] {{.*}} 'int *__bidi_indexable'
 // CHECK:     | |     |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
 // CHECK:     | |     |     `-OpaqueValueExpr [[ove_4]] {{.*}} 'int *__bidi_indexable'
 // CHECK:     | |     `-BinaryOperator {{.+}} 'int' '<='
-// CHECK:     | |       |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:     | |       |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:     | |       | `-IntegerLiteral {{.+}} 0
-// CHECK:     | |       `-OpaqueValueExpr [[ove_6]] {{.*}} 'long'
+// CHECK:     | |       `-OpaqueValueExpr [[ove_6]] {{.*}} '__ptrdiff_t':'long'
 // CHECK:     | |-OpaqueValueExpr [[ove_4]]
 // CHECK:     | | `-ImplicitCastExpr {{.+}} 'int *__bidi_indexable' <ArrayToPointerDecay>
 // CHECK:     | |   `-DeclRefExpr {{.+}} [[var_arr]]
@@ -121,13 +121,13 @@ void foo(int *__counted_by(*len) buf, int *len) {
 // CHECK:     | | `-UnaryOperator {{.+}} cannot overflow
 // CHECK:     | |   `-DeclRefExpr {{.+}} [[var_len_1]]
 // CHECK:     | `-OpaqueValueExpr [[ove_6]]
-// CHECK:     |   `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:     |   `-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:     |     `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK:     |       `-UnaryOperator {{.+}} cannot overflow
 // CHECK:     |         `-OpaqueValueExpr [[ove_5]] {{.*}} 'int *__bidi_indexable'
 // CHECK:     |-OpaqueValueExpr [[ove_4]] {{.*}} 'int *__bidi_indexable'
 // CHECK:     |-OpaqueValueExpr [[ove_5]] {{.*}} 'int *__bidi_indexable'
-// CHECK:     `-OpaqueValueExpr [[ove_6]] {{.*}} 'long'
+// CHECK:     `-OpaqueValueExpr [[ove_6]] {{.*}} '__ptrdiff_t':'long'
 void bar() {
   int arr[10];
   int len = 11;

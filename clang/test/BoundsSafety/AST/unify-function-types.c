@@ -72,9 +72,9 @@ char test1(char src_buf[__counted_by(src_len)], int src_len, int src_len2) {
 // CHECK-NEXT: {{^}}|       | |   |     `-OpaqueValueExpr [[ove]] {{.*}} 'char *__bidi_indexable'
 // CHECK:      {{^}}|       | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}|       | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}|       | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}|       | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}|       | |     | | `-OpaqueValueExpr [[ove_3]] {{.*}} 'int'
-// CHECK:      {{^}}|       | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}|       | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}|       | |     |   |-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // CHECK-NEXT: {{^}}|       | |     |   | `-GetBoundExpr {{.+}} upper
 // CHECK-NEXT: {{^}}|       | |     |   |   `-OpaqueValueExpr [[ove]] {{.*}} 'char *__bidi_indexable'
@@ -173,9 +173,9 @@ char * __counted_by(src_len) test3(char src_buf[__counted_by(src_len)], int src_
 // CHECK-NEXT: {{^}}|       | |     `-OpaqueValueExpr [[ove_5]] {{.*}} 'char *__bidi_indexable'
 // CHECK:      {{^}}|       | `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}|       |   |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}|       |   | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}|       |   | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}|       |   | | `-OpaqueValueExpr [[ove_12:0x[^ ]+]] {{.*}} 'int'
-// CHECK:      {{^}}|       |   | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}|       |   | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}|       |   |   |-GetBoundExpr {{.+}} upper
 // CHECK-NEXT: {{^}}|       |   |   | `-OpaqueValueExpr [[ove_5]] {{.*}} 'char *__bidi_indexable'
 // CHECK:      {{^}}|       |   |   `-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
@@ -250,9 +250,9 @@ char * __counted_by(src_len) test3(char src_buf[__counted_by(src_len)], int src_
 // CHECK-NEXT: {{^}}|       |   |       |     `-OpaqueValueExpr [[ove_7]] {{.*}} 'char *__bidi_indexable'
 // CHECK:      {{^}}|       |   |       `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}|       |   |         |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}|       |   |         | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}|       |   |         | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}|       |   |         | | `-OpaqueValueExpr [[ove_10]] {{.*}} 'int'
-// CHECK:      {{^}}|       |   |         | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}|       |   |         | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}|       |   |         |   |-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // CHECK-NEXT: {{^}}|       |   |         |   | `-GetBoundExpr {{.+}} upper
 // CHECK-NEXT: {{^}}|       |   |         |   |   `-OpaqueValueExpr [[ove_7]] {{.*}} 'char *__bidi_indexable'

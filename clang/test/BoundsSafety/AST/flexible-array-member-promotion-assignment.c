@@ -160,7 +160,7 @@ void promote_to_sized_by(struct flexible *flex) {
 // CHECK:   |   | |   `-BinaryOperator {{.+}} 'int' '<='
 // CHECK:   |   | |     |-OpaqueValueExpr [[ove_6]] {{.*}} 'unsigned long long'
 // CHECK:   |   | |     `-ImplicitCastExpr {{.+}} 'unsigned long long' <IntegralCast>
-// CHECK:   |   | |       `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:   |   | |       `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK:   |   | |         |-CStyleCastExpr {{.+}} 'char *' <BitCast>
 // CHECK:   |   | |         | `-GetBoundExpr {{.+}} upper
 // CHECK:   |   | |         |   `-OpaqueValueExpr [[ove_7]] {{.*}} 'struct flexible *__bidi_indexable'
@@ -169,11 +169,11 @@ void promote_to_sized_by(struct flexible *flex) {
 // CHECK:   |   | |             `-OpaqueValueExpr [[ove_7]] {{.*}} 'struct flexible *__bidi_indexable'
 // CHECK:   |   | |-OpaqueValueExpr [[ove_6]]
 // CHECK:   |   | | `-ImplicitCastExpr {{.+}} 'unsigned long long' <IntegralCast>
-// CHECK:   |   | |   `-BinaryOperator {{.+}} 'unsigned long' '+'
+// CHECK:   |   | |   `-BinaryOperator {{.+}} '__size_t':'unsigned long' '+'
 // CHECK:   |   | |     |-UnaryExprOrTypeTraitExpr
-// CHECK:   |   | |     `-BinaryOperator {{.+}} 'unsigned long' '*'
+// CHECK:   |   | |     `-BinaryOperator {{.+}} '__size_t':'unsigned long' '*'
 // CHECK:   |   | |       |-UnaryExprOrTypeTraitExpr
-// CHECK:   |   | |       `-ImplicitCastExpr {{.+}} 'unsigned long' <IntegralCast>
+// CHECK:   |   | |       `-ImplicitCastExpr {{.+}} '__size_t':'unsigned long' <IntegralCast>
 // CHECK:   |   | |         `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK:   |   | |           `-MemberExpr {{.+}} ->count
 // CHECK:   |   | |             `-ImplicitCastExpr {{.+}} 'struct flexible *__single' <LValueToRValue>

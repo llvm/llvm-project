@@ -115,11 +115,11 @@ void receive_transparent_union(union TransparentUnion);
 // CHECK-NEXT: |           |   |     `-DeclRefExpr {{.+}} 'char *__bidi_indexable' lvalue ParmVar {{.+}} 'new_ptr' 'char *__bidi_indexable'
 // CHECK-NEXT: |           |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |           |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |           |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |           |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |           |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |           |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |           |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |           |     |   |   `-ImplicitCastExpr {{.+}} 'char *__bidi_indexable' <LValueToRValue>
@@ -193,11 +193,11 @@ void assign_via_ptr(struct cbon* ptr, int new_count,
 // CHECK-NEXT: |           |   |     `-DeclRefExpr {{.+}} 'char *__bidi_indexable' lvalue ParmVar {{.+}} 'new_ptr' 'char *__bidi_indexable'
 // CHECK-NEXT: |           |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |           |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |           |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |           |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |           |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |           |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |           |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |           |     |   |   `-ImplicitCastExpr {{.+}} 'char *__bidi_indexable' <LValueToRValue>
@@ -270,11 +270,11 @@ void assign_operator(int new_count, char* __bidi_indexable new_ptr) {
 // CHECK-NEXT: |             |   |     `-DeclRefExpr {{.+}} 'char *__bidi_indexable' lvalue ParmVar {{.+}} 'new_ptr' 'char *__bidi_indexable'
 // CHECK-NEXT: |             |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |             |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |             |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |             |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |             |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |             |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |             |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |             |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |             |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |             |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |             |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |             |     |   |   `-ImplicitCastExpr {{.+}} 'char *__bidi_indexable' <LValueToRValue>
@@ -346,11 +346,11 @@ void local_var_init(int new_count, char* __bidi_indexable new_ptr) {
 // CHECK-NEXT: |           |   |     `-DeclRefExpr {{.+}} 'char *__bidi_indexable' lvalue ParmVar {{.+}} 'new_ptr' 'char *__bidi_indexable'
 // CHECK-NEXT: |           |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |           |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |           |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |           |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |           |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |           |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |           |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |           |     |   |   `-ImplicitCastExpr {{.+}} 'char *__bidi_indexable' <LValueToRValue>
@@ -420,11 +420,11 @@ void call_arg(int new_count, char* __bidi_indexable new_ptr) {
 // CHECK-NEXT: |           |   |     `-DeclRefExpr {{.+}} 'char *__bidi_indexable' lvalue ParmVar {{.+}} 'new_ptr' 'char *__bidi_indexable'
 // CHECK-NEXT: |           |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |           |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |           |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |           |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |           |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |           |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |           |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |           |     |   |   `-ImplicitCastExpr {{.+}} 'char *__bidi_indexable' <LValueToRValue>
@@ -494,11 +494,11 @@ struct cbon return_cbon(int new_count, char* __bidi_indexable new_ptr) {
 // CHECK-NEXT: |           |   |     `-DeclRefExpr {{.+}} 'char *__bidi_indexable' lvalue ParmVar {{.+}} 'new_ptr' 'char *__bidi_indexable'
 // CHECK-NEXT: |           |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |           |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |           |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |           |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |           |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |           |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |           |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |           |     |   |   `-ImplicitCastExpr {{.+}} 'char *__bidi_indexable' <LValueToRValue>
@@ -611,11 +611,11 @@ void assign_via_ptr_nullptr(struct cbon* ptr, int new_count) {
 // CHECK-NEXT: |           | |   |     `-DeclRefExpr {{.+}} 'char *__bidi_indexable' lvalue ParmVar {{.+}} 'new_ptr' 'char *__bidi_indexable'
 // CHECK-NEXT: |           | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |           | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |           | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |           | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |           | |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |           | |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |           | |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |           | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |           | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |           | |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |           | |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |           | |     |   |   `-ImplicitCastExpr {{.+}} 'char *__bidi_indexable' <LValueToRValue>
@@ -695,11 +695,11 @@ void assign_via_ptr_nested(struct nested_cbon* ptr,
 // CHECK-NEXT: |           |     |   |     `-DeclRefExpr {{.+}} 'char *__bidi_indexable' lvalue ParmVar {{.+}} 'new_ptr' 'char *__bidi_indexable'
 // CHECK-NEXT: |           |     |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |           |     |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |           |     |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |           |     |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |           |     |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |           |     |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |           |     |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |           |     |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |           |     |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |           |     |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |           |     |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |           |     |     |   |   `-ImplicitCastExpr {{.+}} 'char *__bidi_indexable' <LValueToRValue>
@@ -780,11 +780,11 @@ void assign_via_ptr_nested_v2(struct nested_cbon* ptr,
 // CHECK-NEXT: |           | |     |   |     `-DeclRefExpr {{.+}} 'char *__bidi_indexable' lvalue ParmVar {{.+}} 'new_ptr' 'char *__bidi_indexable'
 // CHECK-NEXT: |           | |     |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |           | |     |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |           | |     |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |           | |     |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |           | |     |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |           | |     |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |           | |     |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |           | |     |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |           | |     |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |           | |     |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |           | |     |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |           | |     |     |   |   `-ImplicitCastExpr {{.+}} 'char *__bidi_indexable' <LValueToRValue>
@@ -839,11 +839,11 @@ void assign_via_ptr_nested_v2(struct nested_cbon* ptr,
 // CHECK-NEXT: |           |   |     `-DeclRefExpr {{.+}} 'char *__bidi_indexable' lvalue ParmVar {{.+}} 'new_ptr' 'char *__bidi_indexable'
 // CHECK-NEXT: |           |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |           |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |           |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |           |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |           |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |           |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |           |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |           |     |   |   `-ImplicitCastExpr {{.+}} 'char *__bidi_indexable' <LValueToRValue>
@@ -918,11 +918,11 @@ void assign_via_ptr_nested_v3(struct nested_and_outer_cbon* ptr,
 // CHECK-NEXT: |   |       | |   |     `-DeclRefExpr {{.+}} 'char *__bidi_indexable' lvalue ParmVar {{.+}} 'new_ptr' 'char *__bidi_indexable'
 // CHECK-NEXT: |   |       | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |   |       | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |   |       | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |   |       | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |   |       | |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |   |       | |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |   |       | |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |   |       | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |   |       | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |   |       | |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |   |       | |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |   |       | |     |   |   `-ImplicitCastExpr {{.+}} 'char *__bidi_indexable' <LValueToRValue>
@@ -1034,11 +1034,11 @@ void array_of_struct_init(char* __bidi_indexable new_ptr,
 // CHECK-NEXT: |           |   |     `-DeclRefExpr {{.+}} 'char *__bidi_indexable' lvalue ParmVar {{.+}} 'new_ptr' 'char *__bidi_indexable'
 // CHECK-NEXT: |           |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |           |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |           |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |           |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |           |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |           |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |           |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |           |     |   |   `-ImplicitCastExpr {{.+}} 'char *__bidi_indexable' <LValueToRValue>
@@ -1163,11 +1163,11 @@ void assign_via_ptr_other_data_side_effect_zero_ptr(struct cbon_with_other_data*
 // CHECK-NEXT: |               |   |     `-DeclRefExpr {{.+}} 'char *__bidi_indexable' lvalue ParmVar {{.+}} 'new_ptr' 'char *__bidi_indexable'
 // CHECK-NEXT: |               |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |               |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |               |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |               |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |               |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |               |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |               |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |               |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |               |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |               |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |               |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |               |     |   |   `-ImplicitCastExpr {{.+}} 'char *__bidi_indexable' <LValueToRValue>
@@ -1245,11 +1245,11 @@ void call_arg_transparent_union(int new_count,
 // CHECK-NEXT: |             |   |     `-DeclRefExpr {{.+}} 'char *__bidi_indexable' lvalue ParmVar {{.+}} 'new_ptr' 'char *__bidi_indexable'
 // CHECK-NEXT: |             |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |             |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |             |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |             |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |             |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |             |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |             |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |             |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |             |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |             |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |             |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |             |     |   |   `-ImplicitCastExpr {{.+}} 'char *__bidi_indexable' <LValueToRValue>
@@ -1646,13 +1646,13 @@ void call_arg_transparent_union_untransparently(int new_count,
 // CHECK-NEXT: |           |   |               `-DeclRefExpr {{.+}} 'struct cbon *__single' lvalue ParmVar {{.+}} 'ptr' 'struct cbon *__single'
 // CHECK-NEXT: |           |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |           |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |           |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |           |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |           |     | |     `-MemberExpr {{.+}} 'int' lvalue ->count {{.+}}
 // CHECK-NEXT: |           |     | |       `-ImplicitCastExpr {{.+}} 'struct cbon *__single' <LValueToRValue>
 // CHECK-NEXT: |           |     | |         `-DeclRefExpr {{.+}} 'struct cbon *__single' lvalue ParmVar {{.+}} 'ptr' 'struct cbon *__single'
-// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |           |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |           |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |           |     |   |   `-MaterializeSequenceExpr {{.+}} 'char *__bidi_indexable' <Unbind>
@@ -2037,11 +2037,11 @@ void assign_via_ptr_from_ptr(struct cbon* ptr) {
 // CHECK-NEXT: |           |   |         `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
 // CHECK-NEXT: |           |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |           |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |           |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |           |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |           |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |           |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |           |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |           |     |   |   `-MaterializeSequenceExpr {{.+}} 'char *__bidi_indexable' <Unbind>
@@ -2341,11 +2341,11 @@ void assign_via_ptr_from_cbon(struct cbon* ptr, int new_count,
 // CHECK-NEXT: |           |   |         `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
 // CHECK-NEXT: |           |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |           |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |           |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |           |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |           |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |           |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |           |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |           |     |   |   `-MaterializeSequenceExpr {{.+}} 'char *__bidi_indexable' <Unbind>
@@ -2645,11 +2645,11 @@ void assign_operator_from_cbon(int new_count,
 // CHECK-NEXT: |             |   |         `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
 // CHECK-NEXT: |             |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |             |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |             |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |             |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |             |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |             |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |             |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |             |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |             |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |             |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |             |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |             |     |   |   `-MaterializeSequenceExpr {{.+}} 'char *__bidi_indexable' <Unbind>
@@ -2948,11 +2948,11 @@ void local_var_init_from_cbon(int new_count,
 // CHECK-NEXT: |           |   |         `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
 // CHECK-NEXT: |           |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |           |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |           |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |           |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |           |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |           |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |           |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |           |     |   |   `-MaterializeSequenceExpr {{.+}} 'char *__bidi_indexable' <Unbind>
@@ -3249,11 +3249,11 @@ void call_arg_from_cbon(int new_count,
 // CHECK-NEXT: |           |   |         `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
 // CHECK-NEXT: |           |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |           |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |           |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |           |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |           |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |           |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |           |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |           |     |   |   `-MaterializeSequenceExpr {{.+}} 'char *__bidi_indexable' <Unbind>
@@ -3550,11 +3550,11 @@ struct cbon return_cbon_from_cbon(int new_count,
 // CHECK-NEXT: |           |   |         `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
 // CHECK-NEXT: |           |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |           |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |           |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |           |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |           |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |           |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |           |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |           |     |   |   `-MaterializeSequenceExpr {{.+}} 'char *__bidi_indexable' <Unbind>
@@ -3856,11 +3856,11 @@ void construct_not_used_from_cbon(int new_count,
 // CHECK-NEXT: |           | |   |         `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
 // CHECK-NEXT: |           | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |           | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |           | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |           | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |           | |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |           | |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |           | |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |           | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |           | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |           | |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |           | |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |           | |     |   |   `-MaterializeSequenceExpr {{.+}} 'char *__bidi_indexable' <Unbind>
@@ -4166,11 +4166,11 @@ void assign_via_ptr_nested_from_cbon(struct nested_cbon* ptr,
 // CHECK-NEXT: |           |     |   |         `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
 // CHECK-NEXT: |           |     |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |           |     |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |           |     |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |           |     |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |           |     |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |           |     |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |           |     |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |           |     |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |           |     |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |           |     |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |           |     |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |           |     |     |   |   `-MaterializeSequenceExpr {{.+}} 'char *__bidi_indexable' <Unbind>
@@ -4470,11 +4470,11 @@ void assign_via_ptr_nested_v2_from_cbon(struct nested_cbon* ptr,
 // CHECK-NEXT: |   |       | |   |         `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
 // CHECK-NEXT: |   |       | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |   |       | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |   |       | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |   |       | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |   |       | |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |   |       | |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |   |       | |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |   |       | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |   |       | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |   |       | |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |   |       | |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |   |       | |     |   |   `-MaterializeSequenceExpr {{.+}} 'char *__bidi_indexable' <Unbind>
@@ -4804,11 +4804,11 @@ void array_of_struct_init_from_cbon(char* __counted_by_or_null(new_count) new_pt
 // CHECK-NEXT: |           |   |         `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
 // CHECK-NEXT: |           |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |           |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |           |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |           |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |           |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |           |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |           |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |           |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |           |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |           |     |   |   `-MaterializeSequenceExpr {{.+}} 'char *__bidi_indexable' <Unbind>
@@ -5009,11 +5009,11 @@ void assign_via_ptr_other_data_side_effect_zero_ptr_from_cbon(struct cbon_with_o
 // CHECK-NEXT: |               |   |     `-DeclRefExpr {{.+}} 'char *__bidi_indexable' lvalue ParmVar {{.+}} 'new_ptr' 'char *__bidi_indexable'
 // CHECK-NEXT: |               |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: |               |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: |               |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: |               |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: |               |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT: |               |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: |               |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT: |               |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT: |               |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: |               |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT: |               |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT: |               |     |   |   `-ImplicitCastExpr {{.+}} 'char *__bidi_indexable' <LValueToRValue>
@@ -5092,11 +5092,11 @@ void call_arg_transparent_union_from_cbon(int new_count,
 // CHECK-NEXT:               |   |     `-DeclRefExpr {{.+}} 'char *__bidi_indexable' lvalue ParmVar {{.+}} 'new_ptr' 'char *__bidi_indexable'
 // CHECK-NEXT:               |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT:               |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT:               |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT:               |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT:               |     | | `-OpaqueValueExpr {{.+}} 'int'
 // CHECK-NEXT:               |     | |   `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT:               |     | |     `-DeclRefExpr {{.+}} 'int' lvalue ParmVar {{.+}} 'new_count' 'int'
-// CHECK-NEXT:               |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK-NEXT:               |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT:               |     |   |-GetBoundExpr {{.+}} 'char *' upper
 // CHECK-NEXT:               |     |   | `-OpaqueValueExpr {{.+}} 'char *__bidi_indexable'
 // CHECK-NEXT:               |     |   |   `-ImplicitCastExpr {{.+}} 'char *__bidi_indexable' <LValueToRValue>

@@ -46,9 +46,9 @@ void test() {
 // CHECK:     | | |   |     `-OpaqueValueExpr [[ove]] {{.*}} 'short *__bidi_indexable'
 // CHECK:     | | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK:     | | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK:     | | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:     | | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:     | | |     | | `-OpaqueValueExpr [[ove_2]] {{.*}} 'short'
-// CHECK:     | | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:     | | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK:     | | |     |   |-ImplicitCastExpr {{.+}} 'short *' <BoundsSafetyPointerCast>
 // CHECK:     | | |     |   | `-GetBoundExpr {{.+}} upper
 // CHECK:     | | |     |   |   `-OpaqueValueExpr [[ove]] {{.*}} 'short *__bidi_indexable'
@@ -74,9 +74,9 @@ void test() {
 // CHECK:     | |   |     `-OpaqueValueExpr [[ove_1]] {{.*}} 'short *__bidi_indexable'
 // CHECK:     | |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK:     | |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK:     | |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK:     | |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK:     | |     | | `-OpaqueValueExpr [[ove_2]] {{.*}} 'short'
-// CHECK:     | |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:     | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK:     | |     |   |-ImplicitCastExpr {{.+}} 'short *' <BoundsSafetyPointerCast>
 // CHECK:     | |     |   | `-GetBoundExpr {{.+}} upper
 // CHECK:     | |     |   |   `-OpaqueValueExpr [[ove_1]] {{.*}} 'short *__bidi_indexable'

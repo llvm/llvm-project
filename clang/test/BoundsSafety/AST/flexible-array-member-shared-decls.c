@@ -61,7 +61,7 @@ struct Outer *foo(int len) {
 // CHECK-NEXT: {{^}}|   |     | |   |-OpaqueValueExpr [[ove_2:0x[^ ]+]] {{.*}} 'struct Outer *__bidi_indexable'
 // CHECK:      {{^}}|   |     | |   |   | | |-OpaqueValueExpr [[ove_3:0x[^ ]+]] {{.*}} 'struct Outer *__single __sized_by(16UL + 4UL * len)':'struct Outer *__single'
 // CHECK:      {{^}}|   |     | |   |   | | |   `-OpaqueValueExpr [[ove_4:0x[^ ]+]] {{.*}} 'int'
-// CHECK:      {{^}}|   |     | |   |   | | |     |-OpaqueValueExpr [[ove_5:0x[^ ]+]] {{.*}} 'unsigned long'
+// CHECK:      {{^}}|   |     | |   |   | | |     |-OpaqueValueExpr [[ove_5:0x[^ ]+]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}|   |     | |   |-OpaqueValueExpr [[ove_2]] {{.*}} 'struct Outer *__bidi_indexable'
 // CHECK:      {{^}}|   |     | |   |-ImplicitCastExpr {{.+}} 'int *' <ArrayToPointerDecay>
 // CHECK-NEXT: {{^}}|   |     | |   | `-MemberExpr {{.+}} ->fam
@@ -81,9 +81,9 @@ struct Outer *foo(int len) {
 // CHECK-NEXT: {{^}}|   |     |   |     `-OpaqueValueExpr [[ove_7]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}|   |     |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}|   |     |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}|   |     |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}|   |     |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}|   |     |     | | `-OpaqueValueExpr [[ove_6]] {{.*}} 'int'
-// CHECK:      {{^}}|   |     |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}|   |     |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}|   |     |     |   |-GetBoundExpr {{.+}} upper
 // CHECK-NEXT: {{^}}|   |     |     |   | `-OpaqueValueExpr [[ove_7]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}|   |     |     |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
@@ -102,10 +102,10 @@ struct Outer *foo(int len) {
 // CHECK-NEXT: {{^}}|   |     |   | | |   | `-ImplicitCastExpr {{.+}} 'struct Outer *' <BoundsSafetyPointerCast>
 // CHECK-NEXT: {{^}}|   |     |   | | |   |   `-OpaqueValueExpr [[ove_3]] {{.*}} 'struct Outer *__single __sized_by(16UL + 4UL * len)':'struct Outer *__single'
 // CHECK:      {{^}}|   |     |   | | |   `-AssumptionExpr
-// CHECK-NEXT: {{^}}|   |     |   | | |     |-OpaqueValueExpr [[ove_5]] {{.*}} 'unsigned long'
+// CHECK-NEXT: {{^}}|   |     |   | | |     |-OpaqueValueExpr [[ove_5]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}|   |     |   | | |     `-BinaryOperator {{.+}} 'int' '>='
 // CHECK-NEXT: {{^}}|   |     |   | | |       |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
-// CHECK-NEXT: {{^}}|   |     |   | | |       | `-OpaqueValueExpr [[ove_5]] {{.*}} 'unsigned long'
+// CHECK-NEXT: {{^}}|   |     |   | | |       | `-OpaqueValueExpr [[ove_5]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}|   |     |   | | |       `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
 // CHECK-NEXT: {{^}}|   |     |   | | |         `-IntegerLiteral {{.+}} 0
 // CHECK:      {{^}}|   |     |   | |-OpaqueValueExpr [[ove_4]]
@@ -117,15 +117,15 @@ struct Outer *foo(int len) {
 // CHECK-NEXT: {{^}}|   |     |   | |   | `-DeclRefExpr {{.+}} [[func_bar]]
 // CHECK-NEXT: {{^}}|   |     |   | |   `-OpaqueValueExpr [[ove_4]] {{.*}} 'int'
 // CHECK:      {{^}}|   |     |   | `-OpaqueValueExpr [[ove_5]]
-// CHECK-NEXT: {{^}}|   |     |   |   `-BinaryOperator {{.+}} 'unsigned long' '+'
+// CHECK-NEXT: {{^}}|   |     |   |   `-BinaryOperator {{.+}} '__size_t':'unsigned long' '+'
 // CHECK-NEXT: {{^}}|   |     |   |     |-IntegerLiteral {{.+}} 16
-// CHECK-NEXT: {{^}}|   |     |   |     `-BinaryOperator {{.+}} 'unsigned long' '*'
+// CHECK-NEXT: {{^}}|   |     |   |     `-BinaryOperator {{.+}} '__size_t':'unsigned long' '*'
 // CHECK-NEXT: {{^}}|   |     |   |       |-IntegerLiteral {{.+}} 4
-// CHECK-NEXT: {{^}}|   |     |   |       `-ImplicitCastExpr {{.+}} 'unsigned long' <IntegralCast>
+// CHECK-NEXT: {{^}}|   |     |   |       `-ImplicitCastExpr {{.+}} '__size_t':'unsigned long' <IntegralCast>
 // CHECK-NEXT: {{^}}|   |     |   |         `-OpaqueValueExpr [[ove_4]] {{.*}} 'int'
 // CHECK:      {{^}}|   |     |   |-OpaqueValueExpr [[ove_4]] {{.*}} 'int'
 // CHECK:      {{^}}|   |     |   |-OpaqueValueExpr [[ove_3]] {{.*}} 'struct Outer *__single __sized_by(16UL + 4UL * len)':'struct Outer *__single'
-// CHECK:      {{^}}|   |     |   `-OpaqueValueExpr [[ove_5]] {{.*}} 'unsigned long'
+// CHECK:      {{^}}|   |     |   `-OpaqueValueExpr [[ove_5]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}|   |     |-OpaqueValueExpr [[ove_6]]
 // CHECK-NEXT: {{^}}|   |     | `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
 // CHECK-NEXT: {{^}}|   |     |   `-DeclRefExpr {{.+}} [[var_len_2]]
@@ -209,7 +209,7 @@ struct Outer *foo2(int len) {
 // CHECK-NEXT: {{^}}    |     | |   |-OpaqueValueExpr [[ove_11:0x[^ ]+]] {{.*}} 'struct Outer *__bidi_indexable'
 // CHECK:      {{^}}    |     | |   |   | | |-OpaqueValueExpr [[ove_12:0x[^ ]+]] {{.*}} 'struct Outer *__single __sized_by(16UL + 4UL * len)':'struct Outer *__single'
 // CHECK:      {{^}}    |     | |   |   | | |   `-OpaqueValueExpr [[ove_13:0x[^ ]+]] {{.*}} 'int'
-// CHECK:      {{^}}    |     | |   |   | | |     |-OpaqueValueExpr [[ove_14:0x[^ ]+]] {{.*}} 'unsigned long'
+// CHECK:      {{^}}    |     | |   |   | | |     |-OpaqueValueExpr [[ove_14:0x[^ ]+]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}    |     | |   |-OpaqueValueExpr [[ove_11]] {{.*}} 'struct Outer *__bidi_indexable'
 // CHECK:      {{^}}    |     | |   |-ImplicitCastExpr {{.+}} 'int *' <ArrayToPointerDecay>
 // CHECK-NEXT: {{^}}    |     | |   | `-MemberExpr {{.+}} ->fam
@@ -229,9 +229,9 @@ struct Outer *foo2(int len) {
 // CHECK-NEXT: {{^}}    |     |   |     `-OpaqueValueExpr [[ove_16]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}    |     |   `-BinaryOperator {{.+}} 'int' '&&'
 // CHECK-NEXT: {{^}}    |     |     |-BinaryOperator {{.+}} 'int' '<='
-// CHECK-NEXT: {{^}}    |     |     | |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK-NEXT: {{^}}    |     |     | |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK-NEXT: {{^}}    |     |     | | `-OpaqueValueExpr [[ove_15]] {{.*}} 'int'
-// CHECK:      {{^}}    |     |     | `-BinaryOperator {{.+}} 'long' '-'
+// CHECK:      {{^}}    |     |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK-NEXT: {{^}}    |     |     |   |-GetBoundExpr {{.+}} upper
 // CHECK-NEXT: {{^}}    |     |     |   | `-OpaqueValueExpr [[ove_16]] {{.*}} 'int *__bidi_indexable'
 // CHECK:      {{^}}    |     |     |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
@@ -250,10 +250,10 @@ struct Outer *foo2(int len) {
 // CHECK-NEXT: {{^}}    |     |   | | |   | `-ImplicitCastExpr {{.+}} 'struct Outer *' <BoundsSafetyPointerCast>
 // CHECK-NEXT: {{^}}    |     |   | | |   |   `-OpaqueValueExpr [[ove_12]] {{.*}} 'struct Outer *__single __sized_by(16UL + 4UL * len)':'struct Outer *__single'
 // CHECK:      {{^}}    |     |   | | |   `-AssumptionExpr
-// CHECK-NEXT: {{^}}    |     |   | | |     |-OpaqueValueExpr [[ove_14]] {{.*}} 'unsigned long'
+// CHECK-NEXT: {{^}}    |     |   | | |     |-OpaqueValueExpr [[ove_14]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}    |     |   | | |     `-BinaryOperator {{.+}} 'int' '>='
 // CHECK-NEXT: {{^}}    |     |   | | |       |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
-// CHECK-NEXT: {{^}}    |     |   | | |       | `-OpaqueValueExpr [[ove_14]] {{.*}} 'unsigned long'
+// CHECK-NEXT: {{^}}    |     |   | | |       | `-OpaqueValueExpr [[ove_14]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}    |     |   | | |       `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
 // CHECK-NEXT: {{^}}    |     |   | | |         `-IntegerLiteral {{.+}} 0
 // CHECK:      {{^}}    |     |   | |-OpaqueValueExpr [[ove_13]]
@@ -265,15 +265,15 @@ struct Outer *foo2(int len) {
 // CHECK-NEXT: {{^}}    |     |   | |   | `-DeclRefExpr {{.+}} [[func_bar]]
 // CHECK-NEXT: {{^}}    |     |   | |   `-OpaqueValueExpr [[ove_13]] {{.*}} 'int'
 // CHECK:      {{^}}    |     |   | `-OpaqueValueExpr [[ove_14]]
-// CHECK-NEXT: {{^}}    |     |   |   `-BinaryOperator {{.+}} 'unsigned long' '+'
+// CHECK-NEXT: {{^}}    |     |   |   `-BinaryOperator {{.+}} '__size_t':'unsigned long' '+'
 // CHECK-NEXT: {{^}}    |     |   |     |-IntegerLiteral {{.+}} 16
-// CHECK-NEXT: {{^}}    |     |   |     `-BinaryOperator {{.+}} 'unsigned long' '*'
+// CHECK-NEXT: {{^}}    |     |   |     `-BinaryOperator {{.+}} '__size_t':'unsigned long' '*'
 // CHECK-NEXT: {{^}}    |     |   |       |-IntegerLiteral {{.+}} 4
-// CHECK-NEXT: {{^}}    |     |   |       `-ImplicitCastExpr {{.+}} 'unsigned long' <IntegralCast>
+// CHECK-NEXT: {{^}}    |     |   |       `-ImplicitCastExpr {{.+}} '__size_t':'unsigned long' <IntegralCast>
 // CHECK-NEXT: {{^}}    |     |   |         `-OpaqueValueExpr [[ove_13]] {{.*}} 'int'
 // CHECK:      {{^}}    |     |   |-OpaqueValueExpr [[ove_13]] {{.*}} 'int'
 // CHECK:      {{^}}    |     |   |-OpaqueValueExpr [[ove_12]] {{.*}} 'struct Outer *__single __sized_by(16UL + 4UL * len)':'struct Outer *__single'
-// CHECK:      {{^}}    |     |   `-OpaqueValueExpr [[ove_14]] {{.*}} 'unsigned long'
+// CHECK:      {{^}}    |     |   `-OpaqueValueExpr [[ove_14]] {{.*}} '__size_t':'unsigned long'
 // CHECK:      {{^}}    |     |-OpaqueValueExpr [[ove_16]]
 // CHECK-NEXT: {{^}}    |     | `-ImplicitCastExpr {{.+}} 'int *__bidi_indexable' <LValueToRValue>
 // CHECK-NEXT: {{^}}    |     |   `-DeclRefExpr {{.+}} [[var_p2_1]]

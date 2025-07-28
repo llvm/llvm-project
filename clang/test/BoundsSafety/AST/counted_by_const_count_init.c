@@ -79,12 +79,12 @@ void fun_pointer_assignment(struct struct_const_count *sp, void *__bidi_indexabl
 // CHECK: |     | |   |   `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>
 // CHECK: |     | |   |     `-OpaqueValueExpr [[ove_3]] {{.*}} 'int *__bidi_indexable'
 // CHECK: |     | |   `-BinaryOperator {{.+}} 'int' '<='
-// CHECK: |     | |     |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// CHECK: |     | |     |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // CHECK: |     | |     | `-ImplicitCastExpr {{.+}} 'unsigned int' <LValueToRValue>
 // CHECK: |     | |     |   `-MemberExpr {{.+}} ->const_count
 // CHECK: |     | |     |     `-ImplicitCastExpr {{.+}} 'struct struct_const_count *__single' <LValueToRValue>
 // CHECK: |     | |     |       `-DeclRefExpr {{.+}} [[var_sp_1]]
-// CHECK: |     | |     `-BinaryOperator {{.+}} 'long' '-'
+// CHECK: |     | |     `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // CHECK: |     | |       |-GetBoundExpr {{.+}} upper
 // CHECK: |     | |       | `-OpaqueValueExpr [[ove_3]] {{.*}} 'int *__bidi_indexable'
 // CHECK: |     | |       `-ImplicitCastExpr {{.+}} 'int *' <BoundsSafetyPointerCast>

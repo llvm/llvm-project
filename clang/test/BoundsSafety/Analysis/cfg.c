@@ -168,7 +168,7 @@ static void NO_RETURN handler_private(const void *__sized_by(0x78) p_stack)
 // CHECK-NEXT:   3: 120
 // CHECK-NEXT:   4: [B1.2] (BoundsSafetyPointerPromotionExpr, const void *__bidi_indexable)
 // CHECK-NEXT:   5: 120
-// CHECK-NEXT:   6: [B1.5] (ImplicitCastExpr, IntegralCast, long)
+// CHECK-NEXT:   6: [B1.5] (ImplicitCastExpr, IntegralCast, __ptrdiff_t)
 // CHECK-NEXT:   7: handler_private
 // CHECK-NEXT:   8: [B1.7] (ImplicitCastExpr, FunctionToPointerDecay, void (*__single)(const void *__single __sized_by(120)) __attribute__((noreturn)))
 // CHECK-NEXT:   9: [B1.4] (ImplicitCastExpr, BoundsSafetyPointerCast, const void *__single __sized_by(120))

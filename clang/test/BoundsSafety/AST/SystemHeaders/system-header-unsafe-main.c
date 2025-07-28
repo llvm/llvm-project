@@ -52,8 +52,8 @@ void func(char * __unsafe_indexable ptr, char * __bidi_indexable bidi) {
 // RELAXED: |     | |   |     `-OpaqueValueExpr [[ove_1]] {{.*}} 'char *__bidi_indexable'
 // RELAXED: |     | |   `-BinaryOperator {{.+}} 'int' '&&'
 // RELAXED: |     | |     |-BinaryOperator {{.+}} 'int' '<='
-// RELAXED: |     | |     | |-OpaqueValueExpr [[ove_2:0x[^ ]+]] {{.*}} 'long'
-// RELAXED: |     | |     | `-BinaryOperator {{.+}} 'long' '-'
+// RELAXED: |     | |     | |-OpaqueValueExpr [[ove_2:0x[^ ]+]] {{.*}} '__ptrdiff_t':'long'
+// RELAXED: |     | |     | `-BinaryOperator {{.+}} '__ptrdiff_t':'long' '-'
 // RELAXED: |     | |     |   |-ImplicitCastExpr {{.+}} 'char *' <BoundsSafetyPointerCast>
 // RELAXED: |     | |     |   | `-CStyleCastExpr {{.+}} 'char *__bidi_indexable' <NoOp>
 // RELAXED: |     | |     |   |   `-GetBoundExpr {{.+}} upper
@@ -62,9 +62,9 @@ void func(char * __unsafe_indexable ptr, char * __bidi_indexable bidi) {
 // RELAXED: |     | |     |     `-CStyleCastExpr {{.+}} 'char *__bidi_indexable' <NoOp>
 // RELAXED: |     | |     |       `-OpaqueValueExpr [[ove_1]] {{.*}} 'char *__bidi_indexable'
 // RELAXED: |     | |     `-BinaryOperator {{.+}} 'int' '<='
-// RELAXED: |     | |       |-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// RELAXED: |     | |       |-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // RELAXED: |     | |       | `-IntegerLiteral {{.+}} 0
-// RELAXED: |     | |       `-OpaqueValueExpr [[ove_2]] {{.*}} 'long'
+// RELAXED: |     | |       `-OpaqueValueExpr [[ove_2]] {{.*}} '__ptrdiff_t':'long'
 // RELAXED: |     | |-OpaqueValueExpr [[ove]]
 // RELAXED: |     | | `-ImplicitCastExpr {{.+}} 'char *' <LValueToRValue>
 // RELAXED: |     | |   `-DeclRefExpr {{.+}} [[var_ptr]]
@@ -72,11 +72,11 @@ void func(char * __unsafe_indexable ptr, char * __bidi_indexable bidi) {
 // RELAXED: |     | | `-ImplicitCastExpr {{.+}} 'char *__bidi_indexable' <LValueToRValue>
 // RELAXED: |     | |   `-DeclRefExpr {{.+}} [[var_bidi]]
 // RELAXED: |     | `-OpaqueValueExpr [[ove_2]]
-// RELAXED: |     |   `-ImplicitCastExpr {{.+}} 'long' <IntegralCast>
+// RELAXED: |     |   `-ImplicitCastExpr {{.+}} '__ptrdiff_t':'long' <IntegralCast>
 // RELAXED: |     |     `-IntegerLiteral {{.+}} 5
 // RELAXED: |     |-OpaqueValueExpr [[ove]] {{.*}} 'char *'
 // RELAXED: |     |-OpaqueValueExpr [[ove_1]] {{.*}} 'char *__bidi_indexable'
-// RELAXED: |     `-OpaqueValueExpr [[ove_2]] {{.*}} 'long'
+// RELAXED: |     `-OpaqueValueExpr [[ove_2]] {{.*}} '__ptrdiff_t':'long'
 //
 // STRICT: |-FunctionDecl [[func_funcInSDK:0x[^ ]+]] {{.+}} funcInSDK
 // STRICT: | |-ParmVarDecl [[var_ptr:0x[^ ]+]]
