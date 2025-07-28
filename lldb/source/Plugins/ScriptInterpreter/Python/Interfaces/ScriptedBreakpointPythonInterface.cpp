@@ -31,23 +31,23 @@ ScriptedBreakpointPythonInterface::ScriptedBreakpointPythonInterface(
     : ScriptedBreakpointInterface(), ScriptedPythonInterface(interpreter) {}
 
 llvm::Expected<StructuredData::GenericSP>
-ScriptedBreakpointPythonInterface::CreatePluginObject(llvm::StringRef class_name,
-                                                    lldb::BreakpointSP break_sp,
-                                                    const StructuredDataImpl &args_sp) {
+ScriptedBreakpointPythonInterface::CreatePluginObject(
+    llvm::StringRef class_name, lldb::BreakpointSP break_sp,
+    const StructuredDataImpl &args_sp) {
   return ScriptedPythonInterface::CreatePluginObject(class_name, nullptr,
                                                      break_sp, args_sp);
 }
 
-bool
-ScriptedBreakpointPythonInterface::ResolverCallback(SymbolContext sym_ctx) {
+bool ScriptedBreakpointPythonInterface::ResolverCallback(
+    SymbolContext sym_ctx) {
   Status error;
-  
+
   StructuredData::ObjectSP obj = Dispatch("__callback__", error, sym_ctx);
 
   if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
                                                     error)) {
     Log *log = GetLog(LLDBLog::Script);
-    LLDB_LOG(log, "Error calling __callback__ method: {1}", error); 
+    LLDB_LOG(log, "Error calling __callback__ method: {1}", error);
     return true;
   }
   return obj->GetBooleanValue();
@@ -59,23 +59,23 @@ lldb::SearchDepth ScriptedBreakpointPythonInterface::GetDepth() {
 
   if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
                                                     error)) {
-      return lldb::eSearchDepthModule;
+    return lldb::eSearchDepthModule;
   }
   uint64_t value = obj->GetUnsignedIntegerValue();
   if (value <= lldb::kLastSearchDepthKind)
-    return (lldb::SearchDepth) value;
+    return (lldb::SearchDepth)value;
   // This is what we were doing on error before, though I'm not sure that's
   // better than returning eSearchDepthInvalid.
   return lldb::eSearchDepthModule;
 }
 
-std::optional<std::string> ScriptedBreakpointPythonInterface::GetShortHelp() { 
+std::optional<std::string> ScriptedBreakpointPythonInterface::GetShortHelp() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_short_help", error);
 
   if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
                                                     error)) {
-      return {};
+    return {};
   }
 
   return obj->GetAsString()->GetValue().str();
@@ -88,7 +88,8 @@ void ScriptedBreakpointPythonInterface::Initialize() {
       "SBTarget.BreakpointCreateFromScript"};
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(),
-      llvm::StringRef("Create a breakpoint that chooses locations based on user-created callbacks"),
+      llvm::StringRef("Create a breakpoint that chooses locations based on "
+                      "user-created callbacks"),
       CreateInstance, eScriptLanguagePython, {ci_usages, api_usages});
 }
 

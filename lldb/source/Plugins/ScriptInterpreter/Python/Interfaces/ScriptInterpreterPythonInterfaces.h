@@ -16,10 +16,10 @@
 #if LLDB_ENABLE_PYTHON
 
 #include "OperatingSystemPythonInterface.h"
+#include "ScriptedBreakpointPythonInterface.h"
 #include "ScriptedPlatformPythonInterface.h"
 #include "ScriptedProcessPythonInterface.h"
 #include "ScriptedStopHookPythonInterface.h"
-#include "ScriptedBreakpointPythonInterface.h"
 #include "ScriptedThreadPlanPythonInterface.h"
 
 namespace lldb_private {

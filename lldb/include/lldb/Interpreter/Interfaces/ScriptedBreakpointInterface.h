@@ -9,9 +9,9 @@
 #ifndef LLDB_INTERPRETER_INTERFACES_SCRIPTEDBREAKPOINTINTERFACE_H
 #define LLDB_INTERPRETER_INTERFACES_SCRIPTEDBREAKPOINTINTERFACE_H
 
-#include "lldb/lldb-private.h"
-#include "lldb/Symbol/SymbolContext.h"
 #include "ScriptedInterface.h"
+#include "lldb/Symbol/SymbolContext.h"
+#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 class ScriptedBreakpointInterface : public ScriptedInterface {
@@ -23,9 +23,7 @@ public:
   /// "ResolverCallback" will get called when a new module is loaded.  The
   /// new module information is passed in sym_ctx.  The Resolver will add
   /// any breakpoint locations it found in that module.
-  virtual bool ResolverCallback(SymbolContext sym_ctx) {
-    return true;
-  }
+  virtual bool ResolverCallback(SymbolContext sym_ctx) { return true; }
   virtual lldb::SearchDepth GetDepth() { return lldb::eSearchDepthModule; }
   virtual std::optional<std::string> GetShortHelp() { return nullptr; }
 };

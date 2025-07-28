@@ -60,14 +60,15 @@ class ResolverModuleDepth(Resolver):
         print(f"About to call the Resolver callback for {self.bkpt}")
         Resolver.__callback__(self, sym_ctx)
         print("Called the callback for ResolverModuleDepth")
-        
+
+
 class ResolverCUDepth(Resolver):
     def __get_depth__(self):
         return lldb.eSearchDepthCompUnit
 
     def __callback__(self, sym_ctx):
         Resolver.__callback__(self, sym_ctx)
-        
+
 
 class ResolverFuncDepth(Resolver):
     def __get_depth__(self):
@@ -75,7 +76,7 @@ class ResolverFuncDepth(Resolver):
 
     def __callback__(self, sym_ctx):
         Resolver.__callback__(self, sym_ctx)
-        
+
 
 class ResolverBadDepth(Resolver):
     def __get_depth__(self):

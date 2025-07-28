@@ -564,7 +564,8 @@ Event *ScriptedPythonInterface::ExtractValueFromPythonObject<Event *>(
     python::PythonObject &p, Status &error);
 
 template <>
-SymbolContext ScriptedPythonInterface::ExtractValueFromPythonObject<SymbolContext>(
+SymbolContext
+ScriptedPythonInterface::ExtractValueFromPythonObject<SymbolContext>(
     python::PythonObject &p, Status &error);
 
 template <>

@@ -1,4 +1,5 @@
-//===-- ScriptedBreakpointPythonInterface.h -----------------------*- C++ -*-===//
+//===-- ScriptedBreakpointPythonInterface.h -----------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,8 +19,8 @@
 
 namespace lldb_private {
 class ScriptedBreakpointPythonInterface : public ScriptedBreakpointInterface,
-                                        public ScriptedPythonInterface,
-                                        public PluginInterface {
+                                          public ScriptedPythonInterface,
+                                          public PluginInterface {
 public:
   ScriptedBreakpointPythonInterface(ScriptInterpreterPythonImpl &interpreter);
 

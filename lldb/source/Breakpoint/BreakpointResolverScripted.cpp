@@ -57,9 +57,9 @@ void BreakpointResolverScripted::CreateImplementationIfNeeded(
         "Script interpreter couldn't create Scripted Breakpoint Interface");
     return;
   }
-  
-  auto obj_or_err = m_interface_sp->CreatePluginObject(
-      m_class_name, breakpoint_sp, m_args);
+
+  auto obj_or_err =
+      m_interface_sp->CreatePluginObject(m_class_name, breakpoint_sp, m_args);
   if (!obj_or_err) {
     m_error = Status::FromError(obj_or_err.takeError());
     return;

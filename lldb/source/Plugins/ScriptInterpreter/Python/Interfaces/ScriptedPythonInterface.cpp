@@ -84,8 +84,9 @@ template <>
 SymbolContext
 ScriptedPythonInterface::ExtractValueFromPythonObject<SymbolContext>(
     python::PythonObject &p, Status &error) {
-  if (lldb::SBSymbolContext *sb_symbol_context = reinterpret_cast<lldb::SBSymbolContext *>(
-          python::LLDBSWIGPython_CastPyObjectToSBSymbolContext(p.get())))
+  if (lldb::SBSymbolContext *sb_symbol_context =
+          reinterpret_cast<lldb::SBSymbolContext *>(
+              python::LLDBSWIGPython_CastPyObjectToSBSymbolContext(p.get())))
     return m_interpreter.GetOpaqueTypeFromSBSymbolContext(*sb_symbol_context);
   error = Status::FromErrorString(
       "Couldn't cast lldb::SBSymbolContext to lldb_private::SymbolContext.");
