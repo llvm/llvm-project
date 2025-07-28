@@ -168,6 +168,7 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   let WaveSizePredicate    = ps.WaveSizePredicate;
   let AsmMatchConverter    = ps.AsmMatchConverter;
   let OtherPredicates      = ps.OtherPredicates;
+  let WaveSizePredicate    = ps.WaveSizePredicate;
   let TSFlags              = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let SchedRW              = ps.SchedRW;
