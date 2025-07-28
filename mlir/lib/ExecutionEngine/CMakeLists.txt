@@ -426,7 +426,7 @@ if(LLVM_ENABLE_PIC)
     set_property(TARGET mlir_sycl_runtime APPEND PROPERTY BUILD_RPATH "${LevelZeroRuntime_LIBRARIES_DIR}" "${SyclRuntime_LIBRARIES_DIR}")
   endif()
 
-  if(MLIR_ENABLE_LEVEL_ZERO_RUNNER)
+  if(MLIR_ENABLE_LEVELZERO_RUNNER)
     find_package(LevelZeroRuntime)
 
     if(NOT LevelZeroRuntime_FOUND)
