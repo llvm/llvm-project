@@ -366,9 +366,8 @@ def ReifyRankedShapedTypeOpInterface :
 
         `reifiedReturnShapes` is populated with one vector per op result. Each
         of those vectors contains an OpFoldResult for each dimension of the
-        shaped type. In case a dimension in the type is static, the
-        corresponding entry is an IntegerAttr. Otherwise, it is a Value. The
-        given builder may be used to insert ops that compute result shapes.
+        shaped type. The given builder may be used to insert ops that compute
+        result shapes.
 
         If the shape of a particular result cannot be computed it must be empty.
       }],

@@ -16,9 +16,7 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -87,11 +85,11 @@ Value memref::AllocaOp::getDefaultValue(const MemorySlot &slot,
   // TODO: support more types.
   return TypeSwitch<Type, Value>(slot.elemType)
       .Case([&](MemRefType t) {
-        return builder.create<memref::AllocaOp>(getLoc(), t);
+        return memref::AllocaOp::create(builder, getLoc(), t);
       })
       .Default([&](Type t) {
-        return builder.create<arith::ConstantOp>(getLoc(), t,
-                                                 builder.getZeroAttr(t));
+        return arith::ConstantOp::create(builder, getLoc(), t,
+                                         builder.getZeroAttr(t));
       });
 }
 
@@ -137,7 +135,7 @@ DenseMap<Attribute, MemorySlot> memref::AllocaOp::destructure(
   for (Attribute usedIndex : usedIndices) {
     Type elemType = memrefType.getTypeAtIndex(usedIndex);
     MemRefType elemPtr = MemRefType::get({}, elemType);
-    auto subAlloca = builder.create<memref::AllocaOp>(getLoc(), elemPtr);
+    auto subAlloca = memref::AllocaOp::create(builder, getLoc(), elemPtr);
     newAllocators.push_back(subAlloca);
     slotMap.try_emplace<MemorySlot>(usedIndex,
                                     {subAlloca.getResult(), elemType});

@@ -17,6 +17,7 @@
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
@@ -52,6 +53,53 @@ public:
   }
 };
 
+static void legalizeLifetimeIntrinsics(Module &M) {
+  for (Function &F : M) {
+    Intrinsic::ID IID = F.getIntrinsicID();
+    if (IID != Intrinsic::lifetime_start && IID != Intrinsic::lifetime_end)
+      continue;
+
+    // Lifetime intrinsics in LLVM 3.7 do not have the memory FnAttr
+    F.removeFnAttr(Attribute::Memory);
+
+    // Lifetime intrinsics in LLVM 3.7 do not have mangled names
+    F.setName(Intrinsic::getBaseName(IID));
+
+    // LLVM 3.7 Lifetime intrinics require an i8* operand, so we insert bitcasts
+    // to ensure that is the case
+    for (auto *User : make_early_inc_range(F.users())) {
+      CallInst *CI = dyn_cast<CallInst>(User);
+      assert(CI && "Expected user of a lifetime intrinsic function to be a "
+                   "lifetime intrinsic call");
+      Value *PtrOperand = CI->getArgOperand(1);
+      PointerType *PtrTy = cast<PointerType>(PtrOperand->getType());
+      Value *NoOpBitCast = CastInst::Create(Instruction::BitCast, PtrOperand,
+                                            PtrTy, "", CI->getIterator());
+      CI->setArgOperand(1, NoOpBitCast);
+    }
+  }
+}
+
+static void removeLifetimeIntrinsics(Module &M) {
+  for (Function &F : make_early_inc_range(M)) {
+    if (Intrinsic::ID IID = F.getIntrinsicID();
+        IID != Intrinsic::lifetime_start && IID != Intrinsic::lifetime_end)
+      continue;
+
+    for (User *U : make_early_inc_range(F.users())) {
+      LifetimeIntrinsic *LI = dyn_cast<LifetimeIntrinsic>(U);
+      assert(LI && "Expected user of lifetime intrinsic function to be "
+                   "a LifetimeIntrinsic instruction");
+      BitCastInst *BCI = dyn_cast<BitCastInst>(LI->getArgOperand(1));
+      assert(BCI && "Expected pointer operand of LifetimeIntrinsic to be a "
+                    "BitCastInst");
+      LI->eraseFromParent();
+      BCI->eraseFromParent();
+    }
+    F.eraseFromParent();
+  }
+}
+
 class EmbedDXILPass : public llvm::ModulePass {
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -70,7 +118,16 @@ public:
     // Only the output bitcode need to be DXIL triple.
     M.setTargetTriple(Triple("dxil-ms-dx"));
 
+    // Perform late legalization of lifetime intrinsics that would otherwise
+    // fail the Module Verifier if performed in an earlier pass
+    legalizeLifetimeIntrinsics(M);
+
     WriteDXILToFile(M, OS);
+
+    // We no longer need lifetime intrinsics after bitcode serialization, so we
+    // simply remove them to keep the Module Verifier happy after our
+    // not-so-legal legalizations
+    removeLifetimeIntrinsics(M);
 
     // Recover triple.
     M.setTargetTriple(OriginalTriple);

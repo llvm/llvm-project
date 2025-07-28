@@ -355,7 +355,7 @@ bool CallBase::isTailCall() const {
 }
 
 Intrinsic::ID CallBase::getIntrinsicID() const {
-  if (auto *F = getCalledFunction())
+  if (auto *F = dyn_cast_or_null<Function>(getCalledOperand()))
     return F->getIntrinsicID();
   return Intrinsic::not_intrinsic;
 }
@@ -2582,7 +2582,7 @@ Type *ExtractValueInst::getIndexedType(Type *Agg,
       return nullptr;
     }
   }
-  return const_cast<Type*>(Agg);
+  return Agg;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3488,7 +3488,7 @@ CmpInst::CmpInst(Type *ty, OtherOps op, Predicate predicate, Value *LHS,
     : Instruction(ty, op, AllocMarker, InsertBefore) {
   Op<0>() = LHS;
   Op<1>() = RHS;
-  setPredicate((Predicate)predicate);
+  setPredicate(predicate);
   setName(Name);
   if (FlagsSource)
     copyIRFlags(FlagsSource);

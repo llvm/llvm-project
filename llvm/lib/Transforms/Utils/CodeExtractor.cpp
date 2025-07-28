@@ -1020,6 +1020,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::EndAttrKinds:
       case Attribute::EmptyKey:
       case Attribute::TombstoneKey:
+      case Attribute::DeadOnReturn:
         llvm_unreachable("Not a function attribute");
       }
 
@@ -1218,12 +1219,8 @@ void CodeExtractor::calculateNewCallTerminatorWeights(
 /// \p F.
 static void eraseDebugIntrinsicsWithNonLocalRefs(Function &F) {
   for (Instruction &I : instructions(F)) {
-    SmallVector<DbgVariableIntrinsic *, 4> DbgUsers;
     SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
-    findDbgUsers(DbgUsers, &I, &DbgVariableRecords);
-    for (DbgVariableIntrinsic *DVI : DbgUsers)
-      if (DVI->getFunction() != &F)
-        DVI->eraseFromParent();
+    findDbgUsers(&I, DbgVariableRecords);
     for (DbgVariableRecord *DVR : DbgVariableRecords)
       if (DVR->getFunction() != &F)
         DVR->eraseFromParent();
@@ -1285,17 +1282,13 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
         NewFunc.getEntryBlock().getTerminator()->getIterator());
   };
   for (auto [Input, NewVal] : zip_equal(Inputs, NewValues)) {
-    SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
     SmallVector<DbgVariableRecord *, 1> DPUsers;
-    findDbgUsers(DbgUsers, Input, &DPUsers);
+    findDbgUsers(Input, DPUsers);
     DIExpression *Expr = DIB.createExpression();
 
     // Iterate the debud users of the Input values. If they are in the extracted
     // function then update their location with the new value. If they are in
     // the parent function then create a similar debug record.
-    for (auto *DVI : DbgUsers)
-      UpdateOrInsertDebugRecord(DVI, Input, NewVal, Expr,
-                                isa<DbgDeclareInst>(DVI));
     for (auto *DVR : DPUsers)
       UpdateOrInsertDebugRecord(DVR, Input, NewVal, Expr, DVR->isDbgDeclare());
   }
@@ -1347,8 +1340,10 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
     if (!NewLabel) {
       DILocalScope *NewScope = DILocalScope::cloneScopeForSubprogram(
           *OldLabel->getScope(), *NewSP, Ctx, Cache);
-      NewLabel = DILabel::get(Ctx, NewScope, OldLabel->getName(),
-                              OldLabel->getFile(), OldLabel->getLine());
+      NewLabel =
+          DILabel::get(Ctx, NewScope, OldLabel->getName(), OldLabel->getFile(),
+                       OldLabel->getLine(), OldLabel->getColumn(),
+                       OldLabel->isArtificial(), OldLabel->getCoroSuspendIdx());
     }
     LabelRecord->setLabel(cast<DILabel>(NewLabel));
   };
@@ -1528,12 +1523,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   fixupDebugInfoPostExtraction(*oldFunction, *newFunction, *TheCall, inputs,
                                NewValues);
 
-  LLVM_DEBUG(if (verifyFunction(*newFunction, &errs())) {
-    newFunction->dump();
-    report_fatal_error("verification of newFunction failed!");
-  });
-  LLVM_DEBUG(if (verifyFunction(*oldFunction))
-                 report_fatal_error("verification of oldFunction failed!"));
+  LLVM_DEBUG(llvm::dbgs() << "After extractCodeRegion - newFunction:\n");
+  LLVM_DEBUG(newFunction->dump());
+  LLVM_DEBUG(llvm::dbgs() << "After extractCodeRegion - oldFunction:\n");
+  LLVM_DEBUG(oldFunction->dump());
   LLVM_DEBUG(if (AC && verifyAssumptionCache(*oldFunction, *newFunction, AC))
                  report_fatal_error("Stale Asumption cache for old Function!"));
   return newFunction;
@@ -1833,6 +1826,9 @@ CallInst *CodeExtractor::emitReplacerCall(
   // This takes place of the original loop
   BasicBlock *codeReplacer =
       BasicBlock::Create(Context, "codeRepl", oldFunction, ReplIP);
+  if (AllocationBlock)
+    assert(AllocationBlock->getParent() == oldFunction &&
+           "AllocationBlock is not in the same function");
   BasicBlock *AllocaBlock =
       AllocationBlock ? AllocationBlock : &oldFunction->getEntryBlock();
 

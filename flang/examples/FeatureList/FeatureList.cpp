@@ -472,7 +472,6 @@ public:
   READ_FEATURE(OmpIteration)
   READ_FEATURE(OmpIterationOffset)
   READ_FEATURE(OmpIterationVector)
-  READ_FEATURE(OmpEndAllocators)
   READ_FEATURE(OmpEndBlockDirective)
   READ_FEATURE(OmpEndCriticalDirective)
   READ_FEATURE(OmpEndLoopDirective)

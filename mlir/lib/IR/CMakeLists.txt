@@ -29,10 +29,10 @@ add_mlir_library(MLIRIR
   ODSSupport.cpp
   Operation.cpp
   OperationSupport.cpp
+  PatternLoggingListener.cpp
   PatternMatch.cpp
   Region.cpp
   RegionKindInterface.cpp
-  StateStack.cpp
   SymbolTable.cpp
   TensorEncoding.cpp
   Types.cpp
