@@ -44,6 +44,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMAssumeSepStorageOpLowering
+    : public mlir::OpConversionPattern<cir::AssumeSepStorageOp> {
+public:
+  using mlir::OpConversionPattern<cir::AssumeSepStorageOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::AssumeSepStorageOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMBitClrsbOpLowering
     : public mlir::OpConversionPattern<cir::BitClrsbOp> {
 public:
@@ -157,6 +167,16 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::ReturnOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMRotateOpLowering
+    : public mlir::OpConversionPattern<cir::RotateOp> {
+public:
+  using mlir::OpConversionPattern<cir::RotateOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::RotateOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 
@@ -530,6 +550,16 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::ComplexImagOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMComplexImagPtrOpLowering
+    : public mlir::OpConversionPattern<cir::ComplexImagPtrOp> {
+public:
+  using mlir::OpConversionPattern<cir::ComplexImagPtrOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ComplexImagPtrOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 

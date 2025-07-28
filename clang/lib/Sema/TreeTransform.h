@@ -4621,19 +4621,9 @@ NestedNameSpecifierLoc TreeTransform<Derived>::TransformNestedNameSpecifierLoc(
     }
 
     case NestedNameSpecifier::Namespace: {
-      NamespaceDecl *NS =
-          cast_or_null<NamespaceDecl>(getDerived().TransformDecl(
-              Q.getLocalBeginLoc(), QNNS->getAsNamespace()));
+      auto *NS = cast<NamespaceBaseDecl>(getDerived().TransformDecl(
+          Q.getLocalBeginLoc(), QNNS->getAsNamespace()));
       SS.Extend(SemaRef.Context, NS, Q.getLocalBeginLoc(), Q.getLocalEndLoc());
-      break;
-    }
-
-    case NestedNameSpecifier::NamespaceAlias: {
-      NamespaceAliasDecl *Alias =
-          cast_or_null<NamespaceAliasDecl>(getDerived().TransformDecl(
-              Q.getLocalBeginLoc(), QNNS->getAsNamespaceAlias()));
-      SS.Extend(SemaRef.Context, Alias, Q.getLocalBeginLoc(),
-                Q.getLocalEndLoc());
       break;
     }
 
@@ -7253,6 +7243,12 @@ QualType TreeTransform<Derived>::TransformDependentBitIntType(
     NewTL.setNameLoc(TL.getNameLoc());
   }
   return Result;
+}
+
+template <typename Derived>
+QualType TreeTransform<Derived>::TransformPredefinedSugarType(
+    TypeLocBuilder &TLB, PredefinedSugarTypeLoc TL) {
+  llvm_unreachable("This type does not need to be transformed.");
 }
 
   /// Simple iterator that traverses the template arguments in a
@@ -14034,9 +14030,14 @@ TreeTransform<Derived>::TransformCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
     if (Object.isInvalid())
       return ExprError();
 
-    // FIXME: Poor location information
-    SourceLocation FakeLParenLoc = SemaRef.getLocForEndOfToken(
-        static_cast<Expr *>(Object.get())->getEndLoc());
+    // FIXME: Poor location information. Also, if the location for the end of
+    // the token is within a macro expansion, getLocForEndOfToken() will return
+    // an invalid source location. If that happens and we have an otherwise
+    // valid end location, use the valid one instead of the invalid one.
+    SourceLocation EndLoc = static_cast<Expr *>(Object.get())->getEndLoc();
+    SourceLocation FakeLParenLoc = SemaRef.getLocForEndOfToken(EndLoc);
+    if (FakeLParenLoc.isInvalid() && EndLoc.isValid())
+      FakeLParenLoc = EndLoc;
 
     // Transform the call arguments.
     SmallVector<Expr*, 8> Args;

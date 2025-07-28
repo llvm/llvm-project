@@ -793,7 +793,7 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
       if (isa<InvokeInst>(CB))
         return false;
 
-      Instruction *Inst = CB->getNextNonDebugInstruction();
+      Instruction *Inst = CB->getNextNode();
       Worklist.push_back(Inst);
       return true;
     };

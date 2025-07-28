@@ -111,6 +111,22 @@ void assume(bool arg) {
 // OGCG:   call void @llvm.assume(i1 %{{.+}})
 // OGCG: }
 
+void assume_separate_storage(void *p1, void *p2) {
+  __builtin_assume_separate_storage(p1, p2);
+}
+
+// CIR: cir.func{{.*}} @_Z23assume_separate_storagePvS_
+// CIR:   cir.assume_separate_storage %{{.+}}, %{{.+}} : !cir.ptr<!void>
+// CIR: }
+
+// LLVM: define {{.*}}void @_Z23assume_separate_storagePvS_
+// LLVM:   call void @llvm.assume(i1 true) [ "separate_storage"(ptr %{{.+}}, ptr %{{.+}}) ]
+// LLVM: }
+
+// OGCG: define {{.*}}void @_Z23assume_separate_storagePvS_
+// OGCG:   call void @llvm.assume(i1 true) [ "separate_storage"(ptr %{{.+}}, ptr %{{.+}}) ]
+// OGCG: }
+
 void expect(int x, int y) {
   __builtin_expect(x, y);
 }

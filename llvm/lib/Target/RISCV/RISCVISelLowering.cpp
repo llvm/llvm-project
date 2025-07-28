@@ -39,7 +39,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/CommandLine.h"
@@ -129,7 +128,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasStdExtZfhmin())
     addRegisterClass(MVT::f16, &RISCV::FPR16RegClass);
-  if (Subtarget.hasStdExtZfbfmin())
+  if (Subtarget.hasStdExtZfbfmin() || Subtarget.hasVendorXAndesBFHCvt())
     addRegisterClass(MVT::bf16, &RISCV::FPR16RegClass);
   if (Subtarget.hasStdExtF())
     addRegisterClass(MVT::f32, &RISCV::FPR32RegClass);
@@ -656,6 +655,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::GET_FPENV, XLenVT, Custom);
     setOperationAction(ISD::SET_FPENV, XLenVT, Custom);
     setOperationAction(ISD::RESET_FPENV, MVT::Other, Custom);
+    setOperationAction(ISD::GET_FPMODE, XLenVT, Custom);
+    setOperationAction(ISD::SET_FPMODE, XLenVT, Custom);
+    setOperationAction(ISD::RESET_FPMODE, MVT::Other, Custom);
   }
 
   setOperationAction({ISD::GlobalAddress, ISD::BlockAddress, ISD::ConstantPool,
@@ -1616,6 +1618,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     }
   }
 
+  // Customize load and store operation for bf16 if zfh isn't enabled.
+  if (Subtarget.hasVendorXAndesBFHCvt() && !Subtarget.hasStdExtZfh()) {
+    setOperationAction(ISD::LOAD, MVT::bf16, Custom);
+    setOperationAction(ISD::STORE, MVT::bf16, Custom);
+  }
+
   // Function alignments.
   const Align FunctionAlignment(Subtarget.hasStdExtZca() ? 2 : 4);
   setMinFunctionAlignment(FunctionAlignment);
@@ -2315,6 +2323,10 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     return false;
 
   if (getLegalZfaFPImm(Imm, VT) >= 0)
+    return true;
+
+  // Some constants can be produced by fli+fneg.
+  if (Imm.isNegative() && getLegalZfaFPImm(-Imm, VT) >= 0)
     return true;
 
   // Cannot create a 64 bit floating-point immediate value for rv32.
@@ -7210,6 +7222,47 @@ static SDValue SplitStrictFPVectorOp(SDValue Op, SelectionDAG &DAG) {
   return DAG.getMergeValues({V, HiRes.getValue(1)}, DL);
 }
 
+SDValue
+RISCVTargetLowering::lowerXAndesBfHCvtBFloat16Load(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  assert(Subtarget.hasVendorXAndesBFHCvt() && !Subtarget.hasStdExtZfh() &&
+         "Unexpected bfloat16 load lowering");
+
+  SDLoc DL(Op);
+  LoadSDNode *LD = cast<LoadSDNode>(Op.getNode());
+  EVT MemVT = LD->getMemoryVT();
+  SDValue Load = DAG.getExtLoad(
+      ISD::ZEXTLOAD, DL, Subtarget.getXLenVT(), LD->getChain(),
+      LD->getBasePtr(),
+      EVT::getIntegerVT(*DAG.getContext(), MemVT.getSizeInBits()),
+      LD->getMemOperand());
+  // Using mask to make bf16 nan-boxing valid when we don't have flh
+  // instruction. -65536 would be treat as a small number and thus it can be
+  // directly used lui to get the constant.
+  SDValue mask = DAG.getSignedConstant(-65536, DL, Subtarget.getXLenVT());
+  SDValue OrSixteenOne =
+      DAG.getNode(ISD::OR, DL, Load.getValueType(), {Load, mask});
+  SDValue ConvertedResult =
+      DAG.getNode(RISCVISD::NDS_FMV_BF16_X, DL, MVT::bf16, OrSixteenOne);
+  return DAG.getMergeValues({ConvertedResult, Load.getValue(1)}, DL);
+}
+
+SDValue
+RISCVTargetLowering::lowerXAndesBfHCvtBFloat16Store(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  assert(Subtarget.hasVendorXAndesBFHCvt() && !Subtarget.hasStdExtZfh() &&
+         "Unexpected bfloat16 store lowering");
+
+  StoreSDNode *ST = cast<StoreSDNode>(Op.getNode());
+  SDLoc DL(Op);
+  SDValue FMV = DAG.getNode(RISCVISD::NDS_FMV_X_ANYEXTBF16, DL,
+                            Subtarget.getXLenVT(), ST->getValue());
+  return DAG.getTruncStore(
+      ST->getChain(), DL, FMV, ST->getBasePtr(),
+      EVT::getIntegerVT(*DAG.getContext(), ST->getMemoryVT().getSizeInBits()),
+      ST->getMemOperand());
+}
+
 SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
                                             SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -7908,6 +7961,9 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return DAG.getMergeValues({Pair, Chain}, DL);
     }
 
+    if (VT == MVT::bf16)
+      return lowerXAndesBfHCvtBFloat16Load(Op, DAG);
+
     // Handle normal vector tuple load.
     if (VT.isRISCVVectorTuple()) {
       SDLoc DL(Op);
@@ -7934,7 +7990,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
             BasePtr, MachinePointerInfo(Load->getAddressSpace()), Align(8));
         OutChains.push_back(LoadVal.getValue(1));
         Ret = DAG.getNode(RISCVISD::TUPLE_INSERT, DL, VT, Ret, LoadVal,
-                          DAG.getVectorIdxConstant(i, DL));
+                          DAG.getTargetConstant(i, DL, MVT::i32));
         BasePtr = DAG.getNode(ISD::ADD, DL, XLenVT, BasePtr, VROffset, Flag);
       }
       return DAG.getMergeValues(
@@ -7992,6 +8048,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
           {Store->getChain(), Lo, Hi, Store->getBasePtr()}, MVT::i64,
           Store->getMemOperand());
     }
+
+    if (VT == MVT::bf16)
+      return lowerXAndesBfHCvtBFloat16Store(Op, DAG);
+
     // Handle normal vector tuple store.
     if (VT.isRISCVVectorTuple()) {
       SDLoc DL(Op);
@@ -8013,9 +8073,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
 
       // Extract subregisters in a vector tuple and store them individually.
       for (unsigned i = 0; i < NF; ++i) {
-        auto Extract = DAG.getNode(RISCVISD::TUPLE_EXTRACT, DL,
-                                   MVT::getScalableVectorVT(MVT::i8, NumElts),
-                                   StoredVal, DAG.getVectorIdxConstant(i, DL));
+        auto Extract =
+            DAG.getNode(RISCVISD::TUPLE_EXTRACT, DL,
+                        MVT::getScalableVectorVT(MVT::i8, NumElts), StoredVal,
+                        DAG.getTargetConstant(i, DL, MVT::i32));
         Ret = DAG.getStore(Chain, DL, Extract, BasePtr,
                            MachinePointerInfo(Store->getAddressSpace()),
                            Store->getBaseAlign(),
@@ -8226,6 +8287,12 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerSET_FPENV(Op, DAG);
   case ISD::RESET_FPENV:
     return lowerRESET_FPENV(Op, DAG);
+  case ISD::GET_FPMODE:
+    return lowerGET_FPMODE(Op, DAG);
+  case ISD::SET_FPMODE:
+    return lowerSET_FPMODE(Op, DAG);
+  case ISD::RESET_FPMODE:
+    return lowerRESET_FPMODE(Op, DAG);
   case ISD::EH_DWARF_CFA:
     return lowerEH_DWARF_CFA(Op, DAG);
   case ISD::VP_MERGE:
@@ -10926,9 +10993,9 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                 Load->getMemoryVT(), Load->getMemOperand());
     SmallVector<SDValue, 9> Results;
     for (unsigned int RetIdx = 0; RetIdx < NF; RetIdx++) {
-      SDValue SubVec =
-          DAG.getNode(RISCVISD::TUPLE_EXTRACT, DL, ContainerVT,
-                      Result.getValue(0), DAG.getVectorIdxConstant(RetIdx, DL));
+      SDValue SubVec = DAG.getNode(RISCVISD::TUPLE_EXTRACT, DL, ContainerVT,
+                                   Result.getValue(0),
+                                   DAG.getTargetConstant(RetIdx, DL, MVT::i32));
       Results.push_back(convertFromScalableVector(VT, SubVec, DAG, Subtarget));
     }
     Results.push_back(Result.getValue(1));
@@ -11015,7 +11082,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
           RISCVISD::TUPLE_INSERT, DL, VecTupTy, StoredVal,
           convertToScalableVector(
               ContainerVT, FixedIntrinsic->getOperand(2 + i), DAG, Subtarget),
-          DAG.getVectorIdxConstant(i, DL));
+          DAG.getTargetConstant(i, DL, MVT::i32));
 
     SDValue Ops[] = {
         FixedIntrinsic->getChain(),
@@ -11969,7 +12036,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
 
   // Store with unit-stride store and load it back with segmented load.
   MVT XLenVT = Subtarget.getXLenVT();
-  SDValue VL = getDefaultScalableVLOps(ConcatVT, DL, DAG, Subtarget).second;
+  auto [Mask, VL] = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
   SDValue Passthru = DAG.getUNDEF(ConcatVT);
 
   // Allocate a stack slot.
@@ -11990,16 +12057,20 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
       MachineMemOperand::MOStore, LocationSize::beforeOrAfterPointer());
 
   static const Intrinsic::ID VlsegIntrinsicsIds[] = {
-      Intrinsic::riscv_vlseg2, Intrinsic::riscv_vlseg3, Intrinsic::riscv_vlseg4,
-      Intrinsic::riscv_vlseg5, Intrinsic::riscv_vlseg6, Intrinsic::riscv_vlseg7,
-      Intrinsic::riscv_vlseg8};
+      Intrinsic::riscv_vlseg2_mask, Intrinsic::riscv_vlseg3_mask,
+      Intrinsic::riscv_vlseg4_mask, Intrinsic::riscv_vlseg5_mask,
+      Intrinsic::riscv_vlseg6_mask, Intrinsic::riscv_vlseg7_mask,
+      Intrinsic::riscv_vlseg8_mask};
 
   SDValue LoadOps[] = {
       Chain,
       DAG.getTargetConstant(VlsegIntrinsicsIds[Factor - 2], DL, XLenVT),
       Passthru,
       StackPtr,
+      Mask,
       VL,
+      DAG.getTargetConstant(
+          RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC, DL, XLenVT),
       DAG.getTargetConstant(Log2_64(VecVT.getScalarSizeInBits()), DL, XLenVT)};
 
   unsigned Sz =
@@ -12015,7 +12086,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
 
   for (unsigned i = 0U; i < Factor; ++i)
     Res[i] = DAG.getNode(RISCVISD::TUPLE_EXTRACT, DL, VecVT, Load,
-                         DAG.getVectorIdxConstant(i, DL));
+                         DAG.getTargetConstant(i, DL, MVT::i32));
 
   return DAG.getMergeValues(Res, DL);
 }
@@ -12051,7 +12122,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
   }
 
   MVT XLenVT = Subtarget.getXLenVT();
-  SDValue VL = DAG.getRegister(RISCV::X0, XLenVT);
+  auto [Mask, VL] = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
 
   // If the VT is larger than LMUL=8, we need to split and reassemble.
   if ((VecVT.getSizeInBits().getKnownMinValue() * Factor) >
@@ -12100,10 +12171,10 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
     auto PtrInfo = MachinePointerInfo::getFixedStack(MF, FrameIndex);
 
     static const Intrinsic::ID IntrIds[] = {
-        Intrinsic::riscv_vsseg2, Intrinsic::riscv_vsseg3,
-        Intrinsic::riscv_vsseg4, Intrinsic::riscv_vsseg5,
-        Intrinsic::riscv_vsseg6, Intrinsic::riscv_vsseg7,
-        Intrinsic::riscv_vsseg8,
+        Intrinsic::riscv_vsseg2_mask, Intrinsic::riscv_vsseg3_mask,
+        Intrinsic::riscv_vsseg4_mask, Intrinsic::riscv_vsseg5_mask,
+        Intrinsic::riscv_vsseg6_mask, Intrinsic::riscv_vsseg7_mask,
+        Intrinsic::riscv_vsseg8_mask,
     };
 
     unsigned Sz =
@@ -12112,13 +12183,15 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
 
     SDValue StoredVal = DAG.getUNDEF(VecTupTy);
     for (unsigned i = 0; i < Factor; i++)
-      StoredVal = DAG.getNode(RISCVISD::TUPLE_INSERT, DL, VecTupTy, StoredVal,
-                              Op.getOperand(i), DAG.getConstant(i, DL, XLenVT));
+      StoredVal =
+          DAG.getNode(RISCVISD::TUPLE_INSERT, DL, VecTupTy, StoredVal,
+                      Op.getOperand(i), DAG.getTargetConstant(i, DL, MVT::i32));
 
     SDValue Ops[] = {DAG.getEntryNode(),
                      DAG.getTargetConstant(IntrIds[Factor - 2], DL, XLenVT),
                      StoredVal,
                      StackPtr,
+                     Mask,
                      VL,
                      DAG.getTargetConstant(Log2_64(VecVT.getScalarSizeInBits()),
                                            DL, XLenVT)};
@@ -13998,6 +14071,52 @@ SDValue RISCVTargetLowering::lowerRESET_FPENV(SDValue Op,
                      EnvValue);
 }
 
+const uint64_t ModeMask64 = ~RISCVExceptFlags::ALL;
+const uint32_t ModeMask32 = ~RISCVExceptFlags::ALL;
+
+SDValue RISCVTargetLowering::lowerGET_FPMODE(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  const MVT XLenVT = Subtarget.getXLenVT();
+  SDLoc DL(Op);
+  SDValue Chain = Op->getOperand(0);
+  SDValue SysRegNo = DAG.getTargetConstant(RISCVSysReg::fcsr, DL, XLenVT);
+  SDVTList VTs = DAG.getVTList(XLenVT, MVT::Other);
+  SDValue Result = DAG.getNode(RISCVISD::READ_CSR, DL, VTs, Chain, SysRegNo);
+  Chain = Result.getValue(1);
+  return DAG.getMergeValues({Result, Chain}, DL);
+}
+
+SDValue RISCVTargetLowering::lowerSET_FPMODE(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  const MVT XLenVT = Subtarget.getXLenVT();
+  const uint64_t ModeMaskValue = Subtarget.is64Bit() ? ModeMask64 : ModeMask32;
+  SDLoc DL(Op);
+  SDValue Chain = Op->getOperand(0);
+  SDValue EnvValue = Op->getOperand(1);
+  SDValue SysRegNo = DAG.getTargetConstant(RISCVSysReg::fcsr, DL, XLenVT);
+  SDValue ModeMask = DAG.getConstant(ModeMaskValue, DL, XLenVT);
+
+  EnvValue = DAG.getNode(ISD::ZERO_EXTEND, DL, XLenVT, EnvValue);
+  EnvValue = DAG.getNode(ISD::AND, DL, XLenVT, EnvValue, ModeMask);
+  Chain = DAG.getNode(RISCVISD::CLEAR_CSR, DL, MVT::Other, Chain, SysRegNo,
+                      ModeMask);
+  return DAG.getNode(RISCVISD::SET_CSR, DL, MVT::Other, Chain, SysRegNo,
+                     EnvValue);
+}
+
+SDValue RISCVTargetLowering::lowerRESET_FPMODE(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  const MVT XLenVT = Subtarget.getXLenVT();
+  const uint64_t ModeMaskValue = Subtarget.is64Bit() ? ModeMask64 : ModeMask32;
+  SDLoc DL(Op);
+  SDValue Chain = Op->getOperand(0);
+  SDValue SysRegNo = DAG.getTargetConstant(RISCVSysReg::fcsr, DL, XLenVT);
+  SDValue ModeMask = DAG.getConstant(ModeMaskValue, DL, XLenVT);
+
+  return DAG.getNode(RISCVISD::CLEAR_CSR, DL, MVT::Other, Chain, SysRegNo,
+                     ModeMask);
+}
+
 SDValue RISCVTargetLowering::lowerEH_DWARF_CFA(SDValue Op,
                                                SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
@@ -15032,10 +15151,15 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG,
 
 // Optimize (add (shl x, c0), (shl y, c1)) ->
 //          (SLLI (SH*ADD x, y), c0), if c1-c0 equals to [1|2|3].
+// or
+//          (SLLI (QC.SHLADD x, y, c1 - c0), c0), if 4 <= (c1-c0) <=31.
 static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
                                   const RISCVSubtarget &Subtarget) {
-  // Perform this optimization only in the zba/xandesperf extension.
-  if (!Subtarget.hasStdExtZba() && !Subtarget.hasVendorXAndesPerf())
+  const bool HasStdExtZba = Subtarget.hasStdExtZba();
+  const bool HasVendorXAndesPerf = Subtarget.hasVendorXAndesPerf();
+  const bool HasVendorXqciac = Subtarget.hasVendorXqciac();
+  // Perform this optimization only in the zba/xandesperf/xqciac extension.
+  if (!HasStdExtZba && !HasVendorXAndesPerf && !HasVendorXqciac)
     return SDValue();
 
   // Skip for vector types and larger types.
@@ -15060,14 +15184,22 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
   if (C0 <= 0 || C1 <= 0)
     return SDValue();
 
-  // Skip if SH1ADD/SH2ADD/SH3ADD are not applicable.
-  int64_t Bits = std::min(C0, C1);
   int64_t Diff = std::abs(C0 - C1);
-  if (Diff != 1 && Diff != 2 && Diff != 3)
+  bool IsShXaddDiff = Diff == 1 || Diff == 2 || Diff == 3;
+  bool HasShXadd = HasStdExtZba || HasVendorXAndesPerf;
+
+  // Skip if SH1ADD/SH2ADD/SH3ADD are not applicable.
+  if ((!IsShXaddDiff && HasShXadd && !HasVendorXqciac) ||
+      (IsShXaddDiff && !HasShXadd && HasVendorXqciac))
+    return SDValue();
+
+  // Skip if QC_SHLADD is not applicable.
+  if (Diff == 0 || Diff > 31)
     return SDValue();
 
   // Build nodes.
   SDLoc DL(N);
+  int64_t Bits = std::min(C0, C1);
   SDValue NS = (C0 < C1) ? N0->getOperand(0) : N1->getOperand(0);
   SDValue NL = (C0 > C1) ? N0->getOperand(0) : N1->getOperand(0);
   SDValue SHADD = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, NL,
@@ -16001,7 +16133,7 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   uint64_t MulAmt = CNode->getZExtValue();
 
   // Don't do this if the Xqciac extension is enabled and the MulAmt in simm12.
-  if (Subtarget.hasVendorXqciac() && isInt<12>(MulAmt))
+  if (Subtarget.hasVendorXqciac() && isInt<12>(CNode->getSExtValue()))
     return SDValue();
 
   const bool HasShlAdd = Subtarget.hasStdExtZba() ||
@@ -16106,10 +16238,12 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     // 2^N - 3/5/9 --> (sub (shl X, C1), (shXadd X, x))
     for (uint64_t Offset : {3, 5, 9}) {
       if (isPowerOf2_64(MulAmt + Offset)) {
+        unsigned ShAmt = Log2_64(MulAmt + Offset);
+        if (ShAmt >= VT.getSizeInBits())
+          continue;
         SDLoc DL(N);
         SDValue Shift1 =
-            DAG.getNode(ISD::SHL, DL, VT, X,
-                        DAG.getConstant(Log2_64(MulAmt + Offset), DL, VT));
+            DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShAmt, DL, VT));
         SDValue Mul359 =
             DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
                         DAG.getConstant(Log2_64(Offset - 1), DL, VT), X);
@@ -20618,7 +20752,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       SDValue Result = DAG.getUNDEF(VT);
       for (unsigned i = 0; i < NF; ++i)
         Result = DAG.getNode(RISCVISD::TUPLE_INSERT, DL, VT, Result, Splat,
-                             DAG.getVectorIdxConstant(i, DL));
+                             DAG.getTargetConstant(i, DL, MVT::i32));
       return Result;
     }
     // If this is a bitcast between a MVT::v4i1/v2i1/v1i1 and an illegal integer
@@ -23942,7 +24076,7 @@ bool RISCVTargetLowering::splitValueIntoRegisterParts(
 #endif
 
     Val = DAG.getNode(RISCVISD::TUPLE_INSERT, DL, PartVT, DAG.getUNDEF(PartVT),
-                      Val, DAG.getVectorIdxConstant(0, DL));
+                      Val, DAG.getTargetConstant(0, DL, MVT::i32));
     Parts[0] = Val;
     return true;
   }

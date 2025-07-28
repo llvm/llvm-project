@@ -549,7 +549,7 @@ define void @sink_splat_rsub_scalable(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB10_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a3, 0(a2)
-; CHECK-NEXT:    subw a3, a1, a3
+; CHECK-NEXT:    sub a3, a1, a3
 ; CHECK-NEXT:    sw a3, 0(a2)
 ; CHECK-NEXT:    addi a2, a2, 4
 ; CHECK-NEXT:    bne a2, a0, .LBB10_6

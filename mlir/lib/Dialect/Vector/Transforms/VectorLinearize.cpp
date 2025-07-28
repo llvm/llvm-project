@@ -658,7 +658,7 @@ struct LinearizeVectorCreateMask final
     // The result of the comparison is then multiplied with
     // the second operand of create_mask to get the 1D mask.
     auto firstOperand = adaptor.getOperands().front();
-    auto zero = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 0);
+    auto zero = mlir::arith::ConstantIndexOp::create(rewriter, loc, 0);
     auto isNonZero = rewriter.createOrFold<mlir::arith::CmpIOp>(
         loc, mlir::arith::CmpIPredicate::sgt, firstOperand, zero);
     auto isNonZeroIndex = rewriter.createOrFold<mlir::arith::IndexCastOp>(
@@ -668,8 +668,96 @@ struct LinearizeVectorCreateMask final
         loc, rewriter.getIndexType(), isNonZeroIndex, secondOperand);
 
     auto newMask =
-        rewriter.create<mlir::vector::CreateMaskOp>(loc, dstTy, maskSize);
+        mlir::vector::CreateMaskOp::create(rewriter, loc, dstTy, maskSize);
     rewriter.replaceOp(createMaskOp, newMask);
+    return success();
+  }
+};
+
+/// This pattern linearizes vector.load from vector<1x1x...xN> to vector<N>
+/// It currently supports linearization where all but the last dimension are 1
+/// The following,
+///   vector.load %arg0[%c0, %c0] : memref<1x4xf32>, vector<1x4xf32>
+/// is converted to:
+///   vector.load %arg0[%c0, %c0] : memref<1x4xf32>, vector<4xf32>
+///   vector.shape_cast %load_result : vector<4xf32> to vector<1x4xf32>
+/// For generic cases, the vector unroll pass should be used to unroll the load
+/// to vector<1x1x...xN> form and then linearized
+struct LinearizeVectorLoad final : public OpConversionPattern<vector::LoadOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LinearizeVectorLoad(const TypeConverter &typeConverter, MLIRContext *context,
+                      PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(vector::LoadOp loadOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType vecTy = loadOp.getType();
+    if (!vecTy)
+      return rewriter.notifyMatchFailure(loadOp, "expected vector type");
+
+    auto shape = vecTy.getShape();
+    auto scalableDims = vecTy.getScalableDims();
+    // All but the last dim must be 1, and only the last dim may be scalable (if
+    // any).
+    if (!llvm::all_of(shape.drop_back(1), [](auto d) { return d == 1; }))
+      return rewriter.notifyMatchFailure(loadOp,
+                                         "only vector<1x1x...xN> supported");
+
+    if (llvm::any_of(scalableDims.drop_back(1), [](bool s) { return s; }))
+      return rewriter.notifyMatchFailure(loadOp,
+                                         "only innermost dim may be scalable");
+
+    auto linearTy = typeConverter->convertType<VectorType>(vecTy);
+
+    auto newLoad =
+        vector::LoadOp::create(rewriter, loadOp.getLoc(), linearTy,
+                               adaptor.getBase(), adaptor.getIndices());
+    rewriter.replaceOp(loadOp, newLoad.getResult());
+    return success();
+  }
+};
+
+/// This pattern linearizes vector.store from vector<1x1x...xN> to vector<N>
+/// It currently supports linearization where all but the last dimension are 1
+/// The following,
+///   vector.store %arg0, %arg1[%c0, %c0]s
+///     : vector<1x4xf32>, memref<1x4xf32>
+/// is converted to:
+///   vector.shape_cast %arg0 : vector<1x4xf32> to vector<4xf32>
+///   vector.store %arg0, %arg1[%c0, %c0]
+///     : vector<4xf32>, memref<1x4xf32>
+/// For generic cases, the vector unroll pass should be used to unroll the store
+/// to vector<1x1x...xN> form and then linearized
+struct LinearizeVectorStore final
+    : public OpConversionPattern<vector::StoreOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LinearizeVectorStore(const TypeConverter &typeConverter, MLIRContext *context,
+                       PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(vector::StoreOp storeOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType vecTy = storeOp.getValueToStore().getType();
+    if (!vecTy)
+      return rewriter.notifyMatchFailure(storeOp, "expected vector type");
+
+    auto shape = vecTy.getShape();
+    auto scalableDims = vecTy.getScalableDims();
+    // All but the last dim must be 1, and only the last dim may be scalable (if
+    // any).
+    if (!llvm::all_of(shape.drop_back(1), [](auto d) { return d == 1; }))
+      return rewriter.notifyMatchFailure(storeOp,
+                                         "only vector<1x1x...xN> supported");
+
+    if (llvm::any_of(scalableDims.drop_back(1), [](bool s) { return s; }))
+      return rewriter.notifyMatchFailure(storeOp,
+                                         "only innermost dim may be scalable");
+
+    rewriter.replaceOpWithNewOp<vector::StoreOp>(
+        storeOp, adaptor.getValueToStore(), adaptor.getBase(),
+        adaptor.getIndices());
     return success();
   }
 };
@@ -745,7 +833,7 @@ void mlir::vector::populateForVectorLinearize(TypeConverter &typeConverter,
     if (!isa<VectorType>(type) || !isa<VectorType>(value.getType()))
       return nullptr;
 
-    return builder.create<vector::ShapeCastOp>(loc, type, value);
+    return vector::ShapeCastOp::create(builder, loc, type, value);
   };
   typeConverter.addSourceMaterialization(materializeCast);
   typeConverter.addTargetMaterialization(materializeCast);
@@ -765,8 +853,8 @@ void mlir::vector::populateVectorLinearizeBasePatterns(
     RewritePatternSet &patterns) {
   patterns
       .add<LinearizeConstantLike, LinearizeVectorizable, LinearizeVectorBitCast,
-           LinearizeVectorSplat, LinearizeVectorCreateMask>(
-          typeConverter, patterns.getContext());
+           LinearizeVectorSplat, LinearizeVectorCreateMask, LinearizeVectorLoad,
+           LinearizeVectorStore>(typeConverter, patterns.getContext());
 }
 
 void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(

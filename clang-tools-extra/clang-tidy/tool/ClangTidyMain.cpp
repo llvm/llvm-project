@@ -328,7 +328,7 @@ This option overrides the 'UseColor' option in
 
 static cl::opt<bool> VerifyConfig("verify-config", desc(R"(
 Check the config files to ensure each check and
-option is recognized.
+option is recognized without running any checks.
 )"),
                                   cl::init(false), cl::cat(ClangTidyCategory));
 

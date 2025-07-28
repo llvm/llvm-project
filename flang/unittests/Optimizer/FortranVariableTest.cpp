@@ -21,9 +21,8 @@ public:
     // Set the insertion point in the function entry block.
     moduleOp = builder->create<mlir::ModuleOp>(loc);
     builder->setInsertionPointToStart(moduleOp->getBody());
-    mlir::func::FuncOp func =
-        builder->create<mlir::func::FuncOp>(loc, "fortran_variable_tests",
-            builder->getFunctionType(std::nullopt, std::nullopt));
+    mlir::func::FuncOp func = builder->create<mlir::func::FuncOp>(
+        loc, "fortran_variable_tests", builder->getFunctionType({}, {}));
     auto *entryBlock = func.addEntryBlock();
     builder->setInsertionPointToStart(entryBlock);
   }
@@ -49,7 +48,7 @@ TEST_F(FortranVariableTest, SimpleScalar) {
   mlir::Value addr = builder->create<fir::AllocaOp>(loc, eleType);
   auto name = mlir::StringAttr::get(&context, "x");
   auto declare = builder->create<fir::DeclareOp>(loc, addr.getType(), addr,
-      /*shape=*/mlir::Value{}, /*typeParams=*/std::nullopt,
+      /*shape=*/mlir::Value{}, /*typeParams=*/mlir::ValueRange{},
       /*dummy_scope=*/nullptr, name,
       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
       /*data_attr=*/cuf::DataAttributeAttr{});
@@ -103,11 +102,11 @@ TEST_F(FortranVariableTest, SimpleArray) {
       extents.size(), fir::SequenceType::getUnknownExtent());
   mlir::Type seqTy = fir::SequenceType::get(typeShape, eleType);
   mlir::Value addr = builder->create<fir::AllocaOp>(
-      loc, seqTy, /*pinned=*/false, /*typeParams=*/std::nullopt, extents);
+      loc, seqTy, /*pinned=*/false, /*typeParams=*/mlir::ValueRange{}, extents);
   mlir::Value shape = createShape(extents);
   auto name = mlir::StringAttr::get(&context, "x");
   auto declare = builder->create<fir::DeclareOp>(loc, addr.getType(), addr,
-      shape, /*typeParams*/ std::nullopt, /*dummy_scope=*/nullptr, name,
+      shape, /*typeParams=*/mlir::ValueRange{}, /*dummy_scope=*/nullptr, name,
       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
       /*data_attr=*/cuf::DataAttributeAttr{});
 

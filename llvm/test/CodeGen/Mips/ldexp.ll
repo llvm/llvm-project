@@ -125,28 +125,25 @@ define half @ldexp_f16(half %arg0, i32 %arg1) nounwind {
   ret half %ldexp
 }
 
-define x86_fp80 @ldexp_f80(x86_fp80 %arg0, i32 %arg1) nounwind {
-; SOFT-LABEL: ldexp_f80:
+define fp128 @ldexp_f128(fp128 %arg0, i32 %arg1) nounwind {
+; SOFT-LABEL: ldexp_f128:
 ; SOFT:       # %bb.0:
-; SOFT-NEXT:    addiu $sp, $sp, -24
-; SOFT-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
+; SOFT-NEXT:    addiu $sp, $sp, -32
+; SOFT-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
+; SOFT-NEXT:    lw $1, 48($sp)
 ; SOFT-NEXT:    jal ldexpl
-; SOFT-NEXT:    andi $4, $4, 65535
-; SOFT-NEXT:    move $4, $2
-; SOFT-NEXT:    addiu $2, $zero, 0
-; SOFT-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
+; SOFT-NEXT:    sw $1, 16($sp)
+; SOFT-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
 ; SOFT-NEXT:    jr $ra
-; SOFT-NEXT:    addiu $sp, $sp, 24
-  %ldexp = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 %arg1)
-  ret x86_fp80 %ldexp
+; SOFT-NEXT:    addiu $sp, $sp, 32
+  %ldexp = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 %arg1)
+  ret fp128 %ldexp
 }
-
 
 declare double @llvm.ldexp.f64.i32(double, i32) #0
 declare float @llvm.ldexp.f32.i32(float, i32) #0
 declare <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float>, <2 x i32>) #0
 declare <4 x float> @llvm.ldexp.v4f32.v4i32(<4 x float>, <4 x i32>) #0
-declare x86_fp80 @llvm.ldexp.f80.i32(x86_fp80, i32)
 declare half @llvm.ldexp.f16.i32(half, i32) #0
 
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
