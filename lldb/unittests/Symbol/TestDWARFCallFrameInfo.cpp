@@ -373,10 +373,10 @@ Symbols:
   std::unique_ptr<UnwindPlan> plan_up = cfi.GetUnwindPlan(sym->GetAddress());
   ASSERT_TRUE(plan_up);
   ASSERT_EQ(1, plan_up->GetRowCount());
-  EXPECT_THAT(plan_up->GetRowAtIndex(0), testing::Pointee(GetValOffsetExpectedRow0()));
+  EXPECT_THAT(plan_up->GetRowAtIndex(0),
+              testing::Pointee(GetValOffsetExpectedRow0()));
 }
 
 TEST_F(DWARFCallFrameInfoTest, ValOffset_dwarf3) {
   TestValOffset(DWARFCallFrameInfo::DWARF, "debug_frame3");
 }
-

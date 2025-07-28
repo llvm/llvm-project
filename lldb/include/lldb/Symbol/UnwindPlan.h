@@ -57,20 +57,20 @@ public:
     class AbstractRegisterLocation {
     public:
       enum RestoreType {
-        unspecified,       // not specified, we may be able to assume this
-                           // is the same register. gcc doesn't specify all
-                           // initial values so we really don't know...
-        undefined,         // reg is not available, e.g. volatile reg
-        same,              // reg is unchanged
-        atCFAPlusOffset,   // reg = deref(CFA + offset)
-        isCFAPlusOffset,   // reg = CFA + offset
-        atAFAPlusOffset,   // reg = deref(AFA + offset)
-        isAFAPlusOffset,   // reg = AFA + offset
-        inOtherRegister,   // reg = other reg
+        unspecified,     // not specified, we may be able to assume this
+                         // is the same register. gcc doesn't specify all
+                         // initial values so we really don't know...
+        undefined,       // reg is not available, e.g. volatile reg
+        same,            // reg is unchanged
+        atCFAPlusOffset, // reg = deref(CFA + offset)
+        isCFAPlusOffset, // reg = CFA + offset
+        atAFAPlusOffset, // reg = deref(AFA + offset)
+        isAFAPlusOffset, // reg = AFA + offset
+        inOtherRegister, // reg = other reg
         isOtherRegisterPlusOffset, // reg = other reg + offset
-        atDWARFExpression, // reg = deref(eval(dwarf_expr))
-        isDWARFExpression, // reg = eval(dwarf_expr)
-        isConstant         // reg = constant
+        atDWARFExpression,         // reg = deref(eval(dwarf_expr))
+        isDWARFExpression,         // reg = eval(dwarf_expr)
+        isConstant                 // reg = constant
       };
 
       AbstractRegisterLocation() : m_location() {}
