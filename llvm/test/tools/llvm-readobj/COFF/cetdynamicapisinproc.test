@@ -1,0 +1,16 @@
+# To regenerate has-cetdynamicapisinproc.exe
+# $ echo int main() { return 0; } > has-cetdynamicapisinproc.c
+# $ cl has-cetdynamicapisinproc.c /link /cetdynamicapisinproc
+RUN: llvm-readobj --coff-debug-directory %p/Inputs/has-cetdynamicapisinproc.exe | FileCheck %s
+
+CHECK:  DebugEntry {
+CHECK:    Characteristics: 0x0
+CHECK:    Type: ExtendedDLLCharacteristics (0x14)
+CHECK:    ExtendedCharacteristics [ (0x8)
+CHECK:      IMAGE_DLL_CHARACTERISTICS_EX_CET_DYNAMIC_APIS_ALLOW_IN_PROC_ONLY (0x8)
+CHECK:    ]
+CHECK:    RawData (
+CHECK:      0000: 08000000                             |....|
+CHECK:    )
+CHECK:  }
+
