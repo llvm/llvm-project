@@ -24805,15 +24805,14 @@ static bool isEquivalentMaskless(unsigned CC, unsigned width,
   case AArch64CC::GT:
     if ((AddConstant == 0) ||
         (CompConstant == MaxUInt - 1 && AddConstant < 0) ||
-        (AddConstant >= 0 && CompConstant < 0) ||
-        (AddConstant <= 0 && CompConstant <= 0 && CompConstant < AddConstant))
+        (AddConstant > 0 && CompConstant < 0) ||
+        (AddConstant < 0 && CompConstant <= 0 && CompConstant < AddConstant))
       return true;
     break;
   case AArch64CC::LT:
   case AArch64CC::GE:
-    if ((AddConstant == 0) ||
-        (AddConstant >= 0 && CompConstant <= 0) ||
-        (AddConstant <= 0 && CompConstant <= 0 && CompConstant <= AddConstant))
+    if ((AddConstant == 0) || (AddConstant > 0 && CompConstant <= 0) ||
+        (AddConstant < 0 && CompConstant <= 0 && CompConstant <= AddConstant))
       return true;
     break;
   case AArch64CC::HI:
@@ -24825,8 +24824,7 @@ static bool isEquivalentMaskless(unsigned CC, unsigned width,
    break;
   case AArch64CC::PL:
   case AArch64CC::MI:
-    if ((AddConstant == 0) ||
-        (AddConstant > 0 && CompConstant <= 0) ||
+    if ((AddConstant == 0) || (AddConstant > 0 && CompConstant <= 0) ||
         (AddConstant < 0 && CompConstant <= AddConstant))
       return true;
     break;
