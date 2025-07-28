@@ -3495,7 +3495,7 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
     // TODO: Report an error on duplicate metadata nodes.
     default:
       return error("expected 'align' or '!tbaa' or '!alias.scope' or "
-                   "'!noalias' or '!range'");
+                   "'!noalias' or '!range' or '!noalias.addrspace'");
     }
   }
   if (expectAndConsume(MIToken::rparen))
