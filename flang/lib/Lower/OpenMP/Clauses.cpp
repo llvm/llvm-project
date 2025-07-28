@@ -773,11 +773,11 @@ Doacross make(const parser::OmpClause::Doacross &inp,
 Enter make(const parser::OmpClause::Enter &inp,
            semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpEnterClause
-  CLAUSET_ENUM_CONVERT(
-        convert, parser::OmpAutomapModifier::Value, Enter::Modifier,
-        // clang-format off
-        MS(Automap, Automap)
-        // clang-format on);
+  CLAUSET_ENUM_CONVERT( //
+      convert, parser::OmpAutomapModifier::Value, Enter::Modifier,
+      // clang-format off
+      MS(Automap, Automap)
+      // clang-format on
   );
   auto &mods = semantics::OmpGetModifiers(inp.v);
   auto *mod = semantics::OmpGetUniqueModifier<parser::OmpAutomapModifier>(mods);
