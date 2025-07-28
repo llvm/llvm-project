@@ -127,6 +127,17 @@ struct FunctionCallLabel {
 /// from JITted expressions.
 inline constexpr llvm::StringRef FunctionCallLabelPrefix = "$__lldb_func";
 
+/// Returns the components of the specified function call label.
+///
+/// The format of \c label is described in \c FunctionCallLabel.
+/// The label prefix is not one of the components.
+llvm::Expected<llvm::SmallVector<llvm::StringRef, 3>>
+splitFunctionCallLabel(llvm::StringRef label);
+
+// Decodes the function label into a \c FunctionCallLabel.
+llvm::Expected<FunctionCallLabel>
+makeFunctionCallLabel(llvm::StringRef label);
+
 } // namespace lldb_private
 
 #endif // LLDB_EXPRESSION_EXPRESSION_H

@@ -790,17 +790,7 @@ ResolveFunctionCallLabel(llvm::StringRef name,
   if (!sc.target_sp)
     return llvm::createStringError("target not available.");
 
-  auto ts_or_err = sc.target_sp->GetScratchTypeSystemForLanguage(
-      lldb::eLanguageTypeC_plus_plus);
-  if (!ts_or_err || !*ts_or_err)
-    return llvm::joinErrors(
-        llvm::createStringError(
-            "failed to find scratch C++ TypeSystem for current target."),
-        ts_or_err.takeError());
-
-  auto ts_sp = *ts_or_err;
-
-  auto label_or_err = ts_sp->makeFunctionCallLabel(name);
+  auto label_or_err = makeFunctionCallLabel(name);
   if (!label_or_err)
     return llvm::joinErrors(
         llvm::createStringError("failed to create FunctionCallLabel from: %s",

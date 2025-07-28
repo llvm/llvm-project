@@ -9056,6 +9056,8 @@ ConstString TypeSystemClang::DeclGetMangledName(void *opaque_decl) {
   if (!mc || !mc->shouldMangleCXXName(nd))
     return {};
 
+  // We have a LLDB FunctionCallLabel instead of an ordinary mangled name.
+  // Extract the mangled name out of this label.
   if (const auto *label = nd->getAttr<AsmLabelAttr>()) {
     if (auto components_or_err = splitFunctionCallLabel(label->getLabel()))
       return ConstString((*components_or_err)[0]);
@@ -9784,50 +9786,4 @@ void TypeSystemClang::LogCreation() const {
   if (auto *log = GetLog(LLDBLog::Expressions))
     LLDB_LOG(log, "Created new TypeSystem for (ASTContext*){0:x} '{1}'",
              &getASTContext(), getDisplayName());
-}
-
-llvm::Expected<llvm::SmallVector<llvm::StringRef, 3>>
-TypeSystemClang::splitFunctionCallLabel(llvm::StringRef label) const {
-  if (!label.consume_front(FunctionCallLabelPrefix))
-    return llvm::createStringError(
-        "expected function call label prefix not found in %s", label.data());
-  if (!label.consume_front(":"))
-    return llvm::createStringError(
-        "incorrect format: expected ':' as the first character.");
-
-  llvm::SmallVector<llvm::StringRef, 3> components;
-  label.split(components, ":");
-
-  if (components.size() != 3)
-    return llvm::createStringError(
-        "incorrect format: too many label subcomponents.");
-
-  return components;
-}
-
-llvm::Expected<FunctionCallLabel>
-TypeSystemClang::makeFunctionCallLabel(llvm::StringRef label) const {
-  auto components_or_err = splitFunctionCallLabel(label);
-  if (!components_or_err)
-    return llvm::joinErrors(
-        llvm::createStringError("Failed to decode function call label"),
-        components_or_err.takeError());
-
-  const auto &components = *components_or_err;
-
-  llvm::StringRef module_label = components[1];
-  llvm::StringRef die_label = components[2];
-
-  lldb::user_id_t module_id = 0;
-  if (module_label.consumeInteger(0, module_id))
-    return llvm::createStringError(
-        llvm::formatv("failed to parse module ID from '{0}'.", components[1]));
-
-  lldb::user_id_t die_id;
-  if (die_label.consumeInteger(/*Radix=*/0, die_id))
-    return llvm::createStringError(
-        llvm::formatv("failed to parse DIE ID from '{0}'.", components[2]));
-
-  return FunctionCallLabel{/*.lookup_name=*/components[0],
-                           /*.module_id=*/module_id, /*.symbol_id=*/die_id};
 }
