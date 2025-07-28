@@ -1402,7 +1402,7 @@ void Intrinsic::emitBodyAsBuiltinCall() {
         CastToType.makeInteger(8, true);
         Arg = "__builtin_bit_cast(" + CastToType.str() + ", " + Arg + ")";
       } else if (LocalCK == ClassI &&
-           (CastToType.isInteger() || CastToType.isPoly())) {
+                 (CastToType.isInteger() || CastToType.isPoly())) {
         CastToType.makeSigned();
         Arg = "__builtin_bit_cast(" + CastToType.str() + ", " + Arg + ")";
       }
