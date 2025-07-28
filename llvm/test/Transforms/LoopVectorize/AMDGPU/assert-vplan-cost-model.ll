@@ -30,12 +30,10 @@ define protected amdgpu_kernel void @func_int8(ptr addrspace(1) %p_a_grid.coerce
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[INDEX]], [[MUL17]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P_A_GRID_COERCE]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP3]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr addrspace(1) [[TMP4]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr addrspace(1) [[TMP3]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P_B_GRID_COERCE]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP6]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i8>, ptr addrspace(1) [[TMP7]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i8>, ptr addrspace(1) [[TMP6]], align 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <2 x i8> [[WIDE_LOAD]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext <2 x i8> [[WIDE_LOAD1]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul nuw nsw <2 x i32> [[TMP9]], [[TMP8]]
