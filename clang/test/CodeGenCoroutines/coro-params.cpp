@@ -104,17 +104,24 @@ void f(int val, MoveOnly moParam, MoveAndCopy mcParam, TrivialABI trivialParam) 
   // CHECK: call void @_ZNSt16coroutine_traitsIJvi8MoveOnly11MoveAndCopy10TrivialABIEE12promise_type13final_suspendEv(
   // CHECK: call void @_ZN14suspend_always12await_resumeEv(
 
-  // Destroy promise, then parameter copies:
-  // CHECK: call void @_ZNSt16coroutine_traitsIJvi8MoveOnly11MoveAndCopy10TrivialABIEE12promise_typeD1Ev(ptr {{[^,]*}} %__promise)
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(
-  // CHECK-NEXT: call void @_ZN10TrivialABID1Ev(ptr {{[^,]*}} %[[TrivialCopy]])
+  // Parameter copies:
+  // CHECK: call void @_ZN10TrivialABID1Ev(ptr {{[^,]*}} %[[TrivialCopy]])
   // CHECK-NEXT: call void @llvm.lifetime.end.p0(
   // CHECK-NEXT: call void @_ZN11MoveAndCopyD1Ev(ptr {{[^,]*}} %[[McCopy]])
   // CHECK-NEXT: call void @llvm.lifetime.end.p0(
   // CHECK-NEXT: call void @_ZN8MoveOnlyD1Ev(ptr {{[^,]*}} %[[MoCopy]]
   // CHECK-NEXT: call void @llvm.lifetime.end.p0(
   // CHECK-NEXT: call void @llvm.lifetime.end.p0(
+  // CHECK-NEXT: %InResume = call i1 @llvm.coro.end(ptr null, i1 false, token none)
+  // CHECK-NEXT: br i1 %InResume, label %promise.free, label %coro.ret
+
+  // Destroy promise:
+  // CHECK: promise.free
+  // CHECK-NEXT: call void @_ZNSt16coroutine_traitsIJvi8MoveOnly11MoveAndCopy10TrivialABIEE12promise_typeD1Ev(ptr {{[^,]*}} %__promise)
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(
   // CHECK-NEXT: call ptr @llvm.coro.free(
+  // CHECK-NEXT: {{[^,]*}} = icmp ne ptr {{[^,]*}}, null
+  // CHECK-NEXT: br i1 {{[^,]*}}, label %coro.free, label %after.coro.free
 
   // The original trivial_abi parameter is destroyed when returning from the ramp.
   // CHECK: call i1 @llvm.coro.end

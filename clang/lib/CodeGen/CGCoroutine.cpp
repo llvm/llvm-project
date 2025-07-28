@@ -73,6 +73,15 @@ struct clang::CodeGen::CGCoroData {
   // the address of the coroutine frame of the current coroutine.
   llvm::CallInst *CoroBegin = nullptr;
 
+  // Stores call to promise destruction and the llvm.lifetime.end of promise alloca
+  // We will clone them into deferred promise free block.
+  llvm::CallInst *PromiseDtor = nullptr;
+  llvm::CallInst *PromiseEnd = nullptr;
+
+  // Stores the llvm.coro.end that identifies if the coroutine exit without
+  // suspend.
+  llvm::CallInst *InResume = nullptr;
+
   // Stores the last emitted coro.free for the deallocate expressions, we use it
   // to wrap dealloc code with if(auto mem = coro.free) dealloc(mem).
   llvm::CallInst *LastCoroFree = nullptr;
@@ -595,7 +604,7 @@ struct CallCoroEnd final : public EHScopeStack::Cleanup {
 namespace {
 // Make sure to call coro.delete on scope exit.
 struct CallCoroDelete final : public EHScopeStack::Cleanup {
-  Stmt *Deallocate;
+  const CoroutineBodyStmt *S;
 
   // Emit "if (coro.free(CoroId, CoroBegin)) Deallocate;"
 
@@ -605,16 +614,73 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
   // builds a single call to a deallocation function which is safe to emit
   // multiple times.
   void Emit(CodeGenFunction &CGF, Flags) override {
+    bool Sinked = CGF.CurCoro.Data->InResume != nullptr;
+    if (!Sinked)
+      sinkPromiseBB(CGF);
+    EmitCoroFree(CGF);
+  }
+
+  explicit CallCoroDelete(const CoroutineBodyStmt *S) : S(S) {}
+
+  // Sink promise destructor to separate block
+  void sinkPromiseBB(CodeGenFunction &CGF) {
+    auto &Builder = CGF.Builder;
+    auto &CoroData = *CGF.CurCoro.Data;
+    auto *CleanupBB = Builder.GetInsertBlock()->getSinglePredecessor();
+    auto *Promise = CGF.GetAddrOfLocalVar(S->getPromiseDecl()).getBasePointer();
+    llvm::CallInst *PromiseDtor = nullptr;
+    BasicBlock *PromiseBB = nullptr;
+    for (llvm::User *U : Promise->users()) {
+      auto *I = dyn_cast<llvm::CallInst>(U);
+      if (!I || I->getParent() != CleanupBB)
+        continue;
+
+      if (I->isLifetimeStartOrEnd()) {
+        assert(!CoroData.PromiseEnd && "Unexpected multiple lifetime.end");
+        I->moveBefore(CleanupBB->getTerminator()->getIterator());
+        PromiseBB = CleanupBB->splitBasicBlock(I, "promise.free");
+        CoroData.PromiseEnd = I;
+      }
+      else {
+        assert(!PromiseDtor && "Unexpected multiple destructor call");
+        PromiseDtor = I;
+      }
+    }
+
+    if (PromiseDtor) {
+      PromiseDtor->moveBefore(CoroData.PromiseEnd->getIterator());
+      CoroData.PromiseDtor = PromiseDtor;
+    }
+
+    BasicBlock *SaveInsertBlock = CGF.Builder.GetInsertBlock();
+    CleanupBB->getTerminator()->eraseFromParent();
+    Builder.SetInsertPoint(CleanupBB);
+
+    llvm::Function *CoroEnd = CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_end);
+    auto *NullPtr = llvm::ConstantPointerNull::get(CGF.Int8PtrTy);
+    CoroData.InResume = Builder.CreateCall(
+        CoroEnd,
+        {NullPtr, Builder.getFalse(),
+         llvm::ConstantTokenNone::get(CoroEnd->getContext())},
+        "InResume");
+
+    BasicBlock *EndBB = CoroData.CleanupJD.getBlock();
+    Builder.CreateCondBr(CoroData.InResume, PromiseBB, EndBB);
+    Builder.SetInsertPoint(SaveInsertBlock);
+  }
+
+  void EmitCoroFree(CodeGenFunction &CGF, const Twine &NameSuffix = "") {
     // Remember the current point, as we are going to emit deallocation code
     // first to get to coro.free instruction that is an argument to a delete
     // call.
     BasicBlock *SaveInsertBlock = CGF.Builder.GetInsertBlock();
 
-    auto *FreeBB = CGF.createBasicBlock("coro.free");
+    Stmt *Deallocate = S->getDeallocate();
+    auto *FreeBB = CGF.createBasicBlock("coro.free" + NameSuffix);
     CGF.EmitBlock(FreeBB);
     CGF.EmitStmt(Deallocate);
 
-    auto *AfterFreeBB = CGF.createBasicBlock("after.coro.free");
+    auto *AfterFreeBB = CGF.createBasicBlock("after.coro.free" + NameSuffix);
     CGF.EmitBlock(AfterFreeBB);
 
     // We should have captured coro.free from the emission of deallocate.
@@ -639,7 +705,6 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
     InsertPt->eraseFromParent();
     CGF.Builder.SetInsertPoint(AfterFreeBB);
   }
-  explicit CallCoroDelete(Stmt *DeallocStmt) : Deallocate(DeallocStmt) {}
 };
 }
 
@@ -787,13 +852,13 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   auto *AllocBB = createBasicBlock("coro.alloc");
   auto *InitBB = createBasicBlock("coro.init");
   auto *FinalBB = createBasicBlock("coro.final");
-  auto *RetBB = createBasicBlock("coro.ret");
+  auto *EndBB = createBasicBlock("coro.end");
 
   auto *CoroId = Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::coro_id),
       {Builder.getInt32(NewAlign), NullPtr, NullPtr, NullPtr});
   createCoroData(*this, CurCoro, CoroId);
-  CurCoro.Data->SuspendBB = RetBB;
+  CurCoro.Data->SuspendBB = EndBB;
   assert(ShouldEmitLifetimeMarkers &&
          "Must emit lifetime intrinsics for coroutines");
 
@@ -829,23 +894,25 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
 
   EmitBlock(InitBB);
 
-  // Pass the result of the allocation to coro.begin.
-  auto *Phi = Builder.CreatePHI(VoidPtrTy, 2);
-  Phi->addIncoming(NullPtr, EntryBB);
-  Phi->addIncoming(AllocateCall, AllocOrInvokeContBB);
-  auto *CoroBegin = Builder.CreateCall(
-      CGM.getIntrinsic(llvm::Intrinsic::coro_begin), {CoroId, Phi});
-  CurCoro.Data->CoroBegin = CoroBegin;
+  {
+    // Pass the result of the allocation to coro.begin.
+    auto *Phi = Builder.CreatePHI(VoidPtrTy, 2);
+    Phi->addIncoming(NullPtr, EntryBB);
+    Phi->addIncoming(AllocateCall, AllocOrInvokeContBB);
+    auto *CoroBegin = Builder.CreateCall(
+        CGM.getIntrinsic(llvm::Intrinsic::coro_begin), {CoroId, Phi});
+    CurCoro.Data->CoroBegin = CoroBegin;
+  }
 
   GetReturnObjectManager GroManager(*this, S);
   GroManager.EmitGroAlloca();
 
-  CurCoro.Data->CleanupJD = getJumpDestInCurrentScope(RetBB);
+  CurCoro.Data->CleanupJD = getJumpDestInCurrentScope(EndBB);
   {
     CGDebugInfo *DI = getDebugInfo();
     ParamReferenceReplacerRAII ParamReplacer(LocalDeclMap);
     CodeGenFunction::RunCleanupsScope ResumeScope(*this);
-    EHStack.pushCleanup<CallCoroDelete>(NormalAndEHCleanup, S.getDeallocate());
+    EHStack.pushCleanup<CallCoroDelete>(NormalAndEHCleanup, &S);
 
     // Create mapping between parameters and copy-params for coroutine function.
     llvm::ArrayRef<const Stmt *> ParamMoves = S.getParamMoves();
@@ -950,7 +1017,14 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     }
   }
 
-  EmitBlock(RetBB);
+  EmitBlock(EndBB);
+  auto *Phi = Builder.CreatePHI(Builder.getInt1Ty(), llvm::pred_size(EndBB),
+                                "never.suspend");
+  BasicBlock *CleanupBB = CurCoro.Data->InResume->getParent();
+  for (auto *Pred : llvm::predecessors(EndBB)) {
+    auto *V = (Pred == CleanupBB) ? Builder.getTrue() : Builder.getFalse();
+    Phi->addIncoming(V, Pred);
+  }
   // Emit coro.end before getReturnStmt (and parameter destructors), since
   // resume and destroy parts of the coroutine should not include them.
   llvm::Function *CoroEnd = CGM.getIntrinsic(llvm::Intrinsic::coro_end);
@@ -971,7 +1045,28 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     // shouldn't change the AST.
     if (PreviousRetValue)
       cast<ReturnStmt>(Ret)->setRetValue(PreviousRetValue);
+
+    // Defer destruction of promise if coroutine completed without suspending
+    auto *DeferPromiseBB = createBasicBlock("promise.free.defer");
+    auto *RetBB = EndBB->splitBasicBlock(EndBB->getTerminator(), "coro.ret");
+    EndBB->getTerminator()->eraseFromParent();
+
+    Builder.SetInsertPoint(EndBB);
+    Builder.CreateCondBr(Phi, DeferPromiseBB, RetBB);
+
+    EmitBlock(DeferPromiseBB);
+    auto *InsertPt = Builder.CreateBr(RetBB);
+    if (auto *I = CurCoro.Data->PromiseDtor)
+      I->clone()->insertBefore(InsertPt->getIterator());
+    CurCoro.Data->PromiseEnd->clone()->insertBefore(InsertPt->getIterator());
+    InsertPt->eraseFromParent();
+
+    CallCoroDelete(&S).EmitCoroFree(*this, ".defer");
+    Builder.CreateBr(RetBB);
+    Builder.ClearInsertionPoint();
   }
+  else
+    EndBB->setName("coro.ret");
 
   // LLVM require the frontend to mark the coroutine.
   CurFn->setPresplitCoroutine();

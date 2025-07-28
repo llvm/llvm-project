@@ -151,6 +151,9 @@ C++20 Feature Support
 - Implement constant evaluation of lambdas that capture structured bindings.
   (#GH145956)
 
+- Fixed premature coroutine promise destruction when the coroutine completes
+  without suspending, as part of CWG2563. (#GH120200)
+
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
