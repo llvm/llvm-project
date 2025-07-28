@@ -575,8 +575,8 @@ private:
     Value sizePtr = LLVM::GEPOp::create(rewriter, loc, indexPtrTy,
                                         getTypeConverter()->getIndexType(),
                                         offsetPtr, idxPlusOne);
-    return rewriter
-        .create<LLVM::LoadOp>(loc, getTypeConverter()->getIndexType(), sizePtr)
+    return LLVM::LoadOp::create(rewriter, loc,
+                                getTypeConverter()->getIndexType(), sizePtr)
         .getResult();
   }
 

@@ -28,7 +28,7 @@ makeIsolatedFromAboveImpl(RewriterBase &rewriter,
   SmallVector<Value> operands = regionOp.getOperands();
   operands.append(capturedValues);
   auto isolatedRegionOp =
-      rewriter.create<test::IsolatedOneRegionOp>(regionOp.getLoc(), operands);
+      test::IsolatedOneRegionOp::create(rewriter, regionOp.getLoc(), operands);
   rewriter.inlineRegionBefore(region, isolatedRegionOp.getRegion(),
                               isolatedRegionOp.getRegion().begin());
   rewriter.eraseOp(regionOp);
