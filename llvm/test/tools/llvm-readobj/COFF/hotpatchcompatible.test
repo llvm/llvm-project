@@ -1,5 +1,5 @@
 RUN: yaml2obj %p/Inputs/hascetret42.yaml -o %t.obj
-RUN: lld-link /out:%t.exe /entry:main /hotpatchcompatible %t.obj
+RUN: lld-link /out:%t.exe /entry:main /hotpatchcompatible /functionpadmin:6 %t.obj
 RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck %s
 
 CHECK:  DebugEntry {
