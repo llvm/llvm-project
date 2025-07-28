@@ -507,45 +507,25 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
   assert(NumStoredElements % Factor == 0 &&
          "number of stored element should be a multiple of Factor");
 
+  Value *Mask = nullptr;
   if (auto *VPStore = dyn_cast<VPIntrinsic>(Store)) {
     unsigned LaneMaskLen = NumStoredElements / Factor;
-    Value *LaneMask = getMask(VPStore->getMaskParam(), Factor,
-                              ElementCount::getFixed(LaneMaskLen));
-    if (!LaneMask)
+    Mask = getMask(VPStore->getMaskParam(), Factor,
+                   ElementCount::getFixed(LaneMaskLen));
+    if (!Mask)
       return false;
 
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.store: " << *Store
                       << "\n");
 
-    IRBuilder<> Builder(VPStore);
-    // We need to effectively de-interleave the shufflemask
-    // because lowerInterleavedVPStore expects individual de-interleaved
-    // values.
-    SmallVector<Value *, 10> NewShuffles;
-    SmallVector<int, 16> NewShuffleMask(LaneMaskLen);
-    auto ShuffleMask = SVI->getShuffleMask();
-
-    for (unsigned i = 0; i < Factor; i++) {
-      for (unsigned j = 0; j < LaneMaskLen; j++)
-        NewShuffleMask[j] = ShuffleMask[i + Factor * j];
-
-      NewShuffles.push_back(Builder.CreateShuffleVector(
-          SVI->getOperand(0), SVI->getOperand(1), NewShuffleMask));
-    }
-
-    // Try to create target specific intrinsics to replace the vp.store and
-    // shuffle.
-    if (!TLI->lowerInterleavedVPStore(VPStore, LaneMask, NewShuffles))
-      // We already created new shuffles.
-      return true;
   } else {
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved store: " << *Store << "\n");
-
-    // Try to create target specific intrinsics to replace the store and
-    // shuffle.
-    if (!TLI->lowerInterleavedStore(cast<StoreInst>(Store), SVI, Factor))
-      return false;
   }
+
+  // Try to create target specific intrinsics to replace the store and
+  // shuffle.
+  if (!TLI->lowerInterleavedStore(Store, Mask, SVI, Factor))
+    return false;
 
   // Already have a new target specific interleaved store. Erase the old store.
   DeadInsts.insert(Store);
