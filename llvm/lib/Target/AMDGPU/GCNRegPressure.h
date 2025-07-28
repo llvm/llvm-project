@@ -108,13 +108,13 @@ struct GCNRegPressure {
   }
   unsigned getSGPRTuplesWeight() const { return Value[TOTAL_KINDS + SGPR]; }
 
-  unsigned getOccupancy(const GCNSubtarget &ST,
-                        unsigned DynamicVGPRBlockSize) const {
-    return std::min(
-        ST.getOccupancyWithNumSGPRs(getSGPRNum()),
-        ST.getOccupancyWithNumVGPRs(
-            getVGPRNum(ST.hasGFX90AInsts(), ST.getAddressableNumArchVGPRs()),
-            DynamicVGPRBlockSize));
+  unsigned getOccupancy(const GCNSubtarget &ST, unsigned DynamicVGPRBlockSize,
+                        const MachineFunction &MF) const {
+    return std::min(ST.getOccupancyWithNumSGPRs(getSGPRNum()),
+                    ST.getOccupancyWithNumVGPRs(
+                        getVGPRNum(ST.hasGFX90AInsts(),
+                                   ST.getArchVGPRAllocationThreshold(MF)),
+                        DynamicVGPRBlockSize));
   }
 
   void inc(unsigned Reg,
@@ -123,9 +123,10 @@ struct GCNRegPressure {
            const MachineRegisterInfo &MRI);
 
   bool higherOccupancy(const GCNSubtarget &ST, const GCNRegPressure &O,
-                       unsigned DynamicVGPRBlockSize) const {
-    return getOccupancy(ST, DynamicVGPRBlockSize) >
-           O.getOccupancy(ST, DynamicVGPRBlockSize);
+                       unsigned DynamicVGPRBlockSize,
+                       const MachineFunction &MF) const {
+    return getOccupancy(ST, DynamicVGPRBlockSize, MF) >
+           O.getOccupancy(ST, DynamicVGPRBlockSize, MF);
   }
 
   /// Compares \p this GCNRegpressure to \p O, returning true if \p this is
@@ -551,7 +552,8 @@ bool isEqual(const GCNRPTracker::LiveRegSet &S1,
              const GCNRPTracker::LiveRegSet &S2);
 
 Printable print(const GCNRegPressure &RP, const GCNSubtarget *ST = nullptr,
-                unsigned DynamicVGPRBlockSize = 0);
+                unsigned DynamicVGPRBlockSize = 0,
+                const MachineFunction *MF = nullptr);
 
 Printable print(const GCNRPTracker::LiveRegSet &LiveRegs,
                 const MachineRegisterInfo &MRI);

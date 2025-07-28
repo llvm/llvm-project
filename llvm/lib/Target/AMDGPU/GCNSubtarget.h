@@ -1629,6 +1629,15 @@ public:
     return AMDGPU::IsaInfo::getAddressableNumArchVGPRs(this);
   }
 
+  unsigned getArchVGPRAllocationThreshold(const MachineFunction &MF) const {
+    if (hasGFX90AInsts() || !hasMAIInsts())
+      return AMDGPU::IsaInfo::getAddressableNumArchVGPRs(this);
+
+    const Function &F = MF.getFunction();
+    std::pair<unsigned, unsigned> Waves = getWavesPerEU(F);
+    return getMaxNumVGPRs(Waves.first, 0);
+  }
+
   /// \returns Addressable number of VGPRs supported by the subtarget.
   unsigned getAddressableNumVGPRs(unsigned DynamicVGPRBlockSize) const {
     return AMDGPU::IsaInfo::getAddressableNumVGPRs(this, DynamicVGPRBlockSize);
