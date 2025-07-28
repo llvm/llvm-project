@@ -758,9 +758,11 @@ NamedDecl *Parser::ParseTemplateTemplateParameter(unsigned Depth,
       ConsumeToken();
   }
 
-  if (!getLangOpts().CPlusPlus23 &&
-      Kind != TemplateNameKind::TNK_Type_template) {
-    // Diag older language mods
+  if (!getLangOpts().CPlusPlus26 &&
+      (Kind == TemplateNameKind::TNK_Concept_template ||
+       Kind == TemplateNameKind::TNK_Var_template)) {
+    Diag(PrevTokLocation, diag::err_cxx26_template_template_params)
+        << (Kind == TemplateNameKind::TNK_Concept_template);
   }
 
   // Parse the ellipsis, if given.

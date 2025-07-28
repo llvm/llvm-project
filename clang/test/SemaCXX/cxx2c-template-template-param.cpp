@@ -1,4 +1,4 @@
-// RUN:  %clang_cc1 -std=c++2b -verify %s
+// RUN:  %clang_cc1 -std=c++2c -verify %s
 
 namespace Errors {
 
