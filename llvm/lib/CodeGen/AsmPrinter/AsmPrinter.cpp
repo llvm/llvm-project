@@ -4221,10 +4221,11 @@ MCSymbol *AsmPrinter::GetCPISymbol(unsigned CPID) const {
       SectionKind Kind = CPE.getSectionKind(&DL);
       const Constant *C = CPE.Val.ConstVal;
       Align Alignment = CPE.Alignment;
-      if (const MCSectionCOFF *S = dyn_cast<MCSectionCOFF>(
-              getObjFileLowering().getSectionForConstant(DL, Kind, C,
-                                                         Alignment))) {
-        if (MCSymbol *Sym = S->getCOMDATSymbol()) {
+      auto *S =
+          getObjFileLowering().getSectionForConstant(DL, Kind, C, Alignment);
+      if (S && TM.getTargetTriple().isOSBinFormatCOFF()) {
+        if (MCSymbol *Sym =
+                static_cast<const MCSectionCOFF *>(S)->getCOMDATSymbol()) {
           if (Sym->isUndefined())
             OutStreamer->emitSymbolAttribute(Sym, MCSA_Global);
           return Sym;
