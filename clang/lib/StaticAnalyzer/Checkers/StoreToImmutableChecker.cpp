@@ -96,11 +96,6 @@ void StoreToImmutableChecker::checkBind(SVal Loc, SVal Val, const Stmt *S,
   if (!isConstVariable(MR, C))
     return;
 
-  const SourceManager &SM = C.getSourceManager();
-  // Skip if this is a system macro (likely from system headers)
-  if (SM.isInSystemMacro(S->getBeginLoc()))
-    return;
-
   // Generate the bug report
   ExplodedNode *N = C.generateNonFatalErrorNode();
   if (!N)
@@ -115,8 +110,9 @@ void StoreToImmutableChecker::checkBind(SVal Loc, SVal Val, const Stmt *S,
 
   // If the location that is being written to has a declaration, place a note.
   if (const DeclRegion *DR = dyn_cast<DeclRegion>(MR)) {
-    R->addNote("Memory region is in immutable space",
-               PathDiagnosticLocation::create(DR->getDecl(), SM));
+    R->addNote(
+        "Memory region is in immutable space",
+        PathDiagnosticLocation::create(DR->getDecl(), C.getSourceManager()));
   }
 
   // For this checker, we are only interested in the value being written, no
