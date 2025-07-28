@@ -910,7 +910,7 @@ getSystemOffloadArchs(Compilation &C, Action::OffloadKind Kind) {
 
   SmallVector<std::string> GPUArchs;
   if (llvm::ErrorOr<std::string> Executable =
-          llvm::sys::findProgramByName(Program)) {
+          llvm::sys::findProgramByName(Program, {C.getDriver().Dir})) {
     llvm::SmallVector<StringRef> Args{*Executable};
     if (Kind == Action::OFK_HIP)
       Args.push_back("--only=amdgpu");
