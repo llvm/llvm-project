@@ -26,3 +26,21 @@ dialects, build system and language bindings.
   joker.eph@gmail.com (email),
   [@joker-eph](https://github.com/joker-eph) (GitHub),
   mehdi_amini (Discourse)
+
+## Tensor Compiler
+
+MLIR components specific to construction of compilers for tensor algebra, in
+particular for machine learning compilers.
+
+- Renato Golin \
+  rengolin@gmail.com (email),
+  [@rengolin](https://github.com/rengolin) (GitHub),
+  rengolin (Discourse)
+- Jacques Pienaar \
+  jpienaar@google.com (email),
+  [@jpienaar](https://github.com/jpienaar) (GitHub),
+  jpienaar (Discourse)
+- Andrzej Warzynski \
+  andrzej.warzynski@arm.com (email),
+  [@banach-space](https://github.com/banach-space) (GitHub),
+  banach-space (Discourse)
