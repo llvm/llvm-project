@@ -2100,6 +2100,13 @@ public:
     return Trunc ? Trunc->getType()
                  : getStartValue()->getLiveInIRValue()->getType();
   }
+
+  /// Returns the VPValue representing the value of this induction at
+  /// the last unrolled part, if it exists. Returns itself if unrolling did not
+  /// take place.
+  VPValue *getLastUnrolledPartOperand() {
+    return isUnrolled() ? getOperand(getNumOperands() - 1) : this;
+  }
 };
 
 class VPWidenPointerInductionRecipe : public VPWidenInductionRecipe {
