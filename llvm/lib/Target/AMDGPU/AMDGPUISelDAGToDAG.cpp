@@ -4084,7 +4084,7 @@ void AMDGPUDAGToDAGISel::SelectSpatialClusterVNBR(SDNode *N, unsigned IntrID) {
     SendOps.push_back(SDValue(ShiftRefl, 0));
     SendOps.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32));
     SendOps.push_back(N->getOperand(0));
-    SDNode *Selected = CurDAG->SelectNodeTo(N, Opcode, MVT::Other, SendOps);
+    CurDAG->SelectNodeTo(N, Opcode, MVT::Other, SendOps);
   } else {
     CurDAG->SelectNodeTo(
         N, Opcode, N->getVTList(),
