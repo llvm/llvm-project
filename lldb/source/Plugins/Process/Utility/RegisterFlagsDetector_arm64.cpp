@@ -26,6 +26,8 @@
 #define HWCAP2_EBF16 (1ULL << 32)
 #define HWCAP2_FPMR (1ULL << 48)
 
+#define HWCAP3_MTE_STORE_ONLY (1ULL << 1)
+
 using namespace lldb_private;
 
 Arm64RegisterFlagsDetector::Fields
@@ -92,7 +94,6 @@ Arm64RegisterFlagsDetector::Fields
 Arm64RegisterFlagsDetector::DetectMTECtrlFields(uint64_t hwcap, uint64_t hwcap2,
                                                 uint64_t hwcap3) {
   (void)hwcap;
-  (void)hwcap3;
 
   if (!(hwcap2 & HWCAP2_MTE))
     return {};
@@ -101,12 +102,22 @@ Arm64RegisterFlagsDetector::DetectMTECtrlFields(uint64_t hwcap, uint64_t hwcap2,
   // to prctl(PR_TAGGED_ADDR_CTRL...). Fields are derived from the defines
   // used to build the value.
 
+  std::vector<RegisterFlags::Field> fields;
+  fields.reserve(4);
+  if (hwcap3 & HWCAP3_MTE_STORE_ONLY)
+    fields.push_back({"STORE_ONLY", 19});
+
   static const FieldEnum tcf_enum(
       "tcf_enum",
       {{0, "TCF_NONE"}, {1, "TCF_SYNC"}, {2, "TCF_ASYNC"}, {3, "TCF_ASYMM"}});
-  return {{"TAGS", 3, 18}, // 16 bit bitfield shifted up by PR_MTE_TAG_SHIFT.
-          {"TCF", 1, 2, &tcf_enum},
-          {"TAGGED_ADDR_ENABLE", 0}};
+
+  fields.insert(
+      std::end(fields),
+      {{"TAGS", 3, 18}, // 16 bit bitfield shifted up by PR_MTE_TAG_SHIFT.
+       {"TCF", 1, 2, &tcf_enum},
+       {"TAGGED_ADDR_ENABLE", 0}});
+
+  return fields;
 }
 
 Arm64RegisterFlagsDetector::Fields
