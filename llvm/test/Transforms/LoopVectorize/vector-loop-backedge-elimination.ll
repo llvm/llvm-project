@@ -1218,6 +1218,133 @@ exit:
   ret void
 }
 
+define void @test_vector_tc_eq_16(ptr %A) {
+; VF8UF1-LABEL: define void @test_vector_tc_eq_16(
+; VF8UF1-SAME: ptr [[A:%.*]]) {
+; VF8UF1-NEXT:  [[ENTRY:.*]]:
+; VF8UF1-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF8UF1:       [[VECTOR_PH]]:
+; VF8UF1-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 16
+; VF8UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF8UF1:       [[VECTOR_BODY]]:
+; VF8UF1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF8UF1-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
+; VF8UF1-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[NEXT_GEP]], align 1
+; VF8UF1-NEXT:    [[TMP1:%.*]] = add nsw <8 x i8> [[WIDE_LOAD]], splat (i8 10)
+; VF8UF1-NEXT:    store <8 x i8> [[TMP1]], ptr [[NEXT_GEP]], align 1
+; VF8UF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; VF8UF1-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
+; VF8UF1-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; VF8UF1:       [[MIDDLE_BLOCK]]:
+; VF8UF1-NEXT:    br label %[[SCALAR_PH]]
+; VF8UF1:       [[SCALAR_PH]]:
+; VF8UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 16, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; VF8UF1-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi ptr [ [[TMP0]], %[[MIDDLE_BLOCK]] ], [ [[A]], %[[ENTRY]] ]
+; VF8UF1-NEXT:    br label %[[LOOP:.*]]
+; VF8UF1:       [[LOOP]]:
+; VF8UF1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; VF8UF1-NEXT:    [[P_SRC:%.*]] = phi ptr [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[P_SRC_NEXT:%.*]], %[[LOOP]] ]
+; VF8UF1-NEXT:    [[P_SRC_NEXT]] = getelementptr inbounds i8, ptr [[P_SRC]], i64 1
+; VF8UF1-NEXT:    [[L:%.*]] = load i8, ptr [[P_SRC]], align 1
+; VF8UF1-NEXT:    [[ADD:%.*]] = add nsw i8 [[L]], 10
+; VF8UF1-NEXT:    store i8 [[ADD]], ptr [[P_SRC]], align 1
+; VF8UF1-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
+; VF8UF1-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 17
+; VF8UF1-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
+; VF8UF1:       [[EXIT]]:
+; VF8UF1-NEXT:    ret void
+;
+; VF8UF2-LABEL: define void @test_vector_tc_eq_16(
+; VF8UF2-SAME: ptr [[A:%.*]]) {
+; VF8UF2-NEXT:  [[ENTRY:.*]]:
+; VF8UF2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF8UF2:       [[VECTOR_PH]]:
+; VF8UF2-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 16
+; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF8UF2:       [[VECTOR_BODY]]:
+; VF8UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF8UF2-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
+; VF8UF2-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 8
+; VF8UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[NEXT_GEP]], align 1
+; VF8UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i8>, ptr [[TMP1]], align 1
+; VF8UF2-NEXT:    [[TMP2:%.*]] = add nsw <8 x i8> [[WIDE_LOAD]], splat (i8 10)
+; VF8UF2-NEXT:    [[TMP3:%.*]] = add nsw <8 x i8> [[WIDE_LOAD1]], splat (i8 10)
+; VF8UF2-NEXT:    store <8 x i8> [[TMP2]], ptr [[NEXT_GEP]], align 1
+; VF8UF2-NEXT:    store <8 x i8> [[TMP3]], ptr [[TMP1]], align 1
+; VF8UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; VF8UF2-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
+; VF8UF2-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; VF8UF2:       [[MIDDLE_BLOCK]]:
+; VF8UF2-NEXT:    br label %[[SCALAR_PH]]
+; VF8UF2:       [[SCALAR_PH]]:
+; VF8UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 16, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; VF8UF2-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi ptr [ [[TMP0]], %[[MIDDLE_BLOCK]] ], [ [[A]], %[[ENTRY]] ]
+; VF8UF2-NEXT:    br label %[[LOOP:.*]]
+; VF8UF2:       [[LOOP]]:
+; VF8UF2-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; VF8UF2-NEXT:    [[P_SRC:%.*]] = phi ptr [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[P_SRC_NEXT:%.*]], %[[LOOP]] ]
+; VF8UF2-NEXT:    [[P_SRC_NEXT]] = getelementptr inbounds i8, ptr [[P_SRC]], i64 1
+; VF8UF2-NEXT:    [[L:%.*]] = load i8, ptr [[P_SRC]], align 1
+; VF8UF2-NEXT:    [[ADD:%.*]] = add nsw i8 [[L]], 10
+; VF8UF2-NEXT:    store i8 [[ADD]], ptr [[P_SRC]], align 1
+; VF8UF2-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
+; VF8UF2-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 17
+; VF8UF2-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; VF8UF2:       [[EXIT]]:
+; VF8UF2-NEXT:    ret void
+;
+; VF16UF1-LABEL: define void @test_vector_tc_eq_16(
+; VF16UF1-SAME: ptr [[A:%.*]]) {
+; VF16UF1-NEXT:  [[ENTRY:.*]]:
+; VF16UF1-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF16UF1:       [[VECTOR_PH]]:
+; VF16UF1-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 16
+; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF16UF1:       [[VECTOR_BODY]]:
+; VF16UF1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF16UF1-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
+; VF16UF1-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[NEXT_GEP]], align 1
+; VF16UF1-NEXT:    [[TMP1:%.*]] = add nsw <16 x i8> [[WIDE_LOAD]], splat (i8 10)
+; VF16UF1-NEXT:    store <16 x i8> [[TMP1]], ptr [[NEXT_GEP]], align 1
+; VF16UF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; VF16UF1-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
+; VF16UF1-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; VF16UF1:       [[MIDDLE_BLOCK]]:
+; VF16UF1-NEXT:    br label %[[SCALAR_PH]]
+; VF16UF1:       [[SCALAR_PH]]:
+; VF16UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 16, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; VF16UF1-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi ptr [ [[TMP0]], %[[MIDDLE_BLOCK]] ], [ [[A]], %[[ENTRY]] ]
+; VF16UF1-NEXT:    br label %[[LOOP:.*]]
+; VF16UF1:       [[LOOP]]:
+; VF16UF1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; VF16UF1-NEXT:    [[P_SRC:%.*]] = phi ptr [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[P_SRC_NEXT:%.*]], %[[LOOP]] ]
+; VF16UF1-NEXT:    [[P_SRC_NEXT]] = getelementptr inbounds i8, ptr [[P_SRC]], i64 1
+; VF16UF1-NEXT:    [[L:%.*]] = load i8, ptr [[P_SRC]], align 1
+; VF16UF1-NEXT:    [[ADD:%.*]] = add nsw i8 [[L]], 10
+; VF16UF1-NEXT:    store i8 [[ADD]], ptr [[P_SRC]], align 1
+; VF16UF1-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
+; VF16UF1-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 17
+; VF16UF1-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; VF16UF1:       [[EXIT]]:
+; VF16UF1-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %p.src = phi ptr [ %A, %entry ], [ %p.src.next, %loop ]
+  %p.src.next = getelementptr inbounds i8, ptr %p.src, i64 1
+  %l = load i8, ptr %p.src, align 1
+  %add = add nsw i8 %l, 10
+  store i8 %add, ptr %p.src
+  %iv.next = add nsw i64 %iv, 1
+  %cmp = icmp eq i64 %iv.next, 17
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret void
+}
 ;.
 ; VF8UF1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; VF8UF1: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
@@ -1227,6 +1354,8 @@ exit:
 ; VF8UF1: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
 ; VF8UF1: [[LOOP6]] = distinct !{[[LOOP6]], [[META2]], [[META1]]}
 ; VF8UF1: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
+; VF8UF1: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
+; VF8UF1: [[LOOP9]] = distinct !{[[LOOP9]], [[META2]], [[META1]]}
 ;.
 ; VF8UF2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; VF8UF2: [[META1]] = !{!"llvm.loop.unroll.runtime.disable"}
@@ -1234,6 +1363,8 @@ exit:
 ; VF8UF2: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
 ; VF8UF2: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ; VF8UF2: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
+; VF8UF2: [[LOOP6]] = distinct !{[[LOOP6]], [[META2]], [[META1]]}
+; VF8UF2: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]]}
 ;.
 ; VF16UF1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; VF16UF1: [[META1]] = !{!"llvm.loop.unroll.runtime.disable"}
@@ -1241,4 +1372,6 @@ exit:
 ; VF16UF1: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
 ; VF16UF1: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ; VF16UF1: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
+; VF16UF1: [[LOOP6]] = distinct !{[[LOOP6]], [[META2]], [[META1]]}
+; VF16UF1: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]]}
 ;.
