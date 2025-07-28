@@ -225,3 +225,20 @@ svmfloat8x2_t test_svcreate2_mf8(svmfloat8_t x0, svmfloat8_t x1) ATTR
 {
   return SVE_ACLE_FUNC(svcreate2,_mf8,,)(x0, x1);
 }
+
+// CHECK-LABEL: @test_svcreate2_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } poison, <vscale x 8 x bfloat> [[X0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], <vscale x 8 x bfloat> [[X1:%.*]], 1
+// CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP1]]
+//
+// CPP-CHECK-LABEL: @_Z19test_svcreate2_bf16u14__SVBfloat16_tS_(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } poison, <vscale x 8 x bfloat> [[X0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], <vscale x 8 x bfloat> [[X1:%.*]], 1
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP1]]
+//
+svbfloat16x2_t test_svcreate2_bf16(svbfloat16_t x0, svbfloat16_t x1) ATTR
+{
+  return SVE_ACLE_FUNC(svcreate2,_bf16,,)(x0, x1);
+}

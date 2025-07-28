@@ -261,3 +261,55 @@ loop.latch:                                       ; preds = %cond.false, %loop.h
 exit:                                             ; preds = %loop.latch
   ret void
 }
+
+; Test case for https://github.com/llvm/llvm-project/issues/149347.
+; FIXME: Currently mis-compiles.
+define void @test_store_to_invariant_address_needs_mask_due_to_low_trip_count(ptr %dst) {
+; CHECK-LABEL: define void @test_store_to_invariant_address_needs_mask_due_to_low_trip_count(
+; CHECK-SAME: ptr [[DST:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    store i32 0, ptr [[DST]], align 4
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    br i1 true, label %[[LOOP_LATCH]], label %[[ELSE:.*]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 1, %[[LOOP_HEADER]] ], [ 0, %[[ELSE]] ]
+; CHECK-NEXT:    store i32 [[MERGE]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add i16 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i16 [[IV_NEXT]], 3
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i16 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  br i1 true, label %loop.latch, label %else
+
+else:
+  br label %loop.latch
+
+loop.latch:
+  %merge = phi i32 [ 1, %loop.header ], [ 0, %else ]
+  store i32 %merge, ptr %dst, align 4
+  %iv.next = add i16 %iv, 1
+  %ec = icmp eq i16 %iv.next, 3
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}

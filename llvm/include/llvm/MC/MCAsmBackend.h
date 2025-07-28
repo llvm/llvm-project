@@ -18,12 +18,7 @@
 
 namespace llvm {
 
-class MCAlignFragment;
-class MCDwarfCallFrameFragment;
-class MCDwarfLineAddrFragment;
 class MCFragment;
-class MCLEBFragment;
-class MCRelaxableFragment;
 class MCSymbol;
 class MCAssembler;
 class MCContext;
@@ -63,6 +58,9 @@ protected: // Can only create subclasses.
 
   MCAssembler *Asm = nullptr;
 
+  bool AllowAutoPadding = false;
+  bool AllowEnhancedRelaxation = false;
+
 public:
   MCAsmBackend(const MCAsmBackend &) = delete;
   MCAsmBackend &operator=(const MCAsmBackend &) = delete;
@@ -76,11 +74,11 @@ public:
 
   /// Return true if this target might automatically pad instructions and thus
   /// need to emit padding enable/disable directives around sensative code.
-  virtual bool allowAutoPadding() const { return false; }
+  bool allowAutoPadding() const { return AllowAutoPadding; }
   /// Return true if this target allows an unrelaxable instruction to be
   /// emitted into RelaxableFragment and then we can increase its size in a
   /// tricky way for optimization.
-  virtual bool allowEnhancedRelaxation() const { return false; }
+  bool allowEnhancedRelaxation() const { return AllowEnhancedRelaxation; }
 
   /// lifetime management
   virtual void reset() {}
@@ -107,21 +105,6 @@ public:
 
   /// Get information on a fixup kind.
   virtual MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const;
-
-  /// Hook to check if extra nop bytes must be inserted for alignment directive.
-  /// For some targets this may be necessary in order to support linker
-  /// relaxation. The number of bytes to insert are returned in Size.
-  virtual bool shouldInsertExtraNopBytesForCodeAlign(const MCAlignFragment &AF,
-                                                     unsigned &Size) {
-    return false;
-  }
-
-  /// Hook which indicates if the target requires a fixup to be generated when
-  /// handling an align directive in an executable section
-  virtual bool shouldInsertFixupForCodeAlign(MCAssembler &Asm,
-                                             MCAlignFragment &AF) {
-    return false;
-  }
 
   // Evaluate a fixup, returning std::nullopt to use default handling for
   // `Value` and `IsResolved`. Otherwise, returns `IsResolved` with the
@@ -157,8 +140,9 @@ public:
 
   /// Target specific predicate for whether a given fixup requires the
   /// associated instruction to be relaxed.
-  virtual bool fixupNeedsRelaxationAdvanced(const MCFixup &, const MCValue &,
-                                            uint64_t, bool Resolved) const;
+  virtual bool fixupNeedsRelaxationAdvanced(const MCFragment &, const MCFixup &,
+                                            const MCValue &, uint64_t,
+                                            bool Resolved) const;
 
   /// Simple predicate for targets where !Resolved implies requiring relaxation
   virtual bool fixupNeedsRelaxation(const MCFixup &Fixup,
@@ -179,18 +163,20 @@ public:
   }
 
   // Defined by linker relaxation targets.
-  virtual bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
-                                  bool &WasRelaxed) const {
+
+  // Return false to use default handling. Otherwise, set `Size` to the number
+  // of padding bytes.
+  virtual bool relaxAlign(MCFragment &F, unsigned &Size) { return false; }
+  virtual bool relaxDwarfLineAddr(MCFragment &, bool &WasRelaxed) const {
     return false;
   }
-  virtual bool relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
-                             bool &WasRelaxed) const {
+  virtual bool relaxDwarfCFA(MCFragment &, bool &WasRelaxed) const {
     return false;
   }
 
   // Defined by linker relaxation targets to possibly emit LEB128 relocations
   // and set Value at the relocated location.
-  virtual std::pair<bool, bool> relaxLEB128(MCLEBFragment &LF,
+  virtual std::pair<bool, bool> relaxLEB128(MCFragment &,
                                             int64_t &Value) const {
     return std::make_pair(false, false);
   }
@@ -228,8 +214,7 @@ public:
 
   bool isDarwinCanonicalPersonality(const MCSymbol *Sym) const;
 
-  // Return STI for fragments of type MCRelaxableFragment and MCDataFragment
-  // with hasInstructions() == true.
+  // Return STI for fragments with hasInstructions() == true.
   static const MCSubtargetInfo *getSubtargetInfo(const MCFragment &F);
 };
 

@@ -50,7 +50,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI polymorphic_allocator() noexcept : __res_(std::pmr::get_default_resource()) {}
 
-  _LIBCPP_HIDE_FROM_ABI polymorphic_allocator(memory_resource* __r) noexcept : __res_(__r) {}
+  _LIBCPP_HIDE_FROM_ABI polymorphic_allocator(memory_resource* _LIBCPP_DIAGNOSE_NULLPTR __r) noexcept : __res_(__r) {
+    _LIBCPP_ASSERT_NON_NULL(__r, "Attempted to pass a nullptr resource to polymorphic_alloator");
+  }
 
   _LIBCPP_HIDE_FROM_ABI polymorphic_allocator(const polymorphic_allocator&) = default;
 
@@ -133,10 +135,10 @@ public:
         piecewise_construct,
         __transform_tuple(typename __uses_alloc_ctor< _T1, polymorphic_allocator&, _Args1... >::type(),
                           std::move(__x),
-                          typename __make_tuple_indices<sizeof...(_Args1)>::type{}),
+                          make_index_sequence<sizeof...(_Args1)>()),
         __transform_tuple(typename __uses_alloc_ctor< _T2, polymorphic_allocator&, _Args2... >::type(),
                           std::move(__y),
-                          typename __make_tuple_indices<sizeof...(_Args2)>::type{}));
+                          make_index_sequence<sizeof...(_Args2)>()));
   }
 
   template <class _T1, class _T2>
@@ -174,7 +176,7 @@ public:
     return polymorphic_allocator();
   }
 
-  _LIBCPP_HIDE_FROM_ABI memory_resource* resource() const noexcept { return __res_; }
+  [[__gnu__::__returns_nonnull__]] _LIBCPP_HIDE_FROM_ABI memory_resource* resource() const noexcept { return __res_; }
 
   _LIBCPP_HIDE_FROM_ABI friend bool
   operator==(const polymorphic_allocator& __lhs, const polymorphic_allocator& __rhs) noexcept {
@@ -192,20 +194,20 @@ public:
 private:
   template <class... _Args, size_t... _Is>
   _LIBCPP_HIDE_FROM_ABI tuple<_Args&&...>
-  __transform_tuple(integral_constant<int, 0>, tuple<_Args...>&& __t, __tuple_indices<_Is...>) {
+  __transform_tuple(integral_constant<int, 0>, tuple<_Args...>&& __t, index_sequence<_Is...>) {
     return std::forward_as_tuple(std::get<_Is>(std::move(__t))...);
   }
 
   template <class... _Args, size_t... _Is>
   _LIBCPP_HIDE_FROM_ABI tuple<allocator_arg_t const&, polymorphic_allocator&, _Args&&...>
-  __transform_tuple(integral_constant<int, 1>, tuple<_Args...>&& __t, __tuple_indices<_Is...>) {
+  __transform_tuple(integral_constant<int, 1>, tuple<_Args...>&& __t, index_sequence<_Is...>) {
     using _Tup = tuple<allocator_arg_t const&, polymorphic_allocator&, _Args&&...>;
     return _Tup(allocator_arg, *this, std::get<_Is>(std::move(__t))...);
   }
 
   template <class... _Args, size_t... _Is>
   _LIBCPP_HIDE_FROM_ABI tuple<_Args&&..., polymorphic_allocator&>
-  __transform_tuple(integral_constant<int, 2>, tuple<_Args...>&& __t, __tuple_indices<_Is...>) {
+  __transform_tuple(integral_constant<int, 2>, tuple<_Args...>&& __t, index_sequence<_Is...>) {
     using _Tup = tuple<_Args&&..., polymorphic_allocator&>;
     return _Tup(std::get<_Is>(std::move(__t))..., *this);
   }

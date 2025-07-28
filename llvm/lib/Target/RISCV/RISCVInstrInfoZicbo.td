@@ -41,6 +41,7 @@ class Prefetch_ri<bits<5> optype, string opcodestr>
               opcodestr, "${imm12}(${rs1})"> {
   let Inst{11-7} = 0b00000;
   let rs2 = optype;
+  let Format = InstFormatOther; // this does not follow the normal S format.
 }
 
 //===----------------------------------------------------------------------===//

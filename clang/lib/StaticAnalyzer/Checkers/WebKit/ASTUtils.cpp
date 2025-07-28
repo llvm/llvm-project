@@ -177,7 +177,10 @@ bool tryToFindPtrOrigin(
       E = unaryOp->getSubExpr();
       continue;
     }
-
+    if (auto *BoxedExpr = dyn_cast<ObjCBoxedExpr>(E)) {
+      E = BoxedExpr->getSubExpr();
+      continue;
+    }
     break;
   }
   // Some other expression.

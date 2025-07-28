@@ -174,16 +174,12 @@ define { <16 x i8>, <32 x i8> } @differenttypes({ <4 x i32>, <8 x i32> } %a, ptr
 ; CHECK-LABEL: define { <16 x i8>, <32 x i8> } @differenttypes
 ; CHECK-SAME: ({ <4 x i32>, <8 x i32> } [[A:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr nonnull [[P]])
 ; CHECK-NEXT:    store { <4 x i32>, <8 x i32> } [[A]], ptr [[P]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = load { <16 x i8>, <32 x i8> }, ptr [[P]], align 16
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr nonnull [[P]])
 ; CHECK-NEXT:    ret { <16 x i8>, <32 x i8> } [[TMP0]]
 ;
 entry:
-  call void @llvm.lifetime.start.p0(i64 -1, ptr nonnull %p) #5
   store { <4 x i32>, <8 x i32> } %a, ptr %p, align 16
   %2 = load { <16 x i8>, <32 x i8> }, ptr %p, align 16
-  call void @llvm.lifetime.end.p0(i64 -1, ptr nonnull %p) #5
   ret { <16 x i8>, <32 x i8> } %2
 }

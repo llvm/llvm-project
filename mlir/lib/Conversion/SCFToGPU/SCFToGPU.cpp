@@ -25,9 +25,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -84,8 +82,8 @@ static Operation::operand_range getUpperBoundOperands(AffineForOp forOp) {
 // Get a Value that corresponds to the loop step.  If the step is an attribute,
 // materialize a corresponding constant using builder.
 static Value getOrCreateStep(AffineForOp forOp, OpBuilder &builder) {
-  return builder.create<arith::ConstantIndexOp>(forOp.getLoc(),
-                                                forOp.getStepAsInt());
+  return arith::ConstantIndexOp::create(builder, forOp.getLoc(),
+                                        forOp.getStepAsInt());
 }
 
 // Get a Value for the loop lower bound.  If the value requires computation,
@@ -190,12 +188,12 @@ AffineLoopToGpuConverter::collectBounds(AffineForOp forOp, unsigned numLoops) {
       return std::nullopt;
     }
 
-    Value range = builder.create<arith::SubIOp>(currentLoop.getLoc(),
-                                                upperBound, lowerBound);
+    Value range = arith::SubIOp::create(builder, currentLoop.getLoc(),
+                                        upperBound, lowerBound);
     Value step = getOrCreateStep(currentLoop, builder);
     if (getConstantIntValue(step) != static_cast<int64_t>(1))
-      range =
-          builder.create<arith::CeilDivSIOp>(currentLoop.getLoc(), range, step);
+      range = arith::CeilDivSIOp::create(builder, currentLoop.getLoc(), range,
+                                         step);
     dims.push_back(range);
 
     lbs.push_back(lowerBound);
@@ -221,7 +219,7 @@ void AffineLoopToGpuConverter::createLaunch(AffineForOp rootForOp,
   // no loop mapped to a specific dimension, use constant "1" as its size.
   Value constOne =
       (numBlockDims < 3 || numThreadDims < 3)
-          ? builder.create<arith::ConstantIndexOp>(rootForOp.getLoc(), 1)
+          ? arith::ConstantIndexOp::create(builder, rootForOp.getLoc(), 1)
           : nullptr;
   Value gridSizeX = numBlockDims > 0 ? dims[0] : constOne;
   Value gridSizeY = numBlockDims > 1 ? dims[1] : constOne;
@@ -232,9 +230,9 @@ void AffineLoopToGpuConverter::createLaunch(AffineForOp rootForOp,
 
   // Create a launch op and move the body region of the innermost loop to the
   // launch op.
-  auto launchOp = builder.create<gpu::LaunchOp>(
-      rootForOp.getLoc(), gridSizeX, gridSizeY, gridSizeZ, blockSizeX,
-      blockSizeY, blockSizeZ);
+  auto launchOp =
+      gpu::LaunchOp::create(builder, rootForOp.getLoc(), gridSizeX, gridSizeY,
+                            gridSizeZ, blockSizeX, blockSizeY, blockSizeZ);
 
   // Replace the loop terminator (loops contain only a single block) with the
   // gpu terminator and move the operations from the loop body block to the gpu
@@ -244,7 +242,7 @@ void AffineLoopToGpuConverter::createLaunch(AffineForOp rootForOp,
   Location terminatorLoc = terminator.getLoc();
   terminator.erase();
   builder.setInsertionPointToEnd(innermostForOp.getBody());
-  builder.create<gpu::TerminatorOp>(terminatorLoc, TypeRange());
+  gpu::TerminatorOp::create(builder, terminatorLoc, TypeRange());
   launchOp.getBody().front().getOperations().splice(
       launchOp.getBody().front().begin(),
       innermostForOp.getBody()->getOperations());
@@ -263,10 +261,10 @@ void AffineLoopToGpuConverter::createLaunch(AffineForOp rootForOp,
             : getDim3Value(launchOp.getThreadIds(), en.index() - numBlockDims);
     Value step = steps[en.index()];
     if (getConstantIntValue(step) != static_cast<int64_t>(1))
-      id = builder.create<arith::MulIOp>(rootForOp.getLoc(), step, id);
+      id = arith::MulIOp::create(builder, rootForOp.getLoc(), step, id);
 
     Value ivReplacement =
-        builder.create<arith::AddIOp>(rootForOp.getLoc(), *lbArgumentIt, id);
+        arith::AddIOp::create(builder, rootForOp.getLoc(), *lbArgumentIt, id);
     en.value().replaceAllUsesWith(ivReplacement);
     std::advance(lbArgumentIt, 1);
     std::advance(stepArgumentIt, 1);
@@ -319,8 +317,8 @@ static Value deriveStaticUpperBound(Value upperBound,
   if (auto minOp = upperBound.getDefiningOp<AffineMinOp>()) {
     for (const AffineExpr &result : minOp.getMap().getResults()) {
       if (auto constExpr = dyn_cast<AffineConstantExpr>(result)) {
-        return rewriter.create<arith::ConstantIndexOp>(minOp.getLoc(),
-                                                       constExpr.getValue());
+        return arith::ConstantIndexOp::create(rewriter, minOp.getLoc(),
+                                              constExpr.getValue());
       }
     }
   }
@@ -344,8 +342,8 @@ static Value deriveStaticUpperBound(Value upperBound,
         if ((lhs.value() < 0) != (rhs.value() < 0))
           return {};
 
-        return rewriter.create<arith::ConstantIndexOp>(
-            multiplyOp.getLoc(), lhs.value() * rhs.value());
+        return arith::ConstantIndexOp::create(rewriter, multiplyOp.getLoc(),
+                                              lhs.value() * rhs.value());
       }
   }
 
@@ -422,8 +420,8 @@ static LogicalResult processParallelLoop(
     if (launchIndependent(val))
       return val;
     if (auto constOp = val.getDefiningOp<arith::ConstantOp>())
-      return rewriter.create<arith::ConstantOp>(constOp.getLoc(),
-                                                constOp.getValue());
+      return arith::ConstantOp::create(rewriter, constOp.getLoc(),
+                                       constOp.getValue());
     return {};
   };
 
@@ -453,8 +451,8 @@ static LogicalResult processParallelLoop(
           1, 2,
           rewriter.getAffineDimExpr(0) * rewriter.getAffineSymbolExpr(0) +
               rewriter.getAffineSymbolExpr(1));
-      newIndex = rewriter.create<AffineApplyOp>(
-          loc, annotation.getMap().compose(lowerAndStep),
+      newIndex = AffineApplyOp::create(
+          rewriter, loc, annotation.getMap().compose(lowerAndStep),
           ValueRange{operand, ensureLaunchIndependent(step),
                      ensureLaunchIndependent(lowerBound)});
       // If there was also a bound, insert that, too.
@@ -498,8 +496,8 @@ static LogicalResult processParallelLoop(
               1, 2,
               ((rewriter.getAffineDimExpr(0) - rewriter.getAffineSymbolExpr(0))
                    .ceilDiv(rewriter.getAffineSymbolExpr(1))));
-          Value launchBound = rewriter.create<AffineApplyOp>(
-              loc, annotation.getBound().compose(stepMap),
+          Value launchBound = AffineApplyOp::create(
+              rewriter, loc, annotation.getBound().compose(stepMap),
               ValueRange{
                   ensureLaunchIndependent(
                       cloningMap.lookupOrDefault(upperBound)),
@@ -517,10 +515,10 @@ static LogicalResult processParallelLoop(
         if (!boundIsPrecise) {
           // We are using an approximation, create a surrounding conditional.
           Value originalBound = std::get<3>(config);
-          arith::CmpIOp pred = rewriter.create<arith::CmpIOp>(
-              loc, arith::CmpIPredicate::slt, newIndex,
+          arith::CmpIOp pred = arith::CmpIOp::create(
+              rewriter, loc, arith::CmpIPredicate::slt, newIndex,
               cloningMap.lookupOrDefault(originalBound));
-          scf::IfOp ifOp = rewriter.create<scf::IfOp>(loc, pred, false);
+          scf::IfOp ifOp = scf::IfOp::create(rewriter, loc, pred, false);
           rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
           // Put a sentinel into the worklist so we know when to pop out of the
           // if body again. We use the launchOp here, as that cannot be part of
@@ -530,10 +528,10 @@ static LogicalResult processParallelLoop(
       }
     } else {
       // Create a sequential for loop.
-      auto loopOp = rewriter.create<scf::ForOp>(
-          loc, cloningMap.lookupOrDefault(lowerBound),
-          cloningMap.lookupOrDefault(upperBound),
-          cloningMap.lookupOrDefault(step));
+      auto loopOp = scf::ForOp::create(rewriter, loc,
+                                       cloningMap.lookupOrDefault(lowerBound),
+                                       cloningMap.lookupOrDefault(upperBound),
+                                       cloningMap.lookupOrDefault(step));
       newIndex = loopOp.getInductionVar();
       rewriter.setInsertionPointToStart(loopOp.getBody());
       // Put a sentinel into the worklist so we know when to pop out of the loop
@@ -608,12 +606,12 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
   // sizes. Those will be refined later as we discover them from mappings.
   Location loc = parallelOp.getLoc();
   Value constantOne =
-      rewriter.create<arith::ConstantIndexOp>(parallelOp.getLoc(), 1);
-  gpu::LaunchOp launchOp = rewriter.create<gpu::LaunchOp>(
-      parallelOp.getLoc(), constantOne, constantOne, constantOne, constantOne,
-      constantOne, constantOne);
+      arith::ConstantIndexOp::create(rewriter, parallelOp.getLoc(), 1);
+  gpu::LaunchOp launchOp = gpu::LaunchOp::create(
+      rewriter, parallelOp.getLoc(), constantOne, constantOne, constantOne,
+      constantOne, constantOne, constantOne);
   rewriter.setInsertionPointToEnd(&launchOp.getBody().front());
-  rewriter.create<gpu::TerminatorOp>(loc);
+  gpu::TerminatorOp::create(rewriter, loc);
   rewriter.setInsertionPointToStart(&launchOp.getBody().front());
 
   IRMapping cloningMap;
@@ -667,7 +665,7 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
       if (externalValues.size())
         return failure();
       // Replace by gpu.all_reduce.
-      auto gpuRedOp = rewriter.create<gpu::AllReduceOp>(loc, newValue);
+      auto gpuRedOp = gpu::AllReduceOp::create(rewriter, loc, newValue);
       cloningMap.map(parentLoop->getResult(0), gpuRedOp.getResult());
       // Copy region.
       rewriter.inlineRegionBefore(reduceOp.getRegion(0), gpuRedOp.getRegion(),

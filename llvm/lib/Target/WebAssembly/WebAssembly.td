@@ -71,6 +71,7 @@ def FeatureReferenceTypes :
       SubtargetFeature<"reference-types", "HasReferenceTypes", "true",
                        "Enable reference types">;
 
+def FeatureGC : SubtargetFeature<"gc", "HasGC", "true", "Enable wasm gc">;
 def FeatureRelaxedSIMD :
       SubtargetFeature<"relaxed-simd", "SIMDLevel", "RelaxedSIMD",
                        "Enable relaxed-simd instructions">;
@@ -136,13 +137,13 @@ def : ProcessorModel<"lime1", NoSchedModel,
 
 // Latest and greatest experimental version of WebAssembly. Bugs included!
 def : ProcessorModel<"bleeding-edge", NoSchedModel,
-                      [FeatureAtomics, FeatureBulkMemory, FeatureBulkMemoryOpt,
-                       FeatureCallIndirectOverlong, FeatureExceptionHandling,
-                       FeatureExtendedConst, FeatureFP16, FeatureMultiMemory,
-                       FeatureMultivalue, FeatureMutableGlobals,
-                       FeatureNontrappingFPToInt, FeatureRelaxedSIMD,
-                       FeatureReferenceTypes, FeatureSIMD128, FeatureSignExt,
-                       FeatureTailCall]>;
+                     [FeatureAtomics, FeatureBulkMemory, FeatureBulkMemoryOpt,
+                      FeatureCallIndirectOverlong, FeatureExceptionHandling,
+                      FeatureExtendedConst, FeatureFP16, FeatureMultiMemory,
+                      FeatureMultivalue, FeatureMutableGlobals,
+                      FeatureNontrappingFPToInt, FeatureRelaxedSIMD,
+                      FeatureReferenceTypes, FeatureGC, FeatureSIMD128,
+                      FeatureSignExt, FeatureTailCall]>;
 
 //===----------------------------------------------------------------------===//
 // Target Declaration

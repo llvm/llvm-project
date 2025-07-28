@@ -135,6 +135,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  tanpif_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    tanpif_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.tanpif
+)
+
+add_fp_unittest(
   tanpif16_test
   SUITE
     libc-math-smoke-tests
@@ -3158,7 +3169,6 @@ add_fp_unittest(
     libc.hdr.signal_macros
     libc.src.math.nanf
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY
@@ -3174,7 +3184,6 @@ add_fp_unittest(
     libc.hdr.signal_macros
     libc.src.math.nan
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY
@@ -3190,7 +3199,6 @@ add_fp_unittest(
     libc.hdr.signal_macros
     libc.src.math.nanl
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY
@@ -3206,7 +3214,6 @@ add_fp_unittest(
     libc.hdr.signal_macros
     libc.src.math.nanf16
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY
@@ -3222,7 +3229,6 @@ add_fp_unittest(
     libc.hdr.signal_macros
     libc.src.math.nanf128
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY

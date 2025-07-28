@@ -321,7 +321,8 @@ public:
                                               bool IsNonTemporal,
                                               bool IsLastUse = false) const = 0;
 
-  virtual bool expandSystemScopeStore(MachineBasicBlock::iterator &MI) const {
+  virtual bool finalizeStore(MachineBasicBlock::iterator &MI,
+                             bool Atomic) const {
     return false;
   };
 
@@ -602,7 +603,8 @@ public:
                                       bool IsVolatile, bool IsNonTemporal,
                                       bool IsLastUse) const override;
 
-  bool expandSystemScopeStore(MachineBasicBlock::iterator &MI) const override;
+  bool finalizeStore(MachineBasicBlock::iterator &MI,
+                     bool Atomic) const override;
 
   bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
@@ -704,16 +706,16 @@ void diagnoseUnknownMMRAASName(const MachineInstr &MI, StringRef AS) {
       DiagnosticInfoUnsupported(Fn, Str.str(), MI.getDebugLoc(), DS_Warning));
 }
 
-/// Reads \p MI's MMRAs to parse the "amdgpu-as" MMRA.
-/// If this tag isn't present, or if it has no meaningful values, returns \p
-/// Default. Otherwise returns all the address spaces concerned by the MMRA.
-static SIAtomicAddrSpace getFenceAddrSpaceMMRA(const MachineInstr &MI,
-                                               SIAtomicAddrSpace Default) {
-  static constexpr StringLiteral FenceASPrefix = "amdgpu-as";
+/// Reads \p MI's MMRAs to parse the "amdgpu-synchronize-as" MMRA.
+/// If this tag isn't present, or if it has no meaningful values, returns
+/// \p none, otherwise returns the address spaces specified by the MD.
+static std::optional<SIAtomicAddrSpace>
+getSynchronizeAddrSpaceMD(const MachineInstr &MI) {
+  static constexpr StringLiteral FenceASPrefix = "amdgpu-synchronize-as";
 
   auto MMRA = MMRAMetadata(MI.getMMRAMetadata());
   if (!MMRA)
-    return Default;
+    return std::nullopt;
 
   SIAtomicAddrSpace Result = SIAtomicAddrSpace::NONE;
   for (const auto &[Prefix, Suffix] : MMRA) {
@@ -726,7 +728,10 @@ static SIAtomicAddrSpace getFenceAddrSpaceMMRA(const MachineInstr &MI,
       diagnoseUnknownMMRAASName(MI, Suffix);
   }
 
-  return (Result != SIAtomicAddrSpace::NONE) ? Result : Default;
+  if (Result == SIAtomicAddrSpace::NONE)
+    return std::nullopt;
+
+  return Result;
 }
 
 } // end anonymous namespace
@@ -903,11 +908,18 @@ SIMemOpAccess::getAtomicFenceInfo(const MachineBasicBlock::iterator &MI) const {
   std::tie(Scope, OrderingAddrSpace, IsCrossAddressSpaceOrdering) =
       *ScopeOrNone;
 
-  if ((OrderingAddrSpace == SIAtomicAddrSpace::NONE) ||
-      ((OrderingAddrSpace & SIAtomicAddrSpace::ATOMIC) != OrderingAddrSpace)) {
+  if (OrderingAddrSpace != SIAtomicAddrSpace::ATOMIC) {
+    // We currently expect refineOrderingAS to be the only place that
+    // can refine the AS ordered by the fence.
+    // If that changes, we need to review the semantics of that function
+    // in case it needs to preserve certain address spaces.
     reportUnsupported(MI, "Unsupported atomic address space");
     return std::nullopt;
   }
+
+  auto SynchronizeAS = getSynchronizeAddrSpaceMD(*MI);
+  if (SynchronizeAS)
+    OrderingAddrSpace = *SynchronizeAS;
 
   return SIMemOpInfo(Ordering, Scope, OrderingAddrSpace, SIAtomicAddrSpace::ATOMIC,
                      IsCrossAddressSpaceOrdering, AtomicOrdering::NotAtomic);
@@ -2541,11 +2553,25 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
   return Changed;
 }
 
-bool SIGfx12CacheControl::expandSystemScopeStore(
-    MachineBasicBlock::iterator &MI) const {
+bool SIGfx12CacheControl::finalizeStore(MachineBasicBlock::iterator &MI,
+                                        bool Atomic) const {
   MachineOperand *CPol = TII->getNamedOperand(*MI, OpName::cpol);
-  if (CPol && ((CPol->getImm() & CPol::SCOPE) == CPol::SCOPE_SYS))
-    return insertWaitsBeforeSystemScopeStore(MI);
+  if (!CPol)
+    return false;
+
+  const unsigned Scope = CPol->getImm() & CPol::SCOPE;
+
+  // GFX12.0 only: Extra waits needed before system scope stores.
+  if (!ST.hasGFX1250Insts()) {
+    if (!Atomic && Scope == CPol::SCOPE_SYS)
+      return insertWaitsBeforeSystemScopeStore(MI);
+    return false;
+  }
+
+  // GFX12.5 only: Require SCOPE_SE on stores that may hit the scratch address
+  // space.
+  if (TII->mayAccessScratchThroughFlat(*MI) && Scope == CPol::SCOPE_CU)
+    return setScope(MI, CPol::SCOPE_SE);
 
   return false;
 }
@@ -2664,6 +2690,7 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
                                    MOI.getIsCrossAddressSpaceOrdering(),
                                    Position::BEFORE);
 
+    Changed |= CC->finalizeStore(MI, /*Atomic=*/true);
     return Changed;
   }
 
@@ -2676,7 +2703,7 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
 
   // GFX12 specific, scope(desired coherence domain in cache hierarchy) is
   // instruction field, do not confuse it with atomic scope.
-  Changed |= CC->expandSystemScopeStore(MI);
+  Changed |= CC->finalizeStore(MI, /*Atomic=*/false);
   return Changed;
 }
 
@@ -2687,11 +2714,7 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
   AtomicPseudoMIs.push_back(MI);
   bool Changed = false;
 
-  // Refine fenced address space based on MMRAs.
-  //
-  // TODO: Should we support this MMRA on other atomic operations?
-  auto OrderingAddrSpace =
-      getFenceAddrSpaceMMRA(*MI, MOI.getOrderingAddrSpace());
+  const SIAtomicAddrSpace OrderingAddrSpace = MOI.getOrderingAddrSpace();
 
   if (MOI.isAtomic()) {
     const AtomicOrdering Order = MOI.getOrdering();

@@ -345,14 +345,19 @@ void test() {
 namespace cwg2692 { // cwg2692: 19
 #if __cplusplus >= 202302L
 
- struct A {
+struct A {
     static void f(A); // #cwg2692-1
     void f(this A); // #cwg2692-2
 
-    void g();
-  };
+    template <typename T>
+    static void g(T); // #cwg2692-3
+    template <typename T>
+    void g(this T); // #cwg2692-4
 
-  void A::g() {
+    void test();
+};
+
+void A::test() {
     (&A::f)(A());
     // since-cxx23-error@-1 {{call to 'f' is ambiguous}}
     //   since-cxx23-note@#cwg2692-1 {{candidate function}}
@@ -361,6 +366,16 @@ namespace cwg2692 { // cwg2692: 19
     // since-cxx23-error@-1 {{no matching function for call to 'f'}}
     //   since-cxx23-note@#cwg2692-1 {{candidate function not viable: requires 1 argument, but 0 were provided}}
     //   since-cxx23-note@#cwg2692-2 {{candidate function not viable: requires 1 argument, but 0 were provided}}
-  }
+
+
+    (&A::g)(A());
+    // since-cxx23-error@-1 {{call to 'g' is ambiguous}}
+    //   since-cxx23-note@#cwg2692-3 {{candidate function}}
+    //   since-cxx23-note@#cwg2692-4 {{candidate function}}
+    (&A::g<A>)();
+    // since-cxx23-error@-1 {{no matching function for call to 'g'}}
+    //   since-cxx23-note@#cwg2692-3 {{candidate function template not viable: requires 1 argument, but 0 were provided}}
+    //   since-cxx23-note@#cwg2692-4 {{candidate function [with T = cwg2692::A] not viable: requires 1 argument, but 0 were provided}}
+}
 #endif
 } // namespace cwg2692

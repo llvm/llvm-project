@@ -510,7 +510,7 @@ set(USE_NO_UNINITIALIZED 0)
 # false positives.
 if (CMAKE_COMPILER_IS_GNUCXX)
   # Disable all -Wuninitialized warning for old GCC versions.
-  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12.0)
+  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 15.0)
     set(USE_NO_UNINITIALIZED 1)
   else()
     set(USE_NO_MAYBE_UNINITIALIZED 1)

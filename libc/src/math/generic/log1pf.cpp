@@ -37,6 +37,7 @@ namespace internal {
 
 // We don't need to treat denormal and 0
 LIBC_INLINE float log(double x) {
+  using namespace acoshf_internal;
   constexpr double LOG_2 = 0x1.62e42fefa39efp-1;
 
   using FPBits = typename fputil::FPBits<double>;

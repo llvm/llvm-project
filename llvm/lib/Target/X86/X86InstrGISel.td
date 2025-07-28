@@ -27,5 +27,13 @@ def G_FIST : X86GenericInstruction {
   let mayStore = true;
 }
 
+def G_FNSTCW16 : X86GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins ptype0:$dst);
+  let hasSideEffects = true;
+  let mayStore = true;
+}
+
 def : GINodeEquiv<G_FILD, X86fild>;
 def : GINodeEquiv<G_FIST, X86fp_to_mem>;
+def : GINodeEquiv<G_FNSTCW16, X86fp_cwd_get16>;

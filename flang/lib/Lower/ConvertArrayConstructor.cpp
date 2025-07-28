@@ -137,9 +137,9 @@ public:
                              mlir::Value stride) {
     if constexpr (!hasLoops)
       fir::emitFatalError(loc, "array constructor lowering is inconsistent");
-    auto loop = builder.create<fir::DoLoopOp>(loc, lower, upper, stride,
-                                              /*unordered=*/false,
-                                              /*finalCount=*/false);
+    auto loop = fir::DoLoopOp::create(builder, loc, lower, upper, stride,
+                                      /*unordered=*/false,
+                                      /*finalCount=*/false);
     builder.setInsertionPointToStart(loop.getBody());
     return loop.getInductionVar();
   }
@@ -213,15 +213,15 @@ public:
     assert(!elementalOp && "expected only one implied-do");
     mlir::Value one =
         builder.createIntegerConstant(loc, builder.getIndexType(), 1);
-    elementalOp = builder.create<hlfir::ElementalOp>(
-        loc, exprType, shape,
-        /*mold=*/nullptr, lengthParams, /*isUnordered=*/true);
+    elementalOp = hlfir::ElementalOp::create(builder, loc, exprType, shape,
+                                             /*mold=*/nullptr, lengthParams,
+                                             /*isUnordered=*/true);
     builder.setInsertionPointToStart(elementalOp.getBody());
     // implied-do-index = lower+((i-1)*stride)
-    mlir::Value diff = builder.create<mlir::arith::SubIOp>(
-        loc, elementalOp.getIndices()[0], one);
-    mlir::Value mul = builder.create<mlir::arith::MulIOp>(loc, diff, stride);
-    mlir::Value add = builder.create<mlir::arith::AddIOp>(loc, lower, mul);
+    mlir::Value diff = mlir::arith::SubIOp::create(
+        builder, loc, elementalOp.getIndices()[0], one);
+    mlir::Value mul = mlir::arith::MulIOp::create(builder, loc, diff, stride);
+    mlir::Value add = mlir::arith::AddIOp::create(builder, loc, lower, mul);
     return add;
   }
 
@@ -260,7 +260,7 @@ public:
     if (destroyOp)
       destroyOp->erase();
 
-    builder.create<hlfir::YieldElementOp>(loc, elementResult);
+    hlfir::YieldElementOp::create(builder, loc, elementResult);
   }
 
   // Override the default, because the context scope must be popped in
@@ -315,8 +315,8 @@ public:
       mlir::Value tempStorage = builder.createHeapTemporary(
           loc, declaredType, tempName, extents, lengths);
       mlir::Value shape = builder.genShape(loc, extents);
-      declare = builder.create<hlfir::DeclareOp>(
-          loc, tempStorage, tempName, shape, lengths,
+      declare = hlfir::DeclareOp::create(
+          builder, loc, tempStorage, tempName, shape, lengths,
           /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
       initialBoxValue =
           builder.createBox(loc, boxType, declare->getOriginalBase(), shape,
@@ -347,7 +347,7 @@ public:
                                           /*slice=*/mlir::Value{}, emboxLengths,
                                           /*tdesc=*/{});
     }
-    builder.create<fir::StoreOp>(loc, initialBoxValue, allocatableTemp);
+    fir::StoreOp::create(builder, loc, initialBoxValue, allocatableTemp);
     arrayConstructorVector = fir::runtime::genInitArrayConstructorVector(
         loc, builder, allocatableTemp,
         builder.createBool(loc, missingLengthParameters));
@@ -369,7 +369,7 @@ public:
           loc, builder, value, arrayConstructorElementType);
       mlir::Value addr = fir::getBase(addrExv);
       if (mlir::isa<fir::BaseBoxType>(addr.getType()))
-        addr = builder.create<fir::BoxAddrOp>(loc, addr);
+        addr = fir::BoxAddrOp::create(builder, loc, addr);
       fir::runtime::genPushArrayConstructorSimpleScalar(
           loc, builder, arrayConstructorVector, addr);
       if (cleanUp)
@@ -389,9 +389,9 @@ public:
   mlir::Value startImpliedDo(mlir::Location loc, fir::FirOpBuilder &builder,
                              mlir::Value lower, mlir::Value upper,
                              mlir::Value stride) {
-    auto loop = builder.create<fir::DoLoopOp>(loc, lower, upper, stride,
-                                              /*unordered=*/false,
-                                              /*finalCount=*/false);
+    auto loop = fir::DoLoopOp::create(builder, loc, lower, upper, stride,
+                                      /*unordered=*/false,
+                                      /*finalCount=*/false);
     builder.setInsertionPointToStart(loop.getBody());
     return loop.getInductionVar();
   }
@@ -409,7 +409,7 @@ public:
     else
       temp = hlfir::derefPointersAndAllocatables(
           loc, builder, hlfir::Entity{allocatableTemp});
-    auto hlfirExpr = builder.create<hlfir::AsExprOp>(loc, temp, mustFree);
+    auto hlfirExpr = hlfir::AsExprOp::create(builder, loc, temp, mustFree);
     return hlfir::Entity{hlfirExpr};
   }
 

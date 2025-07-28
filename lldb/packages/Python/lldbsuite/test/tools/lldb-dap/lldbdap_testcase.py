@@ -173,6 +173,28 @@ class DAPTestCaseBase(TestBase):
                         return
         self.assertTrue(False, f"breakpoint not hit, stopped_events={stopped_events}")
 
+    def verify_all_breakpoints_hit(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
+        """Wait for the process we are debugging to stop, and verify we hit
+        all of the breakpoint locations in the "breakpoint_ids" array.
+        "breakpoint_ids" should be a list of int breakpoint IDs ([1, 2])."""
+        stopped_events = self.dap_server.wait_for_stopped(timeout)
+        for stopped_event in stopped_events:
+            if "body" in stopped_event:
+                body = stopped_event["body"]
+                if "reason" not in body:
+                    continue
+                if (
+                    body["reason"] != "breakpoint"
+                    and body["reason"] != "instruction breakpoint"
+                ):
+                    continue
+                if "hitBreakpointIds" not in body:
+                    continue
+                hit_bps = body["hitBreakpointIds"]
+                if all(breakpoint_id in hit_bps for breakpoint_id in breakpoint_ids):
+                    return
+        self.assertTrue(False, f"breakpoints not hit, stopped_events={stopped_events}")
+
     def verify_stop_exception_info(self, expected_description, timeout=DEFAULT_TIMEOUT):
         """Wait for the process we are debugging to stop, and verify the stop
         reason is 'exception' and that the description matches
@@ -508,7 +530,7 @@ class DAPTestCaseBase(TestBase):
                 self.assertIsNotNone(server_tool, "debugserver not found.")
         return server_tool
 
-    def writeMemory(self, memoryReference, data=None, offset=None, allowPartial=None):
+    def writeMemory(self, memoryReference, data=None, offset=0, allowPartial=False):
         # This function accepts data in decimal and hexadecimal format,
         # converts it to a Base64 string, and send it to the DAP,
         # which expects Base64 encoded data.

@@ -47,6 +47,8 @@ end program
 
 ! CHECK-NEXT: PolymorphicOpConversion
 ! CHECK-NEXT: AssumedRankOpConversion
+! CHECK-NEXT: 'func.func' Pipeline
+! CHECK-NEXT:   OptimizeArrayRepacking
 ! CHECK-NEXT: LowerRepackArraysPass
 ! CHECK-NEXT: SimplifyFIROperations
 

@@ -324,8 +324,8 @@
 // RUN:        -ccc-print-phases --offload-arch=sm_999 -fgpu-rdc -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix=INVALID-ARCH %s
 //      INVALID-ARCH: error: unsupported CUDA gpu architecture: sm_999
-// INVALID-ARCH-NEXT: 0: input, "[[INPUT:.+]]", cuda, (host-cuda)
-// INVALID-ARCH-NEXT: 1: preprocessor, {0}, cuda-cpp-output, (host-cuda)
-// INVALID-ARCH-NEXT: 2: compiler, {1}, ir, (host-cuda)
-// INVALID-ARCH-NEXT: 3: backend, {2}, assembler, (host-cuda)
-// INVALID-ARCH-NEXT: 4: assembler, {3}, object, (host-cuda)
+//      INVALID-ARCH: 0: input, "[[INPUT:.+]]", cuda
+// INVALID-ARCH-NEXT: 1: preprocessor, {0}, cuda-cpp-output
+// INVALID-ARCH-NEXT: 2: compiler, {1}, ir
+// INVALID-ARCH-NEXT: 3: backend, {2}, assembler
+// INVALID-ARCH-NEXT: 4: assembler, {3}, object

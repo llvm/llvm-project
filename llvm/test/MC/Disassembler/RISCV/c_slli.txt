@@ -14,7 +14,7 @@
 # RUN:     -M no-aliases --show-encoding < %s 2>&1 | \
 # RUN:   FileCheck --check-prefix=NOHINTS %s
 
-# GOOD: c.slli64 zero
+# GOOD: c.slli zero, 0
 # NOHINTS: invalid instruction encoding
 0x02 0x00
 
@@ -302,7 +302,7 @@
 # NOHINTS: invalid instruction encoding
 0x7E 0x10
 
-# GOOD: c.slli64 ra
+# GOOD: c.slli ra, 0
 0x82 0x00
 
 # GOOD: c.slli ra, 1
@@ -526,7 +526,7 @@
 # GOOD64: c.slli ra, 63
 0xFE 0x10
 
-# GOOD: c.slli64 sp
+# GOOD: c.slli sp, 0
 0x02 0x01
 
 # GOOD: c.slli sp, 1
@@ -750,7 +750,7 @@
 # GOOD64: c.slli sp, 63
 0x7E 0x11
 
-# GOOD: c.slli64 gp
+# GOOD: c.slli gp, 0
 0x82 0x01
 
 # GOOD: c.slli gp, 1
@@ -974,7 +974,7 @@
 # GOOD64: c.slli gp, 63
 0xFE 0x11
 
-# GOOD: c.slli64 tp
+# GOOD: c.slli tp, 0
 0x02 0x02
 
 # GOOD: c.slli tp, 1
@@ -1198,7 +1198,7 @@
 # GOOD64: c.slli tp, 63
 0x7E 0x12
 
-# GOOD: c.slli64 t0
+# GOOD: c.slli t0, 0
 0x82 0x02
 
 # GOOD: c.slli t0, 1
@@ -1422,7 +1422,7 @@
 # GOOD64: c.slli t0, 63
 0xFE 0x12
 
-# GOOD: c.slli64 t1
+# GOOD: c.slli t1, 0
 0x02 0x03
 
 # GOOD: c.slli t1, 1
@@ -1646,7 +1646,7 @@
 # GOOD64: c.slli t1, 63
 0x7E 0x13
 
-# GOOD: c.slli64 t2
+# GOOD: c.slli t2, 0
 0x82 0x03
 
 # GOOD: c.slli t2, 1
@@ -1870,7 +1870,7 @@
 # GOOD64: c.slli t2, 63
 0xFE 0x13
 
-# GOOD: c.slli64 s0
+# GOOD: c.slli s0, 0
 0x02 0x04
 
 # GOOD: c.slli s0, 1
@@ -2094,7 +2094,7 @@
 # GOOD64: c.slli s0, 63
 0x7E 0x14
 
-# GOOD: c.slli64 s1
+# GOOD: c.slli s1, 0
 0x82 0x04
 
 # GOOD: c.slli s1, 1
@@ -2318,7 +2318,7 @@
 # GOOD64: c.slli s1, 63
 0xFE 0x14
 
-# GOOD: c.slli64 a0
+# GOOD: c.slli a0, 0
 0x02 0x05
 
 # GOOD: c.slli a0, 1
@@ -2542,7 +2542,7 @@
 # GOOD64: c.slli a0, 63
 0x7E 0x15
 
-# GOOD: c.slli64 a1
+# GOOD: c.slli a1, 0
 0x82 0x05
 
 # GOOD: c.slli a1, 1
@@ -2766,7 +2766,7 @@
 # GOOD64: c.slli a1, 63
 0xFE 0x15
 
-# GOOD: c.slli64 a2
+# GOOD: c.slli a2, 0
 0x02 0x06
 
 # GOOD: c.slli a2, 1
@@ -2990,7 +2990,7 @@
 # GOOD64: c.slli a2, 63
 0x7E 0x16
 
-# GOOD: c.slli64 a3
+# GOOD: c.slli a3, 0
 0x82 0x06
 
 # GOOD: c.slli a3, 1
@@ -3214,7 +3214,7 @@
 # GOOD64: c.slli a3, 63
 0xFE 0x16
 
-# GOOD: c.slli64 a4
+# GOOD: c.slli a4, 0
 0x02 0x07
 
 # GOOD: c.slli a4, 1
@@ -3438,7 +3438,7 @@
 # GOOD64: c.slli a4, 63
 0x7E 0x17
 
-# GOOD: c.slli64 a5
+# GOOD: c.slli a5, 0
 0x82 0x07
 
 # GOOD: c.slli a5, 1
@@ -3662,7 +3662,7 @@
 # GOOD64: c.slli a5, 63
 0xFE 0x17
 
-# GOOD: c.slli64 a6
+# GOOD: c.slli a6, 0
 0x02 0x08
 
 # GOOD: c.slli a6, 1
@@ -3886,7 +3886,7 @@
 # GOOD64: c.slli a6, 63
 0x7E 0x18
 
-# GOOD: c.slli64 a7
+# GOOD: c.slli a7, 0
 0x82 0x08
 
 # GOOD: c.slli a7, 1
@@ -4110,7 +4110,7 @@
 # GOOD64: c.slli a7, 63
 0xFE 0x18
 
-# GOOD: c.slli64 s2
+# GOOD: c.slli s2, 0
 0x02 0x09
 
 # GOOD: c.slli s2, 1
@@ -4334,7 +4334,7 @@
 # GOOD64: c.slli s2, 63
 0x7E 0x19
 
-# GOOD: c.slli64 s3
+# GOOD: c.slli s3, 0
 0x82 0x09
 
 # GOOD: c.slli s3, 1
@@ -4558,7 +4558,7 @@
 # GOOD64: c.slli s3, 63
 0xFE 0x19
 
-# GOOD: c.slli64 s4
+# GOOD: c.slli s4, 0
 0x02 0x0A
 
 # GOOD: c.slli s4, 1
@@ -4782,7 +4782,7 @@
 # GOOD64: c.slli s4, 63
 0x7E 0x1A
 
-# GOOD: c.slli64 s5
+# GOOD: c.slli s5, 0
 0x82 0x0A
 
 # GOOD: c.slli s5, 1
@@ -5006,7 +5006,7 @@
 # GOOD64: c.slli s5, 63
 0xFE 0x1A
 
-# GOOD: c.slli64 s6
+# GOOD: c.slli s6, 0
 0x02 0x0B
 
 # GOOD: c.slli s6, 1
@@ -5230,7 +5230,7 @@
 # GOOD64: c.slli s6, 63
 0x7E 0x1B
 
-# GOOD: c.slli64 s7
+# GOOD: c.slli s7, 0
 0x82 0x0B
 
 # GOOD: c.slli s7, 1
@@ -5454,7 +5454,7 @@
 # GOOD64: c.slli s7, 63
 0xFE 0x1B
 
-# GOOD: c.slli64 s8
+# GOOD: c.slli s8, 0
 0x02 0x0C
 
 # GOOD: c.slli s8, 1
@@ -5678,7 +5678,7 @@
 # GOOD64: c.slli s8, 63
 0x7E 0x1C
 
-# GOOD: c.slli64 s9
+# GOOD: c.slli s9, 0
 0x82 0x0C
 
 # GOOD: c.slli s9, 1
@@ -5902,7 +5902,7 @@
 # GOOD64: c.slli s9, 63
 0xFE 0x1C
 
-# GOOD: c.slli64 s10
+# GOOD: c.slli s10, 0
 0x02 0x0D
 
 # GOOD: c.slli s10, 1
@@ -6126,7 +6126,7 @@
 # GOOD64: c.slli s10, 63
 0x7E 0x1D
 
-# GOOD: c.slli64 s11
+# GOOD: c.slli s11, 0
 0x82 0x0D
 
 # GOOD: c.slli s11, 1
@@ -6350,7 +6350,7 @@
 # GOOD64: c.slli s11, 63
 0xFE 0x1D
 
-# GOOD: c.slli64 t3
+# GOOD: c.slli t3, 0
 0x02 0x0E
 
 # GOOD: c.slli t3, 1
@@ -6574,7 +6574,7 @@
 # GOOD64: c.slli t3, 63
 0x7E 0x1E
 
-# GOOD: c.slli64 t4
+# GOOD: c.slli t4, 0
 0x82 0x0E
 
 # GOOD: c.slli t4, 1
@@ -6798,7 +6798,7 @@
 # GOOD64: c.slli t4, 63
 0xFE 0x1E
 
-# GOOD: c.slli64 t5
+# GOOD: c.slli t5, 0
 0x02 0x0F
 
 # GOOD: c.slli t5, 1
@@ -7022,7 +7022,7 @@
 # GOOD64: c.slli t5, 63
 0x7E 0x1F
 
-# GOOD: c.slli64 t6
+# GOOD: c.slli t6, 0
 0x82 0x0F
 
 # GOOD: c.slli t6, 1

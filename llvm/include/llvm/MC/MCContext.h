@@ -47,7 +47,6 @@ namespace llvm {
 
 class CodeViewContext;
 class MCAsmInfo;
-class MCDataFragment;
 class MCInst;
 class MCLabel;
 class MCObjectFileInfo;
@@ -333,8 +332,6 @@ private:
 
   void reportCommon(SMLoc Loc,
                     std::function<void(SMDiagnostic &, const SourceMgr *)>);
-
-  MCDataFragment *allocInitialFragment(MCSection &Sec);
 
   MCSymbolTableEntry &getSymbolTableEntry(StringRef Name);
 

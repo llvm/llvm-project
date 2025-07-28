@@ -85,12 +85,19 @@ RT_API_ATTRS void Descriptor::Establish(int characterKind,
 RT_API_ATTRS void Descriptor::Establish(const typeInfo::DerivedType &dt,
     void *p, int rank, const SubscriptValue *extent,
     ISO::CFI_attribute_t attribute) {
-  Establish(TypeCode{TypeCategory::Derived, 0}, dt.sizeInBytes(), p, rank,
-      extent, attribute, true);
-  DescriptorAddendum *a{Addendum()};
-  Terminator terminator{__FILE__, __LINE__};
-  RUNTIME_CHECK(terminator, a != nullptr);
-  new (a) DescriptorAddendum{&dt};
+  auto elementBytes{static_cast<std::size_t>(dt.sizeInBytes())};
+  ISO::EstablishDescriptor(
+      &raw_, p, attribute, CFI_type_struct, elementBytes, rank, extent);
+  if (elementBytes == 0) {
+    raw_.elem_len = 0;
+    // Reset byte strides of the dimensions, since EstablishDescriptor()
+    // only does that when the base address is not nullptr.
+    for (int j{0}; j < rank; ++j) {
+      GetDimension(j).SetByteStride(0);
+    }
+  }
+  SetHasAddendum();
+  new (Addendum()) DescriptorAddendum{&dt};
 }
 
 RT_API_ATTRS OwningPtr<Descriptor> Descriptor::Create(TypeCode t,
@@ -141,21 +148,7 @@ RT_API_ATTRS std::size_t Descriptor::SizeInBytes() const {
 }
 
 RT_API_ATTRS std::size_t Descriptor::Elements() const {
-  int n{rank()};
-  std::size_t elements{1};
-  for (int j{0}; j < n; ++j) {
-    elements *= GetDimension(j).Extent();
-  }
-  return elements;
-}
-
-RT_API_ATTRS static inline int MapAllocIdx(const Descriptor &desc) {
-#ifdef RT_DEVICE_COMPILATION
-  // Force default allocator in device code.
-  return kDefaultAllocator;
-#else
-  return desc.GetAllocIdx();
-#endif
+  return InlineElements();
 }
 
 RT_API_ATTRS int Descriptor::Allocate(std::int64_t *asyncObject) {
@@ -166,7 +159,7 @@ RT_API_ATTRS int Descriptor::Allocate(std::int64_t *asyncObject) {
     elementBytes = raw_.elem_len = 0;
   }
   std::size_t byteSize{Elements() * elementBytes};
-  AllocFct alloc{allocatorRegistry.GetAllocator(MapAllocIdx(*this))};
+  AllocFct alloc{allocatorRegistry.GetAllocator(MapAllocIdx())};
   // Zero size allocation is possible in Fortran and the resulting
   // descriptor must be allocated/associated. Since std::malloc(0)
   // result is implementation defined, always allocate at least one byte.
@@ -204,18 +197,6 @@ RT_API_ATTRS int Descriptor::Destroy(
       }
     }
     return Deallocate();
-  }
-}
-
-RT_API_ATTRS int Descriptor::Deallocate() {
-  ISO::CFI_cdesc_t &descriptor{raw()};
-  if (!descriptor.base_addr) {
-    return CFI_ERROR_BASE_ADDR_NULL;
-  } else {
-    FreeFct free{allocatorRegistry.GetDeallocator(MapAllocIdx(*this))};
-    free(descriptor.base_addr);
-    descriptor.base_addr = nullptr;
-    return CFI_SUCCESS;
   }
 }
 
@@ -271,18 +252,21 @@ RT_API_ATTRS bool Descriptor::EstablishPointerSection(const Descriptor &source,
   return CFI_section(&raw_, &source.raw_, lower, upper, stride) == CFI_SUCCESS;
 }
 
-RT_API_ATTRS void Descriptor::ApplyMold(const Descriptor &mold, int rank) {
-  raw_.elem_len = mold.raw_.elem_len;
+RT_API_ATTRS void Descriptor::ApplyMold(
+    const Descriptor &mold, int rank, bool isMonomorphic) {
   raw_.rank = rank;
-  raw_.type = mold.raw_.type;
   for (int j{0}; j < rank && j < mold.raw_.rank; ++j) {
     GetDimension(j) = mold.GetDimension(j);
   }
-  if (auto *addendum{Addendum()}) {
-    if (auto *moldAddendum{mold.Addendum()}) {
-      *addendum = *moldAddendum;
-    } else {
-      INTERNAL_CHECK(!addendum->derivedType());
+  if (!isMonomorphic) {
+    raw_.elem_len = mold.raw_.elem_len;
+    raw_.type = mold.raw_.type;
+    if (auto *addendum{Addendum()}) {
+      if (auto *moldAddendum{mold.Addendum()}) {
+        *addendum = *moldAddendum;
+      } else {
+        INTERNAL_CHECK(!addendum->derivedType());
+      }
     }
   }
 }

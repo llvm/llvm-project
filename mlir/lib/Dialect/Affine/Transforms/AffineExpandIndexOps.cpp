@@ -58,8 +58,9 @@ static SmallVector<Value> computeStrides(Location loc, RewriterBase &rewriter,
       // Note: basis elements and their products are, definitionally,
       // non-negative, so `nuw` is justified.
       if (dynamicPart)
-        dynamicPart = rewriter.create<arith::MulIOp>(
-            loc, dynamicPart, dynamicBasis[dynamicIndex - 1], ovflags);
+        dynamicPart =
+            arith::MulIOp::create(rewriter, loc, dynamicPart,
+                                  dynamicBasis[dynamicIndex - 1], ovflags);
       else
         dynamicPart = dynamicBasis[dynamicIndex - 1];
       --dynamicIndex;
@@ -74,7 +75,7 @@ static SmallVector<Value> computeStrides(Location loc, RewriterBase &rewriter,
           rewriter.createOrFold<arith::ConstantIndexOp>(loc, staticPart);
       if (dynamicPart)
         stride =
-            rewriter.create<arith::MulIOp>(loc, dynamicPart, stride, ovflags);
+            arith::MulIOp::create(rewriter, loc, dynamicPart, stride, ovflags);
       result.push_back(stride);
     }
   }
@@ -106,20 +107,20 @@ affine::lowerAffineDelinearizeIndexOp(RewriterBase &rewriter,
   Value zero = rewriter.createOrFold<arith::ConstantIndexOp>(loc, 0);
 
   Value initialPart =
-      rewriter.create<arith::FloorDivSIOp>(loc, linearIdx, strides.front());
+      arith::FloorDivSIOp::create(rewriter, loc, linearIdx, strides.front());
   results.push_back(initialPart);
 
   auto emitModTerm = [&](Value stride) -> Value {
-    Value remainder = rewriter.create<arith::RemSIOp>(loc, linearIdx, stride);
-    Value remainderNegative = rewriter.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::slt, remainder, zero);
+    Value remainder = arith::RemSIOp::create(rewriter, loc, linearIdx, stride);
+    Value remainderNegative = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::slt, remainder, zero);
     // If the correction is relevant, this term is <= stride, which is known
     // to be positive in `index`. Otherwise, while 2 * stride might overflow,
     // this branch won't be taken, so the risk of `poison` is fine.
-    Value corrected = rewriter.create<arith::AddIOp>(
-        loc, remainder, stride, arith::IntegerOverflowFlags::nsw);
-    Value mod = rewriter.create<arith::SelectOp>(loc, remainderNegative,
-                                                 corrected, remainder);
+    Value corrected = arith::AddIOp::create(rewriter, loc, remainder, stride,
+                                            arith::IntegerOverflowFlags::nsw);
+    Value mod = arith::SelectOp::create(rewriter, loc, remainderNegative,
+                                        corrected, remainder);
     return mod;
   };
 
@@ -131,7 +132,7 @@ affine::lowerAffineDelinearizeIndexOp(RewriterBase &rewriter,
     // We know both inputs are positive, so floorDiv == div.
     // This could potentially be a divui, but it's not clear if that would
     // cause issues.
-    Value divided = rewriter.create<arith::DivSIOp>(loc, modulus, nextStride);
+    Value divided = arith::DivSIOp::create(rewriter, loc, modulus, nextStride);
     results.push_back(divided);
   }
 
@@ -167,8 +168,8 @@ LogicalResult affine::lowerAffineLinearizeIndexOp(RewriterBase &rewriter,
   // our hands on an `OpOperand&` for the loop invariant counting function.
   for (auto [stride, idxOp] :
        llvm::zip_equal(strides, llvm::drop_end(op.getMultiIndexMutable()))) {
-    Value scaledIdx = rewriter.create<arith::MulIOp>(
-        loc, idxOp.get(), stride, arith::IntegerOverflowFlags::nsw);
+    Value scaledIdx = arith::MulIOp::create(rewriter, loc, idxOp.get(), stride,
+                                            arith::IntegerOverflowFlags::nsw);
     int64_t numHoistableLoops = numEnclosingInvariantLoops(idxOp);
     scaledValues.emplace_back(scaledIdx, numHoistableLoops);
   }
@@ -184,8 +185,8 @@ LogicalResult affine::lowerAffineLinearizeIndexOp(RewriterBase &rewriter,
   Value result = scaledValues.front().first;
   for (auto [scaledValue, numHoistableLoops] : llvm::drop_begin(scaledValues)) {
     std::ignore = numHoistableLoops;
-    result = rewriter.create<arith::AddIOp>(loc, result, scaledValue,
-                                            arith::IntegerOverflowFlags::nsw);
+    result = arith::AddIOp::create(rewriter, loc, result, scaledValue,
+                                   arith::IntegerOverflowFlags::nsw);
   }
   rewriter.replaceOp(op, result);
   return success();

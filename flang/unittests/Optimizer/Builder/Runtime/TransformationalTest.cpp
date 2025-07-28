@@ -16,12 +16,12 @@ void testGenBesselJn(
   mlir::Type i32Ty = builder.getIntegerType(32);
   mlir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), realTy);
-  mlir::Value result = builder.create<fir::UndefOp>(loc, seqTy);
-  mlir::Value n1 = builder.create<fir::UndefOp>(loc, i32Ty);
-  mlir::Value n2 = builder.create<fir::UndefOp>(loc, i32Ty);
-  mlir::Value x = builder.create<fir::UndefOp>(loc, realTy);
-  mlir::Value bn1 = builder.create<fir::UndefOp>(loc, realTy);
-  mlir::Value bn2 = builder.create<fir::UndefOp>(loc, realTy);
+  mlir::Value result = fir::UndefOp::create(builder, loc, seqTy);
+  mlir::Value n1 = fir::UndefOp::create(builder, loc, i32Ty);
+  mlir::Value n2 = fir::UndefOp::create(builder, loc, i32Ty);
+  mlir::Value x = fir::UndefOp::create(builder, loc, realTy);
+  mlir::Value bn1 = fir::UndefOp::create(builder, loc, realTy);
+  mlir::Value bn2 = fir::UndefOp::create(builder, loc, realTy);
   fir::runtime::genBesselJn(builder, loc, result, n1, n2, x, bn1, bn2);
   checkCallOpFromResultBox(result, fctName, 6);
 }
@@ -39,9 +39,9 @@ void testGenBesselJnX0(
   mlir::Type i32Ty = builder.getIntegerType(32);
   mlir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), realTy);
-  mlir::Value result = builder.create<fir::UndefOp>(loc, seqTy);
-  mlir::Value n1 = builder.create<fir::UndefOp>(loc, i32Ty);
-  mlir::Value n2 = builder.create<fir::UndefOp>(loc, i32Ty);
+  mlir::Value result = fir::UndefOp::create(builder, loc, seqTy);
+  mlir::Value n1 = fir::UndefOp::create(builder, loc, i32Ty);
+  mlir::Value n2 = fir::UndefOp::create(builder, loc, i32Ty);
   fir::runtime::genBesselJnX0(builder, loc, realTy, result, n1, n2);
   checkCallOpFromResultBox(result, fctName, 3);
 }
@@ -59,12 +59,12 @@ void testGenBesselYn(
   mlir::Type i32Ty = builder.getIntegerType(32);
   mlir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), realTy);
-  mlir::Value result = builder.create<fir::UndefOp>(loc, seqTy);
-  mlir::Value n1 = builder.create<fir::UndefOp>(loc, i32Ty);
-  mlir::Value n2 = builder.create<fir::UndefOp>(loc, i32Ty);
-  mlir::Value x = builder.create<fir::UndefOp>(loc, realTy);
-  mlir::Value bn1 = builder.create<fir::UndefOp>(loc, realTy);
-  mlir::Value bn2 = builder.create<fir::UndefOp>(loc, realTy);
+  mlir::Value result = fir::UndefOp::create(builder, loc, seqTy);
+  mlir::Value n1 = fir::UndefOp::create(builder, loc, i32Ty);
+  mlir::Value n2 = fir::UndefOp::create(builder, loc, i32Ty);
+  mlir::Value x = fir::UndefOp::create(builder, loc, realTy);
+  mlir::Value bn1 = fir::UndefOp::create(builder, loc, realTy);
+  mlir::Value bn2 = fir::UndefOp::create(builder, loc, realTy);
   fir::runtime::genBesselYn(builder, loc, result, n1, n2, x, bn1, bn2);
   checkCallOpFromResultBox(result, fctName, 6);
 }
@@ -82,9 +82,9 @@ void testGenBesselYnX0(
   mlir::Type i32Ty = builder.getIntegerType(32);
   mlir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), realTy);
-  mlir::Value result = builder.create<fir::UndefOp>(loc, seqTy);
-  mlir::Value n1 = builder.create<fir::UndefOp>(loc, i32Ty);
-  mlir::Value n2 = builder.create<fir::UndefOp>(loc, i32Ty);
+  mlir::Value result = fir::UndefOp::create(builder, loc, seqTy);
+  mlir::Value n1 = fir::UndefOp::create(builder, loc, i32Ty);
+  mlir::Value n2 = fir::UndefOp::create(builder, loc, i32Ty);
   fir::runtime::genBesselYnX0(builder, loc, realTy, result, n1, n2);
   checkCallOpFromResultBox(result, fctName, 3);
 }
@@ -155,9 +155,9 @@ void testGenMatmul(fir::FirOpBuilder &builder, mlir::Type eleTy1,
       fir::SequenceType::get(fir::SequenceType::Shape(2, 10), eleTy2);
   mlir::Type boxTy1 = fir::BoxType::get(seqTy1);
   mlir::Type boxTy2 = fir::BoxType::get(seqTy2);
-  mlir::Value result = builder.create<fir::UndefOp>(loc, resultTy);
-  mlir::Value matrixA = builder.create<fir::UndefOp>(loc, boxTy1);
-  mlir::Value matrixB = builder.create<fir::UndefOp>(loc, boxTy2);
+  mlir::Value result = fir::UndefOp::create(builder, loc, resultTy);
+  mlir::Value matrixA = fir::UndefOp::create(builder, loc, boxTy1);
+  mlir::Value matrixB = fir::UndefOp::create(builder, loc, boxTy2);
   fir::runtime::genMatmul(builder, loc, result, matrixA, matrixB);
   checkCallOpFromResultBox(result, funcName, 3);
 }

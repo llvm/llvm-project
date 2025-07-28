@@ -2264,33 +2264,12 @@ define <2 x i64> @lsr_const(<2 x i64> %a, <2 x i64> %b) {
 }
 
 define <2 x i64> @asr(<2 x i64> %a, <2 x i64> %b) {
-; CHECK-NEON-LABEL: asr:
-; CHECK-NEON:       // %bb.0:
-; CHECK-NEON-NEXT:    shrn v0.2s, v0.2d, #32
-; CHECK-NEON-NEXT:    shrn v1.2s, v1.2d, #32
-; CHECK-NEON-NEXT:    smull v0.2d, v0.2s, v1.2s
-; CHECK-NEON-NEXT:    ret
-;
-; CHECK-SVE-LABEL: asr:
-; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    shrn v0.2s, v0.2d, #32
-; CHECK-SVE-NEXT:    shrn v1.2s, v1.2d, #32
-; CHECK-SVE-NEXT:    smull v0.2d, v0.2s, v1.2s
-; CHECK-SVE-NEXT:    ret
-;
-; CHECK-GI-LABEL: asr:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sshr v0.2d, v0.2d, #32
-; CHECK-GI-NEXT:    sshr v1.2d, v1.2d, #32
-; CHECK-GI-NEXT:    fmov x10, d0
-; CHECK-GI-NEXT:    fmov x11, d1
-; CHECK-GI-NEXT:    mov x8, v0.d[1]
-; CHECK-GI-NEXT:    mov x9, v1.d[1]
-; CHECK-GI-NEXT:    mul x10, x10, x11
-; CHECK-GI-NEXT:    mul x8, x8, x9
-; CHECK-GI-NEXT:    fmov d0, x10
-; CHECK-GI-NEXT:    mov v0.d[1], x8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: asr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shrn v0.2s, v0.2d, #32
+; CHECK-NEXT:    shrn v1.2s, v1.2d, #32
+; CHECK-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-NEXT:    ret
     %x = ashr <2 x i64> %a, <i64 32, i64 32>
     %y = ashr <2 x i64> %b, <i64 32, i64 32>
     %z = mul nsw <2 x i64> %x, %y
@@ -2298,34 +2277,12 @@ define <2 x i64> @asr(<2 x i64> %a, <2 x i64> %b) {
 }
 
 define <2 x i64> @asr_const(<2 x i64> %a, <2 x i64> %b) {
-; CHECK-NEON-LABEL: asr_const:
-; CHECK-NEON:       // %bb.0:
-; CHECK-NEON-NEXT:    movi v1.2s, #31
-; CHECK-NEON-NEXT:    shrn v0.2s, v0.2d, #32
-; CHECK-NEON-NEXT:    smull v0.2d, v0.2s, v1.2s
-; CHECK-NEON-NEXT:    ret
-;
-; CHECK-SVE-LABEL: asr_const:
-; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    movi v1.2s, #31
-; CHECK-SVE-NEXT:    shrn v0.2s, v0.2d, #32
-; CHECK-SVE-NEXT:    smull v0.2d, v0.2s, v1.2s
-; CHECK-SVE-NEXT:    ret
-;
-; CHECK-GI-LABEL: asr_const:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI81_0
-; CHECK-GI-NEXT:    sshr v0.2d, v0.2d, #32
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI81_0]
-; CHECK-GI-NEXT:    fmov x10, d0
-; CHECK-GI-NEXT:    fmov x11, d1
-; CHECK-GI-NEXT:    mov x8, v0.d[1]
-; CHECK-GI-NEXT:    mov x9, v1.d[1]
-; CHECK-GI-NEXT:    mul x10, x10, x11
-; CHECK-GI-NEXT:    mul x8, x8, x9
-; CHECK-GI-NEXT:    fmov d0, x10
-; CHECK-GI-NEXT:    mov v0.d[1], x8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: asr_const:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.2s, #31
+; CHECK-NEXT:    shrn v0.2s, v0.2d, #32
+; CHECK-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-NEXT:    ret
     %x = ashr <2 x i64> %a, <i64 32, i64 32>
     %z = mul nsw <2 x i64> %x, <i64 31, i64 31>
     ret <2 x i64> %z

@@ -10,6 +10,9 @@ group("unittests") {
     "Bitstream:BitstreamTests",
     "CGData:CodeGenDataTests",
     "CodeGen:CodeGenTests",
+
+    # FIXME: Figure out how to make pass.
+    # "CodeGen/CGPluginTest",
     "CodeGen/GlobalISel:GlobalISelTests",
     "DWARFLinkerParallel:DWARFLinkerParallelTests",
     "DebugInfo/BTF:DebugInfoBTFTests",

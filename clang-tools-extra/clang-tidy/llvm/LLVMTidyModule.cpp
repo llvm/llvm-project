@@ -16,7 +16,9 @@
 #include "IncludeOrderCheck.h"
 #include "PreferIsaOrDynCastInConditionalsCheck.h"
 #include "PreferRegisterOverUnsignedCheck.h"
+#include "PreferStaticOverAnonymousNamespaceCheck.h"
 #include "TwineLocalCheck.h"
+#include "UseNewMLIROpBuilderCheck.h"
 
 namespace clang::tidy {
 namespace llvm_check {
@@ -34,9 +36,13 @@ public:
         "llvm-prefer-isa-or-dyn-cast-in-conditionals");
     CheckFactories.registerCheck<PreferRegisterOverUnsignedCheck>(
         "llvm-prefer-register-over-unsigned");
+    CheckFactories.registerCheck<PreferStaticOverAnonymousNamespaceCheck>(
+        "llvm-prefer-static-over-anonymous-namespace");
     CheckFactories.registerCheck<readability::QualifiedAutoCheck>(
         "llvm-qualified-auto");
     CheckFactories.registerCheck<TwineLocalCheck>("llvm-twine-local");
+    CheckFactories.registerCheck<UseNewMlirOpBuilderCheck>(
+        "llvm-use-new-mlir-op-builder");
   }
 
   ClangTidyOptions getModuleOptions() override {

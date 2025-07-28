@@ -9,12 +9,11 @@
 #ifndef LLVM_LIBC_UTILS_MPFRWRAPPER_MPFRUTILS_H
 #define LLVM_LIBC_UTILS_MPFRWRAPPER_MPFRUTILS_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/config.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {

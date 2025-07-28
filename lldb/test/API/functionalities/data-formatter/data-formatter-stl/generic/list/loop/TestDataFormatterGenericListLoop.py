@@ -9,15 +9,11 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-USE_LIBSTDCPP = "USE_LIBSTDCPP"
-USE_LIBCPP = "USE_LIBCPP"
-
 
 class GenericListDataFormatterTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    def do_test_with_run_command(self, stdlib_type):
-        self.build(dictionary={stdlib_type: "1"})
+    def do_test_with_run_command(self):
         exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target and target.IsValid(), "Target is valid")
@@ -64,8 +60,16 @@ class GenericListDataFormatterTestCase(TestBase):
 
     @add_test_categories(["libstdcxx"])
     def test_with_run_command_libstdcpp(self):
-        self.do_test_with_run_command(USE_LIBSTDCPP)
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test_with_run_command()
 
     @add_test_categories(["libc++"])
     def test_with_run_command_libcpp(self):
-        self.do_test_with_run_command(USE_LIBCPP)
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test_with_run_command()
+
+    @add_test_categories(["msvcstl"])
+    def test_with_run_command_msvcstl(self):
+        # No flags, because the "msvcstl" category checks that the MSVC STL is used by default.
+        self.build()
+        self.do_test_with_run_command()

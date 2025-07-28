@@ -812,7 +812,7 @@ bool FalkorHWPFFix::runOnMachineFunction(MachineFunction &Fn) {
   if (skipFunction(Fn.getFunction()))
     return false;
 
-  TII = static_cast<const AArch64InstrInfo *>(ST.getInstrInfo());
+  TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
 
   MachineLoopInfo &LI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();

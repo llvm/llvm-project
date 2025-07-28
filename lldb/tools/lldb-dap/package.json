@@ -528,7 +528,23 @@
               "runInTerminal": {
                 "type": "boolean",
                 "description": "Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs",
-                "default": false
+                "default": false,
+                "deprecationMessage": "Attribute 'runInTerminal' is deprecated, use 'console' instead."
+              },
+              "console": {
+                "type": "string",
+                "enum": [
+                  "internalConsole",
+                  "integratedTerminal",
+                  "externalTerminal"
+                ],
+                "enumDescriptions": [
+                  "Use Debug Console for output (input is not supported).",
+                  "Launch the program inside an integrated terminal in the IDE.",
+                  "Launch the program inside an external terminal window."
+                ],
+                "description": "Specify where to launch the program: internal console, integrated terminal or external terminal.",
+                "default": "internalConsole"
               },
               "timeout": {
                 "type": "number",

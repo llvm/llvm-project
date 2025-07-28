@@ -893,10 +893,9 @@ define i32 @test56(i16 %x) {
 
 define i32 @test57(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test57(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[DOTAND:%.*]] = select i1 [[TOBOOL]], i32 0, i32 [[AND]]
-; CHECK-NEXT:    ret i32 [[DOTAND]]
+; CHECK-NEXT:    [[Y:%.*]] = freeze i32 [[Y1:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %and = and i32 %x, %y
   %tobool = icmp eq i32 %x, 0

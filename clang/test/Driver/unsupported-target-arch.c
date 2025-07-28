@@ -20,10 +20,6 @@
 // RUN: FileCheck --input-file=%t.err --check-prefix=CHECK-NOARCH-NETBSD %s
 // CHECK-NOARCH-NETBSD: error: unknown target triple 'noarch-unknown-netbsd'{{$}}
 //
-// RUN: not %clang --target=noarch-unknown-nacl -o %t.o %s 2> %t.err
-// RUN: FileCheck --input-file=%t.err --check-prefix=CHECK-NOARCH-NACL %s
-// CHECK-NOARCH-NACL:  error: the target architecture 'noarch' is not supported by the target 'Native Client'
-
 // RUN: not %clang --target=noarch-unknown-windows-gnu -o %t.o %s 2> %t.err
 // RUN: FileCheck --input-file=%t.err --check-prefix=CHECK-NOARCH-MINGW %s
 // CHECK-NOARCH-MINGW: error: unknown target triple 'noarch-unknown-windows-gnu'

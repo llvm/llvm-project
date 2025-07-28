@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs --stress-regalloc=10 < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs --stress-regalloc=10 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --stress-regalloc=10 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --stress-regalloc=10 < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}test_remat_sgpr:
 ; GCN-NOT:     v_writelane_b32

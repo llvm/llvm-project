@@ -13,7 +13,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define <vscale x 2 x bfloat> @fabs_nxv2bf16(<vscale x 2 x bfloat> %a) {
 ; CHECK-LABEL: fabs_nxv2bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and z0.h, z0.h, #0x7fff
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fabs z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x bfloat> @llvm.fabs.nxv2bf16(<vscale x 2 x bfloat> %a)
   ret <vscale x 2 x bfloat> %res
@@ -22,7 +23,8 @@ define <vscale x 2 x bfloat> @fabs_nxv2bf16(<vscale x 2 x bfloat> %a) {
 define <vscale x 4 x bfloat> @fabs_nxv4bf16(<vscale x 4 x bfloat> %a) {
 ; CHECK-LABEL: fabs_nxv4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and z0.h, z0.h, #0x7fff
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fabs z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x bfloat> @llvm.fabs.nxv4bf16(<vscale x 4 x bfloat> %a)
   ret <vscale x 4 x bfloat> %res
@@ -31,7 +33,8 @@ define <vscale x 4 x bfloat> @fabs_nxv4bf16(<vscale x 4 x bfloat> %a) {
 define <vscale x 8 x bfloat> @fabs_nxv8bf16(<vscale x 8 x bfloat> %a) {
 ; CHECK-LABEL: fabs_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and z0.h, z0.h, #0x7fff
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fabs z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x bfloat> @llvm.fabs.nxv8bf16(<vscale x 8 x bfloat> %a)
   ret <vscale x 8 x bfloat> %res
@@ -586,7 +589,8 @@ define <vscale x 8 x bfloat> @fmul_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 
 define <vscale x 2 x bfloat> @fneg_nxv2bf16(<vscale x 2 x bfloat> %a) {
 ; CHECK-LABEL: fneg_nxv2bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor z0.h, z0.h, #0x8000
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fneg z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ret
   %res = fneg <vscale x 2 x bfloat> %a
   ret <vscale x 2 x bfloat> %res
@@ -595,7 +599,8 @@ define <vscale x 2 x bfloat> @fneg_nxv2bf16(<vscale x 2 x bfloat> %a) {
 define <vscale x 4 x bfloat> @fneg_nxv4bf16(<vscale x 4 x bfloat> %a) {
 ; CHECK-LABEL: fneg_nxv4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor z0.h, z0.h, #0x8000
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fneg z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ret
   %res = fneg <vscale x 4 x bfloat> %a
   ret <vscale x 4 x bfloat> %res
@@ -604,7 +609,8 @@ define <vscale x 4 x bfloat> @fneg_nxv4bf16(<vscale x 4 x bfloat> %a) {
 define <vscale x 8 x bfloat> @fneg_nxv8bf16(<vscale x 8 x bfloat> %a) {
 ; CHECK-LABEL: fneg_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor z0.h, z0.h, #0x8000
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fneg z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ret
   %res = fneg <vscale x 8 x bfloat> %a
   ret <vscale x 8 x bfloat> %res

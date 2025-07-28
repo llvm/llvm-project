@@ -180,6 +180,36 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
         return ::mlir::acc::VariableTypeCategory::uncategorized;
       }]
     >,
+      InterfaceMethod<
+      /*description=*/[{
+        Generates the operations that would be normally placed in a recipe's
+        init region. It inserts at the builder's current location.
+        It can be used either to directly "inline" the init region
+        or if the caller sets the insertion point to inside a recipe body,
+        it fills it in. This does not generate the `acc.yield` that normally
+        would terminate a recipe.
+
+        The `extents` are optional and can be empty - it is only when a
+        slice of the private variable needs allocation.
+        The `initVal` can be empty - it is primarily needed for reductions
+        to ensure the variable is also initialized with appropriate value.
+
+        If the return value is empty, it means that recipe body was not
+        successfully generated.
+      }],
+      /*retTy=*/"::mlir::Value",
+      /*methodName=*/"generatePrivateInit",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+                    "::mlir::Location":$loc,
+                    "::mlir::TypedValue<::mlir::acc::MappableType>":$var,
+                    "::llvm::StringRef":$varName,
+                    "::mlir::ValueRange":$extents,
+                    "::mlir::Value":$initVal),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return {};
+      }]
+    >,
   ];
 }
 

@@ -1092,7 +1092,7 @@ emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
                                     Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
-  if (CGM.getLangOpts().Optimize) {
+  if (CGM.getCodeGenOpts().OptimizationLevel != 0) {
     Fn->removeFnAttr(llvm::Attribute::NoInline);
     Fn->removeFnAttr(llvm::Attribute::OptimizeNone);
     Fn->addFnAttr(llvm::Attribute::AlwaysInline);
@@ -3199,7 +3199,7 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
       &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), TaskPrivatesMap,
                                     TaskPrivatesMapFnInfo);
-  if (CGM.getLangOpts().Optimize) {
+  if (CGM.getCodeGenOpts().OptimizationLevel != 0) {
     TaskPrivatesMap->removeFnAttr(llvm::Attribute::NoInline);
     TaskPrivatesMap->removeFnAttr(llvm::Attribute::OptimizeNone);
     TaskPrivatesMap->addFnAttr(llvm::Attribute::AlwaysInline);
@@ -7080,6 +7080,110 @@ private:
     return ConstLength.getSExtValue() != 1;
   }
 
+  /// A helper class to copy structures with overlapped elements, i.e. those
+  /// which have mappings of both "s" and "s.mem".  Consecutive elements that
+  /// are not explicitly copied have mapping nodes synthesized for them,
+  /// taking care to avoid generating zero-sized copies.
+  class CopyOverlappedEntryGaps {
+    CodeGenFunction &CGF;
+    MapCombinedInfoTy &CombinedInfo;
+    OpenMPOffloadMappingFlags Flags = OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+    const ValueDecl *MapDecl = nullptr;
+    const Expr *MapExpr = nullptr;
+    Address BP = Address::invalid();
+    bool IsNonContiguous = false;
+    uint64_t DimSize = 0;
+    // These elements track the position as the struct is iterated over
+    // (in order of increasing element address).
+    const RecordDecl *LastParent = nullptr;
+    uint64_t Cursor = 0;
+    unsigned LastIndex = -1u;
+    Address LB = Address::invalid();
+
+  public:
+    CopyOverlappedEntryGaps(CodeGenFunction &CGF,
+                            MapCombinedInfoTy &CombinedInfo,
+                            OpenMPOffloadMappingFlags Flags,
+                            const ValueDecl *MapDecl, const Expr *MapExpr,
+                            Address BP, Address LB, bool IsNonContiguous,
+                            uint64_t DimSize)
+        : CGF(CGF), CombinedInfo(CombinedInfo), Flags(Flags), MapDecl(MapDecl),
+          MapExpr(MapExpr), BP(BP), IsNonContiguous(IsNonContiguous),
+          DimSize(DimSize), LB(LB) {}
+
+    void processField(
+        const OMPClauseMappableExprCommon::MappableComponent &MC,
+        const FieldDecl *FD,
+        llvm::function_ref<LValue(CodeGenFunction &, const MemberExpr *)>
+            EmitMemberExprBase) {
+      const RecordDecl *RD = FD->getParent();
+      const ASTRecordLayout &RL = CGF.getContext().getASTRecordLayout(RD);
+      uint64_t FieldOffset = RL.getFieldOffset(FD->getFieldIndex());
+      uint64_t FieldSize =
+          CGF.getContext().getTypeSize(FD->getType().getCanonicalType());
+      Address ComponentLB = Address::invalid();
+
+      if (FD->getType()->isLValueReferenceType()) {
+        const auto *ME = cast<MemberExpr>(MC.getAssociatedExpression());
+        LValue BaseLVal = EmitMemberExprBase(CGF, ME);
+        ComponentLB =
+            CGF.EmitLValueForFieldInitialization(BaseLVal, FD).getAddress();
+      } else {
+        ComponentLB =
+            CGF.EmitOMPSharedLValue(MC.getAssociatedExpression()).getAddress();
+      }
+
+      if (!LastParent)
+        LastParent = RD;
+      if (FD->getParent() == LastParent) {
+        if (FD->getFieldIndex() != LastIndex + 1)
+          copyUntilField(FD, ComponentLB);
+      } else {
+        LastParent = FD->getParent();
+        if (((int64_t)FieldOffset - (int64_t)Cursor) > 0)
+          copyUntilField(FD, ComponentLB);
+      }
+      Cursor = FieldOffset + FieldSize;
+      LastIndex = FD->getFieldIndex();
+      LB = CGF.Builder.CreateConstGEP(ComponentLB, 1);
+    }
+
+    void copyUntilField(const FieldDecl *FD, Address ComponentLB) {
+      llvm::Value *ComponentLBPtr = ComponentLB.emitRawPointer(CGF);
+      llvm::Value *LBPtr = LB.emitRawPointer(CGF);
+      llvm::Value *Size =
+          CGF.Builder.CreatePtrDiff(CGF.Int8Ty, ComponentLBPtr, LBPtr);
+      copySizedChunk(LBPtr, Size);
+    }
+
+    void copyUntilEnd(Address HB) {
+      if (LastParent) {
+        const ASTRecordLayout &RL =
+            CGF.getContext().getASTRecordLayout(LastParent);
+        if ((uint64_t)CGF.getContext().toBits(RL.getSize()) <= Cursor)
+          return;
+      }
+      llvm::Value *LBPtr = LB.emitRawPointer(CGF);
+      llvm::Value *Size = CGF.Builder.CreatePtrDiff(
+          CGF.Int8Ty, CGF.Builder.CreateConstGEP(HB, 1).emitRawPointer(CGF),
+          LBPtr);
+      copySizedChunk(LBPtr, Size);
+    }
+
+    void copySizedChunk(llvm::Value *Base, llvm::Value *Size) {
+      CombinedInfo.Exprs.emplace_back(MapDecl, MapExpr);
+      CombinedInfo.BasePointers.push_back(BP.emitRawPointer(CGF));
+      CombinedInfo.DevicePtrDecls.push_back(nullptr);
+      CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
+      CombinedInfo.Pointers.push_back(Base);
+      CombinedInfo.Sizes.push_back(
+          CGF.Builder.CreateIntCast(Size, CGF.Int64Ty, /*isSigned=*/true));
+      CombinedInfo.Types.push_back(Flags);
+      CombinedInfo.Mappers.push_back(nullptr);
+      CombinedInfo.NonContigInfo.Dims.push_back(IsNonContiguous ? DimSize : 1);
+    }
+  };
+
   /// Generate the base pointers, section pointers, sizes, map type bits, and
   /// user-defined mappers (all included in \a CombinedInfo) for the provided
   /// map type, map or motion modifiers, and expression components.
@@ -7570,63 +7674,22 @@ private:
               getMapTypeBits(MapType, MapModifiers, MotionModifiers, IsImplicit,
                              /*AddPtrFlag=*/false,
                              /*AddIsTargetParamFlag=*/false, IsNonContiguous);
-          llvm::Value *Size = nullptr;
+          CopyOverlappedEntryGaps CopyGaps(CGF, CombinedInfo, Flags, MapDecl,
+                                           MapExpr, BP, LB, IsNonContiguous,
+                                           DimSize);
           // Do bitcopy of all non-overlapped structure elements.
           for (OMPClauseMappableExprCommon::MappableExprComponentListRef
                    Component : OverlappedElements) {
-            Address ComponentLB = Address::invalid();
             for (const OMPClauseMappableExprCommon::MappableComponent &MC :
                  Component) {
               if (const ValueDecl *VD = MC.getAssociatedDeclaration()) {
-                const auto *FD = dyn_cast<FieldDecl>(VD);
-                if (FD && FD->getType()->isLValueReferenceType()) {
-                  const auto *ME =
-                      cast<MemberExpr>(MC.getAssociatedExpression());
-                  LValue BaseLVal = EmitMemberExprBase(CGF, ME);
-                  ComponentLB =
-                      CGF.EmitLValueForFieldInitialization(BaseLVal, FD)
-                          .getAddress();
-                } else {
-                  ComponentLB =
-                      CGF.EmitOMPSharedLValue(MC.getAssociatedExpression())
-                          .getAddress();
+                if (const auto *FD = dyn_cast<FieldDecl>(VD)) {
+                  CopyGaps.processField(MC, FD, EmitMemberExprBase);
                 }
-                llvm::Value *ComponentLBPtr = ComponentLB.emitRawPointer(CGF);
-                llvm::Value *LBPtr = LB.emitRawPointer(CGF);
-                Size = CGF.Builder.CreatePtrDiff(CGF.Int8Ty, ComponentLBPtr,
-                                                 LBPtr);
-                break;
               }
             }
-            assert(Size && "Failed to determine structure size");
-            CombinedInfo.Exprs.emplace_back(MapDecl, MapExpr);
-            CombinedInfo.BasePointers.push_back(BP.emitRawPointer(CGF));
-            CombinedInfo.DevicePtrDecls.push_back(nullptr);
-            CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
-            CombinedInfo.Pointers.push_back(LB.emitRawPointer(CGF));
-            CombinedInfo.Sizes.push_back(CGF.Builder.CreateIntCast(
-                Size, CGF.Int64Ty, /*isSigned=*/true));
-            CombinedInfo.Types.push_back(Flags);
-            CombinedInfo.Mappers.push_back(nullptr);
-            CombinedInfo.NonContigInfo.Dims.push_back(IsNonContiguous ? DimSize
-                                                                      : 1);
-            LB = CGF.Builder.CreateConstGEP(ComponentLB, 1);
           }
-          CombinedInfo.Exprs.emplace_back(MapDecl, MapExpr);
-          CombinedInfo.BasePointers.push_back(BP.emitRawPointer(CGF));
-          CombinedInfo.DevicePtrDecls.push_back(nullptr);
-          CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
-          CombinedInfo.Pointers.push_back(LB.emitRawPointer(CGF));
-          llvm::Value *LBPtr = LB.emitRawPointer(CGF);
-          Size = CGF.Builder.CreatePtrDiff(
-              CGF.Int8Ty, CGF.Builder.CreateConstGEP(HB, 1).emitRawPointer(CGF),
-              LBPtr);
-          CombinedInfo.Sizes.push_back(
-              CGF.Builder.CreateIntCast(Size, CGF.Int64Ty, /*isSigned=*/true));
-          CombinedInfo.Types.push_back(Flags);
-          CombinedInfo.Mappers.push_back(nullptr);
-          CombinedInfo.NonContigInfo.Dims.push_back(IsNonContiguous ? DimSize
-                                                                    : 1);
+          CopyGaps.copyUntilEnd(HB);
           break;
         }
         llvm::Value *Size = getExprTypeSize(I->getAssociatedExpression());

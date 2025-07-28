@@ -2424,6 +2424,11 @@ public:
     return buildInstr(TargetOpcode::G_RESET_FPMODE, {}, {});
   }
 
+  /// Build and insert \p Dst = G_GET_ROUNDING
+  MachineInstrBuilder buildGetRounding(const DstOp &Dst) {
+    return buildInstr(TargetOpcode::G_GET_ROUNDING, {Dst}, {});
+  }
+
   virtual MachineInstrBuilder
   buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps, ArrayRef<SrcOp> SrcOps,
              std::optional<unsigned> Flags = std::nullopt);

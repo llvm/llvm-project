@@ -193,7 +193,11 @@ MarkupContent renderDoc(const markup::Document &Doc, MarkupKind Kind) {
     Result.value.append(Doc.asPlainText());
     break;
   case MarkupKind::Markdown:
-    Result.value.append(Doc.asMarkdown());
+    if (Config::current().Documentation.CommentFormat ==
+        Config::CommentFormatPolicy::PlainText)
+      Result.value.append(Doc.asEscapedMarkdown());
+    else
+      Result.value.append(Doc.asMarkdown());
     break;
   }
   return Result;
@@ -870,7 +874,7 @@ bool contextAllowsIndex(enum CodeCompletionContext::Kind K) {
 }
 
 static bool isInjectedClass(const NamedDecl &D) {
-  if (auto *R = dyn_cast_or_null<RecordDecl>(&D))
+  if (auto *R = dyn_cast_or_null<CXXRecordDecl>(&D))
     if (R->isInjectedClassName())
       return true;
   return false;
@@ -1470,7 +1474,6 @@ bool allowIndex(CodeCompletionContext &CC) {
   switch (NameSpec->getKind()) {
   case NestedNameSpecifier::Global:
   case NestedNameSpecifier::Namespace:
-  case NestedNameSpecifier::NamespaceAlias:
     return true;
   case NestedNameSpecifier::Super:
   case NestedNameSpecifier::TypeSpec:

@@ -8,7 +8,7 @@
 ! RUN: | FileCheck %s
 
 
-!CHECK: func @_QQmain() attributes {fir.bindc_name = "default_clause_lowering"} {
+!CHECK: func @_QQmain() attributes {fir.bindc_name = "DEFAULT_CLAUSE_LOWERING"} {
 !CHECK: %[[W:.*]] = fir.alloca i32 {bindc_name = "w", uniq_name = "_QFEw"}
 !CHECK: %[[W_DECL:.*]]:2 = hlfir.declare %[[W]] {uniq_name = "_QFEw"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFEx"}

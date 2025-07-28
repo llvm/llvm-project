@@ -271,6 +271,12 @@ td_library(
 )
 
 td_library(
+    name = "BuiltinsRISCVXAndesTdFiles",
+    srcs = ["include/clang/Basic/BuiltinsRISCVXAndes.td"],
+    includes = ["include"],
+)
+
+td_library(
     name = "BuiltinsX86BaseTdFiles",
     srcs = ["include/clang/Basic/BuiltinsX86Base.td"],
     includes = ["include"],
@@ -348,6 +354,7 @@ gentbl_cc_library(
     td_file = "include/clang/Basic/BuiltinsRISCV.td",
     deps = [
         ":BuiltinsBaseTdFiles",
+        ":BuiltinsRISCVXAndesTdFiles",
         ":BuiltinsRISCVXCVTdFiles",
     ],
 )
@@ -1879,6 +1886,29 @@ cc_library(
         "include/clang/Support/*.h",
     ]),
     includes = ["include"],
+    deps = [
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "directory_watcher",
+    srcs = glob([
+        "lib/DirectoryWatcher/*.cpp",
+        "lib/DirectoryWatcher/*.h",
+    ]) + select({
+        "@platforms//os:windows": glob(["lib/DirectoryWatcher/windows/*.cpp"]),
+        "@platforms//os:macos": glob(["lib/DirectoryWatcher/mac/*.cpp"]),
+        "@platforms//os:linux": glob(["lib/DirectoryWatcher/linux/*.cpp"]),
+        "//conditions:default": glob(["lib/DirectoryWatcher/default/*.cpp"]),
+    }),
+    hdrs = glob([
+        "include/clang/DirectoryWatcher/*.h",
+    ]),
+    includes = [
+        "include",
+        "lib/DirectoryWatcher",
+    ],
     deps = [
         "//llvm:Support",
     ],

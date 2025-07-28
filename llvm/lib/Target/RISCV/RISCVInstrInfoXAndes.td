@@ -11,6 +11,20 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// RISC-V specific DAG Nodes.
+//===----------------------------------------------------------------------===//
+
+def SDT_NDS_FMV_BF16_X
+    : SDTypeProfile<1, 1, [SDTCisVT<0, bf16>, SDTCisVT<1, XLenVT>]>;
+def SDT_NDS_FMV_X_ANYEXTBF16
+    : SDTypeProfile<1, 1, [SDTCisVT<0, XLenVT>, SDTCisVT<1, bf16>]>;
+
+def riscv_nds_fmv_bf16_x
+    : SDNode<"RISCVISD::NDS_FMV_BF16_X", SDT_NDS_FMV_BF16_X>;
+def riscv_nds_fmv_x_anyextbf16
+    : SDNode<"RISCVISD::NDS_FMV_X_ANYEXTBF16", SDT_NDS_FMV_X_ANYEXTBF16>;
+
+//===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
@@ -348,6 +362,17 @@ class NDSRVInstSDGP<bits<3> funct3, string opcodestr>
   let mayStore = 1;
 }
 
+class NDSRVInstBFHCvt<bits<7> funct7, bits<5> rs1val, DAGOperand rdty,
+                      DAGOperand rs2ty, string opcodestr>
+    : RVInstR<funct7, 0b100, OPC_CUSTOM_2, (outs rdty:$rd),
+              (ins rs2ty:$rs2), opcodestr, "$rd, $rs2"> {
+  let rs1 = rs1val;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let mayRaiseFPException = 1;
+}
+
 class NDSRVInstVFPMAD<bits<6> funct6, string opcodestr>
     : RVInst<(outs VR:$vd), (ins VR:$vs2, FPR32:$rs1, VMaskOp:$vm),
              opcodestr # "." # "vf", "$vd, $rs1, $vs2$vm", [], InstFormatR>,
@@ -437,11 +462,10 @@ class NDSRVInstVLN<bits<5> funct5, string opcodestr>
 }
 
 class VPseudoVLN8NoMask<VReg RetClass, bit U> :
-      Pseudo<(outs RetClass:$rd),
-             (ins RetClass:$dest,
-                  GPRMemZeroOffset:$rs1,
-                  AVL:$vl, sew:$sew, vec_policy:$policy), []>,
-      RISCVVPseudo,
+      RISCVVPseudo<(outs RetClass:$rd),
+                   (ins RetClass:$dest,
+                        GPRMemZeroOffset:$rs1,
+                        AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVNDSVLN</*Masked*/0, /*Unsigned*/U, !logtwo(8), VLMul> {
   let mayLoad = 1;
   let mayStore = 0;
@@ -453,11 +477,11 @@ class VPseudoVLN8NoMask<VReg RetClass, bit U> :
 }
 
 class VPseudoVLN8Mask<VReg RetClass, bit U> :
-      Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
-             (ins GetVRegNoV0<RetClass>.R:$passthru,
-                  GPRMemZeroOffset:$rs1,
-                  VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy), []>,
-      RISCVVPseudo,
+      RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
+                   (ins GetVRegNoV0<RetClass>.R:$passthru,
+                        GPRMemZeroOffset:$rs1,
+                        VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy),
+                   []>,
       RISCVNDSVLN</*Masked*/1, /*Unsigned*/U, !logtwo(8), VLMul> {
   let mayLoad = 1;
   let mayStore = 0;
@@ -631,6 +655,19 @@ def NDS_SDGP  : NDSRVInstSDGP<0b111, "nds.sdgp">;
 } // Predicates = [HasVendorXAndesPerf, IsRV64]
 
 //===----------------------------------------------------------------------===//
+// XAndesBFHCvt
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXAndesBFHCvt] in {
+def NDS_FCVT_S_BF16 : NDSRVInstBFHCvt<0b0000000, 0b00010,
+                                      FPR32, FPR16, "nds.fcvt.s.bf16">,
+                      Sched<[WriteFCvtF16ToF32, ReadFCvtF16ToF32]>;
+def NDS_FCVT_BF16_S : NDSRVInstBFHCvt<0b0000000, 0b00011,
+                                      FPR16, FPR32, "nds.fcvt.bf16.s">,
+                      Sched<[WriteFCvtF32ToF16, ReadFCvtF32ToF16]>;
+}
+
+//===----------------------------------------------------------------------===//
 // XAndesVBFHCvt
 //===----------------------------------------------------------------------===//
 
@@ -743,6 +780,32 @@ def : Sh2AddPat<NDS_LEA_W_ZE>;
 def : Sh3AddPat<NDS_LEA_D_ZE>;
 } // Predicates = [HasVendorXAndesPerf, IsRV64]
 
+let Predicates = [HasVendorXAndesBFHCvt] in {
+def : Pat<(fpextend (bf16 FPR16:$rs)),
+          (NDS_FCVT_S_BF16 (bf16 FPR16:$rs))>;
+def : Pat<(bf16 (fpround FPR32:$rs)),
+          (NDS_FCVT_BF16_S FPR32:$rs)>;
+} // Predicates = [HasVendorXAndesBFHCvt]
+
+let isCodeGenOnly = 1 in {
+def NDS_FMV_BF16_X : FPUnaryOp_r<0b1111000, 0b00000, 0b000, FPR16, GPR, "fmv.w.x">,
+                     Sched<[WriteFMovI32ToF32, ReadFMovI32ToF32]>;
+def NDS_FMV_X_BF16 : FPUnaryOp_r<0b1110000, 0b00000, 0b000, GPR, FPR16, "fmv.x.w">,
+                     Sched<[WriteFMovF32ToI32, ReadFMovF32ToI32]>;
+}
+
+let Predicates = [HasVendorXAndesBFHCvt] in {
+def : Pat<(riscv_nds_fmv_bf16_x GPR:$src), (NDS_FMV_BF16_X GPR:$src)>;
+def : Pat<(riscv_nds_fmv_x_anyextbf16 (bf16 FPR16:$src)),
+          (NDS_FMV_X_BF16 (bf16 FPR16:$src))>;
+} // Predicates = [HasVendorXAndesBFHCvt]
+
+// Use flh/fsh to load/store bf16 if zfh is enabled.
+let Predicates = [HasStdExtZfh, HasVendorXAndesBFHCvt] in {
+def : LdPat<load, FLH, bf16>;
+def : StPat<store, FSH, FPR16, bf16>;
+} // Predicates = [HasStdExtZfh, HasVendorXAndesBFHCvt]
+
 let Predicates = [HasVendorXAndesVBFHCvt] in {
 defm PseudoNDS_VFWCVT_S_BF16 : VPseudoVWCVT_S_BF16;
 defm PseudoNDS_VFNCVT_BF16_S : VPseudoVNCVT_BF16_S;
@@ -801,13 +864,13 @@ defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotsu", "PseudoNDS_VD4DOTSU",
 let Predicates = [HasShortForwardBranchOpt], hasSideEffects = 0,
     mayLoad = 0, mayStore = 0, Size = 8, Constraints = "$dst = $falsev" in {
 def PseudoCCNDS_BFOS : Pseudo<(outs GPR:$dst),
-                              (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                              (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                                GPR:$falsev, GPR:$rs1,
                                uimmlog2xlen:$msb, uimmlog2xlen:$lsb), []>,
                        Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
                               ReadSFBALU]>;
 def PseudoCCNDS_BFOZ : Pseudo<(outs GPR:$dst),
-                              (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                              (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                                GPR:$falsev, GPR:$rs1,
                                uimmlog2xlen:$msb, uimmlog2xlen:$lsb), []>,
                        Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,

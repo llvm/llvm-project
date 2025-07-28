@@ -34,10 +34,6 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 2
-      - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@a1209f81afb8c005c13b4296c32e363431bffea5 # v1.2.17
-        with:
-          max-size: "2000M"
       - name: Build and Test
         # Mark the job as a success even if the step fails so that people do
         # not get notified while the new premerge pipeline is in an
@@ -61,8 +57,22 @@ jobs:
           export CC=/opt/llvm/bin/clang
           export CXX=/opt/llvm/bin/clang++
 
-          ./.ci/monolithic-linux.sh "${projects_to_build}" "${project_check_targets}" "${runtimes_to_build}" "${runtimes_check_targets}" "${runtimes_check_targets_needs_reconfig}"
+          # This environment variable is passes into the container through the
+          # runner pod definition. This differs between our two clusters which
+          # why we do not hardcode it.
+          export SCCACHE_GCS_BUCKET=$CACHE_GCS_BUCKET
+          export SCCACHE_GCS_RW_MODE=READ_WRITE
+
+          # Set the idle timeout to zero to ensure sccache runs for the
+          # entire duration of the job. Otherwise it might stop if we run
+          # several test suites in a row and discard statistics that we want
+          # to save in the end.
+          export SCCACHE_IDLE_TIMEOUT=0
+          sccache --start-server
+
+          ./.ci/monolithic-linux.sh "${projects_to_build}" "${project_check_targets}" "${runtimes_to_build}" "${runtimes_check_targets}" "${runtimes_check_targets_needs_reconfig}" "${enable_cir}"
       - name: Upload Artifacts
+        if: '!cancelled()'
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: Premerge Artifacts (Linux)
@@ -75,7 +85,7 @@ jobs:
     if: >-
         github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
-    runs-on: llvm-premerge-windows-runners
+    runs-on: llvm-premerge-windows-2022-runners
     defaults:
       run:
         shell: bash
@@ -84,11 +94,6 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 2
-      - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@a1209f81afb8c005c13b4296c32e363431bffea5 # v1.2.17
-        with:
-          variant: "sccache"
-          max-size: "2000M"
       - name: Compute Projects
         id: vars
         run: |
@@ -111,8 +116,11 @@ jobs:
         shell: cmd
         run: |
           call C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64
-          bash .ci/monolithic-windows.sh "${{ steps.vars.outputs.windows-projects }}" "${{ steps.vars.outputs.windows-check-targets }}"
+          # See the comments above in the Linux job for why we define each of
+          # these environment variables.
+          bash -c "export SCCACHE_GCS_BUCKET=$CACHE_GCS_BUCKET; export SCCACHE_GCS_RW_MODE=READ_WRITE; export SCCACHE_IDLE_TIMEOUT=0; sccache --start-server; .ci/monolithic-windows.sh \"${{ steps.vars.outputs.windows-projects }}\" \"${{ steps.vars.outputs.windows-check-targets }}\""
       - name: Upload Artifacts
+        if: '!cancelled()'
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: Premerge Artifacts (Windows)

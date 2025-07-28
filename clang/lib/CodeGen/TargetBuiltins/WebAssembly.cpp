@@ -12,7 +12,10 @@
 
 #include "CGBuiltin.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -217,6 +220,64 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   case WebAssembly::BI__builtin_wasm_ref_null_func: {
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_ref_null_func);
     return Builder.CreateCall(Callee);
+  }
+  case WebAssembly::BI__builtin_wasm_test_function_pointer_signature: {
+    Value *FuncRef = EmitScalarExpr(E->getArg(0));
+
+    // Get the function type from the argument's static type
+    QualType ArgType = E->getArg(0)->getType();
+    const PointerType *PtrTy = ArgType->getAs<PointerType>();
+    assert(PtrTy && "Sema should have ensured this is a function pointer");
+
+    const FunctionType *FuncTy = PtrTy->getPointeeType()->getAs<FunctionType>();
+    assert(FuncTy && "Sema should have ensured this is a function pointer");
+
+    // In the llvm IR, we won't have access any more to the type of the function
+    // pointer so we need to insert this type information somehow. The
+    // @llvm.wasm.ref.test.func takes varargs arguments whose values are unused
+    // to indicate the type of the function to test for. See the test here:
+    // llvm/test/CodeGen/WebAssembly/ref-test-func.ll
+    //
+    // The format is: first we include the return types (since this is a C
+    // function pointer, there will be 0 or one of these) then a token type to
+    // indicate the boundary between return types and param types, then the
+    // param types.
+
+    llvm::FunctionType *LLVMFuncTy =
+        cast<llvm::FunctionType>(ConvertType(QualType(FuncTy, 0)));
+
+    unsigned NParams = LLVMFuncTy->getNumParams();
+    std::vector<Value *> Args;
+    Args.reserve(NParams + 3);
+    // The only real argument is the FuncRef
+    Args.push_back(FuncRef);
+
+    // Add the type information
+    auto addType = [this, &Args](llvm::Type *T) {
+      if (T->isVoidTy()) {
+        // Do nothing
+      } else if (T->isFloatingPointTy()) {
+        Args.push_back(ConstantFP::get(T, 0));
+      } else if (T->isIntegerTy()) {
+        Args.push_back(ConstantInt::get(T, 0));
+      } else if (T->isPointerTy()) {
+        Args.push_back(ConstantPointerNull::get(llvm::PointerType::get(
+            getLLVMContext(), T->getPointerAddressSpace())));
+      } else {
+        // TODO: Handle reference types. For now, we reject them in Sema.
+        llvm_unreachable("Unhandled type");
+      }
+    };
+
+    addType(LLVMFuncTy->getReturnType());
+    // The token type indicates the boundary between return types and param
+    // types.
+    Args.push_back(PoisonValue::get(llvm::Type::getTokenTy(getLLVMContext())));
+    for (unsigned i = 0; i < NParams; i++) {
+      addType(LLVMFuncTy->getParamType(i));
+    }
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_ref_test_func);
+    return Builder.CreateCall(Callee, Args);
   }
   case WebAssembly::BI__builtin_wasm_swizzle_i8x16: {
     Value *Src = EmitScalarExpr(E->getArg(0));

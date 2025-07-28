@@ -16,6 +16,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
@@ -89,7 +90,22 @@ static FailureOr<MemRefType> getFatRawBufferTypeLike(MemRefType source,
     auto stridedLayout = dyn_cast<StridedLayoutAttr>(layout);
     if (!stridedLayout)
       return failure();
-    mb.setLayout(StridedLayoutAttr::get(ctx, 0, stridedLayout.getStrides()));
+    MemRefLayoutAttrInterface newLayout =
+        StridedLayoutAttr::get(ctx, 0, stridedLayout.getStrides());
+    // Special case: if resetting the offset causes the strided layout to become
+    // the identity layout, then reset to the identity layout.
+    // TODO: this'll get a lot simpler when we have the contiguous layout.
+    SmallVector<int64_t> stridesIfIdentity;
+    if (source.hasStaticShape()) {
+      stridesIfIdentity = computeSuffixProduct(source.getShape());
+    } else if (source.getRank() <= 1) {
+      stridesIfIdentity = SmallVector<int64_t>(source.getRank(), 1);
+    }
+    if (stridesIfIdentity == stridedLayout.getStrides()) {
+      newLayout = AffineMapAttr::get(
+          AffineMap::getMultiDimIdentityMap(source.getRank(), ctx));
+    }
+    mb.setLayout(newLayout);
   }
   return (MemRefType)(mb);
 }
@@ -134,6 +150,8 @@ static bool hasGlobalMemorySpace(Attribute memorySpace) {
 }
 
 static bool hasWorkgroupMemorySpace(Attribute memorySpace) {
+  if (!memorySpace)
+    return false;
   if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
     return intMemorySpace.getInt() == 3;
   if (auto gpuMemorySpace = dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
@@ -142,6 +160,8 @@ static bool hasWorkgroupMemorySpace(Attribute memorySpace) {
 }
 
 static bool hasFatRawBufferMemorySpace(Attribute memorySpace) {
+  if (!memorySpace)
+    return false;
   if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
     return intMemorySpace.getInt() == 7;
   if (auto gpuMemorySpace = dyn_cast<amdgpu::AddressSpaceAttr>(memorySpace))
@@ -490,6 +510,10 @@ LogicalResult DPPOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// GatherToLDSOp
+//===----------------------------------------------------------------------===//
+
 LogicalResult GatherToLDSOp::verify() {
   MemRefType srcType = cast<MemRefType>(getSrc().getType());
   MemRefType dstType = cast<MemRefType>(getDst().getType());
@@ -525,6 +549,42 @@ LogicalResult GatherToLDSOp::verify() {
 
   return success();
 }
+
+namespace {
+/// If the source/target of a GatherToLDSOp is a CastOp that only removes static
+/// information or changes layout, the cast can be skipped.
+struct FoldGatherToLDSOfCast final : OpRewritePattern<GatherToLDSOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(GatherToLDSOp gatherOp,
+                                PatternRewriter &rewriter) const override {
+    bool modified = false;
+    auto foldCast = [&](OpOperand &operand) {
+      if (auto castOp = operand.get().getDefiningOp<memref::CastOp>()) {
+        if (memref::CastOp::canFoldIntoConsumerOp(castOp)) {
+          rewriter.modifyOpInPlace(gatherOp,
+                                   [&] { operand.assign(castOp.getSource()); });
+          modified = true;
+        }
+      }
+    };
+
+    foldCast(gatherOp.getSrcMutable());
+    foldCast(gatherOp.getDstMutable());
+
+    return success(modified);
+  }
+};
+} // namespace
+
+void GatherToLDSOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                MLIRContext *context) {
+  results.add<FoldGatherToLDSOfCast>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// TransposeLoadOp
+//===----------------------------------------------------------------------===//
 
 LogicalResult TransposeLoadOp::verify() {
   MemRefType srcType = cast<MemRefType>(getSrc().getType());

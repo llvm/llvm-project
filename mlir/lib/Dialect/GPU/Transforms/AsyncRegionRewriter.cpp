@@ -129,7 +129,7 @@ private:
   }
 
   Value createWaitOp(Location loc, Type resultType, ValueRange operands) {
-    return builder.create<gpu::WaitOp>(loc, resultType, operands)
+    return gpu::WaitOp::create(builder, loc, resultType, operands)
         .getAsyncToken();
   }
 
@@ -165,8 +165,9 @@ async::ExecuteOp addExecuteResults(async::ExecuteOp executeOp,
 
   // Clone executeOp with the extra results.
   OpBuilder builder(executeOp);
-  auto newOp = builder.create<async::ExecuteOp>(
-      executeOp.getLoc(), TypeRange{resultTypes}.drop_front() /*drop token*/,
+  auto newOp = async::ExecuteOp::create(
+      builder, executeOp.getLoc(),
+      TypeRange{resultTypes}.drop_front() /*drop token*/,
       executeOp.getDependencies(), executeOp.getBodyOperands());
   IRMapping mapper;
   newOp.getRegion().getBlocks().clear();
@@ -247,7 +248,7 @@ private:
           builder.setInsertionPointAfter(op);
           for (auto asyncToken : asyncTokens)
             tokens.push_back(
-                builder.create<async::AwaitOp>(loc, asyncToken).getResult());
+                async::AwaitOp::create(builder, loc, asyncToken).getResult());
           // Set `it` after the inserted async.await ops.
           it = builder.getInsertionPoint();
         })
@@ -279,7 +280,7 @@ private:
 
     // Otherwise, insert a gpu.wait before 'it'.
     builder.setInsertionPoint(it->getBlock(), it);
-    auto waitOp = builder.create<gpu::WaitOp>(loc, Type{}, tokens);
+    auto waitOp = gpu::WaitOp::create(builder, loc, Type{}, tokens);
 
     // If the new waitOp is at the end of an async.execute region, add it to the
     // worklist. 'operator()(executeOp)' would do the same, but this is faster.

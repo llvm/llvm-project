@@ -6,8 +6,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define <vscale x 8 x bfloat> @fmla_nxv8bf16(<vscale x 8 x bfloat> %acc, <vscale x 8 x bfloat> %m1, <vscale x 8 x bfloat> %m2) {
 ; CHECK-LABEL: fmla_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bfmul z1.h, z1.h, z2.h
-; CHECK-NEXT:    bfadd z0.h, z0.h, z1.h
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    bfmla z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    ret
   %mul = fmul contract <vscale x 8 x bfloat> %m1, %m2
   %res = fadd contract <vscale x 8 x bfloat> %acc, %mul
@@ -17,8 +17,8 @@ define <vscale x 8 x bfloat> @fmla_nxv8bf16(<vscale x 8 x bfloat> %acc, <vscale 
 define <vscale x 4 x bfloat> @fmla_nxv4bf16(<vscale x 4 x bfloat> %acc, <vscale x 4 x bfloat> %m1, <vscale x 4 x bfloat> %m2) {
 ; CHECK-LABEL: fmla_nxv4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bfmul z1.h, z1.h, z2.h
-; CHECK-NEXT:    bfadd z0.h, z0.h, z1.h
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    bfmla z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    ret
   %mul = fmul contract <vscale x 4 x bfloat> %m1, %m2
   %res = fadd contract <vscale x 4 x bfloat> %acc, %mul
@@ -28,8 +28,8 @@ define <vscale x 4 x bfloat> @fmla_nxv4bf16(<vscale x 4 x bfloat> %acc, <vscale 
 define <vscale x 2 x bfloat> @fmla_nxv2bf16(<vscale x 2 x bfloat> %acc, <vscale x 2 x bfloat> %m1, <vscale x 2 x bfloat> %m2) {
 ; CHECK-LABEL: fmla_nxv2bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bfmul z1.h, z1.h, z2.h
-; CHECK-NEXT:    bfadd z0.h, z0.h, z1.h
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    bfmla z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    ret
   %mul = fmul contract <vscale x 2 x bfloat> %m1, %m2
   %res = fadd contract <vscale x 2 x bfloat> %acc, %mul
@@ -39,8 +39,8 @@ define <vscale x 2 x bfloat> @fmla_nxv2bf16(<vscale x 2 x bfloat> %acc, <vscale 
 define <vscale x 8 x bfloat> @fmls_nxv8bf16(<vscale x 8 x bfloat> %acc, <vscale x 8 x bfloat> %m1, <vscale x 8 x bfloat> %m2) {
 ; CHECK-LABEL: fmls_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bfmul z1.h, z1.h, z2.h
-; CHECK-NEXT:    bfsub z0.h, z0.h, z1.h
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    bfmls z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    ret
   %mul = fmul contract <vscale x 8 x bfloat> %m1, %m2
   %res = fsub contract <vscale x 8 x bfloat> %acc, %mul
@@ -50,8 +50,8 @@ define <vscale x 8 x bfloat> @fmls_nxv8bf16(<vscale x 8 x bfloat> %acc, <vscale 
 define <vscale x 4 x bfloat> @fmls_nxv4bf16(<vscale x 4 x bfloat> %acc, <vscale x 4 x bfloat> %m1, <vscale x 4 x bfloat> %m2) {
 ; CHECK-LABEL: fmls_nxv4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bfmul z1.h, z1.h, z2.h
-; CHECK-NEXT:    bfsub z0.h, z0.h, z1.h
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    bfmls z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    ret
   %mul = fmul contract <vscale x 4 x bfloat> %m1, %m2
   %res = fsub contract <vscale x 4 x bfloat> %acc, %mul
@@ -61,8 +61,8 @@ define <vscale x 4 x bfloat> @fmls_nxv4bf16(<vscale x 4 x bfloat> %acc, <vscale 
 define <vscale x 2 x bfloat> @fmls_nxv2bf16(<vscale x 2 x bfloat> %acc, <vscale x 2 x bfloat> %m1, <vscale x 2 x bfloat> %m2) {
 ; CHECK-LABEL: fmls_nxv2bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bfmul z1.h, z1.h, z2.h
-; CHECK-NEXT:    bfsub z0.h, z0.h, z1.h
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    bfmls z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    ret
   %mul = fmul contract <vscale x 2 x bfloat> %m1, %m2
   %res = fsub contract <vscale x 2 x bfloat> %acc, %mul
@@ -72,9 +72,7 @@ define <vscale x 2 x bfloat> @fmls_nxv2bf16(<vscale x 2 x bfloat> %acc, <vscale 
 define <vscale x 8 x bfloat> @fmla_sel_nxv8bf16(<vscale x 8 x i1> %pred, <vscale x 8 x bfloat> %acc, <vscale x 8 x bfloat> %m1, <vscale x 8 x bfloat> %m2) {
 ; CHECK-LABEL: fmla_sel_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bfmul z1.h, z1.h, z2.h
-; CHECK-NEXT:    bfadd z1.h, z0.h, z1.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    bfmla z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    ret
   %mul = fmul contract <vscale x 8 x bfloat> %m1, %m2
   %add = fadd contract <vscale x 8 x bfloat> %acc, %mul
@@ -85,9 +83,7 @@ define <vscale x 8 x bfloat> @fmla_sel_nxv8bf16(<vscale x 8 x i1> %pred, <vscale
 define <vscale x 4 x bfloat> @fmla_sel_nxv4bf16(<vscale x 4 x i1> %pred, <vscale x 4 x bfloat> %acc, <vscale x 4 x bfloat> %m1, <vscale x 4 x bfloat> %m2) {
 ; CHECK-LABEL: fmla_sel_nxv4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bfmul z1.h, z1.h, z2.h
-; CHECK-NEXT:    bfadd z1.h, z0.h, z1.h
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    bfmla z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    ret
   %mul = fmul contract <vscale x 4 x bfloat> %m1, %m2
   %add = fadd contract <vscale x 4 x bfloat> %acc, %mul
@@ -98,9 +94,7 @@ define <vscale x 4 x bfloat> @fmla_sel_nxv4bf16(<vscale x 4 x i1> %pred, <vscale
 define <vscale x 2 x bfloat> @fmla_sel_nxv2bf16(<vscale x 2 x i1> %pred, <vscale x 2 x bfloat> %acc, <vscale x 2 x bfloat> %m1, <vscale x 2 x bfloat> %m2) {
 ; CHECK-LABEL: fmla_sel_nxv2bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bfmul z1.h, z1.h, z2.h
-; CHECK-NEXT:    bfadd z1.h, z0.h, z1.h
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    bfmla z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    ret
   %mul = fmul contract <vscale x 2 x bfloat> %m1, %m2
   %add = fadd contract <vscale x 2 x bfloat> %acc, %mul
@@ -111,9 +105,7 @@ define <vscale x 2 x bfloat> @fmla_sel_nxv2bf16(<vscale x 2 x i1> %pred, <vscale
 define <vscale x 8 x bfloat> @fmls_sel_nxv8bf16(<vscale x 8 x i1> %pred, <vscale x 8 x bfloat> %acc, <vscale x 8 x bfloat> %m1, <vscale x 8 x bfloat> %m2) {
 ; CHECK-LABEL: fmls_sel_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bfmul z1.h, z1.h, z2.h
-; CHECK-NEXT:    bfsub z1.h, z0.h, z1.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    bfmls z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    ret
   %mul = fmul contract <vscale x 8 x bfloat> %m1, %m2
   %sub = fsub contract <vscale x 8 x bfloat> %acc, %mul
@@ -124,9 +116,7 @@ define <vscale x 8 x bfloat> @fmls_sel_nxv8bf16(<vscale x 8 x i1> %pred, <vscale
 define <vscale x 4 x bfloat> @fmls_sel_nxv4bf16(<vscale x 4 x i1> %pred, <vscale x 4 x bfloat> %acc, <vscale x 4 x bfloat> %m1, <vscale x 4 x bfloat> %m2) {
 ; CHECK-LABEL: fmls_sel_nxv4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bfmul z1.h, z1.h, z2.h
-; CHECK-NEXT:    bfsub z1.h, z0.h, z1.h
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    bfmls z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    ret
   %mul = fmul contract <vscale x 4 x bfloat> %m1, %m2
   %sub = fsub contract <vscale x 4 x bfloat> %acc, %mul
@@ -137,9 +127,7 @@ define <vscale x 4 x bfloat> @fmls_sel_nxv4bf16(<vscale x 4 x i1> %pred, <vscale
 define <vscale x 2 x bfloat> @fmls_sel_nxv2bf16(<vscale x 2 x i1> %pred, <vscale x 2 x bfloat> %acc, <vscale x 2 x bfloat> %m1, <vscale x 2 x bfloat> %m2) {
 ; CHECK-LABEL: fmls_sel_nxv2bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bfmul z1.h, z1.h, z2.h
-; CHECK-NEXT:    bfsub z1.h, z0.h, z1.h
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    bfmls z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    ret
   %mul = fmul contract <vscale x 2 x bfloat> %m1, %m2
   %sub = fsub contract <vscale x 2 x bfloat> %acc, %mul

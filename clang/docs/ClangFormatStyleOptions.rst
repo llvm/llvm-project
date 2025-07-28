@@ -1554,9 +1554,9 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      #define A                                                                      \
-        int aaaa;                                                                    \
-        int b;                                                                       \
+      #define A                                                            \
+        int aaaa;                                                          \
+        int b;                                                             \
         int dddddddddd;
 
 
@@ -1912,7 +1912,7 @@ the configuration (without a prefix: ``Auto``).
 
   * ``SFS_InlineOnly`` (in configuration: ``InlineOnly``)
     Only merge functions defined inside a class. Same as ``inline``,
-    except it does not implies ``empty``: i.e. top level empty functions
+    except it does not imply ``empty``: i.e. top level empty functions
     are not merged either.
 
     .. code-block:: c++
@@ -4201,8 +4201,8 @@ the configuration (without a prefix: ``Auto``).
   * ``""`` means "arbitrary suffix"
   * ``"$"`` means "no suffix"
 
-  For example, if configured to ``"(_test)?$"``, then a header a.h would be seen
-  as the "main" include in both a.cc and a_test.cc.
+  For example, if configured to ``"(_test)?$"``, then a header a.h would be
+  seen as the "main" include in both a.cc and a_test.cc.
 
 .. _IncludeIsMainSourceRegex:
 
@@ -4974,6 +4974,12 @@ the configuration (without a prefix: ``Auto``).
      A(); -> y;
      A(z); -> z;
      A(a, b); // will not be expanded.
+
+.. _MacrosSkippedByRemoveParentheses:
+
+**MacrosSkippedByRemoveParentheses** (``List of Strings``) :versionbadge:`clang-format 21` :ref:`¶ <MacrosSkippedByRemoveParentheses>`
+  A vector of function-like macros whose invocations should be skipped by
+  ``RemoveParentheses``.
 
 .. _MainIncludeChar:
 
@@ -6009,6 +6015,16 @@ the configuration (without a prefix: ``Auto``).
        #include "B/A.h"           #include "B/a.h"
        #include "B/a.h"           #include "a/b.h"
 
+  * ``bool IgnoreExtension`` When sorting includes in each block, only take file extensions into
+    account if two includes compare equal otherwise.
+
+    .. code-block:: c++
+
+       true:                          false:
+       # include "A.h"         vs.    # include "A-util.h"
+       # include "A.inc"              # include "A.h"
+       # include "A-util.h"           # include "A.inc"
+
 
 .. _SortJavaStaticImport:
 
@@ -6383,6 +6399,14 @@ the configuration (without a prefix: ``Auto``).
        true:                                  false:
        IF (...)                        vs.    IF(...)
          <conditional-body>                     <conditional-body>
+
+  * ``bool AfterNot`` If ``true``, put a space between alternative operator ``not`` and the
+    opening parenthesis.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       return not (a || b);            vs.    return not(a || b);
 
   * ``bool AfterOverloadedOperator`` If ``true``, put a space between operator overloading and opening
     parentheses.

@@ -288,7 +288,7 @@ public:
     // Filter out decls that we can't complete later.
     if (!isa<TagDecl>(to) && !isa<ObjCInterfaceDecl>(to))
       return;
-    RecordDecl *from_record_decl = dyn_cast<RecordDecl>(from);
+    auto *from_record_decl = dyn_cast<CXXRecordDecl>(from);
     // We don't need to complete injected class name decls.
     if (from_record_decl && from_record_decl->isInjectedClassName())
       return;
