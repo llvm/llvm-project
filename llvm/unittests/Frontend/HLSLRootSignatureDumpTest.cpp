@@ -17,7 +17,7 @@ TEST(HLSLRootSignatureTest, DescriptorCBVClauseDump) {
   DescriptorTableClause Clause;
   Clause.Type = ClauseType::CBuffer;
   Clause.Reg = {RegisterType::BReg, 0};
-  Clause.setDefaultFlags();
+  Clause.setDefaultFlags(llvm::dxbc::RootSignatureVersion::V1_1);
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
@@ -100,6 +100,40 @@ TEST(HLSLRootSignatureTest, DescriptorSamplerClauseDump) {
   EXPECT_EQ(Out, Expected);
 }
 
+TEST(HLSLRootSignatureTest, DescriptorCBVV10ClauseDump) {
+  DescriptorTableClause Clause;
+  Clause.Type = ClauseType::CBuffer;
+  Clause.Reg = {RegisterType::BReg, 0};
+  Clause.setDefaultFlags(llvm::dxbc::RootSignatureVersion::V1_0);
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  OS << Clause;
+  OS.flush();
+
+  std::string Expected = "CBV(b0, numDescriptors = 1, space = 0, "
+                         "offset = DescriptorTableOffsetAppend, "
+                         "flags = DescriptorsVolatile | DataVolatile)";
+  EXPECT_EQ(Out, Expected);
+}
+
+TEST(HLSLRootSignatureTest, DescriptorSamplerV10ClauseDump) {
+  DescriptorTableClause Clause;
+  Clause.Type = ClauseType::Sampler;
+  Clause.Reg = {RegisterType::SReg, 0};
+  Clause.setDefaultFlags(llvm::dxbc::RootSignatureVersion::V1_0);
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  OS << Clause;
+  OS.flush();
+
+  std::string Expected = "Sampler(s0, numDescriptors = 1, space = 0, offset = "
+                         "DescriptorTableOffsetAppend, "
+                         "flags = DescriptorsVolatile)";
+  EXPECT_EQ(Out, Expected);
+}
+
 TEST(HLSLRootSignatureTest, DescriptorTableDump) {
   DescriptorTable Table;
   Table.NumClauses = 4;
@@ -119,7 +153,7 @@ TEST(HLSLRootSignatureTest, RootCBVDump) {
   RootDescriptor Descriptor;
   Descriptor.Type = DescriptorType::CBuffer;
   Descriptor.Reg = {RegisterType::BReg, 0};
-  Descriptor.setDefaultFlags();
+  Descriptor.setDefaultFlags(llvm::dxbc::RootSignatureVersion::V1_1);
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
@@ -129,6 +163,40 @@ TEST(HLSLRootSignatureTest, RootCBVDump) {
   std::string Expected = "RootCBV(b0, space = 0, "
                          "visibility = All, "
                          "flags = DataStaticWhileSetAtExecute)";
+  EXPECT_EQ(Out, Expected);
+}
+
+TEST(HLSLRootSignatureTest, RootSRV10Dump) {
+  RootDescriptor Descriptor;
+  Descriptor.Type = DescriptorType::SRV;
+  Descriptor.Reg = {RegisterType::TReg, 0};
+  Descriptor.setDefaultFlags(llvm::dxbc::RootSignatureVersion::V1_0);
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  OS << Descriptor;
+  OS.flush();
+
+  std::string Expected = "RootSRV(t0, space = 0, "
+                         "visibility = All, "
+                         "flags = DataVolatile)";
+  EXPECT_EQ(Out, Expected);
+}
+
+TEST(HLSLRootSignatureTest, RootUAVV10Dump) {
+  RootDescriptor Descriptor;
+  Descriptor.Type = DescriptorType::UAV;
+  Descriptor.Reg = {RegisterType::UReg, 0};
+  Descriptor.setDefaultFlags(llvm::dxbc::RootSignatureVersion::V1_0);
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  OS << Descriptor;
+  OS.flush();
+
+  std::string Expected = "RootUAV(u0, space = 0, "
+                         "visibility = All, "
+                         "flags = DataVolatile)";
   EXPECT_EQ(Out, Expected);
 }
 

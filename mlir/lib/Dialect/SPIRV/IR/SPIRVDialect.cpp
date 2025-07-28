@@ -25,13 +25,9 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
 using namespace mlir::spirv;
@@ -96,11 +92,13 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
   /// as necessary.
   void handleTerminator(Operation *op, Block *newDest) const final {
     if (auto returnOp = dyn_cast<spirv::ReturnOp>(op)) {
-      OpBuilder(op).create<spirv::BranchOp>(op->getLoc(), newDest);
+      auto builder = OpBuilder(op);
+      spirv::BranchOp::create(builder, op->getLoc(), newDest);
       op->erase();
     } else if (auto retValOp = dyn_cast<spirv::ReturnValueOp>(op)) {
-      OpBuilder(op).create<spirv::BranchOp>(retValOp->getLoc(), newDest,
-                                            retValOp->getOperands());
+      auto builder = OpBuilder(op);
+      spirv::BranchOp::create(builder, retValOp->getLoc(), newDest,
+                              retValOp->getOperands());
       op->erase();
     }
   }
@@ -669,19 +667,17 @@ static ParseResult parseStructMemberDecorations(
 
     // Parse member decoration value if it exists.
     if (succeeded(parser.parseOptionalEqual())) {
-      auto memberDecorationValue =
-          parseAndVerifyInteger<uint32_t>(dialect, parser);
-
-      if (!memberDecorationValue)
+      Attribute memberDecorationValue;
+      if (failed(parser.parseAttribute(memberDecorationValue)))
         return failure();
 
       memberDecorationInfo.emplace_back(
-          static_cast<uint32_t>(memberTypes.size() - 1), 1,
-          memberDecoration.value(), memberDecorationValue.value());
+          static_cast<uint32_t>(memberTypes.size() - 1),
+          memberDecoration.value(), memberDecorationValue);
     } else {
       memberDecorationInfo.emplace_back(
-          static_cast<uint32_t>(memberTypes.size() - 1), 0,
-          memberDecoration.value(), 0);
+          static_cast<uint32_t>(memberTypes.size() - 1),
+          memberDecoration.value(), UnitAttr::get(dialect.getContext()));
     }
     return success();
   };
@@ -886,8 +882,9 @@ static void print(StructType type, DialectAsmPrinter &os) {
       }
       auto eachFn = [&os](spirv::StructType::MemberDecorationInfo decoration) {
         os << stringifyDecoration(decoration.decoration);
-        if (decoration.hasValue) {
-          os << "=" << decoration.decorationValue;
+        if (decoration.hasValue()) {
+          os << "=";
+          os.printAttributeWithoutType(decoration.decorationValue);
         }
       };
       llvm::interleaveComma(decorations, os, eachFn);
@@ -944,12 +941,12 @@ Operation *SPIRVDialect::materializeConstant(OpBuilder &builder,
                                              Attribute value, Type type,
                                              Location loc) {
   if (auto poison = dyn_cast<ub::PoisonAttr>(value))
-    return builder.create<ub::PoisonOp>(loc, type, poison);
+    return ub::PoisonOp::create(builder, loc, type, poison);
 
   if (!spirv::ConstantOp::isBuildableWith(type))
     return nullptr;
 
-  return builder.create<spirv::ConstantOp>(loc, type, value);
+  return spirv::ConstantOp::create(builder, loc, type, value);
 }
 
 //===----------------------------------------------------------------------===//

@@ -569,34 +569,39 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
   // * When compiling for SVE only, the caller must be in non-streaming mode.
   // * When compiling for both SVE and SME, the caller can be in either mode.
   if (BuiltinType == SemaARM::VerifyRuntimeMode) {
-    llvm::StringMap<bool> CallerFeatureMapWithoutSVE;
-    S.Context.getFunctionFeatureMap(CallerFeatureMapWithoutSVE, FD);
-    CallerFeatureMapWithoutSVE["sve"] = false;
+    llvm::StringMap<bool> CallerFeatures;
+    S.Context.getFunctionFeatureMap(CallerFeatures, FD);
 
     // Avoid emitting diagnostics for a function that can never compile.
-    if (FnType == SemaARM::ArmStreaming && !CallerFeatureMapWithoutSVE["sme"])
+    if (FnType == SemaARM::ArmStreaming && !CallerFeatures["sme"])
       return false;
 
-    llvm::StringMap<bool> CallerFeatureMapWithoutSME;
-    S.Context.getFunctionFeatureMap(CallerFeatureMapWithoutSME, FD);
-    CallerFeatureMapWithoutSME["sme"] = false;
+    const auto FindTopLevelPipe = [](const char *S) {
+      unsigned Depth = 0;
+      unsigned I = 0, E = strlen(S);
+      for (; I < E; ++I) {
+        if (S[I] == '|' && Depth == 0)
+          break;
+        if (S[I] == '(')
+          ++Depth;
+        else if (S[I] == ')')
+          --Depth;
+      }
+      return I;
+    };
 
-    // We know the builtin requires either some combination of SVE flags, or
-    // some combination of SME flags, but we need to figure out which part
-    // of the required features is satisfied by the target features.
-    //
-    // For a builtin with target guard 'sve2p1|sme2', if we compile with
-    // '+sve2p1,+sme', then we know that it satisfies the 'sve2p1' part if we
-    // evaluate the features for '+sve2p1,+sme,+nosme'.
-    //
-    // Similarly, if we compile with '+sve2,+sme2', then we know it satisfies
-    // the 'sme2' part if we evaluate the features for '+sve2,+sme2,+nosve'.
-    StringRef BuiltinTargetGuards(
-        S.Context.BuiltinInfo.getRequiredFeatures(BuiltinID));
+    const char *RequiredFeatures =
+        S.Context.BuiltinInfo.getRequiredFeatures(BuiltinID);
+    unsigned PipeIdx = FindTopLevelPipe(RequiredFeatures);
+    assert(PipeIdx != 0 && PipeIdx != strlen(RequiredFeatures) &&
+           "Expected feature string of the form 'SVE-EXPR|SME-EXPR'");
+    StringRef NonStreamingBuiltinGuard = StringRef(RequiredFeatures, PipeIdx);
+    StringRef StreamingBuiltinGuard = StringRef(RequiredFeatures + PipeIdx + 1);
+
     bool SatisfiesSVE = Builtin::evaluateRequiredTargetFeatures(
-        BuiltinTargetGuards, CallerFeatureMapWithoutSME);
+        NonStreamingBuiltinGuard, CallerFeatures);
     bool SatisfiesSME = Builtin::evaluateRequiredTargetFeatures(
-        BuiltinTargetGuards, CallerFeatureMapWithoutSVE);
+        StreamingBuiltinGuard, CallerFeatures);
 
     if ((SatisfiesSVE && SatisfiesSME) ||
         (SatisfiesSVE && FnType == SemaARM::ArmStreamingCompatible))
@@ -1528,6 +1533,97 @@ bool SemaARM::areLaxCompatibleSveTypes(QualType FirstType,
 
   return IsLaxCompatible(FirstType, SecondType) ||
          IsLaxCompatible(SecondType, FirstType);
+}
+
+bool SemaARM::checkTargetVersionAttr(const StringRef Param,
+                                     const SourceLocation Loc) {
+  using namespace DiagAttrParams;
+
+  llvm::SmallVector<StringRef, 8> Features;
+  Param.split(Features, '+');
+  for (StringRef Feat : Features) {
+    Feat = Feat.trim();
+    if (Feat == "default")
+      continue;
+    if (!getASTContext().getTargetInfo().validateCpuSupports(Feat))
+      return Diag(Loc, diag::warn_unsupported_target_attribute)
+             << Unsupported << None << Feat << TargetVersion;
+  }
+  return false;
+}
+
+bool SemaARM::checkTargetClonesAttr(
+    SmallVectorImpl<StringRef> &Params, SmallVectorImpl<SourceLocation> &Locs,
+    SmallVectorImpl<SmallString<64>> &NewParams) {
+  using namespace DiagAttrParams;
+
+  if (!getASTContext().getTargetInfo().hasFeature("fmv"))
+    return true;
+
+  assert(Params.size() == Locs.size() &&
+         "Mismatch between number of string parameters and locations");
+
+  bool HasDefault = false;
+  bool HasNonDefault = false;
+  for (unsigned I = 0, E = Params.size(); I < E; ++I) {
+    const StringRef Param = Params[I].trim();
+    const SourceLocation &Loc = Locs[I];
+
+    if (Param.empty())
+      return Diag(Loc, diag::warn_unsupported_target_attribute)
+             << Unsupported << None << "" << TargetClones;
+
+    if (Param == "default") {
+      if (HasDefault)
+        Diag(Loc, diag::warn_target_clone_duplicate_options);
+      else {
+        NewParams.push_back(Param);
+        HasDefault = true;
+      }
+      continue;
+    }
+
+    bool HasCodeGenImpact = false;
+    llvm::SmallVector<StringRef, 8> Features;
+    llvm::SmallVector<StringRef, 8> ValidFeatures;
+    Param.split(Features, '+');
+    for (StringRef Feat : Features) {
+      Feat = Feat.trim();
+      if (!getASTContext().getTargetInfo().validateCpuSupports(Feat)) {
+        Diag(Loc, diag::warn_unsupported_target_attribute)
+            << Unsupported << None << Feat << TargetClones;
+        continue;
+      }
+      if (getASTContext().getTargetInfo().doesFeatureAffectCodeGen(Feat))
+        HasCodeGenImpact = true;
+      ValidFeatures.push_back(Feat);
+    }
+
+    // Ignore features that don't impact code generation.
+    if (!HasCodeGenImpact) {
+      Diag(Loc, diag::warn_target_clone_no_impact_options);
+      continue;
+    }
+
+    if (ValidFeatures.empty())
+      continue;
+
+    // Canonicalize attribute parameter.
+    llvm::sort(ValidFeatures);
+    SmallString<64> NewParam(llvm::join(ValidFeatures, "+"));
+    if (llvm::is_contained(NewParams, NewParam)) {
+      Diag(Loc, diag::warn_target_clone_duplicate_options);
+      continue;
+    }
+
+    // Valid non-default argument.
+    NewParams.push_back(NewParam);
+    HasNonDefault = true;
+  }
+  if (!HasNonDefault)
+    return true;
+
+  return false;
 }
 
 } // namespace clang

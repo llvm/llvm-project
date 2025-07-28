@@ -46,6 +46,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     : TargetLowering(TM), Subtarget(&STI) {
   auto MVTPtr = Subtarget->hasAddr64() ? MVT::i64 : MVT::i32;
 
+  // Set the load count for memcmp expand optimization
+  MaxLoadsPerMemcmp = 8;
+  MaxLoadsPerMemcmpOptSize = 4;
+
   // Booleans always contain 0 or 1.
   setBooleanContents(ZeroOrOneBooleanContent);
   // Except in SIMD vectors
@@ -284,7 +288,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     // Expand float operations supported for scalars but not SIMD
     for (auto Op : {ISD::FCOPYSIGN, ISD::FLOG, ISD::FLOG2, ISD::FLOG10,
-                    ISD::FEXP, ISD::FEXP2})
+                    ISD::FEXP, ISD::FEXP2, ISD::FEXP10})
       for (auto T : {MVT::v4f32, MVT::v2f64})
         setOperationAction(Op, T, Expand);
 
@@ -794,6 +798,7 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
 
   if (IsIndirect) {
     // Placeholder for the type index.
+    // This gets replaced with the correct value in WebAssemblyMCInstLower.cpp
     MIB.addImm(0);
     // The table into which this call_indirect indexes.
     MCSymbolWasm *Table = IsFuncrefCall
@@ -1910,9 +1915,6 @@ SDValue WebAssemblyTargetLowering::LowerRETURNADDR(SDValue Op,
     return SDValue();
   }
 
-  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
-
   unsigned Depth = Op.getConstantOperandVal(0);
   MakeLibCallOptions CallOptions;
   return makeLibCall(DAG, RTLIB::RETURN_ADDRESS, Op.getValueType(),
@@ -2938,6 +2940,25 @@ performVectorExtendToFPCombine(SDNode *N,
 }
 
 static SDValue
+performVectorNonNegToFPCombine(SDNode *N,
+                               TargetLowering::DAGCombinerInfo &DCI) {
+  auto &DAG = DCI.DAG;
+
+  SDNodeFlags Flags = N->getFlags();
+  SDValue Op0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  // Optimize uitofp to sitofp when the sign bit is known to be zero.
+  // Depending on the target (runtime) backend, this might be performance
+  // neutral (e.g. AArch64) or a significant improvement (e.g. x86_64).
+  if (VT.isVector() && (Flags.hasNonNeg() || DAG.SignBitIsZero(Op0))) {
+    return DAG.getNode(ISD::SINT_TO_FP, SDLoc(N), VT, Op0);
+  }
+
+  return SDValue();
+}
+
+static SDValue
 performVectorExtendCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   auto &DAG = DCI.DAG;
   assert(N->getOpcode() == ISD::SIGN_EXTEND ||
@@ -3518,6 +3539,9 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ZERO_EXTEND:
     return performVectorExtendCombine(N, DCI);
   case ISD::UINT_TO_FP:
+    if (auto ExtCombine = performVectorExtendToFPCombine(N, DCI))
+      return ExtCombine;
+    return performVectorNonNegToFPCombine(N, DCI);
   case ISD::SINT_TO_FP:
     return performVectorExtendToFPCombine(N, DCI);
   case ISD::FP_TO_SINT_SAT:

@@ -592,8 +592,10 @@ define <4 x i32> @reassociate_xors_v4i32(<4 x i32> %x0, <4 x i32> %x1, <4 x i32>
 ; CHECK-LABEL: reassociate_xors_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    eor v1.16b, v2.16b, v3.16b
-; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    eor3 z0.d, z0.d, z2.d, z3.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %t0 = and <4 x i32> %x0, %x1
   %t1 = xor <4 x i32> %t0, %x2

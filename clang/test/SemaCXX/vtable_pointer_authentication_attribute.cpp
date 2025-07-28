@@ -12,7 +12,7 @@ namespace basic {
   }
 
 TEST_AUTH(NoParams);
-// expected-error@-1{{'ptrauth_vtable_pointer' attribute takes at least 3 arguments}}
+// expected-error@-1{{'clang::ptrauth_vtable_pointer' attribute takes at least 3 arguments}}
 TEST_AUTH(NoAuth, no_authentication, default_address_discrimination, default_extra_discrimination);
 TEST_AUTH(InvalidKey, wat, default_address_discrimination, default_extra_discrimination);
 // expected-error@-1{{invalid authentication key 'wat'}}
@@ -26,7 +26,7 @@ TEST_AUTH(InvalidCustomDiscrimination, no_authentication, default_address_discri
 // expected-error@-1{{invalid custom discrimination}}
 TEST_AUTH(Default, default_key, default_address_discrimination, default_extra_discrimination);
 TEST_AUTH(InvalidDefaultExtra, default_key, default_address_discrimination, default_extra_discrimination, 1);
-// expected-error@-1{{'ptrauth_vtable_pointer' attribute takes no more than 3 arguments}}
+// expected-error@-1{{'clang::ptrauth_vtable_pointer' attribute takes no more than 3 arguments}}
 TEST_AUTH(ProcessDependentKey, process_dependent, default_address_discrimination, default_extra_discrimination);
 TEST_AUTH(ProcessIndependentKey, process_independent, default_address_discrimination, default_extra_discrimination);
 TEST_AUTH(DefaultAddressDiscrimination, process_independent, default_address_discrimination, default_extra_discrimination);

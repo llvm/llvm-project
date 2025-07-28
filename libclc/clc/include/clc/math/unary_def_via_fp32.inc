@@ -6,6 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_FUNCTION(__CLC_GENTYPE x) {
-  return __CLC_CONVERT_GENTYPE(__CLC_FUNCTION(__CLC_CONVERT_FLOATN(x)));
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE FUNCTION(__CLC_GENTYPE x) {
+  return __CLC_CONVERT_GENTYPE(FUNCTION(__CLC_CONVERT_FLOATN(x)));
 }

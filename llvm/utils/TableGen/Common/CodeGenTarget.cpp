@@ -88,7 +88,7 @@ StringRef CodeGenTarget::getName() const { return TargetRec->getName(); }
 /// namespace. The namespace is cached because it is requested multiple times.
 StringRef CodeGenTarget::getInstNamespace() const {
   if (InstNamespace.empty()) {
-    for (const CodeGenInstruction *Inst : getInstructionsByEnumValue()) {
+    for (const CodeGenInstruction *Inst : getInstructions()) {
       // We are not interested in the "TargetOpcode" namespace.
       if (Inst->Namespace != "TargetOpcode") {
         InstNamespace = Inst->Namespace;

@@ -809,7 +809,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
   // If we have a bss global going to a section that supports the
   // zerofill directive, do so here.
-  if (GVKind.isBSS() && MAI->isMachO() && TheSection->isVirtualSection()) {
+  if (GVKind.isBSS() && MAI->isMachO() && TheSection->isBssSection()) {
     if (Size == 0)
       Size = 1; // zerofill of 0 bytes is undefined.
     emitLinkage(GV, GVSym);
@@ -1391,7 +1391,8 @@ static uint32_t getBBAddrMapMetadata(const MachineBasicBlock &MBB) {
 }
 
 static llvm::object::BBAddrMap::Features
-getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
+getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
+                    bool HasCalls) {
   // Ensure that the user has not passed in additional options while also
   // specifying all or none.
   if ((PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::None) ||
@@ -1424,13 +1425,14 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
           BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
           static_cast<bool>(BBAddrMapSkipEmitBBEntries),
-          false};
+          HasCalls};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   MCSection *BBAddrMapSection =
       getObjFileLowering().getBBAddrMapSection(*MF.getSection());
   assert(BBAddrMapSection && ".llvm_bb_addr_map section is not initialized.");
+  bool HasCalls = !CurrentFnCallsiteSymbols.empty();
 
   const MCSymbol *FunctionSymbol = getFunctionBegin();
 
@@ -1440,7 +1442,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   uint8_t BBAddrMapVersion = OutStreamer->getContext().getBBAddrMapVersion();
   OutStreamer->emitInt8(BBAddrMapVersion);
   OutStreamer->AddComment("feature");
-  auto Features = getBBAddrMapFeature(MF, MBBSectionRanges.size());
+  auto Features = getBBAddrMapFeature(MF, MBBSectionRanges.size(), HasCalls);
   OutStreamer->emitInt8(Features.encode());
   // Emit BB Information for each basic block in the function.
   if (Features.MultiBBRange) {
@@ -1493,13 +1495,23 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       // Emit the basic block offset relative to the end of the previous block.
       // This is zero unless the block is padded due to alignment.
       emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);
-      // Emit the basic block size. When BBs have alignments, their size cannot
-      // always be computed from their offsets.
-      emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), MBBSymbol);
+      const MCSymbol *CurrentLabel = MBBSymbol;
+      if (HasCalls) {
+        auto CallsiteSymbols = CurrentFnCallsiteSymbols.lookup(&MBB);
+        OutStreamer->AddComment("number of callsites");
+        OutStreamer->emitULEB128IntValue(CallsiteSymbols.size());
+        for (const MCSymbol *CallsiteSymbol : CallsiteSymbols) {
+          // Emit the callsite offset.
+          emitLabelDifferenceAsULEB128(CallsiteSymbol, CurrentLabel);
+          CurrentLabel = CallsiteSymbol;
+        }
+      }
+      // Emit the offset to the end of the block, which can be used to compute
+      // the total block size.
+      emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), CurrentLabel);
       // Emit the Metadata.
       OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
     }
-
     PrevMBBEndSymbol = MBB.getEndSymbol();
   }
 
@@ -1828,6 +1840,8 @@ void AsmPrinter::emitFunctionBody() {
           !MI.isDebugInstr()) {
         HasAnyRealCode = true;
       }
+      if (MI.isCall() && MF->getTarget().Options.BBAddrMap)
+        OutStreamer->emitLabel(createCallsiteSymbol(MBB));
 
       // If there is a pre-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPreInstrSymbol())
@@ -1854,6 +1868,7 @@ void AsmPrinter::emitFunctionBody() {
         OutStreamer->emitLabel(MI.getOperand(0).getMCSymbol());
         break;
       case TargetOpcode::EH_LABEL:
+        OutStreamer->AddComment("EH_LABEL");
         OutStreamer->emitLabel(MI.getOperand(0).getMCSymbol());
         // For AsynchEH, insert a Nop if followed by a trap inst
         //   Or the exception won't be caught.
@@ -2775,6 +2790,14 @@ MCSymbol *AsmPrinter::getMBBExceptionSym(const MachineBasicBlock &MBB) {
   return Res.first->second;
 }
 
+MCSymbol *AsmPrinter::createCallsiteSymbol(const MachineBasicBlock &MBB) {
+  MCContext &Ctx = MF->getContext();
+  MCSymbol *Sym = Ctx.createTempSymbol("BB" + Twine(MF->getFunctionNumber()) +
+                                       "_" + Twine(MBB.getNumber()) + "_CS");
+  CurrentFnCallsiteSymbols[&MBB].push_back(Sym);
+  return Sym;
+}
+
 void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   this->MF = &MF;
   const Function &F = MF.getFunction();
@@ -2809,6 +2832,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   CurrentFnBegin = nullptr;
   CurrentFnBeginLocal = nullptr;
   CurrentSectionBeginSym = nullptr;
+  CurrentFnCallsiteSymbols.clear();
   MBBSectionRanges.clear();
   MBBSectionExceptionSyms.clear();
   bool NeedsLocalForSize = MAI->needsLocalForSize();
@@ -4197,10 +4221,11 @@ MCSymbol *AsmPrinter::GetCPISymbol(unsigned CPID) const {
       SectionKind Kind = CPE.getSectionKind(&DL);
       const Constant *C = CPE.Val.ConstVal;
       Align Alignment = CPE.Alignment;
-      if (const MCSectionCOFF *S = dyn_cast<MCSectionCOFF>(
-              getObjFileLowering().getSectionForConstant(DL, Kind, C,
-                                                         Alignment))) {
-        if (MCSymbol *Sym = S->getCOMDATSymbol()) {
+      auto *S =
+          getObjFileLowering().getSectionForConstant(DL, Kind, C, Alignment);
+      if (S && TM.getTargetTriple().isOSBinFormatCOFF()) {
+        if (MCSymbol *Sym =
+                static_cast<const MCSectionCOFF *>(S)->getCOMDATSymbol()) {
           if (Sym->isUndefined())
             OutStreamer->emitSymbolAttribute(Sym, MCSA_Global);
           return Sym;
@@ -4628,12 +4653,10 @@ void AsmPrinter::emitXRayTable() {
 
   // We then emit a single entry in the index per function. We use the symbols
   // that bound the instrumentation map as the range for a specific function.
-  // Each entry here will be 2 * word size aligned, as we're writing down two
-  // pointers. This should work for both 32-bit and 64-bit platforms.
+  // Each entry contains 2 words and needs to be word-aligned.
   if (FnSledIndex) {
     OutStreamer->switchSection(FnSledIndex);
-    OutStreamer->emitCodeAlignment(Align(2 * WordSizeBytes),
-                                   &getSubtargetInfo());
+    OutStreamer->emitValueToAlignment(Align(WordSizeBytes));
     // For Mach-O, use an "l" symbol as the atom of this subsection. The label
     // difference uses a SUBTRACTOR external relocation which references the
     // symbol.

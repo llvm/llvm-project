@@ -71,6 +71,7 @@ endfunction()
 
 function(_get_hermetic_test_compile_options output_var)
   _get_common_test_compile_options(compile_options "" "")
+  list(APPEND compile_options "-DLIBC_TEST=HERMETIC")
 
   # null check tests are death tests, remove from hermetic tests for now.
   if(LIBC_ADD_NULL_CHECKS)
@@ -232,8 +233,13 @@ function(create_libc_unittest fq_target_name)
 
   _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_C_TEST}"
                                    "${LIBC_UNITTEST_FLAGS}")
+  list(APPEND compile_options "-DLIBC_TEST=UNIT")
   # TODO: Ideally we would have a separate function for link options.
-  set(link_options ${compile_options})
+  set(link_options
+    ${compile_options}
+    ${LIBC_LINK_OPTIONS_DEFAULT}
+    ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
+  )
   list(APPEND compile_options ${LIBC_UNITTEST_COMPILE_OPTIONS})
 
   if(SHOW_INTERMEDIATE_OBJECTS)
@@ -327,7 +333,7 @@ function(create_libc_unittest fq_target_name)
   if(NOT LIBC_UNITTEST_NO_RUN_POSTBUILD)
     add_custom_target(
       ${fq_target_name}
-      COMMAND ${LIBC_UNITTEST_ENV} ${CMAKE_CROSSCOMPILING_EMULATOR} ${fq_build_target_name}
+      COMMAND ${LIBC_UNITTEST_ENV} ${CMAKE_CROSSCOMPILING_EMULATOR} ${CMAKE_CURRENT_BINARY_DIR}/${fq_build_target_name}
       COMMENT "Running unit test ${fq_target_name}"
       DEPENDS ${fq_build_target_name}
     )
@@ -567,6 +573,8 @@ function(add_integration_test test_name)
   target_compile_options(${fq_build_target_name} PRIVATE
                          ${compile_options} ${INTEGRATION_TEST_COMPILE_OPTIONS})
 
+  set(compiler_runtime "")
+
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} ${INTEGRATION_TEST_COMPILE_OPTIONS}
@@ -580,18 +588,34 @@ function(add_integration_test test_name)
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
-    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
+    set(link_options
+      -nolibc
+      -nostartfiles
+      -nostdlib++
+      -static
+      ${LIBC_LINK_OPTIONS_DEFAULT}
+      ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
+    )
+    target_link_options(${fq_build_target_name} PRIVATE ${link_options})
   else()
     # Older version of gcc does not support `nostdlib++` flag.  We use
     # `nostdlib` and link against libgcc_s, which cannot be linked statically.
-    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib)
-    list(APPEND link_libraries ${LIBGCC_S_LOCATION})
+    set(link_options
+      -nolibc
+      -nostartfiles
+      -nostdlib
+      ${LIBC_LINK_OPTIONS_DEFAULT}
+      ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
+    )
+    target_link_options(${fq_build_target_name} PRIVATE ${link_options})
+    list(APPEND compiler_runtime ${LIBGCC_S_LOCATION})
   endif()
   target_link_libraries(
     ${fq_build_target_name}
-    ${fq_target_name}.__libc__
     libc.startup.${LIBC_TARGET_OS}.crt1
     libc.test.IntegrationTest.test
+    ${fq_target_name}.__libc__
+    ${compiler_runtime}
   )
   add_dependencies(${fq_build_target_name}
                    libc.test.IntegrationTest.test
@@ -752,6 +776,7 @@ function(add_libc_hermetic test_name)
                          ${HERMETIC_TEST_COMPILE_OPTIONS})
 
   set(link_libraries "")
+  set(compiler_runtime "")
   foreach(lib IN LISTS HERMETIC_TEST_LINK_LIBRARIES)
     if(TARGET ${lib}.hermetic)
       list(APPEND link_libraries ${lib}.hermetic)
@@ -774,12 +799,27 @@ function(add_libc_hermetic test_name)
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
-    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
+    set(link_options
+      -nolibc
+      -nostartfiles
+      -nostdlib++
+      -static
+      ${LIBC_LINK_OPTIONS_DEFAULT}
+      ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
+    )
+    target_link_options(${fq_build_target_name} PRIVATE ${link_options})
   else()
     # Older version of gcc does not support `nostdlib++` flag.  We use
     # `nostdlib` and link against libgcc_s, which cannot be linked statically.
-    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib)
-    list(APPEND link_libraries ${LIBGCC_S_LOCATION})
+    set(link_options
+      -nolibc
+      -nostartfiles
+      -nostdlib
+      ${LIBC_LINK_OPTIONS_DEFAULT}
+      ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
+    )
+    target_link_options(${fq_build_target_name} PRIVATE ${link_options})
+    list(APPEND compiler_runtime ${LIBGCC_S_LOCATION})
   endif()
   target_link_libraries(
     ${fq_build_target_name}
@@ -787,7 +827,9 @@ function(add_libc_hermetic test_name)
       libc.startup.${LIBC_TARGET_OS}.crt1
       ${link_libraries}
       LibcHermeticTestSupport.hermetic
-      ${fq_target_name}.__libc__)
+      ${fq_target_name}.__libc__
+      ${compiler_runtime}
+    )
   add_dependencies(${fq_build_target_name}
                    LibcTest.hermetic
                    libc.test.UnitTest.ErrnoSetterMatcher
@@ -809,9 +851,16 @@ function(add_libc_hermetic test_name)
   endif()
 
   if(NOT HERMETIC_TEST_NO_RUN_POSTBUILD)
-    set(test_cmd ${HERMETIC_TEST_ENV}
+    if (LIBC_TEST_CMD)
+      # In the form of "<command> binary=@BINARY@", e.g. "qemu-system-arm -loader$<COMMA>file=@BINARY@"
+      string(REPLACE "@BINARY@" "$<TARGET_FILE:${fq_build_target_name}>" test_cmd_parsed ${LIBC_TEST_CMD})
+      string(REPLACE " " ";" test_cmd "${test_cmd_parsed}")
+    else()
+      set(test_cmd ${HERMETIC_TEST_ENV}
         $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}> ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
         $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
+    endif()
+
     add_custom_target(
       ${fq_target_name}
       DEPENDS ${fq_target_name}.__cmd__
@@ -863,7 +912,9 @@ function(add_libc_test test_name)
       # Tests like the file tests perform file operations on disk file. If we
       # don't chain up the unit test and hermetic test, then those tests will
       # step on each other's files.
-      add_dependencies(${fq_test_name}.__hermetic__ ${fq_test_name}.__unit__)
+      if(NOT LIBC_TEST_HERMETIC_ONLY)
+        add_dependencies(${fq_test_name}.__hermetic__ ${fq_test_name}.__unit__)
+      endif()
     endif()
   endif()
 endfunction(add_libc_test)

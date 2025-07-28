@@ -61,8 +61,8 @@ void b([[deprecated, maybe_unused]] void) {}     // expected-warning {{attribute
                                                  // expected-warning {{attribute 'maybe_unused' cannot be applied to a 'void' parameter}} \
                                                  // expected-warning {{use of the 'deprecated' attribute is a C++14 extension}} \
                                                  // expected-warning {{use of the 'maybe_unused' attribute is a C++17 extension}}
-void c([[clang::lifetimebound]] void) {}         // expected-warning {{attribute 'lifetimebound' cannot be applied to a 'void' parameter}}
-void d([[clang::annotate("a", "b", 1)]] void) {} // expected-warning {{attribute 'annotate' cannot be applied to a 'void' parameter}}
+void c([[clang::lifetimebound]] void) {}         // expected-warning {{attribute 'clang::lifetimebound' cannot be applied to a 'void' parameter}}
+void d([[clang::annotate("a", "b", 1)]] void) {} // expected-warning {{attribute 'clang::annotate' cannot be applied to a 'void' parameter}}
 
 struct S {
   void e([[maybe_unused]] void) {} // expected-warning {{attribute 'maybe_unused' cannot be applied to a 'void' parameter}} \

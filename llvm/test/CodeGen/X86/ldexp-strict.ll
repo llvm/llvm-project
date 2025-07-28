@@ -4,45 +4,40 @@
 ; FIXME: Expansion support without libcalls
 
 ; FIXME: Implement f16->f32 promotion for strictfp
-; define half @test_strict_ldexp_f16_i32(ptr addrspace(1) %out, half %a, i32 %b) #2 {
+; define half @test_strict_ldexp_f16_i32(ptr addrspace(1) %out, half %a, i32 %b) nounwind #2 {
 ;   %result = call half @llvm.experimental.constrained.ldexp.f16.i32(half %a, i32 %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
 ;   ret half %result
 ; }
 
-define float @test_strict_ldexp_f32_i32(ptr addrspace(1) %out, float %a, i32 %b) #2 {
+define float @test_strict_ldexp_f32_i32(ptr addrspace(1) %out, float %a, i32 %b) nounwind #2 {
 ; X64-LABEL: test_strict_ldexp_f32_i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    movl %esi, %edi
 ; X64-NEXT:    callq ldexpf@PLT
 ; X64-NEXT:    popq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
   %result = call float @llvm.experimental.constrained.ldexp.f32.i32(float %a, i32 %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %result
 }
 
-define double @test_strict_ldexp_f64_i32(ptr addrspace(1) %out, double %a, i32 %b) #2 {
+define double @test_strict_ldexp_f64_i32(ptr addrspace(1) %out, double %a, i32 %b) nounwind #2 {
 ; X64-LABEL: test_strict_ldexp_f64_i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    movl %esi, %edi
 ; X64-NEXT:    callq ldexp@PLT
 ; X64-NEXT:    popq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
   %result = call double @llvm.experimental.constrained.ldexp.f64.i32(double %a, i32 %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %result
 }
 
 
-define <2 x float> @test_strict_ldexp_v2f32_v2i32(ptr addrspace(1) %out, <2 x float> %a, <2 x i32> %b) #2 {
+define <2 x float> @test_strict_ldexp_v2f32_v2i32(ptr addrspace(1) %out, <2 x float> %a, <2 x i32> %b) nounwind #2 {
 ; X64-LABEL: test_strict_ldexp_v2f32_v2i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    subq $56, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 64
 ; X64-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; X64-NEXT:    movd %xmm1, %edi
@@ -58,7 +53,6 @@ define <2 x float> @test_strict_ldexp_v2f32_v2i32(ptr addrspace(1) %out, <2 x fl
 ; X64-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; X64-NEXT:    movaps %xmm1, %xmm0
 ; X64-NEXT:    addq $56, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
   %result = call <2 x float> @llvm.experimental.constrained.ldexp.v2f32.v2i32(<2 x float> %a, <2 x i32> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <2 x float> %result

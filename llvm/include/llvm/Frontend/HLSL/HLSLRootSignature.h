@@ -51,7 +51,14 @@ struct RootDescriptor {
   dxbc::ShaderVisibility Visibility = dxbc::ShaderVisibility::All;
   dxbc::RootDescriptorFlags Flags;
 
-  void setDefaultFlags() {
+  void setDefaultFlags(dxbc::RootSignatureVersion Version) {
+    if (Version == dxbc::RootSignatureVersion::V1_0) {
+      Flags = dxbc::RootDescriptorFlags::DataVolatile;
+      return;
+    }
+
+    assert(Version == llvm::dxbc::RootSignatureVersion::V1_1 &&
+           "Specified an invalid root signature version");
     switch (Type) {
     case DescriptorType::CBuffer:
     case DescriptorType::SRV:
@@ -84,7 +91,16 @@ struct DescriptorTableClause {
   uint32_t Offset = DescriptorTableOffsetAppend;
   dxbc::DescriptorRangeFlags Flags;
 
-  void setDefaultFlags() {
+  void setDefaultFlags(dxbc::RootSignatureVersion Version) {
+    if (Version == dxbc::RootSignatureVersion::V1_0) {
+      Flags = dxbc::DescriptorRangeFlags::DescriptorsVolatile;
+      if (Type != ClauseType::Sampler)
+        Flags |= dxbc::DescriptorRangeFlags::DataVolatile;
+      return;
+    }
+
+    assert(Version == dxbc::RootSignatureVersion::V1_1 &&
+           "Specified an invalid root signature version");
     switch (Type) {
     case ClauseType::CBuffer:
     case ClauseType::SRV:

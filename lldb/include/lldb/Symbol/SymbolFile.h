@@ -467,8 +467,11 @@ public:
   ///     If true, then only return separate debug info files that encountered
   ///     errors during loading. If false, then return all expected separate
   ///     debug info files, regardless of whether they were successfully loaded.
+  /// \param load_all_debug_info
+  ///     If true, force loading any symbol files if they are not yet loaded.
   virtual bool GetSeparateDebugInfo(StructuredData::Dictionary &d,
-                                    bool errors_only) {
+                                    bool errors_only,
+                                    bool load_all_debug_info = false) {
     return false;
   };
 

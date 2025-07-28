@@ -1294,8 +1294,9 @@ unsigned TargetTransformInfo::getAtomicMemIntrinsicMaxElementSize() const {
 }
 
 Value *TargetTransformInfo::getOrCreateResultFromMemIntrinsic(
-    IntrinsicInst *Inst, Type *ExpectedType) const {
-  return TTIImpl->getOrCreateResultFromMemIntrinsic(Inst, ExpectedType);
+    IntrinsicInst *Inst, Type *ExpectedType, bool CanCreate) const {
+  return TTIImpl->getOrCreateResultFromMemIntrinsic(Inst, ExpectedType,
+                                                    CanCreate);
 }
 
 Type *TargetTransformInfo::getMemcpyLoopLoweringType(
@@ -1422,7 +1423,7 @@ bool TargetTransformInfo::hasArmWideBranch(bool Thumb) const {
   return TTIImpl->hasArmWideBranch(Thumb);
 }
 
-uint64_t TargetTransformInfo::getFeatureMask(const Function &F) const {
+APInt TargetTransformInfo::getFeatureMask(const Function &F) const {
   return TTIImpl->getFeatureMask(F);
 }
 
