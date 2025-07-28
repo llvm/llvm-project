@@ -69,7 +69,7 @@ class LoopRotate {
   bool RotationOnly;
   bool IsUtilMode;
   bool PrepareForLTO;
-  function_ref<bool(Loop *, ScalarEvolution *)> ProfitabilityCheck;
+  bool ForceRotation;
 
 public:
   LoopRotate(unsigned MaxHeaderSize, LoopInfo *LI,
@@ -77,11 +77,11 @@ public:
              DominatorTree *DT, ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
              const SimplifyQuery &SQ, bool RotationOnly, bool IsUtilMode,
              bool PrepareForLTO,
-             function_ref<bool(Loop *, ScalarEvolution *)> ProfitabilityCheck)
+             bool ForceRotation)
       : MaxHeaderSize(MaxHeaderSize), LI(LI), TTI(TTI), AC(AC), DT(DT), SE(SE),
         MSSAU(MSSAU), SQ(SQ), RotationOnly(RotationOnly),
         IsUtilMode(IsUtilMode), PrepareForLTO(PrepareForLTO),
-        ProfitabilityCheck(ProfitabilityCheck) {}
+        ForceRotation(ForceRotation) {}
   bool processLoop(Loop *L);
 
 private:
@@ -445,7 +445,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // latch was just simplified. Or if we think it will be profitable.
     if (L->isLoopExiting(OrigLatch) && !SimplifiedLatch &&
         IsUtilMode == false && !profitableToRotateLoopExitingLatch(L) &&
-        !canRotateDeoptimizingLatchExit(L) && !ProfitabilityCheck(L, SE))
+        !canRotateDeoptimizingLatchExit(L) && !ForceRotation)
       return Rotated;
 
     // Check size of original header and reject loop if it is very big or we can't
@@ -1061,9 +1061,8 @@ bool llvm::LoopRotation(
     DominatorTree *DT, ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
     const SimplifyQuery &SQ, bool RotationOnly = true,
     unsigned Threshold = unsigned(-1), bool IsUtilMode = true,
-    bool PrepareForLTO,
-    function_ref<bool(Loop *, ScalarEvolution *)> ProfitabilityCheck) {
+    bool PrepareForLTO, bool ForceRotation) {
   LoopRotate LR(Threshold, LI, TTI, AC, DT, SE, MSSAU, SQ, RotationOnly,
-                IsUtilMode, PrepareForLTO, ProfitabilityCheck);
+                IsUtilMode, PrepareForLTO, ForceRotation);
   return LR.processLoop(L);
 }

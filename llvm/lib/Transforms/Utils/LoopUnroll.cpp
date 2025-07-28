@@ -564,7 +564,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                                /*MemorySSAUpdater*/ nullptr, SQ,
                                /*RotationOnly*/ false, /*Threshold*/ 16,
                                /*IsUtilMode*/ false, /*PrepareForLTO*/ false,
-                               [](Loop *, ScalarEvolution *) { return true; });
+                               /*ForceRotation*/ true);
       }
       if (LoopRotated) {
         // Loop was rotated, try unrolling.
