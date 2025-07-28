@@ -2,7 +2,7 @@
 # `CalleeTypeId` is used for propagating call site type identifiers for
 # indirect targets only. This test does not contain any indirect targets.
 
-# RUN: llc --call-graph-section %s -run-pass=none -o - | FileCheck --match-full-lines %s
+# RUN: llc -mtriple=x86_64 --call-graph-section %s -run-pass=none -o - | FileCheck --match-full-lines %s
 # CHECK-NOT: calleeTypeIds
 # CHECK: name: bar
 # CHECK: callSites:

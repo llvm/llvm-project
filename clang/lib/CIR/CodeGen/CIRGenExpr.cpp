@@ -949,7 +949,6 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_Dynamic:
   case CK_ToUnion:
   case CK_BaseToDerived:
-  case CK_LValueBitCast:
   case CK_AddressSpaceConversion:
   case CK_ObjCObjectLValueCast:
   case CK_VectorSplat:
@@ -963,6 +962,18 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
                      e->getCastKindName());
 
     return {};
+  }
+
+  case CK_LValueBitCast: {
+    // This must be a reinterpret_cast (or c-style equivalent).
+    const auto *ce = cast<ExplicitCastExpr>(e);
+
+    cgm.emitExplicitCastExprType(ce, this);
+    LValue LV = emitLValue(e->getSubExpr());
+    Address V = LV.getAddress().withElementType(
+        builder, convertTypeForMem(ce->getTypeAsWritten()->getPointeeType()));
+
+    return makeAddrLValue(V, e->getType(), LV.getBaseInfo());
   }
 
   case CK_NoOp: {
@@ -1657,37 +1668,38 @@ void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
     return;
   }
 
-  if (getContext().getAsArrayType(e->getType())) {
-    cgm.errorNYI(e->getSourceRange(), "emitCXXConstructExpr: array type");
-    return;
+  if (const ArrayType *arrayType = getContext().getAsArrayType(e->getType())) {
+    assert(!cir::MissingFeatures::sanitizers());
+    emitCXXAggrConstructorCall(cd, arrayType, dest.getAddress(), e, false);
+  } else {
+
+    clang::CXXCtorType type = Ctor_Complete;
+    bool forVirtualBase = false;
+    bool delegating = false;
+
+    switch (e->getConstructionKind()) {
+    case CXXConstructionKind::Complete:
+      type = Ctor_Complete;
+      break;
+    case CXXConstructionKind::Delegating:
+      // We should be emitting a constructor; GlobalDecl will assert this
+      type = curGD.getCtorType();
+      delegating = true;
+      break;
+    case CXXConstructionKind::VirtualBase:
+      // This should just set 'forVirtualBase' to true and fall through, but
+      // virtual base class support is otherwise missing, so this needs to wait
+      // until it can be tested.
+      cgm.errorNYI(e->getSourceRange(),
+                   "emitCXXConstructExpr: virtual base constructor");
+      return;
+    case CXXConstructionKind::NonVirtualBase:
+      type = Ctor_Base;
+      break;
+    }
+
+    emitCXXConstructorCall(cd, type, forVirtualBase, delegating, dest, e);
   }
-
-  clang::CXXCtorType type = Ctor_Complete;
-  bool forVirtualBase = false;
-  bool delegating = false;
-
-  switch (e->getConstructionKind()) {
-  case CXXConstructionKind::Complete:
-    type = Ctor_Complete;
-    break;
-  case CXXConstructionKind::Delegating:
-    // We should be emitting a constructor; GlobalDecl will assert this
-    type = curGD.getCtorType();
-    delegating = true;
-    break;
-  case CXXConstructionKind::VirtualBase:
-    // This should just set 'forVirtualBase' to true and fall through, but
-    // virtual base class support is otherwise missing, so this needs to wait
-    // until it can be tested.
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitCXXConstructExpr: virtual base constructor");
-    return;
-  case CXXConstructionKind::NonVirtualBase:
-    type = Ctor_Base;
-    break;
-  }
-
-  emitCXXConstructorCall(cd, type, forVirtualBase, delegating, dest, e);
 }
 
 RValue CIRGenFunction::emitReferenceBindingToExpr(const Expr *e) {
