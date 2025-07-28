@@ -1,14 +1,27 @@
+//===-- NativeRegisterContextLinux_arm64dbreg.cpp -------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "NativeRegisterContextLinux_arm64dbreg.h"
+#include "lldb/Host/linux/Ptrace.h"
 
-using namespace lldb_private::process_linux::arm64;
+#include <asm/ptrace.h>
+// System includes - They have to be included after framework includes because
+// they define some macros which collide with variable names in other modules
+#include <sys/uio.h>
+// NT_PRSTATUS and NT_FPREGSET definition
+#include <elf.h>
 
-namespace lldb_private {
-namespace process_linux {
-namespace arm64 {
+using namespace lldb;
+using namespace lldb_private;
+using namespace lldb_private::process_linux;
 
-namespace {
-Status ReadHardwareDebugInfoHelper(int regset, ::pid_t tid,
-                                   uint32_t &max_supported) {
+static Status ReadHardwareDebugInfoHelper(int regset, ::pid_t tid,
+                                          uint32_t &max_supported) {
   struct iovec ioVec;
   struct user_hwdebug_state dreg_state;
   Status error;
@@ -24,10 +37,9 @@ Status ReadHardwareDebugInfoHelper(int regset, ::pid_t tid,
   max_supported = dreg_state.dbg_info & 0xff;
   return error;
 }
-} // namespace
 
-Status ReadHardwareDebugInfo(::pid_t tid, uint32_t &max_hwp_supported,
-                             uint32_t &max_hbp_supported) {
+Status lldb_private::process_linux::arm64::ReadHardwareDebugInfo(
+    ::pid_t tid, uint32_t &max_hwp_supported, uint32_t &max_hbp_supported) {
   Status error =
       ReadHardwareDebugInfoHelper(NT_ARM_HW_WATCH, tid, max_hwp_supported);
 
@@ -37,7 +49,7 @@ Status ReadHardwareDebugInfo(::pid_t tid, uint32_t &max_hwp_supported,
   return ReadHardwareDebugInfoHelper(NT_ARM_HW_BREAK, tid, max_hbp_supported);
 }
 
-Status WriteHardwareDebugRegs(
+Status lldb_private::process_linux::arm64::WriteHardwareDebugRegs(
     int hwbType, ::pid_t tid, uint32_t max_supported,
     const std::array<NativeRegisterContextDBReg::DREG, 16> &regs) {
   struct iovec ioVec;
@@ -57,7 +69,3 @@ Status WriteHardwareDebugRegs(
   return NativeProcessLinux::PtraceWrapper(PTRACE_SETREGSET, tid, &regset,
                                            &ioVec, ioVec.iov_len);
 }
-
-} // namespace arm64
-} // namespace process_linux
-} // namespace lldb_private
