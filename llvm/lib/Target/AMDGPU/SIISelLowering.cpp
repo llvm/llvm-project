@@ -6861,15 +6861,19 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .addReg(WaveIDInWaveGroup)
         .addImm(Rank);
     BuildMI(*BB, &MI, DL, TII->get(AMDGPU::S_CBRANCH_SCC0)).addMBB(SplitBB);
+
     // Call inside the conditional branch.
     Register CalleeAddrReg = MI.getOperand(1).getReg();
-    BuildMI(*RankCallBB, RankCallBB->end(), DL, TII->get(AMDGPU::S_SETPC_B64))
-        .addReg(CalleeAddrReg);
+    auto CalleeAddrDef = MRI.getVRegDef(CalleeAddrReg);
+    assert(CalleeAddrDef->getOpcode() == AMDGPU::SI_PC_ADD_REL_OFFSET64);
+    // Use s_add_pc_i64, bypass the address computation.
+    BuildMI(*RankCallBB, RankCallBB->end(), DL, TII->get(AMDGPU::S_ADD_PC_I64))
+        .addGlobalAddress(CalleeAddrDef->getOperand(1).getGlobal(), 0,
+                          SIInstrInfo::MO_REL64);
+
     // Update IDX0 for the next rank-call. Use the global address of the rank
     // callee as the source. In AsmPrinter, it will be replaced with the
     // MCSymbol representing the number of VGPRs of that callee.
-    auto CalleeAddrDef =  MRI.getVRegDef(CalleeAddrReg);
-    assert(CalleeAddrDef->getOpcode() == AMDGPU::SI_PC_ADD_REL_OFFSET64);
     BuildMI(*SplitBB, SplitBB->begin(), DL, TII->get(AMDGPU::S_ADD_GPR_IDX_U32),
             AMDGPU::IDX0)
         .addGlobalAddress(CalleeAddrDef->getOperand(1).getGlobal(), 0,

@@ -2551,57 +2551,44 @@ def : GCNPat <
                    (V_RCP_IFLAG_F32_e32 (V_CVT_F32_U32_e32 $src0))))
 >;
 
-multiclass SI_WATERFALL_Pattern < ValueType dvt, ValueType svt, string VecSize> {
-  def : GCNPat<
-    (i32 (int_amdgcn_waterfall_begin i32:$tok, svt:$idx)),
-    (!cast<Instruction>("SI_WATERFALL_BEGIN_"#VecSize) i32:$tok, svt:$idx)
-  >;
-
-  def : GCNPat<
-    (dvt (int_amdgcn_waterfall_readfirstlane i32:$tok, svt:$src)),
-    (!cast<Instruction>("SI_WATERFALL_READFIRSTLANE_"#VecSize) i32:$tok, svt:$src)
-  >;
-
-  def : GCNPat<
-    (svt (int_amdgcn_waterfall_end i32:$tok, svt:$src)),
-    (!cast<Instruction>("SI_WATERFALL_END_"#VecSize) i32:$tok, svt:$src)
-  >;
+multiclass SI_WATERFALL_Pattern<ValueType dvt, ValueType svt, string VecSize> {
+  def : GCNPat<(dvt(int_amdgcn_waterfall_readfirstlane i32:$tok, svt:$src)),
+               (!cast<Instruction>("SI_WATERFALL_READFIRSTLANE_"#VecSize)
+                       i32:$tok,
+                   svt:$src)>;
 }
 
-multiclass SI_WATERFALL_S_Pattern < ValueType svt, string VecSize> {
-  def : GCNPat<
-    (i32 (int_amdgcn_waterfall_begin i32:$tok, svt:$idx)),
-    (!cast<Instruction>("SI_WATERFALL_BEGIN_"#VecSize) i32:$tok, svt:$idx)
-  >;
+multiclass SI_WATERFALL_S_Pattern<list<ValueType> vts, string VecSize> {
+  foreach vt = vts in {
+    def : GCNPat<(i32(int_amdgcn_waterfall_begin i32:$tok, vt:$idx)),
+                 (!cast<Instruction>("SI_WATERFALL_BEGIN_"#VecSize) i32:$tok,
+                     vt:$idx)>;
 
-  def : GCNPat<
-    (svt (int_amdgcn_waterfall_readfirstlane i32:$tok, svt:$src)),
-    (!cast<Instruction>("SI_WATERFALL_READFIRSTLANE_"#VecSize) i32:$tok, svt:$src)
-  >;
+    def : GCNPat<(vt(int_amdgcn_waterfall_readfirstlane i32:$tok, vt:$src)),
+                 (!cast<Instruction>("SI_WATERFALL_READFIRSTLANE_"#VecSize)
+                         i32:$tok,
+                     vt:$src)>;
 
-  def : GCNPat<
-    (svt (int_amdgcn_waterfall_end i32:$tok, svt:$src)),
-    (!cast<Instruction>("SI_WATERFALL_END_"#VecSize) i32:$tok, svt:$src)
-  >;
+    def : GCNPat<(vt(int_amdgcn_waterfall_end i32:$tok, vt:$src)),
+                 (!cast<Instruction>("SI_WATERFALL_END_"#VecSize) i32:$tok,
+                     vt:$src)>;
 
-  def : GCNPat<
-    (svt (int_amdgcn_waterfall_last_use i32:$tok, svt:$src)),
-    (!cast<Instruction>("SI_WATERFALL_LAST_USE_"#VecSize) i32:$tok, svt:$src)
-  >;
-  def : GCNPat<
-    (svt (int_amdgcn_waterfall_last_use_vgpr i32:$tok, svt:$src)),
-    (!cast<Instruction>("SI_WATERFALL_LAST_USE_"#VecSize#"_V") i32:$tok, svt:$src)
-  >;
+    def : GCNPat<(vt(int_amdgcn_waterfall_last_use i32:$tok, vt:$src)),
+                 (!cast<Instruction>("SI_WATERFALL_LAST_USE_"#VecSize) i32:$tok,
+                     vt:$src)>;
+
+    def : GCNPat<(vt(int_amdgcn_waterfall_last_use_vgpr i32:$tok, vt:$src)),
+                 (!cast<Instruction>("SI_WATERFALL_LAST_USE_"#VecSize#"_V")
+                         i32:$tok,
+                     vt:$src)>;
+  }
 }
 
-defm : SI_WATERFALL_S_Pattern <i16, "V1">;
-defm : SI_WATERFALL_S_Pattern <v2i16, "V1">;
-defm : SI_WATERFALL_S_Pattern <v4i16, "V2">;
-
-defm : SI_WATERFALL_S_Pattern <i32, "V1">;
-defm : SI_WATERFALL_S_Pattern <v2i32, "V2">;
-defm : SI_WATERFALL_S_Pattern <v4i32, "V4">;
-defm : SI_WATERFALL_S_Pattern <v8i32, "V8">;
+defm : SI_WATERFALL_S_Pattern<Reg16Types.types, "V1">;
+defm : SI_WATERFALL_S_Pattern<Reg32Types.types, "V1">;
+defm : SI_WATERFALL_S_Pattern<Reg64Types.types, "V2">;
+defm : SI_WATERFALL_S_Pattern<Reg128Types.types, "V4">;
+defm : SI_WATERFALL_S_Pattern<Reg256Types.types, "V8">;
 
 defm : SI_WATERFALL_Pattern <i16, f16, "V1">;
 defm : SI_WATERFALL_Pattern <v2i16, v2f16, "V1">;
