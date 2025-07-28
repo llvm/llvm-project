@@ -37,6 +37,8 @@ Potentially Breaking Changes
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
+- The ``__has_builtin`` function now only considers the currently active target when being used with target offloading.
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 - For C++20 modules, the Reduced BMI mode will be the default option. This may introduce
@@ -97,8 +99,6 @@ Non-comprehensive list of changes in this release
   The encoding used is currently the same as ``__builtin_verbose_trap`` but might change in the future. 
   This feature is enabled by default but can be disabled by compiling with 
   ``-fno-sanitize-annotate-debug-info-traps``.
-
-- The ``__has_builtin`` function now only considers the currently active target when being used with target offloading.
 
 New Compiler Flags
 ------------------
