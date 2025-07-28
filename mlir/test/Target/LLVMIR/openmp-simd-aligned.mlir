@@ -61,7 +61,7 @@ llvm.func @_QPsimd_aligned_allocatable() {
 
 //CHECK-LABEL: define void @_QPsimd_aligned_non_power_of_two() {
 //CHECK:   %[[A_ADDR:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i64 1, align 8
-//CHECK-NOT:   call void @llvm.assume(i1 true) [ "align"(ptr %{{.*}}, i64 256) ]
+//CHECK-NOT:   call void @llvm.assume(i1 true) [ "align"(ptr %{{.*}}, i64 257) ]
 llvm.func @_QPsimd_aligned_non_power_of_two() {
   %0 = llvm.mlir.constant(1 : i64) : i64
   %1 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> {bindc_name = "a"} : (i64) -> !llvm.ptr
