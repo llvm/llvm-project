@@ -52,8 +52,11 @@ TEST_MAIN(int, char **, char **) {
   uint32_t state = entropy();
   for (int i = 0; i < 1024; ++i) {
     if (xorshift32(state) % 2) {
-      uint64_t size = xorshift32(state) % 256 + 1;
-      void *ptr = malloc(size);
+      uint64_t size = xorshift32(state) % 256 + 16;
+      uint64_t *ptr = reinterpret_cast<uint64_t *>(malloc(size));
+      *ptr = gpu::get_thread_id();
+
+      EXPECT_EQ(*ptr, gpu::get_thread_id());
       ASSERT_TRUE(ptr);
       ASSERT_TRUE(__builtin_is_aligned(ptr, 16));
       free(ptr);
