@@ -85,6 +85,13 @@ static int64_t extractConstantMultiplier(AffineExpr expr) {
 /// The `indexingMap` + `indexingSizes` encoding suits StructuredOps.
 /// The implementaiton below iteratively combines increases from contributing
 /// dimensions using affine.apply operations.
+/// The padded shape is computed by evaluating the maximum accessed index per
+/// dimension, which may involve multiplying by constant factors derived from
+/// the affine indexing expressions. Currently, only a limited set of projected
+/// permutation indexing map is supported, such as
+/// - affine_map<(d0, d1, d2) -> (d0, d1)>
+/// - affine_map<(d0, d1, d2) -> (d0, d1 + d2)>
+/// - affine_map<(d0, d1) -> (d0 * 3 + d1)>
 /// In the future, more general interfaces can be devised to encode similar
 /// shape evolutions and map between an op and its operands.
 SmallVector<OpFoldResult> linalg::computePaddedShape(
