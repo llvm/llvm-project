@@ -2198,12 +2198,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     config->incremental = false;
   }
 
-  // MS link.exe compatibility, at least 6 bytes of function padding is
-  // required if hotpatchable
-  if (config->hotpatchCompat && config->functionPadMin >= 6) {
-    Fatal(ctx) << "/hotpatchcompatible: requires at least 6 bytes of /functionpadmin";
-  }
-
   if (errCount(ctx))
     return;
 
@@ -2311,6 +2305,12 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle /functionpadmin
   for (auto *arg : args.filtered(OPT_functionpadmin, OPT_functionpadmin_opt))
     parseFunctionPadMin(arg);
+
+  // MS link.exe compatibility, at least 6 bytes of function padding is
+  // required if hotpatchable
+  if (config->hotpatchCompat && config->functionPadMin < 6)
+    Err(ctx)
+        << "/hotpatchcompatible: requires at least 6 bytes of /functionpadmin";
 
   // Handle /dependentloadflag
   for (auto *arg :

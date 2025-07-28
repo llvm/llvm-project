@@ -90,7 +90,7 @@ CETDYNAMICAPISINPROC: IMAGE_DLL_CHARACTERISTICS_EX_CET_DYNAMIC_APIS_ALLOW_IN_PRO
 # RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=NONCETDYNAMICAPISINPROC %s
 NONCETDYNAMICAPISINPROC-NOT: IMAGE_DLL_CHARACTERISTICS_EX_CET_DYNAMIC_APIS_ALLOW_IN_PROC_ONLY
 
-# RUN: lld-link /out:%t.exe /entry:main /hotpatchcompatible %t.obj
+# RUN: lld-link /out:%t.exe /entry:main /hotpatchcompatible /functionpadmin:6 %t.obj
 # RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=HOTPATCHCOMPATIBLE %s
 HOTPATCHCOMPATIBLE: IMAGE_DLL_CHARACTERISTICS_EX_HOTPATCH_COMPATIBLE
 
