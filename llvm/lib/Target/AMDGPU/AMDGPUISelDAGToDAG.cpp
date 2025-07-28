@@ -1872,6 +1872,23 @@ static SDValue matchZExtFromI32(SDValue Op) {
   return (ExtSrc.getValueType() == MVT::i32) ? ExtSrc : SDValue();
 }
 
+// If this matches *_extend i32:x, return x
+// Otherwise if the value is I32 returns x.
+static SDValue matchExtFromI32orI32(SDValue Op, bool IsSigned,
+                                    const SelectionDAG *DAG) {
+  if (Op.getValueType() == MVT::i32)
+    return Op;
+
+  if (Op.getOpcode() != (IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND) &&
+      Op.getOpcode() != ISD::ANY_EXTEND &&
+      !(DAG->SignBitIsZero(Op) &&
+        Op.getOpcode() == (IsSigned ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND)))
+    return SDValue();
+
+  SDValue ExtSrc = Op.getOperand(0);
+  return (ExtSrc.getValueType() == MVT::i32) ? ExtSrc : SDValue();
+}
+
 // Match (64-bit SGPR base) + (zext vgpr offset) + sext(imm offset)
 bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
                                            SDValue Addr,
@@ -2159,16 +2176,58 @@ bool AMDGPUDAGToDAGISel::isSOffsetLegalWithImmOffset(SDValue *SOffset,
   return true;
 }
 
+// Given \p Offset and load node \p N check if an \p Offset is a multiple of
+// the load byte size. If it is update \p Offset to a pre-scaled value and
+// return true.
+bool AMDGPUDAGToDAGISel::SelectScaleOffset(SDNode *N, SDValue &Offset,
+                                           bool IsSigned) const {
+  bool ScaleOffset = false;
+  if (!Subtarget->hasScaleOffset() || !Offset)
+    return false;
+
+  unsigned Size =
+      (unsigned)cast<MemSDNode>(N)->getMemoryVT().getFixedSizeInBits() / 8;
+
+  SDValue Off = Offset;
+  if (SDValue Ext = matchExtFromI32orI32(Offset, IsSigned, CurDAG))
+    Off = Ext;
+
+  if (isPowerOf2_32(Size) && Off.getOpcode() == ISD::SHL) {
+    if (auto *C = dyn_cast<ConstantSDNode>(Off.getOperand(1)))
+      ScaleOffset = C->getZExtValue() == Log2_32(Size);
+  } else if (Offset.getOpcode() == ISD::MUL ||
+             (IsSigned && Offset.getOpcode() == AMDGPUISD::MUL_I24) ||
+             Offset.getOpcode() == AMDGPUISD::MUL_U24 ||
+             (Offset.isMachineOpcode() &&
+              Offset.getMachineOpcode() ==
+                  (IsSigned ? AMDGPU::S_MUL_I64_I32_PSEUDO
+                            : AMDGPU::S_MUL_U64_U32_PSEUDO))) {
+    if (auto *C = dyn_cast<ConstantSDNode>(Offset.getOperand(1)))
+      ScaleOffset = C->getZExtValue() == Size;
+  }
+
+  if (ScaleOffset)
+    Offset = Off.getOperand(0);
+
+  return ScaleOffset;
+}
+
 // Match an immediate (if Offset is not null) or an SGPR (if SOffset is
 // not null) offset. If Imm32Only is true, match only 32-bit immediate
 // offsets available on CI.
-bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDValue ByteOffsetNode,
+bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDNode *N, SDValue ByteOffsetNode,
                                           SDValue *SOffset, SDValue *Offset,
                                           bool Imm32Only, bool IsBuffer,
-                                          bool HasSOffset,
-                                          int64_t ImmOffset) const {
+                                          bool HasSOffset, int64_t ImmOffset,
+                                          bool *ScaleOffset) const {
   assert((!SOffset || !Offset) &&
          "Cannot match both soffset and offset at the same time!");
+
+  if (ScaleOffset) {
+    assert(N && SOffset);
+
+    *ScaleOffset = SelectScaleOffset(N, ByteOffsetNode, false /* IsSigned */);
+  }
 
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(ByteOffsetNode);
   if (!C) {
@@ -2254,24 +2313,25 @@ SDValue AMDGPUDAGToDAGISel::Expand32BitAddress(SDValue Addr) const {
 // Match a base and an immediate (if Offset is not null) or an SGPR (if
 // SOffset is not null) or an immediate+SGPR offset. If Imm32Only is
 // true, match only 32-bit immediate offsets available on CI.
-bool AMDGPUDAGToDAGISel::SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase,
-                                              SDValue *SOffset, SDValue *Offset,
-                                              bool Imm32Only, bool IsBuffer,
-                                              bool HasSOffset,
-                                              int64_t ImmOffset) const {
+bool AMDGPUDAGToDAGISel::SelectSMRDBaseOffset(SDNode *N, SDValue Addr,
+                                              SDValue &SBase, SDValue *SOffset,
+                                              SDValue *Offset, bool Imm32Only,
+                                              bool IsBuffer, bool HasSOffset,
+                                              int64_t ImmOffset,
+                                              bool *ScaleOffset) const {
   if (SOffset && Offset) {
     assert(!Imm32Only && !IsBuffer);
     SDValue B;
 
-    if (!SelectSMRDBaseOffset(Addr, B, nullptr, Offset, false, false, true))
+    if (!SelectSMRDBaseOffset(N, Addr, B, nullptr, Offset, false, false, true))
       return false;
 
     int64_t ImmOff = 0;
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(*Offset))
       ImmOff = C->getSExtValue();
 
-    return SelectSMRDBaseOffset(B, SBase, SOffset, nullptr, false, false, true,
-                                ImmOff);
+    return SelectSMRDBaseOffset(N, B, SBase, SOffset, nullptr, false, false,
+                                true, ImmOff, ScaleOffset);
   }
 
   // A 32-bit (address + offset) should not cause unsigned 32-bit integer
@@ -2291,23 +2351,25 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase,
   if (!N0 || !N1)
     return false;
 
-  if (SelectSMRDOffset(N1, SOffset, Offset, Imm32Only, IsBuffer, HasSOffset,
-                       ImmOffset)) {
+  if (SelectSMRDOffset(N, N1, SOffset, Offset, Imm32Only, IsBuffer, HasSOffset,
+                       ImmOffset, ScaleOffset)) {
     SBase = N0;
     return true;
   }
-  if (SelectSMRDOffset(N0, SOffset, Offset, Imm32Only, IsBuffer, HasSOffset,
-                       ImmOffset)) {
+  if (SelectSMRDOffset(N, N0, SOffset, Offset, Imm32Only, IsBuffer, HasSOffset,
+                       ImmOffset, ScaleOffset)) {
     SBase = N1;
     return true;
   }
   return false;
 }
 
-bool AMDGPUDAGToDAGISel::SelectSMRD(SDValue Addr, SDValue &SBase,
+bool AMDGPUDAGToDAGISel::SelectSMRD(SDNode *N, SDValue Addr, SDValue &SBase,
                                     SDValue *SOffset, SDValue *Offset,
-                                    bool Imm32Only) const {
-  if (SelectSMRDBaseOffset(Addr, SBase, SOffset, Offset, Imm32Only)) {
+                                    bool Imm32Only, bool *ScaleOffset) const {
+  if (SelectSMRDBaseOffset(N, Addr, SBase, SOffset, Offset, Imm32Only,
+                           /* IsBuffer */ false, /* HasSOffset */ false,
+                           /* ImmOffset */ 0, ScaleOffset)) {
     SBase = Expand32BitAddress(SBase);
     return true;
   }
@@ -2323,36 +2385,51 @@ bool AMDGPUDAGToDAGISel::SelectSMRD(SDValue Addr, SDValue &SBase,
 
 bool AMDGPUDAGToDAGISel::SelectSMRDImm(SDValue Addr, SDValue &SBase,
                                        SDValue &Offset) const {
-  return SelectSMRD(Addr, SBase, /* SOffset */ nullptr, &Offset);
+  return SelectSMRD(/* N */ nullptr, Addr, SBase, /* SOffset */ nullptr,
+                    &Offset);
 }
 
 bool AMDGPUDAGToDAGISel::SelectSMRDImm32(SDValue Addr, SDValue &SBase,
                                          SDValue &Offset) const {
   assert(Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS);
-  return SelectSMRD(Addr, SBase, /* SOffset */ nullptr, &Offset,
-                    /* Imm32Only */ true);
+  return SelectSMRD(/* N */ nullptr, Addr, SBase, /* SOffset */ nullptr,
+                    &Offset, /* Imm32Only */ true);
 }
 
-bool AMDGPUDAGToDAGISel::SelectSMRDSgpr(SDValue Addr, SDValue &SBase,
-                                        SDValue &SOffset) const {
-  return SelectSMRD(Addr, SBase, &SOffset, /* Offset */ nullptr);
+bool AMDGPUDAGToDAGISel::SelectSMRDSgpr(SDNode *N, SDValue Addr, SDValue &SBase,
+                                        SDValue &SOffset, SDValue &CPol) const {
+  bool ScaleOffset;
+  if (!SelectSMRD(N, Addr, SBase, &SOffset, /* Offset */ nullptr,
+                  /* Imm32Only */ false, &ScaleOffset))
+    return false;
+
+  CPol = CurDAG->getTargetConstant(ScaleOffset ? AMDGPU::CPol::SCAL : 0,
+                                   SDLoc(N), MVT::i32);
+  return true;
 }
 
-bool AMDGPUDAGToDAGISel::SelectSMRDSgprImm(SDValue Addr, SDValue &SBase,
-                                           SDValue &SOffset,
-                                           SDValue &Offset) const {
-  return SelectSMRD(Addr, SBase, &SOffset, &Offset);
+bool AMDGPUDAGToDAGISel::SelectSMRDSgprImm(SDNode *N, SDValue Addr,
+                                           SDValue &SBase, SDValue &SOffset,
+                                           SDValue &Offset,
+                                           SDValue &CPol) const {
+  bool ScaleOffset;
+  if (!SelectSMRD(N, Addr, SBase, &SOffset, &Offset, false, &ScaleOffset))
+    return false;
+
+  CPol = CurDAG->getTargetConstant(ScaleOffset ? AMDGPU::CPol::SCAL : 0,
+                                   SDLoc(N), MVT::i32);
+  return true;
 }
 
 bool AMDGPUDAGToDAGISel::SelectSMRDBufferImm(SDValue N, SDValue &Offset) const {
-  return SelectSMRDOffset(N, /* SOffset */ nullptr, &Offset,
+  return SelectSMRDOffset(/* N */ nullptr, N, /* SOffset */ nullptr, &Offset,
                           /* Imm32Only */ false, /* IsBuffer */ true);
 }
 
 bool AMDGPUDAGToDAGISel::SelectSMRDBufferImm32(SDValue N,
                                                SDValue &Offset) const {
   assert(Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS);
-  return SelectSMRDOffset(N, /* SOffset */ nullptr, &Offset,
+  return SelectSMRDOffset(/* N */ nullptr, N, /* SOffset */ nullptr, &Offset,
                           /* Imm32Only */ true, /* IsBuffer */ true);
 }
 
@@ -2361,9 +2438,9 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBufferSgprImm(SDValue N, SDValue &SOffset,
   // Match the (soffset + offset) pair as a 32-bit register base and
   // an immediate offset.
   return N.getValueType() == MVT::i32 &&
-         SelectSMRDBaseOffset(N, /* SBase */ SOffset, /* SOffset*/ nullptr,
-                              &Offset, /* Imm32Only */ false,
-                              /* IsBuffer */ true);
+         SelectSMRDBaseOffset(/* N */ nullptr, N, /* SBase */ SOffset,
+                              /* SOffset*/ nullptr, &Offset,
+                              /* Imm32Only */ false, /* IsBuffer */ true);
 }
 
 bool AMDGPUDAGToDAGISel::SelectMOVRELOffset(SDValue Index,
