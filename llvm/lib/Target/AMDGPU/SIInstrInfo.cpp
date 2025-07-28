@@ -6382,65 +6382,74 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
     legalizeOpWithMove(MI, VOP3Idx[2]);
 }
 
-// Recursively check to see if the ultimate source of a readfirstlane is SGPR.
-// If it is, readfirstlane can be omitted, and the source of the value can be
-// used directly.
+// Check to see if the ultimate source of a readfirstlane is SGPR. If it is,
+// readfirstlane can be omitted, and the source of the value can be used
+// directly.
 Register SIInstrInfo::checkIsSourceSGPR(const MachineOperand &MO,
                                         const MachineRegisterInfo &MRI,
                                         const SIRegisterInfo *TRI,
                                         int MaxDepth) const {
-  if (MaxDepth == 0)
-    return Register();
+  SmallVector<MachineOperand, 1> Worklist;
+  Worklist.push_back(MO);
 
-  Register PotentialSGPR = MO.getReg();
+  while (!Worklist.empty() && MaxDepth > 0) {
+    MachineOperand MOperand = Worklist.pop_back_val();
 
-  // While we could return a physical SGPR source, we would need to guarantee it
-  // has not been redefined.
-  if (PotentialSGPR.isPhysical())
-    return Register();
+    Register PotentialSGPR = MOperand.getReg();
 
-  assert(MRI.hasOneDef(PotentialSGPR));
-
-  MachineInstr *MI = MRI.getVRegDef(PotentialSGPR);
-  auto MIOpc = MI->getOpcode();
-  const TargetRegisterClass *RC = MRI.getRegClass(PotentialSGPR);
-
-  if (RI.hasSGPRs(RC))
-    return PotentialSGPR;
-
-  switch (MIOpc) {
-  case AMDGPU::COPY: {
-    MachineOperand CopySource = MI->getOperand(1);
-    return checkIsSourceSGPR(CopySource, MRI, TRI, MaxDepth - 1);
-  }
-  case AMDGPU::REG_SEQUENCE: {
-    unsigned SubRegToFind = MO.getSubReg();
-    unsigned SubRegOperandIndex = 2;
-    unsigned CopySourceIndex = 0;
-
-    // Since subregs may be listed out of order, we need to
-    // loop over operands to find the subreg we are looking for.
-    while (SubRegOperandIndex < MI->getNumOperands()) {
-      assert(MI->isOperandSubregIdx(SubRegOperandIndex));
-
-      unsigned SubRegIndex = MI->getOperand(SubRegOperandIndex).getImm();
-      if (SubRegIndex == SubRegToFind) {
-        CopySourceIndex = SubRegOperandIndex - 1;
-        break;
-      }
-
-      SubRegOperandIndex += 2;
-    }
-
-    if (SubRegOperandIndex >= MI->getNumOperands())
+    // While we could return a physical SGPR source, we would need to guarantee
+    // it has not been redefined.
+    if (PotentialSGPR.isPhysical())
       return Register();
 
-    MachineOperand CopySource = MI->getOperand(CopySourceIndex);
-    return checkIsSourceSGPR(CopySource, MRI, TRI, MaxDepth - 1);
+    assert(MRI.hasOneDef(PotentialSGPR));
+
+    MachineInstr *MI = MRI.getVRegDef(PotentialSGPR);
+    unsigned MIOpc = MI->getOpcode();
+    const TargetRegisterClass *RC = MRI.getRegClass(PotentialSGPR);
+
+    if (RI.hasSGPRs(RC))
+      return PotentialSGPR;
+
+    switch (MIOpc) {
+    case AMDGPU::COPY: {
+      MachineOperand CopySource = MI->getOperand(1);
+      Worklist.push_back(CopySource);
+      break;
+    }
+    case AMDGPU::REG_SEQUENCE: {
+      unsigned SubRegToFind = MOperand.getSubReg();
+      unsigned SubRegOperandIndex = 2;
+      unsigned CopySourceIndex = 0;
+
+      // Since subregs may be listed out of order, we need to
+      // loop over operands to find the subreg we are looking for.
+      while (SubRegOperandIndex < MI->getNumOperands()) {
+        assert(MI->isOperandSubregIdx(SubRegOperandIndex));
+
+        unsigned SubRegIndex = MI->getOperand(SubRegOperandIndex).getImm();
+        if (SubRegIndex == SubRegToFind) {
+          CopySourceIndex = SubRegOperandIndex - 1;
+          break;
+        }
+
+        SubRegOperandIndex += 2;
+      }
+
+      if (SubRegOperandIndex >= MI->getNumOperands())
+        return Register();
+
+      MachineOperand CopySource = MI->getOperand(CopySourceIndex);
+      Worklist.push_back(CopySource);
+      break;
+    }
+    default:
+      return Register();
+    }
+    --MaxDepth;
   }
-  default:
-    return Register();
-  }
+
+  return Register();
 }
 
 Register SIInstrInfo::readlaneVGPRToSGPR(
@@ -6471,6 +6480,8 @@ Register SIInstrInfo::readlaneVGPRToSGPR(
   }
 
   SmallVector<Register, 8> SRegs;
+  SmallVector<unsigned, 8> SRegIndices;
+
   const MachineInstr *CopySourceInstr = MRI.getVRegDef(SrcReg);
 
   if (CopySourceInstr->getOpcode() != AMDGPU::REG_SEQUENCE) {
@@ -6480,9 +6491,9 @@ Register SIInstrInfo::readlaneVGPRToSGPR(
               get(AMDGPU::V_READFIRSTLANE_B32), SGPR)
           .addReg(SrcReg, 0, RI.getSubRegFromChannel(i));
       SRegs.push_back(SGPR);
+      SRegIndices.push_back(i);
     }
   } else {
-    SRegs.resize(SubRegs);
     const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
     for (unsigned i = 0; i < SubRegs; ++i) {
@@ -6499,14 +6510,15 @@ Register SIInstrInfo::readlaneVGPRToSGPR(
       unsigned SubRegChannel = RI.getChannelFromSubReg(SubRegIndex);
 
       if (SGPRSource) {
-        SRegs[SubRegChannel] = SGPRSource;
+        SRegs.push_back(SGPRSource);
       } else {
         Register SGPR = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
         BuildMI(*UseMI.getParent(), UseMI, UseMI.getDebugLoc(),
                 get(AMDGPU::V_READFIRSTLANE_B32), SGPR)
             .addReg(SrcReg, 0, SubRegIndex);
-        SRegs[SubRegChannel] = SGPR;
+        SRegs.push_back(SGPR);
       }
+      SRegIndices.push_back(SubRegChannel);
     }
   }
 
@@ -6515,7 +6527,7 @@ Register SIInstrInfo::readlaneVGPRToSGPR(
               get(AMDGPU::REG_SEQUENCE), DstReg);
   for (unsigned i = 0; i < SubRegs; ++i) {
     MIB.addReg(SRegs[i]);
-    MIB.addImm(RI.getSubRegFromChannel(i));
+    MIB.addImm(RI.getSubRegFromChannel(SRegIndices[i]));
   }
   return DstReg;
 }
