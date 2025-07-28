@@ -10400,6 +10400,7 @@ def warn_format_conversion_argument_type_mismatch_pedantic : Extension<
   InGroup<FormatPedantic>;
 def warn_format_conversion_argument_type_mismatch_signedness : Warning<
   warn_format_conversion_argument_type_mismatch.Summary>,
+  "format specifies type %0 but the argument has %select{type|underlying type}2 %1, which differs in signedness">,
   InGroup<FormatSignedness>, DefaultIgnore;
 def warn_format_conversion_argument_type_mismatch_confusion : Warning<
   warn_format_conversion_argument_type_mismatch.Summary>,
@@ -10513,7 +10514,8 @@ def warn_format_cmp_sensitivity_mismatch : Warning<
 def warn_format_cmp_specifier_mismatch : Warning<
   "format specifier '%0' is incompatible with '%1'">, InGroup<Format>;
 def warn_format_cmp_specifier_sign_mismatch : Warning<
-  "signedness of format specifier '%0' is incompatible with '%1'">, InGroup<Format>;
+  "signedness of format specifier '%0' is incompatible with '%1'">, InGroup<FormatSignedness>,
+  DefaultIgnore;
 def warn_format_cmp_specifier_mismatch_pedantic : Extension<
   warn_format_cmp_specifier_sign_mismatch.Summary>, InGroup<FormatPedantic>;
 def note_format_cmp_with : Note<
