@@ -10398,8 +10398,7 @@ def warn_format_conversion_argument_type_mismatch : Warning<
 def warn_format_conversion_argument_type_mismatch_pedantic : Extension<
   warn_format_conversion_argument_type_mismatch.Summary>,
   InGroup<FormatPedantic>;
-def warn_format_conversion_argument_type_mismatch_signedness
-    : Warning<warn_format_conversion_argument_type_mismatch.Summary>,
+def warn_format_conversion_argument_type_mismatch_signedness: Warning<
       "format specifies type %0 but the argument has %select{type|underlying "
       "type}2 %1, which differs in signedness" >
     , InGroup<FormatSignedness>, DefaultIgnore;
