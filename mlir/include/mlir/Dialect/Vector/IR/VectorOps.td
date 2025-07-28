@@ -646,55 +646,6 @@ def Vector_DeinterleaveOp :
       }];
     }
 
-def Vector_ExtractElementOp :
-  Vector_Op<"extractelement", [Pure,
-     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
-     TypesMatchWith<"result type matches element type of vector operand",
-                    "vector", "result",
-                    "::llvm::cast<VectorType>($_self).getElementType()">]>,
-    Arguments<(ins AnyVectorOfAnyRank:$vector,
-                   Optional<AnySignlessIntegerOrIndex>:$position)>,
-    Results<(outs AnyType:$result)> {
-  let summary = "extractelement operation";
-  let description = [{
-    Note: This operation is deprecated. Please use vector.extract insert.
-
-    Takes a 0-D or 1-D vector and a optional dynamic index position and
-    extracts the scalar at that position.
-
-    Note that this instruction resembles vector.extract, but is restricted to
-    0-D and 1-D vectors.
-    If the vector is 0-D, the position must be std::nullopt.
-
-
-    It is meant to be closer to LLVM's version:
-    https://llvm.org/docs/LangRef.html#extractelement-instruction
-
-    Example:
-
-    ```mlir
-    %c = arith.constant 15 : i32
-    %1 = vector.extractelement %0[%c : i32]: vector<16xf32>
-    %2 = vector.extractelement %z[]: vector<f32>
-    ```
-  }];
-  let assemblyFormat = [{
-    $vector `[` ($position^ `:` type($position))? `]` attr-dict `:` type($vector)
-  }];
-
-  let builders = [
-    // 0-D builder.
-    OpBuilder<(ins "Value":$source)>,
-  ];
-  let extraClassDeclaration = [{
-    VectorType getSourceVectorType() {
-      return ::llvm::cast<VectorType>(getVector().getType());
-    }
-  }];
-  let hasVerifier = 1;
-  let hasFolder = 1;
-}
-
 def Vector_ExtractOp :
   Vector_Op<"extract", [Pure,
      DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
@@ -888,57 +839,6 @@ def Vector_FromElementsOp : Vector_Op<"from_elements", [
   let assemblyFormat = "$elements attr-dict `:` type($dest)";
   let hasFolder = 1;
   let hasCanonicalizer = 1;
-}
-
-def Vector_InsertElementOp :
-  Vector_Op<"insertelement", [Pure,
-     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
-     TypesMatchWith<"source operand type matches element type of result",
-                    "result", "source",
-                    "::llvm::cast<VectorType>($_self).getElementType()">,
-     AllTypesMatch<["dest", "result"]>]>,
-     Arguments<(ins AnyType:$source, AnyVectorOfAnyRank:$dest,
-                    Optional<AnySignlessIntegerOrIndex>:$position)>,
-     Results<(outs AnyVectorOfAnyRank:$result)> {
-  let summary = "insertelement operation";
-  let description = [{
-    Note: This operation is deprecated. Please use vector.insert instead.
-
-    Takes a scalar source, a 0-D or 1-D destination vector and a dynamic index
-    position and inserts the source into the destination at the proper position.
-
-    Note that this instruction resembles vector.insert, but is restricted to 0-D
-    and 1-D vectors.
-
-    It is meant to be closer to LLVM's version:
-    https://llvm.org/docs/LangRef.html#insertelement-instruction
-
-    Example:
-
-    ```mlir
-    %c = arith.constant 15 : i32
-    %f = arith.constant 0.0f : f32
-    %1 = vector.insertelement %f, %0[%c : i32]: vector<16xf32>
-    %2 = vector.insertelement %f, %z[]: vector<f32>
-    ```
-  }];
-  let assemblyFormat = [{
-    $source `,` $dest `[` ($position^ `:` type($position))? `]`  attr-dict `:`
-    type($result)
-  }];
-
-  let builders = [
-    // 0-D builder.
-    OpBuilder<(ins "Value":$source, "Value":$dest)>,
-  ];
-  let extraClassDeclaration = [{
-    Type getSourceType() { return getSource().getType(); }
-    VectorType getDestVectorType() {
-      return ::llvm::cast<VectorType>(getDest().getType());
-    }
-  }];
-  let hasVerifier = 1;
-  let hasFolder = 1;
 }
 
 def Vector_InsertOp :

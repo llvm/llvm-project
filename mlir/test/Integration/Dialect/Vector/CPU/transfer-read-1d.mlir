@@ -200,7 +200,7 @@ func.func @entry() {
   // CHECK: ( 2, 12, 22, -1, -1, -42, -42, -42, -42 )
 
   // 6. Read a scalar from a 2D memref and broadcast the value to a 1D vector.
-  //    Generates a loop with vector.insertelement.
+  //    Generates a loop with vector.insert.
   call @transfer_read_1d_broadcast(%A, %c1, %c2)
       : (memref<?x?xf32>, index, index) -> ()
   // CHECK: ( 12, 12, 12, 12, 12, 12, 12, 12, 12 )

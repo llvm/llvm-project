@@ -60,16 +60,6 @@ func.func @vector_extract() -> index {
   func.return %2 : index
 }
 
-// CHECK-LABEL: func @vector_extractelement
-// CHECK: test.reflect_bounds {smax = 7 : index, smin = 6 : index, umax = 7 : index, umin = 6 : index}
-func.func @vector_extractelement() -> index {
-  %c0 = arith.constant 0 : index
-  %0 = test.with_bounds { umin = 6 : index, umax = 7 : index, smin = 6 : index, smax = 7 : index } : vector<4xindex>
-  %1 = vector.extractelement %0[%c0 : index] : vector<4xindex>
-  %2 = test.reflect_bounds %1 : index
-  func.return %2 : index
-}
-
 // CHECK-LABEL: func @vector_add
 // CHECK: test.reflect_bounds {smax = 12 : index, smin = 10 : index, umax = 12 : index, umin = 10 : index}
 func.func @vector_add() -> vector<4xindex> {
@@ -86,17 +76,6 @@ func.func @vector_insert() -> vector<4xindex> {
   %0 = test.with_bounds { umin = 5 : index, umax = 7 : index, smin = 5 : index, smax = 7 : index } : vector<4xindex>
   %1 = test.with_bounds { umin = 6 : index, umax = 8 : index, smin = 6 : index, smax = 8 : index } : index
   %2 = vector.insert %1, %0[0] : index into vector<4xindex>
-  %3 = test.reflect_bounds %2 : vector<4xindex>
-  func.return %3 : vector<4xindex>
-}
-
-// CHECK-LABEL: func @vector_insertelement
-// CHECK: test.reflect_bounds {smax = 8 : index, smin = 5 : index, umax = 8 : index, umin = 5 : index}
-func.func @vector_insertelement() -> vector<4xindex> {
-  %c0 = arith.constant 0 : index
-  %0 = test.with_bounds { umin = 5 : index, umax = 7 : index, smin = 5 : index, smax = 7 : index } : vector<4xindex>
-  %1 = test.with_bounds { umin = 6 : index, umax = 8 : index, smin = 6 : index, smax = 8 : index } : index
-  %2 = vector.insertelement %1, %0[%c0 : index] : vector<4xindex>
   %3 = test.reflect_bounds %2 : vector<4xindex>
   func.return %3 : vector<4xindex>
 }
