@@ -19,10 +19,7 @@
 #include "Record.h"
 #include "Source.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/PointerUnion.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
-#include <map>
 #include <vector>
 
 namespace clang {

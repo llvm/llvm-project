@@ -120,8 +120,8 @@ public:
   Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
   ~Pointer();
 
-  void operator=(const Pointer &P);
-  void operator=(Pointer &&P);
+  Pointer &operator=(const Pointer &P);
+  Pointer &operator=(Pointer &&P);
 
   /// Equality operators are just for tests.
   bool operator==(const Pointer &P) const {
@@ -761,7 +761,7 @@ public:
 
     if (Offset < Other.Offset)
       return ComparisonCategoryResult::Less;
-    else if (Offset > Other.Offset)
+    if (Offset > Other.Offset)
       return ComparisonCategoryResult::Greater;
 
     return ComparisonCategoryResult::Equal;
