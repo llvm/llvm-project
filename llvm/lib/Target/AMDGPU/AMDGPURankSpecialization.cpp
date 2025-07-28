@@ -198,14 +198,6 @@ void AMDGPURankSpecializationImpl::buildSpecializations(Function &Kernel) {
 
     Specializations.push_back(Specialization);
 
-    Specialization->copyAttributesFrom(&Kernel);
-    Specialization->copyMetadata(&Kernel, 0);
-    Specialization->setVisibility(GlobalValue::DefaultVisibility);
-    Specialization->setLinkage(GlobalValue::InternalLinkage);
-    Specialization->setDSOLocal(true); // for internal linkage
-    Specialization->addFnAttr("amdgpu-wavegroup-enable");
-    Specialization->addFnAttr("amdgpu-wavegroup-rank-function");
-
     // Loop over the arguments, copying the names of the mapped arguments over...
     Function::arg_iterator DestI = Specialization->arg_begin();
     for (const Argument &I : Kernel.args()) {
@@ -213,29 +205,32 @@ void AMDGPURankSpecializationImpl::buildSpecializations(Function &Kernel) {
       VMap[&I] = &*DestI++;        // Add mapping to VMap
     }
 
-    const bool IsClone = i + 1 < DisjointMasks.size();
-    if (IsClone) {
-      SmallVector<ReturnInst *, 8> Returns; // Ignore returns cloned.
-      CloneFunctionBodyInto(*Specialization, Kernel, VMap, RF_NoModuleLevelChanges,
-                            Returns);
-    } else {
-      // For the last clone, we can just move the contents of the original function.
-      Specialization->splice(Specialization->begin(), &Kernel);
+    SmallVector<ReturnInst *, 8> Returns; // Ignore returns cloned.
+    CloneFunctionInto(Specialization, &Kernel, VMap,
+                      CloneFunctionChangeType::GlobalChanges, Returns);
 
-      SmallVector<BasicBlock *> BBs;
-      // Remap instructions in Specialization to point at new values.
-      for (BasicBlock &BB : *Specialization)
-        BBs.push_back(&BB);
-      remapInstructionsInBlocks(BBs, VMap);
+    // Specialization should have wavegroup attr copied from Kernel during
+    // CloneFunctionInto.
+    assert(Specialization->hasFnAttribute("amdgpu-wavegroup-enable"));
+    if (DISubprogram *SP = Specialization->getSubprogram()) {
+      assert(SP != Kernel.getSubprogram() && SP->isDistinct());
+      MDString *NewLinkageName =
+          MDString::get(Kernel.getContext(), Specialization->getName());
+      SP->replaceLinkageName(NewLinkageName);
     }
 
+    Specialization->addFnAttr("amdgpu-wavegroup-rank-function");
+    Specialization->setVisibility(GlobalValue::DefaultVisibility);
+    Specialization->setLinkage(GlobalValue::InternalLinkage);
+    Specialization->setDSOLocal(true);
+
     // Bake our knowledge of the WaveID into the clone.
-    Value *CloneWaveID = IsClone ? &*VMap.lookup(WaveID) : WaveID;
+    Value *CloneWaveID = &*VMap.lookup(WaveID);
     if (auto UniqueRank = isSingleRank(Mask))
       CloneWaveID->replaceAllUsesWith(ConstantInt::get(WaveID->getType(), *UniqueRank));
 
     for (const auto &Entry : I1Masks) {
-      Value *I1Value = IsClone ? &*VMap.lookup(Entry.first) : Entry.first;
+      Value *I1Value = &*VMap.lookup(Entry.first);
       bool Value = (Entry.second & Mask).any();
       if (Value && (Entry.second & Mask) != Mask)
         continue;
@@ -251,6 +246,13 @@ void AMDGPURankSpecializationImpl::buildSpecializations(Function &Kernel) {
         Switch->setCondition(ConstantInt::get(WaveID->getType(), *getFirstRank(Mask)));
     }
   }
+
+  // Kernel was already cloned for each specialization, so clear its body to use
+  // as the entry/jump kernel.
+  for (BasicBlock &BB : Kernel)
+    BB.dropAllReferences();
+  while (Kernel.size() > 0)
+    Kernel.begin()->eraseFromParent();
 
   // Create the jump table in the entry kernel.
   IRBuilder<> Builder(Kernel.getContext());
