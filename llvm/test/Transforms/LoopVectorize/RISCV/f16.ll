@@ -25,37 +25,9 @@ define void @fadd(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; NO-ZVFHMIN-PREDICATED-LABEL: define void @fadd(
 ; NO-ZVFHMIN-PREDICATED-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NO-ZVFHMIN-PREDICATED-NEXT:  [[ENTRY:.*]]:
-; NO-ZVFHMIN-PREDICATED-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; NO-ZVFHMIN-PREDICATED:       [[VECTOR_PH]]:
-; NO-ZVFHMIN-PREDICATED-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 15
-; NO-ZVFHMIN-PREDICATED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
-; NO-ZVFHMIN-PREDICATED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; NO-ZVFHMIN-PREDICATED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
-; NO-ZVFHMIN-PREDICATED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
-; NO-ZVFHMIN-PREDICATED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i64> [[BROADCAST_SPLATINSERT]], <16 x i64> poison, <16 x i32> zeroinitializer
-; NO-ZVFHMIN-PREDICATED-NEXT:    br label %[[VECTOR_BODY:.*]]
-; NO-ZVFHMIN-PREDICATED:       [[VECTOR_BODY]]:
-; NO-ZVFHMIN-PREDICATED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; NO-ZVFHMIN-PREDICATED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i64> poison, i64 [[INDEX]], i64 0
-; NO-ZVFHMIN-PREDICATED-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <16 x i64> [[BROADCAST_SPLATINSERT1]], <16 x i64> poison, <16 x i32> zeroinitializer
-; NO-ZVFHMIN-PREDICATED-NEXT:    [[VEC_IV:%.*]] = add <16 x i64> [[BROADCAST_SPLAT2]], <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>
-; NO-ZVFHMIN-PREDICATED-NEXT:    [[TMP0:%.*]] = icmp ule <16 x i64> [[VEC_IV]], [[BROADCAST_SPLAT]]
-; NO-ZVFHMIN-PREDICATED-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr [[A]], i64 [[INDEX]]
-; NO-ZVFHMIN-PREDICATED-NEXT:    [[TMP2:%.*]] = getelementptr half, ptr [[B]], i64 [[INDEX]]
-; NO-ZVFHMIN-PREDICATED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x half> @llvm.masked.load.v16f16.p0(ptr [[TMP1]], i32 2, <16 x i1> [[TMP0]], <16 x half> poison)
-; NO-ZVFHMIN-PREDICATED-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <16 x half> @llvm.masked.load.v16f16.p0(ptr [[TMP2]], i32 2, <16 x i1> [[TMP0]], <16 x half> poison)
-; NO-ZVFHMIN-PREDICATED-NEXT:    [[TMP3:%.*]] = fadd <16 x half> [[WIDE_MASKED_LOAD]], [[WIDE_MASKED_LOAD3]]
-; NO-ZVFHMIN-PREDICATED-NEXT:    call void @llvm.masked.store.v16f16.p0(<16 x half> [[TMP3]], ptr [[TMP1]], i32 2, <16 x i1> [[TMP0]])
-; NO-ZVFHMIN-PREDICATED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
-; NO-ZVFHMIN-PREDICATED-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-ZVFHMIN-PREDICATED-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; NO-ZVFHMIN-PREDICATED:       [[MIDDLE_BLOCK]]:
-; NO-ZVFHMIN-PREDICATED-NEXT:    br label %[[EXIT:.*]]
-; NO-ZVFHMIN-PREDICATED:       [[SCALAR_PH]]:
-; NO-ZVFHMIN-PREDICATED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; NO-ZVFHMIN-PREDICATED-NEXT:    br label %[[LOOP:.*]]
 ; NO-ZVFHMIN-PREDICATED:       [[LOOP]]:
-; NO-ZVFHMIN-PREDICATED-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; NO-ZVFHMIN-PREDICATED-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; NO-ZVFHMIN-PREDICATED-NEXT:    [[A_GEP:%.*]] = getelementptr half, ptr [[A]], i64 [[I]]
 ; NO-ZVFHMIN-PREDICATED-NEXT:    [[B_GEP:%.*]] = getelementptr half, ptr [[B]], i64 [[I]]
 ; NO-ZVFHMIN-PREDICATED-NEXT:    [[X:%.*]] = load half, ptr [[A_GEP]], align 2
@@ -64,7 +36,7 @@ define void @fadd(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; NO-ZVFHMIN-PREDICATED-NEXT:    store half [[Z]], ptr [[A_GEP]], align 2
 ; NO-ZVFHMIN-PREDICATED-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
 ; NO-ZVFHMIN-PREDICATED-NEXT:    [[DONE:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
-; NO-ZVFHMIN-PREDICATED-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; NO-ZVFHMIN-PREDICATED-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
 ; NO-ZVFHMIN-PREDICATED:       [[EXIT]]:
 ; NO-ZVFHMIN-PREDICATED-NEXT:    ret void
 ;
@@ -130,11 +102,6 @@ loop:
 exit:
   ret void
 }
-;.
-; NO-ZVFHMIN-PREDICATED: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
-; NO-ZVFHMIN-PREDICATED: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; NO-ZVFHMIN-PREDICATED: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; NO-ZVFHMIN-PREDICATED: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ;.
 ; ZVFHMIN: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; ZVFHMIN: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
