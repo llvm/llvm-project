@@ -4,18 +4,9 @@
 define <32 x i8> @insert_extract_v32i8(<32 x i8> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v32i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    ld.b $a0, $sp, 31
+; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 14
+; CHECK-NEXT:    vpickve2gr.b $a0, $vr1, 15
 ; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 1
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <32 x i8> %a, i32 31
@@ -26,18 +17,9 @@ entry:
 define <16 x i16> @insert_extract_v16i16(<16 x i16> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    ld.h $a0, $sp, 30
+; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 14
+; CHECK-NEXT:    vpickve2gr.h $a0, $vr1, 7
 ; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 1
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <16 x i16> %a, i32 15
@@ -61,8 +43,6 @@ define <8 x float> @insert_extract_v8f32(<8 x float> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v8f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 7
-; CHECK-NEXT:    movgr2fr.w $fa1, $a0
-; CHECK-NEXT:    movfr2gr.s $a0, $fa1
 ; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a0, 1
 ; CHECK-NEXT:    ret
 entry:
@@ -87,8 +67,6 @@ define <4 x double> @insert_extract_v4f64(<4 x double> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 3
-; CHECK-NEXT:    movgr2fr.d $fa1, $a0
-; CHECK-NEXT:    movfr2gr.d $a0, $fa1
 ; CHECK-NEXT:    xvinsgr2vr.d $xr0, $a0, 1
 ; CHECK-NEXT:    ret
 entry:

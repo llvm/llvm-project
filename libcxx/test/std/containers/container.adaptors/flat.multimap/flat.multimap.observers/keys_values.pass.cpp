@@ -28,9 +28,10 @@
 #include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
+#include "../helpers.h"
 
 template <class KeyContainer, class ValueContainer>
-void test() {
+constexpr void test() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
   using M     = std::flat_multimap<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
@@ -43,17 +44,35 @@ void test() {
   static_assert(noexcept(m.keys()));
   static_assert(noexcept(m.values()));
 
-  auto expected_keys   = {2, 2, 3, 4};
-  auto expected_values = {'b', 'e', 'c', 'a'};
+  auto expected_keys = {2, 2, 3, 4};
   assert(std::ranges::equal(keys, expected_keys));
-  assert(std::ranges::equal(values, expected_values));
+  check_possible_values(
+      values,
+      std::vector<std::vector<char>>{
+          {'b', 'e'},
+          {'b', 'e'},
+          {'c'},
+          {'a'},
+      });
+}
+
+constexpr bool test() {
+  test<std::vector<int>, std::vector<char>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test<std::deque<int>, std::vector<char>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<char>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<char, min_allocator<char>>>();
+
+  return true;
 }
 
 int main(int, char**) {
-  test<std::vector<int>, std::vector<char>>();
-  test<std::deque<int>, std::vector<char>>();
-  test<MinSequenceContainer<int>, MinSequenceContainer<char>>();
-  test<std::vector<int, min_allocator<int>>, std::vector<char, min_allocator<char>>>();
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

@@ -58,7 +58,6 @@ define void @test(i32 %0, i8 %1, i64 %2, float %3) {
 ; CHECK-NEXT:    br label %[[BB54:.*]]
 ; CHECK:       [[BB54]]:
 ; CHECK-NEXT:    [[TMP54:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[TMP17]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 0, ptr null)
 ; CHECK-NEXT:    [[TMP55:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[TMP21]])
 ; CHECK-NEXT:    [[TMP56:%.*]] = insertelement <8 x float> poison, float [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP57:%.*]] = shufflevector <8 x float> [[TMP56]], <8 x float> poison, <8 x i32> <i32 poison, i32 poison, i32 0, i32 0, i32 0, i32 0, i32 poison, i32 poison>
@@ -198,7 +197,6 @@ define void @test(i32 %0, i8 %1, i64 %2, float %3) {
   %95 = or i64 %94, %91
   %96 = or i64 %95, %37
   store i64 %96, ptr null, align 1
-  call void @llvm.lifetime.start.p0(i64 0, ptr null)
   store i64 %42, ptr null, align 1
   %97 = bitcast float %3 to i32
   %98 = icmp ult i32 %97, 1325400064

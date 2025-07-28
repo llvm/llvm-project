@@ -977,8 +977,7 @@ static void __kmp_fork_team_threads(kmp_root_t *root, kmp_team_t *team,
   master_th->th.th_team_serialized = FALSE;
   master_th->th.th_dispatch = &team->t.t_dispatch[0];
 
-/* make sure we are not the optimized hot team */
-#if KMP_NESTED_HOT_TEAMS
+  /* make sure we are not the optimized hot team */
   use_hot_team = 0;
   kmp_hot_team_ptr_t *hot_teams = master_th->th.th_hot_teams;
   if (hot_teams) { // hot teams array is not allocated if
@@ -1009,9 +1008,6 @@ static void __kmp_fork_team_threads(kmp_root_t *root, kmp_team_t *team,
       use_hot_team = 0;
     }
   }
-#else
-  use_hot_team = team == root->r.r_hot_team;
-#endif
   if (!use_hot_team) {
 
     /* install the primary thread */
@@ -1255,13 +1251,12 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
 
       __kmp_acquire_bootstrap_lock(&__kmp_forkjoin_lock);
 
-      new_team =
-          __kmp_allocate_team(this_thr->th.th_root, 1, 1,
+      new_team = __kmp_allocate_team(
+          this_thr->th.th_root, 1, 1,
 #if OMPT_SUPPORT
-                              ompt_parallel_data,
+          ompt_parallel_data,
 #endif
-                              proc_bind, &this_thr->th.th_current_task->td_icvs,
-                              0 USE_NESTED_HOT_ARG(NULL));
+          proc_bind, &this_thr->th.th_current_task->td_icvs, 0, NULL);
       __kmp_release_bootstrap_lock(&__kmp_forkjoin_lock);
       KMP_ASSERT(new_team);
 
@@ -1952,9 +1947,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
   int level;
   int active_level;
   int teams_level;
-#if KMP_NESTED_HOT_TEAMS
   kmp_hot_team_ptr_t **p_hot_teams;
-#endif
   { // KMP_TIME_BLOCK
     KMP_TIME_DEVELOPER_PARTITIONED_BLOCK(KMP_fork_call);
     KMP_COUNT_VALUE(OMP_PARALLEL_args, argc);
@@ -2012,7 +2005,6 @@ int __kmp_fork_call(ident_t *loc, int gtid,
     active_level = parent_team->t.t_active_level;
     // needed to check nesting inside the teams
     teams_level = master_th->th.th_teams_level;
-#if KMP_NESTED_HOT_TEAMS
     p_hot_teams = &master_th->th.th_hot_teams;
     if (*p_hot_teams == NULL && __kmp_hot_teams_max_level > 0) {
       *p_hot_teams = (kmp_hot_team_ptr_t *)__kmp_allocate(
@@ -2021,7 +2013,6 @@ int __kmp_fork_call(ident_t *loc, int gtid,
       // it is either actual or not needed (when active_level > 0)
       (*p_hot_teams)[0].hot_team_nth = 1;
     }
-#endif
 
 #if OMPT_SUPPORT
     if (ompt_enabled.enabled) {
@@ -2200,20 +2191,18 @@ int __kmp_fork_call(ident_t *loc, int gtid,
 #if OMPT_SUPPORT
                                  ompt_parallel_data,
 #endif
-                                 proc_bind, &new_icvs,
-                                 argc USE_NESTED_HOT_ARG(master_th));
+                                 proc_bind, &new_icvs, argc, master_th);
       if (__kmp_barrier_release_pattern[bs_forkjoin_barrier] == bp_dist_bar)
         copy_icvs((kmp_internal_control_t *)team->t.b->team_icvs, &new_icvs);
     } else {
       /* allocate a new parallel team */
       KF_TRACE(10, ("__kmp_fork_call: before __kmp_allocate_team\n"));
-      team = __kmp_allocate_team(root, nthreads, nthreads,
+      team = __kmp_allocate_team(
+          root, nthreads, nthreads,
 #if OMPT_SUPPORT
-                                 ompt_parallel_data,
+          ompt_parallel_data,
 #endif
-                                 proc_bind,
-                                 &master_th->th.th_current_task->td_icvs,
-                                 argc USE_NESTED_HOT_ARG(master_th));
+          proc_bind, &master_th->th.th_current_task->td_icvs, argc, master_th);
       if (__kmp_barrier_release_pattern[bs_forkjoin_barrier] == bp_dist_bar)
         copy_icvs((kmp_internal_control_t *)team->t.b->team_icvs,
                   &master_th->th.th_current_task->td_icvs);
@@ -2699,8 +2688,7 @@ void __kmp_join_call(ident_t *loc, int gtid
   if (root->r.r_active != master_active)
     root->r.r_active = master_active;
 
-  __kmp_free_team(root, team USE_NESTED_HOT_ARG(
-                            master_th)); // this will free worker threads
+  __kmp_free_team(root, team, master_th); // this will free worker threads
 
   /* this race was fun to find. make sure the following is in the critical
      region otherwise assertions may fail occasionally since the old team may be
@@ -2716,8 +2704,7 @@ void __kmp_join_call(ident_t *loc, int gtid
   if (parent_team->t.t_serialized &&
       parent_team != master_th->th.th_serial_team &&
       parent_team != root->r.r_root_team) {
-    __kmp_free_team(root,
-                    master_th->th.th_serial_team USE_NESTED_HOT_ARG(NULL));
+    __kmp_free_team(root, master_th->th.th_serial_team, NULL);
     master_th->th.th_serial_team = parent_team;
   }
 
@@ -2823,11 +2810,8 @@ void __kmp_set_num_threads(int new_nth, int gtid) {
   // rather than waiting for the next parallel region.
   root = thread->th.th_root;
   if (__kmp_init_parallel && (!root->r.r_active) &&
-      (root->r.r_hot_team->t.t_nproc > new_nth)
-#if KMP_NESTED_HOT_TEAMS
-      && __kmp_hot_teams_max_level && !__kmp_hot_teams_mode
-#endif
-  ) {
+      (root->r.r_hot_team->t.t_nproc > new_nth) && __kmp_hot_teams_max_level &&
+      !__kmp_hot_teams_mode) {
     kmp_team_t *hot_team = root->r.r_hot_team;
     int f;
 
@@ -2848,12 +2832,10 @@ void __kmp_set_num_threads(int new_nth, int gtid) {
       hot_team->t.t_threads[f] = NULL;
     }
     hot_team->t.t_nproc = new_nth;
-#if KMP_NESTED_HOT_TEAMS
     if (thread->th.th_hot_teams) {
       KMP_DEBUG_ASSERT(hot_team == thread->th.th_hot_teams[0].hot_team);
       thread->th.th_hot_teams[0].hot_team_nth = new_nth;
     }
-#endif
 
     if (__kmp_barrier_release_pattern[bs_forkjoin_barrier] == bp_dist_bar) {
       hot_team->t.b->update_num_threads(new_nth);
@@ -3375,17 +3357,16 @@ static void __kmp_initialize_root(kmp_root_t *root) {
   /* allocate the root team structure */
   KF_TRACE(10, ("__kmp_initialize_root: before root_team\n"));
 
-  root_team =
-      __kmp_allocate_team(root,
-                          1, // new_nproc
-                          1, // max_nproc
+  root_team = __kmp_allocate_team(root,
+                                  1, // new_nproc
+                                  1, // max_nproc
 #if OMPT_SUPPORT
-                          ompt_data_none, // root parallel id
+                                  ompt_data_none, // root parallel id
 #endif
-                          __kmp_nested_proc_bind.bind_types[0], &r_icvs,
-                          0 // argc
-                          USE_NESTED_HOT_ARG(NULL) // primary thread is unknown
-      );
+                                  __kmp_nested_proc_bind.bind_types[0], &r_icvs,
+                                  0, // argc
+                                  NULL // primary thread is unknown
+  );
 #if USE_DEBUGGER
   // Non-NULL value should be assigned to make the debugger display the root
   // team.
@@ -3413,17 +3394,16 @@ static void __kmp_initialize_root(kmp_root_t *root) {
   /* allocate the hot team structure */
   KF_TRACE(10, ("__kmp_initialize_root: before hot_team\n"));
 
-  hot_team =
-      __kmp_allocate_team(root,
-                          1, // new_nproc
-                          __kmp_dflt_team_nth_ub * 2, // max_nproc
+  hot_team = __kmp_allocate_team(root,
+                                 1, // new_nproc
+                                 __kmp_dflt_team_nth_ub * 2, // max_nproc
 #if OMPT_SUPPORT
-                          ompt_data_none, // root parallel id
+                                 ompt_data_none, // root parallel id
 #endif
-                          __kmp_nested_proc_bind.bind_types[0], &r_icvs,
-                          0 // argc
-                          USE_NESTED_HOT_ARG(NULL) // primary thread is unknown
-      );
+                                 __kmp_nested_proc_bind.bind_types[0], &r_icvs,
+                                 0, // argc
+                                 NULL // primary thread is unknown
+  );
   KF_TRACE(10, ("__kmp_initialize_root: after hot_team = %p\n", hot_team));
 
   root->r.r_hot_team = hot_team;
@@ -3962,12 +3942,12 @@ int __kmp_register_root(int initial_thread) {
   if (!root_thread->th.th_serial_team) {
     kmp_internal_control_t r_icvs = __kmp_get_global_icvs();
     KF_TRACE(10, ("__kmp_register_root: before serial_team\n"));
-    root_thread->th.th_serial_team = __kmp_allocate_team(
-        root, 1, 1,
+    root_thread->th.th_serial_team =
+        __kmp_allocate_team(root, 1, 1,
 #if OMPT_SUPPORT
-        ompt_data_none, // root parallel id
+                            ompt_data_none, // root parallel id
 #endif
-        proc_bind_default, &r_icvs, 0 USE_NESTED_HOT_ARG(NULL));
+                            proc_bind_default, &r_icvs, 0, NULL);
   }
   KMP_ASSERT(root_thread->th.th_serial_team);
   KF_TRACE(10, ("__kmp_register_root: after serial_team = %p\n",
@@ -4073,7 +4053,6 @@ int __kmp_register_root(int initial_thread) {
   return gtid;
 }
 
-#if KMP_NESTED_HOT_TEAMS
 static int __kmp_free_hot_teams(kmp_root_t *root, kmp_info_t *thr, int level,
                                 const int max_level) {
   int i, n, nth;
@@ -4098,7 +4077,6 @@ static int __kmp_free_hot_teams(kmp_root_t *root, kmp_info_t *thr, int level,
   __kmp_free_team(root, team, NULL);
   return n;
 }
-#endif
 
 // Resets a root thread and clear its root and hot teams.
 // Returns the number of __kmp_threads entries directly and indirectly freed.
@@ -4114,8 +4092,7 @@ static int __kmp_reset_root(int gtid, kmp_root_t *root) {
   root->r.r_hot_team = NULL;
   // __kmp_free_team() does not free hot teams, so we have to clear r_hot_team
   // before call to __kmp_free_team().
-  __kmp_free_team(root, root_team USE_NESTED_HOT_ARG(NULL));
-#if KMP_NESTED_HOT_TEAMS
+  __kmp_free_team(root, root_team, NULL);
   if (__kmp_hot_teams_max_level >
       0) { // need to free nested hot teams and their threads if any
     for (i = 0; i < hot_team->t.t_nproc; ++i) {
@@ -4129,8 +4106,7 @@ static int __kmp_reset_root(int gtid, kmp_root_t *root) {
       }
     }
   }
-#endif
-  __kmp_free_team(root, hot_team USE_NESTED_HOT_ARG(NULL));
+  __kmp_free_team(root, hot_team, NULL);
 
   // Before we can reap the thread, we need to make certain that all other
   // threads in the teams that had this root as ancestor have stopped trying to
@@ -4437,9 +4413,6 @@ kmp_info_t *__kmp_allocate_thread(kmp_root_t *root, kmp_team_t *team,
 
   KA_TRACE(20, ("__kmp_allocate_thread: T#%d\n", __kmp_get_gtid()));
   KMP_DEBUG_ASSERT(root && team);
-#if !KMP_NESTED_HOT_TEAMS
-  KMP_DEBUG_ASSERT(KMP_MASTER_GTID(__kmp_get_gtid()));
-#endif
   KMP_MB();
 
   /* first, try to get one from the thread pool unless allocating thread is
@@ -4614,8 +4587,7 @@ kmp_info_t *__kmp_allocate_thread(kmp_root_t *root, kmp_team_t *team,
 #if OMPT_SUPPORT
                                           ompt_data_none, // root parallel id
 #endif
-                                          proc_bind_default, &r_icvs,
-                                          0 USE_NESTED_HOT_ARG(NULL));
+                                          proc_bind_default, &r_icvs, 0, NULL);
   }
   KMP_ASSERT(serial_team);
   serial_team->t.t_serialized = 0; // AC: the team created in reserve, not for
@@ -5139,14 +5111,13 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
 
 /* allocate a new team data structure to use.  take one off of the free pool if
    available */
-kmp_team_t *
-__kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
+kmp_team_t *__kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
 #if OMPT_SUPPORT
-                    ompt_data_t ompt_parallel_data,
+                                ompt_data_t ompt_parallel_data,
 #endif
-                    kmp_proc_bind_t new_proc_bind,
-                    kmp_internal_control_t *new_icvs,
-                    int argc USE_NESTED_HOT_ARG(kmp_info_t *master)) {
+                                kmp_proc_bind_t new_proc_bind,
+                                kmp_internal_control_t *new_icvs, int argc,
+                                kmp_info_t *master) {
   KMP_TIME_DEVELOPER_PARTITIONED_BLOCK(KMP_allocate_team);
   int f;
   kmp_team_t *team;
@@ -5159,7 +5130,6 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
   KMP_DEBUG_ASSERT(max_nproc >= new_nproc);
   KMP_MB();
 
-#if KMP_NESTED_HOT_TEAMS
   kmp_hot_team_ptr_t *hot_teams;
   if (master) {
     team = master->th.th_team;
@@ -5193,15 +5163,10 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
     // check we won't access uninitialized hot_teams, just in case
     KMP_DEBUG_ASSERT(new_nproc == 1);
   }
-#endif
   // Optimization to use a "hot" team
   if (use_hot_team && new_nproc > 1) {
     KMP_DEBUG_ASSERT(new_nproc <= max_nproc);
-#if KMP_NESTED_HOT_TEAMS
     team = hot_teams[level].hot_team;
-#else
-    team = root->r.r_hot_team;
-#endif
 #if KMP_DEBUG
     if (__kmp_tasking_mode != tskm_immediate_exec) {
       KA_TRACE(20, ("__kmp_allocate_team: hot team task_team[0] = %p "
@@ -5288,20 +5253,17 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
           th->th.th_task_team = NULL;
         }
       }
-#if KMP_NESTED_HOT_TEAMS
       if (__kmp_hot_teams_mode == 0) {
         // AC: saved number of threads should correspond to team's value in this
         // mode, can be bigger in mode 1, when hot team has threads in reserve
         KMP_DEBUG_ASSERT(hot_teams[level].hot_team_nth == team->t.t_nproc);
         hot_teams[level].hot_team_nth = new_nproc;
-#endif // KMP_NESTED_HOT_TEAMS
         /* release the extra threads we don't need any more */
         for (f = new_nproc; f < team->t.t_nproc; f++) {
           KMP_DEBUG_ASSERT(team->t.t_threads[f]);
           __kmp_free_thread(team->t.t_threads[f]);
           team->t.t_threads[f] = NULL;
         }
-#if KMP_NESTED_HOT_TEAMS
       } // (__kmp_hot_teams_mode == 0)
       else {
         // When keeping extra threads in team, switch threads to wait on own
@@ -5317,7 +5279,6 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
           }
         }
       }
-#endif // KMP_NESTED_HOT_TEAMS
       team->t.t_nproc = new_nproc;
       // TODO???: team->t.t_max_active_levels = new_max_active_levels;
       KMP_CHECK_UPDATE(team->t.t_sched.sched, new_icvs->sched.sched);
@@ -5358,7 +5319,6 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
       int old_nproc = team->t.t_nproc; // save old value and use to update only
       team->t.t_size_changed = 1;
 
-#if KMP_NESTED_HOT_TEAMS
       int avail_threads = hot_teams[level].hot_team_nth;
       if (new_nproc < avail_threads)
         avail_threads = new_nproc;
@@ -5386,7 +5346,6 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
         // get reserved threads involved if any.
         team->t.t_nproc = hot_teams[level].hot_team_nth;
         hot_teams[level].hot_team_nth = new_nproc; // adjust hot team max size
-#endif // KMP_NESTED_HOT_TEAMS
         if (team->t.t_max_nproc < new_nproc) {
           /* reallocate larger arrays */
           __kmp_reallocate_team_arrays(team, new_nproc);
@@ -5435,9 +5394,7 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
         /* Restore initial primary thread's affinity mask */
         new_temp_affinity.restore();
 #endif
-#if KMP_NESTED_HOT_TEAMS
       } // end of check of t_nproc vs. new_nproc vs. hot_team_nth
-#endif // KMP_NESTED_HOT_TEAMS
       if (__kmp_barrier_release_pattern[bs_forkjoin_barrier] == bp_dist_bar) {
         // Barrier size already increased earlier in this function
         // Activate team threads via th_used_in_team
@@ -5484,7 +5441,6 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
         thr->th.th_teams_size = master->th.th_teams_size;
       }
     }
-#if KMP_NESTED_HOT_TEAMS
     if (level) {
       // Sync barrier state for nested hot teams, not needed for outermost hot
       // team.
@@ -5501,7 +5457,6 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
         }
       }
     }
-#endif // KMP_NESTED_HOT_TEAMS
 
     /* reallocate space for arguments if necessary */
     __kmp_alloc_argv_entries(argc, team, TRUE);
@@ -5666,8 +5621,7 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
 
 /* free the team.  return it to the team pool.  release all the threads
  * associated with it */
-void __kmp_free_team(kmp_root_t *root,
-                     kmp_team_t *team USE_NESTED_HOT_ARG(kmp_info_t *master)) {
+void __kmp_free_team(kmp_root_t *root, kmp_team_t *team, kmp_info_t *master) {
   int f;
   KA_TRACE(20, ("__kmp_free_team: T#%d freeing team %d\n", __kmp_get_gtid(),
                 team->t.t_id));
@@ -5679,7 +5633,6 @@ void __kmp_free_team(kmp_root_t *root,
   KMP_DEBUG_ASSERT(team->t.t_threads);
 
   int use_hot_team = team == root->r.r_hot_team;
-#if KMP_NESTED_HOT_TEAMS
   int level;
   if (master) {
     level = team->t.t_active_level - 1;
@@ -5702,7 +5655,6 @@ void __kmp_free_team(kmp_root_t *root,
       use_hot_team = 1;
     }
   }
-#endif // KMP_NESTED_HOT_TEAMS
 
   /* team is done working */
   TCW_SYNC_PTR(team->t.t_pkfn,
@@ -5749,9 +5701,7 @@ void __kmp_free_team(kmp_root_t *root,
               20,
               ("__kmp_free_team: T#%d deactivating task_team %p on team %d\n",
                __kmp_get_gtid(), task_team, team->t.t_id));
-#if KMP_NESTED_HOT_TEAMS
           __kmp_free_task_team(master, task_team);
-#endif
           team->t.t_task_team[tt_idx] = NULL;
         }
       }
@@ -8331,6 +8281,7 @@ void __kmp_cleanup(void) {
     __kmp_free(ptr);
     ptr = next;
   }
+  __kmp_old_threads_list = NULL;
 
 #if KMP_USE_DYNAMIC_LOCK
   __kmp_cleanup_indirect_user_locks();
@@ -8338,7 +8289,7 @@ void __kmp_cleanup(void) {
   __kmp_cleanup_user_locks();
 #endif
 #if OMPD_SUPPORT
-  if (ompd_state) {
+  if (ompd_env_block) {
     __kmp_free(ompd_env_block);
     ompd_env_block = NULL;
     ompd_env_block_size = 0;
@@ -8364,12 +8315,17 @@ void __kmp_cleanup(void) {
   __kmp_nested_proc_bind.bind_types = NULL;
   __kmp_nested_proc_bind.size = 0;
   __kmp_nested_proc_bind.used = 0;
+  __kmp_dflt_team_nth = 0;
+  __kmp_dflt_team_nth_ub = 0;
   if (__kmp_affinity_format) {
     KMP_INTERNAL_FREE(__kmp_affinity_format);
     __kmp_affinity_format = NULL;
   }
 
   __kmp_i18n_catclose();
+
+  if (__kmp_nesting_nth_level)
+    KMP_INTERNAL_FREE(__kmp_nesting_nth_level);
 
 #if KMP_USE_HIER_SCHED
   __kmp_hier_scheds.deallocate();
@@ -8378,6 +8334,9 @@ void __kmp_cleanup(void) {
 #if KMP_STATS_ENABLED
   __kmp_stats_fini();
 #endif
+
+  __kmpc_destroy_allocator(KMP_GTID_SHUTDOWN, __kmp_def_allocator);
+  __kmp_def_allocator = omp_default_mem_alloc;
 
   KA_TRACE(10, ("__kmp_cleanup: exit\n"));
 }
@@ -8774,11 +8733,15 @@ static int __kmp_aux_capture_affinity_field(int gtid, const kmp_info_t *th,
     break;
 #if KMP_AFFINITY_SUPPORTED
   case 'A': {
-    kmp_str_buf_t buf;
-    __kmp_str_buf_init(&buf);
-    __kmp_affinity_str_buf_mask(&buf, th->th.th_affin_mask);
-    rc = __kmp_str_buf_print(field_buffer, format, buf.str);
-    __kmp_str_buf_free(&buf);
+    if (th->th.th_affin_mask) {
+      kmp_str_buf_t buf;
+      __kmp_str_buf_init(&buf);
+      __kmp_affinity_str_buf_mask(&buf, th->th.th_affin_mask);
+      rc = __kmp_str_buf_print(field_buffer, format, buf.str);
+      __kmp_str_buf_free(&buf);
+    } else {
+      rc = __kmp_str_buf_print(field_buffer, "%s", "disabled");
+    }
   } break;
 #endif
   default:

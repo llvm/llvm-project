@@ -44,7 +44,12 @@ template <unsigned Value> struct PointerInfo {
 };
 
 template <unsigned Value, typename InfoType = PointerInfo<Value>>
-struct Pointer {};
+struct Pointer {
+  // When compiling for Windows with exceptions enabled, this struct
+  // must contain something that takes space and is initialised.
+  // Otherwise it will not be present in the debug information.
+  int pad = 0;
+};
 
 enum EnumType {};
 enum class ScopedEnumType {};

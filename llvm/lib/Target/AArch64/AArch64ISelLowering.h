@@ -182,6 +182,13 @@ public:
   MachineBasicBlock *EmitGetSMESaveSize(MachineInstr &MI,
                                         MachineBasicBlock *BB) const;
 
+  /// Replace (0, vreg) discriminator components with the operands of blend
+  /// or with (immediate, NoRegister) when possible.
+  void fixupPtrauthDiscriminator(MachineInstr &MI, MachineBasicBlock *BB,
+                                 MachineOperand &IntDiscOp,
+                                 MachineOperand &AddrDiscOp,
+                                 const TargetRegisterClass *AddrDiscRC) const;
+
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;
@@ -211,11 +218,12 @@ public:
 
   unsigned getMaxSupportedInterleaveFactor() const override { return 4; }
 
-  bool lowerInterleavedLoad(LoadInst *LI,
+  bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                             ArrayRef<ShuffleVectorInst *> Shuffles,
                             ArrayRef<unsigned> Indices,
                             unsigned Factor) const override;
-  bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
+  bool lowerInterleavedStore(Instruction *Store, Value *Mask,
+                             ShuffleVectorInst *SVI,
                              unsigned Factor) const override;
 
   bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,

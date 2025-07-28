@@ -3383,6 +3383,10 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
                                     SrcSubscripts, DstSubscripts))
     return false;
 
+  assert(isLoopInvariant(SrcBase, SrcLoop) &&
+         isLoopInvariant(DstBase, DstLoop) &&
+         "Expected SrcBase and DstBase to be loop invariant");
+
   int Size = SrcSubscripts.size();
   LLVM_DEBUG({
     dbgs() << "\nSrcSubscripts: ";
@@ -3666,18 +3670,29 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
                                         SCEVUnionPredicate(Assume, *SE));
   }
 
+  // Even if the base pointers are the same, they may not be loop-invariant. It
+  // could lead to incorrect results, as we're analyzing loop-carried
+  // dependencies. Src and Dst can be in different loops, so we need to check
+  // the base pointer is invariant in both loops.
+  Loop *SrcLoop = LI->getLoopFor(Src->getParent());
+  Loop *DstLoop = LI->getLoopFor(Dst->getParent());
+  if (!isLoopInvariant(SrcBase, SrcLoop) ||
+      !isLoopInvariant(DstBase, DstLoop)) {
+    LLVM_DEBUG(dbgs() << "The base pointer is not loop invariant.\n");
+    return std::make_unique<Dependence>(Src, Dst,
+                                        SCEVUnionPredicate(Assume, *SE));
+  }
+
   uint64_t EltSize = SrcLoc.Size.toRaw();
   const SCEV *SrcEv = SE->getMinusSCEV(SrcSCEV, SrcBase);
   const SCEV *DstEv = SE->getMinusSCEV(DstSCEV, DstBase);
 
-  if (Src != Dst) {
-    // Check that memory access offsets are multiples of element sizes.
-    if (!SE->isKnownMultipleOf(SrcEv, EltSize, Assume) ||
-        !SE->isKnownMultipleOf(DstEv, EltSize, Assume)) {
-      LLVM_DEBUG(dbgs() << "can't analyze SCEV with different offsets\n");
-      return std::make_unique<Dependence>(Src, Dst,
-                                          SCEVUnionPredicate(Assume, *SE));
-    }
+  // Check that memory access offsets are multiples of element sizes.
+  if (!SE->isKnownMultipleOf(SrcEv, EltSize, Assume) ||
+      !SE->isKnownMultipleOf(DstEv, EltSize, Assume)) {
+    LLVM_DEBUG(dbgs() << "can't analyze SCEV with different offsets\n");
+    return std::make_unique<Dependence>(Src, Dst,
+                                        SCEVUnionPredicate(Assume, *SE));
   }
 
   if (!Assume.empty()) {

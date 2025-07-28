@@ -131,6 +131,7 @@ def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
 def hasDotInstructions : Predicate<"Subtarget->hasDotInstructions()">;
 def hasTcgen05Instructions : Predicate<"Subtarget->hasTcgen05Instructions()">;
+def hasTMACTAGroupSupport  : Predicate<"Subtarget->hasCpAsyncBulkTensorCTAGroupSupport()">;
 def hasF32x2Instructions : Predicate<"Subtarget->hasF32x2Instructions()">;
 
 class hasPTX<int version>: Predicate<"Subtarget->getPTXVersion() >= " # version>;
@@ -1233,7 +1234,7 @@ defm FMA_F32    : FMA<F32RT,    allow_ftz = true>;
 defm FMA_F32x2  : FMA<F32X2RT,  allow_ftz = true, preds = [hasF32x2Instructions]>;
 defm FMA_F64    : FMA<F64RT,    allow_ftz = false>;
 
-// sin/cos
+// sin/cos/tanh
 
 class UnaryOpAllowsApproxFn<SDPatternOperator operator>
     : PatFrag<(ops node:$A),
@@ -1249,6 +1250,10 @@ def COS_APPROX_f32 :
   BasicFlagsNVPTXInst<(outs B32:$dst), (ins B32:$src), (ins FTZFlag:$ftz),
                       "cos.approx$ftz.f32",
                       [(set f32:$dst, (UnaryOpAllowsApproxFn<fcos> f32:$src))]>;
+def TANH_APPROX_f32 :
+  BasicNVPTXInst<(outs B32:$dst), (ins B32:$src), "tanh.approx.f32",
+                 [(set f32:$dst, (UnaryOpAllowsApproxFn<ftanh> f32:$src))]>,
+                 Requires<[hasPTX<70>, hasSM<75>]>;
 
 //-----------------------------------
 // Bitwise operations
@@ -1453,18 +1458,33 @@ let hasSideEffects = false in {
                 (ins PrmtMode:$mode),
                 "prmt.b32$mode",
                 [(set i32:$d, (prmt i32:$a, i32:$b, imm:$c, imm:$mode))]>;
+  def PRMT_B32rir
+  : BasicFlagsNVPTXInst<(outs B32:$d),
+              (ins B32:$a, i32imm:$b, B32:$c),
+              (ins PrmtMode:$mode),
+              "prmt.b32$mode",
+              [(set i32:$d, (prmt i32:$a, imm:$b, i32:$c, imm:$mode))]>;
   def PRMT_B32rii
     : BasicFlagsNVPTXInst<(outs B32:$d),
                 (ins B32:$a, i32imm:$b, Hexu32imm:$c),
                 (ins PrmtMode:$mode),
                 "prmt.b32$mode",
                 [(set i32:$d, (prmt i32:$a, imm:$b, imm:$c, imm:$mode))]>;
-  def PRMT_B32rir
+  def PRMT_B32irr
     : BasicFlagsNVPTXInst<(outs B32:$d),
-                (ins B32:$a, i32imm:$b, B32:$c),
-                (ins PrmtMode:$mode),
+                (ins i32imm:$a, B32:$b, B32:$c), (ins PrmtMode:$mode),
                 "prmt.b32$mode",
-                [(set i32:$d, (prmt i32:$a, imm:$b, i32:$c, imm:$mode))]>;
+                [(set i32:$d, (prmt imm:$a, i32:$b, i32:$c, imm:$mode))]>;
+  def PRMT_B32iri
+    : BasicFlagsNVPTXInst<(outs B32:$d),
+                (ins i32imm:$a, B32:$b, Hexu32imm:$c), (ins PrmtMode:$mode),
+                "prmt.b32$mode",
+                [(set i32:$d, (prmt imm:$a, i32:$b, imm:$c, imm:$mode))]>;
+  def PRMT_B32iir
+    : BasicFlagsNVPTXInst<(outs B32:$d),
+                (ins i32imm:$a, i32imm:$b, B32:$c), (ins PrmtMode:$mode),
+                "prmt.b32$mode",
+                [(set i32:$d, (prmt imm:$a, imm:$b, i32:$c, imm:$mode))]>;
 
 }
 

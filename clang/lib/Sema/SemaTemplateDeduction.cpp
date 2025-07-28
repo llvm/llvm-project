@@ -3083,8 +3083,7 @@ static TemplateDeductionResult ConvertDeducedTemplateArguments(
 
     // If there was no default argument, deduction is incomplete.
     if (DefArg.getArgument().isNull()) {
-      Info.Param = makeTemplateParameter(
-          const_cast<NamedDecl *>(TemplateParams->getParam(I)));
+      Info.Param = makeTemplateParameter(TemplateParams->getParam(I));
       Info.reset(
           TemplateArgumentList::CreateCopy(S.Context, CTAI.SugaredConverted),
           TemplateArgumentList::CreateCopy(S.Context, CTAI.CanonicalConverted));
@@ -3100,8 +3099,7 @@ static TemplateDeductionResult ConvertDeducedTemplateArguments(
     if (S.CheckTemplateArgument(
             Param, DefArg, TD, TD->getLocation(), TD->getSourceRange().getEnd(),
             /*ArgumentPackIndex=*/0, CTAI, Sema::CTAK_Specified)) {
-      Info.Param = makeTemplateParameter(
-                         const_cast<NamedDecl *>(TemplateParams->getParam(I)));
+      Info.Param = makeTemplateParameter(TemplateParams->getParam(I));
       // FIXME: These template arguments are temporary. Free them!
       Info.reset(
           TemplateArgumentList::CreateCopy(S.Context, CTAI.SugaredConverted),
@@ -3227,7 +3225,7 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
     if (ParamIdx >= TPL->size())
       ParamIdx = TPL->size() - 1;
 
-    Decl *Param = const_cast<NamedDecl *>(TPL->getParam(ParamIdx));
+    Decl *Param = TPL->getParam(ParamIdx);
     Info.Param = makeTemplateParameter(Param);
     Info.FirstArg = Ps[ArgIdx].getArgument();
     return TemplateDeductionResult::SubstitutionFailure;
@@ -5525,6 +5523,15 @@ static TemplateDeductionResult CheckDeductionConsistency(
   // FIXME: A substitution can be incomplete on a non-structural part of the
   // type. Use the canonical type for now, until the TemplateInstantiator can
   // deal with that.
+
+  // Workaround: Implicit deduction guides use InjectedClassNameTypes, whereas
+  // the explicit guides don't. The substitution doesn't transform these types,
+  // so let it transform their specializations instead.
+  bool IsDeductionGuide = isa<CXXDeductionGuideDecl>(FTD->getTemplatedDecl());
+  if (IsDeductionGuide) {
+    if (auto *Injected = P->getAs<InjectedClassNameType>())
+      P = Injected->getInjectedSpecializationType();
+  }
   QualType InstP = S.SubstType(P.getCanonicalType(), MLTAL, FTD->getLocation(),
                                FTD->getDeclName(), &IsIncompleteSubstitution);
   if (InstP.isNull() && !IsIncompleteSubstitution)
@@ -5539,9 +5546,15 @@ static TemplateDeductionResult CheckDeductionConsistency(
   if (auto *PA = dyn_cast<PackExpansionType>(A);
       PA && !isa<PackExpansionType>(InstP))
     A = PA->getPattern();
-  if (!S.Context.hasSameType(
-          S.Context.getUnqualifiedArrayType(InstP.getNonReferenceType()),
-          S.Context.getUnqualifiedArrayType(A.getNonReferenceType())))
+  auto T1 = S.Context.getUnqualifiedArrayType(InstP.getNonReferenceType());
+  auto T2 = S.Context.getUnqualifiedArrayType(A.getNonReferenceType());
+  if (IsDeductionGuide) {
+    if (auto *Injected = T1->getAs<InjectedClassNameType>())
+      T1 = Injected->getInjectedSpecializationType();
+    if (auto *Injected = T2->getAs<InjectedClassNameType>())
+      T2 = Injected->getInjectedSpecializationType();
+  }
+  if (!S.Context.hasSameType(T1, T2))
     return TemplateDeductionResult::NonDeducedMismatch;
   return TemplateDeductionResult::Success;
 }
