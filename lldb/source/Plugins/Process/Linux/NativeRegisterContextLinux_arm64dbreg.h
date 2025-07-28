@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// These functions are split out to be reused in NativeRegisterContextLinux_arm,
-// for supporting debugging 32bit processes on arm64.
+// When debugging 32-bit processes, Arm64 lldb-server should use 64-bit ptrace
+// interfaces. 32-bit ptrace interfaces should only be used by 32-bit server.
+// These functions are split out to be reused in both 32-bit and 64-bit register
+// context for 64-bit server.
 
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg.h"
