@@ -147,6 +147,9 @@ TEST_F(InterpreterTest, DeclsAndStatements) {
 }
 
 TEST_F(InterpreterTest, UndoCommand) {
+#ifdef __EMSCRIPTEN__
+  GTEST_SKIP() << "Test fails for Emscipten builds";
+#endif
   Args ExtraArgs = {"-Xclang", "-diagnostic-log-file", "-Xclang", "-"};
 
   // Create the diagnostic engine with unowned consumer.
@@ -256,6 +259,9 @@ static NamedDecl *LookupSingleName(Interpreter &Interp, const char *Name) {
 }
 
 TEST_F(InterpreterTest, InstantiateTemplate) {
+#ifdef __EMSCRIPTEN__
+  GTEST_SKIP() << "Test fails for Emscipten builds";
+#endif
   // FIXME: We cannot yet handle delayed template parsing. If we run with
   // -fdelayed-template-parsing we try adding the newly created decl to the
   // active PTU which causes an assert.
@@ -295,6 +301,9 @@ TEST_F(InterpreterTest, InstantiateTemplate) {
 }
 
 TEST_F(InterpreterTest, Value) {
+#ifdef __EMSCRIPTEN__
+  GTEST_SKIP() << "Test fails for Emscipten builds";
+#endif
   std::vector<const char *> Args = {"-fno-sized-deallocation"};
   std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
 

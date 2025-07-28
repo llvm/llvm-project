@@ -38,8 +38,10 @@ protected:
   }
 
   void SetUp() override {
+#ifndef __EMSCRIPTEN__
     if (!HostSupportsJIT())
       GTEST_SKIP();
+#endif
   }
 
   void TearDown() override {}

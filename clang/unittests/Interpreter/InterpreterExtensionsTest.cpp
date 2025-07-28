@@ -75,9 +75,10 @@ struct OutOfProcInterpreter : public Interpreter {
 };
 
 TEST_F(InterpreterExtensionsTest, FindRuntimeInterface) {
+#ifndef __EMSCRIPTEN__
   if (!HostSupportsJIT())
     GTEST_SKIP();
-
+#endif
   clang::IncrementalCompilerBuilder CB;
   llvm::Error ErrOut = llvm::Error::success();
   auto CI = cantFail(CB.CreateCpp());
