@@ -2696,7 +2696,7 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
 ///    vector.body:
 ///      EMIT-SCALAR %pointer.phi = phi %start, %ptr.ind
 ///      EMIT %mul = mul %stepvector, %step
-///      EMIT %vector.gep = ptradd %pointer.phi, %mul
+///      EMIT %vector.gep = wide-ptradd %pointer.phi, %mul
 ///      ...
 ///      EMIT %ptr.ind = ptradd %pointer.phi, %vf
 ///      EMIT branch-on-count ...
@@ -2704,6 +2704,9 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
 static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R,
                                           VPTypeAnalysis &TypeInfo) {
   VPlan *Plan = R->getParent()->getPlan();
+  VPValue *Start = R->getStartValue();
+  VPValue *Step = R->getStepValue();
+  VPValue *VF = R->getVFValue();
 
   assert(R->getInductionDescriptor().getKind() ==
              InductionDescriptor::IK_PtrInduction &&
@@ -2712,70 +2715,33 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R,
   assert(!R->onlyScalarsGenerated(Plan->hasScalableVF()) &&
          "Recipe should have been replaced");
 
-  unsigned CurrentPart = R->getCurrentPart();
-
   VPBuilder Builder(R);
   DebugLoc DL = R->getDebugLoc();
 
-  // Build a pointer phi.
-  VPPhi *ScalarPtrPhi;
-  if (CurrentPart == 0) {
-    ScalarPtrPhi =
-        Builder.createScalarPhi({R->getStartValue()}, DL, "pointer.phi");
-  } else {
-    // The recipe has been unrolled. In that case, fetch the single pointer phi
-    // shared among all unrolled parts of the recipe.
-    auto *PtrAdd = cast<VPInstruction>(R->getFirstUnrolledPartOperand());
-    ScalarPtrPhi = cast<VPPhi>(PtrAdd->getOperand(0)->getDefiningRecipe());
-  }
-
-  Builder.setInsertPoint(R->getParent(), R->getParent()->getFirstNonPhi());
-
-  // A pointer induction, performed by using a gep.
-  Type *OffsetTy = TypeInfo.inferScalarType(R->getStepValue());
-  VPValue *RuntimeVF = Builder.createScalarZExtOrTrunc(
-      &Plan->getVF(), OffsetTy, TypeInfo.inferScalarType(&Plan->getVF()), DL);
-  if (CurrentPart == 0) {
-    // The recipe represents the first part of the pointer induction. Create the
-    // GEP to increment the phi across all unrolled parts.
-    VPValue *NumUnrolledElems = Builder.createScalarZExtOrTrunc(
-        R->getOperand(2), OffsetTy, TypeInfo.inferScalarType(R->getOperand(2)),
-        DL);
-    VPValue *Offset = Builder.createNaryOp(
-        Instruction::Mul, {R->getStepValue(), NumUnrolledElems});
-
-    VPBuilder::InsertPointGuard Guard(Builder);
-    VPBasicBlock *ExitingBB =
-        Plan->getVectorLoopRegion()->getExitingBasicBlock();
-    Builder.setInsertPoint(ExitingBB,
-                           ExitingBB->getTerminator()->getIterator());
-
-    VPValue *InductionGEP =
-        Builder.createPtrAdd(ScalarPtrPhi, Offset, DL, "ptr.ind");
-    ScalarPtrPhi->addOperand(InductionGEP);
-  }
-
-  VPValue *CurrentPartV =
-      Plan->getOrAddLiveIn(ConstantInt::get(OffsetTy, CurrentPart));
+  // Build a scalar pointer phi.
+  VPPhi *ScalarPtrPhi = Builder.createScalarPhi(Start, DL, "pointer.phi");
 
   // Create actual address geps that use the pointer phi as base and a
   // vectorized version of the step value (<step*0, ..., step*N>) as offset.
-  VPValue *StartOffsetScalar =
-      Builder.createNaryOp(Instruction::Mul, {RuntimeVF, CurrentPartV});
-  VPValue *StartOffset =
-      Builder.createNaryOp(VPInstruction::Broadcast, StartOffsetScalar);
-  // Create a vector of consecutive numbers from StartOffset to StartOffset+VF.
-  StartOffset = Builder.createNaryOp(
-      Instruction::Add,
-      {StartOffset,
-       Builder.createNaryOp(VPInstruction::StepVector, {}, OffsetTy)});
-
-  VPValue *PtrAdd = Builder.createWidePtrAdd(
-      ScalarPtrPhi,
-      Builder.createNaryOp(Instruction::Mul, {StartOffset, R->getStepValue()}),
-      DL, "vector.gep");
-
+  Builder.setInsertPoint(R->getParent(), R->getParent()->getFirstNonPhi());
+  Type *StepTy = TypeInfo.inferScalarType(Step);
+  VPValue *Offset = Builder.createNaryOp(VPInstruction::StepVector, {}, StepTy);
+  Offset = Builder.createNaryOp(Instruction::Mul, {Offset, Step});
+  VPValue *PtrAdd = Builder.createNaryOp(
+      VPInstruction::WidePtrAdd, {ScalarPtrPhi, Offset}, DL, "vector.gep");
   R->replaceAllUsesWith(PtrAdd);
+
+  // Create the backedge value for the scalar pointer phi.
+  Builder.setInsertPoint(R->getParent(), R->getParent()->getFirstNonPhi());
+  VF = Builder.createScalarZExtOrTrunc(VF, StepTy, TypeInfo.inferScalarType(VF),
+                                       DL);
+  VPValue *Inc = Builder.createNaryOp(Instruction::Mul, {Step, VF});
+
+  VPBasicBlock *ExitingBB = Plan->getVectorLoopRegion()->getExitingBasicBlock();
+  Builder.setInsertPoint(ExitingBB, ExitingBB->getTerminator()->getIterator());
+  VPValue *InductionGEP =
+      Builder.createPtrAdd(ScalarPtrPhi, Inc, DL, "ptr.ind");
+  ScalarPtrPhi->addOperand(InductionGEP);
 }
 
 void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
