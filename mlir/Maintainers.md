@@ -70,15 +70,15 @@ Named maintainers, if available, should be contacted first, as they're more acti
 
 #### Linear Algebra Dialects
 * ‘linalg’ Dialect (tensor)
-* Tensor Operator Set Architecture (TOSA) Dialect ([@sjarus](https://github.com/@sjarus))
+* Tensor Operator Set Architecture (TOSA) Dialect ([@sjarus](https://github.com/sjarus))
 
 #### Type Dialects
 * ‘tensor’ Dialect (tensor)
 * ‘memref’ Dialect (tensor)
-* ‘vector’ Dialect (tensor + [@dcaballe](https://github.com/@dcaballe), [@Groverkss](https://github.com/@Groverkss))
-* ‘sparse_tensor’ Dialect ([@aartbik](https://github.com/@aartbik), [@matthias-springer](https://github.com/@matthias-springer))
+* ‘vector’ Dialect (tensor + [@dcaballe](https://github.com/dcaballe), [@Groverkss](https://github.com/Groverkss))
+* ‘sparse_tensor’ Dialect ([@aartbik](https://github.com/aartbik), [@matthias-springer](https://github.com/matthias-springer))
 
 #### Accessory Dialects
-* ‘bufferization’ Dialect (tensor, [@matthias-springer](https://github.com/@matthias-springer))
-* ‘ml_program’ Dialect ([@jpienaar](https://github.com/@jpienaar))
+* ‘bufferization’ Dialect (tensor, [@matthias-springer](https://github.com/matthias-springer))
+* ‘ml_program’ Dialect ([@jpienaar](https://github.com/jpienaar))
 * ‘quant’ Dialect (unmaintained)
