@@ -63,6 +63,22 @@ class GetDoublingValueFromLMUL<string startMx, int Value, string targetMx> {
   );
 }
 
+<<<<<<< HEAD
+=======
+class GetLMULValue<list<int> Values, string LMUL> {
+  int c = !cond(
+    !and(!eq(LMUL, "MF8"), !ge(!size(Values), 1)) : Values[0],
+    !and(!eq(LMUL, "MF4"), !ge(!size(Values), 2)) : Values[1],
+    !and(!eq(LMUL, "MF2"), !ge(!size(Values), 3)) : Values[2],
+    !and(!eq(LMUL, "M1"),  !ge(!size(Values), 4)) : Values[3],
+    !and(!eq(LMUL, "M2"),  !ge(!size(Values), 5)) : Values[4],
+    !and(!eq(LMUL, "M4"),  !ge(!size(Values), 6)) : Values[5],
+    !and(!eq(LMUL, "M8"),  !ge(!size(Values), 7)) : Values[6],
+    true : 0
+  );
+}
+
+>>>>>>> 26699be80fe0 (Added helper class)
 class SMX60IsWorstCaseMX<string mx, list<string> MxList> {
   string LLMUL = LargestLMUL<MxList>.r;
   bit c = !eq(mx, LLMUL);
