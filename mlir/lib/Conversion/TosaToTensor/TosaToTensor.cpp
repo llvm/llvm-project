@@ -230,7 +230,7 @@ public:
                   ConversionPatternRewriter &rewriter) const final {
     auto loc = reshape.getLoc();
     auto resultType =
-        getTypeConverter()->convertType<ShapedType>(reshape.getType()));
+        getTypeConverter()->convertType<ShapedType>(reshape.getType());
     if (!resultType) {
       return rewriter.notifyMatchFailure(reshape.getLoc(),
                                          "could not convert result type");
