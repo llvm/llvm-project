@@ -97,6 +97,24 @@ static void insertComment(Object &Description, json::Value &Comment,
   }
 }
 
+static json::Value extractTextComments(Object *ParagraphComment) {
+  if (!ParagraphComment)
+    return json::Object();
+  return *ParagraphComment->get("Children");
+}
+
+static json::Value extractVerbatimComments(json::Array VerbatimLines) {
+  json::Value TextArray = json::Array();
+  auto &TextArrayRef = *TextArray.getAsArray();
+  for (auto &Line : VerbatimLines)
+    TextArrayRef.push_back(*Line.getAsObject()
+                                ->get("VerbatimBlockLineComment")
+                                ->getAsObject()
+                                ->get("Text"));
+
+  return TextArray;
+}
+
 static Object serializeComment(const CommentInfo &I, Object &Description) {
   // taken from PR #142273
   Object Obj = Object();
@@ -117,14 +135,11 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
   }
 
   case CommentKind::CK_BlockCommandComment: {
-    Child.insert({"Command", I.Name});
-    // TODO: The "Children" level of nesting isn't needed for comments that
-    // don't hold additional information at the top level. BriefComments can
-    // just be an array of ParagraphComments.
-    Child.insert({"Children", ChildArr});
-    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    auto TextCommentsArray = extractTextComments(CARef.front().getAsObject());
     if (I.Name == "brief")
-      insertComment(Description, ChildVal, "BriefComments");
+      insertComment(Description, TextCommentsArray, "BriefComments");
+    else if (I.Name == "return")
+      insertComment(Description, TextCommentsArray, "ReturnComments");
     return Obj;
   }
 
@@ -146,19 +161,19 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
     Child.insert({"ParamName", I.ParamName});
     Child.insert({"Direction", I.Direction});
     Child.insert({"Explicit", I.Explicit});
-    Child.insert({"Children", ChildArr});
-    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    auto TextCommentsArray = extractTextComments(CARef.front().getAsObject());
+    Child.insert({"Children", TextCommentsArray});
+    if (I.Kind == CommentKind::CK_ParamCommandComment)
+      insertComment(Description, ChildVal, "ParamComments");
     return Obj;
   }
 
   case CommentKind::CK_VerbatimBlockComment: {
-    Child.insert({"Text", I.Text});
-    if (!I.CloseName.empty())
-      Child.insert({"CloseName", I.CloseName});
-    Child.insert({"Children", ChildArr});
-    if (I.CloseName == "endcode")
-      insertComment(Description, ChildVal, "CodeComments");
-    else if (I.CloseName == "endverbatim")
+    if (I.CloseName == "endcode") {
+      // We don't support \code language specification
+      auto TextCommentsArray = extractVerbatimComments(CARef);
+      insertComment(Description, TextCommentsArray, "CodeComments");
+    } else if (I.CloseName == "endverbatim")
       insertComment(Description, ChildVal, "VerbatimComments");
     return Obj;
   }
@@ -201,8 +216,8 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
   case CommentKind::CK_FullComment:
   case CommentKind::CK_ParagraphComment: {
     Child.insert({"Children", ChildArr});
-    Obj.insert({commentKindToString(I.Kind), ChildVal});
-    return Obj;
+    Child["ParagraphComment"] = true;
+    return Child;
   }
 
   case CommentKind::CK_Unknown: {
@@ -239,9 +254,11 @@ serializeCommonAttributes(const Info &I, json::Object &Obj,
       json::Value Comment = serializeComment(*CommentInfo, Description);
       // if a ParagraphComment is returned, then it is a top-level comment that
       // needs to be inserted manually.
-      if (auto *ParagraphComment =
-              Comment.getAsObject()->get("ParagraphComment"))
-        insertComment(Description, *ParagraphComment, "ParagraphComments");
+      if (auto *ParagraphComment = Comment.getAsObject();
+          ParagraphComment->get("ParagraphComment")) {
+        auto TextCommentsArray = extractTextComments(ParagraphComment);
+        insertComment(Description, TextCommentsArray, "ParagraphComments");
+      }
     }
     Obj["Description"] = std::move(Description);
   }
