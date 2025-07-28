@@ -205,6 +205,7 @@ namespace std {
 #  include <__functional/invoke.h>
 #  include <__functional/unary_function.h>
 #  include <__fwd/functional.h>
+#  include <__iterator/bounded_iter.h>
 #  include <__iterator/wrap_iter.h>
 #  include <__memory/addressof.h>
 #  include <__memory/construct_at.h>
@@ -622,8 +623,13 @@ class _LIBCPP_DECLSPEC_EMPTY_BASES optional
 public:
   using value_type = _Tp;
 #    if _LIBCPP_STD_VER >= 26
+#      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+  using iterator       = __bounded_iter<__wrap_iter<pointer>>;
+  using const_iterator = __bounded_iter<__wrap_iter<const_pointer>>;
+#      else
   using iterator       = __wrap_iter<pointer>;
   using const_iterator = __wrap_iter<const_pointer>;
+#      endif
 #    endif
 
   using __trivially_relocatable _LIBCPP_NODEBUG =
@@ -831,10 +837,26 @@ public:
 
 #    if _LIBCPP_STD_VER >= 26
   // [optional.iterators], iterator support
-  _LIBCPP_HIDE_FROM_ABI constexpr iterator begin() noexcept { return iterator(std::addressof(this->__get())); }
+  _LIBCPP_HIDE_FROM_ABI constexpr iterator begin() noexcept {
+#      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+    return std::__make_bounded_iter(
+        std::__wrap_iter<pointer>(std::addressof(this->__get())),
+        std::__wrap_iter<pointer>(std::addressof(this->__get())),
+        std::__wrap_iter<pointer>(std::addressof(this->__get()) + (this->has_value()) ? 1 : 0));
+#      else
+    return iterator(std::addressof(this->__get()));
+#      endif
+  }
 
   _LIBCPP_HIDE_FROM_ABI constexpr const_iterator begin() const noexcept {
+#      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+    return std::__make_bounded_iter(
+        std::__wrap_iter<const_pointer>(std::addressof(this->__get())),
+        std::__wrap_iter<const_pointer>(std::addressof(this->__get())),
+        std::__wrap_iter<const_pointer>(std::addressof(this->__get()) + (this->has_value()) ? 1 : 0));
+#      else
     return const_iterator(std::addressof(this->__get()));
+#      endif
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr iterator end() noexcept { return begin() + (this->has_value() ? 1 : 0); }
