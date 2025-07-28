@@ -9,13 +9,13 @@
 define ptr @ball() {
 entry:
   %fp_foo_val = load ptr, ptr null, align 8
-   ; CHECK: [[LABEL_TMP0:\.Ltmp[0-9]+]]:
+   ; CHECK: [[LABEL_TMP0:\.L.*]]:
   call void (...) %fp_foo_val(), !callee_type !0
   %fp_bar_val = load ptr, ptr null, align 8
-  ; CHECK: [[LABEL_TMP1:\.Ltmp[0-9]+]]:
+  ; CHECK: [[LABEL_TMP1:\.L.*]]:
   %call_fp_bar = call i32 %fp_bar_val(i8 0), !callee_type !2
   %fp_baz_val = load ptr, ptr null, align 8
-  ; CHECK: [[LABEL_TMP2:\.Ltmp[0-9]+]]:
+  ; CHECK: [[LABEL_TMP2:\.L.*]]:
   %call_fp_baz = call ptr %fp_baz_val(ptr null), !callee_type !4
   ret ptr %call_fp_baz
 }
