@@ -1730,8 +1730,7 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
     if (!mapOp.getDefiningOp())
       return emitError(op->getLoc(), "missing map operation");
 
-    if (auto mapInfoOp =
-            mlir::dyn_cast<mlir::omp::MapInfoOp>(mapOp.getDefiningOp())) {
+    if (auto mapInfoOp = mapOp.getDefiningOp<mlir::omp::MapInfoOp>()) {
       uint64_t mapTypeBits = mapInfoOp.getMapType();
 
       bool to = mapTypeToBitFlag(
