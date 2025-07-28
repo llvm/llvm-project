@@ -115,7 +115,7 @@ static bool hasBcmp(const Triple &TT) {
     return TT.isGNUEnvironment() || TT.isMusl();
   // Both NetBSD and OpenBSD are planning to remove the function. Windows does
   // not have it.
-  return TT.isOSFreeBSD() || TT.isOSSolaris();
+  return TT.isOSFreeBSD() || TT.isOSDragonFly() || TT.isOSSolaris();
 }
 
 static bool isCallingConvCCompatible(CallingConv::ID CC, const Triple &TT,
@@ -605,7 +605,7 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_exp10l);
   }
 
-  // ffsl is available on at least Darwin, Mac OS X, iOS, FreeBSD, and
+  // ffsl is available on at least Darwin, Mac OS X, iOS, FreeBSD, DragonFly, OpenBSD and
   // Linux (GLIBC):
   // http://developer.apple.com/library/mac/#documentation/Darwin/Reference/ManPages/man3/ffsl.3.html
   // http://svn.freebsd.org/base/head/lib/libc/string/ffsl.c
@@ -618,13 +618,15 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
   case Triple::WatchOS:
   case Triple::XROS:
   case Triple::FreeBSD:
+  case Triple::DragonFly:
+  case Triple::OpenBSD:
   case Triple::Linux:
     break;
   default:
     TLI.setUnavailable(LibFunc_ffsl);
   }
 
-  // ffsll is available on at least FreeBSD and Linux (GLIBC):
+  // ffsll is available on at least FreeBSD, DragonFly, OpenBSD and Linux (GLIBC):
   // http://svn.freebsd.org/base/head/lib/libc/string/ffsll.c
   // http://www.gnu.org/software/gnulib/manual/html_node/ffsll.html
   switch (T.getOS()) {
@@ -635,17 +637,22 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
   case Triple::WatchOS:
   case Triple::XROS:
   case Triple::FreeBSD:
+  case Triple::DragonFly:
+  case Triple::OpenBSD:
   case Triple::Linux:
     break;
   default:
     TLI.setUnavailable(LibFunc_ffsll);
   }
 
-  // The following functions are available on at least FreeBSD:
+  // The following functions are available on at least FreeBSD and DragonFly:
   // http://svn.freebsd.org/base/head/lib/libc/string/fls.c
   // http://svn.freebsd.org/base/head/lib/libc/string/flsl.c
   // http://svn.freebsd.org/base/head/lib/libc/string/flsll.c
-  if (!T.isOSFreeBSD()) {
+  // https://gitweb.dragonflybsd.org/?p=dragonfly.git;a=blob;f=lib/libc/string/fls.c
+  // https://gitweb.dragonflybsd.org/?p=dragonfly.git;a=blob;f=lib/libc/string/flsl.c
+  // https://gitweb.dragonflybsd.org/?p=dragonfly.git;a=blob;f=lib/libc/string/flsll.c
+  if (!T.isOSFreeBSD() && !T.isOSDragonFly()) {
     TLI.setUnavailable(LibFunc_fls);
     TLI.setUnavailable(LibFunc_flsl);
     TLI.setUnavailable(LibFunc_flsll);
@@ -896,6 +903,17 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_roundeven);
     TLI.setUnavailable(LibFunc_roundevenf);
     TLI.setUnavailable(LibFunc_roundevenl);
+  }
+
+  if (T.isOSDragonFly()) {
+    TLI.setAvailable(LibFunc_fputc_unlocked);
+    TLI.setAvailable(LibFunc_fputs_unlocked);
+    TLI.setAvailable(LibFunc_fread_unlocked);
+    TLI.setAvailable(LibFunc_fwrite_unlocked);
+    TLI.setAvailable(LibFunc_getc_unlocked);
+    TLI.setAvailable(LibFunc_getchar_unlocked);
+    TLI.setAvailable(LibFunc_putc_unlocked);
+    TLI.setAvailable(LibFunc_putchar_unlocked);
   }
 
   // As currently implemented in clang, NVPTX code has no standard library to
