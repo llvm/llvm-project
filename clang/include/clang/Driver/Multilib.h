@@ -84,8 +84,8 @@ public:
   /// All elements begin with either '-' or '!'
   const flags_list &flags() const { return Flags; }
 
-  /// Get the include directories specified in multilib.yaml under the 'IncludeDirs'
-  /// field
+  /// Get the include directories specified in multilib.yaml under the
+  /// 'IncludeDirs' field
   const includedirs_list &includeDirs() const { return IncludeDirs; }
 
   /// Get the exclusive group label.
