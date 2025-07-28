@@ -1201,6 +1201,8 @@ public:
   /// inside a function, including static vars etc.
   void emitVarDecl(const clang::VarDecl &d);
 
+  void emitVariablyModifiedType(QualType ty);
+
   mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
 
   /// Given an assignment `*lhs = rhs`, emit a test that checks if \p rhs is
