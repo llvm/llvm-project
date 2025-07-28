@@ -1318,8 +1318,18 @@ void ObjectFileELF::ParseRISCVAttributes(DataExtractor &data, uint64_t length,
       }
     }
   }
-  if (!attr.empty() && attr.contains("xqci")) {
-    arch_spec.SetAdditionalDisassemblyFeatureStr("+xqci,");
+
+  // List of RISC-V architecture extensions to detect from ELF.
+  // These extensions are extracted from the ".riscv.attributes" section.
+  // New extensions can be added to this list for detection without
+  // modifying the core logic.
+  std::vector<std::string> riscv_extensions = {"xqci"};
+
+  for (const auto &ext : riscv_extensions) {
+    if (!attr.empty() && attr.contains(ext) &&
+        !arch_spec.GetAdditionalDisassemblyFeatureStr().contains(ext)) {
+      arch_spec.SetAdditionalDisassemblyFeatureStr("+" + ext + ",");
+    }
   }
 }
 
@@ -1613,9 +1623,7 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
           DataExtractor data;
           if (sheader.sh_type == SHT_RISCV_ATTRIBUTES && section_size != 0 &&
               (data.SetData(object_data, sheader.sh_offset, section_size) ==
-               section_size) &&
-              !arch_spec.GetAdditionalDisassemblyFeatureStr().contains(
-                  "xqci")) {
+               section_size)) {
             ParseRISCVAttributes(data, section_size, arch_spec);
           }
         }
