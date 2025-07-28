@@ -54,19 +54,21 @@ Status lldb_private::process_linux::arm64::ReadHardwareDebugInfo(
 Status lldb_private::process_linux::arm64::WriteHardwareDebugRegs(
     int hwbType, ::pid_t tid, uint32_t max_supported,
     const std::array<NativeRegisterContextDBReg::DREG, 16> &regs) {
-  struct iovec ioVec;
-  struct user_hwdebug_state dreg_state;
   int regset = hwbType == NativeRegisterContextDBReg::eDREGTypeWATCH
                    ? NT_ARM_HW_WATCH
                    : NT_ARM_HW_BREAK;
+
+  struct user_hwdebug_state dreg_state;
   memset(&dreg_state, 0, sizeof(dreg_state));
-  ioVec.iov_base = &dreg_state;
-  ioVec.iov_len = sizeof(dreg_state.dbg_info) + sizeof(dreg_state.pad) +
-                  (sizeof(dreg_state.dbg_regs[0]) * max_supported);
   for (uint32_t i = 0; i < max_supported; i++) {
     dreg_state.dbg_regs[i].addr = regs[i].address;
     dreg_state.dbg_regs[i].ctrl = regs[i].control;
   }
+
+  struct iovec ioVec;
+  ioVec.iov_base = &dreg_state;
+  ioVec.iov_len = sizeof(dreg_state.dbg_info) + sizeof(dreg_state.pad) +
+                  (sizeof(dreg_state.dbg_regs[0]) * max_supported);
 
   return NativeProcessLinux::PtraceWrapper(PTRACE_SETREGSET, tid, &regset,
                                            &ioVec, ioVec.iov_len);
