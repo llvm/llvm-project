@@ -21,6 +21,7 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectStreamer.h"
@@ -721,15 +722,56 @@ void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
 
   int64_t SignedValue = static_cast<int64_t>(Value);
-  if (IsResolved && Fixup.isPCRel()) {
-    // check that PC relative fixup fits into the fixup size.
+
+  // If the fixup is resolved to an absolute value, and is explictly signed
+  // (either by its type or by being marked as PC-relative), we should check
+  // that it fits.
+  // Otherwise, be conservative because some users may rely on overflow, or
+  // being able to use a signed value where an unsigned value would normally be
+  // expected, so strict checks may break things.
+  bool CheckSignedVal = false;
+  if (IsResolved) {
+    switch (Fixup.getKind()) {
+    default:
+      llvm_unreachable("invalid fixup kind!");
+    case FK_NONE:
+    case FK_Data_1:
+    case FK_Data_2:
+    case FK_Data_4:
+    case FK_Data_8:
+    case FK_SecRel_1:
+    case FK_SecRel_2:
+    case FK_SecRel_4:
+    case FK_SecRel_8:
+      CheckSignedVal = false;
+      break;
+    case X86::reloc_riprel_4byte:
+    case X86::reloc_riprel_4byte_relax:
+    case X86::reloc_riprel_4byte_relax_rex:
+    case X86::reloc_riprel_4byte_relax_rex2:
+    case X86::reloc_riprel_4byte_movq_load:
+    case X86::reloc_riprel_4byte_movq_load_rex2:
+    case X86::reloc_riprel_4byte_relax_evex:
+    case X86::reloc_signed_4byte:
+    case X86::reloc_signed_4byte_relax:
+    case X86::reloc_global_offset_table:
+    case X86::reloc_branch_4byte_pcrel:
+      CheckSignedVal = true;
+      break;
+    }
+
+    if (Fixup.isPCRel())
+      CheckSignedVal = true;
+  }
+
+  if (CheckSignedVal) {
     if (Size > 0 && !isIntN(Size * 8, SignedValue))
       getContext().reportError(Fixup.getLoc(),
                                "value of " + Twine(SignedValue) +
                                    " is too large for field of " + Twine(Size) +
                                    ((Size == 1) ? " byte." : " bytes."));
   } else {
-    // Check that uppper bits are either all zeros or all ones.
+    // Check that upper bits are either all zeros or all ones.
     // Specifically ignore overflow/underflow as long as the leakage is
     // limited to the lower bits. This is to remain compatible with
     // other assemblers.
