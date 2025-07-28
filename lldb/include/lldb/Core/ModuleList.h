@@ -18,6 +18,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
+#include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-types.h"
 
 #include "llvm/ADT/DenseSet.h"
@@ -530,8 +531,9 @@ public:
   /// be non-null.
   ///
   /// This function is thread-safe.
-  void ForEach(std::function<bool(const lldb::ModuleSP &module_sp)> const
-                   &callback) const;
+  void
+  ForEach(std::function<IterationAction(const lldb::ModuleSP &module_sp)> const
+              &callback) const;
 
   void ClearModuleDependentCaches();
 
