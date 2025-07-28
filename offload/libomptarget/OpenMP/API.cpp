@@ -736,7 +736,7 @@ EXTERN int omp_target_is_accessible(const void *Ptr, size_t Size,
       DeviceOrErr->getMappingInfo().getTgtPtrBegin(const_cast<void *>(Ptr), Size,
                                                    /*UpdateRefCount=*/false,
                                                    /*UseHoldRefCount=*/false);
-  int Rc = TPR.isPresent();
+  int Rc = (TPR.isContained() || TPR.isHostPointer());
   DP("Call to omp_target_is_accessible returns %d\n", Rc);
   return Rc;
 }
