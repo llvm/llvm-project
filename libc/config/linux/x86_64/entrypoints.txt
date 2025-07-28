@@ -1267,9 +1267,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.wchar.mbsinit
     libc.src.wchar.mbrtowc
     libc.src.wchar.mbtowc
-    libc.src.wchar.mbstowcs
-    libc.src.wchar.mbsrtowcs
-    libc.src.wchar.mbsnrtowcs
     libc.src.wchar.wcrtomb
     libc.src.wchar.wctomb
     libc.src.wchar.wcstombs
