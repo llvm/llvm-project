@@ -2905,9 +2905,8 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     if (Id.getKind() == UnqualifiedIdKind::IK_TemplateId && Id.TemplateId &&
         (Id.TemplateId->Kind == TNK_Var_template ||
          Id.TemplateId->Kind == TNK_Concept_template)) {
-      // TODO CORENTIN
-      // assert(R.getAsSingle<VarTemplateDecl>() &&
-      //       "There should only be one declaration found.");
+      assert(R.getAsSingle<TemplateDecl>() &&
+             "There should only be one declaration found.");
     }
 
     return BuildTemplateIdExpr(SS, TemplateKWLoc, R, ADL, TemplateArgs);

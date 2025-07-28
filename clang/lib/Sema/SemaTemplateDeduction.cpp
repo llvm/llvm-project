@@ -181,14 +181,6 @@ public:
                  TNK_Concept_template)));
   }
 
-  /*NonTypeOrVarTemplateParmDecl(const NonTypeTemplateParmDecl* NTTP)
-      : Template(NTTP) {}
-  NonTypeOrVarTemplateParmDecl(const TemplateTemplateParmDecl* TTP)
-      : Template(TTP) {
-    assert(TTP->kind() == TNK_Var_template || TTP->kind() ==
-  clang::TNK_Concept_template);
-  }*/
-
   QualType getType() const {
     if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Template))
       return NTTP->getType();
@@ -6739,18 +6731,17 @@ struct MarkUsedTemplateParameterVisitor : DynamicRecursiveASTVisitor {
     return true;
   }
 
-  /*bool VisitUnresolvedLookupExpr(UnresolvedLookupExpr *ULE) {
+  bool VisitUnresolvedLookupExpr(UnresolvedLookupExpr *ULE) override {
     if (ULE->isConceptReference() || ULE->isVarDeclReference()) {
       if (auto *TTP = ULE->getTemplateTemplateDecl()) {
         if (TTP->getDepth() == Depth)
           Used[TTP->getIndex()] = true;
       }
       for (auto &TLoc : ULE->template_arguments())
-        RecursiveASTVisitor<MarkUsedTemplateParameterVisitor>::
-            TraverseTemplateArgumentLoc(TLoc);
+        DynamicRecursiveASTVisitor::TraverseTemplateArgumentLoc(TLoc);
     }
     return true;
-  }*/
+  }
 };
 }
 
@@ -6773,7 +6764,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx,
     E = Expansion->getPattern();
 
   E = unwrapExpressionForDeduction(E);
-  /*if (const auto *ULE = dyn_cast<UnresolvedLookupExpr>(E);
+  if (const auto *ULE = dyn_cast<UnresolvedLookupExpr>(E);
       ULE && (ULE->isConceptReference() || ULE->isVarDeclReference())) {
     if (const auto *TTP = ULE->getTemplateTemplateDecl())
       Used[TTP->getIndex()] = true;
@@ -6781,7 +6772,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx,
       MarkUsedTemplateParameters(Ctx, TLoc.getArgument(), OnlyDeduced, Depth,
                                  Used);
     return;
-  }*/
+  }
 
   const NonTypeOrVarTemplateParmDecl NTTP =
       getDeducedNTTParameterFromExpr(E, Depth);

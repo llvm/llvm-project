@@ -5183,11 +5183,11 @@ bool TreeTransform<Derived>::TransformConceptTemplateArguments(
     TemplateArgumentLoc In = *First;
 
     if (In.getArgument().getKind() == TemplateArgument::Pack) {
-      // if(In.getArgument().pack_size() == 00  ||
-      // !isConcept(In.getArgument().pack_elements()[0])) {
-      //   Outputs.addArgument(In);
-      //   continue;
-      // }
+      if (In.getArgument().pack_size() == 0 ||
+          !isConcept(In.getArgument().pack_elements()[0])) {
+        Outputs.addArgument(In);
+        continue;
+      }
       typedef TemplateArgumentLocInventIterator<Derived,
                                                 TemplateArgument::pack_iterator>
           PackLocIterator;
