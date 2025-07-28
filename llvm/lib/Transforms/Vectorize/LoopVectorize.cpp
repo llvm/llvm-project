@@ -4172,7 +4172,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
   // Set of already visited types.
   DenseSet<Type *> Visited;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+           vp_depth_first_deep(Plan.getVectorPreheader()))) {
     for (VPRecipeBase &R : *VPBB) {
       if (EphemeralRecipes.contains(&R))
         continue;
@@ -4192,6 +4192,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPEVLBasedIVPHISC:
       case VPDef::VPPredInstPHISC:
       case VPDef::VPBranchOnMaskSC:
+      case VPDef::VPIRInstructionSC:
         continue;
       case VPDef::VPReductionSC:
       case VPDef::VPActiveLaneMaskPHISC:
@@ -4247,6 +4248,9 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       // operand.
       VPValue *ToCheck =
           R.getNumDefinedValues() >= 1 ? R.getVPValue(0) : R.getOperand(1);
+      // Don't consider values that didn't come from the original scalar IR.
+      if (!ToCheck->getUnderlyingValue())
+        continue;
       Type *ScalarTy = TypeInfo.inferScalarType(ToCheck);
       if (!Visited.insert({ScalarTy}).second)
         continue;
