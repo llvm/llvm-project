@@ -407,6 +407,7 @@ const MCPhysReg *SIRegisterInfo::getCalleeSavedRegs(
     return ST.hasGFX90AInsts() ? CSR_AMDGPU_GFX90AInsts_SaveList
                                : CSR_AMDGPU_SaveList;
   case CallingConv::AMDGPU_Gfx:
+  case CallingConv::AMDGPU_Gfx_WholeWave:
     return ST.hasGFX90AInsts() ? CSR_AMDGPU_SI_Gfx_GFX90AInsts_SaveList
                                : CSR_AMDGPU_SI_Gfx_SaveList;
   case CallingConv::AMDGPU_CS_ChainPreserve:
@@ -433,6 +434,7 @@ const uint32_t *SIRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     return ST.hasGFX90AInsts() ? CSR_AMDGPU_GFX90AInsts_RegMask
                                : CSR_AMDGPU_RegMask;
   case CallingConv::AMDGPU_Gfx:
+  case CallingConv::AMDGPU_Gfx_WholeWave:
     return ST.hasGFX90AInsts() ? CSR_AMDGPU_SI_Gfx_GFX90AInsts_RegMask
                                : CSR_AMDGPU_SI_Gfx_RegMask;
   case CallingConv::AMDGPU_CS_Chain:
@@ -570,65 +572,6 @@ MCRegister SIRegisterInfo::reservedPrivateSegmentBufferReg(
   return getAlignedHighSGPRForRC(MF, /*Align=*/4, &AMDGPU::SGPR_128RegClass);
 }
 
-std::pair<unsigned, unsigned>
-SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
-  const unsigned MaxVectorRegs = ST.getMaxNumVGPRs(MF);
-
-  unsigned MaxNumVGPRs = MaxVectorRegs;
-  unsigned MaxNumAGPRs = 0;
-
-  // On GFX90A, the number of VGPRs and AGPRs need not be equal. Theoretically,
-  // a wave may have up to 512 total vector registers combining together both
-  // VGPRs and AGPRs. Hence, in an entry function without calls and without
-  // AGPRs used within it, it is possible to use the whole vector register
-  // budget for VGPRs.
-  //
-  // TODO: it shall be possible to estimate maximum AGPR/VGPR pressure and split
-  //       register file accordingly.
-  if (ST.hasGFX90AInsts()) {
-    unsigned MinNumAGPRs = 0;
-    const unsigned TotalNumAGPRs = AMDGPU::AGPR_32RegClass.getNumRegs();
-    const unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
-
-    const std::pair<unsigned, unsigned> DefaultNumAGPR = {~0u, ~0u};
-
-    // TODO: Move this logic into subtarget on IR function
-    //
-    // TODO: The lower bound should probably force the number of required
-    // registers up, overriding amdgpu-waves-per-eu.
-    std::tie(MinNumAGPRs, MaxNumAGPRs) = AMDGPU::getIntegerPairAttribute(
-        MF.getFunction(), "amdgpu-agpr-alloc", DefaultNumAGPR,
-        /*OnlyFirstRequired=*/true);
-
-    if (MinNumAGPRs == DefaultNumAGPR.first) {
-      // Default to splitting half the registers if AGPRs are required.
-      MinNumAGPRs = MaxNumAGPRs = MaxVectorRegs / 2;
-    } else {
-      // Align to accum_offset's allocation granularity.
-      MinNumAGPRs = alignTo(MinNumAGPRs, 4);
-
-      MinNumAGPRs = std::min(MinNumAGPRs, TotalNumAGPRs);
-    }
-
-    // Clamp values to be inbounds of our limits, and ensure min <= max.
-
-    MaxNumAGPRs = std::min(std::max(MinNumAGPRs, MaxNumAGPRs), MaxVectorRegs);
-    MinNumAGPRs = std::min(std::min(MinNumAGPRs, TotalNumAGPRs), MaxNumAGPRs);
-
-    MaxNumVGPRs = std::min(MaxVectorRegs - MinNumAGPRs, TotalNumVGPRs);
-    MaxNumAGPRs = std::min(MaxVectorRegs - MaxNumVGPRs, MaxNumAGPRs);
-
-    assert(MaxNumVGPRs + MaxNumAGPRs <= MaxVectorRegs &&
-           MaxNumAGPRs <= TotalNumAGPRs && MaxNumVGPRs <= TotalNumVGPRs &&
-           "invalid register counts");
-  } else if (ST.hasMAIInsts()) {
-    // On gfx908 the number of AGPRs always equals the number of VGPRs.
-    MaxNumAGPRs = MaxNumVGPRs = MaxVectorRegs;
-  }
-
-  return std::pair(MaxNumVGPRs, MaxNumAGPRs);
-}
-
 BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   Reserved.set(AMDGPU::MODE);
@@ -740,7 +683,7 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   // Reserve VGPRs/AGPRs.
   //
-  auto [MaxNumVGPRs, MaxNumAGPRs] = getMaxNumVectorRegs(MF);
+  auto [MaxNumVGPRs, MaxNumAGPRs] = ST.getMaxNumVectorRegs(MF.getFunction());
 
   for (const TargetRegisterClass *RC : regclasses()) {
     if (RC->isBaseClass() && isVGPRClass(RC)) {
@@ -4052,11 +3995,11 @@ SIRegisterInfo::getSubRegAlignmentNumBits(const TargetRegisterClass *RC,
   return 0;
 }
 
-unsigned
-SIRegisterInfo::getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
-                                   const TargetRegisterClass &RC) const {
+unsigned SIRegisterInfo::getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
+                                            const TargetRegisterClass &RC,
+                                            bool IncludeCalls) const {
   for (MCPhysReg Reg : reverse(RC.getRegisters()))
-    if (MRI.isPhysRegUsed(Reg))
+    if (MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/!IncludeCalls))
       return getHWRegIndex(Reg) + 1;
   return 0;
 }

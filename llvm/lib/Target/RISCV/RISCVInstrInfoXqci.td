@@ -845,10 +845,11 @@ let Predicates = [HasVendorXqcibi, IsRV32] in {
 let Predicates = [HasVendorXqcibm, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_INSBRI : QCIRVInstRI<0b1, simm11, "qc.insbri">;
-  def QC_INSBI : RVInstIBase<0b001, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
-                             (ins simm5:$imm5, uimm5_plus1:$width,
+  def QC_INSBI : RVInstIBase<0b001, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb),
+                             (ins GPRNoX0:$rd, simm5:$imm5, uimm5_plus1:$width,
                              uimm5:$shamt), "qc.insbi",
                              "$rd, $imm5, $width, $shamt"> {
+    let Constraints = "$rd = $rd_wb";
     bits<5> imm5;
     bits<5> shamt;
     bits<5> width;
@@ -1376,9 +1377,9 @@ let Predicates = [HasVendorXqciac, IsRV32] in {
 def : Pat<(i32 (add GPRNoX0:$rd, (mul GPRNoX0:$rs1, simm12:$imm12))),
           (QC_MULIADD GPRNoX0:$rd, GPRNoX0:$rs1, simm12:$imm12)>;
 def : Pat<(i32 (add_like_non_imm12 (shl GPRNoX0:$rs1, uimm5gt3:$imm), GPRNoX0:$rs2)),
-          (QC_SHLADD GPRNoX0:$rs2, GPRNoX0:$rs1, uimm5gt3:$imm)>;
+          (QC_SHLADD GPRNoX0:$rs1, GPRNoX0:$rs2, uimm5gt3:$imm)>;
 def : Pat<(i32 (riscv_shl_add GPRNoX0:$rs1, uimm5gt3:$imm, GPRNoX0:$rs2)),
-          (QC_SHLADD GPRNoX0:$rs2, GPRNoX0:$rs1, uimm5gt3:$imm)>;
+          (QC_SHLADD GPRNoX0:$rs1, GPRNoX0:$rs2, uimm5gt3:$imm)>;
 } // Predicates = [HasVendorXqciac, IsRV32]
 
 /// Simple arithmetic operations

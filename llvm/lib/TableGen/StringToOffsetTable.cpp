@@ -83,10 +83,11 @@ void StringToOffsetTable::EmitStringTableDef(raw_ostream &OS,
 #pragma GCC diagnostic pop
 #endif
 
-{1}constexpr llvm::StringTable
+{1} llvm::StringTable
 {2}{0} = {0}Storage;
 )",
-                Name, ClassPrefix.empty() ? "static " : "", ClassPrefix);
+                Name, ClassPrefix.empty() ? "static constexpr" : "const",
+                ClassPrefix);
 }
 
 void StringToOffsetTable::EmitString(raw_ostream &O) const {

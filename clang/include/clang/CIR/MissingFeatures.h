@@ -196,6 +196,8 @@ struct MissingFeatures {
   static bool cxxRecordStaticMembers() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
+  static bool ehCleanupFlags() { return false; }
+  static bool ehstackBranches() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
   static bool emitLifetimeMarkers() { return false; }
@@ -252,8 +254,9 @@ struct MissingFeatures {
   static bool writebacks() { return false; }
   static bool appleKext() { return false; }
   static bool dtorCleanups() { return false; }
-  static bool completeDtors() { return false; }
   static bool vtableInitialization() { return false; }
+  static bool msvcBuiltins() { return false; }
+  static bool vlas() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
