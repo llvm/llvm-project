@@ -17,9 +17,7 @@ namespace mlir {
 
 class DialectRegistry;
 class MLIRContext;
-} // namespace mlir
 
-namespace mlir {
 /// Register the XeVM dialect and the translation from it to the LLVM IR in the
 /// given registry;
 void registerXeVMDialectTranslation(mlir::DialectRegistry &registry);

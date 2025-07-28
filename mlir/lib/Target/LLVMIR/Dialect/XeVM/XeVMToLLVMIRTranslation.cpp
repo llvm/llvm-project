@@ -37,15 +37,6 @@ class XeVMDialectLLVMIRTranslationInterface
 public:
   using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
 
-  /// Translates the given operation to LLVM IR using the provided IR builder
-  /// and saving the state in `moduleTranslation`.
-  LogicalResult
-  convertOperation(Operation *op, llvm::IRBuilderBase &builder,
-                   LLVM::ModuleTranslation &moduleTranslation) const final {
-    /* TODO */
-    return failure();
-  }
-
   /// Attaches module-level metadata for functions marked as kernels.
   LogicalResult
   amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
@@ -72,28 +63,23 @@ public:
   }
 
 private:
-  template <typename IntTy>
-  static llvm::Metadata *getConstantIntMD(llvm::Type *type, IntTy val) {
-    return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(type, val));
-  }
-
   static LogicalResult handleDecorationCacheControl(llvm::Instruction *inst,
                                                     ArrayRef<Attribute> attrs) {
     SmallVector<llvm::Metadata *> decorations;
     llvm::LLVMContext &ctx = inst->getContext();
     llvm::Type *i32Ty = llvm::IntegerType::getInt32Ty(ctx);
-    llvm::transform(attrs, std::back_inserter(decorations),
-                    [&ctx, i32Ty](Attribute attr) -> llvm::Metadata * {
-                      auto valuesArray = dyn_cast<ArrayAttr>(attr).getValue();
-                      std::array<llvm::Metadata *, 4> metadata;
-                      llvm::transform(
-                          valuesArray, metadata.begin(),
-                          [i32Ty](Attribute valueAttr) {
-                            return getConstantIntMD(
-                                i32Ty, cast<IntegerAttr>(valueAttr).getValue());
-                          });
-                      return llvm::MDNode::get(ctx, metadata);
-                    });
+    llvm::transform(
+        attrs, std::back_inserter(decorations),
+        [&ctx, i32Ty](Attribute attr) -> llvm::Metadata * {
+          auto valuesArray = dyn_cast<ArrayAttr>(attr).getValue();
+          std::array<llvm::Metadata *, 4> metadata;
+          llvm::transform(
+              valuesArray, metadata.begin(), [i32Ty](Attribute valueAttr) {
+                return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+                    i32Ty, cast<IntegerAttr>(valueAttr).getValue()));
+              });
+          return llvm::MDNode::get(ctx, metadata);
+        });
     constexpr llvm::StringLiteral decorationCacheControlMDName =
         "spirv.DecorationCacheControlINTEL";
     inst->setMetadata(decorationCacheControlMDName,
@@ -103,14 +89,14 @@ private:
 };
 } // namespace
 
-void ::mlir::registerXeVMDialectTranslation(::mlir::DialectRegistry &registry) {
+void mlir::registerXeVMDialectTranslation(::mlir::DialectRegistry &registry) {
   registry.insert<xevm::XeVMDialect>();
   registry.addExtension(+[](MLIRContext *ctx, xevm::XeVMDialect *dialect) {
     dialect->addInterfaces<XeVMDialectLLVMIRTranslationInterface>();
   });
 }
 
-void ::mlir::registerXeVMDialectTranslation(::mlir::MLIRContext &context) {
+void mlir::registerXeVMDialectTranslation(::mlir::MLIRContext &context) {
   DialectRegistry registry;
   registerXeVMDialectTranslation(registry);
   context.appendDialectRegistry(registry);

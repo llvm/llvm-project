@@ -2,8 +2,12 @@
 ; This test checks that lifetime markers are considered clobbers of %P,
 ; and due to lack of noalias information, of %Q as well.
 
-define i8 @test(ptr %P, ptr %Q) {
+declare ptr @obscure(ptr) memory(none)
+
+define i8 @test() {
 entry:
+  %P = alloca [32 x i8]
+  %Q = call ptr @obscure(ptr %P)
 ; CHECK:  1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT:   call void @llvm.lifetime.start.p0(i64 32, ptr %P)
   call void @llvm.lifetime.start.p0(i64 32, ptr %P)

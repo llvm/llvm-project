@@ -74,27 +74,25 @@ unsigned Program::createGlobalString(const StringLiteral *S, const Expr *Base) {
 
   const Pointer Ptr(G->block());
   if (CharWidth == 1) {
-    std::memcpy(&Ptr.atIndex(0).deref<char>(), S->getString().data(),
-                StringLength);
+    std::memcpy(&Ptr.elem<char>(0), S->getString().data(), StringLength);
   } else {
     // Construct the string in storage.
     for (unsigned I = 0; I <= StringLength; ++I) {
-      Pointer Field = Ptr.atIndex(I);
       const uint32_t CodePoint = I == StringLength ? 0 : S->getCodeUnit(I);
       switch (CharType) {
       case PT_Sint8: {
         using T = PrimConv<PT_Sint8>::T;
-        Field.deref<T>() = T::from(CodePoint, BitWidth);
+        Ptr.elem<T>(I) = T::from(CodePoint, BitWidth);
         break;
       }
       case PT_Uint16: {
         using T = PrimConv<PT_Uint16>::T;
-        Field.deref<T>() = T::from(CodePoint, BitWidth);
+        Ptr.elem<T>(I) = T::from(CodePoint, BitWidth);
         break;
       }
       case PT_Uint32: {
         using T = PrimConv<PT_Uint32>::T;
-        Field.deref<T>() = T::from(CodePoint, BitWidth);
+        Ptr.elem<T>(I) = T::from(CodePoint, BitWidth);
         break;
       }
       default:
@@ -171,7 +169,7 @@ unsigned Program::getOrCreateDummy(const DeclTy &D) {
   assert(!QT.isNull());
 
   Descriptor *Desc;
-  if (std::optional<PrimType> T = Ctx.classify(QT))
+  if (OptPrimType T = Ctx.classify(QT))
     Desc = createDescriptor(D, *T, /*SourceTy=*/nullptr, std::nullopt,
                             /*IsConst=*/QT.isConstQualified());
   else
@@ -250,7 +248,7 @@ std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
   const bool IsConst = Ty.isConstQualified();
   const bool IsTemporary = D.dyn_cast<const Expr *>();
   const bool IsVolatile = Ty.isVolatileQualified();
-  if (std::optional<PrimType> T = Ctx.classify(Ty))
+  if (OptPrimType T = Ctx.classify(Ty))
     Desc = createDescriptor(D, *T, nullptr, Descriptor::GlobalMD, IsConst,
                             IsTemporary, /*IsMutable=*/false, IsVolatile);
   else
@@ -373,7 +371,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     const bool IsMutable = FD->isMutable();
     const bool IsVolatile = FT.isVolatileQualified();
     const Descriptor *Desc;
-    if (std::optional<PrimType> T = Ctx.classify(FT)) {
+    if (OptPrimType T = Ctx.classify(FT)) {
       Desc = createDescriptor(FD, *T, nullptr, std::nullopt, IsConst,
                               /*isTemporary=*/false, IsMutable, IsVolatile);
     } else {
@@ -412,7 +410,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
     // Array of well-known bounds.
     if (const auto *CAT = dyn_cast<ConstantArrayType>(ArrayType)) {
       size_t NumElems = CAT->getZExtSize();
-      if (std::optional<PrimType> T = Ctx.classify(ElemTy)) {
+      if (OptPrimType T = Ctx.classify(ElemTy)) {
         // Arrays of primitives.
         unsigned ElemSize = primSize(*T);
         if (std::numeric_limits<unsigned>::max() / ElemSize <= NumElems) {
@@ -439,7 +437,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
     // is forbidden on pointers to such objects.
     if (isa<IncompleteArrayType>(ArrayType) ||
         isa<VariableArrayType>(ArrayType)) {
-      if (std::optional<PrimType> T = Ctx.classify(ElemTy)) {
+      if (OptPrimType T = Ctx.classify(ElemTy)) {
         return allocateDescriptor(D, *T, MDSize, IsConst, IsTemporary,
                                   Descriptor::UnknownSize{});
       } else {
@@ -462,7 +460,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
 
   // Complex types - represented as arrays of elements.
   if (const auto *CT = Ty->getAs<ComplexType>()) {
-    std::optional<PrimType> ElemTy = Ctx.classify(CT->getElementType());
+    OptPrimType ElemTy = Ctx.classify(CT->getElementType());
     if (!ElemTy)
       return nullptr;
 
@@ -472,7 +470,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
 
   // Same with vector types.
   if (const auto *VT = Ty->getAs<VectorType>()) {
-    std::optional<PrimType> ElemTy = Ctx.classify(VT->getElementType());
+    OptPrimType ElemTy = Ctx.classify(VT->getElementType());
     if (!ElemTy)
       return nullptr;
 

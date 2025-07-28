@@ -554,7 +554,7 @@ struct ClampClampOptimization : public OpRewritePattern<tosa::ClampOp> {
     Value input = op.getInput();
 
     // Check the input to the CLAMP op is itself a CLAMP.
-    auto clampOp = dyn_cast_if_present<tosa::ClampOp>(input.getDefiningOp());
+    auto clampOp = input.getDefiningOp<tosa::ClampOp>();
     if (!clampOp)
       return failure();
 
@@ -845,9 +845,9 @@ struct PadSliceOptimization : public OpRewritePattern<tosa::SliceOp> {
         getTosaConstShape(rewriter, sliceOp.getLoc(), newPadPaddings);
     auto newPadTy =
         RankedTensorType::get(newPadShape, inputTy.getElementType());
-    auto newPadOp = rewriter.create<tosa::PadOp>(
-        padOp.getLoc(), newPadTy, padOp.getInput1(), newPaddingsOp,
-        padOp.getPadConst());
+    auto newPadOp = tosa::PadOp::create(rewriter, padOp.getLoc(), newPadTy,
+                                        padOp.getInput1(), newPaddingsOp,
+                                        padOp.getPadConst());
 
     // Update SliceOp and point to new PadOp
     auto newStartOp =
@@ -897,9 +897,9 @@ struct SliceDynamicSizeCanonicalization
     }
 
     auto size_op = getTosaConstShape(rewriter, sliceOp.getLoc(), sliceSizes);
-    auto newSliceOp = rewriter.create<tosa::SliceOp>(
-        sliceOp.getLoc(), sliceOp.getType(), sliceOp.getInput1(),
-        sliceOp.getStart(), size_op);
+    auto newSliceOp =
+        tosa::SliceOp::create(rewriter, sliceOp.getLoc(), sliceOp.getType(),
+                              sliceOp.getInput1(), sliceOp.getStart(), size_op);
 
     rewriter.replaceOp(sliceOp, newSliceOp.getResult());
     return success();
@@ -1295,15 +1295,19 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
     }
 
     if (llvm::isa<IntegerType>(inETy) && llvm::isa<IntegerType>(outETy)) {
-      auto unsignIn = llvm::cast<IntegerType>(inETy).isUnsignedInteger();
+      const auto inIntType = llvm::cast<IntegerType>(inETy);
+      auto unsignIn = inIntType.isUnsignedInteger();
       bool trunc =
           inETy.getIntOrFloatBitWidth() > outETy.getIntOrFloatBitWidth();
       auto intVal = operand.getSplatValue<APInt>();
       auto bitwidth = outETy.getIntOrFloatBitWidth();
 
-      if (trunc) {
+      // i1 types are boolean in TOSA
+      if (outETy.isInteger(1)) {
+        intVal = APInt(bitwidth, intVal.isZero() ? 0 : 1);
+      } else if (trunc) {
         intVal = intVal.trunc(bitwidth);
-      } else if (unsignIn) {
+      } else if (unsignIn || inIntType.isInteger(1)) {
         intVal = intVal.zext(bitwidth);
       } else {
         intVal = intVal.sext(bitwidth);
@@ -1632,7 +1636,7 @@ OpFoldResult ConcatOp::fold(FoldAdaptor adaptor) {
   for (Value operand : getOperands()) {
     concatOperands.emplace_back(operand);
 
-    auto producer = dyn_cast_or_null<ConcatOp>(operand.getDefiningOp());
+    auto producer = operand.getDefiningOp<ConcatOp>();
     if (!producer)
       continue;
 

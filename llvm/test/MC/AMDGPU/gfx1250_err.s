@@ -96,3 +96,63 @@ v_ceil_f64 v[2:3], lit64(123
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected closing parentheses
 // GFX1250-ERR: v_ceil_f64 v[2:3], lit64(123
 // GFX1250-ERR:                             ^
+
+v_fmaak_f64 v[4:5], lit(lit64(0x7e8)), v[8:9], lit64(0x7e8)
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1250-ERR: v_fmaak_f64 v[4:5], lit(lit64(0x7e8)), v[8:9], lit64(0x7e8)
+// GFX1250-ERR:                              ^
+
+v_fmaak_f64 v[4:5], lit64(lit64(0x7e8)), v[8:9], lit64(0x7e8)
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1250-ERR: v_fmaak_f64 v[4:5], lit64(lit64(0x7e8)), v[8:9], lit64(0x7e8)
+// GFX1250-ERR:                                ^
+
+v_fmaak_f64 v[4:5], lit64(lit(0x7e8)), v[8:9], lit64(0x7e8)
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1250-ERR: v_fmaak_f64 v[4:5], lit64(lit(0x7e8)), v[8:9], lit64(0x7e8)
+// GFX1250-ERR:                              ^
+
+v_fmamk_f64 v[4:5], 123.0, 123.1, v[6:7]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
+// GFX1250-ERR: v_fmamk_f64 v[4:5], 123.0, 123.1, v[6:7]
+// GFX1250-ERR:                     ^
+
+v_fmamk_f64 v[4:5], 0x405ec00000000001, 123.0, v[6:7]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
+// GFX1250-ERR: v_fmamk_f64 v[4:5], 0x405ec00000000001, 123.0, v[6:7]
+// GFX1250-ERR:                     ^
+
+v_fmaak_f64 v[4:5], 123.1, v[6:7], 123.0
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
+// GFX1250-ERR: v_fmaak_f64 v[4:5], 123.1, v[6:7], 123.0
+// GFX1250-ERR:                     ^
+
+v_fmaak_f64 v[4:5], 123.0, v[6:7], 0x405ec00000000001
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
+// GFX1250-ERR: v_fmaak_f64 v[4:5], 123.0, v[6:7], 0x405ec00000000001
+// GFX1250-ERR:                     ^
+
+v_fmaak_f64 v[4:5], 0x7e8, v[8:9], lit64(0x7e8)
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
+// GFX1250-ERR: v_fmaak_f64 v[4:5], 0x7e8, v[8:9], lit64(0x7e8)
+// GFX1250-ERR:                     ^
+
+v_pk_add_min_i16 v10, -v1, v2, v3
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1250-ERR: v_pk_add_min_i16 v10, -v1, v2, v3
+// GFX1250-ERR:                       ^
+
+v_pk_add_min_i16 v10, sext(v1), v2, v3
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1250-ERR: v_pk_add_min_i16 v10, sext(v1), v2, v3
+// GFX1250-ERR:                       ^
+
+v_pk_add_min_i16 v10, v1, v2, v3 neg_lo:[1,0,0]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1250-ERR: v_pk_add_min_i16 v10, v1, v2, v3 neg_lo:[1,0,0]
+// GFX1250-ERR:                                  ^
+
+v_pk_add_min_i16 v10, v1, v2, v3 neg_hi:[1,0,0]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1250-ERR: v_pk_add_min_i16 v10, v1, v2, v3 neg_hi:[1,0,0]
+// GFX1250-ERR:                                  ^

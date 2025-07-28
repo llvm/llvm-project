@@ -5,16 +5,41 @@
     
     This file defines templates for generating comments
 }}
-{{#FullComment}}
-    {{#Children}}
-    {{>Comments}}
-    {{/Children}}
-{{/FullComment}}
+{{#BriefComments}}
+    <div>
+    {{#.}}
+        <p>{{TextComment}}</p>
+    {{/.}}
+    </div>
+{{/BriefComments}}
+{{#ParagraphComments}}
+    <div>
+    {{#.}}
+        <p>{{TextComment}}</p>
+    {{/.}}
+    </div>
+{{/ParagraphComments}}
 {{#ParagraphComment}}
     {{#Children}}
     {{>Comments}}
     {{/Children}}
 {{/ParagraphComment}}
+{{#HasParamComments}}
+    <h3>Parameters</h3>
+    {{#ParamComments}}
+    <div>
+        <b>{{ParamName}}</b> {{#Explicit}}{{Direction}}{{/Explicit}} {{#Children}}{{>Comments}}{{/Children}}
+    </div> 
+    {{/ParamComments}}
+{{/HasParamComments}}
+{{#HasReturnComments}}
+    <h3>Returns</h3>
+    {{#ReturnComments}}
+        {{#.}}
+        <p>{{TextComment}}</p>
+        {{/.}}
+    {{/ReturnComments}}
+{{/HasReturnComments}}
 {{#BlockCommandComment}}
     <div class="block-command-comment__command">
         <div class="block-command-command">

@@ -1157,9 +1157,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         !TC.getTriple().isAndroid() && !TC.getTriple().isOSFuchsia();
   }
 
-  LinkRuntimes =
-      Args.hasFlag(options::OPT_fsanitize_link_runtime,
-                   options::OPT_fno_sanitize_link_runtime, LinkRuntimes);
+  LinkRuntimes = Args.hasFlag(options::OPT_fsanitize_link_runtime,
+                              options::OPT_fno_sanitize_link_runtime,
+                              !Args.hasArg(options::OPT_r));
 
   // Parse -link-cxx-sanitizer flag.
   LinkCXXRuntimes = D.CCCIsCXX();

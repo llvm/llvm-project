@@ -36,6 +36,20 @@ XCOFFObjectWriter &MCXCOFFStreamer::getWriter() {
   return static_cast<XCOFFObjectWriter &>(getAssembler().getWriter());
 }
 
+void MCXCOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
+  MCObjectStreamer::changeSection(Section, Subsection);
+  auto *Sec = cast<MCSectionXCOFF>(Section);
+  // We might miss calculating the symbols difference as absolute value before
+  // adding fixups when symbol_A without the fragment set is the csect itself
+  // and symbol_B is in it.
+  // TODO: Currently we only set the fragment for XMC_PR csects and DWARF
+  // sections because we don't have other cases that hit this problem yet.
+  // if (IsDwarfSec || CsectProp->MappingClass == XCOFF::XMC_PR)
+  //   QualName->setFragment(F);
+  if (Sec->isDwarfSect() || Sec->getMappingClass() == XCOFF::XMC_PR)
+    Sec->getQualNameSymbol()->setFragment(CurFrag);
+}
+
 bool MCXCOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
                                           MCSymbolAttr Attribute) {
   auto *Symbol = cast<MCSymbolXCOFF>(Sym);
@@ -89,7 +103,7 @@ void MCXCOFFStreamer::emitXCOFFSymbolLinkageWithVisibility(
 void MCXCOFFStreamer::emitXCOFFRefDirective(const MCSymbol *Symbol) {
   // Add a Fixup here to later record a relocation of type R_REF to prevent the
   // ref symbol from being garbage collected (by the binder).
-  MCDataFragment *DF = getOrCreateDataFragment();
+  MCFragment *DF = getCurrentFragment();
   const MCSymbolRefExpr *SRE = MCSymbolRefExpr::create(Symbol, getContext());
   std::optional<MCFixupKind> MaybeKind =
       getAssembler().getBackend().getFixupKind("R_REF");

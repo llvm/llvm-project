@@ -348,9 +348,9 @@ const Symbol &BypassGeneric(const Symbol &symbol) {
 
 const Symbol &GetCrayPointer(const Symbol &crayPointee) {
   const Symbol *found{nullptr};
-  for (const auto &[pointee, pointer] :
-      crayPointee.GetUltimate().owner().crayPointers()) {
-    if (pointee == crayPointee.name()) {
+  const Symbol &ultimate{crayPointee.GetUltimate()};
+  for (const auto &[pointee, pointer] : ultimate.owner().crayPointers()) {
+    if (pointee == ultimate.name()) {
       found = &pointer.get();
       break;
     }
@@ -1740,7 +1740,7 @@ std::forward_list<std::string> GetOperatorNames(
 std::forward_list<std::string> GetAllNames(
     const SemanticsContext &context, const SourceName &name) {
   std::string str{name.ToString()};
-  if (!name.empty() && name.end()[-1] == ')' &&
+  if (!name.empty() && name.back() == ')' &&
       name.ToString().rfind("operator(", 0) == 0) {
     for (int i{0}; i != common::LogicalOperator_enumSize; ++i) {
       auto names{GetOperatorNames(context, common::LogicalOperator{i})};

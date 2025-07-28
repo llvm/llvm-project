@@ -162,6 +162,8 @@ static void initField(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
   Desc->IsConst = IsConst || D->IsConst;
   Desc->IsFieldMutable = IsMutable || D->IsMutable;
   Desc->IsVolatile = IsVolatile || D->IsVolatile;
+  // True if this field is const AND the parent is mutable.
+  Desc->IsConstInMutable = Desc->IsConst && IsMutable;
 
   if (auto Fn = D->CtorFn)
     Fn(B, Ptr + FieldOffset, Desc->IsConst, Desc->IsFieldMutable,
