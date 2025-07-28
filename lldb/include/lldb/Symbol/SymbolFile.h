@@ -329,16 +329,18 @@ public:
   GetMangledNamesForFunction(const std::string &scope_qualified_name,
                              std::vector<ConstString> &mangled_names);
 
-  /// Resolves the function DIE identified by \c lookup_name within
-  /// this SymbolFile.
+  /// Resolves the function corresponding to the specified LLDB function
+  /// call \c label.
   ///
   /// \param[in,out] sc_list The resolved functions will be appended to this
   /// list.
   ///
-  /// \param[in] lookup_name The UID of the function DIE to resolve.
+  /// \param[in] label The FunctionCallLabel to be resolved.
   ///
-  virtual llvm::Error FindAndResolveFunction(SymbolContextList &sc_list,
-                                             llvm::StringRef lookup_name) {
+  /// \returns An llvm::Error if the specified \c label couldn't be resolved.
+  ///          Returns \c llvm::ErrorSuccess otherwise.
+  virtual llvm::Error ResolveFunctionCallLabel(SymbolContextList &sc_list,
+                                               const FunctionCallLabel &label) {
     return llvm::createStringError("Not implemented");
   }
 

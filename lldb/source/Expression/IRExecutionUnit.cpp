@@ -811,8 +811,7 @@ ResolveFunctionCallLabel(llvm::StringRef name,
         llvm::formatv("no SymbolFile found on module {0:x}.", module_sp.get()));
 
   SymbolContextList sc_list;
-  if (auto err =
-          symbol_file->FindAndResolveFunction(sc_list, label.lookup_name))
+  if (auto err = symbol_file->ResolveFunctionCallLabel(sc_list, label))
     return llvm::joinErrors(
         llvm::createStringError("failed to resolve function by UID"),
         std::move(err));

@@ -2476,42 +2476,53 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
 }
 
 llvm::Error
-SymbolFileDWARF::FindAndResolveFunction(SymbolContextList &sc_list,
-                                        llvm::StringRef lookup_name) {
+SymbolFileDWARF::ResolveFunctionCallLabel(SymbolContextList &sc_list,
+                                          const FunctionCallLabel &label) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
 
-  DWARFDIE die;
-  Module::LookupInfo info(ConstString(lookup_name), lldb::eFunctionNameTypeFull,
-                          lldb::eLanguageTypeUnknown);
-
-  m_index->GetFunctions(info, *this, {}, [&](DWARFDIE entry) {
-    if (entry.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
-      return true;
-
-    // We don't check whether the specification DIE for this function
-    // corresponds to the declaration DIE because the declaration might be in
-    // a type-unit but the definition in the compile-unit (and it's
-    // specifcation would point to the declaration in the compile-unit). We
-    // rely on the mangled name within the module to be enough to find us the
-    // unique definition.
-    die = entry;
-    return false;
-  });
-
+  DWARFDIE die = GetDIE(label.symbol_id);
   if (!die.IsValid())
     return llvm::createStringError(
-        llvm::formatv("failed to find definition DIE for '{0}'", lookup_name));
+        llvm::formatv("invalid DIE ID in {0}", label));
 
-  if (!ResolveFunction(die, false, sc_list))
-    return llvm::createStringError("failed to resolve function DIE");
+  // Label was created using a declaration DIE. Need to fetch the definition
+  // to resolve the function call.
+  if (die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0)) {
+    Module::LookupInfo info(ConstString(label.lookup_name),
+                            lldb::eFunctionNameTypeFull,
+                            lldb::eLanguageTypeUnknown);
+
+    m_index->GetFunctions(info, *this, {}, [&](DWARFDIE entry) {
+      if (entry.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
+        return true;
+
+      // We don't check whether the specification DIE for this function
+      // corresponds to the declaration DIE because the declaration might be in
+      // a type-unit but the definition in the compile-unit (and it's
+      // specifcation would point to the declaration in the compile-unit). We
+      // rely on the mangled name within the module to be enough to find us the
+      // unique definition.
+      die = entry;
+      return false;
+    });
+
+    if (die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
+      return llvm::createStringError(
+          llvm::formatv("failed to find definition DIE for {0}", label));
+  }
+
+  if (!ResolveFunction(die, /*include_inlines=*/false, sc_list))
+    return llvm::createStringError(
+        llvm::formatv("failed to resolve function for {0}", label));
 
   if (sc_list.IsEmpty())
-    return llvm::createStringError("no definition DIE found");
+    return llvm::createStringError(
+        llvm::formatv("failed to find function for {0}", label));
 
   if (sc_list.GetSize() > 1)
     return llvm::createStringError(
-        "found %d functions for %s but expected only 1", sc_list.GetSize(),
-        lookup_name.data());
+        llvm::formatv("found {0} functions for {1} but expected only 1",
+                      sc_list.GetSize(), label));
 
   return llvm::Error::success();
 }

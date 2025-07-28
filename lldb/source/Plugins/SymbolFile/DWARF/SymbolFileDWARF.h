@@ -436,8 +436,8 @@ protected:
   DIEArray MergeBlockAbstractParameters(const DWARFDIE &block_die,
                                         DIEArray &&variable_dies);
 
-  llvm::Error FindAndResolveFunction(SymbolContextList &sc_list,
-                                     llvm::StringRef lookup_name) override;
+  llvm::Error ResolveFunctionCallLabel(SymbolContextList &sc_list,
+                                       const FunctionCallLabel &label) override;
 
   // Given a die_offset, figure out the symbol context representing that die.
   bool ResolveFunction(const DWARFDIE &die, bool include_inlines,
