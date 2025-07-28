@@ -1482,6 +1482,20 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
   switch (Opcode) {
   default:
     llvm_unreachable("Missing case");
+  case Instruction::PtrToAddr:
+    if (auto *GEP = dyn_cast<GEPOperator>(C)) {
+      // For now just handle the basic case of GEPs on NULL for ptrtoaddr.
+      // (ptrtoaddr (gep null, x)) -> x
+      // (ptrtoaddr (gep (gep null, x), y) -> x + y, etc.
+      unsigned BitWidth = DL.getIndexTypeSizeInBits(GEP->getType());
+      APInt BaseOffset(BitWidth, 0);
+      auto *Base = cast<Constant>(GEP->stripAndAccumulateConstantOffsets(
+          DL, BaseOffset, /*AllowNonInbounds=*/true));
+      if (Base->isNullValue()) {
+        return ConstantInt::get(C->getContext(), BaseOffset);
+      }
+    }
+    break;
   case Instruction::PtrToInt:
     if (auto *CE = dyn_cast<ConstantExpr>(C)) {
       Constant *FoldedValue = nullptr;
