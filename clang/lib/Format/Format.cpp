@@ -2667,9 +2667,11 @@ private:
 
         if ((PrecededByName && SpaceBefore) ||
             (FollowedByName && !SpaceAfter)) {
+          // Right alignment.
           ++AlignmentDiff;
         } else if ((PrecededByName && !SpaceBefore) ||
                    (FollowedByName && SpaceAfter)) {
+          // Left alignment.
           --AlignmentDiff;
         }
       }
