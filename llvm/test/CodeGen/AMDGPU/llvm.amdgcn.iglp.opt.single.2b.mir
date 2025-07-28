@@ -135,17 +135,17 @@ body:             |
   ; GCN-NEXT:   [[DEF34:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_OFFEN [[V_ADD_U32_e32_10]], [[DEF47]], 0, 0, 0, 0, implicit $exec :: (load (s16) from %ir.in22, !alias.scope !0, addrspace 7)
   ; GCN-NEXT:   [[DEF35:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_OFFEN [[V_ADD_U32_e32_11]], [[DEF47]], 0, 0, 0, 0, implicit $exec :: (load (s16) from %ir.in23, !alias.scope !0, addrspace 7)
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:areg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_e64 [[DS_READ_B128_gfx9_2]].sub2_sub3, [[DS_READ_B128_gfx9_9]].sub2_sub3, [[DEF1]], 0, 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   [[DEF36:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_OFFEN [[V_ADD_U32_e32_12]], [[DEF47]], 0, 0, 0, 0, implicit $exec :: (load (s16) from %ir.in24, !alias.scope !0, addrspace 7)
-  ; GCN-NEXT:   [[DEF37:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_OFFEN [[V_ADD_U32_e32_13]], [[DEF47]], 0, 0, 0, 0, implicit $exec :: (load (s16) from %ir.in25, !alias.scope !0, addrspace 7)
   ; GCN-NEXT:   [[V_ADD_U32_e32_14:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF42]], [[DEF22]], implicit $exec
   ; GCN-NEXT:   [[V_ADD_U32_e32_15:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF42]], [[DEF23]], implicit $exec
+  ; GCN-NEXT:   [[DEF36:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_OFFEN [[V_ADD_U32_e32_12]], [[DEF47]], 0, 0, 0, 0, implicit $exec :: (load (s16) from %ir.in24, !alias.scope !0, addrspace 7)
+  ; GCN-NEXT:   [[DEF37:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_OFFEN [[V_ADD_U32_e32_13]], [[DEF47]], 0, 0, 0, 0, implicit $exec :: (load (s16) from %ir.in25, !alias.scope !0, addrspace 7)
   ; GCN-NEXT:   [[DEF38:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_OFFEN [[V_ADD_U32_e32_14]], [[DEF47]], 0, 0, 0, 0, implicit $exec :: (load (s16) from %ir.in26, !alias.scope !0, addrspace 7)
   ; GCN-NEXT:   [[DEF39:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_OFFEN [[V_ADD_U32_e32_15]], [[DEF47]], 0, 0, 0, 0, implicit $exec
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:areg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_e64 [[DS_READ_B128_gfx9_4]].sub0_sub1, [[DS_READ_B128_gfx9_10]].sub0_sub1, [[DEF1]], 0, 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   DS_WRITE_B128_gfx9 [[DEF41]], [[DEF2]], 0, 0, implicit $exec :: (store (s128) into %ir.in2, !alias.scope !0, addrspace 3)
   ; GCN-NEXT:   [[V_ADD_U32_e32_16:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 -16, [[DEF45]], implicit $exec
-  ; GCN-NEXT:   [[V_ADD_U32_e32_17:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 -16, [[DEF46]], implicit $exec
+  ; GCN-NEXT:   DS_WRITE_B128_gfx9 [[DEF41]], [[DEF2]], 0, 0, implicit $exec :: (store (s128) into %ir.in2, !alias.scope !0, addrspace 3)
   ; GCN-NEXT:   [[DEF2:%[0-9]+]]:av_128_align2 = BUFFER_LOAD_DWORDX4_OFFEN [[V_ADD_U32_e32_16]], [[DEF48]], 0, 0, 0, 0, implicit $exec :: (load (s128) from %ir.in26, !alias.scope !0, addrspace 7)
+  ; GCN-NEXT:   [[V_ADD_U32_e32_17:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 -16, [[DEF46]], implicit $exec
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:areg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_e64 [[DS_READ_B128_gfx9_4]].sub2_sub3, [[DS_READ_B128_gfx9_10]].sub2_sub3, [[DEF1]], 0, 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   DS_WRITE_B128_gfx9 [[DEF41]], [[DEF3]], 2064, 0, implicit $exec :: (store (s128) into %ir.in3, !alias.scope !0, addrspace 3)
   ; GCN-NEXT:   [[DEF3:%[0-9]+]]:av_128_align2 = BUFFER_LOAD_DWORDX4_OFFEN [[DEF45]], [[DEF48]], 0, 0, 0, 0, implicit $exec :: (load (s128) from %ir.in27, !alias.scope !0, addrspace 7)

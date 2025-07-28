@@ -1988,8 +1988,8 @@ body:             |
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 257, implicit $exec, implicit $mode
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 258, implicit $exec, implicit $mode
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 258, implicit $exec, implicit $mode
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 257, implicit $exec, implicit $mode
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
@@ -2274,7 +2274,7 @@ body:             |
   ; GFX908-NEXT:   S_NOP 0, implicit [[DEF91]], implicit [[DEF92]], implicit [[DEF93]], implicit [[DEF94]], implicit [[DEF95]], implicit [[DEF96]], implicit [[DEF97]], implicit [[DEF98]], implicit [[DEF99]], implicit [[DEF100]]
   ; GFX908-NEXT:   S_NOP 0, implicit [[DEF101]], implicit [[DEF102]], implicit [[DEF103]], implicit [[DEF104]], implicit [[DEF105]], implicit [[DEF106]], implicit [[DEF107]], implicit [[DEF108]], implicit [[DEF109]], implicit [[DEF110]]
   ; GFX908-NEXT:   S_NOP 0, implicit [[DEF111]], implicit [[DEF112]], implicit [[DEF113]], implicit [[DEF114]], implicit [[DEF115]], implicit [[DEF116]], implicit [[DEF117]], implicit [[DEF118]], implicit [[DEF119]], implicit [[DEF120]]
-  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF121]], implicit [[DEF122]], implicit [[DEF123]], implicit [[DEF124]], implicit [[DEF125]], implicit [[DEF126]], implicit [[DEF127]], implicit [[V_CVT_I32_F64_e32_]], implicit [[V_CVT_I32_F64_e32_1]]
+  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF121]], implicit [[DEF122]], implicit [[DEF123]], implicit [[DEF124]], implicit [[DEF125]], implicit [[DEF126]], implicit [[DEF127]], implicit [[V_CVT_I32_F64_e32_1]], implicit [[V_CVT_I32_F64_e32_]]
   ; GFX908-NEXT:   S_ENDPGM 0
   ;
   ; GFX90A-LABEL: name: reduce_spill_agpr_above_addressable_limit
