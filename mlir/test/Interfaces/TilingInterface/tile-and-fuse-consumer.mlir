@@ -595,16 +595,17 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// It is valid to fuse the pack op with padding semantics if the tiled
-// dimensions do not need padding.
+// It is valid to fuse the pack op with padding semantics if it is a perfect
+// tiling case.
 
 func.func @fuse_pack_consumer_with_padding_semantics(%arg0: tensor<64x32xf32>, %arg1: tensor<64x32xf32>) -> tensor<22x2x3x16xf32> {
-  %0 = scf.forall (%arg2) = (0) to (32) step (16) shared_outs(%arg3 = %arg1) -> (tensor<64x32xf32>) {
-    %src = tensor.extract_slice %arg0[0, %arg2] [64, 16] [1, 1] : tensor<64x32xf32> to tensor<64x16xf32>
-    %dest = tensor.extract_slice %arg3[0, %arg2] [64, 16] [1, 1] : tensor<64x32xf32> to tensor<64x16xf32>
-    %2 = linalg.exp ins(%src : tensor<64x16xf32>) outs(%dest : tensor<64x16xf32>) -> tensor<64x16xf32>
+  %0 = scf.forall (%arg2, %arg3) = (0, 0) to (64, 32) step (15, 16) shared_outs(%arg4 = %arg1) -> (tensor<64x32xf32>) {
+    %size = affine.min affine_map<(d0) -> (-d0 + 64, 15)>(%arg2)
+    %src = tensor.extract_slice %arg0[%arg2, %arg3] [%size, 16] [1, 1] : tensor<64x32xf32> to tensor<?x16xf32>
+    %dest = tensor.extract_slice %arg4[%arg2, %arg3] [%size, 16] [1, 1] : tensor<64x32xf32> to tensor<?x16xf32>
+    %2 = linalg.exp ins(%src : tensor<?x16xf32>) outs(%dest : tensor<?x16xf32>) -> tensor<?x16xf32>
     scf.forall.in_parallel {
-      tensor.parallel_insert_slice %2 into %arg3[0, %arg2] [64, 16] [1, 1] : tensor<64x16xf32> into tensor<64x32xf32>
+      tensor.parallel_insert_slice %2 into %arg4[%arg2, %arg3] [%size, 16] [1, 1] : tensor<?x16xf32> into tensor<64x32xf32>
     }
   }
   %1 = tensor.empty() : tensor<22x2x3x16xf32>
@@ -621,28 +622,39 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
-//      CHECK: #[[PACK_RESULT_MAP:.*]] = affine_map<(d0) -> (d0 floordiv 16)>
+//  CHECK-DAG: #[[MAP0:.*]] = affine_map<(d0) -> (-d0 + 64, 15)>
+//  CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0) -> (d0 floordiv 3)>
+//  CHECK-DAG: #[[MAP2:.*]] = affine_map<(d0) -> (d0 ceildiv 3)>
+//  CHECK-DAG: #[[MAP3:.*]] = affine_map<(d0) -> (d0 floordiv 16)>
 //      CHECK: func.func @fuse_pack_consumer_with_padding_semantics(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]
 //  CHECK-DAG:   %[[OUT_INIT:.*]] = tensor.empty() : tensor<22x2x3x16xf32>
 //  CHECK-DAG:   %[[PAD_VAL:.*]] = arith.constant 0.000000e+00 : f32
-//      CHECK:   %{{.*}}:2 = scf.forall (%[[IV:.*]]) = (0) to (32) step (16)
-// CHECK-SAME:      shared_outs(%[[FIRST_OUT_ARG:.*]] = %[[ARG1]], %[[PACK_OUT_ARG:.*]] = %[[OUT_INIT]])
-//      CHECK:      %[[ELEM_SRC:.*]] = tensor.extract_slice %[[ARG0]][0, %[[IV]]] [64, 16] [1, 1]
-//      CHECK:      %[[ELEM_DEST:.*]] = tensor.extract_slice %[[FIRST_OUT_ARG]][0, %[[IV]]] [64, 16] [1, 1]
+//      CHECK:   %{{.*}}:2 = scf.forall (%[[I:.*]], %[[J:.*]]) = (0, 0) to (64, 32) step (15, 16)
+// CHECK-SAME:      shared_outs(%[[ELEM_OUT:.*]] = %[[ARG1]], %[[PACK_OUT:.*]] = %[[OUT_INIT]])
+//      CHECK:      %[[SIZE:.+]] = affine.min #[[MAP0]](%[[I]])
+//      CHECK:      %[[ELEM_SRC:.*]] = tensor.extract_slice %[[ARG0]]
+// CHECK-SAME:        [%[[I]], %[[J]]] [%[[SIZE]], 16] [1, 1]
+//      CHECK:      %[[ELEM_DEST:.*]] = tensor.extract_slice %[[ELEM_OUT]]
+// CHECK-SAME:        [%[[I]], %[[J]]] [%[[SIZE]], 16] [1, 1]
 //      CHECK:      %[[ELEM:.*]] = linalg.exp
 // CHECK-SAME:        ins(%[[ELEM_SRC]]
 // CHECK-SAME:        outs(%[[ELEM_DEST]]
-//  CHECK-DAG:      %[[PACK_RESULT_OFFSET:.*]] = affine.apply #[[PACK_RESULT_MAP]](%[[IV]])
-//  CHECK-DAG:      %[[TILED_PACK_DEST:.*]] = tensor.extract_slice %[[PACK_OUT_ARG]][0, %[[PACK_RESULT_OFFSET]], 0, 0] [22, 1, 3, 16] [1, 1, 1, 1]
-//      CHECK:      %[[TILED_PACK_OUT:.*]] = linalg.pack %[[ELEM]]
+//  CHECK-DAG:      %[[D0_OFFSET:.*]] = affine.apply #[[MAP1]](%[[I]])
+//  CHECK-DAG:      %[[D0_SIZE:.*]] = affine.apply #[[MAP2]](%[[SIZE]])
+//  CHECK-DAG:      %[[D1_OFFSET:.*]] = affine.apply #[[MAP3]](%[[J]])
+//  CHECK-DAG:      %[[PACK_INIT:.*]] = tensor.extract_slice %[[PACK_OUT]]
+// CHECK-SAME:        [%[[D0_OFFSET]], %[[D1_OFFSET]], 0, 0] [%[[D0_SIZE]], 1, 3, 16] [1, 1, 1, 1]
+//      CHECK:      %[[PACK:.*]] = linalg.pack %[[ELEM]]
 // CHECK-SAME:        padding_value(%[[PAD_VAL]] : f32)
 // CHECK-SAME:        inner_dims_pos = [0, 1] inner_tiles = [3, 16]
 // CHECK-SAME:        into %[[TILED_PACK_DEST]]
 //      CHECK:      scf.forall.in_parallel {
-//      CHECK:          tensor.parallel_insert_slice %[[GENERIC_OUT]] into %[[FIRST_OUT_ARG]][0, %[[IV]]] [64, 16] [1, 1]
-//      CHECK:          tensor.parallel_insert_slice %[[TILED_PACK_OUT]] into %[[PACK_OUT_ARG]][0, %[[PACK_RESULT_OFFSET]], 0, 0] [22, 1, 3, 16] [1, 1, 1, 1]
+//      CHECK:          tensor.parallel_insert_slice %[[ELEM]] into %[[ELEM_OUT]]
+// CHECK-SAME:            [%[[I]], %[[J]]] [%[[SIZE]], 16] [1, 1]
+//      CHECK:          tensor.parallel_insert_slice %[[PACK]] into %[[PACK_OUT]]
+// CHECK-SAME:            [%[[D0_OFFSET]], %[[D1_OFFSET]], 0, 0] [%[[D0_SIZE]], 1, 3, 16] [1, 1, 1, 1]
 
 // -----
 
