@@ -9,7 +9,6 @@
 #if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
 
 #include "NativeRegisterContextLinux_arm.h"
-#include "NativeRegisterContextLinuxArm64Shared.h"
 
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/Procfs.h"
@@ -25,6 +24,7 @@
 #include <sys/uio.h>
 
 #if defined(__arm64__) || defined(__aarch64__)
+#include "NativeRegisterContextLinux_arm64dbreg.h"
 #include "lldb/Host/linux/Ptrace.h"
 #include <asm/ptrace.h>
 #endif

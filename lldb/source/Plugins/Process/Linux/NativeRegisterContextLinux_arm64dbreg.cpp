@@ -1,4 +1,4 @@
-#include "NativeRegisterContextLinuxArm64Shared.h"
+#include "NativeRegisterContextLinux_arm64dbreg.h"
 
 using namespace lldb_private::process_linux::arm64;
 
