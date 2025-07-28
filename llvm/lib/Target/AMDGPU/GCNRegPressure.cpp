@@ -267,7 +267,7 @@ Printable llvm::print(const GCNRegPressure &RP, const GCNSubtarget *ST,
         OS << ", LVGPR WT: " << RP.getVGPRTuplesWeight(ArchVGPRThreshold)
            << ", LSGPR WT: " << RP.getSGPRTuplesWeight();
         if (ST)
-          OS << " -> Occ: " << RP.getOccupancy(*ST, DynamicVGPRBlockSize, *MF);
+          OS << " -> Occ: " << RP.getOccupancy(*MF);
         OS << '\n';
       });
 }

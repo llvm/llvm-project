@@ -18,6 +18,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_GCNREGPRESSURE_H
 
 #include "GCNSubtarget.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include <algorithm>
@@ -108,8 +109,11 @@ struct GCNRegPressure {
   }
   unsigned getSGPRTuplesWeight() const { return Value[TOTAL_KINDS + SGPR]; }
 
-  unsigned getOccupancy(const GCNSubtarget &ST, unsigned DynamicVGPRBlockSize,
-                        const MachineFunction &MF) const {
+  unsigned getOccupancy(const MachineFunction &MF) const {
+    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+    unsigned DynamicVGPRBlockSize =
+        MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
+
     return std::min(ST.getOccupancyWithNumSGPRs(getSGPRNum()),
                     ST.getOccupancyWithNumVGPRs(
                         getVGPRNum(ST.hasGFX90AInsts(),
@@ -122,11 +126,9 @@ struct GCNRegPressure {
            LaneBitmask NewMask,
            const MachineRegisterInfo &MRI);
 
-  bool higherOccupancy(const GCNSubtarget &ST, const GCNRegPressure &O,
-                       unsigned DynamicVGPRBlockSize,
+  bool higherOccupancy(const GCNRegPressure &O,
                        const MachineFunction &MF) const {
-    return getOccupancy(ST, DynamicVGPRBlockSize, MF) >
-           O.getOccupancy(ST, DynamicVGPRBlockSize, MF);
+    return getOccupancy(MF) > O.getOccupancy(MF);
   }
 
   /// Compares \p this GCNRegpressure to \p O, returning true if \p this is

@@ -1146,9 +1146,7 @@ void UnclusteredHighRPStage::finalizeGCNSchedStage() {
   if (DAG.MinOccupancy > InitialOccupancy) {
     for (unsigned IDX = 0; IDX < DAG.Pressure.size(); ++IDX)
       DAG.RegionsWithMinOcc[IDX] =
-          DAG.Pressure[IDX].getOccupancy(DAG.ST,
-                                         DAG.MFI.getDynamicVGPRBlockSize(),
-                                         DAG.MF) == DAG.MinOccupancy;
+          DAG.Pressure[IDX].getOccupancy(DAG.MF) == DAG.MinOccupancy;
 
     LLVM_DEBUG(dbgs() << StageID
                       << " stage successfully increased occupancy to "
@@ -1288,15 +1286,13 @@ void GCNSchedStage::checkScheduling() {
                     << print(PressureAfter, &ST, 0, &MF));
   LLVM_DEBUG(dbgs() << "Region: " << RegionIdx << ".\n");
 
-  unsigned DynamicVGPRBlockSize = DAG.MFI.getDynamicVGPRBlockSize();
   unsigned ArchVGPRThreshold = ST.getArchVGPRAllocationThreshold(MF);
   if (PressureAfter.getSGPRNum() <= S.SGPRCriticalLimit &&
       PressureAfter.getVGPRNum(ST.hasGFX90AInsts(), ArchVGPRThreshold) <=
           S.VGPRCriticalLimit) {
     DAG.Pressure[RegionIdx] = PressureAfter;
     DAG.RegionsWithMinOcc[RegionIdx] =
-        PressureAfter.getOccupancy(ST, DynamicVGPRBlockSize, DAG.MF) ==
-        DAG.MinOccupancy;
+        PressureAfter.getOccupancy(DAG.MF) == DAG.MinOccupancy;
 
     // Early out if we have achieved the occupancy target.
     LLVM_DEBUG(dbgs() << "Pressure in desired limits, done.\n");
@@ -1306,11 +1302,9 @@ void GCNSchedStage::checkScheduling() {
   unsigned TargetOccupancy = std::min(
       S.getTargetOccupancy(), ST.getOccupancyWithWorkGroupSizes(MF).second);
   unsigned WavesAfter =
-      std::min(TargetOccupancy,
-               PressureAfter.getOccupancy(ST, DynamicVGPRBlockSize, DAG.MF));
+      std::min(TargetOccupancy, PressureAfter.getOccupancy(DAG.MF));
   unsigned WavesBefore =
-      std::min(TargetOccupancy,
-               PressureBefore.getOccupancy(ST, DynamicVGPRBlockSize, DAG.MF));
+      std::min(TargetOccupancy, PressureBefore.getOccupancy(DAG.MF));
   LLVM_DEBUG(dbgs() << "Occupancy before scheduling: " << WavesBefore
                     << ", after " << WavesAfter << ".\n");
 
@@ -1360,8 +1354,7 @@ void GCNSchedStage::checkScheduling() {
   } else {
     DAG.Pressure[RegionIdx] = PressureAfter;
     DAG.RegionsWithMinOcc[RegionIdx] =
-        PressureAfter.getOccupancy(ST, DynamicVGPRBlockSize, DAG.MF) ==
-        DAG.MinOccupancy;
+        PressureAfter.getOccupancy(DAG.MF) == DAG.MinOccupancy;
   }
 }
 
@@ -1515,8 +1508,7 @@ bool OccInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
 bool UnclusteredHighRPStage::shouldRevertScheduling(unsigned WavesAfter) {
   // If RP is not reduced in the unclustered reschedule stage, revert to the
   // old schedule.
-  if ((WavesAfter <= PressureBefore.getOccupancy(
-                         ST, DAG.MFI.getDynamicVGPRBlockSize(), DAG.MF) &&
+  if ((WavesAfter <= PressureBefore.getOccupancy(DAG.MF) &&
        mayCauseSpilling(WavesAfter)) ||
       GCNSchedStage::shouldRevertScheduling(WavesAfter)) {
     LLVM_DEBUG(dbgs() << "Unclustered reschedule did not help.\n");
@@ -1539,9 +1531,7 @@ bool UnclusteredHighRPStage::shouldRevertScheduling(unsigned WavesAfter) {
   unsigned OldMetric = MBefore.getMetric();
   unsigned NewMetric = MAfter.getMetric();
   unsigned WavesBefore =
-      std::min(S.getTargetOccupancy(),
-               PressureBefore.getOccupancy(
-                   ST, DAG.MFI.getDynamicVGPRBlockSize(), DAG.MF));
+      std::min(S.getTargetOccupancy(), PressureBefore.getOccupancy(DAG.MF));
   unsigned Profit =
       ((WavesAfter * ScheduleMetrics::ScaleFactor) / WavesBefore *
        ((OldMetric + ScheduleMetricBias) * ScheduleMetrics::ScaleFactor) /
@@ -1595,8 +1585,7 @@ bool GCNSchedStage::mayCauseSpilling(unsigned WavesAfter) {
 
 void GCNSchedStage::revertScheduling() {
   DAG.RegionsWithMinOcc[RegionIdx] =
-      PressureBefore.getOccupancy(ST, DAG.MFI.getDynamicVGPRBlockSize(),
-                                  DAG.MF) == DAG.MinOccupancy;
+      PressureBefore.getOccupancy(DAG.MF) == DAG.MinOccupancy;
   LLVM_DEBUG(dbgs() << "Attempting to revert scheduling.\n");
   DAG.RegionEnd = DAG.RegionBegin;
   int SkippedDebugInstr = 0;
@@ -2033,11 +2022,7 @@ void PreRARematStage::rematerialize() {
       }
     }
     DAG.Pressure[I] = RP;
-    AchievedOcc = std::min(
-        AchievedOcc,
-        RP.getOccupancy(
-            ST, MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize(),
-            DAG.MF));
+    AchievedOcc = std::min(AchievedOcc, RP.getOccupancy(DAG.MF));
   }
   REMAT_DEBUG(dbgs() << "Achieved occupancy " << AchievedOcc << "\n");
 }
