@@ -1022,7 +1022,8 @@ bool Compiler<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
     if (classifyPrim(E) != PT_Ptr)
       return this->emitDecayPtr(PT_Ptr, classifyPrim(E), E);
     return true;
-  } else if (Op == BO_Sub) {
+  }
+  if (Op == BO_Sub) {
     if (!this->emitSubOffset(OffsetType, E))
       return false;
 
@@ -3703,7 +3704,7 @@ bool Compiler<Emitter>::VisitBlockExpr(const BlockExpr *E) {
     return true;
 
   const Function *Func = nullptr;
-  if (auto F = Ctx.getOrCreateObjCBlock(E))
+  if (const Function *F = Ctx.getOrCreateObjCBlock(E))
     Func = F;
 
   if (!Func)
@@ -4288,7 +4289,8 @@ bool Compiler<Emitter>::visitZeroArrayInitializer(QualType T, const Expr *E) {
         return false;
     }
     return true;
-  } else if (ElemType->isRecordType()) {
+  }
+  if (ElemType->isRecordType()) {
     const Record *R = getRecord(ElemType);
 
     for (size_t I = 0; I != NumElems; ++I) {
@@ -4302,7 +4304,8 @@ bool Compiler<Emitter>::visitZeroArrayInitializer(QualType T, const Expr *E) {
         return false;
     }
     return true;
-  } else if (ElemType->isArrayType()) {
+  }
+  if (ElemType->isArrayType()) {
     for (size_t I = 0; I != NumElems; ++I) {
       if (!this->emitConstUint32(I, E))
         return false;
@@ -4774,11 +4777,10 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
         if (!this->visit(Init))
           return false;
         return this->emitSetLocal(*VarT, Offset, VD) && Scope.destroyLocals();
-      } else {
+      }
         if (!this->visit(Init))
           return false;
         return this->emitSetLocal(*VarT, Offset, VD);
-      }
     }
   } else {
     if (std::optional<unsigned> Offset = this->allocateLocal(
@@ -4805,7 +4807,7 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
   assert(!DiscardResult);
   if (Val.isInt())
     return this->emitConst(Val.getInt(), ValType, E);
-  else if (Val.isFloat()) {
+  if (Val.isFloat()) {
     APFloat F = Val.getFloat();
     return this->emitFloat(F, E);
   }
@@ -4816,9 +4818,8 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
     APValue::LValueBase Base = Val.getLValueBase();
     if (const Expr *BaseExpr = Base.dyn_cast<const Expr *>())
       return this->visit(BaseExpr);
-    else if (const auto *VD = Base.dyn_cast<const ValueDecl *>()) {
+    if (const auto *VD = Base.dyn_cast<const ValueDecl *>())
       return this->visitDeclRef(VD, E);
-    }
   } else if (Val.isMemberPointer()) {
     if (const ValueDecl *MemberDecl = Val.getMemberPointerDecl())
       return this->emitGetMemberPtr(MemberDecl, E);
@@ -4854,7 +4855,8 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
       }
     }
     return true;
-  } else if (Val.isUnion()) {
+  }
+  if (Val.isUnion()) {
     const FieldDecl *UnionField = Val.getUnionField();
     const Record *R = this->getRecord(UnionField->getParent());
     assert(R);
@@ -4864,7 +4866,8 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
     if (!this->visitAPValue(F, T, E))
       return false;
     return this->emitInitField(T, RF->Offset, E);
-  } else if (Val.isArray()) {
+  }
+  if (Val.isArray()) {
     const auto *ArrType = T->getAsArrayTypeUnsafe();
     QualType ElemType = ArrType->getElementType();
     for (unsigned A = 0, AN = Val.getArraySize(); A != AN; ++A) {
@@ -4981,12 +4984,10 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
 
     // Calls to replaceable operator new/operator delete.
     if (FuncDecl->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
-      if (FuncDecl->getDeclName().isAnyOperatorNew()) {
+      if (FuncDecl->getDeclName().isAnyOperatorNew())
         return VisitBuiltinCallExpr(E, Builtin::BI__builtin_operator_new);
-      } else {
-        assert(FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_Delete);
-        return VisitBuiltinCallExpr(E, Builtin::BI__builtin_operator_delete);
-      }
+      assert(FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_Delete);
+      return VisitBuiltinCallExpr(E, Builtin::BI__builtin_operator_delete);
     }
 
     // Explicit calls to trivial destructors
@@ -5455,7 +5456,9 @@ bool Compiler<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
         return false;
       this->emitCleanup();
       return this->emitRet(*ReturnType, RS);
-    } else if (RE->getType()->isVoidType()) {
+    }
+
+    if (RE->getType()->isVoidType()) {
       if (!this->visit(RE))
         return false;
     } else {
@@ -5500,7 +5503,7 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
   if (std::optional<bool> BoolValue = getBoolValue(IS->getCond())) {
     if (*BoolValue)
       return visitChildStmt(IS->getThen());
-    else if (const Stmt *Else = IS->getElse())
+    if (const Stmt *Else = IS->getElse())
       return visitChildStmt(Else);
     return true;
   }
@@ -5992,7 +5995,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     if (!this->emitThis(Ctor))
       return false;
 
-    auto PVD = Ctor->getParamDecl(0);
+    const ParmVarDecl *PVD = Ctor->getParamDecl(0);
     ParamOffset PO = this->Params[PVD]; // Must exist.
 
     if (!this->emitGetParam(PT_Ptr, PO.Offset, Ctor))
@@ -6153,7 +6156,7 @@ bool Compiler<Emitter>::compileUnionAssignmentOperator(
   if (!this->emitThis(MD))
     return false;
 
-  auto PVD = MD->getParamDecl(0);
+  const ParmVarDecl *PVD = MD->getParamDecl(0);
   ParamOffset PO = this->Params[PVD]; // Must exist.
 
   if (!this->emitGetParam(PT_Ptr, PO.Offset, MD))
