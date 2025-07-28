@@ -36,8 +36,6 @@ class MCCVDefRangeFragment;
 class MCCVInlineLineTableFragment;
 class MCFragment;
 class MCFixup;
-class MCLEBFragment;
-class MCPseudoProbeAddrFragment;
 class MCSymbolRefExpr;
 class raw_ostream;
 class MCAsmBackend;
@@ -68,6 +66,13 @@ private:
   SectionListType Sections;
 
   SmallVector<const MCSymbol *, 0> Symbols;
+
+  struct RelocDirective {
+    const MCExpr &Offset;
+    const MCExpr *Expr;
+    uint32_t Kind;
+  };
+  SmallVector<RelocDirective, 0> relocDirectives;
 
   mutable SmallVector<std::pair<SMLoc, std::string>, 0> PendingErrors;
 
@@ -116,7 +121,6 @@ private:
   bool relaxCVInlineLineTable(MCCVInlineLineTableFragment &DF);
   bool relaxCVDefRange(MCCVDefRangeFragment &DF);
   bool relaxFill(MCFillFragment &F);
-  bool relaxPseudoProbeAddr(MCPseudoProbeAddrFragment &DF);
 
 public:
   /// Construct a new assembler instance.
@@ -205,6 +209,7 @@ public:
 
   LLVM_ABI bool registerSection(MCSection &Section);
   LLVM_ABI bool registerSymbol(const MCSymbol &Symbol);
+  void addRelocDirective(RelocDirective RD);
 
   LLVM_ABI void reportError(SMLoc L, const Twine &Msg) const;
   // Record pending errors during layout iteration, as they may go away once the

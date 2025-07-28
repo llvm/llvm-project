@@ -231,3 +231,27 @@ define <vscale x 8 x i64> @sload_8i8_8i64(ptr %a) {
   %aext = sext <vscale x 8 x i8> %aval to <vscale x 8 x i64>
   ret <vscale x 8 x i64> %aext
 }
+
+; Ensure we don't try to promote a predicate load to a sign-extended load.
+define <vscale x 16 x i8> @sload_16i1_16i8(ptr %addr) {
+; CHECK-LABEL: sload_16i1_16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr p0, [x0]
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ret
+  %load = load <vscale x 16 x i1>, ptr %addr
+  %zext = sext <vscale x 16 x i1> %load to <vscale x 16 x i8>
+  ret <vscale x 16 x i8> %zext
+}
+
+; Ensure we don't try to promote a predicate load to a zero-extended load.
+define <vscale x 16 x i8> @zload_16i1_16i8(ptr %addr) {
+; CHECK-LABEL: zload_16i1_16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr p0, [x0]
+; CHECK-NEXT:    mov z0.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    ret
+  %load = load <vscale x 16 x i1>, ptr %addr
+  %zext = zext <vscale x 16 x i1> %load to <vscale x 16 x i8>
+  ret <vscale x 16 x i8> %zext
+}

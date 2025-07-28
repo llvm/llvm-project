@@ -380,13 +380,13 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
       Type indexType = oldIndex.getType();
 
       int ratio = dstNumBytes / srcNumBytes;
-      auto ratioValue = rewriter.create<spirv::ConstantOp>(
-          loc, indexType, rewriter.getIntegerAttr(indexType, ratio));
+      auto ratioValue = spirv::ConstantOp::create(
+          rewriter, loc, indexType, rewriter.getIntegerAttr(indexType, ratio));
 
       indices.back() =
-          rewriter.create<spirv::SDivOp>(loc, indexType, oldIndex, ratioValue);
-      indices.push_back(
-          rewriter.create<spirv::SModOp>(loc, indexType, oldIndex, ratioValue));
+          spirv::SDivOp::create(rewriter, loc, indexType, oldIndex, ratioValue);
+      indices.push_back(spirv::SModOp::create(rewriter, loc, indexType,
+                                              oldIndex, ratioValue));
 
       rewriter.replaceOpWithNewOp<spirv::AccessChainOp>(
           acOp, adaptor.getBasePtr(), indices);
@@ -407,11 +407,11 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
       Type indexType = oldIndex.getType();
 
       int ratio = srcNumBytes / dstNumBytes;
-      auto ratioValue = rewriter.create<spirv::ConstantOp>(
-          loc, indexType, rewriter.getIntegerAttr(indexType, ratio));
+      auto ratioValue = spirv::ConstantOp::create(
+          rewriter, loc, indexType, rewriter.getIntegerAttr(indexType, ratio));
 
       indices.back() =
-          rewriter.create<spirv::IMulOp>(loc, indexType, oldIndex, ratioValue);
+          spirv::IMulOp::create(rewriter, loc, indexType, oldIndex, ratioValue);
 
       rewriter.replaceOpWithNewOp<spirv::AccessChainOp>(
           acOp, adaptor.getBasePtr(), indices);
@@ -435,15 +435,15 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
     auto dstElemType = cast<spirv::SPIRVType>(dstPtrType.getPointeeType());
 
     Location loc = loadOp.getLoc();
-    auto newLoadOp = rewriter.create<spirv::LoadOp>(loc, adaptor.getPtr());
+    auto newLoadOp = spirv::LoadOp::create(rewriter, loc, adaptor.getPtr());
     if (srcElemType == dstElemType) {
       rewriter.replaceOp(loadOp, newLoadOp->getResults());
       return success();
     }
 
     if (areSameBitwidthScalarType(srcElemType, dstElemType)) {
-      auto castOp = rewriter.create<spirv::BitcastOp>(loc, srcElemType,
-                                                      newLoadOp.getValue());
+      auto castOp = spirv::BitcastOp::create(rewriter, loc, srcElemType,
+                                             newLoadOp.getValue());
       rewriter.replaceOp(loadOp, castOp->getResults());
 
       return success();
@@ -475,14 +475,14 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
       auto indices = llvm::to_vector<4>(acOp.getIndices());
       for (int i = 1; i < ratio; ++i) {
         // Load all subsequent components belonging to this element.
-        indices.back() = rewriter.create<spirv::IAddOp>(
-            loc, i32Type, indices.back(), oneValue);
-        auto componentAcOp = rewriter.create<spirv::AccessChainOp>(
-            loc, acOp.getBasePtr(), indices);
+        indices.back() = spirv::IAddOp::create(rewriter, loc, i32Type,
+                                               indices.back(), oneValue);
+        auto componentAcOp = spirv::AccessChainOp::create(
+            rewriter, loc, acOp.getBasePtr(), indices);
         // Assuming little endian, this reads lower-ordered bits of the number
         // to lower-numbered components of the vector.
         components.push_back(
-            rewriter.create<spirv::LoadOp>(loc, componentAcOp));
+            spirv::LoadOp::create(rewriter, loc, componentAcOp));
       }
 
       // Create a vector of the components and then cast back to the larger
@@ -510,15 +510,15 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
               castType = VectorType::get({count}, castType);
 
             for (Value &c : components)
-              c = rewriter.create<spirv::BitcastOp>(loc, castType, c);
+              c = spirv::BitcastOp::create(rewriter, loc, castType, c);
           }
         }
-      Value vectorValue = rewriter.create<spirv::CompositeConstructOp>(
-          loc, vectorType, components);
+      Value vectorValue = spirv::CompositeConstructOp::create(
+          rewriter, loc, vectorType, components);
 
       if (!isa<VectorType>(srcElemType))
         vectorValue =
-            rewriter.create<spirv::BitcastOp>(loc, srcElemType, vectorValue);
+            spirv::BitcastOp::create(rewriter, loc, srcElemType, vectorValue);
       rewriter.replaceOp(loadOp, vectorValue);
       return success();
     }
@@ -546,7 +546,7 @@ struct ConvertStore : public ConvertAliasResource<spirv::StoreOp> {
     Location loc = storeOp.getLoc();
     Value value = adaptor.getValue();
     if (srcElemType != dstElemType)
-      value = rewriter.create<spirv::BitcastOp>(loc, dstElemType, value);
+      value = spirv::BitcastOp::create(rewriter, loc, dstElemType, value);
     rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, adaptor.getPtr(),
                                                 value, storeOp->getAttrs());
     return success();

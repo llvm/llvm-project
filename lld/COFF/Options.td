@@ -270,6 +270,17 @@ def thinlto_object_suffix_replace : P<
 def thinlto_prefix_replace: P<
     "thinlto-prefix-replace",
     "'old;new' replace old prefix with new prefix in ThinLTO outputs">;
+def thinlto_distributor : P<"thinlto-distributor",
+  "Distributor to use for ThinLTO backend compilations. If specified, ThinLTO "
+  "backend compilations will be distributed">;
+def thinlto_distributor_arg : P<"thinlto-distributor-arg",
+  "Arguments to pass to the ThinLTO distributor">;
+def thinlto_compiler : P<"thinlto-remote-compiler",
+  "Compiler for the ThinLTO distributor to invoke for ThinLTO backend "
+  "compilations">;
+def thinlto_compiler_arg : P<"thinlto-remote-compiler-arg",
+  "Compiler arguments for the ThinLTO distributor to pass for ThinLTO backend "
+  "compilations">;
 def lto_obj_path : P<
     "lto-obj-path",
     "output native object for merged LTO unit to this path">;
