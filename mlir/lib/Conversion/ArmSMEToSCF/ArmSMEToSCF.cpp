@@ -327,7 +327,8 @@ struct TileLoadOpWithMaskAndPadNonZeroConversion
 
     // Splat pad into 1-D vector matching type of tile slice.
     VectorType tileSliceType = VectorType::Builder(tileType).dropDim(0);
-    auto pad1DOp = vector::SplatOp::create(rewriter, loc, tileSliceType, padOp);
+    auto pad1DOp =
+        vector::BroadcastOp::create(rewriter, loc, tileSliceType, padOp);
 
     auto loadSlice = vector::MaskedLoadOp::create(rewriter, loc, tileSliceType,
                                                   tileLoadOp.getBase(),
