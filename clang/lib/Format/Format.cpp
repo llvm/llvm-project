@@ -1754,7 +1754,6 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.AttributeMacros.push_back("absl_nullable");
   GoogleStyle.AttributeMacros.push_back("absl_nullability_unknown");
   GoogleStyle.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
-  GoogleStyle.DerivePointerAlignment = true;
   GoogleStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
   GoogleStyle.IncludeStyle.IncludeCategories = {{"^<ext/.*\\.h>", 2, 0, false},
                                                 {"^<.*\\.h>", 1, 0, false},
@@ -1863,6 +1862,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   } else if (Language == FormatStyle::LK_ObjC) {
     GoogleStyle.AlwaysBreakBeforeMultilineStrings = false;
     GoogleStyle.ColumnLimit = 100;
+    GoogleStyle.DerivePointerAlignment = true;
     // "Regroup" doesn't work well for ObjC yet (main header heuristic,
     // relationship between ObjC standard library headers and other heades,
     // #imports, etc.)

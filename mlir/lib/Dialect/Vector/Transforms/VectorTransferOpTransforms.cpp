@@ -330,8 +330,8 @@ createMaskDropNonScalableUnitDims(PatternRewriter &rewriter, Location loc,
     }
     reducedOperands.push_back(operand);
   }
-  return rewriter
-      .create<vector::CreateMaskOp>(loc, reducedType, reducedOperands)
+  return vector::CreateMaskOp::create(rewriter, loc, reducedType,
+                                      reducedOperands)
       .getResult();
 }
 

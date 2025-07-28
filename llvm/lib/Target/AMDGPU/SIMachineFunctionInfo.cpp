@@ -81,11 +81,15 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     PSInputAddr = AMDGPU::getInitialPSInputAddr(F);
   }
 
-  MayNeedAGPRs = ST.hasMAIInsts() && !MFMAVGPRForm;
-  if (!MFMAVGPRForm && ST.hasGFX90AInsts() &&
-      ST.getMaxNumVGPRs(F) <= AMDGPU::VGPR_32RegClass.getNumRegs() &&
-      !mayUseAGPRs(F))
-    MayNeedAGPRs = false; // We will select all MAI with VGPR operands.
+  MayNeedAGPRs = ST.hasMAIInsts();
+  if (ST.hasGFX90AInsts()) {
+    // FIXME: MayNeedAGPRs is a misnomer for how this is used. MFMA selection
+    // should be separated from availability of AGPRs
+    if (MFMAVGPRForm ||
+        (ST.getMaxNumVGPRs(F) <= AMDGPU::VGPR_32RegClass.getNumRegs() &&
+         !mayUseAGPRs(F)))
+      MayNeedAGPRs = false; // We will select all MAI with VGPR operands.
+  }
 
   if (AMDGPU::isChainCC(CC)) {
     // Chain functions don't receive an SP from their caller, but are free to

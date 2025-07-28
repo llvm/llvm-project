@@ -385,10 +385,9 @@ struct BubbleUpExpandShapeThroughExtractSlice
             return getValueOrCreateConstantIndexOp(rewriter, loc, ofr);
           });
       OpFoldResult collapsedOffset =
-          rewriter
-              .create<affine::AffineLinearizeIndexOp>(loc, offsetVals,
-                                                      reassocGroupSizes,
-                                                      /*disjoint=*/true)
+          affine::AffineLinearizeIndexOp::create(rewriter, loc, offsetVals,
+                                                 reassocGroupSizes,
+                                                 /*disjoint=*/true)
               .getResult();
       collapsedOffsets.push_back(collapsedOffset);
       collapsedSizes.push_back(collapsedSize);

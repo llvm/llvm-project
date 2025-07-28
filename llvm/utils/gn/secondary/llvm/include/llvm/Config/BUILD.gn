@@ -296,6 +296,7 @@ write_cmake_config("llvm-config") {
   input = "llvm-config.h.cmake"
   output = "$target_gen_dir/llvm-config.h"
   values = [
+    "LLVM_ENABLE_PROFCHECK=",
     "LLVM_BUILD_LLVM_DYLIB=",
     "LLVM_BUILD_SHARED_LIBS=",
     "LLVM_ENABLE_LLVM_C_EXPORT_ANNOTATIONS=",

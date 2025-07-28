@@ -1236,6 +1236,12 @@ let isCommutable = 1, isReMaterializable = 1 in {
     defm V_PK_MIN_NUM_BF16 : VOP3PInst<"v_pk_min_num_bf16", VOP3P_Profile<VOP_V2BF16_V2BF16_V2BF16, VOP3_PACKED>, fminnum_like>;
     defm V_PK_MAX_NUM_BF16 : VOP3PInst<"v_pk_max_num_bf16", VOP3P_Profile<VOP_V2BF16_V2BF16_V2BF16, VOP3_PACKED>, fmaxnum_like>;
     defm V_PK_FMA_BF16     : VOP3PInst<"v_pk_fma_bf16", VOP3P_Profile<VOP_V2BF16_V2BF16_V2BF16_V2BF16, VOP3_PACKED>, any_fma>;
+
+    // Scalar pseudo used to emulate AMDGPUClamp.
+    // Expanded to V_PK_MAX_NUM_BF16 with unused high half.
+    // FIXME-TRUE16: Pseudo expansion of this won't work with True16.
+    let True16Predicate = UseFakeTrue16Insts in
+    defm V_MAX_BF16_PSEUDO : VOP3Inst <"v_max_bf16", VOP_BF16_BF16_BF16>;
   }
 } // End isCommutable = 1, isReMaterializable = 1
 

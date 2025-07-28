@@ -524,9 +524,8 @@ define i8 @xvmsk_eq_v2i64_concat_poison(<2 x i64> %vec) {
 ; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 0
 ; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 0
 ; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 0
-; CHECK-NEXT:    vpackev.h $vr0, $vr0, $vr1
-; CHECK-NEXT:    vslli.h $vr0, $vr0, 15
+; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 1
+; CHECK-NEXT:    vslli.h $vr0, $vr1, 15
 ; CHECK-NEXT:    vmskltz.h $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
@@ -539,24 +538,20 @@ define i8 @xvmsk_eq_v2i64_concat_poison(<2 x i64> %vec) {
 define i8 @xvmsk_ne_v4i32_concat_poison(<4 x i32> %vec) {
 ; CHECK-LABEL: xvmsk_ne_v4i32_concat_poison:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vseqi.w $vr0, $vr0, 0
 ; CHECK-NEXT:    vrepli.b $vr1, -1
 ; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 3
-; CHECK-NEXT:    st.h $a0, $sp, 6
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 2
-; CHECK-NEXT:    st.h $a0, $sp, 4
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 1
-; CHECK-NEXT:    st.h $a0, $sp, 2
 ; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; CHECK-NEXT:    st.h $a0, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 0
-; CHECK-NEXT:    vslli.h $vr0, $vr0, 15
+; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 0
+; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 1
+; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 1
+; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 2
+; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 2
+; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 3
+; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 3
+; CHECK-NEXT:    vslli.h $vr0, $vr1, 15
 ; CHECK-NEXT:    vmskltz.h $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
   %tobool = icmp ne <4 x i32> %vec, zeroinitializer
   %insertvec = shufflevector <4 x i1> %tobool, <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -567,23 +562,19 @@ define i8 @xvmsk_ne_v4i32_concat_poison(<4 x i32> %vec) {
 define i8 @xvmsk_ogt_v4f64_concat_poison(<4 x double> %vec) {
 ; CHECK-LABEL: xvmsk_ogt_v4f64_concat_poison:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    xvrepli.b $xr1, 0
 ; CHECK-NEXT:    xvfcmp.clt.d $xr0, $xr1, $xr0
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 0
-; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 1
-; CHECK-NEXT:    xvpickve2gr.d $a2, $xr0, 2
-; CHECK-NEXT:    xvpickve2gr.d $a3, $xr0, 3
-; CHECK-NEXT:    st.h $a3, $sp, 6
-; CHECK-NEXT:    st.h $a2, $sp, 4
-; CHECK-NEXT:    st.h $a1, $sp, 2
-; CHECK-NEXT:    st.h $a0, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 0
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 3
+; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 2
+; CHECK-NEXT:    xvpickve2gr.d $a2, $xr0, 1
+; CHECK-NEXT:    xvpickve2gr.d $a3, $xr0, 0
+; CHECK-NEXT:    vinsgr2vr.h $vr0, $a3, 0
+; CHECK-NEXT:    vinsgr2vr.h $vr0, $a2, 1
+; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 2
+; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 3
 ; CHECK-NEXT:    vslli.h $vr0, $vr0, 15
 ; CHECK-NEXT:    vmskltz.h $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
   %tobool = fcmp ogt <4 x double> %vec, zeroinitializer
   %insertvec = shufflevector <4 x i1> %tobool, <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>

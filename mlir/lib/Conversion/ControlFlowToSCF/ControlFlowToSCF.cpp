@@ -144,12 +144,11 @@ ControlFlowToSCFTransformation::createUnreachableTerminator(Location loc,
     return emitError(loc, "Cannot create unreachable terminator for '")
            << parentOp->getName() << "'";
 
-  return builder
-      .create<func::ReturnOp>(
-          loc, llvm::map_to_vector(funcOp.getResultTypes(),
-                                   [&](Type type) {
-                                     return getUndefValue(loc, builder, type);
-                                   }))
+  return func::ReturnOp::create(
+             builder, loc,
+             llvm::map_to_vector(
+                 funcOp.getResultTypes(),
+                 [&](Type type) { return getUndefValue(loc, builder, type); }))
       .getOperation();
 }
 

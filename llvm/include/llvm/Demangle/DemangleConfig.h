@@ -103,7 +103,7 @@
 #if defined(LLVM_EXPORTS)
 #define DEMANGLE_ABI __declspec(dllexport)
 #else
-#define DEMANGLE_ABI__declspec(dllimport)
+#define DEMANGLE_ABI __declspec(dllimport)
 #endif
 #else
 #if __has_attribute(visibility)

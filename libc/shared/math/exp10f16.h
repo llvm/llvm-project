@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SHARED_MATH_EXP10F_H
-#define LLVM_LIBC_SHARED_MATH_EXP10F_H
+#ifndef LLVM_LIBC_SHARED_MATH_EXP10F16_H
+#define LLVM_LIBC_SHARED_MATH_EXP10F16_H
 
 #include "include/llvm-libc-macros/float16-macros.h"
 #include "shared/libc_common.h"
@@ -26,4 +26,4 @@ using math::exp10f16;
 
 #endif // LIBC_TYPES_HAS_FLOAT16
 
-#endif // LLVM_LIBC_SHARED_MATH_EXP10F_H
+#endif // LLVM_LIBC_SHARED_MATH_EXP10F16_H

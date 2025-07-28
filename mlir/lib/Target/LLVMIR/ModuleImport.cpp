@@ -142,6 +142,7 @@ static LogicalResult convertInstructionImpl(OpBuilder &odsBuilder,
   // TODO: Implement the `convertInstruction` hooks in the
   // `LLVMDialectLLVMIRImportInterface` and move the following include there.
 #include "mlir/Dialect/LLVMIR/LLVMOpFromLLVMIRConversions.inc"
+
   return failure();
 }
 
@@ -1626,12 +1627,11 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
   // Convert dso_local_equivalent.
   if (auto *dsoLocalEquivalent = dyn_cast<llvm::DSOLocalEquivalent>(constant)) {
     Type type = convertType(dsoLocalEquivalent->getType());
-    return builder
-        .create<DSOLocalEquivalentOp>(
-            loc, type,
-            FlatSymbolRefAttr::get(
-                builder.getContext(),
-                dsoLocalEquivalent->getGlobalValue()->getName()))
+    return DSOLocalEquivalentOp::create(
+               builder, loc, type,
+               FlatSymbolRefAttr::get(
+                   builder.getContext(),
+                   dsoLocalEquivalent->getGlobalValue()->getName()))
         .getResult();
   }
 
@@ -1736,9 +1736,9 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
         FlatSymbolRefAttr::get(context, blockAddr->getFunction()->getName());
     auto blockTag =
         BlockTagAttr::get(context, blockAddr->getBasicBlock()->getNumber());
-    return builder
-        .create<BlockAddressOp>(loc, convertType(blockAddr->getType()),
-                                BlockAddressAttr::get(context, fnSym, blockTag))
+    return BlockAddressOp::create(
+               builder, loc, convertType(blockAddr->getType()),
+               BlockAddressAttr::get(context, fnSym, blockTag))
         .getRes();
   }
 
@@ -2228,17 +2228,16 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
         if (!resultTy)
           return failure();
         ArrayAttr operandAttrs = convertAsmInlineOperandAttrs(*callInst);
-        return builder
-            .create<InlineAsmOp>(
-                loc, resultTy, *operands,
-                builder.getStringAttr(asmI->getAsmString()),
-                builder.getStringAttr(asmI->getConstraintString()),
-                asmI->hasSideEffects(), asmI->isAlignStack(),
-                convertTailCallKindFromLLVM(callInst->getTailCallKind()),
-                AsmDialectAttr::get(
-                    mlirModule.getContext(),
-                    convertAsmDialectFromLLVM(asmI->getDialect())),
-                operandAttrs)
+        return InlineAsmOp::create(
+                   builder, loc, resultTy, *operands,
+                   builder.getStringAttr(asmI->getAsmString()),
+                   builder.getStringAttr(asmI->getConstraintString()),
+                   asmI->hasSideEffects(), asmI->isAlignStack(),
+                   convertTailCallKindFromLLVM(callInst->getTailCallKind()),
+                   AsmDialectAttr::get(
+                       mlirModule.getContext(),
+                       convertAsmDialectFromLLVM(asmI->getDialect())),
+                   operandAttrs)
             .getOperation();
       }
       bool isIncompatibleCall;

@@ -348,24 +348,23 @@ getLocationToWriteFullVec(RewriterBase &b, vector::TransferWriteOp xferOp,
   Location loc = xferOp.getLoc();
   Value zero = arith::ConstantIndexOp::create(b, loc, 0);
   Value memref = xferOp.getBase();
-  return b
-      .create<scf::IfOp>(
-          loc, inBoundsCond,
-          [&](OpBuilder &b, Location loc) {
-            Value res =
-                castToCompatibleMemRefType(b, memref, compatibleMemRefType);
-            scf::ValueVector viewAndIndices{res};
-            llvm::append_range(viewAndIndices, xferOp.getIndices());
-            scf::YieldOp::create(b, loc, viewAndIndices);
-          },
-          [&](OpBuilder &b, Location loc) {
-            Value casted =
-                castToCompatibleMemRefType(b, alloc, compatibleMemRefType);
-            scf::ValueVector viewAndIndices{casted};
-            viewAndIndices.insert(viewAndIndices.end(),
-                                  xferOp.getTransferRank(), zero);
-            scf::YieldOp::create(b, loc, viewAndIndices);
-          })
+  return scf::IfOp::create(
+             b, loc, inBoundsCond,
+             [&](OpBuilder &b, Location loc) {
+               Value res =
+                   castToCompatibleMemRefType(b, memref, compatibleMemRefType);
+               scf::ValueVector viewAndIndices{res};
+               llvm::append_range(viewAndIndices, xferOp.getIndices());
+               scf::YieldOp::create(b, loc, viewAndIndices);
+             },
+             [&](OpBuilder &b, Location loc) {
+               Value casted =
+                   castToCompatibleMemRefType(b, alloc, compatibleMemRefType);
+               scf::ValueVector viewAndIndices{casted};
+               viewAndIndices.insert(viewAndIndices.end(),
+                                     xferOp.getTransferRank(), zero);
+               scf::YieldOp::create(b, loc, viewAndIndices);
+             })
       ->getResults();
 }
 

@@ -402,8 +402,8 @@ public:
     Value actualOp = adaptValueType(adaptor.getIn(), rewriter, castSrcType);
 
     // Actual cast (may change bitwidth)
-    auto cast = rewriter.template create<emitc::CastOp>(op.getLoc(),
-                                                        castDestType, actualOp);
+    auto cast =
+        emitc::CastOp::create(rewriter, op.getLoc(), castDestType, actualOp);
 
     // Cast to the expected output type
     auto result = adaptValueType(cast, rewriter, opReturnType);
@@ -507,8 +507,8 @@ public:
     Value lhs = adaptValueType(adaptor.getLhs(), rewriter, arithmeticType);
     Value rhs = adaptValueType(adaptor.getRhs(), rewriter, arithmeticType);
 
-    Value arithmeticResult = rewriter.template create<EmitCOp>(
-        op.getLoc(), arithmeticType, lhs, rhs);
+    Value arithmeticResult =
+        EmitCOp::create(rewriter, op.getLoc(), arithmeticType, lhs, rhs);
 
     Value result = adaptValueType(arithmeticResult, rewriter, type);
 
@@ -547,8 +547,8 @@ public:
     Value lhs = adaptValueType(adaptor.getLhs(), rewriter, arithmeticType);
     Value rhs = adaptValueType(adaptor.getRhs(), rewriter, arithmeticType);
 
-    Value arithmeticResult = rewriter.template create<EmitCOp>(
-        op.getLoc(), arithmeticType, lhs, rhs);
+    Value arithmeticResult =
+        EmitCOp::create(rewriter, op.getLoc(), arithmeticType, lhs, rhs);
 
     Value result = adaptValueType(arithmeticResult, rewriter, type);
 
@@ -748,8 +748,8 @@ public:
     }
     Value fpCastOperand = adaptor.getIn();
     if (actualOperandType != operandType) {
-      fpCastOperand = rewriter.template create<emitc::CastOp>(
-          castOp.getLoc(), actualOperandType, fpCastOperand);
+      fpCastOperand = emitc::CastOp::create(rewriter, castOp.getLoc(),
+                                            actualOperandType, fpCastOperand);
     }
     rewriter.replaceOpWithNewOp<emitc::CastOp>(castOp, dstType, fpCastOperand);
 

@@ -185,9 +185,8 @@ struct CopyOpInterface
                             int64_t dim) -> Value {
         return type.isDynamicDim(dim)
                    ? DimOp::create(builder, loc, memRef, dim).getResult()
-                   : builder
-                         .create<arith::ConstantIndexOp>(loc,
-                                                         type.getDimSize(dim))
+                   : arith::ConstantIndexOp::create(builder, loc,
+                                                    type.getDimSize(dim))
                          .getResult();
       };
       Value sourceDim = getDimSize(copyOp.getSource(), rankedSourceType, i);

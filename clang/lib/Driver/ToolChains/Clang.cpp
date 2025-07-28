@@ -3881,17 +3881,17 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
                                  const ArgList &Args, const InputInfo &Input,
                                  const InputInfo &Output, bool HaveStd20,
                                  ArgStringList &CmdArgs) {
-  bool IsCXX = types::isCXX(Input.getType());
-  bool HaveStdCXXModules = IsCXX && HaveStd20;
+  const bool IsCXX = types::isCXX(Input.getType());
+  const bool HaveStdCXXModules = IsCXX && HaveStd20;
   bool HaveModules = HaveStdCXXModules;
 
   // -fmodules enables the use of precompiled modules (off by default).
   // Users can pass -fno-cxx-modules to turn off modules support for
   // C++/Objective-C++ programs.
+  const bool AllowedInCXX = Args.hasFlag(options::OPT_fcxx_modules,
+                                         options::OPT_fno_cxx_modules, true);
   bool HaveClangModules = false;
   if (Args.hasFlag(options::OPT_fmodules, options::OPT_fno_modules, false)) {
-    bool AllowedInCXX = Args.hasFlag(options::OPT_fcxx_modules,
-                                     options::OPT_fno_cxx_modules, true);
     if (AllowedInCXX || !IsCXX) {
       CmdArgs.push_back("-fmodules");
       HaveClangModules = true;
@@ -3899,6 +3899,9 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
   }
 
   HaveModules |= HaveClangModules;
+
+  if (HaveModules && !AllowedInCXX)
+    CmdArgs.push_back("-fno-cxx-modules");
 
   // -fmodule-maps enables implicit reading of module map files. By default,
   // this is enabled if we are using Clang's flavor of precompiled modules.

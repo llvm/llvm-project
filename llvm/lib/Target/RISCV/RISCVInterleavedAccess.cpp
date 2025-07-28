@@ -224,10 +224,10 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
     Value *Stride = ConstantInt::get(XLenTy, Factor * ScalarSizeInBytes);
     Value *Offset = ConstantInt::get(XLenTy, Indices[0] * ScalarSizeInBytes);
     Value *BasePtr = Builder.CreatePtrAdd(Ptr, Offset);
-    // Note: Same VL as above, but i32 not xlen due to signature of
-    // vp.strided.load
-    VL = Builder.CreateElementCount(Builder.getInt32Ty(),
-                                    VTy->getElementCount());
+    // For rv64, need to truncate i64 to i32 to match signature.  As VL is at most
+    // the number of active lanes (which is bounded by i32) this is safe.
+    VL = Builder.CreateTrunc(VL, Builder.getInt32Ty());
+
     CallInst *CI =
         Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_load,
                                 {VTy, BasePtr->getType(), Stride->getType()},
@@ -302,10 +302,9 @@ bool RISCVTargetLowering::lowerInterleavedStore(Instruction *Store,
     Value *Stride = ConstantInt::get(XLenTy, Factor * ScalarSizeInBytes);
     Value *Offset = ConstantInt::get(XLenTy, Index * ScalarSizeInBytes);
     Value *BasePtr = Builder.CreatePtrAdd(Ptr, Offset);
-    // Note: Same VL as above, but i32 not xlen due to signature of
-    // vp.strided.store
-    VL = Builder.CreateElementCount(Builder.getInt32Ty(),
-                                    VTy->getElementCount());
+    // For rv64, need to truncate i64 to i32 to match signature.  As VL is at
+    // most the number of active lanes (which is bounded by i32) this is safe.
+    VL = Builder.CreateTrunc(VL, Builder.getInt32Ty());
 
     CallInst *CI =
         Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_store,

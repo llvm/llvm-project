@@ -940,7 +940,6 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       FunctionProtoTypes(this_(), FunctionProtoTypesLog2InitSize),
       DependentTypeOfExprTypes(this_()), DependentDecltypeTypes(this_()),
       DependentPackIndexingTypes(this_()), TemplateSpecializationTypes(this_()),
-      DependentTemplateSpecializationTypes(this_()),
       DependentBitIntTypes(this_()), SubstTemplateTemplateParmPacks(this_()),
       DeducedTemplates(this_()), ArrayParameterTypes(this_()),
       CanonTemplateTemplateParms(this_()), SourceMgr(SM), LangOpts(LOpts),
@@ -5979,10 +5978,9 @@ QualType ASTContext::getDependentTemplateSpecializationType(
   llvm::FoldingSetNodeID ID;
   DependentTemplateSpecializationType::Profile(ID, *this, Keyword, Name, Args);
 
-  void *InsertPos = nullptr;
-  if (auto *T = DependentTemplateSpecializationTypes.FindNodeOrInsertPos(
-          ID, InsertPos))
-    return QualType(T, 0);
+  if (auto const T_iter = DependentTemplateSpecializationTypes.find(ID);
+      T_iter != DependentTemplateSpecializationTypes.end())
+    return QualType(T_iter->getSecond(), 0);
 
   NestedNameSpecifier *NNS = Name.getQualifier();
 
@@ -6001,11 +5999,6 @@ QualType ASTContext::getDependentTemplateSpecializationType(
           CanonKeyword, {CanonNNS, Name.getName(), /*HasTemplateKeyword=*/true},
           CanonArgs,
           /*IsCanonical=*/true);
-      // Find the insert position again.
-      [[maybe_unused]] auto *Nothing =
-          DependentTemplateSpecializationTypes.FindNodeOrInsertPos(ID,
-                                                                   InsertPos);
-      assert(!Nothing && "canonical type broken");
     }
   } else {
     assert(Keyword == getCanonicalElaboratedTypeKeyword(Keyword));
@@ -6021,8 +6014,13 @@ QualType ASTContext::getDependentTemplateSpecializationType(
                        alignof(DependentTemplateSpecializationType));
   auto *T =
       new (Mem) DependentTemplateSpecializationType(Keyword, Name, Args, Canon);
+#ifndef NDEBUG
+  llvm::FoldingSetNodeID InsertedID;
+  T->Profile(InsertedID, *this);
+  assert(InsertedID == ID && "ID does not match");
+#endif
   Types.push_back(T);
-  DependentTemplateSpecializationTypes.InsertNode(T, InsertPos);
+  DependentTemplateSpecializationTypes.try_emplace(ID, T);
   return QualType(T, 0);
 }
 

@@ -147,6 +147,18 @@ def UndefAttr : CIR_TypedAttr<"Undef", "undef"> {
 }
 
 //===----------------------------------------------------------------------===//
+// PoisonAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_PoisonAttr : CIR_TypedAttr<"Poison", "poison"> {
+  let summary = "Represent a typed poison constant";
+  let description = [{
+    The PoisonAttr represents a typed poison constant, corresponding to LLVM's
+    notion of poison.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // IntegerAttr
 //===----------------------------------------------------------------------===//
 
