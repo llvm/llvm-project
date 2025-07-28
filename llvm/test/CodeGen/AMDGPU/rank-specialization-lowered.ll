@@ -64,20 +64,18 @@ entry:
 
 declare i32 @llvm.amdgcn.wave.id.in.wavegroup() #2
 
-define internal void @test_kernel_1.rank_0_2_3_4_5_6_7() #3 {
+define private amdgpu_kernel void @test_kernel_1.rank_0_2_3_4_5_6_7() #3 {
 ; CHECK-LABEL: test_kernel_1.rank_0_2_3_4_5_6_7:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    s_wait_expcnt 0x0
-; CHECK-NEXT:    s_wait_samplecnt 0x0
-; CHECK-NEXT:    s_wait_rtscnt 0x0
-; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[4:5]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; CHECK-NEXT:    s_get_pc_i64 s[0:1]
 ; CHECK-NEXT:    s_add_nc_u64 s[0:1], s[0:1], dummy_store@gotpcrel+4
-; CHECK-NEXT:    v_writelane_b32 v127, s30, 0
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; CHECK-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
+; CHECK-NEXT:    v_mov_b32_e32 v31, v0
 ; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    v_writelane_b32 v127, s31, 1
 ; CHECK-NEXT:    s_branch .LBB3_2
 ; CHECK-NEXT:  .LBB3_1: ; %Flow
 ; CHECK-NEXT:    ; in Loop: Header=BB3_2 Depth=1
@@ -96,9 +94,7 @@ define internal void @test_kernel_1.rank_0_2_3_4_5_6_7() #3 {
 ; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    s_branch .LBB3_1
 ; CHECK-NEXT:  .LBB3_4: ; %if.end7
-; CHECK-NEXT:    v_readlane_b32 s31, v127, 1
-; CHECK-NEXT:    v_readlane_b32 s30, v127, 0
-; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+; CHECK-NEXT:    s_endpgm
 entry:
   br label %for.cond
 
@@ -116,23 +112,21 @@ if.end7:                                          ; preds = %for.cond
   ret void
 }
 
-define internal void @test_kernel_1.rank_1() #3 {
+define private amdgpu_kernel void @test_kernel_1.rank_1() #3 {
 ; CHECK-LABEL: test_kernel_1.rank_1:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    s_wait_expcnt 0x0
-; CHECK-NEXT:    s_wait_samplecnt 0x0
-; CHECK-NEXT:    s_wait_rtscnt 0x0
-; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[4:5]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; CHECK-NEXT:    s_get_pc_i64 s[0:1]
 ; CHECK-NEXT:    s_add_nc_u64 s[0:1], s[0:1], dummy_store@gotpcrel+4
-; CHECK-NEXT:    s_get_pc_i64 s[16:17]
-; CHECK-NEXT:    s_add_nc_u64 s[16:17], s[16:17], dummy_rank1a@gotpcrel+4
+; CHECK-NEXT:    s_get_pc_i64 s[12:13]
+; CHECK-NEXT:    s_add_nc_u64 s[12:13], s[12:13], dummy_rank1a@gotpcrel+4
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; CHECK-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
-; CHECK-NEXT:    s_load_b64 s[16:17], s[16:17], 0x0
-; CHECK-NEXT:    v_writelane_b32 v127, s30, 0
+; CHECK-NEXT:    s_load_b64 s[12:13], s[12:13], 0x0
+; CHECK-NEXT:    v_mov_b32_e32 v31, v0
 ; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    v_writelane_b32 v127, s31, 1
 ; CHECK-NEXT:    s_branch .LBB4_2
 ; CHECK-NEXT:  .LBB4_1: ; %Flow
 ; CHECK-NEXT:    ; in Loop: Header=BB4_2 Depth=1
@@ -147,7 +141,7 @@ define internal void @test_kernel_1.rank_1() #3 {
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB4_1
 ; CHECK-NEXT:  ; %bb.3: ; %if.then
 ; CHECK-NEXT:    ; in Loop: Header=BB4_2 Depth=1
-; CHECK-NEXT:    s_swap_pc_i64 s[30:31], s[16:17]
+; CHECK-NEXT:    s_swap_pc_i64 s[30:31], s[12:13]
 ; CHECK-NEXT:    s_add_co_i32 s1, s1, 1
 ; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    s_branch .LBB4_1
@@ -157,9 +151,7 @@ define internal void @test_kernel_1.rank_1() #3 {
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
-; CHECK-NEXT:    v_readlane_b32 s31, v127, 1
-; CHECK-NEXT:    v_readlane_b32 s30, v127, 0
-; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+; CHECK-NEXT:    s_endpgm
 entry:
   br label %for.cond
 
@@ -208,43 +200,43 @@ define dso_local amdgpu_kernel void @test_kernel_1() local_unnamed_addr #1 !reqd
 ; CHECK-NEXT:  ; %bb.4:
 ; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_0_2_3_4_5_6_7@rel64-8
 ; CHECK-NEXT:  .LBB5_5: ; %bb.rank_0_2_3_4_5_6_7
-; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr)
+; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(32, dummy_store.num_vgpr)
 ; CHECK-NEXT:    s_cmp_eq_u32 s9, 2
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_7
 ; CHECK-NEXT:  ; %bb.6:
 ; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_0_2_3_4_5_6_7@rel64-8
 ; CHECK-NEXT:  .LBB5_7: ; %bb.rank_0_2_3_4_5_6_7
-; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr)
+; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(32, dummy_store.num_vgpr)
 ; CHECK-NEXT:    s_cmp_eq_u32 s9, 3
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_9
 ; CHECK-NEXT:  ; %bb.8:
 ; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_0_2_3_4_5_6_7@rel64-8
 ; CHECK-NEXT:  .LBB5_9: ; %bb.rank_0_2_3_4_5_6_7
-; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr)
+; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(32, dummy_store.num_vgpr)
 ; CHECK-NEXT:    s_cmp_eq_u32 s9, 4
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_11
 ; CHECK-NEXT:  ; %bb.10:
 ; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_0_2_3_4_5_6_7@rel64-8
 ; CHECK-NEXT:  .LBB5_11: ; %bb.rank_0_2_3_4_5_6_7
-; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr)
+; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(32, dummy_store.num_vgpr)
 ; CHECK-NEXT:    s_cmp_eq_u32 s9, 5
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_13
 ; CHECK-NEXT:  ; %bb.12:
 ; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_0_2_3_4_5_6_7@rel64-8
 ; CHECK-NEXT:  .LBB5_13: ; %bb.rank_0_2_3_4_5_6_7
-; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr)
+; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(32, dummy_store.num_vgpr)
 ; CHECK-NEXT:    s_cmp_eq_u32 s9, 6
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_15
 ; CHECK-NEXT:  ; %bb.14:
 ; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_0_2_3_4_5_6_7@rel64-8
 ; CHECK-NEXT:  .LBB5_15: ; %bb.rank_0_2_3_4_5_6_7
-; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr)
+; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(32, dummy_store.num_vgpr)
 ; CHECK-NEXT:    s_cmp_eq_u32 s9, 7
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_17
 ; CHECK-NEXT:  ; %bb.16:
 ; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_0_2_3_4_5_6_7@rel64-8
 ; CHECK-NEXT:  .LBB5_17: ; %bb.rank_0_2_3_4_5_6_7
-; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr)
+; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(32, dummy_store.num_vgpr)
 ; CHECK-NEXT:    s_cbranch_execnz .LBB5_2
 ; CHECK-NEXT:  .LBB5_18: ; %bb.rank_1
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, 0
@@ -253,7 +245,7 @@ define dso_local amdgpu_kernel void @test_kernel_1() local_unnamed_addr #1 !reqd
 ; CHECK-NEXT:  ; %bb.19:
 ; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_1@rel64-8
 ; CHECK-NEXT:  .LBB5_20: ; %bb.rank_1
-; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr, dummy_rank1a.num_vgpr, dummy_rank1b.num_vgpr)
+; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(32, dummy_store.num_vgpr, dummy_rank1a.num_vgpr, dummy_rank1b.num_vgpr)
 ; CHECK-NEXT:    s_endpgm
 entry:
   %0 = call i32 @llvm.amdgcn.wave.id.in.wavegroup()

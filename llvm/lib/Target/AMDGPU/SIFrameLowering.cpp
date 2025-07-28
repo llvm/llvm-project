@@ -1921,9 +1921,6 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (MFI->isChainFunction() && !MF.getFrameInfo().hasTailCall())
     return;
 
-  if (AMDGPU::getWavegroupRankFunction(MF.getFunction()))
-    return;
-
   TargetFrameLowering::determineCalleeSaves(MF, SavedVGPRs, RS);
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
