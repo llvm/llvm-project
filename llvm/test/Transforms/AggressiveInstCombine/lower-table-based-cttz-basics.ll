@@ -276,3 +276,50 @@ entry:
   %0 = load i32, ptr %arrayidx, align 4
   ret i32 %0
 }
+
+define i32 @ctz1_with_i8_gep(i32 %x) {
+; CHECK-LABEL: @ctz1_with_i8_gep(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 0, i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP3]] to i32
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %sub = sub i32 0, %x
+  %and = and i32 %sub, %x
+  %mul = mul i32 %and, 125613361
+  %shr = lshr i32 %mul, 27
+  %idxprom = zext i32 %shr to i64
+  %arrayidx = getelementptr inbounds i8, ptr @ctz7.table, i64 %idxprom
+  %0 = load i8, ptr %arrayidx, align 1
+  %conv = zext i8 %0 to i32
+  ret i32 %conv
+}
+
+define i32 @ctz2_with_i8_gep(i32 %x) {
+; CHECK-LABEL: @ctz2_with_i8_gep(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[AND]], 72416175
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[MUL]], 26
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[SHR]] to i64
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [64 x i8], ptr @ctz2.table, i64 0, i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP0]] to i32
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %sub = sub i32 0, %x
+  %and = and i32 %sub, %x
+  %mul = mul i32 %and, 72416175
+  %shr = lshr i32 %mul, 26
+  %idxprom = zext i32 %shr to i64
+  %arrayidx = getelementptr inbounds [64 x i8], ptr @ctz2.table, i64 0, i64 %idxprom
+  %0 = load i16, ptr %arrayidx, align 2
+  %conv = sext i16 %0 to i32
+  ret i32 %conv
+}

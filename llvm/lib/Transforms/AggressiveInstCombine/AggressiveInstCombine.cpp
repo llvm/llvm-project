@@ -547,14 +547,20 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I) {
     return false;
 
   GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand());
-  if (!GEP || !GEP->hasNoUnsignedSignedWrap() || GEP->getNumIndices() != 2)
+  if (!GEP || !GEP->hasNoUnsignedSignedWrap())
     return false;
 
-  if (!GEP->getSourceElementType()->isArrayTy())
-    return false;
-
-  uint64_t ArraySize = GEP->getSourceElementType()->getArrayNumElements();
-  if (ArraySize != 32 && ArraySize != 64)
+  Type *GEPSrcEltTy = GEP->getSourceElementType();
+  Value *GepIdx;
+  if (GEP->getNumIndices() == 2) {
+    if (!GEPSrcEltTy->isArrayTy() ||
+        !match(GEP->idx_begin()->get(), m_ZeroInt()))
+      return false;
+    GEPSrcEltTy = GEPSrcEltTy->getArrayElementType();
+    GepIdx = std::next(GEP->idx_begin())->get();
+  } else if (GEP->getNumIndices() == 1)
+    GepIdx = GEP->idx_begin()->get();
+  else
     return false;
 
   GlobalVariable *GVTable = dyn_cast<GlobalVariable>(GEP->getPointerOperand());
@@ -563,21 +569,17 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I) {
 
   ConstantDataArray *ConstData =
       dyn_cast<ConstantDataArray>(GVTable->getInitializer());
-  if (!ConstData)
+  if (!ConstData || ConstData->getElementType() != GEPSrcEltTy)
     return false;
 
-  if (!match(GEP->idx_begin()->get(), m_ZeroInt()))
-    return false;
-
-  Value *Idx2 = std::next(GEP->idx_begin())->get();
   Value *X1;
   uint64_t MulConst, ShiftConst;
   // FIXME: 64-bit targets have `i64` type for the GEP index, so this match will
   // probably fail for other (e.g. 32-bit) targets.
-  if (!match(Idx2, m_ZExtOrSelf(
-                       m_LShr(m_Mul(m_c_And(m_Neg(m_Value(X1)), m_Deferred(X1)),
-                                    m_ConstantInt(MulConst)),
-                              m_ConstantInt(ShiftConst)))))
+  if (!match(GepIdx, m_ZExtOrSelf(m_LShr(
+                         m_Mul(m_c_And(m_Neg(m_Value(X1)), m_Deferred(X1)),
+                               m_ConstantInt(MulConst)),
+                         m_ConstantInt(ShiftConst)))))
     return false;
 
   unsigned InputBits = X1->getType()->getScalarSizeInBits();
