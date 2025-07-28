@@ -29,8 +29,10 @@
 using namespace lldb_private;
 
 Arm64RegisterFlagsDetector::Fields
-Arm64RegisterFlagsDetector::DetectFPMRFields(uint64_t hwcap, uint64_t hwcap2) {
+Arm64RegisterFlagsDetector::DetectFPMRFields(uint64_t hwcap, uint64_t hwcap2,
+                                             uint64_t hwcap3) {
   (void)hwcap;
+  (void)hwcap3;
 
   if (!(hwcap2 & HWCAP2_FPMR))
     return {};
@@ -53,8 +55,10 @@ Arm64RegisterFlagsDetector::DetectFPMRFields(uint64_t hwcap, uint64_t hwcap2) {
 
 Arm64RegisterFlagsDetector::Fields
 Arm64RegisterFlagsDetector::DetectGCSFeatureFields(uint64_t hwcap,
-                                                   uint64_t hwcap2) {
+                                                   uint64_t hwcap2,
+                                                   uint64_t hwcap3) {
   (void)hwcap2;
+  (void)hwcap3;
 
   if (!(hwcap & HWCAP_GCS))
     return {};
@@ -67,8 +71,10 @@ Arm64RegisterFlagsDetector::DetectGCSFeatureFields(uint64_t hwcap,
 }
 
 Arm64RegisterFlagsDetector::Fields
-Arm64RegisterFlagsDetector::DetectSVCRFields(uint64_t hwcap, uint64_t hwcap2) {
+Arm64RegisterFlagsDetector::DetectSVCRFields(uint64_t hwcap, uint64_t hwcap2,
+                                             uint64_t hwcap3) {
   (void)hwcap;
+  (void)hwcap3;
 
   if (!(hwcap2 & HWCAP2_SME))
     return {};
@@ -83,9 +89,10 @@ Arm64RegisterFlagsDetector::DetectSVCRFields(uint64_t hwcap, uint64_t hwcap2) {
 }
 
 Arm64RegisterFlagsDetector::Fields
-Arm64RegisterFlagsDetector::DetectMTECtrlFields(uint64_t hwcap,
-                                                uint64_t hwcap2) {
+Arm64RegisterFlagsDetector::DetectMTECtrlFields(uint64_t hwcap, uint64_t hwcap2,
+                                                uint64_t hwcap3) {
   (void)hwcap;
+  (void)hwcap3;
 
   if (!(hwcap2 & HWCAP2_MTE))
     return {};
@@ -103,7 +110,10 @@ Arm64RegisterFlagsDetector::DetectMTECtrlFields(uint64_t hwcap,
 }
 
 Arm64RegisterFlagsDetector::Fields
-Arm64RegisterFlagsDetector::DetectFPCRFields(uint64_t hwcap, uint64_t hwcap2) {
+Arm64RegisterFlagsDetector::DetectFPCRFields(uint64_t hwcap, uint64_t hwcap2,
+                                             uint64_t hwcap3) {
+  (void)hwcap3;
+
   static const FieldEnum rmode_enum(
       "rmode_enum", {{0, "RN"}, {1, "RP"}, {2, "RM"}, {3, "RZ"}});
 
@@ -142,10 +152,12 @@ Arm64RegisterFlagsDetector::DetectFPCRFields(uint64_t hwcap, uint64_t hwcap2) {
 }
 
 Arm64RegisterFlagsDetector::Fields
-Arm64RegisterFlagsDetector::DetectFPSRFields(uint64_t hwcap, uint64_t hwcap2) {
+Arm64RegisterFlagsDetector::DetectFPSRFields(uint64_t hwcap, uint64_t hwcap2,
+                                             uint64_t hwcap3) {
   // fpsr's contents are constant.
   (void)hwcap;
   (void)hwcap2;
+  (void)hwcap3;
 
   return {
       // Bits 31-28 are N/Z/C/V, only used by AArch32.
@@ -162,7 +174,10 @@ Arm64RegisterFlagsDetector::DetectFPSRFields(uint64_t hwcap, uint64_t hwcap2) {
 }
 
 Arm64RegisterFlagsDetector::Fields
-Arm64RegisterFlagsDetector::DetectCPSRFields(uint64_t hwcap, uint64_t hwcap2) {
+Arm64RegisterFlagsDetector::DetectCPSRFields(uint64_t hwcap, uint64_t hwcap2,
+                                             uint64_t hwcap3) {
+  (void)hwcap3;
+
   // The fields here are a combination of the Arm manual's SPSR_EL1,
   // plus a few changes where Linux has decided not to make use of them at all,
   // or at least not from userspace.
@@ -207,9 +222,10 @@ Arm64RegisterFlagsDetector::DetectCPSRFields(uint64_t hwcap, uint64_t hwcap2) {
   return cpsr_fields;
 }
 
-void Arm64RegisterFlagsDetector::DetectFields(uint64_t hwcap, uint64_t hwcap2) {
+void Arm64RegisterFlagsDetector::DetectFields(uint64_t hwcap, uint64_t hwcap2,
+                                              uint64_t hwcap3) {
   for (auto &reg : m_registers)
-    reg.m_flags.SetFields(reg.m_detector(hwcap, hwcap2));
+    reg.m_flags.SetFields(reg.m_detector(hwcap, hwcap2, hwcap3));
   m_has_detected = true;
 }
 
