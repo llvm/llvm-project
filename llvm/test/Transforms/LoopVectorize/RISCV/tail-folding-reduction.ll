@@ -123,36 +123,34 @@ for.end:
 define i32 @mul(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-LABEL: @mul(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
+; IF-EVL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N_RND_UP:%.*]], 16
+; IF-EVL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N:%.*]], 7
-; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 8
+; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; IF-EVL-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> splat (i32 1), i32 [[START:%.*]], i32 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT1]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i32> [ [[TMP9]], [[ENTRY]] ], [ [[TMP5:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[IV]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
-; IF-EVL-NEXT:    [[VEC_IV:%.*]] = add <8 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
-; IF-EVL-NEXT:    [[TMP2:%.*]] = icmp ule <8 x i64> [[VEC_IV]], [[BROADCAST_SPLAT2]]
+; IF-EVL-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x i32> [ splat (i32 1), [[ENTRY]] ], [ [[TMP4:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IV]]
-; IF-EVL-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr [[TMP3]], i32 4, <8 x i1> [[TMP2]], <8 x i32> poison)
+; IF-EVL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i32 8
+; IF-EVL-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = load <8 x i32>, ptr [[TMP3]], align 4
+; IF-EVL-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x i32>, ptr [[TMP2]], align 4
 ; IF-EVL-NEXT:    [[TMP5]] = mul <8 x i32> [[WIDE_MASKED_LOAD]], [[VEC_PHI]]
-; IF-EVL-NEXT:    [[TMP6:%.*]] = select <8 x i1> [[TMP2]], <8 x i32> [[TMP5]], <8 x i32> [[VEC_PHI]]
-; IF-EVL-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 8
+; IF-EVL-NEXT:    [[TMP4]] = mul <8 x i32> [[WIDE_LOAD2]], [[VEC_PHI1]]
+; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 16
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[IV_NEXT]], [[N_VEC]]
 ; IF-EVL-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; IF-EVL:       middle.block:
+; IF-EVL-NEXT:    [[TMP6:%.*]] = mul <8 x i32> [[TMP4]], [[TMP5]]
 ; IF-EVL-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.mul.v8i32(<8 x i32> [[TMP6]])
-; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
+; IF-EVL-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_RND_UP]], [[N_VEC]]
+; IF-EVL-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY1:%.*]] ]
-; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[START]], [[ENTRY1]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY1:%.*]] ]
+; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP8]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY1]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY1:%.*]]
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], [[FOR_BODY1]] ]
@@ -161,7 +159,7 @@ define i32 @mul(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; IF-EVL-NEXT:    [[MUL]] = mul nsw i32 [[TMP0]], [[RDX]]
 ; IF-EVL-NEXT:    [[IV_NEXT1]] = add nuw nsw i64 [[IV1]], 1
-; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT1]], [[N]]
+; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT1]], [[N_RND_UP]]
 ; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY1]], !llvm.loop [[LOOP6:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[MUL_LCSSA:%.*]] = phi i32 [ [[MUL]], [[FOR_BODY1]] ], [ [[TMP8]], [[MIDDLE_BLOCK]] ]
@@ -1156,36 +1154,34 @@ for.end:
 define float @fmul(ptr %a, i64 %n, float %start) {
 ; IF-EVL-LABEL: @fmul(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
+; IF-EVL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N_RND_UP:%.*]], 16
+; IF-EVL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N:%.*]], 7
-; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 8
+; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; IF-EVL-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = insertelement <8 x float> splat (float 1.000000e+00), float [[START:%.*]], i32 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT1]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <8 x float> [ [[TMP9]], [[ENTRY]] ], [ [[TMP5:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[IV]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
-; IF-EVL-NEXT:    [[VEC_IV:%.*]] = add <8 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
-; IF-EVL-NEXT:    [[TMP2:%.*]] = icmp ule <8 x i64> [[VEC_IV]], [[BROADCAST_SPLAT2]]
+; IF-EVL-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x float> [ splat (float 1.000000e+00), [[ENTRY]] ], [ [[TMP4:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[IV]]
-; IF-EVL-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x float> @llvm.masked.load.v8f32.p0(ptr [[TMP3]], i32 4, <8 x i1> [[TMP2]], <8 x float> poison)
+; IF-EVL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP3]], i32 8
+; IF-EVL-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = load <8 x float>, ptr [[TMP3]], align 4
+; IF-EVL-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x float>, ptr [[TMP2]], align 4
 ; IF-EVL-NEXT:    [[TMP5]] = fmul reassoc <8 x float> [[WIDE_MASKED_LOAD]], [[VEC_PHI]]
-; IF-EVL-NEXT:    [[TMP6:%.*]] = select reassoc <8 x i1> [[TMP2]], <8 x float> [[TMP5]], <8 x float> [[VEC_PHI]]
-; IF-EVL-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 8
+; IF-EVL-NEXT:    [[TMP4]] = fmul reassoc <8 x float> [[WIDE_LOAD2]], [[VEC_PHI1]]
+; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 16
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[IV_NEXT]], [[N_VEC]]
 ; IF-EVL-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
 ; IF-EVL:       middle.block:
+; IF-EVL-NEXT:    [[TMP6:%.*]] = fmul reassoc <8 x float> [[TMP4]], [[TMP5]]
 ; IF-EVL-NEXT:    [[TMP8:%.*]] = call reassoc float @llvm.vector.reduce.fmul.v8f32(float 1.000000e+00, <8 x float> [[TMP6]])
-; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
+; IF-EVL-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_RND_UP]], [[N_VEC]]
+; IF-EVL-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY1:%.*]] ]
-; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[START]], [[ENTRY1]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY1:%.*]] ]
+; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP8]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY1]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY1:%.*]]
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], [[FOR_BODY1]] ]
@@ -1194,7 +1190,7 @@ define float @fmul(ptr %a, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; IF-EVL-NEXT:    [[MUL]] = fmul reassoc float [[TMP0]], [[RDX]]
 ; IF-EVL-NEXT:    [[IV_NEXT1]] = add nuw nsw i64 [[IV1]], 1
-; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT1]], [[N]]
+; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT1]], [[N_RND_UP]]
 ; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY1]], !llvm.loop [[LOOP24:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[MUL_LCSSA:%.*]] = phi float [ [[MUL]], [[FOR_BODY1]] ], [ [[TMP8]], [[MIDDLE_BLOCK]] ]
@@ -1502,37 +1498,35 @@ for.end:
 define float @fminimum(ptr %a, i64 %n, float %start) {
 ; IF-EVL-LABEL: @fminimum(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
+; IF-EVL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N_RND_UP:%.*]], 16
+; IF-EVL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N:%.*]], 7
-; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 8
+; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; IF-EVL-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT3]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <8 x float> poison, float [[START:%.*]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT2]], <8 x float> poison, <8 x i32> zeroinitializer
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <8 x float> [ [[BROADCAST_SPLAT]], [[ENTRY]] ], [ [[TMP4:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i64> poison, i64 [[IV]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT1]], <8 x i64> poison, <8 x i32> zeroinitializer
-; IF-EVL-NEXT:    [[VEC_IV:%.*]] = add <8 x i64> [[BROADCAST_SPLAT2]], <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
-; IF-EVL-NEXT:    [[TMP1:%.*]] = icmp ule <8 x i64> [[VEC_IV]], [[BROADCAST_SPLAT4]]
+; IF-EVL-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x float> [ [[BROADCAST_SPLAT]], [[ENTRY]] ], [ [[TMP3:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[IV]]
-; IF-EVL-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x float> @llvm.masked.load.v8f32.p0(ptr [[TMP2]], i32 4, <8 x i1> [[TMP1]], <8 x float> poison)
+; IF-EVL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 8
+; IF-EVL-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = load <8 x float>, ptr [[TMP2]], align 4
+; IF-EVL-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x float>, ptr [[TMP1]], align 4
 ; IF-EVL-NEXT:    [[TMP4]] = call <8 x float> @llvm.minimum.v8f32(<8 x float> [[VEC_PHI]], <8 x float> [[WIDE_MASKED_LOAD]])
-; IF-EVL-NEXT:    [[TMP5:%.*]] = select <8 x i1> [[TMP1]], <8 x float> [[TMP4]], <8 x float> [[VEC_PHI]]
-; IF-EVL-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 8
+; IF-EVL-NEXT:    [[TMP3]] = call <8 x float> @llvm.minimum.v8f32(<8 x float> [[VEC_PHI1]], <8 x float> [[WIDE_LOAD2]])
+; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 16
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[IV_NEXT]], [[N_VEC]]
 ; IF-EVL-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP29:![0-9]+]]
 ; IF-EVL:       middle.block:
+; IF-EVL-NEXT:    [[TMP5:%.*]] = call <8 x float> @llvm.minimum.v8f32(<8 x float> [[TMP4]], <8 x float> [[TMP3]])
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = call float @llvm.vector.reduce.fminimum.v8f32(<8 x float> [[TMP5]])
-; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
+; IF-EVL-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_RND_UP]], [[N_VEC]]
+; IF-EVL-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY1:%.*]] ]
-; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[START]], [[ENTRY1]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY1:%.*]] ]
+; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY1]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY1:%.*]]
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], [[FOR_BODY1]] ]
@@ -1541,7 +1535,7 @@ define float @fminimum(ptr %a, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; IF-EVL-NEXT:    [[MIN]] = tail call float @llvm.minimum.f32(float [[RDX]], float [[TMP0]])
 ; IF-EVL-NEXT:    [[IV_NEXT1]] = add nuw nsw i64 [[IV1]], 1
-; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT1]], [[N]]
+; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT1]], [[N_RND_UP]]
 ; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY1]], !llvm.loop [[LOOP30:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[MIN_LCSSA:%.*]] = phi float [ [[MIN]], [[FOR_BODY1]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
@@ -1612,37 +1606,35 @@ for.end:
 define float @fmaximum(ptr %a, i64 %n, float %start) {
 ; IF-EVL-LABEL: @fmaximum(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
+; IF-EVL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N_RND_UP:%.*]], 16
+; IF-EVL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N:%.*]], 7
-; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 8
+; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; IF-EVL-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT3]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <8 x float> poison, float [[START:%.*]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT2]], <8 x float> poison, <8 x i32> zeroinitializer
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <8 x float> [ [[BROADCAST_SPLAT]], [[ENTRY]] ], [ [[TMP4:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i64> poison, i64 [[IV]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT1]], <8 x i64> poison, <8 x i32> zeroinitializer
-; IF-EVL-NEXT:    [[VEC_IV:%.*]] = add <8 x i64> [[BROADCAST_SPLAT2]], <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
-; IF-EVL-NEXT:    [[TMP1:%.*]] = icmp ule <8 x i64> [[VEC_IV]], [[BROADCAST_SPLAT4]]
+; IF-EVL-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x float> [ [[BROADCAST_SPLAT]], [[ENTRY]] ], [ [[TMP3:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[IV]]
-; IF-EVL-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x float> @llvm.masked.load.v8f32.p0(ptr [[TMP2]], i32 4, <8 x i1> [[TMP1]], <8 x float> poison)
+; IF-EVL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 8
+; IF-EVL-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = load <8 x float>, ptr [[TMP2]], align 4
+; IF-EVL-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x float>, ptr [[TMP1]], align 4
 ; IF-EVL-NEXT:    [[TMP4]] = call <8 x float> @llvm.maximum.v8f32(<8 x float> [[VEC_PHI]], <8 x float> [[WIDE_MASKED_LOAD]])
-; IF-EVL-NEXT:    [[TMP5:%.*]] = select <8 x i1> [[TMP1]], <8 x float> [[TMP4]], <8 x float> [[VEC_PHI]]
-; IF-EVL-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 8
+; IF-EVL-NEXT:    [[TMP3]] = call <8 x float> @llvm.maximum.v8f32(<8 x float> [[VEC_PHI1]], <8 x float> [[WIDE_LOAD2]])
+; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 16
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[IV_NEXT]], [[N_VEC]]
 ; IF-EVL-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP31:![0-9]+]]
 ; IF-EVL:       middle.block:
+; IF-EVL-NEXT:    [[TMP5:%.*]] = call <8 x float> @llvm.maximum.v8f32(<8 x float> [[TMP4]], <8 x float> [[TMP3]])
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = call float @llvm.vector.reduce.fmaximum.v8f32(<8 x float> [[TMP5]])
-; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
+; IF-EVL-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_RND_UP]], [[N_VEC]]
+; IF-EVL-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY1:%.*]] ]
-; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[START]], [[ENTRY1]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY1:%.*]] ]
+; IF-EVL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY1]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY1:%.*]]
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], [[FOR_BODY1]] ]
@@ -1651,7 +1643,7 @@ define float @fmaximum(ptr %a, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; IF-EVL-NEXT:    [[MAX]] = tail call float @llvm.maximum.f32(float [[RDX]], float [[TMP0]])
 ; IF-EVL-NEXT:    [[IV_NEXT1]] = add nuw nsw i64 [[IV1]], 1
-; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT1]], [[N]]
+; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT1]], [[N_RND_UP]]
 ; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY1]], !llvm.loop [[LOOP32:![0-9]+]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[MAX_LCSSA:%.*]] = phi float [ [[MAX]], [[FOR_BODY1]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
