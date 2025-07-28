@@ -456,7 +456,7 @@ static bool PGOMemOPSizeOptImpl(Function &F, BlockFrequencyInfo &BFI,
   if (DisableMemOPOPT)
     return false;
 
-  if (F.hasFnAttribute(Attribute::OptimizeForSize))
+  if (F.hasOptSize())
     return false;
   MemOPSizeOpt MemOPSizeOpt(F, BFI, ORE, DT, TLI);
   MemOPSizeOpt.perform();
