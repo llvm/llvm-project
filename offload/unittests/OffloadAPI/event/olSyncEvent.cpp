@@ -1,4 +1,4 @@
-//===------- Offload API tests - olWaitEvent -====-------------------------===//
+//===------- Offload API tests - olSyncEvent -====-------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,10 +10,10 @@
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
-using olWaitEventTest = OffloadQueueTest;
-OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olWaitEventTest);
+using olSyncEventTest = OffloadQueueTest;
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olSyncEventTest);
 
-TEST_P(olWaitEventTest, Success) {
+TEST_P(olSyncEventTest, Success) {
   uint32_t Src = 42;
   void *DstPtr;
 
@@ -23,15 +23,15 @@ TEST_P(olWaitEventTest, Success) {
   ASSERT_SUCCESS(
       olMemcpy(Queue, DstPtr, Device, &Src, Host, sizeof(Src), &Event));
   ASSERT_NE(Event, nullptr);
-  ASSERT_SUCCESS(olWaitEvent(Event));
+  ASSERT_SUCCESS(olSyncEvent(Event));
   ASSERT_SUCCESS(olDestroyEvent(Event));
 }
 
-TEST_P(olWaitEventTest, InvalidNullEvent) {
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olWaitEvent(nullptr));
+TEST_P(olSyncEventTest, InvalidNullEvent) {
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olSyncEvent(nullptr));
 }
 
-TEST_P(olWaitEventTest, SuccessMultipleWait) {
+TEST_P(olSyncEventTest, SuccessMultipleWait) {
   uint32_t Src = 42;
   void *DstPtr;
 
@@ -43,7 +43,7 @@ TEST_P(olWaitEventTest, SuccessMultipleWait) {
   ASSERT_NE(Event, nullptr);
 
   for (size_t I = 0; I < 10; I++)
-    ASSERT_SUCCESS(olWaitEvent(Event));
+    ASSERT_SUCCESS(olSyncEvent(Event));
 
   ASSERT_SUCCESS(olDestroyEvent(Event));
 }

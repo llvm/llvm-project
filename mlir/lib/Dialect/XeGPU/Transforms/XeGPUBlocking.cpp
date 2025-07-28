@@ -76,6 +76,29 @@ resolveUnrealizedConversionCastOp(UnrealizedConversionCastOp castOp) {
   }
 }
 
+// This pattern lowers ConvertLayoutOp by removing the inst_data field from the
+// layout attributes. Since both producer and consumer operations handle data
+// partitioning based on their own inst_data, while maintaining original input
+// and output shape, ConvertLayoutOp does not need to manage inst_data.
+struct ConvertLayoutOpPattern
+    : public OpRewritePattern<xegpu::ConvertLayoutOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
+                                PatternRewriter &rewriter) const override {
+    xegpu::LayoutAttr input_layout = op.getInputLayoutAttr();
+    xegpu::LayoutAttr target_layout = op.getTargetLayoutAttr();
+    if (!input_layout.getInstData() || !target_layout.getInstData())
+      return rewriter.notifyMatchFailure(op, "Not a target ConvertLayoutOp.");
+
+    input_layout = input_layout.dropInstData();
+    target_layout = target_layout.dropInstData();
+    auto newOp = rewriter.createOrFold<xegpu::ConvertLayoutOp>(
+        op.getLoc(), op.getType(), op.getSource(), input_layout, target_layout);
+    rewriter.replaceOp(op, newOp);
+    return success();
+  }
+};
+
 //===------------------------------------------------------------------------===//
 // The XeGPUBlockingPass leverages the unroll patterns for XeGPU and Vector ops
 // to partition operations that process large shapes into multiple operations on
@@ -331,6 +354,7 @@ void XeGPUBlockingPass::runOnOperation() {
   });
 
   RewritePatternSet patterns(ctx);
+  patterns.add<ConvertLayoutOpPattern>(ctx);
 
   vector::UnrollVectorOptions vectorOptions;
   vectorOptions.setNativeShapeFn(options.nativeShape);

@@ -3,6 +3,8 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GFX11,GFX11-FAKE16
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GFX11,GFX11-GISEL-TRUE16
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GFX11,GFX11-FAKE16
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GFX11,GFX11-GISEL
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GFX11,GFX11-GISEL
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GFX12,GFX12-SDAG-TRUE16
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GFX12,GFX12-FAKE16
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GFX12,GFX12-GISEL-TRUE16
@@ -509,6 +511,30 @@ define amdgpu_kernel void @struct_atomic_buffer_load_v4i16(<4 x i32> %addr, i32 
 ; GFX11-GISEL-TRUE16-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX11-GISEL-TRUE16-NEXT:  ; %bb.2: ; %bb2
 ; GFX11-GISEL-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-GISEL-LABEL: struct_atomic_buffer_load_v4i16:
+; GFX11-GISEL:       ; %bb.0: ; %bb
+; GFX11-GISEL-NEXT:    s_clause 0x1
+; GFX11-GISEL-NEXT:    s_load_b32 s6, s[4:5], 0x34
+; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-GISEL-NEXT:    v_mov_b32_e32 v1, s6
+; GFX11-GISEL-NEXT:  .LBB8_1: ; %bb1
+; GFX11-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX11-GISEL-NEXT:    buffer_load_b64 v[2:3], v1, s[0:3], 0 idxen offset:4 glc
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s5, v2
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s6, v3
+; GFX11-GISEL-NEXT:    s_pack_ll_b32_b16 s5, s5, s6
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, s5, v0
+; GFX11-GISEL-NEXT:    s_or_b32 s4, vcc_lo, s4
+; GFX11-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
+; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB8_1
+; GFX11-GISEL-NEXT:  ; %bb.2: ; %bb2
+; GFX11-GISEL-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: struct_atomic_buffer_load_v4i16:
 ; GFX12-SDAG-TRUE16:       ; %bb.0: ; %bb
