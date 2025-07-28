@@ -2031,14 +2031,17 @@ static bool isS16(const SDValue &Op, SelectionDAG &DAG) {
 }
 
 /// IntCCToARMCC - Convert a DAG integer condition code to an ARM CC
-static ARMCC::CondCodes IntCCToARMCC(ISD::CondCode CC) {
+static ARMCC::CondCodes IntCCToARMCC(ISD::CondCode CC, SDValue RHS,
+                                     bool canUsePLOrMI = true) {
   switch (CC) {
   default: llvm_unreachable("Unknown condition code!");
   case ISD::SETNE:  return ARMCC::NE;
   case ISD::SETEQ:  return ARMCC::EQ;
   case ISD::SETGT:  return ARMCC::GT;
-  case ISD::SETGE:  return ARMCC::GE;
-  case ISD::SETLT:  return ARMCC::LT;
+  case ISD::SETGE:
+    return canUsePLOrMI && isNullConstant(RHS) ? ARMCC::PL : ARMCC::GE;
+  case ISD::SETLT:
+    return canUsePLOrMI && isNullConstant(RHS) ? ARMCC::MI : ARMCC::LT;
   case ISD::SETLE:  return ARMCC::LE;
   case ISD::SETUGT: return ARMCC::HI;
   case ISD::SETUGE: return ARMCC::HS;
@@ -4934,22 +4937,7 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     return Shift.getValue(1);
   }
 
-  ARMCC::CondCodes CondCode = IntCCToARMCC(CC);
-
-  // If the RHS is a constant zero then the V (overflow) flag will never be
-  // set. This can allow us to simplify GE to PL or LT to MI, which can be
-  // simpler for other passes (like the peephole optimiser) to deal with.
-  if (isNullConstant(RHS)) {
-    switch (CondCode) {
-      default: break;
-      case ARMCC::GE:
-        CondCode = ARMCC::PL;
-        break;
-      case ARMCC::LT:
-        CondCode = ARMCC::MI;
-        break;
-    }
-  }
+  ARMCC::CondCodes CondCode = IntCCToARMCC(CC, RHS);
 
   ARMISD::NodeType CompareType;
   switch (CondCode) {
@@ -5621,7 +5609,7 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     if (Subtarget->hasFPARMv8Base() && (TrueVal.getValueType() == MVT::f16 ||
                                         TrueVal.getValueType() == MVT::f32 ||
                                         TrueVal.getValueType() == MVT::f64)) {
-      ARMCC::CondCodes CondCode = IntCCToARMCC(CC);
+      ARMCC::CondCodes CondCode = IntCCToARMCC(CC, RHS, false);
       if (CondCode == ARMCC::LT || CondCode == ARMCC::LE ||
           CondCode == ARMCC::VC || CondCode == ARMCC::NE) {
         CC = ISD::getSetCCInverse(CC, LHS.getValueType());
@@ -5778,7 +5766,7 @@ ARMTargetLowering::OptimizeVFPBrcond(SDValue Op, SelectionDAG &DAG) const {
     expandf64Toi32(RHS, DAG, RHS1, RHS2);
     LHS2 = DAG.getNode(ISD::AND, dl, MVT::i32, LHS2, Mask);
     RHS2 = DAG.getNode(ISD::AND, dl, MVT::i32, RHS2, Mask);
-    ARMCC::CondCodes CondCode = IntCCToARMCC(CC);
+    ARMCC::CondCodes CondCode = IntCCToARMCC(CC, RHS2, false);
     ARMcc = DAG.getConstant(CondCode, dl, MVT::i32);
     SDValue Ops[] = { Chain, ARMcc, LHS1, LHS2, RHS1, RHS2, Dest };
     return DAG.getNode(ARMISD::BCC_i64, dl, MVT::Other, Ops);
@@ -7044,7 +7032,8 @@ static SDValue LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) {
   SDValue FVal = DAG.getConstant(0, DL, MVT::i32);
   SDValue TVal = DAG.getConstant(1, DL, MVT::i32);
   SDValue ARMcc = DAG.getConstant(
-      IntCCToARMCC(cast<CondCodeSDNode>(Cond)->get()), DL, MVT::i32);
+      IntCCToARMCC(cast<CondCodeSDNode>(Cond)->get(), RHS, false), DL,
+      MVT::i32);
   return DAG.getNode(ARMISD::CMOV, DL, Op.getValueType(), FVal, TVal, ARMcc,
                      Cmp.getValue(1));
 }
