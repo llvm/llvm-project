@@ -139,43 +139,6 @@ Also note that the Docker container shares the same filesystem as your local mac
 modifying files on your local machine will also modify what the Docker container sees.
 This is useful for editing source files as you're testing your code in the Docker container.
 
-Updating the CI testing container images
-----------------------------------------
-
-The libcxx linux premerge testing can run on one of three sets of
-runner groups. The three runner group names are
-"llvm-premerge-libcxx-runners", "llvm-premerge-libcxx-release-runners"
-or "llvm-premerge-libcxx-next-runners".  Which runner set to use is
-controlled by the contents of https://github.com/llvm/llvm-project/blob/main/.github/workflows/libcxx-build-and-test.yaml . By default, it uses
-"llvm-premerge-libcxx-runners". To switch to one of the other runner
-sets, just replace all uses of "llvm-premerge-libcxx-runners" in the yaml
-file with the desired runner set.
-
-Which container image is used by these three runner sets is controlled
-and set by the variable values in
-https://github.com/llvm/llvm-zorg/blob/main/premerge/premerge_resources/variables.tf.
-The table below shows the variable names, their current values, and
-the runner sets to which they correspond.
-
-+------------------------------------+---------------------------+--------------------------------------------------------------------------+
-|Runner Set                          |Variable                   |Image Value                                                               |
-+====================================+===========================+==========================================================================+
-|llvm-premerge-libcxx-runners        |libcxx_runner_image        |ghcr.io/llvm/libcxx-linux-builder:16f046281bf1a11d344eac1bc44d11f3e50e3b5d|
-+------------------------------------+---------------------------+--------------------------------------------------------------------------+
-|llvm-premerge-libcxx-release-runners|libcxx_release_runner_image|ghcr.io/llvm/libcxx-linux-builder:16f046281bf1a11d344eac1bc44d11f3e50e3b5d|
-+------------------------------------+---------------------------+--------------------------------------------------------------------------+
-|llvm-premerge-libcxx-next-runners   |libcxx_next_runner_image   |ghcr.io/llvm/libcxx-linux-builder:16f046281bf1a11d344eac1bc44d11f3e50e3b5d|
-+------------------------------------+---------------------------+--------------------------------------------------------------------------+
-
-Note: The three runner images are (temporarily) all the same, but that
-will not normally be the case.
-
-To change the container image, the variable.tf file in llvm-zorg must
-be changed. Once that change has been merged, an llvm-zorg
-administrator must use terraform to apply the change to the running
-GKE cluster.
-
-
 Writing Tests
 =============
 
