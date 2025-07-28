@@ -387,8 +387,7 @@ vector::isValidMaskedInputVector(ArrayRef<int64_t> shape,
                              staticSize <= inputSize;
                     })) {
     LDBG() << "Input vector sizes must be greater than or equal to iteration "
-              "space "
-              "static sizes";
+              "space static sizes";
     return failure();
   }
   return success();
