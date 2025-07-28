@@ -13,7 +13,6 @@
 ; CHECK: {Code} 's_endpgm'
 
 source_filename = "module"
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-p10:32:32-p11:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9-p32:32:32-v8:8-v16:16-v32:32-v48:32-v64:32-v80:32-v96:32-v112:32-v128:32-v144:32-v160:32-v176:32-v192:32-v208:32-v224:32-v240:32-v256:32-i1:32-i8:8-i16:16-i32:32-i64:32-f16:16-f32:32-f64:32"
 target triple = "amdgcn-amd-amdpal"
 
 %dx.types.ResRet.f32 = type { float, float, float, float, i32 }
@@ -21,26 +20,26 @@ target triple = "amdgcn-amd-amdpal"
 define dllexport amdgpu_cs void @_amdgpu_cs_main(i32 inreg noundef %globalTable, i32 inreg noundef %userdata4, <3 x i32> inreg noundef %WorkgroupId, i32 inreg noundef %MultiDispatchInfo, <3 x i32> noundef %LocalInvocationId) #0 !dbg !14 {
   %LocalInvocationId.i0 = extractelement <3 x i32> %LocalInvocationId, i64 0, !dbg !28
   %WorkgroupId.i0 = extractelement <3 x i32> %WorkgroupId, i64 0, !dbg !28
-  %1 = call i64 @llvm.amdgcn.s.getpc(), !dbg !28
-  %2 = shl i32 %WorkgroupId.i0, 6, !dbg !28
-  %3 = add i32 %LocalInvocationId.i0, %2, !dbg !28
-    #dbg_value(i32 %3, !29, !DIExpression(DW_OP_LLVM_fragment, 0, 32), !28)
-  %4 = and i64 %1, -4294967296, !dbg !30
-  %5 = zext i32 %userdata4 to i64, !dbg !30
-  %6 = or disjoint i64 %4, %5, !dbg !30
-  %7 = inttoptr i64 %6 to ptr addrspace(4), !dbg !30
-  call void @llvm.assume(i1 true) [ "align"(ptr addrspace(4) %7, i32 4), "dereferenceable"(ptr addrspace(4) %7, i32 -1) ], !dbg !30
-  %8 = load <4 x i32>, ptr addrspace(4) %7, align 4, !dbg !30, !invariant.load !2
-  %9 = call float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32> %8, i32 %3, i32 0, i32 0, i32 0), !dbg !30
+  %pc = call i64 @llvm.amdgcn.s.getpc(), !dbg !28
+  %offset = shl i32 %WorkgroupId.i0, 6, !dbg !28
+  %dtid = add i32 %LocalInvocationId.i0, %offset, !dbg !28
+    #dbg_value(i32 %dtid, !29, !DIExpression(DW_OP_LLVM_fragment, 0, 32), !28)
+  %pc_hi = and i64 %pc, -4294967296, !dbg !30
+  %zext = zext i32 %userdata4 to i64, !dbg !30
+  %ptr_val = or disjoint i64 %pc_hi, %zext, !dbg !30
+  %ptr = inttoptr i64 %ptr_val to ptr addrspace(4), !dbg !30
+  call void @llvm.assume(i1 true) [ "align"(ptr addrspace(4) %ptr, i32 4), "dereferenceable"(ptr addrspace(4) %ptr, i32 -1) ], !dbg !30
+  %uav_0 = load <4 x i32>, ptr addrspace(4) %ptr, align 4, !dbg !30, !invariant.load !2
+  %uav_load_1 = call float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32> %uav_0, i32 %dtid, i32 0, i32 0, i32 0), !dbg !30
     #dbg_value(%dx.types.ResRet.f32 poison, !31, !DIExpression(), !32)
-  %10 = fmul reassoc arcp contract afn float %9, 2.000000e+00, !dbg !33
-    #dbg_value(float %10, !34, !DIExpression(), !35)
-  call void @llvm.assume(i1 true) [ "align"(ptr addrspace(4) %7, i32 4), "dereferenceable"(ptr addrspace(4) %7, i32 -1) ], !dbg !36
-  %11 = getelementptr i8, ptr addrspace(4) %7, i64 32, !dbg !36
-  %.upto01 = insertelement <4 x float> poison, float %10, i64 0, !dbg !36
-  %12 = shufflevector <4 x float> %.upto01, <4 x float> poison, <4 x i32> zeroinitializer, !dbg !36
-  %13 = load <4 x i32>, ptr addrspace(4) %11, align 4, !dbg !36, !invariant.load !2
-  call void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float> %12, <4 x i32> %13, i32 %3, i32 0, i32 0, i32 0), !dbg !36
+  %mul = fmul reassoc arcp contract afn float %uav_load_1, 2.000000e+00, !dbg !33
+    #dbg_value(float %mul, !34, !DIExpression(), !35)
+  call void @llvm.assume(i1 true) [ "align"(ptr addrspace(4) %ptr, i32 4), "dereferenceable"(ptr addrspace(4) %ptr, i32 -1) ], !dbg !36
+  %uav_1_ptr = getelementptr i8, ptr addrspace(4) %ptr, i64 32, !dbg !36
+  %.upto01 = insertelement <4 x float> poison, float %mul, i64 0, !dbg !36
+  %filled_vector = shufflevector <4 x float> %.upto01, <4 x float> poison, <4 x i32> zeroinitializer, !dbg !36
+  %uav_1 = load <4 x i32>, ptr addrspace(4) %uav_1_ptr, align 4, !dbg !36, !invariant.load !2
+  call void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float> %filled_vector, <4 x i32> %uav_1, i32 %dtid, i32 0, i32 0, i32 0), !dbg !36
   ret void, !dbg !37
 }
 
@@ -52,7 +51,7 @@ declare void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float>, <4 x i32
 
 declare float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32>, i32, i32, i32, i32 immarg) #4
 
-attributes #0 = { memory(readwrite) "amdgpu-flat-work-group-size"="64,64" "amdgpu-memory-bound"="false" "amdgpu-num-sgpr"="4294967295" "amdgpu-num-vgpr"="4294967295" "amdgpu-prealloc-sgpr-spill-vgprs" "amdgpu-unroll-threshold"="1200" "amdgpu-wave-limiter"="false" "amdgpu-work-group-info-arg-no"="3" "denormal-fp-math"="ieee" "denormal-fp-math-f32"="preserve-sign" "target-features"=",+wavefrontsize64,+cumode,+enable-flat-scratch" }
+attributes #0 = { memory(readwrite) }
 attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #2 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 attributes #3 = { nocallback nofree nosync nounwind willreturn memory(write) }
