@@ -264,11 +264,19 @@ static LogicalResult verifyAlignedClause(Operation *op,
   if (!alignments)
     return success();
 
+  static bool emitWarn = false;
   // Check if all alignment values are positive - OpenMP 4.5 -> 2.8.1 section
   for (unsigned i = 0; i < (*alignments).size(); ++i) {
     if (auto intAttr = llvm::dyn_cast<IntegerAttr>((*alignments)[i])) {
-      if (intAttr.getValue().sle(0))
+      auto alignment = intAttr.getValue();
+      if (alignment.sle(0))
         return op->emitOpError() << "alignment should be greater than 0";
+      else if (!alignment.isPowerOf2() && !emitWarn) {
+        emitWarn = true;
+        emitWarning(
+            op->getLoc(),
+            "Alignment is not a power of 2, aligned clause will be ignored");
+      }
     } else {
       return op->emitOpError() << "expected integer alignment";
     }
