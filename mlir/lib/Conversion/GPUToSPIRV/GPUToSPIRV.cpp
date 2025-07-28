@@ -514,8 +514,10 @@ LogicalResult GPURotateConversion::matchAndRewrite(
 
   Location loc = rotateOp.getLoc();
   auto scope = rewriter.getAttr<spirv::ScopeAttr>(spirv::Scope::Subgroup);
-  Value offsetVal = arith::ConstantOp::create(rewriter, loc, adaptor.getOffsetAttr());
-  Value widthVal = arith::ConstantOp::create(rewriter, loc, adaptor.getWidthAttr());
+  Value offsetVal =
+      arith::ConstantOp::create(rewriter, loc, adaptor.getOffsetAttr());
+  Value widthVal =
+      arith::ConstantOp::create(rewriter, loc, adaptor.getWidthAttr());
   Value rotateResult = spirv::GroupNonUniformRotateKHROp::create(
       rewriter, loc, scope, adaptor.getValue(), offsetVal, widthVal);
   Value validVal;
