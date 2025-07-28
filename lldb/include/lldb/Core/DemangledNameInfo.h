@@ -30,6 +30,16 @@ struct DemangledNameInfo {
   /// \endcode
   std::pair<size_t, size_t> BasenameRange;
 
+  /// A [start, end) pair for the function template arguments.
+  /// The basename is the name without scope qualifiers
+  /// and without template parameters. E.g.,
+  /// \code{.cpp}
+  ///    void foo::bar<int>::someFunc<float>(int) const &&
+  ///                                ^     ^
+  ///                              start  end
+  /// \endcode
+  std::pair<size_t, size_t> TemplateRange;
+
   /// A [start, end) pair for the function scope qualifiers.
   /// E.g., for
   /// \code{.cpp}
@@ -59,6 +69,11 @@ struct DemangledNameInfo {
   /// \endcode
   std::pair<size_t, size_t> QualifiersRange;
 
+  /// Indicates the [start, end) of the function's name qualifiers. This is a
+  /// catch-all range for anything in between the basename and the arguments,
+  /// that is not tracked by the rest of the pairs.
+  std::pair<size_t, size_t> NameQualifiersRange;
+
   /// Indicates the [start, end) of the function's prefix. This is a
   /// catch-all range for anything that is not tracked by the rest of
   /// the pairs.
@@ -75,6 +90,11 @@ struct DemangledNameInfo {
     return BasenameRange.second > BasenameRange.first;
   }
 
+  /// Returns \c true if this object holds a valid template range.
+  bool hasTemplate() const {
+    return TemplateRange.second >= TemplateRange.first;
+  }
+
   /// Returns \c true if this object holds a valid scope range.
   bool hasScope() const { return ScopeRange.second >= ScopeRange.first; }
 
@@ -86,6 +106,11 @@ struct DemangledNameInfo {
   /// Returns \c true if this object holds a valid qualifiers range.
   bool hasQualifiers() const {
     return QualifiersRange.second >= QualifiersRange.first;
+  }
+
+  /// Returns \c true if this object holds a valid name qualifiers range.
+  bool hasNameQualifiers() const {
+    return NameQualifiersRange.second >= NameQualifiersRange.first;
   }
 
   /// Returns \c true if this object holds a valid prefix range.
