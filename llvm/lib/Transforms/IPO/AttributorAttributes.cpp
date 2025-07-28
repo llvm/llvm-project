@@ -5256,6 +5256,7 @@ getAssumedAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
     if (Alignment != 0) {
       return Alignment;
     }
+    return QueryingAA.getAssumedAlign().value();
     break;
   }
   default:
@@ -5594,7 +5595,6 @@ struct AAAlignCallSiteReturned final
         return OldAssumed == getAssumed() ? ChangeStatus::UNCHANGED
                                           : ChangeStatus::CHANGED;
       }
-      return ChangeStatus::UNCHANGED;
     }
     return Base::updateImpl(A);
   };
