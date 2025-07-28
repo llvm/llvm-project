@@ -124,14 +124,3 @@ add_object_library(
     libc.src.__support.threads.linux.raw_mutex
     libc.src.__support.CPP.mutex
 )
-
-add_object_library(
-  barrier
-  HDRS
-    barrier.h
-  SRCS
-    barrier.cpp
-  DEPENDS
-    libc.src.__support.threads.CndVar
-    libc.src.__support.threads.mutex
-)
