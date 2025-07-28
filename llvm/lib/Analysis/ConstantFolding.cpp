@@ -1641,19 +1641,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::vector_extract:
   case Intrinsic::vector_insert:
   case Intrinsic::vector_interleave2:
-  case Intrinsic::vector_interleave3:
-  case Intrinsic::vector_interleave4:
-  case Intrinsic::vector_interleave5:
-  case Intrinsic::vector_interleave6:
-  case Intrinsic::vector_interleave7:
-  case Intrinsic::vector_interleave8:
   case Intrinsic::vector_deinterleave2:
-  case Intrinsic::vector_deinterleave3:
-  case Intrinsic::vector_deinterleave4:
-  case Intrinsic::vector_deinterleave5:
-  case Intrinsic::vector_deinterleave6:
-  case Intrinsic::vector_deinterleave7:
-  case Intrinsic::vector_deinterleave8:
   // Target intrinsics
   case Intrinsic::amdgcn_perm:
   case Intrinsic::amdgcn_wave_reduce_umin:

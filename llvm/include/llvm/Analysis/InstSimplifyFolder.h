@@ -125,10 +125,6 @@ public:
                                    dyn_cast_if_present<CallBase>(FMFSource));
   }
 
-  Value *FoldVectorInterleave(ArrayRef<Value *> Ops) const override {
-    return ConstFolder.FoldVectorInterleave(Ops);
-  }
-
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//

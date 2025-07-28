@@ -181,24 +181,6 @@ public:
     return nullptr;
   }
 
-  Value *FoldVectorInterleave(ArrayRef<Value *> Ops) const override {
-    // Check to see if all operands are the same.
-    for (unsigned I = 1; I < Ops.size(); I++) {
-      if (Ops[I] != Ops[0])
-        return nullptr;
-    }
-
-    // Is this just a large splat?
-    if (auto *C = dyn_cast<Constant>(Ops[0])) {
-      if (auto *V = C->getSplatValue()) {
-        auto *SubvecTy = cast<VectorType>(Ops[0]->getType());
-        return ConstantVector::getSplat(
-            SubvecTy->getElementCount() * Ops.size(), V);
-      }
-    }
-    return nullptr;
-  }
-
   Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
                              Instruction *FMFSource) const override {
     // Use TargetFolder or InstSimplifyFolder instead.

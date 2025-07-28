@@ -13,7 +13,6 @@
 
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -1159,9 +1158,6 @@ Value *IRBuilderBase::CreateVectorInterleave(ArrayRef<Value *> Ops,
            "Vector interleave expects matching operand types!");
   }
 #endif
-
-  if (auto *V = Folder.FoldVectorInterleave(Ops))
-    return V;
 
   unsigned IID = Intrinsic::getInterleaveIntrinsicID(Ops.size());
   auto *SubvecTy = cast<VectorType>(Ops[0]->getType());

@@ -118,10 +118,6 @@ public:
     return nullptr;
   }
 
-  Value *FoldVectorInterleave(ArrayRef<Value *> Ops) const override {
-    return nullptr;
-  }
-
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//
