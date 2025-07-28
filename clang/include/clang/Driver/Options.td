@@ -2005,6 +2005,14 @@ def fno_bounds_safety_bringup_missing_checks : Flag<["-"], "fno-bounds-safety-br
   Alias<fno_bounds_safety_bringup_missing_checks_EQ>, AliasArgs<["all"]>,
   HelpText<"Disable new -fbounds-safety run-time checks">;
 
+defm lifetime_safety : BoolFOption<
+  "experimental-lifetime-safety",
+  LangOpts<"EnableLifetimeSafety">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [CC1Option], "Disable">,
+  BothFlags<[], [CC1Option],
+          " experimental lifetime safety for C++">>;
+
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Emit">,
@@ -4382,7 +4390,7 @@ def fno_trigraphs : Flag<["-"], "fno-trigraphs">, Group<f_Group>,
   HelpText<"Do not process trigraph sequences">,
   Visibility<[ClangOption, CC1Option]>;
 def funique_source_file_names: Flag<["-"], "funique-source-file-names">, Group<f_Group>,
-  HelpText<"Allow the compiler to assume that each translation unit has a unique "                       
+  HelpText<"Allow the compiler to assume that each translation unit has a unique "
            "source file identifier (see -funique-source-file-identifier) at link time">;
 def fno_unique_source_file_names: Flag<["-"], "fno-unique-source-file-names">;
 def unique_source_file_identifier_EQ: Joined<["-"], "funique-source-file-identifier=">, Group<f_Group>,
@@ -7208,7 +7216,7 @@ defm android_pad_segment : BooleanFFlag<"android-pad-segment">, Group<f_Group>;
 def shared_libflangrt : Flag<["-"], "shared-libflangrt">,
   HelpText<"Link the flang-rt shared library">, Group<Link_Group>,
   Visibility<[FlangOption]>, Flags<[NoArgumentUnused]>;
-def static_libflangrt : Flag<["-"], "static-libflangrt">, 
+def static_libflangrt : Flag<["-"], "static-libflangrt">,
   HelpText<"Link the flang-rt static library">, Group<Link_Group>,
   Visibility<[FlangOption]>, Flags<[NoArgumentUnused]>;
 

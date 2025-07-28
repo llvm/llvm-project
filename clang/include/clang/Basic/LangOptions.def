@@ -510,6 +510,8 @@ LANGOPT(BoundsSafetyBringUpMissingChecks, 7, clang::LangOptions::getDefaultBound
         "Bring up new -fbounds-safety run-time checks")
 /* TO_UPSTREAM(BoundsSafety) OFF*/
 
+LANGOPT(EnableLifetimeSafety, 1, 0, NotCompatible, "Experimental lifetime safety analysis for C++")
+
 LANGOPT(PreserveVec3Type, 1, 0, NotCompatible, "Preserve 3-component vector type")
 
 #undef LANGOPT
