@@ -363,6 +363,13 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       continue;
     }
     VPValue *Op0;
+    if (match(&R, m_VPInstruction<VPInstruction::ExtractLane>(
+                      m_VPValue(Op0), m_VPValue(Op1)))) {
+      addUniformForAllParts(cast<VPInstruction>(&R));
+      for (unsigned Part = 1; Part != UF; ++Part)
+        R.addOperand(getValueForPart(Op1, Part));
+      continue;
+    }
     if (match(&R, m_VPInstruction<VPInstruction::ExtractLastElement>(
                       m_VPValue(Op0))) ||
         match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
@@ -486,6 +493,7 @@ static VPReplicateRecipe *cloneForLane(VPlan &Plan, VPBuilder &Builder,
   auto *New =
       new VPReplicateRecipe(RepR->getUnderlyingInstr(), NewOps,
                             /*IsSingleScalar=*/true, /*Mask=*/nullptr, *RepR);
+  New->transferFlags(*RepR);
   New->insertBefore(RepR);
   return New;
 }

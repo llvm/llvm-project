@@ -84,8 +84,8 @@ void library_builtins() {
 
 // CIR: cir.func{{.*}} @_Z16library_builtinsv() {
 // CIR: %[[NULL:.+]] = cir.const #cir.ptr<null> : !cir.ptr<!s8i>
-// CIR: cir.call @printf(%[[NULL]]) : (!cir.ptr<!s8i>) -> !s32i
-// CIR: cir.call @abort() : () -> ()
+// CIR: cir.call @printf(%[[NULL]]) nothrow : (!cir.ptr<!s8i>) -> !s32i
+// CIR: cir.call @abort() nothrow : () -> ()
 
 // LLVM: define{{.*}} void @_Z16library_builtinsv()
 // LLVM: call i32 (ptr, ...) @printf(ptr null)
@@ -109,6 +109,22 @@ void assume(bool arg) {
 
 // OGCG: define {{.*}}void @_Z6assumeb
 // OGCG:   call void @llvm.assume(i1 %{{.+}})
+// OGCG: }
+
+void assume_separate_storage(void *p1, void *p2) {
+  __builtin_assume_separate_storage(p1, p2);
+}
+
+// CIR: cir.func{{.*}} @_Z23assume_separate_storagePvS_
+// CIR:   cir.assume_separate_storage %{{.+}}, %{{.+}} : !cir.ptr<!void>
+// CIR: }
+
+// LLVM: define {{.*}}void @_Z23assume_separate_storagePvS_
+// LLVM:   call void @llvm.assume(i1 true) [ "separate_storage"(ptr %{{.+}}, ptr %{{.+}}) ]
+// LLVM: }
+
+// OGCG: define {{.*}}void @_Z23assume_separate_storagePvS_
+// OGCG:   call void @llvm.assume(i1 true) [ "separate_storage"(ptr %{{.+}}, ptr %{{.+}}) ]
 // OGCG: }
 
 void expect(int x, int y) {

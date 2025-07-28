@@ -663,11 +663,12 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
     auto *II = dyn_cast<IntrinsicInst>(I);
     if (II && II->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
       auto *HandleType = cast<TargetExtType>(II->getOperand(0)->getType());
-      if (HandleType->getTargetExtName() == "spirv.Image") {
-        if (II->hasOneUse()) {
-          auto *U = *II->users().begin();
+      if (HandleType->getTargetExtName() == "spirv.Image" ||
+          HandleType->getTargetExtName() == "spirv.SignedImage") {
+        for (User *U : II->users()) {
           Ty = cast<Instruction>(U)->getAccessType();
-          assert(Ty && "Unable to get type for resource pointer.");
+          if (Ty)
+            break;
         }
       } else if (HandleType->getTargetExtName() == "spirv.VulkanBuffer") {
         // This call is supposed to index into an array

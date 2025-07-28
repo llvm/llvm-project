@@ -180,6 +180,8 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
     return decodeRecord(R, I->TagType, Blob);
   case RECORD_IS_TYPE_DEF:
     return decodeRecord(R, I->IsTypeDef, Blob);
+  case RECORD_MANGLED_NAME:
+    return decodeRecord(R, I->MangledName, Blob);
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid field for RecordInfo");
@@ -382,6 +384,8 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
     return decodeRecord(R, I->Path, Blob);
   case REFERENCE_FIELD:
     return decodeRecord(R, F, Blob);
+  case REFERENCE_FILE:
+    return decodeRecord(R, I->DocumentationFileName, Blob);
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid field for Reference");
@@ -567,6 +571,17 @@ template <typename T>
 static llvm::Error addReference(T I, Reference &&R, FieldId F) {
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                  "invalid type cannot contain Reference");
+}
+
+template <> llvm::Error addReference(VarInfo *I, Reference &&R, FieldId F) {
+  switch (F) {
+  case FieldId::F_namespace:
+    I->Namespace.emplace_back(std::move(R));
+    return llvm::Error::success();
+  default:
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "VarInfo cannot contain this Reference");
+  }
 }
 
 template <> llvm::Error addReference(TypeInfo *I, Reference &&R, FieldId F) {

@@ -18,13 +18,10 @@
 
 using namespace llvm;
 
-MCSection::MCSection(SectionVariant V, StringRef Name, bool IsText,
-                     bool IsVirtual, MCSymbol *Begin)
-    : Begin(Begin), BundleGroupBeforeFirstInst(false), HasInstructions(false),
-      IsRegistered(false), IsText(IsText), IsVirtual(IsVirtual),
-      LinkerRelaxable(false), Name(Name), Variant(V) {
-  // The initial subsection number is 0. Create a fragment list.
-  CurFragList = &Subsections.emplace_back(0u, FragList{}).second;
+MCSection::MCSection(StringRef Name, bool IsText, bool IsBss, MCSymbol *Begin)
+    : Begin(Begin), HasInstructions(false), IsRegistered(false), IsText(IsText),
+      IsBss(IsBss), LinkerRelaxable(false), Name(Name) {
+  DummyFragment.setParent(this);
 }
 
 MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
@@ -34,36 +31,6 @@ MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
 }
 
 bool MCSection::hasEnded() const { return End && End->isInSection(); }
-
-MCSection::~MCSection() {
-  for (auto &[_, Chain] : Subsections) {
-    for (MCFragment *X = Chain.Head, *Y; X; X = Y) {
-      Y = X->Next;
-      X->destroy();
-    }
-  }
-}
-
-void MCSection::setBundleLockState(BundleLockStateType NewState) {
-  if (NewState == NotBundleLocked) {
-    if (BundleLockNestingDepth == 0) {
-      report_fatal_error("Mismatched bundle_lock/unlock directives");
-    }
-    if (--BundleLockNestingDepth == 0) {
-      BundleLockState = NotBundleLocked;
-    }
-    return;
-  }
-
-  // If any of the directives is an align_to_end directive, the whole nested
-  // group is align_to_end. So don't downgrade from align_to_end to just locked.
-  if (BundleLockState != BundleLockedAlignToEnd) {
-    BundleLockState = NewState;
-  }
-  ++BundleLockNestingDepth;
-}
-
-StringRef MCSection::getVirtualSectionKind() const { return "virtual"; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCSection::dump(
@@ -88,3 +55,45 @@ LLVM_DUMP_METHOD void MCSection::dump(
   }
 }
 #endif
+
+void MCFragment::setVarContents(ArrayRef<char> Contents) {
+  auto &S = getParent()->ContentStorage;
+  if (VarContentStart + Contents.size() > VarContentEnd) {
+    VarContentStart = S.size();
+    S.resize_for_overwrite(S.size() + Contents.size());
+  }
+  VarContentEnd = VarContentStart + Contents.size();
+  llvm::copy(Contents, S.begin() + VarContentStart);
+}
+
+void MCFragment::addFixup(MCFixup Fixup) { appendFixups({Fixup}); }
+
+void MCFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
+  auto &S = getParent()->FixupStorage;
+  if (LLVM_UNLIKELY(FixupEnd != S.size())) {
+    // Move the elements to the end. Reserve space to avoid invalidating
+    // S.begin()+I for `append`.
+    auto Size = FixupEnd - FixupStart;
+    auto I = std::exchange(FixupStart, S.size());
+    S.reserve(S.size() + Size);
+    S.append(S.begin() + I, S.begin() + I + Size);
+  }
+  S.append(Fixups.begin(), Fixups.end());
+  FixupEnd = S.size();
+}
+
+void MCFragment::setVarFixups(ArrayRef<MCFixup> Fixups) {
+  auto &S = getParent()->FixupStorage;
+  if (VarFixupStart + Fixups.size() > VarFixupEnd) {
+    VarFixupStart = S.size();
+    S.resize_for_overwrite(S.size() + Fixups.size());
+  }
+  VarFixupEnd = VarFixupStart + Fixups.size();
+  // Source fixup offsets are relative to the variable part's start. Add the
+  // fixed part size to make them relative to the fixed part's start.
+  std::transform(Fixups.begin(), Fixups.end(), S.begin() + VarFixupStart,
+                 [Fixed = getFixedSize()](MCFixup F) {
+                   F.setOffset(Fixed + F.getOffset());
+                   return F;
+                 });
+}

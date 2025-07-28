@@ -14,8 +14,8 @@ define arm_aapcs_vfpcc void @k() {
 ; CHECK-NEXT:    sub sp, #32
 ; CHECK-NEXT:    adr r5, .LCPI0_0
 ; CHECK-NEXT:    adr r4, .LCPI0_1
-; CHECK-NEXT:    vldrw.u32 q5, [r5]
-; CHECK-NEXT:    vldrw.u32 q6, [r4]
+; CHECK-NEXT:    vldrw.u32 q6, [r5]
+; CHECK-NEXT:    vldrw.u32 q5, [r4]
 ; CHECK-NEXT:    add r0, sp, #16
 ; CHECK-NEXT:    vmov.i32 q0, #0x1
 ; CHECK-NEXT:    vmov.i8 q1, #0x0
@@ -25,14 +25,14 @@ define arm_aapcs_vfpcc void @k() {
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vand q6, q6, q0
 ; CHECK-NEXT:    vand q5, q5, q0
-; CHECK-NEXT:    vcmp.i32 eq, q6, zr
-; CHECK-NEXT:    vpsel q6, q2, q1
+; CHECK-NEXT:    vand q6, q6, q0
 ; CHECK-NEXT:    vcmp.i32 eq, q5, zr
 ; CHECK-NEXT:    vpsel q5, q2, q1
-; CHECK-NEXT:    vstrh.32 q6, [r0]
-; CHECK-NEXT:    vstrh.32 q5, [r0, #8]
+; CHECK-NEXT:    vcmp.i32 eq, q6, zr
+; CHECK-NEXT:    vpsel q6, q2, q1
+; CHECK-NEXT:    vstrh.32 q5, [r0]
+; CHECK-NEXT:    vstrh.32 q6, [r0, #8]
 ; CHECK-NEXT:    vldrw.u32 q5, [r0]
 ; CHECK-NEXT:    vcmp.i16 ne, q5, zr
 ; CHECK-NEXT:    vmov.i32 q5, #0x0

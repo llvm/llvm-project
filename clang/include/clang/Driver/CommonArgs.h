@@ -283,6 +283,12 @@ StringRef parseMPreferVectorWidthOption(clang::DiagnosticsEngine &Diags,
 StringRef parseMRecipOption(clang::DiagnosticsEngine &Diags,
                             const llvm::opt::ArgList &Args);
 
+// Convert ComplexRangeKind to a string that can be passed as a frontend option.
+std::string complexRangeKindToStr(LangOptions::ComplexRangeKind Range);
+
+// Render a frontend option corresponding to ComplexRangeKind.
+std::string renderComplexRangeOption(LangOptions::ComplexRangeKind Range);
+
 } // end namespace tools
 } // end namespace driver
 } // end namespace clang
