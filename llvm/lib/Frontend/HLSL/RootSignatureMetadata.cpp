@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
@@ -563,6 +564,9 @@ bool MetadataParser::validateRootSignature(
         static_cast<dxbc::RootParameterType>(Info.Header.ParameterType);
 
     switch (PT) {
+    case dxbc::RootParameterType::Constants32Bit:
+      // ToDo: Add proper validation.
+      continue;
 
     case dxbc::RootParameterType::CBV:
     case dxbc::RootParameterType::UAV:
