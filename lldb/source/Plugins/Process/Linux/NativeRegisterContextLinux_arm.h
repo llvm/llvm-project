@@ -75,11 +75,6 @@ public:
 
   bool WatchpointIsEnabled(uint32_t wp_index);
 
-  using DREGType = NativeRegisterContextDBReg::DREGType;
-  static const DREGType eDREGTypeBREAK = DREGType::eDREGTypeBREAK;
-  static const DREGType eDREGTypeWATCH = DREGType::eDREGTypeWATCH;
-  using DREG = NativeRegisterContextDBReg::DREG;
-
 protected:
   Status DoReadRegisterValue(uint32_t offset, const char *reg_name,
                              uint32_t size, RegisterValue &value) override;
@@ -105,8 +100,10 @@ private:
   uint32_t m_gpr_arm[k_num_gpr_registers_arm];
   RegisterInfoPOSIX_arm::FPU m_fpr;
 
-  std::array<DREG, 16> m_hbr_regs; // Arm native linux hardware breakpoints
-  std::array<DREG, 16> m_hwp_regs; // Arm native linux hardware watchpoints
+  std::array<NativeRegisterContextDBReg::DREG, 16>
+      m_hbr_regs; // Arm native linux hardware breakpoints
+  std::array<NativeRegisterContextDBReg::DREG, 16>
+      m_hwp_regs; // Arm native linux hardware watchpoints
 
   uint32_t m_max_hwp_supported;
   uint32_t m_max_hbp_supported;
@@ -118,7 +115,8 @@ private:
 
   Status ReadHardwareDebugInfo();
 
-  Status WriteHardwareDebugRegs(DREGType hwbType, int hwb_index);
+  Status WriteHardwareDebugRegs(NativeRegisterContextDBReg::DREGType hwbType,
+                                int hwb_index);
 
   uint32_t CalculateFprOffset(const RegisterInfo *reg_info) const;
 
