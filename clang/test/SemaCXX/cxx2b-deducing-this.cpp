@@ -1357,3 +1357,35 @@ void Bar(this int) { // expected-note {{candidate function}}
 }
 
 }
+
+namespace GH147046_regression {
+
+template <typename z> struct ai {
+    ai(z::ah);
+};
+
+template <typename z> struct ak {
+    template <typename am> void an(am, z);
+    template <typename am> static void an(am, ai<z>);
+};
+template <typename> struct ao {};
+
+template <typename ap>
+auto ar(ao<ap> at) -> decltype(ak<ap>::an(at, 0));
+// expected-note@-1 {{candidate template ignored: substitution failure [with ap = GH147046_regression::ay]: no matching function for call to 'an'}}
+
+class aw;
+struct ax {
+    typedef int ah;
+};
+struct ay {
+    typedef aw ah;
+};
+
+ao<ay> az ;
+ai<ax> bd(0);
+void f() {
+    ar(az); // expected-error {{no matching function for call to 'ar'}}
+}
+
+}
