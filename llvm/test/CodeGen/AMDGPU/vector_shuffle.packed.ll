@@ -1961,16 +1961,15 @@ define <6 x half> @shuffle_v6f16_452367(ptr addrspace(1) %arg0, ptr addrspace(1)
 ; GFX942-LABEL: shuffle_v6f16_452367:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v7, v1
-; GFX942-NEXT:    v_mov_b32_e32 v6, v0
-; GFX942-NEXT:    v_mov_b32_e32 v5, v3
-; GFX942-NEXT:    v_mov_b32_e32 v4, v2
-; GFX942-NEXT:    global_load_dwordx3 v[0:2], v[6:7], off
-; GFX942-NEXT:    global_load_dword v3, v[4:5], off
+; GFX942-NEXT:    global_load_dwordx3 v[4:6], v[0:1], off
+; GFX942-NEXT:    global_load_dword v4, v[2:3], off
+; GFX942-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
+; GFX942-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
 ; GFX942-NEXT:    s_waitcnt vmcnt(1)
-; GFX942-NEXT:    v_mov_b32_e32 v0, v2
+; GFX942-NEXT:    v_mov_b32_e32 v0, v6
+; GFX942-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v2, v3
+; GFX942-NEXT:    v_mov_b32_e32 v2, v4
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: shuffle_v6f16_452367:
@@ -5151,16 +5150,15 @@ define <6 x bfloat> @shuffle_v6bf16_452367(ptr addrspace(1) %arg0, ptr addrspace
 ; GFX942-LABEL: shuffle_v6bf16_452367:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v7, v1
-; GFX942-NEXT:    v_mov_b32_e32 v6, v0
-; GFX942-NEXT:    v_mov_b32_e32 v5, v3
-; GFX942-NEXT:    v_mov_b32_e32 v4, v2
-; GFX942-NEXT:    global_load_dwordx3 v[0:2], v[6:7], off
-; GFX942-NEXT:    global_load_dword v3, v[4:5], off
+; GFX942-NEXT:    global_load_dwordx3 v[4:6], v[0:1], off
+; GFX942-NEXT:    global_load_dword v4, v[2:3], off
+; GFX942-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
+; GFX942-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
 ; GFX942-NEXT:    s_waitcnt vmcnt(1)
-; GFX942-NEXT:    v_mov_b32_e32 v0, v2
+; GFX942-NEXT:    v_mov_b32_e32 v0, v6
+; GFX942-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v2, v3
+; GFX942-NEXT:    v_mov_b32_e32 v2, v4
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: shuffle_v6bf16_452367:

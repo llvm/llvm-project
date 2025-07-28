@@ -1363,6 +1363,28 @@ static void RegisterStdStringSummaryProvider(
       summary_sp);
 }
 
+static void RegisterStdStringViewSummaryProvider(
+    const lldb::TypeCategoryImplSP &category_sp, llvm::StringRef string_ty,
+    llvm::StringRef char_ty, lldb::TypeSummaryImplSP summary_sp) {
+  // std::string_view
+  category_sp->AddTypeSummary(
+      std::make_shared<lldb_private::TypeNameSpecifierImpl>(
+          string_ty, eFormatterMatchExact),
+      summary_sp);
+
+  // std::basic_string_view<char, std::char_traits<char>>
+  // NativePDB has spaces at different positions compared to PDB and DWARF, so
+  // use a regex and make them optional.
+  category_sp->AddTypeSummary(
+      std::make_shared<lldb_private::TypeNameSpecifierImpl>(
+          llvm::formatv(
+              "^std::basic_string_view<{0}, ?std::char_traits<{0}> ?>$",
+              char_ty)
+              .str(),
+          eFormatterMatchRegex),
+      summary_sp);
+}
+
 static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   if (!cpp_category_sp)
     return;
@@ -1862,6 +1884,36 @@ static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           stl_summary_flags,
           MsvcStlStringSummaryProvider<StringElementType::UTF32>,
           "MSVC STL std::u32string summary provider"));
+
+  RegisterStdStringViewSummaryProvider(
+      cpp_category_sp, "std::string_view", "char",
+      std::make_shared<CXXFunctionSummaryFormat>(
+          stl_summary_flags,
+          MsvcStlStringViewSummaryProvider<StringElementType::ASCII>,
+          "MSVC STL std::string_view summary provider"));
+  RegisterStdStringViewSummaryProvider(
+      cpp_category_sp, "std::u8string_view", "char8_t",
+      std::make_shared<CXXFunctionSummaryFormat>(
+          stl_summary_flags,
+          MsvcStlStringViewSummaryProvider<StringElementType::UTF8>,
+          "MSVC STL std::u8string_view summary provider"));
+  RegisterStdStringViewSummaryProvider(
+      cpp_category_sp, "std::u16string_view", "char16_t",
+      std::make_shared<CXXFunctionSummaryFormat>(
+          stl_summary_flags,
+          MsvcStlStringViewSummaryProvider<StringElementType::UTF16>,
+          "MSVC STL std::u16string_view summary provider"));
+  RegisterStdStringViewSummaryProvider(
+      cpp_category_sp, "std::u32string_view", "char32_t",
+      std::make_shared<CXXFunctionSummaryFormat>(
+          stl_summary_flags,
+          MsvcStlStringViewSummaryProvider<StringElementType::UTF32>,
+          "MSVC STL std::u32string_view summary provider"));
+  RegisterStdStringViewSummaryProvider(
+      cpp_category_sp, "std::wstring_view", "wchar_t",
+      std::make_shared<CXXFunctionSummaryFormat>(
+          stl_summary_flags, MsvcStlWStringViewSummaryProvider,
+          "MSVC STL std::wstring_view summary provider"));
 
   stl_summary_flags.SetDontShowChildren(false);
 

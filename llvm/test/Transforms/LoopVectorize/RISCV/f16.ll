@@ -40,12 +40,10 @@ define void @fadd(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; ZVFHMIN-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; ZVFHMIN-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr [[A]], i64 [[INDEX]]
 ; ZVFHMIN-NEXT:    [[TMP2:%.*]] = getelementptr half, ptr [[B]], i64 [[INDEX]]
-; ZVFHMIN-NEXT:    [[TMP3:%.*]] = getelementptr half, ptr [[TMP1]], i32 0
-; ZVFHMIN-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x half>, ptr [[TMP3]], align 2
-; ZVFHMIN-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr [[TMP2]], i32 0
-; ZVFHMIN-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 8 x half>, ptr [[TMP4]], align 2
+; ZVFHMIN-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x half>, ptr [[TMP1]], align 2
+; ZVFHMIN-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 8 x half>, ptr [[TMP2]], align 2
 ; ZVFHMIN-NEXT:    [[TMP11:%.*]] = fadd <vscale x 8 x half> [[WIDE_LOAD]], [[WIDE_LOAD1]]
-; ZVFHMIN-NEXT:    store <vscale x 8 x half> [[TMP11]], ptr [[TMP3]], align 2
+; ZVFHMIN-NEXT:    store <vscale x 8 x half> [[TMP11]], ptr [[TMP1]], align 2
 ; ZVFHMIN-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; ZVFHMIN-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; ZVFHMIN-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
