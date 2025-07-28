@@ -104,9 +104,7 @@
 #include "llvm/Transforms/Scalar/FlattenCFG.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/InferAddressSpaces.h"
-#include "llvm/Transforms/Scalar/LICM.h"
 #include "llvm/Transforms/Scalar/LoopDataPrefetch.h"
-#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Scalar/NaryReassociate.h"
 #include "llvm/Transforms/Scalar/SeparateConstOffsetFromGEP.h"
 #include "llvm/Transforms/Scalar/Sink.h"
@@ -2064,12 +2062,7 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
     // TODO: May want to move later or split into an early and late one.
     addPass(AMDGPUCodeGenPreparePass(TM));
 
-    // Try to hoist loop invariant parts of divisions AMDGPUCodeGenPrepare may
-    // have expanded.
-    if (TM.getOptLevel() > CodeGenOptLevel::Less) {
-      addPass(createFunctionToLoopPassAdaptor(LICMPass(LICMOptions()),
-                                              /*UseMemorySSA=*/true));
-    }
+    // TODO: LICM
   }
 
   Base::addIRPasses(addPass);
