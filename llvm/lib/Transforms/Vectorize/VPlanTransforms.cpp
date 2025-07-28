@@ -2732,14 +2732,14 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R,
   Builder.setInsertPoint(R->getParent(), R->getParent()->getFirstNonPhi());
 
   // A pointer induction, performed by using a gep.
-  Type *PhiType = TypeInfo.inferScalarType(R->getStepValue());
+  Type *OffsetTy = TypeInfo.inferScalarType(R->getStepValue());
   VPValue *RuntimeVF = Builder.createScalarZExtOrTrunc(
-      &Plan->getVF(), PhiType, TypeInfo.inferScalarType(&Plan->getVF()), DL);
+      &Plan->getVF(), OffsetTy, TypeInfo.inferScalarType(&Plan->getVF()), DL);
   if (CurrentPart == 0) {
     // The recipe represents the first part of the pointer induction. Create the
     // GEP to increment the phi across all unrolled parts.
     VPValue *NumUnrolledElems = Builder.createScalarZExtOrTrunc(
-        R->getOperand(2), PhiType, TypeInfo.inferScalarType(R->getOperand(2)),
+        R->getOperand(2), OffsetTy, TypeInfo.inferScalarType(R->getOperand(2)),
         DL);
     VPValue *Offset = Builder.createNaryOp(
         Instruction::Mul, {R->getStepValue(), NumUnrolledElems});
@@ -2756,7 +2756,7 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R,
   }
 
   VPValue *CurrentPartV =
-      Plan->getOrAddLiveIn(ConstantInt::get(PhiType, CurrentPart));
+      Plan->getOrAddLiveIn(ConstantInt::get(OffsetTy, CurrentPart));
 
   // Create actual address geps that use the pointer phi as base and a
   // vectorized version of the step value (<step*0, ..., step*N>) as offset.
@@ -2768,7 +2768,7 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R,
   StartOffset = Builder.createNaryOp(
       Instruction::Add,
       {StartOffset,
-       Builder.createNaryOp(VPInstruction::StepVector, {}, PhiType)});
+       Builder.createNaryOp(VPInstruction::StepVector, {}, OffsetTy)});
 
   VPValue *PtrAdd = Builder.createWidePtrAdd(
       ScalarPtrPhi,
