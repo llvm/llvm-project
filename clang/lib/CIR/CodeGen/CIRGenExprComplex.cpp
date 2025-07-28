@@ -60,7 +60,7 @@ public:
   mlir::Value VisitDeclRefExpr(DeclRefExpr *e);
   mlir::Value VisitGenericSelectionExpr(GenericSelectionExpr *e);
   mlir::Value VisitImplicitCastExpr(ImplicitCastExpr *e);
-  mlir::Value VisitInitListExpr(const InitListExpr *e);
+  mlir::Value VisitInitListExpr(InitListExpr *e);
 
   mlir::Value VisitCompoundLiteralExpr(CompoundLiteralExpr *e) {
     return emitLoadOfLValue(e);
@@ -452,7 +452,7 @@ mlir::Value ComplexExprEmitter::VisitImplicitCastExpr(ImplicitCastExpr *e) {
   return emitCast(e->getCastKind(), e->getSubExpr(), e->getType());
 }
 
-mlir::Value ComplexExprEmitter::VisitInitListExpr(const InitListExpr *e) {
+mlir::Value ComplexExprEmitter::VisitInitListExpr(InitListExpr *e) {
   mlir::Location loc = cgf.getLoc(e->getExprLoc());
   if (e->getNumInits() == 2) {
     mlir::Value real = cgf.emitScalarExpr(e->getInit(0));
@@ -460,10 +460,8 @@ mlir::Value ComplexExprEmitter::VisitInitListExpr(const InitListExpr *e) {
     return builder.createComplexCreate(loc, real, imag);
   }
 
-  if (e->getNumInits() == 1) {
-    cgf.cgm.errorNYI("Create Complex with InitList with size 1");
-    return {};
-  }
+  if (e->getNumInits() == 1)
+    return Visit(e->getInit(0));
 
   assert(e->getNumInits() == 0 && "Unexpected number of inits");
   mlir::Type complexTy = cgf.convertType(e->getType());

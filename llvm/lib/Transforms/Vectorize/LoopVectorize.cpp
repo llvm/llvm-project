@@ -1359,9 +1359,7 @@ public:
       return;
     // Override EVL styles if needed.
     // FIXME: Investigate opportunity for fixed vector factor.
-    // FIXME: Support interleave accesses.
     bool EVLIsLegal = UserIC <= 1 && IsScalableVF &&
-                      !InterleaveInfo.hasGroups() &&
                       TTI.hasActiveVectorLength() && !EnableVPlanNativePath;
     if (EVLIsLegal)
       return;
@@ -2023,6 +2021,9 @@ public:
   /// Retrieves the MemCheckCond and MemCheckBlock that were generated as IR
   /// outside VPlan.
   std::pair<Value *, BasicBlock *> getMemRuntimeChecks() {
+    using namespace llvm::PatternMatch;
+    if (MemRuntimeCheckCond && match(MemRuntimeCheckCond, m_ZeroInt()))
+      return {nullptr, nullptr};
     return {MemRuntimeCheckCond, MemCheckBlock};
   }
 
@@ -4499,19 +4500,17 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
   Type *TCType = Legal->getWidestInductionType();
   const SCEV *RemainingIterations = nullptr;
   unsigned MaxTripCount = 0;
+  const SCEV *TC =
+      vputils::getSCEVExprForVPValue(getPlanFor(MainLoopVF).getTripCount(), SE);
+  assert(!isa<SCEVCouldNotCompute>(TC) && "Trip count SCEV must be computable");
+  RemainingIterations =
+      SE.getURemExpr(TC, SE.getElementCount(TCType, MainLoopVF * IC));
+
+  // No iterations left to process in the epilogue.
+  if (RemainingIterations->isZero())
+    return Result;
+
   if (MainLoopVF.isFixed()) {
-    // TODO: extend to support scalable VFs.
-    const SCEV *TC = vputils::getSCEVExprForVPValue(
-        getPlanFor(MainLoopVF).getTripCount(), SE);
-    assert(!isa<SCEVCouldNotCompute>(TC) &&
-           "Trip count SCEV must be computable");
-    RemainingIterations = SE.getURemExpr(
-        TC, SE.getConstant(TCType, MainLoopVF.getFixedValue() * IC));
-
-    // No iterations left to process in the epilogue.
-    if (RemainingIterations->isZero())
-      return Result;
-
     MaxTripCount = MainLoopVF.getFixedValue() * IC - 1;
     if (SE.isKnownPredicate(CmpInst::ICMP_ULT, RemainingIterations,
                             SE.getConstant(TCType, MaxTripCount))) {
@@ -7278,6 +7277,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPBasicBlock *VectorPH = cast<VPBasicBlock>(BestVPlan.getVectorPreheader());
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
   VPlanTransforms::simplifyRecipes(BestVPlan, *Legal->getWidestInductionType());
+  VPlanTransforms::removeBranchOnConst(BestVPlan);
   VPlanTransforms::narrowInterleaveGroups(
       BestVPlan, BestVF,
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector));
@@ -10074,12 +10074,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Get user vectorization factor and interleave count.
   ElementCount UserVF = Hints.getWidth();
   unsigned UserIC = Hints.getInterleave();
-  if (LVL.hasUncountableEarlyExit() && UserIC != 1) {
-    UserIC = 1;
-    reportVectorizationInfo("Interleaving not supported for loops "
-                            "with uncountable early exits",
-                            "InterleaveEarlyExitDisabled", ORE, L);
-  }
 
   // Plan how to best vectorize.
   LVP.plan(UserVF, UserIC);
@@ -10097,8 +10091,19 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     unsigned SelectedIC = std::max(IC, UserIC);
     //  Optimistically generate runtime checks if they are needed. Drop them if
     //  they turn out to not be profitable.
-    if (VF.Width.isVector() || SelectedIC > 1)
+    if (VF.Width.isVector() || SelectedIC > 1) {
       Checks.create(L, *LVL.getLAI(), PSE.getPredicate(), VF.Width, SelectedIC);
+
+      // Bail out early if either the SCEV or memory runtime checks are known to
+      // fail. In that case, the vector loop would never execute.
+      using namespace llvm::PatternMatch;
+      if (Checks.getSCEVChecks().first &&
+          match(Checks.getSCEVChecks().first, m_One()))
+        return false;
+      if (Checks.getMemRuntimeChecks().first &&
+          match(Checks.getMemRuntimeChecks().first, m_One()))
+        return false;
+    }
 
     // Check if it is profitable to vectorize with runtime checks.
     bool ForceVectorization =
@@ -10230,6 +10235,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
           L, PSE, LI, DT, TLI, TTI, AC, ORE, ElementCount::getFixed(1),
           ElementCount::getFixed(1), IC, &CM, BFI, PSI, Checks, BestPlan);
 
+      // TODO: Move to general VPlan pipeline once epilogue loops are also
+      // supported.
+      VPlanTransforms::runPass(VPlanTransforms::materializeVectorTripCount,
+                               BestPlan, VF.Width, IC, PSE);
+
       LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT, false);
 
       ORE->emit([&]() {
@@ -10297,6 +10307,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width,
                                VF.MinProfitableTripCount, IC, &CM, BFI, PSI,
                                Checks, BestPlan);
+        // TODO: Move to general VPlan pipeline once epilogue loops are also
+        // supported.
+        VPlanTransforms::runPass(VPlanTransforms::materializeVectorTripCount,
+                                 BestPlan, VF.Width, IC, PSE);
+
         LVP.executePlan(VF.Width, IC, BestPlan, LB, DT, false);
         ++LoopsVectorized;
 
