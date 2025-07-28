@@ -37,7 +37,7 @@ constexpr static uint32_t MIN_SIZE = 16;
 constexpr static uint32_t MIN_ALIGNMENT = MIN_SIZE - 1;
 
 // The number of times to attempt claiming an in-progress slab allocation.
-constexpr static uint32_t MAX_TRIES = 128;
+constexpr static uint32_t MAX_TRIES = 1024;
 
 // A sentinel used to indicate an invalid but non-null pointer value.
 constexpr static uint64_t SENTINEL = cpp::numeric_limits<uint64_t>::max();
