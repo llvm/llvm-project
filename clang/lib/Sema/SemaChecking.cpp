@@ -7648,8 +7648,8 @@ bool EquatableFormatArgument::VerifyCompatible(
   case MK::NoMatchSignedness:
     EmitDiagnostic(S,
                    S.PDiag(diag::warn_format_cmp_specifier_sign_mismatch)
-                     << buildFormatSpecifier()
-                     << Other.buildFormatSpecifier(),
+                       << buildFormatSpecifier()
+                       << Other.buildFormatSpecifier(),
                    FmtExpr, InFunctionCall);
     HadError = S.Diag(Other.ElementLoc, diag::note_format_cmp_with)
                << 0 << Other.Range;
