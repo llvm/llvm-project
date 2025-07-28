@@ -33,7 +33,7 @@ class TargetTransformInfo;
 /// header. If the loop header's size exceeds the threshold, the loop rotation
 /// will give up. The flag IsUtilMode controls the heuristic used in the
 /// LoopRotation. If it is true, the profitability heuristic will be ignored.
-/// The ProfitabilityCheck function overrides the general profitability check.
+/// The ForceRotation flag overrides the general profitability check.
 LLVM_ABI bool LoopRotation(
     Loop *L, LoopInfo *LI, const TargetTransformInfo *TTI, AssumptionCache *AC,
     DominatorTree *DT, ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
