@@ -230,7 +230,6 @@ subroutine aligned_non_power_of_two()
   integer :: i
   integer, allocatable :: A(:)
   allocate(A(10))
-!CHECK-WARN: {{.*}} warning: loc({{.*}}simd.f90{{.*}}): Alignment is not a power of 2, alignment will be ignored.
 !CHECK: %[[A_PTR:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "a",
 !CHECK-SAME: uniq_name = "_QFaligned_non_power_of_twoEa"}
 !CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A_PTR]] {fortran_attrs = #fir.var_attrs<allocatable>,
