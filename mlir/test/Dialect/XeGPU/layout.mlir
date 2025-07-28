@@ -35,14 +35,18 @@ gpu.func @create_nd_tdesc_wg_1(%src: memref<24x32xf32>) {
 }
 
 gpu.func @convert_layout(%a: vector<32x64xf16>) {
-  %2 = xegpu.convert_layout %a {srcMap = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>,
-                                resMap = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<32x64xf16>
+  // CHECK: xegpu.convert_layout
+  // CHECK-SAME: <{input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>, target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<32x64xf16>
+  %2 = xegpu.convert_layout %a <{input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>,
+                                target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<32x64xf16>
   gpu.return
 }
 
 gpu.func @convert_layout_wg(%a: vector<32x64xf16>) {
-  %2 = xegpu.convert_layout %a {srcMap = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>,
-                                resMap = #xegpu.layout<sg_layout = [4, 2], sg_data = [8, 32], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<32x64xf16>
+  // CHECK: xegpu.convert_layout
+  // CHECK-SAME: <{input_layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>, target_layout = #xegpu.layout<sg_layout = [4, 2], sg_data = [8, 32], lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<32x64xf16>
+  %2 = xegpu.convert_layout %a <{input_layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>,
+                                target_layout = #xegpu.layout<sg_layout = [4, 2], sg_data = [8, 32], lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<32x64xf16>
   gpu.return
 }
 
