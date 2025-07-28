@@ -14,6 +14,7 @@
 #include "DirectXTargetMachine.h"
 #include "DXILCBufferAccess.h"
 #include "DXILDataScalarization.h"
+#include "DXILFinalizeLinkage.h"
 #include "DXILFlattenArrays.h"
 #include "DXILForwardHandleAccesses.h"
 #include "DXILIntrinsicExpansion.h"
