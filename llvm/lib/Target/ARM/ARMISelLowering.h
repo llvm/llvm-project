@@ -605,7 +605,7 @@ class VectorType;
 
     Sched::Preference getSchedulingPreference(SDNode *N) const override;
 
-    bool preferZeroCompareBranch() const override { return true; }
+    bool preferZeroCompareBranch(BranchInst *) const override { return true; }
 
     bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
 
