@@ -2833,7 +2833,6 @@ def CIR_ComplexRangeKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"Improved", 1, "improved">,
     I32EnumAttrCase<"Promoted", 2, "promoted">,
     I32EnumAttrCase<"Basic", 3, "basic">,
-    I32EnumAttrCase<"None", 4, "none">
 ]>;
 
 def CIR_ComplexMulOp : CIR_Op<"complex.mul", [

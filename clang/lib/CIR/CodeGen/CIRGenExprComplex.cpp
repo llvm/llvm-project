@@ -651,7 +651,7 @@ getComplexRangeAttr(LangOptions::ComplexRangeKind range) {
   case LangOptions::CX_Basic:
     return cir::ComplexRangeKind::Basic;
   case LangOptions::CX_None:
-    return cir::ComplexRangeKind::None;
+    return cir::ComplexRangeKind::Full;
   }
 }
 

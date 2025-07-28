@@ -423,7 +423,7 @@ void LoweringPreparePass::runOnOperation() {
   llvm::SmallVector<mlir::Operation *> opsToTransform;
 
   op->walk([&](mlir::Operation *op) {
-    if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp, ,
+    if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
                   cir::ComplexMulOp, cir::UnaryOp>(op))
       opsToTransform.push_back(op);
   });
