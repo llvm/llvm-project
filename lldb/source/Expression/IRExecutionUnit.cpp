@@ -809,11 +809,11 @@ ResolveFunctionCallLabel(llvm::StringRef name,
 
   const auto &label = *label_or_err;
 
-  auto module_sp = sc.target_sp->GetImages().FindModule(label.m_module_id);
+  auto module_sp = sc.target_sp->GetImages().FindModule(label.module_id);
 
   if (!module_sp)
     return llvm::createStringError(
-        llvm::formatv("failed to find module by UID {0}", label.m_module_id));
+        llvm::formatv("failed to find module by UID {0}", label.module_id));
 
   auto *symbol_file = module_sp->GetSymbolFile();
   if (!symbol_file)
@@ -822,7 +822,7 @@ ResolveFunctionCallLabel(llvm::StringRef name,
 
   SymbolContextList sc_list;
   if (auto err =
-          symbol_file->FindAndResolveFunction(sc_list, label.m_lookup_name))
+          symbol_file->FindAndResolveFunction(sc_list, label.lookup_name))
     return llvm::joinErrors(
         llvm::createStringError("failed to resolve function by UID"),
         std::move(err));

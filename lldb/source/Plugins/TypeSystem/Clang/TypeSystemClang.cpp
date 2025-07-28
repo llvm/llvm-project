@@ -9786,8 +9786,6 @@ void TypeSystemClang::LogCreation() const {
              &getASTContext(), getDisplayName());
 }
 
-// Expected format is:
-// $__lldb_func:<mangled name>:<module id>:<definition/declaration DIE id>
 llvm::Expected<llvm::SmallVector<llvm::StringRef, 3>>
 TypeSystemClang::splitFunctionCallLabel(llvm::StringRef label) const {
   if (!label.consume_front(FunctionCallLabelPrefix))
@@ -9830,6 +9828,6 @@ TypeSystemClang::makeFunctionCallLabel(llvm::StringRef label) const {
     return llvm::createStringError(
         llvm::formatv("failed to parse DIE ID from '{0}'.", components[2]));
 
-  return FunctionCallLabel{/*.m_lookup_name =*/components[0],
-                           /*.m_module_id =*/module_id, /*.m_die_id =*/die_id};
+  return FunctionCallLabel{/*.lookup_name=*/components[0],
+                           /*.module_id=*/module_id, /*.symbol_id=*/die_id};
 }

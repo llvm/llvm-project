@@ -102,16 +102,25 @@ protected:
 ///
 /// The format being:
 ///
-///   <prefix>:<mangled name>:<module id>:<DIE id>
+///   <prefix>:<mangled name>:<module uid>:<symbol uid>
 ///
 /// The label string needs to stay valid for the entire lifetime
 /// of this object.
 struct FunctionCallLabel {
-  llvm::StringRef m_lookup_name;
-  lldb::user_id_t m_module_id;
+  /// Name to use when searching for the function symbol in
+  /// \c module_id. For most function calls this will be a
+  /// mangled name. In cases where a mangled name can't be used,
+  /// this will be the function name.
+  llvm::StringRef lookup_name;
 
-  /// Mostly for debuggability.
-  lldb::user_id_t m_die_id;
+  /// Unique identifier of the lldb_private::Module
+  /// which contains the symbol identified by \c symbol_id.
+  lldb::user_id_t module_id;
+
+  /// Unique identifier of the function symbol on which to
+  /// perform the function call. For example, for DWARF this would
+  /// be the DIE UID.
+  lldb::user_id_t symbol_id;
 };
 
 /// LLDB attaches this prefix to mangled names of functions that it get called
