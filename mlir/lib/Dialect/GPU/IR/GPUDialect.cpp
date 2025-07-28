@@ -1399,9 +1399,6 @@ LogicalResult RotateOp::verify() {
   uint32_t offset = getOffset();
   uint32_t width = getWidth();
 
-  if (!llvm::isPowerOf2_32(width))
-    return emitOpError() << "width must be a power of two";
-
   if (offset >= width) {
     return emitOpError() << "offset must be in the range [0, " << width << ")";
   }

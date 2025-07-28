@@ -1368,7 +1368,9 @@ def GPU_ShuffleOp : GPU_Op<
 
 def GPU_RotateOp : GPU_Op<
     "rotate", [Pure, AllTypesMatch<["value", "rotateResult"]>]>,
-    Arguments<(ins AnyIntegerOrFloatOr1DVector:$value, I32Attr:$offset, I32Attr:$width)>,
+    Arguments<(ins AnyIntegerOrFloatOr1DVector:$value,
+                   ConfinedAttr<I32Attr, [IntMinValue<0>]>:$offset,
+                   ConfinedAttr<I32Attr, [IntPowerOf2]>:$width)>,
     Results<(outs AnyIntegerOrFloatOr1DVector:$rotateResult, I1:$valid)> {
   let summary = "Rotate values within a subgroup.";
   let description = [{
