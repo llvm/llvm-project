@@ -2093,9 +2093,6 @@ void AsmPrinter::emitFunctionBody() {
         MCSymbol *Sym = OutContext.createTempSymbol("reloc_none");
         OutStreamer->emitLabel(Sym);
         const MCExpr *Dot = MCSymbolRefExpr::create(Sym, OutContext);
-
-        assert(MI.getNumOperands() == 1 &&
-               "RELOC_NONE can only have one operand");
         const MCExpr *Value = MCSymbolRefExpr::create(
             getSymbol(MI.getOperand(0).getGlobal()), OutContext);
         OutStreamer->emitRelocDirective(*Dot, "BFD_RELOC_NONE", Value, SMLoc(),
