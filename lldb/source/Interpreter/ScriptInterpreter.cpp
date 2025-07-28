@@ -118,9 +118,8 @@ lldb::StreamSP ScriptInterpreter::GetOpaqueTypeFromSBStream(
 
 SymbolContext ScriptInterpreter::GetOpaqueTypeFromSBSymbolContext(
     const lldb::SBSymbolContext &sb_sym_ctx) const {
-  if (sb_sym_ctx.m_opaque_up) {
+  if (sb_sym_ctx.m_opaque_up)
     return *sb_sym_ctx.m_opaque_up.get();
-  }
   return {};
 }
 

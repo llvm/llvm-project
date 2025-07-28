@@ -62,7 +62,6 @@ void BreakpointResolverScripted::CreateImplementationIfNeeded(
       m_class_name, breakpoint_sp, m_args);
   if (!obj_or_err) {
     m_error = Status::FromError(obj_or_err.takeError());
-    printf("CreateImplementationIfNeeded got error: %s\n", m_error.AsCString());
     return;
   }
 

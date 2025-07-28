@@ -1,4 +1,4 @@
-//===-- ScriptedBreakpointInterface.h -----------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,14 +11,13 @@
 
 #include "lldb/lldb-private.h"
 #include "lldb/Symbol/SymbolContext.h"
-
 #include "ScriptedInterface.h"
 
 namespace lldb_private {
 class ScriptedBreakpointInterface : public ScriptedInterface {
 public:
   virtual llvm::Expected<StructuredData::GenericSP>
-  CreatePluginObject(llvm::StringRef class_name, lldb::BreakpointSP target_sp,
+  CreatePluginObject(llvm::StringRef class_name, lldb::BreakpointSP break_sp,
                      const StructuredDataImpl &args_sp) = 0;
 
   /// "ResolverCallback" will get called when a new module is loaded.  The

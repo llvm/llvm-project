@@ -1,4 +1,4 @@
-//===-- ScriptedBreakpointPythonInterface.cpp -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,10 +15,8 @@
 
 #if LLDB_ENABLE_PYTHON
 
-// clang-format off
 // LLDB Python header must be included first
 #include "../lldb-python.h"
-//clang-format on
 
 #include "../SWIGPythonBridge.h"
 #include "../ScriptInterpreterPythonImpl.h"
@@ -36,9 +34,8 @@ llvm::Expected<StructuredData::GenericSP>
 ScriptedBreakpointPythonInterface::CreatePluginObject(llvm::StringRef class_name,
                                                     lldb::BreakpointSP break_sp,
                                                     const StructuredDataImpl &args_sp) {
-  lldb::TargetSP target_sp;
   return ScriptedPythonInterface::CreatePluginObject(class_name, nullptr,
-                                                     break_sp /*target_sp*/, args_sp);
+                                                     break_sp, args_sp);
 }
 
 bool
@@ -49,7 +46,8 @@ ScriptedBreakpointPythonInterface::ResolverCallback(SymbolContext sym_ctx) {
 
   if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
                                                     error)) {
-    // FIXME: Should log the error here.
+    Log *log = GetLog(LLDBLog::Script);
+    LLDB_LOG(log, "Error calling __callback__ method: {1}", error); 
     return true;
   }
   return obj->GetBooleanValue();
@@ -86,7 +84,8 @@ std::optional<std::string> ScriptedBreakpointPythonInterface::GetShortHelp() {
 void ScriptedBreakpointPythonInterface::Initialize() {
   const std::vector<llvm::StringRef> ci_usages = {
       "breakpoint set -P classname [-k key -v value ...]"};
-  const std::vector<llvm::StringRef> api_usages = {};
+  const std::vector<llvm::StringRef> api_usages = {
+      "SBTarget.BreakpointCreateFromScript"};
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(),
       llvm::StringRef("Create a breakpoint that chooses locations based on user-created callbacks"),
