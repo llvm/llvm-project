@@ -1936,6 +1936,35 @@ bool IsSameOrConvertOf(const Expr<SomeType> &expr, const Expr<SomeType> &x) {
     return false;
   }
 }
+
+struct VariableFinder : public evaluate::AnyTraverse<VariableFinder> {
+  using Base = evaluate::AnyTraverse<VariableFinder>;
+  using SomeExpr = Expr<SomeType>;
+  VariableFinder(const SomeExpr &v) : Base(*this), var(v) {}
+
+  using Base::operator();
+
+  template <typename T>
+  bool operator()(const evaluate::Designator<T> &x) const {
+    auto copy{x};
+    return evaluate::AsGenericExpr(std::move(copy)) == var;
+  }
+
+  template <typename T>
+  bool operator()(const evaluate::FunctionRef<T> &x) const {
+    auto copy{x};
+    return evaluate::AsGenericExpr(std::move(copy)) == var;
+  }
+
+private:
+  const SomeExpr &var;
+};
+
+bool IsVarSubexpressionOf(
+    const Expr<SomeType> &sub, const Expr<SomeType> &super) {
+  return VariableFinder{sub}(super);
+}
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {

@@ -60,6 +60,32 @@ program openacc_atomic_validity
   i = i + 1
   !$acc end atomic
 
+  !ERROR: The variables assigned in this atomic capture construct must be distinct
+  !$acc atomic capture
+  c(1) = c(2)
+  c(1) = c(3)
+  !$acc end atomic
+  
+  !ERROR: The assignments in this atomic capture construct do not update a variable and capture either its initial or final value
+  !$acc atomic capture
+  c(1) = c(2)
+  c(2) = c(2)
+  !$acc end atomic
+
+  !ERROR: The assignments in this atomic capture construct do not update a variable and capture either its initial or final value
+  !$acc atomic capture
+  c(1) = c(2)
+  c(2) = c(1)
+  !$acc end atomic
+
+  !ERROR: The assignments in this atomic capture construct do not update a variable and capture either its initial or final value
+  !$acc atomic capture
+  c(1) = c(2)
+  c(3) = c(2)
+  !$acc end atomic
+
+
+
   !$acc atomic capture if(l .EQV. .false.)
   c(i) = i
   i = i + 1
@@ -106,14 +132,14 @@ subroutine capture_with_convert_f64_to_i32()
   !$acc end atomic
 
   !$acc atomic capture
-  !TODO: the rhs side of this update statement should reference x.
+  !ERROR: The RHS of this atomic update statement must reference the updated variable: x
   x = v * v
   v = x
   !$acc end atomic
 
   !$acc atomic capture
   x = v
-  !TODO: the rhs hand side of this write expression is not allowed to read v.
+  !ERROR: The updated variable, v, cannot appear more than once in the atomic update operation
   v = v * v
   !$acc end atomic
 

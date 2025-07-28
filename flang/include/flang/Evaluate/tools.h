@@ -1512,6 +1512,10 @@ GetTopLevelOperation(const Expr<SomeType> &expr);
 // Check if expr is same as x, or a sequence of Convert operations on x.
 bool IsSameOrConvertOf(const Expr<SomeType> &expr, const Expr<SomeType> &x);
 
+// Check if the Variable appears as a subexpression of the expression.
+bool IsVarSubexpressionOf(
+    const Expr<SomeType> &var, const Expr<SomeType> &super);
+
 // Strip away any top-level Convert operations (if any exist) and return
 // the input value. A ComplexConstructor(x, 0) is also considered as a
 // convert operation.

@@ -399,8 +399,8 @@ OmpStructureChecker::CheckUpdateCapture(
   //    subexpression of the right-hand side.
   // 2. An assignment could be a capture (cbc) if the right-hand side is
   //    a variable (or a function ref), with potential type conversions.
-  bool cbu1{IsSubexpressionOf(as1.lhs, as1.rhs)}; // Can as1 be an update?
-  bool cbu2{IsSubexpressionOf(as2.lhs, as2.rhs)}; // Can as2 be an update?
+  bool cbu1{IsVarSubexpressionOf(as1.lhs, as1.rhs)}; // Can as1 be an update?
+  bool cbu2{IsVarSubexpressionOf(as2.lhs, as2.rhs)}; // Can as2 be an update?
   bool cbc1{IsVarOrFunctionRef(GetConvertInput(as1.rhs))}; // Can 1 be capture?
   bool cbc2{IsVarOrFunctionRef(GetConvertInput(as2.rhs))}; // Can 2 be capture?
 
@@ -657,7 +657,7 @@ void OmpStructureChecker::CheckAtomicUpdateAssignment(
       if (IsSameOrConvertOf(arg, atom)) {
         ++count;
       } else {
-        if (!subExpr && IsSubexpressionOf(atom, arg)) {
+        if (!subExpr && evaluate::IsVarSubexpressionOf(atom, arg)) {
           subExpr = arg;
         }
         nonAtom.push_back(arg);
