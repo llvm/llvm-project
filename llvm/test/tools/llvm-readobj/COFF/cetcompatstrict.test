@@ -1,6 +1,6 @@
 # To regenerate has-cetstrict.exe
 # $ echo int main() { return 0; } > has-cetstrict.c
-# $ cl has-cetstruct.c /link /cetcompatstrict
+# $ cl has-cetstrict.c /link /cetcompatstrict
 RUN: llvm-readobj --coff-debug-directory %p/Inputs/has-cetstrict.exe | FileCheck %s
 
 CHECK:  DebugEntry {
