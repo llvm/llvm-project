@@ -9790,7 +9790,7 @@ void TypeSystemClang::LogCreation() const {
 // $__lldb_func:<mangled name>:<module id>:<definition/declaration DIE id>
 llvm::Expected<llvm::SmallVector<llvm::StringRef, 3>>
 TypeSystemClang::splitFunctionCallLabel(llvm::StringRef label) const {
-  if (!consumeFunctionCallLabelPrefix(label))
+  if (!label.consume_front(FunctionCallLabelPrefix))
     return llvm::createStringError(
         "expected function call label prefix not found in %s", label.data());
   if (!label.consume_front(":"))

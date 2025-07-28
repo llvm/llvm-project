@@ -966,7 +966,7 @@ lldb::addr_t IRExecutionUnit::FindInUserDefinedSymbols(
 
 lldb::addr_t IRExecutionUnit::FindSymbol(lldb_private::ConstString name,
                                          bool &missing_weak) {
-  if (hasFunctionCallLabelPrefix(name.GetStringRef())) {
+  if (name.GetStringRef().starts_with(FunctionCallLabelPrefix)) {
     if (auto addr_or_err = ResolveFunctionCallLabel(name.GetStringRef(),
                                                     m_sym_ctx, missing_weak)) {
       return *addr_or_err;

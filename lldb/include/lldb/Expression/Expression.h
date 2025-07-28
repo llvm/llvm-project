@@ -118,9 +118,6 @@ struct FunctionCallLabel {
 /// from JITted expressions.
 inline constexpr llvm::StringRef FunctionCallLabelPrefix = "$__lldb_func";
 
-bool consumeFunctionCallLabelPrefix(llvm::StringRef &name);
-bool hasFunctionCallLabelPrefix(llvm::StringRef name);
-
 } // namespace lldb_private
 
 #endif // LLDB_EXPRESSION_EXPRESSION_H

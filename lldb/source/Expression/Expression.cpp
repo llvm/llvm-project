@@ -30,15 +30,3 @@ Expression::Expression(ExecutionContextScope &exe_scope)
       m_jit_end_addr(LLDB_INVALID_ADDRESS) {
   assert(m_target_wp.lock());
 }
-
-bool lldb_private::consumeFunctionCallLabelPrefix(llvm::StringRef &name) {
-  // On Darwin mangled names get a '_' prefix.
-  name.consume_front("_");
-  return name.consume_front(FunctionCallLabelPrefix);
-}
-
-bool lldb_private::hasFunctionCallLabelPrefix(llvm::StringRef name) {
-  // On Darwin mangled names get a '_' prefix.
-  name.consume_front("_");
-  return name.starts_with(FunctionCallLabelPrefix);
-}
