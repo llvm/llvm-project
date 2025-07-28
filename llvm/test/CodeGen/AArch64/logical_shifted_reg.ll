@@ -255,7 +255,7 @@ define void @flag_setting() {
 ; CHECK-NEXT:    b.gt .LBB2_4
 ; CHECK-NEXT:  // %bb.1: // %test2
 ; CHECK-NEXT:    tst x9, x10, lsl #63
-; CHECK-NEXT:    b.lt .LBB2_4
+; CHECK-NEXT:    b.mi .LBB2_4
 ; CHECK-NEXT:  // %bb.2: // %test3
 ; CHECK-NEXT:    tst x9, x10, asr #12
 ; CHECK-NEXT:    b.gt .LBB2_4
