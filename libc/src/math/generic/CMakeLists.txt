@@ -3889,12 +3889,7 @@ add_entrypoint_object(
   HDRS
     ../asinhf.h
   DEPENDS
-    .explogxf
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.FPUtil.sqrt
-    libc.src.__support.macros.optimization
+    libc.src.__support.math.asinhf
 )
 
 add_entrypoint_object(
