@@ -1624,7 +1624,7 @@ let OtherPredicates = [HasImageInsts] in {
 // Represents the point at which a wave must wait for all outstanding direct loads to LDS.
 // Typically inserted by the memory legalizer and consumed by SIInsertWaitcnts.
 
-def S_WAITCNT_LDS_DIRECT : SPseudoInstSI<(outs), (ins)> {
+def S_WAITCNT_lds_direct : SPseudoInstSI<(outs), (ins)> {
    let hasSideEffects = 0;
 }
 

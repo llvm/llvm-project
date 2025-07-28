@@ -1381,9 +1381,9 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
         Modified = true;
       } else
         WaitcntInstr = &II;
-    } else if (Opcode == AMDGPU::S_WAITCNT_LDS_DIRECT) {
+    } else if (Opcode == AMDGPU::S_WAITCNT_lds_direct) {
       assert(ST->hasVMemToLDSLoad());
-      LLVM_DEBUG(dbgs() << "Processing S_WAITCNT_LDS_DIRECT: " << II
+      LLVM_DEBUG(dbgs() << "Processing S_WAITCNT_lds_direct: " << II
                         << "Before: " << Wait.LoadCnt << '\n';);
       ScoreBrackets.determineWait(LOAD_CNT, FIRST_LDS_VGPR, Wait);
       LLVM_DEBUG(dbgs() << "After: " << Wait.LoadCnt << '\n';);
@@ -1566,7 +1566,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
         ScoreBrackets.simplifyWaitcnt(OldWait);
       Wait = Wait.combined(OldWait);
       UpdatableInstr = &CombinedStoreDsCntInstr;
-    } else if (Opcode == AMDGPU::S_WAITCNT_LDS_DIRECT) {
+    } else if (Opcode == AMDGPU::S_WAITCNT_lds_direct) {
       // Architectures higher than GFX10 do not have direct loads to
       // LDS, so no work required here yet.
       II.eraseFromParent();
@@ -2461,7 +2461,7 @@ static bool isWaitInstr(MachineInstr &Inst) {
           Inst.getOperand(0).getReg() == AMDGPU::SGPR_NULL) ||
          Opcode == AMDGPU::S_WAIT_LOADCNT_DSCNT ||
          Opcode == AMDGPU::S_WAIT_STORECNT_DSCNT ||
-         Opcode == AMDGPU::S_WAITCNT_LDS_DIRECT ||
+         Opcode == AMDGPU::S_WAITCNT_lds_direct ||
          counterTypeForInstr(Opcode).has_value();
 }
 
