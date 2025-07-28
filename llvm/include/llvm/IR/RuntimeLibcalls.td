@@ -1146,6 +1146,7 @@ defvar LibmHasFrexpF128 = LibcallImpls<(add frexp_f128), isNotOSWindowsOrIsCygwi
 defvar LibmHasLdexpF128 = LibcallImpls<(add ldexp_f128), isNotOSWindowsOrIsCygwinMinGW>;
 
 defvar has__stack_chk_fail = LibcallImpls<(add __stack_chk_fail), isNotOSOpenBSD>;
+defvar has__stack_smash_handler = LibcallImpls<(add __stack_smash_handler), isOSOpenBSD>;
 
 //===----------------------------------------------------------------------===//
 // Objective-C Runtime Libcalls
@@ -1224,7 +1225,7 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        DarwinExp10, DarwinSinCosStret,
        LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
        LibmHasExp10F32, LibmHasExp10F64, LibmHasExp10F128,
-       has__stack_chk_fail)
+       has__stack_chk_fail, has__stack_smash_handler)
 >;
 
 // Prepend a # to every name
@@ -1501,7 +1502,7 @@ def ARMSystemLibrary
            LibcallImpls<(add __divmodsi4, __udivmodsi4),
                         RuntimeLibcallPredicate<[{TT.isOSBinFormatMachO() &&
                                                   (!TT.isiOS() || !TT.isOSVersionLT(5, 0))}]>>,
-           has__stack_chk_fail)> {
+           has__stack_chk_fail, has__stack_smash_handler)> {
   let DefaultLibcallCallingConv = LibcallCallingConv<[{
      (!TT.isOSDarwin() && !TT.isiOS() && !TT.isWatchOS() && !TT.isDriverKit()) ?
         (FloatABI == FloatABI::Hard ? CallingConv::ARM_AAPCS_VFP
@@ -2010,7 +2011,7 @@ def PPCSystemLibrary
            LibmHasSinCosPPCF128,
            AvailableIf<memcpy, isNotAIX>,
            LibcallImpls<(add Int128RTLibcalls), isPPC64>,
-           has__stack_chk_fail)>;
+           has__stack_chk_fail, has__stack_smash_handler)>;
 
 //===----------------------------------------------------------------------===//
 // RISCV Runtime Libcalls
@@ -2025,7 +2026,7 @@ def RISCVSystemLibrary
            exp10f, exp10, exp10l_f128,
            __riscv_flush_icache,
            LibcallImpls<(add Int128RTLibcalls), isRISCV64>,
-           has__stack_chk_fail)>;
+           has__stack_chk_fail, has__stack_smash_handler)>;
 
 //===----------------------------------------------------------------------===//
 // SPARC Runtime Libcalls
@@ -2093,7 +2094,7 @@ def SPARCSystemLibrary
        LibcallImpls<(add _Q_qtoll, _Q_qtoull, _Q_lltoq, _Q_ulltoq), isSPARC32>,
        LibcallImpls<(add SPARC64_MulDivCalls, Int128RTLibcalls), isSPARC64>,
        LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-       has__stack_chk_fail)
+       has__stack_chk_fail, has__stack_smash_handler)
 >;
 
 //===----------------------------------------------------------------------===//
@@ -2154,7 +2155,8 @@ defvar X86CommonLibcalls =
        // FIXME: MSVCRT doesn't have powi. The f128 case is added as a
        // hack for one test relying on it.
        __powitf2_f128,
-       has__stack_chk_fail
+       has__stack_chk_fail,
+       has__stack_smash_handler
 );
 
 defvar Windows32DivRemMulCalls =
@@ -2323,5 +2325,6 @@ def LegacyDefaultSystemLibrary
          exp10f, exp10, exp10l_f128,
          __powisf2, __powidf2, __powitf2_f128,
          LibcallImpls<(add Int128RTLibcalls), isArch64Bit>,
-         has__stack_chk_fail
+         has__stack_chk_fail,
+         has__stack_smash_handler
 )>;
