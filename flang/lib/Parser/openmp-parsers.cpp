@@ -449,6 +449,9 @@ TYPE_PARSER(construct<OmpAllocatorSimpleModifier>(scalarIntExpr))
 TYPE_PARSER(construct<OmpAlwaysModifier>( //
     "ALWAYS" >> pure(OmpAlwaysModifier::Value::Always)))
 
+TYPE_PARSER(construct<OmpAutomapModifier>(
+    "AUTOMAP" >> pure(OmpAutomapModifier::Value::Automap)))
+
 TYPE_PARSER(construct<OmpChunkModifier>( //
     "SIMD" >> pure(OmpChunkModifier::Value::Simd)))
 
@@ -600,6 +603,13 @@ TYPE_PARSER(sourced(construct<OmpDependClause::TaskDep::Modifier>(sourced(
 
 TYPE_PARSER(
     sourced(construct<OmpDeviceClause::Modifier>(Parser<OmpDeviceModifier>{})))
+
+TYPE_PARSER(
+    sourced(construct<OmpEnterClause::Modifier>(Parser<OmpAutomapModifier>{})))
+
+TYPE_PARSER(construct<OmpEnterClause>(
+    maybe(nonemptyList(Parser<OmpEnterClause::Modifier>{}) / ":"),
+    Parser<OmpObjectList>{}))
 
 TYPE_PARSER(sourced(construct<OmpFromClause::Modifier>(
     sourced(construct<OmpFromClause::Modifier>(Parser<OmpExpectation>{}) ||
@@ -1023,7 +1033,7 @@ TYPE_PARSER( //
     "DYNAMIC_ALLOCATORS" >>
         construct<OmpClause>(construct<OmpClause::DynamicAllocators>()) ||
     "ENTER" >> construct<OmpClause>(construct<OmpClause::Enter>(
-                   parenthesized(Parser<OmpObjectList>{}))) ||
+                   parenthesized(Parser<OmpEnterClause>{}))) ||
     "EXCLUSIVE" >> construct<OmpClause>(construct<OmpClause::Exclusive>(
                        parenthesized(Parser<OmpObjectList>{}))) ||
     "FAIL" >> construct<OmpClause>(construct<OmpClause::Fail>(
