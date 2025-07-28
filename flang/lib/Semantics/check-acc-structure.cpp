@@ -11,9 +11,15 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Semantics/type.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
+
+// TODO: Move the parts that I am reusing from openmp-utils.h to
+// evaluate/tools.h
+#include "openmp-utils.h"
 
 #define CHECK_SIMPLE_CLAUSE(X, Y) \
   void AccStructureChecker::Enter(const parser::AccClause::X &) { \
@@ -370,39 +376,9 @@ void AccStructureChecker::CheckAtomicStmt(
   }
 }
 
-void AccStructureChecker::CheckAtomicUpdateStmt(
-    const parser::AssignmentStmt &assign) {
-  static std::string construct{"update"};
-  CheckAtomicStmt(assign, construct);
-}
-
-void AccStructureChecker::CheckAtomicWriteStmt(
-    const parser::AssignmentStmt &assign) {
-  static std::string construct{"write"};
-  CheckAtomicStmt(assign, construct);
-}
-
-void AccStructureChecker::CheckAtomicCaptureStmt(
-    const parser::AssignmentStmt &assign) {
-  static std::string construct{"capture"};
-  CheckAtomicStmt(assign, construct);
-}
-
-const parser::Variable *AccStructureChecker::GetIfAtomicUpdateVar(
-    const parser::AssignmentStmt &assign) const {
-  // OpenACC 3.4, 2893-2898
-  const auto &updatedVar{std::get<parser::Variable>(assign.t)};
-  const auto &rhs{std::get<parser::Expr>(assign.t)};
-
-  // Is the rhs something a valid operations that references the updatedVar?
-  const auto expr{GetExpr(context_, rhs)};
-  if (!expr) {
-    llvm::errs() << "IsAtomicUpdateStmt: no expr\n";
-    return nullptr;
-  }
-  const auto [op, args] = evaluate::GetTopLevelOperation(*expr);
+static bool IsValidAtomicUpdateOperation(
+    const evaluate::operation::Operator &op) {
   switch (op) {
-  // 2909-2910 operator is one of +, *, -, /, .and., .or., .eqv., or .neqv..
   case evaluate::operation::Operator::Add:
   case evaluate::operation::Operator::Mul:
   case evaluate::operation::Operator::Sub:
@@ -414,39 +390,148 @@ const parser::Variable *AccStructureChecker::GetIfAtomicUpdateVar(
   // 2909 intrinsic-procedure name is one of max, min, iand, ior, or ieor.
   case evaluate::operation::Operator::Max:
   case evaluate::operation::Operator::Min:
+    // Currently all get mapped to And, Or, and Neqv
     // case evaluate::operation::Operator::Iand:
     // case evaluate::operation::Operator::Ior:
     // case evaluate::operation::Operator::Ieor:
-    break;
-  // x = (x) is not allowed.
+    return true;
+  case evaluate::operation::Operator::Convert:
   case evaluate::operation::Operator::Identity:
   default:
-    return nullptr;
+    return false;
   }
-  const auto &updatedExpr{GetExpr(context_, updatedVar)};
-  if (!updatedExpr) {
-    return nullptr;
+}
+
+static bool IsConvertOperation(const evaluate::operation::Operator op) {
+  switch (op) {
+  case evaluate::operation::Operator::Convert:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static SomeExpr GetExprModuloConversion(const SomeExpr &expr) {
+  const auto [op, args]{evaluate::GetTopLevelOperation(expr)};
+  // Check: if it is a conversion then it must have at least one argument.
+  CHECK((op != evaluate::operation::Operator::Convert || args.size() >= 1) &&
+      "Invalid conversion operation");
+  if (op == evaluate::operation::Operator::Convert && args.size() == 1) {
+    return args[0];
+  }
+  return expr;
+}
+
+void AccStructureChecker::CheckAtomicUpdateStmt(
+    const parser::AssignmentStmt &assign, const SomeExpr &updateVar,
+    const SomeExpr *captureVar) {
+  static std::string construct{"update"};
+  CheckAtomicStmt(assign, construct);
+  const auto &expr{std::get<parser::Expr>(assign.t)};
+  const auto *rhs{GetExpr(context_, expr)};
+  if (rhs) {
+    const auto [op, args]{
+        evaluate::GetTopLevelOperation(GetExprModuloConversion(*rhs))};
+    if (!IsValidAtomicUpdateOperation(op)) {
+      context_.Say(expr.source,
+          "Invalid atomic update operation, can only use: *, +, -, *, /, and, or, eqv, neqv, max, min, iand, ior, ieor"_err_en_US,
+          construct);
+      // TODO: Check that the updateVar is referenced in the args.
+      // TODO: Check that the captureVar is not referenced in the args.
+    }
+  }
+}
+
+void AccStructureChecker::CheckAtomicWriteStmt(
+    const parser::AssignmentStmt &assign, const SomeExpr &updateVar,
+    const SomeExpr *captureVar) {
+  static std::string construct{"write"};
+  CheckAtomicStmt(assign, construct);
+  const auto &expr{std::get<parser::Expr>(assign.t)};
+  const auto *rhs{GetExpr(context_, expr)};
+  if (rhs) {
+    if (omp::IsSubexpressionOf(updateVar, *rhs)) {
+      context_.Say(expr.source,
+          "The RHS of this atomic write statement cannot reference the updated variable: %s"_err_en_US,
+          updateVar.AsFortran());
+    }
+    // TODO: Check w/ Valintin about semantic there are a lot of lowering tests
+    // that seem to violate the spec.
+    // if (captureVar && omp::IsSubexpressionOf(*captureVar, *rhs)) {
+    //  context_.Say(expr.source,
+    //      "The RHS of this atomic write statement cannot reference the capture
+    //      variable: %s"_err_en_US, captureVar->AsFortran());
+    //}
+  }
+}
+
+// Todo, with an appropriate extractor this would be pretty easy to check
+// and provide updateVar in a context sensitive way. I would probably need to
+// to switch the arguments to be evaluate::Exprs.
+void AccStructureChecker::CheckAtomicCaptureStmt(
+    const parser::AssignmentStmt &assign, const SomeExpr *updateVar,
+    const SomeExpr &captureVar) {
+  static std::string construct{"capture"};
+  CheckAtomicStmt(assign, construct);
+}
+
+// If the updatedVar is null, then we don't bother checking for updates to it.
+// Just that the op is a valid atomic update operator.
+bool AccStructureChecker::IsAtomicUpdateExpr(
+    const evaluate::Expr<evaluate::SomeType> &expr,
+    const evaluate::Expr<evaluate::SomeType> *updatedVar,
+    bool allowConvert) const {
+  const auto [op, args]{evaluate::GetTopLevelOperation(expr)};
+  if (!IsValidAtomicUpdateOperation(op)) {
+    if (IsConvertOperation(op) && args.size() == 1) {
+      return IsAtomicUpdateExpr(args[0], updatedVar, /*allowConvert=*/false);
+    }
+    return false;
+  }
+  if (!updatedVar) {
+    return true;
   }
   for (const auto &arg : args) {
-    if (*updatedExpr == arg) {
-      return &updatedVar;
+    if (*updatedVar == arg) {
+      return true;
     }
+  }
+  return false;
+}
+
+// The allowNonUpdate argument is used to generate slightly more helpful error
+// messages when the rhs is not an update to the updatedVar.
+const parser::Variable *AccStructureChecker::GetUpdatedVarIfAtomicUpdateStmt(
+    const parser::AssignmentStmt &assign, bool allowNonUpdate) const {
+  // OpenACC 3.4, 2893-2898
+  const auto &updatedVar{std::get<parser::Variable>(assign.t)};
+  const auto &rhs{std::get<parser::Expr>(assign.t)};
+
+  // Is the rhs something a valid operations that references the updatedVar?
+  const auto *expr{GetExpr(context_, rhs)};
+  const auto *updatedExpr{GetExpr(context_, updatedVar)};
+  if (!expr || !updatedExpr) {
+    return nullptr;
+  }
+  if (IsAtomicUpdateExpr(*expr, allowNonUpdate ? nullptr : updatedExpr,
+          /*allowConvert=*/true)) {
+    return &updatedVar;
   }
   return nullptr;
 }
 
 bool AccStructureChecker::IsAtomicCaptureStmt(
     const parser::AssignmentStmt &assign,
-    const parser::Variable &updatedVar) const {
+    const parser::Variable &updateVar) const {
   const auto &var{std::get<parser::Variable>(assign.t)};
   const auto &expr{std::get<parser::Expr>(assign.t)};
   const auto *varExpr{GetExpr(context_, var)};
-  const auto *updatedVarExpr{GetExpr(context_, updatedVar)};
+  const auto *updatedVarExpr{GetExpr(context_, updateVar)};
   const auto *exprExpr{GetExpr(context_, expr)};
   if (!varExpr || !updatedVarExpr || !exprExpr) {
     return false;
   }
-  return updatedVarExpr == exprExpr && !(updatedVarExpr == varExpr);
+  return *updatedVarExpr == *exprExpr && !(*updatedVarExpr == *varExpr);
 }
 
 void AccStructureChecker::Enter(const parser::AccAtomicCapture &capture) {
@@ -454,42 +539,104 @@ void AccStructureChecker::Enter(const parser::AccAtomicCapture &capture) {
       std::get<Fortran::parser::AccAtomicCapture::Stmt1>(capture.t).v.statement;
   const Fortran::parser::AssignmentStmt &stmt2 =
       std::get<Fortran::parser::AccAtomicCapture::Stmt2>(capture.t).v.statement;
-  if (const parser::Variable *updatedVar{GetIfAtomicUpdateVar(stmt1)};
-      updatedVar && IsAtomicCaptureStmt(stmt2, *updatedVar)) {
-    CheckAtomicUpdateStmt(stmt1);
-    CheckAtomicCaptureStmt(stmt2);
-  } else if (const parser::Variable *updatedVar{GetIfAtomicUpdateVar(stmt2)};
-      updatedVar && IsAtomicCaptureStmt(stmt1, *updatedVar)) {
-    CheckAtomicCaptureStmt(stmt1);
-    CheckAtomicUpdateStmt(stmt2);
-  } else {
-    // Note, the write-statement when unified with is just an assignment
-    // statement x is unconstrained. This is moral equivalent of `if (...
-    // updatedVar{IsAtomicWriteStmt(stmt2)}; updatedVar && ...)`
-    const auto &updatedVarV{std::get<parser::Variable>(stmt2.t)};
-    if (IsAtomicCaptureStmt(stmt1, updatedVarV)) {
-      CheckAtomicCaptureStmt(stmt1);
-      CheckAtomicWriteStmt(stmt2);
-    } else {
+  const auto &var1{std::get<parser::Variable>(stmt1.t)};
+  const auto &var2{std::get<parser::Variable>(stmt2.t)};
+  const auto *lhs1{GetExpr(context_, var1)};
+  const auto *lhs2{GetExpr(context_, var2)};
+  if (!lhs1 || !lhs2) {
+    // Not enough information to check.
+    return;
+  }
+  if (*lhs1 == *lhs2) {
+    context_.Say(std::get<parser::Verbatim>(capture.t).source,
+        "The variables assigned to in this atomic capture construct must be distinct"_err_en_US);
+    return;
+  }
+  const auto &expr1{std::get<parser::Expr>(stmt1.t)};
+  const auto &expr2{std::get<parser::Expr>(stmt2.t)};
+  const auto *rhs1{GetExpr(context_, expr1)};
+  const auto *rhs2{GetExpr(context_, expr2)};
+  if (!rhs1 || !rhs2) {
+    return;
+  }
+  bool stmt1CapturesLhs2{*lhs2 == GetExprModuloConversion(*rhs1)};
+  bool stmt2CapturesLhs1{*lhs1 == GetExprModuloConversion(*rhs2)};
+  if (stmt1CapturesLhs2 && !stmt2CapturesLhs1) {
+    if (*lhs2 == GetExprModuloConversion(*rhs2)) {
+      // y = x; x = x; Doesn't fit the spec;
       context_.Say(std::get<parser::Verbatim>(capture.t).source,
           "The assignments in this atomic capture construct do not update a variable and capture either its initial or final value"_err_en_US);
+      // TODO: Add attatchment that x = x is not considered an update.
+    } else if (omp::IsSubexpressionOf(*lhs2, *rhs2)) {
+      // Take y = x; x = <expr w/ x> as capture; update
+      const auto &updateVar{*lhs2};
+      const auto &captureVar{*lhs1};
+      CheckAtomicCaptureStmt(stmt1, &updateVar, captureVar);
+      CheckAtomicUpdateStmt(stmt2, updateVar, &captureVar);
+    } else {
+      // Take y = x; x = <expr w/o x> as capture; write
+      const auto &updateVar{*lhs2};
+      const auto &captureVar{*lhs1};
+      CheckAtomicCaptureStmt(stmt1, &updateVar, captureVar);
+      CheckAtomicWriteStmt(stmt2, updateVar, &captureVar);
     }
+  } else if (stmt2CapturesLhs1 && !stmt1CapturesLhs2) {
+    if (*lhs1 == GetExprModuloConversion(*rhs1)) {
+      // Error x = x; y = x;
+      context_.Say(var1.GetSource(),
+          "The first assignment in this atomic capture construct doesn't perform a valid update"_err_en_US);
+      // TODO: Add attatchment that x = x is not considered an update.
+      return;
+    } else {
+      // Take x = <expr>; y = x; as update; capture
+      const auto &updateVar{*lhs1};
+      const auto &captureVar{*lhs2};
+      CheckAtomicUpdateStmt(stmt1, updateVar, &captureVar);
+      CheckAtomicCaptureStmt(stmt2, &updateVar, captureVar);
+    }
+  } else if (stmt1CapturesLhs2 && stmt2CapturesLhs1) {
+    // x1 = x2; x2 = x1; Doesn't fit the spec;
+    context_.Say(std::get<parser::Verbatim>(capture.t).source,
+        "The assignments in this atomic capture construct do not update a variable and capture either its initial or final value"_err_en_US);
+  } else {
+    // y1 = <expr != y2>; y2 = <expr != y1>; Doesn't fit the spec
+    context_.Say(std::get<parser::Verbatim>(capture.t).source,
+        "The assignments in this atomic capture construct do not update a variable and capture either its initial or final value"_err_en_US);
   }
+  return;
 }
 
 void AccStructureChecker::Enter(const parser::AccAtomicUpdate &x) {
-  CheckAtomicUpdateStmt(
-      std::get<parser::Statement<parser::AssignmentStmt>>(x.t).statement);
+  const auto &assign{
+      std::get<parser::Statement<parser::AssignmentStmt>>(x.t).statement};
+  const auto &var{std::get<parser::Variable>(assign.t)};
+  const auto *updateVar{GetExpr(context_, var)};
+  if (!updateVar) {
+    return;
+  }
+  CheckAtomicUpdateStmt(assign, *updateVar, nullptr);
 }
 
 void AccStructureChecker::Enter(const parser::AccAtomicWrite &x) {
-  CheckAtomicWriteStmt(
-      std::get<parser::Statement<parser::AssignmentStmt>>(x.t).statement);
+  const auto &assign{
+      std::get<parser::Statement<parser::AssignmentStmt>>(x.t).statement};
+  const auto &var{std::get<parser::Variable>(assign.t)};
+  const auto *updateVar{GetExpr(context_, var)};
+  if (!updateVar) {
+    return;
+  }
+  CheckAtomicWriteStmt(assign, *updateVar, nullptr);
 }
 
 void AccStructureChecker::Enter(const parser::AccAtomicRead &x) {
-  CheckAtomicCaptureStmt(
-      std::get<parser::Statement<parser::AssignmentStmt>>(x.t).statement);
+  const auto &assign{
+      std::get<parser::Statement<parser::AssignmentStmt>>(x.t).statement};
+  const auto &var{std::get<parser::Variable>(assign.t)};
+  const auto *captureVar{GetExpr(context_, var)};
+  if (!captureVar) {
+    return;
+  }
+  CheckAtomicCaptureStmt(assign, nullptr, *captureVar);
 }
 
 void AccStructureChecker::Enter(const parser::OpenACCCacheConstruct &x) {

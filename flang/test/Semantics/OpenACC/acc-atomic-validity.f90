@@ -80,3 +80,45 @@ program openacc_atomic_validity
   !$acc end parallel
 
 end program openacc_atomic_validity
+
+subroutine capture_with_convert_f64_to_i32()
+  integer :: x
+  real(8) :: v, w
+  x = 1
+  v = 0
+  w = 2
+
+  !$acc atomic capture
+  x = x * 2.5_8
+  v = x
+  !$acc end atomic
+
+  !$acc atomic capture
+  !TODO: The rhs side of this update statement cannot reference v.
+  x = x * v
+  v = x
+  !$acc end atomic
+
+  !$acc atomic capture
+  !TODO: The rhs side of this update statement cannot reference v.
+  x = v * x
+  v = x
+  !$acc end atomic
+
+  !$acc atomic capture
+  !TODO: the rhs side of this update statement should reference x.
+  x = v * v
+  v = x
+  !$acc end atomic
+
+  !$acc atomic capture
+  x = v
+  !TODO: the rhs hand side of this write expression is not allowed to read v.
+  v = v * v
+  !$acc end atomic
+
+  !$acc atomic capture
+  v = x
+  x = w * w
+  !$acc end atomic
+end subroutine capture_with_convert_f64_to_i32

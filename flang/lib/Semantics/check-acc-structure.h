@@ -87,15 +87,27 @@ private:
       const parser::Expr &expr, const parser::Variable &updatedVar) const;
   bool IsAtomicUpdateIntrinsic(
       const parser::Expr &expr, const parser::Variable &updatedVar) const;
-  const parser::Variable *GetIfAtomicUpdateVar(
-      const parser::AssignmentStmt &assign) const;
+  bool IsAtomicUpdateExpr(const evaluate::Expr<evaluate::SomeType> &expr,
+      const evaluate::Expr<evaluate::SomeType> *updatedVar,
+      bool allowConvert) const;
+  const parser::Variable *GetUpdatedVarIfAtomicUpdateStmt(
+      const parser::AssignmentStmt &assign, bool allowNonUpdate) const;
   bool IsAtomicCaptureStmt(const parser::AssignmentStmt &assign,
       const parser::Variable &updatedVar) const;
   void CheckAtomicStmt(
       const parser::AssignmentStmt &assign, std::string &construct);
-  void CheckAtomicUpdateStmt(const parser::AssignmentStmt &assign);
-  void CheckAtomicCaptureStmt(const parser::AssignmentStmt &assign);
-  void CheckAtomicWriteStmt(const parser::AssignmentStmt &assign);
+  void CheckAtomicUpdateStmt(const parser::AssignmentStmt &assign,
+      const SomeExpr &updateVar, const SomeExpr *captureVar);
+  void CheckAtomicCaptureStmt(const parser::AssignmentStmt &assign,
+      const SomeExpr *updateVar, const SomeExpr &captureVar);
+  void CheckAtomicWriteStmt(const parser::AssignmentStmt &assign,
+      const SomeExpr &updateVar, const SomeExpr *captureVar);
+  void CheckAtomicUpdateVariable(
+      const parser::Variable &updateVar, const parser::Variable &captureVar);
+  void CheckAtomicCaptureVariable(
+      const parser::Variable &captureVar, const parser::Variable &updateVar);
+  bool DoesExprReferenceVar(const evaluate::Expr<evaluate::SomeType> &expr,
+      const evaluate::Expr<evaluate::SomeType> &var) const;
 
   bool CheckAllowedModifier(llvm::acc::Clause clause);
   bool IsComputeConstruct(llvm::acc::Directive directive) const;
