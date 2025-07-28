@@ -208,13 +208,13 @@ define <2 x bfloat> @test_call(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_call_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_call_param_1];
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
-; CHECK-NEXT:    st.param.b32 [param0], %r1;
 ; CHECK-NEXT:    .param .align 4 .b8 param1[4];
-; CHECK-NEXT:    st.param.b32 [param1], %r2;
 ; CHECK-NEXT:    .param .align 4 .b8 retval0[4];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_call_param_1];
+; CHECK-NEXT:    st.param.b32 [param1], %r2;
+; CHECK-NEXT:    st.param.b32 [param0], %r1;
 ; CHECK-NEXT:    call.uni (retval0), test_callee, (param0, param1);
 ; CHECK-NEXT:    ld.param.b32 %r3, [retval0];
 ; CHECK-NEXT:    } // callseq 0

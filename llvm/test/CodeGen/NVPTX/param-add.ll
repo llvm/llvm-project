@@ -18,16 +18,16 @@ define i32 @test(%struct.1float alignstack(32) %data) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_param_0];
-; CHECK-NEXT:    shr.u32 %r2, %r1, 8;
-; CHECK-NEXT:    shr.u32 %r3, %r1, 16;
-; CHECK-NEXT:    shr.u32 %r4, %r1, 24;
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .align 1 .b8 param0[4];
-; CHECK-NEXT:    st.param.b8 [param0], %r1;
-; CHECK-NEXT:    st.param.b8 [param0+1], %r2;
-; CHECK-NEXT:    st.param.b8 [param0+2], %r3;
-; CHECK-NEXT:    st.param.b8 [param0+3], %r4;
 ; CHECK-NEXT:    .param .b32 retval0;
+; CHECK-NEXT:    st.param.b8 [param0], %r1;
+; CHECK-NEXT:    shr.u32 %r2, %r1, 8;
+; CHECK-NEXT:    st.param.b8 [param0+1], %r2;
+; CHECK-NEXT:    shr.u32 %r3, %r1, 16;
+; CHECK-NEXT:    st.param.b8 [param0+2], %r3;
+; CHECK-NEXT:    shr.u32 %r4, %r3, 8;
+; CHECK-NEXT:    st.param.b8 [param0+3], %r4;
 ; CHECK-NEXT:    call.uni (retval0), callee, (param0);
 ; CHECK-NEXT:    ld.param.b32 %r5, [retval0];
 ; CHECK-NEXT:    } // callseq 0

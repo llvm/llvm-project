@@ -38,7 +38,7 @@ enum NodeType : unsigned {
   /// This node represents a PTX call instruction. It's operands are as follows:
   ///
   /// CALL(Chain, IsConvergent, IsIndirectCall/IsUniform, NumReturns,
-  ///      NumParams, Callee, Proto, InGlue)
+  ///      NumParams, Callee, Proto)
   CALL,
 
   MoveParam,
@@ -84,13 +84,7 @@ enum NodeType : unsigned {
   StoreV2,
   StoreV4,
   StoreV8,
-  LoadParam,
-  LoadParamV2,
-  LoadParamV4,
-  StoreParam,
-  StoreParamV2,
-  StoreParamV4,
-  LAST_MEMORY_OPCODE = StoreParamV4,
+  LAST_MEMORY_OPCODE = StoreV8,
 };
 }
 

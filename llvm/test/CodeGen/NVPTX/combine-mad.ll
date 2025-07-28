@@ -199,10 +199,10 @@ define i32 @test_mad_multi_use(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    add.s32 %r5, %r3, %r4;
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .b32 param0;
-; CHECK-NEXT:    st.param.b32 [param0], %r3;
 ; CHECK-NEXT:    .param .b32 param1;
-; CHECK-NEXT:    st.param.b32 [param1], %r5;
 ; CHECK-NEXT:    .param .b32 retval0;
+; CHECK-NEXT:    st.param.b32 [param0], %r3;
+; CHECK-NEXT:    st.param.b32 [param1], %r5;
 ; CHECK-NEXT:    call.uni (retval0), use, (param0, param1);
 ; CHECK-NEXT:    ld.param.b32 %r6, [retval0];
 ; CHECK-NEXT:    } // callseq 0
