@@ -81,9 +81,13 @@ void DemandedBits::determineLiveOperandBits(
     auto Shift = ShiftLeft ? static_cast<ShiftFn>(&APInt::shl)
                            : static_cast<ShiftFn>(&APInt::lshr);
     AB = APInt::getZero(BitWidth);
-    for (unsigned ShiftAmount = Min; ShiftAmount <= Max; ++ShiftAmount) {
-      AB |= (AOut.*Shift)(ShiftAmount);
+    uint8_t LoopRange = Max - Min;
+    auto Mask = AOut;
+    for (unsigned ShiftAmnt = 1; ShiftAmnt <= LoopRange; ShiftAmnt <<= 1) {
+      APInt Shifted = (Mask.*Shift)(ShiftAmnt);
+      Mask |= Shifted;
     }
+    AB = (Mask.*Shift)(Min);
   };
 
   switch (UserI->getOpcode()) {
@@ -221,13 +225,17 @@ void DemandedBits::determineLiveOperandBits(
         ComputeKnownBits(BitWidth, UserI->getOperand(1), nullptr);
         unsigned Min = Known.getMinValue().getLimitedValue(BitWidth - 1);
         unsigned Max = Known.getMaxValue().getLimitedValue(BitWidth - 1);
-        // Suppose AOut == 0b0000 1001
+        // Suppose AOut == 0b0000 0001
         // [min, max] = [1, 3]
-        // shift by 1 we get 0b0001 0010
-        // shift by 2 we get 0b0010 0100
-        // shift by 3 we get 0b0100 1000
-        // we take the or for every shift to cover all the positions.
+        // iteration 1 shift by 1 mask is 0b0000 0011
+        // iteration 2 shift by 2 mask is 0b0000 1111
+        // iteration 3, shiftAmnt = 4 > max - min, we stop.
         //
+        // After the iterations we need one more shift by min,
+        // to move from 0b0000 1111 to --> 0b0001 1110.
+        // The loop populates the mask relative to (0,...,max-min),
+        // but we need coverage from (min, max).
+        // This is why the shift by min is needed.
         GetShiftedRange(Min, Max, /*ShiftLeft=*/true);
         if (cast<LShrOperator>(UserI)->isExact())
           AB |= APInt::getLowBitsSet(BitWidth, Max);
