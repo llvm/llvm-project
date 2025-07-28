@@ -1094,6 +1094,10 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   if (match(Def, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
     return Def->replaceAllUsesWith(A);
 
+  if (match(Def, m_c_Mul(m_VPValue(A), m_SpecificInt(0))))
+    return Def->replaceAllUsesWith(R.getOperand(0) == A ? R.getOperand(1)
+                                                        : R.getOperand(0));
+
   if (match(Def, m_Not(m_VPValue(A)))) {
     if (match(A, m_Not(m_VPValue(A))))
       return Def->replaceAllUsesWith(A);
