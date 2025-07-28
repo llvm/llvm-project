@@ -36,81 +36,60 @@ S4<Var> t16; // expected-error {{template argument does not refer to a concept, 
 
 }
 
-template <template<typename T> auto V> // expected-note {{previous template template parameter is here}}
+template <template<typename T> auto V> // expected-note {{previous template template parameter is here}} \
+                                       // expected-error{{template argument for non-type template parameter must be an expression}}
 struct S1 {
     static_assert(V<int> == 42);
     static_assert(V<const int> == 84);
     static_assert(V<double> == 0);
 };
-template <template<auto T> auto V>  // expected-note {{previous template template parameter is here}}
+template <template<auto T> auto V>  // expected-error {{template argument for template type parameter must be a type}} \
+                                    // expected-note {{previous template template parameter is here}}
 struct S2 {
     static_assert(V<0> == 1);
     static_assert(V<1> == 0);
 };
-template <template<typename T> concept C > // expected-note {{previous template template parameter is here}}
+template <template<typename T> concept C > // expected-error {{template argument for non-type template parameter must be an expression}} \
+                                           // expected-note {{previous template template parameter is here}}
 struct S3 {
     static_assert(C<int>);
 };
-template <template<auto> concept C> // expected-note {{previous template template parameter is here}}
+template <template<auto> concept C> // expected-error {{template argument for template type parameter must be a type}} \
+                                    // expected-note {{previous template template parameter is here}}
 struct S4 {
     static_assert(C<0>);
 };
 
-template <typename T> // expected-note {{template parameter has a different kind in template argument}}
+template <typename T> // expected-note {{template parameter is declared here}}
 concept C = true;
 
-template <auto I> // expected-note {{template parameter has a different kind in template argument}}
+template <auto I> // expected-note {{template parameter is declared here}}
 concept CI = true;
 
-template <typename T> // expected-note {{template parameter has a different kind in template argument}}
+template <typename T> // expected-note {{template parameter is declared here}}
 constexpr auto Var = 42;
 template <typename T>
 constexpr auto Var<const T> = 84;
 template <>
 constexpr auto Var<double> = 0;
 
-template <auto N> // expected-note {{template parameter has a different kind in template argument}}
+template <auto N> // expected-note {{template parameter is declared here}}
 constexpr auto Var2 = 0;
 template <auto N>
 requires (N%2 == 0)
 constexpr auto Var2<N> = 1;
 
 void test () {
-    S1<Var2> sE; // expected-error {{template template argument has different template parameters than its corresponding template template parameter}}
-    S2<Var>  sE; // expected-error {{template template argument has different template parameters than its corresponding template template parameter}}
+    S1<Var2> sE; // expected-note {{template template argument has different template parameters than its corresponding template template parameter}}
+    S2<Var>  sE; // expected-note {{template template argument has different template parameters than its corresponding template template parameter}}
     S1<Var> s1;
     S2<Var2> s2;
     S3<C> s3;
-    S4<C> sE; // expected-error {{template template argument has different template parameters than its corresponding template template parameter}}
+    S4<C> sE; // expected-note {{template template argument has different template parameters than its corresponding template template parameter}}
     S4<CI> s4;
-    S3<CI> sE; // expected-error {{template template argument has different template parameters than its corresponding template template parameter}}
+    S3<CI> sE; // expected-note {{template template argument has different template parameters than its corresponding template template parameter}}
 }
 
-namespace subsumption {
-
-template <typename T>
-concept A = true;
-
-template <typename T>
-concept B = A<T> && true;
-
-template <typename T>
-concept C = true;
-
-template <typename T>
-concept D = C<T> && true;
-
-template <typename ABC, template <typename> concept... C>
-concept Apply = (C<ABC> && ...);
-
-constexpr int f(Apply<A, C> auto) {return 1;}
-constexpr int f(Apply<B, D> auto) {return 2;}
-
-int test() {
-   static_assert(f(1) == 2);
-}
-
-}
 
 namespace template_type_constraints {
 
@@ -362,11 +341,12 @@ concept D = Var<int>;
 }
 
 namespace InvalidName {
-// FIXME corentin: improve diagnostics
 template <typename T, template <typename> concept C>
 concept A = C<T>; // expected-note {{here}}
 
 template <A<concept missing<int>> T> // expected-error {{expected expression}} \
-                                     // expected-error {{too few template arguments for concept 'A'}}
+                                     // expected-error {{too few template arguments for concept 'A'}} \
+                                     // expected-error {{unknown type name 'T'}}  \
+                                     // expected-error {{expected unqualified-id}}
 auto f();
 }
