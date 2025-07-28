@@ -1341,7 +1341,9 @@ public:
 
   void moveToVALUImpl(SIInstrWorklist &Worklist, MachineDominatorTree *MDT,
                       MachineInstr &Inst) const;
-
+  /// Wrapper function for generating waterfall for instruction \p MI
+  /// This function take into consideration of related pre & succ instructions
+  /// (e.g. calling process) into consideratioin
   void createWaterFall(MachineInstr *MI, MachineDominatorTree *MDT,
                        ArrayRef<MachineOperand *> ScalarOps,
                        ArrayRef<Register> PhySGPRs = {}) const;
