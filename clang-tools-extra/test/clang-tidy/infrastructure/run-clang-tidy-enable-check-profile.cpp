@@ -12,9 +12,10 @@
 // CHECK-SINGLE-NEXT:                          clang-tidy checks profiling
 // CHECK-SINGLE-NEXT: ===-------------------------------------------------------------------------===
 // CHECK-SINGLE-NEXT: Total Execution Time: {{.*}} seconds ({{.*}} wall clock)
-// CHECK-SINGLE: {{.*}}  --- Name ---
-// CHECK-SINGLE-NEXT: {{.*}}  readability-function-size
-// CHECK-SINGLE-NEXT: {{.*}}  Total
+// CHECK-SINGLE-EMPTY:
+// CHECK-SINGLE-NEXT:    ---User Time---   --System Time--   --User+System--   ---Wall Time---  --- Name ---
+// CHECK-SINGLE: {{[[:space:]]*[0-9]+\.[0-9]+.*%.*readability-function-size}}
+// CHECK-SINGLE: {{[[:space:]]*[0-9]+\.[0-9]+.*100\.0%.*Total}}
 
 // Test profiling functionality with multiple files and multiple checks
 // RUN: rm -rf %t-multi
@@ -31,11 +32,12 @@
 // CHECK-MULTIPLE-NEXT:                          clang-tidy checks profiling
 // CHECK-MULTIPLE-NEXT: ===-------------------------------------------------------------------------===
 // CHECK-MULTIPLE-NEXT: Total Execution Time: {{.*}} seconds ({{.*}} wall clock)
-// CHECK-MULTIPLE: {{.*}}  --- Name ---
-// CHECK-MULTIPLE: {{.*}}  readability-function-size
-// CHECK-MULTIPLE: {{.*}}  misc-unused-using-decls
-// CHECK-MULTIPLE: {{.*}}  llvm-qualified-auto
-// CHECK-MULTIPLE: {{.*}}  Total
+// CHECK-MULTIPLE-EMPTY:
+// CHECK-MULTIPLE-NEXT:    ---User Time---   --System Time--   --User+System--   ---Wall Time---  --- Name ---
+// CHECK-MULTIPLE-DAG: {{[[:space:]]*[0-9]+\.[0-9]+.*%.*readability-function-size}}
+// CHECK-MULTIPLE-DAG: {{[[:space:]]*[0-9]+\.[0-9]+.*%.*misc-unused-using-decls}}
+// CHECK-MULTIPLE-DAG: {{[[:space:]]*[0-9]+\.[0-9]+.*%.*llvm-qualified-auto}}
+// CHECK-MULTIPLE: {{[[:space:]]*[0-9]+\.[0-9]+.*100\.0%.*Total}}
 
 // Test profiling functionality with no files (empty database)
 // RUN: rm -rf %t-empty
