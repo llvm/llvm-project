@@ -64,9 +64,9 @@ define void @test_ld_param_byval(ptr byval(i32) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [test_ld_param_byval_param_0];
 ; CHECK-NEXT:    { // callseq 1, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_ld_param_byval_param_0];
 ; CHECK-NEXT:    st.param.b32 [param0], %r1;
 ; CHECK-NEXT:    call.uni byval_user, (param0);
 ; CHECK-NEXT:    } // callseq 1
