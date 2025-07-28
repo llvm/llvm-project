@@ -725,3 +725,303 @@ v_pk_max3_u16 v10, v1, v2, v3 op_sel:[1,0,0] op_sel_hi:[0,1,1]
 v_pk_max3_u16 v10, s1, 100, v3 op_sel:[1,0,0] op_sel_hi:[0,1,1] clamp
 // GFX1250: v_pk_max3_u16 v10, s1, 0x64, v3 op_sel:[1,0,0] op_sel_hi:[0,1,1] clamp ; encoding: [0x0a,0xc8,0x30,0xcc,0x01,0xfe,0x0d,0x14,0x64,0x00,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_add_bf16 v5, v1, v2
+// GFX1250: v_pk_add_bf16 v5, v1, v2                ; encoding: [0x05,0x40,0x23,0xcc,0x01,0x05,0x02,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_add_bf16 v5, v255, v255
+// GFX1250: v_pk_add_bf16 v5, v255, v255            ; encoding: [0x05,0x40,0x23,0xcc,0xff,0xff,0x03,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_add_bf16 v5, s1, s2
+// GFX1250: v_pk_add_bf16 v5, s1, s2                ; encoding: [0x05,0x40,0x23,0xcc,0x01,0x04,0x00,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_add_bf16 v5, s105, s105
+// GFX1250: v_pk_add_bf16 v5, s105, s105            ; encoding: [0x05,0x40,0x23,0xcc,0x69,0xd2,0x00,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_add_bf16 v5, vcc_lo, ttmp15
+// GFX1250: v_pk_add_bf16 v5, vcc_lo, ttmp15        ; encoding: [0x05,0x40,0x23,0xcc,0x6a,0xf6,0x00,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_add_bf16 v5, vcc_hi, 0xfe0b
+// GFX1250: v_pk_add_bf16 v5, vcc_hi, 0xfe0b        ; encoding: [0x05,0x40,0x23,0xcc,0x6b,0xfe,0x01,0x18,0x0b,0xfe,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_add_bf16 v5, ttmp15, src_scc
+// GFX1250: v_pk_add_bf16 v5, ttmp15, src_scc       ; encoding: [0x05,0x40,0x23,0xcc,0x7b,0xfa,0x01,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_add_bf16 v5, m0, 0.5
+// GFX1250: v_pk_add_bf16 v5, m0, 0.5               ; encoding: [0x05,0x40,0x23,0xcc,0x7d,0xe0,0x01,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_add_bf16 v5, exec_lo, -1
+// GFX1250: v_pk_add_bf16 v5, exec_lo, -1           ; encoding: [0x05,0x40,0x23,0xcc,0x7e,0x82,0x01,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_add_bf16 v5, exec_hi, null
+// GFX1250: v_pk_add_bf16 v5, exec_hi, null         ; encoding: [0x05,0x40,0x23,0xcc,0x7f,0xf8,0x00,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_add_bf16 v5, null, exec_lo
+// GFX1250: v_pk_add_bf16 v5, null, exec_lo         ; encoding: [0x05,0x40,0x23,0xcc,0x7c,0xfc,0x00,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_add_bf16 v5, -1, exec_hi op_sel:[1,1] op_sel_hi:[0,0] neg_lo:[1,0] neg_hi:[1,0]
+// GFX1250: v_pk_add_bf16 v5, -1, exec_hi op_sel:[1,1] op_sel_hi:[0,0] neg_lo:[1,0] neg_hi:[1,0] ; encoding: [0x05,0x59,0x23,0xcc,0xc1,0xfe,0x00,0x20]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_add_bf16 v5, 0.5, m0 op_sel:[0,0] op_sel_hi:[1,1] neg_lo:[0,1] neg_hi:[0,1]
+// GFX1250: v_pk_add_bf16 v5, 0.5, m0 neg_lo:[0,1] neg_hi:[0,1] ; encoding: [0x05,0x42,0x23,0xcc,0xf0,0xfa,0x00,0x58]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_add_bf16 v5, src_scc, vcc_lo op_sel:[1,0] op_sel_hi:[0,1] neg_lo:[0,0] neg_hi:[0,0]
+// GFX1250: v_pk_add_bf16 v5, src_scc, vcc_lo op_sel:[1,0] op_sel_hi:[0,1] ; encoding: [0x05,0x48,0x23,0xcc,0xfd,0xd4,0x00,0x10]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_add_bf16 v255, 0xfe0b, vcc_hi op_sel:[0,1] op_sel_hi:[1,0] neg_lo:[1,1] neg_hi:[1,1] clamp
+// GFX1250: v_pk_add_bf16 v255, 0xfe0b, vcc_hi op_sel:[0,1] op_sel_hi:[1,0] neg_lo:[1,1] neg_hi:[1,1] clamp ; encoding: [0xff,0xd3,0x23,0xcc,0xff,0xd6,0x00,0x68,0x0b,0xfe,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_mul_bf16 v5, v1, v2
+// GFX1250: v_pk_mul_bf16 v5, v1, v2                ; encoding: [0x05,0x40,0x2a,0xcc,0x01,0x05,0x02,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_mul_bf16 v5, v255, v255
+// GFX1250: v_pk_mul_bf16 v5, v255, v255            ; encoding: [0x05,0x40,0x2a,0xcc,0xff,0xff,0x03,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_mul_bf16 v5, s1, s2
+// GFX1250: v_pk_mul_bf16 v5, s1, s2                ; encoding: [0x05,0x40,0x2a,0xcc,0x01,0x04,0x00,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_mul_bf16 v5, s105, s105
+// GFX1250: v_pk_mul_bf16 v5, s105, s105            ; encoding: [0x05,0x40,0x2a,0xcc,0x69,0xd2,0x00,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_mul_bf16 v5, vcc_lo, ttmp15
+// GFX1250: v_pk_mul_bf16 v5, vcc_lo, ttmp15        ; encoding: [0x05,0x40,0x2a,0xcc,0x6a,0xf6,0x00,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_mul_bf16 v5, vcc_hi, 0xfe0b
+// GFX1250: v_pk_mul_bf16 v5, vcc_hi, 0xfe0b        ; encoding: [0x05,0x40,0x2a,0xcc,0x6b,0xfe,0x01,0x18,0x0b,0xfe,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_mul_bf16 v5, ttmp15, src_scc
+// GFX1250: v_pk_mul_bf16 v5, ttmp15, src_scc       ; encoding: [0x05,0x40,0x2a,0xcc,0x7b,0xfa,0x01,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_mul_bf16 v5, m0, 0.5
+// GFX1250: v_pk_mul_bf16 v5, m0, 0.5               ; encoding: [0x05,0x40,0x2a,0xcc,0x7d,0xe0,0x01,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_mul_bf16 v5, exec_lo, -1
+// GFX1250: v_pk_mul_bf16 v5, exec_lo, -1           ; encoding: [0x05,0x40,0x2a,0xcc,0x7e,0x82,0x01,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_mul_bf16 v5, exec_hi, null
+// GFX1250: v_pk_mul_bf16 v5, exec_hi, null         ; encoding: [0x05,0x40,0x2a,0xcc,0x7f,0xf8,0x00,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_mul_bf16 v5, null, exec_lo
+// GFX1250: v_pk_mul_bf16 v5, null, exec_lo         ; encoding: [0x05,0x40,0x2a,0xcc,0x7c,0xfc,0x00,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_mul_bf16 v5, -1, exec_hi op_sel:[1,1] op_sel_hi:[0,0] neg_lo:[1,0] neg_hi:[1,0]
+// GFX1250: v_pk_mul_bf16 v5, -1, exec_hi op_sel:[1,1] op_sel_hi:[0,0] neg_lo:[1,0] neg_hi:[1,0] ; encoding: [0x05,0x59,0x2a,0xcc,0xc1,0xfe,0x00,0x20]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_mul_bf16 v5, 0.5, m0 op_sel:[0,0] op_sel_hi:[1,1] neg_lo:[0,1] neg_hi:[0,1]
+// GFX1250: v_pk_mul_bf16 v5, 0.5, m0 neg_lo:[0,1] neg_hi:[0,1] ; encoding: [0x05,0x42,0x2a,0xcc,0xf0,0xfa,0x00,0x58]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_mul_bf16 v5, src_scc, vcc_lo op_sel:[1,0] op_sel_hi:[0,1] neg_lo:[0,0] neg_hi:[0,0]
+// GFX1250: v_pk_mul_bf16 v5, src_scc, vcc_lo op_sel:[1,0] op_sel_hi:[0,1] ; encoding: [0x05,0x48,0x2a,0xcc,0xfd,0xd4,0x00,0x10]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_mul_bf16 v255, 0xfe0b, vcc_hi op_sel:[0,1] op_sel_hi:[1,0] neg_lo:[1,1] neg_hi:[1,1] clamp
+// GFX1250: v_pk_mul_bf16 v255, 0xfe0b, vcc_hi op_sel:[0,1] op_sel_hi:[1,0] neg_lo:[1,1] neg_hi:[1,1] clamp ; encoding: [0xff,0xd3,0x2a,0xcc,0xff,0xd6,0x00,0x68,0x0b,0xfe,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_max_num_bf16 v5, v1, v2
+// GFX1250: v_pk_max_num_bf16 v5, v1, v2            ; encoding: [0x05,0x40,0x2c,0xcc,0x01,0x05,0x02,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_max_num_bf16 v5, v255, v255
+// GFX1250: v_pk_max_num_bf16 v5, v255, v255        ; encoding: [0x05,0x40,0x2c,0xcc,0xff,0xff,0x03,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_max_num_bf16 v5, s1, s2
+// GFX1250: v_pk_max_num_bf16 v5, s1, s2            ; encoding: [0x05,0x40,0x2c,0xcc,0x01,0x04,0x00,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_max_num_bf16 v5, s105, s105
+// GFX1250: v_pk_max_num_bf16 v5, s105, s105        ; encoding: [0x05,0x40,0x2c,0xcc,0x69,0xd2,0x00,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_max_num_bf16 v5, vcc_lo, ttmp15
+// GFX1250: v_pk_max_num_bf16 v5, vcc_lo, ttmp15    ; encoding: [0x05,0x40,0x2c,0xcc,0x6a,0xf6,0x00,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_max_num_bf16 v5, vcc_hi, 0xfe0b
+// GFX1250: v_pk_max_num_bf16 v5, vcc_hi, 0xfe0b    ; encoding: [0x05,0x40,0x2c,0xcc,0x6b,0xfe,0x01,0x18,0x0b,0xfe,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_max_num_bf16 v5, ttmp15, src_scc
+// GFX1250: v_pk_max_num_bf16 v5, ttmp15, src_scc   ; encoding: [0x05,0x40,0x2c,0xcc,0x7b,0xfa,0x01,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_max_num_bf16 v5, m0, 0.5
+// GFX1250: v_pk_max_num_bf16 v5, m0, 0.5           ; encoding: [0x05,0x40,0x2c,0xcc,0x7d,0xe0,0x01,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_max_num_bf16 v5, exec_lo, -1
+// GFX1250: v_pk_max_num_bf16 v5, exec_lo, -1       ; encoding: [0x05,0x40,0x2c,0xcc,0x7e,0x82,0x01,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_max_num_bf16 v5, exec_hi, null
+// GFX1250: v_pk_max_num_bf16 v5, exec_hi, null     ; encoding: [0x05,0x40,0x2c,0xcc,0x7f,0xf8,0x00,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_max_num_bf16 v5, null, exec_lo
+// GFX1250: v_pk_max_num_bf16 v5, null, exec_lo     ; encoding: [0x05,0x40,0x2c,0xcc,0x7c,0xfc,0x00,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_max_num_bf16 v5, -1, exec_hi op_sel:[1,1] op_sel_hi:[0,0] neg_lo:[1,0] neg_hi:[1,0]
+// GFX1250: v_pk_max_num_bf16 v5, -1, exec_hi op_sel:[1,1] op_sel_hi:[0,0] neg_lo:[1,0] neg_hi:[1,0] ; encoding: [0x05,0x59,0x2c,0xcc,0xc1,0xfe,0x00,0x20]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_max_num_bf16 v5, 0.5, m0 op_sel:[0,0] op_sel_hi:[1,1] neg_lo:[0,1] neg_hi:[0,1]
+// GFX1250: v_pk_max_num_bf16 v5, 0.5, m0 neg_lo:[0,1] neg_hi:[0,1] ; encoding: [0x05,0x42,0x2c,0xcc,0xf0,0xfa,0x00,0x58]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_max_num_bf16 v5, src_scc, vcc_lo op_sel:[1,0] op_sel_hi:[0,1] neg_lo:[0,0] neg_hi:[0,0]
+// GFX1250: v_pk_max_num_bf16 v5, src_scc, vcc_lo op_sel:[1,0] op_sel_hi:[0,1] ; encoding: [0x05,0x48,0x2c,0xcc,0xfd,0xd4,0x00,0x10]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_max_num_bf16 v255, 0xfe0b, vcc_hi op_sel:[0,1] op_sel_hi:[1,0] neg_lo:[1,1] neg_hi:[1,1] clamp
+// GFX1250: v_pk_max_num_bf16 v255, 0xfe0b, vcc_hi op_sel:[0,1] op_sel_hi:[1,0] neg_lo:[1,1] neg_hi:[1,1] clamp ; encoding: [0xff,0xd3,0x2c,0xcc,0xff,0xd6,0x00,0x68,0x0b,0xfe,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_min_num_bf16 v5, v1, v2
+// GFX1250: v_pk_min_num_bf16 v5, v1, v2            ; encoding: [0x05,0x40,0x2b,0xcc,0x01,0x05,0x02,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_min_num_bf16 v5, v255, v255
+// GFX1250: v_pk_min_num_bf16 v5, v255, v255        ; encoding: [0x05,0x40,0x2b,0xcc,0xff,0xff,0x03,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_min_num_bf16 v5, s1, s2
+// GFX1250: v_pk_min_num_bf16 v5, s1, s2            ; encoding: [0x05,0x40,0x2b,0xcc,0x01,0x04,0x00,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_min_num_bf16 v5, s105, s105
+// GFX1250: v_pk_min_num_bf16 v5, s105, s105        ; encoding: [0x05,0x40,0x2b,0xcc,0x69,0xd2,0x00,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_min_num_bf16 v5, vcc_lo, ttmp15
+// GFX1250: v_pk_min_num_bf16 v5, vcc_lo, ttmp15    ; encoding: [0x05,0x40,0x2b,0xcc,0x6a,0xf6,0x00,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_min_num_bf16 v5, vcc_hi, 0xfe0b
+// GFX1250: v_pk_min_num_bf16 v5, vcc_hi, 0xfe0b    ; encoding: [0x05,0x40,0x2b,0xcc,0x6b,0xfe,0x01,0x18,0x0b,0xfe,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_min_num_bf16 v5, ttmp15, src_scc
+// GFX1250: v_pk_min_num_bf16 v5, ttmp15, src_scc   ; encoding: [0x05,0x40,0x2b,0xcc,0x7b,0xfa,0x01,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_min_num_bf16 v5, m0, 0.5
+// GFX1250: v_pk_min_num_bf16 v5, m0, 0.5           ; encoding: [0x05,0x40,0x2b,0xcc,0x7d,0xe0,0x01,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_min_num_bf16 v5, exec_lo, -1
+// GFX1250: v_pk_min_num_bf16 v5, exec_lo, -1       ; encoding: [0x05,0x40,0x2b,0xcc,0x7e,0x82,0x01,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_min_num_bf16 v5, exec_hi, null
+// GFX1250: v_pk_min_num_bf16 v5, exec_hi, null     ; encoding: [0x05,0x40,0x2b,0xcc,0x7f,0xf8,0x00,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_min_num_bf16 v5, null, exec_lo
+// GFX1250: v_pk_min_num_bf16 v5, null, exec_lo     ; encoding: [0x05,0x40,0x2b,0xcc,0x7c,0xfc,0x00,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_min_num_bf16 v5, -1, exec_hi op_sel:[1,1] op_sel_hi:[0,0] neg_lo:[1,0] neg_hi:[1,0]
+// GFX1250: v_pk_min_num_bf16 v5, -1, exec_hi op_sel:[1,1] op_sel_hi:[0,0] neg_lo:[1,0] neg_hi:[1,0] ; encoding: [0x05,0x59,0x2b,0xcc,0xc1,0xfe,0x00,0x20]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_min_num_bf16 v5, 0.5, m0 op_sel:[0,0] op_sel_hi:[1,1] neg_lo:[0,1] neg_hi:[0,1]
+// GFX1250: v_pk_min_num_bf16 v5, 0.5, m0 neg_lo:[0,1] neg_hi:[0,1] ; encoding: [0x05,0x42,0x2b,0xcc,0xf0,0xfa,0x00,0x58]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_min_num_bf16 v5, src_scc, vcc_lo op_sel:[1,0] op_sel_hi:[0,1] neg_lo:[0,0] neg_hi:[0,0]
+// GFX1250: v_pk_min_num_bf16 v5, src_scc, vcc_lo op_sel:[1,0] op_sel_hi:[0,1] ; encoding: [0x05,0x48,0x2b,0xcc,0xfd,0xd4,0x00,0x10]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_min_num_bf16 v255, 0xfe0b, vcc_hi op_sel:[0,1] op_sel_hi:[1,0] neg_lo:[1,1] neg_hi:[1,1] clamp
+// GFX1250: v_pk_min_num_bf16 v255, 0xfe0b, vcc_hi op_sel:[0,1] op_sel_hi:[1,0] neg_lo:[1,1] neg_hi:[1,1] clamp ; encoding: [0xff,0xd3,0x2b,0xcc,0xff,0xd6,0x00,0x68,0x0b,0xfe,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_fma_bf16 v5, v1, v2, s3
+// GFX1250: v_pk_fma_bf16 v5, v1, v2, s3            ; encoding: [0x05,0x40,0x11,0xcc,0x01,0x05,0x0e,0x18]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_fma_bf16 v5, v255, s2, s105
+// GFX1250: v_pk_fma_bf16 v5, v255, s2, s105        ; encoding: [0x05,0x40,0x11,0xcc,0xff,0x05,0xa4,0x19]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_fma_bf16 v5, s1, v255, exec_hi
+// GFX1250: v_pk_fma_bf16 v5, s1, v255, exec_hi     ; encoding: [0x05,0x40,0x11,0xcc,0x01,0xfe,0xff,0x19]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_fma_bf16 v5, s105, s105, exec_lo
+// GFX1250: v_pk_fma_bf16 v5, s105, s105, exec_lo   ; encoding: [0x05,0x40,0x11,0xcc,0x69,0xd2,0xf8,0x19]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_fma_bf16 v5, vcc_lo, ttmp15, v3
+// GFX1250: v_pk_fma_bf16 v5, vcc_lo, ttmp15, v3    ; encoding: [0x05,0x40,0x11,0xcc,0x6a,0xf6,0x0c,0x1c]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_fma_bf16 v5, vcc_hi, 0xfe0b, v255
+// GFX1250: v_pk_fma_bf16 v5, vcc_hi, 0xfe0b, v255  ; encoding: [0x05,0x40,0x11,0xcc,0x6b,0xfe,0xfd,0x1f,0x0b,0xfe,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_fma_bf16 v5, ttmp15, src_scc, ttmp15
+// GFX1250: v_pk_fma_bf16 v5, ttmp15, src_scc, ttmp15 ; encoding: [0x05,0x40,0x11,0xcc,0x7b,0xfa,0xed,0x19]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_fma_bf16 v5, m0, 0.5, m0 op_sel_hi:[0,0,0]
+// GFX1250: v_pk_fma_bf16 v5, m0, 0.5, m0 op_sel_hi:[0,0,0] ; encoding: [0x05,0x00,0x11,0xcc,0x7d,0xe0,0xf5,0x01]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_fma_bf16 v5, exec_lo, -1, vcc_hi op_sel_hi:[0,0,1]
+// GFX1250: v_pk_fma_bf16 v5, exec_lo, -1, vcc_hi op_sel_hi:[0,0,1] ; encoding: [0x05,0x40,0x11,0xcc,0x7e,0x82,0xad,0x01]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_fma_bf16 v5, exec_hi, null, vcc_lo op_sel_hi:[0,1,0]
+// GFX1250: v_pk_fma_bf16 v5, exec_hi, null, vcc_lo op_sel_hi:[0,1,0] ; encoding: [0x05,0x00,0x11,0xcc,0x7f,0xf8,0xa8,0x11]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_fma_bf16 v5, null, exec_lo, 0xfe0b op_sel:[1,1,1] op_sel_hi:[1,0,0] neg_lo:[1,0,0] neg_hi:[1,0,0]
+// GFX1250: v_pk_fma_bf16 v5, null, exec_lo, 0xfe0b op_sel:[1,1,1] op_sel_hi:[1,0,0] neg_lo:[1,0,0] neg_hi:[1,0,0] ; encoding: [0x05,0x39,0x11,0xcc,0x7c,0xfc,0xfc,0x2b,0x0b,0xfe,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_fma_bf16 v5, -1, exec_hi, src_scc op_sel:[0,0,0] op_sel_hi:[1,1,1] neg_lo:[0,1,0] neg_hi:[0,1,0]
+// GFX1250: v_pk_fma_bf16 v5, -1, exec_hi, src_scc neg_lo:[0,1,0] neg_hi:[0,1,0] ; encoding: [0x05,0x42,0x11,0xcc,0xc1,0xfe,0xf4,0x5b]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_fma_bf16 v5, 0.5, m0, 0.5 op_sel:[1,0,0] op_sel_hi:[0,1,1] neg_lo:[0,0,1] neg_hi:[0,0,1]
+// GFX1250: v_pk_fma_bf16 v5, 0.5, m0, 0.5 op_sel:[1,0,0] op_sel_hi:[0,1,1] neg_lo:[0,0,1] neg_hi:[0,0,1] ; encoding: [0x05,0x4c,0x11,0xcc,0xf0,0xfa,0xc0,0x93]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_fma_bf16 v5, src_scc, vcc_lo, -1 op_sel:[0,1,0] op_sel_hi:[1,0,1] neg_lo:[0,0,0] neg_hi:[0,0,0]
+// GFX1250: v_pk_fma_bf16 v5, src_scc, vcc_lo, -1 op_sel:[0,1,0] op_sel_hi:[1,0,1] ; encoding: [0x05,0x50,0x11,0xcc,0xfd,0xd4,0x04,0x0b]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_pk_fma_bf16 v255, 0xfe0b, vcc_hi, null op_sel:[0,0,1] op_sel_hi:[1,1,0] neg_lo:[1,1,1] neg_hi:[1,1,1] clamp
+// GFX1250: v_pk_fma_bf16 v255, 0xfe0b, vcc_hi, null op_sel:[0,0,1] op_sel_hi:[1,1,0] neg_lo:[1,1,1] neg_hi:[1,1,1] clamp ; encoding: [0xff,0xa7,0x11,0xcc,0xff,0xd6,0xf0,0xf9,0x0b,0xfe,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU

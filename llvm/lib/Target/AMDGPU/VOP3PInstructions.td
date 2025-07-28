@@ -1196,6 +1196,14 @@ let isCommutable = 1, isReMaterializable = 1 in {
 
   let SubtargetPredicate = HasPkMovB32, isAsCheapAsAMove = 1 in
   defm V_PK_MOV_B32 : VOP3PInst<"v_pk_mov_b32", VOP3P_Profile<VOP_V2I32_V2I32_V2I32, VOP3_PACKED>>;
+
+  let SubtargetPredicate = HasBF16PackedInsts in {
+    defm V_PK_ADD_BF16     : VOP3PInst<"v_pk_add_bf16", VOP3P_Profile<VOP_V2BF16_V2BF16_V2BF16, VOP3_PACKED>, any_fadd>;
+    defm V_PK_MUL_BF16     : VOP3PInst<"v_pk_mul_bf16", VOP3P_Profile<VOP_V2BF16_V2BF16_V2BF16, VOP3_PACKED>, any_fmul>;
+    defm V_PK_MIN_NUM_BF16 : VOP3PInst<"v_pk_min_num_bf16", VOP3P_Profile<VOP_V2BF16_V2BF16_V2BF16, VOP3_PACKED>, fminnum_like>;
+    defm V_PK_MAX_NUM_BF16 : VOP3PInst<"v_pk_max_num_bf16", VOP3P_Profile<VOP_V2BF16_V2BF16_V2BF16, VOP3_PACKED>, fmaxnum_like>;
+    defm V_PK_FMA_BF16     : VOP3PInst<"v_pk_fma_bf16", VOP3P_Profile<VOP_V2BF16_V2BF16_V2BF16_V2BF16, VOP3_PACKED>, any_fma>;
+  }
 } // End isCommutable = 1, isReMaterializable = 1
 
 def : AMDGPUMnemonicAlias<"v_accvgpr_read",  "v_accvgpr_read_b32">;
@@ -2222,6 +2230,11 @@ defm V_PK_MAX3_I16     : VOP3P_Real_gfx1250<0x2f>;
 defm V_PK_MAX3_U16     : VOP3P_Real_gfx1250<0x30>;
 defm V_PK_MIN3_I16     : VOP3P_Real_gfx1250<0x31>;
 defm V_PK_MIN3_U16     : VOP3P_Real_gfx1250<0x32>;
+defm V_PK_FMA_BF16     : VOP3P_Real_gfx1250<0x11>;
+defm V_PK_ADD_BF16     : VOP3P_Real_gfx1250<0x23>;
+defm V_PK_MUL_BF16     : VOP3P_Real_gfx1250<0x2a>;
+defm V_PK_MIN_NUM_BF16 : VOP3P_Real_gfx1250<0x2b>;
+defm V_PK_MAX_NUM_BF16 : VOP3P_Real_gfx1250<0x2c>;
 
 defm V_PK_MINIMUM_F16 : VOP3P_Real_gfx12<0x1d>;
 defm V_PK_MAXIMUM_F16 : VOP3P_Real_gfx12<0x1e>;
