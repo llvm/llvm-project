@@ -2,12 +2,6 @@ parameters:
   # This template adds arcade-powered source-build to CI. A job is created for each platform, as
   # well as an optional server job that completes when all platform jobs complete.
 
-  # The name of the "join" job for all source-build platforms. If set to empty string, the job is
-  # not included. Existing repo pipelines can use this job depend on all source-build jobs
-  # completing without maintaining a separate list of every single job ID: just depend on this one
-  # server job. By default, not included. Recommended name if used: 'Source_Build_Complete'.
-  allCompletedJobId: ''
-
   # See /eng/common/core-templates/job/source-build.yml
   jobNamePrefix: 'Source_Build'
 
@@ -30,16 +24,6 @@ parameters:
   enableInternalSources: false
 
 jobs:
-
-- ${{ if ne(parameters.allCompletedJobId, '') }}:
-  - job: ${{ parameters.allCompletedJobId }}
-    displayName: Source-Build Complete
-    pool: server
-    dependsOn:
-    - ${{ each platform in parameters.platforms }}:
-      - ${{ parameters.jobNamePrefix }}_${{ platform.name }}
-    - ${{ if eq(length(parameters.platforms), 0) }}:
-      - ${{ parameters.jobNamePrefix }}_${{ parameters.defaultManagedPlatform.name }}
 
 - ${{ each platform in parameters.platforms }}:
   - template: /eng/common/core-templates/job/source-build.yml

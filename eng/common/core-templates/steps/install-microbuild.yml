@@ -4,8 +4,16 @@ parameters:
   # Enable install tasks for MicroBuild on Mac and Linux
   # Will be ignored if 'enableMicrobuild' is false or 'Agent.Os' is 'Windows_NT'
   enableMicrobuildForMacAndLinux: false
+  # Determines whether the ESRP service connection information should be passed to the signing plugin.
+  # This overlaps with _SignType to some degree. We only need the service connection for real signing.
+  # It's important that the service connection not be passed to the MicroBuildSigningPlugin task in this place.
+  # Doing so will cause the service connection to be authorized for the pipeline, which isn't allowed and won't work for non-prod.
+  # Unfortunately, _SignType can't be used to exclude the use of the service connection in non-real sign scenarios. The
+  # variable is not available in template expression. _SignType has a very large proliferation across .NET, so replacing it is tough.
+  microbuildUseESRP: true
   # Location of the MicroBuild output folder
   microBuildOutputFolder: '$(Build.SourcesDirectory)'
+
   continueOnError: false
 
 steps:
@@ -21,19 +29,37 @@ steps:
           workingDirectory: ${{ parameters.microBuildOutputFolder }}
         condition: and(succeeded(), ne(variables['Agent.Os'], 'Windows_NT'))
 
+    - script: |
+        REM Check if ESRP is disabled while SignType is real
+        if /I "${{ parameters.microbuildUseESRP }}"=="false" if /I "$(_SignType)"=="real" (
+          echo Error: ESRP must be enabled when SignType is real.
+          exit /b 1
+        )
+      displayName: 'Validate ESRP usage (Windows)'
+      condition: and(succeeded(), eq(variables['Agent.Os'], 'Windows_NT'))
+    - script: |
+        # Check if ESRP is disabled while SignType is real
+        if [ "${{ parameters.microbuildUseESRP }}" = "false" ] && [ "$(_SignType)" = "real" ]; then
+          echo "Error: ESRP must be enabled when SignType is real."
+          exit 1
+        fi
+      displayName: 'Validate ESRP usage (Non-Windows)'
+      condition: and(succeeded(), ne(variables['Agent.Os'], 'Windows_NT'))
+
     - task: MicroBuildSigningPlugin@4
       displayName: Install MicroBuild plugin
       inputs:
         signType: $(_SignType)
         zipSources: false
         feedSource: https://dnceng.pkgs.visualstudio.com/_packaging/MicroBuildToolset/nuget/v3/index.json
-        ${{ if and(eq(parameters.enableMicrobuildForMacAndLinux, 'true'), ne(variables['Agent.Os'], 'Windows_NT')) }}:
-          azureSubscription: 'MicroBuild Signing Task (DevDiv)'
-          useEsrpCli: true
-        ${{ elseif eq(variables['System.TeamProject'], 'DevDiv') }}:
-          ConnectedPMEServiceName: 6cc74545-d7b9-4050-9dfa-ebefcc8961ea
-        ${{ else }}:
-          ConnectedPMEServiceName: 248d384a-b39b-46e3-8ad5-c2c210d5e7ca
+        ${{ if eq(parameters.microbuildUseESRP, true) }}:
+          ${{ if eq(parameters.enableMicrobuildForMacAndLinux, 'true') }}:
+            azureSubscription: 'MicroBuild Signing Task (DevDiv)'
+            useEsrpCli: true
+          ${{ elseif eq(variables['System.TeamProject'], 'DevDiv') }}:
+            ConnectedPMEServiceName: 6cc74545-d7b9-4050-9dfa-ebefcc8961ea
+          ${{ else }}:
+            ConnectedPMEServiceName: 248d384a-b39b-46e3-8ad5-c2c210d5e7ca
       env:
         TeamName: $(_TeamName)
         MicroBuildOutputFolderOverride: ${{ parameters.microBuildOutputFolder }}
