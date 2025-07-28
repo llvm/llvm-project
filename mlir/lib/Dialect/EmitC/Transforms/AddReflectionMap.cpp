@@ -80,10 +80,29 @@ public:
 
   LogicalResult matchAndRewrite(mlir::emitc::ClassOp classOp,
                                 PatternRewriter &rewriter) const override {
-    MLIRContext *context = rewriter.getContext();
-
+    mlir::MLIRContext *context = rewriter.getContext();
+    emitc::OpaqueType stringViewType =
+        mlir::emitc::OpaqueType::get(rewriter.getContext(), "std::string_view");
+    emitc::OpaqueType charType =
+        mlir::emitc::OpaqueType::get(rewriter.getContext(), "char");
     emitc::OpaqueType mapType = mlir::emitc::OpaqueType::get(
-        context, "const std::map<std::string, char*>");
+        rewriter.getContext(), "const std::map<std::string, char*>");
+
+    FunctionType funcType =
+        rewriter.getFunctionType({stringViewType}, {charType});
+    emitc::FuncOp executeFunc =
+        classOp.lookupSymbol<mlir::emitc::FuncOp>("execute");
+    if (executeFunc)
+      rewriter.setInsertionPoint(executeFunc);
+    else
+      classOp.emitError() << "ClassOp must contain a function named 'execute' "
+                             "to add reflection map";
+
+    emitc::FuncOp getBufferFunc = rewriter.create<mlir::emitc::FuncOp>(
+        classOp.getLoc(), "getBufferForName", funcType);
+
+    Block *funcBody = getBufferFunc.addEntryBlock();
+    rewriter.setInsertionPointToStart(funcBody);
 
     // Collect all field names
     std::vector<std::pair<std::string, std::string>> fieldNames;
@@ -110,45 +129,44 @@ public:
       }
     });
 
-    // Construct the map initializer string
     std::string mapInitializer = "{ ";
     for (size_t i = 0; i < fieldNames.size(); ++i) {
       mapInitializer += " { \"" + fieldNames[i].first + "\", " +
                         "reinterpret_cast<char*>(&" + fieldNames[i].second +
-                        ")";
-      mapInitializer += " }";
+                        ")",
+          mapInitializer += " }";
       if (i < fieldNames.size() - 1)
         mapInitializer += ", ";
     }
     mapInitializer += " }";
 
-    emitc::OpaqueType returnType = mlir::emitc::OpaqueType::get(
-        context, "const std::map<std::string, char*>");
+    emitc::OpaqueType iteratorType = mlir::emitc::OpaqueType::get(
+        context, "std::map<std::string, char*>::const_iterator");
 
-    emitc::FuncOp executeFunc =
-        classOp.lookupSymbol<mlir::emitc::FuncOp>("execute");
-    if (executeFunc)
-      rewriter.setInsertionPoint(executeFunc);
-    else
-      classOp.emitError() << "ClassOp must contain a function named 'execute' "
-                             "to add reflection map";
-
-    // Create the getFeatures function
-    emitc::FuncOp getFeaturesFunc = rewriter.create<mlir::emitc::FuncOp>(
-        classOp.getLoc(), "getFeatures",
-        rewriter.getFunctionType({}, {returnType}));
-
-    // Add the body of the getFeatures function
-    Block *funcBody = getFeaturesFunc.addEntryBlock();
-    rewriter.setInsertionPointToStart(funcBody);
-
-    // Create the constant map
     emitc::ConstantOp bufferMap = rewriter.create<emitc::ConstantOp>(
         classOp.getLoc(), mapType,
         emitc::OpaqueAttr::get(context, mapInitializer));
 
-    rewriter.create<mlir::emitc::ReturnOp>(classOp.getLoc(),
-                                           bufferMap.getResult());
+    mlir::Value nameArg = getBufferFunc.getArgument(0);
+    emitc::CallOpaqueOp it = rewriter.create<emitc::CallOpaqueOp>(
+        classOp.getLoc(), iteratorType, rewriter.getStringAttr("find"),
+        mlir::ValueRange{bufferMap.getResult(), nameArg});
+    emitc::CallOpaqueOp endIt = rewriter.create<emitc::CallOpaqueOp>(
+        classOp.getLoc(), iteratorType, rewriter.getStringAttr("end"),
+        bufferMap.getResult());
+    emitc::CallOpaqueOp isEnd = rewriter.create<emitc::CallOpaqueOp>(
+        classOp.getLoc(), rewriter.getI1Type(),
+        "operator==", mlir::ValueRange{it.getResult(0), endIt.getResult(0)});
+    emitc::ConstantOp nullPtr = rewriter.create<emitc::ConstantOp>(
+        classOp.getLoc(), charType, emitc::OpaqueAttr::get(context, "nullptr"));
+    emitc::CallOpaqueOp second = rewriter.create<emitc::CallOpaqueOp>(
+        classOp.getLoc(), charType, "second", it.getResult(0));
+
+    emitc::ConditionalOp result = rewriter.create<emitc::ConditionalOp>(
+        classOp.getLoc(), charType, isEnd.getResult(0), nullPtr.getResult(),
+        second.getResult(0));
+
+    rewriter.create<emitc::ReturnOp>(classOp.getLoc(), result.getResult());
 
     return success();
   }
