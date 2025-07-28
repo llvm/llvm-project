@@ -8042,8 +8042,8 @@ static void AddTemplateOverloadCandidateImmediately(
 
     Candidate.IgnoreObjectArgument =
         isa<CXXMethodDecl>(Candidate.Function) &&
-        cast<CXXMethodDecl>(Candidate.Function)
-            ->isImplicitObjectMemberFunction() &&
+        !cast<CXXMethodDecl>(Candidate.Function)
+             ->isExplicitObjectMemberFunction() &&
         !isa<CXXConstructorDecl>(Candidate.Function);
 
     Candidate.ExplicitCallArguments = Args.size();
