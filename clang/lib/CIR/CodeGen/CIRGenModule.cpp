@@ -1208,6 +1208,15 @@ cir::GlobalOp CIRGenModule::getGlobalForStringLiteral(const StringLiteral *s,
   return gv;
 }
 
+void CIRGenModule::emitExplicitCastExprType(const ExplicitCastExpr *e,
+                                            CIRGenFunction *cgf) {
+  if (cgf && e->getType()->isVariablyModifiedType())
+    cgf->emitVariablyModifiedType(e->getType());
+
+  assert(!cir::MissingFeatures::generateDebugInfo() &&
+         "emitExplicitCastExprType");
+}
+
 void CIRGenModule::emitDeclContext(const DeclContext *dc) {
   for (Decl *decl : dc->decls()) {
     // Unlike other DeclContexts, the contents of an ObjCImplDecl at TU scope
