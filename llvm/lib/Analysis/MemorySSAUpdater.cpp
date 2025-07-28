@@ -228,21 +228,20 @@ MemoryAccess *MemorySSAUpdater::tryRemoveTrivialPhi(MemoryPhi *Phi,
   if (!Same)
     return nullptr;
 
-  TrackingVH<MemoryAccess> Result(Same);
-
   // Worklist approach to recursively removing trivial Phis.
-  SmallVector<TrackingVH<Value>, 5> Worklist;
+  SmallVector<Value*, 5> Worklist;
+  SmallSetVector<Value*, 5> Visited;
 
   for (auto U : Same->users()) {
     if (dyn_cast<MemoryPhi>(&*U))
-      Worklist.push_back(TrackingVH<Value>(U));
+      Worklist.push_back(&*U);
   }
 
   while (!Worklist.empty() && Worklist.size() < TrivialPhiProcessingLimit) {
     MemoryPhi *RecPhi = dyn_cast<MemoryPhi>(&*(Worklist[Worklist.size() - 1]));
     Worklist.pop_back();
 
-    if (!RecPhi)
+    if (!RecPhi || Visited.contains(RecPhi))
       continue;
     auto RecOperands = RecPhi->operands();
 
@@ -267,17 +266,22 @@ MemoryAccess *MemorySSAUpdater::tryRemoveTrivialPhi(MemoryPhi *Phi,
       continue;
 
     if (RecPhi) {
+      if (RecPhi == Same) {
+        // Update the returned value
+        Same = RecSame;
+      }
+      Visited.insert(RecPhi);
       RecPhi->replaceAllUsesWith(RecSame);
       removeMemoryAccess(RecPhi);
     }
 
     for (auto U : RecSame->users()) {
       if (dyn_cast<MemoryPhi>(&*U))
-        Worklist.push_back(TrackingVH<Value>(U));
+        Worklist.push_back(&*U);
     }
   }
 
-  return Result;
+  return Same;
 }
 
 void MemorySSAUpdater::insertUse(MemoryUse *MU, bool RenameUses) {
