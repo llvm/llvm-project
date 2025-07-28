@@ -41,7 +41,7 @@ Note : No distinction is made between the support in Parser/Semantics, MLIR, Low
 | target construct                                           | P      | device clause not supported |
 | target update construct                                    | P      | device clause not supported |
 | declare target directive                                   | P      | |
-| teams construct                                            | P      | reduction clause not supported |
+| teams construct                                            | Y      | |
 | distribute construct                                       | P      | dist_schedule clause not supported |
 | distribute simd construct                                  | P      | dist_schedule and linear clauses are not supported |
 | distribute parallel loop construct                         | P      | dist_schedule clause not supported |
