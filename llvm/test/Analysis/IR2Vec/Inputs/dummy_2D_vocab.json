@@ -47,6 +47,7 @@
         "FPTrunc": [89, 90],
         "FPExt": [91, 92],
         "PtrToInt": [93, 94],
+        "PtrToAddr": [135, 136],
         "IntToPtr": [95, 96],
         "BitCast": [97, 98],
         "AddrSpaceCast": [99, 100],
@@ -66,8 +67,7 @@
         "ExtractValue": [127, 128],
         "InsertValue": [129, 130],
         "LandingPad": [131, 132],
-        "Freeze": [133, 134],
-        "PtrToAddr": [135, 136]
+        "Freeze": [133, 134]
     },
     "Types": {
         "FloatTy": [1, 2],
