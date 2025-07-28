@@ -365,14 +365,14 @@ void AccStructureChecker::CheckAtomicStmt(
       context_.Say(expr.source,
           "LHS of atomic %s statement must be scalar"_err_en_US, construct);
     }
-    // TODO: Check if lhs is intrinsic type
+    // TODO: Check if lhs is intrinsic type.
   }
   if (rhs) {
     if (rhs->Rank() != 0) {
       context_.Say(var.GetSource(),
           "RHS of atomic %s statement must be scalar"_err_en_US, construct);
     }
-    // TODO: Check if rhs is intrinsic type
+    // TODO: Check if rhs is intrinsic type.
   }
 }
 
@@ -445,12 +445,6 @@ void AccStructureChecker::CheckAtomicUpdateStmt(
               "Arguments to the atomic update operation cannot reference the updated variable, %s, as a subexpression"_err_en_US,
               updateVar.AsFortran());
         }
-        // TODO:
-        // if (captureVar && omp::IsSubexpressionOf(*captureVar, arg)) {
-        //  context_.Say(expr.source,
-        //      "The RHS of this atomic update statement cannot reference the
-        //      capture variable: %s"_err_en_US, captureVar->AsFortran());
-        //}
       }
       if (!foundUpdateVar) {
         context_.Say(expr.source,
@@ -474,13 +468,6 @@ void AccStructureChecker::CheckAtomicWriteStmt(
           "The RHS of this atomic write statement cannot reference the atomic variable: %s"_err_en_US,
           updateVar.AsFortran());
     }
-    // TODO fix tests that this breaks.
-    // if (captureVar && omp::IsSubexpressionOf(*captureVar, *rhs)) {
-    //  context_.Say(expr.source,
-    //      "The RHS of this atomic write statement cannot reference the
-    //      variable, %s, used to capture the atomic variable"_err_en_US,
-    //      captureVar->AsFortran());
-    //}
   }
 }
 
