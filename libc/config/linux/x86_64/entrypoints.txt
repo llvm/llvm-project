@@ -377,6 +377,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.wcsrchr
     libc.src.wchar.wcsspn
     libc.src.wchar.wcscspn
+    libc.src.wchar.wcsdup
     libc.src.wchar.wmemcmp
     libc.src.wchar.wmempcpy
     libc.src.wchar.wmemcpy
@@ -1261,10 +1262,16 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.socket.recvmsg
 
     # wchar.h entrypoints
+    libc.src.wchar.mblen
+    libc.src.wchar.mbrlen
+    libc.src.wchar.mbsinit
     libc.src.wchar.mbrtowc
     libc.src.wchar.mbtowc
     libc.src.wchar.wcrtomb
     libc.src.wchar.wctomb
+    libc.src.wchar.wcstombs
+    libc.src.wchar.wcsrtombs
+    libc.src.wchar.wcsnrtombs
   )
 endif()
 

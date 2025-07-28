@@ -582,6 +582,7 @@ LogicalResult WhileLowering::matchAndRewrite(WhileOp whileOp,
   // block. This should be reconsidered if we allow break/continue in SCF.
   rewriter.setInsertionPointToEnd(before);
   auto condOp = cast<ConditionOp>(before->getTerminator());
+  SmallVector<Value> args = llvm::to_vector(condOp.getArgs());
   rewriter.replaceOpWithNewOp<cf::CondBranchOp>(condOp, condOp.getCondition(),
                                                 after, condOp.getArgs(),
                                                 continuation, ValueRange());
@@ -593,7 +594,7 @@ LogicalResult WhileLowering::matchAndRewrite(WhileOp whileOp,
 
   // Replace the op with values "yielded" from the "before" region, which are
   // visible by dominance.
-  rewriter.replaceOp(whileOp, condOp.getArgs());
+  rewriter.replaceOp(whileOp, args);
 
   return success();
 }
