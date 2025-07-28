@@ -1416,68 +1416,21 @@ public:
 
   /// Create OpenMP interop with the given interop context
   omp_interop_val_t *create_interop(int32_t ID, int32_t InteropContext,
-                                    interop_spec_t *InteropSpec) {
-    assert(InteropSpec && "Interop spec is null");
-    auto &Device = getDevice(ID);
-    auto InteropOrErr = Device.createInterop(InteropContext, *InteropSpec);
-    if (!InteropOrErr) {
-      REPORT("Failure to create interop object for device " DPxMOD ": %s\n",
-             DPxPTR(InteropSpec), toString(InteropOrErr.takeError()).c_str());
-      return nullptr;
-    }
-    return *InteropOrErr;
-  }
+                                    interop_spec_t *InteropSpec);
 
   /// Release OpenMP interop object
-  int32_t release_interop(int32_t ID, omp_interop_val_t *Interop) {
-    assert(Interop && "Interop is null");
-    assert(Interop->DeviceId == ID && "Interop does not match device id");
-    auto &Device = getDevice(ID);
-    auto Err = Device.releaseInterop(Interop);
-    if (Err) {
-      REPORT("Failure to release interop object " DPxMOD ": %s\n",
-             DPxPTR(Interop), toString(std::move(Err)).c_str());
-      return OFFLOAD_FAIL;
-    }
-    return OFFLOAD_SUCCESS;
-  }
+  int32_t release_interop(int32_t ID, omp_interop_val_t *Interop);
 
   /// Flush the queue associated with the interop object if necessary
-  int32_t flush_queue(omp_interop_val_t *Interop) {
-    assert(Interop && "Interop is null");
-    auto Err = flushQueueImpl(Interop);
-    if (Err) {
-      REPORT("Failure to flush interop object " DPxMOD " queue: %s\n",
-             DPxPTR(Interop), toString(std::move(Err)).c_str());
-      return OFFLOAD_FAIL;
-    }
-    return OFFLOAD_SUCCESS;
-  }
+  int32_t flush_queue(omp_interop_val_t *Interop);
+
   /// Perform a host synchronization with the queue associated with the interop
   /// object and wait for it to complete.
-  int32_t sync_barrier(omp_interop_val_t *Interop) {
-    assert(Interop && "Interop is null");
-    auto Err = syncBarrierImpl(Interop);
-    if (Err) {
-      REPORT("Failure to synchronize interop object " DPxMOD ": %s\n",
-             DPxPTR(Interop), toString(std::move(Err)).c_str());
-      return OFFLOAD_FAIL;
-    }
-    return OFFLOAD_SUCCESS;
-  }
+  int32_t sync_barrier(omp_interop_val_t *Interop);
 
   /// Queue an asynchronous barrier in the queue associated with the interop
   /// object and return immediately.
-  int32_t async_barrier(omp_interop_val_t *Interop) {
-    assert(Interop && "Interop is null");
-    auto Err = asyncBarrierImpl(Interop);
-    if (Err) {
-      REPORT("Failure to queue barrier in interop object " DPxMOD ": %s\n",
-             DPxPTR(Interop), toString(std::move(Err)).c_str());
-      return OFFLOAD_FAIL;
-    }
-    return OFFLOAD_SUCCESS;
-  }
+  int32_t async_barrier(omp_interop_val_t *Interop);
 
 private:
   /// Indicates if the platform runtime has been fully initialized.
