@@ -174,8 +174,8 @@ def PSABS_H   : RVPUnaryWUF<0b00, 0b00111, "psabs.h">;
 def PSABS_B   : RVPUnaryWUF<0b10, 0b00111, "psabs.b">;
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV64] in {
-def PSEXT_W_B      : RVPUnaryWUF<0b01, 0b00100, "psext.w.b">;
-def PSEXT_W_H      : RVPUnaryWUF<0b01, 0b00101, "psext.w.h">;
+def PSEXT_W_B : RVPUnaryWUF<0b01, 0b00100, "psext.w.b">;
+def PSEXT_W_H : RVPUnaryWUF<0b01, 0b00101, "psext.w.h">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in
