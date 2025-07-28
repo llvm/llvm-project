@@ -4253,7 +4253,28 @@ FormatToken *TokenAnnotator::calculateInitializerColumnList(
       CurrentToken = CurrentToken->Next;
       if (!CurrentToken)
         break;
-      CurrentToken->StartsColumn = true;
+
+      // Right (closing) braces should not count as starting a column because
+      // they are aligned using separate logic.
+
+      // Note: This uses startsSequence() so that trailing comments are skipped
+      // when checking if the token after a comma/l-brace is a r_brace. We can't
+      // just ignore comments in general, because an inline comment with
+      // something else after it should still count as starting a column.
+      // IE:
+      //
+      //        { // a
+      //          4
+      //        }
+      //
+      //   vs.
+      //
+      //        { /* a */ 4 }
+      //
+      // In the first case, the comment does not start a column, but in the
+      // second it does.
+      CurrentToken->StartsColumn = !CurrentToken->startsSequence(tok::r_brace);
+
       CurrentToken = CurrentToken->Previous;
     }
     CurrentToken = CurrentToken->Next;
