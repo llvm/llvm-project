@@ -9,6 +9,7 @@ add_offload_unittest("device"
     device/olGetDeviceInfoSize.cpp)
 
 add_offload_unittest("event"
+    event/olCreateEvent.cpp
     event/olDestroyEvent.cpp
     event/olSyncEvent.cpp
     event/olGetEventInfo.cpp

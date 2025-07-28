@@ -19,7 +19,6 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
 using namespace llvm;
@@ -186,10 +185,10 @@ void MCObjectStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 
   getAssembler().registerSymbol(*Symbol);
 
-  // If there is a current fragment, mark the symbol as pointing into it.
-  // Otherwise queue the label and set its fragment pointer when we emit the
-  // next fragment.
-  MCFragment *F = getCurrentFragment();
+  // Set the fragment and offset. This function might be called by
+  // changeSection, when the section stack top hasn't been changed to the new
+  // section.
+  MCFragment *F = CurFrag;
   Symbol->setFragment(F);
   Symbol->setOffset(F->getContents().size());
 
@@ -248,6 +247,15 @@ void MCObjectStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   assert(Section && "Cannot switch to a null section!");
   getContext().clearDwarfLocSeen();
 
+  // Register the section and create an initial fragment for subsection 0
+  // if `Subsection` is non-zero.
+  bool NewSec = getAssembler().registerSection(*Section);
+  MCFragment *F0 = nullptr;
+  if (NewSec && Subsection) {
+    changeSection(Section, 0);
+    F0 = CurFrag;
+  }
+
   auto &Subsections = Section->Subsections;
   size_t I = 0, E = Subsections.size();
   while (I != E && Subsections[I].first < Subsection)
@@ -263,12 +271,13 @@ void MCObjectStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   Section->CurFragList = &Subsections[I].second;
   CurFrag = Section->CurFragList->Tail;
 
-  getAssembler().registerSection(*Section);
-}
-
-void MCObjectStreamer::switchSectionNoPrint(MCSection *Section) {
-  MCStreamer::switchSectionNoPrint(Section);
-  changeSection(Section, 0);
+  // Define the section symbol at subsection 0's initial fragment if required.
+  if (!NewSec)
+    return;
+  if (auto *Sym = Section->getBeginSymbol()) {
+    Sym->setFragment(Subsection ? F0 : CurFrag);
+    getAssembler().registerSymbol(*Sym);
+  }
 }
 
 void MCObjectStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
@@ -331,31 +340,33 @@ void MCObjectStreamer::emitInstToData(const MCInst &Inst,
   MCFragment *F = getCurrentFragment();
 
   // Append the instruction to the data fragment.
-  size_t FixupStartIndex = F->getFixups().size();
   size_t CodeOffset = F->getContents().size();
   SmallVector<MCFixup, 1> Fixups;
   getAssembler().getEmitter().encodeInstruction(
       Inst, F->getContentsForAppending(), Fixups, STI);
   F->doneAppending();
-  if (!Fixups.empty())
-    F->appendFixups(Fixups);
   F->setHasInstructions(STI);
 
+  if (Fixups.empty())
+    return;
   bool MarkedLinkerRelaxable = false;
-  for (auto &Fixup : MutableArrayRef(F->getFixups()).slice(FixupStartIndex)) {
+  for (auto &Fixup : Fixups) {
     Fixup.setOffset(Fixup.getOffset() + CodeOffset);
-    if (!Fixup.isLinkerRelaxable())
+    if (!Fixup.isLinkerRelaxable() || MarkedLinkerRelaxable)
       continue;
-    F->setLinkerRelaxable();
+    MarkedLinkerRelaxable = true;
+    // Set the fragment's order within the subsection for use by
+    // MCAssembler::relaxAlign.
+    auto *Sec = F->getParent();
+    if (!Sec->isLinkerRelaxable())
+      Sec->setLinkerRelaxable();
     // Do not add data after a linker-relaxable instruction. The difference
     // between a new label and a label at or before the linker-relaxable
     // instruction cannot be resolved at assemble-time.
-    if (!MarkedLinkerRelaxable) {
-      MarkedLinkerRelaxable = true;
-      getCurrentSectionOnly()->setLinkerRelaxable();
-      newFragment();
-    }
+    F->setLinkerRelaxable();
+    newFragment();
   }
+  F->appendFixups(Fixups);
 }
 
 void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,

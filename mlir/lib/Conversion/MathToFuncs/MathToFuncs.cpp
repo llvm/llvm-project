@@ -17,7 +17,6 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -699,7 +698,8 @@ static func::FuncOp createCtlzFunc(ModuleOp *module, Type elementType) {
   scf::IfOp ifOp =
       scf::IfOp::create(builder, elementType, inputEqZero,
                         /*addThenBlock=*/true, /*addElseBlock=*/true);
-  ifOp.getThenBodyBuilder().create<scf::YieldOp>(loc, bitWidthValue);
+  auto thenBuilder = ifOp.getThenBodyBuilder();
+  scf::YieldOp::create(thenBuilder, loc, bitWidthValue);
 
   auto elseBuilder =
       ImplicitLocOpBuilder::atBlockEnd(loc, &ifOp.getElseRegion().front());

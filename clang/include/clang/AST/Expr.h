@@ -16,6 +16,7 @@
 #include "clang/AST/APNumericStorage.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTVector.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/ComputeDependence.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclAccessPair.h"
@@ -261,6 +262,12 @@ public:
   bool isUnusedResultAWarning(const Expr *&WarnExpr, SourceLocation &Loc,
                               SourceRange &R1, SourceRange &R2,
                               ASTContext &Ctx) const;
+
+  /// Returns the WarnUnusedResultAttr that is declared on the callee
+  /// or its return type declaration, together with a NamedDecl that
+  /// refers to the declaration the attribute is attached to.
+  static std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
+  getUnusedResultAttrImpl(const Decl *Callee, QualType ReturnType);
 
   /// isLValue - True if this expression is an "l-value" according to
   /// the rules of the current language.  C and C++ give somewhat
@@ -3190,11 +3197,13 @@ public:
   /// type.
   QualType getCallReturnType(const ASTContext &Ctx) const;
 
-  /// Returns the WarnUnusedResultAttr that is either declared on the called
-  /// function, or its return type declaration, together with a NamedDecl that
-  /// refers to the declaration the attribute is attached onto.
-  std::pair<const NamedDecl *, const Attr *>
-  getUnusedResultAttr(const ASTContext &Ctx) const;
+  /// Returns the WarnUnusedResultAttr that is declared on the callee
+  /// or its return type declaration, together with a NamedDecl that
+  /// refers to the declaration the attribute is attached to.
+  std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
+  getUnusedResultAttr(const ASTContext &Ctx) const {
+    return getUnusedResultAttrImpl(getCalleeDecl(), getCallReturnType(Ctx));
+  }
 
   /// Returns true if this call expression should warn on unused results.
   bool hasUnusedResultAttr(const ASTContext &Ctx) const {
