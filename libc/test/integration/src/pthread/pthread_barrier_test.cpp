@@ -17,7 +17,6 @@
 #include "src/pthread/pthread_mutex_init.h"
 #include "src/pthread/pthread_mutex_lock.h"
 #include "src/pthread/pthread_mutex_unlock.h"
-#include "src/stdio/printf.h"
 #include "src/string/memset.h"
 
 #include "test/IntegrationTest/test.h"

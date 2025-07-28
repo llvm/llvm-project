@@ -37,7 +37,7 @@ public:
 };
 
 static_assert(
-    sizeof(Barrier) <= sizeof(pthread_barrier_t),
+    sizeof(Barrier) == sizeof(pthread_barrier_t),
     "The public pthread_barrier_t type cannot accommodate the internal "
     "barrier type.");
 
