@@ -70,6 +70,7 @@ void f() {
   // CHECK-FIXES: mlir::ModuleOp::create(ib)
   ib.create<mlir::ModuleOp>(   );
 
-  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: use 'OpType::create(builder, ...)' instead of 'builder.create<OpType>(...)' [llvm-use-new-mlir-op-builder]
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use 'OpType::create(builder, ...)' instead of 'builder.create<OpType>(...)' [llvm-use-new-mlir-op-builder]
+  // CHECK-FIXES: mlir::OpBuilder().create<mlir::ModuleOp>(builder.getUnknownLoc());
   mlir::OpBuilder().create<mlir::ModuleOp>(builder.getUnknownLoc());
 }
