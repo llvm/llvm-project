@@ -929,12 +929,11 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
     if (!AllConstantInt)
       break;
 
-    // TODO: Try to intersect two inrange attributes?
-    if (!InRange) {
-      InRange = GEP->getInRange();
-      if (InRange)
-        // Adjust inrange by offset until now.
-        InRange = InRange->sextOrTrunc(BitWidth).subtract(Offset);
+    // Adjust inrange offset and intersect inrange attributes
+    if (auto GEPRange = GEP->getInRange()) {
+      auto AdjustedGEPRange = GEPRange->sextOrTrunc(BitWidth).subtract(Offset);
+      InRange =
+          InRange ? InRange->intersectWith(AdjustedGEPRange) : AdjustedGEPRange;
     }
 
     Ptr = cast<Constant>(GEP->getOperand(0));
@@ -1483,6 +1482,20 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
   switch (Opcode) {
   default:
     llvm_unreachable("Missing case");
+  case Instruction::PtrToAddr:
+    if (auto *GEP = dyn_cast<GEPOperator>(C)) {
+      // For now just handle the basic case of GEPs on NULL for ptrtoaddr.
+      // (ptrtoaddr (gep null, x)) -> x
+      // (ptrtoaddr (gep (gep null, x), y) -> x + y, etc.
+      unsigned BitWidth = DL.getIndexTypeSizeInBits(GEP->getType());
+      APInt BaseOffset(BitWidth, 0);
+      auto *Base = cast<Constant>(GEP->stripAndAccumulateConstantOffsets(
+          DL, BaseOffset, /*AllowNonInbounds=*/true));
+      if (Base->isNullValue()) {
+        return ConstantInt::get(C->getContext(), BaseOffset);
+      }
+    }
+    break;
   case Instruction::PtrToInt:
     if (auto *CE = dyn_cast<ConstantExpr>(C)) {
       Constant *FoldedValue = nullptr;
@@ -2004,21 +2017,20 @@ inline bool llvm_fenv_testexcept() {
   return false;
 }
 
-static const APFloat FTZPreserveSign(const APFloat &V) {
+static APFloat FTZPreserveSign(const APFloat &V) {
   if (V.isDenormal())
     return APFloat::getZero(V.getSemantics(), V.isNegative());
   return V;
 }
 
-static const APFloat FlushToPositiveZero(const APFloat &V) {
+static APFloat FlushToPositiveZero(const APFloat &V) {
   if (V.isDenormal())
     return APFloat::getZero(V.getSemantics(), false);
   return V;
 }
 
-static const APFloat
-FlushWithDenormKind(const APFloat &V,
-                    DenormalMode::DenormalModeKind DenormKind) {
+static APFloat FlushWithDenormKind(const APFloat &V,
+                                   DenormalMode::DenormalModeKind DenormKind) {
   assert(DenormKind != DenormalMode::DenormalModeKind::Invalid &&
          DenormKind != DenormalMode::DenormalModeKind::Dynamic);
   switch (DenormKind) {
@@ -2677,11 +2689,14 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
       case Intrinsic::nvvm_round_ftz_f:
       case Intrinsic::nvvm_round_f:
-      case Intrinsic::nvvm_round_d:
-        return ConstantFoldFP(
-            round, APF, Ty,
-            nvvm::GetNVVMDenromMode(
-                nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
+      case Intrinsic::nvvm_round_d: {
+        // Use APFloat implementation instead of native libm call, as some
+        // implementations (e.g. on PPC) do not preserve the sign of negative 0.
+        bool IsFTZ = nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID);
+        auto V = IsFTZ ? FTZPreserveSign(APF) : APF;
+        V.roundToIntegral(APFloat::rmNearestTiesToAway);
+        return ConstantFP::get(Ty->getContext(), V);
+      }
 
       case Intrinsic::nvvm_saturate_ftz_f:
       case Intrinsic::nvvm_saturate_d:

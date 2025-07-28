@@ -3744,3 +3744,61 @@ define <vscale x 1 x float> @vector_deinterleave_nxv1f32_nxv8f32_oneactive2(<vsc
   %ext = extractvalue {<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>} %res, 5
   ret <vscale x 1 x float> %ext
 }
+
+
+define { <8 x float>, <8 x float> } @interleave_deinterleave2(<8 x float> %a, <8 x float> %b) {
+; V-LABEL: interleave_deinterleave2:
+; V:       # %bb.0: # %entry
+; V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; V-NEXT:    vwaddu.vv v12, v8, v10
+; V-NEXT:    li a0, -1
+; V-NEXT:    vwmaccu.vx v12, a0, v10
+; V-NEXT:    li a0, 32
+; V-NEXT:    vnsrl.wx v10, v12, a0
+; V-NEXT:    vnsrl.wi v8, v12, 0
+; V-NEXT:    ret
+;
+; ZIP-LABEL: interleave_deinterleave2:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; ZIP-NEXT:    vmv2r.v v12, v10
+; ZIP-NEXT:    li a0, 32
+; ZIP-NEXT:    ri.vzip2a.vv v16, v8, v12
+; ZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; ZIP-NEXT:    vnsrl.wx v10, v16, a0
+; ZIP-NEXT:    vnsrl.wi v8, v16, 0
+; ZIP-NEXT:    ret
+entry:
+  %0 = call <16 x float> @llvm.vector.interleave2.v16f32(<8 x float> %a, <8 x float> %b)
+  %1 = call { <8 x float>, <8 x float> } @llvm.vector.deinterleave2.v16f32(<16 x float> %0)
+  ret { <8 x float>, <8 x float> } %1
+}
+
+define <16 x float> @deinterleave_interleave2(<16 x float> %arg) {
+; V-LABEL: deinterleave_interleave2:
+; V:       # %bb.0: # %entry
+; V-NEXT:    li a0, 32
+; V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; V-NEXT:    vnsrl.wi v12, v8, 0
+; V-NEXT:    vnsrl.wx v14, v8, a0
+; V-NEXT:    vwaddu.vv v8, v12, v14
+; V-NEXT:    li a0, -1
+; V-NEXT:    vwmaccu.vx v8, a0, v14
+; V-NEXT:    ret
+;
+; ZIP-LABEL: deinterleave_interleave2:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; ZIP-NEXT:    vnsrl.wi v12, v8, 0
+; ZIP-NEXT:    li a0, 32
+; ZIP-NEXT:    vnsrl.wx v16, v8, a0
+; ZIP-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; ZIP-NEXT:    ri.vzip2a.vv v8, v12, v16
+; ZIP-NEXT:    ret
+entry:
+  %0 = call { <8 x float>, <8 x float> } @llvm.vector.deinterleave2.v16f32(<16 x float> %arg)
+  %a = extractvalue { <8 x float>, <8 x float> } %0, 0
+  %b = extractvalue { <8 x float>, <8 x float> } %0, 1
+  %res = call <16 x float> @llvm.vector.interleave2.v16f32(<8 x float> %a, <8 x float> %b)
+  ret <16 x float> %res
+}

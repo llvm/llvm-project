@@ -8,21 +8,10 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 define void @test_distance_positive_independent_via_trip_count(ptr %A) {
 ; CHECK-LABEL: 'test_distance_positive_independent_via_trip_count'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
-; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.A.400 = getelementptr inbounds i32, ptr %A.400, i64 %iv
-; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: (400 + %A)<nuw> High: (804 + %A))
-; CHECK-NEXT:            Member: {(400 + %A)<nuw>,+,4}<nuw><%loop>
-; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %A High: (101 + %A))
-; CHECK-NEXT:            Member: {%A,+,1}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:

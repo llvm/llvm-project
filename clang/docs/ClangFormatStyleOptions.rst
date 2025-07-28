@@ -1912,7 +1912,7 @@ the configuration (without a prefix: ``Auto``).
 
   * ``SFS_InlineOnly`` (in configuration: ``InlineOnly``)
     Only merge functions defined inside a class. Same as ``inline``,
-    except it does not implies ``empty``: i.e. top level empty functions
+    except it does not imply ``empty``: i.e. top level empty functions
     are not merged either.
 
     .. code-block:: c++
@@ -4201,8 +4201,8 @@ the configuration (without a prefix: ``Auto``).
   * ``""`` means "arbitrary suffix"
   * ``"$"`` means "no suffix"
 
-  For example, if configured to ``"(_test)?$"``, then a header a.h would be seen
-  as the "main" include in both a.cc and a_test.cc.
+  For example, if configured to ``"(_test)?$"``, then a header a.h would be
+  seen as the "main" include in both a.cc and a_test.cc.
 
 .. _IncludeIsMainSourceRegex:
 
@@ -6399,6 +6399,14 @@ the configuration (without a prefix: ``Auto``).
        true:                                  false:
        IF (...)                        vs.    IF(...)
          <conditional-body>                     <conditional-body>
+
+  * ``bool AfterNot`` If ``true``, put a space between alternative operator ``not`` and the
+    opening parenthesis.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       return not (a || b);            vs.    return not(a || b);
 
   * ``bool AfterOverloadedOperator`` If ``true``, put a space between operator overloading and opening
     parentheses.
