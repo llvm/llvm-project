@@ -1,6 +1,21 @@
 cmake_minimum_required(VERSION 3.20.0)
 set(LLVM_SUBPROJECT_TITLE "Flang")
 
+# Patch: define dummy mlir-tblgen target for TableGen.cmake
+if(DEFINED MLIR_TABLEGEN_EXE AND NOT TARGET mlir-tblgen)
+  add_executable(mlir-tblgen IMPORTED GLOBAL)
+  set_target_properties(mlir-tblgen PROPERTIES
+    IMPORTED_LOCATION "${MLIR_TABLEGEN_EXE}"
+  )
+endif()
+
+if(DEFINED MLIR_TABLEGEN_EXE AND NOT TARGET MLIR-TBLGen)
+  add_executable(MLIR-TBLGen IMPORTED GLOBAL)
+  set_target_properties(MLIR-TBLGen PROPERTIES
+    IMPORTED_LOCATION "${MLIR_TABLEGEN_EXE}"
+  )
+endif()
+
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 endif()
