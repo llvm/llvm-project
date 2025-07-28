@@ -9,10 +9,9 @@ define void @reprocessing_crash() #0 {
 ; CHECK-LABEL: define void @reprocessing_crash(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x double> @llvm.vector.interleave2.nxv4f64(<vscale x 2 x double> zeroinitializer, <vscale x 2 x double> zeroinitializer)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <vscale x 4 x double> [ [[TMP0]], %[[ENTRY]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <vscale x 4 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2]] = fsub <vscale x 4 x double> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    br i1 false, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -48,11 +47,10 @@ define double @test_fp_single_reduction(i1 %c) #2 {
 ; CHECK-LABEL: define double @test_fp_single_reduction(
 ; CHECK-SAME: i1 [[C:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x double> @llvm.vector.interleave2.v8f64(<4 x double> zeroinitializer, <4 x double> zeroinitializer)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[VEC_PHI218:%.*]] = phi <4 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <8 x double> [ [[TMP0]], %[[ENTRY]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <8 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x double> zeroinitializer, <8 x double> zeroinitializer, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[TMP2]] = fadd <4 x double> [[VEC_PHI218]], [[STRIDED_VEC]]
 ; CHECK-NEXT:    [[TMP3]] = fadd <8 x double> [[TMP1]], zeroinitializer
