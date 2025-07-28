@@ -42,8 +42,6 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <cassert>
-#include <cstddef>
-#include <iostream>
 #include <utility>
 
 #define DEBUG_TYPE "instcombine"
@@ -51,6 +49,7 @@
 
 using namespace llvm;
 using namespace PatternMatch;
+
 
 /// Replace a select operand based on an equality comparison with the identity
 /// constant of a binop.
@@ -1714,6 +1713,7 @@ tryToReuseConstantFromSelectInComparison(SelectInst &Sel, ICmpInst &Cmp,
   if (Pred == CmpInst::ICMP_ULT && match(X, m_Add(m_Value(), m_Constant())))
     return nullptr;
 
+
   Value *SelVal0, *SelVal1; // We do not care which one is from where.
   match(&Sel, m_Select(m_Value(), m_Value(SelVal0), m_Value(SelVal1)));
   // At least one of these values we are selecting between must be a constant
@@ -2004,8 +2004,7 @@ Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
 ///   %b_sub' = usub.sat(y, IntConst2 - MostSignificantBit)
 ///   %or = or %a_sub', %b_sub'
 ///   %and = and %or, MostSignificantBit
-/// If the args are vectors
-///
+/// Likewise, for vector arguments as well.
 static Instruction *foldICmpUSubSatWithAndForMostSignificantBitCmp(
     SelectInst &SI, ICmpInst *ICI, InstCombiner::BuilderTy &Builder) {
   auto *CI = dyn_cast<ICmpInst>(SI.getCondition());
@@ -4332,9 +4331,10 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       bool IsCastNeeded = LHS->getType() != SelType;
       Value *CmpLHS = cast<CmpInst>(CondVal)->getOperand(0);
       Value *CmpRHS = cast<CmpInst>(CondVal)->getOperand(1);
-      if (IsCastNeeded || (LHS->getType()->isFPOrFPVectorTy() &&
-                           ((CmpLHS != LHS && CmpLHS != RHS) ||
-                            (CmpRHS != LHS && CmpRHS != RHS)))) {
+      if (IsCastNeeded ||
+          (LHS->getType()->isFPOrFPVectorTy() &&
+           ((CmpLHS != LHS && CmpLHS != RHS) ||
+            (CmpRHS != LHS && CmpRHS != RHS)))) {
         CmpInst::Predicate MinMaxPred = getMinMaxPred(SPF, SPR.Ordered);
 
         Value *Cmp;
