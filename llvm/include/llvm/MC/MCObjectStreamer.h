@@ -40,7 +40,6 @@ class MCObjectStreamer : public MCStreamer {
   std::unique_ptr<MCAssembler> Assembler;
   bool EmitEHFrame;
   bool EmitDebugFrame;
-  bool EmitSFrame;
 
   struct PendingAssignment {
     MCSymbol *Symbol;
@@ -71,7 +70,7 @@ public:
 
   void emitFrames(MCAsmBackend *MAB);
   MCSymbol *emitCFILabel() override;
-  void emitCFISections(bool EH, bool Debug, bool SFrame) override;
+  void emitCFISections(bool EH, bool Debug) override;
 
 public:
   void visitUsedSymbol(const MCSymbol &Sym) override;
