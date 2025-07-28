@@ -589,10 +589,10 @@ ModuleSP ModuleList::FindModule(lldb::user_id_t uid) const {
   ForEach([&](const ModuleSP &m) {
     if (m->GetID() == uid) {
       module_sp = m;
-      return true;
+      return IterationAction::Stop;
     }
 
-    return false;
+    return IterationAction::Continue;
   });
 
   return module_sp;
