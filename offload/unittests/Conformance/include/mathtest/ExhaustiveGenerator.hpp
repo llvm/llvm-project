@@ -56,6 +56,8 @@ public:
         Strides[Index] = Strides[Index + 1] * DimSizes[Index + 1];
   }
 
+  void reset() noexcept override { NextFlatIndex = 0; }
+
   [[nodiscard]] std::size_t
   fill(llvm::MutableArrayRef<InTypes>... Buffers) noexcept override {
     const std::array<std::size_t, NumInputs> BufferSizes = {Buffers.size()...};

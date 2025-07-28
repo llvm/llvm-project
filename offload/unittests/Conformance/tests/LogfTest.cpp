@@ -11,10 +11,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "mathtest/DeviceContext.hpp"
+#include "mathtest/CommandLineExtras.hpp"
 #include "mathtest/ExhaustiveGenerator.hpp"
-#include "mathtest/GpuMathTest.hpp"
 #include "mathtest/IndexedRange.hpp"
+#include "mathtest/TestConfig.hpp"
 #include "mathtest/TestRunner.hpp"
 
 #include "llvm/ADT/StringRef.h"
@@ -22,7 +22,6 @@
 #include <cstdlib>
 #include <limits>
 #include <math.h>
-#include <memory>
 
 namespace mathtest {
 
@@ -36,22 +35,22 @@ template <> struct FunctionConfig<logf> {
 };
 } // namespace mathtest
 
-int main() {
+int main(int argc, const char **argv) {
+  llvm::cl::ParseCommandLineOptions(argc, argv,
+                                    "Conformance test of the logf function");
+
   using namespace mathtest;
-
-  const llvm::StringRef Platform = PLATFORM;
-  auto Context = std::make_shared<DeviceContext>(Platform, /*DeviceId=*/0);
-
-  const llvm::StringRef Provider = PROVIDER;
-  const llvm::StringRef DeviceBinaryDir = DEVICE_BINARY_DIR;
-  GpuMathTest<logf> LogfTest(Context, Provider, DeviceBinaryDir);
 
   IndexedRange<float> Range(/*Begin=*/0.0f,
                             /*End=*/std::numeric_limits<float>::infinity(),
                             /*Inclusive=*/true);
   ExhaustiveGenerator<float> Generator(Range);
 
-  const auto Passed = runTest(LogfTest, Generator);
+  const auto Configs = cl::getTestConfigs();
+  const llvm::StringRef DeviceBinaryDir = DEVICE_BINARY_DIR;
+  const bool IsVerbose = cl::IsVerbose;
+
+  bool Passed = runTests<logf>(Generator, Configs, DeviceBinaryDir, IsVerbose);
 
   return Passed ? EXIT_SUCCESS : EXIT_FAILURE;
 }

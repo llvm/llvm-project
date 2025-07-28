@@ -11,10 +11,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "mathtest/DeviceContext.hpp"
+#include "mathtest/CommandLineExtras.hpp"
 #include "mathtest/ExhaustiveGenerator.hpp"
-#include "mathtest/GpuMathTest.hpp"
 #include "mathtest/IndexedRange.hpp"
+#include "mathtest/TestConfig.hpp"
 #include "mathtest/TestRunner.hpp"
 #include "mathtest/TypeExtras.hpp"
 
@@ -22,7 +22,6 @@
 
 #include <cstdlib>
 #include <math.h>
-#include <memory>
 
 using namespace mathtest;
 
@@ -43,19 +42,20 @@ template <> struct FunctionConfig<hypotf16> {
 };
 } // namespace mathtest
 
-int main() {
-  const llvm::StringRef Platform = PLATFORM;
-  auto Context = std::make_shared<DeviceContext>(Platform, /*DeviceId=*/0);
-
-  const llvm::StringRef Provider = PROVIDER;
-  const llvm::StringRef DeviceBinaryDir = DEVICE_BINARY_DIR;
-  GpuMathTest<hypotf16> Hypotf16Test(Context, Provider, DeviceBinaryDir);
+int main(int argc, const char **argv) {
+  llvm::cl::ParseCommandLineOptions(
+      argc, argv, "Conformance test of the hypotf16 function");
 
   IndexedRange<float16> RangeX;
   IndexedRange<float16> RangeY;
   ExhaustiveGenerator<float16, float16> Generator(RangeX, RangeY);
 
-  const auto Passed = runTest(Hypotf16Test, Generator);
+  const auto Configs = cl::getTestConfigs();
+  const llvm::StringRef DeviceBinaryDir = DEVICE_BINARY_DIR;
+  const bool IsVerbose = cl::IsVerbose;
+
+  bool Passed =
+      runTests<hypotf16>(Generator, Configs, DeviceBinaryDir, IsVerbose);
 
   return Passed ? EXIT_SUCCESS : EXIT_FAILURE;
 }

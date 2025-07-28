@@ -30,7 +30,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
-#include <optional>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -67,47 +66,25 @@ public:
     return ManagedBuffer<T>(TypedAddress, Size);
   }
 
-  [[nodiscard]] std::shared_ptr<DeviceImage>
+  [[nodiscard]] llvm::Expected<std::shared_ptr<DeviceImage>>
   loadBinary(llvm::StringRef Directory, llvm::StringRef BinaryName) const;
 
-  [[nodiscard]] std::optional<std::shared_ptr<DeviceImage>>
-  tryLoadBinary(llvm::StringRef Directory, llvm::StringRef BinaryName) const;
-
   template <typename KernelSignature>
-  DeviceKernel<KernelSignature>
+  [[nodiscard]] llvm::Expected<DeviceKernel<KernelSignature>>
   getKernel(const std::shared_ptr<DeviceImage> &Image,
-            llvm::StringRef KernelName) const noexcept {
+            llvm::StringRef KernelName) const {
     assert(Image && "Image provided to getKernel is null");
 
     if (Image->DeviceHandle != DeviceHandle)
-      FATAL_ERROR("Image provided to getKernel was created for a different "
-                  "device");
+      return llvm::createStringError(
+          "Image provided to getKernel was created for a different device");
 
-    auto KernelHandleOrErr = getKernelImpl(Image->Handle, KernelName);
+    auto ExpectedHandle = getKernelHandle(Image->Handle, KernelName);
 
-    if (auto Err = KernelHandleOrErr.takeError())
-      FATAL_ERROR(llvm::toString(std::move(Err)));
+    if (!ExpectedHandle)
+      return ExpectedHandle.takeError();
 
-    return DeviceKernel<KernelSignature>(Image, *KernelHandleOrErr);
-  }
-
-  template <typename KernelSignature>
-  [[nodiscard]] std::optional<DeviceKernel<KernelSignature>>
-  tryGetKernel(const std::shared_ptr<DeviceImage> &Image,
-               llvm::StringRef KernelName) const noexcept {
-    assert(Image && "Image provided to getKernel is null");
-
-    if (Image->DeviceHandle != DeviceHandle)
-      return std::nullopt;
-
-    auto KernelHandleOrErr = getKernelImpl(Image->Handle, KernelName);
-
-    if (auto Err = KernelHandleOrErr.takeError()) {
-      llvm::consumeError(std::move(Err));
-      return std::nullopt;
-    }
-
-    return DeviceKernel<KernelSignature>(Image, *KernelHandleOrErr);
+    return DeviceKernel<KernelSignature>(Image, *ExpectedHandle);
   }
 
   template <typename KernelSignature, typename... ArgTypes>
@@ -144,12 +121,9 @@ public:
   [[nodiscard]] llvm::StringRef getPlatform() const noexcept;
 
 private:
-  [[nodiscard]] llvm::Expected<std::shared_ptr<DeviceImage>>
-  loadBinaryImpl(llvm::StringRef Directory, llvm::StringRef BinaryName) const;
-
   [[nodiscard]] llvm::Expected<ol_symbol_handle_t>
-  getKernelImpl(ol_program_handle_t ProgramHandle,
-                llvm::StringRef KernelName) const noexcept;
+  getKernelHandle(ol_program_handle_t ProgramHandle,
+                  llvm::StringRef KernelName) const noexcept;
 
   void launchKernelImpl(ol_symbol_handle_t KernelHandle, uint32_t NumGroups,
                         uint32_t GroupSize, const void *KernelArgs,

@@ -96,56 +96,26 @@ function(add_offload_unittest test_dirname)
 endfunction()
 
 function(add_conformance_test test_name)
-  set(options "")
-  set(oneValueArgs "")
-  set(multiValueArgs "SOURCES;PROVIDERS")
-  cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+  set(target_name "${test_name}.conformance")
 
-  if(NOT ARG_SOURCES)
-    message(WARNING "Conformance test '${test_name}' must specify at least one source file")
-    return()
-  endif()
-  if(NOT ARG_PROVIDERS)
-    message(WARNING "Conformance test '${test_name}' must specify at least one provider")
-    return()
-  endif()
+  list(TRANSFORM ARGN PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/" OUTPUT_VARIABLE files)
+
   if(NOT TARGET libc)
     message(WARNING "Cannot run conformance tests without the LLVM C library")
     return()
   endif()
 
-  list(TRANSFORM ARG_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/" OUTPUT_VARIABLE files)
-  add_custom_target(offload.conformance.${test_name})
+  add_executable(${target_name} ${files})
+  add_dependencies(${target_name} conformance_device_binaries)
+  target_compile_definitions(${target_name}
+    PRIVATE DEVICE_BINARY_DIR="${OFFLOAD_CONFORMANCE_DEVICE_BINARY_DIR}")
+  target_link_libraries(${target_name} PRIVATE ${PLUGINS_TEST_COMMON} libc)
+  set_target_properties(${target_name} PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
-  foreach(provider IN LISTS ARG_PROVIDERS)
-    set(candidate_platforms ${OFFLOAD_CONFORMANCE_PROVIDER_PLATFORMS_${provider}})
-    add_custom_target(offload.conformance.${test_name}.${provider})
-
-    foreach(platform IN LISTS candidate_platforms)
-      if(platform IN_LIST OFFLOAD_CONFORMANCE_AVAILABLE_PLATFORMS)
-        set(target_name "${test_name}.${provider}.${platform}.conformance")
-        set(target_call "offload.conformance.${test_name}.${provider}.${platform}")
-
-        add_executable(${target_name} ${files})
-        add_dependencies(${target_name} ${provider}.bin)
-        target_compile_definitions(${target_name}
-          PRIVATE PROVIDER="${provider}"
-          PRIVATE PLATFORM="${platform}"
-          PRIVATE DEVICE_BINARY_DIR="${OFFLOAD_CONFORMANCE_DEVICE_BINARY_DIR}")
-        target_link_libraries(${target_name} PRIVATE ${PLUGINS_TEST_COMMON} libc)
-        set_target_properties(${target_name} PROPERTIES EXCLUDE_FROM_ALL TRUE)
-
-        add_custom_target(${target_call}
-          COMMAND $<TARGET_FILE:${target_name}>
-          DEPENDS ${target_name}
-          COMMENT "Running conformance test '${test_name}' with '${provider}' on '${platform}'")
-
-        add_dependencies(offload.conformance ${target_call})
-        add_dependencies(offload.conformance.${test_name} ${target_call})
-        add_dependencies(offload.conformance.${test_name}.${provider} ${target_call})
-      endif()
-    endforeach()
-  endforeach()
+  add_custom_target(offload.conformance.${test_name}
+    COMMAND $<TARGET_FILE:${target_name}>
+    DEPENDS ${target_name})
+  add_dependencies(offload.conformance offload.conformance.${test_name})
 endfunction()
 
 set(OFFLOAD_TESTS_FORCE_NVPTX_ARCH "" CACHE STRING

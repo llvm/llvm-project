@@ -16,6 +16,7 @@
 
 #include "mathtest/ErrorHandling.hpp"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -88,7 +89,7 @@ getDevicePlatform(ol_device_handle_t DeviceHandle) noexcept {
                              PropValue.data()));
   PropValue.pop_back(); // Remove the null terminator
 
-  return llvm::StringRef(PropValue).lower();
+  return PropValue;
 }
 
 [[nodiscard]] ol_platform_backend_t
@@ -177,10 +178,11 @@ DeviceContext::DeviceContext(std::size_t GlobalDeviceId)
 
 DeviceContext::DeviceContext(llvm::StringRef Platform, std::size_t DeviceId)
     : DeviceHandle(nullptr) {
-  std::string NormalizedPlatform = Platform.lower();
   const auto &Platforms = getPlatforms();
 
-  if (!Platforms.contains(NormalizedPlatform))
+  if (!llvm::any_of(Platforms, [&](llvm::StringRef CurrentPlatform) {
+        return CurrentPlatform.equals_insensitive(Platform);
+      }))
     FATAL_ERROR("There is no platform that matches with '" +
                 llvm::Twine(Platform) +
                 "'. Available platforms are: " + llvm::join(Platforms, ", "));
@@ -191,7 +193,7 @@ DeviceContext::DeviceContext(llvm::StringRef Platform, std::size_t DeviceId)
   std::size_t MatchCount = 0;
 
   for (std::size_t Index = 0; Index < Devices.size(); ++Index) {
-    if (Devices[Index].Platform == NormalizedPlatform) {
+    if (Platform.equals_insensitive(Devices[Index].Platform)) {
       if (MatchCount == DeviceId) {
         FoundGlobalDeviceId = Index;
         break;
@@ -210,8 +212,8 @@ DeviceContext::DeviceContext(llvm::StringRef Platform, std::size_t DeviceId)
 }
 
 [[nodiscard]] llvm::Expected<std::shared_ptr<DeviceImage>>
-DeviceContext::loadBinaryImpl(llvm::StringRef Directory,
-                              llvm::StringRef BinaryName) const {
+DeviceContext::loadBinary(llvm::StringRef Directory,
+                          llvm::StringRef BinaryName) const {
   auto Backend = getDevices()[GlobalDeviceId].Backend;
   llvm::StringRef Extension;
 
@@ -223,7 +225,8 @@ DeviceContext::loadBinaryImpl(llvm::StringRef Directory,
     Extension = ".nvptx64.bin";
     break;
   default:
-    llvm_unreachable("Unsupported backend to infer binary extension");
+    return llvm::createStringError(
+        "Unsupported backend to infer binary extension");
   }
 
   llvm::SmallString<128> FullPath(Directory);
@@ -233,7 +236,9 @@ DeviceContext::loadBinaryImpl(llvm::StringRef Directory,
       llvm::MemoryBuffer::getFile(FullPath);
 
   if (std::error_code ErrorCode = FileOrErr.getError())
-    return llvm::errorCodeToError(ErrorCode);
+    return llvm::createStringError(
+        llvm::Twine("Failed to read device binary file '") + FullPath +
+        "': " + ErrorCode.message());
 
   std::unique_ptr<llvm::MemoryBuffer> &BinaryData = *FileOrErr;
 
@@ -246,57 +251,38 @@ DeviceContext::loadBinaryImpl(llvm::StringRef Directory,
     llvm::StringRef Details =
         OlResult->Details ? OlResult->Details : "No details provided";
 
-    return llvm::createStringError(llvm::Twine(Details) + " (Code " +
-                                   llvm::Twine(OlResult->Code) + ")");
+    // clang-format off
+    return llvm::createStringError(
+      llvm::Twine(Details) +
+      " (code " + llvm::Twine(OlResult->Code) + ")");
+    // clang-format on
   }
 
   return std::shared_ptr<DeviceImage>(
       new DeviceImage(DeviceHandle, ProgramHandle));
 }
 
-[[nodiscard]] std::shared_ptr<DeviceImage>
-DeviceContext::loadBinary(llvm::StringRef Directory,
-                          llvm::StringRef BinaryName) const {
-  auto ImageOrErr = loadBinaryImpl(Directory, BinaryName);
-
-  if (auto Err = ImageOrErr.takeError())
-    FATAL_ERROR(llvm::toString(std::move(Err)));
-
-  return std::move(*ImageOrErr);
-}
-
-[[nodiscard]] std::optional<std::shared_ptr<DeviceImage>>
-DeviceContext::tryLoadBinary(llvm::StringRef Directory,
-                             llvm::StringRef BinaryName) const {
-  auto ImageOrErr = loadBinaryImpl(Directory, BinaryName);
-
-  if (auto Err = ImageOrErr.takeError()) {
-    llvm::consumeError(std::move(Err));
-    return std::nullopt;
-  }
-
-  return std::move(*ImageOrErr);
-}
-
 [[nodiscard]] llvm::Expected<ol_symbol_handle_t>
-DeviceContext::getKernelImpl(ol_program_handle_t ProgramHandle,
-                             llvm::StringRef KernelName) const noexcept {
-  ol_symbol_handle_t KernelHandle = nullptr;
-  llvm::SmallString<32> KernelNameBuffer(KernelName);
+DeviceContext::getKernelHandle(ol_program_handle_t ProgramHandle,
+                               llvm::StringRef KernelName) const noexcept {
+  ol_symbol_handle_t Handle = nullptr;
+  llvm::SmallString<32> NameBuffer(KernelName);
 
-  const ol_result_t OlResult =
-      olGetSymbol(ProgramHandle, KernelNameBuffer.c_str(),
-                  OL_SYMBOL_KIND_KERNEL, &KernelHandle);
+  const ol_result_t OlResult = olGetSymbol(ProgramHandle, NameBuffer.c_str(),
+                                           OL_SYMBOL_KIND_KERNEL, &Handle);
 
   if (OlResult != OL_SUCCESS) {
     llvm::StringRef Details =
         OlResult->Details ? OlResult->Details : "No details provided";
 
-    return llvm::createStringError(llvm::Twine(Details) + " (Code " +
-                                   llvm::Twine(OlResult->Code) + ")");
+    // clang-format off
+    return llvm::createStringError(
+      llvm::Twine(Details) +
+      " (code " + llvm::Twine(OlResult->Code) + ")");
+    // clang-format on
   }
 
-  return KernelHandle;
+  return Handle;
 }
 
 void DeviceContext::launchKernelImpl(

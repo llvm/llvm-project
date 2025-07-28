@@ -24,8 +24,8 @@
 #include "mathtest/TestResult.hpp"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 
 #include <cassert>
 #include <cstddef>
@@ -61,12 +61,16 @@ public:
   using ResultType = ApplyTupleTypes_t<InTypesTuple, PartialResultType>;
   using GeneratorType = ApplyTupleTypes_t<InTypesTuple, InputGenerator>;
 
-  explicit GpuMathTest(std::shared_ptr<DeviceContext> Context,
-                       llvm::StringRef Provider,
-                       llvm::StringRef DeviceBinaryDir)
-      : Context(std::move(Context)), Provider(Provider),
-        Kernel(getKernel(this->Context, Provider, DeviceBinaryDir)) {
-    assert(this->Context && "Context must not be null");
+  [[nodiscard]] static llvm::Expected<GpuMathTest>
+  create(std::shared_ptr<DeviceContext> Context, llvm::StringRef Provider,
+         llvm::StringRef DeviceBinaryDir) {
+    assert(Context && "Context must not be null");
+
+    auto ExpectedKernel = getKernel(*Context, Provider, DeviceBinaryDir);
+    if (!ExpectedKernel)
+      return ExpectedKernel.takeError();
+
+    return GpuMathTest(std::move(Context), Provider, *ExpectedKernel);
   }
 
   ResultType run(GeneratorType &Generator,
@@ -102,20 +106,26 @@ public:
   [[nodiscard]] std::string getProvider() const noexcept { return Provider; }
 
 private:
-  static DeviceKernel<KernelSignature>
-  getKernel(const std::shared_ptr<DeviceContext> &Context,
-            llvm::StringRef Provider,
-            llvm::StringRef DeviceBinaryDir) noexcept {
-    constexpr llvm::StringRef ValidProviders[] = {"llvm-libm"};
+  explicit GpuMathTest(std::shared_ptr<DeviceContext> Context,
+                       llvm::StringRef Provider,
+                       DeviceKernel<KernelSignature> Kernel)
+      : Context(std::move(Context)), Provider(Provider), Kernel(Kernel) {}
 
-    if (llvm::find(ValidProviders, Provider) == std::end(ValidProviders))
-      FATAL_ERROR(llvm::Twine("Unsupported provider: '") + Provider + "'");
-
+  static llvm::Expected<DeviceKernel<KernelSignature>>
+  getKernel(const DeviceContext &Context, llvm::StringRef Provider,
+            llvm::StringRef DeviceBinaryDir) {
     llvm::StringRef BinaryName = Provider;
-    const auto Image = Context->loadBinary(DeviceBinaryDir, BinaryName);
 
-    return Context->getKernel<KernelSignature>(Image,
-                                               FunctionConfig::KernelName);
+    auto ExpectedImage = Context.loadBinary(DeviceBinaryDir, BinaryName);
+    if (!ExpectedImage)
+      return ExpectedImage.takeError();
+
+    auto ExpectedKernel = Context.getKernel<KernelSignature>(
+        *ExpectedImage, FunctionConfig::KernelName);
+    if (!ExpectedKernel)
+      return ExpectedKernel.takeError();
+
+    return *ExpectedKernel;
   }
 
   [[nodiscard]] auto createBuffers(std::size_t BufferSize) const {

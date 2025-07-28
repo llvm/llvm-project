@@ -23,6 +23,8 @@ template <typename... InTypes> class InputGenerator {
 public:
   virtual ~InputGenerator() noexcept = default;
 
+  virtual void reset() noexcept = 0;
+
   [[nodiscard]] virtual size_t
   fill(llvm::MutableArrayRef<InTypes>... Buffers) noexcept = 0;
 };
