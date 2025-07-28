@@ -694,16 +694,8 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
           I->clearRegisterKills(DefOp.getReg(), &RI);
       }
 
-      MachineInstrBuilder Builder =
-        BuildMI(MBB, MI, DL, TII.get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), DestReg)
-        .add(DefOp);
-      if (ImpDefSuperReg)
-        Builder.addReg(ImpDefSuperReg, RegState::Define | RegState::Implicit);
-
-      if (ImpUseSuperReg) {
-        Builder.addReg(ImpUseSuperReg,
-                      getKillRegState(KillSrc) | RegState::Implicit);
-      }
+      BuildMI(MBB, MI, DL, TII.get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), DestReg)
+          .add(DefOp);
 
       return;
     }
@@ -747,27 +739,26 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
 
   MachineInstrBuilder UseBuilder = BuildMI(MBB, MI, DL, TII.get(TmpCopyOp), Tmp)
     .addReg(SrcReg, getKillRegState(KillSrc));
-  if (ImpUseSuperReg) {
-    UseBuilder.addReg(ImpUseSuperReg,
-                      getKillRegState(KillSrc) | RegState::Implicit);
-  }
 
-  MachineInstrBuilder DefBuilder
-    = BuildMI(MBB, MI, DL, TII.get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), DestReg)
-    .addReg(Tmp, RegState::Kill);
-
-  if (ImpDefSuperReg)
-    DefBuilder.addReg(ImpDefSuperReg, RegState::Define | RegState::Implicit);
+  BuildMI(MBB, MI, DL, TII.get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), DestReg)
+      .addReg(Tmp, RegState::Kill);
 }
 
 static void expandSGPRCopy(const SIInstrInfo &TII, MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MI, const DebugLoc &DL,
                            MCRegister DestReg, MCRegister SrcReg, bool KillSrc,
-                           const TargetRegisterClass *RC, bool Forward) {
+                           const TargetRegisterClass *RC, bool Forward,
+                           uint64_t LiveRegUnitMaskVal) {
   const SIRegisterInfo &RI = TII.getRegisterInfo();
   ArrayRef<int16_t> BaseIndices = RI.getRegSplitParts(RC, 4);
   MachineBasicBlock::iterator I = MI;
-  MachineInstr *FirstMI = nullptr, *LastMI = nullptr;
+  bool isSrcRegFullLive = LiveRegUnitMaskVal == 0;
+
+  uint64_t TestMaskVal = 0x0000000000000003;
+  uint8_t ShiftVal = 2;
+
+  if (!Forward)
+    TestMaskVal = TestMaskVal << (ShiftVal * (BaseIndices.size() - 1));
 
   for (unsigned Idx = 0; Idx < BaseIndices.size(); ++Idx) {
     int16_t SubIdx = BaseIndices[Idx];
@@ -775,41 +766,47 @@ static void expandSGPRCopy(const SIInstrInfo &TII, MachineBasicBlock &MBB,
     Register SrcSubReg = RI.getSubReg(SrcReg, SubIdx);
     assert(DestSubReg && SrcSubReg && "Failed to find subregs!");
     unsigned Opcode = AMDGPU::S_MOV_B32;
+    bool IsFirstSubreg = Idx == 0;
+
+    if (!IsFirstSubreg) {
+      TestMaskVal = Forward ? TestMaskVal << ShiftVal : TestMaskVal >> ShiftVal;
+    }
+
+    // Check for liveness of current subregister using TestMaskVal.
+    if (!isSrcRegFullLive && (LiveRegUnitMaskVal & TestMaskVal) == uint64_t(0))
+      continue;
 
     // Is SGPR aligned? If so try to combine with next.
     bool AlignedDest = ((DestSubReg - AMDGPU::SGPR0) % 2) == 0;
     bool AlignedSrc = ((SrcSubReg - AMDGPU::SGPR0) % 2) == 0;
-    if (AlignedDest && AlignedSrc && (Idx + 1 < BaseIndices.size())) {
+    bool isSrc64Live = true;
+
+    if (!isSrcRegFullLive)
+      isSrc64Live = Forward
+                        ? ((LiveRegUnitMaskVal & (TestMaskVal << ShiftVal)) !=
+                           uint64_t(0))
+                        : ((LiveRegUnitMaskVal & (TestMaskVal >> ShiftVal)) !=
+                           uint64_t(0));
+
+    if (isSrc64Live && AlignedDest && AlignedSrc &&
+        (Idx + 1 < BaseIndices.size())) {
       // Can use SGPR64 copy
       unsigned Channel = RI.getChannelFromSubReg(SubIdx);
       SubIdx = RI.getSubRegFromChannel(Channel, 2);
       DestSubReg = RI.getSubReg(DestReg, SubIdx);
       SrcSubReg = RI.getSubReg(SrcReg, SubIdx);
       assert(DestSubReg && SrcSubReg && "Failed to find subregs!");
+      TestMaskVal = Forward ? TestMaskVal << ShiftVal : TestMaskVal >> ShiftVal;
       Opcode = AMDGPU::S_MOV_B64;
       Idx++;
     }
 
-    LastMI = BuildMI(MBB, I, DL, TII.get(Opcode), DestSubReg)
-                 .addReg(SrcSubReg)
-                 .addReg(SrcReg, RegState::Implicit);
-
-    if (!FirstMI)
-      FirstMI = LastMI;
+    BuildMI(MBB, I, DL, TII.get(Opcode), DestSubReg)
+        .addReg(SrcSubReg, getKillRegState(KillSrc));
 
     if (!Forward)
       I--;
   }
-
-  assert(FirstMI && LastMI);
-  if (!Forward)
-    std::swap(FirstMI, LastMI);
-
-  FirstMI->addOperand(
-      MachineOperand::CreateReg(DestReg, true /*IsDef*/, true /*IsImp*/));
-
-  if (KillSrc)
-    LastMI->addRegisterKilled(SrcReg, &RI);
 }
 
 void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
@@ -821,6 +818,13 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   unsigned Size = RI.getRegSizeInBits(*RC);
   const TargetRegisterClass *SrcRC = RI.getPhysRegBaseClass(SrcReg);
   unsigned SrcSize = RI.getRegSizeInBits(*SrcRC);
+
+  uint64_t LiveRegUnitMaskVal = 0;
+  if (MI->getNumOperands() > 2 && MI->getOperand(2).isImm()) {
+    LiveRegUnitMaskVal = MI->getOperand(2).getImm();
+  }
+
+  bool isSrcRegFullLive = LiveRegUnitMaskVal == 0;
 
   // The rest of copyPhysReg assumes Src and Dst size are the same size.
   // TODO-GFX11_16BIT If all true 16 bit instruction patterns are completed can
@@ -1043,16 +1047,15 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     }
     if (ST.hasPkMovB32()) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), DestReg)
-        .addImm(SISrcMods::OP_SEL_1)
-        .addReg(SrcReg)
-        .addImm(SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1)
-        .addReg(SrcReg)
-        .addImm(0) // op_sel_lo
-        .addImm(0) // op_sel_hi
-        .addImm(0) // neg_lo
-        .addImm(0) // neg_hi
-        .addImm(0) // clamp
-        .addReg(SrcReg, getKillRegState(KillSrc) | RegState::Implicit);
+          .addImm(SISrcMods::OP_SEL_1)
+          .addReg(SrcReg, getKillRegState(KillSrc))
+          .addImm(SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1)
+          .addReg(SrcReg, getKillRegState(KillSrc))
+          .addImm(0)  // op_sel_lo
+          .addImm(0)  // op_sel_hi
+          .addImm(0)  // neg_lo
+          .addImm(0)  // neg_hi
+          .addImm(0); // clamp
       return;
     }
   }
@@ -1065,12 +1068,14 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     }
     const bool CanKillSuperReg = KillSrc && !RI.regsOverlap(SrcReg, DestReg);
     expandSGPRCopy(*this, MBB, MI, DL, DestReg, SrcReg, CanKillSuperReg, RC,
-                   Forward);
+                   Forward, LiveRegUnitMaskVal);
     return;
   }
 
   unsigned EltSize = 4;
   unsigned Opcode = AMDGPU::V_MOV_B32_e32;
+  uint64_t TestMaskVal = 0x0000000000000003;
+  uint8_t ShiftVal = 2;
   if (RI.isAGPRClass(RC)) {
     if (ST.hasGFX90AInsts() && RI.isAGPRClass(SrcRC))
       Opcode = AMDGPU::V_ACCVGPR_MOV_B32;
@@ -1085,12 +1090,18 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
              (RI.isProperlyAlignedRC(*RC) &&
               (SrcRC == RC || RI.isSGPRClass(SrcRC)))) {
     // TODO: In 96-bit case, could do a 64-bit mov and then a 32-bit mov.
+    // TODO: In case of partial liveness, could do mix of 64-bit and 32-bit
+    // moves. Look expandSGPRCopy function for reference.
     if (ST.hasMovB64()) {
       Opcode = AMDGPU::V_MOV_B64_e32;
       EltSize = 8;
+      TestMaskVal = 0x000000000000000F;
+      ShiftVal = 4;
     } else if (ST.hasPkMovB32()) {
       Opcode = AMDGPU::V_PK_MOV_B32;
       EltSize = 8;
+      TestMaskVal = 0x000000000000000F;
+      ShiftVal = 4;
     }
   }
 
@@ -1104,6 +1115,10 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     RS = std::make_unique<RegScavenger>();
 
   ArrayRef<int16_t> SubIndices = RI.getRegSplitParts(RC, EltSize);
+
+  // The TestMaskVal will scan from right to left.
+  if (!Forward)
+    TestMaskVal = TestMaskVal << (ShiftVal * (SubIndices.size() - 1));
 
   // If there is an overlap, we can't kill the super-register on the last
   // instruction, since it will also kill the components made live by this def.
@@ -1121,7 +1136,14 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     assert(DestSubReg && SrcSubReg && "Failed to find subregs!");
 
     bool IsFirstSubreg = Idx == 0;
-    bool UseKill = CanKillSuperReg && Idx == SubIndices.size() - 1;
+    bool UseKill = CanKillSuperReg;
+
+    if (!IsFirstSubreg) {
+      TestMaskVal = Forward ? TestMaskVal << ShiftVal : TestMaskVal >> ShiftVal;
+    }
+
+    if (!isSrcRegFullLive && (LiveRegUnitMaskVal & TestMaskVal) == uint64_t(0))
+      continue;
 
     if (Opcode == AMDGPU::INSTRUCTION_LIST_END) {
       Register ImpDefSuper = IsFirstSubreg ? Register(DestReg) : Register();
@@ -1132,24 +1154,18 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       MachineInstrBuilder MIB =
           BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), DestSubReg)
               .addImm(SISrcMods::OP_SEL_1)
-              .addReg(SrcSubReg)
+              .addReg(SrcSubReg, getKillRegState(UseKill))
               .addImm(SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1)
-              .addReg(SrcSubReg)
-              .addImm(0) // op_sel_lo
-              .addImm(0) // op_sel_hi
-              .addImm(0) // neg_lo
-              .addImm(0) // neg_hi
-              .addImm(0) // clamp
-              .addReg(SrcReg, getKillRegState(UseKill) | RegState::Implicit);
-      if (IsFirstSubreg)
-        MIB.addReg(DestReg, RegState::Define | RegState::Implicit);
+              .addReg(SrcSubReg, getKillRegState(UseKill))
+              .addImm(0)  // op_sel_lo
+              .addImm(0)  // op_sel_hi
+              .addImm(0)  // neg_lo
+              .addImm(0)  // neg_hi
+              .addImm(0); // clamp
     } else {
       MachineInstrBuilder Builder =
-          BuildMI(MBB, MI, DL, get(Opcode), DestSubReg).addReg(SrcSubReg);
-      if (IsFirstSubreg)
-        Builder.addReg(DestReg, RegState::Define | RegState::Implicit);
-
-      Builder.addReg(SrcReg, getKillRegState(UseKill) | RegState::Implicit);
+          BuildMI(MBB, MI, DL, get(Opcode), DestSubReg)
+              .addReg(SrcSubReg, getKillRegState(UseKill));
     }
   }
 }
