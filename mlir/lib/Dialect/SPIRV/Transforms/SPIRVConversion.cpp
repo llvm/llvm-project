@@ -575,6 +575,83 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
   }
   spirv::StorageClass storageClass = attr.getValue();
 
+  // Images are a special case since they are an opaque type from which elements
+  // may be accessed via image specific ops or directly through a texture
+  // pointer.
+  if (storageClass == spirv::StorageClass::Image) {
+    const auto rank = type.getRank();
+    if (rank < 1 || rank > 3) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << type << " illegal: cannot lower memref of rank " << rank
+                 << " to a SPIR-V Image\n");
+      return nullptr;
+    }
+
+    const auto dim = [rank]() {
+#define DIM_CASE(DIM)                                                          \
+  case DIM:                                                                    \
+    return spirv::Dim::Dim##DIM##D
+      switch (rank) {
+        DIM_CASE(1);
+        DIM_CASE(2);
+        DIM_CASE(3);
+      default:
+        llvm_unreachable("Invalid memref rank!");
+      }
+#undef DIM_CASE
+    }();
+
+    // Note that we currently only support lowering to single element texels
+    // e.g. R32f
+    const auto elementType = type.getElementType();
+    if (!elementType.isIntOrFloat()) {
+      LLVM_DEBUG(llvm::dbgs() << type << " illegal: cannot lower memref of "
+                              << elementType << " to a  SPIR-V Image\n");
+      return nullptr;
+    }
+
+    const auto imageFormat = [&elementType]() {
+      return llvm::TypeSwitch<Type, spirv::ImageFormat>(elementType)
+          .Case<Float16Type>(
+              [](Float16Type) { return spirv::ImageFormat::R16f; })
+          .Case<Float32Type>(
+              [](Float32Type) { return spirv::ImageFormat::R32f; })
+          .Case<IntegerType>([](IntegerType intType) {
+            auto const isSigned = intType.isSigned() || intType.isSignless();
+#define BIT_WIDTH_CASE(BIT_WIDTH)                                              \
+  case BIT_WIDTH:                                                              \
+    return isSigned ? spirv::ImageFormat::R##BIT_WIDTH##i                      \
+                    : spirv::ImageFormat::R##BIT_WIDTH##ui
+
+            switch (intType.getWidth()) {
+              BIT_WIDTH_CASE(16);
+              BIT_WIDTH_CASE(32);
+            default:
+              llvm_unreachable("Unhandled integer type!");
+            }
+          })
+          .Default([](Type) {
+            llvm_unreachable("Unhandled element type!");
+            // We need to return something here to satisfy the type switch.
+            return spirv::ImageFormat::R32f;
+          });
+#undef BIT_WIDTH_CASE
+    }();
+
+    // Currently every memref in the image storage class is converted to a
+    // sampled image so we can hardcode the NeedSampler field. Future work
+    // will generalize this to support regular non-sampled images.
+    const auto spvImageTy = spirv::ImageType::get(
+        elementType, dim, spirv::ImageDepthInfo::DepthUnknown,
+        spirv::ImageArrayedInfo::NonArrayed,
+        spirv::ImageSamplingInfo::SingleSampled,
+        spirv::ImageSamplerUseInfo::NeedSampler, imageFormat);
+    const auto spvSampledImageTy = spirv::SampledImageType::get(spvImageTy);
+    const auto imagePtrTy = spirv::PointerType::get(
+        spvSampledImageTy, spirv::StorageClass::UniformConstant);
+    return imagePtrTy;
+  }
+
   if (isa<IntegerType>(type.getElementType())) {
     if (type.getElementTypeBitWidth() == 1)
       return convertBoolMemrefType(targetEnv, options, type, storageClass);

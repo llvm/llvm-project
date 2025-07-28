@@ -243,6 +243,16 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// Converts memref.load to spirv.Image + spirv.ImageFetch
+class ImageLoadOpPattern final : public OpConversionPattern<memref::LoadOp> {
+public:
+  using OpConversionPattern<memref::LoadOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 /// Converts memref.store to spirv.Store on integers.
 class IntStoreOpPattern final : public OpConversionPattern<memref::StoreOp> {
 public:
@@ -527,6 +537,11 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   if (!memrefType.getElementType().isSignlessInteger())
     return failure();
 
+  if (memrefType.getMemorySpace() ==
+      spirv::StorageClassAttr::get(rewriter.getContext(),
+                                   spirv::StorageClass::Image))
+    return failure();
+
   const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
   Value accessChain =
       spirv::getElementPtr(typeConverter, memrefType, adaptor.getMemref(),
@@ -643,6 +658,12 @@ LoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   auto memrefType = cast<MemRefType>(loadOp.getMemref().getType());
   if (memrefType.getElementType().isSignlessInteger())
     return failure();
+
+  if (memrefType.getMemorySpace() ==
+      spirv::StorageClassAttr::get(rewriter.getContext(),
+                                   spirv::StorageClass::Image))
+    return failure();
+
   Value loadPtr = spirv::getElementPtr(
       *getTypeConverter<SPIRVTypeConverter>(), memrefType, adaptor.getMemref(),
       adaptor.getIndices(), loadOp.getLoc(), rewriter);
@@ -658,6 +679,79 @@ LoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   auto [memoryAccess, alignment] = *memoryRequirements;
   rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, loadPtr, memoryAccess,
                                              alignment);
+  return success();
+}
+
+LogicalResult
+ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
+                                    ConversionPatternRewriter &rewriter) const {
+  const auto memrefType = cast<MemRefType>(loadOp.getMemref().getType());
+  if (memrefType.getMemorySpace() !=
+      spirv::StorageClassAttr::get(rewriter.getContext(),
+                                   spirv::StorageClass::Image))
+    return failure();
+
+  const auto loadPtr = adaptor.getMemref();
+  const auto memoryRequirements = calculateMemoryRequirements(loadPtr, loadOp);
+  if (failed(memoryRequirements))
+    return rewriter.notifyMatchFailure(
+        loadOp, "failed to determine memory requirements");
+
+  const auto [memoryAccess, alignment] = *memoryRequirements;
+
+  if (!loadOp.getMemRefType().hasRank())
+    return rewriter.notifyMatchFailure(
+        loadOp, "cannot lower unranked memrefs to SPIR-V images");
+
+  // We currently only support lowering of scalar memref elements to texels in
+  // the R[16|32][f|i|ui] formats. Future work will enable lowering of vector
+  // elements to texels in richer formats.
+  if (!loadOp.getMemRefType().getElementType().isIntOrFloat())
+    return rewriter.notifyMatchFailure(
+        loadOp, "cannot lower memrefs who's element type is not int or float "
+                "to SPIR-V images");
+
+  // We currently only support sampled images since OpImageFetch does not work
+  // for plain images and the OpImageRead instruction needs to be materialized
+  // instead or texels need to be accessed via atomics through a texel pointer.
+  // Future work will generalize support to plain images.
+  if (const auto convertedPointeeType = cast<spirv::PointerType>(
+          getTypeConverter()->convertType(loadOp.getMemRefType()));
+      !isa<spirv::SampledImageType>(convertedPointeeType.getPointeeType()))
+    return rewriter.notifyMatchFailure(loadOp,
+                                       "cannot lower memrefs which do not "
+                                       "convert to SPIR-V sampled images");
+
+  // Materialize the lowering.
+  auto imageLoadOp = rewriter.create<spirv::LoadOp>(loadOp->getLoc(), loadPtr,
+                                                    memoryAccess, alignment);
+  // Extract the image from the sampled image.
+  auto imageOp = rewriter.create<spirv::ImageOp>(loadOp->getLoc(), imageLoadOp);
+
+  // Build a vector of coordinates or just a scalar index if we have a 1D image.
+  Value coords;
+  if (memrefType.getRank() != 1) {
+    const auto coordVectorType = VectorType::get(
+        {loadOp.getMemRefType().getRank()}, adaptor.getIndices().getType()[0]);
+    coords = rewriter.create<spirv::CompositeConstructOp>(
+        loadOp->getLoc(), coordVectorType, adaptor.getIndices());
+  } else {
+    coords = adaptor.getIndices()[0];
+  }
+
+  // Fetch the value out of the image.
+  const auto resultVectorType = VectorType::get({4}, loadOp.getType());
+  auto fetchOp = rewriter.create<spirv::ImageFetchOp>(
+      loadOp->getLoc(), resultVectorType, imageOp, coords,
+      mlir::spirv::ImageOperandsAttr{}, ValueRange{});
+
+  // Note that because OpImageFetch returns a rank 4 vector we need to extract
+  // the elements corresponding to the load which will since we only support the
+  // R[16|32][f|i|ui] formats will always be the R(red) 0th vector element.
+  const auto compositeExtractOp =
+      rewriter.create<spirv::CompositeExtractOp>(loadOp->getLoc(), fetchOp, 0);
+
+  rewriter.replaceOp(loadOp, compositeExtractOp);
   return success();
 }
 
@@ -952,11 +1046,11 @@ LogicalResult ExtractAlignedPointerAsIndexOpPattern::matchAndRewrite(
 namespace mlir {
 void populateMemRefToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                    RewritePatternSet &patterns) {
-  patterns
-      .add<AllocaOpPattern, AllocOpPattern, AtomicRMWOpPattern,
-           DeallocOpPattern, IntLoadOpPattern, IntStoreOpPattern, LoadOpPattern,
-           MemorySpaceCastOpPattern, StoreOpPattern, ReinterpretCastPattern,
-           CastPattern, ExtractAlignedPointerAsIndexOpPattern>(
-          typeConverter, patterns.getContext());
+  patterns.add<AllocaOpPattern, AllocOpPattern, AtomicRMWOpPattern,
+               DeallocOpPattern, IntLoadOpPattern, ImageLoadOpPattern,
+               IntStoreOpPattern, LoadOpPattern, MemorySpaceCastOpPattern,
+               StoreOpPattern, ReinterpretCastPattern, CastPattern,
+               ExtractAlignedPointerAsIndexOpPattern>(typeConverter,
+                                                      patterns.getContext());
 }
 } // namespace mlir
