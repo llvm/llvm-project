@@ -2129,6 +2129,7 @@ private:
         toLocation(), *this, info.reduceOperatorList, reduceVars,
         reduceVarByRef, reductionDeclSymbols, info.reduceSymList);
     assert(result && "Failed to process `do concurrent` reductions");
+    (void)result;
 
     doConcurrentLoopOp.getReduceVarsMutable().assign(reduceVars);
     doConcurrentLoopOp.setReduceSymsAttr(
