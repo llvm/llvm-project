@@ -575,6 +575,7 @@ MCRegister SIRegisterInfo::reservedPrivateSegmentBufferReg(
 std::pair<unsigned, unsigned>
 SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
   const unsigned MaxVectorRegs = ST.getMaxNumVGPRs(MF);
+  const unsigned MinWavesPerEU = ST.getWavesPerEU(MF.getFunction()).first;
 
   unsigned MaxNumVGPRs = MaxVectorRegs;
   unsigned MaxNumAGPRs = 0;
@@ -588,6 +589,7 @@ SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
   // TODO: it shall be possible to estimate maximum AGPR/VGPR pressure and split
   //       register file accordingly.
   if (ST.hasGFX90AInsts()) {
+    const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
     unsigned MinNumAGPRs = 0;
     const unsigned TotalNumAGPRs = AMDGPU::AGPR_32RegClass.getNumRegs();
     const unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
@@ -604,7 +606,8 @@ SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
 
     if (MinNumAGPRs == DefaultNumAGPR.first) {
       // Default to splitting half the registers if AGPRs are required.
-      MinNumAGPRs = MaxNumAGPRs = MaxVectorRegs / 2;
+      MinNumAGPRs = MaxNumAGPRs =
+          (MFI->mayNeedAGPRs() || MinWavesPerEU == 1) ? MaxVectorRegs / 2 : 0;
     } else {
       // Align to accum_offset's allocation granularity.
       MinNumAGPRs = alignTo(MinNumAGPRs, 4);
@@ -756,7 +759,8 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   }
 
   // Reserve all the AGPRs if there are no instructions to use it.
-  if (!ST.hasMAIInsts())
+  if (!ST.hasMAIInsts() || (ST.hasGFX90AInsts() && !MFI->mayNeedAGPRs() &&
+                            ST.getWavesPerEU(MF.getFunction()).first > 1))
     MaxNumAGPRs = 0;
   for (const TargetRegisterClass *RC : regclasses()) {
     if (RC->isBaseClass() && isAGPRClass(RC)) {

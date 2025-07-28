@@ -154,6 +154,7 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
     // Remove reserved registers from the allocation order.
     if (Reserved.test(PhysReg))
       continue;
+
     uint8_t Cost = RegCosts[PhysReg];
     MinCost = std::min(MinCost, Cost);
 
