@@ -12,6 +12,7 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/cast.h"
+#include "src/__support/FPUtil/comparison_operations.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
@@ -56,6 +57,30 @@ struct BFloat16 {
   LIBC_INLINE constexpr operator float() const {
     uint32_t x_bits = static_cast<uint32_t>(bits) << 16U;
     return cpp::bit_cast<float>(x_bits);
+  }
+
+  LIBC_INLINE constexpr bool operator==(BFloat16 other) const {
+    return fputil::equals(*this, other);
+  }
+
+  LIBC_INLINE constexpr bool operator!=(BFloat16 other) const {
+    return !fputil::equals(*this, other);
+  }
+
+  LIBC_INLINE constexpr bool operator<(BFloat16 other) const {
+    return fputil::less_than(*this, other);
+  }
+
+  LIBC_INLINE constexpr bool operator<=(BFloat16 other) const {
+    return fputil::less_than_or_equals(*this, other);
+  }
+
+  LIBC_INLINE constexpr bool operator>(BFloat16 other) const {
+    return fputil::greater_than(*this, other);
+  }
+
+  LIBC_INLINE constexpr bool operator>=(BFloat16 other) const {
+    return fputil::greater_than_or_equals(*this, other);
   }
 }; // struct BFloat16
 
