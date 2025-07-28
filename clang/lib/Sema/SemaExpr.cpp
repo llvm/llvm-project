@@ -7833,11 +7833,13 @@ static void CheckSufficientAllocSize(Sema &S, QualType DestType,
     return;
 
   // Find the total size allocated by the function call.
-  llvm::APInt AllocSize;
-  if (!CE->getAllocSizeAttr() ||
-      !CE->getBytesReturnedByAllocSizeCall(S.Context, AllocSize))
+  if (!CE->getCalleeAllocSizeAttr())
     return;
-  auto Size = CharUnits::fromQuantity(AllocSize.getZExtValue());
+  std::optional<llvm::APInt> AllocSize =
+      CE->getBytesReturnedByAllocSizeCall(S.Context);
+  if (!AllocSize)
+    return;
+  auto Size = CharUnits::fromQuantity(AllocSize->getZExtValue());
 
   QualType TargetType = DestType->getPointeeType();
   auto LhsSize = S.Context.getTypeSizeInCharsIfKnown(TargetType);

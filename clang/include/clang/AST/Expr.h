@@ -3258,12 +3258,12 @@ public:
   }
 
   /// Try to get the alloc_size attribute of the callee. May return null.
-  const AllocSizeAttr *getAllocSizeAttr() const;
+  const AllocSizeAttr *getCalleeAllocSizeAttr() const;
 
   /// Get the total size in bytes allocated by calling a function decorated with
-  /// alloc_size. Returns true if the the result was successfully evaluated.
-  bool getBytesReturnedByAllocSizeCall(const ASTContext &Ctx,
-                                       llvm::APInt &Result) const;
+  /// alloc_size. Returns std::nullopt if the the result cannot be evaluated.
+  std::optional<llvm::APInt>
+  getBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const;
 
   bool isCallToStdMove() const;
 

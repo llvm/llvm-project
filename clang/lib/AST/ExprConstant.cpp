@@ -133,7 +133,7 @@ namespace {
       E = Cast->getSubExpr()->IgnoreParens();
 
     if (const auto *CE = dyn_cast<CallExpr>(E))
-      return CE->getAllocSizeAttr() ? CE : nullptr;
+      return CE->getCalleeAllocSizeAttr() ? CE : nullptr;
     return nullptr;
   }
 
@@ -9439,7 +9439,12 @@ static bool getBytesReturnedByAllocSizeCall(const ASTContext &Ctx,
          "Can't get the size of a non alloc_size function");
   const auto *Base = LVal.getLValueBase().get<const Expr *>();
   const CallExpr *CE = tryUnwrapAllocSizeCall(Base);
-  return CE->getBytesReturnedByAllocSizeCall(Ctx, Result);
+  std::optional<llvm::APInt> Size = CE->getBytesReturnedByAllocSizeCall(Ctx);
+  if (!Size)
+    return false;
+
+  Result = std::move(*Size);
+  return true;
 }
 
 /// Attempts to evaluate the given LValueBase as the result of a call to
@@ -9917,7 +9922,7 @@ bool PointerExprEvaluator::visitNonBuiltinCallExpr(const CallExpr *E) {
   if (ExprEvaluatorBaseTy::VisitCallExpr(E))
     return true;
 
-  if (!(InvalidBaseOK && E->getAllocSizeAttr()))
+  if (!(InvalidBaseOK && E->getCalleeAllocSizeAttr()))
     return false;
 
   Result.setInvalid(E);

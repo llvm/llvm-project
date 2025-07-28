@@ -3542,7 +3542,7 @@ bool CallExpr::isBuiltinAssumeFalse(const ASTContext &Ctx) const {
          Arg->EvaluateAsBooleanCondition(ArgVal, Ctx) && !ArgVal;
 }
 
-const AllocSizeAttr *CallExpr::getAllocSizeAttr() const {
+const AllocSizeAttr *CallExpr::getCalleeAllocSizeAttr() const {
   if (const FunctionDecl *DirectCallee = getDirectCallee())
     return DirectCallee->getAttr<AllocSizeAttr>();
   if (const Decl *IndirectCallee = getCalleeDecl())
@@ -3550,15 +3550,15 @@ const AllocSizeAttr *CallExpr::getAllocSizeAttr() const {
   return nullptr;
 }
 
-bool CallExpr::getBytesReturnedByAllocSizeCall(const ASTContext &Ctx,
-                                               llvm::APInt &Result) const {
-  const AllocSizeAttr *AllocSize = getAllocSizeAttr();
+std::optional<llvm::APInt>
+CallExpr::getBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const {
+  const AllocSizeAttr *AllocSize = getCalleeAllocSizeAttr();
 
   assert(AllocSize && AllocSize->getElemSizeParam().isValid());
   unsigned SizeArgNo = AllocSize->getElemSizeParam().getASTIndex();
   unsigned BitsInSizeT = Ctx.getTypeSize(Ctx.getSizeType());
   if (getNumArgs() <= SizeArgNo)
-    return false;
+    return {};
 
   auto EvaluateAsSizeT = [&](const Expr *E, llvm::APSInt &Into) {
     Expr::EvalResult ExprResult;
@@ -3574,25 +3574,22 @@ bool CallExpr::getBytesReturnedByAllocSizeCall(const ASTContext &Ctx,
 
   llvm::APSInt SizeOfElem;
   if (!EvaluateAsSizeT(getArg(SizeArgNo), SizeOfElem))
-    return false;
+    return {};
 
-  if (!AllocSize->getNumElemsParam().isValid()) {
-    Result = std::move(SizeOfElem);
-    return true;
-  }
+  if (!AllocSize->getNumElemsParam().isValid())
+    return SizeOfElem;
 
   llvm::APSInt NumberOfElems;
   unsigned NumArgNo = AllocSize->getNumElemsParam().getASTIndex();
   if (!EvaluateAsSizeT(getArg(NumArgNo), NumberOfElems))
-    return false;
+    return {};
 
   bool Overflow;
   llvm::APInt BytesAvailable = SizeOfElem.umul_ov(NumberOfElems, Overflow);
   if (Overflow)
-    return false;
+    return {};
 
-  Result = std::move(BytesAvailable);
-  return true;
+  return BytesAvailable;
 }
 
 bool CallExpr::isCallToStdMove() const {
