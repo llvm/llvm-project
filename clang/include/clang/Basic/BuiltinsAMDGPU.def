@@ -642,6 +642,9 @@ TARGET_BUILTIN(__builtin_amdgcn_cvt_sr_f16_f32, "V2hV2hfUiIb", "nc", "f32-to-f16
 // GFX1250+ only builtins.
 //===----------------------------------------------------------------------===//
 
+TARGET_BUILTIN(__builtin_amdgcn_flat_prefetch, "vvC*0Ii", "nc", "vmem-pref-insts")
+TARGET_BUILTIN(__builtin_amdgcn_global_prefetch, "vvC*1Ii", "nc", "vmem-pref-insts")
+
 TARGET_BUILTIN(__builtin_amdgcn_tensor_load_to_lds, "vV4iV8iV4iV4iIi", "nc", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_tensor_load_to_lds_d2, "vV4iV8iIi", "nc", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_tensor_store_from_lds, "vV4iV8iV4iV4iIi", "nc", "gfx1250-insts")
