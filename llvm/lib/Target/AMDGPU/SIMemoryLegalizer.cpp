@@ -704,12 +704,12 @@ void diagnoseUnknownMMRAASName(const MachineInstr &MI, StringRef AS) {
       DiagnosticInfoUnsupported(Fn, Str.str(), MI.getDebugLoc(), DS_Warning));
 }
 
-/// Reads \p MI's MMRAs to parse the "amdgpu-as" MMRA.
+/// Reads \p MI's MMRAs to parse the "amdgpu-synchronize-as" MMRA.
 /// If this tag isn't present, or if it has no meaningful values, returns \p
 /// Default. Otherwise returns all the address spaces concerned by the MMRA.
 static SIAtomicAddrSpace getFenceAddrSpaceMMRA(const MachineInstr &MI,
                                                SIAtomicAddrSpace Default) {
-  static constexpr StringLiteral FenceASPrefix = "amdgpu-as";
+  static constexpr StringLiteral FenceASPrefix = "amdgpu-synchronize-as";
 
   auto MMRA = MMRAMetadata(MI.getMMRAMetadata());
   if (!MMRA)
