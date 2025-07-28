@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/Support/Compiler.h"
 
@@ -36,6 +37,10 @@ public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
 private:
+  // Annotate global variables' section prefix based on data access profile.
+  bool
+  annotateGlobalVariables(Module &M,
+                          const memprof::DataAccessProfData *DataAccessProf);
   std::string MemoryProfileFileName;
   IntrusiveRefCntPtr<vfs::FileSystem> FS;
 };

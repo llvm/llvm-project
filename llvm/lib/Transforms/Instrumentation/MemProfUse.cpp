@@ -22,6 +22,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/MemProfCommon.h"
@@ -74,6 +75,17 @@ static cl::opt<bool> ClMemProfAttachCalleeGuids(
 static cl::opt<unsigned> MinMatchedColdBytePercent(
     "memprof-matching-cold-threshold", cl::init(100), cl::Hidden,
     cl::desc("Min percent of cold bytes matched to hint allocation cold"));
+
+static cl::opt<bool> AnnotationStaticDataPrefix(
+    "annotate-static-data-prefix", cl::init(false), cl::Hidden,
+    cl::desc("If true, annotate the static data section prefix"));
+
+static cl::opt<bool>
+    PrintStaticDataPrefix("print-static-data-prefix", cl::init(false),
+                          cl::Hidden,
+                          cl::desc("If true, print the static data section "
+                                   "prefix in errs(). This option is "
+                                   "meant for debugging."));
 
 // Matching statistics
 STATISTIC(NumOfMemProfMissing, "Number of functions without memory profile.");
@@ -674,8 +686,9 @@ MemProfUsePass::MemProfUsePass(std::string MemoryProfileFile,
 }
 
 PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
-  // Return immediately if the module doesn't contain any function.
-  if (M.empty())
+  // Return immediately if the module doesn't contain any function or global
+  // variables.
+  if (M.empty() && M.globals().empty())
     return PreservedAnalyses::all();
 
   LLVM_DEBUG(dbgs() << "Read in memory profile:");
@@ -702,6 +715,14 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
                                           "Not a memory profile"));
     return PreservedAnalyses::all();
   }
+
+  const bool Changed =
+      annotateGlobalVariables(M, MemProfReader->getDataAccessProfileData());
+
+  // If the module doesn't contain any function, return after we process all
+  // global variables.
+  if (M.empty())
+    return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
@@ -751,4 +772,59 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
   }
 
   return PreservedAnalyses::none();
+}
+
+bool MemProfUsePass::annotateGlobalVariables(
+    Module &M, const memprof::DataAccessProfData *DataAccessProf) {
+  if (!AnnotationStaticDataPrefix || M.globals().empty() || !DataAccessProf)
+    return false;
+
+  bool Changed = false;
+  for (GlobalVariable &GVar : M.globals()) {
+    assert(!GVar.getSectionPrefix().has_value() &&
+           "GVar shouldn't have section prefix yet");
+    if (GVar.isDeclarationForLinker())
+      continue;
+
+    StringRef Name = GVar.getName();
+    // Skip string literals whose mangled names doesn't stay stable across
+    // binary releases.
+    // TODO: Track string content hash in the profiles and compute it inside the
+    // compiler to categeorize the hotness string literals.
+    if (Name.starts_with(".str"))
+      continue;
+
+    // DataAccessProfRecord's look-up methods will canonicalize the variable
+    // name before looking up methods, so optimizer doesn't need to do it.
+    std::optional<DataAccessProfRecord> Record =
+        DataAccessProf->getProfileRecord(Name);
+    // Annotate a global variable as hot if it has non-zero sampled count, and
+    // annotate it as cold if it's seen in the profiled binary
+    // file but doesn't have any access sample.
+    if (Record && Record->AccessCount > 0) {
+      GVar.setSectionPrefix("hot");
+      Changed = true;
+    } else if (DataAccessProf->isKnownColdSymbol(Name)) {
+      GVar.setSectionPrefix("unlikely");
+      Changed = true;
+    }
+  }
+
+  // Optimization remark emitter requires a llvm::Function, but it's not well
+  // defined to associate a global variable with a function. So we just print
+  // out the static data section prefix in errs().
+  if (PrintStaticDataPrefix) {
+    for (GlobalVariable &GVar : M.globals()) {
+      if (GVar.isDeclarationForLinker())
+        continue;
+      StringRef Name = GVar.getName();
+      auto SectionPrefix = GVar.getSectionPrefix();
+      if (SectionPrefix.has_value())
+        errs() << "Global variable " << Name
+               << " has section prefix: " << SectionPrefix.value() << "\n";
+      else
+        errs() << "Global variable " << Name << " has no section prefix\n";
+    }
+  }
+  return Changed;
 }
