@@ -41,7 +41,7 @@ TEST(ScudoReportDeathTest, Generic) {
       scudo::reportMisalignedPointer(scudo::AllocatorAction::Deallocating, P),
       "Scudo ERROR.*deallocating.*42424242");
   EXPECT_DEATH(scudo::reportDeallocTypeMismatch(
-                   scudo::AllocatorAction::Reallocating, P, 0, 1),
+                   scudo::AllocatorAction::Reallocating, P, 0, 1, false),
                "Scudo ERROR.*reallocating.*42424242");
   EXPECT_DEATH(scudo::reportDeleteSizeMismatch(P, 123, 456),
                "Scudo ERROR.*42424242.*123.*456");
