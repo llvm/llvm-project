@@ -809,16 +809,16 @@ ResolveFunctionCallLabel(llvm::StringRef name,
 
   const auto &label = *label_or_err;
 
-  Module *module = Module::GetAllocatedModuleWithUID(label.m_module_id);
+  auto module_sp = sc.target_sp->GetImages().FindModule(label.m_module_id);
 
-  if (!module)
+  if (!module_sp)
     return llvm::createStringError(
         llvm::formatv("failed to find module by UID {0}", label.m_module_id));
 
-  auto *symbol_file = module->GetSymbolFile();
+  auto *symbol_file = module_sp->GetSymbolFile();
   if (!symbol_file)
     return llvm::createStringError(
-        llvm::formatv("no SymbolFile found on module {0:x}.", module));
+        llvm::formatv("no SymbolFile found on module {0:x}.", module_sp.get()));
 
   SymbolContextList sc_list;
   if (auto err =

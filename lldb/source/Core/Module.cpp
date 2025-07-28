@@ -121,15 +121,6 @@ size_t Module::GetNumberAllocatedModules() {
   return GetModuleCollection().size();
 }
 
-Module *Module::GetAllocatedModuleWithUID(lldb::user_id_t uid) {
-  std::lock_guard<std::recursive_mutex> guard(
-      GetAllocationModuleCollectionMutex());
-  for (Module *mod : GetModuleCollection())
-    if (mod->GetID() == uid)
-      return mod;
-  return nullptr;
-}
-
 Module *Module::GetAllocatedModuleAtIndex(size_t idx) {
   std::lock_guard<std::recursive_mutex> guard(
       GetAllocationModuleCollectionMutex());
@@ -139,8 +130,7 @@ Module *Module::GetAllocatedModuleAtIndex(size_t idx) {
   return nullptr;
 }
 
-// TODO: needs a mutex
-static lldb::user_id_t g_unique_id = 1;
+static std::atomic<lldb::user_id_t> g_unique_id = 1;
 
 Module::Module(const ModuleSpec &module_spec)
     : UserID(g_unique_id++), m_unwind_table(*this), m_file_has_changed(false),

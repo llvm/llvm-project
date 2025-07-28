@@ -98,7 +98,6 @@ public:
   // using the "--global" (-g for short).
   static size_t GetNumberAllocatedModules();
 
-  static Module *GetAllocatedModuleWithUID(lldb::user_id_t uid);
   static Module *GetAllocatedModuleAtIndex(size_t idx);
 
   static std::recursive_mutex &GetAllocationModuleCollectionMutex();
