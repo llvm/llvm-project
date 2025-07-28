@@ -61,3 +61,24 @@ particular for machine learning compilers.
   andrzej.warzynski@arm.com (email),
   [@banach-space](https://github.com/banach-space) (GitHub),
   banach-space (Discourse)
+
+### Dialects
+
+The `tensor` maintainer refers to the people working in the tensor compiler category, with the point-of-contact being the maintainers above.
+These are key MLIR dialects that will never become _unmaintained_.
+Named maintainers, if available, should be contacted first, as they're more active in those areas.
+
+#### Linear Algebra Dialects
+* ‘linalg’ Dialect (tensor)
+* Tensor Operator Set Architecture (TOSA) Dialect (sjarus)
+
+#### Type Dialects
+* ‘tensor’ Dialect (tensor)
+* ‘memref’ Dialect (tensor)
+* ‘vector’ Dialect (tensor + dcaballe, groverkss)
+* ‘sparse_tensor’ Dialect (aartbik, matthias-springer)
+
+#### Accessory Dialects
+* ‘bufferization’ Dialect (tensor, matthias-springer)
+* ‘ml_program’ Dialect (jpienaar)
+* ‘quant’ Dialect (unmaintained)
