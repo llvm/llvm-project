@@ -53,10 +53,9 @@ bool verifyRootDescriptorFlag(uint32_t Version, uint32_t FlagsVal) {
 
 bool verifyRangeType(uint32_t Type) {
   switch (Type) {
-  case llvm::to_underlying(dxbc::DescriptorRangeType::CBV):
-  case llvm::to_underlying(dxbc::DescriptorRangeType::SRV):
-  case llvm::to_underlying(dxbc::DescriptorRangeType::UAV):
-  case llvm::to_underlying(dxbc::DescriptorRangeType::Sampler):
+#define DESCRIPTOR_RANGE(Num, Val)                                             \
+  case llvm::to_underlying(dxbc::DescriptorRangeType::Val):
+#include "llvm/BinaryFormat/DXContainerConstants.def"
     return true;
   };
 
