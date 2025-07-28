@@ -581,6 +581,26 @@ void DataAggregator::imputeFallThroughs() {
     outs() << "BOLT-INFO: imputed " << InferredTraces << " traces\n";
 }
 
+void DataAggregator::registerProfiledFunctions() {
+  DenseSet<uint64_t> Addrs;
+  for (const auto &Trace : llvm::make_first_range(Traces)) {
+    if (Trace.Branch != Trace::FT_ONLY &&
+        Trace.Branch != Trace::FT_EXTERNAL_ORIGIN)
+      Addrs.insert(Trace.Branch);
+    Addrs.insert(Trace.From);
+  }
+
+  for (const auto [PC, _] : BasicSamples)
+    Addrs.insert(PC);
+
+  for (const PerfMemSample &MemSample : MemSamples)
+    Addrs.insert(MemSample.PC);
+
+  for (const uint64_t Addr : Addrs)
+    if (BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr))
+      Func->setHasProfileAvailable();
+}
+
 Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   this->BC = &BC;
 
@@ -603,6 +623,7 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
       exit(0);
   }
 
+  registerProfiledFunctions();
   return Error::success();
 }
 
@@ -906,10 +927,9 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
   if (BF.isPseudo())
     return Branches;
 
-  if (!BF.isSimple())
+  // Can only record traces in CFG state
+  if (!BF.hasCFG())
     return std::nullopt;
-
-  assert(BF.hasCFG() && "can only record traces in CFG state");
 
   const BinaryBasicBlock *FromBB = BF.getBasicBlockContainingOffset(From);
   const BinaryBasicBlock *ToBB = BF.getBasicBlockContainingOffset(To);
@@ -1348,10 +1368,6 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   }
 
   const uint64_t FromOffset = Addr[0]->Offset;
-  BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(FromOffset);
-  if (FromFunc)
-    FromFunc->setHasProfileAvailable();
-
   int64_t Count = Counters[0];
   int64_t Mispreds = Counters[1];
 
@@ -1361,11 +1377,6 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     NumTotalSamples += Count;
     return std::error_code();
   }
-
-  const uint64_t ToOffset = Addr[1]->Offset;
-  BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(ToOffset);
-  if (ToFunc)
-    ToFunc->setHasProfileAvailable();
 
   /// For fall-through types, adjust locations to match Trace container.
   if (Type == FT || Type == FT_EXTERNAL_ORIGIN || Type == FT_EXTERNAL_RETURN) {
@@ -1614,9 +1625,6 @@ std::error_code DataAggregator::parseBranchEvents() {
   Traces.reserve(TraceMap.size());
   for (const auto &[Trace, Info] : TraceMap) {
     Traces.emplace_back(Trace, Info);
-    for (const uint64_t Addr : {Trace.Branch, Trace.From})
-      if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Addr))
-        BF->setHasProfileAvailable();
   }
   clear(TraceMap);
 
@@ -1677,9 +1685,6 @@ std::error_code DataAggregator::parseBasicEvents() {
       continue;
     ++NumTotalSamples;
 
-    if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Sample->PC))
-      BF->setHasProfileAvailable();
-
     ++BasicSamples[Sample->PC];
     EventNames.insert(Sample->EventName);
   }
@@ -1716,9 +1721,6 @@ std::error_code DataAggregator::parseMemEvents() {
     ErrorOr<PerfMemSample> Sample = parseMemSample();
     if (std::error_code EC = Sample.getError())
       return EC;
-
-    if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Sample->PC))
-      BF->setHasProfileAvailable();
 
     MemSamples.emplace_back(std::move(Sample.get()));
   }

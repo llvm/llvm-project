@@ -1,7 +1,7 @@
 # Test MIR printer and parser to check if a call instruction with multiple
 # callee types are handled correctly.
 
-# RUN: llc --call-graph-section %s -run-pass=none -o - | FileCheck --match-full-lines %s
+# RUN: llc -mtriple=x86_64 --call-graph-section %s -run-pass=none -o - | FileCheck --match-full-lines %s
 # CHECK: name: ambiguous_caller
 # CHECK: callSites:
 # CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: {{.*}}, calleeTypeIds:
