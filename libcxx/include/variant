@@ -1182,13 +1182,21 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr variant(const variant&) = default;
   _LIBCPP_HIDE_FROM_ABI constexpr variant(variant&&)      = default;
 
-  template < class _Arg,
-             enable_if_t<!is_same_v<__remove_cvref_t<_Arg>, variant>, int>        = 0,
-             enable_if_t<!__is_inplace_type<__remove_cvref_t<_Arg>>::value, int>  = 0,
-             enable_if_t<!__is_inplace_index<__remove_cvref_t<_Arg>>::value, int> = 0,
-             class _Tp  = __variant_detail::__best_match_t<_Arg, _Types...>,
-             size_t _Ip = __find_detail::__find_unambiguous_index_sfinae<_Tp, _Types...>::value,
-             enable_if_t<is_constructible_v<_Tp, _Arg>, int> = 0>
+  template <class _Arg,
+            bool = !is_same_v<__remove_cvref_t<_Arg>, variant> && !__is_inplace_type<__remove_cvref_t<_Arg>>::value &&
+                   !__is_inplace_index<__remove_cvref_t<_Arg>>::value,
+            class = void>
+  struct __arg_overload_type {};
+
+  template <class _Arg>
+  struct __arg_overload_type<_Arg, true, __void_t<__variant_detail::__best_match_t<_Arg, _Types...>>> {
+    using type _LIBCPP_NODEBUG = __variant_detail::__best_match_t<_Arg, _Types...>;
+  };
+
+  template <class _Arg,
+            class _Tp  = typename __arg_overload_type<_Arg>::type,
+            size_t _Ip = __find_detail::__find_unambiguous_index_sfinae<_Tp, _Types...>::value,
+            enable_if_t<is_constructible_v<_Tp, _Arg>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI constexpr variant(_Arg&& __arg) noexcept(is_nothrow_constructible_v<_Tp, _Arg>)
       : __impl_(in_place_index<_Ip>, std::forward<_Arg>(__arg)) {}
 
