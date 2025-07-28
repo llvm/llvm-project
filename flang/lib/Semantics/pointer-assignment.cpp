@@ -281,7 +281,7 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
           " function '%s' that is a procedure pointer"_err_en_US;
   } else if (!funcResult->attrs.test(FunctionResult::Attr::Pointer)) {
     msg = "%s is associated with the result of a reference to function '%s'"
-          " that is a not a pointer"_err_en_US;
+          " that is not a pointer"_err_en_US;
   } else if (isContiguous_ &&
       !funcResult->attrs.test(FunctionResult::Attr::Contiguous)) {
     auto restorer{common::ScopedSet(lhs_, symbol)};
