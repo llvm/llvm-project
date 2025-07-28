@@ -348,13 +348,11 @@ static void collectCallOps(iterator_range<Region::iterator> blocks,
 // InlinerInterfaceImpl
 //===----------------------------------------------------------------------===//
 
-#ifndef NDEBUG
 static std::string getNodeName(CallOpInterface op) {
   if (llvm::dyn_cast_if_present<SymbolRefAttr>(op.getCallableForCallee()))
     return debugString(op);
   return "_unnamed_callee_";
 }
-#endif
 
 /// Return true if the specified `inlineHistoryID`  indicates an inline history
 /// that already includes `node`.
