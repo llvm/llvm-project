@@ -111,11 +111,12 @@ define ptr @test_lcssa_reuse_preserve_lcssa() {
 ; CHECK-NEXT:    [[EC_1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[EC_1]], label %[[THEN:.*]], label %[[LOOP_1]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[IV_1_LCSSA:%.*]] = phi ptr [ [[IV_1]], %[[LOOP_1]] ]
+; CHECK-NEXT:    [[IV_1_LCSSA1:%.*]] = phi ptr [ [[IV_1]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_2]], label %[[LOOP_2_PREHEADER:.*]], label %[[LOOP_0_LATCH:.*]]
 ; CHECK:       [[LOOP_2_PREHEADER]]:
-; CHECK-NEXT:    [[IV_1_LCSSA_LCSSA:%.*]] = phi ptr [ [[IV_1_LCSSA]], %[[THEN]] ]
+; CHECK-NEXT:    [[IV_1_LCSSA:%.*]] = phi ptr [ [[IV_1_LCSSA1]], %[[THEN]] ]
+; CHECK-NEXT:    [[IV_1_LCSSA_LCSSA:%.*]] = phi ptr [ [[IV_1_LCSSA1]], %[[THEN]] ]
 ; CHECK-NEXT:    [[STRLEN:%.*]] = call i64 @strlen(ptr null)
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[IV_1_LCSSA]], i64 1
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[STRLEN]]

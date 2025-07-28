@@ -1257,7 +1257,7 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
     assert(Diff->getType()->isIntegerTy() &&
            "difference must be of integer type");
     Value *DiffV = expand(Diff);
-    Value *BaseV = &PN;
+    Value *BaseV = fixupLCSSAFormFor(&PN);
     if (PhiTy->isPointerTy()) {
       if (STy->isPointerTy())
         return Builder.CreatePtrAdd(BaseV, DiffV);
