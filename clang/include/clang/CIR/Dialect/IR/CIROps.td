@@ -2817,6 +2817,8 @@ class CIR_BitOpBase<string mnemonic, TypeConstraint operandTy>
   let assemblyFormat = [{
     $input `:` type($result) attr-dict
   }];
+
+  let hasFolder = 1;
 }
 
 class CIR_BitZeroCountOpBase<string mnemonic, TypeConstraint operandTy>
@@ -3024,6 +3026,8 @@ def CIR_RotateOp : CIR_Op<"rotate", [Pure, SameOperandsAndResultType]> {
     bool isRotateLeft() { return getRotateLeft(); }
     bool isRotateRight() { return !getRotateLeft(); }
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
