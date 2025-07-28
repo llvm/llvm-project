@@ -3646,7 +3646,7 @@ static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
 static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
                                          ISD::CondCode CC, SDValue CCOp,
                                          AArch64CC::CondCode Predicate,
-                                         AArch64CC::CondCode OutCC,
+                                         AArch64CC::CondCode &OutCC,
                                          const SDLoc &DL, SelectionDAG &DAG) {
   unsigned Opcode = 0;
   const bool FullFP16 = DAG.getSubtarget<AArch64Subtarget>().hasFullFP16();
@@ -3661,7 +3661,48 @@ static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
     Opcode = AArch64ISD::FCCMP;
   } else if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(RHS)) {
     APInt Imm = Const->getAPIntValue();
-    if (Imm.isNegative() && Imm.sgt(-32)) {
+    if (Imm.getZExtValue() == 32 && (CC == ISD::SETLT || CC == ISD::SETGE ||
+                                     CC == ISD::SETULT || CC == ISD::SETUGE)) {
+      Opcode = AArch64ISD::CCMP;
+      RHS = DAG.getConstant(31, DL, Const->getValueType(0));
+      switch (CC) {
+      case ISD::SETLT:
+        OutCC = AArch64CC::LE;
+        break;
+      case ISD::SETGE:
+        OutCC = AArch64CC::GT;
+        break;
+      case ISD::SETULT:
+        OutCC = AArch64CC::LS;
+        break;
+      case ISD::SETUGE:
+        OutCC = AArch64CC::HI;
+        break;
+      default:
+        llvm_unreachable("Cannot adjust 32 to 31");
+      }
+    } else if (Imm.getSExtValue() == -32 &&
+               (CC == ISD::SETLE || CC == ISD::SETGT || CC == ISD::SETULE ||
+                CC == ISD::SETUGT)) {
+      Opcode = AArch64ISD::CCMN;
+      RHS = DAG.getConstant(31, DL, Const->getValueType(0));
+      switch (CC) {
+      case ISD::SETLE:
+        OutCC = AArch64CC::LT;
+        break;
+      case ISD::SETGT:
+        OutCC = AArch64CC::GE;
+        break;
+      case ISD::SETULE:
+        OutCC = AArch64CC::LO;
+        break;
+      case ISD::SETUGT:
+        OutCC = AArch64CC::HS;
+        break;
+      default:
+        llvm_unreachable("Cannot adjust -32 to -31");
+      }
+    } else if (Imm.isNegative() && Imm.sgt(-32)) {
       Opcode = AArch64ISD::CCMN;
       RHS = DAG.getConstant(Imm.abs(), DL, Const->getValueType(0));
     }
