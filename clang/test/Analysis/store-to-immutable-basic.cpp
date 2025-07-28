@@ -43,3 +43,21 @@ void test_ref_to_const_data() {
   int &ref = *(int*)&data;
   ref = 100; // expected-warning {{Writing to immutable memory is undefined behavior. This memory region is marked as immutable and should not be modified}}
 }
+
+struct MultipleLayerStruct {
+  MultipleLayerStruct();
+  const int data; // expected-note {{Memory region is in immutable space}}
+  const int buf[10];
+};
+
+MultipleLayerStruct MLS[10]; // mutable global
+
+void test_multiple_layer_struct_array_member() {
+  int *p = (int*)&MLS[2].data;
+  *p = 4; // expected-warning {{Writing to immutable memory is undefined behavior. This memory region is marked as immutable and should not be modified}}
+}
+
+void test_multiple_layer_struct_array_array_member() {
+  int *p = (int*)&MLS[2].buf[3];
+  *p = 4; // expected-warning {{Writing to immutable memory is undefined behavior. This memory region is marked as immutable and should not be modified}}
+}
