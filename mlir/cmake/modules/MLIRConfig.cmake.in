@@ -9,9 +9,16 @@ find_package(LLVM ${LLVM_VERSION} EXACT REQUIRED CONFIG
 set(MLIR_EXPORTED_TARGETS "@MLIR_EXPORTS@")
 set(MLIR_CMAKE_DIR "@MLIR_CONFIG_CMAKE_DIR@")
 set(MLIR_INCLUDE_DIRS "@MLIR_CONFIG_INCLUDE_DIRS@")
-set(MLIR_TABLEGEN_EXE "@MLIR_CONFIG_TABLEGEN_EXE@")
-set(MLIR_PDLL_TABLEGEN_EXE "@MLIR_CONFIG_PDLL_TABLEGEN_EXE@")
-set(MLIR_SRC_SHARDER_TABLEGEN_EXE "@MLIR_CONFIG_SRC_SHARDER_TABLEGEN_EXE@")
+# Allow users to override tablegen executables (e.g. for sandboxed builds).
+if(NOT MLIR_TABLEGEN_EXE)
+  set(MLIR_TABLEGEN_EXE "@MLIR_CONFIG_TABLEGEN_EXE@")
+endif()
+if(NOT MLIR_PDLL_TABLEGEN_EXE)
+  set(MLIR_PDLL_TABLEGEN_EXE "@MLIR_CONFIG_PDLL_TABLEGEN_EXE@")
+endif()
+if(NOT MLIR_SRC_SHARDER_TABLEGEN_EXE)
+  set(MLIR_SRC_SHARDER_TABLEGEN_EXE "@MLIR_CONFIG_SRC_SHARDER_TABLEGEN_EXE@")
+endif()
 set(MLIR_IRDL_TO_CPP_EXE "@MLIR_CONFIG_IRDL_TO_CPP_EXE@")
 set(MLIR_INSTALL_AGGREGATE_OBJECTS "@MLIR_INSTALL_AGGREGATE_OBJECTS@")
 set(MLIR_ENABLE_BINDINGS_PYTHON "@MLIR_ENABLE_BINDINGS_PYTHON@")
@@ -30,6 +37,29 @@ set_property(GLOBAL PROPERTY MLIR_UPSTREAM_CAPI_LIBS "@MLIR_CAPI_LIBS@")
 # This is based on how LLVM handles exports.
 if(NOT TARGET MLIRSupport)
   @MLIR_CONFIG_INCLUDE_EXPORTS@
+endif()
+
+# Ensure MLIR_TABLEGEN_EXE is a full path and has a corresponding imported
+# target. In install trees, MLIR_TABLEGEN_EXE may be a bare name
+# ("mlir-tblgen") rather than an absolute path. Resolve it so that
+# TableGen.cmake can use it as both a COMMAND and a DEPENDS entry.
+if(MLIR_TABLEGEN_EXE AND NOT IS_ABSOLUTE "${MLIR_TABLEGEN_EXE}"
+    AND NOT TARGET "${MLIR_TABLEGEN_EXE}")
+  find_program(_mlir_tblgen_exe "${MLIR_TABLEGEN_EXE}"
+    HINTS "${LLVM_TOOLS_BINARY_DIR}")
+  if(_mlir_tblgen_exe)
+    set(MLIR_TABLEGEN_EXE "${_mlir_tblgen_exe}")
+  endif()
+  unset(_mlir_tblgen_exe)
+endif()
+
+if(NOT TARGET mlir-tblgen AND MLIR_TABLEGEN_EXE)
+  add_executable(mlir-tblgen IMPORTED GLOBAL)
+  set_target_properties(mlir-tblgen PROPERTIES
+    IMPORTED_LOCATION "${MLIR_TABLEGEN_EXE}")
+endif()
+if(NOT DEFINED MLIR_TABLEGEN_TARGET)
+  set(MLIR_TABLEGEN_TARGET mlir-tblgen)
 endif()
 
 # By creating these targets here, subprojects that depend on MLIR's
