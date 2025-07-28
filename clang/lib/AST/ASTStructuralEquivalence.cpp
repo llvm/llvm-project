@@ -2071,6 +2071,44 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       !CheckStructurallyEquivalentAttributes(Context, D1, D2))
     return false;
 
+  // In C23, if one enumeration has a fixed underlying type, the other shall
+  // have a compatible fixed underlying type (6.2.7).
+  if (Context.LangOpts.C23) {
+    if (D1->isFixed() != D2->isFixed()) {
+      if (Context.Complain) {
+        Context.Diag2(D2->getLocation(),
+                      Context.getApplicableDiagnostic(
+                          diag::err_odr_tag_type_inconsistent))
+            << Context.ToCtx.getTypeDeclType(D2)
+            << (&Context.FromCtx != &Context.ToCtx);
+        EnumDecl *Has = D1->isFixed() ? D1 : D2;
+        EnumDecl *Missing = D1->isFixed() ? D1 : D2;
+        Context.Diag1(Has->getLocation(), diag::note_odr_fixed_underlying_type)
+            << Has;
+        Context.Diag2(Missing->getLocation(),
+                      diag::note_odr_missing_fixed_underlying_type)
+            << Missing;
+      }
+      return false;
+    }
+    if (D1->isFixed()) {
+      assert(D2->isFixed() && "enums expected to have fixed underlying types");
+      if (!IsStructurallyEquivalent(Context, D1->getIntegerType(),
+                                    D2->getIntegerType())) {
+        if (Context.Complain) {
+          Context.Diag2(D2->getLocation(),
+                        Context.getApplicableDiagnostic(
+                            diag::err_odr_tag_type_inconsistent))
+              << Context.ToCtx.getTypeDeclType(D2)
+              << (&Context.FromCtx != &Context.ToCtx);
+          Context.Diag1(D2->getLocation(), diag::note_odr_enumerator)
+              << D2 << D2->getIntegerType() << D1->getIntegerType();
+        }
+        return false;
+      }
+    }
+  }
+
   llvm::SmallVector<const EnumConstantDecl *, 8> D1Enums, D2Enums;
   auto CopyEnumerators =
       [](auto &&Range, llvm::SmallVectorImpl<const EnumConstantDecl *> &Cont) {
