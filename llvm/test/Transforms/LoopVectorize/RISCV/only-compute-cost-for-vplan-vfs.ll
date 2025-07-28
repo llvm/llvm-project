@@ -1,4 +1,4 @@
-; RUN: opt -passes=loop-vectorize -force-tail-folding-style=data-with-evl \
+; RUN: opt -passes=loop-vectorize \
 ; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
 ; RUN: -mtriple=riscv64 -mattr=+v -S -debug %s 2>&1 | FileCheck %s
 
