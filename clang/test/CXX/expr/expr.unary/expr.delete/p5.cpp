@@ -6,12 +6,12 @@
 
 // The trivial case.
 class T0; // expected-note {{forward declaration}}
-void f0(T0 *a) { delete a; } // expected-warning {{deleting pointer to incomplete type}}
+void f0(T0 *a) { delete a; } // expected-warning {{deleting pointer to incomplete type 'T0'}}
 class T0 { ~T0(); };
 
 // The trivial case, inside a template instantiation.
 template<typename T>
-struct T1_A { T *x; ~T1_A() { delete x; } }; // expected-warning {{deleting pointer to incomplete type}}
+struct T1_A { T *x; ~T1_A() { delete x; } }; // expected-warning {{deleting pointer to incomplete type 'T1_B'}}
 class T1_B; // expected-note {{forward declaration}}
 void f0() { T1_A<T1_B> x; } // expected-note {{in instantiation of member function}}
 
@@ -44,3 +44,8 @@ class T3_A {
 private: 
   ~T3_A(); // expected-note{{declared private here}}
 };
+
+// The trivial case but with a union.
+union T4; // expected-note {{forward declaration}}
+void f4(T4 *a) { delete a; } // expected-warning {{deleting pointer to incomplete type 'T4'}}
+union T4 { ~T4(); };

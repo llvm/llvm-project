@@ -28,7 +28,7 @@ struct S // expected-note {{candidate}}
   S(double, int); // expected-note 2 {{candidate}}
   S(float, int); // expected-note 2 {{candidate}}
 };
-struct T; // expected-note{{forward declaration of 'T'}}
+struct T; // expected-note 3{{forward declaration of 'T'}}
 struct U
 {
   // A special new, to verify that the global version isn't used.
@@ -216,6 +216,8 @@ void good_deletes()
   delete (int*)0;
   delete [](int*)0;
   delete (S*)0;
+  delete [](S(*)[2])0;
+  delete [](S(*)[])0;
   ::delete (int*)0;
 }
 
@@ -227,7 +229,13 @@ void bad_deletes()
   // cxx98-23-warning@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
   // since-cxx26-error@-2 {{cannot delete pointer to incomplete type 'void'}}
   delete (T*)0;
-  // cxx98-23-warning@-1 {{deleting pointer to incomplete type}}
+  // cxx98-23-warning@-1 {{deleting pointer to incomplete type 'T'}}
+  // since-cxx26-error@-2 {{cannot delete pointer to incomplete type 'T'}}
+  delete [](T(*)[2])0;
+  // cxx98-23-warning@-1 {{deleting pointer to incomplete type 'T'}}
+  // since-cxx26-error@-2 {{cannot delete pointer to incomplete type 'T'}}
+  delete [](T(*)[])0;
+  // cxx98-23-warning@-1 {{deleting pointer to incomplete type 'T'}}
   // since-cxx26-error@-2 {{cannot delete pointer to incomplete type 'T'}}
   ::S::delete (int*)0; // expected-error {{expected unqualified-id}}
 }
@@ -570,7 +578,7 @@ namespace DeleteIncompleteClassPointerError {
   struct A; // expected-note {{forward declaration}}
   void f(A *x) { 1+delete x; }
   // expected-error@-1 {{invalid operands to binary expression}}
-  // cxx98-23-warning@-2 {{deleting pointer to incomplete type}}
+  // cxx98-23-warning@-2 {{deleting pointer to incomplete type 'A'}}
   // since-cxx26-error@-3 {{cannot delete pointer to incomplete type 'A'}}
 }
 
@@ -595,6 +603,9 @@ struct GH99278_2 {
   } f;
 };
 GH99278_2<void> e;
+void GH99278_3(int(*p)[]) {
+  delete[] p;
+};
 #endif
 
 struct PlacementArg {};

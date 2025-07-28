@@ -146,7 +146,9 @@ Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 - Diagnose binding a reference to ``*nullptr`` during constant evaluation. (#GH48665)
 - Suppress ``-Wdeprecated-declarations`` in implicitly generated functions. (#GH147293)
-- Fix a crash when deleting a pointer to an incomplete array (#GH150359).
+- Clang no longer rejects deleting a pointer to an incomplete array, regardless
+  of C++ standard version. (#GH149406)
+- Fix a crash when deleting a pointer to an incomplete array. (#GH150359)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

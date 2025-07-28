@@ -499,7 +499,7 @@ namespace PseudoDtor {
 
 namespace Incomplete {
   class Foo; // expected-note{{forward declaration}}
-  void f(Foo *foo) { delete foo; } // expected-warning{{deleting pointer to incomplete type}}
+  void f(Foo *foo) { delete foo; } // expected-warning{{deleting pointer to incomplete type 'Foo'}}
 }
 
 namespace TypeTraitExpr {

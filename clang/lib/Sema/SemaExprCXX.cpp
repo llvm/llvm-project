@@ -4039,18 +4039,18 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
     } else if (Pointee->isFunctionType() || Pointee->isVoidType() ||
                Pointee->isSizelessType()) {
       return ExprError(Diag(StartLoc, diag::err_delete_operand)
-        << Type << Ex.get()->getSourceRange());
+                       << Type << Ex.get()->getSourceRange());
     } else if (!Pointee->isDependentType()) {
       // FIXME: This can result in errors if the definition was imported from a
       // module but is hidden.
-      if (Pointee->isEnumeralType() ||
-          !RequireCompleteType(StartLoc, Pointee,
-                               LangOpts.CPlusPlus26
-                                   ? diag::err_delete_incomplete
-                                   : diag::warn_delete_incomplete,
-                               Ex.get())) {
-        if (const RecordType *RT = PointeeElem->getAs<RecordType>())
+      if (const RecordType *RT = PointeeElem->getAs<RecordType>()) {
+        if (!RequireCompleteType(StartLoc, PointeeElem,
+                                 LangOpts.CPlusPlus26
+                                     ? diag::err_delete_incomplete
+                                     : diag::warn_delete_incomplete,
+                                 Ex.get())) {
           PointeeRD = cast<CXXRecordDecl>(RT->getDecl());
+        }
       }
     }
 
