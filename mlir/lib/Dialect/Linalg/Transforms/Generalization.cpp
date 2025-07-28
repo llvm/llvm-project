@@ -61,8 +61,9 @@ FailureOr<GenericOp> mlir::linalg::generalizeNamedOp(RewriterBase &rewriter,
   // All named ops have a region attached that can be inlined.
   assert(linalgOp->getNumRegions() == 1 &&
          "expect named op to have one region attached");
-  GenericOp genericOp = rewriter.create<GenericOp>(
-      linalgOp.getLoc(), resultTypes, inputs, outputs, indexingMaps, iterators);
+  GenericOp genericOp =
+      GenericOp::create(rewriter, linalgOp.getLoc(), resultTypes, inputs,
+                        outputs, indexingMaps, iterators);
   rewriter.inlineRegionBefore(linalgOp->getRegion(0), genericOp.getRegion(),
                               genericOp.getRegion().begin());
   rewriter.replaceOp(linalgOp, genericOp->getResults());

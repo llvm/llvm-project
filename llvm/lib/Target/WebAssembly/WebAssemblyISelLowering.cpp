@@ -288,7 +288,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     // Expand float operations supported for scalars but not SIMD
     for (auto Op : {ISD::FCOPYSIGN, ISD::FLOG, ISD::FLOG2, ISD::FLOG10,
-                    ISD::FEXP, ISD::FEXP2})
+                    ISD::FEXP, ISD::FEXP2, ISD::FEXP10})
       for (auto T : {MVT::v4f32, MVT::v2f64})
         setOperationAction(Op, T, Expand);
 
@@ -798,6 +798,7 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
 
   if (IsIndirect) {
     // Placeholder for the type index.
+    // This gets replaced with the correct value in WebAssemblyMCInstLower.cpp
     MIB.addImm(0);
     // The table into which this call_indirect indexes.
     MCSymbolWasm *Table = IsFuncrefCall

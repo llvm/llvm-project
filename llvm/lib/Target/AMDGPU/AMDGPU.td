@@ -149,6 +149,12 @@ def FeatureFmaMixInsts : SubtargetFeature<"fma-mix-insts",
   "Has v_fma_mix_f32, v_fma_mixlo_f16, v_fma_mixhi_f16 instructions"
 >;
 
+def FeatureFmaMixBF16Insts : SubtargetFeature<"fma-mix-bf16-insts",
+  "HasFmaMixBF16Insts",
+  "true",
+  "Has v_fma_mix_f32_bf16, v_fma_mixlo_bf16, v_fma_mixhi_bf16 instructions"
+>;
+
 def FeatureIEEEMinimumMaximumInsts : SubtargetFeature<"ieee-minimum-maximum-insts",
   "HasIEEEMinimumMaximumInsts",
   "true",
@@ -165,6 +171,12 @@ def FeatureMinimum3Maximum3F16 : SubtargetFeature<"minimum3-maximum3-f16",
   "HasMinimum3Maximum3F16",
   "true",
   "Has v_minimum3_f16 and v_maximum3_f16 instructions"
+>;
+
+def FeatureMin3Max3PKF16 : SubtargetFeature<"min3-max3-pkf16",
+  "HasMin3Max3PKF16",
+  "true",
+  "Has v_pk_min3_num_f16 and v_pk_max3_num_f16 instructions"
 >;
 
 def FeatureMinimum3Maximum3PKF16 : SubtargetFeature<"minimum3-maximum3-pkf16",
@@ -256,10 +268,22 @@ def FeatureInstFwdPrefetchBug : SubtargetFeature<"inst-fwd-prefetch-bug",
   "S_INST_PREFETCH instruction causes shader to hang"
 >;
 
+def FeatureVmemPrefInsts : SubtargetFeature<"vmem-pref-insts",
+  "HasVmemPrefInsts",
+  "true",
+  "Has flat_prefect_b8 and global_prefetch_b8 instructions"
+>;
+
 def FeatureSafeSmemPrefetch : SubtargetFeature<"safe-smem-prefetch",
   "HasSafeSmemPrefetch",
   "true",
   "SMEM prefetches do not fail on illegal address"
+>;
+
+def FeatureSafeCUPrefetch : SubtargetFeature<"safe-cu-prefetch",
+  "HasSafeCUPrefetch",
+  "true",
+  "VMEM CU scope prefetches do not fail on illegal address"
 >;
 
 def FeatureVcmpxExecWARHazard : SubtargetFeature<"vcmpx-exec-war-hazard",
@@ -557,6 +581,12 @@ def FeatureBF16ConversionInsts : SubtargetFeature<"bf16-cvt-insts",
   "HasBF16ConversionInsts",
   "true",
   "Has bf16 conversion instructions"
+>;
+
+def FeatureBF16PackedInsts : SubtargetFeature<"bf16-pk-insts",
+  "HasBF16PackedInsts",
+  "true",
+  "Has bf16 packed instructions (fma, add, mul, max, min)"
 >;
 
 def FeatureVOP3P : SubtargetFeature<"vop3p",
@@ -1349,6 +1379,10 @@ def FeatureLshlAddU64Inst
     : SubtargetFeature<"lshl-add-u64-inst", "HasLshlAddU64Inst", "true",
                        "Has v_lshl_add_u64 instruction">;
 
+def FeatureAddSubU64Insts
+    : SubtargetFeature<"add-sub-u64-insts", "HasAddSubU64Insts", "true",
+                       "Has v_add_u64 and v_sub_u64 instructions">;
+
 def FeatureMemToLDSLoad : SubtargetFeature<"vmem-to-lds-load-insts",
   "HasVMemToLDSLoad",
   "true",
@@ -1989,7 +2023,10 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureTransposeLoadF4F6Insts,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
+   FeatureBF16PackedInsts,
    FeatureCvtPkF16F32Inst,
+   FeatureFmaMixBF16Insts,
+   FeatureMin3Max3PKF16,
    FeatureMinimum3Maximum3PKF16,
    FeaturePrngInst,
    FeaturePermlane16Swap,
@@ -2002,7 +2039,9 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureFlatBufferGlobalAtomicFaddF64Inst,
    FeatureMemoryAtomicFAddF32DenormalSupport,
    FeatureKernargPreload,
+   FeatureVmemPrefInsts,
    FeatureLshlAddU64Inst,
+   FeatureAddSubU64Insts,
    FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
 ]>;
@@ -2349,6 +2388,10 @@ def HasMinimum3Maximum3F16 :
   Predicate<"Subtarget->hasMinimum3Maximum3F16()">,
   AssemblerPredicate<(all_of FeatureMinimum3Maximum3F16)>;
 
+def HasMin3Max3PKF16 :
+  Predicate<"Subtarget->hasMin3Max3PKF16()">,
+  AssemblerPredicate<(all_of FeatureMin3Max3PKF16)>;
+
 def HasMinimum3Maximum3PKF16 :
   Predicate<"Subtarget->hasMinimum3Maximum3PKF16()">,
   AssemblerPredicate<(all_of FeatureMinimum3Maximum3PKF16)>;
@@ -2472,6 +2515,9 @@ def HasBF16TransInsts : Predicate<"Subtarget->hasBF16TransInsts()">,
 def HasBF16ConversionInsts : Predicate<"Subtarget->hasBF16ConversionInsts()">,
   AssemblerPredicate<(all_of FeatureBF16ConversionInsts)>;
 
+def HasBF16PackedInsts : Predicate<"Subtarget->hasBF16PackedInsts()">,
+  AssemblerPredicate<(all_of FeatureBF16PackedInsts)>;
+
 def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<(all_of FeatureVOP3P)>;
 
@@ -2519,6 +2565,14 @@ def HasFmaakFmamkF64Insts :
   Predicate<"Subtarget->hasFmaakFmamkF64Insts()">,
   AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
 
+def HasPkAddMinMaxInsts :
+  Predicate<"Subtarget->hasPkAddMinMaxInsts()">,
+  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
+
+def HasPkMinMax3Insts :
+  Predicate<"Subtarget->hasPkMinMax3Insts()">,
+  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
+
 def HasImageInsts : Predicate<"Subtarget->hasImageInsts()">,
   AssemblerPredicate<(all_of FeatureImageInsts)>;
 
@@ -2564,6 +2618,9 @@ def HasMovrel : Predicate<"Subtarget->hasMovrel()">,
 
 def HasFmaMixInsts : Predicate<"Subtarget->hasFmaMixInsts()">,
   AssemblerPredicate<(all_of FeatureFmaMixInsts)>;
+
+def HasFmaMixBF16Insts : Predicate<"Subtarget->hasFmaMixBF16Insts()">,
+  AssemblerPredicate<(all_of FeatureFmaMixBF16Insts)>;
 
 def HasDLInsts : Predicate<"Subtarget->hasDLInsts()">,
   AssemblerPredicate<(all_of FeatureDLInsts)>;
@@ -2763,11 +2820,17 @@ def HasScalarDwordx3Loads : Predicate<"Subtarget->hasScalarDwordx3Loads()">;
 def HasXF32Insts : Predicate<"Subtarget->hasXF32Insts()">,
    AssemblerPredicate<(all_of FeatureXF32Insts)>;
 
+def HasVmemPrefInsts : Predicate<"Subtarget->hasVmemPrefInsts()">,
+  AssemblerPredicate<(all_of FeatureVmemPrefInsts)>;
+
 def HasAshrPkInsts : Predicate<"Subtarget->hasAshrPkInsts()">,
   AssemblerPredicate<(all_of FeatureAshrPkInsts)>;
 
 def HasLshlAddU64Inst : Predicate<"Subtarget->hasLshlAddU64Inst()">,
                         AssemblerPredicate<(all_of FeatureLshlAddU64Inst)>;
+
+def HasAddSubU64Insts : Predicate<"Subtarget->hasAddSubU64Insts()">,
+                        AssemblerPredicate<(all_of FeatureAddSubU64Insts)>;
 
 def HasLdsBarrierArriveAtomic : Predicate<"Subtarget->hasLdsBarrierArriveAtomic()">,
   AssemblerPredicate<(all_of FeatureLdsBarrierArriveAtomic)>;

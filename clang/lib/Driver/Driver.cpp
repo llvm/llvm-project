@@ -68,6 +68,7 @@
 #include "clang/Driver/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -208,8 +209,8 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
       CCLogDiagnostics(false), CCGenDiagnostics(false),
       CCPrintProcessStats(false), CCPrintInternalStats(false),
       TargetTriple(TargetTriple), Saver(Alloc), PrependArg(nullptr),
-      CheckInputsExist(true), ProbePrecompiled(true),
-      SuppressMissingInputWarning(false) {
+      PreferredLinker(CLANG_DEFAULT_LINKER), CheckInputsExist(true),
+      ProbePrecompiled(true), SuppressMissingInputWarning(false) {
   // Provide a sane fallback if no VFS is specified.
   if (!this->VFS)
     this->VFS = llvm::vfs::getRealFileSystem();
@@ -907,7 +908,7 @@ getSystemOffloadArchs(Compilation &C, Action::OffloadKind Kind) {
   StringRef Program = C.getArgs().getLastArgValue(
       options::OPT_offload_arch_tool_EQ, "offload-arch");
 
-  SmallVector<std::string, 1> GPUArchs;
+  SmallVector<std::string> GPUArchs;
   if (llvm::ErrorOr<std::string> Executable =
           llvm::sys::findProgramByName(Program)) {
     llvm::SmallVector<StringRef> Args{*Executable};
@@ -1012,6 +1013,7 @@ inferOffloadToolchains(Compilation &C, Action::OffloadKind Kind) {
                      C.getArgs().MakeArgString(Triple.split("-").first),
                      C.getArgs().MakeArgString("--offload-arch=" + Arch));
     C.getArgs().append(A);
+    C.getArgs().AddSynthesizedArg(A);
     Triples.insert(Triple);
   }
 
@@ -1062,7 +1064,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         (C.getInputArgs().hasArg(options::OPT_offload_arch_EQ) &&
          !(IsCuda || IsHIP))));
 
-  llvm::DenseSet<Action::OffloadKind> Kinds;
+  llvm::SmallSet<Action::OffloadKind, 4> Kinds;
   const std::pair<bool, Action::OffloadKind> ActiveKinds[] = {
       {IsCuda, Action::OFK_Cuda},
       {IsHIP, Action::OFK_HIP},
@@ -4884,7 +4886,13 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     // Compiling HIP in device-only non-RDC mode requires linking each action
     // individually.
     for (Action *&A : DeviceActions) {
-      if ((A->getType() != types::TY_Object &&
+      // Special handling for the HIP SPIR-V toolchain because it doesn't use
+      // the SPIR-V backend yet doesn't report the output as an object.
+      bool IsAMDGCNSPIRV = A->getOffloadingToolChain() &&
+                           A->getOffloadingToolChain()->getTriple().getOS() ==
+                               llvm::Triple::OSType::AMDHSA &&
+                           A->getOffloadingToolChain()->getTriple().isSPIRV();
+      if ((A->getType() != types::TY_Object && !IsAMDGCNSPIRV &&
            A->getType() != types::TY_LTO_BC) ||
           !HIPNoRDC || !offloadDeviceOnly())
         continue;
@@ -4940,8 +4948,9 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     // fatbinary for each translation unit, linking each input individually.
     Action *FatbinAction =
         C.MakeAction<LinkJobAction>(OffloadActions, types::TY_HIP_FATBIN);
-    DDep.add(*FatbinAction, *C.getSingleOffloadToolChain<Action::OFK_HIP>(),
-             nullptr, Action::OFK_HIP);
+    DDep.add(*FatbinAction,
+             *C.getOffloadToolChains<Action::OFK_HIP>().first->second, nullptr,
+             Action::OFK_HIP);
   } else {
     // Package all the offloading actions into a single output that can be
     // embedded in the host and linked.
@@ -5096,7 +5105,10 @@ Action *Driver::ConstructPhaseAction(
                         false) ||
            (Args.hasFlag(options::OPT_offload_new_driver,
                          options::OPT_no_offload_new_driver, false) &&
-            !offloadDeviceOnly())) ||
+            (!offloadDeviceOnly() ||
+             (Input->getOffloadingToolChain() &&
+              TargetDeviceOffloadKind == Action::OFK_HIP &&
+              Input->getOffloadingToolChain()->getTriple().isSPIRV())))) ||
           TargetDeviceOffloadKind == Action::OFK_OpenMP))) {
       types::ID Output =
           Args.hasArg(options::OPT_S) &&

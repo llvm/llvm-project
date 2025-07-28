@@ -44,8 +44,8 @@ struct ComplexOpToROCDLLibraryCalls : public OpRewritePattern<Op> {
       rewriter.setInsertionPointToStart(&symTable->getRegion(0).front());
       auto funcTy = FunctionType::get(
           rewriter.getContext(), op->getOperandTypes(), op->getResultTypes());
-      opFunc = rewriter.create<func::FuncOp>(rewriter.getUnknownLoc(), funcName,
-                                             funcTy);
+      opFunc = func::FuncOp::create(rewriter, rewriter.getUnknownLoc(),
+                                    funcName, funcTy);
       opFunc.setPrivate();
     }
     rewriter.replaceOpWithNewOp<func::CallOp>(op, funcName, op.getType(),
