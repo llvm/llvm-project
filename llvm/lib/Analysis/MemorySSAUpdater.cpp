@@ -229,8 +229,8 @@ MemoryAccess *MemorySSAUpdater::tryRemoveTrivialPhi(MemoryPhi *Phi,
     return nullptr;
 
   // Worklist approach to recursively removing trivial Phis.
-  SmallVector<Value*, 5> Worklist;
-  SmallSetVector<Value*, 5> Visited;
+  SmallVector<Value *, 5> Worklist;
+  SmallSetVector<Value *, 5> Visited;
 
   for (auto U : Same->users()) {
     if (dyn_cast<MemoryPhi>(&*U))
