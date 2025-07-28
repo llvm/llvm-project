@@ -138,7 +138,7 @@ public:
       if (i < fieldNames.size() - 1)
         mapInitializer += ", ";
     }
-    mapInitializer += " }";
+    mapInitializer += " }}";
 
     emitc::OpaqueType iteratorType = mlir::emitc::OpaqueType::get(
         context, "std::map<std::string, char*>::const_iterator");
