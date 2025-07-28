@@ -29,29 +29,24 @@ public:
   void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &C) const;
 
 private:
-  bool isConstVariable(const MemRegion *MR, CheckerContext &C) const;
+  bool isEffectivelyConstRegion(const MemRegion *MR, CheckerContext &C) const;
   bool isConstQualifiedType(const MemRegion *MR, CheckerContext &C) const;
 };
 } // end anonymous namespace
 
-bool StoreToImmutableChecker::isConstVariable(const MemRegion *MR,
-                                              CheckerContext &C) const {
+static bool isEffectivelyConstRegionAux(const MemRegion *MR,
+                                        CheckerContext &C) {
   // Check if the region is in the global immutable space
   const MemSpaceRegion *MS = MR->getMemorySpace(C.getState());
   if (isa<GlobalImmutableSpaceRegion>(MS))
     return true;
 
-  // Check if this is a VarRegion with a const-qualified type
-  if (const VarRegion *VR = dyn_cast<VarRegion>(MR)) {
-    const VarDecl *VD = VR->getDecl();
-    if (VD && VD->getType().isConstQualified())
-      return true;
-  }
-
-  // Check if this is a FieldRegion with a const-qualified type
-  if (const FieldRegion *FR = dyn_cast<FieldRegion>(MR)) {
-    const FieldDecl *FD = FR->getDecl();
-    if (FD && FD->getType().isConstQualified())
+  // Check if this is a TypedRegion with a const-qualified type
+  if (const TypedRegion *TR = dyn_cast<TypedRegion>(MR)) {
+    QualType LocationType = TR->getDesugaredLocationType(C.getASTContext());
+    if (LocationType->isPointerOrReferenceType())
+      LocationType = LocationType->getPointeeType();
+    if (LocationType.isConstQualified())
       return true;
   }
 
@@ -62,22 +57,33 @@ bool StoreToImmutableChecker::isConstVariable(const MemRegion *MR,
       return true;
   }
 
-  // Check if this is an ElementRegion accessing a const array
-  if (const ElementRegion *ER = dyn_cast<ElementRegion>(MR)) {
-    return isConstQualifiedType(ER->getSuperRegion(), C);
-  }
+  // NOTE: The only kind of region that is not checked by the above branches is
+  // AllocaRegion. We do not need to check AllocaRegion, as it models untyped
+  // memory, that is allocated on the stack.
 
   return false;
 }
 
-bool StoreToImmutableChecker::isConstQualifiedType(const MemRegion *MR,
-                                                   CheckerContext &C) const {
-  // Check if the region has a const-qualified type
-  if (const TypedValueRegion *TVR = dyn_cast<TypedValueRegion>(MR)) {
-    QualType Ty = TVR->getValueType();
-    return Ty.isConstQualified();
+bool StoreToImmutableChecker::isEffectivelyConstRegion(
+    const MemRegion *MR, CheckerContext &C) const {
+  // If the region is an ElementRegion, we need to check if any of the super
+  // regions have const-qualified type.
+  if (const ElementRegion *ER = dyn_cast<ElementRegion>(MR)) {
+    SmallVector<const MemRegion *, 8> SuperRegions;
+    const MemRegion *Current = MR;
+    const MemRegion *Base = ER->getBaseRegion();
+    while (Current != Base) {
+      SuperRegions.push_back(Current);
+      assert(isa<SubRegion>(Current));
+      Current = cast<SubRegion>(Current)->getSuperRegion();
+    }
+    SuperRegions.push_back(Base);
+    return llvm::any_of(SuperRegions, [&C](const MemRegion *MR) {
+      return isEffectivelyConstRegionAux(MR, C);
+    });
   }
-  return false;
+
+  return isEffectivelyConstRegionAux(MR, C);
 }
 
 void StoreToImmutableChecker::checkBind(SVal Loc, SVal Val, const Stmt *S,
@@ -93,7 +99,7 @@ void StoreToImmutableChecker::checkBind(SVal Loc, SVal Val, const Stmt *S,
     return;
 
   // Check if the region corresponds to a const variable
-  if (!isConstVariable(MR, C))
+  if (!isEffectivelyConstRegion(MR, C))
     return;
 
   // Generate the bug report
