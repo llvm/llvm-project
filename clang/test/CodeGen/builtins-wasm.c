@@ -755,6 +755,8 @@ void *tp (void) {
 typedef void (*Fvoid)(void);
 typedef float (*Ffloats)(float, double, int);
 typedef void (*Fpointers)(Fvoid, Ffloats, void*, int*, int***, char[5]);
+typedef __externref_t (*FExternRef)(__externref_t, __externref_t);
+typedef __funcref Fpointers (*FFuncRef)(__funcref Fvoid, __funcref Ffloats);
 
 void use(int);
 
@@ -764,11 +766,21 @@ void test_function_pointer_signature_void(Fvoid func) {
 }
 
 void test_function_pointer_signature_floats(Ffloats func) {
-  // WEBASSEMBLY:  tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, float 0.000000e+00, token poison, float 0.000000e+00, double 0.000000e+00, i32 0)
+  // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, float poison, token poison, float poison, double poison, i32 poison)
   use(__builtin_wasm_test_function_pointer_signature(func));
 }
 
 void test_function_pointer_signature_pointers(Fpointers func) {
-  // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, token poison, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null)
+  // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, token poison, ptr poison, ptr poison, ptr poison, ptr poison, ptr poison, ptr poison)
+  use(__builtin_wasm_test_function_pointer_signature(func));
+}
+
+void test_function_pointer_externref(FExternRef func) {
+  // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, ptr addrspace(10) poison, token poison, ptr addrspace(10) poison, ptr addrspace(10) poison)
+  use(__builtin_wasm_test_function_pointer_signature(func));
+}
+
+void test_function_pointer_funcref(FFuncRef func) {
+  // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, ptr addrspace(20) poison, token poison, ptr addrspace(20) poison, ptr addrspace(20) poison)
   use(__builtin_wasm_test_function_pointer_signature(func));
 }

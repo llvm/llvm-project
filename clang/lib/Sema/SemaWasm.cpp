@@ -250,24 +250,6 @@ bool SemaWasm::BuiltinWasmTestFunctionPointerSignature(CallExpr *TheCall) {
            << ArgType << FuncPtrArg->getSourceRange();
   }
 
-  // Check that the function pointer doesn't use reference types
-  if (FuncTy->getReturnType().isWebAssemblyReferenceType()) {
-    return Diag(
-               FuncPtrArg->getBeginLoc(),
-               diag::err_wasm_builtin_test_fp_sig_cannot_include_reference_type)
-           << 0 << FuncTy->getReturnType() << FuncPtrArg->getSourceRange();
-  }
-  auto NParams = FuncTy->getNumParams();
-  for (unsigned I = 0; I < NParams; I++) {
-    if (FuncTy->getParamType(I).isWebAssemblyReferenceType()) {
-      return Diag(
-                 FuncPtrArg->getBeginLoc(),
-                 diag::
-                     err_wasm_builtin_test_fp_sig_cannot_include_reference_type)
-             << 1 << FuncPtrArg->getSourceRange();
-    }
-  }
-
   // Set return type to int (the result of the test)
   TheCall->setType(getASTContext().IntTy);
 
