@@ -15946,11 +15946,11 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
   // Skip optimization for inlinable immediates.
   if (isFloatingPoint) {
     const APFloat &Val = cast<ConstantFPSDNode>(ConstVal)->getValueAPF();
-    if (!Val.isNormal() ||
-        Subtarget->getInstrInfo()->isInlineConstant(Val))
+    if (!Val.isNormal() || Subtarget->getInstrInfo()->isInlineConstant(Val))
       return SDValue();
   } else {
-    if (AMDGPU::isInlinableIntLiteral(cast<ConstantSDNode>(ConstVal)->getSExtValue()))
+    if (AMDGPU::isInlinableIntLiteral(
+            cast<ConstantSDNode>(ConstVal)->getSExtValue()))
       return SDValue();
   }
 
