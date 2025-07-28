@@ -1,4 +1,10 @@
+<<<<<<< HEAD
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -experimental-debug-variable-locations=false < %s | FileCheck %s
+||||||| 5050a1507116
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs < %s | FileCheck %s
+=======
+; RUN: llc -mtriple=amdgcn-amd-amdhsa < %s | FileCheck %s
+>>>>>>> 5f20518f5b4734d01848dfe44d24aed195dc2043
 
 %struct.ShapeData = type { <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, i32, i32, i64, <4 x float>, i32, i8, i8, i16, i32, i32 }
 
