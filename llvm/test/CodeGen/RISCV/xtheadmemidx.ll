@@ -704,14 +704,14 @@ define i64 @lrd(ptr %a, iXLen %b) {
 define i64 @lrd_2(ptr %a, iXLen %b) {
 ; RV32XTHEADMEMIDX-LABEL: lrd_2:
 ; RV32XTHEADMEMIDX:       # %bb.0:
-; RV32XTHEADMEMIDX-NEXT:    addi a2, a0, 96
-; RV32XTHEADMEMIDX-NEXT:    th.lrw a2, a2, a1, 3
-; RV32XTHEADMEMIDX-NEXT:    addi a0, a0, 100
-; RV32XTHEADMEMIDX-NEXT:    th.lrw a1, a0, a1, 3
-; RV32XTHEADMEMIDX-NEXT:    add a0, a2, a2
-; RV32XTHEADMEMIDX-NEXT:    sltu a2, a0, a2
-; RV32XTHEADMEMIDX-NEXT:    add a1, a1, a1
-; RV32XTHEADMEMIDX-NEXT:    add a1, a1, a2
+; RV32XTHEADMEMIDX-NEXT:    slli a1, a1, 3
+; RV32XTHEADMEMIDX-NEXT:    add a0, a1, a0
+; RV32XTHEADMEMIDX-NEXT:    lw a1, 96(a0)
+; RV32XTHEADMEMIDX-NEXT:    lw a2, 100(a0)
+; RV32XTHEADMEMIDX-NEXT:    add a0, a1, a1
+; RV32XTHEADMEMIDX-NEXT:    sltu a1, a0, a1
+; RV32XTHEADMEMIDX-NEXT:    add a2, a2, a2
+; RV32XTHEADMEMIDX-NEXT:    add a1, a2, a1
 ; RV32XTHEADMEMIDX-NEXT:    ret
 ;
 ; RV64XTHEADMEMIDX-LABEL: lrd_2:
