@@ -705,9 +705,6 @@ protected:
       void trap() {}
     )"));
 
-    CFG::BuildOptions Opts;
-    Opts.ExtendedNoReturnAnalysis = true;
-
     ASSERT_THAT_ERROR(
         test::checkDataflow<FunctionCallAnalysis>(
             AnalysisInputs<FunctionCallAnalysis>(
@@ -716,8 +713,7 @@ protected:
                   return FunctionCallAnalysis(C);
                 })
                 .withASTBuildArgs({"-fsyntax-only", "-std=c++17"})
-                .withASTBuildVirtualMappedFiles(std::move(FilesContents))
-                .withCfgBuildOptions(std::move(Opts)),
+                .withASTBuildVirtualMappedFiles(std::move(FilesContents)),
             /*VerifyResults=*/
             [&Expectations](
                 const llvm::StringMap<
