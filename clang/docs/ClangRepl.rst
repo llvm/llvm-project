@@ -197,6 +197,13 @@ Comments:
    clang-repl> // Comments in Clang-Repl
    clang-repl> /* Comments in Clang-Repl */
 
+Help:
+=====
+
+.. code-block:: text
+
+   clang-repl>%help
+
 Undo:
 =====
 
