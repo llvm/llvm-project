@@ -1760,7 +1760,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
               Tok, *this, diag::err_feature_check_malformed);
           if (!II)
             return false;
-          auto BuiltinID = II->getBuiltinID();
+          unsigned BuiltinID = II->getBuiltinID();
           if (BuiltinID != 0) {
             switch (II->getBuiltinID()) {
             case Builtin::BI__builtin_cpu_is:
