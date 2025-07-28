@@ -1459,8 +1459,6 @@ void HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     size_t Size = memtag::getAllocaSizeInBytes(*AI);
     size_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
 
-    Value *AICast = IRB.CreatePointerCast(AI, PtrTy);
-
     auto HandleLifetime = [&](IntrinsicInst *II) {
       // Set the lifetime intrinsic to cover the whole alloca. This reduces the
       // set of assumptions we need to make about the lifetime. Without this we
@@ -1473,14 +1471,13 @@ void HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
       // one set of start / end in any execution (i.e. the ends are not
       // reachable from each other), so this will not cause any problems.
       II->setArgOperand(0, ConstantInt::get(Int64Ty, AlignedSize));
-      II->setArgOperand(1, AICast);
     };
     llvm::for_each(Info.LifetimeStart, HandleLifetime);
     llvm::for_each(Info.LifetimeEnd, HandleLifetime);
 
-    AI->replaceUsesWithIf(Replacement, [AICast, AILong](const Use &U) {
+    AI->replaceUsesWithIf(Replacement, [AILong](const Use &U) {
       auto *User = U.getUser();
-      return User != AILong && User != AICast && !isa<LifetimeIntrinsic>(User);
+      return User != AILong && !isa<LifetimeIntrinsic>(User);
     });
 
     memtag::annotateDebugRecords(Info, retagMask(N));

@@ -791,9 +791,8 @@ struct FoldFillWithPad final : public OpRewritePattern<tensor::PadOp> {
         tensor::EmptyOp::create(rewriter, padOp.getLoc(), reifiedShape.front(),
                                 padOp.getResultType().getElementType());
     Value replacement =
-        rewriter
-            .create<FillOp>(fillOp.getLoc(), ValueRange{padValue},
-                            ValueRange{emptyTensor})
+        FillOp::create(rewriter, fillOp.getLoc(), ValueRange{padValue},
+                       ValueRange{emptyTensor})
             .getResult(0);
     if (replacement.getType() != padOp.getResultType()) {
       replacement = tensor::CastOp::create(rewriter, fillOp.getLoc(),
@@ -2154,9 +2153,8 @@ struct SwapTransposeWithBroadcast : OpRewritePattern<linalg::TransposeOp> {
 
     // Create broadcast(transpose(input)).
     Value transposeResult =
-        rewriter
-            .create<TransposeOp>(loc, broadcastOp.getInput(), transposeInit,
-                                 resultPerms)
+        TransposeOp::create(rewriter, loc, broadcastOp.getInput(),
+                            transposeInit, resultPerms)
             ->getResult(0);
     rewriter.replaceOpWithNewOp<BroadcastOp>(
         transposeOp, transposeResult, transposeOp.getInit(), resultDimensions);

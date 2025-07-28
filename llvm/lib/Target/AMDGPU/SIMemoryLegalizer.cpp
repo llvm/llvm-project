@@ -321,7 +321,8 @@ public:
                                               bool IsNonTemporal,
                                               bool IsLastUse = false) const = 0;
 
-  virtual bool expandSystemScopeStore(MachineBasicBlock::iterator &MI) const {
+  virtual bool finalizeStore(MachineBasicBlock::iterator &MI,
+                             bool Atomic) const {
     return false;
   };
 
@@ -602,7 +603,8 @@ public:
                                       bool IsVolatile, bool IsNonTemporal,
                                       bool IsLastUse) const override;
 
-  bool expandSystemScopeStore(MachineBasicBlock::iterator &MI) const override;
+  bool finalizeStore(MachineBasicBlock::iterator &MI,
+                     bool Atomic) const override;
 
   bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
@@ -2551,11 +2553,25 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
   return Changed;
 }
 
-bool SIGfx12CacheControl::expandSystemScopeStore(
-    MachineBasicBlock::iterator &MI) const {
+bool SIGfx12CacheControl::finalizeStore(MachineBasicBlock::iterator &MI,
+                                        bool Atomic) const {
   MachineOperand *CPol = TII->getNamedOperand(*MI, OpName::cpol);
-  if (CPol && ((CPol->getImm() & CPol::SCOPE) == CPol::SCOPE_SYS))
-    return insertWaitsBeforeSystemScopeStore(MI);
+  if (!CPol)
+    return false;
+
+  const unsigned Scope = CPol->getImm() & CPol::SCOPE;
+
+  // GFX12.0 only: Extra waits needed before system scope stores.
+  if (!ST.hasGFX1250Insts()) {
+    if (!Atomic && Scope == CPol::SCOPE_SYS)
+      return insertWaitsBeforeSystemScopeStore(MI);
+    return false;
+  }
+
+  // GFX12.5 only: Require SCOPE_SE on stores that may hit the scratch address
+  // space.
+  if (TII->mayAccessScratchThroughFlat(*MI) && Scope == CPol::SCOPE_CU)
+    return setScope(MI, CPol::SCOPE_SE);
 
   return false;
 }
@@ -2674,6 +2690,7 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
                                    MOI.getIsCrossAddressSpaceOrdering(),
                                    Position::BEFORE);
 
+    Changed |= CC->finalizeStore(MI, /*Atomic=*/true);
     return Changed;
   }
 
@@ -2686,7 +2703,7 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
 
   // GFX12 specific, scope(desired coherence domain in cache hierarchy) is
   // instruction field, do not confuse it with atomic scope.
-  Changed |= CC->expandSystemScopeStore(MI);
+  Changed |= CC->finalizeStore(MI, /*Atomic=*/false);
   return Changed;
 }
 
