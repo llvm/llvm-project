@@ -12,6 +12,7 @@
 #define lldb_NativeRegisterContextLinux_arm_h
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
+#include "Plugins/Process/Utility/NativeRegisterContextDBReg.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
 #include "Plugins/Process/Utility/lldb-arm-register-enums.h"
 
@@ -74,8 +75,10 @@ public:
 
   bool WatchpointIsEnabled(uint32_t wp_index);
 
-  // Debug register type select
-  enum DREGType { eDREGTypeWATCH = 0, eDREGTypeBREAK };
+  using DREGType = NativeRegisterContextDBReg::DREGType;
+  static const DREGType eDREGTypeBREAK = DREGType::eDREGTypeBREAK;
+  static const DREGType eDREGTypeWATCH = DREGType::eDREGTypeWATCH;
+  using DREG = NativeRegisterContextDBReg::DREG;
 
 protected:
   Status DoReadRegisterValue(uint32_t offset, const char *reg_name,
@@ -102,17 +105,8 @@ private:
   uint32_t m_gpr_arm[k_num_gpr_registers_arm];
   RegisterInfoPOSIX_arm::FPU m_fpr;
 
-  // Debug register info for hardware breakpoints and watchpoints management.
-  struct DREG {
-    lldb::addr_t address;  // Breakpoint/watchpoint address value.
-    lldb::addr_t hit_addr; // Address at which last watchpoint trigger exception
-                           // occurred.
-    lldb::addr_t real_addr; // Address value that should cause target to stop.
-    uint32_t control;       // Breakpoint/watchpoint control value.
-  };
-
-  struct DREG m_hbr_regs[16]; // Arm native linux hardware breakpoints
-  struct DREG m_hwp_regs[16]; // Arm native linux hardware watchpoints
+  std::array<DREG, 16> m_hbr_regs; // Arm native linux hardware breakpoints
+  std::array<DREG, 16> m_hwp_regs; // Arm native linux hardware watchpoints
 
   uint32_t m_max_hwp_supported;
   uint32_t m_max_hbp_supported;
