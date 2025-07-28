@@ -321,12 +321,14 @@ public:
     return span<element_type, _Count>{data() + size() - _Count, _Count};
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr span<element_type, dynamic_extent> first(size_type __count) const noexcept {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_HIDE_FROM_ABI constexpr span<element_type, dynamic_extent>
+  first(size_type __count) const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__count <= size(), "span<T, N>::first(count): count out of range");
     return {data(), __count};
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr span<element_type, dynamic_extent> last(size_type __count) const noexcept {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_HIDE_FROM_ABI constexpr span<element_type, dynamic_extent>
+  last(size_type __count) const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__count <= size(), "span<T, N>::last(count): count out of range");
     return {data() + size() - __count, __count};
   }
@@ -342,7 +344,7 @@ public:
     return _ReturnType{data() + _Offset, _Count == dynamic_extent ? size() - _Offset : _Count};
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr span<element_type, dynamic_extent>
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_HIDE_FROM_ABI constexpr span<element_type, dynamic_extent>
   subspan(size_type __offset, size_type __count = dynamic_extent) const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__offset <= size(), "span<T, N>::subspan(offset, count): offset out of range");
     if (__count == dynamic_extent)
@@ -356,7 +358,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr size_type size_bytes() const noexcept { return _Extent * sizeof(element_type); }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool empty() const noexcept { return _Extent == 0; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](size_type __idx) const noexcept {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_HIDE_FROM_ABI constexpr reference
+  operator[](size_type __idx) const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__idx < size(), "span<T, N>::operator[](index): index out of range");
     return __data_[__idx];
   }
@@ -369,12 +372,12 @@ public:
   }
 #    endif
 
-  _LIBCPP_HIDE_FROM_ABI constexpr reference front() const noexcept {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_HIDE_FROM_ABI constexpr reference front() const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "span<T, N>::front() on empty span");
     return __data_[0];
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr reference back() const noexcept {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_HIDE_FROM_ABI constexpr reference back() const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "span<T, N>::back() on empty span");
     return __data_[size() - 1];
   }
@@ -478,36 +481,41 @@ public:
       : __data_{__other.data()}, __size_{__other.size()} {}
 
   template <size_t _Count>
-  _LIBCPP_HIDE_FROM_ABI constexpr span<element_type, _Count> first() const noexcept {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_HIDE_FROM_ABI constexpr span<element_type, _Count>
+  first() const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(_Count <= size(), "span<T>::first<Count>(): Count out of range");
     return span<element_type, _Count>{data(), _Count};
   }
 
   template <size_t _Count>
-  _LIBCPP_HIDE_FROM_ABI constexpr span<element_type, _Count> last() const noexcept {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_HIDE_FROM_ABI constexpr span<element_type, _Count>
+  last() const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(_Count <= size(), "span<T>::last<Count>(): Count out of range");
     return span<element_type, _Count>{data() + size() - _Count, _Count};
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr span<element_type, dynamic_extent> first(size_type __count) const noexcept {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_HIDE_FROM_ABI constexpr span<element_type, dynamic_extent>
+  first(size_type __count) const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__count <= size(), "span<T>::first(count): count out of range");
     return {data(), __count};
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr span<element_type, dynamic_extent> last(size_type __count) const noexcept {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_HIDE_FROM_ABI constexpr span<element_type, dynamic_extent>
+  last(size_type __count) const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__count <= size(), "span<T>::last(count): count out of range");
     return {data() + size() - __count, __count};
   }
 
   template <size_t _Offset, size_t _Count = dynamic_extent>
-  _LIBCPP_HIDE_FROM_ABI constexpr span<element_type, _Count> subspan() const noexcept {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_HIDE_FROM_ABI constexpr span<element_type, _Count>
+  subspan() const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(_Offset <= size(), "span<T>::subspan<Offset, Count>(): Offset out of range");
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(_Count == dynamic_extent || _Count <= size() - _Offset,
                                         "span<T>::subspan<Offset, Count>(): Offset + Count out of range");
     return span<element_type, _Count>{data() + _Offset, _Count == dynamic_extent ? size() - _Offset : _Count};
   }
 
-  constexpr span<element_type, dynamic_extent> _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_HIDE_FROM_ABI constexpr span<element_type, dynamic_extent>
   subspan(size_type __offset, size_type __count = dynamic_extent) const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__offset <= size(), "span<T>::subspan(offset, count): offset out of range");
     if (__count == dynamic_extent)
@@ -521,7 +529,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr size_type size_bytes() const noexcept { return __size_ * sizeof(element_type); }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool empty() const noexcept { return __size_ == 0; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](size_type __idx) const noexcept {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_HIDE_FROM_ABI constexpr reference
+  operator[](size_type __idx) const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__idx < size(), "span<T>::operator[](index): index out of range");
     return __data_[__idx];
   }
@@ -534,12 +543,12 @@ public:
   }
 #    endif
 
-  _LIBCPP_HIDE_FROM_ABI constexpr reference front() const noexcept {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_HIDE_FROM_ABI constexpr reference front() const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "span<T>::front() on empty span");
     return __data_[0];
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr reference back() const noexcept {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_HIDE_FROM_ABI constexpr reference back() const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "span<T>::back() on empty span");
     return __data_[size() - 1];
   }
