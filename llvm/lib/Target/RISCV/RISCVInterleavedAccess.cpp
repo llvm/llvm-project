@@ -32,7 +32,7 @@ bool RISCVTargetLowering::isLegalInterleavedAccessType(
   if (!isTypeLegal(VT))
     return false;
 
-  if (!isLegalElementTypeForRVV(VT.getScalarType()) ||
+  if (!isLegalLoadStoreElementTypeForRVV(VT.getScalarType()) ||
       !allowsMemoryAccessForAlignment(VTy->getContext(), DL, VT, AddrSpace,
                                       Alignment))
     return false;

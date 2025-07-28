@@ -384,6 +384,7 @@ public:
   bool shouldRemoveExtendFromGSIndex(SDValue Extend, EVT DataVT) const override;
 
   bool isLegalElementTypeForRVV(EVT ScalarTy) const;
+  bool isLegalLoadStoreElementTypeForRVV(EVT ScalarTy) const;
 
   bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
 
