@@ -10,8 +10,8 @@
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/Target.h"
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
 using namespace lldb_private;
@@ -86,4 +86,11 @@ std::string lldb_private::FunctionCallLabel::toString() const {
   return llvm::formatv("{0}:{1:x}:{2:x}:{3}", FunctionCallLabelPrefix,
                        module_id, symbol_id, lookup_name)
       .str();
+}
+
+void llvm::format_provider<FunctionCallLabel>::format(
+    const FunctionCallLabel &label, raw_ostream &OS, StringRef Style) {
+  OS << llvm::formatv("FunctionCallLabel{ module_id: {0:x}, symbol_id: {1:x}, "
+                      "lookup_name: {2} }",
+                      label.module_id, label.symbol_id, label.lookup_name);
 }

@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 
+#include "llvm/Support/FormatProviders.h"
 
 #include "lldb/Expression/ExpressionTypeSystemHelper.h"
 #include "lldb/lldb-forward.h"
@@ -146,5 +147,12 @@ struct FunctionCallLabel {
 inline constexpr llvm::StringRef FunctionCallLabelPrefix = "$__lldb_func";
 
 } // namespace lldb_private
+
+namespace llvm {
+template <> struct format_provider<lldb_private::FunctionCallLabel> {
+  static void format(const lldb_private::FunctionCallLabel &label,
+                     raw_ostream &OS, StringRef Style);
+};
+} // namespace llvm
 
 #endif // LLDB_EXPRESSION_EXPRESSION_H
