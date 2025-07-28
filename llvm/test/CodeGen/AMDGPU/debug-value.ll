@@ -1,10 +1,4 @@
-<<<<<<< HEAD
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -experimental-debug-variable-locations=false -amdgpu-codegenprepare-break-large-phis=0 < %s | FileCheck %s
-||||||| 5050a1507116
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -amdgpu-codegenprepare-break-large-phis=0 < %s | FileCheck %s
-=======
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -amdgpu-codegenprepare-break-large-phis=0 < %s | FileCheck %s
->>>>>>> 5f20518f5b4734d01848dfe44d24aed195dc2043
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -experimental-debug-variable-locations=false -amdgpu-codegenprepare-break-large-phis=0 < %s | FileCheck %s
 
 %struct.wombat = type { [4 x i32], [4 x i32], [4 x i32] }
 
