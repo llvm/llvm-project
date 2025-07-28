@@ -400,67 +400,6 @@ func.func @insert_dynamic_cst(%val: f32, %arg0 : vector<4xf32>) -> vector<4xf32>
 
 // -----
 
-// CHECK-LABEL: @extract_element
-//  CHECK-SAME: %[[V:.*]]: vector<4xf32>, %[[ID:.*]]: i32
-//       CHECK:   spirv.VectorExtractDynamic %[[V]][%[[ID]]] : vector<4xf32>, i32
-func.func @extract_element(%arg0 : vector<4xf32>, %id : i32) -> f32 {
-  %0 = vector.extractelement %arg0[%id : i32] : vector<4xf32>
-  return %0: f32
-}
-
-// -----
-
-// CHECK-LABEL: @extract_element_cst
-//  CHECK-SAME: %[[V:.*]]: vector<4xf32>
-//       CHECK:   spirv.CompositeExtract %[[V]][1 : i32] : vector<4xf32>
-func.func @extract_element_cst(%arg0 : vector<4xf32>) -> f32 {
-  %idx = arith.constant 1 : i32
-  %0 = vector.extractelement %arg0[%idx : i32] : vector<4xf32>
-  return %0: f32
-}
-
-// -----
-
-// CHECK-LABEL: @extract_element_index
-func.func @extract_element_index(%arg0 : vector<4xf32>, %id : index) -> f32 {
-  // CHECK: spirv.VectorExtractDynamic
-  %0 = vector.extractelement %arg0[%id : index] : vector<4xf32>
-  return %0: f32
-}
-
-// -----
-
-// CHECK-LABEL: @extract_element_size5_vector
-func.func @extract_element_size5_vector(%arg0 : vector<5xf32>, %id : i32) -> f32 {
-  // CHECK: vector.extractelement
-  %0 = vector.extractelement %arg0[%id : i32] : vector<5xf32>
-  return %0: f32
-}
-
-// -----
-
-// CHECK-LABEL: @extract_element_size1_vector
-//  CHECK-SAME: (%[[S:.+]]: f32
-func.func @extract_element_size1_vector(%arg0 : f32, %i: index) -> f32 {
-  %bcast = vector.broadcast %arg0 : f32 to vector<1xf32>
-  %0 = vector.extractelement %bcast[%i : index] : vector<1xf32>
-  // CHECK: return %[[S]]
-  return %0: f32
-}
-
-// -----
-
-// CHECK-LABEL: @extract_element_0d_vector
-//  CHECK-SAME: (%[[S:.+]]: f32)
-func.func @extract_element_0d_vector(%arg0 : f32) -> f32 {
-  %bcast = vector.broadcast %arg0 : f32 to vector<f32>
-  %0 = vector.extractelement %bcast[] : vector<f32>
-  // CHECK: return %[[S]]
-  return %0: f32
-}
-
-// -----
-
 // CHECK-LABEL: @extract_strided_slice
 //  CHECK-SAME: %[[ARG:.+]]: vector<4xf32>
 //       CHECK:   spirv.VectorShuffle [1 : i32, 2 : i32] %[[ARG]], %[[ARG]] : vector<4xf32>, vector<4xf32> -> vector<2xf32>
@@ -469,67 +408,6 @@ func.func @extract_strided_slice(%arg0: vector<4xf32>) -> (vector<2xf32>, vector
   %0 = vector.extract_strided_slice %arg0 {offsets = [1], sizes = [2], strides = [1]} : vector<4xf32> to vector<2xf32>
   %1 = vector.extract_strided_slice %arg0 {offsets = [1], sizes = [1], strides = [1]} : vector<4xf32> to vector<1xf32>
   return %0, %1 : vector<2xf32>, vector<1xf32>
-}
-
-// -----
-
-// CHECK-LABEL: @insert_element
-//  CHECK-SAME: %[[VAL:.*]]: f32, %[[V:.*]]: vector<4xf32>, %[[ID:.*]]: i32
-//       CHECK:   spirv.VectorInsertDynamic %[[VAL]], %[[V]][%[[ID]]] : vector<4xf32>, i32
-func.func @insert_element(%val: f32, %arg0 : vector<4xf32>, %id : i32) -> vector<4xf32> {
-  %0 = vector.insertelement %val, %arg0[%id : i32] : vector<4xf32>
-  return %0: vector<4xf32>
-}
-
-// -----
-
-// CHECK-LABEL: @insert_element_cst
-//  CHECK-SAME: %[[VAL:.*]]: f32, %[[V:.*]]: vector<4xf32>
-//       CHECK:   spirv.CompositeInsert %[[VAL]], %[[V]][2 : i32] : f32 into vector<4xf32>
-func.func @insert_element_cst(%val: f32, %arg0 : vector<4xf32>) -> vector<4xf32> {
-  %idx = arith.constant 2 : i32
-  %0 = vector.insertelement %val, %arg0[%idx : i32] : vector<4xf32>
-  return %0: vector<4xf32>
-}
-
-// -----
-
-// CHECK-LABEL: @insert_element_index
-func.func @insert_element_index(%val: f32, %arg0 : vector<4xf32>, %id : index) -> vector<4xf32> {
-  // CHECK: spirv.VectorInsertDynamic
-  %0 = vector.insertelement %val, %arg0[%id : index] : vector<4xf32>
-  return %0: vector<4xf32>
-}
-
-// -----
-
-// CHECK-LABEL: @insert_element_size5_vector
-func.func @insert_element_size5_vector(%val: f32, %arg0 : vector<5xf32>, %id : i32) -> vector<5xf32> {
-  // CHECK: vector.insertelement
-  %0 = vector.insertelement %val, %arg0[%id : i32] : vector<5xf32>
-  return %0 : vector<5xf32>
-}
-
-// -----
-
-// CHECK-LABEL: @insert_element_size1_vector
-//  CHECK-SAME: (%[[S:[a-z0-9]+]]: f32
-func.func @insert_element_size1_vector(%scalar: f32, %vector : vector<1xf32>, %i: index) -> vector<1xf32> {
-  %0 = vector.insertelement %scalar, %vector[%i : index] : vector<1xf32>
-  // CHECK: %[[V:.+]] = builtin.unrealized_conversion_cast %arg0 : f32 to vector<1xf32>
-  // CHECK: return %[[V]]
-  return %0: vector<1xf32>
-}
-
-// -----
-
-// CHECK-LABEL: @insert_element_0d_vector
-//  CHECK-SAME: (%[[S:[a-z0-9]+]]: f32
-func.func @insert_element_0d_vector(%scalar: f32, %vector : vector<f32>) -> vector<f32> {
-  %0 = vector.insertelement %scalar, %vector[] : vector<f32>
-  // CHECK: %[[V:.+]] = builtin.unrealized_conversion_cast %arg0 : f32 to vector<f32>
-  // CHECK: return %[[V]]
-  return %0: vector<f32>
 }
 
 // -----
