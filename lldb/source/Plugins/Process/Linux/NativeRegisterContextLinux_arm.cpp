@@ -747,7 +747,7 @@ Status NativeRegisterContextLinux_arm::ReadHardwareDebugInfo() {
 #else  // __aarch64__
   return arm64::ReadHardwareDebugInfo(m_thread.GetID(), m_max_hwp_supported,
                                       m_max_hbp_supported);
-#endif // __arm__
+#endif // ifdef __arm__
 }
 
 Status NativeRegisterContextLinux_arm::WriteHardwareDebugRegs(DREGType hwbType,
@@ -799,7 +799,7 @@ Status NativeRegisterContextLinux_arm::WriteHardwareDebugRegs(DREGType hwbType,
   auto &regs = (hwbType == eDREGTypeWATCH) ? m_hwp_regs : m_hbr_regs;
   return arm64::WriteHardwareDebugRegs(hwbType, m_thread.GetID(), max_supported,
                                        regs);
-#endif // __arm__
+#endif // ifdef __arm__
 }
 
 uint32_t NativeRegisterContextLinux_arm::CalculateFprOffset(
