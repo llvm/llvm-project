@@ -227,7 +227,7 @@ public:
   LLVM_ABI static VocabVector createDummyVocabForTest(unsigned Dim = 1);
 
   LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &Inv) const;
+                           ModuleAnalysisManager::Invalidator &Inv) const;
 };
 
 /// Embedder provides the interface to generate embeddings (vector

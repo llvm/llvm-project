@@ -13,9 +13,9 @@
 #ifndef LLVM_TRANSFORMS_UTILS_PROFILEVERIFY_H
 #define LLVM_TRANSFORMS_UTILS_PROFILEVERIFY_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 /// Inject MD_prof metadata where it's missing. Used for testing that passes

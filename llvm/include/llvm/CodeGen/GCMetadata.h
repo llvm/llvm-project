@@ -106,7 +106,7 @@ public:
 
   /// Handle invalidation explicitly.
   LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &Inv);
+                           FunctionAnalysisManager::Invalidator &Inv);
 
   /// getFunction - Return the function to which this metadata applies.
   const Function &getFunction() const { return F; }
@@ -164,7 +164,7 @@ public:
 
   /// Handle invalidation explicitly.
   LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &Inv);
+                           ModuleAnalysisManager::Invalidator &Inv);
 
   using iterator = MapT::iterator;
   using const_iterator = MapT::const_iterator;

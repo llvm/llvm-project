@@ -9,8 +9,8 @@
 #ifndef LLVM_MC_DXCONTAINERROOTSIGNATURE_H
 #define LLVM_MC_DXCONTAINERROOTSIGNATURE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <limits>
 
