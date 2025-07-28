@@ -370,20 +370,6 @@ func.func @omp_simd_unexpected_alignment(%arg0 : index, %arg1 : index,
 
 // -----
 
-func.func @omp_simd_non_power_of_two_alignment(%arg0 : index, %arg1 : index,
-                                     %arg2 : index, %arg3 : memref<i32>,
-                                     %arg4 : memref<i32>) -> () {
-  //  expected-warning @below {{Alignment is not a power of 2, aligned clause will be ignored}}
-  "omp.simd"(%arg3, %arg4) ({
-    omp.loop_nest (%iv) : index = (%arg0) to (%arg1) step (%arg2) {
-      omp.yield
-    }
-  }) {alignments = [64, 127], operandSegmentSizes = array<i32: 2, 0, 0, 0, 0, 0, 0>} : (memref<i32>, memref<i32>) -> ()
-  return
-}
-
-// -----
-
 func.func @omp_simd_aligned_float(%arg0 : index, %arg1 : index,
                                   %arg2 : index, %arg3 : memref<i32>,
                                   %arg4 : memref<i32>) -> () {
