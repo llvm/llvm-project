@@ -10,10 +10,6 @@
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/Target.h"
 
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Error.h"
-
 using namespace lldb_private;
 
 Expression::Expression(Target &target)
