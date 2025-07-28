@@ -42,11 +42,11 @@ ASM_FUNCTION_ARM_RE = re.compile(
 )
 
 ASM_FUNCTION_AARCH64_RE = re.compile(
-    r'^_?(?P<func>[^:]+):[ \t]*\/\/[ \t]*@"?(?P=func)"?( (Function|Tail Call))?\n'
+    r'^_?(?P<func>[a-zA-Z][a-zA-Z0-9]*):[ \t]*(\/\/[ \t]*@"?(?P=func)"?)?( (Function|Tail Call))?\n'
     r"(?:[ \t]+.cfi_startproc\n)?"  # drop optional cfi noise
-    r"(?P<body>.*?)\n"
+    r"(?P<body>.*?)"
     # This list is incomplete
-    r"^\s*(\.Lfunc_end[0-9]+|// -- End function)",
+    r"^(\.Lfunc_end[0-9]+:|// -- End function)",
     flags=(re.M | re.S),
 )
 
