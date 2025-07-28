@@ -12290,7 +12290,8 @@ SDValue AArch64TargetLowering::getSqrtEstimate(SDValue Operand,
       SDLoc DL(Operand);
       EVT VT = Operand.getValueType();
 
-      SDNodeFlags Flags = SDNodeFlags::AllowReassociation;
+      SDNodeFlags Flags =
+          SDNodeFlags::AllowReassociation | SDNodeFlags::NoSignedZeros;
 
       // Newton reciprocal square root iteration: E * 0.5 * (3 - X * E^2)
       // AArch64 reciprocal square root iteration instruction: 0.5 * (3 - M * N)
