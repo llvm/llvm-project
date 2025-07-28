@@ -873,7 +873,7 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
 /// Helper to access the operand that contains the unroll part for this recipe
 /// after unrolling.
 template <unsigned PartOpIdx> class LLVM_ABI_FOR_TEST VPUnrollPartAccessor {
-public:
+protected:
   /// Return the VPValue operand containing the unroll part or null if there is
   /// no such operand.
   VPValue *getUnrollPartOperand(VPUser &U) const;
@@ -2104,6 +2104,9 @@ public:
 
   /// Returns true if only scalar values will be generated.
   bool onlyScalarsGenerated(bool IsScalable);
+
+  /// Returns the unroll part.
+  unsigned getCurrentPart() { return getUnrollPart(*this); }
 
   /// Returns the VPValue representing the value of this induction at
   /// the first unrolled part, if it exists. Returns itself if unrolling did not

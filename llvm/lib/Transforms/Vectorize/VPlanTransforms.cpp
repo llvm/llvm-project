@@ -2708,7 +2708,7 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R,
   assert(!R->onlyScalarsGenerated(Plan->hasScalableVF()) &&
          "Recipe should have been replaced");
 
-  unsigned CurrentPart = R->getUnrollPart(*R);
+  unsigned CurrentPart = R->getCurrentPart();
 
   VPBuilder Builder(R);
   DebugLoc DL = R->getDebugLoc();
