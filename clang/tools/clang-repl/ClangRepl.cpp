@@ -28,6 +28,7 @@
 #include "llvm/Support/ManagedStatic.h" // llvm_shutdown
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include <optional>
 
@@ -347,11 +348,15 @@ int main(int argc, const char **argv) {
     }
   }
 
-  const char *percent_commands = "%help\tlist clang-repl %commands\n"
-                                 "%undo\tundo the previous input\n"
-                                 "%quit\texit clang-repl\n";
+  // if we add more % commands, there should be better architecture than this
+  const char *help_output = "%help\tlist clang-repl %commands\n"
+                            "%undo\tundo the previous input\n"
+                            "%quit\texit clang-repl\n";
+  const char *help_prompt = "type %help to list clang-repl commands\n";
+
+  llvm::raw_ostream &OS = llvm::outs();
   if (OptInputs.empty()) {
-    printf("type %%help to list clang-repl commands\n");
+    OS << help_prompt;
     llvm::LineEditor LE("clang-repl");
     std::string Input;
     LE.setListCompleter(ReplListCompleter(CB, *Interp));
@@ -375,7 +380,9 @@ int main(int argc, const char **argv) {
         if (auto Err = Interp->Undo())
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       } else if (Input == R"(%help)") {
-        printf("%s\n", percent_commands);
+        OS << help_output << '\n';
+      } else if (Input[0] == '%') { // make sure this is evaluated last
+        OS << "Invalid % command: \"" << Input << "\". " << help_prompt;
       } else if (Input.rfind("%lib ", 0) == 0) {
         if (auto Err = Interp->LoadDynamicLibrary(Input.data() + 5))
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
