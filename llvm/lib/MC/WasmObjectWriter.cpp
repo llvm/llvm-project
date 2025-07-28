@@ -480,7 +480,7 @@ void WasmObjectWriter::recordRelocation(const MCFragment &F,
   // The WebAssembly backend should never generate FKF_IsPCRel fixups
   assert(!Fixup.isPCRel());
 
-  const auto &FixupSection = cast<MCSectionWasm>(*F.getParent());
+  const auto &FixupSection = static_cast<MCSectionWasm &>(*F.getParent());
   uint64_t C = Target.getConstant();
   uint64_t FixupOffset = Asm->getFragmentOffset(F) + Fixup.getOffset();
   MCContext &Ctx = getContext();
@@ -696,14 +696,15 @@ static void addData(SmallVectorImpl<char> &DataBytes,
     if (Frag.hasInstructions())
       report_fatal_error("only data supported in data sections");
 
-    if (auto *Align = dyn_cast<MCAlignFragment>(&Frag)) {
-      if (Align->getFillLen() != 1)
+    llvm::append_range(DataBytes, Frag.getContents());
+    if (Frag.getKind() == MCFragment::FT_Align) {
+      if (Frag.getAlignFillLen() != 1)
         report_fatal_error("only byte values supported for alignment");
       // If nops are requested, use zeros, as this is the data section.
-      uint8_t Value = Align->hasEmitNops() ? 0 : Align->getFill();
+      uint8_t Value = Frag.hasAlignEmitNops() ? 0 : Frag.getAlignFill();
       uint64_t Size =
-          std::min<uint64_t>(alignTo(DataBytes.size(), Align->getAlignment()),
-                             DataBytes.size() + Align->getMaxBytesToEmit());
+          std::min<uint64_t>(alignTo(DataBytes.size(), Frag.getAlignment()),
+                             DataBytes.size() + Frag.getAlignMaxBytesToEmit());
       DataBytes.resize(Size, Value);
     } else if (auto *Fill = dyn_cast<MCFillFragment>(&Frag)) {
       int64_t NumValues;
@@ -711,12 +712,10 @@ static void addData(SmallVectorImpl<char> &DataBytes,
         llvm_unreachable("The fill should be an assembler constant");
       DataBytes.insert(DataBytes.end(), Fill->getValueSize() * NumValues,
                        Fill->getValue());
+    } else if (Frag.getKind() == MCFragment::FT_LEB) {
+      llvm::append_range(DataBytes, Frag.getVarContents());
     } else {
-      llvm::append_range(DataBytes, Frag.getContents());
-      if (Frag.getKind() == MCFragment::FT_LEB)
-        llvm::append_range(DataBytes, Frag.getVarContents());
-      else
-        assert(Frag.getKind() == MCFragment::FT_Data);
+      assert(Frag.getKind() == MCFragment::FT_Data);
     }
   }
 

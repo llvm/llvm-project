@@ -555,7 +555,6 @@ static void cacheDIVar(FrameDataInfo &FrameData,
       if (I != Container.end())
         DIVarCache.insert({V, (*I)->getVariable()});
     };
-    CacheIt(findDbgDeclares(V));
     CacheIt(findDVRDeclares(V));
   }
 }
@@ -1395,10 +1394,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     auto *G = GetFramePointer(Alloca);
     G->setName(Alloca->getName() + Twine(".reload.addr"));
 
-    SmallVector<DbgVariableIntrinsic *, 4> DIs;
     SmallVector<DbgVariableRecord *> DbgVariableRecords;
-    findDbgUsers(DIs, Alloca, &DbgVariableRecords);
-    assert(DIs.empty() && "Should never see debug-intrinsics");
+    findDbgUsers(Alloca, DbgVariableRecords);
     for (auto *DVR : DbgVariableRecords)
       DVR->replaceVariableLocationOp(Alloca, G);
 

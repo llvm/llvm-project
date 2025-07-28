@@ -107,7 +107,7 @@ struct VPlanTransforms {
   /// try to update the vector loop to exit early if any input is NaN and resume
   /// executing in the scalar loop to handle the NaNs there. Return false if
   /// this attempt was unsuccessful.
-  static bool handleMaxMinNumReductionsWithoutFastMath(VPlan &Plan);
+  static bool handleMaxMinNumReductions(VPlan &Plan);
 
   /// Clear NSW/NUW flags from reduction instructions if necessary.
   static void clearReductionWrapFlags(VPlan &Plan);
@@ -224,6 +224,10 @@ struct VPlanTransforms {
   /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
   static void simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy);
 
+  /// Remove BranchOnCond recipes with true or false conditions together with
+  /// removing dead edges to their successors.
+  static void removeBranchOnConst(VPlan &Plan);
+
   /// If there's a single exit block, optimize its phi recipes that use exiting
   /// IV values by feeding them precomputed end values instead, possibly taken
   /// one step backwards.
@@ -233,6 +237,12 @@ struct VPlanTransforms {
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
+
+  // Materialize vector trip counts for constants early if it can simply be
+  // computed as (Original TC / VF * UF) * VF * UF.
+  static void materializeVectorTripCount(VPlan &Plan, ElementCount BestVF,
+                                         unsigned BestUF,
+                                         PredicatedScalarEvolution &PSE);
 
   /// Try to convert a plan with interleave groups with VF elements to a plan
   /// with the interleave groups replaced by wide loads and stores processing VF
