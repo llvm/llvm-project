@@ -102,17 +102,11 @@ protected:
 ///
 /// The format being:
 ///
-///   <prefix>:<mangled name>:<module uid>:<symbol uid>
+///   <prefix>:<module uid>:<symbol uid>:<mangled name>
 ///
 /// The label string needs to stay valid for the entire lifetime
 /// of this object.
 struct FunctionCallLabel {
-  /// Name to use when searching for the function symbol in
-  /// \c module_id. For most function calls this will be a
-  /// mangled name. In cases where a mangled name can't be used,
-  /// this will be the function name.
-  llvm::StringRef lookup_name;
-
   /// Unique identifier of the lldb_private::Module
   /// which contains the symbol identified by \c symbol_id.
   lldb::user_id_t module_id;
@@ -122,6 +116,15 @@ struct FunctionCallLabel {
   /// be the DIE UID.
   lldb::user_id_t symbol_id;
 
+  /// Name to use when searching for the function symbol in
+  /// \c module_id. For most function calls this will be a
+  /// mangled name. In cases where a mangled name can't be used,
+  /// this will be the function name.
+  ///
+  /// NOTE: kept as last element so we don't have to worry about
+  /// ':' in the mangled name when parsing the label.
+  llvm::StringRef lookup_name;
+
   /// Decodes the specified function \c label into a \c FunctionCallLabel.
   static llvm::Expected<FunctionCallLabel> fromString(llvm::StringRef label);
 
@@ -129,7 +132,7 @@ struct FunctionCallLabel {
   ///
   /// The representation roundtrips through \c fromString:
   /// \code{.cpp}
-  /// llvm::StringRef encoded = "$__lldb_func:_Z3foov:0x0:0x0";
+  /// llvm::StringRef encoded = "$__lldb_func:0x0:0x0:_Z3foov";
   /// FunctionCallLabel label = *fromString(label);
   ///
   /// assert (label.toString() == encoded);
@@ -141,13 +144,6 @@ struct FunctionCallLabel {
 /// LLDB attaches this prefix to mangled names of functions that it get called
 /// from JITted expressions.
 inline constexpr llvm::StringRef FunctionCallLabelPrefix = "$__lldb_func";
-
-/// Returns the components of the specified function call label.
-///
-/// The format of \c label is described in \c FunctionCallLabel.
-/// The label prefix is not one of the components.
-llvm::Expected<llvm::SmallVector<llvm::StringRef, 3>>
-splitFunctionCallLabel(llvm::StringRef label);
 
 } // namespace lldb_private
 

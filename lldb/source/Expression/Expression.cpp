@@ -31,8 +31,12 @@ Expression::Expression(ExecutionContextScope &exe_scope)
   assert(m_target_wp.lock());
 }
 
-llvm::Expected<llvm::SmallVector<llvm::StringRef, 3>>
-lldb_private::splitFunctionCallLabel(llvm::StringRef label) {
+/// Returns the components of the specified function call label.
+///
+/// The format of \c label is described in \c FunctionCallLabel.
+/// The label prefix is not one of the components.
+static llvm::Expected<llvm::SmallVector<llvm::StringRef, 3>>
+splitFunctionCallLabel(llvm::StringRef label) {
   if (!label.consume_front(FunctionCallLabelPrefix))
     return llvm::createStringError(
         "expected function call label prefix not found in %s", label.data());
@@ -60,25 +64,26 @@ lldb_private::FunctionCallLabel::fromString(llvm::StringRef label) {
 
   const auto &components = *components_or_err;
 
-  llvm::StringRef module_label = components[1];
-  llvm::StringRef die_label = components[2];
+  llvm::StringRef module_label = components[0];
+  llvm::StringRef die_label = components[1];
 
   lldb::user_id_t module_id = 0;
   if (module_label.consumeInteger(0, module_id))
     return llvm::createStringError(
-        llvm::formatv("failed to parse module ID from '{0}'.", components[1]));
+        llvm::formatv("failed to parse module ID from '{0}'.", components[0]));
 
   lldb::user_id_t die_id;
   if (die_label.consumeInteger(/*Radix=*/0, die_id))
     return llvm::createStringError(
-        llvm::formatv("failed to parse DIE ID from '{0}'.", components[2]));
+        llvm::formatv("failed to parse DIE ID from '{0}'.", components[1]));
 
-  return FunctionCallLabel{/*.lookup_name=*/components[0],
-                           /*.module_id=*/module_id, /*.symbol_id=*/die_id};
+  return FunctionCallLabel{/*.module_id=*/module_id,
+                           /*.symbol_id=*/die_id,
+                           /*.lookup_name=*/components[2]};
 }
 
 std::string lldb_private::FunctionCallLabel::toString() const {
-  return llvm::formatv("{0}:{1}:{2:x}:{3:x}", FunctionCallLabelPrefix,
-                       lookup_name, module_id, symbol_id)
+  return llvm::formatv("{0}:{1:x}:{2:x}:{3}", FunctionCallLabelPrefix,
+                       module_id, symbol_id, lookup_name)
       .str();
 }

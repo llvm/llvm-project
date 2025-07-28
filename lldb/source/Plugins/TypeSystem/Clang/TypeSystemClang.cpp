@@ -9047,13 +9047,13 @@ ConstString TypeSystemClang::DeclGetName(void *opaque_decl) {
 
 static ConstString
 ExtractMangledNameFromFunctionCallLabel(llvm::StringRef label) {
-  auto components_or_err = splitFunctionCallLabel(label);
-  if (!components_or_err) {
-    llvm::consumeError(components_or_err.takeError());
+  auto label_or_err = FunctionCallLabel::fromString(label);
+  if (!label_or_err) {
+    llvm::consumeError(label_or_err.takeError());
     return {};
   }
 
-  llvm::StringRef mangled = (*components_or_err)[0];
+  llvm::StringRef mangled = label_or_err->lookup_name;
   if (Mangled::IsMangledName(mangled))
     return ConstString(mangled);
 
