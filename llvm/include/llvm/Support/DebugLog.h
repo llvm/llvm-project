@@ -40,8 +40,8 @@ namespace llvm {
   DEBUGLOG_WITH_STREAM_TYPE_AND_FILE(STREAM, TYPE, __SHORT_FILE__)
 #else
 #define DEBUGLOG_WITH_STREAM_AND_TYPE(STREAM, TYPE)                            \
-  DEBUGLOG_WITH_STREAM_TYPE_AND_FILE(                                          \
-      STREAM, TYPE, ::llvm::impl::LogWithNewline::getShortFileName(__FILE__))
+  DEBUGLOG_WITH_STREAM_TYPE_AND_FILE(STREAM, TYPE,                             \
+                                     ::llvm::impl::getShortFileName(__FILE__))
 #endif
 
 namespace impl {
