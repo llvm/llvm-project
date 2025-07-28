@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_PTHREAD_BARRIER_T_H
 #define LLVM_LIBC_TYPES_PTHREAD_BARRIER_T_H
 
-#include "include/llvm-libc-types/__barrier_type.h"
+#include "__barrier_type.h"
 typedef __barrier_type pthread_barrier_t;
 
 #endif // LLVM_LIBC_TYPES_PTHREAD_BARRIER_T_H
