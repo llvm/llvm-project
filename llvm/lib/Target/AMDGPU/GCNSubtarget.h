@@ -1377,6 +1377,10 @@ public:
 
   bool hasVALUReadSGPRHazard() const { return GFX12Insts && !GFX1250Insts; }
 
+  bool setRegModeNeedsVNOPs() const {
+    return GFX1250Insts && getGeneration() == GFX12;
+  }
+
   bool hasForceVALUThrottle() const { return HasForceVALUThrottle; }
 
   bool hasMLMathInsts() const { return HasMLMathInsts; }
