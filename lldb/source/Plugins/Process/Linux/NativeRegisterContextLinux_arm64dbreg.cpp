@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if defined(__arm64__) || defined(__aarch64__)
+
 #include "NativeRegisterContextLinux_arm64dbreg.h"
 #include "lldb/Host/linux/Ptrace.h"
 
@@ -69,3 +71,5 @@ Status lldb_private::process_linux::arm64::WriteHardwareDebugRegs(
   return NativeProcessLinux::PtraceWrapper(PTRACE_SETREGSET, tid, &regset,
                                            &ioVec, ioVec.iov_len);
 }
+
+#endif // defined (__arm64__) || defined (__aarch64__)
