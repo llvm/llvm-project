@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/Support/Compiler.h"
 #include <limits>
 
@@ -24,7 +25,6 @@ namespace llvm {
 
 template <typename PtrType> class SmallPtrSetImpl;
 class AllocaInst;
-class BasicBlock;
 class BlockFrequency;
 class BlockFrequencyInfo;
 class BranchProbabilityInfo;
@@ -85,6 +85,10 @@ public:
   /// 3) Add allocas for any scalar outputs, adding all of the outputs' allocas
   ///    as arguments, and inserting stores to the arguments for any scalars.
   class CodeExtractor {
+    using CustomArgAllocatorCBTy = std::function<Instruction *(
+        BasicBlock *, BasicBlock::iterator, Type *, const Twine &)>;
+    using CustomArgDeallocatorCBTy = std::function<Instruction *(
+        BasicBlock *, BasicBlock::iterator, Value *, Type *)>;
     using ValueSet = SetVector<Value *>;
 
     // Various bits of state computed on construction.
@@ -133,6 +137,25 @@ public:
     // space.
     bool ArgsInZeroAddressSpace;
 
+    // If set, this callback will be used to allocate the arguments in the
+    // caller before passing it to the outlined function holding the extracted
+    // piece of code.
+    CustomArgAllocatorCBTy *CustomArgAllocatorCB;
+
+    // A block outside of the extraction set where previously introduced
+    // intermediate allocations can be deallocated. This is only used when an
+    // custom deallocator is specified.
+    BasicBlock *DeallocationBlock;
+
+    // If set, this callback will be used to deallocate the arguments in the
+    // caller after running the outlined function holding the extracted piece of
+    // code. It will not be called if a custom allocator isn't also present.
+    //
+    // By default, this will be done at the end of the basic block containing
+    // the call to the outlined function, except if a deallocation block is
+    // specified. In that case, that will take precedence.
+    CustomArgDeallocatorCBTy *CustomArgDeallocatorCB;
+
   public:
     /// Create a code extractor for a sequence of blocks.
     ///
@@ -149,7 +172,9 @@ public:
     /// the function from which the code is being extracted.
     /// If ArgsInZeroAddressSpace param is set to true, then the aggregate
     /// param pointer of the outlined function is declared in zero address
-    /// space.
+    /// space. If a CustomArgAllocatorCB callback is specified, it will be used
+    /// to allocate any structures or variable copies needed to pass arguments
+    /// to the outlined function, rather than using regular allocas.
     LLVM_ABI
     CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                   bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
@@ -157,7 +182,10 @@ public:
                   AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
                   bool AllowAlloca = false,
                   BasicBlock *AllocationBlock = nullptr,
-                  std::string Suffix = "", bool ArgsInZeroAddressSpace = false);
+                  std::string Suffix = "", bool ArgsInZeroAddressSpace = false,
+                  CustomArgAllocatorCBTy *CustomArgAllocatorCB = nullptr,
+                  BasicBlock *DeallocationBlock = nullptr,
+                  CustomArgDeallocatorCBTy *CustomArgDeallocatorCB = nullptr);
 
     /// Perform the extraction, returning the new function.
     ///
