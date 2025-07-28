@@ -124,6 +124,10 @@ Improvements to Clang's diagnostics
   Added a new warning in this group for the case where the attribute is missing/implicit on
   an override of a virtual method.
 
+- Fixed false positives in ``-Waddress-of-packed-member`` diagnostics when
+  potential misaligned members get processed before they can get discarded
+  (#GH144729).
+
 Improvements to Clang's time-trace
 ----------------------------------
 

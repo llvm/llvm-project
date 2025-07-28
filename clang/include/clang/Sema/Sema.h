@@ -2662,7 +2662,7 @@ public:
   /// Diagnoses the current set of gathered accesses. This typically
   /// happens at full expression level. The set is cleared after emitting the
   /// diagnostics.
-  void DiagnoseMisalignedMembers();
+  void DiagnoseMisalignedMembers(const Expr *E);
 
   /// This function checks if the expression is in the sef of potentially
   /// misaligned members and it is converted to some pointer type T with lower
