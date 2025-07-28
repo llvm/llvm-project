@@ -157,6 +157,11 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT: if (TT.getArch() == Triple::blah) {
+// CHECK-NEXT:     static constexpr LibcallImplBitset SystemAvailableImpls({
+// CHECK-NEXT:       0x000000000000e0
+// CHECK-NEXT:     });
+// CHECK-NEXT:     AvailableLibcallImpls = SystemAvailableImpls;
+// CHECK-EMPTY:
 // CHECK-NEXT:     static const LibcallImplPair LibraryCalls[] = {
 // CHECK-NEXT:         {RTLIB::BZERO, RTLIB::bzero}, // bzero
 // CHECK-NEXT:         {RTLIB::CALLOC, RTLIB::calloc}, // calloc
@@ -165,6 +170,7 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-EMPTY:
 // CHECK-NEXT:     for (const auto [Func, Impl] : LibraryCalls) {
 // CHECK-NEXT:       setLibcallImpl(Func, Impl);
+// CHECK-NEXT:       setAvailable(Impl);
 // CHECK-NEXT:     }
 // CHECK-EMPTY:
 // CHECK-NEXT:    if (TT.hasCompilerRT()) {
@@ -175,6 +181,7 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-EMPTY:
 // CHECK-NEXT:      for (const auto [Func, Impl] : LibraryCalls_hasCompilerRT) {
 // CHECK-NEXT:        setLibcallImpl(Func, Impl);
+// CHECK-NEXT:        setAvailable(Impl);
 // CHECK-NEXT:      }
 // CHECK-EMPTY:
 // CHECK-NEXT:    }
@@ -186,6 +193,7 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-EMPTY:
 // CHECK-NEXT:      for (const auto [Func, Impl] : LibraryCalls_isBarOS) {
 // CHECK-NEXT:        setLibcallImpl(Func, Impl);
+// CHECK-NEXT:        setAvailable(Impl);
 // CHECK-NEXT:      }
 // CHECK-EMPTY:
 // CHECK-NEXT:    }
@@ -194,6 +202,11 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: if (TT.getArch() == Triple::buzz) {
+// CHECK-NEXT:    static constexpr LibcallImplBitset SystemAvailableImpls({
+// CHECK-NEXT:      0x00000000000118
+// CHECK-NEXT:    });
+// CHECK-NEXT:    AvailableLibcallImpls = SystemAvailableImpls;
+// CHECK-EMPTY:
 // CHECK-NEXT:    static const LibcallImplPair LibraryCalls[] = {
 // CHECK-NEXT:        {RTLIB::SHL_I32, RTLIB::__ashlsi3}, // __ashlsi3
 // CHECK-NEXT:        {RTLIB::SQRT_F80, RTLIB::sqrtl_f80}, // sqrtl
@@ -202,12 +215,18 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-EMPTY:
 // CHECK-NEXT:    for (const auto [Func, Impl] : LibraryCalls) {
 // CHECK-NEXT:      setLibcallImpl(Func, Impl);
+// CHECK-NEXT:      setAvailable(Impl);
 // CHECK-NEXT:    }
 // CHECK-EMPTY:
 // CHECK-NEXT:   return;
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: if (TT.getArch() == Triple::foo) {
+// CHECK-NEXT:    static constexpr LibcallImplBitset SystemAvailableImpls({
+// CHECK-NEXT:      0x000000000000a0
+// CHECK-NEXT:    });
+// CHECK-NEXT:    AvailableLibcallImpls = SystemAvailableImpls;
+// CHECK-EMPTY:
 // CHECK-NEXT:    static const LibcallImplPair LibraryCalls[] = {
 // CHECK-NEXT:        {RTLIB::BZERO, RTLIB::bzero}, // bzero
 // CHECK-NEXT:        {RTLIB::SQRT_F128, RTLIB::sqrtl_f128}, // sqrtl
@@ -215,6 +234,7 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-EMPTY:
 // CHECK-NEXT:    for (const auto [Func, Impl] : LibraryCalls) {
 // CHECK-NEXT:      setLibcallImpl(Func, Impl);
+// CHECK-NEXT:      setAvailable(Impl);
 // CHECK-NEXT:    }
 // CHECK-EMPTY:
 // CHECK-NEXT:    if (TT.getOS() == Triple::bar) {
@@ -224,6 +244,7 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-EMPTY:
 // CHECK-NEXT:      for (const auto [Func, Impl] : LibraryCalls_isBarOS) {
 // CHECK-NEXT:        setLibcallImpl(Func, Impl);
+// CHECK-NEXT:        setAvailable(Impl);
 // CHECK-NEXT:      }
 // CHECK-EMPTY:
 // CHECK-NEXT:    }
@@ -232,6 +253,11 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT: if (TT.getArch() == Triple::simple) {
+// CHECK-NEXT:    static constexpr LibcallImplBitset SystemAvailableImpls({
+// CHECK-NEXT:      0x00000000000158
+// CHECK-NEXT:    });
+// CHECK-NEXT:    AvailableLibcallImpls = SystemAvailableImpls;
+// CHECK-EMPTY:
 // CHECK-NEXT:    static const LibcallImplPair LibraryCalls[] = {
 // CHECK-NEXT:        {RTLIB::CALLOC, RTLIB::calloc}, // calloc
 // CHECK-NEXT:        {RTLIB::SHL_I32, RTLIB::__ashlsi3}, // __ashlsi3
@@ -241,6 +267,7 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-EMPTY:
 // CHECK-NEXT:    for (const auto [Func, Impl] : LibraryCalls) {
 // CHECK-NEXT:      setLibcallImpl(Func, Impl);
+// CHECK-NEXT:      setAvailable(Impl);
 // CHECK-NEXT:    }
 // CHECK-EMPTY:
 // CHECK-NEXT:   return;

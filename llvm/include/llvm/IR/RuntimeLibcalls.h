@@ -53,8 +53,64 @@ static inline auto libcall_impls() {
   return enum_seq(static_cast<RTLIB::LibcallImpl>(1), RTLIB::NumLibcallImpls);
 }
 
+/// Manage a bitset representing the list of available libcalls for a module.
+///
+/// Most of this exists because std::bitset cannot be statically constructed in
+/// a size large enough before c++23
+class LibcallImplBitset {
+private:
+  using BitWord = uint64_t;
+  static constexpr unsigned BitWordSize = sizeof(BitWord) * CHAR_BIT;
+  static constexpr size_t NumArrayElts =
+      divideCeil(RTLIB::NumLibcallImpls, BitWordSize);
+  using Storage = BitWord[NumArrayElts];
+
+  Storage Bits = {};
+
+  /// Get bitmask for \p Impl in its Bits element.
+  static constexpr BitWord getBitmask(RTLIB::LibcallImpl Impl) {
+    unsigned Idx = static_cast<unsigned>(Impl);
+    return BitWord(1) << (Idx % BitWordSize);
+  }
+
+  /// Get index of array element of Bits for \p Impl
+  static constexpr unsigned getArrayIdx(RTLIB::LibcallImpl Impl) {
+    return static_cast<unsigned>(Impl) / BitWordSize;
+  }
+
+public:
+  constexpr LibcallImplBitset() = default;
+  constexpr LibcallImplBitset(const Storage &Src) {
+    for (size_t I = 0; I != NumArrayElts; ++I)
+      Bits[I] = Src[I];
+  }
+
+  /// Check if a LibcallImpl is available.
+  constexpr bool test(RTLIB::LibcallImpl Impl) const {
+    BitWord Mask = getBitmask(Impl);
+    return (Bits[getArrayIdx(Impl)] & Mask) != 0;
+  }
+
+  /// Mark a LibcallImpl as available
+  void set(RTLIB::LibcallImpl Impl) {
+    assert(Impl != RTLIB::Unsupported && "cannot enable unsupported libcall");
+    Bits[getArrayIdx(Impl)] |= getBitmask(Impl);
+  }
+
+  /// Mark a LibcallImpl as unavailable
+  void unset(RTLIB::LibcallImpl Impl) {
+    assert(Impl != RTLIB::Unsupported && "cannot enable unsupported libcall");
+    Bits[getArrayIdx(Impl)] &= ~getBitmask(Impl);
+  }
+};
+
 /// A simple container for information about the supported runtime calls.
 struct RuntimeLibcallsInfo {
+private:
+  /// Bitset of libcalls a module may emit a call to.
+  LibcallImplBitset AvailableLibcallImpls;
+
+public:
   explicit RuntimeLibcallsInfo(
       const Triple &TT,
       ExceptionHandling ExceptionModel = ExceptionHandling::None,
@@ -130,6 +186,14 @@ struct RuntimeLibcallsInfo {
   /// Return the libcall provided by \p Impl
   static RTLIB::Libcall getLibcallFromImpl(RTLIB::LibcallImpl Impl) {
     return ImplToLibcall[Impl];
+  }
+
+  bool isAvailable(RTLIB::LibcallImpl Impl) const {
+    return AvailableLibcallImpls.test(Impl);
+  }
+
+  void setAvailable(RTLIB::LibcallImpl Impl) {
+    AvailableLibcallImpls.set(Impl);
   }
 
   /// Check if this is valid libcall for the current module, otherwise

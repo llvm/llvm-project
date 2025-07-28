@@ -114,12 +114,8 @@ RuntimeLibcallsInfo::getSupportedLibcallImpl(StringRef FuncName) const {
   for (auto I = Range.begin(); I != Range.end(); ++I) {
     RTLIB::LibcallImpl Impl =
         static_cast<RTLIB::LibcallImpl>(I - RuntimeLibcallNameOffsets.begin());
-
-    // FIXME: This should not depend on looking up ImplToLibcall, only the list
-    // of libcalls for the module.
-    RTLIB::LibcallImpl Recognized = LibcallImpls[ImplToLibcall[Impl]];
-    if (Recognized != RTLIB::Unsupported)
-      return Recognized;
+    if (isAvailable(Impl))
+      return Impl;
   }
 
   return RTLIB::Unsupported;
