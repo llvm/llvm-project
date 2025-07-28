@@ -64,13 +64,6 @@
 // CHECK-NOT: __riscv_v_intrinsic {{.*$}}
 // CHECK-NOT: __riscv_v_min_vlen {{.*$}}
 // CHECK-NOT: __riscv_vector {{.*$}}
-// CHECK-NOT: __riscv_xcvalu {{.*$}}
-// CHECK-NOT: __riscv_xcvbi {{.*$}}
-// CHECK-NOT: __riscv_xcvbitmanip {{.*$}}
-// CHECK-NOT: __riscv_xcvelw {{.*$}}
-// CHECK-NOT: __riscv_xcvmac {{.*$}}
-// CHECK-NOT: __riscv_xcvmem {{.*$}}
-// CHECK-NOT: __riscv_xcvsimd {{.*$}}
 // CHECK-NOT: __riscv_xtheadba {{.*$}}
 // CHECK-NOT: __riscv_xtheadbb {{.*$}}
 // CHECK-NOT: __riscv_xtheadbs {{.*$}}
@@ -559,46 +552,6 @@
 // CHECK-V-EXT: __riscv_v_intrinsic 1000000{{$}}
 // CHECK-V-EXT: __riscv_v_min_vlen 128
 // CHECK-V-EXT: __riscv_vector 1
-
-// RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN:   -march=rv32ixcvalu -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-XCVALU-EXT %s
-// RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN:   -march=rv64ixcvalu -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-XCVALU-EXT %s
-// CHECK-XCVALU-EXT: __riscv_xcvalu 1000000{{$}}
-
-// RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN:   -march=rv32ixcvbi -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-XCVBI-EXT %s
-// RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN:   -march=rv64ixcvbi -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-XCVBI-EXT %s
-// CHECK-XCVBI-EXT: __riscv_xcvbi 1000000{{$}}
-
-// RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN:   -march=rv32ixcvbitmanip -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-XCVBITMANIP-EXT %s
-// RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN:   -march=rv64ixcvbitmanip -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-XCVBITMANIP-EXT %s
-// CHECK-XCVBITMANIP-EXT: __riscv_xcvbitmanip 1000000{{$}}
-
-// RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN:   -march=rv32ixcvmac -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-XCVMAC-EXT %s
-// RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN:   -march=rv64ixcvmac -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-XCVMAC-EXT %s
-// CHECK-XCVMAC-EXT: __riscv_xcvmac 1000000{{$}}
-
-// RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN:   -march=rv32ixcvsimd -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-XCVSIMD-EXT %s
-// RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN:   -march=rv64ixcvsimd -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-XCVSIMD-EXT %s
-// CHECK-XCVSIMD-EXT: __riscv_xcvsimd 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32ixtheadba -E -dM %s \
