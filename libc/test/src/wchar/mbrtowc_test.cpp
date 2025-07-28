@@ -190,6 +190,18 @@ TEST_F(LlvmLibcMBRToWCTest, NullString) {
   ASSERT_ERRNO_SUCCESS();
 }
 
+TEST_F(LlvmLibcMBRToWCTest, NullDest) {
+  const char ch[4] = {static_cast<char>(0xF0), static_cast<char>(0x9F),
+                      static_cast<char>(0xA4),
+                      static_cast<char>(0xA1)}; // 🤡 clown emoji
+  mbstate_t *mb;
+  LIBC_NAMESPACE::memset(&mb, 0, sizeof(mbstate_t));
+  // reading nullptr should return correct size
+  size_t n = LIBC_NAMESPACE::mbrtowc(nullptr, ch, 10, mb);
+  ASSERT_EQ(static_cast<int>(n), 4);
+  ASSERT_ERRNO_SUCCESS();
+}
+
 TEST_F(LlvmLibcMBRToWCTest, InvalidMBState) {
   const char ch[4] = {static_cast<char>(0xC2), static_cast<char>(0x8E),
                       static_cast<char>(0xC7), static_cast<char>(0x8C)};

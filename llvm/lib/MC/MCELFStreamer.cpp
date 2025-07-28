@@ -88,8 +88,10 @@ void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   if (SectionELF->getFlags() & ELF::SHF_GNU_RETAIN)
     getWriter().markGnuAbi();
 
-  changeSectionImpl(Section, Subsection);
-  Asm.registerSymbol(*Section->getBeginSymbol());
+  MCObjectStreamer::changeSection(Section, Subsection);
+  auto *Sym = static_cast<MCSymbolELF *>(Section->getBeginSymbol());
+  Sym->setBinding(ELF::STB_LOCAL);
+  Sym->setType(ELF::STT_SECTION);
 }
 
 void MCELFStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Target) {
