@@ -22,6 +22,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/MemProfCommon.h"
@@ -747,6 +748,25 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
       for (uint64_t StackId : CallStack)
         errs() << " " << StackId;
       errs() << "\n";
+    }
+  }
+
+  memprof::DataAccessProfData *DataAccessProf =
+      MemProfReader->getDataAccessProfileData();
+
+  if (!DataAccessProf) {
+    return PreservedAnalyses::none();
+  }
+
+  for (GlobalVariable &G : M.globals()) {
+    bool Cold = DataAccessProf->isKnownColdSymbol(G.getName());
+    std::optional<DataAccessProfRecord> Record =
+        DataAccessProf->getProfileRecord(G.getName());
+    if (Record && Record->AccessCount > 0) {
+      G.setSectionPrefix("hot");
+    }
+    if (Cold) {
+      G.setSectionPrefix("unlikely");
     }
   }
 
