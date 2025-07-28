@@ -9045,6 +9045,21 @@ ConstString TypeSystemClang::DeclGetName(void *opaque_decl) {
   return ConstString();
 }
 
+static ConstString
+ExtractMangledNameFromFunctionCallLabel(llvm::StringRef label) {
+  auto components_or_err = splitFunctionCallLabel(label);
+  if (!components_or_err) {
+    llvm::consumeError(components_or_err.takeError());
+    return {};
+  }
+
+  llvm::StringRef mangled = (*components_or_err)[0];
+  if (Mangled::IsMangledName(mangled))
+    return ConstString(mangled);
+
+  return {};
+}
+
 ConstString TypeSystemClang::DeclGetMangledName(void *opaque_decl) {
   clang::NamedDecl *nd = llvm::dyn_cast_or_null<clang::NamedDecl>(
       static_cast<clang::Decl *>(opaque_decl));
@@ -9056,14 +9071,12 @@ ConstString TypeSystemClang::DeclGetMangledName(void *opaque_decl) {
   if (!mc || !mc->shouldMangleCXXName(nd))
     return {};
 
-  // We have a LLDB FunctionCallLabel instead of an ordinary mangled name.
+  // We have an LLDB FunctionCallLabel instead of an ordinary mangled name.
   // Extract the mangled name out of this label.
-  if (const auto *label = nd->getAttr<AsmLabelAttr>()) {
-    if (auto components_or_err = splitFunctionCallLabel(label->getLabel()))
-      return ConstString((*components_or_err)[0]);
-    else
-      llvm::consumeError(components_or_err.takeError());
-  }
+  if (const auto *label = nd->getAttr<AsmLabelAttr>())
+    if (ConstString mangled =
+            ExtractMangledNameFromFunctionCallLabel(label->getLabel()))
+      return mangled;
 
   llvm::SmallVector<char, 1024> buf;
   llvm::raw_svector_ostream llvm_ostrm(buf);
