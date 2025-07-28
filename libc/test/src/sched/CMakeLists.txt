@@ -41,6 +41,18 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  getcpu_test
+  SUITE
+    libc_sched_unittests
+  SRCS
+    getcpu_test.cpp
+  DEPENDS
+    libc.include.sched
+    libc.src.errno.errno
+    libc.src.sched.getcpu
+)
+
+add_libc_unittest(
   scheduler_test
   SUITE
     libc_sched_unittests
