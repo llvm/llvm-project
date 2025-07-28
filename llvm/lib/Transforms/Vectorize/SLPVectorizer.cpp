@@ -9165,6 +9165,33 @@ getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
   return {IntrinsicCost, LibCost};
 }
 
+/// Check if extracts are cheaper than the original scalars.
+static bool areExtractsCheaperThanScalars(
+    TargetTransformInfo &TTI, Type *UserScalarTy, VectorType *UserVecTy,
+    const APInt &DemandedElts, const InstructionCost UserScalarsCost,
+    Type *ScalarTy, unsigned VF, ArrayRef<int> Mask,
+    const llvm::function_ref<InstructionCost()> GetUserEntryCost) {
+  constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  // If extracts are cheaper than the original scalars - success.
+  InstructionCost ExtractCost =
+      ::getScalarizationOverhead(TTI, UserScalarTy, UserVecTy, DemandedElts,
+                                 /*Insert=*/false, /*Extract=*/true, CostKind);
+  if (ExtractCost <= UserScalarsCost)
+    return true;
+  InstructionCost NodeCost = GetUserEntryCost();
+  // The node is profitable for vectorization - success.
+  if (ExtractCost <= NodeCost)
+    return true;
+  auto *VecTy = getWidenedType(ScalarTy, VF);
+  InstructionCost ScalarsCost =
+      ::getScalarizationOverhead(TTI, ScalarTy, VecTy, APInt::getAllOnes(VF),
+                                 /*Insert=*/true, /*Extract=*/false, CostKind);
+  if (!Mask.empty())
+    ScalarsCost +=
+        getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, VecTy, Mask, CostKind);
+  return ExtractCost < UserScalarsCost + ScalarsCost;
+}
+
 bool BoUpSLP::isProfitableToVectorizeWithNonVecUsers(
     const InstructionsState &S, const EdgeInfo &UserTreeIdx,
     ArrayRef<Value *> VL, ArrayRef<int> Mask) {
@@ -9193,7 +9220,8 @@ bool BoUpSLP::isProfitableToVectorizeWithNonVecUsers(
   Type *ScalarTy = getValueType(VL.front());
   if (!isValidElementType(ScalarTy))
     return true;
-  // Ignore subvectors extracts for revectorized nodes.
+  // Ignore subvectors extracts for revectorized nodes, subvector extracts are
+  // always cheap as they do not require vector-to-scalar move.
   if (UserScalarTy->isVectorTy())
     return true;
   auto *UserVecTy =
@@ -9215,31 +9243,13 @@ bool BoUpSLP::isProfitableToVectorizeWithNonVecUsers(
   if (DemandedElts.isZero())
     return true;
 
-  auto AreExtractsCheaperThanScalars = [&]() {
-    // If extracts are cheaper than the original scalars - success.
-    InstructionCost ExtractCost = ::getScalarizationOverhead(
-        *TTI, UserScalarTy, UserVecTy, DemandedElts,
-        /*Insert=*/false, /*Extract=*/true, CostKind);
-    if (ExtractCost <= UserScalarsCost)
-      return true;
-    SmallPtrSet<Value *, 4> CheckedExtracts;
-    InstructionCost NodeCost =
-        getEntryCost(UserTreeIdx.UserTE, {}, CheckedExtracts);
-    // The node is profitable for vectorization - success.
-    if (ExtractCost <= NodeCost)
-      return true;
-    auto *VecTy = getWidenedType(ScalarTy, VL.size());
-    InstructionCost ScalarsCost = ::getScalarizationOverhead(
-        *TTI, ScalarTy, VecTy, APInt::getAllOnes(VL.size()),
-        /*Insert=*/true, /*Extract=*/false, CostKind);
-    if (!Mask.empty())
-      ScalarsCost +=
-          getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, VecTy, Mask, CostKind);
-    return ExtractCost < UserScalarsCost + ScalarsCost;
-  };
-
   // User extracts are cheaper than user scalars + immediate scalars - success.
-  return AreExtractsCheaperThanScalars();
+  return areExtractsCheaperThanScalars(
+      *TTI, UserScalarTy, UserVecTy, DemandedElts, UserScalarsCost, ScalarTy,
+      VL.size(), Mask, [&]() {
+        SmallPtrSet<Value *, 4> CheckedExtracts;
+        return getEntryCost(UserTreeIdx.UserTE, {}, CheckedExtracts);
+      });
 }
 
 BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
@@ -13366,9 +13376,10 @@ public:
       });
       InVectors.front() = V;
     }
-    if (!SubVectors.empty() &&
-        (SubVectors.size() > 1 || SubVectors.front().second != 0 ||
-         SubVectors.front().first->getVectorFactor() != CommonMask.size())) {
+    bool FullSubvectorMatch =
+        SubVectors.size() == 1 && SubVectors.front().second == 0 &&
+        SubVectors.front().first->getVectorFactor() == CommonMask.size();
+    if (!SubVectors.empty() && !FullSubvectorMatch) {
       const PointerUnion<Value *, const TreeEntry *> &Vec = InVectors.front();
       if (InVectors.size() == 2)
         Cost += createShuffle(Vec, InVectors.back(), CommonMask);
@@ -17466,8 +17477,10 @@ public:
       });
       InVectors.front() = Vec;
     }
-    if (SubVectors.size() == 1 && SubVectors.front().second == 0 &&
-        SubVectors.front().first->getVectorFactor() == CommonMask.size()) {
+    const bool FullSubvectorMatch =
+        SubVectors.size() == 1 && SubVectors.front().second == 0 &&
+        SubVectors.front().first->getVectorFactor() == CommonMask.size();
+    if (FullSubvectorMatch) {
       Value *Vec = SubVectors.front().first->VectorizedValue;
       if (Vec->getType()->isIntOrIntVectorTy())
         Vec = castToScalarTyElem(
