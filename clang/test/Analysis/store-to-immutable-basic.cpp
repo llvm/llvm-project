@@ -1,16 +1,14 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.core.StoreToImmutable -verify %s
 
-// Test the inteaction of the StoreToImmutable checker with C++ references.
 
 void test_write_to_const_ref_param(const int &param) {
   *(int*)&param = 100; // expected-warning {{Writing to immutable memory is undefined behavior. This memory region is marked as immutable and should not be modified}}
-  // expected-note@-1 {{Writing to immutable memory is undefined behavior. This memory region is marked as immutable and should not be modified}}
 }
 
+// FIXME: This should warn in C mode too.
 void test_write_to_string_literal() {
   char *str = (char*)"hello";
   str[0] = 'H'; // expected-warning {{Writing to immutable memory is undefined behavior. This memory region is marked as immutable and should not be modified}}
-  // expected-note@-1 {{Writing to immutable memory is undefined behavior. This memory region is marked as immutable and should not be modified}}
 }
 
 struct ParamStruct {
@@ -20,7 +18,6 @@ struct ParamStruct {
 
 void test_write_to_const_struct_ref_param(const ParamStruct &s) {
   *(int*)&s.z = 100; // expected-warning {{Writing to immutable memory is undefined behavior. This memory region is marked as immutable and should not be modified}}
-  // expected-note@-1 {{Writing to immutable memory is undefined behavior. This memory region is marked as immutable and should not be modified}}
 }
 
 void test_const_ref_to_nonconst_data() {
@@ -33,5 +30,16 @@ void test_const_ref_to_const_data() {
   const int data = 42; // expected-note {{Memory region is in immutable space}}
   const int &ref = data;
   *(int*)&ref = 100; // expected-warning {{Writing to immutable memory is undefined behavior. This memory region is marked as immutable and should not be modified}}
-  // expected-note@-1 {{Writing to immutable memory is undefined behavior. This memory region is marked as immutable and should not be modified}}
 } 
+
+void test_ref_to_nonconst_data() {
+  int data = 42;
+  int &ref = data;
+  ref = 100; // No warning expected
+}
+
+void test_ref_to_const_data() {
+  const int data = 42; // expected-note {{Memory region is in immutable space}}
+  int &ref = *(int*)&data;
+  ref = 100; // expected-warning {{Writing to immutable memory is undefined behavior. This memory region is marked as immutable and should not be modified}}
+}
