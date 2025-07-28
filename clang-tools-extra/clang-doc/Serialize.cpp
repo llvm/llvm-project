@@ -12,6 +12,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Comment.h"
 #include "clang/AST/DeclFriend.h"
+#include "clang/AST/Mangle.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringExtras.h"
@@ -494,7 +495,8 @@ static void InsertChild(ScopeChildren &Scope, const NamespaceInfo &Info) {
 
 static void InsertChild(ScopeChildren &Scope, const RecordInfo &Info) {
   Scope.Records.emplace_back(Info.USR, Info.Name, InfoType::IT_record,
-                             Info.Name, getInfoRelativePath(Info.Namespace));
+                             Info.Name, getInfoRelativePath(Info.Namespace),
+                             Info.MangledName);
 }
 
 static void InsertChild(ScopeChildren &Scope, EnumInfo Info) {
@@ -767,6 +769,23 @@ static void populateSymbolInfo(SymbolInfo &I, const T *D, const FullComment *C,
     I.DefLoc = Loc;
   else
     I.Loc.emplace_back(Loc);
+
+  auto *Mangler = ItaniumMangleContext::create(
+      D->getASTContext(), D->getASTContext().getDiagnostics());
+  std::string MangledName;
+  llvm::raw_string_ostream MangledStream(MangledName);
+  if (auto *CXXD = dyn_cast<CXXRecordDecl>(D))
+    Mangler->mangleCXXVTable(CXXD, MangledStream);
+  else
+    MangledStream << D->getNameAsString();
+  if (MangledName.size() > 255)
+    // File creation fails if the mangled name is too long, so default to the
+    // USR. We should look for a better check since filesystems differ in
+    // maximum filename length
+    I.MangledName = llvm::toStringRef(llvm::toHex(I.USR));
+  else
+    I.MangledName = MangledName;
+  delete Mangler;
 }
 
 static void

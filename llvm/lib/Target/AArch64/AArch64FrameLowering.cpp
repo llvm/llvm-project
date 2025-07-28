@@ -731,8 +731,7 @@ void AArch64FrameLowering::resetCFIToInitialState(
 
   MachineFunction &MF = *MBB.getParent();
   const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
-  const auto &TRI =
-      static_cast<const AArch64RegisterInfo &>(*Subtarget.getRegisterInfo());
+  const auto &TRI = *Subtarget.getRegisterInfo();
   const auto &MFI = *MF.getInfo<AArch64FunctionInfo>();
 
   CFIInstBuilder CFIBuilder(MBB, MBB.begin(), MachineInstr::NoFlags);
@@ -1746,7 +1745,7 @@ static void emitShadowCallStackEpilogue(const TargetInstrInfo &TII,
                                         MachineFunction &MF,
                                         MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI,
-                                        const DebugLoc &DL) {
+                                        const DebugLoc &DL, bool NeedsWinCFI) {
   // Shadow call stack epilog: ldr x30, [x18, #-8]!
   BuildMI(MBB, MBBI, DL, TII.get(AArch64::LDRXpre))
       .addReg(AArch64::X18, RegState::Define)
@@ -1754,6 +1753,10 @@ static void emitShadowCallStackEpilogue(const TargetInstrInfo &TII,
       .addReg(AArch64::X18)
       .addImm(-8)
       .setMIFlag(MachineInstr::FrameDestroy);
+
+  if (NeedsWinCFI)
+    BuildMI(MBB, MBBI, DL, TII.get(AArch64::SEH_Nop))
+        .setMIFlag(MachineInstr::FrameDestroy);
 
   if (MF.getInfo<AArch64FunctionInfo>()->needsAsyncDwarfUnwindInfo(MF))
     CFIInstBuilder(MBB, MBBI, MachineInstr::FrameDestroy)
@@ -1899,13 +1902,15 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::PAUTH_PROLOGUE))
           .setMIFlag(MachineInstr::FrameSetup);
     }
-    if (NeedsWinCFI)
-      HasWinCFI = true; // AArch64PointerAuth pass will insert SEH_PACSignLR
+    // AArch64PointerAuth pass will insert SEH_PACSignLR
+    HasWinCFI |= NeedsWinCFI;
   }
 
-  if (MFnI.needsShadowCallStackPrologueEpilogue(MF))
+  if (MFnI.needsShadowCallStackPrologueEpilogue(MF)) {
     emitShadowCallStackPrologue(*TII, MF, MBB, MBBI, DL, NeedsWinCFI,
                                 MFnI.needsDwarfUnwindInfo(MF));
+    HasWinCFI |= NeedsWinCFI;
+  }
 
   if (EmitCFI && MFnI.isMTETagged()) {
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::EMITMTETAGGED))
@@ -1990,8 +1995,13 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
            "unexpected function without stack frame but with SVE objects");
     // All of the stack allocation is for locals.
     AFI->setLocalStackSize(NumBytes);
-    if (!NumBytes)
+    if (!NumBytes) {
+      if (NeedsWinCFI && HasWinCFI) {
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PrologEnd))
+            .setMIFlag(MachineInstr::FrameSetup);
+      }
       return;
+    }
     // REDZONE: If the stack size is less than 128 bytes, we don't need
     // to actually allocate.
     if (canUseRedZone(MF)) {
@@ -2460,8 +2470,11 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   MachineBasicBlock::iterator EpilogStartI = MBB.end();
 
   auto FinishingTouches = make_scope_exit([&]() {
-    if (AFI->needsShadowCallStackPrologueEpilogue(MF))
-      emitShadowCallStackEpilogue(*TII, MF, MBB, MBB.getFirstTerminator(), DL);
+    if (AFI->needsShadowCallStackPrologueEpilogue(MF)) {
+      emitShadowCallStackEpilogue(*TII, MF, MBB, MBB.getFirstTerminator(), DL,
+                                  NeedsWinCFI);
+      HasWinCFI |= NeedsWinCFI;
+    }
     if (EmitCFI)
       emitCalleeSavedGPRRestores(MBB, MBB.getFirstTerminator());
     if (AFI->shouldSignReturnAddress(MF)) {
@@ -2472,8 +2485,8 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
                 TII->get(AArch64::PAUTH_EPILOGUE))
             .setMIFlag(MachineInstr::FrameDestroy);
       }
-      if (NeedsWinCFI)
-        HasWinCFI = true; // AArch64PointerAuth pass will insert SEH_PACSignLR
+      // AArch64PointerAuth pass will insert SEH_PACSignLR
+      HasWinCFI |= NeedsWinCFI;
     }
     if (HasWinCFI) {
       BuildMI(MBB, MBB.getFirstTerminator(), DL,
@@ -3030,9 +3043,11 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
         StackOffset::get(MFI.getStackSize() - AFI->getCalleeSavedStackSize(),
                          ObjectOffset);
     if (FPAfterSVECalleeSaves) {
-      assert(-ObjectOffset > (int64_t)AFI->getSVECalleeSavedStackSize() &&
-             "Math isn't correct for CSRs with FPAfterSVECalleeSaves");
       FPOffset += StackOffset::getScalable(AFI->getSVECalleeSavedStackSize());
+      if (-ObjectOffset <= (int64_t)AFI->getSVECalleeSavedStackSize()) {
+        FPOffset += StackOffset::getFixed(AFI->getCalleeSavedStackSize());
+        SPOffset += StackOffset::getFixed(AFI->getCalleeSavedStackSize());
+      }
     }
     // Always use the FP for SVE spills if available and beneficial.
     if (hasFP(MF) && (SPOffset.getFixed() ||

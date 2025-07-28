@@ -7,4 +7,5 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.fenv
     libc.include.math
     libc.include.unistd
+    libc.include.wctype
 )
