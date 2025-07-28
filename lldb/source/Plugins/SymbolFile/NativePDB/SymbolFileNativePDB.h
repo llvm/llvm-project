@@ -258,6 +258,8 @@ private:
 
   void ParseInlineSite(PdbCompilandSymId inline_site_id, Address func_addr);
 
+  std::vector<CompilerContext> GetContextForType(llvm::codeview::TypeIndex ti);
+
   llvm::BumpPtrAllocator m_allocator;
 
   lldb::addr_t m_obj_load_address = 0;
