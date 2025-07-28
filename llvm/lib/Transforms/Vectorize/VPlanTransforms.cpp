@@ -774,10 +774,10 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
   using namespace VPlanPatternMatch;
 
   VPValue *Incoming, *Mask;
-  if (!match(Op, m_VPInstruction<Instruction::ExtractElement>(
-                     m_VPValue(Incoming),
+  if (!match(Op, m_VPInstruction<VPInstruction::ExtractLane>(
                      m_VPInstruction<VPInstruction::FirstActiveLane>(
-                         m_VPValue(Mask)))))
+                         m_VPValue(Mask)),
+                     m_VPValue(Incoming))))
     return nullptr;
 
   auto *WideIV = getOptimizableIVOf(Incoming);
@@ -1172,6 +1172,14 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   if (!Plan->isUnrolled())
     return;
 
+  // VPVectorPointer for part 0 can be replaced by their start pointer.
+  if (auto *VecPtr = dyn_cast<VPVectorPointerRecipe>(&R)) {
+    if (VecPtr->isFirstPart()) {
+      VecPtr->replaceAllUsesWith(VecPtr->getOperand(0));
+      return;
+    }
+  }
+
   // VPScalarIVSteps for part 0 can be replaced by their start value, if only
   // the first lane is demanded.
   if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(Def)) {
@@ -1307,8 +1315,9 @@ static void simplifyBlends(VPlan &Plan) {
         OperandsWithMask.push_back(Blend->getMask(I));
       }
 
-      auto *NewBlend = new VPBlendRecipe(
-          cast<PHINode>(Blend->getUnderlyingValue()), OperandsWithMask);
+      auto *NewBlend =
+          new VPBlendRecipe(cast_or_null<PHINode>(Blend->getUnderlyingValue()),
+                            OperandsWithMask, Blend->getDebugLoc());
       NewBlend->insertBefore(&R);
 
       VPValue *DeadMask = Blend->getMask(StartIndex);
@@ -1361,7 +1370,7 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
   unsigned NewBitWidth =
       ComputeBitWidth(TC->getValue(), BestVF.getKnownMinValue() * BestUF);
 
-  LLVMContext &Ctx = Plan.getCanonicalIV()->getScalarType()->getContext();
+  LLVMContext &Ctx = Plan.getContext();
   auto *NewIVTy = IntegerType::get(Ctx, NewBitWidth);
 
   bool MadeChange = false;
@@ -1883,9 +1892,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
   }
 }
 
-/// Remove BranchOnCond recipes with true or false conditions together with
-/// removing dead edges to their successors.
-static void removeBranchOnConst(VPlan &Plan) {
+void VPlanTransforms::removeBranchOnConst(VPlan &Plan) {
   using namespace llvm::VPlanPatternMatch;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry()))) {
@@ -1908,12 +1915,9 @@ static void removeBranchOnConst(VPlan &Plan) {
            "There must be a single edge between VPBB and its successor");
     // Values coming from VPBB into phi recipes of RemoveSucc are removed from
     // these recipes.
-    for (VPRecipeBase &R : RemovedSucc->phis()) {
-      auto *Phi = cast<VPPhiAccessors>(&R);
-      assert((!isa<VPIRPhi>(&R) || RemovedSucc->getNumPredecessors() == 1) &&
-             "VPIRPhis must have a single predecessor");
-      Phi->removeIncomingValueFor(VPBB);
-    }
+    for (VPRecipeBase &R : RemovedSucc->phis())
+      cast<VPPhiAccessors>(&R)->removeIncomingValueFor(VPBB);
+
     // Disconnect blocks and remove the terminator. RemovedSucc will be deleted
     // automatically on VPlan destruction if it becomes unreachable.
     VPBlockUtils::disconnectBlocks(VPBB, RemovedSucc);
@@ -2515,8 +2519,8 @@ void VPlanTransforms::createInterleaveGroups(
                    DL.getTypeAllocSize(getLoadStoreType(IRInsertPos)) *
                        IG->getIndex(IRInsertPos),
                    /*IsSigned=*/true);
-      VPValue *OffsetVPV = Plan.getOrAddLiveIn(
-          ConstantInt::get(IRInsertPos->getParent()->getContext(), -Offset));
+      VPValue *OffsetVPV =
+          Plan.getOrAddLiveIn(ConstantInt::get(Plan.getContext(), -Offset));
       VPBuilder B(InsertPos);
       Addr = InBounds ? B.createInBoundsPtrAdd(InsertPos->getAddr(), OffsetVPV)
                       : B.createPtrAdd(InsertPos->getAddr(), OffsetVPV);
@@ -2842,7 +2846,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
           VPInstruction::FirstActiveLane, {CondToEarlyExit}, nullptr,
           "first.active.lane");
       IncomingFromEarlyExit = EarlyExitB.createNaryOp(
-          Instruction::ExtractElement, {IncomingFromEarlyExit, FirstActiveLane},
+          VPInstruction::ExtractLane, {FirstActiveLane, IncomingFromEarlyExit},
           nullptr, "early.exit.value");
       ExitIRI->setOperand(EarlyExitIdx, IncomingFromEarlyExit);
     }
@@ -3091,6 +3095,29 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
                              return Broadcast != &U && !U.usesScalars(VPV);
                            });
   }
+}
+
+void VPlanTransforms::materializeVectorTripCount(
+    VPlan &Plan, ElementCount BestVF, unsigned BestUF,
+    PredicatedScalarEvolution &PSE) {
+  assert(Plan.hasVF(BestVF) && "BestVF is not available in Plan");
+  assert(Plan.hasUF(BestUF) && "BestUF is not available in Plan");
+
+  VPValue *TC = Plan.getTripCount();
+  // Skip cases for which the trip count may be non-trivial to materialize.
+  if (!Plan.hasScalarTail() ||
+      Plan.getMiddleBlock()->getSingleSuccessor() ==
+          Plan.getScalarPreheader() ||
+      !TC->isLiveIn())
+    return;
+  // Materialize vector trip counts for constants early if it can simply
+  // be computed as (Original TC / VF * UF) * VF * UF.
+  ScalarEvolution &SE = *PSE.getSE();
+  auto *TCScev = SE.getSCEV(TC->getLiveInIRValue());
+  const SCEV *VFxUF = SE.getElementCount(TCScev->getType(), BestVF * BestUF);
+  auto VecTCScev = SE.getMulExpr(SE.getUDivExpr(TCScev, VFxUF), VFxUF);
+  if (auto *NewC = dyn_cast<SCEVConstant>(VecTCScev))
+    Plan.getVectorTripCount().setUnderlyingValue(NewC->getValue());
 }
 
 /// Returns true if \p V is VPWidenLoadRecipe or VPInterleaveRecipe that can be
@@ -3350,7 +3377,7 @@ void VPlanTransforms::addBranchWeightToMiddleTerminator(
   if (VF.isScalable() && VScaleForTuning.has_value())
     VectorStep *= *VScaleForTuning;
   assert(VectorStep > 0 && "trip count should not be zero");
-  MDBuilder MDB(Plan.getScalarHeader()->getIRBasicBlock()->getContext());
+  MDBuilder MDB(Plan.getContext());
   MDNode *BranchWeights =
       MDB.createBranchWeights({1, VectorStep - 1}, /*IsExpected=*/false);
   MiddleTerm->addMetadata(LLVMContext::MD_prof, BranchWeights);

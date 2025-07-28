@@ -422,9 +422,8 @@ FormatManager::GetCategory(ConstString category_name, bool can_create) {
   if (!can_create)
     return lldb::TypeCategoryImplSP();
 
-  m_categories_map.Add(
-      category_name,
-      lldb::TypeCategoryImplSP(new TypeCategoryImpl(this, category_name)));
+  m_categories_map.Add(category_name,
+                       std::make_shared<TypeCategoryImpl>(this, category_name));
   return GetCategory(category_name);
 }
 
