@@ -385,11 +385,9 @@ def parse_arguments() -> Tuple[argparse.Namespace, List[str]]:
     args, extra_args = parser.parse_known_args()
     if args.std is None:
         _, extension = os.path.splitext(args.assume_filename or args.input_file_name)
-        args.std = (
-            ["c++11-or-later"]
-            if extension in [".cpp", ".hpp", ".mm"]
-            else ["c99-or-later"]
-        )
+        args.std = [
+            "c++11-or-later" if extension in [".cpp", ".hpp", ".mm"] else "c99-or-later"
+        ]
 
     return (args, extra_args)
 
