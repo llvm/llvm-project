@@ -327,6 +327,8 @@ endif()
 # lldb-rpc sources in the first phase of host build so that they can
 # get built using the just-built Clang toolchain in the second phase.
 if (NOT DEFINED LLDB_CAN_USE_LLDB_RPC_SERVER)
+  set(LLDB_CAN_USE_LLDB_RPC_SERVER OFF)
+else()
   if ((CMAKE_CROSSCOMPILING OR LLVM_HOST_TRIPLE MATCHES "${LLVM_DEFAULT_TARGET_TRIPLE}") AND
       CMAKE_SYSTEM_NAME MATCHES "AIX|Android|Darwin|FreeBSD|Linux|NetBSD|OpenBSD|Windows")
     set(LLDB_CAN_USE_LLDB_RPC_SERVER ON)
@@ -335,11 +337,16 @@ if (NOT DEFINED LLDB_CAN_USE_LLDB_RPC_SERVER)
   endif()
 endif()
 
-if (CMAKE_CROSSCOMPILING)
-  set(LLDB_BUILD_LLDBRPC OFF CACHE BOOL "")
-  get_host_tool_path(lldb-rpc-gen LLDB_RPC_GEN_EXE lldb_rpc_gen_exe lldb_rpc_gen_target)
+
+if (NOT DEFINED LLDB_BUILD_LLDBRPC)
+  set(LLDB_BUILD_LLDBRPC OFF)
 else()
-  set(LLDB_BUILD_LLDBRPC ON CACHE BOOL "")
+  if (CMAKE_CROSSCOMPILING)
+    set(LLDB_BUILD_LLDBRPC OFF CACHE BOOL "")
+    get_host_tool_path(lldb-rpc-gen LLDB_RPC_GEN_EXE lldb_rpc_gen_exe lldb_rpc_gen_target)
+  else()
+    set(LLDB_BUILD_LLDBRPC ON CACHE BOOL "")
+  endif()
 endif()
 
 include(LLDBGenerateConfig)

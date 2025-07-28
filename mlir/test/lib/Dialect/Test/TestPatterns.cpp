@@ -1361,14 +1361,16 @@ struct TestLegalizePatternDriver
     : public PassWrapper<TestLegalizePatternDriver, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLegalizePatternDriver)
 
+  TestLegalizePatternDriver() = default;
+  TestLegalizePatternDriver(const TestLegalizePatternDriver &other)
+      : PassWrapper(other) {}
+
   StringRef getArgument() const final { return "test-legalize-patterns"; }
   StringRef getDescription() const final {
     return "Run test dialect legalization patterns";
   }
   /// The mode of conversion to use with the driver.
   enum class ConversionMode { Analysis, Full, Partial };
-
-  TestLegalizePatternDriver(ConversionMode mode) : mode(mode) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<func::FuncDialect, test::TestDialect>();
@@ -1498,23 +1500,18 @@ struct TestLegalizePatternDriver
       op->emitRemark() << "op '" << op->getName() << "' is legalizable";
   }
 
-  /// The mode of conversion to use.
-  ConversionMode mode;
+  Option<ConversionMode> mode{
+      *this, "test-legalize-mode",
+      llvm::cl::desc("The legalization mode to use with the test driver"),
+      llvm::cl::init(ConversionMode::Partial),
+      llvm::cl::values(
+          clEnumValN(ConversionMode::Analysis, "analysis",
+                     "Perform an analysis conversion"),
+          clEnumValN(ConversionMode::Full, "full", "Perform a full conversion"),
+          clEnumValN(ConversionMode::Partial, "partial",
+                     "Perform a partial conversion"))};
 };
 } // namespace
-
-static llvm::cl::opt<TestLegalizePatternDriver::ConversionMode>
-    legalizerConversionMode(
-        "test-legalize-mode",
-        llvm::cl::desc("The legalization mode to use with the test driver"),
-        llvm::cl::init(TestLegalizePatternDriver::ConversionMode::Partial),
-        llvm::cl::values(
-            clEnumValN(TestLegalizePatternDriver::ConversionMode::Analysis,
-                       "analysis", "Perform an analysis conversion"),
-            clEnumValN(TestLegalizePatternDriver::ConversionMode::Full, "full",
-                       "Perform a full conversion"),
-            clEnumValN(TestLegalizePatternDriver::ConversionMode::Partial,
-                       "partial", "Perform a partial conversion")));
 
 //===----------------------------------------------------------------------===//
 // ConversionPatternRewriter::getRemappedValue testing. This method is used
@@ -2201,9 +2198,7 @@ void registerPatternsTestPass() {
   PassRegistration<TestStrictPatternDriver>();
   PassRegistration<TestWalkPatternDriver>();
 
-  PassRegistration<TestLegalizePatternDriver>([] {
-    return std::make_unique<TestLegalizePatternDriver>(legalizerConversionMode);
-  });
+  PassRegistration<TestLegalizePatternDriver>();
 
   PassRegistration<TestRemappedValue>();
 

@@ -38,7 +38,7 @@ XCOFFObjectWriter &MCXCOFFStreamer::getWriter() {
 
 void MCXCOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   MCObjectStreamer::changeSection(Section, Subsection);
-  auto *Sec = cast<MCSectionXCOFF>(Section);
+  auto *Sec = static_cast<const MCSectionXCOFF *>(Section);
   // We might miss calculating the symbols difference as absolute value before
   // adding fixups when symbol_A without the fragment set is the csect itself
   // and symbol_B is in it.
