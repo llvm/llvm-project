@@ -1655,30 +1655,6 @@ RegisterContextUnwind::SavedLocationForRegister(
     return UnwindLLDB::RegisterSearchResult::eRegisterFound;
   }
 
-  if (abs_regloc->IsOtherRegisterPlusOffset()) {
-    uint32_t unwindplan_regnum = abs_regloc->GetRegisterNumber();
-    int unwindplan_offset = abs_regloc->GetOffset();
-    RegisterNumber row_regnum(m_thread, abs_regkind, unwindplan_regnum);
-    if (row_regnum.GetAsKind(eRegisterKindLLDB) == LLDB_INVALID_REGNUM) {
-      UnwindLogMsg("could not supply caller's %s (%d) location - was saved in "
-                   "another reg+offset but couldn't convert that regnum",
-                   regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
-      return UnwindLLDB::RegisterSearchResult::eRegisterNotFound;
-    }
-    regloc.type =
-        UnwindLLDB::ConcreteRegisterLocation::eRegisterIsRegisterPlusOffset;
-    regloc.location.reg_plus_offset.register_number =
-        row_regnum.GetAsKind(eRegisterKindLLDB);
-    regloc.location.reg_plus_offset.offset = unwindplan_offset;
-    m_registers[regnum.GetAsKind(eRegisterKindLLDB)] = regloc;
-    UnwindLogMsg("supplying caller's register %s (%d), "
-                 "from register %s (%d) plus offset %u",
-                 regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB),
-                 row_regnum.GetName(), row_regnum.GetAsKind(eRegisterKindLLDB),
-                 unwindplan_offset);
-    return UnwindLLDB::RegisterSearchResult::eRegisterFound;
-  }
-
   if (abs_regloc->IsDWARFExpression() || abs_regloc->IsAtDWARFExpression()) {
     DataExtractor dwarfdata(abs_regloc->GetDWARFExpressionBytes(),
                             abs_regloc->GetDWARFExpressionLength(),

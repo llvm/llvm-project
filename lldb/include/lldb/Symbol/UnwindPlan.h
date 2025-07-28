@@ -67,7 +67,6 @@ public:
         atAFAPlusOffset, // reg = deref(AFA + offset)
         isAFAPlusOffset, // reg = AFA + offset
         inOtherRegister, // reg = other reg
-        isOtherRegisterPlusOffset, // reg = other reg + offset
         atDWARFExpression,         // reg = deref(eval(dwarf_expr))
         isDWARFExpression,         // reg = eval(dwarf_expr)
         isConstant                 // reg = constant
@@ -102,10 +101,6 @@ public:
       bool IsAtAFAPlusOffset() const { return m_type == atAFAPlusOffset; }
 
       bool IsInOtherRegister() const { return m_type == inOtherRegister; }
-
-      bool IsOtherRegisterPlusOffset() const {
-        return m_type == isOtherRegisterPlusOffset;
-      }
 
       bool IsAtDWARFExpression() const { return m_type == atDWARFExpression; }
 
@@ -145,17 +140,9 @@ public:
         m_location.reg_num = reg_num;
       }
 
-      void SetIsRegisterPlusOffset(uint32_t reg_num, int32_t offset = 0) {
-        m_type = isOtherRegisterPlusOffset;
-        m_location.reg_plus_offset.reg_num = reg_num;
-        m_location.reg_plus_offset.offset = offset;
-      }
-
       uint32_t GetRegisterNumber() const {
         if (m_type == inOtherRegister)
           return m_location.reg_num;
-        if (m_type == isOtherRegisterPlusOffset)
-          return m_location.reg_plus_offset.reg_num;
         return LLDB_INVALID_REGNUM;
       }
 
@@ -169,8 +156,6 @@ public:
         case atAFAPlusOffset:
         case isAFAPlusOffset:
           return m_location.offset;
-        case inOtherRegister:
-          return m_location.reg_plus_offset.offset;
         default:
           return 0;
         }
@@ -219,11 +204,6 @@ public:
         } expr;
         // For m_type == isConstant
         uint64_t constant_value;
-        // For m_type == inOtherRegisterPlusOffset
-        struct {
-          uint32_t reg_num;
-          int32_t offset;
-        } reg_plus_offset;
       } m_location;
     };
 

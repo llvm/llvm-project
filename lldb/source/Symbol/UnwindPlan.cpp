@@ -42,12 +42,6 @@ bool UnwindPlan::Row::AbstractRegisterLocation::operator==(
     case inOtherRegister:
       return m_location.reg_num == rhs.m_location.reg_num;
 
-    case isOtherRegisterPlusOffset:
-      return m_location.reg_plus_offset.reg_num ==
-                 rhs.m_location.reg_plus_offset.reg_num &&
-             m_location.reg_plus_offset.offset ==
-                 rhs.m_location.reg_plus_offset.offset;
-
     case atDWARFExpression:
     case isDWARFExpression:
       if (m_location.expr.length == rhs.m_location.expr.length)
@@ -149,17 +143,6 @@ void UnwindPlan::Row::AbstractRegisterLocation::Dump(
       s.Printf("=%s", other_reg_info->name);
     else
       s.Printf("=reg(%u)", m_location.reg_num);
-  } break;
-
-  case isOtherRegisterPlusOffset: {
-    const RegisterInfo *other_reg_info = nullptr;
-    if (unwind_plan)
-      other_reg_info = unwind_plan->GetRegisterInfo(thread, m_location.reg_num);
-    if (other_reg_info)
-      s.Printf("=%s", other_reg_info->name);
-    else
-      s.Printf("=reg(%u)+%u", m_location.reg_plus_offset.reg_num,
-               m_location.reg_plus_offset.offset);
   } break;
 
   case atDWARFExpression:
