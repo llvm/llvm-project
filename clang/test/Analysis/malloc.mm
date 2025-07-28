@@ -35,7 +35,7 @@ void testNSStringFreeWhenDoneYES3(NSUInteger dataLength) {
 void testNSStringFreeWhenDoneYES4(NSUInteger dataLength) {
   unichar *data = (unichar*)malloc(42);
   NSString *nsstr = [[NSString alloc] initWithCharactersNoCopy:data length:dataLength freeWhenDone:1];
-  free(data); //expected-warning {{Attempt to free non-owned memory}}
+  free(data); //expected-warning {{Attempt to release non-owned memory}}
 }
 
 void testNSStringFreeWhenDoneYES(NSUInteger dataLength) {
@@ -95,14 +95,14 @@ void testOffsetFree() {
 void testRelinquished1() {
   void *data = malloc(42);
   NSData *nsdata = [NSData dataWithBytesNoCopy:data length:42 freeWhenDone:1];
-  free(data); // expected-warning {{Attempt to free non-owned memory}}
+  free(data); // expected-warning {{Attempt to release non-owned memory}}
 }
 
 void testRelinquished2() {
   void *data = malloc(42);
   NSData *nsdata;
   free(data);
-  [NSData dataWithBytesNoCopy:data length:42]; // expected-warning {{Use of memory after it is freed}}
+  [NSData dataWithBytesNoCopy:data length:42]; // expected-warning {{Use of memory after it is released}}
 }
 
 @interface My
@@ -112,7 +112,7 @@ void testRelinquished2() {
 void testUseAfterFree() {
   int *p = (int *)malloc(sizeof(int));
   free(p);
-  [My param:p];  // expected-warning{{Use of memory after it is freed}}
+  [My param:p];  // expected-warning{{Use of memory after it is released}}
 }
 
 void testNoCopy() {
@@ -318,7 +318,7 @@ NSString *test12365078_no_malloc_returnValue(unichar *characters) {
 
 void test12365078_nocheck_nomalloc(unichar *characters) {
   NSString *string = [[NSString alloc] initWithCharactersNoCopy:characters length:12 freeWhenDone:1];
-  free(characters); // expected-warning {{Attempt to free non-owned memory}}
+  free(characters); // expected-warning {{Attempt to release non-owned memory}}
 }
 
 void test12365078_nested(unichar *characters) {
@@ -339,7 +339,7 @@ void test12365078_nested(unichar *characters) {
 void test12365078_check_positive() {
   unichar *characters = (unichar*)malloc(12);
   NSString *string = [[NSString alloc] initWithCharactersNoCopy:characters length:12 freeWhenDone:1];
-  if (string) free(characters); // expected-warning{{Attempt to free non-owned memory}}
+  if (string) free(characters); // expected-warning{{Attempt to release non-owned memory}}
 }
 
 void *test_reinterpret_cast_to_block() {
