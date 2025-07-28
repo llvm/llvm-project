@@ -779,16 +779,17 @@ struct LinkT {
 template <typename T, typename I, typename E> //
 struct MapT {
   using LocatorList = ObjectListT<I, E>;
-  ENUM(MapType, To, From, Tofrom, Alloc, Release, Delete);
-  ENUM(MapTypeModifier, Always, Close, Present, OmpxHold);
+  ENUM(MapType, To, From, Tofrom, Storage);
+  ENUM(MapTypeModifier, Always, Close, Delete, Present, Self, OmpxHold);
+  ENUM(RefModifier, RefPtee, RefPtr, RefPtrPtee);
   // See note at the definition of the MapperT type.
   using Mappers = ListT<type::MapperT<I, E>>; // Not a spec name
   using Iterator = type::IteratorT<T, I, E>;
   using MapTypeModifiers = ListT<MapTypeModifier>; // Not a spec name
 
   using TupleTrait = std::true_type;
-  std::tuple<OPT(MapType), OPT(MapTypeModifiers), OPT(Mappers), OPT(Iterator),
-             LocatorList>
+  std::tuple<OPT(MapType), OPT(MapTypeModifiers), OPT(RefModifier),
+             OPT(Mappers), OPT(Iterator), LocatorList>
       t;
 };
 
