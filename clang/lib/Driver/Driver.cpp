@@ -908,7 +908,7 @@ getSystemOffloadArchs(Compilation &C, Action::OffloadKind Kind) {
   StringRef Program = C.getArgs().getLastArgValue(
       options::OPT_offload_arch_tool_EQ, "offload-arch");
 
-  SmallVector<std::string, 1> GPUArchs;
+  SmallVector<std::string> GPUArchs;
   if (llvm::ErrorOr<std::string> Executable =
           llvm::sys::findProgramByName(Program)) {
     llvm::SmallVector<StringRef> Args{*Executable};
