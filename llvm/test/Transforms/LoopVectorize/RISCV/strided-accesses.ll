@@ -757,13 +757,13 @@ define void @double_stride_ptr_iv(ptr %p, ptr %p2, i64 %stride) {
 ; STRIDED-NEXT:    [[TMP19:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; STRIDED-NEXT:    [[DOTSPLATINSERT9:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[STRIDE]], i64 0
 ; STRIDED-NEXT:    [[DOTSPLAT10:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT9]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; STRIDED-NEXT:    [[TMP21:%.*]] = mul <vscale x 4 x i64> [[TMP19]], [[DOTSPLAT10]]
-; STRIDED-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI11]], <vscale x 4 x i64> [[TMP21]]
+; STRIDED-NEXT:    [[TMP18:%.*]] = mul <vscale x 4 x i64> [[TMP19]], [[DOTSPLAT10]]
+; STRIDED-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI11]], <vscale x 4 x i64> [[TMP18]]
 ; STRIDED-NEXT:    [[TMP25:%.*]] = mul i64 [[STRIDE]], [[TMP13]]
 ; STRIDED-NEXT:    [[TMP27:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
-; STRIDED-NEXT:    [[TMP29:%.*]] = mul <vscale x 4 x i64> [[TMP27]], [[DOTSPLAT10]]
-; STRIDED-NEXT:    [[VECTOR_GEP11:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <vscale x 4 x i64> [[TMP29]]
-; STRIDED-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> [[VECTOR_GEP11]], i32 4, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> poison), !alias.scope [[META15:![0-9]+]]
+; STRIDED-NEXT:    [[TMP21:%.*]] = mul <vscale x 4 x i64> [[TMP27]], [[DOTSPLAT10]]
+; STRIDED-NEXT:    [[VECTOR_GEP7:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <vscale x 4 x i64> [[TMP21]]
+; STRIDED-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> [[VECTOR_GEP7]], i32 4, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> poison), !alias.scope [[META15:![0-9]+]]
 ; STRIDED-NEXT:    [[TMP30:%.*]] = add <vscale x 4 x i32> [[WIDE_MASKED_GATHER]], splat (i32 1)
 ; STRIDED-NEXT:    call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[TMP30]], <vscale x 4 x ptr> [[VECTOR_GEP]], i32 4, <vscale x 4 x i1> splat (i1 true)), !alias.scope [[META18:![0-9]+]], !noalias [[META15]]
 ; STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP13]]

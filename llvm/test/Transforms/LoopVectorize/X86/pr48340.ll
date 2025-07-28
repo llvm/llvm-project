@@ -27,8 +27,8 @@ define ptr @foo(ptr %p, ptr %p.last) unnamed_addr #0 {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[P]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VECTOR_GEP4:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> <i64 0, i64 1024, i64 2048, i64 3072>
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = getelementptr i8, <4 x ptr> [[VECTOR_GEP4]], <4 x i64> splat (i64 4096)
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> <i64 0, i64 1024, i64 2048, i64 3072>
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = getelementptr i8, <4 x ptr> [[TMP5]], <4 x i64> splat (i64 4096)
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = getelementptr i8, <4 x ptr> [[STEP_ADD]], <4 x i64> splat (i64 4096)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, <4 x ptr> [[STEP_ADD_2]], <4 x i64> splat (i64 4096)
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <4 x ptr> @llvm.masked.gather.v4p0.v4p0(<4 x ptr> [[TMP8]], i32 8, <4 x i1> splat (i1 true), <4 x ptr> poison)
@@ -87,8 +87,8 @@ define ptr @bar(ptr %p, ptr %p.last) unnamed_addr #0 {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[P]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VECTOR_GEP4:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> <i64 0, i64 1024, i64 2048, i64 3072>
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = getelementptr i8, <4 x ptr> [[VECTOR_GEP4]], <4 x i64> splat (i64 4096)
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> <i64 0, i64 1024, i64 2048, i64 3072>
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = getelementptr i8, <4 x ptr> [[TMP5]], <4 x i64> splat (i64 4096)
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = getelementptr i8, <4 x ptr> [[STEP_ADD]], <4 x i64> splat (i64 4096)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, <4 x ptr> [[STEP_ADD_2]], <4 x i64> splat (i64 4096)
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <4 x ptr> @llvm.masked.gather.v4p0.v4p0(<4 x ptr> [[TMP8]], i32 8, <4 x i1> splat (i1 true), <4 x ptr> poison)
