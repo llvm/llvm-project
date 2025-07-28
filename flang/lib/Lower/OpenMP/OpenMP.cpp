@@ -712,20 +712,16 @@ static void threadPrivatizeVars(lower::AbstractConverter &converter,
   }
 }
 
-static mlir::Operation *
-createAndSetPrivatizedLoopVar(lower::AbstractConverter &converter,
-                              mlir::Location loc, mlir::Value indexVal,
-                              const semantics::Symbol *sym) {
+static mlir::Operation *setLoopVar(lower::AbstractConverter &converter,
+                                   mlir::Location loc, mlir::Value indexVal,
+                                   const semantics::Symbol *sym) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
   mlir::OpBuilder::InsertPoint insPt = firOpBuilder.saveInsertionPoint();
   firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
-
   mlir::Type tempTy = converter.genType(*sym);
-
-  assert(converter.isPresentShallowLookup(*sym) &&
-         "Expected symbol to be in symbol table.");
-
   firOpBuilder.restoreInsertionPoint(insPt);
+
   mlir::Value cvtVal = firOpBuilder.createConvert(loc, tempTy, indexVal);
   hlfir::Entity lhs{converter.getSymbolAddress(*sym)};
 
@@ -734,6 +730,15 @@ createAndSetPrivatizedLoopVar(lower::AbstractConverter &converter,
   mlir::Operation *storeOp =
       hlfir::AssignOp::create(firOpBuilder, loc, cvtVal, lhs);
   return storeOp;
+}
+
+static mlir::Operation *
+createAndSetPrivatizedLoopVar(lower::AbstractConverter &converter,
+                              mlir::Location loc, mlir::Value indexVal,
+                              const semantics::Symbol *sym) {
+  assert(converter.isPresentShallowLookup(*sym) &&
+         "Expected symbol to be in symbol table.");
+  return setLoopVar(converter, loc, indexVal, sym);
 }
 
 // This helper function implements the functionality of "promoting" non-CPTR
@@ -2198,17 +2203,8 @@ genCanonicalLoopOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     mlir::Value userVal =
         firOpBuilder.create<mlir::arith::AddIOp>(loc, loopLBVar, scaled);
 
-    mlir::OpBuilder::InsertPoint insPt = firOpBuilder.saveInsertionPoint();
-    firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
-    mlir::Type tempTy = converter.genType(*iv);
-    firOpBuilder.restoreInsertionPoint(insPt);
-
     // Write loop value to loop variable
-    mlir::Value cvtVal = firOpBuilder.createConvert(loc, tempTy, userVal);
-    hlfir::Entity lhs{converter.getSymbolAddress(*iv)};
-    lhs = hlfir::derefPointersAndAllocatables(loc, firOpBuilder, lhs);
-    mlir::Operation *storeOp =
-        hlfir::AssignOp::create(firOpBuilder, loc, cvtVal, lhs);
+    mlir::Operation *storeOp = setLoopVar(converter, loc, userVal, iv);
 
     firOpBuilder.setInsertionPointAfter(storeOp);
     return {iv};
