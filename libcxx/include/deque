@@ -461,9 +461,8 @@ private:
       __deque_iterator<_ValueType, _Pointer, _Reference, _MapPointer, _DiffType, _BlockSize>;
 
 public:
-  using __is_segmented_iterator _LIBCPP_NODEBUG = true_type;
-  using __segment_iterator _LIBCPP_NODEBUG      = _MapPointer;
-  using __local_iterator _LIBCPP_NODEBUG        = _Pointer;
+  using __segment_iterator _LIBCPP_NODEBUG = _MapPointer;
+  using __local_iterator _LIBCPP_NODEBUG   = _Pointer;
 
   static _LIBCPP_HIDE_FROM_ABI __segment_iterator __segment(_Iterator __iter) { return __iter.__m_iter_; }
   static _LIBCPP_HIDE_FROM_ABI __local_iterator __local(_Iterator __iter) { return __iter.__ptr_; }

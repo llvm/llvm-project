@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -141,6 +140,8 @@ void MCMachOStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
     MCSymbol *Label = getContext().createLinkerPrivateTempSymbol();
     Section->setBeginSymbol(Label);
     HasSectionLabel[Section] = true;
+    if (!Label->isInSection())
+      emitLabel(Label);
   }
 }
 
@@ -442,13 +443,13 @@ void MCMachOStreamer::finishImpl() {
   // Set the fragment atom associations by tracking the last seen atom defining
   // symbol.
   for (MCSection &Sec : getAssembler()) {
-    cast<MCSectionMachO>(Sec).allocAtoms();
+    static_cast<MCSectionMachO &>(Sec).allocAtoms();
     const MCSymbol *CurrentAtom = nullptr;
     size_t I = 0;
     for (MCFragment &Frag : Sec) {
       if (const MCSymbol *Symbol = DefiningSymbolMap.lookup(&Frag))
         CurrentAtom = Symbol;
-      cast<MCSectionMachO>(Sec).setAtom(I++, CurrentAtom);
+      static_cast<MCSectionMachO &>(Sec).setAtom(I++, CurrentAtom);
     }
   }
 

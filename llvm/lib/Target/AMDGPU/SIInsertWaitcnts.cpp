@@ -552,7 +552,7 @@ public:
         (!Inst.mayLoad() || SIInstrInfo::isAtomicNoRet(Inst))) {
       // FLAT and SCRATCH instructions may access scratch. Other VMEM
       // instructions do not.
-      if (SIInstrInfo::isFLAT(Inst) && mayAccessScratchThroughFlat(Inst))
+      if (TII->mayAccessScratchThroughFlat(Inst))
         return SCRATCH_WRITE_ACCESS;
       return VMEM_WRITE_ACCESS;
     }
@@ -565,7 +565,6 @@ public:
 
   bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
   bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
-  bool mayAccessScratchThroughFlat(const MachineInstr &MI) const;
   bool isVmemAccess(const MachineInstr &MI) const;
   bool generateWaitcntInstBefore(MachineInstr &MI,
                                  WaitcntBrackets &ScoreBrackets,
@@ -2108,8 +2107,9 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
 bool SIInsertWaitcnts::mayAccessVMEMThroughFlat(const MachineInstr &MI) const {
   assert(TII->isFLAT(MI));
 
-  // All flat instructions use the VMEM counter.
-  assert(TII->usesVM_CNT(MI));
+  // All flat instructions use the VMEM counter except prefetch.
+  if (!TII->usesVM_CNT(MI))
+    return false;
 
   // If there are no memory operands then conservatively assume the flat
   // operation may access VMEM.
@@ -2157,32 +2157,6 @@ bool SIInsertWaitcnts::mayAccessLDSThroughFlat(const MachineInstr &MI) const {
   }
 
   return false;
-}
-
-// This is a flat memory operation. Check to see if it has memory tokens for
-// either scratch or FLAT.
-bool SIInsertWaitcnts::mayAccessScratchThroughFlat(
-    const MachineInstr &MI) const {
-  assert(TII->isFLAT(MI));
-
-  // SCRATCH instructions always access scratch.
-  if (TII->isFLATScratch(MI))
-    return true;
-
-  // GLOBAL instructions never access scratch.
-  if (TII->isFLATGlobal(MI))
-    return false;
-
-  // If there are no memory operands then conservatively assume the flat
-  // operation may access scratch.
-  if (MI.memoperands_empty())
-    return true;
-
-  // See if any memory operand specifies an address space that involves scratch.
-  return any_of(MI.memoperands(), [](const MachineMemOperand *Memop) {
-    unsigned AS = Memop->getAddrSpace();
-    return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS;
-  });
 }
 
 bool SIInsertWaitcnts::isVmemAccess(const MachineInstr &MI) const {
@@ -2294,9 +2268,6 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ++FlatASCount;
       ScoreBrackets->updateByEvent(TII, TRI, MRI, LDS_ACCESS, Inst);
     }
-
-    // A Flat memory operation must access at least one address space.
-    assert(FlatASCount);
 
     // This is a flat memory operation that access both VMEM and LDS, so note it
     // - it will require that both the VM and LGKM be flushed to zero if it is
