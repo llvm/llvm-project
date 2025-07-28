@@ -325,26 +325,30 @@ private:
 
 static llvm::ManagedStatic<WindowsEventLog> event_log;
 
-static LPCWSTR AnsiToUtf16(const std::string &ansi) {
+static std::wstring AnsiToUtf16(const std::string &ansi) {
   if (ansi.empty())
-    return nullptr;
+    return {};
+
   const int unicode_length =
       MultiByteToWideChar(CP_ACP, 0, ansi.c_str(), -1, nullptr, 0);
-  WCHAR *unicode = new WCHAR[unicode_length];
-  MultiByteToWideChar(CP_ACP, 0, ansi.c_str(), -1, unicode, unicode_length);
+  if (unicode_length == 0)
+    return {};
+
+  std::wstring unicode(unicode_length, L'\0');
+  MultiByteToWideChar(CP_ACP, 0, ansi.c_str(), -1, &unicode[0], unicode_length);
   return unicode;
 }
 
 void Host::SystemLog(Severity severity, llvm::StringRef message) {
   HANDLE h = event_log->GetHandle();
-  if (!h) {
+  if (!h)
     return;
-  }
 
-  LPCWSTR wide_message = AnsiToUtf16(message.str());
-  if (!wide_message) {
+  std::wstring wide_message = AnsiToUtf16(message.str());
+  if (wide_message.empty())
     return;
-  }
+
+  LPCWSTR msg_ptr = wide_message.c_str();
 
   WORD event_type;
   switch (severity) {
@@ -359,7 +363,5 @@ void Host::SystemLog(Severity severity, llvm::StringRef message) {
     event_type = EVENTLOG_INFORMATION_TYPE;
   }
 
-  ReportEventW(h, event_type, 0, 0, nullptr, 1, 0, &wide_message, nullptr);
-
-  delete[] wide_message;
+  ReportEventW(h, event_type, 0, 0, nullptr, 1, 0, &msg_ptr, nullptr);
 }
