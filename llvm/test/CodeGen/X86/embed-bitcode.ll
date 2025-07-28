@@ -10,14 +10,12 @@
 ; COFF:      Name: .llvmbc (2E 6C 6C 76 6D 62 63 00)
 ; COFF:      Characteristics [
 ; COFF-NEXT:   IMAGE_SCN_ALIGN_1BYTES
-; COFF-NEXT:   IMAGE_SCN_CNT_INITIALIZED_DATA
-; COFF-NEXT:   IMAGE_SCN_MEM_READ
+; COFF-NEXT:   IMAGE_SCN_MEM_DISCARDABLE
 ; COFF-NEXT: ]
 ; COFF:      Name: .llvmcmd (2E 6C 6C 76 6D 63 6D 64)
 ; COFF:      Characteristics [
 ; COFF-NEXT:   IMAGE_SCN_ALIGN_1BYTES
-; COFF-NEXT:   IMAGE_SCN_CNT_INITIALIZED_DATA
-; COFF-NEXT:   IMAGE_SCN_MEM_READ
+; COFF-NEXT:   IMAGE_SCN_MEM_DISCARDABLE
 ; COFF-NEXT: ]
 
 @llvm.embedded.module = private constant [4 x i8] c"BC\C0\DE", section ".llvmbc", align 1
