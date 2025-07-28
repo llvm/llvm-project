@@ -4,13 +4,14 @@
 # RUN: llvm-readobj --coff-imports %t.exe | FileCheck -check-prefix=IMPORT %s
 # RUN: llvm-readobj --coff-basereloc %t.exe | FileCheck -check-prefix=BASEREL %s
 # RUN: llvm-readobj --unwind %t.exe | FileCheck -check-prefix=UNWIND %s
+# RUN: llvm-readobj --section-headers %t.exe | FileCheck -check-prefix=SECTION %s
 
 IMPORT:      DelayImport {
 IMPORT-NEXT:   Name: std64.dll
 IMPORT-NEXT:   Attributes: 0x1
 IMPORT-NEXT:   ModuleHandle: 0x3018
-IMPORT-NEXT:   ImportAddressTable: 0x3020
-IMPORT-NEXT:   ImportNameTable: 0x2050
+IMPORT-NEXT:   ImportAddressTable: 0x5000
+IMPORT-NEXT:   ImportNameTable: 0x2040
 IMPORT-NEXT:   BoundDelayImportTable: 0x0
 IMPORT-NEXT:   UnloadDelayImportTable: 0x0
 IMPORT-NEXT:   Import {
@@ -30,22 +31,22 @@ IMPORT-NEXT: }
 BASEREL:      BaseReloc [
 BASEREL-NEXT:   Entry {
 BASEREL-NEXT:     Type: DIR64
-BASEREL-NEXT:     Address: 0x3020
+BASEREL-NEXT:     Address: 0x5000
 BASEREL-NEXT:   }
 BASEREL-NEXT:   Entry {
 BASEREL-NEXT:     Type: DIR64
-BASEREL-NEXT:     Address: 0x3028
+BASEREL-NEXT:     Address: 0x5008
 BASEREL-NEXT:   }
 BASEREL-NEXT:   Entry {
 BASEREL-NEXT:     Type: DIR64
-BASEREL-NEXT:     Address: 0x3030
+BASEREL-NEXT:     Address: 0x5010
 BASEREL-NEXT:   }
 
 UNWIND:      UnwindInformation [
 UNWIND-NEXT:   RuntimeFunction {
 UNWIND-NEXT:     StartAddress: (0x14000108A)
 UNWIND-NEXT:     EndAddress: (0x1400010DD)
-UNWIND-NEXT:     UnwindInfoAddress: (0x140002000)
+UNWIND-NEXT:     UnwindInfoAddress: (0x140002088)
 UNWIND-NEXT:     UnwindInfo {
 UNWIND-NEXT:       Version: 1
 UNWIND-NEXT:       Flags [ (0x0)
@@ -64,3 +65,19 @@ UNWIND-NEXT:       ]
 UNWIND-NEXT:     }
 UNWIND-NEXT:   }
 UNWIND-NEXT: ]
+
+SECTION:        Name: .didat (2E 64 69 64 61 74 00 00)
+SECTION-NEXT:   VirtualSize: 0x20
+SECTION-NEXT:   VirtualAddress: 0x5000
+SECTION-NEXT:   RawDataSize: 512
+SECTION-NEXT:   PointerToRawData: 0x{{[0-9A-F]+}}
+SECTION-NEXT:   PointerToRelocations: 0x0
+SECTION-NEXT:   PointerToLineNumbers: 0x0
+SECTION-NEXT:   RelocationCount: 0
+SECTION-NEXT:   LineNumberCount: 0
+SECTION-NEXT:   Characteristics [ (0xC0000040)
+SECTION-NEXT:     IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+SECTION-NEXT:     IMAGE_SCN_MEM_READ (0x40000000)
+SECTION-NEXT:     IMAGE_SCN_MEM_WRITE (0x80000000)
+SECTION-NEXT:   ]
+SECTION-NEXT: }

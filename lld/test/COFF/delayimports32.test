@@ -6,6 +6,7 @@
 # RUN: llvm-readobj --coff-imports %t.exe | FileCheck -check-prefix=IMPORT %s
 # RUN: llvm-readobj --coff-basereloc %t.exe | FileCheck -check-prefix=BASEREL %s
 # RUN: llvm-objdump --no-print-imm-hex -d %t.exe | FileCheck --check-prefix=DISASM %s
+# RUN: llvm-readobj --section-headers %t.exe | FileCheck -check-prefix=SECTION %s
 
 IMPORT:      Format: COFF-i386
 IMPORT-NEXT: Arch: i386
@@ -14,7 +15,7 @@ IMPORT-NEXT: DelayImport {
 IMPORT-NEXT:   Name: std32.dll
 IMPORT-NEXT:   Attributes: 0x1
 IMPORT-NEXT:   ModuleHandle: 0x3018
-IMPORT-NEXT:   ImportAddressTable: 0x3020
+IMPORT-NEXT:   ImportAddressTable: 0x4000
 IMPORT-NEXT:   ImportNameTable: 0x2040
 IMPORT-NEXT:   BoundDelayImportTable: 0x0
 IMPORT-NEXT:   UnloadDelayImportTable: 0x0
@@ -63,17 +64,17 @@ BASEREL-NEXT:     Address: 0x1000
 BASEREL-NEXT:   }
 BASEREL-NEXT:   Entry {
 BASEREL-NEXT:     Type: HIGHLOW
-BASEREL-NEXT:     Address: 0x3020
+BASEREL-NEXT:     Address: 0x4000
 BASEREL-NEXT:   }
 BASEREL-NEXT:   Entry {
 BASEREL-NEXT:     Type: HIGHLOW
-BASEREL-NEXT:     Address: 0x3024
+BASEREL-NEXT:     Address: 0x4004
 BASEREL-NEXT:   }
 BASEREL-NEXT: ]
 
-DISASM:      1029:      b8 20 30 40 00  movl    $4206624, %eax
+DISASM:      1029:      b8 00 40 40 00  movl    $4210688, %eax
 DISASM-NEXT: 102e:      e9 0a 00 00 00  jmp     0x40103d <.text+0x3d>
-DISASM-NEXT: 1033:      b8 24 30 40 00  movl    $4206628, %eax
+DISASM-NEXT: 1033:      b8 04 40 40 00  movl    $4210692, %eax
 DISASM-NEXT: 1038:      e9 00 00 00 00  jmp     0x40103d <.text+0x3d>
 DISASM-NEXT: 103d:      51      pushl   %ecx
 DISASM-NEXT: 103e:      52      pushl   %edx
@@ -83,3 +84,19 @@ DISASM-NEXT: 1045:      e8 b6 ff ff ff  calll   0x401000 <.text>
 DISASM-NEXT: 104a:      5a      popl    %edx
 DISASM-NEXT: 104b:      59      popl    %ecx
 DISASM-NEXT: 104c:      ff e0   jmpl    *%eax
+
+SECTION:        Name: .didat (2E 64 69 64 61 74 00 00)
+SECTION-NEXT:   VirtualSize: 0x10
+SECTION-NEXT:   VirtualAddress: 0x4000
+SECTION-NEXT:   RawDataSize: 512
+SECTION-NEXT:   PointerToRawData: 0x{{[0-9A-F]+}}
+SECTION-NEXT:   PointerToRelocations: 0x0
+SECTION-NEXT:   PointerToLineNumbers: 0x0
+SECTION-NEXT:   RelocationCount: 0
+SECTION-NEXT:   LineNumberCount: 0
+SECTION-NEXT:   Characteristics [ (0xC0000040)
+SECTION-NEXT:     IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+SECTION-NEXT:     IMAGE_SCN_MEM_READ (0x40000000)
+SECTION-NEXT:     IMAGE_SCN_MEM_WRITE (0x80000000)
+SECTION-NEXT:   ]
+SECTION-NEXT: }
