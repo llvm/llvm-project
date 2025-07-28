@@ -63,11 +63,6 @@ public:
   }
 
 private:
-  template <typename IntTy>
-  static llvm::Metadata *getConstantIntMD(llvm::Type *type, IntTy val) {
-    return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(type, val));
-  }
-
   static LogicalResult handleDecorationCacheControl(llvm::Instruction *inst,
                                                     ArrayRef<Attribute> attrs) {
     SmallVector<llvm::Metadata *> decorations;
@@ -94,14 +89,14 @@ private:
 };
 } // namespace
 
-void ::mlir::registerXeVMDialectTranslation(::mlir::DialectRegistry &registry) {
+void mlir::registerXeVMDialectTranslation(::mlir::DialectRegistry &registry) {
   registry.insert<xevm::XeVMDialect>();
   registry.addExtension(+[](MLIRContext *ctx, xevm::XeVMDialect *dialect) {
     dialect->addInterfaces<XeVMDialectLLVMIRTranslationInterface>();
   });
 }
 
-void ::mlir::registerXeVMDialectTranslation(::mlir::MLIRContext &context) {
+void mlir::registerXeVMDialectTranslation(::mlir::MLIRContext &context) {
   DialectRegistry registry;
   registerXeVMDialectTranslation(registry);
   context.appendDialectRegistry(registry);
