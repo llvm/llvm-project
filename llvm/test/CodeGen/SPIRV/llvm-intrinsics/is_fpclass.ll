@@ -33,7 +33,7 @@
 ; CHECK-DAG: %[[#InfFP64:]] = OpConstant %[[#I64Ty]] 9218868437227405312
 ; CHECK-DAG: %[[#NegInfFP64:]] = OpConstant %[[#I64Ty]] 18442240474082181120
 
-; CHECK-DAG: %[[#FalseV4:]] = OpConstantComposite %[[#V4BoolTy]] %[[#Zero]] %[[#Zero]] %[[#Zero]] %[[#Zero]]
+; CHECK-DAG: %[[#FalseV4:]] = OpConstantComposite %[[#V4BoolTy]] %[[#False]] %[[#False]] %[[#False]] %[[#False]]
 ; CHECK-DAG: %[[#ValueMaskV4:]] = OpConstantComposite %[[#V4I32Ty]] %[[#ValueMask]] %[[#ValueMask]] %[[#ValueMask]] %[[#ValueMask]]
 ; CHECK-DAG: %[[#InfV4:]] = OpConstantComposite %[[#V4I32Ty]] %[[#Inf]] %[[#Inf]] %[[#Inf]] %[[#Inf]]
 ; CHECK-DAG: %[[#InfWithQnanBitV4:]] = OpConstantComposite %[[#V4I32Ty]] %[[#InfWithQnanBit]] %[[#InfWithQnanBit]] %[[#InfWithQnanBit]] %[[#InfWithQnanBit]]

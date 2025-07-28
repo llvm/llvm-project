@@ -441,11 +441,13 @@ bool SPIRVLegalizerInfo::legalizeIsFPClass(
     if (!Ty.isFixedVector())
       return assignSPIRVTy(MIRBuilder.buildConstant(Ty, C));
     auto ScalarC = MIRBuilder.buildConstant(Ty.getScalarType(), C);
-    SPIRVType *SPIRVIntEltTy =
-        GR->getOrCreateSPIRVType(LLVMIntTy->getScalarType(), MIRBuilder,
-                                 SPIRV::AccessQualifier::ReadWrite,
-                                 /*EmitIR*/ true);
-    GR->assignSPIRVTypeToVReg(SPIRVIntEltTy, ScalarC.getReg(0), MF);
+    assert((Ty == IntTy || Ty == DstTyCopy) &&
+           "Unexpected LLT type while lowering constant for G_IS_FPCLASS");
+    SPIRVType *VecEltTy = GR->getOrCreateSPIRVType(
+        (Ty == IntTy ? LLVMIntTy : LLVMDstTy)->getScalarType(), MIRBuilder,
+        SPIRV::AccessQualifier::ReadWrite,
+        /*EmitIR*/ true);
+    GR->assignSPIRVTypeToVReg(VecEltTy, ScalarC.getReg(0), MF);
     return assignSPIRVTy(MIRBuilder.buildSplatBuildVector(Ty, ScalarC));
   };
 
