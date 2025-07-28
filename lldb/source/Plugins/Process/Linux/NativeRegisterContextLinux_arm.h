@@ -124,7 +124,7 @@ private:
 
   Status ReadHardwareDebugInfo();
 
-  Status WriteHardwareDebugRegs(int hwbType, int hwb_index);
+  Status WriteHardwareDebugRegs(DREGType hwbType, int hwb_index);
 
   uint32_t CalculateFprOffset(const RegisterInfo *reg_info) const;
 
