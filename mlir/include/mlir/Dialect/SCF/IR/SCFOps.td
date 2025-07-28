@@ -248,12 +248,10 @@ def ForOp : SCF_Op<"for",
   let regions = (region SizedRegion<1>:$region);
 
   let skipDefaultBuilders = 1;
-  let builders = [
-    OpBuilder<(ins "Value":$lowerBound, "Value":$upperBound, "Value":$step,
-      CArg<"ValueRange", "std::nullopt">:$initArgs,
+  let builders = [OpBuilder<(ins "Value":$lowerBound, "Value":$upperBound,
+      "Value":$step, CArg<"ValueRange", "{}">:$initArgs,
       CArg<"function_ref<void(OpBuilder &, Location, Value, ValueRange)>",
-           "nullptr">)>
-  ];
+           "nullptr">)>];
 
   let extraClassDeclaration = [{
     using BodyBuilderFn =
@@ -613,6 +611,18 @@ def ForallOp : SCF_Op<"forall", [
     /// Returns operations within scf.forall.in_parallel whose destination
     /// operand is the block argument `bbArg`.
     SmallVector<Operation*> getCombiningOps(BlockArgument bbArg);
+
+    /// Returns the subset of DeviceMappingArrayAttrs of type
+    /// DeviceMappingAttrInterface.
+    SmallVector<DeviceMappingAttrInterface> getDeviceMappingAttrs();
+
+    /// Returns the at most one DeviceMaskingAttrInterface in the mapping.
+    /// If more than one DeviceMaskingAttrInterface is specified, returns
+    /// failure. If no mapping is present, returns nullptr.
+    FailureOr<DeviceMaskingAttrInterface> getDeviceMaskingAttr();
+
+    /// Returns true if the mapping specified for this forall op is linear.
+    bool usesLinearMapping();
   }];
 }
 

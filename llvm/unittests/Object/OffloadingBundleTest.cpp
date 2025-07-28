@@ -74,8 +74,11 @@ TEST(OffloadingBundleTest, checkExtractCodeObject) {
   int64_t Offset = 8192;
   int64_t Size = 4048;
 
-  Error Err = extractCodeObject(**ObjOrErr, Offset, Size,
-                                StringRef("checkExtractCodeObject.co"));
+  llvm::unittest::TempDir Tmp("tmpdir", /*Unique=*/true);
+  SmallString<128> FileName(Tmp.path().begin(), Tmp.path().end());
+  sys::path::append(FileName, "checkExtractCodeObject.co");
+
+  Error Err = extractCodeObject(**ObjOrErr, Offset, Size, StringRef(FileName));
   EXPECT_FALSE(errorToBool(std::move(Err)));
 }
 

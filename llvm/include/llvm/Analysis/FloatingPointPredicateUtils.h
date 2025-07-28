@@ -11,6 +11,7 @@
 
 #include "llvm/IR/GenericFloatingPointPredicateUtils.h"
 #include "llvm/IR/SSAContext.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -18,15 +19,16 @@ using FloatingPointPredicateUtils =
     GenericFloatingPointPredicateUtils<SSAContext>;
 
 template <>
-DenormalMode FloatingPointPredicateUtils::queryDenormalMode(const Function &F,
-                                                            Value *Val);
+LLVM_ABI DenormalMode
+FloatingPointPredicateUtils::queryDenormalMode(const Function &F, Value *Val);
 
 template <>
-bool FloatingPointPredicateUtils::lookThroughFAbs(const Function &F, Value *LHS,
-                                                  Value *&Src);
+LLVM_ABI bool FloatingPointPredicateUtils::lookThroughFAbs(const Function &F,
+                                                           Value *LHS,
+                                                           Value *&Src);
 
 template <>
-std::optional<APFloat>
+LLVM_ABI std::optional<APFloat>
 FloatingPointPredicateUtils::matchConstantFloat(const Function &F, Value *Val);
 
 /// Returns a pair of values, which if passed to llvm.is.fpclass, returns the

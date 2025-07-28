@@ -500,7 +500,7 @@ const Init *BitsInit::convertInitializerTo(const RecTy *Ty) const {
   }
 
   if (auto *BRT = dyn_cast<BitsRecTy>(Ty)) {
-    // If the number of bits is right, return it.  Otherwise we need to expand
+    // If the number of bits is right, return it. Otherwise we need to expand
     // or truncate.
     if (getNumBits() != BRT->getNumBits()) return nullptr;
     return this;
@@ -944,7 +944,7 @@ const Init *UnOpInit::Fold(const Record *CurRec, bool IsFinal) const {
   case TAIL:
     if (const auto *LHSl = dyn_cast<ListInit>(LHS)) {
       assert(!LHSl->empty() && "Empty list in tail");
-      // Note the slice(1).  We can't just pass the result of getElements()
+      // Note the slice(1). We can't just pass the result of getElements()
       // directly.
       return ListInit::get(LHSl->getElements().slice(1),
                            LHSl->getElementType());
@@ -1557,8 +1557,7 @@ unresolved:
 }
 
 const Init *BinOpInit::resolveReferences(Resolver &R) const {
-  const Init *lhs = LHS->resolveReferences(R);
-  const Init *rhs = RHS->resolveReferences(R);
+  const Init *NewLHS = LHS->resolveReferences(R);
 
   unsigned Opc = getOpcode();
   if (Opc == AND || Opc == OR) {
@@ -1570,15 +1569,17 @@ const Init *BinOpInit::resolveReferences(Resolver &R) const {
     // limited version of short-circuit against all ones (`true` is casted
     // to 1 rather than all ones before we evaluate `!or`).
     if (const auto *LHSi = dyn_cast_or_null<IntInit>(
-            lhs->convertInitializerTo(IntRecTy::get(getRecordKeeper())))) {
+            NewLHS->convertInitializerTo(IntRecTy::get(getRecordKeeper())))) {
       if ((Opc == AND && !LHSi->getValue()) ||
           (Opc == OR && LHSi->getValue() == -1))
         return LHSi;
     }
   }
 
-  if (LHS != lhs || RHS != rhs)
-    return (BinOpInit::get(getOpcode(), lhs, rhs, getType()))
+  const Init *NewRHS = RHS->resolveReferences(R);
+
+  if (LHS != NewLHS || RHS != NewRHS)
+    return (BinOpInit::get(getOpcode(), NewLHS, NewRHS, getType()))
         ->Fold(R.getCurrentRecord());
   return this;
 }
@@ -2920,16 +2921,16 @@ void Record::setName(const Init *NewName) {
   Name = NewName;
   checkName();
   // DO NOT resolve record values to the name at this point because
-  // there might be default values for arguments of this def.  Those
+  // there might be default values for arguments of this def. Those
   // arguments might not have been resolved yet so we don't want to
   // prematurely assume values for those arguments were not passed to
   // this def.
   //
   // Nonetheless, it may be that some of this Record's values
-  // reference the record name.  Indeed, the reason for having the
-  // record name be an Init is to provide this flexibility.  The extra
+  // reference the record name. Indeed, the reason for having the
+  // record name be an Init is to provide this flexibility. The extra
   // resolve steps after completely instantiating defs takes care of
-  // this.  See TGParser::ParseDef and TGParser::ParseDefm.
+  // this. See TGParser::ParseDef and TGParser::ParseDefm.
 }
 
 void Record::resolveReferences(Resolver &R, const RecordVal *SkipVal) {

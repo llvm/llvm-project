@@ -70,8 +70,6 @@ static cl::opt<bool> SimplifyMIR(
 static cl::opt<bool> PrintLocations("mir-debug-loc", cl::Hidden, cl::init(true),
                                     cl::desc("Print MIR debug-locations"));
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
-
 namespace {
 
 /// This structure describes how to print out stack object references.
@@ -817,6 +815,9 @@ static void printMI(raw_ostream &OS, MFPrintState &State,
   if (MI.getFlag(MachineInstr::SameSign))
     OS << "samesign ";
 
+  // NOTE: Please add new MIFlags also to the MI_FLAGS_STR in
+  // llvm/utils/update_mir_test_checks.py.
+
   OS << TII->getName(MI.getOpcode());
 
   LS = ListSeparator();
@@ -967,18 +968,11 @@ void MIRFormatter::printIRValue(raw_ostream &OS, const Value &V,
 }
 
 void llvm::printMIR(raw_ostream &OS, const Module &M) {
-  ScopedDbgInfoFormatSetter FormatSetter(const_cast<Module &>(M),
-                                         UseNewDbgInfoFormat);
-
   yaml::Output Out(OS);
   Out << const_cast<Module &>(M);
 }
 
 void llvm::printMIR(raw_ostream &OS, const MachineModuleInfo &MMI,
                     const MachineFunction &MF) {
-  // RemoveDIs: as there's no textual form for DbgRecords yet, print debug-info
-  // in dbg.value format.
-  ScopedDbgInfoFormatSetter FormatSetter(
-      const_cast<Function &>(MF.getFunction()), UseNewDbgInfoFormat);
   printMF(OS, MMI, MF);
 }

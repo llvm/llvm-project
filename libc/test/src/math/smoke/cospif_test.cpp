@@ -6,16 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
+#include "hdr/stdint_proxy.h"
+#include "src/__support/libc_errno.h"
 #include "src/math/cospif.h"
 #include "test/UnitTest/FPMatcher.h"
-
-#include <stdint.h>
 
 using LlvmLibcCospifTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcCospifTest, SpecialNumbers) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
 
   EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::cospif(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);

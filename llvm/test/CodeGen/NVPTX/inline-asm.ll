@@ -5,14 +5,14 @@
 define float @test(float %x) {
 ; CHECK-LABEL: test(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.b32 %r2, [test_param_0];
 ; CHECK-NEXT:    // begin inline asm
-; CHECK-NEXT:    ex2.approx.ftz.f32 %r4, %r2;
+; CHECK-NEXT:    ex2.approx.ftz.f32 %r1, %r2;
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %0 = call float asm "ex2.approx.ftz.f32 $0, $1;", "=f,f"(float %x)

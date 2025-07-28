@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -gkey-instructions -x c++ -std=c++17 %s -debug-info-kind=line-tables-only -emit-llvm -o - \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -gkey-instructions -x c++ -std=c++17 %s -debug-info-kind=line-tables-only -emit-llvm -o - \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
-// RUN: %clang_cc1 -gkey-instructions -x c %s -debug-info-kind=line-tables-only -emit-llvm -o -  \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -gkey-instructions -x c %s -debug-info-kind=line-tables-only -emit-llvm -o -  \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
 // Perennial question: should the `dec` be in its own source atom or not
@@ -25,9 +25,12 @@ void a(int A) {
 // CHECK: %tobool = icmp ne i32 %dec, 0, !dbg [[G2R1:!.*]]
 // CHECK: br i1 %tobool, label %do.body, label %do.end, !dbg [[G3R1:!.*]], !llvm.loop
     do { } while (--A);
+
+// CHECK: ret{{.*}}, !dbg [[RET:!.*]]
 }
 
 // CHECK: [[G1R2]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 2)
 // CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
 // CHECK: [[G2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
 // CHECK: [[G3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
+// CHECK: [[RET]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 1)

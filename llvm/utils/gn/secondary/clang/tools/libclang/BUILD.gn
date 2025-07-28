@@ -87,6 +87,7 @@ shared_library("libclang") {
     "Index_Internal.h",
     "Indexing.cpp",
     "Rewrite.cpp",
+    "Obsolete.cpp",
   ]
   if (host_os == "mac") {
     ldflags = [

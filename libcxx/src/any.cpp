@@ -17,14 +17,12 @@ const char* bad_any_cast::what() const noexcept { return "bad any cast"; }
 //  Preserve std::experimental::any_bad_cast for ABI compatibility
 //  Even though it no longer exists in a header file
 _LIBCPP_BEGIN_NAMESPACE_LFTS
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_AVAILABILITY_BAD_ANY_CAST bad_any_cast : public bad_cast {
+class _LIBCPP_EXPORTED_FROM_ABI bad_any_cast : public bad_cast {
 public:
   virtual const char* what() const noexcept;
 };
 
 const char* bad_any_cast::what() const noexcept { return "bad any cast"; }
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_LFTS

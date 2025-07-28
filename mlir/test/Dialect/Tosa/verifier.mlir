@@ -864,3 +864,75 @@ func.func @test_variable_write_shape_mismatch(%arg0: tensor<2x4x8xf32>) -> () {
   tosa.variable_write @stored_var, %arg0 : tensor<2x4x8xf32>
   return
 }
+
+// -----
+
+// CHECK-LABEL: @scatter_invalid_indices_N
+func.func @scatter_invalid_indices_N(%arg0 : tensor<2x4x5xi32>, %arg1 : tensor<3x2xi32>, %arg2 : tensor<2x2x5xi32>) {
+  // expected-error@+1 {{'tosa.scatter' op requires indices dimension 0 to have size 2, got 3}}
+  %1 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<2x4x5xi32>, tensor<3x2xi32>, tensor<2x2x5xi32>) -> tensor<2x4x5xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @scatter_invalid_input_N
+func.func @scatter_invalid_input_N(%arg0 : tensor<?x4x5xi32>, %arg1 : tensor<2x2xi32>, %arg2 : tensor<3x2x5xi32>) {
+  // expected-error@+1 {{'tosa.scatter' op requires input dimension 0 to have size 2, got 3}}
+  %2 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<?x4x5xi32>, tensor<2x2xi32>, tensor<3x2x5xi32>) -> tensor<2x4x5xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @scatter_invalid_out_N
+func.func @scatter_invalid_out_N(%arg0 : tensor<?x4x5xi32>, %arg1 : tensor<?x2xi32>, %arg2 : tensor<2x2x5xi32>) {
+  // expected-error@+1 {{'tosa.scatter' op requires values_out dimension 0 to have size 2, got 3}}
+  %2 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<?x4x5xi32>, tensor<?x2xi32>, tensor<2x2x5xi32>) -> tensor<3x4x5xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @scatter_invalid_out_K
+func.func @scatter_invalid_out_K(%arg0 : tensor<?x4x5xi32>, %arg1 : tensor<?x2xi32>, %arg2 : tensor<2x2x5xi32>) {
+  // expected-error@+1 {{'tosa.scatter' op requires values_out dimension 1 to have size 4, got 3}}
+  %2 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<?x4x5xi32>, tensor<?x2xi32>, tensor<2x2x5xi32>) -> tensor<2x3x5xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @scatter_invalid_input_W
+func.func @scatter_invalid_input_W(%arg0 : tensor<?x4x5xi32>, %arg1 : tensor<?x2xi32>, %arg2 : tensor<2x3x5xi32>) {
+  // expected-error@+1 {{'tosa.scatter' op requires input dimension 1 to have size 2, got 3}}
+  %2 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<?x4x5xi32>, tensor<?x2xi32>, tensor<2x3x5xi32>) -> tensor<2x4x5xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @scatter_invalid_input_C
+func.func @scatter_invalid_input_C(%arg0 : tensor<?x4x5xi32>, %arg1 : tensor<?x2xi32>, %arg2 : tensor<2x2x6xi32>) {
+  // expected-error@+1 {{'tosa.scatter' op requires input dimension 2 to have size 5, got 6}}
+  %2 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<?x4x5xi32>, tensor<?x2xi32>, tensor<2x2x6xi32>) -> tensor<2x4x5xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @scatter_invalid_out_C
+func.func @scatter_invalid_out_C(%arg0 : tensor<?x4x5xi32>, %arg1 : tensor<?x2xi32>, %arg2 : tensor<2x2x5xi32>) {
+  // expected-error@+1 {{'tosa.scatter' op requires values_out dimension 2 to have size 5, got 6}}
+  %2 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<?x4x5xi32>, tensor<?x2xi32>, tensor<2x2x5xi32>) -> tensor<2x4x6xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @scatter_invalid_K_W
+func.func @scatter_invalid_K_W(%arg0 : tensor<2x4x5xi32>, %arg1 : tensor<2x6xi32>, %arg2 : tensor<2x6x5xi32>) {
+  // expected-error@+1 {{'tosa.scatter' op requires dimensions K >= W, got K=4 and W=6}}
+  %2 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<2x4x5xi32>, tensor<2x6xi32>, tensor<2x6x5xi32>) -> tensor<2x4x5xi32>
+  return
+}

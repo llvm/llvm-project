@@ -414,6 +414,9 @@ struct PotentiallyFinal<T*> final { };
 template<>
 struct PotentiallyFinal<int> final { };
 
+struct FwdDeclFinal;
+using FwdDeclFinalAlias = FwdDeclFinal;
+struct FwdDeclFinal final {};
 
 
 
@@ -423,6 +426,8 @@ void is_final()
 	static_assert(__is_final(FinalClass));
 	static_assert(__is_final(PotentiallyFinal<float*>));
 	static_assert(__is_final(PotentiallyFinal<int>));
+        static_assert(__is_final(FwdDeclFinal));
+        static_assert(__is_final(FwdDeclFinalAlias));
 
 	static_assert(!__is_final(int));
 	static_assert(!__is_final(Union));
@@ -3138,6 +3143,10 @@ void reference_binds_to_temporary_checks() {
   static_assert(!(__reference_binds_to_temporary(int, long)));
 
   static_assert((__reference_binds_to_temporary(const int &, long)));
+
+  // Test that function references are never considered bound to temporaries.
+  static_assert(!__reference_binds_to_temporary(void(&)(), void()));
+  static_assert(!__reference_binds_to_temporary(void(&&)(), void()));
 }
 
 
@@ -3149,6 +3158,14 @@ struct ExplicitConversionRvalueRef {
 struct ExplicitConversionRef {
     operator int();
     explicit operator int&();
+};
+
+struct NonMovable {
+  NonMovable(NonMovable&&) = delete;
+};
+
+struct ConvertsFromNonMovable {
+  ConvertsFromNonMovable(NonMovable);
 };
 
 void reference_constructs_from_temporary_checks() {
@@ -3187,6 +3204,16 @@ void reference_constructs_from_temporary_checks() {
   static_assert(!__reference_constructs_from_temporary(int, long));
 
   static_assert(__reference_constructs_from_temporary(const int &, long));
+
+  // Test that function references are never considered bound to temporaries.
+  static_assert(!__reference_constructs_from_temporary(void(&&)(), void()));
+  static_assert(!__reference_constructs_from_temporary(void(&)(), void()));
+
+  // LWG3819: reference_meows_from_temporary should not use is_meowible
+  static_assert(__reference_constructs_from_temporary(ConvertsFromNonMovable&&, NonMovable) == __cplusplus >= 201703L);
+  // For scalar types, cv-qualifications are dropped first for prvalues.
+  static_assert(__reference_constructs_from_temporary(int&&, const int));
+  static_assert(__reference_constructs_from_temporary(int&&, volatile int));
 
   // Additional checks
   static_assert(__reference_constructs_from_temporary(POD const&, Derives));
@@ -3244,6 +3271,16 @@ void reference_converts_from_temporary_checks() {
   static_assert(!__reference_converts_from_temporary(int, long));
 
   static_assert(__reference_converts_from_temporary(const int &, long));
+
+  // Test that function references are never considered bound to temporaries.
+  static_assert(!__reference_converts_from_temporary(void(&)(), void()));
+  static_assert(!__reference_converts_from_temporary(void(&&)(), void()));
+
+  // LWG3819: reference_meows_from_temporary should not use is_meowible
+  static_assert(__reference_converts_from_temporary(ConvertsFromNonMovable&&, NonMovable) == __cplusplus >= 201703L);
+  // For scalar types, cv-qualifications are dropped first for prvalues.
+  static_assert(__reference_converts_from_temporary(int&&, const int));
+  static_assert(__reference_converts_from_temporary(int&&, volatile int));
 
   // Additional checks
   static_assert(__reference_converts_from_temporary(POD const&, Derives));

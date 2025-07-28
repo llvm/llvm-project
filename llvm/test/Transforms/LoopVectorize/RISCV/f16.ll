@@ -25,27 +25,25 @@ define void @fadd(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; ZVFHMIN-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; ZVFHMIN-NEXT:  [[ENTRY:.*]]:
 ; ZVFHMIN-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; ZVFHMIN-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 8
+; ZVFHMIN-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 8
 ; ZVFHMIN-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP8]]
 ; ZVFHMIN-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; ZVFHMIN:       [[VECTOR_PH]]:
 ; ZVFHMIN-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; ZVFHMIN-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 8
+; ZVFHMIN-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 8
 ; ZVFHMIN-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP10]]
 ; ZVFHMIN-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; ZVFHMIN-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
-; ZVFHMIN-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP12]], 8
+; ZVFHMIN-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP12]], 8
 ; ZVFHMIN-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; ZVFHMIN:       [[VECTOR_BODY]]:
 ; ZVFHMIN-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; ZVFHMIN-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr [[A]], i64 [[INDEX]]
 ; ZVFHMIN-NEXT:    [[TMP2:%.*]] = getelementptr half, ptr [[B]], i64 [[INDEX]]
-; ZVFHMIN-NEXT:    [[TMP3:%.*]] = getelementptr half, ptr [[TMP1]], i32 0
-; ZVFHMIN-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x half>, ptr [[TMP3]], align 2
-; ZVFHMIN-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr [[TMP2]], i32 0
-; ZVFHMIN-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 8 x half>, ptr [[TMP4]], align 2
+; ZVFHMIN-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x half>, ptr [[TMP1]], align 2
+; ZVFHMIN-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 8 x half>, ptr [[TMP2]], align 2
 ; ZVFHMIN-NEXT:    [[TMP11:%.*]] = fadd <vscale x 8 x half> [[WIDE_LOAD]], [[WIDE_LOAD1]]
-; ZVFHMIN-NEXT:    store <vscale x 8 x half> [[TMP11]], ptr [[TMP3]], align 2
+; ZVFHMIN-NEXT:    store <vscale x 8 x half> [[TMP11]], ptr [[TMP1]], align 2
 ; ZVFHMIN-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; ZVFHMIN-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; ZVFHMIN-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

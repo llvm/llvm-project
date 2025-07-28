@@ -243,10 +243,6 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // Vector of regions recorder for later rescheduling
   SmallVector<RegionBoundaries, 32> Regions;
 
-  // Records if a region is not yet scheduled, or schedule has been reverted,
-  // or we generally desire to reschedule it.
-  BitVector RescheduleRegions;
-
   // Record regions with high register pressure.
   BitVector RegionsWithHighRP;
 
@@ -444,8 +440,6 @@ public:
 /// estimates reducing spilling or increasing occupancy is possible, as few
 /// instructions as possible are rematerialized to reduce potential negative
 /// effects on function latency.
-///
-/// TODO: We should extend this to work on SGPRs and AGPRs as well.
 class PreRARematStage : public GCNSchedStage {
 private:
   /// Useful information about a rematerializable instruction.
@@ -476,6 +470,9 @@ private:
   /// In case we need to rollback rematerializations, save lane masks for all
   /// rematerialized registers in all regions in which they are live-ins.
   DenseMap<std::pair<unsigned, Register>, LaneBitmask> RegMasks;
+  /// After successful stage initialization, indicates which regions should be
+  /// rescheduled.
+  BitVector RescheduleRegions;
   /// Target occupancy the stage estimates is reachable through
   /// rematerialization. Greater than or equal to the pre-stage min occupancy.
   unsigned TargetOcc;
@@ -520,7 +517,7 @@ public:
   bool shouldRevertScheduling(unsigned WavesAfter) override;
 
   PreRARematStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
-      : GCNSchedStage(StageID, DAG) {}
+      : GCNSchedStage(StageID, DAG), RescheduleRegions(DAG.Regions.size()) {}
 };
 
 class ILPInitialScheduleStage : public GCNSchedStage {

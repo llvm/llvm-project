@@ -114,7 +114,7 @@ void attachDeclarePostDeallocAction(AbstractConverter &, fir::FirOpBuilder &,
 void genOpenACCTerminator(fir::FirOpBuilder &, mlir::Operation *,
                           mlir::Location);
 
-int64_t getCollapseValue(const Fortran::parser::AccClauseList &);
+int64_t getLoopCountForCollapseAndTile(const Fortran::parser::AccClauseList &);
 
 bool isInOpenACCLoop(fir::FirOpBuilder &);
 

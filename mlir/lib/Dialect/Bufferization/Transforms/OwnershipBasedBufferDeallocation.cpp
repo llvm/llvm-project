@@ -43,7 +43,7 @@ using namespace mlir::bufferization;
 //===----------------------------------------------------------------------===//
 
 static Value buildBoolValue(OpBuilder &builder, Location loc, bool value) {
-  return builder.create<arith::ConstantOp>(loc, builder.getBoolAttr(value));
+  return arith::ConstantOp::create(builder, loc, builder.getBoolAttr(value));
 }
 
 static bool isMemref(Value v) { return isa<BaseMemRefType>(v.getType()); }
@@ -166,8 +166,9 @@ namespace {
 /// program have a corresponding de-allocation.
 class BufferDeallocation {
 public:
-  BufferDeallocation(Operation *op, DeallocationOptions options)
-      : state(op), options(options) {}
+  BufferDeallocation(Operation *op, DeallocationOptions options,
+                     SymbolTableCollection &symbolTables)
+      : state(op, symbolTables), options(options) {}
 
   /// Performs the actual placement/creation of all dealloc operations.
   LogicalResult deallocate(FunctionOpInterface op);
@@ -749,19 +750,17 @@ Value BufferDeallocation::materializeMemrefWithGuaranteedOwnership(
 
   // Insert a runtime check and only clone if we still don't have ownership at
   // runtime.
-  Value maybeClone =
-      builder
-          .create<scf::IfOp>(
-              memref.getLoc(), condition,
-              [&](OpBuilder &builder, Location loc) {
-                builder.create<scf::YieldOp>(loc, newMemref);
-              },
-              [&](OpBuilder &builder, Location loc) {
-                Value clone =
-                    builder.create<bufferization::CloneOp>(loc, newMemref);
-                builder.create<scf::YieldOp>(loc, clone);
-              })
-          .getResult(0);
+  Value maybeClone = scf::IfOp::create(
+                         builder, memref.getLoc(), condition,
+                         [&](OpBuilder &builder, Location loc) {
+                           scf::YieldOp::create(builder, loc, newMemref);
+                         },
+                         [&](OpBuilder &builder, Location loc) {
+                           Value clone = bufferization::CloneOp::create(
+                               builder, loc, newMemref);
+                           scf::YieldOp::create(builder, loc, clone);
+                         })
+                         .getResult(0);
   Value trueVal = buildBoolValue(builder, memref.getLoc(), true);
   state.updateOwnership(maybeClone, trueVal);
   state.addMemrefToDeallocate(maybeClone, maybeClone.getParentBlock());
@@ -796,8 +795,8 @@ BufferDeallocation::handleInterface(BranchOpInterface op) {
   state.getMemrefsToRetain(block, op->getSuccessor(0), forwardedOperands,
                            toRetain);
 
-  auto deallocOp = builder.create<bufferization::DeallocOp>(
-      op.getLoc(), memrefs, conditions, toRetain);
+  auto deallocOp = bufferization::DeallocOp::create(
+      builder, op.getLoc(), memrefs, conditions, toRetain);
 
   // We want to replace the current ownership of the retained values with the
   // result values of the dealloc operation as they are always unique.
@@ -884,12 +883,11 @@ BufferDeallocation::handleInterface(MemoryEffectOpInterface op) {
       builder.setInsertionPoint(op);
       Ownership ownership = state.getOwnership(operand, block);
       if (ownership.isUnique()) {
-        Value ownershipInverted = builder.create<arith::XOrIOp>(
-            op.getLoc(), ownership.getIndicator(),
+        Value ownershipInverted = arith::XOrIOp::create(
+            builder, op.getLoc(), ownership.getIndicator(),
             buildBoolValue(builder, op.getLoc(), true));
-        builder.create<cf::AssertOp>(
-            op.getLoc(), ownershipInverted,
-            "expected that the block does not have ownership");
+        cf::AssertOp::create(builder, op.getLoc(), ownershipInverted,
+                             "expected that the block does not have ownership");
       }
     }
   }
@@ -1027,11 +1025,13 @@ struct OwnershipBasedBufferDeallocationPass
     DeallocationOptions options;
     options.privateFuncDynamicOwnership = privateFuncDynamicOwnership;
 
+    mlir::SymbolTableCollection symbolTables;
+
     auto status = getOperation()->walk([&](func::FuncOp func) {
       if (func.isExternal())
         return WalkResult::skip();
 
-      if (failed(deallocateBuffersOwnershipBased(func, options)))
+      if (failed(deallocateBuffersOwnershipBased(func, options, symbolTables)))
         return WalkResult::interrupt();
 
       return WalkResult::advance();
@@ -1047,11 +1047,11 @@ struct OwnershipBasedBufferDeallocationPass
 // Implement bufferization API
 //===----------------------------------------------------------------------===//
 
-LogicalResult
-bufferization::deallocateBuffersOwnershipBased(FunctionOpInterface op,
-                                               DeallocationOptions options) {
+LogicalResult bufferization::deallocateBuffersOwnershipBased(
+    FunctionOpInterface op, DeallocationOptions options,
+    SymbolTableCollection &symbolTables) {
   // Gather all required allocation nodes and prepare the deallocation phase.
-  BufferDeallocation deallocation(op, options);
+  BufferDeallocation deallocation(op, options, symbolTables);
 
   // Place all required temporary clone and dealloc nodes.
   return deallocation.deallocate(op);

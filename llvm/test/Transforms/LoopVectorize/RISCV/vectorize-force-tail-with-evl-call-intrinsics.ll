@@ -16,15 +16,10 @@ define void @vp_smax(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    [[C3:%.*]] = ptrtoint ptr [[C]] to i64
 ; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
 ; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
-; IF-EVL-NEXT:    [[TMP0:%.*]] = sub i64 -1, [[N]]
-; IF-EVL-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 4
-; IF-EVL-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umax.i64(i64 13, i64 [[TMP2]])
-; IF-EVL-NEXT:    [[TMP22:%.*]] = icmp ult i64 [[TMP0]], [[TMP3]]
-; IF-EVL-NEXT:    br i1 [[TMP22]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; IF-EVL-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; IF-EVL-NEXT:    [[TMP23:%.*]] = mul i64 [[TMP5]], 4
 ; IF-EVL-NEXT:    [[TMP24:%.*]] = sub i64 [[A1]], [[B2]]
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP24]], [[TMP23]]
@@ -35,13 +30,13 @@ define void @vp_smax(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
 ; IF-EVL-NEXT:    [[TMP27:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP28:%.*]] = mul i64 [[TMP27]], 4
+; IF-EVL-NEXT:    [[TMP28:%.*]] = mul nuw i64 [[TMP27]], 4
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP28]], 1
 ; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP6]]
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP28]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 4
+; IF-EVL-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -49,15 +44,12 @@ define void @vp_smax(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    [[AVL:%.*]] = sub i64 [[N]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP11]], i32 0
-; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP12]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP11]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[TMP13]], i32 0
-; IF-EVL-NEXT:    [[VP_OP_LOAD5:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP14]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
+; IF-EVL-NEXT:    [[VP_OP_LOAD5:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP13]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP29:%.*]] = call <vscale x 4 x i32> @llvm.smax.nxv4i32(<vscale x 4 x i32> [[VP_OP_LOAD]], <vscale x 4 x i32> [[VP_OP_LOAD5]])
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP16]], i32 0
-; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP29]], ptr align 4 [[TMP17]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
+; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP29]], ptr align 4 [[TMP16]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP9]] to i64
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP18]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
@@ -130,15 +122,10 @@ define void @vp_smin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    [[C3:%.*]] = ptrtoint ptr [[C]] to i64
 ; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
 ; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
-; IF-EVL-NEXT:    [[TMP0:%.*]] = sub i64 -1, [[N]]
-; IF-EVL-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 4
-; IF-EVL-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umax.i64(i64 13, i64 [[TMP2]])
-; IF-EVL-NEXT:    [[TMP22:%.*]] = icmp ult i64 [[TMP0]], [[TMP3]]
-; IF-EVL-NEXT:    br i1 [[TMP22]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; IF-EVL-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; IF-EVL-NEXT:    [[TMP23:%.*]] = mul i64 [[TMP5]], 4
 ; IF-EVL-NEXT:    [[TMP24:%.*]] = sub i64 [[A1]], [[B2]]
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP24]], [[TMP23]]
@@ -149,13 +136,13 @@ define void @vp_smin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
 ; IF-EVL-NEXT:    [[TMP27:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP28:%.*]] = mul i64 [[TMP27]], 4
+; IF-EVL-NEXT:    [[TMP28:%.*]] = mul nuw i64 [[TMP27]], 4
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP28]], 1
 ; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP6]]
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP28]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 4
+; IF-EVL-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -163,15 +150,12 @@ define void @vp_smin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    [[AVL:%.*]] = sub i64 [[N]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP11]], i32 0
-; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP12]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP11]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[TMP13]], i32 0
-; IF-EVL-NEXT:    [[VP_OP_LOAD5:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP14]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
+; IF-EVL-NEXT:    [[VP_OP_LOAD5:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP13]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP29:%.*]] = call <vscale x 4 x i32> @llvm.smin.nxv4i32(<vscale x 4 x i32> [[VP_OP_LOAD]], <vscale x 4 x i32> [[VP_OP_LOAD5]])
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP16]], i32 0
-; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP29]], ptr align 4 [[TMP17]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
+; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP29]], ptr align 4 [[TMP16]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP9]] to i64
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP18]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
@@ -244,15 +228,10 @@ define void @vp_umax(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    [[C3:%.*]] = ptrtoint ptr [[C]] to i64
 ; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
 ; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
-; IF-EVL-NEXT:    [[TMP0:%.*]] = sub i64 -1, [[N]]
-; IF-EVL-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 4
-; IF-EVL-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umax.i64(i64 13, i64 [[TMP2]])
-; IF-EVL-NEXT:    [[TMP22:%.*]] = icmp ult i64 [[TMP0]], [[TMP3]]
-; IF-EVL-NEXT:    br i1 [[TMP22]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; IF-EVL-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; IF-EVL-NEXT:    [[TMP23:%.*]] = mul i64 [[TMP5]], 4
 ; IF-EVL-NEXT:    [[TMP24:%.*]] = sub i64 [[A1]], [[B2]]
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP24]], [[TMP23]]
@@ -263,13 +242,13 @@ define void @vp_umax(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
 ; IF-EVL-NEXT:    [[TMP27:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP28:%.*]] = mul i64 [[TMP27]], 4
+; IF-EVL-NEXT:    [[TMP28:%.*]] = mul nuw i64 [[TMP27]], 4
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP28]], 1
 ; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP6]]
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP28]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 4
+; IF-EVL-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -277,15 +256,12 @@ define void @vp_umax(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    [[AVL:%.*]] = sub i64 [[N]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP11]], i32 0
-; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP12]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP11]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[TMP13]], i32 0
-; IF-EVL-NEXT:    [[VP_OP_LOAD5:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP14]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
+; IF-EVL-NEXT:    [[VP_OP_LOAD5:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP13]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP29:%.*]] = call <vscale x 4 x i32> @llvm.umax.nxv4i32(<vscale x 4 x i32> [[VP_OP_LOAD]], <vscale x 4 x i32> [[VP_OP_LOAD5]])
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP16]], i32 0
-; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP29]], ptr align 4 [[TMP17]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
+; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP29]], ptr align 4 [[TMP16]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP9]] to i64
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP18]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
@@ -358,15 +334,10 @@ define void @vp_umin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    [[C3:%.*]] = ptrtoint ptr [[C]] to i64
 ; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
 ; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
-; IF-EVL-NEXT:    [[TMP0:%.*]] = sub i64 -1, [[N]]
-; IF-EVL-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 4
-; IF-EVL-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umax.i64(i64 13, i64 [[TMP2]])
-; IF-EVL-NEXT:    [[TMP22:%.*]] = icmp ult i64 [[TMP0]], [[TMP3]]
-; IF-EVL-NEXT:    br i1 [[TMP22]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; IF-EVL-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; IF-EVL-NEXT:    [[TMP23:%.*]] = mul i64 [[TMP5]], 4
 ; IF-EVL-NEXT:    [[TMP24:%.*]] = sub i64 [[A1]], [[B2]]
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP24]], [[TMP23]]
@@ -377,13 +348,13 @@ define void @vp_umin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
 ; IF-EVL-NEXT:    [[TMP27:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP28:%.*]] = mul i64 [[TMP27]], 4
+; IF-EVL-NEXT:    [[TMP28:%.*]] = mul nuw i64 [[TMP27]], 4
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP28]], 1
 ; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP6]]
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP28]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 4
+; IF-EVL-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -391,15 +362,12 @@ define void @vp_umin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    [[AVL:%.*]] = sub i64 [[N]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP11]], i32 0
-; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP12]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP11]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[TMP13]], i32 0
-; IF-EVL-NEXT:    [[VP_OP_LOAD5:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP14]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
+; IF-EVL-NEXT:    [[VP_OP_LOAD5:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP13]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP29:%.*]] = call <vscale x 4 x i32> @llvm.umin.nxv4i32(<vscale x 4 x i32> [[VP_OP_LOAD]], <vscale x 4 x i32> [[VP_OP_LOAD5]])
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP16]], i32 0
-; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP29]], ptr align 4 [[TMP17]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
+; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP29]], ptr align 4 [[TMP16]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP9]] to i64
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP18]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
@@ -472,27 +440,23 @@ define void @vp_ctlz(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:  [[ENTRY:.*]]:
 ; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
 ; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
-; IF-EVL-NEXT:    [[TMP0:%.*]] = sub i64 -1, [[N]]
-; IF-EVL-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 4
-; IF-EVL-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
-; IF-EVL-NEXT:    br i1 [[TMP3]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; IF-EVL-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = mul i64 [[TMP5]], 4
 ; IF-EVL-NEXT:    [[TMP21:%.*]] = sub i64 [[A1]], [[B2]]
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP21]], [[TMP20]]
 ; IF-EVL-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
 ; IF-EVL-NEXT:    [[TMP22:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP23:%.*]] = mul i64 [[TMP22]], 4
+; IF-EVL-NEXT:    [[TMP23:%.*]] = mul nuw i64 [[TMP22]], 4
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP23]], 1
 ; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP6]]
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP23]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 4
+; IF-EVL-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -500,12 +464,10 @@ define void @vp_ctlz(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:    [[AVL:%.*]] = sub i64 [[N]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP11]], i32 0
-; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP12]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP11]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP24:%.*]] = call <vscale x 4 x i32> @llvm.ctlz.nxv4i32(<vscale x 4 x i32> [[VP_OP_LOAD]], i1 true)
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[TMP14]], i32 0
-; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP24]], ptr align 4 [[TMP15]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
+; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP24]], ptr align 4 [[TMP14]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP9]] to i64
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP16]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
@@ -571,27 +533,23 @@ define void @vp_cttz(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:  [[ENTRY:.*]]:
 ; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
 ; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
-; IF-EVL-NEXT:    [[TMP0:%.*]] = sub i64 -1, [[N]]
-; IF-EVL-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 4
-; IF-EVL-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
-; IF-EVL-NEXT:    br i1 [[TMP3]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; IF-EVL-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 4
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = sub i64 [[A1]], [[B2]]
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP7]], [[TMP6]]
 ; IF-EVL-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
 ; IF-EVL-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 4
+; IF-EVL-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 4
 ; IF-EVL-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP9]], 1
 ; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP10]]
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP9]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP12:%.*]] = mul i64 [[TMP11]], 4
+; IF-EVL-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 4
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -599,12 +557,10 @@ define void @vp_cttz(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:    [[AVL:%.*]] = sub i64 [[N]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i32 0
-; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP16]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP13]])
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP15]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP13]])
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = call <vscale x 4 x i32> @llvm.cttz.nxv4i32(<vscale x 4 x i32> [[VP_OP_LOAD]], i1 true)
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[TMP18]], i32 0
-; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP17]], ptr align 4 [[TMP19]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP13]])
+; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP17]], ptr align 4 [[TMP18]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP13]])
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP13]] to i64
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP20]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP12]]
@@ -670,28 +626,23 @@ define void @vp_lrint(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:  [[ENTRY:.*]]:
 ; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
 ; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
-; IF-EVL-NEXT:    [[TMP0:%.*]] = sub i64 -1, [[N]]
-; IF-EVL-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 4
-; IF-EVL-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umax.i64(i64 9, i64 [[TMP2]])
-; IF-EVL-NEXT:    [[TMP22:%.*]] = icmp ult i64 [[TMP0]], [[TMP3]]
-; IF-EVL-NEXT:    br i1 [[TMP22]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; IF-EVL-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; IF-EVL-NEXT:    [[TMP23:%.*]] = mul i64 [[TMP5]], 4
 ; IF-EVL-NEXT:    [[TMP24:%.*]] = sub i64 [[A1]], [[B2]]
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP24]], [[TMP23]]
 ; IF-EVL-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
 ; IF-EVL-NEXT:    [[TMP25:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP26:%.*]] = mul i64 [[TMP25]], 4
+; IF-EVL-NEXT:    [[TMP26:%.*]] = mul nuw i64 [[TMP25]], 4
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP26]], 1
 ; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP6]]
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP26]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 4
+; IF-EVL-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -699,14 +650,12 @@ define void @vp_lrint(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:    [[AVL:%.*]] = sub i64 [[N]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i32 0
-; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP12]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP11]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP27:%.*]] = fpext <vscale x 4 x float> [[VP_OP_LOAD]] to <vscale x 4 x double>
 ; IF-EVL-NEXT:    [[TMP28:%.*]] = call <vscale x 4 x i64> @llvm.lrint.nxv4i64.nxv4f64(<vscale x 4 x double> [[TMP27]])
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = trunc <vscale x 4 x i64> [[TMP28]] to <vscale x 4 x i32>
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP16]], i32 0
-; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP15]], ptr align 4 [[TMP17]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
+; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP15]], ptr align 4 [[TMP16]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP9]] to i64
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP18]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
@@ -778,28 +727,23 @@ define void @vp_llrint(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:  [[ENTRY:.*]]:
 ; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
 ; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
-; IF-EVL-NEXT:    [[TMP0:%.*]] = sub i64 -1, [[N]]
-; IF-EVL-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 4
-; IF-EVL-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umax.i64(i64 9, i64 [[TMP2]])
-; IF-EVL-NEXT:    [[TMP22:%.*]] = icmp ult i64 [[TMP0]], [[TMP3]]
-; IF-EVL-NEXT:    br i1 [[TMP22]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; IF-EVL-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; IF-EVL-NEXT:    [[TMP23:%.*]] = mul i64 [[TMP5]], 4
 ; IF-EVL-NEXT:    [[TMP24:%.*]] = sub i64 [[A1]], [[B2]]
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP24]], [[TMP23]]
 ; IF-EVL-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
 ; IF-EVL-NEXT:    [[TMP25:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP26:%.*]] = mul i64 [[TMP25]], 4
+; IF-EVL-NEXT:    [[TMP26:%.*]] = mul nuw i64 [[TMP25]], 4
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP26]], 1
 ; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP6]]
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP26]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 4
+; IF-EVL-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -807,14 +751,12 @@ define void @vp_llrint(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:    [[AVL:%.*]] = sub i64 [[N]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i32 0
-; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP12]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP11]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP27:%.*]] = fpext <vscale x 4 x float> [[VP_OP_LOAD]] to <vscale x 4 x double>
 ; IF-EVL-NEXT:    [[TMP28:%.*]] = call <vscale x 4 x i64> @llvm.llrint.nxv4i64.nxv4f64(<vscale x 4 x double> [[TMP27]])
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = trunc <vscale x 4 x i64> [[TMP28]] to <vscale x 4 x i32>
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP16]], i32 0
-; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP15]], ptr align 4 [[TMP17]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
+; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP15]], ptr align 4 [[TMP16]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP9]] to i64
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP18]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
@@ -886,28 +828,23 @@ define void @vp_abs(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:  [[ENTRY:.*]]:
 ; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
 ; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
-; IF-EVL-NEXT:    [[TMP0:%.*]] = sub i64 -1, [[N]]
-; IF-EVL-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 4
-; IF-EVL-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umax.i64(i64 8, i64 [[TMP2]])
-; IF-EVL-NEXT:    [[TMP19:%.*]] = icmp ult i64 [[TMP0]], [[TMP3]]
-; IF-EVL-NEXT:    br i1 [[TMP19]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; IF-EVL-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = mul i64 [[TMP5]], 4
 ; IF-EVL-NEXT:    [[TMP21:%.*]] = sub i64 [[A1]], [[B2]]
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP21]], [[TMP20]]
 ; IF-EVL-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
 ; IF-EVL-NEXT:    [[TMP22:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP23:%.*]] = mul i64 [[TMP22]], 4
+; IF-EVL-NEXT:    [[TMP23:%.*]] = mul nuw i64 [[TMP22]], 4
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP23]], 1
 ; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP6]]
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP23]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 4
+; IF-EVL-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -915,12 +852,10 @@ define void @vp_abs(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:    [[AVL:%.*]] = sub i64 [[N]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP11]], i32 0
-; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP12]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP11]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP24:%.*]] = call <vscale x 4 x i32> @llvm.abs.nxv4i32(<vscale x 4 x i32> [[VP_OP_LOAD]], i1 true)
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[TMP14]], i32 0
-; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP24]], ptr align 4 [[TMP15]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
+; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP24]], ptr align 4 [[TMP14]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP9]] to i64
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP16]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]

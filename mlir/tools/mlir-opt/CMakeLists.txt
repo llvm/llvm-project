@@ -17,7 +17,6 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestFuncToLLVM
     MLIRAffineTransformsTestPasses
     MLIRArithTestPasses
-    MLIRArmNeonTestPasses
     MLIRArmSMETestPasses
     MLIRBufferizationTestPasses
     MLIRControlFlowTestPasses
@@ -29,7 +28,8 @@ if(MLIR_INCLUDE_TESTS)
     MLIRMathTestPasses
     MLIRTestMathToVCIX
     MLIRMemRefTestPasses
-    MLIRMeshTest
+    MLIRTestMemRefToLLVMWithTransforms
+    MLIRShardTest
     MLIRNVGPUTestPasses
     MLIRSCFTestPasses
     MLIRShapeTestPasses
