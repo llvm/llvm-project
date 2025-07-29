@@ -2,6 +2,9 @@ set(LLVM_OPTIONAL_SOURCES
   null.cpp
 )
 
+get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
+get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
 set(LLVM_LINK_COMPONENTS
   Core
   Support
@@ -62,11 +65,21 @@ if(MLIR_INCLUDE_TESTS)
 endif()
 
 set(LIBS
+  ${dialect_libs}
+  ${conversion_libs}
+  ${extension_libs}
 
+  MLIRAffineAnalysis
+  MLIRAnalysis
+  MLIRCastInterfaces
+  MLIRDialect
   MLIROptLib
-  MLIRRegisterAllDialects
-  MLIRRegisterAllExtensions
-  MLIRRegisterAllPasses
+  MLIRParser
+  MLIRPass
+  MLIRTransforms
+  MLIRTransformUtils
+  MLIRSupport
+  MLIRIR
 
   # TODO: Remove when registerAllGPUToLLVMIRTranslations is no longer
   # registered directly in mlir-opt.cpp.
