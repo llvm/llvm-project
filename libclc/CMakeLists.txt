@@ -5,9 +5,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 endif()
 set(LLVM_SUBPROJECT_TITLE "libclc")
 
-# Top level target used to build all Libclc libraries.
-add_custom_target( libclc ALL )
-
 set(CMAKE_CXX_STANDARD 17)
 
 # Add path for custom modules
@@ -44,6 +41,9 @@ set( LIBCLC_TARGETS_TO_BUILD "all"
     CACHE STRING "Semicolon-separated list of libclc targets to build, or 'all'." )
 
 option( ENABLE_RUNTIME_SUBNORMAL "Enable runtime linking of subnormal support." OFF )
+
+# Top level target used to build all Libclc libraries.
+add_custom_target( libclc ALL )
 
 add_custom_target( libclc-opencl-builtins COMMENT "Build libclc OpenCL builtins" )
 add_dependencies( libclc libclc-opencl-builtins )
