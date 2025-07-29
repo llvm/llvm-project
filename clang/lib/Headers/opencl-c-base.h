@@ -697,7 +697,16 @@ template <typename _Tp> struct __remove_address_space<__constant _Tp> {
 #if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_1_2)
 // OpenCL v1.2 s6.12.13, v2.0 s6.13.13 - printf
 
-int printf(__constant const char* st, ...) __attribute__((format(printf, 1, 2)));
+#ifdef __OPENCL_CPP_VERSION__
+#define CLINKAGE extern "C"
+#else
+#define CLINKAGE
+#endif
+
+CLINKAGE int printf(__constant const char *st, ...)
+    __attribute__((format(printf, 1, 2)));
+
+#undef CLINKAGE
 #endif
 
 #ifdef cl_intel_device_side_avc_motion_estimation

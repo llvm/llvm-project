@@ -335,63 +335,6 @@ struct VectorInsertOpConvert final
   }
 };
 
-struct VectorExtractElementOpConvert final
-    : public OpConversionPattern<vector::ExtractElementOp> {
-  using OpConversionPattern::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(vector::ExtractElementOp extractOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    Type resultType = getTypeConverter()->convertType(extractOp.getType());
-    if (!resultType)
-      return failure();
-
-    if (isa<spirv::ScalarType>(adaptor.getVector().getType())) {
-      rewriter.replaceOp(extractOp, adaptor.getVector());
-      return success();
-    }
-
-    APInt cstPos;
-    if (matchPattern(adaptor.getPosition(), m_ConstantInt(&cstPos)))
-      rewriter.replaceOpWithNewOp<spirv::CompositeExtractOp>(
-          extractOp, resultType, adaptor.getVector(),
-          rewriter.getI32ArrayAttr({static_cast<int>(cstPos.getSExtValue())}));
-    else
-      rewriter.replaceOpWithNewOp<spirv::VectorExtractDynamicOp>(
-          extractOp, resultType, adaptor.getVector(), adaptor.getPosition());
-    return success();
-  }
-};
-
-struct VectorInsertElementOpConvert final
-    : public OpConversionPattern<vector::InsertElementOp> {
-  using OpConversionPattern::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(vector::InsertElementOp insertOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    Type vectorType = getTypeConverter()->convertType(insertOp.getType());
-    if (!vectorType)
-      return failure();
-
-    if (isa<spirv::ScalarType>(vectorType)) {
-      rewriter.replaceOp(insertOp, adaptor.getSource());
-      return success();
-    }
-
-    APInt cstPos;
-    if (matchPattern(adaptor.getPosition(), m_ConstantInt(&cstPos)))
-      rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(
-          insertOp, adaptor.getSource(), adaptor.getDest(),
-          cstPos.getSExtValue());
-    else
-      rewriter.replaceOpWithNewOp<spirv::VectorInsertDynamicOp>(
-          insertOp, vectorType, insertOp.getDest(), adaptor.getSource(),
-          adaptor.getPosition());
-    return success();
-  }
-};
-
 struct VectorInsertStridedSliceOpConvert final
     : public OpConversionPattern<vector::InsertStridedSliceOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -1107,12 +1050,11 @@ struct VectorToElementOpConvert final
 void mlir::populateVectorToSPIRVPatterns(
     const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns.add<
-      VectorBitcastConvert, VectorBroadcastConvert,
-      VectorExtractElementOpConvert, VectorExtractOpConvert,
+      VectorBitcastConvert, VectorBroadcastConvert, VectorExtractOpConvert,
       VectorExtractStridedSliceOpConvert, VectorFmaOpConvert<spirv::GLFmaOp>,
       VectorFmaOpConvert<spirv::CLFmaOp>, VectorFromElementsOpConvert,
-      VectorToElementOpConvert, VectorInsertElementOpConvert,
-      VectorInsertOpConvert, VectorReductionPattern<GL_INT_MAX_MIN_OPS>,
+      VectorToElementOpConvert, VectorInsertOpConvert,
+      VectorReductionPattern<GL_INT_MAX_MIN_OPS>,
       VectorReductionPattern<CL_INT_MAX_MIN_OPS>,
       VectorReductionFloatMinMax<CL_FLOAT_MAX_MIN_OPS>,
       VectorReductionFloatMinMax<GL_FLOAT_MAX_MIN_OPS>, VectorShapeCast,

@@ -1363,11 +1363,15 @@ public:
                       TTI.hasActiveVectorLength() && !EnableVPlanNativePath;
     if (EVLIsLegal)
       return;
-    // If for some reason EVL mode is unsupported, fallback to
-    // DataWithoutLaneMask to try to vectorize the loop with folded tail
-    // in a generic way.
-    ChosenTailFoldingStyle = {TailFoldingStyle::DataWithoutLaneMask,
-                              TailFoldingStyle::DataWithoutLaneMask};
+    // If for some reason EVL mode is unsupported, fallback to a scalar epilogue
+    // if it's allowed, or DataWithoutLaneMask otherwise.
+    if (ScalarEpilogueStatus == CM_ScalarEpilogueAllowed ||
+        ScalarEpilogueStatus == CM_ScalarEpilogueNotNeededUsePredicate)
+      ChosenTailFoldingStyle = {TailFoldingStyle::None, TailFoldingStyle::None};
+    else
+      ChosenTailFoldingStyle = {TailFoldingStyle::DataWithoutLaneMask,
+                                TailFoldingStyle::DataWithoutLaneMask};
+
     LLVM_DEBUG(
         dbgs() << "LV: Preference for VP intrinsics indicated. Will "
                   "not try to generate VP Intrinsics "
@@ -4500,19 +4504,17 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
   Type *TCType = Legal->getWidestInductionType();
   const SCEV *RemainingIterations = nullptr;
   unsigned MaxTripCount = 0;
+  const SCEV *TC =
+      vputils::getSCEVExprForVPValue(getPlanFor(MainLoopVF).getTripCount(), SE);
+  assert(!isa<SCEVCouldNotCompute>(TC) && "Trip count SCEV must be computable");
+  RemainingIterations =
+      SE.getURemExpr(TC, SE.getElementCount(TCType, MainLoopVF * IC));
+
+  // No iterations left to process in the epilogue.
+  if (RemainingIterations->isZero())
+    return Result;
+
   if (MainLoopVF.isFixed()) {
-    // TODO: extend to support scalable VFs.
-    const SCEV *TC = vputils::getSCEVExprForVPValue(
-        getPlanFor(MainLoopVF).getTripCount(), SE);
-    assert(!isa<SCEVCouldNotCompute>(TC) &&
-           "Trip count SCEV must be computable");
-    RemainingIterations = SE.getURemExpr(
-        TC, SE.getConstant(TCType, MainLoopVF.getFixedValue() * IC));
-
-    // No iterations left to process in the epilogue.
-    if (RemainingIterations->isZero())
-      return Result;
-
     MaxTripCount = MainLoopVF.getFixedValue() * IC - 1;
     if (SE.isKnownPredicate(CmpInst::ICMP_ULT, RemainingIterations,
                             SE.getConstant(TCType, MaxTripCount))) {

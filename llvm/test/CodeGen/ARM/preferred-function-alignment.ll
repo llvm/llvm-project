@@ -22,3 +22,11 @@ define void @test() {
 define void @test_optsize() optsize {
   ret void
 }
+
+; CHECK-LABEL: test_minsize
+; ALIGN-CS-16: .p2align 1
+; ALIGN-CS-32: .p2align 2
+
+define void @test_minsize() minsize {
+  ret void
+}

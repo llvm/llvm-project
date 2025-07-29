@@ -369,31 +369,68 @@ multiclass FLAT_Global_Store_Pseudo_t16<string opName> {
   }
 }
 
-class FLAT_Global_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0> : FLAT_Pseudo<
+// Async loads, introduced in gfx1250, will store directly
+// to a DS address in vdst (they will not use M0 for DS addess).
+class FLAT_Global_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0, bit IsAsync = 0> : FLAT_Pseudo<
   opName,
   (outs ),
   !con(
-      !if(EnableSaddr, (ins SReg_64:$saddr, VGPR_32:$vaddr), (ins VReg_64:$vaddr)),
-      (ins flat_offset:$offset, CPol_0:$cpol)),
-  " $vaddr"#!if(EnableSaddr, ", $saddr", ", off")#"$offset$cpol"> {
-  let LGKM_CNT = 1;
+       !if(IsAsync, (ins VGPR_32:$vdst), (ins)),
+       !if(EnableSaddr, (ins SReg_64:$saddr, VGPR_32:$vaddr), (ins VReg_64:$vaddr)),
+       (ins flat_offset:$offset, CPol_0:$cpol)),
+  !if(IsAsync, " $vdst,", "")#" $vaddr"#!if(EnableSaddr, ", $saddr", ", off")#"$offset$cpol"> {
+  let LGKM_CNT = !not(IsAsync);
+  let VM_CNT = !not(IsAsync);
+  let ASYNC_CNT = IsAsync;
   let is_flat_global = 1;
   let lds = 1;
   let has_data = 0;
+  let has_vdst = IsAsync; // vdst for ds address with IsAsync
+  let mayLoad = 1;
+  let mayStore = 1;
+  let has_saddr = 1;
+  let enabled_saddr = EnableSaddr;
+  let VALU = 1;
+  let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", "");
+  let Uses = !if(IsAsync, [EXEC, ASYNCcnt], [M0, EXEC]);
+  let Defs = !if(IsAsync, [ASYNCcnt], []);
+  let SchedRW = [WriteVMEM, WriteLDS];
+}
+
+multiclass FLAT_Global_Load_LDS_Pseudo<string opName, bit IsAsync = 0> {
+  def ""     : FLAT_Global_Load_LDS_Pseudo<opName, 0, IsAsync>,
+    GlobalSaddrTable<0, opName>;
+  def _SADDR : FLAT_Global_Load_LDS_Pseudo<opName, 1, IsAsync>,
+    GlobalSaddrTable<1, opName>;
+}
+
+class FLAT_Global_STORE_LDS_Pseudo <string opName, bit EnableSaddr = 0> : FLAT_Pseudo<
+  opName,
+  (outs ),
+  !con(
+      !if(EnableSaddr, (ins SReg_64:$saddr, VGPR_32:$vaddr), (ins VReg_64:$vaddr)), (ins VGPR_32:$vdata),
+      (ins flat_offset:$offset, CPol_0:$cpol)),
+  " $vaddr, $vdata"#!if(EnableSaddr, ", $saddr", ", off")#"$offset$cpol"> {
+  let VM_CNT = 0;
+  let ASYNC_CNT = 1;
+  let is_flat_global = 1;
+  let lds = 1;
+  let has_data = 1; // vdata for ds address
   let has_vdst = 0;
   let mayLoad = 1;
   let mayStore = 1;
   let has_saddr = 1;
   let enabled_saddr = EnableSaddr;
   let VALU = 1;
-  let Uses = [M0, EXEC];
+  let Uses = [EXEC, ASYNCcnt];
+  let Defs = [ASYNCcnt];
   let SchedRW = [WriteVMEM, WriteLDS];
 }
 
-multiclass FLAT_Global_Load_LDS_Pseudo<string opName> {
-  def ""     : FLAT_Global_Load_LDS_Pseudo<opName>,
+multiclass FLAT_Global_STORE_LDS_Pseudo<string opName> {
+  def ""     : FLAT_Global_STORE_LDS_Pseudo<opName>,
     GlobalSaddrTable<0, opName>;
-  def _SADDR : FLAT_Global_Load_LDS_Pseudo<opName, 1>,
+  def _SADDR : FLAT_Global_STORE_LDS_Pseudo<opName, 1>,
     GlobalSaddrTable<1, opName>;
 }
 
@@ -1155,6 +1192,15 @@ let SubtargetPredicate = isGFX12Plus in {
 } // End SubtargetPredicate = isGFX12Plus
 
 let SubtargetPredicate = isGFX1250Plus in {
+
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B8       :  FLAT_Global_Load_LDS_Pseudo<"global_load_async_to_lds_b8",    1>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B32      :  FLAT_Global_Load_LDS_Pseudo<"global_load_async_to_lds_b32",   1>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B64      :  FLAT_Global_Load_LDS_Pseudo<"global_load_async_to_lds_b64",   1>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B128     :  FLAT_Global_Load_LDS_Pseudo<"global_load_async_to_lds_b128",  1>;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B8    :  FLAT_Global_STORE_LDS_Pseudo<"global_store_async_from_lds_b8">;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B32   :  FLAT_Global_STORE_LDS_Pseudo<"global_store_async_from_lds_b32">;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B64   :  FLAT_Global_STORE_LDS_Pseudo<"global_store_async_from_lds_b64">;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B128  :  FLAT_Global_STORE_LDS_Pseudo<"global_store_async_from_lds_b128">;
 
 def TENSOR_SAVE : FLAT_Global_Tensor_Pseudo<"tensor_save", 1>;
 def TENSOR_STOP : FLAT_Global_Tensor_Pseudo<"tensor_stop">;
@@ -3373,6 +3419,15 @@ defm FLAT_LOAD_MONITOR_B128           : VFLAT_Real_AllAddr_gfx1250<0x072>;
 defm GLOBAL_LOAD_MONITOR_B32          : VFLAT_Real_AllAddr_gfx1250<0x070>;
 defm GLOBAL_LOAD_MONITOR_B64          : VFLAT_Real_AllAddr_gfx1250<0x071>;
 defm GLOBAL_LOAD_MONITOR_B128         : VFLAT_Real_AllAddr_gfx1250<0x072>;
+
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B8      : VFLAT_Real_AllAddr_gfx1250<0x5f>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B32     : VFLAT_Real_AllAddr_gfx1250<0x60>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B64     : VFLAT_Real_AllAddr_gfx1250<0x61>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B128    : VFLAT_Real_AllAddr_gfx1250<0x62>;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B8   : VFLAT_Real_AllAddr_gfx1250<0x63>;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B32  : VFLAT_Real_AllAddr_gfx1250<0x64>;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B64  : VFLAT_Real_AllAddr_gfx1250<0x65>;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B128 : VFLAT_Real_AllAddr_gfx1250<0x66>;
 
 defm GLOBAL_LOAD_TR_B128_w32          : VFLAT_Real_AllAddr_gfx1250<0x057, "global_load_tr16_b128">;
 defm GLOBAL_LOAD_TR_B64_w32           : VFLAT_Real_AllAddr_gfx1250<0x058, "global_load_tr8_b64">;

@@ -8,6 +8,14 @@
 struct A{};
 struct B{ explicit operator bool() { return true; } };
 
+// This should be the first test case of this file.
+void IsActOnFinishFullExprCalled() {
+  // Do not add other test cases to this function.
+  // Make sure `ActOnFinishFullExpr` is called and creates `ExprWithCleanups`
+  // to avoid assertion failure.
+  [[assume(B{})]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}} // ext-warning {{C++23 extension}}
+}
+
 template <bool cond>
 void f() {
   [[assume(cond)]]; // ext-warning {{C++23 extension}}

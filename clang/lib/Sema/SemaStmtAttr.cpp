@@ -795,6 +795,10 @@ ExprResult Sema::BuildCXXAssumeExpr(Expr *Assumption,
   if (Res.isInvalid())
     return ExprError();
 
+  Res = ActOnFinishFullExpr(Res.get(), /*DiscardedValue=*/false);
+  if (Res.isInvalid())
+    return ExprError();
+
   Assumption = Res.get();
   if (Assumption->HasSideEffects(Context))
     Diag(Assumption->getBeginLoc(), diag::warn_assume_side_effects)

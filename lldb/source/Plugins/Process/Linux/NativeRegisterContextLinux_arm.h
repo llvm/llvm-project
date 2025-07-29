@@ -109,7 +109,6 @@ private:
                            // occurred.
     lldb::addr_t real_addr; // Address value that should cause target to stop.
     uint32_t control;       // Breakpoint/watchpoint control value.
-    uint32_t refcount;      // Serves as enable/disable and reference counter.
   };
 
   struct DREG m_hbr_regs[16]; // Arm native linux hardware breakpoints

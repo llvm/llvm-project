@@ -119,30 +119,6 @@ func.func @shuffle_empty_mask(%arg0: vector<2xf32>, %arg1: vector<2xf32>) {
 
 // -----
 
-func.func @extract_element(%arg0: vector<f32>) {
-  %c = arith.constant 3 : i32
-  // expected-error@+1 {{expected position to be empty with 0-D vector}}
-  %1 = vector.extractelement %arg0[%c : i32] : vector<f32>
-}
-
-// -----
-
-func.func @extract_element(%arg0: vector<4xf32>) {
-  %c = arith.constant 3 : i32
-  // expected-error@+1 {{expected position for 1-D vector}}
-  %1 = vector.extractelement %arg0[] : vector<4xf32>
-}
-
-// -----
-
-func.func @extract_element(%arg0: vector<4x4xf32>) {
-  %c = arith.constant 3 : i32
-  // expected-error@+1 {{unexpected >1 vector rank}}
-  %1 = vector.extractelement %arg0[%c : i32] : vector<4x4xf32>
-}
-
-// -----
-
 func.func @extract_vector_type(%arg0: index) {
   // expected-error@+1 {{invalid kind of type specified: expected builtin.vector, but found 'index'}}
   %1 = vector.extract %arg0[] : index from index
@@ -188,38 +164,6 @@ func.func @extract_0d_result(%arg0: vector<f32>) {
 func.func @extract_position_overflow(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute #3 to be a non-negative integer smaller than the corresponding vector dimension or poison (-1)}}
   %1 = vector.extract %arg0[0, 0, -5] : f32 from vector<4x8x16xf32>
-}
-
-// -----
-
-func.func @insert_element(%arg0: f32, %arg1: vector<f32>) {
-  %c = arith.constant 3 : i32
-  // expected-error@+1 {{expected position to be empty with 0-D vector}}
-  %0 = vector.insertelement %arg0, %arg1[%c : i32] : vector<f32>
-}
-
-// -----
-
-func.func @insert_element(%arg0: f32, %arg1: vector<4xf32>) {
-  %c = arith.constant 3 : i32
-  // expected-error@+1 {{expected position for 1-D vector}}
-  %0 = vector.insertelement %arg0, %arg1[] : vector<4xf32>
-}
-
-// -----
-
-func.func @insert_element(%arg0: f32, %arg1: vector<4x4xf32>) {
-  %c = arith.constant 3 : i32
-  // expected-error@+1 {{unexpected >1 vector rank}}
-  %0 = vector.insertelement %arg0, %arg1[%c : i32] : vector<4x4xf32>
-}
-
-// -----
-
-func.func @insert_element_wrong_type(%arg0: i32, %arg1: vector<4xf32>) {
-  %c = arith.constant 3 : i32
-  // expected-error@+1 {{'vector.insertelement' op failed to verify that source operand type matches element type of result}}
-  %0 = "vector.insertelement" (%arg0, %arg1, %c) : (i32, vector<4xf32>, i32) -> (vector<4xf32>)
 }
 
 // -----

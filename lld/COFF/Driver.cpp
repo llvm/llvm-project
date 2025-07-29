@@ -2554,28 +2554,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
             e.symbolName = symtab.mangleMaybe(e.sym);
         }
 
-        // Add weak aliases. Weak aliases is a mechanism to give remaining
-        // undefined symbols final chance to be resolved successfully.
-        for (auto pair : symtab.alternateNames) {
-          StringRef from = pair.first;
-          StringRef to = pair.second;
-          Symbol *sym = symtab.find(from);
-          if (!sym)
-            continue;
-          if (auto *u = dyn_cast<Undefined>(sym)) {
-            if (u->weakAlias) {
-              // On ARM64EC, anti-dependency aliases are treated as undefined
-              // symbols unless a demangled symbol aliases a defined one, which
-              // is part of the implementation.
-              if (!symtab.isEC() || !u->isAntiDep)
-                continue;
-              if (!isa<Undefined>(u->weakAlias) &&
-                  !isArm64ECMangledFunctionName(u->getName()))
-                continue;
-            }
-            u->setWeakAlias(symtab.addUndefined(to));
-          }
-        }
+        symtab.resolveAlternateNames();
       });
 
       ctx.forEachActiveSymtab([&](SymbolTable &symtab) {

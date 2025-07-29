@@ -56,6 +56,8 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
   switch ((unsigned)Fixup.getKind()) {
   default:
     report_fatal_error("Unimplemented fixup kind.");
+  case XCOFF::RelocationType::R_REF:
+    return {XCOFF::RelocationType::R_REF, 0};
   case PPC::fixup_ppc_half16: {
     const uint8_t SignAndSizeForHalf16 = EncodedSignednessIndicator | 15;
     switch (Specifier) {
@@ -96,12 +98,6 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
     return {XCOFF::RelocationType::R_RBR, EncodedSignednessIndicator | 25};
   case PPC::fixup_ppc_br24abs:
     return {XCOFF::RelocationType::R_RBA, EncodedSignednessIndicator | 25};
-  case PPC::fixup_ppc_nofixup: {
-    if (Specifier == PPC::S_None)
-      return {XCOFF::RelocationType::R_REF, 0};
-    else
-      llvm_unreachable("Unsupported Modifier");
-  } break;
   case FK_Data_4:
   case FK_Data_8:
     const uint8_t SignAndSizeForFKData =

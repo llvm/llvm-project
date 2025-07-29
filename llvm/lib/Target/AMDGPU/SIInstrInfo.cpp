@@ -4249,6 +4249,32 @@ bool SIInstrInfo::isAlwaysGDS(uint16_t Opcode) const {
          Opcode == AMDGPU::DS_SUB_GS_REG_RTN || isGWS(Opcode);
 }
 
+bool SIInstrInfo::mayAccessScratchThroughFlat(const MachineInstr &MI) const {
+  if (!isFLAT(MI) || isFLATGlobal(MI))
+    return false;
+
+  // If scratch is not initialized, we can never access it.
+  if (MI.getMF()->getFunction().hasFnAttribute("amdgpu-no-flat-scratch-init"))
+    return false;
+
+  // SCRATCH instructions always access scratch.
+  if (isFLATScratch(MI))
+    return true;
+
+  // If there are no memory operands then conservatively assume the flat
+  // operation may access scratch.
+  if (MI.memoperands_empty())
+    return true;
+
+  // TODO (?): Does this need to be taught how to read noalias.addrspace ?
+
+  // See if any memory operand specifies an address space that involves scratch.
+  return any_of(MI.memoperands(), [](const MachineMemOperand *Memop) {
+    unsigned AS = Memop->getAddrSpace();
+    return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS;
+  });
+}
+
 bool SIInstrInfo::modifiesModeRegister(const MachineInstr &MI) {
   // Skip the full operand and register alias search modifiesRegister
   // does. There's only a handful of instructions that touch this, it's only an

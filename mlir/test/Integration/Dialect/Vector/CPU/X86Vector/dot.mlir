@@ -11,8 +11,8 @@ func.func @entry() -> i32 {
   %b = arith.constant dense<[9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0]> : vector<8xf32>
   %r = x86vector.avx.intr.dot %a, %b : vector<8xf32>
 
-  %1 = vector.extractelement %r[%i0 : i32]: vector<8xf32>
-  %2 = vector.extractelement %r[%i4 : i32]: vector<8xf32>
+  %1 = vector.extract %r[%i0] : f32 from vector<8xf32>
+  %2 = vector.extract %r[%i4] : f32 from vector<8xf32>
   %d = arith.addf %1, %2 : f32
 
   // CHECK: ( 110, 110, 110, 110, 382, 382, 382, 382 )

@@ -343,7 +343,6 @@ if config.enable_assertions:
 else:
     config.available_features.add("noasserts")
 
-
 def have_host_jit_feature_support(feature_name):
     mlir_runner_exe = lit.util.which("mlir-runner", config.mlir_tools_dir)
 

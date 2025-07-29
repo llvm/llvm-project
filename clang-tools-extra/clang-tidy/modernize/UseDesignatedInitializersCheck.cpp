@@ -121,10 +121,11 @@ void UseDesignatedInitializersCheck::registerMatchers(MatchFinder *Finder) {
       hasAnyBase(hasType(cxxRecordDecl(has(fieldDecl()))));
   Finder->addMatcher(
       initListExpr(
-          hasType(cxxRecordDecl(
-                      RestrictToPODTypes ? isPOD() : isAggregate(),
-                      unless(anyOf(HasBaseWithFields, hasName("::std::array"))))
-                      .bind("type")),
+          hasType(hasUnqualifiedDesugaredType(recordType(hasDeclaration(
+              cxxRecordDecl(
+                  RestrictToPODTypes ? isPOD() : isAggregate(),
+                  unless(anyOf(HasBaseWithFields, hasName("::std::array"))))
+                  .bind("type"))))),
           IgnoreSingleElementAggregates ? hasMoreThanOneElement() : anything(),
           unless(isFullyDesignated()))
           .bind("init"),
@@ -155,7 +156,7 @@ void UseDesignatedInitializersCheck::check(
       DiagnosticBuilder Diag =
           diag(InitList->getLBraceLoc(),
                "use designated initializer list to initialize %0");
-      Diag << Type << InitList->getSourceRange();
+      Diag << InitList->getType() << InitList->getSourceRange();
       for (const Stmt *InitExpr : *SyntacticInitList) {
         const auto Designator = Designators[InitExpr->getBeginLoc()];
         if (Designator && !Designator->empty())

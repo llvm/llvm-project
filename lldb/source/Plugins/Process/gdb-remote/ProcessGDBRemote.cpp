@@ -4783,7 +4783,8 @@ bool ParseRegisters(
             } else if (gdb_type == "data_ptr" || gdb_type == "code_ptr") {
               reg_info.format = eFormatAddressInfo;
               reg_info.encoding = eEncodingUint;
-            } else if (gdb_type == "float") {
+            } else if (gdb_type == "float" || gdb_type == "ieee_single" ||
+                       gdb_type == "ieee_double") {
               reg_info.format = eFormatFloat;
               reg_info.encoding = eEncodingIEEE754;
             } else if (gdb_type == "aarch64v" ||
@@ -5260,17 +5261,17 @@ llvm::Error ProcessGDBRemote::LoadModules() {
     loaded_modules.Remove(removed_modules);
     m_process->GetTarget().ModulesDidUnload(removed_modules, false);
 
-    new_modules.ForEach([&target](const lldb::ModuleSP module_sp) -> bool {
+    new_modules.ForEach([&target](const lldb::ModuleSP module_sp) {
       lldb_private::ObjectFile *obj = module_sp->GetObjectFile();
       if (!obj)
-        return true;
+        return IterationAction::Continue;
 
       if (obj->GetType() != ObjectFile::Type::eTypeExecutable)
-        return true;
+        return IterationAction::Continue;
 
       lldb::ModuleSP module_copy_sp = module_sp;
       target.SetExecutableModule(module_copy_sp, eLoadDependentsNo);
-      return false;
+      return IterationAction::Stop;
     });
 
     loaded_modules.AppendIfNeeded(new_modules);

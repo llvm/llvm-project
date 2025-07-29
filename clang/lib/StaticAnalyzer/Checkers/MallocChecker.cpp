@@ -2693,7 +2693,7 @@ void MallocChecker::HandleUseAfterFree(CheckerContext &C, SourceRange Range,
         Frontend->UseFreeBug,
         AF.Kind == AF_InnerBuffer
             ? "Inner pointer of container used after re/deallocation"
-            : "Use of memory after it is freed",
+            : "Use of memory after it is released",
         N);
 
     R->markInteresting(Sym);
@@ -2721,8 +2721,8 @@ void MallocChecker::HandleDoubleFree(CheckerContext &C, SourceRange Range,
   if (ExplodedNode *N = C.generateErrorNode()) {
     auto R = std::make_unique<PathSensitiveBugReport>(
         Frontend->DoubleFreeBug,
-        (Released ? "Attempt to free released memory"
-                  : "Attempt to free non-owned memory"),
+        (Released ? "Attempt to release already released memory"
+                  : "Attempt to release non-owned memory"),
         N);
     if (Range.isValid())
       R->addRange(Range);

@@ -87,6 +87,7 @@ public:
   // Add a new fragment to the current section without a variable-size tail.
   void newFragment();
 
+  void appendContents(ArrayRef<char> Contents);
   void appendContents(size_t Num, char Elt);
   void addFixup(const MCExpr *Value, MCFixupKind Kind);
 

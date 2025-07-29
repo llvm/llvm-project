@@ -88,6 +88,57 @@ void fir::setTuneCPU(mlir::ModuleOp mod, llvm::StringRef cpu) {
   mod->setAttr(tuneCpuName, mlir::StringAttr::get(ctx, cpu));
 }
 
+static constexpr const char *atomicIgnoreDenormalModeName =
+    "fir.atomic_ignore_denormal_mode";
+
+void fir::setAtomicIgnoreDenormalMode(mlir::ModuleOp mod, bool value) {
+  if (value) {
+    auto *ctx = mod.getContext();
+    mod->setAttr(atomicIgnoreDenormalModeName, mlir::UnitAttr::get(ctx));
+  } else {
+    if (mod->hasAttr(atomicIgnoreDenormalModeName))
+      mod->removeAttr(atomicIgnoreDenormalModeName);
+  }
+}
+
+bool fir::getAtomicIgnoreDenormalMode(mlir::ModuleOp mod) {
+  return mod->hasAttr(atomicIgnoreDenormalModeName);
+}
+
+static constexpr const char *atomicFineGrainedMemoryName =
+    "fir.atomic_fine_grained_memory";
+
+void fir::setAtomicFineGrainedMemory(mlir::ModuleOp mod, bool value) {
+  if (value) {
+    auto *ctx = mod.getContext();
+    mod->setAttr(atomicFineGrainedMemoryName, mlir::UnitAttr::get(ctx));
+  } else {
+    if (mod->hasAttr(atomicFineGrainedMemoryName))
+      mod->removeAttr(atomicFineGrainedMemoryName);
+  }
+}
+
+bool fir::getAtomicFineGrainedMemory(mlir::ModuleOp mod) {
+  return mod->hasAttr(atomicFineGrainedMemoryName);
+}
+
+static constexpr const char *atomicRemoteMemoryName =
+    "fir.atomic_remote_memory";
+
+void fir::setAtomicRemoteMemory(mlir::ModuleOp mod, bool value) {
+  if (value) {
+    auto *ctx = mod.getContext();
+    mod->setAttr(atomicRemoteMemoryName, mlir::UnitAttr::get(ctx));
+  } else {
+    if (mod->hasAttr(atomicRemoteMemoryName))
+      mod->removeAttr(atomicRemoteMemoryName);
+  }
+}
+
+bool fir::getAtomicRemoteMemory(mlir::ModuleOp mod) {
+  return mod->hasAttr(atomicRemoteMemoryName);
+}
+
 llvm::StringRef fir::getTuneCPU(mlir::ModuleOp mod) {
   if (auto attr = mod->getAttrOfType<mlir::StringAttr>(tuneCpuName))
     return attr.getValue();

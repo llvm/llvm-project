@@ -418,7 +418,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
         }
         return allocateDescriptor(D, *T, MDSize, NumElems, IsConst, IsTemporary,
                                   IsMutable);
-      } else {
+      }
         // Arrays of composites. In this case, the array is a list of pointers,
         // followed by the actual elements.
         const Descriptor *ElemDesc = createDescriptor(
@@ -430,7 +430,6 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
           return {};
         return allocateDescriptor(D, Ty, ElemDesc, MDSize, NumElems, IsConst,
                                   IsTemporary, IsMutable);
-      }
     }
 
     // Array of unknown bounds - cannot be accessed and pointer arithmetic
@@ -440,14 +439,13 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
       if (OptPrimType T = Ctx.classify(ElemTy)) {
         return allocateDescriptor(D, *T, MDSize, IsConst, IsTemporary,
                                   Descriptor::UnknownSize{});
-      } else {
+      }
         const Descriptor *Desc = createDescriptor(
             D, ElemTy.getTypePtr(), std::nullopt, IsConst, IsTemporary);
         if (!Desc)
           return nullptr;
         return allocateDescriptor(D, Desc, MDSize, IsTemporary,
                                   Descriptor::UnknownSize{});
-      }
     }
   }
 

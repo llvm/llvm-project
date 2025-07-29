@@ -69,8 +69,17 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
 
   // Link LLVM bitcode.
   ArgStringList LinkArgs{};
+
   for (auto Input : Inputs)
     LinkArgs.push_back(Input.getFilename());
+
+  // Add static device libraries using the common helper function.
+  // This handles unbundling archives (.a) containing bitcode bundles.
+  StringRef Arch = getToolChain().getTriple().getArchName();
+  StringRef Target =
+      "generic"; // SPIR-V is generic, no specific target ID like -mcpu
+  tools::AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LinkArgs, Arch,
+                                    Target, /*IsBitCodeSDL=*/true);
   LinkArgs.append({"-o", TempFile});
   const char *LlvmLink =
       Args.MakeArgString(getToolChain().GetProgramPath("llvm-link"));

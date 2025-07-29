@@ -370,6 +370,11 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
       setOperationAction(ISD::FMINNUM, VT, Legal);
       setOperationAction(ISD::FMAXNUM, VT, Legal);
       setOperationAction(ISD::FROUND, VT, Legal);
+      setOperationAction(ISD::FROUNDEVEN, VT, Legal);
+      setOperationAction(ISD::FRINT, VT, Legal);
+      setOperationAction(ISD::FTRUNC, VT, Legal);
+      setOperationAction(ISD::FFLOOR, VT, Legal);
+      setOperationAction(ISD::FCEIL, VT, Legal);
       setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMUL, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
@@ -1507,6 +1512,12 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::FLOG2, MVT::f16, Promote);
 
     setOperationAction(ISD::FROUND, MVT::f16, Legal);
+    setOperationAction(ISD::FROUNDEVEN, MVT::f16, Legal);
+    setOperationAction(ISD::FTRUNC, MVT::f16, Legal);
+    setOperationAction(ISD::FNEARBYINT, MVT::f16, Legal);
+    setOperationAction(ISD::FRINT, MVT::f16, Legal);
+    setOperationAction(ISD::FFLOOR, MVT::f16, Legal);
+    setOperationAction(ISD::FCEIL, MVT::f16, Legal);
   }
 
   if (Subtarget->hasNEON()) {
