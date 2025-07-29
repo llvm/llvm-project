@@ -5,7 +5,7 @@ import * as child_process from "child_process";
 import * as fs from "node:fs/promises";
 import { ConfigureButton, OpenSettingsButton } from "./ui/show-error-message";
 import { ErrorWithNotification } from "./ui/error-with-notification";
-import { Logger } from "./logger";
+import { LogFilePathProvider, Logger } from "./logger";
 
 const exec = util.promisify(child_process.execFile);
 
@@ -178,6 +178,7 @@ function formatDate(date: Date): string {
  * debug configuration. Assumes that the given debug configuration is for a local launch of lldb-dap.
  *
  * @param logger The {@link Logger} to get default session log location
+ * @param logFilePath The {@link LogFilePathProvider} for determining where to put session logs
  * @param workspaceFolder The {@link vscode.WorkspaceFolder} that the debug session will be launched within
  * @param configuration The {@link vscode.DebugConfiguration} that will be launched
  * @throws An {@link ErrorWithNotification} if something went wrong
@@ -185,6 +186,7 @@ function formatDate(date: Date): string {
  */
 export async function createDebugAdapterExecutable(
   logger: Logger,
+  logFilePath: LogFilePathProvider,
   workspaceFolder: vscode.WorkspaceFolder | undefined,
   configuration: vscode.DebugConfiguration,
 ): Promise<vscode.DebugAdapterExecutable> {
@@ -194,7 +196,7 @@ export async function createDebugAdapterExecutable(
   if (log_path) {
     env["LLDBDAP_LOG"] = log_path;
   } else if (vscode.workspace.getConfiguration("lldb-dap").get("verboseLogging", false)) {
-    env["LLDBDAP_LOG"] = logger.logFilePath(`lldb-dap-session-${formatDate(new Date())}.log`);
+    env["LLDBDAP_LOG"] = logFilePath(`lldb-dap-session-${formatDate(new Date())}.log`);
   }
   const configEnvironment =
     config.get<{ [key: string]: string }>("environment") || {};
@@ -224,7 +226,7 @@ export async function createDebugAdapterExecutable(
 export class LLDBDapDescriptorFactory
   implements vscode.DebugAdapterDescriptorFactory
 {
-  constructor(private readonly logger: Logger) {}
+  constructor(private readonly logger: Logger, private logFilePath: LogFilePathProvider) {}
 
   async createDebugAdapterDescriptor(
     session: vscode.DebugSession,
@@ -251,6 +253,7 @@ export class LLDBDapDescriptorFactory
 
     return createDebugAdapterExecutable(
       this.logger,
+      this.logFilePath,
       session.workspaceFolder,
       session.configuration,
     );

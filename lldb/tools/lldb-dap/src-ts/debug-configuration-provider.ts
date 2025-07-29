@@ -5,7 +5,7 @@ import { LLDBDapServer } from "./lldb-dap-server";
 import { createDebugAdapterExecutable } from "./debug-adapter-factory";
 import { ConfigureButton, showErrorMessage } from "./ui/show-error-message";
 import { ErrorWithNotification } from "./ui/error-with-notification";
-import { Logger } from "./logger";
+import { LogFilePathProvider, Logger } from "./logger";
 
 const exec = util.promisify(child_process.execFile);
 
@@ -72,7 +72,7 @@ const configurations: Record<string, DefaultConfig> = {
 export class LLDBDapConfigurationProvider
   implements vscode.DebugConfigurationProvider
 {
-  constructor(private readonly server: LLDBDapServer, private readonly logger: Logger) {}
+  constructor(private readonly server: LLDBDapServer, private readonly logger: Logger, private readonly logFilePath: LogFilePathProvider) {}
 
   async resolveDebugConfiguration(
     folder: vscode.WorkspaceFolder | undefined,
@@ -156,6 +156,7 @@ export class LLDBDapConfigurationProvider
         // if there are any.
         const executable = await createDebugAdapterExecutable(
           this.logger,
+          this.logFilePath,
           folder,
           debugConfiguration,
         );
@@ -192,7 +193,7 @@ export class LLDBDapConfigurationProvider
 
       return debugConfiguration;
     } catch (error) {
-      this.logger.error(error);
+      this.logger.error(error as Error);
       // Show a better error message to the user if possible
       if (!(error instanceof ErrorWithNotification)) {
         throw error;

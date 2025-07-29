@@ -13,16 +13,25 @@ class OutputChannelTransport extends Transport {
     }
 }
 
-export class Logger implements vscode.Disposable {
+export type LogFilePathProvider = (name: string) => string;
+
+export interface Logger {
+  debug(message: string, ...args: any[]): void
+  error(error: string | Error, ...args: any[]): void
+  info(message: string, ...args: any[]): void
+  warn(message: string, ...args: any[]): void
+}
+
+export class LLDBDAPLogger implements vscode.Disposable {
     private disposables: vscode.Disposable[] = [];
     private logger: winston.Logger;
 
-    constructor(public readonly logFilePath: (name: string) => string, ouptutChannel: vscode.OutputChannel) {
+    constructor(public readonly logFilePath: string, ouptutChannel: vscode.OutputChannel) {
         const ouptutChannelTransport = new OutputChannelTransport(ouptutChannel);
         ouptutChannelTransport.level = this.outputChannelLevel();
         this.logger = winston.createLogger({
             transports: [
-                new winston.transports.File({ filename: logFilePath("lldb-dap-extension.log"), level: "debug" }), // File logging at the 'debug' level
+                new winston.transports.File({ filename: logFilePath, level: "debug" }), // File logging at the 'debug' level
                 ouptutChannelTransport
             ],
             format: winston.format.combine(
@@ -48,24 +57,25 @@ export class Logger implements vscode.Disposable {
         );
     }
 
-    debug(message: any) {
-        this.logger.debug(this.normalizeMessage(message));
+    debug(message: string, ...args: any[]) {
+        this.logger.debug([message, ...args].map(m => this.normalizeMessage(m)).join(" "));
     }
 
-    info(message: any) {
-        this.logger.info(this.normalizeMessage(message));
+    info(message: string, ...args: any[]) {
+        this.logger.info([message, ...args].map(m => this.normalizeMessage(m)).join(" "));
     }
 
-    warn(message: any) {
-        this.logger.warn(this.normalizeMessage(message));
+    warn(message: string, ...args: any[]) {
+        this.logger.warn([message, ...args].map(m => this.normalizeMessage(m)).join(" "));
     }
 
-    error(message: any) {
+    error(message: Error | string, ...args: any[]) {
         if (message instanceof Error) {
             this.logger.error(message);
+            this.logger.error([...args].map(m => this.normalizeMessage(m)).join(" "));
             return;
         }
-        this.logger.error(this.normalizeMessage(message));
+        this.logger.error([message, ...args].map(m => this.normalizeMessage(m)).join(" "));
     }
 
     private normalizeMessage(message: any) {

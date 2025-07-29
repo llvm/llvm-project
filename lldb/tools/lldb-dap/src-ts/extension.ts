@@ -11,14 +11,14 @@ import {
   ModulesDataProvider,
   ModuleProperty,
 } from "./ui/modules-data-provider";
-import { Logger } from "./logger";
+import { LLDBDAPLogger, LogFilePathProvider } from "./logger";
 
 /**
  * This class represents the extension and manages its life cycle. Other extensions
  * using it as as library should use this class as the main entry point.
  */
 export class LLDBDapExtension extends DisposableContext {
-  constructor(logger: Logger, outputChannel: vscode.OutputChannel) {
+  constructor(logger: LLDBDAPLogger, logFilePath: LogFilePathProvider, outputChannel: vscode.OutputChannel) {
     super();
 
     const lldbDapServer = new LLDBDapServer();
@@ -31,11 +31,11 @@ export class LLDBDapExtension extends DisposableContext {
       sessionTracker,
       vscode.debug.registerDebugConfigurationProvider(
         "lldb-dap",
-        new LLDBDapConfigurationProvider(lldbDapServer, logger),
+        new LLDBDapConfigurationProvider(lldbDapServer, logger, logFilePath),
       ),
       vscode.debug.registerDebugAdapterDescriptorFactory(
         "lldb-dap",
-        new LLDBDapDescriptorFactory(logger),
+        new LLDBDapDescriptorFactory(logger, logFilePath),
       ),
       vscode.debug.registerDebugAdapterTrackerFactory(
         "lldb-dap",
@@ -61,8 +61,9 @@ export class LLDBDapExtension extends DisposableContext {
 export async function activate(context: vscode.ExtensionContext) {
   await vscode.workspace.fs.createDirectory(context.logUri);
   const outputChannel = vscode.window.createOutputChannel("LLDB-DAP");
-  const logger = new Logger((name) => path.join(context.logUri.fsPath, name), outputChannel);
+  const logFilePath: LogFilePathProvider = (name) => path.join(context.logUri.fsPath, name);
+  const logger = new LLDBDAPLogger(logFilePath("lldb-dap-extension.log"), outputChannel);
   logger.info("LLDB-Dap extension activating...");
-  context.subscriptions.push(new LLDBDapExtension(logger, outputChannel));
+  context.subscriptions.push(new LLDBDapExtension(logger, logFilePath, outputChannel));
   logger.info("LLDB-Dap extension activated");
 }
