@@ -4,6 +4,7 @@
 
 # A wrapper library over MPFR for use with LLVM libc math unittests.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load("//libc/test:libc_test_rules.bzl", "libc_test_library")
 
 package(default_visibility = ["//visibility:public"])
