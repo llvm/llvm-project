@@ -1,4 +1,4 @@
-//===-- Double-precision atan function ------------------------------------===//
+//===-- Shared atan function ------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/atan.h"
+#ifndef LLVM_LIBC_SHARED_MATH_ATAN_H
+#define LLVM_LIBC_SHARED_MATH_ATAN_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/atan.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(double, atan, (double x)) { return math::atan(x); }
+using math::atan;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_ATAN_H
