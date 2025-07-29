@@ -73,72 +73,6 @@ Here is an example of how to use the ``overflow_behavior`` attribute with a type
 semantics and won't be removed via eager compiler optimizations (like some
 undefined behavior might).
 
-Conversion Semantics
-====================
-
-Overflow behavior types are implicitly convertible to and from built-in
-integral types with specific semantics for warnings and constant evaluation.
-
-Constant Conversion Warnings
-----------------------------
-
-When a constant expression is converted to a narrower type that would cause
-value truncation, the ``-Wconstant-conversion`` warning behavior depends on
-the **destination type**:
-
-* **Destination is wrapping type** (``__wrap``): No warning is issued because
-  truncation with wrapping behavior is expected and well-defined.
-
-* **Destination is non-wrapping or standard type**: Warning is issued if the
-  constant value would be truncated.
-
-.. code-block:: c++
-
-  // Examples of constant conversion behavior
-  short x1 = (int __wrap)100000;        // Warning: truncation to standard type
-  short __wrap x2 = (int)100000;        // No warning: wrapping destination
-  short __no_wrap x3 = (int)100000;     // Warning: truncation with overflow check
-  short x4 = (int __no_wrap)100000;     // Warning: truncation to standard type
-
-This rule ensures that explicit use of wrapping types suppresses warnings
-only when the destination is intended to wrap, while preserving warnings
-for potentially unintended truncation to standard or non-wrapping types.
-
-C++ Narrowing Conversions
--------------------------
-
-In C++, overflow behavior types also affect narrowing conversion diagnostics
-in brace initialization. When a constant expression would cause a narrowing
-conversion, the behavior depends on the **destination type**:
-
-* **Destination is wrapping type** (``__wrap``): No C++ narrowing conversion
-  error is issued, allowing the initialization to succeed even in ``constexpr``
-  contexts.
-
-* **Destination is non-wrapping or standard type**: C++ narrowing conversion
-  error is issued as normal.
-
-.. code-block:: c++
-
-  // C++ narrowing conversion behavior
-  constexpr short __wrap x1 = {(int)100000};    // OK: wrapping destination
-  constexpr short x2 = {(int)100000};           // Error: standard destination
-  constexpr short __no_wrap x3 = {(int)100000}; // Error: non-wrapping destination
-
-This allows ``__wrap`` types to be used seamlessly in ``constexpr`` contexts
-where truncation is intentional and expected.
-
-Note that truncation itself is a form of overflow behavior - when a value
-is too large to fit in the destination type, the high-order bits are
-discarded, which is the wrapping behavior that ``__wrap`` types are
-designed to handle predictably.
-
-C++ Template and Overload Resolution
--------------------------------------
-
-Note that C++ overload set formation rules treat promotions to and from
-overflow behavior types the same as normal integral promotions and conversions.
-
 Promotion Rules
 ===============
 
@@ -195,6 +129,132 @@ variety of scenarios is detailed below.
      - Larger bit-width; unsigned favored if same width
    * - Different Kind OBTs (``wrap`` + ``no_wrap``)
      - ``no_wrap`` type (matches ``no_wrap`` operand's characteristics)
+
+Conversion Semantics
+====================
+
+Overflow behavior types are implicitly convertible to and from built-in
+integral types with specific semantics for warnings and constant evaluation.
+
+Constant Conversion Warnings
+----------------------------
+
+When a constant expression is converted to a narrower type that would cause
+value truncation, the ``-Wconstant-conversion`` warning behavior depends on
+the **destination type**:
+
+* **Destination is wrapping type**
+  (``__attribute__((overflow_behavior(wrap)))``): No warning is issued because
+  truncation with wrapping behavior is expected and well-defined.
+
+* **Destination is non-wrapping or standard type**: Warning is issued if the
+  constant value would be truncated.
+
+.. code-block:: c++
+
+  #define __wrap __attribute__((overflow_behavior(wrap)))
+  #define __no_wrap __attribute__((overflow_behavior(no_wrap)))
+
+  // Examples of constant conversion behavior
+  short x1 = (int __wrap)100000;        // Warning: truncation to standard type
+  short __wrap x2 = (int)100000;        // No warning: wrapping destination (also no UBSan truncation warning)
+  short __no_wrap x3 = (int)100000;     // Warning: truncation with overflow check
+  short x4 = (int __no_wrap)100000;     // Warning: truncation to standard type
+
+This rule ensures that explicit use of wrapping types suppresses warnings
+only when the destination is intended to wrap, while preserving warnings
+for potentially unintended truncation to standard or non-wrapping types.
+
+C++ Narrowing Conversions
+-------------------------
+
+In C++, overflow behavior types also affect narrowing conversion diagnostics
+in brace initialization. When a constant expression would cause a narrowing
+conversion, the behavior depends on the **destination type**:
+
+* **Destination is wrapping type**
+  (``__attribute__((overflow_behavior(wrap)))``): No C++ narrowing conversion
+  error is issued, allowing the initialization to succeed even in ``constexpr``
+  contexts.
+
+* **Destination is non-wrapping or standard type**: C++ narrowing conversion
+  error is issued as normal.
+
+.. code-block:: c++
+
+  #define __wrap __attribute__((overflow_behavior(wrap)))
+  #define __no_wrap __attribute__((overflow_behavior(no_wrap)))
+
+  // C++ narrowing conversion behavior
+  constexpr short __wrap x1 = {(int)100000};    // OK: wrapping destination
+  constexpr short x2 = {(int)100000};           // Error: standard destination
+  constexpr short __no_wrap x3 = {(int)100000}; // Error: non-wrapping destination
+
+This allows ``wrap`` types to be used seamlessly in ``constexpr`` contexts
+where truncation is intentional and expected.
+
+Note that truncation itself is a form of overflow behavior - when a value
+is too large to fit in the destination type, the high-order bits are
+discarded, which is the wrapping behavior that ``wrap`` types are
+designed to handle predictably.
+
+UBSan Truncation Checks
+------------------------
+
+The destination type also determines UBSan's
+``implicit-signed-integer-truncation`` and
+``implicit-unsigned-integer-truncation`` behavior. Conversions to
+``__attribute__((overflow_behavior(wrap)))`` destinations suppress these UBSan
+checks since truncation is expected and well-defined for wrapping types.
+
+C++ Template and Overload Resolution
+-------------------------------------
+
+For the purposes of C++ overload set formation, promotions or conversions to
+and from overflow behavior types are of the same rank as normal integer
+promotions and conversions. These rules have implications during overload
+candidate selection which may lead to unexpected but correct ambiguity errors.
+
+The example below shows potential ambiguity as matching just the underlying
+type of an OBT parameter is not enough to precisely pick an overload candidate.
+
+.. code-block:: c++
+
+  void foo(__attribute__((overflow_behavior(no_wrap))) int a);
+  void foo(short a);
+
+  void bar(int a) {
+    foo(a); // call to 'foo' is ambiguous
+  }
+
+Most integral types can be implicitly converted to match OBT parameter types
+and this can be done unambiguously in certain cases. Especially, when all other
+candidates are not implicitly convertible.
+
+.. code-block:: c++
+
+  void foo(__attribute__((overflow_behavior(no_wrap))) int a);
+  void foo(char *a);
+
+  void bar(int a) {
+    foo(a); // picks foo(__no_wrap int)
+  }
+
+
+Overflow behavior types with differing kinds may also create ambiguity in
+certain contexts.
+
+.. code-block:: c++
+
+  void foo(__attribute__((overflow_behavior(no_wrap))) int a);
+  void foo(__attribute__((overflow_behavior(wrap))) int a);
+
+  void bar(int a) {
+    foo(a); // call to 'foo' is ambiguous
+  }
+
+Overflow behavior types may also be used as template parameters and used within
+C ``_Generic`` expressions.
 
 Interaction with Command-Line Flags and Sanitizer Special Case Lists
 ====================================================================

@@ -2,9 +2,6 @@
 // RUN: -fsanitize=signed-integer-overflow,unsigned-integer-overflow,implicit-signed-integer-truncation,implicit-unsigned-integer-truncation \
 // RUN: -emit-llvm -o - | FileCheck %s --check-prefix=DEFAULT
 
-
-// Test the __attribute__((overflow_behavior())) for C++
-
 #define __wrap __attribute__((overflow_behavior(wrap)))
 #define __no_wrap __attribute__((overflow_behavior(no_wrap)))
 
@@ -18,22 +15,6 @@ public:
 
   decltype(a) getA() const { return a; }
 };
-/* define dso_local void @_Z12test_membersc(i8 noundef signext %some) #0 {
-entry:
-  %some.addr = alloca i8, align 1
-  %foo = alloca %class.Foo, align 8
-  store i8 %some, ptr %some.addr, align 1
-  %0 = load i8, ptr %some.addr, align 1
-  call void @_ZN3FooC2Ec(ptr noundef nonnull align 8 dereferenceable(9) %foo, i8 noundef signext %0)
-  %a = getelementptr inbounds nuw %class.Foo, ptr %foo, i32 0, i32 1
-  %1 = load i8, ptr %a, align 8
-  %inc = add i8 %1, 1
-  store i8 %inc, ptr %a, align 8
-  %call = call noundef i8 @_ZNK3Foo4getAEv(ptr noundef nonnull align 8 dereferenceable(9) %foo)
-  %add = add i8 %call, 1
-  ret void
-}
-*/
 
 // DEFAULT-LABEL: define {{.*}} @_Z12test_membersc
 void test_members(char some) {
