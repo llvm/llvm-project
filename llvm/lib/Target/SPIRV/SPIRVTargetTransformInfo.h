@@ -60,7 +60,7 @@ public:
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
                                           Value *NewV) const override;
 
-  bool isVectorElementIndexingUsingGEPAllowed() const override { return false; }
+  bool allowVectorElementIndexingUsingGEP() const override { return false; }
 };
 
 } // namespace llvm
