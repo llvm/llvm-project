@@ -380,7 +380,7 @@ def SparseVectorization : Pass<"sparse-vectorization", "ModuleOp"> {
 
       After:
         %3 = memref.load %2[] : memref<f32>
-        %4 = vector.insertelement %3, %cst[%c0 : index] : vector<32xf32>
+        %4 = vector.insert %3, %cst [0] : f32 into vector<32xf32>
         %5 = scf.for %arg3 = %c0 to %c1024 step %c32 iter_args(%arg4 = %4) -> (vector<32xf32>) {
           %8 = vector.load %0[%arg3] : memref<?xf32>, vector<32xf32>
           %9 = vector.load %1[%arg3] : memref<1024xf32>, vector<32xf32>

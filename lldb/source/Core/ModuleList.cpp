@@ -1077,12 +1077,12 @@ bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
 }
 
 void ModuleList::ForEach(
-    std::function<bool(const ModuleSP &module_sp)> const &callback) const {
+    std::function<IterationAction(const ModuleSP &module_sp)> const &callback)
+    const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   for (const auto &module_sp : m_modules) {
     assert(module_sp != nullptr);
-    // If the callback returns false, then stop iterating and break out
-    if (!callback(module_sp))
+    if (callback(module_sp) == IterationAction::Stop)
       break;
   }
 }

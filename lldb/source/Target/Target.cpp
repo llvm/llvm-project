@@ -36,6 +36,7 @@
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedStopHookInterface.h"
 #include "lldb/Interpreter/OptionGroupWatchpoint.h"
 #include "lldb/Interpreter/OptionValues.h"
@@ -2487,9 +2488,9 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
 
           ModuleList found_modules;
           m_images.FindModules(module_spec_copy, found_modules);
-          found_modules.ForEach([&](const ModuleSP &found_module) -> bool {
+          found_modules.ForEach([&](const ModuleSP &found_module) {
             old_modules.push_back(found_module);
-            return true;
+            return IterationAction::Continue;
           });
         }
 
