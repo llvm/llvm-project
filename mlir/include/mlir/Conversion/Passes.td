@@ -841,9 +841,13 @@ def ConvertMathToFuncs : Pass<"convert-math-to-funcs", "ModuleOp"> {
 // MemRefToEmitC
 //===----------------------------------------------------------------------===//
 
-def ConvertMemRefToEmitC : Pass<"convert-memref-to-emitc"> {
+def ConvertMemRefToEmitC : Pass<"convert-memref-to-emitc", "ModuleOp"> {
   let summary = "Convert MemRef dialect to EmitC dialect";
   let dependentDialects = ["emitc::EmitCDialect"];
+  let options = [Option<
+      "lowerToCpp", "lower-to-cpp", "bool",
+      /*default=*/"false",
+      /*description=*/"Target C++ (true) instead of C (false)">];
 }
 
 //===----------------------------------------------------------------------===//
@@ -903,13 +907,13 @@ def ConvertMemRefToSPIRVPass : Pass<"convert-memref-to-spirv"> {
 }
 
 //===----------------------------------------------------------------------===//
-// MeshToMPI
+// ShardToMPI
 //===----------------------------------------------------------------------===//
 
-def ConvertMeshToMPIPass : Pass<"convert-mesh-to-mpi"> {
-  let summary = "Convert Mesh dialect to MPI dialect.";
+def ConvertShardToMPIPass : Pass<"convert-shard-to-mpi"> {
+  let summary = "Convert Shard dialect to MPI dialect.";
   let description = [{
-    This pass converts communication operations from the Mesh dialect to the
+    This pass converts communication operations from the Shard dialect to the
     MPI dialect.
     If it finds the DLTI attribute "MPI:comm_world-rank" on the module it will
     use that integer value instead of calling MPI_Comm_rank. This allows
@@ -1448,6 +1452,10 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
     Option<"armI8MM", "enable-arm-i8mm",
            "bool", /*default=*/"false",
            "Enables the use of Arm FEAT_I8MM instructions while lowering "
+           "the vector dialect.">,
+    Option<"armBF16", "enable-arm-bf16",
+           "bool", /*default=*/"false",
+           "Enables the use of Arm FEAT_BF16 instructions while lowering "
            "the vector dialect.">,
     Option<"x86Vector", "enable-x86vector",
            "bool", /*default=*/"false",
