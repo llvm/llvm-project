@@ -1098,29 +1098,80 @@ bool RewriteScheduleStage::initGCNSchedStage() {
     }
   }
 
-  bool ShouldRewrite = false;
+  unsigned ArchVGPRThreshold =
+      ST.getMaxNumVectorRegs(DAG.MF.getFunction()).first;
+
+  int64_t Cost = 0;
+      MBFI.calculate(MF, MBPI, *DAG.MLI);
   for (unsigned RegionIdx = 0; RegionIdx < DAG.Regions.size(); RegionIdx++) {
     if (!DAG.RegionsWithExcessArchVGPR[RegionIdx])
       continue;
 
+    unsigned MaxCombinedVGPRs = ST.getMaxNumVGPRs(MF);
+
+    auto PressureBefore = DAG.Pressure[RegionIdx];
+    unsigned UnifiedPressureBefore =
+        PressureBefore.getVGPRNum(true, ArchVGPRThreshold);
+    unsigned ArchPressureBefore =
+        PressureBefore.getArchVGPRNum(ArchVGPRThreshold);
+    unsigned AGPRPressureBefore = PressureBefore.getAGPRNum(ArchVGPRThreshold);
+    unsigned UnifiedSpillBefore =
+        UnifiedPressureBefore > MaxCombinedVGPRs
+            ? (UnifiedPressureBefore - MaxCombinedVGPRs)
+            : 0;
+    unsigned ArchSpillBefore =
+        ArchPressureBefore > ST.getAddressableNumArchVGPRs()
+            ? (ArchPressureBefore - ST.getAddressableNumArchVGPRs())
+            : 0;
+    unsigned AGPRSpillBefore =
+        AGPRPressureBefore > ST.getAddressableNumArchVGPRs()
+            ? (AGPRPressureBefore - ST.getAddressableNumArchVGPRs())
+            : 0;
+
+    unsigned SpillCostBefore =
+        std::max(UnifiedSpillBefore, (ArchSpillBefore + AGPRSpillBefore));
+
+   
     // For the cases we care about (i.e. ArchVGPR usage is greater than the
     // addressable limit), rewriting alone should bring pressure to manageable
     // level. If we find any such region, then the rewrite is potentially
     // beneficial.
     auto PressureAfter = DAG.getRealRegPressure(RegionIdx);
-    unsigned MaxCombinedVGPRs = ST.getMaxNumVGPRs(MF);
-    if (PressureAfter.getArchVGPRNum() <= ST.getAddressableNumArchVGPRs() &&
-        PressureAfter.getVGPRNum(true) <= MaxCombinedVGPRs) {
-      ShouldRewrite = true;
-      break;
-    }
+    unsigned UnifiedPressureAfter =
+        PressureAfter.getVGPRNum(true, ArchVGPRThreshold);
+    unsigned ArchPressureAfter =
+        PressureAfter.getArchVGPRNum(ArchVGPRThreshold);
+    unsigned AGPRPressureAfter = PressureAfter.getAGPRNum(ArchVGPRThreshold);
+    unsigned UnifiedSpillAfter = UnifiedPressureAfter > MaxCombinedVGPRs
+                                     ? (UnifiedPressureAfter - MaxCombinedVGPRs)
+                                     : 0;
+    unsigned ArchSpillAfter =
+        ArchPressureAfter > ST.getAddressableNumArchVGPRs()
+            ? (ArchPressureAfter - ST.getAddressableNumArchVGPRs())
+            : 0;
+    unsigned AGPRSpillAfter =
+        AGPRPressureAfter > ST.getAddressableNumArchVGPRs()
+            ? (AGPRPressureAfter - ST.getAddressableNumArchVGPRs())
+            : 0;
+
+    unsigned SpillCostAfter =
+        std::max(UnifiedSpillAfter, (ArchSpillAfter + AGPRSpillAfter));
+
+    uint64_t EntryFreq = MBFI.getEntryFreq().getFrequency();
+    uint64_t BlockFreq =
+        EntryFreq ? MBFI.getBlockFreq(DAG.Regions[RegionIdx].first->getParent())
+                        .getFrequency() / EntryFreq
+                  : 1;
+
+    // Assumes perfect spilling -- giving edge to VGPR form.
+    Cost += ((int)SpillCostAfter - (int)SpillCostBefore) * (int)BlockFreq;
   }
 
   // If we find that we'll need to insert cross RC copies inside loop bodies,
   // then bail
+  bool ShouldRewrite = Cost < 0;
   if (ShouldRewrite) {
-    CI.clear();
-    CI.compute(MF);
+    uint64_t EntryFreq = MBFI.getEntryFreq().getFrequency();
 
     for (auto *DefMI : CrossRCUseCopies) {
       auto DefReg = DefMI->getOperand(0).getReg();
@@ -1137,11 +1188,16 @@ bool RewriteScheduleStage::initGCNSchedStage() {
           if (!RequiredRC || SRI->hasAGPRs(RequiredRC))
             continue;
 
-          unsigned DefDepth = CI.getCycleDepth(DefMI->getParent());
-          if (DefDepth && CI.getCycleDepth(UseMI.getParent()) >= DefDepth) {
-            ShouldRewrite = false;
+          uint64_t UseFreq =
+              EntryFreq ? MBFI.getBlockFreq(UseMI.getParent()).getFrequency() /
+                              EntryFreq
+                        : 1;
+
+          // Assumes no copy-reuse, giving edge to VGPR form.
+          Cost += UseFreq;
+          ShouldRewrite = Cost < 0;
+          if (!ShouldRewrite)
             break;
-          }
         }
         if (!ShouldRewrite)
           break;
@@ -1596,7 +1652,8 @@ void GCNSchedStage::checkScheduling() {
     DAG.RegionsWithExcessRP[RegionIdx] = true;
   }
 
-  if (PressureAfter.getArchVGPRNum() > ST.getAddressableNumArchVGPRs())
+  if (PressureAfter.getArchVGPRNum(ArchVGPRThreshold) >
+      ST.getAddressableNumArchVGPRs())
     DAG.RegionsWithExcessArchVGPR[RegionIdx] = true;
 
   // Revert if this region's schedule would cause a drop in occupancy or

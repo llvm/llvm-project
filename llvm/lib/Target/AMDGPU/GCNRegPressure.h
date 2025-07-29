@@ -99,7 +99,6 @@ struct GCNRegPressure {
   unsigned getArchVGPRNum(unsigned AddressableArchVGPR) const {
     unsigned AVGPRsAsVGPRs =
         getAVGPRsAsVGPRsNum(Value[VGPR], Value[AVGPR], AddressableArchVGPR);
-
     return Value[VGPR] + AVGPRsAsVGPRs;
   }
   /// \returns the AccVGPR32 pressure
