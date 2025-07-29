@@ -42,7 +42,7 @@ static bool isEffectivelyConstRegionAux(const MemRegion *MR,
     return true;
 
   // Check if this is a TypedRegion with a const-qualified type
-  if (const TypedRegion *TR = dyn_cast<TypedRegion>(MR)) {
+  if (const auto *TR = dyn_cast<TypedRegion>(MR)) {
     QualType LocationType = TR->getDesugaredLocationType(C.getASTContext());
     if (LocationType->isPointerOrReferenceType())
       LocationType = LocationType->getPointeeType();
@@ -51,7 +51,7 @@ static bool isEffectivelyConstRegionAux(const MemRegion *MR,
   }
 
   // Check if this is a SymbolicRegion with a const-qualified pointee type
-  if (const SymbolicRegion *SR = dyn_cast<SymbolicRegion>(MR)) {
+  if (const auto *SR = dyn_cast<SymbolicRegion>(MR)) {
     QualType PointeeType = SR->getPointeeStaticType();
     if (PointeeType.isConstQualified())
       return true;
@@ -68,7 +68,7 @@ bool StoreToImmutableChecker::isEffectivelyConstRegion(
     const MemRegion *MR, CheckerContext &C) const {
   // If the region is an ElementRegion, we need to check if any of the super
   // regions have const-qualified type.
-  if (const ElementRegion *ER = dyn_cast<ElementRegion>(MR)) {
+  if (const auto *ER = dyn_cast<ElementRegion>(MR)) {
     SmallVector<const MemRegion *, 8> SuperRegions;
     const MemRegion *Current = MR;
     const MemRegion *Base = ER->getBaseRegion();
