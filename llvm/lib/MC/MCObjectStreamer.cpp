@@ -19,6 +19,7 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSFrame.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
 using namespace llvm;
@@ -30,7 +31,7 @@ MCObjectStreamer::MCObjectStreamer(MCContext &Context,
     : MCStreamer(Context),
       Assembler(std::make_unique<MCAssembler>(
           Context, std::move(TAB), std::move(Emitter), std::move(OW))),
-      EmitEHFrame(true), EmitDebugFrame(false) {
+      EmitEHFrame(true), EmitDebugFrame(false), EmitSFrame(false) {
   assert(Assembler->getBackendPtr() && Assembler->getEmitterPtr());
   IsObj = true;
   setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
@@ -185,6 +186,10 @@ void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
 
   if (EmitDebugFrame)
     MCDwarfFrameEmitter::Emit(*this, MAB, false);
+
+  if (EmitSFrame || (getContext().getTargetOptions() &&
+                     getContext().getTargetOptions()->EmitSFrameUnwind))
+    MCSFrameEmitter::Emit(*this);
 }
 
 void MCObjectStreamer::visitUsedSymbol(const MCSymbol &Sym) {
