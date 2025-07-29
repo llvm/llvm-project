@@ -278,21 +278,26 @@ class LibraryResolver {
 public:
   class SymbolEnumerator {
   public:
-    enum class Result { Continue, Stop, Error };
+    enum class EnumerateResult { Continue, Stop, Error };
 
-    using OnEachSymbolFn = std::function<Result(StringRef Sym)>;
+    using OnEachSymbolFn = std::function<EnumerateResult(StringRef Sym)>;
 
-    enum class Filter : uint32_t {
+    enum Filter : uint32_t {
       None = 0,
       IgnoreUndefined = 1 << 0,
       IgnoreWeak = 1 << 1,
       IgnoreIndirect = 1 << 2,
-
-      Default = IgnoreUndefined
+      IgnoreHidden = 1 << 3,
+      IgnoreNonGlobal = 1 << 4
     };
 
     struct Options {
-      uint32_t FilterFlags = static_cast<uint32_t>(Filter::Default);
+      static uint32_t defaultFlag() {
+        return SymbolEnumerator::Filter::IgnoreUndefined |
+               SymbolEnumerator::Filter::IgnoreWeak |
+               SymbolEnumerator::Filter::IgnoreIndirect;
+      }
+      uint32_t FilterFlags = Filter::None;
     };
 
     static bool enumerateSymbols(StringRef Path, OnEachSymbolFn OnEach,
@@ -450,7 +455,7 @@ private:
 
 using SymbolEnumerator = LibraryResolver::SymbolEnumerator;
 using SymbolQuery = LibraryResolver::SymbolQuery;
-using EnumerateResult = SymbolEnumerator::Result;
+using EnumerateResult = SymbolEnumerator::EnumerateResult;
 
 class LibraryResolutionDriver {
 public:
@@ -474,8 +479,6 @@ private:
       : Loader(std::move(loader)) {}
 
   std::unique_ptr<LibraryResolver> Loader;
-  // std::function<void(const std::string &, LibraryManager::State)>
-  // onStateChange;
 };
 
 } // end namespace orc

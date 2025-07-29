@@ -64,10 +64,7 @@ bool LibraryResolutionDriver::markLibraryLoaded(StringRef path) {
     return false;
 
   lib->setState(LibraryManager::State::Loaded);
-  // lib->setNativeHandle(handle);
 
-  // if (onStateChange)
-  //   onStateChange(path.str(), LibraryManager::State::Loaded);
   return true;
 }
 
@@ -78,8 +75,6 @@ bool LibraryResolutionDriver::markLibraryUnLoaded(StringRef path) {
 
   lib->setState(LibraryManager::State::Unloaded);
 
-  // if (onStateChange)
-  //   onStateChange(path.str(), LibraryManager::State::Unloaded);
   return true;
 }
 
@@ -109,13 +104,13 @@ static bool shouldIgnoreSymbol(const object::SymbolRef &Sym,
     return true;
 
   using Filter = SymbolEnumerator::Filter;
-  if ((IgnoreFlags & static_cast<uint32_t>(Filter::IgnoreUndefined)) &&
+  if ((IgnoreFlags & Filter::IgnoreUndefined) &&
       (Flags & object::SymbolRef::SF_Undefined))
     return true;
-  if ((IgnoreFlags & static_cast<uint32_t>(Filter::IgnoreIndirect)) &&
+  if ((IgnoreFlags & Filter::IgnoreIndirect) &&
       (Flags & object::SymbolRef::SF_Indirect))
     return true;
-  if ((IgnoreFlags & static_cast<uint32_t>(Filter::IgnoreWeak)) &&
+  if ((IgnoreFlags & Filter::IgnoreWeak) &&
       (Flags & object::SymbolRef::SF_Weak))
     return true;
 
@@ -208,9 +203,8 @@ private:
 
 void LibraryResolver::resolveSymbolsInLibrary(LibraryInfo &lib,
                                               SymbolQuery &unresolvedSymbols) {
-  // LLVM_DEBUG(
-  dbgs() << "Checking unresolved symbols "
-         << " in library : " << lib.getFileName() << "\n"; //);
+  LLVM_DEBUG(dbgs() << "Checking unresolved symbols "
+                    << " in library : " << lib.getFileName() << "\n";);
   std::unordered_set<std::string> discoveredSymbols;
   bool hasEnumerated = false;
 
@@ -221,43 +215,37 @@ void LibraryResolver::resolveSymbolsInLibrary(LibraryInfo &lib,
     hasEnumerated = true;
 
     SymbolEnumerator::Options opts;
-    opts.FilterFlags =
-        static_cast<uint32_t>(SymbolEnumerator::Filter::IgnoreUndefined) |
-        static_cast<uint32_t>(SymbolEnumerator::Filter::IgnoreWeak) |
-        static_cast<uint32_t>(SymbolEnumerator::Filter::IgnoreIndirect);
-    // LLVM_DEBUG(
-    dbgs() << "Enumerating symbols in library: " << lib.getFullPath() << "\n";
-    // );
+    opts.FilterFlags = SymbolEnumerator::Options::defaultFlag();
+
+    LLVM_DEBUG(dbgs() << "Enumerating symbols in library: " << lib.getFullPath()
+                      << "\n";);
     SymbolEnumerator::enumerateSymbols(
         lib.getFullPath(),
         [&](StringRef sym) {
           discoveredSymbols.insert(sym.str());
-          return SymbolEnumerator::Result::Continue;
+          return EnumerateResult::Continue;
         },
         opts);
   };
 
   if (!unresolvedSymbols.hasUnresolved()) {
-    // LLVM_DEBUG(
-    dbgs() << "Skipping library: " << lib.getFullPath()
-           << " — unresolved symbols exist.\n";
-    // );
+    LLVM_DEBUG(dbgs() << "Skipping library: " << lib.getFullPath()
+                      << " — unresolved symbols exist.\n";);
     return;
   }
 
   enumerateSymbolsIfNeeded();
 
   if (discoveredSymbols.empty()) {
-    // LLVM_DEBUG(
-    dbgs() << "  No symbols and remove library : " << lib.getFullPath()
-           << "\n"; //);
+    LLVM_DEBUG(dbgs() << "  No symbols and remove library : "
+                      << lib.getFullPath() << "\n";);
     m_libMgr.removeLibrary(lib.getFullPath());
     return;
   }
 
   if (!lib.hasFilter()) {
-    // LLVM_DEBUG(
-    dbgs() << "Building filter for library: " << lib.getFullPath() << "\n"; //);
+    LLVM_DEBUG(dbgs() << "Building filter for library: " << lib.getFullPath()
+                      << "\n";);
     lib.ensureFilterBuilt(FB,
                           {discoveredSymbols.begin(), discoveredSymbols.end()});
     dbgs() << "discoveredSymbols : " << discoveredSymbols.size() << "\n";
@@ -267,17 +255,15 @@ void LibraryResolver::resolveSymbolsInLibrary(LibraryInfo &lib,
 
   const auto &unresolved = unresolvedSymbols.getUnresolvedSymbols();
   bool hadAnySym = false;
-  // LLVM_DEBUG(
-  dbgs() << "Total unresolved symbols : " << unresolved.size() << "\n"; //);
+  LLVM_DEBUG(dbgs() << "Total unresolved symbols : " << unresolved.size()
+                    << "\n";);
   for (const auto &symbol : unresolved) {
     if (lib.mayContain(symbol)) {
-      // LLVM_DEBUG(
-      dbgs() << "Checking symbol '" << symbol
-             << "' in library: " << lib.getFullPath() << "\n"; //);
+      LLVM_DEBUG(dbgs() << "Checking symbol '" << symbol
+                        << "' in library: " << lib.getFullPath() << "\n";);
       if (discoveredSymbols.count(symbol.str()) > 0) {
-        // LLVM_DEBUG(
-        dbgs() << "  Resolved symbol: " << symbol
-               << " in library: " << lib.getFullPath() << "\n"; //);
+        LLVM_DEBUG(dbgs() << "  Resolved symbol: " << symbol
+                          << " in library: " << lib.getFullPath() << "\n";);
         unresolvedSymbols.resolve(symbol, lib.getFullPath());
         hadAnySym = true;
       }
@@ -297,9 +283,8 @@ void LibraryResolver::searchSymbolsInLibraries(
   using LibraryState = LibraryManager::State;
   using LibraryType = PathType;
   auto tryResolveFrom = [&](LibraryState S, LibraryType K) {
-    // LLVM_DEBUG(
-    dbgs() << "Trying resolve from state=" << static_cast<int>(S)
-           << " type=" << static_cast<int>(K) << "\n"; //);
+    LLVM_DEBUG(dbgs() << "Trying resolve from state=" << static_cast<int>(S)
+                      << " type=" << static_cast<int>(K) << "\n";);
 
     SymbolSearchContext Ctx(query);
     while (!Ctx.allResolved()) {
@@ -331,20 +316,20 @@ void LibraryResolver::searchSymbolsInLibraries(
   }
 
   // done:
-  // LLVM_DEBUG({
-  dbgs() << "Search complete.\n";
-  for (const auto &r : query.getAllResults())
-    dbgs() << "Resolved Symbol:" << r->Name << " -> " << r->ResolvedLibPath
-           << "\n";
-  //});
+  LLVM_DEBUG({
+    dbgs() << "Search complete.\n";
+    for (const auto &r : query.getAllResults())
+      dbgs() << "Resolved Symbol:" << r->Name << " -> " << r->ResolvedLibPath
+             << "\n";
+  });
 
   onComplete(query);
 }
 
 bool LibraryResolver::scanLibrariesIfNeeded(PathType PK) {
-  // LLVM_DEBUG(
-  dbgs() << "LibraryResolver::scanLibrariesIfNeeded: Scanning for "
-         << (PK == PathType::User ? "User" : "System") << " libraries\n"; //);
+  LLVM_DEBUG(dbgs() << "LibraryResolver::scanLibrariesIfNeeded: Scanning for "
+                    << (PK == PathType::User ? "User" : "System")
+                    << " libraries\n";);
   if (!m_scanH.leftToScan(PK))
     return false;
   LibraryScanner Scanner(m_scanH, m_libMgr, m_shouldScan);
@@ -355,7 +340,6 @@ bool LibraryResolver::scanLibrariesIfNeeded(PathType PK) {
 bool LibraryResolver::symbolExistsInLibrary(
     const LibraryInfo &lib, StringRef symbolName,
     std::vector<std::string> *allSymbols) {
-
   SymbolEnumerator::Options opts;
   return symbolExistsInLibrary(lib, symbolName, allSymbols, opts);
 }
@@ -364,7 +348,6 @@ bool LibraryResolver::symbolExistsInLibrary(
     const LibraryInfo &lib, StringRef symbolName,
     std::vector<std::string> *allSymbols,
     const SymbolEnumerator::Options &opts) {
-
   bool found = false;
 
   SymbolEnumerator::enumerateSymbols(
@@ -375,10 +358,10 @@ bool LibraryResolver::symbolExistsInLibrary(
 
         if (sym == symbolName) {
           found = true;
-          // return SymbolEnumerator::Result::Stop;
+          // return EnumerateResult::Stop;
         }
 
-        return SymbolEnumerator::Result::Continue;
+        return EnumerateResult::Continue;
       },
       opts);
 
