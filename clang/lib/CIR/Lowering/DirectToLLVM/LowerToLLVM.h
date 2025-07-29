@@ -84,6 +84,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMBitFfsOpLowering
+    : public mlir::OpConversionPattern<cir::BitFfsOp> {
+public:
+  using mlir::OpConversionPattern<cir::BitFfsOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::BitFfsOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMBitParityOpLowering
     : public mlir::OpConversionPattern<cir::BitParityOp> {
 public:
