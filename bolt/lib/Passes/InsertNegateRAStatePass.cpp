@@ -43,27 +43,32 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
 
   fixUnknownStates(BF);
 
-  bool FirstIter = true;
-  MCInst PrevInst;
-  BinaryBasicBlock *PrevBB = nullptr;
-  // We need to iterate on BBs in the Layout order
-  // not in the order they are stored in the BF class.
-  auto *Begin = BF.getLayout().block_begin();
-  auto *End = BF.getLayout().block_end();
-  for (auto *BB = Begin; BB != End; BB++) {
-
-    // Support for function splitting:
-    // if two consecutive BBs with Signed state are going to end up in different
-    // functions, we have to add a OpNegateRAState to the beginning of the newly
-    // split function, so it starts with a Signed state.
-    if (PrevBB != nullptr &&
-        PrevBB->getFragmentNum() != (*BB)->getFragmentNum() &&
-        BC.MIB->isRASigned(*((*BB)->begin()))) {
-      BF.addCFIInstruction(*BB, (*BB)->begin(),
+  // Support for function splitting:
+  // if two consecutive BBs with Signed state are going to end up in different
+  // functions (so are held by different FunctionFragments), we have to add a
+  // OpNegateRAState to the beginning of the newly split function, so it starts
+  // with a Signed state.
+  for (FunctionFragment &FF : BF.getLayout().fragments()) {
+    // Find the first BB in the FF which has Instructions.
+    // BOLT can generate empty BBs at function splitting which are only used as
+    // target labels. We should add the negate-ra-state CFI to the first
+    // non-empty BB.
+    auto FirstNonEmpty =
+        std::find_if(FF.begin(), FF.end(), [](BinaryBasicBlock *BB) {
+          // getFirstNonPseudo returns BB.end() if it does not find any
+          // Instructions.
+          return BB->getFirstNonPseudo() != BB->end();
+        });
+    if (BC.MIB->isRASigned(*((*FirstNonEmpty)->begin()))) {
+      BF.addCFIInstruction(*FirstNonEmpty, (*FirstNonEmpty)->begin(),
                            MCCFIInstruction::createNegateRAState(nullptr));
     }
+  }
 
-    for (auto It = (*BB)->begin(); It != (*BB)->end(); ++It) {
+  bool FirstIter = true;
+  MCInst PrevInst;
+  for (BinaryBasicBlock &BB : BF) {
+    for (auto It = BB.begin(); It != BB.end(); ++It) {
 
       MCInst &Inst = *It;
       if (BC.MIB->isCFI(Inst))
@@ -76,7 +81,7 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
             (BC.MIB->isRAUnsigned(PrevInst) && BC.MIB->isRASigned(Inst))) {
 
           It = BF.addCFIInstruction(
-              *BB, It, MCCFIInstruction::createNegateRAState(nullptr));
+              &BB, It, MCCFIInstruction::createNegateRAState(nullptr));
         }
 
       } else {
@@ -84,7 +89,6 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
       }
       PrevInst = *It;
     }
-    PrevBB = *BB;
   }
 }
 
