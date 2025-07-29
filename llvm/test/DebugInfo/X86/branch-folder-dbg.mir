@@ -9,11 +9,15 @@
 ## can be killed.
 ##
 ## Check DBG_PHIs are deleted rather than hoisted (implicit-check-not).
+##
+## Check DBG_LABELs are hoisted and not modified (and don't cause a crash).
 
 # CHECK: bb.0
 # CHECK:      CALL64pcrel32 @f, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
 ## --- Start splice from bb.2.if.else (and debug instructions from bb.1.if.then) ---
+# CHECK-NEXT: DBG_LABEL 0
 # CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[#]], !DIExpression(),  debug-location ![[#]]
+# CHECK-NEXT: DBG_LABEL 1
 # CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[#]], !DIExpression(),  debug-location ![[#]]
 # CHECK-NEXT: $edi = MOV32r0 implicit-def dead $eflags, debug-instr-number 2, debug-location !DILocation(line: 0, scope: ![[#]])
 # CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[#]], !DIExpression(DW_OP_LLVM_arg, 0),  debug-location ![[#]]
@@ -98,6 +102,7 @@ body:             |
     successors: %bb.3(0x80000000)
 
     DBG_PHI $esp, 3
+    DBG_LABEL 0
     DBG_VALUE $esi, $noreg, !11, !DIExpression(),  debug-location !13
     $edi = MOV32r0 implicit-def dead $eflags, debug-instr-number 1, debug-location !14
     DBG_INSTR_REF !11, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0),  debug-location !13
@@ -109,6 +114,7 @@ body:             |
     successors: %bb.3(0x80000000)
 
     DBG_PHI $esp, 4
+    DBG_LABEL 1
     DBG_VALUE $esp, $noreg, !11, !DIExpression(), debug-location !13
     $edi = MOV32r0 implicit-def dead $eflags, debug-instr-number 2, debug-location !16
     DBG_INSTR_REF !11, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(2, 0),  debug-location !13
