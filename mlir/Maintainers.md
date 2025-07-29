@@ -27,6 +27,23 @@ dialects, build system and language bindings.
   [@joker-eph](https://github.com/joker-eph) (GitHub),
   mehdi_amini (Discourse)
 
+## Egress
+
+MLIR components pertaining to egress flows from MLIR, in particular to LLVM IR.
+
+- Matthias Springer \
+  me@m-sp.org (email),
+  [@matthias-springer](https://github.com/matthias-springer) (GitHub),
+  matthias-springer (Discourse)
+- Andrzej Warzynski \
+  andrzej.warzynski@arm.com (email),
+  [@banach-space](https://github.com/banach-space) (GitHub),
+  banach-space (Discourse)
+- Tobias Gysi \
+  tobias.gysi@nextsilicon.com (email),
+  [@gysit](https://github.com/gysit) (GitHub),
+  gysit (Discourse)
+
 ## Tensor Compiler
 
 MLIR components specific to construction of compilers for tensor algebra, in
