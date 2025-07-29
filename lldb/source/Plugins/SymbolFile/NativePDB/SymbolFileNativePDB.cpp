@@ -2269,6 +2269,10 @@ void SymbolFileNativePDB::BuildParentMap() {
       llvm::consumeError(std::move(error));
   }
 
+  // After calling Append(), the type-name map needs to be sorted again to be
+  // able to look up a type by its name.
+  m_type_base_names.Sort();
+
   // Now that we know the forward -> full mapping of all type indices, we can
   // re-write all the indices.  At the end of this process, we want a mapping
   // consisting of fwd -> full and full -> full for all child -> parent indices.
@@ -2299,8 +2303,6 @@ void SymbolFileNativePDB::BuildParentMap() {
     TypeIndex fwd = full_to_forward[full];
     m_parent_types[fwd] = m_parent_types[full];
   }
-
-  m_type_base_names.Sort();
 }
 
 std::optional<PdbCompilandSymId>
