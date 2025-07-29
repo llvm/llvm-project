@@ -32,6 +32,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
@@ -2292,9 +2293,39 @@ Speculation::Speculatability BroadcastOp::getSpeculatability() {
   return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
 }
 
+/// Fold back-to-back broadcasts together.
+struct FoldBroadcasts : OpRewritePattern<linalg::BroadcastOp> {
+  using OpRewritePattern<linalg::BroadcastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::BroadcastOp broadcastOp,
+                                PatternRewriter &rewriter) const override {
+    auto defBroadcastOp = broadcastOp.getInput().getDefiningOp<BroadcastOp>();
+    if (!defBroadcastOp)
+      return failure();
+    ArrayRef<int64_t> defDimensions = defBroadcastOp.getDimensions();
+    ArrayRef<int64_t> dimensions = broadcastOp.getDimensions();
+    SmallVector<int64_t> foldedDims(dimensions);
+    Value init = broadcastOp.getInit();
+    int64_t initRank = cast<ShapedType>(init.getType()).getRank();
+    // Mapping from input dims to init dims.
+    SmallVector<int64_t> dimMap;
+    for (auto dim : llvm::seq<int64_t>(0, initRank)) {
+      if (!llvm::is_contained(dimensions, dim))
+        dimMap.push_back(dim);
+    }
+    for (auto dim : defDimensions)
+      foldedDims.push_back(dimMap[dim]);
+
+    llvm::sort(foldedDims);
+    rewriter.replaceOpWithNewOp<BroadcastOp>(
+        broadcastOp, defBroadcastOp.getInput(), init, foldedDims);
+    return success();
+  }
+};
+
 void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.add<EraseIdentityLinalgOp<BroadcastOp>>(context);
+  results.add<EraseIdentityLinalgOp<BroadcastOp>, FoldBroadcasts>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4622,22 +4653,6 @@ static bool isInvalidPackingPosSpecification(ArrayRef<int64_t> dimsPos,
   });
 }
 
-/// Returns true if the dimension of `sourceShape` is smaller than the dimension
-/// of the `limitShape`.
-static bool areAllInBound(ArrayRef<int64_t> sourceShape,
-                          ArrayRef<int64_t> limitShape) {
-  assert(
-      sourceShape.size() == limitShape.size() &&
-      "expected source shape rank, and limit of the shape to have same rank");
-  return llvm::all_of(
-      llvm::zip(sourceShape, limitShape), [](std::tuple<int64_t, int64_t> it) {
-        int64_t sourceExtent = std::get<0>(it);
-        int64_t limit = std::get<1>(it);
-        return ShapedType::isDynamic(sourceExtent) ||
-               ShapedType::isDynamic(limit) || sourceExtent <= limit;
-      });
-}
-
 template <typename OpTy>
 static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
   static_assert(llvm::is_one_of<OpTy, PackOp, UnPackOp>::value,
@@ -4696,11 +4711,6 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
   // represents full tiles.
   RankedTensorType expectedPackedType = PackOp::inferPackedType(
       unpackedType, packOrUnPack.getStaticTiles(), innerDimsPos, outerDimPerm);
-  if (!areAllInBound(expectedPackedType.getShape(), packedType.getShape())) {
-    return op->emitError("the shape of output is not large enough to hold the "
-                         "packed data. Expected at least ")
-           << expectedPackedType << ", got " << packedType;
-  }
   if (!llvm::all_of(
           llvm::zip(packedType.getShape().take_back(mixedTiles.size()),
                     mixedTiles),
@@ -4716,6 +4726,12 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
           })) {
     return op->emitError("mismatch in inner tile sizes specified and shaped of "
                          "tiled dimension in the packed type");
+  }
+  if (failed(verifyCompatibleShape(expectedPackedType.getShape(),
+                                   packedType.getShape()))) {
+    return op->emitError("expected ")
+           << expectedPackedType << " for the packed domain value, got "
+           << packedType;
   }
   return success();
 }

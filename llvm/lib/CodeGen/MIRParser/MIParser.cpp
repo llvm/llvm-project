@@ -3482,6 +3482,11 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
       if (parseMDNode(AAInfo.NoAlias))
         return true;
       break;
+    case MIToken::md_noalias_addrspace:
+      lex();
+      if (parseMDNode(AAInfo.NoAliasAddrSpace))
+        return true;
+      break;
     case MIToken::md_range:
       lex();
       if (parseMDNode(Range))
@@ -3490,7 +3495,7 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
     // TODO: Report an error on duplicate metadata nodes.
     default:
       return error("expected 'align' or '!tbaa' or '!alias.scope' or "
-                   "'!noalias' or '!range'");
+                   "'!noalias' or '!range' or '!noalias.addrspace'");
     }
   }
   if (expectAndConsume(MIToken::rparen))

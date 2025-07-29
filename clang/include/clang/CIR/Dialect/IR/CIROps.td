@@ -1747,7 +1747,7 @@ def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
   let arguments = (ins
     Arg<CIR_PointerType, "the address to store the value", [MemWrite]>:$addr,
     CIR_AnyType:$src,
-    BitfieldInfoAttr:$bitfield_info,
+    CIR_BitfieldInfoAttr:$bitfield_info,
     DefaultValuedOptionalAttr<I64Attr, "0">:$alignment,
     UnitAttr:$is_volatile
   );
@@ -1834,7 +1834,7 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
 
   let arguments = (ins
     Arg<CIR_PointerType, "the address to load from", [MemRead]>:$addr,
-    BitfieldInfoAttr:$bitfield_info,
+    CIR_BitfieldInfoAttr:$bitfield_info,
     DefaultValuedOptionalAttr<I64Attr, "0">:$alignment,
     UnitAttr:$is_volatile
     );
@@ -2907,6 +2907,28 @@ def CIR_BitCtzOp : CIR_BitZeroCountOpBase<"ctz",
     %0 = cir.const #cir.int<8> : !u32i
     // %1 will be 3
     %1 = cir.ctz %0 poison_zero : !u32i
+    ```
+  }];
+}
+
+def CIR_BitFfsOp : CIR_BitOpBase<"ffs", CIR_SIntOfWidths<[32, 64]>> {
+  let summary = "Get the position of the least significant 1-bit in input";
+  let description = [{
+    Compute the 1-based position of the least significant 1-bit of the input.
+
+    The input integer must be a signed integer. The `cir.ffs` operation returns
+    one plus the index of the least significant 1-bit of the input signed
+    integer. If the input integer is 0, `cir.ffs` yields 0.
+
+    Example:
+
+    ```mlir
+    !s32i = !cir.int<s, 32>
+
+    // %0 = 0x0010_1000
+    %0 = cir.const #cir.int<40> : !s32i
+    // #1 will be 4 since the 4th least significant bit is 1.
+    %1 = cir.ffs %0 : !s32i
     ```
   }];
 }
