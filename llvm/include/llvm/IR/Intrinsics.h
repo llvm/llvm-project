@@ -283,8 +283,15 @@ namespace Intrinsic {
   // or of the wrong kind will be renamed by adding ".renamed" to the name.
   LLVM_ABI std::optional<Function *> remangleIntrinsicFunction(Function *F);
 
-} // End Intrinsic namespace
+  /// Returns the corresponding llvm.vector.interleaveN intrinsic for factor N.
+  LLVM_ABI Intrinsic::ID getInterleaveIntrinsicID(unsigned Factor);
 
-} // End llvm namespace
+  /// Returns the corresponding llvm.vector.deinterleaveN intrinsic for factor
+  /// N.
+  LLVM_ABI Intrinsic::ID getDeinterleaveIntrinsicID(unsigned Factor);
+
+  } // namespace Intrinsic
+
+  } // namespace llvm
 
 #endif
