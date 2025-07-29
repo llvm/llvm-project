@@ -1667,6 +1667,10 @@ public:
     return getMaxNumVGPRs(F);
   }
 
+  /// Return a pair of maximum numbers of VGPRs and AGPRs that meet the number
+  /// of waves per execution unit required for the function \p MF.
+  std::pair<unsigned, unsigned> getMaxNumVectorRegs(const Function &F) const;
+
   /// \returns Maximum number of VGPRs that meets number of waves per execution
   /// unit requirement for function \p MF, or number of VGPRs explicitly
   /// requested using "amdgpu-num-vgpr" attribute attached to function \p MF.
