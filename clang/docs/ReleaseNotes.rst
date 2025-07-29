@@ -37,6 +37,8 @@ Potentially Breaking Changes
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
+- The ``__has_builtin`` function now only considers the currently active target when being used with target offloading.
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 - For C++20 modules, the Reduced BMI mode will be the default option. This may introduce
@@ -147,6 +149,8 @@ Bug Fixes to C++ Support
 - Diagnose binding a reference to ``*nullptr`` during constant evaluation. (#GH48665)
 - Suppress ``-Wdeprecated-declarations`` in implicitly generated functions. (#GH147293)
 - Fix a crash when deleting a pointer to an incomplete array (#GH150359).
+- Fix an assertion failure when expression in assumption attribute
+  (``[[assume(expr)]]``) creates temporary objects.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
