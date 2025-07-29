@@ -7600,8 +7600,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     if (TM.getOptLevel() == CodeGenOptLevel::None)
       return;
 
-    const int64_t ObjectSize =
-        cast<ConstantInt>(I.getArgOperand(0))->getSExtValue();
     const AllocaInst *LifetimeObject = cast<AllocaInst>(I.getArgOperand(1));
 
     // First check that the Alloca is static, otherwise it won't have a
@@ -7611,7 +7609,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       return;
 
     const int FrameIndex = SI->second;
-    Res = DAG.getLifetimeNode(IsStart, sdl, getRoot(), FrameIndex, ObjectSize);
+    Res = DAG.getLifetimeNode(IsStart, sdl, getRoot(), FrameIndex);
     DAG.setRoot(Res);
     return;
   }
