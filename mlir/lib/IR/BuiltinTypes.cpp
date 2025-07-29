@@ -19,6 +19,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <algorithm>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -244,10 +245,61 @@ VectorType VectorType::scaleElementBitwidth(unsigned scale) {
   return VectorType();
 }
 
-VectorType VectorType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
+VectorType VectorType::cloneWith(std::optional<ArrayRef<int64_t>> maybeShape,
                                  Type elementType) const {
-  return VectorType::get(shape.value_or(getShape()), elementType,
-                         getScalableDims());
+
+  // Case where only the element type is modified:
+  if (!maybeShape.has_value())
+    return VectorType::get(getShape(), elementType, getScalableDims());
+
+  ArrayRef<int64_t> shape = maybeShape.value();
+  int64_t rankBefore = getRank();
+  int64_t rankAfter = static_cast<int64_t>(shape.size());
+
+  // In the case where the rank is unchanged, the positions of the scalable
+  // dimensions are retained.
+  // Example: vector<4x[1]xf32> -> vector<1x[4]xi8>
+  if (rankBefore == rankAfter)
+    return VectorType::get(shape, elementType, getScalableDims());
+
+  // In the case where the rank increases, retain the scalable dimension
+  // position relative to front (outermost dimension).
+  // Example: vector<4x[1]xf32> -> vector<1x[2]x2x1xi8>
+  if (rankBefore < rankAfter) {
+    SmallVector<bool> newScalableDims(rankAfter, false);
+    std::copy(getScalableDims().begin(), getScalableDims().end(),
+              newScalableDims.begin() + (rankAfter - rankBefore));
+    return VectorType::get(shape, elementType, newScalableDims);
+  }
+
+  // In the case where the rank decreases, retain the first `rankAfter` scalable
+  // dimensions. Any scalable dimensions in the final `rankBefore - rankAfter`
+  // dimensions are packed into gaps, if possible.
+  //
+  // Examples:
+  //
+  // vector<4x[1]xf32> -> vector<[4]xi8>
+  // vector<[4]x1xf32> -> vector<[4]xi8>
+  // vector<[2]x3x[4]x5xf32> -> vector<[6]x[20]xi8>
+  //
+  // If the number of scalable dimensions excedes the number of dimensions in
+  // the new shape, there is an assertion failure.
+  assert(rankAfter < rankBefore);
+  SmallVector<bool> newScalableDims(getScalableDims().take_front(rankAfter));
+  int nScalablesToRelocate =
+      llvm::count_if(getScalableDims().take_back(rankBefore - rankAfter),
+                     [](bool b) { return b; });
+  int currentIndex = newScalableDims.size() - 1;
+  while (nScalablesToRelocate > 0 && currentIndex >= 0) {
+    if (!newScalableDims[currentIndex]) {
+      newScalableDims[currentIndex] = true;
+      --nScalablesToRelocate;
+    }
+  }
+
+  assert(nScalablesToRelocate == 0 &&
+         "too many scalable dimensions for new (lower) rank");
+  return VectorType::get(shape, elementType, newScalableDims);
 }
 
 //===----------------------------------------------------------------------===//
