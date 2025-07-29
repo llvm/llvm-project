@@ -697,10 +697,13 @@ void TextDiagnostic::emitDiagnosticMessage(
 
   // The fancy format prints things in a different order.
   if (DiagOpts.getFormat() == TextDiagnosticFormat::Fancy) {
-    if (NestingLevel == 0)
-      startLine();
-    else
+    if (NestingLevel == 0) {
+      if (LastLevel != DiagnosticsEngine::Ignored)
+        OS << "\n";
+    } else {
+      emptyLine();
       OS << '|' << std::string(BaseIndent - 2, '-') << ' ';
+    }
 
     printDiagnosticLevel(OS, Level, DiagOpts.ShowColors);
     printDiagnosticMessage(OS,
@@ -724,9 +727,9 @@ void TextDiagnostic::emitDiagnosticMessage(
       emitDiagnosticLoc(Loc, PLoc, Level, Ranges);
       OS.resetColor();
       OS << '\n';
-      emptyLine();
     }
 
+    emptyLine();
     return;
   }
 
@@ -846,10 +849,6 @@ void TextDiagnostic::beginDiagnostic(DiagOrStoredDiag D,
   if (DiagOpts.getFormat() == TextDiagnosticFormat::Fancy) {
     BaseIndent = std::min(NestingLevel * IndentWidth, MaxIndentWidth);
     IncludeStack.clear();
-    if (NestingLevel != 0)
-      startLine();
-    if (LastLevel != DiagnosticsEngine::Ignored)
-      OS << "\n";
   }
 }
 
