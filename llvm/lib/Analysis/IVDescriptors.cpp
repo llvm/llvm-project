@@ -1210,6 +1210,7 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
 unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   switch (Kind) {
   case RecurKind::Sub:
+    return Instruction::Sub;
   case RecurKind::Add:
     return Instruction::Add;
   case RecurKind::Mul:
