@@ -5,10 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file implements lowering of vector operations to AMX dialect ops.
-//
-//===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/VectorToAMX/VectorToAMX.h"
 
