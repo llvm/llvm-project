@@ -21,7 +21,7 @@ TEST(MemProf, F16EncodeDecode) {
 
     if (TestCase >= MaxRepresentable) {
       EXPECT_EQ(Decoded, MaxRepresentable);
-    } else if (TestCase == 0) {
+    } else if (TestCase <= MaxMantissa) {
       EXPECT_EQ(Decoded, TestCase);
     } else {
       // The decoded value should be close to the original value.
