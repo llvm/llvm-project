@@ -651,6 +651,16 @@ TARGET_BUILTIN(__builtin_amdgcn_global_load_monitor_b128, "V4iV4i*1Ii", "nc", "g
 TARGET_BUILTIN(__builtin_amdgcn_flat_load_monitor_b32, "ii*0Ii", "nc", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_flat_load_monitor_b64, "V2iV2i*0Ii", "nc", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_flat_load_monitor_b128, "V4iV4i*0Ii", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_global_load_async_to_lds_b8, "vc*1c*3IiIi", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_global_load_async_to_lds_b32, "vi*1i*3IiIi", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_global_load_async_to_lds_b64, "vV2i*1V2i*3IiIi", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_global_load_async_to_lds_b128, "vV4i*1V4i*3IiIi", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_global_store_async_from_lds_b8, "vc*1c*3IiIi", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_global_store_async_from_lds_b32, "vi*1i*3IiIi", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_global_store_async_from_lds_b64, "vV2i*1V2i*3IiIi", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_global_store_async_from_lds_b128, "vV4i*1V4i*3IiIi", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_ds_atomic_async_barrier_arrive_b64, "vLi*3", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_ds_atomic_barrier_arrive_rtn_b64, "LiLi*3Li", "nc", "gfx1250-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_tensor_load_to_lds, "vV4iV8iV4iV4iIi", "nc", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_tensor_load_to_lds_d2, "vV4iV8iIi", "nc", "gfx1250-insts")
@@ -669,9 +679,6 @@ TARGET_BUILTIN(__builtin_amdgcn_ds_load_tr6_b96_v3i32, "V3iV3i*3", "nc", "transp
 TARGET_BUILTIN(__builtin_amdgcn_ds_load_tr16_b128_v8i16, "V8sV8s*3", "nc", "gfx1250-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_ds_load_tr16_b128_v8f16, "V8hV8h*3", "nc", "gfx1250-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_ds_load_tr16_b128_v8bf16, "V8yV8y*3", "nc", "gfx1250-insts,wavefrontsize32")
-
-TARGET_BUILTIN(__builtin_amdgcn_ds_atomic_async_barrier_arrive_b64, "vLi*3", "nc", "gfx1250-insts")
-TARGET_BUILTIN(__builtin_amdgcn_ds_atomic_barrier_arrive_rtn_b64, "LiLi*3Li", "nc", "gfx1250-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_s_setprio_inc_wg, "vIs", "n", "setprio-inc-wg-inst")
 TARGET_BUILTIN(__builtin_amdgcn_s_monitor_sleep,  "vIs", "n", "gfx1250-insts")
