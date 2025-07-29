@@ -310,6 +310,7 @@ public:
       // TODO: Can we maybe not save the whole template parameter list and just
       //  the type constraint? Saving the whole TPL makes it easier to handle in
       //  serialization but is less elegant.
+      ReturnTypeRequirement(TemplateParameterList *TPL, bool IsDependent);
       ReturnTypeRequirement(TemplateParameterList *TPL);
 
       bool isDependent() const {

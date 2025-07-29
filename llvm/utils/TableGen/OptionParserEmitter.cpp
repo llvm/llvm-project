@@ -291,7 +291,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "/////////\n";
   OS << "// String table\n\n";
   OS << "#ifdef OPTTABLE_STR_TABLE_CODE\n";
-  Table.EmitStringTableDef(OS, "OptionStrTable", /*Indent=*/"");
+  Table.EmitStringTableDef(OS, "OptionStrTable");
   OS << "#endif // OPTTABLE_STR_TABLE_CODE\n\n";
 
   // Dump prefixes.

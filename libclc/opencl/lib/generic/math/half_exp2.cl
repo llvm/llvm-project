@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_half_exp2.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/half_exp2.h>
 
 #define __FLOAT_ONLY
 #define FUNCTION half_exp2

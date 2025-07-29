@@ -62,7 +62,7 @@
 #include <utility>
 
 /// The semantic version combined as a string.
-#define LLVM_COVERAGE_EXPORT_JSON_STR "3.0.0"
+#define LLVM_COVERAGE_EXPORT_JSON_STR "3.0.1"
 
 /// Unique type identifier for JSON coverage export.
 #define LLVM_COVERAGE_EXPORT_JSON_TYPE_STR "llvm.coverage.json.export"
@@ -113,7 +113,7 @@ json::Array renderMCDCRecord(const coverage::MCDCRecord &Record) {
   const auto [TrueDecisions, FalseDecisions] = Record.getDecisions();
   return json::Array({CMR.LineStart, CMR.ColumnStart, CMR.LineEnd,
                       CMR.ColumnEnd, TrueDecisions, FalseDecisions,
-                      CMR.ExpandedFileID, int64_t(CMR.Kind),
+                      CMR.FileID, CMR.ExpandedFileID, int64_t(CMR.Kind),
                       gatherConditions(Record)});
 }
 

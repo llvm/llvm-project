@@ -32,7 +32,24 @@ bool verifyRegisterSpace(uint32_t RegisterSpace) {
   return !(RegisterSpace >= 0xFFFFFFF0 && RegisterSpace <= 0xFFFFFFFF);
 }
 
-bool verifyDescriptorFlag(uint32_t Flags) { return (Flags & ~0xE) == 0; }
+bool verifyRootDescriptorFlag(uint32_t Version, uint32_t FlagsVal) {
+  using FlagT = dxbc::RootDescriptorFlags;
+  FlagT Flags = FlagT(FlagsVal);
+  if (Version == 1)
+    return Flags == FlagT::DataVolatile;
+
+  assert(Version == 2 && "Provided invalid root signature version");
+
+  // The data-specific flags are mutually exclusive.
+  FlagT DataFlags = FlagT::DataVolatile | FlagT::DataStatic |
+                    FlagT::DataStaticWhileSetAtExecute;
+
+  if (popcount(llvm::to_underlying(Flags & DataFlags)) > 1)
+    return false;
+
+  // Only a data flag or no flags is valid
+  return (Flags | DataFlags) == DataFlags;
+}
 
 bool verifyRangeType(uint32_t Type) {
   switch (Type) {
@@ -106,6 +123,10 @@ bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
     Mask |= FlagT::DataStatic;
   }
   return (Flags & ~Mask) == FlagT::None;
+}
+
+bool verifyNumDescriptors(uint32_t NumDescriptors) {
+  return NumDescriptors > 0;
 }
 
 bool verifySamplerFilter(uint32_t Value) {
@@ -220,6 +241,77 @@ std::optional<const RangeInfo *> ResourceRange::insert(const RangeInfo &Info) {
   assert(LowerBound <= UpperBound && "Attempting to insert an empty interval");
   Intervals.insert(LowerBound, UpperBound, &Info);
   return Res;
+}
+
+llvm::SmallVector<OverlappingRanges>
+findOverlappingRanges(ArrayRef<RangeInfo> Infos) {
+  // It is expected that Infos is filled with valid RangeInfos and that
+  // they are sorted with respect to the RangeInfo <operator
+  assert(llvm::is_sorted(Infos) && "Ranges must be sorted");
+
+  llvm::SmallVector<OverlappingRanges> Overlaps;
+  using GroupT = std::pair<dxil::ResourceClass, /*Space*/ uint32_t>;
+
+  // First we will init our state to track:
+  if (Infos.size() == 0)
+    return Overlaps; // No ranges to overlap
+  GroupT CurGroup = {Infos[0].Class, Infos[0].Space};
+
+  // Create a ResourceRange for each Visibility
+  ResourceRange::MapT::Allocator Allocator;
+  std::array<ResourceRange, 8> Ranges = {
+      ResourceRange(Allocator), // All
+      ResourceRange(Allocator), // Vertex
+      ResourceRange(Allocator), // Hull
+      ResourceRange(Allocator), // Domain
+      ResourceRange(Allocator), // Geometry
+      ResourceRange(Allocator), // Pixel
+      ResourceRange(Allocator), // Amplification
+      ResourceRange(Allocator), // Mesh
+  };
+
+  // Reset the ResourceRanges for when we iterate through a new group
+  auto ClearRanges = [&Ranges]() {
+    for (ResourceRange &Range : Ranges)
+      Range.clear();
+  };
+
+  // Iterate through collected RangeInfos
+  for (const RangeInfo &Info : Infos) {
+    GroupT InfoGroup = {Info.Class, Info.Space};
+    // Reset our ResourceRanges when we enter a new group
+    if (CurGroup != InfoGroup) {
+      ClearRanges();
+      CurGroup = InfoGroup;
+    }
+
+    // Insert range info into corresponding Visibility ResourceRange
+    ResourceRange &VisRange = Ranges[llvm::to_underlying(Info.Visibility)];
+    if (std::optional<const RangeInfo *> Overlapping = VisRange.insert(Info))
+      Overlaps.push_back(OverlappingRanges(&Info, Overlapping.value()));
+
+    // Check for overlap in all overlapping Visibility ResourceRanges
+    //
+    // If the range that we are inserting has ShaderVisiblity::All it needs to
+    // check for an overlap in all other visibility types as well.
+    // Otherwise, the range that is inserted needs to check that it does not
+    // overlap with ShaderVisibility::All.
+    //
+    // OverlapRanges will be an ArrayRef to all non-all visibility
+    // ResourceRanges in the former case and it will be an ArrayRef to just the
+    // all visiblity ResourceRange in the latter case.
+    ArrayRef<ResourceRange> OverlapRanges =
+        Info.Visibility == llvm::dxbc::ShaderVisibility::All
+            ? ArrayRef<ResourceRange>{Ranges}.drop_front()
+            : ArrayRef<ResourceRange>{Ranges}.take_front();
+
+    for (const ResourceRange &Range : OverlapRanges)
+      if (std::optional<const RangeInfo *> Overlapping =
+              Range.getOverlapping(Info))
+        Overlaps.push_back(OverlappingRanges(&Info, Overlapping.value()));
+  }
+
+  return Overlaps;
 }
 
 } // namespace rootsig

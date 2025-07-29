@@ -39,8 +39,6 @@ public:
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   MutableArrayRef<char> Data, uint64_t Value,
                   bool IsResolved) override;
-  bool mayNeedRelaxation(const MCInst &Inst,
-                         const MCSubtargetInfo &STI) const override;
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 
@@ -146,7 +144,7 @@ std::optional<bool> XtensaAsmBackend::evaluateFixup(const MCFragment &F,
   // For a few PC-relative fixups, offsets need to be aligned down. We
   // compensate here because the default handler's `Value` decrement doesn't
   // account for this alignment.
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   case Xtensa::fixup_xtensa_call_18:
   case Xtensa::fixup_xtensa_l32r_16:
     Value = (Asm->getFragmentOffset(F) + Fixup.getOffset()) % 4;
@@ -176,11 +174,6 @@ void XtensaAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   for (unsigned i = 0; i != FullSize; ++i) {
     Data[Offset + i] |= uint8_t((Value >> (i * 8)) & 0xff);
   }
-}
-
-bool XtensaAsmBackend::mayNeedRelaxation(const MCInst &Inst,
-                                         const MCSubtargetInfo &STI) const {
-  return false;
 }
 
 bool XtensaAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,

@@ -124,8 +124,8 @@ void test() {
 #if _LIBCPP_HAS_EXCEPTIONS
   // expected-error-re@*:* {{call to deleted constructor of{{.*}}}}
   // expected-error-re@*:* {{call to deleted constructor of{{.*}}}}
-  // expected-error-re@*:* {{call to deleted constructor of{{.*}}}}
-  // expected-error-re@*:* {{call to deleted constructor of{{.*}}}}
+  // expected-error-re@*:* 1-2{{call to deleted constructor of{{.*}}}}
+  // expected-error-re@*:* 0-2{{call to deleted constructor of{{.*}}}}
 #endif
 }
 // clang-format on
