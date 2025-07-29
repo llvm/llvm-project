@@ -284,6 +284,7 @@ def FeatureSafeCUPrefetch : SubtargetFeature<"safe-cu-prefetch",
   "HasSafeCUPrefetch",
   "true",
   "VMEM CU scope prefetches do not fail on illegal address"
+>;
 
 def FeatureCUStores : SubtargetFeature<"cu-stores",
   "HasCUStores",
