@@ -8665,6 +8665,23 @@ cc_library(
 )
 
 cc_library(
+    name = "XeVMToLLVMIRTranslation",
+    srcs = glob(["lib/Target/LLVMIR/Dialect/XeVM/*.cpp"]),
+    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/XeVM/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":DialectUtils",
+        ":IR",
+        ":LLVMDialect",
+        ":Support",
+        ":ToLLVMIRTranslation",
+        ":XeVMDialect",
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "AllToLLVMIRTranslations",
     hdrs = ["include/mlir/Target/LLVMIR/Dialect/All.h"],
     includes = ["include"],
@@ -8683,6 +8700,7 @@ cc_library(
         ":ROCDLToLLVMIRTranslation",
         ":SPIRVToLLVMIRTranslation",
         ":VCIXToLLVMIRTranslation",
+        ":XeVMToLLVMIRTranslation",
     ],
 )
 
