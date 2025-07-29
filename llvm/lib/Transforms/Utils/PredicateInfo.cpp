@@ -15,6 +15,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/IteratedDominanceFrontier.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
@@ -212,6 +213,8 @@ class PredicateInfoBuilder {
   // 0 is not a valid Value Info index, you can use DenseMap::lookup and tell
   // whether it returned a valid result.
   DenseMap<Value *, unsigned int> ValueInfoNums;
+
+  DenseMap<BasicBlock *, SmallVector<Value *, 4>> PHICandidates;
 
   BumpPtrAllocator &Allocator;
 
@@ -478,6 +481,9 @@ void PredicateInfoBuilder::buildPredicateInfo() {
       if (DT.isReachableFromEntry(II->getParent()))
         processAssume(II, II->getParent(), OpsToRename);
   }
+
+  // ...
+
   // Now rename all our operations.
   renameUses(OpsToRename);
 }
@@ -773,6 +779,8 @@ std::optional<PredicateConstraint> PredicateBase::getConstraint() const {
     }
 
     return {{CmpInst::ICMP_EQ, cast<PredicateSwitch>(this)->CaseValue}};
+  case PT_PHI:
+    return cast<PredicatePHI>(this)->getConstraint();
   }
   llvm_unreachable("Unknown predicate type");
 }
@@ -838,6 +846,10 @@ public:
       } else if (const auto *PA = dyn_cast<PredicateAssume>(PI)) {
         OS << "; assume predicate info {"
            << " Comparison:" << *PA->Condition;
+      } else if (const auto *PP = dyn_cast<PredicatePHI>(PI)) {
+        OS << "; phi predicate info { PHIBlock: ";
+        PP->PHIBlock->printAsOperand(OS);
+        OS << " IncomingEdges: " << PP->IncomingPredicates.size();
       }
       OS << ", RenamedOp: ";
       PI->RenamedOp->printAsOperand(OS, false);
