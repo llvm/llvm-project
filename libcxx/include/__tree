@@ -2231,9 +2231,9 @@ __tree<_Tp, _Compare, _Allocator>::__count_unique(const _Key& __k) const {
   __node_pointer __rt = __root();
   while (__rt != nullptr) {
     if (value_comp()(__k, __rt->__value_)) {
-      __rt = static_cast<__node_pointer>(__rt->__left_);
+      __rt = std::__static_fancy_pointer_cast<__node_pointer>(__rt->__left_);
     } else if (value_comp()(__rt->__value_, __k))
-      __rt = static_cast<__node_pointer>(__rt->__right_);
+      __rt = std::__static_fancy_pointer_cast<__node_pointer>(__rt->__right_);
     else
       return 1;
   }
