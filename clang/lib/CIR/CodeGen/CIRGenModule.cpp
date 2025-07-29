@@ -1593,10 +1593,10 @@ static bool shouldAssumeDSOLocal(const CIRGenModule &cgm,
 
   const llvm::Triple &tt = cgm.getTriple();
   const CodeGenOptions &cgOpts = cgm.getCodeGenOpts();
-  if (tt.isWindowsGNUEnvironment()) {
-    // In MinGW, variables without DLLImport can still be automatically
-    // imported from a DLL by the linker; don't mark variables that
-    // potentially could come from another DLL as DSO local.
+  if (tt.isOSCygMing()) {
+    // In MinGW and Cygwin, variables without DLLImport can still be
+    // automatically imported from a DLL by the linker; don't mark variables
+    // that potentially could come from another DLL as DSO local.
 
     // With EmulatedTLS, TLS variables can be autoimported from other DLLs
     // (and this actually happens in the public interface of libstdc++), so
