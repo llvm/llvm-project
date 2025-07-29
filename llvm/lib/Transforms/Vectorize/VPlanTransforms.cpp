@@ -2269,29 +2269,27 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
       }
       ToErase.push_back(CurRecipe);
     }
+
+    // Replace header masks with a mask equivalent to predicating by EVL:
+    //
+    // icmp ule widen-canonical-iv backedge-taken-count
+    // ->
+    // icmp ult step-vector, EVL
+    VPRecipeBase *EVLR = EVL.getDefiningRecipe();
+    VPBuilder Builder(EVLR->getParent(), std::next(EVLR->getIterator()));
+    Type *EVLType = TypeInfo.inferScalarType(&EVL);
+    VPValue *EVLMask = Builder.createICmp(
+        CmpInst::ICMP_ULT,
+        Builder.createNaryOp(VPInstruction::StepVector, {}, EVLType), &EVL);
+    HeaderMask->replaceAllUsesWith(EVLMask);
+    ToErase.push_back(HeaderMask->getDefiningRecipe());
   }
 
-  Type *EVLType = TypeInfo.inferScalarType(&EVL);
   for (VPRecipeBase *R : reverse(ToErase)) {
     SmallVector<VPValue *> PossiblyDead(R->operands());
     R->eraseFromParent();
     for (VPValue *Op : PossiblyDead)
       recursivelyDeleteDeadRecipes(Op);
-  }
-
-  // Replace header masks with a mask equivalent to predicating by EVL:
-  //
-  // icmp ule widen-canonical-iv backedge-taken-count
-  // ->
-  // icmp ult step-vector, EVL
-  for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
-    VPRecipeBase *EVLR = EVL.getDefiningRecipe();
-    VPBuilder Builder(EVLR->getParent(), std::next(EVLR->getIterator()));
-    VPValue *EVLMask = Builder.createICmp(
-        CmpInst::ICMP_ULT,
-        Builder.createNaryOp(VPInstruction::StepVector, {}, EVLType), &EVL);
-    HeaderMask->replaceAllUsesWith(EVLMask);
-    HeaderMask->getDefiningRecipe()->eraseFromParent();
   }
 }
 
