@@ -199,7 +199,7 @@ class ProfiledBinary {
   // The runtime base address that the first executable segment is loaded at.
   uint64_t BaseAddress = 0;
   // The runtime base address that the first loadabe segment is loaded at.
-  uint64_t FirstLoadableAddress = 0;
+  std::optional<uint64_t> FirstLoadableAddress;
   // The preferred load address of each executable segment.
   std::vector<uint64_t> PreferredTextSegmentAddresses;
   // The file offset of each executable segment.
@@ -381,7 +381,10 @@ public:
     return PreferredTextSegmentAddresses[0];
   }
   // Return the preferred load address for the first loadable segment.
-  uint64_t getFirstLoadableAddress() const { return FirstLoadableAddress; }
+  uint64_t getFirstLoadableAddress() const {
+    assert(FirstLoadableAddress && "FirstLoadableAddress must be set.");
+    return *FirstLoadableAddress;
+  }
   // Return the file offset for the first executable segment.
   uint64_t getTextSegmentOffset() const { return TextSegmentOffsets[0]; }
   const std::vector<uint64_t> &getPreferredTextSegmentAddresses() const {
