@@ -40,6 +40,20 @@
         {{/.}}
     {{/ReturnComments}}
 {{/HasReturnComments}}
+{{#HasCodeComments}}
+    <h3>Code</h3> 
+    {{#CodeComments}}
+    <div>
+        <pre class="code-block">
+            <code>
+            {{#.}}
+            {{.}}
+            {{/.}}
+            </code>
+        </pre>
+    </div>
+    {{/CodeComments}}
+{{/HasCodeComments}}
 {{#BlockCommandComment}}
     <div class="block-command-comment__command">
         <div class="block-command-command">

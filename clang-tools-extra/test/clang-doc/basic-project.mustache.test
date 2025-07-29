@@ -729,6 +729,15 @@ HTML-CIRCLE:                        <p></p>
 HTML-CIRCLE:                    </div>
 HTML-CIRCLE:                    <h3>Returns</h3>
 HTML-CIRCLE:                        <p> double The perimeter of the circle.</p>
+HTML-CIRCLE:                    <h3>Code</h3> 
+HTML-CIRCLE:                    <div>
+HTML-CIRCLE:                        <pre class="code-block">
+HTML-CIRCLE:                            <code>
+HTML-CIRCLE:                            Circle circle(5.0);
+HTML-CIRCLE:                            double perimeter = circle.perimeter();
+HTML-CIRCLE:                            </code>
+HTML-CIRCLE:                        </pre>
+HTML-CIRCLE:                    </div>
 HTML-CIRCLE:                        </div>
 HTML-CIRCLE:     </div>
 HTML-CIRCLE: </div>
