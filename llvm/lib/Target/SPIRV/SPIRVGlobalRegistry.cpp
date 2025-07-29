@@ -831,8 +831,8 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
   const SPIRVSubtarget &ST =
       cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
   if (NumElems != 0) {
-    Register NumElementsVReg = buildConstantInt(
-        NumElems, MIRBuilder, SpvTypeInt32, EmitIR);
+    Register NumElementsVReg =
+        buildConstantInt(NumElems, MIRBuilder, SpvTypeInt32, EmitIR);
     ArrayType = createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
       return MIRBuilder.buildInstr(SPIRV::OpTypeArray)
           .addDef(createTypeVReg(MIRBuilder))
