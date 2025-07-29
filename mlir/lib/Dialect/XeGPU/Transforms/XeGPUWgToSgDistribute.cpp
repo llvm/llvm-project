@@ -34,6 +34,26 @@ using namespace mlir;
 
 namespace {
 
+// Check if there is sg id range attached to the scf.if op.
+static bool isSgIdRangeSpecified(Operation *op, int64_t &startOfRange,
+                                 int64_t &endOfRange) {
+  Operation *parent = op->getParentOp();
+  // Find the outermost scf::IfOp with xegpu.sg_id_range.
+  while (parent) {
+    if (auto ifOp = dyn_cast<scf::IfOp>(parent)) {
+      if (auto attr = llvm::dyn_cast_or_null<xegpu::RangeAttr>(
+              ifOp->getAttr("sg_id_range"))) {
+        startOfRange = attr.getStart().getInt();
+        endOfRange = attr.getEnd().getInt();
+        break;
+      }
+    }
+    parent = parent->getParentOp();
+  }
+  // Return false if startOfRange is 0
+  return (startOfRange > 0 && endOfRange > startOfRange);
+}
+
 static std::pair<SmallVector<int64_t>, int>
 getSgShapeAndCount(ArrayRef<int64_t> shape, xegpu::LayoutAttr layout) {
   int count = 1;
@@ -174,8 +194,26 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
       sgDataDim[i] = arith::ConstantIndexOp::create(rewriter, loc, sgShape[i]);
     }
 
+    int64_t startOfRange = -1, endOfRange = -1;
+    bool sgIdRangeSpecified =
+        isSgIdRangeSpecified(op, startOfRange, endOfRange);
+
+    Value adjustedSgId = linearSgId;
+    if (sgIdRangeSpecified) {
+      int64_t sgCount = endOfRange - startOfRange;
+      if (computeProduct(sgLayout) != sgCount)
+        return rewriter.notifyMatchFailure(
+            op, "sg_layout size must match the sg_id_range");
+      // Subtract startOfRange from the original subgroup id to get the adjusted
+      // sg id
+      Value startOfRangeVal =
+          rewriter.create<arith::ConstantIndexOp>(loc, startOfRange);
+      adjustedSgId =
+          rewriter.createOrFold<index::SubOp>(loc, linearSgId, startOfRangeVal);
+    }
+
     auto deLinearizeSgId =
-        affine::delinearizeIndex(rewriter, loc, linearSgId, sgLayoutDim);
+        affine::delinearizeIndex(rewriter, loc, adjustedSgId, sgLayoutDim);
     if (failed(deLinearizeSgId))
       return failure();
     SmallVector<Value> sgIds = *deLinearizeSgId;

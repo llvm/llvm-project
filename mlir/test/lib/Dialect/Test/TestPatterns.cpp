@@ -2114,7 +2114,7 @@ struct TestMergeBlocksPatternDriver
     /// Expect the op to have a single block after legalization.
     target.addDynamicallyLegalOp<TestMergeBlocksOp>(
         [&](TestMergeBlocksOp op) -> bool {
-          return llvm::hasSingleElement(op.getBody());
+          return op.getBody().hasOneBlock();
         });
 
     /// Only allow `test.br` within test.merge_blocks op.

@@ -1541,7 +1541,7 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
        &AAAMDMaxNumWorkgroups::ID, &AAAMDWavesPerEU::ID, &AAAMDGPUNoAGPR::ID,
        &AACallEdges::ID, &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
        &AAUnderlyingObjects::ID, &AANoAliasAddrSpace::ID, &AAAddressSpace::ID,
-       &AAIndirectCallInfo::ID, &AAInstanceInfo::ID, &AAAMDGPUClusterDims::ID});
+       &AAIndirectCallInfo::ID, &AAAMDGPUClusterDims::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;

@@ -7783,6 +7783,16 @@ TEST_F(FormatTest, ConstructorInitializers) {
                "Constructor() :\n"
                "    // Comment forcing unwanted break.\n"
                "    aaaa(aaaa) {}");
+
+  // Braced initializers with trailing commas.
+  verifyFormat("MyClass::MyClass()\n"
+               "    : aaaa{\n"
+               "          0,\n"
+               "      },\n"
+               "      bbbb{\n"
+               "          0,\n"
+               "      } {}",
+               "MyClass::MyClass():aaaa{0,},bbbb{0,}{}");
 }
 
 TEST_F(FormatTest, AllowAllConstructorInitializersOnNextLine) {
@@ -12103,6 +12113,8 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
   Prefix = "void a() const &;\n"
            "void b() const &;\n";
   verifyFormat(Prefix + "int *x;", Prefix + "int* x;", DerivePointerAlignment);
+
+  verifyGoogleFormat("MACRO(int*, std::function<void() &&>);");
 }
 
 TEST_F(FormatTest, PointerAlignmentFallback) {
@@ -17663,6 +17675,12 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("X A::operator++ (T);", SomeSpace2);
   verifyFormat("int x = int (y);", SomeSpace2);
   verifyFormat("auto lambda = []() { return 0; };", SomeSpace2);
+
+  auto Style = getLLVMStyle();
+  Style.SpaceBeforeParens = FormatStyle::SBPO_Custom;
+  EXPECT_FALSE(Style.SpaceBeforeParensOptions.AfterNot);
+  Style.SpaceBeforeParensOptions.AfterNot = true;
+  verifyFormat("return not (a || b);", Style);
 
   FormatStyle SpaceAfterOverloadedOperator = getLLVMStyle();
   SpaceAfterOverloadedOperator.SpaceBeforeParens = FormatStyle::SBPO_Custom;

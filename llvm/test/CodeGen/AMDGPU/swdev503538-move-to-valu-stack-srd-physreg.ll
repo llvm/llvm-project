@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -O0 2> %t.err < %s | FileCheck %s
+; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -verify-machineinstrs=0 -O0 2> %t.err < %s | FileCheck %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t.err
 
 ; FIXME: This error will be fixed by supporting arbitrary divergent
