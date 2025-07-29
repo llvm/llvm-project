@@ -698,6 +698,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fabsbf16
+  SRCS
+    fabsbf16.cpp
+  HDRS
+    ../fabsbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
+
+add_entrypoint_object(
   fadd
   SRCS
     fadd.cpp
