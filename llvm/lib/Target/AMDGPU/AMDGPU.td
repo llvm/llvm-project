@@ -2429,7 +2429,7 @@ def HasAtomicFMinFMaxF64FlatInsts :
 
 def HasLdsAtomicAddF64 :
   Predicate<"Subtarget->hasLdsAtomicAddF64()">,
-  AssemblerPredicate<(any_of FeatureGFX90AInsts)>;
+  AssemblerPredicate<(any_of FeatureGFX90AInsts, FeatureGFX1250Insts)>;
 
 def HasFlatGlobalInsts : Predicate<"Subtarget->hasFlatGlobalInsts()">,
   AssemblerPredicate<(all_of FeatureFlatGlobalInsts)>;

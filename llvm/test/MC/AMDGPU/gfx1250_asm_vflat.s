@@ -285,6 +285,217 @@ flat_load_monitor_b64 v[2:3], v2, s[4:5] offset:64 scale_offset
 // GFX1250: flat_load_monitor_b64 v[2:3], v2, s[4:5] offset:64 scale_offset ; encoding: [0x04,0x40,0x1c,0xec,0x02,0x00,0x01,0x00,0x02,0x40,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+flat_atomic_add_f64 v[0:1], v[2:3] offset:4095
+// GFX1250: flat_atomic_add_f64 v[0:1], v[2:3] offset:4095 ; encoding: [0x7c,0x40,0x15,0xec,0x00,0x00,0x00,0x01,0x00,0xff,0x0f,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_add_f64 v[0:1], v[2:3] offset:4095
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_add_f64 v[254:255], v[2:3] offset:4095
+// GFX1250: flat_atomic_add_f64 v[254:255], v[2:3] offset:4095 ; encoding: [0x7c,0x40,0x15,0xec,0x00,0x00,0x00,0x01,0xfe,0xff,0x0f,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_add_f64 v[254:255], v[2:3] offset:4095
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_add_f64 v[0:1], v[254:255] offset:4095
+// GFX1250: flat_atomic_add_f64 v[0:1], v[254:255] offset:4095 ; encoding: [0x7c,0x40,0x15,0xec,0x00,0x00,0x00,0x7f,0x00,0xff,0x0f,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_add_f64 v[0:1], v[254:255] offset:4095
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_add_f64 v[0:1], v[2:3]
+// GFX1250: flat_atomic_add_f64 v[0:1], v[2:3] ; encoding: [0x7c,0x40,0x15,0xec,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_add_f64 v[0:1], v[2:3]
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_add_f64 v[0:1], v[2:3]
+// GFX1250: flat_atomic_add_f64 v[0:1], v[2:3] ; encoding: [0x7c,0x40,0x15,0xec,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_add_f64 v[0:1], v[2:3]
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_add_f64 v[0:1], v[2:3] offset:7
+// GFX1250: flat_atomic_add_f64 v[0:1], v[2:3] offset:7 ; encoding: [0x7c,0x40,0x15,0xec,0x00,0x00,0x00,0x01,0x00,0x07,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_add_f64 v[0:1], v[2:3] offset:7
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_min_num_f64 v[0:1], v[2:3] offset:4095
+// GFX1250: flat_atomic_min_num_f64 v[0:1], v[2:3] offset:4095 ; encoding: [0x7c,0xc0,0x16,0xec,0x00,0x00,0x00,0x01,0x00,0xff,0x0f,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_min_num_f64 v[0:1], v[2:3] offset:4095
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_min_num_f64 v[254:255], v[2:3] offset:4095
+// GFX1250: flat_atomic_min_num_f64 v[254:255], v[2:3] offset:4095 ; encoding: [0x7c,0xc0,0x16,0xec,0x00,0x00,0x00,0x01,0xfe,0xff,0x0f,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_min_num_f64 v[254:255], v[2:3] offset:4095
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_min_num_f64 v[0:1], v[254:255] offset:4095
+// GFX1250: flat_atomic_min_num_f64 v[0:1], v[254:255] offset:4095 ; encoding: [0x7c,0xc0,0x16,0xec,0x00,0x00,0x00,0x7f,0x00,0xff,0x0f,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_min_num_f64 v[0:1], v[254:255] offset:4095
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_min_num_f64 v[0:1], v[2:3]
+// GFX1250: flat_atomic_min_num_f64 v[0:1], v[2:3] ; encoding: [0x7c,0xc0,0x16,0xec,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_min_num_f64 v[0:1], v[2:3]
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_min_num_f64 v[0:1], v[2:3]
+// GFX1250: flat_atomic_min_num_f64 v[0:1], v[2:3] ; encoding: [0x7c,0xc0,0x16,0xec,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_min_num_f64 v[0:1], v[2:3]
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_min_num_f64 v[0:1], v[2:3] offset:7
+// GFX1250: flat_atomic_min_num_f64 v[0:1], v[2:3] offset:7 ; encoding: [0x7c,0xc0,0x16,0xec,0x00,0x00,0x00,0x01,0x00,0x07,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_min_num_f64 v[0:1], v[2:3] offset:7
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_max_num_f64 v[0:1], v[2:3] offset:4095
+// GFX1250: flat_atomic_max_num_f64 v[0:1], v[2:3] offset:4095 ; encoding: [0x7c,0x00,0x17,0xec,0x00,0x00,0x00,0x01,0x00,0xff,0x0f,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_max_num_f64 v[0:1], v[2:3] offset:4095
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_max_num_f64 v[254:255], v[2:3] offset:4095
+// GFX1250: flat_atomic_max_num_f64 v[254:255], v[2:3] offset:4095 ; encoding: [0x7c,0x00,0x17,0xec,0x00,0x00,0x00,0x01,0xfe,0xff,0x0f,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_max_num_f64 v[254:255], v[2:3] offset:4095
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_max_num_f64 v[0:1], v[254:255] offset:4095
+// GFX1250: flat_atomic_max_num_f64 v[0:1], v[254:255] offset:4095 ; encoding: [0x7c,0x00,0x17,0xec,0x00,0x00,0x00,0x7f,0x00,0xff,0x0f,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_max_num_f64 v[0:1], v[254:255] offset:4095
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_max_num_f64 v[0:1], v[2:3]
+// GFX1250: flat_atomic_max_num_f64 v[0:1], v[2:3] ; encoding: [0x7c,0x00,0x17,0xec,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_max_num_f64 v[0:1], v[2:3]
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_max_num_f64 v[0:1], v[2:3]
+// GFX1250: flat_atomic_max_num_f64 v[0:1], v[2:3] ; encoding: [0x7c,0x00,0x17,0xec,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_max_num_f64 v[0:1], v[2:3]
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_max_num_f64 v[0:1], v[2:3] offset:7
+// GFX1250: flat_atomic_max_num_f64 v[0:1], v[2:3] offset:7 ; encoding: [0x7c,0x00,0x17,0xec,0x00,0x00,0x00,0x01,0x00,0x07,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_max_num_f64 v[0:1], v[2:3] offset:7
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_min_f64 v[0:1], v[2:3] offset:4095
+// GFX1250: flat_atomic_min_num_f64 v[0:1], v[2:3] offset:4095 ; encoding: [0x7c,0xc0,0x16,0xec,0x00,0x00,0x00,0x01,0x00,0xff,0x0f,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_min_f64 v[0:1], v[2:3] offset:4095
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_min_f64 v[254:255], v[2:3] offset:4095
+// GFX1250: flat_atomic_min_num_f64 v[254:255], v[2:3] offset:4095 ; encoding: [0x7c,0xc0,0x16,0xec,0x00,0x00,0x00,0x01,0xfe,0xff,0x0f,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_min_f64 v[254:255], v[2:3] offset:4095
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_min_f64 v[0:1], v[254:255] offset:4095
+// GFX1250: flat_atomic_min_num_f64 v[0:1], v[254:255] offset:4095 ; encoding: [0x7c,0xc0,0x16,0xec,0x00,0x00,0x00,0x7f,0x00,0xff,0x0f,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_min_f64 v[0:1], v[254:255] offset:4095
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_min_f64 v[0:1], v[2:3]
+// GFX1250: flat_atomic_min_num_f64 v[0:1], v[2:3] ; encoding: [0x7c,0xc0,0x16,0xec,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_min_f64 v[0:1], v[2:3]
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_min_f64 v[0:1], v[2:3]
+// GFX1250: flat_atomic_min_num_f64 v[0:1], v[2:3] ; encoding: [0x7c,0xc0,0x16,0xec,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_min_f64 v[0:1], v[2:3]
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_min_f64 v[0:1], v[2:3] offset:7
+// GFX1250: flat_atomic_min_num_f64 v[0:1], v[2:3] offset:7 ; encoding: [0x7c,0xc0,0x16,0xec,0x00,0x00,0x00,0x01,0x00,0x07,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_min_f64 v[0:1], v[2:3] offset:7
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_max_f64 v[0:1], v[2:3] offset:4095
+// GFX1250: flat_atomic_max_num_f64 v[0:1], v[2:3] offset:4095 ; encoding: [0x7c,0x00,0x17,0xec,0x00,0x00,0x00,0x01,0x00,0xff,0x0f,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_max_f64 v[0:1], v[2:3] offset:4095
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_max_f64 v[254:255], v[2:3] offset:4095
+// GFX1250: flat_atomic_max_num_f64 v[254:255], v[2:3] offset:4095 ; encoding: [0x7c,0x00,0x17,0xec,0x00,0x00,0x00,0x01,0xfe,0xff,0x0f,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_max_f64 v[254:255], v[2:3] offset:4095
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_max_f64 v[0:1], v[254:255] offset:4095
+// GFX1250: flat_atomic_max_num_f64 v[0:1], v[254:255] offset:4095 ; encoding: [0x7c,0x00,0x17,0xec,0x00,0x00,0x00,0x7f,0x00,0xff,0x0f,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_max_f64 v[0:1], v[254:255] offset:4095
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_max_f64 v[0:1], v[2:3]
+// GFX1250: flat_atomic_max_num_f64 v[0:1], v[2:3] ; encoding: [0x7c,0x00,0x17,0xec,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_max_f64 v[0:1], v[2:3]
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_max_f64 v[0:1], v[2:3]
+// GFX1250: flat_atomic_max_num_f64 v[0:1], v[2:3] ; encoding: [0x7c,0x00,0x17,0xec,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_max_f64 v[0:1], v[2:3]
+// GFX12-ERR-NEXT:{{^}}^
+
+flat_atomic_max_f64 v[0:1], v[2:3] offset:7
+// GFX1250: flat_atomic_max_num_f64 v[0:1], v[2:3] offset:7 ; encoding: [0x7c,0x00,0x17,0xec,0x00,0x00,0x00,0x01,0x00,0x07,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: flat_atomic_max_f64 v[0:1], v[2:3] offset:7
+// GFX12-ERR-NEXT:{{^}}^
+
+global_atomic_add_f64 v[0:1], v[2:3], off
+// GFX1250: global_atomic_add_f64 v[0:1], v[2:3], off ; encoding: [0x7c,0x40,0x15,0xee,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: global_atomic_add_f64 v[0:1], v[2:3], off
+// GFX12-ERR-NEXT:{{^}}^
+
+global_atomic_min_num_f64 v[0:1], v[2:3], off
+// GFX1250: global_atomic_min_num_f64 v[0:1], v[2:3], off ; encoding: [0x7c,0xc0,0x16,0xee,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: global_atomic_min_num_f64 v[0:1], v[2:3], off
+// GFX12-ERR-NEXT:{{^}}^
+
+global_atomic_max_num_f64 v[0:1], v[2:3], off
+// GFX1250: global_atomic_max_num_f64 v[0:1], v[2:3], off ; encoding: [0x7c,0x00,0x17,0xee,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: global_atomic_max_num_f64 v[0:1], v[2:3], off
+// GFX12-ERR-NEXT:{{^}}^
+
+global_atomic_min_f64 v[0:1], v[2:3], off
+// GFX1250: global_atomic_min_num_f64 v[0:1], v[2:3], off ; encoding: [0x7c,0xc0,0x16,0xee,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: global_atomic_min_f64 v[0:1], v[2:3], off
+// GFX12-ERR-NEXT:{{^}}^
+
+global_atomic_max_f64 v[0:1], v[2:3], off
+// GFX1250: global_atomic_max_num_f64 v[0:1], v[2:3], off ; encoding: [0x7c,0x00,0x17,0xee,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX12-ERR-NEXT: global_atomic_max_f64 v[0:1], v[2:3], off
+// GFX12-ERR-NEXT:{{^}}^
+
+
 global_store_async_from_lds_b8 v[2:3], v1, off th:TH_STORE_BYPASS scope:SCOPE_SYS
 // GFX1250: global_store_async_from_lds_b8 v[2:3], v1, off th:TH_STORE_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0xc0,0x18,0xee,0x00,0x00,0xbc,0x00,0x02,0x00,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU

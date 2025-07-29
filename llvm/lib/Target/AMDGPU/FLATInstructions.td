@@ -3488,6 +3488,14 @@ defm GLOBAL_LOAD_TR_B64_w32           : VFLAT_Real_AllAddr_gfx1250<0x058, "globa
 defm GLOBAL_LOAD_TR4_B64              : VFLAT_Real_AllAddr_gfx1250<0x073>;
 defm GLOBAL_LOAD_TR6_B96              : VFLAT_Real_AllAddr_gfx1250<0x074>;
 
+defm FLAT_ATOMIC_ADD_F64              : VFLAT_Real_Atomics_gfx1250<0x055>;
+defm FLAT_ATOMIC_MIN_F64              : VFLAT_Real_Atomics_gfx1250<0x05b, "flat_atomic_min_num_f64">;
+defm FLAT_ATOMIC_MAX_F64              : VFLAT_Real_Atomics_gfx1250<0x05c, "flat_atomic_max_num_f64">;
+
+defm GLOBAL_ATOMIC_ADD_F64            : VFLAT_Real_Atomics_gfx1250<0x055>;
+defm GLOBAL_ATOMIC_MIN_F64            : VFLAT_Real_Atomics_gfx1250<0x05b, "global_atomic_min_num_f64">;
+defm GLOBAL_ATOMIC_MAX_F64            : VFLAT_Real_Atomics_gfx1250<0x05c, "global_atomic_max_num_f64">;
+
 def True16D16Table : GenericTable {
   let FilterClass = "True16D16Table";
   let CppTypeName = "True16D16Info";
