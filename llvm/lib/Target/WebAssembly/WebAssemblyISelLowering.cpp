@@ -3436,8 +3436,7 @@ static SDValue performSETCCCombine(SDNode *N,
   return SDValue();
 }
 
-static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG) {
-  assert(N->getOpcode() == ISD::MUL);
+static SDValue TryWideExtMulCombine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   if (VT != MVT::v8i32 && VT != MVT::v16i32)
     return SDValue();
@@ -3523,6 +3522,46 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+static SDValue performMulCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI) {
+  assert(N->getOpcode() == ISD::MUL);
+  EVT VT = N->getValueType(0);
+  if (!VT.isVector())
+    return SDValue();
+
+  if (auto Res = TryWideExtMulCombine(N, DCI.DAG))
+    return Res;
+
+  // We don't natively support v16i8 mul, but we do support v8i16 so split the
+  // inputs and extend them to v8i16. Only do this before legalization in case
+  // a narrow vector is widened and may be simplified later.
+  if (!DCI.isBeforeLegalize() || VT != MVT::v16i8)
+    return SDValue();
+
+  SDLoc DL(N);
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDValue LowLHS =
+      DAG.getNode(WebAssemblyISD::EXTEND_LOW_U, DL, MVT::v8i16, LHS);
+  SDValue HighLHS =
+      DAG.getNode(WebAssemblyISD::EXTEND_HIGH_U, DL, MVT::v8i16, LHS);
+  SDValue LowRHS =
+      DAG.getNode(WebAssemblyISD::EXTEND_LOW_U, DL, MVT::v8i16, RHS);
+  SDValue HighRHS =
+      DAG.getNode(WebAssemblyISD::EXTEND_HIGH_U, DL, MVT::v8i16, RHS);
+
+  SDValue MulLow =
+      DAG.getBitcast(VT, DAG.getNode(ISD::MUL, DL, MVT::v8i16, LowLHS, LowRHS));
+  SDValue MulHigh = DAG.getBitcast(
+      VT, DAG.getNode(ISD::MUL, DL, MVT::v8i16, HighLHS, HighRHS));
+
+  // Take the low byte of each lane.
+  return DAG.getVectorShuffle(
+      VT, DL, MulLow, MulHigh,
+      {0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30});
+}
+
 SDValue
 WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
@@ -3557,6 +3596,6 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
     return performLowerPartialReduction(N, DCI.DAG);
   }
   case ISD::MUL:
-    return performMulCombine(N, DCI.DAG);
+    return performMulCombine(N, DCI);
   }
 }
