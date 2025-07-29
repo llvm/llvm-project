@@ -1251,29 +1251,31 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::lround:
   case Intrinsic::llround: {
     auto LT = getTypeLegalizationCost(RetTy);
-    auto *SrcTy = ICA.getArgTypes().front();
+    Type *SrcTy = ICA.getArgTypes().front();
     auto SrcLT = getTypeLegalizationCost(SrcTy);
     if (ST->hasVInstructions() && LT.second.isVector()) {
       ArrayRef<unsigned> Ops;
-      unsigned SrcEltSz =
-          DL.getTypeSizeInBits(cast<VectorType>(SrcTy)->getElementType());
-      unsigned DstEltSz =
-          DL.getTypeSizeInBits(cast<VectorType>(RetTy)->getElementType());
+      unsigned SrcEltSz = DL.getTypeSizeInBits(SrcTy->getScalarType());
+      unsigned DstEltSz = DL.getTypeSizeInBits(RetTy->getScalarType());
       if (LT.second.getVectorElementType() == MVT::bf16) {
+        if (!ST->hasVInstructionsBF16Minimal())
+          return InstructionCost::getInvalid();
         if (DstEltSz == 32)
           Ops = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFCVT_X_F_V};
         else
           Ops = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFWCVT_X_F_V};
       } else if (LT.second.getVectorElementType() == MVT::f16 &&
                  !ST->hasVInstructionsF16()) {
+        if (!ST->hasVInstructionsF16Minimal())
+          return InstructionCost::getInvalid();
         if (DstEltSz == 32)
           Ops = {RISCV::VFWCVT_F_F_V, RISCV::VFCVT_X_F_V};
         else
           Ops = {RISCV::VFWCVT_F_F_V, RISCV::VFWCVT_X_F_V};
 
-      } else if (SrcEltSz < DstEltSz) {
-        Ops = {RISCV::VFNCVT_X_F_W, RISCV::VMV_V_V};
       } else if (SrcEltSz > DstEltSz) {
+        Ops = {RISCV::VFNCVT_X_F_W};
+      } else if (SrcEltSz < DstEltSz) {
         Ops = {RISCV::VFWCVT_X_F_V};
       } else {
         Ops = {RISCV::VFCVT_X_F_V};
