@@ -863,7 +863,8 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
     }
 
     Value getTensorDesc() {
-       return getDest();
+      assert(getTensorDescType() && "Expected dest to be a TensorDescType");
+      return getDest();
     }
 
     xegpu::TensorDescType getTensorDescType() {

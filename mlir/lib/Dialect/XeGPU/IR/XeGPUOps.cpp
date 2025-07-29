@@ -673,14 +673,12 @@ LogicalResult CreateDescOp::verify() {
 LogicalResult PrefetchOp::verify() {
   auto tdescTy = getTensorDescType();
 
-  if (tdescTy) {
-    if (!tdescTy.isScattered())
-      return emitOpError("Expects a scattered TensorDesc.\n");
-  } else {
-    if (getRankOf(getSource()) > 1)
-      return emitOpError(
-          "Expecting the source is a 1D memref or pointer (uint64_t).");
-  }
+  if (tdescTy && !tdescTy.isScattered())
+    return emitOpError("Expects a scattered TensorDesc.\n");
+
+  if (!tdescTy && getRankOf(getSource()) > 1)
+    return emitOpError(
+        "Expecting the source is a 1D memref or pointer (uint64_t).");
 
   if (!isReadHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
@@ -709,14 +707,12 @@ LogicalResult LoadGatherOp::verify() {
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
 
-  if (tdescTy) {
-    if (!tdescTy.isScattered())
-      return emitOpError("Expects a scattered TensorDesc.\n");
-  } else {
-    if (getRankOf(getSource()) > 1)
-      return emitOpError(
-          "Expecting the source is a 1D memref or pointer (uint64_t).");
-  }
+  if (tdescTy && !tdescTy.isScattered())
+    return emitOpError("Expects a scattered TensorDesc.\n");
+
+  if (!tdescTy && getRankOf(getSource()) > 1)
+    return emitOpError(
+        "Expecting the source is a 1D memref or pointer (uint64_t).");
 
   if (!isReadHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
@@ -758,14 +754,12 @@ LogicalResult StoreScatterOp::verify() {
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
 
-  if (tdescTy) {
-    if (!tdescTy.isScattered())
-      return emitOpError("Expects a scattered TensorDesc.\n");
-  } else {
-    if (getRankOf(getDest()) > 1)
-      return emitOpError(
-          "Expecting the dest is a 1D memref or pointer (uint64_t).");
-  }
+  if (tdescTy && !tdescTy.isScattered())
+    return emitOpError("Expects a scattered TensorDesc.\n");
+
+  if (!tdescTy && getRankOf(getDest()) > 1)
+    return emitOpError(
+        "Expecting the dest is a 1D memref or pointer (uint64_t).");
 
   if (!isWriteHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
