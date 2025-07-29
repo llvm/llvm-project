@@ -286,6 +286,7 @@ class SimplifyCFGOpt {
   bool simplifyBranch(BranchInst *Branch, IRBuilder<> &Builder);
   bool simplifyUncondBranch(BranchInst *BI, IRBuilder<> &Builder);
   bool simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder);
+  bool foldCondBranchOnValueKnownInPredecessor(BranchInst *BI);
 
   bool tryToSimplifyUncondBranchWithICmpInIt(ICmpInst *ICI,
                                              IRBuilder<> &Builder);
@@ -3604,15 +3605,23 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
   return false;
 }
 
-static bool foldCondBranchOnValueKnownInPredecessor(BranchInst *BI,
-                                                    DomTreeUpdater *DTU,
-                                                    const DataLayout &DL,
-                                                    AssumptionCache *AC) {
+#include <iostream>
+
+bool SimplifyCFGOpt::foldCondBranchOnValueKnownInPredecessor(BranchInst *BI) {
+  // Note: If BB is a loop header then there is a risk that threading introduces
+  // a non-canonical loop by moving a back edge. So we avoid this optimization
+  // for loop headers if NeedCanonicalLoop is set.
+  bool InHeader = is_contained(LoopHeaders, BI->getParent());
+  bool AvoidThreading = Options.NeedCanonicalLoop && InHeader;
+  if (AvoidThreading) {
+    return false;
+  }
+
   std::optional<bool> Result;
   bool EverChanged = false;
   do {
     // Note that None means "we changed things, but recurse further."
-    Result = foldCondBranchOnValueKnownInPredecessorImpl(BI, DTU, DL, AC);
+    Result = foldCondBranchOnValueKnownInPredecessorImpl(BI, DTU, DL, Options.AC);
     EverChanged |= Result == std::nullopt || *Result;
   } while (Result == std::nullopt);
   return EverChanged;
@@ -8030,14 +8039,8 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   // If this is a branch on something for which we know the constant value in
   // predecessors (e.g. a phi node in the current block), thread control
   // through this block.
-  // Note: If BB is a loop header then there is a risk that threading introduces
-  // a non-canonical loop by moving a back edge. So we avoid this optimization
-  // for loop headers if NeedCanonicalLoop is set.
-  bool InHeader = !LoopHeaders.empty() && is_contained(LoopHeaders, BB);
-  bool AvoidThreading = Options.NeedCanonicalLoop && InHeader;
-  if (!AvoidThreading)
-    if (foldCondBranchOnValueKnownInPredecessor(BI, DTU, DL, Options.AC))
-      return requestResimplify();
+  if (foldCondBranchOnValueKnownInPredecessor(BI))
+    return requestResimplify();
 
   // Scan predecessor blocks for conditional branches.
   for (BasicBlock *Pred : predecessors(BB))
