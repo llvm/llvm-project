@@ -1103,6 +1103,60 @@ cir::GlobalLinkageKind CIRGenModule::getCIRLinkageForDeclarator(
   return cir::GlobalLinkageKind::ExternalLinkage;
 }
 
+/// This function is called when we implement a function with no prototype, e.g.
+/// "int foo() {}". If there are existing call uses of the old function in the
+/// module, this adjusts them to call the new function directly.
+///
+/// This is not just a cleanup: the always_inline pass requires direct calls to
+/// functions to be able to inline them.  If there is a bitcast in the way, it
+/// won't inline them. Instcombine normally deletes these calls, but it isn't
+/// run at -O0.
+void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
+    mlir::Operation *old, cir::FuncOp newFn) {
+  // If we're redefining a global as a function, don't transform it.
+  auto oldFn = mlir::dyn_cast<cir::FuncOp>(old);
+  if (!oldFn)
+    return;
+
+  // TODO(cir): this RAUW ignores the features below.
+  assert(!cir::MissingFeatures::opFuncExceptions());
+  assert(!cir::MissingFeatures::opFuncParameterAttributes());
+  assert(!cir::MissingFeatures::opFuncOperandBundles());
+  if (oldFn->getAttrs().size() <= 1)
+    errorNYI(old->getLoc(),
+             "replaceUsesOfNonProtoTypeWithRealFunction: Attribute forwarding");
+
+  // Mark new function as originated from a no-proto declaration.
+  newFn.setNoProto(oldFn.getNoProto());
+
+  // Iterate through all calls of the no-proto function.
+  std::optional<mlir::SymbolTable::UseRange> symUses =
+      oldFn.getSymbolUses(oldFn->getParentOp());
+  for (const mlir::SymbolTable::SymbolUse &use : symUses.value()) {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+
+    if (auto noProtoCallOp = mlir::dyn_cast<cir::CallOp>(use.getUser())) {
+      builder.setInsertionPoint(noProtoCallOp);
+
+      // Patch call type with the real function type.
+      cir::CallOp realCallOp = builder.createCallOp(
+          noProtoCallOp.getLoc(), newFn, noProtoCallOp.getOperands());
+
+      // Replace old no proto call with fixed call.
+      noProtoCallOp.replaceAllUsesWith(realCallOp);
+      noProtoCallOp.erase();
+    } else if (auto getGlobalOp =
+                   mlir::dyn_cast<cir::GetGlobalOp>(use.getUser())) {
+      // Replace type
+      getGlobalOp.getAddr().setType(
+          cir::PointerType::get(newFn.getFunctionType()));
+    } else {
+      errorNYI(use.getUser()->getLoc(),
+               "replaceUsesOfNonProtoTypeWithRealFunction: unexpected use");
+    }
+  }
+}
+
 cir::GlobalLinkageKind
 CIRGenModule::getCIRLinkageVarDefinition(const VarDecl *vd, bool isConstant) {
   assert(!isConstant && "constant variables NYI");
@@ -1701,8 +1755,7 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
   // Lookup the entry, lazily creating it if necessary.
   mlir::Operation *entry = getGlobalValue(mangledName);
   if (entry) {
-    if (!isa<cir::FuncOp>(entry))
-      errorNYI(d->getSourceRange(), "getOrCreateCIRFunction: non-FuncOp");
+    assert(mlir::isa<cir::FuncOp>(entry));
 
     assert(!cir::MissingFeatures::weakRefReference());
 
@@ -1737,6 +1790,30 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
   cir::FuncOp funcOp = createCIRFunction(
       invalidLoc ? theModule->getLoc() : getLoc(funcDecl->getSourceRange()),
       mangledName, mlir::cast<cir::FuncType>(funcType), funcDecl);
+
+  // If we already created a function with the same mangled name (but different
+  // type) before, take its name and add it to the list of functions to be
+  // replaced with F at the end of CodeGen.
+  //
+  // This happens if there is a prototype for a function (e.g. "int f()") and
+  // then a definition of a different type (e.g. "int f(int x)").
+  if (entry) {
+
+    // Fetch a generic symbol-defining operation and its uses.
+    auto symbolOp = mlir::cast<mlir::SymbolOpInterface>(entry);
+
+    // This might be an implementation of a function without a prototype, in
+    // which case, try to do special replacement of calls which match the new
+    // prototype. The really key thing here is that we also potentially drop
+    // arguments from the call site so as to make a direct call, which makes the
+    // inliner happier and suppresses a number of optimizer warnings (!) about
+    // dropping arguments.
+    if (symbolOp.getSymbolUses(symbolOp->getParentOp()))
+      replaceUsesOfNonProtoTypeWithRealFunction(entry, funcOp);
+
+    // Obliterate no-proto declaration.
+    entry->erase();
+  }
 
   if (d)
     setFunctionAttributes(gd, funcOp, /*isIncompleteFunction=*/false, isThunk);
@@ -1814,7 +1891,9 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
     func = builder.create<cir::FuncOp>(loc, name, funcType);
 
     assert(!cir::MissingFeatures::opFuncAstDeclAttr());
-    assert(!cir::MissingFeatures::opFuncNoProto());
+
+    if (funcDecl && !funcDecl->hasPrototype())
+      func.setNoProto(true);
 
     assert(func.isDeclaration() && "expected empty body");
 
