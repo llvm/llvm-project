@@ -9228,6 +9228,8 @@ bool Sema::CheckConceptUseInDefinition(NamedDecl *Concept, SourceLocation Loc) {
     Diag(CE->getLocation(), diag::note_declared_at);
     return true;
   }
+  // Concept template parameters don't have a definition and can't
+  // be defined recursively.
   return false;
 }
 

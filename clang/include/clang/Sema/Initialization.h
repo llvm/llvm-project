@@ -159,7 +159,8 @@ private:
   };
 
   struct VD {
-    /// The VarDecl, FieldDecl, or BindingDecl being initialized.
+    /// The VarDecl, FieldDecl, TemplateParmDecl, or BindingDecl being
+    /// initialized.
     NamedDecl *VariableOrMember;
 
     /// When Kind == EK_Member, whether this is an implicit member
