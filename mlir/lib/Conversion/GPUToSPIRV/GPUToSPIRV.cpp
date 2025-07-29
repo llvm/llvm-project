@@ -507,25 +507,27 @@ LogicalResult GPURotateConversion::matchAndRewrite(
       getTypeConverter<SPIRVTypeConverter>()->getTargetEnv();
   unsigned subgroupSize =
       targetEnv.getAttr().getResourceLimits().getSubgroupSize();
-  IntegerAttr widthAttr;
-  if (!matchPattern(rotateOp.getWidth(), m_Constant(&widthAttr)) ||
-      widthAttr.getValue().getZExtValue() > subgroupSize)
+  unsigned width = rotateOp.getWidth();
+  if (width > subgroupSize)
     return rewriter.notifyMatchFailure(
-        rotateOp,
-        "rotate width is not a constant or larger than target subgroup size");
+        rotateOp, "rotate width is larger than target subgroup size");
 
   Location loc = rotateOp.getLoc();
   auto scope = rewriter.getAttr<spirv::ScopeAttr>(spirv::Scope::Subgroup);
+  Value offsetVal =
+      arith::ConstantOp::create(rewriter, loc, adaptor.getOffsetAttr());
+  Value widthVal =
+      arith::ConstantOp::create(rewriter, loc, adaptor.getWidthAttr());
   Value rotateResult = spirv::GroupNonUniformRotateKHROp::create(
-      rewriter, loc, scope, adaptor.getValue(), adaptor.getOffset(),
-      adaptor.getWidth());
+      rewriter, loc, scope, adaptor.getValue(), offsetVal, widthVal);
   Value validVal;
-  if (widthAttr.getValue().getZExtValue() == subgroupSize) {
+  if (width == subgroupSize) {
     validVal = spirv::ConstantOp::getOne(rewriter.getI1Type(), loc, rewriter);
   } else {
+    IntegerAttr widthAttr = adaptor.getWidthAttr();
     Value laneId = gpu::LaneIdOp::create(rewriter, loc, widthAttr);
     validVal = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::ult,
-                                     laneId, adaptor.getWidth());
+                                     laneId, widthVal);
   }
 
   rewriter.replaceOp(rotateOp, {rotateResult, validVal});
