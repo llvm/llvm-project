@@ -2086,13 +2086,11 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
   for (auto &BB : *F)
     for (auto &I : BB.instructionsWithoutDebug())
       if (auto *CB = dyn_cast<CallBase>(&I)) {
-        if (CB->hasFnAttr(Attribute::NoRecurse))
-          continue;
-
         Function *Callee = CB->getCalledFunction();
         if (!Callee || Callee == F ||
-            !(Callee->isDeclaration() &&
-              Callee->hasFnAttribute(Attribute::NoCallback)))
+            (!Callee->doesNotRecurse() &&
+             !(Callee->isDeclaration() &&
+               Callee->hasFnAttribute(Attribute::NoCallback))))
           // Function calls a potentially recursive function.
           return;
       }
