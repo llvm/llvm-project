@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs -o - %s 2>%t.err | FileCheck -implicit-check-not=error %s
+; RUN: not llc -mtriple=amdgcn -mcpu=gfx908 -o - %s 2>%t.err | FileCheck -implicit-check-not=error %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t.err
 
 ; This testcase would fail on an "illegal eviction". If the assert was

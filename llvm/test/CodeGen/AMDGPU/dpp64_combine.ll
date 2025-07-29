@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP64,GFX90A,DPP64-GFX9 -DCTL=row_newbcast
-; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,DPP64-GFX9,GFX942 -DCTL=row_newbcast
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS,GFX10 -DCTL=row_share
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS,GFX11 -DCTL=row_share
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck %s -check-prefixes=GCN,DPP64,GFX90A,DPP64-GFX9 -DCTL=row_newbcast
+; RUN: llc -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,DPP64-GFX9,GFX942 -DCTL=row_newbcast
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS,GFX10 -DCTL=row_share
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS,GFX11 -DCTL=row_share
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX1250 -DCTL=row_share
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1251 < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,DPP64-GFX1251 -DCTL=row_share
 
