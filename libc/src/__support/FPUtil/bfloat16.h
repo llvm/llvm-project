@@ -83,7 +83,7 @@ struct BFloat16 {
     return fputil::greater_than_or_equals(*this, other);
   }
 
-  LIBC_INLINE BFloat16 operator-() const {
+  LIBC_INLINE constexpr BFloat16 operator-() const {
     fputil::FPBits<bfloat16> result(*this);
     result.set_sign(result.is_pos() ? Sign::NEG : Sign::POS);
     return result.get_val();
