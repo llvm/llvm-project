@@ -3,18 +3,16 @@
 
 
 --- |
-  define void @undefine_metadata(ptr %ptr, float %data) #0 {
+  define void @undefined_metadata(ptr %ptr, float %data) {
     %1 = atomicrmw fadd ptr %ptr, float %data syncscope("agent") seq_cst, align 4, !noalias.addrspace !0
     ret void
   }
-
-  attributes #0 = { "target-cpu"="gfx1200" }
 
   !0 = !{i32 5, i32 6}
 ...
 
 ---
-name: undefine_metadata
+name: undefined_metadata
 
 body: |
   bb.1 (%ir-block.0):
