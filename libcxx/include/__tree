@@ -794,9 +794,9 @@ public:
 
 private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit __tree_const_iterator(__node_pointer __p) _NOEXCEPT
-      : __ptr_(__p) {}
+      : __ptr_(std::__static_fancy_pointer_cast<__end_node_pointer>(__p)) {}
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit __tree_const_iterator(__end_node_pointer __p) _NOEXCEPT
-      : __ptr_(__p) {}
+      : __ptr_(std::__static_fancy_pointer_cast<__end_node_pointer>(__p)) {}
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_pointer __get_np() const {
     return std::__static_fancy_pointer_cast<__node_pointer>(__ptr_);
   }
@@ -2328,13 +2328,13 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26
   __node_pointer __rt         = __root();
   while (__rt != nullptr) {
     if (value_comp()(__k, __rt->__value_)) {
-      __result = static_cast<__end_node_pointer>(__rt);
-      __rt     = static_cast<__node_pointer>(__rt->__left_);
+      __result = std::__static_fancy_pointer_cast<__end_node_pointer>(__rt);
+      __rt     = std::__static_fancy_pointer_cast<__node_pointer>(__rt->__left_);
     } else if (value_comp()(__rt->__value_, __k))
-      __rt = static_cast<__node_pointer>(__rt->__right_);
+      __rt = std::__static_fancy_pointer_cast<__node_pointer>(__rt->__right_);
     else
       return _Pp(iterator(__rt),
-                 iterator(__rt->__right_ != nullptr ? static_cast<__end_node_pointer>(std::__tree_min(__rt->__right_))
+                 iterator(__rt->__right_ != nullptr ? std::__static_fancy_pointer_cast<__end_node_pointer>(std::__tree_min(__rt->__right_))
                                                     : __result));
   }
   return _Pp(iterator(__result), iterator(__result));
@@ -2350,15 +2350,15 @@ __tree<_Tp, _Compare, _Allocator>::__equal_range_unique(const _Key& __k) const {
   __node_pointer __rt         = __root();
   while (__rt != nullptr) {
     if (value_comp()(__k, __rt->__value_)) {
-      __result = static_cast<__end_node_pointer>(__rt);
-      __rt     = static_cast<__node_pointer>(__rt->__left_);
+      __result = std::__static_fancy_pointer_cast<__end_node_pointer>(__rt);
+      __rt     = std::__static_fancy_pointer_cast<__node_pointer>(__rt->__left_);
     } else if (value_comp()(__rt->__value_, __k))
-      __rt = static_cast<__node_pointer>(__rt->__right_);
+      __rt = std::__static_fancy_pointer_cast<__node_pointer>(__rt->__right_);
     else
       return _Pp(
           const_iterator(__rt),
           const_iterator(
-              __rt->__right_ != nullptr ? static_cast<__end_node_pointer>(std::__tree_min(__rt->__right_)) : __result));
+              __rt->__right_ != nullptr ? std::__static_fancy_pointer_cast<__end_node_pointer>(std::__tree_min(__rt->__right_)) : __result));
   }
   return _Pp(const_iterator(__result), const_iterator(__result));
 }
