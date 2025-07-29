@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Iterator
 import contextlib
 import dataclasses
@@ -24,25 +25,32 @@ import re
 import sysconfig
 import threading
 import types
-from typing import NamedTuple
+from typing import NamedTuple, Optional
+from .ir import Location
 
 # import jax.version
 # from jax._src.lib import xla_client
 
 from . import traceback_util
+from .traceback_util import (
+    TracebackCaches,
+    Traceback,
+    _traceback_caches,
+    _traceback_in_locations_limit,
+    _include_full_tracebacks_in_locations,
+)
 
 traceback_util.register_exclusion(__file__)
 
-from ._mlir_libs._mlir import Traceback
 
-
-class Frame(NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class Frame:
     file_name: str
     function_name: str
     start_line: int
-    start_column: int
-    end_line: int
-    end_column: int
+    start_column: Optional[int] = None
+    end_line: Optional[int] = None
+    end_column: Optional[int] = None
 
 
 _exclude_paths: list[str] = [
@@ -173,16 +181,27 @@ def is_user_filename(filename: str) -> bool:
 
 
 def raw_frame_to_frame(code: types.CodeType, lasti: int) -> Frame:
-    loc = Traceback.code_addr2location(code, lasti)
-    start_line, start_column, end_line, end_column = loc
-    return Frame(
-        file_name=code.co_filename,
-        function_name=code.co_qualname,
-        start_line=start_line,
-        start_column=start_column,
-        end_line=end_line,
-        end_column=end_column,
-    )
+    if sys.version_info.minor >= 11:
+        loc = Traceback.code_addr2location(code, lasti)
+        start_line, start_column, end_line, end_column = loc
+        frame = Frame(
+            file_name=code.co_filename,
+            function_name=code.co_qualname,
+            start_line=start_line,
+            start_column=start_column,
+            end_line=end_line,
+            end_column=end_column,
+        )
+    else:
+        start_line = Traceback.code_addr2line(code, lasti)
+        frame = Frame(
+            file_name=code.co_filename,
+            function_name=code.co_name,
+            start_line=start_line,
+            start_column=0,
+        )
+
+    return frame
 
 
 def user_frames(traceback: Traceback | None) -> Iterator[Frame]:
@@ -226,6 +245,7 @@ class _SourceInfoContext(threading.local):
     context: SourceInfo
 
     def __init__(self):
+        super().__init__()
         self.context = new_source_info()
 
 
@@ -365,3 +385,111 @@ class TransformNameStackContextManager(contextlib.ContextDecorator):
 
 
 transform_name_stack = TransformNameStackContextManager
+
+
+def get_canonical_source_file(file_name: str, caches: TracebackCaches) -> str:
+    canonical_file_name = caches.canonical_name_cache.get(file_name, None)
+    if canonical_file_name is not None:
+        return canonical_file_name
+
+    # pattern = config.hlo_source_file_canonicalization_regex.value
+    # if pattern:
+    #     file_name = re.sub(pattern, "", file_name)
+    caches.canonical_name_cache[file_name] = file_name
+    return file_name
+
+
+def _is_user_file(file_name: str) -> bool:
+    is_user = _traceback_caches.is_user_file_cache.get(file_name, None)
+    if is_user is not None:
+        return is_user
+    out = is_user_filename(file_name)
+    _traceback_caches.is_user_file_cache[file_name] = out
+    return out
+
+
+def _traceback_to_location(tb: Traceback) -> Location:
+    """Converts a full traceback to a callsite() MLIR location."""
+    loc = _traceback_caches.traceback_cache.get(tb, None)
+    if loc is not None:
+        return loc
+
+    frame_locs = []
+    frames_limit = _traceback_in_locations_limit
+    frames_limit = frames_limit if frames_limit >= 0 else 1000
+
+    codes, lastis = tb.raw_frames()
+    for i, code in enumerate(codes):
+        if not _is_user_file(code.co_filename):
+            continue
+
+        lasti = lastis[i]
+        code_lasti = code, lasti
+        loc = _traceback_caches.location_cache.get(code_lasti, None)
+        if loc is None:
+            frame = raw_frame_to_frame(code, lasti)
+            if (
+                frame.start_column is not None
+                and frame.end_line is not None
+                and frame.end_column is not None
+            ):
+                file_loc = Location.file(
+                    get_canonical_source_file(frame.file_name, _traceback_caches),
+                    frame.start_line,
+                    frame.start_column,
+                    frame.end_line,
+                    frame.end_column,
+                )
+            else:
+                file_loc = Location.file(
+                    get_canonical_source_file(frame.file_name, _traceback_caches),
+                    frame.start_line,
+                    frame.start_column,
+                )
+            loc = Location.name(frame.function_name, childLoc=file_loc)
+            _traceback_caches.location_cache[code_lasti] = loc
+        frame_locs.append(loc)
+        if len(frame_locs) >= frames_limit:
+            break
+
+    n = len(frame_locs)
+    if n == 0:
+        loc = Location.unknown()
+    elif n == 1:
+        loc = frame_locs[0]
+    else:
+        loc = Location.callsite(frame_locs[0], frame_locs[1:])
+    _traceback_caches.traceback_cache[tb] = loc
+    return loc
+
+
+def source_info_to_location(
+    primitive: None,
+    name_stack: NameStack,
+    traceback: Traceback | None,
+) -> Location:
+    if _include_full_tracebacks_in_locations:
+        if traceback is None:
+            loc = Location.unknown()
+        else:
+            loc = _traceback_to_location(traceback)
+    else:
+        frame = user_frame(traceback)
+        if frame is None:
+            loc = Location.unknown()
+        else:
+            loc = Location.file(
+                get_canonical_source_file(frame.file_name, _traceback_caches),
+                frame.start_line,
+                frame.start_column,
+            )
+    if primitive is None:
+        if name_stack.stack:
+            loc = Location.name(str(name_stack), childLoc=loc)
+    else:
+        eqn_str = (
+            f"{name_stack}/{primitive.name}" if name_stack.stack else primitive.name
+        )
+        loc = Location.name(eqn_str, childLoc=loc)
+        loc = Location.name(f"{primitive.name}:", childLoc=loc)
+    return loc

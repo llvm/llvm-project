@@ -14,12 +14,15 @@
 
 from __future__ import annotations
 
+import dataclasses
 from collections.abc import Callable
 import functools
 import os
 import traceback
 import types
 from typing import Any, TypeVar, cast
+from ._mlir_libs._mlir import Traceback
+from .ir import Location
 
 
 C = TypeVar("C", bound=Callable[..., Any])
@@ -236,3 +239,22 @@ def api_boundary(fun: C) -> C:
                 del mode
 
     return cast(C, reraise_with_filtered_traceback)
+
+
+@dataclasses.dataclass
+class TracebackCaches:
+    traceback_cache: dict[Traceback, Location]
+    location_cache: dict[tuple[types.CodeType, int], Location]
+    canonical_name_cache: dict[str, str]
+    is_user_file_cache: dict[str, bool]
+
+    def __init__(self):
+        self.traceback_cache = {}
+        self.location_cache = {}
+        self.canonical_name_cache = {}
+        self.is_user_file_cache = {}
+
+
+_traceback_caches = TracebackCaches()
+_traceback_in_locations_limit = 100
+_include_full_tracebacks_in_locations = True

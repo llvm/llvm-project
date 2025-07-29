@@ -440,22 +440,22 @@ void BuildTracebackSubmodule(nb::module_ &m) {
       },
       "Python wrapper around the Python C API function PyCode_Addr2Line");
 
+#if PY_VERSION_HEX >= 0x030b00f0
   type.attr("code_addr2location") = nb::cpp_function(
       [](nb::handle code, int lasti) {
         if (!PyCode_Check(code.ptr())) {
           throw std::runtime_error("code argument must be a code object");
         }
         int start_line, start_column, end_line, end_column;
-        // if (!PyCode_Addr2Location(reinterpret_cast<PyCodeObject
-        // *>(code.ptr()),
-        //                           lasti, &start_line, &start_column,
-        //                           &end_line, &end_column)) {
-        //   throw nb::python_error();
-        // }
-        throw nb::python_error();
+        if (!PyCode_Addr2Location(reinterpret_cast<PyCodeObject *>(code.ptr()),
+                                  lasti, &start_line, &start_column, &end_line,
+                                  &end_column)) {
+          throw nb::python_error();
+        }
         return nb::make_tuple(start_line, start_column, end_line, end_column);
       },
       "Python wrapper around the Python C API function PyCode_Addr2Location");
+#endif
 }
 } // namespace mlir::python
 
