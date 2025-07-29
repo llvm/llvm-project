@@ -32,6 +32,7 @@
     "@types/vscode": "1.75.0",
     "@vscode/debugprotocol": "^1.68.0",
     "@vscode/vsce": "^3.2.2",
+    "esbuild": "^0.25.8",
     "prettier": "^3.4.2",
     "prettier-plugin-curly": "^0.3.1",
     "typescript": "^5.7.3",
@@ -44,7 +45,7 @@
   ],
   "main": "./out/extension",
   "scripts": {
-    "vscode:prepublish": "tsc -p ./",
+    "vscode:prepublish": "esbuild src-ts/extension.ts --bundle --platform=node --external:vscode --minify --outfile=out/extension.js",
     "watch": "tsc -watch -p ./",
     "format": "npx prettier './src-ts/' --write",
     "package": "vsce package --out ./out/lldb-dap.vsix",

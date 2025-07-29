@@ -1,6 +1,9 @@
 import * as vscode from "vscode";
 import * as winston from "winston";
-import * as Transport from "winston-transport";
+import * as TransportType from "winston-transport";
+
+// Runtime error if don't use "require"
+const Transport: typeof TransportType = require("winston-transport");
 
 class OutputChannelTransport extends Transport {
     constructor(private readonly ouptutChannel: vscode.OutputChannel) {
