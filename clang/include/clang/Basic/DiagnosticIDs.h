@@ -92,20 +92,6 @@ namespace clang {
       Remark          ///< A diagnostic that indicates normal progress through
                       ///< compilation.
     };
-
-    /// Diagnostic nesting level; this can be any positive integer; we only
-    /// use an enum for this so we can treat it as a separate type. The main
-    /// use of this is for diagnostics which need to store the global nesting
-    /// level when they are created because they are emitted at a later point
-    /// in time when the nesting level might have changed.
-    ///
-    /// The intended use case for this type is usually the following:
-    ///
-    ///   Diag(...) << diag::NestingLevel(DiagsEngine.getNestingLevel())
-    ///
-    /// Hard-coding a nesting level (e.g. diag::NestingLevel(2)) is usually
-    /// a bad idea as it fails to take the global nesting level into account.
-    enum class NestingLevel : unsigned {};
   } // end namespace diag
 } // end namespace clang
 

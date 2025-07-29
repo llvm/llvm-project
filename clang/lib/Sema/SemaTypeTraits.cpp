@@ -2355,10 +2355,8 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
   if (D->hasDefinition())
     DiagnoseNonTriviallyCopyableReason(SemaRef, Loc, D);
 
-  {
-    DiagnosticsEngine::NestingLevelRAII IncrementNestingLevel{SemaRef.Diags};
-    SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
-  }
+  IncrementNestingLevel.Increment();
+  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 }
 
 static void DiagnoseNonAssignableReason(Sema &SemaRef, SourceLocation Loc,
@@ -2452,7 +2450,7 @@ static void DiagnoseIsEmptyReason(Sema &S, SourceLocation Loc, QualType T) {
   if (auto *D = T->getAsCXXRecordDecl()) {
     if (D->hasDefinition()) {
       DiagnoseIsEmptyReason(S, Loc, D);
-      DiagnosticsEngine::NestingLevelRAII IncrementNestingLevel{S.Diags};
+      IncrementNestingLevel.Increment();
       S.Diag(D->getLocation(), diag::note_defined_here) << D;
     }
   }

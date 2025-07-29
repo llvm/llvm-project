@@ -655,6 +655,7 @@ void DiagnosticsEngine::Report(const StoredDiagnostic &storedDiag) {
   DiagStorage.FixItHints.append(storedDiag.fixit_begin(),
                                 storedDiag.fixit_end());
 
+  DiagStorage.NestingLevel = storedDiag.getNestingLevel();
   assert(Client && "DiagnosticConsumer not set!");
   Level DiagLevel = storedDiag.getLevel();
   Diagnostic Info(this, storedDiag.getLocation(), storedDiag.getID(),
@@ -665,12 +666,9 @@ void DiagnosticsEngine::Report(const StoredDiagnostic &storedDiag) {
 void DiagnosticsEngine::Report(Level DiagLevel, Diagnostic Info) {
   assert(DiagLevel != Ignored && "Cannot emit ignored diagnostics!");
 
-  // If a nesting level was specified at creation time, do not do anything
-  // here. This can happen if a diagnostic is stored to be emitted later;
-  // in most cases, though, we want to compute the nesting level automatically.
   if (!getEnableNesting()) {
     Info.setNestingLevel(0);
-  } else if (Info.shouldUseDefaultNestingLevel()) {
+  } else if (!Info.nestingLevelAlreadyComputed()) {
     Info.setNestingLevel(DiagLevel == Note ? GlobalNestingLevel + 1
                                            : GlobalNestingLevel);
   }
@@ -813,8 +811,9 @@ Diagnostic::Diagnostic(const DiagnosticsEngine *DO,
 
 Diagnostic::Diagnostic(const DiagnosticsEngine *DO, SourceLocation DiagLoc,
                        unsigned DiagID, const DiagnosticStorage &DiagStorage,
-                       StringRef StoredDiagMessage, unsigned NestingLevel)
-    : DiagObj(DO), DiagLoc(DiagLoc), DiagID(DiagID), NestingLevel(NestingLevel),
+                       StringRef StoredDiagMessage)
+    : DiagObj(DO), DiagLoc(DiagLoc), DiagID(DiagID),
+      NestingLevel(DiagStorage.NestingLevel.value_or(0)),
       DiagStorage(DiagStorage), StoredDiagMessage(StoredDiagMessage) {}
 
 DiagnosticConsumer::~DiagnosticConsumer() = default;

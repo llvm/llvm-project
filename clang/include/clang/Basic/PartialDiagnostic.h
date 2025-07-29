@@ -106,7 +106,9 @@ public:
     for (unsigned I = 0, N = Other.getNumFixItHints(); I != N; ++I)
       AddFixItHint(Other.getFixItHint(I));
 
-    if (!Other.shouldUseDefaultNestingLevel())
+    // If the nesting level for this diagnostic has already been determined
+    // by the diagnostics engine, copy it.
+    if (Other.nestingLevelAlreadyComputed())
       SetNestingLevel(Other.getNestingLevel());
   }
 
@@ -166,8 +168,7 @@ public:
     for (const FixItHint &Fix : DiagStorage->FixItHints)
       DB.AddFixItHint(Fix);
 
-    if (DiagStorage->NestingLevel)
-      DB.SetNestingLevel(DiagStorage->NestingLevel);
+    DB.SetNestingLevel(DiagStorage->NestingLevel);
   }
 
   void EmitToString(DiagnosticsEngine &Diags,

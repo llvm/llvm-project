@@ -349,17 +349,24 @@ private:
   unsigned GlobalNestingLevel = 0;
 
 public:
+  /// Helper to increment the global diagnostics nesting level.
   class NestingLevelRAII {
     DiagnosticsEngine& Diags;
-    unsigned Increment;
+    unsigned TheIncrement;
 
   public:
-    explicit NestingLevelRAII(DiagnosticsEngine &Diags, unsigned Increment = 1)
-        : Diags(Diags), Increment(Increment) {
+    explicit NestingLevelRAII(DiagnosticsEngine &Diags,
+                              unsigned Increment = 1)
+        : Diags(Diags), TheIncrement(Increment) {
       Diags.GlobalNestingLevel += Increment;
     }
 
-    ~NestingLevelRAII() { Diags.GlobalNestingLevel -= Increment; }
+    void Increment(unsigned Increment = 1) {
+      TheIncrement += Increment;
+      Diags.GlobalNestingLevel += Increment;
+    }
+
+    ~NestingLevelRAII() { Diags.GlobalNestingLevel -= TheIncrement; }
   };
 
 private:
@@ -1415,14 +1422,6 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
   return DB;
 }
 
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                             diag::NestingLevel Level) {
-  // The 'NestingLevel' type exists solely so we can pass it to this overload
-  // without it being mistaken as a diagnostic parameter.
-  DB.SetNestingLevel(llvm::to_underlying(Level));
-  return DB;
-}
-
 // We use enable_if here to prevent that this overload is selected for
 // pointers or other arguments that are implicitly convertible to bool.
 template <typename T>
@@ -1597,7 +1596,7 @@ public:
   Diagnostic(const DiagnosticsEngine *DO, const DiagnosticBuilder &DiagBuilder);
   Diagnostic(const DiagnosticsEngine *DO, SourceLocation DiagLoc,
              unsigned DiagID, const DiagnosticStorage &DiagStorage,
-             StringRef StoredDiagMessage, unsigned NestingLevel = 0);
+             StringRef StoredDiagMessage);
 
   const DiagnosticsEngine *getDiags() const { return DiagObj; }
   unsigned getID() const { return DiagID; }
@@ -1697,10 +1696,10 @@ public:
   unsigned getNestingLevel() const { return NestingLevel; }
   void setNestingLevel(unsigned Level) { NestingLevel = Level; }
 
-  /// Whether the nesting level of this diagnostic should be replaced
-  /// with its default value (e.g. 1 for notes).
-  bool shouldUseDefaultNestingLevel() const {
-    return !DiagStorage.NestingLevel;
+  /// Determine whether the absolute nesting level (based on the current global
+  /// nesting level of the diagnostics engine) has already been computed.
+  bool nestingLevelAlreadyComputed() const {
+    return DiagStorage.NestingLevel != std::nullopt;
   }
 
   /// Format this diagnostic into a string, substituting the
