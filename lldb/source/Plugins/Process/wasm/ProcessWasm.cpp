@@ -104,7 +104,7 @@ llvm::Expected<std::vector<lldb::addr_t>>
 ProcessWasm::GetWasmCallStack(lldb::tid_t tid) {
   StreamString packet;
   packet.Printf("qWasmCallStack:");
-  packet.Printf("%llx", tid);
+  packet.Printf("%" PRIx64, tid);
 
   StringExtractorGDBRemote response;
   if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response) !=
