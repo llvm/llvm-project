@@ -224,7 +224,6 @@ struct MissingFeatures {
   static bool moduleNameHash() { return false; }
   static bool msabi() { return false; }
   static bool needsGlobalCtorDtor() { return false; }
-  static bool nonFineGrainedBitfields() { return false; }
   static bool objCBlocks() { return false; }
   static bool objCGC() { return false; }
   static bool objCLifetime() { return false; }
