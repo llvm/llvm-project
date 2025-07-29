@@ -336,6 +336,10 @@ static void ProcessAPINotes(Sema &S, Decl *D,
         });
   }
 
+  if (auto ConformsTo = Info.getSwiftConformance())
+    D->addAttr(
+        SwiftAttrAttr::Create(S.Context, "conforms_to:" + ConformsTo.value()));
+
   ProcessAPINotes(S, D, static_cast<const api_notes::CommonEntityInfo &>(Info),
                   Metadata);
 }
@@ -697,10 +701,6 @@ static void ProcessAPINotes(Sema &S, TagDecl *D, const api_notes::TagInfo &Info,
   if (auto DefaultOwnership = Info.SwiftDefaultOwnership)
     D->addAttr(SwiftAttrAttr::Create(
         S.Context, "returned_as_" + DefaultOwnership.value() + "_by_default"));
-
-  if (auto ConformsTo = Info.SwiftConformance)
-    D->addAttr(
-        SwiftAttrAttr::Create(S.Context, "conforms_to:" + ConformsTo.value()));
 
   if (auto Copyable = Info.isSwiftCopyable()) {
     if (!*Copyable)
