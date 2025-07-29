@@ -39,17 +39,23 @@ static llvm::Expected<llvm::SmallVector<llvm::StringRef, 3>>
 splitFunctionCallLabel(llvm::StringRef label) {
   if (!label.consume_front(FunctionCallLabelPrefix))
     return llvm::createStringError(
-        "expected function call label prefix not found in %s", label.data());
+        "expected function call label prefix not found.");
   if (!label.consume_front(":"))
     return llvm::createStringError(
-        "incorrect format: expected ':' as the first character.");
+        "expected ':' as the first character after prefix.");
+
+  auto sep1 = label.find_first_of(":");
+  if (sep1 == llvm::StringRef::npos)
+    return llvm::createStringError("no ':' separator found.");
+
+  auto sep2 = label.find_first_of(":", sep1 + 1);
+  if (sep2 == llvm::StringRef::npos)
+    return llvm::createStringError("only single ':' separator found.");
 
   llvm::SmallVector<llvm::StringRef, 3> components;
-  label.split(components, ":");
-
-  if (components.size() != 3)
-    return llvm::createStringError(
-        "incorrect format: too many label subcomponents.");
+  components.push_back(label.slice(0, sep1));
+  components.push_back(label.slice(sep1 + 1, sep2));
+  components.push_back(label.slice(sep2 + 1, llvm::StringRef::npos));
 
   return components;
 }
@@ -59,7 +65,8 @@ lldb_private::FunctionCallLabel::fromString(llvm::StringRef label) {
   auto components_or_err = splitFunctionCallLabel(label);
   if (!components_or_err)
     return llvm::joinErrors(
-        llvm::createStringError("Failed to decode function call label"),
+        llvm::createStringError("failed to split function call label '%s'",
+                                label.data()),
         components_or_err.takeError());
 
   const auto &components = *components_or_err;
@@ -75,7 +82,7 @@ lldb_private::FunctionCallLabel::fromString(llvm::StringRef label) {
   lldb::user_id_t die_id;
   if (die_label.consumeInteger(/*Radix=*/0, die_id))
     return llvm::createStringError(
-        llvm::formatv("failed to parse DIE ID from '{0}'.", components[1]));
+        llvm::formatv("failed to parse symbol ID from '{0}'.", components[1]));
 
   return FunctionCallLabel{/*.module_id=*/module_id,
                            /*.symbol_id=*/die_id,

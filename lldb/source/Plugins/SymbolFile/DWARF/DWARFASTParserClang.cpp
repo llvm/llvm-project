@@ -255,7 +255,15 @@ static std::optional<std::string> MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
   if (!name)
     return std::nullopt;
 
-  auto module_sp = die.GetModule();
+  SymbolFileDWARF *dwarf = die.GetDWARF();
+  if (!dwarf)
+    return std::nullopt;
+
+  ObjectFile *main_obj = dwarf->GetMainObjectFile();
+  if (!main_obj)
+    return std::nullopt;
+
+  auto module_sp = main_obj->GetModule();
   if (!module_sp)
     return std::nullopt;
 
