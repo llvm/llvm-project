@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/ParentMap.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -29,10 +30,58 @@ public:
   void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &C) const;
 
 private:
+  bool isInitializationContext(const Stmt *S, CheckerContext &C) const;
   bool isEffectivelyConstRegion(const MemRegion *MR, CheckerContext &C) const;
-  bool isConstQualifiedType(const MemRegion *MR, CheckerContext &C) const;
 };
 } // end anonymous namespace
+
+bool StoreToImmutableChecker::isInitializationContext(const Stmt *S,
+                                                      CheckerContext &C) const {
+  // Check if this is a DeclStmt (variable declaration)
+  if (isa<DeclStmt>(S))
+    return true;
+
+  // This part is specific for initialization of const lambdas pre-C++17.
+  // Lets look at the AST of the statement:
+  // ```
+  // const auto lambda = [](){};
+  // ```
+  //
+  // The relevant part of the AST for this case prior to C++17 is:
+  // ...
+  // `-DeclStmt
+  //   `-VarDecl
+  //     `-ExprWithCleanups
+  //       `-CXXConstructExpr
+  // ...
+  // In C++17 and later, the AST is different:
+  // ...
+  // `-DeclStmt
+  //   `-VarDecl
+  //     `-ImplicitCastExpr
+  //       `-LambdaExpr
+  //         |-CXXRecordDecl
+  //         `-CXXConstructExpr
+  // ...
+  // And even beside this, the statement `S` that is given to the checkBind
+  // callback is the VarDecl in C++17 and later, and the CXXConstructExpr in
+  // C++14 and before. So in order to support the C++14 we need the following
+  // ugly hack to detect whether this construction is used to initialize a
+  // variable.
+  //
+  // FIXME: This should be eliminated once the API of checkBind would allow to
+  // distinguish between initialization and assignment, because this information
+  // is already available in the engine, it is just not passed to the checker
+  // API.
+  if (!isa<CXXConstructExpr>(S))
+    return false;
+
+  // We use elidable construction to detect initialization.
+  if (cast<CXXConstructExpr>(S)->isElidable())
+    return true;
+
+  return false;
+}
 
 static bool isEffectivelyConstRegionAux(const MemRegion *MR,
                                         CheckerContext &C) {
@@ -95,7 +144,9 @@ void StoreToImmutableChecker::checkBind(SVal Loc, SVal Val, const Stmt *S,
 
   // Skip variable declarations and initializations - we only want to catch
   // actual writes
-  if (isa<DeclStmt, DeclRefExpr>(S))
+  // FIXME: If the API of checkBind would allow to distinguish between
+  // initialization and assignment, we could use that instead.
+  if (isInitializationContext(S, C))
     return;
 
   // Check if the region corresponds to a const variable
