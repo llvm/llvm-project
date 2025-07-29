@@ -22,8 +22,8 @@ define spir_kernel void @foo(ptr %p){
 ; CHECK: OpFunction
 ; CHECK: %[[#Ptr:]] = OpFunctionParameter
 ; CHECK: OpLabel
-; CHECK: %[[#]] = OpInBoundsPtrAccessChain %[[#SyclHalfTyPtr]] %[[#Ptr]] %[[#ConstNull]] %[[#ConstNull]]
-; CHECK: %[[#StorePtr:]] = OpBitcast %[[#StorePtrTy]] %[[#Ptr]]
+; CHECK: %[[#BitcastOp:]] = OpInBoundsPtrAccessChain %[[#SyclHalfTyPtr]] %[[#Ptr]] %[[#ConstNull]] %[[#ConstNull]]
+; CHECK: %[[#StorePtr:]] = OpBitcast %[[#StorePtrTy]] %[[#BitcastOp]]
 ; CHECK: OpStore %[[#StorePtr]] %[[#ConstFive]]
 ; CHECK: OpReturn
 entry:
@@ -52,8 +52,8 @@ define spir_kernel void @foo3(ptr %p){
 ; CHECK: OpFunction
 ; CHECK: %[[#Ptr:]] = OpFunctionParameter
 ; CHECK: OpLabel
-; CHECK: %[[#]] = OpInBoundsPtrAccessChain %[[#i32Ptr]] %[[#Ptr]] %[[#ConstNull]] %[[#ConstNull]]
-; CHECK: %[[#StorePtr:]] = OpBitcast %[[#StorePtrTy]] %[[#Ptr]]
+; CHECK: %[[#BitcastOp:]] = OpInBoundsPtrAccessChain %[[#i32Ptr]] %[[#Ptr]] %[[#ConstNull]] %[[#ConstNull]]
+; CHECK: %[[#StorePtr:]] = OpBitcast %[[#StorePtrTy]] %[[#BitcastOp]]
 ; CHECK: OpStore %[[#StorePtr]] %[[#ConstFive]]
 ; CHECK: OpReturn
 entry:

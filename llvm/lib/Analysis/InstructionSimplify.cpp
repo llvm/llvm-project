@@ -5013,27 +5013,6 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
   if (Indices.empty())
     return Ptr;
 
-  // getelementptr [0 x T], P, 0 (zero), I -> getelementptr T, P, I.
-  // If type is 0-length array and first index is 0 (zero), drop both the
-  // 0-length array type and the first index. This is a common pattern in the
-  // IR, e.g. when using a zero-length array as a placeholder for a flexible
-  // array such as unbound arrays.
-  if (SrcTy->isArrayTy() && cast<ArrayType>(SrcTy)->getNumElements() == 0 &&
-      match(Indices[0], m_Zero())) {
-    assert(Q.CxtI);
-    IRBuilder<> Builder(const_cast<Instruction *>(Q.CxtI));
-    Indices = Indices.drop_front();
-    SrcTy = cast<ArrayType>(SrcTy)->getElementType();
-    Value *NewGEP = Builder.CreateGEP(SrcTy, Ptr, Indices, "", NW);
-    // Try and simplify again, it could be that after the first simplification
-    // we unlocked new simplification opportunities.
-    Value *Simplify = simplifyGEPInst(SrcTy, Ptr, Indices, NW, Q);
-    if (Simplify)
-      return Simplify;
-
-    return NewGEP;
-  }
-
   // Compute the (pointer) type returned by the GEP instruction.
   Type *LastType = GetElementPtrInst::getIndexedType(SrcTy, Indices);
   Type *GEPTy = Ptr->getType();

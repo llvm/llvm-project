@@ -449,20 +449,3 @@ define ptr @gep_noinbounds_null(i64 %idx) {
   %p = getelementptr i8, ptr null, i64 %idx
   ret ptr %p
 }
-
-define ptr @gep_zero_length_array_first_index_zero(i64 %idx) {
-; CHECK-LABEL: @gep_zero_length_array_first_index_zero(
-; CHECK-NEXT:    [[P:%.*]] = getelementptr [32 x i32], ptr null, i64 [[IDX:%.*]]
-; CHECK-NEXT:    ret ptr [[P]]
-;
-  %p = getelementptr [0 x [32 x i32]], ptr null, i64 0, i64 %idx
-  ret ptr %p
-}
-
-define ptr @gep_zero_length_array_all_index_zero(i64 %idx) {
-; CHECK-LABEL: @gep_zero_length_array_all_index_zero(
-; CHECK-NEXT:    ret ptr null
-;
-  %p = getelementptr [0 x [32 x i32]], ptr null, i64 0, i64 0 
-  ret ptr %p
-}
