@@ -10,32 +10,32 @@ define dso_local void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<%0> = VF
 ; CHECK-NEXT: vp<%3> = original trip-count
-; CHECK-EMPTY: 
+; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body.preheader>:
 ; CHECK-NEXT:   IR   %wide.trip.count = zext nneg i32 %n to i64
 ; CHECK-NEXT:   EMIT vp<%3> = EXPAND SCEV (zext i32 %n to i64)
 ; CHECK-NEXT:   EMIT vp<%4> = EXPAND SCEV (ptrtoint ptr %c to i64)
 ; CHECK-NEXT:   EMIT vp<%5> = EXPAND SCEV (ptrtoint ptr %b to i64)
 ; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
-; CHECK-EMPTY: 
+; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT:   EMIT vp<%6> = ALIAS-LANE-MASK vp<%5>, vp<%4> (write-after-read)
 ; CHECK-NEXT:   EMIT vp<%index.part.next> = VF * Part + ir<0>
 ; CHECK-NEXT:   EMIT vp<%active.lane.mask.entry> = active lane mask vp<%index.part.next>, vp<%3>
 ; CHECK-NEXT: Successor(s): vector loop
-; CHECK-EMPTY: 
+; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<%7> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:     ACTIVE-LANE-MASK-PHI vp<%8> = phi vp<%active.lane.mask.entry>, vp<%active.lane.mask.next>
 ; CHECK-NEXT:     EMIT vp<%9> = and vp<%8>, vp<%6>
 ; CHECK-NEXT:   Successor(s): pred.store
-; CHECK-EMPTY: 
+; CHECK-EMPTY:
 ; CHECK-NEXT:   <xVFxUF> pred.store: {
 ; CHECK-NEXT:     pred.store.entry:
 ; CHECK-NEXT:       BRANCH-ON-MASK vp<%9>
 ; CHECK-NEXT:     Successor(s): pred.store.if, pred.store.continue
-; CHECK-EMPTY: 
+; CHECK-EMPTY:
 ; CHECK-NEXT:     pred.store.if:
 ; CHECK-NEXT:       vp<%10> = SCALAR-STEPS vp<%7>, ir<1>, vp<%0>
 ; CHECK-NEXT:       REPLICATE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<%10>
@@ -46,12 +46,12 @@ define dso_local void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NEXT:       REPLICATE ir<%add> = add ir<%1>, ir<%0>
 ; CHECK-NEXT:       REPLICATE store ir<%add>, ir<%arrayidx6>
 ; CHECK-NEXT:     Successor(s): pred.store.continue
-; CHECK-EMPTY: 
+; CHECK-EMPTY:
 ; CHECK-NEXT:     pred.store.continue:
 ; CHECK-NEXT:     No successors
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Successor(s): for.body.2
-; CHECK-EMPTY: 
+; CHECK-EMPTY:
 ; CHECK-NEXT:   for.body.2:
 ; CHECK-NEXT:     EMIT vp<%popcount> = popcount vp<%6>
 ; CHECK-NEXT:     EMIT vp<%index.next> = add vp<%7>, vp<%popcount>
@@ -62,10 +62,10 @@ define dso_local void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): middle.block
-; CHECK-EMPTY: 
+; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT: Successor(s): ir-bb<for.cond.cleanup.loopexit>
-; CHECK-EMPTY: 
+; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.cond.cleanup.loopexit>:
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:

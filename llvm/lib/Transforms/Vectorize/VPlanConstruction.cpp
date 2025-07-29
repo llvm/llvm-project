@@ -622,26 +622,25 @@ static constexpr uint32_t CheckBypassWeights[] = {1, 127};
 
 void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
                                        BasicBlock *CheckBlock,
-                                       bool AddBranchWeights, bool HasAliasMask) {
+                                       bool AddBranchWeights) {
+  VPValue *CondVPV = Plan.getOrAddLiveIn(Cond);
   VPBasicBlock *CheckBlockVPBB = Plan.createVPIRBasicBlock(CheckBlock);
   VPBlockBase *VectorPH = Plan.getVectorPreheader();
+  VPBlockBase *ScalarPH = Plan.getScalarPreheader();
   VPBlockBase *PreVectorPH = VectorPH->getSinglePredecessor();
   VPBlockUtils::insertOnEdge(PreVectorPH, VectorPH, CheckBlockVPBB);
-  if (!HasAliasMask) {
-    VPValue *CondVPV = Plan.getOrAddLiveIn(Cond);
-    VPBlockBase *ScalarPH = Plan.getScalarPreheader();
-    VPBlockUtils::connectBlocks(CheckBlockVPBB, ScalarPH);
-    CheckBlockVPBB->swapSuccessors();
+  VPBlockUtils::connectBlocks(CheckBlockVPBB, ScalarPH);
+  CheckBlockVPBB->swapSuccessors();
 
-    // We just connected a new block to the scalar preheader. Update all
-    // VPPhis by adding an incoming value for it, replicating the last value.
-    unsigned NumPredecessors = ScalarPH->getNumPredecessors();
-    for (VPRecipeBase &R : cast<VPBasicBlock>(ScalarPH)->phis()) {
-      assert(isa<VPPhi>(&R) && "Phi expected to be VPPhi");
-      assert(cast<VPPhi>(&R)->getNumIncoming() == NumPredecessors - 1 &&
-             "must have incoming values for all operands");
-      R.addOperand(R.getOperand(NumPredecessors - 2));
-    }
+  // We just connected a new block to the scalar preheader. Update all
+  // VPPhis by adding an incoming value for it, replicating the last value.
+  unsigned NumPredecessors = ScalarPH->getNumPredecessors();
+  for (VPRecipeBase &R : cast<VPBasicBlock>(ScalarPH)->phis()) {
+    assert(isa<VPPhi>(&R) && "Phi expected to be VPPhi");
+    assert(cast<VPPhi>(&R)->getNumIncoming() == NumPredecessors - 1 &&
+           "must have incoming values for all operands");
+    R.addOperand(R.getOperand(NumPredecessors - 2));
+  }
 
   VPIRMetadata VPBranchWeights;
   auto *Term = VPBuilder(CheckBlockVPBB)

@@ -2038,11 +2038,15 @@ static VPValue *addVPLaneMaskPhiAndUpdateExitBranch(
   LaneMaskPhi->insertAfter(CanonicalIVPHI);
   VPValue *LaneMask = LaneMaskPhi;
   if (AliasMask) {
+    auto &Ctx = Plan.getCanonicalIV()->getScalarType()->getContext();
+    VPBuilder CountBuilder =
+        VPBuilder::getToInsertAfter(AliasMask->getDefiningRecipe());
+    VPValue *PopCount = CountBuilder.createNaryOp(VPInstruction::PopCount,
+                                                  {AliasMask}, DL, "popcount");
     // Increment phi by correct amount.
     Builder.setInsertPoint(CanonicalIVIncrement);
 
-    VPValue *IncrementBy = Builder.createNaryOp(VPInstruction::PopCount,
-                                                {AliasMask}, DL, "popcount");
+    VPValue *IncrementBy = PopCount;
     Type *IVType = CanonicalIVPHI->getScalarType();
 
     if (IVType->getScalarSizeInBits() < 64)

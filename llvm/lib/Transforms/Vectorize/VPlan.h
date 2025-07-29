@@ -3190,7 +3190,7 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
   }
 };
 
-// Given a pointer A that is being laoded from, and pointer B that is being
+// Given a pointer A that is being loaded from, and pointer B that is being
 // stored to, both with unknown lengths, create a mask that disables
 // elements which could overlap across a loop iteration. For example, if A
 // is X and B is X + 2 with VF being 4, only the first two elements of the

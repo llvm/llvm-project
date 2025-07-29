@@ -974,6 +974,11 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::loop_dependence_raw_mask:
+  case Intrinsic::loop_dependence_war_mask:
+    if (ST->hasSVE2())
+      return 1;
+    return InstructionCost::getInvalid(CostKind);
   default:
     break;
   }
