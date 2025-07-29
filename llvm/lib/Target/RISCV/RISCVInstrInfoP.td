@@ -136,6 +136,7 @@ class RVPUnary_ri<bits<2> w, bits<5> uf, string opcodestr>
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtP] in {
+let IsSignExtendingOpW = 1 in
 def CLS    : Unary_r<0b011000000011, 0b001, "cls">;
 def ABS    : Unary_r<0b011000000111, 0b001, "abs">;
 } // Predicates = [HasStdExtP]
@@ -146,8 +147,10 @@ let Predicates = [HasStdExtP, IsRV64] in {
 def REV16      : Unary_r<0b011010110000, 0b101, "rev16">;
 def REV_RV64   : Unary_r<0b011010111111, 0b101, "rev">;
 
+let IsSignExtendingOpW = 1 in {
 def CLSW  : UnaryW_r<0b011000000011, 0b001, "clsw">;
 def ABSW  : UnaryW_r<0b011000000111, 0b001, "absw">;
+}
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in {
