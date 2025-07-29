@@ -162,8 +162,8 @@ func.func @negative_non_vector_acc(%A: vector<4x8x2xf16>, %B: vector<8x4x2xf16>,
 #map = affine_map<(m, n, k, vnni) -> (m, k, vnni)>
 #map1 = affine_map<(m, n, k, vnni) -> (k, n, vnni)>
 #map2 = affine_map<(m, n, k, vnni) -> (m, n)>
-func.func @negative_invalid_operand_types(%A: vector<4x8x2xf32>, %B: vector<8x16x2xf32>,
-    %C: vector<4x16xf32>) -> vector<4x16xf32> {
+func.func @negative_invalid_operand_types(%A: vector<4x8x2xf32>,
+    %B: vector<8x16x2xf32>, %C: vector<4x16xf32>) -> vector<4x16xf32> {
   %0 = vector.contract
     {kind = #vector.kind<add>,
     indexing_maps = [#map, #map1, #map2],
@@ -211,6 +211,25 @@ func.func @negative_invalid_vnni_factor(%A: vector<4x2x4xf16>, %B: vector<2x2x4x
 }
 
 // CHECK-LABEL: @negative_invalid_vnni_factor(
+// CHECK-NOT: amx
+// CHECK: vector.contract
+
+// -----
+
+#map = affine_map<(batch, m, n, k, vnni) -> (batch, m, k, vnni)>
+#map1 = affine_map<(batch, m, n, k, vnni) -> (batch, k, n, vnni)>
+#map2 = affine_map<(batch, m, n, k, vnni) -> (batch, m, n)>
+func.func @negative_invalid_operands_shapes(%A: vector<1x4x8x2xf16>,
+    %B: vector<1x8x16x2xf16>, %C: vector<1x4x16xf32>) -> vector<1x4x16xf32> {
+  %0 = vector.contract
+    {kind = #vector.kind<add>,
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "parallel", "reduction", "reduction"]}
+    %A, %B, %C : vector<1x4x8x2xf16>, vector<1x8x16x2xf16> into vector<1x4x16xf32>
+  return %0 : vector<1x4x16xf32>
+}
+
+// CHECK-LABEL: @negative_invalid_operands_shapes(
 // CHECK-NOT: amx
 // CHECK: vector.contract
 
