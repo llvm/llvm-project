@@ -585,7 +585,8 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
   }
 
   if (const auto *bd = dyn_cast<BindingDecl>(nd)) {
-    assert(!e->refersToEnclosingVariableOrCapture() && !cir::MissingFeatures::lambdaCaptures());
+    assert(!e->refersToEnclosingVariableOrCapture() &&
+           !cir::MissingFeatures::lambdaCaptures());
     return emitLValue(bd->getBinding());
   }
 
