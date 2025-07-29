@@ -248,6 +248,10 @@ bool Watchpoint::VariableWatchpointDisabler(void *baton,
               " matched internal breakpoint execution context",
               watch_sp->GetID());
     process_sp->DisableWatchpoint(watch_sp);
+    Debugger::ReportWarning(
+        llvm::formatv("Watchpoint {0} is leaving its scope! "
+                      "Disabling this watchpoint.",
+                      watch_sp->GetID()));
     return false;
   }
   LLDB_LOGF(log,
