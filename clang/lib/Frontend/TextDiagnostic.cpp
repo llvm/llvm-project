@@ -69,9 +69,6 @@ static void applyTemplateHighlighting(raw_ostream &OS, StringRef Str,
   }
 }
 
-/// Number of spaces to indent when word-wrapping.
-constexpr unsigned WordWrapIndentation = 4;
-
 /// Number of spaces per indent level.
 constexpr unsigned IndentWidth = 4;
 
@@ -657,6 +654,7 @@ static bool printWordWrapped(raw_ostream &OS, StringRef Str, unsigned Columns,
 
     // This word does not fit on the current line, so wrap to the next
     // line.
+    unsigned WordWrapIndentation = FancyFormat ? 4 : 6;
     OS << '\n';
     startLineImpl(OS, BaseIndent + WordWrapIndentation, FancyFormat);
     applyTemplateHighlighting(OS, Str.substr(WordStart, WordLength),
