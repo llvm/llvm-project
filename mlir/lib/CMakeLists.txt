@@ -50,5 +50,7 @@ add_mlir_library(MLIRRegisterAllExtensions
   PARTIAL_SOURCES_INTENDED
 
   LINK_LIBS PUBLIC
+  ${dialect_libs}
+  ${conversion_libs}
   ${extension_libs}
   )
