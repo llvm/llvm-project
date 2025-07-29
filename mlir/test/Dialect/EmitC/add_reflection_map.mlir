@@ -27,22 +27,22 @@ emitc.class @mainClass {
 // CHECK-NEXT:     emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = ["another_feature"]}
 // CHECK-NEXT:     emitc.field @fieldName1 : !emitc.array<1xf32> {emitc.field_ref = ["some_feature"]}
 // CHECK-NEXT:     emitc.field @fieldName2 : !emitc.array<1xf32> {emitc.field_ref = ["output_0"]}
-// CHECK-NEXT:     emitc.func @getFeatures() -> !emitc.opaque<"const std::map<std::string, char*>"> {
-// CHECK-NEXT:        %0 = "emitc.constant"() <{value = #emitc.opaque<"{  { \22another_feature\22, reinterpret_cast<char*>(&fieldName0) },  { \22some_feature\22, reinterpret_cast<char*>(&fieldName1) },  { \22output_0\22, reinterpret_cast<char*>(&fieldName2) } }">}> : () -> !emitc.opaque<"const std::map<std::string, char*>">
-// CHECK-NEXT:        return %0 : !emitc.opaque<"const std::map<std::string, char*>">
-// CHECK-NEXT:     }
+// CHECK-NEXT:     %0 = "emitc.constant"() <{value = #emitc.opaque<"{  { \22another_feature\22, reinterpret_cast<char*>(&fieldName0) },  
+// CHECK-SAME:     { \22some_feature\22, reinterpret_cast<char*>(&fieldName1) },  
+// CHECK-SAME:     { \22output_0\22, reinterpret_cast<char*>(&fieldName2) } }">}> 
+// CHECK-SAME:     : () -> !emitc.opaque<"const std::map<std::string, char*>">
 // CHECK-NEXT:     emitc.func @execute() {
-// CHECK-NEXT:       %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
-// CHECK-NEXT:       %1 = get_field @fieldName0 : !emitc.array<1xf32>
-// CHECK-NEXT:       %2 = get_field @fieldName1 : !emitc.array<1xf32>
-// CHECK-NEXT:       %3 = get_field @fieldName2 : !emitc.array<1xf32>
-// CHECK-NEXT:       %4 = subscript %2[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
-// CHECK-NEXT:       %5 = load %4 : <f32>
-// CHECK-NEXT:       %6 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
-// CHECK-NEXT:       %7 = load %6 : <f32>
-// CHECK-NEXT:       %8 = add %5, %7 : (f32, f32) -> f32
-// CHECK-NEXT:       %9 = subscript %3[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
-// CHECK-NEXT:       assign %8 : f32 to %9 : <f32>
+// CHECK-NEXT:       %1 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
+// CHECK-NEXT:       %2 = get_field @fieldName0 : !emitc.array<1xf32>
+// CHECK-NEXT:       %3 = get_field @fieldName1 : !emitc.array<1xf32>
+// CHECK-NEXT:       %4 = get_field @fieldName2 : !emitc.array<1xf32>
+// CHECK-NEXT:       %5 = subscript %3[%1] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+// CHECK-NEXT:       %6 = load %5 : <f32>
+// CHECK-NEXT:       %7 = subscript %2[%1] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+// CHECK-NEXT:       %8 = load %7 : <f32>
+// CHECK-NEXT:       %9 = add %6, %8 : (f32, f32) -> f32
+// CHECK-NEXT:       %10 = subscript %4[%1] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+// CHECK-NEXT:       assign %9 : f32 to %10 : <f32>
 // CHECK-NEXT:       return
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }

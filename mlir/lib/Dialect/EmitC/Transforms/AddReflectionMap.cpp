@@ -13,6 +13,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/WalkPatternRewriteDriver.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
 using namespace emitc;
@@ -60,12 +61,11 @@ class AddReflectionMapPass
     }
 
     mlir::OpBuilder builder(module.getBody(), module.getBody()->begin());
-    if (!hasMapHdr) {
+    if (!hasMapHdr)
       addHeader(builder, module, mapLibraryHeader);
-    }
-    if (!hasStringHdr) {
+
+    if (!hasStringHdr)
       addHeader(builder, module, stringLibraryHeader);
-    }
   }
 };
 
@@ -82,7 +82,6 @@ public:
                                 PatternRewriter &rewriter) const override {
     MLIRContext *context = rewriter.getContext();
 
-    // Define the opaque types
     emitc::OpaqueType mapType = mlir::emitc::OpaqueType::get(
         context, "const std::map<std::string, char*>");
 
@@ -105,43 +104,33 @@ public:
       }
     });
 
-    std::stringstream ss;
-    ss << "{ ";
+    std::string mapString;
+    mapString += "{ ";
     for (size_t i = 0; i < fieldNames.size(); ++i) {
-      ss << " { \"" << fieldNames[i].first << "\", reinterpret_cast<char*>(&"
-         << fieldNames[i].second << ") }";
-      if (i < fieldNames.size() - 1) {
-        ss << ", ";
-      }
+      mapString += llvm::formatv("{ \"{0}\", reinterpret_cast<char*>(&{1}) }",
+                                 fieldNames[i].first, fieldNames[i].second);
+      if (i < fieldNames.size() - 1)
+        mapString += ", ";
     }
-    ss << " }";
+    mapString += " }";
 
     emitc::FuncOp executeFunc =
         classOp.lookupSymbol<mlir::emitc::FuncOp>("execute");
     if (executeFunc)
       rewriter.setInsertionPoint(executeFunc);
-    else
+    else {
       classOp.emitError() << "ClassOp must contain a function named 'execute' "
                              "to add reflection map";
-
-    emitc::OpaqueType returnType = mlir::emitc::OpaqueType::get(
-        context, "const std::map<std::string, char*>");
-
-    // Create the getFeatures function
-    emitc::FuncOp getFeaturesFunc = rewriter.create<mlir::emitc::FuncOp>(
-        classOp.getLoc(), "getFeatures",
-        rewriter.getFunctionType({}, {returnType}));
-
-    // Add the body of the getFeatures function
-    Block *funcBody = getFeaturesFunc.addEntryBlock();
-    rewriter.setInsertionPointToStart(funcBody);
+      return failure();
+    }
 
     // Create the constant map
-    emitc::ConstantOp bufferMap = rewriter.create<emitc::ConstantOp>(
-        classOp.getLoc(), mapType, emitc::OpaqueAttr::get(context, ss.str()));
+    rewriter.create<emitc::ConstantOp>(
+        classOp.getLoc(), mapType, emitc::OpaqueAttr::get(context, mapString));
 
-    rewriter.create<mlir::emitc::ReturnOp>(classOp.getLoc(),
-                                           bufferMap.getResult());
+    // TODO: Ideally, we would create a function that returns a reference to the
+    // buffer map. However, current limitations in EmitC function support make
+    // this difficult to implement at the moment.
 
     return success();
   }
