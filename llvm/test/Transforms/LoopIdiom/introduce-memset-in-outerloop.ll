@@ -1,6 +1,7 @@
-; REQUIRES: asserts
-; RUN: opt <%s -p "loop(loop-idiom)" -verify-scev -o /dev/null
+; RUN: opt <%s -p "print<scalar-evolution>" -disable-output 2>&1 | FileCheck %s
+; RUN: opt <%s -p "loop(loop-idiom),print<scalar-evolution>" -disable-output 2>&1 | FileCheck %s
 
+; CHECK: backedge-taken count is i64 1
 
 ; IR corresponds to the following C test:
 ; extern char a[];
@@ -10,8 +11,6 @@
 ;       a[c + d] = 0;
 ; }
 
-; Make sure we do not crash when verifying scev.
-
 @a = external global [0 x i8]
 
 define void @foo()  {
@@ -19,7 +18,7 @@ entry:
   br label %outerL
 
 outerL:                              ; preds = %entry, %outerLatch
-  %e = phi i64 [ undef, %entry ], [ %lcssa, %outerLatch ]
+  %e = phi i64 [ poison, %entry ], [ %lcssa, %outerLatch ]
   %c = phi i64 [ 0, %entry ], [ %c.next, %outerLatch ]
   %e.cmp = icmp slt i64 %e, 6
   br i1 %e.cmp, label %innerL, label %outerLatch

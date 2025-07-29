@@ -1154,11 +1154,6 @@ bool LoopIdiomRecognize::processLoopStridedStore(
 
   NewCall->setDebugLoc(TheStore->getDebugLoc());
 
-  auto *MemsetLoop = LI->getLoopFor(NewCall->getParent());
-  // FIXME: We should invalidate scev only if the loop already does not have any
-  // side effects.
-  SE->forgetLoop(MemsetLoop);
-
   if (MSSAU) {
     MemoryAccess *NewMemAcc = MSSAU->createMemoryAccessInBB(
         NewCall, nullptr, NewCall->getParent(), MemorySSA::BeforeTerminator);
