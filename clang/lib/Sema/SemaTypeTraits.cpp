@@ -2343,6 +2343,7 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
   SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
       << T << diag::TraitName::TriviallyCopyable;
 
+  DiagnosticsEngine::NestingLevelRAII IncrementNestingLevel{SemaRef.Diags};
   if (T->isReferenceType())
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
         << diag::TraitNotSatisfiedReason::Ref;
@@ -2354,7 +2355,10 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
   if (D->hasDefinition())
     DiagnoseNonTriviallyCopyableReason(SemaRef, Loc, D);
 
-  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+  {
+    DiagnosticsEngine::NestingLevelRAII IncrementNestingLevel{SemaRef.Diags};
+    SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+  }
 }
 
 static void DiagnoseNonAssignableReason(Sema &SemaRef, SourceLocation Loc,
@@ -2371,6 +2375,7 @@ static void DiagnoseNonAssignableReason(Sema &SemaRef, SourceLocation Loc,
   auto LHS = createDeclValExpr(T);
   auto RHS = createDeclValExpr(U);
 
+  DiagnosticsEngine::NestingLevelRAII IncrementNestingLevel{SemaRef.Diags};
   EnterExpressionEvaluationContext Unevaluated(
       SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
   Sema::ContextRAII TUContext(SemaRef,
@@ -2431,6 +2436,7 @@ static void DiagnoseIsEmptyReason(Sema &S, SourceLocation Loc,
 static void DiagnoseIsEmptyReason(Sema &S, SourceLocation Loc, QualType T) {
   // Emit primary "not empty" diagnostic.
   S.Diag(Loc, diag::note_unsatisfied_trait) << T << diag::TraitName::Empty;
+  DiagnosticsEngine::NestingLevelRAII IncrementNestingLevel{S.Diags};
 
   // While diagnosing is_empty<T>, we want to look at the actual type, not a
   // reference or an array of it. So we need to massage the QualType param to
@@ -2446,6 +2452,7 @@ static void DiagnoseIsEmptyReason(Sema &S, SourceLocation Loc, QualType T) {
   if (auto *D = T->getAsCXXRecordDecl()) {
     if (D->hasDefinition()) {
       DiagnoseIsEmptyReason(S, Loc, D);
+      DiagnosticsEngine::NestingLevelRAII IncrementNestingLevel{S.Diags};
       S.Diag(D->getLocation(), diag::note_defined_here) << D;
     }
   }
