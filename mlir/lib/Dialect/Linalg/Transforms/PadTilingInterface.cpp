@@ -187,9 +187,8 @@ SmallVector<OpFoldResult> linalg::computePaddedShape(
     for (unsigned i = 1; i < dims.size(); ++i)
       sumExpr = sumExpr + dims[i];
     // Add 1 to the maximum accessed index and get the final padded size.
-    sumExpr = sumExpr + rewriter.getAffineConstantExpr(1);
-    OpFoldResult paddedDimOfr =
-        affine::makeComposedFoldedAffineApply(rewriter, loc, sumExpr, terms);
+    OpFoldResult paddedDimOfr = affine::makeComposedFoldedAffineApply(
+        rewriter, loc, sumExpr + 1, terms);
     paddedShape[resultIndex] = paddedDimOfr;
   }
 
