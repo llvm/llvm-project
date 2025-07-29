@@ -5306,6 +5306,19 @@ add_fp_unittest(
     libc.src.math.ddivf128
 )
 
+
+add_fp_unittest(
+  bfloat16_add_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    bfloat16_add_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+)
+
 add_fp_unittest(
   add_same_type_test
   SUITE
