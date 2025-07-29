@@ -344,8 +344,8 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
   }
   bool bzMode{(edit.modes.editingFlags & blankZero) != 0};
   int exponent{0};
-  if (!next || (!bzMode && *next == ' ') ||
-      (!(edit.modes.editingFlags & decimalComma) && *next == ',')) {
+  const char32_t comma{GetSeparatorChar(edit)};
+  if (!next || (!bzMode && *next == ' ') || *next == comma) {
     if (!edit.IsListDirected() && !io.GetConnectionState().IsAtEOF()) {
       // An empty/blank field means zero when not list-directed.
       // A fixed-width field containing only a sign is also zero;
@@ -545,7 +545,7 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
     while (next && (*next == ' ' || *next == '\t')) {
       next = io.NextInField(remaining, edit);
     }
-    if (next && (*next != ',' || (edit.modes.editingFlags & decimalComma))) {
+    if (next && *next != comma) {
       return {}; // error: unused nonblank character in fixed-width field
     }
   }
