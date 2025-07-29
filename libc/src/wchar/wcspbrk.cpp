@@ -11,7 +11,7 @@
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/null_check.h"
-#include "wchar_utils.h"
+#include "src/wchar/wchar_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
