@@ -60,9 +60,6 @@ def : Function {
         Param<"const void*", "SrcPtr", "pointer to copy from", PARAM_IN>,
         Param<"ol_device_handle_t", "SrcDevice", "device that SrcPtr belongs to", PARAM_IN>,
         Param<"size_t", "Size", "size in bytes of data to copy", PARAM_IN>,
-        Param<"ol_event_handle_t*", "EventOut", "optional recorded event for the enqueued operation", PARAM_OUT_OPTIONAL>
     ];
-    let returns = [
-        Return<"OL_ERRC_INVALID_ARGUMENT", ["`Queue == NULL && EventOut != NULL`"]>
-    ];
+    let returns = [];
 }

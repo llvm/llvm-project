@@ -13,13 +13,12 @@ define i64 @exit_value_scalar_live_in(ptr %dst, i64 %in) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP2]], align 2
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
@@ -29,9 +28,9 @@ define i64 @exit_value_scalar_live_in(ptr %dst, i64 %in) {
 ; CHECK-NEXT:    store i16 0, ptr [[GEP]], align 2
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ult i64 [[IV]], 1000
-; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT:.*]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[IN]], %[[LOOP]] ], [ [[IN]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[IN]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -60,13 +59,12 @@ define <2 x i64> @exit_value_vector_live_in(ptr %dst) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP2]], align 2
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
@@ -76,9 +74,9 @@ define <2 x i64> @exit_value_vector_live_in(ptr %dst) {
 ; CHECK-NEXT:    store i16 0, ptr [[GEP]], align 2
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ult i64 [[IV]], 1000
-; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT:.*]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi <2 x i64> [ zeroinitializer, %[[LOOP]] ], [ zeroinitializer, %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi <2 x i64> [ zeroinitializer, %[[LOOP]] ]
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
 entry:

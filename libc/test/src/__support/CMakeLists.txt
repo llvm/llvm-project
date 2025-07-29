@@ -265,6 +265,7 @@ add_libc_test(
   SRCS
     str_to_float_comparison_test.cpp
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.stdio.printf
     libc.src.stdio.fopen
     libc.src.stdio.fclose

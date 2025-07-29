@@ -1095,10 +1095,11 @@ TEST(CompletionTest, Documentation) {
 
       int x = ^
      )cpp");
-  EXPECT_THAT(Results.Completions,
-              Contains(AllOf(
-                  named("foo"),
-                  doc("Annotation: custom_annotation\nNon-doxygen comment."))));
+  EXPECT_THAT(
+      Results.Completions,
+      Contains(
+          AllOf(named("foo"),
+                doc("Annotation: custom_annotation\n\nNon-doxygen comment."))));
   EXPECT_THAT(
       Results.Completions,
       Contains(AllOf(named("bar"), doc("Doxygen comment.\n\\param int a"))));
@@ -2297,7 +2298,7 @@ TEST(CompletionTest, Render) {
   EXPECT_EQ(R.insertTextFormat, InsertTextFormat::PlainText);
   EXPECT_EQ(R.filterText, "x");
   EXPECT_EQ(R.detail, "int");
-  EXPECT_EQ(R.documentation->value, "From \"foo.h\"\nThis is x()");
+  EXPECT_EQ(R.documentation->value, "From \"foo.h\"\n\nThis is x()");
   EXPECT_THAT(R.additionalTextEdits, IsEmpty());
   EXPECT_EQ(R.sortText, sortText(1.0, "x"));
   EXPECT_FALSE(R.deprecated);
@@ -2332,7 +2333,7 @@ TEST(CompletionTest, Render) {
   C.BundleSize = 2;
   R = C.render(Opts);
   EXPECT_EQ(R.detail, "[2 overloads]");
-  EXPECT_EQ(R.documentation->value, "From \"foo.h\"\nThis is x()");
+  EXPECT_EQ(R.documentation->value, "From \"foo.h\"\n\nThis is x()");
 
   C.Deprecated = true;
   R = C.render(Opts);
@@ -2340,7 +2341,7 @@ TEST(CompletionTest, Render) {
 
   Opts.DocumentationFormat = MarkupKind::Markdown;
   R = C.render(Opts);
-  EXPECT_EQ(R.documentation->value, "From `\"foo.h\"`  \nThis is `x()`");
+  EXPECT_EQ(R.documentation->value, "From `\"foo.h\"`\n\nThis is `x()`");
 }
 
 TEST(CompletionTest, IgnoreRecoveryResults) {

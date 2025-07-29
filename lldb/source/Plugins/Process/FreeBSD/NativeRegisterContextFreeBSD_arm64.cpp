@@ -44,7 +44,8 @@ NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
     NativeProcessFreeBSD &process = native_thread.GetProcess();
     g_register_flags_detector.DetectFields(
         process.GetAuxValue(AuxVector::AUXV_FREEBSD_AT_HWCAP).value_or(0),
-        process.GetAuxValue(AuxVector::AUXV_AT_HWCAP2).value_or(0));
+        process.GetAuxValue(AuxVector::AUXV_AT_HWCAP2).value_or(0),
+        /*hwcap3=*/0);
   }
 
   return new NativeRegisterContextFreeBSD_arm64(target_arch, native_thread);

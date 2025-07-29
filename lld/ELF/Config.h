@@ -404,6 +404,7 @@ struct Config {
   bool zIfuncNoplt;
   bool zInitfirst;
   bool zInterpose;
+  bool zKeepDataSectionPrefix;
   bool zKeepTextSectionPrefix;
   bool zLrodataAfterBss;
   bool zNoBtCfi;
@@ -568,6 +569,7 @@ struct UndefinedDiag {
 // a partition.
 struct InStruct {
   std::unique_ptr<InputSection> attributes;
+  std::unique_ptr<SyntheticSection> hexagonAttributes;
   std::unique_ptr<SyntheticSection> riscvAttributes;
   std::unique_ptr<BssSection> bss;
   std::unique_ptr<BssSection> bssRelRo;

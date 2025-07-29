@@ -548,8 +548,10 @@ cc_library(
 
 cc_library(
     name = "DWARFCFIChecker",
-    srcs = glob(["lib/DWARFCFIChecker/*.cpp",
-                 "lib/DWARFCFIChecker/*.h",]),
+    srcs = glob([
+        "lib/DWARFCFIChecker/*.cpp",
+        "lib/DWARFCFIChecker/*.h",
+    ]),
     hdrs = glob(["include/llvm/DWARFCFIChecker/*.h"]),
     copts = llvm_copts,
     deps = [
@@ -1737,6 +1739,7 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":Core",
+        ":MC",
         ":Support",
     ],
 )

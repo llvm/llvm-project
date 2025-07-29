@@ -551,4 +551,14 @@ def SimplifyFIROperations : Pass<"simplify-fir-operations", "mlir::ModuleOp"> {
       "Prefer expanding without using Fortran runtime calls.">];
 }
 
+def OptimizeArrayRepacking
+    : Pass<"optimize-array-repacking", "mlir::func::FuncOp"> {
+  let summary = "Optimizes redundant array repacking operations";
+  let description = [{
+    If the source of fir.pack_array is known to be contiguous,
+    then this pass erases such operations. The corresponding
+    fir.unpack_array operations are also removed.
+  }];
+}
+
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

@@ -348,22 +348,6 @@ public:
     return CIRBaseBuilderTy::createStore(loc, val, dst.getPointer(), align);
   }
 
-  mlir::Value createComplexCreate(mlir::Location loc, mlir::Value real,
-                                  mlir::Value imag) {
-    auto resultComplexTy = cir::ComplexType::get(real.getType());
-    return create<cir::ComplexCreateOp>(loc, resultComplexTy, real, imag);
-  }
-
-  mlir::Value createComplexReal(mlir::Location loc, mlir::Value operand) {
-    auto operandTy = mlir::cast<cir::ComplexType>(operand.getType());
-    return create<cir::ComplexRealOp>(loc, operandTy.getElementType(), operand);
-  }
-
-  mlir::Value createComplexImag(mlir::Location loc, mlir::Value operand) {
-    auto operandTy = mlir::cast<cir::ComplexType>(operand.getType());
-    return create<cir::ComplexImagOp>(loc, operandTy.getElementType(), operand);
-  }
-
   /// Create a cir.complex.real_ptr operation that derives a pointer to the real
   /// part of the complex value pointed to by the specified pointer value.
   mlir::Value createComplexRealPtr(mlir::Location loc, mlir::Value value) {
@@ -375,6 +359,21 @@ public:
 
   Address createComplexRealPtr(mlir::Location loc, Address addr) {
     return Address{createComplexRealPtr(loc, addr.getPointer()),
+                   addr.getAlignment()};
+  }
+
+  /// Create a cir.complex.imag_ptr operation that derives a pointer to the
+  /// imaginary part of the complex value pointed to by the specified pointer
+  /// value.
+  mlir::Value createComplexImagPtr(mlir::Location loc, mlir::Value value) {
+    auto srcPtrTy = mlir::cast<cir::PointerType>(value.getType());
+    auto srcComplexTy = mlir::cast<cir::ComplexType>(srcPtrTy.getPointee());
+    return create<cir::ComplexImagPtrOp>(
+        loc, getPointerTo(srcComplexTy.getElementType()), value);
+  }
+
+  Address createComplexImagPtr(mlir::Location loc, Address addr) {
+    return Address{createComplexImagPtr(loc, addr.getPointer()),
                    addr.getAlignment()};
   }
 
@@ -409,21 +408,23 @@ public:
   }
 
   mlir::Value createSetBitfield(mlir::Location loc, mlir::Type resultType,
-                                mlir::Value dstAddr, mlir::Type storageType,
+                                Address dstAddr, mlir::Type storageType,
                                 mlir::Value src, const CIRGenBitFieldInfo &info,
-                                bool isLvalueVolatile, bool useVolatile) {
-    return create<cir::SetBitfieldOp>(loc, resultType, dstAddr, storageType,
-                                      src, info.name, info.size, info.offset,
-                                      info.isSigned, isLvalueVolatile);
+                                bool isLvalueVolatile) {
+    return create<cir::SetBitfieldOp>(
+        loc, resultType, dstAddr.getPointer(), storageType, src, info.name,
+        info.size, info.offset, info.isSigned, isLvalueVolatile,
+        dstAddr.getAlignment().getAsAlign().value());
   }
 
   mlir::Value createGetBitfield(mlir::Location loc, mlir::Type resultType,
-                                mlir::Value addr, mlir::Type storageType,
+                                Address addr, mlir::Type storageType,
                                 const CIRGenBitFieldInfo &info,
-                                bool isLvalueVolatile, bool useVolatile) {
-    return create<cir::GetBitfieldOp>(loc, resultType, addr, storageType,
-                                      info.name, info.size, info.offset,
-                                      info.isSigned, isLvalueVolatile);
+                                bool isLvalueVolatile) {
+    return create<cir::GetBitfieldOp>(
+        loc, resultType, addr.getPointer(), storageType, info.name, info.size,
+        info.offset, info.isSigned, isLvalueVolatile,
+        addr.getAlignment().getAsAlign().value());
   }
 };
 

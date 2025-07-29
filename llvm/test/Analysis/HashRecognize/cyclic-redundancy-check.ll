@@ -909,10 +909,10 @@ exit:                                              ; preds = %loop
   ret i16 %crc.next
 }
 
-define i16 @not.crc.bad.cast(i8 %msg, i16 %checksum) {
-; CHECK-LABEL: 'not.crc.bad.cast'
+define i16 @not.crc.bad.endian.swapped.sb.check(i8 %msg, i16 %checksum) {
+; CHECK-LABEL: 'not.crc.bad.endian.swapped.sb.check'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Expected bottom 8 bits zero (????????00001011)
+; CHECK-NEXT:  Reason: Found stray unvisited instructions
 ;
 entry:
   br label %loop
@@ -1189,3 +1189,55 @@ loop:                                              ; preds = %loop, %entry
 exit:                                              ; preds = %loop
   ret i16 %crc.next
 }
+
+define i16 @not.crc.stray.unvisited.call(i16 %crc.init) {
+; CHECK-LABEL: 'not.crc.stray.unvisited.call'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Found stray unvisited instructions
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %crc.init, %entry ], [ %crc.next, %loop ]
+  %crc.shl = shl i16 %crc, 1
+  %crc.xor = xor i16 %crc.shl, 4129
+  %check.sb = icmp slt i16 %crc, 0
+  %crc.next = select i1 %check.sb, i16 %crc.xor, i16 %crc.shl
+  call void @print(i16 %crc.next)
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exit.cond = icmp samesign ult i32 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
+declare void @print(i16)
+
+define i16 @not.crc.call.sb.check(i16 %crc.init) {
+; CHECK-LABEL: 'not.crc.call.sb.check'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Found stray unvisited instructions
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %crc.init, %entry ], [ %crc.next, %loop ]
+  %crc.shl = shl i16 %crc, 1
+  %crc.xor = xor i16 %crc.shl, 4129
+  %call = call i16 @side.effect()
+  %check.sb = icmp slt i16 %call, 0
+  %crc.next = select i1 %check.sb, i16 %crc.xor, i16 %crc.shl
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exit.cond = icmp samesign ult i32 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
+declare i16 @side.effect()

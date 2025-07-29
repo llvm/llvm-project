@@ -559,7 +559,7 @@ void ThreadIgnoreSyncBegin(ThreadState *thr, uptr pc);
 void ThreadIgnoreSyncEnd(ThreadState *thr);
 
 Tid ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached);
-void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
+void ThreadStart(ThreadState *thr, Tid tid, ThreadID os_id,
                  ThreadType thread_type);
 void ThreadFinish(ThreadState *thr);
 Tid ThreadConsumeTid(ThreadState *thr, uptr pc, uptr uid);

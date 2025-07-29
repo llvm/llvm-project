@@ -98,25 +98,11 @@ bool CheckGlobalInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 /// Checks if a value can be stored in a block.
 bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
-/// Checks if a method can be invoked on an object.
-bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
-
 /// Checks if a value can be initialized.
 bool CheckInit(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
-/// Checks if a method can be called.
-bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F);
-
-/// Checks if calling the currently active function would exceed
-/// the allowed call depth.
-bool CheckCallDepth(InterpState &S, CodePtr OpPC);
-
 /// Checks the 'this' pointer.
 bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This);
-
-/// Checks if all the arguments annotated as 'nonnull' are in fact not null.
-bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
-                      const CallExpr *CE, unsigned ArgSize);
 
 /// Checks if dynamic memory allocation is available in the current
 /// language mode.
@@ -482,10 +468,10 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
   const Pointer &Result = S.Stk.peek<Pointer>();
 
   if constexpr (std::is_same_v<T, Floating>) {
-    APFloat A = LHS.atIndex(0).deref<Floating>().getAPFloat();
-    APFloat B = LHS.atIndex(1).deref<Floating>().getAPFloat();
-    APFloat C = RHS.atIndex(0).deref<Floating>().getAPFloat();
-    APFloat D = RHS.atIndex(1).deref<Floating>().getAPFloat();
+    APFloat A = LHS.elem<Floating>(0).getAPFloat();
+    APFloat B = LHS.elem<Floating>(1).getAPFloat();
+    APFloat C = RHS.elem<Floating>(0).getAPFloat();
+    APFloat D = RHS.elem<Floating>(1).getAPFloat();
 
     APFloat ResR(A.getSemantics());
     APFloat ResI(A.getSemantics());
@@ -494,20 +480,20 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
     // Copy into the result.
     Floating RA = S.allocFloat(A.getSemantics());
     RA.copy(ResR);
-    Result.atIndex(0).deref<Floating>() = RA; // Floating(ResR);
+    Result.elem<Floating>(0) = RA; // Floating(ResR);
     Result.atIndex(0).initialize();
 
     Floating RI = S.allocFloat(A.getSemantics());
     RI.copy(ResI);
-    Result.atIndex(1).deref<Floating>() = RI; // Floating(ResI);
+    Result.elem<Floating>(1) = RI; // Floating(ResI);
     Result.atIndex(1).initialize();
     Result.initialize();
   } else {
     // Integer element type.
-    const T &LHSR = LHS.atIndex(0).deref<T>();
-    const T &LHSI = LHS.atIndex(1).deref<T>();
-    const T &RHSR = RHS.atIndex(0).deref<T>();
-    const T &RHSI = RHS.atIndex(1).deref<T>();
+    const T &LHSR = LHS.elem<T>(0);
+    const T &LHSI = LHS.elem<T>(1);
+    const T &RHSR = RHS.elem<T>(0);
+    const T &RHSI = RHS.elem<T>(1);
     unsigned Bits = LHSR.bitWidth();
 
     // real(Result) = (real(LHS) * real(RHS)) - (imag(LHS) * imag(RHS))
@@ -517,7 +503,7 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
     T B;
     if (T::mul(LHSI, RHSI, Bits, &B))
       return false;
-    if (T::sub(A, B, Bits, &Result.atIndex(0).deref<T>()))
+    if (T::sub(A, B, Bits, &Result.elem<T>(0)))
       return false;
     Result.atIndex(0).initialize();
 
@@ -526,7 +512,7 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
       return false;
     if (T::mul(LHSI, RHSR, Bits, &B))
       return false;
-    if (T::add(A, B, Bits, &Result.atIndex(1).deref<T>()))
+    if (T::add(A, B, Bits, &Result.elem<T>(1)))
       return false;
     Result.atIndex(1).initialize();
     Result.initialize();
@@ -542,10 +528,10 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
   const Pointer &Result = S.Stk.peek<Pointer>();
 
   if constexpr (std::is_same_v<T, Floating>) {
-    APFloat A = LHS.atIndex(0).deref<Floating>().getAPFloat();
-    APFloat B = LHS.atIndex(1).deref<Floating>().getAPFloat();
-    APFloat C = RHS.atIndex(0).deref<Floating>().getAPFloat();
-    APFloat D = RHS.atIndex(1).deref<Floating>().getAPFloat();
+    APFloat A = LHS.elem<Floating>(0).getAPFloat();
+    APFloat B = LHS.elem<Floating>(1).getAPFloat();
+    APFloat C = RHS.elem<Floating>(0).getAPFloat();
+    APFloat D = RHS.elem<Floating>(1).getAPFloat();
 
     APFloat ResR(A.getSemantics());
     APFloat ResI(A.getSemantics());
@@ -554,21 +540,21 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
     // Copy into the result.
     Floating RA = S.allocFloat(A.getSemantics());
     RA.copy(ResR);
-    Result.atIndex(0).deref<Floating>() = RA; // Floating(ResR);
+    Result.elem<Floating>(0) = RA; // Floating(ResR);
     Result.atIndex(0).initialize();
 
     Floating RI = S.allocFloat(A.getSemantics());
     RI.copy(ResI);
-    Result.atIndex(1).deref<Floating>() = RI; // Floating(ResI);
+    Result.elem<Floating>(1) = RI; // Floating(ResI);
     Result.atIndex(1).initialize();
 
     Result.initialize();
   } else {
     // Integer element type.
-    const T &LHSR = LHS.atIndex(0).deref<T>();
-    const T &LHSI = LHS.atIndex(1).deref<T>();
-    const T &RHSR = RHS.atIndex(0).deref<T>();
-    const T &RHSI = RHS.atIndex(1).deref<T>();
+    const T &LHSR = LHS.elem<T>(0);
+    const T &LHSI = LHS.elem<T>(1);
+    const T &RHSR = RHS.elem<T>(0);
+    const T &RHSI = RHS.elem<T>(1);
     unsigned Bits = LHSR.bitWidth();
     const T Zero = T::from(0, Bits);
 
@@ -595,8 +581,8 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
     }
 
     // real(Result) = ((real(LHS) * real(RHS)) + (imag(LHS) * imag(RHS))) / Den
-    T &ResultR = Result.atIndex(0).deref<T>();
-    T &ResultI = Result.atIndex(1).deref<T>();
+    T &ResultR = Result.elem<T>(0);
+    T &ResultI = Result.elem<T>(1);
 
     if (T::mul(LHSR, RHSR, Bits, &A) || T::mul(LHSI, RHSI, Bits, &B))
       return false;
@@ -1322,7 +1308,7 @@ bool Dup(InterpState &S, CodePtr OpPC) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Pop(InterpState &S, CodePtr OpPC) {
-  S.Stk.pop<T>();
+  S.Stk.discard<T>();
   return true;
 }
 
@@ -1592,6 +1578,21 @@ bool InitThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
   if (!CheckThis(S, OpPC, This))
     return false;
   const Pointer &Field = This.atField(I);
+  assert(Field.canBeInitialized());
+  Field.deref<T>() = S.Stk.pop<T>();
+  Field.initialize();
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool InitThisFieldActivate(InterpState &S, CodePtr OpPC, uint32_t I) {
+  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
+    return false;
+  const Pointer &This = S.Current->getThis();
+  if (!CheckThis(S, OpPC, This))
+    return false;
+  const Pointer &Field = This.atField(I);
+  assert(Field.canBeInitialized());
   Field.deref<T>() = S.Stk.pop<T>();
   Field.activate();
   Field.initialize();
@@ -1610,9 +1611,28 @@ bool InitThisBitField(InterpState &S, CodePtr OpPC, const Record::Field *F,
   if (!CheckThis(S, OpPC, This))
     return false;
   const Pointer &Field = This.atField(FieldOffset);
+  assert(Field.canBeInitialized());
   const auto &Value = S.Stk.pop<T>();
   Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue());
   Field.initialize();
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool InitThisBitFieldActivate(InterpState &S, CodePtr OpPC,
+                              const Record::Field *F, uint32_t FieldOffset) {
+  assert(F->isBitField());
+  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
+    return false;
+  const Pointer &This = S.Current->getThis();
+  if (!CheckThis(S, OpPC, This))
+    return false;
+  const Pointer &Field = This.atField(FieldOffset);
+  assert(Field.canBeInitialized());
+  const auto &Value = S.Stk.pop<T>();
+  Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue());
+  Field.initialize();
+  Field.activate();
   return true;
 }
 
@@ -1627,6 +1647,18 @@ bool InitField(InterpState &S, CodePtr OpPC, uint32_t I) {
     return false;
   const Pointer &Field = Ptr.atField(I);
   Field.deref<T>() = Value;
+  Field.initialize();
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool InitFieldActivate(InterpState &S, CodePtr OpPC, uint32_t I) {
+  const T &Value = S.Stk.pop<T>();
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckRange(S, OpPC, Ptr, CSK_Field))
+    return false;
+  const Pointer &Field = Ptr.atField(I);
+  Field.deref<T>() = Value;
   Field.activate();
   Field.initialize();
   return true;
@@ -1634,6 +1666,32 @@ bool InitField(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitBitField(InterpState &S, CodePtr OpPC, const Record::Field *F) {
+  assert(F->isBitField());
+  const T &Value = S.Stk.pop<T>();
+  const Pointer &Field = S.Stk.peek<Pointer>().atField(F->Offset);
+
+  if constexpr (needsAlloc<T>()) {
+    T Result = S.allocAP<T>(Value.bitWidth());
+    if (T::isSigned())
+      Result.copy(Value.toAPSInt()
+                      .trunc(F->Decl->getBitWidthValue())
+                      .sextOrTrunc(Value.bitWidth()));
+    else
+      Result.copy(Value.toAPSInt()
+                      .trunc(F->Decl->getBitWidthValue())
+                      .zextOrTrunc(Value.bitWidth()));
+
+    Field.deref<T>() = Result;
+  } else {
+    Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue());
+  }
+  Field.initialize();
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool InitBitFieldActivate(InterpState &S, CodePtr OpPC,
+                          const Record::Field *F) {
   assert(F->isBitField());
   const T &Value = S.Stk.pop<T>();
   const Pointer &Field = S.Stk.peek<Pointer>().atField(F->Offset);
@@ -1692,32 +1750,6 @@ inline bool GetPtrThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
   if (!CheckThis(S, OpPC, This))
     return false;
   S.Stk.push<Pointer>(This.atField(Off));
-  return true;
-}
-
-inline bool GetPtrActiveField(InterpState &S, CodePtr OpPC, uint32_t Off) {
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckNull(S, OpPC, Ptr, CSK_Field))
-    return false;
-  if (!CheckRange(S, OpPC, Ptr, CSK_Field))
-    return false;
-  Pointer Field = Ptr.atField(Off);
-  Ptr.deactivate();
-  Field.activate();
-  S.Stk.push<Pointer>(std::move(Field));
-  return true;
-}
-
-inline bool GetPtrActiveThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
-  if (S.checkingPotentialConstantExpression())
-    return false;
-  const Pointer &This = S.Current->getThis();
-  if (!CheckThis(S, OpPC, This))
-    return false;
-  Pointer Field = This.atField(Off);
-  This.deactivate();
-  Field.activate();
-  S.Stk.push<Pointer>(std::move(Field));
   return true;
 }
 
@@ -1816,6 +1848,20 @@ inline bool GetPtrThisBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
 inline bool FinishInitPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+  if (Ptr.canBeInitialized())
+    Ptr.initialize();
+  return true;
+}
+
+inline bool FinishInit(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (Ptr.canBeInitialized())
+    Ptr.initialize();
+  return true;
+}
+
+inline bool FinishInitActivate(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
     Ptr.activate();
@@ -1823,8 +1869,8 @@ inline bool FinishInitPop(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
-inline bool FinishInit(InterpState &S, CodePtr OpPC) {
-  const Pointer &Ptr = S.Stk.peek<Pointer>();
+inline bool FinishInitActivatePop(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
     Ptr.activate();
@@ -1836,6 +1882,16 @@ bool FinishInitGlobal(InterpState &S, CodePtr OpPC);
 
 inline bool Dump(InterpState &S, CodePtr OpPC) {
   S.Stk.dump();
+  return true;
+}
+
+inline bool CheckNull(InterpState &S, CodePtr OpPC) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+  if (Ptr.isZero()) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_dereferencing_null);
+    return S.noteUndefinedBehavior();
+  }
   return true;
 }
 
@@ -1902,10 +1958,8 @@ bool Store(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
-  if (Ptr.canBeInitialized()) {
+  if (Ptr.canBeInitialized())
     Ptr.initialize();
-    Ptr.activate();
-  }
   Ptr.deref<T>() = Value;
   return true;
 }
@@ -1916,10 +1970,56 @@ bool StorePop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
+  if (Ptr.canBeInitialized())
+    Ptr.initialize();
+  Ptr.deref<T>() = Value;
+  return true;
+}
+
+static inline bool Activate(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (Ptr.canBeInitialized())
+    Ptr.activate();
+  return true;
+}
+
+static inline bool ActivateThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
+  if (S.checkingPotentialConstantExpression())
+    return false;
+
+  const Pointer &Ptr = S.Current->getThis();
+  assert(Ptr.atField(I).canBeInitialized());
+  Ptr.atField(I).activate();
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool StoreActivate(InterpState &S, CodePtr OpPC) {
+  const T &Value = S.Stk.pop<T>();
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
     Ptr.activate();
   }
+
+  if (!CheckStore(S, OpPC, Ptr))
+    return false;
+  Ptr.deref<T>() = Value;
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool StoreActivatePop(InterpState &S, CodePtr OpPC) {
+  const T &Value = S.Stk.pop<T>();
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (Ptr.canBeInitialized()) {
+    Ptr.initialize();
+    Ptr.activate();
+  }
+  if (!CheckStore(S, OpPC, Ptr))
+    return false;
   Ptr.deref<T>() = Value;
   return true;
 }
@@ -1930,10 +2030,8 @@ bool StoreBitField(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
-  if (Ptr.canBeInitialized()) {
+  if (Ptr.canBeInitialized())
     Ptr.initialize();
-    Ptr.activate();
-  }
   if (const auto *FD = Ptr.getField())
     Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue());
   else
@@ -1947,10 +2045,43 @@ bool StoreBitFieldPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
+  if (Ptr.canBeInitialized())
+    Ptr.initialize();
+  if (const auto *FD = Ptr.getField())
+    Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue());
+  else
+    Ptr.deref<T>() = Value;
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool StoreBitFieldActivate(InterpState &S, CodePtr OpPC) {
+  const T &Value = S.Stk.pop<T>();
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
     Ptr.activate();
   }
+  if (!CheckStore(S, OpPC, Ptr))
+    return false;
+  if (const auto *FD = Ptr.getField())
+    Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue());
+  else
+    Ptr.deref<T>() = Value;
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool StoreBitFieldActivatePop(InterpState &S, CodePtr OpPC) {
+  const T &Value = S.Stk.pop<T>();
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (Ptr.canBeInitialized()) {
+    Ptr.initialize();
+    Ptr.activate();
+  }
+  if (!CheckStore(S, OpPC, Ptr))
+    return false;
   if (const auto *FD = Ptr.getField())
     Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue());
   else
@@ -1964,7 +2095,6 @@ bool Init(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckInit(S, OpPC, Ptr))
     return false;
-  Ptr.activate();
   Ptr.initialize();
   new (&Ptr.deref<T>()) T(Value);
   return true;
@@ -1976,7 +2106,6 @@ bool InitPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckInit(S, OpPC, Ptr))
     return false;
-  Ptr.activate();
   Ptr.initialize();
   new (&Ptr.deref<T>()) T(Value);
   return true;
@@ -2984,7 +3113,7 @@ inline bool ArrayElem(InterpState &S, CodePtr OpPC, uint32_t Index) {
     return false;
 
   assert(Ptr.atIndex(Index).getFieldDesc()->getPrimType() == Name);
-  S.Stk.push<T>(Ptr.atIndex(Index).deref<T>());
+  S.Stk.push<T>(Ptr.elem<T>(Index));
   return true;
 }
 
@@ -2996,7 +3125,7 @@ inline bool ArrayElemPop(InterpState &S, CodePtr OpPC, uint32_t Index) {
     return false;
 
   assert(Ptr.atIndex(Index).getFieldDesc()->getPrimType() == Name);
-  S.Stk.push<T>(Ptr.atIndex(Index).deref<T>());
+  S.Stk.push<T>(Ptr.elem<T>(Index));
   return true;
 }
 
@@ -3438,12 +3567,22 @@ inline bool BitCastPrim(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
       Floating Result = S.allocFloat(*Sem);
       Floating::bitcastFromMemory(Buff.data(), *Sem, &Result);
       S.Stk.push<Floating>(Result);
-
-      // S.Stk.push<Floating>(T::bitcastFromMemory(Buff.data(), *Sem));
     } else if constexpr (needsAlloc<T>()) {
       T Result = S.allocAP<T>(ResultBitWidth);
       T::bitcastFromMemory(Buff.data(), ResultBitWidth, &Result);
       S.Stk.push<T>(Result);
+    } else if constexpr (std::is_same_v<T, Boolean>) {
+      // Only allow to cast single-byte integers to bool if they are either 0
+      // or 1.
+      assert(FullBitWidth.getQuantity() == 8);
+      auto Val = static_cast<unsigned int>(Buff[0]);
+      if (Val > 1) {
+        S.FFDiag(S.Current->getSource(OpPC),
+                 diag::note_constexpr_bit_cast_unrepresentable_value)
+            << S.getASTContext().BoolTy << Val;
+        return false;
+      }
+      S.Stk.push<T>(T::bitcastFromMemory(Buff.data(), ResultBitWidth));
     } else {
       assert(!Sem);
       S.Stk.push<T>(T::bitcastFromMemory(Buff.data(), ResultBitWidth));

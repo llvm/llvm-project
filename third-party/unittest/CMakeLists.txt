@@ -74,9 +74,11 @@ if (NOT LLVM_ENABLE_THREADS)
   target_compile_definitions(llvm_gtest PUBLIC GTEST_HAS_PTHREAD=0)
 endif ()
 
+# Top-level include directory required for "llvm/Support/raw_os_ostream.h"
 target_include_directories(llvm_gtest
   PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/googletest/include>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/googlemock/include>
+         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/>
          $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/llvm-gtest/>
          $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/llvm-gmock/>
   PRIVATE googletest googlemock

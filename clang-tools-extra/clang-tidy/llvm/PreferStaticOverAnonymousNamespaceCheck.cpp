@@ -21,6 +21,17 @@ AST_MATCHER(NamedDecl, isInMacro) {
 
 AST_MATCHER(VarDecl, isLocalVariable) { return Node.isLocalVarDecl(); }
 
+AST_MATCHER(Decl, isLexicallyInAnonymousNamespace) {
+  for (const DeclContext *DC = Node.getLexicalDeclContext(); DC != nullptr;
+       DC = DC->getLexicalParent()) {
+    if (const auto *ND = dyn_cast<NamespaceDecl>(DC))
+      if (ND->isAnonymousNamespace())
+        return true;
+  }
+
+  return false;
+}
+
 } // namespace
 
 PreferStaticOverAnonymousNamespaceCheck::
@@ -40,9 +51,9 @@ void PreferStaticOverAnonymousNamespaceCheck::storeOptions(
 
 void PreferStaticOverAnonymousNamespaceCheck::registerMatchers(
     MatchFinder *Finder) {
-  const auto IsDefinitionInAnonymousNamespace =
-      allOf(unless(isExpansionInSystemHeader()), isInAnonymousNamespace(),
-            unless(isInMacro()), isDefinition());
+  const auto IsDefinitionInAnonymousNamespace = allOf(
+      unless(isExpansionInSystemHeader()), isLexicallyInAnonymousNamespace(),
+      unless(isInMacro()), isDefinition());
 
   if (AllowMemberFunctionsInClass) {
     Finder->addMatcher(

@@ -116,8 +116,8 @@ public:
   }
   TailFoldingStyle
   getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const override {
-    return ST->hasVInstructions() ? TailFoldingStyle::Data
-                                  : TailFoldingStyle::DataWithoutLaneMask;
+    return ST->hasVInstructions() ? TailFoldingStyle::DataWithEVL
+                                  : TailFoldingStyle::None;
   }
   std::optional<unsigned> getMaxVScale() const override;
   std::optional<unsigned> getVScaleForTuning() const override;
@@ -265,7 +265,7 @@ public:
     if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
       return false;
 
-    return TLI->isLegalElementTypeForRVV(ElemType);
+    return TLI->isLegalLoadStoreElementTypeForRVV(ElemType);
   }
 
   bool isLegalMaskedLoad(Type *DataType, Align Alignment,
@@ -297,7 +297,7 @@ public:
     if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
       return false;
 
-    return TLI->isLegalElementTypeForRVV(ElemType);
+    return TLI->isLegalLoadStoreElementTypeForRVV(ElemType);
   }
 
   bool isLegalMaskedGather(Type *DataType, Align Alignment) const override {

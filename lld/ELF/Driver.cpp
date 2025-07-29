@@ -1625,6 +1625,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zIfuncNoplt = hasZOption(args, "ifunc-noplt");
   ctx.arg.zInitfirst = hasZOption(args, "initfirst");
   ctx.arg.zInterpose = hasZOption(args, "interpose");
+  ctx.arg.zKeepDataSectionPrefix = getZFlag(
+      args, "keep-data-section-prefix", "nokeep-data-section-prefix", false);
   ctx.arg.zKeepTextSectionPrefix = getZFlag(
       args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
   ctx.arg.zLrodataAfterBss =
@@ -3445,6 +3447,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // output sections in the usual way.
   if (!ctx.arg.relocatable)
     combineEhSections(ctx);
+
+  // Merge .hexagon.attributes sections.
+  if (ctx.arg.emachine == EM_HEXAGON)
+    mergeHexagonAttributesSections(ctx);
 
   // Merge .riscv.attributes sections.
   if (ctx.arg.emachine == EM_RISCV)

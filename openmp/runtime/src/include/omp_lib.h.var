@@ -1010,8 +1010,8 @@
           integer (kind=omp_integer_kind), value :: libnum
         end subroutine kmp_set_library
 
-        subroutine kmp_set_defaults(string) bind(c)
-          character string(*)
+        subroutine kmp_set_defaults(string)
+          character (len=*) :: string
         end subroutine kmp_set_defaults
 
         function kmp_get_stacksize() bind(c)

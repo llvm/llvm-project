@@ -157,6 +157,8 @@ void CallStackTrie::addCallStack(
 }
 
 void CallStackTrie::addCallStack(MDNode *MIB) {
+  // Note that we are building this from existing MD_memprof metadata.
+  BuiltFromExistingMetadata = true;
   MDNode *StackMD = getMIBStackNode(MIB);
   assert(StackMD);
   std::vector<uint64_t> CallStack;
@@ -187,8 +189,9 @@ void CallStackTrie::addCallStack(MDNode *MIB) {
 static MDNode *createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
                              AllocationType AllocType,
                              ArrayRef<ContextTotalSize> ContextSizeInfo,
-                             const uint64_t MaxColdSize, uint64_t &TotalBytes,
-                             uint64_t &ColdBytes) {
+                             const uint64_t MaxColdSize,
+                             bool BuiltFromExistingMetadata,
+                             uint64_t &TotalBytes, uint64_t &ColdBytes) {
   SmallVector<Metadata *> MIBPayload(
       {buildCallstackMetadata(MIBCallStack, Ctx)});
   MIBPayload.push_back(
@@ -197,8 +200,9 @@ static MDNode *createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
   if (ContextSizeInfo.empty()) {
     // The profile matcher should have provided context size info if there was a
     // MinCallsiteColdBytePercent < 100. Here we check >=100 to gracefully
-    // handle a user-provided percent larger than 100.
-    assert(MinCallsiteColdBytePercent >= 100);
+    // handle a user-provided percent larger than 100. However, we may not have
+    // this information if we built the Trie from existing MD_memprof metadata.
+    assert(BuiltFromExistingMetadata || MinCallsiteColdBytePercent >= 100);
     return MDNode::get(Ctx, MIBPayload);
   }
 
@@ -252,9 +256,19 @@ void CallStackTrie::convertHotToNotCold(CallStackTrieNode *Node) {
 static void saveFilteredNewMIBNodes(std::vector<Metadata *> &NewMIBNodes,
                                     std::vector<Metadata *> &SavedMIBNodes,
                                     unsigned CallerContextLength,
-                                    uint64_t TotalBytes, uint64_t ColdBytes) {
+                                    uint64_t TotalBytes, uint64_t ColdBytes,
+                                    bool BuiltFromExistingMetadata) {
   const bool MostlyCold =
-      MinCallsiteColdBytePercent < 100 &&
+      // If we have built the Trie from existing MD_memprof metadata, we may or
+      // may not have context size information (in which case ColdBytes and
+      // TotalBytes are 0, which is not also guarded against below). Even if we
+      // do have some context size information from the the metadata, we have
+      // already gone through a round of discarding of small non-cold contexts
+      // during matching, and it would be overly aggressive to do it again, and
+      // we also want to maintain the same behavior with and without reporting
+      // of hinted bytes enabled.
+      !BuiltFromExistingMetadata && MinCallsiteColdBytePercent < 100 &&
+      ColdBytes > 0 &&
       ColdBytes * 100 >= MinCallsiteColdBytePercent * TotalBytes;
 
   // In the simplest case, with pruning disabled, keep all the new MIB nodes.
@@ -386,9 +400,9 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
   if (hasSingleAllocType(Node->AllocTypes)) {
     std::vector<ContextTotalSize> ContextSizeInfo;
     collectContextSizeInfo(Node, ContextSizeInfo);
-    MIBNodes.push_back(
-        createMIBNode(Ctx, MIBCallStack, (AllocationType)Node->AllocTypes,
-                      ContextSizeInfo, MaxColdSize, TotalBytes, ColdBytes));
+    MIBNodes.push_back(createMIBNode(
+        Ctx, MIBCallStack, (AllocationType)Node->AllocTypes, ContextSizeInfo,
+        MaxColdSize, BuiltFromExistingMetadata, TotalBytes, ColdBytes));
     return true;
   }
 
@@ -416,7 +430,8 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
     // Pass in the stack length of the MIB nodes added for the immediate caller,
     // which is the current stack length plus 1.
     saveFilteredNewMIBNodes(NewMIBNodes, MIBNodes, MIBCallStack.size() + 1,
-                            CallerTotalBytes, CallerColdBytes);
+                            CallerTotalBytes, CallerColdBytes,
+                            BuiltFromExistingMetadata);
     TotalBytes += CallerTotalBytes;
     ColdBytes += CallerColdBytes;
 
@@ -441,9 +456,9 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
     return false;
   std::vector<ContextTotalSize> ContextSizeInfo;
   collectContextSizeInfo(Node, ContextSizeInfo);
-  MIBNodes.push_back(createMIBNode(Ctx, MIBCallStack, AllocationType::NotCold,
-                                   ContextSizeInfo, MaxColdSize, TotalBytes,
-                                   ColdBytes));
+  MIBNodes.push_back(createMIBNode(
+      Ctx, MIBCallStack, AllocationType::NotCold, ContextSizeInfo, MaxColdSize,
+      BuiltFromExistingMetadata, TotalBytes, ColdBytes));
   return true;
 }
 

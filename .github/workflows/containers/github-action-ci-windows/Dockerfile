@@ -1,6 +1,6 @@
 # Agent image for LLVM org cluster.
 # .net 4.8 is required by chocolately package manager.
-FROM mcr.microsoft.com/dotnet/framework/sdk:4.8-windowsservercore-ltsc2019
+FROM mcr.microsoft.com/dotnet/framework/sdk:4.8-windowsservercore-ltsc2022
 
 # Restore the default Windows shell for correct batch processing.
 SHELL ["cmd", "/S", "/C"]
@@ -39,11 +39,16 @@ RUN regsvr32 /S "C:\BuildTools\DIA SDK\bin\amd64\msdia140.dll" & \
 
 # install tools as described in https://llvm.org/docs/GettingStartedVS.html
 # and a few more that were not documented...
-RUN choco install -y ninja git sccache
 # Pin an older version of Python; the current Python 3.10 fails when
 # doing "pip install" for the other dependencies, as it fails to find libxml
 # while compiling some package.
-RUN choco install -y python3 --version 3.9.7
+# We version pin the other packages as well to ensure the container build is as
+# reproducible as possible to prevent issues when upgrading only part of the
+# container.
+RUN choco install -y ninja --version 1.13.1 && \
+    choco install -y git --version 2.50.1 && \
+    choco install -y sccache --version 0.10.0 && \
+    choco install -y python3 --version 3.9.7
 
 # Testing requires psutil
 RUN pip install psutil
@@ -85,7 +90,7 @@ RUN powershell -Command \
 RUN git config --system core.longpaths true & \
     git config --global core.autocrlf false
 
-ARG RUNNER_VERSION=2.326.0
+ARG RUNNER_VERSION=2.327.1
 ENV RUNNER_VERSION=$RUNNER_VERSION
 
 RUN powershell -Command \

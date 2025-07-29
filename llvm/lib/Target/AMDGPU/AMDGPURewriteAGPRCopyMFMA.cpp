@@ -159,7 +159,8 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
 
       // If the inputs are tied and the same register, we can shortcut and
       // directly replace the register.
-      if (Src2->getReg() != CopySrcReg) {
+      if (!Src2->isReg() || Src2->getReg() != CopySrcReg ||
+          Src2->getSubReg() != DefMI->getOperand(1).getSubReg()) {
         LLVM_DEBUG(
             dbgs()
             << "Replacing untied VGPR MFMAs with AGPR form not yet handled\n");
