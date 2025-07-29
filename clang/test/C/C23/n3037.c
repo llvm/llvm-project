@@ -402,6 +402,44 @@ _Static_assert(0 == _Generic(inner_anon_tagged.untagged, struct { int i; } : 1, 
 enum { E_Untagged1 } nontag_enum; // both-note {{previous definition is here}}
 _Static_assert(0 == _Generic(nontag_enum, enum { E_Untagged1 } : 1, default : 0)); // both-error {{redefinition of enumerator 'E_Untagged1'}}
 
+// Test that enumerations with mixed underlying types are properly handled.
+enum GH150594_E1 : int { GH150594_Val1 };
+enum GH150594_E2 : int { GH150594_Val2 };
+enum GH150594_E3 { GH150594_Val3 };
+enum GH150594_E4 : int { GH150594_Val4 };
+void GH150594(void) {
+  extern enum GH150594_E1 Fn1(void); // both-note {{previous declaration is here}}
+  extern enum GH150594_E2 Fn2(void); // c17-note {{previous declaration is here}}
+  extern enum GH150594_E3 Fn3(void); // both-note {{previous declaration is here}}
+  extern enum GH150594_E4 Fn4(void); // both-note {{previous declaration is here}}
+  enum GH150594_E1 { GH150594_Val1 };
+  enum GH150594_E2 : int { GH150594_Val2 };
+  enum GH150594_E3 : int { GH150594_Val3 };
+  enum GH150594_E4 : short { GH150594_Val4 };
+  extern enum GH150594_E1 Fn1(void); // both-error {{conflicting types for 'Fn1'}}
+  extern enum GH150594_E2 Fn2(void); // c17-error {{conflicting types for 'Fn2'}}
+  extern enum GH150594_E3 Fn3(void); // both-error {{conflicting types for 'Fn3'}}
+  extern enum GH150594_E4 Fn4(void); // both-error {{conflicting types for 'Fn4'}}
+
+  // Show that two declarations in the same scope give expected diagnostics.
+  enum E1 { e1 };       // both-note {{previous declaration is here}}
+  enum E1 : int { e1 }; // both-error {{enumeration previously declared with nonfixed underlying type}}
+
+  enum E2 : int { e2 }; // both-note {{previous declaration is here}}
+  enum E2 { e2 };       // both-error {{enumeration previously declared with fixed underlying type}}
+
+  enum E3 : int { e3 };   // both-note {{previous declaration is here}}
+  enum E3 : short { e3 }; // both-error {{enumeration redeclared with different underlying type 'short' (was 'int')}}
+
+  typedef short foo;
+  enum E4 : foo { e4 };   // c17-note 2 {{previous definition is here}}
+  enum E4 : short { e4 }; // c17-error {{redefinition of 'E4'}} \
+                             c17-error {{redefinition of enumerator 'e4'}}
+
+  enum E5 : foo { e5 }; // both-note {{previous declaration is here}}
+  enum E5 : int { e5 }; // both-error {{enumeration redeclared with different underlying type 'int' (was 'foo' (aka 'short'))}}
+}
+
 // Test that enumerations are compatible with their underlying type, but still
 // diagnose when "same type" is required rather than merely "compatible type".
 enum E1 : int { e1 }; // Fixed underlying type
