@@ -313,7 +313,7 @@ class CollectUnexpandedParameterPacksVisitor
     bool TraverseUnresolvedLookupExpr(UnresolvedLookupExpr *E) override {
       if (E->getNumDecls() == 1) {
         NamedDecl *ND = *E->decls_begin();
-        if (auto *TTP = llvm::dyn_cast<TemplateTemplateParmDecl>(ND);
+        if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(ND);
             TTP && TTP->isParameterPack())
           addUnexpanded(ND, E->getBeginLoc());
       }

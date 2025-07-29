@@ -6669,7 +6669,7 @@ QualType ASTContext::getAutoTypeInternal(
       Canon = DeducedType.getCanonicalType();
     } else if (TypeConstraintConcept) {
       bool AnyNonCanonArgs = false;
-      TemplateDecl *CanonicalConcept =
+      auto *CanonicalConcept =
           cast<TemplateDecl>(TypeConstraintConcept->getCanonicalDecl());
       auto CanonicalConceptArgs = ::getCanonicalTemplateArguments(
           *this, TypeConstraintArgs, AnyNonCanonArgs);

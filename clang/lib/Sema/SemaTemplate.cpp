@@ -1078,8 +1078,7 @@ bool Sema::CheckTypeConstraint(TemplateIdAnnotation *TypeConstr) {
   NamedDecl *CD = nullptr;
   bool IsTypeConcept = false;
   bool RequiresArguments = false;
-  if (TemplateTemplateParmDecl *TTP =
-          llvm::dyn_cast<TemplateTemplateParmDecl>(TN.getAsTemplateDecl())) {
+  if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TN.getAsTemplateDecl())) {
     IsTypeConcept = TTP->isTypeConceptTemplateParam();
     RequiresArguments =
         TTP->getTemplateParameters()->getMinRequiredArguments() > 1;

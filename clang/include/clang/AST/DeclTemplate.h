@@ -3360,8 +3360,7 @@ inline TemplateDecl *getAsTypeTemplateDecl(Decl *D) {
                 isa<ClassTemplatePartialSpecializationDecl>(TD) ||
                 isa<TypeAliasTemplateDecl>(TD) ||
                 [&]() {
-                  if (TemplateTemplateParmDecl *TTP =
-                          dyn_cast<TemplateTemplateParmDecl>(TD))
+                  if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TD))
                     return TTP->templateParameterKind() == TNK_Type_template;
                   return false;
                 }())

@@ -2349,7 +2349,7 @@ ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
   // Determine the substituted parameter type. We can usually infer this from
   // the template argument, but not always.
   auto SubstParamType = [&] {
-    if (auto NTTP = dyn_cast<NonTypeTemplateParmDecl>(parm)) {
+    if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(parm)) {
       QualType T;
       if (NTTP->isExpandedParameterPack())
         T = NTTP->getExpansionType(*SemaRef.ArgPackSubstIndex);

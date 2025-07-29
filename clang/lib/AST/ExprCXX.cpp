@@ -401,7 +401,7 @@ static bool UnresolvedLookupExprIsVariableOrConceptParameterPack(
   if (std::distance(Begin, End) != 1)
     return false;
   NamedDecl *ND = *Begin;
-  if (auto *TTP = llvm::dyn_cast<TemplateTemplateParmDecl>(ND))
+  if (const auto *TTP = llvm::dyn_cast<TemplateTemplateParmDecl>(ND))
     return TTP->isParameterPack();
   return false;
 }
