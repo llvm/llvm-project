@@ -607,8 +607,7 @@ bool SPIRVEmitIntrinsics::walkLogicalAccessChain(
     const std::function<void(Type *, uint64_t)> &OnLiteralIndexing,
     const std::function<void(Type *, Value *)> &OnDynamicIndexing) {
   // We only rewrite i8* GEP. Other should be left as-is.
-  // Observation so-far is i8* GEP always have a single index. Making sure
-  // that's the case.
+  // Valid i8* GEP must always have a single index.
   assert(GEP.getSourceElementType() ==
          IntegerType::getInt8Ty(CurrF->getContext()));
   assert(GEP.getNumIndices() == 1);
