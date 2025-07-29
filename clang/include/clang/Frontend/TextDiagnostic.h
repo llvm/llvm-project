@@ -35,8 +35,8 @@ namespace clang {
 class TextDiagnostic : public DiagnosticRenderer {
   raw_ostream &OS;
   const Preprocessor *PP;
-  std::vector<std::pair<FullSourceLoc, PresumedLoc>> IncludeStack;
   unsigned BaseIndent = 0;
+  SmallVector<std::pair<FullSourceLoc, PresumedLoc>, 30> IncludeStack;
 
 public:
   TextDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
