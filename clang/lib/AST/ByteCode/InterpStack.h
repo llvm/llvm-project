@@ -14,11 +14,9 @@
 #define LLVM_CLANG_AST_INTERP_INTERPSTACK_H
 
 #include "FixedPoint.h"
-#include "FunctionPointer.h"
 #include "IntegralAP.h"
 #include "MemberPointer.h"
 #include "PrimType.h"
-#include <memory>
 #include <vector>
 
 namespace clang {
