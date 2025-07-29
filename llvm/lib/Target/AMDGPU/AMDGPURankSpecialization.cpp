@@ -262,10 +262,6 @@ void AMDGPURankSpecializationImpl::buildSpecializations(Function &Kernel) {
   // Create the jump table in the entry kernel.
   IRBuilder<> Builder(Kernel.getContext());
   BasicBlock *Entry = BasicBlock::Create(Kernel.getContext(), "entry", &Kernel);
-  SmallVector<BasicBlock *> Cases;
-  SmallVector<Value *> Args;
-  for (Value &Arg : Kernel.args())
-    Args.push_back(&Arg);
 
   Builder.SetInsertPoint(Entry);
 
