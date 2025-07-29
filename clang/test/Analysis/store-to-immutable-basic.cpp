@@ -1,5 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.core.StoreToImmutable -verify %s
-
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.core.StoreToImmutable -std=c++17 -verify %s
 
 void test_write_to_const_ref_param(const int &param) {
   *(int*)&param = 100; // expected-warning {{Writing to immutable memory is undefined behavior. This memory region is marked as immutable and should not be modified}}
