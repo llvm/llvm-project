@@ -1389,6 +1389,9 @@ def FeatureAddSubU64Insts
     : SubtargetFeature<"add-sub-u64-insts", "HasAddSubU64Insts", "true",
                        "Has v_add_u64 and v_sub_u64 instructions">;
 
+def FeatureMadU32Inst : SubtargetFeature<"mad-u32-inst", "HasMadU32Inst",
+                                         "true", "Has v_mad_u32 instruction">;
+
 def FeatureMemToLDSLoad : SubtargetFeature<"vmem-to-lds-load-insts",
   "HasVMemToLDSLoad",
   "true",
@@ -2049,6 +2052,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureVmemPrefInsts,
    FeatureLshlAddU64Inst,
    FeatureAddSubU64Insts,
+   FeatureMadU32Inst,
    FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
 ]>;
@@ -2838,6 +2842,9 @@ def HasLshlAddU64Inst : Predicate<"Subtarget->hasLshlAddU64Inst()">,
 
 def HasAddSubU64Insts : Predicate<"Subtarget->hasAddSubU64Insts()">,
                         AssemblerPredicate<(all_of FeatureAddSubU64Insts)>;
+
+def HasMadU32Inst : Predicate<"Subtarget->hasMadU32Inst()">,
+                    AssemblerPredicate<(all_of FeatureMadU32Inst)>;
 
 def HasLdsBarrierArriveAtomic : Predicate<"Subtarget->hasLdsBarrierArriveAtomic()">,
   AssemblerPredicate<(all_of FeatureLdsBarrierArriveAtomic)>;
