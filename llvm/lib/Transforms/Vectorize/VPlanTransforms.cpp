@@ -2419,14 +2419,13 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
   EVLPhi->eraseFromParent();
 
   // Replace CanonicalIVInc with EVL-PHI increment.
-  VPRecipeBase *CanonicalIV = &*HeaderVPBB->begin();
+  auto *CanonicalIV = cast<VPPhi>(&*HeaderVPBB->begin());
   assert(
-      isa<VPPhi>(CanonicalIV) &&
-      match(CanonicalIV->getOperand(1),
+      match(CanonicalIV->getIncomingValue(1),
             m_c_Binary<Instruction::Add>(m_Specific(cast<VPPhi>(CanonicalIV)),
                                          m_Specific(&Plan.getVFxUF()))) &&
-      "Unexpected canoincal iv");
-  VPValue *Backedge = CanonicalIV->getOperand(1);
+      "Unexpected canonical iv");
+  VPValue *Backedge = CanonicalIV->getIncomingValue(1);
   Backedge->replaceAllUsesWith(EVLIncrement);
 
   // Remove unused phi and increment.
