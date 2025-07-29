@@ -18,15 +18,9 @@
 include "mlir/IR/OpBase.td"
 
 
-/// Interface for operations with result and argument attributes.
-def ArgAndResultAttrsOpInterface : OpInterface<"ArgAndResultAttrsOpInterface"> {
-  let description = [{
-    An operation that has argument and result attributes. This interface
-    provides functions to access and modify the argument and result
-    attributes of the operation.
-  }];
-  let cppNamespace = "::mlir";
-
+/// Interface for operations with arguments attributes (both call-like
+/// and callable operations).
+def ArgumentAttributesMethods {
   list<InterfaceMethod> methods = [
     InterfaceMethod<[{
         Get the array of argument attribute dictionaries. The method should
@@ -70,8 +64,7 @@ def ArgAndResultAttrsOpInterface : OpInterface<"ArgAndResultAttrsOpInterface"> {
 // a call-like operation. This represents the destination of the call.
 
 /// Interface for call-like operations.
-def CallOpInterface : OpInterface<"CallOpInterface",
-                                  [ArgAndResultAttrsOpInterface]> {
+def CallOpInterface : OpInterface<"CallOpInterface"> {
   let description = [{
     A call-like operation is one that transfers control from one sub-routine to
     another. These operations may be traditional direct calls `call @foo`, or
@@ -130,12 +123,11 @@ def CallOpInterface : OpInterface<"CallOpInterface",
         return ::mlir::call_interface_impl::resolveCallable($_op);
       }]
     >
-  ];
+  ] # ArgumentAttributesMethods.methods;
 }
 
 /// Interface for callable operations.
-def CallableOpInterface : OpInterface<"CallableOpInterface",
-                                      [ArgAndResultAttrsOpInterface]> {
+def CallableOpInterface : OpInterface<"CallableOpInterface"> {
   let description = [{
     A callable operation is one who represents a potential sub-routine, and may
     be a target for a call-like operation (those providing the CallOpInterface
@@ -148,11 +140,11 @@ def CallableOpInterface : OpInterface<"CallableOpInterface",
 
   let methods = [
     InterfaceMethod<[{
-      Returns the region on the current operation that is callable. This may
-      return null in the case of an external callable object, e.g. an external
-      function.
-    }],
-    "::mlir::Region *", "getCallableRegion">,
+        Returns the region on the current operation that is callable. This may
+        return null in the case of an external callable object, e.g. an external
+        function.
+      }],
+      "::mlir::Region *", "getCallableRegion">,
     InterfaceMethod<[{
       Returns the callable's argument types based exclusively on the type (to
       allow for this method may be called on function declarations).
@@ -163,7 +155,7 @@ def CallableOpInterface : OpInterface<"CallableOpInterface",
       allow for this method may be called on function declarations).
     }],
     "::llvm::ArrayRef<::mlir::Type>", "getResultTypes">,
-  ];
+  ] # ArgumentAttributesMethods.methods;
 }
 
 #endif // MLIR_INTERFACES_CALLINTERFACES
