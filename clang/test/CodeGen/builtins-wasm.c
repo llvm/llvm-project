@@ -752,41 +752,59 @@ void *tp (void) {
   // WEBASSEMBLY: call {{.*}} @llvm.thread.pointer.p0()
 }
 
-typedef void (*Fvoid)(void);
-typedef float (*Ffloats)(float, double, int);
-typedef void (*Fpointers)(Fvoid, Ffloats, void*, int*, int***, char[5]);
-typedef void (*FVarArgs)(int, ...);
-typedef __externref_t (*FExternRef)(__externref_t, __externref_t);
-typedef __funcref Fpointers (*FFuncRef)(__funcref Fvoid, __funcref Ffloats);
 
 void use(int);
 
+typedef void (*Fvoid)(void);
 void test_function_pointer_signature_void(Fvoid func) {
   // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, token poison)
   use(__builtin_wasm_test_function_pointer_signature(func));
 }
 
+typedef float (*Ffloats)(float, double, int);
 void test_function_pointer_signature_floats(Ffloats func) {
   // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, float poison, token poison, float poison, double poison, i32 poison)
   use(__builtin_wasm_test_function_pointer_signature(func));
 }
 
+typedef void (*Fpointers)(Fvoid, Ffloats, void*, int*, int***, char[5]);
 void test_function_pointer_signature_pointers(Fpointers func) {
   // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, token poison, ptr poison, ptr poison, ptr poison, ptr poison, ptr poison, ptr poison)
   use(__builtin_wasm_test_function_pointer_signature(func));
 }
 
+typedef void (*FVarArgs)(int, ...);
 void test_function_pointer_signature_varargs(FVarArgs func) {
   // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, token poison, i32 poison, ptr poison)
   use(__builtin_wasm_test_function_pointer_signature(func));
 }
 
+typedef __externref_t (*FExternRef)(__externref_t, __externref_t);
 void test_function_pointer_externref(FExternRef func) {
   // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, ptr addrspace(10) poison, token poison, ptr addrspace(10) poison, ptr addrspace(10) poison)
   use(__builtin_wasm_test_function_pointer_signature(func));
 }
 
+typedef __funcref Fpointers (*FFuncRef)(__funcref Fvoid, __funcref Ffloats);
 void test_function_pointer_funcref(FFuncRef func) {
   // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, ptr addrspace(20) poison, token poison, ptr addrspace(20) poison, ptr addrspace(20) poison)
+  use(__builtin_wasm_test_function_pointer_signature(func));
+}
+
+// Some tests that we get struct ABIs correct. There is no special code in
+// __builtin_wasm_test_function_pointer_signature for this, it gets handled by
+// the normal type lowering code.
+// Single element structs are unboxed, multi element structs are passed on
+// stack.
+typedef struct {double x;} (*Fstructs1)(struct {double x;}, struct {float x;}, struct {double x; float y;}, union {double x; float y;});
+void test_function_pointer_structs1(Fstructs1 func) {
+  // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, double poison, token poison, double poison, float poison, ptr poison, ptr poison)
+  use(__builtin_wasm_test_function_pointer_signature(func));
+}
+
+// Two element return struct ==> return ptr on stack
+typedef struct {double x; double y;} (*Fstructs2)(void);
+void test_function_pointer_structs2(Fstructs2 func) {
+  // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, token poison, ptr poison)
   use(__builtin_wasm_test_function_pointer_signature(func));
 }
