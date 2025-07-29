@@ -8,7 +8,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 LLDB_INVALID_ADDRESS = lldb.LLDB_INVALID_ADDRESS
 load_address = 0x400000000
 
-
 def format_register_value(val):
     """
     Encode each byte by two hex digits in little-endian order.
@@ -35,6 +34,8 @@ class MyResponder(MockGDBServerResponder):
     def respond(self, packet):
         if packet[0:13] == "qRegisterInfo":
             return self.qRegisterInfo(packet[13:])
+        if packet.startswith("qWasmCallStack"):
+            return self.qWasmCallStack()
         return MockGDBServerResponder.respond(self, packet)
 
     def qSupported(self, client_supported):
@@ -47,7 +48,7 @@ class MyResponder(MockGDBServerResponder):
         return ""
 
     def qfThreadInfo(self):
-        return "OK"
+        return "m1,"
 
     def qRegisterInfo(self, index):
         if index == 0:
@@ -61,7 +62,7 @@ class MyResponder(MockGDBServerResponder):
         )
 
     def haltReason(self):
-        return "T05thread:1;"
+        return "T02thread:1;"
 
     def readRegister(self, register):
         return format_register_value(self.current_pc)
@@ -89,6 +90,10 @@ class MyResponder(MockGDBServerResponder):
             file.close()
         return result
 
+    def qWasmCallStack(self):
+        # Return two 64-bit addresses: 0x40000000000001B3, 0x40000000000001FE
+        return "b301000000000040fe01000000000040"
+
 
 class TestWasm(GDBRemoteTestBase):
     @skipIfAsan
@@ -104,7 +109,7 @@ class TestWasm(GDBRemoteTestBase):
         self.server.responder = MyResponder(obj_path, "test_wasm")
 
         target = self.dbg.CreateTarget("")
-        process = self.connect(target)
+        process = self.connect(target, "wasm")
         lldbutil.expect_state_changes(
             self, self.dbg.GetListener(), process, [lldb.eStateStopped]
         )
@@ -174,7 +179,7 @@ class TestWasm(GDBRemoteTestBase):
         )
 
         target = self.dbg.CreateTarget("")
-        process = self.connect(target)
+        process = self.connect(target, "wasm")
         lldbutil.expect_state_changes(
             self, self.dbg.GetListener(), process, [lldb.eStateStopped]
         )
@@ -230,7 +235,7 @@ class TestWasm(GDBRemoteTestBase):
         self.server.responder = MyResponder(obj_path)
 
         target = self.dbg.CreateTarget("")
-        process = self.connect(target)
+        process = self.connect(target, "wasm")
         lldbutil.expect_state_changes(
             self, self.dbg.GetListener(), process, [lldb.eStateStopped]
         )
@@ -272,3 +277,14 @@ class TestWasm(GDBRemoteTestBase):
         self.assertEqual(
             LLDB_INVALID_ADDRESS, debug_line_section.GetLoadAddress(target)
         )
+
+        thread = process.GetThreadAtIndex(0)
+        self.assertTrue(thread.IsValid())
+
+        frame = thread.GetFrameAtIndex(0)
+        self.assertTrue(frame.IsValid())
+        self.assertEqual(frame.GetPC(), 0x40000000000001B3)
+
+        frame = thread.GetFrameAtIndex(1)
+        self.assertTrue(frame.IsValid())
+        self.assertEqual(frame.GetPC(), 0x40000000000001FE)
