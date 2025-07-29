@@ -460,7 +460,7 @@ static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
 // the numbers from 0 to \p InputBits that should represent cttz results.
 static bool isCTTZTable(Constant *Table, uint64_t Mul, uint64_t Shift,
                         uint64_t AndMask, Type *AccessTy, unsigned InputBits,
-                        unsigned GEPIdxFactor, const DataLayout &DL) {
+                        APInt GEPIdxFactor, const DataLayout &DL) {
   for (unsigned Idx = 0; Idx < InputBits; Idx++) {
     APInt Index = (APInt(InputBits, 1ull << Idx) * Mul).lshr(Shift) & AndMask;
     ConstantInt *C = dyn_cast_or_null<ConstantInt>(
@@ -483,6 +483,11 @@ static bool isCTTZTable(Constant *Table, uint64_t Mul, uint64_t Shift,
 // }
 // this can be lowered to `cttz` instruction.
 // There is also a special case when the element is 0.
+//
+// The (x & -x) sets the lowest non-zero bit to 1. The multiply is a de-bruijn
+// sequence that contains each patterns of bits in it. The shift extracts
+// the top bits after the multiply, and that index into the table should
+// represent the number of trailing zeros in the original number.
 //
 // Here are some examples or LLVM IR for a 64-bit target:
 //
@@ -525,7 +530,7 @@ static bool isCTTZTable(Constant *Table, uint64_t Mul, uint64_t Shift,
 //     i64 %shr
 // %0 = load i8, i8* %arrayidx, align 1, !tbaa !8
 //
-// All this can be lowered to @llvm.cttz.i32/64 intrinsic.
+// All these can be lowered to @llvm.cttz.i32/64 intrinsics.
 static bool tryToRecognizeTableBasedCttz(Instruction &I, const DataLayout &DL) {
   LoadInst *LI = dyn_cast<LoadInst>(&I);
   if (!LI)
@@ -539,45 +544,40 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I, const DataLayout &DL) {
   if (!GEP || !GEP->hasNoUnsignedSignedWrap())
     return false;
 
-  Type *GEPSrcEltTy = GEP->getSourceElementType();
-  Value *GepIdx;
-  if (GEP->getNumIndices() == 2) {
-    if (!GEPSrcEltTy->isArrayTy() ||
-        !match(GEP->idx_begin()->get(), m_ZeroInt()))
-      return false;
-    GEPSrcEltTy = GEPSrcEltTy->getArrayElementType();
-    GepIdx = std::next(GEP->idx_begin())->get();
-  } else if (GEP->getNumIndices() == 1)
-    GepIdx = GEP->idx_begin()->get();
-  else
-    return false;
-
   GlobalVariable *GVTable = dyn_cast<GlobalVariable>(GEP->getPointerOperand());
   if (!GVTable || !GVTable->hasInitializer() || !GVTable->isConstant())
     return false;
 
+  unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
+  APInt ModOffset(BW, 0);
+  SmallMapVector<Value *, APInt, 4> VarOffsets;
+  if (!GEP->collectOffset(DL, BW, VarOffsets, ModOffset) ||
+      VarOffsets.size() != 1 || ModOffset != 0)
+    return false;
+  auto [GepIdx, GEPScale] = VarOffsets.front();
+
   Value *X1;
   uint64_t MulConst, ShiftConst, AndCst = ~0ull;
+  // Check that the gep variable index is ((x & -x) * MulConst) >> ShiftConst.
+  // This might be extended to the pointer index type, and if the gep index type
+  // has been replaced with an i8 then a new And (and different ShiftConst) will
+  // be present.
   // FIXME: 64-bit targets have `i64` type for the GEP index, so this match will
   // probably fail for other (e.g. 32-bit) targets.
-  if (!match(GepIdx, m_ZExtOrSelf(m_LShr(
-                         m_Mul(m_c_And(m_Neg(m_Value(X1)), m_Deferred(X1)),
-                               m_ConstantInt(MulConst)),
-                         m_ConstantInt(ShiftConst)))) &&
-      !match(GepIdx, m_ZExtOrSelf(m_And(m_LShr(m_Mul(m_c_And(m_Neg(m_Value(X1)),
-                                                             m_Deferred(X1)),
-                                                     m_ConstantInt(MulConst)),
-                                               m_ConstantInt(ShiftConst)),
-                                        m_ConstantInt(AndCst)))))
+  auto MatchInner = m_LShr(m_Mul(m_c_And(m_Neg(m_Value(X1)), m_Deferred(X1)),
+                                 m_ConstantInt(MulConst)),
+                           m_ConstantInt(ShiftConst));
+  if (!match(GepIdx, m_ZExtOrSelf(MatchInner)) &&
+      !match(GepIdx, m_ZExtOrSelf(m_And(MatchInner, m_ConstantInt(AndCst)))))
     return false;
 
   unsigned InputBits = X1->getType()->getScalarSizeInBits();
   if (InputBits != 16 && InputBits != 32 && InputBits != 64)
     return false;
 
-  if (!isCTTZTable(GVTable->getInitializer(), MulConst, ShiftConst, AndCst,
-                   AccessType, InputBits,
-                   GEPSrcEltTy->getScalarSizeInBits() / 8, DL))
+  if (!GEPScale.isIntN(InputBits) ||
+      !isCTTZTable(GVTable->getInitializer(), MulConst, ShiftConst, AndCst,
+                   AccessType, InputBits, GEPScale.trunc(InputBits), DL))
     return false;
 
   ConstantInt *ZeroTableElem = cast<ConstantInt>(
