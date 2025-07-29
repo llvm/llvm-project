@@ -459,7 +459,7 @@ public:
   bool switchSection(MCSection *Section, const MCExpr *);
 
   /// Similar to switchSection, but does not print the section directive.
-  virtual void switchSectionNoPrint(MCSection *Section);
+  void switchSectionNoPrint(MCSection *Section);
 
   /// Create the default sections and set the initial one.
   virtual void initSections(bool NoExecStack, const MCSubtargetInfo &STI);

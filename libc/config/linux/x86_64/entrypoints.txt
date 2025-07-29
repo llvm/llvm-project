@@ -892,6 +892,12 @@ if(LIBC_TYPES_HAS_FLOAT128)
   )
 endif()
 
+
+list(APPEND TARGET_LIBM_ENTRYPOINTS
+  # bfloat16 entrypoints
+  libc.src.math.fabsbf16
+)
+
 if(LIBC_COMPILER_HAS_FIXED_POINT)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # stdfix.h _Fract and _Accum entrypoints
@@ -1264,8 +1270,12 @@ if(LLVM_LIBC_FULL_BUILD)
     # wchar.h entrypoints
     libc.src.wchar.mblen
     libc.src.wchar.mbrlen
+    libc.src.wchar.mbsinit
     libc.src.wchar.mbrtowc
     libc.src.wchar.mbtowc
+    libc.src.wchar.mbstowcs
+    libc.src.wchar.mbsrtowcs
+    libc.src.wchar.mbsnrtowcs
     libc.src.wchar.wcrtomb
     libc.src.wchar.wctomb
     libc.src.wchar.wcstombs

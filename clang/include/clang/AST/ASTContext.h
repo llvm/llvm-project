@@ -238,9 +238,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<ElaboratedType> ElaboratedTypes{
       GeneralTypesLog2InitSize};
   mutable llvm::FoldingSet<DependentNameType> DependentNameTypes;
-  mutable llvm::ContextualFoldingSet<DependentTemplateSpecializationType,
-                                     ASTContext&>
-    DependentTemplateSpecializationTypes;
+  mutable llvm::DenseMap<llvm::FoldingSetNodeID,
+                         DependentTemplateSpecializationType *>
+      DependentTemplateSpecializationTypes;
   mutable llvm::FoldingSet<PackExpansionType> PackExpansionTypes;
   mutable llvm::FoldingSet<ObjCObjectTypeImpl> ObjCObjectTypes;
   mutable llvm::FoldingSet<ObjCObjectPointerType> ObjCObjectPointerTypes;
@@ -633,8 +633,6 @@ public:
   getRelocationInfoForCXXRecord(const CXXRecordDecl *) const;
   void setRelocationInfoForCXXRecord(const CXXRecordDecl *,
                                      CXXRecordDeclRelocationInfo);
-
-  void initSanitizers(const LangOptions &LangOpts, SourceManager &SM);
 
   /// Examines a given type, and returns whether the type itself
   /// is address discriminated, or any transitively embedded types

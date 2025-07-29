@@ -521,6 +521,32 @@ mlir::LogicalResult CIRToLLVMBitCtzOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
+mlir::LogicalResult CIRToLLVMBitFfsOpLowering::matchAndRewrite(
+    cir::BitFfsOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto resTy = getTypeConverter()->convertType(op.getType());
+  auto ctz = rewriter.create<mlir::LLVM::CountTrailingZerosOp>(
+      op.getLoc(), resTy, adaptor.getInput(), /*is_zero_poison=*/true);
+
+  auto one = rewriter.create<mlir::LLVM::ConstantOp>(op.getLoc(), resTy, 1);
+  auto ctzAddOne = rewriter.create<mlir::LLVM::AddOp>(op.getLoc(), ctz, one);
+
+  auto zeroInputTy = rewriter.create<mlir::LLVM::ConstantOp>(
+      op.getLoc(), adaptor.getInput().getType(), 0);
+  auto isZero = rewriter.create<mlir::LLVM::ICmpOp>(
+      op.getLoc(),
+      mlir::LLVM::ICmpPredicateAttr::get(rewriter.getContext(),
+                                         mlir::LLVM::ICmpPredicate::eq),
+      adaptor.getInput(), zeroInputTy);
+
+  auto zero = rewriter.create<mlir::LLVM::ConstantOp>(op.getLoc(), resTy, 0);
+  auto res = rewriter.create<mlir::LLVM::SelectOp>(op.getLoc(), isZero, zero,
+                                                   ctzAddOne);
+  rewriter.replaceOp(op, res);
+
+  return mlir::LogicalResult::success();
+}
+
 mlir::LogicalResult CIRToLLVMBitParityOpLowering::matchAndRewrite(
     cir::BitParityOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -1026,6 +1052,12 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     cir::ConstantOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Attribute attr = op.getValue();
+
+  if (mlir::isa<cir::PoisonAttr>(attr)) {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::PoisonOp>(
+        op, getTypeConverter()->convertType(op.getType()));
+    return mlir::success();
+  }
 
   if (mlir::isa<mlir::IntegerType>(op.getType())) {
     // Verified cir.const operations cannot actually be of these types, but the
@@ -2083,6 +2115,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMBitClrsbOpLowering,
                CIRToLLVMBitClzOpLowering,
                CIRToLLVMBitCtzOpLowering,
+               CIRToLLVMBitFfsOpLowering,
                CIRToLLVMBitParityOpLowering,
                CIRToLLVMBitPopcountOpLowering,
                CIRToLLVMBitReverseOpLowering,

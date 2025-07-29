@@ -2508,7 +2508,20 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           .addReg(DstHi);
     }
     break;
+
+  case AMDGPU::V_MAX_BF16_PSEUDO_e64:
+    assert(ST.hasBF16PackedInsts());
+    MI.setDesc(get(AMDGPU::V_PK_MAX_NUM_BF16));
+    MI.addOperand(MachineOperand::CreateImm(0)); // op_sel
+    MI.addOperand(MachineOperand::CreateImm(0)); // neg_lo
+    MI.addOperand(MachineOperand::CreateImm(0)); // neg_hi
+    auto Op0 = getNamedOperand(MI, AMDGPU::OpName::src0_modifiers);
+    Op0->setImm(Op0->getImm() | SISrcMods::OP_SEL_1);
+    auto Op1 = getNamedOperand(MI, AMDGPU::OpName::src1_modifiers);
+    Op1->setImm(Op1->getImm() | SISrcMods::OP_SEL_1);
+    break;
   }
+
   return true;
 }
 
@@ -4234,6 +4247,32 @@ bool SIInstrInfo::isAlwaysGDS(uint16_t Opcode) const {
   return Opcode == AMDGPU::DS_ORDERED_COUNT ||
          Opcode == AMDGPU::DS_ADD_GS_REG_RTN ||
          Opcode == AMDGPU::DS_SUB_GS_REG_RTN || isGWS(Opcode);
+}
+
+bool SIInstrInfo::mayAccessScratchThroughFlat(const MachineInstr &MI) const {
+  if (!isFLAT(MI) || isFLATGlobal(MI))
+    return false;
+
+  // If scratch is not initialized, we can never access it.
+  if (MI.getMF()->getFunction().hasFnAttribute("amdgpu-no-flat-scratch-init"))
+    return false;
+
+  // SCRATCH instructions always access scratch.
+  if (isFLATScratch(MI))
+    return true;
+
+  // If there are no memory operands then conservatively assume the flat
+  // operation may access scratch.
+  if (MI.memoperands_empty())
+    return true;
+
+  // TODO (?): Does this need to be taught how to read noalias.addrspace ?
+
+  // See if any memory operand specifies an address space that involves scratch.
+  return any_of(MI.memoperands(), [](const MachineMemOperand *Memop) {
+    unsigned AS = Memop->getAddrSpace();
+    return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS;
+  });
 }
 
 bool SIInstrInfo::modifiesModeRegister(const MachineInstr &MI) {
