@@ -1,4 +1,4 @@
-//===- VectorToXeGPU.cpp - Convert vector to AMX dialect --------*- C++ -*-===//
+//===- VectorToAMX.cpp - Convert vector to AMX dialect ----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements lowering of vector operations to XeGPU dialect ops.
+// This file implements lowering of vector operations to AMX dialect ops.
 //
 //===----------------------------------------------------------------------===//
 
