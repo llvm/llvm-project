@@ -16,6 +16,7 @@
 #include "MemberPointer.h"
 #include "PrimType.h"
 #include "Record.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
 
@@ -66,14 +67,14 @@ Pointer::~Pointer() {
   }
 }
 
-void Pointer::operator=(const Pointer &P) {
+Pointer &Pointer::operator=(const Pointer &P) {
   // If the current storage type is Block, we need to remove
   // this pointer from the block.
   if (isBlockPointer()) {
     if (P.isBlockPointer() && this->block() == P.block()) {
       Offset = P.Offset;
       PointeeStorage.BS.Base = P.PointeeStorage.BS.Base;
-      return;
+      return *this;
     }
 
     if (Block *Pointee = PointeeStorage.BS.Pointee) {
@@ -101,16 +102,17 @@ void Pointer::operator=(const Pointer &P) {
   } else {
     assert(false && "Unhandled storage kind");
   }
+  return *this;
 }
 
-void Pointer::operator=(Pointer &&P) {
+Pointer &Pointer::operator=(Pointer &&P) {
   // If the current storage type is Block, we need to remove
   // this pointer from the block.
   if (isBlockPointer()) {
     if (P.isBlockPointer() && this->block() == P.block()) {
       Offset = P.Offset;
       PointeeStorage.BS.Base = P.PointeeStorage.BS.Base;
-      return;
+      return *this;
     }
 
     if (Block *Pointee = PointeeStorage.BS.Pointee) {
@@ -138,6 +140,7 @@ void Pointer::operator=(Pointer &&P) {
   } else {
     assert(false && "Unhandled storage kind");
   }
+  return *this;
 }
 
 APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
@@ -492,6 +495,19 @@ void Pointer::initialize() const {
   getInlineDesc()->IsInitialized = true;
 }
 
+void Pointer::initializeAllElements() const {
+  assert(getFieldDesc()->isPrimitiveArray());
+  assert(isArrayRoot());
+
+  InitMapPtr &IM = getInitMap();
+  if (!IM) {
+    IM = std::make_pair(true, nullptr);
+  } else {
+    IM->first = true;
+    IM->second.reset();
+  }
+}
+
 void Pointer::activate() const {
   // Field has its bit in an inline descriptor.
   assert(PointeeStorage.BS.Base != 0 &&
@@ -603,7 +619,7 @@ bool Pointer::pointsToStringLiteral() const {
     return false;
 
   const Expr *E = block()->getDescriptor()->asExpr();
-  return E && isa<StringLiteral>(E);
+  return isa_and_nonnull<StringLiteral>(E);
 }
 
 std::optional<std::pair<Pointer, Pointer>>
@@ -665,7 +681,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
       return false;
 
     // Primitive values.
-    if (std::optional<PrimType> T = Ctx.classify(Ty)) {
+    if (OptPrimType T = Ctx.classify(Ty)) {
       TYPE_SWITCH(*T, R = Ptr.deref<T>().toAPValue(ASTCtx));
       return true;
     }
@@ -682,7 +698,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
           const Pointer &FP = Ptr.atField(F.Offset);
           QualType FieldTy = F.Decl->getType();
           if (FP.isActive()) {
-            if (std::optional<PrimType> T = Ctx.classify(FieldTy)) {
+            if (OptPrimType T = Ctx.classify(FieldTy)) {
               TYPE_SWITCH(*T, Value = FP.deref<T>().toAPValue(ASTCtx));
             } else {
               Ok &= Composite(FieldTy, FP, Value);
@@ -705,7 +721,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
           const Pointer &FP = Ptr.atField(FD->Offset);
           APValue &Value = R.getStructField(I);
 
-          if (std::optional<PrimType> T = Ctx.classify(FieldTy)) {
+          if (OptPrimType T = Ctx.classify(FieldTy)) {
             TYPE_SWITCH(*T, Value = FP.deref<T>().toAPValue(ASTCtx));
           } else {
             Ok &= Composite(FieldTy, FP, Value);
@@ -743,7 +759,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
       for (unsigned I = 0; I < NumElems; ++I) {
         APValue &Slot = R.getArrayInitializedElt(I);
         const Pointer &EP = Ptr.atIndex(I);
-        if (std::optional<PrimType> T = Ctx.classify(ElemTy)) {
+        if (OptPrimType T = Ctx.classify(ElemTy)) {
           TYPE_SWITCH(*T, Slot = EP.deref<T>().toAPValue(ASTCtx));
         } else {
           Ok &= Composite(ElemTy, EP.narrow(), Slot);
@@ -757,7 +773,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
       QualType ElemTy = CT->getElementType();
 
       if (ElemTy->isIntegerType()) {
-        std::optional<PrimType> ElemT = Ctx.classify(ElemTy);
+        OptPrimType ElemT = Ctx.classify(ElemTy);
         assert(ElemT);
         INT_TYPE_SWITCH(*ElemT, {
           auto V1 = Ptr.elem<T>(0);
@@ -803,7 +819,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
     return toAPValue(ASTCtx);
 
   // Just load primitive types.
-  if (std::optional<PrimType> T = Ctx.classify(ResultType)) {
+  if (OptPrimType T = Ctx.classify(ResultType)) {
     TYPE_SWITCH(*T, return this->deref<T>().toAPValue(ASTCtx));
   }
 

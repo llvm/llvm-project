@@ -1682,7 +1682,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.hasFlatAtomicFaddF32Inst())
     Atomic.legalFor({{S32, FlatPtr}});
 
-  if (ST.hasGFX90AInsts()) {
+  if (ST.hasGFX90AInsts() || ST.hasGFX1250Insts()) {
     // These are legal with some caveats, and should have undergone expansion in
     // the IR in most situations
     // TODO: Move atomic expansion into legalizer
@@ -4208,6 +4208,9 @@ bool AMDGPULegalizerInfo::legalizeMul(LegalizerHelper &Helper,
   assert(Ty.isScalar());
 
   unsigned Size = Ty.getSizeInBits();
+  if (ST.hasVectorMulU64() && Size == 64)
+    return true;
+
   unsigned NumParts = Size / 32;
   assert((Size % 32) == 0);
   assert(NumParts >= 2);

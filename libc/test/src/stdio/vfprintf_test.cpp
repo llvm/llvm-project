@@ -45,7 +45,7 @@ int call_vfprintf(::FILE *__restrict stream, const char *__restrict format,
 }
 
 TEST(LlvmLibcVFPrintfTest, WriteToFile) {
-  const char *FILENAME = "vfprintf_output.test";
+  const char *FILENAME = APPEND_LIBC_TEST("vfprintf_output.test");
   auto FILE_PATH = libc_make_test_file_path(FILENAME);
 
   ::FILE *file = printf_test::fopen(FILE_PATH, "w");

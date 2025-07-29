@@ -482,4 +482,19 @@
 #  define SANITIZER_START_BACKGROUND_THREAD_IN_ASAN_INTERNAL 0
 #endif
 
+#if SANITIZER_LINUX
+#  if SANITIZER_GLIBC
+// Workaround for
+// glibc/commit/3d3572f59059e2b19b8541ea648a6172136ec42e
+// Linux: Keep termios ioctl constants strictly internal
+#    if __GLIBC_PREREQ(2, 41)
+#      define SANITIZER_TERMIOS_IOCTL_CONSTANTS 0
+#    else
+#      define SANITIZER_TERMIOS_IOCTL_CONSTANTS 1
+#    endif
+#  else
+#    define SANITIZER_TERMIOS_IOCTL_CONSTANTS 1
+#  endif
+#endif
+
 #endif  // SANITIZER_PLATFORM_H

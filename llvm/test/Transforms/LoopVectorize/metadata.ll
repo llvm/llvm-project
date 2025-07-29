@@ -18,14 +18,12 @@ define void @fp_math(ptr nocapture %a, ptr noalias %b, i64 %size) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP2]], align 4, !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 4, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[WIDE_LOAD]], splat (double 9.900000e+01), !fpmath [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fcmp oge <2 x double> [[TMP3]], splat (double 1.000000e+01)
-; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP4]], <2 x double> [[WIDE_LOAD]], <2 x double> zeroinitializer, !fpmath [[META3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = fptrunc <2 x double> [[TMP5]] to <2 x float>, !fpmath [[META3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    store <2 x float> [[TMP6]], ptr [[TMP7]], align 4, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP4]], <2 x double> [[WIDE_LOAD]], <2 x double> zeroinitializer, !fpmath [[META3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fptrunc <2 x double> [[TMP6]] to <2 x float>, !fpmath [[META3]]
+; CHECK-NEXT:    store <2 x float> [[TMP5]], ptr [[TMP1]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -64,22 +62,20 @@ define void @fp_math(ptr nocapture %a, ptr noalias %b, i64 %size) {
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[INDEX]]
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
-; INTERLEAVE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 0
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 2
-; INTERLEAVE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP2]], align 4, !tbaa [[TBAA0:![0-9]+]]
+; INTERLEAVE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 4, !tbaa [[TBAA0:![0-9]+]]
 ; INTERLEAVE-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x double>, ptr [[TMP3]], align 4, !tbaa [[TBAA0]]
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[WIDE_LOAD]], splat (double 9.900000e+01), !fpmath [[META3:![0-9]+]]
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[WIDE_LOAD1]], splat (double 9.900000e+01), !fpmath [[META3]]
 ; INTERLEAVE-NEXT:    [[TMP6:%.*]] = fcmp oge <2 x double> [[TMP4]], splat (double 1.000000e+01)
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = fcmp oge <2 x double> [[TMP5]], splat (double 1.000000e+01)
-; INTERLEAVE-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP6]], <2 x double> [[WIDE_LOAD]], <2 x double> zeroinitializer, !fpmath [[META3]]
-; INTERLEAVE-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP7]], <2 x double> [[WIDE_LOAD1]], <2 x double> zeroinitializer, !fpmath [[META3]]
+; INTERLEAVE-NEXT:    [[TMP11:%.*]] = select <2 x i1> [[TMP6]], <2 x double> [[WIDE_LOAD]], <2 x double> zeroinitializer, !fpmath [[META3]]
+; INTERLEAVE-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP7]], <2 x double> [[WIDE_LOAD1]], <2 x double> zeroinitializer, !fpmath [[META3]]
+; INTERLEAVE-NEXT:    [[TMP9:%.*]] = fptrunc <2 x double> [[TMP11]] to <2 x float>, !fpmath [[META3]]
 ; INTERLEAVE-NEXT:    [[TMP10:%.*]] = fptrunc <2 x double> [[TMP8]] to <2 x float>, !fpmath [[META3]]
-; INTERLEAVE-NEXT:    [[TMP11:%.*]] = fptrunc <2 x double> [[TMP9]] to <2 x float>, !fpmath [[META3]]
-; INTERLEAVE-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
 ; INTERLEAVE-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 2
-; INTERLEAVE-NEXT:    store <2 x float> [[TMP10]], ptr [[TMP12]], align 4, !tbaa [[TBAA0]]
-; INTERLEAVE-NEXT:    store <2 x float> [[TMP11]], ptr [[TMP13]], align 4, !tbaa [[TBAA0]]
+; INTERLEAVE-NEXT:    store <2 x float> [[TMP9]], ptr [[TMP1]], align 4, !tbaa [[TBAA0]]
+; INTERLEAVE-NEXT:    store <2 x float> [[TMP10]], ptr [[TMP13]], align 4, !tbaa [[TBAA0]]
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; INTERLEAVE-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -137,19 +133,17 @@ define void @widen_call_range(ptr noalias %a, ptr readonly %b) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[TMP0]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 4, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP0]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @foo_vector_fixed2_nomask(<2 x i64> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP3]], i32 0
-; CHECK-NEXT:    store <2 x i64> [[TMP2]], ptr [[TMP4]], align 4
+; CHECK-NEXT:    store <2 x i64> [[TMP2]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -173,24 +167,22 @@ define void @widen_call_range(ptr noalias %a, ptr readonly %b) {
 ; INTERLEAVE:       [[VECTOR_BODY]]:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDEX]]
-; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[TMP0]], i32 0
 ; INTERLEAVE-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[TMP0]], i32 2
-; INTERLEAVE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 4, !tbaa [[TBAA0]]
+; INTERLEAVE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP0]], align 4, !tbaa [[TBAA0]]
 ; INTERLEAVE-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i64>, ptr [[TMP2]], align 4, !tbaa [[TBAA0]]
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = call <2 x i64> @foo_vector_fixed2_nomask(<2 x i64> [[WIDE_LOAD]])
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = call <2 x i64> @foo_vector_fixed2_nomask(<2 x i64> [[WIDE_LOAD1]])
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
-; INTERLEAVE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[TMP5]], i32 0
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[TMP5]], i32 2
-; INTERLEAVE-NEXT:    store <2 x i64> [[TMP3]], ptr [[TMP6]], align 4
+; INTERLEAVE-NEXT:    store <2 x i64> [[TMP3]], ptr [[TMP5]], align 4
 ; INTERLEAVE-NEXT:    store <2 x i64> [[TMP4]], ptr [[TMP7]], align 4
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; INTERLEAVE-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; INTERLEAVE-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
-; INTERLEAVE-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; INTERLEAVE-NEXT:    br label %[[EXIT:.*]]
 ; INTERLEAVE:       [[SCALAR_PH]]:
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; INTERLEAVE-NEXT:    br label %[[LOOP:.*]]
 ; INTERLEAVE:       [[LOOP]]:
 ; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -233,19 +225,17 @@ define void @widen_call_fpmath(ptr noalias %a, ptr readonly %b) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[TMP0]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP1]], align 8, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x double> @bar_vector_fixed2_nomask(<2 x double> [[WIDE_LOAD]]), !fpmath [[META3]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @bar_vector_fixed2_nomask(<2 x double> [[WIDE_LOAD]]), !fpmath [[META3]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 0
-; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[TMP4]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -269,24 +259,22 @@ define void @widen_call_fpmath(ptr noalias %a, ptr readonly %b) {
 ; INTERLEAVE:       [[VECTOR_BODY]]:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[B]], i64 [[INDEX]]
-; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[TMP0]], i32 0
 ; INTERLEAVE-NEXT:    [[TMP2:%.*]] = getelementptr double, ptr [[TMP0]], i32 2
-; INTERLEAVE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP1]], align 8, !tbaa [[TBAA0]]
+; INTERLEAVE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8, !tbaa [[TBAA0]]
 ; INTERLEAVE-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x double>, ptr [[TMP2]], align 8, !tbaa [[TBAA0]]
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = call <2 x double> @bar_vector_fixed2_nomask(<2 x double> [[WIDE_LOAD]]), !fpmath [[META3]]
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = call <2 x double> @bar_vector_fixed2_nomask(<2 x double> [[WIDE_LOAD1]]), !fpmath [[META3]]
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[INDEX]]
-; INTERLEAVE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[TMP5]], i32 0
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[TMP5]], i32 2
-; INTERLEAVE-NEXT:    store <2 x double> [[TMP3]], ptr [[TMP6]], align 8
+; INTERLEAVE-NEXT:    store <2 x double> [[TMP3]], ptr [[TMP5]], align 8
 ; INTERLEAVE-NEXT:    store <2 x double> [[TMP4]], ptr [[TMP7]], align 8
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; INTERLEAVE-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; INTERLEAVE-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
-; INTERLEAVE-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; INTERLEAVE-NEXT:    br label %[[EXIT:.*]]
 ; INTERLEAVE:       [[SCALAR_PH]]:
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; INTERLEAVE-NEXT:    br label %[[LOOP:.*]]
 ; INTERLEAVE:       [[LOOP]]:
 ; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -329,19 +317,17 @@ define void @widen_intrinsic(ptr noalias %a, ptr readonly %b) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[TMP0]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.abs.v2i64(<2 x i64> [[WIDE_LOAD]], i1 true)
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP3]], i32 0
-; CHECK-NEXT:    store <2 x i64> [[TMP2]], ptr [[TMP4]], align 4
+; CHECK-NEXT:    store <2 x i64> [[TMP2]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -365,24 +351,22 @@ define void @widen_intrinsic(ptr noalias %a, ptr readonly %b) {
 ; INTERLEAVE:       [[VECTOR_BODY]]:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDEX]]
-; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[TMP0]], i32 0
 ; INTERLEAVE-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[TMP0]], i32 2
-; INTERLEAVE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 4
+; INTERLEAVE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP0]], align 4
 ; INTERLEAVE-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i64>, ptr [[TMP2]], align 4
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.abs.v2i64(<2 x i64> [[WIDE_LOAD]], i1 true)
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.abs.v2i64(<2 x i64> [[WIDE_LOAD1]], i1 true)
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
-; INTERLEAVE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[TMP5]], i32 0
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[TMP5]], i32 2
-; INTERLEAVE-NEXT:    store <2 x i64> [[TMP3]], ptr [[TMP6]], align 4
+; INTERLEAVE-NEXT:    store <2 x i64> [[TMP3]], ptr [[TMP5]], align 4
 ; INTERLEAVE-NEXT:    store <2 x i64> [[TMP4]], ptr [[TMP7]], align 4
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; INTERLEAVE-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; INTERLEAVE-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
-; INTERLEAVE-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; INTERLEAVE-NEXT:    br label %[[EXIT:.*]]
 ; INTERLEAVE:       [[SCALAR_PH]]:
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; INTERLEAVE-NEXT:    br label %[[LOOP:.*]]
 ; INTERLEAVE:       [[LOOP]]:
 ; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -425,19 +409,17 @@ define void @widen_intrinsic_fpmath(ptr noalias %a, ptr readonly %b) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[TMP0]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP1]], align 8, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x double> @llvm.sin.v2f64(<2 x double> [[WIDE_LOAD]]), !fpmath [[META3]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @llvm.sin.v2f64(<2 x double> [[WIDE_LOAD]]), !fpmath [[META3]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 0
-; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[TMP4]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -461,24 +443,22 @@ define void @widen_intrinsic_fpmath(ptr noalias %a, ptr readonly %b) {
 ; INTERLEAVE:       [[VECTOR_BODY]]:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[B]], i64 [[INDEX]]
-; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[TMP0]], i32 0
 ; INTERLEAVE-NEXT:    [[TMP2:%.*]] = getelementptr double, ptr [[TMP0]], i32 2
-; INTERLEAVE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP1]], align 8, !tbaa [[TBAA0]]
+; INTERLEAVE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8, !tbaa [[TBAA0]]
 ; INTERLEAVE-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x double>, ptr [[TMP2]], align 8, !tbaa [[TBAA0]]
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.sin.v2f64(<2 x double> [[WIDE_LOAD]]), !fpmath [[META3]]
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.sin.v2f64(<2 x double> [[WIDE_LOAD1]]), !fpmath [[META3]]
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[INDEX]]
-; INTERLEAVE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[TMP5]], i32 0
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[TMP5]], i32 2
-; INTERLEAVE-NEXT:    store <2 x double> [[TMP3]], ptr [[TMP6]], align 8
+; INTERLEAVE-NEXT:    store <2 x double> [[TMP3]], ptr [[TMP5]], align 8
 ; INTERLEAVE-NEXT:    store <2 x double> [[TMP4]], ptr [[TMP7]], align 8
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; INTERLEAVE-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; INTERLEAVE-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
-; INTERLEAVE-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; INTERLEAVE-NEXT:    br label %[[EXIT:.*]]
 ; INTERLEAVE:       [[SCALAR_PH]]:
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; INTERLEAVE-NEXT:    br label %[[LOOP:.*]]
 ; INTERLEAVE:       [[LOOP]]:
 ; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -525,12 +505,10 @@ define void @unknown_metadata(ptr nocapture %a, ptr noalias %b, i64 %size) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT2:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[INDEX]], !custom_md [[META2:![0-9]+]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[INDEX]], !custom_md [[META2:![0-9]+]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[B]], <2 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x ptr> [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    store <2 x ptr> [[TMP2]], ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
@@ -575,13 +553,11 @@ define void @unknown_metadata(ptr nocapture %a, ptr noalias %b, i64 %size) {
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B]], <2 x i64> [[VEC_IND]]
 ; INTERLEAVE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[B]], <2 x i64> [[STEP_ADD]]
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 0
-; INTERLEAVE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i32 0
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i32 2
-; INTERLEAVE-NEXT:    store <2 x i32> [[VEC_IND1]], ptr [[TMP4]], align 4
+; INTERLEAVE-NEXT:    store <2 x i32> [[VEC_IND1]], ptr [[TMP3]], align 4
 ; INTERLEAVE-NEXT:    store <2 x i32> [[STEP_ADD3]], ptr [[TMP5]], align 4
-; INTERLEAVE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
-; INTERLEAVE-NEXT:    store <2 x ptr> [[TMP1]], ptr [[TMP6]], align 8
+; INTERLEAVE-NEXT:    store <2 x ptr> [[TMP1]], ptr [[TMP0]], align 8
 ; INTERLEAVE-NEXT:    store <2 x ptr> [[TMP2]], ptr [[TMP7]], align 8
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; INTERLEAVE-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[STEP_ADD]], splat (i64 2)

@@ -26,8 +26,10 @@ using namespace llvm;
 using namespace llvm::codeview;
 
 void CodeViewContext::finish() {
-  if (StrTabFragment)
-    StrTabFragment->setContents(StrTab);
+  if (!StrTabFragment)
+    return;
+  assert(StrTabFragment->getKind() == MCFragment::FT_Data);
+  StrTabFragment->setVarContents(StrTab);
 }
 
 /// This is a valid number for use with .cv_loc if we've already seen a .cv_file
@@ -168,6 +170,7 @@ void CodeViewContext::emitStringTable(MCObjectStreamer &OS) {
   if (!StrTabFragment) {
     OS.newFragment();
     StrTabFragment = OS.getCurrentFragment();
+    OS.newFragment();
   }
 
   OS.emitValueToAlignment(Align(4), 0);
@@ -603,7 +606,7 @@ void CodeViewContext::encodeInlineLineTable(const MCAssembler &Asm,
 
   compressAnnotation(BinaryAnnotationsOpCode::ChangeCodeLength, Buffer);
   compressAnnotation(std::min(EndSymLength, LocAfterLength), Buffer);
-  Frag.setContents(Buffer);
+  Frag.setVarContents(Buffer);
 }
 
 void CodeViewContext::encodeDefRange(const MCAssembler &Asm,
@@ -691,6 +694,6 @@ void CodeViewContext::encodeDefRange(const MCAssembler &Asm,
     }
   }
 
-  Frag.setContents(Contents);
-  Frag.setFixups(Fixups);
+  Frag.setVarContents(Contents);
+  Frag.setVarFixups(Fixups);
 }
