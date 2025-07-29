@@ -32,9 +32,10 @@ class VOP3b_Profile<ValueType vt> : VOPProfile<[vt, vt, vt, vt]> {
   let HasExtDPP = 0;
 }
 
-let HasExt64BitDPP = 1 in {
-def VOP3b_F32_I1_F32_F32_F32 : VOP3b_Profile<f32>;
-def VOP3b_F64_I1_F64_F64_F64 : VOP3b_Profile<f64>;
+def DIV_FIXUP_F32_PROF : VOP3_Profile<VOP_F32_F32_F32_F32> {
+  let HasExtVOP3DPP = 0;
+  let HasExtDPP = 0;
+}
 
 def VOP3b_I64_I1_I32_I32_I64 : VOPProfile<[i64, i32, i32, i64]> {
   let HasClamp = 1;
@@ -44,6 +45,10 @@ def VOP3b_I64_I1_I32_I32_I64 : VOPProfile<[i64, i32, i32, i64]> {
   let Asm64 = "$vdst, $sdst, $src0, $src1, $src2$clamp";
 }
 
+let HasExt64BitDPP = 1 in {
+def VOP3b_F32_I1_F32_F32_F32 : VOP3b_Profile<f32>;
+def VOP3b_F64_I1_F64_F64_F64 : VOP3b_Profile<f64>;
+
 class V_MUL_PROF<VOPProfile P> : VOP3_Profile<P> {
   let HasExtVOP3DPP = 0;
   let HasExtDPP = 0;
@@ -52,11 +57,6 @@ class V_MUL_PROF<VOPProfile P> : VOP3_Profile<P> {
 def V_LSHL_ADD_U64_PROF : VOP3_Profile<VOP_I64_I64_I32_I64>;
 
 def VOP_F64_F64_F64_F64_DPP_PROF : VOP3_Profile<VOP_F64_F64_F64_F64>;
-
-def DIV_FIXUP_F32_PROF : VOP3_Profile<VOP_F32_F32_F32_F32> {
-  let HasExtVOP3DPP = 0;
-  let HasExtDPP = 0;
-}
 } // End HasExt64BitDPP = 1;
 
 //===----------------------------------------------------------------------===//
