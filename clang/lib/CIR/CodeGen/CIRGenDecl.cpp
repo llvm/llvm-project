@@ -608,11 +608,16 @@ void CIRGenFunction::emitDecl(const Decl &d) {
   case Decl::UsingDirective: // using namespace X; [C++]
     assert(!cir::MissingFeatures::generateDebugInfo());
     return;
-  case Decl::Var: {
+  case Decl::Var:
+  case Decl::Decomposition: {
     const VarDecl &vd = cast<VarDecl>(d);
     assert(vd.isLocalVarDecl() &&
            "Should not see file-scope variables inside a function!");
     emitVarDecl(vd);
+    if (auto *dd = dyn_cast<DecompositionDecl>(&vd))
+      for (BindingDecl *b : dd->bindings())
+        if (VarDecl *hd = b->getHoldingVar())
+          emitVarDecl(*hd);
     return;
   }
   case Decl::OpenACCDeclare:
@@ -632,7 +637,6 @@ void CIRGenFunction::emitDecl(const Decl &d) {
   case Decl::ImplicitConceptSpecialization:
   case Decl::TopLevelStmt:
   case Decl::UsingPack:
-  case Decl::Decomposition: // This could be moved to join Decl::Var
   case Decl::OMPDeclareReduction:
   case Decl::OMPDeclareMapper:
     cgm.errorNYI(d.getSourceRange(),
