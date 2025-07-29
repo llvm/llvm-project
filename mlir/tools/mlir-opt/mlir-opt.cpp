@@ -135,6 +135,7 @@ void registerTestShardSimplificationsPass();
 void registerTestMultiBuffering();
 void registerTestNextAccessPass();
 void registerTestNVGPULowerings();
+void registerTestOneShotModuleBufferizePass();
 void registerTestOpaqueLoc();
 void registerTestOpLoweringPasses();
 void registerTestPadFusion();
@@ -281,6 +282,7 @@ void registerTestPasses() {
   mlir::test::registerTestMultiBuffering();
   mlir::test::registerTestNextAccessPass();
   mlir::test::registerTestNVGPULowerings();
+  mlir::test::registerTestOneShotModuleBufferizePass();
   mlir::test::registerTestOpaqueLoc();
   mlir::test::registerTestOpLoweringPasses();
   mlir::test::registerTestPadFusion();
