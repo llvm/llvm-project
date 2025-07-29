@@ -360,6 +360,9 @@ foreach(header
     set(copy_command ${CMAKE_COMMAND} -E copy ${header} ${staged_header})
   endif()
 
+  add_custom_target(liblldb-stage-header-${basename} DEPENDS ${staged_header})
+  add_dependencies(liblldb-stage-header-${basename} lldb-sbapi-dwarf-enums)
+  add_dependencies(liblldb-header-staging liblldb-stage-header-${basename})
   add_custom_command(
     DEPENDS ${header} OUTPUT ${staged_header}
     COMMAND ${copy_command}
@@ -371,6 +374,7 @@ foreach(header
     set(output_header $<TARGET_FILE_DIR:liblldb>/Headers/${basename})
 
     add_custom_target(lldb-framework-fixup-header-${basename} DEPENDS ${staged_header})
+    add_dependencies(lldb-framework-fixup-header-${basename} liblldb-stage-header-${basename})
     add_dependencies(lldb-framework-fixup-all-headers lldb-framework-fixup-header-${basename})
 
     add_custom_command(TARGET lldb-framework-fixup-header-${basename} POST_BUILD
