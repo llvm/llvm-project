@@ -1060,7 +1060,10 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       }
     }
     ProgInfo.NumSGPR = AMDGPUMCExpr::createMax(
-        {ProgInfo.NumSGPR, CreateExpr(WaveDispatchNumSGPR)}, Ctx);
+        {ProgInfo.NumSGPR,
+         MCBinaryExpr::createAdd(CreateExpr(WaveDispatchNumSGPR), ExtraSGPRs,
+                                 Ctx)},
+        Ctx);
 
     ProgInfo.NumArchVGPR = AMDGPUMCExpr::createMax(
         {ProgInfo.NumVGPR, CreateExpr(WaveDispatchNumVGPR)}, Ctx);
