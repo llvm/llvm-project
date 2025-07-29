@@ -955,11 +955,12 @@ def OMP_Parallel : Directive<[Spelling<"parallel">]> {
     VersionedClause<OMPC_Reduction>,
     VersionedClause<OMPC_Shared>,
   ];
-  let allowedOnceClauses = [
-    VersionedClause<OMPC_Default>,
-    VersionedClause<OMPC_If>,
-    VersionedClause<OMPC_NumThreads>,
-    VersionedClause<OMPC_ProcBind>,
+  let allowedOnceClauses = [VersionedClause<OMPC_Default>,
+                            VersionedClause<OMPC_If>,
+                            VersionedClause<OMPC_NumThreads>,
+                            VersionedClause<OMPC_ProcBind>,
+                            VersionedClause<OMPC_Message, 60>,
+                            VersionedClause<OMPC_Severity, 60>,
   ];
   let association = AS_Block;
   let category = CA_Executable;

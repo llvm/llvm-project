@@ -34,7 +34,6 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple arm-netbsd
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple arm-openbsd
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple arm-rtems
-// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple arm-nacl
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple arm-win32-cygnus
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple arm-win32-gnu
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple arm-win32-itanium
@@ -60,7 +59,6 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple mipsel-rtems
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple mipsel-freebsd
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple mipsel-netbsd
-// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple mipsel-nacl
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple mips64
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple mips64-linux
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple mips64-rtems
@@ -147,7 +145,6 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-win32-msvc
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-haiku
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-rtems
-// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-nacl
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-elfiamcu
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-hurd
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64
@@ -166,7 +163,6 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64-win32gnu
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64-win32msvc
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64-haiku
-// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64-nacl
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64-ps4
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64-ps5
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64-managarm

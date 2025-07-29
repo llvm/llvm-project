@@ -191,6 +191,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/time.h entrypoints
     libc.src.sys.time.setitimer
     libc.src.sys.time.getitimer
+
+    # wctype.h entrypoints
+    libc.src.wctype.iswalpha
 )
 
 if(LLVM_LIBC_FULL_BUILD)
@@ -437,6 +440,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
+    libc.src.math.tanpif
     libc.src.math.totalorder
     libc.src.math.totalorderf
     libc.src.math.totalorderl
@@ -452,6 +456,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ufromfpx
     libc.src.math.ufromfpxf
     libc.src.math.ufromfpxl
+)
+
+list(APPEND TARGET_LIBM_ENTRYPOINTS
+  # bfloat16 entrypoints
+  libc.src.math.fabsbf16
 )
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS

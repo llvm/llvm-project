@@ -1887,7 +1887,6 @@ def produce_tests():
 {cxx_tests}
 
 // clang-format on
-
 """.format(
             script_name=script_name,
             header=h,

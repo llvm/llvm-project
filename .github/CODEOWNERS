@@ -31,9 +31,9 @@
 /clang/www/cxx_dr_status.html @Endilll
 /clang/www/make_cxx_dr_status @Endilll
 
-/clang/include/clang/CIR @lanza @bcardosolopes
-/clang/lib/CIR @lanza @bcardosolopes
-/clang/tools/cir-* @lanza @bcardosolopes
+/clang/include/clang/CIR @lanza @bcardosolopes @xlauko @andykaylor
+/clang/lib/CIR @lanza @bcardosolopes @xlauko @andykaylor
+/clang/tools/cir-* @lanza @bcardosolopes @xlauko @andykaylor
 
 /lldb/ @JDevlieghere
 
@@ -120,15 +120,16 @@
 /mlir/**/Index* @mogball
 
 # MLIR Python Bindings
-/mlir/test/python/ @ftynse @makslevental @stellaraccident
-/mlir/python/ @ftynse @makslevental @stellaraccident
+/mlir/test/python/ @ftynse @makslevental @stellaraccident @rolfmorel
+/mlir/python/ @ftynse @makslevental @stellaraccident @rolfmorel
+/mlir/lib/Bindings/Python @makslevental @rolfmorel
 
 # MLIR Mem2Reg/SROA
 /mlir/**/Transforms/Mem2Reg.* @moxinilian
 /mlir/**/Transforms/SROA.* @moxinilian
 
 # BOLT
-/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @yota9 @paschalis-mpeis
+/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @yota9 @paschalis-mpeis @yozhu
 
 # Bazel build system.
 /utils/bazel/ @rupprecht @keith @aaronmondal

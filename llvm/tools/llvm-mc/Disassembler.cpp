@@ -45,7 +45,11 @@ static bool PrintInsts(const MCDisassembler &DisAsm, const ByteArrayTy &Bytes,
     MCInst Inst;
 
     MCDisassembler::DecodeStatus S;
-    S = DisAsm.getInstruction(Inst, Size, Data.slice(Index), Index, nulls());
+    if (STI.getTargetTriple().getArch() == Triple::hexagon)
+      S = DisAsm.getInstructionBundle(Inst, Size, Data.slice(Index), Index,
+                                      nulls());
+    else
+      S = DisAsm.getInstruction(Inst, Size, Data.slice(Index), Index, nulls());
     switch (S) {
     case MCDisassembler::Fail:
       SM.PrintMessage(SMLoc::getFromPointer(Bytes.second[Index]),

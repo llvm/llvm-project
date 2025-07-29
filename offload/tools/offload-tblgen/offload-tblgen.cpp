@@ -26,6 +26,7 @@ enum ActionType {
   PrintRecords,
   DumpJSON,
   GenAPI,
+  GenDoc,
   GenFuncNames,
   GenImplFuncDecls,
   GenEntryPoints,
@@ -44,6 +45,8 @@ cl::opt<ActionType> Action(
         clEnumValN(DumpJSON, "dump-json",
                    "Dump all records as machine-readable JSON"),
         clEnumValN(GenAPI, "gen-api", "Generate Offload API header contents"),
+        clEnumValN(GenDoc, "gen-doc",
+                   "Generate Offload API documentation contents"),
         clEnumValN(GenFuncNames, "gen-func-names",
                    "Generate a list of all Offload API function names"),
         clEnumValN(
@@ -70,6 +73,9 @@ static bool OffloadTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenAPI:
     EmitOffloadAPI(Records, OS);
+    break;
+  case GenDoc:
+    EmitOffloadDoc(Records, OS);
     break;
   case GenFuncNames:
     EmitOffloadFuncNames(Records, OS);
