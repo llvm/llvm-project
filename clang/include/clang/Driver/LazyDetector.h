@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_LAZYDETECTOR_H
-#define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_LAZYDETECTOR_H
+#ifndef LLVM_CLANG_DRIVER_LAZYDETECTOR_H
+#define LLVM_CLANG_DRIVER_LAZYDETECTOR_H
 
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
@@ -42,4 +42,4 @@ public:
 
 } // end namespace clang
 
-#endif // LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_LAZYDETECTOR_H
+#endif // LLVM_CLANG_DRIVER_LAZYDETECTOR_H
