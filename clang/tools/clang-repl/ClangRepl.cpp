@@ -352,11 +352,9 @@ int main(int argc, const char **argv) {
   const char *help_output = "%help\tlist clang-repl %commands\n"
                             "%undo\tundo the previous input\n"
                             "%quit\texit clang-repl\n";
-  const char *help_prompt = "type %help to list clang-repl commands\n";
 
   llvm::raw_ostream &OS = llvm::outs();
   if (OptInputs.empty()) {
-    OS << help_prompt;
     llvm::LineEditor LE("clang-repl");
     std::string Input;
     LE.setListCompleter(ReplListCompleter(CB, *Interp));
@@ -381,11 +379,14 @@ int main(int argc, const char **argv) {
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       } else if (Input == R"(%help)") {
         OS << help_output << '\n';
-      } else if (Input[0] == '%') { // make sure this is evaluated last
-        OS << "Invalid % command: \"" << Input << "\". " << help_prompt;
+      } else if (Input == R"(%lib)") {
+        OS << "%lib expects 1 argument: the path to a dynamic library\n";
       } else if (Input.rfind("%lib ", 0) == 0) {
         if (auto Err = Interp->LoadDynamicLibrary(Input.data() + 5))
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
+      } else if (Input[0] == '%') { // make sure this is evaluated last
+        OS << "Invalid % command \"" << Input << "\", "
+           << "use \"%help\" to list commands\n";
       } else if (auto Err = Interp->ParseAndExecute(Input)) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       }
