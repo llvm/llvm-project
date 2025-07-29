@@ -94,6 +94,8 @@ namespace llvm {
     lltok::Kind LexToken();
 
     int getNextChar();
+    const char *skipNChars(unsigned N);
+    void advancePositionTo(const char *Ptr);
     void SkipLineComment();
     bool SkipCComment();
     lltok::Kind ReadString(lltok::Kind kind);
