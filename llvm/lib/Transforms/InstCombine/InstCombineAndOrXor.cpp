@@ -19,6 +19,8 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include <bitset>
+#include <map>
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -45,6 +47,202 @@ static Value *getFCmpValue(unsigned Code, Value *LHS, Value *RHS,
   if (Constant *TorF = getPredForFCmpCode(Code, LHS->getType(), NewPred))
     return TorF;
   return Builder.CreateFCmpFMF(NewPred, LHS, RHS, FMF);
+}
+
+/// This is to create optimal 3-variable boolean logic from truth tables.
+/// currently it supports the cases pertaining to the issue 97044. More cases
+/// can be added based on real-world justification for specific 3 input cases
+///  or with reviewer approval all 256 cases can be added (choose the
+///  canonicalizations found
+/// in x86InstCombine.cpp?)
+static Value *createLogicFromTable3Var(const std::bitset<8> &Table, Value *Op0,
+                                       Value *Op1, Value *Op2, Value *Root,
+                                       IRBuilderBase &Builder, bool HasOneUse) {
+  uint8_t TruthValue = Table.to_ulong();
+
+  // Skip transformation if expression is already simple (at most 2 levels
+  // deep).
+  if (Root->hasOneUse() && isa<BinaryOperator>(Root)) {
+    if (auto *BO = dyn_cast<BinaryOperator>(Root)) {
+      bool IsSimple = !isa<BinaryOperator>(BO->getOperand(0)) ||
+                      !isa<BinaryOperator>(BO->getOperand(1));
+      if (IsSimple)
+        return nullptr;
+    }
+  }
+
+  auto FoldConstant = [&](bool Val) {
+    Constant *Res = Val ? Builder.getTrue() : Builder.getFalse();
+    if (Op0->getType()->isVectorTy())
+      Res = ConstantVector::getSplat(
+          cast<VectorType>(Op0->getType())->getElementCount(), Res);
+    return Res;
+  };
+
+  Value *Result = nullptr;
+  switch (TruthValue) {
+  default:
+    return nullptr;
+
+  case 0x00: // Always FALSE
+    Result = FoldConstant(false);
+    break;
+
+  case 0xFF: // Always TRUE
+    Result = FoldConstant(true);
+    break;
+
+  case 0xE1: // ~((Op1 | Op2) ^ Op0)
+    if (!HasOneUse)
+      return nullptr;
+    {
+      Value *Or = Builder.CreateOr(Op1, Op2);
+      Value *Xor = Builder.CreateXor(Or, Op0);
+      Result = Builder.CreateNot(Xor);
+    }
+    break;
+
+  case 0x60: // Op0 & (Op1 ^ Op2)
+    if (!HasOneUse)
+      return nullptr;
+    {
+      Value *Xor = Builder.CreateXor(Op1, Op2);
+      Result = Builder.CreateAnd(Op0, Xor);
+    }
+    break;
+
+  case 0xD2: // ((Op1 | Op2) ^ Op0) ^ Op1
+    if (!HasOneUse)
+      return nullptr;
+    {
+      Value *Or = Builder.CreateOr(Op1, Op2);
+      Value *Xor1 = Builder.CreateXor(Or, Op0);
+      Result = Builder.CreateXor(Xor1, Op1);
+    }
+    break;
+  }
+
+  return Result;
+}
+
+static std::tuple<Value *, Value *, Value *>
+extractThreeVariables(Value *Root) {
+  std::set<Value *> Variables;
+  unsigned NodeCount = 0;
+  const unsigned MaxNodes =
+      50; // To prevent exponential blowup (see bitwise-hang.ll)
+
+  std::function<void(Value *)> Collect = [&](Value *V) {
+    if (++NodeCount > MaxNodes)
+      return;
+
+    Value *NotV;
+    if (match(V, m_Not(m_Value(NotV)))) {
+      Collect(NotV);
+      return;
+    }
+    if (auto *BO = dyn_cast<BinaryOperator>(V)) {
+      Collect(BO->getOperand(0));
+      Collect(BO->getOperand(1));
+    } else if (isa<Argument>(V) || isa<Instruction>(V)) {
+      if (!isa<Constant>(V) && V != Root) {
+        Variables.insert(V);
+      }
+    }
+  };
+
+  Collect(Root);
+
+  // Bail if we hit the node limit
+  if (NodeCount > MaxNodes)
+    return {nullptr, nullptr, nullptr};
+
+  if (Variables.size() == 3) {
+    auto It = Variables.begin();
+    Value *Op0 = *It++;
+    Value *Op1 = *It++;
+    Value *Op2 = *It;
+    return {Op0, Op1, Op2};
+  }
+  return {nullptr, nullptr, nullptr};
+}
+
+/// Evaluate a boolean expression with concrete variable values.
+static std::optional<bool>
+evaluateBooleanExpression(Value *Expr, const std::map<Value *, bool> &Values) {
+  if (auto It = Values.find(Expr); It != Values.end()) {
+    return It->second;
+  }
+  Value *NotExpr;
+  if (match(Expr, m_Not(m_Value(NotExpr)))) {
+    auto Operand = evaluateBooleanExpression(NotExpr, Values);
+    if (Operand)
+      return !*Operand;
+    return std::nullopt;
+  }
+  if (auto *BO = dyn_cast<BinaryOperator>(Expr)) {
+    auto LHS = evaluateBooleanExpression(BO->getOperand(0), Values);
+    auto RHS = evaluateBooleanExpression(BO->getOperand(1), Values);
+    if (!LHS || !RHS)
+      return std::nullopt;
+
+    switch (BO->getOpcode()) {
+    case Instruction::And:
+      return *LHS && *RHS;
+    case Instruction::Or:
+      return *LHS || *RHS;
+    case Instruction::Xor:
+      return *LHS != *RHS;
+    default:
+      return std::nullopt;
+    }
+  }
+  return std::nullopt;
+}
+
+/// Extracts the truth table from a 3-variable boolean expression.
+/// The truth table is a 8-bit integer where each bit corresponds to a possible
+/// combination of the three variables.
+/// The bits are ordered as follows:
+/// 000, 001, 010, 011, 100, 101, 110, 111
+/// The result is a bitset where the i-th bit is set if the expression is true
+/// for the i-th combination of the variables.
+static std::optional<std::bitset<8>>
+extractThreeBitTruthTable(Value *Expr, Value *Op0, Value *Op1, Value *Op2) {
+  std::bitset<8> Table;
+  for (int I = 0; I < 8; I++) {
+    bool Val0 = (I >> 2) & 1;
+    bool Val1 = (I >> 1) & 1;
+    bool Val2 = I & 1;
+    std::map<Value *, bool> Values = {{Op0, Val0}, {Op1, Val1}, {Op2, Val2}};
+    auto Result = evaluateBooleanExpression(Expr, Values);
+    if (!Result)
+      return std::nullopt;
+    Table[I] = *Result;
+  }
+  return Table;
+}
+
+/// Try to canonicalize 3-variable boolean expressions using truth table lookup.
+static Value *foldThreeVarBoolExpr(Value *Root,
+                                   InstCombiner::BuilderTy &Builder) {
+  // Only proceed if this is a "complex" expression.
+  if (!isa<BinaryOperator>(Root))
+    return nullptr;
+
+  auto [Op0, Op1, Op2] = extractThreeVariables(Root);
+  if (!Op0 || !Op1 || !Op2)
+    return nullptr;
+
+  auto Table = extractThreeBitTruthTable(Root, Op0, Op1, Op2);
+  if (!Table)
+    return nullptr;
+
+  // Only transform expressions with single use to avoid code growth.
+  if (!Root->hasOneUse())
+    return nullptr;
+
+  return createLogicFromTable3Var(*Table, Op0, Op1, Op2, Root, Builder, true);
 }
 
 /// Emit a computation of: (V >= Lo && V < Hi) if Inside is true, otherwise
@@ -3777,41 +3975,8 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
-  // ((X & Y & ~Z) | (X & ~Y & Z) | (~X & ~Y &~Z) | (X & Y &Z)) -> ~((Y | Z) ^
-  // X)
-  {
-    Value *X, *Y, *Z;
-    Value *Term1, *Term2, *XAndYAndZ;
-    if (match(&I,
-              m_Or(m_Or(m_Value(Term1), m_Value(Term2)), m_Value(XAndYAndZ))) &&
-        match(XAndYAndZ, m_And(m_And(m_Value(X), m_Value(Y)), m_Value(Z)))) {
-      Value *YOrZ = Builder.CreateOr(Y, Z);
-      Value *YOrZXorX = Builder.CreateXor(YOrZ, X);
-      return BinaryOperator::CreateNot(YOrZXorX);
-    }
-  }
-
-  // (Z & X) | ~((Y ^ X) | Z) -> ~((Y | Z) ^ X)
-  {
-    Value *X, *Y, *Z;
-    Value *ZAndX, *NotPattern;
-
-    if (match(&I, m_c_Or(m_Value(ZAndX), m_Value(NotPattern))) &&
-        match(ZAndX, m_c_And(m_Value(Z), m_Value(X)))) {
-
-      Value *YXorXOrZ;
-      if (match(NotPattern, m_Not(m_Value(YXorXOrZ)))) {
-        Value *YXorX;
-        if (match(YXorXOrZ, m_c_Or(m_Value(YXorX), m_Specific(Z))) &&
-            match(YXorX, m_c_Xor(m_Value(Y), m_Specific(X)))) {
-
-          Value *YOrZ = Builder.CreateOr(Y, Z);
-          Value *YOrZXorX = Builder.CreateXor(YOrZ, X);
-          return BinaryOperator::CreateNot(YOrZXorX);
-        }
-      }
-    }
-  }
+  if (Value *Canonical = foldThreeVarBoolExpr(&I, Builder))
+    return replaceInstUsesWith(I, Canonical);
 
   Type *Ty = I.getType();
   if (Ty->isIntOrIntVectorTy(1)) {
@@ -5219,24 +5384,8 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     }
   }
 
-  // ((X & Y) | (~X & ~Y)) ^ (Z & (((X & Y) | (~X & ~Y)) ^ ((X & Y) | (X &
-  // ~Y)))) -> ~((Y | Z) ^ X)
-  if (match(Op1, m_AllOnes())) {
-    Value *X, *Y, *Z;
-    Value *XorWithY;
-    if (match(Op0, m_Xor(m_Value(XorWithY), m_Value(Y)))) {
-      Value *ZAndNotY;
-      if (match(XorWithY, m_Xor(m_Value(X), m_Value(ZAndNotY)))) {
-        Value *NotY;
-        if (match(ZAndNotY, m_And(m_Value(Z), m_Value(NotY))) &&
-            match(NotY, m_Not(m_Specific(Y)))) {
-          Value *YOrZ = Builder.CreateOr(Y, Z);
-          Value *YOrZXorX = Builder.CreateXor(YOrZ, X);
-          return BinaryOperator::CreateNot(YOrZXorX);
-        }
-      }
-    }
-  }
+  if (Value *Canonical = foldThreeVarBoolExpr(&I, Builder))
+    return replaceInstUsesWith(I, Canonical);
 
   if (auto *LHS = dyn_cast<ICmpInst>(I.getOperand(0)))
     if (auto *RHS = dyn_cast<ICmpInst>(I.getOperand(1)))
