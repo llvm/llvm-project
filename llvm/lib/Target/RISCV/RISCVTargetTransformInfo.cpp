@@ -1251,39 +1251,35 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::lround:
   case Intrinsic::llround: {
     auto LT = getTypeLegalizationCost(RetTy);
+    auto *SrcTy = ICA.getArgTypes().front();
+    auto SrcLT = getTypeLegalizationCost(SrcTy);
     if (ST->hasVInstructions() && LT.second.isVector()) {
       ArrayRef<unsigned> Ops;
+      unsigned SrcEltSz =
+          DL.getTypeSizeInBits(cast<VectorType>(SrcTy)->getElementType());
       unsigned DstEltSz =
           DL.getTypeSizeInBits(cast<VectorType>(RetTy)->getElementType());
       if (LT.second.getVectorElementType() == MVT::bf16) {
-        if (DstEltSz == 64 && ST->is64Bit())
-          // vfwcvtbf16.f.f.v v9, v8
-          // vfcvt.x.f.v v8, v9
+        if (DstEltSz == 32)
           Ops = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFCVT_X_F_V};
         else
-          // vfwcvtbf16.f.f.v v9, v8
-          // vfwcvt.x.f.v v8, v9
           Ops = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFWCVT_X_F_V};
       } else if (LT.second.getVectorElementType() == MVT::f16 &&
                  !ST->hasVInstructionsF16()) {
-        if (DstEltSz == 64 && ST->is64Bit())
-          // vfwcvt.f.f.v v9, v8
-          // vfwcvt.x.f.v v8, v9
-          Ops = {RISCV::VFWCVT_F_F_V, RISCV::VFWCVT_X_F_V};
-        else
-          // vfwcvt.f.f.v v9, v8
-          // vfcvt.x.f.v v8, v9
+        if (DstEltSz == 32)
           Ops = {RISCV::VFWCVT_F_F_V, RISCV::VFCVT_X_F_V};
+        else
+          Ops = {RISCV::VFWCVT_F_F_V, RISCV::VFWCVT_X_F_V};
 
-      } else if (DstEltSz == 32 && ST->is64Bit()) {
-        // vfncvt.x.f.w v10, v8
-        // vmv.v.v v8, v10
+      } else if (SrcEltSz < DstEltSz) {
         Ops = {RISCV::VFNCVT_X_F_W, RISCV::VMV_V_V};
+      } else if (SrcEltSz > DstEltSz) {
+        Ops = {RISCV::VFWCVT_X_F_V};
       } else {
-        // vfcvt.x.f.v v8, v8
         Ops = {RISCV::VFCVT_X_F_V};
       }
-      return LT.first * getRISCVInstructionCost(Ops, LT.second, CostKind);
+      return std::max(SrcLT.first, LT.first) *
+             getRISCVInstructionCost(Ops, LT.second, CostKind);
     }
     break;
   }
