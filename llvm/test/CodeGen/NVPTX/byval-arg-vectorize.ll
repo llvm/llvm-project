@@ -20,13 +20,11 @@ define void @call_byval(ptr %out, ptr %in1, ptr %in2) {
 ; CHECK-NEXT:    .param .align 16 .b8 param1[16];
 ; CHECK-NEXT:    .param .align 8 .b8 retval0[16];
 ; CHECK-NEXT:    ld.param.b64 %rd2, [call_byval_param_2];
-; CHECK-NEXT:    ld.b64 %rd3, [%rd2+8];
-; CHECK-NEXT:    ld.b64 %rd4, [%rd2];
-; CHECK-NEXT:    st.param.v2.b64 [param1], {%rd4, %rd3};
+; CHECK-NEXT:    ld.v2.b64 {%rd3, %rd4}, [%rd2];
+; CHECK-NEXT:    st.param.v2.b64 [param1], {%rd3, %rd4};
 ; CHECK-NEXT:    ld.param.b64 %rd5, [call_byval_param_1];
-; CHECK-NEXT:    ld.b64 %rd6, [%rd5+8];
-; CHECK-NEXT:    ld.b64 %rd7, [%rd5];
-; CHECK-NEXT:    st.param.v2.b64 [param0], {%rd7, %rd6};
+; CHECK-NEXT:    ld.v2.b64 {%rd6, %rd7}, [%rd5];
+; CHECK-NEXT:    st.param.v2.b64 [param0], {%rd6, %rd7};
 ; CHECK-NEXT:    call.uni (retval0), add, (param0, param1);
 ; CHECK-NEXT:    ld.param.b64 %rd8, [retval0+8];
 ; CHECK-NEXT:    ld.param.b64 %rd9, [retval0];
