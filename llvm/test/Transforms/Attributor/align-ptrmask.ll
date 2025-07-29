@@ -134,3 +134,23 @@ define ptr @align_ptrmask_back_const_forward_ptr(ptr align 16 %x, i64 %y, i1 %cm
   %p = tail call ptr @llvm.ptrmask.p0.i64(ptr %x, i64 -8)
   ret ptr %p
 }
+
+; FIXME: The store will create AAAlign for %ptr1,
+; but the attribute didn't propagate through extractelement, need propagate
+define <2 x ptr> @ptrmask_v2p0_v2i64(<2 x ptr> align 2 %ptr, i64 %a) {
+; CHECK-LABEL: define <2 x ptr> @ptrmask_v2p0_v2i64(
+; CHECK-SAME: <2 x ptr> align 2 [[PTR:%.*]], i64 [[A:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[PTR]], <2 x i64> noundef splat (i64 -8)) #[[ATTR4]]
+; CHECK-NEXT:    [[PTR1:%.*]] = extractelement <2 x ptr> [[RESULT]], i32 0
+; CHECK-NEXT:    [[PTR2:%.*]] = extractelement <2 x ptr> [[RESULT]], i32 1
+; CHECK-NEXT:    store i64 [[A]], ptr [[PTR1]], align 16
+; CHECK-NEXT:    store i64 [[A]], ptr [[PTR2]], align 16
+; CHECK-NEXT:    ret <2 x ptr> [[RESULT]]
+;
+  %result = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> %ptr, <2 x i64> splat(i64 -8))
+  %ptr1 = extractelement <2 x ptr> %result, i32 0
+  %ptr2 = extractelement <2 x ptr> %result, i32 1
+  store i64 %a, ptr %ptr1, align 16
+  store i64 %a, ptr %ptr2, align 16
+  ret <2 x ptr> %result
+}
