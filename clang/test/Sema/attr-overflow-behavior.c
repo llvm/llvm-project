@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -Winteger-overflow -Wno-unused-value -foverflow-behavior-types -Woverflow-behavior-conversion -verify -fsyntax-only
+// RUN: %clang_cc1 %s -Winteger-overflow -Wno-unused-value -foverflow-behavior-types -Woverflow-behavior-conversion -Wconstant-conversion -verify -fsyntax-only
 
 typedef int __attribute__((overflow_behavior)) bad_arg_count; // expected-error {{'overflow_behavior' attribute takes one argument}}
 typedef int __attribute__((overflow_behavior(not_real))) bad_arg_spec; // expected-error {{'not_real' is not a valid argument to attribute 'overflow_behavior'}}
@@ -15,6 +15,7 @@ void foo() {
   (ok_wrap)2147483647 + 100; // no warn
 }
 
+#define __wrap __attribute__((overflow_behavior(wrap)))
 #define __no_wrap __attribute__((overflow_behavior(no_wrap)))
 
 void ptr(int a) {
@@ -35,7 +36,20 @@ void imp_disc_test(unsigned __attribute__((overflow_behavior(wrap))) a) {
 }
 
 // -Wconversion for assignments that discard overflow behavior
-void assignment_disc_test(unsigned __attribute__((overflow_behavior(wrap))) a) {
+void assignment_disc(unsigned __attribute__((overflow_behavior(wrap))) a) {
   int b = a; // expected-warning {{implicit conversion from '__wrap unsigned int' to 'int' during assignment discards overflow behavior}}
   int c = (int)a; // OK
+}
+
+void constant_conversion() {
+  short x1 = (int __wrap)100000; // expected-warning {{implicit conversion from '__wrap int' to 'short' changes value from 100000 to -31072}}
+  short __wrap x2 = (int)100000; // No warning expected
+  short __no_wrap x3 = (int)100000; // expected-warning {{implicit conversion from 'int' to '__no_wrap short' changes value from 100000 to -31072}}
+  short x4 = (int __no_wrap)100000; // expected-warning {{implicit conversion from '__no_wrap int' to 'short' changes value from 100000 to -31072}}
+
+  unsigned short __wrap ux1 = (unsigned int)100000; // No warning - wrapping expected
+  unsigned short ux2 = (unsigned int __wrap)100000; // expected-warning {{implicit conversion from '__wrap unsigned int' to 'unsigned short' changes value from 100000 to 34464}}
+  unsigned short __no_wrap ux3 = (unsigned int)100000; // expected-warning {{implicit conversion from 'unsigned int' to '__no_wrap unsigned short' changes value from 100000 to 34464}}
+  unsigned short __no_wrap ux4 = (unsigned int __no_wrap)100000; // expected-warning {{implicit conversion from '__no_wrap unsigned int' to '__no_wrap unsigned short' changes value from 100000 to 34464}}
+  unsigned short __no_wrap ux5 = (unsigned int __wrap)100000; // expected-warning {{implicit conversion from '__wrap unsigned int' to '__no_wrap unsigned short' changes value from 100000 to 34464}}
 }

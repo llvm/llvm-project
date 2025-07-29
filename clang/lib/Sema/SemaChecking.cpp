@@ -12180,27 +12180,8 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
     }
   }
 
-  // Diagnose potentially problematic implicit casts from an overflow behavior
-  // type to an integer type.
-  if (const auto *OBT = Source->getAs<OverflowBehaviorType>()) {
-    bool DiscardedDuringAssignment = false;
-    if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E))
-      DiscardedDuringAssignment = DRE->isOverflowBehaviorDiscarded();
-
-    if (Target->isIntegerType() && !Target->isOverflowBehaviorType()) {
-      // Implicit casts from unsigned wrap types to unsigned types are less
-      // problematic but still warrant some diagnostic.
-      if (OBT->isUnsignedIntegerType() && OBT->isWrapKind() &&
-          Target->isUnsignedIntegerType())
-        return DiagnoseImpCast(*this, E, T, CC,
-                               diag::warn_impcast_overflow_behavior_pedantic);
-      if (DiscardedDuringAssignment)
-        return DiagnoseImpCast(*this, E, T, CC,
-                               diag::warn_impcast_overflow_behavior_assignment);
-      return DiagnoseImpCast(*this, E, T, CC,
-                             diag::warn_impcast_overflow_behavior);
-    }
-  }
+  if (CheckOverflowBehaviorTypeConversion(E, T, CC))
+    return;
 
   // If the we're converting a constant to an ObjC BOOL on a platform where BOOL
   // is a typedef for signed char (macOS), then that constant value has to be 1
@@ -12534,6 +12515,14 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
   IntRange TargetRange = IntRange::forTargetOfCanonicalType(Context, Target);
 
   if (LikelySourceRange->Width > TargetRange.Width) {
+    // Check if target is a wrapping OBT - if so, don't warn about constant
+    // conversion because wrapping behavior is defined for truncation
+    if (const auto *TargetOBT = Target->getAs<OverflowBehaviorType>()) {
+      if (TargetOBT->isWrapKind()) {
+        return;
+      }
+    }
+
     // If the source is a constant, use a default-on diagnostic.
     // TODO: this should happen for bitfield stores, too.
     Expr::EvalResult Result;
@@ -13204,6 +13193,94 @@ void Sema::DiagnoseAlwaysNonNullPointer(Expr *E,
   }
   Diag(E->getExprLoc(), diag::note_function_to_function_call)
       << FixItHint::CreateInsertion(getLocForEndOfToken(E->getEndLoc()), "()");
+}
+
+bool Sema::CheckOverflowBehaviorTypeConversion(Expr *E, QualType T,
+                                               SourceLocation CC) {
+  QualType Source = E->getType();
+  QualType Target = T;
+
+  if (const auto *OBT = Source->getAs<OverflowBehaviorType>()) {
+
+    bool DiscardedDuringAssignment = false;
+
+    if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E))
+      DiscardedDuringAssignment = DRE->isOverflowBehaviorDiscarded();
+
+    if (Target->isIntegerType() && !Target->isOverflowBehaviorType()) {
+      // Before issuing the general OBT warning, check if this is a constant
+      // conversion that should get the more specific constant conversion
+      // warning
+      QualType UnderlyingType = OBT->getUnderlyingType();
+      IntRange SourceRange = IntRange::forTargetOfCanonicalType(
+          Context, UnderlyingType.getTypePtr());
+      IntRange TargetRange =
+          IntRange::forTargetOfCanonicalType(Context, Target.getTypePtr());
+
+      if (SourceRange.Width > TargetRange.Width) {
+        // Try to evaluate as constant - look through potential OBT cast
+        Expr::EvalResult Result;
+        bool HasConstant = false;
+
+        const Expr *ExprToEval = E;
+        if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
+          if (const auto *CE = dyn_cast<CStyleCastExpr>(ICE->getSubExpr())) {
+            if (CE->getType()->getAs<OverflowBehaviorType>()) {
+              ExprToEval = CE->getSubExpr();
+            }
+          }
+        }
+
+        if (ExprToEval->EvaluateAsInt(Result, Context,
+                                      Expr::SE_AllowSideEffects,
+                                      isConstantEvaluatedContext())) {
+          HasConstant = true;
+        }
+
+        if (HasConstant) {
+          llvm::APSInt Value(32);
+          Value = Result.Val.getInt();
+
+          if (!SourceMgr.isInSystemMacro(CC)) {
+            std::string PrettySourceValue = toString(Value, 10);
+            std::string PrettyTargetValue =
+                PrettyPrintInRange(Value, TargetRange);
+
+            DiagRuntimeBehavior(
+                E->getExprLoc(), E,
+                PDiag(diag::warn_impcast_integer_precision_constant)
+                    << PrettySourceValue << PrettyTargetValue << E->getType()
+                    << T << E->getSourceRange() << clang::SourceRange(CC));
+            return true;
+          }
+        }
+      }
+
+      // Implicit casts from unsigned wrap types to unsigned types are less
+      // problematic but still warrant some diagnostic.
+      if (OBT->isUnsignedIntegerType() && OBT->isWrapKind() &&
+          Target->isUnsignedIntegerType()) {
+        DiagnoseImpCast(*this, E, T, CC,
+                        diag::warn_impcast_overflow_behavior_pedantic);
+        return true;
+      }
+      if (DiscardedDuringAssignment) {
+        DiagnoseImpCast(*this, E, T, CC,
+                        diag::warn_impcast_overflow_behavior_assignment);
+        return true;
+      }
+      DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_overflow_behavior);
+      return true;
+    }
+  }
+
+  if (const auto *TargetOBT = Target->getAs<OverflowBehaviorType>()) {
+    if (TargetOBT->isWrapKind()) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 void Sema::CheckImplicitConversions(Expr *E, SourceLocation CC) {
