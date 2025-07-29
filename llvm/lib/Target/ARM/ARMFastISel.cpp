@@ -2635,12 +2635,8 @@ bool ARMFastISel::SelectIntrinsicCall(const IntrinsicInst &I) {
     return SelectCall(&I, "memset");
   }
   case Intrinsic::trap: {
-    unsigned Opcode;
-    if (Subtarget->isThumb())
-      Opcode = ARM::tTRAP;
-    else
-      Opcode = Subtarget->useNaClTrap() ? ARM::TRAPNaCl : ARM::TRAP;
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opcode));
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+            TII.get(Subtarget->isThumb() ? ARM::tTRAP : ARM::TRAP));
     return true;
   }
   }

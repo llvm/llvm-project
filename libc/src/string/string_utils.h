@@ -15,6 +15,7 @@
 #define LLVM_LIBC_SRC_STRING_STRING_UTILS_H
 
 #include "hdr/limits_macros.h"
+#include "hdr/stdint_proxy.h" // uintptr_t
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/bitset.h"
 #include "src/__support/CPP/type_traits.h" // cpp::is_same_v
