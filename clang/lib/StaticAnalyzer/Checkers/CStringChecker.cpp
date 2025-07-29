@@ -78,12 +78,9 @@ static QualType getCharPtrType(ASTContext &Ctx, CharKind CK) {
                                                     : Ctx.WideCharTy);
 }
 
-class CStringChecker : public Checker< eval::Call,
-                                         check::PreStmt<DeclStmt>,
-                                         check::LiveSymbols,
-                                         check::DeadSymbols,
-                                         check::RegionChanges
-                                         > {
+class CStringChecker
+    : public Checker<eval::Call, check::PreStmt<DeclStmt>, check::LiveSymbols,
+                     check::DeadSymbols, check::RegionChanges> {
   mutable std::unique_ptr<BugType> BT_Null, BT_Bounds, BT_Overlap,
       BT_NotCString, BT_AdditionOverflow, BT_UninitRead;
 
@@ -324,11 +321,14 @@ public:
                                SizeArgExpr Size, AnyArgExpr First,
                                AnyArgExpr Second,
                                CharKind CK = CharKind::Regular) const;
+  // Check for presence of terminating zero in a string argument.
+  ProgramStateRef checkNullTerminated(CheckerContext &C, ProgramStateRef State,
+                                      AnyArgExpr Arg, SVal ArgVal) const;
+
   void emitOverlapBug(CheckerContext &C,
                       ProgramStateRef state,
                       const Stmt *First,
                       const Stmt *Second) const;
-
   void emitNullArgBug(CheckerContext &C, ProgramStateRef State, const Stmt *S,
                       StringRef WarningMsg) const;
   void emitOutOfBoundsBug(CheckerContext &C, ProgramStateRef State,
@@ -957,6 +957,68 @@ ProgramStateRef CStringChecker::checkAdditionOverflow(CheckerContext &C,
   }
 
   return state;
+}
+
+ProgramStateRef CStringChecker::checkNullTerminated(CheckerContext &C,
+                                                    ProgramStateRef State,
+                                                    AnyArgExpr Arg,
+                                                    SVal ArgVal) const {
+  if (!State)
+    return nullptr;
+
+  if (!Filter.CheckCStringNotNullTerm)
+    return State;
+
+  SValBuilder &SVB = C.getSValBuilder();
+
+  auto TryGetTypedValueR = [](const MemRegion *R) -> const TypedValueRegion * {
+    if (!R)
+      return nullptr;
+    return R->StripCasts()->getAs<TypedValueRegion>();
+  };
+
+  const TypedValueRegion *StrReg = TryGetTypedValueR(ArgVal.getAsRegion());
+  if (!StrReg)
+    return State;
+  int Offset = 0;
+  if (const auto *ElemReg = StrReg->getAs<ElementRegion>()) {
+    RegionRawOffset ROffset = ElemReg->getAsArrayOffset();
+    StrReg = TryGetTypedValueR(ROffset.getRegion());
+    if (!StrReg)
+      return State;
+    Offset = ROffset.getOffset().getQuantity();
+  }
+
+  DefinedOrUnknownSVal Extent = getDynamicExtent(State, StrReg, SVB);
+  if (Extent.isUnknown())
+    return State;
+  const llvm::APSInt *KnownExtent = SVB.getKnownValue(State, Extent);
+  if (!KnownExtent)
+    return State;
+  MemRegionManager &RegionM = SVB.getRegionManager();
+  int RegionExtent = KnownExtent->getExtValue();
+  if (Offset >= RegionExtent)
+    return State;
+  for (int I = Offset; I < RegionExtent; ++I) {
+    const ElementRegion *ElemR = RegionM.getElementRegion(
+        C.getASTContext().CharTy, SVB.makeArrayIndex(I), StrReg,
+        C.getASTContext());
+    SVal ElemVal = State->getSValAsScalarOrLoc(ElemR);
+    if (!State->isNonNull(ElemVal).isConstrainedTrue())
+      // We have here a lower bound for the string length.
+      // Try to update the CStringLength value?
+      return State;
+  }
+
+  SmallString<80> Buf;
+  llvm::raw_svector_ostream OS(Buf);
+  assert(CurrentFunctionDescription);
+  OS << "Terminating zero missing from string passed as "
+     << (Arg.ArgumentIndex + 1) << llvm::getOrdinalSuffix(Arg.ArgumentIndex + 1)
+     << " argument to " << CurrentFunctionDescription;
+
+  emitNotCStringBug(C, State, Arg.Expression, OS.str());
+  return nullptr;
 }
 
 ProgramStateRef CStringChecker::setCStringLength(ProgramStateRef state,
@@ -1718,6 +1780,9 @@ void CStringChecker::evalstrLengthCommon(CheckerContext &C,
   SVal ArgVal = state->getSVal(Arg.Expression, LCtx);
   state = checkNonNull(C, state, Arg, ArgVal);
 
+  if (!IsStrnlen)
+    state = checkNullTerminated(C, state, Arg, ArgVal);
+
   if (!state)
     return;
 
@@ -1882,6 +1947,9 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
   DestinationArgExpr Dst = {{Call.getArgExpr(0), 0}};
   SVal DstVal = state->getSVal(Dst.Expression, LCtx);
   state = checkNonNull(C, state, Dst, DstVal);
+  // Look for terminating zero.
+  if (!IsBounded || appendK != ConcatFnKind::none)
+    state = checkNullTerminated(C, state, Dst, DstVal);
   if (!state)
     return;
 
@@ -1889,6 +1957,9 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
   SourceArgExpr srcExpr = {{Call.getArgExpr(1), 1}};
   SVal srcVal = state->getSVal(srcExpr.Expression, LCtx);
   state = checkNonNull(C, state, srcExpr, srcVal);
+  // Look for terminating zero.
+  if (!IsBounded)
+    state = checkNullTerminated(C, state, srcExpr, srcVal);
   if (!state)
     return;
 
@@ -2340,6 +2411,9 @@ void CStringChecker::evalStrcmpCommon(CheckerContext &C, const CallEvent &Call,
   AnyArgExpr Left = {Call.getArgExpr(0), 0};
   SVal LeftVal = state->getSVal(Left.Expression, LCtx);
   state = checkNonNull(C, state, Left, LeftVal);
+  // Look for terminating zero.
+  if (!IsBounded)
+    state = checkNullTerminated(C, state, Left, LeftVal);
   if (!state)
     return;
 
@@ -2347,6 +2421,9 @@ void CStringChecker::evalStrcmpCommon(CheckerContext &C, const CallEvent &Call,
   AnyArgExpr Right = {Call.getArgExpr(1), 1};
   SVal RightVal = state->getSVal(Right.Expression, LCtx);
   state = checkNonNull(C, state, Right, RightVal);
+  // Look for terminating zero.
+  if (!IsBounded)
+    state = checkNullTerminated(C, state, Right, RightVal);
   if (!state)
     return;
 
@@ -2478,6 +2555,8 @@ void CStringChecker::evalStrsep(CheckerContext &C,
   // a null string).
   SVal SearchStrVal = State->getSVal(SearchStrPtr.Expression, LCtx);
   State = checkNonNull(C, State, SearchStrPtr, SearchStrVal);
+  // Look for terminating zero.
+  State = checkNullTerminated(C, State, SearchStrPtr, SearchStrVal);
   if (!State)
     return;
 
@@ -2485,6 +2564,8 @@ void CStringChecker::evalStrsep(CheckerContext &C,
   AnyArgExpr DelimStr = {Call.getArgExpr(1), 1};
   SVal DelimStrVal = State->getSVal(DelimStr.Expression, LCtx);
   State = checkNonNull(C, State, DelimStr, DelimStrVal);
+  // Look for terminating zero.
+  State = checkNullTerminated(C, State, DelimStr, DelimStrVal);
   if (!State)
     return;
 
@@ -2675,6 +2756,7 @@ void CStringChecker::evalSprintfCommon(CheckerContext &C, const CallEvent &Call,
     // This is an invalid call, let's just ignore it.
     return;
   }
+  // FIXME: Why not check for null pointer (and null-terminated string)?
 
   const auto AllArguments =
       llvm::make_range(CE->getArgs(), CE->getArgs() + CE->getNumArgs());
