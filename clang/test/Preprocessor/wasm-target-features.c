@@ -209,6 +209,7 @@
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_simd128__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_tail_call__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_wide_arithmetic__ 1{{$}}
+// BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_gc__ 1{{$}}
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target wasm32-unknown-unknown -mcpu=bleeding-edge -mno-simd128 \
