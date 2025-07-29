@@ -5319,13 +5319,13 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  bfloat16_sub_test
+  bfloat16_div_test
   SUITE
     libc-math-smoke-tests
   SRCS
-    bfloat16_sub_test.cpp
+    bfloat16_div_test.cpp
   HDRS
-    SubTest.h
+    DivTest.h
   DEPENDS
     libc.src.__support.FPUtil.bfloat16
 )
@@ -5333,11 +5333,23 @@ add_fp_unittest(
 add_fp_unittest(
   bfloat16_mul_test
   SUITE
+  libc-math-smoke-tests
+  SRCS
+  bfloat16_mul_test.cpp
+  HDRS
+  MulTest.h
+  DEPENDS
+  libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
+  bfloat16_sub_test
+  SUITE
     libc-math-smoke-tests
   SRCS
-    bfloat16_mul_test.cpp
+    bfloat16_sub_test.cpp
   HDRS
-    MulTest.h
+    SubTest.h
   DEPENDS
     libc.src.__support.FPUtil.bfloat16
 )
