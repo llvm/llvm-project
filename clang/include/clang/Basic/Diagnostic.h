@@ -165,9 +165,10 @@ struct DiagnosticStorage {
   /// or in DiagArguments.
   unsigned char DiagArgumentsKind[MaxArguments];
 
-  /// Nesting level of this diagnostic, if any. If unset, this defaults to
-  /// 1 for notes and 0 otherwise. A (default) value of 0 indicates a top-level
-  /// diagnostic.
+  /// Nesting level of this diagnostic, if any.
+  ///
+  /// If unset, the nesting level will be computed by the diagnostics engine
+  /// when the diagnostic is emitted.
   UnsignedOrNone NestingLevel = std::nullopt;
 
   /// The values for the various substitution positions.
