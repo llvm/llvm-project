@@ -72,15 +72,24 @@ const configurations: Record<string, DefaultConfig> = {
 export class LLDBDapConfigurationProvider
   implements vscode.DebugConfigurationProvider
 {
-  constructor(private readonly server: LLDBDapServer, private readonly logger: Logger, private readonly logFilePath: LogFilePathProvider) {}
+  constructor(
+    private readonly server: LLDBDapServer,
+    private readonly logger: Logger,
+    private readonly logFilePath: LogFilePathProvider,
+  ) {}
 
   async resolveDebugConfiguration(
     folder: vscode.WorkspaceFolder | undefined,
     debugConfiguration: vscode.DebugConfiguration,
     token?: vscode.CancellationToken,
   ): Promise<vscode.DebugConfiguration> {
-    this.logger.info(`Resolving debug configuration for "${debugConfiguration.name}"`);
-    this.logger.debug("Initial debug configuration:\n" + JSON.stringify(debugConfiguration, undefined, 2));
+    this.logger.info(
+      `Resolving debug configuration for "${debugConfiguration.name}"`,
+    );
+    this.logger.debug(
+      "Initial debug configuration:\n" +
+        JSON.stringify(debugConfiguration, undefined, 2),
+    );
     let config = vscode.workspace.getConfiguration("lldb-dap");
     for (const [key, cfg] of Object.entries(configurations)) {
       if (Reflect.has(debugConfiguration, key)) {
@@ -189,7 +198,10 @@ export class LLDBDapConfigurationProvider
         }
       }
 
-      this.logger.debug("Resolved debug configuration:\n" + JSON.stringify(debugConfiguration, undefined, 2));
+      this.logger.debug(
+        "Resolved debug configuration:\n" +
+          JSON.stringify(debugConfiguration, undefined, 2),
+      );
 
       return debugConfiguration;
     } catch (error) {

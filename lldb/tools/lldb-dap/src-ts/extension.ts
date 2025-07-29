@@ -18,7 +18,11 @@ import { LLDBDAPLogger, LogFilePathProvider } from "./logger";
  * using it as as library should use this class as the main entry point.
  */
 export class LLDBDapExtension extends DisposableContext {
-  constructor(logger: LLDBDAPLogger, logFilePath: LogFilePathProvider, outputChannel: vscode.OutputChannel) {
+  constructor(
+    logger: LLDBDAPLogger,
+    logFilePath: LogFilePathProvider,
+    outputChannel: vscode.OutputChannel,
+  ) {
     super();
 
     const lldbDapServer = new LLDBDapServer();
@@ -61,9 +65,15 @@ export class LLDBDapExtension extends DisposableContext {
 export async function activate(context: vscode.ExtensionContext) {
   await vscode.workspace.fs.createDirectory(context.logUri);
   const outputChannel = vscode.window.createOutputChannel("LLDB-DAP");
-  const logFilePath: LogFilePathProvider = (name) => path.join(context.logUri.fsPath, name);
-  const logger = new LLDBDAPLogger(logFilePath("lldb-dap-extension.log"), outputChannel);
+  const logFilePath: LogFilePathProvider = (name) =>
+    path.join(context.logUri.fsPath, name);
+  const logger = new LLDBDAPLogger(
+    logFilePath("lldb-dap-extension.log"),
+    outputChannel,
+  );
   logger.info("LLDB-Dap extension activating...");
-  context.subscriptions.push(new LLDBDapExtension(logger, logFilePath, outputChannel));
+  context.subscriptions.push(
+    new LLDBDapExtension(logger, logFilePath, outputChannel),
+  );
   logger.info("LLDB-Dap extension activated");
 }

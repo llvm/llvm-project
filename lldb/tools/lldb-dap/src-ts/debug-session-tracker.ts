@@ -69,7 +69,7 @@ export class DebugSessionTracker
     return {
       onError: (error) => !stopping && this.logger.error(error), // Can throw benign read errors when shutting down
       onDidSendMessage: (message) => this.onDidSendMessage(session, message),
-      onWillStopSession: () => stopping = true,
+      onWillStopSession: () => (stopping = true),
       onExit: () => this.onExit(session),
     };
   }
@@ -144,7 +144,9 @@ export class DebugSessionTracker
       // The vscode.DebugAdapterTracker#onExit event is sometimes called with
       // exitCode = undefined but the exit event from LLDB-DAP always has the "exitCode"
       const { exitCode } = message.body;
-      this.logger.info(`Session "${session.name}" exited with code ${exitCode}`);
+      this.logger.info(
+        `Session "${session.name}" exited with code ${exitCode}`,
+      );
     }
   }
 }

@@ -164,13 +164,13 @@ async function getDAPArguments(
  * @returns The formatted date.
  */
 function formatDate(date: Date): string {
-    const year = date.getFullYear().toString().padStart(4, "0");
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const day = date.getDate().toString().padStart(2, "0");
-    const hour = date.getHours().toString().padStart(2, "0");
-    const minute = date.getMinutes().toString().padStart(2, "0");
-    const seconds = date.getSeconds().toString().padStart(2, "0");
-    return `${year}${month}${day}T${hour}${minute}${seconds}`;
+  const year = date.getFullYear().toString().padStart(4, "0");
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
+  const hour = date.getHours().toString().padStart(2, "0");
+  const minute = date.getMinutes().toString().padStart(2, "0");
+  const seconds = date.getSeconds().toString().padStart(2, "0");
+  return `${year}${month}${day}T${hour}${minute}${seconds}`;
 }
 
 /**
@@ -190,13 +190,19 @@ export async function createDebugAdapterExecutable(
   workspaceFolder: vscode.WorkspaceFolder | undefined,
   configuration: vscode.DebugConfiguration,
 ): Promise<vscode.DebugAdapterExecutable> {
-  const config = vscode.workspace.workspaceFile ? vscode.workspace.getConfiguration("lldb-dap") : vscode.workspace.getConfiguration("lldb-dap", workspaceFolder);
+  const config = vscode.workspace.workspaceFile
+    ? vscode.workspace.getConfiguration("lldb-dap")
+    : vscode.workspace.getConfiguration("lldb-dap", workspaceFolder);
   const log_path = config.get<string>("log-path");
   let env: { [key: string]: string } = {};
   if (log_path) {
     env["LLDBDAP_LOG"] = log_path;
-  } else if (vscode.workspace.getConfiguration("lldb-dap").get("verboseLogging", false)) {
-    env["LLDBDAP_LOG"] = logFilePath(`lldb-dap-session-${formatDate(new Date())}.log`);
+  } else if (
+    vscode.workspace.getConfiguration("lldb-dap").get("verboseLogging", false)
+  ) {
+    env["LLDBDAP_LOG"] = logFilePath(
+      `lldb-dap-session-${formatDate(new Date())}.log`,
+    );
   }
   const configEnvironment =
     config.get<{ [key: string]: string }>("environment") || {};
@@ -226,14 +232,20 @@ export async function createDebugAdapterExecutable(
 export class LLDBDapDescriptorFactory
   implements vscode.DebugAdapterDescriptorFactory
 {
-  constructor(private readonly logger: Logger, private logFilePath: LogFilePathProvider) {}
+  constructor(
+    private readonly logger: Logger,
+    private logFilePath: LogFilePathProvider,
+  ) {}
 
   async createDebugAdapterDescriptor(
     session: vscode.DebugSession,
     executable: vscode.DebugAdapterExecutable | undefined,
   ): Promise<vscode.DebugAdapterDescriptor | undefined> {
     this.logger.info(`Creating debug adapter for session "${session.name}"`);
-    this.logger.debug(`Session "${session.name}" debug configuration:\n` + JSON.stringify(session.configuration, undefined, 2));
+    this.logger.debug(
+      `Session "${session.name}" debug configuration:\n` +
+        JSON.stringify(session.configuration, undefined, 2),
+    );
     if (executable) {
       const error = new Error(
         "Setting the debug adapter executable in the package.json is not supported.",
@@ -244,7 +256,9 @@ export class LLDBDapDescriptorFactory
 
     // Use a server connection if the debugAdapterPort is provided
     if (session.configuration.debugAdapterPort) {
-      this.logger.info(`Spawning debug adapter server on port ${session.configuration.debugAdapterPort}`);
+      this.logger.info(
+        `Spawning debug adapter server on port ${session.configuration.debugAdapterPort}`,
+      );
       return new vscode.DebugAdapterServer(
         session.configuration.debugAdapterPort,
         session.configuration.debugAdapterHostname,
