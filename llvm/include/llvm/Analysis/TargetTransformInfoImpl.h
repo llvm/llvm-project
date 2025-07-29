@@ -1145,7 +1145,7 @@ public:
       const Function &F,
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {}
 
-  virtual bool isVectorElementIndexingUsingGEPAllowed() const { return true; }
+  virtual bool allowVectorElementIndexingUsingGEP() const { return true; }
 
 protected:
   // Obtain the minimum required size to hold the value (without the sign)
