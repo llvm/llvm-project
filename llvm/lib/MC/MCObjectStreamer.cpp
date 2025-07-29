@@ -58,6 +58,10 @@ void MCObjectStreamer::insert(MCFragment *F) {
   newFragment();
 }
 
+void MCObjectStreamer::appendContents(ArrayRef<char> Contents) {
+  CurFrag->appendContents(Contents);
+}
+
 void MCObjectStreamer::appendContents(size_t Num, char Elt) {
   CurFrag->appendContents(Num, Elt);
 }
@@ -543,8 +547,7 @@ void MCObjectStreamer::emitCVFileChecksumOffsetDirective(unsigned FileNo) {
 
 void MCObjectStreamer::emitBytes(StringRef Data) {
   MCDwarfLineEntry::make(this, getCurrentSectionOnly());
-  MCFragment *DF = getCurrentFragment();
-  DF->appendContents(ArrayRef(Data.data(), Data.size()));
+  appendContents(ArrayRef(Data.data(), Data.size()));
 }
 
 void MCObjectStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
