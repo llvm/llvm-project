@@ -23,11 +23,9 @@ define void @preserve_lcssa_when_reusing_existing_phi() {
 ; CHECK-NEXT:    br i1 true, label %[[LOOP_2_LATCH:.*]], label %[[LOOP_4_PREHEADER:.*]]
 ; CHECK:       [[LOOP_4_PREHEADER]]:
 ; CHECK-NEXT:    [[IV_3_LCSSA_LCSSA1:%.*]] = phi i32 [ [[IV_3_LCSSA]], %[[PH]] ]
-; CHECK-NEXT:    [[IV_3_LCSSA_LCSSA:%.*]] = phi i32 [ [[IV_3_LCSSA]], %[[PH]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[IV_3_LCSSA]], %[[PH]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[IV_3_LCSSA_LCSSA1]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], -1
-; CHECK-NEXT:    [[XTRAITER:%.*]] = and i32 [[TMP1]], 7
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i32 [[TMP0]], 7
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 7
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[LOOP_1_LATCH_UNR_LCSSA:.*]], label %[[LOOP_4_PREHEADER_NEW:.*]]
 ; CHECK:       [[LOOP_4_PREHEADER_NEW]]:
@@ -62,7 +60,7 @@ define void @preserve_lcssa_when_reusing_existing_phi() {
 ; CHECK-NEXT:    [[EPIL_ITER:%.*]] = phi i32 [ 0, %[[LOOP_4_EPIL_PREHEADER]] ], [ [[EPIL_ITER_NEXT:%.*]], %[[LOOP_4_EPIL]] ]
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    [[INC_I_EPIL]] = add i32 [[IV_4_EPIL]], 1
-; CHECK-NEXT:    [[EC_EPIL:%.*]] = icmp eq i32 [[IV_4_EPIL]], [[IV_3_LCSSA_LCSSA]]
+; CHECK-NEXT:    [[EC_EPIL:%.*]] = icmp eq i32 [[IV_4_EPIL]], [[TMP2]]
 ; CHECK-NEXT:    [[EPIL_ITER_NEXT]] = add i32 [[EPIL_ITER]], 1
 ; CHECK-NEXT:    [[EPIL_ITER_CMP:%.*]] = icmp ne i32 [[EPIL_ITER_NEXT]], [[XTRAITER]]
 ; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP]], label %[[LOOP_4_EPIL]], label %[[LOOP_1_LATCH_EPILOG_LCSSA:.*]], !llvm.loop [[LOOP0:![0-9]+]]
