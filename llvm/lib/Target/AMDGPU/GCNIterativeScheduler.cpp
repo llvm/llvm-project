@@ -484,7 +484,7 @@ unsigned GCNIterativeScheduler::tryMaximizeOccupancy(unsigned TargetOcc) {
 }
 
 void GCNIterativeScheduler::scheduleLegacyMaxOccupancy(
-  bool TryMaximizeOccupancy) {
+    bool TryMaximizeOccupancy) {
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   auto TgtOcc = MFI->getMinAllowedOccupancy();
 
@@ -573,8 +573,7 @@ void GCNIterativeScheduler::scheduleMinReg(bool force) {
 ///////////////////////////////////////////////////////////////////////////////
 // ILP scheduler port
 
-void GCNIterativeScheduler::scheduleILP(
-  bool TryMaximizeOccupancy) {
+void GCNIterativeScheduler::scheduleILP(bool TryMaximizeOccupancy) {
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   auto TgtOcc = MFI->getMinAllowedOccupancy();
 
