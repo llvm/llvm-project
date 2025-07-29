@@ -97,15 +97,17 @@ struct GCNRegPressure {
   /// \returns the ArchVGPR32 pressure, plus the AVGPRS which we assume will be
   /// allocated as VGPR
   unsigned getArchVGPRNum(unsigned AddressableArchVGPR) const {
-    return std::min(Value[VGPR] + Value[AVGPR], AddressableArchVGPR);
+    unsigned AVGPRsAsVGPRs =
+        getAVGPRsAsVGPRsNum(Value[VGPR], Value[AVGPR], AddressableArchVGPR);
+
+    return Value[VGPR] + AVGPRsAsVGPRs;
   }
   /// \returns the AccVGPR32 pressure
   unsigned getAGPRNum(unsigned AddressableArchVGPR) const {
-    unsigned VGPRsForAGPRs =
-        Value[VGPR] + Value[AVGPR] > AddressableArchVGPR
-            ? (Value[VGPR] + Value[AVGPR] - AddressableArchVGPR)
-            : 0;
-    return Value[AGPR] + VGPRsForAGPRs;
+    unsigned AVGPRsAsAGPRs = getAVGPRsAsAGPRsNum(
+        Value[VGPR], Value[AGPR], Value[AVGPR], AddressableArchVGPR);
+
+    return Value[AGPR] + AVGPRsAsAGPRs;
   }
   /// \returns the AVGPR32 pressure
   unsigned getAVGPRNum() const { return Value[AVGPR]; }
