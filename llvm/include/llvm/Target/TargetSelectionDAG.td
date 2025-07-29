@@ -1147,6 +1147,9 @@ def fadd_contract : PatFrag<(ops node:$a, node:$b), (fadd node:$a, node:$b),[{
   return N->getFlags().hasAllowContract();
 }]>;
 
+def fsub_contract : PatFrag<(ops node:$a, node:$b), (fsub node:$a, node:$b),[{
+  return N->getFlags().hasAllowContract();
+}]>;
 
 def not  : PatFrag<(ops node:$in), (xor node:$in, -1)>;
 def vnot : PatFrag<(ops node:$in), (xor node:$in, immAllOnesV)>;

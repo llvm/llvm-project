@@ -1368,12 +1368,14 @@ def GPU_ShuffleOp : GPU_Op<
 
 def GPU_RotateOp : GPU_Op<
     "rotate", [Pure, AllTypesMatch<["value", "rotateResult"]>]>,
-    Arguments<(ins AnyIntegerOrFloatOr1DVector:$value, I32:$offset, I32:$width)>,
+    Arguments<(ins AnyIntegerOrFloatOr1DVector:$value,
+                   ConfinedAttr<I32Attr, [IntMinValue<0>]>:$offset,
+                   ConfinedAttr<I32Attr, [IntPowerOf2]>:$width)>,
     Results<(outs AnyIntegerOrFloatOr1DVector:$rotateResult, I1:$valid)> {
   let summary = "Rotate values within a subgroup.";
   let description = [{
     The "rotate" op moves values across lanes in a subgroup (a.k.a., local
-    invocations) within the same subgroup. The `width` argument specifies the
+    invocations) within the same subgroup. The `width` attribute specifies the
     number of lanes that participate in the rotation, and must be uniform across
     all participating lanes. Further, the first `width` lanes of the subgroup
     must be active.
@@ -1394,9 +1396,7 @@ def GPU_RotateOp : GPU_Op<
     example:
 
     ```mlir
-    %offset = arith.constant 1 : i32
-    %width = arith.constant 16 : i32
-    %1, %2 = gpu.rotate %0, %offset, %width : f32
+    %1, %2 = gpu.rotate %0, 1, 16 : f32
     ```
 
     For lane `k`, returns the value from lane `(k + cst1) % width`.
@@ -1405,11 +1405,6 @@ def GPU_RotateOp : GPU_Op<
   let assemblyFormat = [{
     $value `,` $offset `,` $width attr-dict `:` type($value)
   }];
-
-  let builders = [
-    // Helper function that creates a rotate with constant offset/width.
-    OpBuilder<(ins "Value":$value, "int32_t":$offset, "int32_t":$width)>
-  ];
 
   let hasVerifier = 1;
 }

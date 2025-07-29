@@ -11,6 +11,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/MathExtras.h"
@@ -21,7 +22,6 @@
 using namespace mlir;
 
 #define DEBUG_TYPE "linalg-transforms"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 
 static Attribute linearId0(MLIRContext *ctx) {
   return gpu::GPUThreadMappingAttr::get(ctx, gpu::MappingId::LinearDim0);
@@ -81,7 +81,7 @@ transform::gpu::CopyMappingInfo::CopyMappingInfo(MLIRContext *ctx,
   this->threadMapping =
       llvm::to_vector(ArrayRef(allThreadMappings)
                           .take_back(this->smallestBoundingTileSizes.size()));
-  LLVM_DEBUG(this->print(DBGS()); llvm::dbgs() << "\n");
+  LDBG() << *this;
 }
 
 int64_t transform::gpu::CopyMappingInfo::maxContiguousElementsToTransfer(

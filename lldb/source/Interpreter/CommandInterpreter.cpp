@@ -135,8 +135,7 @@ CommandInterpreter::CommandInterpreter(Debugger &debugger,
                                        bool synchronous_execution)
     : Broadcaster(debugger.GetBroadcasterManager(),
                   CommandInterpreter::GetStaticBroadcasterClass().str()),
-      Properties(
-          OptionValuePropertiesSP(new OptionValueProperties("interpreter"))),
+      Properties(std::make_shared<OptionValueProperties>("interpreter")),
       IOHandlerDelegate(IOHandlerDelegate::Completion::LLDBCommand),
       m_debugger(debugger), m_synchronous_execution(true),
       m_skip_lldbinit_files(false), m_skip_app_init_files(false),

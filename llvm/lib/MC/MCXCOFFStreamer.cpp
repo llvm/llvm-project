@@ -38,7 +38,7 @@ XCOFFObjectWriter &MCXCOFFStreamer::getWriter() {
 
 void MCXCOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   MCObjectStreamer::changeSection(Section, Subsection);
-  auto *Sec = cast<MCSectionXCOFF>(Section);
+  auto *Sec = static_cast<const MCSectionXCOFF *>(Section);
   // We might miss calculating the symbols difference as absolute value before
   // adding fixups when symbol_A without the fragment set is the csect itself
   // and symbol_B is in it.
@@ -103,16 +103,8 @@ void MCXCOFFStreamer::emitXCOFFSymbolLinkageWithVisibility(
 void MCXCOFFStreamer::emitXCOFFRefDirective(const MCSymbol *Symbol) {
   // Add a Fixup here to later record a relocation of type R_REF to prevent the
   // ref symbol from being garbage collected (by the binder).
-  MCFragment *DF = getCurrentFragment();
-  const MCSymbolRefExpr *SRE = MCSymbolRefExpr::create(Symbol, getContext());
-  std::optional<MCFixupKind> MaybeKind =
-      getAssembler().getBackend().getFixupKind("R_REF");
-  if (!MaybeKind)
-    report_fatal_error("failed to get fixup kind for R_REF relocation");
-
-  MCFixupKind Kind = *MaybeKind;
-  MCFixup Fixup = MCFixup::create(DF->getContents().size(), SRE, Kind);
-  DF->addFixup(Fixup);
+  addFixup(MCSymbolRefExpr::create(Symbol, getContext()),
+           XCOFF::RelocationType::R_REF);
 }
 
 void MCXCOFFStreamer::emitXCOFFRenameDirective(const MCSymbol *Name,

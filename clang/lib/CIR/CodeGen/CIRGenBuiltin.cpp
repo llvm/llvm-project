@@ -190,6 +190,11 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     assert(!cir::MissingFeatures::builtinCheckKind());
     return emitBuiltinBitOp<cir::BitClzOp>(*this, e, /*poisonZero=*/true);
 
+  case Builtin::BI__builtin_ffs:
+  case Builtin::BI__builtin_ffsl:
+  case Builtin::BI__builtin_ffsll:
+    return emitBuiltinBitOp<cir::BitFfsOp>(*this, e);
+
   case Builtin::BI__builtin_parity:
   case Builtin::BI__builtin_parityl:
   case Builtin::BI__builtin_parityll:

@@ -445,7 +445,7 @@ When processing an operation like described, we query if it registered the
 
 ```c++
   // Ask the operation to infer its output shapes.
-  LLVM_DEBUG(llvm::dbgs() << "Inferring shape for: " << *op << "\n");
+  LDBG() << "Inferring shape for: " << *op;
 
   /// We check if an operation has a particular interface by casting.
   if (ShapeInference shapeOp = dyn_cast<ShapeInference>(op)) {

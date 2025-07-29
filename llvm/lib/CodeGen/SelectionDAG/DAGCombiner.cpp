@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/ByteProvider.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/SDPatternMatch.h"
@@ -15262,23 +15263,31 @@ SDValue DAGCombiner::visitAssertExt(SDNode *N) {
     }
   }
 
-  // If we have (AssertZext (and (AssertSext X, iX), M), iY) and Y is smaller
-  // than X, and the And doesn't change the lower iX bits, we can move the
-  // AssertZext in front of the And and drop the AssertSext.
   if (Opcode == ISD::AssertZext && N0.getOpcode() == ISD::AND &&
-      N0.hasOneUse() && N0.getOperand(0).getOpcode() == ISD::AssertSext &&
       isa<ConstantSDNode>(N0.getOperand(1))) {
-    SDValue BigA = N0.getOperand(0);
-    EVT BigA_AssertVT = cast<VTSDNode>(BigA.getOperand(1))->getVT();
     const APInt &Mask = N0.getConstantOperandAPInt(1);
-    if (AssertVT.bitsLT(BigA_AssertVT) &&
-        Mask.countr_one() >= BigA_AssertVT.getScalarSizeInBits()) {
-      SDLoc DL(N);
-      SDValue NewAssert =
-          DAG.getNode(Opcode, DL, N->getValueType(0), BigA.getOperand(0), N1);
-      return DAG.getNode(ISD::AND, DL, N->getValueType(0), NewAssert,
-                         N0.getOperand(1));
+
+    // If we have (AssertZext (and (AssertSext X, iX), M), iY) and Y is smaller
+    // than X, and the And doesn't change the lower iX bits, we can move the
+    // AssertZext in front of the And and drop the AssertSext.
+    if (N0.getOperand(0).getOpcode() == ISD::AssertSext && N0.hasOneUse()) {
+      SDValue BigA = N0.getOperand(0);
+      EVT BigA_AssertVT = cast<VTSDNode>(BigA.getOperand(1))->getVT();
+      if (AssertVT.bitsLT(BigA_AssertVT) &&
+          Mask.countr_one() >= BigA_AssertVT.getScalarSizeInBits()) {
+        SDLoc DL(N);
+        SDValue NewAssert =
+            DAG.getNode(Opcode, DL, N->getValueType(0), BigA.getOperand(0), N1);
+        return DAG.getNode(ISD::AND, DL, N->getValueType(0), NewAssert,
+                           N0.getOperand(1));
+      }
     }
+
+    // Remove AssertZext entirely if the mask guarantees the assertion cannot
+    // fail.
+    // TODO: Use KB countMinLeadingZeros to handle non-constant masks?
+    if (Mask.isIntN(AssertVT.getScalarSizeInBits()))
+      return N0;
   }
 
   return SDValue();
@@ -22778,8 +22787,10 @@ SDValue DAGCombiner::visitLIFETIME_END(SDNode *N) {
       const BaseIndexOffset StoreBase = BaseIndexOffset::match(ST, DAG);
       // If we store purely within object bounds just before its lifetime ends,
       // we can remove the store.
-      if (LifetimeEndBase.contains(DAG, LifetimeEnd->getSize() * 8, StoreBase,
-                                   StoreSize.getFixedValue() * 8)) {
+      MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+      if (LifetimeEndBase.contains(
+              DAG, MFI.getObjectSize(LifetimeEnd->getFrameIndex()) * 8,
+              StoreBase, StoreSize.getFixedValue() * 8)) {
         LLVM_DEBUG(dbgs() << "\nRemoving store:"; StoreBase.dump();
                    dbgs() << "\nwithin LIFETIME_END of : ";
                    LifetimeEndBase.dump(); dbgs() << "\n");
@@ -29415,7 +29426,7 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
     MachineMemOperand *MMO;
   };
 
-  auto getCharacteristics = [](SDNode *N) -> MemUseCharacteristics {
+  auto getCharacteristics = [this](SDNode *N) -> MemUseCharacteristics {
     if (const auto *LSN = dyn_cast<LSBaseSDNode>(N)) {
       int64_t Offset = 0;
       if (auto *C = dyn_cast<ConstantSDNode>(LSN->getOffset()))
@@ -29428,13 +29439,15 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
               LSN->getBasePtr(),           Offset /*base offset*/,
               LocationSize::precise(Size), LSN->getMemOperand()};
     }
-    if (const auto *LN = cast<LifetimeSDNode>(N))
+    if (const auto *LN = cast<LifetimeSDNode>(N)) {
+      MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
       return {false /*isVolatile*/,
               /*isAtomic*/ false,
               LN->getOperand(1),
               0,
-              LocationSize::precise(LN->getSize()),
+              LocationSize::precise(MFI.getObjectSize(LN->getFrameIndex())),
               (MachineMemOperand *)nullptr};
+    }
     // Default.
     return {false /*isvolatile*/,
             /*isAtomic*/ false,

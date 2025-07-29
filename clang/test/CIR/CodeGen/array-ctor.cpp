@@ -33,8 +33,8 @@ void foo() {
 // CIR:   cir.store %[[DECAY]], %[[ITER]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:   cir.do {
 // CIR:     %[[CURRENT:.*]] = cir.load %[[ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
-// CIR:     %[[CONST1:.*]] = cir.const #cir.int<1> : !u64i
 // CIR:     cir.call @_ZN1SC1Ev(%[[CURRENT]]) : (!cir.ptr<!rec_S>) -> ()
+// CIR:     %[[CONST1:.*]] = cir.const #cir.int<1> : !u64i
 // CIR:     %[[NEXT:.*]] = cir.ptr_stride(%[[CURRENT]] : !cir.ptr<!rec_S>, %[[CONST1]] : !u64i), !cir.ptr<!rec_S>
 // CIR:     cir.store %[[NEXT]], %[[ITER]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:     cir.yield

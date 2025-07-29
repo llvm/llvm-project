@@ -257,6 +257,70 @@ func.func @broadcast_scalar_extsi_scalable(%a : i8) -> vector<2x[4]xi32> {
   return %r : vector<2x[4]xi32>
 }
 
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_scalar_and_splat_const(
+// CHECK-SAME:     %[[ARG_0:.*]]: index) -> vector<1x4xindex> {
+// CHECK:           %[[NEW_CST:.*]] = arith.constant 2 : index
+// CHECK:           %[[ADD:.*]] = arith.addi %[[ARG_0]], %[[NEW_CST]] : index
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[ADD]] : index to vector<1x4xindex>
+// CHECK:           return %[[BCAST]] : vector<1x4xindex>
+
+func.func @broadcast_scalar_and_splat_const(%arg0: index) -> vector<1x4xindex> {
+  %0 = vector.broadcast %arg0 : index to vector<1x4xindex>
+  %cst = arith.constant dense<2> : vector<1x4xindex>
+  %2 = arith.addi %0, %cst : vector<1x4xindex>
+  return %2 : vector<1x4xindex>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_scalar_and_splat_const_const_first(
+// CHECK-SAME:     %[[ARG_0:.*]]: index) -> vector<1x4xindex> {
+// CHECK:           %[[NEW_CST:.*]] = arith.constant 2 : index
+// CHECK:           %[[SUB:.*]] = arith.subi %[[NEW_CST]], %[[ARG_0]] : index
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[SUB]] : index to vector<1x4xindex>
+// CHECK:           return %[[BCAST]] : vector<1x4xindex>
+
+func.func @broadcast_scalar_and_splat_const_const_first(%arg0: index) -> vector<1x4xindex> {
+  %0 = vector.broadcast %arg0 : index to vector<1x4xindex>
+  %cst = arith.constant dense<2> : vector<1x4xindex>
+  %2 = arith.subi %cst, %0 : vector<1x4xindex>
+  return %2 : vector<1x4xindex>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_vector_and_splat_const(
+// CHECK-SAME:     %[[ARG_0:.*]]: vector<4xf32>) -> vector<3x4xf32> {
+// CHECK:           %[[NEW_CST:.*]] = arith.constant dense<2.000000e+00> : vector<4xf32>
+// CHECK:           %[[ADD:.*]] = arith.mulf %[[ARG_0]], %[[NEW_CST]] : vector<4xf32>
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[ADD]] : vector<4xf32> to vector<3x4xf32>
+// CHECK:           return %[[BCAST]] : vector<3x4xf32>
+
+func.func @broadcast_vector_and_splat_const(%arg0: vector<4xf32>) -> vector<3x4xf32> {
+  %0 = vector.broadcast %arg0 : vector<4xf32> to vector<3x4xf32>
+  %cst = arith.constant dense<2.000000e+00> : vector<3x4xf32>
+  %2 = arith.mulf %0, %cst : vector<3x4xf32>
+  return %2 : vector<3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @negative_broadcast_with_non_splat_const(
+// CHECK-SAME:     %[[ARG_0:.*]]: index) -> vector<1x4xindex> {
+// CHECK-DAG:       %[[BCAST:.*]] = vector.broadcast %[[ARG_0]] : index to vector<1x4xindex>
+// CHECK-DAG:       %[[CST:.*]] = arith.constant dense<{{\[}}[0, 1, 2, 3]]> : vector<1x4xindex>
+// CHECK:           %[[ADD:.*]] = arith.addi %[[BCAST]], %[[CST]] : vector<1x4xindex>
+// CHECK:           return %[[ADD]] : vector<1x4xindex>
+
+func.func @negative_broadcast_with_non_splat_const(%arg0: index) -> vector<1x4xindex> {
+  %0 = vector.broadcast %arg0 : index to vector<1x4xindex>
+  %cst = arith.constant dense<[[0, 1, 2, 3]]> : vector<1x4xindex>
+  %2 = arith.addi %0, %cst : vector<1x4xindex>
+  return %2 : vector<1x4xindex>
+}
+
 //===----------------------------------------------------------------------===//
 // [Pattern: ReorderElementwiseOpsOnTranspose]
 //===----------------------------------------------------------------------===//

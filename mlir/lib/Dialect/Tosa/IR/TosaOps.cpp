@@ -3647,6 +3647,22 @@ std::optional<SmallVector<int64_t, 4>> ApplyScaleOp::getShapeForUnroll() {
   return std::nullopt;
 }
 
+static void printInitializationList(OpAsmPrinter &parser,
+                                    Block::BlockArgListType blocksArgs,
+                                    ValueRange initializers,
+                                    StringRef prefix = "") {
+  assert(blocksArgs.size() == initializers.size() &&
+         "expected same length of arguments and initializers");
+  if (initializers.empty())
+    return;
+
+  parser << prefix << '(';
+  llvm::interleaveComma(
+      llvm::zip(blocksArgs, initializers), parser,
+      [&](auto it) { parser << std::get<0>(it) << " = " << std::get<1>(it); });
+  parser << ")";
+}
+
 // parse and print of IfOp refer to the implementation of SCF dialect.
 ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
   // Create the regions for 'then'.
@@ -3654,16 +3670,64 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
   Region *thenRegion = result.addRegion();
   Region *elseRegion = result.addRegion();
 
-  auto &builder = parser.getBuilder();
   OpAsmParser::UnresolvedOperand cond;
-  // Create a i1 tensor type for the boolean condition.
-  Type i1Type = RankedTensorType::get({}, builder.getIntegerType(1));
-  if (parser.parseOperand(cond) ||
-      parser.resolveOperand(cond, i1Type, result.operands))
+
+  if (parser.parseOperand(cond))
     return failure();
-  // Parse optional results type list.
-  if (parser.parseOptionalArrowTypeList(result.types))
+
+  SmallVector<OpAsmParser::Argument, 4> regionArgs;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> operands;
+
+  // Parse the optional block arguments
+  OptionalParseResult listResult =
+      parser.parseOptionalAssignmentList(regionArgs, operands);
+  if (listResult.has_value() && failed(listResult.value()))
     return failure();
+
+  // Parse a colon.
+  if (failed(parser.parseColon()))
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected type for condition operand");
+
+  // Parse the type of the condition operand
+  Type condType;
+  if (failed(parser.parseType(condType)))
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected type for condition operand");
+
+  // Resolve operand with provided type
+  if (failed(parser.resolveOperand(cond, condType, result.operands)))
+    return failure();
+
+  // Parse optional block arg types
+  if (listResult.has_value()) {
+    FunctionType functionType;
+
+    if (failed(parser.parseType(functionType)))
+      return parser.emitError(parser.getCurrentLocation())
+             << "expected list of types for block arguments "
+             << "followed by arrow type and list of return types";
+
+    result.addTypes(functionType.getResults());
+
+    if (functionType.getNumInputs() != operands.size()) {
+      return parser.emitError(parser.getCurrentLocation())
+             << "expected as many input types as operands "
+             << "(expected " << operands.size() << " got "
+             << functionType.getNumInputs() << ")";
+    }
+
+    // Resolve input operands.
+    if (failed(parser.resolveOperands(operands, functionType.getInputs(),
+                                      parser.getCurrentLocation(),
+                                      result.operands)))
+      return failure();
+  } else {
+    // Parse optional results type list.
+    if (parser.parseOptionalArrowTypeList(result.types))
+      return failure();
+  }
+
   // Parse the 'then' region.
   if (parser.parseRegion(*thenRegion, /*arguments=*/{}, /*argTypes=*/{}))
     return failure();
@@ -3681,26 +3745,28 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void IfOp::print(OpAsmPrinter &p) {
-  bool printBlockTerminators = false;
-
   p << " " << getCondition();
-  if (!getResults().empty()) {
-    p << " -> (" << getResultTypes() << ")";
-    // Print yield explicitly if the op defines values.
-    printBlockTerminators = true;
+
+  printInitializationList(p, getThenGraph().front().getArguments(),
+                          getInputList(), " ");
+  p << " : ";
+  p << getCondition().getType();
+
+  if (!getInputList().empty()) {
+    p << " (";
+    llvm::interleaveComma(getInputList().getTypes(), p);
+    p << ")";
   }
-  p << ' ';
-  p.printRegion(getThenGraph(),
-                /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/printBlockTerminators);
+  p.printArrowTypeList(getResultTypes());
+  p << " ";
+
+  p.printRegion(getThenGraph());
 
   // Print the 'else' regions if it exists and has a block.
   auto &elseRegion = getElseGraph();
   if (!elseRegion.empty()) {
     p << " else ";
-    p.printRegion(elseRegion,
-                  /*printEntryBlockArgs=*/false,
-                  /*printBlockTerminators=*/printBlockTerminators);
+    p.printRegion(elseRegion);
   }
 
   p.printOptionalAttrDict((*this)->getAttrs());
@@ -3907,22 +3973,6 @@ ParseResult WhileOp::parse(OpAsmParser &parser, OperationState &result) {
   return failure(parser.parseRegion(*cond, regionArgs) ||
                  parser.parseKeyword("do") || parser.parseRegion(*body) ||
                  parser.parseOptionalAttrDictWithKeyword(result.attributes));
-}
-
-static void printInitializationList(OpAsmPrinter &parser,
-                                    Block::BlockArgListType blocksArgs,
-                                    ValueRange initializers,
-                                    StringRef prefix = "") {
-  assert(blocksArgs.size() == initializers.size() &&
-         "expected same length of arguments and initializers");
-  if (initializers.empty())
-    return;
-
-  parser << prefix << '(';
-  llvm::interleaveComma(
-      llvm::zip(blocksArgs, initializers), parser,
-      [&](auto it) { parser << std::get<0>(it) << " = " << std::get<1>(it); });
-  parser << ")";
 }
 
 void WhileOp::print(OpAsmPrinter &parser) {

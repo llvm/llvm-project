@@ -2385,23 +2385,6 @@ SDValue LoongArchTargetLowering::lowerBF16_TO_FP(SDValue Op,
   return Res;
 }
 
-static bool isConstantOrUndef(const SDValue Op) {
-  if (Op->isUndef())
-    return true;
-  if (isa<ConstantSDNode>(Op))
-    return true;
-  if (isa<ConstantFPSDNode>(Op))
-    return true;
-  return false;
-}
-
-static bool isConstantOrUndefBUILD_VECTOR(const BuildVectorSDNode *Op) {
-  for (unsigned i = 0; i < Op->getNumOperands(); ++i)
-    if (isConstantOrUndef(Op->getOperand(i)))
-      return true;
-  return false;
-}
-
 // Lower BUILD_VECTOR as broadcast load (if possible).
 // For example:
 //   %a = load i8, ptr %ptr
@@ -2451,10 +2434,14 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
                                                    SelectionDAG &DAG) const {
   BuildVectorSDNode *Node = cast<BuildVectorSDNode>(Op);
   EVT ResTy = Op->getValueType(0);
+  unsigned NumElts = ResTy.getVectorNumElements();
   SDLoc DL(Op);
   APInt SplatValue, SplatUndef;
   unsigned SplatBitSize;
   bool HasAnyUndefs;
+  bool IsConstant = false;
+  bool UseSameConstant = true;
+  SDValue ConstantValue;
   bool Is128Vec = ResTy.is128BitVector();
   bool Is256Vec = ResTy.is256BitVector();
 
@@ -2505,20 +2492,45 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
   if (DAG.isSplatValue(Op, /*AllowUndefs=*/false))
     return Op;
 
-  if (!isConstantOrUndefBUILD_VECTOR(Node)) {
+  for (unsigned i = 0; i < NumElts; ++i) {
+    SDValue Opi = Node->getOperand(i);
+    if (isIntOrFPConstant(Opi)) {
+      IsConstant = true;
+      if (!ConstantValue.getNode())
+        ConstantValue = Opi;
+      else if (ConstantValue != Opi)
+        UseSameConstant = false;
+    }
+  }
+
+  // If the type of BUILD_VECTOR is v2f64, custom legalizing it has no benefits.
+  if (IsConstant && UseSameConstant && ResTy != MVT::v2f64) {
+    SDValue Result = DAG.getSplatBuildVector(ResTy, DL, ConstantValue);
+    for (unsigned i = 0; i < NumElts; ++i) {
+      SDValue Opi = Node->getOperand(i);
+      if (!isIntOrFPConstant(Opi))
+        Result = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ResTy, Result, Opi,
+                             DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
+    }
+    return Result;
+  }
+
+  if (!IsConstant) {
     // Use INSERT_VECTOR_ELT operations rather than expand to stores.
     // The resulting code is the same length as the expansion, but it doesn't
     // use memory operations.
-    EVT ResTy = Node->getValueType(0);
-
     assert(ResTy.isVector());
 
-    unsigned NumElts = ResTy.getVectorNumElements();
-    SDValue Vector =
-        DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ResTy, Node->getOperand(0));
+    SDValue Op0 = Node->getOperand(0);
+    SDValue Vector = DAG.getUNDEF(ResTy);
+
+    if (!Op0.isUndef())
+      Vector = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ResTy, Op0);
     for (unsigned i = 1; i < NumElts; ++i) {
-      Vector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ResTy, Vector,
-                           Node->getOperand(i),
+      SDValue Opi = Node->getOperand(i);
+      if (Opi.isUndef())
+        continue;
+      Vector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ResTy, Vector, Opi,
                            DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
     }
     return Vector;

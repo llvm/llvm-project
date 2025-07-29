@@ -945,8 +945,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (LangOpts.GNUCVersion && LangOpts.CPlusPlus11)
     Builder.defineMacro("__GXX_EXPERIMENTAL_CXX0X__");
 
-  if (TI.getTriple().isWindowsGNUEnvironment()) {
-    // Set ABI defining macros for libstdc++ for MinGW, where the
+  if (TI.getTriple().isOSCygMing()) {
+    // Set ABI defining macros for libstdc++ for MinGW and Cygwin, where the
     // default in libstdc++ differs from the defaults for this target.
     Builder.defineMacro("__GXX_TYPEINFO_EQUALITY_INLINE", "0");
   }

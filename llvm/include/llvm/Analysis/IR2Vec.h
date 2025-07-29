@@ -153,6 +153,7 @@ class Vocabulary {
                     static_cast<unsigned>(OperandKind::MaxOperandKind),
                 "OperandKindNames array size must match MaxOperandKind");
 
+public:
   /// Vocabulary layout constants
 #define LAST_OTHER_INST(NUM) static constexpr unsigned MaxOpcodes = NUM;
 #include "llvm/IR/Instruction.def"
@@ -162,39 +163,38 @@ class Vocabulary {
   static constexpr unsigned MaxOperandKinds =
       static_cast<unsigned>(OperandKind::MaxOperandKind);
 
-public:
   Vocabulary() = default;
-  Vocabulary(VocabVector &&Vocab);
+  LLVM_ABI Vocabulary(VocabVector &&Vocab);
 
-  bool isValid() const;
-  unsigned getDimension() const;
-  size_t size() const;
+  LLVM_ABI bool isValid() const;
+  LLVM_ABI unsigned getDimension() const;
+  LLVM_ABI size_t size() const;
 
   static size_t expectedSize() {
     return MaxOpcodes + MaxTypeIDs + MaxOperandKinds;
   }
 
   /// Helper function to get vocabulary key for a given Opcode
-  static StringRef getVocabKeyForOpcode(unsigned Opcode);
+  LLVM_ABI static StringRef getVocabKeyForOpcode(unsigned Opcode);
 
   /// Helper function to get vocabulary key for a given TypeID
-  static StringRef getVocabKeyForTypeID(Type::TypeID TypeID);
+  LLVM_ABI static StringRef getVocabKeyForTypeID(Type::TypeID TypeID);
 
   /// Helper function to get vocabulary key for a given OperandKind
-  static StringRef getVocabKeyForOperandKind(OperandKind Kind);
+  LLVM_ABI static StringRef getVocabKeyForOperandKind(OperandKind Kind);
 
   /// Helper function to classify an operand into OperandKind
-  static OperandKind getOperandKind(const Value *Op);
+  LLVM_ABI static OperandKind getOperandKind(const Value *Op);
 
   /// Helpers to return the IDs of a given Opcode, TypeID, or OperandKind
-  static unsigned getNumericID(unsigned Opcode);
-  static unsigned getNumericID(Type::TypeID TypeID);
-  static unsigned getNumericID(const Value *Op);
+  LLVM_ABI static unsigned getNumericID(unsigned Opcode);
+  LLVM_ABI static unsigned getNumericID(Type::TypeID TypeID);
+  LLVM_ABI static unsigned getNumericID(const Value *Op);
 
   /// Accessors to get the embedding for a given entity.
-  const ir2vec::Embedding &operator[](unsigned Opcode) const;
-  const ir2vec::Embedding &operator[](Type::TypeID TypeId) const;
-  const ir2vec::Embedding &operator[](const Value *Arg) const;
+  LLVM_ABI const ir2vec::Embedding &operator[](unsigned Opcode) const;
+  LLVM_ABI const ir2vec::Embedding &operator[](Type::TypeID TypeId) const;
+  LLVM_ABI const ir2vec::Embedding &operator[](const Value *Arg) const;
 
   /// Const Iterator type aliases
   using const_iterator = VocabVector::const_iterator;
@@ -221,13 +221,13 @@ public:
   /// Returns the string key for a given index position in the vocabulary.
   /// This is useful for debugging or printing the vocabulary. Do not use this
   /// for embedding generation as string based lookups are inefficient.
-  static StringRef getStringKey(unsigned Pos);
+  LLVM_ABI static StringRef getStringKey(unsigned Pos);
 
   /// Create a dummy vocabulary for testing purposes.
-  static VocabVector createDummyVocabForTest(unsigned Dim = 1);
+  LLVM_ABI static VocabVector createDummyVocabForTest(unsigned Dim = 1);
 
-  bool invalidate(Module &M, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &Inv) const;
+  LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
+                           ModuleAnalysisManager::Invalidator &Inv) const;
 };
 
 /// Embedder provides the interface to generate embeddings (vector

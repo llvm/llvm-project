@@ -26653,9 +26653,10 @@ object's lifetime.
 Arguments:
 """"""""""
 
-The first argument is a constant integer representing the size of the
-object, or -1 if it is variable sized. The second argument is a pointer
-to an ``alloca`` instruction.
+The first argument is a constant integer, which is ignored and will be removed
+in the future.
+
+The second argument is a pointer to an ``alloca`` instruction.
 
 Semantics:
 """"""""""
@@ -26693,9 +26694,10 @@ The '``llvm.lifetime.end``' intrinsic specifies the end of a
 Arguments:
 """"""""""
 
-The first argument is a constant integer representing the size of the
-object, or -1 if it is variable sized. The second argument is a pointer
-to an ``alloca`` instruction.
+The first argument is a constant integer, which is ignored and will be removed
+in the future.
+
+The second argument is a pointer to an ``alloca`` instruction.
 
 Semantics:
 """"""""""

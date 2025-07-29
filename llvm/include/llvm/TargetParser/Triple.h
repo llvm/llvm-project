@@ -199,7 +199,8 @@ public:
     SUSE,
     OpenEmbedded,
     Intel,
-    LastVendorType = Intel
+    Meta,
+    LastVendorType = Meta
   };
   enum OSType {
     UnknownOS,
@@ -307,8 +308,8 @@ public:
     Mlibc,
 
     PAuthTest,
-
-    LastEnvironmentType = PAuthTest
+    MTIA,
+    LastEnvironmentType = MTIA
   };
   enum ObjectFormatType {
     UnknownObjectFormat,

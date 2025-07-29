@@ -53,6 +53,33 @@ functions:
       - type: wchar_t *__restrict
       - type: const char *__restrict
       - type: size_t
+  - name: mbsnrtowcs
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const char **__restrict
+      - type: size_t
+      - type: size_t
+      - type: mbstate_t *__restrict
+  - name: mbsrtowcs
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const char **__restrict
+      - type: size_t
+      - type: mbstate_t *__restrict
+  - name: mbstowcs
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const char *__restrict
+      - type: size_t
   - name: mbsinit
     standards:
       - stdc

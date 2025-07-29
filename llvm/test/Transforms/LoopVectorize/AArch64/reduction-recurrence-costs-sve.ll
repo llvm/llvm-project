@@ -353,11 +353,10 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP21:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP22:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP13:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[INDEX]]
-; DEFAULT-NEXT:    [[TMP15:%.*]] = getelementptr i16, ptr [[TMP13]], i32 0
 ; DEFAULT-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP17:%.*]] = mul nuw i64 [[TMP16]], 4
 ; DEFAULT-NEXT:    [[TMP18:%.*]] = getelementptr i16, ptr [[TMP13]], i64 [[TMP17]]
-; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i16>, ptr [[TMP15]], align 2
+; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i16>, ptr [[TMP13]], align 2
 ; DEFAULT-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x i16>, ptr [[TMP18]], align 2
 ; DEFAULT-NEXT:    [[TMP19:%.*]] = udiv <vscale x 4 x i16> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; DEFAULT-NEXT:    [[TMP20:%.*]] = udiv <vscale x 4 x i16> [[WIDE_LOAD2]], [[BROADCAST_SPLAT]]
@@ -412,11 +411,10 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; VSCALEFORTUNING2-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP15:%.*]], %[[VECTOR_BODY]] ]
 ; VSCALEFORTUNING2-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP16:%.*]], %[[VECTOR_BODY]] ]
 ; VSCALEFORTUNING2-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[INDEX]]
-; VSCALEFORTUNING2-NEXT:    [[TMP9:%.*]] = getelementptr i16, ptr [[TMP8]], i32 0
 ; VSCALEFORTUNING2-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
 ; VSCALEFORTUNING2-NEXT:    [[TMP11:%.*]] = mul nuw i64 [[TMP10]], 4
 ; VSCALEFORTUNING2-NEXT:    [[TMP12:%.*]] = getelementptr i16, ptr [[TMP8]], i64 [[TMP11]]
-; VSCALEFORTUNING2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i16>, ptr [[TMP9]], align 2
+; VSCALEFORTUNING2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i16>, ptr [[TMP8]], align 2
 ; VSCALEFORTUNING2-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x i16>, ptr [[TMP12]], align 2
 ; VSCALEFORTUNING2-NEXT:    [[TMP13:%.*]] = udiv <vscale x 4 x i16> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; VSCALEFORTUNING2-NEXT:    [[TMP14:%.*]] = udiv <vscale x 4 x i16> [[WIDE_LOAD2]], [[BROADCAST_SPLAT]]
@@ -476,8 +474,7 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 8 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; PRED-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 8 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP16:%.*]], %[[VECTOR_BODY]] ]
 ; PRED-NEXT:    [[TMP14:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[INDEX]]
-; PRED-NEXT:    [[TMP15:%.*]] = getelementptr i16, ptr [[TMP14]], i32 0
-; PRED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr [[TMP15]], i32 2, <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x i16> poison)
+; PRED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr [[TMP14]], i32 2, <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x i16> poison)
 ; PRED-NEXT:    [[TMP20:%.*]] = udiv <vscale x 8 x i16> [[WIDE_MASKED_LOAD]], [[BROADCAST_SPLAT]]
 ; PRED-NEXT:    [[TMP21:%.*]] = or <vscale x 8 x i16> [[TMP20]], [[VEC_PHI]]
 ; PRED-NEXT:    [[TMP16]] = select <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x i16> [[TMP21]], <vscale x 8 x i16> [[VEC_PHI]]

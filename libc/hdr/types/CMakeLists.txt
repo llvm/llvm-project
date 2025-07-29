@@ -242,6 +242,22 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  pthread_barrier_t
+  HDRS
+    pthread_barrier_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.pthread_barrier_t
+)
+
+add_proxy_header_library(
+  pthread_barrierattr_t
+  HDRS
+    pthread_barrierattr_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.pthread_barrierattr_t
+)
+
+add_proxy_header_library(
   atexithandler_t
   HDRS
     atexithandler_t.h

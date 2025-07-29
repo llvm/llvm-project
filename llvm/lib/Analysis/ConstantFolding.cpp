@@ -1373,7 +1373,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
   if (ConstantFP *CFP = dyn_cast<ConstantFP>(Operand))
     return flushDenormalConstantFP(CFP, Inst, IsOutput);
 
-  if (isa<ConstantAggregateZero, UndefValue, ConstantExpr>(Operand))
+  if (isa<ConstantAggregateZero, UndefValue>(Operand))
     return Operand;
 
   Type *Ty = Operand->getType();
@@ -1388,6 +1388,9 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
 
     Ty = VecTy->getElementType();
   }
+
+  if (isa<ConstantExpr>(Operand))
+    return Operand;
 
   if (const auto *CV = dyn_cast<ConstantVector>(Operand)) {
     SmallVector<Constant *, 16> NewElts;
