@@ -1779,18 +1779,13 @@ class LLDBTestCaseFactory(type):
             ):
                 # If any debug info categories were explicitly tagged, assume that list to be
                 # authoritative.  If none were specified, try with all debug info formats.
-                test_method_categories = getattr(attrvalue, "categories", [])
-                dbginfo_categories = set(test_method_categories) & set(
+                test_method_categories = set(getattr(attrvalue, "categories", []))
+                all_dbginfo_categories = set(
                     test_categories.debug_info_categories.keys()
                 )
-                if dbginfo_categories:
-                    other_categories = [
-                        category
-                        for category in test_method_categories
-                        if category not in dbginfo_categories
-                    ]
-                else:
-                    other_categories = test_method_categories
+                dbginfo_categories = test_method_categories & all_dbginfo_categories
+                other_categories = list(test_method_categories - all_dbginfo_categories)
+                if not dbginfo_categories:
                     dbginfo_categories = [
                         category
                         for category, can_replicate in test_categories.debug_info_categories.items()
