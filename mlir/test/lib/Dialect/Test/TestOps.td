@@ -125,6 +125,15 @@ def SymbolScopeOp : TEST_Op<"symbol_scope",
   let regions = (region SizedRegion<1>:$region);
 }
 
+def SymbolScopeIsolatedOp
+    : TEST_Op<"symbol_scope_isolated", [IsolatedFromAbove, SymbolTable,
+                                        SingleBlockImplicitTerminator<
+                                            "TerminatorOp">]> {
+  let summary =
+      "operation which defines a new symbol table that is IsolatedFromAbove";
+  let regions = (region SizedRegion<1>:$region);
+}
+
 def SymbolTableRegionOp : TEST_Op<"symbol_table_region", [SymbolTable]> {
   let summary =  "operation which defines a new symbol table without a "
                  "restriction on a terminator";
