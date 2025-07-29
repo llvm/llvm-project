@@ -12290,6 +12290,7 @@ SDValue AArch64TargetLowering::getSqrtEstimate(SDValue Operand,
       SDLoc DL(Operand);
       EVT VT = Operand.getValueType();
 
+      // Ensure nodes can be recognized by isAssociativeAndCommutative.
       SDNodeFlags Flags =
           SDNodeFlags::AllowReassociation | SDNodeFlags::NoSignedZeros;
 
