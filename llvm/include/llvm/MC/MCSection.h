@@ -149,23 +149,6 @@ public:
   MCFragment(const MCFragment &) = delete;
   MCFragment &operator=(const MCFragment &) = delete;
 
-  bool isEncoded() const {
-    MCFragment::FragmentType Kind = getKind();
-    switch (Kind) {
-    default:
-      return false;
-    case MCFragment::FT_Relaxable:
-    case MCFragment::FT_Data:
-    case MCFragment::FT_Align:
-    case MCFragment::FT_Dwarf:
-    case MCFragment::FT_DwarfFrame:
-    case MCFragment::FT_LEB:
-    case MCFragment::FT_CVInlineLines:
-    case MCFragment::FT_CVDefRange:
-      return true;
-    }
-  }
-
   MCFragment *getNext() const { return Next; }
 
   FragmentType getKind() const { return Kind; }
