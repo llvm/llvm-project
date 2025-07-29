@@ -25,41 +25,6 @@ using APSInt = llvm::APSInt;
 namespace clang {
 namespace interp {
 
-static bool hasTrivialDefaultCtorParent(const FieldDecl *FD) {
-  assert(FD);
-  assert(FD->getParent()->isUnion());
-  const auto *CXXRD = dyn_cast<CXXRecordDecl>(FD->getParent());
-  return !CXXRD || CXXRD->hasTrivialDefaultConstructor();
-}
-
-static bool refersToUnion(const Expr *E) {
-  for (;;) {
-    if (const auto *ME = dyn_cast<MemberExpr>(E)) {
-      if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
-          FD && FD->getParent()->isUnion() && hasTrivialDefaultCtorParent(FD))
-        return true;
-      E = ME->getBase();
-      continue;
-    }
-
-    if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
-      E = ASE->getBase()->IgnoreImplicit();
-      continue;
-    }
-
-    if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E);
-        ICE && (ICE->getCastKind() == CK_NoOp ||
-                ICE->getCastKind() == CK_DerivedToBase ||
-                ICE->getCastKind() == CK_UncheckedDerivedToBase)) {
-      E = ICE->getSubExpr();
-      continue;
-    }
-
-    break;
-  }
-  return false;
-}
-
 static std::optional<bool> getBoolValue(const Expr *E) {
   if (const auto *CE = dyn_cast_if_present<ConstantExpr>(E);
       CE && CE->hasAPValueResult() &&
@@ -5408,6 +5373,53 @@ bool Compiler<Emitter>::maybeEmitDeferredVarInit(const VarDecl *VD) {
   return true;
 }
 
+static bool hasTrivialDefaultCtorParent(const FieldDecl *FD) {
+  assert(FD);
+  assert(FD->getParent()->isUnion());
+  const auto *CXXRD = dyn_cast<CXXRecordDecl>(FD->getParent());
+  return !CXXRD || CXXRD->hasTrivialDefaultConstructor();
+}
+
+template <class Emitter> bool Compiler<Emitter>::refersToUnion(const Expr *E) {
+  for (;;) {
+    if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+      if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
+          FD && FD->getParent()->isUnion() && hasTrivialDefaultCtorParent(FD))
+        return true;
+      E = ME->getBase();
+      continue;
+    }
+
+    if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+      E = ASE->getBase()->IgnoreImplicit();
+      continue;
+    }
+
+    if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E);
+        ICE && (ICE->getCastKind() == CK_NoOp ||
+                ICE->getCastKind() == CK_DerivedToBase ||
+                ICE->getCastKind() == CK_UncheckedDerivedToBase)) {
+      E = ICE->getSubExpr();
+      continue;
+    }
+
+    if (const auto *This = dyn_cast<CXXThisExpr>(E)) {
+      const auto *ThisRecord =
+          This->getType()->getPointeeType()->getAsRecordDecl();
+      if (!ThisRecord->isUnion())
+        return false;
+      // Otherwise, always activate if we're in the ctor.
+      if (const auto *Ctor =
+              dyn_cast_if_present<CXXConstructorDecl>(CompilingFunction))
+        return Ctor->getParent() == ThisRecord;
+      return false;
+    }
+
+    break;
+  }
+  return false;
+}
+
 template <class Emitter>
 bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS,
                                       bool EvaluateConditionDecl) {
@@ -5940,16 +5952,15 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
       return false;
 
     if (OptPrimType T = this->classify(InitExpr)) {
+      if (Activate && !this->emitActivateThisField(FieldOffset, InitExpr))
+        return false;
+
       if (!this->visit(InitExpr))
         return false;
 
       bool BitField = F->isBitField();
-      if (BitField && Activate)
-        return this->emitInitThisBitFieldActivate(*T, F, FieldOffset, InitExpr);
       if (BitField)
         return this->emitInitThisBitField(*T, F, FieldOffset, InitExpr);
-      if (Activate)
-        return this->emitInitThisFieldActivate(*T, FieldOffset, InitExpr);
       return this->emitInitThisField(*T, FieldOffset, InitExpr);
     }
     // Non-primitive case. Get a pointer to the field-to-initialize
