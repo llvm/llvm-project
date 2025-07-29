@@ -1188,6 +1188,7 @@ public:
   void removeLocalConst();
   void removeLocalVolatile();
   void removeLocalRestrict();
+  QualType removeNonAddressSpaceQualifiers();
 
   void removeLocalFastQualifiers() { Value.setInt(0); }
   void removeLocalFastQualifiers(unsigned Mask) {
@@ -8272,6 +8273,15 @@ inline void QualType::removeLocalRestrict() {
 
 inline void QualType::removeLocalVolatile() {
   removeLocalFastQualifiers(Qualifiers::Volatile);
+}
+
+inline QualType QualType::removeNonAddressSpaceQualifiers() {
+  if (getQualifiers().hasTargetSpecificAddressSpace()) {
+    removeLocalFastQualifiers();
+  } else {
+    return getCanonicalType().getUnqualifiedType();
+  }
+  return *this;
 }
 
 /// Check if this type has any address space qualifier.

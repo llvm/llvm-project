@@ -1217,7 +1217,7 @@ const ElementRegion *
 MemRegionManager::getElementRegion(QualType elementType, NonLoc Idx,
                                    const SubRegion *superRegion,
                                    const ASTContext &Ctx) {
-  QualType T = Ctx.getCanonicalType(elementType).getUnqualifiedType();
+  QualType T = elementType.removeNonAddressSpaceQualifiers();
 
   llvm::FoldingSetNodeID ID;
   ElementRegion::ProfileRegion(ID, T, Idx, superRegion);
