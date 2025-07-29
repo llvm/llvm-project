@@ -63,12 +63,19 @@ public:
     Val.Explicit.clear();
 
     for (StringRef Pair : Pairs) {
-      size_t Pos = Pair.find(':');
-      if (Pos == StringRef::npos)
+      llvm::SmallVector<StringRef, 2> Parts;
+      Pair.split(Parts, ':');
+
+      if (Parts.size() != 2)
         return O.error("Expected '<provider>:<platform>', got '" + Pair + "'");
 
-      StringRef Provider = Pair.take_front(Pos);
-      StringRef Platform = Pair.drop_front(Pos + 1);
+      StringRef Provider = Parts[0].trim();
+      StringRef Platform = Parts[1].trim();
+
+      if (Provider.empty() || Platform.empty())
+        return O.error("Provider and platform must not be empty in '" + Pair +
+                       "'");
+
       mathtest::TestConfig Config = {Provider.str(), Platform.str()};
       if (!isAllowed(Config))
         return O.error("Invalid pair '" + Pair + "'");
