@@ -2281,10 +2281,10 @@ __tree<_Tp, _Compare, _Allocator>::__lower_bound(
     const _Key& __v, __node_pointer __root, __end_node_pointer __result) const {
   while (__root != nullptr) {
     if (!value_comp()(__root->__value_, __v)) {
-      __result = static_cast<__end_node_pointer>(__root);
-      __root   = static_cast<__node_pointer>(__root->__left_);
+      __result = std::__static_fancy_pointer_cast<__end_node_pointer>(__root);
+      __root   = std::__static_fancy_pointer_cast<__node_pointer>(__root->__left_);
     } else
-      __root = static_cast<__node_pointer>(__root->__right_);
+      __root = std::__static_fancy_pointer_cast<__node_pointer>(__root->__right_);
   }
   return const_iterator(__result);
 }
