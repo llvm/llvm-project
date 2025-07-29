@@ -64,6 +64,7 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
       .Case("mutable-globals", HasMutableGlobals)
       .Case("nontrapping-fptoint", HasNontrappingFPToInt)
       .Case("reference-types", HasReferenceTypes)
+      .Case("gc", HasGC)
       .Case("relaxed-simd", SIMDLevel >= RelaxedSIMD)
       .Case("sign-ext", HasSignExt)
       .Case("simd128", SIMDLevel >= SIMD128)
@@ -106,6 +107,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_nontrapping_fptoint__");
   if (HasReferenceTypes)
     Builder.defineMacro("__wasm_reference_types__");
+  if (HasGC)
+    Builder.defineMacro("__wasm_gc__");
   if (SIMDLevel >= RelaxedSIMD)
     Builder.defineMacro("__wasm_relaxed_simd__");
   if (HasSignExt)
@@ -307,6 +310,14 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
       HasReferenceTypes = false;
       continue;
     }
+    if (Feature == "+gc") {
+      HasGC = true;
+      continue;
+    }
+    if (Feature == "-gc") {
+      HasGC = false;
+      continue;
+    }
     if (Feature == "+relaxed-simd") {
       SIMDLevel = std::max(SIMDLevel, RelaxedSIMD);
       continue;
@@ -351,6 +362,11 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     Diags.Report(diag::err_opt_not_valid_with_opt)
         << Feature << "-target-feature";
     return false;
+  }
+
+  // gc implies reference-types
+  if (HasGC) {
+    HasReferenceTypes = true;
   }
 
   // bulk-memory-opt is a subset of bulk-memory.
