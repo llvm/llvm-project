@@ -96,21 +96,20 @@ public:
         fieldNames.emplace_back(stringAttr.getValue().str(),
                                 fieldOp.getName().str());
 
-      } else {
+      } else
         fieldOp.emitError()
             << "FieldOp must have a dictionary attribute named '"
             << attributeName << "'"
             << "with an array containing a string attribute";
-      }
+    
     });
 
     std::string mapString;
     mapString += "{ ";
     for (size_t i = 0; i < fieldNames.size(); ++i) {
-      mapString += llvm::formatv("{ \"{0}\", reinterpret_cast<char*>(&{1}) }",
-                                 fieldNames[i].first, fieldNames[i].second);
-      if (i < fieldNames.size() - 1)
-        mapString += ", ";
+      mapString += llvm::formatv(
+          "{ \"{0}\", reinterpret_cast<char*>(&{1}) }{2}", fieldNames[i].first,
+          fieldNames[i].second, (i < fieldNames.size() - 1) ? ", " : "");
     }
     mapString += " }";
 
