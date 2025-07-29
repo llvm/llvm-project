@@ -1964,9 +1964,9 @@ __tree<_Tp, _Compare, _Allocator>::__emplace_hint_unique_impl(const_iterator __p
   __end_node_pointer __parent;
   __node_base_pointer __dummy;
   __node_base_pointer& __child = __find_equal(__p, __parent, __dummy, __h->__value_);
-  __node_pointer __r           = static_cast<__node_pointer>(__child);
+  __node_pointer __r           = std::__static_fancy_pointer_cast<__node_pointer>(__child);
   if (__child == nullptr) {
-    __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
+    __insert_node_at(__parent, __child, std::__static_fancy_pointer_cast<__node_base_pointer>(__h.get()));
     __r = __h.release();
   }
   return iterator(__r);
