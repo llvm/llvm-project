@@ -650,7 +650,7 @@ protected:
   bool GetDynamicTypeAndAddress_ExistentialMetatype(
       ValueObject &in_value, CompilerType meta_type,
       lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
-      Address &address);
+      Address &address, Value::ValueType &value_type);
 
   bool GetDynamicTypeAndAddress_Value(ValueObject &in_value,
                                       CompilerType &bound_type,
