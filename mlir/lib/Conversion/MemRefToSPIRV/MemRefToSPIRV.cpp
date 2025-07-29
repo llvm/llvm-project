@@ -723,33 +723,34 @@ ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
                                        "convert to SPIR-V sampled images");
 
   // Materialize the lowering.
-  auto imageLoadOp = rewriter.create<spirv::LoadOp>(loadOp->getLoc(), loadPtr,
-                                                    memoryAccess, alignment);
+  auto imageLoadOp = spirv::LoadOp::create(rewriter, loadOp->getLoc(), loadPtr,
+                                           memoryAccess, alignment);
   // Extract the image from the sampled image.
-  auto imageOp = rewriter.create<spirv::ImageOp>(loadOp->getLoc(), imageLoadOp);
+  auto imageOp =
+      spirv::ImageOp::create(rewriter, loadOp->getLoc(), imageLoadOp);
 
   // Build a vector of coordinates or just a scalar index if we have a 1D image.
   Value coords;
   if (memrefType.getRank() != 1) {
     const auto coordVectorType = VectorType::get(
         {loadOp.getMemRefType().getRank()}, adaptor.getIndices().getType()[0]);
-    coords = rewriter.create<spirv::CompositeConstructOp>(
-        loadOp->getLoc(), coordVectorType, adaptor.getIndices());
+    coords = spirv::CompositeConstructOp::create(
+        rewriter, loadOp->getLoc(), coordVectorType, adaptor.getIndices());
   } else {
     coords = adaptor.getIndices()[0];
   }
 
   // Fetch the value out of the image.
   auto resultVectorType = VectorType::get({4}, loadOp.getType());
-  auto fetchOp = rewriter.create<spirv::ImageFetchOp>(
-      loadOp->getLoc(), resultVectorType, imageOp, coords,
+  auto fetchOp = spirv::ImageFetchOp::create(
+      rewriter, loadOp->getLoc(), resultVectorType, imageOp, coords,
       mlir::spirv::ImageOperandsAttr{}, ValueRange{});
 
   // Note that because OpImageFetch returns a rank 4 vector we need to extract
   // the elements corresponding to the load which will since we only support the
   // R[16|32][f|i|ui] formats will always be the R(red) 0th vector element.
   auto compositeExtractOp =
-      rewriter.create<spirv::CompositeExtractOp>(loadOp->getLoc(), fetchOp, 0);
+      spirv::CompositeExtractOp::create(rewriter, loadOp->getLoc(), fetchOp, 0);
 
   rewriter.replaceOp(loadOp, compositeExtractOp);
   return success();
