@@ -79,7 +79,9 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
   StringRef Target =
       "generic"; // SPIR-V is generic, no specific target ID like -mcpu
   tools::AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LinkArgs, Arch,
-                                    Target, /*IsBitCodeSDL=*/true);
+                                    Target, /*IsBitCodeSDL=*/true,
+                                    /*PostClangLink=*/false);
+
   LinkArgs.append({"-o", TempFile});
   const char *LlvmLink =
       Args.MakeArgString(getToolChain().GetProgramPath("llvm-link"));
