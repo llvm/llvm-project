@@ -33,7 +33,7 @@ public:
                          MCSubtargetInfo &STI, MCStreamer &Streamer,
                          MemoryBuffer &Buffer, SourceMgr &SM, MCContext &Ctx,
                          const MCTargetOptions &MCOptions, bool HexBytes,
-                         unsigned BenchmarkNumRuns);
+                         unsigned NumBenchmarkRuns);
 };
 
 } // namespace llvm

@@ -243,7 +243,7 @@ static cl::opt<ActionType> Action(
     cl::cat(MCCategory));
 
 static cl::opt<unsigned>
-    BenchmarkNumRuns("benchmark-num-runs",
+    NumBenchmarkRuns("num-benchmark-runs",
                      cl::desc("Number of runs for decoder benchmarking"),
                      cl::cat(MCCategory));
 
@@ -399,9 +399,7 @@ int main(int argc, char **argv) {
     if (!TimeTrace)
       return;
     if (auto E = timeTraceProfilerWrite(TimeTraceFile, OutputFilename)) {
-      handleAllErrors(std::move(E), [&](const StringError &SE) {
-        errs() << SE.getMessage() << "\n";
-      });
+      logAllUnhandledErrors(std::move(E), errs());
       return;
     }
     timeTraceProfilerCleanup();
@@ -639,7 +637,7 @@ int main(int argc, char **argv) {
   }
 
   int Res = 1;
-  bool Disassemble = false;
+  bool disassemble = false;
   switch (Action) {
   case AC_AsLex:
     Res = AsLexInput(SrcMgr, *MAI, Out->os());
@@ -651,13 +649,13 @@ int main(int argc, char **argv) {
   case AC_MDisassemble:
   case AC_CDisassemble:
   case AC_Disassemble:
-    Disassemble = true;
+    disassemble = true;
     break;
   }
-  if (Disassemble)
+  if (disassemble)
     Res = Disassembler::disassemble(*TheTarget, TripleName, *STI, *Str, *Buffer,
                                     SrcMgr, Ctx, MCOptions, HexBytes,
-                                    BenchmarkNumRuns);
+                                    NumBenchmarkRuns);
 
   // Keep output if no errors.
   if (Res == 0) {
