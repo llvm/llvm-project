@@ -32,57 +32,42 @@ void JSONTransport::Log(llvm::StringRef message) {
 // Parses messages based on
 // https://microsoft.github.io/debug-adapter-protocol/overview#base-protocol
 Expected<std::vector<std::string>> HTTPDelimitedJSONTransport::Parse() {
-  if (m_buffer.empty())
-    return std::vector<std::string>{};
-
   std::vector<std::string> messages;
   StringRef buffer = m_buffer;
-  size_t content_length = 0, end_of_last_message = 0, cursor = 0;
-  do {
-    auto idx = buffer.find(kHeaderSeparator, cursor);
-    // Separator not found, we need more data.
-    if (idx == StringRef::npos)
-      break;
-
-    auto header = buffer.slice(cursor, idx);
-    cursor = idx + kHeaderSeparator.size();
-
-    // An empty line separates the headers from the message body.
-    if (header.empty()) {
-      // Check if we have enough data or wait for the next chunk to arrive.
-      if (content_length + cursor > buffer.size())
-        break;
-
-      std::string body = buffer.substr(cursor, content_length).str();
-      end_of_last_message = cursor + content_length;
-      cursor += content_length;
-      Logv("--> {0}", body);
-      messages.emplace_back(std::move(body));
-      content_length = 0;
-      continue;
-    }
-
+  while (buffer.contains(kEndOfHeader)) {
+    auto [headers, rest] = buffer.split(kEndOfHeader);
+    SmallVector<StringRef> kv_pairs;
     // HTTP Headers are formatted like `<field-name> ':' [<field-value>]`.
-    if (!header.contains(kHeaderFieldSeparator))
-      return createStringError("malformed content header");
+    headers.split(kv_pairs, kHeaderSeparator);
+    size_t content_length = 0;
+    for (const auto &header : kv_pairs) {
+      auto [key, value] = header.split(kHeaderFieldSeparator);
+      // 'Content-Length' is the only meaningful key at the moment. Others are
+      // ignored.
+      if (!key.equals_insensitive(kHeaderContentLength))
+        continue;
 
-    auto [name, value] = header.split(kHeaderFieldSeparator);
-
-    // Handle known headers, at the moment only "Content-Length" is specified,
-    // other headers are ignored.
-    if (name.lower() == kHeaderContentLength.lower()) {
       value = value.trim();
-      if (value.trim().consumeInteger(10, content_length))
+      if (!llvm::to_integer(value, content_length, 10))
         return createStringError(std::errc::invalid_argument,
                                  "invalid content length: %s",
                                  value.str().c_str());
     }
-  } while (cursor < buffer.size());
+
+    // Check if we have enough data.
+    if (content_length > rest.size())
+      break;
+
+    StringRef body = rest.take_front(content_length);
+    buffer = rest.drop_front(content_length);
+    messages.emplace_back(body.str());
+    Logv("--> {0}", body);
+  }
 
   // Store the remainder of the buffer for the next read callback.
-  m_buffer = buffer.substr(end_of_last_message);
+  m_buffer = buffer.str();
 
-  return messages;
+  return std::move(messages);
 }
 
 Error HTTPDelimitedJSONTransport::WriteImpl(const std::string &message) {
@@ -102,15 +87,12 @@ Error HTTPDelimitedJSONTransport::WriteImpl(const std::string &message) {
 Expected<std::vector<std::string>> JSONRPCTransport::Parse() {
   std::vector<std::string> messages;
   StringRef buf = m_buffer;
-  do {
-    size_t idx = buf.find(kMessageSeparator);
-    if (idx == StringRef::npos)
-      break;
-    std::string raw_json = buf.substr(0, idx).str();
-    buf = buf.substr(idx + 1);
+  while (buf.contains(kMessageSeparator)) {
+    auto [raw_json, rest] = buf.split(kMessageSeparator);
+    buf = rest;
+    messages.emplace_back(raw_json.str());
     Logv("--> {0}", raw_json);
-    messages.push_back(raw_json);
-  } while (!buf.empty());
+  }
 
   // Store the remainder of the buffer for the next read callback.
   m_buffer = buf.str();

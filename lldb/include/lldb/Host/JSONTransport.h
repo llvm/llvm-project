@@ -78,7 +78,7 @@ class JSONTransport {
 public:
   using ReadHandleUP = MainLoopBase::ReadHandleUP;
   template <typename T>
-  using Callback = std::function<void(MainLoopBase &, llvm::Expected<T>)>;
+  using Callback = std::function<void(MainLoopBase &, const llvm::Expected<T>)>;
 
   JSONTransport(lldb::IOObjectSP input, lldb::IOObjectSP output);
   virtual ~JSONTransport() = default;
@@ -98,7 +98,7 @@ public:
   /// Registers the transport with the MainLoop.
   template <typename T>
   llvm::Expected<ReadHandleUP> RegisterReadObject(MainLoopBase &loop,
-                                                  Callback<T> callback) {
+                                                  const Callback<T> &callback) {
     Status error;
     ReadHandleUP handle = loop.RegisterReadObject(
         m_input,
@@ -170,6 +170,7 @@ protected:
   static constexpr llvm::StringLiteral kHeaderContentLength = "Content-Length";
   static constexpr llvm::StringLiteral kHeaderFieldSeparator = ":";
   static constexpr llvm::StringLiteral kHeaderSeparator = "\r\n";
+  static constexpr llvm::StringLiteral kEndOfHeader = "\r\n\r\n";
 };
 
 /// A transport class for JSON RPC.
