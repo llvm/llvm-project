@@ -109,6 +109,390 @@ scratch_store_b32 v2, v5, s1 scale_offset
 // GFX12-ERR-NEXT:{{^}}scratch_store_b32 v2, v5, s1 scale_offset
 // GFX12-ERR-NEXT:{{^}}                             ^
 
+flat_prefetch_b8 v[2:3]
+// GFX1250: flat_prefetch_b8 v[2:3]                 ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x00,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_prefetch_b8 v[2:3] offset:1024    ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x00,0x00,0x02,0x00,0xfc,0xff]
+// GFX1250: flat_prefetch_b8 v[2:3] offset:1024     ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x00,0x00,0x02,0x00,0x04,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_prefetch_b8 v[2:3] offset:-1024    ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x00,0x00,0x02,0x00,0xfc,0xff]
+// GFX1250: flat_prefetch_b8 v[2:3] offset:-1024    ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x00,0x00,0x02,0x00,0xfc,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_prefetch_b8 v[2:3] offset:-1024 th:TH_LOAD_NT scope:SCOPE_SE ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x14,0x00,0x02,0x00,0xfc,0xff]
+// GFX1250: flat_prefetch_b8 v[2:3] offset:-1024 th:TH_LOAD_NT scope:SCOPE_SE ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x14,0x00,0x02,0x00,0xfc,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_prefetch_b8 v[2:3] th:TH_LOAD_HT scope:SCOPE_CU ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x24,0x00,0x02,0x00,0xfc,0xff]
+// GFX1250: flat_prefetch_b8 v[2:3] th:TH_LOAD_HT   ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x20,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_prefetch_b8 v[2:3] offset:64 th:TH_LOAD_NT_RT scope:SCOPE_DEV ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x24,0x00,0x02,0x00,0xfc,0xff]
+// GFX1250: flat_prefetch_b8 v[2:3] offset:64 th:TH_LOAD_NT_RT scope:SCOPE_DEV ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x48,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_prefetch_b8 v[2:3] th:TH_LOAD_HT
+// GFX1250: flat_prefetch_b8 v[2:3] th:TH_LOAD_HT   ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x20,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_prefetch_b8 v[2:3] th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: flat_prefetch_b8 v[2:3] th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x3c,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_prefetch_b8 v[2:3], off offset:-1024 th:TH_LOAD_HT scope:SCOPE_SE
+// GFX1250: global_prefetch_b8 v[2:3], off offset:-1024 th:TH_LOAD_HT scope:SCOPE_SE ; encoding: [0x7c,0x40,0x17,0xee,0x00,0x00,0x24,0x00,0x02,0x00,0xfc,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_NT scope:SCOPE_DEV
+// GFX1250: global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_NT scope:SCOPE_DEV ; encoding: [0x02,0x40,0x17,0xee,0x00,0x00,0x18,0x00,0x04,0x00,0xfc,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_prefetch_b8 v4, s[2:3] th:TH_LOAD_RT_NT scope:SCOPE_CU
+// GFX1250: global_prefetch_b8 v4, s[2:3] th:TH_LOAD_RT_NT ; encoding: [0x02,0x40,0x17,0xee,0x00,0x00,0x50,0x00,0x04,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_prefetch_b8 v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: global_prefetch_b8 v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0x40,0x17,0xee,0x00,0x00,0x3c,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_prefetch_b8 v[2:3], off offset:64 th:TH_LOAD_NT_RT scope:SCOPE_DEV
+// GFX1250: global_prefetch_b8 v[2:3], off offset:64 th:TH_LOAD_NT_RT scope:SCOPE_DEV ; encoding: [0x7c,0x40,0x17,0xee,0x00,0x00,0x48,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_monitor_b32 v1, v[2:3], off
+// GFX1250: global_load_monitor_b32 v1, v[2:3], off ; encoding: [0x7c,0x00,0x1c,0xee,0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_monitor_b32 v1, v[2:3], off offset:64
+// GFX1250: global_load_monitor_b32 v1, v[2:3], off offset:64 ; encoding: [0x7c,0x00,0x1c,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_monitor_b32 v1, v[2:3], off offset:-64 th:TH_LOAD_NT_HT scope:SCOPE_DEV
+// GFX1250: global_load_monitor_b32 v1, v[2:3], off offset:-64 th:TH_LOAD_NT_HT scope:SCOPE_DEV ; encoding: [0x7c,0x00,0x1c,0xee,0x01,0x00,0x68,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_monitor_b32 v1, v2, s[0:1]
+// GFX1250: global_load_monitor_b32 v1, v2, s[0:1] ; encoding: [0x00,0x00,0x1c,0xee,0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_monitor_b32 v1, v2, s[0:1] offset:64
+// GFX1250: global_load_monitor_b32 v1, v2, s[0:1] offset:64 ; encoding: [0x00,0x00,0x1c,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_monitor_b32 v1, v2, s[0:1] offset:-64 th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: global_load_monitor_b32 v1, v2, s[0:1] offset:-64 th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x00,0x00,0x1c,0xee,0x01,0x00,0x3c,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_monitor_b64 v[0:1], v[2:3], off
+// GFX1250: global_load_monitor_b64 v[0:1], v[2:3], off ; encoding: [0x7c,0x40,0x1c,0xee,0x00,0x00,0x00,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_monitor_b64 v[0:1], v[2:3], off offset:64
+// GFX1250: global_load_monitor_b64 v[0:1], v[2:3], off offset:64 ; encoding: [0x7c,0x40,0x1c,0xee,0x00,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_monitor_b64 v[0:1], v[2:3], off offset:-64 th:TH_LOAD_HT scope:SCOPE_SE
+// GFX1250: global_load_monitor_b64 v[0:1], v[2:3], off offset:-64 th:TH_LOAD_HT scope:SCOPE_SE ; encoding: [0x7c,0x40,0x1c,0xee,0x00,0x00,0x24,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_monitor_b64 v[0:1], v2, s[0:1]
+// GFX1250: encoding: [0x00,0x40,0x1c,0xee,0x00,0x00,0x00,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_monitor_b64 v[0:1], v2, s[0:1] offset:64
+// GFX1250: global_load_monitor_b64 v[0:1], v2, s[0:1] offset:64 ; encoding: [0x00,0x40,0x1c,0xee,0x00,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_monitor_b64 v[0:1], v2, s[0:1] offset:-64 th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: global_load_monitor_b64 v[0:1], v2, s[0:1] offset:-64 th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x00,0x40,0x1c,0xee,0x00,0x00,0x3c,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_monitor_b128 v[0:3], v[4:5], off
+// GFX1250: global_load_monitor_b128 v[0:3], v[4:5], off ; encoding: [0x7c,0x80,0x1c,0xee,0x00,0x00,0x00,0x00,0x04,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_monitor_b128 v[0:3], v[4:5], off offset:64
+// GFX1250: global_load_monitor_b128 v[0:3], v[4:5], off offset:64 ; encoding: [0x7c,0x80,0x1c,0xee,0x00,0x00,0x00,0x00,0x04,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_monitor_b128 v[0:3], v[4:5], off offset:-64 th:TH_LOAD_NT
+// GFX1250: global_load_monitor_b128 v[0:3], v[4:5], off offset:-64 th:TH_LOAD_NT ; encoding: [0x7c,0x80,0x1c,0xee,0x00,0x00,0x10,0x00,0x04,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_monitor_b128 v[0:3], v4, s[0:1]
+// GFX1250: global_load_monitor_b128 v[0:3], v4, s[0:1] ; encoding:  [0x00,0x80,0x1c,0xee,0x00,0x00,0x00,0x00,0x04,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_monitor_b128 v[0:3], v4, s[0:1] offset:64
+// GFX1250: global_load_monitor_b128 v[0:3], v4, s[0:1] offset:64 ; encoding: [0x00,0x80,0x1c,0xee,0x00,0x00,0x00,0x00,0x04,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_monitor_b128 v[0:3], v4, s[0:1] offset:-64 th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: global_load_monitor_b128 v[0:3], v4, s[0:1] offset:-64 th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x00,0x80,0x1c,0xee,0x00,0x00,0x3c,0x00,0x04,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_monitor_b32 v1, v2, s[4:5] offset:64 scale_offset
+// GFX1250: global_load_monitor_b32 v1, v2, s[4:5] offset:64 scale_offset ; encoding: [0x04,0x00,0x1c,0xee,0x01,0x00,0x01,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_monitor_b64 v[2:3], v2, s[4:5] offset:64 scale_offset
+// GFX1250: global_load_monitor_b64 v[2:3], v2, s[4:5] offset:64 scale_offset ; encoding: [0x04,0x40,0x1c,0xee,0x02,0x00,0x01,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_load_monitor_b32 v1, v[2:3]
+// GFX1250: flat_load_monitor_b32 v1, v[2:3] ; encoding: [0x7c,0x00,0x1c,0xec,0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_load_monitor_b32 v1, v[2:3] offset:64
+// GFX1250: flat_load_monitor_b32 v1, v[2:3] offset:64 ; encoding: [0x7c,0x00,0x1c,0xec,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_load_monitor_b32 v1, v[2:3] offset:-64 th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: flat_load_monitor_b32 v1, v[2:3] offset:-64 th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0x00,0x1c,0xec,0x01,0x00,0x3c,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_load_monitor_b64 v[0:1], v[2:3]
+// GFX1250: flat_load_monitor_b64 v[0:1], v[2:3] ; encoding: [0x7c,0x40,0x1c,0xec,0x00,0x00,0x00,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_load_monitor_b64 v[0:1], v[2:3] offset:64
+// GFX1250: flat_load_monitor_b64 v[0:1], v[2:3] offset:64 ; encoding: [0x7c,0x40,0x1c,0xec,0x00,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_load_monitor_b64 v[0:1], v[2:3] offset:-64 th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: flat_load_monitor_b64 v[0:1], v[2:3] offset:-64 th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0x40,0x1c,0xec,0x00,0x00,0x3c,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_load_monitor_b128 v[0:3], v[4:5]
+// GFX1250: flat_load_monitor_b128 v[0:3], v[4:5] ; encoding: [0x7c,0x80,0x1c,0xec,0x00,0x00,0x00,0x00,0x04,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_load_monitor_b128 v[0:3], v[4:5] offset:64
+// GFX1250: flat_load_monitor_b128 v[0:3], v[4:5] offset:64 ; encoding: [0x7c,0x80,0x1c,0xec,0x00,0x00,0x00,0x00,0x04,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_load_monitor_b128 v[0:3], v[4:5] offset:-64 th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: flat_load_monitor_b128 v[0:3], v[4:5] offset:-64 th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0x80,0x1c,0xec,0x00,0x00,0x3c,0x00,0x04,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_load_monitor_b32 v1, v2, s[4:5] offset:64 scale_offset
+// GFX1250: flat_load_monitor_b32 v1, v2, s[4:5] offset:64 scale_offset ; encoding: [0x04,0x00,0x1c,0xec,0x01,0x00,0x01,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_load_monitor_b64 v[2:3], v2, s[4:5] offset:64 scale_offset
+// GFX1250: flat_load_monitor_b64 v[2:3], v2, s[4:5] offset:64 scale_offset ; encoding: [0x04,0x40,0x1c,0xec,0x02,0x00,0x01,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b8 v[2:3], v1, off th:TH_STORE_BYPASS scope:SCOPE_SYS
+// GFX1250: global_store_async_from_lds_b8 v[2:3], v1, off th:TH_STORE_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0xc0,0x18,0xee,0x00,0x00,0xbc,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b8 v[2:3], v1, off offset:64
+// GFX1250: global_store_async_from_lds_b8 v[2:3], v1, off offset:64 ; encoding: [0x7c,0xc0,0x18,0xee,0x00,0x00,0x80,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b8 v[2:3], v1, off offset:-64
+// GFX1250: global_store_async_from_lds_b8 v[2:3], v1, off offset:-64 ; encoding: [0x7c,0xc0,0x18,0xee,0x00,0x00,0x80,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b8 v2, v1, s[2:3] th:TH_STORE_NT_HT scope:SCOPE_DEV
+// GFX1250: global_store_async_from_lds_b8 v2, v1, s[2:3] th:TH_STORE_NT_HT scope:SCOPE_DEV ; encoding: [0x02,0xc0,0x18,0xee,0x00,0x00,0xe8,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b8 v2, v1, s[2:3] offset:64
+// GFX1250: global_store_async_from_lds_b8 v2, v1, s[2:3] offset:64 ; encoding: [0x02,0xc0,0x18,0xee,0x00,0x00,0x80,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b8 v2, v1, s[2:3] offset:-64
+// GFX1250: global_store_async_from_lds_b8 v2, v1, s[2:3] offset:-64 ; encoding: [0x02,0xc0,0x18,0xee,0x00,0x00,0x80,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b32 v[2:3], v1, off th:TH_STORE_BYPASS scope:SCOPE_SYS
+// GFX1250: global_store_async_from_lds_b32 v[2:3], v1, off th:TH_STORE_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0x00,0x19,0xee,0x00,0x00,0xbc,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b32 v[2:3], v1, off offset:64
+// GFX1250: global_store_async_from_lds_b32 v[2:3], v1, off offset:64 ; encoding: [0x7c,0x00,0x19,0xee,0x00,0x00,0x80,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b32 v[2:3], v1, off offset:-64
+// GFX1250: global_store_async_from_lds_b32 v[2:3], v1, off offset:-64 ; encoding: [0x7c,0x00,0x19,0xee,0x00,0x00,0x80,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b32 v2, v1, s[2:3] th:TH_STORE_NT_HT scope:SCOPE_DEV
+// GFX1250: global_store_async_from_lds_b32 v2, v1, s[2:3] th:TH_STORE_NT_HT scope:SCOPE_DEV ; encoding: [0x02,0x00,0x19,0xee,0x00,0x00,0xe8,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b32 v2, v1, s[2:3] offset:64
+// GFX1250: global_store_async_from_lds_b32 v2, v1, s[2:3] offset:64 ; encoding: [0x02,0x00,0x19,0xee,0x00,0x00,0x80,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b32 v2, v1, s[2:3] offset:-64
+// GFX1250: global_store_async_from_lds_b32 v2, v1, s[2:3] offset:-64 ; encoding: [0x02,0x00,0x19,0xee,0x00,0x00,0x80,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b64 v[2:3], v1, off th:TH_STORE_BYPASS scope:SCOPE_SYS
+// GFX1250: global_store_async_from_lds_b64 v[2:3], v1, off th:TH_STORE_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0x40,0x19,0xee,0x00,0x00,0xbc,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b64 v[2:3], v1, off offset:64
+// GFX1250: global_store_async_from_lds_b64 v[2:3], v1, off offset:64 ; encoding: [0x7c,0x40,0x19,0xee,0x00,0x00,0x80,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b64 v[2:3], v1, off offset:-64
+// GFX1250: global_store_async_from_lds_b64 v[2:3], v1, off offset:-64 ; encoding: [0x7c,0x40,0x19,0xee,0x00,0x00,0x80,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b64 v2, v1, s[2:3] th:TH_STORE_NT_HT scope:SCOPE_DEV
+// GFX1250: global_store_async_from_lds_b64 v2, v1, s[2:3] th:TH_STORE_NT_HT scope:SCOPE_DEV ; encoding: [0x02,0x40,0x19,0xee,0x00,0x00,0xe8,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b64 v2, v1, s[2:3] offset:64
+// GFX1250: global_store_async_from_lds_b64 v2, v1, s[2:3] offset:64 ; encoding: [0x02,0x40,0x19,0xee,0x00,0x00,0x80,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b64 v2, v1, s[2:3] offset:-64
+// GFX1250: global_store_async_from_lds_b64 v2, v1, s[2:3] offset:-64 ; encoding: [0x02,0x40,0x19,0xee,0x00,0x00,0x80,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b128 v[2:3], v1, off th:TH_STORE_BYPASS scope:SCOPE_SYS
+// GFX1250: global_store_async_from_lds_b128 v[2:3], v1, off th:TH_STORE_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0x80,0x19,0xee,0x00,0x00,0xbc,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b128 v[2:3], v1, off offset:64
+// GFX1250: global_store_async_from_lds_b128 v[2:3], v1, off offset:64 ; encoding: [0x7c,0x80,0x19,0xee,0x00,0x00,0x80,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b128 v[2:3], v1, off offset:-64
+// GFX1250: global_store_async_from_lds_b128 v[2:3], v1, off offset:-64 ; encoding: [0x7c,0x80,0x19,0xee,0x00,0x00,0x80,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b128 v2, v1, s[2:3] th:TH_STORE_NT_HT scope:SCOPE_DEV
+// GFX1250: global_store_async_from_lds_b128 v2, v1, s[2:3] th:TH_STORE_NT_HT scope:SCOPE_DEV ; encoding: [0x02,0x80,0x19,0xee,0x00,0x00,0xe8,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b128 v2, v1, s[2:3] offset:64
+// GFX1250: global_store_async_from_lds_b128 v2, v1, s[2:3] offset:64 ; encoding: [0x02,0x80,0x19,0xee,0x00,0x00,0x80,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b128 v2, v1, s[2:3] offset:-64
+// GFX1250: global_store_async_from_lds_b128 v2, v1, s[2:3] offset:-64 ; encoding: [0x02,0x80,0x19,0xee,0x00,0x00,0x80,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b32 v2, v1, s[4:5] scale_offset th:TH_STORE_BYPASS scope:SCOPE_SYS
+// GFX1250: global_store_async_from_lds_b32 v2, v1, s[4:5] scale_offset th:TH_STORE_BYPASS scope:SCOPE_SYS ; encoding: [0x04,0x00,0x19,0xee,0x00,0x00,0xbd,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_store_async_from_lds_b64 v2, v1, s[4:5] scale_offset th:TH_STORE_BYPASS scope:SCOPE_SYS
+// GFX1250: global_store_async_from_lds_b64 v2, v1, s[4:5] scale_offset th:TH_STORE_BYPASS scope:SCOPE_SYS ; encoding: [0x04,0x40,0x19,0xee,0x00,0x00,0xbd,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b8 v1, v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: global_load_async_to_lds_b8 v1, v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0xc0,0x17,0xee,0x01,0x00,0x3c,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b8 v1, v[2:3], off offset:64
+// GFX1250: global_load_async_to_lds_b8 v1, v[2:3], off offset:64 ; encoding: [0x7c,0xc0,0x17,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b8 v1, v[2:3], off offset:-64
+// GFX1250: global_load_async_to_lds_b8 v1, v[2:3], off offset:-64 ; encoding: [0x7c,0xc0,0x17,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b8 v1, v2, s[2:3] th:TH_LOAD_NT_HT scope:SCOPE_DEV
+// GFX1250: global_load_async_to_lds_b8 v1, v2, s[2:3] th:TH_LOAD_NT_HT scope:SCOPE_DEV ; encoding: [0x02,0xc0,0x17,0xee,0x01,0x00,0x68,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b8 v1, v2, s[2:3] offset:64
+// GFX1250: global_load_async_to_lds_b8 v1, v2, s[2:3] offset:64 ; encoding: [0x02,0xc0,0x17,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b8 v1, v2, s[2:3] offset:-64
+// GFX1250: global_load_async_to_lds_b8 v1, v2, s[2:3] offset:-64 ; encoding: [0x02,0xc0,0x17,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b32 v1, v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: global_load_async_to_lds_b32 v1, v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0x00,0x18,0xee,0x01,0x00,0x3c,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b32 v1, v[2:3], off offset:64
+// GFX1250: global_load_async_to_lds_b32 v1, v[2:3], off offset:64 ; encoding: [0x7c,0x00,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b32 v1, v[2:3], off offset:-64
+// GFX1250: global_load_async_to_lds_b32 v1, v[2:3], off offset:-64 ; encoding: [0x7c,0x00,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b32 v1, v2, s[2:3] th:TH_LOAD_NT_HT scope:SCOPE_DEV
+// GFX1250: global_load_async_to_lds_b32 v1, v2, s[2:3] th:TH_LOAD_NT_HT scope:SCOPE_DEV ; encoding: [0x02,0x00,0x18,0xee,0x01,0x00,0x68,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b32 v1, v2, s[2:3] offset:64
+// GFX1250: global_load_async_to_lds_b32 v1, v2, s[2:3] offset:64 ; encoding: [0x02,0x00,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b32 v1, v2, s[2:3] offset:-64
+// GFX1250: global_load_async_to_lds_b32 v1, v2, s[2:3] offset:-64 ; encoding: [0x02,0x00,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b64 v1, v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: global_load_async_to_lds_b64 v1, v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0x40,0x18,0xee,0x01,0x00,0x3c,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b64 v1, v[2:3], off offset:64
+// GFX1250: global_load_async_to_lds_b64 v1, v[2:3], off offset:64 ; encoding: [0x7c,0x40,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b64 v1, v[2:3], off offset:-64
+// GFX1250: global_load_async_to_lds_b64 v1, v[2:3], off offset:-64 ; encoding: [0x7c,0x40,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b64 v1, v2, s[2:3] th:TH_LOAD_NT_HT scope:SCOPE_DEV
+// GFX1250: global_load_async_to_lds_b64 v1, v2, s[2:3] th:TH_LOAD_NT_HT scope:SCOPE_DEV ; encoding: [0x02,0x40,0x18,0xee,0x01,0x00,0x68,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b64 v1, v2, s[2:3] offset:64
+// GFX1250: global_load_async_to_lds_b64 v1, v2, s[2:3] offset:64 ; encoding: [0x02,0x40,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b64 v1, v2, s[2:3] offset:-64
+// GFX1250: global_load_async_to_lds_b64 v1, v2, s[2:3] offset:-64 ; encoding: [0x02,0x40,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b128 v1, v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: global_load_async_to_lds_b128 v1, v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0x80,0x18,0xee,0x01,0x00,0x3c,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b128 v1, v[2:3], off offset:64
+// GFX1250: global_load_async_to_lds_b128 v1, v[2:3], off offset:64 ; encoding: [0x7c,0x80,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b128 v1, v[2:3], off offset:-64
+// GFX1250: global_load_async_to_lds_b128 v1, v[2:3], off offset:-64 ; encoding: [0x7c,0x80,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b128 v1, v2, s[2:3] th:TH_LOAD_NT_HT scope:SCOPE_DEV
+// GFX1250: global_load_async_to_lds_b128 v1, v2, s[2:3] th:TH_LOAD_NT_HT scope:SCOPE_DEV ; encoding: [0x02,0x80,0x18,0xee,0x01,0x00,0x68,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b128 v1, v2, s[2:3] offset:64
+// GFX1250: global_load_async_to_lds_b128 v1, v2, s[2:3] offset:64 ; encoding: [0x02,0x80,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b128 v1, v2, s[2:3] offset:-64
+// GFX1250: global_load_async_to_lds_b128 v1, v2, s[2:3] offset:-64 ; encoding: [0x02,0x80,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b32 v2, v1, s[4:5] scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: global_load_async_to_lds_b32 v2, v1, s[4:5] scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x04,0x00,0x18,0xee,0x02,0x00,0x3d,0x00,0x01,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_async_to_lds_b64 v2, v1, s[4:5] scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: global_load_async_to_lds_b64 v2, v1, s[4:5] scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x04,0x40,0x18,0xee,0x02,0x00,0x3d,0x00,0x01,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 tensor_save s[0:1]
 // GFX1250: tensor_save s[0:1] ; encoding: [0x00,0x80,0x1b,0xee,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
@@ -484,3 +868,7 @@ flat_store_d16_hi_b16 v2, v2, s[2:3] offset:64 scale_offset
 flat_store_d16_hi_b8 v2, v2, s[2:3] offset:64 scale_offset
 // GFX1250: flat_store_d16_hi_b8 v2, v2, s[2:3] offset:64 scale_offset ; encoding: [0x02,0x00,0x09,0xec,0x00,0x00,0x01,0x01,0x02,0x40,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_prefetch_b8 v3, s[2:3]
+// GFX1250: flat_prefetch_b8 v3, s[2:3]             ; encoding: [0x02,0x40,0x17,0xec,0x00,0x00,0x00,0x00,0x03,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
