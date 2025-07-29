@@ -5836,7 +5836,7 @@ static bool isTargetDeviceOp(Operation *op) {
     return true;
 
   if (mlir::isa<omp::TargetAllocMemOp>(op) ||
-      mlir::isa<mp::TargetFreeMemOp>(op))
+      mlir::isa<omp::TargetFreeMemOp>(op))
     return true;
 
   if (auto parentFn = op->getParentOfType<LLVM::LLVMFuncOp>())
