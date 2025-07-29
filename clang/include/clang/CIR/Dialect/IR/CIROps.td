@@ -2843,6 +2843,9 @@ def CIR_ComplexMulOp : CIR_Op<"complex.mul", [
     The `cir.complex.mul` operation takes two complex numbers and returns
     their product.
 
+    Range is used to controls the various implementations for complex
+    multiplication.
+
     Example:
 
     ```mlir

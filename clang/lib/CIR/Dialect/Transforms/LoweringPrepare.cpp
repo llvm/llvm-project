@@ -44,7 +44,7 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   clang::ASTContext *astCtx;
 
   /// Tracks current module.
-  mlir::ModuleOp theModule;
+  mlir::ModuleOp mlirModule;
 
   void setASTContext(clang::ASTContext *c) { astCtx = c; }
 };
@@ -55,7 +55,7 @@ cir::FuncOp LoweringPreparePass::buildRuntimeFunction(
     mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
     cir::FuncType type, cir::GlobalLinkageKind linkage) {
   cir::FuncOp f = dyn_cast_or_null<FuncOp>(SymbolTable::lookupNearestSymbolFrom(
-      theModule, StringAttr::get(theModule->getContext(), name)));
+      mlirModule, StringAttr::get(mlirModule->getContext(), name)));
   if (!f) {
     f = builder.create<cir::FuncOp>(loc, name, type);
     f.setLinkageAttr(
@@ -167,10 +167,12 @@ static mlir::Value buildComplexBinOpLibCall(
 
   cir::FuncType libFuncTy = cir::FuncType::get(libFuncInputTypes, ty);
 
+  // Inserting a declaration for the runtime function to be used in Complex
+  // multiplication and division when needed
   cir::FuncOp libFunc;
   {
     mlir::OpBuilder::InsertionGuard ipGuard{builder};
-    builder.setInsertionPointToStart(pass.theModule.getBody());
+    builder.setInsertionPointToStart(pass.mlirModule.getBody());
     libFunc = pass.buildRuntimeFunction(builder, libFuncName, loc, libFuncTy);
   }
 
@@ -227,6 +229,8 @@ static mlir::Value lowerComplexMul(LoweringPreparePass &pass,
       rangeKind == cir::ComplexRangeKind::Improved ||
       rangeKind == cir::ComplexRangeKind::Promoted)
     return algebraicResult;
+
+  assert(!cir::MissingFeatures::fastMathFlags());
 
   // Check whether the real part and the imaginary part of the result are both
   // NaN. If so, emit a library call to compute the multiplication instead.
@@ -416,9 +420,8 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
 
 void LoweringPreparePass::runOnOperation() {
   mlir::Operation *op = getOperation();
-  if (isa<::mlir::ModuleOp>(op)) {
-    theModule = cast<::mlir::ModuleOp>(op);
-  }
+  if (isa<::mlir::ModuleOp>(op))
+    mlirModule = cast<::mlir::ModuleOp>(op);
 
   llvm::SmallVector<mlir::Operation *> opsToTransform;
 
