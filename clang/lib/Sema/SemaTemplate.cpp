@@ -1185,26 +1185,15 @@ static ExprResult formImmediatelyDeclaredConstraint(
         SS, /*TemplateKWLoc=*/SourceLocation(), NameInfo,
         /*FoundDecl=*/FoundDecl ? FoundDecl : NamedConcept, CD,
         &ConstraintArgs);
-    if (ImmediatelyDeclaredConstraint.isInvalid() || !EllipsisLoc.isValid())
-      return ImmediatelyDeclaredConstraint;
   }
   // We have a template template parameter
   else {
     auto *CDT = dyn_cast<TemplateTemplateParmDecl>(NamedConcept);
     ImmediatelyDeclaredConstraint = S.CheckVarOrConceptTemplateTemplateId(
         SS, NameInfo, CDT, SourceLocation(), &ConstraintArgs);
-    if (ImmediatelyDeclaredConstraint.isInvalid())
-      return ImmediatelyDeclaredConstraint;
-    UnresolvedSet<1> R;
-    R.addDecl(CDT);
-    ImmediatelyDeclaredConstraint = UnresolvedLookupExpr::Create(
-        S.getASTContext(), nullptr, SS.getWithLocInContext(S.getASTContext()),
-        SourceLocation(), NameInfo, false, &ConstraintArgs, R.begin(), R.end(),
-        /*KnownDependent=*/false,
-        /*KnownInstantiationDependent=*/false);
-    if (ImmediatelyDeclaredConstraint.isInvalid() || !EllipsisLoc.isValid())
-      return ImmediatelyDeclaredConstraint;
   }
+  if (ImmediatelyDeclaredConstraint.isInvalid() || !EllipsisLoc.isValid())
+    return ImmediatelyDeclaredConstraint;
 
   // C++2a [temp.param]p4:
   //     [...] If T is not a pack, then E is E', otherwise E is (E' && ...).
@@ -4760,7 +4749,7 @@ ExprResult Sema::CheckVarTemplateId(
 }
 
 ExprResult Sema::CheckVarOrConceptTemplateTemplateId(
-    const CXXScopeSpec &, const DeclarationNameInfo &,
+    const CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo,
     TemplateTemplateParmDecl *Template, SourceLocation TemplateLoc,
     const TemplateArgumentListInfo *TemplateArgs) {
   assert(Template && "A variable template id without template?");
@@ -4773,12 +4762,21 @@ ExprResult Sema::CheckVarOrConceptTemplateTemplateId(
   CheckTemplateArgumentInfo CTAI;
   if (CheckTemplateArgumentList(
           Template, TemplateLoc,
+          // FIXME: TemplateArgs will not be modified because
+          // UpdateArgsWithConversions is false, however, we should
+          // CheckTemplateArgumentList to be const-correct.
           const_cast<TemplateArgumentListInfo &>(*TemplateArgs),
           /*DefaultArgs=*/{}, /*PartialTemplateArgs=*/false, CTAI,
-          /*UpdateArgsWithConversions=*/true))
+          /*UpdateArgsWithConversions=*/false))
     return true;
 
-  return ExprResult();
+  UnresolvedSet<1> R;
+  R.addDecl(Template);
+  return UnresolvedLookupExpr::Create(
+      getASTContext(), nullptr, SS.getWithLocInContext(getASTContext()),
+      SourceLocation(), NameInfo, false, TemplateArgs, R.begin(), R.end(),
+      /*KnownDependent=*/false,
+      /*KnownInstantiationDependent=*/false);
 }
 
 void Sema::diagnoseMissingTemplateArguments(TemplateName Name,
@@ -4893,31 +4891,29 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
     KnownDependent = true;
   }
 
+  // We don't want lookup warnings at this point.
+  R.suppressDiagnostics();
+
   if (R.getAsSingle<ConceptDecl>()) {
     return CheckConceptTemplateId(SS, TemplateKWLoc, R.getLookupNameInfo(),
                                   R.getRepresentativeDecl(),
                                   R.getAsSingle<ConceptDecl>(), TemplateArgs);
   }
 
-  // In C++1y, check variable template ids.
-  if (R.getAsSingle<TemplateTemplateParmDecl>()) {
-    ExprResult Res = CheckVarOrConceptTemplateTemplateId(
+  // Check variable template ids (C++17) and concept template parameters
+  // (C++26).
+  UnresolvedLookupExpr *ULE;
+  if (R.getAsSingle<TemplateTemplateParmDecl>())
+    return CheckVarOrConceptTemplateTemplateId(
         SS, R.getLookupNameInfo(), R.getAsSingle<TemplateTemplateParmDecl>(),
         TemplateKWLoc, TemplateArgs);
-    if (Res.isInvalid() || Res.isUsable())
-      return Res;
-    // Result is dependent. Carry on to build an UnresolvedLookupEpxr.
-  }
 
-  // We don't want lookup warnings at this point.
-  R.suppressDiagnostics();
-
-  UnresolvedLookupExpr *ULE = UnresolvedLookupExpr::Create(
+  // Function templates
+  ULE = UnresolvedLookupExpr::Create(
       Context, R.getNamingClass(), SS.getWithLocInContext(Context),
       TemplateKWLoc, R.getLookupNameInfo(), RequiresADL, TemplateArgs,
       R.begin(), R.end(), KnownDependent,
       /*KnownInstantiationDependent=*/false);
-
   // Model the templates with UnresolvedTemplateTy. The expression should then
   // either be transformed in an instantiation or be diagnosed in
   // CheckPlaceholderExpr.
