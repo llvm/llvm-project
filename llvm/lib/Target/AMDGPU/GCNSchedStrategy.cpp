@@ -1102,7 +1102,7 @@ bool RewriteScheduleStage::initGCNSchedStage() {
       ST.getMaxNumVectorRegs(DAG.MF.getFunction()).first;
 
   int64_t Cost = 0;
-      MBFI.calculate(MF, MBPI, *DAG.MLI);
+  MBFI.calculate(MF, MBPI, *DAG.MLI);
   for (unsigned RegionIdx = 0; RegionIdx < DAG.Regions.size(); RegionIdx++) {
     if (!DAG.RegionsWithExcessArchVGPR[RegionIdx])
       continue;
@@ -1131,7 +1131,6 @@ bool RewriteScheduleStage::initGCNSchedStage() {
     unsigned SpillCostBefore =
         std::max(UnifiedSpillBefore, (ArchSpillBefore + AGPRSpillBefore));
 
-   
     // For the cases we care about (i.e. ArchVGPR usage is greater than the
     // addressable limit), rewriting alone should bring pressure to manageable
     // level. If we find any such region, then the rewrite is potentially
@@ -1160,7 +1159,8 @@ bool RewriteScheduleStage::initGCNSchedStage() {
     uint64_t EntryFreq = MBFI.getEntryFreq().getFrequency();
     uint64_t BlockFreq =
         EntryFreq ? MBFI.getBlockFreq(DAG.Regions[RegionIdx].first->getParent())
-                        .getFrequency() / EntryFreq
+                            .getFrequency() /
+                        EntryFreq
                   : 1;
 
     // Assumes perfect spilling -- giving edge to VGPR form.
@@ -1256,7 +1256,8 @@ bool RewriteScheduleStage::initGCNSchedStage() {
           continue;
 
         Register DestVGPR;
-        if (!NewCopies.contains(DefReg) || !NewCopies[DefReg].contains(UseMI->getParent())) {
+        if (!NewCopies.contains(DefReg) ||
+            !NewCopies[DefReg].contains(UseMI->getParent())) {
           Register DestVGPR = DAG.MRI.createVirtualRegister(
               SRI->getEquivalentVGPRClass(DAG.MRI.getRegClass(DefReg)));
 
@@ -1270,7 +1271,8 @@ bool RewriteScheduleStage::initGCNSchedStage() {
 
           NewCopies[DefReg][UseMI->getParent()] = VGPRCopy;
         }
-        DestVGPR = NewCopies[DefReg][UseMI->getParent()]->getOperand(0).getReg();
+        DestVGPR =
+            NewCopies[DefReg][UseMI->getParent()]->getOperand(0).getReg();
         TheOp.setReg(DestVGPR);
       }
     }
@@ -1280,7 +1282,7 @@ bool RewriteScheduleStage::initGCNSchedStage() {
         DAG.LIS->removeInterval(DefReg);
         DAG.LIS->createAndComputeVirtRegInterval(DefReg);
         DAG.LIS->createAndComputeVirtRegInterval(
-        NewCopy.second->getOperand(0).getReg());
+            NewCopy.second->getOperand(0).getReg());
       }
     }
   }
@@ -1312,7 +1314,8 @@ bool RewriteScheduleStage::initGCNSchedStage() {
           continue;
 
         Register SrcVGPR;
-        if (!NewCopies.contains(Src2Reg) || !NewCopies[Src2Reg].contains(DefMI->getParent())) {
+        if (!NewCopies.contains(Src2Reg) ||
+            !NewCopies[Src2Reg].contains(DefMI->getParent())) {
           Register SrcVGPR = DAG.MRI.createVirtualRegister(
               SRI->getEquivalentVGPRClass(DAG.MRI.getRegClass(Src2Reg)));
 
@@ -1326,7 +1329,8 @@ bool RewriteScheduleStage::initGCNSchedStage() {
           NewCopies[Src2Reg][DefMI->getParent()] = VGPRCopy;
         }
 
-        SrcVGPR = NewCopies[Src2Reg][DefMI->getParent()]->getOperand(1).getReg();
+        SrcVGPR =
+            NewCopies[Src2Reg][DefMI->getParent()]->getOperand(1).getReg();
         TheOp.setReg(SrcVGPR);
       }
     }
