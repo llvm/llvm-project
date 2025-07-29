@@ -15285,6 +15285,7 @@ SDValue DAGCombiner::visitAssertExt(SDNode *N) {
 
     // Remove AssertZext entirely if the mask guarantees the assertion cannot
     // fail.
+    // TODO: Use KB countMinLeadingZeros to handle non-constant masks?
     if (Mask.isIntN(AssertVT.getScalarSizeInBits()))
       return N0;
   }
