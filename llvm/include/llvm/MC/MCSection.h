@@ -190,7 +190,7 @@ public:
   MutableArrayRef<char> getContents();
   ArrayRef<char> getContents() const;
 
-  void setVarContents(ArrayRef<char> Contents);
+  LLVM_ABI void setVarContents(ArrayRef<char> Contents);
   void clearVarContents() { setVarContents({}); }
   MutableArrayRef<char> getVarContents();
   ArrayRef<char> getVarContents() const;
@@ -211,7 +211,7 @@ public:
 
   // Source fixup offsets are relative to the variable part's start.
   // Stored fixup offsets are relative to the fixed part's start.
-  void setVarFixups(ArrayRef<MCFixup> Fixups);
+  LLVM_ABI void setVarFixups(ArrayRef<MCFixup> Fixups);
   void clearVarFixups() { setVarFixups({}); }
   MutableArrayRef<MCFixup> getVarFixups();
   ArrayRef<MCFixup> getVarFixups() const;
