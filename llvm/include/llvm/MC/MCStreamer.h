@@ -438,7 +438,7 @@ public:
     assert(!CurFrag || CurFrag->getKind() == MCFragment::FT_Data);
     return CurFrag;
   }
-  size_t getCurFragOffset() const { return getCurrentFragment()->Offset; }
+  size_t getCurFragSize() const { return getCurrentFragment()->getFixedSize(); }
   /// Save the current and previous section on the section stack.
   void pushSection() {
     SectionStack.push_back(
@@ -459,7 +459,7 @@ public:
   bool switchSection(MCSection *Section, const MCExpr *);
 
   /// Similar to switchSection, but does not print the section directive.
-  virtual void switchSectionNoPrint(MCSection *Section);
+  void switchSectionNoPrint(MCSection *Section);
 
   /// Create the default sections and set the initial one.
   virtual void initSections(bool NoExecStack, const MCSubtargetInfo &STI);
