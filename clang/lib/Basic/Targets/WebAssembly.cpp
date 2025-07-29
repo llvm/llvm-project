@@ -197,6 +197,7 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     Features["multimemory"] = true;
     Features["tail-call"] = true;
     Features["wide-arithmetic"] = true;
+    Features["gc"] = true;
     setSIMDLevel(Features, RelaxedSIMD, true);
   };
   if (CPU == "generic") {
