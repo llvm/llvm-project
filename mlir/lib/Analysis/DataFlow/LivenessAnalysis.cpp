@@ -21,7 +21,6 @@
 #include <mlir/Support/LLVM.h>
 
 #define DEBUG_TYPE "liveness-analysis"
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
 
 using namespace mlir;
 using namespace mlir::dataflow;
@@ -295,7 +294,7 @@ RunLivenessAnalysis::RunLivenessAnalysis(Operation *op) {
   solver.load<LivenessAnalysis>(symbolTable);
   LDBG() << "Initializing and running solver";
   (void)solver.initializeAndRun(op);
-  LDBG() << "Dumping liveness state for op";
+  LDBG() << "RunLivenessAnalysis initialized for op: " << op->getName();
 }
 
 const Liveness *RunLivenessAnalysis::getLiveness(Value val) {
