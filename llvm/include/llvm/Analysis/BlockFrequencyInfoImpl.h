@@ -72,9 +72,6 @@ namespace bfi_detail {
 
 struct IrreducibleGraph;
 
-// This is part of a workaround for a GCC 4.7 crash on lambdas.
-template <class BT> struct BlockEdgesAdder;
-
 /// Mass of a block.
 ///
 /// This class implements a sort of fixed-point fraction always between 0.0 and
@@ -843,9 +840,6 @@ void IrreducibleGraph::addEdges(const BlockNode &Node,
 ///         (Running this until fixed point would "solve" the geometric
 ///         series by simulation.)
 template <class BT> class BlockFrequencyInfoImpl : BlockFrequencyInfoImplBase {
-  // This is part of a workaround for a GCC 4.7 crash on lambdas.
-  friend struct bfi_detail::BlockEdgesAdder<BT>;
-
   using BlockT = typename bfi_detail::TypeMap<BT>::BlockT;
   using BlockKeyT = typename bfi_detail::TypeMap<BT>::BlockKeyT;
   using FunctionT = typename bfi_detail::TypeMap<BT>::FunctionT;

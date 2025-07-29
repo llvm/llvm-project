@@ -78,11 +78,8 @@ static unsigned getFixupKindLog2Size(unsigned Kind) {
   switch (Kind) {
   default:
     llvm_unreachable("invalid fixup kind!");
-  case FK_PCRel_1:
   case FK_Data_1: return 0;
-  case FK_PCRel_2:
   case FK_Data_2: return 1;
-  case FK_PCRel_4:
     // FIXME: Remove these!!!
   case X86::reloc_riprel_4byte:
   case X86::reloc_riprel_4byte_relax:
@@ -261,7 +258,7 @@ void X86MachObjectWriter::RecordX86_64Relocation(
           // x86_64 distinguishes movq foo@GOTPCREL so that the linker can
           // rewrite the movq to an leaq at link time if the symbol ends up in
           // the same linkage unit.
-          if (Fixup.getTargetKind() == X86::reloc_riprel_4byte_movq_load)
+          if (Fixup.getKind() == X86::reloc_riprel_4byte_movq_load)
             Type = MachO::X86_64_RELOC_GOT_LOAD;
           else
             Type = MachO::X86_64_RELOC_GOT;
@@ -323,7 +320,7 @@ void X86MachObjectWriter::RecordX86_64Relocation(
         return;
       } else {
         Type = MachO::X86_64_RELOC_UNSIGNED;
-        if (Fixup.getTargetKind() == X86::reloc_signed_4byte) {
+        if (Fixup.getKind() == X86::reloc_signed_4byte) {
           reportError(
               Fixup.getLoc(),
               "32-bit absolute addressing is not supported in 64-bit mode");

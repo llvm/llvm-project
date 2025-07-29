@@ -3036,14 +3036,12 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
         return isKnownNonZero(TI->getOperand(0), DemandedElts, Q, Depth);
     break;
 
+  // Iff x - y != 0, then x ^ y != 0
+  // Therefore we can do the same exact checks
+  case Instruction::Xor:
   case Instruction::Sub:
     return isNonZeroSub(DemandedElts, Q, BitWidth, I->getOperand(0),
                         I->getOperand(1), Depth);
-  case Instruction::Xor:
-    // (X ^ (X != 0)) is non zero
-    if (matchOpWithOpEqZero(I->getOperand(0), I->getOperand(1)))
-      return true;
-    break;
   case Instruction::Or:
     // (X | (X != 0)) is non zero
     if (matchOpWithOpEqZero(I->getOperand(0), I->getOperand(1)))
@@ -7901,6 +7899,8 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::umax:
   case Intrinsic::umin:
   case Intrinsic::scmp:
+  case Intrinsic::is_fpclass:
+  case Intrinsic::ptrmask:
   case Intrinsic::ucmp:
   case Intrinsic::bitreverse:
   case Intrinsic::bswap:
@@ -7912,8 +7912,40 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::ushl_sat:
   case Intrinsic::smul_fix:
   case Intrinsic::smul_fix_sat:
+  case Intrinsic::umul_fix:
+  case Intrinsic::umul_fix_sat:
+  case Intrinsic::pow:
+  case Intrinsic::powi:
+  case Intrinsic::sin:
+  case Intrinsic::sinh:
+  case Intrinsic::cos:
+  case Intrinsic::cosh:
+  case Intrinsic::sincos:
+  case Intrinsic::sincospi:
+  case Intrinsic::tan:
+  case Intrinsic::tanh:
+  case Intrinsic::asin:
+  case Intrinsic::acos:
+  case Intrinsic::atan:
+  case Intrinsic::atan2:
   case Intrinsic::canonicalize:
   case Intrinsic::sqrt:
+  case Intrinsic::exp:
+  case Intrinsic::exp2:
+  case Intrinsic::exp10:
+  case Intrinsic::log:
+  case Intrinsic::log2:
+  case Intrinsic::log10:
+  case Intrinsic::modf:
+  case Intrinsic::floor:
+  case Intrinsic::ceil:
+  case Intrinsic::trunc:
+  case Intrinsic::rint:
+  case Intrinsic::nearbyint:
+  case Intrinsic::round:
+  case Intrinsic::roundeven:
+  case Intrinsic::lrint:
+  case Intrinsic::llrint:
     return true;
   default:
     return false;
@@ -9285,9 +9317,9 @@ isImpliedCondCommonOperandWithCR(CmpPredicate LPred, const ConstantRange &LCR,
     return Res;
   if (LPred.hasSameSign() ^ RPred.hasSameSign()) {
     LPred = LPred.hasSameSign() ? ICmpInst::getFlippedSignednessPredicate(LPred)
-                                : static_cast<CmpInst::Predicate>(LPred);
+                                : LPred.dropSameSign();
     RPred = RPred.hasSameSign() ? ICmpInst::getFlippedSignednessPredicate(RPred)
-                                : static_cast<CmpInst::Predicate>(RPred);
+                                : RPred.dropSameSign();
     return CRImpliesPred(ConstantRange::makeAllowedICmpRegion(LPred, LCR),
                          RPred);
   }

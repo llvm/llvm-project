@@ -60,7 +60,7 @@ union purr { float y; int x; }; // c23-error {{type 'union purr' has incompatibl
 
 // The presence of an attribute makes two types not compatible.
 struct [[gnu::packed]] attr_test { // c17-note {{previous definition is here}} \
-                                      c23-note {{attribute 'packed' here}}
+                                      c23-note {{attribute 'gnu::packed' here}}
   int x;
 };
 
@@ -75,26 +75,26 @@ struct attr_test_2 { // c17-note {{previous definition is here}}
 
 struct [[gnu::packed]] attr_test_2 { // c17-error {{redefinition of 'attr_test_2'}} \
                                         c23-error {{type 'struct attr_test_2' has an attribute which currently causes the types to be treated as though they are incompatible}} \
-                                        c23-note {{attribute 'packed' here}}
+                                        c23-note {{attribute 'gnu::packed' here}}
   int x;
 };
 
 // This includes the same attribute on both types.
 struct [[gnu::packed]] attr_test_3 { // c17-note {{previous definition is here}} \
-                                       c23-note {{attribute 'packed' here}}
+                                       c23-note {{attribute 'gnu::packed' here}}
   int x;
 };
 
 struct [[gnu::packed]] attr_test_3 { // c17-error {{redefinition of 'attr_test_3'}} \
                                         c23-error {{type 'struct attr_test_3' has an attribute which currently causes the types to be treated as though they are incompatible}} \
-                                        c23-note {{attribute 'packed' here}}
+                                        c23-note {{attribute 'gnu::packed' here}}
   int x;
 };
 
 // Everything which applies to the tag itself also applies to fields.
 struct field_attr_test_1 { // c17-note {{previous definition is here}}
   int x;
-  [[gnu::packed]] int y; // c23-note {{attribute 'packed' here}}
+  [[gnu::packed]] int y; // c23-note {{attribute 'gnu::packed' here}}
 };
 
 struct field_attr_test_1 { // c17-error {{redefinition of 'field_attr_test_1'}} \
@@ -104,7 +104,7 @@ struct field_attr_test_1 { // c17-error {{redefinition of 'field_attr_test_1'}} 
 };
 
 struct field_attr_test_2 { // c17-note {{previous definition is here}}
-  [[gnu::packed]] int x; // c23-note {{attribute 'packed' here}}
+  [[gnu::packed]] int x; // c23-note {{attribute 'gnu::packed' here}}
   int y;
 };
 
@@ -115,13 +115,13 @@ struct field_attr_test_2 { // c17-error {{redefinition of 'field_attr_test_2'}} 
 };
 
 struct field_attr_test_3 { // c17-note {{previous definition is here}}
-  [[gnu::packed]] int x;   // c23-note {{attribute 'packed' here}}
+  [[gnu::packed]] int x;   // c23-note {{attribute 'gnu::packed' here}}
   int y;
 };
 
 struct field_attr_test_3 { // c17-error {{redefinition of 'field_attr_test_3'}} \
                               c23-error {{type 'struct field_attr_test_3' has a member with an attribute which currently causes the types to be treated as though they are incompatible}}
-  int x [[gnu::packed]];   // c23-note {{attribute 'packed' here}}
+  int x [[gnu::packed]];   // c23-note {{attribute 'gnu::packed' here}}
   int y;
 };
 
@@ -401,3 +401,39 @@ _Static_assert(0 == _Generic(inner_anon_tagged.untagged, struct { int i; } : 1, 
 // unions and structures are both RecordDecl objects, whereas EnumDecl is not).
 enum { E_Untagged1 } nontag_enum; // both-note {{previous definition is here}}
 _Static_assert(0 == _Generic(nontag_enum, enum { E_Untagged1 } : 1, default : 0)); // both-error {{redefinition of enumerator 'E_Untagged1'}}
+
+// Test that enumerations are compatible with their underlying type, but still
+// diagnose when "same type" is required rather than merely "compatible type".
+enum E1 : int { e1 }; // Fixed underlying type
+enum E2 { e2 };       // Unfixed underlying type, defaults to int or unsigned int
+
+struct GH149965_1 { int h; };
+// This typeof trick is used to get the underlying type of the enumeration in a
+// platform agnostic way.
+struct GH149965_2 { __typeof__(+(enum E2){}) h; };
+void gh149965(void) {
+  extern struct GH149965_1 x1; // c17-note {{previous declaration is here}}
+  extern struct GH149965_2 x2; // c17-note {{previous declaration is here}}
+
+  // Both the structure and the variable declarations are fine because only a
+  // compatible type is required, not the same type, because the structures are
+  // declared in different scopes.
+  struct GH149965_1 { enum E1 h; };
+  struct GH149965_2 { enum E2 h; };
+
+  extern struct GH149965_1 x1; // c17-error {{redeclaration of 'x1'}}
+  extern struct GH149965_2 x2; // c17-error {{redeclaration of 'x2'}}
+
+  // However, in the same scope, the same type is required, not just compatible
+  // types.
+  // FIXME: this should be an error in both C17 and C23 mode.
+  struct GH149965_3 { int h; };     // c17-note {{previous definition is here}}
+  struct GH149965_3 { enum E1 h; }; // c17-error {{redefinition of 'GH149965_3'}}
+
+  // For Clang, the composite type after declaration merging is the enumeration
+  // type rather than an integer type.
+  enum E1 *eptr;
+  [[maybe_unused]] __typeof__(x1.h) *ptr = eptr;
+  enum E2 *eptr2;
+  [[maybe_unused]] __typeof__(x2.h) *ptr2 = eptr2;
+}

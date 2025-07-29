@@ -676,7 +676,7 @@ void Parser::ParseGNUAttributeArgs(
   std::optional<ParseScope> PrototypeScope;
   if (normalizeAttrName(AttrName->getName()) == "enable_if" &&
       D && D->isFunctionDeclarator()) {
-    DeclaratorChunk::FunctionTypeInfo FTI = D->getFunctionTypeInfo();
+    const DeclaratorChunk::FunctionTypeInfo& FTI = D->getFunctionTypeInfo();
     PrototypeScope.emplace(this, Scope::FunctionPrototypeScope |
                                      Scope::FunctionDeclarationScope |
                                      Scope::DeclScope);
@@ -2710,6 +2710,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     break;
   }
   case InitKind::Uninitialized: {
+    InitializerScopeRAII InitScope(*this, D, ThisDecl);
     Actions.ActOnUninitializedDecl(ThisDecl);
     break;
   }
@@ -5694,10 +5695,9 @@ Parser::DeclGroupPtrTy Parser::ParseTopLevelStmtDecl() {
                                Scope::CompoundStmtScope);
   TopLevelStmtDecl *TLSD = Actions.ActOnStartTopLevelStmtDecl(getCurScope());
   StmtResult R = ParseStatementOrDeclaration(Stmts, SubStmtCtx);
+  Actions.ActOnFinishTopLevelStmtDecl(TLSD, R.get());
   if (!R.isUsable())
     R = Actions.ActOnNullStmt(Tok.getLocation());
-
-  Actions.ActOnFinishTopLevelStmtDecl(TLSD, R.get());
 
   if (Tok.is(tok::annot_repl_input_end) &&
       Tok.getAnnotationValue() != nullptr) {

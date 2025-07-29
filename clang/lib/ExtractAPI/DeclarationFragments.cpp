@@ -220,23 +220,14 @@ DeclarationFragmentsBuilder::getFragmentsForNNS(const NestedNameSpecifier *NNS,
     break;
 
   case NestedNameSpecifier::Namespace: {
-    const NamespaceDecl *NS = NNS->getAsNamespace();
-    if (NS->isAnonymousNamespace())
+    const NamespaceBaseDecl *NS = NNS->getAsNamespace();
+    if (const auto *Namespace = dyn_cast<NamespaceDecl>(NS);
+        Namespace && Namespace->isAnonymousNamespace())
       return Fragments;
     SmallString<128> USR;
     index::generateUSRForDecl(NS, USR);
     Fragments.append(NS->getName(),
                      DeclarationFragments::FragmentKind::Identifier, USR, NS);
-    break;
-  }
-
-  case NestedNameSpecifier::NamespaceAlias: {
-    const NamespaceAliasDecl *Alias = NNS->getAsNamespaceAlias();
-    SmallString<128> USR;
-    index::generateUSRForDecl(Alias, USR);
-    Fragments.append(Alias->getName(),
-                     DeclarationFragments::FragmentKind::Identifier, USR,
-                     Alias);
     break;
   }
 
@@ -1617,10 +1608,13 @@ DeclarationFragmentsBuilder::getFunctionSignature(const ObjCMethodDecl *);
 DeclarationFragments
 DeclarationFragmentsBuilder::getSubHeading(const NamedDecl *Decl) {
   DeclarationFragments Fragments;
-  if (isa<CXXConstructorDecl>(Decl) || isa<CXXDestructorDecl>(Decl))
+  if (isa<CXXConstructorDecl>(Decl)) {
     Fragments.append(cast<CXXRecordDecl>(Decl->getDeclContext())->getName(),
                      DeclarationFragments::FragmentKind::Identifier);
-  else if (isa<CXXConversionDecl>(Decl)) {
+  } else if (isa<CXXDestructorDecl>(Decl)) {
+    Fragments.append(cast<CXXDestructorDecl>(Decl)->getNameAsString(),
+                     DeclarationFragments::FragmentKind::Identifier);
+  } else if (isa<CXXConversionDecl>(Decl)) {
     Fragments.append(
         cast<CXXConversionDecl>(Decl)->getConversionType().getAsString(),
         DeclarationFragments::FragmentKind::Identifier);
@@ -1634,9 +1628,11 @@ DeclarationFragmentsBuilder::getSubHeading(const NamedDecl *Decl) {
   } else if (Decl->getIdentifier()) {
     Fragments.append(Decl->getName(),
                      DeclarationFragments::FragmentKind::Identifier);
-  } else
+  } else {
     Fragments.append(Decl->getDeclName().getAsString(),
                      DeclarationFragments::FragmentKind::Identifier);
+  }
+
   return Fragments;
 }
 
