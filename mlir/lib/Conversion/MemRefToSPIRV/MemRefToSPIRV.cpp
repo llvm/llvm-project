@@ -246,7 +246,7 @@ public:
 /// Converts memref.load to spirv.Image + spirv.ImageFetch
 class ImageLoadOpPattern final : public OpConversionPattern<memref::LoadOp> {
 public:
-  using OpConversionPattern<memref::LoadOp>::OpConversionPattern;
+  using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
@@ -685,14 +685,14 @@ LoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
 LogicalResult
 ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
                                     ConversionPatternRewriter &rewriter) const {
-  const auto memrefType = cast<MemRefType>(loadOp.getMemref().getType());
+  auto memrefType = cast<MemRefType>(loadOp.getMemref().getType());
   if (memrefType.getMemorySpace() !=
       spirv::StorageClassAttr::get(rewriter.getContext(),
                                    spirv::StorageClass::Image))
     return failure();
 
-  const auto loadPtr = adaptor.getMemref();
-  const auto memoryRequirements = calculateMemoryRequirements(loadPtr, loadOp);
+  auto loadPtr = adaptor.getMemref();
+  auto memoryRequirements = calculateMemoryRequirements(loadPtr, loadOp);
   if (failed(memoryRequirements))
     return rewriter.notifyMatchFailure(
         loadOp, "failed to determine memory requirements");
@@ -715,7 +715,7 @@ ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   // for plain images and the OpImageRead instruction needs to be materialized
   // instead or texels need to be accessed via atomics through a texel pointer.
   // Future work will generalize support to plain images.
-  if (const auto convertedPointeeType = cast<spirv::PointerType>(
+  if (auto convertedPointeeType = cast<spirv::PointerType>(
           getTypeConverter()->convertType(loadOp.getMemRefType()));
       !isa<spirv::SampledImageType>(convertedPointeeType.getPointeeType()))
     return rewriter.notifyMatchFailure(loadOp,
@@ -740,7 +740,7 @@ ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   }
 
   // Fetch the value out of the image.
-  const auto resultVectorType = VectorType::get({4}, loadOp.getType());
+  auto resultVectorType = VectorType::get({4}, loadOp.getType());
   auto fetchOp = rewriter.create<spirv::ImageFetchOp>(
       loadOp->getLoc(), resultVectorType, imageOp, coords,
       mlir::spirv::ImageOperandsAttr{}, ValueRange{});

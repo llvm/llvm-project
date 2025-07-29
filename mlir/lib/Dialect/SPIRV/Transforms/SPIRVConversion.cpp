@@ -579,7 +579,7 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
   // may be accessed via image specific ops or directly through a texture
   // pointer.
   if (storageClass == spirv::StorageClass::Image) {
-    const auto rank = type.getRank();
+    const int64_t rank = type.getRank();
     if (rank < 1 || rank > 3) {
       LLVM_DEBUG(llvm::dbgs()
                  << type << " illegal: cannot lower memref of rank " << rank
@@ -602,8 +602,8 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
     }();
 
     // Note that we currently only support lowering to single element texels
-    // e.g. R32f
-    const auto elementType = type.getElementType();
+    // e.g. R32f.
+    auto elementType = type.getElementType();
     if (!elementType.isIntOrFloat()) {
       LLVM_DEBUG(llvm::dbgs() << type << " illegal: cannot lower memref of "
                               << elementType << " to a  SPIR-V Image\n");
@@ -641,15 +641,15 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
     // Currently every memref in the image storage class is converted to a
     // sampled image so we can hardcode the NeedSampler field. Future work
     // will generalize this to support regular non-sampled images.
-    const auto spvImageTy = spirv::ImageType::get(
+    auto spvImageType = spirv::ImageType::get(
         elementType, dim, spirv::ImageDepthInfo::DepthUnknown,
         spirv::ImageArrayedInfo::NonArrayed,
         spirv::ImageSamplingInfo::SingleSampled,
         spirv::ImageSamplerUseInfo::NeedSampler, imageFormat);
-    const auto spvSampledImageTy = spirv::SampledImageType::get(spvImageTy);
-    const auto imagePtrTy = spirv::PointerType::get(
-        spvSampledImageTy, spirv::StorageClass::UniformConstant);
-    return imagePtrTy;
+    auto spvSampledImageType = spirv::SampledImageType::get(spvImageType);
+    auto imagePtrType = spirv::PointerType::get(
+        spvSampledImageType, spirv::StorageClass::UniformConstant);
+    return imagePtrType;
   }
 
   if (isa<IntegerType>(type.getElementType())) {
