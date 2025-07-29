@@ -57,6 +57,24 @@ struct GCNRegPressure {
     return std::max(Value[VGPR] + Value[AVGPR], Value[AGPR]);
   }
 
+  inline static unsigned getAVGPRsAsVGPRsNum(unsigned NumArchVGPRs,
+                                             unsigned NumAVGPRs,
+                                             unsigned AddressableArchVGPR) {
+
+    return NumArchVGPRs < AddressableArchVGPR
+               ? std::min((AddressableArchVGPR - NumArchVGPRs), NumAVGPRs)
+               : 0;
+  }
+
+  inline static unsigned getAVGPRsAsAGPRsNum(unsigned NumArchVGPRs,
+                                             unsigned NumAGPRs,
+                                             unsigned NumAVGPRs,
+                                             unsigned AddressableArchVGPR) {
+    unsigned AVGPRsAsVGPRs =
+        getAVGPRsAsVGPRsNum(NumArchVGPRs, NumAVGPRs, AddressableArchVGPR);
+    return NumAVGPRs > AVGPRsAsVGPRs ? NumAVGPRs - AVGPRsAsVGPRs : 0;
+  }
+
   /// Returns the aggregated VGPR pressure, assuming \p NumArchVGPRs ArchVGPRs
   /// \p NumAGPRs AGPRS, and \p NumAVGPRs AVGPRs for a target with a unified
   /// VGPR file.
@@ -68,11 +86,10 @@ struct GCNRegPressure {
     // Until we hit the VGPRThreshold, we will assign AV as VGPR. After that
     // point, we will assign as AGPR.
     unsigned AVGPRsAsVGPRs =
-        NumArchVGPRs < AddressableArchVGPR
-            ? std::min((AddressableArchVGPR - NumArchVGPRs), NumAVGPRs)
-            : 0;
-    unsigned AVGPRsAsAGPRs =
-        NumAVGPRs > AVGPRsAsVGPRs ? NumAVGPRs - AVGPRsAsVGPRs : 0;
+        getAVGPRsAsVGPRsNum(NumArchVGPRs, NumAVGPRs, AddressableArchVGPR);
+    unsigned AVGPRsAsAGPRs = getAVGPRsAsAGPRsNum(
+        NumArchVGPRs, NumAGPRs, NumAVGPRs, AddressableArchVGPR);
+    NumAVGPRs > AVGPRsAsVGPRs ? NumAVGPRs - AVGPRsAsVGPRs : 0;
     return alignTo(NumArchVGPRs + AVGPRsAsVGPRs,
                    AMDGPU::IsaInfo::getArchVGPRAllocGranule()) +
            NumAGPRs + AVGPRsAsAGPRs;
@@ -96,13 +113,11 @@ struct GCNRegPressure {
 
   unsigned getVGPRTuplesWeight(unsigned AddressableArchVGPR) const {
     unsigned AVGPRsAsVGPRs =
-        Value[TOTAL_KINDS + VGPR] < AddressableArchVGPR
-            ? std::min(AddressableArchVGPR - Value[TOTAL_KINDS + VGPR],
-                       Value[TOTAL_KINDS + AVGPR])
-            : 0;
-    unsigned AVGPRsAsAGPRs = Value[TOTAL_KINDS + AVGPR] > AVGPRsAsVGPRs
-                                 ? Value[TOTAL_KINDS + AVGPR] - AVGPRsAsVGPRs
-                                 : 0;
+        getAVGPRsAsVGPRsNum(Value[TOTAL_KINDS + VGPR],
+                            Value[TOTAL_KINDS + AVGPR], AddressableArchVGPR);
+    unsigned AVGPRsAsAGPRs = getAVGPRsAsAGPRsNum(
+        Value[TOTAL_KINDS + VGPR], Value[TOTAL_KINDS + AGPR],
+        Value[TOTAL_KINDS + AVGPR], AddressableArchVGPR);
 
     return std::max(Value[TOTAL_KINDS + VGPR] + AVGPRsAsVGPRs,
                     Value[TOTAL_KINDS + AGPR] + AVGPRsAsAGPRs);
