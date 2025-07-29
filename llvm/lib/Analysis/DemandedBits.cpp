@@ -77,17 +77,17 @@ void DemandedBits::determineLiveOperandBits(
         }
       };
   auto GetShiftedRange = [&](unsigned Min, unsigned Max, bool ShiftLeft) {
-    using ShiftFn = APInt (APInt::*)(unsigned) const;
-    auto Shift = ShiftLeft ? static_cast<ShiftFn>(&APInt::shl)
-                           : static_cast<ShiftFn>(&APInt::lshr);
+    auto ShiftF = [&](const APInt &Mask, unsigned ShiftAmnt) {
+      return ShiftLeft ? Mask.shl(ShiftAmnt) : Mask.lshr(ShiftAmnt);
+    };
     AB = APInt::getZero(BitWidth);
     uint8_t LoopRange = Max - Min;
     auto Mask = AOut;
     for (unsigned ShiftAmnt = 1; ShiftAmnt <= LoopRange; ShiftAmnt <<= 1) {
-      APInt Shifted = (Mask.*Shift)(ShiftAmnt);
+      APInt Shifted = ShiftF(Mask, ShiftAmnt);
       Mask |= Shifted;
     }
-    AB = (Mask.*Shift)(Min);
+    AB = ShiftF(Mask, Min);
   };
 
   switch (UserI->getOpcode()) {
