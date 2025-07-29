@@ -911,9 +911,9 @@ define void @device_func(ptr byval(i32) align 4 %input) {
 ; PTX-NEXT:    .reg .b64 %rd<2>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.b32 %r1, [device_func_param_0];
 ; PTX-NEXT:    { // callseq 3, 0
 ; PTX-NEXT:    .param .align 4 .b8 param0[4];
+; PTX-NEXT:    ld.param.b32 %r1, [device_func_param_0];
 ; PTX-NEXT:    st.param.b32 [param0], %r1;
 ; PTX-NEXT:    call.uni device_func, (param0);
 ; PTX-NEXT:    } // callseq 3

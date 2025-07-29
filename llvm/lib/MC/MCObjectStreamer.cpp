@@ -46,15 +46,15 @@ MCAssembler *MCObjectStreamer::getAssemblerPtr() {
   return nullptr;
 }
 
-constexpr size_t FragChunkSize = 16384;
-// Ensure the new fragment can at least at least a few bytes.
+constexpr size_t FragBlockSize = 16384;
+// Ensure the new fragment can at least store a few bytes.
 constexpr size_t NewFragHeadroom = 8;
 
 static_assert(NewFragHeadroom >= alignof(MCFragment));
-static_assert(FragChunkSize >= sizeof(MCFragment) + NewFragHeadroom);
+static_assert(FragBlockSize >= sizeof(MCFragment) + NewFragHeadroom);
 
 MCFragment *MCObjectStreamer::allocFragSpace(size_t Headroom) {
-  auto Size = std::max(FragChunkSize, sizeof(MCFragment) + Headroom);
+  auto Size = std::max(FragBlockSize, sizeof(MCFragment) + Headroom);
   FragSpace = Size - sizeof(MCFragment);
   auto Chunk = std::unique_ptr<char[]>(new char[Size]);
   auto *F = reinterpret_cast<MCFragment *>(Chunk.get());
@@ -65,7 +65,7 @@ MCFragment *MCObjectStreamer::allocFragSpace(size_t Headroom) {
 void MCObjectStreamer::newFragment() {
   MCFragment *F;
   if (LLVM_LIKELY(sizeof(MCFragment) + NewFragHeadroom <= FragSpace)) {
-    auto End = size_t(getCurFragEnd());
+    auto End = reinterpret_cast<size_t>(getCurFragEnd());
     F = reinterpret_cast<MCFragment *>(
         alignToPowerOf2(End, alignof(MCFragment)));
     FragSpace -= size_t(F) - End + sizeof(MCFragment);
@@ -87,22 +87,21 @@ void MCObjectStreamer::ensureHeadroom(size_t Headroom) {
 void MCObjectStreamer::insert(MCFragment *Frag) {
   assert(Frag->getKind() != MCFragment::FT_Data &&
          "F should have a variable-size tail");
-  // Allocate an empty fragment, potentially reusing the space associated with
-  // CurFrag.
+  // Frag is not connected to FragSpace. Before modifying CurFrag with
+  // addFragment(Frag), allocate an empty fragment to maintain FragSpace
+  // connectivity, potentially reusing CurFrag's associated space.
   MCFragment *F;
   if (LLVM_LIKELY(sizeof(MCFragment) + NewFragHeadroom <= FragSpace)) {
-    auto End = size_t(getCurFragEnd());
+    auto End = reinterpret_cast<size_t>(getCurFragEnd());
     F = reinterpret_cast<MCFragment *>(
         alignToPowerOf2(End, alignof(MCFragment)));
     FragSpace -= size_t(F) - End + sizeof(MCFragment);
   } else {
     F = allocFragSpace(0);
   }
-
-  // Add Frag, which destroys CurFrag and the associated space.
-  addFragment(Frag);
   new (F) MCFragment();
-  // Add the empty fragment, which restores CurFrag and the associated space.
+
+  addFragment(Frag);
   addFragment(F);
 }
 
@@ -318,12 +317,12 @@ void MCObjectStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
     F0 = CurFrag;
   }
 
-  // CurFrag will be changed. To ensure that FragSpace remains connected with
-  // CurFrag, allocate an empty fragment and add it to the fragment list.
-  // (Subsections[I].second.Tail is disconnected with FragSpace.)
+  // To maintain connectivity between CurFrag and FragSpace when CurFrag is
+  // modified, allocate an empty fragment and append it to the fragment list.
+  // (Subsections[I].second.Tail is not connected to FragSpace.)
   MCFragment *F;
   if (LLVM_LIKELY(sizeof(MCFragment) + NewFragHeadroom <= FragSpace)) {
-    auto End = size_t(getCurFragEnd());
+    auto End = reinterpret_cast<size_t>(getCurFragEnd());
     F = reinterpret_cast<MCFragment *>(
         alignToPowerOf2(End, alignof(MCFragment)));
     FragSpace -= size_t(F) - End + sizeof(MCFragment);
@@ -425,6 +424,10 @@ void MCObjectStreamer::emitInstToData(const MCInst &Inst,
   SmallVector<MCFixup, 1> Fixups;
   getAssembler().getEmitter().encodeInstruction(Inst, Content, Fixups, STI);
   appendContents(Content);
+  if (CurFrag != F) {
+    F = CurFrag;
+    CodeOffset = 0;
+  }
   F->setHasInstructions(STI);
 
   if (Fixups.empty())

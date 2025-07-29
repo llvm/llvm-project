@@ -570,11 +570,11 @@ void VPlanTransforms::prepareForVectorization(
   VPBuilder Builder(MiddleVPBB);
   VPValue *Cmp;
   if (!RequiresScalarEpilogueCheck)
-    Cmp = Plan.getOrAddLiveIn(ConstantInt::getFalse(
-        IntegerType::getInt1Ty(TripCount->getType()->getContext())));
+    Cmp = Plan.getOrAddLiveIn(
+        ConstantInt::getFalse(IntegerType::getInt1Ty(Plan.getContext())));
   else if (TailFolded)
-    Cmp = Plan.getOrAddLiveIn(ConstantInt::getTrue(
-        IntegerType::getInt1Ty(TripCount->getType()->getContext())));
+    Cmp = Plan.getOrAddLiveIn(
+        ConstantInt::getTrue(IntegerType::getInt1Ty(Plan.getContext())));
   else
     Cmp = Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),
                              &Plan.getVectorTripCount(), LatchDL, "cmp.n");
@@ -648,7 +648,7 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
                    .createNaryOp(VPInstruction::BranchOnCond, {CondVPV},
                                  Plan.getCanonicalIV()->getDebugLoc());
   if (AddBranchWeights) {
-    MDBuilder MDB(Plan.getScalarHeader()->getIRBasicBlock()->getContext());
+    MDBuilder MDB(Plan.getContext());
     MDNode *BranchWeights =
         MDB.createBranchWeights(CheckBypassWeights, /*IsExpected=*/false);
     Term->addMetadata(LLVMContext::MD_prof, BranchWeights);

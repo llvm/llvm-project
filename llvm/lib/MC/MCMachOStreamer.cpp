@@ -521,5 +521,6 @@ void MCMachOStreamer::createAddrSigSection() {
   // (instead of emitting a zero-sized section) so these relocations are
   // technically valid, even though we don't expect these relocations to
   // actually be applied by the linker.
-  Frag->setVarContents(std::vector<char>(8, 0));
+  constexpr char zero[8] = {};
+  Frag->setVarContents(zero);
 }
