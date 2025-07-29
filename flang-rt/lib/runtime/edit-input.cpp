@@ -375,21 +375,37 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
         Put(*next);
       }
     }
-    if (next && *next == '(') { // NaN(...)
-      Put('(');
-      int depth{1};
-      while (true) {
-        next = io.NextInField(remaining, edit);
-        if (depth == 0) {
-          break;
-        } else if (!next) {
-          return {}; // error
-        } else if (*next == '(') {
-          ++depth;
-        } else if (*next == ')') {
-          --depth;
+    if (first == 'N' && (!next || *next == '(') &&
+        remaining.value_or(1) > 0) { // NaN(...)?
+      std::size_t byteCount{0};
+      if (!next) { // NextInField won't return '(' for list-directed
+        next = io.GetCurrentChar(byteCount);
+      }
+      if (next && *next == '(') {
+        int depth{1};
+        while (true) {
+          if (*next >= 'a' && *next <= 'z') {
+            *next = *next - 'a' + 'A';
+          }
+          Put(*next);
+          io.HandleRelativePosition(byteCount);
+          io.GotChar(byteCount);
+          if (remaining) {
+            *remaining -= byteCount;
+          }
+          if (depth == 0) {
+            break; // done
+          }
+          next = io.GetCurrentChar(byteCount);
+          if (!next || remaining.value_or(1) < 1) {
+            return {}; // error
+          } else if (*next == '(') {
+            ++depth;
+          } else if (*next == ')') {
+            --depth;
+          }
         }
-        Put(*next);
+        next = io.NextInField(remaining, edit);
       }
     }
   } else if (first == radixPointChar || (first >= '0' && first <= '9') ||
