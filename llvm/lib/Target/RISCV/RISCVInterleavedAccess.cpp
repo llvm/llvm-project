@@ -266,33 +266,6 @@ bool RISCVTargetLowering::lowerInterleavedStore(Instruction *Store,
   if (!isLegalInterleavedAccessType(VTy, Factor, Alignment, AS, DL))
     return false;
 
-  unsigned Index;
-  // If the segment store only has one active lane (i.e. the interleave is
-  // just a spread shuffle), we can use a strided store instead.  This will
-  // be equally fast, and create less vector register pressure.
-  if (!Subtarget.hasOptimizedSegmentLoadStore(Factor) &&
-      isSpreadMask(Mask, Factor, Index)) {
-    unsigned ScalarSizeInBytes =
-        DL.getTypeStoreSize(ShuffleVTy->getElementType());
-    Value *Data = SVI->getOperand(0);
-    Data = Builder.CreateExtractVector(VTy, Data, uint64_t(0));
-    Value *Stride = ConstantInt::get(XLenTy, Factor * ScalarSizeInBytes);
-    Value *Offset = ConstantInt::get(XLenTy, Index * ScalarSizeInBytes);
-    Value *BasePtr = Builder.CreatePtrAdd(Ptr, Offset);
-    // For rv64, need to truncate i64 to i32 to match signature.  As VL is at
-    // most the number of active lanes (which is bounded by i32) this is safe.
-    VL = Builder.CreateTrunc(VL, Builder.getInt32Ty());
-
-    CallInst *CI =
-        Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_store,
-                                {VTy, BasePtr->getType(), Stride->getType()},
-                                {Data, BasePtr, Stride, LaneMask, VL});
-    Alignment = commonAlignment(Alignment, Index * ScalarSizeInBytes);
-    CI->addParamAttr(1,
-                     Attribute::getWithAlignment(CI->getContext(), Alignment));
-    return true;
-  }
-
   Function *VssegNFunc = Intrinsic::getOrInsertDeclaration(
       Store->getModule(), FixedVssegIntrIds[Factor - 2], {VTy, PtrTy, XLenTy});
 
