@@ -173,18 +173,19 @@ static const Expr *unwrapExpressionForDeduction(const Expr *E) {
 class NonTypeOrVarTemplateParmDecl {
 public:
   NonTypeOrVarTemplateParmDecl(const NamedDecl *Template) : Template(Template) {
-    assert(!Template || isa<NonTypeTemplateParmDecl>(Template) ||
-           (isa<TemplateTemplateParmDecl>(Template) &&
-            (cast<TemplateTemplateParmDecl>(Template)->kind() ==
-                 TNK_Var_template ||
-             cast<TemplateTemplateParmDecl>(Template)->kind() ==
-                 TNK_Concept_template)));
+    assert(
+        !Template || isa<NonTypeTemplateParmDecl>(Template) ||
+        (isa<TemplateTemplateParmDecl>(Template) &&
+         (cast<TemplateTemplateParmDecl>(Template)->templateParameterKind() ==
+              TNK_Var_template ||
+          cast<TemplateTemplateParmDecl>(Template)->templateParameterKind() ==
+              TNK_Concept_template)));
   }
 
   QualType getType() const {
     if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Template))
       return NTTP->getType();
-    return getTemplate()->kind() == TNK_Concept_template
+    return getTemplate()->templateParameterKind() == TNK_Concept_template
                ? getTemplate()->getASTContext().BoolTy
                : getTemplate()->getASTContext().DependentTy;
   }

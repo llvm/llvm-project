@@ -345,7 +345,7 @@ bool TemplateArgument::isConceptOrConceptTemplateParameter() const {
       return true;
     else if (auto *TTP = dyn_cast_if_present<TemplateTemplateParmDecl>(
                  getAsTemplate().getAsTemplateDecl()))
-      return TTP->kind() == TNK_Concept_template;
+      return TTP->templateParameterKind() == TNK_Concept_template;
   }
   return false;
 }

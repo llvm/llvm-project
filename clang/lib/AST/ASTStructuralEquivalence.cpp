@@ -2249,7 +2249,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   }
 
   // Check template parameter lists.
-  return D1->kind() == D2->kind() &&
+  return D1->templateParameterKind() == D2->templateParameterKind() &&
          IsStructurallyEquivalent(Context, D1->getTemplateParameters(),
                                   D2->getTemplateParameters());
 }

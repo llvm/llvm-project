@@ -724,7 +724,7 @@ void ASTContext::CanonicalTemplateTemplateParm::Profile(
   ID.AddInteger(Parm->getDepth());
   ID.AddInteger(Parm->getPosition());
   ID.AddBoolean(Parm->isParameterPack());
-  ID.AddInteger(Parm->kind());
+  ID.AddInteger(Parm->templateParameterKind());
 
   TemplateParameterList *Params = Parm->getTemplateParameters();
   ID.AddInteger(Params->size());
@@ -830,7 +830,8 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
 
   TemplateTemplateParmDecl *CanonTTP = TemplateTemplateParmDecl::Create(
       *this, getTranslationUnitDecl(), SourceLocation(), TTP->getDepth(),
-      TTP->getPosition(), TTP->isParameterPack(), nullptr, TTP->kind(),
+      TTP->getPosition(), TTP->isParameterPack(), nullptr,
+      TTP->templateParameterKind(),
       /*Typename=*/false,
       TemplateParameterList::Create(*this, SourceLocation(), SourceLocation(),
                                     CanonParams, SourceLocation(),

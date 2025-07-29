@@ -307,11 +307,12 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
       assert(isa<ClassTemplateDecl>(TD) || isa<TemplateTemplateParmDecl>(TD) ||
              isa<TypeAliasTemplateDecl>(TD) || isa<VarTemplateDecl>(TD) ||
              isa<BuiltinTemplateDecl>(TD) || isa<ConceptDecl>(TD));
-      TemplateKind = isa<TemplateTemplateParmDecl>(TD)
-                         ? dyn_cast<TemplateTemplateParmDecl>(TD)->kind()
-                     : isa<VarTemplateDecl>(TD) ? TNK_Var_template
-                     : isa<ConceptDecl>(TD)     ? TNK_Concept_template
-                                                : TNK_Type_template;
+      TemplateKind =
+          isa<TemplateTemplateParmDecl>(TD)
+              ? dyn_cast<TemplateTemplateParmDecl>(TD)->templateParameterKind()
+          : isa<VarTemplateDecl>(TD) ? TNK_Var_template
+          : isa<ConceptDecl>(TD)     ? TNK_Concept_template
+                                     : TNK_Type_template;
     }
   }
 
@@ -4754,8 +4755,9 @@ ExprResult Sema::CheckVarOrConceptTemplateTemplateId(
     const TemplateArgumentListInfo *TemplateArgs) {
   assert(Template && "A variable template id without template?");
 
-  if (Template->kind() != TemplateNameKind::TNK_Var_template &&
-      Template->kind() != TemplateNameKind::TNK_Concept_template)
+  if (Template->templateParameterKind() != TemplateNameKind::TNK_Var_template &&
+      Template->templateParameterKind() !=
+          TemplateNameKind::TNK_Concept_template)
     return ExprResult();
 
   // Check that the template argument list is well-formed for this template.
@@ -5711,7 +5713,7 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &ArgLoc,
   case TemplateArgument::Expression:
   case TemplateArgument::Type: {
     auto Kind = 0;
-    switch (TempParm->kind()) {
+    switch (TempParm->templateParameterKind()) {
     case TemplateNameKind::TNK_Var_template:
       Kind = 1;
       break;
@@ -7718,7 +7720,7 @@ bool Sema::CheckDeclCompatibleWithTemplateTemplate(
   unsigned DiagFoundKind = 0;
 
   if (auto *TTP = llvm::dyn_cast<TemplateTemplateParmDecl>(Template)) {
-    switch (TTP->kind()) {
+    switch (TTP->templateParameterKind()) {
     case TemplateNameKind::TNK_Concept_template:
       DiagFoundKind = 3;
       break;
@@ -7729,7 +7731,7 @@ bool Sema::CheckDeclCompatibleWithTemplateTemplate(
       DiagFoundKind = 1;
       break;
     }
-    Kind = TTP->kind();
+    Kind = TTP->templateParameterKind();
   } else if (isa<ConceptDecl>(Template)) {
     Kind = TemplateNameKind::TNK_Concept_template;
     DiagFoundKind = 3;
@@ -7748,12 +7750,12 @@ bool Sema::CheckDeclCompatibleWithTemplateTemplate(
     assert(false && "Unexpected Decl");
   }
 
-  if (Kind == Param->kind()) {
+  if (Kind == Param->templateParameterKind()) {
     return true;
   }
 
   unsigned DiagKind = 0;
-  switch (Param->kind()) {
+  switch (Param->templateParameterKind()) {
   case TemplateNameKind::TNK_Concept_template:
     DiagKind = 2;
     break;
@@ -8231,7 +8233,7 @@ static bool MatchTemplateParameterKind(
   else if (TemplateTemplateParmDecl *OldTTP =
                dyn_cast<TemplateTemplateParmDecl>(Old)) {
     TemplateTemplateParmDecl *NewTTP = cast<TemplateTemplateParmDecl>(New);
-    if (OldTTP->kind() != NewTTP->kind())
+    if (OldTTP->templateParameterKind() != NewTTP->templateParameterKind())
       return false;
     if (!S.TemplateParameterListsAreEqual(
             NewInstFrom, NewTTP->getTemplateParameters(), OldInstFrom,

@@ -3273,7 +3273,7 @@ public:
     return getNumDecls() == 1 && [&]() {
       if (auto *TTP = dyn_cast_or_null<TemplateTemplateParmDecl>(
               getTrailingResults()->getDecl()))
-        return TTP->kind() == TNK_Concept_template;
+        return TTP->templateParameterKind() == TNK_Concept_template;
       if (isa<ConceptDecl>(getTrailingResults()->getDecl()))
         return true;
       return false;
@@ -3284,7 +3284,7 @@ public:
     return getNumDecls() == 1 && [&]() {
       if (auto *TTP = dyn_cast_or_null<TemplateTemplateParmDecl>(
               getTrailingResults()->getDecl()))
-        return TTP->kind() == TNK_Var_template;
+        return TTP->templateParameterKind() == TNK_Var_template;
       if (isa<VarTemplateDecl>(getTrailingResults()->getDecl()))
         return true;
       return false;

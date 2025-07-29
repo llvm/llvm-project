@@ -1754,12 +1754,12 @@ public:
     return SourceRange(getTemplateParameters()->getTemplateLoc(), End);
   }
 
-  TemplateNameKind kind() const {
+  TemplateNameKind templateParameterKind() const {
     return static_cast<TemplateNameKind>(ParameterKind);
   }
 
   bool isTypeConceptTemplateParam() const {
-    return kind() == TemplateNameKind::TNK_Concept_template &&
+    return templateParameterKind() == TemplateNameKind::TNK_Concept_template &&
            getTemplateParameters()->size() > 0 &&
            isa<TemplateTypeParmDecl>(getTemplateParameters()->getParam(0));
   }
@@ -3362,7 +3362,7 @@ inline TemplateDecl *getAsTypeTemplateDecl(Decl *D) {
                 [&]() {
                   if (TemplateTemplateParmDecl *TTP =
                           dyn_cast<TemplateTemplateParmDecl>(TD))
-                    return TTP->kind() == TNK_Type_template;
+                    return TTP->templateParameterKind() == TNK_Type_template;
                   return false;
                 }())
              ? TD
