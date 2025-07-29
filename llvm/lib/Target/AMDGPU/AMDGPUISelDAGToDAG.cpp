@@ -1134,15 +1134,26 @@ void AMDGPUDAGToDAGISel::SelectMAD_64_32(SDNode *N) {
   SDLoc SL(N);
   bool Signed = N->getOpcode() == AMDGPUISD::MAD_I64_I32;
   unsigned Opc;
+  bool UseNoCarry = Subtarget->hasMadU64U32NoCarry() && !N->hasAnyUseOfValue(1);
   if (Subtarget->hasMADIntraFwdBug())
     Opc = Signed ? AMDGPU::V_MAD_I64_I32_gfx11_e64
                  : AMDGPU::V_MAD_U64_U32_gfx11_e64;
+  else if (UseNoCarry)
+    Opc = Signed ? AMDGPU::V_MAD_NC_I64_I32_e64 : AMDGPU::V_MAD_NC_U64_U32_e64;
   else
     Opc = Signed ? AMDGPU::V_MAD_I64_I32_e64 : AMDGPU::V_MAD_U64_U32_e64;
 
   SDValue Clamp = CurDAG->getTargetConstant(0, SL, MVT::i1);
   SDValue Ops[] = { N->getOperand(0), N->getOperand(1), N->getOperand(2),
                     Clamp };
+
+  if (UseNoCarry) {
+    MachineSDNode *Mad = CurDAG->getMachineNode(Opc, SL, MVT::i64, Ops);
+    ReplaceUses(SDValue(N, 0), SDValue(Mad, 0));
+    CurDAG->RemoveDeadNode(N);
+    return;
+  }
+
   CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
 }
 
