@@ -14,7 +14,6 @@
 #ifndef LLVM_CLANG_SEMA_PARSEDTEMPLATE_H
 #define LLVM_CLANG_SEMA_PARSEDTEMPLATE_H
 
-#include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TemplateKinds.h"
@@ -27,116 +26,115 @@
 #include <new>
 
 namespace clang {
+  /// Represents the parsed form of a C++ template argument.
+  class ParsedTemplateArgument {
+  public:
+    /// Describes the kind of template argument that was parsed.
+    enum KindType {
+      /// A template type parameter, stored as a type.
+      Type,
+      /// A non-type template parameter, stored as an expression.
+      NonType,
+      /// A template template argument, stored as a template name.
+      Template
+    };
 
-/// Represents the parsed form of a C++ template argument.
-class ParsedTemplateArgument {
-public:
-  /// Describes the kind of template argument that was parsed.
-  enum KindType {
-    /// A template type parameter, stored as a type.
-    Type,
-    /// A non-type template parameter, stored as an expression.
-    NonType,
-    /// A template template argument, stored as a template name.
-    Template,
+    /// Build an empty template argument.
+    ///
+    /// This template argument is invalid.
+    ParsedTemplateArgument() : Kind(Type), Arg(nullptr) { }
+
+    /// Create a template type argument or non-type template argument.
+    ///
+    /// \param Arg the template type argument or non-type template argument.
+    /// \param Loc the location of the type.
+    ParsedTemplateArgument(KindType Kind, void *Arg, SourceLocation Loc)
+      : Kind(Kind), Arg(Arg), Loc(Loc) { }
+
+    /// Create a template template argument.
+    ///
+    /// \param SS the C++ scope specifier that precedes the template name, if
+    /// any.
+    ///
+    /// \param Template the template to which this template template
+    /// argument refers.
+    ///
+    /// \param TemplateLoc the location of the template name.
+    ParsedTemplateArgument(const CXXScopeSpec &SS,
+                           ParsedTemplateTy Template,
+                           SourceLocation TemplateLoc)
+      : Kind(ParsedTemplateArgument::Template),
+        Arg(Template.getAsOpaquePtr()), SS(SS), Loc(TemplateLoc) {}
+
+    /// Determine whether the given template argument is invalid.
+    bool isInvalid() const { return Arg == nullptr; }
+
+    /// Determine what kind of template argument we have.
+    KindType getKind() const { return Kind; }
+
+    /// Retrieve the template type argument's type.
+    ParsedType getAsType() const {
+      assert(Kind == Type && "Not a template type argument");
+      return ParsedType::getFromOpaquePtr(Arg);
+    }
+
+    /// Retrieve the non-type template argument's expression.
+    Expr *getAsExpr() const {
+      assert(Kind == NonType && "Not a non-type template argument");
+      return static_cast<Expr*>(Arg);
+    }
+
+    /// Retrieve the template template argument's template name.
+    ParsedTemplateTy getAsTemplate() const {
+      assert(Kind == Template && "Not a template template argument");
+      return ParsedTemplateTy::getFromOpaquePtr(Arg);
+    }
+
+    /// Retrieve the location of the template argument.
+    SourceLocation getLocation() const { return Loc; }
+
+    /// Retrieve the nested-name-specifier that precedes the template
+    /// name in a template template argument.
+    const CXXScopeSpec &getScopeSpec() const {
+      assert(Kind == Template &&
+             "Only template template arguments can have a scope specifier");
+      return SS;
+    }
+
+    /// Retrieve the location of the ellipsis that makes a template
+    /// template argument into a pack expansion.
+    SourceLocation getEllipsisLoc() const {
+      assert(Kind == Template &&
+             "Only template template arguments can have an ellipsis");
+      return EllipsisLoc;
+    }
+
+    /// Retrieve a pack expansion of the given template template
+    /// argument.
+    ///
+    /// \param EllipsisLoc The location of the ellipsis.
+    ParsedTemplateArgument getTemplatePackExpansion(
+                                              SourceLocation EllipsisLoc) const;
+
+  private:
+    KindType Kind;
+
+    /// The actual template argument representation, which may be
+    /// an \c Sema::TypeTy* (for a type), an Expr* (for an
+    /// expression), or an Sema::TemplateTy (for a template).
+    void *Arg;
+
+    /// The nested-name-specifier that can accompany a template template
+    /// argument.
+    CXXScopeSpec SS;
+
+    /// the location of the template argument.
+    SourceLocation Loc;
+
+    /// The ellipsis location that can accompany a template template
+    /// argument (turning it into a template template argument expansion).
+    SourceLocation EllipsisLoc;
   };
-
-  /// Build an empty template argument.
-  ///
-  /// This template argument is invalid.
-  ParsedTemplateArgument() : Kind(Type), Arg(nullptr) {}
-
-  /// Create a template type argument or non-type template argument.
-  ///
-  /// \param Arg the template type argument or non-type template argument.
-  /// \param Loc the location of the type.
-  ParsedTemplateArgument(KindType Kind, void *Arg, SourceLocation Loc)
-      : Kind(Kind), Arg(Arg), Loc(Loc) {}
-
-  /// Create a template template argument.
-  ///
-  /// \param SS the C++ scope specifier that precedes the template name, if
-  /// any.
-  ///
-  /// \param Template the template to which this template template
-  /// argument refers.
-  ///
-  /// \param TemplateLoc the location of the template name.
-  ParsedTemplateArgument(const CXXScopeSpec &SS, ParsedTemplateTy Template,
-                         SourceLocation TemplateLoc)
-      : Kind(ParsedTemplateArgument::Template), Arg(Template.getAsOpaquePtr()),
-        SS(SS), Loc(TemplateLoc) {}
-
-  /// Determine whether the given template argument is invalid.
-  bool isInvalid() const { return Arg == nullptr; }
-
-  /// Determine what kind of template argument we have.
-  KindType getKind() const { return Kind; }
-
-  /// Retrieve the template type argument's type.
-  ParsedType getAsType() const {
-    assert(Kind == Type && "Not a template type argument");
-    return ParsedType::getFromOpaquePtr(Arg);
-  }
-
-  /// Retrieve the non-type template argument's expression.
-  Expr *getAsExpr() const {
-    assert(Kind == NonType && "Not a non-type template argument");
-    return static_cast<Expr *>(Arg);
-  }
-
-  /// Retrieve the template template argument's template name.
-  ParsedTemplateTy getAsTemplate() const {
-    assert(Kind == Template && "Not a template template argument");
-    return ParsedTemplateTy::getFromOpaquePtr(Arg);
-  }
-
-  /// Retrieve the location of the template argument.
-  SourceLocation getLocation() const { return Loc; }
-
-  /// Retrieve the nested-name-specifier that precedes the template
-  /// name in a template template argument.
-  const CXXScopeSpec &getScopeSpec() const {
-    assert((Kind == Template) &&
-           "Only template template arguments can have a scope specifier");
-    return SS;
-  }
-
-  /// Retrieve the location of the ellipsis that makes a template
-  /// template argument into a pack expansion.
-  SourceLocation getEllipsisLoc() const {
-    assert((Kind == Template) &&
-           "Only template arguments can have an ellipsis");
-    return EllipsisLoc;
-  }
-
-  /// Retrieve a pack expansion of the given template template
-  /// argument.
-  ///
-  /// \param EllipsisLoc The location of the ellipsis.
-  ParsedTemplateArgument
-  getTemplatePackExpansion(SourceLocation EllipsisLoc) const;
-
-private:
-  KindType Kind;
-
-  /// The actual template argument representation, which may be
-  /// an \c Sema::TypeTy* (for a type), an Expr* (for an
-  /// expression), or an Sema::TemplateTy (for a template).
-  void *Arg;
-
-  /// The nested-name-specifier that can accompany a template template
-  /// argument.
-  CXXScopeSpec SS;
-
-  /// the location of the template argument.
-  SourceLocation Loc;
-
-  /// The ellipsis location that can accompany a template/universal template
-  /// argument (turning it into a template/universal template argument
-  /// expansion).
-  SourceLocation EllipsisLoc;
-};
 
   /// Information about a template-id annotation
   /// token.
