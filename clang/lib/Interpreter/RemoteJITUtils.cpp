@@ -93,6 +93,10 @@ createSharedMemoryManager(SimpleRemoteEPC &SREPC,
       SlabSize, SREPC, SAs);
 }
 
+// Launches an out-of-process executor for remote JIT. The calling program can
+// provide a CustomizeFork callback, which allows it to run custom code in the
+// child process before exec. This enables sending custom setup or code to be
+// executed in the child (out-of-process) executor.
 Expected<std::unique_ptr<SimpleRemoteEPC>>
 launchExecutor(StringRef ExecutablePath, bool UseSharedMemory,
                llvm::StringRef SlabAllocateSizeString,
@@ -163,10 +167,10 @@ launchExecutor(StringRef ExecutablePath, bool UseSharedMemory,
              << ExecutorPath.get() << "\"\n";
       exit(1);
     }
-  } else {
-    LaunchedExecutorPID.push_back(ChildPID);
   }
   // else we're the parent...
+
+  LaunchedExecutorPID.push_back(ChildPID);
 
   // Close the child ends of the pipes
   close(ToExecutor[ReadEnd]);
