@@ -21,7 +21,6 @@ void constexpr_test() {
 
   constexpr nowrap_int min = -2147483648;
   constexpr nowrap_int one_nw = 1;
-  // This should fail to compile because of overflow.
   constexpr nowrap_int res = sub(min, one_nw); // expected-error {{constexpr variable 'res' must be initialized by a constant expression}} expected-note {{in call to 'sub(-2147483648, 1)'}}
 }
 

@@ -73,8 +73,68 @@ Here is an example of how to use the ``overflow_behavior`` attribute with a type
 semantics and won't be removed via eager compiler optimizations (like some
 undefined behavior might).
 
+Conversion Semantics
+====================
+
 Overflow behavior types are implicitly convertible to and from built-in
-integral types.
+integral types with specific semantics for warnings and constant evaluation.
+
+Constant Conversion Warnings
+----------------------------
+
+When a constant expression is converted to a narrower type that would cause
+value truncation, the ``-Wconstant-conversion`` warning behavior depends on
+the **destination type**:
+
+* **Destination is wrapping type** (``__wrap``): No warning is issued because
+  truncation with wrapping behavior is expected and well-defined.
+
+* **Destination is non-wrapping or standard type**: Warning is issued if the
+  constant value would be truncated.
+
+.. code-block:: c++
+
+  // Examples of constant conversion behavior
+  short x1 = (int __wrap)100000;        // Warning: truncation to standard type
+  short __wrap x2 = (int)100000;        // No warning: wrapping destination
+  short __no_wrap x3 = (int)100000;     // Warning: truncation with overflow check
+  short x4 = (int __no_wrap)100000;     // Warning: truncation to standard type
+
+This rule ensures that explicit use of wrapping types suppresses warnings
+only when the destination is intended to wrap, while preserving warnings
+for potentially unintended truncation to standard or non-wrapping types.
+
+C++ Narrowing Conversions
+-------------------------
+
+In C++, overflow behavior types also affect narrowing conversion diagnostics
+in brace initialization. When a constant expression would cause a narrowing
+conversion, the behavior depends on the **destination type**:
+
+* **Destination is wrapping type** (``__wrap``): No C++ narrowing conversion
+  error is issued, allowing the initialization to succeed even in ``constexpr``
+  contexts.
+
+* **Destination is non-wrapping or standard type**: C++ narrowing conversion
+  error is issued as normal.
+
+.. code-block:: c++
+
+  // C++ narrowing conversion behavior
+  constexpr short __wrap x1 = {(int)100000};    // OK: wrapping destination
+  constexpr short x2 = {(int)100000};           // Error: standard destination
+  constexpr short __no_wrap x3 = {(int)100000}; // Error: non-wrapping destination
+
+This allows ``__wrap`` types to be used seamlessly in ``constexpr`` contexts
+where truncation is intentional and expected.
+
+Note that truncation itself is a form of overflow behavior - when a value
+is too large to fit in the destination type, the high-order bits are
+discarded, which is the wrapping behavior that ``__wrap`` types are
+designed to handle predictably.
+
+C++ Template and Overload Resolution
+-------------------------------------
 
 Note that C++ overload set formation rules treat promotions to and from
 overflow behavior types the same as normal integral promotions and conversions.
