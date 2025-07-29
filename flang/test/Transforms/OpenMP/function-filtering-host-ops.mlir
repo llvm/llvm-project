@@ -473,6 +473,23 @@ module attributes {omp.is_target_device = true} {
     return
   }
 
+  // CHECK-LABEL: func.func @assumed_length
+  // CHECK-SAME: (%[[ARG:.*]]: !fir.boxchar<1>)
+  func.func @assumed_length(%arg: !fir.boxchar<1>) {
+    // CHECK-NEXT: %[[PLACEHOLDER:.*]] = fir.alloca !fir.char<1>
+    // CHECK-NEXT: %[[ONE:.*]] = arith.constant 1 : i32
+    // CHECK-NEXT: %[[EMBOXCHAR:.*]] = fir.emboxchar %[[PLACEHOLDER]], %[[ONE]] : (!fir.ref<!fir.char<1>>, i32) -> !fir.boxchar<1>
+    // CHECK-NEXT: omp.target private(@boxchar_firstprivatizer %[[EMBOXCHAR]] -> %{{.*}} [map_idx=0] : !fir.boxchar<1>)
+    %0 = fir.alloca !fir.boxchar<1>
+    %1 = fir.dummy_scope : !fir.dscope
+    %2:2 = fir.unboxchar %arg : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+    %3:2 = hlfir.declare %2#0 typeparams %2#1 dummy_scope %1 {uniq_name = "arg"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+    omp.target private(@boxchar_firstprivatizer %3#0 -> %arg3 [map_idx=0] : !fir.boxchar<1>) {
+      omp.terminator
+    }
+    return
+  }
+
   func.func private @foo() -> () attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>}
   fir.global internal @global_scalar constant : i32 {
     %0 = arith.constant 10 : i32
@@ -494,5 +511,22 @@ module attributes {omp.is_target_device = true} {
   ^bb1(%arg0: i32, %arg1: i32):
     %1 = arith.addi %arg0, %arg1 : i32
     omp.yield (%1 : i32)
+  }
+  omp.private {type = firstprivate} @boxchar_firstprivatizer : !fir.boxchar<1> init {
+  ^bb0(%arg0: !fir.boxchar<1>, %arg1: !fir.boxchar<1>):
+    %0:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+    %1 = fir.allocmem !fir.char<1,?>(%0#1 : index) {bindc_name = "", uniq_name = ""}
+    %2 = fir.emboxchar %1, %0#1 : (!fir.heap<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+    omp.yield(%2 : !fir.boxchar<1>)
+  } copy {
+  ^bb0(%arg0: !fir.boxchar<1>, %arg1: !fir.boxchar<1>):
+    hlfir.assign %arg0 to %arg1 : !fir.boxchar<1>, !fir.boxchar<1>
+    omp.yield(%arg1 : !fir.boxchar<1>)
+  } dealloc {
+  ^bb0(%arg0: !fir.boxchar<1>):
+    %0:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+    %1 = fir.convert %0#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.heap<!fir.char<1,?>>
+    fir.freemem %1 : !fir.heap<!fir.char<1,?>>
+    omp.yield
   }
 }

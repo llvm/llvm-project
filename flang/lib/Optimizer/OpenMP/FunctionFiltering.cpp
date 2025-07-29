@@ -487,23 +487,37 @@ private:
     }
 
     // We don't actually need the proper initialization, but rather just
-    // maintain the basic form of these operands. We create 1-bit placeholder
-    // allocas that we "typecast" to the expected type and replace all uses.
-    // Using fir.undefined here instead is not possible because these variables
-    // cannot be constants, as that would trigger different codegen for target
-    // regions.
+    // maintain the basic form of these operands. Generally, we create 1-bit
+    // placeholder allocas that we "typecast" to the expected type and replace
+    // all uses. Using fir.undefined here instead is not possible because these
+    // variables cannot be constants, as that would trigger different codegen
+    // for target regions.
     applyChildRewrites(region, childValRewrites, rewriteValues,
                        parentValRewrites);
     for (Value value : rewriteValues) {
       Location loc = value.getLoc();
       Value rewriteValue;
-      // If it's defined by fir.address_of, then we need to keep that op as
-      // well because it might be pointing to a 'declare target' global.
-      // Constants can also trigger different codegen paths, so we keep them as
-      // well.
       if (isa_and_present<arith::ConstantOp, fir::AddrOfOp>(
               value.getDefiningOp())) {
+        // If it's defined by fir.address_of, then we need to keep that op as
+        // well because it might be pointing to a 'declare target' global.
+        // Constants can also trigger different codegen paths, so we keep them
+        // as well.
         rewriteValue = builder.clone(*value.getDefiningOp())->getResult(0);
+      } else if (auto boxCharType =
+                     dyn_cast<fir::BoxCharType>(value.getType())) {
+        // !fir.boxchar types cannot be directly obtained by converting a
+        // !fir.ref<i1>, as they aren't reference types. Since they can appear
+        // representing some `target firstprivate` clauses, we need to create
+        // a special case here based on creating a placeholder fir.emboxchar op.
+        MLIRContext *ctx = &getContext();
+        fir::KindTy kind = boxCharType.getKind();
+        auto placeholder = builder.create<fir::AllocaOp>(
+            loc, fir::CharacterType::getSingleton(ctx, kind));
+        auto one = builder.create<arith::ConstantOp>(
+            loc, builder.getI32Type(), builder.getI32IntegerAttr(1));
+        rewriteValue = builder.create<fir::EmboxCharOp>(loc, boxCharType,
+                                                        placeholder, one);
       } else {
         Value placeholder =
             builder.create<fir::AllocaOp>(loc, builder.getI1Type());
