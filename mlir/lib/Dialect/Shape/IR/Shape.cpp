@@ -1702,9 +1702,8 @@ struct ShapeOfOpToConstShapeOp : public OpRewritePattern<shape::ShapeOfOp> {
       return failure();
     Location loc = op.getLoc();
     Value constShape =
-        rewriter
-            .create<ConstShapeOp>(loc,
-                                  rewriter.getIndexTensorAttr(type.getShape()))
+        ConstShapeOp::create(rewriter, loc,
+                             rewriter.getIndexTensorAttr(type.getShape()))
             .getResult();
     if (constShape.getType() != op.getResult().getType())
       constShape = tensor::CastOp::create(rewriter, loc,
