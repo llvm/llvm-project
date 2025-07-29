@@ -1244,7 +1244,8 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     break;
   }
 
-  case Decl::Var: {
+  case Decl::Var:
+  case Decl::VarTemplateSpecialization: {
     auto *vd = cast<VarDecl>(decl);
     emitGlobal(vd);
     break;
