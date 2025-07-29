@@ -34,7 +34,6 @@ class ComparisonOperationsTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   static constexpr T neg_large = T(-10000.0);
 
 public:
-
   void test_equals() {
     EXPECT_TRUE(equals(neg_zero, neg_zero));
     EXPECT_TRUE(equals(zero, neg_zero));
