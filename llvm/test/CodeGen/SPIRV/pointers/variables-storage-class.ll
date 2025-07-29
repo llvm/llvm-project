@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-vulkan %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-vulkan %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: %[[#U8:]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[#U32:]] = OpTypeInt 32 0
@@ -20,7 +20,7 @@
 ; CHECK-DAG: %[[#]] = OpVariable %[[#VTYPE]] Private %[[#VAL]]
 @PrivInternal = internal addrspace(10) global i32 456
 
-define spir_kernel void @Foo() {
+define spir_kernel void @Foo() #0 {
   ; CHECK: %[[#]] = OpLoad %[[#]] %[[#PTR]] Aligned 8
   %l = load ptr addrspace(1), ptr addrspace(1) @Ptr, align 8
   ; CHECK: OpCopyMemorySized %[[#]] %[[#INIT]] %[[#]] Aligned 4
@@ -29,3 +29,5 @@ define spir_kernel void @Foo() {
 }
 
 declare void @llvm.memcpy.p1.p2.i64(ptr addrspace(1) noalias nocapture writeonly, ptr addrspace(2) noalias nocapture readonly, i64, i1 immarg)
+
+attributes #0 = { "hlsl.shader"="compute" }
