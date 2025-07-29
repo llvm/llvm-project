@@ -1,4 +1,4 @@
-//===-- Definition of type jmp_buf ----------------------------------------===//
+//===-- Definition of type sigjmp_buf -------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TYPES_JMP_BUF_H
-#define LLVM_LIBC_TYPES_JMP_BUF_H
+#ifndef LLVM_LIBC_TYPES_SIGJMP_BUF_H
+#define LLVM_LIBC_TYPES_SIGJMP_BUF_H
 
 #include "__jmp_buf.h"
 
-typedef __jmp_buf jmp_buf[1];
+typedef __jmp_buf sigjmp_buf[1];
 
-#endif // LLVM_LIBC_TYPES_JMP_BUF_H
+#endif // LLVM_LIBC_TYPES_SIGJMP_BUF_H
