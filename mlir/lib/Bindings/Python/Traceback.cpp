@@ -41,6 +41,31 @@ limitations under the License.
 #undef Py_BUILD_CORE
 #endif // PLATFORM_GOOGLE
 
+// Introduced in python 3.10
+#if PY_VERSION_HEX < 0x030a00f0
+PyObject *Py_NewRef(PyObject *o) {
+  Py_INCREF(o);
+  return o;
+}
+#endif
+
+// bpo-40421 added PyFrame_GetLasti() to Python 3.11.0b1
+#if PY_VERSION_HEX < 0x030B00B1 && !defined(PYPY_VERSION)
+static inline int PyFrame_GetLasti(PyFrameObject *frame) {
+#if PY_VERSION_HEX >= 0x030A00A7
+  // bpo-27129: Since Python 3.10.0a7, f_lasti is an instruction offset,
+  // not a bytes offset anymore. Python uses 16-bit "wordcode" (2 bytes)
+  // instructions.
+  if (frame->f_lasti < 0) {
+    return -1;
+  }
+  return frame->f_lasti * 2;
+#else
+  return frame->f_lasti;
+#endif
+}
+#endif
+
 namespace mlir::python {
 struct TracebackEntry;
 struct TracebackObject;
@@ -135,11 +160,17 @@ static void traceback_tp_dealloc(PyObject *self) {
 }
 
 Traceback::Frame DecodeFrame(const TracebackEntry &frame) {
+  // python 3.11
+#if PY_VERSION_HEX < 0x030b00f0
+  PyObject *name = frame.code->co_name;
+#else
+  PyObject *name = frame.code->co_qualname;
+#endif
   return Traceback::Frame{
-      .file_name = nb::borrow<nb::str>(frame.code->co_filename),
-      .function_name = nb::borrow<nb::str>(frame.code->co_qualname),
-      .function_start_line = frame.code->co_firstlineno,
-      .line_num = PyCode_Addr2Line(frame.code, frame.lasti),
+      /*file_name=*/nb::borrow<nb::str>(frame.code->co_filename),
+      /*function_name=*/nb::borrow<nb::str>(name),
+      /*function_start_line=*/frame.code->co_firstlineno,
+      /*line_num=*/PyCode_Addr2Line(frame.code, frame.lasti),
   };
 }
 
@@ -415,11 +446,13 @@ void BuildTracebackSubmodule(nb::module_ &m) {
           throw std::runtime_error("code argument must be a code object");
         }
         int start_line, start_column, end_line, end_column;
-        if (!PyCode_Addr2Location(reinterpret_cast<PyCodeObject *>(code.ptr()),
-                                  lasti, &start_line, &start_column, &end_line,
-                                  &end_column)) {
-          throw nb::python_error();
-        }
+        // if (!PyCode_Addr2Location(reinterpret_cast<PyCodeObject
+        // *>(code.ptr()),
+        //                           lasti, &start_line, &start_column,
+        //                           &end_line, &end_column)) {
+        //   throw nb::python_error();
+        // }
+        throw nb::python_error();
         return nb::make_tuple(start_line, start_column, end_line, end_column);
       },
       "Python wrapper around the Python C API function PyCode_Addr2Location");
