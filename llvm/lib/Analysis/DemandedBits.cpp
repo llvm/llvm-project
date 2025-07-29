@@ -81,7 +81,7 @@ void DemandedBits::determineLiveOperandBits(
       return ShiftLeft ? Mask.shl(ShiftAmnt) : Mask.lshr(ShiftAmnt);
     };
     AB = APInt::getZero(BitWidth);
-    uint8_t LoopRange = Max - Min;
+    unsigned LoopRange = Max - Min;
     auto Mask = AOut;
     for (unsigned ShiftAmnt = 1; ShiftAmnt <= LoopRange; ShiftAmnt <<= 1) {
       APInt Shifted = ShiftF(Mask, ShiftAmnt);
