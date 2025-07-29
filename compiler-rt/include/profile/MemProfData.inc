@@ -232,14 +232,14 @@ constexpr int MantissaBits = 12;
 constexpr int ExponentBits = 4;
 constexpr uint16_t MaxMantissa = (1U << MantissaBits) - 1;
 constexpr uint16_t MaxExponent = (1U << ExponentBits) - 1;
+constexpr uint64_t MaxRepresentableValue = static_cast<uint64_t>(MaxMantissa)
+                                         << MaxExponent;
 
 // Encodes a 64-bit unsigned integer into a 16-bit scaled integer format.
 inline uint16_t encodeHistogramCount(uint64_t Count) {
   if (Count == 0)
     return 0;
 
-  const uint64_t MaxRepresentableValue = static_cast<uint64_t>(MaxMantissa)
-                                         << MaxExponent;
   if (Count > MaxRepresentableValue)
     Count = MaxRepresentableValue;
 
