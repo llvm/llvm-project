@@ -58,8 +58,8 @@ function(llvm_process_sources OUT_VAR)
   set(sources ${ARG_UNPARSED_ARGUMENTS})
   llvm_check_source_file_list(${sources})
 
-  # Don't generate __SHORT_FILE__ on MSVC builds as it can force repeated cache regeneration.
-  if(NOT MSVC)
+  # Don't generate __SHORT_FILE__ on VS builds as it can prevent build parallelisation.
+  if(NOT CMAKE_GENERATOR MATCHES "Visual Studio")
     foreach(fn ${sources})
       get_filename_component(suf ${fn} EXT)
       if("${suf}" STREQUAL ".cpp" OR "${suf}" STREQUAL ".c")
