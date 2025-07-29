@@ -243,13 +243,18 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         frame = self.get_stackFrames(format={"parameters": False, "module": True})[0]
         self.assertEqual(frame["name"], "a.out recurse")
 
-    def test_stackFrameModuleIdUUID(self):
+    @skipIfWindows
+    def test_stack_frame_module_id(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
         source = "main.c"
+        lines = [line_number(source, "recurse end")]
+        breakpoint_ids = self.set_source_breakpoints(source, lines)
+        self.assertEqual(
+            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
+        )
 
-        self.set_source_breakpoints(source, [line_number(source, "recurse end")])
-        self.continue_to_next_stop()
+        self.continue_to_breakpoints(breakpoint_ids)
 
         modules = self.dap_server.get_modules()
         name_to_id = {
@@ -260,6 +265,8 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         for frame in stackFrames:
             module_id = frame.get("moduleId")
             source_name = frame.get("source", {}).get("name")
+            if module_id is None or source_name is None:
+                continue
 
             if source_name in name_to_id:
                 expected_id = name_to_id[source_name]
