@@ -5408,7 +5408,7 @@ static SDValue PerformREMCombine(SDNode *N,
   return SDValue();
 }
 
-// (any_extend|sign_extend|zero_extend (mul|shl) x, y) -> (mul.wide x, y)
+// (sign_extend|zero_extend (mul|shl) x, y) -> (mul.wide x, y)
 static SDValue combineMulWide(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                               CodeGenOptLevel OptLevel) {
   if (OptLevel == CodeGenOptLevel::None)
