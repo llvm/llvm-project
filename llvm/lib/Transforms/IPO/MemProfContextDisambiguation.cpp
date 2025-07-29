@@ -4766,8 +4766,8 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
             if (!FuncCloneToCurNodeCloneMap.count(CF.FuncClone))
               return CF.FuncClone;
           }
-          assert(false &&
-                 "Expected an available func clone for this callsite clone");
+          llvm_unreachable(
+              "Expected an available func clone for this callsite clone");
         };
 
         // See if we can use existing function clone. Walk through
