@@ -179,8 +179,8 @@ private:
   void HasInvalidDistributeNesting(const parser::OpenMPLoopConstruct &x);
   void HasInvalidLoopBinding(const parser::OpenMPLoopConstruct &x);
   // specific clause related
-  void CheckAllowedMapTypes(const parser::OmpMapType::Value &,
-      const std::list<parser::OmpMapType::Value> &);
+  void CheckAllowedMapTypes(
+      parser::OmpMapType::Value, llvm::ArrayRef<parser::OmpMapType::Value>);
 
   const std::list<parser::OmpTraitProperty> &GetTraitPropertyList(
       const parser::OmpTraitSelector &);
