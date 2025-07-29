@@ -946,8 +946,6 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
        << " -> "
        << ASC->getDestAddressSpace()
        << ']';
-  } else if (const LifetimeSDNode *LN = dyn_cast<LifetimeSDNode>(this)) {
-    OS << "<0 to " << LN->getSize() << ">";
   } else if (const auto *AA = dyn_cast<AssertAlignSDNode>(this)) {
     OS << '<' << AA->getAlign().value() << '>';
   }

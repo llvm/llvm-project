@@ -784,10 +784,6 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
   case ISD::TargetFrameIndex:
     ID.AddInteger(cast<FrameIndexSDNode>(N)->getIndex());
     break;
-  case ISD::LIFETIME_START:
-  case ISD::LIFETIME_END:
-    ID.AddInteger(cast<LifetimeSDNode>(N)->getSize());
-    break;
   case ISD::PSEUDO_PROBE:
     ID.AddInteger(cast<PseudoProbeSDNode>(N)->getGuid());
     ID.AddInteger(cast<PseudoProbeSDNode>(N)->getIndex());
@@ -9360,8 +9356,7 @@ SDValue SelectionDAG::getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
 }
 
 SDValue SelectionDAG::getLifetimeNode(bool IsStart, const SDLoc &dl,
-                                      SDValue Chain, int FrameIndex,
-                                      int64_t Size) {
+                                      SDValue Chain, int FrameIndex) {
   const unsigned Opcode = IsStart ? ISD::LIFETIME_START : ISD::LIFETIME_END;
   const auto VTs = getVTList(MVT::Other);
   SDValue Ops[2] = {
@@ -9373,13 +9368,12 @@ SDValue SelectionDAG::getLifetimeNode(bool IsStart, const SDLoc &dl,
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, Opcode, VTs, Ops);
   ID.AddInteger(FrameIndex);
-  ID.AddInteger(Size);
   void *IP = nullptr;
   if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP))
     return SDValue(E, 0);
 
-  LifetimeSDNode *N = newSDNode<LifetimeSDNode>(Opcode, dl.getIROrder(),
-                                                dl.getDebugLoc(), VTs, Size);
+  LifetimeSDNode *N =
+      newSDNode<LifetimeSDNode>(Opcode, dl.getIROrder(), dl.getDebugLoc(), VTs);
   createOperands(N, Ops);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
