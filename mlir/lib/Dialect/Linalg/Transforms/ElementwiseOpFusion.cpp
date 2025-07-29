@@ -1217,20 +1217,15 @@ struct FoldReshapeWithProducerPadOpByCollapsing
         collapseOp.getReassociationIndices();
     SmallVector<OpFoldResult> low = padOp.getMixedLowPad();
     SmallVector<OpFoldResult> high = padOp.getMixedHighPad();
-
-    for (auto [idx, reInd] : llvm::enumerate(reassociations)) {
-      if (reInd.size() > 1) {
-        for (auto dimIdx : reInd) {
-          if (!isConstantIntValue(low[dimIdx], 0) ||
-              !isConstantIntValue(high[dimIdx], 0)) {
-            return failure();
-          }
-        }
-      }
-    }
-
     SmallVector<OpFoldResult> newLow, newHigh;
     for (auto [idx, reInd] : llvm::enumerate(reassociations)) {
+      if (reInd.size() > 1 && llvm::any_of(reInd, [&](int64_t dimIdx) {
+            return !isConstantIntValue(low[dimIdx], 0) ||
+                   !isConstantIntValue(high[dimIdx], 0);
+          })) {
+        return failure();
+      }
+
       newLow.push_back(low[reInd[0]]);
       newHigh.push_back(high[reInd[0]]);
     }
@@ -1244,16 +1239,12 @@ struct FoldReshapeWithProducerPadOpByCollapsing
       OpFoldResult l = low[reInd[0]];
       OpFoldResult h = high[reInd[0]];
       if (!isConstantIntValue(l, 0) || !isConstantIntValue(h, 0)) {
-        auto mixedSize =
-            tensor::getMixedSize(rewriter, loc, padOp.getSource(), reInd[0]);
-        auto dimSize = getConstantIntValue(mixedSize);
-        assert(dimSize.has_value() && "Expected static dimension");
-        collapsedShape[inDimIdx] = *dimSize;
+        collapsedShape[inDimIdx] = padOp.getSourceType().getShape()[reInd[0]];
       }
     }
 
     auto newCollapseType = RankedTensorType::get(
-        collapsedShape, padOp.getSource().getType().getElementType());
+        collapsedShape, padOp.getSourceType().getElementType());
     auto newCollapseOp = rewriter.create<tensor::CollapseShapeOp>(
         loc, newCollapseType, padOp.getSource(), reassociations);
 
