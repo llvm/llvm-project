@@ -1,4 +1,4 @@
-.. title:: clang-tidy - llvm-mlir-op-builder
+.. title:: clang-tidy - llvm-use-new-mlir-op-builder
 
 llvm-mlir-op-builder
 ====================
