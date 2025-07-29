@@ -596,6 +596,18 @@ static unsigned findEndOfWord(unsigned Start, StringRef Str,
   return findEndOfWord(Start + 1, Str, Length, Column + 1, Columns);
 }
 
+static void startLineImpl(raw_ostream &OS, unsigned Indent, bool FancyFormat) {
+  if (Indent == 0)
+    return;
+
+  if (FancyFormat) {
+    OS << "|";
+    OS.indent(Indent - 1);
+  } else {
+    OS.indent(Indent);
+  }
+}
+
 /// Print the given string to a stream, word-wrapping it to
 /// some number of columns in the process.
 ///
@@ -610,7 +622,8 @@ static unsigned findEndOfWord(unsigned Start, StringRef Str,
 /// \returns true if word-wrapping was required, or false if the
 /// string fit on the first line.
 static bool printWordWrapped(raw_ostream &OS, StringRef Str, unsigned Columns,
-                             unsigned Column, bool Bold, unsigned NestingLevel) {
+                             unsigned Column, bool Bold, unsigned NestingLevel,
+                             bool FancyFormat) {
   unsigned BaseIndent = std::min(NestingLevel * IndentWidth, MaxIndentWidth);
   Columns -= BaseIndent;
 
@@ -645,7 +658,7 @@ static bool printWordWrapped(raw_ostream &OS, StringRef Str, unsigned Columns,
     // This word does not fit on the current line, so wrap to the next
     // line.
     OS << '\n';
-    OS.indent(BaseIndent + WordWrapIndentation);
+    startLineImpl(OS, BaseIndent + WordWrapIndentation, FancyFormat);
     applyTemplateHighlighting(OS, Str.substr(WordStart, WordLength),
                               TextNormal, Bold);
     Column = WordWrapIndentation + WordLength;
@@ -667,6 +680,16 @@ TextDiagnostic::TextDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
 
 TextDiagnostic::~TextDiagnostic() {}
 
+void TextDiagnostic::emptyLine() {
+  startLineImpl(OS, 1, DiagOpts.getFormat() == TextDiagnosticFormat::Fancy);
+  OS << '\n';
+}
+
+void TextDiagnostic::startLine(unsigned Indent = 0) {
+  startLineImpl(OS, BaseIndent + Indent,
+                DiagOpts.getFormat() == TextDiagnosticFormat::Fancy);
+}
+
 void TextDiagnostic::emitDiagnosticMessage(
     FullSourceLoc Loc, PresumedLoc PLoc, DiagnosticsEngine::Level Level,
     StringRef Message, ArrayRef<clang::CharSourceRange> Ranges,
@@ -676,30 +699,34 @@ void TextDiagnostic::emitDiagnosticMessage(
 
   // The fancy format prints things in a different order.
   if (DiagOpts.getFormat() == TextDiagnosticFormat::Fancy) {
-    OS.indent(BaseIndent);
+    if (NestingLevel == 0)
+      startLine();
+    else
+      OS << '|' << std::string(BaseIndent - 2, '-') << ' ';
 
     printDiagnosticLevel(OS, Level, DiagOpts.ShowColors);
     printDiagnosticMessage(OS,
                            /*IsSupplemental*/ Level == DiagnosticsEngine::Note,
                            Message, OS.tell() - StartOfLocationInfo,
                            DiagOpts.MessageLength, DiagOpts.ShowColors,
-                           NestingLevel);
+                           NestingLevel, /*FancyFormat=*/true);
 
     if (DiagOpts.ShowLocation && Loc.isValid()) {
-      OS << '\n';
+      emptyLine();
       for (auto [Loc, PLoc] : IncludeStack) {
-        OS.indent(BaseIndent + 6);
+        startLine(6);
         OS << "- included from ";
         emitDiagnosticLoc(Loc, PLoc, Level, /*Ranges=*/{});
         OS.resetColor();
         OS << '\n';
       }
 
-      OS.indent(BaseIndent + 6);
+      startLine(6);
       OS << "- at ";
       emitDiagnosticLoc(Loc, PLoc, Level, Ranges);
       OS.resetColor();
-      OS << "\n\n";
+      OS << '\n';
+      emptyLine();
     }
 
     return;
@@ -718,7 +745,7 @@ void TextDiagnostic::emitDiagnosticMessage(
                          /*IsSupplemental*/ Level == DiagnosticsEngine::Note,
                          Message, OS.tell() - StartOfLocationInfo,
                          DiagOpts.MessageLength, DiagOpts.ShowColors,
-                         /*NestingLevel=*/0);
+                         /*NestingLevel=*/0, /*FancyFormat=*/false);
 }
 
 /*static*/ void
@@ -753,12 +780,10 @@ TextDiagnostic::printDiagnosticLevel(raw_ostream &OS,
 }
 
 /*static*/
-void TextDiagnostic::printDiagnosticMessage(raw_ostream &OS,
-                                            bool IsSupplemental,
-                                            StringRef Message,
-                                            unsigned CurrentColumn,
-                                            unsigned Columns, bool ShowColors,
-                                            unsigned NestingLevel) {
+void TextDiagnostic::printDiagnosticMessage(
+    raw_ostream &OS, bool IsSupplemental, StringRef Message,
+    unsigned CurrentColumn, unsigned Columns, bool ShowColors,
+    unsigned NestingLevel, bool FancyFormat) {
   bool Bold = false;
   if (ShowColors && !IsSupplemental) {
     // Print primary diagnostic messages in bold and without color, to visually
@@ -768,7 +793,8 @@ void TextDiagnostic::printDiagnosticMessage(raw_ostream &OS,
   }
 
   if (Columns)
-    printWordWrapped(OS, Message, Columns, CurrentColumn, Bold, NestingLevel);
+    printWordWrapped(OS, Message, Columns, CurrentColumn, Bold, NestingLevel,
+                     FancyFormat);
   else {
     bool Normal = true;
     applyTemplateHighlighting(OS, Message, Normal, Bold);
@@ -822,6 +848,8 @@ void TextDiagnostic::beginDiagnostic(DiagOrStoredDiag D,
   if (DiagOpts.getFormat() == TextDiagnosticFormat::Fancy) {
     BaseIndent = std::min(NestingLevel * IndentWidth, MaxIndentWidth);
     IncludeStack.clear();
+    if (NestingLevel != 0)
+      startLine();
     if (LastLevel != DiagnosticsEngine::Ignored)
       OS << "\n";
   }
@@ -1409,8 +1437,10 @@ void TextDiagnostic::emitSnippetAndCaret(
           ? std::max(4u, getNumDisplayWidth(DisplayLineNo + MaxLines))
           : 0;
   auto indentForLineNumbers = [&] {
-    if (MaxLineNoDisplayWidth > 0)
-      OS.indent(BaseIndent + MaxLineNoDisplayWidth + 2) << "| ";
+    if (MaxLineNoDisplayWidth > 0) {
+      startLine(MaxLineNoDisplayWidth + 2);
+      OS << "| ";
+    }
   };
 
   // Prepare source highlighting information for the lines we're about to
@@ -1521,8 +1551,8 @@ void TextDiagnostic::emitSnippet(StringRef SourceLine,
   // Emit line number.
   if (MaxLineNoDisplayWidth > 0) {
     unsigned LineNoDisplayWidth = getNumDisplayWidth(DisplayLineNo);
-    OS.indent(BaseIndent + MaxLineNoDisplayWidth - LineNoDisplayWidth + 1)
-        << DisplayLineNo << " | ";
+    startLine(MaxLineNoDisplayWidth - LineNoDisplayWidth + 1);
+    OS << DisplayLineNo << " | ";
   }
 
   // Print the source line one character at a time.

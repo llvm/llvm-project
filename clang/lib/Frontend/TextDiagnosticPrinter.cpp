@@ -133,14 +133,13 @@ void TextDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
   // diagnostics in a context that lacks language options, a source manager, or
   // other infrastructure necessary when emitting more rich diagnostics.
   if (!Info.getLocation().isValid()) {
+    bool FancyFormat = DiagOpts.getFormat() == TextDiagnosticFormat::Fancy;
     TextDiagnostic::printDiagnosticLevel(OS, Level, DiagOpts.ShowColors);
     TextDiagnostic::printDiagnosticMessage(
         OS, /*IsSupplemental=*/Level == DiagnosticsEngine::Note,
         DiagMessageStream.str(), OS.tell() - StartOfLocationInfo,
         DiagOpts.MessageLength, DiagOpts.ShowColors,
-        DiagOpts.getFormat() == TextDiagnosticFormat::Fancy
-            ? Info.getNestingLevel()
-            : 0);
+        FancyFormat ? Info.getNestingLevel() : 0, FancyFormat);
     OS.flush();
     return;
   }

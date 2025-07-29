@@ -83,7 +83,7 @@ public:
   static void printDiagnosticMessage(raw_ostream &OS, bool IsSupplemental,
                                      StringRef Message, unsigned CurrentColumn,
                                      unsigned Columns, bool ShowColors,
-                                     unsigned NestingLevel);
+                                     unsigned NestingLevel, bool FancyFormat);
 
 protected:
   void beginDiagnostic(DiagOrStoredDiag D, DiagnosticsEngine::Level Level,
@@ -126,6 +126,9 @@ private:
                    ArrayRef<StyleRange> Styles);
 
   void emitParseableFixits(ArrayRef<FixItHint> Hints, const SourceManager &SM);
+
+  void emptyLine();
+  void startLine(unsigned Indent);
 };
 
 } // end namespace clang
