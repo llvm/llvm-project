@@ -2980,7 +2980,7 @@ void Verifier::visitFunction(const Function &F) {
           &F);
     break;
   case CallingConv::AMDGPU_Gfx_WholeWave:
-    Check(F.arg_size() != 0 && F.arg_begin()->getType()->isIntegerTy(1),
+    Check(!F.arg_empty() && F.arg_begin()->getType()->isIntegerTy(1),
           "Calling convention requires first argument to be i1", &F);
     Check(!F.arg_begin()->hasInRegAttr(),
           "Calling convention requires first argument to not be inreg", &F);
