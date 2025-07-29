@@ -12,12 +12,12 @@
 
 #include "llvm/ADT/Twine.h"
 
+#include "level_zero/ze_api.h"
 #include <cassert>
 #include <deque>
 #include <exception>
 #include <functional>
 #include <iostream>
-#include <level_zero/ze_api.h>
 #include <limits>
 #include <unordered_set>
 #include <vector>
