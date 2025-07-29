@@ -191,7 +191,7 @@ template <class _EndNodePtr, class _NodePtr>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _EndNodePtr __tree_next_iter(_NodePtr __x) _NOEXCEPT {
   _LIBCPP_ASSERT_INTERNAL(__x != nullptr, "node shouldn't be null");
   if (__x->__right_ != nullptr)
-    return static_cast<_EndNodePtr>(std::__tree_min(__x->__right_));
+    return std::__static_fancy_pointer_cast<_EndNodePtr>(std::__tree_min(__x->__right_));
   while (!std::__tree_is_left_child(__x))
     __x = __x->__parent_unsafe();
   return static_cast<_EndNodePtr>(__x->__parent_);
@@ -204,7 +204,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _NodePtr __tree_prev_
   _LIBCPP_ASSERT_INTERNAL(__x != nullptr, "node shouldn't be null");
   if (__x->__left_ != nullptr)
     return std::__tree_max(__x->__left_);
-  _NodePtr __xx = static_cast<_NodePtr>(__x);
+  _NodePtr __xx = std::__static_fancy_pointer_cast<_NodePtr>(__x);
   while (std::__tree_is_left_child(__xx))
     __xx = __xx->__parent_unsafe();
   return __xx->__parent_unsafe();
@@ -673,7 +673,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_iterator& operator++() {
-    __ptr_ = std::__tree_next_iter<__end_node_pointer>(static_cast<__node_base_pointer>(__ptr_));
+    __ptr_ = std::__tree_next_iter<__end_node_pointer>(std::__static_fancy_pointer_cast<__node_base_pointer>(__ptr_));
     return *this;
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_iterator operator++(int) {
@@ -683,7 +683,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_iterator& operator--() {
-    __ptr_ = static_cast<__end_node_pointer>(std::__tree_prev_iter<__node_base_pointer>(__ptr_));
+    __ptr_ = std::__static_fancy_pointer_cast<__end_node_pointer>(std::__tree_prev_iter<__node_base_pointer>(__ptr_));
     return *this;
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_iterator operator--(int) {
@@ -762,7 +762,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_const_iterator& operator++() {
-    __ptr_ = std::__tree_next_iter<__end_node_pointer>(static_cast<__node_base_pointer>(__ptr_));
+    __ptr_ = std::__tree_next_iter<__end_node_pointer>(std::__static_fancy_pointer_cast<__node_base_pointer>(__ptr_));
     return *this;
   }
 
@@ -1821,7 +1821,7 @@ pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, bool>
   // min_pointer<std::__tree_node_base<min_pointer<void>>>
 
   __node_base_pointer& __child = __find_equal(__p, __parent, __dummy, __k);
-  __node_pointer __r           = static_cast<__node_pointer>(__child);
+  __node_pointer __r           = std::__static_fancy_pointer_cast<__node_pointer>(__child);
   bool __inserted              = false;
   if (__child == nullptr) {
     __node_holder __h = __construct_node(std::forward<_Args>(__args)...);
