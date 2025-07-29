@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_UTILS_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_UTILS_H
 
+#include "hdr/stdint_proxy.h" // intptr_t / uintptr_t / INT32_MAX / INT32_MIN
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/cstddef.h"
 #include "src/__support/CPP/type_traits.h"
@@ -18,7 +19,6 @@
 #include "src/__support/macros/properties/architectures.h"
 
 #include <stddef.h> // size_t
-#include <stdint.h> // intptr_t / uintptr_t / INT32_MAX / INT32_MIN
 
 namespace LIBC_NAMESPACE_DECL {
 

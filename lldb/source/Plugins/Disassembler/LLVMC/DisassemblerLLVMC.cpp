@@ -59,10 +59,8 @@ public:
 
   ~MCDisasmInstance() = default;
 
-  uint64_t GetMCInst(const uint8_t *opcode_data, size_t opcode_data_len,
-                     lldb::addr_t pc, llvm::MCInst &mc_inst) const;
   bool GetMCInst(const uint8_t *opcode_data, size_t opcode_data_len,
-                 lldb::addr_t pc, llvm::MCInst &mc_inst, size_t &size) const;
+                 lldb::addr_t pc, llvm::MCInst &mc_inst, uint64_t &size) const;
   void PrintMCInst(llvm::MCInst &mc_inst, lldb::addr_t pc,
                    std::string &inst_string, std::string &comments_string);
   void SetStyle(bool use_hex_immed, HexImmediateStyle hex_style);
@@ -531,7 +529,7 @@ public:
           const addr_t pc = m_address.GetFileAddress();
           llvm::MCInst inst;
 
-          size_t inst_size = 0;
+          uint64_t inst_size = 0;
           m_is_valid = mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len,
                                                 pc, inst, inst_size);
           m_opcode.Clear();
@@ -614,7 +612,7 @@ public:
         const uint8_t *opcode_data = data.GetDataStart();
         const size_t opcode_data_len = data.GetByteSize();
         llvm::MCInst inst;
-        size_t inst_size = 0;
+        uint64_t inst_size = 0;
         bool valid = mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc,
                                               inst, inst_size);
 
@@ -1217,7 +1215,7 @@ protected:
     const uint8_t *opcode_data = data.GetDataStart();
     const size_t opcode_data_len = data.GetByteSize();
     llvm::MCInst inst;
-    size_t inst_size = 0;
+    uint64_t inst_size = 0;
     const bool valid = mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len,
                                                 pc, inst, inst_size);
     if (!valid)
@@ -1353,7 +1351,7 @@ bool DisassemblerLLVMC::MCDisasmInstance::GetMCInst(const uint8_t *opcode_data,
                                                     size_t opcode_data_len,
                                                     lldb::addr_t pc,
                                                     llvm::MCInst &mc_inst,
-                                                    size_t &size) const {
+                                                    uint64_t &size) const {
   llvm::ArrayRef<uint8_t> data(opcode_data, opcode_data_len);
   llvm::MCDisassembler::DecodeStatus status;
 

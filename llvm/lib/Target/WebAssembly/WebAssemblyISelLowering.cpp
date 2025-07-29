@@ -46,6 +46,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     : TargetLowering(TM), Subtarget(&STI) {
   auto MVTPtr = Subtarget->hasAddr64() ? MVT::i64 : MVT::i32;
 
+  // Set the load count for memcmp expand optimization
+  MaxLoadsPerMemcmp = 8;
+  MaxLoadsPerMemcmpOptSize = 4;
+
   // Booleans always contain 0 or 1.
   setBooleanContents(ZeroOrOneBooleanContent);
   // Except in SIMD vectors
@@ -284,7 +288,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     // Expand float operations supported for scalars but not SIMD
     for (auto Op : {ISD::FCOPYSIGN, ISD::FLOG, ISD::FLOG2, ISD::FLOG10,
-                    ISD::FEXP, ISD::FEXP2})
+                    ISD::FEXP, ISD::FEXP2, ISD::FEXP10})
       for (auto T : {MVT::v4f32, MVT::v2f64})
         setOperationAction(Op, T, Expand);
 
@@ -794,6 +798,7 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
 
   if (IsIndirect) {
     // Placeholder for the type index.
+    // This gets replaced with the correct value in WebAssemblyMCInstLower.cpp
     MIB.addImm(0);
     // The table into which this call_indirect indexes.
     MCSymbolWasm *Table = IsFuncrefCall
@@ -2935,6 +2940,25 @@ performVectorExtendToFPCombine(SDNode *N,
 }
 
 static SDValue
+performVectorNonNegToFPCombine(SDNode *N,
+                               TargetLowering::DAGCombinerInfo &DCI) {
+  auto &DAG = DCI.DAG;
+
+  SDNodeFlags Flags = N->getFlags();
+  SDValue Op0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  // Optimize uitofp to sitofp when the sign bit is known to be zero.
+  // Depending on the target (runtime) backend, this might be performance
+  // neutral (e.g. AArch64) or a significant improvement (e.g. x86_64).
+  if (VT.isVector() && (Flags.hasNonNeg() || DAG.SignBitIsZero(Op0))) {
+    return DAG.getNode(ISD::SINT_TO_FP, SDLoc(N), VT, Op0);
+  }
+
+  return SDValue();
+}
+
+static SDValue
 performVectorExtendCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   auto &DAG = DCI.DAG;
   assert(N->getOpcode() == ISD::SIGN_EXTEND ||
@@ -3412,8 +3436,7 @@ static SDValue performSETCCCombine(SDNode *N,
   return SDValue();
 }
 
-static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG) {
-  assert(N->getOpcode() == ISD::MUL);
+static SDValue TryWideExtMulCombine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   if (VT != MVT::v8i32 && VT != MVT::v16i32)
     return SDValue();
@@ -3499,6 +3522,46 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+static SDValue performMulCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI) {
+  assert(N->getOpcode() == ISD::MUL);
+  EVT VT = N->getValueType(0);
+  if (!VT.isVector())
+    return SDValue();
+
+  if (auto Res = TryWideExtMulCombine(N, DCI.DAG))
+    return Res;
+
+  // We don't natively support v16i8 mul, but we do support v8i16 so split the
+  // inputs and extend them to v8i16. Only do this before legalization in case
+  // a narrow vector is widened and may be simplified later.
+  if (!DCI.isBeforeLegalize() || VT != MVT::v16i8)
+    return SDValue();
+
+  SDLoc DL(N);
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDValue LowLHS =
+      DAG.getNode(WebAssemblyISD::EXTEND_LOW_U, DL, MVT::v8i16, LHS);
+  SDValue HighLHS =
+      DAG.getNode(WebAssemblyISD::EXTEND_HIGH_U, DL, MVT::v8i16, LHS);
+  SDValue LowRHS =
+      DAG.getNode(WebAssemblyISD::EXTEND_LOW_U, DL, MVT::v8i16, RHS);
+  SDValue HighRHS =
+      DAG.getNode(WebAssemblyISD::EXTEND_HIGH_U, DL, MVT::v8i16, RHS);
+
+  SDValue MulLow =
+      DAG.getBitcast(VT, DAG.getNode(ISD::MUL, DL, MVT::v8i16, LowLHS, LowRHS));
+  SDValue MulHigh = DAG.getBitcast(
+      VT, DAG.getNode(ISD::MUL, DL, MVT::v8i16, HighLHS, HighRHS));
+
+  // Take the low byte of each lane.
+  return DAG.getVectorShuffle(
+      VT, DL, MulLow, MulHigh,
+      {0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30});
+}
+
 SDValue
 WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
@@ -3515,6 +3578,9 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ZERO_EXTEND:
     return performVectorExtendCombine(N, DCI);
   case ISD::UINT_TO_FP:
+    if (auto ExtCombine = performVectorExtendToFPCombine(N, DCI))
+      return ExtCombine;
+    return performVectorNonNegToFPCombine(N, DCI);
   case ISD::SINT_TO_FP:
     return performVectorExtendToFPCombine(N, DCI);
   case ISD::FP_TO_SINT_SAT:
@@ -3530,6 +3596,6 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
     return performLowerPartialReduction(N, DCI.DAG);
   }
   case ISD::MUL:
-    return performMulCombine(N, DCI.DAG);
+    return performMulCombine(N, DCI);
   }
 }

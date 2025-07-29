@@ -460,6 +460,17 @@ mlir::LogicalResult CIRToLLVMAssumeOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMAssumeSepStorageOpLowering::matchAndRewrite(
+    cir::AssumeSepStorageOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto cond = rewriter.create<mlir::LLVM::ConstantOp>(op.getLoc(),
+                                                      rewriter.getI1Type(), 1);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(
+      op, cond, mlir::LLVM::AssumeSeparateStorageTag{}, adaptor.getPtr1(),
+      adaptor.getPtr2());
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMBitClrsbOpLowering::matchAndRewrite(
     cir::BitClrsbOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -507,6 +518,32 @@ mlir::LogicalResult CIRToLLVMBitCtzOpLowering::matchAndRewrite(
   auto llvmOp = rewriter.create<mlir::LLVM::CountTrailingZerosOp>(
       op.getLoc(), resTy, adaptor.getInput(), op.getPoisonZero());
   rewriter.replaceOp(op, llvmOp);
+  return mlir::LogicalResult::success();
+}
+
+mlir::LogicalResult CIRToLLVMBitFfsOpLowering::matchAndRewrite(
+    cir::BitFfsOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto resTy = getTypeConverter()->convertType(op.getType());
+  auto ctz = rewriter.create<mlir::LLVM::CountTrailingZerosOp>(
+      op.getLoc(), resTy, adaptor.getInput(), /*is_zero_poison=*/true);
+
+  auto one = rewriter.create<mlir::LLVM::ConstantOp>(op.getLoc(), resTy, 1);
+  auto ctzAddOne = rewriter.create<mlir::LLVM::AddOp>(op.getLoc(), ctz, one);
+
+  auto zeroInputTy = rewriter.create<mlir::LLVM::ConstantOp>(
+      op.getLoc(), adaptor.getInput().getType(), 0);
+  auto isZero = rewriter.create<mlir::LLVM::ICmpOp>(
+      op.getLoc(),
+      mlir::LLVM::ICmpPredicateAttr::get(rewriter.getContext(),
+                                         mlir::LLVM::ICmpPredicate::eq),
+      adaptor.getInput(), zeroInputTy);
+
+  auto zero = rewriter.create<mlir::LLVM::ConstantOp>(op.getLoc(), resTy, 0);
+  auto res = rewriter.create<mlir::LLVM::SelectOp>(op.getLoc(), isZero, zero,
+                                                   ctzAddOne);
+  rewriter.replaceOp(op, res);
+
   return mlir::LogicalResult::success();
 }
 
@@ -872,6 +909,21 @@ mlir::LogicalResult CIRToLLVMReturnOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
+mlir::LogicalResult CIRToLLVMRotateOpLowering::matchAndRewrite(
+    cir::RotateOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  // Note that LLVM intrinsic calls to @llvm.fsh{r,l}.i* have the same type as
+  // the operand.
+  mlir::Value input = adaptor.getInput();
+  if (op.isRotateLeft())
+    rewriter.replaceOpWithNewOp<mlir::LLVM::FshlOp>(op, input, input,
+                                                    adaptor.getAmount());
+  else
+    rewriter.replaceOpWithNewOp<mlir::LLVM::FshrOp>(op, input, input,
+                                                    adaptor.getAmount());
+  return mlir::LogicalResult::success();
+}
+
 static mlir::LogicalResult
 rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
                     mlir::ConversionPatternRewriter &rewriter,
@@ -1000,6 +1052,12 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     cir::ConstantOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Attribute attr = op.getValue();
+
+  if (mlir::isa<cir::PoisonAttr>(attr)) {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::PoisonOp>(
+        op, getTypeConverter()->convertType(op.getType()));
+    return mlir::success();
+  }
 
   if (mlir::isa<mlir::IntegerType>(op.getType())) {
     // Verified cir.const operations cannot actually be of these types, but the
@@ -2051,11 +2109,13 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   patterns.add<
       // clang-format off
                CIRToLLVMAssumeOpLowering,
+               CIRToLLVMAssumeSepStorageOpLowering,
                CIRToLLVMBaseClassAddrOpLowering,
                CIRToLLVMBinOpLowering,
                CIRToLLVMBitClrsbOpLowering,
                CIRToLLVMBitClzOpLowering,
                CIRToLLVMBitCtzOpLowering,
+               CIRToLLVMBitFfsOpLowering,
                CIRToLLVMBitParityOpLowering,
                CIRToLLVMBitPopcountOpLowering,
                CIRToLLVMBitReverseOpLowering,
@@ -2077,6 +2137,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMGetBitfieldOpLowering,
                CIRToLLVMGetGlobalOpLowering,
                CIRToLLVMGetMemberOpLowering,
+               CIRToLLVMRotateOpLowering,
                CIRToLLVMSelectOpLowering,
                CIRToLLVMSetBitfieldOpLowering,
                CIRToLLVMShiftOpLowering,
@@ -2555,7 +2616,7 @@ mlir::LogicalResult CIRToLLVMSetBitfieldOpLowering::matchAndRewrite(
     assert(storageSize > size && "Invalid bitfield size.");
 
     mlir::Value val = rewriter.create<mlir::LLVM::LoadOp>(
-        op.getLoc(), intType, adaptor.getAddr(), /* alignment */ 0,
+        op.getLoc(), intType, adaptor.getAddr(), op.getAlignment(),
         op.getIsVolatile());
 
     srcVal =
@@ -2572,7 +2633,7 @@ mlir::LogicalResult CIRToLLVMSetBitfieldOpLowering::matchAndRewrite(
   }
 
   rewriter.create<mlir::LLVM::StoreOp>(op.getLoc(), srcVal, adaptor.getAddr(),
-                                       /* alignment */ 0, op.getIsVolatile());
+                                       op.getAlignment(), op.getIsVolatile());
 
   mlir::Type resultTy = getTypeConverter()->convertType(op.getType());
 
@@ -2646,7 +2707,8 @@ mlir::LogicalResult CIRToLLVMGetBitfieldOpLowering::matchAndRewrite(
       computeBitfieldIntType(storageType, context, storageSize);
 
   mlir::Value val = rewriter.create<mlir::LLVM::LoadOp>(
-      op.getLoc(), intType, adaptor.getAddr(), 0, op.getIsVolatile());
+      op.getLoc(), intType, adaptor.getAddr(), op.getAlignment(),
+      op.getIsVolatile());
   val = rewriter.create<mlir::LLVM::BitcastOp>(op.getLoc(), intType, val);
 
   if (info.getIsSigned()) {

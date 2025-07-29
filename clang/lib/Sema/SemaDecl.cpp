@@ -3267,6 +3267,14 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
     if (isa<UsedAttr>(I) || isa<RetainAttr>(I))
       continue;
 
+    if (isa<InferredNoReturnAttr>(I)) {
+      if (auto *FD = dyn_cast<FunctionDecl>(New)) {
+        if (FD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
+          continue; // Don't propagate inferred noreturn attributes to explicit
+                    // specializations.
+      }
+    }
+
     if (mergeDeclAttribute(*this, New, I, LocalAMK))
       foundAny = true;
   }
@@ -8059,7 +8067,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     NewVD->setInvalidDecl();
 
   // Handle GNU asm-label extension (encoded as an attribute).
-  if (Expr *E = (Expr*)D.getAsmLabel()) {
+  if (Expr *E = D.getAsmLabel()) {
     // The parser guarantees this is a string.
     StringLiteral *SE = cast<StringLiteral>(E);
     StringRef Label = SE->getString();
@@ -10333,7 +10341,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                        isFunctionTemplateSpecialization);
 
   // Handle GNU asm-label extension (encoded as an attribute).
-  if (Expr *E = (Expr*) D.getAsmLabel()) {
+  if (Expr *E = D.getAsmLabel()) {
     // The parser guarantees this is a string.
     StringLiteral *SE = cast<StringLiteral>(E);
     NewFD->addAttr(AsmLabelAttr::Create(Context, SE->getString(),
@@ -18476,6 +18484,10 @@ CreateNewDecl:
   // record.
   AddPushedVisibilityAttribute(New);
 
+  // If this is not a definition, process API notes for it now.
+  if (TUK != TagUseKind::Definition)
+    ProcessAPINotes(New);
+
   if (isMemberSpecialization && !New->isInvalidDecl())
     CompleteMemberSpecialization(New, Previous);
 
@@ -20569,7 +20581,8 @@ TopLevelStmtDecl *Sema::ActOnStartTopLevelStmtDecl(Scope *S) {
 }
 
 void Sema::ActOnFinishTopLevelStmtDecl(TopLevelStmtDecl *D, Stmt *Statement) {
-  D->setStmt(Statement);
+  if (Statement)
+    D->setStmt(Statement);
   PopCompoundScope();
   PopFunctionScopeInfo();
   PopDeclContext();

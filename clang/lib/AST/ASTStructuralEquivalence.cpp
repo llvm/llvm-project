@@ -598,9 +598,6 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   case NestedNameSpecifier::Namespace:
     return IsStructurallyEquivalent(Context, NNS1->getAsNamespace(),
                                     NNS2->getAsNamespace());
-  case NestedNameSpecifier::NamespaceAlias:
-    return IsStructurallyEquivalent(Context, NNS1->getAsNamespaceAlias(),
-                                    NNS2->getAsNamespaceAlias());
   case NestedNameSpecifier::TypeSpec:
     return IsStructurallyEquivalent(Context, QualType(NNS1->getAsType(), 0),
                                     QualType(NNS2->getAsType(), 0));
@@ -873,7 +870,29 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     else if (T1->getTypeClass() == Type::FunctionNoProto &&
              T2->getTypeClass() == Type::FunctionProto)
       TC = Type::FunctionNoProto;
-    else
+    else if (Context.LangOpts.C23 && !Context.StrictTypeSpelling &&
+             (T1->getTypeClass() == Type::Enum ||
+              T2->getTypeClass() == Type::Enum)) {
+      // In C23, if not being strict about token equivalence, we need to handle
+      // the case where one type is an enumeration and the other type is an
+      // integral type.
+      //
+      // C23 6.7.3.3p16: The enumerated type is compatible with the underlying
+      // type of the enumeration.
+      //
+      // Treat the enumeration as its underlying type and use the builtin type
+      // class comparison.
+      if (T1->getTypeClass() == Type::Enum) {
+        T1 = T1->getAs<EnumType>()->getDecl()->getIntegerType();
+        if (!T2->isBuiltinType() || T1.isNull()) // Sanity check
+          return false;
+      } else if (T2->getTypeClass() == Type::Enum) {
+        T2 = T2->getAs<EnumType>()->getDecl()->getIntegerType();
+        if (!T1->isBuiltinType() || T2.isNull()) // Sanity check
+          return false;
+      }
+      TC = Type::Builtin;
+    } else
       return false;
   }
 
@@ -1477,6 +1496,13 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (Int1->isUnsigned() != Int2->isUnsigned() ||
         !IsStructurallyEquivalent(Context, Int1->getNumBitsExpr(),
                                   Int2->getNumBitsExpr()))
+      return false;
+    break;
+  }
+  case Type::PredefinedSugar: {
+    const auto *TP1 = cast<PredefinedSugarType>(T1);
+    const auto *TP2 = cast<PredefinedSugarType>(T2);
+    if (TP1->getKind() != TP2->getKind())
       return false;
     break;
   }

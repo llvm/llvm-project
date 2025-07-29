@@ -119,6 +119,11 @@ struct True16D16Info {
   unsigned LoOp;
 };
 
+struct WMMAInstInfo {
+  uint16_t Opcode;
+  bool is_wmma_xdl;
+};
+
 #define GET_MIMGBaseOpcode_DECL
 #define GET_MIMGDim_DECL
 #define GET_MIMGEncoding_DECL
@@ -129,6 +134,7 @@ struct True16D16Info {
 #define GET_isMFMA_F8F6F4Table_DECL
 #define GET_isCvtScaleF32_F32F16ToF8F4Table_DECL
 #define GET_True16D16Table_DECL
+#define GET_WMMAInstInfoTable_DECL
 #include "AMDGPUGenSearchableTables.inc"
 
 namespace IsaInfo {
@@ -593,6 +599,9 @@ bool getMAIIsDGEMM(unsigned Opc);
 LLVM_READONLY
 bool getMAIIsGFX940XDL(unsigned Opc);
 
+LLVM_READONLY
+bool getWMMAIsXDL(unsigned Opc);
+
 // Get an equivalent BitOp3 for a binary logical \p Opc.
 // \returns BitOp3 modifier for the logical operation or zero.
 // Used in VOPD3 conversion.
@@ -616,6 +625,14 @@ uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal);
 LLVM_READONLY
 const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
                                                       unsigned BLGP,
+                                                      unsigned F8F8Opcode);
+
+LLVM_READNONE
+uint8_t wmmaScaleF8F6F4FormatToNumRegs(unsigned Fmt);
+
+LLVM_READONLY
+const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
+                                                      unsigned FmtB,
                                                       unsigned F8F8Opcode);
 
 LLVM_READONLY
@@ -1414,7 +1431,8 @@ constexpr bool isShader(CallingConv::ID CC) {
 
 LLVM_READNONE
 constexpr bool isGraphics(CallingConv::ID CC) {
-  return isShader(CC) || CC == CallingConv::AMDGPU_Gfx;
+  return isShader(CC) || CC == CallingConv::AMDGPU_Gfx ||
+         CC == CallingConv::AMDGPU_Gfx_WholeWave;
 }
 
 LLVM_READNONE
@@ -1738,6 +1756,9 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 
 /// \returns true if the intrinsic is uniform
 bool isIntrinsicAlwaysUniform(unsigned IntrID);
+
+/// \returns true if a memory instruction supports scale_offset modifier.
+bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);
 
 /// \returns lds block size in terms of dwords. \p
 /// This is used to calculate the lds size encoded for PAL metadata 3.0+ which

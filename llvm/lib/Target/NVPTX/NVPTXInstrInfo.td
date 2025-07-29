@@ -131,6 +131,7 @@ def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
 def hasDotInstructions : Predicate<"Subtarget->hasDotInstructions()">;
 def hasTcgen05Instructions : Predicate<"Subtarget->hasTcgen05Instructions()">;
+def hasTMACTAGroupSupport  : Predicate<"Subtarget->hasCpAsyncBulkTensorCTAGroupSupport()">;
 def hasF32x2Instructions : Predicate<"Subtarget->hasF32x2Instructions()">;
 
 class hasPTX<int version>: Predicate<"Subtarget->getPTXVersion() >= " # version>;
@@ -1233,7 +1234,7 @@ defm FMA_F32    : FMA<F32RT,    allow_ftz = true>;
 defm FMA_F32x2  : FMA<F32X2RT,  allow_ftz = true, preds = [hasF32x2Instructions]>;
 defm FMA_F64    : FMA<F64RT,    allow_ftz = false>;
 
-// sin/cos
+// sin/cos/tanh
 
 class UnaryOpAllowsApproxFn<SDPatternOperator operator>
     : PatFrag<(ops node:$A),
@@ -1249,6 +1250,10 @@ def COS_APPROX_f32 :
   BasicFlagsNVPTXInst<(outs B32:$dst), (ins B32:$src), (ins FTZFlag:$ftz),
                       "cos.approx$ftz.f32",
                       [(set f32:$dst, (UnaryOpAllowsApproxFn<fcos> f32:$src))]>;
+def TANH_APPROX_f32 :
+  BasicNVPTXInst<(outs B32:$dst), (ins B32:$src), "tanh.approx.f32",
+                 [(set f32:$dst, (UnaryOpAllowsApproxFn<ftanh> f32:$src))]>,
+                 Requires<[hasPTX<70>, hasSM<75>]>;
 
 //-----------------------------------
 // Bitwise operations
@@ -1453,18 +1458,33 @@ let hasSideEffects = false in {
                 (ins PrmtMode:$mode),
                 "prmt.b32$mode",
                 [(set i32:$d, (prmt i32:$a, i32:$b, imm:$c, imm:$mode))]>;
+  def PRMT_B32rir
+  : BasicFlagsNVPTXInst<(outs B32:$d),
+              (ins B32:$a, i32imm:$b, B32:$c),
+              (ins PrmtMode:$mode),
+              "prmt.b32$mode",
+              [(set i32:$d, (prmt i32:$a, imm:$b, i32:$c, imm:$mode))]>;
   def PRMT_B32rii
     : BasicFlagsNVPTXInst<(outs B32:$d),
                 (ins B32:$a, i32imm:$b, Hexu32imm:$c),
                 (ins PrmtMode:$mode),
                 "prmt.b32$mode",
                 [(set i32:$d, (prmt i32:$a, imm:$b, imm:$c, imm:$mode))]>;
-  def PRMT_B32rir
+  def PRMT_B32irr
     : BasicFlagsNVPTXInst<(outs B32:$d),
-                (ins B32:$a, i32imm:$b, B32:$c),
-                (ins PrmtMode:$mode),
+                (ins i32imm:$a, B32:$b, B32:$c), (ins PrmtMode:$mode),
                 "prmt.b32$mode",
-                [(set i32:$d, (prmt i32:$a, imm:$b, i32:$c, imm:$mode))]>;
+                [(set i32:$d, (prmt imm:$a, i32:$b, i32:$c, imm:$mode))]>;
+  def PRMT_B32iri
+    : BasicFlagsNVPTXInst<(outs B32:$d),
+                (ins i32imm:$a, B32:$b, Hexu32imm:$c), (ins PrmtMode:$mode),
+                "prmt.b32$mode",
+                [(set i32:$d, (prmt imm:$a, i32:$b, imm:$c, imm:$mode))]>;
+  def PRMT_B32iir
+    : BasicFlagsNVPTXInst<(outs B32:$d),
+                (ins i32imm:$a, i32imm:$b, B32:$c), (ins PrmtMode:$mode),
+                "prmt.b32$mode",
+                [(set i32:$d, (prmt imm:$a, imm:$b, i32:$c, imm:$mode))]>;
 
 }
 
@@ -1608,8 +1628,8 @@ def ADDR : Operand<pAny> {
   let MIOperandInfo = (ops ADDR_base, i32imm);
 }
 
-def LdStCode : Operand<i32> {
-  let PrintMethod = "printLdStCode";
+def AtomicCode : Operand<i32> {
+  let PrintMethod = "printAtomicCode";
 }
 
 def MmaCode : Operand<i32> {
@@ -1737,12 +1757,6 @@ def SDTDeclareArrayParam :
   SDTypeProfile<0, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisVT<2, i32>]>;
 def SDTDeclareScalarParam :
   SDTypeProfile<0, 2, [SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
-def SDTLoadParamProfile : SDTypeProfile<1, 2, [SDTCisInt<1>, SDTCisInt<2>]>;
-def SDTLoadParamV2Profile : SDTypeProfile<2, 2, [SDTCisSameAs<0, 1>, SDTCisInt<2>, SDTCisInt<3>]>;
-def SDTLoadParamV4Profile : SDTypeProfile<4, 2, [SDTCisInt<4>, SDTCisInt<5>]>;
-def SDTStoreParamProfile : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>]>;
-def SDTStoreParamV2Profile : SDTypeProfile<0, 4, [SDTCisInt<0>, SDTCisInt<1>]>;
-def SDTStoreParamV4Profile : SDTypeProfile<0, 6, [SDTCisInt<0>, SDTCisInt<1>]>;
 def SDTMoveParamProfile : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisSameAs<0, 1>]>;
 
 def SDTProxyReg : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>]>;
@@ -1754,104 +1768,20 @@ def declare_array_param :
 def declare_scalar_param :
   SDNode<"NVPTXISD::DeclareScalarParam", SDTDeclareScalarParam,
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-
-def LoadParam :
-  SDNode<"NVPTXISD::LoadParam", SDTLoadParamProfile,
-         [SDNPHasChain, SDNPMayLoad, SDNPOutGlue, SDNPInGlue]>;
-def LoadParamV2 :
-  SDNode<"NVPTXISD::LoadParamV2", SDTLoadParamV2Profile,
-         [SDNPHasChain, SDNPMayLoad, SDNPOutGlue, SDNPInGlue]>;
-def LoadParamV4 :
-  SDNode<"NVPTXISD::LoadParamV4", SDTLoadParamV4Profile,
-         [SDNPHasChain, SDNPMayLoad, SDNPOutGlue, SDNPInGlue]>;
-def StoreParam :
-  SDNode<"NVPTXISD::StoreParam", SDTStoreParamProfile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def StoreParamV2 :
-  SDNode<"NVPTXISD::StoreParamV2", SDTStoreParamV2Profile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def StoreParamV4 :
-  SDNode<"NVPTXISD::StoreParamV4", SDTStoreParamV4Profile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
 def MoveParam :
   SDNode<"NVPTXISD::MoveParam", SDTMoveParamProfile, []>;
 def proxy_reg :
   SDNode<"NVPTXISD::ProxyReg", SDTProxyReg, [SDNPHasChain]>;
 
   /// CALL(Chain, IsConvergent, IsIndirectCall/IsUniform, NumReturns,
-  ///      NumParams, Callee, Proto, InGlue)
+  ///      NumParams, Callee, Proto)
 def SDTCallProfile : SDTypeProfile<0, 6,
                        [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisVT<2, i32>,
                         SDTCisVT<3, i32>, SDTCisVT<5, i32>]>;
-def call :
-  SDNode<"NVPTXISD::CALL", SDTCallProfile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-
-let mayLoad = true in {
-  class LoadParamMemInst<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs regclass:$dst), (ins Offseti32imm:$b),
-                  !strconcat("ld.param", opstr, " \t$dst, [retval0$b];"),
-                  []>;
-
-  class LoadParamV2MemInst<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs regclass:$dst, regclass:$dst2), (ins Offseti32imm:$b),
-                  !strconcat("ld.param.v2", opstr,
-                             " \t{{$dst, $dst2}}, [retval0$b];"), []>;
-
-  class LoadParamV4MemInst<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs regclass:$dst, regclass:$dst2, regclass:$dst3,
-                        regclass:$dst4),
-                  (ins Offseti32imm:$b),
-                  !strconcat("ld.param.v4", opstr,
-                             " \t{{$dst, $dst2, $dst3, $dst4}}, [retval0$b];"),
-                  []>;
-}
-
-let mayStore = true in {
-
-  multiclass StoreParamInst<NVPTXRegClass regclass, Operand IMMType, string opstr, bit support_imm = true> {
-    foreach op = [IMMType, regclass] in
-      if !or(support_imm, !isa<NVPTXRegClass>(op)) then
-        def _ # !if(!isa<NVPTXRegClass>(op), "r", "i")
-          : NVPTXInst<(outs),
-                      (ins op:$val, i32imm:$a, Offseti32imm:$b),
-                      "st.param" # opstr # " \t[param$a$b], $val;",
-                      []>;
-  }
-
-  multiclass StoreParamV2Inst<NVPTXRegClass regclass, Operand IMMType, string opstr> {
-    foreach op1 = [IMMType, regclass] in
-      foreach op2 = [IMMType, regclass] in
-        def _ # !if(!isa<NVPTXRegClass>(op1), "r", "i")
-              # !if(!isa<NVPTXRegClass>(op2), "r", "i")
-          : NVPTXInst<(outs),
-                      (ins op1:$val1, op2:$val2,
-                           i32imm:$a, Offseti32imm:$b),
-                      "st.param.v2" # opstr # " \t[param$a$b], {{$val1, $val2}};",
-                      []>;
-  }
-
-  multiclass StoreParamV4Inst<NVPTXRegClass regclass, Operand IMMType, string opstr> {
-    foreach op1 = [IMMType, regclass] in
-      foreach op2 = [IMMType, regclass] in
-        foreach op3 = [IMMType, regclass] in
-          foreach op4 = [IMMType, regclass] in
-            def _ # !if(!isa<NVPTXRegClass>(op1), "r", "i")
-                  # !if(!isa<NVPTXRegClass>(op2), "r", "i")
-                  # !if(!isa<NVPTXRegClass>(op3), "r", "i")
-                  # !if(!isa<NVPTXRegClass>(op4), "r", "i")
-
-              : NVPTXInst<(outs),
-                          (ins op1:$val1, op2:$val2, op3:$val3, op4:$val4,
-                               i32imm:$a, Offseti32imm:$b),
-                          "st.param.v4" # opstr #
-                          " \t[param$a$b], {{$val1, $val2, $val3, $val4}};",
-                          []>;
-  }
-}
+def call : SDNode<"NVPTXISD::CALL", SDTCallProfile, [SDNPHasChain, SDNPSideEffect]>;
 
 /// CALL(Chain, IsConvergent, IsIndirectCall/IsUniform, NumReturns,
-///      NumParams, Callee, Proto, InGlue)
+///      NumParams, Callee, Proto)
 
 def CallOperand : Operand<i32> { let PrintMethod = "printCallOperand"; }
 
@@ -1887,43 +1817,6 @@ foreach is_convergent = [0, 1] in {
   def : Pat<(call is_convergent, 0, imm:$rets, imm:$params, i64:$addr, 0),
             (call_uni_inst $addr, imm:$rets, imm:$params)>;
 }
-
-def LoadParamMemI64    : LoadParamMemInst<B64, ".b64">;
-def LoadParamMemI32    : LoadParamMemInst<B32, ".b32">;
-def LoadParamMemI16    : LoadParamMemInst<B16, ".b16">;
-def LoadParamMemI8     : LoadParamMemInst<B16, ".b8">;
-def LoadParamMemV2I64  : LoadParamV2MemInst<B64, ".b64">;
-def LoadParamMemV2I32  : LoadParamV2MemInst<B32, ".b32">;
-def LoadParamMemV2I16  : LoadParamV2MemInst<B16, ".b16">;
-def LoadParamMemV2I8   : LoadParamV2MemInst<B16, ".b8">;
-def LoadParamMemV4I32  : LoadParamV4MemInst<B32, ".b32">;
-def LoadParamMemV4I16  : LoadParamV4MemInst<B16, ".b16">;
-def LoadParamMemV4I8   : LoadParamV4MemInst<B16, ".b8">;
-
-defm StoreParamI64    : StoreParamInst<B64, i64imm, ".b64">;
-defm StoreParamI32    : StoreParamInst<B32, i32imm, ".b32">;
-defm StoreParamI16    : StoreParamInst<B16, i16imm, ".b16">;
-defm StoreParamI8     : StoreParamInst<B16, i8imm,  ".b8">;
-
-defm StoreParamI8TruncI32 : StoreParamInst<B32, i8imm, ".b8", /* support_imm */ false>;
-defm StoreParamI8TruncI64 : StoreParamInst<B64, i8imm, ".b8", /* support_imm */ false>;
-
-defm StoreParamV2I64  : StoreParamV2Inst<B64, i64imm, ".b64">;
-defm StoreParamV2I32  : StoreParamV2Inst<B32, i32imm, ".b32">;
-defm StoreParamV2I16  : StoreParamV2Inst<B16, i16imm, ".b16">;
-defm StoreParamV2I8   : StoreParamV2Inst<B16, i8imm,  ".b8">;
-
-defm StoreParamV4I32  : StoreParamV4Inst<B32, i32imm, ".b32">;
-defm StoreParamV4I16  : StoreParamV4Inst<B16, i16imm, ".b16">;
-defm StoreParamV4I8   : StoreParamV4Inst<B16, i8imm,  ".b8">;
-
-defm StoreParamF32    : StoreParamInst<B32, f32imm, ".b32">;
-defm StoreParamF64    : StoreParamInst<B64, f64imm, ".b64">;
-
-defm StoreParamV2F32  : StoreParamV2Inst<B32, f32imm, ".b32">;
-defm StoreParamV2F64  : StoreParamV2Inst<B64, f64imm, ".b64">;
-
-defm StoreParamV4F32  : StoreParamV4Inst<B32, f32imm, ".b32">;
 
 def DECLARE_PARAM_array :
   NVPTXInst<(outs), (ins i32imm:$a, i32imm:$align, i32imm:$size),
@@ -1962,7 +1855,7 @@ defm ProxyRegB64 : ProxyRegInst<"b64",  B64>;
 class LD<NVPTXRegClass regclass>
   : NVPTXInst<
     (outs regclass:$dst),
-    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Sign,
+    (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp, AtomicCode:$Sign,
          i32imm:$fromWidth, ADDR:$addr),
     "ld${sem:sem}${scope:scope}${addsp:addsp}.${Sign:sign}$fromWidth "
     "\t$dst, [$addr];", []>;
@@ -1978,7 +1871,7 @@ class ST<DAGOperand O>
   : NVPTXInst<
     (outs),
     (ins O:$src,
-         LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, i32imm:$toWidth,
+         AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp, i32imm:$toWidth,
          ADDR:$addr),
     "st${sem:sem}${scope:scope}${addsp:addsp}.b$toWidth"
     " \t[$addr], $src;", []>;
@@ -1996,21 +1889,21 @@ let mayStore=1, hasSideEffects=0 in {
 multiclass LD_VEC<NVPTXRegClass regclass, bit support_v8 = false> {
   def _v2 : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2),
-    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp,
-         LdStCode:$Sign, i32imm:$fromWidth, ADDR:$addr),
+    (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
+         AtomicCode:$Sign, i32imm:$fromWidth, ADDR:$addr),
     "ld${sem:sem}${scope:scope}${addsp:addsp}.v2.${Sign:sign}$fromWidth "
     "\t{{$dst1, $dst2}}, [$addr];", []>;
   def _v4 : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4),
-    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp,
-         LdStCode:$Sign, i32imm:$fromWidth, ADDR:$addr),
+    (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
+         AtomicCode:$Sign, i32imm:$fromWidth, ADDR:$addr),
     "ld${sem:sem}${scope:scope}${addsp:addsp}.v4.${Sign:sign}$fromWidth "
     "\t{{$dst1, $dst2, $dst3, $dst4}}, [$addr];", []>;
   if support_v8 then
     def _v8 : NVPTXInst<
       (outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4,
             regclass:$dst5, regclass:$dst6, regclass:$dst7, regclass:$dst8),
-      (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Sign,
+      (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp, AtomicCode:$Sign,
            i32imm:$fromWidth, ADDR:$addr),
       "ld${sem:sem}${scope:scope}${addsp:addsp}.v8.${Sign:sign}$fromWidth "
       "\t{{$dst1, $dst2, $dst3, $dst4, $dst5, $dst6, $dst7, $dst8}}, "
@@ -2027,14 +1920,14 @@ multiclass ST_VEC<DAGOperand O, bit support_v8 = false> {
   def _v2 : NVPTXInst<
     (outs),
     (ins O:$src1, O:$src2,
-         LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, i32imm:$fromWidth,
+         AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp, i32imm:$fromWidth,
          ADDR:$addr),
     "st${sem:sem}${scope:scope}${addsp:addsp}.v2.b$fromWidth "
     "\t[$addr], {{$src1, $src2}};", []>;
   def _v4 : NVPTXInst<
     (outs),
     (ins O:$src1, O:$src2, O:$src3, O:$src4,
-         LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, i32imm:$fromWidth,
+         AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp, i32imm:$fromWidth,
          ADDR:$addr),
     "st${sem:sem}${scope:scope}${addsp:addsp}.v4.b$fromWidth "
     "\t[$addr], {{$src1, $src2, $src3, $src4}};", []>;
@@ -2043,7 +1936,7 @@ multiclass ST_VEC<DAGOperand O, bit support_v8 = false> {
       (outs),
       (ins O:$src1, O:$src2, O:$src3, O:$src4,
            O:$src5, O:$src6, O:$src7, O:$src8,
-           LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, i32imm:$fromWidth, 
+           AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp, i32imm:$fromWidth,
            ADDR:$addr),
       "st${sem:sem}${scope:scope}${addsp:addsp}.v8.b$fromWidth "
       "\t[$addr], "
