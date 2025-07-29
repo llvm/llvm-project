@@ -689,16 +689,10 @@ struct DropPadUnitDims : public OpRewritePattern<tensor::PadOp> {
         collapseValue(rewriter, padOp.getLoc(), padOp.getSource(), newShape,
                       reassociationMap, options.rankReductionStrategy);
 
-<<<<<<< HEAD
-    auto newPadOp = tensor::PadOp::create(
-        rewriter, padOp.getLoc(), /*result=*/Type(), collapsedSource, newLowPad,
-=======
-    auto resultType = RankedTensorType::get(
-        newResultShape, padOp.getResultType().getElementType()); //,
-    //        padOp.getResultType().getEncoding());
+    auto newResultType = RankedTensorType::get(
+        newResultShape, padOp.getResultType().getElementType());
     auto newPadOp = rewriter.create<tensor::PadOp>(
-        padOp.getLoc(), /*result=*/resultType, collapsedSource, newLowPad,
->>>>>>> 617b335dec04 ([MLIR] Specify outputType in pad op unitDim drop)
+        padOp.getLoc(), /*result=*/newResultType, collapsedSource, newLowPad,
         newHighPad, paddingVal, padOp.getNofold());
 
     Value dest = padOp.getResult();

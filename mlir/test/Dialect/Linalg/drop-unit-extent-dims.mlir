@@ -1088,12 +1088,12 @@ func.func @drop_unit_dim_mixed_static_dynamic(%arg0: tensor<1x?xf32>) -> tensor<
 }
 // CHECK-LABEL: func @drop_unit_dim_mixed_static_dynamic
 //       CHECK:   %[[CST:.*]] = arith.constant 0.000000e+00 : f32
-//       CHECK:   %[[COLLAPSE:.+]] = tensor.collapse_shape 
+//       CHECK:   %[[COLLAPSE:.+]] = tensor.collapse_shape %[[ARGS:.*]] : tensor<1x?xf32> into tensor<?xf32>
 //       CHECK:   %[[PADDED:.*]] = tensor.pad %[[COLLAPSE]] low[1] high[0] {
 //       CHECK:   ^bb0(%[[IDX:.*]]: index):
 //       CHECK:     tensor.yield %[[CST]] : f32
 //       CHECK:   } : tensor<?xf32> to tensor<16xf32>
-//       CHECK:   %[[EXPANDED:.*]] = tensor.expand_shape %[[PADDED]]
+//       CHECK:   %[[EXPANDED:.*]] = tensor.expand_shape %[[PADDED]] {{\[\[}}0, 1]] output_shape [1, 16] : tensor<16xf32> into tensor<1x16xf32>
 //       CHECK:   return %[[EXPANDED]] : tensor<1x16xf32>
 
 // -----
