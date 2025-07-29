@@ -12,10 +12,10 @@ define i16 @use_carry_bit(i16 %2) {
 ; CHECK-NEXT:    andl $1, %ecx
 ; CHECK-NEXT:    cmovnew %di, %ax
 ; CHECK-NEXT:    retq
-  %4 = call { i16, i1 } @llvm.uadd.with.overflow.i16(i16 %2, i16 1)
-  %5 = extractvalue { i16, i1 } %4, 0
-  %6 = extractvalue { i16, i1 } %4, 1
-  %7 = select i1 %6, i16 %2, i16 %5
-  ret i16 %7
+  %uadd = call { i16, i1 } @llvm.uadd.with.overflow.i16(i16 %2, i16 1)
+  %res = extractvalue { i16, i1 } %uadd, 0
+  %carry = extractvalue { i16, i1 } %uadd, 1
+  %ret = select i1 %carry, i16 %2, i16 %res
+  ret i16 %ret
 }
 
