@@ -103,16 +103,8 @@ void MCXCOFFStreamer::emitXCOFFSymbolLinkageWithVisibility(
 void MCXCOFFStreamer::emitXCOFFRefDirective(const MCSymbol *Symbol) {
   // Add a Fixup here to later record a relocation of type R_REF to prevent the
   // ref symbol from being garbage collected (by the binder).
-  MCFragment *DF = getCurrentFragment();
-  const MCSymbolRefExpr *SRE = MCSymbolRefExpr::create(Symbol, getContext());
-  std::optional<MCFixupKind> MaybeKind =
-      getAssembler().getBackend().getFixupKind("R_REF");
-  if (!MaybeKind)
-    report_fatal_error("failed to get fixup kind for R_REF relocation");
-
-  MCFixupKind Kind = *MaybeKind;
-  MCFixup Fixup = MCFixup::create(DF->getContents().size(), SRE, Kind);
-  DF->addFixup(Fixup);
+  addFixup(MCSymbolRefExpr::create(Symbol, getContext()),
+           XCOFF::RelocationType::R_REF);
 }
 
 void MCXCOFFStreamer::emitXCOFFRenameDirective(const MCSymbol *Name,
