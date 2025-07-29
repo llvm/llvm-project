@@ -343,10 +343,10 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
                             ? static_cast<GCNRPTracker *>(&UpwardTracker)
                             : static_cast<GCNRPTracker *>(&DownwardTracker);
       SGPRPressure = T->getPressure().getSGPRNum();
-      VGPRPressure =
-          T->getPressure().getArchVGPRNum(DAG->MF.getSubtarget<GCNSubtarget>()
-                                              .getMaxNumVectorRegs(DAG->MF.getFunction())
-                                              .first);
+      VGPRPressure = T->getPressure().getArchVGPRNum(
+          DAG->MF.getSubtarget<GCNSubtarget>()
+              .getMaxNumVectorRegs(DAG->MF.getFunction())
+              .first);
     }
   }
   ReadyQueue &Q = Zone.Available;
@@ -1287,8 +1287,7 @@ void GCNSchedStage::checkScheduling() {
                     << print(PressureAfter, &ST, 0, &MF));
   LLVM_DEBUG(dbgs() << "Region: " << RegionIdx << ".\n");
 
-  unsigned ArchVGPRThreshold =
-      ST.getMaxNumVectorRegs(MF.getFunction()).first;
+  unsigned ArchVGPRThreshold = ST.getMaxNumVectorRegs(MF.getFunction()).first;
   if (PressureAfter.getSGPRNum() <= S.SGPRCriticalLimit &&
       PressureAfter.getVGPRNum(ST.hasGFX90AInsts(), ArchVGPRThreshold) <=
           S.VGPRCriticalLimit) {
@@ -1480,8 +1479,7 @@ bool GCNSchedStage::shouldRevertScheduling(unsigned WavesAfter) {
 
   // For dynamic VGPR mode, we don't want to waste any VGPR blocks.
   if (DAG.MFI.isDynamicVGPREnabled()) {
-    unsigned ArchVGPRThreshold =
-        ST.getMaxNumVectorRegs(MF.getFunction()).first;
+    unsigned ArchVGPRThreshold = ST.getMaxNumVectorRegs(MF.getFunction()).first;
     unsigned BlocksBefore = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
         &ST, DAG.MFI.getDynamicVGPRBlockSize(),
         PressureBefore.getVGPRNum(false, ArchVGPRThreshold));
