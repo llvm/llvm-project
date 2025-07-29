@@ -77,6 +77,8 @@ struct CVTagRecord {
       return CompilerContextKind::ClassOrStruct;
     if (m_kind == Enum)
       return CompilerContextKind::Enum;
+
+    assert(m_kind == Union);
     return CompilerContextKind::Union;
   }
 
