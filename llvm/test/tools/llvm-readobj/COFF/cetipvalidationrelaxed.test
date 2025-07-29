@@ -1,16 +1,18 @@
-# To regenerate has-cetipvalidationrelaxed.exe
-# $ echo int main() { return 0; } > has-cetipvalidationrelaxed.c
-# $ cl has-cetipvalidationrelaxed.c /link /cetipvalidationrelaxed
-RUN: llvm-readobj --coff-debug-directory %p/Inputs/has-cetipvalidationrelaxed.exe | FileCheck %s
+# To regenerate has-exdllcharacteristics.exe
+# $ echo int main() { return 0; } > has-exdllcharacteristics.c
+# To make minimum possible stub file (to decrease the binary size)
+# $ echo -n '4D5A00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000' | xxd -r -p > stub
+# $ cl has-exdllcharacteristics.c /entry:main /STUB:stub /NOCOFFGRPINFO /EMITTOOLVERSIONINFO:NO /EMITPOGOPHASEINFO /NOVCFEATURE /MANIFEST:NO /cetcompat /cetcompatstrict /cetdynamicapisinproc /cetipvalidationrelaxed /hotpatchcompatible /functionpadmin:6
+RUN: llvm-readobj --coff-debug-directory %p/Inputs/has-exdllcharacteristics.exe | FileCheck %s
 
 CHECK:  DebugEntry {
 CHECK:    Characteristics: 0x0
 CHECK:    Type: ExtendedDLLCharacteristics (0x14)
-CHECK:    ExtendedCharacteristics [ (0x4)
+CHECK:    ExtendedCharacteristics [ (0x8F)
 CHECK:      IMAGE_DLL_CHARACTERISTICS_EX_CET_SET_CONTEXT_IP_VALIDATION_RELAXED_MODE (0x4)
 CHECK:    ]
 CHECK:    RawData (
-CHECK:      0000: 04000000                             |....|
+CHECK:      0000: 8F000000                             |....|
 CHECK:    )
 CHECK:  }
 
