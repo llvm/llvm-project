@@ -1298,6 +1298,7 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
              decl->getDeclKindName());
     break;
 
+  case Decl::CXXConversion:
   case Decl::CXXMethod:
   case Decl::Function: {
     auto *fd = cast<FunctionDecl>(decl);
