@@ -136,7 +136,7 @@ void ReadCommonTypeInfo(const uint8_t *&Data, CommonTypeInfo &Info) {
   }
 
   if (unsigned ConformanceLength =
-            endian::readNext<uint16_t, llvm::endianness::little>(Data)) {
+          endian::readNext<uint16_t, llvm::endianness::little>(Data)) {
     Info.setSwiftConformance(std::string(reinterpret_cast<const char *>(Data),
                                          ConformanceLength - 1));
     Data += ConformanceLength - 1;
