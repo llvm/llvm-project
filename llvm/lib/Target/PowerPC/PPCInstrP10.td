@@ -2159,8 +2159,115 @@ let AddedComplexity = 400, Predicates = [IsISA3_1, HasVSX] in {
                                (COPY_TO_REGCLASS $VRB, VSRC), 2)))>;
 }
 
-class XXEvalPattern <dag pattern, bits<8> imm> :
-  Pat<(v4i32 pattern), (XXEVAL $vA, $vB, $vC, imm)> {}
+// =============================================================================
+// XXEVAL Instruction Pattern Definitions
+// =============================================================================
+//
+// XXEVAL instruction performs 256 different logical operations on three vector
+// operands using an 8-bit immediate value to select the operation.
+// Format: xxeval XT, XA, XB, XC, IMM
+// For example:
+// Equivalent function A?xor(B,C):and(B,C) is performed by
+// xxeval XT, XA, XB, XC, 22
+//
+// REGISTER CLASS CONSTRAINTS:
+// - XXEVAL natively supports: VSRC register class [v4i32, v4f32, v2f64, v2i64]
+// - Other vector types [v16i8, v8i16] require COPY_TO_REGCLASS to/from VRRC
+// =============================================================================
+
+class XXEvalPattern<dag pattern, bits<8> imm>
+    : Pat<(v4i32 pattern), (XXEVAL $vA, $vB, $vC, imm)> {}
+
+class XXEvalPatterns<ValueType Vt, dag InputPattern, bits<8> Imm>
+    : Pat<(Vt InputPattern),
+          !if(!or(!eq(Vt, v4i32), !eq(Vt, v2i64)),
+              // VSRC path: direct XXEVAL for v4i32 and v2i64
+              (XXEVAL $vA, $vB, $vC, Imm),
+              // VRRC path: wrap with COPY_TO_REGCLASS for other types
+              (COPY_TO_REGCLASS(XXEVAL(COPY_TO_REGCLASS Vt:$vA, VSRC),
+                   (COPY_TO_REGCLASS Vt:$vB, VSRC),
+                   (COPY_TO_REGCLASS Vt:$vC, VSRC), Imm),
+                  VRRC))> {}
+
+// =============================================================================
+// PatFrags for Bitcast-Aware Vector bitwise Operations
+//
+// Each PatFrags defines TWO alternatives for pattern matcher to choose:
+// - Direct operation (for v4i32)
+// - Bitcast operation (for other types: v2i64, v16i8, v8i16)
+// =============================================================================
+
+// Basic Binary Operations
+def VAnd
+    : PatFrags<(ops node:$a, node:$b), [(and node:$a, node:$b),
+                                        (bitconvert(and
+                                            (v4i32(bitconvert node:$a)),
+                                            (v4i32(bitconvert node:$b))))]>;
+
+def VXor
+    : PatFrags<(ops node:$a, node:$b), [(xor node:$a, node:$b),
+                                        (bitconvert(xor
+                                            (v4i32(bitconvert node:$a)),
+                                            (v4i32(bitconvert node:$b))))]>;
+
+def VOr : PatFrags<(ops node:$a, node:$b), [(or node:$a, node:$b),
+                                            (bitconvert(or
+                                                (v4i32(bitconvert node:$a)),
+                                                (v4i32(bitconvert node:$b))))]>;
+
+def VNot
+    : PatFrags<(ops node:$a), [(vnot node:$a),
+                               (bitconvert(vnot(v4i32(bitconvert node:$a))))]>;
+
+// Derived bitwise operations
+// Vector NOR operation (not(or))
+def VNor
+    : PatFrags<(ops node:$a, node:$b), [(vnot(or node:$a, node:$b)),
+                                        (bitconvert(vnot(or
+                                            (v4i32(bitconvert node:$a)),
+                                            (v4i32(bitconvert node:$b)))))]>;
+
+// Vector EQV operation (not(xor))
+def VEqv
+    : PatFrags<(ops node:$a, node:$b), [(vnot(xor node:$a, node:$b)),
+                                        (bitconvert(vnot(xor
+                                            (v4i32(bitconvert node:$a)),
+                                            (v4i32(bitconvert node:$b)))))]>;
+
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectAnd
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : AND(B,C)
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op on vectors B and C (XOR, NOR, EQV, or NOT)
+// - AND(B,C) is the "false" case op on vectors B and C
+// =============================================================================
+multiclass XXEvalTernarySelectAnd<ValueType Vt> {
+  // Pattern: A ? XOR(B,C) : AND(B,C) XXEVAL immediate value: 22
+  def : XXEvalPatterns<
+            Vt, (vselect Vt:$vA, (VXor Vt:$vB, Vt:$vC), (VAnd Vt:$vB, Vt:$vC)),
+            22>;
+
+  // Pattern: A ? NOR(B,C) : AND(B,C) XXEVAL immediate value: 24
+  def : XXEvalPatterns<
+            Vt, (vselect Vt:$vA, (VNor Vt:$vB, Vt:$vC), (VAnd Vt:$vB, Vt:$vC)),
+            24>;
+
+  // Pattern: A ? EQV(B,C) : AND(B,C) XXEVAL immediate value: 25
+  def : XXEvalPatterns<
+            Vt, (vselect Vt:$vA, (VEqv Vt:$vB, Vt:$vC), (VAnd Vt:$vB, Vt:$vC)),
+            25>;
+
+  // Pattern: A ? NOT(C) : AND(B,C) XXEVAL immediate value: 26
+  def : XXEvalPatterns<
+            Vt, (vselect Vt:$vA, (VNot Vt:$vC), (VAnd Vt:$vB, Vt:$vC)), 26>;
+
+  // Pattern: A ? NOT(B) : AND(B,C) XXEVAL immediate value: 28
+  def : XXEvalPatterns<
+            Vt, (vselect Vt:$vA, (VNot Vt:$vB), (VAnd Vt:$vB, Vt:$vC)), 28>;
+}
 
 let Predicates = [PrefixInstrs, HasP10Vector] in {
   let AddedComplexity = 400 in {
@@ -2269,6 +2376,11 @@ let Predicates = [PrefixInstrs, HasP10Vector] in {
     def : XXEvalPattern<(xor v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 30>;
     // (xor A, (or B, C))
     def : XXEvalPattern<(xor v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 120>;
+
+    // XXEval Patterns for ternary Operations.
+    foreach Ty = [v4i32, v2i64, v8i16, v16i8] in {
+        defm : XXEvalTernarySelectAnd<Ty>;
+    }
 
     // Anonymous patterns to select prefixed VSX loads and stores.
     // Load / Store f128
