@@ -1,12 +1,10 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s --spirv-ext=+SPV_KHR_bit_instructions -o - | FileCheck %s --check-prefix=CHECK-EXTENSION
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s --spirv-ext=+SPV_KHR_bit_instructions -o - -filetype=obj | spirv-val %} 
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-NO-EXTENSION
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %} 
 ;
-; CHECK-EXTENSION: Capability BitInstructions
-; CHECK-EXTENSION: Extension "SPV_KHR_bit_instructions"
+; CHECK-NO-EXTENSION-NOT: Capability BitInstructions 
+; CHECK-NO-EXTENSION-NOT: Extension "SPV_KHR_bit_instructions"
+; CHECK-NO-EXTENSION: Capability Shader 
 ;
-; CHECK-EXTENSION: %[[#]] = OpFunction %[[#]] None %[[#]]
-; CHECK-EXTENSION: %[[#reversebase:]] = OpFunctionParameter %[[#]]
-; CHECK-EXTENSION: %[[#]] = OpBitReverse %[[#]] %[[#reversebase]]
 ; OpenCL equivalent.
 ; kernel void testBitReverse_SPIRVFriendly(long4 b, global long4 *res) {
 ;   *res = bit_reverse(b);
@@ -21,7 +19,7 @@ entry:
 declare <4 x i64> @llvm.bitreverse.v4i64(<4 x i64>) #4
 
 
-attributes #3 = { nounwind }
+attributes #3 = { nounwind "hlsl.shader"="compute" }
 attributes #4 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
 !llvm.module.flags = !{!0}
