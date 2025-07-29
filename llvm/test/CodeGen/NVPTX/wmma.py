@@ -15,11 +15,11 @@ class MMAType:
     def __init__(self, ptx_type):
         self.ptx_type = ptx_type
         self.llvm_type = {
-            "e4m3" : "i32",
-            "e5m2" : "i32",
-            "e3m2" : "i32",
-            "e2m3" : "i32",
-            "e2m1" : "i32",
+            "e4m3": "i32",
+            "e5m2": "i32",
+            "e3m2": "i32",
+            "e2m3": "i32",
+            "e2m1": "i32",
             "f16": "<2 x half>",
             "f32": "float",
             "f64": "double",
@@ -48,7 +48,7 @@ class MMAType:
 
 
 class MMAFrag:
-    def __init__(self, geom, frag, ptx_elt_type, is_mma_sparse = False):
+    def __init__(self, geom, frag, ptx_elt_type, is_mma_sparse=False):
         self.geom = geom
         self.frag = frag
         self.mma_type = MMAType(ptx_elt_type)
@@ -264,7 +264,7 @@ class MMAOp:
         return "{A:%s, B:%s, C:%s, D:%s}" % (self.a, self.b, self.c, self.d)
 
 
-def make_mma_ops(geoms, types_a, types_b, types_c, types_d, is_mma_sparse = False):
+def make_mma_ops(geoms, types_a, types_b, types_c, types_d, is_mma_sparse=False):
     ops = []
     for geom, type_a, type_c in product(geoms, types_a, types_c):
         for type_b, type_d in product(
@@ -877,8 +877,12 @@ define void @test_${function}_o(i8 ${as}* %dst, ${args}) {
 def mma_signature(op):
     if op.a.mma_type.ptx_type in ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"]:
         # FP8/F8F6F4 ops identified by inputs, accumulator & result types.
-        return "%s.%s.%s.%s" % (op.d.mma_type.ptx_type, op.a.mma_type.ptx_type, \
-                op.b.mma_type.ptx_type, op.c.mma_type.ptx_type)
+        return "%s.%s.%s.%s" % (
+            op.d.mma_type.ptx_type,
+            op.a.mma_type.ptx_type,
+            op.b.mma_type.ptx_type,
+            op.c.mma_type.ptx_type,
+        )
     elif op.a.mma_type.ptx_type == "f16":
         # FP16 ops identified by accumulator & result type.
         return "%s.%s" % (op.d.mma_type.ptx_type, op.c.mma_type.ptx_type)
@@ -1038,11 +1042,23 @@ def get_mma_sp_ops():
     return (
         make_mma_ops(["m16n8k16", "m16n8k32"], ["bf16"], [], ["f32"], [], True)
         + make_mma_ops(["m16n8k8", "m16n8k16"], ["tf32"], [], ["f32"], [], True)
-        + make_mma_ops(["m16n8k16", "m16n8k32"], ["f16"], [], ["f16", "f32"], ["f16", "f32"], True)
-        + make_mma_ops(["m16n8k64", "m16n8k128"], ["s4", "u4"], ["s4", "u4"], ["s32"], [], True)
-        + make_mma_ops(["m16n8k32", "m16n8k64"], ["s8", "u8"], ["s8", "u8"], ["s32"], [], True)
-        + make_mma_ops(["m16n8k64"], ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
-            ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"], ["f16", "f32"], ["f16", "f32"], True)
+        + make_mma_ops(
+            ["m16n8k16", "m16n8k32"], ["f16"], [], ["f16", "f32"], ["f16", "f32"], True
+        )
+        + make_mma_ops(
+            ["m16n8k64", "m16n8k128"], ["s4", "u4"], ["s4", "u4"], ["s32"], [], True
+        )
+        + make_mma_ops(
+            ["m16n8k32", "m16n8k64"], ["s8", "u8"], ["s8", "u8"], ["s32"], [], True
+        )
+        + make_mma_ops(
+            ["m16n8k64"],
+            ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+            ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+            ["f16", "f32"],
+            ["f16", "f32"],
+            True,
+        )
     )
 
 
@@ -1067,7 +1083,8 @@ def is_mma_sp_variant_supported(op, metadata, kind, satf):
         return False
 
     if not (
-        is_type_supported(op.a.mma_type.ptx_type) and is_mma_sp_geom_supported(op.a.geom)
+        is_type_supported(op.a.mma_type.ptx_type)
+        and is_mma_sp_geom_supported(op.a.geom)
     ):
         return False
 
@@ -1080,22 +1097,27 @@ def is_mma_sp_variant_supported(op, metadata, kind, satf):
     if (
         op.a.mma_type.ptx_type in ["f16", "bf16", "tf32"]
         and op.a.mma_type.ptx_type != op.b.mma_type.ptx_type
-       ):
+    ):
         return False
 
     # C and D type must be the same for m16n8k16/m16n8k32
     if (
         op.a.geom in ["m16n8k16", "m16n8k32"]
         and op.c.mma_type.ptx_type != op.d.mma_type.ptx_type
-       ):
+    ):
         return False
 
-    if kind == "" and (op.a.mma_type.ptx_type in ["e3m2", "e2m3", "e2m1"] or \
-            op.b.mma_type.ptx_type in ["e3m2", "e2m3", "e2m1"]):
+    if kind == "" and (
+        op.a.mma_type.ptx_type in ["e3m2", "e2m3", "e2m1"]
+        or op.b.mma_type.ptx_type in ["e3m2", "e2m3", "e2m1"]
+    ):
         return False
 
-    if kind == "" and op.a.geom == "m16n8k64" and \
-            (op.c.mma_type.ptx_type == "f16" or op.d.mma_type.ptx_type == "f16"):
+    if (
+        kind == ""
+        and op.a.geom == "m16n8k64"
+        and (op.c.mma_type.ptx_type == "f16" or op.d.mma_type.ptx_type == "f16")
+    ):
         return False
 
     if kind != "" and (metadata == "sp" or op.a.geom != "m16n8k64" or is_int):
@@ -1117,10 +1139,15 @@ def sp_selector_gen(op):
 
     if (op.a.geom, op.a.mma_type.ptx_type) in range_01:
         return range(2)
-    if (
-        op.a.geom == "m16n8k64"
-        and op.a.mma_type.ptx_type in ["u8", "s8", "e4m3", "e5m2", "e3m2", "e2m3", "e2m1"]
-    ):
+    if op.a.geom == "m16n8k64" and op.a.mma_type.ptx_type in [
+        "u8",
+        "s8",
+        "e4m3",
+        "e5m2",
+        "e3m2",
+        "e2m3",
+        "e2m1",
+    ]:
         return range(1)
     return range(4)
 
@@ -1149,7 +1176,12 @@ define ${ret_ty} @test_${function}_${selector}(
 """
 
     test_params = params
-    test_params["intrinsic"] = Template(intrinsic_template).substitute(params).replace("::", ".").replace("_", ".")
+    test_params["intrinsic"] = (
+        Template(intrinsic_template)
+        .substitute(params)
+        .replace("::", ".")
+        .replace("_", ".")
+    )
     test_params["function"] = test_params["intrinsic"].replace(".", "_")
     test_params["instruction"] = Template(instruction_template).substitute(params)
     test_params["ret_ty"] = make_wmma_ld_ret_ty(op.d)
@@ -1169,7 +1201,9 @@ define ${ret_ty} @test_${function}_${selector}(
     for selector in [str(r) for r in sp_selector_gen(op)]:
         test_params["selector"] = selector
         test_params["check_selector"] = "{{" + test_params["selector"] + "}}"
-        test_params["call_args"] = test_params["args"].replace("%selector", test_params["selector"])
+        test_params["call_args"] = test_params["args"].replace(
+            "%selector", test_params["selector"]
+        )
 
         print(Template(mma_sp_test_template).substitute(test_params))
 
@@ -1180,8 +1214,12 @@ def gen_mma_sp_tests():
     if ptx_version < 71 or gpu_arch < 80:
         return []
 
-    mma_sp_intrinsic_template = "llvm.nvvm.mma.${metadata}.${geom}.row.col${kind}${satf}.${intrinsic_signature}"
-    mma_sp_instruction_template = "mma.${metadata}.sync.aligned.${geom}.row.col${kind}${satf}.${ptx_signature}"
+    mma_sp_intrinsic_template = (
+        "llvm.nvvm.mma.${metadata}.${geom}.row.col${kind}${satf}.${intrinsic_signature}"
+    )
+    mma_sp_instruction_template = (
+        "mma.${metadata}.sync.aligned.${geom}.row.col${kind}${satf}.${ptx_signature}"
+    )
 
     generated_items = []
 
@@ -1189,7 +1227,7 @@ def gen_mma_sp_tests():
         get_mma_sp_ops(),
         ["sp::ordered_metadata", "sp"],
         ["", ".kind::f8f6f4"],
-        [".satfinite", ""]
+        [".satfinite", ""],
     ):
 
         if not is_mma_sp_variant_supported(op, metadata, kind, satf):
@@ -1208,9 +1246,7 @@ def gen_mma_sp_tests():
         instruction_template = mma_sp_instruction_template
 
         generated_items.append(
-            common_mma_sp_test_gen(
-                params, op, intrinsic_template, instruction_template
-            )
+            common_mma_sp_test_gen(params, op, intrinsic_template, instruction_template)
         )
 
     return generated_items
