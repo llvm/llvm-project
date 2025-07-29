@@ -437,6 +437,10 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     F->addFnAttr("amdgpu-no-rank-specialization");
   }
 
+  if (const auto *Attr = FD->getAttr<AMDGPUSpecializeKernelAttr>()) {
+    F->addFnAttr("amdgpu-specialize-kernel");
+  }
+
   if (auto *Attr = FD->getAttr<CUDAClusterDimsAttr>()) {
     uint32_t X =
         Attr->getX()->EvaluateKnownConstInt(M.getContext()).getExtValue();
