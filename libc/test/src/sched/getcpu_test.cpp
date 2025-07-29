@@ -9,15 +9,17 @@
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/libc_errno.h"
 #include "src/sched/getcpu.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 
-#include <sched.h>
+using LlvmLibcSchedGetCpuTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST(LlvmLibcSchedGetCpuTest, SmokeTest) {
   unsigned int current_cpu;
   unsigned int current_node;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   ASSERT_THAT(LIBC_NAMESPACE::getcpu(&current_cpu, &current_node), Succeeds(0));
+  ASSERT_ERRNO_SUCCESS();
 }
 
 TEST(LlvmLibcSchedGetCpuTest, BadPointer) {

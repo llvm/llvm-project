@@ -50,6 +50,7 @@ add_libc_unittest(
     libc.include.sched
     libc.src.errno.errno
     libc.src.sched.getcpu
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_unittest(
