@@ -40,7 +40,7 @@
 
 // HARDENING {
 
-// TODO: Remove in LLVM 23. We're making these an error to catch folks who might not have migrated.
+// TODO(LLVM 23): Remove this. We're making these an error to catch folks who might not have migrated.
 //       Since hardening went through several changes (many of which impacted user-facing macros),
 //       we're keeping these checks around for a bit longer than usual. Failure to properly configure
 //       hardening results in checks being dropped silently, which is a pretty big deal.
