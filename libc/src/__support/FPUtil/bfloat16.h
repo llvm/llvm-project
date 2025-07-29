@@ -16,6 +16,7 @@
 #include "src/__support/FPUtil/comparison_operations.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/generic/add_sub.h"
+#include "src/__support/FPUtil/generic/mul.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 
@@ -95,6 +96,10 @@ struct BFloat16 {
 
   LIBC_INLINE BFloat16 operator-(BFloat16 other) const {
     return fputil::generic::sub<BFloat16>(*this, other);
+  }
+
+  LIBC_INLINE BFloat16 operator*(BFloat16 other) const {
+    return fputil::generic::mul<bfloat16>(*this, other);
   }
 
 }; // struct BFloat16
