@@ -1486,6 +1486,10 @@ void TargetTransformInfo::collectKernelLaunchBounds(
   return TTIImpl->collectKernelLaunchBounds(F, LB);
 }
 
+bool TargetTransformInfo::isVectorElementIndexingUsingGEPAllowed() const {
+  return TTIImpl->isVectorElementIndexingUsingGEPAllowed();
+}
+
 TargetTransformInfoImplBase::~TargetTransformInfoImplBase() = default;
 
 TargetIRAnalysis::TargetIRAnalysis() : TTICallback(&getDefaultTTI) {}

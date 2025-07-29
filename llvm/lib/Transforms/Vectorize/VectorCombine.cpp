@@ -1664,6 +1664,8 @@ static Align computeAlignmentAfterScalarization(Align VectorAlignment,
 //   %1 = getelementptr inbounds i32, i32* %0, i64 0, i64 1
 //   store i32 %b, i32* %1
 bool VectorCombine::foldSingleElementStore(Instruction &I) {
+  if (!TTI.isVectorElementIndexingUsingGEPAllowed())
+    return false;
   auto *SI = cast<StoreInst>(&I);
   if (!SI->isSimple() || !isa<VectorType>(SI->getValueOperand()->getType()))
     return false;
@@ -1719,6 +1721,9 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
 
 /// Try to scalarize vector loads feeding extractelement instructions.
 bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
+  if (!TTI.isVectorElementIndexingUsingGEPAllowed())
+    return false;
+
   Value *Ptr;
   if (!match(&I, m_Load(m_Value(Ptr))))
     return false;
@@ -1827,6 +1832,8 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
 }
 
 bool VectorCombine::scalarizeExtExtract(Instruction &I) {
+  if (!TTI.isVectorElementIndexingUsingGEPAllowed())
+    return false;
   auto *Ext = dyn_cast<ZExtInst>(&I);
   if (!Ext)
     return false;
@@ -3866,9 +3873,8 @@ bool VectorCombine::run() {
 
   LLVM_DEBUG(dbgs() << "\n\nVECTORCOMBINE on " << F.getName() << "\n");
 
-  const bool isSPIRV = F.getParent()->getTargetTriple().isSPIRV();
   bool MadeChange = false;
-  auto FoldInst = [this, &MadeChange, isSPIRV](Instruction &I) {
+  auto FoldInst = [this, &MadeChange](Instruction &I) {
     Builder.SetInsertPoint(&I);
     bool IsVectorType = isa<VectorType>(I.getType());
     bool IsFixedVectorType = isa<FixedVectorType>(I.getType());
@@ -3897,15 +3903,13 @@ bool VectorCombine::run() {
     // TODO: Identify and allow other scalable transforms
     if (IsVectorType) {
       MadeChange |= scalarizeOpOrCmp(I);
-      if (!isSPIRV) {
-        MadeChange |= scalarizeLoadExtract(I);
-        MadeChange |= scalarizeExtExtract(I);
-      }
+      MadeChange |= scalarizeLoadExtract(I);
+      MadeChange |= scalarizeExtExtract(I);
       MadeChange |= scalarizeVPIntrinsic(I);
       MadeChange |= foldInterleaveIntrinsics(I);
     }
 
-    if (Opcode == Instruction::Store && !isSPIRV)
+    if (Opcode == Instruction::Store)
       MadeChange |= foldSingleElementStore(I);
 
     // If this is an early pipeline invocation of this pass, we are done.
