@@ -1529,7 +1529,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 _Tp& map<_Key, _Tp, _Compare, _Allocator>::at(cons
   __node_base_pointer& __child = __tree_.__find_equal(__parent, __k);
   if (__child == nullptr)
     std::__throw_out_of_range("map::at:  key not found");
-  return static_cast<__node_pointer>(__child)->__value_.second;
+  return std::__static_fancy_pointer_cast<__node_pointer>(__child)->__value_.second;
 }
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
@@ -1538,7 +1538,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 const _Tp& map<_Key, _Tp, _Compare, _Allocator>::a
   __node_base_pointer __child = __tree_.__find_equal(__parent, __k);
   if (__child == nullptr)
     std::__throw_out_of_range("map::at:  key not found");
-  return static_cast<__node_pointer>(__child)->__value_.second;
+  return std::__static_fancy_pointer_cast<__node_pointer>(__child)->__value_.second;
 }
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
