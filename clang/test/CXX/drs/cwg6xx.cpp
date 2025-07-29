@@ -922,7 +922,11 @@ namespace cwg667 { // cwg667: 8
 
   struct B { ~B() = delete; };
   union C { B b; };
+  #if __cplusplus > 202302L
+  static_assert(__is_trivially_destructible(C), "");
+  #else
   static_assert(!__is_trivially_destructible(C), "");
+  #endif
 
   struct D { D(const D&) = delete; };
   struct E : D {};
