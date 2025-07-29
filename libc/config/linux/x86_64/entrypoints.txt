@@ -1261,6 +1261,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.socket.recvmsg
 
     # wchar.h entrypoints
+    libc.src.wchar.mblen
+    libc.src.wchar.mbrlen
     libc.src.wchar.mbrtowc
     libc.src.wchar.mbtowc
     libc.src.wchar.wcrtomb
