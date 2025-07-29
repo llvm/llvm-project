@@ -313,6 +313,9 @@ public:
 
   static void setInitializer(cir::GlobalOp &op, mlir::Attribute value);
 
+  void replaceUsesOfNonProtoTypeWithRealFunction(mlir::Operation *old,
+                                                 cir::FuncOp newFn);
+
   cir::FuncOp
   getOrCreateCIRFunction(llvm::StringRef mangledName, mlir::Type funcType,
                          clang::GlobalDecl gd, bool forVTable,
