@@ -22524,7 +22524,7 @@ static SDValue foldToMaskedStore(StoreSDNode *Store, SelectionDAG &DAG,
   }
 
   auto *Load = cast<LoadSDNode>(StoredVal.getOperand(LoadPos));
-  if (!Load->isSimple() || Load->getExtensionType() != ISD::NON_EXTLOAD)
+  if (!Load->isSimple() || !ISD::isNormalLoad(Load))
     return SDValue();
 
   if (!Store->getChain().reachesChainWithoutSideEffects(LoadCh))
