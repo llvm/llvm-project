@@ -195,11 +195,11 @@ public:
 
 template <class ID>
 class min_pointer<void, ID> {
-  #ifdef TEST_IS_CONSTANT_EVALUATED
+#ifdef TEST_IS_CONSTANT_EVALUATED
   ID* ptr_;
-  #else
+#else
   void* ptr_;
-  #endif
+#endif
 
 public:
   min_pointer() TEST_NOEXCEPT = default;

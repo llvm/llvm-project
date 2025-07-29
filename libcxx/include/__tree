@@ -594,7 +594,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI __node_value_type& __get_value() { return __value_; }
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node(_Args&&... __args) : __value_(std::forward<_Args>(__args)...) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node(_Args&&... __args)
+      : __value_(std::forward<_Args>(__args)...) {}
   // TODO: libcxx26
   // _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node(__node_value_type &&  args): __value_{args} { }
   ~__tree_node()                             = delete;
@@ -882,17 +883,23 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __end_node_pointer __end_node() const _NOEXCEPT {
     return pointer_traits<__end_node_pointer>::pointer_to(const_cast<__end_node_t&>(__end_node_));
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_allocator& __node_alloc() _NOEXCEPT { return __node_alloc_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_allocator& __node_alloc() _NOEXCEPT {
+    return __node_alloc_;
+  }
 
 private:
   _LIBCPP_HIDE_FROM_ABI const __node_allocator& __node_alloc() const _NOEXCEPT { return __node_alloc_; }
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 allocator_type __alloc() const _NOEXCEPT { return allocator_type(__node_alloc()); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 allocator_type __alloc() const _NOEXCEPT {
+    return allocator_type(__node_alloc());
+  }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type size() const _NOEXCEPT { return __size_; }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 value_compare& value_comp() _NOEXCEPT { return __value_comp_; }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const value_compare& value_comp() const _NOEXCEPT { return __value_comp_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const value_compare& value_comp() const _NOEXCEPT {
+    return __value_comp_;
+  }
 
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_pointer __root() const _NOEXCEPT {
@@ -961,9 +968,13 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 ~__tree();
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator begin() _NOEXCEPT { return iterator(__begin_node_); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator begin() const _NOEXCEPT { return const_iterator(__begin_node_); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator begin() const _NOEXCEPT {
+    return const_iterator(__begin_node_);
+  }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator end() _NOEXCEPT { return iterator(__end_node()); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator end() const _NOEXCEPT { return const_iterator(__end_node()); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator end() const _NOEXCEPT {
+    return const_iterator(__end_node());
+  }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type max_size() const _NOEXCEPT {
     return std::min<size_type>(__node_traits::max_size(__node_alloc()), numeric_limits<difference_type >::max());
@@ -1825,58 +1836,58 @@ pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, bool>
   if (__child == nullptr) {
     __node_holder __h = __construct_node(std::forward<_Args>(__args)...);
 
-/*
- error: cannot convert 
- '__node_holder'
- (aka 
-' unique_ptr<
-    __tree_node<
-      std::__value_type<int, double>,
-      min_pointer<void, std::integral_constant<unsigned long, 0> >
-    >,
-    __tree_node_destructor<
-      min_allocator<
-        std::__tree_node<
+    /*
+     error: cannot convert
+     '__node_holder'
+     (aka
+    ' unique_ptr<
+        __tree_node<
           std::__value_type<int, double>,
           min_pointer<void, std::integral_constant<unsigned long, 0> >
+        >,
+        __tree_node_destructor<
+          min_allocator<
+            std::__tree_node<
+              std::__value_type<int, double>,
+              min_pointer<void, std::integral_constant<unsigned long, 0> >
+            >
+          >
         >
       >
-    >
-  >
-'
- )
-  to 'double' without a conversion operator
-*/
+    '
+     )
+      to 'double' without a conversion operator
+    */
     // double d2 =static_cast<double>(__h);
     // (void)d2;
 
-/*
-  error: cannot convert 'pointer'
-  (aka
-' min_pointer<
-    std::__tree_node<
-      std::__value_type<int, double>,
-      min_pointer<void, std::integral_constant<unsigned long, 0>>
-    >
-  >
-') to 'double' without a conversion operator
- */
+    /*
+      error: cannot convert 'pointer'
+      (aka
+    ' min_pointer<
+        std::__tree_node<
+          std::__value_type<int, double>,
+          min_pointer<void, std::integral_constant<unsigned long, 0>>
+        >
+      >
+    ') to 'double' without a conversion operator
+     */
     // double d =static_cast<double>(__h.get());
     // (void)d;
 
-/*
-error: cannot convert '__node_base_pointer' (aka
-' min_pointer<
-    std::__tree_node_base<
-      min_pointer<void, std::integral_constant<unsigned long, 0>>
-    >,
-    std::integral_constant<unsigned long, 0>
-  >
-') to 'double' without a conversion operator
-*/
+    /*
+    error: cannot convert '__node_base_pointer' (aka
+    ' min_pointer<
+        std::__tree_node_base<
+          min_pointer<void, std::integral_constant<unsigned long, 0>>
+        >,
+        std::integral_constant<unsigned long, 0>
+      >
+    ') to 'double' without a conversion operator
+    */
 
-// __node_base_pointer xxx = nullptr;
-// (void)xxx;
+    // __node_base_pointer xxx = nullptr;
+    // (void)xxx;
     // double d3 =static_cast<double>(xxx);
     // (void)d3;
 
@@ -1884,16 +1895,20 @@ error: cannot convert '__node_base_pointer' (aka
     // (void)__foo;
     // __maybe_unused__ __node_base_pointer __foo2 = __node_base_pointer(__h.get());
 
-/*
-error: cannot convert '__tree<std::__value_type<int, double>, std::__map_value_compare<int, std::pair<const int, double>, std::less<int>, true>, min_allocator<std::pair<const int, double>>>::__node_holder' (aka 'unique_ptr<__tree_node<std::__value_type<int, double>, min_pointer<void, std::integral_constant<unsigned long, 0>>>, __tree_node_destructor<min_allocator<std::__tree_node<std::__value_type<int, double>, min_pointer<void, std::integral_constant<unsigned long, 0>>>>>>') to 'double' without a conversion operator
-*/
+    /*
+    error: cannot convert '__tree<std::__value_type<int, double>, std::__map_value_compare<int, std::pair<const int,
+    double>, std::less<int>, true>, min_allocator<std::pair<const int, double>>>::__node_holder' (aka
+    'unique_ptr<__tree_node<std::__value_type<int, double>, min_pointer<void, std::integral_constant<unsigned long,
+    0>>>, __tree_node_destructor<min_allocator<std::__tree_node<std::__value_type<int, double>, min_pointer<void,
+    std::integral_constant<unsigned long, 0>>>>>>') to 'double' without a conversion operator
+    */
     // __tree<_Tp, _Compare, _Allocator>::__node_holder __tmp_nh;
     // double __xxx = static_cast<double>(__tmp_nh);
 
-
-/*
-error: cannot convert 'pointer' (aka 'min_pointer<std::__tree_node<std::__value_type<int, double>, min_pointer<void, std::integral_constant<unsigned long, 0>>>>') to 'double' without a conversion operator
-*/
+    /*
+    error: cannot convert 'pointer' (aka 'min_pointer<std::__tree_node<std::__value_type<int, double>, min_pointer<void,
+    std::integral_constant<unsigned long, 0>>>>') to 'double' without a conversion operator
+    */
     // __tree<_Tp, _Compare, _Allocator>::__node_holder __tmp_nh;
     // double __xxx = static_cast<double>(__tmp_nh.get());
 
@@ -1906,18 +1921,16 @@ error: cannot convert 'pointer' (aka 'min_pointer<std::__tree_node<std::__value_
       'std::__tree_node_base<min_pointer<void>>'
     */
 
-if(__libcpp_is_constant_evaluated()){
+    if (__libcpp_is_constant_evaluated()) {
+      typename __tree<_Tp, _Compare, _Allocator>::__node_holder::pointer cast =
+          static_cast< __tree<_Tp, _Compare, _Allocator>::__node_holder::pointer>(__h.get());
+      __node_base_pointer base = // static_cast<__node_base_pointer>(cast);
+          std::__static_fancy_pointer_cast<__node_base_pointer>(cast);
 
-typename __tree<_Tp, _Compare, _Allocator>::__node_holder::pointer cast = static_cast<
-__tree<_Tp, _Compare, _Allocator>::__node_holder::pointer>(__h.get());
-__node_base_pointer base = //static_cast<__node_base_pointer>(cast);
-std::__static_fancy_pointer_cast<__node_base_pointer>(cast);
-
-
-    __insert_node_at(__parent, __child, base);
-}else {
-    __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
-}
+      __insert_node_at(__parent, __child, base);
+    } else {
+      __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
+    }
 
     __r        = __h.release();
     __inserted = true;
@@ -2333,8 +2346,9 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26
       __rt = std::__static_fancy_pointer_cast<__node_pointer>(__rt->__right_);
     else
       return _Pp(iterator(__rt),
-                 iterator(__rt->__right_ != nullptr ? std::__static_fancy_pointer_cast<__end_node_pointer>(std::__tree_min(__rt->__right_))
-                                                    : __result));
+                 iterator(__rt->__right_ != nullptr
+                              ? std::__static_fancy_pointer_cast<__end_node_pointer>(std::__tree_min(__rt->__right_))
+                              : __result));
   }
   return _Pp(iterator(__result), iterator(__result));
 }
@@ -2356,8 +2370,9 @@ __tree<_Tp, _Compare, _Allocator>::__equal_range_unique(const _Key& __k) const {
     else
       return _Pp(
           const_iterator(__rt),
-          const_iterator(
-              __rt->__right_ != nullptr ? std::__static_fancy_pointer_cast<__end_node_pointer>(std::__tree_min(__rt->__right_)) : __result));
+          const_iterator(__rt->__right_ != nullptr
+                             ? std::__static_fancy_pointer_cast<__end_node_pointer>(std::__tree_min(__rt->__right_))
+                             : __result));
   }
   return _Pp(const_iterator(__result), const_iterator(__result));
 }
