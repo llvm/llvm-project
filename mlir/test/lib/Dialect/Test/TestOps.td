@@ -119,6 +119,13 @@ def SymbolOp : TEST_Op<"symbol", [NoMemoryEffect, Symbol]> {
                        OptionalAttr<StrAttr>:$sym_visibility);
 }
 
+def OverriddenSymbolVisibilityOp : TEST_Op<"overridden_symbol_visibility", [
+  DeclareOpInterfaceMethods<Symbol, ["getVisibility", "setVisibility"]>,
+]> {
+  let summary =  "operation overridden symbol visibility accessors";
+  let arguments = (ins StrAttr:$sym_name);
+}
+
 def SymbolScopeOp : TEST_Op<"symbol_scope",
     [SymbolTable, SingleBlockImplicitTerminator<"TerminatorOp">]> {
   let summary =  "operation which defines a new symbol table";
