@@ -705,7 +705,12 @@ foreach mx = SchedMxList in {
   foreach sew = SchedSEWSet<mx>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
 
-    let Latency = Get7111935Latency<mx>.c, ReleaseAtCycles = [5] in {
+    defvar VIRedOcc = !cond(
+      !eq(mx, "M8") : 35,
+      !eq(mx, "M4") : 10,
+      true: GetOneMF4AndDouble<mx>.c
+    );
+    let Latency = Get7111935Latency<mx>.c, ReleaseAtCycles = [VIRedOcc] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVIRedMinMaxV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
 
       // Pattern for vredsum:                  5/5/5/7/11/19/35
@@ -721,7 +726,12 @@ foreach mx = SchedMxListWRed in {
   foreach sew = SchedSEWSet<mx, 0, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListWRed>.c;
 
-    let Latency = Get7111935Latency<mx>.c, ReleaseAtCycles = [5] in {
+    defvar VIWRedOcc = !cond(
+      !eq(mx, "M8") : 35,
+      !eq(mx, "M4") : 10,
+      true: GetOneMF4AndDouble<mx>.c
+    );
+    let Latency = Get7111935Latency<mx>.c, ReleaseAtCycles = [VIWRedOcc] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVIWRedV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
   }
@@ -730,10 +740,18 @@ foreach mx = SchedMxListWRed in {
 foreach mx = SchedMxListF in {
   foreach sew = SchedSEWSet<mx, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
-    // Pattern for vfredmax.vs, vfredmin.vs: 12,12,15,21,33,57
-    // Pattern for vfredusum.vs is slightly lower for e16/e32
+
+    defvar VFRedOcc = !cond(
+      !eq(mx, "M8") : 57,
+      !eq(mx, "M4") : 20,
+      !eq(mx, "M2") : 14,
+      true: 8
+    );
+
+    // Latency for vfredmax.vs, vfredmin.vs: 12,12,15,21,33,57
+    // Latency for vfredusum.vs is slightly lower for e16/e32
     // We use the worst-case for simplificity
-    let Latency = Get15213357Latency<mx>.c, ReleaseAtCycles = [12] in {
+    let Latency = Get15213357Latency<mx>.c, ReleaseAtCycles = [VFRedOcc] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFRedV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFRedMinMaxV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
     }
@@ -744,21 +762,16 @@ foreach mx = SchedMxListF in {
   foreach sew = SchedSEWSet<mx, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
 
-    // Compute latency based on SEW and LMUL combination
-    defvar SEWLatencyFactor = !cond(
-      !eq(sew, 16) : 48,  // e16: 48*LMUL
-      !eq(sew, 32) : 24,  // e32: 24*LMUL
-      !eq(sew, 64) : 12   // e64: 12*LMUL
-    );
-
-    // Slightly increased latencies for e32mf2=24 (should be 12)
+    // Compute latency based on SEW
     defvar Lat = !cond(
-      !eq(mx, "MF4") : 12,
-      !eq(mx, "MF2") : 24,
-      true: !mul(Get1248Latency<mx>.c, SEWLatencyFactor)
+      !eq(sew, 16) : GetDoublingValueFromLMUL<"MF4", 12, mx>.c,
+      !eq(sew, 32) : GetDoublingValueFromLMUL<"MF2", 12, mx>.c,
+      !eq(sew, 64) : GetDoublingValueFromLMUL<"M1", 12, mx>.c
     );
 
-    let Latency = Lat, ReleaseAtCycles = [12] in {
+    // Roughly equal to latency when LMUL is M8, otherwise it is half the latency
+    defvar VFRedOVLatAndOcc = !if(!eq(mx, "M8"), Lat, !div(Lat, 2));
+    let Latency = Lat, ReleaseAtCycles = [VFRedOVLatAndOcc] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFRedOV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
     }
   }
@@ -768,23 +781,17 @@ foreach mx = SchedMxListFWRed in {
   foreach sew = SchedSEWSet<mx, 1, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListFWRed, 1>.c;
 
-    // Compute latency based on SEW and LMUL combination
-    defvar SEWLatencyFactor = !cond(
-      !eq(sew, 16) : 64,  // e16: 64*LMUL
-      !eq(sew, 32) : 32   // e32: 32*LMUL
-    );
-
-    // Slightly increased latencies for e32mf2=32 (should be 16)
+    // Compute latency based on SEW
     defvar Lat = !cond(
-      !eq(mx, "MF4") : 16,
-      !eq(mx, "MF2") : 32,
-      true: !mul(Get1248Latency<mx>.c, SEWLatencyFactor)
+      !eq(sew, 16) : GetDoublingValueFromLMUL<"MF4", 16, mx>.c,
+      !eq(sew, 32) : GetDoublingValueFromLMUL<"MF2", 16, mx>.c,
+      !eq(sew, 64) : GetDoublingValueFromLMUL<"M1", 16, mx>.c
     );
 
-    let Latency = Lat, ReleaseAtCycles = [16] in {
+    // Roughly equal to latency when LMUL is M8, otherwise it is half the latency
+    defvar VFRedOVLatAndOcc = !if(!eq(mx, "M8"), Lat, !div(Lat, 2));
       defm "" : LMULSEWWriteResMXSEW<"WriteVFWRedV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFWRedOV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
-    }
   }
 }
 
