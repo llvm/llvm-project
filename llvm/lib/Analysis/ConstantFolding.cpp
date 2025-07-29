@@ -3834,7 +3834,7 @@ static Constant *ConstantFoldFixedVectorCall(
     assert(NumElements == 8 && Result.size() == 4 &&
            "wasm dot takes i16x8 and produces i32x4");
     assert(Ty->isIntegerTy());
-    SmallVector<APInt, 8> MulVector;
+    int32_t MulVector[8];
 
     for (unsigned I = 0; I < NumElements; ++I) {
       ConstantInt *Elt0 =
@@ -3842,17 +3842,12 @@ static Constant *ConstantFoldFixedVectorCall(
       ConstantInt *Elt1 =
           cast<ConstantInt>(Operands[1]->getAggregateElement(I));
 
-      // sext 32 first, according to specs
       APInt IMul = Elt0->getValue().sext(32) * Elt1->getValue().sext(32);
 
-      // Multiplication can never be more than 32 bit.
-      // We can opt to not perform modulo of imul here.
-      MulVector.push_back(IMul);
+      MulVector[I] = IMul.getSExtValue();
     }
     for (unsigned I = 0; I < Result.size(); I++) {
-      // Addition can never be more than 32 bit.
-      // We can opt to not perform modulo of iadd here.
-      APInt IAdd = MulVector[I * 2] + MulVector[I * 2 + 1];
+      int32_t IAdd = MulVector[I * 2] + MulVector[I * 2 + 1];
       Result[I] = ConstantInt::get(Ty, IAdd);
     }
 
