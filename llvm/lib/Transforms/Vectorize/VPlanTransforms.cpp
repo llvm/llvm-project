@@ -2570,7 +2570,8 @@ void VPlanTransforms::createInterleaveGroups(
       }
 
     bool NeedsMaskForGaps =
-        IG->requiresScalarEpilogue() && !ScalarEpilogueAllowed;
+        (IG->requiresScalarEpilogue() && !ScalarEpilogueAllowed) ||
+        (!StoredValues.empty() && (IG->getNumMembers() < IG->getFactor()));
 
     Instruction *IRInsertPos = IG->getInsertPos();
     auto *InsertPos =
