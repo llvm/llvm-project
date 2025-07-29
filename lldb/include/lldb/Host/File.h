@@ -440,11 +440,11 @@ protected:
     return ValueGuard(m_stream_mutex, StreamIsValidUnlocked());
   }
 
-  int m_descriptor;
+  int m_descriptor = kInvalidDescriptor;
   bool m_own_descriptor = false;
   mutable std::mutex m_descriptor_mutex;
 
-  FILE *m_stream;
+  FILE *m_stream = kInvalidStream;
   mutable std::mutex m_stream_mutex;
 
   OpenOptions m_options{};

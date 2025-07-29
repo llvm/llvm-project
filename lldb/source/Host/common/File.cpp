@@ -248,12 +248,10 @@ uint32_t File::GetPermissions(Status &error) const {
   return file_stats.st_mode & (S_IRWXU | S_IRWXG | S_IRWXO);
 }
 
-NativeFile::NativeFile()
-    : m_descriptor(kInvalidDescriptor), m_stream(kInvalidStream) {}
+NativeFile::NativeFile() = default;
 
 NativeFile::NativeFile(FILE *fh, bool transfer_ownership)
-    : m_descriptor(kInvalidDescriptor), m_own_descriptor(false), m_stream(fh),
-      m_options(), m_own_stream(transfer_ownership) {
+    : m_stream(fh), m_own_stream(transfer_ownership) {
 #ifdef _WIN32
   int fd = _fileno(fh);
   is_windows_console =
@@ -263,7 +261,7 @@ NativeFile::NativeFile(FILE *fh, bool transfer_ownership)
 
 NativeFile::NativeFile(int fd, OpenOptions options, bool transfer_ownership)
     : m_descriptor(fd), m_own_descriptor(transfer_ownership),
-      m_stream(kInvalidStream), m_options(options), m_own_stream(false) {
+      m_options(options) {
 #ifdef _WIN32
   is_windows_console =
       ::GetFileType((HANDLE)::_get_osfhandle(fd)) == FILE_TYPE_CHAR;
