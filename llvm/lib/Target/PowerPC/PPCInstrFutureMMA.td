@@ -506,16 +506,8 @@ let Predicates = [MMA, PrefixInstrs, IsISAFuture] in {
 
 //---------------------------- Anonymous Patterns ----------------------------//
 // Predicate combinations available:
-// [IsISAFuture]
 // [MMA, IsISAFuture]
 // [MMA, PrefixInstrs, IsISAFuture]
-
-let Predicates = [IsISAFuture] in {
-  // Cryptography Intrinsic
-  def : Pat<(v1024i1(int_ppc_mma_dmxxshapad v1024i1:$ATi, v16i8:$XB, timm:$ID,
-                timm:$E, timm:$BL)),
-            (DMXXSHAPAD $ATi, RCCp.BToVSRC, $ID, $E, $BL)>;
-}
 
 let Predicates = [MMA, IsISAFuture] in {
   // MMA+ Intrinsics
@@ -555,6 +547,11 @@ let Predicates = [MMA, IsISAFuture] in {
   def : Pat<(v1024i1(int_ppc_mma_dmxvf16gerx2nn v1024i1:$ATi, v256i1:$XAp,
                 v16i8:$XB)),
             (DMXVF16GERX2NN $ATi, $XAp, RCCp.BToVSRC)>;
+
+  // Cryptography Intrinsic
+  def : Pat<(v1024i1(int_ppc_mma_dmxxshapad v1024i1:$ATi, v16i8:$XB, timm:$ID,
+                timm:$E, timm:$BL)),
+            (DMXXSHAPAD $ATi, RCCp.BToVSRC, $ID, $E, $BL)>;
 }
 
 let Predicates = [MMA, PrefixInstrs, IsISAFuture] in {
