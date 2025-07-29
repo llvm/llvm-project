@@ -202,8 +202,8 @@ enum class TailFoldingStyle {
 };
 
 enum class RTCheckStyle {
-  /// Branch to scalar loop if checks fails at runtime.
-  ScalarFallback,
+  /// Create runtime checks based on the difference between two pointers
+  ScalarDifference,
   /// Form a mask based on elements which won't be a WAR or RAW hazard.
   UseSafeEltsMask,
 };
