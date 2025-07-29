@@ -748,7 +748,7 @@ ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   // Note that because OpImageFetch returns a rank 4 vector we need to extract
   // the elements corresponding to the load which will since we only support the
   // R[16|32][f|i|ui] formats will always be the R(red) 0th vector element.
-  const auto compositeExtractOp =
+  auto compositeExtractOp =
       rewriter.create<spirv::CompositeExtractOp>(loadOp->getLoc(), fetchOp, 0);
 
   rewriter.replaceOp(loadOp, compositeExtractOp);
