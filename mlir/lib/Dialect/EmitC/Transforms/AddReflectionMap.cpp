@@ -89,38 +89,32 @@ public:
     // Collect all field names
     std::vector<std::pair<std::string, std::string>> fieldNames;
     classOp.walk([&](mlir::emitc::FieldOp fieldOp) {
-      if (mlir::Attribute attrsAttr =
-              fieldOp->getAttrDictionary().get("attrs")) {
-        if (DictionaryAttr innerDictAttr =
-                dyn_cast<mlir::DictionaryAttr>(attrsAttr)) {
-          ArrayAttr arrayAttr = dyn_cast<mlir::ArrayAttr>(
-              innerDictAttr.getNamed(attributeName)->getValue());
-          if (!arrayAttr.empty()) {
-            StringAttr stringAttr = dyn_cast<mlir::StringAttr>(arrayAttr[0]);
-            std::string indexPath = stringAttr.getValue().str();
-            fieldNames.emplace_back(indexPath, fieldOp.getName().str());
-          }
-          if (arrayAttr.size() > 1) {
-            fieldOp.emitError() << attributeName
-                                << " attribute must "
-                                   "contain at most one value, but found "
-                                << arrayAttr.size() << " values.";
-            return;
-          }
-        }
+      if (DictionaryAttr innerDictAttr = dyn_cast<mlir::DictionaryAttr>(
+              fieldOp->getAttrDictionary().get("attrs"))) {
+        ArrayAttr arrayAttr = cast<mlir::ArrayAttr>(
+            innerDictAttr.getNamed(attributeName)->getValue());
+        StringAttr stringAttr = cast<mlir::StringAttr>(arrayAttr[0]);
+        fieldNames.emplace_back(stringAttr.getValue().str(),
+                                fieldOp.getName().str());
+
+      } else {
+        fieldOp.emitError()
+            << "FieldOp must have a dictionary attribute named '"
+            << attributeName << "'"
+            << "with an array containing a string attribute";
       }
     });
 
-    std::string mapInitializer = "{ ";
+    std::stringstream ss;
+    ss << "{ ";
     for (size_t i = 0; i < fieldNames.size(); ++i) {
-      mapInitializer += " { \"" + fieldNames[i].first + "\", " +
-                        "reinterpret_cast<char*>(&" + fieldNames[i].second +
-                        ")",
-          mapInitializer += " }";
-      if (i < fieldNames.size() - 1)
-        mapInitializer += ", ";
+      ss << " { \"" << fieldNames[i].first << "\", reinterpret_cast<char*>(&"
+         << fieldNames[i].second << ") }";
+      if (i < fieldNames.size() - 1) {
+        ss << ", ";
+      }
     }
-    mapInitializer += " }";
+    ss << " }";
 
     emitc::FuncOp executeFunc =
         classOp.lookupSymbol<mlir::emitc::FuncOp>("execute");
@@ -144,8 +138,7 @@ public:
 
     // Create the constant map
     emitc::ConstantOp bufferMap = rewriter.create<emitc::ConstantOp>(
-        classOp.getLoc(), mapType,
-        emitc::OpaqueAttr::get(context, mapInitializer));
+        classOp.getLoc(), mapType, emitc::OpaqueAttr::get(context, ss.str()));
 
     rewriter.create<mlir::emitc::ReturnOp>(classOp.getLoc(),
                                            bufferMap.getResult());
