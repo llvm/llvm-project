@@ -73,7 +73,10 @@ static void applyTemplateHighlighting(raw_ostream &OS, StringRef Str,
 constexpr unsigned IndentWidth = 4;
 
 /// Maximum indentation level.
-constexpr unsigned MaxIndentWidth = 6 * IndentWidth;
+constexpr unsigned MaxIndentLvl = 10;
+
+/// Maximum indent width.
+constexpr unsigned MaxIndentWidth = MaxIndentLvl * IndentWidth;
 
 static int bytesSincePreviousTabOrLineBegin(StringRef SourceLine, size_t i) {
   int bytes = 0;
