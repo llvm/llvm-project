@@ -965,6 +965,7 @@ static bool foldConsecutiveStores(BasicBlock &BB, const DataLayout &DL,
   if (DL.isBigEndian())
     return false;
 
+  BatchAAResults BatchAA(AA);
   SmallVector<PartStore, 8> Parts;
   bool MadeChange = false;
   for (Instruction &I : make_early_inc_range(BB)) {
@@ -980,8 +981,13 @@ static bool foldConsecutiveStores(BasicBlock &BB, const DataLayout &DL,
       continue;
     }
 
-    // FIXME: Use AA to make this more precise.
-    if (I.mayReadOrWriteMemory() || I.mayThrow()) {
+    if (Parts.empty())
+      continue;
+
+    if (I.mayThrow() ||
+        (I.mayReadOrWriteMemory() &&
+         isModOrRefSet(BatchAA.getModRefInfo(
+             &I, MemoryLocation::getBeforeOrAfter(Parts[0].PtrBase))))) {
       MadeChange |= mergePartStores(Parts, DL, TTI);
       Parts.clear();
       continue;
