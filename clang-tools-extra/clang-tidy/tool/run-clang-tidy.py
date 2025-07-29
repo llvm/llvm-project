@@ -199,7 +199,7 @@ def aggregate_profiles(profile_dir: str) -> Dict[str, float]:
                         else:
                             aggregated[key] = value
         except (json.JSONDecodeError, KeyError, IOError) as e:
-            print(f"Warning: invalid json file {profile_file}: {e}", file=sys.stderr)
+            print(f"Error: invalid json file {profile_file}: {e}", file=sys.stderr)
             continue
 
     return aggregated
