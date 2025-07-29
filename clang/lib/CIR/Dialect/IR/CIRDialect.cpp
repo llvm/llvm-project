@@ -2295,6 +2295,15 @@ OpFoldResult BitCtzOp::fold(FoldAdaptor adaptor) {
       getPoisonZero());
 }
 
+OpFoldResult BitFfsOp::fold(FoldAdaptor adaptor) {
+  return foldUnaryBitOp(adaptor.getInput(), [](const llvm::APInt &inputValue) {
+    unsigned trailingZeros = inputValue.countTrailingZeros();
+    unsigned result =
+        trailingZeros == inputValue.getBitWidth() ? 0 : trailingZeros + 1;
+    return llvm::APInt(inputValue.getBitWidth(), result);
+  });
+}
+
 OpFoldResult BitParityOp::fold(FoldAdaptor adaptor) {
   return foldUnaryBitOp(adaptor.getInput(), [](const llvm::APInt &inputValue) {
     return llvm::APInt(inputValue.getBitWidth(), inputValue.popcount() % 2);
