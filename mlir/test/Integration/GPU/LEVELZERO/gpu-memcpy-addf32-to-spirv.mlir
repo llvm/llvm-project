@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(gpu-async-region),spirv-attach-target{ver=v1.0 caps=Addresses,Int64,Kernel},convert-gpu-to-spirv{use-64bit-index=true},gpu.module(spirv.module(spirv-lower-abi-attrs,spirv-update-vce)),func.func(llvm-request-c-wrappers),convert-scf-to-cf,convert-cf-to-llvm,convert-arith-to-llvm,convert-math-to-llvm,convert-func-to-llvm,gpu-to-llvm{use-bare-pointers-for-kernels=true},gpu-module-to-binary,expand-strided-metadata,lower-affine,finalize-memref-to-llvm,reconcile-unrealized-casts)' \
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(gpu-async-region),spirv-attach-target{ver=v1.0 caps=Addresses,Int64,Kernel},convert-gpu-to-spirv{use-64bit-index=true},gpu.module(spirv.module(spirv-lower-abi-attrs,spirv-update-vce)),func.func(llvm-request-c-wrappers),convert-scf-to-cf,convert-to-llvm,gpu-to-llvm{use-bare-pointers-for-kernels=true},gpu-module-to-binary,expand-strided-metadata,lower-affine,reconcile-unrealized-casts)' \
 // RUN: | mlir-runner \
 // RUN:   --shared-libs=%mlir_levelzero_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
@@ -26,7 +26,9 @@ module @add attributes {gpu.container_module} {
     %memref_0 = gpu.alloc () : memref<2x2x2xf32>
     gpu.memcpy %memref_0, %arg1 : memref<2x2x2xf32>, memref<2x2x2xf32>
     %memref_1 = gpu.alloc () : memref<2x2x2xf32>
+
     gpu.launch_func @test_kernel::@test_kernel blocks in (%c2, %c2, %c2) threads in (%c1, %c1, %c1) args(%memref : memref<2x2x2xf32>, %memref_0 : memref<2x2x2xf32>, %memref_1 : memref<2x2x2xf32>)
+
     %alloc = memref.alloc() : memref<2x2x2xf32>
     gpu.memcpy %alloc, %memref_1 : memref<2x2x2xf32>, memref<2x2x2xf32>
     gpu.dealloc %memref_1 : memref<2x2x2xf32>
