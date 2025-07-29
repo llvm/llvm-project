@@ -5949,8 +5949,7 @@ bool CombinerHelper::canCombineFMadOrFMA(MachineInstr &MI,
   const TargetOptions &Options = MF->getTarget().Options;
   LLT DstType = MRI.getType(MI.getOperand(0).getReg());
 
-  if (CanReassociate &&
-      !(Options.UnsafeFPMath || MI.getFlag(MachineInstr::MIFlag::FmReassoc)))
+  if (CanReassociate && !MI.getFlag(MachineInstr::MIFlag::FmReassoc))
     return false;
 
   // Floating-point multiply-add with intermediate rounding.
@@ -5962,8 +5961,7 @@ bool CombinerHelper::canCombineFMadOrFMA(MachineInstr &MI,
   if (!HasFMAD && !HasFMA)
     return false;
 
-  AllowFusionGlobally = Options.AllowFPOpFusion == FPOpFusion::Fast ||
-                        Options.UnsafeFPMath || HasFMAD;
+  AllowFusionGlobally = Options.AllowFPOpFusion == FPOpFusion::Fast || HasFMAD;
   // If the addition is not contractable, do not combine.
   if (!AllowFusionGlobally && !MI.getFlag(MachineInstr::MIFlag::FmContract))
     return false;
