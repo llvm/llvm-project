@@ -460,7 +460,7 @@ invoke.unwind:
 define i32 @freeze_callbr_use_after_phi(i1 %c) {
 ; CHECK-LABEL: @freeze_callbr_use_after_phi(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X:%.*]] = callbr i32 asm sideeffect "", "=r"() #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[X:%.*]] = callbr i32 asm sideeffect "", "=r"() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:            to label [[CALLBR_CONT:%.*]] []
 ; CHECK:       callbr.cont:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[X]], [[ENTRY:%.*]] ], [ 0, [[CALLBR_CONT]] ]
@@ -986,6 +986,40 @@ exit:                                             ; preds = %loop
   ret void
 }
 
+; 'assume' says GEP ptr can't produce poison, check freeze is pushed to offset.
+define void @fold_phi_gep_phi_offset_assume(ptr %init, ptr %end, i64 %n) {
+; CHECK-LABEL: @fold_phi_gep_phi_offset_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N:%.*]] = freeze i64 [[N1:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[INIT:%.*]], [[ENTRY:%.*]] ], [ [[I_NEXT_FR:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[N]], [[ENTRY]] ], [ [[OFF_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OFF_NEXT]] = shl i64 [[OFF]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(ptr [[I]]) ]
+; CHECK-NEXT:    [[I_NEXT_FR]] = getelementptr i8, ptr [[I]], i64 [[OFF_NEXT]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[I_NEXT_FR]], [[END:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:                                             ; preds = %loop, %entry
+  %i = phi ptr [ %init, %entry ], [ %i.next.fr, %loop ]
+  %off = phi i64 [ %n, %entry ], [ %off.next, %loop ]
+  %off.next = shl i64 %off, 3
+  call void @llvm.assume(i1 true) [ "noundef"(ptr %i) ]
+  %i.next = getelementptr inbounds i8, ptr %i, i64 %off.next
+  %i.next.fr = freeze ptr %i.next
+  %cond = icmp eq ptr %i.next.fr, %end
+  br i1 %cond, label %loop, label %exit
+
+exit:                                             ; preds = %loop
+  ret void
+}
+
 define void @fold_phi_multiple_insts(i32 %init, i32 %n) {
 ; CHECK-LABEL: @fold_phi_multiple_insts(
 ; CHECK-NEXT:  entry:
@@ -1346,7 +1380,8 @@ define ptr @freeze_ptrmask_nonnull(ptr %p, i64 noundef %m) {
 !2 = !{i32 0, i32 100}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; CHECK: attributes #[[ATTR1]] = { nounwind }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
+; CHECK: attributes #[[ATTR2]] = { nounwind }
 ;.
 ; CHECK: [[META0]] = !{}
 ; CHECK: [[META1]] = !{i64 4}
