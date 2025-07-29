@@ -419,6 +419,7 @@ cc_test(
         "//mlir:Parser",
         "//mlir:Pass",
         "//mlir:ReconcileUnrealizedCasts",
+        "//mlir:RegisterAllDialects",
         "//mlir:ToLLVMIRTranslation",
         "//mlir:VectorToLLVM",
         "//mlir:VectorToSCF",
