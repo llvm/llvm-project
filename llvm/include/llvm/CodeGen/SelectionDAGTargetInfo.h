@@ -23,8 +23,9 @@
 
 namespace llvm {
 
-class SelectionDAG;
 class CallInst;
+class SelectionDAG;
+
 //===----------------------------------------------------------------------===//
 /// Targets can subclass this to parameterize the
 /// SelectionDAG lowering and instruction selection process.
