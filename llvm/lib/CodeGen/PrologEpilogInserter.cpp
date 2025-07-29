@@ -725,8 +725,8 @@ static void fillCSInfoPerBB(MachineFrameInfo &MFI,
           continue;
         }
         // CalleeSavedInfo list for each point
-        auto CSIV = std::vector<CalleeSavedInfo>({*RTI.second});
-        Inner.try_emplace(BB, std::move(CSIV));
+        Inner.try_emplace(BB,
+                          std::initializer_list<CalleeSavedInfo>{*RTI.second});
       }
     }
   }
