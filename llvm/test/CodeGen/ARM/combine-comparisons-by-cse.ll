@@ -19,8 +19,8 @@ define i32 @combine_gt_ge_10() #0 {
 ; ARM-NEXT:    movt r0, :upper16:a
 ; ARM-NEXT:    movt r1, :upper16:b
 ; ARM-NEXT:    ldr r0, [r0]
-; ARM-NEXT:    cmp r0, #11
-; ARM-NEXT:    blt .LBB0_2
+; ARM-NEXT:    cmp r0, #10
+; ARM-NEXT:    ble .LBB0_2
 ; ARM-NEXT:  @ %bb.1: @ %land.lhs.true
 ; ARM-NEXT:    movw r0, :lower16:c
 ; ARM-NEXT:    ldr r3, [r1]
@@ -31,7 +31,6 @@ define i32 @combine_gt_ge_10() #0 {
 ; ARM-NEXT:    bxeq lr
 ; ARM-NEXT:    b .LBB0_3
 ; ARM-NEXT:  .LBB0_2: @ %lor.lhs.false
-; ARM-NEXT:    cmp r0, #10
 ; ARM-NEXT:    blt .LBB0_4
 ; ARM-NEXT:  .LBB0_3: @ %land.lhs.true3
 ; ARM-NEXT:    movw r0, :lower16:d
@@ -50,8 +49,8 @@ define i32 @combine_gt_ge_10() #0 {
 ; THUMB:       @ %bb.0: @ %entry
 ; THUMB-NEXT:    ldr r0, .LCPI0_0
 ; THUMB-NEXT:    ldr r0, [r0]
-; THUMB-NEXT:    cmp r0, #11
-; THUMB-NEXT:    blt .LBB0_3
+; THUMB-NEXT:    cmp r0, #10
+; THUMB-NEXT:    ble .LBB0_3
 ; THUMB-NEXT:  @ %bb.1: @ %land.lhs.true
 ; THUMB-NEXT:    ldr r0, .LCPI0_1
 ; THUMB-NEXT:    ldr r0, [r0]
@@ -63,7 +62,6 @@ define i32 @combine_gt_ge_10() #0 {
 ; THUMB-NEXT:    movs r0, #1
 ; THUMB-NEXT:    bx lr
 ; THUMB-NEXT:  .LBB0_3: @ %lor.lhs.false
-; THUMB-NEXT:    cmp r0, #10
 ; THUMB-NEXT:    blt .LBB0_6
 ; THUMB-NEXT:  .LBB0_4: @ %land.lhs.true3
 ; THUMB-NEXT:    ldr r0, .LCPI0_3
@@ -93,11 +91,11 @@ define i32 @combine_gt_ge_10() #0 {
 ; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    movw r0, :lower16:a
 ; THUMB2-NEXT:    movt r0, :upper16:a
-; THUMB2-NEXT:    ldr r1, [r0]
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    cmp r0, #10
 ; THUMB2-NEXT:    movw r0, :lower16:b
 ; THUMB2-NEXT:    movt r0, :upper16:b
-; THUMB2-NEXT:    cmp r1, #11
-; THUMB2-NEXT:    blt .LBB0_2
+; THUMB2-NEXT:    ble .LBB0_2
 ; THUMB2-NEXT:  @ %bb.1: @ %land.lhs.true
 ; THUMB2-NEXT:    movw r1, :lower16:c
 ; THUMB2-NEXT:    ldr r2, [r0]
@@ -109,7 +107,6 @@ define i32 @combine_gt_ge_10() #0 {
 ; THUMB2-NEXT:    bxeq lr
 ; THUMB2-NEXT:    b .LBB0_3
 ; THUMB2-NEXT:  .LBB0_2: @ %lor.lhs.false
-; THUMB2-NEXT:    cmp r1, #10
 ; THUMB2-NEXT:    blt .LBB0_4
 ; THUMB2-NEXT:  .LBB0_3: @ %land.lhs.true3
 ; THUMB2-NEXT:    movw r1, :lower16:d
@@ -128,11 +125,11 @@ define i32 @combine_gt_ge_10() #0 {
 ; THUMBV8:       @ %bb.0: @ %entry
 ; THUMBV8-NEXT:    movw r0, :lower16:a
 ; THUMBV8-NEXT:    movt r0, :upper16:a
-; THUMBV8-NEXT:    ldr r1, [r0]
+; THUMBV8-NEXT:    ldr r0, [r0]
+; THUMBV8-NEXT:    cmp r0, #10
 ; THUMBV8-NEXT:    movw r0, :lower16:b
 ; THUMBV8-NEXT:    movt r0, :upper16:b
-; THUMBV8-NEXT:    cmp r1, #11
-; THUMBV8-NEXT:    blt .LBB0_2
+; THUMBV8-NEXT:    ble .LBB0_2
 ; THUMBV8-NEXT:  @ %bb.1: @ %land.lhs.true
 ; THUMBV8-NEXT:    movw r1, :lower16:c
 ; THUMBV8-NEXT:    ldr r2, [r0]
@@ -144,7 +141,6 @@ define i32 @combine_gt_ge_10() #0 {
 ; THUMBV8-NEXT:    bxeq lr
 ; THUMBV8-NEXT:    b .LBB0_3
 ; THUMBV8-NEXT:  .LBB0_2: @ %lor.lhs.false
-; THUMBV8-NEXT:    cmp r1, #10
 ; THUMBV8-NEXT:    blt .LBB0_4
 ; THUMBV8-NEXT:  .LBB0_3: @ %land.lhs.true3
 ; THUMBV8-NEXT:    movw r1, :lower16:d
@@ -194,15 +190,14 @@ define i32 @combine_gt_lt_5() #0 {
 ; ARM-NEXT:    movw r0, :lower16:a
 ; ARM-NEXT:    movt r0, :upper16:a
 ; ARM-NEXT:    ldr r0, [r0]
-; ARM-NEXT:    cmp r0, #6
-; ARM-NEXT:    blt .LBB1_2
+; ARM-NEXT:    cmp r0, #5
+; ARM-NEXT:    ble .LBB1_2
 ; ARM-NEXT:  @ %bb.1: @ %land.lhs.true
 ; ARM-NEXT:    movw r0, :lower16:c
 ; ARM-NEXT:    movt r0, :upper16:c
 ; ARM-NEXT:    b .LBB1_4
 ; ARM-NEXT:  .LBB1_2: @ %lor.lhs.false
-; ARM-NEXT:    cmp r0, #4
-; ARM-NEXT:    bgt .LBB1_5
+; ARM-NEXT:    bge .LBB1_5
 ; ARM-NEXT:  @ %bb.3: @ %land.lhs.true3
 ; ARM-NEXT:    movw r0, :lower16:d
 ; ARM-NEXT:    movt r0, :upper16:d
@@ -223,8 +218,8 @@ define i32 @combine_gt_lt_5() #0 {
 ; THUMB:       @ %bb.0: @ %entry
 ; THUMB-NEXT:    ldr r0, .LCPI1_0
 ; THUMB-NEXT:    ldr r0, [r0]
-; THUMB-NEXT:    cmp r0, #6
-; THUMB-NEXT:    blt .LBB1_3
+; THUMB-NEXT:    cmp r0, #5
+; THUMB-NEXT:    ble .LBB1_3
 ; THUMB-NEXT:  @ %bb.1: @ %land.lhs.true
 ; THUMB-NEXT:    ldr r0, .LCPI1_3
 ; THUMB-NEXT:    ldr r0, [r0]
@@ -236,8 +231,7 @@ define i32 @combine_gt_lt_5() #0 {
 ; THUMB-NEXT:    movs r0, #1
 ; THUMB-NEXT:    bx lr
 ; THUMB-NEXT:  .LBB1_3: @ %lor.lhs.false
-; THUMB-NEXT:    cmp r0, #4
-; THUMB-NEXT:    bgt .LBB1_6
+; THUMB-NEXT:    bge .LBB1_6
 ; THUMB-NEXT:  @ %bb.4: @ %land.lhs.true3
 ; THUMB-NEXT:    ldr r0, .LCPI1_1
 ; THUMB-NEXT:    ldr r0, [r0]
@@ -267,8 +261,8 @@ define i32 @combine_gt_lt_5() #0 {
 ; THUMB2-NEXT:    movw r0, :lower16:a
 ; THUMB2-NEXT:    movt r0, :upper16:a
 ; THUMB2-NEXT:    ldr r0, [r0]
-; THUMB2-NEXT:    cmp r0, #6
-; THUMB2-NEXT:    blt .LBB1_2
+; THUMB2-NEXT:    cmp r0, #5
+; THUMB2-NEXT:    ble .LBB1_2
 ; THUMB2-NEXT:  @ %bb.1: @ %land.lhs.true
 ; THUMB2-NEXT:    movw r0, :lower16:c
 ; THUMB2-NEXT:    movw r1, :lower16:b
@@ -282,8 +276,7 @@ define i32 @combine_gt_lt_5() #0 {
 ; THUMB2-NEXT:    bxeq lr
 ; THUMB2-NEXT:    b .LBB1_4
 ; THUMB2-NEXT:  .LBB1_2: @ %lor.lhs.false
-; THUMB2-NEXT:    cmp r0, #4
-; THUMB2-NEXT:    bgt .LBB1_4
+; THUMB2-NEXT:    bge .LBB1_4
 ; THUMB2-NEXT:  @ %bb.3: @ %land.lhs.true3
 ; THUMB2-NEXT:    movw r0, :lower16:d
 ; THUMB2-NEXT:    movw r1, :lower16:b
@@ -304,8 +297,8 @@ define i32 @combine_gt_lt_5() #0 {
 ; THUMBV8-NEXT:    movw r0, :lower16:a
 ; THUMBV8-NEXT:    movt r0, :upper16:a
 ; THUMBV8-NEXT:    ldr r0, [r0]
-; THUMBV8-NEXT:    cmp r0, #6
-; THUMBV8-NEXT:    blt .LBB1_2
+; THUMBV8-NEXT:    cmp r0, #5
+; THUMBV8-NEXT:    ble .LBB1_2
 ; THUMBV8-NEXT:  @ %bb.1: @ %land.lhs.true
 ; THUMBV8-NEXT:    movw r0, :lower16:c
 ; THUMBV8-NEXT:    movw r1, :lower16:b
@@ -319,8 +312,7 @@ define i32 @combine_gt_lt_5() #0 {
 ; THUMBV8-NEXT:    bxeq lr
 ; THUMBV8-NEXT:    b .LBB1_4
 ; THUMBV8-NEXT:  .LBB1_2: @ %lor.lhs.false
-; THUMBV8-NEXT:    cmp r0, #4
-; THUMBV8-NEXT:    bgt .LBB1_4
+; THUMBV8-NEXT:    bge .LBB1_4
 ; THUMBV8-NEXT:  @ %bb.3: @ %land.lhs.true3
 ; THUMBV8-NEXT:    movw r0, :lower16:d
 ; THUMBV8-NEXT:    movw r1, :lower16:b
@@ -373,8 +365,8 @@ define i32 @combine_lt_ge_5() #0 {
 ; ARM-NEXT:    movt r0, :upper16:a
 ; ARM-NEXT:    movt r1, :upper16:b
 ; ARM-NEXT:    ldr r0, [r0]
-; ARM-NEXT:    cmp r0, #4
-; ARM-NEXT:    bgt .LBB2_2
+; ARM-NEXT:    cmp r0, #5
+; ARM-NEXT:    bge .LBB2_2
 ; ARM-NEXT:  @ %bb.1: @ %land.lhs.true
 ; ARM-NEXT:    movw r0, :lower16:c
 ; ARM-NEXT:    ldr r3, [r1]
@@ -385,7 +377,6 @@ define i32 @combine_lt_ge_5() #0 {
 ; ARM-NEXT:    bxeq lr
 ; ARM-NEXT:    b .LBB2_3
 ; ARM-NEXT:  .LBB2_2: @ %lor.lhs.false
-; ARM-NEXT:    cmp r0, #5
 ; ARM-NEXT:    bgt .LBB2_4
 ; ARM-NEXT:  .LBB2_3: @ %land.lhs.true3
 ; ARM-NEXT:    movw r0, :lower16:d
@@ -404,8 +395,8 @@ define i32 @combine_lt_ge_5() #0 {
 ; THUMB:       @ %bb.0: @ %entry
 ; THUMB-NEXT:    ldr r0, .LCPI2_0
 ; THUMB-NEXT:    ldr r0, [r0]
-; THUMB-NEXT:    cmp r0, #4
-; THUMB-NEXT:    bgt .LBB2_3
+; THUMB-NEXT:    cmp r0, #5
+; THUMB-NEXT:    bge .LBB2_3
 ; THUMB-NEXT:  @ %bb.1: @ %land.lhs.true
 ; THUMB-NEXT:    ldr r0, .LCPI2_1
 ; THUMB-NEXT:    ldr r0, [r0]
@@ -417,7 +408,6 @@ define i32 @combine_lt_ge_5() #0 {
 ; THUMB-NEXT:    movs r0, #1
 ; THUMB-NEXT:    bx lr
 ; THUMB-NEXT:  .LBB2_3: @ %lor.lhs.false
-; THUMB-NEXT:    cmp r0, #5
 ; THUMB-NEXT:    bgt .LBB2_6
 ; THUMB-NEXT:  .LBB2_4: @ %land.lhs.true3
 ; THUMB-NEXT:    ldr r0, .LCPI2_3
@@ -447,11 +437,11 @@ define i32 @combine_lt_ge_5() #0 {
 ; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    movw r0, :lower16:a
 ; THUMB2-NEXT:    movt r0, :upper16:a
-; THUMB2-NEXT:    ldr r1, [r0]
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    cmp r0, #5
 ; THUMB2-NEXT:    movw r0, :lower16:b
 ; THUMB2-NEXT:    movt r0, :upper16:b
-; THUMB2-NEXT:    cmp r1, #4
-; THUMB2-NEXT:    bgt .LBB2_2
+; THUMB2-NEXT:    bge .LBB2_2
 ; THUMB2-NEXT:  @ %bb.1: @ %land.lhs.true
 ; THUMB2-NEXT:    movw r1, :lower16:c
 ; THUMB2-NEXT:    ldr r2, [r0]
@@ -463,7 +453,6 @@ define i32 @combine_lt_ge_5() #0 {
 ; THUMB2-NEXT:    bxeq lr
 ; THUMB2-NEXT:    b .LBB2_3
 ; THUMB2-NEXT:  .LBB2_2: @ %lor.lhs.false
-; THUMB2-NEXT:    cmp r1, #5
 ; THUMB2-NEXT:    bgt .LBB2_4
 ; THUMB2-NEXT:  .LBB2_3: @ %land.lhs.true3
 ; THUMB2-NEXT:    movw r1, :lower16:d
@@ -482,11 +471,11 @@ define i32 @combine_lt_ge_5() #0 {
 ; THUMBV8:       @ %bb.0: @ %entry
 ; THUMBV8-NEXT:    movw r0, :lower16:a
 ; THUMBV8-NEXT:    movt r0, :upper16:a
-; THUMBV8-NEXT:    ldr r1, [r0]
+; THUMBV8-NEXT:    ldr r0, [r0]
+; THUMBV8-NEXT:    cmp r0, #5
 ; THUMBV8-NEXT:    movw r0, :lower16:b
 ; THUMBV8-NEXT:    movt r0, :upper16:b
-; THUMBV8-NEXT:    cmp r1, #4
-; THUMBV8-NEXT:    bgt .LBB2_2
+; THUMBV8-NEXT:    bge .LBB2_2
 ; THUMBV8-NEXT:  @ %bb.1: @ %land.lhs.true
 ; THUMBV8-NEXT:    movw r1, :lower16:c
 ; THUMBV8-NEXT:    ldr r2, [r0]
@@ -498,7 +487,6 @@ define i32 @combine_lt_ge_5() #0 {
 ; THUMBV8-NEXT:    bxeq lr
 ; THUMBV8-NEXT:    b .LBB2_3
 ; THUMBV8-NEXT:  .LBB2_2: @ %lor.lhs.false
-; THUMBV8-NEXT:    cmp r1, #5
 ; THUMBV8-NEXT:    bgt .LBB2_4
 ; THUMBV8-NEXT:  .LBB2_3: @ %land.lhs.true3
 ; THUMBV8-NEXT:    movw r1, :lower16:d
@@ -548,15 +536,14 @@ define i32 @combine_lt_gt_5() #0 {
 ; ARM-NEXT:    movw r0, :lower16:a
 ; ARM-NEXT:    movt r0, :upper16:a
 ; ARM-NEXT:    ldr r0, [r0]
-; ARM-NEXT:    cmp r0, #4
-; ARM-NEXT:    bgt .LBB3_2
+; ARM-NEXT:    cmp r0, #5
+; ARM-NEXT:    bge .LBB3_2
 ; ARM-NEXT:  @ %bb.1: @ %land.lhs.true
 ; ARM-NEXT:    movw r0, :lower16:c
 ; ARM-NEXT:    movt r0, :upper16:c
 ; ARM-NEXT:    b .LBB3_4
 ; ARM-NEXT:  .LBB3_2: @ %lor.lhs.false
-; ARM-NEXT:    cmp r0, #6
-; ARM-NEXT:    blt .LBB3_5
+; ARM-NEXT:    ble .LBB3_5
 ; ARM-NEXT:  @ %bb.3: @ %land.lhs.true3
 ; ARM-NEXT:    movw r0, :lower16:d
 ; ARM-NEXT:    movt r0, :upper16:d
@@ -577,8 +564,8 @@ define i32 @combine_lt_gt_5() #0 {
 ; THUMB:       @ %bb.0: @ %entry
 ; THUMB-NEXT:    ldr r0, .LCPI3_0
 ; THUMB-NEXT:    ldr r0, [r0]
-; THUMB-NEXT:    cmp r0, #4
-; THUMB-NEXT:    bgt .LBB3_3
+; THUMB-NEXT:    cmp r0, #5
+; THUMB-NEXT:    bge .LBB3_3
 ; THUMB-NEXT:  @ %bb.1: @ %land.lhs.true
 ; THUMB-NEXT:    ldr r0, .LCPI3_3
 ; THUMB-NEXT:    ldr r0, [r0]
@@ -590,8 +577,7 @@ define i32 @combine_lt_gt_5() #0 {
 ; THUMB-NEXT:    movs r0, #1
 ; THUMB-NEXT:    bx lr
 ; THUMB-NEXT:  .LBB3_3: @ %lor.lhs.false
-; THUMB-NEXT:    cmp r0, #6
-; THUMB-NEXT:    blt .LBB3_6
+; THUMB-NEXT:    ble .LBB3_6
 ; THUMB-NEXT:  @ %bb.4: @ %land.lhs.true3
 ; THUMB-NEXT:    ldr r0, .LCPI3_1
 ; THUMB-NEXT:    ldr r0, [r0]
@@ -621,8 +607,8 @@ define i32 @combine_lt_gt_5() #0 {
 ; THUMB2-NEXT:    movw r0, :lower16:a
 ; THUMB2-NEXT:    movt r0, :upper16:a
 ; THUMB2-NEXT:    ldr r0, [r0]
-; THUMB2-NEXT:    cmp r0, #4
-; THUMB2-NEXT:    bgt .LBB3_2
+; THUMB2-NEXT:    cmp r0, #5
+; THUMB2-NEXT:    bge .LBB3_2
 ; THUMB2-NEXT:  @ %bb.1: @ %land.lhs.true
 ; THUMB2-NEXT:    movw r0, :lower16:c
 ; THUMB2-NEXT:    movw r1, :lower16:b
@@ -636,8 +622,7 @@ define i32 @combine_lt_gt_5() #0 {
 ; THUMB2-NEXT:    bxeq lr
 ; THUMB2-NEXT:    b .LBB3_4
 ; THUMB2-NEXT:  .LBB3_2: @ %lor.lhs.false
-; THUMB2-NEXT:    cmp r0, #6
-; THUMB2-NEXT:    blt .LBB3_4
+; THUMB2-NEXT:    ble .LBB3_4
 ; THUMB2-NEXT:  @ %bb.3: @ %land.lhs.true3
 ; THUMB2-NEXT:    movw r0, :lower16:d
 ; THUMB2-NEXT:    movw r1, :lower16:b
@@ -658,8 +643,8 @@ define i32 @combine_lt_gt_5() #0 {
 ; THUMBV8-NEXT:    movw r0, :lower16:a
 ; THUMBV8-NEXT:    movt r0, :upper16:a
 ; THUMBV8-NEXT:    ldr r0, [r0]
-; THUMBV8-NEXT:    cmp r0, #4
-; THUMBV8-NEXT:    bgt .LBB3_2
+; THUMBV8-NEXT:    cmp r0, #5
+; THUMBV8-NEXT:    bge .LBB3_2
 ; THUMBV8-NEXT:  @ %bb.1: @ %land.lhs.true
 ; THUMBV8-NEXT:    movw r0, :lower16:c
 ; THUMBV8-NEXT:    movw r1, :lower16:b
@@ -673,8 +658,7 @@ define i32 @combine_lt_gt_5() #0 {
 ; THUMBV8-NEXT:    bxeq lr
 ; THUMBV8-NEXT:    b .LBB3_4
 ; THUMBV8-NEXT:  .LBB3_2: @ %lor.lhs.false
-; THUMBV8-NEXT:    cmp r0, #6
-; THUMBV8-NEXT:    blt .LBB3_4
+; THUMBV8-NEXT:    ble .LBB3_4
 ; THUMBV8-NEXT:  @ %bb.3: @ %land.lhs.true3
 ; THUMBV8-NEXT:    movw r0, :lower16:d
 ; THUMBV8-NEXT:    movw r1, :lower16:b
@@ -725,15 +709,14 @@ define i32 @combine_gt_lt_n5() #0 {
 ; ARM-NEXT:    movw r0, :lower16:a
 ; ARM-NEXT:    movt r0, :upper16:a
 ; ARM-NEXT:    ldr r0, [r0]
-; ARM-NEXT:    cmn r0, #4
-; ARM-NEXT:    blt .LBB4_2
+; ARM-NEXT:    cmn r0, #5
+; ARM-NEXT:    ble .LBB4_2
 ; ARM-NEXT:  @ %bb.1: @ %land.lhs.true
 ; ARM-NEXT:    movw r0, :lower16:c
 ; ARM-NEXT:    movt r0, :upper16:c
 ; ARM-NEXT:    b .LBB4_4
 ; ARM-NEXT:  .LBB4_2: @ %lor.lhs.false
-; ARM-NEXT:    cmn r0, #6
-; ARM-NEXT:    bgt .LBB4_5
+; ARM-NEXT:    bge .LBB4_5
 ; ARM-NEXT:  @ %bb.3: @ %land.lhs.true3
 ; ARM-NEXT:    movw r0, :lower16:d
 ; ARM-NEXT:    movt r0, :upper16:d
@@ -802,8 +785,8 @@ define i32 @combine_gt_lt_n5() #0 {
 ; THUMB2-NEXT:    movw r0, :lower16:a
 ; THUMB2-NEXT:    movt r0, :upper16:a
 ; THUMB2-NEXT:    ldr r0, [r0]
-; THUMB2-NEXT:    cmn.w r0, #4
-; THUMB2-NEXT:    blt .LBB4_2
+; THUMB2-NEXT:    cmn.w r0, #5
+; THUMB2-NEXT:    ble .LBB4_2
 ; THUMB2-NEXT:  @ %bb.1: @ %land.lhs.true
 ; THUMB2-NEXT:    movw r0, :lower16:c
 ; THUMB2-NEXT:    movw r1, :lower16:b
@@ -817,8 +800,7 @@ define i32 @combine_gt_lt_n5() #0 {
 ; THUMB2-NEXT:    bxeq lr
 ; THUMB2-NEXT:    b .LBB4_4
 ; THUMB2-NEXT:  .LBB4_2: @ %lor.lhs.false
-; THUMB2-NEXT:    cmn.w r0, #6
-; THUMB2-NEXT:    bgt .LBB4_4
+; THUMB2-NEXT:    bge .LBB4_4
 ; THUMB2-NEXT:  @ %bb.3: @ %land.lhs.true3
 ; THUMB2-NEXT:    movw r0, :lower16:d
 ; THUMB2-NEXT:    movw r1, :lower16:b
@@ -839,8 +821,8 @@ define i32 @combine_gt_lt_n5() #0 {
 ; THUMBV8-NEXT:    movw r0, :lower16:a
 ; THUMBV8-NEXT:    movt r0, :upper16:a
 ; THUMBV8-NEXT:    ldr r0, [r0]
-; THUMBV8-NEXT:    cmn.w r0, #4
-; THUMBV8-NEXT:    blt .LBB4_2
+; THUMBV8-NEXT:    cmn.w r0, #5
+; THUMBV8-NEXT:    ble .LBB4_2
 ; THUMBV8-NEXT:  @ %bb.1: @ %land.lhs.true
 ; THUMBV8-NEXT:    movw r0, :lower16:c
 ; THUMBV8-NEXT:    movw r1, :lower16:b
@@ -854,8 +836,7 @@ define i32 @combine_gt_lt_n5() #0 {
 ; THUMBV8-NEXT:    bxeq lr
 ; THUMBV8-NEXT:    b .LBB4_4
 ; THUMBV8-NEXT:  .LBB4_2: @ %lor.lhs.false
-; THUMBV8-NEXT:    cmn.w r0, #6
-; THUMBV8-NEXT:    bgt .LBB4_4
+; THUMBV8-NEXT:    bge .LBB4_4
 ; THUMBV8-NEXT:  @ %bb.3: @ %land.lhs.true3
 ; THUMBV8-NEXT:    movw r0, :lower16:d
 ; THUMBV8-NEXT:    movw r1, :lower16:b
@@ -906,15 +887,14 @@ define i32 @combine_lt_gt_n5() #0 {
 ; ARM-NEXT:    movw r0, :lower16:a
 ; ARM-NEXT:    movt r0, :upper16:a
 ; ARM-NEXT:    ldr r0, [r0]
-; ARM-NEXT:    cmn r0, #6
-; ARM-NEXT:    bgt .LBB5_2
+; ARM-NEXT:    cmn r0, #5
+; ARM-NEXT:    bge .LBB5_2
 ; ARM-NEXT:  @ %bb.1: @ %land.lhs.true
 ; ARM-NEXT:    movw r0, :lower16:c
 ; ARM-NEXT:    movt r0, :upper16:c
 ; ARM-NEXT:    b .LBB5_4
 ; ARM-NEXT:  .LBB5_2: @ %lor.lhs.false
-; ARM-NEXT:    cmn r0, #4
-; ARM-NEXT:    blt .LBB5_5
+; ARM-NEXT:    ble .LBB5_5
 ; ARM-NEXT:  @ %bb.3: @ %land.lhs.true3
 ; ARM-NEXT:    movw r0, :lower16:d
 ; ARM-NEXT:    movt r0, :upper16:d
@@ -983,8 +963,8 @@ define i32 @combine_lt_gt_n5() #0 {
 ; THUMB2-NEXT:    movw r0, :lower16:a
 ; THUMB2-NEXT:    movt r0, :upper16:a
 ; THUMB2-NEXT:    ldr r0, [r0]
-; THUMB2-NEXT:    cmn.w r0, #6
-; THUMB2-NEXT:    bgt .LBB5_2
+; THUMB2-NEXT:    cmn.w r0, #5
+; THUMB2-NEXT:    bge .LBB5_2
 ; THUMB2-NEXT:  @ %bb.1: @ %land.lhs.true
 ; THUMB2-NEXT:    movw r0, :lower16:c
 ; THUMB2-NEXT:    movw r1, :lower16:b
@@ -998,8 +978,7 @@ define i32 @combine_lt_gt_n5() #0 {
 ; THUMB2-NEXT:    bxeq lr
 ; THUMB2-NEXT:    b .LBB5_4
 ; THUMB2-NEXT:  .LBB5_2: @ %lor.lhs.false
-; THUMB2-NEXT:    cmn.w r0, #4
-; THUMB2-NEXT:    blt .LBB5_4
+; THUMB2-NEXT:    ble .LBB5_4
 ; THUMB2-NEXT:  @ %bb.3: @ %land.lhs.true3
 ; THUMB2-NEXT:    movw r0, :lower16:d
 ; THUMB2-NEXT:    movw r1, :lower16:b
@@ -1020,8 +999,8 @@ define i32 @combine_lt_gt_n5() #0 {
 ; THUMBV8-NEXT:    movw r0, :lower16:a
 ; THUMBV8-NEXT:    movt r0, :upper16:a
 ; THUMBV8-NEXT:    ldr r0, [r0]
-; THUMBV8-NEXT:    cmn.w r0, #6
-; THUMBV8-NEXT:    bgt .LBB5_2
+; THUMBV8-NEXT:    cmn.w r0, #5
+; THUMBV8-NEXT:    bge .LBB5_2
 ; THUMBV8-NEXT:  @ %bb.1: @ %land.lhs.true
 ; THUMBV8-NEXT:    movw r0, :lower16:c
 ; THUMBV8-NEXT:    movw r1, :lower16:b
@@ -1035,8 +1014,7 @@ define i32 @combine_lt_gt_n5() #0 {
 ; THUMBV8-NEXT:    bxeq lr
 ; THUMBV8-NEXT:    b .LBB5_4
 ; THUMBV8-NEXT:  .LBB5_2: @ %lor.lhs.false
-; THUMBV8-NEXT:    cmn.w r0, #4
-; THUMBV8-NEXT:    blt .LBB5_4
+; THUMBV8-NEXT:    ble .LBB5_4
 ; THUMBV8-NEXT:  @ %bb.3: @ %land.lhs.true3
 ; THUMBV8-NEXT:    movw r0, :lower16:d
 ; THUMBV8-NEXT:    movw r1, :lower16:b
@@ -1785,3 +1763,1422 @@ return:                                           ; preds = %if.end, %land.lhs.t
   %retval.0 = phi i32 [ 0, %if.end ], [ 1, %land.lhs.true3 ], [ 1, %land.lhs.true ]
   ret i32 %retval.0
 }
+
+; (a > 10 && b == c) || (a >= 10 && b == d)
+define i32 @combine_ugt_uge_10() #0 {
+; ARM-LABEL: combine_ugt_uge_10:
+; ARM:       @ %bb.0: @ %entry
+; ARM-NEXT:    movw r0, :lower16:a
+; ARM-NEXT:    movw r1, :lower16:b
+; ARM-NEXT:    movt r0, :upper16:a
+; ARM-NEXT:    movt r1, :upper16:b
+; ARM-NEXT:    ldr r0, [r0]
+; ARM-NEXT:    cmp r0, #10
+; ARM-NEXT:    bls .LBB10_2
+; ARM-NEXT:  @ %bb.1: @ %land.lhs.true
+; ARM-NEXT:    movw r0, :lower16:c
+; ARM-NEXT:    ldr r3, [r1]
+; ARM-NEXT:    movt r0, :upper16:c
+; ARM-NEXT:    ldr r2, [r0]
+; ARM-NEXT:    mov r0, #1
+; ARM-NEXT:    cmp r3, r2
+; ARM-NEXT:    bxeq lr
+; ARM-NEXT:    b .LBB10_3
+; ARM-NEXT:  .LBB10_2: @ %lor.lhs.false
+; ARM-NEXT:    blo .LBB10_4
+; ARM-NEXT:  .LBB10_3: @ %land.lhs.true3
+; ARM-NEXT:    movw r0, :lower16:d
+; ARM-NEXT:    ldr r1, [r1]
+; ARM-NEXT:    movt r0, :upper16:d
+; ARM-NEXT:    ldr r2, [r0]
+; ARM-NEXT:    mov r0, #1
+; ARM-NEXT:    cmp r1, r2
+; ARM-NEXT:    movne r0, #0
+; ARM-NEXT:    bx lr
+; ARM-NEXT:  .LBB10_4: @ %if.end
+; ARM-NEXT:    mov r0, #0
+; ARM-NEXT:    bx lr
+;
+; THUMB-LABEL: combine_ugt_uge_10:
+; THUMB:       @ %bb.0: @ %entry
+; THUMB-NEXT:    ldr r0, .LCPI10_0
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    cmp r0, #10
+; THUMB-NEXT:    bls .LBB10_3
+; THUMB-NEXT:  @ %bb.1: @ %land.lhs.true
+; THUMB-NEXT:    ldr r0, .LCPI10_1
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    ldr r1, .LCPI10_2
+; THUMB-NEXT:    ldr r1, [r1]
+; THUMB-NEXT:    cmp r1, r0
+; THUMB-NEXT:    bne .LBB10_4
+; THUMB-NEXT:  @ %bb.2:
+; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:  .LBB10_3: @ %lor.lhs.false
+; THUMB-NEXT:    blo .LBB10_6
+; THUMB-NEXT:  .LBB10_4: @ %land.lhs.true3
+; THUMB-NEXT:    ldr r0, .LCPI10_3
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    ldr r1, .LCPI10_2
+; THUMB-NEXT:    ldr r1, [r1]
+; THUMB-NEXT:    cmp r1, r0
+; THUMB-NEXT:    bne .LBB10_6
+; THUMB-NEXT:  @ %bb.5:
+; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:  .LBB10_6: @ %if.end
+; THUMB-NEXT:    movs r0, #0
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:    .p2align 2
+; THUMB-NEXT:  @ %bb.7:
+; THUMB-NEXT:  .LCPI10_0:
+; THUMB-NEXT:    .long a
+; THUMB-NEXT:  .LCPI10_1:
+; THUMB-NEXT:    .long c
+; THUMB-NEXT:  .LCPI10_2:
+; THUMB-NEXT:    .long b
+; THUMB-NEXT:  .LCPI10_3:
+; THUMB-NEXT:    .long d
+;
+; THUMB2-LABEL: combine_ugt_uge_10:
+; THUMB2:       @ %bb.0: @ %entry
+; THUMB2-NEXT:    movw r0, :lower16:a
+; THUMB2-NEXT:    movt r0, :upper16:a
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    cmp r0, #10
+; THUMB2-NEXT:    movw r0, :lower16:b
+; THUMB2-NEXT:    movt r0, :upper16:b
+; THUMB2-NEXT:    bls .LBB10_2
+; THUMB2-NEXT:  @ %bb.1: @ %land.lhs.true
+; THUMB2-NEXT:    movw r1, :lower16:c
+; THUMB2-NEXT:    ldr r2, [r0]
+; THUMB2-NEXT:    movt r1, :upper16:c
+; THUMB2-NEXT:    ldr r1, [r1]
+; THUMB2-NEXT:    cmp r2, r1
+; THUMB2-NEXT:    itt eq
+; THUMB2-NEXT:    moveq r0, #1
+; THUMB2-NEXT:    bxeq lr
+; THUMB2-NEXT:    b .LBB10_3
+; THUMB2-NEXT:  .LBB10_2: @ %lor.lhs.false
+; THUMB2-NEXT:    blo .LBB10_4
+; THUMB2-NEXT:  .LBB10_3: @ %land.lhs.true3
+; THUMB2-NEXT:    movw r1, :lower16:d
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    movt r1, :upper16:d
+; THUMB2-NEXT:    ldr r1, [r1]
+; THUMB2-NEXT:    cmp r0, r1
+; THUMB2-NEXT:    itt eq
+; THUMB2-NEXT:    moveq r0, #1
+; THUMB2-NEXT:    bxeq lr
+; THUMB2-NEXT:  .LBB10_4: @ %if.end
+; THUMB2-NEXT:    movs r0, #0
+; THUMB2-NEXT:    bx lr
+;
+; THUMBV8-LABEL: combine_ugt_uge_10:
+; THUMBV8:       @ %bb.0: @ %entry
+; THUMBV8-NEXT:    movw r0, :lower16:a
+; THUMBV8-NEXT:    movt r0, :upper16:a
+; THUMBV8-NEXT:    ldr r0, [r0]
+; THUMBV8-NEXT:    cmp r0, #10
+; THUMBV8-NEXT:    movw r0, :lower16:b
+; THUMBV8-NEXT:    movt r0, :upper16:b
+; THUMBV8-NEXT:    bls .LBB10_2
+; THUMBV8-NEXT:  @ %bb.1: @ %land.lhs.true
+; THUMBV8-NEXT:    movw r1, :lower16:c
+; THUMBV8-NEXT:    ldr r2, [r0]
+; THUMBV8-NEXT:    movt r1, :upper16:c
+; THUMBV8-NEXT:    ldr r1, [r1]
+; THUMBV8-NEXT:    cmp r2, r1
+; THUMBV8-NEXT:    itt eq
+; THUMBV8-NEXT:    moveq r0, #1
+; THUMBV8-NEXT:    bxeq lr
+; THUMBV8-NEXT:    b .LBB10_3
+; THUMBV8-NEXT:  .LBB10_2: @ %lor.lhs.false
+; THUMBV8-NEXT:    blo .LBB10_4
+; THUMBV8-NEXT:  .LBB10_3: @ %land.lhs.true3
+; THUMBV8-NEXT:    movw r1, :lower16:d
+; THUMBV8-NEXT:    ldr r0, [r0]
+; THUMBV8-NEXT:    movt r1, :upper16:d
+; THUMBV8-NEXT:    ldr r1, [r1]
+; THUMBV8-NEXT:    cmp r0, r1
+; THUMBV8-NEXT:    itt eq
+; THUMBV8-NEXT:    moveq r0, #1
+; THUMBV8-NEXT:    bxeq lr
+; THUMBV8-NEXT:  .LBB10_4: @ %if.end
+; THUMBV8-NEXT:    movs r0, #0
+; THUMBV8-NEXT:    bx lr
+entry:
+  %0 = load i32, ptr @a, align 4
+  %cmp = icmp ugt i32 %0, 10
+  br i1 %cmp, label %land.lhs.true, label %lor.lhs.false
+
+land.lhs.true:                                    ; preds = %entry
+  %1 = load i32, ptr @b, align 4
+  %2 = load i32, ptr @c, align 4
+  %cmp1 = icmp eq i32 %1, %2
+  br i1 %cmp1, label %return, label %land.lhs.true3
+
+lor.lhs.false:                                    ; preds = %entry
+  %cmp2 = icmp ugt i32 %0, 9
+  br i1 %cmp2, label %land.lhs.true3, label %if.end
+
+land.lhs.true3:                                   ; preds = %lor.lhs.false, %land.lhs.true
+  %3 = load i32, ptr @b, align 4
+  %4 = load i32, ptr @d, align 4
+  %cmp4 = icmp eq i32 %3, %4
+  br i1 %cmp4, label %return, label %if.end
+
+if.end:                                           ; preds = %land.lhs.true3, %lor.lhs.false
+  br label %return
+
+return:                                           ; preds = %if.end, %land.lhs.true3, %land.lhs.true
+  %retval.0 = phi i32 [ 0, %if.end ], [ 1, %land.lhs.true3 ], [ 1, %land.lhs.true ]
+  ret i32 %retval.0
+}
+
+; (a > 5 && b == c) || (a < 5 && b == d)
+define i32 @combine_ugt_ult_5() #0 {
+; ARM-LABEL: combine_ugt_ult_5:
+; ARM:       @ %bb.0: @ %entry
+; ARM-NEXT:    movw r0, :lower16:a
+; ARM-NEXT:    movt r0, :upper16:a
+; ARM-NEXT:    ldr r0, [r0]
+; ARM-NEXT:    cmp r0, #5
+; ARM-NEXT:    bls .LBB11_2
+; ARM-NEXT:  @ %bb.1: @ %land.lhs.true
+; ARM-NEXT:    movw r0, :lower16:c
+; ARM-NEXT:    movt r0, :upper16:c
+; ARM-NEXT:    b .LBB11_4
+; ARM-NEXT:  .LBB11_2: @ %lor.lhs.false
+; ARM-NEXT:    bhs .LBB11_5
+; ARM-NEXT:  @ %bb.3: @ %land.lhs.true3
+; ARM-NEXT:    movw r0, :lower16:d
+; ARM-NEXT:    movt r0, :upper16:d
+; ARM-NEXT:  .LBB11_4: @ %land.lhs.true3
+; ARM-NEXT:    ldr r1, [r0]
+; ARM-NEXT:    movw r0, :lower16:b
+; ARM-NEXT:    movt r0, :upper16:b
+; ARM-NEXT:    ldr r2, [r0]
+; ARM-NEXT:    mov r0, #1
+; ARM-NEXT:    cmp r2, r1
+; ARM-NEXT:    movne r0, #0
+; ARM-NEXT:    bx lr
+; ARM-NEXT:  .LBB11_5: @ %if.end
+; ARM-NEXT:    mov r0, #0
+; ARM-NEXT:    bx lr
+;
+; THUMB-LABEL: combine_ugt_ult_5:
+; THUMB:       @ %bb.0: @ %entry
+; THUMB-NEXT:    ldr r0, .LCPI11_0
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    cmp r0, #5
+; THUMB-NEXT:    bls .LBB11_3
+; THUMB-NEXT:  @ %bb.1: @ %land.lhs.true
+; THUMB-NEXT:    ldr r0, .LCPI11_3
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    ldr r1, .LCPI11_2
+; THUMB-NEXT:    ldr r1, [r1]
+; THUMB-NEXT:    cmp r1, r0
+; THUMB-NEXT:    bne .LBB11_6
+; THUMB-NEXT:  @ %bb.2:
+; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:  .LBB11_3: @ %lor.lhs.false
+; THUMB-NEXT:    bhs .LBB11_6
+; THUMB-NEXT:  @ %bb.4: @ %land.lhs.true3
+; THUMB-NEXT:    ldr r0, .LCPI11_1
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    ldr r1, .LCPI11_2
+; THUMB-NEXT:    ldr r1, [r1]
+; THUMB-NEXT:    cmp r1, r0
+; THUMB-NEXT:    bne .LBB11_6
+; THUMB-NEXT:  @ %bb.5:
+; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:  .LBB11_6: @ %if.end
+; THUMB-NEXT:    movs r0, #0
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:    .p2align 2
+; THUMB-NEXT:  @ %bb.7:
+; THUMB-NEXT:  .LCPI11_0:
+; THUMB-NEXT:    .long a
+; THUMB-NEXT:  .LCPI11_1:
+; THUMB-NEXT:    .long d
+; THUMB-NEXT:  .LCPI11_2:
+; THUMB-NEXT:    .long b
+; THUMB-NEXT:  .LCPI11_3:
+; THUMB-NEXT:    .long c
+;
+; THUMB2-LABEL: combine_ugt_ult_5:
+; THUMB2:       @ %bb.0: @ %entry
+; THUMB2-NEXT:    movw r0, :lower16:a
+; THUMB2-NEXT:    movt r0, :upper16:a
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    cmp r0, #5
+; THUMB2-NEXT:    bls .LBB11_2
+; THUMB2-NEXT:  @ %bb.1: @ %land.lhs.true
+; THUMB2-NEXT:    movw r0, :lower16:c
+; THUMB2-NEXT:    movw r1, :lower16:b
+; THUMB2-NEXT:    movt r0, :upper16:c
+; THUMB2-NEXT:    movt r1, :upper16:b
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    ldr r1, [r1]
+; THUMB2-NEXT:    cmp r1, r0
+; THUMB2-NEXT:    itt eq
+; THUMB2-NEXT:    moveq r0, #1
+; THUMB2-NEXT:    bxeq lr
+; THUMB2-NEXT:    b .LBB11_4
+; THUMB2-NEXT:  .LBB11_2: @ %lor.lhs.false
+; THUMB2-NEXT:    bhs .LBB11_4
+; THUMB2-NEXT:  @ %bb.3: @ %land.lhs.true3
+; THUMB2-NEXT:    movw r0, :lower16:d
+; THUMB2-NEXT:    movw r1, :lower16:b
+; THUMB2-NEXT:    movt r0, :upper16:d
+; THUMB2-NEXT:    movt r1, :upper16:b
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    ldr r1, [r1]
+; THUMB2-NEXT:    cmp r1, r0
+; THUMB2-NEXT:    itt eq
+; THUMB2-NEXT:    moveq r0, #1
+; THUMB2-NEXT:    bxeq lr
+; THUMB2-NEXT:  .LBB11_4: @ %if.end
+; THUMB2-NEXT:    movs r0, #0
+; THUMB2-NEXT:    bx lr
+;
+; THUMBV8-LABEL: combine_ugt_ult_5:
+; THUMBV8:       @ %bb.0: @ %entry
+; THUMBV8-NEXT:    movw r0, :lower16:a
+; THUMBV8-NEXT:    movt r0, :upper16:a
+; THUMBV8-NEXT:    ldr r0, [r0]
+; THUMBV8-NEXT:    cmp r0, #5
+; THUMBV8-NEXT:    bls .LBB11_2
+; THUMBV8-NEXT:  @ %bb.1: @ %land.lhs.true
+; THUMBV8-NEXT:    movw r0, :lower16:c
+; THUMBV8-NEXT:    movw r1, :lower16:b
+; THUMBV8-NEXT:    movt r0, :upper16:c
+; THUMBV8-NEXT:    movt r1, :upper16:b
+; THUMBV8-NEXT:    ldr r0, [r0]
+; THUMBV8-NEXT:    ldr r1, [r1]
+; THUMBV8-NEXT:    cmp r1, r0
+; THUMBV8-NEXT:    itt eq
+; THUMBV8-NEXT:    moveq r0, #1
+; THUMBV8-NEXT:    bxeq lr
+; THUMBV8-NEXT:    b .LBB11_4
+; THUMBV8-NEXT:  .LBB11_2: @ %lor.lhs.false
+; THUMBV8-NEXT:    bhs .LBB11_4
+; THUMBV8-NEXT:  @ %bb.3: @ %land.lhs.true3
+; THUMBV8-NEXT:    movw r0, :lower16:d
+; THUMBV8-NEXT:    movw r1, :lower16:b
+; THUMBV8-NEXT:    movt r0, :upper16:d
+; THUMBV8-NEXT:    movt r1, :upper16:b
+; THUMBV8-NEXT:    ldr r0, [r0]
+; THUMBV8-NEXT:    ldr r1, [r1]
+; THUMBV8-NEXT:    cmp r1, r0
+; THUMBV8-NEXT:    itt eq
+; THUMBV8-NEXT:    moveq r0, #1
+; THUMBV8-NEXT:    bxeq lr
+; THUMBV8-NEXT:  .LBB11_4: @ %if.end
+; THUMBV8-NEXT:    movs r0, #0
+; THUMBV8-NEXT:    bx lr
+entry:
+  %0 = load i32, ptr @a, align 4
+  %cmp = icmp ugt i32 %0, 5
+  br i1 %cmp, label %land.lhs.true, label %lor.lhs.false
+
+land.lhs.true:                                    ; preds = %entry
+  %1 = load i32, ptr @b, align 4
+  %2 = load i32, ptr @c, align 4
+  %cmp1 = icmp eq i32 %1, %2
+  br i1 %cmp1, label %return, label %if.end
+
+lor.lhs.false:                                    ; preds = %entry
+  %cmp2 = icmp ult i32 %0, 5
+  br i1 %cmp2, label %land.lhs.true3, label %if.end
+
+land.lhs.true3:                                   ; preds = %lor.lhs.false
+  %3 = load i32, ptr @b, align 4
+  %4 = load i32, ptr @d, align 4
+  %cmp4 = icmp eq i32 %3, %4
+  br i1 %cmp4, label %return, label %if.end
+
+if.end:                                           ; preds = %land.lhs.true3, %lor.lhs.false, %land.lhs.true
+  br label %return
+
+return:                                           ; preds = %if.end, %land.lhs.true3, %land.lhs.true
+  %retval.0 = phi i32 [ 0, %if.end ], [ 1, %land.lhs.true3 ], [ 1, %land.lhs.true ]
+  ret i32 %retval.0
+}
+
+; (a < 5 && b == c) || (a <= 5 && b == d)
+define i32 @combine_ult_uge_5() #0 {
+; ARM-LABEL: combine_ult_uge_5:
+; ARM:       @ %bb.0: @ %entry
+; ARM-NEXT:    movw r0, :lower16:a
+; ARM-NEXT:    movw r1, :lower16:b
+; ARM-NEXT:    movt r0, :upper16:a
+; ARM-NEXT:    movt r1, :upper16:b
+; ARM-NEXT:    ldr r0, [r0]
+; ARM-NEXT:    cmp r0, #5
+; ARM-NEXT:    bhs .LBB12_2
+; ARM-NEXT:  @ %bb.1: @ %land.lhs.true
+; ARM-NEXT:    movw r0, :lower16:c
+; ARM-NEXT:    ldr r3, [r1]
+; ARM-NEXT:    movt r0, :upper16:c
+; ARM-NEXT:    ldr r2, [r0]
+; ARM-NEXT:    mov r0, #1
+; ARM-NEXT:    cmp r3, r2
+; ARM-NEXT:    bxeq lr
+; ARM-NEXT:    b .LBB12_3
+; ARM-NEXT:  .LBB12_2: @ %lor.lhs.false
+; ARM-NEXT:    bhi .LBB12_4
+; ARM-NEXT:  .LBB12_3: @ %land.lhs.true3
+; ARM-NEXT:    movw r0, :lower16:d
+; ARM-NEXT:    ldr r1, [r1]
+; ARM-NEXT:    movt r0, :upper16:d
+; ARM-NEXT:    ldr r2, [r0]
+; ARM-NEXT:    mov r0, #1
+; ARM-NEXT:    cmp r1, r2
+; ARM-NEXT:    movne r0, #0
+; ARM-NEXT:    bx lr
+; ARM-NEXT:  .LBB12_4: @ %if.end
+; ARM-NEXT:    mov r0, #0
+; ARM-NEXT:    bx lr
+;
+; THUMB-LABEL: combine_ult_uge_5:
+; THUMB:       @ %bb.0: @ %entry
+; THUMB-NEXT:    ldr r0, .LCPI12_0
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    cmp r0, #5
+; THUMB-NEXT:    bhs .LBB12_3
+; THUMB-NEXT:  @ %bb.1: @ %land.lhs.true
+; THUMB-NEXT:    ldr r0, .LCPI12_1
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    ldr r1, .LCPI12_2
+; THUMB-NEXT:    ldr r1, [r1]
+; THUMB-NEXT:    cmp r1, r0
+; THUMB-NEXT:    bne .LBB12_4
+; THUMB-NEXT:  @ %bb.2:
+; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:  .LBB12_3: @ %lor.lhs.false
+; THUMB-NEXT:    bhi .LBB12_6
+; THUMB-NEXT:  .LBB12_4: @ %land.lhs.true3
+; THUMB-NEXT:    ldr r0, .LCPI12_3
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    ldr r1, .LCPI12_2
+; THUMB-NEXT:    ldr r1, [r1]
+; THUMB-NEXT:    cmp r1, r0
+; THUMB-NEXT:    bne .LBB12_6
+; THUMB-NEXT:  @ %bb.5:
+; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:  .LBB12_6: @ %if.end
+; THUMB-NEXT:    movs r0, #0
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:    .p2align 2
+; THUMB-NEXT:  @ %bb.7:
+; THUMB-NEXT:  .LCPI12_0:
+; THUMB-NEXT:    .long a
+; THUMB-NEXT:  .LCPI12_1:
+; THUMB-NEXT:    .long c
+; THUMB-NEXT:  .LCPI12_2:
+; THUMB-NEXT:    .long b
+; THUMB-NEXT:  .LCPI12_3:
+; THUMB-NEXT:    .long d
+;
+; THUMB2-LABEL: combine_ult_uge_5:
+; THUMB2:       @ %bb.0: @ %entry
+; THUMB2-NEXT:    movw r0, :lower16:a
+; THUMB2-NEXT:    movt r0, :upper16:a
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    cmp r0, #5
+; THUMB2-NEXT:    movw r0, :lower16:b
+; THUMB2-NEXT:    movt r0, :upper16:b
+; THUMB2-NEXT:    bhs .LBB12_2
+; THUMB2-NEXT:  @ %bb.1: @ %land.lhs.true
+; THUMB2-NEXT:    movw r1, :lower16:c
+; THUMB2-NEXT:    ldr r2, [r0]
+; THUMB2-NEXT:    movt r1, :upper16:c
+; THUMB2-NEXT:    ldr r1, [r1]
+; THUMB2-NEXT:    cmp r2, r1
+; THUMB2-NEXT:    itt eq
+; THUMB2-NEXT:    moveq r0, #1
+; THUMB2-NEXT:    bxeq lr
+; THUMB2-NEXT:    b .LBB12_3
+; THUMB2-NEXT:  .LBB12_2: @ %lor.lhs.false
+; THUMB2-NEXT:    bhi .LBB12_4
+; THUMB2-NEXT:  .LBB12_3: @ %land.lhs.true3
+; THUMB2-NEXT:    movw r1, :lower16:d
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    movt r1, :upper16:d
+; THUMB2-NEXT:    ldr r1, [r1]
+; THUMB2-NEXT:    cmp r0, r1
+; THUMB2-NEXT:    itt eq
+; THUMB2-NEXT:    moveq r0, #1
+; THUMB2-NEXT:    bxeq lr
+; THUMB2-NEXT:  .LBB12_4: @ %if.end
+; THUMB2-NEXT:    movs r0, #0
+; THUMB2-NEXT:    bx lr
+;
+; THUMBV8-LABEL: combine_ult_uge_5:
+; THUMBV8:       @ %bb.0: @ %entry
+; THUMBV8-NEXT:    movw r0, :lower16:a
+; THUMBV8-NEXT:    movt r0, :upper16:a
+; THUMBV8-NEXT:    ldr r0, [r0]
+; THUMBV8-NEXT:    cmp r0, #5
+; THUMBV8-NEXT:    movw r0, :lower16:b
+; THUMBV8-NEXT:    movt r0, :upper16:b
+; THUMBV8-NEXT:    bhs .LBB12_2
+; THUMBV8-NEXT:  @ %bb.1: @ %land.lhs.true
+; THUMBV8-NEXT:    movw r1, :lower16:c
+; THUMBV8-NEXT:    ldr r2, [r0]
+; THUMBV8-NEXT:    movt r1, :upper16:c
+; THUMBV8-NEXT:    ldr r1, [r1]
+; THUMBV8-NEXT:    cmp r2, r1
+; THUMBV8-NEXT:    itt eq
+; THUMBV8-NEXT:    moveq r0, #1
+; THUMBV8-NEXT:    bxeq lr
+; THUMBV8-NEXT:    b .LBB12_3
+; THUMBV8-NEXT:  .LBB12_2: @ %lor.lhs.false
+; THUMBV8-NEXT:    bhi .LBB12_4
+; THUMBV8-NEXT:  .LBB12_3: @ %land.lhs.true3
+; THUMBV8-NEXT:    movw r1, :lower16:d
+; THUMBV8-NEXT:    ldr r0, [r0]
+; THUMBV8-NEXT:    movt r1, :upper16:d
+; THUMBV8-NEXT:    ldr r1, [r1]
+; THUMBV8-NEXT:    cmp r0, r1
+; THUMBV8-NEXT:    itt eq
+; THUMBV8-NEXT:    moveq r0, #1
+; THUMBV8-NEXT:    bxeq lr
+; THUMBV8-NEXT:  .LBB12_4: @ %if.end
+; THUMBV8-NEXT:    movs r0, #0
+; THUMBV8-NEXT:    bx lr
+entry:
+  %0 = load i32, ptr @a, align 4
+  %cmp = icmp ult i32 %0, 5
+  br i1 %cmp, label %land.lhs.true, label %lor.lhs.false
+
+land.lhs.true:                                    ; preds = %entry
+  %1 = load i32, ptr @b, align 4
+  %2 = load i32, ptr @c, align 4
+  %cmp1 = icmp eq i32 %1, %2
+  br i1 %cmp1, label %return, label %land.lhs.true3
+
+lor.lhs.false:                                    ; preds = %entry
+  %cmp2 = icmp ult i32 %0, 6
+  br i1 %cmp2, label %land.lhs.true3, label %if.end
+
+land.lhs.true3:                                   ; preds = %lor.lhs.false, %land.lhs.true
+  %3 = load i32, ptr @b, align 4
+  %4 = load i32, ptr @d, align 4
+  %cmp4 = icmp eq i32 %3, %4
+  br i1 %cmp4, label %return, label %if.end
+
+if.end:                                           ; preds = %land.lhs.true3, %lor.lhs.false
+  br label %return
+
+return:                                           ; preds = %if.end, %land.lhs.true3, %land.lhs.true
+  %retval.0 = phi i32 [ 0, %if.end ], [ 1, %land.lhs.true3 ], [ 1, %land.lhs.true ]
+  ret i32 %retval.0
+}
+
+; (a < 5 && b == c) || (a > 5 && b == d)
+define i32 @combine_ult_ugt_5() #0 {
+; ARM-LABEL: combine_ult_ugt_5:
+; ARM:       @ %bb.0: @ %entry
+; ARM-NEXT:    movw r0, :lower16:a
+; ARM-NEXT:    movt r0, :upper16:a
+; ARM-NEXT:    ldr r0, [r0]
+; ARM-NEXT:    cmp r0, #5
+; ARM-NEXT:    bhs .LBB13_2
+; ARM-NEXT:  @ %bb.1: @ %land.lhs.true
+; ARM-NEXT:    movw r0, :lower16:c
+; ARM-NEXT:    movt r0, :upper16:c
+; ARM-NEXT:    b .LBB13_4
+; ARM-NEXT:  .LBB13_2: @ %lor.lhs.false
+; ARM-NEXT:    bls .LBB13_5
+; ARM-NEXT:  @ %bb.3: @ %land.lhs.true3
+; ARM-NEXT:    movw r0, :lower16:d
+; ARM-NEXT:    movt r0, :upper16:d
+; ARM-NEXT:  .LBB13_4: @ %land.lhs.true3
+; ARM-NEXT:    ldr r1, [r0]
+; ARM-NEXT:    movw r0, :lower16:b
+; ARM-NEXT:    movt r0, :upper16:b
+; ARM-NEXT:    ldr r2, [r0]
+; ARM-NEXT:    mov r0, #1
+; ARM-NEXT:    cmp r2, r1
+; ARM-NEXT:    movne r0, #0
+; ARM-NEXT:    bx lr
+; ARM-NEXT:  .LBB13_5: @ %if.end
+; ARM-NEXT:    mov r0, #0
+; ARM-NEXT:    bx lr
+;
+; THUMB-LABEL: combine_ult_ugt_5:
+; THUMB:       @ %bb.0: @ %entry
+; THUMB-NEXT:    ldr r0, .LCPI13_0
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    cmp r0, #5
+; THUMB-NEXT:    bhs .LBB13_3
+; THUMB-NEXT:  @ %bb.1: @ %land.lhs.true
+; THUMB-NEXT:    ldr r0, .LCPI13_3
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    ldr r1, .LCPI13_2
+; THUMB-NEXT:    ldr r1, [r1]
+; THUMB-NEXT:    cmp r1, r0
+; THUMB-NEXT:    bne .LBB13_6
+; THUMB-NEXT:  @ %bb.2:
+; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:  .LBB13_3: @ %lor.lhs.false
+; THUMB-NEXT:    bls .LBB13_6
+; THUMB-NEXT:  @ %bb.4: @ %land.lhs.true3
+; THUMB-NEXT:    ldr r0, .LCPI13_1
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    ldr r1, .LCPI13_2
+; THUMB-NEXT:    ldr r1, [r1]
+; THUMB-NEXT:    cmp r1, r0
+; THUMB-NEXT:    bne .LBB13_6
+; THUMB-NEXT:  @ %bb.5:
+; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:  .LBB13_6: @ %if.end
+; THUMB-NEXT:    movs r0, #0
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:    .p2align 2
+; THUMB-NEXT:  @ %bb.7:
+; THUMB-NEXT:  .LCPI13_0:
+; THUMB-NEXT:    .long a
+; THUMB-NEXT:  .LCPI13_1:
+; THUMB-NEXT:    .long d
+; THUMB-NEXT:  .LCPI13_2:
+; THUMB-NEXT:    .long b
+; THUMB-NEXT:  .LCPI13_3:
+; THUMB-NEXT:    .long c
+;
+; THUMB2-LABEL: combine_ult_ugt_5:
+; THUMB2:       @ %bb.0: @ %entry
+; THUMB2-NEXT:    movw r0, :lower16:a
+; THUMB2-NEXT:    movt r0, :upper16:a
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    cmp r0, #5
+; THUMB2-NEXT:    bhs .LBB13_2
+; THUMB2-NEXT:  @ %bb.1: @ %land.lhs.true
+; THUMB2-NEXT:    movw r0, :lower16:c
+; THUMB2-NEXT:    movw r1, :lower16:b
+; THUMB2-NEXT:    movt r0, :upper16:c
+; THUMB2-NEXT:    movt r1, :upper16:b
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    ldr r1, [r1]
+; THUMB2-NEXT:    cmp r1, r0
+; THUMB2-NEXT:    itt eq
+; THUMB2-NEXT:    moveq r0, #1
+; THUMB2-NEXT:    bxeq lr
+; THUMB2-NEXT:    b .LBB13_4
+; THUMB2-NEXT:  .LBB13_2: @ %lor.lhs.false
+; THUMB2-NEXT:    bls .LBB13_4
+; THUMB2-NEXT:  @ %bb.3: @ %land.lhs.true3
+; THUMB2-NEXT:    movw r0, :lower16:d
+; THUMB2-NEXT:    movw r1, :lower16:b
+; THUMB2-NEXT:    movt r0, :upper16:d
+; THUMB2-NEXT:    movt r1, :upper16:b
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    ldr r1, [r1]
+; THUMB2-NEXT:    cmp r1, r0
+; THUMB2-NEXT:    itt eq
+; THUMB2-NEXT:    moveq r0, #1
+; THUMB2-NEXT:    bxeq lr
+; THUMB2-NEXT:  .LBB13_4: @ %if.end
+; THUMB2-NEXT:    movs r0, #0
+; THUMB2-NEXT:    bx lr
+;
+; THUMBV8-LABEL: combine_ult_ugt_5:
+; THUMBV8:       @ %bb.0: @ %entry
+; THUMBV8-NEXT:    movw r0, :lower16:a
+; THUMBV8-NEXT:    movt r0, :upper16:a
+; THUMBV8-NEXT:    ldr r0, [r0]
+; THUMBV8-NEXT:    cmp r0, #5
+; THUMBV8-NEXT:    bhs .LBB13_2
+; THUMBV8-NEXT:  @ %bb.1: @ %land.lhs.true
+; THUMBV8-NEXT:    movw r0, :lower16:c
+; THUMBV8-NEXT:    movw r1, :lower16:b
+; THUMBV8-NEXT:    movt r0, :upper16:c
+; THUMBV8-NEXT:    movt r1, :upper16:b
+; THUMBV8-NEXT:    ldr r0, [r0]
+; THUMBV8-NEXT:    ldr r1, [r1]
+; THUMBV8-NEXT:    cmp r1, r0
+; THUMBV8-NEXT:    itt eq
+; THUMBV8-NEXT:    moveq r0, #1
+; THUMBV8-NEXT:    bxeq lr
+; THUMBV8-NEXT:    b .LBB13_4
+; THUMBV8-NEXT:  .LBB13_2: @ %lor.lhs.false
+; THUMBV8-NEXT:    bls .LBB13_4
+; THUMBV8-NEXT:  @ %bb.3: @ %land.lhs.true3
+; THUMBV8-NEXT:    movw r0, :lower16:d
+; THUMBV8-NEXT:    movw r1, :lower16:b
+; THUMBV8-NEXT:    movt r0, :upper16:d
+; THUMBV8-NEXT:    movt r1, :upper16:b
+; THUMBV8-NEXT:    ldr r0, [r0]
+; THUMBV8-NEXT:    ldr r1, [r1]
+; THUMBV8-NEXT:    cmp r1, r0
+; THUMBV8-NEXT:    itt eq
+; THUMBV8-NEXT:    moveq r0, #1
+; THUMBV8-NEXT:    bxeq lr
+; THUMBV8-NEXT:  .LBB13_4: @ %if.end
+; THUMBV8-NEXT:    movs r0, #0
+; THUMBV8-NEXT:    bx lr
+entry:
+  %0 = load i32, ptr @a, align 4
+  %cmp = icmp ult i32 %0, 5
+  br i1 %cmp, label %land.lhs.true, label %lor.lhs.false
+
+land.lhs.true:                                    ; preds = %entry
+  %1 = load i32, ptr @b, align 4
+  %2 = load i32, ptr @c, align 4
+  %cmp1 = icmp eq i32 %1, %2
+  br i1 %cmp1, label %return, label %if.end
+
+lor.lhs.false:                                    ; preds = %entry
+  %cmp2 = icmp ugt i32 %0, 5
+  br i1 %cmp2, label %land.lhs.true3, label %if.end
+
+land.lhs.true3:                                   ; preds = %lor.lhs.false
+  %3 = load i32, ptr @b, align 4
+  %4 = load i32, ptr @d, align 4
+  %cmp4 = icmp eq i32 %3, %4
+  br i1 %cmp4, label %return, label %if.end
+
+if.end:                                           ; preds = %land.lhs.true3, %lor.lhs.false, %land.lhs.true
+  br label %return
+
+return:                                           ; preds = %if.end, %land.lhs.true3, %land.lhs.true
+  %retval.0 = phi i32 [ 0, %if.end ], [ 1, %land.lhs.true3 ], [ 1, %land.lhs.true ]
+  ret i32 %retval.0
+}
+
+; (a > -5 && b == c) || (a < -5 && b == d)
+define i32 @combine_ugt_ult_n5() #0 {
+; ARM-LABEL: combine_ugt_ult_n5:
+; ARM:       @ %bb.0: @ %entry
+; ARM-NEXT:    movw r0, :lower16:a
+; ARM-NEXT:    movt r0, :upper16:a
+; ARM-NEXT:    ldr r0, [r0]
+; ARM-NEXT:    cmn r0, #5
+; ARM-NEXT:    bls .LBB14_2
+; ARM-NEXT:  @ %bb.1: @ %land.lhs.true
+; ARM-NEXT:    movw r0, :lower16:c
+; ARM-NEXT:    movt r0, :upper16:c
+; ARM-NEXT:    b .LBB14_4
+; ARM-NEXT:  .LBB14_2: @ %lor.lhs.false
+; ARM-NEXT:    bhs .LBB14_5
+; ARM-NEXT:  @ %bb.3: @ %land.lhs.true3
+; ARM-NEXT:    movw r0, :lower16:d
+; ARM-NEXT:    movt r0, :upper16:d
+; ARM-NEXT:  .LBB14_4: @ %land.lhs.true3
+; ARM-NEXT:    ldr r1, [r0]
+; ARM-NEXT:    movw r0, :lower16:b
+; ARM-NEXT:    movt r0, :upper16:b
+; ARM-NEXT:    ldr r2, [r0]
+; ARM-NEXT:    mov r0, #1
+; ARM-NEXT:    cmp r2, r1
+; ARM-NEXT:    movne r0, #0
+; ARM-NEXT:    bx lr
+; ARM-NEXT:  .LBB14_5: @ %if.end
+; ARM-NEXT:    mov r0, #0
+; ARM-NEXT:    bx lr
+;
+; THUMB-LABEL: combine_ugt_ult_n5:
+; THUMB:       @ %bb.0: @ %entry
+; THUMB-NEXT:    ldr r0, .LCPI14_0
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    movs r1, #3
+; THUMB-NEXT:    mvns r1, r1
+; THUMB-NEXT:    cmp r0, r1
+; THUMB-NEXT:    blo .LBB14_3
+; THUMB-NEXT:  @ %bb.1: @ %land.lhs.true
+; THUMB-NEXT:    ldr r0, .LCPI14_3
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    ldr r1, .LCPI14_2
+; THUMB-NEXT:    ldr r1, [r1]
+; THUMB-NEXT:    cmp r1, r0
+; THUMB-NEXT:    bne .LBB14_6
+; THUMB-NEXT:  @ %bb.2:
+; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:  .LBB14_3: @ %lor.lhs.false
+; THUMB-NEXT:    movs r1, #5
+; THUMB-NEXT:    mvns r1, r1
+; THUMB-NEXT:    cmp r0, r1
+; THUMB-NEXT:    bhi .LBB14_6
+; THUMB-NEXT:  @ %bb.4: @ %land.lhs.true3
+; THUMB-NEXT:    ldr r0, .LCPI14_1
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    ldr r1, .LCPI14_2
+; THUMB-NEXT:    ldr r1, [r1]
+; THUMB-NEXT:    cmp r1, r0
+; THUMB-NEXT:    bne .LBB14_6
+; THUMB-NEXT:  @ %bb.5:
+; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:  .LBB14_6: @ %if.end
+; THUMB-NEXT:    movs r0, #0
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:    .p2align 2
+; THUMB-NEXT:  @ %bb.7:
+; THUMB-NEXT:  .LCPI14_0:
+; THUMB-NEXT:    .long a
+; THUMB-NEXT:  .LCPI14_1:
+; THUMB-NEXT:    .long d
+; THUMB-NEXT:  .LCPI14_2:
+; THUMB-NEXT:    .long b
+; THUMB-NEXT:  .LCPI14_3:
+; THUMB-NEXT:    .long c
+;
+; THUMB2-LABEL: combine_ugt_ult_n5:
+; THUMB2:       @ %bb.0: @ %entry
+; THUMB2-NEXT:    movw r0, :lower16:a
+; THUMB2-NEXT:    movt r0, :upper16:a
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    cmn.w r0, #5
+; THUMB2-NEXT:    bls .LBB14_2
+; THUMB2-NEXT:  @ %bb.1: @ %land.lhs.true
+; THUMB2-NEXT:    movw r0, :lower16:c
+; THUMB2-NEXT:    movw r1, :lower16:b
+; THUMB2-NEXT:    movt r0, :upper16:c
+; THUMB2-NEXT:    movt r1, :upper16:b
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    ldr r1, [r1]
+; THUMB2-NEXT:    cmp r1, r0
+; THUMB2-NEXT:    itt eq
+; THUMB2-NEXT:    moveq r0, #1
+; THUMB2-NEXT:    bxeq lr
+; THUMB2-NEXT:    b .LBB14_4
+; THUMB2-NEXT:  .LBB14_2: @ %lor.lhs.false
+; THUMB2-NEXT:    bhs .LBB14_4
+; THUMB2-NEXT:  @ %bb.3: @ %land.lhs.true3
+; THUMB2-NEXT:    movw r0, :lower16:d
+; THUMB2-NEXT:    movw r1, :lower16:b
+; THUMB2-NEXT:    movt r0, :upper16:d
+; THUMB2-NEXT:    movt r1, :upper16:b
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    ldr r1, [r1]
+; THUMB2-NEXT:    cmp r1, r0
+; THUMB2-NEXT:    itt eq
+; THUMB2-NEXT:    moveq r0, #1
+; THUMB2-NEXT:    bxeq lr
+; THUMB2-NEXT:  .LBB14_4: @ %if.end
+; THUMB2-NEXT:    movs r0, #0
+; THUMB2-NEXT:    bx lr
+;
+; THUMBV8-LABEL: combine_ugt_ult_n5:
+; THUMBV8:       @ %bb.0: @ %entry
+; THUMBV8-NEXT:    movw r0, :lower16:a
+; THUMBV8-NEXT:    movt r0, :upper16:a
+; THUMBV8-NEXT:    ldr r0, [r0]
+; THUMBV8-NEXT:    cmn.w r0, #5
+; THUMBV8-NEXT:    bls .LBB14_2
+; THUMBV8-NEXT:  @ %bb.1: @ %land.lhs.true
+; THUMBV8-NEXT:    movw r0, :lower16:c
+; THUMBV8-NEXT:    movw r1, :lower16:b
+; THUMBV8-NEXT:    movt r0, :upper16:c
+; THUMBV8-NEXT:    movt r1, :upper16:b
+; THUMBV8-NEXT:    ldr r0, [r0]
+; THUMBV8-NEXT:    ldr r1, [r1]
+; THUMBV8-NEXT:    cmp r1, r0
+; THUMBV8-NEXT:    itt eq
+; THUMBV8-NEXT:    moveq r0, #1
+; THUMBV8-NEXT:    bxeq lr
+; THUMBV8-NEXT:    b .LBB14_4
+; THUMBV8-NEXT:  .LBB14_2: @ %lor.lhs.false
+; THUMBV8-NEXT:    bhs .LBB14_4
+; THUMBV8-NEXT:  @ %bb.3: @ %land.lhs.true3
+; THUMBV8-NEXT:    movw r0, :lower16:d
+; THUMBV8-NEXT:    movw r1, :lower16:b
+; THUMBV8-NEXT:    movt r0, :upper16:d
+; THUMBV8-NEXT:    movt r1, :upper16:b
+; THUMBV8-NEXT:    ldr r0, [r0]
+; THUMBV8-NEXT:    ldr r1, [r1]
+; THUMBV8-NEXT:    cmp r1, r0
+; THUMBV8-NEXT:    itt eq
+; THUMBV8-NEXT:    moveq r0, #1
+; THUMBV8-NEXT:    bxeq lr
+; THUMBV8-NEXT:  .LBB14_4: @ %if.end
+; THUMBV8-NEXT:    movs r0, #0
+; THUMBV8-NEXT:    bx lr
+entry:
+  %0 = load i32, ptr @a, align 4
+  %cmp = icmp ugt i32 %0, -5
+  br i1 %cmp, label %land.lhs.true, label %lor.lhs.false
+
+land.lhs.true:                                    ; preds = %entry
+  %1 = load i32, ptr @b, align 4
+  %2 = load i32, ptr @c, align 4
+  %cmp1 = icmp eq i32 %1, %2
+  br i1 %cmp1, label %return, label %if.end
+
+lor.lhs.false:                                    ; preds = %entry
+  %cmp2 = icmp ult i32 %0, -5
+  br i1 %cmp2, label %land.lhs.true3, label %if.end
+
+land.lhs.true3:                                   ; preds = %lor.lhs.false
+  %3 = load i32, ptr @b, align 4
+  %4 = load i32, ptr @d, align 4
+  %cmp4 = icmp eq i32 %3, %4
+  br i1 %cmp4, label %return, label %if.end
+
+if.end:                                           ; preds = %land.lhs.true3, %lor.lhs.false, %land.lhs.true
+  br label %return
+
+return:                                           ; preds = %if.end, %land.lhs.true3, %land.lhs.true
+  %retval.0 = phi i32 [ 0, %if.end ], [ 1, %land.lhs.true3 ], [ 1, %land.lhs.true ]
+  ret i32 %retval.0
+}
+
+; (a < -5 && b == c) || (a > -5 && b == d)
+define i32 @combine_ult_ugt_n5() #0 {
+; ARM-LABEL: combine_ult_ugt_n5:
+; ARM:       @ %bb.0: @ %entry
+; ARM-NEXT:    movw r0, :lower16:a
+; ARM-NEXT:    movt r0, :upper16:a
+; ARM-NEXT:    ldr r0, [r0]
+; ARM-NEXT:    cmn r0, #5
+; ARM-NEXT:    bhs .LBB15_2
+; ARM-NEXT:  @ %bb.1: @ %land.lhs.true
+; ARM-NEXT:    movw r0, :lower16:c
+; ARM-NEXT:    movt r0, :upper16:c
+; ARM-NEXT:    b .LBB15_4
+; ARM-NEXT:  .LBB15_2: @ %lor.lhs.false
+; ARM-NEXT:    bls .LBB15_5
+; ARM-NEXT:  @ %bb.3: @ %land.lhs.true3
+; ARM-NEXT:    movw r0, :lower16:d
+; ARM-NEXT:    movt r0, :upper16:d
+; ARM-NEXT:  .LBB15_4: @ %land.lhs.true3
+; ARM-NEXT:    ldr r1, [r0]
+; ARM-NEXT:    movw r0, :lower16:b
+; ARM-NEXT:    movt r0, :upper16:b
+; ARM-NEXT:    ldr r2, [r0]
+; ARM-NEXT:    mov r0, #1
+; ARM-NEXT:    cmp r2, r1
+; ARM-NEXT:    movne r0, #0
+; ARM-NEXT:    bx lr
+; ARM-NEXT:  .LBB15_5: @ %if.end
+; ARM-NEXT:    mov r0, #0
+; ARM-NEXT:    bx lr
+;
+; THUMB-LABEL: combine_ult_ugt_n5:
+; THUMB:       @ %bb.0: @ %entry
+; THUMB-NEXT:    ldr r0, .LCPI15_0
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    movs r1, #5
+; THUMB-NEXT:    mvns r1, r1
+; THUMB-NEXT:    cmp r0, r1
+; THUMB-NEXT:    bhi .LBB15_3
+; THUMB-NEXT:  @ %bb.1: @ %land.lhs.true
+; THUMB-NEXT:    ldr r0, .LCPI15_3
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    ldr r1, .LCPI15_2
+; THUMB-NEXT:    ldr r1, [r1]
+; THUMB-NEXT:    cmp r1, r0
+; THUMB-NEXT:    bne .LBB15_6
+; THUMB-NEXT:  @ %bb.2:
+; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:  .LBB15_3: @ %lor.lhs.false
+; THUMB-NEXT:    movs r1, #3
+; THUMB-NEXT:    mvns r1, r1
+; THUMB-NEXT:    cmp r0, r1
+; THUMB-NEXT:    blo .LBB15_6
+; THUMB-NEXT:  @ %bb.4: @ %land.lhs.true3
+; THUMB-NEXT:    ldr r0, .LCPI15_1
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    ldr r1, .LCPI15_2
+; THUMB-NEXT:    ldr r1, [r1]
+; THUMB-NEXT:    cmp r1, r0
+; THUMB-NEXT:    bne .LBB15_6
+; THUMB-NEXT:  @ %bb.5:
+; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:  .LBB15_6: @ %if.end
+; THUMB-NEXT:    movs r0, #0
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:    .p2align 2
+; THUMB-NEXT:  @ %bb.7:
+; THUMB-NEXT:  .LCPI15_0:
+; THUMB-NEXT:    .long a
+; THUMB-NEXT:  .LCPI15_1:
+; THUMB-NEXT:    .long d
+; THUMB-NEXT:  .LCPI15_2:
+; THUMB-NEXT:    .long b
+; THUMB-NEXT:  .LCPI15_3:
+; THUMB-NEXT:    .long c
+;
+; THUMB2-LABEL: combine_ult_ugt_n5:
+; THUMB2:       @ %bb.0: @ %entry
+; THUMB2-NEXT:    movw r0, :lower16:a
+; THUMB2-NEXT:    movt r0, :upper16:a
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    cmn.w r0, #5
+; THUMB2-NEXT:    bhs .LBB15_2
+; THUMB2-NEXT:  @ %bb.1: @ %land.lhs.true
+; THUMB2-NEXT:    movw r0, :lower16:c
+; THUMB2-NEXT:    movw r1, :lower16:b
+; THUMB2-NEXT:    movt r0, :upper16:c
+; THUMB2-NEXT:    movt r1, :upper16:b
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    ldr r1, [r1]
+; THUMB2-NEXT:    cmp r1, r0
+; THUMB2-NEXT:    itt eq
+; THUMB2-NEXT:    moveq r0, #1
+; THUMB2-NEXT:    bxeq lr
+; THUMB2-NEXT:    b .LBB15_4
+; THUMB2-NEXT:  .LBB15_2: @ %lor.lhs.false
+; THUMB2-NEXT:    bls .LBB15_4
+; THUMB2-NEXT:  @ %bb.3: @ %land.lhs.true3
+; THUMB2-NEXT:    movw r0, :lower16:d
+; THUMB2-NEXT:    movw r1, :lower16:b
+; THUMB2-NEXT:    movt r0, :upper16:d
+; THUMB2-NEXT:    movt r1, :upper16:b
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    ldr r1, [r1]
+; THUMB2-NEXT:    cmp r1, r0
+; THUMB2-NEXT:    itt eq
+; THUMB2-NEXT:    moveq r0, #1
+; THUMB2-NEXT:    bxeq lr
+; THUMB2-NEXT:  .LBB15_4: @ %if.end
+; THUMB2-NEXT:    movs r0, #0
+; THUMB2-NEXT:    bx lr
+;
+; THUMBV8-LABEL: combine_ult_ugt_n5:
+; THUMBV8:       @ %bb.0: @ %entry
+; THUMBV8-NEXT:    movw r0, :lower16:a
+; THUMBV8-NEXT:    movt r0, :upper16:a
+; THUMBV8-NEXT:    ldr r0, [r0]
+; THUMBV8-NEXT:    cmn.w r0, #5
+; THUMBV8-NEXT:    bhs .LBB15_2
+; THUMBV8-NEXT:  @ %bb.1: @ %land.lhs.true
+; THUMBV8-NEXT:    movw r0, :lower16:c
+; THUMBV8-NEXT:    movw r1, :lower16:b
+; THUMBV8-NEXT:    movt r0, :upper16:c
+; THUMBV8-NEXT:    movt r1, :upper16:b
+; THUMBV8-NEXT:    ldr r0, [r0]
+; THUMBV8-NEXT:    ldr r1, [r1]
+; THUMBV8-NEXT:    cmp r1, r0
+; THUMBV8-NEXT:    itt eq
+; THUMBV8-NEXT:    moveq r0, #1
+; THUMBV8-NEXT:    bxeq lr
+; THUMBV8-NEXT:    b .LBB15_4
+; THUMBV8-NEXT:  .LBB15_2: @ %lor.lhs.false
+; THUMBV8-NEXT:    bls .LBB15_4
+; THUMBV8-NEXT:  @ %bb.3: @ %land.lhs.true3
+; THUMBV8-NEXT:    movw r0, :lower16:d
+; THUMBV8-NEXT:    movw r1, :lower16:b
+; THUMBV8-NEXT:    movt r0, :upper16:d
+; THUMBV8-NEXT:    movt r1, :upper16:b
+; THUMBV8-NEXT:    ldr r0, [r0]
+; THUMBV8-NEXT:    ldr r1, [r1]
+; THUMBV8-NEXT:    cmp r1, r0
+; THUMBV8-NEXT:    itt eq
+; THUMBV8-NEXT:    moveq r0, #1
+; THUMBV8-NEXT:    bxeq lr
+; THUMBV8-NEXT:  .LBB15_4: @ %if.end
+; THUMBV8-NEXT:    movs r0, #0
+; THUMBV8-NEXT:    bx lr
+entry:
+  %0 = load i32, ptr @a, align 4
+  %cmp = icmp ult i32 %0, -5
+  br i1 %cmp, label %land.lhs.true, label %lor.lhs.false
+
+land.lhs.true:                                    ; preds = %entry
+  %1 = load i32, ptr @b, align 4
+  %2 = load i32, ptr @c, align 4
+  %cmp1 = icmp eq i32 %1, %2
+  br i1 %cmp1, label %return, label %if.end
+
+lor.lhs.false:                                    ; preds = %entry
+  %cmp2 = icmp ugt i32 %0, -5
+  br i1 %cmp2, label %land.lhs.true3, label %if.end
+
+land.lhs.true3:                                   ; preds = %lor.lhs.false
+  %3 = load i32, ptr @b, align 4
+  %4 = load i32, ptr @d, align 4
+  %cmp4 = icmp eq i32 %3, %4
+  br i1 %cmp4, label %return, label %if.end
+
+if.end:                                           ; preds = %land.lhs.true3, %lor.lhs.false, %land.lhs.true
+  br label %return
+
+return:                                           ; preds = %if.end, %land.lhs.true3, %land.lhs.true
+  %retval.0 = phi i32 [ 0, %if.end ], [ 1, %land.lhs.true3 ], [ 1, %land.lhs.true ]
+  ret i32 %retval.0
+}
+
+; Yes, you can mix them too!
+; (a < -5 && b == c) || (a u> -5 && b == d)
+define i32 @combine_ult_gt_n5() #0 {
+; ARM-LABEL: combine_ult_gt_n5:
+; ARM:       @ %bb.0: @ %entry
+; ARM-NEXT:    movw r0, :lower16:a
+; ARM-NEXT:    movt r0, :upper16:a
+; ARM-NEXT:    ldr r0, [r0]
+; ARM-NEXT:    cmn r0, #5
+; ARM-NEXT:    bhs .LBB16_2
+; ARM-NEXT:  @ %bb.1: @ %land.lhs.true
+; ARM-NEXT:    movw r0, :lower16:c
+; ARM-NEXT:    movt r0, :upper16:c
+; ARM-NEXT:    b .LBB16_4
+; ARM-NEXT:  .LBB16_2: @ %lor.lhs.false
+; ARM-NEXT:    ble .LBB16_5
+; ARM-NEXT:  @ %bb.3: @ %land.lhs.true3
+; ARM-NEXT:    movw r0, :lower16:d
+; ARM-NEXT:    movt r0, :upper16:d
+; ARM-NEXT:  .LBB16_4: @ %land.lhs.true3
+; ARM-NEXT:    ldr r1, [r0]
+; ARM-NEXT:    movw r0, :lower16:b
+; ARM-NEXT:    movt r0, :upper16:b
+; ARM-NEXT:    ldr r2, [r0]
+; ARM-NEXT:    mov r0, #1
+; ARM-NEXT:    cmp r2, r1
+; ARM-NEXT:    movne r0, #0
+; ARM-NEXT:    bx lr
+; ARM-NEXT:  .LBB16_5: @ %if.end
+; ARM-NEXT:    mov r0, #0
+; ARM-NEXT:    bx lr
+;
+; THUMB-LABEL: combine_ult_gt_n5:
+; THUMB:       @ %bb.0: @ %entry
+; THUMB-NEXT:    ldr r0, .LCPI16_0
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    movs r1, #5
+; THUMB-NEXT:    mvns r1, r1
+; THUMB-NEXT:    cmp r0, r1
+; THUMB-NEXT:    bhi .LBB16_3
+; THUMB-NEXT:  @ %bb.1: @ %land.lhs.true
+; THUMB-NEXT:    ldr r0, .LCPI16_3
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    ldr r1, .LCPI16_2
+; THUMB-NEXT:    ldr r1, [r1]
+; THUMB-NEXT:    cmp r1, r0
+; THUMB-NEXT:    bne .LBB16_6
+; THUMB-NEXT:  @ %bb.2:
+; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:  .LBB16_3: @ %lor.lhs.false
+; THUMB-NEXT:    movs r1, #3
+; THUMB-NEXT:    mvns r1, r1
+; THUMB-NEXT:    cmp r0, r1
+; THUMB-NEXT:    blt .LBB16_6
+; THUMB-NEXT:  @ %bb.4: @ %land.lhs.true3
+; THUMB-NEXT:    ldr r0, .LCPI16_1
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    ldr r1, .LCPI16_2
+; THUMB-NEXT:    ldr r1, [r1]
+; THUMB-NEXT:    cmp r1, r0
+; THUMB-NEXT:    bne .LBB16_6
+; THUMB-NEXT:  @ %bb.5:
+; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:  .LBB16_6: @ %if.end
+; THUMB-NEXT:    movs r0, #0
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:    .p2align 2
+; THUMB-NEXT:  @ %bb.7:
+; THUMB-NEXT:  .LCPI16_0:
+; THUMB-NEXT:    .long a
+; THUMB-NEXT:  .LCPI16_1:
+; THUMB-NEXT:    .long d
+; THUMB-NEXT:  .LCPI16_2:
+; THUMB-NEXT:    .long b
+; THUMB-NEXT:  .LCPI16_3:
+; THUMB-NEXT:    .long c
+;
+; THUMB2-LABEL: combine_ult_gt_n5:
+; THUMB2:       @ %bb.0: @ %entry
+; THUMB2-NEXT:    movw r0, :lower16:a
+; THUMB2-NEXT:    movt r0, :upper16:a
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    cmn.w r0, #5
+; THUMB2-NEXT:    bhs .LBB16_2
+; THUMB2-NEXT:  @ %bb.1: @ %land.lhs.true
+; THUMB2-NEXT:    movw r0, :lower16:c
+; THUMB2-NEXT:    movw r1, :lower16:b
+; THUMB2-NEXT:    movt r0, :upper16:c
+; THUMB2-NEXT:    movt r1, :upper16:b
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    ldr r1, [r1]
+; THUMB2-NEXT:    cmp r1, r0
+; THUMB2-NEXT:    itt eq
+; THUMB2-NEXT:    moveq r0, #1
+; THUMB2-NEXT:    bxeq lr
+; THUMB2-NEXT:    b .LBB16_4
+; THUMB2-NEXT:  .LBB16_2: @ %lor.lhs.false
+; THUMB2-NEXT:    ble .LBB16_4
+; THUMB2-NEXT:  @ %bb.3: @ %land.lhs.true3
+; THUMB2-NEXT:    movw r0, :lower16:d
+; THUMB2-NEXT:    movw r1, :lower16:b
+; THUMB2-NEXT:    movt r0, :upper16:d
+; THUMB2-NEXT:    movt r1, :upper16:b
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    ldr r1, [r1]
+; THUMB2-NEXT:    cmp r1, r0
+; THUMB2-NEXT:    itt eq
+; THUMB2-NEXT:    moveq r0, #1
+; THUMB2-NEXT:    bxeq lr
+; THUMB2-NEXT:  .LBB16_4: @ %if.end
+; THUMB2-NEXT:    movs r0, #0
+; THUMB2-NEXT:    bx lr
+;
+; THUMBV8-LABEL: combine_ult_gt_n5:
+; THUMBV8:       @ %bb.0: @ %entry
+; THUMBV8-NEXT:    movw r0, :lower16:a
+; THUMBV8-NEXT:    movt r0, :upper16:a
+; THUMBV8-NEXT:    ldr r0, [r0]
+; THUMBV8-NEXT:    cmn.w r0, #5
+; THUMBV8-NEXT:    bhs .LBB16_2
+; THUMBV8-NEXT:  @ %bb.1: @ %land.lhs.true
+; THUMBV8-NEXT:    movw r0, :lower16:c
+; THUMBV8-NEXT:    movw r1, :lower16:b
+; THUMBV8-NEXT:    movt r0, :upper16:c
+; THUMBV8-NEXT:    movt r1, :upper16:b
+; THUMBV8-NEXT:    ldr r0, [r0]
+; THUMBV8-NEXT:    ldr r1, [r1]
+; THUMBV8-NEXT:    cmp r1, r0
+; THUMBV8-NEXT:    itt eq
+; THUMBV8-NEXT:    moveq r0, #1
+; THUMBV8-NEXT:    bxeq lr
+; THUMBV8-NEXT:    b .LBB16_4
+; THUMBV8-NEXT:  .LBB16_2: @ %lor.lhs.false
+; THUMBV8-NEXT:    ble .LBB16_4
+; THUMBV8-NEXT:  @ %bb.3: @ %land.lhs.true3
+; THUMBV8-NEXT:    movw r0, :lower16:d
+; THUMBV8-NEXT:    movw r1, :lower16:b
+; THUMBV8-NEXT:    movt r0, :upper16:d
+; THUMBV8-NEXT:    movt r1, :upper16:b
+; THUMBV8-NEXT:    ldr r0, [r0]
+; THUMBV8-NEXT:    ldr r1, [r1]
+; THUMBV8-NEXT:    cmp r1, r0
+; THUMBV8-NEXT:    itt eq
+; THUMBV8-NEXT:    moveq r0, #1
+; THUMBV8-NEXT:    bxeq lr
+; THUMBV8-NEXT:  .LBB16_4: @ %if.end
+; THUMBV8-NEXT:    movs r0, #0
+; THUMBV8-NEXT:    bx lr
+entry:
+  %0 = load i32, ptr @a, align 4
+  %cmp = icmp ult i32 %0, -5
+  br i1 %cmp, label %land.lhs.true, label %lor.lhs.false
+
+land.lhs.true:                                    ; preds = %entry
+  %1 = load i32, ptr @b, align 4
+  %2 = load i32, ptr @c, align 4
+  %cmp1 = icmp eq i32 %1, %2
+  br i1 %cmp1, label %return, label %if.end
+
+lor.lhs.false:                                    ; preds = %entry
+  %cmp2 = icmp sgt i32 %0, -5
+  br i1 %cmp2, label %land.lhs.true3, label %if.end
+
+land.lhs.true3:                                   ; preds = %lor.lhs.false
+  %3 = load i32, ptr @b, align 4
+  %4 = load i32, ptr @d, align 4
+  %cmp4 = icmp eq i32 %3, %4
+  br i1 %cmp4, label %return, label %if.end
+
+if.end:                                           ; preds = %land.lhs.true3, %lor.lhs.false, %land.lhs.true
+  br label %return
+
+return:                                           ; preds = %if.end, %land.lhs.true3, %land.lhs.true
+  %retval.0 = phi i32 [ 0, %if.end ], [ 1, %land.lhs.true3 ], [ 1, %land.lhs.true ]
+  ret i32 %retval.0
+}
+
+define i32 @combine_ugt_uge_sel(i32 %v, ptr %p) #0 {
+; ARM-LABEL: combine_ugt_uge_sel:
+; ARM:       @ %bb.0: @ %entry
+; ARM-NEXT:    movw r2, :lower16:a
+; ARM-NEXT:    movt r2, :upper16:a
+; ARM-NEXT:    ldr r2, [r2]
+; ARM-NEXT:    cmp r2, #0
+; ARM-NEXT:    moveq r0, r2
+; ARM-NEXT:    str r0, [r1]
+; ARM-NEXT:    movw r1, :lower16:b
+; ARM-NEXT:    movt r1, :upper16:b
+; ARM-NEXT:    beq .LBB17_3
+; ARM-NEXT:  @ %bb.1: @ %lor.lhs.false
+; ARM-NEXT:    cmp r2, #2
+; ARM-NEXT:    bhs .LBB17_4
+; ARM-NEXT:  @ %bb.2: @ %if.end
+; ARM-NEXT:    mov r0, #0
+; ARM-NEXT:    bx lr
+; ARM-NEXT:  .LBB17_3: @ %land.lhs.true
+; ARM-NEXT:    movw r0, :lower16:c
+; ARM-NEXT:    ldr r3, [r1]
+; ARM-NEXT:    movt r0, :upper16:c
+; ARM-NEXT:    ldr r2, [r0]
+; ARM-NEXT:    mov r0, #1
+; ARM-NEXT:    cmp r3, r2
+; ARM-NEXT:    bxeq lr
+; ARM-NEXT:  .LBB17_4: @ %land.lhs.true3
+; ARM-NEXT:    movw r0, :lower16:d
+; ARM-NEXT:    ldr r1, [r1]
+; ARM-NEXT:    movt r0, :upper16:d
+; ARM-NEXT:    ldr r2, [r0]
+; ARM-NEXT:    mov r0, #1
+; ARM-NEXT:    cmp r1, r2
+; ARM-NEXT:    movne r0, #0
+; ARM-NEXT:    bx lr
+;
+; THUMB-LABEL: combine_ugt_uge_sel:
+; THUMB:       @ %bb.0: @ %entry
+; THUMB-NEXT:    ldr r2, .LCPI17_0
+; THUMB-NEXT:    ldr r2, [r2]
+; THUMB-NEXT:    cmp r2, #0
+; THUMB-NEXT:    bne .LBB17_2
+; THUMB-NEXT:  @ %bb.1: @ %entry
+; THUMB-NEXT:    mov r0, r2
+; THUMB-NEXT:  .LBB17_2: @ %entry
+; THUMB-NEXT:    str r0, [r1]
+; THUMB-NEXT:    beq .LBB17_4
+; THUMB-NEXT:  @ %bb.3: @ %lor.lhs.false
+; THUMB-NEXT:    cmp r2, #2
+; THUMB-NEXT:    bhs .LBB17_6
+; THUMB-NEXT:    b .LBB17_8
+; THUMB-NEXT:  .LBB17_4: @ %land.lhs.true
+; THUMB-NEXT:    ldr r0, .LCPI17_1
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    ldr r1, .LCPI17_2
+; THUMB-NEXT:    ldr r1, [r1]
+; THUMB-NEXT:    cmp r1, r0
+; THUMB-NEXT:    bne .LBB17_6
+; THUMB-NEXT:  @ %bb.5:
+; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:  .LBB17_6: @ %land.lhs.true3
+; THUMB-NEXT:    ldr r0, .LCPI17_3
+; THUMB-NEXT:    ldr r0, [r0]
+; THUMB-NEXT:    ldr r1, .LCPI17_2
+; THUMB-NEXT:    ldr r1, [r1]
+; THUMB-NEXT:    cmp r1, r0
+; THUMB-NEXT:    bne .LBB17_8
+; THUMB-NEXT:  @ %bb.7:
+; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:  .LBB17_8: @ %if.end
+; THUMB-NEXT:    movs r0, #0
+; THUMB-NEXT:    bx lr
+; THUMB-NEXT:    .p2align 2
+; THUMB-NEXT:  @ %bb.9:
+; THUMB-NEXT:  .LCPI17_0:
+; THUMB-NEXT:    .long a
+; THUMB-NEXT:  .LCPI17_1:
+; THUMB-NEXT:    .long c
+; THUMB-NEXT:  .LCPI17_2:
+; THUMB-NEXT:    .long b
+; THUMB-NEXT:  .LCPI17_3:
+; THUMB-NEXT:    .long d
+;
+; THUMB2-LABEL: combine_ugt_uge_sel:
+; THUMB2:       @ %bb.0: @ %entry
+; THUMB2-NEXT:    movw r2, :lower16:a
+; THUMB2-NEXT:    movt r2, :upper16:a
+; THUMB2-NEXT:    ldr r2, [r2]
+; THUMB2-NEXT:    cmp r2, #0
+; THUMB2-NEXT:    it eq
+; THUMB2-NEXT:    moveq r0, r2
+; THUMB2-NEXT:    str r0, [r1]
+; THUMB2-NEXT:    movw r0, :lower16:b
+; THUMB2-NEXT:    movt r0, :upper16:b
+; THUMB2-NEXT:    beq .LBB17_2
+; THUMB2-NEXT:  @ %bb.1: @ %lor.lhs.false
+; THUMB2-NEXT:    cmp r2, #2
+; THUMB2-NEXT:    bhs .LBB17_3
+; THUMB2-NEXT:    b .LBB17_4
+; THUMB2-NEXT:  .LBB17_2: @ %land.lhs.true
+; THUMB2-NEXT:    movw r1, :lower16:c
+; THUMB2-NEXT:    ldr r2, [r0]
+; THUMB2-NEXT:    movt r1, :upper16:c
+; THUMB2-NEXT:    ldr r1, [r1]
+; THUMB2-NEXT:    cmp r2, r1
+; THUMB2-NEXT:    itt eq
+; THUMB2-NEXT:    moveq r0, #1
+; THUMB2-NEXT:    bxeq lr
+; THUMB2-NEXT:  .LBB17_3: @ %land.lhs.true3
+; THUMB2-NEXT:    movw r1, :lower16:d
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    movt r1, :upper16:d
+; THUMB2-NEXT:    ldr r1, [r1]
+; THUMB2-NEXT:    cmp r0, r1
+; THUMB2-NEXT:    itt eq
+; THUMB2-NEXT:    moveq r0, #1
+; THUMB2-NEXT:    bxeq lr
+; THUMB2-NEXT:  .LBB17_4: @ %if.end
+; THUMB2-NEXT:    movs r0, #0
+; THUMB2-NEXT:    bx lr
+;
+; THUMBV8-LABEL: combine_ugt_uge_sel:
+; THUMBV8:       @ %bb.0: @ %entry
+; THUMBV8-NEXT:    movw r2, :lower16:a
+; THUMBV8-NEXT:    movt r2, :upper16:a
+; THUMBV8-NEXT:    ldr r2, [r2]
+; THUMBV8-NEXT:    cmp r2, #0
+; THUMBV8-NEXT:    csel r0, r0, r2, ne
+; THUMBV8-NEXT:    str r0, [r1]
+; THUMBV8-NEXT:    movw r0, :lower16:b
+; THUMBV8-NEXT:    movt r0, :upper16:b
+; THUMBV8-NEXT:    beq .LBB17_2
+; THUMBV8-NEXT:  @ %bb.1: @ %lor.lhs.false
+; THUMBV8-NEXT:    cmp r2, #2
+; THUMBV8-NEXT:    bhs .LBB17_3
+; THUMBV8-NEXT:    b .LBB17_4
+; THUMBV8-NEXT:  .LBB17_2: @ %land.lhs.true
+; THUMBV8-NEXT:    movw r1, :lower16:c
+; THUMBV8-NEXT:    ldr r2, [r0]
+; THUMBV8-NEXT:    movt r1, :upper16:c
+; THUMBV8-NEXT:    ldr r1, [r1]
+; THUMBV8-NEXT:    cmp r2, r1
+; THUMBV8-NEXT:    itt eq
+; THUMBV8-NEXT:    moveq r0, #1
+; THUMBV8-NEXT:    bxeq lr
+; THUMBV8-NEXT:  .LBB17_3: @ %land.lhs.true3
+; THUMBV8-NEXT:    movw r1, :lower16:d
+; THUMBV8-NEXT:    ldr r0, [r0]
+; THUMBV8-NEXT:    movt r1, :upper16:d
+; THUMBV8-NEXT:    ldr r1, [r1]
+; THUMBV8-NEXT:    cmp r0, r1
+; THUMBV8-NEXT:    itt eq
+; THUMBV8-NEXT:    moveq r0, #1
+; THUMBV8-NEXT:    bxeq lr
+; THUMBV8-NEXT:  .LBB17_4: @ %if.end
+; THUMBV8-NEXT:    movs r0, #0
+; THUMBV8-NEXT:    bx lr
+entry:
+  %0 = load i32, ptr @a, align 4
+  %cmp = icmp ugt i32 %0, 0
+  %m = select i1 %cmp, i32 %v, i32 0
+  store i32 %m, ptr %p
+  br i1 %cmp, label %lor.lhs.false, label %land.lhs.true
+
+land.lhs.true:                                    ; preds = %entry
+  %1 = load i32, ptr @b, align 4
+  %2 = load i32, ptr @c, align 4
+  %cmp1 = icmp eq i32 %1, %2
+  br i1 %cmp1, label %return, label %land.lhs.true3
+
+lor.lhs.false:                                    ; preds = %entry
+  %cmp2 = icmp ugt i32 %0, 1
+  br i1 %cmp2, label %land.lhs.true3, label %if.end
+
+land.lhs.true3:                                   ; preds = %lor.lhs.false, %land.lhs.true
+  %3 = load i32, ptr @b, align 4
+  %4 = load i32, ptr @d, align 4
+  %cmp4 = icmp eq i32 %3, %4
+  br i1 %cmp4, label %return, label %if.end
+
+if.end:                                           ; preds = %land.lhs.true3, %lor.lhs.false
+  br label %return
+
+return:                                           ; preds = %if.end, %land.lhs.true3, %land.lhs.true
+  %retval.0 = phi i32 [ 0, %if.end ], [ 1, %land.lhs.true3 ], [ 1, %land.lhs.true ]
+  ret i32 %retval.0
+}
+
+attributes #0 = { uwtable }
