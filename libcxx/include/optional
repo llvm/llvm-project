@@ -842,7 +842,7 @@ public:
     return std::__make_bounded_iter(
         std::__wrap_iter<pointer>(std::addressof(this->__get())),
         std::__wrap_iter<pointer>(std::addressof(this->__get())),
-        std::__wrap_iter<pointer>(std::addressof(this->__get()) + (this->has_value()) ? 1 : 0));
+        std::__wrap_iter<pointer>(std::addressof(this->__get()) + (this->has_value() ? 1 : 0)));
 #      else
     return iterator(std::addressof(this->__get()));
 #      endif
@@ -853,7 +853,7 @@ public:
     return std::__make_bounded_iter(
         std::__wrap_iter<const_pointer>(std::addressof(this->__get())),
         std::__wrap_iter<const_pointer>(std::addressof(this->__get())),
-        std::__wrap_iter<const_pointer>(std::addressof(this->__get()) + (this->has_value()) ? 1 : 0));
+        std::__wrap_iter<const_pointer>(std::addressof(this->__get()) + (this->has_value() ? 1 : 0)));
 #      else
     return const_iterator(std::addressof(this->__get()));
 #      endif
