@@ -1,12 +1,12 @@
 # REQUIRES: loongarch
 
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=+relax %s -o %t.32.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=+relax --defsym ELF32=1 %s -o %t.32.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 -mattr=+relax %s -o %t.64.o
 
 # RUN: ld.lld --section-start=.text=0x10000 --section-start=.data=0x14000 %t.32.o -o %t.32
 # RUN: ld.lld --section-start=.text=0x10000 --section-start=.data=0x14000 %t.64.o -o %t.64
-# RUN: llvm-objdump -td --no-show-raw-insn %t.32 | FileCheck --check-prefixes=RELAX %s
-# RUN: llvm-objdump -td --no-show-raw-insn %t.64 | FileCheck --check-prefixes=RELAX %s
+# RUN: llvm-objdump -td --no-show-raw-insn %t.32 | FileCheck --check-prefixes=RELAX,RELAX32 %s
+# RUN: llvm-objdump -td --no-show-raw-insn %t.64 | FileCheck --check-prefixes=RELAX,RELAX64 %s
 
 # RUN: ld.lld --section-start=.text=0x10000 --section-start=.data=0x14000 %t.32.o -shared -o %t.32s
 # RUN: ld.lld --section-start=.text=0x10000 --section-start=.data=0x14000 %t.64.o -shared -o %t.64s
@@ -25,6 +25,11 @@
 # RELAX-NEXT:              pcaddi $a0, 4094
 # RELAX-NEXT:              pcaddi $a0, 4093
 
+# RELAX32-NEXT:            pcalau12i $a0, 4
+# RELAX32-NEXT:            ld.w      $a0, $a0, 8
+# RELAX64-NEXT:            pcalau12i $a0, 4
+# RELAX64-NEXT:            ld.d      $a0, $a0, 12
+
 # NORELAX32-LABEL: <_start>:
 ## offset exceed range of pcaddi
 ## offset = 0x410000 - 0x10000: 0x400 pages, page offset 0
@@ -36,6 +41,8 @@
 # NORELAX32-NEXT:          addi.w        $a0, $a0, 0
 # NORELAX32-NEXT:          pcalau12i     $a0, 1024
 # NORELAX32-NEXT:          ld.w          $a0, $a0, 4
+# NORELAX32-NEXT:          pcalau12i     $a0, 1024
+# NORELAX32-NEXT:          ld.w          $a0, $a0, 8
 
 # NORELAX64-LABEL: <_start>:
 ## offset exceed range of pcaddi
@@ -48,6 +55,16 @@
 # NORELAX64-NEXT:          addi.d        $a0, $a0, 0
 # NORELAX64-NEXT:          pcalau12i     $a0, 1024
 # NORELAX64-NEXT:          ld.d          $a0, $a0, 8
+# NORELAX64-NEXT:          pcalau12i     $a0, 1024
+# NORELAX64-NEXT:          ld.d          $a0, $a0, 12
+
+.macro ld dst, src1, src2
+.ifdef ELF32
+ld.w \dst, \src1, \src2
+.else
+ld.d \dst, \src1, \src2
+.endif
+.endm
 
 .section .text
 .global _start
@@ -56,6 +73,11 @@ _start:
   la.global $a0, sym
   la.pcrel  $a0, sym
   la.got    $a0, sym
+
+  pcalau12i $a0, %got_pc_hi20(sym+4)
+    .reloc .-4, R_LARCH_RELAX, 0
+  ld        $a0, $a0, %got_pc_lo12(sym+4)
+    .reloc .-4, R_LARCH_RELAX, 0
 
 .section .data
 sym:
