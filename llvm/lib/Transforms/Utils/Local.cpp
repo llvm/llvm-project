@@ -482,6 +482,9 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
 
     if (II->isLifetimeStartOrEnd()) {
       auto *Arg = II->getArgOperand(1);
+      if (isa<PoisonValue>(Arg))
+        return true;
+
       // If the only uses of the alloca are lifetime intrinsics, then the
       // intrinsics are dead.
       return llvm::all_of(Arg->uses(), [](Use &Use) {
