@@ -4776,7 +4776,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //     <32 x i8> @llvm.x86.vgf2p8affineqb.256(<32 x i8>, <32 x i8>, i8)
   //     <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8>, <64 x i8>, i8)
   //      Out                                    A          x          b
-  // where Out = A * x + b in GF(2) (N.B. Out, A and x are packed)
+  // where A and x are packed matrices, b is a vector,
+  //       Out = A * x + b in GF(2)
   //
   // Multiplication in GF(2) is equivalent to bitwise AND. However, the matrix
   // computation also includes a parity calculation.
@@ -4784,7 +4785,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // For the bitwise AND of bits V1 and V2, the exact shadow is:
   //     Out_Shadow =   (V1_Shadow & V2_Shadow)
   //                  | (V1        & V2_Shadow)
-  //                  | (V1_Shadow & V2_Shadow)
+  //                  | (V1_Shadow & V2       )
   //
   // We approximate the shadow of gf2p8affineqb using:
   //     Out_Shadow =   gf2p8affineqb(x_Shadow, A_shadow, 0)
@@ -4800,44 +4801,44 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     assert(I.arg_size() == 3);
     Value *A = I.getOperand(0);
-    Value *x = I.getOperand(1);
-    Value *b = I.getOperand(2);
+    Value *X = I.getOperand(1);
+    Value *B = I.getOperand(2);
 
     assert(isFixedIntVector(A));
     assert(cast<VectorType>(A->getType())
                ->getElementType()
                ->getScalarSizeInBits() == 8);
 
-    assert(A->getType() == x->getType());
+    assert(A->getType() == X->getType());
 
-    assert(b->getType()->isIntegerTy());
-    assert(b->getType()->getScalarSizeInBits() == 8);
+    assert(B->getType()->isIntegerTy());
+    assert(B->getType()->getScalarSizeInBits() == 8);
 
     assert(I.getType() == A->getType());
 
     Value *AShadow = getShadow(A);
-    Value *xShadow = getShadow(x);
-    Value *bZeroShadow = getCleanShadow(b);
+    Value *XShadow = getShadow(X);
+    Value *BZeroShadow = getCleanShadow(B);
 
-    CallInst *xShadowAShadow = IRB.CreateIntrinsic(
-        I.getType(), I.getIntrinsicID(), {xShadow, AShadow, bZeroShadow});
-    CallInst *xAShadow = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
-                                             {x, AShadow, bZeroShadow});
-    CallInst *xShadowA = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
-                                             {xShadow, A, bZeroShadow});
+    CallInst *AShadowXShadow = IRB.CreateIntrinsic(
+        I.getType(), I.getIntrinsicID(), {XShadow, AShadow, BZeroShadow});
+    CallInst *AShadowX = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
+                                             {X, AShadow, BZeroShadow});
+    CallInst *XShadowA = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
+                                             {XShadow, A, BZeroShadow});
 
     unsigned NumElements = cast<FixedVectorType>(I.getType())->getNumElements();
-    Value *bShadow = getShadow(b);
-    Value *bBroadcastShadow = getCleanShadow(AShadow);
+    Value *BShadow = getShadow(B);
+    Value *BBroadcastShadow = getCleanShadow(AShadow);
     // There is no LLVM IR intrinsic for _mm512_set1_epi8.
     // This loop generates a lot of LLVM IR, which we expect that CodeGen will
     // lower appropriately (e.g., VPBROADCASTB).
     // Besides, b is often a constant, in which case it is fully initialized.
     for (unsigned i = 0; i < NumElements; i++)
-      bBroadcastShadow = IRB.CreateInsertElement(bBroadcastShadow, bShadow, i);
+      BBroadcastShadow = IRB.CreateInsertElement(BBroadcastShadow, BShadow, i);
 
     setShadow(&I, IRB.CreateOr(
-                      {xShadowAShadow, xAShadow, xShadowA, bBroadcastShadow}));
+                      {AShadowXShadow, AShadowX, XShadowA, BBroadcastShadow}));
     setOriginForNaryOp(I);
   }
 
