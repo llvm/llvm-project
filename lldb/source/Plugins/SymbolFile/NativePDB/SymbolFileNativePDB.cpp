@@ -2205,9 +2205,9 @@ void SymbolFileNativePDB::BuildParentMap() {
     CVTagRecord tag = CVTagRecord::create(type);
 
     RecordIndices &indices = record_indices[tag.asTag().getUniqueName()];
-    if (tag.asTag().isForwardRef())
+    if (tag.asTag().isForwardRef()) {
       indices.forward = *ti;
-    else {
+    } else {
       indices.full = *ti;
 
       auto base_name = MSVCUndecoratedNameParser::DropScope(tag.name());
