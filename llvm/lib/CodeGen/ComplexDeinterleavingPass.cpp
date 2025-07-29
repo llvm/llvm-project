@@ -2186,8 +2186,6 @@ Value *ComplexDeinterleavingGraph::replaceNode(IRBuilderBase &Builder,
     llvm_unreachable("Deinterleave node should already have ReplacementNode");
     break;
   case ComplexDeinterleavingOperation::Splat: {
-    auto *NewTy = VectorType::getDoubleElementsVectorType(
-        cast<VectorType>(Node->Real->getType()));
     auto *R = dyn_cast<Instruction>(Node->Real);
     auto *I = dyn_cast<Instruction>(Node->Imag);
     if (R && I) {
@@ -2225,8 +2223,6 @@ Value *ComplexDeinterleavingGraph::replaceNode(IRBuilderBase &Builder,
     auto *MaskImag = cast<Instruction>(Node->Imag)->getOperand(0);
     auto *A = replaceNode(Builder, Node->Operands[0]);
     auto *B = replaceNode(Builder, Node->Operands[1]);
-    auto *NewMaskTy = VectorType::getDoubleElementsVectorType(
-        cast<VectorType>(MaskReal->getType()));
     auto *NewMask = Builder.CreateVectorInterleave({MaskReal, MaskImag});
     ReplacementNode = Builder.CreateSelect(NewMask, A, B);
     break;
@@ -2278,9 +2274,6 @@ void ComplexDeinterleavingGraph::processReductionOperation(
   auto *OldPHIReal = ReductionInfo[Real].first;
   auto *OldPHIImag = ReductionInfo[Imag].first;
   auto *NewPHI = OldToNewPHI[OldPHIReal];
-
-  auto *VTy = cast<VectorType>(Real->getType());
-  auto *NewVTy = VectorType::getDoubleElementsVectorType(VTy);
 
   // We have to interleave initial origin values coming from IncomingBlock
   Value *InitReal = OldPHIReal->getIncomingValueForBlock(Incoming);
