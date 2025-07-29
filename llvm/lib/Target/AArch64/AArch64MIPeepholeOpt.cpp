@@ -8,8 +8,8 @@
 //
 // This pass performs below peephole optimizations on MIR level.
 //
-// 1. MOVi32imm + ANDWrr ==> ANDWri + ANDWri
-//    MOVi64imm + ANDXrr ==> ANDXri + ANDXri
+// 1. MOVi32imm + ANDS?Wrr ==> ANDWri + ANDS?Wri
+//    MOVi64imm + ANDS?Xrr ==> ANDXri + ANDS?Xri
 //
 // 2. MOVi32imm + ADDWrr ==> ADDWRi + ADDWRi
 //    MOVi64imm + ADDXrr ==> ANDXri + ANDXri
@@ -126,7 +126,7 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   bool visitADDSSUBS(OpcodePair PosOpcs, OpcodePair NegOpcs, MachineInstr &MI);
 
   template <typename T>
-  bool visitAND(unsigned Opc, MachineInstr &MI);
+  bool visitAND(unsigned Opc, MachineInstr &MI, unsigned OtherOpc = 0);
   bool visitORR(MachineInstr &MI);
   bool visitCSEL(MachineInstr &MI);
   bool visitINSERT(MachineInstr &MI);
@@ -194,12 +194,12 @@ static bool splitBitmaskImm(T Imm, unsigned RegSize, T &Imm1Enc, T &Imm2Enc) {
 }
 
 template <typename T>
-bool AArch64MIPeepholeOpt::visitAND(
-    unsigned Opc, MachineInstr &MI) {
+bool AArch64MIPeepholeOpt::visitAND(unsigned Opc, MachineInstr &MI,
+                                    unsigned OtherOpc) {
   // Try below transformation.
   //
-  // MOVi32imm + ANDWrr ==> ANDWri + ANDWri
-  // MOVi64imm + ANDXrr ==> ANDXri + ANDXri
+  // MOVi32imm + ANDS?Wrr ==> ANDWri + ANDS?Wri
+  // MOVi64imm + ANDS?Xrr ==> ANDXri + ANDS?Xri
   //
   // The mov pseudo instruction could be expanded to multiple mov instructions
   // later. Let's try to split the constant operand of mov instruction into two
@@ -208,10 +208,10 @@ bool AArch64MIPeepholeOpt::visitAND(
 
   return splitTwoPartImm<T>(
       MI,
-      [Opc](T Imm, unsigned RegSize, T &Imm0,
-            T &Imm1) -> std::optional<OpcodePair> {
+      [Opc, OtherOpc](T Imm, unsigned RegSize, T &Imm0,
+                      T &Imm1) -> std::optional<OpcodePair> {
         if (splitBitmaskImm(Imm, RegSize, Imm0, Imm1))
-          return std::make_pair(Opc, Opc);
+          return std::make_pair(Opc, !OtherOpc ? Opc : OtherOpc);
         return std::nullopt;
       },
       [&TII = TII](MachineInstr &MI, OpcodePair Opcode, unsigned Imm0,
@@ -863,6 +863,12 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
         break;
       case AArch64::ANDXrr:
         Changed |= visitAND<uint64_t>(AArch64::ANDXri, MI);
+        break;
+      case AArch64::ANDSWrr:
+        Changed |= visitAND<uint32_t>(AArch64::ANDWri, MI, AArch64::ANDSWri);
+        break;
+      case AArch64::ANDSXrr:
+        Changed |= visitAND<uint64_t>(AArch64::ANDXri, MI, AArch64::ANDSXri);
         break;
       case AArch64::ORRWrs:
         Changed |= visitORR(MI);

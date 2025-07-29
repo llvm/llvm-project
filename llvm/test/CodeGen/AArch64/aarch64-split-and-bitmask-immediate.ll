@@ -263,3 +263,110 @@ entry:
   %conv = zext i1 %cmp to i8
   ret i8 %conv
 }
+
+; Test ANDS.
+define i32 @test1_ands(i32 %a) {
+; CHECK-LABEL: test1_ands:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and w8, w0, #0x3ffc00
+; CHECK-NEXT:    ands w8, w8, #0xffe007ff
+; CHECK-NEXT:    csel w0, w0, w8, eq
+; CHECK-NEXT:    ret
+entry:
+  %ands = and i32 %a, 2098176
+  %c = icmp eq i32 %ands, 0
+  %r = select i1 %c, i32 %a, i32 %ands
+  ret i32 %r
+}
+
+; This constant should not be split because it can be handled by one mov.
+define i32 @test2_ands(i32 %a) {
+; CHECK-LABEL: test2_ands:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #135 // =0x87
+; CHECK-NEXT:    ands w8, w0, w8
+; CHECK-NEXT:    csel w0, w0, w8, eq
+; CHECK-NEXT:    ret
+entry:
+  %ands = and i32 %a, 135
+  %c = icmp eq i32 %ands, 0
+  %r = select i1 %c, i32 %a, i32 %ands
+  ret i32 %r
+}
+
+; This constant should not be split because the split immediate is not valid
+; bitmask immediate.
+define i32 @test3_ands(i32 %a) {
+; CHECK-LABEL: test3_ands:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1024 // =0x400
+; CHECK-NEXT:    movk w8, #33, lsl #16
+; CHECK-NEXT:    ands w8, w0, w8
+; CHECK-NEXT:    csel w0, w0, w8, eq
+; CHECK-NEXT:    ret
+entry:
+  %ands = and i32 %a, 2163712
+  %c = icmp eq i32 %ands, 0
+  %r = select i1 %c, i32 %a, i32 %ands
+  ret i32 %r
+}
+
+define i64 @test4_ands(i64 %a) {
+; CHECK-LABEL: test4_ands:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and x8, x0, #0x3ffc00
+; CHECK-NEXT:    ands x8, x8, #0xffffffffffe007ff
+; CHECK-NEXT:    csel x0, x0, x8, eq
+; CHECK-NEXT:    ret
+entry:
+  %ands = and i64 %a, 2098176
+  %c = icmp eq i64 %ands, 0
+  %r = select i1 %c, i64 %a, i64 %ands
+  ret i64 %r
+}
+
+define i64 @test5_ands(i64 %a) {
+; CHECK-LABEL: test5_ands:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and x8, x0, #0x3ffffc000
+; CHECK-NEXT:    ands x8, x8, #0xfffffffe00007fff
+; CHECK-NEXT:    csel x0, x0, x8, eq
+; CHECK-NEXT:    ret
+entry:
+  %ands = and i64 %a, 8589950976
+  %c = icmp eq i64 %ands, 0
+  %r = select i1 %c, i64 %a, i64 %ands
+  ret i64 %r
+}
+
+; This constant should not be split because it can be handled by one mov.
+define i64 @test6_ands(i64 %a) {
+; CHECK-LABEL: test6_ands:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #135 // =0x87
+; CHECK-NEXT:    ands x8, x0, x8
+; CHECK-NEXT:    csel x0, x0, x8, eq
+; CHECK-NEXT:    ret
+entry:
+  %ands = and i64 %a, 135
+  %c = icmp eq i64 %ands, 0
+  %r = select i1 %c, i64 %a, i64 %ands
+  ret i64 %r
+}
+
+; This constant should not be split because the split immediate is not valid
+; bitmask immediate.
+define i64 @test7_ands(i64 %a) {
+; CHECK-LABEL: test7_ands:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1024 // =0x400
+; CHECK-NEXT:    movk w8, #33, lsl #16
+; CHECK-NEXT:    ands x8, x0, x8
+; CHECK-NEXT:    csel x0, x0, x8, eq
+; CHECK-NEXT:    ret
+entry:
+  %ands = and i64 %a, 2163712
+  %c = icmp eq i64 %ands, 0
+  %r = select i1 %c, i64 %a, i64 %ands
+  ret i64 %r
+}
