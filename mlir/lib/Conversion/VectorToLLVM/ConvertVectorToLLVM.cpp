@@ -1898,11 +1898,12 @@ struct VectorFromElementsLowering
     if (vectorType.getRank() == 0) {
       result = LLVM::PoisonOp::create(rewriter, loc, llvmType);
       auto index0 = LLVM::ConstantOp::create(rewriter, loc, llvmIndexType, 0);
-      result = LLVM::InsertElementOp::create(rewriter, loc, result, adaptor.getElements().front(), index0);
+      result = LLVM::InsertElementOp::create(
+          rewriter, loc, result, adaptor.getElements().front(), index0);
       rewriter.replaceOp(fromElementsOp, result);
       return success();
     }
-    
+
     // Build 1D vectors for the innermost dimension
     int64_t innerDimSize = vectorType.getShape().back();
     int64_t numInnerVectors = vectorType.getNumElements() / innerDimSize;
@@ -1910,7 +1911,8 @@ struct VectorFromElementsLowering
     SmallVector<Value> innerVectors;
     innerVectors.reserve(numInnerVectors);
 
-    auto innerVectorType = VectorType::get(innerDimSize, vectorType.getElementType());
+    auto innerVectorType =
+        VectorType::get(innerDimSize, vectorType.getElementType());
     Type llvmInnerType = typeConverter->convertType(innerVectorType);
 
     int64_t elementInVectorIdx = 0;
@@ -1918,8 +1920,10 @@ struct VectorFromElementsLowering
     for (auto val : adaptor.getElements()) {
       if (elementInVectorIdx == 0)
         innerVector = LLVM::PoisonOp::create(rewriter, loc, llvmInnerType);
-      auto position = LLVM::ConstantOp::create(rewriter, loc, llvmIndexType, elementInVectorIdx);
-      innerVector = LLVM::InsertElementOp::create(rewriter, loc, llvmInnerType, innerVector, val, position);
+      auto position = LLVM::ConstantOp::create(rewriter, loc, llvmIndexType,
+                                               elementInVectorIdx);
+      innerVector = LLVM::InsertElementOp::create(rewriter, loc, llvmInnerType,
+                                                  innerVector, val, position);
       if (++elementInVectorIdx == innerDimSize) {
         innerVectors.push_back(innerVector);
         elementInVectorIdx = 0;
@@ -1934,18 +1938,19 @@ struct VectorFromElementsLowering
 
     // Now build the nested aggregate structure from these 1D vectors.
     result = LLVM::PoisonOp::create(rewriter, loc, llvmType);
-    
+
     // Use the same iteration approach as VectorBroadcastScalarToNdLowering to
     // insert the 1D vectors into the aggregate.
-    auto vectorTypeInfo = LLVM::detail::extractNDVectorTypeInfo(vectorType, *getTypeConverter());
+    auto vectorTypeInfo =
+        LLVM::detail::extractNDVectorTypeInfo(vectorType, *getTypeConverter());
     if (!vectorTypeInfo.llvmNDVectorTy)
       return failure();
     int64_t vectorIdx = 0;
     nDVectorIterate(vectorTypeInfo, rewriter, [&](ArrayRef<int64_t> position) {
-      result = LLVM::InsertValueOp::create(rewriter, loc, result, 
+      result = LLVM::InsertValueOp::create(rewriter, loc, result,
                                            innerVectors[vectorIdx++], position);
     });
-    
+
     rewriter.replaceOp(fromElementsOp, result);
     return success();
   }
