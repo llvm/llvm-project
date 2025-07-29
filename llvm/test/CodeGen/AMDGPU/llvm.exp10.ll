@@ -3235,7 +3235,7 @@ define float @v_exp10_f32_fast(float %in) {
   ret float %result
 }
 
-define float @v_exp10_f32_unsafe_math_attr(float %in) "unsafe-fp-math"="true" {
+define float @v_exp10_f32_unsafe_math_attr(float %in) {
 ; GCN-SDAG-LABEL: v_exp10_f32_unsafe_math_attr:
 ; GCN-SDAG:       ; %bb.0:
 ; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3303,7 +3303,7 @@ define float @v_exp10_f32_unsafe_math_attr(float %in) "unsafe-fp-math"="true" {
 ; CM:       ; %bb.0:
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    PAD
-  %result = call float @llvm.exp10.f32(float %in)
+  %result = call afn float @llvm.exp10.f32(float %in)
   ret float %result
 }
 
