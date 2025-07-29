@@ -70,6 +70,14 @@
   SANITIZER_CHECK(                                                             \
       VLABoundNotPositive, vla_bound_not_positive, 0,                          \
       "Variable length array bound evaluates to non-positive value")           \
+  SANITIZER_CHECK(NullPointerUse, null_pointer_use, 0, "Null pointer usage")   \
+  SANITIZER_CHECK(                                                             \
+      NullPointerUseWithNullability, null_pointer_use_with_nullability, 0,     \
+      "Assigning null to a lvalue which is annotated with _Nonnull")           \
+  SANITIZER_CHECK(MisalignedPointerUse, misaligned_pointer_use, 0,             \
+                  "Misaligned pointer use")                                    \
+  SANITIZER_CHECK(InsufficientObjectSize, insufficient_object_size, 0,         \
+                  "Insufficient object size")                                  \
   SANITIZER_CHECK(BoundsSafety, bounds_safety, 0,                              \
                   "") // BoundsSafety Msg is empty because it is not considered
                       // part of UBSan; therefore, no trap reason is emitted for

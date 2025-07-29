@@ -8,9 +8,9 @@ struct A {
   // COMMON-LABEL: define linkonce_odr void @_ZN1A10do_nothingEv
   void do_nothing() {
     // ALIGN-NOT: ptrtoint ptr %{{.*}} to i64, !nosanitize
- 
+
     // NULL: icmp ne ptr %{{.*}}, null, !nosanitize
- 
+
     // OBJSIZE-NOT: call i64 @llvm.objectsize
   }
 };
@@ -48,7 +48,7 @@ void invalid_cast(Cat *cat = nullptr) {
   //
   // VPTR: [[ICMP:%.*]] = icmp ne ptr {{.*}}, null
   // VPTR-NEXT: br i1 [[ICMP]]
-  // VPTR: call void @__ubsan_handle_type_mismatch
+  // VPTR: call void @__ubsan_handle_null_pointer_use_abort
   // VPTR-NOT: icmp ne ptr {{.*}}, null
   // VPTR: br i1 [[ICMP]]
   // VPTR: call void @__ubsan_handle_dynamic_type_cache_miss
@@ -56,7 +56,7 @@ void invalid_cast(Cat *cat = nullptr) {
   // Fall back to the vptr sanitizer's null check when -fsanitize=null isn't
   // available.
   //
-  // VPTR_NO_NULL-NOT: call void @__ubsan_handle_type_mismatch
+  // VPTR_NO_NULL-NOT: call void @__ubsan_handle_null_pointer_use_abort
   // VPTR_NO_NULL: [[ICMP:%.*]] = icmp ne ptr {{.*}}, null
   // VPTR_NO_NULL-NEXT: br i1 [[ICMP]]
   // VPTR_NO_NULL: call void @__ubsan_handle_dynamic_type_cache_miss
@@ -67,7 +67,7 @@ void invalid_cast(Cat *cat = nullptr) {
 // VPTR_NO_NULL-LABEL: define{{.*}} void @_Z13invalid_cast2v
 void invalid_cast2() {
   // We've got a pointer to an alloca, so there's no run-time null check needed.
-  // VPTR_NO_NULL-NOT: call void @__ubsan_handle_type_mismatch
+  // VPTR_NO_NULL-NOT: call void @__ubsan_handle_null_pointer_use_abort
   // VPTR_NO_NULL: call void @__ubsan_handle_dynamic_type_cache_miss
   Cat cat;
   cat.speak();

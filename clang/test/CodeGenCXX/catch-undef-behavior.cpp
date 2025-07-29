@@ -29,10 +29,12 @@ void reference_binding(int *p, S *q) {
 
   // CHECK: %[[SIZE:.*]] = call i64 @llvm.objectsize.i64
   // CHECK-NEXT: icmp uge i64 %[[SIZE]], 4
+  // CHECK: call void @__ubsan_handle_insufficient_object_size
 
   // CHECK: %[[PTRINT:.*]] = ptrtoint
   // CHECK-NEXT: %[[MISALIGN:.*]] = and i64 %[[PTRINT]], 3
   // CHECK-NEXT: icmp eq i64 %[[MISALIGN]], 0
+  // CHECK: call void @__ubsan_handle_misaligned_pointer_use
   int &r = *p;
 
   // A reference is not required to refer to an object within its lifetime.
@@ -49,10 +51,12 @@ void member_access(S *p) {
 
   // CHECK: %[[SIZE:.*]] = call i64 @llvm.objectsize.i64
   // CHECK-NEXT: icmp uge i64 %[[SIZE]], 24
+  // CHECK: call void @__ubsan_handle_insufficient_object_size
 
   // CHECK: %[[PTRINT:.*]] = ptrtoint
   // CHECK-NEXT: %[[MISALIGN:.*]] = and i64 %[[PTRINT]], 7
   // CHECK-NEXT: icmp eq i64 %[[MISALIGN]], 0
+  // CHECK: call void @__ubsan_handle_misaligned_pointer_use
 
   // (1b) Check that 'p' actually points to an 'S'.
 
@@ -91,10 +95,12 @@ void member_access(S *p) {
 
   // CHECK: %[[SIZE:.*]] = call i64 @llvm.objectsize.i64
   // CHECK-NEXT: icmp uge i64 %[[SIZE]], 4
+  // CHECK: call void @__ubsan_handle_insufficient_object_size
 
   // CHECK: %[[PTRINT:.*]] = ptrtoint
   // CHECK-NEXT: %[[MISALIGN:.*]] = and i64 %[[PTRINT]], 3
   // CHECK-NEXT: icmp eq i64 %[[MISALIGN]], 0
+  // CHECK: call void @__ubsan_handle_misaligned_pointer_use
   int k = p->b;
 
   // (3a) Check 'p' is appropriately sized and aligned for member function call.
@@ -103,10 +109,12 @@ void member_access(S *p) {
 
   // CHECK: %[[SIZE:.*]] = call i64 @llvm.objectsize.i64
   // CHECK-NEXT: icmp uge i64 %[[SIZE]], 24
+  // CHECK: call void @__ubsan_handle_insufficient_object_size
 
   // CHECK: %[[PTRINT:.*]] = ptrtoint
   // CHECK-NEXT: %[[MISALIGN:.*]] = and i64 %[[PTRINT]], 7
   // CHECK-NEXT: icmp eq i64 %[[MISALIGN]], 0
+  // CHECK: call void @__ubsan_handle_misaligned_pointer_use
 
   // (3b) Check that 'p' actually points to an 'S'
 
@@ -203,13 +211,12 @@ void bad_downcast_pointer(S *p) {
 
   // CHECK: %[[SIZE:.*]] = call i64 @llvm.objectsize.i64.p0(
   // CHECK: %[[E1:.*]] = icmp uge i64 %[[SIZE]], 24
+  // CHECK: call void @__ubsan_handle_insufficient_object_size
+
   // CHECK: %[[MISALIGN:.*]] = and i64 %{{.*}}, 7
   // CHECK: %[[E2:.*]] = icmp eq i64 %[[MISALIGN]], 0
-  // CHECK: %[[E12:.*]] = and i1 %[[E1]], %[[E2]]
-  // CHECK: br i1 %[[E12]],
-
-  // CHECK: call void @__ubsan_handle_type_mismatch
-  // CHECK: br label
+  // CHECK: br i1 %[[E2]],
+  // CHECK: call void @__ubsan_handle_misaligned_pointer_use
 
   // CHECK: br i1 %{{.*}},
 
@@ -220,21 +227,17 @@ void bad_downcast_pointer(S *p) {
 
 // CHECK-LABEL: @_Z22bad_downcast_reference
 void bad_downcast_reference(S &p) {
-  // CHECK: %[[E1:.*]] = icmp ne {{.*}}, null
-  // CHECK-NOT: br i1
+  // CHECK: %[[NONNULL:.*]] = icmp ne {{.*}}, null
+  // CHECK: br i1 %[[NONNULL]],
 
   // CHECK: %[[SIZE:.*]] = call i64 @llvm.objectsize.i64.p0(
-  // CHECK: %[[E2:.*]] = icmp uge i64 %[[SIZE]], 24
+  // CHECK: %[[E1:.*]] = icmp uge i64 %[[SIZE]], 24
+  // CHECK: call void @__ubsan_handle_insufficient_object_size
 
   // CHECK: %[[MISALIGN:.*]] = and i64 %{{.*}}, 7
-  // CHECK: %[[E3:.*]] = icmp eq i64 %[[MISALIGN]], 0
-
-  // CHECK: %[[E12:.*]] = and i1 %[[E1]], %[[E2]]
-  // CHECK: %[[E123:.*]] = and i1 %[[E12]], %[[E3]]
-  // CHECK: br i1 %[[E123]],
-
-  // CHECK: call void @__ubsan_handle_type_mismatch
-  // CHECK: br label
+  // CHECK: %[[E2:.*]] = icmp eq i64 %[[MISALIGN]], 0
+  // CHECK: br i1 %[[E2]],
+  // CHECK: call void @__ubsan_handle_misaligned_pointer_use
 
   // CHECK: br i1 %{{.*}},
 
@@ -362,30 +365,38 @@ class C : public A, public B // align=16
 void downcast_pointer(B *b) {
   (void) static_cast<C*>(b);
   // Alignment check from EmitTypeCheck(TCK_DowncastPointer, ...)
+
+  // CHECK: %[[NULL:.*]] = icmp eq ptr {{.*}}, null
+  // CHECK: br i1 %[[NULL]],
+
   // CHECK: [[SUB:%[.a-z0-9]*]] = getelementptr inbounds i8, ptr {{.*}}, i64 -16
-  // null check goes here
   // CHECK: [[FROM_PHI:%.+]] = phi ptr [ [[SUB]], {{.*}} ], {{.*}}
-  // Objectsize check goes here
+
+  // CHECK: %[[SIZE:.*]] = call i64 @llvm.objectsize.i64.p0(
+  // CHECK: %[[E1:.*]] = icmp uge i64 %[[SIZE]], 36
+  // CHECK: call void @__ubsan_handle_insufficient_object_size
+
   // CHECK: [[C_INT:%.+]] = ptrtoint ptr [[FROM_PHI]] to i64
   // CHECK-NEXT: [[MASKED:%.+]] = and i64 [[C_INT]], 15
   // CHECK-NEXT: [[TEST:%.+]] = icmp eq i64 [[MASKED]], 0
-  // AND the alignment test with the objectsize test.
-  // CHECK-NEXT: [[AND:%.+]] = and i1 {{.*}}, [[TEST]]
-  // CHECK-NEXT: br i1 [[AND]]
+  // CHECK-NEXT: br i1 [[TEST]]
+  // CHECK: call void @__ubsan_handle_misaligned_pointer_use
 }
 
 // CHECK-LABEL: define{{.*}} void @_Z18downcast_referenceR1B(ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %b)
 void downcast_reference(B &b) {
   (void) static_cast<C&>(b);
   // Alignment check from EmitTypeCheck(TCK_DowncastReference, ...)
-  // CHECK:      [[SUB:%[.a-z0-9]*]] = getelementptr inbounds i8, ptr {{.*}}, i64 -16
-  // Objectsize check goes here
+  // CHECK: [[SUB:%[.a-z0-9]*]] = getelementptr inbounds i8, ptr {{.*}}, i64 -16
+
+  // CHECK: %[[SIZE:.*]] = call i64 @llvm.objectsize.i64.p0(
+  // CHECK: %[[E1:.*]] = icmp uge i64 %[[SIZE]], 36
+  // CHECK: call void @__ubsan_handle_insufficient_object_size
+
   // CHECK:      [[C_INT:%.+]] = ptrtoint ptr [[SUB]] to i64
   // CHECK-NEXT: [[MASKED:%.+]] = and i64 [[C_INT]], 15
   // CHECK-NEXT: [[TEST:%.+]] = icmp eq i64 [[MASKED]], 0
-  // AND the alignment test with the objectsize test.
-  // CHECK:      [[AND:%.+]] = and i1 {{.*}}, [[TEST]]
-  // CHECK-NEXT: br i1 [[AND]]
+  // CHECK-NEXT: br i1 [[TEST]]
 }
 
 // CHECK-FUNCSAN: @_Z22indirect_function_callPFviE({{.*}} !func_sanitize ![[FUNCSAN:.*]] {
@@ -418,6 +429,7 @@ namespace VBaseObjectSize {
     // Size check: check for nvsize(B) == 16 (do not require size(B) == 32)
     // CHECK: [[SIZE:%.+]] = call i{{32|64}} @llvm.objectsize.i64.p0(
     // CHECK: icmp uge i{{32|64}} [[SIZE]], 16,
+    // CHECK: call void @__ubsan_handle_insufficient_object_size
 
     // Alignment check: check for nvalign(B) == 8 (do not require align(B) == 16)
     // CHECK: [[PTRTOINT:%.+]] = ptrtoint {{.*}} to i64,
@@ -427,6 +439,7 @@ namespace VBaseObjectSize {
 
   // CHECK-LABEL: define {{.*}} @_ZN15VBaseObjectSize1B1gEv(
   void *B::g() {
+    // CHECK: call void @__ubsan_handle_null_pointer_use
     // Ensure that the check on the "this" pointer also uses the proper
     // alignment. We should be using nvalign(B) == 8, not 16.
     // CHECK: [[PTRTOINT:%.+]] = ptrtoint {{.*}} to i64,
@@ -510,7 +523,7 @@ S* upcast_pointer(T* t) {
   // CHECK: %[[MISALIGN:.*]] = and i64 %{{.*}}, 7
   // CHECK: icmp eq i64 %[[MISALIGN]], 0
 
-  // CHECK: call void @__ubsan_handle_type_mismatch
+  // CHECK: call void @__ubsan_handle_misaligned_pointer_use
   return t;
 }
 
@@ -523,7 +536,7 @@ void upcast_to_vbase() {
   // CHECK-NOT: br i1
 
   // CHECK: call i64 @llvm.objectsize
-  // CHECK: call void @__ubsan_handle_type_mismatch
+  // CHECK: call void @__ubsan_handle_insufficient_object_size
   // CHECK: call void @__ubsan_handle_dynamic_type_cache_miss
   const S& s = getV();
 }
@@ -545,7 +558,7 @@ namespace NothrowNew {
     // CHECK: icmp uge i64 {{.*}}, 123456,
     // CHECK: br i1
     //
-    // CHECK: call {{.*}}__ubsan_handle_type_mismatch
+    // CHECK: call void @__ubsan_handle_insufficient_object_size
     //
     // CHECK: [[null]]:
     // CHECK-NOT: {{ }}br{{ }}
@@ -563,7 +576,7 @@ namespace NothrowNew {
     // CHECK: icmp uge i64 {{.*}}, 123456,
     // CHECK: br i1
     //
-    // CHECK: call {{.*}}__ubsan_handle_type_mismatch
+    // CHECK: call void @__ubsan_handle_insufficient_object_size
     //
     // CHECK: call {{.*}}_ZN10NothrowNew1XC1Ev
     //
@@ -578,12 +591,11 @@ namespace NothrowNew {
     // CHECK: icmp ne ptr{{.*}}, null
     // CHECK: %[[size:.*]] = mul
     // CHECK: llvm.objectsize
-    // CHECK: icmp uge i64 {{.*}}, %[[size]],
-    // CHECK: %[[ok:.*]] = and
+    // CHECK: %[[ok:.*]] = icmp uge i64 {{.*}}, %[[size]],
     // CHECK: br i1 %[[ok]], label %[[good:.*]], label %[[bad:[^,]*]]
     //
     // CHECK: [[bad]]:
-    // CHECK: call {{.*}}__ubsan_handle_type_mismatch
+    // CHECK: call void @__ubsan_handle_insufficient_object_size
     //
     // CHECK: [[good]]:
     // CHECK-NOT: {{ }}br{{ }}
@@ -598,7 +610,7 @@ namespace NothrowNew {
     // CHECK: br i1 %[[nonnull]], label %[[good:.*]], label %[[bad:[^,]*]]
     //
     // CHECK: [[bad]]:
-    // CHECK: call {{.*}}__ubsan_handle_type_mismatch
+    // CHECK: call void @__ubsan_handle_null_pointer_use
     //
     // CHECK: [[good]]:
     // CHECK-NOT: {{ }}br{{ }}
@@ -609,7 +621,7 @@ namespace NothrowNew {
   // CHECK-LABEL: define{{.*}}throwing_new_zero_size
   void *throwing_new_zero_size() {
     // Nothing to check here.
-    // CHECK-NOT: __ubsan_handle_type_mismatch
+    // CHECK-NOT: __ubsan_handle_null_pointer_use
     return new (nothrow{}) char[0];
     // CHECK: ret
   }
@@ -629,11 +641,12 @@ void ThisAlign::this_align_lambda() {
   // CHECK: %[[this_outer:.*]] = load ptr, ptr %[[this_outer_addr]],
   //
   // CHECK: %[[this_inner_isnonnull:.*]] = icmp ne ptr %[[this_inner]], null
+  // CHECK: br i1 %[[this_inner_isnonnull:.*]]
+  // CHECK: call void @__ubsan_handle_null_pointer_use
   // CHECK: %[[this_inner_asint:.*]] = ptrtoint ptr %[[this_inner]] to i
   // CHECK: %[[this_inner_misalignment:.*]] = and i{{32|64}} %[[this_inner_asint]], {{3|7}},
   // CHECK: %[[this_inner_isaligned:.*]] = icmp eq i{{32|64}} %[[this_inner_misalignment]], 0
-  // CHECK: %[[this_inner_valid:.*]] = and i1 %[[this_inner_isnonnull]], %[[this_inner_isaligned]],
-  // CHECK: br i1 %[[this_inner_valid:.*]]
+  // CHECK: br i1 %[[this_inner_isaligned:.*]]
   [&] { return this; } ();
 }
 

@@ -148,6 +148,162 @@ void __ubsan::__ubsan_handle_type_mismatch_v1_abort(TypeMismatchData *Data,
   Die();
 }
 
+static void handleNullPointerUseImpl(NullPointerUseData *Data,
+                                     ValueHandle Pointer, ReportOptions Opts) {
+  Location Loc = Data->Loc.acquire();
+
+  ErrorType ET = ErrorType::NullPointerUse;
+
+  // Use the SourceLocation from Data to track deduplication, even if it's
+  // invalid.
+  if (ignoreReport(Loc.getSourceLocation(), Opts, ET))
+    return;
+
+  SymbolizedStackHolder FallbackLoc;
+  if (Data->Loc.isInvalid()) {
+    FallbackLoc.reset(getCallerLocation(Opts.pc));
+    Loc = FallbackLoc;
+  }
+
+  ScopedReport R(Opts, Loc, ET);
+
+  Diag(Loc, DL_Error, ET, "%0 null pointer of type %1")
+      << TypeCheckKinds[Data->TypeCheckKind] << Data->Type;
+}
+
+void __ubsan::__ubsan_handle_null_pointer_use(NullPointerUseData *Data,
+                                              ValueHandle Pointer) {
+  GET_REPORT_OPTIONS(false);
+  handleNullPointerUseImpl(Data, Pointer, Opts);
+}
+void __ubsan::__ubsan_handle_null_pointer_use_abort(NullPointerUseData *Data,
+                                                    ValueHandle Pointer) {
+  GET_REPORT_OPTIONS(true);
+  handleNullPointerUseImpl(Data, Pointer, Opts);
+  Die();
+}
+
+static void
+handleNullPointerUseWithNullabilityImpl(NullPointerUseWithNullabilityData *Data,
+                                        ValueHandle Pointer,
+                                        ReportOptions Opts) {
+  Location Loc = Data->Loc.acquire();
+
+  ErrorType ET = ErrorType::NullPointerUseWithNullability;
+
+  // Use the SourceLocation from Data to track deduplication, even if it's
+  // invalid.
+  if (ignoreReport(Loc.getSourceLocation(), Opts, ET))
+    return;
+
+  SymbolizedStackHolder FallbackLoc;
+  if (Data->Loc.isInvalid()) {
+    FallbackLoc.reset(getCallerLocation(Opts.pc));
+    Loc = FallbackLoc;
+  }
+
+  ScopedReport R(Opts, Loc, ET);
+
+  Diag(Loc, DL_Error, ET, "%0 null pointer of type %1")
+      << TypeCheckKinds[Data->TypeCheckKind] << Data->Type;
+}
+
+void __ubsan::__ubsan_handle_null_pointer_use_with_nullability(
+    NullPointerUseWithNullabilityData *Data, ValueHandle Pointer) {
+  GET_REPORT_OPTIONS(false);
+  handleNullPointerUseWithNullabilityImpl(Data, Pointer, Opts);
+}
+void __ubsan::__ubsan_handle_null_pointer_use_with_nullability_abort(
+    NullPointerUseWithNullabilityData *Data, ValueHandle Pointer) {
+  GET_REPORT_OPTIONS(true);
+  handleNullPointerUseWithNullabilityImpl(Data, Pointer, Opts);
+  Die();
+}
+
+static void handleMisalignedPointerUseImpl(MisalignedPointerUseData *Data,
+                                           ValueHandle Pointer,
+                                           ReportOptions Opts) {
+  Location Loc = Data->Loc.acquire();
+
+  uptr Alignment = (uptr)1 << Data->LogAlignment;
+  ErrorType ET = ErrorType::MisalignedPointerUse;
+
+  // Use the SourceLocation from Data to track deduplication, even if it's
+  // invalid.
+  if (ignoreReport(Loc.getSourceLocation(), Opts, ET))
+    return;
+
+  SymbolizedStackHolder FallbackLoc;
+  if (Data->Loc.isInvalid()) {
+    FallbackLoc.reset(getCallerLocation(Opts.pc));
+    Loc = FallbackLoc;
+  }
+
+  ScopedReport R(Opts, Loc, ET);
+
+  Diag(Loc, DL_Error, ET,
+       "%0 misaligned address %1 for type %3, "
+       "which requires %2 byte alignment")
+      << TypeCheckKinds[Data->TypeCheckKind] << (void *)Pointer << Alignment
+      << Data->Type;
+
+  if (Pointer)
+    Diag(Pointer, DL_Note, ET, "pointer points here");
+}
+
+void __ubsan::__ubsan_handle_misaligned_pointer_use(
+    MisalignedPointerUseData *Data, ValueHandle Pointer) {
+  GET_REPORT_OPTIONS(false);
+  handleMisalignedPointerUseImpl(Data, Pointer, Opts);
+}
+void __ubsan::__ubsan_handle_misaligned_pointer_use_abort(
+    MisalignedPointerUseData *Data, ValueHandle Pointer) {
+  GET_REPORT_OPTIONS(true);
+  handleMisalignedPointerUseImpl(Data, Pointer, Opts);
+  Die();
+}
+
+static void handleInsufficientObjectSizeImpl(InsufficientObjectSizeData *Data,
+                                             ValueHandle Pointer,
+                                             ReportOptions Opts) {
+  Location Loc = Data->Loc.acquire();
+
+  ErrorType ET = ErrorType::InsufficientObjectSize;
+
+  // Use the SourceLocation from Data to track deduplication, even if it's
+  // invalid.
+  if (ignoreReport(Loc.getSourceLocation(), Opts, ET))
+    return;
+
+  SymbolizedStackHolder FallbackLoc;
+  if (Data->Loc.isInvalid()) {
+    FallbackLoc.reset(getCallerLocation(Opts.pc));
+    Loc = FallbackLoc;
+  }
+
+  ScopedReport R(Opts, Loc, ET);
+
+  Diag(Loc, DL_Error, ET,
+       "%0 address %1 with insufficient space "
+       "for an object of type %2")
+      << TypeCheckKinds[Data->TypeCheckKind] << (void *)Pointer << Data->Type;
+
+  if (Pointer)
+    Diag(Pointer, DL_Note, ET, "pointer points here");
+}
+
+void __ubsan::__ubsan_handle_insufficient_object_size(
+    InsufficientObjectSizeData *Data, ValueHandle Pointer) {
+  GET_REPORT_OPTIONS(false);
+  handleInsufficientObjectSizeImpl(Data, Pointer, Opts);
+}
+void __ubsan::__ubsan_handle_insufficient_object_size_abort(
+    InsufficientObjectSizeData *Data, ValueHandle Pointer) {
+  GET_REPORT_OPTIONS(true);
+  handleInsufficientObjectSizeImpl(Data, Pointer, Opts);
+  Die();
+}
+
 static void handleAlignmentAssumptionImpl(AlignmentAssumptionData *Data,
                                           ValueHandle Pointer,
                                           ValueHandle Alignment,

@@ -766,18 +766,13 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
   llvm::BasicBlock *Done = nullptr;
   bool DoneViaNullSanitize = false;
 
+  llvm::Value *True = llvm::ConstantInt::getTrue(getLLVMContext());
+
   {
-    auto CheckHandler = SanitizerHandler::TypeMismatch;
-    SanitizerDebugLocation SanScope(this,
-                                    {SanitizerKind::SO_Null,
-                                     SanitizerKind::SO_ObjectSize,
-                                     SanitizerKind::SO_Alignment},
+    auto CheckHandler = SanitizerHandler::NullPointerUse;
+    SanitizerDebugLocation SanScope(this, {SanitizerKind::SO_Null},
                                     CheckHandler);
 
-    SmallVector<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>, 3>
-        Checks;
-
-    llvm::Value *True = llvm::ConstantInt::getTrue(getLLVMContext());
     bool AllowNullPointers = isNullPointerAllowed(TCK);
     if ((SanOpts.has(SanitizerKind::Null) || AllowNullPointers) &&
         !IsGuaranteedNonNull) {
@@ -799,10 +794,20 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
           Builder.CreateCondBr(IsNonNull, Rest, Done);
           EmitBlock(Rest);
         } else {
-          Checks.push_back(std::make_pair(IsNonNull, SanitizerKind::SO_Null));
+          llvm::Constant *StaticData[] = {EmitCheckSourceLocation(Loc),
+                                          EmitCheckTypeDescriptor(Ty),
+                                          llvm::ConstantInt::get(Int8Ty, TCK)};
+          EmitCheck({{IsNonNull, SanitizerKind::SO_Null}}, CheckHandler,
+                    StaticData, Ptr);
         }
       }
     }
+  }
+
+  {
+    auto CheckHandler = SanitizerHandler::InsufficientObjectSize;
+    SanitizerDebugLocation SanScope(this, {SanitizerKind::SO_ObjectSize},
+                                    CheckHandler);
 
     if (SanOpts.has(SanitizerKind::ObjectSize) &&
         !SkippedChecks.has(SanitizerKind::ObjectSize) &&
@@ -827,10 +832,19 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
         llvm::Value *Dynamic = Builder.getFalse();
         llvm::Value *LargeEnough = Builder.CreateICmpUGE(
             Builder.CreateCall(F, {Ptr, Min, NullIsUnknown, Dynamic}), Size);
-        Checks.push_back(
-            std::make_pair(LargeEnough, SanitizerKind::SO_ObjectSize));
+        llvm::Constant *StaticData[] = {EmitCheckSourceLocation(Loc),
+                                        EmitCheckTypeDescriptor(Ty),
+                                        llvm::ConstantInt::get(Int8Ty, TCK)};
+        EmitCheck({{LargeEnough, SanitizerKind::SO_ObjectSize}}, CheckHandler,
+                  StaticData, Ptr);
       }
     }
+  }
+
+  {
+    auto CheckHandler = SanitizerHandler::MisalignedPointerUse;
+    SanitizerDebugLocation SanScope(this, {SanitizerKind::SO_Alignment},
+                                    CheckHandler);
 
     llvm::MaybeAlign AlignVal;
     llvm::Value *PtrAsInt = nullptr;
@@ -851,18 +865,15 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
             PtrAsInt, llvm::ConstantInt::get(IntPtrTy, AlignVal->value() - 1));
         llvm::Value *Aligned =
             Builder.CreateICmpEQ(Align, llvm::ConstantInt::get(IntPtrTy, 0));
-        if (Aligned != True)
-          Checks.push_back(
-              std::make_pair(Aligned, SanitizerKind::SO_Alignment));
+        if (Aligned != True) {
+          llvm::Constant *StaticData[] = {
+              EmitCheckSourceLocation(Loc), EmitCheckTypeDescriptor(Ty),
+              llvm::ConstantInt::get(Int8Ty, llvm::Log2(*AlignVal)),
+              llvm::ConstantInt::get(Int8Ty, TCK)};
+          EmitCheck({{Aligned, SanitizerKind::SO_Alignment}}, CheckHandler,
+                    StaticData, PtrAsInt ? PtrAsInt : Ptr);
+        }
       }
-    }
-
-    if (Checks.size() > 0) {
-      llvm::Constant *StaticData[] = {
-          EmitCheckSourceLocation(Loc), EmitCheckTypeDescriptor(Ty),
-          llvm::ConstantInt::get(Int8Ty, AlignVal ? llvm::Log2(*AlignVal) : 1),
-          llvm::ConstantInt::get(Int8Ty, TCK)};
-      EmitCheck(Checks, CheckHandler, StaticData, PtrAsInt ? PtrAsInt : Ptr);
     }
   }
 
@@ -950,7 +961,7 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
     SanitizerDebugLocation SanScope(
         this,
         {DoneViaNullSanitize ? SanitizerKind::SO_Null : SanitizerKind::SO_Vptr},
-        DoneViaNullSanitize ? SanitizerHandler::TypeMismatch
+        DoneViaNullSanitize ? SanitizerHandler::NullPointerUse
                             : SanitizerHandler::DynamicTypeCacheMiss);
     Builder.CreateBr(Done);
     EmitBlock(Done);
