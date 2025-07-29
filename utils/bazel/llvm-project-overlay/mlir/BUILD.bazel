@@ -1003,6 +1003,9 @@ mlir_c_api_cc_library(
         ":BuiltinToLLVMIRTranslation",
         ":IR",
         ":LLVMToLLVMIRTranslation",
+        ":RegisterAllDialects",
+        ":RegisterAllExtensions",
+        ":RegisterAllPasses",
     ],
 )
 
