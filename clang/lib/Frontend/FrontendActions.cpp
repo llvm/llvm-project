@@ -181,7 +181,7 @@ bool GeneratePCHAction::shouldEraseOutputFiles() {
 
 bool GeneratePCHAction::BeginSourceFileAction(CompilerInstance &CI) {
   CI.getLangOpts().CompilingPCH = true;
-  return true;
+  return ASTFrontendAction::BeginSourceFileAction(CI);
 }
 
 std::vector<std::unique_ptr<ASTConsumer>>
