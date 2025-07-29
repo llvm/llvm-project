@@ -31,9 +31,7 @@ TEST_F(ClusteredRowsTest, CreateSingleElement) {
   EXPECT_EQ(CR->size(), 1u);
 
   // Test population with single element
-  std::vector<DebugLineTableRowRef> TestRefs = {
-      {42, 100}
-  };
+  std::vector<DebugLineTableRowRef> TestRefs = {{42, 100}};
   CR->populate(TestRefs);
 
   ArrayRef<DebugLineTableRowRef> Rows = CR->getRows();
@@ -48,11 +46,7 @@ TEST_F(ClusteredRowsTest, CreateMultipleElements) {
   EXPECT_EQ(CR->size(), 3u);
 
   // Test population with multiple elements
-  std::vector<DebugLineTableRowRef> TestRefs = {
-      {10, 20},
-      {30, 40},
-      {50, 60}
-  };
+  std::vector<DebugLineTableRowRef> TestRefs = {{10, 20}, {30, 40}, {50, 60}};
   CR->populate(TestRefs);
 
   ArrayRef<DebugLineTableRowRef> Rows = CR->getRows();
@@ -87,12 +81,7 @@ TEST_F(ClusteredRowsTest, PopulateWithArrayRef) {
   ASSERT_NE(CR, nullptr);
 
   // Test population with ArrayRef
-  DebugLineTableRowRef TestArray[] = {
-      {1, 2},
-      {3, 4},
-      {5, 6},
-      {7, 8}
-  };
+  DebugLineTableRowRef TestArray[] = {{1, 2}, {3, 4}, {5, 6}, {7, 8}};
   ArrayRef<DebugLineTableRowRef> TestRefs(TestArray, 4);
   CR->populate(TestRefs);
 

@@ -1575,14 +1575,12 @@ unsigned BinaryContext::addDebugFilenameToUnit(const uint32_t DestCUID,
   StringRef Dir = "";
   if (FileNameEntry.DirIdx != 0) {
     if (std::optional<const char *> DirName = dwarf::toString(
-            LineTable->Prologue
-                .IncludeDirectories[FileNameEntry.DirIdx - 1])) {
+            LineTable->Prologue.IncludeDirectories[FileNameEntry.DirIdx - 1])) {
       Dir = *DirName;
     }
   }
   StringRef FileName = "";
-  if (std::optional<const char *> FName =
-          dwarf::toString(FileNameEntry.Name))
+  if (std::optional<const char *> FName = dwarf::toString(FileNameEntry.Name))
     FileName = *FName;
   assert(FileName != "");
   DWARFCompileUnit *DstUnit = DwCtx->getCompileUnitForOffset(DestCUID);
