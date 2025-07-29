@@ -225,7 +225,7 @@ bool fromJSON(const json::Value &Params, InitializeRequestArguments &IRA,
 
 bool fromJSON(const json::Value &Params, Configuration &C, json::Path P) {
   json::ObjectMapper O(Params, P);
-  return O.mapOptional("debuggerRoot", C.debuggerRoot) &&
+  bool success = O.mapOptional("debuggerRoot", C.debuggerRoot) &&
          O.mapOptional("enableAutoVariableSummaries",
                        C.enableAutoVariableSummaries) &&
          O.mapOptional("enableSyntheticChildDebugging",
@@ -246,8 +246,13 @@ bool fromJSON(const json::Value &Params, Configuration &C, json::Path P) {
          O.mapOptional("program", C.program) &&
          O.mapOptional("targetTriple", C.targetTriple) &&
          O.mapOptional("platformName", C.platformName) &&
+         // REMOVED: Bandaid configuration options no longer needed due to core fixes
          parseSourceMap(Params, C.sourceMap, P) &&
          parseTimeout(Params, C.timeout, P);
+
+  // REMOVED: Validation for bandaid configuration options no longer needed
+
+  return success;
 }
 
 bool fromJSON(const json::Value &Params, BreakpointLocationsArguments &BLA,

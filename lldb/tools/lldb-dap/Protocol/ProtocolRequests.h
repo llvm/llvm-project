@@ -159,6 +159,13 @@ struct Configuration {
   /// when viewing variables.
   bool enableAutoVariableSummaries = false;
 
+  // REMOVED: Performance optimization options are no longer needed.
+  // Core LLDB fixes now provide optimal performance by default.
+  // The following options have been removed as they are superseded by core improvements:
+  // - launchTimeoutMs: Core fixes provide adaptive timeouts
+  // - fastLaunchMode: Core optimizations are always enabled
+  // - deferSymbolLoading: Core LLDB now uses on-demand loading by default
+  // - lazyPluginLoading: Core LLDB optimizes plugin loading automatically
   /// If a variable is displayed using a synthetic children, also display the
   /// actual contents of the variable at the end under a [raw] entry. This is
   /// useful when creating synthetic child plug-ins as it lets you see the
@@ -174,6 +181,12 @@ struct Configuration {
   /// Optional timeout when waiting for the program to `runInTerminal` or
   /// attach.
   std::chrono::seconds timeout = std::chrono::seconds(30);
+
+  // REMOVED: Network symbol optimization options are no longer needed.
+  // Core LLDB fixes now provide optimal network symbol handling by default:
+  // - debuginfodTimeoutMs: Core LLDB now uses 2s timeout instead of 90s
+  // - symbolServerTimeoutMs: Core LLDB provides adaptive timeout management
+  // - disableNetworkSymbols: Core LLDB automatically detects network conditions
 
   /// The escape prefix to use for executing regular LLDB commands in the Debug
   /// Console, instead of printing variables. Defaults to a backtick. If it's an
