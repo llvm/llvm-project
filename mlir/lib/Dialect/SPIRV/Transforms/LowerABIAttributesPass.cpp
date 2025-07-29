@@ -64,9 +64,9 @@ createGlobalVarForEntryPointArgument(OpBuilder &builder, spirv::FuncOp funcOp,
   // Note that currently only sampled images are supported in the SPIR-V
   // lowering.
   if (isa<spirv::SampledImageType>(pointeeType))
-    return builder.create<spirv::GlobalVariableOp>(
-        funcOp.getLoc(), varType, varName, abiInfo.getDescriptorSet(),
-        abiInfo.getBinding());
+    return spirv::GlobalVariableOp::create(builder, funcOp.getLoc(), varType,
+                                           varName, abiInfo.getDescriptorSet(),
+                                           abiInfo.getBinding());
 
   auto varPointeeType = cast<spirv::StructType>(pointeeType);
 
