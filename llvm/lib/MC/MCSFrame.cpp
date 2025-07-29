@@ -30,7 +30,6 @@ class SFrameEmitterImpl {
   MCSymbol *FRESubSectionStart;
   MCSymbol *FRESubSectionEnd;
 
-
 public:
   SFrameEmitterImpl(MCObjectStreamer &Streamer) : Streamer(Streamer) {
     SFrameABI = Streamer.getContext().getObjectFileInfo()->getSFrameABIArch();

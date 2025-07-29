@@ -382,18 +382,18 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
                                ? ELF::SHT_X86_64_UNWIND
                                : ELF::SHT_PROGBITS;
   switch (T.getArch()) {
-    case Triple::x86_64:
-      SFrameABIArch = sframe::ABI::AMD64EndianLittle;
-      break;
-    case Triple::aarch64:
-      SFrameABIArch = sframe::ABI::AArch64EndianLittle;
-      break;
-    case Triple::aarch64_be:
-      SFrameABIArch = sframe::ABI::AArch64EndianBig;
-      break;
-    default:
-      SFrameABIArch = sframe::ABI::Undefined;
-      break;
+  case Triple::x86_64:
+    SFrameABIArch = sframe::ABI::AMD64EndianLittle;
+    break;
+  case Triple::aarch64:
+    SFrameABIArch = sframe::ABI::AArch64EndianLittle;
+    break;
+  case Triple::aarch64_be:
+    SFrameABIArch = sframe::ABI::AArch64EndianBig;
+    break;
+  default:
+    SFrameABIArch = sframe::ABI::Undefined;
+    break;
   }
 
   // Solaris requires different flags for .eh_frame to seemingly every other
