@@ -145,9 +145,7 @@ class TestStdGen(unittest.TestCase):
 </tbody></table>
 """
         self.assertEqual(_ParseSymbolPage(html, "int8_t", "int8_t"), ["<cstdint>"])
-        self.assertEqual(
-            _ParseSymbolPage(html, "int16_t", "int16_t"), ["<cstdint>"]
-        )
+        self.assertEqual(_ParseSymbolPage(html, "int16_t", "int16_t"), ["<cstdint>"])
 
 
 if __name__ == "__main__":

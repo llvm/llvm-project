@@ -233,21 +233,28 @@ def PrintSymbol(symbol):
     if len(symbol.headers) == 1:
         augmented_symbols = [symbol]
     else:
-        augmented_symbols = [cppreference_parser.Symbol(
-                                symbol.name,
-                                None if header.endswith(".h>") else symbol.namespace,
-                                [header])
-                            for header in symbol.headers]
+        augmented_symbols = [
+            cppreference_parser.Symbol(
+                symbol.name,
+                None if header.endswith(".h>") else symbol.namespace,
+                [header],
+            )
+            for header in symbol.headers
+        ]
 
     # Add C compatibility symbols
-    augmented_symbols.extend([csymbol
-                            for s in augmented_symbols
-                            for csymbol in GetCCompatibilitySymbols(s)])
+    augmented_symbols.extend(
+        [csymbol for s in augmented_symbols for csymbol in GetCCompatibilitySymbols(s)]
+    )
 
     # Add additional headers for IO symbols
-    augmented_symbols.extend([cppreference_parser.Symbol(s.name, s.namespace, [header])
-                            for s in augmented_symbols
-                            for header in AdditionalHeadersForIOSymbols(s)])
+    augmented_symbols.extend(
+        [
+            cppreference_parser.Symbol(s.name, s.namespace, [header])
+            for s in augmented_symbols
+            for header in AdditionalHeadersForIOSymbols(s)
+        ]
+    )
 
     for s in augmented_symbols:
         # SYMBOL(unqualified_name, namespace, header)
@@ -273,11 +280,9 @@ def main():
             (symbol_index_root, "filesystem.html", "std::filesystem::"),
             (symbol_index_root, "pmr.html", "std::pmr::"),
             (symbol_index_root, "ranges.html", "std::ranges::"),
-
             (symbol_index_root, "views.html", "std::ranges::views::"),
             # std::ranges::views can be accessed as std::views.
             (symbol_index_root, "views.html", "std::views::"),
-
             (symbol_index_root, "regex_constants.html", "std::regex_constants::"),
             (symbol_index_root, "this_thread.html", "std::this_thread::"),
             # Zombie symbols that were available from the Standard Library, but are
@@ -288,8 +293,10 @@ def main():
     elif args.symbols == "c":
         page_root = os.path.join(args.cppreference, "en", "c")
         symbol_index_root = os.path.join(page_root, "symbol_index")
-        parse_pages = [(page_root, "index.html", None),
-                       (symbol_index_root, "macro.html", None)]
+        parse_pages = [
+            (page_root, "index.html", None),
+            (symbol_index_root, "macro.html", None),
+        ]
 
     if not os.path.exists(symbol_index_root):
         exit("Path %s doesn't exist!" % symbol_index_root)
