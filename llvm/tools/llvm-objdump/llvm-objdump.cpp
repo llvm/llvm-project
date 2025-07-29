@@ -352,7 +352,7 @@ uint32_t objdump::PrefixStrip;
 // Enumeration of function kinds, and their mapping to function kind values
 // from call graph section (.callgraph).
 // Must stay in sync with enum from llvm/include/llvm/CodeGen/AsmPrinter.h.
-enum FunctionKind {
+enum class FunctionKind : uint64_t {
   // Function cannot be target to indirect calls.
   NOT_INDIRECT_TARGET = 0,
   // Function may be target to indirect calls but its type id is unknown.
@@ -361,7 +361,7 @@ enum FunctionKind {
   INDIRECT_TARGET_KNOWN_TID = 2,
 
   // Available in the binary but not listed in the call graph section.
-  NOT_LISTED = -1,
+  NOT_LISTED = 3,
 };
 
 struct FunctionInfo {
@@ -2162,6 +2162,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       if (!PrintedSection) {
         PrintedSection = true;
         OS << "\nDisassembly of section ";
+        // llvm::report_fatal_error("NO PRINTING BUSINESS FOR
+        // MEeeeeeeeeeeeeeeeeee");
         if (!SegmentName.empty())
           OS << SegmentName << ",";
         OS << SectionName << ":\n";
@@ -2207,6 +2209,14 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       // would describe the same data twice.
       for (size_t SHI = 0; SHI < SymbolsHere.size(); ++SHI) {
         SymbolInfoTy Symbol = SymbolsHere[SHI];
+
+        if (CallGraphInfo && Symbol.Type == ELF::STT_FUNC) {
+          auto FuncPc = Symbol.Addr;
+          auto FuncName = Symbol.Name.str();
+          FuncInfo[FuncPc].Name = FuncName;
+          // Initalize to be later updated while parsing the call graph section.
+          FuncInfo[FuncPc].Kind = FunctionKind::NOT_LISTED;
+        }
 
         Expected<bool> RespondedOrErr = DT->DisAsm->onSymbolStart(
             Symbol, Size, Bytes.slice(Start, End - Start), SectionAddr + Start);
@@ -2284,14 +2294,6 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                                   SectionAddr, Index, End, AllLabels);
         collectBBAddrMapLabels(FullAddrMap, SectionAddr, Index, End,
                                BBAddrMapLabels);
-      }
-
-      if (CallGraphInfo && Symbols[SI].Type == ELF::STT_FUNC) {
-        auto FuncPc = Symbols[SI].Addr;
-        auto FuncName = Symbols[SI].Name.str();
-        FuncInfo[FuncPc].Name = FuncName;
-        // Initalize to be later updated while parsing the call graph section.
-        FuncInfo[FuncPc].Kind = NOT_LISTED;
       }
 
       if (DT->InstrAnalysis)
@@ -2420,7 +2422,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
             if (Disassembled && MIA->isCall(Inst)) {
               // Call site address is the address of the instruction just
               // next to the call instruction. This is the return address
-              // as appears on the stack trace.
+              // as it appears on the stack trace.
               uint64_t CallSitePc = SectionAddr + Index + Size;
               uint64_t CallerPc = SectionAddr + Start + VMAAdjustment;
               // Check the operands to decide whether this is an direct or
@@ -2440,10 +2442,10 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
               }
               // Check if the assumption holds true.
               assert(HasRegOperand ||
-                    (!HasRegOperand && ImmOperandCount == 1) &&
-                        "Call instruction is expected to have at least one "
-                        "register operand (i.e., indirect call) or exactly "
-                        "one immediate operand (i.e., direct call).");
+                     (!HasRegOperand && ImmOperandCount == 1) &&
+                         "Call instruction is expected to have at least one "
+                         "register operand (i.e., indirect call) or exactly "
+                         "one immediate operand (i.e., direct call).");
               if (HasRegOperand) {
                 // Indirect call.
                 IndirectCallSites.insert(CallSitePc);
@@ -2452,21 +2454,21 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                 // Direct call.
                 uint64_t CalleePc;
                 bool Res = MIA->evaluateBranch(Inst, SectionAddr + Index, Size,
-                                              CalleePc);
+                                               CalleePc);
                 assert(Res && "Failed to evaluate direct call target address.");
                 FuncInfo[CallerPc].DirectCallSites.emplace_back(CallSitePc,
                                                                 CalleePc);
               }
 
-              if(FuncInfo[CallerPc].Name.empty()) {
+              if (FuncInfo[CallerPc].Name.empty()) {
                 for (size_t Index = 0; Index < SymbolsHere.size(); ++Index) {
                   if (SymbolsHere[Index].Addr == CallerPc) {
                     FuncInfo[CallerPc].Name = SymNamesHere[Index];
                   }
-                }                  
-              }              
+                }
+              }
             }
-          }                     
+          }
 
           DT->InstPrinter->setCommentStream(CommentStream);
 
@@ -3226,8 +3228,9 @@ void Dumper::printSymbol(const SymbolRef &Symbol,
 }
 
 static void printCallGraphInfo(ObjectFile *Obj) {
-  // Get function info through disassembly.
-  disassembleObject(Obj, /*InlineRelocs=*/false, outs());
+  // Get function info through disassembly. Suppress disassembler outputs to
+  // console.
+  disassembleObject(Obj, /*InlineRelocs=*/false, nulls());
 
   // Get the .callgraph section.
   StringRef CallGraphSectionName(".callgraph");
@@ -3291,13 +3294,13 @@ static void printCallGraphInfo(ObjectFile *Obj) {
       uint64_t Kind = CGNext();
       switch (Kind) {
       case 0: // not an indirect target
-        FuncInfo[FuncEntryPc].Kind = NOT_INDIRECT_TARGET;
+        FuncInfo[FuncEntryPc].Kind = FunctionKind::NOT_INDIRECT_TARGET;
         break;
       case 1: // indirect target with unknown type id
-        FuncInfo[FuncEntryPc].Kind = INDIRECT_TARGET_UNKNOWN_TID;
+        FuncInfo[FuncEntryPc].Kind = FunctionKind::INDIRECT_TARGET_UNKNOWN_TID;
         break;
       case 2: // indirect target with known type id
-        FuncInfo[FuncEntryPc].Kind = INDIRECT_TARGET_KNOWN_TID;
+        FuncInfo[FuncEntryPc].Kind = FunctionKind::INDIRECT_TARGET_KNOWN_TID;
         TypeIdToIndirTargets[CGNext()].push_back(FuncEntryPc);
         break;
       default:
@@ -3339,9 +3342,14 @@ static void printCallGraphInfo(ObjectFile *Obj) {
 
     uint64_t NotListedCount = 0;
     uint64_t UnknownCount = 0;
+
+    llvm::sort(FuncInfo,
+               [](const auto &A, const auto &B) { return A.first < B.first; });
+
     for (const auto &El : FuncInfo) {
-      NotListedCount += El.second.Kind == NOT_LISTED;
-      UnknownCount += El.second.Kind == INDIRECT_TARGET_UNKNOWN_TID;
+      NotListedCount += El.second.Kind == FunctionKind::NOT_LISTED;
+      UnknownCount +=
+          El.second.Kind == FunctionKind::INDIRECT_TARGET_UNKNOWN_TID;
     }
     if (NotListedCount)
       reportWarning("callgraph section does not have information for " +
@@ -3363,7 +3371,8 @@ static void printCallGraphInfo(ObjectFile *Obj) {
       for (const auto &El : FuncInfo) {
         uint64_t FuncEntryPc = El.first;
         FunctionKind FuncKind = El.second.Kind;
-        if (FuncKind == NOT_LISTED || FuncKind == INDIRECT_TARGET_UNKNOWN_TID)
+        if (FuncKind == FunctionKind::NOT_LISTED ||
+            FuncKind == FunctionKind::INDIRECT_TARGET_UNKNOWN_TID)
           outs() << " " << format("%lx", FuncEntryPc);
       }
     }
