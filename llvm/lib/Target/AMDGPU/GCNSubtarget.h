@@ -715,7 +715,9 @@ public:
   bool hasVINTERPEncoding() const { return GFX11Insts && !hasGFX1250Insts(); }
 
   // DS_ADD_F64/DS_ADD_RTN_F64
-  bool hasLdsAtomicAddF64() const { return hasGFX90AInsts(); }
+  bool hasLdsAtomicAddF64() const {
+    return hasGFX90AInsts() || hasGFX1250Insts();
+  }
 
   bool hasMultiDwordFlatScratchAddressing() const {
     return getGeneration() >= GFX9;
