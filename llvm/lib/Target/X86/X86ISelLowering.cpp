@@ -54236,10 +54236,10 @@ static SDValue combinePMULH(SDValue Src, EVT VT, const SDLoc &DL,
                 m_Srl(m_Mul(m_Value(LHS), m_Value(RHS)), m_ConstInt(ShiftAmt))))
     return SDValue();
 
-  if (ShiftAmt.ult(16))
+  if (ShiftAmt.ult(16) || ShiftAmt.uge(InVT.getScalarSizeInBits()))
     return SDValue();
 
-  APInt AdditionalShift = (ShiftAmt - 16).trunc(16);
+  uint64_t AdditionalShift = ShiftAmt.getZExtValue() - 16;
 
   // Count leading sign/zero bits on both inputs - if there are enough then
   // truncation back to vXi16 will be cheap - either as a pack/shuffle
