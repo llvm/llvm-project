@@ -128,6 +128,7 @@ jobs:
           'generic-abi-unstable',
           'generic-hardening-mode-debug',
           'generic-hardening-mode-extensive',
+          'generic-hardening-mode-extensive-observe-semantic',
           'generic-hardening-mode-fast',
           'generic-hardening-mode-fast-with-abi-breaks',
           'generic-merged',
