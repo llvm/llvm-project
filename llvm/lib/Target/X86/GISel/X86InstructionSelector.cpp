@@ -1250,8 +1250,8 @@ bool X86InstructionSelector::selectUAddSub(MachineInstr &I,
            .addReg(Op0Reg)
            .addReg(Op1Reg);
 
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::SETCCr),
-      CarryOutReg).addImm(X86::COND_B);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::SETCCr), CarryOutReg)
+      .addImm(X86::COND_B);
 
   if (!constrainSelectedInstRegOperands(Inst, TII, TRI, RBI) ||
       !RBI.constrainGenericRegister(CarryOutReg, *CarryRC, MRI))
