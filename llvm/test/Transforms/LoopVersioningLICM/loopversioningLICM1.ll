@@ -68,10 +68,10 @@ define i32 @foo(ptr nocapture %var1, ptr nocapture readnone %var2, ptr nocapture
 ; CHECK-NEXT:    [[ADD8]] = add nsw i32 [[ADD86]], [[ADD]]
 ; CHECK-NEXT:    [[INC]] = add nuw i32 [[J_113]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[INC]], [[ITR]]
-; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_BODY3]], label [[FOR_INC11_LOOPEXIT_LOOPEXIT5:%.*]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_BODY3]], label [[FOR_INC11_LOOPEXIT_LOOPEXIT6:%.*]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       for.inc11.loopexit.loopexit:
 ; CHECK-NEXT:    br label [[FOR_INC11_LOOPEXIT:%.*]]
-; CHECK:       for.inc11.loopexit.loopexit5:
+; CHECK:       for.inc11.loopexit.loopexit6:
 ; CHECK-NEXT:    [[ADD8_LCSSA:%.*]] = phi i32 [ [[ADD8]], [[FOR_BODY3]] ]
 ; CHECK-NEXT:    store i32 [[ADD8_LCSSA]], ptr [[ARRAYIDX7]], align 4, !alias.scope [[META2]]
 ; CHECK-NEXT:    br label [[FOR_INC11_LOOPEXIT]]
