@@ -58,7 +58,7 @@ createGlobalVarForEntryPointArgument(OpBuilder &builder, spirv::FuncOp funcOp,
         spirv::PointerType::get(spirv::StructType::get(varType), *storageClass);
   }
   auto varPtrType = cast<spirv::PointerType>(varType);
-  auto pointeeType = varPtrType.getPointeeType();
+  Type pointeeType = varPtrType.getPointeeType();
 
   // Images are an opaque type and so we can just return a pointer to an image.
   // Note that currently only sampled images are supported in the SPIR-V
