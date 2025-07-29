@@ -41,7 +41,7 @@ the source for LLVM and compiler-rt.
 
 ``qemu-arm`` should be available as a package for your Linux distribution.
 
-The most complicated of the prerequisites to is the ``arm-linux-gnueabihf``
+The most complicated of the prerequisites to satisfy is the ``arm-linux-gnueabihf``
 sysroot. In theory it is possible to use the Linux distributions multiarch
 support to fulfill the dependencies for building but unfortunately due to
 ``/usr/local/include`` being added some host includes are selected.
