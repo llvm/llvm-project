@@ -28,7 +28,6 @@
 #include "llvm/Support/ManagedStatic.h" // llvm_shutdown
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include <optional>
 
@@ -354,7 +353,8 @@ int main(int argc, const char **argv) {
                             "%lib\t<path>\tlink a dynamic library\n"
                             "%quit\t\texit clang-repl\n";
 
-  llvm::raw_ostream &OS = llvm::outs();
+  const char *lib_bad_args =
+      "%lib expects 1 argument: the path to a dynamic library\n";
   if (OptInputs.empty()) {
     llvm::LineEditor LE("clang-repl");
     std::string Input;
@@ -379,15 +379,23 @@ int main(int argc, const char **argv) {
         if (auto Err = Interp->Undo())
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       } else if (Input == R"(%help)") {
-        OS << help_output << '\n';
+        auto Err =
+            llvm::make_error<llvm::StringError>(help_output, std::error_code());
+        llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "");
       } else if (Input == R"(%lib)") {
-        OS << "%lib expects 1 argument: the path to a dynamic library\n";
+        auto Err = llvm::make_error<llvm::StringError>(lib_bad_args,
+                                                       std::error_code());
+        llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       } else if (Input.rfind("%lib ", 0) == 0) {
         if (auto Err = Interp->LoadDynamicLibrary(Input.data() + 5))
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       } else if (Input[0] == '%') { // make sure this is evaluated last
-        OS << "Invalid % command \"" << Input << "\", "
-           << "use \"%help\" to list commands\n";
+        auto Err = llvm::make_error<llvm::StringError>(
+            llvm::formatv(
+                "Invalid % command \"{0}\", use \"%help\" to list commands\n",
+                Input),
+            std::error_code());
+        llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       } else if (auto Err = Interp->ParseAndExecute(Input)) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       }
