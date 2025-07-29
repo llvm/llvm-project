@@ -265,6 +265,7 @@ protected:
   bool HasIEEEMinimumMaximumInsts = false;
   bool HasMinimum3Maximum3F32 = false;
   bool HasMinimum3Maximum3F16 = false;
+  bool HasMin3Max3PKF16 = false;
   bool HasMinimum3Maximum3PKF16 = false;
   bool HasLshlAddU64Inst = false;
   bool HasAddSubU64Insts = false;
@@ -1387,6 +1388,8 @@ public:
   bool hasMinimum3Maximum3F16() const {
     return HasMinimum3Maximum3F16;
   }
+
+  bool hasMin3Max3PKF16() const { return HasMin3Max3PKF16; }
 
   bool hasTanhInsts() const { return HasTanhInsts; }
 
