@@ -330,7 +330,6 @@ gpu.func @subgroup_store_nd_2(%dst: memref<24x32xf16>, %x : index) {
   gpu.return
 }
 
-
 // CHECK: func @subgroup_store_nd_offset_1(%[[arg0:.*]]: memref<24x32xf16>) {
 gpu.func @subgroup_store_nd_offset_1(%dst: memref<24x32xf16>) {
   // CHECK: %[[C:.*]] = arith.constant dense<1.000000e+00> : vector<32xf16>
@@ -658,7 +657,6 @@ gpu.func @prefetch(%src: ui64) {
   xegpu.prefetch %1 <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>: !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>>
   gpu.return
 }
-
 
 // CHECK: gpu.func @prefetch_offset(%[[arg0:.*]]: ui64) {
 gpu.func @prefetch_offset(%src: ui64) {

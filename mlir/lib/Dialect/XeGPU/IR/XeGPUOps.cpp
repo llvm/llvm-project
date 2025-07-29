@@ -111,39 +111,7 @@ isValidGatherScatterParams(Type maskTy, VectorType valueTy,
 }
 
 static LogicalResult
-isValidGatherScatterMemRefParams(Type maskTy, VectorType valueTy,
-                                 MemRefType memTy, int64_t chunkSize,
-                                 function_ref<InFlightDiagnostic()> emitError) {
-
-  if (!valueTy)
-    return emitError() << "Expecting a vector type result.";
-
-  auto maskShape = getShapeOf(maskTy);
-  auto valueShape = getShapeOf(valueTy);
-
-  if (valueTy.getElementType() != memTy.getElementType())
-    return emitError() << "Value should have the same element type as MemRef.";
-
-  // a valid shape for SIMT case
-  if (valueTy.getRank() == 1) {
-    if (valueTy.getNumElements() != chunkSize)
-      return emitError() << "value elements must match chunk size " << chunkSize
-                         << " for SIMT code.";
-    return success();
-  }
-
-  llvm::SmallVector<int64_t> expectedMaskShape(valueShape);
-  if (chunkSize > 1)
-    expectedMaskShape.pop_back();
-  if (expectedMaskShape != maskShape)
-    return emitError() << "Mask should match value except the chunk size dim.";
-
-  return success();
-}
-
-static LogicalResult
-isValidGatherScatterRawptrParams(Type maskTy, VectorType valueTy,
-                                 int64_t chunkSize,
+isValidGatherScatterBufferParams(Type maskTy, VectorType valueTy, int64_t chunkSize,
                                  function_ref<InFlightDiagnostic()> emitError) {
 
   if (!valueTy)
@@ -703,8 +671,14 @@ LogicalResult CreateDescOp::verify() {
 //===----------------------------------------------------------------------===//
 LogicalResult PrefetchOp::verify() {
   auto tdescTy = getTensorDescType();
-  if (tdescTy && !tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.\n");
+
+  if (tdescTy) {
+    if (!tdescTy.isScattered())
+      return emitOpError("Expects a scattered TensorDesc.\n");
+  } else {
+    if (getRankOf(getSource()) > 1)
+      return emitOpError("Expecting the source is a 1D memref or pointer (uint64_t).");
+  }
 
   if (!isReadHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
@@ -733,6 +707,14 @@ LogicalResult LoadGatherOp::verify() {
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
 
+  if (tdescTy) {
+    if (!tdescTy.isScattered())
+      return emitOpError("Expects a scattered TensorDesc.\n");
+  } else {
+    if (getRankOf(getSource()) > 1)
+      return emitOpError("Expecting the source is a 1D memref or pointer (uint64_t).");
+  }
+
   if (!isReadHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
@@ -749,10 +731,10 @@ LogicalResult LoadGatherOp::verify() {
   uint64_t chunkSize = static_cast<int64_t>(getChunkSize().value_or(1));
   auto memTy = dyn_cast<MemRefType>(srcTy);
 
-  if (memTy)
-    return isValidGatherScatterMemRefParams(maskTy, valueTy, memTy, chunkSize,
-                                            [&]() { return emitOpError(); });
-  return isValidGatherScatterRawptrParams(maskTy, valueTy, chunkSize,
+  if (memTy && (valueTy.getElementType() != memTy.getElementType()) )
+    return emitError() << "Value should have the same element type as MemRef.";
+
+  return isValidGatherScatterBufferParams(maskTy, valueTy, chunkSize,
                                           [&]() { return emitOpError(); });
 }
 
@@ -773,6 +755,14 @@ LogicalResult StoreScatterOp::verify() {
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
 
+  if (tdescTy) {
+    if (!tdescTy.isScattered())
+      return emitOpError("Expects a scattered TensorDesc.\n");
+  } else {
+    if (getRankOf(getDest()) > 1)
+      return emitOpError("Expecting the dest is a 1D memref or pointer (uint64_t).");    
+  }
+  
   if (!isWriteHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
@@ -790,10 +780,10 @@ LogicalResult StoreScatterOp::verify() {
   uint64_t chunkSize = static_cast<int64_t>(getChunkSize().value_or(1));
   auto memTy = dyn_cast<MemRefType>(destTy);
 
-  if (memTy)
-    return isValidGatherScatterMemRefParams(maskTy, valueTy, memTy, chunkSize,
-                                            [&]() { return emitOpError(); });
-  return isValidGatherScatterRawptrParams(maskTy, valueTy, chunkSize,
+  if (memTy && (valueTy.getElementType() != memTy.getElementType()) )
+    return emitError() << "Value should have the same element type as MemRef.";
+
+  return isValidGatherScatterBufferParams(maskTy, valueTy, chunkSize,
                                           [&]() { return emitOpError(); });
 }
 

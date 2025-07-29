@@ -405,7 +405,7 @@ func.func @load_gather_offset_wi(%src: ui64) {
 }
 
 // -----
-func.func @store_scatter_offset_sg(%src: memref<?xf16>) {
+func.func @store_scatter_offset_wi(%src: memref<?xf16>) {
   %val = arith.constant dense<2.9>: vector<4xf16>
   %offsets = arith.constant dense<[0]> : vector<1xindex>
   %mask = arith.constant dense<1>: vector<1xi1>

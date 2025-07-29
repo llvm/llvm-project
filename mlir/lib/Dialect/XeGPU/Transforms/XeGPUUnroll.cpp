@@ -484,6 +484,7 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
     VectorType valueTy = llvm::dyn_cast<VectorType>(op.getValue().getType());
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
 
+    // TODO: handle the unstructure source case (!tdesTy)
     if (!tdescTy || !tdescTy.isScattered())
       return failure();
 
@@ -546,6 +547,7 @@ struct UnrollPrefetchOp : public UnrollPattern<xegpu::PrefetchOp> {
     Location loc = op.getLoc();
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
 
+    // TODO: handle the unstructure source case (!tdesTy)
     if (!tdescTy || !tdescTy.isScattered())
       return failure();
 
@@ -575,6 +577,7 @@ struct UnrollStoreScatterOp : public UnrollPattern<xegpu::StoreScatterOp> {
     VectorType valueTy = llvm::dyn_cast<VectorType>(op.getValue().getType());
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
 
+    // TODO: handle the unstructure source case (!tdesTy)
     if (!tdescTy || !tdescTy.isScattered())
       return failure();
 

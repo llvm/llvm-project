@@ -628,17 +628,28 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
     As compared to prefetch_nd, which works on non-scattered TensorDesc,
     it works on scattered TensorDesc instead.
 
-    Example:
+    Example 1:
     ```mlir
       xegpu.prefetch %tdesc {l1_hint = #xegpu.cache_hint<cached>,
                              l2_hint = #xegpu.cache_hint<cached>,
                              l3_hint = #xegpu.cache_hint<cached>}
         : !xegpu.tensor_desc<16xf16>
     ```
+    
+    Example 2:
+    A variant accepts memref as base pointer and an offset instead of scattered TensorTdesc. It combines "create scattered TensorTdesc" and "prefetch with scattered TensorTdesc". The source operand could be a raw pointer (uint64_t). Please refer to create_tdesc for the restriction of memref. 
+    ```mlir
+      %a = memref.alloc() : memref<1024xf32>
+      %0 = arith.constant dense<[0, 16, 32, 64]> : vector<4xindex>
+      xegpu.prefetch %a[%0] {l1_hint = #xegpu.cache_hint<cached>,
+                             l2_hint = #xegpu.cache_hint<cached>,
+                             l3_hint = #xegpu.cache_hint<cached>}
+        : memref<1024xf32>, vector<4xindex>
+    ```
 
   }];
 
-  let arguments = (ins XeGPU_TensorDescOrMemRef: $source,
+  let arguments = (ins XeGPU_GatherScatterSourceType: $source,
                        Optional<XeGPU_OffsetType>: $offsets,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
@@ -706,6 +717,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
           : !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<memory_space=global, chunk_size=8>>,
             vector<16xi1> -> vector<16x8xf32>
   ```
+  
   Example 3 (SIMT mode):
   ```mlir
     %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>,
@@ -714,10 +726,22 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
           : !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<memory_space=global, chunk_size=8>>
             vector<16xi1> -> vector<8xf32>
   ```
+  
+  Example 4:
+  A variant accepts memref as base pointer and an offset instead of scattered TensorTdesc. It combines "create scattered TensorTdesc" and "load with scattered TensorTdesc". The source operand could be a raw pointer (uint64_t). Please refer to create_tdesc for the restriction of memref. 
+  ```mlir
+    %a = memref.alloc() : memref<1024xf32>
+    %offsets = vector.step : vector<16xindex>
+    %mask = vector.constant_mask [16]: vector<16xi1>
+    %val = xegpu.load %a[%offsets], %mask {l1_hint = #xegpu.cache_hint<cached>,
+                           l2_hint = #xegpu.cache_hint<cached>,
+                           l3_hint = #xegpu.cache_hint<cached>}
+      : memref<1024xf32>, vector<16xi1>, vector<16xindex> -> vector<16xf32>
+  ```
 
   }];
 
-  let arguments = (ins XeGPU_TensorDescOrMemRef: $source,
+  let arguments = (ins XeGPU_GatherScatterSourceType: $source,
                        Optional<XeGPU_OffsetType>: $offsets,
                        XeGPU_MaskType: $mask,
                        OptionalAttr<I64Attr>: $chunk_size,
@@ -807,11 +831,25 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
                              l3_hint = #xegpu.cache_hint<write_through>}>
           : vector<8xf32>, !xegpu.tensor_desc<16x8xf32, #xegpu.scattered_tdesc_attr<chunk_size=8>> vector<16xi1>
   ```
+
+  Example 4:
+  A variant accepts memref as base pointer and an offset instead of scattered TensorTdesc. It combines "create scattered TensorTdesc" and "store with scattered TensorTdesc". The dest operand could be a raw pointer (uint64_t). Please refer to create_tdesc for the restriction of memref. 
+  ```mlir
+    %a = memref.alloc() : memref<1024xf32>
+    %val = arith.constant dense<0.0> : vector<16xf32>
+    %offsets = vector.step : vector<16xindex>
+    %mask = vector.constant_mask [16]: vector<16xi1>
+    xegpu.store %val, %a[%offsets], %mask {l1_hint = #xegpu.cache_hint<cached>,
+                           l2_hint = #xegpu.cache_hint<cached>,
+                           l3_hint = #xegpu.cache_hint<cached>}
+      : memref<1024xf32>, vector<16xi1>, vector<16xindex> -> vector<16xf32>
+  ```
+
   }];
 
   let arguments = (ins
     XeGPU_ValueType: $value,
-    XeGPU_TensorDescOrMemRef: $dest,
+    XeGPU_GatherScatterSourceType: $dest,
     Optional<XeGPU_OffsetType>: $offsets,
     XeGPU_MaskType: $mask,
     OptionalAttr<I64Attr>: $chunk_size,
