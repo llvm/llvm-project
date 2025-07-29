@@ -237,7 +237,7 @@ void TemplateParameterList::getAssociatedConstraints(
           ACs.emplace_back(E);
       }
     }
-  if (HasRequiresClause && getRequiresClause())
+  if (HasRequiresClause)
     ACs.emplace_back(getRequiresClause());
 }
 

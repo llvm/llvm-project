@@ -340,15 +340,14 @@ bool TemplateArgument::isPackExpansion() const {
 }
 
 bool TemplateArgument::isConceptOrConceptTemplateParameter() const {
-  bool isConcept = false;
   if (getKind() == TemplateArgument::Template) {
     if (isa<ConceptDecl>(getAsTemplate().getAsTemplateDecl()))
-      isConcept = true;
+      return true;
     else if (auto *TTP = dyn_cast_if_present<TemplateTemplateParmDecl>(
                  getAsTemplate().getAsTemplateDecl()))
-      isConcept = TTP->kind() == TNK_Concept_template;
+      return TTP->kind() == TNK_Concept_template;
   }
-  return isConcept;
+  return false;
 }
 
 bool TemplateArgument::containsUnexpandedParameterPack() const {
