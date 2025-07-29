@@ -1226,9 +1226,10 @@ bool X86InstructionSelector::selectUAddSub(MachineInstr &I,
         Def->getOpcode() == TargetOpcode::G_USUBE ||
         Def->getOpcode() == TargetOpcode::G_USUBO) {
       // carry set by prev ADD/SUB.
-      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::COPY),
-              X86::EFLAGS)
-          .addReg(CarryInReg);
+
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::CMP8ri))
+          .addReg(CarryInReg)
+          .addImm(1);
 
       if (!RBI.constrainGenericRegister(CarryInReg, *CarryRC, MRI))
         return false;
@@ -1249,31 +1250,12 @@ bool X86InstructionSelector::selectUAddSub(MachineInstr &I,
            .addReg(Op0Reg)
            .addReg(Op1Reg);
 
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::COPY), CarryOutReg)
-      .addReg(X86::EFLAGS);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::SETCCr),
+      CarryOutReg).addImm(X86::COND_B);
 
   if (!constrainSelectedInstRegOperands(Inst, TII, TRI, RBI) ||
       !RBI.constrainGenericRegister(CarryOutReg, *CarryRC, MRI))
     return false;
-
-  // If there are instructions that use carry as value, we need to lower it
-  // differently than setting EFLAGS
-  Register SetCarryCC;
-  for (auto &Use :
-       llvm::make_early_inc_range(MRI.use_nodbg_operands(CarryOutReg))) {
-    MachineInstr *MI = Use.getParent();
-    if (MI->isCopy() && MI->getOperand(0).getReg() == X86::EFLAGS)
-      continue;
-    if (!SetCarryCC) {
-      SetCarryCC = MRI.createGenericVirtualRegister(MRI.getType(CarryOutReg));
-      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::SETCCr),
-              SetCarryCC)
-          .addImm(X86::COND_B);
-      if (!RBI.constrainGenericRegister(SetCarryCC, *CarryRC, MRI))
-        return false;
-    }
-    Use.setReg(SetCarryCC);
-  }
 
   I.eraseFromParent();
   return true;
