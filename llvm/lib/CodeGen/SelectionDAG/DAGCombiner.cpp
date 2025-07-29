@@ -22490,7 +22490,7 @@ SDValue DAGCombiner::visitATOMIC_STORE(SDNode *N) {
 
 static SDValue foldToMaskedStore(StoreSDNode *Store, SelectionDAG &DAG,
                                  const SDLoc &Dl) {
-  if (!Store->isSimple() || Store->isTruncatingStore())
+  if (!Store->isSimple() || !ISD::isNormalStore(Store))
     return SDValue();
 
   SDValue StoredVal = Store->getValue();
