@@ -3605,23 +3605,19 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
   return false;
 }
 
-#include <iostream>
-
 bool SimplifyCFGOpt::foldCondBranchOnValueKnownInPredecessor(BranchInst *BI) {
   // Note: If BB is a loop header then there is a risk that threading introduces
   // a non-canonical loop by moving a back edge. So we avoid this optimization
   // for loop headers if NeedCanonicalLoop is set.
-  bool InHeader = is_contained(LoopHeaders, BI->getParent());
-  bool AvoidThreading = Options.NeedCanonicalLoop && InHeader;
-  if (AvoidThreading) {
+  if (Options.NeedCanonicalLoop && is_contained(LoopHeaders, BI->getParent()))
     return false;
-  }
 
   std::optional<bool> Result;
   bool EverChanged = false;
   do {
     // Note that None means "we changed things, but recurse further."
-    Result = foldCondBranchOnValueKnownInPredecessorImpl(BI, DTU, DL, Options.AC);
+    Result =
+        foldCondBranchOnValueKnownInPredecessorImpl(BI, DTU, DL, Options.AC);
     EverChanged |= Result == std::nullopt || *Result;
   } while (Result == std::nullopt);
   return EverChanged;
