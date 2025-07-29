@@ -207,55 +207,30 @@ void ScopedReportBase::SymbolizeStackElems() {
       mop->stack->suppressable = true;
   }
 
-  Vector<ReportLocation *> locs_tmp;
-
-  // Repopulate the locations in the order they were added - take care with
-  // the added locations
-  usize locs_idx = 0;
-  for (usize i = 0; i < rep_->added_location_addrs.Size(); i++) {
-    AddedLocationAddr *added_loc_addr = &rep_->added_location_addrs[i];
-
-    for (; locs_idx < added_loc_addr->locs_idx; locs_idx++) {
-      ReportLocation *loc = rep_->locs[locs_idx];
-      loc->stack = SymbolizeStackId(loc->stack_id);
-      locs_tmp.PushBack(loc);
-    }
-
-    if (ReportLocation *added_loc = SymbolizeData(added_loc_addr->addr)) {
-      added_loc->suppressable = true;
-      locs_tmp.PushBack(added_loc);
-    }
-  }
-
-  // Append any remaining locations
-  for (; locs_idx < rep_->locs.Size(); locs_idx++) {
-    ReportLocation *loc = rep_->locs[locs_idx];
-    loc->stack = SymbolizeStackId(loc->stack_id);
-    locs_tmp.PushBack(loc);
-  }
-
-  rep_->locs.Reset();
-  for (usize i = 0; i < locs_tmp.Size(); i++) rep_->locs.PushBack(locs_tmp[i]);
-
   // symbolize locations
   for (usize i = 0; i < rep_->locs.Size(); i++) {
-    ReportLocation *loc = rep_->locs[i];
-    loc->stack = SymbolizeStackId(loc->stack_id);
+    // added locations have a NULL placeholder - don't dereference them
+    if (ReportLocation *loc = rep_->locs[i])
+      loc->stack = SymbolizeStackId(loc->stack_id);
   }
 
-  usize offset = 0;
+  // symbolize any added locations
   for (usize i = 0; i < rep_->added_location_addrs.Size(); i++) {
-    struct AddedLocationAddr *added_loc = &rep_->added_location_addrs[i];
+    AddedLocationAddr *added_loc = &rep_->added_location_addrs[i];
     if (ReportLocation *loc = SymbolizeData(added_loc->addr)) {
-      offset++;
       loc->suppressable = true;
       rep_->locs[added_loc->locs_idx] = loc;
     }
   }
 
-  // Check that all locs are populated (no-op in release)
+  // Filter out any added location placeholders that could not be symbolized
+  Vector<ReportLocation *> filtered_locs;
   for (usize i = 0; i < rep_->locs.Size(); i++)
-    CHECK_NE(rep_->locs[i], nullptr);
+    if (rep_->locs[i] != nullptr)
+      filtered_locs.PushBack(rep_->locs[i]);
+  rep_->locs.Resize(filtered_locs.Size());
+  for (usize i = 0; i < filtered_locs.Size(); i++)
+    rep_->locs[i] = (filtered_locs[i]);
 
   // symbolize threads
   for (usize i = 0; i < rep_->threads.Size(); i++) {
@@ -396,6 +371,7 @@ void ScopedReportBase::AddLocation(uptr addr, uptr size) {
   }
 #endif
   rep_->added_location_addrs.PushBack({addr, rep_->locs.Size()});
+  rep_->locs.PushBack(nullptr);
 }
 
 #if !SANITIZER_GO
