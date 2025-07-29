@@ -1913,14 +1913,6 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
   readVectorSizes.append(sourceShape.begin() + vectorSizes.size(),
                          sourceShape.end());
 
-  ReifiedRankedShapedTypeDims reifiedRetShapes;
-  LogicalResult status =
-      cast<ReifyRankedShapedTypeOpInterface>(unpackOp.getOperation())
-          .reifyResultShapes(rewriter, reifiedRetShapes);
-  if (status.failed()) {
-    LDBG() << "Unable to reify result shapes of " << unpackOp;
-    return failure();
-  }
   Location loc = unpackOp->getLoc();
 
   auto padValue = arith::ConstantOp::create(
@@ -3714,8 +3706,8 @@ struct Conv1DGenerator
     }
     }
 
-    return rewriter
-        .create<vector::TransferWriteOp>(loc, res, resShaped, resPadding)
+    return vector::TransferWriteOp::create(rewriter, loc, res, resShaped,
+                                           resPadding)
         .getOperation();
   }
 

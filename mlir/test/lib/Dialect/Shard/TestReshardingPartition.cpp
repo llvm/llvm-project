@@ -72,15 +72,14 @@ struct TestReshardingRewritePattern : OpRewritePattern<ShardOp> {
       ShapedType sourceShardShape =
           shardShapedType(op.getResult().getType(), grid, op.getSharding());
       TypedValue<ShapedType> sourceShard = cast<TypedValue<ShapedType>>(
-          builder
-              .create<UnrealizedConversionCastOp>(sourceShardShape, op.getSrc())
+          UnrealizedConversionCastOp::create(builder, sourceShardShape,
+                                             op.getSrc())
               ->getResult(0));
       TypedValue<ShapedType> targetShard =
           reshard(builder, grid, op, targetShardOp, sourceShard);
       Value newTargetUnsharded =
-          builder
-              .create<UnrealizedConversionCastOp>(
-                  targetShardOp.getResult().getType(), targetShard)
+          UnrealizedConversionCastOp::create(
+              builder, targetShardOp.getResult().getType(), targetShard)
               ->getResult(0);
       rewriter.replaceAllUsesWith(targetShardOp.getResult(),
                                   newTargetUnsharded);
