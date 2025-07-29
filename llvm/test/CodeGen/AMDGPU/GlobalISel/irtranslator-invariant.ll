@@ -43,7 +43,7 @@ define { i32, i64 } @load_const_struct_gv() {
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p1) = G_GLOBAL_VALUE @const_struct_gv
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p1) :: (dereferenceable invariant load (s32) from @const_struct_gv, align 8, addrspace 1)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[GV]], [[C]](s64)
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p1) = nuw G_PTR_ADD [[GV]], [[C]](s64)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p1) :: (dereferenceable invariant load (s64) from @const_struct_gv + 8, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](s64)
   ; CHECK-NEXT:   $vgpr0 = COPY [[LOAD]](s32)
