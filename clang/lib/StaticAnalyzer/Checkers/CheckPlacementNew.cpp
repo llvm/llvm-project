@@ -117,7 +117,6 @@ bool PlacementNewChecker::checkPlaceCapacityIsSufficient(
           llvm::formatv("Storage provided to placement new is only {0} bytes, "
                         "whereas the allocated type requires {1} bytes",
                         SizeOfPlaceCI->getValue(), SizeOfTargetCI->getValue());
-      // TODO: use clang constants
 
       auto R = std::make_unique<PathSensitiveBugReport>(SBT, Msg, N);
       bugreporter::trackExpressionValue(N, NE->getPlacementArg(0), *R);

@@ -166,11 +166,29 @@ void f1() {
     short a;
   };
 
-  // on some systems, placement array new may allocate more memory than the nominal size of the array
-  // in such cases, test code could be problematic, but the checker doesn't warn here because this behavior is expected to be rare
+  // On some systems, (notably before MSVC 16.7), a non-allocating placement
+  // array new could allocate more memory than the nominal size of the array.
+
+  // Since CWG 2382 (implemented in MSVC 16.7), overhead was disallowed for non-allocating placement new.
+  //  See:
+  //    https://learn.microsoft.com/en-us/cpp/overview/visual-cpp-language-conformance?view=msvc-170
+  //    https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p1969r0.html#2382
+
+  // However, as of 17.1, there is a regression when the type comes from a template
+  // parameter where MSVC reintroduces overhead.
+  //  See:
+  //    https://developercommunity.visualstudio.com/t/10777485
+  //    https://godbolt.org/z/E1z1Tsfvj
+
+  // The checker doesn't warn here because this behavior only affects older
+  // MSVC versions (<16.7) or certain specific versions (17.1).
+  // Suppressing warnings avoids false positives on standard-compliant compilers
+  // and modern MSVC versions, but users of affected MSVC versions should be
+  // aware of potential buffer size issues.
+
   const unsigned N = 32;
   alignas(S) unsigned char buffer1[sizeof(S) * N]; 
-  ::new (buffer1) S[N];                           
+  ::new (buffer1) S[N]; // no-warning: See comments above
 }
 
 void f2() {
@@ -178,11 +196,11 @@ void f2() {
     short a;
   };
 
-  // on some systems, placement array new may allocate more memory than the nominal size of the array
-  // in such cases, test code could be problematic, but the checker doesn't warn here because this behavior is expected to be rare
+  // On some systems, placement array new could allocate more memory than the nominal size of the array.
+  // See the comment at f1() above for more details.
   const unsigned N = 32;
   alignas(S) unsigned char buffer2[sizeof(S) * N + sizeof(int)]; 
-  ::new (buffer2) S[N];                                         
+  ::new (buffer2) S[N]; // no-warning: See comments above
 }
 } // namespace testArrayTypesAllocation
 
