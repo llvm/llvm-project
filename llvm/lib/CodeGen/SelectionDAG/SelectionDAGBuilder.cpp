@@ -3923,11 +3923,15 @@ void SelectionDAGBuilder::visitFPTrunc(const User &I) {
   // FPTrunc is never a no-op cast, no need to check
   SDValue N = getValue(I.getOperand(0));
   SDLoc dl = getCurSDLoc();
+  SDNodeFlags Flags;
+  if (auto *TruncInst = dyn_cast<FPMathOperator>(&I))
+    Flags.copyFMF(*TruncInst);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
   setValue(&I, DAG.getNode(ISD::FP_ROUND, dl, DestVT, N,
                            DAG.getTargetConstant(
-                               0, dl, TLI.getPointerTy(DAG.getDataLayout()))));
+                               0, dl, TLI.getPointerTy(DAG.getDataLayout())),
+                           Flags));
 }
 
 void SelectionDAGBuilder::visitFPExt(const User &I) {
