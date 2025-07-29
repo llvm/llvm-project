@@ -19,7 +19,8 @@ MCTargetOptions::MCTargetOptions()
       PreserveAsmComments(true), Dwarf64(false),
       EmitDwarfUnwind(EmitDwarfUnwindType::Default),
       MCUseDwarfDirectory(DefaultDwarfDirectory),
-      EmitCompactUnwindNonCanonical(false), PPCUseFullRegisterNames(false) {}
+      EmitCompactUnwindNonCanonical(false), EmitSFrameUnwind(false),
+      PPCUseFullRegisterNames(false) {}
 
 StringRef MCTargetOptions::getABIName() const {
   return ABIName;
