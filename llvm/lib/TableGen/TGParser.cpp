@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TGParser.h"
+#include "TGLexer.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
@@ -1199,6 +1200,7 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
   case tgtok::XCast:
   case tgtok::XRepr:
   case tgtok::XGetDagOp:
+  case tgtok::XGetDagOpName:
   case tgtok::XInitialized: { // Value ::= !unop '(' Value ')'
     UnOpInit::UnaryOp Code;
     const RecTy *Type = nullptr;
@@ -1286,6 +1288,11 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
         Type = RecordRecTy::get(Records, {});
       }
       Code = UnOpInit::GETDAGOP;
+      break;
+    case tgtok::XGetDagOpName:
+      Lex.Lex(); // eat the operation
+      Type = StringRecTy::get(Records);
+      Code = UnOpInit::GETDAGOPNAME;
       break;
     case tgtok::XInitialized:
       Lex.Lex(); // eat the operation
@@ -1514,7 +1521,8 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
   case tgtok::XInterleave:
   case tgtok::XGetDagArg:
   case tgtok::XGetDagName:
-  case tgtok::XSetDagOp: { // Value ::= !binop '(' Value ',' Value ')'
+  case tgtok::XSetDagOp:
+  case tgtok::XSetDagOpName: { // Value ::= !binop '(' Value ',' Value ')'
     tgtok::TokKind OpTok = Lex.getCode();
     SMLoc OpLoc = Lex.getLoc();
     Lex.Lex();  // eat the operation
@@ -1550,6 +1558,9 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
     case tgtok::XStrConcat:  Code = BinOpInit::STRCONCAT; break;
     case tgtok::XInterleave: Code = BinOpInit::INTERLEAVE; break;
     case tgtok::XSetDagOp:   Code = BinOpInit::SETDAGOP; break;
+    case tgtok::XSetDagOpName:
+      Code = BinOpInit::SETDAGOPNAME;
+      break;
     case tgtok::XGetDagArg:
       Code = BinOpInit::GETDAGARG;
       break;
@@ -1578,6 +1589,10 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
         TokError("did not get type for !getdagarg operator");
         return nullptr;
       }
+      ArgType = DagRecTy::get(Records);
+      break;
+    case tgtok::XSetDagOpName:
+      Type = DagRecTy::get(Records);
       ArgType = DagRecTy::get(Records);
       break;
     case tgtok::XGetDagName:
@@ -1773,22 +1788,26 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
       // Deal with BinOps whose arguments have different types, by
       // rewriting ArgType in between them.
       switch (Code) {
-        case BinOpInit::SETDAGOP:
-          // After parsing the first dag argument, switch to expecting
-          // a record, with no restriction on its superclasses.
-          ArgType = RecordRecTy::get(Records, {});
-          break;
-        case BinOpInit::GETDAGARG:
-          // After parsing the first dag argument, expect an index integer or a
-          // name string.
-          ArgType = nullptr;
-          break;
-        case BinOpInit::GETDAGNAME:
-          // After parsing the first dag argument, expect an index integer.
-          ArgType = IntRecTy::get(Records);
-          break;
-        default:
-          break;
+      case BinOpInit::SETDAGOPNAME:
+        // After parsing the first dag argument, expect a string.
+        ArgType = StringRecTy::get(Records);
+        break;
+      case BinOpInit::SETDAGOP:
+        // After parsing the first dag argument, switch to expecting
+        // a record, with no restriction on its superclasses.
+        ArgType = RecordRecTy::get(Records, {});
+        break;
+      case BinOpInit::GETDAGARG:
+        // After parsing the first dag argument, expect an index integer or a
+        // name string.
+        ArgType = nullptr;
+        break;
+      case BinOpInit::GETDAGNAME:
+        // After parsing the first dag argument, expect an index integer.
+        ArgType = IntRecTy::get(Records);
+        break;
+      default:
+        break;
       }
 
       if (!consume(tgtok::comma))
