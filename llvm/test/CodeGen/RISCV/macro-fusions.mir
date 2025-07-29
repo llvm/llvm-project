@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=riscv64-linux-gnu -x=mir < %s \
 # RUN:   -debug-only=machine-scheduler -start-before=machine-scheduler 2>&1 \
 # RUN:   -mattr=+lui-addi-fusion,+auipc-addi-fusion,+zexth-fusion,+zextw-fusion,+shifted-zextw-fusion,+ld-add-fusion \
-# RUN:   -mattr=+add-lw-fusion,+auipc-ld-fusion,+lui-ld-fusion,+addi-ld-fusion,+addi-lw-fusion \
+# RUN:   -mattr=+add-load-fusion,+add-lw-fusion,+auipc-ld-fusion,+lui-ld-fusion,+addi-ld-fusion,+addi-lw-fusion \
 # RUN:   -mattr=+zba,+adduw-lw-fusion,+shxadd-load-fusion,+shxadduw-load-fusion \
 # RUN:   | FileCheck %s
 # RUN: llc -mtriple=riscv64-linux-gnu -x=mir < %s \
@@ -180,6 +180,42 @@ body:             |
     PseudoRET
 ...
 
+# CHECK: add_lb
+# CHECK: Macro fuse: {{.*}}ADD - LB
+---
+name: add_lb
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = ADD %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LB %3, 0
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: add_lh
+# CHECK: Macro fuse: {{.*}}ADD - LH
+---
+name: add_lh
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = ADD %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LH %3, 0
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
 # CHECK: add_lw
 # CHECK: Macro fuse: {{.*}}ADD - LW
 ---
@@ -193,6 +229,60 @@ body:             |
     %3:gpr = ADD %1, %2
     %4:gpr = XORI %2, 3
     %5:gpr = LW %3, 0
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: add_lbu
+# CHECK: Macro fuse: {{.*}}ADD - LBU
+---
+name: add_lbu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = ADD %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LBU %3, 0
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: add_lhu
+# CHECK: Macro fuse: {{.*}}ADD - LHU
+---
+name: add_lhu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = ADD %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LHU %3, 0
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: add_lwu
+# CHECK: Macro fuse: {{.*}}ADD - LWU
+---
+name: add_lwu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = ADD %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LWU %3, 0
     $x10 = COPY %4
     $x11 = COPY %5
     PseudoRET
@@ -519,6 +609,168 @@ body:             |
     PseudoRET
 ...
 
+# CHECK: sh1add_lbu
+# CHECK: Macro fuse: {{.*}}SH1ADD - LBU
+---
+name: sh1add_lbu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SH1ADD %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LBU %3, 8
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: sh2add_lbu
+# CHECK: Macro fuse: {{.*}}SH2ADD - LBU
+---
+name: sh2add_lbu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SH2ADD %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LBU %3, 8
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: sh3add_lbu
+# CHECK: Macro fuse: {{.*}}SH3ADD - LBU
+---
+name: sh3add_lbu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SH3ADD %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LBU %3, 8
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: sh1add_lhu
+# CHECK: Macro fuse: {{.*}}SH1ADD - LHU
+---
+name: sh1add_lhu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SH1ADD %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LHU %3, 8
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: sh2add_lhu
+# CHECK: Macro fuse: {{.*}}SH2ADD - LHU
+---
+name: sh2add_lhu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SH2ADD %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LHU %3, 8
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: sh3add_lhu
+# CHECK: Macro fuse: {{.*}}SH3ADD - LHU
+---
+name: sh3add_lhu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SH3ADD %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LHU %3, 8
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: sh1add_lwu
+# CHECK: Macro fuse: {{.*}}SH1ADD - LWU
+---
+name: sh1add_lwu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SH1ADD %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LWU %3, 8
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: sh2add_lwu
+# CHECK: Macro fuse: {{.*}}SH2ADD - LWU
+---
+name: sh2add_lwu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SH2ADD %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LWU %3, 8
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: sh3add_lwu
+# CHECK: Macro fuse: {{.*}}SH3ADD - LWU
+---
+name: sh3add_lwu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SH3ADD %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LWU %3, 8
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
 # CHECK: sh1adduw_lb
 # CHECK: Macro fuse: {{.*}}SH1ADD_UW - LB
 ---
@@ -730,6 +982,168 @@ body:             |
     %3:gpr = SH3ADD_UW %1, %2
     %4:gpr = XORI %2, 3
     %5:gpr = LD %3, 8
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: sh1adduw_lbu
+# CHECK: Macro fuse: {{.*}}SH1ADD_UW - LBU
+---
+name: sh1adduw_lbu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SH1ADD_UW %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LBU %3, 8
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: sh2adduw_lbu
+# CHECK: Macro fuse: {{.*}}SH2ADD_UW - LBU
+---
+name: sh2adduw_lbu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SH2ADD_UW %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LBU %3, 8
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: sh3adduw_lbu
+# CHECK: Macro fuse: {{.*}}SH3ADD_UW - LBU
+---
+name: sh3adduw_lbu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SH3ADD_UW %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LBU %3, 8
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: sh1adduw_lhu
+# CHECK: Macro fuse: {{.*}}SH1ADD_UW - LHU
+---
+name: sh1adduw_lhu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SH1ADD_UW %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LHU %3, 8
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: sh2adduw_lhu
+# CHECK: Macro fuse: {{.*}}SH2ADD_UW - LHU
+---
+name: sh2adduw_lhu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SH2ADD_UW %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LHU %3, 8
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: sh3adduw_lhu
+# CHECK: Macro fuse: {{.*}}SH3ADD_UW - LHU
+---
+name: sh3adduw_lhu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SH3ADD_UW %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LHU %3, 8
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: sh1adduw_lwu
+# CHECK: Macro fuse: {{.*}}SH1ADD_UW - LWU
+---
+name: sh1adduw_lwu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SH1ADD_UW %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LWU %3, 8
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: sh2adduw_lwu
+# CHECK: Macro fuse: {{.*}}SH2ADD_UW - LWU
+---
+name: sh2adduw_lwu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SH2ADD_UW %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LWU %3, 8
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: sh3adduw_lwu
+# CHECK: Macro fuse: {{.*}}SH3ADD_UW - LWU
+---
+name: sh3adduw_lwu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SH3ADD_UW %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = LWU %3, 8
     $x10 = COPY %4
     $x11 = COPY %5
     PseudoRET

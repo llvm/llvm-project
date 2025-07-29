@@ -104,6 +104,18 @@ def TuneADDLWFusion
                    CheckImmOperand<2, 0>
                  ]>>;
 
+// Fuse add followed by a load (lb, lh, lw, ld, lbu, lhu, lwu):
+//   add rd, rs1, rs2
+//   load rd, 0(rd)
+def TuneADDLoadFusion
+  : SimpleFusion<"add-load-fusion", "HasADDLoadFusion", "Enable ADD + load macrofusion",
+                 CheckOpcode<[ADD]>,
+                 CheckAll<[
+                   CheckOpcode<[LB, LH, LW, LD, LBU, LHU, LWU]>,
+                   CheckIsImmOperand<2>,
+                   CheckImmOperand<2, 0>
+                 ]>>;
+
 // Fuse AUIPC followed by LD:
 //   auipc rd, imm20
 //   ld rd, imm12(rd)
@@ -156,8 +168,8 @@ def TuneADDILWFusion
                  CheckOpcode<[ADDI]>,
                  CheckOpcode<[LW]>>;
 
-// Fuse ADDUW followed by LW
-//   adduw rd, rs1, rs2
+// Fuse ADD_UW followed by LW
+//   add.uw rd, rs1, rs2
 //   lw rd, imm12(rd)
 def TuneADDUWLWFusion
   : SimpleFusion<"adduw-lw-fusion", "HasADDUWLWFusion",
@@ -165,20 +177,20 @@ def TuneADDUWLWFusion
                  CheckOpcode<[ADD_UW]>,
                  CheckOpcode<[LW]>>;
 
-// Fuse SHXADD followed by a load (lb, lh, lw, ld)
+// Fuse SHXADD followed by a load (lb, lh, lw, ld, lbu, lhu, lwu)
 //   shXadd rd, rs1, rs2
 //   load rd, imm12(rd)
 def TuneSHXADDLoadFusion
   : SimpleFusion<"shxadd-load-fusion", "HasSHXADDLoadFusion",
                  "Enable SH(1|2|3)ADD + load macrofusion",
                  CheckOpcode<[SH1ADD, SH2ADD, SH3ADD]>,
-                 CheckOpcode<[LB, LH, LW, LD]>>;
+                 CheckOpcode<[LB, LH, LW, LD, LBU, LHU, LWU]>>;
 
-// Fuse SHXADD.UW followed by a load (lb, lh, lw, ld)
+// Fuse SHXADD_UW followed by a load (lb, lh, lw, ld, lbu, lhu, lwu)
 //   shXadd.uw rd, rs1, rs2
 //   load rd, imm12(rd)
 def TuneSHXADDUWLoadFusion
   : SimpleFusion<"shxadduw-load-fusion", "HasSHXADDUWLoadFusion",
                  "Enable SH(1|2|3)ADDUW + load macrofusion",
                  CheckOpcode<[SH1ADD_UW, SH2ADD_UW, SH3ADD_UW]>,
-                 CheckOpcode<[LB, LH, LW, LD]>>;
+                 CheckOpcode<[LB, LH, LW, LD, LBU, LHU, LWU]>>;
