@@ -28,11 +28,11 @@
 # CHECK-NEXT: pcalau12i $a5, 2
 # CHECK-NEXT: ld.d      $a5, $a6, -2048
 
-# RUN: ld.lld a.o -T underflow-range.t -o a
-# RUN: llvm-objdump -d --no-show-raw-insn a | FileCheck --check-prefix=OUTRANGE %s
+# RUN: ld.lld a.o -T underflow-range.t -o a-underflow
+# RUN: llvm-objdump -d --no-show-raw-insn a-underflow | FileCheck --check-prefix=OUTRANGE %s
 
-# RUN: ld.lld a.o -T overflow-range.t -o a
-# RUN: llvm-objdump -d --no-show-raw-insn a | FileCheck --check-prefix=OUTRANGE %s
+# RUN: ld.lld a.o -T overflow-range.t -o a-overflow
+# RUN: llvm-objdump -d --no-show-raw-insn a-overflow | FileCheck --check-prefix=OUTRANGE %s
 
 # OUTRANGE:      pcalau12i $a0, 1
 # OUTRANGE-NEXT: ld.d      $a0, $a0, 0
@@ -44,7 +44,7 @@
 # UNPAIRED:         pcalau12i $a0, 2
 # UNPAIRED-NEXT:    b         8
 # UNPAIRED-NEXT:    pcalau12i $a0, 2
-# UNPAIRED:    ld.d      $a0, $a0, -2048
+# UNPAIRED:         ld.d      $a0, $a0, -2048
 
 ## Relocations do not appear in pairs, no relaxations should be applied.
 # RUN: ld.lld lone-ldr.o -T within-range.t -o lone-ldr
@@ -84,11 +84,8 @@ SECTIONS {
 SECTIONS {
  .text   0x1000: { *(.text) }
  .got    0x2000: { *(.got) }
- .rodate 0x80000800 : { *(.rodata) }  /* 0x1000+2GB-0x800 */
+ .rodata 0x80000800 : { *(.rodata) }  /* 0x1000+2GB-0x800 */
 }
-
-## This linker script ensures that .rodata and .text are sufficiently (>4GB)
-## far apart so that the pcalau12i + ld pair cannot be relaxed to pcalau12i + add.
 
 #--- a.s
 ## Symbol 'x' is nonpreemptible, the optimization should be applied.
