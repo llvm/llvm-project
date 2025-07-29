@@ -98,7 +98,6 @@ void registerTestDiagnosticsMetadataPass();
 void registerTestDominancePass();
 void registerTestDynamicPipelinePass();
 void registerTestEmulateNarrowTypePass();
-void registerTestExpandMathPass();
 void registerTestFooAnalysisPass();
 void registerTestComposeSubView();
 void registerTestMultiBuffering();
@@ -245,7 +244,6 @@ void registerTestPasses() {
   mlir::test::registerTestDominancePass();
   mlir::test::registerTestDynamicPipelinePass();
   mlir::test::registerTestEmulateNarrowTypePass();
-  mlir::test::registerTestExpandMathPass();
   mlir::test::registerTestFooAnalysisPass();
   mlir::test::registerTestComposeSubView();
   mlir::test::registerTestMultiBuffering();

@@ -353,6 +353,37 @@ def Math_CeilOp : Math_FloatUnaryOp<"ceil"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ClampFOp
+//===----------------------------------------------------------------------===//
+
+def Math_ClampFOp : Math_FloatTernaryOp<"clampf"> {
+  let summary = "floating point clamping operation";
+  let description = [{
+    The `clampf` operation takes three operands and returns one result, each of
+    these is required to be the same type. Operands must be of floating point type
+    (i.e., scalar, tensor or vector).
+
+    The semantics of the operation are described by:
+    ```
+      clampf(value, min, max) = maxf(minf(value, min), max)
+    ```
+
+    Example:
+
+    ```mlir
+    %d = math.clampf %value to [%min, %max] : f64
+    ```
+  }];
+  let arguments = (ins FloatLike:$value, FloatLike:$min, FloatLike:$max,
+      DefaultValuedAttr<Arith_FastMathAttr,
+                        "::mlir::arith::FastMathFlags::none">:$fastmath);
+  let assemblyFormat = [{
+    $value `to` ` ` `[` $min `,` $max `]` (`fastmath` `` $fastmath^)?
+    attr-dict `:` type($result)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // CopySignOp
 //===----------------------------------------------------------------------===//
 
