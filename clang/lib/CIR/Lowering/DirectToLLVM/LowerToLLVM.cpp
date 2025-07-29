@@ -932,7 +932,7 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
           fn.getFunctionType());
       assert(llvmFnTy && "Failed to convert function type");
     } else if (auto alias = mlir::cast<mlir::LLVM::AliasOp>(callee)) {
-      // If the callee wasan alias. In that case,
+      // If the callee was an alias. In that case,
       // we need to prepend the address of the alias to the operands. The
       // way aliases work in the LLVM dialect is a little counter-intuitive.
       // The AliasOp itself is a pseudo-function that returns the address of
