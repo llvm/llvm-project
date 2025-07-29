@@ -250,7 +250,10 @@ bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
 Printable llvm::print(const GCNRegPressure &RP, const GCNSubtarget *ST,
                       unsigned DynamicVGPRBlockSize,
                       const MachineFunction *MF) {
-  unsigned ArchVGPRThreshold = ST->getMaxNumVectorRegs(MF->getFunction()).first;
+  unsigned ArchVGPRThreshold = std::numeric_limits<unsigned int>::max();
+  if (ST && MF)
+    ArchVGPRThreshold = ST->getMaxNumVectorRegs(MF->getFunction()).first;
+
   return Printable(
       [&RP, ST, DynamicVGPRBlockSize, ArchVGPRThreshold, MF](raw_ostream &OS) {
         OS << "VGPRs: " << RP.getArchVGPRNum(ArchVGPRThreshold) << ' '
