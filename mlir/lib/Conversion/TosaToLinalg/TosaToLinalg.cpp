@@ -569,10 +569,9 @@ static Value createLinalgBodyCalculationForElementwiseOp(
     // to UIToFP.
     if (srcTy.isUnsignedInteger() && isa<FloatType>(dstTy)) {
       auto unrealizedCast =
-          rewriter
-              .create<UnrealizedConversionCastOp>(
-                  loc, rewriter.getIntegerType(srcTy.getIntOrFloatBitWidth()),
-                  args[0])
+          UnrealizedConversionCastOp::create(
+              rewriter, loc,
+              rewriter.getIntegerType(srcTy.getIntOrFloatBitWidth()), args[0])
               .getResult(0);
       return arith::UIToFPOp::create(rewriter, loc, resultTypes[0],
                                      unrealizedCast);
@@ -868,14 +867,13 @@ static Value broadcastDynamicDimension(PatternRewriter &rewriter, Location loc,
 
     // Emit 'linalg.generic' op
     auto resultTensor =
-        opBuilder
-            .create<linalg::GenericOp>(
-                loc, outputTensor.getType(), operand, outputTensor, affineMaps,
-                getNParallelLoopsAttrs(rank),
-                [&](OpBuilder &opBuilder, Location loc, ValueRange blockArgs) {
-                  // Emit 'linalg.yield' op
-                  linalg::YieldOp::create(opBuilder, loc, blockArgs.front());
-                })
+        linalg::GenericOp::create(
+            opBuilder, loc, outputTensor.getType(), operand, outputTensor,
+            affineMaps, getNParallelLoopsAttrs(rank),
+            [&](OpBuilder &opBuilder, Location loc, ValueRange blockArgs) {
+              // Emit 'linalg.yield' op
+              linalg::YieldOp::create(opBuilder, loc, blockArgs.front());
+            })
             .getResult(0);
 
     // Cast to original operand type if necessary
@@ -1155,11 +1153,9 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
   inputs.push_back(input);
 
   // First fill the output buffer with the init value.
-  auto emptyTensor =
-      rewriter
-          .create<tensor::EmptyOp>(loc, reduceShape, resultTy.getElementType(),
-                                   dynDims)
-          .getResult();
+  auto emptyTensor = tensor::EmptyOp::create(rewriter, loc, reduceShape,
+                                             resultTy.getElementType(), dynDims)
+                         .getResult();
 
   auto fillValueAttr = createInitialValueForReduceOp(op, elementTy, rewriter);
   if (!fillValueAttr)
@@ -1167,10 +1163,10 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
         op, "No initial value found for reduction operation");
 
   auto fillValue = arith::ConstantOp::create(rewriter, loc, fillValueAttr);
-  auto filledTensor = rewriter
-                          .create<linalg::FillOp>(loc, ValueRange{fillValue},
-                                                  ValueRange{emptyTensor})
-                          .result();
+  auto filledTensor =
+      linalg::FillOp::create(rewriter, loc, ValueRange{fillValue},
+                             ValueRange{emptyTensor})
+          .result();
   outputs.push_back(filledTensor);
 
   bool isNanIgnoreMode = false;
@@ -1186,14 +1182,12 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
       auto trueAttr = rewriter.getBoolAttr(true);
       auto trueValue = arith::ConstantOp::create(rewriter, loc, trueAttr);
       auto emptyBoolTensor =
-          rewriter
-              .create<tensor::EmptyOp>(loc, reduceShape, trueValue.getType(),
-                                       dynDims)
+          tensor::EmptyOp::create(rewriter, loc, reduceShape,
+                                  trueValue.getType(), dynDims)
               .getResult();
       auto allResultsNaNTensor =
-          rewriter
-              .create<linalg::FillOp>(loc, ValueRange{trueValue},
-                                      ValueRange{emptyBoolTensor})
+          linalg::FillOp::create(rewriter, loc, ValueRange{trueValue},
+                                 ValueRange{emptyBoolTensor})
               .result();
       // Note that because the linalg::ReduceOp has two variadic arguments
       // (inputs and outputs) and it has the SameVariadicOperandSize trait we
@@ -1261,22 +1255,19 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
         APFloat::getNaN(cast<FloatType>(elementTy).getFloatSemantics(), false));
     auto nanValue = arith::ConstantOp::create(rewriter, loc, nanValueAttr);
     auto emptyNanTensor =
-        rewriter
-            .create<tensor::EmptyOp>(loc, reduceShape,
-                                     resultTy.getElementType(), dynDims)
+        tensor::EmptyOp::create(rewriter, loc, reduceShape,
+                                resultTy.getElementType(), dynDims)
             .getResult();
     auto nanFilledTensor =
-        rewriter
-            .create<linalg::FillOp>(loc, ValueRange{nanValue},
-                                    ValueRange{emptyNanTensor})
+        linalg::FillOp::create(rewriter, loc, ValueRange{nanValue},
+                               ValueRange{emptyNanTensor})
             .result();
 
     // Create an empty tensor, non need to fill this since it will be
     // overwritten by the select.
     auto finalEmptyTensor =
-        rewriter
-            .create<tensor::EmptyOp>(loc, reduceShape,
-                                     resultTy.getElementType(), dynDims)
+        tensor::EmptyOp::create(rewriter, loc, reduceShape,
+                                resultTy.getElementType(), dynDims)
             .getResult();
 
     // Do a selection between the tensors akin to:
@@ -1503,12 +1494,11 @@ public:
           Value shift = shiftConstant ? shiftConstant : blockArgs[shiftArg];
 
           if (valueTy.isUnsignedInteger()) {
-            value = nestedBuilder
-                        .create<UnrealizedConversionCastOp>(
-                            nestedLoc,
-                            nestedBuilder.getIntegerType(
-                                valueTy.getIntOrFloatBitWidth()),
-                            value)
+            value = UnrealizedConversionCastOp::create(
+                        nestedBuilder, nestedLoc,
+                        nestedBuilder.getIntegerType(
+                            valueTy.getIntOrFloatBitWidth()),
+                        value)
                         .getResult(0);
           }
           if (valueTy.getIntOrFloatBitWidth() < 32) {
@@ -1557,9 +1547,8 @@ public:
           }
 
           if (outIntType.isUnsignedInteger()) {
-            value = nestedBuilder
-                        .create<UnrealizedConversionCastOp>(nestedLoc,
-                                                            outIntType, value)
+            value = UnrealizedConversionCastOp::create(nestedBuilder, nestedLoc,
+                                                       outIntType, value)
                         .getResult(0);
           }
           linalg::YieldOp::create(nestedBuilder, loc, value);
@@ -2095,10 +2084,9 @@ public:
     Value axisDimSize = tensor::DimOp::create(rewriter, loc, input, axis);
 
     // First fill the output buffer with the init value.
-    auto emptyTensor = rewriter
-                           .create<tensor::EmptyOp>(loc, inputTy.getShape(),
-                                                    inputTy.getElementType(),
-                                                    ArrayRef<Value>({dynDims}))
+    auto emptyTensor = tensor::EmptyOp::create(
+                           rewriter, loc, inputTy.getShape(),
+                           inputTy.getElementType(), ArrayRef<Value>({dynDims}))
                            .getResult();
     SmallVector<AffineMap, 2> affineMaps = {
         rewriter.getMultiDimIdentityMap(resultTy.getRank())};
@@ -2241,23 +2229,22 @@ public:
     }
 
     // First fill the output buffer for the index.
-    auto emptyTensorIdx = rewriter
-                              .create<tensor::EmptyOp>(loc, resultTy.getShape(),
-                                                       outElementTy, dynDims)
-                              .getResult();
+    auto emptyTensorIdx =
+        tensor::EmptyOp::create(rewriter, loc, resultTy.getShape(),
+                                outElementTy, dynDims)
+            .getResult();
     auto fillValueIdx = arith::ConstantOp::create(
         rewriter, loc, rewriter.getIntegerAttr(outElementTy, 0));
     auto filledTensorIdx =
-        rewriter
-            .create<linalg::FillOp>(loc, ValueRange{fillValueIdx},
-                                    ValueRange{emptyTensorIdx})
+        linalg::FillOp::create(rewriter, loc, ValueRange{fillValueIdx},
+                               ValueRange{emptyTensorIdx})
             .result();
 
     // Second fill the output buffer for the running max.
-    auto emptyTensorMax = rewriter
-                              .create<tensor::EmptyOp>(loc, resultTy.getShape(),
-                                                       inElementTy, dynDims)
-                              .getResult();
+    auto emptyTensorMax =
+        tensor::EmptyOp::create(rewriter, loc, resultTy.getShape(), inElementTy,
+                                dynDims)
+            .getResult();
     auto fillValueMaxAttr =
         createInitialValueForReduceOp(argmaxOp, inElementTy, rewriter);
 
@@ -2268,9 +2255,8 @@ public:
     auto fillValueMax =
         arith::ConstantOp::create(rewriter, loc, fillValueMaxAttr);
     auto filledTensorMax =
-        rewriter
-            .create<linalg::FillOp>(loc, ValueRange{fillValueMax},
-                                    ValueRange{emptyTensorMax})
+        linalg::FillOp::create(rewriter, loc, ValueRange{fillValueMax},
+                               ValueRange{emptyTensorMax})
             .result();
 
     // We need to reduce along the arg-max axis, with parallel operations along
@@ -2371,9 +2357,8 @@ public:
 
     auto loc = op.getLoc();
     auto emptyTensor =
-        rewriter
-            .create<tensor::EmptyOp>(loc, resultTy.getShape(), resultElementTy,
-                                     dynamicDims)
+        tensor::EmptyOp::create(rewriter, loc, resultTy.getShape(),
+                                resultElementTy, dynamicDims)
             .getResult();
 
     SmallVector<AffineMap, 2> affineMaps = {
@@ -2448,10 +2433,10 @@ public:
       }
     }
 
-    auto emptyTensor = rewriter
-                           .create<tensor::EmptyOp>(loc, resultTy.getShape(),
-                                                    resultElementTy, dynDims)
-                           .getResult();
+    auto emptyTensor =
+        tensor::EmptyOp::create(rewriter, loc, resultTy.getShape(),
+                                resultElementTy, dynDims)
+            .getResult();
 
     SmallVector<AffineMap, 2> affineMaps = {
         rewriter.getMultiDimIdentityMap(resultTy.getRank()),
@@ -2585,10 +2570,10 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
         tensor::EmptyOp::create(rewriter, loc, type, dynamicSizes);
     auto fillValueAttr = rewriter.getZeroAttr(type.getElementType());
     auto fillValue = arith::ConstantOp::create(rewriter, loc, fillValueAttr);
-    auto filledTensor = rewriter
-                            .create<linalg::FillOp>(loc, ValueRange{fillValue},
-                                                    ValueRange{emptyTensor})
-                            .result();
+    auto filledTensor =
+        linalg::FillOp::create(rewriter, loc, ValueRange{fillValue},
+                               ValueRange{emptyTensor})
+            .result();
     return filledTensor;
   }
 
