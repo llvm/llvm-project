@@ -197,7 +197,8 @@ static std::pair<parser::CharBlock, parser::CharBlock> SplitAssignmentSource(
 }
 
 static bool IsCheckForAssociated(const SomeExpr &cond) {
-  return GetTopLevelOperation(cond).first == operation::Operator::Associated;
+  return GetTopLevelOperationIgnoreResizing(cond).first ==
+      operation::Operator::Associated;
 }
 
 static bool IsMaybeAtomicWrite(const evaluate::Assignment &assign) {
@@ -607,7 +608,7 @@ void OmpStructureChecker::CheckAtomicUpdateAssignment(
   std::pair<operation::Operator, std::vector<SomeExpr>> top{
       operation::Operator::Unknown, {}};
   if (auto &&maybeInput{GetConvertInput(update.rhs)}) {
-    top = GetTopLevelOperation(*maybeInput);
+    top = GetTopLevelOperationIgnoreResizing(*maybeInput);
   }
   switch (top.first) {
   case operation::Operator::Add:
@@ -715,7 +716,7 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateAssignment(
 
   CheckAtomicVariable(atom, alsrc);
 
-  auto top{GetTopLevelOperation(cond)};
+  auto top{GetTopLevelOperationIgnoreResizing(cond)};
   // Missing arguments to operations would have been diagnosed by now.
 
   switch (top.first) {

@@ -84,7 +84,7 @@ public:
 
 private:
   void CheckAtomicStmt(
-      const parser::AssignmentStmt &assign, std::string &construct);
+      const parser::AssignmentStmt &assign, const std::string &construct);
   void CheckAtomicUpdateStmt(const parser::AssignmentStmt &assign,
       const SomeExpr &updateVar, const SomeExpr *captureVar);
   void CheckAtomicCaptureStmt(const parser::AssignmentStmt &assign,

@@ -1809,8 +1809,13 @@ operation::Operator operation::OperationCode(const ProcedureDesignator &proc) {
 }
 
 std::pair<operation::Operator, std::vector<Expr<SomeType>>>
-GetTopLevelOperation(const Expr<SomeType> &expr) {
+GetTopLevelOperationIgnoreResizing(const Expr<SomeType> &expr) {
   return operation::ArgumentExtractor<true>{}(expr);
+}
+
+std::pair<operation::Operator, std::vector<Expr<SomeType>>>
+GetTopLevelOperation(const Expr<SomeType> &expr) {
+  return operation::ArgumentExtractor<false>{}(expr);
 }
 
 namespace operation {
@@ -1946,14 +1951,12 @@ struct VariableFinder : public evaluate::AnyTraverse<VariableFinder> {
 
   template <typename T>
   bool operator()(const evaluate::Designator<T> &x) const {
-    auto copy{x};
-    return evaluate::AsGenericExpr(std::move(copy)) == var;
+    return evaluate::AsGenericExpr(common::Clone(x)) == var;
   }
 
   template <typename T>
   bool operator()(const evaluate::FunctionRef<T> &x) const {
-    auto copy{x};
-    return evaluate::AsGenericExpr(std::move(copy)) == var;
+    return evaluate::AsGenericExpr(common::Clone(x)) == var;
   }
 
 private:
