@@ -6,31 +6,25 @@
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
 struct inline_operator {
-    operator int() const {
-        return 987;
-    }
+  operator int() const { return 987; }
 
-    int operator+(inline_operator) {
-        return 666;
-    }
+  int operator+(inline_operator) { return 666; }
 };
 
 struct out_of_line_operator {
-    operator int();
+  operator int();
 };
 
-out_of_line_operator::operator int() {
-    return 123;
-}
+out_of_line_operator::operator int() { return 123; }
 
 void test() {
-    int x = 42;
+  int x = 42;
 
-    inline_operator i;
-    x = i;
+  inline_operator i;
+  x = i;
 
-    out_of_line_operator o;
-    x = o;
+  out_of_line_operator o;
+  x = o;
 }
 
 // CIR: cir.func dso_local @_ZN20out_of_line_operatorcviEv(%[[THIS_ARG:.+]]: !cir.ptr<!rec_out_of_line_operator>{{.*}}) -> !s32i
