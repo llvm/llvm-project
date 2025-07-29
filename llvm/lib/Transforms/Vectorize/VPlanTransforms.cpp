@@ -2243,11 +2243,10 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   }
 
   // Try to optimize header mask recipes away to their EVL variants.
-  //
-  // TODO: Split this out and move into VPlanTransforms::optimize.
-  // transformRecipestoEVLRecipes should be run in tryToBuildVPlanWithVPRecipes
-  // beforehand.
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
+    // TODO: Split optimizeMaskToEVL out and move into
+    // VPlanTransforms::optimize. transformRecipestoEVLRecipes should be run in
+    // tryToBuildVPlanWithVPRecipes beforehand.
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       auto *CurRecipe = cast<VPRecipeBase>(U);
       VPRecipeBase *EVLRecipe =
