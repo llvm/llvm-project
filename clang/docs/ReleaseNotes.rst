@@ -387,6 +387,9 @@ Bug Fixes to Compiler Builtins
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- ``[[nodiscard]]`` is now respected on Objective-C and Objective-C++ methods.
+  (#GH141504)
+
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 - Diagnose binding a reference to ``*nullptr`` during constant evaluation. (#GH48665)

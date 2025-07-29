@@ -371,4 +371,4 @@ void doGccThings() {
   makeGccTrue(); // expected-warning {{ignoring return value of function declared with 'gnu::warn_unused_result' attribute}}
 }
 
-}
+} // namespace BuildStringOnClangScope
