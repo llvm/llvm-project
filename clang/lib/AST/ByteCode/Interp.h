@@ -481,13 +481,11 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
     Floating RA = S.allocFloat(A.getSemantics());
     RA.copy(ResR);
     Result.elem<Floating>(0) = RA; // Floating(ResR);
-    Result.atIndex(0).initialize();
 
     Floating RI = S.allocFloat(A.getSemantics());
     RI.copy(ResI);
     Result.elem<Floating>(1) = RI; // Floating(ResI);
-    Result.atIndex(1).initialize();
-    Result.initialize();
+    Result.initializeAllElements();
   } else {
     // Integer element type.
     const T &LHSR = LHS.elem<T>(0);
@@ -505,7 +503,6 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
       return false;
     if (T::sub(A, B, Bits, &Result.elem<T>(0)))
       return false;
-    Result.atIndex(0).initialize();
 
     // imag(Result) = (real(LHS) * imag(RHS)) + (imag(LHS) * real(RHS))
     if (T::mul(LHSR, RHSI, Bits, &A))
@@ -514,8 +511,8 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
       return false;
     if (T::add(A, B, Bits, &Result.elem<T>(1)))
       return false;
-    Result.atIndex(1).initialize();
     Result.initialize();
+    Result.initializeAllElements();
   }
 
   return true;
@@ -541,14 +538,12 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
     Floating RA = S.allocFloat(A.getSemantics());
     RA.copy(ResR);
     Result.elem<Floating>(0) = RA; // Floating(ResR);
-    Result.atIndex(0).initialize();
 
     Floating RI = S.allocFloat(A.getSemantics());
     RI.copy(ResI);
     Result.elem<Floating>(1) = RI; // Floating(ResI);
-    Result.atIndex(1).initialize();
 
-    Result.initialize();
+    Result.initializeAllElements();
   } else {
     // Integer element type.
     const T &LHSR = LHS.elem<T>(0);
@@ -590,7 +585,6 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
       return false;
     if (T::div(ResultR, Den, Bits, &ResultR))
       return false;
-    Result.atIndex(0).initialize();
 
     // imag(Result) = ((imag(LHS) * real(RHS)) - (real(LHS) * imag(RHS))) / Den
     if (T::mul(LHSI, RHSR, Bits, &A) || T::mul(LHSR, RHSI, Bits, &B))
@@ -599,8 +593,7 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
       return false;
     if (T::div(ResultI, Den, Bits, &ResultI))
       return false;
-    Result.atIndex(1).initialize();
-    Result.initialize();
+    Result.initializeAllElements();
   }
 
   return true;

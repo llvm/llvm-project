@@ -495,6 +495,19 @@ void Pointer::initialize() const {
   getInlineDesc()->IsInitialized = true;
 }
 
+void Pointer::initializeAllElements() const {
+  assert(getFieldDesc()->isPrimitiveArray());
+  assert(isArrayRoot());
+
+  InitMapPtr &IM = getInitMap();
+  if (!IM) {
+    IM = std::make_pair(true, nullptr);
+  } else {
+    IM->first = true;
+    IM->second.reset();
+  }
+}
+
 void Pointer::activate() const {
   // Field has its bit in an inline descriptor.
   assert(PointeeStorage.BS.Base != 0 &&
