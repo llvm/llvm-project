@@ -1797,6 +1797,33 @@ static void applyOverrideOptions(std::vector<std::string> &args,
   args = new_args;
 }
 
+/// Set PCM validation. This needs to happen before ClangImporter is created but
+/// after m_has_explicit_modules has been initialized.
+void SwiftASTContext::ConfigureModuleValidation(
+    std::vector<std::string> &extra_args) {
+  // Read the setting.
+  AutoBool validate_pcm_setting = AutoBool::Auto;
+  TargetSP target_sp = GetTargetWP().lock();
+  if (target_sp)
+    validate_pcm_setting = target_sp->GetSwiftPCMValidation();
+
+  // If validation is explicitly enabled, honor it.
+  bool validate_pcm = validate_pcm_setting == AutoBool::True;
+  if (validate_pcm_setting == AutoBool::Auto) {
+    // Disable validation for explicit modules.
+    validate_pcm = m_has_explicit_modules ? false : true;
+    // Enable validation in asserts builds.
+#ifndef NDEBUG
+    validate_pcm = true;
+#endif
+  }
+
+  if (!validate_pcm) {
+    extra_args.push_back("-fno-modules-check-relocated");
+    LOG_PRINTF(GetLog(LLDBLog::Types), "PCM validation is disabled");
+  }
+}
+
 void SwiftASTContext::AddExtraClangArgs(
     const std::vector<std::string> &ExtraArgs,
     const std::vector<std::pair<std::string, bool>> module_search_paths,
@@ -1809,6 +1836,7 @@ void SwiftASTContext::AddExtraClangArgs(
         llvm::any_of(importer_options.ExtraArgs, [](const std::string &arg) {
           return StringRef(arg).starts_with("-fmodule-file=");
         });
+    ConfigureModuleValidation(importer_options.ExtraArgs);
   });
 
   if (ExtraArgs.empty())
@@ -1944,6 +1972,7 @@ void SwiftASTContext::AddExtraClangCC1Args(
   // If cc1 arguments are parsed and generated correctly, set explicitly-built
   // module since only explicit module build can use direct cc1 mode.
   m_has_explicit_modules = true;
+  ConfigureModuleValidation(dest);
   return;
 }
 
@@ -9265,39 +9294,6 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
   if (cu_imports.size() == 0)
     return true;
 
-  // Set PCM validation. This is not a great place to do this, but it
-  // needs to happen after ClangImporter was created and
-  // m_has_explicit_modules has been initialized.
-  {
-    // Read the setting.
-    AutoBool validate_pcm_setting = AutoBool::Auto;
-    TargetSP target_sp = GetTargetWP().lock();
-    if (target_sp)
-      validate_pcm_setting = target_sp->GetSwiftPCMValidation();
-
-    // If the setting is explicit, honor it.
-    bool validate_pcm = validate_pcm_setting != AutoBool::False;
-    if (validate_pcm_setting == AutoBool::Auto) {
-      // Disable validation for explicit modules.
-      validate_pcm = m_has_explicit_modules ? false : true;
-      // Enable validation in asserts builds.
-#ifndef NDEBUG
-      validate_pcm = true;
-#endif
-    }
-
-    const auto &pp_opts =
-        m_clangimporter->getClangPreprocessor().getPreprocessorOpts();
-    // rdar://155232969
-    // pp_opts.DisablePCHOrModuleValidation =
-    //     validate_pcm ? clang::DisableValidationForModuleKind::None
-    //                  : clang::DisableValidationForModuleKind::All;
-    // pp_opts.ModulesCheckRelocated = validate_pcm;
-
-    if (!validate_pcm)
-      LOG_PRINTF(GetLog(LLDBLog::Types), "PCM validation cannot be disabled");
-  }
-  
   LOG_PRINTF(GetLog(LLDBLog::Types), "Importing dependencies of current CU");
   
   std::string category = "Importing Swift module dependencies for ";
