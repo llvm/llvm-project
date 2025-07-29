@@ -58,16 +58,19 @@ function(llvm_process_sources OUT_VAR)
   set(sources ${ARG_UNPARSED_ARGUMENTS})
   llvm_check_source_file_list(${sources})
 
-  foreach(fn ${sources})
-    get_filename_component(suf ${fn} EXT)
-    if("${suf}" STREQUAL ".cpp" OR "${suf}" STREQUAL ".c")
-      get_filename_component(short_name ${fn} NAME)
-      set_property(
-          SOURCE ${fn}
-          APPEND
-          PROPERTY COMPILE_DEFINITIONS __SHORT_FILE__="${short_name}")
-    endif()
-  endforeach()
+  # Don't generate __SHORT_FILE__ on MSVC builds as it can force repeated cache regeneration.
+  if(NOT MSVC)
+    foreach(fn ${sources})
+      get_filename_component(suf ${fn} EXT)
+      if("${suf}" STREQUAL ".cpp" OR "${suf}" STREQUAL ".c")
+        get_filename_component(short_name ${fn} NAME)
+        set_property(
+            SOURCE ${fn}
+            APPEND
+            PROPERTY COMPILE_DEFINITIONS __SHORT_FILE__="${short_name}")
+      endif()
+    endforeach()
+  endif()
 
 
   # This adds .td and .h files to the Visual Studio solution:
