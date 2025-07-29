@@ -4772,6 +4772,11 @@ ExprResult Sema::CheckVarOrConceptTemplateTemplateId(
 
   UnresolvedSet<1> R;
   R.addDecl(Template);
+
+  // FIXME: We model references to variable template and concept parameters
+  // as an UnresolvedLookupExpr. This is because they encapsulate the same
+  // data, can generally be used in the same places and work the same way.
+  // However, it might be cleaner to use a dedicated AST node in the long run.
   return UnresolvedLookupExpr::Create(
       getASTContext(), nullptr, SS.getWithLocInContext(getASTContext()),
       SourceLocation(), NameInfo, false, TemplateArgs, R.begin(), R.end(),
