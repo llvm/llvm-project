@@ -14,15 +14,14 @@
 
 using LlvmLibcSchedGetCpuTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST(LlvmLibcSchedGetCpuTest, SmokeTest) {
+TEST_F(LlvmLibcSchedGetCpuTest, SmokeTest) {
   unsigned int current_cpu;
   unsigned int current_node;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   ASSERT_THAT(LIBC_NAMESPACE::getcpu(&current_cpu, &current_node), Succeeds(0));
-  ASSERT_ERRNO_SUCCESS();
 }
 
-TEST(LlvmLibcSchedGetCpuTest, BadPointer) {
+TEST_F(LlvmLibcSchedGetCpuTest, BadPointer) {
   unsigned int current_cpu;
   unsigned int *current_node = reinterpret_cast<unsigned int *>(-1);
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
