@@ -26,7 +26,7 @@ add_distinct_clang_unittest(ClangReplInterpreterTests
   TargetParser
   )
 
-if(TARGET llvm-jitlink-executor AND TARGET compiler-rt)
+if(NOT WIN32)
   add_dependencies(ClangReplInterpreterTests
     llvm-jitlink-executor
     compiler-rt
