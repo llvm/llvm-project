@@ -9166,11 +9166,12 @@ getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
 }
 
 /// Check if extracts are cheaper than the original scalars.
-static bool areExtractsCheaperThanScalars(
-    TargetTransformInfo &TTI, Type *UserScalarTy, VectorType *UserVecTy,
-    const APInt &DemandedElts, const InstructionCost UserScalarsCost,
-    Type *ScalarTy, unsigned VF, ArrayRef<int> Mask,
-    const llvm::function_ref<InstructionCost()> GetUserEntryCost) {
+static bool
+areExtractsCheaperThanScalars(TargetTransformInfo &TTI, Type *UserScalarTy,
+                              VectorType *UserVecTy, const APInt &DemandedElts,
+                              const InstructionCost UserScalarsCost,
+                              Type *ScalarTy, unsigned VF, ArrayRef<int> Mask,
+                              InstructionCost UserEntryCost) {
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   // If extracts are cheaper than the original scalars - success.
   InstructionCost ExtractCost =
@@ -9178,9 +9179,8 @@ static bool areExtractsCheaperThanScalars(
                                  /*Insert=*/false, /*Extract=*/true, CostKind);
   if (ExtractCost <= UserScalarsCost)
     return true;
-  InstructionCost NodeCost = GetUserEntryCost();
   // The node is profitable for vectorization - success.
-  if (ExtractCost <= NodeCost)
+  if (ExtractCost <= UserEntryCost)
     return true;
   auto *VecTy = getWidenedType(ScalarTy, VF);
   InstructionCost ScalarsCost =
@@ -9244,12 +9244,12 @@ bool BoUpSLP::isProfitableToVectorizeWithNonVecUsers(
     return true;
 
   // User extracts are cheaper than user scalars + immediate scalars - success.
-  return areExtractsCheaperThanScalars(
-      *TTI, UserScalarTy, UserVecTy, DemandedElts, UserScalarsCost, ScalarTy,
-      VL.size(), Mask, [&]() {
-        SmallPtrSet<Value *, 4> CheckedExtracts;
-        return getEntryCost(UserTreeIdx.UserTE, {}, CheckedExtracts);
-      });
+  SmallPtrSet<Value *, 4> CheckedExtracts;
+  InstructionCost UserEntryCost =
+      getEntryCost(UserTreeIdx.UserTE, {}, CheckedExtracts);
+  return areExtractsCheaperThanScalars(*TTI, UserScalarTy, UserVecTy,
+                                       DemandedElts, UserScalarsCost, ScalarTy,
+                                       VL.size(), Mask, UserEntryCost);
 }
 
 BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
