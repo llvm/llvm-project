@@ -296,8 +296,7 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
     return nullptr;
   }
 
-  ExprResult ConstraintExprResult =
-      Actions.CorrectDelayedTyposInExpr(ParseConstraintExpression());
+  ExprResult ConstraintExprResult = ParseConstraintExpression();
   if (ConstraintExprResult.isInvalid()) {
     SkipUntil(tok::semi);
     if (D)
@@ -1319,8 +1318,8 @@ ParsedTemplateArgument Parser::ParseTemplateArgument() {
   if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace))
     ExprArg = ParseBraceInitializer();
   else
-    ExprArg =
-        ParseConstantExpressionInExprEvalContext(TypeCastState::MaybeTypeCast);
+    ExprArg = ParseConstantExpressionInExprEvalContext(
+        TypoCorrectionTypeBehavior::AllowBoth);
   if (ExprArg.isInvalid() || !ExprArg.get()) {
     return ParsedTemplateArgument();
   }

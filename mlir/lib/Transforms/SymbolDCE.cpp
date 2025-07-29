@@ -14,6 +14,7 @@
 #include "mlir/Transforms/Passes.h"
 
 #include "mlir/IR/SymbolTable.h"
+#include "llvm/Support/Debug.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_SYMBOLDCE
@@ -21,6 +22,8 @@ namespace mlir {
 } // namespace mlir
 
 using namespace mlir;
+
+#define DEBUG_TYPE "symbol-dce"
 
 namespace {
 struct SymbolDCE : public impl::SymbolDCEBase<SymbolDCE> {
@@ -84,6 +87,8 @@ LogicalResult SymbolDCE::computeLiveness(Operation *symbolTableOp,
                                          SymbolTableCollection &symbolTable,
                                          bool symbolTableIsHidden,
                                          DenseSet<Operation *> &liveSymbols) {
+  LLVM_DEBUG(llvm::dbgs() << "computeLiveness: " << symbolTableOp->getName()
+                          << "\n");
   // A worklist of live operations to propagate uses from.
   SmallVector<Operation *, 16> worklist;
 
@@ -105,9 +110,13 @@ LogicalResult SymbolDCE::computeLiveness(Operation *symbolTableOp,
   }
 
   // Process the set of symbols that were known to be live, adding new symbols
-  // that are referenced within.
+  // that are referenced within. For operations that are not symbol tables, it
+  // considers the liveness with respect to the op itself rather than scope of
+  // nested symbol tables by enqueuing all the top level operations for
+  // consideration.
   while (!worklist.empty()) {
     Operation *op = worklist.pop_back_val();
+    LLVM_DEBUG(llvm::dbgs() << "processing: " << op->getName() << "\n");
 
     // If this is a symbol table, recursively compute its liveness.
     if (op->hasTrait<OpTrait::SymbolTable>()) {
@@ -115,26 +124,56 @@ LogicalResult SymbolDCE::computeLiveness(Operation *symbolTableOp,
       // symbol, or if it is a private symbol.
       SymbolOpInterface symbol = dyn_cast<SymbolOpInterface>(op);
       bool symIsHidden = symbolTableIsHidden || !symbol || symbol.isPrivate();
+      LLVM_DEBUG(llvm::dbgs() << "\tsymbol table: " << op->getName()
+                              << " is hidden: " << symIsHidden << "\n");
       if (failed(computeLiveness(op, symbolTable, symIsHidden, liveSymbols)))
         return failure();
+    } else {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "\tnon-symbol table: " << op->getName() << "\n");
+      // If the op is not a symbol table, then, unless op itself is dead which
+      // would be handled by DCE, we need to check all the regions and blocks
+      // within the op to find the uses (e.g., consider visibility within op as
+      // if top level rather than relying on pure symbol table visibility). This
+      // is more conservative than SymbolTable::walkSymbolTables in the case
+      // where there is again SymbolTable information to take advantage of.
+      for (auto &region : op->getRegions())
+        for (auto &block : region.getBlocks())
+          for (Operation &op : block)
+            if (op.getNumRegions())
+              worklist.push_back(&op);
     }
+
+    // Get the first parent symbol table op. Note: due to enqueueing of
+    // top-level ops, we may not have a symbol table parent here, but if we do
+    // not, then we also don't have a symbol.
+    Operation *parentOp = op->getParentOp();
+    if (!parentOp->hasTrait<OpTrait::SymbolTable>())
+      continue;
 
     // Collect the uses held by this operation.
     std::optional<SymbolTable::UseRange> uses = SymbolTable::getSymbolUses(op);
     if (!uses) {
       return op->emitError()
-             << "operation contains potentially unknown symbol table, "
-                "meaning that we can't reliable compute symbol uses";
+             << "operation contains potentially unknown symbol table, meaning "
+             << "that we can't reliable compute symbol uses";
     }
 
     SmallVector<Operation *, 4> resolvedSymbols;
+    LLVM_DEBUG(llvm::dbgs() << "uses of " << op->getName() << "\n");
     for (const SymbolTable::SymbolUse &use : *uses) {
+      LLVM_DEBUG(llvm::dbgs() << "\tuse: " << use.getUser() << "\n");
       // Lookup the symbols referenced by this use.
       resolvedSymbols.clear();
-      if (failed(symbolTable.lookupSymbolIn(
-              op->getParentOp(), use.getSymbolRef(), resolvedSymbols)))
+      if (failed(symbolTable.lookupSymbolIn(parentOp, use.getSymbolRef(),
+                                            resolvedSymbols)))
         // Ignore references to unknown symbols.
         continue;
+      LLVM_DEBUG({
+        llvm::dbgs() << "\t\tresolved symbols: ";
+        llvm::interleaveComma(resolvedSymbols, llvm::dbgs());
+        llvm::dbgs() << "\n";
+      });
 
       // Mark each of the resolved symbols as live.
       for (Operation *resolvedSymbol : resolvedSymbols)

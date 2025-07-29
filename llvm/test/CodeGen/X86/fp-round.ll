@@ -52,7 +52,7 @@ define half @round_f16(half %h) {
 ; AVX512F:       # %bb.0: # %entry
 ; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512F-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
-; AVX512F-NEXT:    vpternlogd {{.*#+}} xmm1 = xmm1 | (xmm0 & mem)
+; AVX512F-NEXT:    vpternlogd {{.*#+}} xmm1 = xmm1 | (xmm0 & m32bcst)
 ; AVX512F-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
@@ -98,7 +98,7 @@ define float @round_f32(float %x) {
 ; AVX512F-LABEL: round_f32:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
-; AVX512F-NEXT:    vpternlogd {{.*#+}} xmm1 = xmm1 | (xmm0 & mem)
+; AVX512F-NEXT:    vpternlogd {{.*#+}} xmm1 = xmm1 | (xmm0 & m32bcst)
 ; AVX512F-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    retq
@@ -106,7 +106,7 @@ define float @round_f32(float %x) {
 ; AVX512FP16-LABEL: round_f32:
 ; AVX512FP16:       ## %bb.0:
 ; AVX512FP16-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
-; AVX512FP16-NEXT:    vpternlogd {{.*#+}} xmm1 = xmm1 | (xmm0 & mem)
+; AVX512FP16-NEXT:    vpternlogd {{.*#+}} xmm1 = xmm1 | (xmm0 & m32bcst)
 ; AVX512FP16-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX512FP16-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; AVX512FP16-NEXT:    retq
@@ -142,7 +142,7 @@ define double @round_f64(double %x) {
 ; AVX512F-LABEL: round_f64:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4.9999999999999994E-1,4.9999999999999994E-1]
-; AVX512F-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm1 | (xmm0 & mem)
+; AVX512F-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm1 | (xmm0 & m64bcst)
 ; AVX512F-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    retq
@@ -150,7 +150,7 @@ define double @round_f64(double %x) {
 ; AVX512FP16-LABEL: round_f64:
 ; AVX512FP16:       ## %bb.0:
 ; AVX512FP16-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4.9999999999999994E-1,4.9999999999999994E-1]
-; AVX512FP16-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm1 | (xmm0 & mem)
+; AVX512FP16-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm1 | (xmm0 & m64bcst)
 ; AVX512FP16-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX512FP16-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm0
 ; AVX512FP16-NEXT:    retq
@@ -208,7 +208,7 @@ define <4 x float> @round_v4f32(<4 x float> %x) {
 ; AVX512F-LABEL: round_v4f32:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
-; AVX512F-NEXT:    vpternlogd {{.*#+}} xmm1 = xmm1 | (xmm0 & mem)
+; AVX512F-NEXT:    vpternlogd {{.*#+}} xmm1 = xmm1 | (xmm0 & m32bcst)
 ; AVX512F-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vroundps $11, %xmm0, %xmm0
 ; AVX512F-NEXT:    retq
@@ -216,7 +216,7 @@ define <4 x float> @round_v4f32(<4 x float> %x) {
 ; AVX512FP16-LABEL: round_v4f32:
 ; AVX512FP16:       ## %bb.0:
 ; AVX512FP16-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
-; AVX512FP16-NEXT:    vpternlogd {{.*#+}} xmm1 = xmm1 | (xmm0 & mem)
+; AVX512FP16-NEXT:    vpternlogd {{.*#+}} xmm1 = xmm1 | (xmm0 & m32bcst)
 ; AVX512FP16-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX512FP16-NEXT:    vroundps $11, %xmm0, %xmm0
 ; AVX512FP16-NEXT:    retq
@@ -262,7 +262,7 @@ define <2 x double> @round_v2f64(<2 x double> %x) {
 ; AVX512F-LABEL: round_v2f64:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4.9999999999999994E-1,4.9999999999999994E-1]
-; AVX512F-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm1 | (xmm0 & mem)
+; AVX512F-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm1 | (xmm0 & m64bcst)
 ; AVX512F-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vroundpd $11, %xmm0, %xmm0
 ; AVX512F-NEXT:    retq
@@ -270,7 +270,7 @@ define <2 x double> @round_v2f64(<2 x double> %x) {
 ; AVX512FP16-LABEL: round_v2f64:
 ; AVX512FP16:       ## %bb.0:
 ; AVX512FP16-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4.9999999999999994E-1,4.9999999999999994E-1]
-; AVX512FP16-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm1 | (xmm0 & mem)
+; AVX512FP16-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm1 | (xmm0 & m64bcst)
 ; AVX512FP16-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; AVX512FP16-NEXT:    vroundpd $11, %xmm0, %xmm0
 ; AVX512FP16-NEXT:    retq
@@ -356,7 +356,7 @@ define <8 x float> @round_v8f32(<8 x float> %x) {
 ; AVX512F-LABEL: round_v8f32:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
-; AVX512F-NEXT:    vpternlogd {{.*#+}} ymm1 = ymm1 | (ymm0 & mem)
+; AVX512F-NEXT:    vpternlogd {{.*#+}} ymm1 = ymm1 | (ymm0 & m32bcst)
 ; AVX512F-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    vroundps $11, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
@@ -364,7 +364,7 @@ define <8 x float> @round_v8f32(<8 x float> %x) {
 ; AVX512FP16-LABEL: round_v8f32:
 ; AVX512FP16:       ## %bb.0:
 ; AVX512FP16-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
-; AVX512FP16-NEXT:    vpternlogd {{.*#+}} ymm1 = ymm1 | (ymm0 & mem)
+; AVX512FP16-NEXT:    vpternlogd {{.*#+}} ymm1 = ymm1 | (ymm0 & m32bcst)
 ; AVX512FP16-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; AVX512FP16-NEXT:    vroundps $11, %ymm0, %ymm0
 ; AVX512FP16-NEXT:    retq
@@ -426,7 +426,7 @@ define <4 x double> @round_v4f64(<4 x double> %x) {
 ; AVX512F-LABEL: round_v4f64:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1]
-; AVX512F-NEXT:    vpternlogq {{.*#+}} ymm1 = ymm1 | (ymm0 & mem)
+; AVX512F-NEXT:    vpternlogq {{.*#+}} ymm1 = ymm1 | (ymm0 & m64bcst)
 ; AVX512F-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    vroundpd $11, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
@@ -434,7 +434,7 @@ define <4 x double> @round_v4f64(<4 x double> %x) {
 ; AVX512FP16-LABEL: round_v4f64:
 ; AVX512FP16:       ## %bb.0:
 ; AVX512FP16-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1]
-; AVX512FP16-NEXT:    vpternlogq {{.*#+}} ymm1 = ymm1 | (ymm0 & mem)
+; AVX512FP16-NEXT:    vpternlogq {{.*#+}} ymm1 = ymm1 | (ymm0 & m64bcst)
 ; AVX512FP16-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; AVX512FP16-NEXT:    vroundpd $11, %ymm0, %ymm0
 ; AVX512FP16-NEXT:    retq
@@ -582,7 +582,7 @@ define <16 x float> @round_v16f32(<16 x float> %x) {
 ; AVX512F-LABEL: round_v16f32:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
-; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm1 = zmm1 | (zmm0 & mem)
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm1 = zmm1 | (zmm0 & m32bcst)
 ; AVX512F-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    vrndscaleps $11, %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
@@ -590,7 +590,7 @@ define <16 x float> @round_v16f32(<16 x float> %x) {
 ; AVX512FP16-LABEL: round_v16f32:
 ; AVX512FP16:       ## %bb.0:
 ; AVX512FP16-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
-; AVX512FP16-NEXT:    vpternlogd {{.*#+}} zmm1 = zmm1 | (zmm0 & mem)
+; AVX512FP16-NEXT:    vpternlogd {{.*#+}} zmm1 = zmm1 | (zmm0 & m32bcst)
 ; AVX512FP16-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; AVX512FP16-NEXT:    vrndscaleps $11, %zmm0, %zmm0
 ; AVX512FP16-NEXT:    retq
@@ -690,7 +690,7 @@ define <8 x double> @round_v8f64(<8 x double> %x) {
 ; AVX512F-LABEL: round_v8f64:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1]
-; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm1 = zmm1 | (zmm0 & mem)
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm1 = zmm1 | (zmm0 & m64bcst)
 ; AVX512F-NEXT:    vaddpd %zmm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    vrndscalepd $11, %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
@@ -698,7 +698,7 @@ define <8 x double> @round_v8f64(<8 x double> %x) {
 ; AVX512FP16-LABEL: round_v8f64:
 ; AVX512FP16:       ## %bb.0:
 ; AVX512FP16-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1]
-; AVX512FP16-NEXT:    vpternlogq {{.*#+}} zmm1 = zmm1 | (zmm0 & mem)
+; AVX512FP16-NEXT:    vpternlogq {{.*#+}} zmm1 = zmm1 | (zmm0 & m64bcst)
 ; AVX512FP16-NEXT:    vaddpd %zmm1, %zmm0, %zmm0
 ; AVX512FP16-NEXT:    vrndscalepd $11, %zmm0, %zmm0
 ; AVX512FP16-NEXT:    retq

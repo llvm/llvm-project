@@ -107,6 +107,7 @@ enum class LVAttributeKind {
   Generated,     // --attribute=generated
   Global,        // --attribute=global
   Inserted,      // --attribute=inserted
+  Language,      // --attribute=language
   Level,         // --attribute=level
   Linkage,       // --attribute=linkage
   Local,         // --attribute=local
@@ -338,6 +339,7 @@ public:
   ATTRIBUTE_OPTION(Generated);
   ATTRIBUTE_OPTION(Global);
   ATTRIBUTE_OPTION(Inserted);
+  ATTRIBUTE_OPTION(Language);
   ATTRIBUTE_OPTION(Level);
   ATTRIBUTE_OPTION(Linkage);
   ATTRIBUTE_OPTION(Location);

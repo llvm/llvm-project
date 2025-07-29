@@ -34,6 +34,9 @@ class CanonicalLoopInfo;
 struct TargetRegionEntryInfo;
 class OffloadEntriesInfoManager;
 class OpenMPIRBuilder;
+class Loop;
+class LoopAnalysis;
+class LoopInfo;
 
 /// Move the instruction after an InsertPoint to the beginning of another
 /// BasicBlock.
@@ -484,7 +487,7 @@ public:
   /// not have an effect on \p M (see initialize)
   OpenMPIRBuilder(Module &M)
       : M(M), Builder(M.getContext()), OffloadInfoManager(this),
-        T(M.getTargetTriple()) {}
+        T(M.getTargetTriple()), IsFinalized(false) {}
   LLVM_ABI ~OpenMPIRBuilder();
 
   class AtomicInfo : public llvm::AtomicInfo {
@@ -520,6 +523,10 @@ public:
   /// \param Fn                    The function to be finalized. If not used,
   ///                              all functions are finalized.
   LLVM_ABI void finalize(Function *Fn = nullptr);
+
+  /// Check whether the finalize function has already run
+  /// \return true if the finalize function has already run
+  LLVM_ABI bool isFinalized();
 
   /// Add attributes known for \p FnID to \p Fn.
   LLVM_ABI void addAttributes(omp::RuntimeFunction FnID, Function &Fn);
@@ -1110,6 +1117,7 @@ private:
   /// \param NamePrefix Optional name prefix for if.then if.else blocks.
   void createIfVersion(CanonicalLoopInfo *Loop, Value *IfCond,
                        ValueMap<const Value *, WeakTrackingVH> &VMap,
+                       LoopAnalysis &LIA, LoopInfo &LI, llvm::Loop *L,
                        const Twine &NamePrefix = "");
 
 public:
@@ -2507,7 +2515,7 @@ public:
       TargetTaskBodyCallbackTy TaskBodyCB, Value *DeviceID, Value *RTLoc,
       OpenMPIRBuilder::InsertPointTy AllocaIP,
       const SmallVector<llvm::OpenMPIRBuilder::DependData> &Dependencies,
-      bool HasNoWait);
+      const TargetDataRTArgs &RTArgs, bool HasNoWait);
 
   /// Emit the arguments to be passed to the runtime library based on the
   /// arrays of base pointers, pointers, sizes, map types, and mappers.  If
@@ -3285,6 +3293,8 @@ private:
   /// \Return The instruction
   Value *emitRMWOpAsInstruction(Value *Src1, Value *Src2,
                                 AtomicRMWInst::BinOp RMWOp);
+
+  bool IsFinalized;
 
 public:
   /// a struct to pack relevant information while generating atomic Ops

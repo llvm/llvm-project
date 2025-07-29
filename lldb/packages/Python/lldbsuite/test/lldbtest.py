@@ -1380,6 +1380,9 @@ class Base(unittest.TestCase):
     def isAArch64MTE(self):
         return self.isAArch64() and "mte" in self.getCPUInfo()
 
+    def isAArch64MTEStoreOnly(self):
+        return self.isAArch64() and "mtestoreonly" in self.getCPUInfo()
+
     def isAArch64GCS(self):
         return self.isAArch64() and "gcs" in self.getCPUInfo()
 
@@ -2268,7 +2271,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
             completions, list(match_strings)[1:], "List of returned completion is wrong"
         )
 
-    def completions_contain(self, command, completions):
+    def completions_contain(self, command, completions, match=True):
         """Checks that the completions for the given command contain the given
         list of completions."""
         interp = self.dbg.GetCommandInterpreter()
@@ -2276,9 +2279,16 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         interp.HandleCompletion(command, len(command), 0, -1, match_strings)
         for completion in completions:
             # match_strings is a 1-indexed list, so we have to slice...
-            self.assertIn(
-                completion, list(match_strings)[1:], "Couldn't find expected completion"
-            )
+            if match:
+                self.assertIn(
+                    completion,
+                    list(match_strings)[1:],
+                    "Couldn't find expected completion",
+                )
+            else:
+                self.assertNotIn(
+                    completion, list(match_strings)[1:], "Found unexpected completion"
+                )
 
     def filecheck(
         self, command, check_file, filecheck_options="", expect_cmd_failure=False

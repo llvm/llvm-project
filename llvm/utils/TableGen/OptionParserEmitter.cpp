@@ -264,11 +264,11 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   typedef SmallVector<SmallString<2>, 2> PrefixKeyT;
   typedef std::map<PrefixKeyT, unsigned> PrefixesT;
   PrefixesT Prefixes;
-  Prefixes.insert({PrefixKeyT(), 0});
+  Prefixes.try_emplace(PrefixKeyT(), 0);
   for (const Record &R : llvm::make_pointee_range(Opts)) {
     std::vector<StringRef> RPrefixes = R.getValueAsListOfStrings("Prefixes");
     PrefixKeyT PrefixKey(RPrefixes.begin(), RPrefixes.end());
-    Prefixes.insert({PrefixKey, 0});
+    Prefixes.try_emplace(PrefixKey, 0);
   }
 
   DenseSet<StringRef> PrefixesUnionSet;
@@ -291,7 +291,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "/////////\n";
   OS << "// String table\n\n";
   OS << "#ifdef OPTTABLE_STR_TABLE_CODE\n";
-  Table.EmitStringTableDef(OS, "OptionStrTable", /*Indent=*/"");
+  Table.EmitStringTableDef(OS, "OptionStrTable");
   OS << "#endif // OPTTABLE_STR_TABLE_CODE\n\n";
 
   // Dump prefixes.

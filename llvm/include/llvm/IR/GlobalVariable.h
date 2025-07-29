@@ -298,6 +298,23 @@ public:
   ///
   LLVM_ABI void clearCodeModel();
 
+  /// FIXME: Remove this function once transition to Align is over.
+  uint64_t getAlignment() const {
+    MaybeAlign Align = getAlign();
+    return Align ? Align->value() : 0;
+  }
+
+  /// Returns the alignment of the given variable.
+  MaybeAlign getAlign() const { return GlobalObject::getAlign(); }
+
+  /// Sets the alignment attribute of the GlobalVariable.
+  void setAlignment(Align Align) { GlobalObject::setAlignment(Align); }
+
+  /// Sets the alignment attribute of the GlobalVariable.
+  /// This method will be deprecated as the alignment property should always be
+  /// defined.
+  void setAlignment(MaybeAlign Align) { GlobalObject::setAlignment(Align); }
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
     return V->getValueID() == Value::GlobalVariableVal;

@@ -1,5 +1,7 @@
 # RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=postra-machine-sink -verify-machineinstrs  -o - %s | FileCheck -check-prefix=RUN-POSTRA %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -passes='postra-machine-sink' -o - %s | FileCheck -check-prefix=RUN-POSTRA %s
 # RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=postra-machine-sink -opt-bisect-limit=0 -verify-machineinstrs  -o - %s | FileCheck -check-prefix=BISECT-NO-RUN-POSTRA %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -passes='postra-machine-sink' -opt-bisect-limit=0 -o - %s | FileCheck -check-prefix=BISECT-NO-RUN-POSTRA %s
 
 ---
 

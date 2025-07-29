@@ -167,6 +167,7 @@ template <class Stream, class T>
 
 #    include <__fwd/istream.h>
 #    include <__iterator/istreambuf_iterator.h>
+#    include <__locale_dir/num.h>
 #    include <__ostream/basic_ostream.h>
 #    include <__type_traits/conjunction.h>
 #    include <__type_traits/enable_if.h>
@@ -176,7 +177,7 @@ template <class Stream, class T>
 #    include <__utility/forward.h>
 #    include <bitset>
 #    include <ios>
-#    include <locale>
+#    include <streambuf>
 #    include <version>
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -1409,6 +1410,10 @@ _LIBCPP_POP_MACROS
 #    include <iosfwd>
 #    include <ostream>
 #    include <type_traits>
+#  endif
+
+#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 23
+#    include <locale>
 #  endif
 
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)

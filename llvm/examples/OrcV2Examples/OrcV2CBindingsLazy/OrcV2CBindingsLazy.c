@@ -67,11 +67,9 @@ const char MainMod[] =
 LLVMErrorRef parseExampleModule(const char *Source, size_t Len,
                                 const char *Name,
                                 LLVMOrcThreadSafeModuleRef *TSM) {
-  // Create a new ThreadSafeContext and underlying LLVMContext.
-  LLVMOrcThreadSafeContextRef TSCtx = LLVMOrcCreateNewThreadSafeContext();
 
-  // Get a reference to the underlying LLVMContext.
-  LLVMContextRef Ctx = LLVMOrcThreadSafeContextGetContext(TSCtx);
+  // Create an LLVMContext for the Module.
+  LLVMContextRef Ctx = LLVMContextCreate();
 
   // Wrap Source in a MemoryBuffer
   LLVMMemoryBufferRef MB =
@@ -84,6 +82,10 @@ LLVMErrorRef parseExampleModule(const char *Source, size_t Len,
     return LLVMCreateStringError(ErrMsg);
     // TODO: LLVMDisposeMessage(ErrMsg);
   }
+
+  // Create a new ThreadSafeContext to hold the context.
+  LLVMOrcThreadSafeContextRef TSCtx =
+      LLVMOrcCreateNewThreadSafeContextFromLLVMContext(Ctx);
 
   // Our module is now complete. Wrap it and our ThreadSafeContext in a
   // ThreadSafeModule.

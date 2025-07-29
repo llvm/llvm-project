@@ -23,16 +23,17 @@ add_flang_library(FortranLower
   LoweringOptions.cpp
   Mangler.cpp
   OpenACC.cpp
+  OpenMP/Atomic.cpp
   OpenMP/ClauseProcessor.cpp
   OpenMP/Clauses.cpp
   OpenMP/DataSharingProcessor.cpp
   OpenMP/Decomposer.cpp
   OpenMP/OpenMP.cpp
-  OpenMP/ReductionProcessor.cpp
   OpenMP/Utils.cpp
   PFTBuilder.cpp
   Runtime.cpp
   Support/PrivateReductionUtils.cpp
+  Support/ReductionProcessor.cpp
   Support/Utils.cpp
   SymbolMap.cpp
   VectorSubscripts.cpp
@@ -50,6 +51,7 @@ add_flang_library(FortranLower
   FIRDialect
   FIRDialectSupport
   FIRBuilder
+  FIROpenACCSupport
   FIRSupport
   FIRTransforms
   HLFIRDialect

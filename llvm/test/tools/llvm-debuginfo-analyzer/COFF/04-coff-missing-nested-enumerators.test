@@ -25,7 +25,7 @@
 ; references to the enumerators 'RED' and 'BLUE'. The CodeView generated
 ; by GCC and MSVC, does include such references.
 
-; RUN: llvm-debuginfo-analyzer --attribute=level,format,producer,size \
+; RUN: llvm-debuginfo-analyzer --attribute=language,level,format,producer,size \
 ; RUN:                         --output-sort=name \
 ; RUN:                         --print=symbols,types \
 ; RUN:                         %p/Inputs/pr-46466-codeview-clang.o \
@@ -37,6 +37,7 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]             {CompileUnit} 'pr-46466.cpp'
 ; ONE-NEXT: [002]               {Producer} 'clang version 15.0.0 {{.*}}'
+; ONE-NEXT: [002]               {Language} 'Cpp'
 ; ONE-NEXT: [002]               {Variable} extern 'S' -> 'Struct'
 ; ONE-NEXT: [002]     1         {Struct} 'Struct' [Size = 1]
 ; ONE-NEXT: [003]                 {Member} public 'U' -> 'Union'
@@ -50,6 +51,7 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]             {CompileUnit} 'pr-46466.cpp'
 ; ONE-NEXT: [002]               {Producer} 'Microsoft (R) Optimizing Compiler'
+; ONE-NEXT: [002]               {Language} 'Cpp'
 ; ONE-NEXT: [002]               {Variable} extern 'S' -> 'Struct'
 ; ONE-NEXT: [002]     1         {Struct} 'Struct' [Size = 1]
 ; ONE-NEXT: [003]                 {Member} public 'U' -> 'Union'

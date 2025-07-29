@@ -16,6 +16,7 @@
 #include "RISCV.h"
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "llvm-mca-riscv-custombehaviour"
@@ -344,7 +345,8 @@ createRISCVInstrumentManager(const MCSubtargetInfo &STI,
 }
 
 /// Extern function to initialize the targets for the RISC-V backend
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTargetMCA() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeRISCVTargetMCA() {
   TargetRegistry::RegisterInstrumentManager(getTheRISCV32Target(),
                                             createRISCVInstrumentManager);
   TargetRegistry::RegisterInstrumentManager(getTheRISCV64Target(),

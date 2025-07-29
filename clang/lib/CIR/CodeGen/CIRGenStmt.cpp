@@ -391,8 +391,7 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
     // If this function returns a reference, take the address of the
     // expression rather than the value.
     RValue result = emitReferenceBindingToExpr(rv);
-    builder.CIRBaseBuilderTy::createStore(loc, result.getScalarVal(),
-                                          *fnRetAlloca);
+    builder.CIRBaseBuilderTy::createStore(loc, result.getValue(), *fnRetAlloca);
   } else {
     mlir::Value value = nullptr;
     switch (CIRGenFunction::getEvaluationKind(rv->getType())) {
@@ -410,7 +409,10 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   }
 
   auto *retBlock = curLexScope->getOrCreateRetBlock(*this, loc);
+  // This should emit a branch through the cleanup block if one exists.
   builder.create<cir::BrOp>(loc, retBlock);
+  if (ehStack.getStackDepth() != currentCleanupStackDepth)
+    cgm.errorNYI(s.getSourceRange(), "return with cleanup stack");
   builder.createBlock(builder.getBlock()->getParent());
 
   return mlir::success();

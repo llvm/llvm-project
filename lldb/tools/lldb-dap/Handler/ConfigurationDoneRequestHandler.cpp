@@ -41,6 +41,11 @@ ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
         "any debugger command scripts are not resuming the process during the "
         "launch sequence.");
 
+  // Waiting until 'configurationDone' to send target based capabilities in case
+  // the launch or attach scripts adjust the target. The initial dummy target
+  // may have different capabilities than the final target.
+  SendTargetBasedCapabilities(dap);
+
   // Clients can request a baseline of currently existing threads after
   // we acknowledge the configurationDone request.
   // Client requests the baseline of currently existing threads after

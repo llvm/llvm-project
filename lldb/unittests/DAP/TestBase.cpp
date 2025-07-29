@@ -28,13 +28,8 @@ using lldb_private::File;
 using lldb_private::NativeFile;
 using lldb_private::Pipe;
 
-void PipeBase::SetUp() {
-  ASSERT_THAT_ERROR(input.CreateNew(false).ToError(), Succeeded());
-  ASSERT_THAT_ERROR(output.CreateNew(false).ToError(), Succeeded());
-}
-
 void TransportBase::SetUp() {
-  PipeBase::SetUp();
+  PipePairTest::SetUp();
   to_dap = std::make_unique<Transport>(
       "to_dap", nullptr,
       std::make_shared<NativeFile>(input.GetReadFileDescriptor(),
@@ -63,10 +58,12 @@ void DAPTestBase::SetUp() {
 }
 
 void DAPTestBase::TearDown() {
-  if (core)
+  if (core) {
     ASSERT_THAT_ERROR(core->discard(), Succeeded());
-  if (binary)
+  }
+  if (binary) {
     ASSERT_THAT_ERROR(binary->discard(), Succeeded());
+  }
 }
 
 void DAPTestBase::SetUpTestSuite() {
@@ -122,7 +119,8 @@ std::vector<Message> DAPTestBase::DrainOutput() {
   std::vector<Message> msgs;
   output.CloseWriteFileDescriptor();
   while (true) {
-    Expected<Message> next = from_dap->Read(std::chrono::milliseconds(1));
+    Expected<Message> next =
+        from_dap->Read<protocol::Message>(std::chrono::milliseconds(1));
     if (!next) {
       consumeError(next.takeError());
       break;

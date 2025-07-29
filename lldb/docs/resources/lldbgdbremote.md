@@ -1998,6 +1998,23 @@ threads (live system debug) / cores (JTAG) in your program have
 stopped and allows LLDB to display and control your program
 correctly.
 
+## qWatchpointSupportInfo
+
+Get the number of hardware watchpoints available on the remote target.
+
+```
+send packet: $qWatchpointSupportInfo:#55
+read packet: $num:4;#f9
+```
+
+`num` is the number of hardware breakpoints, it will be `0` if none are
+available.
+
+**Priority to Implement:** Low. If this packet is not supported, LLDB will assume
+that hardware breakpoints are supported. If that is not the case, LLDB assumes
+that the debug stub will respond with an error when asked to set a hardware
+watchpoint.
+
 ## Stop reply packet extensions
 
 This section describes some of the additional information you can

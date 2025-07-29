@@ -16,10 +16,6 @@ class DataFormatterDisablingTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number("main.cpp", "// Set break point at this line.")
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24462, Data formatters have problems on Windows",
-    )
     def test_with_run_command(self):
         """Check that we can properly disable all data formatter categories."""
         self.build()

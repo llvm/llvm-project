@@ -33,7 +33,7 @@ cir.func @func() {
   cir.return
 }
 
-// CHECK: cir.func @func() {
+// CHECK: cir.func{{.*}} @func() {
 // CHECK:   %0 = cir.alloca !cir.array<!s32i x 10>, !cir.ptr<!cir.array<!s32i x 10>>, ["l"] {alignment = 4 : i64}
 // CHECK:   cir.return
 // CHECK: }
@@ -44,7 +44,7 @@ cir.func @func2(%arg0: !cir.ptr<!s32i>) {
   cir.return
 }
 
-// CHECK: cir.func @func2(%arg0: !cir.ptr<!s32i>) {
+// CHECK: cir.func{{.*}} @func2(%arg0: !cir.ptr<!s32i>) {
 // CHECK:   %0 = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["p", init] {alignment = 8 : i64}
 // CHECK:   cir.store %arg0, %0 : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CHECK:   cir.return
@@ -56,7 +56,7 @@ cir.func @func3(%arg0: !cir.ptr<!cir.array<!s32i x 10>>) {
   cir.return
 }
 
-// CHECK: cir.func @func3(%arg0: !cir.ptr<!cir.array<!s32i x 10>>) {
+// CHECK: cir.func{{.*}} @func3(%arg0: !cir.ptr<!cir.array<!s32i x 10>>) {
 // CHECK:   %0 = cir.alloca !cir.ptr<!cir.array<!s32i x 10>>, !cir.ptr<!cir.ptr<!cir.array<!s32i x 10>>>, ["pp", init] {alignment = 8 : i64}
 // CHECK:   cir.store %arg0, %0 : !cir.ptr<!cir.array<!s32i x 10>>, !cir.ptr<!cir.ptr<!cir.array<!s32i x 10>>>
 // CHECK:   cir.return

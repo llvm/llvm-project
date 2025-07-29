@@ -33,14 +33,14 @@ functions:
     return_type: float
     arguments:
       - type: float
-    name: acoshf16
+  - name: acoshf16
     standards:
       - stdc
     return_type: _Float16
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    name: acospif16
+  - name: acospif16
     standards:
       - stdc
     return_type: _Float16
@@ -734,7 +734,7 @@ functions:
       - type: float128
       - type: float128
       - type: float128
-    guards: LIBC_TYPES_HAS_FLOAT128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: ffmal
     standards:
       - stdc
@@ -2524,6 +2524,12 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: tanpif
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: float
   - name: tanpif16
     standards:
       - stdc

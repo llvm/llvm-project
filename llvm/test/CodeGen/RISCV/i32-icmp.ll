@@ -1136,3 +1136,57 @@ define i32 @icmp_sle_constant_neg_2050(i32 %a) nounwind {
   %2 = zext i1 %1 to i32
   ret i32 %2
 }
+
+define i32 @mask_test_eq(i32 %x) nounwind {
+; RV32I-LABEL: mask_test_eq:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 12
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32XQCILIA-LABEL: mask_test_eq:
+; RV32XQCILIA:       # %bb.0:
+; RV32XQCILIA-NEXT:    slli a0, a0, 12
+; RV32XQCILIA-NEXT:    seqz a0, a0
+; RV32XQCILIA-NEXT:    ret
+  %y = and i32 %x, 1048575
+  %cmp = icmp eq i32 %y, 0
+  %ext = zext i1 %cmp to i32
+  ret i32 %ext
+}
+
+define i32 @mask_test_ne(i32 %x) nounwind {
+; RV32I-LABEL: mask_test_ne:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 12
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32XQCILIA-LABEL: mask_test_ne:
+; RV32XQCILIA:       # %bb.0:
+; RV32XQCILIA-NEXT:    slli a0, a0, 12
+; RV32XQCILIA-NEXT:    snez a0, a0
+; RV32XQCILIA-NEXT:    ret
+  %y = and i32 %x, 1048575
+  %cmp = icmp ne i32 %y, 0
+  %ext = zext i1 %cmp to i32
+  ret i32 %ext
+}
+
+define i32 @mask_test_eq_simm12(i32 %x) nounwind {
+; RV32I-LABEL: mask_test_eq_simm12:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, 3
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32XQCILIA-LABEL: mask_test_eq_simm12:
+; RV32XQCILIA:       # %bb.0:
+; RV32XQCILIA-NEXT:    andi a0, a0, 3
+; RV32XQCILIA-NEXT:    seqz a0, a0
+; RV32XQCILIA-NEXT:    ret
+  %y = and i32 %x, 3
+  %cmp = icmp eq i32 %y, 0
+  %ext = zext i1 %cmp to i32
+  ret i32 %ext
+}

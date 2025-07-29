@@ -92,6 +92,14 @@ include(LLVMCheckCompilerLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 
+
+# Determine whether we are in the runtimes/runtimes-bins directory of a
+# bootstrap build.
+set(LLVM_TREE_AVAILABLE OFF)
+if (LLVM_LIBRARY_OUTPUT_INTDIR AND LLVM_RUNTIME_OUTPUT_INTDIR AND PACKAGE_VERSION)
+  set(LLVM_TREE_AVAILABLE ON)
+endif()
+
 # CMake omits default compiler include paths, but in runtimes build, we use
 # -nostdinc and -nostdinc++ and control include paths manually so this behavior
 # is undesirable. Filtering CMAKE_{LANG}_IMPLICIT_INCLUDE_DIRECTORIES to remove
@@ -259,7 +267,7 @@ if(LLVM_INCLUDE_TESTS)
     # dir rather than ${LLVM_INSTALL_DIR}/bin/llvm-lit (which may not exist if
     # LLVM_BINARY_DIR points at an installed LLVM tree rather than a build tree).
     set(LLVM_LIT_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/bin)
-    get_llvm_lit_path(_base_dir _file_name)
+    get_llvm_lit_path(_base_dir _file_name ALLOW_EXTERNAL)
     set(LLVM_EXTERNAL_LIT "${_base_dir}/${_file_name}" CACHE STRING "Command used to spawn lit" FORCE)
     # Avoid warning about missing llvm-lit from runtimes CMake files. This is
     # fine since we call configure_file() to create llvm-lit at the end of this

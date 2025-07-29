@@ -11,17 +11,16 @@ define <2 x bfloat> @test_sin(<2 x bfloat> %a) #0 #1 {
 ; CHECK-LABEL: test_sin(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b32 %r<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [test_sin_param_0];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; CHECK-NEXT:    cvt.f32.bf16 %r2, %rs1;
-; CHECK-NEXT:    sin.approx.f32 %r3, %r2;
-; CHECK-NEXT:    cvt.f32.bf16 %r4, %rs2;
-; CHECK-NEXT:    sin.approx.f32 %r5, %r4;
-; CHECK-NEXT:    cvt.rn.bf16x2.f32 %r6, %r5, %r3;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
+; CHECK-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_sin_param_0];
+; CHECK-NEXT:    cvt.f32.bf16 %r1, %rs1;
+; CHECK-NEXT:    sin.approx.f32 %r2, %r1;
+; CHECK-NEXT:    cvt.f32.bf16 %r3, %rs2;
+; CHECK-NEXT:    sin.approx.f32 %r4, %r3;
+; CHECK-NEXT:    cvt.rn.bf16x2.f32 %r5, %r4, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-NEXT:    ret;
   %r = call <2 x bfloat> @llvm.sin.f16(<2 x bfloat> %a)
   ret <2 x bfloat> %r
@@ -31,17 +30,16 @@ define <2 x bfloat> @test_cos(<2 x bfloat> %a) #0 #1 {
 ; CHECK-LABEL: test_cos(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b32 %r<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [test_cos_param_0];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; CHECK-NEXT:    cvt.f32.bf16 %r2, %rs1;
-; CHECK-NEXT:    cos.approx.f32 %r3, %r2;
-; CHECK-NEXT:    cvt.f32.bf16 %r4, %rs2;
-; CHECK-NEXT:    cos.approx.f32 %r5, %r4;
-; CHECK-NEXT:    cvt.rn.bf16x2.f32 %r6, %r5, %r3;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
+; CHECK-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_cos_param_0];
+; CHECK-NEXT:    cvt.f32.bf16 %r1, %rs1;
+; CHECK-NEXT:    cos.approx.f32 %r2, %r1;
+; CHECK-NEXT:    cvt.f32.bf16 %r3, %rs2;
+; CHECK-NEXT:    cos.approx.f32 %r4, %r3;
+; CHECK-NEXT:    cvt.rn.bf16x2.f32 %r5, %r4, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-NEXT:    ret;
   %r = call <2 x bfloat> @llvm.cos.f16(<2 x bfloat> %a)
   ret <2 x bfloat> %r

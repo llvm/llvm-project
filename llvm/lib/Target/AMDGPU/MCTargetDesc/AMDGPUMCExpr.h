@@ -50,6 +50,7 @@ public:
     S_REL64,         // symbol@rel64
     S_ABS32_LO,      // symbol@abs32@lo
     S_ABS32_HI,      // symbol@abs32@hi
+    S_ABS64,         // symbol@abs64
   };
 
 private:
@@ -93,11 +94,10 @@ public:
     return create(VariantKind::AGVK_AlignTo, {Value, Align}, Ctx);
   }
 
-  static const AMDGPUMCExpr *createOccupancy(unsigned InitOcc,
-                                             const MCExpr *NumSGPRs,
-                                             const MCExpr *NumVGPRs,
-                                             const GCNSubtarget &STM,
-                                             MCContext &Ctx);
+  static const AMDGPUMCExpr *
+  createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
+                  const MCExpr *NumVGPRs, unsigned DynamicVGPRBlockSize,
+                  const GCNSubtarget &STM, MCContext &Ctx);
 
   ArrayRef<const MCExpr *> getArgs() const { return Args; }
   VariantKind getKind() const { return Kind; }
@@ -106,13 +106,13 @@ public:
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
   bool evaluateAsRelocatableImpl(MCValue &Res,
                                  const MCAssembler *Asm) const override;
-  bool isSymbolUsedInExpression(const MCSymbol *Sym) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override;
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }
+  static bool isSymbolUsedInExpression(const MCSymbol *Sym, const MCExpr *E);
 };
 
 namespace AMDGPU {

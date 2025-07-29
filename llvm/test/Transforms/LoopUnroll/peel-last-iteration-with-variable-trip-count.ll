@@ -171,6 +171,155 @@ exit:
 }
 
 
+define i32 @peel_last_with_trip_count_check_lcssa_phi_cmp_not_invar2(i32 %n) {
+; CHECK-LABEL: define i32 @peel_last_with_trip_count_check_lcssa_phi_cmp_not_invar2(
+; CHECK-SAME: i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[N]], -2
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[ENTRY_SPLIT:.*]], label %[[EXIT_PEEL_BEGIN:.*]]
+; CHECK:       [[ENTRY_SPLIT]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY_SPLIT]] ], [ [[IV_NEXT1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[IV]], [[SUB]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i32 1, i32 2
+; CHECK-NEXT:    call void @foo(i32 [[SEL]])
+; CHECK-NEXT:    [[IV_NEXT1]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[N]], 1
+; CHECK-NEXT:    [[EC1:%.*]] = icmp ne i32 [[IV_NEXT1]], [[TMP2]]
+; CHECK-NEXT:    br i1 [[EC1]], label %[[LOOP]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK:       [[EXIT_PEEL_BEGIN_LOOPEXIT]]:
+; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[IV_NEXT1]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[EXIT_PEEL_BEGIN]]
+; CHECK:       [[EXIT_PEEL_BEGIN]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[DOTPH]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
+; CHECK:       [[LOOP_PEEL]]:
+; CHECK-NEXT:    [[C_PEEL:%.*]] = icmp ne i32 [[TMP3]], [[SUB]]
+; CHECK-NEXT:    [[SEL_LCSSA:%.*]] = select i1 [[C_PEEL]], i32 1, i32 2
+; CHECK-NEXT:    call void @foo(i32 [[SEL_LCSSA]])
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add i32 [[TMP3]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp ne i32 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT_PEEL_NEXT:.*]], label %[[EXIT_PEEL_NEXT]]
+; CHECK:       [[EXIT_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[SEL_LCSSA]]
+;
+entry:
+  %sub = add i32 %n, -2
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %c = icmp ne i32 %iv, %sub
+  %sel = select i1 %c, i32 1, i32 2
+  call void @foo(i32 %sel)
+  %iv.next = add i32 %iv, 1
+  %ec = icmp ne i32 %iv.next, %n
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  %sel.lcssa = phi i32 [ %sel, %loop ]
+  ret i32 %sel.lcssa
+}
+
+
+
+define i32 @peel_last_with_trip_count_check_lcssa_phi_cmp_not_invar3(i32 %n) {
+; CHECK-LABEL: define i32 @peel_last_with_trip_count_check_lcssa_phi_cmp_not_invar3(
+; CHECK-SAME: i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i32 [[SUB]], 0
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[ENTRY_SPLIT:.*]], label %[[EXIT_PEEL_BEGIN:.*]]
+; CHECK:       [[ENTRY_SPLIT]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY_SPLIT]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    call void @foo(i32 2)
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[N]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp ne i32 [[IV_NEXT]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       [[EXIT_PEEL_BEGIN_LOOPEXIT]]:
+; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[IV_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[EXIT_PEEL_BEGIN]]
+; CHECK:       [[EXIT_PEEL_BEGIN]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[DOTPH]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
+; CHECK:       [[LOOP_PEEL]]:
+; CHECK-NEXT:    [[C_PEEL:%.*]] = icmp eq i32 [[TMP2]], [[SUB]]
+; CHECK-NEXT:    [[SEL_PEEL:%.*]] = select i1 [[C_PEEL]], i32 1, i32 2
+; CHECK-NEXT:    call void @foo(i32 [[SEL_PEEL]])
+; CHECK-NEXT:    [[IV_NEXT_PEEL:%.*]] = add i32 [[TMP2]], 1
+; CHECK-NEXT:    [[EC_PEEL:%.*]] = icmp ne i32 [[IV_NEXT_PEEL]], [[N]]
+; CHECK-NEXT:    br i1 [[EC_PEEL]], label %[[EXIT_PEEL_NEXT:.*]], label %[[EXIT_PEEL_NEXT]]
+; CHECK:       [[EXIT_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[SEL_PEEL]]
+;
+entry:
+  %sub = add i32 %n, -1
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %c = icmp eq i32 %iv, %sub
+  %sel = select i1 %c, i32 1, i32 2
+  call void @foo(i32 %sel)
+  %iv.next = add i32 %iv, 1
+  %ec = icmp ne i32 %iv.next, %n
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  %sel.lcssa = phi i32 [ %sel, %loop ]
+  ret i32 %sel.lcssa
+}
+
+define i32 @peel_last_with_trip_count_check_lcssa_phi_cmp_not_invar4(i32 %n) {
+; CHECK-LABEL: define i32 @peel_last_with_trip_count_check_lcssa_phi_cmp_not_invar4(
+; CHECK-SAME: i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[IV]], [[SUB]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i32 1, i32 2
+; CHECK-NEXT:    call void @foo(i32 [[SEL]])
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp ne i32 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[SEL_LCSSA:%.*]] = phi i32 [ [[SEL]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[SEL_LCSSA]]
+;
+entry:
+  %sub = add i32 %n, -1
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %c = icmp ne i32 %iv, %sub
+  %sel = select i1 %c, i32 1, i32 2
+  call void @foo(i32 %sel)
+  %iv.next = add i32 %iv, 1
+  %ec = icmp ne i32 %iv.next, %n
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  %sel.lcssa = phi i32 [ %sel, %loop ]
+  ret i32 %sel.lcssa
+}
+
 define void @peel_last_with_trip_count_check_nested_loop(i32 %n) {
 ; CHECK-LABEL: define void @peel_last_with_trip_count_check_nested_loop(
 ; CHECK-SAME: i32 [[N:%.*]]) {
@@ -214,7 +363,7 @@ define void @peel_last_with_trip_count_check_nested_loop(i32 %n) {
 ; CHECK-NEXT:    [[IV_NEXT1]] = add nuw i32 [[IV1]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[N]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT1:%.*]] = icmp eq i32 [[IV_NEXT1]], [[TMP2]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT1]], label %[[OUTER_HEADER_LOOPEXIT_PEEL_BEGIN_LOOPEXIT]], label %[[INNER_HEADER]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT1]], label %[[OUTER_HEADER_LOOPEXIT_PEEL_BEGIN_LOOPEXIT]], label %[[INNER_HEADER]], !llvm.loop [[LOOP4:![0-9]+]]
 ;
 entry:
   %sub = add i32 %n, -1
@@ -242,4 +391,6 @@ inner.latch:
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.peeled.count", i32 1}
 ; CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[META1]]}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]]}
 ;.

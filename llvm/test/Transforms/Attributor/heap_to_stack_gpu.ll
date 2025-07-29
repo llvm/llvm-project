@@ -340,27 +340,6 @@ bb:
   ret i32 %i2
 }
 
-define i32 @test_lifetime() {
-; CHECK-LABEL: define {{[^@]+}}@test_lifetime() {
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = tail call noalias ptr @malloc(i64 noundef 4)
-; CHECK-NEXT:    tail call void @no_sync_func(ptr noalias nofree captures(none) [[I]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noalias nofree nonnull align 4 captures(none) dereferenceable(4) [[I]])
-; CHECK-NEXT:    store i32 10, ptr [[I]], align 4
-; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr [[I]], align 4
-; CHECK-NEXT:    tail call void @free(ptr noalias nonnull align 4 captures(none) dereferenceable(4) [[I]])
-; CHECK-NEXT:    ret i32 [[I2]]
-;
-bb:
-  %i = tail call noalias ptr @malloc(i64 4)
-  tail call void @no_sync_func(ptr %i)
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i)
-  store i32 10, ptr %i, align 4
-  %i2 = load i32, ptr %i, align 4
-  tail call void @free(ptr %i)
-  ret i32 %i2
-}
-
 ; TEST 11
 
 define void @test11() {

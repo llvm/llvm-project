@@ -57,12 +57,14 @@ IRExecutionUnit::IRExecutionUnit(std::unique_ptr<llvm::LLVMContext> &context_up,
 lldb::addr_t IRExecutionUnit::WriteNow(const uint8_t *bytes, size_t size,
                                        Status &error) {
   const bool zero_memory = false;
-  lldb::addr_t allocation_process_addr =
+  auto address_or_error =
       Malloc(size, 8, lldb::ePermissionsWritable | lldb::ePermissionsReadable,
-             eAllocationPolicyMirror, zero_memory, error);
-
-  if (!error.Success())
+             eAllocationPolicyMirror, zero_memory);
+  if (!address_or_error) {
+    error = Status::FromError(address_or_error.takeError());
     return LLDB_INVALID_ADDRESS;
+  }
+  lldb::addr_t allocation_process_addr = *address_or_error;
 
   WriteMemory(allocation_process_addr, bytes, size, error);
 
@@ -698,7 +700,7 @@ void IRExecutionUnit::CollectCandidateCPlusPlusNames(
 
 class LoadAddressResolver {
 public:
-  LoadAddressResolver(Target *target, bool &symbol_was_missing_weak)
+  LoadAddressResolver(Target &target, bool &symbol_was_missing_weak)
       : m_target(target), m_symbol_was_missing_weak(symbol_was_missing_weak) {}
 
   std::optional<lldb::addr_t> Resolve(SymbolContextList &sc_list) {
@@ -720,11 +722,11 @@ public:
 
       // First try the symbol.
       if (candidate_sc.symbol) {
-        load_address = candidate_sc.symbol->ResolveCallableAddress(*m_target);
+        load_address = candidate_sc.symbol->ResolveCallableAddress(m_target);
         if (load_address == LLDB_INVALID_ADDRESS) {
           Address addr = candidate_sc.symbol->GetAddress();
-          load_address = m_target->GetProcessSP()
-                             ? addr.GetLoadAddress(m_target)
+          load_address = m_target.GetProcessSP()
+                             ? addr.GetLoadAddress(&m_target)
                              : addr.GetFileAddress();
         }
       }
@@ -732,8 +734,8 @@ public:
       // If that didn't work, try the function.
       if (load_address == LLDB_INVALID_ADDRESS && candidate_sc.function) {
         Address addr = candidate_sc.function->GetAddress();
-        load_address = m_target->GetProcessSP() ? addr.GetLoadAddress(m_target)
-                                                : addr.GetFileAddress();
+        load_address = m_target.GetProcessSP() ? addr.GetLoadAddress(&m_target)
+                                               : addr.GetFileAddress();
       }
 
       // We found a load address.
@@ -764,7 +766,7 @@ public:
   }
 
 private:
-  Target *m_target;
+  Target &m_target;
   bool &m_symbol_was_missing_weak;
   lldb::addr_t m_best_internal_load_address = LLDB_INVALID_ADDRESS;
 };
@@ -788,7 +790,7 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
   for (size_t i = 0; i < m_preferred_modules.GetSize(); ++i)
     non_local_images.Remove(m_preferred_modules.GetModuleAtIndex(i));
 
-  LoadAddressResolver resolver(target, symbol_was_missing_weak);
+  LoadAddressResolver resolver(*target, symbol_was_missing_weak);
 
   ModuleFunctionSearchOptions function_options;
   function_options.include_symbols = true;
@@ -1102,9 +1104,12 @@ bool IRExecutionUnit::CommitOneAllocation(lldb::ProcessSP &process_sp,
     break;
   default:
     const bool zero_memory = false;
-    record.m_process_address =
-        Malloc(record.m_size, record.m_alignment, record.m_permissions,
-               eAllocationPolicyProcessOnly, zero_memory, error);
+    if (auto address_or_error =
+            Malloc(record.m_size, record.m_alignment, record.m_permissions,
+                   eAllocationPolicyProcessOnly, zero_memory))
+      record.m_process_address = *address_or_error;
+    else
+      error = Status::FromError(address_or_error.takeError());
     break;
   }
 
