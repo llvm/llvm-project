@@ -18,6 +18,7 @@
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/ThreadSafeDenseMap.h"
+#include "lldb/Utility/ThreadSafeStringMap.h"
 #include "swift/Demangling/ManglingFlavor.h"
 
 // FIXME: needed only for the DenseMap.
@@ -691,8 +692,9 @@ protected:
   /// Perform all the implicit imports for the current frame.
   mutable std::unique_ptr<SymbolContext> m_initial_symbol_context_up;
   std::unique_ptr<SwiftPersistentExpressionState> m_persistent_state_up;
-  /// Map ConstString Clang type identifiers to Clang types.
-  ThreadSafeDenseMap<const char *, lldb::TypeSP> m_clang_type_cache;
+  /// Map ConstString Clang type identifiers and the concatenation of the
+  /// compiler context used to find them to Clang types.
+  ThreadSafeStringMap<lldb::TypeSP> m_clang_type_cache;
 };
 
 } // namespace lldb_private
