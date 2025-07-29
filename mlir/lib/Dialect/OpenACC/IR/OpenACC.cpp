@@ -2957,6 +2957,23 @@ bool acc::LoopOp::hasDefaultGangWorkerVector() {
          getGangValue(GangArgType::Dim) || getGangValue(GangArgType::Static);
 }
 
+acc::LoopParMode
+acc::LoopOp::getDefaultOrDeviceTypeParallelism(DeviceType deviceType) {
+  if (hasSeq(deviceType))
+    return LoopParMode::loop_seq;
+  if (hasAuto(deviceType))
+    return LoopParMode::loop_auto;
+  if (hasIndependent(deviceType))
+    return LoopParMode::loop_independent;
+  if (hasSeq())
+    return LoopParMode::loop_seq;
+  if (hasAuto())
+    return LoopParMode::loop_auto;
+  assert(hasIndependent() &&
+         "loop must have default auto, seq, or independent");
+  return LoopParMode::loop_independent;
+}
+
 void acc::LoopOp::addGangOperands(
     MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
     llvm::ArrayRef<GangArgType> argTypes, mlir::ValueRange values) {
