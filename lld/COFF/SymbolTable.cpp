@@ -1364,7 +1364,19 @@ void SymbolTable::resolveAlternateNames() {
             !isArm64ECMangledFunctionName(u->getName()))
           continue;
       }
-      u->setWeakAlias(addUndefined(to));
+
+      // Check if the destination symbol is defined. If not, skip it.
+      // It may still be resolved later if more input files are added.
+      // Also skip anti-dependency targets, as they can't be chained anyway.
+      Symbol *toSym = find(to);
+      if (!toSym)
+        continue;
+      auto toUndef = dyn_cast<Undefined>(toSym);
+      if (toUndef && (!toUndef->weakAlias || toUndef->isAntiDep))
+        continue;
+      if (toSym->isLazy())
+        forceLazy(toSym);
+      u->setWeakAlias(toSym);
     }
   }
 }
