@@ -198,8 +198,8 @@ def aggregate_profiles(profile_dir: str) -> Dict[str, float]:
                             aggregated[key] += value
                         else:
                             aggregated[key] = value
-        except (json.JSONDecodeError, KeyError, IOError):
-            # Skip malformed or unreadable files
+        except (json.JSONDecodeError, KeyError, IOError) as e:
+            print(f"Warning: invalid json file {profile_file}: {e}", file=sys.stderr)
             continue
 
     return aggregated
@@ -617,10 +617,8 @@ async def main() -> None:
         delete_fixes_dir = True
 
     profile_dir: Optional[str] = None
-    delete_profile_dir = False
     if args.enable_check_profile:
         profile_dir = tempfile.mkdtemp()
-        delete_profile_dir = True
 
     try:
         invocation = get_tidy_invocation(
@@ -728,8 +726,7 @@ async def main() -> None:
         if delete_fixes_dir:
             assert export_fixes_dir
             shutil.rmtree(export_fixes_dir)
-        if delete_profile_dir:
-            assert profile_dir
+        if profile_dir:
             shutil.rmtree(profile_dir)
         return
 
@@ -763,8 +760,7 @@ async def main() -> None:
     if delete_fixes_dir:
         assert export_fixes_dir
         shutil.rmtree(export_fixes_dir)
-    if delete_profile_dir:
-        assert profile_dir
+    if profile_dir:
         shutil.rmtree(profile_dir)
     sys.exit(returncode)
 
