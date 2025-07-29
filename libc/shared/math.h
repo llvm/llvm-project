@@ -17,6 +17,7 @@
 #include "math/acoshf.h"
 #include "math/acoshf16.h"
 #include "math/acospif16.h"
+#include "math/asin.h"
 #include "math/erff.h"
 #include "math/exp.h"
 #include "math/exp10.h"
