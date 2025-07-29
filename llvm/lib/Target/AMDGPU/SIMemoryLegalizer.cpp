@@ -2564,7 +2564,9 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
 
   // GFX12.5 only: Require SCOPE_SE on stores that may hit the scratch address
   // space.
-  if (TII->mayAccessScratchThroughFlat(MI) && Scope == CPol::SCOPE_CU)
+  // We also require SCOPE_SE minimum if we not have the "cu-stores" feature.
+  if (Scope == CPol::SCOPE_CU &&
+      (!ST.hasCUStores() || TII->mayAccessScratchThroughFlat(MI)))
     return setScope(MI, CPol::SCOPE_SE);
 
   return false;
