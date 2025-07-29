@@ -1608,9 +1608,6 @@ namespace {
                           QualType ObjectType = QualType(),
                           NamedDecl *FirstQualifierInScope = nullptr,
                           bool AllowInjectedClassName = false);
-    TemplateArgument
-    TransformNamedTemplateTemplateArgument(CXXScopeSpec &SS, TemplateName Name,
-                                           SourceLocation NameLoc);
 
     const AnnotateAttr *TransformAnnotateAttr(const AnnotateAttr *AA);
     const CXXAssumeAttr *TransformCXXAssumeAttr(const CXXAssumeAttr *AA);
@@ -2187,27 +2184,6 @@ TemplateName TemplateInstantiator::TransformTemplateName(
   return inherited::TransformTemplateName(SS, Name, NameLoc, ObjectType,
                                           FirstQualifierInScope,
                                           AllowInjectedClassName);
-}
-
-TemplateArgument TemplateInstantiator::TransformNamedTemplateTemplateArgument(
-    CXXScopeSpec &SS, TemplateName Name, SourceLocation NameLoc) {
-  if (TemplateTemplateParmDecl *TTP =
-          dyn_cast_or_null<TemplateTemplateParmDecl>(
-              Name.getAsTemplateDecl())) {
-    if (TTP->getDepth() < TemplateArgs.getNumLevels()) {
-      // If the corresponding template argument is NULL or non-existent, it's
-      // because we are performing instantiation from explicitly-specified
-      // template arguments in a function template, but there were some
-      // arguments left unspecified.
-      if (!TemplateArgs.hasTemplateArgument(TTP->getDepth(),
-                                            TTP->getPosition()))
-        return TemplateArgument(Name);
-    }
-  }
-  TemplateName TN = getDerived().TransformTemplateName(SS, Name, NameLoc);
-  if (!TN.isNull())
-    return TN;
-  return TemplateArgument();
 }
 
 ExprResult
