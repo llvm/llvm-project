@@ -457,13 +457,12 @@ static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
 
 // Check if this array of constants represents a cttz table.
 // Iterate over the elements from \p Table by trying to find/match all
-// the numbers from 0 to \p InputTy->getSizeInBits() that should represent cttz
-// results.
+// the numbers from 0 to \p InputBits that should represent cttz results.
 static bool isCTTZTable(Constant *Table, uint64_t Mul, uint64_t Shift,
-                        Type *AccessTy, unsigned InputBits,
+                        uint64_t AndMask, Type *AccessTy, unsigned InputBits,
                         unsigned GEPIdxFactor, const DataLayout &DL) {
   for (unsigned Idx = 0; Idx < InputBits; Idx++) {
-    APInt Index = (APInt(InputBits, 1ull << Idx) * Mul).lshr(Shift);
+    APInt Index = (APInt(InputBits, 1ull << Idx) * Mul).lshr(Shift) & AndMask;
     ConstantInt *C = dyn_cast_or_null<ConstantInt>(
         ConstantFoldLoadFromConst(Table, AccessTy, Index * GEPIdxFactor, DL));
     if (!C || C->getZExtValue() != Idx)
@@ -558,26 +557,27 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I, const DataLayout &DL) {
     return false;
 
   Value *X1;
-  uint64_t MulConst, ShiftConst;
+  uint64_t MulConst, ShiftConst, AndCst = ~0ull;
   // FIXME: 64-bit targets have `i64` type for the GEP index, so this match will
   // probably fail for other (e.g. 32-bit) targets.
   if (!match(GepIdx, m_ZExtOrSelf(m_LShr(
                          m_Mul(m_c_And(m_Neg(m_Value(X1)), m_Deferred(X1)),
                                m_ConstantInt(MulConst)),
-                         m_ConstantInt(ShiftConst)))))
+                         m_ConstantInt(ShiftConst)))) &&
+      !match(GepIdx, m_ZExtOrSelf(m_And(m_LShr(m_Mul(m_c_And(m_Neg(m_Value(X1)),
+                                                             m_Deferred(X1)),
+                                                     m_ConstantInt(MulConst)),
+                                               m_ConstantInt(ShiftConst)),
+                                        m_ConstantInt(AndCst)))))
     return false;
 
   unsigned InputBits = X1->getType()->getScalarSizeInBits();
   if (InputBits != 16 && InputBits != 32 && InputBits != 64)
     return false;
 
-  // Shift should extract top 4..7 bits.
-  if (InputBits - Log2_32(InputBits) != ShiftConst &&
-      InputBits - Log2_32(InputBits) - 1 != ShiftConst)
-    return false;
-
-  if (!isCTTZTable(GVTable->getInitializer(), MulConst, ShiftConst, AccessType,
-                   InputBits, GEPSrcEltTy->getScalarSizeInBits() / 8, DL))
+  if (!isCTTZTable(GVTable->getInitializer(), MulConst, ShiftConst, AndCst,
+                   AccessType, InputBits,
+                   GEPSrcEltTy->getScalarSizeInBits() / 8, DL))
     return false;
 
   ConstantInt *ZeroTableElem = cast<ConstantInt>(
