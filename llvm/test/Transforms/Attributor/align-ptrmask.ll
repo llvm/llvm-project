@@ -6,7 +6,7 @@ define ptr @align_ptrmask_back_no_prop(ptr align 2 %x, i1 %cmp1, i1 %cmp2) {
 ; CHECK-SAME: ptr nofree writeonly align 2 [[X:%.*]], i1 [[CMP1:%.*]], i1 [[CMP2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i64 -32, i64 -8
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP2]], i64 [[SEL]], i64 -16
-; CHECK-NEXT:    [[P:%.*]] = tail call noundef nonnull align 8 dereferenceable(4) ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 noundef [[SEL1]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[P:%.*]] = tail call noundef nonnull align 8 dereferenceable(4) ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 noundef [[SEL1]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    store float 1.000000e+00, ptr [[P]], align 8
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
@@ -22,7 +22,7 @@ define ptr @align_ptrmask_back_prop(ptr align 2 %x, i1 %cmp1, i1 %cmp2) {
 ; CHECK-SAME: ptr nofree writeonly align 16 [[X:%.*]], i1 [[CMP1:%.*]], i1 [[CMP2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i64 -32, i64 -8
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP2]], i64 [[SEL]], i64 -16
-; CHECK-NEXT:    [[P:%.*]] = tail call noundef nonnull align 16 dereferenceable(4) ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 noundef [[SEL1]]) #[[ATTR3]]
+; CHECK-NEXT:    [[P:%.*]] = tail call noundef nonnull align 16 dereferenceable(4) ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 noundef [[SEL1]]) #[[ATTR4]]
 ; CHECK-NEXT:    store float 1.000000e+00, ptr [[P]], align 16
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
@@ -38,7 +38,7 @@ define ptr @align_ptrmask_forward_mask(ptr align 2 %x, i1 %cmp1, i1 %cmp2) {
 ; CHECK-SAME: ptr nofree readnone align 2 [[X:%.*]], i1 [[CMP1:%.*]], i1 [[CMP2:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i64 -32, i64 -8
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP2]], i64 [[SEL]], i64 -16
-; CHECK-NEXT:    [[P:%.*]] = tail call align 8 ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 noundef [[SEL1]]) #[[ATTR3]]
+; CHECK-NEXT:    [[P:%.*]] = tail call align 8 ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 noundef [[SEL1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
   %sel = select i1 %cmp1, i64 -32, i64 -8
@@ -52,7 +52,7 @@ define ptr @align_ptrmask_forward_ptr(ptr align 16 %x, i1 %cmp1, i1 %cmp2) {
 ; CHECK-SAME: ptr nofree readnone align 16 [[X:%.*]], i1 [[CMP1:%.*]], i1 [[CMP2:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i64 -32, i64 -8
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP2]], i64 [[SEL]], i64 -16
-; CHECK-NEXT:    [[P:%.*]] = tail call align 16 ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 noundef [[SEL1]]) #[[ATTR3]]
+; CHECK-NEXT:    [[P:%.*]] = tail call align 16 ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 noundef [[SEL1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
   %sel = select i1 %cmp1, i64 -32, i64 -8
@@ -66,7 +66,7 @@ define ptr @align_ptrmask_forward_nonconst_mask(ptr align 8 %x, i64 %y, i1 %cmp1
 ; CHECK-SAME: ptr nofree readnone align 8 [[X:%.*]], i64 [[Y:%.*]], i1 [[CMP1:%.*]], i1 [[CMP2:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i64 -32, i64 [[Y]]
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP2]], i64 [[SEL]], i64 -16
-; CHECK-NEXT:    [[P:%.*]] = tail call align 8 ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 [[SEL1]]) #[[ATTR3]]
+; CHECK-NEXT:    [[P:%.*]] = tail call align 8 ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 [[SEL1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
   %sel = select i1 %cmp1, i64 -32, i64 %y
@@ -80,7 +80,7 @@ define ptr @align_ptrmask_back_nonconst_mask(ptr align 4 %x, i64 %y, i1 %cmp1, i
 ; CHECK-SAME: ptr nofree writeonly align 8 [[X:%.*]], i64 [[Y:%.*]], i1 [[CMP1:%.*]], i1 [[CMP2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i64 -32, i64 [[Y]]
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP2]], i64 [[SEL]], i64 -16
-; CHECK-NEXT:    [[P:%.*]] = tail call noundef nonnull align 8 dereferenceable(4) ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 [[SEL1]]) #[[ATTR3]]
+; CHECK-NEXT:    [[P:%.*]] = tail call noundef nonnull align 8 dereferenceable(4) ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 [[SEL1]]) #[[ATTR4]]
 ; CHECK-NEXT:    store float 1.000000e+00, ptr [[P]], align 8
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
@@ -94,7 +94,7 @@ define ptr @align_ptrmask_back_nonconst_mask(ptr align 4 %x, i64 %y, i1 %cmp1, i
 define ptr @align_ptrmask_back_const_back_noprop(ptr align 4 %x, i64 %y, i1 %cmp1, i1 %cmp2) {
 ; CHECK-LABEL: define noundef nonnull align 8 dereferenceable(4) ptr @align_ptrmask_back_const_back_noprop(
 ; CHECK-SAME: ptr nofree writeonly align 4 [[X:%.*]], i64 [[Y:%.*]], i1 [[CMP1:%.*]], i1 [[CMP2:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[P:%.*]] = tail call noundef nonnull align 8 dereferenceable(4) ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 noundef -8) #[[ATTR3]]
+; CHECK-NEXT:    [[P:%.*]] = tail call noundef nonnull align 8 dereferenceable(4) ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 noundef -8) #[[ATTR4]]
 ; CHECK-NEXT:    store float 1.000000e+00, ptr [[P]], align 8
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
@@ -106,7 +106,7 @@ define ptr @align_ptrmask_back_const_back_noprop(ptr align 4 %x, i64 %y, i1 %cmp
 define ptr @align_ptrmask_back_const_back_prop(ptr align 4 %x, i64 %y, i1 %cmp1, i1 %cmp2) {
 ; CHECK-LABEL: define noundef nonnull align 8 dereferenceable(4) ptr @align_ptrmask_back_const_back_prop(
 ; CHECK-SAME: ptr nofree writeonly align 8 [[X:%.*]], i64 [[Y:%.*]], i1 [[CMP1:%.*]], i1 [[CMP2:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[P:%.*]] = tail call noundef nonnull align 8 dereferenceable(4) ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 noundef -2) #[[ATTR3]]
+; CHECK-NEXT:    [[P:%.*]] = tail call noundef nonnull align 8 dereferenceable(4) ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 noundef -2) #[[ATTR4]]
 ; CHECK-NEXT:    store float 1.000000e+00, ptr [[P]], align 8
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
@@ -118,7 +118,7 @@ define ptr @align_ptrmask_back_const_back_prop(ptr align 4 %x, i64 %y, i1 %cmp1,
 define ptr @align_ptrmask_back_const_forward_mask(ptr align 4 %x, i64 %y, i1 %cmp1, i1 %cmp2) {
 ; CHECK-LABEL: define align 8 ptr @align_ptrmask_back_const_forward_mask(
 ; CHECK-SAME: ptr nofree readnone align 4 [[X:%.*]], i64 [[Y:%.*]], i1 [[CMP1:%.*]], i1 [[CMP2:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[P:%.*]] = tail call align 8 ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 noundef -8) #[[ATTR3]]
+; CHECK-NEXT:    [[P:%.*]] = tail call align 8 ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 noundef -8) #[[ATTR4]]
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
   %p = tail call ptr @llvm.ptrmask.p0.i64(ptr %x, i64 -8)
@@ -128,7 +128,7 @@ define ptr @align_ptrmask_back_const_forward_mask(ptr align 4 %x, i64 %y, i1 %cm
 define ptr @align_ptrmask_back_const_forward_ptr(ptr align 16 %x, i64 %y, i1 %cmp1, i1 %cmp2) {
 ; CHECK-LABEL: define align 16 ptr @align_ptrmask_back_const_forward_ptr(
 ; CHECK-SAME: ptr nofree readnone align 16 [[X:%.*]], i64 [[Y:%.*]], i1 [[CMP1:%.*]], i1 [[CMP2:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[P:%.*]] = tail call align 16 ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 noundef -8) #[[ATTR3]]
+; CHECK-NEXT:    [[P:%.*]] = tail call align 16 ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 noundef -8) #[[ATTR4]]
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
   %p = tail call ptr @llvm.ptrmask.p0.i64(ptr %x, i64 -8)
