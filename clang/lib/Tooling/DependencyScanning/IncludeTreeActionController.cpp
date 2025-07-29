@@ -425,6 +425,13 @@ Error IncludeTreeActionController::finalizeModuleBuild(
       ModuleScanInstance.getInvocation().getLangOpts(),
       ModuleScanInstance.getInvocation().getCodeGenOpts());
   auto Builder = BuilderStack.pop_back_val();
+
+  // If there was an error, bail out early. The state of `Builder` may be
+  // inconsistent since there is no guarantee that exitedInclude or
+  // finalizeModuleBuild have been called for all imports.
+  if (ModuleScanInstance.getDiagnostics().hasUnrecoverableErrorOccurred())
+    return Error::success(); // Already reported.
+
   auto Tree = Builder->finishIncludeTree(ModuleScanInstance,
                                          ModuleScanInstance.getInvocation());
   if (!Tree)
