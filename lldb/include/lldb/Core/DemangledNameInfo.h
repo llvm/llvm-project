@@ -22,7 +22,9 @@ namespace lldb_private {
 struct DemangledNameInfo {
   /// A [start, end) pair for the function basename.
   /// The basename is the name without scope qualifiers
-  /// and without template parameters. E.g.,
+  /// and without template parameters.
+  ///
+  /// E.g.,
   /// \code{.cpp}
   ///    void foo::bar<int>::someFunc<float>(int) const &&
   ///                        ^       ^
@@ -31,17 +33,18 @@ struct DemangledNameInfo {
   std::pair<size_t, size_t> BasenameRange;
 
   /// A [start, end) pair for the function template arguments.
-  /// The basename is the name without scope qualifiers
-  /// and without template parameters. E.g.,
+  ///
+  /// E.g.,
   /// \code{.cpp}
   ///    void foo::bar<int>::someFunc<float>(int) const &&
-  ///                                ^     ^
-  ///                              start  end
+  ///                                ^      ^
+  ///                              start   end
   /// \endcode
-  std::pair<size_t, size_t> TemplateRange;
+  std::pair<size_t, size_t> TemplateArgumentsRange;
 
   /// A [start, end) pair for the function scope qualifiers.
-  /// E.g., for
+  ///
+  /// E.g.,
   /// \code{.cpp}
   ///    void foo::bar<int>::qux<float>(int) const &&
   ///         ^              ^
@@ -50,6 +53,7 @@ struct DemangledNameInfo {
   std::pair<size_t, size_t> ScopeRange;
 
   /// Indicates the [start, end) of the function argument list.
+  ///
   /// E.g.,
   /// \code{.cpp}
   ///    int (*getFunc<float>(float, double))(int, int)
@@ -72,6 +76,13 @@ struct DemangledNameInfo {
   /// Indicates the [start, end) of the function's name qualifiers. This is a
   /// catch-all range for anything in between the basename and the arguments,
   /// that is not tracked by the rest of the pairs.
+  ///
+  /// E.g.,
+  /// \code{.swift}
+  ///    void foo::bar<int>::qux<float>(int) const &&
+  ///                                       ^        ^
+  ///                                     start     end
+  /// \endcode
   std::pair<size_t, size_t> NameQualifiersRange;
 
   /// Indicates the [start, end) of the function's prefix. This is a
@@ -90,9 +101,9 @@ struct DemangledNameInfo {
     return BasenameRange.second > BasenameRange.first;
   }
 
-  /// Returns \c true if this object holds a valid template range.
-  bool hasTemplate() const {
-    return TemplateRange.second >= TemplateRange.first;
+  /// Returns \c true if this object holds a valid template arguments range.
+  bool hasTemplateArguments() const {
+    return TemplateArgumentsRange.second >= TemplateArgumentsRange.first;
   }
 
   /// Returns \c true if this object holds a valid scope range.
@@ -171,6 +182,14 @@ private:
   /// If this object \ref shouldTrack, then update the end of
   /// the basename range to the current \c OB position.
   void updateBasenameEnd();
+
+  /// If this object \ref shouldTrack, then update the beginning of
+  /// the template arguments range to the current \c OB position.
+  void updateTemplateArgumentsStart();
+
+  /// If this object \ref shouldTrack, then update the end of
+  /// the template arguments range to the current \c OB position.
+  void updateTemplateArgumentsEnd();
 
   /// If this object \ref shouldTrack, then update the beginning
   /// of the scope range to the current \c OB position.

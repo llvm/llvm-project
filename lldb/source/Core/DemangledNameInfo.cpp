@@ -92,6 +92,10 @@ void TrackingOutputBuffer::finalizeStart() {
   if (NameInfo.BasenameRange.second == 0)
     NameInfo.BasenameRange.second = getCurrentPosition();
 
+  if (NameInfo.BasenameRange.second != NameInfo.ArgumentsRange.first)
+    NameInfo.TemplateArgumentsRange = {NameInfo.BasenameRange.second,
+                                       NameInfo.ArgumentsRange.first};
+
   assert(!shouldTrack());
   assert(canFinalize());
 }

@@ -436,7 +436,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
     // clang-format off
    { "_ZNVKO3BarIN2ns3QuxIiEEE1CIPFi3FooIS_IiES6_EEE6methodIS6_EENS5_IT_SC_E5InnerIiEESD_SD_",
      {
-       /*.BasenameRange=*/{92, 98}, /*.TemplateRange=*/{0, 0}, /*.ScopeRange=*/{36, 92},
+       /*.BasenameRange=*/{92, 98}, /*.TemplateArgumentsRange=*/{98, 108}, /*.ScopeRange=*/{36, 92},
        /*.ArgumentsRange=*/{108, 158}, /*.QualifiersRange=*/{158, 176}, /*.NameQualifiersRange=*/{0, 0},
        /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
      },
@@ -446,7 +446,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
    },
    { "_Z7getFuncIfEPFiiiET_",
      {
-       /*.BasenameRange=*/{6, 13}, /*.TemplateRange=*/{0, 0}, /*.ScopeRange=*/{6, 6},
+       /*.BasenameRange=*/{6, 13}, /*.TemplateArgumentsRange=*/{13, 20}, /*.ScopeRange=*/{6, 6},
        /*.ArgumentsRange=*/{20, 27}, /*.QualifiersRange=*/{38, 38}, /*.NameQualifiersRange=*/{0, 0},
        /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
      },
@@ -456,7 +456,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
    },
    { "_ZN1f1b1c1gEv",
      {
-       /*.BasenameRange=*/{9, 10}, /*.TemplateRange=*/{0, 0}, /*.ScopeRange=*/{0, 9},
+       /*.BasenameRange=*/{9, 10}, /*.TemplateArgumentsRange=*/{0, 0}, /*.ScopeRange=*/{0, 9},
        /*.ArgumentsRange=*/{10, 12}, /*.QualifiersRange=*/{12, 12}, /*.NameQualifiersRange=*/{0, 0},
        /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
      },
@@ -466,7 +466,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
    },
    { "_ZN5test73fD1IiEEDTcmtlNS_1DEL_ZNS_1bEEEcvT__EES2_",
      {
-       /*.BasenameRange=*/{45, 48}, /*.TemplateRange=*/{0, 0}, /*.ScopeRange=*/{38, 45},
+       /*.BasenameRange=*/{45, 48}, /*.TemplateArgumentsRange=*/{48, 53}, /*.ScopeRange=*/{38, 45},
        /*.ArgumentsRange=*/{53, 58}, /*.QualifiersRange=*/{58, 58}, /*.NameQualifiersRange=*/{0, 0},
        /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
      },
@@ -476,7 +476,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
    },
    { "_ZN5test73fD1IiEEDTcmtlNS_1DEL_ZNS_1bINDT1cE1dEEEEEcvT__EES2_",
      {
-       /*.BasenameRange=*/{61, 64}, /*.TemplateRange=*/{0, 0},/*.ScopeRange=*/{54, 61},
+       /*.BasenameRange=*/{61, 64}, /*.TemplateArgumentsRange=*/{64, 69},/*.ScopeRange=*/{54, 61},
        /*.ArgumentsRange=*/{69, 79}, /*.QualifiersRange=*/{79, 79}, /*.NameQualifiersRange=*/{0, 0},
        /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
      },
@@ -486,7 +486,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
    },
    { "_ZN5test7INDT1cE1dINDT1cE1dEEEE3fD1INDT1cE1dINDT1cE1dEEEEEDTcmtlNS_1DEL_ZNS_1bINDT1cE1dEEEEEcvT__EES2_",
      {
-       /*.BasenameRange=*/{120, 123}, /*.TemplateRange=*/{0, 0}, /*.ScopeRange=*/{81, 120},
+       /*.BasenameRange=*/{120, 123}, /*.TemplateArgumentsRange=*/{123, 155}, /*.ScopeRange=*/{81, 120},
        /*.ArgumentsRange=*/{155, 168}, /*.QualifiersRange=*/{168, 168}, /*.NameQualifiersRange=*/{0, 0},
        /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
      },
@@ -496,7 +496,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
    },
    { "_ZN8nlohmann16json_abi_v3_11_310basic_jsonINSt3__13mapENS2_6vectorENS2_12basic_stringIcNS2_11char_traitsIcEENS2_9allocatorIcEEEEbxydS8_NS0_14adl_serializerENS4_IhNS8_IhEEEEvE5parseIRA29_KcEESE_OT_NS2_8functionIFbiNS0_6detail13parse_event_tERSE_EEEbb",
      {
-       /*.BasenameRange=*/{687, 692}, /*.TemplateRange=*/{0, 0}, /*.ScopeRange=*/{343, 687},
+       /*.BasenameRange=*/{687, 692}, /*.TemplateArgumentsRange=*/{692, 713}, /*.ScopeRange=*/{343, 687},
        /*.ArgumentsRange=*/{713, 1174}, /*.QualifiersRange=*/{1174, 1174}, /*.NameQualifiersRange=*/{0, 0},
        /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
      },
@@ -506,7 +506,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
    },
    { "_ZN8nlohmann16json_abi_v3_11_310basic_jsonINSt3__13mapENS2_6vectorENS2_12basic_stringIcNS2_11char_traitsIcEENS2_9allocatorIcEEEEbxydS8_NS0_14adl_serializerENS4_IhNS8_IhEEEEvEC1EDn",
      {
-       /*.BasenameRange=*/{344, 354}, /*.TemplateRange=*/{0, 0}, /*.ScopeRange=*/{0, 344},
+       /*.BasenameRange=*/{344, 354}, /*.TemplateArgumentsRange=*/{0, 0}, /*.ScopeRange=*/{0, 344},
        /*.ArgumentsRange=*/{354, 370}, /*.QualifiersRange=*/{370, 370}, /*.NameQualifiersRange=*/{0, 0},
        /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
      },
@@ -516,7 +516,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
    },
    { "_Z3fppIiEPFPFvvEiEf",
      {
-       /*.BasenameRange=*/{10, 13}, /*.TemplateRange=*/{0, 0}, /*.ScopeRange=*/{10, 10},
+       /*.BasenameRange=*/{10, 13}, /*.TemplateArgumentsRange=*/{13, 18}, /*.ScopeRange=*/{10, 10},
       /*.ArgumentsRange=*/{18, 25}, /*.QualifiersRange=*/{34,34}, /*.NameQualifiersRange=*/{0, 0},
       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
      },
@@ -526,7 +526,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
    },
    { "_Z3fppIiEPFPFvvEN2ns3FooIiEEEf",
      {
-       /*.BasenameRange=*/{10, 13}, /*.TemplateRange=*/{0, 0}, /*.ScopeRange=*/{10, 10},
+       /*.BasenameRange=*/{10, 13}, /*.TemplateArgumentsRange=*/{13, 18}, /*.ScopeRange=*/{10, 10},
        /*.ArgumentsRange=*/{18, 25}, /*.QualifiersRange=*/{43, 43}, /*.NameQualifiersRange=*/{0, 0},
        /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
      },
@@ -536,7 +536,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
    },
    { "_Z3fppIiEPFPFvPFN2ns3FooIiEENS2_3BarIfE3QuxEEEPFS2_S2_EEf",
      {
-       /*.BasenameRange=*/{10, 13}, /*.TemplateRange=*/{0, 0}, /*.ScopeRange=*/{10, 10},
+       /*.BasenameRange=*/{10, 13}, /*.TemplateArgumentsRange=*/{13, 18}, /*.ScopeRange=*/{10, 10},
        /*.ArgumentsRange=*/{18, 25}, /*.QualifiersRange=*/{108, 108}, /*.NameQualifiersRange=*/{0, 0},
        /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
      },
@@ -546,7 +546,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
    },
    { "_ZN2ns8HasFuncsINS_3FooINS1_IiE3BarIfE3QuxEEEE3fppIiEEPFPFvvEiEf",
      {
-       /*.BasenameRange=*/{64, 67}, /*.TemplateRange=*/{0, 0}, /*.ScopeRange=*/{10, 64},
+       /*.BasenameRange=*/{64, 67}, /*.TemplateArgumentsRange=*/{67, 72}, /*.ScopeRange=*/{10, 64},
        /*.ArgumentsRange=*/{72, 79}, /*.QualifiersRange=*/{88, 88}, /*.NameQualifiersRange=*/{0, 0},
        /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
      },
@@ -556,7 +556,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
    },
    { "_ZN2ns8HasFuncsINS_3FooINS1_IiE3BarIfE3QuxEEEE3fppIiEEPFPFvvES2_Ef",
      {
-       /*.BasenameRange=*/{64, 67}, /*.TemplateRange=*/{0, 0}, /*.ScopeRange=*/{10, 64},
+       /*.BasenameRange=*/{64, 67}, /*.TemplateArgumentsRange=*/{67, 72}, /*.ScopeRange=*/{10, 64},
        /*.ArgumentsRange=*/{72, 79}, /*.QualifiersRange=*/{97, 97}, /*.NameQualifiersRange=*/{0, 0},
        /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
      },
@@ -566,7 +566,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
    },
    { "_ZN2ns8HasFuncsINS_3FooINS1_IiE3BarIfE3QuxEEEE3fppIiEEPFPFvPFS2_S5_EEPFS2_S2_EEf",
      {
-       /*.BasenameRange=*/{64, 67}, /*.TemplateRange=*/{0, 0}, /*.ScopeRange=*/{10, 64},
+       /*.BasenameRange=*/{64, 67}, /*.TemplateArgumentsRange=*/{67, 72}, /*.ScopeRange=*/{10, 64},
        /*.ArgumentsRange=*/{72, 79}, /*.QualifiersRange=*/{162, 162}, /*.NameQualifiersRange=*/{0, 0},
        /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
      },
@@ -576,7 +576,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
    },
    { "_ZNKO2ns3ns23Bar3fooIiEEPFPFNS0_3FooIiEEiENS3_IfEEEi",
      {
-       /*.BasenameRange=*/{37, 40}, /*.TemplateRange=*/{0, 0}, /*.ScopeRange=*/{23, 37},
+       /*.BasenameRange=*/{37, 40}, /*.TemplateArgumentsRange=*/{40, 45}, /*.ScopeRange=*/{23, 37},
        /*.ArgumentsRange=*/{45, 50}, /*.QualifiersRange=*/{78, 87}, /*.NameQualifiersRange=*/{0, 0},
        /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
      },
@@ -586,7 +586,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
    },
    { "_ZTV11ImageLoader",
      {
-       /*.BasenameRange=*/{0, 0}, /*.TemplateRange=*/{0, 0}, /*.ScopeRange=*/{0, 0},
+       /*.BasenameRange=*/{0, 0}, /*.TemplateArgumentsRange=*/{0, 0}, /*.ScopeRange=*/{0, 0},
        /*.ArgumentsRange=*/{0, 0}, /*.QualifiersRange=*/{0, 0}, /*.NameQualifiersRange=*/{0, 0},
        /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
      },
@@ -597,7 +597,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
    },
    { "___ZNK5dyld313MachOAnalyzer18forEachInitializerER11DiagnosticsRKNS0_15VMAddrConverterEU13block_pointerFvjEPKv_block_invoke.204",
      {
-       /*.BasenameRange=*/{55, 73}, /*.TemplateRange=*/{0, 0}, /*.ScopeRange=*/{33, 55},
+       /*.BasenameRange=*/{55, 73}, /*.TemplateArgumentsRange=*/{0, 0}, /*.ScopeRange=*/{33, 55},
        /*.ArgumentsRange=*/{73, 181}, /*.QualifiersRange=*/{181, 187}, /*.NameQualifiersRange=*/{0, 0},
        /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
      },
@@ -607,7 +607,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
    },
    { "_ZZN5dyld45startEPNS_10KernelArgsEPvS2_ENK3$_1clEv",
      {
-       /*.BasenameRange=*/{53, 63}, /*.TemplateRange=*/{0, 0}, /*.ScopeRange=*/{0, 53},
+       /*.BasenameRange=*/{53, 63}, /*.TemplateArgumentsRange=*/{0, 0}, /*.ScopeRange=*/{0, 53},
        /*.ArgumentsRange=*/{63, 65}, /*.QualifiersRange=*/{65, 71}, /*.NameQualifiersRange=*/{0, 0},
        /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
      },
@@ -617,7 +617,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
    },
    { "_ZZNK5dyld46Loader38runInitializersBottomUpPlusUpwardLinksERNS_12RuntimeStateEENK3$_0clEv",
      {
-       /*.BasenameRange=*/{88, 98}, /*.TemplateRange=*/{0, 0}, /*.ScopeRange=*/{0, 88},
+       /*.BasenameRange=*/{88, 98}, /*.TemplateArgumentsRange=*/{0, 0}, /*.ScopeRange=*/{0, 88},
        /*.ArgumentsRange=*/{98, 100}, /*.QualifiersRange=*/{100, 106}, /*.NameQualifiersRange=*/{0, 0},
        /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
      },
@@ -627,7 +627,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
    },
    { "_ZZNK5dyld46Loader38runInitializersBottomUpPlusUpwardLinksERNS_12RuntimeStateEENK3$_0clEv.cold",
      {
-       /*.BasenameRange=*/{88, 98}, /*.TemplateRange=*/{0, 0}, /*.ScopeRange=*/{0, 88},
+       /*.BasenameRange=*/{88, 98}, /*.TemplateArgumentsRange=*/{0, 0}, /*.ScopeRange=*/{0, 88},
        /*.ArgumentsRange=*/{98, 100}, /*.QualifiersRange=*/{100, 106}, /*.NameQualifiersRange=*/{0, 0},
        /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
      },
@@ -677,11 +677,14 @@ TEST_P(DemanglingPartsTestFixture, DemanglingParts) {
   auto demangled = std::string_view(*OB);
 
   ASSERT_EQ(OB->NameInfo.hasBasename(), valid_basename);
-
+  std::cout << demangled << " " << OB->NameInfo.BasenameRange.first << ", "
+            << OB->NameInfo.BasenameRange.second << '\n';
   EXPECT_EQ(OB->NameInfo.BasenameRange, info.BasenameRange);
+  EXPECT_EQ(OB->NameInfo.TemplateArgumentsRange, info.TemplateArgumentsRange);
   EXPECT_EQ(OB->NameInfo.ScopeRange, info.ScopeRange);
   EXPECT_EQ(OB->NameInfo.ArgumentsRange, info.ArgumentsRange);
   EXPECT_EQ(OB->NameInfo.QualifiersRange, info.QualifiersRange);
+  EXPECT_EQ(OB->NameInfo.NameQualifiersRange, info.NameQualifiersRange);
 
   auto get_part = [&](const std::pair<size_t, size_t> &loc) {
     return demangled.substr(loc.first, loc.second - loc.first);
@@ -711,9 +714,9 @@ DemangledNameInfoTestCase g_demangled_name_info_test_cases[] = {
     // clang-format off
   {
     {
-      /*.BasenameRange=*/{0, 10}, /*.TemplateRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
-      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0}, /*.PrefixRange=*/{1, 0},
-      /*.SuffixRange=*/{1, 0}
+      /*.BasenameRange=*/{0, 10}, /*.TemplateArgumentsRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
+      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0},
+      /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
     },
     /*valid_basename=*/true, /*valid_template=*/false, /*valid_scope=*/false,
     /*valid_arguments=*/false, /*valid_qualifiers=*/false, /*valid_name_qualifiers=*/false,
@@ -721,9 +724,9 @@ DemangledNameInfoTestCase g_demangled_name_info_test_cases[] = {
   },
   {
     {
-      /*.BasenameRange=*/{1, 0}, /*.TemplateRange=*/{0, 10}, /*.ScopeRange=*/{1, 0},
-      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0}, /*.PrefixRange=*/{1, 0},
-      /*.SuffixRange=*/{1, 0}
+      /*.BasenameRange=*/{1, 0}, /*.TemplateArgumentsRange=*/{0, 10}, /*.ScopeRange=*/{1, 0},
+      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0},
+      /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
     },
     /*valid_basename=*/false, /*valid_name_qualifiers=*/true, /*valid_scope=*/false,
     /*valid_arguments=*/false, /*valid_qualifiers=*/false, /*valid_name_qualifiers=*/false,
@@ -731,9 +734,9 @@ DemangledNameInfoTestCase g_demangled_name_info_test_cases[] = {
   },
   {
     {
-      /*.BasenameRange=*/{1, 0}, /*.TemplateRange=*/{1, 0}, /*.ScopeRange=*/{0, 10},
-      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0}, /*.PrefixRange=*/{1, 0},
-      /*.SuffixRange=*/{1, 0}
+      /*.BasenameRange=*/{1, 0}, /*.TemplateArgumentsRange=*/{1, 0}, /*.ScopeRange=*/{0, 10},
+      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0},
+      /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
     },
     /*valid_basename=*/false, /*valid_template=*/false, /*valid_scope=*/true,
     /*valid_arguments=*/false, /*valid_qualifiers=*/false, /*valid_name_qualifiers=*/false,
@@ -741,9 +744,9 @@ DemangledNameInfoTestCase g_demangled_name_info_test_cases[] = {
   },
   {
     {
-      /*.BasenameRange=*/{1, 0}, /*.TemplateRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
-      /*.ArgumentsRange=*/{0, 10}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0}, /*.PrefixRange=*/{1, 0},
-      /*.SuffixRange=*/{1, 0}
+      /*.BasenameRange=*/{1, 0}, /*.TemplateArgumentsRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
+      /*.ArgumentsRange=*/{0, 10}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0},
+      /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
     },
     /*valid_basename=*/false, /*valid_template=*/false, /*valid_scope=*/false,
     /*valid_arguments=*/true, /*valid_qualifiers=*/false, /*valid_name_qualifiers=*/false,
@@ -751,9 +754,9 @@ DemangledNameInfoTestCase g_demangled_name_info_test_cases[] = {
   },
   {
     {
-      /*.BasenameRange=*/{1, 0}, /*.TemplateRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
-      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{0, 10}, /*.NameQualifiersRange=*/{1, 0}, /*.PrefixRange=*/{1, 0},
-      /*.SuffixRange=*/{1, 0}
+      /*.BasenameRange=*/{1, 0}, /*.TemplateArgumentsRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
+      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{0, 10}, /*.NameQualifiersRange=*/{1, 0},
+      /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
     },
     /*valid_basename=*/false, /*valid_template=*/false, /*valid_scope=*/false,
     /*valid_arguments=*/false, /*valid_qualifiers=*/true, /*valid_name_qualifiers=*/false,
@@ -761,9 +764,9 @@ DemangledNameInfoTestCase g_demangled_name_info_test_cases[] = {
   },
   {
     {
-      /*.BasenameRange=*/{1, 0}, /*.TemplateRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
-      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{0, 10}, /*.PrefixRange=*/{1, 0},
-      /*.SuffixRange=*/{1, 0}
+      /*.BasenameRange=*/{1, 0}, /*.TemplateArgumentsRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
+      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{0, 10},
+      /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
     },
     /*valid_basename=*/false, /*valid_template=*/false, /*valid_scope=*/false,
     /*valid_arguments=*/false, /*valid_qualifiers=*/false, /*valid_name_qualifiers=*/true,
@@ -771,9 +774,9 @@ DemangledNameInfoTestCase g_demangled_name_info_test_cases[] = {
   },
   {
     {
-      /*.BasenameRange=*/{1, 0}, /*.TemplateRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
-      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0}, /*.PrefixRange=*/{0, 10},
-      /*.SuffixRange=*/{1, 0}
+      /*.BasenameRange=*/{1, 0}, /*.TemplateArgumentsRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
+      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0},
+      /*.PrefixRange=*/{0, 10}, /*.SuffixRange=*/{1, 0}
     },
     /*valid_basename=*/false, /*valid_template=*/false, /*valid_scope=*/false,
     /*valid_arguments=*/false, /*valid_qualifiers=*/false, /*valid_name_qualifiers=*/false,
@@ -781,9 +784,9 @@ DemangledNameInfoTestCase g_demangled_name_info_test_cases[] = {
   },
   {
     {
-      /*.BasenameRange=*/{1, 0}, /*.TemplateRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
-      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0}, /*.PrefixRange=*/{1, 0},
-      /*.SuffixRange=*/{0, 10}
+      /*.BasenameRange=*/{1, 0}, /*.TemplateArgumentsRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
+      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0},
+      /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{0, 10}
     },
     /*valid_basename=*/false, /*valid_template=*/false, /*valid_scope=*/false,
     /*valid_arguments=*/false, /*valid_qualifiers=*/false, /*valid_name_qualifiers=*/false,
@@ -796,12 +799,12 @@ struct DemangledNameInfoTestFixture
     : public ::testing::TestWithParam<DemangledNameInfoTestCase> {};
 
 TEST_P(DemangledNameInfoTestFixture, DemangledNameInfoRanges) {
-  const auto &[info, valid_basename, valid_template, valid_scope,
+  const auto &[info, valid_basename, valid_template_arguments, valid_scope,
                valid_arguments, valid_qualifiers, valid_name_qualifiers,
                valid_prefix, valid_suffix] = GetParam();
 
   ASSERT_EQ(info.hasBasename(), valid_basename);
-  ASSERT_EQ(info.hasTemplate(), valid_template);
+  ASSERT_EQ(info.hasTemplateArguments(), valid_template_arguments);
   ASSERT_EQ(info.hasScope(), valid_scope);
   ASSERT_EQ(info.hasArguments(), valid_arguments);
   ASSERT_EQ(info.hasQualifiers(), valid_qualifiers);
