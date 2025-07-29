@@ -20787,7 +20787,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
           /*Mask=*/N->getOperand(4),
           /*VL=*/N->getOperand(5)};
 
-      auto OldMemSD = cast<MemIntrinsicSDNode>(N);
+      auto *OldMemSD = cast<MemIntrinsicSDNode>(N);
       // Match getTgtMemIntrinsic for non-unit stride case
       EVT MemVT = OldMemSD->getMemoryVT().getScalarType();
       MachineFunction &MF = DAG.getMachineFunction();
