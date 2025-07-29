@@ -132,7 +132,7 @@ struct GCNRegPressure {
         ST.getOccupancyWithNumSGPRs(getSGPRNum()),
         ST.getOccupancyWithNumVGPRs(
             getVGPRNum(ST.hasGFX90AInsts(),
-                       ST.getRegisterInfo()->getMaxNumVectorRegs(MF).first),
+                       ST.getMaxNumVectorRegs(MF.getFunction()).first),
             DynamicVGPRBlockSize));
   }
 

@@ -191,8 +191,7 @@ static void getRegisterPressures(
     NewPressure = TempUpwardTracker.getPressure();
   }
   unsigned ArchVGPRThreshold = DAG->MF.getSubtarget<GCNSubtarget>()
-                                   .getRegisterInfo()
-                                   ->getMaxNumVectorRegs(DAG->MF)
+                                   .getMaxNumVectorRegs(DAG->MF.getFunction())
                                    .first;
   Pressure[AMDGPU::RegisterPressureSets::SReg_32] = NewPressure.getSGPRNum();
   Pressure[AMDGPU::RegisterPressureSets::VGPR_32] =
@@ -346,8 +345,7 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
       SGPRPressure = T->getPressure().getSGPRNum();
       VGPRPressure =
           T->getPressure().getArchVGPRNum(DAG->MF.getSubtarget<GCNSubtarget>()
-                                              .getRegisterInfo()
-                                              ->getMaxNumVectorRegs(DAG->MF)
+                                              .getMaxNumVectorRegs(DAG->MF.getFunction())
                                               .first);
     }
   }
@@ -1290,7 +1288,7 @@ void GCNSchedStage::checkScheduling() {
   LLVM_DEBUG(dbgs() << "Region: " << RegionIdx << ".\n");
 
   unsigned ArchVGPRThreshold =
-      ST.getRegisterInfo()->getMaxNumVectorRegs(MF).first;
+      ST.getMaxNumVectorRegs(MF.getFunction()).first;
   if (PressureAfter.getSGPRNum() <= S.SGPRCriticalLimit &&
       PressureAfter.getVGPRNum(ST.hasGFX90AInsts(), ArchVGPRThreshold) <=
           S.VGPRCriticalLimit) {
@@ -1483,7 +1481,7 @@ bool GCNSchedStage::shouldRevertScheduling(unsigned WavesAfter) {
   // For dynamic VGPR mode, we don't want to waste any VGPR blocks.
   if (DAG.MFI.isDynamicVGPREnabled()) {
     unsigned ArchVGPRThreshold =
-        ST.getRegisterInfo()->getMaxNumVectorRegs(MF).first;
+        ST.getMaxNumVectorRegs(MF.getFunction()).first;
     unsigned BlocksBefore = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
         &ST, DAG.MFI.getDynamicVGPRBlockSize(),
         PressureBefore.getVGPRNum(false, ArchVGPRThreshold));

@@ -100,7 +100,7 @@ bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
                           unsigned MaxOccupancy) const {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   unsigned ArchVGPRThreshold =
-      ST.getRegisterInfo()->getMaxNumVectorRegs(MF).first;
+      ST.getMaxNumVectorRegs(MF.getFunction()).first;
   unsigned DynamicVGPRBlockSize =
       MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
 
@@ -252,7 +252,7 @@ Printable llvm::print(const GCNRegPressure &RP, const GCNSubtarget *ST,
                       unsigned DynamicVGPRBlockSize,
                       const MachineFunction *MF) {
   unsigned ArchVGPRThreshold =
-      ST->getRegisterInfo()->getMaxNumVectorRegs(*MF).first;
+      ST->getMaxNumVectorRegs(MF->getFunction()).first;
   return Printable(
       [&RP, ST, DynamicVGPRBlockSize, ArchVGPRThreshold, MF](raw_ostream &OS) {
         OS << "VGPRs: " << RP.getArchVGPRNum(ArchVGPRThreshold) << ' '
@@ -906,8 +906,7 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
     return Printable([&RP, &MF](raw_ostream &OS) {
       OS << format(PFX "  %-5d", RP.getSGPRNum())
          << format(" %-5d", RP.getVGPRNum(false, MF.getSubtarget<GCNSubtarget>()
-                                                     .getRegisterInfo()
-                                                     ->getMaxNumVectorRegs(MF)
+                                                     .getMaxNumVectorRegs(MF.getFunction())
                                                      .first));
     });
   };

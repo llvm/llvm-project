@@ -211,7 +211,7 @@ bool SIFormMemoryClausesImpl::checkPressure(const MachineInstr &MI,
   if (Occupancy >= MFI->getMinAllowedOccupancy() &&
       MaxPressure.getVGPRNum(
           ST->hasGFX90AInsts(),
-          ST->getRegisterInfo()->getMaxNumVectorRegs(*MI.getMF()).first) <=
+          ST->getMaxNumVectorRegs(MI.getMF()->getFunction()).first) <=
           MaxVGPRs / 2 &&
       MaxPressure.getSGPRNum() <= MaxSGPRs / 2) {
     LastRecordedOccupancy = Occupancy;
