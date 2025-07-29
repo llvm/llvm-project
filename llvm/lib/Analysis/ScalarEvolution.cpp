@@ -7422,6 +7422,9 @@ ScalarEvolution::getLoopProperties(const Loop *L) {
       if (auto *SI = dyn_cast<StoreInst>(I))
         return !SI->isSimple();
 
+      if (I->mayThrow())
+        return true;
+
       // Check if the function accesses inaccessible memory.
       if (auto *CI = dyn_cast<CallInst>(I)) {
         auto ME = CI->getMemoryEffects();
@@ -7429,7 +7432,7 @@ ScalarEvolution::getLoopProperties(const Loop *L) {
           return false;
       }
 
-      return I->mayThrow() || I->mayWriteToMemory();
+      return I->mayWriteToMemory();
     };
 
     LoopProperties LP = {/* HasNoAbnormalExits */ true,
