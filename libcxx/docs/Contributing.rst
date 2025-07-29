@@ -174,10 +174,11 @@ Pre-commit CI
 Introduction
 ------------
 
-Unlike most parts of the LLVM project, libc++ uses a pre-commit CI [#]_. This
-CI used to be hosted on `Buildkite <https://buildkite.com/llvm-project/libcxx-ci>`__, but has migrated to the LLVM CI infrastrcuture, and
-the build results are visible in the review on GitHub. Please make sure
-the CI is green before committing a patch.
+Unlike most parts of the LLVM project, libc++ uses a pre-commit CI [#]_. Some of
+this CI is hosted on `Buildkite<https://buildkite.com/llvm-project/libcxx-ci>`__,
+but some has migrated to the LLVM CI infrastructure. The build results are
+visible in the review on GitHub. Please make sure the CI is green before
+committing a patch.
 
 The CI tests libc++ for all :ref:`supported platforms <SupportedPlatforms>`.
 The build is started for every commit added to a Pull Request. A complete CI
@@ -267,14 +268,14 @@ GCC, and CMake.
 Updating the CI testing container images
 ----------------------------------------
 
-The libcxx linux premerge testing can run on one of three sets of
-runner groups. The three runner group names are
-"llvm-premerge-libcxx-runners", "llvm-premerge-libcxx-release-runners"
-or "llvm-premerge-libcxx-next-runners".  Which runner set to use is
-controlled by the contents of https://github.com/llvm/llvm-project/blob/main/.github/workflows/libcxx-build-and-test.yaml . By default, it uses
-"llvm-premerge-libcxx-runners". To switch to one of the other runner
-sets, just replace all uses of "llvm-premerge-libcxx-runners" in the yaml
-file with the desired runner set.
+The libcxx linux premerge testing can run on one of three sets of runner
+groups. The three runner group names are "llvm-premerge-libcxx-runners",
+"llvm-premerge-libcxx-release-runners" or "llvm-premerge-libcxx-next-runners".
+Which runner set to use is controlled by the contents of
+https://github.com/llvm/llvm-project/blob/main/.github/workflows/libcxx-build-and-test.yaml.
+By default, it uses "llvm-premerge-libcxx-runners". To switch to one of the
+other runner sets, just replace all uses of "llvm-premerge-libcxx-runners" in
+the yaml file with the desired runner set.
 
 Which container image is used by these three runner sets is controlled
 and set by the variable values in
@@ -300,17 +301,20 @@ everything (tools, etc.). Whether to update just the runner or to update
 everything is controlled by the value of ``ACTIONS_BASE_IMAGE``, under
 ``actions-builder`` in ``libcxx/utils/ci/docker-compose.yml``.
 
-To update just the runner binary, change the value of
-``ACTIONS_BASE_IMAGE`` to be one of the libcxx runner variable images
-from
-https://github.com/llvm/llvm-zorg/blob/main/premerge/premerge_resources/variables.tf.
+To update just the runner binary, change the value of ``ACTIONS_BASE_IMAGE``
+to be a modified version of one of the libcxx runner variable images from
+https://github.com/llvm/llvm-zorg/blob/main/premerge/premerge_resources/variables.tf,
+as follows: Find the libcxx runner image name you want to use from the
+variables.tf file. The name will be something like
+``ghcr.io/llvm/libcxx-linux-builder:<some-commit-SHA>``.  Replace
+``libcxx-linux-builder`` with ``libcxx-linux-builder-base``. Use this new image
+name as the value you assign to ``ACTIONS_BASE_IMAGE``.
 
 To update the entire container image, set the value of ``ACTIONS_BASE_IMAGE``
 to ``builder-base``. If the value is already ``builder-base`` (there
-have been no just-the-runner updates since the last complete update), then
-you need to find the line containing
-``RUN echo "Last forced update executed on`` in
-``libcxx/utils/ci/Dockerfile`` and update the date to be the current date.
+have been no just-the-runner updates since the last complete update), then you
+need to find the line containing ``RUN echo "Last forced update executed on``
+in ``libcxx/utils/ci/Dockerfile`` and update the date to be the current date.
 
 Once you have created and merged a PR with those changes, a new image
 will be created, and a link to it can be found at
@@ -320,9 +324,10 @@ where the actual image name should be
 
 Lastly you need to create a PR in the llvm-zorg repository,
 updating the the value of the appropriate libcxx runner variable in
-the variables.tf file mentioned above. Once that change has been
-merged, an llvm-zorg administrator must use terraform to apply the
-change to the running GKE cluster.
+the variables.tf file mentioned above to the name of your newly created
+image (see above paragraph about finding the image name). Once that change
+has been merged, the LLVM premerge maintainer (a Google employee) must use
+terraform to apply the change to the running GKE cluster.
 
 
 run-buildbot-container
