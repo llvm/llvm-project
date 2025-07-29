@@ -1254,7 +1254,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     Type *SrcTy = ICA.getArgTypes().front();
     auto SrcLT = getTypeLegalizationCost(SrcTy);
     if (ST->hasVInstructions() && LT.second.isVector()) {
-      ArrayRef<unsigned> Ops;
+      SmallVector<unsigned, 2> Ops;
       unsigned SrcEltSz = DL.getTypeSizeInBits(SrcTy->getScalarType());
       unsigned DstEltSz = DL.getTypeSizeInBits(RetTy->getScalarType());
       if (LT.second.getVectorElementType() == MVT::bf16) {
