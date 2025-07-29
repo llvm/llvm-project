@@ -249,7 +249,7 @@ static bool hasPossibleIncompatibleOps(const Function *F) {
   return false;
 }
 
-uint64_t AArch64TTIImpl::getFeatureMask(const Function &F) const {
+APInt AArch64TTIImpl::getFeatureMask(const Function &F) const {
   StringRef AttributeStr =
       isMultiversionedFunction(F) ? "fmv-features" : "target-features";
   StringRef FeatureStr = F.getFnAttribute(AttributeStr).getValueAsString();

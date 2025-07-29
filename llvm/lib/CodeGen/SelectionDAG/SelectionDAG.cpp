@@ -784,10 +784,6 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
   case ISD::TargetFrameIndex:
     ID.AddInteger(cast<FrameIndexSDNode>(N)->getIndex());
     break;
-  case ISD::LIFETIME_START:
-  case ISD::LIFETIME_END:
-    ID.AddInteger(cast<LifetimeSDNode>(N)->getSize());
-    break;
   case ISD::PSEUDO_PROBE:
     ID.AddInteger(cast<PseudoProbeSDNode>(N)->getGuid());
     ID.AddInteger(cast<PseudoProbeSDNode>(N)->getIndex());
@@ -9360,8 +9356,7 @@ SDValue SelectionDAG::getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
 }
 
 SDValue SelectionDAG::getLifetimeNode(bool IsStart, const SDLoc &dl,
-                                      SDValue Chain, int FrameIndex,
-                                      int64_t Size) {
+                                      SDValue Chain, int FrameIndex) {
   const unsigned Opcode = IsStart ? ISD::LIFETIME_START : ISD::LIFETIME_END;
   const auto VTs = getVTList(MVT::Other);
   SDValue Ops[2] = {
@@ -9373,13 +9368,12 @@ SDValue SelectionDAG::getLifetimeNode(bool IsStart, const SDLoc &dl,
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, Opcode, VTs, Ops);
   ID.AddInteger(FrameIndex);
-  ID.AddInteger(Size);
   void *IP = nullptr;
   if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP))
     return SDValue(E, 0);
 
-  LifetimeSDNode *N = newSDNode<LifetimeSDNode>(Opcode, dl.getIROrder(),
-                                                dl.getDebugLoc(), VTs, Size);
+  LifetimeSDNode *N =
+      newSDNode<LifetimeSDNode>(Opcode, dl.getIROrder(), dl.getDebugLoc(), VTs);
   createOperands(N, Ops);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
@@ -10860,26 +10854,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
            (Ops[2]->getAsZExtVal() == 0 || Ops[2]->getAsZExtVal() == 1) &&
            "Invalid STRICT_FP_ROUND!");
     break;
-#if 0
-  // FIXME: figure out how to safely handle things like
-  // int foo(int x) { return 1 << (x & 255); }
-  // int bar() { return foo(256); }
-  case ISD::SRA_PARTS:
-  case ISD::SRL_PARTS:
-  case ISD::SHL_PARTS:
-    if (N3.getOpcode() == ISD::SIGN_EXTEND_INREG &&
-        cast<VTSDNode>(N3.getOperand(1))->getVT() != MVT::i1)
-      return getNode(Opcode, DL, VT, N1, N2, N3.getOperand(0));
-    else if (N3.getOpcode() == ISD::AND)
-      if (ConstantSDNode *AndRHS = dyn_cast<ConstantSDNode>(N3.getOperand(1))) {
-        // If the and is only masking out bits that cannot effect the shift,
-        // eliminate the and.
-        unsigned NumBits = VT.getScalarSizeInBits()*2;
-        if ((AndRHS->getValue() & (NumBits-1)) == NumBits-1)
-          return getNode(Opcode, DL, VT, N1, N2, N3.getOperand(0));
-      }
-    break;
-#endif
   }
 
   // Memoize the node unless it returns a glue result.
