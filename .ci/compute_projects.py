@@ -154,6 +154,7 @@ META_PROJECTS = {
     ("clang", "include", "clang", "CIR"): "CIR",
     ("*", "docs"): "docs",
     ("llvm", "utils", "gn"): "gn",
+    (".github", "workflows", "premerge.yaml"): ".ci",
 }
 
 # Projects that should not run any tests. These need to be metaprojects.
