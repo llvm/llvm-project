@@ -1708,7 +1708,7 @@ __tree<_Tp, _Compare, _Allocator>::__find_equal(__end_node_pointer& __parent, co
           __nd_ptr = std::addressof(__nd->__left_);
           __nd     = std::__static_fancy_pointer_cast<__node_pointer>(__nd->__left_);
         } else {
-          __parent = static_cast<__end_node_pointer>(__nd);
+          __parent = std::__static_fancy_pointer_cast<__end_node_pointer>(__nd);
           return __parent->__left_;
         }
       } else if (value_comp()(__nd->__value_, __v)) {
@@ -2036,7 +2036,7 @@ __tree<_Tp, _Compare, _Allocator>::__remove_node_pointer(__node_pointer __ptr) _
   if (__begin_node() == __ptr)
     __begin_node() = __r.__ptr_;
   --size();
-  std::__tree_remove(__end_node()->__left_, static_cast<__node_base_pointer>(__ptr));
+  std::__tree_remove(__end_node()->__left_, std::__static_fancy_pointer_cast<__node_base_pointer>(__ptr));
   return __r;
 }
 
