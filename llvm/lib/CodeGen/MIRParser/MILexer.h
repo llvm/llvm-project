@@ -151,6 +151,7 @@ struct MIToken {
     md_tbaa,
     md_alias_scope,
     md_noalias,
+    md_noalias_addrspace,
     md_range,
     md_diexpr,
     md_dilocation,
