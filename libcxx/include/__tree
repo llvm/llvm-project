@@ -1355,7 +1355,7 @@ __tree<_Tp, _Compare, _Allocator>::__tree(const value_compare& __comp, const all
 template <class _Tp, class _Compare, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::__node_pointer
 __tree<_Tp, _Compare, _Allocator>::_DetachedTreeCache::__detach_from_tree(__tree* __t) _NOEXCEPT {
-  __node_pointer __cache                = static_cast<__node_pointer>(__t->__begin_node());
+  __node_pointer __cache                = std::__static_fancy_pointer_cast<__node_pointer>(__t->__begin_node());
   __t->__begin_node()                   = __t->__end_node();
   __t->__end_node()->__left_->__parent_ = nullptr;
   __t->__end_node()->__left_            = nullptr;
@@ -2003,7 +2003,7 @@ __tree<_Tp, _Compare, _Allocator>::__node_assign_unique(const value_type& __v, _
   bool __inserted              = false;
   if (__child == nullptr) {
     __assign_value(__nd->__value_, __v);
-    __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__nd));
+    __insert_node_at(__parent, __child, std::__static_fancy_pointer_cast<__node_base_pointer>(__nd));
     __r        = __nd;
     __inserted = true;
   }
