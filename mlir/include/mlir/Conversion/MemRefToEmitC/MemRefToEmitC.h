@@ -10,8 +10,10 @@
 
 constexpr const char *alignedAllocFunctionName = "aligned_alloc";
 constexpr const char *mallocFunctionName = "malloc";
+constexpr const char *memcpyFunctionName = "memcpy";
 constexpr const char *cppStandardLibraryHeader = "cstdlib";
 constexpr const char *cStandardLibraryHeader = "stdlib.h";
+constexpr const char *stringLibraryHeader = "string.h";
 
 namespace mlir {
 class DialectRegistry;

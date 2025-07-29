@@ -1,25 +1,24 @@
-// RUN: mlir-opt -convert-memref-to-emitc %s -split-input-file | FileCheck %s
+// RUN: mlir-opt -convert-memref-to-emitc %s  | FileCheck %s
 
 func.func @copying(%arg0 : memref<2x4xf32>) {
   memref.copy %arg0, %arg0 : memref<2x4xf32> to memref<2x4xf32>
   return
 }
 
-// func.func @copying_memcpy(%arg_0: !emitc.ptr<f32>) {
-//   %size = "emitc.constant"() <{value = 8 : index}> :() -> index
-//   %element_size = "emitc.constant"() <{value = 4 : index}> :() -> index
-//   %total_bytes = emitc.mul %size, %element_size : (index, index) -> index
-  
-//   emitc.call_opaque "memcpy"(%arg_0, %arg_0, %total_bytes) : (!emitc.ptr<f32>, !emitc.ptr<f32>, index) -> ()
-//   return
-// }
+// CHECK: module {
+// CHECK-NEXT:  emitc.include <"string.h">
+// CHECK-LABEL:  copying
+// CHECK-NEXT: %0 = builtin.unrealized_conversion_cast %arg0 : memref<2x4xf32> to !emitc.array<2x4xf32>
+// CHECK-NEXT: %1 = "emitc.constant"() <{value = 0 : index}> : () -> index
+// CHECK-NEXT: %2 = emitc.subscript %0[%1, %1] : (!emitc.array<2x4xf32>, index, index) -> !emitc.lvalue<f32>
+// CHECK-NEXT: %3 = emitc.apply "&"(%2) : (!emitc.lvalue<f32>) -> !emitc.ptr<f32>
+// CHECK-NEXT: %4 = emitc.subscript %0[%1, %1] : (!emitc.array<2x4xf32>, index, index) -> !emitc.lvalue<f32>
+// CHECK-NEXT: %5 = emitc.apply "&"(%4) : (!emitc.lvalue<f32>) -> !emitc.ptr<f32>
+// CHECK-NEXT: %6 = emitc.call_opaque "sizeof"() {args = [f32]} : () -> !emitc.size_t
+// CHECK-NEXT: %7 = "emitc.constant"() <{value = 8 : index}> : () -> index
+// CHECK-NEXT: %8 = emitc.mul %6, %7 : (!emitc.size_t, index) -> !emitc.size_t
+// CHECK-NEXT: emitc.call_opaque "memcpy"(%5, %3, %8) : (!emitc.ptr<f32>, !emitc.ptr<f32>, !emitc.size_t) -> ()
+// CHECK-NEXT:    return
+// CHECK-NEXT:  }
+// CHECK-NEXT:}
 
-// CHECK-LABEL: copying_memcpy
-// CHECK-SAME: %arg_0: !emitc.ptr<f32>
-// CHECK-NEXT: %size = "emitc.constant"() <{value = 8 : index}> :() -> index
-// CHECK-NEXT: %element_size = "emitc.constant"() <{value = 4 : index}> :() -> index
-// CHECK-NEXT: %total_bytes = emitc.mul %size, %element_size : (index, index) -> index
-// CHECK-NEXT: emitc.call_opaque "memcpy"
-// CHECK-SAME: (%arg_0, %arg_0, %total_bytes)
-// CHECK-NEXT: : (!emitc.ptr<f32>, !emitc.ptr<f32>, index) -> ()
-// CHECK-NEXT: return
