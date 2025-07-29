@@ -30,3 +30,11 @@ template<> some_struct var_template<2>;
 // OGCG: @_Z12var_templateILi0EE = global i32 0
 // OGCG: @_Z12var_templateILi1EE = global i32 1
 // OGCG: @_Z12var_templateILi2EE = global %[[STRUCT_TYPE]] zeroinitializer
+
+template<typename T, int I> int partial_var_template_specialization_shouldnt_hit_codegen;
+template<typename T> int partial_var_template_specialization_shouldnt_hit_codegen<T, 123>;
+template<int I> float partial_var_template_specialization_shouldnt_hit_codegen<float, I>;
+
+// CIR-NOT: partial_var_template_specialization_shouldnt_hit_codegen
+// LLVM-NOT: partial_var_template_specialization_shouldnt_hit_codegen
+// OGCG-NOT: partial_var_template_specialization_shouldnt_hit_codegen

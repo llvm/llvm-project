@@ -1268,8 +1268,10 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     break;
 
   // No code generation needed.
-  case Decl::UsingShadow:
   case Decl::Empty:
+  case Decl::UsingShadow:
+  case Decl::VarTemplate:
+  case Decl::VarTemplatePartialSpecialization:
     break;
 
   case Decl::CXXConstructor:
