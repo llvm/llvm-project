@@ -40,6 +40,7 @@ class MCObjectStreamer : public MCStreamer {
   std::unique_ptr<MCAssembler> Assembler;
   bool EmitEHFrame;
   bool EmitDebugFrame;
+  bool EmitSFrame;
 
   struct PendingAssignment {
     MCSymbol *Symbol;
@@ -70,16 +71,7 @@ public:
 
   void emitFrames(MCAsmBackend *MAB);
   MCSymbol *emitCFILabel() override;
-  void emitCFISections(bool EH, bool Debug) override;
-
-  // TODO: Change callers to use getCurrentFragment instead.
-  MCFragment *getOrCreateDataFragment() { return getCurrentFragment(); }
-
-protected:
-  bool changeSectionImpl(MCSection *Section, uint32_t Subsection);
-  MCAlignFragment *createAlignFragment(Align Alignment, int64_t Fill,
-                                       uint8_t FillLen,
-                                       unsigned MaxBytesToEmit);
+  void emitCFISections(bool EH, bool Debug, bool SFrame) override;
 
 public:
   void visitUsedSymbol(const MCSymbol &Sym) override;
@@ -88,6 +80,15 @@ public:
   MCAssembler *getAssemblerPtr() override;
   /// \name MCStreamer Interface
   /// @{
+
+  // Add a fragment with a variable-size tail and start a new empty fragment.
+  void insert(MCFragment *F);
+
+  // Add a new fragment to the current section without a variable-size tail.
+  void newFragment();
+
+  void appendContents(size_t Num, char Elt);
+  void addFixup(const MCExpr *Value, MCFixupKind Kind);
 
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   virtual void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment &F,
@@ -101,7 +102,6 @@ public:
   void emitSLEB128Value(const MCExpr *Value) override;
   void emitWeakReference(MCSymbol *Alias, const MCSymbol *Target) override;
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
-  void switchSectionNoPrint(MCSection *Section) override;
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   /// Emit an instruction to a special fragment, because this instruction

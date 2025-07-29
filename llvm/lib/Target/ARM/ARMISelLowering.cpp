@@ -20347,6 +20347,13 @@ ARMTargetLowering::getSingleConstraintMatchWeight(
   return weight;
 }
 
+static bool isIncompatibleReg(const MCPhysReg &PR, MVT VT) {
+  if (PR == 0 || VT == MVT::Other)
+    return false;
+  return (ARM::SPRRegClass.contains(PR) && VT != MVT::f32 && VT != MVT::i32) ||
+         (ARM::DPRRegClass.contains(PR) && VT != MVT::f64);
+}
+
 using RCPair = std::pair<unsigned, const TargetRegisterClass *>;
 
 RCPair ARMTargetLowering::getRegForInlineAsmConstraint(
@@ -20420,7 +20427,10 @@ RCPair ARMTargetLowering::getRegForInlineAsmConstraint(
   if (StringRef("{cc}").equals_insensitive(Constraint))
     return std::make_pair(unsigned(ARM::CPSR), &ARM::CCRRegClass);
 
-  return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+  auto RCP = TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+  if (isIncompatibleReg(RCP.first, VT))
+    return {0, nullptr};
+  return RCP;
 }
 
 /// LowerAsmOperandForConstraint - Lower the specified operand into the Ops
@@ -21731,11 +21741,16 @@ bool ARMTargetLowering::lowerInterleavedLoad(
 ///        %sub.v1 = shuffle <32 x i32> %v0, <32 x i32> v1, <32, 33, 34, 35>
 ///        %sub.v2 = shuffle <32 x i32> %v0, <32 x i32> v1, <16, 17, 18, 19>
 ///        call void llvm.arm.neon.vst3(%ptr, %sub.v0, %sub.v1, %sub.v2, 4)
-bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
+bool ARMTargetLowering::lowerInterleavedStore(Instruction *Store,
+                                              Value *LaneMask,
                                               ShuffleVectorInst *SVI,
                                               unsigned Factor) const {
   assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
          "Invalid interleave factor");
+  auto *SI = dyn_cast<StoreInst>(Store);
+  if (!SI)
+    return false;
+  assert(!LaneMask && "Unexpected mask on store");
 
   auto *VecTy = cast<FixedVectorType>(SVI->getType());
   assert(VecTy->getNumElements() % Factor == 0 && "Invalid interleaved store");

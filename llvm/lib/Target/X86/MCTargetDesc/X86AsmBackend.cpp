@@ -388,36 +388,6 @@ static bool mayHaveInterruptDelaySlot(unsigned InstOpcode) {
   return false;
 }
 
-/// Check if the instruction to be emitted is right after any data.
-static bool
-isRightAfterData(MCFragment *CurrentFragment,
-                 const std::pair<MCFragment *, size_t> &PrevInstPosition) {
-  MCFragment *F = CurrentFragment;
-  // Since data is always emitted into a DataFragment, our check strategy is
-  // simple here.
-  //   - If the fragment is a DataFragment
-  //     - If it's empty (section start or data after align), return false.
-  //     - If it's not the fragment where the previous instruction is,
-  //       returns true.
-  //     - If it's the fragment holding the previous instruction but its
-  //       size changed since the previous instruction was emitted into
-  //       it, returns true.
-  //     - Otherwise returns false.
-  //   - If the fragment is not a DataFragment, returns false.
-  if (F->getKind() == MCFragment::FT_Data)
-    return F->getFixedSize() && (F != PrevInstPosition.first ||
-                                 F->getFixedSize() != PrevInstPosition.second);
-
-  return false;
-}
-
-/// \returns the fragment size if it has instructions, otherwise returns 0.
-static size_t getSizeForInstFragment(const MCFragment *F) {
-  if (!F || !F->hasInstructions())
-    return 0;
-  return F->getSize();
-}
-
 /// Return true if we can insert NOP or prefixes automatically before the
 /// the instruction to be emitted.
 bool X86AsmBackend::canPadInst(const MCInst &Inst, MCObjectStreamer &OS) const {
@@ -441,9 +411,11 @@ bool X86AsmBackend::canPadInst(const MCInst &Inst, MCObjectStreamer &OS) const {
     // semantic.
     return false;
 
-  if (isRightAfterData(OS.getCurrentFragment(), PrevInstPosition))
-    // If this instruction follows any data, there is no clear
-    // instruction boundary, inserting a nop/prefix would change semantic.
+  // If this instruction follows any data, there is no clear instruction
+  // boundary, inserting a nop/prefix would change semantic.
+  auto Offset = OS.getCurFragSize();
+  if (Offset && (OS.getCurrentFragment() != PrevInstPosition.first ||
+                 Offset != PrevInstPosition.second))
     return false;
 
   return true;
@@ -552,7 +524,7 @@ void X86AsmBackend::emitInstructionEnd(MCObjectStreamer &OS,
   // Update PrevInstOpcode here, canPadInst() reads that.
   MCFragment *CF = OS.getCurrentFragment();
   PrevInstOpcode = Inst.getOpcode();
-  PrevInstPosition = std::make_pair(CF, getSizeForInstFragment(CF));
+  PrevInstPosition = std::make_pair(CF, OS.getCurFragSize());
 
   if (!canPadBranches(OS))
     return;
@@ -926,13 +898,11 @@ bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
         continue;
       }
 
-      const uint64_t OrigSize = Asm.computeFragmentSize(F);
-
       // To keep the effects local, prefer to relax instructions closest to
       // the align directive.  This is purely about human understandability
       // of the resulting code.  If we later find a reason to expand
       // particular instructions over others, we can adjust.
-      unsigned RemainingSize = OrigSize;
+      unsigned RemainingSize = Asm.computeFragmentSize(F) - F.getFixedSize();
       while (!Relaxable.empty() && RemainingSize != 0) {
         auto &RF = *Relaxable.pop_back_val();
         // Give the backend a chance to play any tricks it wishes to increase

@@ -8,6 +8,7 @@
 
 #include "llvm/MC/MCAsmInfoXCOFF.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -15,8 +16,6 @@ using namespace llvm;
 namespace llvm {
 extern cl::opt<cl::boolOrDefault> UseLEB128Directives;
 }
-
-void MCAsmInfoXCOFF::anchor() {}
 
 MCAsmInfoXCOFF::MCAsmInfoXCOFF() {
   IsAIX = true;
@@ -55,4 +54,8 @@ bool MCAsmInfoXCOFF::isAcceptableChar(char C) const {
   // underscores, periods, uppercase or lowercase letters, or
   // any combination of these.
   return isAlnum(C) || C == '_' || C == '.';
+}
+
+bool MCAsmInfoXCOFF::useCodeAlign(const MCSection &Sec) const {
+  return static_cast<const MCSectionXCOFF &>(Sec).getKind().isText();
 }

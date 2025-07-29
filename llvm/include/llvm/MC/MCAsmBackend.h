@@ -18,9 +18,7 @@
 
 namespace llvm {
 
-class MCAlignFragment;
 class MCFragment;
-class MCLEBFragment;
 class MCSymbol;
 class MCAssembler;
 class MCContext;
@@ -108,21 +106,6 @@ public:
   /// Get information on a fixup kind.
   virtual MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const;
 
-  /// Hook to check if extra nop bytes must be inserted for alignment directive.
-  /// For some targets this may be necessary in order to support linker
-  /// relaxation. The number of bytes to insert are returned in Size.
-  virtual bool shouldInsertExtraNopBytesForCodeAlign(const MCAlignFragment &AF,
-                                                     unsigned &Size) {
-    return false;
-  }
-
-  /// Hook which indicates if the target requires a fixup to be generated when
-  /// handling an align directive in an executable section
-  virtual bool shouldInsertFixupForCodeAlign(MCAssembler &Asm,
-                                             MCAlignFragment &AF) {
-    return false;
-  }
-
   // Evaluate a fixup, returning std::nullopt to use default handling for
   // `Value` and `IsResolved`. Otherwise, returns `IsResolved` with the
   // expectation that the hook updates `Value`.
@@ -180,6 +163,10 @@ public:
   }
 
   // Defined by linker relaxation targets.
+
+  // Return false to use default handling. Otherwise, set `Size` to the number
+  // of padding bytes.
+  virtual bool relaxAlign(MCFragment &F, unsigned &Size) { return false; }
   virtual bool relaxDwarfLineAddr(MCFragment &, bool &WasRelaxed) const {
     return false;
   }

@@ -24,13 +24,11 @@ class MCSectionDXContainer final : public MCSection {
   friend class MCContext;
 
   MCSectionDXContainer(StringRef Name, SectionKind K, MCSymbol *Begin)
-      : MCSection(SV_DXContainer, Name, K.isText(), /*IsVirtual=*/false,
-                  Begin) {}
+      : MCSection(Name, K.isText(), /*IsVirtual=*/false, Begin) {}
 
 public:
   void printSwitchToSection(const MCAsmInfo &, const Triple &, raw_ostream &,
                             uint32_t) const override;
-  bool useCodeAlign() const override { return false; }
 };
 
 } // end namespace llvm
