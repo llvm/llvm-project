@@ -806,7 +806,7 @@ uint64_t MachObjectWriter::writeObject() {
     }
     MCSection *Sec = getContext().getMachOSection("__LLVM", "__cg_profile", 0,
                                                   SectionKind::getMetadata());
-    llvm::copy(OS.str(), Sec->curFragList()->Head->getContents().data());
+    llvm::copy(OS.str(), Sec->curFragList()->Head->getVarContents().data());
   }
 
   unsigned NumSections = Asm.end() - Asm.begin();
