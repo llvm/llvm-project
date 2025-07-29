@@ -23,7 +23,9 @@ BEGIN {
     cu_count = 0
     current_cu_file = ""
     # Initialize file names array
-    for (i = 0; i < 100; i++) current_file_names[i] = ""
+    for (i = 0; i < 100; i++) {
+        current_file_names[i] = ""
+    }
 }
 
 # Track debug_line sections (new CU)
@@ -31,31 +33,34 @@ BEGIN {
     cu_count++
     current_cu_file = ""
     # Clear file names array for new CU
-    for (i = 0; i < 100; i++) current_file_names[i] = ""
+    for (i = 0; i < 100; i++) {
+        current_file_names[i] = ""
+    }
     next
 }
 
 # Capture file names and their indices
 /^file_names\[.*\]:/ {
-    # Extract file index using more portable regex
-    if (match($0, /file_names\[[[:space:]]*([0-9]+)\]:/, arr)) {
-        file_index = arr[1]
-    } else {
-        # Fallback parsing
-        gsub(/file_names\[/, "", $0)
-        gsub(/\]:.*/, "", $0)
-        gsub(/[[:space:]]/, "", $0)
-        file_index = $0
-    }
+    # Extract file index using simple string operations
+    line_copy = $0
+    gsub(/file_names\[/, "", line_copy)
+    gsub(/\]:.*/, "", line_copy)
+    gsub(/[ \t]/, "", line_copy)
+    file_index = line_copy
 
     getline  # Read the next line which contains the actual filename
-    if (match($0, /name:[[:space:]]*"([^"]*)"/, name_arr)) {
-        filename = name_arr[1]
+    # Extract filename from name: "filename" format
+    if (match($0, /name:[ \t]*"/)) {
+        filename = $0
+        gsub(/.*name:[ \t]*"/, "", filename)
+        gsub(/".*/, "", filename)
         current_file_names[file_index] = filename
 
         # Extract basename for main CU file (first .c/.cpp/.cc file we see)
-        if (current_cu_file == "" && match(filename, /([^\/]*\.(c|cpp|cc))$/, cu_arr)) {
-            current_cu_file = cu_arr[1]
+        if (current_cu_file == "" && match(filename, /\.(c|cpp|cc)$/)) {
+            cu_filename = filename
+            gsub(/.*\//, "", cu_filename)
+            current_cu_file = cu_filename
         }
     }
     next
@@ -74,19 +79,18 @@ BEGIN {
         if (filename == "") {
             filename = "UNKNOWN_FILE_" file_index
         } else {
-            # Extract just the basename using portable method
-            if (match(filename, /([^\/]*)$/, basename_arr)) {
-                filename = basename_arr[1]
-            } else {
-                # Fallback: use gsub
-                gsub(/.*\//, "", filename)
-            }
+            # Extract just the basename
+            basename = filename
+            gsub(/.*\//, "", basename)
+            filename = basename
         }
 
         # Build additional info (flags, etc.)
         additional_info = ""
         for (i = 8; i <= NF; i++) {
-            if (additional_info != "") additional_info = additional_info " "
+            if (additional_info != "") {
+                additional_info = additional_info " "
+            }
             additional_info = additional_info $i
         }
 
