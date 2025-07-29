@@ -89,7 +89,6 @@ struct GCNRegPressure {
         getAVGPRsAsVGPRsNum(NumArchVGPRs, NumAVGPRs, AddressableArchVGPR);
     unsigned AVGPRsAsAGPRs = getAVGPRsAsAGPRsNum(
         NumArchVGPRs, NumAGPRs, NumAVGPRs, AddressableArchVGPR);
-    NumAVGPRs > AVGPRsAsVGPRs ? NumAVGPRs - AVGPRsAsVGPRs : 0;
     return alignTo(NumArchVGPRs + AVGPRsAsVGPRs,
                    AMDGPU::IsaInfo::getArchVGPRAllocGranule()) +
            NumAGPRs + AVGPRsAsAGPRs;
@@ -129,11 +128,12 @@ struct GCNRegPressure {
     unsigned DynamicVGPRBlockSize =
         MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
 
-    return std::min(ST.getOccupancyWithNumSGPRs(getSGPRNum()),
-                    ST.getOccupancyWithNumVGPRs(
-                        getVGPRNum(ST.hasGFX90AInsts(),
-                                   ST.getArchVGPRAllocationThreshold(MF)),
-                        DynamicVGPRBlockSize));
+    return std::min(
+        ST.getOccupancyWithNumSGPRs(getSGPRNum()),
+        ST.getOccupancyWithNumVGPRs(
+            getVGPRNum(ST.hasGFX90AInsts(),
+                       ST.getRegisterInfo()->getMaxNumVectorRegs(MF).first),
+            DynamicVGPRBlockSize));
   }
 
   void inc(unsigned Reg,

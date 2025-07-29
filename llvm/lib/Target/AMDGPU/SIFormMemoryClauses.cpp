@@ -209,8 +209,9 @@ bool SIFormMemoryClausesImpl::checkPressure(const MachineInstr &MI,
   // tracking does not account for the alignment requirements for SGPRs, or the
   // fragmentation of registers the allocator will need to satisfy.
   if (Occupancy >= MFI->getMinAllowedOccupancy() &&
-      MaxPressure.getVGPRNum(ST->hasGFX90AInsts(),
-                             ST->getArchVGPRAllocationThreshold(*MI.getMF())) <=
+      MaxPressure.getVGPRNum(
+          ST->hasGFX90AInsts(),
+          ST->getRegisterInfo()->getMaxNumVectorRegs(*MI.getMF()).first) <=
           MaxVGPRs / 2 &&
       MaxPressure.getSGPRNum() <= MaxSGPRs / 2) {
     LastRecordedOccupancy = Occupancy;
