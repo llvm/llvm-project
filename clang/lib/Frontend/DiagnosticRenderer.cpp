@@ -82,13 +82,10 @@ static void mergeFixits(ArrayRef<FixItHint> FixItHints,
   }
 }
 
-void DiagnosticRenderer::emitDiagnostic(FullSourceLoc Loc,
-                                        DiagnosticsEngine::Level Level,
-                                        StringRef Message,
-                                        ArrayRef<CharSourceRange> Ranges,
-                                        ArrayRef<FixItHint> FixItHints,
-                                        unsigned NestingLevel,
-                                        DiagOrStoredDiag D) {
+void DiagnosticRenderer::emitDiagnostic(
+    FullSourceLoc Loc, DiagnosticsEngine::Level Level, StringRef Message,
+    ArrayRef<CharSourceRange> Ranges, ArrayRef<FixItHint> FixItHints,
+    unsigned NestingLevel, DiagOrStoredDiag D) {
   assert(Loc.hasManager() || Loc.isInvalid());
 
   beginDiagnostic(D, Level, NestingLevel);
@@ -129,7 +126,8 @@ void DiagnosticRenderer::emitDiagnostic(FullSourceLoc Loc,
     // If this location is within a macro, walk from UnexpandedLoc up to Loc
     // and produce a macro backtrace.
     if (UnexpandedLoc.isValid() && UnexpandedLoc.isMacroID()) {
-      emitMacroExpansions(UnexpandedLoc, Level, MutableRanges, FixItHints, NestingLevel);
+      emitMacroExpansions(UnexpandedLoc, Level, MutableRanges, FixItHints,
+                          NestingLevel);
     }
   }
 
@@ -142,14 +140,14 @@ void DiagnosticRenderer::emitDiagnostic(FullSourceLoc Loc,
 void DiagnosticRenderer::emitStoredDiagnostic(StoredDiagnostic &Diag) {
   emitDiagnostic(Diag.getLocation(), Diag.getLevel(), Diag.getMessage(),
                  Diag.getRanges(), Diag.getFixIts(),
-                 Diag.getNestingLevel().value_or(0),
-                 &Diag);
+                 Diag.getNestingLevel().value_or(0), &Diag);
 }
 
 void DiagnosticRenderer::emitBasicNote(StringRef Message,
                                        unsigned CurrentNestingLevel) {
   emitDiagnosticMessage(FullSourceLoc(), PresumedLoc(), DiagnosticsEngine::Note,
-                        Message, {}, CurrentNestingLevel + 1, DiagOrStoredDiag());
+                        Message, {}, CurrentNestingLevel + 1,
+                        DiagOrStoredDiag());
 }
 
 /// Prints an include stack when appropriate for a particular
@@ -433,8 +431,7 @@ void DiagnosticRenderer::emitCaret(FullSourceLoc Loc,
 /// macro expansion message
 void DiagnosticRenderer::emitSingleMacroExpansion(
     FullSourceLoc Loc, DiagnosticsEngine::Level Level,
-    ArrayRef<CharSourceRange> Ranges,
-    unsigned CurrentNestingLevel) {
+    ArrayRef<CharSourceRange> Ranges, unsigned CurrentNestingLevel) {
   // Find the spelling location for the macro definition. We must use the
   // spelling location here to avoid emitting a macro backtrace for the note.
   FullSourceLoc SpellingLoc = Loc.getSpellingLoc();
@@ -547,7 +544,8 @@ void DiagnosticRenderer::emitMacroExpansions(FullSourceLoc Loc,
   if (MacroDepth <= MacroLimit || MacroLimit == 0) {
     for (auto I = LocationStack.rbegin(), E = LocationStack.rend();
          I != E; ++I)
-      emitSingleMacroExpansion(FullSourceLoc(*I, SM), Level, Ranges, NestingLevel);
+      emitSingleMacroExpansion(FullSourceLoc(*I, SM), Level, Ranges,
+                               NestingLevel);
     return;
   }
 
@@ -557,7 +555,8 @@ void DiagnosticRenderer::emitMacroExpansions(FullSourceLoc Loc,
   for (auto I = LocationStack.rbegin(),
             E = LocationStack.rbegin() + MacroStartMessages;
        I != E; ++I)
-    emitSingleMacroExpansion(FullSourceLoc(*I, SM), Level, Ranges, NestingLevel);
+    emitSingleMacroExpansion(FullSourceLoc(*I, SM), Level, Ranges,
+                             NestingLevel);
 
   SmallString<200> MessageStorage;
   llvm::raw_svector_ostream Message(MessageStorage);
@@ -569,7 +568,8 @@ void DiagnosticRenderer::emitMacroExpansions(FullSourceLoc Loc,
   for (auto I = LocationStack.rend() - MacroEndMessages,
             E = LocationStack.rend();
        I != E; ++I)
-    emitSingleMacroExpansion(FullSourceLoc(*I, SM), Level, Ranges, NestingLevel);
+    emitSingleMacroExpansion(FullSourceLoc(*I, SM), Level, Ranges,
+                             NestingLevel);
 }
 
 DiagnosticNoteRenderer::~DiagnosticNoteRenderer() = default;

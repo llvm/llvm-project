@@ -88,7 +88,8 @@ public:
 protected:
   void beginDiagnostic(DiagOrStoredDiag D, DiagnosticsEngine::Level Level,
                        unsigned NestingLevel) override;
-  void endDiagnostic(DiagOrStoredDiag D, DiagnosticsEngine::Level Level) override;
+  void endDiagnostic(DiagOrStoredDiag D,
+                     DiagnosticsEngine::Level Level) override;
 
   void emitDiagnosticMessage(FullSourceLoc Loc, PresumedLoc PLoc,
                              DiagnosticsEngine::Level Level, StringRef Message,

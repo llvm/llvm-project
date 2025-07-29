@@ -352,7 +352,7 @@ private:
 public:
   /// Helper to increment the global diagnostics nesting level.
   class NestingLevelRAII {
-    DiagnosticsEngine& Diags;
+    DiagnosticsEngine &Diags;
     unsigned TheIncrement;
 
   public:

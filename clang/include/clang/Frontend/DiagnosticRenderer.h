@@ -135,8 +135,7 @@ public:
   /// \param NestingLevel How deeply this diagnostic is nested.
   void emitDiagnostic(FullSourceLoc Loc, DiagnosticsEngine::Level Level,
                       StringRef Message, ArrayRef<CharSourceRange> Ranges,
-                      ArrayRef<FixItHint> FixItHints,
-                      unsigned NestingLevel = 0,
+                      ArrayRef<FixItHint> FixItHints, unsigned NestingLevel = 0,
                       DiagOrStoredDiag D = (Diagnostic *)nullptr);
 
   void emitStoredDiagnostic(StoredDiagnostic &Diag);

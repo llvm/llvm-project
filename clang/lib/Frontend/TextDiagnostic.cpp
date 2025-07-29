@@ -694,8 +694,7 @@ void TextDiagnostic::startLine(unsigned Indent = 0) {
 void TextDiagnostic::emitDiagnosticMessage(
     FullSourceLoc Loc, PresumedLoc PLoc, DiagnosticsEngine::Level Level,
     StringRef Message, ArrayRef<clang::CharSourceRange> Ranges,
-    unsigned NestingLevel,
-    DiagOrStoredDiag D) {
+    unsigned NestingLevel, DiagOrStoredDiag D) {
   uint64_t StartOfLocationInfo = OS.tell();
 
   // The fancy format prints things in a different order.

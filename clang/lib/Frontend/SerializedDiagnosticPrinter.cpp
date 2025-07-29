@@ -671,8 +671,7 @@ void SDiagsWriter::EmitDiagnosticMessage(FullSourceLoc Loc, PresumedLoc PLoc,
 void SDiagsRenderer::emitDiagnosticMessage(
     FullSourceLoc Loc, PresumedLoc PLoc, DiagnosticsEngine::Level Level,
     StringRef Message, ArrayRef<clang::CharSourceRange> Ranges,
-    unsigned NestingLevel,
-    DiagOrStoredDiag D) {
+    unsigned NestingLevel, DiagOrStoredDiag D) {
   Writer.EmitDiagnosticMessage(Loc, PLoc, Level, Message, D);
 }
 

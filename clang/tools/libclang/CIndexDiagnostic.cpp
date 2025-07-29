@@ -88,8 +88,7 @@ public:
 
   ~CXDiagnosticRenderer() override {}
 
-  void beginDiagnostic(DiagOrStoredDiag D,
-                       DiagnosticsEngine::Level Level,
+  void beginDiagnostic(DiagOrStoredDiag D, DiagnosticsEngine::Level Level,
                        unsigned NestingLevel) override {
 
     const StoredDiagnostic *SD =
