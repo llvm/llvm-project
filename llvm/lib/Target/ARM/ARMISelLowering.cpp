@@ -805,7 +805,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   if (!Subtarget->isThumb1Only() && !Subtarget->hasV8_1MMainlineOps())
     setOperationAction(ISD::SCMP, MVT::i32, Custom);
 
-  if (!Subtarget->HasV8_1MMainlineOps())
+  if (!Subtarget->hasV8_1MMainlineOps())
     setOperationAction(ISD::UCMP, MVT::i32, Custom);
 
   setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
