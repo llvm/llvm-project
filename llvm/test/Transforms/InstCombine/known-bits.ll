@@ -1244,6 +1244,62 @@ define i1 @extract_value_smul_fail(i8 %xx, i8 %yy) {
   ret i1 %r
 }
 
+define i8 @known_self_mul_bit_0_set(i8 noundef %x) {
+; CHECK-LABEL: @known_self_mul_bit_0_set(
+; CHECK-NEXT:    [[BIT_0_SET:%.*]] = or i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[SELF_MUL:%.*]] = mul i8 [[BIT_0_SET]], [[BIT_0_SET]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[SELF_MUL]], 4
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %bit_0_set = or i8 %x, 1
+  %self_mul = mul i8 %bit_0_set, %bit_0_set
+  %r = and i8 %self_mul, 4
+  ret i8 %r
+}
+
+define i8 @known_self_mul_bit_0_unset(i8 noundef %x) {
+; CHECK-LABEL: @known_self_mul_bit_0_unset(
+; CHECK-NEXT:    [[BIT_0_UNSET:%.*]] = and i8 [[X:%.*]], -2
+; CHECK-NEXT:    [[SELF_MUL:%.*]] = mul i8 [[BIT_0_UNSET]], [[BIT_0_UNSET]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[SELF_MUL]], 8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %bit_0_unset = and i8 %x, -2
+  %self_mul = mul i8 %bit_0_unset, %bit_0_unset
+  %r = and i8 %self_mul, 8
+  ret i8 %r
+}
+
+define i8 @known_self_mul_bit_1_set_bit_0_unset(i8 noundef %x) {
+; CHECK-LABEL: @known_self_mul_bit_1_set_bit_0_unset(
+; CHECK-NEXT:    [[LOWER_2_UNSET:%.*]] = and i8 [[X:%.*]], -4
+; CHECK-NEXT:    [[BIT_1_SET_BIT_0_UNSET:%.*]] = or disjoint i8 [[LOWER_2_UNSET]], 2
+; CHECK-NEXT:    [[SELF_MUL:%.*]] = mul i8 [[BIT_1_SET_BIT_0_UNSET]], [[BIT_1_SET_BIT_0_UNSET]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[SELF_MUL]], 24
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %lower_2_unset = and i8 %x, -4
+  %bit_1_set_bit_0_unset = or disjoint i8 %lower_2_unset, 2
+  %self_mul = mul i8 %bit_1_set_bit_0_unset, %bit_1_set_bit_0_unset
+  %r = and i8 %self_mul, 24
+  ret i8 %r
+}
+
+define i4 @known_self_mul_bit_1_set_bit_0_unset_i4(i4 noundef %x) {
+; CHECK-LABEL: @known_self_mul_bit_1_set_bit_0_unset_i4(
+; CHECK-NEXT:    [[LOWER_2_UNSET:%.*]] = and i4 [[X:%.*]], -4
+; CHECK-NEXT:    [[BIT_1_SET_BIT_0_UNSET:%.*]] = or disjoint i4 [[LOWER_2_UNSET]], 2
+; CHECK-NEXT:    [[SELF_MUL:%.*]] = mul i4 [[BIT_1_SET_BIT_0_UNSET]], [[BIT_1_SET_BIT_0_UNSET]]
+; CHECK-NEXT:    [[R:%.*]] = and i4 [[SELF_MUL]], -8
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %lower_2_unset = and i4 %x, -4
+  %bit_1_set_bit_0_unset = or disjoint i4 %lower_2_unset, 2
+  %self_mul = mul i4 %bit_1_set_bit_0_unset, %bit_1_set_bit_0_unset
+  %r = and i4 %self_mul, 24
+  ret i4 %r
+}
+
 define i8 @known_reduce_or(<2 x i8> %xx) {
 ; CHECK-LABEL: @known_reduce_or(
 ; CHECK-NEXT:    ret i8 1
