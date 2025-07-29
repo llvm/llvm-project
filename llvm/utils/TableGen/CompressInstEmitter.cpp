@@ -785,14 +785,14 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
         switch (DestOperandMap[OpNo].Kind) {
         case OpData::Operand: {
           unsigned OpIdx = DestOperandMap[OpNo].OpInfo.Idx;
-          DestRec = DestOperandMap[OpNo].OpInfo.DagRec;
+          const Record *DagRec = DestOperandMap[OpNo].OpInfo.DagRec;
           // Check that the operand in the Source instruction fits
           // the type for the Dest instruction.
-          if (DestRec->isSubClassOf("RegisterClass") ||
-              DestRec->isSubClassOf("RegisterOperand")) {
-            auto *ClassRec = DestRec->isSubClassOf("RegisterClass")
-                                 ? DestRec
-                                 : DestRec->getValueAsDef("RegClass");
+          if (DagRec->isSubClassOf("RegisterClass") ||
+              DagRec->isSubClassOf("RegisterOperand")) {
+            auto *ClassRec = DagRec->isSubClassOf("RegisterClass")
+                                 ? DagRec
+                                 : DagRec->getValueAsDef("RegClass");
             // This is a register operand. Check the register class.
             // Don't check register class if this is a tied operand, it was done
             // for the operand it's tied to.
@@ -815,19 +815,40 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
             // Handling immediate operands.
             if (CompressOrUncompress) {
               unsigned Entry = getPredicates(MCOpPredicateMap, MCOpPredicates,
-                                             DestRec, "MCOperandPredicate");
-              CondStream.indent(8) << ValidatorName << "("
-                                   << "MI.getOperand(" << OpIdx << "), STI, "
-                                   << Entry << ") &&\n";
+                                             DagRec, "MCOperandPredicate");
+              CondStream.indent(8)
+                  << ValidatorName << "("
+                  << "MI.getOperand(" << OpIdx << "), STI, " << Entry << " /* "
+                  << DagRec->getName() << " */) &&\n";
+              // Also check DestRec if different than DagRec.
+              if (DagRec != DestRec) {
+                Entry = getPredicates(MCOpPredicateMap, MCOpPredicates, DestRec,
+                                      "MCOperandPredicate");
+                CondStream.indent(8)
+                    << ValidatorName << "("
+                    << "MI.getOperand(" << OpIdx << "), STI, " << Entry
+                    << " /* " << DestRec->getName() << " */) &&\n";
+              }
             } else {
               unsigned Entry =
-                  getPredicates(ImmLeafPredicateMap, ImmLeafPredicates, DestRec,
+                  getPredicates(ImmLeafPredicateMap, ImmLeafPredicates, DagRec,
                                 "ImmediateCode");
               CondStream.indent(8)
                   << "MI.getOperand(" << OpIdx << ").isImm() &&\n";
-              CondStream.indent(8) << TargetName << "ValidateMachineOperand("
-                                   << "MI.getOperand(" << OpIdx << "), &STI, "
-                                   << Entry << ") &&\n";
+              CondStream.indent(8)
+                  << TargetName << "ValidateMachineOperand("
+                  << "MI.getOperand(" << OpIdx << "), &STI, " << Entry << " /* "
+                  << DagRec->getName() << " */) &&\n";
+              if (DagRec != DestRec) {
+                Entry = getPredicates(ImmLeafPredicateMap, ImmLeafPredicates,
+                                      DestRec, "ImmediateCode");
+                CondStream.indent(8)
+                    << "MI.getOperand(" << OpIdx << ").isImm() &&\n";
+                CondStream.indent(8)
+                    << TargetName << "ValidateMachineOperand("
+                    << "MI.getOperand(" << OpIdx << "), &STI, " << Entry
+                    << " /* " << DestRec->getName() << " */) &&\n";
+              }
             }
             if (CompressOrUncompress)
               CodeStream.indent(6)
@@ -842,7 +863,8 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
             CondStream.indent(8)
                 << ValidatorName << "("
                 << "MCOperand::createImm(" << DestOperandMap[OpNo].ImmVal
-                << "), STI, " << Entry << ") &&\n";
+                << "), STI, " << Entry << " /* " << DestRec->getName()
+                << " */) &&\n";
           } else {
             unsigned Entry =
                 getPredicates(ImmLeafPredicateMap, ImmLeafPredicates, DestRec,
@@ -850,8 +872,8 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
             CondStream.indent(8)
                 << TargetName
                 << "ValidateMachineOperand(MachineOperand::CreateImm("
-                << DestOperandMap[OpNo].ImmVal << "), &STI, " << Entry
-                << ") &&\n";
+                << DestOperandMap[OpNo].ImmVal << "), &STI, " << Entry << " /* "
+                << DestRec->getName() << " */) &&\n";
           }
           if (CompressOrUncompress)
             CodeStream.indent(6) << "OutInst.addOperand(MCOperand::createImm("
