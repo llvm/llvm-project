@@ -6379,6 +6379,7 @@ libc_function(
         ":__support_common",
         ":__support_macros_null_check",
         ":types_wchar_t",
+        ":wchar_utils",
     ],
 )
 
