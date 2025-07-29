@@ -21,9 +21,11 @@ import os
 import traceback
 import types
 from typing import Any, TypeVar, cast
-from ._mlir_libs._mlir import Traceback
+from ._mlir_libs._mlir import Traceback, set_tracebacks_enabled
 from .ir import Location
 
+
+set_tracebacks_enabled(True)
 
 C = TypeVar("C", bound=Callable[..., Any])
 

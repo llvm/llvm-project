@@ -23,6 +23,8 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#include "mlir-c/IR.h"
+
 // placeholder for index annotation headers
 #include "nanobind/nanobind.h"
 
@@ -49,8 +51,12 @@ public:
 
     std::string ToString() const;
   };
+
   // Returns a list of Frames for the traceback.
   std::vector<Frame> Frames() const;
+
+  // Returns a list of Frames for the traceback.
+  MlirLocation tracebackToLocation(MlirContext ctx) const;
 
 private:
   static bool Check(PyObject *o);

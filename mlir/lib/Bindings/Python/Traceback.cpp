@@ -14,6 +14,7 @@ limitations under the License.
 ==============================================================================*/
 
 #include "Traceback.h"
+#include "IRModule.h"
 
 #include <Python.h>
 
@@ -244,6 +245,58 @@ std::vector<Traceback::Frame> Traceback::Frames() const {
   return frames;
 }
 
+MlirLocation Traceback::tracebackToLocation(MlirContext ctx) const {
+  // We require the GIL because we manipulate Python strings.
+  assert(PyGILState_Check());
+
+  // check cache
+  int frames_limit = 100;
+  std::vector<MlirLocation> frame_locs{};
+  TracebackObject *tb = reinterpret_cast<TracebackObject *>(ptr());
+  frame_locs.reserve(Py_SIZE(tb));
+  for (Py_ssize_t i = 0; i < Py_SIZE(tb); ++i) {
+    const TracebackEntry &frame = tb->frames[i];
+    // if not _is_user_file(code.co_filename):
+    //     continue
+    // get_canonical_source_file
+    MlirStringRef fileName = mlirStringRefCreateFromCString(
+        nb::borrow<nb::str>(frame.code->co_filename).c_str());
+#if PY_VERSION_HEX < 0x030b00f0
+    MlirStringRef funcName = mlirStringRefCreateFromCString(
+        nb::borrow<nb::str>(frame.code->co_name).c_str());
+    auto line = PyCode_Addr2Line(frame.code, frame.lasti);
+    auto loc = mlirLocationFileLineColGet(ctx, fileName, line, 0);
+#else
+    MlirStringRef funcName = mlirStringRefCreateFromCString(
+        nb::borrow<nb::str>(frame.code->co_qualname).c_str());
+    int start_line, start_column, end_line, end_column;
+    if (!PyCode_Addr2Location(frame.code, frame.lasti, &start_line,
+                              &start_column, &end_line, &end_column)) {
+      throw nb::python_error();
+    }
+    auto loc = mlirLocationFileLineColRangeGet(
+        ctx, fileName, start_column, start_column, end_line, end_column);
+#endif
+    frame_locs.push_back(mlirLocationNameGet(ctx, funcName, loc));
+    if (frame_locs.size() > frames_limit)
+      break;
+  }
+
+  if (frame_locs.empty())
+    return mlirLocationUnknownGet(ctx);
+  if (frame_locs.size() == 1)
+    return frame_locs.front();
+
+  MlirLocation callee = frame_locs.front();
+  frame_locs.erase(frame_locs.begin());
+  MlirLocation caller = frame_locs.back();
+  for (const MlirLocation &frame :
+       llvm::reverse(llvm::ArrayRef(frame_locs).drop_back()))
+    caller = mlirLocationCallSiteGet(frame, caller);
+
+  return mlirLocationCallSiteGet(callee, caller);
+}
+
 std::string Traceback::Frame::ToString() const {
   std::string s = nb::cast<std::string>(file_name);
   s += ":" + std::to_string(line_num) + " ";
@@ -381,6 +434,13 @@ void BuildTracebackSubmodule(nb::module_ &m) {
       object that describes the Python stack of the calling thread. Stack
       trace collection has a small overhead, so it is disabled by default. If
       traceback collection is disabled, returns ``None``. )doc");
+  type.attr("_infer_location") = nb::cpp_function(
+      [](DefaultingPyMlirContext context) {
+        auto tb = Traceback::Get();
+        assert(tb);
+        return tb->tracebackToLocation(context->get());
+      },
+      nb::arg("context") = nb::none());
   type.attr("frames") = nb_property_readonly(&Traceback::Frames);
   type.attr("raw_frames") = nb::cpp_function(
       [](const Traceback &tb) -> nb::tuple {

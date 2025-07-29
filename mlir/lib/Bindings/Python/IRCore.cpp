@@ -9,6 +9,7 @@
 #include "Globals.h"
 #include "IRModule.h"
 #include "NanobindUtils.h"
+#include "Traceback.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/Debug.h"
@@ -1523,7 +1524,7 @@ nb::object PyOperation::create(std::string_view name,
                                llvm::ArrayRef<MlirValue> operands,
                                std::optional<nb::dict> attributes,
                                std::optional<std::vector<PyBlock *>> successors,
-                               int regions, DefaultingPyLocation location,
+                               int regions, PyLocation location,
                                const nb::object &maybeIp, bool inferType) {
   llvm::SmallVector<MlirType, 4> mlirResults;
   llvm::SmallVector<MlirBlock, 4> mlirSuccessors;
@@ -1627,7 +1628,7 @@ nb::object PyOperation::create(std::string_view name,
   if (!operation.ptr)
     throw nb::value_error("Operation creation failed");
   PyOperationRef created =
-      PyOperation::createDetached(location->getContext(), operation);
+      PyOperation::createDetached(location.getContext(), operation);
   maybeInsertOperation(created, maybeIp);
 
   return created.getObject();
@@ -1937,9 +1938,9 @@ nb::object PyOpView::buildGeneric(
     std::optional<nb::list> resultTypeList, nb::list operandList,
     std::optional<nb::dict> attributes,
     std::optional<std::vector<PyBlock *>> successors,
-    std::optional<int> regions, DefaultingPyLocation location,
+    std::optional<int> regions, PyLocation location,
     const nb::object &maybeIp) {
-  PyMlirContextRef context = location->getContext();
+  PyMlirContextRef context = location.getContext();
 
   // Class level operation construction metadata.
   // Operand and result segment specs are either none, which does no
@@ -3456,6 +3457,13 @@ void mlir::python::populateIRCore(nb::module_ &m) {
              std::optional<std::vector<PyBlock *>> successors, int regions,
              DefaultingPyLocation location, const nb::object &maybeIp,
              bool inferType) {
+            //////////////
+            std::optional<Traceback> tb = Traceback::Get();
+            PyMlirContextRef ctx = location->getContext();
+            auto loc = tb->tracebackToLocation(ctx->get());
+            PyLocation pyLoc{ctx, loc};
+            //////////////
+
             // Unpack/validate operands.
             llvm::SmallVector<MlirValue, 4> mlirOperands;
             if (operands) {
@@ -3468,7 +3476,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             }
 
             return PyOperation::create(name, results, mlirOperands, attributes,
-                                       successors, regions, location, maybeIp,
+                                       successors, regions, pyLoc, maybeIp,
                                        inferType);
           },
           nb::arg("name"), nb::arg("results").none() = nb::none(),
@@ -3517,7 +3525,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                 new (self) PyOpView(PyOpView::buildGeneric(
                     name, opRegionSpec, operandSegmentSpecObj,
                     resultSegmentSpecObj, resultTypeList, operandList,
-                    attributes, successors, regions, location, maybeIp));
+                    attributes, successors, regions, *location.get(), maybeIp));
               },
               nb::arg("name"), nb::arg("opRegionSpec"),
               nb::arg("operandSegmentSpecObj").none() = nb::none(),
@@ -3553,6 +3561,12 @@ void mlir::python::populateIRCore(nb::module_ &m) {
          std::optional<std::vector<PyBlock *>> successors,
          std::optional<int> regions, DefaultingPyLocation location,
          const nb::object &maybeIp) {
+        //////////////
+        std::optional<Traceback> tb = Traceback::Get();
+        PyMlirContextRef ctx = location->getContext();
+        auto loc = tb->tracebackToLocation(ctx->get());
+        PyLocation pyLoc{ctx, loc};
+        //////////////
         std::string name = nb::cast<std::string>(cls.attr("OPERATION_NAME"));
         std::tuple<int, bool> opRegionSpec =
             nb::cast<std::tuple<int, bool>>(cls.attr("_ODS_REGIONS"));
@@ -3561,7 +3575,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
         return PyOpView::buildGeneric(name, opRegionSpec, operandSegmentSpec,
                                       resultSegmentSpec, resultTypeList,
                                       operandList, attributes, successors,
-                                      regions, location, maybeIp);
+                                      regions, pyLoc, maybeIp);
       },
       nb::arg("cls"), nb::arg("results").none() = nb::none(),
       nb::arg("operands").none() = nb::none(),

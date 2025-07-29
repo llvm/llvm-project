@@ -408,59 +408,59 @@ def _is_user_file(file_name: str) -> bool:
     return out
 
 
-def _traceback_to_location(tb: Traceback) -> Location:
-    """Converts a full traceback to a callsite() MLIR location."""
-    loc = _traceback_caches.traceback_cache.get(tb, None)
-    if loc is not None:
-        return loc
-
-    frame_locs = []
-    frames_limit = _traceback_in_locations_limit
-    frames_limit = frames_limit if frames_limit >= 0 else 1000
-
-    codes, lastis = tb.raw_frames()
-    for i, code in enumerate(codes):
-        if not _is_user_file(code.co_filename):
-            continue
-
-        lasti = lastis[i]
-        code_lasti = code, lasti
-        loc = _traceback_caches.location_cache.get(code_lasti, None)
-        if loc is None:
-            frame = raw_frame_to_frame(code, lasti)
-            if (
-                frame.start_column is not None
-                and frame.end_line is not None
-                and frame.end_column is not None
-            ):
-                file_loc = Location.file(
-                    get_canonical_source_file(frame.file_name, _traceback_caches),
-                    frame.start_line,
-                    frame.start_column,
-                    frame.end_line,
-                    frame.end_column,
-                )
-            else:
-                file_loc = Location.file(
-                    get_canonical_source_file(frame.file_name, _traceback_caches),
-                    frame.start_line,
-                    frame.start_column,
-                )
-            loc = Location.name(frame.function_name, childLoc=file_loc)
-            _traceback_caches.location_cache[code_lasti] = loc
-        frame_locs.append(loc)
-        if len(frame_locs) >= frames_limit:
-            break
-
-    n = len(frame_locs)
-    if n == 0:
-        loc = Location.unknown()
-    elif n == 1:
-        loc = frame_locs[0]
-    else:
-        loc = Location.callsite(frame_locs[0], frame_locs[1:])
-    _traceback_caches.traceback_cache[tb] = loc
-    return loc
+# def _traceback_to_location(tb: Traceback) -> Location:
+#     """Converts a full traceback to a callsite() MLIR location."""
+#     loc = _traceback_caches.traceback_cache.get(tb, None)
+#     if loc is not None:
+#         return loc
+#
+#     frame_locs = []
+#     frames_limit = _traceback_in_locations_limit
+#     frames_limit = frames_limit if frames_limit >= 0 else 1000
+#
+#     codes, lastis = tb.raw_frames()
+#     for _, code in enumerate(codes):
+#         if not _is_user_file(code.co_filename):
+#             continue
+#
+#         lasti = lastis[i]
+#         code_lasti = code, lasti
+#         loc = _traceback_caches.location_cache.get(code_lasti, None)
+#         if loc is None:
+#             frame = raw_frame_to_frame(code, lasti)
+#             if (
+#                 frame.start_column is not None
+#                 and frame.end_line is not None
+#                 and frame.end_column is not None
+#             ):
+#                 file_loc = Location.file(
+#                     get_canonical_source_file(frame.file_name, _traceback_caches),
+#                     frame.start_line,
+#                     frame.start_column,
+#                     frame.end_line,
+#                     frame.end_column,
+#                 )
+#             else:
+#                 file_loc = Location.file(
+#                     get_canonical_source_file(frame.file_name, _traceback_caches),
+#                     frame.start_line,
+#                     frame.start_column,
+#                 )
+#             loc = Location.name(frame.function_name, childLoc=file_loc)
+#             _traceback_caches.location_cache[code_lasti] = loc
+#         frame_locs.append(loc)
+#         if len(frame_locs) >= frames_limit:
+#             break
+#
+#     n = len(frame_locs)
+#     if n == 0:
+#         loc = Location.unknown()
+#     elif n == 1:
+#         loc = frame_locs[0]
+#     else:
+#         loc = Location.callsite(frame_locs[0], frame_locs[1:])
+#     _traceback_caches.traceback_cache[tb] = loc
+#     return loc
 
 
 def source_info_to_location(
