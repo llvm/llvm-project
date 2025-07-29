@@ -76,15 +76,18 @@ class SPIRVLegalizePointerCast : public FunctionPass {
                               FixedVectorType *TargetType, Value *Source) {
     assert(TargetType->getNumElements() <= SourceType->getNumElements());
     LoadInst *NewLoad = B.CreateLoad(SourceType, Source);
-    Value *AssignType = NewLoad;
-    if (TargetType->getElementType() != SourceType->getElementType())
-      AssignType = B.CreateBitCast(NewLoad, TargetType);
-    buildAssignType(B, SourceType, AssignType);
+    buildAssignType(B, SourceType, NewLoad);
+    Value *AssignValue = NewLoad;
+    if (TargetType->getElementType() != SourceType->getElementType()) {
+      AssignValue = B.CreateIntrinsic(Intrinsic::spv_bitcast,
+                                      {TargetType, SourceType}, {NewLoad});
+      buildAssignType(B, TargetType, AssignValue);
+    }
 
     SmallVector<int> Mask(/* Size= */ TargetType->getNumElements());
     for (unsigned I = 0; I < TargetType->getNumElements(); ++I)
       Mask[I] = I;
-    Value *Output = B.CreateShuffleVector(AssignType, AssignType, Mask);
+    Value *Output = B.CreateShuffleVector(AssignValue, AssignValue, Mask);
     buildAssignType(B, TargetType, Output);
     return Output;
   }
@@ -136,7 +139,9 @@ class SPIRVLegalizePointerCast : public FunctionPass {
                                            OriginalOperand, LI);
     }
     // Destination is a smaller vector than source.
+    // or different vector type.
     // - float3 v3 = vector4;
+    // - float4 v2 = int4;
     else if (SVT && DVT)
       Output = loadVectorFromVector(B, SVT, DVT, OriginalOperand);
     // Destination is the scalar type stored at the start of an aggregate.
