@@ -1527,11 +1527,6 @@ Triple::ArchType LowerTypeTestsModule::selectJumpTableArmEncoding(
 void LowerTypeTestsModule::createJumpTable(
     Function *F, ArrayRef<GlobalTypeMember *> Functions,
     Triple::ArchType JumpTableArch) {
-  std::string AsmStr, ConstraintStr;
-  raw_string_ostream AsmOS(AsmStr), ConstraintOS(ConstraintStr);
-  SmallVector<Value *, 16> AsmArgs;
-  AsmArgs.reserve(Functions.size() * 2);
-
   BasicBlock *BB = BasicBlock::Create(M.getContext(), "entry", F);
   IRBuilder<> IRB(BB);
 

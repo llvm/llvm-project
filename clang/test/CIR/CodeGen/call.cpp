@@ -102,3 +102,18 @@ void f12() {
 // LLVM:         %[[#slot:]] = alloca %struct.S, i64 1, align 4
 // LLVM-NEXT:    %[[#ret:]] = call %struct.S @_Z3f10v()
 // LLVM-NEXT:    store %struct.S %[[#ret]], ptr %[[#slot]], align 4
+
+void f13() noexcept;
+void f14() {
+  f13();
+}
+
+// CIR-LABEL: cir.func{{.+}} @_Z3f14v()
+// CIR:         cir.call @_Z3f13v() nothrow : () -> ()
+// CIR:       }
+
+// LLVM-LABEL: define{{.+}} void @_Z3f14v()
+// LLVM:         call void @_Z3f13v() #[[LLVM_ATTR_0:.+]]
+// LLVM:       }
+
+// LLLVM: attributes #[[LLVM_ATTR_0]] = { nounwind }

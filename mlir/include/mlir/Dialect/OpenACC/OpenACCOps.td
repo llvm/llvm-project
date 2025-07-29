@@ -2771,18 +2771,17 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
     must be modified as well.
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name,
-                       SymbolNameAttr:$func_name,
-                       OptionalAttr<StrArrayAttr>:$bindName,
-                       OptionalAttr<DeviceTypeArrayAttr>:$bindNameDeviceType,
-                       OptionalAttr<DeviceTypeArrayAttr>:$worker,
-                       OptionalAttr<DeviceTypeArrayAttr>:$vector,
-                       OptionalAttr<DeviceTypeArrayAttr>:$seq,
-                       UnitAttr:$nohost,
-                       UnitAttr:$implicit,
-                       OptionalAttr<DeviceTypeArrayAttr>:$gang,
-                       OptionalAttr<I64ArrayAttr>:$gangDim,
-                       OptionalAttr<DeviceTypeArrayAttr>:$gangDimDeviceType);
+  let arguments = (ins SymbolNameAttr:$sym_name, SymbolRefAttr:$func_name,
+      OptionalAttr<SymbolRefArrayAttr>:$bindIdName,
+      OptionalAttr<StrArrayAttr>:$bindStrName,
+      OptionalAttr<DeviceTypeArrayAttr>:$bindIdNameDeviceType,
+      OptionalAttr<DeviceTypeArrayAttr>:$bindStrNameDeviceType,
+      OptionalAttr<DeviceTypeArrayAttr>:$worker,
+      OptionalAttr<DeviceTypeArrayAttr>:$vector,
+      OptionalAttr<DeviceTypeArrayAttr>:$seq, UnitAttr:$nohost,
+      UnitAttr:$implicit, OptionalAttr<DeviceTypeArrayAttr>:$gang,
+      OptionalAttr<I64ArrayAttr>:$gangDim,
+      OptionalAttr<DeviceTypeArrayAttr>:$gangDimDeviceType);
 
   let extraClassDeclaration = [{
     static StringRef getGangDimKeyword() { return "dim"; }
@@ -2818,14 +2817,14 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
     std::optional<int64_t> getGangDimValue();
     std::optional<int64_t> getGangDimValue(mlir::acc::DeviceType deviceType);
 
-    std::optional<llvm::StringRef> getBindNameValue();
-    std::optional<llvm::StringRef> getBindNameValue(mlir::acc::DeviceType deviceType);
+    std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue();
+    std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue(mlir::acc::DeviceType deviceType);
   }];
 
   let assemblyFormat = [{
     $sym_name `func` `(` $func_name `)`
     oilist (
-        `bind` `(` custom<BindName>($bindName, $bindNameDeviceType) `)`
+        `bind` `(` custom<BindName>($bindIdName, $bindStrName ,$bindIdNameDeviceType, $bindStrNameDeviceType) `)`
       | `gang` `` custom<RoutineGangClause>($gang, $gangDim, $gangDimDeviceType)
       | `worker` custom<DeviceTypeArrayAttr>($worker)
       | `vector` custom<DeviceTypeArrayAttr>($vector)
@@ -3028,6 +3027,21 @@ def OpenACC_UpdateOp : OpenACC_Op<"update",
     /// Return the wait devnum value clause for the given device_type if
     /// present.
     mlir::Value getWaitDevnum(mlir::acc::DeviceType deviceType);
+    /// Add an entry to the 'async-only' attribute (clause spelled without
+    /// arguments)for each of the additional device types (or a none if it is
+    /// empty).
+    void addAsyncOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add a value to the 'async' with the current list of device types.
+    void addAsyncOperand(MLIRContext *, mlir::Value,
+                         llvm::ArrayRef<DeviceType>);
+    /// Add an entry to the 'wait-only' attribute (clause spelled without
+    /// arguments)for each of the additional device types (or a none if it is
+    /// empty).
+    void addWaitOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add an array-like entry  to the 'wait' with the current list of device
+    /// types.
+    void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
+                         llvm::ArrayRef<DeviceType>);
   }];
 
   let assemblyFormat = [{

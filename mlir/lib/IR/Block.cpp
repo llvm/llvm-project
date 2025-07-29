@@ -10,8 +10,6 @@
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
 

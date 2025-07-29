@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_CIR_DIALECT_CIR_TYPES
-#define MLIR_CIR_DIALECT_CIR_TYPES
+#ifndef CLANG_CIR_DIALECT_IR_CIRTYPES_TD
+#define CLANG_CIR_DIALECT_IR_CIRTYPES_TD
 
 include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "clang/CIR/Dialect/IR/CIRTypeConstraints.td"
@@ -35,7 +35,8 @@ class CIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
 
 def CIR_IntType : CIR_Type<"Int", "int", [
     DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
-    DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>
+    DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
+    DeclareTypeInterfaceMethods<CIR_IntTypeInterface>,
 ]> {
   let summary = "Integer type with arbitrary precision up to a fixed limit";
   let description = [{
@@ -508,9 +509,12 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
     A few examples:
 
     ```mlir
-        !complete = !cir.record<struct "complete" {!cir.int<u, 8>}>
-        !incomplete = !cir.record<struct "incomplete" incomplete>
-        !anonymous = !cir.record<struct {!cir.int<u, 8>}>
+        !rec_complete = !cir.record<struct "complete" {!u8i}>
+        !rec_incomplete = !cir.record<struct "incomplete" incomplete>
+        !anonymous_struct = !cir.record<struct {!u8i}>
+        !rec_p1 = !cir.record<struct "p1" packed {!u8i, !u8i}>
+        !rec_p2 = !cir.record<struct "p2" padded {!u8i, !u8i}>
+        !rec_p3 = !cir.record<struct "p3" packed padded {!s32i, !u8i, !u8i}>
     ```
 
     Incomplete records are mutable, meaning they can be later completed with a
@@ -551,7 +555,7 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
       "bool":$padded,
       "RecordKind":$kind
     ), [{
-      return $_get($_ctxt, members, name, /*complete=*/true, packed, padded,
+      return $_get($_ctxt, members, name, /*incomplete=*/false, packed, padded,
                    kind);
     }]>,
 
@@ -563,6 +567,17 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
       return $_get($_ctxt, /*members=*/llvm::ArrayRef<Type>{}, name,
                          /*incomplete=*/true, /*packed=*/false,
                          /*padded=*/false, kind);
+    }]>,
+
+    // Create an anonymous record type (always complete).
+    TypeBuilder<(ins
+      "llvm::ArrayRef<mlir::Type>":$members,
+      "bool":$packed,
+      "bool":$padded,
+      "RecordKind":$kind
+    ), [{
+      return $_get($_ctxt, members, mlir::StringAttr{}, /*incomplete=*/false,
+                      packed, padded, kind);
     }]>];
 
   let extraClassDeclaration = [{
@@ -623,4 +638,4 @@ def CIR_AnyType : AnyTypeOf<[
   CIR_ComplexType
 ]>;
 
-#endif // MLIR_CIR_DIALECT_CIR_TYPES
+#endif // CLANG_CIR_DIALECT_IR_CIRTYPES_TD

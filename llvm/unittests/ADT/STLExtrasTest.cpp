@@ -1591,6 +1591,17 @@ TEST(STLExtrasTest, Includes) {
   }
 }
 
+TEST(STLExtrasTest, Fill) {
+  std::vector<int> V1 = {1, 2, 3};
+  std::vector<int> V2;
+  int Val = 4;
+  fill(V1, Val);
+  EXPECT_THAT(V1, ElementsAre(Val, Val, Val));
+  V2.resize(4);
+  fill(V2, Val);
+  EXPECT_THAT(V2, ElementsAre(Val, Val, Val, Val));
+}
+
 struct Foo;
 struct Bar {};
 

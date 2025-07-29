@@ -63,7 +63,8 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
   // at the start of the statement. Thus, we're not using MaybeParseAttributes
   // here because we don't want to allow arbitrary orderings.
   ParsedAttributes CXX11Attrs(AttrFactory);
-  MaybeParseCXX11Attributes(CXX11Attrs, /*MightBeObjCMessageSend*/ true);
+  bool HasStdAttr =
+      MaybeParseCXX11Attributes(CXX11Attrs, /*MightBeObjCMessageSend*/ true);
   ParsedAttributes GNUOrMSAttrs(AttrFactory);
   if (getLangOpts().OpenCL)
     MaybeParseGNUAttributes(GNUOrMSAttrs);
@@ -79,6 +80,13 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
 
   assert((CXX11Attrs.empty() || Res.isInvalid() || Res.isUsable()) &&
          "attributes on empty statement");
+
+  if (HasStdAttr && getLangOpts().C23 &&
+      (StmtCtx & ParsedStmtContext::AllowDeclarationsInC) ==
+          ParsedStmtContext{} &&
+      isa_and_present<NullStmt>(Res.get()))
+    Diag(CXX11Attrs.Range.getBegin(), diag::warn_attr_in_secondary_block)
+        << CXX11Attrs.Range;
 
   if (CXX11Attrs.empty() || Res.isInvalid())
     return Res;
@@ -533,7 +541,8 @@ StmtResult Parser::ParseExprStatement(ParsedStmtContext StmtCtx) {
   }
 
   Token *CurTok = nullptr;
-  // Note we shouldn't eat the token since the callback needs it.
+  // If the semicolon is missing at the end of REPL input, we want to print
+  // the result. Note we shouldn't eat the token since the callback needs it.
   if (Tok.is(tok::annot_repl_input_end))
     CurTok = &Tok;
   else

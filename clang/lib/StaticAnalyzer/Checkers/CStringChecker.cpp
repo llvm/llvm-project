@@ -2223,6 +2223,44 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
         Result = lastElement;
     }
 
+    // For bounded method, amountCopied take the minimum of two values,
+    // for ConcatFnKind::strlcat:
+    // amountCopied = min (size - dstLen - 1 , srcLen)
+    // for others:
+    // amountCopied = min (srcLen, size)
+    // So even if we don't know about amountCopied, as long as one of them will
+    // not cause an out-of-bound access, the whole function's operation will not
+    // too, that will avoid invalidating the superRegion of data member in that
+    // situation.
+    bool CouldAccessOutOfBound = true;
+    if (IsBounded && amountCopied.isUnknown()) {
+      auto CouldAccessOutOfBoundForSVal =
+          [&](std::optional<NonLoc> Val) -> bool {
+        if (!Val)
+          return true;
+        return !isFirstBufInBound(C, state, C.getSVal(Dst.Expression),
+                                  Dst.Expression->getType(), *Val,
+                                  C.getASTContext().getSizeType());
+      };
+
+      CouldAccessOutOfBound = CouldAccessOutOfBoundForSVal(strLengthNL);
+
+      if (CouldAccessOutOfBound) {
+        // Get the max number of characters to copy.
+        const Expr *LenExpr = Call.getArgExpr(2);
+        SVal LenVal = state->getSVal(LenExpr, LCtx);
+
+        // Protect against misdeclared strncpy().
+        LenVal = svalBuilder.evalCast(LenVal, sizeTy, LenExpr->getType());
+
+        // Because analyzer doesn't handle expressions like `size -
+        // dstLen - 1` very well, we roughly use `size` for
+        // ConcatFnKind::strlcat here, same with other concat kinds.
+        CouldAccessOutOfBound =
+            CouldAccessOutOfBoundForSVal(LenVal.getAs<NonLoc>());
+      }
+    }
+
     // Invalidate the destination (regular invalidation without pointer-escaping
     // the address of the top-level region). This must happen before we set the
     // C string length because invalidation will clear the length.
@@ -2230,9 +2268,13 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
     // can use LazyCompoundVals to copy the source values into the destination.
     // This would probably remove any existing bindings past the end of the
     // string, but that's still an improvement over blank invalidation.
-    state = invalidateDestinationBufferBySize(
-        C, state, Dst.Expression, Call.getCFGElementRef(), *dstRegVal,
-        amountCopied, C.getASTContext().getSizeType());
+    if (CouldAccessOutOfBound)
+      state = invalidateDestinationBufferBySize(
+          C, state, Dst.Expression, Call.getCFGElementRef(), *dstRegVal,
+          amountCopied, C.getASTContext().getSizeType());
+    else
+      state = invalidateDestinationBufferNeverOverflows(
+          C, state, Call.getCFGElementRef(), *dstRegVal);
 
     // Invalidate the source (const-invalidation without const-pointer-escaping
     // the address of the top-level region).

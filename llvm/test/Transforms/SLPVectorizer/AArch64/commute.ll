@@ -16,9 +16,7 @@ define void @test1(ptr nocapture readonly %J, i32 %xmin, i32 %ymin) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr [[J:%.*]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fsub fast <2 x float> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <2 x float> [[TMP5]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x float> [[TMP6]], i32 1
-; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[ADD:%.*]] = call fast float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> [[TMP6]])
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ADD]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY3_LR_PH]], label [[FOR_END27:%.*]]
 ; CHECK:       for.end27:
@@ -57,9 +55,7 @@ define void @test2(ptr nocapture readonly %J, i32 %xmin, i32 %ymin) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr [[J:%.*]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fsub fast <2 x float> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <2 x float> [[TMP5]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x float> [[TMP6]], i32 1
-; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[TMP8]], [[TMP7]]
+; CHECK-NEXT:    [[ADD:%.*]] = call fast float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> [[TMP6]])
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ADD]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY3_LR_PH]], label [[FOR_END27:%.*]]
 ; CHECK:       for.end27:

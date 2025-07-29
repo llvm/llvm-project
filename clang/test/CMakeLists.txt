@@ -114,6 +114,7 @@ if(CLANG_ENABLE_CIR)
   list(APPEND CLANG_TEST_DEPS
     cir-opt
     cir-translate
+    mlir-translate
     )
 endif()
 
@@ -233,3 +234,5 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/debuginfo-tests)
     add_subdirectory(debuginfo-tests)
   endif()
 endif()
+
+add_subdirectory(Analysis/LifetimeSafety)

@@ -1,10 +1,8 @@
 // RUN: %clang -std=c23 -O0 %s -o %t && %run %t
-// UNSUPPORTED: asan, hwasan, rtsan, ubsan
+// UNSUPPORTED: asan, hwasan, ubsan
 
 #include <stddef.h>
 #include <stdlib.h>
-
-extern void *aligned_alloc(size_t alignment, size_t size);
 
 extern void free_sized(void *p, size_t size);
 

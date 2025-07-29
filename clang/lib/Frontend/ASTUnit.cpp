@@ -215,8 +215,8 @@ struct ASTUnit::ASTWriterData {
   llvm::BitstreamWriter Stream;
   ASTWriter Writer;
 
-  ASTWriterData(ModuleCache &ModCache)
-      : Stream(Buffer), Writer(Stream, Buffer, ModCache, {}) {}
+  ASTWriterData(ModuleCache &ModCache, const CodeGenOptions &CGOpts)
+      : Stream(Buffer), Writer(Stream, Buffer, ModCache, CGOpts, {}) {}
 };
 
 void ASTUnit::clearFileLevelDecls() {
@@ -235,7 +235,8 @@ const unsigned DefaultPreambleRebuildInterval = 5;
 static std::atomic<unsigned> ActiveASTUnitObjects;
 
 ASTUnit::ASTUnit(bool _MainFileIsAST)
-    : MainFileIsAST(_MainFileIsAST), WantTiming(getenv("LIBCLANG_TIMING")),
+    : CodeGenOpts(std::make_unique<CodeGenOptions>()),
+      MainFileIsAST(_MainFileIsAST), WantTiming(getenv("LIBCLANG_TIMING")),
       ShouldCacheCodeCompletionResults(false),
       IncludeBriefCommentsInCodeCompletion(false), UserFilesAreVolatile(false),
       UnsafeToFree(false) {
@@ -516,6 +517,7 @@ class ASTInfoCollector : public ASTReaderListener {
   HeaderSearchOptions &HSOpts;
   PreprocessorOptions &PPOpts;
   LangOptions &LangOpt;
+  CodeGenOptions &CodeGenOpts;
   std::shared_ptr<TargetOptions> &TargetOpts;
   IntrusiveRefCntPtr<TargetInfo> &Target;
   unsigned &Counter;
@@ -525,12 +527,12 @@ class ASTInfoCollector : public ASTReaderListener {
 public:
   ASTInfoCollector(Preprocessor &PP, ASTContext *Context,
                    HeaderSearchOptions &HSOpts, PreprocessorOptions &PPOpts,
-                   LangOptions &LangOpt,
+                   LangOptions &LangOpt, CodeGenOptions &CodeGenOpts,
                    std::shared_ptr<TargetOptions> &TargetOpts,
                    IntrusiveRefCntPtr<TargetInfo> &Target, unsigned &Counter)
       : PP(PP), Context(Context), HSOpts(HSOpts), PPOpts(PPOpts),
-        LangOpt(LangOpt), TargetOpts(TargetOpts), Target(Target),
-        Counter(Counter) {}
+        LangOpt(LangOpt), CodeGenOpts(CodeGenOpts), TargetOpts(TargetOpts),
+        Target(Target), Counter(Counter) {}
 
   bool ReadLanguageOptions(const LangOptions &LangOpts,
                            StringRef ModuleFilename, bool Complain,
@@ -552,6 +554,13 @@ public:
     InitializedLanguage = true;
 
     updated();
+    return false;
+  }
+
+  bool ReadCodeGenOptions(const CodeGenOptions &CGOpts,
+                          StringRef ModuleFilename, bool Complain,
+                          bool AllowCompatibleDifferences) override {
+    this->CodeGenOpts = CGOpts;
     return false;
   }
 
@@ -631,7 +640,7 @@ private:
     //
     // FIXME: We shouldn't need to do this, the target should be immutable once
     // created. This complexity should be lifted elsewhere.
-    Target->adjust(PP.getDiagnostics(), LangOpt);
+    Target->adjust(PP.getDiagnostics(), LangOpt, /*AuxTarget=*/nullptr);
 
     // Initialize the preprocessor.
     PP.Initialize(*Target);
@@ -858,14 +867,16 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
       DisableValidationForModuleKind::None;
   if (::getenv("LIBCLANG_DISABLE_PCH_VALIDATION"))
     disableValid = DisableValidationForModuleKind::All;
-  AST->Reader = new ASTReader(
-      PP, *AST->ModCache, AST->Ctx.get(), PCHContainerRdr, {}, /*isysroot=*/"",
-      /*DisableValidationKind=*/disableValid, AllowASTWithCompilerErrors);
+  AST->Reader = new ASTReader(PP, *AST->ModCache, AST->Ctx.get(),
+                              PCHContainerRdr, *AST->CodeGenOpts, {},
+                              /*isysroot=*/"",
+                              /*DisableValidationKind=*/disableValid,
+                              AllowASTWithCompilerErrors);
 
   unsigned Counter = 0;
   AST->Reader->setListener(std::make_unique<ASTInfoCollector>(
       *AST->PP, AST->Ctx.get(), *AST->HSOpts, *AST->PPOpts, *AST->LangOpts,
-      AST->TargetOpts, AST->Target, Counter));
+      *AST->CodeGenOpts, AST->TargetOpts, AST->Target, Counter));
 
   // Attach the AST reader to the AST context as an external AST
   // source, so that declarations will be deserialized from the
@@ -1836,6 +1847,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCommandLine(
   AST->DiagOpts = DiagOpts;
   AST->Diagnostics = Diags;
   AST->FileSystemOpts = CI->getFileSystemOpts();
+  AST->CodeGenOpts = std::make_unique<CodeGenOptions>(CI->getCodeGenOpts());
   VFS = createVFSFromCompilerInvocation(*CI, *Diags, VFS);
   AST->FileMgr = new FileManager(AST->FileSystemOpts, VFS);
   AST->StorePreamblesInMemory = StorePreamblesInMemory;
@@ -1851,7 +1863,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCommandLine(
   AST->Invocation = CI;
   AST->SkipFunctionBodies = SkipFunctionBodies;
   if (ForSerialization)
-    AST->WriterData.reset(new ASTWriterData(*AST->ModCache));
+    AST->WriterData.reset(new ASTWriterData(*AST->ModCache, *AST->CodeGenOpts));
   // Zero out now to ease cleanup during crash recovery.
   CI = nullptr;
   Diags = nullptr;
@@ -2385,7 +2397,7 @@ bool ASTUnit::serialize(raw_ostream &OS) {
   SmallString<128> Buffer;
   llvm::BitstreamWriter Stream(Buffer);
   IntrusiveRefCntPtr<ModuleCache> ModCache = createCrossProcessModuleCache();
-  ASTWriter Writer(Stream, Buffer, *ModCache, {});
+  ASTWriter Writer(Stream, Buffer, *ModCache, *CodeGenOpts, {});
   return serializeUnit(Writer, Buffer, getSema(), OS);
 }
 
@@ -2466,9 +2478,7 @@ void ASTUnit::addFileLevelDecl(Decl *D) {
 
   SourceLocation FileLoc = SM.getFileLoc(Loc);
   assert(SM.isLocalSourceLocation(FileLoc));
-  FileID FID;
-  unsigned Offset;
-  std::tie(FID, Offset) = SM.getDecomposedLoc(FileLoc);
+  auto [FID, Offset] = SM.getDecomposedLoc(FileLoc);
   if (FID.isInvalid())
     return;
 

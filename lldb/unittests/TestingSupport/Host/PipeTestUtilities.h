@@ -14,7 +14,7 @@
 #include "gtest/gtest.h"
 
 /// A base class for tests that need a pair of pipes for communication.
-class PipeTest : public testing::Test {
+class PipePairTest : public testing::Test {
 protected:
   lldb_private::Pipe input;
   lldb_private::Pipe output;
