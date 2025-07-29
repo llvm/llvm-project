@@ -2,7 +2,7 @@
 # $ echo int main() { return 0; } > has-exdllcharacteristics.c
 # To make minimum possible stub file (to decrease the binary size)
 # $ echo -n '4D5A00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000' | xxd -r -p > stub
-# $ cl has-exdllcharacteristics.c /entry:main /STUB:stub /NOCOFFGRPINFO /EMITTOOLVERSIONINFO:NO /EMITPOGOPHASEINFO /NOVCFEATURE /MANIFEST:NO /cetcompat /cetcompatstrict /cetdynamicapisinproc /cetipvalidationrelaxed /hotpatchcompatible /functionpadmin:6
+# $ cl has-exdllcharacteristics.c /link /entry:main /STUB:stub /NOCOFFGRPINFO /EMITTOOLVERSIONINFO:NO /EMITPOGOPHASEINFO /NOVCFEATURE /MANIFEST:NO /cetcompat /cetcompatstrict /cetdynamicapisinproc /cetipvalidationrelaxed /hotpatchcompatible /functionpadmin:6
 RUN: llvm-readobj --coff-debug-directory %p/Inputs/has-exdllcharacteristics.exe | FileCheck %s
 
 CHECK:  DebugEntry {
