@@ -2615,7 +2615,7 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
   bool Changed = false;
 
   // GFX125x only: xcnt wait is needed before flat and global atomics stores/rmw
-  if (Atomic && ST.hasGFX1250Insts() && TII->isFLAT(MI)) {
+  if (Atomic && ST.requiresWaitXCntBeforeAtomicStores() && TII->isFLAT(MI)) {
     MachineBasicBlock &MBB = *MI.getParent();
     BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(S_WAIT_XCNT_soft)).addImm(0);
     Changed = true;
