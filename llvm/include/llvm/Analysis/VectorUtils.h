@@ -633,6 +633,9 @@ public:
     return true;
   }
 
+  /// Return true if the group has no gaps.
+  bool isFull() const { return getNumMembers() == getFactor(); }
+
 private:
   uint32_t Factor; // Interleave Factor.
   bool Reverse;
