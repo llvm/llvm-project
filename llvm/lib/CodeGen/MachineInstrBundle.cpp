@@ -359,3 +359,13 @@ PhysRegInfo llvm::AnalyzePhysRegInBundle(const MachineInstr &MI, Register Reg,
 
   return PRI;
 }
+
+PreservedAnalyses
+llvm::FinalizeBundleTestPass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &) {
+  // For testing purposes, bundle the entire contents of each basic block
+  // except for terminators.
+  for (MachineBasicBlock &MBB : MF)
+    finalizeBundle(MBB, MBB.instr_begin(), MBB.getFirstInstrTerminator());
+  return PreservedAnalyses::none();
+}
