@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVRegisterInfo.h"
-#include "MCTargetDesc/RISCVBaseInfo.h"
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/SmallSet.h"
