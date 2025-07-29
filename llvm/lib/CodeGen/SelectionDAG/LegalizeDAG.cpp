@@ -4139,8 +4139,22 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Tmp1 = Node->getOperand(0);
     Tmp2 = Node->getOperand(1);
     Tmp3 = Node->getOperand(2);
-    Tmp1 = DAG.getCTSelect(dl, Tmp1.getValueType(), Tmp1, Tmp2, Tmp3);
-    Tmp1->setFlags(Node->getFlags());
+    EVT VT = Tmp2.getValueType();
+    if (VT.isVector()) {
+      SmallVector<SDValue> Elements;
+      unsigned NumElements = VT.getVectorNumElements();
+      EVT ScalarVT = VT.getScalarType();
+      for (unsigned Idx = 0; Idx < NumElements; ++Idx) {
+        SDValue IdxVal = DAG.getConstant(Idx, dl, MVT::i64);
+        SDValue TVal = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, ScalarVT, Tmp2, IdxVal);
+        SDValue FVal = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, ScalarVT, Tmp3, IdxVal);
+        Elements.push_back(DAG.getCTSelect(dl, ScalarVT, Tmp1, TVal, FVal, Node->getFlags()));
+      }
+      Tmp1 = DAG.getBuildVector(VT, dl, Elements);
+    } else {
+      Tmp1 = DAG.getCTSelect(dl, Tmp1.getValueType(), Tmp1, Tmp2, Tmp3);
+      Tmp1->setFlags(Node->getFlags());
+    }
     Results.push_back(Tmp1);
     break;
   }
