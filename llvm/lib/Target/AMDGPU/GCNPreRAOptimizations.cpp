@@ -39,19 +39,12 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
 
-#include "AMDGPURegisterBankInfo.h"
 #include "SIInstrInfo.h"
-#include "SIMachineFunctionInfo.h"
-
-#include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/InitializePasses.h"
 #include <unordered_set>
 
 #include "GCNSchedStrategy.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 using namespace llvm;
@@ -88,7 +81,6 @@ public:
 class GCNPreRAOptimizationsLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  const MachineLoopInfo *MLI = nullptr;
 
   GCNPreRAOptimizationsLegacy() : MachineFunctionPass(ID) {
     initializeGCNPreRAOptimizationsLegacyPass(*PassRegistry::getPassRegistry());
@@ -102,7 +94,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LiveIntervalsWrapperPass>();
-    AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -636,7 +627,6 @@ bool GCNPreRAOptimizationsLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
   LiveIntervals *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   return GCNPreRAOptimizationsImpl(LIS).run(MF);
 }
 
