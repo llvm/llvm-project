@@ -349,9 +349,10 @@ int main(int argc, const char **argv) {
   }
 
   // if we add more % commands, there should be better architecture than this
-  const char *help_output = "%help\tlist clang-repl %commands\n"
-                            "%undo\tundo the previous input\n"
-                            "%quit\texit clang-repl\n";
+  const char *help_output = "%help\t\tlist clang-repl %commands\n"
+                            "%undo\t\tundo the previous input\n"
+                            "%lib\t<path>\tlink a dynamic library\n"
+                            "%quit\t\texit clang-repl\n";
 
   llvm::raw_ostream &OS = llvm::outs();
   if (OptInputs.empty()) {
