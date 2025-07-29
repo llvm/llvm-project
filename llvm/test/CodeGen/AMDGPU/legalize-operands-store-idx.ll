@@ -6,8 +6,8 @@ declare void @llvm.amdgcn.load.mcast.b32.p10.p1(ptr addrspace(10), ptr addrspace
 @sem = internal addrspace(3) global target("amdgcn.semaphore", 1) poison
 @sem2 = internal addrspace(3) global target("amdgcn.semaphore", 1) poison
 
-define void @test(ptr addrspace(10) %itp, ptr addrspace(1) %p1) {
-; GFX13-LABEL: test:
+define void @global(ptr addrspace(10) %itp, ptr addrspace(1) %p1) {
+; GFX13-LABEL: global:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
@@ -26,6 +26,52 @@ define void @test(ptr addrspace(10) %itp, ptr addrspace(1) %p1) {
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
   call void @llvm.amdgcn.load.mcast.b32.p10.p1(ptr addrspace(10) %itp, ptr addrspace(1) readonly %p1, i32 10, i32 983040)
+  ret void
+}
+
+define void @ds(ptr addrspace(10) %itp, ptr addrspace(3) %p3) {
+; GFX13-LABEL: ds:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_rtscnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_lshrrev_b32_e32 v0, 2, v0
+; GFX13-NEXT:    s_mov_b32 m0, 0xf0000
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, s0
+; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; GFX13-NEXT:    ds_load_mcast_b32 g1[0], v1
+; GFX13-NEXT:    s_wait_dscnt 0x0
+; GFX13-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
+main_body:
+  call void @llvm.amdgcn.load.mcast.b32.p10.p3(ptr addrspace(10) %itp, ptr addrspace(3) readonly %p3, i32 10, i32 983040)
+  ret void
+}
+
+define void @dds(ptr addrspace(10) %itp, ptr addrspace(11) %p11) {
+; GFX13-LABEL: dds:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_rtscnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_lshrrev_b32_e32 v0, 2, v0
+; GFX13-NEXT:    s_mov_b32 m0, 0xf0000
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, s0
+; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; GFX13-NEXT:    dds_load_mcast_b32 g1[0], v1, off th:TH_LOAD_HT scope:SCOPE_SE
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
+main_body:
+  call void @llvm.amdgcn.load.mcast.b32.p10.p11(ptr addrspace(10) %itp, ptr addrspace(11) readonly %p11, i32 10, i32 983040)
   ret void
 }
 
@@ -53,3 +99,4 @@ main_body:
                                                 ptr addrspace(10) %itp_refl, ptr addrspace(3) @sem2, i32 0);
   ret void;
 }
+
