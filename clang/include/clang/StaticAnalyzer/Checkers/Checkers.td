@@ -1047,11 +1047,6 @@ def RetainCountBase : Checker<"RetainCountBase">,
 
 let ParentPackage = OSX in {
 
-def NSOrCFErrorDerefChecker : Checker<"NSOrCFErrorDerefChecker">,
-  HelpText<"Implementation checker for NSErrorChecker and CFErrorChecker">,
-  Documentation<NotDocumented>,
-  Hidden;
-
 def NumberObjectConversionChecker : Checker<"NumberObjectConversion">,
   HelpText<"Check for erroneous conversions of objects representing numbers "
            "into numbers">,
@@ -1149,9 +1144,8 @@ def ObjCSuperCallChecker : Checker<"MissingSuperCall">,
   Documentation<NotDocumented>;
 
 def NSErrorChecker : Checker<"NSError">,
-  HelpText<"Check usage of NSError** parameters">,
-  Dependencies<[NSOrCFErrorDerefChecker]>,
-  Documentation<HasDocumentation>;
+                     HelpText<"Check usage of NSError** parameters">,
+                     Documentation<HasDocumentation>;
 
 def RetainCountChecker : Checker<"RetainCount">,
   HelpText<"Check for leaks and improper reference count management">,
@@ -1253,9 +1247,8 @@ def CFRetainReleaseChecker : Checker<"CFRetainRelease">,
   Documentation<HasDocumentation>;
 
 def CFErrorChecker : Checker<"CFError">,
-  HelpText<"Check usage of CFErrorRef* parameters">,
-  Dependencies<[NSOrCFErrorDerefChecker]>,
-  Documentation<HasDocumentation>;
+                     HelpText<"Check usage of CFErrorRef* parameters">,
+                     Documentation<HasDocumentation>;
 
 } // end "osx.coreFoundation"
 
