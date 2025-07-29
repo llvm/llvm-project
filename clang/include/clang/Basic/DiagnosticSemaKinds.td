@@ -9331,8 +9331,28 @@ def err_atomic_builtin_pointer_size : Error<
   "address argument to atomic builtin must be a pointer to 1,2,4,8 or 16 byte "
   "type (%0 invalid)">;
 def err_atomic_exclusive_builtin_pointer_size : Error<
-  "address argument to load or store exclusive builtin must be a pointer to"
-  " 1,2,4 or 8 byte type (%0 invalid)">;
+  "address argument to load or store exclusive builtin must be a pointer to "
+  // Because the range of legal sizes for load/store exclusive varies with the
+  // Arm architecture version, this error message wants to be able to specify
+  // various different subsets of the sizes 1, 2, 4, 8. Rather than make a
+  // separate diagnostic for each subset, I've arranged here that _this_ error
+  // can display any combination of the sizes. For each size there are two
+  // %select parameters: the first chooses whether you need a "," or " or " to
+  // separate the number from a previous one (or neither), and the second
+  // parameter indicates whether to display the number itself.
+  //
+  // (The very first of these parameters isn't really necessary, since you
+  // never want to start with "," or " or " before the first number in the
+  // list, but it keeps it simple to make it look exactly like the other cases,
+  // and also allows a loop constructing this diagnostic to handle every case
+  // exactly the same.)
+  "%select{|,| or }1%select{|1}2"
+  "%select{|,| or }3%select{|2}4"
+  "%select{|,| or }5%select{|4}6"
+  "%select{|,| or }7%select{|8}8"
+  " byte type (%0 invalid)">;
+def err_atomic_exclusive_builtin_pointer_size_none : Error<
+  "load and store exclusive builtins are not available on this architecture">;
 def err_atomic_builtin_ext_int_size : Error<
   "atomic memory operand must have a power-of-two size">;
 def err_atomic_builtin_bit_int_prohibit : Error<
