@@ -6,6 +6,7 @@
 ; CHECK-NEXT:   32bit                            - Implements RV32.
 ; CHECK-NEXT:   64bit                            - Implements RV64.
 ; CHECK-NEXT:   a                                - 'A' (Atomic Instructions).
+; CHECK-NEXT:   add-load-fusion                  - Enable ADD + load macrofusion.
 ; CHECK-NEXT:   add-lw-fusion                    - Enable ADD+LW macrofusion.
 ; CHECK-NEXT:   addi-ld-fusion                   - Enable ADDI+LD macrofusion.
 ; CHECK-NEXT:   addi-lw-fusion                   - Enable ADDI+LW macrofusion.
