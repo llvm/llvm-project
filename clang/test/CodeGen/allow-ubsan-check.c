@@ -182,8 +182,6 @@ int overflow(int x, int y) {
 
 void use(double*);
 
-//
-//                                                                  71 == SO_LocalBounds
 // CHECK-LABEL: define dso_local double @lbounds(
 // CHECK-SAME: i32 noundef [[B:%.*]], i32 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
