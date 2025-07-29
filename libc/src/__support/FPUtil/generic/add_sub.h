@@ -16,6 +16,7 @@
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
@@ -106,11 +107,22 @@ add_or_sub(InType x, InType y) {
       volatile InType tmp = y;
       if constexpr (IsSub)
         tmp = -tmp;
-      return cast<OutType>(tmp);
+      if constexpr (cpp::is_same_v<InType, bfloat16> &&
+                    cpp::is_same_v<OutType, bfloat16>) {
+        return BFloat16(tmp.bits);
+      } else {
+        return cast<OutType>(tmp);
+      }
     }
 
-    if (y_bits.is_zero())
-      return cast<OutType>(x);
+    if (y_bits.is_zero()) {
+      if constexpr (cpp::is_same_v<InType, bfloat16> &&
+                    cpp::is_same_v<OutType, bfloat16>) {
+        return BFloat16(x.bits);
+      } else {
+        return cast<OutType>(x);
+      }
+    }
   }
 
   InType x_abs = x_bits.abs().get_val();
