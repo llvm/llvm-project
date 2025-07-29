@@ -98,6 +98,8 @@ public:
   void ensureHeadroom(size_t Headroom);
   void appendContents(ArrayRef<char> Contents);
   void appendContents(size_t Num, char Elt);
+  // Add a fixup to the current fragment. Call ensureHeadroom beforehand to
+  // ensure the fixup and appended content apply to the same fragment.
   void addFixup(const MCExpr *Value, MCFixupKind Kind);
 
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
