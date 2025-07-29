@@ -618,21 +618,21 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       LDREX = 0;
     else if (ArchKind == llvm::ARM::ArchKind::ARMV6K ||
              ArchKind == llvm::ARM::ArchKind::ARMV6KZ)
-      LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
+      LDREX = ARM_LDREX_D | ARM_LDREX_W | ARM_LDREX_H | ARM_LDREX_B;
     else
-      LDREX = LDREX_W;
+      LDREX = ARM_LDREX_W;
     break;
   case 7:
   case 8:
     if (ArchProfile == llvm::ARM::ProfileKind::M)
-      LDREX = LDREX_W | LDREX_H | LDREX_B;
+      LDREX = ARM_LDREX_W | ARM_LDREX_H | ARM_LDREX_B;
     else
-      LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
+      LDREX = ARM_LDREX_D | ARM_LDREX_W | ARM_LDREX_H | ARM_LDREX_B;
     break;
   case 9:
     assert(ArchProfile != llvm::ARM::ProfileKind::M &&
            "No Armv9-M architectures defined");
-    LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
+    LDREX = ARM_LDREX_D | ARM_LDREX_W | ARM_LDREX_H | ARM_LDREX_B;
   }
 
   if (!(FPU & NeonFPU) && FPMath == FP_Neon) {
