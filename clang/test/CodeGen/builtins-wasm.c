@@ -796,9 +796,9 @@ void test_function_pointer_funcref(FFuncRef func) {
 // the normal type lowering code.
 // Single element structs are unboxed, multi element structs are passed on
 // stack.
-typedef struct {double x;} (*Fstructs1)(struct {double x;}, struct {float x;}, struct {double x; float y;}, union {double x; float y;});
+typedef struct {double x;} (*Fstructs1)(struct {double x;}, struct {float x;}, struct {double x; float y;});
 void test_function_pointer_structs1(Fstructs1 func) {
-  // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, double poison, token poison, double poison, float poison, ptr poison, ptr poison)
+  // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, double poison, token poison, double poison, float poison, ptr poison)
   use(__builtin_wasm_test_function_pointer_signature(func));
 }
 
@@ -806,5 +806,12 @@ void test_function_pointer_structs1(Fstructs1 func) {
 typedef struct {double x; double y;} (*Fstructs2)(void);
 void test_function_pointer_structs2(Fstructs2 func) {
   // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, token poison, ptr poison)
+  use(__builtin_wasm_test_function_pointer_signature(func));
+}
+
+// Return union ==> return ptr on stack, one element union => unboxed
+typedef union {double x; float y;} (*FUnions)(union {double x; float y;}, union {double x;});
+void test_function_pointer_unions(FUnions func) {
+  // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, token poison, ptr poison, ptr poison, double poison)
   use(__builtin_wasm_test_function_pointer_signature(func));
 }
