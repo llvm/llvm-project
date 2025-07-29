@@ -1241,7 +1241,7 @@ bool RewriteScheduleStage::initGCNSchedStage() {
     for (auto &UseMI : DAG.MRI.use_nodbg_instructions(DefReg))
       UseInstrs.push_back(&UseMI);
 
-    DenseMap<Register, MachineInstr *> NewCopies;
+    DenseMap<Register, DenseMap<MachineBasicBlock *, MachineInstr *>> NewCopies;
     for (auto UseMI : UseInstrs) {
       for (unsigned OpNo = 0; OpNo < UseMI->getNumOperands(); OpNo++) {
         auto &TheOp = UseMI->getOperand(OpNo);
@@ -1256,29 +1256,32 @@ bool RewriteScheduleStage::initGCNSchedStage() {
           continue;
 
         Register DestVGPR;
-        if (!NewCopies.contains(DefReg)) {
+        if (!NewCopies.contains(DefReg) || !NewCopies[DefReg].contains(UseMI->getParent())) {
           Register DestVGPR = DAG.MRI.createVirtualRegister(
               SRI->getEquivalentVGPRClass(DAG.MRI.getRegClass(DefReg)));
 
           // Insert copy near the user to avoid inserting inside loops.
+          // TODO  insert point
           MachineInstrBuilder VGPRCopy =
-              BuildMI(*UseMI->getParent(), UseMI->getIterator(),
+              BuildMI(*UseMI->getParent(), UseMI->getParent()->getFirstNonPHI(),
                       UseMI->getDebugLoc(), TII->get(TargetOpcode::COPY))
                   .addDef(DestVGPR, 0, 0)
                   .addUse(DefReg, 0, 0);
 
-          NewCopies[DefReg] = VGPRCopy;
+          NewCopies[DefReg][UseMI->getParent()] = VGPRCopy;
         }
-        DestVGPR = NewCopies[DefReg]->getOperand(0).getReg();
+        DestVGPR = NewCopies[DefReg][UseMI->getParent()]->getOperand(0).getReg();
         TheOp.setReg(DestVGPR);
       }
     }
     if (NewCopies.contains(DefReg)) {
-      DAG.LIS->InsertMachineInstrInMaps(*NewCopies[DefReg]);
-      DAG.LIS->removeInterval(DefReg);
-      DAG.LIS->createAndComputeVirtRegInterval(DefReg);
-      DAG.LIS->createAndComputeVirtRegInterval(
-          NewCopies[DefReg]->getOperand(0).getReg());
+      for (auto NewCopy : NewCopies[DefReg]) {
+        DAG.LIS->InsertMachineInstrInMaps(*NewCopy.second);
+        DAG.LIS->removeInterval(DefReg);
+        DAG.LIS->createAndComputeVirtRegInterval(DefReg);
+        DAG.LIS->createAndComputeVirtRegInterval(
+        NewCopy.second->getOperand(0).getReg());
+      }
     }
   }
 
@@ -1294,7 +1297,7 @@ bool RewriteScheduleStage::initGCNSchedStage() {
     for (auto &DefMI : DAG.MRI.def_instructions(Src2Reg))
       DefInstrs.push_back(&DefMI);
 
-    DenseMap<Register, MachineInstr *> NewCopies;
+    DenseMap<Register, DenseMap<MachineBasicBlock *, MachineInstr *>> NewCopies;
     for (auto DefMI : DefInstrs) {
       for (unsigned OpNo = 0; OpNo < DefMI->getNumOperands(); OpNo++) {
         auto &TheOp = DefMI->getOperand(OpNo);
@@ -1309,31 +1312,33 @@ bool RewriteScheduleStage::initGCNSchedStage() {
           continue;
 
         Register SrcVGPR;
-        if (!NewCopies.contains(Src2Reg)) {
+        if (!NewCopies.contains(Src2Reg) || !NewCopies[Src2Reg].contains(DefMI->getParent())) {
           Register SrcVGPR = DAG.MRI.createVirtualRegister(
               SRI->getEquivalentVGPRClass(DAG.MRI.getRegClass(Src2Reg)));
 
           // Insert copy near the def to avoid inserting inside loops.
           MachineInstrBuilder VGPRCopy =
-              BuildMI(*DefMI->getParent(), ++DefMI->getIterator(),
+              BuildMI(*DefMI->getParent(), DefMI->getParent()->end(),
                       DefMI->getDebugLoc(), TII->get(TargetOpcode::COPY))
                   .addDef(Src2Reg, 0, 0)
                   .addUse(SrcVGPR, 0, 0);
 
-          NewCopies[Src2Reg] = VGPRCopy;
+          NewCopies[Src2Reg][DefMI->getParent()] = VGPRCopy;
         }
 
-        SrcVGPR = NewCopies[Src2Reg]->getOperand(1).getReg();
+        SrcVGPR = NewCopies[Src2Reg][DefMI->getParent()]->getOperand(1).getReg();
         TheOp.setReg(SrcVGPR);
       }
     }
 
     if (NewCopies.contains(Src2Reg)) {
-      DAG.LIS->InsertMachineInstrInMaps(*NewCopies[Src2Reg]);
-      DAG.LIS->removeInterval(Src2Reg);
-      DAG.LIS->createAndComputeVirtRegInterval(Src2Reg);
-      DAG.LIS->createAndComputeVirtRegInterval(
-          NewCopies[Src2Reg]->getOperand(1).getReg());
+      for (auto NewCopy : NewCopies[Src2Reg]) {
+        DAG.LIS->InsertMachineInstrInMaps(*NewCopy.second);
+        DAG.LIS->removeInterval(Src2Reg);
+        DAG.LIS->createAndComputeVirtRegInterval(Src2Reg);
+        DAG.LIS->createAndComputeVirtRegInterval(
+            NewCopy.second->getOperand(1).getReg());
+      }
     }
   }
 
