@@ -3277,7 +3277,7 @@ TEST(SignatureHelpTest, SkipExplicitObjectParameter) {
       A a {};
       a.foo($c1^);
       (&A::bar)($c2^);
-      // TODO: (&A::foo)(^c3)
+      (&A::foo)($c3^);
     }
   )cpp");
 
@@ -3294,7 +3294,7 @@ TEST(SignatureHelpTest, SkipExplicitObjectParameter) {
     const auto Result = signatureHelp(testPath(TU.Filename), Code.point("c1"),
                                       *Preamble, Inputs, MarkupKind::PlainText);
 
-    EXPECT_EQ(1, Result.signatures.size());
+    EXPECT_EQ(1U, Result.signatures.size());
 
     EXPECT_THAT(Result.signatures[0], AllOf(sig("foo([[int arg]]) -> void")));
   }
@@ -3302,9 +3302,18 @@ TEST(SignatureHelpTest, SkipExplicitObjectParameter) {
     const auto Result = signatureHelp(testPath(TU.Filename), Code.point("c2"),
                                       *Preamble, Inputs, MarkupKind::PlainText);
 
-    EXPECT_EQ(1, Result.signatures.size());
+    EXPECT_EQ(1U, Result.signatures.size());
 
     EXPECT_THAT(Result.signatures[0], AllOf(sig("([[A]], [[int]]) -> void")));
+  }
+  {
+    const auto Result = signatureHelp(testPath(TU.Filename), Code.point("c3"),
+                                      *Preamble, Inputs, MarkupKind::PlainText);
+    // TODO: We expect 1 signature here
+    // EXPECT_EQ(1U, Result.signatures.size());
+
+    // EXPECT_THAT(Result.signatures[0], AllOf(sig("([[A]], [[int]]) ->
+    // void")));
   }
 }
 
@@ -4415,9 +4424,9 @@ TEST(CompletionTest, SkipExplicitObjectParameter) {
 
     int main() {
       A a {};
-      a.$c1^s
+      a.$c1^
       (&A::ba$c2^;
-      // TODO: (&A::fo$c3^
+      (&A::fo$c3^;
     }
   )cpp");
 
@@ -4435,11 +4444,11 @@ TEST(CompletionTest, SkipExplicitObjectParameter) {
     auto Result = codeComplete(testPath(TU.Filename), Code.point("c1"),
                                Preamble.get(), Inputs, Opts);
 
-    EXPECT_THAT(Result.Completions,
-                UnorderedElementsAre(AllOf(named("foo"), signature("(int arg)"),
-                                           snippetSuffix("(${1:int arg})")),
-                                     AllOf(named("bar"), signature("(int arg)"),
-                                           snippetSuffix("(${1:int arg})"))));
+    EXPECT_THAT(
+        Result.Completions,
+        UnorderedElementsAre(
+            AllOf(named("foo"), signature("(int arg)"), snippetSuffix("")),
+            AllOf(named("bar"), signature("(int arg)"), snippetSuffix(""))));
   }
   {
     auto Result = codeComplete(testPath(TU.Filename), Code.point("c2"),
@@ -4448,6 +4457,14 @@ TEST(CompletionTest, SkipExplicitObjectParameter) {
     EXPECT_THAT(Result.Completions,
                 ElementsAre(AllOf(named("bar"), signature("(int arg)"),
                                   snippetSuffix(""))));
+  }
+  {
+    auto Result = codeComplete(testPath(TU.Filename), Code.point("c3"),
+                               Preamble.get(), Inputs, Opts);
+    EXPECT_THAT(
+        Result.Completions,
+        ElementsAre(AllOf(named("foo"), signature("<class self:auto>(int arg)"),
+                          snippetSuffix("<${1:class self:auto}>"))));
   }
 }
 } // namespace

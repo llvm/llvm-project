@@ -28,15 +28,17 @@ int func2() {
 // CHECK-CC2: OVERLOAD: [#void#]foo(int arg)
 
 int func3() {
-  // TODO: (&A::foo)
+  (&A::foo)
   (&A::bar)
 }
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-2):10 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC3 %s
-// CHECK-CC3: COMPLETION: bar : [#void#]bar(<#int arg#>)
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-3):10 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC3 %s
+// CHECK-CC3: COMPLETION: foo : [#void#]foo<<#class self:auto#>>(<#int arg#>)
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-4):10 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC4 %s
+// CHECK-CC4: COMPLETION: bar : [#void#]bar(<#int arg#>)
 
 int func4() {
-  // TODO: (&A::foo)(
+  // TODO (&A::foo)(
   (&A::bar)(
 }
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-2):13 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC4 %s
-// CHECK-CC4: OVERLOAD: [#void#](<#A#>, int)
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-2):13 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC5 %s
+// CHECK-CC5: OVERLOAD: [#void#](<#A#>, int)
