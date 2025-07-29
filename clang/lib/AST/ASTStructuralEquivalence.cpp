@@ -2126,7 +2126,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                             diag::err_odr_tag_type_inconsistent))
               << Context.ToCtx.getTypeDeclType(D2)
               << (&Context.FromCtx != &Context.ToCtx);
-          Context.Diag2(D2->getLocation(), diag::note_odr_enumerator)
+          Context.Diag2(D2->getLocation(),
+                        diag::note_odr_incompatible_fixed_underlying_type)
               << D2 << D2->getIntegerType() << D1->getIntegerType();
         }
         return false;

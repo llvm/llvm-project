@@ -11,6 +11,6 @@
 // CHECK: enum4.c:6:6: note: enumeration 'E2' has fixed underlying type here
 // CHECK: enum3.c:6:6: note: enumeration 'E2' missing fixed underlying type here
 // CHECK: enum3.c:11:6: warning: type 'enum E3' has incompatible definitions in different translation units
-// CHECK: enum3.c:11:6: note: enumerator 'E3' with value 'long' here
+// CHECK: enum3.c:11:6: note: enumeration 'E3' declared with incompatible fixed underlying types ('long' vs. 'short')
 // CHECK: 3 warnings and 1 error generated
 
