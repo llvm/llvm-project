@@ -1269,6 +1269,7 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   // No code generation needed.
   case Decl::ClassTemplate:
   case Decl::Concept:
+  case Decl::CXXDeductionGuide:
   case Decl::Empty:
   case Decl::FunctionTemplate:
   case Decl::StaticAssert:

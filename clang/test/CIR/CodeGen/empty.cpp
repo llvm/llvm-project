@@ -23,5 +23,10 @@ namespace N {
     using ::class_template; // UsingShadow
 }
 
+template<typename T>
+struct deduction_guide {};
+
+deduction_guide() -> deduction_guide<int>;
+
 // CIR: module {{.*}} {
 // CIR-NEXT: }
