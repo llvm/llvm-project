@@ -2007,17 +2007,6 @@ def PAUTH_EPILOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
 
 // These pointer authentication instructions require armv8.3a
 let Predicates = [HasPAuth] in {
-  multiclass SignAuth<bits<3> prefix, bits<3> prefix_z, string asm,
-                      SDPatternOperator op> {
-    def IA   : SignAuthOneData<prefix, 0b00, !strconcat(asm,  "ia"), op>;
-    def IB   : SignAuthOneData<prefix, 0b01, !strconcat(asm,  "ib"), op>;
-    def DA   : SignAuthOneData<prefix, 0b10, !strconcat(asm,  "da"), op>;
-    def DB   : SignAuthOneData<prefix, 0b11, !strconcat(asm,  "db"), op>;
-    def IZA  : SignAuthZero<prefix_z,  0b00, !strconcat(asm, "iza"), op>;
-    def DZA  : SignAuthZero<prefix_z,  0b10, !strconcat(asm, "dza"), op>;
-    def IZB  : SignAuthZero<prefix_z,  0b01, !strconcat(asm, "izb"), op>;
-    def DZB  : SignAuthZero<prefix_z,  0b11, !strconcat(asm, "dzb"), op>;
-  }
 
   // When PA is enabled, a better mnemonic should be emitted.
   def : InstAlias<"paciaz", (PACIAZ), 1>;
@@ -2034,7 +2023,19 @@ let Predicates = [HasPAuth] in {
   def : InstAlias<"autib1716", (AUTIB1716), 1>;
   def : InstAlias<"xpaclri", (XPACLRI), 1>;
 
-  defm PAC : SignAuth<0b000, 0b010, "pac", int_ptrauth_sign>;
+  multiclass SignAuth<bits<3> prefix, bits<3> prefix_z, string asm,
+                      SDPatternOperator op> {
+    def IA   : SignAuthOneData<prefix, 0b00, !strconcat(asm,  "ia"), op>;
+    def IB   : SignAuthOneData<prefix, 0b01, !strconcat(asm,  "ib"), op>;
+    def DA   : SignAuthOneData<prefix, 0b10, !strconcat(asm,  "da"), op>;
+    def DB   : SignAuthOneData<prefix, 0b11, !strconcat(asm,  "db"), op>;
+    def IZA  : SignAuthZero<prefix_z,  0b00, !strconcat(asm, "iza"), op>;
+    def DZA  : SignAuthZero<prefix_z,  0b10, !strconcat(asm, "dza"), op>;
+    def IZB  : SignAuthZero<prefix_z,  0b01, !strconcat(asm, "izb"), op>;
+    def DZB  : SignAuthZero<prefix_z,  0b11, !strconcat(asm, "dzb"), op>;
+  }
+
+  defm PAC : SignAuth<0b000, 0b010, "pac", null_frag>;
   defm AUT : SignAuth<0b001, 0b011, "aut", null_frag>;
 
   def XPACI : ClearAuth<0, "xpaci">;
@@ -2157,6 +2158,26 @@ let Predicates = [HasPAuth] in {
     let Defs = [NZCV];
     let Uses = [];
   }
+
+  // PAC pseudo instruction. In AsmPrinter, it is expanded into an actual PAC*
+  // instruction immediately preceded by the discriminator computation.
+  // This enforces the expected immediate modifier is used for signing, even
+  // if an attacker is able to substitute AddrDisc.
+  def PAC : Pseudo<(outs GPR64:$SignedVal),
+                   (ins GPR64:$Val, i32imm:$Key, i64imm:$Disc, GPR64noip:$AddrDisc),
+                   [], "$SignedVal = $Val">, Sched<[WriteI, ReadI]> {
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 0;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let Size = 12;
+    let Defs = [X16, X17];
+    let usesCustomInserter = 1;
+  }
+
+  // A standalone pattern is used, so that literal 0 can be passed as $Disc.
+  def : Pat<(int_ptrauth_sign GPR64:$Val, timm:$Key, GPR64noip:$AddrDisc),
+            (PAC GPR64:$Val, $Key, 0, GPR64noip:$AddrDisc)>;
 
   // AUT and re-PAC a value, using different keys/data.
   // This directly manipulates x16/x17, which are the only registers that
