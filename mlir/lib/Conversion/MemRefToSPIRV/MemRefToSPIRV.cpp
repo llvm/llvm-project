@@ -715,9 +715,9 @@ ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   // for plain images and the OpImageRead instruction needs to be materialized
   // instead or texels need to be accessed via atomics through a texel pointer.
   // Future work will generalize support to plain images.
-  if (auto convertedPointeeType = cast<spirv::PointerType>(
-          getTypeConverter()->convertType(loadOp.getMemRefType()));
-      !isa<spirv::SampledImageType>(convertedPointeeType.getPointeeType()))
+  auto convertedPointeeType = cast<spirv::PointerType>(
+      getTypeConverter()->convertType(loadOp.getMemRefType()));
+  if (!isa<spirv::SampledImageType>(convertedPointeeType.getPointeeType()))
     return rewriter.notifyMatchFailure(loadOp,
                                        "cannot lower memrefs which do not "
                                        "convert to SPIR-V sampled images");

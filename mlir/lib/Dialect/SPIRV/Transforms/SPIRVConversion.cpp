@@ -588,17 +588,16 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
     }
 
     const auto dim = [rank]() {
-#define DIM_CASE(DIM)                                                          \
-  case DIM:                                                                    \
-    return spirv::Dim::Dim##DIM##D
       switch (rank) {
-        DIM_CASE(1);
-        DIM_CASE(2);
-        DIM_CASE(3);
+      case 1:
+        return spirv::Dim::Dim1D;
+      case 2:
+        return spirv::Dim::Dim2D;
+      case 3:
+        return spirv::Dim::Dim3D;
       default:
         llvm_unreachable("Invalid memref rank!");
       }
-#undef DIM_CASE
     }();
 
     // Note that we currently only support lowering to single element texels
