@@ -238,17 +238,16 @@ public:
   /// \p PreservesNUW  Outputs whether the extraction allows preserving the
   ///                  GEP's nuw flag, if it has one.
   static Value *Extract(Value *Idx, GetElementPtrInst *GEP,
-                        User *&UserChainTail, bool &PreservesNUW,
-                        DominatorTree *DT);
+                        User *&UserChainTail, bool &PreservesNUW);
 
   /// Looks for a constant offset from the given GEP index without extracting
   /// it. It returns the numeric value of the extracted constant offset (0 if
   /// failed). The meaning of the arguments are the same as Extract.
-  static int64_t Find(Value *Idx, GetElementPtrInst *GEP, DominatorTree *DT);
+  static int64_t Find(Value *Idx, GetElementPtrInst *GEP);
 
 private:
-  ConstantOffsetExtractor(BasicBlock::iterator InsertionPt, DominatorTree *DT)
-      : IP(InsertionPt), DT(DT), DL(InsertionPt->getDataLayout()) {}
+  ConstantOffsetExtractor(BasicBlock::iterator InsertionPt)
+      : IP(InsertionPt), DL(InsertionPt->getDataLayout()) {}
 
   /// Searches the expression that computes V for a non-zero constant C s.t.
   /// V can be reassociated into the form V' + C. If the searching is
@@ -322,19 +321,9 @@ private:
   bool CanTraceInto(bool SignExtended, bool ZeroExtended, BinaryOperator *BO,
                     bool NonNegative);
 
-  // Find the most dominating Xor with the same base operand.
-  BinaryOperator *findDominatingXor(Value *BaseOperand,
-                                    BinaryOperator *CurrentXor);
-
-  /// Check if Xor instruction should be considered for optimization.
-  bool shouldConsiderXor(BinaryOperator *XorInst);
-
-  /// Cache the information about Xor idiom.
-  struct XorRewriteInfo {
-    llvm::BinaryOperator *BaseXor = nullptr;
-    int64_t AdjustedOffset = 0;
-  };
-  std::optional<XorRewriteInfo> CachedXorInfo;
+  /// Check if Xor instruction should be considered and updated for
+  /// optimization.
+  bool shouldConsiderAndUpdateXor(BinaryOperator *XorInst);
 
   /// The path from the constant offset to the old GEP index. e.g., if the GEP
   /// index is "a * b + (c + 5)". After running function find, UserChain[0] will
@@ -350,8 +339,6 @@ private:
 
   /// Insertion position of cloned instructions.
   BasicBlock::iterator IP;
-
-  DominatorTree *DT;
 
   const DataLayout &DL;
 };
@@ -549,9 +536,9 @@ bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended,
       !cast<PossiblyDisjointInst>(BO)->isDisjoint())
     return false;
 
-  // Handle Xor idiom.
+  // Handle Xor decomposition.
   if (BO->getOpcode() == Instruction::Xor)
-    return shouldConsiderXor(BO);
+    return shouldConsiderAndUpdateXor(BO);
 
   // FIXME: We don't currently support constants from the RHS of subs,
   // when we are zero-extended, because we need a way to zero-extended
@@ -763,10 +750,6 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
          "UserChain, so no one should be used more than "
          "once");
 
-  // Special case for Xor idiom.
-  if (BO->getOpcode() == Instruction::Xor)
-    return CachedXorInfo->BaseXor;
-
   unsigned OpNo = (BO->getOperand(0) == UserChain[ChainIndex - 1] ? 0 : 1);
   assert(BO->getOperand(OpNo) == UserChain[ChainIndex - 1]);
   Value *NextInChain = removeConstOffset(ChainIndex - 1);
@@ -807,77 +790,57 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   return NewBO;
 }
 
-// Find the most dominating Xor with the same base operand.
-BinaryOperator *
-ConstantOffsetExtractor::findDominatingXor(Value *BaseOperand,
-                                           BinaryOperator *CurrentXor) {
-  BinaryOperator *MostDominatingXor = nullptr;
-  // Iterate over all instructions that use the BaseOperand.
-  for (User *U : BaseOperand->users()) {
-    auto *CandidateXor = dyn_cast<BinaryOperator>(U);
+/// \brief Tries to canonicalize a 'xor' with a constant into a form that is
+/// more amenable to address-mode matching.
+///
+/// The transformation rewrites `Base ^ Const` into
+/// `(Base ^ NonDisjointBits) ^ DisjointBits`.
+///
+/// `DisjointBits` are the bits set in `Const` operand that are known to be zero
+/// in `Base` operand. For these bits, the `xor` operation is equivalent to
+/// `add`, which exposes an offset that can be more easily folded into a memory
+/// access.
+///
+/// For example, if we know the low bit of `%ptr` is 0:
+///   `xor %ptr, 3`  ; 3 is `0b11`
+/// becomes:
+///   `%tmp = xor %ptr, 2` ; NonDisjointBits is `0b10`
+///   `xor %tmp, 1`        ; DisjointBits is `0b01`
+///
+/// The final `xor %tmp, 1` is an addition of 1.
+///
+/// \returns `true` if the transformation was applied, `false` otherwise.
+bool ConstantOffsetExtractor::shouldConsiderAndUpdateXor(
+    BinaryOperator *XorInst) {
+  Value *BaseOperand;
+  ConstantInt *XorConst;
+  if (!match(XorInst, m_Xor(m_Value(BaseOperand), m_ConstantInt(XorConst))))
+    return false;
 
-    // Simple checks.
-    if (!CandidateXor || CandidateXor == CurrentXor)
-      continue;
+  const SimplifyQuery SQ(DL);
+  const KnownBits BaseKnown = computeKnownBits(BaseOperand, SQ);
+  const APInt &ConstValue = XorConst->getValue();
 
-    // Check if the binary operator is a Xor with constant.
-    if (!match(CandidateXor, m_Xor(m_Specific(BaseOperand), m_ConstantInt())))
-      continue;
+  // Check if any bits of the constant can be treated as disjoint
+  // (addition-like).
+  const APInt DisjointBits = ConstValue & BaseKnown.Zero;
+  if (DisjointBits.isZero())
+    return false;
 
-    // After confirming the structure, check the dominance relationship.
-    if (DT->dominates(CandidateXor, CurrentXor))
-      // If we find a dominating Xor, keep it if it's the first one,
-      // or if it dominates the best candidate we've found so far.
-      if (!MostDominatingXor || DT->dominates(CandidateXor, MostDominatingXor))
-        MostDominatingXor = CandidateXor;
+  // Split the xor into disjoint and non-disjoint parts.
+  const APInt NonDisjointBits = ConstValue & ~DisjointBits;
+
+  IRBuilder<> Builder(XorInst);
+  Type *Ty = XorConst->getType();
+
+  // Transform: (base ^ constant) -> ((base ^ non_disjoint) ^ disjoint).
+  if (!NonDisjointBits.isZero()) {
+    Value *NewBase =
+        Builder.CreateXor(BaseOperand, ConstantInt::get(Ty, NonDisjointBits));
+    XorInst->setOperand(0, NewBase);
   }
 
-  return MostDominatingXor;
-}
-
-// Check if Xor should be considered.
-// Only the following idiom is considered.
-// Example:
-// %3 = xor i32 %2, 32
-// %4 = xor i32 %2, 8224
-// %6 = getelementptr half, ptr addrspace(3) %1, i32 %3
-// %7 = getelementptr half, ptr addrspace(3) %1, i32 %4
-// GEP that corresponds to %7, looks at the binary operator %4.
-// In order for %4 to be considered, it should have a dominating xor with
-// constant offset that is disjoint with an adjusted offset.
-// If disjoint, %4 = xor i32 %2, 8224 can be treated as %4 = add i32 %3, 8192
-bool ConstantOffsetExtractor::shouldConsiderXor(BinaryOperator *XorInst) {
-
-  Value *BaseOperand = nullptr;
-  ConstantInt *CurrentConst = nullptr;
-  if (!match(XorInst, m_Xor(m_Value(BaseOperand), m_ConstantInt(CurrentConst))))
-    return false;
-
-  // Find the most dominating Xor with the same base operand.
-  BinaryOperator *DominatingXor = findDominatingXor(BaseOperand, XorInst);
-  if (!DominatingXor)
-    return false;
-
-  // We expect the dominating instruction to also be a 'xor-const'.
-  ConstantInt *DominatingConst = nullptr;
-  if (!match(DominatingXor,
-             m_Xor(m_Specific(BaseOperand), m_ConstantInt(DominatingConst))))
-    return false;
-
-  // Calculate the adjusted offset (difference between constants)
-  APInt AdjustedOffset = CurrentConst->getValue() - DominatingConst->getValue();
-
-  // Check disjoint conditions
-  // 1. AdjustedOffset and DominatingConst should be disjoint
-  if ((AdjustedOffset & DominatingConst->getValue()) != 0)
-    return false;
-
-  // 2. DominatingXor and AdjustedOffset should be disjoint
-  if (!MaskedValueIsZero(DominatingXor, AdjustedOffset, SimplifyQuery(DL), 0))
-    return false;
-
-  // Cache the result.
-  CachedXorInfo = XorRewriteInfo{DominatingXor, AdjustedOffset.getSExtValue()};
+  XorInst->setOperand(1, ConstantInt::get(Ty, DisjointBits));
   return true;
 }
 
@@ -906,8 +869,8 @@ static bool allowsPreservingNUW(const User *U) {
 
 Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
                                         User *&UserChainTail,
-                                        bool &PreservesNUW, DominatorTree *DT) {
-  ConstantOffsetExtractor Extractor(GEP->getIterator(), DT);
+                                        bool &PreservesNUW) {
+  ConstantOffsetExtractor Extractor(GEP->getIterator());
   // Find a non-zero constant offset first.
   APInt ConstantOffset =
       Extractor.find(Idx, /* SignExtended */ false, /* ZeroExtended */ false,
@@ -926,20 +889,12 @@ Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
   return IdxWithoutConstOffset;
 }
 
-int64_t ConstantOffsetExtractor::Find(Value *Idx, GetElementPtrInst *GEP,
-                                      DominatorTree *DT) {
+int64_t ConstantOffsetExtractor::Find(Value *Idx, GetElementPtrInst *GEP) {
   // If Idx is an index of an inbound GEP, Idx is guaranteed to be non-negative.
-  ConstantOffsetExtractor Extractor(GEP->getIterator(), DT);
-  auto Offset = Extractor
-                    .find(Idx, /* SignExtended */ false,
-                          /* ZeroExtended */ false, GEP->isInBounds())
-                    .getSExtValue();
-
-  // Return the disjoint offset for Xor.
-  if (Extractor.CachedXorInfo)
-    return Extractor.CachedXorInfo->AdjustedOffset;
-
-  return Offset;
+  return ConstantOffsetExtractor(GEP->getIterator())
+      .find(Idx, /* SignExtended */ false, /* ZeroExtended */ false,
+            GEP->isInBounds())
+      .getSExtValue();
 }
 
 bool SeparateConstOffsetFromGEP::canonicalizeArrayIndicesToIndexSize(
@@ -975,7 +930,7 @@ SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
 
       // Tries to extract a constant offset from this GEP index.
       int64_t ConstantOffset =
-          ConstantOffsetExtractor::Find(GEP->getOperand(I), GEP, DT);
+          ConstantOffsetExtractor::Find(GEP->getOperand(I), GEP);
       if (ConstantOffset != 0) {
         NeedsExtraction = true;
         // A GEP may have multiple indices.  We accumulate the extracted
@@ -1215,7 +1170,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
       User *UserChainTail;
       bool PreservesNUW;
       Value *NewIdx = ConstantOffsetExtractor::Extract(
-          OldIdx, GEP, UserChainTail, PreservesNUW, DT);
+          OldIdx, GEP, UserChainTail, PreservesNUW);
       if (NewIdx != nullptr) {
         // Switches to the index with the constant offset removed.
         GEP->setOperand(I, NewIdx);
