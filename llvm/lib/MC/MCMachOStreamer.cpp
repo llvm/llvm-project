@@ -484,7 +484,8 @@ void MCMachOStreamer::finalizeCGProfile() {
   // For each entry, reserve space for 2 32-bit indices and a 64-bit count.
   size_t SectionBytes =
       W.getCGProfile().size() * (2 * sizeof(uint32_t) + sizeof(uint64_t));
-  (*CGProfileSection->begin()).appendContents(SectionBytes, 0);
+  (*CGProfileSection->begin())
+      .setVarContents(std::vector<char>(SectionBytes, 0));
 }
 
 MCStreamer *llvm::createMachOStreamer(MCContext &Context,
@@ -520,5 +521,6 @@ void MCMachOStreamer::createAddrSigSection() {
   // (instead of emitting a zero-sized section) so these relocations are
   // technically valid, even though we don't expect these relocations to
   // actually be applied by the linker.
-  Frag->appendContents(8, 0);
+  constexpr char zero[8] = {};
+  Frag->setVarContents(zero);
 }
