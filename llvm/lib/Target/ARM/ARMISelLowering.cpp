@@ -802,10 +802,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::BSWAP, VT, Expand);
   }
 
-  if (!Subtarget->isThumb1Only() && !Subtarget->hasMVEIntegerOps())
+  if (!Subtarget->isThumb1Only() && !Subtarget->hasV8_1MMainlineOps())
     setOperationAction(ISD::SCMP, MVT::i32, Custom);
 
-  if (!Subtarget->hasMVEIntegerOps())
+  if (!Subtarget->HasV8_1MMainlineOps())
     setOperationAction(ISD::UCMP, MVT::i32, Custom);
 
   setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
