@@ -174,8 +174,6 @@ TEST_F(InterpreterTest, SanityWithRemoteExecution) {
   if (!HostSupportsJIT())
     GTEST_SKIP();
 
-  std::string OrcRuntimePath = getOrcRuntimePath();
-
   std::unique_ptr<Interpreter> Interp = createInterpreterWithRemoteExecution();
 
   using PTU = PartialTranslationUnit;
