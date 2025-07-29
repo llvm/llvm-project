@@ -196,13 +196,24 @@ class SPIRVEmitIntrinsics
 
   // Tries to walk the type accessed by the given GEP instruction.
   // For each nested type access, one of the 2 callbacks is called:
-  //  - OnStaticIndex when the index is a known constant value.
+  //  - OnLiteralIndexing when the index is a known constant value.
+  //    Parameters:
+  //      PointedType: the pointed type resulting of this indexing.
+  //        If the parent type is an array, this is the index in the array.
+  //        If the parent type is a struct, this is the field index.
+  //      Index: index of the element in the parent type.
   //  - OnDynamnicIndexing when the index is a non-constant value.
+  //    This callback is only called when indexing into an array.
+  //    Parameters:
+  //      ElementType: the type of the elements stored in the parent array.
+  //      Offset: the Value* containing the byte offset into the array.
   // Return true if an error occured during the walk, false otherwise.
   bool walkLogicalAccessChain(
       GetElementPtrInst &GEP,
-      const std::function<void(Type *, uint64_t)> &OnStaticIndexing,
-      const std::function<void(Type *, Value *)> &OnDynamicIndexing);
+      const std::function<void(Type *PointedType, uint64_t Index)>
+          &OnLiteralIndexing,
+      const std::function<void(Type *ElementType, Value *Offset)>
+          &OnDynamicIndexing);
 
   // Returns the type accessed using the given GEP instruction by relying
   // on the GEP type.
@@ -593,54 +604,64 @@ void SPIRVEmitIntrinsics::maybeAssignPtrType(Type *&Ty, Value *Op, Type *RefTy,
 
 bool SPIRVEmitIntrinsics::walkLogicalAccessChain(
     GetElementPtrInst &GEP,
-    const std::function<void(Type *, uint64_t)> &OnStaticIndexing,
+    const std::function<void(Type *, uint64_t)> &OnLiteralIndexing,
     const std::function<void(Type *, Value *)> &OnDynamicIndexing) {
+  // We only rewrite i8* GEP. Other should be left as-is.
+  // Observation so-far is i8* GEP always have a single index. Making sure
+  // that's the case.
+  assert(GEP.getSourceElementType() ==
+         IntegerType::getInt8Ty(CurrF->getContext()));
+  assert(GEP.getNumIndices() == 1);
+
   auto &DL = CurrF->getDataLayout();
   Value *Src = getPointerRoot(GEP.getPointerOperand());
   Type *CurType = deduceElementType(Src, true);
 
-  for (Value *V : GEP.indices()) {
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
-      uint64_t Offset = CI->getZExtValue();
-
-      do {
-        if (ArrayType *AT = dyn_cast<ArrayType>(CurType)) {
-          uint32_t EltTypeSize = DL.getTypeSizeInBits(AT->getElementType()) / 8;
-          assert(Offset < AT->getNumElements() * EltTypeSize);
-          uint64_t Index = Offset / EltTypeSize;
-          Offset = Offset - (Index * EltTypeSize);
-          CurType = AT->getElementType();
-          OnStaticIndexing(CurType, Index);
-        } else if (StructType *ST = dyn_cast<StructType>(CurType)) {
-          uint32_t StructSize = DL.getTypeSizeInBits(ST) / 8;
-          assert(Offset < StructSize);
-          const auto &STL = DL.getStructLayout(ST);
-          unsigned Element = STL->getElementContainingOffset(Offset);
-          Offset -= STL->getElementOffset(Element);
-          CurType = ST->getElementType(Element);
-          OnStaticIndexing(CurType, Element);
-        } else {
-          // Vector type indexing should not use GEP.
-          // So if we have an index left, something is wrong. Giving up.
-          return true;
-        }
-      } while (Offset > 0);
-
-    } else if (ArrayType *AT = dyn_cast<ArrayType>(CurType)) {
-      // Index is not constant. Either we have an array and accept it, or we
-      // give up.
-      CurType = AT->getElementType();
-      OnDynamicIndexing(CurType, V);
-    } else
-      return true;
+  Value *Operand = *GEP.idx_begin();
+  ConstantInt *CI = dyn_cast<ConstantInt>(Operand);
+  if (!CI) {
+    ArrayType *AT = dyn_cast<ArrayType>(CurType);
+    // Operand is not constant. Either we have an array and accept it, or we
+    // give up.
+    if (AT)
+      OnDynamicIndexing(AT->getElementType(), Operand);
+    return AT == nullptr;
   }
+
+  assert(CI);
+  uint64_t Offset = CI->getZExtValue();
+
+  do {
+    if (ArrayType *AT = dyn_cast<ArrayType>(CurType)) {
+      uint32_t EltTypeSize = DL.getTypeSizeInBits(AT->getElementType()) / 8;
+      assert(Offset < AT->getNumElements() * EltTypeSize);
+      uint64_t Index = Offset / EltTypeSize;
+      Offset = Offset - (Index * EltTypeSize);
+      CurType = AT->getElementType();
+      OnLiteralIndexing(CurType, Index);
+    } else if (StructType *ST = dyn_cast<StructType>(CurType)) {
+      uint32_t StructSize = DL.getTypeSizeInBits(ST) / 8;
+      assert(Offset < StructSize);
+      const auto &STL = DL.getStructLayout(ST);
+      unsigned Element = STL->getElementContainingOffset(Offset);
+      Offset -= STL->getElementOffset(Element);
+      CurType = ST->getElementType(Element);
+      OnLiteralIndexing(CurType, Element);
+    } else {
+      // Vector type indexing should not use GEP.
+      // So if we have an index left, something is wrong. Giving up.
+      return true;
+    }
+  } while (Offset > 0);
 
   return false;
 }
 
 Instruction *
 SPIRVEmitIntrinsics::buildLogicalAccessChainFromGEP(GetElementPtrInst &GEP) {
+  auto &DL = CurrF->getDataLayout();
   IRBuilder<> B(GEP.getParent());
+  B.SetInsertPoint(&GEP);
 
   std::vector<Value *> Indices;
   Indices.push_back(ConstantInt::get(
@@ -651,9 +672,14 @@ SPIRVEmitIntrinsics::buildLogicalAccessChainFromGEP(GetElementPtrInst &GEP) {
         Indices.push_back(
             ConstantInt::get(B.getInt64Ty(), Index, /* Signed= */ false));
       },
-      [&Indices](Type *EltType, Value *Index) { Indices.push_back(Index); });
+      [&Indices, &B, &DL](Type *EltType, Value *Offset) {
+        uint32_t EltTypeSize = DL.getTypeSizeInBits(EltType) / 8;
+        Value *Index = B.CreateUDiv(
+            Offset, ConstantInt::get(Offset->getType(), EltTypeSize,
+                                     /* Signed= */ false));
+        Indices.push_back(Index);
+      });
 
-  B.SetInsertPoint(&GEP);
   SmallVector<Type *, 2> Types = {GEP.getType(), GEP.getOperand(0)->getType()};
   SmallVector<Value *, 4> Args;
   Args.push_back(B.getInt1(GEP.isInBounds()));
@@ -1728,7 +1754,9 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
     // the alternative type-scavenging method is not working.
     // Physical SPIR-V can work around this, but not logical, hence still
     // try to rely on the broken type scavenging for logical.
-    if (TM->getSubtargetImpl()->isLogicalSPIRV()) {
+    bool IsRewrittenGEP =
+        GEPI->getSourceElementType() == IntegerType::getInt8Ty(I->getContext());
+    if (IsRewrittenGEP && TM->getSubtargetImpl()->isLogicalSPIRV()) {
       Value *Src = getPointerRoot(Pointer);
       OpTy = GR->findDeducedElementType(Src);
     }
