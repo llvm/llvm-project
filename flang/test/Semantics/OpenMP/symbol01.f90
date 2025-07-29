@@ -48,7 +48,7 @@ program MM
  !DEF: /MM/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
  do i=1,10
   !DEF: /MM/OtherConstruct1/a (OmpPrivate, OmpExplicit) HostAssoc REAL(4)
-  !DEF: /MM/OtherConstruct1/b (OmpShared) HostAssoc INTEGER(4)
+  !DEF: /MM/OtherConstruct1/b (OmpShared, OmpImplicit) HostAssoc INTEGER(4)
   !REF: /MM/OtherConstruct1/i
   a = a+b(i)
   !DEF: /MM/OtherConstruct1/t (OmpPrivate, OmpExplicit) HostAssoc TYPE(myty)

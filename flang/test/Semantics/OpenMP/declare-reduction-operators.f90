@@ -73,7 +73,7 @@ program test_vector
   !$OMP parallel do reduction(+:v2)
 !CHECK: OtherConstruct scope
 !CHECK: i (OmpPrivate, OmpPreDetermined): HostAssoc
-!CHECK: v1 (OmpShared): HostAssoc
+!CHECK: v1 (OmpShared, OmpImplicit): HostAssoc
 !CHECK: v2 (OmpReduction, OmpExplicit): HostAssoc
 
   do i = 1, 100

@@ -15,7 +15,7 @@ program OMP_REDUCTION
   do i=1,10
     !DEF: /OMP_REDUCTION/OtherConstruct1/k (OmpReduction, OmpExplicit) HostAssoc INTEGER(4)
     !DEF: /OMP_REDUCTION/max ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
-    !DEF: /OMP_REDUCTION/OtherConstruct1/m (OmpShared) HostAssoc INTEGER(4)
+    !DEF: /OMP_REDUCTION/OtherConstruct1/m (OmpShared, OmpImplicit) HostAssoc INTEGER(4)
     k = max(k, m)
   end do
   !$omp end parallel do
@@ -25,7 +25,7 @@ program OMP_REDUCTION
   do i=1,10
     !DEF: /OMP_REDUCTION/OtherConstruct2/k (OmpReduction, OmpExplicit) HostAssoc INTEGER(4)
     !DEF: /OMP_REDUCTION/min ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
-    !DEF: /OMP_REDUCTION/OtherConstruct2/m (OmpShared) HostAssoc INTEGER(4)
+    !DEF: /OMP_REDUCTION/OtherConstruct2/m (OmpShared, OmpImplicit) HostAssoc INTEGER(4)
     k = min(k, m)
   end do
   !$omp end parallel do
@@ -35,7 +35,7 @@ program OMP_REDUCTION
   do i=1,10
     !DEF: /OMP_REDUCTION/OtherConstruct3/k (OmpReduction, OmpExplicit) HostAssoc INTEGER(4)
     !DEF: /OMP_REDUCTION/iand ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
-    !DEF: /OMP_REDUCTION/OtherConstruct3/m (OmpShared) HostAssoc INTEGER(4)
+    !DEF: /OMP_REDUCTION/OtherConstruct3/m (OmpShared, OmpImplicit) HostAssoc INTEGER(4)
     k = iand(k, m)
   end do
   !$omp end parallel do
@@ -45,7 +45,7 @@ program OMP_REDUCTION
   do i=1,10
     !DEF: /OMP_REDUCTION/OtherConstruct4/k (OmpReduction, OmpExplicit) HostAssoc INTEGER(4)
     !DEF: /OMP_REDUCTION/ior ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
-    !DEF: /OMP_REDUCTION/OtherConstruct4/m (OmpShared) HostAssoc INTEGER(4)
+    !DEF: /OMP_REDUCTION/OtherConstruct4/m (OmpShared, OmpImplicit) HostAssoc INTEGER(4)
     k = ior(k, m)
   end do
   !$omp end parallel do
@@ -55,7 +55,7 @@ program OMP_REDUCTION
   do i=1,10
     !DEF: /OMP_REDUCTION/OtherConstruct5/k (OmpReduction, OmpExplicit) HostAssoc INTEGER(4)
     !DEF: /OMP_REDUCTION/ieor ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
-    !DEF: /OMP_REDUCTION/OtherConstruct5/m (OmpShared) HostAssoc INTEGER(4)
+    !DEF: /OMP_REDUCTION/OtherConstruct5/m (OmpShared, OmpImplicit) HostAssoc INTEGER(4)
     k = ieor(k,m)
   end do
   !$omp end parallel do

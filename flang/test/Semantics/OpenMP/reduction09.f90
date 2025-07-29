@@ -26,7 +26,7 @@ program OMP_REDUCTION
   !$omp parallel do  reduction(+:a(10))
   !DEF: /OMP_REDUCTION/OtherConstruct2/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
-    !DEF: /OMP_REDUCTION/OtherConstruct2/k (OmpShared) HostAssoc INTEGER(4)
+    !DEF: /OMP_REDUCTION/OtherConstruct2/k (OmpShared, OmpImplicit) HostAssoc INTEGER(4)
     k = k+1
   end do
   !$omp end parallel do
@@ -35,7 +35,7 @@ program OMP_REDUCTION
   !$omp parallel do  reduction(+:a(1:10:1))
   !DEF: /OMP_REDUCTION/OtherConstruct3/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
-    !DEF: /OMP_REDUCTION/OtherConstruct3/k (OmpShared) HostAssoc INTEGER(4)
+    !DEF: /OMP_REDUCTION/OtherConstruct3/k (OmpShared, OmpImplicit) HostAssoc INTEGER(4)
     k = k+1
   end do
   !$omp end parallel do
@@ -43,7 +43,7 @@ program OMP_REDUCTION
   !$omp parallel do  reduction(+:b(1:10:1,1:5,2))
   !DEF: /OMP_REDUCTION/OtherConstruct4/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
-    !DEF: /OMP_REDUCTION/OtherConstruct4/k (OmpShared) HostAssoc INTEGER(4)
+    !DEF: /OMP_REDUCTION/OtherConstruct4/k (OmpShared, OmpImplicit) HostAssoc INTEGER(4)
     k = k+1
   end do
   !$omp end parallel do
@@ -51,7 +51,7 @@ program OMP_REDUCTION
   !$omp parallel do  reduction(+:b(1:10:1,1:5,2:5:1))
   !DEF: /OMP_REDUCTION/OtherConstruct5/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
-    !DEF: /OMP_REDUCTION/OtherConstruct5/k (OmpShared) HostAssoc INTEGER(4)
+    !DEF: /OMP_REDUCTION/OtherConstruct5/k (OmpShared, OmpImplicit) HostAssoc INTEGER(4)
     k = k+1
   end do
   !$omp end parallel do
