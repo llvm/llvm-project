@@ -27,15 +27,9 @@ emitc.class @mainClass {
 // CHECK-NEXT:     emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = ["another_feature"]}
 // CHECK-NEXT:     emitc.field @fieldName1 : !emitc.array<1xf32> {emitc.field_ref = ["some_feature"]}
 // CHECK-NEXT:     emitc.field @fieldName2 : !emitc.array<1xf32> {emitc.field_ref = ["output_0"]}
-// CHECK-NEXT:     emitc.func @getBufferForName(%arg0: !emitc.opaque<"std::string_view">) -> !emitc.opaque<"char"> {
-// CHECK-NEXT:       %0 = "emitc.constant"() <{value = #emitc.opaque<"{  { \22another_feature\22, reinterpret_cast<char*>(&fieldName0) },  { \22some_feature\22, reinterpret_cast<char*>(&fieldName1) },  { \22output_0\22, reinterpret_cast<char*>(&fieldName2) } }">}> : () -> !emitc.opaque<"const std::map<std::string, char*>">
-// CHECK-NEXT:       %1 = call_opaque "find"(%0, %arg0) : (!emitc.opaque<"const std::map<std::string, char*>">, !emitc.opaque<"std::string_view">) -> !emitc.opaque<"std::map<std::string, char*>::const_iterator">
-// CHECK-NEXT:       %2 = call_opaque "end"(%0) : (!emitc.opaque<"const std::map<std::string, char*>">) -> !emitc.opaque<"std::map<std::string, char*>::const_iterator">
-// CHECK-NEXT:       %3 = call_opaque "operator=="(%1, %2) : (!emitc.opaque<"std::map<std::string, char*>::const_iterator">, !emitc.opaque<"std::map<std::string, char*>::const_iterator">) -> i1
-// CHECK-NEXT:       %4 = "emitc.constant"() <{value = #emitc.opaque<"nullptr">}> : () -> !emitc.opaque<"char">
-// CHECK-NEXT:       %5 = call_opaque "second"(%1) : (!emitc.opaque<"std::map<std::string, char*>::const_iterator">) -> !emitc.opaque<"char">
-// CHECK-NEXT:       %6 = conditional %3, %4, %5 : !emitc.opaque<"char">
-// CHECK-NEXT:       return %6 : !emitc.opaque<"char">
+// CHECK-NEXT:     emitc.func @getFeatures() -> !emitc.opaque<"const std::map<std::string, char*>"> {
+// CHECK-NEXT:        %0 = "emitc.constant"() <{value = #emitc.opaque<"{  { \22another_feature\22, reinterpret_cast<char*>(&fieldName0) },  { \22some_feature\22, reinterpret_cast<char*>(&fieldName1) },  { \22output_0\22, reinterpret_cast<char*>(&fieldName2) } }">}> : () -> !emitc.opaque<"const std::map<std::string, char*>">
+// CHECK-NEXT:        return %0 : !emitc.opaque<"const std::map<std::string, char*>">
 // CHECK-NEXT:     }
 // CHECK-NEXT:     emitc.func @execute() {
 // CHECK-NEXT:       %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
