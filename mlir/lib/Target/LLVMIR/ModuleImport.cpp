@@ -2267,7 +2267,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       // Handle parameter and result attributes unless it's an incompatible
       // call.
       if (!isIncompatibleCall)
-        convertArgAndResultAttrs(callInst, callOp);
+        convertParameterAttributes(callInst, callOp, builder);
       return callOp.getOperation();
     }();
 
@@ -2364,7 +2364,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     // Handle parameter and result attributes unless it's an incompatible
     // invoke.
     if (!isIncompatibleInvoke)
-      convertArgAndResultAttrs(invokeInst, invokeOp);
+      convertParameterAttributes(invokeInst, invokeOp, builder);
 
     if (!invokeInst->getType()->isVoidTy())
       mapValue(inst, invokeOp.getResults().front());
@@ -2730,10 +2730,11 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
 }
 
 DictionaryAttr
-ModuleImport::convertArgOrResultAttrSet(llvm::AttributeSet llvmAttrSet) {
+ModuleImport::convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
+                                        OpBuilder &builder) {
   SmallVector<NamedAttribute> paramAttrs;
   for (auto [llvmKind, mlirName] : getAttrKindToNameMapping()) {
-    auto llvmAttr = llvmAttrSet.getAttribute(llvmKind);
+    auto llvmAttr = llvmParamAttrs.getAttribute(llvmKind);
     // Skip attributes that are not attached.
     if (!llvmAttr.isValid())
       continue;
@@ -2768,12 +2769,13 @@ ModuleImport::convertArgOrResultAttrSet(llvm::AttributeSet llvmAttrSet) {
   return builder.getDictionaryAttr(paramAttrs);
 }
 
-void ModuleImport::convertArgAndResultAttrs(llvm::Function *func,
-                                            LLVMFuncOp funcOp) {
+void ModuleImport::convertParameterAttributes(llvm::Function *func,
+                                              LLVMFuncOp funcOp,
+                                              OpBuilder &builder) {
   auto llvmAttrs = func->getAttributes();
   for (size_t i = 0, e = funcOp.getNumArguments(); i < e; ++i) {
     llvm::AttributeSet llvmArgAttrs = llvmAttrs.getParamAttrs(i);
-    funcOp.setArgAttrs(i, convertArgOrResultAttrSet(llvmArgAttrs));
+    funcOp.setArgAttrs(i, convertParameterAttribute(llvmArgAttrs, builder));
   }
   // Convert the result attributes and attach them wrapped in an ArrayAttribute
   // to the funcOp.
@@ -2781,23 +2783,17 @@ void ModuleImport::convertArgAndResultAttrs(llvm::Function *func,
   if (!llvmResAttr.hasAttributes())
     return;
   funcOp.setResAttrsAttr(
-      builder.getArrayAttr({convertArgOrResultAttrSet(llvmResAttr)}));
+      builder.getArrayAttr(convertParameterAttribute(llvmResAttr, builder)));
 }
 
-void ModuleImport::convertArgAndResultAttrs(
-    llvm::CallBase *call, ArgAndResultAttrsOpInterface attrsOp,
-    ArrayRef<unsigned> immArgPositions) {
-  // Compute the set of immediate argument positions.
-  llvm::SmallDenseSet<unsigned> immArgPositionsSet(immArgPositions.begin(),
-                                                   immArgPositions.end());
-  // Convert the argument attributes and filter out immediate arguments.
+void ModuleImport::convertParameterAttributes(llvm::CallBase *call,
+                                              ArrayAttr &argsAttr,
+                                              ArrayAttr &resAttr,
+                                              OpBuilder &builder) {
   llvm::AttributeList llvmAttrs = call->getAttributes();
   SmallVector<llvm::AttributeSet> llvmArgAttrsSet;
   bool anyArgAttrs = false;
   for (size_t i = 0, e = call->arg_size(); i < e; ++i) {
-    // Skip immediate arguments.
-    if (immArgPositionsSet.contains(i))
-      continue;
     llvmArgAttrsSet.emplace_back(llvmAttrs.getParamAttrs(i));
     if (llvmArgAttrsSet.back().hasAttributes())
       anyArgAttrs = true;
@@ -2811,16 +2807,24 @@ void ModuleImport::convertArgAndResultAttrs(
   if (anyArgAttrs) {
     SmallVector<DictionaryAttr> argAttrs;
     for (auto &llvmArgAttrs : llvmArgAttrsSet)
-      argAttrs.emplace_back(convertArgOrResultAttrSet(llvmArgAttrs));
-    attrsOp.setArgAttrsAttr(getArrayAttr(argAttrs));
+      argAttrs.emplace_back(convertParameterAttribute(llvmArgAttrs, builder));
+    argsAttr = getArrayAttr(argAttrs);
   }
 
-  // Convert the result attributes.
   llvm::AttributeSet llvmResAttr = llvmAttrs.getRetAttrs();
   if (!llvmResAttr.hasAttributes())
     return;
-  DictionaryAttr resAttrs = convertArgOrResultAttrSet(llvmResAttr);
-  attrsOp.setResAttrsAttr(getArrayAttr({resAttrs}));
+  DictionaryAttr resAttrs = convertParameterAttribute(llvmResAttr, builder);
+  resAttr = getArrayAttr({resAttrs});
+}
+
+void ModuleImport::convertParameterAttributes(llvm::CallBase *call,
+                                              CallOpInterface callOp,
+                                              OpBuilder &builder) {
+  ArrayAttr argsAttr, resAttr;
+  convertParameterAttributes(call, argsAttr, resAttr, builder);
+  callOp.setArgAttrsAttr(argsAttr);
+  callOp.setResAttrsAttr(resAttr);
 }
 
 template <typename Op>
@@ -2888,7 +2892,7 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
       builder, loc, func->getName(), functionType,
       convertLinkageFromLLVM(func->getLinkage()), dsoLocal, cconv);
 
-  convertArgAndResultAttrs(func, funcOp);
+  convertParameterAttributes(func, funcOp, builder);
 
   if (FlatSymbolRefAttr personality = getPersonalityAsAttr(func))
     funcOp.setPersonalityAttr(personality);
