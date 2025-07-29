@@ -16712,12 +16712,13 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
 
     if (RC) {
       if (NumRegs > 1) {
+        if (Idx >= RC->getNumRegs() || Idx + NumRegs - 1 > RC->getNumRegs())
+          return std::pair(0U, nullptr);
+
         uint32_t Width = NumRegs * 32;
         // Prohibit constraints for register ranges with a width that does not
         // match the required type.
         if (VT.SimpleTy != MVT::Other && Width != VT.getSizeInBits())
-          return std::pair(0U, nullptr);
-        if (Idx >= RC->getNumRegs())
           return std::pair(0U, nullptr);
 
         MCRegister Reg = RC->getRegister(Idx);

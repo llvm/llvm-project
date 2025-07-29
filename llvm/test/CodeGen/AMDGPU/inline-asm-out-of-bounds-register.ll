@@ -83,3 +83,21 @@ define void @vgpr32_last_is_uintmax_p1() {
   tail call void asm sideeffect "; use %0", "{v[4294967265:4294967296]}"(i64 123)
   ret void
 }
+
+; CHECK: error: couldn't allocate input reg for constraint '{v[2:2147483651]}'
+define void @overflow_bitwidth_0() {
+  tail call void asm sideeffect "; use %0", "{v[2:2147483651]}"(i64 123)
+  ret void
+}
+
+; CHECK: error: couldn't allocate input reg for constraint '{v[2147483635:2147483651]}'
+define void @overflow_bitwidth_1() {
+  tail call void asm sideeffect "; use %0", "{v[2147483635:2147483651]}"(i64 123)
+  ret void
+}
+
+; CHECK: error: couldn't allocate input reg for constraint '{v[2147483635:2147483651]}'
+define void @overflow_bitwidth_2() {
+  tail call void asm sideeffect "; use %0", "{v[2147483635:2147483651]}"(i64 123)
+  ret void
+}
