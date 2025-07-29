@@ -355,8 +355,7 @@ public:
     unsigned TheIncrement;
 
   public:
-    explicit NestingLevelRAII(DiagnosticsEngine &Diags,
-                              unsigned Increment = 1)
+    explicit NestingLevelRAII(DiagnosticsEngine &Diags, unsigned Increment = 1)
         : Diags(Diags), TheIncrement(Increment) {
       Diags.GlobalNestingLevel += Increment;
     }

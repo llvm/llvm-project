@@ -52,7 +52,6 @@ struct UnsignedOrNone {
     return operator bool() ? *this : val;
   }
 
-
 private:
   constexpr UnsignedOrNone(std::nullopt_t, unsigned Rep) : Rep(Rep) {};
 
