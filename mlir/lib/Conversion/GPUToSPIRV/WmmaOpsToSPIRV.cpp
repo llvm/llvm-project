@@ -283,8 +283,8 @@ struct WmmaLoadOpToSPIRVLowering final
 
     int64_t stride = op.getLeadDimension().getSExtValue();
     IntegerType i32Type = rewriter.getI32Type();
-    auto strideValue = rewriter.create<spirv::ConstantOp>(
-        loc, i32Type, IntegerAttr::get(i32Type, stride));
+    auto strideValue = spirv::ConstantOp::create(
+        rewriter, loc, i32Type, IntegerAttr::get(i32Type, stride));
 
     bool isColMajor = op.getTranspose().value_or(false);
     auto layout = isColMajor ? spirv::CooperativeMatrixLayoutKHR::ColumnMajor
@@ -315,8 +315,8 @@ struct WmmaStoreOpToSPIRVLowering final
 
     int64_t stride = op.getLeadDimension().getSExtValue();
     IntegerType i32Type = rewriter.getI32Type();
-    auto strideValue = rewriter.create<spirv::ConstantOp>(
-        loc, i32Type, IntegerAttr::get(i32Type, stride));
+    auto strideValue = spirv::ConstantOp::create(
+        rewriter, loc, i32Type, IntegerAttr::get(i32Type, stride));
 
     bool isColMajor = op.getTranspose().value_or(false);
     auto layout = isColMajor ? spirv::CooperativeMatrixLayoutKHR::ColumnMajor

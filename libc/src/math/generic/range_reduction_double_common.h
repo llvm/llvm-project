@@ -278,7 +278,7 @@ private:
 };
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-static Float128 range_reduction_small_f128(double x) {
+LIBC_INLINE static Float128 range_reduction_small_f128(double x) {
   constexpr Float128 PI_OVER_128_F128 = {
       Sign::POS, -133, 0xc90f'daa2'2168'c234'c4c6'628b'80dc'1cd1_u128};
   constexpr double ONE_TWENTY_EIGHT_OVER_PI_D = 0x1.45f306dc9c883p5;
