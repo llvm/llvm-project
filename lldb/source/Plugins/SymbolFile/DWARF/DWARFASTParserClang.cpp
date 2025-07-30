@@ -250,14 +250,14 @@ static unsigned GetCXXMethodCVQuals(const DWARFDIE &subprogram,
   return cv_quals;
 }
 
-static std::optional<std::string> MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
+static std::string MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
   char const *name = die.GetMangledName(/*substitute_name_allowed*/ false);
   if (!name)
-    return std::nullopt;
+    return {};
 
   SymbolFileDWARF *dwarf = die.GetDWARF();
   if (!dwarf)
-    return std::nullopt;
+    return {};
 
   auto get_module_id = [&](SymbolFile *sym) {
     if (!sym)
@@ -279,11 +279,11 @@ static std::optional<std::string> MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
     module_id = get_module_id(dwarf);
 
   if (module_id == LLDB_INVALID_UID)
-    return std::nullopt;
+    return {};
 
   const auto die_id = die.GetID();
   if (die_id == LLDB_INVALID_UID)
-    return std::nullopt;
+    return {};
 
   return FunctionCallLabel{/*module_id=*/module_id,
                            /*symbol_id=*/die_id,
