@@ -78,7 +78,7 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   ParseDiagnosticArgs(DiagOpts, ParsedArgs);
 
   IntrusiveRefCntPtr<DiagnosticsEngine> Diag = new clang::DiagnosticsEngine(
-      new clang::DiagnosticIDs(), DiagOpts,
+      clang::DiagnosticIDs::create(), DiagOpts,
       new clang::TextDiagnosticPrinter(llvm::errs(), DiagOpts));
 
   // Create file manager for all file operations and holding in-memory generated

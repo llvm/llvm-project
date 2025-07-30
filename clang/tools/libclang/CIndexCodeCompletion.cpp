@@ -357,8 +357,7 @@ static std::atomic<unsigned> CodeCompletionResultObjects;
 AllocatedCXCodeCompleteResults::AllocatedCXCodeCompleteResults(
     IntrusiveRefCntPtr<FileManager> FileMgr)
     : CXCodeCompleteResults(),
-      Diag(new DiagnosticsEngine(
-          IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), DiagOpts)),
+      Diag(new DiagnosticsEngine(DiagnosticIDs::create(), DiagOpts)),
       FileMgr(std::move(FileMgr)),
       SourceMgr(new SourceManager(*Diag, *this->FileMgr)),
       CodeCompletionAllocator(
