@@ -312,27 +312,6 @@ LogicalResult INTELConvertFToBF16Op::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// spirv.INTELRoundFToTF32Op
-//===----------------------------------------------------------------------===//
-
-LogicalResult INTELRoundFToTF32Op::verify() {
-  auto operandType = getOperand().getType();
-  auto resultType = getResult().getType();
-  // ODS checks that vector result type and vector operand type have the same
-  // shape.
-  if (auto vectorType = llvm::dyn_cast<VectorType>(operandType)) {
-    unsigned operandNumElements = vectorType.getNumElements();
-    unsigned resultNumElements =
-        llvm::cast<VectorType>(resultType).getNumElements();
-    if (operandNumElements != resultNumElements) {
-      return emitOpError(
-          "operand and result must have same number of elements");
-    }
-  }
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // spirv.FConvertOp
 //===----------------------------------------------------------------------===//
 
