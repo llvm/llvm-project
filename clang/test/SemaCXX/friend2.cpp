@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++11
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,expected-noncl %s -std=c++11
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,expected-cl %s -cl-std=clc++2021
 
 // If a friend function is defined in several non-template classes,
 // it is an error.
@@ -62,16 +63,16 @@ template<typename T> struct C6b {
   friend void func6(int) {}  // expected-error{{redefinition of 'func6'}}
 };
 C6a<long> c6a;
-C6b<int*> c6b;  // expected-note{{in instantiation of template class 'C6b<int *>' requested here}}
-
+C6b<int*> c6b;  // expected-noncl-note{{in instantiation of template class 'C6b<int *>' requested here}}
+                // expected-cl-note@-1{{in instantiation of template class 'C6b<__generic int *>' requested here}}
 void func7(int);
 template<typename T> struct C7 {
   friend void func7(int) {}  // expected-error{{redefinition of 'func7'}}
                              // expected-note@-1{{previous definition is here}}
 };
 C7<long> c7a;
-C7<int*> c7b;  // expected-note{{in instantiation of template class 'C7<int *>' requested here}}
-
+C7<int*> c7b;  // expected-noncl-note{{in instantiation of template class 'C7<int *>' requested here}}
+               // expected-cl-note@-1{{in instantiation of template class 'C7<__generic int *>' requested here}}
 
 // Even if clases are not instantiated and hence friend functions defined in them are not
 // available, their declarations can be checked.

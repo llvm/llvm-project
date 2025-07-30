@@ -29,6 +29,7 @@
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/Template.h"
@@ -2825,6 +2826,11 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
 
   if (isFriend) {
     Function->setObjectOfFriendDecl();
+    // For OpenCLCPlusPlus dialect remove address space (__generic/__private)
+    // of dependend or template free friend function instantiation.
+    if (SemaRef.getLangOpts().OpenCLCPlusPlus) {
+      SemaRef.OpenCL().removeFriendFunctionAddressSpace(Function, TInfo);
+    }
     if (FunctionTemplateDecl *FT = Function->getDescribedFunctionTemplate())
       FT->setObjectOfFriendDecl();
   }

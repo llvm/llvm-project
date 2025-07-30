@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++17 -verify -emit-llvm-only %s
+// RUN: %clang_cc1 -cl-std=clc++2021 -verify -emit-llvm-only %s
 
 template <class T> void bar(const T &t) { foo(t); }
 

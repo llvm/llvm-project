@@ -576,4 +576,16 @@ bool SemaOpenCL::checkBuiltinToAddr(unsigned BuiltinID, CallExpr *Call) {
   return false;
 }
 
+void SemaOpenCL::removeFriendFunctionAddressSpace(FunctionDecl *FD,
+                                                  TypeSourceInfo *TInfo) {
+  assert(!isa<CXXMethodDecl>(FD) && "Only free function should be adjusted");
+
+  // For generic address space remove __generic, otherwise remove __private
+  QualType R = TInfo->getType();
+  const FunctionProtoType *FPT = R->getAs<FunctionProtoType>();
+  FD->setType(SemaRef.Context.getFunctionType(
+      FPT->getReturnType(), FPT->getParamTypes(),
+      FPT->getExtProtoInfo().withoutAddressSpace()));
+}
+
 } // namespace clang
