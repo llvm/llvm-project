@@ -61,9 +61,8 @@ static ze_driver_handle_t getDriver(uint32_t idx = 0) {
   driver_type.pNext = nullptr;
   uint32_t driverCount{0};
   thread_local static std::vector<ze_driver_handle_t> drivers;
-
   thread_local static bool isDriverInitialised{false};
-  if (isDriverInitialised)
+  if (isDriverInitialised && idx < drivers.size())
     return drivers[idx];
   L0_SAFE_CALL(zeInitDrivers(&driverCount, nullptr, &driver_type));
   if (!driverCount)
@@ -83,7 +82,8 @@ static ze_device_handle_t getDefaultDevice(const uint32_t driverIdx = 0,
                                            const int32_t devIdx = 0) {
   thread_local static ze_device_handle_t l0Device;
   thread_local static int32_t currDevIdx{-1};
-  if (devIdx == currDevIdx)
+  thread_local static uint32_t currDriverIdx{0};
+  if (currDriverIdx == driverIdx && currDevIdx == devIdx)
     return l0Device;
   auto driver = getDriver(driverIdx);
   uint32_t deviceCount{0};
@@ -96,6 +96,7 @@ static ze_device_handle_t getDefaultDevice(const uint32_t driverIdx = 0,
   std::vector<ze_device_handle_t> devices(deviceCount);
   L0_SAFE_CALL(zeDeviceGet(driver, &deviceCount, devices.data()));
   l0Device = devices[devIdx];
+  currDriverIdx = driverIdx;
   currDevIdx = devIdx;
   return l0Device;
 }
@@ -130,20 +131,18 @@ struct ZeCommandListDeleter {
       L0_SAFE_CALL(zeCommandListDestroy(cmdList));
   }
 };
-
+using UniqueZeContext =
+    std::unique_ptr<std::remove_pointer<ze_context_handle_t>::type,
+                    ZeContextDeleter>;
+using UniqueZeCommandList =
+    std::unique_ptr<std::remove_pointer<ze_command_list_handle_t>::type,
+                    ZeCommandListDeleter>;
 struct L0RtContext {
   ze_driver_handle_t driver{nullptr};
   ze_device_handle_t device{nullptr};
-  using UniqueZeContext =
-      std::unique_ptr<std::remove_pointer<ze_context_handle_t>::type,
-                      ZeContextDeleter>;
   UniqueZeContext context;
-
   // Usually, one immediate command list with ordinal 0 suffices for
   // both copy and compute ops, but leaves HW underutilized.
-  using UniqueZeCommandList =
-      std::unique_ptr<std::remove_pointer<ze_command_list_handle_t>::type,
-                      ZeCommandListDeleter>;
   UniqueZeCommandList immCmdListCompute;
   // Copy engines can be used for both memcpy and memset, but
   // they have limitations for memset pattern size (e.g., 1 byte).
@@ -219,13 +218,37 @@ struct L0RtContext {
   ~L0RtContext() = default;
 };
 
+struct ZeEventDeleter {
+  void operator()(ze_event_handle_t event) const {
+    if (event)
+      L0_SAFE_CALL(zeEventDestroy(event));
+  }
+};
+
+struct ZeEventPoolDeleter {
+  void operator()(ze_event_pool_handle_t pool) const {
+    if (pool)
+      L0_SAFE_CALL(zeEventPoolDestroy(pool));
+  }
+};
+
+using UniqueZeEvent =
+    std::unique_ptr<std::remove_pointer<ze_event_handle_t>::type,
+                    ZeEventDeleter>;
+using UniqueZeEventPool =
+    std::unique_ptr<std::remove_pointer<ze_event_pool_handle_t>::type,
+                    ZeEventPoolDeleter>;
+
 // L0 only supports pre-determined sizes of event pools,
-// implement a rt data struct to avoid running out of events.
+// implement a runtime data structure to avoid running out of events.
+
 struct DynamicEventPool {
   constexpr static size_t numEventsPerPool{128};
-  std::vector<ze_event_pool_handle_t> eventPools;
-  std::vector<ze_event_handle_t> availableEvents;
-  std::unordered_set<ze_event_handle_t> takenEvents;
+
+  std::vector<UniqueZeEventPool> eventPools;
+  std::vector<UniqueZeEvent> availableEvents;
+  std::unordered_map<ze_event_handle_t, UniqueZeEvent> takenEvents;
+
   size_t currentEventsLimit{0};
   size_t currentEventsCnt{0};
   L0RtContext *rtCtx;
@@ -234,51 +257,68 @@ struct DynamicEventPool {
     createNewPool(numEventsPerPool);
   }
 
+  DynamicEventPool(const DynamicEventPool &) = delete;
+  DynamicEventPool &operator=(const DynamicEventPool &) = delete;
+
+  // Allow move
+  DynamicEventPool(DynamicEventPool &&) noexcept = default;
+  DynamicEventPool &operator=(DynamicEventPool &&) noexcept = default;
+
   ~DynamicEventPool() {
-    assert(!takenEvents.size());
-    // zeEventDestroy will trigger L0_SAFE_CALL if an event is still used by
-    // device
-    for (auto event : availableEvents)
-      L0_SAFE_CALL(zeEventDestroy(event));
-    for (auto pool : eventPools)
-      L0_SAFE_CALL(zeEventPoolDestroy(pool));
+    assert(takenEvents.empty() && "Some events were not released");
   }
 
   void createNewPool(size_t numEvents) {
     ze_event_pool_desc_t eventPoolDesc = {};
     eventPoolDesc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
     eventPoolDesc.count = numEvents;
-    eventPools.push_back(nullptr);
+
+    ze_event_pool_handle_t rawPool = nullptr;
     L0_SAFE_CALL(zeEventPoolCreate(rtCtx->context.get(), &eventPoolDesc, 1,
-                                   &rtCtx->device, &eventPools.back()));
+                                   &rtCtx->device, &rawPool));
+
+    eventPools.emplace_back(UniqueZeEventPool(rawPool));
     currentEventsLimit += numEvents;
   }
 
   ze_event_handle_t takeEvent() {
-    ze_event_handle_t event{nullptr};
-    if (availableEvents.size()) {
-      event = availableEvents.back();
+    ze_event_handle_t rawEvent = nullptr;
+
+    if (!availableEvents.empty()) {
+      // Reuse one
+      auto uniqueEvent = std::move(availableEvents.back());
       availableEvents.pop_back();
+      rawEvent = uniqueEvent.get();
+      takenEvents[rawEvent] = std::move(uniqueEvent);
     } else {
       if (currentEventsCnt == currentEventsLimit)
         createNewPool(numEventsPerPool);
-      currentEventsCnt++;
+
       ze_event_desc_t eventDesc = {
           ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr,
           static_cast<uint32_t>(currentEventsCnt % numEventsPerPool),
           ZE_EVENT_SCOPE_FLAG_DEVICE, ZE_EVENT_SCOPE_FLAG_HOST};
-      L0_SAFE_CALL(zeEventCreate(eventPools.back(), &eventDesc, &event));
+
+      ze_event_handle_t newEvent = nullptr;
+      L0_SAFE_CALL(
+          zeEventCreate(eventPools.back().get(), &eventDesc, &newEvent));
+
+      takenEvents[newEvent] = UniqueZeEvent(newEvent);
+      rawEvent = newEvent;
+      currentEventsCnt++;
     }
-    takenEvents.insert(event);
-    return event;
+
+    return rawEvent;
   }
 
   void releaseEvent(ze_event_handle_t event) {
-    auto found = takenEvents.find(event);
-    assert(found != takenEvents.end());
-    takenEvents.erase(found);
+    auto it = takenEvents.find(event);
+    assert(it != takenEvents.end() &&
+           "Attempting to release unknown or already released event");
+
     L0_SAFE_CALL(zeEventHostReset(event));
-    availableEvents.push_back(event);
+    availableEvents.emplace_back(std::move(it->second));
+    takenEvents.erase(it);
   }
 };
 
