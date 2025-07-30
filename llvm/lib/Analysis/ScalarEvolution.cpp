@@ -2682,6 +2682,21 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
         return getAddExpr(NewOps, PreservedFlags);
       }
     }
+
+    // Try to push the constant operand into a ZExt: A + zext (-A + B) -> zext
+    // (B), if trunc (A) + -A + B  does not unsigned-wrap.
+    if (auto *ZExt = dyn_cast<SCEVZeroExtendExpr>(Ops[1])) {
+      const SCEV *B = ZExt->getOperand(0);
+      const SCEV *NarrowA = getTruncateExpr(A, B->getType());
+      if (isa<SCEVAddExpr>(B) &&
+          NarrowA == getNegativeSCEV(cast<SCEVAddExpr>(B)->getOperand(0)) &&
+          getZeroExtendExpr(NarrowA, ZExt->getType()) == A &&
+          hasFlags(StrengthenNoWrapFlags(this, scAddExpr, {NarrowA, B},
+                                         SCEV::FlagAnyWrap),
+                   SCEV::FlagNUW)) {
+        return getZeroExtendExpr(getAddExpr(NarrowA, B), ZExt->getType());
+      }
+    }
   }
 
   // Canonicalize (-1 * urem X, Y) + X --> (Y * X/Y)
