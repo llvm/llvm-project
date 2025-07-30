@@ -168,7 +168,7 @@ unsigned encodeVTYPE(VLMUL VLMul, unsigned SEW, bool TailAgnostic,
     VTypeI |= 0x40;
   if (MaskAgnostic)
     VTypeI |= 0x80;
-  if (Altfmt)
+  if (AltFmt)
     VTypeI |= 0x100;
 
   return VTypeI;
