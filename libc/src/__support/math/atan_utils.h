@@ -18,7 +18,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace {
+namespace atan_internal {
 
 using DoubleDouble = fputil::DoubleDouble;
 using Float128 = fputil::DyadicFloat<128>;
@@ -29,7 +29,7 @@ using Float128 = fputil::DyadicFloat<128>;
 //     b = round(atan(i/64) - a, D, RN);
 //     print("{", b, ",", a, "},");
 //   };
-constexpr DoubleDouble ATAN_I[65] = {
+static constexpr DoubleDouble ATAN_I[65] = {
     {0.0, 0.0},
     {-0x1.220c39d4dff5p-61, 0x1.fff555bbb729bp-7},
     {-0x1.5ec431444912cp-60, 0x1.ffd55bba97625p-6},
@@ -110,7 +110,8 @@ constexpr DoubleDouble ATAN_I[65] = {
 //        + x_lo * (1 - x_hi^2 + x_hi^4)
 // Since p.lo is ~ x^3/3, the relative error from rounding is bounded by:
 //   |(atan(x) - P(x))/atan(x)| < ulp(x^2) <= 2^(-14-52) = 2^-66.
-[[maybe_unused]] DoubleDouble atan_eval(const DoubleDouble &x) {
+[[maybe_unused]] LIBC_INLINE static DoubleDouble
+atan_eval(const DoubleDouble &x) {
   DoubleDouble p;
   p.hi = x.hi;
   double x_hi_sq = x.hi * x.hi;
@@ -142,7 +143,7 @@ constexpr DoubleDouble ATAN_I[65] = {
 //     b = 2^ll + a;
 //     print("{Sign::POS, ", 2^(ll - 128), ",", b, "},");
 // };
-constexpr Float128 ATAN_I_F128[65] = {
+static constexpr Float128 ATAN_I_F128[65] = {
     {Sign::POS, 0, 0_u128},
     {Sign::POS, -134, 0xfffaaadd'db94d5bb'e78c5640'15f76048_u128},
     {Sign::POS, -133, 0xffeaaddd'4bb12542'779d776d'da8c6214_u128},
@@ -215,7 +216,7 @@ constexpr Float128 ATAN_I_F128[65] = {
 //                 [0, 2^-7]);
 // > dirtyinfnorm(atan(x) - P, [0, 2^-7]);
 // 0x1.26016ad97f323875760f869684c0898d7b7bb8bep-122
-constexpr Float128 ATAN_POLY_F128[] = {
+static constexpr Float128 ATAN_POLY_F128[] = {
     {Sign::NEG, -129, 0xaaaaaaaa'aaaaaaaa'aaaaaaa6'003c5d1d_u128},
     {Sign::POS, -130, 0xcccccccc'cccccccc'cca00232'8776b063_u128},
     {Sign::NEG, -130, 0x92492492'49249201'27f5268a'cb24aec0_u128},
@@ -225,7 +226,8 @@ constexpr Float128 ATAN_POLY_F128[] = {
 };
 
 // Approximate atan for |x| <= 2^-7.
-[[maybe_unused]] Float128 atan_eval(const Float128 &x) {
+[[maybe_unused]] LIBC_INLINE static constexpr Float128
+atan_eval(const Float128 &x) {
   Float128 x_sq = fputil::quick_mul(x, x);
   Float128 x3 = fputil::quick_mul(x, x_sq);
   Float128 p = fputil::polyeval(x_sq, ATAN_POLY_F128[0], ATAN_POLY_F128[1],
@@ -234,7 +236,7 @@ constexpr Float128 ATAN_POLY_F128[] = {
   return fputil::multiply_add(x3, p, x);
 }
 
-} // anonymous namespace
+} // namespace atan_internal
 
 } // namespace LIBC_NAMESPACE_DECL
 
