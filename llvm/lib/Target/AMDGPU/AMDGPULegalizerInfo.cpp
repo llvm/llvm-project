@@ -1342,13 +1342,30 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0);
 
     if (ST.hasVOP3PInsts()) {
-      getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS})
-        .legalFor({S32, S16, V2S16})
-        .clampMaxNumElements(0, S16, 2)
-        .minScalar(0, S16)
-        .widenScalarToNextPow2(0)
-        .scalarize(0)
-        .lower();
+      getActionDefinitionsBuilder(G_ABS)
+          .legalFor({S32, S16, V2S16})
+          .clampMaxNumElements(0, S16, 2)
+          .minScalar(0, S16)
+          .widenScalarToNextPow2(0)
+          .scalarize(0)
+          .lower();
+      if (ST.hasIntMinMax64()) {
+        getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
+            .legalFor({S32, S16, S64, V2S16})
+            .clampMaxNumElements(0, S16, 2)
+            .minScalar(0, S16)
+            .widenScalarToNextPow2(0)
+            .scalarize(0)
+            .lower();
+      } else {
+        getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
+            .legalFor({S32, S16, V2S16})
+            .clampMaxNumElements(0, S16, 2)
+            .minScalar(0, S16)
+            .widenScalarToNextPow2(0)
+            .scalarize(0)
+            .lower();
+      }
     } else {
       getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS})
         .legalFor({S32, S16})

@@ -202,6 +202,13 @@ defm V_MAXIMUM_F64 : VOP3Inst <"v_maximum_f64", VOP3_Profile<VOP_F64_F64_F64>, f
 } // End SchedRW = [WriteDoubleAdd]
 } // End SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0, AddedComplexity = 1
 
+let SubtargetPredicate = isGFX1250Plus, SchedRW = [WriteDoubleAdd] in {
+defm V_MAX_I64 : VOP3Inst <"v_max_i64", VOP_I64_I64_I64_DPP, smax>;
+defm V_MAX_U64 : VOP3Inst <"v_max_u64", VOP_I64_I64_I64_DPP, umax>;
+defm V_MIN_I64 : VOP3Inst <"v_min_i64", VOP_I64_I64_I64_DPP, smin>;
+defm V_MIN_U64 : VOP3Inst <"v_min_u64", VOP_I64_I64_I64_DPP, umin>;
+} // End SubtargetPredicate = isGFX1250Plus, SchedRW = [WriteDoubleAdd]
+
 } // End isReMaterializable = 1
 
 let Uses = [MODE, VCC, EXEC] in {
@@ -1810,6 +1817,10 @@ defm V_BITOP3_B32         : VOP3_Real_BITOP3_gfx1250<0x234>;
 defm V_MAD_U32 : VOP3Only_Realtriple_gfx1250<0x235>;
 defm V_MAD_NC_U64_U32 : VOP3Only_Realtriple_gfx1250<0x2fa>;
 defm V_MAD_NC_I64_I32 : VOP3Only_Realtriple_gfx1250<0x2fb>;
+defm V_MIN_U64 : VOP3Only_Realtriple_gfx1250<0x318>;
+defm V_MAX_U64 : VOP3Only_Realtriple_gfx1250<0x319>;
+defm V_MIN_I64 : VOP3Only_Realtriple_gfx1250<0x31a>;
+defm V_MAX_I64 : VOP3Only_Realtriple_gfx1250<0x31b>;
 
 defm V_CVT_PK_FP8_F32  : VOP3Only_Realtriple_t16_and_fake16_gfx12<0x369, "v_cvt_pk_fp8_f32">;
 defm V_CVT_PK_BF8_F32  : VOP3Only_Realtriple_t16_and_fake16_gfx12<0x36a, "v_cvt_pk_bf8_f32">;

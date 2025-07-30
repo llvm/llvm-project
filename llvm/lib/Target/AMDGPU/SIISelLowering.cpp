@@ -909,6 +909,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        Custom);
   }
 
+  if (Subtarget->hasIntMinMax64())
+    setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX}, MVT::i64,
+                       Legal);
+
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
                      {MVT::Other, MVT::f32, MVT::v4f32, MVT::i16, MVT::f16,
                       MVT::bf16, MVT::v2i16, MVT::v2f16, MVT::v2bf16, MVT::i128,
