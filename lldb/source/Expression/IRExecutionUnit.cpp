@@ -809,8 +809,6 @@ static lldb::ModuleSP FindDebugModule(lldb::user_id_t uid,
 ///
 /// \param[in] label Function call label encoding the unique location of the
 /// function to look up.
-///                  Assumes that the \c FunctionCallLabelPrefix has been
-///                  stripped from the front of the label.
 static llvm::Expected<lldb::addr_t>
 ResolveFunctionCallLabel(llvm::StringRef name,
                          const lldb_private::SymbolContext &sc,
