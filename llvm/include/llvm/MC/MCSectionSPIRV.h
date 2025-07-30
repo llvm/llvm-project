@@ -33,7 +33,6 @@ public:
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
                             uint32_t Subsection) const override {}
-  bool useCodeAlign() const override { return false; }
 };
 
 } // end namespace llvm
