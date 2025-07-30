@@ -85,12 +85,24 @@ void tools::MinGW::Linker::AddLibGCC(const ArgList &Args,
 
   CmdArgs.push_back("-lmoldname");
   CmdArgs.push_back("-lmingwex");
-  for (auto Lib : Args.getAllArgValues(options::OPT_l))
-    if (StringRef(Lib).starts_with("msvcr") ||
-        StringRef(Lib).starts_with("ucrt") ||
-        StringRef(Lib).starts_with("crtdll"))
-      return;
-  CmdArgs.push_back("-lmsvcrt");
+
+  if (Arg *A = Args.getLastArg(options::OPT_mcrtdll_EQ)) {
+    std::string mcrtdll = (Twine("-l") + A->getValue()).str();
+    CmdArgs.push_back(Args.MakeArgStringRef(mcrtdll));
+  } else {
+    for (auto Lib : Args.getAllArgValues(options::OPT_l))
+      if (StringRef(Lib).starts_with("msvcr") ||
+          StringRef(Lib).starts_with("ucrt") ||
+          StringRef(Lib).starts_with("crtdll")) {
+        Lib = (llvm::Twine("-l") + Lib).str();
+        // Respect the user's chosen crt variant, but still provide it
+        // again as the last linker argument, because some of the libraries
+        // we added above may depend on it.
+        CmdArgs.push_back(Args.MakeArgStringRef(Lib));
+        return;
+      }
+    CmdArgs.push_back("-lmsvcrt");
+  }
 }
 
 void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,

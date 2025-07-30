@@ -4676,6 +4676,44 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     }
   }
 
+  // Process MinGW -mcrtdll option
+  if (Arg *A = Args.getLastArg(OPT_mcrtdll_EQ)) {
+    Opts.MinGWCRTDll =
+        llvm::StringSwitch<enum LangOptions::WindowsCRTDLLVersion>(
+            A->getValue())
+            .StartsWithLower("crtdll",
+                             LangOptions::WindowsCRTDLLVersion::CRTDLL)
+            .StartsWithLower("msvcrt10",
+                             LangOptions::WindowsCRTDLLVersion::MSVCRT10)
+            .StartsWithLower("msvcrt20",
+                             LangOptions::WindowsCRTDLLVersion::MSVCRT20)
+            .StartsWithLower("msvcrt40",
+                             LangOptions::WindowsCRTDLLVersion::MSVCRT40)
+            .StartsWithLower("msvcr40",
+                             LangOptions::WindowsCRTDLLVersion::MSVCRT40)
+            .StartsWithLower("msvcrtd",
+                             LangOptions::WindowsCRTDLLVersion::MSVCRTD)
+            .StartsWithLower("msvcr70",
+                             LangOptions::WindowsCRTDLLVersion::MSVCR70)
+            .StartsWithLower("msvcr71",
+                             LangOptions::WindowsCRTDLLVersion::MSVCR71)
+            .StartsWithLower("msvcr80",
+                             LangOptions::WindowsCRTDLLVersion::MSVCR80)
+            .StartsWithLower("msvcr90",
+                             LangOptions::WindowsCRTDLLVersion::MSVCR90)
+            .StartsWithLower("msvcr100",
+                             LangOptions::WindowsCRTDLLVersion::MSVCR100)
+            .StartsWithLower("msvcr110",
+                             LangOptions::WindowsCRTDLLVersion::MSVCR110)
+            .StartsWithLower("msvcr120",
+                             LangOptions::WindowsCRTDLLVersion::MSVCR120)
+            .StartsWithLower("ucrt", LangOptions::WindowsCRTDLLVersion::UCRT)
+            .Default(LangOptions::WindowsCRTDLLVersion::CRTDLL_Default);
+    if (Opts.MinGWCRTDll == LangOptions::WindowsCRTDLLVersion::CRTDLL_Default) {
+      Diags.Report(diag::err_unknown_crtdll) << A->getValue();
+    }
+  }
+
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 

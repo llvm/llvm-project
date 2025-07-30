@@ -1619,6 +1619,12 @@ defm auto_import : BoolFOption<"auto-import",
   PosFlag<SetTrue, [], [], "MinGW specific. Enable code generation support for "
           "automatic dllimport, and enable support for it in the linker. "
           "Enabled by default.">>;
+def mcrtdll_EQ : Joined<["-"], "mcrtdll=">,
+                 Group<m_Group>,
+                 Visibility<[ClangOption, CC1Option]>,
+                 HelpText<"MinGW specific. Changes preprocessor flags and "
+                          "linker options to use the"
+                          "specified C runtime library.">;
 } // let Flags = [TargetSpecific]
 
 // In the future this option will be supported by other offloading

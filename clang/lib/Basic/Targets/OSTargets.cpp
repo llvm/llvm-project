@@ -141,8 +141,54 @@ static void addMinGWDefines(const llvm::Triple &Triple, const LangOptions &Opts,
     DefineStd(Builder, "WIN64", Opts);
     Builder.defineMacro("__MINGW64__");
   }
-  Builder.defineMacro("__MSVCRT__");
   Builder.defineMacro("__MINGW32__");
+  if (Opts.getMinGWCRTDll() == LangOptions::WindowsCRTDLLVersion::CRTDLL) {
+    Builder.defineMacro("__CRTDLL__");
+  } else {
+    Builder.defineMacro("__MSVCRT__");
+    switch (Opts.getMinGWCRTDll()) {
+    case LangOptions::WindowsCRTDLLVersion::CRTDLL_Default:
+      break;
+    case LangOptions::WindowsCRTDLLVersion::MSVCRT10:
+      Builder.defineMacro("__MSVCRT_VERSION__", "0x100");
+      break;
+    case LangOptions::WindowsCRTDLLVersion::MSVCRT20:
+      Builder.defineMacro("__MSVCRT_VERSION__", "0x200");
+      break;
+    case LangOptions::WindowsCRTDLLVersion::MSVCRT40:
+      Builder.defineMacro("__MSVCRT_VERSION__", "0x400");
+      break;
+    case LangOptions::WindowsCRTDLLVersion::MSVCRTD:
+      Builder.defineMacro("__MSVCRT_VERSION__", "0x600");
+      break;
+    case LangOptions::WindowsCRTDLLVersion::MSVCR70:
+      Builder.defineMacro("__MSVCRT_VERSION__", "0x700");
+      break;
+    case LangOptions::WindowsCRTDLLVersion::MSVCR71:
+      Builder.defineMacro("__MSVCRT_VERSION__", "0x701");
+      break;
+    case LangOptions::WindowsCRTDLLVersion::MSVCR80:
+      Builder.defineMacro("__MSVCRT_VERSION__", "0x800");
+      break;
+    case LangOptions::WindowsCRTDLLVersion::MSVCR90:
+      Builder.defineMacro("__MSVCRT_VERSION__", "0x900");
+      break;
+    case LangOptions::WindowsCRTDLLVersion::MSVCR100:
+      Builder.defineMacro("__MSVCRT_VERSION__", "0xA00");
+      break;
+    case LangOptions::WindowsCRTDLLVersion::MSVCR110:
+      Builder.defineMacro("__MSVCRT_VERSION__", "0xB00");
+      break;
+    case LangOptions::WindowsCRTDLLVersion::MSVCR120:
+      Builder.defineMacro("__MSVCRT_VERSION__", "0xC00");
+      break;
+    case LangOptions::WindowsCRTDLLVersion::UCRT:
+      Builder.defineMacro("_UCRT");
+      break;
+    default:
+      llvm_unreachable("Unknown MinGW CRT version");
+    }
+  }
   addCygMingDefines(Opts, Builder);
 }
 

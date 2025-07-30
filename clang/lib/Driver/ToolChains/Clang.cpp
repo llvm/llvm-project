@@ -5947,6 +5947,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Triple.isOSCygMing()) {
     Args.addOptOutFlag(CmdArgs, options::OPT_fauto_import,
                        options::OPT_fno_auto_import);
+    Args.addLastArg(CmdArgs, options::OPT_mcrtdll_EQ);
   }
 
   if (Args.hasFlag(options::OPT_fms_volatile, options::OPT_fno_ms_volatile,

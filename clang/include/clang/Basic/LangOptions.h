@@ -164,6 +164,23 @@ public:
     MSVC2022_9 = 1939,
   };
 
+  enum WindowsCRTDLLVersion {
+    CRTDLL_Default,
+    CRTDLL,
+    MSVCRT10,
+    MSVCRT20,
+    MSVCRT40,
+    MSVCRTD,
+    MSVCR70,
+    MSVCR71,
+    MSVCR80,
+    MSVCR90,
+    MSVCR100,
+    MSVCR110,
+    MSVCR120,
+    UCRT
+  };
+
   enum SYCLMajorVersion {
     SYCL_None,
     SYCL_2017,
