@@ -703,6 +703,7 @@ private:
   // Add U as additional user of V.
   void addAdditionalUser(Value *V, User *U) { AdditionalUsers[V].insert(U); }
 
+  void handlePredicate(Instruction *I, Value *CopyOf, const PredicateBase *PI);
   void handleCallOverdefined(CallBase &CB);
   void handleCallResult(CallBase &CB);
   void handleCallArguments(CallBase &CB);
@@ -1927,6 +1928,75 @@ void SCCPInstVisitor::handleCallArguments(CallBase &CB) {
   }
 }
 
+void SCCPInstVisitor::handlePredicate(Instruction *I, Value *CopyOf,
+                                      const PredicateBase *PI) {
+  ValueLatticeElement CopyOfVal = getValueState(CopyOf);
+  const std::optional<PredicateConstraint> &Constraint = PI->getConstraint();
+  if (!Constraint) {
+    mergeInValue(ValueState[I], I, CopyOfVal);
+    return;
+  }
+
+  CmpInst::Predicate Pred = Constraint->Predicate;
+  Value *OtherOp = Constraint->OtherOp;
+
+  // Wait until OtherOp is resolved.
+  if (getValueState(OtherOp).isUnknown()) {
+    addAdditionalUser(OtherOp, I);
+    return;
+  }
+
+  ValueLatticeElement CondVal = getValueState(OtherOp);
+  ValueLatticeElement &IV = ValueState[I];
+  if (CondVal.isConstantRange() || CopyOfVal.isConstantRange()) {
+    auto ImposedCR =
+        ConstantRange::getFull(DL.getTypeSizeInBits(CopyOf->getType()));
+
+    // Get the range imposed by the condition.
+    if (CondVal.isConstantRange())
+      ImposedCR = ConstantRange::makeAllowedICmpRegion(
+          Pred, CondVal.getConstantRange());
+
+    // Combine range info for the original value with the new range from the
+    // condition.
+    auto CopyOfCR = CopyOfVal.asConstantRange(CopyOf->getType(),
+                                              /*UndefAllowed=*/true);
+    // Treat an unresolved input like a full range.
+    if (CopyOfCR.isEmptySet())
+      CopyOfCR = ConstantRange::getFull(CopyOfCR.getBitWidth());
+    auto NewCR = ImposedCR.intersectWith(CopyOfCR);
+    // If the existing information is != x, do not use the information from
+    // a chained predicate, as the != x information is more likely to be
+    // helpful in practice.
+    if (!CopyOfCR.contains(NewCR) && CopyOfCR.getSingleMissingElement())
+      NewCR = CopyOfCR;
+
+    // The new range is based on a branch condition. That guarantees that
+    // neither of the compare operands can be undef in the branch targets,
+    // unless we have conditions that are always true/false (e.g. icmp ule
+    // i32, %a, i32_max). For the latter overdefined/empty range will be
+    // inferred, but the branch will get folded accordingly anyways.
+    addAdditionalUser(OtherOp, I);
+    mergeInValue(
+        IV, I, ValueLatticeElement::getRange(NewCR, /*MayIncludeUndef*/ false));
+    return;
+  } else if (Pred == CmpInst::ICMP_EQ &&
+             (CondVal.isConstant() || CondVal.isNotConstant())) {
+    // For non-integer values or integer constant expressions, only
+    // propagate equal constants or not-constants.
+    addAdditionalUser(OtherOp, I);
+    mergeInValue(IV, I, CondVal);
+    return;
+  } else if (Pred == CmpInst::ICMP_NE && CondVal.isConstant()) {
+    // Propagate inequalities.
+    addAdditionalUser(OtherOp, I);
+    mergeInValue(IV, I, ValueLatticeElement::getNot(CondVal.getConstant()));
+    return;
+  }
+
+  return (void)mergeInValue(IV, I, CopyOfVal);
+}
+
 void SCCPInstVisitor::handleCallResult(CallBase &CB) {
   Function *F = CB.getCalledFunction();
 
@@ -1936,77 +2006,10 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
         return;
 
       Value *CopyOf = CB.getOperand(0);
-      ValueLatticeElement CopyOfVal = getValueState(CopyOf);
-      const auto *PI = getPredicateInfoFor(&CB);
+      const PredicateBase *PI = getPredicateInfoFor(&CB);
       assert(PI && "Missing predicate info for ssa.copy");
-
-      const std::optional<PredicateConstraint> &Constraint =
-          PI->getConstraint();
-      if (!Constraint) {
-        mergeInValue(ValueState[&CB], &CB, CopyOfVal);
-        return;
-      }
-
-      CmpInst::Predicate Pred = Constraint->Predicate;
-      Value *OtherOp = Constraint->OtherOp;
-
-      // Wait until OtherOp is resolved.
-      if (getValueState(OtherOp).isUnknown()) {
-        addAdditionalUser(OtherOp, &CB);
-        return;
-      }
-
-      ValueLatticeElement CondVal = getValueState(OtherOp);
-      ValueLatticeElement &IV = ValueState[&CB];
-      if (CondVal.isConstantRange() || CopyOfVal.isConstantRange()) {
-        auto ImposedCR =
-            ConstantRange::getFull(DL.getTypeSizeInBits(CopyOf->getType()));
-
-        // Get the range imposed by the condition.
-        if (CondVal.isConstantRange())
-          ImposedCR = ConstantRange::makeAllowedICmpRegion(
-              Pred, CondVal.getConstantRange());
-
-        // Combine range info for the original value with the new range from the
-        // condition.
-        auto CopyOfCR = CopyOfVal.asConstantRange(CopyOf->getType(),
-                                                  /*UndefAllowed=*/true);
-        // Treat an unresolved input like a full range.
-        if (CopyOfCR.isEmptySet())
-          CopyOfCR = ConstantRange::getFull(CopyOfCR.getBitWidth());
-        auto NewCR = ImposedCR.intersectWith(CopyOfCR);
-        // If the existing information is != x, do not use the information from
-        // a chained predicate, as the != x information is more likely to be
-        // helpful in practice.
-        if (!CopyOfCR.contains(NewCR) && CopyOfCR.getSingleMissingElement())
-          NewCR = CopyOfCR;
-
-        // The new range is based on a branch condition. That guarantees that
-        // neither of the compare operands can be undef in the branch targets,
-        // unless we have conditions that are always true/false (e.g. icmp ule
-        // i32, %a, i32_max). For the latter overdefined/empty range will be
-        // inferred, but the branch will get folded accordingly anyways.
-        addAdditionalUser(OtherOp, &CB);
-        mergeInValue(
-            IV, &CB,
-            ValueLatticeElement::getRange(NewCR, /*MayIncludeUndef*/ false));
-        return;
-      } else if (Pred == CmpInst::ICMP_EQ &&
-                 (CondVal.isConstant() || CondVal.isNotConstant())) {
-        // For non-integer values or integer constant expressions, only
-        // propagate equal constants or not-constants.
-        addAdditionalUser(OtherOp, &CB);
-        mergeInValue(IV, &CB, CondVal);
-        return;
-      } else if (Pred == CmpInst::ICMP_NE && CondVal.isConstant()) {
-        // Propagate inequalities.
-        addAdditionalUser(OtherOp, &CB);
-        mergeInValue(IV, &CB,
-                     ValueLatticeElement::getNot(CondVal.getConstant()));
-        return;
-      }
-
-      return (void)mergeInValue(IV, &CB, CopyOfVal);
+      handlePredicate(&CB, CopyOf, PI);
+      return;
     }
 
     if (II->getIntrinsicID() == Intrinsic::vscale) {
