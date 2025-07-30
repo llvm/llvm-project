@@ -27,6 +27,10 @@ int func2() {
 // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-2):9 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC2 %s
 // CHECK-CC2: OVERLOAD: [#void#]foo(int arg)
 
+// TODO: llvm/llvm-project/146649
+// This is incorrect behavior. Correct Result should be a variant of, 
+// CC3: should be something like [#void#]foo(<#A self#>, <#int arg#>)
+// CC4: should be something like [#void#]bar(<#A self#>, <#int arg#>)
 int func3() {
   (&A::foo)
   (&A::bar)
