@@ -14,7 +14,7 @@ define <8 x ptr> @test_vector_gep(ptr %arg1, <8 x i64> %arg2) {
 ; CHECK-LABEL: define <8 x ptr> @test_vector_gep(
 ; CHECK-SAME: ptr [[ARG1:%.*]], <8 x i64> [[ARG2:%.*]]) {
 ; CHECK-NEXT:  [[TOP:.*:]]
-; CHECK-NEXT:    [[VECTORGEP14:%.*]] = getelementptr inbounds [[DUAL:%.*]], ptr [[ARG1]], <8 x i64> [[ARG2]], i32 1, i32 0, i64 0, i32 1, i32 0, i64 0
+; CHECK-NEXT:    [[VECTORGEP14:%.*]] = getelementptr inbounds [[DUAL:%.*]], ptr [[ARG1]], <8 x i64> [[ARG2]], i32 1, i32 0, i64 0, i32 1
 ; CHECK-NEXT:    ret <8 x ptr> [[VECTORGEP14]]
 ;
 top:
