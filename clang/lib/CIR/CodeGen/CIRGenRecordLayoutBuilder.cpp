@@ -789,7 +789,8 @@ void CIRRecordLowering::computeVolatileBitfields() {
     // of the type), we first undo that calculation here and redo it once
     // the bit-field offset within the new container is calculated.
     const unsigned oldOffset =
-        isBigEndian() ? info.storageSize - (info.offset + info.size) : info.offset;
+        isBigEndian() ? info.storageSize - (info.offset + info.size)
+                      : info.offset;
     // Offset to the bit-field from the beginning of the struct.
     const unsigned absoluteOffset =
         astContext.toBits(info.storageOffset) + oldOffset;
