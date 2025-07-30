@@ -1718,9 +1718,15 @@ void BinaryContext::preprocessDebugInfo() {
   // Clear debug info for functions from units that we are not going to process.
   for (auto &KV : BinaryFunctions) {
     BinaryFunction &BF = KV.second;
+    // Collect units to remove to avoid iterator invalidation
+    SmallVector<DWARFUnit *, 1> UnitsToRemove;
     for (auto *Unit : BF.getDWARFUnits()) {
       if (!ProcessedCUs.count(Unit))
-        BF.removeDWARFUnit(Unit);
+        UnitsToRemove.push_back(Unit);
+    }
+    // Remove the collected units
+    for (auto *Unit : UnitsToRemove) {
+      BF.removeDWARFUnit(Unit);
     }
   }
 

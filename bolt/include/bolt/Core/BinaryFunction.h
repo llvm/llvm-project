@@ -2420,7 +2420,7 @@ public:
   }
 
   /// Return DWARF compile units for this function.
-  const SmallVector<DWARFUnit *, 1> getDWARFUnits() const {
+  const SmallVector<DWARFUnit *, 1>& getDWARFUnits() const {
     return DwarfUnitVec;
   }
 
