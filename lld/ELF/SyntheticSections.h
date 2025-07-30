@@ -421,9 +421,6 @@ private:
 class DynamicReloc {
 public:
   enum Kind {
-    /// The resulting dynamic relocation has already had its addend computed.
-    /// Calling computeAddend() is an error. Only for internal use.
-    Computed,
     /// The resulting dynamic relocation will not reference a symbol: #sym is
     /// only used to compute the addend with InputSection::getRelocTargetVA().
     /// Useful for various relative and TLS relocations (e.g. R_X86_64_TPOFF64).
@@ -438,7 +435,8 @@ public:
                uint64_t offsetInSec, Kind kind, Symbol &sym, int64_t addend,
                RelExpr expr)
       : sym(&sym), inputSec(inputSec), offsetInSec(offsetInSec), type(type),
-        addend(addend), kind(kind), expr(expr) {}
+        addend(addend), isAgainstSymbol(kind == AgainstSymbol), isFinal(false),
+        expr(expr) {}
   /// This constructor records a relative relocation with no symbol.
   DynamicReloc(RelType type, const InputSectionBase *inputSec,
                uint64_t offsetInSec, int64_t addend = 0)
@@ -447,17 +445,14 @@ public:
 
   uint64_t getOffset() const;
   uint32_t getSymIndex(SymbolTableBaseSection *symTab) const;
-  bool needsDynSymIndex() const {
-    assert(kind != Computed && "cannot check kind after computeRaw");
-    return kind == AgainstSymbol;
-  }
+  bool needsDynSymIndex() const { return isAgainstSymbol; }
 
   /// Computes the addend of the dynamic relocation. Note that this is not the
   /// same as the #addend member variable as it may also include the symbol
   /// address/the address of the corresponding GOT entry/etc.
   int64_t computeAddend(Ctx &) const;
 
-  void computeRaw(Ctx &, SymbolTableBaseSection *symt);
+  void finalize(Ctx &, SymbolTableBaseSection *symt);
 
   Symbol *sym;
   const InputSectionBase *inputSec;
@@ -470,7 +465,15 @@ public:
   int64_t addend;
 
 private:
-  Kind kind;
+  /// Whether this was constructed with a Kind of AgainstSymbol.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t isAgainstSymbol : 1;
+
+  /// The resulting dynamic relocation has already had its addend computed.
+  /// Calling computeAddend() is an error.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t isFinal : 1;
+
   // The kind of expression used to calculate the added (required e.g. for
   // relative GOT relocations).
   RelExpr expr;
