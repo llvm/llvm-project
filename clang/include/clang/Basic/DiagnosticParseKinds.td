@@ -1574,6 +1574,9 @@ def err_omp_declare_target_multiple : Error<
   "%0 appears multiple times in clauses on the same declare target directive">;
 def err_omp_declare_target_indirect_device_type: Error<
   "only 'device_type(any)' clause is allowed with indirect clause">;
+def warn_omp_deprecated_declare_target_delimited_form :
+  Warning<"the delimited form of '#pragma omp declare target' without clauses is deprecated; use '#pragma omp begin declare target' instead">,
+  InGroup<Deprecated>;
 def err_omp_expected_clause: Error<
   "expected at least one clause on '#pragma omp %0' directive">;
 def err_omp_mapper_illegal_identifier : Error<
@@ -1591,6 +1594,9 @@ def err_omp_unknown_adjust_args_op
 def err_omp_declare_variant_wrong_clause : Error<
   "expected %select{'match'|'match', 'adjust_args', or 'append_args'}0 clause "
   "on 'omp declare variant' directive">;
+def err_omp_non_by_ref_need_device_addr_modifier_argument
+    : Error<"expected reference type argument on 'adjust_args' clause with "
+            "'need_device_addr' modifier">;
 def err_omp_declare_variant_duplicate_nested_trait : Error<
   "nested OpenMP context selector contains duplicated trait '%0'"
   " in selector '%1' and set '%2' with different score">;
@@ -1860,8 +1866,7 @@ def err_hlsl_virtual_inheritance
     : Error<"virtual inheritance is unsupported in HLSL">;
 
 // HLSL Root Signature Parser Diagnostics
-def err_hlsl_unexpected_end_of_params
-    : Error<"expected %0 to denote end of parameters, or, another valid parameter of %1">;
+def err_hlsl_invalid_token : Error<"invalid %select{parameter|value}0 of %1">;
 def err_hlsl_rootsig_repeat_param : Error<"specified the same parameter '%0' multiple times">;
 def err_hlsl_rootsig_missing_param : Error<"did not specify mandatory parameter '%0'">;
 def err_hlsl_number_literal_overflow : Error<

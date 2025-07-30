@@ -218,16 +218,7 @@ static NestedNameSpecifier *getFullyQualifiedNestedNameSpecifier(
       return Scope;
     case NestedNameSpecifier::Namespace:
       return TypeName::createNestedNameSpecifier(
-          Ctx, Scope->getAsNamespace(), WithGlobalNsPrefix);
-    case NestedNameSpecifier::NamespaceAlias:
-      // Namespace aliases are only valid for the duration of the
-      // scope where they were introduced, and therefore are often
-      // invalid at the end of the TU.  So use the namespace name more
-      // likely to be valid at the end of the TU.
-      return TypeName::createNestedNameSpecifier(
-          Ctx,
-          Scope->getAsNamespaceAlias()->getNamespace()->getCanonicalDecl(),
-          WithGlobalNsPrefix);
+          Ctx, Scope->getAsNamespace()->getNamespace(), WithGlobalNsPrefix);
     case NestedNameSpecifier::Identifier:
       // A function or some other construct that makes it un-namable
       // at the end of the TU. Skip the current component of the name,

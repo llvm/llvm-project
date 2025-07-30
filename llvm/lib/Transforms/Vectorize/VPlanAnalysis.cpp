@@ -16,7 +16,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Support/GenericDomTreeConstruction.h"
 
 using namespace llvm;
 
@@ -85,6 +84,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return ResTy;
   }
   case Instruction::ICmp:
+  case Instruction::FCmp:
   case VPInstruction::ActiveLaneMask:
     assert(inferScalarType(R->getOperand(0)) ==
                inferScalarType(R->getOperand(1)) &&
@@ -110,6 +110,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
     return SetResultTyFromOp();
+  case VPInstruction::ExtractLane:
+    return inferScalarType(R->getOperand(1));
   case VPInstruction::FirstActiveLane:
     return Type::getIntNTy(Ctx, 64);
   case VPInstruction::ExtractLastElement:
@@ -405,9 +407,12 @@ static unsigned getVFScaleFactor(VPRecipeBase *R) {
   return 1;
 }
 
-bool VPRegisterUsage::exceedsMaxNumRegs(const TargetTransformInfo &TTI) const {
-  return any_of(MaxLocalUsers, [&TTI](auto &LU) {
-    return LU.second > TTI.getNumberOfRegisters(LU.first);
+bool VPRegisterUsage::exceedsMaxNumRegs(const TargetTransformInfo &TTI,
+                                        unsigned OverrideMaxNumRegs) const {
+  return any_of(MaxLocalUsers, [&TTI, &OverrideMaxNumRegs](auto &LU) {
+    return LU.second > (OverrideMaxNumRegs > 0
+                            ? OverrideMaxNumRegs
+                            : TTI.getNumberOfRegisters(LU.first));
   });
 }
 

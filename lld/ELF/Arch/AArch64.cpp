@@ -137,7 +137,6 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   switch (type) {
   case R_AARCH64_ABS16:
   case R_AARCH64_ABS32:
-  case R_AARCH64_PATCHINST:
   case R_AARCH64_ABS64:
   case R_AARCH64_FUNCINIT64:
   case R_AARCH64_ADD_ABS_LO12_NC:
@@ -156,6 +155,12 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_MOVW_UABS_G2:
   case R_AARCH64_MOVW_UABS_G2_NC:
   case R_AARCH64_MOVW_UABS_G3:
+    return R_ABS;
+  case R_AARCH64_PATCHINST:
+    if (!isAbsolute(s))
+      Err(ctx) << getErrorLoc(ctx, loc)
+               << "R_AARCH64_PATCHINST relocation against non-absolute symbol "
+               << &s;
     return R_ABS;
   case R_AARCH64_AUTH_ABS64:
     return RE_AARCH64_AUTH;

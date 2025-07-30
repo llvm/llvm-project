@@ -798,6 +798,13 @@ Specify how to report the missing GNU_PROPERTY_X86_FEATURE_1_IBT or GNU_PROPERTY
 .Cm none
 is the default, linker will not report the missing property otherwise will be reported as a warning or an error.
 .Pp
+.It Cm gcs-report Ns = Ns Ar [none|warning|error]
+Specify how to report missing
+.Cm GNU_PROPERTY_AARCH64_FEATURE_1_GCS
+property. GNU_PROPERTY_AARCH64_FEATURE_1_GCS indicates object file support for the Guarded Control Stack security feature.
+.Cm none
+is the default, linker will not report the missing property otherwise will be reported as a warning or an error.
+.Pp
 .It Cm dynamic-undefined-weak
 Make undefined weak symbols dynamic when the dynamic symbol table is present, if they are referenced from
 relocatable object files and not forced local by symbol visibility or versioning. Do not make them dynamic when
@@ -952,6 +959,17 @@ disallows overlap.
 .Pp
 .It Cm shstk
 x86 only, use shadow stack.
+.Pp
+.It Cm gcs Ns = Ns Ar [implicit|never|always]
+Specifies how the
+.Cm GNU_PROPERTY_AARCH64_FEATURE_1_GCS
+bit is set in the output ELF file. When set, it indicates support for the Guarded Control Stack (GCS) security feature.
+.Cm implicit
+(default) The GCS feature bit is set if all input relocatable files have a .note.gnu.property section containing the GNU_PROPERTY_AARCH64_FEATURE_1_GCS bit.
+.Cm never
+clears the GCS feature bit regardless of input relocatable files' markings.
+.Cm always
+sets the GCS feature bit regardless of input object markings.
 .Pp
 .It Cm stack-size Ns = Ns Ar size
 Set the main thread's stack size to

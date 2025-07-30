@@ -108,3 +108,31 @@ If specific jobs within the workflow need additional permissions, those
 permissions should be added within the specific job. This practice locks down
 all permissions by default and only enables them when needed, better enforcing
 the principle of least privilege.
+
+Ensuring Workflows Run on the Correct Events
+--------------------------------------------
+
+Github allows workflows to run on a multitude of events and it is important to
+configure a workflow such that it triggers on the correct events. There are
+two main best practices around events that trigger workflows:
+
+1. Workflows that are designed to run on pull requests should not be
+restricted by target branch. Restricting the target branch unnecessarily
+will prevent any stacked PRs from being tested. ``pull_request`` events should
+not contain a branches key.
+
+2. Workflows that are designed to also trigger on push events (e.g., for
+testing on ``main`` or one of the release branches) need to be restricted by
+branch. While pushes to a fork will not trigger a workflow run due to the
+``push`` event if the workflow already has its jobs disabled in forks
+(described above), stacked PRs will end up running jobs twice if the ``push``
+event does not have any branch restrictions. ``push`` events should have
+their branches restricted at the very least to ``main`` and the release
+branches as follows:
+
+.. code-block:: yaml
+
+  push:
+    branches:
+      - main
+      - releases/*

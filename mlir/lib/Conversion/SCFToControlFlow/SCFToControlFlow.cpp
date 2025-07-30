@@ -340,7 +340,7 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
   Operation *terminator = lastBodyBlock->getTerminator();
   rewriter.setInsertionPointToEnd(lastBodyBlock);
   auto step = forOp.getStep();
-  auto stepped = rewriter.create<arith::AddIOp>(loc, iv, step).getResult();
+  auto stepped = arith::AddIOp::create(rewriter, loc, iv, step).getResult();
   if (!stepped)
     return failure();
 
@@ -348,7 +348,7 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
   loopCarried.push_back(stepped);
   loopCarried.append(terminator->operand_begin(), terminator->operand_end());
   auto branchOp =
-      rewriter.create<cf::BranchOp>(loc, conditionBlock, loopCarried);
+      cf::BranchOp::create(rewriter, loc, conditionBlock, loopCarried);
 
   // Let the CondBranchOp carry the LLVM attributes from the ForOp, such as the
   // llvm.loop_annotation attribute.
@@ -375,16 +375,15 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
   SmallVector<Value, 8> destOperands;
   destOperands.push_back(lowerBound);
   llvm::append_range(destOperands, forOp.getInitArgs());
-  rewriter.create<cf::BranchOp>(loc, conditionBlock, destOperands);
+  cf::BranchOp::create(rewriter, loc, conditionBlock, destOperands);
 
   // With the body block done, we can fill in the condition block.
   rewriter.setInsertionPointToEnd(conditionBlock);
-  auto comparison = rewriter.create<arith::CmpIOp>(
-      loc, arith::CmpIPredicate::slt, iv, upperBound);
+  auto comparison = arith::CmpIOp::create(
+      rewriter, loc, arith::CmpIPredicate::slt, iv, upperBound);
 
-  rewriter.create<cf::CondBranchOp>(loc, comparison, firstBodyBlock,
-                                    ArrayRef<Value>(), endBlock,
-                                    ArrayRef<Value>());
+  cf::CondBranchOp::create(rewriter, loc, comparison, firstBodyBlock,
+                           ArrayRef<Value>(), endBlock, ArrayRef<Value>());
 
   // The result of the loop operation is the values of the condition block
   // arguments except the induction variable on the last iteration.
@@ -409,7 +408,7 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
     continueBlock =
         rewriter.createBlock(remainingOpsBlock, ifOp.getResultTypes(),
                              SmallVector<Location>(ifOp.getNumResults(), loc));
-    rewriter.create<cf::BranchOp>(loc, remainingOpsBlock);
+    cf::BranchOp::create(rewriter, loc, remainingOpsBlock);
   }
 
   // Move blocks from the "then" region to the region containing 'scf.if',
@@ -419,7 +418,7 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
   Operation *thenTerminator = thenRegion.back().getTerminator();
   ValueRange thenTerminatorOperands = thenTerminator->getOperands();
   rewriter.setInsertionPointToEnd(&thenRegion.back());
-  rewriter.create<cf::BranchOp>(loc, continueBlock, thenTerminatorOperands);
+  cf::BranchOp::create(rewriter, loc, continueBlock, thenTerminatorOperands);
   rewriter.eraseOp(thenTerminator);
   rewriter.inlineRegionBefore(thenRegion, continueBlock);
 
@@ -433,15 +432,15 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
     Operation *elseTerminator = elseRegion.back().getTerminator();
     ValueRange elseTerminatorOperands = elseTerminator->getOperands();
     rewriter.setInsertionPointToEnd(&elseRegion.back());
-    rewriter.create<cf::BranchOp>(loc, continueBlock, elseTerminatorOperands);
+    cf::BranchOp::create(rewriter, loc, continueBlock, elseTerminatorOperands);
     rewriter.eraseOp(elseTerminator);
     rewriter.inlineRegionBefore(elseRegion, continueBlock);
   }
 
   rewriter.setInsertionPointToEnd(condBlock);
-  rewriter.create<cf::CondBranchOp>(loc, ifOp.getCondition(), thenBlock,
-                                    /*trueArgs=*/ArrayRef<Value>(), elseBlock,
-                                    /*falseArgs=*/ArrayRef<Value>());
+  cf::CondBranchOp::create(rewriter, loc, ifOp.getCondition(), thenBlock,
+                           /*trueArgs=*/ArrayRef<Value>(), elseBlock,
+                           /*falseArgs=*/ArrayRef<Value>());
 
   // Ok, we're done!
   rewriter.replaceOp(ifOp, continueBlock->getArguments());
@@ -459,13 +458,14 @@ ExecuteRegionLowering::matchAndRewrite(ExecuteRegionOp op,
 
   auto &region = op.getRegion();
   rewriter.setInsertionPointToEnd(condBlock);
-  rewriter.create<cf::BranchOp>(loc, &region.front());
+  cf::BranchOp::create(rewriter, loc, &region.front());
 
   for (Block &block : region) {
     if (auto terminator = dyn_cast<scf::YieldOp>(block.getTerminator())) {
       ValueRange terminatorOperands = terminator->getOperands();
       rewriter.setInsertionPointToEnd(&block);
-      rewriter.create<cf::BranchOp>(loc, remainingOpsBlock, terminatorOperands);
+      cf::BranchOp::create(rewriter, loc, remainingOpsBlock,
+                           terminatorOperands);
       rewriter.eraseOp(terminator);
     }
   }
@@ -503,7 +503,7 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
   for (auto [iv, lower, upper, step] :
        llvm::zip(parallelOp.getInductionVars(), parallelOp.getLowerBound(),
                  parallelOp.getUpperBound(), parallelOp.getStep())) {
-    ForOp forOp = rewriter.create<ForOp>(loc, lower, upper, step, iterArgs);
+    ForOp forOp = ForOp::create(rewriter, loc, lower, upper, step, iterArgs);
     ivs.push_back(forOp.getInductionVar());
     auto iterRange = forOp.getRegionIterArgs();
     iterArgs.assign(iterRange.begin(), iterRange.end());
@@ -517,7 +517,7 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
       // A loop is constructed with an empty "yield" terminator if there are
       // no results.
       rewriter.setInsertionPointToEnd(rewriter.getInsertionBlock());
-      rewriter.create<scf::YieldOp>(loc, forOp.getResults());
+      scf::YieldOp::create(rewriter, loc, forOp.getResults());
     }
 
     rewriter.setInsertionPointToStart(forOp.getBody());
@@ -549,7 +549,7 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
   // has been already created in loop construction).
   if (!yieldOperands.empty()) {
     rewriter.setInsertionPointToEnd(rewriter.getInsertionBlock());
-    rewriter.create<scf::YieldOp>(loc, yieldOperands);
+    scf::YieldOp::create(rewriter, loc, yieldOperands);
   }
 
   rewriter.replaceOp(parallelOp, loopResults);
@@ -575,13 +575,14 @@ LogicalResult WhileLowering::matchAndRewrite(WhileOp whileOp,
 
   // Branch to the "before" region.
   rewriter.setInsertionPointToEnd(currentBlock);
-  rewriter.create<cf::BranchOp>(loc, before, whileOp.getInits());
+  cf::BranchOp::create(rewriter, loc, before, whileOp.getInits());
 
   // Replace terminators with branches. Assuming bodies are SESE, which holds
   // given only the patterns from this file, we only need to look at the last
   // block. This should be reconsidered if we allow break/continue in SCF.
   rewriter.setInsertionPointToEnd(before);
   auto condOp = cast<ConditionOp>(before->getTerminator());
+  SmallVector<Value> args = llvm::to_vector(condOp.getArgs());
   rewriter.replaceOpWithNewOp<cf::CondBranchOp>(condOp, condOp.getCondition(),
                                                 after, condOp.getArgs(),
                                                 continuation, ValueRange());
@@ -593,7 +594,7 @@ LogicalResult WhileLowering::matchAndRewrite(WhileOp whileOp,
 
   // Replace the op with values "yielded" from the "before" region, which are
   // visible by dominance.
-  rewriter.replaceOp(whileOp, condOp.getArgs());
+  rewriter.replaceOp(whileOp, args);
 
   return success();
 }
@@ -625,19 +626,21 @@ DoWhileLowering::matchAndRewrite(WhileOp whileOp,
 
   // Branch to the "before" region.
   rewriter.setInsertionPointToEnd(currentBlock);
-  rewriter.create<cf::BranchOp>(whileOp.getLoc(), before, whileOp.getInits());
+  cf::BranchOp::create(rewriter, whileOp.getLoc(), before, whileOp.getInits());
 
   // Loop around the "before" region based on condition.
   rewriter.setInsertionPointToEnd(before);
   auto condOp = cast<ConditionOp>(before->getTerminator());
-  rewriter.replaceOpWithNewOp<cf::CondBranchOp>(condOp, condOp.getCondition(),
-                                                before, condOp.getArgs(),
-                                                continuation, ValueRange());
+  cf::CondBranchOp::create(rewriter, condOp.getLoc(), condOp.getCondition(),
+                           before, condOp.getArgs(), continuation,
+                           ValueRange());
 
   // Replace the op with values "yielded" from the "before" region, which are
   // visible by dominance.
   rewriter.replaceOp(whileOp, condOp.getArgs());
 
+  // Erase the condition op.
+  rewriter.eraseOp(condOp);
   return success();
 }
 
@@ -693,12 +696,12 @@ IndexSwitchLowering::matchAndRewrite(IndexSwitchOp op,
   SmallVector<ValueRange> caseOperands(caseSuccessors.size(), {});
 
   // Cast switch index to integer case value.
-  Value caseValue = rewriter.create<arith::IndexCastOp>(
-      op.getLoc(), rewriter.getI32Type(), op.getArg());
+  Value caseValue = arith::IndexCastOp::create(
+      rewriter, op.getLoc(), rewriter.getI32Type(), op.getArg());
 
-  rewriter.create<cf::SwitchOp>(
-      op.getLoc(), caseValue, *defaultBlock, ValueRange(),
-      rewriter.getDenseI32ArrayAttr(caseValues), caseSuccessors, caseOperands);
+  cf::SwitchOp::create(rewriter, op.getLoc(), caseValue, *defaultBlock,
+                       ValueRange(), rewriter.getDenseI32ArrayAttr(caseValues),
+                       caseSuccessors, caseOperands);
   rewriter.replaceOp(op, continueBlock->getArguments());
   return success();
 }
