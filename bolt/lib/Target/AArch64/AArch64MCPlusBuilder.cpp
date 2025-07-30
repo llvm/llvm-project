@@ -1757,7 +1757,16 @@ public:
       // Explicit Pointer Authentication check failed, see
       // AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue().
       return true;
+    case 0x1:
+      // __builtin_trap(), as emitted by Clang.
+      return true;
+    case 0x3e8: // decimal 1000
+      // __builtin_trap(), as emitted by GCC.
+      return true;
     default:
+      // Some constants may indicate intentionally recoverable break-points.
+      // This is the case at least for 0xf000, which is used by
+      // __builtin_debugtrap() supported by Clang.
       return false;
     }
   }
