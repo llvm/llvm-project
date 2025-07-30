@@ -2,123 +2,88 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-gnu-linux  < %s | FileCheck %s -check-prefix=CHECK
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc-unknown-gnu-linux  < %s | FileCheck %s -check-prefix=CHECKBE
 
-define ptr @xe_migrate_copy(i1 %tobool, i1 %tobool6) {
+define i32 @xe_migrate_copy(ptr %m, ptr %dst, ptr %tile, ptr %0, ptr %primary_gt, i1 %tobool4, i1 %tobool9, i64 %1, i32 %conv55, i1 %tobool37.not) nounwind {
 ; CHECK-LABEL: xe_migrate_copy:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mfcr 12
-; CHECK-NEXT:    stw 12, 8(1)
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stdu 1, -176(1)
-; CHECK-NEXT:    std 0, 192(1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 176
-; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    .cfi_offset r27, -40
-; CHECK-NEXT:    .cfi_offset r28, -32
-; CHECK-NEXT:    .cfi_offset r29, -24
-; CHECK-NEXT:    .cfi_offset r30, -16
-; CHECK-NEXT:    .cfi_offset cr2, 8
-; CHECK-NEXT:    std 27, 136(1) # 8-byte Folded Spill
-; CHECK-NEXT:    andi. 4, 4, 1
-; CHECK-NEXT:    crmove 8, 1
+; CHECK-NEXT:    stdu 1, -128(1)
+; CHECK-NEXT:    lbz 3, 255(1)
 ; CHECK-NEXT:    andi. 3, 3, 1
-; CHECK-NEXT:    std 28, 144(1) # 8-byte Folded Spill
-; CHECK-NEXT:    crmove 9, 1
-; CHECK-NEXT:    std 29, 152(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 30, 160(1) # 8-byte Folded Spill
-; CHECK-NEXT:    lwz 30, 132(1)
-; CHECK-NEXT:    ld 28, 8(0)
-; CHECK-NEXT:    ld 29, 16(0)
-; CHECK-NEXT:    ld 27, 0(0)
-; CHECK-NEXT:    std 2, 40(1)
-; CHECK-NEXT:    b .LBB0_3
-; CHECK-NEXT:  .LBB0_1: # %if.then36
-; CHECK-NEXT:    #
-; CHECK-NEXT:    li 6, 1
-; CHECK-NEXT:  .LBB0_2: # %if.then36
-; CHECK-NEXT:    #
-; CHECK-NEXT:    mtctr 27
+; CHECK-NEXT:    std 0, 144(1)
+; CHECK-NEXT:    crmove 20, 1
+; CHECK-NEXT:    andi. 3, 9, 1
+; CHECK-NEXT:    lwz 9, 244(1)
+; CHECK-NEXT:    crmove 21, 1
+; CHECK-NEXT:    andi. 3, 8, 1
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    std 3, 112(1)
+; CHECK-NEXT:    crandc 21, 21, 20
+; CHECK-NEXT:    bc 12, 21, .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %while.body
+; CHECK-NEXT:    crand 20, 20, 1
+; CHECK-NEXT:    li 8, 0
+; CHECK-NEXT:    bc 4, 20, .LBB0_3
+; CHECK-NEXT:  .LBB0_2: # %while.body
+; CHECK-NEXT:    li 8, 1
+; CHECK-NEXT:  .LBB0_3: # %while.body
 ; CHECK-NEXT:    li 4, 0
 ; CHECK-NEXT:    li 5, 0
-; CHECK-NEXT:    li 7, 0
-; CHECK-NEXT:    li 8, 0
-; CHECK-NEXT:    mr 9, 30
-; CHECK-NEXT:    li 10, 0
-; CHECK-NEXT:    mr 2, 28
-; CHECK-NEXT:    mr 11, 29
-; CHECK-NEXT:    bctrl
-; CHECK-NEXT:    ld 2, 40(1)
-; CHECK-NEXT:  .LBB0_3: # %if.then36
-; CHECK-NEXT:    #
-; CHECK-NEXT:    lwz 3, 0(0)
-; CHECK-NEXT:    cmplwi 3, 0
-; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    crandc 20, 8, 2
-; CHECK-NEXT:    std 3, 112(1)
-; CHECK-NEXT:    bc 12, 20, .LBB0_1
-; CHECK-NEXT:  # %bb.4: # %if.then36
-; CHECK-NEXT:    #
-; CHECK-NEXT:    crand 20, 2, 9
 ; CHECK-NEXT:    li 6, 0
-; CHECK-NEXT:    bc 4, 20, .LBB0_2
-; CHECK-NEXT:    b .LBB0_1
+; CHECK-NEXT:    li 7, 0
+; CHECK-NEXT:    li 10, 0
+; CHECK-NEXT:    bl xe_migrate_ccs_copy
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi 1, 1, 128
+; CHECK-NEXT:    ld 0, 16(1)
+; CHECK-NEXT:    mtlr 0
+; CHECK-NEXT:    blr
 ;
 ; CHECKBE-LABEL: xe_migrate_copy:
 ; CHECKBE:       # %bb.0: # %entry
 ; CHECKBE-NEXT:    mflr 0
-; CHECKBE-NEXT:    stwu 1, -64(1)
-; CHECKBE-NEXT:    stw 0, 68(1)
-; CHECKBE-NEXT:    .cfi_def_cfa_offset 64
-; CHECKBE-NEXT:    .cfi_offset lr, 4
-; CHECKBE-NEXT:    .cfi_offset r30, -8
-; CHECKBE-NEXT:    .cfi_offset cr2, -12
-; CHECKBE-NEXT:    mfcr 12
-; CHECKBE-NEXT:    stw 30, 56(1) # 4-byte Folded Spill
-; CHECKBE-NEXT:    andi. 4, 4, 1
-; CHECKBE-NEXT:    stw 12, 52(1)
-; CHECKBE-NEXT:    crmove 8, 1
-; CHECKBE-NEXT:    lwz 30, 44(1)
-; CHECKBE-NEXT:    andi. 3, 3, 1
-; CHECKBE-NEXT:    crmove 9, 1
-; CHECKBE-NEXT:    b .LBB0_3
-; CHECKBE-NEXT:  .LBB0_1: # %if.then36
-; CHECKBE-NEXT:    #
-; CHECKBE-NEXT:    li 7, 1
-; CHECKBE-NEXT:  .LBB0_2: # %if.then36
-; CHECKBE-NEXT:    #
+; CHECKBE-NEXT:    stwu 1, -32(1)
+; CHECKBE-NEXT:    lbz 3, 55(1)
 ; CHECKBE-NEXT:    li 4, 0
+; CHECKBE-NEXT:    stw 0, 36(1)
+; CHECKBE-NEXT:    andi. 3, 3, 1
+; CHECKBE-NEXT:    crmove 20, 1
+; CHECKBE-NEXT:    andi. 3, 9, 1
+; CHECKBE-NEXT:    crmove 21, 1
+; CHECKBE-NEXT:    andi. 3, 8, 1
+; CHECKBE-NEXT:    lwz 3, 48(1)
+; CHECKBE-NEXT:    crandc 21, 21, 20
+; CHECKBE-NEXT:    stw 4, 24(1)
+; CHECKBE-NEXT:    stw 4, 20(1)
+; CHECKBE-NEXT:    stw 4, 16(1)
+; CHECKBE-NEXT:    stw 3, 12(1)
+; CHECKBE-NEXT:    bc 12, 21, .LBB0_2
+; CHECKBE-NEXT:  # %bb.1: # %while.body
+; CHECKBE-NEXT:    crand 20, 20, 1
+; CHECKBE-NEXT:    li 8, 0
+; CHECKBE-NEXT:    bc 4, 20, .LBB0_3
+; CHECKBE-NEXT:  .LBB0_2: # %while.body
+; CHECKBE-NEXT:    li 8, 1
+; CHECKBE-NEXT:  .LBB0_3: # %while.body
+; CHECKBE-NEXT:    li 3, 0
 ; CHECKBE-NEXT:    li 5, 0
 ; CHECKBE-NEXT:    li 6, 0
+; CHECKBE-NEXT:    li 7, 0
 ; CHECKBE-NEXT:    li 9, 0
 ; CHECKBE-NEXT:    li 10, 0
-; CHECKBE-NEXT:    bla 0x0
-; CHECKBE-NEXT:  .LBB0_3: # %if.then36
-; CHECKBE-NEXT:    #
-; CHECKBE-NEXT:    lwz 3, 0(0)
-; CHECKBE-NEXT:    stw 30, 12(1)
-; CHECKBE-NEXT:    cmplwi 3, 0
-; CHECKBE-NEXT:    crandc 20, 8, 2
-; CHECKBE-NEXT:    li 3, 0
-; CHECKBE-NEXT:    stw 3, 24(1)
-; CHECKBE-NEXT:    stw 3, 20(1)
-; CHECKBE-NEXT:    stw 3, 16(1)
-; CHECKBE-NEXT:    stw 3, 8(1)
-; CHECKBE-NEXT:    bc 12, 20, .LBB0_1
-; CHECKBE-NEXT:  # %bb.4: # %if.then36
-; CHECKBE-NEXT:    #
-; CHECKBE-NEXT:    crand 20, 2, 9
-; CHECKBE-NEXT:    li 7, 0
-; CHECKBE-NEXT:    bc 4, 20, .LBB0_2
-; CHECKBE-NEXT:    b .LBB0_1
-entry:
-  %src_L0 = alloca i64, align 8
-  br label %if.then36
+; CHECKBE-NEXT:    stw 8, 8(1)
+; CHECKBE-NEXT:    bl xe_migrate_ccs_copy
+; CHECKBE-NEXT:    lwz 0, 36(1)
+; CHECKBE-NEXT:    addi 1, 1, 32
+; CHECKBE-NEXT:    mtlr 0
+; CHECKBE-NEXT:    blr
 
-if.then36:                                        ; preds = %if.then36, %entry
-  %0 = load i32, ptr null, align 4
-  %tobool37.not = icmp eq i32 %0, 0
-  %tobool.tobool6 = select i1 %tobool37.not, i1 %tobool, i1 %tobool6
-  %1 = load i64, ptr %src_L0, align 8
-  %conv55 = trunc i64 %1 to i32
-  %call57 = call i32 null(ptr null, ptr null, i64 0, i1 %tobool.tobool6, i64 0, i1 false, i32 %conv55, i64 0, i1 false)
-  br label %if.then36
+entry:
+  br label %while.body
+
+while.body:
+  %cond53.in = select i1 %tobool37.not, i1 %tobool4, i1 %tobool9
+  %call57 = call zeroext i32 @xe_migrate_ccs_copy(ptr noundef null, ptr noundef null, i64 0, i1 false, i64 0, i1 %cond53.in, i32 %conv55, i64 0, i1 false)
+  ret i32 %call57
 }
+
+declare i32 @xe_migrate_ccs_copy(ptr, ptr, i64, i1, i64, i1, i32, i64, i1)
