@@ -34,8 +34,8 @@
 #include "SymbolFileDWARFDwo.h"
 
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 extern int g_verbose;
 
 // Extract a debug info entry for a given DWARFUnit from the data
