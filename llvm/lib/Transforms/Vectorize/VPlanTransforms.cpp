@@ -1481,9 +1481,9 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   // (BranchOnCond true).
   auto *Header = cast<VPBasicBlock>(VectorRegion->getEntry());
   auto *CanIVTy = Plan.getCanonicalIV()->getScalarType();
-  if (all_of(
-          Header->phis(),
-          IsaPred<VPCanonicalIVPHIRecipe, VPFirstOrderRecurrencePHIRecipe>)) {
+  if (all_of(Header->phis(),
+             IsaPred<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe,
+                     VPFirstOrderRecurrencePHIRecipe>)) {
     for (VPRecipeBase &HeaderR : make_early_inc_range(Header->phis())) {
       auto *HeaderPhiR = cast<VPHeaderPHIRecipe>(&HeaderR);
       HeaderPhiR->replaceAllUsesWith(HeaderPhiR->getStartValue());

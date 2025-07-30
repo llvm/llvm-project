@@ -841,7 +841,7 @@ AMDGPUToolChain::getSystemGPUArchs(const ArgList &Args) const {
   else
     Program = GetProgramPath("amdgpu-arch");
 
-  auto StdoutOrErr = executeToolChainProgram(Program);
+  auto StdoutOrErr = getDriver().executeProgram({Program});
   if (!StdoutOrErr)
     return StdoutOrErr.takeError();
 

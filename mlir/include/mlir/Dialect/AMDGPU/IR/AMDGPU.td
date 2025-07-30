@@ -237,9 +237,11 @@ def AMDGPU_FatRawBufferCastOp :
     Arguments<(ins AnyMemRef:$source,
       Optional<I32>:$validBytes,
       Optional<I<14>>:$cacheSwizzleStride,
-      DefaultValuedProp<BoolProp, "true">:$boundsCheck,
-      UnitProp:$resetOffset)>,
+      DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
+      UnitAttr:$resetOffset)>,
     Results<(outs AnyMemRef:$result)> {
+  // TODO: Set `resetOffset` and `boundsCheck` to use `Property` once
+  //       we implemented pythonic binding for `Property`.
   let summary = "Create a raw buffer fat pointer that matches `memref`";
   let description = [{
     Wraps the memory pointed to by `source` as a raw buffer fat pointer, or,

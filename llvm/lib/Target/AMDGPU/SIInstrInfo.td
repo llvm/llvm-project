@@ -1310,6 +1310,9 @@ let PrintMethod = "printBitOp3" in
 def BitOp3 : NamedIntOperand<"bitop3">;
 def bitop3_0 : DefaultOperand<BitOp3, 0>;
 
+def MatrixAFMT : CustomOperand<i32, 1, "MatrixAFMT">;
+def MatrixBFMT : CustomOperand<i32, 1, "MatrixBFMT">;
+
 def MatrixAReuse : NamedBitOperand<"matrix_a_reuse">;
 def MatrixBReuse : NamedBitOperand<"matrix_b_reuse">;
 
@@ -1885,6 +1888,7 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
         !eq(VT, v4bf16)    : AVSrc_64,
         !eq(VT.Size, 1024) : VRegSrc_1024,
         !eq(VT.Size, 512)  : VRegSrc_512,
+        !eq(VT.Size, 384)  : VRegSrc_384,
         !eq(VT.Size, 256)  : VRegSrc_256,
         !eq(VT.Size, 192)  : VRegSrc_192,
         !eq(VT.Size, 128)  : VRegSrc_128,
@@ -1897,6 +1901,7 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
 class getVOP3VRegSrcForVT<ValueType VT> {
   RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VRegSrc_1024,
                               !eq(VT.Size, 512)  : VRegSrc_512,
+                              !eq(VT.Size, 384)  : VRegSrc_384,
                               !eq(VT.Size, 256)  : VRegSrc_256,
                               !eq(VT.Size, 192)  : VRegSrc_192,
                               !eq(VT.Size, 128)  : VRegSrc_128,
@@ -2669,6 +2674,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                HasOMod);
   field bit HasNeg = HasModifiers;
   field bit HasMatrixReuse = 0;
+  field bit HasMatrixFMT = 0;
 
   field bit HasSrc0Mods = HasModifiers;
   field bit HasSrc1Mods = !if(HasModifiers, !or(HasSrc1FloatMods, HasSrc1IntMods), 0);

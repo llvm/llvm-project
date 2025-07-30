@@ -2514,8 +2514,9 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
     assert(ResTy.isVector());
 
     unsigned NumElts = ResTy.getVectorNumElements();
-    SDValue Vector = DAG.getUNDEF(ResTy);
-    for (unsigned i = 0; i < NumElts; ++i) {
+    SDValue Vector =
+        DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ResTy, Node->getOperand(0));
+    for (unsigned i = 1; i < NumElts; ++i) {
       Vector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ResTy, Vector,
                            Node->getOperand(i),
                            DAG.getConstant(i, DL, Subtarget.getGRLenVT()));

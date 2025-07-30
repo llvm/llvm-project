@@ -1036,7 +1036,7 @@ public:
   }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                           unsigned NumRegionInstrs) const override;
+                           const SchedRegion &Region) const override;
 
   void mirFileLoaded(MachineFunction &MF) const override;
 
@@ -1175,6 +1175,9 @@ public:
   bool hasMovB64() const { return GFX940Insts || GFX1250Insts; }
 
   bool hasLshlAddU64Inst() const { return HasLshlAddU64Inst; }
+
+  // Scalar and global loads support scale_offset bit.
+  bool hasScaleOffset() const { return GFX1250Insts; }
 
   bool hasFlatGVSMode() const { return FlatGVSMode; }
 
