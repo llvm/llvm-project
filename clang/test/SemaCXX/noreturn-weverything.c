@@ -3,7 +3,6 @@
 void free(void *);
 typedef void (*set_free_func)(void *);
 struct Method {
-  set_free_func free;
   int nparams;
   int *param;
 };
