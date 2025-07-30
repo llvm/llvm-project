@@ -435,17 +435,19 @@ void MCObjectStreamer::emitInstToData(const MCInst &Inst,
   bool MarkedLinkerRelaxable = false;
   for (auto &Fixup : Fixups) {
     Fixup.setOffset(Fixup.getOffset() + CodeOffset);
-    if (!Fixup.isLinkerRelaxable())
+    if (!Fixup.isLinkerRelaxable() || MarkedLinkerRelaxable)
       continue;
-    F->setLinkerRelaxable();
+    MarkedLinkerRelaxable = true;
+    // Set the fragment's order within the subsection for use by
+    // MCAssembler::relaxAlign.
+    auto *Sec = F->getParent();
+    if (!Sec->isLinkerRelaxable())
+      Sec->setLinkerRelaxable();
     // Do not add data after a linker-relaxable instruction. The difference
     // between a new label and a label at or before the linker-relaxable
     // instruction cannot be resolved at assemble-time.
-    if (!MarkedLinkerRelaxable) {
-      MarkedLinkerRelaxable = true;
-      getCurrentSectionOnly()->setLinkerRelaxable();
-      newFragment();
-    }
+    F->setLinkerRelaxable();
+    newFragment();
   }
   F->appendFixups(Fixups);
 }
