@@ -37,8 +37,8 @@ namespace hlsl {
 /// UAVSpaces {
 ///   ResClass = ResourceClass::UAV,
 ///   Spaces = {
-///     { Space = 0, FreeRanges = {{ 0, 2 }, { 13, UINT32_MAX }} },
-///     { Space = 2, FreeRanges = {{ 0, 4 }} }
+///     { Space = 0u, FreeRanges = {{ 0u, 2u }, { 13u, ~0u }} },
+///     { Space = 2u, FreeRanges = {{ 0u, 4u }} }
 ///   }
 /// }
 class BindingInfo {
@@ -53,7 +53,7 @@ public:
     uint32_t Space;
     SmallVector<BindingRange> FreeRanges;
     RegisterSpace(uint32_t Space) : Space(Space) {
-      FreeRanges.emplace_back(0, UINT32_MAX);
+      FreeRanges.emplace_back(0, ~0u);
     }
     // Size == -1 means unbounded array
     LLVM_ABI std::optional<uint32_t> findAvailableBinding(int32_t Size);

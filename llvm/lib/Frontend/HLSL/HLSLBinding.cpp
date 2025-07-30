@@ -42,7 +42,7 @@ BindingInfo::RegisterSpace::findAvailableBinding(int32_t Size) {
   // unbounded array
   if (Size == -1) {
     BindingRange &Last = FreeRanges.back();
-    if (Last.UpperBound != UINT32_MAX)
+    if (Last.UpperBound != ~0u)
       // this space is already occupied by an unbounded array
       return std::nullopt;
     uint32_t RegSlot = Last.LowerBound;
@@ -52,8 +52,7 @@ BindingInfo::RegisterSpace::findAvailableBinding(int32_t Size) {
 
   // single resource or fixed-size array
   for (BindingRange &R : FreeRanges) {
-    // compare the size as uint64_t to prevent overflow for range (0,
-    // UINT32_MAX)
+    // compare the size as uint64_t to prevent overflow for range (0, ~0u)
     if ((uint64_t)R.UpperBound - R.LowerBound + 1 < (uint64_t)Size)
       continue;
     uint32_t RegSlot = R.LowerBound;
@@ -102,24 +101,24 @@ BindingInfo BindingInfoBuilder::calculateBindingInfo(
     // The space is full - there are no free slots left, or the rest of the
     // slots are taken by an unbounded array. Set flag to report overlapping
     // binding later.
-    if (S->FreeRanges.empty() || S->FreeRanges.back().UpperBound < UINT32_MAX) {
+    if (S->FreeRanges.empty() || S->FreeRanges.back().UpperBound < ~0u) {
       ReportOverlap(*this, B);
       continue;
     }
     // adjust the last free range lower bound, split it in two, or remove it
     BindingInfo::BindingRange &LastFreeRange = S->FreeRanges.back();
     if (LastFreeRange.LowerBound == B.LowerBound) {
-      if (B.UpperBound < UINT32_MAX)
+      if (B.UpperBound < ~0u)
         LastFreeRange.LowerBound = B.UpperBound + 1;
       else
         S->FreeRanges.pop_back();
     } else if (LastFreeRange.LowerBound < B.LowerBound) {
       LastFreeRange.UpperBound = B.LowerBound - 1;
-      if (B.UpperBound < UINT32_MAX)
-        S->FreeRanges.emplace_back(B.UpperBound + 1, UINT32_MAX);
+      if (B.UpperBound < ~0u)
+        S->FreeRanges.emplace_back(B.UpperBound + 1, ~0u);
     } else {
       ReportOverlap(*this, B);
-      if (B.UpperBound < UINT32_MAX)
+      if (B.UpperBound < ~0u)
         LastFreeRange.LowerBound =
             std::max(LastFreeRange.LowerBound, B.UpperBound + 1);
       else

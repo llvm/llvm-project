@@ -49,7 +49,7 @@ TEST(HLSLBindingTest, TestTrivialCase) {
   EXPECT_EQ(UAVSpaces.RC, ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.Spaces.size(), 1u);
   checkExpectedSpaceAndFreeRanges(UAVSpaces.Spaces[0], 0,
-                                  {0, 4, 6, UINT32_MAX});
+                                  {0u, 4u, 6u, ~0u});
 
   // check that other kinds of register spaces are all available
   for (auto RC :
@@ -97,31 +97,30 @@ TEST(HLSLBindingTest, TestManyBindings) {
   EXPECT_EQ(SRVSpaces.RC, ResourceClass::SRV);
   EXPECT_EQ(SRVSpaces.Spaces.size(), 1u);
   // verify that consecutive bindings are merged
-  // (SRVSpaces has only one free space range {6, UINT32_MAX}).
-  checkExpectedSpaceAndFreeRanges(SRVSpaces.Spaces[0], 0, {6, UINT32_MAX});
+  // (SRVSpaces has only one free space range {6, ~0u}).
+  checkExpectedSpaceAndFreeRanges(SRVSpaces.Spaces[0], 0, {6u, ~0u});
 
   hlsl::BindingInfo::BindingSpaces &UAVSpaces =
       Info.getBindingSpaces(ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.RC, ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.Spaces.size(), 2u);
   checkExpectedSpaceAndFreeRanges(UAVSpaces.Spaces[0], 0,
-                                  {0, 1, 4, 4, 6, UINT32_MAX});
-  checkExpectedSpaceAndFreeRanges(UAVSpaces.Spaces[1], 20,
-                                  {0, 9, 15, UINT32_MAX});
+                                  {0u, 1u, 4u, 4u, 6u, ~0u});
+  checkExpectedSpaceAndFreeRanges(UAVSpaces.Spaces[1], 20, {0u, 9u, 15u, ~0u});
 
   hlsl::BindingInfo::BindingSpaces &CBufferSpaces =
       Info.getBindingSpaces(ResourceClass::CBuffer);
   EXPECT_EQ(CBufferSpaces.RC, ResourceClass::CBuffer);
   EXPECT_EQ(CBufferSpaces.Spaces.size(), 1u);
   checkExpectedSpaceAndFreeRanges(CBufferSpaces.Spaces[0], 0,
-                                  {0, 2, 4, UINT32_MAX});
+                                  {0u, 2u, 4u, ~0u});
 
   hlsl::BindingInfo::BindingSpaces &SamplerSpaces =
       Info.getBindingSpaces(ResourceClass::Sampler);
   EXPECT_EQ(SamplerSpaces.RC, ResourceClass::Sampler);
   EXPECT_EQ(SamplerSpaces.Spaces.size(), 1u);
   checkExpectedSpaceAndFreeRanges(SamplerSpaces.Spaces[0], 2,
-                                  {0, 3, 6, UINT32_MAX});
+                                  {0u, 3u, 6u, ~0u});
 }
 
 TEST(HLSLBindingTest, TestUnboundedAndOverlap) {
@@ -175,8 +174,7 @@ TEST(HLSLBindingTest, TestExactOverlap) {
       Info.getBindingSpaces(ResourceClass::SRV);
   EXPECT_EQ(SRVSpaces.RC, ResourceClass::SRV);
   EXPECT_EQ(SRVSpaces.Spaces.size(), 1u);
-  checkExpectedSpaceAndFreeRanges(SRVSpaces.Spaces[0], 0,
-                                  {0, 4, 6, UINT32_MAX});
+  checkExpectedSpaceAndFreeRanges(SRVSpaces.Spaces[0], 0, {0u, 4u, 6u, ~0u});
 }
 
 TEST(HLSLBindingTest, TestEndOfRange) {
@@ -203,13 +201,16 @@ TEST(HLSLBindingTest, TestEndOfRange) {
       Info.getBindingSpaces(ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.RC, ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.Spaces.size(), 3u);
-  checkExpectedSpaceAndFreeRanges(UAVSpaces.Spaces[0], 0, {0, UINT32_MAX - 1});
-  checkExpectedSpaceAndFreeRanges(UAVSpaces.Spaces[1], 1, {0, UINT32_MAX - 10});
+  checkExpectedSpaceAndFreeRanges(
+      UAVSpaces.Spaces[0], 0, {0, std::numeric_limits<uint32_t>::max() - 1});
+  checkExpectedSpaceAndFreeRanges(
+      UAVSpaces.Spaces[1], 1, {0, std::numeric_limits<uint32_t>::max() - 10});
   checkExpectedSpaceAndFreeRanges(
       UAVSpaces.Spaces[2], 2,
-      {0, (uint32_t)INT32_MAX - 1, (uint32_t)INT32_MAX + 10, UINT32_MAX});
+      {0, static_cast<uint32_t>(std::numeric_limits<int32_t>::max()) - 1u,
+       static_cast<uint32_t>(std::numeric_limits<int32_t>::max()) + 10u,
+       std::numeric_limits<uint32_t>::max()});
 }
-
 
 TEST(HLSLBindingTest, TestFindAvailable) {
   hlsl::BindingInfoBuilder Builder;
