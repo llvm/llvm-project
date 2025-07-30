@@ -827,7 +827,7 @@ ResolveFunctionCallLabel(llvm::StringRef name,
 
   const auto &label = *label_or_err;
 
-  auto module_sp = FindDebugModule(label.module_id, sc.target_sp->GetImages());
+  auto module_sp = sc.target_sp->GetImages().FindModule(label.module_id);
   if (!module_sp)
     return llvm::createStringError(
         llvm::formatv("failed to find module by UID {0}", label.module_id));

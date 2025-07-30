@@ -259,15 +259,25 @@ static std::optional<std::string> MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
   if (!dwarf)
     return std::nullopt;
 
-  ObjectFile *main_obj = dwarf->GetMainObjectFile();
-  if (!main_obj)
-    return std::nullopt;
+  auto get_module_id = [&](SymbolFile *sym) {
+    if (!sym)
+      return LLDB_INVALID_UID;
 
-  auto module_sp = main_obj->GetModule();
-  if (!module_sp)
-    return std::nullopt;
+    auto *obj = sym->GetMainObjectFile();
+    if (!obj)
+      return LLDB_INVALID_UID;
 
-  lldb::user_id_t module_id = module_sp->GetID();
+    auto module_sp = obj->GetModule();
+    if (!module_sp)
+      return LLDB_INVALID_UID;
+
+    return module_sp->GetID();
+  };
+
+  lldb::user_id_t module_id = get_module_id(dwarf->GetDebugMapSymfile());
+  if (module_id == LLDB_INVALID_UID)
+    module_id = get_module_id(dwarf);
+
   if (module_id == LLDB_INVALID_UID)
     return std::nullopt;
 
