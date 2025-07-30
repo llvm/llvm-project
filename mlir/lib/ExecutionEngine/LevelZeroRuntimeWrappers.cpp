@@ -45,7 +45,6 @@ auto catchAll(F &&func) {
       std::abort();                                                            \
     }                                                                          \
   }
-
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -118,23 +117,49 @@ static ze_context_handle_t getDefaultContext() {
 // L0 RT helper structs
 //===----------------------------------------------------------------------===//
 
+struct ZeContextDeleter {
+  void operator()(ze_context_handle_t ctx) const {
+    if (ctx)
+      L0_SAFE_CALL(zeContextDestroy(ctx));
+  }
+};
+
+struct ZeCommandListDeleter {
+  void operator()(ze_command_list_handle_t cmdList) const {
+    if (cmdList)
+      L0_SAFE_CALL(zeCommandListDestroy(cmdList));
+  }
+};
+
 struct L0RtContext {
   ze_driver_handle_t driver{nullptr};
   ze_device_handle_t device{nullptr};
-  ze_context_handle_t context{nullptr};
+  using UniqueZeContext =
+      std::unique_ptr<std::remove_pointer<ze_context_handle_t>::type,
+                      ZeContextDeleter>;
+  UniqueZeContext context;
+
   // Usually, one immediate command list with ordinal 0 suffices for
   // both copy and compute ops, but leaves HW underutilized.
-  ze_command_list_handle_t immCmdListCompute{nullptr};
+  using UniqueZeCommandList =
+      std::unique_ptr<std::remove_pointer<ze_command_list_handle_t>::type,
+                      ZeCommandListDeleter>;
+  UniqueZeCommandList immCmdListCompute;
   // Copy engines can be used for both memcpy and memset, but
   // they have limitations for memset pattern size (e.g., 1 byte).
-  ze_command_list_handle_t immCmdListCopy{nullptr};
+  UniqueZeCommandList immCmdListCopy;
   uint32_t copyEngineMaxMemoryFillPatternSize{-1u};
 
+  L0RtContext() = default;
   L0RtContext(const int32_t devIdx = 0)
-      : driver(getDriver()), device(getDefaultDevice(devIdx)),
-        context(getDefaultContext()) {
+      : driver(getDriver()), device(getDefaultDevice(devIdx)) {
+    // Create context
+    ze_context_handle_t defaultCtx = getDefaultContext();
+    context.reset(defaultCtx);
+
+    // Determine ordinals
     uint32_t computeEngineOrdinal = -1u, copyEngineOrdinal = -1u;
-    ze_device_properties_t deviceProperties = {};
+    ze_device_properties_t deviceProperties{};
     L0_SAFE_CALL(zeDeviceGetProperties(device, &deviceProperties));
     uint32_t queueGroupCount = 0;
     L0_SAFE_CALL(zeDeviceGetCommandQueueGroupProperties(
@@ -143,6 +168,7 @@ struct L0RtContext {
         queueGroupCount);
     L0_SAFE_CALL(zeDeviceGetCommandQueueGroupProperties(
         device, &queueGroupCount, queueGroupProperties.data()));
+
     for (uint32_t queueGroupIdx = 0; queueGroupIdx < queueGroupCount;
          ++queueGroupIdx) {
       const auto &group = queueGroupProperties[queueGroupIdx];
@@ -155,11 +181,15 @@ struct L0RtContext {
       if (copyEngineOrdinal != -1u && computeEngineOrdinal != -1u)
         break;
     }
+
     // Fallback to the default queue if no dedicated copy queue is available.
     if (copyEngineOrdinal == -1u)
       copyEngineOrdinal = computeEngineOrdinal;
+
     assert(copyEngineOrdinal != -1u && computeEngineOrdinal != -1u &&
            "Expected two engines to be available.");
+
+    // Create copy command list
     ze_command_queue_desc_t cmdQueueDesc{
         ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC,
         nullptr,
@@ -168,18 +198,25 @@ struct L0RtContext {
         0,                 // flags
         ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
         ZE_COMMAND_QUEUE_PRIORITY_NORMAL};
-    L0_SAFE_CALL(zeCommandListCreateImmediate(context, device, &cmdQueueDesc,
-                                              &immCmdListCopy));
+
+    ze_command_list_handle_t rawCmdListCopy = nullptr;
+    L0_SAFE_CALL(zeCommandListCreateImmediate(context.get(), device,
+                                              &cmdQueueDesc, &rawCmdListCopy));
+    immCmdListCopy.reset(rawCmdListCopy);
+
+    // Create compute command list
     cmdQueueDesc.ordinal = computeEngineOrdinal;
-    L0_SAFE_CALL(zeCommandListCreateImmediate(context, device, &cmdQueueDesc,
-                                              &immCmdListCompute));
+    ze_command_list_handle_t rawCmdListCompute = nullptr;
+    L0_SAFE_CALL(zeCommandListCreateImmediate(
+        context.get(), device, &cmdQueueDesc, &rawCmdListCompute));
+    immCmdListCompute.reset(rawCmdListCompute);
   }
-  void cleanup() {
-    L0_SAFE_CALL(zeCommandListDestroy(immCmdListCopy));
-    L0_SAFE_CALL(zeCommandListDestroy(immCmdListCompute));
-    L0_SAFE_CALL(zeContextDestroy(context));
-  }
-  ~L0RtContext() { cleanup(); }
+  L0RtContext(const L0RtContext &) = delete;
+  L0RtContext &operator=(const L0RtContext &) = delete;
+  // Allow move
+  L0RtContext(L0RtContext &&) noexcept = default;
+  L0RtContext &operator=(L0RtContext &&) noexcept = default;
+  ~L0RtContext() = default;
 };
 
 // L0 only supports pre-determined sizes of event pools,
@@ -212,7 +249,7 @@ struct DynamicEventPool {
     eventPoolDesc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
     eventPoolDesc.count = numEvents;
     eventPools.push_back(nullptr);
-    L0_SAFE_CALL(zeEventPoolCreate(rtCtx->context, &eventPoolDesc, 1,
+    L0_SAFE_CALL(zeEventPoolCreate(rtCtx->context.get(), &eventPoolDesc, 1,
                                    &rtCtx->device, &eventPools.back()));
     currentEventsLimit += numEvents;
   }
@@ -246,7 +283,7 @@ struct DynamicEventPool {
 };
 
 L0RtContext &getRtContext() {
-  thread_local static L0RtContext rtContext;
+  thread_local static L0RtContext rtContext(0);
   return rtContext;
 }
 
@@ -286,13 +323,13 @@ struct StreamWrapper {
     implicitEventStack.clear();
   }
 
-  void enqueueOp(
-      std::function<void(ze_event_handle_t, uint32_t, ze_event_handle_t *)>
-          op) {
+  template <typename Func>
+  void enqueueOp(Func &&op) {
     ze_event_handle_t newImplicitEvent = dynEventPool.takeEvent();
     ze_event_handle_t *lastImplicitEventPtr = getLastImplicitEventPtr();
     const uint32_t numWaitEvents = lastImplicitEventPtr ? 1 : 0;
-    op(newImplicitEvent, numWaitEvents, lastImplicitEventPtr);
+    std::forward<Func>(op)(newImplicitEvent, numWaitEvents,
+                           lastImplicitEventPtr);
     implicitEventStack.push_back(newImplicitEvent);
   }
 };
@@ -309,7 +346,7 @@ static ze_module_handle_t loadModule(const void *data, size_t dataSize) {
                            nullptr};
   ze_module_build_log_handle_t buildLogHandle;
   ze_result_t result =
-      zeModuleCreate(getRtContext().context, getRtContext().device, &desc,
+      zeModuleCreate(getRtContext().context.get(), getRtContext().device, &desc,
                      &zeModule, &buildLogHandle);
   if (result != ZE_RESULT_SUCCESS) {
     std::cerr << "Error creating module, error code: " << result << std::endl;
@@ -337,14 +374,12 @@ extern "C" void mgpuStreamSynchronize(StreamWrapper *stream) {
     stream->sync();
 }
 
-extern "C" void mgpuStreamDestroy(StreamWrapper *stream) {
-  if (stream)
-    delete stream;
-}
+extern "C" void mgpuStreamDestroy(StreamWrapper *stream) { delete stream; }
 
 extern "C" void mgpuStreamWaitEvent(StreamWrapper *stream,
                                     ze_event_handle_t event) {
-  assert(stream && event);
+  assert(stream && "Invalid stream");
+  assert(event && "Invalid event");
   stream->sync(event);
 }
 
@@ -364,10 +399,10 @@ extern "C" void mgpuEventSynchronize(ze_event_handle_t event) {
 
 extern "C" void mgpuEventRecord(ze_event_handle_t event,
                                 StreamWrapper *stream) {
-  L0_SAFE_CALL(
-      zeCommandListAppendSignalEvent(getRtContext().immCmdListCopy, event));
-  L0_SAFE_CALL(
-      zeCommandListAppendSignalEvent(getRtContext().immCmdListCompute, event));
+  L0_SAFE_CALL(zeCommandListAppendSignalEvent(
+      getRtContext().immCmdListCopy.get(), event));
+  L0_SAFE_CALL(zeCommandListAppendSignalEvent(
+      getRtContext().immCmdListCompute.get(), event));
 }
 
 extern "C" void *mgpuMemAlloc(uint64_t size, StreamWrapper *stream,
@@ -380,12 +415,13 @@ extern "C" void *mgpuMemAlloc(uint64_t size, StreamWrapper *stream,
     if (isShared) {
       ze_host_mem_alloc_desc_t hostDesc = {};
       hostDesc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
-      L0_SAFE_CALL(zeMemAllocShared(getRtContext().context, &deviceDesc,
+      L0_SAFE_CALL(zeMemAllocShared(getRtContext().context.get(), &deviceDesc,
                                     &hostDesc, size, alignment,
                                     getRtContext().device, &memPtr));
     } else {
-      L0_SAFE_CALL(zeMemAllocDevice(getRtContext().context, &deviceDesc, size,
-                                    alignment, getRtContext().device, &memPtr));
+      L0_SAFE_CALL(zeMemAllocDevice(getRtContext().context.get(), &deviceDesc,
+                                    size, alignment, getRtContext().device,
+                                    &memPtr));
     }
     if (!memPtr)
       throw std::runtime_error("mem allocation failed!");
@@ -396,16 +432,16 @@ extern "C" void *mgpuMemAlloc(uint64_t size, StreamWrapper *stream,
 extern "C" void mgpuMemFree(void *ptr, StreamWrapper *stream) {
   stream->sync();
   if (ptr)
-    L0_SAFE_CALL(zeMemFree(getRtContext().context, ptr));
+    L0_SAFE_CALL(zeMemFree(getRtContext().context.get(), ptr));
 }
 
 extern "C" void mgpuMemcpy(void *dst, void *src, size_t sizeBytes,
                            StreamWrapper *stream) {
   stream->enqueueOp([&](ze_event_handle_t newEvent, uint32_t numWaitEvents,
                         ze_event_handle_t *waitEvents) {
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(getRtContext().immCmdListCopy,
-                                               dst, src, sizeBytes, newEvent,
-                                               numWaitEvents, waitEvents));
+    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(
+        getRtContext().immCmdListCopy.get(), dst, src, sizeBytes, newEvent,
+        numWaitEvents, waitEvents));
   });
 }
 
@@ -414,8 +450,8 @@ void mgpuMemset(void *dst, PATTERN_TYPE value, size_t count,
                 StreamWrapper *stream) {
   auto listType =
       getRtContext().copyEngineMaxMemoryFillPatternSize >= sizeof(PATTERN_TYPE)
-          ? getRtContext().immCmdListCopy
-          : getRtContext().immCmdListCompute;
+          ? getRtContext().immCmdListCopy.get()
+          : getRtContext().immCmdListCompute.get();
   stream->enqueueOp([&](ze_event_handle_t newEvent, uint32_t numWaitEvents,
                         ze_event_handle_t *waitEvents) {
     L0_SAFE_CALL(zeCommandListAppendMemoryFill(
@@ -471,7 +507,7 @@ extern "C" void mgpuLaunchKernel(ze_kernel_handle_t kernel, size_t gridX,
   stream->enqueueOp([&](ze_event_handle_t newEvent, uint32_t numWaitEvents,
                         ze_event_handle_t *waitEvents) {
     L0_SAFE_CALL(zeCommandListAppendLaunchKernel(
-        getRtContext().immCmdListCompute, kernel, &dispatch, newEvent,
+        getRtContext().immCmdListCompute.get(), kernel, &dispatch, newEvent,
         numWaitEvents, waitEvents));
   });
 }
@@ -484,7 +520,6 @@ extern "C" void mgpuSetDefaultDevice(int32_t devIdx) {
   catchAll([&]() {
     // For now, a user must ensure that streams and events complete
     // and are destroyed before switching a device.
-    getRtContext().cleanup();
     getRtContext() = L0RtContext(devIdx);
     getDynamicEventPool() = DynamicEventPool(&getRtContext());
   });
