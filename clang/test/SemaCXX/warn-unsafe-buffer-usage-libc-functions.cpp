@@ -155,3 +155,21 @@ void ff(char * p, char * q, std::span<char> s, std::span<char> s2) {
   wcscpy_s();
 #pragma clang diagnostic pop
 }
+
+
+namespace CXXMethodNoWarn {
+  struct StrBuff
+  {
+    void strcpy() const;
+    void strcpy(char* dst) const;
+    void Strcpy(char* dst) const;
+  };
+
+  void test(const StrBuff& str)
+  {
+    char buff[64];
+    str.strcpy();
+    str.strcpy(buff);
+    str.Strcpy(buff);
+  }
+} // namespace CXXMethodNoWarn

@@ -1925,7 +1925,7 @@ public:
     if (!CE || !CE->getDirectCallee())
       return false;
     const auto *FD = dyn_cast<FunctionDecl>(CE->getDirectCallee());
-    if (!FD)
+    if (!FD || isa<CXXMethodDecl>(FD))
       return false;
     auto isSingleStringLiteralArg = false;
     if (CE->getNumArgs() == 1) {
