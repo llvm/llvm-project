@@ -18,7 +18,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/SemaInternal.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringExtras.h"
 
 using namespace clang;
