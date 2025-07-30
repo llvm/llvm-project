@@ -22,12 +22,12 @@ BindingInfo::findAvailableBinding(dxil::ResourceClass RC, uint32_t Space,
 
 BindingInfo::RegisterSpace &
 BindingInfo::BindingSpaces::getOrInsertSpace(uint32_t Space) {
-  for (auto *I = Spaces.begin(); I != Spaces.end(); ++I) {
-    if (I->Space == Space)
-      return *I;
-    if (I->Space < Space)
+  for (auto It = Spaces.begin(), End = Spaces.end(); It != End; ++It) {
+    if (It->Space == Space)
+      return *It;
+    if (It->Space < Space)
       continue;
-    return *Spaces.insert(I, Space);
+    return *Spaces.insert(It, Space);
   }
   return Spaces.emplace_back(Space);
 }
