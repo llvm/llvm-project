@@ -5,6 +5,8 @@ from lldbsuite.test import lldbutil
 
 
 class ExprDefinitionInDylibTestCase(TestBase):
+    NO_DEBUG_INFO_TESTCASE = True
+
     def test(self):
         """
         Tests that we can call functions whose definition
