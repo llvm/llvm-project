@@ -1117,11 +1117,11 @@ define void @test_masked_store_unaligned_v8i32(<8 x i32> %data, ptr %ptr, <8 x i
 ; SVE-LABEL: test_masked_store_unaligned_v8i32:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; SVE-NEXT:    zip2 v3.8b, v2.8b, v0.8b
-; SVE-NEXT:    zip1 v2.8b, v2.8b, v0.8b
-; SVE-NEXT:    add x8, x0, #17
+; SVE-NEXT:    zip1 v3.8b, v2.8b, v0.8b
+; SVE-NEXT:    zip2 v2.8b, v2.8b, v0.8b
+; SVE-NEXT:    add x8, x0, #1
 ; SVE-NEXT:    ptrue p0.s, vl4
-; SVE-NEXT:    add x9, x0, #1
+; SVE-NEXT:    add x9, x0, #17
 ; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE-NEXT:    ushll v3.4s, v3.4h, #0
 ; SVE-NEXT:    ushll v2.4s, v2.4h, #0
@@ -1131,8 +1131,8 @@ define void @test_masked_store_unaligned_v8i32(<8 x i32> %data, ptr %ptr, <8 x i
 ; SVE-NEXT:    cmlt v2.4s, v2.4s, #0
 ; SVE-NEXT:    cmpne p1.s, p0/z, z3.s, #0
 ; SVE-NEXT:    cmpne p0.s, p0/z, z2.s, #0
-; SVE-NEXT:    st1w { z1.s }, p1, [x8]
-; SVE-NEXT:    st1w { z0.s }, p0, [x9]
+; SVE-NEXT:    st1w { z0.s }, p1, [x8]
+; SVE-NEXT:    st1w { z1.s }, p0, [x9]
 ; SVE-NEXT:    ret
   %ptr_i8 = getelementptr i8, ptr %ptr, i32 1
   %ptr_vec = bitcast ptr %ptr_i8 to ptr

@@ -22541,9 +22541,6 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
   SDValue Value = ST->getValue();
   SDValue Ptr   = ST->getBasePtr();
 
-  if (SDValue MaskedStore = foldToMaskedStore(ST, DAG, SDLoc(N)))
-    return MaskedStore;
-
   // If this is a store of a bit convert, store the input value if the
   // resultant store does not need a higher alignment than the original.
   if (Value.getOpcode() == ISD::BITCAST && !ST->isTruncatingStore() &&
@@ -22771,6 +22768,9 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
 
   if (SDValue NewSt = splitMergedValStore(ST))
     return NewSt;
+
+  if (SDValue MaskedStore = foldToMaskedStore(ST, DAG, SDLoc(N)))
+    return MaskedStore;
 
   return ReduceLoadOpStoreWidth(N);
 }

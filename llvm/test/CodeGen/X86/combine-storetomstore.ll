@@ -392,8 +392,8 @@ define void @test_masked_store_success_v8i64(<8 x i64> %x, ptr %ptr, <8 x i1> %m
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
 ; AVX-NEXT:    vpmovsxdq %xmm2, %xmm2
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm4, %ymm2
-; AVX-NEXT:    vmaskmovpd %ymm1, %ymm3, 32(%rdi)
 ; AVX-NEXT:    vmaskmovpd %ymm0, %ymm2, (%rdi)
+; AVX-NEXT:    vmaskmovpd %ymm1, %ymm3, 32(%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
@@ -405,8 +405,8 @@ define void @test_masked_store_success_v8i64(<8 x i64> %x, ptr %ptr, <8 x i1> %m
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
 ; AVX2-NEXT:    vpslld $31, %xmm2, %xmm2
 ; AVX2-NEXT:    vpmovsxdq %xmm2, %ymm2
-; AVX2-NEXT:    vpmaskmovq %ymm1, %ymm3, 32(%rdi)
 ; AVX2-NEXT:    vpmaskmovq %ymm0, %ymm2, (%rdi)
+; AVX2-NEXT:    vpmaskmovq %ymm1, %ymm3, 32(%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -502,8 +502,8 @@ define void @test_masked_store_success_v8f64(<8 x double> %x, ptr %ptr, <8 x i1>
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
 ; AVX-NEXT:    vpmovsxdq %xmm2, %xmm2
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm4, %ymm2
-; AVX-NEXT:    vmaskmovpd %ymm1, %ymm3, 32(%rdi)
 ; AVX-NEXT:    vmaskmovpd %ymm0, %ymm2, (%rdi)
+; AVX-NEXT:    vmaskmovpd %ymm1, %ymm3, 32(%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
@@ -515,8 +515,8 @@ define void @test_masked_store_success_v8f64(<8 x double> %x, ptr %ptr, <8 x i1>
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
 ; AVX2-NEXT:    vpslld $31, %xmm2, %xmm2
 ; AVX2-NEXT:    vpmovsxdq %xmm2, %ymm2
-; AVX2-NEXT:    vmaskmovpd %ymm1, %ymm3, 32(%rdi)
 ; AVX2-NEXT:    vmaskmovpd %ymm0, %ymm2, (%rdi)
+; AVX2-NEXT:    vmaskmovpd %ymm1, %ymm3, 32(%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -1506,8 +1506,8 @@ define void @test_masked_store_unaligned_v8i64(<8 x i64> %data, ptr %ptr, <8 x i
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
 ; AVX-NEXT:    vpmovsxdq %xmm2, %xmm2
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm4, %ymm2
-; AVX-NEXT:    vmaskmovpd %ymm1, %ymm3, 33(%rdi)
 ; AVX-NEXT:    vmaskmovpd %ymm0, %ymm2, 1(%rdi)
+; AVX-NEXT:    vmaskmovpd %ymm1, %ymm3, 33(%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
@@ -1519,8 +1519,8 @@ define void @test_masked_store_unaligned_v8i64(<8 x i64> %data, ptr %ptr, <8 x i
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
 ; AVX2-NEXT:    vpslld $31, %xmm2, %xmm2
 ; AVX2-NEXT:    vpmovsxdq %xmm2, %ymm2
-; AVX2-NEXT:    vpmaskmovq %ymm1, %ymm3, 33(%rdi)
 ; AVX2-NEXT:    vpmaskmovq %ymm0, %ymm2, 1(%rdi)
+; AVX2-NEXT:    vpmaskmovq %ymm1, %ymm3, 33(%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
