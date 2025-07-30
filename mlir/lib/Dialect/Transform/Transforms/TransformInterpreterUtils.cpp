@@ -129,15 +129,29 @@ transform::detail::findTransformEntryPoint(Operation *root, ModuleOp module,
     l.push_back(module);
   for (Operation *op : l) {
     transform::TransformOpInterface transform = nullptr;
-    op->walk<WalkOrder::PreOrder>(
-        [&](transform::NamedSequenceOp namedSequenceOp) {
+    for (Region &region : op->getRegions()) {
+      for (Block &block : region.getBlocks()) {
+        auto namedSequenceOps = block.getOps<transform::NamedSequenceOp>();
+        for (transform::NamedSequenceOp namedSequenceOp : namedSequenceOps) {
           if (namedSequenceOp.getSymName() == entryPoint) {
             transform = cast<transform::TransformOpInterface>(
                 namedSequenceOp.getOperation());
-            return WalkResult::interrupt();
+            break;
           }
-          return WalkResult::advance();
-        });
+        }
+      }
+    }
+    if (!transform) {
+      op->walk<WalkOrder::PreOrder>(
+          [&](transform::NamedSequenceOp namedSequenceOp) {
+            if (namedSequenceOp.getSymName() == entryPoint) {
+              transform = cast<transform::TransformOpInterface>(
+                  namedSequenceOp.getOperation());
+              return WalkResult::interrupt();
+            }
+            return WalkResult::advance();
+          });
+    }
     if (transform)
       return transform;
   }
