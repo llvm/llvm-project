@@ -138,8 +138,7 @@ class SPIRVLegalizePointerCast : public FunctionPass {
       Output = loadFirstValueFromAggregate(B, SVT->getElementType(),
                                            OriginalOperand, LI);
     }
-    // Destination is a smaller vector than source.
-    // or different vector type.
+    // Destination is a smaller vector than source or different vector type.
     // - float3 v3 = vector4;
     // - float4 v2 = int4;
     else if (SVT && DVT)
