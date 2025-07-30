@@ -285,11 +285,9 @@ static std::optional<std::string> MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
   if (die_id == LLDB_INVALID_UID)
     return std::nullopt;
 
-  return FunctionCallLabel{
-      /*module_id=*/module_id,
-      /*symbol_id=*/die_id,
-      /*.lookup_name=*/name
-  }
+  return FunctionCallLabel{/*module_id=*/module_id,
+                           /*symbol_id=*/die_id,
+                           /*.lookup_name=*/name}
       .toString();
 }
 
