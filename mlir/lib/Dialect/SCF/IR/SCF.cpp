@@ -152,7 +152,7 @@ ParseResult ExecuteRegionOp::parse(OpAsmParser &parser,
 void ExecuteRegionOp::print(OpAsmPrinter &p) {
   p.printOptionalArrowTypeList(getResultTypes());
   p << ' ';
-  if(getNoInline())
+  if (getNoInline())
     p << "no_inline ";
   p.printRegion(getRegion(),
                 /*printEntryBlockArgs=*/false,
