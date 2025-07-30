@@ -11,6 +11,9 @@ bt
 # CHECK: frame #0: {{.*}}`__clang_trap_msg$Undefined Behavior Sanitizer$Integer addition overflowed{{.*}}
 # CHECK: frame #1: {{.*}}`main at ubsan_add_overflow.c
 
+frame info
+# CHECK: frame #{{.*}}`main at ubsan_add_overflow.c
+
 frame recognizer info 0
 # CHECK: frame 0 is recognized by Verbose Trap StackFrame Recognizer
 
