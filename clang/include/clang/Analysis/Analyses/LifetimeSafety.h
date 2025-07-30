@@ -33,6 +33,7 @@ namespace internal {
 class Fact;
 class FactManager;
 class LoanPropagationAnalysis;
+class ExpiredLoansAnalysis;
 struct LifetimeFactory;
 
 /// A generic, type-safe wrapper for an ID, distinguished by its `Tag` type.
@@ -52,6 +53,10 @@ template <typename Tag> struct ID {
     IDBuilder.AddInteger(Value);
   }
 };
+template <typename Tag>
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, ID<Tag> ID) {
+  return OS << ID.Value;
+}
 
 using LoanID = ID<struct LoanTag>;
 using OriginID = ID<struct OriginTag>;
@@ -81,6 +86,9 @@ public:
   /// Returns the set of loans an origin holds at a specific program point.
   LoanSet getLoansAtPoint(OriginID OID, ProgramPoint PP) const;
 
+  /// Returns the set of loans that have expired at a specific program point.
+  LoanSet getExpiredLoansAtPoint(ProgramPoint PP) const;
+
   /// Finds the OriginID for a given declaration.
   /// Returns a null optional if not found.
   std::optional<OriginID> getOriginIDForDecl(const ValueDecl *D) const;
@@ -105,6 +113,7 @@ private:
   std::unique_ptr<LifetimeFactory> Factory;
   std::unique_ptr<FactManager> FactMgr;
   std::unique_ptr<LoanPropagationAnalysis> LoanPropagation;
+  std::unique_ptr<ExpiredLoansAnalysis> ExpiredLoans;
 };
 } // namespace internal
 } // namespace clang::lifetimes

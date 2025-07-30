@@ -73,14 +73,16 @@ struct MissingFeatures {
   // FuncOp handling
   static bool opFuncOpenCLKernelMetadata() { return false; }
   static bool opFuncAstDeclAttr() { return false; }
-  static bool opFuncCallingConv() { return false; }
-  static bool opFuncExtraAttrs() { return false; }
-  static bool opFuncNoProto() { return false; }
-  static bool opFuncCPUAndFeaturesAttributes() { return false; }
-  static bool opFuncSection() { return false; }
-  static bool opFuncMultipleReturnVals() { return false; }
   static bool opFuncAttributesForDefinition() { return false; }
+  static bool opFuncCallingConv() { return false; }
+  static bool opFuncCPUAndFeaturesAttributes() { return false; }
+  static bool opFuncExceptions() { return false; }
+  static bool opFuncExtraAttrs() { return false; }
   static bool opFuncMaybeHandleStaticInExternC() { return false; }
+  static bool opFuncMultipleReturnVals() { return false; }
+  static bool opFuncOperandBundles() { return false; }
+  static bool opFuncParameterAttributes() { return false; }
+  static bool opFuncSection() { return false; }
   static bool setLLVMFunctionFEnvAttributes() { return false; }
   static bool setFunctionAttributes() { return false; }
 
@@ -96,7 +98,6 @@ struct MissingFeatures {
   static bool opCallReturn() { return false; }
   static bool opCallArgEvaluationOrder() { return false; }
   static bool opCallCallConv() { return false; }
-  static bool opCallNoPrototypeFunc() { return false; }
   static bool opCallMustTail() { return false; }
   static bool opCallVirtual() { return false; }
   static bool opCallInAlloca() { return false; }
@@ -109,6 +110,7 @@ struct MissingFeatures {
   static bool opCallCIRGenFuncInfoExtParamInfo() { return false; }
   static bool opCallLandingPad() { return false; }
   static bool opCallContinueBlock() { return false; }
+  static bool opCallChain() { return false; }
 
   // CXXNewExpr
   static bool exprNewNullCheck() { return false; }
@@ -196,6 +198,8 @@ struct MissingFeatures {
   static bool cxxRecordStaticMembers() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
+  static bool ehCleanupFlags() { return false; }
+  static bool ehstackBranches() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
   static bool emitLifetimeMarkers() { return false; }
@@ -222,7 +226,6 @@ struct MissingFeatures {
   static bool moduleNameHash() { return false; }
   static bool msabi() { return false; }
   static bool needsGlobalCtorDtor() { return false; }
-  static bool nonFineGrainedBitfields() { return false; }
   static bool objCBlocks() { return false; }
   static bool objCGC() { return false; }
   static bool objCLifetime() { return false; }
@@ -254,6 +257,7 @@ struct MissingFeatures {
   static bool dtorCleanups() { return false; }
   static bool vtableInitialization() { return false; }
   static bool msvcBuiltins() { return false; }
+  static bool vlas() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
