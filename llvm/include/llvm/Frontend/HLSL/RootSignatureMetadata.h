@@ -15,7 +15,6 @@
 #define LLVM_FRONTEND_HLSL_ROOTSIGNATUREMETADATA_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/MC/DXContainerRootSignature.h"

@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Metadata.h"
@@ -274,7 +273,7 @@ Error MetadataParser::parseRootDescriptors(
   assert(ElementKind == RootSignatureElementKind::SRV ||
          ElementKind == RootSignatureElementKind::UAV ||
          ElementKind == RootSignatureElementKind::CBV &&
-             "parseRootDescriptors should only be called with RootDescriptor"
+             "parseRootDescriptors should only be called with RootDescriptor "
              "element kind.");
   if (RootDescriptorNode->getNumOperands() != 5)
     return make_error<InvalidRSMetadataFormat>("Root Descriptor Element");
