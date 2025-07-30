@@ -743,8 +743,9 @@ Error LTO::add(std::unique_ptr<InputFile> Input,
       Conf.VisibilityScheme = Config::ELF;
   }
 
+  ArrayRef<SymbolResolution> InputRes = Res;
   for (unsigned I = 0; I != Input->Mods.size(); ++I) {
-    if (auto Err = addModule(*Input, I, Res).moveInto(Res))
+    if (auto Err = addModule(*Input, InputRes, I, Res).moveInto(Res))
       return Err;
   }
 
@@ -753,8 +754,8 @@ Error LTO::add(std::unique_ptr<InputFile> Input,
 }
 
 Expected<ArrayRef<SymbolResolution>>
-LTO::addModule(InputFile &Input, unsigned ModI,
-               ArrayRef<SymbolResolution> Res) {
+LTO::addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
+               unsigned ModI, ArrayRef<SymbolResolution> Res) {
   Expected<BitcodeLTOInfo> LTOInfo = Input.Mods[ModI].getLTOInfo();
   if (!LTOInfo)
     return LTOInfo.takeError();
@@ -791,7 +792,7 @@ LTO::addModule(InputFile &Input, unsigned ModI,
     return addThinLTO(BM, ModSyms, Res);
 
   RegularLTO.EmptyCombinedModule = false;
-  auto ModOrErr = addRegularLTO(BM, ModSyms, Res);
+  auto ModOrErr = addRegularLTO(Input, InputRes, BM, ModSyms, Res);
   if (!ModOrErr)
     return ModOrErr.takeError();
   Res = ModOrErr->second;
@@ -846,7 +847,8 @@ handleNonPrevailingComdat(GlobalValue &GV,
 // linkRegularLTO.
 Expected<
     std::pair<LTO::RegularLTOState::AddedModule, ArrayRef<SymbolResolution>>>
-LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
+LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
+                   BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
                    ArrayRef<SymbolResolution> Res) {
   RegularLTOState::AddedModule Mod;
   Expected<std::unique_ptr<Module>> MOrErr =
@@ -860,13 +862,34 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
   if (Error Err = M.materializeMetadata())
     return std::move(Err);
 
-  // If cfi.functions is present and we are in regular LTO mode, LowerTypeTests
-  // will rename local functions in the merged module as "<function name>.1".
-  // This causes linking errors, since other parts of the module expect the
-  // original function name.
-  if (LTOMode == LTOK_UnifiedRegular)
+  if (LTOMode == LTOK_UnifiedRegular) {
+    // cfi.functions metadata is intended to be used with ThinLTO and may
+    // trigger invalid IR transformations if they are present when doing regular
+    // LTO, so delete it.
     if (NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions"))
       M.eraseNamedMetadata(CfiFunctionsMD);
+  } else if (NamedMDNode *AliasesMD = M.getNamedMetadata("aliases")) {
+    // Delete aliases entries for non-prevailing symbols on the ThinLTO side of
+    // this input file.
+    DenseSet<StringRef> Prevailing;
+    for (auto [I, R] : zip(Input.symbols(), Res))
+      if (R.Prevailing && !I.getIRName().empty())
+        Prevailing.insert(I.getIRName());
+    std::vector<MDNode *> AliasGroups;
+    for (MDNode *AliasGroup : AliasesMD->operands()) {
+      std::vector<Metadata *> Aliases;
+      for (Metadata *Alias : AliasGroup->operands()) {
+        if (isa<MDString>(Alias) &&
+            Prevailing.count(cast<MDString>(Alias)->getString()))
+          Aliases.push_back(Alias);
+      }
+      if (Aliases.size() > 1)
+        AliasGroups.push_back(MDTuple::get(RegularLTO.Ctx, Aliases));
+    }
+    AliasesMD->clearOperands();
+    for (MDNode *G : AliasGroups)
+      AliasesMD->addOperand(G);
+  }
 
   UpgradeDebugInfo(M);
 
