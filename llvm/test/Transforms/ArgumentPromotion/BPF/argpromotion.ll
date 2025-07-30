@@ -62,7 +62,7 @@ entry:
 ; Without number-of-argument constraint, argpromotion will create a function signature with 6 arguments. Since
 ; bpf target only supports maximum 5 arguments, so no argpromotion here.
 ;
-; CHECK:  i32 @foo1(ptr nocapture noundef readonly %p1, ptr nocapture noundef readonly %p2, ptr nocapture noundef readonly %p3)
+; CHECK:  i32 @foo1(ptr noundef readonly captures(none) %p1, ptr noundef readonly captures(none) %p2, ptr noundef readonly captures(none) %p3)
 
 define internal i32 @foo2(ptr noundef %p1, ptr noundef %p2, ptr noundef %p3) {
 entry:

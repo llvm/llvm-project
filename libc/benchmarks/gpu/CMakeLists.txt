@@ -10,7 +10,7 @@ function(add_benchmark benchmark_name)
     "LINK_LIBRARIES;DEPENDS" # Multi-value arguments
     ${ARGN}
   )
-  
+
   if(NOT libc.src.time.clock IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
     message(FATAL_ERROR "target does not support clock")
   endif()
@@ -45,6 +45,7 @@ add_unittest_framework_library(
     LibcGpuBenchmark.h
     BenchmarkLogger.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.big_int
     libc.src.__support.c_string
     libc.src.__support.CPP.string

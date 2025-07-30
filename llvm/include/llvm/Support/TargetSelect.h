@@ -16,34 +16,41 @@
 #define LLVM_SUPPORT_TARGETSELECT_H
 
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
 
 extern "C" {
   // Declare all of the target-initialization functions that are available.
-#define LLVM_TARGET(TargetName) void LLVMInitialize##TargetName##TargetInfo();
+#define LLVM_TARGET(TargetName)                                                \
+  LLVM_ABI void LLVMInitialize##TargetName##TargetInfo();
 #include "llvm/Config/Targets.def"
 
-#define LLVM_TARGET(TargetName) void LLVMInitialize##TargetName##Target();
+#define LLVM_TARGET(TargetName)                                                \
+  LLVM_ABI void LLVMInitialize##TargetName##Target();
 #include "llvm/Config/Targets.def"
 
   // Declare all of the target-MC-initialization functions that are available.
-#define LLVM_TARGET(TargetName) void LLVMInitialize##TargetName##TargetMC();
+#define LLVM_TARGET(TargetName)                                                \
+  LLVM_ABI void LLVMInitialize##TargetName##TargetMC();
 #include "llvm/Config/Targets.def"
 
   // Declare all of the available assembly printer initialization functions.
-#define LLVM_ASM_PRINTER(TargetName) void LLVMInitialize##TargetName##AsmPrinter();
+#define LLVM_ASM_PRINTER(TargetName)                                           \
+  LLVM_ABI void LLVMInitialize##TargetName##AsmPrinter();
 #include "llvm/Config/AsmPrinters.def"
 
   // Declare all of the available assembly parser initialization functions.
-#define LLVM_ASM_PARSER(TargetName) void LLVMInitialize##TargetName##AsmParser();
+#define LLVM_ASM_PARSER(TargetName)                                            \
+  LLVM_ABI void LLVMInitialize##TargetName##AsmParser();
 #include "llvm/Config/AsmParsers.def"
 
   // Declare all of the available disassembler initialization functions.
-#define LLVM_DISASSEMBLER(TargetName) \
-  void LLVMInitialize##TargetName##Disassembler();
+#define LLVM_DISASSEMBLER(TargetName)                                          \
+  LLVM_ABI void LLVMInitialize##TargetName##Disassembler();
 #include "llvm/Config/Disassemblers.def"
 
 // Declare all of the available TargetMCA initialization functions.
-#define LLVM_TARGETMCA(TargetName) void LLVMInitialize##TargetName##TargetMCA();
+#define LLVM_TARGETMCA(TargetName)                                             \
+  LLVM_ABI void LLVMInitialize##TargetName##TargetMCA();
 #include "llvm/Config/TargetMCAs.def"
 }
 

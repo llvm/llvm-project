@@ -7,11 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/time/gmtime_r.h"
-#include "src/time/time_utils.h"
+#include "src/time/time_constants.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmMatcher.h"
-
-using LIBC_NAMESPACE::time_utils::TimeConstants;
 
 // gmtime and gmtime_r share the same code and thus didn't repeat all the tests
 // from gmtime. Added couple of validation tests.
@@ -22,16 +20,17 @@ TEST(LlvmLibcGmTimeR, EndOf32BitEpochYear) {
   struct tm tm_data;
   struct tm *tm_data_ptr;
   tm_data_ptr = LIBC_NAMESPACE::gmtime_r(&seconds, &tm_data);
-  EXPECT_TM_EQ((tm{7,  // sec
-                   14, // min
-                   3,  // hr
-                   19, // day
-                   0,  // tm_mon starts with 0 for Jan
-                   2038 - TimeConstants::TIME_YEAR_BASE, // year
-                   2,                                    // wday
-                   7,                                    // yday
-                   0}),
-               *tm_data_ptr);
+  EXPECT_TM_EQ(
+      (tm{7,  // sec
+          14, // min
+          3,  // hr
+          19, // day
+          0,  // tm_mon starts with 0 for Jan
+          2038 - LIBC_NAMESPACE::time_constants::TIME_YEAR_BASE, // year
+          2,                                                     // wday
+          7,                                                     // yday
+          0}),
+      *tm_data_ptr);
   EXPECT_TM_EQ(*tm_data_ptr, tm_data);
 }
 
@@ -43,15 +42,16 @@ TEST(LlvmLibcGmTimeR, Max64BitYear) {
   struct tm tm_data;
   struct tm *tm_data_ptr;
   tm_data_ptr = LIBC_NAMESPACE::gmtime_r(&seconds, &tm_data);
-  EXPECT_TM_EQ((tm{50, // sec
-                   50, // min
-                   12, // hr
-                   1,  // day
-                   0,  // tm_mon starts with 0 for Jan
-                   2147483647 - TimeConstants::TIME_YEAR_BASE, // year
-                   2,                                          // wday
-                   50,                                         // yday
-                   0}),
-               *tm_data_ptr);
+  EXPECT_TM_EQ(
+      (tm{50, // sec
+          50, // min
+          12, // hr
+          1,  // day
+          0,  // tm_mon starts with 0 for Jan
+          2147483647 - LIBC_NAMESPACE::time_constants::TIME_YEAR_BASE, // year
+          2,                                                           // wday
+          50,                                                          // yday
+          0}),
+      *tm_data_ptr);
   EXPECT_TM_EQ(*tm_data_ptr, tm_data);
 }

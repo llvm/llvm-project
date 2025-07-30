@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mattr=-xnack -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SDAG,GFX8 -enable-var-scope %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -mattr=-xnack -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SDAG,GFX9 -enable-var-scope %s
-; RUN: llc -global-isel -mtriple=amdgcn--amdpal -mattr=-xnack -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GISEL,GFX9 -enable-var-scope %s
+; RUN: llc -mtriple=amdgcn--amdpal -mattr=-xnack < %s | FileCheck -check-prefixes=GCN,SDAG,GFX8 -enable-var-scope %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -mattr=-xnack < %s | FileCheck -check-prefixes=GCN,SDAG,GFX9 -enable-var-scope %s
+; RUN: llc -global-isel -mtriple=amdgcn--amdpal -mattr=-xnack -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GISEL,GFX9 -enable-var-scope %s
 
 declare amdgpu_gfx float @extern_func(float) #0
 declare amdgpu_gfx float @extern_func_many_args(<64 x float>) #0
@@ -125,7 +125,7 @@ define amdgpu_gfx float @simple_stack_recurse(float %arg0) #0 {
   ret float %add
 }
 
-@lds = internal addrspace(3) global [64 x float] undef
+@lds = internal addrspace(3) global [64 x float] poison
 
 define amdgpu_gfx float @simple_lds(float %arg0) #0 {
   %val = load float, ptr addrspace(3) @lds
@@ -143,7 +143,7 @@ attributes #0 = { nounwind }
 ; GCN: amdpal.pipelines:
 ; GCN-NEXT:  - .registers:
 ; SDAG-NEXT:     '0x2e12 (COMPUTE_PGM_RSRC1)': 0xaf01ca{{$}}
-; GISEL-NEXT:    '0x2e12 (COMPUTE_PGM_RSRC1)': 0xaf01cb{{$}}
+; GISEL-NEXT:    '0x2e12 (COMPUTE_PGM_RSRC1)': 0xaf01ca{{$}}
 ; GCN-NEXT:      '0x2e13 (COMPUTE_PGM_RSRC2)': 0x8001{{$}}
 ; GCN-NEXT:    .shader_functions:
 ; GCN-NEXT:      dynamic_stack:
@@ -157,10 +157,10 @@ attributes #0 = { nounwind }
 ; GCN-NEXT:        .backend_stack_size: 0x10{{$}}
 ; GCN-NEXT:        .lds_size:       0{{$}}
 ; SDAG-NEXT:        .sgpr_count:     0x25{{$}}
-; GISEL-NEXT:        .sgpr_count:     0x27{{$}}
+; GISEL-NEXT:        .sgpr_count:     0x26{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x10{{$}}
 ; SDAG-NEXT:        .vgpr_count:     0x3{{$}}
-; GISEL-NEXT:        .vgpr_count:     0x5{{$}}
+; GISEL-NEXT:        .vgpr_count:     0x4{{$}}
 ; GCN-NEXT:      multiple_stack:
 ; GCN-NEXT:        .backend_stack_size: 0x24{{$}}
 ; GCN-NEXT:        .lds_size:       0{{$}}

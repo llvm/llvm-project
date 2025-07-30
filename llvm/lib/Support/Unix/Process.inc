@@ -17,21 +17,11 @@
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include <mutex>
 #include <optional>
-#if HAVE_FCNTL_H
 #include <fcntl.h>
-#endif
-#ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
-#endif
-#ifdef HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
-#endif
-#ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
-#endif
-#if HAVE_SIGNAL_H
 #include <signal.h>
-#endif
 #if defined(HAVE_MALLINFO) || defined(HAVE_MALLINFO2)
 #include <malloc.h>
 #endif
@@ -41,11 +31,11 @@
 #ifdef HAVE_MALLOC_MALLOC_H
 #include <malloc/malloc.h>
 #endif
+#ifdef HAVE_GETAUXVAL
+#include <sys/auxv.h>
+#endif
 #ifdef HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
-#endif
-#ifdef HAVE_TERMIOS_H
-#include <termios.h>
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -79,7 +69,9 @@ Process::Pid Process::getProcessId() {
 // On Cygwin, getpagesize() returns 64k(AllocationGranularity) and
 // offset in mmap(3) should be aligned to the AllocationGranularity.
 Expected<unsigned> Process::getPageSize() {
-#if defined(HAVE_GETPAGESIZE)
+#if defined(HAVE_GETAUXVAL)
+  static const int page_size = ::getauxval(AT_PAGESZ);
+#elif defined(HAVE_GETPAGESIZE)
   static const int page_size = ::getpagesize();
 #elif defined(HAVE_SYSCONF)
   static long page_size = ::sysconf(_SC_PAGE_SIZE);
@@ -89,6 +81,8 @@ Expected<unsigned> Process::getPageSize() {
   if (page_size == -1)
     return errorCodeToError(errnoAsErrorCode());
 
+  assert(page_size > 0 && "Page size cannot be 0");
+  assert((page_size % 1024) == 0 && "Page size must be aligned by 1024");
   return static_cast<unsigned>(page_size);
 }
 
@@ -142,7 +136,6 @@ void Process::GetTimeUsage(TimePoint<> &elapsed,
 // their operation. To prevent the disk from filling up, this function
 // does what's necessary to prevent their generation.
 void Process::PreventCoreFiles() {
-#if HAVE_SETRLIMIT
   struct rlimit rlim;
   getrlimit(RLIMIT_CORE, &rlim);
 #ifdef __linux__
@@ -165,7 +158,6 @@ void Process::PreventCoreFiles() {
   rlim.rlim_cur = 0;
 #endif
   setrlimit(RLIMIT_CORE, &rlim);
-#endif
 
 #if defined(HAVE_MACH_MACH_H) && !defined(__GNU__)
   // Disable crash reporting on Mac OS X 10.0-10.4
@@ -315,31 +307,40 @@ bool Process::FileDescriptorIsDisplayed(int fd) {
 #endif
 }
 
-static unsigned getColumns() {
+static unsigned getColumns(int FileID) {
   // If COLUMNS is defined in the environment, wrap to that many columns.
+  // This matches GCC.
   if (const char *ColumnsStr = std::getenv("COLUMNS")) {
     int Columns = std::atoi(ColumnsStr);
     if (Columns > 0)
       return Columns;
   }
 
-  // We used to call ioctl TIOCGWINSZ to determine the width. It is considered
-  // unuseful.
-  return 0;
+  // Some shells do not export COLUMNS; query the column count via ioctl()
+  // instead if it isn't available.
+  unsigned Columns = 0;
+
+#if defined(HAVE_SYS_IOCTL_H) && !defined(__sun__)
+  struct winsize ws;
+  if (ioctl(FileID, TIOCGWINSZ, &ws) == 0)
+    Columns = ws.ws_col;
+#endif
+
+  return Columns;
 }
 
 unsigned Process::StandardOutColumns() {
   if (!StandardOutIsDisplayed())
     return 0;
 
-  return getColumns();
+  return getColumns(0);
 }
 
 unsigned Process::StandardErrColumns() {
   if (!StandardErrIsDisplayed())
     return 0;
 
-  return getColumns();
+  return getColumns(1);
 }
 
 static bool terminalHasColors() {

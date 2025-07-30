@@ -202,19 +202,16 @@ tstnbz16 a3
 
 # CHECK-ASM: br16 .L.test
 # CHECK-ASM: encoding: [A,0x04'A']
-# CHECK-ASM: fixup A - offset: 0, value: .L.test, kind: fixup_csky_pcrel_imm10_scale2
 .L.test:
 br16 .L.test
 
 # CHECK-ASM: bt16 .L.test2
 # CHECK-ASM: encoding: [A,0x08'A']
-# CHECK-ASM: fixup A - offset: 0, value: .L.test2, kind: fixup_csky_pcrel_imm10_scale2
 .L.test2:
 bt16 .L.test2
 
 # CHECK-ASM: bf16 .L.test3
 # CHECK-ASM: encoding: [A,0x0c'A']
-# CHECK-ASM: fixup A - offset: 0, value: .L.test3, kind: fixup_csky_pcrel_imm10_scale2
 .L.test3:
 bf16 .L.test3
 
@@ -228,7 +225,6 @@ jsr16 a3
 
 # CHECK-ASM: lrw16 a0, [.L.test14]
 # CHECK-ASM: encoding: [A,A]
-# CHECK-ASM: fixup A - offset: 0, value: .L.test14, kind: fixup_csky_pcrel_uimm7_scale4
 .L.test14:
 lrw16 a0, [.L.test14]
 

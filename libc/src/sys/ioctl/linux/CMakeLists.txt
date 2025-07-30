@@ -1,0 +1,12 @@
+add_entrypoint_object(
+  ioctl
+  SRCS
+    ioctl.cpp
+  HDRS
+    ../ioctl.h
+  DEPENDS
+    libc.include.sys_ioctl
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)

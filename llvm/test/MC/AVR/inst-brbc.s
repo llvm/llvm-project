@@ -10,15 +10,15 @@ foo:
   .short 0xf74c
   .short 0xf4c7
 
-; CHECK: brvc (.Ltmp0+8)+2   ; encoding: [0bAAAAA011,0b111101AA]
-; CHECK-NEXT:                ; fixup A - offset: 0, value: (.Ltmp0+8)+2, kind: fixup_7_pcrel
+; CHECK: brvc .Ltmp0+8+2   ; encoding: [0bAAAAA011,0b111101AA]
 ;
-; CHECK: brcc (.Ltmp1-16)+2  ; encoding: [0bAAAAA000,0b111101AA]
-; CHECK-NEXT:                ; fixup A - offset: 0, value: (.Ltmp1-16)+2, kind: fixup_7_pcrel
+; CHECK: brcc .Ltmp1-16+2  ; encoding: [0bAAAAA000,0b111101AA]
 
 ; INST-LABEL: <foo>:
-; INST-NEXT: 23 f4   brvc .+8
-; INST-NEXT: c0 f7   brsh .-16
+; INST-NEXT: fb f7   brvc .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0xa
+; INST-NEXT: f8 f7   brsh .-2
+; INST-NEXT: R_AVR_7_PCREL .text-0xc
 ; INST-NEXT: 59 f7   brne .-42
 ; INST-NEXT: 52 f7   brpl .-44
 ; INST-NEXT: 4c f7   brge .-46

@@ -1228,18 +1228,18 @@ define <3 x i32> @v3i32_i32(<3 x i32> %a, <3 x i32> %b, <3 x i32> %d, <3 x i32> 
 ; CHECK-GI-LABEL: v3i32_i32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
-; CHECK-GI-NEXT:    mov w9, #-1 // =0xffffffff
 ; CHECK-GI-NEXT:    cmgt v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    mov v4.s[0], w8
-; CHECK-GI-NEXT:    mov v5.s[0], w9
+; CHECK-GI-NEXT:    fmov s4, w8
 ; CHECK-GI-NEXT:    mov v4.s[1], w8
-; CHECK-GI-NEXT:    mov v5.s[1], w9
 ; CHECK-GI-NEXT:    mov v4.s[2], w8
-; CHECK-GI-NEXT:    mov v5.s[2], w9
+; CHECK-GI-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    mov v1.s[1], w8
 ; CHECK-GI-NEXT:    ushl v0.4s, v0.4s, v4.4s
-; CHECK-GI-NEXT:    neg v1.4s, v4.4s
-; CHECK-GI-NEXT:    sshl v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    eor v1.16b, v0.16b, v5.16b
+; CHECK-GI-NEXT:    neg v4.4s, v4.4s
+; CHECK-GI-NEXT:    sshl v0.4s, v0.4s, v4.4s
+; CHECK-GI-NEXT:    mov v1.s[2], w8
+; CHECK-GI-NEXT:    eor v1.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    and v0.16b, v2.16b, v0.16b
 ; CHECK-GI-NEXT:    and v1.16b, v3.16b, v1.16b
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
@@ -1403,28 +1403,26 @@ define <2 x i128> @v2i128_i128(<2 x i128> %a, <2 x i128> %b, <2 x i128> %d, <2 x
 ;
 ; CHECK-GI-LABEL: v2i128_i128:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    cmp x1, x5
-; CHECK-GI-NEXT:    ldp x8, x9, [sp]
-; CHECK-GI-NEXT:    cset w10, lt
 ; CHECK-GI-NEXT:    cmp x0, x4
-; CHECK-GI-NEXT:    cset w13, lo
+; CHECK-GI-NEXT:    ldp x9, x10, [sp]
+; CHECK-GI-NEXT:    cset w8, lo
 ; CHECK-GI-NEXT:    cmp x1, x5
-; CHECK-GI-NEXT:    csel w10, w13, w10, eq
-; CHECK-GI-NEXT:    cmp x3, x7
-; CHECK-GI-NEXT:    ldp x13, x14, [sp, #32]
-; CHECK-GI-NEXT:    cset w15, lt
+; CHECK-GI-NEXT:    cset w11, lt
+; CHECK-GI-NEXT:    ldp x14, x15, [sp, #32]
+; CHECK-GI-NEXT:    csel w8, w8, w11, eq
 ; CHECK-GI-NEXT:    cmp x2, x6
-; CHECK-GI-NEXT:    ldp x11, x12, [sp, #16]
-; CHECK-GI-NEXT:    cset w16, lo
+; CHECK-GI-NEXT:    cset w11, lo
 ; CHECK-GI-NEXT:    cmp x3, x7
+; CHECK-GI-NEXT:    ldp x12, x13, [sp, #16]
+; CHECK-GI-NEXT:    cset w16, lt
 ; CHECK-GI-NEXT:    ldp x17, x18, [sp, #48]
-; CHECK-GI-NEXT:    csel w15, w16, w15, eq
-; CHECK-GI-NEXT:    tst w10, #0x1
-; CHECK-GI-NEXT:    csel x0, x8, x13, ne
-; CHECK-GI-NEXT:    csel x1, x9, x14, ne
-; CHECK-GI-NEXT:    tst w15, #0x1
-; CHECK-GI-NEXT:    csel x2, x11, x17, ne
-; CHECK-GI-NEXT:    csel x3, x12, x18, ne
+; CHECK-GI-NEXT:    csel w11, w11, w16, eq
+; CHECK-GI-NEXT:    tst w8, #0x1
+; CHECK-GI-NEXT:    csel x0, x9, x14, ne
+; CHECK-GI-NEXT:    csel x1, x10, x15, ne
+; CHECK-GI-NEXT:    tst w11, #0x1
+; CHECK-GI-NEXT:    csel x2, x12, x17, ne
+; CHECK-GI-NEXT:    csel x3, x13, x18, ne
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = icmp slt <2 x i128> %a, %b

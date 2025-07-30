@@ -24,7 +24,7 @@ DEFINE_COMPILERRT_FUNCTION(__floatunssidfvfp)
 #else
 	vmov	s15, r0        // move int to float register s15
 	vcvt.f64.u32 d7, s15   // convert 32-bit int in s15 to double in d7
-	vmov	r0, r1, d7     // move d7 to result register pair r0/r1
+	VMOV_FROM_DOUBLE(r0, r1, d7) // move d7 to result register pair r0/r1
 #endif
 	bx	lr
 END_COMPILERRT_FUNCTION(__floatunssidfvfp)

@@ -99,9 +99,15 @@ def AMDGPUtc_return_chain: SDNode<"AMDGPUISD::TC_RETURN_CHAIN",
   [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
 >;
 
+// With dynamic VGPRs.
+def AMDGPUtc_return_chain_dvgpr: SDNode<"AMDGPUISD::TC_RETURN_CHAIN_DVGPR",
+  SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>,
+  [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
+>;
+
 def AMDGPUtrap : SDNode<"AMDGPUISD::TRAP",
-  SDTypeProfile<0, -1, [SDTCisVT<0, i16>]>,
-    [SDNPHasChain, SDNPVariadic, SDNPSideEffect, SDNPInGlue]
+  SDTypeProfile<0, 1, [SDTCisVT<0, i16>]>,
+    [SDNPHasChain, SDNPVariadic, SDNPSideEffect, SDNPOptInGlue]
 >;
 
 def AMDGPUconstdata_ptr : SDNode<
@@ -341,6 +347,17 @@ def AMDGPUfdot2_impl : SDNode<"AMDGPUISD::FDOT2",
                   []>;
 
 def AMDGPUperm_impl : SDNode<"AMDGPUISD::PERM", AMDGPUDTIntTernaryOp, []>;
+
+// Marks the entry into a whole wave function.
+def AMDGPUwhole_wave_setup : SDNode<
+  "AMDGPUISD::WHOLE_WAVE_SETUP", SDTypeProfile<1, 0, [SDTCisInt<0>]>,
+  [SDNPHasChain, SDNPSideEffect]>;
+
+// Marks the return from a whole wave function.
+def AMDGPUwhole_wave_return : SDNode<
+  "AMDGPUISD::WHOLE_WAVE_RETURN", SDTNone,
+  [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
+>;
 
 // SI+ export
 def AMDGPUExportOp : SDTypeProfile<0, 8, [

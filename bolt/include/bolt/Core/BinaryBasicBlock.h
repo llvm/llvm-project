@@ -52,9 +52,8 @@ public:
     uint64_t MispredictedCount; /// number of branches mispredicted
 
     bool operator<(const BinaryBranchInfo &Other) const {
-      return (Count < Other.Count) ||
-             (Count == Other.Count &&
-              MispredictedCount < Other.MispredictedCount);
+      return std::tie(Count, MispredictedCount) <
+             std::tie(Other.Count, Other.MispredictedCount);
     }
   };
 
@@ -818,6 +817,9 @@ public:
   std::pair<uint64_t, uint64_t> getOutputAddressRange() const {
     return OutputAddressRange;
   }
+
+  uint64_t getOutputStartAddress() const { return OutputAddressRange.first; }
+  uint64_t getOutputEndAddress() const { return OutputAddressRange.second; }
 
   bool hasLocSyms() const { return LocSyms != nullptr; }
 

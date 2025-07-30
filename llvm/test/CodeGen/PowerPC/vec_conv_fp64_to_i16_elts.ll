@@ -371,12 +371,12 @@ define void @test16elt(ptr noalias nocapture sret(<16 x i16>) %agg.result, ptr n
 ; CHECK-P8-NEXT:    mtvsrd v8, r4
 ; CHECK-P8-NEXT:    xxmrgld v2, vs1, vs0
 ; CHECK-P8-NEXT:    xxswapd vs1, v2
+; CHECK-P8-NEXT:    stxvd2x vs1, 0, r3
 ; CHECK-P8-NEXT:    vmrghh v7, v7, v8
 ; CHECK-P8-NEXT:    xxmrglw vs3, v7, v6
 ; CHECK-P8-NEXT:    xxmrgld v3, vs3, vs2
 ; CHECK-P8-NEXT:    xxswapd vs0, v3
 ; CHECK-P8-NEXT:    stxvd2x vs0, r3, r5
-; CHECK-P8-NEXT:    stxvd2x vs1, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test16elt:
@@ -918,12 +918,12 @@ define void @test16elt_signed(ptr noalias nocapture sret(<16 x i16>) %agg.result
 ; CHECK-P8-NEXT:    mtvsrd v8, r4
 ; CHECK-P8-NEXT:    xxmrgld v2, vs1, vs0
 ; CHECK-P8-NEXT:    xxswapd vs1, v2
+; CHECK-P8-NEXT:    stxvd2x vs1, 0, r3
 ; CHECK-P8-NEXT:    vmrghh v7, v7, v8
 ; CHECK-P8-NEXT:    xxmrglw vs3, v7, v6
 ; CHECK-P8-NEXT:    xxmrgld v3, vs3, vs2
 ; CHECK-P8-NEXT:    xxswapd vs0, v3
 ; CHECK-P8-NEXT:    stxvd2x vs0, r3, r5
-; CHECK-P8-NEXT:    stxvd2x vs1, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test16elt_signed:

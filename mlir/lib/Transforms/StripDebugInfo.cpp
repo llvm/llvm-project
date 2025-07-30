@@ -8,7 +8,6 @@
 
 #include "mlir/Transforms/Passes.h"
 
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
 

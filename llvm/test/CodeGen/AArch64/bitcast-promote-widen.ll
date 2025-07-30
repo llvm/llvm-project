@@ -6,8 +6,7 @@
 define <2 x i16> @bitcast_v2i16_v2f16(<2 x half> %x) {
 ; CHECK-LABEL: bitcast_v2i16_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-NEXT:    ret
   %y = bitcast <2 x half> %x to <2 x i16>
   ret <2 x i16> %y

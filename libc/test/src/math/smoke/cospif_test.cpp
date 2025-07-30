@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
+#include "hdr/stdint_proxy.h"
+#include "src/__support/libc_errno.h"
 #include "src/math/cospif.h"
 #include "test/UnitTest/FPMatcher.h"
-
-#include <stdint.h>
 
 using LlvmLibcCospifTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcCospifTest, SpecialNumbers) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
+
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::cospif(sNaN), FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cospif(aNaN));
   EXPECT_MATH_ERRNO(0);
@@ -32,3 +34,30 @@ TEST_F(LlvmLibcCospifTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cospif(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcCospifTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cospif(min_denormal));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cospif(max_denormal));
+}
+
+TEST_F(LlvmLibcCospifTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cospif(min_denormal));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cospif(max_denormal));
+}
+
+TEST_F(LlvmLibcCospifTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cospif(min_denormal));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cospif(max_denormal));
+}
+
+#endif

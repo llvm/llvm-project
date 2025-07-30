@@ -59,10 +59,9 @@ public:
   ExprEngineConsumer(CompilerInstance &C)
       : C(C),
         ChkMgr(C.getASTContext(), C.getAnalyzerOpts(), C.getPreprocessor()),
-        CTU(C), Consumers(),
-        AMgr(C.getASTContext(), C.getPreprocessor(), Consumers,
-             CreateRegionStoreManager, CreateRangeConstraintManager, &ChkMgr,
-             C.getAnalyzerOpts()),
+        CTU(C), AMgr(C.getASTContext(), C.getPreprocessor(), {},
+                     CreateRegionStoreManager, CreateRangeConstraintManager,
+                     &ChkMgr, C.getAnalyzerOpts()),
         VisitedCallees(), FS(),
         Eng(CTU, AMgr, &VisitedCallees, &FS, ExprEngine::Inline_Regular) {}
 };

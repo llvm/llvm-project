@@ -37,7 +37,7 @@ define i8 @n2(i8 %x) {
 
 define <2 x i8> @t3_vec_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @t3_vec_splat(
-; CHECK-NEXT:    [[DIV:%.*]] = ashr exact <2 x i8> [[X:%.*]], <i8 5, i8 5>
+; CHECK-NEXT:    [[DIV:%.*]] = ashr exact <2 x i8> [[X:%.*]], splat (i8 5)
 ; CHECK-NEXT:    ret <2 x i8> [[DIV]]
 ;
   %div = sdiv exact <2 x i8> %x, <i8 32, i8 32>
@@ -144,8 +144,8 @@ define i8 @not_prove_exact_with_high_mask(i8 %x, i8 %y) {
 
 define <2 x i8> @prove_exact_with_high_mask_splat_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @prove_exact_with_high_mask_splat_vec(
-; CHECK-NEXT:    [[A:%.*]] = shl <2 x i8> [[X:%.*]], <i8 3, i8 3>
-; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i8> [[A]], <i8 3, i8 3>
+; CHECK-NEXT:    [[A:%.*]] = shl <2 x i8> [[X:%.*]], splat (i8 3)
+; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i8> [[A]], splat (i8 3)
 ; CHECK-NEXT:    ret <2 x i8> [[D]]
 ;
   %a = shl <2 x i8> %x, <i8 3, i8 3>

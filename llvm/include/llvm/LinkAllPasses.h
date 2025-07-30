@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRPrintingPasses.h"
+#include "llvm/Support/AlwaysTrue.h"
 #include "llvm/Support/Valgrind.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
@@ -47,17 +48,19 @@
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
 #include <cstdlib>
 
+namespace llvm {
+class Triple;
+}
+
 namespace {
 struct ForcePassLinking {
   ForcePassLinking() {
-    // We must reference the passes in such a way that compilers will not
-    // delete it all as dead code, even with whole program optimization,
-    // yet is effectively a NO-OP. As the compiler isn't smart enough
-    // to know that getenv() never returns -1, this will do the job.
-    // This is so that globals in the translation units where these functions
-    // are defined are forced to be initialized, populating various
-    // registries.
-    if (std::getenv("bar") != (char *)-1)
+    // We must reference the passes in such a way that compilers will not delete
+    // it all as dead code, even with whole program optimization, yet is
+    // effectively a NO-OP. This is so that globals in the translation units
+    // where these functions are defined are forced to be initialized,
+    // populating various registries.
+    if (llvm::getNonFoldableAlwaysTrue())
       return;
 
     (void)llvm::createAtomicExpandLegacyPass();
@@ -71,6 +74,7 @@ struct ForcePassLinking {
     (void)llvm::createCFGSimplificationPass();
     (void)llvm::createStructurizeCFGPass();
     (void)llvm::createDXILResourceWrapperPassPass();
+    (void)llvm::createDXILResourceTypeWrapperPassPass();
     (void)llvm::createDeadArgEliminationPass();
     (void)llvm::createDeadCodeEliminationPass();
     (void)llvm::createDependenceAnalysisWrapperPass();
@@ -79,6 +83,7 @@ struct ForcePassLinking {
     (void)llvm::createDomOnlyViewerWrapperPassPass();
     (void)llvm::createDomViewerWrapperPassPass();
     (void)llvm::createAlwaysInlinerLegacyPass();
+    (void)llvm::createGlobalMergeFuncPass();
     (void)llvm::createGlobalsAAWrapperPass();
     (void)llvm::createInstSimplifyLegacyPass();
     (void)llvm::createInstructionCombiningPass();
@@ -98,6 +103,7 @@ struct ForcePassLinking {
     (void)llvm::createNaryReassociatePass();
     (void)llvm::createObjCARCContractPass();
     (void)llvm::createPromoteMemoryToRegisterPass();
+    (void)llvm::createRegToMemWrapperPass();
     (void)llvm::createPostDomOnlyPrinterWrapperPassPass();
     (void)llvm::createPostDomPrinterWrapperPassPass();
     (void)llvm::createPostDomOnlyViewerWrapperPassPass();
@@ -112,7 +118,6 @@ struct ForcePassLinking {
     (void)llvm::createSROAPass();
     (void)llvm::createSingleLoopExtractorPass();
     (void)llvm::createTailCallEliminationPass();
-    (void)llvm::createTLSVariableHoistPass();
     (void)llvm::createConstantHoistingPass();
     (void)llvm::createCodeGenPrepareLegacyPass();
     (void)llvm::createPostInlineEntryExitInstrumenterPass();
@@ -145,7 +150,7 @@ struct ForcePassLinking {
     llvm::Function::Create(nullptr, llvm::GlobalValue::ExternalLinkage)
         ->viewCFGOnly();
     llvm::RGPassManager RGM;
-    llvm::TargetLibraryInfoImpl TLII;
+    llvm::TargetLibraryInfoImpl TLII((llvm::Triple()));
     llvm::TargetLibraryInfo TLI(TLII);
     llvm::AliasAnalysis AA(TLI);
     llvm::BatchAAResults BAA(AA);

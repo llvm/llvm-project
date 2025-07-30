@@ -18,12 +18,15 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 #include <memory>
@@ -44,6 +47,7 @@ class DebugHandlerBase;
 class DIE;
 class DIEAbbrev;
 class DwarfDebug;
+class EHStreamer;
 class GCMetadataPrinter;
 class GCStrategy;
 class GlobalAlias;
@@ -83,7 +87,7 @@ class RemarkStreamer;
 }
 
 /// This class is intended to be used as a driving class for all asm writers.
-class AsmPrinter : public MachineFunctionPass {
+class LLVM_ABI AsmPrinter : public MachineFunctionPass {
 public:
   /// Target machine description.
   TargetMachine &TM;
@@ -130,6 +134,19 @@ public:
   /// purpose of calculating its size (e.g. using the .size directive). By
   /// default, this is equal to CurrentFnSym.
   MCSymbol *CurrentFnSymForSize = nullptr;
+
+  /// Vector of symbols marking the position of callsites in the current
+  /// function, keyed by their containing basic block.
+  /// The callsite symbols of each block are stored in the order they appear
+  /// in that block.
+  DenseMap<const MachineBasicBlock *, SmallVector<MCSymbol *, 1>>
+      CurrentFnCallsiteSymbols;
+
+  /// Provides the profile information for constants.
+  const StaticDataProfileInfo *SDPI = nullptr;
+
+  /// The profile summary information.
+  const ProfileSummaryInfo *PSI = nullptr;
 
   /// Map a basic block section ID to the begin and end symbols of that section
   ///  which determine the section's range.
@@ -187,14 +204,16 @@ protected:
   /// For dso_local functions, the current $local alias for the function.
   MCSymbol *CurrentFnBeginLocal = nullptr;
 
-  /// A vector of all debug/EH info emitters we should use. This vector
-  /// maintains ownership of the emitters.
+  /// A handle to the EH info emitter (if present).
+  // Only for EHStreamer subtypes, but some C++ compilers will incorrectly warn
+  // us if we declare that directly.
+  SmallVector<std::unique_ptr<AsmPrinterHandler>, 1> EHHandlers;
+
+  // A vector of all Debuginfo emitters we should use. Protected so that
+  // targets can add their own. This vector maintains ownership of the
+  // emitters.
   SmallVector<std::unique_ptr<AsmPrinterHandler>, 2> Handlers;
   size_t NumUserHandlers = 0;
-
-  /// Debuginfo handler. Protected so that targets can add their own.
-  SmallVector<std::unique_ptr<DebugHandlerBase>, 1> DebugHandlers;
-  size_t NumUserDebugHandlers = 0;
 
   StackMaps SM;
 
@@ -229,7 +248,8 @@ private:
   bool DbgInfoAvailable = false;
 
 protected:
-  explicit AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
+  AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer,
+             char &ID = AsmPrinter::ID);
 
 public:
   ~AsmPrinter() override;
@@ -282,6 +302,10 @@ public:
   /// to emit them as well, return the whole set.
   ArrayRef<MCSymbol *> getAddrLabelSymbolToEmit(const BasicBlock *BB);
 
+  /// Creates a new symbol to be used for the beginning of a callsite at the
+  /// specified basic block.
+  MCSymbol *createCallsiteSymbol(const MachineBasicBlock &MBB);
+
   /// If the specified function has had any references to address-taken blocks
   /// generated, but the block got deleted, return the symbol now so we can
   /// emit it.  This prevents emitting a reference to a symbol that has no
@@ -327,6 +351,10 @@ public:
     DwarfUsesRelocationsAcrossSections = Enable;
   }
 
+  /// Returns a section suffix (hot or unlikely) for the constant if profiles
+  /// are available. Returns empty string otherwise.
+  StringRef getConstantSectionSuffix(const Constant *C) const;
+
   //===------------------------------------------------------------------===//
   // XRay instrumentation implementation.
   //===------------------------------------------------------------------===//
@@ -353,7 +381,7 @@ public:
     const class Function *Fn;
     uint8_t Version;
 
-    void emit(int, MCStreamer *) const;
+    LLVM_ABI void emit(int, MCStreamer *) const;
   };
 
   // All the sleds to be emitted.
@@ -494,7 +522,10 @@ public:
                      unsigned MaxBytesToEmit = 0) const;
 
   /// Lower the specified LLVM Constant to an MCExpr.
-  virtual const MCExpr *lowerConstant(const Constant *CV);
+  /// When BaseCV is present, we are lowering the element at BaseCV plus Offset.
+  virtual const MCExpr *lowerConstant(const Constant *CV,
+                                      const Constant *BaseCV = nullptr,
+                                      uint64_t Offset = 0);
 
   /// Print a general LLVM constant to the .s file.
   /// On AIX, when an alias refers to a sub-element of a global variable, the
@@ -526,8 +557,6 @@ public:
   //===------------------------------------------------------------------===//
 
   void addAsmPrinterHandler(std::unique_ptr<AsmPrinterHandler> Handler);
-
-  void addDebugHandler(std::unique_ptr<DebugHandlerBase> Handler);
 
   // Targets can, or in the case of EmitInstruction, must implement these to
   // customize output.
@@ -631,7 +660,7 @@ public:
                                          StringRef Suffix) const;
 
   /// Return the MCSymbol for the specified ExternalSymbol.
-  MCSymbol *GetExternalSymbolSymbol(Twine Sym) const;
+  MCSymbol *GetExternalSymbolSymbol(const Twine &Sym) const;
 
   /// Return the symbol for the specified jump table entry.
   MCSymbol *GetJTISymbol(unsigned JTID, bool isLinkerPrivate = false) const;
@@ -796,6 +825,17 @@ public:
                            const MCSymbol *BranchLabel) const;
 
   //===------------------------------------------------------------------===//
+  // COFF Helper Routines
+  //===------------------------------------------------------------------===//
+
+  /// Emits symbols and data to allow functions marked with the
+  /// loader-replaceable attribute to be replaceable.
+  void emitCOFFReplaceableFunctionData(Module &M);
+
+  /// Emits the @feat.00 symbol indicating the features enabled in this module.
+  void emitCOFFFeatureSymbol(Module &M);
+
+  //===------------------------------------------------------------------===//
   // Inline Asm Support
   //===------------------------------------------------------------------===//
 
@@ -892,10 +932,10 @@ private:
   // Internal Implementation Details
   //===------------------------------------------------------------------===//
 
-  void emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
-                          const MachineBasicBlock *MBB, unsigned uid) const;
+  virtual void emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
+                                 ArrayRef<unsigned> JumpTableIndices);
 
-  void emitJumpTableSizesSection(const MachineJumpTableInfo *MJTI,
+  void emitJumpTableSizesSection(const MachineJumpTableInfo &MJTI,
                                  const Function &F) const;
 
   void emitLLVMUsedList(const ConstantArray *InitList);
@@ -907,11 +947,13 @@ private:
   GCMetadataPrinter *getOrCreateGCPrinter(GCStrategy &S);
   void emitGlobalIFunc(Module &M, const GlobalIFunc &GI);
 
-private:
   /// This method decides whether the specified basic block requires a label.
   bool shouldEmitLabelForBasicBlock(const MachineBasicBlock &MBB) const;
 
 protected:
+  virtual void emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
+                                  const MachineBasicBlock *MBB,
+                                  unsigned uid) const;
   virtual void emitGlobalAlias(const Module &M, const GlobalAlias &GA);
   virtual bool shouldEmitWeakSwiftAsyncExtendedFramePointerFlags() const {
     return false;

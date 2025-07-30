@@ -216,7 +216,7 @@ static constexpr CustomOperand Operands[] = {
   {{"HW_REG_SCRATCH_BASE_HI"},     ID_FLAT_SCR_HI,         isGFX12Plus},
   {{"HW_REG_SHADER_CYCLES_LO"},    ID_SHADER_CYCLES,       isGFX12Plus},
 
-  // GFX940 specific registers
+  // GFX942 specific registers
   {{"HW_REG_XCC_ID"},                 ID_XCC_ID,                 isGFX940},
   {{"HW_REG_SQ_PERF_SNAPSHOT_DATA"},  ID_SQ_PERF_SNAPSHOT_DATA,  isGFX940},
   {{"HW_REG_SQ_PERF_SNAPSHOT_DATA1"}, ID_SQ_PERF_SNAPSHOT_DATA1, isGFX940},

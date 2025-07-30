@@ -114,7 +114,7 @@ define <8 x i64> @splatvar_shift_v8i64(<8 x i64> %a, <8 x i64> %b) nounwind {
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpsrlq %xmm1, %zmm0, %zmm0
 ; ALL-NEXT:    retq
-  %splat = shufflevector <8 x i64> %b, <8 x i64> undef, <8 x i32> zeroinitializer
+  %splat = shufflevector <8 x i64> %b, <8 x i64> poison, <8 x i32> zeroinitializer
   %shift = lshr <8 x i64> %a, %splat
   ret <8 x i64> %shift
 }
@@ -125,7 +125,7 @@ define <16 x i32> @splatvar_shift_v16i32(<16 x i32> %a, <16 x i32> %b) nounwind 
 ; ALL-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
 ; ALL-NEXT:    vpsrld %xmm1, %zmm0, %zmm0
 ; ALL-NEXT:    retq
-  %splat = shufflevector <16 x i32> %b, <16 x i32> undef, <16 x i32> zeroinitializer
+  %splat = shufflevector <16 x i32> %b, <16 x i32> poison, <16 x i32> zeroinitializer
   %shift = lshr <16 x i32> %a, %splat
   ret <16 x i32> %shift
 }
@@ -145,7 +145,7 @@ define <32 x i16> @splatvar_shift_v32i16(<32 x i16> %a, <32 x i16> %b) nounwind 
 ; AVX512BW-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
 ; AVX512BW-NEXT:    vpsrlw %xmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
-  %splat = shufflevector <32 x i16> %b, <32 x i16> undef, <32 x i32> zeroinitializer
+  %splat = shufflevector <32 x i16> %b, <32 x i16> poison, <32 x i32> zeroinitializer
   %shift = lshr <32 x i16> %a, %splat
   ret <32 x i16> %shift
 }
@@ -176,7 +176,7 @@ define <64 x i8> @splatvar_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; AVX512BW-NEXT:    vpbroadcastb %xmm1, %zmm1
 ; AVX512BW-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
-  %splat = shufflevector <64 x i8> %b, <64 x i8> undef, <64 x i32> zeroinitializer
+  %splat = shufflevector <64 x i8> %b, <64 x i8> poison, <64 x i32> zeroinitializer
   %shift = lshr <64 x i8> %a, %splat
   ret <64 x i8> %shift
 }
@@ -192,7 +192,7 @@ define <8 x i64> @splatvar_modulo_shift_v8i64(<8 x i64> %a, <8 x i64> %b) nounwi
 ; ALL-NEXT:    vpsrlq %xmm1, %zmm0, %zmm0
 ; ALL-NEXT:    retq
   %mod = and <8 x i64> %b, <i64 63, i64 63, i64 63, i64 63, i64 63, i64 63, i64 63, i64 63>
-  %splat = shufflevector <8 x i64> %mod, <8 x i64> undef, <8 x i32> zeroinitializer
+  %splat = shufflevector <8 x i64> %mod, <8 x i64> poison, <8 x i32> zeroinitializer
   %shift = lshr <8 x i64> %a, %splat
   ret <8 x i64> %shift
 }
@@ -204,7 +204,7 @@ define <16 x i32> @splatvar_modulo_shift_v16i32(<16 x i32> %a, <16 x i32> %b) no
 ; ALL-NEXT:    vpsrld %xmm1, %zmm0, %zmm0
 ; ALL-NEXT:    retq
   %mod = and <16 x i32> %b, <i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31>
-  %splat = shufflevector <16 x i32> %mod, <16 x i32> undef, <16 x i32> zeroinitializer
+  %splat = shufflevector <16 x i32> %mod, <16 x i32> poison, <16 x i32> zeroinitializer
   %shift = lshr <16 x i32> %a, %splat
   ret <16 x i32> %shift
 }
@@ -225,7 +225,7 @@ define <32 x i16> @splatvar_modulo_shift_v32i16(<32 x i16> %a, <32 x i16> %b) no
 ; AVX512BW-NEXT:    vpsrlw %xmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
   %mod = and <32 x i16> %b, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
-  %splat = shufflevector <32 x i16> %mod, <32 x i16> undef, <32 x i32> zeroinitializer
+  %splat = shufflevector <32 x i16> %mod, <32 x i16> poison, <32 x i32> zeroinitializer
   %shift = lshr <32 x i16> %a, %splat
   ret <32 x i16> %shift
 }
@@ -257,7 +257,7 @@ define <64 x i8> @splatvar_modulo_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwi
 ; AVX512BW-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
   %mod = and <64 x i8> %b, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
-  %splat = shufflevector <64 x i8> %mod, <64 x i8> undef, <64 x i32> zeroinitializer
+  %splat = shufflevector <64 x i8> %mod, <64 x i8> poison, <64 x i32> zeroinitializer
   %shift = lshr <64 x i8> %a, %splat
   ret <64 x i8> %shift
 }

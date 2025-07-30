@@ -45,10 +45,14 @@ sym1:
 // CHECK-NEXT:           .word   0xd4d4d4d4
 // CHECK-NEXT:           .word   0xd4d4d4d4
 // CHECK-NEXT:           .word   0xd4d4d4d4
+// CHECK-EMPTY:
+// CHECK-NEXT: <elsewhere@plt>:
 // CHECK-NEXT:     10230: add     r12, pc, #0, #12
 // CHECK-NEXT:           add     r12, r12, #32
 // CHECK-NEXT:           ldr     pc, [r12, #124]!
 // CHECK-NEXT:     1023c: d4 d4 d4 d4 .word   0xd4d4d4d4
+// CHECK-EMPTY:
+// CHECK-NEXT: <weakref@plt>:
 // CHECK-NEXT:     10240: add     r12, pc, #0, #12
 // CHECK-NEXT:           add     r12, r12, #32
 // CHECK-NEXT:           ldr     pc, [r12, #112]!

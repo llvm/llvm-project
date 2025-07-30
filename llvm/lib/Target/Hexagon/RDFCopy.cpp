@@ -14,7 +14,6 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RDFGraph.h"
 #include "llvm/CodeGen/RDFLiveness.h"
 #include "llvm/CodeGen/RDFRegisters.h"
@@ -134,8 +133,8 @@ bool CopyPropagation::run() {
     for (NodeId I : Copies) {
       dbgs() << "Instr: " << *DFG.addr<StmtNode*>(I).Addr->getCode();
       dbgs() << "   eq: {";
-      if (CopyMap.count(I)) {
-        for (auto J : CopyMap.at(I))
+      if (auto It = CopyMap.find(I); It != CopyMap.end()) {
+        for (auto J : It->second)
           dbgs() << ' ' << Print<RegisterRef>(J.first, DFG) << '='
                  << Print<RegisterRef>(J.second, DFG);
       }

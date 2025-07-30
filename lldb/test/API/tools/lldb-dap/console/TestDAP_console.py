@@ -19,6 +19,7 @@ def get_subprocess(root_process, process_name):
 
     self.assertTrue(False, "No subprocess with name %s found" % process_name)
 
+
 class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
     def check_lldb_command(
         self, lldb_command, contains_string, assert_msg, command_escape_prefix="`"
@@ -65,6 +66,7 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         # Cause a "scopes" to be sent for frame zero which should update the
         # selected thread and frame to frame 0.
         self.dap_server.get_local_variables(frameIndex=0)
+
         # Verify frame #0 is selected in the command interpreter by running
         # the "frame select" command with no frame index which will print the
         # currently selected frame.
@@ -73,10 +75,10 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         # Cause a "scopes" to be sent for frame one which should update the
         # selected thread and frame to frame 1.
         self.dap_server.get_local_variables(frameIndex=1)
+
         # Verify frame #1 is selected in the command interpreter by running
         # the "frame select" command with no frame index which will print the
         # currently selected frame.
-
         self.check_lldb_command("frame select", "frame #1", "frame 1 is selected")
 
     def test_custom_escape_prefix(self):
@@ -142,9 +144,9 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         )
 
         # Verify the exit status message is printed.
-        self.assertIn(
-            "exited with status = -1 (0xffffffff) debugserver died with signal SIGTERM",
+        self.assertRegex(
             console_output,
+            ".*exited with status = -1 .* died with signal SIGTERM.*",
             "Exit status does not contain message 'exited with status'",
         )
 
@@ -163,4 +165,24 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
             "exited with status = 0 (0x00000000)",
             console_output,
             "Exit status does not contain message 'exited with status'",
+        )
+
+    def test_diagnositcs(self):
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+
+        core = self.getBuildArtifact("minidump.core")
+        self.yaml2obj("minidump.yaml", core)
+        self.dap_server.request_evaluate(
+            f"target create --core  {core}", context="repl"
+        )
+
+        diagnostics = self.collect_important(
+            timeout_secs=self.DEFAULT_TIMEOUT, pattern="minidump file"
+        )
+
+        self.assertIn(
+            "warning: unable to retrieve process ID from minidump file",
+            diagnostics,
+            "diagnostic found in important output",
         )

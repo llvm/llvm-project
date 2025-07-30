@@ -1,8 +1,8 @@
-; RUN: not llc < %s -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs | FileCheck --check-prefix=GCN %s
-; RUN: not llc < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=GCN --check-prefix=VI %s
+; RUN: not llc < %s -mtriple=amdgcn -mcpu=bonaire | FileCheck --check-prefix=GCN %s
+; RUN: not llc < %s -mtriple=amdgcn -mcpu=tonga | FileCheck --check-prefix=GCN --check-prefix=VI %s
 
-; RUN: not llc < %s -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs 2>&1 | FileCheck --check-prefix=NOGCN --check-prefix=NOSI %s
-; RUN: not llc < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs 2>&1 | FileCheck --check-prefix=NOGCN %s
+; RUN: not llc < %s -mtriple=amdgcn -mcpu=bonaire 2>&1 | FileCheck --check-prefix=NOGCN --check-prefix=NOSI %s
+; RUN: not llc < %s -mtriple=amdgcn -mcpu=tonga 2>&1 | FileCheck --check-prefix=NOGCN %s
 
 ; GCN-LABEL: {{^}}inline_reg_constraints:
 ; GCN: flat_load_dword v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]
@@ -295,13 +295,13 @@ define i32 @inline_A_constraint_V1() {
 
 ; NOGCN: error: invalid operand for inline asm constraint 'A'
 define i32 @inline_A_constraint_V2() {
-  %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,A"(<2 x i16> <i16 -4, i16 undef>)
+  %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,A"(<2 x i16> <i16 -4, i16 poison>)
   ret i32 %v0
 }
 
 ; NOGCN: error: invalid operand for inline asm constraint 'A'
 define i32 @inline_A_constraint_V3() {
-  %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,A"(<2 x half> <half undef, half -0.5>)
+  %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,A"(<2 x half> <half poison, half -0.5>)
   ret i32 %v0
 }
 
@@ -456,7 +456,7 @@ define i32 @inline_I_constraint_V1() {
 
 ; NOGCN: error: invalid operand for inline asm constraint 'I'
 define i32 @inline_I_constraint_V2() {
-  %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,I"(<2 x i16> <i16 -4, i16 undef>)
+  %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,I"(<2 x i16> <i16 -4, i16 poison>)
   ret i32 %v0
 }
 
@@ -1160,7 +1160,7 @@ define i32 @inline_DA_constraint_V1() {
 
 ; NOGCN: error: invalid operand for inline asm constraint 'DA'
 define i32 @inline_DA_constraint_V2() {
-  %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,^DA"(<2 x i16> <i16 -4, i16 undef>)
+  %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,^DA"(<2 x i16> <i16 -4, i16 poison>)
   ret i32 %v0
 }
 

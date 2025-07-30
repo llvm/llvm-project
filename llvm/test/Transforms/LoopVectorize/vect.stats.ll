@@ -1,12 +1,12 @@
-; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=4 -force-vector-width=4 -debug-only=loop-vectorize -stats -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=4 -force-vector-width=4 -debug-only=loop-vectorize -enable-early-exit-vectorization --disable-output -stats -S 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
-;
-; We have 2 loops, one of them is vectorizable and the second one is not.
-;
+; We have 3 loops, two of them are vectorizable (with one being early-exit
+; vectorized) and the third one is not.
 
-; CHECK: 2 loop-vectorize               - Number of loops analyzed for vectorization
-; CHECK: 1 loop-vectorize               - Number of loops vectorized
+; CHECK: 3 loop-vectorize               - Number of loops analyzed for vectorization
+; CHECK: 1 loop-vectorize               - Number of early exit loops vectorized
+; CHECK: 2 loop-vectorize               - Number of loops vectorized
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -29,6 +29,36 @@ for.body:                                         ; preds = %entry, %for.body
 
 for.end:                                          ; preds = %entry, %for.body
   ret void
+}
+
+define i32 @early_exit_vectorized(i64 %end) {
+entry:
+  %p1 = alloca [1024 x i32]
+  %p2 = alloca [1024 x i32]
+  call void @init_mem(ptr %p1, i64 1024)
+  call void @init_mem(ptr %p2, i64 1024)
+  %end.clamped = and i64 %end, 1023
+  br label %for.body
+
+for.body:
+  %ind = phi i64 [ %ind.next, %for.inc ], [ 0, %entry ]
+  %arrayidx1 = getelementptr inbounds i32, ptr %p1, i64 %ind
+  %0 = load i32, ptr %arrayidx1, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %p2, i64 %ind
+  %1 = load i32, ptr %arrayidx2, align 4
+  %cmp.early = icmp eq i32 %0, %1
+  br i1 %cmp.early, label %found, label %for.inc
+
+for.inc:
+  %ind.next = add i64 %ind, 1
+  %cmp = icmp ult i64 %ind.next, %end.clamped
+  br i1 %cmp, label %for.body, label %exit
+
+found:
+  ret i32 1
+
+exit:
+  ret i32 0
 }
 
 define void @not_vectorized(ptr nocapture %a, i64 %size) {
@@ -56,3 +86,5 @@ for.body:                                         ; preds = %entry, %for.body
 for.end:                                          ; preds = %entry, %for.body
   ret void
 }
+
+declare void @init_mem(ptr, i64);

@@ -12,10 +12,11 @@ body:             |
     liveins: $d0
     ; CHECK-LABEL: name: no_cross_bank_copies_needed
     ; CHECK: liveins: $d0
-    ; CHECK: %fpr:fpr(s64) = COPY $d0
-    ; CHECK: %lround:gpr(s64) = G_LROUND %fpr(s64)
-    ; CHECK: $d0 = COPY %lround(s64)
-    ; CHECK: RET_ReallyLR implicit $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %fpr:fpr(s64) = COPY $d0
+    ; CHECK-NEXT: %lround:gpr(s64) = G_LROUND %fpr(s64)
+    ; CHECK-NEXT: $d0 = COPY %lround(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %fpr:_(s64) = COPY $d0
     %lround:_(s64) = G_LROUND %fpr
     $d0 = COPY %lround:_(s64)
@@ -31,11 +32,12 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: source_needs_copy
     ; CHECK: liveins: $x0
-    ; CHECK: %gpr:gpr(s64) = COPY $x0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr(s64) = COPY %gpr(s64)
-    ; CHECK: %lround:gpr(s64) = G_LROUND [[COPY]](s64)
-    ; CHECK: $d0 = COPY %lround(s64)
-    ; CHECK: RET_ReallyLR implicit $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %gpr:gpr(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(s64) = COPY %gpr(s64)
+    ; CHECK-NEXT: %lround:gpr(s64) = G_LROUND [[COPY]](s64)
+    ; CHECK-NEXT: $d0 = COPY %lround(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %gpr:_(s64) = COPY $x0
     %lround:_(s64) = G_LROUND %gpr
     $d0 = COPY %lround:_(s64)
@@ -51,11 +53,12 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: load_gets_fpr
     ; CHECK: liveins: $x0
-    ; CHECK: %ptr:gpr(p0) = COPY $x0
-    ; CHECK: %load:fpr(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    ; CHECK: %lround:gpr(s64) = G_LROUND %load(s32)
-    ; CHECK: $d0 = COPY %lround(s64)
-    ; CHECK: RET_ReallyLR implicit $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:gpr(p0) = COPY $x0
+    ; CHECK-NEXT: %load:fpr(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    ; CHECK-NEXT: %lround:gpr(s64) = G_LROUND %load(s32)
+    ; CHECK-NEXT: $d0 = COPY %lround(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %ptr:_(p0) = COPY $x0
     %load:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
     %lround:_(s64) = G_LROUND %load

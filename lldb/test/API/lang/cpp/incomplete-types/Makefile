@@ -16,7 +16,7 @@ main.o: CFLAGS_EXTRAS = -flimit-debug-info
 
 limit: a.o main.o
 	mkdir -p build_limit
-	$(MAKE) -C $(BUILDDIR)/build_limit -f $(MAKEFILE_RULES) \
+	"$(MAKE)" -C $(BUILDDIR)/build_limit -f $(MAKEFILE_RULES) \
 		EXE=../limit CXX_SOURCES="length.cpp ../a.o ../main.o" \
 		CFLAGS_EXTRAS=-flimit-debug-info NO_LIMIT_DEBUG_INFO_FLAGS=""
 

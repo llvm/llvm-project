@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga -mattr=-flat-for-global,-xnack -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tahiti < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga -mattr=-flat-for-global,-xnack < %s | FileCheck -check-prefix=SI %s
 
 ; TODO: Some of those tests fail with OS == amdhsa due to unreasonable register
 ;       allocation differences.
@@ -103,7 +103,7 @@ define amdgpu_kernel void @no_s_addk_i32_k0(ptr addrspace(1) %out, i32 %b) #0 {
   ret void
 }
 
-@lds = addrspace(3) global [512 x i32] undef, align 4
+@lds = addrspace(3) global [512 x i32] poison, align 4
 
 ; SI-LABEL: {{^}}commute_s_addk_i32:
 ; SI: s_addk_i32 s{{[0-9]+}}, 0x800{{$}}

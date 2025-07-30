@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 //  This file defines the template classes ExplodedNode and ExplodedGraph,
-//  which represent a path-sensitive, intra-procedural "exploded graph."
+//  which represent a path-sensitive, intra-procedural "exploded graph".
 //  See "Precise interprocedural dataflow analysis via graph reachability"
 //  by Reps, Horwitz, and Sagiv
 //  (http://portal.acm.org/citation.cfm?id=199462) for the definition of an
@@ -307,11 +307,9 @@ protected:
   // Type definitions.
   using NodeVector = std::vector<ExplodedNode *>;
 
-  /// The roots of the simulation graph. Usually there will be only
-  /// one, but clients are free to establish multiple subgraphs within a single
-  /// SimulGraph. Moreover, these subgraphs can often merge when paths from
-  /// different roots reach the same state at the same program location.
-  NodeVector Roots;
+  /// The root of the simulation graph. Can be nullptr if the graph is empty or
+  /// if it was populated by `createUncachedNode()`.
+  ExplodedNode *Root = nullptr;
 
   /// The nodes in the simulation graph which have been
   /// specially marked as the endpoint of an abstract simulation path.
@@ -345,31 +343,31 @@ public:
   ExplodedGraph();
   ~ExplodedGraph();
 
-  /// Retrieve the node associated with a (Location,State) pair,
-  ///  where the 'Location' is a ProgramPoint in the CFG.  If no node for
-  ///  this pair exists, it is created. IsNew is set to true if
-  ///  the node was freshly created.
+  /// Get the root node of the graph. This may return nullptr if the graph is
+  /// empty or under construction.
+  ExplodedNode *getRoot() const { return Root; }
+
+  /// Retrieve the node associated with a (Location, State) pair, where the
+  /// 'Location' is a ProgramPoint in the CFG. If no node for this pair exists,
+  /// it is created. IsNew is set to true if the node was freshly created.
   ExplodedNode *getNode(const ProgramPoint &L, ProgramStateRef State,
                         bool IsSink = false,
                         bool* IsNew = nullptr);
 
-  /// Create a node for a (Location, State) pair,
-  ///  but don't store it for deduplication later.  This
-  ///  is useful when copying an already completed
-  ///  ExplodedGraph for further processing.
+  /// Create a node for a (Location, State) pair, but don't store it for
+  /// deduplication later. This is useful when copying some nodes from an
+  /// already completed ExplodedGraph for further processing.
   ExplodedNode *createUncachedNode(const ProgramPoint &L,
     ProgramStateRef State,
     int64_t Id,
     bool IsSink = false);
 
-  std::unique_ptr<ExplodedGraph> MakeEmptyGraph() const {
-    return std::make_unique<ExplodedGraph>();
-  }
-
-  /// addRoot - Add an untyped node to the set of roots.
-  ExplodedNode *addRoot(ExplodedNode *V) {
-    Roots.push_back(V);
-    return V;
+  /// Mark a node as the root of the graph. Calling this is an error if the
+  /// graph already has a root node.
+  void designateAsRoot(ExplodedNode *V) {
+    assert(V && "Cannot designate nullptr as root!");
+    assert(!Root && "The graph already has a root, cannot designate another!");
+    Root = V;
   }
 
   /// addEndOfPath - Add an untyped node to the set of EOP nodes.
@@ -378,7 +376,6 @@ public:
     return V;
   }
 
-  unsigned num_roots() const { return Roots.size(); }
   unsigned num_eops() const { return EndNodes.size(); }
 
   bool empty() const { return NumNodes == 0; }
@@ -389,8 +386,6 @@ public:
   // Iterators.
   using NodeTy = ExplodedNode;
   using AllNodesTy = llvm::FoldingSet<ExplodedNode>;
-  using roots_iterator = NodeVector::iterator;
-  using const_roots_iterator = NodeVector::const_iterator;
   using eop_iterator = NodeVector::iterator;
   using const_eop_iterator = NodeVector::const_iterator;
   using node_iterator = AllNodesTy::iterator;
@@ -399,14 +394,6 @@ public:
   llvm::iterator_range<node_iterator> nodes() { return Nodes; }
 
   llvm::iterator_range<const_node_iterator> nodes() const { return Nodes; }
-
-  roots_iterator roots_begin() { return Roots.begin(); }
-
-  roots_iterator roots_end() { return Roots.end(); }
-
-  const_roots_iterator roots_begin() const { return Roots.begin(); }
-
-  const_roots_iterator roots_end() const { return Roots.end(); }
 
   eop_iterator eop_begin() { return EndNodes.begin(); }
 
@@ -426,8 +413,8 @@ public:
   ///
   /// \param Nodes The nodes which must appear in the final graph. Presumably
   ///              these are end-of-path nodes (i.e. they have no successors).
-  /// \param[out] ForwardMap A optional map from nodes in this graph to nodes in
-  ///                        the returned graph.
+  /// \param[out] ForwardMap An optional map from nodes in this graph to nodes
+  ///                        in the returned graph.
   /// \param[out] InverseMap An optional map from nodes in the returned graph to
   ///                        nodes in this graph.
   /// \returns The trimmed graph
@@ -461,14 +448,15 @@ class ExplodedNodeSet {
 
 public:
   ExplodedNodeSet(ExplodedNode *N) {
-    assert(N && !static_cast<ExplodedNode*>(N)->isSink());
+    assert(N && !N->isSink());
     Impl.insert(N);
   }
 
   ExplodedNodeSet() = default;
 
   void Add(ExplodedNode *N) {
-    if (N && !static_cast<ExplodedNode*>(N)->isSink()) Impl.insert(N);
+    if (N && !N->isSink())
+      Impl.insert(N);
   }
 
   using iterator = ImplTy::iterator;
@@ -485,7 +473,7 @@ public:
     if (empty())
       Impl = S.Impl;
     else
-      Impl.insert(S.begin(), S.end());
+      Impl.insert_range(S);
   }
 
   iterator begin() { return Impl.begin(); }
@@ -508,9 +496,7 @@ namespace llvm {
     using ChildIteratorType = clang::ento::ExplodedNode::succ_iterator;
     using nodes_iterator = llvm::df_iterator<GraphTy>;
 
-    static NodeRef getEntryNode(const GraphTy G) {
-      return *G->roots_begin();
-    }
+    static NodeRef getEntryNode(const GraphTy G) { return G->getRoot(); }
 
     static bool predecessorOfTrivial(NodeRef N) {
       return N->succ_size() == 1 && N->getFirstSucc()->isTrivial();

@@ -22,7 +22,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -40,17 +39,28 @@ enum class OpenVariant {
   OpenAt
 };
 
+static std::optional<int> getCreateFlagValue(const ASTContext &Ctx,
+                                             const Preprocessor &PP) {
+  std::optional<int> MacroVal = tryExpandAsInteger("O_CREAT", PP);
+  if (MacroVal.has_value())
+    return MacroVal;
+
+  // If we failed, fall-back to known values.
+  if (Ctx.getTargetInfo().getTriple().getVendor() == llvm::Triple::Apple)
+    return {0x0200};
+  return MacroVal;
+}
+
 namespace {
 
-class UnixAPIMisuseChecker
-    : public Checker<check::PreCall, check::ASTDecl<TranslationUnitDecl>> {
+class UnixAPIMisuseChecker : public Checker<check::PreCall> {
   const BugType BT_open{this, "Improper use of 'open'", categories::UnixAPI};
   const BugType BT_getline{this, "Improper use of getdelim",
                            categories::UnixAPI};
   const BugType BT_pthreadOnce{this, "Improper use of 'pthread_once'",
                                categories::UnixAPI};
   const BugType BT_ArgumentNull{this, "NULL pointer", categories::UnixAPI};
-  mutable std::optional<uint64_t> Val_O_CREAT;
+  const std::optional<int> Val_O_CREAT;
 
   ProgramStateRef
   EnsurePtrNotNull(SVal PtrVal, const Expr *PtrExpr, CheckerContext &C,
@@ -63,6 +73,9 @@ class UnixAPIMisuseChecker
       const Expr *SizePtrExpr, CheckerContext &C, ProgramStateRef State) const;
 
 public:
+  UnixAPIMisuseChecker(const ASTContext &Ctx, const Preprocessor &PP)
+      : Val_O_CREAT(getCreateFlagValue(Ctx, PP)) {}
+
   void checkASTDecl(const TranslationUnitDecl *TU, AnalysisManager &Mgr,
                     BugReporter &BR) const;
 
@@ -70,7 +83,7 @@ public:
 
   void CheckOpen(CheckerContext &C, const CallEvent &Call) const;
   void CheckOpenAt(CheckerContext &C, const CallEvent &Call) const;
-  void CheckGetDelim(CheckerContext &C, const CallEvent &Call) const;
+  void CheckGetDelimOrGetline(CheckerContext &C, const CallEvent &Call) const;
   void CheckPthreadOnce(CheckerContext &C, const CallEvent &Call) const;
 
   void CheckOpenVariant(CheckerContext &C, const CallEvent &Call,
@@ -115,7 +128,7 @@ ProgramStateRef UnixAPIMisuseChecker::EnsurePtrNotNull(
     const StringRef PtrDescr,
     std::optional<std::reference_wrapper<const BugType>> BT) const {
   const auto Ptr = PtrVal.getAs<DefinedSVal>();
-  if (!Ptr)
+  if (!Ptr || !PtrExpr->getType()->isPointerType())
     return State;
 
   const auto [PtrNotNull, PtrNull] = State->assume(*Ptr);
@@ -132,20 +145,6 @@ ProgramStateRef UnixAPIMisuseChecker::EnsurePtrNotNull(
   }
 
   return PtrNotNull;
-}
-
-void UnixAPIMisuseChecker::checkASTDecl(const TranslationUnitDecl *TU,
-                                        AnalysisManager &Mgr,
-                                        BugReporter &) const {
-  // The definition of O_CREAT is platform specific.
-  // Try to get the macro value from the preprocessor.
-  Val_O_CREAT = tryExpandAsInteger("O_CREAT", Mgr.getPreprocessor());
-  // If we failed, fall-back to known values.
-  if (!Val_O_CREAT) {
-    if (TU->getASTContext().getTargetInfo().getTriple().getVendor() ==
-        llvm::Triple::Apple)
-      Val_O_CREAT = 0x0200;
-  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -178,7 +177,7 @@ void UnixAPIMisuseChecker::checkPreCall(const CallEvent &Call,
     CheckPthreadOnce(C, Call);
 
   else if (is_contained({"getdelim", "getline"}, FName))
-    CheckGetDelim(C, Call);
+    CheckGetDelimOrGetline(C, Call);
 }
 void UnixAPIMisuseChecker::ReportOpenBug(CheckerContext &C,
                                          ProgramStateRef State,
@@ -224,6 +223,10 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
   // All calls should at least provide arguments up to the 'flags' parameter.
   unsigned int MinArgCount = FlagsArgIndex + 1;
 
+  // The frontend should issue a warning for this case. Just return.
+  if (Call.getNumArgs() < MinArgCount)
+    return;
+
   // If the flags has O_CREAT set then open/openat() require an additional
   // argument specifying the file mode (permission bits) for the created file.
   unsigned int CreateModeArgIndex = FlagsArgIndex + 1;
@@ -232,11 +235,7 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
   unsigned int MaxArgCount = CreateModeArgIndex + 1;
 
   ProgramStateRef state = C.getState();
-
-  if (Call.getNumArgs() < MinArgCount) {
-    // The frontend should issue a warning for this case. Just return.
-    return;
-  } else if (Call.getNumArgs() == MaxArgCount) {
+  if (Call.getNumArgs() == MaxArgCount) {
     const Expr *Arg = Call.getArgExpr(CreateModeArgIndex);
     QualType QT = Arg->getType();
     if (!QT->isIntegerType()) {
@@ -262,7 +261,7 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
     return;
   }
 
-  if (!Val_O_CREAT) {
+  if (!Val_O_CREAT.has_value()) {
     return;
   }
 
@@ -276,7 +275,7 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
   }
   NonLoc oflags = V.castAs<NonLoc>();
   NonLoc ocreateFlag = C.getSValBuilder()
-                           .makeIntVal(*Val_O_CREAT, oflagsEx->getType())
+                           .makeIntVal(Val_O_CREAT.value(), oflagsEx->getType())
                            .castAs<NonLoc>();
   SVal maskedFlagsUC = C.getSValBuilder().evalBinOpNN(state, BO_And,
                                                       oflags, ocreateFlag,
@@ -333,8 +332,12 @@ ProgramStateRef UnixAPIMisuseChecker::EnsureGetdelimBufferAndSizeCorrect(
 
   // We have a pointer to a pointer to the buffer, and a pointer to the size.
   // We want what they point at.
-  auto LinePtrSVal = getPointeeVal(LinePtrPtrSVal, State)->getAs<DefinedSVal>();
-  auto NSVal = getPointeeVal(SizePtrSVal, State);
+  const auto LinePtrValOpt = getPointeeVal(LinePtrPtrSVal, State);
+  if (!LinePtrValOpt)
+    return nullptr;
+
+  const auto LinePtrSVal = LinePtrValOpt->getAs<DefinedSVal>();
+  const auto NSVal = getPointeeVal(SizePtrSVal, State);
   if (!LinePtrSVal || !NSVal || NSVal->isUnknown())
     return nullptr;
 
@@ -351,9 +354,16 @@ ProgramStateRef UnixAPIMisuseChecker::EnsureGetdelimBufferAndSizeCorrect(
     // If it is defined, and known, its size must be less than or equal to
     // the buffer size.
     auto NDefSVal = NSVal->getAs<DefinedSVal>();
+    if (!NDefSVal)
+      return LinePtrNotNull;
+
     auto &SVB = C.getSValBuilder();
-    auto LineBufSize =
-        getDynamicExtent(LinePtrNotNull, LinePtrSVal->getAsRegion(), SVB);
+
+    const MemRegion *LinePtrRegion = LinePtrSVal->getAsRegion();
+    if (!LinePtrRegion)
+      return LinePtrNotNull;
+
+    auto LineBufSize = getDynamicExtent(LinePtrNotNull, LinePtrRegion, SVB);
     auto LineBufSizeGtN = SVB.evalBinOp(LinePtrNotNull, BO_GE, LineBufSize,
                                         *NDefSVal, SVB.getConditionType())
                               .getAs<DefinedOrUnknownSVal>();
@@ -368,8 +378,11 @@ ProgramStateRef UnixAPIMisuseChecker::EnsureGetdelimBufferAndSizeCorrect(
   return State;
 }
 
-void UnixAPIMisuseChecker::CheckGetDelim(CheckerContext &C,
-                                         const CallEvent &Call) const {
+void UnixAPIMisuseChecker::CheckGetDelimOrGetline(CheckerContext &C,
+                                                  const CallEvent &Call) const {
+  if (Call.getNumArgs() < 2)
+    return;
+
   ProgramStateRef State = C.getState();
 
   // The parameter `n` must not be NULL.
@@ -411,7 +424,7 @@ void UnixAPIMisuseChecker::CheckPthreadOnce(CheckerContext &C,
   // because that's likely to be bad news.
   ProgramStateRef state = C.getState();
   const MemRegion *R = Call.getArgSVal(0).getAsRegion();
-  if (!R || !isa<StackSpaceRegion>(R->getMemorySpace()))
+  if (!R || !R->hasMemorySpace<StackSpaceRegion>(state))
     return;
 
   ExplodedNode *N = C.generateErrorNode(state);
@@ -427,7 +440,7 @@ void UnixAPIMisuseChecker::CheckPthreadOnce(CheckerContext &C,
     os << " stack allocated memory";
   os << " for the \"control\" value.  Using such transient memory for "
   "the control value is potentially dangerous.";
-  if (isa<VarRegion>(R) && isa<StackLocalsSpaceRegion>(R->getMemorySpace()))
+  if (isa<VarRegion>(R) && R->hasMemorySpace<StackLocalsSpaceRegion>(state))
     os << "  Perhaps you intended to declare the variable as 'static'?";
 
   auto report =
@@ -528,17 +541,15 @@ void UnixAPIPortabilityChecker::CheckCallocZero(CheckerContext &C,
     if (argVal.isUnknownOrUndef()) {
       if (i == 0)
         continue;
-      else
-        return;
+      return;
     }
 
     if (IsZeroByteAllocation(state, argVal, &trueState, &falseState)) {
       if (ReportZeroByteAllocation(C, falseState, arg, "calloc"))
         return;
-      else if (i == 0)
+      if (i == 0)
         continue;
-      else
-        return;
+      return;
     }
   }
 
@@ -621,14 +632,17 @@ void UnixAPIPortabilityChecker::checkPreStmt(const CallExpr *CE,
 // Registration.
 //===----------------------------------------------------------------------===//
 
-#define REGISTER_CHECKER(CHECKERNAME)                                          \
-  void ento::register##CHECKERNAME(CheckerManager &mgr) {                      \
-    mgr.registerChecker<CHECKERNAME>();                                        \
-  }                                                                            \
-                                                                               \
-  bool ento::shouldRegister##CHECKERNAME(const CheckerManager &mgr) {          \
-    return true;                                                               \
-  }
+void ento::registerUnixAPIMisuseChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<UnixAPIMisuseChecker>(Mgr.getASTContext(),
+                                            Mgr.getPreprocessor());
+}
+bool ento::shouldRegisterUnixAPIMisuseChecker(const CheckerManager &Mgr) {
+  return true;
+}
 
-REGISTER_CHECKER(UnixAPIMisuseChecker)
-REGISTER_CHECKER(UnixAPIPortabilityChecker)
+void ento::registerUnixAPIPortabilityChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<UnixAPIPortabilityChecker>();
+}
+bool ento::shouldRegisterUnixAPIPortabilityChecker(const CheckerManager &Mgr) {
+  return true;
+}

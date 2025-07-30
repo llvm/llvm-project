@@ -12,7 +12,6 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/Type.h"
@@ -23,6 +22,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DJB.h"
@@ -270,7 +270,7 @@ ObjCLanguageRuntime::GetClassDescriptor(ValueObject &valobj) {
   // pointers returned by the expression parser, don't consider this a valid
   // ObjC object)
   if (valobj.GetCompilerType().IsValid()) {
-    addr_t isa_pointer = valobj.GetPointerValue();
+    addr_t isa_pointer = valobj.GetPointerValue().address;
     if (isa_pointer != LLDB_INVALID_ADDRESS) {
       ExecutionContext exe_ctx(valobj.GetExecutionContextRef());
 

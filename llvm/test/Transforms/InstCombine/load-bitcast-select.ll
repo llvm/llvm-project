@@ -10,14 +10,14 @@ define void @_Z3foov() {
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[I_0]], 1000
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[I_0]], 1000
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[I_0]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1000 x float], ptr @a, i64 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [1000 x float], ptr @b, i64 0, i64 [[TMP0]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1000 x float], ptr @a, i64 0, i64 [[TMP0]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [1000 x float], ptr @b, i64 0, i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp fast olt float [[TMP1]], [[TMP2]]

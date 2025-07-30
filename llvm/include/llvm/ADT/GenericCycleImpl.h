@@ -47,6 +47,11 @@ bool GenericCycle<ContextT>::contains(const GenericCycle *C) const {
 template <typename ContextT>
 void GenericCycle<ContextT>::getExitBlocks(
     SmallVectorImpl<BlockT *> &TmpStorage) const {
+  if (!ExitBlocksCache.empty()) {
+    TmpStorage = ExitBlocksCache;
+    return;
+  }
+
   TmpStorage.clear();
 
   size_t NumExitBlocks = 0;
@@ -65,6 +70,7 @@ void GenericCycle<ContextT>::getExitBlocks(
 
     TmpStorage.resize(NumExitBlocks);
   }
+  ExitBlocksCache.append(TmpStorage.begin(), TmpStorage.end());
 }
 
 template <typename ContextT>
@@ -293,11 +299,13 @@ void GenericCycleInfo<ContextT>::moveTopLevelCycleToNewParent(CycleT *NewParent,
   CurrentContainer.pop_back();
   Child->ParentCycle = NewParent;
 
-  NewParent->Blocks.insert(Child->block_begin(), Child->block_end());
+  NewParent->Blocks.insert_range(Child->blocks());
 
   for (auto &It : BlockMapTopLevel)
     if (It.second == Child)
       It.second = NewParent;
+  NewParent->clearCache();
+  Child->clearCache();
 }
 
 template <typename ContextT>
@@ -316,6 +324,7 @@ void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleT *Cycle) {
   }
 
   BlockMapTopLevel.try_emplace(Block, Cycle);
+  Cycle->clearCache();
 }
 
 /// \brief Main function of the cycle info computations.
@@ -445,7 +454,9 @@ void GenericCycleInfoCompute<ContextT>::dfs(BlockT *EntryBlock) {
     BlockT *Block = TraverseStack.back();
     LLVM_DEBUG(errs() << "DFS visiting block: " << Info.Context.print(Block)
                       << "\n");
-    if (!BlockDFSInfo.count(Block)) {
+    if (BlockDFSInfo.try_emplace(Block, Counter + 1).second) {
+      ++Counter;
+
       // We're visiting the block for the first time. Open its DFSInfo, add
       // successors to the traversal stack, and remember the traversal stack
       // depth at which the block was opened, so that we can correctly record
@@ -456,9 +467,6 @@ void GenericCycleInfoCompute<ContextT>::dfs(BlockT *EntryBlock) {
       DFSTreeStack.emplace_back(TraverseStack.size());
       llvm::append_range(TraverseStack, successors(Block));
 
-      bool Added = BlockDFSInfo.try_emplace(Block, ++Counter).second;
-      (void)Added;
-      assert(Added);
       BlockPreorder.push_back(Block);
       LLVM_DEBUG(errs() << "  preorder number: " << Counter << "\n");
     } else {

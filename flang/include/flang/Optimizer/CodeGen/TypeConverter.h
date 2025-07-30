@@ -62,7 +62,7 @@ public:
   // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
   std::optional<llvm::LogicalResult>
   convertRecordType(fir::RecordType derived,
-                    llvm::SmallVectorImpl<mlir::Type> &results);
+                    llvm::SmallVectorImpl<mlir::Type> &results, bool isPacked);
 
   // Is an extended descriptor needed given the element type of a fir.box type ?
   // Extended descriptors are required for derived types.

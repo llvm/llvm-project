@@ -178,4 +178,32 @@
 #define RT_DEVICE_NOINLINE_HOST_INLINE inline
 #endif
 
+/* RT_OPTNONE_ATTR allows disabling optimizations per function. */
+#if __has_attribute(optimize)
+/* GCC style. */
+#define RT_OPTNONE_ATTR __attribute__((optimize("O0")))
+#elif __has_attribute(optnone)
+/* Clang style. */
+#define RT_OPTNONE_ATTR __attribute__((optnone))
+#else
+#define RT_OPTNONE_ATTR
+#endif
+
+/* Detect system endianness if it was not explicitly set. */
+#if !defined(FLANG_LITTLE_ENDIAN) && !defined(FLANG_BIG_ENDIAN)
+
+/* We always assume Windows is little endian, otherwise use the GCC compatible
+ * flags. */
+#if defined(_MSC_VER) || defined(_WIN32)
+#define FLANG_LITTLE_ENDIAN 1
+#elif defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+#define FLANG_LITTLE_ENDIAN 1
+#elif defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#define FLANG_BIG_ENDIAN 1
+#else
+#error "Unknown or unsupported endianness."
+#endif
+
+#endif /* !defined(FLANG_LITTLE_ENDIAN) && !defined(FLANG_BIG_ENDIAN) */
+
 #endif /* !FORTRAN_RUNTIME_API_ATTRS_H_ */

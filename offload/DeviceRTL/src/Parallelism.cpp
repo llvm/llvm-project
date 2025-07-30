@@ -36,13 +36,12 @@
 #include "DeviceTypes.h"
 #include "DeviceUtils.h"
 #include "Interface.h"
+#include "LibC.h"
 #include "Mapping.h"
 #include "State.h"
 #include "Synchronization.h"
 
 using namespace ompx;
-
-#pragma omp begin declare target device_type(nohost)
 
 namespace {
 
@@ -74,7 +73,7 @@ uint32_t determineNumberOfThreads(int32_t NumThreadsClause) {
   switch (nargs) {
 #include "generated_microtask_cases.gen"
   default:
-    PRINT("Too many arguments in kmp_invoke_microtask, aborting execution.\n");
+    printf("Too many arguments in kmp_invoke_microtask, aborting execution.\n");
     __builtin_trap();
   }
 }
@@ -310,5 +309,3 @@ void __kmpc_push_num_teams(IdentTy *loc, int32_t tid, int32_t num_teams,
 
 void __kmpc_push_proc_bind(IdentTy *loc, uint32_t tid, int proc_bind) {}
 }
-
-#pragma omp end declare target

@@ -573,7 +573,7 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
   // Update the CFG first.
   updateTailPHIs();
 
-  // Save successor probabilties before removing CmpBB and Tail from their
+  // Save successor probabilities before removing CmpBB and Tail from their
   // parents.
   BranchProbability Head2CmpBB = MBPI->getEdgeProbability(Head, CmpBB);
   BranchProbability CmpBB2Tail = MBPI->getEdgeProbability(CmpBB, Tail);
@@ -581,7 +581,7 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
   Head->removeSuccessor(CmpBB);
   CmpBB->removeSuccessor(Tail);
 
-  // If Head and CmpBB had successor probabilties, udpate the probabilities to
+  // If Head and CmpBB had successor probabilities, update the probabilities to
   // reflect the ccmp-conversion.
   if (Head->hasSuccessorProbabilities() && CmpBB->hasSuccessorProbabilities()) {
 
@@ -596,7 +596,7 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
                              Head2Tail + Head2CmpBB * CmpBB2Tail);
 
     // We will transfer successors of CmpBB to Head in a moment without
-    // normalizing the successor probabilities. Set the successor probabilites
+    // normalizing the successor probabilities. Set the successor probabilities
     // before doing so.
     //
     // Pr(I|Head) = Pr(CmpBB|Head) * Pr(I|CmpBB).
@@ -771,9 +771,7 @@ class AArch64ConditionalCompares : public MachineFunctionPass {
 
 public:
   static char ID;
-  AArch64ConditionalCompares() : MachineFunctionPass(ID) {
-    initializeAArch64ConditionalComparesPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64ConditionalCompares() : MachineFunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
   StringRef getPassName() const override {
@@ -795,7 +793,7 @@ INITIALIZE_PASS_BEGIN(AArch64ConditionalCompares, "aarch64-ccmp",
                       "AArch64 CCMP Pass", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineTraceMetrics)
+INITIALIZE_PASS_DEPENDENCY(MachineTraceMetricsWrapperPass)
 INITIALIZE_PASS_END(AArch64ConditionalCompares, "aarch64-ccmp",
                     "AArch64 CCMP Pass", false, false)
 
@@ -809,8 +807,8 @@ void AArch64ConditionalCompares::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
   AU.addPreserved<MachineLoopInfoWrapperPass>();
-  AU.addRequired<MachineTraceMetrics>();
-  AU.addPreserved<MachineTraceMetrics>();
+  AU.addRequired<MachineTraceMetricsWrapperPass>();
+  AU.addPreserved<MachineTraceMetricsWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -937,7 +935,7 @@ bool AArch64ConditionalCompares::runOnMachineFunction(MachineFunction &MF) {
   DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
-  Traces = &getAnalysis<MachineTraceMetrics>();
+  Traces = &getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
   MinInstr = nullptr;
   MinSize = MF.getFunction().hasMinSize();
 

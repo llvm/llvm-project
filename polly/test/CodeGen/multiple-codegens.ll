@@ -6,7 +6,7 @@
 ; RegionPassManager. -polly-codegen must not reuse the -polly-ast analysis the
 ; was created for the first -polly-scops pass.
 ; The current solution is that only the first -polly-codegen is allowed to
-; generate code, the second detects it is re-using an IslAst that belongs to a
+; generate code, the second detects it is reusing an IslAst that belongs to a
 ; different ScopInfo.
 ;
 ; int a, b, c;

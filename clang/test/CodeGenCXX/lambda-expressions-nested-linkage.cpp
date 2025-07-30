@@ -56,6 +56,7 @@ inline int foo() {
     };
   };
   L(3)('a');
+  return 0;
 }
 int use = foo();
 }

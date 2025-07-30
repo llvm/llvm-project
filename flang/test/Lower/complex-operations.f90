@@ -1,4 +1,6 @@
-! RUN: bbc -hlfir=false %s -o - | FileCheck %s
+! REQUIRES: flang-supports-f128-math
+! REQUIRES: x86-registered-target
+! RUN: bbc -target x86_64-unknown-linux-gnu -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: @_QPadd_test
 subroutine add_test(a,b,c)

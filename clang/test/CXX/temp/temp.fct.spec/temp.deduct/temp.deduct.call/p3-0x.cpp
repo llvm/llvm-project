@@ -66,7 +66,7 @@ void test_f1() {
 }
 
 namespace std_example {
-  template <class T> int f(T&&); 
+  template <class T> int f(T&&);
   template <class T> int g(const T&&); // expected-note{{candidate function [with T = int] not viable: expects an rvalue for 1st argument}}
 
   int i;

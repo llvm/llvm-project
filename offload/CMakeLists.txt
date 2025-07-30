@@ -23,6 +23,8 @@ elseif(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
   return()
 endif()
 
+set(OFFLOAD_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
 if(OPENMP_STANDALONE_BUILD)
   set(OFFLOAD_LIBDIR_SUFFIX "" CACHE STRING
     "Suffix of lib installation directory, e.g. 64 => lib64")
@@ -41,10 +43,14 @@ endif()
 
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 
+option(OFFLOAD_INCLUDE_TESTS "Generate and build offload tests." ${LLVM_INCLUDE_TESTS})
+
 # Add path for custom modules
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../runtimes/cmake/Modules"
+  "${LLVM_COMMON_CMAKE_UTILS}"
   "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
 
@@ -61,6 +67,9 @@ if (OPENMP_STANDALONE_BUILD)
     "Suffix of lib installation directory, e.g. 64 => lib64")
   # Do not use OPENMP_LIBDIR_SUFFIX directly, use OPENMP_INSTALL_LIBDIR.
   set(OPENMP_INSTALL_LIBDIR "lib${OPENMP_LIBDIR_SUFFIX}")
+
+  # Used by llvm_add_tool() and tests.
+  set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_CURRENT_BINARY_DIR})
 
   # Group test settings.
   set(OPENMP_TEST_C_COMPILER ${CMAKE_C_COMPILER} CACHE STRING
@@ -127,6 +136,7 @@ include(LibomptargetGetDependencies)
 # Set up testing infrastructure.
 include(OpenMPTesting)
 
+include(CheckCXXCompilerFlag)
 check_cxx_compiler_flag(-Werror=global-constructors OFFLOAD_HAVE_WERROR_CTOR)
 
 # LLVM source tree is required at build time for libomptarget
@@ -199,6 +209,10 @@ set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda-L
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda-JIT-LTO")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} s390x-ibm-linux-gnu")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} s390x-ibm-linux-gnu-LTO")
+set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} riscv64-unknown-linux-gnu")
+set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} riscv64-unknown-linux-gnu-LTO")
+set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} loongarch64-unknown-linux-gnu")
+set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} loongarch64-unknown-linux-gnu-LTO")
 
 # Once the plugins for the different targets are validated, they will be added to
 # the list of supported targets in the current system.
@@ -282,6 +296,26 @@ if(OPENMP_STANDALONE_BUILD)
       ${LLVM_LIBRARY_DIRS}
     REQUIRED
   )
+
+  find_path (
+    LIBOMP_INCLUDE_DIR
+    NAMES
+      omp.h
+    HINTS
+    ${COMPILER_RESOURCE_DIR}/include
+    ${CMAKE_INSTALL_PREFIX}/include
+  )
+
+  get_filename_component(LIBOMP_LIBRARY_DIR ${LIBOMP_STANDALONE} DIRECTORY)
+
+  set(OPENMP_TEST_FLAGS "" CACHE STRING
+    "Extra compiler flags to send to the test compiler.")
+  set(OPENMP_TEST_OPENMP_FLAGS ${OPENMP_TEST_COMPILER_OPENMP_FLAGS} CACHE STRING
+    "OpenMP compiler flag to use for testing OpenMP runtime libraries.")
+  set(LIBOMPTARGET_OPENMP_HEADER_FOLDER "${LIBOMP_INCLUDE_DIR}" CACHE STRING
+    "Path to folder containing omp.h")
+  set(LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER "${LIBOMP_LIBRARY_DIR}" CACHE STRING
+    "Path to folder containing libomp.so, and libLLVMSupport.so with profiling enabled")
 endif()
 
 macro(pythonize_bool var)
@@ -291,14 +325,6 @@ else()
   set(${var} False)
 endif()
 endmacro()
-
-if(OPENMP_STANDALONE_BUILD OR TARGET omp)
-  # Check LIBOMP_HAVE_VERSION_SCRIPT_FLAG
-  include(LLVMCheckCompilerLinkerFlag)
-  if(NOT APPLE)
-    llvm_check_compiler_linker_flag(C "-Wl,--version-script=${CMAKE_CURRENT_LIST_DIR}/../openmp/runtime/src/exports_test_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
-  endif()
-endif()
 
 # OMPT support for libomptarget
 # Follow host OMPT support and check if host support has been requested.
@@ -341,21 +367,21 @@ set(LIBOMPTARGET_LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE STRING
 set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_INTDIR}" CACHE STRING
   "Path to folder where intermediate libraries will be output")
 
+add_subdirectory(tools/offload-tblgen)
+
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins-nextgen)
 add_subdirectory(DeviceRTL)
 add_subdirectory(tools)
+add_subdirectory(docs)
 
 # Build target agnostic offloading library.
-add_subdirectory(src)
+add_subdirectory(libomptarget)
+
+add_subdirectory(liboffload)
 
 # Add tests.
-add_subdirectory(test)
-
-# Add unit tests if GMock/GTest is present
-if (EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest)
-  if (NOT TARGET llvm_gtest)
-    add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)
-  endif()
+if(OFFLOAD_INCLUDE_TESTS)
+  add_subdirectory(test)
   add_subdirectory(unittests)
 endif()

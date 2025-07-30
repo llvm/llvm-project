@@ -58,7 +58,8 @@ struct __find_first_implemented<_Algorithm, __backend_configuration<_B1, _Bn...>
           __find_first_implemented<_Algorithm, __backend_configuration<_Bn...>, _ExecutionPolicy> > {};
 
 template <template <class, class> class _Algorithm, class _BackendConfiguration, class _ExecutionPolicy>
-using __dispatch = typename __find_first_implemented<_Algorithm, _BackendConfiguration, _ExecutionPolicy>::type;
+using __dispatch _LIBCPP_NODEBUG =
+    typename __find_first_implemented<_Algorithm, _BackendConfiguration, _ExecutionPolicy>::type;
 
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD

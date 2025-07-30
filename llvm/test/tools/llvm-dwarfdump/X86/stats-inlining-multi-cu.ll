@@ -4,6 +4,7 @@
 ; Test that abstract origins in multiple CUs are uniqued.
 
 ; CHECK:      "#functions": 4,
+; CHECK:      "#out-of-line functions": 3,
 ; CHECK:      "#inlined functions": 2,
 ; CHECK:      "#unique source variables": 4,
 ; CHECK-NEXT: "#source variables": 6,

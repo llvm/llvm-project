@@ -95,14 +95,14 @@ Options
 
    Semicolon-separated list of fully qualified names of legacy functions that create
    resources but cannot introduce ``gsl::owner<>``.
-   Defaults to ``::malloc;::aligned_alloc;::realloc;::calloc;::fopen;::freopen;::tmpfile``.
+   Defaults to `::malloc;::aligned_alloc;::realloc;::calloc;::fopen;::freopen;::tmpfile`.
 
 
 .. option:: LegacyResourceConsumers
 
    Semicolon-separated list of fully qualified names of legacy functions expecting
    resource owners as pointer arguments but cannot introduce ``gsl::owner<>``.
-   Defaults to ``::free;::realloc;::freopen;::fclose``.
+   Defaults to `::free;::realloc;::freopen;::fclose`.
 
 
 Limitations

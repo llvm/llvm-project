@@ -1,4 +1,3 @@
-// REQUIRES: libgcc
 // UNSUPPORTED: system-windows
 
 // RUN: %clang -c -### --target=x86_64-unknown-linux-gnu --cuda-gpu-arch=gfx900 \
@@ -12,6 +11,10 @@
 // RUN: %clang -c -### --target=x86_64-unknown-linux-gnu --cuda-gpu-arch=gfx900 \
 // RUN:   -std=c++11 --rocm-path=%S/Inputs/rocm -nogpuinc -nogpulib %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=COMMON,CLANG,NOHIP %s
+
+// RUN: %clang -c -### --target=x86_64-unknown-linux-gnu --cuda-gpu-arch=gfx900 \
+// RUN:   -std=c++11 --rocm-path=%S/Inputs/rocm --no-offload-inc -nogpulib --offload-inc %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=COMMON,CLANG,HIP %s
 
 // COMMON-LABEL: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
 // CLANG-SAME: "-internal-isystem" "{{[^"]*}}/lib{{[^"]*}}/clang/{{[^"]*}}/include/cuda_wrappers"

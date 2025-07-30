@@ -22,6 +22,7 @@
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -45,9 +46,9 @@ public:
 
   /// If a parent module is specified, the ifunc is automatically inserted into
   /// the end of the specified module's ifunc list.
-  static GlobalIFunc *create(Type *Ty, unsigned AddressSpace,
-                             LinkageTypes Linkage, const Twine &Name,
-                             Constant *Resolver, Module *Parent);
+  LLVM_ABI static GlobalIFunc *create(Type *Ty, unsigned AddressSpace,
+                                      LinkageTypes Linkage, const Twine &Name,
+                                      Constant *Resolver, Module *Parent);
 
   // allocate space for exactly one operand
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
@@ -62,10 +63,10 @@ public:
 
   /// This method unlinks 'this' from the containing module, but does not
   /// delete it.
-  void removeFromParent();
+  LLVM_ABI void removeFromParent();
 
   /// This method unlinks 'this' from the containing module and deletes it.
-  void eraseFromParent();
+  LLVM_ABI void eraseFromParent();
 
   /// These methods retrieve and set ifunc resolver function.
   void setResolver(Constant *Resolver) { Op<0>().set(Resolver); }
@@ -76,7 +77,7 @@ public:
 
   // Return the resolver function after peeling off potential ConstantExpr
   // indirection.
-  const Function *getResolverFunction() const;
+  LLVM_ABI const Function *getResolverFunction() const;
   Function *getResolverFunction() {
     return const_cast<Function *>(
         static_cast<const GlobalIFunc *>(this)->getResolverFunction());
@@ -96,7 +97,8 @@ public:
   // is already a global object, then apply the operation to it directly. If
   // target is a GlobalExpr or a GlobalAlias, evaluate it to its base object and
   // apply the operation for the base object and all aliases along the path.
-  void applyAlongResolverPath(function_ref<void(const GlobalValue &)> Op) const;
+  LLVM_ABI void
+  applyAlongResolverPath(function_ref<void(const GlobalValue &)> Op) const;
 };
 
 template <>

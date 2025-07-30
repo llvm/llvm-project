@@ -71,10 +71,8 @@ struct CodeCompleteOptions {
   /// Whether to present doc comments as plain-text or markdown.
   MarkupKind DocumentationFormat = MarkupKind::PlainText;
 
-  enum IncludeInsertion {
-    IWYU,
-    NeverInsert,
-  } InsertIncludes = IncludeInsertion::IWYU;
+  Config::HeaderInsertionPolicy InsertIncludes =
+      Config::HeaderInsertionPolicy::IWYU;
 
   /// Whether include insertions for Objective-C code should use #import instead
   /// of #include.
@@ -112,6 +110,9 @@ struct CodeCompleteOptions {
   /// The way argument list on calls '()' and generics '<>' are handled.
   Config::ArgumentListsPolicy ArgumentLists =
       Config::ArgumentListsPolicy::FullPlaceholders;
+
+  /// Whether to suggest code patterns & snippets or not in completion
+  Config::CodePatternsPolicy CodePatterns = Config::CodePatternsPolicy::All;
 
   /// Whether to use the clang parser, or fallback to text-based completion
   /// (using identifiers in the current file and symbol indexes).
@@ -274,7 +275,6 @@ struct SpeculativeFuzzyFind {
   /// Set by `codeComplete()`. This can be used by callers to update cache.
   std::optional<FuzzyFindRequest> NewReq;
   /// The result is consumed by `codeComplete()` if speculation succeeded.
-  /// NOTE: the destructor will wait for the async call to finish.
   std::future<std::pair<bool /*Incomplete*/, SymbolSlab>> Result;
 };
 

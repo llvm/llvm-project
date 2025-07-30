@@ -17,7 +17,6 @@
 #include "lldb/Target/ScriptedThreadPlan.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Target/ThreadPlan.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
@@ -184,8 +183,9 @@ void ScriptedThreadPlan::GetDescription(Stream *s,
       lldb::StreamSP stream = std::make_shared<lldb_private::StreamString>();
       llvm::Error err = m_interface->GetStopDescription(stream);
       if (err) {
-        LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), std::move(err),
-                       "Can't call ScriptedThreadPlan::GetStopDescription.");
+        LLDB_LOG_ERROR(
+            GetLog(LLDBLog::Thread), std::move(err),
+            "Can't call ScriptedThreadPlan::GetStopDescription: {0}");
         s->Printf("Scripted thread plan implemented by class %s.",
                   m_class_name.c_str());
       } else

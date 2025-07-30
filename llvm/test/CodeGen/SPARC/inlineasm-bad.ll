@@ -1,5 +1,5 @@
-; RUN: not llc -march=sparc <%s 2>&1 | FileCheck %s
-; RUN: not llc -march=sparcv9 <%s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=sparc <%s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=sparcv9 <%s 2>&1 | FileCheck %s
 
 ; CHECK: error: couldn't allocate input reg for constraint '{f32}'
 ; CHECK: error: couldn't allocate input reg for constraint '{f21}'

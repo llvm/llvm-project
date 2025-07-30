@@ -26,6 +26,8 @@ public:
   enum RegSetKind {
     GPRegSet,
     FPRegSet,
+    LSXRegSet,
+    LASXRegSet,
   };
 
   struct GPR {
@@ -41,6 +43,16 @@ public:
     uint64_t fpr[32];
     uint64_t fcc;
     uint32_t fcsr;
+  };
+
+  /* 32 registers, 128 bits width per register. */
+  struct LSX {
+    uint64_t vr[32 * 2];
+  };
+
+  /* 32 registers, 256 bits width per register. */
+  struct LASX {
+    uint64_t xr[32 * 4];
   };
 
   RegisterInfoPOSIX_loongarch64(const lldb_private::ArchSpec &target_arch,

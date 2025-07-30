@@ -27,7 +27,7 @@ class Friend {
 
 
 class S {
-  NoDefault nd1;
+  NoDefault nd1; // expected-note {{default constructed field 'nd1' declared here}}
   NoDefault nd2 = 42;
   Explicit e1; // expected-note {{here}}
   Explicit e2 = 42; // expected-error {{no viable conversion}}

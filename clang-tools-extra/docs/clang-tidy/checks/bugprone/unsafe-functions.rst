@@ -114,6 +114,17 @@ qualified name (i.e. ``std::original``), otherwise the regex is matched against 
 If the regular expression starts with `::` (or `^::`), it is matched against the
 fully qualified name (``::std::original``).
 
+.. note::
+
+   Fully qualified names can contain template parameters on certain C++ classes, but not on C++ functions.
+   Type aliases are resolved before matching.
+
+   As an example, the member function ``open`` in the class ``std::ifstream``
+   has a fully qualified name of ``::std::basic_ifstream<char>::open``.
+
+   The example could also be matched with the regex ``::std::basic_ifstream<[^>]*>::open``, which matches all potential
+   template parameters, but does not match nested template classes.
+
 Options
 -------
 

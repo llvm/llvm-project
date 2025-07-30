@@ -27,16 +27,14 @@ namespace {
 class CommentLexerTest : public ::testing::Test {
 protected:
   CommentLexerTest()
-    : FileMgr(FileMgrOpts),
-      DiagID(new DiagnosticIDs()),
-      Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
-      SourceMgr(Diags, FileMgr),
-      Traits(Allocator, CommentOptions()) {
-  }
+      : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
+        Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
+        SourceMgr(Diags, FileMgr), Traits(Allocator, CommentOptions()) {}
 
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   llvm::BumpPtrAllocator Allocator;
@@ -1451,6 +1449,160 @@ TEST_F(CommentLexerTest, HTML19) {
   ASSERT_EQ(StringRef("img"),  Toks[1].getHTMLTagEndName());
 
   ASSERT_EQ(tok::newline,      Toks[2].getKind());
+}
+
+TEST_F(CommentLexerTest, HTML20) {
+  const char *Source = "// <a\n"
+                       "// \n"
+                       "// href=\"foo\"\n"
+                       "// \n"
+                       "// bar>text</a>";
+
+  std::vector<Token> Toks;
+
+  lexString(Source, Toks);
+
+  ASSERT_EQ(11U, Toks.size());
+
+  ASSERT_EQ(tok::text, Toks[0].getKind());
+  ASSERT_EQ(StringRef(" "), Toks[0].getText());
+
+  ASSERT_EQ(tok::html_start_tag, Toks[1].getKind());
+  ASSERT_EQ(StringRef("a"), Toks[1].getHTMLTagStartName());
+
+  ASSERT_EQ(tok::html_ident, Toks[2].getKind());
+  ASSERT_EQ(StringRef("href"), Toks[2].getHTMLIdent());
+
+  ASSERT_EQ(tok::html_equals, Toks[3].getKind());
+
+  ASSERT_EQ(tok::html_quoted_string, Toks[4].getKind());
+  ASSERT_EQ(StringRef("foo"), Toks[4].getHTMLQuotedString());
+
+  ASSERT_EQ(tok::html_ident, Toks[5].getKind());
+  ASSERT_EQ(StringRef("bar"), Toks[5].getHTMLIdent());
+
+  ASSERT_EQ(tok::html_greater, Toks[6].getKind());
+
+  ASSERT_EQ(tok::text, Toks[7].getKind());
+  ASSERT_EQ(StringRef("text"), Toks[7].getText());
+
+  ASSERT_EQ(tok::html_end_tag, Toks[8].getKind());
+  ASSERT_EQ(StringRef("a"), Toks[8].getHTMLTagEndName());
+
+  ASSERT_EQ(tok::html_greater, Toks[9].getKind());
+
+  ASSERT_EQ(tok::newline, Toks[10].getKind());
+}
+
+TEST_F(CommentLexerTest, HTML21) {
+  const char *Source = "/**\n"
+                       " * <a\n"
+                       " * \n"
+                       " * href=\"foo\"\n"
+                       " * \n"
+                       " * bar>text</a>\n"
+                       " */";
+
+  std::vector<Token> Toks;
+
+  lexString(Source, Toks);
+
+  ASSERT_EQ(15U, Toks.size());
+
+  ASSERT_EQ(tok::newline, Toks[0].getKind());
+
+  ASSERT_EQ(tok::text, Toks[1].getKind());
+  ASSERT_EQ(StringRef(" "), Toks[1].getText());
+
+  ASSERT_EQ(tok::html_start_tag, Toks[2].getKind());
+  ASSERT_EQ(StringRef("a"), Toks[2].getHTMLTagStartName());
+
+  ASSERT_EQ(tok::html_ident, Toks[3].getKind());
+  ASSERT_EQ(StringRef("href"), Toks[3].getHTMLIdent());
+
+  ASSERT_EQ(tok::html_equals, Toks[4].getKind());
+
+  ASSERT_EQ(tok::html_quoted_string, Toks[5].getKind());
+  ASSERT_EQ(StringRef("foo"), Toks[5].getHTMLQuotedString());
+
+  ASSERT_EQ(tok::html_ident, Toks[6].getKind());
+  ASSERT_EQ(StringRef("bar"), Toks[6].getHTMLIdent());
+
+  ASSERT_EQ(tok::html_greater, Toks[7].getKind());
+
+  ASSERT_EQ(tok::text, Toks[8].getKind());
+  ASSERT_EQ(StringRef("text"), Toks[8].getText());
+
+  ASSERT_EQ(tok::html_end_tag, Toks[9].getKind());
+  ASSERT_EQ(StringRef("a"), Toks[9].getHTMLTagEndName());
+
+  ASSERT_EQ(tok::html_greater, Toks[10].getKind());
+
+  ASSERT_EQ(tok::newline, Toks[11].getKind());
+
+  ASSERT_EQ(tok::text, Toks[12].getKind());
+  ASSERT_EQ(StringRef(" "), Toks[12].getText());
+
+  ASSERT_EQ(tok::newline, Toks[13].getKind());
+
+  ASSERT_EQ(tok::newline, Toks[14].getKind());
+}
+
+TEST_F(CommentLexerTest, HTML22) {
+  const char *Source = "/**\n"
+                       " * <a\n"
+                       " */";
+
+  std::vector<Token> Toks;
+
+  lexString(Source, Toks);
+
+  ASSERT_EQ(6U, Toks.size());
+
+  ASSERT_EQ(tok::newline, Toks[0].getKind());
+
+  ASSERT_EQ(tok::text, Toks[1].getKind());
+  ASSERT_EQ(StringRef(" "), Toks[1].getText());
+
+  ASSERT_EQ(tok::html_start_tag, Toks[2].getKind());
+  ASSERT_EQ(StringRef("a"), Toks[2].getHTMLTagStartName());
+
+  ASSERT_EQ(tok::newline, Toks[3].getKind());
+
+  ASSERT_EQ(tok::newline, Toks[4].getKind());
+
+  ASSERT_EQ(tok::newline, Toks[5].getKind());
+}
+
+TEST_F(CommentLexerTest, HTML23) {
+  // NOTE: "//<" is considered a comment start
+  const char *Source = "// <\n"
+                       "// a\n"
+                       "// >";
+
+  std::vector<Token> Toks;
+
+  lexString(Source, Toks);
+
+  ASSERT_EQ(7U, Toks.size());
+
+  ASSERT_EQ(tok::text, Toks[0].getKind());
+  ASSERT_EQ(StringRef(" "), Toks[0].getText());
+
+  ASSERT_EQ(tok::text, Toks[1].getKind());
+  ASSERT_EQ(StringRef("<"), Toks[1].getText());
+
+  ASSERT_EQ(tok::newline, Toks[2].getKind());
+
+  ASSERT_EQ(tok::text, Toks[3].getKind());
+  ASSERT_EQ(StringRef(" a"), Toks[3].getText());
+
+  ASSERT_EQ(tok::newline, Toks[4].getKind());
+
+  ASSERT_EQ(tok::text, Toks[5].getKind());
+  ASSERT_EQ(StringRef(" >"), Toks[5].getText());
+
+  ASSERT_EQ(tok::newline, Toks[6].getKind());
 }
 
 TEST_F(CommentLexerTest, NotAKnownHTMLTag1) {

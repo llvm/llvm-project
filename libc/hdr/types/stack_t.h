@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_HDR_STACK_T_H
-#define LLVM_LIBC_HDR_STACK_T_H
+#ifndef LLVM_LIBC_HDR_TYPES_STACK_T_H
+#define LLVM_LIBC_HDR_TYPES_STACK_T_H
 
 #ifdef LIBC_FULL_BUILD
 

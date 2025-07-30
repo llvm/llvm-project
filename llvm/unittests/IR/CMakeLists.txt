@@ -26,6 +26,7 @@ add_llvm_unittest(IRTests
   DemandedBitsTest.cpp
   DominatorTreeTest.cpp
   DominatorTreeBatchUpdatesTest.cpp
+  DroppedVariableStatsIRTest.cpp
   FunctionTest.cpp
   PassBuilderCallbacksTest.cpp
   IRBuilderTest.cpp
@@ -49,7 +50,7 @@ add_llvm_unittest(IRTests
   ValueHandleTest.cpp
   ValueMapTest.cpp
   ValueTest.cpp
-  VectorBuilderTest.cpp
+  VectorTypeUtilsTest.cpp
   VectorTypesTest.cpp
   VerifierTest.cpp
   VFABIDemanglerTest.cpp

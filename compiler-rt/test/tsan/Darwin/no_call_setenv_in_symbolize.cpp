@@ -1,6 +1,6 @@
 // RUN: %clangxx_tsan -O1 %s -o %t
 // `handle_sigbus=0` is required because when the rdar://problem/58789439 bug was
-// present TSan's runtime could derefence bad memory leading to SIGBUS being raised.
+// present TSan's runtime could dereference bad memory leading to SIGBUS being raised.
 // If the signal was caught TSan would deadlock because it would try to run the
 // symbolizer again.
 // RUN: %env_tsan_opts=handle_sigbus=0,symbolize=1 %run %t 2>&1 | FileCheck %s

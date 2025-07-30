@@ -11,27 +11,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Utils/IndexingUtils.h"
-#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
-#include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Location.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Interfaces/VectorInterfaces.h"
 
 #define DEBUG_TYPE "vector-broadcast-lowering"
 
@@ -63,11 +52,7 @@ public:
 
     // Stretching scalar inside vector (e.g. vector<1xf32>) can use splat.
     if (srcRank <= 1 && dstRank == 1) {
-      Value ext;
-      if (srcRank == 0)
-        ext = rewriter.create<vector::ExtractElementOp>(loc, op.getSource());
-      else
-        ext = rewriter.create<vector::ExtractOp>(loc, op.getSource(), 0);
+      Value ext = vector::ExtractOp::create(rewriter, loc, op.getSource());
       rewriter.replaceOpWithNewOp<vector::SplatOp>(op, dstType, ext);
       return success();
     }
@@ -85,11 +70,10 @@ public:
       // Duplication.
       VectorType resType = VectorType::Builder(dstType).dropDim(0);
       Value bcst =
-          rewriter.create<vector::BroadcastOp>(loc, resType, op.getSource());
-      Value result = rewriter.create<arith::ConstantOp>(
-          loc, dstType, rewriter.getZeroAttr(dstType));
+          vector::BroadcastOp::create(rewriter, loc, resType, op.getSource());
+      Value result = ub::PoisonOp::create(rewriter, loc, dstType);
       for (int64_t d = 0, dim = dstType.getDimSize(0); d < dim; ++d)
-        result = rewriter.create<vector::InsertOp>(loc, bcst, result, d);
+        result = vector::InsertOp::create(rewriter, loc, bcst, result, d);
       rewriter.replaceOp(op, result);
       return success();
     }
@@ -127,14 +111,13 @@ public:
     VectorType resType =
         VectorType::get(dstType.getShape().drop_front(), eltType,
                         dstType.getScalableDims().drop_front());
-    Value result = rewriter.create<arith::ConstantOp>(
-        loc, dstType, rewriter.getZeroAttr(dstType));
+    Value result = ub::PoisonOp::create(rewriter, loc, dstType);
     if (m == 0) {
       // Stetch at start.
-      Value ext = rewriter.create<vector::ExtractOp>(loc, op.getSource(), 0);
-      Value bcst = rewriter.create<vector::BroadcastOp>(loc, resType, ext);
+      Value ext = vector::ExtractOp::create(rewriter, loc, op.getSource(), 0);
+      Value bcst = vector::BroadcastOp::create(rewriter, loc, resType, ext);
       for (int64_t d = 0, dim = dstType.getDimSize(0); d < dim; ++d)
-        result = rewriter.create<vector::InsertOp>(loc, bcst, result, d);
+        result = vector::InsertOp::create(rewriter, loc, bcst, result, d);
     } else {
       // Stetch not at start.
       if (dstType.getScalableDims()[0]) {
@@ -142,9 +125,9 @@ public:
         return failure();
       }
       for (int64_t d = 0, dim = dstType.getDimSize(0); d < dim; ++d) {
-        Value ext = rewriter.create<vector::ExtractOp>(loc, op.getSource(), d);
-        Value bcst = rewriter.create<vector::BroadcastOp>(loc, resType, ext);
-        result = rewriter.create<vector::InsertOp>(loc, bcst, result, d);
+        Value ext = vector::ExtractOp::create(rewriter, loc, op.getSource(), d);
+        Value bcst = vector::BroadcastOp::create(rewriter, loc, resType, ext);
+        result = vector::InsertOp::create(rewriter, loc, bcst, result, d);
       }
     }
     rewriter.replaceOp(op, result);

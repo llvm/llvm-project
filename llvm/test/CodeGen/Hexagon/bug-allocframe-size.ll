@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 
 ; Make sure we allocate less than 100 bytes of stack
 ; CHECK: allocframe(#{{[1-9][0-9]}}

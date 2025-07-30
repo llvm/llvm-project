@@ -46,6 +46,22 @@ entry:
   ret void
 }
 
+define void @intrinsic_vse_allonesmask_v_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, ptr %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
+; CHECK-LABEL: intrinsic_vse_allonesmask_v_nxv1i64_nxv1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
+; CHECK-NEXT:    vse64.v v8, (a0)
+; CHECK-NEXT:    ret
+entry:
+  call void @llvm.riscv.vse.mask.nxv1i64(
+    <vscale x 1 x i64> %0,
+    ptr %1,
+    <vscale x 1 x i1> splat (i1 true),
+    iXLen %3)
+
+  ret void
+}
+
 declare void @llvm.riscv.vse.nxv2i64(
   <vscale x 2 x i64>,
   ptr,

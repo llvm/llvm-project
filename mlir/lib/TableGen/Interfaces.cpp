@@ -8,25 +8,28 @@
 
 #include "mlir/TableGen/Interfaces.h"
 #include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace mlir;
 using namespace mlir::tblgen;
+using llvm::DagInit;
+using llvm::DefInit;
+using llvm::Init;
+using llvm::ListInit;
+using llvm::Record;
+using llvm::StringInit;
 
 //===----------------------------------------------------------------------===//
 // InterfaceMethod
 //===----------------------------------------------------------------------===//
 
-InterfaceMethod::InterfaceMethod(const llvm::Record *def) : def(def) {
-  llvm::DagInit *args = def->getValueAsDag("arguments");
+InterfaceMethod::InterfaceMethod(const Record *def) : def(def) {
+  const DagInit *args = def->getValueAsDag("arguments");
   for (unsigned i = 0, e = args->getNumArgs(); i != e; ++i) {
-    arguments.push_back(
-        {llvm::cast<llvm::StringInit>(args->getArg(i))->getValue(),
-         args->getArgNameStr(i)});
+    arguments.push_back({cast<StringInit>(args->getArg(i))->getValue(),
+                         args->getArgNameStr(i)});
   }
 }
 
@@ -46,13 +49,15 @@ bool InterfaceMethod::isStatic() const {
 
 // Return the body for this method if it has one.
 std::optional<StringRef> InterfaceMethod::getBody() const {
-  auto value = def->getValueAsString("body");
+  // Trim leading and trailing spaces from the default implementation.
+  auto value = def->getValueAsString("body").trim();
   return value.empty() ? std::optional<StringRef>() : value;
 }
 
 // Return the default implementation for this method if it has one.
 std::optional<StringRef> InterfaceMethod::getDefaultImplementation() const {
-  auto value = def->getValueAsString("defaultBody");
+  // Trim leading and trailing spaces from the default implementation.
+  auto value = def->getValueAsString("defaultBody").trim();
   return value.empty() ? std::optional<StringRef>() : value;
 }
 
@@ -72,18 +77,17 @@ bool InterfaceMethod::arg_empty() const { return arguments.empty(); }
 // Interface
 //===----------------------------------------------------------------------===//
 
-Interface::Interface(const llvm::Record *def) : def(def) {
+Interface::Interface(const Record *def) : def(def) {
   assert(def->isSubClassOf("Interface") &&
          "must be subclass of TableGen 'Interface' class");
 
   // Initialize the interface methods.
-  auto *listInit = dyn_cast<llvm::ListInit>(def->getValueInit("methods"));
-  for (llvm::Init *init : listInit->getValues())
-    methods.emplace_back(cast<llvm::DefInit>(init)->getDef());
+  auto *listInit = dyn_cast<ListInit>(def->getValueInit("methods"));
+  for (const Init *init : listInit->getElements())
+    methods.emplace_back(cast<DefInit>(init)->getDef());
 
   // Initialize the interface base classes.
-  auto *basesInit =
-      dyn_cast<llvm::ListInit>(def->getValueInit("baseInterfaces"));
+  auto *basesInit = dyn_cast<ListInit>(def->getValueInit("baseInterfaces"));
   // Chained inheritance will produce duplicates in the base interface set.
   StringSet<> basesAdded;
   llvm::unique_function<void(Interface)> addBaseInterfaceFn =
@@ -98,8 +102,8 @@ Interface::Interface(const llvm::Record *def) : def(def) {
         baseInterfaces.push_back(std::make_unique<Interface>(baseInterface));
         basesAdded.insert(baseInterface.getName());
       };
-  for (llvm::Init *init : basesInit->getValues())
-    addBaseInterfaceFn(Interface(cast<llvm::DefInit>(init)->getDef()));
+  for (const Init *init : basesInit->getElements())
+    addBaseInterfaceFn(Interface(cast<DefInit>(init)->getDef()));
 }
 
 // Return the name of this interface.

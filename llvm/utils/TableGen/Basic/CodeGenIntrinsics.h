@@ -128,24 +128,29 @@ struct CodeGenIntrinsic {
     ReadNone,
     ImmArg,
     Alignment,
-    Dereferenceable
+    Dereferenceable,
+    Range,
   };
 
   struct ArgAttribute {
     ArgAttrKind Kind;
     uint64_t Value;
+    uint64_t Value2;
 
-    ArgAttribute(ArgAttrKind K, uint64_t V) : Kind(K), Value(V) {}
+    ArgAttribute(ArgAttrKind K, uint64_t V, uint64_t V2)
+        : Kind(K), Value(V), Value2(V2) {}
 
     bool operator<(const ArgAttribute &Other) const {
-      return std::tie(Kind, Value) < std::tie(Other.Kind, Other.Value);
+      return std::tie(Kind, Value, Value2) <
+             std::tie(Other.Kind, Other.Value, Other.Value2);
     }
   };
 
   /// Vector of attributes for each argument.
   SmallVector<SmallVector<ArgAttribute, 0>> ArgumentAttributes;
 
-  void addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V = 0);
+  void addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V = 0,
+                       uint64_t V2 = 0);
 
   bool hasProperty(enum SDNP Prop) const { return Properties & (1 << Prop); }
 
@@ -185,11 +190,15 @@ public:
   const CodeGenIntrinsic &operator[](size_t Pos) const {
     return Intrinsics[Pos];
   }
+  ArrayRef<CodeGenIntrinsic> operator[](const TargetSet &Set) const {
+    return ArrayRef(&Intrinsics[Set.Offset], Set.Count);
+  }
   ArrayRef<TargetSet> getTargets() const { return Targets; }
 
 private:
   void CheckDuplicateIntrinsics() const;
   void CheckTargetIndependentIntrinsics() const;
+  void CheckOverloadSuffixConflicts() const;
 
   std::vector<CodeGenIntrinsic> Intrinsics;
   std::vector<TargetSet> Targets;

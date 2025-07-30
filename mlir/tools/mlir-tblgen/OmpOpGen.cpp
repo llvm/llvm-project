@@ -72,11 +72,10 @@ static StringRef extractOmpClauseName(const Record *clause) {
   assert(ompClause && "base OpenMP records expected to be defined");
 
   StringRef clauseClassName;
-  SmallVector<const Record *, 1> clauseSuperClasses;
-  clause->getDirectSuperClasses(clauseSuperClasses);
 
   // Check if OpenMP_Clause is a direct superclass.
-  for (const Record *superClass : clauseSuperClasses) {
+  for (const Record *superClass :
+       llvm::make_first_range(clause->getDirectSuperClasses())) {
     if (superClass == ompClause) {
       clauseClassName = clause->getName();
       break;
@@ -85,7 +84,7 @@ static StringRef extractOmpClauseName(const Record *clause) {
 
   // Support indirectly-inherited OpenMP_Clauses.
   if (clauseClassName.empty()) {
-    for (auto [superClass, _] : clause->getSuperClasses()) {
+    for (const Record *superClass : clause->getSuperClasses()) {
       if (superClass->isSubClassOf(ompClause)) {
         clauseClassName = superClass->getName();
         break;
@@ -102,11 +101,11 @@ static StringRef extractOmpClauseName(const Record *clause) {
 
 /// Check that the given argument, identified by its name and initialization
 /// value, is present in the \c arguments `dag`.
-static bool verifyArgument(DagInit *arguments, StringRef argName,
-                           Init *argInit) {
+static bool verifyArgument(const DagInit *arguments, StringRef argName,
+                           const Init *argInit) {
   auto range = zip_equal(arguments->getArgNames(), arguments->getArgs());
   return llvm::any_of(
-      range, [&](std::tuple<llvm::StringInit *const &, llvm::Init *const &> v) {
+      range, [&](std::tuple<const llvm::StringInit *, const llvm::Init *> v) {
         return std::get<0>(v)->getAsUnquotedString() == argName &&
                std::get<1>(v) == argInit;
       });
@@ -141,8 +140,8 @@ static void verifyClause(const Record *op, const Record *clause) {
   StringRef clauseClassName = extractOmpClauseName(clause);
 
   if (!clause->getValueAsBit("ignoreArgs")) {
-    DagInit *opArguments = op->getValueAsDag("arguments");
-    DagInit *arguments = clause->getValueAsDag("arguments");
+    const DagInit *opArguments = op->getValueAsDag("arguments");
+    const DagInit *arguments = clause->getValueAsDag("arguments");
 
     for (auto [name, arg] :
          zip(arguments->getArgNames(), arguments->getArgs())) {
@@ -208,12 +207,13 @@ static void verifyClause(const Record *op, const Record *clause) {
 ///
 /// \return the name of the base type to represent elements of the argument
 ///         type.
-static StringRef translateArgumentType(ArrayRef<SMLoc> loc, StringInit *name,
-                                       Init *init, int &nest, int &rank) {
+static StringRef translateArgumentType(ArrayRef<SMLoc> loc,
+                                       const StringInit *name, const Init *init,
+                                       int &nest, int &rank) {
   const Record *def = cast<DefInit>(init)->getDef();
 
   llvm::StringSet<> superClasses;
-  for (auto [sc, _] : def->getSuperClasses())
+  for (const Record *sc : def->getSuperClasses())
     superClasses.insert(sc->getNameInitAsString());
 
   // Handle wrapper-style superclasses.
@@ -282,7 +282,7 @@ static void genClauseOpsStruct(const Record *clause, raw_ostream &os) {
   StringRef clauseName = extractOmpClauseName(clause);
   os << "struct " << clauseName << "ClauseOps {\n";
 
-  DagInit *arguments = clause->getValueAsDag("arguments");
+  const DagInit *arguments = clause->getValueAsDag("arguments");
   for (auto [name, arg] :
        zip_equal(arguments->getArgNames(), arguments->getArgs())) {
     int nest = 0, rank = 1;

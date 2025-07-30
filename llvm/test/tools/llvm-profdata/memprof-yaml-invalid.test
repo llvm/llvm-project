@@ -1,0 +1,8 @@
+; REQUIRES: x86_64-linux
+; RUN: split-file %s %t
+; RUN: not llvm-profdata merge %t/memprof-invalid.yaml -o %t/memprof-invalid.indexed
+
+; Verify that the invalid YAML input results in an error.
+;--- memprof-invalid.yaml
+---
+...

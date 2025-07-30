@@ -51,8 +51,8 @@ sw.epilog:
 ; 32SMALL-ASM: 	    bgt	0, L..BB0_3
 ; 32SMALL-ASM: 	    lwz 4, L..C0(2)
 ; 32SMALL-ASM: 	    slwi 3, 3, 2
-; 32SMALL-ASM: 	    lwzx 3, 3, 4
-; 32SMALL-ASM: 	    add 3, 3, 4
+; 32SMALL-ASM: 	    lwzx 3, 4, 3
+; 32SMALL-ASM: 	    add 3, 4, 3
 ; 32SMALL-ASM: 	    mtctr 3
 ; 32SMALL-ASM: 	    bctr
 ; 32SMALL-ASM: L..BB0_2:
@@ -78,8 +78,8 @@ sw.epilog:
 ; 32LARGE-ASM: 	    addis 4, L..C0@u(2)
 ; 32LARGE-ASM: 	    slwi 3, 3, 2
 ; 32LARGE-ASM:      lwz 4, L..C0@l(4)
-; 32LARGE-ASM:      lwzx 3, 3, 4
-; 32LARGE-ASM:      add 3, 3, 4
+; 32LARGE-ASM:      lwzx 3, 4, 3
+; 32LARGE-ASM:      add 3, 4, 3
 ; 32LARGE-ASM:      mtctr 3
 ; 32LARGE-ASM:      bctr
 ; 32LARGE-ASM: L..BB0_2:
@@ -104,8 +104,8 @@ sw.epilog:
 ; 64SMALL-ASM:      bgt     0, L..BB0_3
 ; 64SMALL-ASM:      ld 4, L..C0(2)
 ; 64SMALL-ASM:      rldic 3, 3, 2, 30
-; 64SMALL-ASM:      lwax 3, 3, 4
-; 64SMALL-ASM:      add 3, 3, 4
+; 64SMALL-ASM:      lwax 3, 4, 3
+; 64SMALL-ASM:      add 3, 4, 3
 ; 64SMALL-ASM:      mtctr 3
 ; 64SMALL-ASM:      bctr
 ; 64SMALL-ASM: L..BB0_2:
@@ -131,8 +131,8 @@ sw.epilog:
 ; 64LARGE-ASM:      addis 4, L..C0@u(2)
 ; 64LARGE-ASM:      rldic 3, 3, 2, 30
 ; 64LARGE-ASM:      ld 4, L..C0@l(4)
-; 64LARGE-ASM:      lwax 3, 3, 4
-; 64LARGE-ASM:      add 3, 3, 4
+; 64LARGE-ASM:      lwax 3, 4, 3
+; 64LARGE-ASM:      add 3, 4, 3
 ; 64LARGE-ASM:      mtctr 3
 ; 64LARGE-ASM:      bctr
 ; 64LARGE-ASM: L..BB0_2:

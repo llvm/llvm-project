@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -debug-only=pipeliner < %s -o - 2>&1 -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -mtriple=hexagon -debug-only=pipeliner < %s -o - 2>&1 -pipeliner-experimental-cg=true | FileCheck %s
 ; REQUIRES: asserts
 
 ; Test that there is a chain edge between two dependent Phis.

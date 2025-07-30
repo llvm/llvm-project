@@ -10,46 +10,35 @@ declare void @def(ptr)
 define void @alloc_v4i8(ptr %st_ptr) nounwind {
 ; CHECK-LABEL: alloc_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
-; CHECK-NEXT:    add x0, sp, #28
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
-; CHECK-NEXT:    add x20, sp, #28
+; CHECK-NEXT:    add x0, sp, #12
+; CHECK-NEXT:    add x20, sp, #12
 ; CHECK-NEXT:    bl def
 ; CHECK-NEXT:    ptrue p0.b, vl2
 ; CHECK-NEXT:    ld2b { z0.b, z1.b }, p0/z, [x20]
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-NEXT:    mov z2.b, z0.b[1]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    stp w8, w9, [sp, #8]
-; CHECK-NEXT:    ldr d0, [sp, #8]
+; CHECK-NEXT:    zip1 z0.s, z0.s, z2.s
 ; CHECK-NEXT:    st1b { z0.s }, p0, [x19]
-; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: alloc_v4i8:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    sub sp, sp, #48
-; NONEON-NOSVE-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
+; NONEON-NOSVE-NEXT:    sub sp, sp, #32
+; NONEON-NOSVE-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
 ; NONEON-NOSVE-NEXT:    mov x19, x0
-; NONEON-NOSVE-NEXT:    add x0, sp, #28
+; NONEON-NOSVE-NEXT:    add x0, sp, #12
 ; NONEON-NOSVE-NEXT:    bl def
-; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #30]
-; NONEON-NOSVE-NEXT:    strh w8, [sp, #12]
-; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #28]
-; NONEON-NOSVE-NEXT:    strh w8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
-; NONEON-NOSVE-NEXT:    str d0, [sp, #16]
-; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #16]
+; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #14]
+; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #12]
 ; NONEON-NOSVE-NEXT:    strb w8, [x19, #1]
 ; NONEON-NOSVE-NEXT:    strb w9, [x19]
-; NONEON-NOSVE-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
-; NONEON-NOSVE-NEXT:    add sp, sp, #48
+; NONEON-NOSVE-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
+; NONEON-NOSVE-NEXT:    add sp, sp, #32
 ; NONEON-NOSVE-NEXT:    ret
   %alloc = alloca [4 x i8]
   call void @def(ptr %alloc)
@@ -62,32 +51,27 @@ define void @alloc_v4i8(ptr %st_ptr) nounwind {
 define void @alloc_v6i8(ptr %st_ptr) nounwind {
 ; CHECK-LABEL: alloc_v6i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
-; CHECK-NEXT:    add x0, sp, #24
+; CHECK-NEXT:    add x0, sp, #8
 ; CHECK-NEXT:    bl def
-; CHECK-NEXT:    ldr d0, [sp, #24]
+; CHECK-NEXT:    ldr d0, [sp, #8]
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    add x8, sp, #4
 ; CHECK-NEXT:    ptrue p1.s, vl2
 ; CHECK-NEXT:    mov z1.b, z0.b[3]
-; CHECK-NEXT:    mov z2.b, z0.b[5]
-; CHECK-NEXT:    mov z0.b, z0.b[1]
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    strh w8, [sp, #10]
+; CHECK-NEXT:    mov z2.b, z0.b[1]
+; CHECK-NEXT:    mov z0.b, z0.b[5]
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z1.s, z1.s, z0.s
+; CHECK-NEXT:    st1b { z1.h }, p0, [x8]
+; CHECK-NEXT:    ld1h { z1.s }, p1/z, [x8]
 ; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    strh w9, [sp, #12]
-; CHECK-NEXT:    strh w8, [sp, #8]
-; CHECK-NEXT:    add x8, sp, #20
-; CHECK-NEXT:    ldr d0, [sp, #8]
-; CHECK-NEXT:    st1b { z0.h }, p0, [x8]
-; CHECK-NEXT:    ld1h { z0.s }, p1/z, [x8]
-; CHECK-NEXT:    strb w9, [x19, #2]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    strh w8, [x19]
-; CHECK-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    strb w8, [x19, #2]
+; CHECK-NEXT:    str h1, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: alloc_v6i8:
@@ -133,10 +117,8 @@ define void @alloc_v32i8(ptr %st_ptr) nounwind {
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI2_0]
 ; CHECK-NEXT:    tbl z0.b, { z0.b }, z1.b
 ; CHECK-NEXT:    ldr q1, [sp, #16]
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    strb w8, [x19, #8]
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    str x8, [x19]
+; CHECK-NEXT:    stur b1, [x19, #8]
+; CHECK-NEXT:    str d0, [x19]
 ; CHECK-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret

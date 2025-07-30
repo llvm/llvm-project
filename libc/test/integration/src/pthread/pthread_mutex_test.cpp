@@ -6,18 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/stdint_proxy.h" // uintptr_t
+#include "src/pthread/pthread_create.h"
+#include "src/pthread/pthread_join.h"
 #include "src/pthread/pthread_mutex_destroy.h"
 #include "src/pthread/pthread_mutex_init.h"
 #include "src/pthread/pthread_mutex_lock.h"
 #include "src/pthread/pthread_mutex_unlock.h"
-
-#include "src/pthread/pthread_create.h"
-#include "src/pthread/pthread_join.h"
-
 #include "test/IntegrationTest/test.h"
 
 #include <pthread.h>
-#include <stdint.h> // uintptr_t
 
 constexpr int START = 0;
 constexpr int MAX = 10000;
@@ -185,6 +183,10 @@ void multiple_waiters() {
   LIBC_NAMESPACE::pthread_mutex_destroy(&multiple_waiter_lock);
   LIBC_NAMESPACE::pthread_mutex_destroy(&counter_lock);
 }
+
+// Test the initializer
+[[maybe_unused]]
+static pthread_mutex_t test_initializer = PTHREAD_MUTEX_INITIALIZER;
 
 TEST_MAIN() {
   relay_counter();

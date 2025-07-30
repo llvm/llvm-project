@@ -37,6 +37,20 @@ def imm8_sh8 : Immediate<i32, [{ return Imm >= -32768 && Imm <= 32512 && ((Imm &
   let DecoderMethod = "decodeImm8_sh8Operand";
 }
 
+// imm8n_7 predicate - Immediate in the range [-8,7]
+def Imm8n_7_AsmOperand: ImmAsmOperand<"Imm8n_7">;
+def imm8n_7: Immediate<i32, [{ return Imm >= -8 && Imm <= 7; }], "Imm8n_7_AsmOperand"> {
+  let EncoderMethod = "getImm8n_7OpValue";
+  let DecoderMethod = "decodeImm8n_7Operand";
+}
+
+// imm64n_4n predicate - Immediate in the range [-64,-4]
+def Imm64n_4n_AsmOperand: ImmAsmOperand<"Imm64n_4n">;
+def imm64n_4n: Immediate<i32, [{ return Imm >= -64 && Imm <= -4; }], "Imm64n_4n_AsmOperand"> {
+  let EncoderMethod = "getImm64n_4nOpValue";
+  let DecoderMethod = "decodeImm64n_4nOperand";
+}
+
 // imm12 predicate - Immediate in the range [-2048,2047]
 def Imm12_AsmOperand : ImmAsmOperand<"Imm12">;
 def imm12 : Immediate<i32, [{ return Imm >= -2048 && Imm <= 2047; }], "Imm12_AsmOperand"> {
@@ -72,6 +86,20 @@ def imm1_16 : Immediate<i32, [{ return Imm >= 1 && Imm <= 16; }], "Imm1_16_AsmOp
   let DecoderMethod = "decodeImm1_16Operand";
 }
 
+// imm1n_15 predicate - Immediate in the range [-1,15], except 0
+def Imm1n_15_AsmOperand: ImmAsmOperand<"Imm1n_15">;
+def imm1n_15: Immediate<i32, [{ return Imm >= -1 && Imm <= 15 && Imm != 0; }], "Imm1n_15_AsmOperand"> {
+  let EncoderMethod = "getImm1n_15OpValue";
+  let DecoderMethod = "decodeImm1n_15Operand";
+}
+
+// imm32n_95 predicate - Immediate in the range [-32,95]
+def Imm32n_95_AsmOperand: ImmAsmOperand<"Imm32n_95">;
+def imm32n_95: Immediate<i32, [{ return Imm >= -32 && Imm <= 95; }], "Imm32n_95_AsmOperand"> {
+  let EncoderMethod = "getImm32n_95OpValue";
+  let DecoderMethod = "decodeImm32n_95Operand";
+}
+
 // shimm1_31 predicate - Immediate in the range [1,31]
 def Shimm1_31_AsmOperand : ImmAsmOperand<"Shimm1_31">;
 def shimm1_31 : Immediate<i32, [{ return Imm >= 1 && Imm <= 31; }], "Shimm1_31_AsmOperand"> {
@@ -103,6 +131,13 @@ def offset4m32 : Immediate<i32,
     [{ return Imm >= 0 && Imm <= 60 && (Imm & 0x3 == 0); }],
     "Offset4m32_AsmOperand">;
 
+// entry_imm12 predicate - Immediate in the range [0,32760], ENTRY parameter
+def Entry_Imm12_AsmOperand: ImmAsmOperand<"entry_imm12">;
+def entry_imm12: Immediate<i32, [{ return Imm >= 0 && Imm <= 32760 && (Imm % 8 == 0); }], "Entry_Imm12_AsmOperand"> {
+  let EncoderMethod = "getEntry_Imm12OpValue";
+  let DecoderMethod = "decodeEntry_Imm12OpValue";
+}
+
 // b4const predicate - Branch Immediate 4-bit signed operand
 def B4const_AsmOperand: ImmAsmOperand<"B4const">;
 def b4const: Immediate<i32,
@@ -132,6 +167,14 @@ def b4constu: Immediate<i32,
   let EncoderMethod = "getB4constuOpValue";
   let DecoderMethod = "decodeB4constuOperand";
 }
+
+// imm7_22 predicate - Immediate in the range [7,22] for sign extend and clamps
+def Imm7_22_AsmOperand: ImmAsmOperand<"imm7_22">;
+def imm7_22: Immediate<i32, [{ return Imm >= 7 && Imm <= 22; }], "Imm7_22_AsmOperand"> {
+  let EncoderMethod = "getImm7_22OpValue";
+  let DecoderMethod = "decodeImm7_22Operand";
+}
+
 //===----------------------------------------------------------------------===//
 // Memory address operands
 //===----------------------------------------------------------------------===//
@@ -179,6 +222,7 @@ def  pcrel32call : Operand<iPTR> {
   let EncoderMethod = "getCallEncoding";
   let DecoderMethod = "decodeCallOperand";
   let ParserMatchClass = XtensaPCRelTargetAsmOperand;
+  let OperandType = "OPERAND_PCREL";
 }
 
 def brtarget : Operand<OtherVT> {
@@ -186,6 +230,7 @@ def brtarget : Operand<OtherVT> {
   let EncoderMethod = "getBranchTargetEncoding";
   let DecoderMethod = "decodeBranchOperand";
   let ParserMatchClass = XtensaPCRelTargetAsmOperand;
+  let OperandType = "OPERAND_PCREL";
 }
 
 def jumptarget : Operand<OtherVT> {
@@ -193,6 +238,15 @@ def jumptarget : Operand<OtherVT> {
   let EncoderMethod = "getJumpTargetEncoding";
   let DecoderMethod = "decodeJumpOperand";
   let ParserMatchClass = XtensaPCRelTargetAsmOperand;
+  let OperandType = "OPERAND_PCREL";
+}
+
+def ltarget : Operand<OtherVT> {
+  let PrintMethod = "printLoopTarget";
+  let EncoderMethod = "getLoopTargetEncoding";
+  let DecoderMethod = "decodeLoopOperand";
+  let ParserMatchClass = XtensaPCRelTargetAsmOperand;
+  let OperandType = "OPERAND_PCREL";
 }
 
 def L32Rtarget : Operand<i32> {
@@ -200,4 +254,5 @@ def L32Rtarget : Operand<i32> {
   let EncoderMethod = "getL32RTargetEncoding";
   let DecoderMethod = "decodeL32ROperand";
   let ParserMatchClass = XtensaPCRelTargetAsmOperand;
+  let OperandType = "OPERAND_PCREL";
 }

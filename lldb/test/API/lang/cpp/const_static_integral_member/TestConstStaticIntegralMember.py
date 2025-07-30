@@ -120,17 +120,15 @@ class TestCase(TestBase):
         self.assertEqual(varobj.type.name, expect_type)
         self.assertEqual(varobj.value, expect_val)
 
-    @expectedFailureAll(dwarf_version=["<", "5"])
-    # On linux this passes due to the manual index
-    @expectedFailureDarwin(debug_info=no_match(["dsym"]))
-    def test_inline_static_members(self):
-        self.build()
+    def check_inline_static_members(self, flags):
+        self.build(dictionary={"CXXFLAGS_EXTRAS": flags})
         lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp")
         )
 
         self.check_global_var("A::int_val", "const int", "1")
         self.check_global_var("A::int_val_with_address", "const int", "2")
+        self.check_global_var("A::inline_int_val", "const int", "3")
         self.check_global_var("A::bool_val", "const bool", "true")
         self.check_global_var("A::enum_val", "Enum", "enum_case2")
         self.check_global_var("A::enum_bool_val", "EnumBool", "enum_bool_case1")
@@ -143,6 +141,19 @@ class TestCase(TestBase):
         self.check_global_var(
             "ClassWithConstexprs::scoped_enum_val", "ScopedEnum", "scoped_enum_case2"
         )
+
+    # Fails on Windows for unknown reasons.
+    @skipIfWindows
+    # On linux this passes due to the manual index
+    @expectedFailureDarwin(debug_info=no_match(["dsym"]))
+    @skipIf(debug_info=["dsym"], compiler=["clang"], compiler_version=["<", "19.0"])
+    def test_inline_static_members_dwarf5(self):
+        self.check_inline_static_members("-gdwarf-5")
+
+    # On linux this passes due to the manual index
+    @expectedFailureDarwin
+    def test_inline_static_members_dwarf4(self):
+        self.check_inline_static_members("-gdwarf-4")
 
     # With older versions of Clang, LLDB fails to evaluate classes with only
     # constexpr members when dsymutil is enabled
@@ -170,15 +181,12 @@ class TestCase(TestBase):
             "ClassWithEnumAlias::enum_alias_alias", result_value="scoped_enum_case1"
         )
 
-    @expectedFailureAll(dwarf_version=["<", "5"])
-    # On linux this passes due to the manual index
-    @expectedFailureDarwin(debug_info=no_match(["dsym"]))
-    def test_shadowed_static_inline_members(self):
+    def check_shadowed_static_inline_members(self, flags):
         """Tests that the expression evaluator and SBAPI can both
         correctly determine the requested inline static variable
         in the presence of multiple variables of the same name."""
 
-        self.build()
+        self.build(dictionary={"CXXFLAGS_EXTRAS": flags})
         lldbutil.run_to_name_breakpoint(self, "bar")
 
         self.check_global_var("ns::Foo::mem", "const int", "10")
@@ -187,6 +195,19 @@ class TestCase(TestBase):
         self.expect_expr("Foo::mem", result_value="10")
         self.expect_expr("ns::Foo::mem", result_value="10")
         self.expect_expr("::Foo::mem", result_value="-29")
+
+    # Fails on Windows for unknown reasons.
+    @skipIfWindows
+    # On linux this passes due to the manual index
+    @expectedFailureDarwin(debug_info=no_match(["dsym"]))
+    @skipIf(debug_info=["dsym"], compiler=["clang"], compiler_version=["<", "19.0"])
+    def test_shadowed_static_inline_members_dwarf5(self):
+        self.check_shadowed_static_inline_members("-gdwarf-5")
+
+    # On linux this passes due to the manual index
+    @expectedFailureDarwin
+    def test_shadowed_static_inline_members_dwarf4(self):
+        self.check_shadowed_static_inline_members("-gdwarf-4")
 
     @expectedFailureAll(bugnumber="target var doesn't honour global namespace")
     def test_shadowed_static_inline_members_xfail(self):

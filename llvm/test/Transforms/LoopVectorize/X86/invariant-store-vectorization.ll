@@ -35,9 +35,9 @@ define i32 @inv_val_store_to_inv_address_with_reduction(ptr %a, i64 %n, ptr %b) 
 ; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 64
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 128
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 192
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 64
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 128
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 192
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i32>, ptr [[TMP1]], align 8, !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <16 x i32>, ptr [[TMP2]], align 8, !alias.scope [[META0]]
 ; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <16 x i32>, ptr [[TMP3]], align 8, !alias.scope [[META0]]
@@ -62,25 +62,25 @@ define i32 @inv_val_store_to_inv_address_with_reduction(ptr %a, i64 %n, ptr %b) 
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
 ; CHECK:       vec.epilog.ph:
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32  [ [[TMP10]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP10]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[N_VEC13:%.*]] = and i64 [[SMAX2]], 9223372036854775800
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x i32> <i32 poison, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, i32 [[BC_MERGE_RDX]], i64 0
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
-; CHECK-NEXT:    [[INDEX15:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT18:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI16:%.*]] = phi <8 x i32> [ [[TMP11]], [[VEC_EPILOG_PH]] ], [ [[TMP13:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX15]]
-; CHECK-NEXT:    [[WIDE_LOAD17:%.*]] = load <8 x i32>, ptr [[TMP12]], align 8, !alias.scope [[META8:![0-9]+]]
-; CHECK-NEXT:    [[TMP13]] = add <8 x i32> [[VEC_PHI16]], [[WIDE_LOAD17]]
+; CHECK-NEXT:    [[INDEX14:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT17:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI15:%.*]] = phi <8 x i32> [ [[TMP11]], [[VEC_EPILOG_PH]] ], [ [[TMP13:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX14]]
+; CHECK-NEXT:    [[WIDE_LOAD16:%.*]] = load <8 x i32>, ptr [[TMP12]], align 8, !alias.scope [[META8:![0-9]+]]
+; CHECK-NEXT:    [[TMP13]] = add <8 x i32> [[VEC_PHI15]], [[WIDE_LOAD16]]
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META11:![0-9]+]], !noalias [[META8]]
-; CHECK-NEXT:    [[INDEX_NEXT18]] = add nuw i64 [[INDEX15]], 8
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT18]], [[N_VEC13]]
+; CHECK-NEXT:    [[INDEX_NEXT17]] = add nuw i64 [[INDEX14]], 8
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT17]], [[N_VEC13]]
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP13]])
-; CHECK-NEXT:    [[CMP_N14:%.*]] = icmp eq i64 [[SMAX2]], [[N_VEC13]]
-; CHECK-NEXT:    br i1 [[CMP_N14]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
+; CHECK-NEXT:    [[CMP_N18:%.*]] = icmp eq i64 [[SMAX2]], [[N_VEC13]]
+; CHECK-NEXT:    br i1 [[CMP_N18]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC13]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX19:%.*]] = phi i32 [ [[TMP15]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP10]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ITER_CHECK]] ]
@@ -88,7 +88,7 @@ define i32 @inv_val_store_to_inv_address_with_reduction(ptr %a, i64 %n, ptr %b) 
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ]
 ; CHECK-NEXT:    [[T0:%.*]] = phi i32 [ [[T3:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX19]], [[VEC_EPILOG_SCALAR_PH]] ]
-; CHECK-NEXT:    [[T1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[I]]
+; CHECK-NEXT:    [[T1:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[I]]
 ; CHECK-NEXT:    [[T2:%.*]] = load i32, ptr [[T1]], align 8
 ; CHECK-NEXT:    [[T3]] = add i32 [[T0]], [[T2]]
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4
@@ -126,7 +126,7 @@ define void @inv_val_store_to_inv_address_conditional(ptr %a, i64 %n, ptr %b, i3
 ; CHECK-NEXT:  iter.check:
 ; CHECK-NEXT:    [[NTRUNC:%.*]] = trunc i64 [[N:%.*]] to i32
 ; CHECK-NEXT:    [[SMAX2:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 8
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N]], 2
@@ -141,9 +141,9 @@ define void @inv_val_store_to_inv_address_conditional(ptr %a, i64 %n, ptr %b, i3
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK3]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX2]], 9223372036854775792
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[K:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[NTRUNC]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT]], <16 x i32> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <16 x i32> poison, i32 [[NTRUNC]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <16 x i32> poison, i32 [[K:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT4]], <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <16 x ptr> poison, ptr [[A]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <16 x ptr> [[BROADCAST_SPLATINSERT6]], <16 x ptr> poison, <16 x i32> zeroinitializer
@@ -152,9 +152,9 @@ define void @inv_val_store_to_inv_address_conditional(ptr %a, i64 %n, ptr %b, i3
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i32>, ptr [[TMP1]], align 8, !alias.scope [[META15:![0-9]+]], !noalias [[META18:![0-9]+]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <16 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    store <16 x i32> [[BROADCAST_SPLAT5]], ptr [[TMP1]], align 4, !alias.scope [[META15]], !noalias [[META18]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> [[BROADCAST_SPLAT5]], <16 x ptr> [[BROADCAST_SPLAT7]], i32 4, <16 x i1> [[TMP2]]), !alias.scope [[META18]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <16 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT5]]
+; CHECK-NEXT:    store <16 x i32> [[BROADCAST_SPLAT]], ptr [[TMP1]], align 4, !alias.scope [[META15]], !noalias [[META18]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> [[BROADCAST_SPLAT]], <16 x ptr> [[BROADCAST_SPLAT7]], i32 4, <16 x i1> [[TMP2]]), !alias.scope [[META18]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
@@ -162,38 +162,59 @@ define void @inv_val_store_to_inv_address_conditional(ptr %a, i64 %n, ptr %b, i3
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
-; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[SMAX2]], 8
-; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK_NOT_NOT:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
-; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK_NOT_NOT]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
+; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[SMAX2]], 12
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_VEC9:%.*]] = and i64 [[SMAX2]], 9223372036854775800
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT13:%.*]] = insertelement <8 x i32> poison, i32 [[K]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT14:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT13]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT15:%.*]] = insertelement <8 x i32> poison, i32 [[NTRUNC]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT16:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT15]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT17:%.*]] = insertelement <8 x ptr> poison, ptr [[A]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT18:%.*]] = shufflevector <8 x ptr> [[BROADCAST_SPLATINSERT17]], <8 x ptr> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[N_VEC9:%.*]] = and i64 [[SMAX2]], 9223372036854775804
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <4 x i32> poison, i32 [[NTRUNC]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT13:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT12]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT14:%.*]] = insertelement <4 x i32> poison, i32 [[K]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT15:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT14]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
-; CHECK-NEXT:    [[INDEX11:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT19:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX11]]
-; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <8 x i32>, ptr [[TMP4]], align 8, !alias.scope [[META21:![0-9]+]], !noalias [[META24:![0-9]+]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD12]], [[BROADCAST_SPLAT14]]
-; CHECK-NEXT:    store <8 x i32> [[BROADCAST_SPLAT16]], ptr [[TMP4]], align 4, !alias.scope [[META21]], !noalias [[META24]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> [[BROADCAST_SPLAT16]], <8 x ptr> [[BROADCAST_SPLAT18]], i32 4, <8 x i1> [[TMP5]]), !alias.scope [[META24]]
-; CHECK-NEXT:    [[INDEX_NEXT19]] = add nuw i64 [[INDEX11]], 8
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT19]], [[N_VEC9]]
-; CHECK-NEXT:    br i1 [[TMP6]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
+; CHECK-NEXT:    [[INDEX10:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT22:%.*]], [[PRED_STORE_CONTINUE21:%.*]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX10]]
+; CHECK-NEXT:    [[WIDE_LOAD15:%.*]] = load <4 x i32>, ptr [[TMP4]], align 8, !alias.scope [[META21:![0-9]+]], !noalias [[META24:![0-9]+]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD15]], [[BROADCAST_SPLAT15]]
+; CHECK-NEXT:    store <4 x i32> [[BROADCAST_SPLAT13]], ptr [[TMP4]], align 4, !alias.scope [[META21]], !noalias [[META24]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i64 0
+; CHECK-NEXT:    br i1 [[TMP6]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; CHECK:       pred.store.if:
+; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META24]]
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
+; CHECK:       pred.store.continue:
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP5]], i64 1
+; CHECK-NEXT:    br i1 [[TMP7]], label [[PRED_STORE_IF16:%.*]], label [[PRED_STORE_CONTINUE17:%.*]]
+; CHECK:       pred.store.if16:
+; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META24]]
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE17]]
+; CHECK:       pred.store.continue17:
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP5]], i64 2
+; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF18:%.*]], label [[PRED_STORE_CONTINUE19:%.*]]
+; CHECK:       pred.store.if18:
+; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META24]]
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE19]]
+; CHECK:       pred.store.continue19:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP5]], i64 3
+; CHECK-NEXT:    br i1 [[TMP9]], label [[PRED_STORE_IF20:%.*]], label [[PRED_STORE_CONTINUE21]]
+; CHECK:       pred.store.if20:
+; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META24]]
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE21]]
+; CHECK:       pred.store.continue21:
+; CHECK-NEXT:    [[INDEX_NEXT22]] = add nuw i64 [[INDEX10]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT22]], [[N_VEC9]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    [[CMP_N10:%.*]] = icmp eq i64 [[SMAX2]], [[N_VEC9]]
-; CHECK-NEXT:    br i1 [[CMP_N10]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
+; CHECK-NEXT:    [[CMP_N23:%.*]] = icmp eq i64 [[SMAX2]], [[N_VEC9]]
+; CHECK-NEXT:    br i1 [[CMP_N23]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC9]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[LATCH:%.*]] ], [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ]
-; CHECK-NEXT:    [[T1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[I]]
+; CHECK-NEXT:    [[T1:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[I]]
 ; CHECK-NEXT:    [[T2:%.*]] = load i32, ptr [[T1]], align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[T2]], [[K]]
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[T1]], align 4
@@ -262,9 +283,9 @@ define void @variant_val_store_to_inv_address_conditional(ptr %a, i64 %n, ptr %b
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK11]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX10]], 9223372036854775792
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[K:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[NTRUNC]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT]], <16 x i32> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <16 x i32> poison, i32 [[NTRUNC]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <16 x i32> poison, i32 [[K:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT13:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT12]], <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT14:%.*]] = insertelement <16 x ptr> poison, ptr [[A]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT15:%.*]] = shufflevector <16 x ptr> [[BROADCAST_SPLATINSERT14]], <16 x ptr> poison, <16 x i32> zeroinitializer
@@ -273,8 +294,8 @@ define void @variant_val_store_to_inv_address_conditional(ptr %a, i64 %n, ptr %b
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i32>, ptr [[TMP1]], align 8, !alias.scope [[META28:![0-9]+]], !noalias [[META31:![0-9]+]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <16 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    store <16 x i32> [[BROADCAST_SPLAT13]], ptr [[TMP1]], align 4, !alias.scope [[META28]], !noalias [[META31]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <16 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT13]]
+; CHECK-NEXT:    store <16 x i32> [[BROADCAST_SPLAT]], ptr [[TMP1]], align 4, !alias.scope [[META28]], !noalias [[META31]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[C]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr [[TMP3]], i32 8, <16 x i1> [[TMP2]], <16 x i32> poison), !alias.scope [[META34:![0-9]+]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> [[WIDE_MASKED_LOAD]], <16 x ptr> [[BROADCAST_SPLAT15]], i32 4, <16 x i1> [[TMP2]]), !alias.scope [[META35:![0-9]+]], !noalias [[META34]]
@@ -291,40 +312,40 @@ define void @variant_val_store_to_inv_address_conditional(ptr %a, i64 %n, ptr %b
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[N_VEC17:%.*]] = and i64 [[SMAX10]], 9223372036854775800
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT21:%.*]] = insertelement <8 x i32> poison, i32 [[K]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT22:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT21]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT23:%.*]] = insertelement <8 x i32> poison, i32 [[NTRUNC]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT24:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT23]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT26:%.*]] = insertelement <8 x ptr> poison, ptr [[A]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT27:%.*]] = shufflevector <8 x ptr> [[BROADCAST_SPLATINSERT26]], <8 x ptr> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT20:%.*]] = insertelement <8 x i32> poison, i32 [[NTRUNC]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT21:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT20]], <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT22:%.*]] = insertelement <8 x i32> poison, i32 [[K]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT23:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT22]], <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT25:%.*]] = insertelement <8 x ptr> poison, ptr [[A]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT26:%.*]] = shufflevector <8 x ptr> [[BROADCAST_SPLATINSERT25]], <8 x ptr> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
-; CHECK-NEXT:    [[INDEX19:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT28:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX19]]
-; CHECK-NEXT:    [[WIDE_LOAD20:%.*]] = load <8 x i32>, ptr [[TMP5]], align 8, !alias.scope [[META37:![0-9]+]], !noalias [[META40:![0-9]+]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD20]], [[BROADCAST_SPLAT22]]
-; CHECK-NEXT:    store <8 x i32> [[BROADCAST_SPLAT24]], ptr [[TMP5]], align 4, !alias.scope [[META37]], !noalias [[META40]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[C]], i64 [[INDEX19]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD25:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr [[TMP7]], i32 8, <8 x i1> [[TMP6]], <8 x i32> poison), !alias.scope [[META43:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> [[WIDE_MASKED_LOAD25]], <8 x ptr> [[BROADCAST_SPLAT27]], i32 4, <8 x i1> [[TMP6]]), !alias.scope [[META44:![0-9]+]], !noalias [[META43]]
-; CHECK-NEXT:    [[INDEX_NEXT28]] = add nuw i64 [[INDEX19]], 8
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT28]], [[N_VEC17]]
+; CHECK-NEXT:    [[INDEX18:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT27:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX18]]
+; CHECK-NEXT:    [[WIDE_LOAD25:%.*]] = load <8 x i32>, ptr [[TMP5]], align 8, !alias.scope [[META37:![0-9]+]], !noalias [[META40:![0-9]+]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD25]], [[BROADCAST_SPLAT23]]
+; CHECK-NEXT:    store <8 x i32> [[BROADCAST_SPLAT21]], ptr [[TMP5]], align 4, !alias.scope [[META37]], !noalias [[META40]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[C]], i64 [[INDEX18]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD26:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr [[TMP7]], i32 8, <8 x i1> [[TMP6]], <8 x i32> poison), !alias.scope [[META43:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> [[WIDE_MASKED_LOAD26]], <8 x ptr> [[BROADCAST_SPLAT26]], i32 4, <8 x i1> [[TMP6]]), !alias.scope [[META44:![0-9]+]], !noalias [[META43]]
+; CHECK-NEXT:    [[INDEX_NEXT27]] = add nuw i64 [[INDEX18]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT27]], [[N_VEC17]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP45:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    [[CMP_N18:%.*]] = icmp eq i64 [[SMAX10]], [[N_VEC17]]
-; CHECK-NEXT:    br i1 [[CMP_N18]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
+; CHECK-NEXT:    [[CMP_N28:%.*]] = icmp eq i64 [[SMAX10]], [[N_VEC17]]
+; CHECK-NEXT:    br i1 [[CMP_N28]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC17]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[LATCH:%.*]] ], [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ]
-; CHECK-NEXT:    [[T1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[I]]
+; CHECK-NEXT:    [[T1:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[I]]
 ; CHECK-NEXT:    [[T2:%.*]] = load i32, ptr [[T1]], align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[T2]], [[K]]
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[T1]], align 4
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_STORE:%.*]], label [[LATCH]]
 ; CHECK:       cond_store:
-; CHECK-NEXT:    [[T3:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[I]]
+; CHECK-NEXT:    [[T3:%.*]] = getelementptr inbounds nuw i32, ptr [[C]], i64 [[I]]
 ; CHECK-NEXT:    [[T4:%.*]] = load i32, ptr [[T3]], align 8
 ; CHECK-NEXT:    store i32 [[T4]], ptr [[A]], align 4
 ; CHECK-NEXT:    br label [[LATCH]]

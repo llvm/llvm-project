@@ -19,7 +19,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
-#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -44,7 +43,7 @@ void SubtargetFeatures::AddFeature(StringRef String, bool Enable) {
 
 void SubtargetFeatures::addFeaturesVector(
     const ArrayRef<std::string> OtherFeatures) {
-  Features.insert(Features.cend(), OtherFeatures.begin(), OtherFeatures.end());
+  llvm::append_range(Features, OtherFeatures);
 }
 
 SubtargetFeatures::SubtargetFeatures(StringRef Initial) {

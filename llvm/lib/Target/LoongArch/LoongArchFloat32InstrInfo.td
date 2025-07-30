@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file describes the baisc single-precision floating-point instructions.
+// This file describes the basic single-precision floating-point instructions.
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,12 +19,16 @@ def SDT_LoongArchMOVGR2FR_W_LA64
 def SDT_LoongArchMOVFR2GR_S_LA64
     : SDTypeProfile<1, 1, [SDTCisVT<0, i64>, SDTCisVT<1, f32>]>;
 def SDT_LoongArchFTINT : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
+def SDT_LoongArchFRECIPE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
+def SDT_LoongArchFRSQRTE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
 
 def loongarch_movgr2fr_w_la64
     : SDNode<"LoongArchISD::MOVGR2FR_W_LA64", SDT_LoongArchMOVGR2FR_W_LA64>;
 def loongarch_movfr2gr_s_la64
     : SDNode<"LoongArchISD::MOVFR2GR_S_LA64", SDT_LoongArchMOVFR2GR_S_LA64>;
 def loongarch_ftint : SDNode<"LoongArchISD::FTINT", SDT_LoongArchFTINT>;
+def loongarch_frecipe : SDNode<"LoongArchISD::FRECIPE", SDT_LoongArchFRECIPE>;
+def loongarch_frsqrte : SDNode<"LoongArchISD::FRSQRTE", SDT_LoongArchFRSQRTE>;
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -168,7 +172,9 @@ def : PatFprFpr<fmul, FMUL_S, FPR32>;
 def : PatFprFpr<fdiv, FDIV_S, FPR32>;
 def : PatFprFpr<fcopysign, FCOPYSIGN_S, FPR32>;
 def : PatFprFpr<fmaxnum_ieee, FMAX_S, FPR32>;
+def : PatFprFpr<fmaxnum, FMAX_S, FPR32>;
 def : PatFprFpr<fminnum_ieee, FMIN_S, FPR32>;
+def : PatFprFpr<fminnum, FMIN_S, FPR32>;
 def : PatFpr<fneg, FNEG_S, FPR32>;
 def : PatFpr<fabs, FABS_S, FPR32>;
 def : PatFpr<fsqrt, FSQRT_S, FPR32>;
@@ -286,6 +292,8 @@ let Predicates = [HasFrecipe] in {
 // FP approximate reciprocal operation
 def : Pat<(int_loongarch_frecipe_s FPR32:$src), (FRECIPE_S FPR32:$src)>;
 def : Pat<(int_loongarch_frsqrte_s FPR32:$src), (FRSQRTE_S FPR32:$src)>;
+def : Pat<(loongarch_frecipe FPR32:$src), (FRECIPE_S FPR32:$src)>;
+def : Pat<(loongarch_frsqrte FPR32:$src), (FRSQRTE_S FPR32:$src)>;
 }
 
 // fmadd.s: fj * fk + fa

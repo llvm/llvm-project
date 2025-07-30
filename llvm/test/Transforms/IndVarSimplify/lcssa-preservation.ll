@@ -43,7 +43,7 @@ inner.latch:
   br i1 %cmp2, label %inner.header, label %exit
 
 outer.latch:
-  br i1 undef, label %outer.header, label %exit
+  br i1 false, label %outer.header, label %exit
 
 exit:
   %exit.phi = phi i32 [ %inc, %inner.latch ], [ undef, %outer.latch ]

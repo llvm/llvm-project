@@ -113,6 +113,13 @@ class CCAssignToReg<list<Register> regList> : CCAction {
   list<Register> RegList = regList;
 }
 
+/// CCAssignToRegTuple - Same as CCAssignToReg, but with a list of registers as
+/// strings. This is needed because records synthesized during tuple expansion
+/// are not visible outside of the register info emitter.
+class CCAssignToRegTuple<list<string> regList> : CCAction {
+  list<string> RegList = regList;
+}
+
 /// CCAssignToRegWithShadow - Same as CCAssignToReg, but with list of registers
 /// which became shadowed, when some register is used.
 class CCAssignToRegWithShadow<list<Register> regList,

@@ -182,7 +182,7 @@ public:
 
   /// Visit an operation with control-flow semantics and deduce which of its
   /// successors are live.
-  LogicalResult visit(ProgramPoint point) override;
+  LogicalResult visit(ProgramPoint *point) override;
 
 private:
   /// Find and mark symbol callables with potentially unknown callsites as

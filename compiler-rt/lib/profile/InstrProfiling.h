@@ -54,6 +54,12 @@ typedef struct COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT) VTableProfData {
 #include "profile/InstrProfData.inc"
 } VTableProfData;
 
+typedef struct COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT)
+    __llvm_gcov_init_func_struct {
+#define COVINIT_FUNC(Type, LLVMType, Name, Initializer) Type Name;
+#include "profile/InstrProfData.inc"
+} __llvm_gcov_init_func_struct;
+
 /*!
  * \brief Return 1 if profile counters are continuously synced to the raw
  * profile via an mmap(). This is in contrast to the default mode, in which
@@ -118,7 +124,6 @@ ValueProfNode *__llvm_profile_begin_vnodes(void);
 ValueProfNode *__llvm_profile_end_vnodes(void);
 const VTableProfData *__llvm_profile_begin_vtables(void);
 const VTableProfData *__llvm_profile_end_vtables(void);
-uint32_t *__llvm_profile_begin_orderfile(void);
 
 /*!
  * \brief Merge profile data from buffer.
@@ -169,8 +174,6 @@ void __llvm_profile_instrument_target_value(uint64_t TargetValue, void *Data,
  */
 int __llvm_profile_write_file(void);
 
-int __llvm_orderfile_write_file(void);
-
 /*!
  * \brief Set the FILE object for writing instrumentation data. Return 0 if set
  * successfully or return 1 if failed.
@@ -207,6 +210,9 @@ void __llvm_profile_initialize_file(void);
 
 /*! \brief Initialize the profile runtime. */
 void __llvm_profile_initialize(void);
+
+/*! \brief Initialize the gcov profile runtime. */
+void __llvm_profile_gcov_initialize(void);
 
 /*!
  * \brief Return path prefix (excluding the base filename) of the profile data.
@@ -271,7 +277,7 @@ uint64_t __llvm_profile_get_vtable_section_size(const VTableProfData *Begin,
 
 /* ! \brief Given the sizes of the data and counter information, computes the
  * number of padding bytes before and after the counter section, as well as the
- * number of padding bytes after other setions in the raw profile.
+ * number of padding bytes after other sections in the raw profile.
  * Returns -1 upon errors and 0 upon success. Output parameters should be used
  * iff return value is 0.
  *
@@ -294,6 +300,18 @@ int __llvm_profile_get_padding_sizes_for_counters(
  * the disks, and trying to do so would result in side effects such as crashes.
  */
 void __llvm_profile_set_dumped(void);
+
+/*!
+ * \brief Write custom target-specific profiling data to a separate file.
+ * Used by offload PGO.
+ */
+int __llvm_write_custom_profile(const char *Target,
+                                const __llvm_profile_data *DataBegin,
+                                const __llvm_profile_data *DataEnd,
+                                const char *CountersBegin,
+                                const char *CountersEnd, const char *NamesBegin,
+                                const char *NamesEnd,
+                                const uint64_t *VersionOverride);
 
 /*!
  * This variable is defined in InstrProfilingRuntime.cpp as a hidden
@@ -324,4 +342,6 @@ COMPILER_RT_VISIBILITY extern uint64_t
  */
 extern char INSTR_PROF_PROFILE_NAME_VAR[1]; /* __llvm_profile_filename. */
 
+const __llvm_gcov_init_func_struct *__llvm_profile_begin_covinit();
+const __llvm_gcov_init_func_struct *__llvm_profile_end_covinit();
 #endif /* PROFILE_INSTRPROFILING_H_ */

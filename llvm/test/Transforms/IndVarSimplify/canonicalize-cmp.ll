@@ -12,7 +12,7 @@ define i32 @test_01(i32 %a, i32 %b, ptr %p) {
 ; CHECK-NEXT:    br label [[LOOP_ENTRY:%.*]]
 ; CHECK:       loop.entry:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_BE:%.*]] ]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[IV]], 100
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ult i32 [[IV]], 100
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[B1:%.*]], label [[B2:%.*]]
 ; CHECK:       b1:
 ; CHECK-NEXT:    store i32 [[IV]], ptr [[P:%.*]], align 4
@@ -80,7 +80,7 @@ define i32 @test_02(i32 %a, i32 %b, ptr %p) {
 ; CHECK-NEXT:    br label [[LOOP_ENTRY:%.*]]
 ; CHECK:       loop.entry:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_BE:%.*]] ]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 100, [[IV]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ugt i32 100, [[IV]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[B1:%.*]], label [[B2:%.*]]
 ; CHECK:       b1:
 ; CHECK-NEXT:    store i32 [[IV]], ptr [[P:%.*]], align 4

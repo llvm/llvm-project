@@ -34,3 +34,11 @@ int main() {
 // RUN:   -target aarch64-linux -fuse-ld=lld \
 // RUN:   -nostdlib
 // RUN: llvm-bolt %t_pie.exe -o %t.bolt
+
+// RUN: %clang %cflags -fPIC -shared %s -o %t.so -Wl,-q -fuse-ld=lld
+// RUN: llvm-objdump -d -r --disassemble-symbols=main %t.so | FileCheck %s
+// RUN: llvm-bolt %t.so -o %t.bolt.so
+
+// Verify that unoptimized TLS access was generated for shared object.
+// CHECK:      adrp    x0
+// CHECK-NEXT: R_AARCH64_TLSDESC_ADR_PAGE21     tbssstruct

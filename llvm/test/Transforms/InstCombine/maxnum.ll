@@ -217,7 +217,7 @@ define float @maxnum_f32_1_maxnum_p0_val(float %x) {
 
 define <2 x float> @maxnum_f32_1_maxnum_val_p0_val_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @maxnum_f32_1_maxnum_val_p0_val_v2f32(
-; CHECK-NEXT:    [[Z:%.*]] = call <2 x float> @llvm.maxnum.v2f32(<2 x float> [[X:%.*]], <2 x float> <float 1.000000e+00, float 1.000000e+00>)
+; CHECK-NEXT:    [[Z:%.*]] = call <2 x float> @llvm.maxnum.v2f32(<2 x float> [[X:%.*]], <2 x float> splat (float 1.000000e+00))
 ; CHECK-NEXT:    ret <2 x float> [[Z]]
 ;
   %y = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %x, <2 x float> zeroinitializer)

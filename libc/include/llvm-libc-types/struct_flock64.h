@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_TYPES_STRUCT_FLOCK64_H
 #define LLVM_LIBC_TYPES_STRUCT_FLOCK64_H
 
-#include "llvm-libc-types/off64_t.h"
-#include "llvm-libc-types/pid_t.h"
+#include "off64_t.h"
+#include "pid_t.h"
 
 #include <stdint.h>
 

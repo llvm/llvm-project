@@ -1,4 +1,6 @@
 // REQUIRES: x86
+// This test intentionally checks for fatal errors, and fatal errors aren't supported for testing when main is run twice.
+// XFAIL: main-run-twice
 
 // Check bad archive error reporting with --whole-archive
 // and without it.

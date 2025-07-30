@@ -92,10 +92,10 @@ void test1() {
 // CHECK-LE: @llvm.ppc.altivec.vmaxsw
 
   vf = vec_abs(vf);
-// CHECK: and <4 x i32> {{.*}}, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
+// CHECK: and <4 x i32> {{.*}}, splat (i32 2147483647)
 // CHECK: store <4 x float> %{{.*}}, ptr @vf
 // CHECK-LE: bitcast <4 x float> %{{.*}} to <4 x i32>
-// CHECK-LE: and <4 x i32> {{.*}}, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
+// CHECK-LE: and <4 x i32> {{.*}}, splat (i32 2147483647)
 // CHECK-LE: bitcast <4 x i32> %{{.*}} to <4 x float>
 // CHECK-LE: store <4 x float> %{{.*}}, ptr @vf
 
@@ -3502,39 +3502,39 @@ void test6() {
 
   /* vec_sl */
   res_vsc = vec_sl(vsc, vuc);
-// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, splat (i8 8)
 // CHECK: shl <16 x i8> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, splat (i8 8)
 // CHECK-LE: shl <16 x i8> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vuc = vec_sl(vuc, vuc);
-// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, splat (i8 8)
 // CHECK: shl <16 x i8> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, splat (i8 8)
 // CHECK-LE: shl <16 x i8> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vs  = vec_sl(vs, vus);
-// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, splat (i16 16)
 // CHECK: shl <8 x i16> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, splat (i16 16)
 // CHECK-LE: shl <8 x i16> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vus = vec_sl(vus, vus);
-// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, splat (i16 16)
 // CHECK: shl <8 x i16> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, splat (i16 16)
 // CHECK-LE: shl <8 x i16> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vi  = vec_sl(vi, vui);
-// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, <i32 32, i32 32, i32 32, i32 32>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, splat (i32 32)
 // CHECK: shl <4 x i32> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, <i32 32, i32 32, i32 32, i32 32>
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, splat (i32 32)
 // CHECK-LE: shl <4 x i32> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vui = vec_sl(vui, vui);
-// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, <i32 32, i32 32, i32 32, i32 32>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, splat (i32 32)
 // CHECK: shl <4 x i32> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, <i32 32, i32 32, i32 32, i32 32>
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, splat (i32 32)
 // CHECK-LE: shl <4 x i32> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vsc = vec_vslb(vsc, vuc);
@@ -4351,75 +4351,75 @@ void test6() {
 
   /* vec_sr */
   res_vsc = vec_sr(vsc, vuc);
-// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, splat (i8 8)
 // CHECK: lshr <16 x i8> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, splat (i8 8)
 // CHECK-LE: lshr <16 x i8> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vuc = vec_sr(vuc, vuc);
-// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, splat (i8 8)
 // CHECK: lshr <16 x i8> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, splat (i8 8)
 // CHECK-LE: lshr <16 x i8> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vs  = vec_sr(vs, vus);
-// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, splat (i16 16)
 // CHECK: lshr <8 x i16> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, splat (i16 16)
 // CHECK-LE: lshr <8 x i16> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vus = vec_sr(vus, vus);
-// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, splat (i16 16)
 // CHECK: lshr <8 x i16> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, splat (i16 16)
 // CHECK-LE: lshr <8 x i16> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vi  = vec_sr(vi, vui);
-// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, <i32 32, i32 32, i32 32, i32 32>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, splat (i32 32)
 // CHECK: lshr <4 x i32> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, <i32 32, i32 32, i32 32, i32 32>
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, splat (i32 32)
 // CHECK-LE: lshr <4 x i32> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vui = vec_sr(vui, vui);
-// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, <i32 32, i32 32, i32 32, i32 32>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, splat (i32 32)
 // CHECK: lshr <4 x i32> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, <i32 32, i32 32, i32 32, i32 32>
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, splat (i32 32)
 // CHECK-LE: lshr <4 x i32> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vsc = vec_vsrb(vsc, vuc);
-// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, splat (i8 8)
 // CHECK: lshr <16 x i8> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, splat (i8 8)
 // CHECK-LE: lshr <16 x i8> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vuc = vec_vsrb(vuc, vuc);
-// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, splat (i8 8)
 // CHECK: lshr <16 x i8> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, splat (i8 8)
 // CHECK-LE: lshr <16 x i8> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vs  = vec_vsrh(vs, vus);
-// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, splat (i16 16)
 // CHECK: lshr <8 x i16> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, splat (i16 16)
 // CHECK-LE: lshr <8 x i16> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vus = vec_vsrh(vus, vus);
-// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, splat (i16 16)
 // CHECK: lshr <8 x i16> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, splat (i16 16)
 // CHECK-LE: lshr <8 x i16> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vi  = vec_vsrw(vi, vui);
-// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, <i32 32, i32 32, i32 32, i32 32>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, splat (i32 32)
 // CHECK: lshr <4 x i32> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, <i32 32, i32 32, i32 32, i32 32>
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, splat (i32 32)
 // CHECK-LE: lshr <4 x i32> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vui = vec_vsrw(vui, vui);
-// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, <i32 32, i32 32, i32 32, i32 32>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, splat (i32 32)
 // CHECK: lshr <4 x i32> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, <i32 32, i32 32, i32 32, i32 32>
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, splat (i32 32)
 // CHECK-LE: lshr <4 x i32> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   /* vec_sra */
@@ -5623,21 +5623,21 @@ void test6() {
 
   res_vi = vec_sube(vi, vi, vi);
 // CHECK: and <4 x i32>
-// CHECK: xor <4 x i32> {{%[0-9]+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: xor <4 x i32> {{%[0-9]+}}, splat (i32 -1)
 // CHECK: add <4 x i32>
 // CHECK: add <4 x i32>
 // CHECK-LE: and <4 x i32>
-// CHECK-LE: xor <4 x i32> {{%[0-9]+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: xor <4 x i32> {{%[0-9]+}}, splat (i32 -1)
 // CHECK-LE: add <4 x i32>
 // CHECK-LE: add <4 x i32>
 
   res_vui = vec_sube(vui, vui, vui);
 // CHECK: and <4 x i32>
-// CHECK: xor <4 x i32> {{%[0-9]+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: xor <4 x i32> {{%[0-9]+}}, splat (i32 -1)
 // CHECK: add <4 x i32>
 // CHECK: add <4 x i32>
 // CHECK-LE: and <4 x i32>
-// CHECK-LE: xor <4 x i32> {{%[0-9]+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: xor <4 x i32> {{%[0-9]+}}, splat (i32 -1)
 // CHECK-LE: add <4 x i32>
 // CHECK-LE: add <4 x i32>
 
@@ -9407,7 +9407,7 @@ void test8() {
 // CHECK: store <16 x i8> <i8 1, i8 0, i8 3, i8 2, i8 5, i8 4, i8 7, i8 6, i8 9, i8 8, i8 11, i8 10, i8 13, i8 12, i8 15, i8 14>, ptr {{%.+}}, align 16
 // CHECK: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
 // CHECK-LE: store <16 x i8> <i8 1, i8 0, i8 3, i8 2, i8 5, i8 4, i8 7, i8 6, i8 9, i8 8, i8 11, i8 10, i8 13, i8 12, i8 15, i8 14>, ptr {{%.+}}, align 16
-// CHECK-LE: store <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, ptr {{%.+}}, align 16
+// CHECK-LE: store <16 x i8> splat (i8 -1), ptr {{%.+}}, align 16
 // CHECK-LE: xor <16 x i8>
 // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
 
@@ -9415,7 +9415,7 @@ void test8() {
 // CHECK: store <16 x i8> <i8 1, i8 0, i8 3, i8 2, i8 5, i8 4, i8 7, i8 6, i8 9, i8 8, i8 11, i8 10, i8 13, i8 12, i8 15, i8 14>, ptr {{%.+}}, align 16
 // CHECK: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
 // CHECK-LE: store <16 x i8> <i8 1, i8 0, i8 3, i8 2, i8 5, i8 4, i8 7, i8 6, i8 9, i8 8, i8 11, i8 10, i8 13, i8 12, i8 15, i8 14>, ptr {{%.+}}, align 16
-// CHECK-LE: store <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, ptr {{%.+}}, align 16
+// CHECK-LE: store <16 x i8> splat (i8 -1), ptr {{%.+}}, align 16
 // CHECK-LE: xor <16 x i8>
 // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
 
@@ -9423,7 +9423,7 @@ void test8() {
 // CHECK: store <16 x i8> <i8 1, i8 0, i8 3, i8 2, i8 5, i8 4, i8 7, i8 6, i8 9, i8 8, i8 11, i8 10, i8 13, i8 12, i8 15, i8 14>, ptr {{%.+}}, align 16
 // CHECK: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
 // CHECK-LE: store <16 x i8> <i8 1, i8 0, i8 3, i8 2, i8 5, i8 4, i8 7, i8 6, i8 9, i8 8, i8 11, i8 10, i8 13, i8 12, i8 15, i8 14>, ptr {{%.+}}, align 16
-// CHECK-LE: store <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, ptr {{%.+}}, align 16
+// CHECK-LE: store <16 x i8> splat (i8 -1), ptr {{%.+}}, align 16
 // CHECK-LE: xor <16 x i8>
 // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
 
@@ -9431,7 +9431,7 @@ void test8() {
 // CHECK: store <16 x i8> <i8 3, i8 2, i8 1, i8 0, i8 7, i8 6, i8 5, i8 4, i8 11, i8 10, i8 9, i8 8, i8 15, i8 14, i8 13, i8 12>, ptr {{%.+}}, align 16
 // CHECK: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
 // CHECK-LE: store <16 x i8> <i8 3, i8 2, i8 1, i8 0, i8 7, i8 6, i8 5, i8 4, i8 11, i8 10, i8 9, i8 8, i8 15, i8 14, i8 13, i8 12>, ptr {{%.+}}, align 16
-// CHECK-LE: store <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, ptr {{%.+}}, align 16
+// CHECK-LE: store <16 x i8> splat (i8 -1), ptr {{%.+}}, align 16
 // CHECK-LE: xor <16 x i8>
 // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
 
@@ -9439,7 +9439,7 @@ void test8() {
 // CHECK: store <16 x i8> <i8 3, i8 2, i8 1, i8 0, i8 7, i8 6, i8 5, i8 4, i8 11, i8 10, i8 9, i8 8, i8 15, i8 14, i8 13, i8 12>, ptr {{%.+}}, align 16
 // CHECK: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
 // CHECK-LE: store <16 x i8> <i8 3, i8 2, i8 1, i8 0, i8 7, i8 6, i8 5, i8 4, i8 11, i8 10, i8 9, i8 8, i8 15, i8 14, i8 13, i8 12>, ptr {{%.+}}, align 16
-// CHECK-LE: store <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, ptr {{%.+}}, align 16
+// CHECK-LE: store <16 x i8> splat (i8 -1), ptr {{%.+}}, align 16
 // CHECK-LE: xor <16 x i8>
 // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
 
@@ -9447,7 +9447,7 @@ void test8() {
 // CHECK: store <16 x i8> <i8 3, i8 2, i8 1, i8 0, i8 7, i8 6, i8 5, i8 4, i8 11, i8 10, i8 9, i8 8, i8 15, i8 14, i8 13, i8 12>, ptr {{%.+}}, align 16
 // CHECK: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
 // CHECK-LE: store <16 x i8> <i8 3, i8 2, i8 1, i8 0, i8 7, i8 6, i8 5, i8 4, i8 11, i8 10, i8 9, i8 8, i8 15, i8 14, i8 13, i8 12>, ptr {{%.+}}, align 16
-// CHECK-LE: store <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, ptr {{%.+}}, align 16
+// CHECK-LE: store <16 x i8> splat (i8 -1), ptr {{%.+}}, align 16
 // CHECK-LE: xor <16 x i8>
 // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
 
@@ -9455,7 +9455,7 @@ void test8() {
 // CHECK: store <16 x i8> <i8 3, i8 2, i8 1, i8 0, i8 7, i8 6, i8 5, i8 4, i8 11, i8 10, i8 9, i8 8, i8 15, i8 14, i8 13, i8 12>, ptr {{%.+}}, align 16
 // CHECK: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
 // CHECK-LE: store <16 x i8> <i8 3, i8 2, i8 1, i8 0, i8 7, i8 6, i8 5, i8 4, i8 11, i8 10, i8 9, i8 8, i8 15, i8 14, i8 13, i8 12>, ptr {{%.+}}, align 16
-// CHECK-LE: store <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, ptr {{%.+}}, align 16
+// CHECK-LE: store <16 x i8> splat (i8 -1), ptr {{%.+}}, align 16
 // CHECK-LE: xor <16 x i8>
 // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
 }
@@ -9529,10 +9529,10 @@ void test10() {
 vector float test_rsqrtf(vector float a, vector float b) {
   // CHECK-LABEL: test_rsqrtf
   // CHECK: call fast <4 x float> @llvm.sqrt.v4f32
-  // CHECK: fdiv fast <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+  // CHECK: fdiv fast <4 x float> splat (float 1.000000e+00)
   // CHECK-LE-LABEL: test_rsqrtf
   // CHECK-LE: call fast <4 x float> @llvm.sqrt.v4f32
-  // CHECK-LE: fdiv fast <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+  // CHECK-LE: fdiv fast <4 x float> splat (float 1.000000e+00)
   return vec_rsqrt(a);
 }
 

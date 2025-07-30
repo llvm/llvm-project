@@ -22,12 +22,16 @@
 namespace llvm {
 
 class LLVM_LIBRARY_VISIBILITY LoongArchAsmPrinter : public AsmPrinter {
+public:
+  static char ID;
+
+private:
   const MCSubtargetInfo *STI;
 
 public:
   explicit LoongArchAsmPrinter(TargetMachine &TM,
                                std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), STI(TM.getMCSubtargetInfo()) {}
+      : AsmPrinter(TM, std::move(Streamer), ID), STI(TM.getMCSubtargetInfo()) {}
 
   StringRef getPassName() const override {
     return "LoongArch Assembly Printer";
@@ -55,6 +59,7 @@ public:
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const {
     return lowerLoongArchMachineOperandToMCOperand(MO, MCOp, *this);
   }
+  void emitJumpTableInfo() override;
 };
 
 } // end namespace llvm

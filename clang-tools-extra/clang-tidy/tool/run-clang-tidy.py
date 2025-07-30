@@ -87,7 +87,7 @@ def find_compilation_database(path: str) -> str:
 
 
 def get_tidy_invocation(
-    f: str,
+    f: Optional[str],
     clang_tidy_binary: str,
     checks: str,
     tmpdir: Optional[str],
@@ -147,7 +147,8 @@ def get_tidy_invocation(
         start.append(f"--warnings-as-errors={warnings_as_errors}")
     if allow_no_checks:
         start.append("--allow-no-checks")
-    start.append(f)
+    if f:
+        start.append(f)
     return start
 
 
@@ -490,7 +491,7 @@ async def main() -> None:
 
     try:
         invocation = get_tidy_invocation(
-            "",
+            None,
             clang_tidy_binary,
             args.checks,
             None,
@@ -547,7 +548,7 @@ async def main() -> None:
     files = {f for f in files if file_name_re.search(f)}
 
     print(
-        "Running clang-tidy for",
+        f"Running clang-tidy in {max_task} threads for",
         len(files),
         "files out of",
         number_files_in_database,

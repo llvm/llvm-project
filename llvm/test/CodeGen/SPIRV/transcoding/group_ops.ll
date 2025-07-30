@@ -8,9 +8,9 @@
 ; CHECK-SPIRV-DAG: %[[#intv2:]] = OpTypeVector %[[#int]] 2
 ; CHECK-SPIRV-DAG: %[[#intv3:]] = OpTypeVector %[[#int]] 3
 ; CHECK-SPIRV-DAG: %[[#float:]] = OpTypeFloat 32
-; CHECK-SPIRV-DAG: %[[#ScopeCrossWorkgroup:]] = OpConstant %[[#int]] 0
-; CHECK-SPIRV-DAG: %[[#ScopeWorkgroup:]] = OpConstant %[[#int]] 2
-; CHECK-SPIRV-DAG: %[[#ScopeSubgroup:]] = OpConstant %[[#int]] 3
+; CHECK-SPIRV-DAG: %[[#ScopeCrossWorkgroup:]] = OpConstantNull %[[#int]]
+; CHECK-SPIRV-DAG: %[[#ScopeWorkgroup:]] = OpConstant %[[#int]] 2{{$}}
+; CHECK-SPIRV-DAG: %[[#ScopeSubgroup:]] = OpConstant %[[#int]] 3{{$}}
 
 ; CHECK-SPIRV: OpFunction
 ; CHECK-SPIRV: %[[#]] = OpGroupFMax %[[#float]] %[[#ScopeWorkgroup]] Reduce

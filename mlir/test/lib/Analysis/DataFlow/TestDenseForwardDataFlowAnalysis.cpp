@@ -13,9 +13,8 @@
 #include "TestDenseDataFlowAnalysis.h"
 #include "TestDialect.h"
 #include "TestOps.h"
-#include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
-#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/DenseAnalysis.h"
+#include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
@@ -72,6 +71,11 @@ public:
                                             const LastModification &before,
                                             LastModification *after) override;
 
+  /// Visit an operation. If this analysis can confirm that lattice content
+  /// of lattice anchors around operation are necessarily identical, join
+  /// them into the same equivalent class.
+  void buildOperationEquivalentLatticeAnchor(Operation *op) override;
+
   /// At an entry point, the last modifications of all memory resources are
   /// unknown.
   void setToEntryState(LastModification *lattice) override {
@@ -117,7 +121,8 @@ LogicalResult LastModifiedAnalysis::visitOperation(
     std::optional<Value> underlyingValue =
         UnderlyingValueAnalysis::getMostUnderlyingValue(
             value, [&](Value value) {
-              return getOrCreateFor<UnderlyingValueLattice>(op, value);
+              return getOrCreateFor<UnderlyingValueLattice>(
+                  getProgramPointAfter(op), value);
             });
 
     // If the underlying value is not yet known, don't propagate yet.
@@ -146,6 +151,14 @@ LogicalResult LastModifiedAnalysis::visitOperation(
   return success();
 }
 
+void LastModifiedAnalysis::buildOperationEquivalentLatticeAnchor(
+    Operation *op) {
+  if (isMemoryEffectFree(op)) {
+    unionLatticeAnchors<LastModification>(getProgramPointBefore(op),
+                                          getProgramPointAfter(op));
+  }
+}
+
 void LastModifiedAnalysis::visitCallControlFlowTransfer(
     CallOpInterface call, CallControlFlowAction action,
     const LastModification &before, LastModification *after) {
@@ -157,7 +170,7 @@ void LastModifiedAnalysis::visitCallControlFlowTransfer(
           UnderlyingValueAnalysis::getMostUnderlyingValue(
               operand, [&](Value value) {
                 return getOrCreateFor<UnderlyingValueLattice>(
-                    call.getOperation(), value);
+                    getProgramPointAfter(call.getOperation()), value);
               });
       if (!underlyingValue)
         return;
@@ -226,8 +239,7 @@ struct TestLastModifiedPass
     Operation *op = getOperation();
 
     DataFlowSolver solver(DataFlowConfig().setInterprocedural(interprocedural));
-    solver.load<DeadCodeAnalysis>();
-    solver.load<SparseConstantPropagation>();
+    loadBaselineAnalyses(solver);
     solver.load<LastModifiedAnalysis>(assumeFuncWrites);
     solver.load<UnderlyingValueAnalysis>();
     if (failed(solver.initializeAndRun(op)))
@@ -243,7 +255,7 @@ struct TestLastModifiedPass
         return;
       os << "test_tag: " << tag.getValue() << ":\n";
       const LastModification *lastMods =
-          solver.lookupState<LastModification>(op);
+          solver.lookupState<LastModification>(solver.getProgramPointAfter(op));
       assert(lastMods && "expected a dense lattice");
       for (auto [index, operand] : llvm::enumerate(op->getOperands())) {
         os << " operand #" << index << "\n";

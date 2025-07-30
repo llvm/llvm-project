@@ -4,13 +4,13 @@
 
 define void @bar(ptr readonly %0) {
 ; FNATTRS-LABEL: define void @bar(
-; FNATTRS-SAME: ptr nocapture readnone [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
+; FNATTRS-SAME: ptr readnone captures(none) [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FNATTRS-NEXT:    call void @foo(ptr [[TMP0]])
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR-LABEL: define void @bar(
-; ATTRIBUTOR-SAME: ptr nocapture nofree readnone [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
-; ATTRIBUTOR-NEXT:    call void @foo(ptr nocapture nofree readnone [[TMP0]]) #[[ATTR0]]
+; ATTRIBUTOR-SAME: ptr nofree readnone captures(none) [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
+; ATTRIBUTOR-NEXT:    call void @foo(ptr nofree readnone captures(none) [[TMP0]]) #[[ATTR0]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void @foo(ptr %0)
@@ -19,13 +19,13 @@ define void @bar(ptr readonly %0) {
 
 define void @foo(ptr readonly %0) {
 ; FNATTRS-LABEL: define void @foo(
-; FNATTRS-SAME: ptr nocapture readnone [[TMP0:%.*]]) #[[ATTR0]] {
+; FNATTRS-SAME: ptr readnone captures(none) [[TMP0:%.*]]) #[[ATTR0]] {
 ; FNATTRS-NEXT:    call void @bar(ptr [[TMP0]])
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR-LABEL: define void @foo(
-; ATTRIBUTOR-SAME: ptr nocapture nofree readnone [[TMP0:%.*]]) #[[ATTR0]] {
-; ATTRIBUTOR-NEXT:    call void @bar(ptr nocapture nofree readnone [[TMP0]]) #[[ATTR0]]
+; ATTRIBUTOR-SAME: ptr nofree readnone captures(none) [[TMP0:%.*]]) #[[ATTR0]] {
+; ATTRIBUTOR-NEXT:    call void @bar(ptr nofree readnone captures(none) [[TMP0]]) #[[ATTR0]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void @bar(ptr %0)

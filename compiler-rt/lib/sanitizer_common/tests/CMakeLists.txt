@@ -15,6 +15,7 @@ set(SANITIZER_UNITTESTS
   sanitizer_array_ref_test.cpp
   sanitizer_atomic_test.cpp
   sanitizer_bitvector_test.cpp
+  sanitizer_block_signals.cpp
   sanitizer_bvgraph_test.cpp
   sanitizer_chained_origin_depot_test.cpp
   sanitizer_common_test.cpp
@@ -132,6 +133,9 @@ append_list_if(COMPILER_RT_HAS_LIBPTHREAD -pthread SANITIZER_TEST_LINK_FLAGS_COM
 # 'libm' shall be specified explicitly to build i386 tests.
 if(CMAKE_SYSTEM MATCHES "FreeBSD-9.2-RELEASE")
   list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON "-lc++ -lm")
+endif()
+if(CMAKE_SYSTEM MATCHES "Haiku")
+  list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON "-lbsd")
 endif()
 
 include_directories(..)

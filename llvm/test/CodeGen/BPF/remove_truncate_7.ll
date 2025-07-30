@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=bpf -mattr=+alu32 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=bpf -mattr=+alu32 -verify-machineinstrs | FileCheck %s
 ;
 ; Source:
 ;  struct __sk_buff {

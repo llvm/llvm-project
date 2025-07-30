@@ -24,41 +24,41 @@
 #include "../../Emplaceable.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
-        typedef std::unordered_multiset<Emplaceable> C;
-        typedef C::iterator R;
-        C c;
-        R r = c.emplace();
-        assert(c.size() == 1);
-        assert(*r == Emplaceable());
+int main(int, char**) {
+  {
+    typedef std::unordered_multiset<Emplaceable> C;
+    typedef C::iterator R;
+    C c;
+    R r = c.emplace();
+    assert(c.size() == 1);
+    assert(*r == Emplaceable());
 
-        r = c.emplace(Emplaceable(5, 6));
-        assert(c.size() == 2);
-        assert(*r == Emplaceable(5, 6));
+    r = c.emplace(Emplaceable(5, 6));
+    assert(c.size() == 2);
+    assert(*r == Emplaceable(5, 6));
 
-        r = c.emplace(5, 6);
-        assert(c.size() == 3);
-        assert(*r == Emplaceable(5, 6));
-    }
-    {
-        typedef std::unordered_multiset<Emplaceable, std::hash<Emplaceable>,
-                      std::equal_to<Emplaceable>, min_allocator<Emplaceable>> C;
-        typedef C::iterator R;
-        C c;
-        R r = c.emplace();
-        assert(c.size() == 1);
-        assert(*r == Emplaceable());
+    r = c.emplace(5, 6);
+    assert(c.size() == 3);
+    assert(*r == Emplaceable(5, 6));
+  }
+  {
+    typedef std::
+        unordered_multiset<Emplaceable, std::hash<Emplaceable>, std::equal_to<Emplaceable>, min_allocator<Emplaceable>>
+            C;
+    typedef C::iterator R;
+    C c;
+    R r = c.emplace();
+    assert(c.size() == 1);
+    assert(*r == Emplaceable());
 
-        r = c.emplace(Emplaceable(5, 6));
-        assert(c.size() == 2);
-        assert(*r == Emplaceable(5, 6));
+    r = c.emplace(Emplaceable(5, 6));
+    assert(c.size() == 2);
+    assert(*r == Emplaceable(5, 6));
 
-        r = c.emplace(5, 6);
-        assert(c.size() == 3);
-        assert(*r == Emplaceable(5, 6));
-    }
+    r = c.emplace(5, 6);
+    assert(c.size() == 3);
+    assert(*r == Emplaceable(5, 6));
+  }
 
   return 0;
 }

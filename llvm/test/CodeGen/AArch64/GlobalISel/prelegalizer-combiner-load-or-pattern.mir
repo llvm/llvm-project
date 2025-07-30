@@ -21,23 +21,25 @@ body:             |
 
     ; s8* x = ...
     ; s32 y = (x[0] | (x[1] << 8)) | ((x[2] << 16) | (x[3] << 24))
-    ;
     ; -> Little endian: Load from x[0]
     ; -> Big endian: Load from x[0] + BSWAP
 
     ; LITTLE-LABEL: name: s8_loads_to_s32_little_endian_pat
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 1)
-    ; LITTLE: $w1 = COPY %full_load(s32)
-    ; LITTLE: RET_ReallyLR implicit $w1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x1
+    ; LITTLE-NEXT: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 1)
+    ; LITTLE-NEXT: $w1 = COPY %full_load(s32)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; BIG-LABEL: name: s8_loads_to_s32_little_endian_pat
     ; BIG: liveins: $x0, $x1
-    ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 1)
-    ; BIG: %full_load:_(s32) = G_BSWAP [[LOAD]]
-    ; BIG: $w1 = COPY %full_load(s32)
-    ; BIG: RET_ReallyLR implicit $w1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x1
+    ; BIG-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 1)
+    ; BIG-NEXT: %full_load:_(s32) = G_BSWAP [[LOAD]]
+    ; BIG-NEXT: $w1 = COPY %full_load(s32)
+    ; BIG-NEXT: RET_ReallyLR implicit $w1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_2:_(s64) = G_CONSTANT i64 2
     %cst_3:_(s64) = G_CONSTANT i64 3
@@ -62,7 +64,6 @@ body:             |
     %byte3:_(s32) = nuw G_SHL %elt3, %cst_24(s32)
 
     ; Note the shape of the tree:
-    ;
     ; byte byte byte  byte
     ;  \   /      \  /
     ;    OR        OR
@@ -87,23 +88,25 @@ body:             |
 
     ; s8* x = ...
     ; s32 y = (x[0] << 24 | (x[1] << 16)) | ((x[2] << 8) | x[3]))
-    ;
     ; -> Little endian: Load from x[0] + BSWAP
     ; -> Big endian: Load from x[0]
 
     ; LITTLE-LABEL: name: s8_loads_to_s32_big_endian_pat
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 1)
-    ; LITTLE: %full_load:_(s32) = G_BSWAP [[LOAD]]
-    ; LITTLE: $w1 = COPY %full_load(s32)
-    ; LITTLE: RET_ReallyLR implicit $w1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x1
+    ; LITTLE-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 1)
+    ; LITTLE-NEXT: %full_load:_(s32) = G_BSWAP [[LOAD]]
+    ; LITTLE-NEXT: $w1 = COPY %full_load(s32)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; BIG-LABEL: name: s8_loads_to_s32_big_endian_pat
     ; BIG: liveins: $x0, $x1
-    ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 1)
-    ; BIG: $w1 = COPY %full_load(s32)
-    ; BIG: RET_ReallyLR implicit $w1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x1
+    ; BIG-NEXT: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 1)
+    ; BIG-NEXT: $w1 = COPY %full_load(s32)
+    ; BIG-NEXT: RET_ReallyLR implicit $w1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_2:_(s64) = G_CONSTANT i64 2
     %cst_3:_(s64) = G_CONSTANT i64 3
@@ -142,26 +145,27 @@ body:             |
     liveins: $x0, $x1
 
     ; Slightly different OR tree.
-    ;
     ; s8* x = ...
     ; s32 y = (((x[0] | (x[1] << 8)) | (x[2] << 16)) | (x[3] << 24))
-    ;
     ; -> Little endian: Load from x[0]
     ; -> Big endian: Load from x[0] + BSWAP
 
     ; LITTLE-LABEL: name: different_or_pattern
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 1)
-    ; LITTLE: $w1 = COPY %full_load(s32)
-    ; LITTLE: RET_ReallyLR implicit $w1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x1
+    ; LITTLE-NEXT: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 1)
+    ; LITTLE-NEXT: $w1 = COPY %full_load(s32)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; BIG-LABEL: name: different_or_pattern
     ; BIG: liveins: $x0, $x1
-    ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 1)
-    ; BIG: %full_load:_(s32) = G_BSWAP [[LOAD]]
-    ; BIG: $w1 = COPY %full_load(s32)
-    ; BIG: RET_ReallyLR implicit $w1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x1
+    ; BIG-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 1)
+    ; BIG-NEXT: %full_load:_(s32) = G_BSWAP [[LOAD]]
+    ; BIG-NEXT: $w1 = COPY %full_load(s32)
+    ; BIG-NEXT: RET_ReallyLR implicit $w1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_2:_(s64) = G_CONSTANT i64 2
     %cst_3:_(s64) = G_CONSTANT i64 3
@@ -186,7 +190,6 @@ body:             |
     %byte3:_(s32) = nuw G_SHL %elt3, %cst_24(s32)
 
     ; Note the shape of the tree:
-    ;
     ; byte   byte
     ;  \    /
     ;   OR_1   byte
@@ -212,23 +215,25 @@ body:             |
 
     ; s16* x = ...
     ; s32 y = x[0] | (x[1] << 16)
-    ;
     ; -> Little endian: Load from x[0]
     ; -> Big endian: Load from x[0] + BSWAP
 
     ; LITTLE-LABEL: name: s16_loads_to_s32_little_endian_pat
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 2)
-    ; LITTLE: $w1 = COPY %full_load(s32)
-    ; LITTLE: RET_ReallyLR implicit $w1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x1
+    ; LITTLE-NEXT: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 2)
+    ; LITTLE-NEXT: $w1 = COPY %full_load(s32)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; BIG-LABEL: name: s16_loads_to_s32_little_endian_pat
     ; BIG: liveins: $x0, $x1
-    ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 2)
-    ; BIG: %full_load:_(s32) = G_BSWAP [[LOAD]]
-    ; BIG: $w1 = COPY %full_load(s32)
-    ; BIG: RET_ReallyLR implicit $w1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x1
+    ; BIG-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 2)
+    ; BIG-NEXT: %full_load:_(s32) = G_BSWAP [[LOAD]]
+    ; BIG-NEXT: $w1 = COPY %full_load(s32)
+    ; BIG-NEXT: RET_ReallyLR implicit $w1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_16:_(s32) = G_CONSTANT i32 16
 
@@ -253,23 +258,25 @@ body:             |
 
     ; s16 *x = ...
     ; s32 y = x[1] | (x[0] << 16)
-    ;
     ; -> Little endian: Load from x[0] + BSWAP
     ; -> Big endian: Load from x[0]
 
     ; LITTLE-LABEL: name: s16_loads_to_s32_big_endian_pat
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 2)
-    ; LITTLE: %full_load:_(s32) = G_BSWAP [[LOAD]]
-    ; LITTLE: $w1 = COPY %full_load(s32)
-    ; LITTLE: RET_ReallyLR implicit $w1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x1
+    ; LITTLE-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 2)
+    ; LITTLE-NEXT: %full_load:_(s32) = G_BSWAP [[LOAD]]
+    ; LITTLE-NEXT: $w1 = COPY %full_load(s32)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; BIG-LABEL: name: s16_loads_to_s32_big_endian_pat
     ; BIG: liveins: $x0, $x1
-    ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 2)
-    ; BIG: $w1 = COPY %full_load(s32)
-    ; BIG: RET_ReallyLR implicit $w1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x1
+    ; BIG-NEXT: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 2)
+    ; BIG-NEXT: $w1 = COPY %full_load(s32)
+    ; BIG-NEXT: RET_ReallyLR implicit $w1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_16:_(s32) = G_CONSTANT i32 16
 
@@ -294,23 +301,25 @@ body:             |
 
     ; s16 *x = ...
     ; s32 y = (x[0] | (x[1] << 16)) | ((x[2] << 32) | (x[3] << 48))
-    ;
     ; -> Little endian: Load from x[0]
     ; -> Big endian: Load from x[0] + BSWAP
 
     ; LITTLE-LABEL: name: s16_loads_to_s64_little_endian_pat
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: %full_load:_(s64) = G_LOAD %ptr(p0) :: (load (s64), align 2)
-    ; LITTLE: $x1 = COPY %full_load(s64)
-    ; LITTLE: RET_ReallyLR implicit $x1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x1
+    ; LITTLE-NEXT: %full_load:_(s64) = G_LOAD %ptr(p0) :: (load (s64), align 2)
+    ; LITTLE-NEXT: $x1 = COPY %full_load(s64)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $x1
+    ;
     ; BIG-LABEL: name: s16_loads_to_s64_little_endian_pat
     ; BIG: liveins: $x0, $x1
-    ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD %ptr(p0) :: (load (s64), align 2)
-    ; BIG: %full_load:_(s64) = G_BSWAP [[LOAD]]
-    ; BIG: $x1 = COPY %full_load(s64)
-    ; BIG: RET_ReallyLR implicit $x1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x1
+    ; BIG-NEXT: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD %ptr(p0) :: (load (s64), align 2)
+    ; BIG-NEXT: %full_load:_(s64) = G_BSWAP [[LOAD]]
+    ; BIG-NEXT: $x1 = COPY %full_load(s64)
+    ; BIG-NEXT: RET_ReallyLR implicit $x1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_2:_(s64) = G_CONSTANT i64 2
     %cst_3:_(s64) = G_CONSTANT i64 3
@@ -351,23 +360,25 @@ body:             |
 
     ; s16 *x = ...
     ; s64 y = (x[3] | (x[2] << 16)) | ((x[1] << 32) | (x[0] << 48))
-    ;
     ; -> Little endian: Load from x[0] + BSWAP
     ; -> Big endian: Load from x[0]
 
     ; LITTLE-LABEL: name: s16_loads_to_s64_big_endian_pat
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD %ptr(p0) :: (load (s64), align 2)
-    ; LITTLE: %full_load:_(s64) = G_BSWAP [[LOAD]]
-    ; LITTLE: $x1 = COPY %full_load(s64)
-    ; LITTLE: RET_ReallyLR implicit $x1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x1
+    ; LITTLE-NEXT: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD %ptr(p0) :: (load (s64), align 2)
+    ; LITTLE-NEXT: %full_load:_(s64) = G_BSWAP [[LOAD]]
+    ; LITTLE-NEXT: $x1 = COPY %full_load(s64)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $x1
+    ;
     ; BIG-LABEL: name: s16_loads_to_s64_big_endian_pat
     ; BIG: liveins: $x0, $x1
-    ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: %full_load:_(s64) = G_LOAD %ptr(p0) :: (load (s64), align 2)
-    ; BIG: $x1 = COPY %full_load(s64)
-    ; BIG: RET_ReallyLR implicit $x1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x1
+    ; BIG-NEXT: %full_load:_(s64) = G_LOAD %ptr(p0) :: (load (s64), align 2)
+    ; BIG-NEXT: $x1 = COPY %full_load(s64)
+    ; BIG-NEXT: RET_ReallyLR implicit $x1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_2:_(s64) = G_CONSTANT i64 2
     %cst_3:_(s64) = G_CONSTANT i64 3
@@ -408,27 +419,29 @@ body:             |
 
     ; s8* x = ...
     ; s32 y = (x[1] | (x[2] << 8)) | ((x[3] << 16) | (x[4] << 24))
-    ;
     ; -> Little endian: Load from x[1]
     ; -> Big endian: Load from x[1] + BSWAP
 
     ; LITTLE-LABEL: name: nonzero_start_idx_positive_little_endian_pat
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; LITTLE: %ptr:_(p0) = COPY $x0
-    ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; LITTLE: %full_load:_(s32) = G_LOAD %ptr_elt_1(p0) :: (load (s32), align 1)
-    ; LITTLE: $w1 = COPY %full_load(s32)
-    ; LITTLE: RET_ReallyLR implicit $w1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x0
+    ; LITTLE-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; LITTLE-NEXT: %full_load:_(s32) = G_LOAD %ptr_elt_1(p0) :: (load (s32), align 1)
+    ; LITTLE-NEXT: $w1 = COPY %full_load(s32)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; BIG-LABEL: name: nonzero_start_idx_positive_little_endian_pat
     ; BIG: liveins: $x0, $x1
-    ; BIG: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; BIG: %ptr:_(p0) = COPY $x0
-    ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; BIG: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr_elt_1(p0) :: (load (s32), align 1)
-    ; BIG: %full_load:_(s32) = G_BSWAP [[LOAD]]
-    ; BIG: $w1 = COPY %full_load(s32)
-    ; BIG: RET_ReallyLR implicit $w1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x0
+    ; BIG-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; BIG-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr_elt_1(p0) :: (load (s32), align 1)
+    ; BIG-NEXT: %full_load:_(s32) = G_BSWAP [[LOAD]]
+    ; BIG-NEXT: $w1 = COPY %full_load(s32)
+    ; BIG-NEXT: RET_ReallyLR implicit $w1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_2:_(s64) = G_CONSTANT i64 2
     %cst_3:_(s64) = G_CONSTANT i64 3
@@ -470,27 +483,29 @@ body:             |
 
     ; s8* x = ...
     ; s32 y = (x[4] | (x[3] << 8)) | ((x[2] << 16) | (x[1] << 24))
-    ;
     ; -> Little endian: Load from x[1] + BSWAP
     ; -> Big endian: Load from x[1]
 
     ; LITTLE-LABEL: name: nonzero_start_idx_positive_big_endian_pat
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; LITTLE: %ptr:_(p0) = COPY $x0
-    ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; LITTLE: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr_elt_1(p0) :: (load (s32), align 1)
-    ; LITTLE: %full_load:_(s32) = G_BSWAP [[LOAD]]
-    ; LITTLE: $w1 = COPY %full_load(s32)
-    ; LITTLE: RET_ReallyLR implicit $w1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x0
+    ; LITTLE-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; LITTLE-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr_elt_1(p0) :: (load (s32), align 1)
+    ; LITTLE-NEXT: %full_load:_(s32) = G_BSWAP [[LOAD]]
+    ; LITTLE-NEXT: $w1 = COPY %full_load(s32)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; BIG-LABEL: name: nonzero_start_idx_positive_big_endian_pat
     ; BIG: liveins: $x0, $x1
-    ; BIG: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; BIG: %ptr:_(p0) = COPY $x0
-    ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; BIG: %full_load:_(s32) = G_LOAD %ptr_elt_1(p0) :: (load (s32), align 1)
-    ; BIG: $w1 = COPY %full_load(s32)
-    ; BIG: RET_ReallyLR implicit $w1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x0
+    ; BIG-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; BIG-NEXT: %full_load:_(s32) = G_LOAD %ptr_elt_1(p0) :: (load (s32), align 1)
+    ; BIG-NEXT: $w1 = COPY %full_load(s32)
+    ; BIG-NEXT: RET_ReallyLR implicit $w1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_2:_(s64) = G_CONSTANT i64 2
     %cst_3:_(s64) = G_CONSTANT i64 3
@@ -532,27 +547,29 @@ body:             |
 
     ; s8* x = ...
     ; s32 y = (x[-3] | (x[-2] << 8)) | ((x[-1] << 16) | (x[0] << 24))
-    ;
     ; -> Little endian: Load from x[-3]
     ; -> Big endian: Load from x[-3] + BSWAP
 
     ; LITTLE-LABEL: name: nonzero_start_idx_negative_little_endian_pat
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %cst_neg_3:_(s64) = G_CONSTANT i64 -3
-    ; LITTLE: %ptr:_(p0) = COPY $x0
-    ; LITTLE: %ptr_elt_neg_3:_(p0) = G_PTR_ADD %ptr, %cst_neg_3(s64)
-    ; LITTLE: %full_load:_(s32) = G_LOAD %ptr_elt_neg_3(p0) :: (load (s32), align 1)
-    ; LITTLE: $w1 = COPY %full_load(s32)
-    ; LITTLE: RET_ReallyLR implicit $w1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %cst_neg_3:_(s64) = G_CONSTANT i64 -3
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x0
+    ; LITTLE-NEXT: %ptr_elt_neg_3:_(p0) = G_PTR_ADD %ptr, %cst_neg_3(s64)
+    ; LITTLE-NEXT: %full_load:_(s32) = G_LOAD %ptr_elt_neg_3(p0) :: (load (s32), align 1)
+    ; LITTLE-NEXT: $w1 = COPY %full_load(s32)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; BIG-LABEL: name: nonzero_start_idx_negative_little_endian_pat
     ; BIG: liveins: $x0, $x1
-    ; BIG: %cst_neg_3:_(s64) = G_CONSTANT i64 -3
-    ; BIG: %ptr:_(p0) = COPY $x0
-    ; BIG: %ptr_elt_neg_3:_(p0) = G_PTR_ADD %ptr, %cst_neg_3(s64)
-    ; BIG: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr_elt_neg_3(p0) :: (load (s32), align 1)
-    ; BIG: %full_load:_(s32) = G_BSWAP [[LOAD]]
-    ; BIG: $w1 = COPY %full_load(s32)
-    ; BIG: RET_ReallyLR implicit $w1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %cst_neg_3:_(s64) = G_CONSTANT i64 -3
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x0
+    ; BIG-NEXT: %ptr_elt_neg_3:_(p0) = G_PTR_ADD %ptr, %cst_neg_3(s64)
+    ; BIG-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr_elt_neg_3(p0) :: (load (s32), align 1)
+    ; BIG-NEXT: %full_load:_(s32) = G_BSWAP [[LOAD]]
+    ; BIG-NEXT: $w1 = COPY %full_load(s32)
+    ; BIG-NEXT: RET_ReallyLR implicit $w1
     %cst_neg_1:_(s64) = G_CONSTANT i64 -1
     %cst_neg_2:_(s64) = G_CONSTANT i64 -2
     %cst_neg_3:_(s64) = G_CONSTANT i64 -3
@@ -592,27 +609,29 @@ body:             |
 
     ; s8* x = ...
     ; s32 y = (x[0] | (x[-1] << 8)) | ((x[-2] << 16) | (x[-3] << 24))
-    ;
     ; -> Little endian: Load from x[-3] + BSWAP
     ; -> Big endian: Load from x[-3]
 
     ; LITTLE-LABEL: name: nonzero_start_idx_negative_big_endian_pat
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %cst_neg_3:_(s64) = G_CONSTANT i64 -3
-    ; LITTLE: %ptr:_(p0) = COPY $x0
-    ; LITTLE: %ptr_elt_neg_3:_(p0) = G_PTR_ADD %ptr, %cst_neg_3(s64)
-    ; LITTLE: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr_elt_neg_3(p0) :: (load (s32), align 1)
-    ; LITTLE: %full_load:_(s32) = G_BSWAP [[LOAD]]
-    ; LITTLE: $w1 = COPY %full_load(s32)
-    ; LITTLE: RET_ReallyLR implicit $w1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %cst_neg_3:_(s64) = G_CONSTANT i64 -3
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x0
+    ; LITTLE-NEXT: %ptr_elt_neg_3:_(p0) = G_PTR_ADD %ptr, %cst_neg_3(s64)
+    ; LITTLE-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr_elt_neg_3(p0) :: (load (s32), align 1)
+    ; LITTLE-NEXT: %full_load:_(s32) = G_BSWAP [[LOAD]]
+    ; LITTLE-NEXT: $w1 = COPY %full_load(s32)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; BIG-LABEL: name: nonzero_start_idx_negative_big_endian_pat
     ; BIG: liveins: $x0, $x1
-    ; BIG: %cst_neg_3:_(s64) = G_CONSTANT i64 -3
-    ; BIG: %ptr:_(p0) = COPY $x0
-    ; BIG: %ptr_elt_neg_3:_(p0) = G_PTR_ADD %ptr, %cst_neg_3(s64)
-    ; BIG: %full_load:_(s32) = G_LOAD %ptr_elt_neg_3(p0) :: (load (s32), align 1)
-    ; BIG: $w1 = COPY %full_load(s32)
-    ; BIG: RET_ReallyLR implicit $w1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %cst_neg_3:_(s64) = G_CONSTANT i64 -3
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x0
+    ; BIG-NEXT: %ptr_elt_neg_3:_(p0) = G_PTR_ADD %ptr, %cst_neg_3(s64)
+    ; BIG-NEXT: %full_load:_(s32) = G_LOAD %ptr_elt_neg_3(p0) :: (load (s32), align 1)
+    ; BIG-NEXT: $w1 = COPY %full_load(s32)
+    ; BIG-NEXT: RET_ReallyLR implicit $w1
     %cst_neg_1:_(s64) = G_CONSTANT i64 -1
     %cst_neg_2:_(s64) = G_CONSTANT i64 -2
     %cst_neg_3:_(s64) = G_CONSTANT i64 -3
@@ -655,28 +674,31 @@ body:             |
 
     ; LITTLE-LABEL: name: dont_combine_volatile
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; LITTLE: %cst_16:_(s32) = G_CONSTANT i32 16
-    ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (volatile load (s16))
-    ; LITTLE: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
-    ; LITTLE: %full_load:_(s32) = G_OR %low_half, %high_half
-    ; LITTLE: $w1 = COPY %full_load(s32)
-    ; LITTLE: RET_ReallyLR implicit $w1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; LITTLE-NEXT: %cst_16:_(s32) = G_CONSTANT i32 16
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x1
+    ; LITTLE-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; LITTLE-NEXT: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; LITTLE-NEXT: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (volatile load (s16))
+    ; LITTLE-NEXT: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
+    ; LITTLE-NEXT: %full_load:_(s32) = G_OR %low_half, %high_half
+    ; LITTLE-NEXT: $w1 = COPY %full_load(s32)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; BIG-LABEL: name: dont_combine_volatile
     ; BIG: liveins: $x0, $x1
-    ; BIG: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; BIG: %cst_16:_(s32) = G_CONSTANT i32 16
-    ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (volatile load (s16))
-    ; BIG: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
-    ; BIG: %full_load:_(s32) = G_OR %low_half, %high_half
-    ; BIG: $w1 = COPY %full_load(s32)
-    ; BIG: RET_ReallyLR implicit $w1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; BIG-NEXT: %cst_16:_(s32) = G_CONSTANT i32 16
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x1
+    ; BIG-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; BIG-NEXT: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; BIG-NEXT: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (volatile load (s16))
+    ; BIG-NEXT: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
+    ; BIG-NEXT: %full_load:_(s32) = G_OR %low_half, %high_half
+    ; BIG-NEXT: $w1 = COPY %full_load(s32)
+    ; BIG-NEXT: RET_ReallyLR implicit $w1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_16:_(s32) = G_CONSTANT i32 16
 
@@ -703,28 +725,31 @@ body:             |
 
     ; LITTLE-LABEL: name: dont_wrong_memop_size
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; LITTLE: %cst_16:_(s32) = G_CONSTANT i32 16
-    ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-    ; LITTLE: %wrong_size_load:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
-    ; LITTLE: %high_half:_(s32) = nuw G_SHL %wrong_size_load, %cst_16(s32)
-    ; LITTLE: %full_load:_(s32) = G_OR %low_half, %high_half
-    ; LITTLE: $w1 = COPY %full_load(s32)
-    ; LITTLE: RET_ReallyLR implicit $w1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; LITTLE-NEXT: %cst_16:_(s32) = G_CONSTANT i32 16
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x1
+    ; LITTLE-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; LITTLE-NEXT: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; LITTLE-NEXT: %wrong_size_load:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
+    ; LITTLE-NEXT: %high_half:_(s32) = nuw G_SHL %wrong_size_load, %cst_16(s32)
+    ; LITTLE-NEXT: %full_load:_(s32) = G_OR %low_half, %high_half
+    ; LITTLE-NEXT: $w1 = COPY %full_load(s32)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; BIG-LABEL: name: dont_wrong_memop_size
     ; BIG: liveins: $x0, $x1
-    ; BIG: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; BIG: %cst_16:_(s32) = G_CONSTANT i32 16
-    ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-    ; BIG: %wrong_size_load:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
-    ; BIG: %high_half:_(s32) = nuw G_SHL %wrong_size_load, %cst_16(s32)
-    ; BIG: %full_load:_(s32) = G_OR %low_half, %high_half
-    ; BIG: $w1 = COPY %full_load(s32)
-    ; BIG: RET_ReallyLR implicit $w1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; BIG-NEXT: %cst_16:_(s32) = G_CONSTANT i32 16
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x1
+    ; BIG-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; BIG-NEXT: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; BIG-NEXT: %wrong_size_load:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
+    ; BIG-NEXT: %high_half:_(s32) = nuw G_SHL %wrong_size_load, %cst_16(s32)
+    ; BIG-NEXT: %full_load:_(s32) = G_OR %low_half, %high_half
+    ; BIG-NEXT: $w1 = COPY %full_load(s32)
+    ; BIG-NEXT: RET_ReallyLR implicit $w1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_16:_(s32) = G_CONSTANT i32 16
 
@@ -748,34 +773,36 @@ body:             |
     liveins: $x0, $x1
 
     ; This is not equivalent to a 32-bit load with/without a BSWAP:
-    ;
     ; s16 *x = ...
     ; s32 y = x[0] | (x[1] << 24)
 
     ; LITTLE-LABEL: name: dont_combine_wrong_offset
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; LITTLE: %cst_24:_(s32) = G_CONSTANT i32 24
-    ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
-    ; LITTLE: %high_half:_(s32) = nuw G_SHL %elt1, %cst_24(s32)
-    ; LITTLE: %full_load:_(s32) = G_OR %low_half, %high_half
-    ; LITTLE: $w1 = COPY %full_load(s32)
-    ; LITTLE: RET_ReallyLR implicit $w1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; LITTLE-NEXT: %cst_24:_(s32) = G_CONSTANT i32 24
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x1
+    ; LITTLE-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; LITTLE-NEXT: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; LITTLE-NEXT: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
+    ; LITTLE-NEXT: %high_half:_(s32) = nuw G_SHL %elt1, %cst_24(s32)
+    ; LITTLE-NEXT: %full_load:_(s32) = G_OR %low_half, %high_half
+    ; LITTLE-NEXT: $w1 = COPY %full_load(s32)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; BIG-LABEL: name: dont_combine_wrong_offset
     ; BIG: liveins: $x0, $x1
-    ; BIG: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; BIG: %cst_24:_(s32) = G_CONSTANT i32 24
-    ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
-    ; BIG: %high_half:_(s32) = nuw G_SHL %elt1, %cst_24(s32)
-    ; BIG: %full_load:_(s32) = G_OR %low_half, %high_half
-    ; BIG: $w1 = COPY %full_load(s32)
-    ; BIG: RET_ReallyLR implicit $w1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; BIG-NEXT: %cst_24:_(s32) = G_CONSTANT i32 24
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x1
+    ; BIG-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; BIG-NEXT: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; BIG-NEXT: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
+    ; BIG-NEXT: %high_half:_(s32) = nuw G_SHL %elt1, %cst_24(s32)
+    ; BIG-NEXT: %full_load:_(s32) = G_OR %low_half, %high_half
+    ; BIG-NEXT: $w1 = COPY %full_load(s32)
+    ; BIG-NEXT: RET_ReallyLR implicit $w1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_24:_(s32) = G_CONSTANT i32 24
 
@@ -799,34 +826,36 @@ body:             |
     liveins: $x0, $x1
 
     ; This does not correspond to a 32-bit load with/without a BSWAP:
-    ;
     ; s16 *x = ...
     ; s32 y = x[0] | (x[1] << 8)
 
     ; LITTLE-LABEL: name: dont_combine_wrong_offset_2
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; LITTLE: %cst_8:_(s32) = G_CONSTANT i32 8
-    ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
-    ; LITTLE: %high_half:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
-    ; LITTLE: %full_load:_(s32) = G_OR %low_half, %high_half
-    ; LITTLE: $w1 = COPY %full_load(s32)
-    ; LITTLE: RET_ReallyLR implicit $w1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; LITTLE-NEXT: %cst_8:_(s32) = G_CONSTANT i32 8
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x1
+    ; LITTLE-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; LITTLE-NEXT: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; LITTLE-NEXT: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
+    ; LITTLE-NEXT: %high_half:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
+    ; LITTLE-NEXT: %full_load:_(s32) = G_OR %low_half, %high_half
+    ; LITTLE-NEXT: $w1 = COPY %full_load(s32)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; BIG-LABEL: name: dont_combine_wrong_offset_2
     ; BIG: liveins: $x0, $x1
-    ; BIG: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; BIG: %cst_8:_(s32) = G_CONSTANT i32 8
-    ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
-    ; BIG: %high_half:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
-    ; BIG: %full_load:_(s32) = G_OR %low_half, %high_half
-    ; BIG: $w1 = COPY %full_load(s32)
-    ; BIG: RET_ReallyLR implicit $w1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; BIG-NEXT: %cst_8:_(s32) = G_CONSTANT i32 8
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x1
+    ; BIG-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; BIG-NEXT: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; BIG-NEXT: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
+    ; BIG-NEXT: %high_half:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
+    ; BIG-NEXT: %full_load:_(s32) = G_OR %low_half, %high_half
+    ; BIG-NEXT: $w1 = COPY %full_load(s32)
+    ; BIG-NEXT: RET_ReallyLR implicit $w1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_8:_(s32) = G_CONSTANT i32 8
 
@@ -850,46 +879,48 @@ body:             |
     liveins: $x0, $x1
 
     ; This is missing x[2], so we shouldn't combine:
-    ;
     ; s16 *x = ...
     ; s64 y = (x[0] | (x[1] << 16)) | (x[3] << 48)
 
     ; LITTLE-LABEL: name: dont_combine_missing_load
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; LITTLE: %cst_3:_(s64) = G_CONSTANT i64 3
-    ; LITTLE: %cst_16:_(s64) = G_CONSTANT i64 16
-    ; LITTLE: %cst_48:_(s64) = G_CONSTANT i64 48
-    ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; LITTLE: %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s64)
-    ; LITTLE: %byte0_byte1:_(s64) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-    ; LITTLE: %elt1:_(s64) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
-    ; LITTLE: %elt3:_(s64) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s16))
-    ; LITTLE: %byte2_byte3:_(s64) = nuw G_SHL %elt1, %cst_16(s64)
-    ; LITTLE: %byte6_byte7:_(s64) = nuw G_SHL %elt3, %cst_48(s64)
-    ; LITTLE: %or1:_(s64) = G_OR %byte0_byte1, %byte2_byte3
-    ; LITTLE: %full_load:_(s64) = G_OR %or1, %byte6_byte7
-    ; LITTLE: $x1 = COPY %full_load(s64)
-    ; LITTLE: RET_ReallyLR implicit $x1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; LITTLE-NEXT: %cst_3:_(s64) = G_CONSTANT i64 3
+    ; LITTLE-NEXT: %cst_16:_(s64) = G_CONSTANT i64 16
+    ; LITTLE-NEXT: %cst_48:_(s64) = G_CONSTANT i64 48
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x1
+    ; LITTLE-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; LITTLE-NEXT: %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s64)
+    ; LITTLE-NEXT: %byte0_byte1:_(s64) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; LITTLE-NEXT: %elt1:_(s64) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
+    ; LITTLE-NEXT: %elt3:_(s64) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s16))
+    ; LITTLE-NEXT: %byte2_byte3:_(s64) = nuw G_SHL %elt1, %cst_16(s64)
+    ; LITTLE-NEXT: %byte6_byte7:_(s64) = nuw G_SHL %elt3, %cst_48(s64)
+    ; LITTLE-NEXT: %or1:_(s64) = G_OR %byte0_byte1, %byte2_byte3
+    ; LITTLE-NEXT: %full_load:_(s64) = G_OR %or1, %byte6_byte7
+    ; LITTLE-NEXT: $x1 = COPY %full_load(s64)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $x1
+    ;
     ; BIG-LABEL: name: dont_combine_missing_load
     ; BIG: liveins: $x0, $x1
-    ; BIG: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; BIG: %cst_3:_(s64) = G_CONSTANT i64 3
-    ; BIG: %cst_16:_(s64) = G_CONSTANT i64 16
-    ; BIG: %cst_48:_(s64) = G_CONSTANT i64 48
-    ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; BIG: %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s64)
-    ; BIG: %byte0_byte1:_(s64) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-    ; BIG: %elt1:_(s64) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
-    ; BIG: %elt3:_(s64) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s16))
-    ; BIG: %byte2_byte3:_(s64) = nuw G_SHL %elt1, %cst_16(s64)
-    ; BIG: %byte6_byte7:_(s64) = nuw G_SHL %elt3, %cst_48(s64)
-    ; BIG: %or1:_(s64) = G_OR %byte0_byte1, %byte2_byte3
-    ; BIG: %full_load:_(s64) = G_OR %or1, %byte6_byte7
-    ; BIG: $x1 = COPY %full_load(s64)
-    ; BIG: RET_ReallyLR implicit $x1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; BIG-NEXT: %cst_3:_(s64) = G_CONSTANT i64 3
+    ; BIG-NEXT: %cst_16:_(s64) = G_CONSTANT i64 16
+    ; BIG-NEXT: %cst_48:_(s64) = G_CONSTANT i64 48
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x1
+    ; BIG-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; BIG-NEXT: %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s64)
+    ; BIG-NEXT: %byte0_byte1:_(s64) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; BIG-NEXT: %elt1:_(s64) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
+    ; BIG-NEXT: %elt3:_(s64) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s16))
+    ; BIG-NEXT: %byte2_byte3:_(s64) = nuw G_SHL %elt1, %cst_16(s64)
+    ; BIG-NEXT: %byte6_byte7:_(s64) = nuw G_SHL %elt3, %cst_48(s64)
+    ; BIG-NEXT: %or1:_(s64) = G_OR %byte0_byte1, %byte2_byte3
+    ; BIG-NEXT: %full_load:_(s64) = G_OR %or1, %byte6_byte7
+    ; BIG-NEXT: $x1 = COPY %full_load(s64)
+    ; BIG-NEXT: RET_ReallyLR implicit $x1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_3:_(s64) = G_CONSTANT i64 3
 
@@ -926,28 +957,31 @@ body:             |
 
     ; LITTLE-LABEL: name: dont_combine_different_addr_spaces
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; LITTLE: %cst_16:_(s32) = G_CONSTANT i32 16
-    ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16), addrspace 1)
-    ; LITTLE: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
-    ; LITTLE: %full_load:_(s32) = G_OR %low_half, %high_half
-    ; LITTLE: $w1 = COPY %full_load(s32)
-    ; LITTLE: RET_ReallyLR implicit $w1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; LITTLE-NEXT: %cst_16:_(s32) = G_CONSTANT i32 16
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x1
+    ; LITTLE-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; LITTLE-NEXT: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; LITTLE-NEXT: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16), addrspace 1)
+    ; LITTLE-NEXT: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
+    ; LITTLE-NEXT: %full_load:_(s32) = G_OR %low_half, %high_half
+    ; LITTLE-NEXT: $w1 = COPY %full_load(s32)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; BIG-LABEL: name: dont_combine_different_addr_spaces
     ; BIG: liveins: $x0, $x1
-    ; BIG: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; BIG: %cst_16:_(s32) = G_CONSTANT i32 16
-    ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16), addrspace 1)
-    ; BIG: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
-    ; BIG: %full_load:_(s32) = G_OR %low_half, %high_half
-    ; BIG: $w1 = COPY %full_load(s32)
-    ; BIG: RET_ReallyLR implicit $w1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; BIG-NEXT: %cst_16:_(s32) = G_CONSTANT i32 16
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x1
+    ; BIG-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; BIG-NEXT: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; BIG-NEXT: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16), addrspace 1)
+    ; BIG-NEXT: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
+    ; BIG-NEXT: %full_load:_(s32) = G_OR %low_half, %high_half
+    ; BIG-NEXT: $w1 = COPY %full_load(s32)
+    ; BIG-NEXT: RET_ReallyLR implicit $w1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_16:_(s32) = G_CONSTANT i32 16
 
@@ -971,56 +1005,58 @@ body:             |
     liveins: $x0, $x1
 
     ; If two of the G_PTR_ADDs have the same index, then don't combine.
-    ;
     ; sN *x = ...
     ; sM y = (x[i] << A) | (x[i] << B) ...
 
     ; LITTLE-LABEL: name: dont_combine_duplicate_idx
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; LITTLE: %reused_idx:_(s64) = G_CONSTANT i64 2
-    ; LITTLE: %cst_8:_(s32) = G_CONSTANT i32 8
-    ; LITTLE: %cst_16:_(s32) = G_CONSTANT i32 16
-    ; LITTLE: %cst_24:_(s32) = G_CONSTANT i32 24
-    ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; LITTLE: %uses_idx_2:_(p0) = G_PTR_ADD %ptr, %reused_idx(s64)
-    ; LITTLE: %also_uses_idx_2:_(p0) = G_PTR_ADD %ptr, %reused_idx(s64)
-    ; LITTLE: %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
-    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
-    ; LITTLE: %elt2:_(s32) = G_ZEXTLOAD %uses_idx_2(p0) :: (load (s8))
-    ; LITTLE: %elt3:_(s32) = G_ZEXTLOAD %also_uses_idx_2(p0) :: (load (s8))
-    ; LITTLE: %byte1:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
-    ; LITTLE: %byte2:_(s32) = nuw G_SHL %elt2, %cst_16(s32)
-    ; LITTLE: %byte3:_(s32) = nuw G_SHL %elt3, %cst_24(s32)
-    ; LITTLE: %or1:_(s32) = G_OR %byte0, %byte1
-    ; LITTLE: %or2:_(s32) = G_OR %byte2, %byte3
-    ; LITTLE: %full_load:_(s32) = G_OR %or1, %or2
-    ; LITTLE: $w1 = COPY %full_load(s32)
-    ; LITTLE: RET_ReallyLR implicit $w1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; LITTLE-NEXT: %reused_idx:_(s64) = G_CONSTANT i64 2
+    ; LITTLE-NEXT: %cst_8:_(s32) = G_CONSTANT i32 8
+    ; LITTLE-NEXT: %cst_16:_(s32) = G_CONSTANT i32 16
+    ; LITTLE-NEXT: %cst_24:_(s32) = G_CONSTANT i32 24
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x1
+    ; LITTLE-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; LITTLE-NEXT: %uses_idx_2:_(p0) = G_PTR_ADD %ptr, %reused_idx(s64)
+    ; LITTLE-NEXT: %also_uses_idx_2:_(p0) = G_PTR_ADD %ptr, %reused_idx(s64)
+    ; LITTLE-NEXT: %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
+    ; LITTLE-NEXT: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
+    ; LITTLE-NEXT: %elt2:_(s32) = G_ZEXTLOAD %uses_idx_2(p0) :: (load (s8))
+    ; LITTLE-NEXT: %elt3:_(s32) = G_ZEXTLOAD %also_uses_idx_2(p0) :: (load (s8))
+    ; LITTLE-NEXT: %byte1:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
+    ; LITTLE-NEXT: %byte2:_(s32) = nuw G_SHL %elt2, %cst_16(s32)
+    ; LITTLE-NEXT: %byte3:_(s32) = nuw G_SHL %elt3, %cst_24(s32)
+    ; LITTLE-NEXT: %or1:_(s32) = G_OR %byte0, %byte1
+    ; LITTLE-NEXT: %or2:_(s32) = G_OR %byte2, %byte3
+    ; LITTLE-NEXT: %full_load:_(s32) = G_OR %or1, %or2
+    ; LITTLE-NEXT: $w1 = COPY %full_load(s32)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; BIG-LABEL: name: dont_combine_duplicate_idx
     ; BIG: liveins: $x0, $x1
-    ; BIG: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; BIG: %reused_idx:_(s64) = G_CONSTANT i64 2
-    ; BIG: %cst_8:_(s32) = G_CONSTANT i32 8
-    ; BIG: %cst_16:_(s32) = G_CONSTANT i32 16
-    ; BIG: %cst_24:_(s32) = G_CONSTANT i32 24
-    ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; BIG: %uses_idx_2:_(p0) = G_PTR_ADD %ptr, %reused_idx(s64)
-    ; BIG: %also_uses_idx_2:_(p0) = G_PTR_ADD %ptr, %reused_idx(s64)
-    ; BIG: %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
-    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
-    ; BIG: %elt2:_(s32) = G_ZEXTLOAD %uses_idx_2(p0) :: (load (s8))
-    ; BIG: %elt3:_(s32) = G_ZEXTLOAD %also_uses_idx_2(p0) :: (load (s8))
-    ; BIG: %byte1:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
-    ; BIG: %byte2:_(s32) = nuw G_SHL %elt2, %cst_16(s32)
-    ; BIG: %byte3:_(s32) = nuw G_SHL %elt3, %cst_24(s32)
-    ; BIG: %or1:_(s32) = G_OR %byte0, %byte1
-    ; BIG: %or2:_(s32) = G_OR %byte2, %byte3
-    ; BIG: %full_load:_(s32) = G_OR %or1, %or2
-    ; BIG: $w1 = COPY %full_load(s32)
-    ; BIG: RET_ReallyLR implicit $w1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; BIG-NEXT: %reused_idx:_(s64) = G_CONSTANT i64 2
+    ; BIG-NEXT: %cst_8:_(s32) = G_CONSTANT i32 8
+    ; BIG-NEXT: %cst_16:_(s32) = G_CONSTANT i32 16
+    ; BIG-NEXT: %cst_24:_(s32) = G_CONSTANT i32 24
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x1
+    ; BIG-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; BIG-NEXT: %uses_idx_2:_(p0) = G_PTR_ADD %ptr, %reused_idx(s64)
+    ; BIG-NEXT: %also_uses_idx_2:_(p0) = G_PTR_ADD %ptr, %reused_idx(s64)
+    ; BIG-NEXT: %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
+    ; BIG-NEXT: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
+    ; BIG-NEXT: %elt2:_(s32) = G_ZEXTLOAD %uses_idx_2(p0) :: (load (s8))
+    ; BIG-NEXT: %elt3:_(s32) = G_ZEXTLOAD %also_uses_idx_2(p0) :: (load (s8))
+    ; BIG-NEXT: %byte1:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
+    ; BIG-NEXT: %byte2:_(s32) = nuw G_SHL %elt2, %cst_16(s32)
+    ; BIG-NEXT: %byte3:_(s32) = nuw G_SHL %elt3, %cst_24(s32)
+    ; BIG-NEXT: %or1:_(s32) = G_OR %byte0, %byte1
+    ; BIG-NEXT: %or2:_(s32) = G_OR %byte2, %byte3
+    ; BIG-NEXT: %full_load:_(s32) = G_OR %or1, %or2
+    ; BIG-NEXT: $w1 = COPY %full_load(s32)
+    ; BIG-NEXT: RET_ReallyLR implicit $w1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %reused_idx:_(s64) = G_CONSTANT i64 2
 
@@ -1058,56 +1094,58 @@ body:             |
     liveins: $x0, $x1
 
     ; If two of the G_SHLs have the same constant, then we should not combine.
-    ;
     ; sN *x = ...
     ; sM y = (x[i] << A) | (x[i+1] << A) ...
 
     ; LITTLE-LABEL: name: dont_combine_duplicate_offset
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; LITTLE: %cst_2:_(s64) = G_CONSTANT i64 2
-    ; LITTLE: %cst_3:_(s64) = G_CONSTANT i64 3
-    ; LITTLE: %cst_8:_(s32) = G_CONSTANT i32 8
-    ; LITTLE: %duplicate_shl_cst:_(s32) = G_CONSTANT i32 16
-    ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; LITTLE: %ptr_elt_2:_(p0) = G_PTR_ADD %ptr, %cst_2(s64)
-    ; LITTLE: %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s64)
-    ; LITTLE: %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
-    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
-    ; LITTLE: %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load (s8))
-    ; LITTLE: %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s8))
-    ; LITTLE: %byte1:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
-    ; LITTLE: %duplicate_shl_1:_(s32) = nuw G_SHL %elt2, %duplicate_shl_cst(s32)
-    ; LITTLE: %duplicate_shl_2:_(s32) = nuw G_SHL %elt3, %duplicate_shl_cst(s32)
-    ; LITTLE: %or1:_(s32) = G_OR %byte0, %byte1
-    ; LITTLE: %or2:_(s32) = G_OR %duplicate_shl_1, %duplicate_shl_2
-    ; LITTLE: %full_load:_(s32) = G_OR %or1, %or2
-    ; LITTLE: $w1 = COPY %full_load(s32)
-    ; LITTLE: RET_ReallyLR implicit $w1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; LITTLE-NEXT: %cst_2:_(s64) = G_CONSTANT i64 2
+    ; LITTLE-NEXT: %cst_3:_(s64) = G_CONSTANT i64 3
+    ; LITTLE-NEXT: %cst_8:_(s32) = G_CONSTANT i32 8
+    ; LITTLE-NEXT: %duplicate_shl_cst:_(s32) = G_CONSTANT i32 16
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x1
+    ; LITTLE-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; LITTLE-NEXT: %ptr_elt_2:_(p0) = G_PTR_ADD %ptr, %cst_2(s64)
+    ; LITTLE-NEXT: %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s64)
+    ; LITTLE-NEXT: %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
+    ; LITTLE-NEXT: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
+    ; LITTLE-NEXT: %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load (s8))
+    ; LITTLE-NEXT: %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s8))
+    ; LITTLE-NEXT: %byte1:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
+    ; LITTLE-NEXT: %duplicate_shl_1:_(s32) = nuw G_SHL %elt2, %duplicate_shl_cst(s32)
+    ; LITTLE-NEXT: %duplicate_shl_2:_(s32) = nuw G_SHL %elt3, %duplicate_shl_cst(s32)
+    ; LITTLE-NEXT: %or1:_(s32) = G_OR %byte0, %byte1
+    ; LITTLE-NEXT: %or2:_(s32) = G_OR %duplicate_shl_1, %duplicate_shl_2
+    ; LITTLE-NEXT: %full_load:_(s32) = G_OR %or1, %or2
+    ; LITTLE-NEXT: $w1 = COPY %full_load(s32)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; BIG-LABEL: name: dont_combine_duplicate_offset
     ; BIG: liveins: $x0, $x1
-    ; BIG: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; BIG: %cst_2:_(s64) = G_CONSTANT i64 2
-    ; BIG: %cst_3:_(s64) = G_CONSTANT i64 3
-    ; BIG: %cst_8:_(s32) = G_CONSTANT i32 8
-    ; BIG: %duplicate_shl_cst:_(s32) = G_CONSTANT i32 16
-    ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; BIG: %ptr_elt_2:_(p0) = G_PTR_ADD %ptr, %cst_2(s64)
-    ; BIG: %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s64)
-    ; BIG: %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
-    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
-    ; BIG: %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load (s8))
-    ; BIG: %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s8))
-    ; BIG: %byte1:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
-    ; BIG: %duplicate_shl_1:_(s32) = nuw G_SHL %elt2, %duplicate_shl_cst(s32)
-    ; BIG: %duplicate_shl_2:_(s32) = nuw G_SHL %elt3, %duplicate_shl_cst(s32)
-    ; BIG: %or1:_(s32) = G_OR %byte0, %byte1
-    ; BIG: %or2:_(s32) = G_OR %duplicate_shl_1, %duplicate_shl_2
-    ; BIG: %full_load:_(s32) = G_OR %or1, %or2
-    ; BIG: $w1 = COPY %full_load(s32)
-    ; BIG: RET_ReallyLR implicit $w1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; BIG-NEXT: %cst_2:_(s64) = G_CONSTANT i64 2
+    ; BIG-NEXT: %cst_3:_(s64) = G_CONSTANT i64 3
+    ; BIG-NEXT: %cst_8:_(s32) = G_CONSTANT i32 8
+    ; BIG-NEXT: %duplicate_shl_cst:_(s32) = G_CONSTANT i32 16
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x1
+    ; BIG-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; BIG-NEXT: %ptr_elt_2:_(p0) = G_PTR_ADD %ptr, %cst_2(s64)
+    ; BIG-NEXT: %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s64)
+    ; BIG-NEXT: %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
+    ; BIG-NEXT: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
+    ; BIG-NEXT: %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load (s8))
+    ; BIG-NEXT: %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s8))
+    ; BIG-NEXT: %byte1:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
+    ; BIG-NEXT: %duplicate_shl_1:_(s32) = nuw G_SHL %elt2, %duplicate_shl_cst(s32)
+    ; BIG-NEXT: %duplicate_shl_2:_(s32) = nuw G_SHL %elt3, %duplicate_shl_cst(s32)
+    ; BIG-NEXT: %or1:_(s32) = G_OR %byte0, %byte1
+    ; BIG-NEXT: %or2:_(s32) = G_OR %duplicate_shl_1, %duplicate_shl_2
+    ; BIG-NEXT: %full_load:_(s32) = G_OR %or1, %or2
+    ; BIG-NEXT: $w1 = COPY %full_load(s32)
+    ; BIG-NEXT: RET_ReallyLR implicit $w1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_2:_(s64) = G_CONSTANT i64 2
     %cst_3:_(s64) = G_CONSTANT i64 3
@@ -1147,58 +1185,60 @@ body:             |
 
     ; In this case, the lowest index load (e.g. x[0]) does not end up at byte
     ; offset 0. We shouldn't combine.
-    ;
     ; s8 *x = ...
     ; s32 y = (x[0] << 8) | (x[1]) | (x[2] << 16) ...
 
     ; LITTLE-LABEL: name: dont_combine_lowest_index_not_zero_offset
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; LITTLE: %cst_2:_(s64) = G_CONSTANT i64 2
-    ; LITTLE: %cst_3:_(s64) = G_CONSTANT i64 3
-    ; LITTLE: %cst_8:_(s32) = G_CONSTANT i32 8
-    ; LITTLE: %cst_16:_(s32) = G_CONSTANT i32 16
-    ; LITTLE: %cst_24:_(s32) = G_CONSTANT i32 24
-    ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; LITTLE: %ptr_elt_2:_(p0) = G_PTR_ADD %ptr, %cst_2(s64)
-    ; LITTLE: %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s64)
-    ; LITTLE: %lowest_idx_load:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
-    ; LITTLE: %byte0:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
-    ; LITTLE: %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load (s8))
-    ; LITTLE: %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s8))
-    ; LITTLE: %byte1:_(s32) = nuw G_SHL %lowest_idx_load, %cst_8(s32)
-    ; LITTLE: %byte2:_(s32) = nuw G_SHL %elt2, %cst_16(s32)
-    ; LITTLE: %byte3:_(s32) = nuw G_SHL %elt3, %cst_24(s32)
-    ; LITTLE: %or1:_(s32) = G_OR %byte0, %byte1
-    ; LITTLE: %or2:_(s32) = G_OR %byte2, %byte3
-    ; LITTLE: %full_load:_(s32) = G_OR %or1, %or2
-    ; LITTLE: $w1 = COPY %full_load(s32)
-    ; LITTLE: RET_ReallyLR implicit $w1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; LITTLE-NEXT: %cst_2:_(s64) = G_CONSTANT i64 2
+    ; LITTLE-NEXT: %cst_3:_(s64) = G_CONSTANT i64 3
+    ; LITTLE-NEXT: %cst_8:_(s32) = G_CONSTANT i32 8
+    ; LITTLE-NEXT: %cst_16:_(s32) = G_CONSTANT i32 16
+    ; LITTLE-NEXT: %cst_24:_(s32) = G_CONSTANT i32 24
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x1
+    ; LITTLE-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; LITTLE-NEXT: %ptr_elt_2:_(p0) = G_PTR_ADD %ptr, %cst_2(s64)
+    ; LITTLE-NEXT: %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s64)
+    ; LITTLE-NEXT: %lowest_idx_load:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
+    ; LITTLE-NEXT: %byte0:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
+    ; LITTLE-NEXT: %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load (s8))
+    ; LITTLE-NEXT: %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s8))
+    ; LITTLE-NEXT: %byte1:_(s32) = nuw G_SHL %lowest_idx_load, %cst_8(s32)
+    ; LITTLE-NEXT: %byte2:_(s32) = nuw G_SHL %elt2, %cst_16(s32)
+    ; LITTLE-NEXT: %byte3:_(s32) = nuw G_SHL %elt3, %cst_24(s32)
+    ; LITTLE-NEXT: %or1:_(s32) = G_OR %byte0, %byte1
+    ; LITTLE-NEXT: %or2:_(s32) = G_OR %byte2, %byte3
+    ; LITTLE-NEXT: %full_load:_(s32) = G_OR %or1, %or2
+    ; LITTLE-NEXT: $w1 = COPY %full_load(s32)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; BIG-LABEL: name: dont_combine_lowest_index_not_zero_offset
     ; BIG: liveins: $x0, $x1
-    ; BIG: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; BIG: %cst_2:_(s64) = G_CONSTANT i64 2
-    ; BIG: %cst_3:_(s64) = G_CONSTANT i64 3
-    ; BIG: %cst_8:_(s32) = G_CONSTANT i32 8
-    ; BIG: %cst_16:_(s32) = G_CONSTANT i32 16
-    ; BIG: %cst_24:_(s32) = G_CONSTANT i32 24
-    ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; BIG: %ptr_elt_2:_(p0) = G_PTR_ADD %ptr, %cst_2(s64)
-    ; BIG: %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s64)
-    ; BIG: %lowest_idx_load:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
-    ; BIG: %byte0:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
-    ; BIG: %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load (s8))
-    ; BIG: %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s8))
-    ; BIG: %byte1:_(s32) = nuw G_SHL %lowest_idx_load, %cst_8(s32)
-    ; BIG: %byte2:_(s32) = nuw G_SHL %elt2, %cst_16(s32)
-    ; BIG: %byte3:_(s32) = nuw G_SHL %elt3, %cst_24(s32)
-    ; BIG: %or1:_(s32) = G_OR %byte0, %byte1
-    ; BIG: %or2:_(s32) = G_OR %byte2, %byte3
-    ; BIG: %full_load:_(s32) = G_OR %or1, %or2
-    ; BIG: $w1 = COPY %full_load(s32)
-    ; BIG: RET_ReallyLR implicit $w1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; BIG-NEXT: %cst_2:_(s64) = G_CONSTANT i64 2
+    ; BIG-NEXT: %cst_3:_(s64) = G_CONSTANT i64 3
+    ; BIG-NEXT: %cst_8:_(s32) = G_CONSTANT i32 8
+    ; BIG-NEXT: %cst_16:_(s32) = G_CONSTANT i32 16
+    ; BIG-NEXT: %cst_24:_(s32) = G_CONSTANT i32 24
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x1
+    ; BIG-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; BIG-NEXT: %ptr_elt_2:_(p0) = G_PTR_ADD %ptr, %cst_2(s64)
+    ; BIG-NEXT: %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s64)
+    ; BIG-NEXT: %lowest_idx_load:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
+    ; BIG-NEXT: %byte0:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
+    ; BIG-NEXT: %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load (s8))
+    ; BIG-NEXT: %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s8))
+    ; BIG-NEXT: %byte1:_(s32) = nuw G_SHL %lowest_idx_load, %cst_8(s32)
+    ; BIG-NEXT: %byte2:_(s32) = nuw G_SHL %elt2, %cst_16(s32)
+    ; BIG-NEXT: %byte3:_(s32) = nuw G_SHL %elt3, %cst_24(s32)
+    ; BIG-NEXT: %or1:_(s32) = G_OR %byte0, %byte1
+    ; BIG-NEXT: %or2:_(s32) = G_OR %byte2, %byte3
+    ; BIG-NEXT: %full_load:_(s32) = G_OR %or1, %or2
+    ; BIG-NEXT: $w1 = COPY %full_load(s32)
+    ; BIG-NEXT: RET_ReallyLR implicit $w1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_2:_(s64) = G_CONSTANT i64 2
     %cst_3:_(s64) = G_CONSTANT i64 3
@@ -1243,30 +1283,33 @@ body:             |
 
     ; LITTLE-LABEL: name: dont_combine_more_than_one_use_load
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; LITTLE: %cst_16:_(s32) = G_CONSTANT i32 16
-    ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
-    ; LITTLE: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
-    ; LITTLE: %full_load:_(s32) = G_OR %low_half, %high_half
-    ; LITTLE: %extra_use:_(s32) = G_AND %full_load, %low_half
-    ; LITTLE: $w1 = COPY %extra_use(s32)
-    ; LITTLE: RET_ReallyLR implicit $w1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; LITTLE-NEXT: %cst_16:_(s32) = G_CONSTANT i32 16
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x1
+    ; LITTLE-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; LITTLE-NEXT: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; LITTLE-NEXT: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
+    ; LITTLE-NEXT: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
+    ; LITTLE-NEXT: %full_load:_(s32) = G_OR %low_half, %high_half
+    ; LITTLE-NEXT: %extra_use:_(s32) = G_AND %full_load, %low_half
+    ; LITTLE-NEXT: $w1 = COPY %extra_use(s32)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; BIG-LABEL: name: dont_combine_more_than_one_use_load
     ; BIG: liveins: $x0, $x1
-    ; BIG: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; BIG: %cst_16:_(s32) = G_CONSTANT i32 16
-    ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
-    ; BIG: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
-    ; BIG: %full_load:_(s32) = G_OR %low_half, %high_half
-    ; BIG: %extra_use:_(s32) = G_AND %full_load, %low_half
-    ; BIG: $w1 = COPY %extra_use(s32)
-    ; BIG: RET_ReallyLR implicit $w1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; BIG-NEXT: %cst_16:_(s32) = G_CONSTANT i32 16
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x1
+    ; BIG-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; BIG-NEXT: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; BIG-NEXT: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
+    ; BIG-NEXT: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
+    ; BIG-NEXT: %full_load:_(s32) = G_OR %low_half, %high_half
+    ; BIG-NEXT: %extra_use:_(s32) = G_AND %full_load, %low_half
+    ; BIG-NEXT: $w1 = COPY %extra_use(s32)
+    ; BIG-NEXT: RET_ReallyLR implicit $w1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_16:_(s32) = G_CONSTANT i32 16
 
@@ -1295,30 +1338,33 @@ body:             |
 
     ; LITTLE-LABEL: name: dont_combine_more_than_one_use_shl
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; LITTLE: %cst_16:_(s32) = G_CONSTANT i32 16
-    ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
-    ; LITTLE: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
-    ; LITTLE: %full_load:_(s32) = G_OR %low_half, %high_half
-    ; LITTLE: %extra_use:_(s32) = G_AND %full_load, %high_half
-    ; LITTLE: $w1 = COPY %extra_use(s32)
-    ; LITTLE: RET_ReallyLR implicit $w1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; LITTLE-NEXT: %cst_16:_(s32) = G_CONSTANT i32 16
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x1
+    ; LITTLE-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; LITTLE-NEXT: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; LITTLE-NEXT: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
+    ; LITTLE-NEXT: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
+    ; LITTLE-NEXT: %full_load:_(s32) = G_OR %low_half, %high_half
+    ; LITTLE-NEXT: %extra_use:_(s32) = G_AND %full_load, %high_half
+    ; LITTLE-NEXT: $w1 = COPY %extra_use(s32)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; BIG-LABEL: name: dont_combine_more_than_one_use_shl
     ; BIG: liveins: $x0, $x1
-    ; BIG: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; BIG: %cst_16:_(s32) = G_CONSTANT i32 16
-    ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
-    ; BIG: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
-    ; BIG: %full_load:_(s32) = G_OR %low_half, %high_half
-    ; BIG: %extra_use:_(s32) = G_AND %full_load, %high_half
-    ; BIG: $w1 = COPY %extra_use(s32)
-    ; BIG: RET_ReallyLR implicit $w1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; BIG-NEXT: %cst_16:_(s32) = G_CONSTANT i32 16
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x1
+    ; BIG-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; BIG-NEXT: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; BIG-NEXT: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
+    ; BIG-NEXT: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
+    ; BIG-NEXT: %full_load:_(s32) = G_OR %low_half, %high_half
+    ; BIG-NEXT: %extra_use:_(s32) = G_AND %full_load, %high_half
+    ; BIG-NEXT: $w1 = COPY %extra_use(s32)
+    ; BIG-NEXT: RET_ReallyLR implicit $w1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_16:_(s32) = G_CONSTANT i32 16
 
@@ -1345,34 +1391,37 @@ body:             |
 
     ; LITTLE-LABEL: name: dont_combine_store_between_same_mbb
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; LITTLE: %cst_16:_(s32) = G_CONSTANT i32 16
-    ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-    ; LITTLE: %other_ptr:_(p0) = COPY $x1
-    ; LITTLE: %some_val:_(s32) = G_CONSTANT i32 12
-    ; LITTLE: G_STORE %some_val(s32), %other_ptr(p0) :: (store (s16))
-    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
-    ; LITTLE: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
-    ; LITTLE: %full_load:_(s32) = G_OR %low_half, %high_half
-    ; LITTLE: $w1 = COPY %full_load(s32)
-    ; LITTLE: RET_ReallyLR implicit $w1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; LITTLE-NEXT: %cst_16:_(s32) = G_CONSTANT i32 16
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x1
+    ; LITTLE-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; LITTLE-NEXT: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; LITTLE-NEXT: %other_ptr:_(p0) = COPY $x1
+    ; LITTLE-NEXT: %some_val:_(s32) = G_CONSTANT i32 12
+    ; LITTLE-NEXT: G_STORE %some_val(s32), %other_ptr(p0) :: (store (s16))
+    ; LITTLE-NEXT: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
+    ; LITTLE-NEXT: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
+    ; LITTLE-NEXT: %full_load:_(s32) = G_OR %low_half, %high_half
+    ; LITTLE-NEXT: $w1 = COPY %full_load(s32)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; BIG-LABEL: name: dont_combine_store_between_same_mbb
     ; BIG: liveins: $x0, $x1
-    ; BIG: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; BIG: %cst_16:_(s32) = G_CONSTANT i32 16
-    ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-    ; BIG: %other_ptr:_(p0) = COPY $x1
-    ; BIG: %some_val:_(s32) = G_CONSTANT i32 12
-    ; BIG: G_STORE %some_val(s32), %other_ptr(p0) :: (store (s16))
-    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
-    ; BIG: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
-    ; BIG: %full_load:_(s32) = G_OR %low_half, %high_half
-    ; BIG: $w1 = COPY %full_load(s32)
-    ; BIG: RET_ReallyLR implicit $w1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; BIG-NEXT: %cst_16:_(s32) = G_CONSTANT i32 16
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x1
+    ; BIG-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; BIG-NEXT: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; BIG-NEXT: %other_ptr:_(p0) = COPY $x1
+    ; BIG-NEXT: %some_val:_(s32) = G_CONSTANT i32 12
+    ; BIG-NEXT: G_STORE %some_val(s32), %other_ptr(p0) :: (store (s16))
+    ; BIG-NEXT: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
+    ; BIG-NEXT: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
+    ; BIG-NEXT: %full_load:_(s32) = G_OR %low_half, %high_half
+    ; BIG-NEXT: $w1 = COPY %full_load(s32)
+    ; BIG-NEXT: RET_ReallyLR implicit $w1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_16:_(s32) = G_CONSTANT i32 16
 
@@ -1399,48 +1448,59 @@ tracksRegLiveness: true
 body:             |
   ; LITTLE-LABEL: name: dont_combine_store_between_different_mbb
   ; LITTLE: bb.0:
-  ; LITTLE:   successors: %bb.1(0x80000000)
-  ; LITTLE:   liveins: $x0, $x1
-  ; LITTLE:   %cst_1:_(s64) = G_CONSTANT i64 1
-  ; LITTLE:   %cst_16:_(s32) = G_CONSTANT i32 16
-  ; LITTLE:   %ptr:_(p0) = COPY $x1
-  ; LITTLE:   %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-  ; LITTLE:   %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-  ; LITTLE: bb.1:
-  ; LITTLE:   successors: %bb.2(0x80000000)
-  ; LITTLE:   liveins: $x0, $x1
-  ; LITTLE:   %other_ptr:_(p0) = COPY $x1
-  ; LITTLE:   %some_val:_(s32) = G_CONSTANT i32 12
-  ; LITTLE:   G_STORE %some_val(s32), %other_ptr(p0) :: (store (s16))
-  ; LITTLE: bb.2:
-  ; LITTLE:   liveins: $x0, $x1
-  ; LITTLE:   %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
-  ; LITTLE:   %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
-  ; LITTLE:   %full_load:_(s32) = G_OR %low_half, %high_half
-  ; LITTLE:   $w1 = COPY %full_load(s32)
-  ; LITTLE:   RET_ReallyLR implicit $w1
+  ; LITTLE-NEXT:   successors: %bb.1(0x80000000)
+  ; LITTLE-NEXT:   liveins: $x0, $x1
+  ; LITTLE-NEXT: {{  $}}
+  ; LITTLE-NEXT:   %cst_1:_(s64) = G_CONSTANT i64 1
+  ; LITTLE-NEXT:   %cst_16:_(s32) = G_CONSTANT i32 16
+  ; LITTLE-NEXT:   %ptr:_(p0) = COPY $x1
+  ; LITTLE-NEXT:   %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+  ; LITTLE-NEXT:   %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+  ; LITTLE-NEXT: {{  $}}
+  ; LITTLE-NEXT: bb.1:
+  ; LITTLE-NEXT:   successors: %bb.2(0x80000000)
+  ; LITTLE-NEXT:   liveins: $x0, $x1
+  ; LITTLE-NEXT: {{  $}}
+  ; LITTLE-NEXT:   %other_ptr:_(p0) = COPY $x1
+  ; LITTLE-NEXT:   %some_val:_(s32) = G_CONSTANT i32 12
+  ; LITTLE-NEXT:   G_STORE %some_val(s32), %other_ptr(p0) :: (store (s16))
+  ; LITTLE-NEXT: {{  $}}
+  ; LITTLE-NEXT: bb.2:
+  ; LITTLE-NEXT:   liveins: $x0, $x1
+  ; LITTLE-NEXT: {{  $}}
+  ; LITTLE-NEXT:   %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
+  ; LITTLE-NEXT:   %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
+  ; LITTLE-NEXT:   %full_load:_(s32) = G_OR %low_half, %high_half
+  ; LITTLE-NEXT:   $w1 = COPY %full_load(s32)
+  ; LITTLE-NEXT:   RET_ReallyLR implicit $w1
+  ;
   ; BIG-LABEL: name: dont_combine_store_between_different_mbb
   ; BIG: bb.0:
-  ; BIG:   successors: %bb.1(0x80000000)
-  ; BIG:   liveins: $x0, $x1
-  ; BIG:   %cst_1:_(s64) = G_CONSTANT i64 1
-  ; BIG:   %cst_16:_(s32) = G_CONSTANT i32 16
-  ; BIG:   %ptr:_(p0) = COPY $x1
-  ; BIG:   %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-  ; BIG:   %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-  ; BIG: bb.1:
-  ; BIG:   successors: %bb.2(0x80000000)
-  ; BIG:   liveins: $x0, $x1
-  ; BIG:   %other_ptr:_(p0) = COPY $x1
-  ; BIG:   %some_val:_(s32) = G_CONSTANT i32 12
-  ; BIG:   G_STORE %some_val(s32), %other_ptr(p0) :: (store (s16))
-  ; BIG: bb.2:
-  ; BIG:   liveins: $x0, $x1
-  ; BIG:   %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
-  ; BIG:   %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
-  ; BIG:   %full_load:_(s32) = G_OR %low_half, %high_half
-  ; BIG:   $w1 = COPY %full_load(s32)
-  ; BIG:   RET_ReallyLR implicit $w1
+  ; BIG-NEXT:   successors: %bb.1(0x80000000)
+  ; BIG-NEXT:   liveins: $x0, $x1
+  ; BIG-NEXT: {{  $}}
+  ; BIG-NEXT:   %cst_1:_(s64) = G_CONSTANT i64 1
+  ; BIG-NEXT:   %cst_16:_(s32) = G_CONSTANT i32 16
+  ; BIG-NEXT:   %ptr:_(p0) = COPY $x1
+  ; BIG-NEXT:   %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+  ; BIG-NEXT:   %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+  ; BIG-NEXT: {{  $}}
+  ; BIG-NEXT: bb.1:
+  ; BIG-NEXT:   successors: %bb.2(0x80000000)
+  ; BIG-NEXT:   liveins: $x0, $x1
+  ; BIG-NEXT: {{  $}}
+  ; BIG-NEXT:   %other_ptr:_(p0) = COPY $x1
+  ; BIG-NEXT:   %some_val:_(s32) = G_CONSTANT i32 12
+  ; BIG-NEXT:   G_STORE %some_val(s32), %other_ptr(p0) :: (store (s16))
+  ; BIG-NEXT: {{  $}}
+  ; BIG-NEXT: bb.2:
+  ; BIG-NEXT:   liveins: $x0, $x1
+  ; BIG-NEXT: {{  $}}
+  ; BIG-NEXT:   %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
+  ; BIG-NEXT:   %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
+  ; BIG-NEXT:   %full_load:_(s32) = G_OR %low_half, %high_half
+  ; BIG-NEXT:   $w1 = COPY %full_load(s32)
+  ; BIG-NEXT:   RET_ReallyLR implicit $w1
   ; There is a store between the two loads, hidden away in a different MBB.
   ; We should not combine here.
 
@@ -1481,36 +1541,43 @@ tracksRegLiveness: true
 body:             |
   ; LITTLE-LABEL: name: different_mbb
   ; LITTLE: bb.0:
-  ; LITTLE:   successors: %bb.1(0x80000000)
-  ; LITTLE:   liveins: $x0, $x1
-  ; LITTLE:   %cst_1:_(s64) = G_CONSTANT i64 1
-  ; LITTLE:   %cst_16:_(s32) = G_CONSTANT i32 16
-  ; LITTLE:   %ptr:_(p0) = COPY $x1
-  ; LITTLE:   %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-  ; LITTLE:   %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-  ; LITTLE: bb.1:
-  ; LITTLE:   liveins: $x0, $x1
-  ; LITTLE:   %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
-  ; LITTLE:   %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
-  ; LITTLE:   %full_load:_(s32) = G_OR %low_half, %high_half
-  ; LITTLE:   $w1 = COPY %full_load(s32)
-  ; LITTLE:   RET_ReallyLR implicit $w1
+  ; LITTLE-NEXT:   successors: %bb.1(0x80000000)
+  ; LITTLE-NEXT:   liveins: $x0, $x1
+  ; LITTLE-NEXT: {{  $}}
+  ; LITTLE-NEXT:   %cst_1:_(s64) = G_CONSTANT i64 1
+  ; LITTLE-NEXT:   %cst_16:_(s32) = G_CONSTANT i32 16
+  ; LITTLE-NEXT:   %ptr:_(p0) = COPY $x1
+  ; LITTLE-NEXT:   %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+  ; LITTLE-NEXT:   %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+  ; LITTLE-NEXT: {{  $}}
+  ; LITTLE-NEXT: bb.1:
+  ; LITTLE-NEXT:   liveins: $x0, $x1
+  ; LITTLE-NEXT: {{  $}}
+  ; LITTLE-NEXT:   %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
+  ; LITTLE-NEXT:   %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
+  ; LITTLE-NEXT:   %full_load:_(s32) = G_OR %low_half, %high_half
+  ; LITTLE-NEXT:   $w1 = COPY %full_load(s32)
+  ; LITTLE-NEXT:   RET_ReallyLR implicit $w1
+  ;
   ; BIG-LABEL: name: different_mbb
   ; BIG: bb.0:
-  ; BIG:   successors: %bb.1(0x80000000)
-  ; BIG:   liveins: $x0, $x1
-  ; BIG:   %cst_1:_(s64) = G_CONSTANT i64 1
-  ; BIG:   %cst_16:_(s32) = G_CONSTANT i32 16
-  ; BIG:   %ptr:_(p0) = COPY $x1
-  ; BIG:   %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-  ; BIG:   %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-  ; BIG: bb.1:
-  ; BIG:   liveins: $x0, $x1
-  ; BIG:   %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
-  ; BIG:   %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
-  ; BIG:   %full_load:_(s32) = G_OR %low_half, %high_half
-  ; BIG:   $w1 = COPY %full_load(s32)
-  ; BIG:   RET_ReallyLR implicit $w1
+  ; BIG-NEXT:   successors: %bb.1(0x80000000)
+  ; BIG-NEXT:   liveins: $x0, $x1
+  ; BIG-NEXT: {{  $}}
+  ; BIG-NEXT:   %cst_1:_(s64) = G_CONSTANT i64 1
+  ; BIG-NEXT:   %cst_16:_(s32) = G_CONSTANT i32 16
+  ; BIG-NEXT:   %ptr:_(p0) = COPY $x1
+  ; BIG-NEXT:   %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+  ; BIG-NEXT:   %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+  ; BIG-NEXT: {{  $}}
+  ; BIG-NEXT: bb.1:
+  ; BIG-NEXT:   liveins: $x0, $x1
+  ; BIG-NEXT: {{  $}}
+  ; BIG-NEXT:   %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
+  ; BIG-NEXT:   %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
+  ; BIG-NEXT:   %full_load:_(s32) = G_OR %low_half, %high_half
+  ; BIG-NEXT:   $w1 = COPY %full_load(s32)
+  ; BIG-NEXT:   RET_ReallyLR implicit $w1
   ; It should be possible to combine here, but it's not supported right now.
 
 
@@ -1545,17 +1612,20 @@ body:             |
 
     ; LITTLE-LABEL: name: load_first
     ; LITTLE: liveins: $x0, $x1
-    ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 2)
-    ; LITTLE: $w1 = COPY %full_load(s32)
-    ; LITTLE: RET_ReallyLR implicit $w1
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: %ptr:_(p0) = COPY $x1
+    ; LITTLE-NEXT: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 2)
+    ; LITTLE-NEXT: $w1 = COPY %full_load(s32)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; BIG-LABEL: name: load_first
     ; BIG: liveins: $x0, $x1
-    ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 2)
-    ; BIG: %full_load:_(s32) = G_BSWAP [[LOAD]]
-    ; BIG: $w1 = COPY %full_load(s32)
-    ; BIG: RET_ReallyLR implicit $w1
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: %ptr:_(p0) = COPY $x1
+    ; BIG-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 2)
+    ; BIG-NEXT: %full_load:_(s32) = G_BSWAP [[LOAD]]
+    ; BIG-NEXT: $w1 = COPY %full_load(s32)
+    ; BIG-NEXT: RET_ReallyLR implicit $w1
     %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_16:_(s32) = G_CONSTANT i32 16
@@ -1589,23 +1659,26 @@ body:             |
   liveins: $x0, $x1
     ; LITTLE-LABEL: name: store_between_loads_and_or
     ; LITTLE: liveins: $x0, $x1, $x0, $x1
-    ; LITTLE: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; LITTLE: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; LITTLE: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
-    ; LITTLE: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32), align 1)
-    ; LITTLE: G_STORE [[C]](s8), [[COPY1]](p0) :: (store (s8))
-    ; LITTLE: $w0 = COPY [[LOAD]](s32)
-    ; LITTLE: RET_ReallyLR implicit $w0
+    ; LITTLE-NEXT: {{  $}}
+    ; LITTLE-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; LITTLE-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; LITTLE-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
+    ; LITTLE-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32), align 1)
+    ; LITTLE-NEXT: G_STORE [[C]](s8), [[COPY1]](p0) :: (store (s8))
+    ; LITTLE-NEXT: $w0 = COPY [[LOAD]](s32)
+    ; LITTLE-NEXT: RET_ReallyLR implicit $w0
+    ;
     ; BIG-LABEL: name: store_between_loads_and_or
     ; BIG: liveins: $x0, $x1, $x0, $x1
-    ; BIG: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; BIG: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; BIG: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
-    ; BIG: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32), align 1)
-    ; BIG: [[BSWAP:%[0-9]+]]:_(s32) = G_BSWAP [[LOAD]]
-    ; BIG: G_STORE [[C]](s8), [[COPY1]](p0) :: (store (s8))
-    ; BIG: $w0 = COPY [[BSWAP]](s32)
-    ; BIG: RET_ReallyLR implicit $w0
+    ; BIG-NEXT: {{  $}}
+    ; BIG-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; BIG-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; BIG-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
+    ; BIG-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32), align 1)
+    ; BIG-NEXT: [[BSWAP:%[0-9]+]]:_(s32) = G_BSWAP [[LOAD]]
+    ; BIG-NEXT: G_STORE [[C]](s8), [[COPY1]](p0) :: (store (s8))
+    ; BIG-NEXT: $w0 = COPY [[BSWAP]](s32)
+    ; BIG-NEXT: RET_ReallyLR implicit $w0
   %0:_(p0) = COPY $x0
   %1:_(p0) = COPY $x1
   %12:_(s8) = G_CONSTANT i8 1

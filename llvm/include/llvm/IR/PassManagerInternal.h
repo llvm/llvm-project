@@ -22,6 +22,7 @@
 #include "llvm/IR/Analysis.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -101,14 +102,9 @@ struct PassModel : PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...> {
   template <typename T>
   using has_required_t = decltype(std::declval<T &>().isRequired());
 
-  template <typename T>
-  static std::enable_if_t<is_detected<has_required_t, T>::value, bool>
-  passIsRequiredImpl() {
-    return T::isRequired();
-  }
-  template <typename T>
-  static std::enable_if_t<!is_detected<has_required_t, T>::value, bool>
-  passIsRequiredImpl() {
+  template <typename T> static bool passIsRequiredImpl() {
+    if constexpr (is_detected<has_required_t, T>::value)
+      return T::isRequired();
     return false;
   }
 
@@ -167,7 +163,7 @@ template <typename IRUnitT, typename ResultT> class ResultHasInvalidateMethod {
   // ambiguous if there were an invalidate member in the result type.
   template <typename T, typename U> static DisabledType NonceFunction(T U::*);
   struct CheckerBase { int invalidate; };
-  template <typename T> struct Checker : CheckerBase, T {};
+  template <typename T> struct Checker : CheckerBase, std::remove_cv_t<T> {};
   template <typename T>
   static decltype(NonceFunction(&Checker<T>::invalidate)) check(rank<1>);
 

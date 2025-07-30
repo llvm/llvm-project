@@ -14,9 +14,7 @@
 
 #else
 
-#define __need_ssize_t
-#include <stddef.h>
-#undef __need_ssize_t
+#include <sys/types.h>
 
 #endif // LIBC_FULL_BUILD
 

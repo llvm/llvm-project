@@ -14,7 +14,9 @@ public:
                     MachineBasicBlock &MBB) const override {}
   void emitEpilogue(MachineFunction &MF,
                     MachineBasicBlock &MBB) const override {}
-  bool hasFP(const MachineFunction &MF) const override { return false; }
+
+protected:
+  bool hasFPImpl(const MachineFunction &MF) const override { return false; }
 };
 
 static TargetRegisterClass *const BogusRegisterClasses[] = {nullptr};
@@ -76,8 +78,8 @@ public:
 class BogusSubtarget : public TargetSubtargetInfo {
 public:
   BogusSubtarget(TargetMachine &TM)
-      : TargetSubtargetInfo(Triple(""), "", "", "", {}, {}, nullptr, nullptr,
-                            nullptr, nullptr, nullptr, nullptr),
+      : TargetSubtargetInfo(Triple(""), "", "", "", {}, {}, {}, nullptr,
+                            nullptr, nullptr, nullptr, nullptr, nullptr),
         FL(), TL(TM) {}
   ~BogusSubtarget() override {}
 
@@ -102,12 +104,12 @@ static TargetOptions getTargetOptionsForBogusMachine() {
   return Opts;
 }
 
-class BogusTargetMachine : public LLVMTargetMachine {
+class BogusTargetMachine : public CodeGenTargetMachineImpl {
 public:
   BogusTargetMachine()
-      : LLVMTargetMachine(Target(), "", Triple(""), "", "",
-                          getTargetOptionsForBogusMachine(), Reloc::Static,
-                          CodeModel::Small, CodeGenOptLevel::Default),
+      : CodeGenTargetMachineImpl(
+            Target(), "", Triple(""), "", "", getTargetOptionsForBogusMachine(),
+            Reloc::Static, CodeModel::Small, CodeGenOptLevel::Default),
         ST(*this) {}
 
   ~BogusTargetMachine() override {}

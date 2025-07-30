@@ -128,7 +128,6 @@ void f(a::b, a::c) {}
 //
 // CHECK-DAG: @_ZW6Module25extern_var_module_linkage = external {{(dso_local )?}}global
 // CHECK-DAG: @_ZW6Module25inline_var_module_linkage = linkonce_odr {{(dso_local )?}}global
-// CHECK-DAG: @_ZL25static_var_module_linkage = internal {{(dso_local )?}}global i32 0,
 // CHECK-DAG: @_ZW6Module24const_var_module_linkage = available_externally {{(dso_local )?}}constant i32 3,
 
 module Module;
@@ -151,10 +150,6 @@ void use() {
 
   (void)&extern_var_module_linkage;
   (void)&inline_var_module_linkage;
-
-  // FIXME: Issue #61427 Internal-linkage declarations in the interface TU
-  // should not be not visible here.
-  (void)&static_var_module_linkage; // FIXME: Should not be visible here.
 
   (void)&const_var_module_linkage; // FIXME: will be visible after P2788R0
 }

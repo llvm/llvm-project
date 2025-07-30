@@ -14,16 +14,15 @@
 // RUN: FileCheck %s < %t/Vehicles/index.md --check-prefix=MD-VEHICLES-LINE
 // RUN: FileCheck %s < %t/Vehicles/index.md --check-prefix=MD-VEHICLES
 
-
 /**
  * @brief For specifying RGB colors
  */
 enum Color {
-// MD-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
-// HTML-INDEX-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
-  Red, ///< Comment 1
+  // MD-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
+  // HTML-INDEX-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+  Red,   ///< Comment 1
   Green, ///< Comment 2
-  Blue ///< Comment 3
+  Blue   ///< Comment 3
 };
 
 // MD-INDEX: ## Enums
@@ -49,8 +48,8 @@ enum Color {
  * @brief Shape Types
  */
 enum class Shapes {
-// MD-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
-// HTML-INDEX-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+  // MD-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
+  // HTML-INDEX-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
 
   /// Comment 1
   Circle,
@@ -77,22 +76,20 @@ enum class Shapes {
 // HTML-INDEX: <td>2</td>
 // HTML-INDEX: <p> Comment 3</p>
 
-
-
 class Animals {
-// MD-ANIMAL-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
-// HTML-ANIMAL-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+  // MD-ANIMAL-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
+  // HTML-ANIMAL-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
 public:
-      /**
-       * @brief specify what animal the class is
-       */
-      enum AnimalType {
-// MD-ANIMAL-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
-// HTML-ANIMAL-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
-          Dog, ///< Man's best friend
-          Cat, ///< Man's other best friend
-          Iguana ///< A lizard
-      };
+  /**
+   * @brief specify what animal the class is
+   */
+  enum AnimalType {
+    // MD-ANIMAL-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
+    // HTML-ANIMAL-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+    Dog,   ///< Man's best friend
+    Cat,   ///< Man's other best friend
+    Iguana ///< A lizard
+  };
 };
 
 // HTML-ANIMAL: <h1>class Animals</h1>
@@ -108,7 +105,6 @@ public:
 // HTML-ANIMAL: <td>2</td>
 // HTML-ANIMAL: <p> A lizard</p>
 
-
 // MD-ANIMAL: # class Animals
 // MD-ANIMAL: ## Enums
 // MD-ANIMAL: | enum AnimalType |
@@ -118,21 +114,20 @@ public:
 // MD-ANIMAL: | Iguana |
 // MD-ANIMAL: **brief** specify what animal the class is
 
-
 namespace Vehicles {
-    /**
-     * @brief specify type of car
-     */
-    enum Car {
-// MD-VEHICLES-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
-// HTML-VEHICLES-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+/**
+ * @brief specify type of car
+ */
+enum Car {
+  // MD-VEHICLES-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
+  // HTML-VEHICLES-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
 
-       Sedan, ///< Comment 1
-       SUV, ///< Comment 2
-       Pickup, ///< Comment 3
-       Hatchback ///< Comment 4
-    };
-}
+  Sedan,    ///< Comment 1
+  SUV,      ///< Comment 2
+  Pickup,   ///< Comment 3
+  Hatchback ///< Comment 4
+};
+} // namespace Vehicles
 
 // MD-VEHICLES: # namespace Vehicles
 // MD-VEHICLES: ## Enums
@@ -158,7 +153,6 @@ namespace Vehicles {
 // HTML-VEHICLES: <td>Hatchback</td>
 // HTML-VEHICLES: <td>3</td>
 // HTML-VEHICLES: <p> Comment 4</p>
-
 
 enum ColorUserSpecified {
   RedUserSpecified = 'A',

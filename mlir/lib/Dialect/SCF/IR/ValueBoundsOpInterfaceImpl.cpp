@@ -20,6 +20,16 @@ namespace {
 struct ForOpInterface
     : public ValueBoundsOpInterface::ExternalModel<ForOpInterface, ForOp> {
 
+  static AffineExpr getTripCountExpr(scf::ForOp forOp,
+                                     ValueBoundsConstraintSet &cstr) {
+    AffineExpr lbExpr = cstr.getExpr(forOp.getLowerBound());
+    AffineExpr ubExpr = cstr.getExpr(forOp.getUpperBound());
+    AffineExpr stepExpr = cstr.getExpr(forOp.getStep());
+    AffineExpr tripCountExpr =
+        AffineExpr(ubExpr - lbExpr).ceilDiv(stepExpr); // (ub - lb) / step
+    return tripCountExpr;
+  }
+
   /// Populate bounds of values/dimensions for iter_args/OpResults. If the
   /// value/dimension size does not change in an iteration, we can deduce that
   /// it the same as the initial value/dimension.
@@ -70,6 +80,18 @@ struct ForOpInterface
         cstr.bound(value) == cstr.getExpr(initArg);
       }
     }
+
+    if (dim.has_value() || isa<BlockArgument>(value))
+      return;
+
+    // `value` is result of `forOp`, we can prove that:
+    // %result == %init_arg + trip_count * (%yielded_value - %iter_arg).
+    // Where trip_count is (ub - lb) / step.
+    AffineExpr tripCountExpr = getTripCountExpr(forOp, cstr);
+    AffineExpr oneIterAdvanceExpr =
+        cstr.getExpr(yieldedValue) - cstr.getExpr(iterArg);
+    cstr.bound(value) ==
+        cstr.getExpr(initArg) + AffineExpr(tripCountExpr * oneIterAdvanceExpr);
   }
 
   void populateBoundsForIndexValue(Operation *op, Value value,
@@ -77,9 +99,18 @@ struct ForOpInterface
     auto forOp = cast<ForOp>(op);
 
     if (value == forOp.getInductionVar()) {
-      // TODO: Take into account step size.
       cstr.bound(value) >= forOp.getLowerBound();
       cstr.bound(value) < forOp.getUpperBound();
+      // iv <= lb + ((ub-lb)/step - 1) * step
+      // This bound does not replace the `iv < ub` constraint mentioned above,
+      // since constraints involving the multiplication of two constraint set
+      // dimensions are not supported.
+      AffineExpr tripCountMinusOne =
+          getTripCountExpr(forOp, cstr) - cstr.getExpr(1);
+      AffineExpr computedUpperBound =
+          cstr.getExpr(forOp.getLowerBound()) +
+          AffineExpr(tripCountMinusOne * cstr.getExpr(forOp.getStep()));
+      cstr.bound(value) <= computedUpperBound;
       return;
     }
 
@@ -92,6 +123,47 @@ struct ForOpInterface
     auto forOp = cast<ForOp>(op);
     // Handle iter_args and OpResults.
     populateIterArgBounds(forOp, value, dim, cstr);
+  }
+};
+
+struct ForallOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<ForallOpInterface,
+                                                   ForallOp> {
+
+  void populateBoundsForIndexValue(Operation *op, Value value,
+                                   ValueBoundsConstraintSet &cstr) const {
+    auto forallOp = cast<ForallOp>(op);
+
+    // Index values should be induction variables, since the semantics of
+    // tensor::ParallelInsertSliceOp requires forall outputs to be ranked
+    // tensors.
+    auto blockArg = cast<BlockArgument>(value);
+    assert(blockArg.getArgNumber() < forallOp.getInductionVars().size() &&
+           "expected index value to be an induction var");
+    int64_t idx = blockArg.getArgNumber();
+    // TODO: Take into account step size.
+    AffineExpr lb = cstr.getExpr(forallOp.getMixedLowerBound()[idx]);
+    AffineExpr ub = cstr.getExpr(forallOp.getMixedUpperBound()[idx]);
+    cstr.bound(value) >= lb;
+    cstr.bound(value) < ub;
+  }
+
+  void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
+                                       ValueBoundsConstraintSet &cstr) const {
+    auto forallOp = cast<ForallOp>(op);
+
+    // `value` is an iter_arg or an OpResult.
+    int64_t iterArgIdx;
+    if (auto iterArg = llvm::dyn_cast<BlockArgument>(value)) {
+      iterArgIdx = iterArg.getArgNumber() - forallOp.getInductionVars().size();
+    } else {
+      iterArgIdx = llvm::cast<OpResult>(value).getResultNumber();
+    }
+
+    // The forall results and output arguments have the same sizes as the output
+    // operands.
+    Value outputOperand = forallOp.getOutputs()[iterArgIdx];
+    cstr.bound(value)[dim] == cstr.getExpr(outputOperand, dim);
   }
 };
 
@@ -161,6 +233,7 @@ void mlir::scf::registerValueBoundsOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, scf::SCFDialect *dialect) {
     scf::ForOp::attachInterface<scf::ForOpInterface>(*ctx);
+    scf::ForallOp::attachInterface<scf::ForallOpInterface>(*ctx);
     scf::IfOp::attachInterface<scf::IfOpInterface>(*ctx);
   });
 }

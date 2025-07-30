@@ -29,34 +29,27 @@
 
 #include "test_macros.h"
 
-struct test
-    : private std::stack<int>
-{
-    test()
-    {
-        c.push_back(1);
-    }
+struct test : private std::stack<int> {
+  test() { c.push_back(1); }
 };
 
-struct C
-{
-    typedef int value_type;
-    typedef int& reference;
-    typedef const int& const_reference;
-    typedef int size_type;
+struct C {
+  typedef int value_type;
+  typedef int& reference;
+  typedef const int& const_reference;
+  typedef int size_type;
 };
 
-int main(int, char**)
-{
-    static_assert(( std::is_same<std::stack<int>::container_type, std::deque<int> >::value), "");
-    static_assert(( std::is_same<std::stack<int, std::vector<int> >::container_type, std::vector<int> >::value), "");
-    static_assert(( std::is_same<std::stack<int, std::vector<int> >::value_type, int>::value), "");
-    static_assert(( std::is_same<std::stack<int>::reference, std::deque<int>::reference>::value), "");
-    static_assert(( std::is_same<std::stack<int>::const_reference, std::deque<int>::const_reference>::value), "");
-    static_assert(( std::is_same<std::stack<int>::size_type, std::deque<int>::size_type>::value), "");
-    static_assert(( std::uses_allocator<std::stack<int>, std::allocator<int> >::value), "");
-    static_assert((!std::uses_allocator<std::stack<int, C>, std::allocator<int> >::value), "");
-    test t;
+int main(int, char**) {
+  static_assert((std::is_same<std::stack<int>::container_type, std::deque<int> >::value), "");
+  static_assert((std::is_same<std::stack<int, std::vector<int> >::container_type, std::vector<int> >::value), "");
+  static_assert((std::is_same<std::stack<int, std::vector<int> >::value_type, int>::value), "");
+  static_assert((std::is_same<std::stack<int>::reference, std::deque<int>::reference>::value), "");
+  static_assert((std::is_same<std::stack<int>::const_reference, std::deque<int>::const_reference>::value), "");
+  static_assert((std::is_same<std::stack<int>::size_type, std::deque<int>::size_type>::value), "");
+  static_assert((std::uses_allocator<std::stack<int>, std::allocator<int> >::value), "");
+  static_assert((!std::uses_allocator<std::stack<int, C>, std::allocator<int> >::value), "");
+  test t;
 
   return 0;
 }

@@ -206,15 +206,15 @@ define i32 @reorder_indices_1(float %0) {
 ; POW2-ONLY-SAME: float [[TMP0:%.*]]) {
 ; POW2-ONLY-NEXT:  entry:
 ; POW2-ONLY-NEXT:    [[NOR1:%.*]] = alloca [0 x [3 x float]], i32 0, align 4
+; POW2-ONLY-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr float, ptr [[NOR1]], i64 1
 ; POW2-ONLY-NEXT:    [[ARRAYIDX2_I265:%.*]] = getelementptr float, ptr [[NOR1]], i64 2
 ; POW2-ONLY-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX2_I265]], align 4
+; POW2-ONLY-NEXT:    [[TMP7:%.*]] = load <2 x float>, ptr [[ARRAYIDX_I]], align 4
 ; POW2-ONLY-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[NOR1]], align 4
 ; POW2-ONLY-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
 ; POW2-ONLY-NEXT:    [[TMP4:%.*]] = fneg float [[TMP3]]
 ; POW2-ONLY-NEXT:    [[NEG11_I:%.*]] = fmul float [[TMP4]], [[TMP0]]
 ; POW2-ONLY-NEXT:    [[TMP5:%.*]] = call float @llvm.fmuladd.f32(float [[TMP1]], float 0.000000e+00, float [[NEG11_I]])
-; POW2-ONLY-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> <i32 1, i32 poison>
-; POW2-ONLY-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> [[TMP6]], float [[TMP1]], i32 1
 ; POW2-ONLY-NEXT:    [[TMP8:%.*]] = fneg <2 x float> [[TMP7]]
 ; POW2-ONLY-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i32 0
 ; POW2-ONLY-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> poison, <2 x i32> zeroinitializer
@@ -568,8 +568,8 @@ define void @can_reorder_vec3_op_with_padding(ptr %A, <3 x float> %in) {
 ; NON-POW2-SAME: ptr [[A:%.*]], <3 x float> [[IN:%.*]]) {
 ; NON-POW2-NEXT:  entry:
 ; NON-POW2-NEXT:    [[TMP1:%.*]] = fsub <3 x float> [[IN]], [[IN]]
-; NON-POW2-NEXT:    [[TMP2:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP1]], <3 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>, <3 x float> <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>)
-; NON-POW2-NEXT:    [[TMP3:%.*]] = fmul <3 x float> [[TMP2]], <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
+; NON-POW2-NEXT:    [[TMP2:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP1]], <3 x float> splat (float 2.000000e+00), <3 x float> splat (float 3.000000e+00))
+; NON-POW2-NEXT:    [[TMP3:%.*]] = fmul <3 x float> [[TMP2]], splat (float 3.000000e+00)
 ; NON-POW2-NEXT:    [[TMP4:%.*]] = shufflevector <3 x float> [[TMP3]], <3 x float> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; NON-POW2-NEXT:    store <3 x float> [[TMP4]], ptr [[A]], align 4
 ; NON-POW2-NEXT:    ret void
@@ -584,8 +584,8 @@ define void @can_reorder_vec3_op_with_padding(ptr %A, <3 x float> %in) {
 ; POW2-ONLY-NEXT:    [[MUL6_I_I_I_I:%.*]] = fmul float [[TMP1]], 3.000000e+00
 ; POW2-ONLY-NEXT:    [[TMP2:%.*]] = shufflevector <3 x float> [[IN]], <3 x float> poison, <2 x i32> <i32 1, i32 2>
 ; POW2-ONLY-NEXT:    [[TMP3:%.*]] = fsub <2 x float> [[TMP2]], [[TMP2]]
-; POW2-ONLY-NEXT:    [[TMP4:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP3]], <2 x float> <float 2.000000e+00, float 2.000000e+00>, <2 x float> <float 3.000000e+00, float 3.000000e+00>)
-; POW2-ONLY-NEXT:    [[TMP5:%.*]] = fmul <2 x float> [[TMP4]], <float 3.000000e+00, float 3.000000e+00>
+; POW2-ONLY-NEXT:    [[TMP4:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP3]], <2 x float> splat (float 2.000000e+00), <2 x float> splat (float 3.000000e+00))
+; POW2-ONLY-NEXT:    [[TMP5:%.*]] = fmul <2 x float> [[TMP4]], splat (float 3.000000e+00)
 ; POW2-ONLY-NEXT:    store <2 x float> [[TMP5]], ptr [[A]], align 4
 ; POW2-ONLY-NEXT:    store float [[MUL6_I_I_I_I]], ptr [[ARRAYIDX42_I]], align 4
 ; POW2-ONLY-NEXT:    ret void

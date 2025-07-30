@@ -57,7 +57,7 @@ bool PatternParser::parsePatternList(
   // The match section consists of a list of matchers and predicates. Parse each
   // one and add the equivalent GIMatchDag nodes, predicates, and edges.
   for (unsigned I = 0; I < List.getNumArgs(); ++I) {
-    Init *Arg = List.getArg(I);
+    const Init *Arg = List.getArg(I);
     std::string Name = List.getArgName(I)
                            ? List.getArgName(I)->getValue().str()
                            : ("__" + AnonPatNamePrefix + "_" + Twine(I)).str();
@@ -134,11 +134,12 @@ PatternParser::parseInstructionPattern(const Init &Arg, StringRef Name) {
                  getDagWithOperatorOfSubClass(Arg, BuiltinPattern::ClassName)) {
     Pat = std::make_unique<BuiltinPattern>(*BP->getOperatorAsDef(DiagLoc),
                                            insertStrRef(Name));
-  } else
+  } else {
     return nullptr;
+  }
 
   for (unsigned K = 0; K < DagPat->getNumArgs(); ++K) {
-    Init *Arg = DagPat->getArg(K);
+    const Init *Arg = DagPat->getArg(K);
     if (auto *DagArg = getDagWithSpecificOperator(*Arg, "MIFlags")) {
       if (!parseInstructionPatternMIFlags(*Pat, DagArg))
         return nullptr;
@@ -308,7 +309,6 @@ bool PatternParser::parseInstructionPatternMIFlags(InstructionPattern &IP,
           return false;
 
         FI.addUnsetFlag(R);
-        continue;
       }
 
       continue;

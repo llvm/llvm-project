@@ -49,8 +49,8 @@ void g() {
 // This tests mainly that the typeinfo and typename constants have their linkage
 // updated correctly.
 
-// CHECK-TEST2: @_ZTSN5Test21AE ={{.*}} constant
 // CHECK-TEST2: @_ZTIN5Test21AE ={{.*}} constant
+// CHECK-TEST2: @_ZTSN5Test21AE ={{.*}} constant
 // CHECK-TEST2: @_ZTVN5Test21AE ={{.*}} unnamed_addr constant
 namespace Test2 {
   struct A {

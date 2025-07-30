@@ -1,9 +1,9 @@
 ; RUN: opt < %s -passes='require<domfrontier>,loop-simplify,require<domfrontier>' -verify-dom-info
 
 
-define void @a() nounwind {
+define void @a(i1 %arg) nounwind {
 entry:
-  br i1 undef, label %bb37, label %bb1.i
+  br i1 %arg, label %bb37, label %bb1.i
 
 bb1.i:                                            ; preds = %bb1.i, %bb
   %indvar = phi i64 [ %indvar.next, %bb1.i ], [ 0, %entry ] ; <i64> [#uses=1]

@@ -18,14 +18,15 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
 namespace memref {
-#define GEN_PASS_DEF_RESOLVERANKEDSHAPETYPERESULTDIMS
-#define GEN_PASS_DEF_RESOLVESHAPEDTYPERESULTDIMS
+#define GEN_PASS_DEF_RESOLVERANKEDSHAPETYPERESULTDIMSPASS
+#define GEN_PASS_DEF_RESOLVESHAPEDTYPERESULTDIMSPASS
 #include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
 } // namespace memref
 } // namespace mlir
@@ -68,7 +69,7 @@ struct DimOfShapedTypeOpInterface : public OpRewritePattern<OpTy> {
     Location loc = dimOp->getLoc();
     rewriter.replaceOpWithNewOp<tensor::ExtractOp>(
         dimOp, resultShape,
-        rewriter.create<arith::ConstantIndexOp>(loc, *dimIndex).getResult());
+        arith::ConstantIndexOp::create(rewriter, loc, *dimIndex).getResult());
     return success();
   }
 };
@@ -131,11 +132,25 @@ struct IterArgsToInitArgs : public OpRewritePattern<tensor::DimOp> {
     auto blockArg = dyn_cast<BlockArgument>(dimOp.getSource());
     if (!blockArg)
       return failure();
-    auto loopLikeOp =
-        dyn_cast<LoopLikeOpInterface>(blockArg.getParentBlock()->getParentOp());
-    if (!loopLikeOp)
+    // TODO: Enable this for loopLikeInterface. Restricting for scf.for
+    // because the init args shape might change in the loop body.
+    // For e.g.:
+    // ```
+    //  %0 = tensor.empty(%c1) : tensor<?xf32>
+    //  %r = scf.for %iv = %c0 to %c10 step %c1 iter_args(%arg0 = %0) ->
+    //  tensor<?xf32> {
+    //    %1 = tensor.dim %arg0, %c0 : tensor<?xf32>
+    //    %2 = arith.addi %c1, %1 : index
+    //    %3 = tensor.empty(%2) : tensor<?xf32>
+    //    scf.yield %3 : tensor<?xf32>
+    //  }
+    //
+    // ```
+    auto forAllOp =
+        dyn_cast<scf::ForallOp>(blockArg.getParentBlock()->getParentOp());
+    if (!forAllOp)
       return failure();
-    Value initArg = loopLikeOp.getTiedLoopInit(blockArg)->get();
+    Value initArg = forAllOp.getTiedLoopInit(blockArg)->get();
     rewriter.modifyOpInPlace(
         dimOp, [&]() { dimOp.getSourceMutable().assign(initArg); });
     return success();
@@ -149,13 +164,13 @@ struct IterArgsToInitArgs : public OpRewritePattern<tensor::DimOp> {
 
 namespace {
 struct ResolveRankedShapeTypeResultDimsPass final
-    : public memref::impl::ResolveRankedShapeTypeResultDimsBase<
+    : public memref::impl::ResolveRankedShapeTypeResultDimsPassBase<
           ResolveRankedShapeTypeResultDimsPass> {
   void runOnOperation() override;
 };
 
 struct ResolveShapedTypeResultDimsPass final
-    : public memref::impl::ResolveShapedTypeResultDimsBase<
+    : public memref::impl::ResolveShapedTypeResultDimsPassBase<
           ResolveShapedTypeResultDimsPass> {
   void runOnOperation() override;
 };
@@ -180,7 +195,7 @@ void memref::populateResolveShapedTypeResultDimsPatterns(
 void ResolveRankedShapeTypeResultDimsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   memref::populateResolveRankedShapedTypeResultDimsPatterns(patterns);
-  if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+  if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
     return signalPassFailure();
 }
 
@@ -188,14 +203,6 @@ void ResolveShapedTypeResultDimsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   memref::populateResolveRankedShapedTypeResultDimsPatterns(patterns);
   memref::populateResolveShapedTypeResultDimsPatterns(patterns);
-  if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+  if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
     return signalPassFailure();
-}
-
-std::unique_ptr<Pass> memref::createResolveShapedTypeResultDimsPass() {
-  return std::make_unique<ResolveShapedTypeResultDimsPass>();
-}
-
-std::unique_ptr<Pass> memref::createResolveRankedShapeTypeResultDimsPass() {
-  return std::make_unique<ResolveRankedShapeTypeResultDimsPass>();
 }

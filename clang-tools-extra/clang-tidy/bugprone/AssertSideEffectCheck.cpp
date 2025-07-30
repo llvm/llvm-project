@@ -15,8 +15,6 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
-#include <algorithm>
 #include <string>
 
 using namespace clang::ast_matchers;

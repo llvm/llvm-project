@@ -315,7 +315,7 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
 
   // Check whether the flag exists in the command.
   auto HasExact = [&](llvm::StringRef Flag) {
-    return llvm::any_of(Cmd, [&](llvm::StringRef Arg) { return Arg == Flag; });
+    return llvm::is_contained(Cmd, Flag);
   };
 
   // Check whether the flag appears in the command as a prefix.
@@ -404,8 +404,7 @@ enum DriverMode : unsigned char {
 DriverMode getDriverMode(const std::vector<std::string> &Args) {
   DriverMode Mode = DM_GCC;
   llvm::StringRef Argv0 = Args.front();
-  if (Argv0.ends_with_insensitive(".exe"))
-    Argv0 = Argv0.drop_back(strlen(".exe"));
+  Argv0.consume_back_insensitive(".exe");
   if (Argv0.ends_with_insensitive("cl"))
     Mode = DM_CL;
   for (const llvm::StringRef Arg : Args) {
@@ -458,20 +457,6 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
       PrevAlias[Self] = T;
       NextAlias[T] = Self;
     };
-    // Also grab prefixes for each option, these are not fully exposed.
-    llvm::ArrayRef<llvm::StringLiteral> Prefixes[DriverID::LastOption];
-
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
-  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
-      NAME##_init, std::size(NAME##_init) - 1);
-#define OPTION(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
-               FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,       \
-               METAVAR, VALUES)                                                \
-  Prefixes[DriverID::OPT_##ID] = PREFIX;
-#include "clang/Driver/Options.inc"
-#undef OPTION
-#undef PREFIX
 
     struct {
       DriverID ID;
@@ -498,7 +483,9 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
       llvm::SmallVector<Rule> Rules;
       // Iterate over each alias, to add rules for parsing it.
       for (unsigned A = ID; A != DriverID::OPT_INVALID; A = NextAlias[A]) {
-        if (!Prefixes[A].size()) // option groups.
+        llvm::SmallVector<llvm::StringRef, 4> Prefixes;
+        DriverTable.appendOptionPrefixes(A, Prefixes);
+        if (Prefixes.empty()) // option groups.
           continue;
         auto Opt = DriverTable.getOption(A);
         // Exclude - and -foo pseudo-options.
@@ -507,7 +494,7 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
         auto Modes = getModes(Opt);
         std::pair<unsigned, unsigned> ArgCount = getArgCount(Opt);
         // Iterate over each spelling of the alias, e.g. -foo vs --foo.
-        for (StringRef Prefix : Prefixes[A]) {
+        for (StringRef Prefix : Prefixes) {
           llvm::SmallString<64> Buf(Prefix);
           Buf.append(Opt.getName());
           llvm::StringRef Spelling = Result->try_emplace(Buf).first->getKey();

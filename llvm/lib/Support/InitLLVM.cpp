@@ -12,26 +12,34 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/SwapByteOrder.h"
 
 #ifdef _WIN32
 #include "llvm/Support/Windows/WindowsSupport.h"
 #endif
 
-#ifdef __MVS__
+#if defined(HAVE_UNISTD_H)
 #include <unistd.h>
+#else
+#ifndef STDIN_FILENO
+#define STDIN_FILENO 0
+#endif
+#ifndef STDOUT_FILENO
+#define STDOUT_FILENO 1
+#endif
+#ifndef STDERR_FILENO
+#define STDERR_FILENO 2
+#endif
+#endif
 
 void CleanupStdHandles(void *Cookie) {
   llvm::raw_ostream *Outs = &llvm::outs(), *Errs = &llvm::errs();
   Outs->flush();
   Errs->flush();
-  llvm::restorezOSStdHandleAutoConversion(STDIN_FILENO);
-  llvm::restorezOSStdHandleAutoConversion(STDOUT_FILENO);
-  llvm::restorezOSStdHandleAutoConversion(STDERR_FILENO);
+  llvm::restoreStdHandleAutoConversion(STDIN_FILENO);
+  llvm::restoreStdHandleAutoConversion(STDOUT_FILENO);
+  llvm::restoreStdHandleAutoConversion(STDERR_FILENO);
 }
-#endif
 
 using namespace llvm;
 using namespace llvm::sys;
@@ -43,10 +51,10 @@ InitLLVM::InitLLVM(int &Argc, const char **&Argv,
   assert(!Initialized && "InitLLVM was already initialized!");
   Initialized = true;
 #endif
-#ifdef __MVS__
+
   // Bring stdin/stdout/stderr into a known state.
   sys::AddSignalHandler(CleanupStdHandles, nullptr);
-#endif
+
   if (InstallPipeSignalExitHandler)
     // The pipe signal handler must be installed before any other handlers are
     // registered. This is because the Unix \ref RegisterHandlers function does
@@ -70,8 +78,8 @@ InitLLVM::InitLLVM(int &Argc, const char **&Argv,
 
   // If turning on conversion for stderr fails then the error message
   // may be garbled. There is no solution to this problem.
-  ExitOnErr(errorCodeToError(llvm::enablezOSAutoConversion(STDERR_FILENO)));
-  ExitOnErr(errorCodeToError(llvm::enablezOSAutoConversion(STDOUT_FILENO)));
+  ExitOnErr(errorCodeToError(llvm::enableAutoConversion(STDERR_FILENO)));
+  ExitOnErr(errorCodeToError(llvm::enableAutoConversion(STDOUT_FILENO)));
 #endif
 
 #ifdef _WIN32
@@ -99,8 +107,6 @@ InitLLVM::InitLLVM(int &Argc, const char **&Argv,
 }
 
 InitLLVM::~InitLLVM() {
-#ifdef __MVS__
   CleanupStdHandles(nullptr);
-#endif
   llvm_shutdown();
 }

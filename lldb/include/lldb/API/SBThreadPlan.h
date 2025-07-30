@@ -105,6 +105,9 @@ public:
   SBThreadPlan QueueThreadPlanForStepOut(uint32_t frame_idx_to_step_to,
                                          bool first_insn, SBError &error);
 
+  SBThreadPlan QueueThreadPlanForStepSingleInstruction(bool step_over,
+                                                       SBError &error);
+
   SBThreadPlan QueueThreadPlanForRunToAddress(SBAddress address);
   SBThreadPlan QueueThreadPlanForRunToAddress(SBAddress address,
                                               SBError &error);

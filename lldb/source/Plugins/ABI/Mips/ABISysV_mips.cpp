@@ -14,9 +14,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectMemory.h"
-#include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -29,6 +26,9 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectMemory.h"
+#include "lldb/ValueObject/ValueObjectRegister.h"
 #include <optional>
 
 using namespace lldb;
@@ -78,12 +78,6 @@ enum dwarf_regnums {
 };
 
 static const RegisterInfo g_register_infos[] = {
-    //  NAME      ALT    SZ OFF ENCODING        FORMAT         EH_FRAME
-    //  DWARF                   GENERIC                     PROCESS PLUGINS
-    //  LLDB NATIVE            VALUE REGS  INVALIDATE REGS
-    //  ========  ======  == === =============  ===========    ============
-    //  ==============          ============                =================
-    //  ===================     ========== =================
     {"r0",
      "zero",
      4,
@@ -807,7 +801,8 @@ ValueObjectSP ABISysV_mips::GetReturnValueObjectImpl(
 
   // In MIPS register "r2" (v0) holds the integer function return values
   const RegisterInfo *r2_reg_info = reg_ctx->GetRegisterInfoByName("r2", 0);
-  std::optional<uint64_t> bit_width = return_compiler_type.GetBitSize(&thread);
+  std::optional<uint64_t> bit_width =
+      llvm::expectedToOptional(return_compiler_type.GetBitSize(&thread));
   if (!bit_width)
     return return_valobj_sp;
   if (return_compiler_type.IsIntegerOrEnumerationType(is_signed)) {
@@ -960,44 +955,38 @@ ValueObjectSP ABISysV_mips::GetReturnValueObjectImpl(
   return return_valobj_sp;
 }
 
-bool ABISysV_mips::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+UnwindPlanSP ABISysV_mips::CreateFunctionEntryUnwindPlan() {
+  UnwindPlan::Row row;
 
   // Our Call Frame Address is the stack pointer value
-  row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
 
-  // The previous PC is in the RA
-  row->SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);
-  unwind_plan.AppendRow(row);
+  // The previous PC is in the RA, all other registers are the same.
+  row.SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);
 
-  // All other registers are the same.
-
-  unwind_plan.SetSourceName("mips at-func-entry default");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetReturnAddressRegister(dwarf_r31);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(std::move(row));
+  plan_sp->SetSourceName("mips at-func-entry default");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetReturnAddressRegister(dwarf_r31);
+  return plan_sp;
 }
 
-bool ABISysV_mips::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
+UnwindPlanSP ABISysV_mips::CreateDefaultUnwindPlan() {
+  UnwindPlan::Row row;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  row.SetUnspecifiedRegistersAreUndefined(true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
 
-  row->SetUnspecifiedRegistersAreUndefined(true);
-  row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
+  row.SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);
 
-  row->SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);
-
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("mips default unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(std::move(row));
+  plan_sp->SetSourceName("mips default unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  return plan_sp;
 }
 
 bool ABISysV_mips::RegisterIsVolatile(const RegisterInfo *reg_info) {

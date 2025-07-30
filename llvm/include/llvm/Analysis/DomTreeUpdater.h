@@ -23,7 +23,11 @@
 
 namespace llvm {
 
+class DomTreeUpdater;
 class PostDominatorTree;
+
+extern template class LLVM_TEMPLATE_ABI
+    GenericDomTreeUpdater<DomTreeUpdater, DominatorTree, PostDominatorTree>;
 
 class DomTreeUpdater
     : public GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
@@ -66,7 +70,7 @@ public:
   /// all available trees are up-to-date. Assert if any instruction of DelBB is
   /// modified while awaiting deletion. When both DT and PDT are nullptrs, DelBB
   /// will be queued until flush() is called.
-  void deleteBB(BasicBlock *DelBB);
+  LLVM_ABI void deleteBB(BasicBlock *DelBB);
 
   /// Delete DelBB. DelBB will be removed from its Parent and
   /// erased from available trees if it exists. Then the callback will
@@ -76,10 +80,13 @@ public:
   /// all available trees are up-to-date. Assert if any instruction of DelBB is
   /// modified while awaiting deletion. Multiple callbacks can be queued for one
   /// DelBB under Lazy UpdateStrategy.
-  void callbackDeleteBB(BasicBlock *DelBB,
-                        std::function<void(BasicBlock *)> Callback);
+  LLVM_ABI void callbackDeleteBB(BasicBlock *DelBB,
+                                 std::function<void(BasicBlock *)> Callback);
 
   ///@}
+
+  /// Debug method to help view the internal state of this class.
+  LLVM_ABI LLVM_DUMP_METHOD void dump() const;
 
 private:
   class CallBackOnDeletion final : public CallbackVH {
@@ -109,17 +116,18 @@ private:
 
   /// Returns true if at least one BasicBlock is deleted.
   bool forceFlushDeletedBB();
-
-  /// Debug method to help view the internal state of this class.
-  LLVM_DUMP_METHOD void dump() const;
 };
 
-extern template class GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
-                                            PostDominatorTree>;
-
-extern template void
+extern template LLVM_TEMPLATE_ABI void
 GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
                       PostDominatorTree>::recalculate(Function &F);
+
+extern template LLVM_TEMPLATE_ABI void
+GenericDomTreeUpdater<DomTreeUpdater, DominatorTree, PostDominatorTree>::
+    applyUpdatesImpl</*IsForward=*/true>();
+extern template LLVM_TEMPLATE_ABI void
+GenericDomTreeUpdater<DomTreeUpdater, DominatorTree, PostDominatorTree>::
+    applyUpdatesImpl</*IsForward=*/false>();
 } // namespace llvm
 
 #endif // LLVM_ANALYSIS_DOMTREEUPDATER_H

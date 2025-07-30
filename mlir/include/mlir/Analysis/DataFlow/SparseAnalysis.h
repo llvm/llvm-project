@@ -37,7 +37,7 @@ public:
   AbstractSparseLattice(Value value) : AnalysisState(value) {}
 
   /// Return the value this lattice is located at.
-  Value getAnchor() const { return AnalysisState::getAnchor().get<Value>(); }
+  Value getAnchor() const { return cast<Value>(AnalysisState::getAnchor()); }
 
   /// Join the information contained in 'rhs' into this lattice. Returns
   /// if the value of the lattice changed.
@@ -87,7 +87,7 @@ public:
   using AbstractSparseLattice::AbstractSparseLattice;
 
   /// Return the value this lattice is located at.
-  Value getAnchor() const { return anchor.get<Value>(); }
+  Value getAnchor() const { return cast<Value>(anchor); }
 
   /// Return the value held by this lattice. This requires that the value is
   /// initialized.
@@ -179,18 +179,22 @@ private:
 /// operands to the lattices of the results. This analysis will propagate
 /// lattices across control-flow edges and the callgraph using liveness
 /// information.
+///
+/// Visit a program point in sparse forward data-flow analysis will invoke the
+/// transfer function of the operation preceding the program point iterator.
+/// Visit a program point at the begining of block will visit the block itself.
 class AbstractSparseForwardDataFlowAnalysis : public DataFlowAnalysis {
 public:
   /// Initialize the analysis by visiting every owner of an SSA value: all
   /// operations and blocks.
   LogicalResult initialize(Operation *top) override;
 
-  /// Visit a program point. If this is a block and all control-flow
-  /// predecessors or callsites are known, then the arguments lattices are
-  /// propagated from them. If this is a call operation or an operation with
-  /// region control-flow, then its result lattices are set accordingly.
-  /// Otherwise, the operation transfer function is invoked.
-  LogicalResult visit(ProgramPoint point) override;
+  /// Visit a program point. If this is at beginning of block and all
+  /// control-flow predecessors or callsites are known, then the arguments
+  /// lattices are propagated from them. If this is after call operation or an
+  /// operation with region control-flow, then its result lattices are set
+  /// accordingly.  Otherwise, the operation transfer function is invoked.
+  LogicalResult visit(ProgramPoint *point) override;
 
 protected:
   explicit AbstractSparseForwardDataFlowAnalysis(DataFlowSolver &solver);
@@ -221,7 +225,7 @@ protected:
 
   /// Get a read-only lattice element for a value and add it as a dependency to
   /// a program point.
-  const AbstractSparseLattice *getLatticeElementFor(ProgramPoint point,
+  const AbstractSparseLattice *getLatticeElementFor(ProgramPoint *point,
                                                     Value value);
 
   /// Set the given lattice element(s) at control flow entry point(s).
@@ -230,6 +234,30 @@ protected:
 
   /// Join the lattice element and propagate and update if it changed.
   void join(AbstractSparseLattice *lhs, const AbstractSparseLattice &rhs);
+
+  /// Visits a call operation. Given the operand lattices, sets the result
+  /// lattices. Performs interprocedural data flow as follows: if the call
+  /// operation targets an external function, or if the solver is not
+  /// interprocedural, attempts to infer the results from the call arguments
+  /// using the user-provided `visitExternalCallImpl`. Otherwise, computes the
+  /// result lattices from the return sites if all return sites are known;
+  /// otherwise, conservatively marks the result lattices as having reached
+  /// their pessimistic fixpoints.
+  /// This method can be overridden to, for example, be less conservative and
+  /// propagate the information even if some return sites are unknown.
+  virtual LogicalResult
+  visitCallOperation(CallOpInterface call,
+                     ArrayRef<const AbstractSparseLattice *> operandLattices,
+                     ArrayRef<AbstractSparseLattice *> resultLattices);
+
+  /// Visits a callable operation. Computes the argument lattices from call
+  /// sites if all call sites are known; otherwise, conservatively marks them
+  /// as having reached their pessimistic fixpoints.
+  /// This method can be overridden to, for example, be less conservative and
+  /// propagate the information even if some call sites are unknown.
+  virtual void
+  visitCallableOperation(CallableOpInterface callable,
+                         ArrayRef<AbstractSparseLattice *> argLattices);
 
 private:
   /// Recursively initialize the analysis on nested operations and blocks.
@@ -251,9 +279,15 @@ private:
   /// operation `branch`, which can either be the entry block of one of the
   /// regions or the parent operation itself, and set either the argument or
   /// parent result lattices.
-  void visitRegionSuccessors(ProgramPoint point, RegionBranchOpInterface branch,
-                             RegionBranchPoint successor,
-                             ArrayRef<AbstractSparseLattice *> lattices);
+  /// This method can be overridden to control precisely how the region
+  /// successors of `branch` are visited. For example in order to precisely
+  /// control the order in which predecessor operand lattices are propagated
+  /// from. An override is responsible for visiting all the known predecessors
+  /// and propagating therefrom.
+  virtual void
+  visitRegionSuccessors(ProgramPoint *point, RegionBranchOpInterface branch,
+                        RegionBranchPoint successor,
+                        ArrayRef<AbstractSparseLattice *> lattices);
 };
 
 //===----------------------------------------------------------------------===//
@@ -312,7 +346,7 @@ protected:
 
   /// Get the lattice element for a value and create a dependency on the
   /// provided program point.
-  const StateT *getLatticeElementFor(ProgramPoint point, Value value) {
+  const StateT *getLatticeElementFor(ProgramPoint *point, Value value) {
     return static_cast<const StateT *>(
         AbstractSparseForwardDataFlowAnalysis::getLatticeElementFor(point,
                                                                     value));
@@ -377,10 +411,10 @@ public:
   /// under it.
   LogicalResult initialize(Operation *top) override;
 
-  /// Visit a program point. If this is a call operation or an operation with
+  /// Visit a program point. If it is after call operation or an operation with
   /// block or region control-flow, then operand lattices are set accordingly.
   /// Otherwise, invokes the operation transfer function (`visitOperationImpl`).
-  LogicalResult visit(ProgramPoint point) override;
+  LogicalResult visit(ProgramPoint *point) override;
 
 protected:
   explicit AbstractSparseBackwardDataFlowAnalysis(
@@ -403,10 +437,12 @@ protected:
   // Visit operands on call instructions that are not forwarded.
   virtual void visitCallOperand(OpOperand &operand) = 0;
 
-  /// Set the given lattice element(s) at control flow exit point(s).
+  /// Set the given lattice element(s) at control flow exit point(s) and
+  /// propagate the update if it chaned.
   virtual void setToExitState(AbstractSparseLattice *lattice) = 0;
 
-  /// Set the given lattice element(s) at control flow exit point(s).
+  /// Set the given lattice element(s) at control flow exit point(s) and
+  /// propagate the update if it chaned.
   void setAllToExitStates(ArrayRef<AbstractSparseLattice *> lattices);
 
   /// Get the lattice element for a value.
@@ -417,6 +453,16 @@ protected:
 
   /// Join the lattice element and propagate and update if it changed.
   void meet(AbstractSparseLattice *lhs, const AbstractSparseLattice &rhs);
+
+  /// Visits a callable operation. If all the call sites are known computes the
+  /// operand lattices of `op` from the result lattices of all the call sites;
+  /// otherwise, conservatively marks them as having reached their pessimistic
+  /// fixpoints.
+  /// This method can be overridden to, for example, be less conservative and
+  /// propagate the information even if some call sites are unknown.
+  virtual LogicalResult
+  visitCallableOperation(Operation *op, CallableOpInterface callable,
+                         ArrayRef<AbstractSparseLattice *> operandLattices);
 
 private:
   /// Recursively initialize the analysis on nested operations and blocks.
@@ -445,14 +491,14 @@ private:
   /// Get the lattice element for a value, and also set up
   /// dependencies so that the analysis on the given ProgramPoint is re-invoked
   /// if the value changes.
-  const AbstractSparseLattice *getLatticeElementFor(ProgramPoint point,
+  const AbstractSparseLattice *getLatticeElementFor(ProgramPoint *point,
                                                     Value value);
 
   /// Get the lattice elements for a range of values, and also set up
   /// dependencies so that the analysis on the given ProgramPoint is re-invoked
   /// if any of the values change.
   SmallVector<const AbstractSparseLattice *>
-  getLatticeElementsFor(ProgramPoint point, ValueRange values);
+  getLatticeElementsFor(ProgramPoint *point, ValueRange values);
 
   SymbolTableCollection &symbolTable;
 };
@@ -465,6 +511,10 @@ private:
 /// backwards across the IR by implementing transfer functions for operations.
 ///
 /// `StateT` is expected to be a subclass of `AbstractSparseLattice`.
+///
+/// Visit a program point in sparse backward data-flow analysis will invoke the
+/// transfer function of the operation preceding the program point iterator.
+/// Visit a program point at the begining of block will visit the block itself.
 template <typename StateT>
 class SparseBackwardDataFlowAnalysis
     : public AbstractSparseBackwardDataFlowAnalysis {

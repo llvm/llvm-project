@@ -120,7 +120,7 @@ findBBsToSinkInto(const Loop &L, const SmallPtrSetImpl<BasicBlock *> &UseBBs,
   if (UseBBs.size() == 0)
     return BBsToSinkInto;
 
-  BBsToSinkInto.insert(UseBBs.begin(), UseBBs.end());
+  BBsToSinkInto.insert_range(UseBBs);
   SmallPtrSet<BasicBlock *, 2> BBsDominatedByColdestBB;
 
   // For every iteration:
@@ -252,7 +252,7 @@ static bool sinkInstruction(
     // Clone I and replace its uses.
     Instruction *IC = I.clone();
     IC->setName(I.getName());
-    IC->insertBefore(&*N->getFirstInsertionPt());
+    IC->insertBefore(N->getFirstInsertionPt());
 
     if (MSSAU && MSSAU->getMemorySSA()->getMemoryAccess(&I)) {
       // Create a new MemoryAccess and let MemorySSA set its defining access.
@@ -282,7 +282,7 @@ static bool sinkInstruction(
   }
   LLVM_DEBUG(dbgs() << "Sinking " << I << " To: " << MoveBB->getName() << '\n');
   NumLoopSunk++;
-  I.moveBefore(&*MoveBB->getFirstInsertionPt());
+  I.moveBefore(MoveBB->getFirstInsertionPt());
 
   if (MSSAU)
     if (MemoryUseOrDef *OldMemAcc = cast_or_null<MemoryUseOrDef>(

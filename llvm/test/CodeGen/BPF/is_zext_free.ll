@@ -1,4 +1,4 @@
-; RUN: llc -march=bpfel -mattr=+alu32 < %s | FileCheck %s
+; RUN: llc -mtriple=bpfel -mattr=+alu32 < %s | FileCheck %s
 ; Source:
 ;   unsigned test(unsigned long x, unsigned long y) {
 ;     return x & y;

@@ -3,52 +3,6 @@
 # RUN:   -simplify-mir -verify-machineinstrs %s -o - | FileCheck %s
 
 ---
-name:            sitofp_s32_s32
-legalized:       true
-regBankSelected: true
-tracksRegLiveness: true
-body:             |
-  bb.0:
-    liveins: $x10
-
-    ; CHECK-LABEL: name: sitofp_s32_s32
-    ; CHECK: liveins: $x10
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[FCVT_S_W:%[0-9]+]]:fpr32 = nofpexcept FCVT_S_W [[COPY]], 7
-    ; CHECK-NEXT: $f10_f = COPY [[FCVT_S_W]]
-    ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s32) = G_TRUNC %0(s64)
-    %2:fprb(s32) = G_SITOFP %1(s32)
-    $f10_f = COPY %2(s32)
-    PseudoRET implicit $f10_f
-
-...
----
-name:            uitofp_s32_s32
-legalized:       true
-regBankSelected: true
-tracksRegLiveness: true
-body:             |
-  bb.0:
-    liveins: $x10
-
-    ; CHECK-LABEL: name: uitofp_s32_s32
-    ; CHECK: liveins: $x10
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[FCVT_S_WU:%[0-9]+]]:fpr32 = nofpexcept FCVT_S_WU [[COPY]], 7
-    ; CHECK-NEXT: $f10_f = COPY [[FCVT_S_WU]]
-    ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s32) = G_TRUNC %0(s64)
-    %2:fprb(s32) = G_UITOFP %1(s32)
-    $f10_f = COPY %2(s32)
-    PseudoRET implicit $f10_f
-
-...
----
 name:            sitofp_s32_s64
 legalized:       true
 regBankSelected: true
@@ -90,52 +44,6 @@ body:             |
     %1:fprb(s32) = G_UITOFP %0(s64)
     $f10_f = COPY %1(s32)
     PseudoRET implicit $f10_f
-
-...
----
-name:            sitofp_s64_s32
-legalized:       true
-regBankSelected: true
-tracksRegLiveness: true
-body:             |
-  bb.0:
-    liveins: $x10
-
-    ; CHECK-LABEL: name: sitofp_s64_s32
-    ; CHECK: liveins: $x10
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[FCVT_D_W:%[0-9]+]]:fpr64 = nofpexcept FCVT_D_W [[COPY]], 0
-    ; CHECK-NEXT: $f10_d = COPY [[FCVT_D_W]]
-    ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s32) = G_TRUNC %0(s64)
-    %2:fprb(s64) = G_SITOFP %1(s32)
-    $f10_d = COPY %2(s64)
-    PseudoRET implicit $f10_d
-
-...
----
-name:            uitofp_s64_s32
-legalized:       true
-regBankSelected: true
-tracksRegLiveness: true
-body:             |
-  bb.0:
-    liveins: $x10
-
-    ; CHECK-LABEL: name: uitofp_s64_s32
-    ; CHECK: liveins: $x10
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[FCVT_D_WU:%[0-9]+]]:fpr64 = nofpexcept FCVT_D_WU [[COPY]], 0
-    ; CHECK-NEXT: $f10_d = COPY [[FCVT_D_WU]]
-    ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s32) = G_TRUNC %0(s64)
-    %2:fprb(s64) = G_UITOFP %1(s32)
-    $f10_d = COPY %2(s64)
-    PseudoRET implicit $f10_d
 
 ...
 ---

@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=hexagon < %s | FileCheck %s
 ; Test that we do generate max #u5 in memops.
 ; CHECK: memh(r{{[0-9]+}}+#0) -= #31
 

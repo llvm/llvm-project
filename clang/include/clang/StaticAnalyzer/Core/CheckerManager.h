@@ -39,7 +39,8 @@ class AnalysisManager;
 class CXXAllocatorCall;
 class BugReporter;
 class CallEvent;
-class CheckerBase;
+class CheckerFrontend;
+class CheckerBackend;
 class CheckerContext;
 class CheckerRegistry;
 struct CheckerRegistryData;
@@ -64,9 +65,9 @@ class CheckerFn<RET(Ps...)> {
   Func Fn;
 
 public:
-  CheckerBase *Checker;
+  CheckerBackend *Checker;
 
-  CheckerFn(CheckerBase *checker, Func fn) : Fn(fn), Checker(checker) {}
+  CheckerFn(CheckerBackend *checker, Func fn) : Fn(fn), Checker(checker) {}
 
   RET operator()(Ps... ps) const {
     return Fn(Checker, ps...);
@@ -113,7 +114,6 @@ class CheckerNameRef {
 public:
   CheckerNameRef() = default;
 
-  StringRef getName() const { return Name; }
   operator StringRef() const { return Name; }
 };
 
@@ -181,44 +181,44 @@ public:
 
   /// Emits an error through a DiagnosticsEngine about an invalid user supplied
   /// checker option value.
-  void reportInvalidCheckerOptionValue(const CheckerBase *C,
+  void reportInvalidCheckerOptionValue(const CheckerFrontend *Checker,
                                        StringRef OptionName,
                                        StringRef ExpectedValueDesc) const;
 
-  using CheckerRef = CheckerBase *;
   using CheckerTag = const void *;
-  using CheckerDtor = CheckerFn<void ()>;
 
-//===----------------------------------------------------------------------===//
-// Checker registration.
-//===----------------------------------------------------------------------===//
+  //===--------------------------------------------------------------------===//
+  // Checker registration.
+  //===--------------------------------------------------------------------===//
 
-  /// Used to register checkers.
-  /// All arguments are automatically passed through to the checker
-  /// constructor.
-  ///
-  /// \returns a pointer to the checker object.
+  /// If the the singleton instance of a checker class is not yet constructed,
+  /// then construct it (with the supplied arguments), register it for the
+  /// callbacks that are supported by it, and return it. Otherwise, just return
+  /// a pointer to the existing instance.
   template <typename CHECKER, typename... AT>
-  CHECKER *registerChecker(AT &&... Args) {
-    CheckerTag tag = getTag<CHECKER>();
-    CheckerRef &ref = CheckerTags[tag];
-    assert(!ref && "Checker already registered, use getChecker!");
+  CHECKER *getChecker(AT &&...Args) {
+    CheckerTag Tag = getTag<CHECKER>();
 
-    CHECKER *checker = new CHECKER(std::forward<AT>(Args)...);
-    checker->Name = CurrentCheckerName;
-    CheckerDtors.push_back(CheckerDtor(checker, destruct<CHECKER>));
-    CHECKER::_register(checker, *this);
-    ref = checker;
-    return checker;
+    std::unique_ptr<CheckerBackend> &Ref = CheckerTags[Tag];
+    if (!Ref) {
+      std::unique_ptr<CHECKER> Checker =
+          std::make_unique<CHECKER>(std::forward<AT>(Args)...);
+      CHECKER::_register(Checker.get(), *this);
+      Ref = std::move(Checker);
+    }
+
+    return static_cast<CHECKER *>(Ref.get());
   }
 
-  template <typename CHECKER>
-  CHECKER *getChecker() {
-    CheckerTag tag = getTag<CHECKER>();
-    assert(CheckerTags.count(tag) != 0 &&
-           "Requested checker is not registered! Maybe you should add it as a "
-           "dependency in Checkers.td?");
-    return static_cast<CHECKER *>(CheckerTags[tag]);
+  /// Register a single-part checker (derived from `Checker`): construct its
+  /// singleton instance, register it for the supported callbacks and record
+  /// its name (with `CheckerFrontend::enable`). Calling this multiple times
+  /// triggers an assertion failure.
+  template <typename CHECKER, typename... AT>
+  CHECKER *registerChecker(AT &&...Args) {
+    CHECKER *Chk = getChecker<CHECKER>(std::forward<AT>(Args)...);
+    Chk->enable(*this);
+    return Chk;
   }
 
   template <typename CHECKER> bool isRegisteredChecker() {
@@ -344,6 +344,12 @@ public:
                           const Stmt *S, ExprEngine &Eng,
                           const ProgramPoint &PP);
 
+  /// Run checkers after taking a control flow edge.
+  void runCheckersForBlockEntrance(ExplodedNodeSet &Dst,
+                                   const ExplodedNodeSet &Src,
+                                   const BlockEntrance &Entrance,
+                                   ExprEngine &Eng) const;
+
   /// Run checkers for end of analysis.
   void runCheckersForEndAnalysis(ExplodedGraph &G, BugReporter &BR,
                                  ExprEngine &Eng);
@@ -450,7 +456,7 @@ public:
   /// Run checkers for debug-printing a ProgramState.
   ///
   /// Unlike most other callbacks, any checker can simply implement the virtual
-  /// method CheckerBase::printState if it has custom data to print.
+  /// method CheckerBackend::printState if it has custom data to print.
   ///
   /// \param Out   The output stream
   /// \param State The state being printed
@@ -462,9 +468,9 @@ public:
                                     unsigned int Space = 0,
                                     bool IsDot = false) const;
 
-  //===----------------------------------------------------------------------===//
+  //===--------------------------------------------------------------------===//
   // Internal registration functions for AST traversing.
-  //===----------------------------------------------------------------------===//
+  //===--------------------------------------------------------------------===//
 
   // Functions used by the registration mechanism, checkers should not touch
   // these directly.
@@ -478,9 +484,9 @@ public:
 
   void _registerForBody(CheckDeclFunc checkfn);
 
-//===----------------------------------------------------------------------===//
-// Internal registration functions for path-sensitive checking.
-//===----------------------------------------------------------------------===//
+  //===--------------------------------------------------------------------===//
+  // Internal registration functions for path-sensitive checking.
+  //===--------------------------------------------------------------------===//
 
   using CheckStmtFunc = CheckerFn<void (const Stmt *, CheckerContext &)>;
 
@@ -495,6 +501,9 @@ public:
 
   using CheckBindFunc =
       CheckerFn<void(SVal location, SVal val, const Stmt *S, CheckerContext &)>;
+
+  using CheckBlockEntranceFunc =
+      CheckerFn<void(const BlockEntrance &, CheckerContext &)>;
 
   using CheckEndAnalysisFunc =
       CheckerFn<void (ExplodedGraph &, BugReporter &, ExprEngine &)>;
@@ -557,6 +566,8 @@ public:
 
   void _registerForBind(CheckBindFunc checkfn);
 
+  void _registerForBlockEntrance(CheckBlockEntranceFunc checkfn);
+
   void _registerForEndAnalysis(CheckEndAnalysisFunc checkfn);
 
   void _registerForBeginFunction(CheckBeginFunctionFunc checkfn);
@@ -582,9 +593,9 @@ public:
 
   void _registerForEndOfTranslationUnit(CheckEndOfTranslationUnit checkfn);
 
-//===----------------------------------------------------------------------===//
-// Internal registration functions for events.
-//===----------------------------------------------------------------------===//
+  //===--------------------------------------------------------------------===//
+  // Internal registration functions for events.
+  //===--------------------------------------------------------------------===//
 
   using EventTag = void *;
   using CheckEventFunc = CheckerFn<void (const void *event)>;
@@ -611,20 +622,15 @@ public:
       Checker(&event);
   }
 
-//===----------------------------------------------------------------------===//
-// Implementation details.
-//===----------------------------------------------------------------------===//
+  //===--------------------------------------------------------------------===//
+  // Implementation details.
+  //===--------------------------------------------------------------------===//
 
 private:
-  template <typename CHECKER>
-  static void destruct(void *obj) { delete static_cast<CHECKER *>(obj); }
-
   template <typename T>
   static void *getTag() { static int tag; return &tag; }
 
-  llvm::DenseMap<CheckerTag, CheckerRef> CheckerTags;
-
-  std::vector<CheckerDtor> CheckerDtors;
+  llvm::DenseMap<CheckerTag, std::unique_ptr<CheckerBackend>> CheckerTags;
 
   struct DeclCheckerInfo {
     CheckDeclFunc CheckFn;
@@ -667,6 +673,8 @@ private:
   std::vector<CheckLocationFunc> LocationCheckers;
 
   std::vector<CheckBindFunc> BindCheckers;
+
+  std::vector<CheckBlockEntranceFunc> BlockEntranceCheckers;
 
   std::vector<CheckEndAnalysisFunc> EndAnalysisCheckers;
 

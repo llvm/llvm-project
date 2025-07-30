@@ -221,7 +221,7 @@ public:
 
   hash_code getHashValue() const override {
     return hash_combine(this->Expression::getHashValue(), ValueType,
-                        hash_combine_range(op_begin(), op_end()));
+                        hash_combine_range(operands()));
   }
 
   // Debugging support
@@ -313,6 +313,12 @@ public:
 
   static bool classof(const Expression *EB) {
     return EB->getExpressionType() == ET_Call;
+  }
+
+  bool equals(const Expression &Other) const override;
+  bool exactlyEquals(const Expression &Other) const override {
+    return Expression::exactlyEquals(Other) &&
+           cast<CallExpression>(Other).Call == Call;
   }
 
   // Debugging support
@@ -446,7 +452,7 @@ public:
     IntOperands[NumIntOperands++] = IntOperand;
   }
 
-  virtual void allocateIntOperands(BumpPtrAllocator &Allocator) {
+  void allocateIntOperands(BumpPtrAllocator &Allocator) {
     assert(!IntOperands && "Operands already allocated");
     IntOperands = Allocator.Allocate<unsigned>(MaxIntOperands);
   }

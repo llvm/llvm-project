@@ -9,6 +9,8 @@ struct PointType {
 int g_global = 123;
 static int s_global = 234;
 int test_indexedVariables();
+int test_return_variable();
+
 int main(int argc, char const *argv[]) {
   static float s_local = 2.25;
   PointType pt = {11, 22, {0}};
@@ -22,6 +24,9 @@ int main(int argc, char const *argv[]) {
       s_global = x; // breakpoint 2
     }
   }
+  {
+    int return_result = test_return_variable();
+  }
   return test_indexedVariables(); // breakpoint 3
 }
 
@@ -33,4 +38,8 @@ int test_indexedVariables() {
   small_vector.assign(5, 0);
   large_vector.assign(200, 0);
   return 0; // breakpoint 4
+}
+
+int test_return_variable() {
+  return 300; // breakpoint 5
 }

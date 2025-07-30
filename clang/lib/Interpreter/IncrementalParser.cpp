@@ -41,8 +41,9 @@ llvm::Expected<TranslationUnitDecl *>
 IncrementalParser::ParseOrWrapTopLevelDecl() {
   // Recover resources if we crash before exiting this method.
   llvm::CrashRecoveryContextCleanupRegistrar<Sema> CleanupSema(&S);
-  Sema::GlobalEagerInstantiationScope GlobalInstantiations(S, /*Enabled=*/true);
-  Sema::LocalEagerInstantiationScope LocalInstantiations(S);
+  Sema::GlobalEagerInstantiationScope GlobalInstantiations(S, /*Enabled=*/true,
+                                                           /*AtEndOfTU=*/true);
+  Sema::LocalEagerInstantiationScope LocalInstantiations(S, /*AtEndOfTU=*/true);
 
   // Add a new PTU.
   ASTContext &C = S.getASTContext();
@@ -175,7 +176,7 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
   // FIXME: We should de-allocate MostRecentTU
   for (Decl *D : MostRecentTU->decls()) {
     auto *ND = dyn_cast<NamedDecl>(D);
-    if (!ND)
+    if (!ND || ND->getDeclName().isEmpty())
       continue;
     // Check if we need to clean up the IdResolver chain.
     if (ND->getDeclName().getFETokenInfo() && !D->getLangOpts().ObjC &&

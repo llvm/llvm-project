@@ -64,11 +64,18 @@ define <16 x i32> @concat_sext_v8i16_v16i32(<8 x i16> %a0, <8 x i16> %a1) {
 }
 
 define <8 x i32> @concat_sext_v4i1_v8i32(<4 x i1> %a0, <4 x i1> %a1) {
-; CHECK-LABEL: define <8 x i32> @concat_sext_v4i1_v8i32(
-; CHECK-SAME: <4 x i1> [[A0:%.*]], <4 x i1> [[A1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i1> [[A0]], <4 x i1> [[A1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[R:%.*]] = sext <8 x i1> [[TMP1]] to <8 x i32>
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; SSE-LABEL: define <8 x i32> @concat_sext_v4i1_v8i32(
+; SSE-SAME: <4 x i1> [[A0:%.*]], <4 x i1> [[A1:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[X0:%.*]] = sext <4 x i1> [[A0]] to <4 x i32>
+; SSE-NEXT:    [[X1:%.*]] = sext <4 x i1> [[A1]] to <4 x i32>
+; SSE-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[X0]], <4 x i32> [[X1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; SSE-NEXT:    ret <8 x i32> [[R]]
+;
+; AVX-LABEL: define <8 x i32> @concat_sext_v4i1_v8i32(
+; AVX-SAME: <4 x i1> [[A0:%.*]], <4 x i1> [[A1:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i1> [[A0]], <4 x i1> [[A1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; AVX-NEXT:    [[R:%.*]] = sext <8 x i1> [[TMP1]] to <8 x i32>
+; AVX-NEXT:    ret <8 x i32> [[R]]
 ;
   %x0 = sext <4 x i1> %a0 to <4 x i32>
   %x1 = sext <4 x i1> %a1 to <4 x i32>
@@ -90,11 +97,18 @@ define <8 x i16> @concat_trunc_v4i32_v8i16(<4 x i32> %a0, <4 x i32> %a1) {
 }
 
 define <8 x ptr> @concat_inttoptr_v4i32_v8iptr(<4 x i32> %a0, <4 x i32> %a1) {
-; CHECK-LABEL: define <8 x ptr> @concat_inttoptr_v4i32_v8iptr(
-; CHECK-SAME: <4 x i32> [[A0:%.*]], <4 x i32> [[A1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[A0]], <4 x i32> [[A1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[R:%.*]] = inttoptr <8 x i32> [[TMP1]] to <8 x ptr>
-; CHECK-NEXT:    ret <8 x ptr> [[R]]
+; SSE-LABEL: define <8 x ptr> @concat_inttoptr_v4i32_v8iptr(
+; SSE-SAME: <4 x i32> [[A0:%.*]], <4 x i32> [[A1:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[A0]], <4 x i32> [[A1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; SSE-NEXT:    [[R:%.*]] = inttoptr <8 x i32> [[TMP1]] to <8 x ptr>
+; SSE-NEXT:    ret <8 x ptr> [[R]]
+;
+; AVX-LABEL: define <8 x ptr> @concat_inttoptr_v4i32_v8iptr(
+; AVX-SAME: <4 x i32> [[A0:%.*]], <4 x i32> [[A1:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[X0:%.*]] = inttoptr <4 x i32> [[A0]] to <4 x ptr>
+; AVX-NEXT:    [[X1:%.*]] = inttoptr <4 x i32> [[A1]] to <4 x ptr>
+; AVX-NEXT:    [[R:%.*]] = shufflevector <4 x ptr> [[X0]], <4 x ptr> [[X1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; AVX-NEXT:    ret <8 x ptr> [[R]]
 ;
   %x0 = inttoptr <4 x i32> %a0 to <4 x ptr>
   %x1 = inttoptr <4 x i32> %a1 to <4 x ptr>
@@ -138,9 +152,8 @@ define <8 x double> @concat_fpext_v4f32_v8f64(<4 x float> %a0, <4 x float> %a1) 
 define <16 x float> @concat_fptrunc_v8f64_v16f32(<8 x double> %a0, <8 x double> %a1) {
 ; CHECK-LABEL: define <16 x float> @concat_fptrunc_v8f64_v16f32(
 ; CHECK-SAME: <8 x double> [[A0:%.*]], <8 x double> [[A1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[X0:%.*]] = fptrunc <8 x double> [[A0]] to <8 x float>
-; CHECK-NEXT:    [[X1:%.*]] = fptrunc <8 x double> [[A1]] to <8 x float>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <8 x float> [[X0]], <8 x float> [[X1]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x double> [[A0]], <8 x double> [[A1]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[R:%.*]] = fptrunc <16 x double> [[TMP1]] to <16 x float>
 ; CHECK-NEXT:    ret <16 x float> [[R]]
 ;
   %x0 = fptrunc <8 x double> %a0 to <8 x float>
@@ -152,11 +165,17 @@ define <16 x float> @concat_fptrunc_v8f64_v16f32(<8 x double> %a0, <8 x double> 
 ; commuted vector concatenation
 
 define <16 x i32> @rconcat_sext_v8i16_v16i32(<8 x i16> %a0, <8 x i16> %a1) {
-; CHECK-LABEL: define <16 x i32> @rconcat_sext_v8i16_v16i32(
-; CHECK-SAME: <8 x i16> [[A0:%.*]], <8 x i16> [[A1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0]], <8 x i16> [[A1]], <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[R:%.*]] = sext <16 x i16> [[TMP1]] to <16 x i32>
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; SSE-LABEL: define <16 x i32> @rconcat_sext_v8i16_v16i32(
+; SSE-SAME: <8 x i16> [[A0:%.*]], <8 x i16> [[A1:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A1]], <8 x i16> [[A0]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; SSE-NEXT:    [[R:%.*]] = sext <16 x i16> [[TMP1]] to <16 x i32>
+; SSE-NEXT:    ret <16 x i32> [[R]]
+;
+; AVX-LABEL: define <16 x i32> @rconcat_sext_v8i16_v16i32(
+; AVX-SAME: <8 x i16> [[A0:%.*]], <8 x i16> [[A1:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0]], <8 x i16> [[A1]], <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; AVX-NEXT:    [[R:%.*]] = sext <16 x i16> [[TMP1]] to <16 x i32>
+; AVX-NEXT:    ret <16 x i32> [[R]]
 ;
   %x0 = sext <8 x i16> %a0 to <8 x i32>
   %x1 = sext <8 x i16> %a1 to <8 x i32>

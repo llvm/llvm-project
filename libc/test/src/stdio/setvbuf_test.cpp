@@ -11,17 +11,19 @@
 #include "src/stdio/fread.h"
 #include "src/stdio/fwrite.h"
 #include "src/stdio/setvbuf.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
 #include "hdr/stdio_macros.h"
-#include "src/errno/libc_errno.h"
 
-TEST(LlvmLibcSetvbufTest, SetNBFBuffer) {
+using LlvmLibcSetvbufTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
+TEST_F(LlvmLibcSetvbufTest, SetNBFBuffer) {
   // The idea in this test is that we open a file for writing and reading, and
   // then set a NBF buffer to the write handle. Since it is NBF, the data
   // written using the write handle should be immediately readable by the read
   // handle.
-  constexpr char FILENAME[] = "testdata/setvbuf_nbf.test";
+  constexpr char FILENAME[] = APPEND_LIBC_TEST("testdata/setvbuf_nbf.test");
 
   ::FILE *fw = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(fw == nullptr);
@@ -52,12 +54,12 @@ TEST(LlvmLibcSetvbufTest, SetNBFBuffer) {
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(fr));
 }
 
-TEST(LlvmLibcSetvbufTest, SetLBFBuffer) {
+TEST_F(LlvmLibcSetvbufTest, SetLBFBuffer) {
   // The idea in this test is that we open a file for writing and reading, and
   // then set a LBF buffer to the write handle. Since it is LBF, the data
   // written using the write handle should be available right after a '\n' is
   // written.
-  constexpr char FILENAME[] = "testdata/setvbuf_lbf.test";
+  constexpr char FILENAME[] = APPEND_LIBC_TEST("testdata/setvbuf_lbf.test");
 
   ::FILE *fw = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(fw == nullptr);
@@ -94,7 +96,8 @@ TEST(LlvmLibcSetvbufTest, SetLBFBuffer) {
 }
 
 TEST(LlvmLibcSetbufTest, InvalidBufferMode) {
-  constexpr char FILENAME[] = "testdata/setvbuf_invalid_bufmode.test";
+  constexpr char FILENAME[] =
+      APPEND_LIBC_TEST("testdata/setvbuf_invalid_bufmode.test");
   ::FILE *f = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(f == nullptr);
   char buf[BUFSIZ];
@@ -102,6 +105,5 @@ TEST(LlvmLibcSetbufTest, InvalidBufferMode) {
             0);
   ASSERT_ERRNO_EQ(EINVAL);
 
-  LIBC_NAMESPACE::libc_errno = 0;
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(f));
 }

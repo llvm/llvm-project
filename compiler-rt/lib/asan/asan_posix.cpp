@@ -149,6 +149,7 @@ void PlatformTSDDtor(void *tsd) {
 #  endif
 
 static void BeforeFork() {
+  VReport(2, "BeforeFork tid: %llu\n", GetTid());
   if (CAN_SANITIZE_LEAKS) {
     __lsan::LockGlobal();
   }
@@ -156,11 +157,17 @@ static void BeforeFork() {
   // stuff we need.
   __lsan::LockThreads();
   __lsan::LockAllocator();
+
+  AcquirePoisonRecords();
+
   StackDepotLockBeforeFork();
 }
 
 static void AfterFork(bool fork_child) {
   StackDepotUnlockAfterFork(fork_child);
+
+  ReleasePoisonRecords();
+
   // `_lsan` functions defined regardless of `CAN_SANITIZE_LEAKS` and unlock
   // the stuff we need.
   __lsan::UnlockAllocator();
@@ -168,11 +175,12 @@ static void AfterFork(bool fork_child) {
   if (CAN_SANITIZE_LEAKS) {
     __lsan::UnlockGlobal();
   }
+  VReport(2, "AfterFork tid: %llu\n", GetTid());
 }
 
 void InstallAtForkHandler() {
 #  if SANITIZER_SOLARIS || SANITIZER_NETBSD || SANITIZER_APPLE || \
-      (SANITIZER_LINUX && SANITIZER_SPARC)
+      (SANITIZER_LINUX && SANITIZER_SPARC) || SANITIZER_HAIKU
   // While other Linux targets use clone in internal_fork which doesn't
   // trigger pthread_atfork handlers, Linux/sparc64 uses __fork, causing a
   // hang.

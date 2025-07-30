@@ -1,0 +1,107 @@
+# RUN: llc %s -o - -experimental-debug-variable-locations=true \
+# RUN:   -run-pass=livedebugvalues \
+# RUN: | FileCheck %s --implicit-check-not=DBG_VALUE
+# RUN: llc %s -o - -experimental-debug-variable-locations=true \
+# RUN:   -start-before=livedebugvalues -filetype=obj \
+# RUN: | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
+#
+# LLVM can produce DIExpressions that convert from one value of arbitrary size
+# to another. This is normally fine, however that means the value for a
+# variable tracked in instruction referencing might not be the same size as the
+# variable itself.
+#
+# We typically use vector registers as shorthand for "the lower lane of the
+# vector register", for example if we have a single float we might say
+#
+#     DBG_VALUE $xmm0
+#
+# and that's reflected in DWARF too. However, instruction-referencing tries to
+# solve several size problems (see deref-spills-with-size.mir), and gets
+# confused by this shorthand. It manifests in the test sequence below: we
+# locate a variable in a vector register, spill it, then force a stack variable
+# location to be produced. InstrRefBasedLDV would like to produce a
+# DW_OP_deref_size indicating that 128 bits should be loaded for the 32 bit
+# register, but this would be wrong (and illegal DWARF as the max load size is
+# the pointer size).
+#
+# As a sticking-plaster fix: detect when we're about to emit these illegal
+# DWARF locations, and instead use DW_OP_deref_size. There's a small risk we
+# read too much or too little data, but it's better than emitting illegal DWARF.
+
+# CHECK: ![[VAR:[0-9]+]] = !DILocalVariable(name: "flannel",
+
+## Check that we're not producing DW_OP_deref_size, instead using the isIndirect
+## field of DBG_VALUEs.
+
+# CHECK: DBG_VALUE $xmm0, $noreg,
+# CHECK: DBG_VALUE $rsp, 0, ![[VAR]], !DIExpression(DW_OP_plus_uconst, 8),
+
+## Check that we produce a breg location with no further expression attached.
+
+# DWARF:      DW_TAG_variable
+# DWARF-NEXT:     DW_AT_location
+# DWARF-NEXT:         DW_OP_reg17 XMM0
+# DWARF-NEXT:         DW_OP_breg7 RSP+8)
+# DWARF-NEXT:     DW_AT_name    ("flannel")
+
+--- |
+  ; ModuleID = 'missingvar.ll'
+  source_filename = "a"
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  define linkonce_odr void @_ZNSt5dequeIPN4llvm4LoopESaIS2_EE13_M_insert_auxESt15_Deque_iteratorIS2_RS2_PS2_EmRKS2_() local_unnamed_addr align 2 !dbg !3 {
+  entry:
+    call void @llvm.dbg.value(metadata i32 0, metadata !8, metadata !DIExpression()), !dbg !7
+    call void @llvm.dbg.value(metadata i32 0, metadata !10, metadata !DIExpression()), !dbg !7
+    ret void
+  }
+
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+  
+  !llvm.module.flags = !{!0, !9}
+  !llvm.dbg.cu = !{!1}
+  
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+  !1 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "beards", isOptimized: true, runtimeVersion: 4, emissionKind: FullDebug)
+  !2 = !DIFile(filename: "bees.cpp", directory: "")
+  !3 = distinct !DISubprogram(name: "nope", scope: !2, file: !2, line: 1, type: !4, spFlags: DISPFlagDefinition, unit: !1)
+  !4 = !DISubroutineType(types: !5)
+  !5 = !{!6}
+  !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !7 = !DILocation(line: 1, scope: !3)
+  !8 = !DILocalVariable(name: "flannel", scope: !3, type: !6)
+  !9 = !{i32 2, !"Dwarf Version", i32 5}
+  !10 = !DILocalVariable(name: "shoes", scope: !3, type: !11)
+  !11 = !DIBasicType(name: "long", size: 64, encoding: DW_ATE_signed)
+
+
+...
+---
+name:            _ZNSt5dequeIPN4llvm4LoopESaIS2_EE13_M_insert_auxESt15_Deque_iteratorIS2_RS2_PS2_EmRKS2_
+alignment:       16
+tracksRegLiveness: true
+debugInstrRef: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+  - { reg: '$rdx' }
+frameInfo:
+  stackSize:       16
+  offsetAdjustment: -16
+  maxAlignment:    16
+  maxCallFrameSize: 0
+stack:
+  - { id: 6, type: spill-slot, offset: -16, size: 16, alignment: 16 }
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rdx, $rsi, $rbp, $xmm0
+  
+
+    $xmm0 = XORPSrr $xmm0, $xmm0, debug-location !7
+    DBG_VALUE $xmm0, $noreg, !8, !DIExpression(), debug-location !7
+    VMOVUPSmr $rsp, 1, $noreg, 36, $noreg, $xmm0 :: (store (s128) into %stack.6)
+    $xmm0 = XORPSrr $xmm0, $xmm0, debug-location !7
+    RET64 0, debug-location !7
+...

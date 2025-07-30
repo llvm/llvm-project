@@ -68,7 +68,7 @@ int internal_dlinfo(void *handle, int request, void *p) { UNIMPLEMENTED(); }
 
 uptr GetThreadSelf() { return reinterpret_cast<uptr>(thrd_current()); }
 
-tid_t GetTid() { return GetThreadSelf(); }
+ThreadID GetTid() { return GetThreadSelf(); }
 
 void Abort() { abort(); }
 
@@ -444,6 +444,11 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
   return status == ZX_OK;
 }
 
+bool TryMemCpy(void *dest, const void *src, uptr n) {
+  // TODO: implement.
+  return false;
+}
+
 // FIXME implement on this platform.
 void GetMemoryProfile(fill_profile_f cb, uptr *stats) {}
 
@@ -518,7 +523,6 @@ uptr ReadLongProcessName(/*out*/ char *buf, uptr buf_len) {
 uptr MainThreadStackBase, MainThreadStackSize;
 
 bool GetRandom(void *buffer, uptr length, bool blocking) {
-  CHECK_LE(length, ZX_CPRNG_DRAW_MAX_LEN);
   _zx_cprng_draw(buffer, length);
   return true;
 }
@@ -543,6 +547,8 @@ void __sanitizer_startup_hook(int argc, char **argv, char **envp,
   __sanitizer::StoredEnviron = envp;
   __sanitizer::MainThreadStackBase = reinterpret_cast<uintptr_t>(stack_base);
   __sanitizer::MainThreadStackSize = stack_size;
+
+  EarlySanitizerInit();
 }
 
 void __sanitizer_set_report_path(const char *path) {

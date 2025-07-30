@@ -14,9 +14,8 @@
 
 #include "AMDGPUMachineModuleInfo.h"
 #include "llvm/IR/Module.h"
-#include "llvm/MC/MCSymbol.h"
 
-namespace llvm {
+using namespace llvm;
 
 AMDGPUMachineModuleInfo::AMDGPUMachineModuleInfo(const MachineModuleInfo &MMI)
     : MachineModuleInfoELF(MMI) {
@@ -35,5 +34,3 @@ AMDGPUMachineModuleInfo::AMDGPUMachineModuleInfo(const MachineModuleInfo &MMI)
   SingleThreadOneAddressSpaceSSID =
       CTX.getOrInsertSyncScopeID("singlethread-one-as");
 }
-
-} // end namespace llvm

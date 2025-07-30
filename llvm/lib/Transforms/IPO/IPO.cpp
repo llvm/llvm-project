@@ -13,9 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/InitializePasses.h"
-#include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/IPO/AlwaysInliner.h"
-#include "llvm/Transforms/IPO/FunctionAttrs.h"
 
 using namespace llvm;
 

@@ -14,6 +14,12 @@ int o = X::__builtin_fabs(-2.0);
 long p = X::__builtin_fabsf(-3.0f);
 // CHECK: @p ={{.*}} global i64 3, align 8
 
+int x = __builtin_abs(-2);
+// CHECK: @x ={{.*}} global i32 2, align 4
+
+long y = __builtin_abs(-2l);
+// CHECK: @y ={{.*}} global i64 2, align 8
+
 // PR8839
 extern "C" char memmove();
 
@@ -52,14 +58,6 @@ extern "C" int __builtin_abs(int); // #1
 long __builtin_abs(long);          // #2
 extern "C" int __builtin_abs(int); // #3
 
-int x = __builtin_abs(-2);
-// CHECK:      [[X:%.+]] = call i32 @llvm.abs.i32(i32 -2, i1 true)
-// CHECK-NEXT: store i32 [[X]], ptr @x, align 4
-
-long y = __builtin_abs(-2l);
-// CHECK:  [[Y:%.+]] = call noundef i64 @_Z13__builtin_absl(i64 noundef -2)
-// CHECK:  store i64 [[Y]], ptr @y, align 8
-
 extern const char char_memchr_arg[32];
 char *memchr_result = __builtin_char_memchr(char_memchr_arg, 123, 32);
 // CHECK: call ptr @memchr(ptr noundef @char_memchr_arg, i32 noundef 123, i64 noundef 32)
@@ -78,4 +76,10 @@ int constexpr_overflow_result() {
   // CHECK: store i32 [[RET_PTR]], ptr [[Z]]
   // CHECK: [[RET_VAL:%.+]] = load i32, ptr [[Z]]
   // CHECK: ret i32 [[RET_VAL]]
+}
+
+int structured_binding_size() {
+  struct S2 {int a, b;};
+  return __builtin_structured_binding_size(S2);
+  // CHECK: ret i32 2
 }

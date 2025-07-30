@@ -14,7 +14,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, issignalingf16, (float16 x)) {
-  return fputil::issignaling(x);
+  return fputil::issignaling_impl(x);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

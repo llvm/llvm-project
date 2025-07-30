@@ -344,4 +344,105 @@ define i1 @test_store_same_block(ptr %arg) {
   ret i1 %cmp
 }
 
+
+define i1 @test_known_nonnull_at_callsite(ptr %src) {
+; CHECK-LABEL: @test_known_nonnull_at_callsite(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @callee(ptr noundef nonnull [[SRC:%.*]])
+; CHECK-NEXT:    [[NONNULL:%.*]] = icmp eq ptr [[SRC]], null
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  call void @callee(ptr noundef nonnull %src)
+  %nonnull = icmp eq ptr %src, null
+  ret i1 %nonnull
+}
+
+define i1 @test_known_nonnull_mixed(ptr %src) {
+; CHECK-LABEL: @test_known_nonnull_mixed(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @callee2(ptr nonnull [[SRC:%.*]])
+; CHECK-NEXT:    [[NONNULL:%.*]] = icmp eq ptr [[SRC]], null
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  call void @callee2(ptr nonnull %src)
+  %nonnull = icmp eq ptr %src, null
+  ret i1 %nonnull
+}
+
+define i1 @test_known_nonnull_at_callsite_dereferenceable(ptr %src) {
+; CHECK-LABEL: @test_known_nonnull_at_callsite_dereferenceable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @callee(ptr dereferenceable(1) [[SRC:%.*]])
+; CHECK-NEXT:    [[NONNULL:%.*]] = icmp eq ptr [[SRC]], null
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  call void @callee(ptr dereferenceable(1) %src)
+  %nonnull = icmp eq ptr %src, null
+  ret i1 %nonnull
+}
+
+define i1 @test_known_nonnull_at_callsite_gep_inbounds(ptr %src, i64 %x) {
+; CHECK-LABEL: @test_known_nonnull_at_callsite_gep_inbounds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i64 [[X:%.*]]
+; CHECK-NEXT:    call void @callee(ptr noundef nonnull [[GEP]])
+; CHECK-NEXT:    [[NONNULL:%.*]] = icmp eq ptr [[SRC]], null
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %gep = getelementptr inbounds i8, ptr %src, i64 %x
+  call void @callee(ptr noundef nonnull %gep)
+  %nonnull = icmp eq ptr %src, null
+  ret i1 %nonnull
+}
+
+; Negative tests
+
+define i1 @test_known_nonnull_at_callsite_without_noundef(ptr %src) {
+; CHECK-LABEL: @test_known_nonnull_at_callsite_without_noundef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @callee(ptr nonnull [[SRC:%.*]])
+; CHECK-NEXT:    [[NONNULL:%.*]] = icmp eq ptr [[SRC]], null
+; CHECK-NEXT:    ret i1 [[NONNULL]]
+;
+entry:
+  call void @callee(ptr nonnull %src)
+  %nonnull = icmp eq ptr %src, null
+  ret i1 %nonnull
+}
+
+define i1 @test_known_nonnull_at_callsite_dereferenceable_null_is_defined(ptr %src) #0 {
+; CHECK-LABEL: @test_known_nonnull_at_callsite_dereferenceable_null_is_defined(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @callee(ptr dereferenceable(1) [[SRC:%.*]])
+; CHECK-NEXT:    [[NONNULL:%.*]] = icmp eq ptr [[SRC]], null
+; CHECK-NEXT:    ret i1 [[NONNULL]]
+;
+entry:
+  call void @callee(ptr dereferenceable(1) %src)
+  %nonnull = icmp eq ptr %src, null
+  ret i1 %nonnull
+}
+
+define i1 @test_known_nonnull_at_callsite_gep_without_inbounds(ptr %src, i64 %x) {
+; CHECK-LABEL: @test_known_nonnull_at_callsite_gep_without_inbounds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 [[X:%.*]]
+; CHECK-NEXT:    call void @callee(ptr noundef nonnull [[GEP]])
+; CHECK-NEXT:    [[NONNULL:%.*]] = icmp eq ptr [[SRC]], null
+; CHECK-NEXT:    ret i1 [[NONNULL]]
+;
+entry:
+  %gep = getelementptr i8, ptr %src, i64 %x
+  call void @callee(ptr noundef nonnull %gep)
+  %nonnull = icmp eq ptr %src, null
+  ret i1 %nonnull
+}
+
+declare void @callee(ptr)
+declare void @callee2(ptr noundef)
+
 attributes #0 = { null_pointer_is_valid }

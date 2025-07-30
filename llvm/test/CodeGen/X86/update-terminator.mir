@@ -10,14 +10,14 @@
   declare void @dummy3()
 
   ; Function Attrs: nounwind
-  define void @f2() {
-    br i1 undef, label %bb1, label %bb3
+  define void @f2(i1 %arg) {
+    br i1 %arg, label %bb1, label %bb3
 
   bb1:
     call void @dummy1()
     call void @dummy1()
     call void @dummy1()
-    br i1 undef, label %bb2, label %bb2
+    br i1 %arg, label %bb2, label %bb2
 
   bb2:
     call void @dummy2()

@@ -12,19 +12,14 @@
 
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/Matchers.h"
-#include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Verifier.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
@@ -35,7 +30,7 @@ using namespace mlir::nvgpu;
 void nvgpu::NVGPUDialect::initialize() {
   addTypes<
 #define GET_TYPEDEF_LIST
-#include "mlir/Dialect/NVGPU/IR/NVGPUTypes.cpp.inc"
+#include "mlir/Dialect/NVGPU/IR/NVGPUTypeDefs.cpp.inc"
       >();
   addAttributes<
 #define GET_ATTRDEF_LIST
@@ -43,7 +38,7 @@ void nvgpu::NVGPUDialect::initialize() {
       >();
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/NVGPU/IR/NVGPU.cpp.inc"
+#include "mlir/Dialect/NVGPU/IR/NVGPUOps.cpp.inc"
       >();
 }
 
@@ -70,9 +65,9 @@ LogicalResult DeviceAsyncCopyOp::verify() {
   auto srcMemref = llvm::cast<MemRefType>(getSrc().getType());
   auto dstMemref = llvm::cast<MemRefType>(getDst().getType());
 
-  if (!isLastMemrefDimUnitStride(srcMemref))
+  if (!srcMemref.isLastDimUnitStride())
     return emitError("source memref most minor dim must have unit stride");
-  if (!isLastMemrefDimUnitStride(dstMemref))
+  if (!dstMemref.isLastDimUnitStride())
     return emitError("destination memref most minor dim must have unit stride");
   if (!NVGPUDialect::hasSharedMemoryAddressSpace(dstMemref))
     return emitError()
@@ -202,6 +197,18 @@ static LogicalResult verifyMmaSyncOp(Operation *op,
   //
   // Basic verification
   //
+
+  if (aShape.size() != 2) {
+    return op->emitError() << "matrixA must be 2 dimensional vector";
+  }
+
+  if (bShape.size() != 2) {
+    return op->emitError() << "matrixB must be 2 dimensional vector";
+  }
+
+  if (cShape.size() != 2) {
+    return op->emitError() << "matrixC must be 2 dimensional vector";
+  }
 
   auto [m, n, k] = mmaShape;
 
@@ -513,8 +520,8 @@ LogicalResult isAllowedWGMMADataType(Type typeD, Type typeA, Type typeB) {
     return success();
   // F16 += f8 + f8
   // F32 += f8 + f8
-  if ((typeA.isFloat8E5M2() || typeA.isFloat8E4M3FN()) &&
-      (typeB.isFloat8E5M2() || typeB.isFloat8E4M3FN()) &&
+  if (isa<Float8E5M2Type, Float8E4M3FNType>(typeA) &&
+      isa<Float8E5M2Type, Float8E4M3FNType>(typeB) &&
       (typeD.isF32() || typeD.isF16()))
     return success();
 
@@ -536,7 +543,7 @@ LogicalResult isAllowedSizeN(int sizeN, Type typeA) {
                                     80,  96,  112, 128, 144, 160,
                                     176, 192, 208, 224, 240, 256};
   if (typeA.isBF16() || typeA.isF16() || typeA.isF32() || typeA.isTF32() ||
-      typeA.isFloat8E4M3FN() || typeA.isFloat8E5M2())
+      isa<Float8E5M2Type, Float8E4M3FNType>(typeA))
     if (llvm::is_contained(allowedN, sizeN))
       return success();
 
@@ -669,7 +676,7 @@ LogicalResult RcpOp::verify() {
 #include "mlir/Dialect/NVGPU/IR/NVGPUEnums.cpp.inc"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/NVGPU/IR/NVGPU.cpp.inc"
+#include "mlir/Dialect/NVGPU/IR/NVGPUOps.cpp.inc"
 
 #define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/NVGPU/IR/NVGPUTypes.cpp.inc"
+#include "mlir/Dialect/NVGPU/IR/NVGPUTypeDefs.cpp.inc"

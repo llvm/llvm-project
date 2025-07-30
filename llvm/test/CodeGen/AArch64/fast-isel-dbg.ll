@@ -1,5 +1,4 @@
 ; RUN: llc -o - %s -fast-isel -stop-before=finalize-isel | FileCheck %s
-; RUN: llc --try-experimental-debuginfo-iterators -o - %s -fast-isel -stop-before=finalize-isel | FileCheck %s
 
 ; Make sure fast-isel produces DBG_VALUE instructions even if no debug printer
 ; is scheduled because of -stop-before.
@@ -7,8 +6,8 @@ target triple="aarch64--"
 
 ; CHECK-LABEL: name: func
 ; CHECK: DBG_VALUE
-define void @func(i32 %a) !dbg !4 {
-  call void @llvm.dbg.declare(metadata i32 %a, metadata !5, metadata !DIExpression()), !dbg !7
+define void @func(ptr %a) !dbg !4 {
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !5, metadata !DIExpression()), !dbg !7
   ret void
 }
 

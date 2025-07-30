@@ -1,12 +1,12 @@
-; RUN: llc < %s -march=nvptx64 -O2 -mcpu=sm_52 -mattr=+ptx62 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_52 -mattr=+ptx62 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -O2 -mcpu=sm_52 -mattr=+ptx62 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_52 -mattr=+ptx62 | %ptxas-verify %}
 
 declare i32 @llvm.nvvm.activemask()
 
 ; CHECK-LABEL: activemask(
 ;
 ;      CHECK: activemask.b32  %[[REG:.+]];
-; CHECK-NEXT: st.param.b32    [func_retval0+0], %[[REG]];
+; CHECK-NEXT: st.param.b32    [func_retval0], %[[REG]];
 ; CHECK-NEXT: ret;
 define dso_local i32 @activemask() {
 entry:
@@ -18,7 +18,7 @@ entry:
 ;
 ;      CHECK: activemask.b32  %[[REG:.+]];
 ;      CHECK: activemask.b32  %[[REG]];
-;      CHECK: .param.b32    [func_retval0+0], %[[REG]];
+;      CHECK: .param.b32    [func_retval0], %[[REG]];
 ; CHECK-NEXT: ret;
 define dso_local i32 @convergent(i1 %cond) {
 entry:

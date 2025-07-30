@@ -11,9 +11,9 @@
 #define _LIBCPP_EXPERIMENTAL___SIMD_ALIGNED_TAG_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__memory/assume_aligned.h>
 #include <__type_traits/remove_const.h>
-#include <cstddef>
 #include <experimental/__simd/traits.h>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)

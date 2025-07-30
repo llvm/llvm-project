@@ -8,15 +8,21 @@
 //
 
 #include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Analysis.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/ProfileData/CtxInstrContextNode.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
 #include <utility>
@@ -52,14 +58,15 @@ class CtxInstrumentationLowerer final {
   Module &M;
   ModuleAnalysisManager &MAM;
   Type *ContextNodeTy = nullptr;
-  Type *ContextRootTy = nullptr;
+  StructType *FunctionDataTy = nullptr;
 
-  DenseMap<const Function *, Constant *> ContextRootMap;
+  DenseSet<const Function *> ContextRootSet;
   Function *StartCtx = nullptr;
   Function *GetCtx = nullptr;
   Function *ReleaseCtx = nullptr;
   GlobalVariable *ExpectedCalleeTLS = nullptr;
   GlobalVariable *CallsiteInfoTLS = nullptr;
+  Constant *CannotBeRootInitializer = nullptr;
 
 public:
   CtxInstrumentationLowerer(Module &M, ModuleAnalysisManager &MAM);
@@ -99,6 +106,12 @@ std::pair<uint32_t, uint32_t> getNumCountersAndCallsites(const Function &F) {
   }
   return {NumCounters, NumCallsites};
 }
+
+void emitUnsupportedRootError(const Function &F, StringRef Reason) {
+  F.getContext().emitError("[ctxprof] The function " + F.getName() +
+                           " was indicated as context root but " + Reason +
+                           ", which is not supported.");
+}
 } // namespace
 
 // set up tie-in with compiler-rt.
@@ -112,14 +125,34 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
   auto *I32Ty = Type::getInt32Ty(M.getContext());
   auto *I64Ty = Type::getInt64Ty(M.getContext());
 
-  // The ContextRoot type
-  ContextRootTy =
-      StructType::get(M.getContext(), {
-                                          PointerTy,          /*FirstNode*/
-                                          PointerTy,          /*FirstMemBlock*/
-                                          PointerTy,          /*CurrentMem*/
-                                          SanitizerMutexType, /*Taken*/
-                                      });
+#define _PTRDECL(_, __) PointerTy,
+#define _VOLATILE_PTRDECL(_, __) PointerTy,
+#define _CONTEXT_ROOT PointerTy,
+#define _MUTEXDECL(_) SanitizerMutexType,
+
+  FunctionDataTy = StructType::get(
+      M.getContext(), {CTXPROF_FUNCTION_DATA(_PTRDECL, _CONTEXT_ROOT,
+                                             _VOLATILE_PTRDECL, _MUTEXDECL)});
+#undef _PTRDECL
+#undef _CONTEXT_ROOT
+#undef _VOLATILE_PTRDECL
+#undef _MUTEXDECL
+
+#define _PTRDECL(_, __) Constant::getNullValue(PointerTy),
+#define _VOLATILE_PTRDECL(_, __) _PTRDECL(_, __)
+#define _MUTEXDECL(_) Constant::getNullValue(SanitizerMutexType),
+#define _CONTEXT_ROOT                                                          \
+  Constant::getIntegerValue(                                                   \
+      PointerTy,                                                               \
+      APInt(M.getDataLayout().getPointerTypeSizeInBits(PointerTy), 1U)),
+  CannotBeRootInitializer = ConstantStruct::get(
+      FunctionDataTy, {CTXPROF_FUNCTION_DATA(_PTRDECL, _CONTEXT_ROOT,
+                                             _VOLATILE_PTRDECL, _MUTEXDECL)});
+#undef _PTRDECL
+#undef _CONTEXT_ROOT
+#undef _VOLATILE_PTRDECL
+#undef _MUTEXDECL
+
   // The Context header.
   ContextNodeTy = StructType::get(M.getContext(), {
                                                       I64Ty,     /*Guid*/
@@ -128,25 +161,18 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
                                                       I32Ty, /*NumCallsites*/
                                                   });
 
-  // Define a global for each entrypoint. We'll reuse the entrypoint's name as
-  // prefix. We assume the entrypoint names to be unique.
+  // Define a global for each entrypoint. We'll reuse the entrypoint's name
+  // as prefix. We assume the entrypoint names to be unique.
   for (const auto &Fname : ContextRoots) {
     if (const auto *F = M.getFunction(Fname)) {
       if (F->isDeclaration())
         continue;
-      auto *G = M.getOrInsertGlobal(Fname + "_ctx_root", ContextRootTy);
-      cast<GlobalVariable>(G)->setInitializer(
-          Constant::getNullValue(ContextRootTy));
-      ContextRootMap.insert(std::make_pair(F, G));
+      ContextRootSet.insert(F);
       for (const auto &BB : *F)
         for (const auto &I : BB)
           if (const auto *CB = dyn_cast<CallBase>(&I))
-            if (CB->isMustTailCall()) {
-              M.getContext().emitError(
-                  "The function " + Fname +
-                  " was indicated as a context root, but it features musttail "
-                  "calls, which is not supported.");
-            }
+            if (CB->isMustTailCall())
+              emitUnsupportedRootError(*F, "it features musttail calls");
     }
   }
 
@@ -154,29 +180,29 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
   StartCtx = cast<Function>(
       M.getOrInsertFunction(
            CompilerRtAPINames::StartCtx,
-           FunctionType::get(ContextNodeTy->getPointerTo(),
-                             {ContextRootTy->getPointerTo(), /*ContextRoot*/
+           FunctionType::get(PointerTy,
+                             {PointerTy, /*FunctionData*/
                               I64Ty, /*Guid*/ I32Ty,
                               /*NumCounters*/ I32Ty /*NumCallsites*/},
                              false))
           .getCallee());
   GetCtx = cast<Function>(
       M.getOrInsertFunction(CompilerRtAPINames::GetCtx,
-                            FunctionType::get(ContextNodeTy->getPointerTo(),
-                                              {PointerTy, /*Callee*/
+                            FunctionType::get(PointerTy,
+                                              {PointerTy, /*FunctionData*/
+                                               PointerTy, /*Callee*/
                                                I64Ty,     /*Guid*/
                                                I32Ty,     /*NumCounters*/
                                                I32Ty},    /*NumCallsites*/
                                               false))
           .getCallee());
   ReleaseCtx = cast<Function>(
-      M.getOrInsertFunction(
-           CompilerRtAPINames::ReleaseCtx,
-           FunctionType::get(Type::getVoidTy(M.getContext()),
-                             {
-                                 ContextRootTy->getPointerTo(), /*ContextRoot*/
-                             },
-                             false))
+      M.getOrInsertFunction(CompilerRtAPINames::ReleaseCtx,
+                            FunctionType::get(Type::getVoidTy(M.getContext()),
+                                              {
+                                                  PointerTy, /*FunctionData*/
+                                              },
+                                              false))
           .getCallee());
 
   // Declare the TLSes we will need to use.
@@ -204,6 +230,19 @@ PreservedAnalyses PGOCtxProfLoweringPass::run(Module &M,
 bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
   if (F.isDeclaration())
     return false;
+
+  // Probably pointless to try to do anything here, unlikely to be
+  // performance-affecting.
+  if (!llvm::canReturn(F)) {
+    for (auto &BB : F)
+      for (auto &I : make_early_inc_range(BB))
+        if (isa<InstrProfCntrInstBase>(&I))
+          I.eraseFromParent();
+    if (ContextRootSet.contains(&F))
+      emitUnsupportedRootError(F, "it does not return");
+    return true;
+  }
+
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
@@ -214,10 +253,26 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
   Value *RealContext = nullptr;
 
   StructType *ThisContextType = nullptr;
-  Value *TheRootContext = nullptr;
+  Value *TheRootFuctionData = nullptr;
   Value *ExpectedCalleeTLSAddr = nullptr;
   Value *CallsiteInfoTLSAddr = nullptr;
+  const bool HasMusttail = [&F]() {
+    for (auto &BB : F)
+      for (auto &I : BB)
+        if (auto *CB = dyn_cast<CallBase>(&I))
+          if (CB->isMustTailCall())
+            return true;
+    return false;
+  }();
 
+  if (HasMusttail && ContextRootSet.contains(&F)) {
+    F.getContext().emitError(
+        "[ctx_prof] A function with musttail calls was explicitly requested as "
+        "root. That is not supported because we cannot instrument a return "
+        "instruction to release the context: " +
+        F.getName());
+    return false;
+  }
   auto &Head = F.getEntryBlock();
   for (auto &I : Head) {
     // Find the increment intrinsic in the entry basic block.
@@ -225,7 +280,6 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
       assert(Mark->getIndex()->isZero());
 
       IRBuilder<> Builder(Mark);
-
       Guid = Builder.getInt64(
           AssignGUIDPass::getGUID(cast<Function>(*Mark->getNameValue())));
       // The type of the context of this function is now knowable since we have
@@ -237,21 +291,30 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
            ArrayType::get(Builder.getPtrTy(), NumCallsites)});
       // Figure out which way we obtain the context object for this function -
       // if it's an entrypoint, then we call StartCtx, otherwise GetCtx. In the
-      // former case, we also set TheRootContext since we need to release it
+      // former case, we also set TheRootFuctionData since we need to release it
       // at the end (plus it can be used to know if we have an entrypoint or a
       // regular function)
-      auto Iter = ContextRootMap.find(&F);
-      if (Iter != ContextRootMap.end()) {
-        TheRootContext = Iter->second;
+      // Don't set a name, they end up taking a lot of space and we don't need
+      // them.
+
+      // Zero-initialize the FunctionData, except for functions that have
+      // musttail calls. There, we set the CtxRoot field to 1, which will be
+      // treated as a "can't be set as root".
+      TheRootFuctionData = new GlobalVariable(
+          M, FunctionDataTy, false, GlobalVariable::InternalLinkage,
+          HasMusttail ? CannotBeRootInitializer
+                      : Constant::getNullValue(FunctionDataTy));
+
+      if (ContextRootSet.contains(&F)) {
         Context = Builder.CreateCall(
-            StartCtx, {TheRootContext, Guid, Builder.getInt32(NumCounters),
+            StartCtx, {TheRootFuctionData, Guid, Builder.getInt32(NumCounters),
                        Builder.getInt32(NumCallsites)});
         ORE.emit(
             [&] { return OptimizationRemark(DEBUG_TYPE, "Entrypoint", &F); });
       } else {
-        Context =
-            Builder.CreateCall(GetCtx, {&F, Guid, Builder.getInt32(NumCounters),
-                                        Builder.getInt32(NumCallsites)});
+        Context = Builder.CreateCall(GetCtx, {TheRootFuctionData, &F, Guid,
+                                              Builder.getInt32(NumCounters),
+                                              Builder.getInt32(NumCallsites)});
         ORE.emit([&] {
           return OptimizationRemark(DEBUG_TYPE, "RegularFunction", &F);
         });
@@ -264,7 +327,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
         auto *Index = Builder.CreateAnd(CtxAsInt, Builder.getInt64(1));
         // The GEPs corresponding to that index, in the respective TLS.
         ExpectedCalleeTLSAddr = Builder.CreateGEP(
-            Builder.getInt8Ty()->getPointerTo(),
+            PointerType::getUnqual(F.getContext()),
             Builder.CreateThreadLocalAddress(ExpectedCalleeTLS), {Index});
         CallsiteInfoTLSAddr = Builder.CreateGEP(
             Builder.getInt32Ty(),
@@ -277,7 +340,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
       // with counters) stays the same.
       RealContext = Builder.CreateIntToPtr(
           Builder.CreateAnd(CtxAsInt, Builder.getInt64(-2)),
-          ThisContextType->getPointerTo());
+          PointerType::getUnqual(F.getContext()));
       I.eraseFromParent();
       break;
     }
@@ -333,22 +396,41 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
           break;
         }
         I.eraseFromParent();
-      } else if (TheRootContext && isa<ReturnInst>(I)) {
+      } else if (!HasMusttail && isa<ReturnInst>(I)) {
         // Remember to release the context if we are an entrypoint.
         IRBuilder<> Builder(&I);
-        Builder.CreateCall(ReleaseCtx, {TheRootContext});
+        Builder.CreateCall(ReleaseCtx, {TheRootFuctionData});
         ContextWasReleased = true;
       }
     }
   }
-  // FIXME: This would happen if the entrypoint tailcalls. A way to fix would be
-  // to disallow this, (so this then stays as an error), another is to detect
-  // that and then do a wrapper or disallow the tail call. This only affects
-  // instrumentation, when we want to detect the call graph.
-  if (TheRootContext && !ContextWasReleased)
+  if (!HasMusttail && !ContextWasReleased)
     F.getContext().emitError(
-        "[ctx_prof] An entrypoint was instrumented but it has no `ret` "
+        "[ctx_prof] A function that doesn't have musttail calls was "
+        "instrumented but it has no `ret` "
         "instructions above which to release the context: " +
         F.getName());
   return true;
+}
+
+PreservedAnalyses NoinlineNonPrevailing::run(Module &M,
+                                             ModuleAnalysisManager &MAM) {
+  bool Changed = false;
+  for (auto &F : M) {
+    if (F.isDeclaration())
+      continue;
+    if (F.hasFnAttribute(Attribute::NoInline))
+      continue;
+    if (!F.isWeakForLinker())
+      continue;
+
+    if (F.hasFnAttribute(Attribute::AlwaysInline))
+      F.removeFnAttr(Attribute::AlwaysInline);
+
+    F.addFnAttr(Attribute::NoInline);
+    Changed = true;
+  }
+  if (Changed)
+    return PreservedAnalyses::none();
+  return PreservedAnalyses::all();
 }

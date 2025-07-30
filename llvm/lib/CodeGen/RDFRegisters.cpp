@@ -263,7 +263,7 @@ void PhysicalRegisterInfo::print(raw_ostream &OS, RegisterRef A) const {
   } else {
     assert(A.isMask());
     // RegMask SS flag is preserved by idx().
-    unsigned Idx = Register::stackSlot2Index(A.idx());
+    unsigned Idx = Register(A.idx()).stackSlotIndex();
     const char *Fmt = Idx < 0x10000 ? "%04x" : "%08x";
     OS << "M#" << format(Fmt, Idx);
   }

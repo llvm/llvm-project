@@ -24,12 +24,11 @@
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_equality_comparable.h>
 #include <__type_traits/is_integral.h>
-#include <__type_traits/is_same.h>
 #include <__type_traits/is_signed.h>
 #include <__utility/move.h>
 #include <limits>
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 #  include <cwchar>
 #endif
 
@@ -65,7 +64,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find(_Tp* __first, _T
   return __last;
 }
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <class _Tp,
           class _Up,
           class _Proj,
@@ -77,7 +76,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find(_Tp* __first, _T
     return __ret;
   return __last;
 }
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 // TODO: This should also be possible to get right with different signedness
 // cast integral types to allow vectorization
@@ -98,7 +97,7 @@ __find(_Tp* __first, _Tp* __last, const _Up& __value, _Proj& __proj) {
 // __bit_iterator implementation
 template <bool _ToFind, class _Cp, bool _IsConst>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, _IsConst>
-__find_bool(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n) {
+__find_bool(__bit_iterator<_Cp, _IsConst> __first, typename __size_difference_type_traits<_Cp>::size_type __n) {
   using _It            = __bit_iterator<_Cp, _IsConst>;
   using __storage_type = typename _It::__storage_type;
 
@@ -107,10 +106,10 @@ __find_bool(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n) 
   if (__first.__ctz_ != 0) {
     __storage_type __clz_f = static_cast<__storage_type>(__bits_per_word - __first.__ctz_);
     __storage_type __dn    = std::min(__clz_f, __n);
-    __storage_type __m     = (~__storage_type(0) << __first.__ctz_) & (~__storage_type(0) >> (__clz_f - __dn));
+    __storage_type __m     = std::__middle_mask<__storage_type>(__clz_f - __dn, __first.__ctz_);
     __storage_type __b     = std::__invert_if<!_ToFind>(*__first.__seg_) & __m;
     if (__b)
-      return _It(__first.__seg_, static_cast<unsigned>(std::__libcpp_ctz(__b)));
+      return _It(__first.__seg_, static_cast<unsigned>(std::__countr_zero(__b)));
     if (__n == __dn)
       return __first + __n;
     __n -= __dn;
@@ -120,14 +119,14 @@ __find_bool(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n) 
   for (; __n >= __bits_per_word; ++__first.__seg_, __n -= __bits_per_word) {
     __storage_type __b = std::__invert_if<!_ToFind>(*__first.__seg_);
     if (__b)
-      return _It(__first.__seg_, static_cast<unsigned>(std::__libcpp_ctz(__b)));
+      return _It(__first.__seg_, static_cast<unsigned>(std::__countr_zero(__b)));
   }
   // do last partial word
   if (__n > 0) {
-    __storage_type __m = ~__storage_type(0) >> (__bits_per_word - __n);
+    __storage_type __m = std::__trailing_mask<__storage_type>(__bits_per_word - __n);
     __storage_type __b = std::__invert_if<!_ToFind>(*__first.__seg_) & __m;
     if (__b)
-      return _It(__first.__seg_, static_cast<unsigned>(std::__libcpp_ctz(__b)));
+      return _It(__first.__seg_, static_cast<unsigned>(std::__countr_zero(__b)));
   }
   return _It(__first.__seg_, static_cast<unsigned>(__n));
 }
@@ -136,8 +135,10 @@ template <class _Cp, bool _IsConst, class _Tp, class _Proj, __enable_if_t<__is_i
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator<_Cp, _IsConst>
 __find(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, const _Tp& __value, _Proj&) {
   if (static_cast<bool>(__value))
-    return std::__find_bool<true>(__first, static_cast<typename _Cp::size_type>(__last - __first));
-  return std::__find_bool<false>(__first, static_cast<typename _Cp::size_type>(__last - __first));
+    return std::__find_bool<true>(
+        __first, static_cast<typename __size_difference_type_traits<_Cp>::size_type>(__last - __first));
+  return std::__find_bool<false>(
+      __first, static_cast<typename __size_difference_type_traits<_Cp>::size_type>(__last - __first));
 }
 
 // segmented iterator implementation
@@ -148,7 +149,7 @@ struct __find_segment;
 template <class _SegmentedIterator,
           class _Tp,
           class _Proj,
-          __enable_if_t<__is_segmented_iterator<_SegmentedIterator>::value, int> = 0>
+          __enable_if_t<__is_segmented_iterator_v<_SegmentedIterator>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _SegmentedIterator
 __find(_SegmentedIterator __first, _SegmentedIterator __last, const _Tp& __value, _Proj& __proj) {
   return std::__find_segment_if(std::move(__first), std::move(__last), __find_segment<_Tp>(__value), __proj);

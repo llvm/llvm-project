@@ -20,6 +20,7 @@
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
+#include "mlir/Interfaces/IndexingMapOpInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/RawOstreamExtras.h"
@@ -120,6 +121,16 @@ bool isaConvolutionOpInterface(LinalgOp linalgOp,
 /// Checks whether `linalgOp` is semantically equivalent to a `linalg.copyOp`.
 bool isaCopyOpInterface(LinalgOp linalgOp);
 
+/// Checks whether `genericOp` is semantically equivalent to a
+///  `linalg.broadcast`. Returns broadcast dimensions if true.
+std::optional<SmallVector<int64_t>>
+isaBroadcastOpInterface(GenericOp genericOp);
+
+/// Checks whether `genericOp` is semantically equivalent to a
+///  `linalg.transpose`. Returns permuted dimensions if true.
+std::optional<SmallVector<int64_t>>
+isaTransposeOpInterface(GenericOp genericOp);
+
 /// Checks whether a given `genericOp` is semantically equivalent to a single
 /// linalgelementwise unary op. e.g. linalg.exp.
 /// A linalg.generic body could be a series of unary elementwise ops e.g.
@@ -132,6 +143,9 @@ bool isaElemwiseSingleUnaryOpInterface(GenericOp genericOp);
 bool isaElemwiseSingleBinaryOpInterface(GenericOp genericOp);
 
 /// Checks whether `genericOp` is semantically equivalent to a `linalg.fill`.
+/// Supports two patterns:
+/// 1. External: linalg.generic ins(%scalar) outs(%tensor) { yield %scalar }
+/// 2. Inlined: linalg.generic outs(%tensor) { yield %constant }
 /// Returns the scalar fill value if true.
 std::optional<Value> isaFillOpInterface(GenericOp genericOp);
 
@@ -210,5 +224,8 @@ LogicalResult verifyStructuredOpInterface(Operation *op);
 
 /// Include the generated interface declarations.
 #include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h.inc"
+
+/// Include the generated relayout interface declarations.
+#include "mlir/Dialect/Linalg/IR/RelayoutOpInterface.h.inc"
 
 #endif // MLIR_DIALECT_LINALG_IR_LINALGINTERFACES_H_

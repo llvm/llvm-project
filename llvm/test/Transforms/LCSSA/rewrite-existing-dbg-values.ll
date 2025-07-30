@@ -1,5 +1,4 @@
 ; RUN: opt -S -passes=lcssa < %s | FileCheck %s
-; RUN: opt -S -passes=lcssa < %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; Reproducer for PR39019.
 ;

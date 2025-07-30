@@ -42,7 +42,7 @@ call execute_command_line(command, isWait, exitVal, cmdVal, msg)
 ! CHECK-NEXT:        %[[exitstat:.*]] = fir.convert %[[exitstatBox]] : (!fir.box<i32>) -> !fir.box<none>
 ! CHECK-NEXT:        %[[cmdstat:.*]] = fir.convert %[[cmdstatBox]] : (!fir.box<i32>) -> !fir.box<none>
 ! CHECK-NEXT:        %[[cmdmsg:.*]] = fir.convert %[[cmdmsgBox]] : (!fir.box<!fir.char<1,30>>) -> !fir.box<none>
-! CHECK:             %[[VAL_22:.*]] = fir.call @_FortranAExecuteCommandLine(%[[command]], %[[wait]], %[[exitstat]], %[[cmdstat]], %[[cmdmsg]], %[[VAL_20:.*]], %[[c13]]) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:             fir.call @_FortranAExecuteCommandLine(%[[command]], %[[wait]], %[[exitstat]], %[[cmdstat]], %[[cmdmsg]], %[[VAL_20:.*]], %[[c13]]) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 ! CHECK-NEXT:        return
 end subroutine all_args
 
@@ -61,6 +61,6 @@ call execute_command_line(command)
 ! CHECK-NEXT:     %[[commandBox:.*]] = fir.embox %[[commandDeclare]] : (!fir.ref<!fir.char<1,30>>) -> !fir.box<!fir.char<1,30>>
 ! CHECK-NEXT:     %[[absent:.*]] = fir.absent !fir.box<none>
 ! CHECK:          %[[command:.*]] = fir.convert %[[commandBox]] : (!fir.box<!fir.char<1,30>>) -> !fir.box<none> 
-! CHECK:          %[[VAL_8:.*]] = fir.call @_FortranAExecuteCommandLine(%[[command]], %true, %[[absent]], %[[absent]], %[[absent]], %[[VAL_7:.*]], %[[c52]]) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:          fir.call @_FortranAExecuteCommandLine(%[[command]], %true, %[[absent]], %[[absent]], %[[absent]], %[[VAL_7:.*]], %[[c52]]) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 ! CHECK-NEXT:     return
 end subroutine only_command_default_wait_true

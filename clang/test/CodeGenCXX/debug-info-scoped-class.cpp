@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=standalone -std=c++11 \
+// RUN: %clang_cc1 -Wno-error=return-type -emit-llvm -debug-info-kind=standalone -std=c++11 \
 // RUN:   -triple thumbv7-apple-ios %s -o - | FileCheck %s
 
 // This forward-declared scoped enum will be created while building its own

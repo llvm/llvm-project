@@ -7,7 +7,7 @@ int x=sizeof(zxcv);
 int y=__alignof__(zxcv);
 
 
-void *test(int *i) {
+void test(int *i) {
  short a = 1;
  i += a;
  i + a;
@@ -18,7 +18,7 @@ _Bool test2b;
 int test2(void) { if (test2b); return 0; }
 
 // PR1921
-int test3(void) {
+void test3(void) {
   const unsigned char *bp;
   bp -= (short)1;
 }

@@ -1,0 +1,22 @@
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: llc -filetype=obj -o %t/foo.o %S/Inputs/foo-ret-0.ll
+# RUN: llc -filetype=obj -o %t/bar.o %S/Inputs/bar-ret-0.ll
+# RUN: llvm-ar crs %t/libFoo.a %t/foo.o %t/bar.o
+# RUN: llc -filetype=obj -o %t/main.o %S/Inputs/main-ret-0.ll
+# RUN: llvm-jitlink -noexec -all_load -show-init-es %t/main.o -L%t -lFoo \
+# RUN:     | FileCheck %s
+#
+# FIXME: Enable this test on Windows/arm64 once that backend is available.
+# UNSUPPORTED: target=aarch64-{{.*}}-windows-{{.*}}
+#
+# On MinGW targets, when compiling the main() function, it gets
+# an implicitly generated call to __main(), which is missing in
+# this context.
+# XFAIL: target={{.*}}-windows-gnu
+#
+# Check that the llvm-jitlink -all-load option loads all members of
+# multi-file archives.
+#
+# CHECK-DAG: main{{.*}}main.o
+# CHECK-DAG: foo{{.*}}libFoo.a[0](foo.o)
+# CHECK-DAG: bar{{.*}}libFoo.a[1](bar.o)

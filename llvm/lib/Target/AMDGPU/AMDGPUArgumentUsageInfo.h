@@ -9,6 +9,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUARGUMENTUSAGEINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUARGUMENTUSAGEINFO_H
 
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/Pass.h"
@@ -161,6 +162,8 @@ struct AMDGPUFunctionArgInfo {
 
   // Map the index of preloaded kernel arguments to its descriptor.
   SmallDenseMap<int, KernArgPreloadDescriptor> PreloadKernArgs{};
+  // The first user SGPR allocated for kernarg preloading.
+  Register FirstKernArgPreloadReg;
 
   std::tuple<const ArgDescriptor *, const TargetRegisterClass *, LLT>
   getPreloadedValue(PreloadedValue Value) const;

@@ -30,7 +30,7 @@
 ; emits both typedefs at the same lexical scope (3), which is wrong.
 ; GCC emit correct lexical scope for both typedefs.
 
-; RUN: llvm-debuginfo-analyzer --attribute=level,format,producer \
+; RUN: llvm-debuginfo-analyzer --attribute=language,level,format,producer \
 ; RUN:                         --output-sort=kind \
 ; RUN:                         --print=symbols,types,lines \
 ; RUN:                         %p/Inputs/pr-44884-dwarf-clang.o \
@@ -42,6 +42,7 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]             {CompileUnit} 'pr-44884.cpp'
 ; ONE-NEXT: [002]               {Producer} 'clang version 15.0.0 {{.*}}'
+; ONE-NEXT: [002]               {Language} 'DW_LANG_C_plus_plus_14'
 ; ONE-NEXT: [002]     1         {Function} extern not_inlined 'bar' -> 'int'
 ; ONE-NEXT: [003]     1           {Parameter} 'Input' -> 'float'
 ; ONE-NEXT: [003]     1           {Line}
@@ -76,6 +77,7 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]             {CompileUnit} 'pr-44884.cpp'
 ; ONE-NEXT: [002]               {Producer} 'GNU C++14 10.3.0 {{.*}}'
+; ONE-NEXT: [002]               {Language} 'DW_LANG_C_plus_plus'
 ; ONE-NEXT: [002]     1         {Function} extern not_inlined 'bar' -> 'int'
 ; ONE-NEXT: [003]     1           {Parameter} 'Input' -> 'float'
 ; ONE-NEXT: [003]     1           {Line}

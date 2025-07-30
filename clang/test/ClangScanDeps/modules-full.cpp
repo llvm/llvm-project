@@ -41,8 +41,8 @@
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_H1_DINCLUDE:[A-Z0-9]+]]",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/header.h",
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/header.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "header1"
@@ -60,8 +60,8 @@
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_H1:[A-Z0-9]+]]",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/header.h",
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/header.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "header1"
@@ -79,8 +79,8 @@
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_H2_DINCLUDE]]",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/header2.h",
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/header2.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "header2"

@@ -1,0 +1,27 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=gcn-dpp-combine -mattr=+real-true16 -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=GCN
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -run-pass=gcn-dpp-combine -mattr=+real-true16 -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=GCN
+# XUN: llc -mtriple=amdgcn -mcpu=gfx1200 -run-pass=gcn-dpp-combine -mattr=+real-true16 -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=GCN,GFX1150
+
+# FIXME-TRUE16 add gfx1200 runline when we have those true16 instructions supported
+
+---
+
+# V_MOV_B16_t16_e64_dpp is unsupported to combine
+# GCN-label: name: vop3_u16
+# GCN: %4:vgpr_16 = V_MOV_B16_t16_e64_dpp %3, 0, %1, 0, 1, 15, 15, 1, implicit $exec
+# GCN: %6:vgpr_16 = V_MOV_B16_t16_e64_dpp %3, 0, %5, 0, 1, 15, 15, 1, implicit $exec
+name: vop3_u16
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
+
+    %0:vgpr_16 = COPY $vgpr0
+    %1:vgpr_16 = COPY $vgpr1
+    %2:vgpr_16 = COPY $vgpr2
+    %3:vgpr_16 = IMPLICIT_DEF
+    %4:vgpr_16 = V_MOV_B16_t16_e64_dpp %3, 0, %1, 0, 1, 15, 15, 1, implicit $exec
+    %5:vgpr_16 = V_ADD_NC_U16_t16_e64 0, %4, 0, %3, 0, 0, implicit $exec
+    %6:vgpr_16 = V_MOV_B16_t16_e64_dpp %3, 0, %5, 0, 1, 15, 15, 1, implicit $exec
+    %7:vgpr_16 = V_ADD_NC_U16_t16_e64 4, %6, 8, %5, 0, 0, implicit $exec
+...

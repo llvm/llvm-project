@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Support/Compiler.h"
 #include <utility>
 
 namespace llvm {
@@ -32,24 +33,24 @@ template <typename T> class SmallVectorImpl;
 /// computing dominators and loop info) analysis.
 ///
 /// The output is added to Result, as pairs of <from,to> edge info.
-void FindFunctionBackedges(
+LLVM_ABI void FindFunctionBackedges(
     const Function &F,
-    SmallVectorImpl<std::pair<const BasicBlock *, const BasicBlock *> > &
-        Result);
+    SmallVectorImpl<std::pair<const BasicBlock *, const BasicBlock *>> &Result);
 
 /// Search for the specified successor of basic block BB and return its position
 /// in the terminator instruction's list of successors.  It is an error to call
 /// this with a block that is not a successor.
-unsigned GetSuccessorNumber(const BasicBlock *BB, const BasicBlock *Succ);
+LLVM_ABI unsigned GetSuccessorNumber(const BasicBlock *BB,
+                                     const BasicBlock *Succ);
 
 /// Return true if the specified edge is a critical edge. Critical edges are
 /// edges from a block with multiple successors to a block with multiple
 /// predecessors.
 ///
-bool isCriticalEdge(const Instruction *TI, unsigned SuccNum,
-                    bool AllowIdenticalEdges = false);
-bool isCriticalEdge(const Instruction *TI, const BasicBlock *Succ,
-                    bool AllowIdenticalEdges = false);
+LLVM_ABI bool isCriticalEdge(const Instruction *TI, unsigned SuccNum,
+                             bool AllowIdenticalEdges = false);
+LLVM_ABI bool isCriticalEdge(const Instruction *TI, const BasicBlock *Succ,
+                             bool AllowIdenticalEdges = false);
 
 /// Determine whether instruction 'To' is reachable from 'From', without passing
 /// through any blocks in ExclusionSet, returning true if uncertain.
@@ -66,7 +67,7 @@ bool isCriticalEdge(const Instruction *TI, const BasicBlock *Succ,
 /// we find a block that dominates the block containing 'To'. DT is most useful
 /// on branchy code but not loops, and LI is most useful on code with loops but
 /// does not help on branchy code outside loops.
-bool isPotentiallyReachable(
+LLVM_ABI bool isPotentiallyReachable(
     const Instruction *From, const Instruction *To,
     const SmallPtrSetImpl<BasicBlock *> *ExclusionSet = nullptr,
     const DominatorTree *DT = nullptr, const LoopInfo *LI = nullptr);
@@ -77,7 +78,7 @@ bool isPotentiallyReachable(
 /// Determine whether there is a path from From to To within a single function.
 /// Returns false only if we can prove that once 'From' has been reached then
 /// 'To' can not be executed. Conservatively returns true.
-bool isPotentiallyReachable(
+LLVM_ABI bool isPotentiallyReachable(
     const BasicBlock *From, const BasicBlock *To,
     const SmallPtrSetImpl<BasicBlock *> *ExclusionSet = nullptr,
     const DominatorTree *DT = nullptr, const LoopInfo *LI = nullptr);
@@ -91,7 +92,7 @@ bool isPotentiallyReachable(
 /// in 'ExclusionSet'. Returns false only if we can prove that once any block
 /// in 'Worklist' has been reached then 'StopBB' can not be executed.
 /// Conservatively returns true.
-bool isPotentiallyReachableFromMany(
+LLVM_ABI bool isPotentiallyReachableFromMany(
     SmallVectorImpl<BasicBlock *> &Worklist, const BasicBlock *StopBB,
     const SmallPtrSetImpl<BasicBlock *> *ExclusionSet,
     const DominatorTree *DT = nullptr, const LoopInfo *LI = nullptr);
@@ -102,7 +103,7 @@ bool isPotentiallyReachableFromMany(
 /// only if we can prove that once any block in 'Worklist' has been reached then
 /// no blocks in 'StopSet' can be executed without passing through any blocks in
 /// 'ExclusionSet'. Conservatively returns true.
-bool isManyPotentiallyReachableFromMany(
+LLVM_ABI bool isManyPotentiallyReachableFromMany(
     SmallVectorImpl<BasicBlock *> &Worklist,
     const SmallPtrSetImpl<const BasicBlock *> &StopSet,
     const SmallPtrSetImpl<BasicBlock *> *ExclusionSet,
@@ -174,6 +175,29 @@ bool containsIrreducibleCFG(RPOTraversalT &RPOTraversal, const LoopInfoT &LI) {
 
   return false;
 }
-} // End llvm namespace
+
+// Returns true if these basic blocks belong to a presplit coroutine and the
+// edge corresponds to the 'default' case in the switch statement in the
+// pattern:
+//
+// %0 = call i8 @llvm.coro.suspend(token none, i1 false)
+// switch i8 %0, label %suspend [i8 0, label %resume
+//                               i8 1, label %cleanup]
+//
+// i.e. the edge to the `%suspend` BB. This edge is special in that it will
+// be elided by coroutine lowering (coro-split), and the `%suspend` BB needs
+// to be kept as-is. It's not a real CFG edge - post-lowering, it will end
+// up being a `ret`, and it must be thus lowerable to support symmetric
+// transfer. For example:
+//  - this edge is not a loop exit edge if encountered in a loop (and should
+//    be ignored)
+//  - must not be split for PGO instrumentation, for example.
+LLVM_ABI bool isPresplitCoroSuspendExitEdge(const BasicBlock &Src,
+                                            const BasicBlock &Dest);
+
+/// Return true if there is at least a path through which F can return, false if
+/// there is no such path.
+LLVM_ABI bool canReturn(const Function &F);
+} // namespace llvm
 
 #endif

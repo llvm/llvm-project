@@ -1,1 +1,1 @@
-RUN: llc -O0 -march=xcore -asm-verbose < %S/../Inputs/DbgValueOtherTargets.ll | FileCheck %S/../Inputs/DbgValueOtherTargets.ll
+RUN: llc -O0 -mtriple=xcore -asm-verbose < %S/../Inputs/DbgValueOtherTargets.ll | FileCheck %S/../Inputs/DbgValueOtherTargets.ll

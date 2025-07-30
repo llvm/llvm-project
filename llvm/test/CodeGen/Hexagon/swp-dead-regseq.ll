@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner < %s
+; RUN: llc -mtriple=hexagon -enable-pipeliner < %s
 ; REQUIRES: asserts
 
 ; Check that a dead REG_SEQUENCE doesn't ICE.

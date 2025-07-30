@@ -22,8 +22,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetFolder.h"
+#include "llvm/IR/CmpPredicate.h"
 #include "llvm/IR/IRBuilderFolder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Constant;
@@ -31,11 +33,11 @@ class Constant;
 /// InstSimplifyFolder - Use InstructionSimplify to fold operations to existing
 /// values. Also applies target-specific constant folding when not using
 /// InstructionSimplify.
-class InstSimplifyFolder final : public IRBuilderFolder {
+class LLVM_ABI InstSimplifyFolder final : public IRBuilderFolder {
   TargetFolder ConstFolder;
   SimplifyQuery SQ;
 
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
 public:
   explicit InstSimplifyFolder(const DataLayout &DL) : ConstFolder(DL), SQ(DL) {}

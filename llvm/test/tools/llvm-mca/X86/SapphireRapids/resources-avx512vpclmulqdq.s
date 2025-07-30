@@ -33,9 +33,9 @@ vpclmulqdq    $11, (%rax), %zmm17, %zmm19
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT:  -      -     0.33   0.33    -     2.00    -      -      -      -      -     0.33    -
+# CHECK-NEXT:  -      -     0.33   0.33    -     2.00    -      -      -      -     0.33    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpclmulqdq	$11, %zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpclmulqdq	$11, (%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpclmulqdq	$11, (%rax), %zmm17, %zmm19

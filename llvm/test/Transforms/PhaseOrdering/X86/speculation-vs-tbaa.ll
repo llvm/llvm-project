@@ -40,9 +40,9 @@ define void @licm(ptr align 8 dereferenceable(8) %_M_start.i, i64 %numElem) {
 ; O23:       vector.body:
 ; O23-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; O23-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i64 [[INDEX]]
-; O23-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 16
-; O23-NEXT:    store <2 x double> <double 2.000000e+00, double 2.000000e+00>, ptr [[TMP1]], align 8, !tbaa [[TBAA8:![0-9]+]]
-; O23-NEXT:    store <2 x double> <double 2.000000e+00, double 2.000000e+00>, ptr [[TMP2]], align 8, !tbaa [[TBAA8]]
+; O23-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 16
+; O23-NEXT:    store <2 x double> splat (double 2.000000e+00), ptr [[TMP1]], align 8, !tbaa [[TBAA8:![0-9]+]]
+; O23-NEXT:    store <2 x double> splat (double 2.000000e+00), ptr [[TMP2]], align 8, !tbaa [[TBAA8]]
 ; O23-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; O23-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; O23-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]

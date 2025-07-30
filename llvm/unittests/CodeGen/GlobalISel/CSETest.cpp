@@ -75,6 +75,138 @@ TEST_F(AArch64GISelMITest, TestCSE) {
   auto MIBUnmerge2 = CSEB.buildUnmerge({s32, s32}, Copies[0]);
   EXPECT_TRUE(&*MIBUnmerge == &*MIBUnmerge2);
 
+  // Check G_FADD
+  {
+    auto MIBFAdd = CSEB.buildFAdd(s32, Copies[0], Copies[1]);
+    auto MIBFAdd2 = CSEB.buildFAdd(s32, Copies[0], Copies[1]);
+    EXPECT_TRUE(&*MIBFAdd == &*MIBFAdd2);
+
+    auto MIBFAdd3 =
+        CSEB.buildFAdd(s32, Copies[0], Copies[1], MachineInstr::FmNsz);
+    EXPECT_FALSE(&*MIBFAdd == &*MIBFAdd3);
+
+    MIBFAdd2->setFlag(MachineInstr::FmNsz);
+    MIBFAdd2->clearFlag(MachineInstr::FmNsz);
+    EXPECT_TRUE(&*MIBFAdd == &*MIBFAdd2);
+  }
+
+  // Check G_FSUB
+  {
+    auto MIBFSub = CSEB.buildFSub(s32, Copies[0], Copies[1]);
+    auto MIBFSub2 = CSEB.buildFSub(s32, Copies[0], Copies[1]);
+    EXPECT_TRUE(&*MIBFSub == &*MIBFSub2);
+
+    auto MIBFSub3 =
+        CSEB.buildFSub(s32, Copies[0], Copies[1], MachineInstr::FmNoNans);
+    EXPECT_FALSE(&*MIBFSub == &*MIBFSub3);
+
+    MIBFSub2->setFlag(MachineInstr::FmNoNans);
+    MIBFSub2->clearFlag(MachineInstr::FmNoNans);
+    EXPECT_TRUE(&*MIBFSub == &*MIBFSub2);
+  }
+
+  // Check G_FMUL
+  {
+    auto MIBFMul = CSEB.buildFMul(s32, Copies[0], Copies[1]);
+    auto MIBFMul2 = CSEB.buildFMul(s32, Copies[0], Copies[1]);
+    EXPECT_TRUE(&*MIBFMul == &*MIBFMul2);
+
+    auto MIBFMul3 =
+        CSEB.buildFMul(s32, Copies[0], Copies[1], MachineInstr::FmNoNans);
+    EXPECT_FALSE(&*MIBFMul == &*MIBFMul3);
+
+    MIBFMul2->setFlag(MachineInstr::FmNoNans);
+    MIBFMul2->clearFlag(MachineInstr::FmNoNans);
+    EXPECT_TRUE(&*MIBFMul == &*MIBFMul2);
+  }
+
+  // Check G_FDIV
+  {
+    auto MIBFDiv = CSEB.buildFDiv(s32, Copies[0], Copies[1]);
+    auto MIBFDiv2 = CSEB.buildFDiv(s32, Copies[0], Copies[1]);
+    EXPECT_TRUE(&*MIBFDiv == &*MIBFDiv2);
+
+    auto MIBFDiv3 =
+        CSEB.buildFDiv(s32, Copies[0], Copies[1], MachineInstr::FmNoNans);
+    EXPECT_FALSE(&*MIBFDiv == &*MIBFDiv3);
+
+    MIBFDiv2->setFlag(MachineInstr::FmNoNans);
+    MIBFDiv2->clearFlag(MachineInstr::FmNoNans);
+    EXPECT_TRUE(&*MIBFDiv == &*MIBFDiv2);
+  }
+
+  // Check G_FABS
+  {
+    auto MIBFAbs = CSEB.buildFAbs(s32, Copies[0]);
+    auto MIBFAbs2 = CSEB.buildFAbs(s32, Copies[0]);
+    EXPECT_TRUE(&*MIBFAbs == &*MIBFAbs2);
+
+    auto MIBFAbs3 = CSEB.buildFAbs(s32, Copies[0], MachineInstr::FmNsz);
+    EXPECT_FALSE(&*MIBFAbs == &*MIBFAbs3);
+
+    MIBFAbs2->setFlag(MachineInstr::FmNsz);
+    MIBFAbs2->clearFlag(MachineInstr::FmNsz);
+    EXPECT_TRUE(&*MIBFAbs == &*MIBFAbs2);
+  }
+
+  // Check G_FMINNUM/F_MAXNUM:
+  {
+    auto MIBFMinNum = CSEB.buildFMinNum(s32, Copies[0], Copies[1]);
+    auto MIBFMinNum2 = CSEB.buildFMinNum(s32, Copies[0], Copies[1]);
+    EXPECT_TRUE(&*MIBFMinNum == &*MIBFMinNum2);
+
+    auto MIBFMinNum3 =
+        CSEB.buildFMinNum(s32, Copies[0], Copies[1], MachineInstr::FmNsz);
+    EXPECT_FALSE(&*MIBFMinNum == &*MIBFMinNum3);
+
+    MIBFMinNum2->setFlag(MachineInstr::FmNsz);
+    MIBFMinNum2->clearFlag(MachineInstr::FmNsz);
+    EXPECT_TRUE(&*MIBFMinNum == &*MIBFMinNum2);
+  }
+
+  {
+    auto MIBFMaxNum = CSEB.buildFMaxNum(s32, Copies[0], Copies[1]);
+    auto MIBFMaxNum2 = CSEB.buildFMaxNum(s32, Copies[0], Copies[1]);
+    EXPECT_TRUE(&*MIBFMaxNum == &*MIBFMaxNum2);
+
+    auto MIBFMaxNum3 =
+        CSEB.buildFMaxNum(s32, Copies[0], Copies[1], MachineInstr::FmNsz);
+    EXPECT_FALSE(&*MIBFMaxNum == &*MIBFMaxNum3);
+
+    MIBFMaxNum2->setFlag(MachineInstr::FmNsz);
+    MIBFMaxNum2->clearFlag(MachineInstr::FmNsz);
+    EXPECT_TRUE(&*MIBFMaxNum == &*MIBFMaxNum2);
+  }
+
+  // Check G_FMINNUM_IEEE/F_MAXNUM_IEEE:
+  {
+    auto MIBFMinNumIEEE = CSEB.buildFMinNumIEEE(s32, Copies[0], Copies[1]);
+    auto MIBFMinNumIEEE2 = CSEB.buildFMinNumIEEE(s32, Copies[0], Copies[1]);
+    EXPECT_TRUE(&*MIBFMinNumIEEE == &*MIBFMinNumIEEE2);
+
+    auto MIBFMinNumIEEE3 =
+        CSEB.buildFMinNumIEEE(s32, Copies[0], Copies[1], MachineInstr::FmNsz);
+    EXPECT_FALSE(&*MIBFMinNumIEEE == &*MIBFMinNumIEEE3);
+
+    MIBFMinNumIEEE2->setFlag(MachineInstr::FmNsz);
+    MIBFMinNumIEEE2->clearFlag(MachineInstr::FmNsz);
+    EXPECT_TRUE(&*MIBFMinNumIEEE == &*MIBFMinNumIEEE2);
+  }
+
+  {
+    auto MIBFMaxNumIEEE = CSEB.buildFMaxNumIEEE(s32, Copies[0], Copies[1]);
+    auto MIBFMaxNumIEEE2 = CSEB.buildFMaxNumIEEE(s32, Copies[0], Copies[1]);
+    EXPECT_TRUE(&*MIBFMaxNumIEEE == &*MIBFMaxNumIEEE2);
+
+    auto MIBFMaxNumIEEE3 =
+        CSEB.buildFMaxNumIEEE(s32, Copies[0], Copies[1], MachineInstr::FmNsz);
+    EXPECT_FALSE(&*MIBFMaxNumIEEE == &*MIBFMaxNumIEEE3);
+
+    MIBFMaxNumIEEE2->setFlag(MachineInstr::FmNsz);
+    MIBFMaxNumIEEE2->clearFlag(MachineInstr::FmNsz);
+    EXPECT_TRUE(&*MIBFMaxNumIEEE == &*MIBFMaxNumIEEE2);
+  }
+
   // Check G_BUILD_VECTOR
   Register Reg1 = MRI->createGenericVirtualRegister(s32);
   Register Reg2 = MRI->createGenericVirtualRegister(s32);
@@ -368,6 +500,18 @@ TEST_F(AArch64GISelMITest, TestConstantFoldICMP) {
     EXPECT_TRUE(I->getOperand(1).getCImm()->getZExtValue());
   }
 
+  {
+    auto I = CSEB.buildICmp(CmpInst::Predicate::ICMP_EQ, s32, One, One);
+    EXPECT_TRUE(I->getOpcode() == TargetOpcode::G_CONSTANT);
+    EXPECT_EQ(I->getOperand(1).getCImm()->getZExtValue(), 1U);
+  }
+
+  {
+    auto I = CSEB.buildICmp(CmpInst::Predicate::ICMP_EQ, s32, One, Two);
+    EXPECT_TRUE(I->getOpcode() == TargetOpcode::G_CONSTANT);
+    EXPECT_EQ(I->getOperand(1).getCImm()->getZExtValue(), 0U);
+  }
+
   LLT VecTy = LLT::fixed_vector(2, s32);
   LLT DstTy = LLT::fixed_vector(2, s1);
   auto Three = CSEB.buildConstant(s32, 3);
@@ -376,6 +520,8 @@ TEST_F(AArch64GISelMITest, TestConstantFoldICMP) {
   auto OneTwo = CSEB.buildBuildVector(VecTy, {One.getReg(0), Two.getReg(0)});
   auto TwoThree =
       CSEB.buildBuildVector(VecTy, {Two.getReg(0), Three.getReg(0)});
+  auto OneThree =
+      CSEB.buildBuildVector(VecTy, {One.getReg(0), Three.getReg(0)});
   auto MinusOneOne =
       CSEB.buildBuildVector(VecTy, {MinusOne.getReg(0), MinusOne.getReg(0)});
   auto MinusOneTwo =
@@ -415,6 +561,36 @@ TEST_F(AArch64GISelMITest, TestConstantFoldICMP) {
   // ICMP_SLE
   CSEB.buildICmp(CmpInst::Predicate::ICMP_SLE, DstTy, MinusOneTwo, MinusOneOne);
 
+  {
+    auto I =
+        CSEB.buildICmp(CmpInst::Predicate::ICMP_EQ, VecTy, OneOne, TwoThree);
+    EXPECT_TRUE(I->getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+    const APInt HiCst = *getIConstantVRegVal(I->getOperand(1).getReg(), *MRI);
+    const APInt LoCst = *getIConstantVRegVal(I->getOperand(2).getReg(), *MRI);
+    EXPECT_EQ(HiCst.getSExtValue(), 0);
+    EXPECT_EQ(LoCst.getSExtValue(), 0);
+  }
+
+  {
+    auto I =
+        CSEB.buildICmp(CmpInst::Predicate::ICMP_EQ, VecTy, OneThree, TwoThree);
+    EXPECT_TRUE(I->getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+    const APInt HiCst = *getIConstantVRegVal(I->getOperand(1).getReg(), *MRI);
+    const APInt LoCst = *getIConstantVRegVal(I->getOperand(2).getReg(), *MRI);
+    EXPECT_EQ(HiCst.getSExtValue(), 0);
+    EXPECT_EQ(LoCst.getSExtValue(), -1);
+  }
+
+  {
+    auto I =
+        CSEB.buildICmp(CmpInst::Predicate::ICMP_EQ, VecTy, TwoThree, TwoThree);
+    EXPECT_TRUE(I->getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+    const APInt HiCst = *getIConstantVRegVal(I->getOperand(1).getReg(), *MRI);
+    const APInt LoCst = *getIConstantVRegVal(I->getOperand(2).getReg(), *MRI);
+    EXPECT_EQ(HiCst.getSExtValue(), -1);
+    EXPECT_EQ(LoCst.getSExtValue(), -1);
+  }
+
   auto CheckStr = R"(
   ; CHECK: [[One:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; CHECK: [[Two:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
@@ -426,6 +602,7 @@ TEST_F(AArch64GISelMITest, TestConstantFoldICMP) {
   ; CHECK: {{%[0-9]+}}:_(<2 x s32>) = G_BUILD_VECTOR [[One]]:_(s32), [[One]]:_(s32)
   ; CHECK: {{%[0-9]+}}:_(<2 x s32>) = G_BUILD_VECTOR [[One]]:_(s32), [[Two]]:_(s32)
   ; CHECK: {{%[0-9]+}}:_(<2 x s32>) = G_BUILD_VECTOR [[Two]]:_(s32), [[Three]]:_(s32)
+  ; CHECK: {{%[0-9]+}}:_(<2 x s32>) = G_BUILD_VECTOR [[One]]:_(s32), [[Three]]:_(s32)
   ; CHECK: {{%[0-9]+}}:_(<2 x s32>) = G_BUILD_VECTOR [[MinusOne]]:_(s32), [[MinusOne]]:_(s32)
   ; CHECK: {{%[0-9]+}}:_(<2 x s32>) = G_BUILD_VECTOR [[MinusOne]]:_(s32), [[MinusTwo]]:_(s32)
   ; CHECK: {{%[0-9]+}}:_(<2 x s32>) = G_BUILD_VECTOR [[MinusTwo]]:_(s32), [[MinusThree]]:_(s32)

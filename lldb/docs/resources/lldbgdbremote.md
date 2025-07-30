@@ -1998,6 +1998,39 @@ threads (live system debug) / cores (JTAG) in your program have
 stopped and allows LLDB to display and control your program
 correctly.
 
+## qWasmCallStack
+
+Get the Wasm call stack for the given thread id. This returns a hex-encoded
+list of PC values, one for each frame of the call stack. To match the Wasm
+specification, the addresses are encoded in little endian byte order, even if
+the endian of the Wasm runtime's host is not little endian.
+
+```
+send packet: $qWasmCallStack:202dbe040#08
+read packet: $9c01000000000040e501000000000040fe01000000000040#
+```
+
+**Priority to Implement:** Only required for Wasm support. This packed is
+supported by the [WAMR](https://github.com/bytecodealliance/wasm-micro-runtime)
+and [V8](https://v8.dev) Wasm runtimes.
+
+## qWatchpointSupportInfo
+
+Get the number of hardware watchpoints available on the remote target.
+
+```
+send packet: $qWatchpointSupportInfo:#55
+read packet: $num:4;#f9
+```
+
+`num` is the number of hardware breakpoints, it will be `0` if none are
+available.
+
+**Priority to Implement:** Low. If this packet is not supported, LLDB will assume
+that hardware breakpoints are supported. If that is not the case, LLDB assumes
+that the debug stub will respond with an error when asked to set a hardware
+watchpoint.
+
 ## Stop reply packet extensions
 
 This section describes some of the additional information you can
@@ -2411,6 +2444,11 @@ Return value may optionally be followed by a comma and the base16
 value of errno if unlink failed.
 
 ## "x" - Binary memory read
+
+> **Warning:** The format of this packet was decided before GDB 16
+> introduced its own format for `x`. Future versions of LLDB may not
+> support the format described here, and new code should produce and
+> expect the format used by GDB.
 
 Like the `m` (read) and `M` (write) packets, this is a partner to the
 `X` (write binary data) packet, `x`.

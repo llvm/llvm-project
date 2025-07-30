@@ -1,0 +1,39 @@
+// RUN: cir-opt %s -cir-canonicalize -split-input-file -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @fold_complex_real_test() -> !s32i {
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+    %2 = cir.const #cir.const_complex<#cir.int<1> : !s32i, #cir.int<2> : !s32i> : !cir.complex<!s32i>
+    %4 = cir.complex.real %2 : !cir.complex<!s32i> -> !s32i
+    cir.store %4, %0 : !s32i, !cir.ptr<!s32i>
+    %5 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %5 : !s32i
+  }
+
+  // CHECK: cir.func @fold_complex_real_test() -> !s32i {
+  // CHECK:   %[[RET:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+  // CHECK:   %[[REAL:.*]] = cir.const #cir.int<1> : !s32i
+  // CHECK:   cir.store %[[REAL]], %[[RET]] : !s32i, !cir.ptr<!s32i>
+  // CHECK:   %[[TMP:.]] = cir.load %[[RET]] : !cir.ptr<!s32i>, !s32i
+  // CHECK:   cir.return %[[TMP]] : !s32i
+  // CHECK: }
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func dso_local @fold_complex_real_from_create_test(%arg0: !s32i, %arg1: !s32i) -> !s32i {
+    %0 = cir.complex.create %arg0, %arg1 : !s32i -> !cir.complex<!s32i>
+    %1 = cir.complex.real %0 : !cir.complex<!s32i> -> !s32i
+    cir.return %1 : !s32i
+  }
+
+  // CHECK: cir.func dso_local @fold_complex_real_from_create_test(%[[ARG_0:.*]]: !s32i, %[[ARG_1:.*]]: !s32i) -> !s32i {
+  // CHECK:   cir.return %[[ARG_0]] : !s32i
+  // CHECK: }
+}

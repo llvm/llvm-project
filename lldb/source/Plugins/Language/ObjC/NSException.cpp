@@ -10,14 +10,14 @@
 
 #include "Cocoa.h"
 
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "Plugins/Language/ObjC/NSString.h"
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
@@ -148,9 +148,7 @@ public:
                : lldb::ChildCacheState::eRefetch;
   }
 
-  bool MightHaveChildren() override { return true; }
-
-  size_t GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     // NSException has 4 members:
     //   NSString *name;
     //   NSString *reason;
@@ -164,7 +162,8 @@ public:
     if (name == g_reason) return 1;
     if (name == g_userInfo) return 2;
     if (name == g_reserved) return 3;
-    return UINT32_MAX;
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   }
 
 private:

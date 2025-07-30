@@ -914,7 +914,7 @@ table, record with name ``Banana`` will come before the record with name
 ``Pear``. Because of this, the ``lookupCEntryByEncoding`` function will always
 return a pointer to the record with name ``Banana`` even though in some cases
 the correct result can be the record with name ``Pear``. Such kind of scenario
-makes the exisitng lookup function insufficient because they always return a
+makes the existing lookup function insufficient because they always return a
 pointer to a single entry from the table, but instead it should return a range
 of results because multiple entries match the criteria sought by the lookup
 function. In this case, the definition of the lookup function needs to be
@@ -1070,8 +1070,6 @@ function. This class provides three fields.
 * ``list<string> Key``. The list of fields that make up the secondary key.
 
 * ``bit EarlyOut``. See the third example in `Generic Tables`_.
-
-* ``bit ReturnRange``. See the second example in `Generic Tables`_.
 
 Here is an example of a secondary key added to the ``CTable`` above. The
 generated function looks up entries based on the ``Name`` and ``Kind`` fields.

@@ -21,7 +21,7 @@ struct Ctx;
 class ELFOptTable : public llvm::opt::GenericOptTable {
 public:
   ELFOptTable();
-  llvm::opt::InputArgList parse(ArrayRef<const char *> argv);
+  llvm::opt::InputArgList parse(Ctx &, ArrayRef<const char *> argv);
 };
 
 // Create enum with OPT_xxx values for each option in Options.td

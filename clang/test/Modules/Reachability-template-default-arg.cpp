@@ -21,6 +21,5 @@ struct A {
 import template_default_arg;
 void bar() {
   A<> a0;
-  A<t> a1; // expected-error {{declaration of 't' must be imported from module 'template_default_arg' before it is required}}
-           // expected-note@* {{declaration here is not visible}}
+  A<t> a1; // expected-error {{use of undeclared identifier 't'}}
 }

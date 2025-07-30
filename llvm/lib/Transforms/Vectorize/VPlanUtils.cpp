@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlanUtils.h"
+#include "VPlanCFG.h"
 #include "VPlanPatternMatch.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -30,11 +31,18 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
   VPValue *Expanded = nullptr;
   if (auto *E = dyn_cast<SCEVConstant>(Expr))
     Expanded = Plan.getOrAddLiveIn(E->getValue());
-  else if (auto *E = dyn_cast<SCEVUnknown>(Expr))
-    Expanded = Plan.getOrAddLiveIn(E->getValue());
   else {
-    Expanded = new VPExpandSCEVRecipe(Expr, SE);
-    Plan.getPreheader()->appendRecipe(Expanded->getDefiningRecipe());
+    auto *U = dyn_cast<SCEVUnknown>(Expr);
+    // Skip SCEV expansion if Expr is a SCEVUnknown wrapping a non-instruction
+    // value. Otherwise the value may be defined in a loop and using it directly
+    // will break LCSSA form. The SCEV expansion takes care of preserving LCSSA
+    // form.
+    if (U && !isa<Instruction>(U->getValue())) {
+      Expanded = Plan.getOrAddLiveIn(U->getValue());
+    } else {
+      Expanded = new VPExpandSCEVRecipe(Expr, SE);
+      Plan.getEntry()->appendRecipe(Expanded->getDefiningRecipe());
+    }
   }
   Plan.addSCEVExpansion(Expr, Expanded);
   return Expanded;
@@ -55,7 +63,9 @@ bool vputils::isHeaderMask(const VPValue *V, VPlan &Plan) {
 
   if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B))))
     return B == Plan.getTripCount() &&
-           (match(A, m_ScalarIVSteps(m_CanonicalIV(), m_SpecificInt(1))) ||
+           (match(A, m_ScalarIVSteps(m_Specific(Plan.getCanonicalIV()),
+                                     m_SpecificInt(1),
+                                     m_Specific(&Plan.getVF()))) ||
             IsWideCanonicalIV(A));
 
   return match(V, m_Binary<Instruction::ICmp>(m_VPValue(A), m_VPValue(B))) &&
@@ -85,8 +95,7 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
                   m_VPValue())))
       return false;
-    return all_of(R->operands(),
-                  [](VPValue *Op) { return isUniformAcrossVFsAndUFs(Op); });
+    return all_of(R->operands(), isUniformAcrossVFsAndUFs);
   }
 
   auto *CanonicalIV = R->getParent()->getPlan()->getCanonicalIV();
@@ -101,12 +110,15 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
         // VPReplicateRecipe.IsUniform. They are also uniform across UF parts if
         // all their operands are invariant.
         // TODO: Further relax the restrictions.
-        return R->isUniform() &&
+        return R->isSingleScalar() &&
                (isa<LoadInst, StoreInst>(R->getUnderlyingValue())) &&
-               all_of(R->operands(),
-                      [](VPValue *Op) { return isUniformAcrossVFsAndUFs(Op); });
+               all_of(R->operands(), isUniformAcrossVFsAndUFs);
       })
-      .Case<VPScalarCastRecipe, VPWidenCastRecipe>([](const auto *R) {
+      .Case<VPInstruction>([](const auto *VPI) {
+        return VPI->isScalarCast() &&
+               isUniformAcrossVFsAndUFs(VPI->getOperand(0));
+      })
+      .Case<VPWidenCastRecipe>([](const auto *R) {
         // A cast is uniform according to its operand.
         return isUniformAcrossVFsAndUFs(R->getOperand(0));
       })
@@ -114,4 +126,12 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
                                           // unless proven otherwise.
         return false;
       });
+}
+
+VPBasicBlock *vputils::getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT) {
+  auto DepthFirst = vp_depth_first_shallow(Plan.getEntry());
+  auto I = find_if(DepthFirst, [&VPDT](VPBlockBase *VPB) {
+    return VPBlockUtils::isHeader(VPB, VPDT);
+  });
+  return I == DepthFirst.end() ? nullptr : cast<VPBasicBlock>(*I);
 }

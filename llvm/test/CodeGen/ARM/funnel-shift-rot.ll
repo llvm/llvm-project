@@ -71,12 +71,12 @@ define i64 @rotl_i64(i64 %x, i64 %z) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    ands r3, r2, #32
-; CHECK-NEXT:    and r12, r2, #31
+; CHECK-NEXT:    tst r2, #32
 ; CHECK-NEXT:    mov r3, r0
-; CHECK-NEXT:    mov r4, #31
+; CHECK-NEXT:    and r12, r2, #31
 ; CHECK-NEXT:    movne r3, r1
 ; CHECK-NEXT:    movne r1, r0
+; CHECK-NEXT:    mov r4, #31
 ; CHECK-NEXT:    bic r2, r4, r2
 ; CHECK-NEXT:    lsl lr, r3, r12
 ; CHECK-NEXT:    lsr r0, r1, #1
@@ -206,7 +206,7 @@ define i32 @rotr_i32(i32 %x, i32 %z) {
 define i64 @rotr_i64(i64 %x, i64 %z) {
 ; CHECK-LABEL: rotr_i64:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    ands r3, r2, #32
+; CHECK-NEXT:    tst r2, #32
 ; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    moveq r3, r0
 ; CHECK-NEXT:    moveq r0, r1

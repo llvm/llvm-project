@@ -53,13 +53,13 @@ int ListWarnings::run(unsigned int argc, char **argv, llvm::raw_ostream &out) {
   for (const DiagnosticRecord &DR : getBuiltinDiagnosticsByName()) {
     const unsigned diagID = DR.DiagID;
 
-    if (DiagnosticIDs::isBuiltinNote(diagID))
+    if (DiagnosticIDs{}.isNote(diagID))
       continue;
 
-    if (!DiagnosticIDs::isBuiltinWarningOrExtension(diagID))
+    if (!DiagnosticIDs{}.isWarningOrExtension(diagID))
       continue;
 
-    Entry entry(DR.getName(), DiagnosticIDs::getWarningOptionForDiag(diagID));
+    Entry entry(DR.getName(), DiagnosticIDs{}.getWarningOptionForDiag(diagID));
 
     if (entry.Flag.empty())
       Unflagged.push_back(entry);
@@ -97,4 +97,3 @@ int ListWarnings::run(unsigned int argc, char **argv, llvm::raw_ostream &out) {
 
   return 0;
 }
-

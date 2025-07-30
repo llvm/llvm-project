@@ -2,7 +2,7 @@
 
 ; Make sure that boolean immediates are properly (zero) extended.
 ; CHECK: .Ltmp[[N:[0-9]+]]:
-; CHECK-NEXT: .quad (42+1)-.Ltmp[[N]]
+; CHECK-NEXT: .quad 42+1-.Ltmp[[N]]
 
 target triple = "x86_64-unknown-linux-gnu"
 

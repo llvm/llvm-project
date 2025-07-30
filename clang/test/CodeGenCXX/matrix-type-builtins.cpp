@@ -57,7 +57,7 @@ void test_transpose_rvalue() {
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    [[M_T_ADDR:%.*]] = alloca [9 x float], align 4
   // CHECK-NEXT:    [[CALL_RES:%.*]] = call noundef <9 x float> @_Z10get_matrixv()
-  // CHECK-NEXT:    [[ADD:%.*]] = fadd <9 x float> [[CALL_RES]], <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+  // CHECK-NEXT:    [[ADD:%.*]] = fadd <9 x float> [[CALL_RES]], splat (float 2.000000e+00)
   // CHECK-NEXT:    [[M_T:%.*]] = call <9 x float> @llvm.matrix.transpose.v9f32(<9 x float> [[ADD]], i32 3, i32 3)
   // CHECK-NEXT:    store <9 x float> [[M_T]], ptr [[M_T_ADDR]], align 4
   matrix_t<float, 3, 3> m_t = __builtin_matrix_transpose(get_matrix() + 2.0);

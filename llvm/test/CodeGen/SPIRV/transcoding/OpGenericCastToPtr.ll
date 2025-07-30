@@ -2,9 +2,7 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV-DAG: %[[#Char:]] = OpTypeInt 8 0
-; CHECK-SPIRV-DAG: %[[#GlobalCharPtr:]] = OpTypePointer CrossWorkgroup %[[#Char]]
 ; CHECK-SPIRV-DAG: %[[#LocalCharPtr:]] = OpTypePointer Workgroup %[[#Char]]
-; CHECK-SPIRV-DAG: %[[#PrivateCharPtr:]] = OpTypePointer Function %[[#Char]]
 ; CHECK-SPIRV-DAG: %[[#GenericCharPtr:]] = OpTypePointer Generic %[[#Char]]
 
 ; CHECK-SPIRV-DAG: %[[#Int:]] = OpTypeInt 32 0
@@ -26,9 +24,9 @@
 ; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#GlobalIntPtr]]
 ; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#LocalCharPtr]]
 ; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#PrivateIntPtr]]
-; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#GlobalIntPtr]]
-; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#LocalCharPtr]]
-; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#PrivateIntPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtrExplicit %[[#GlobalIntPtr]] %{{.*}} CrossWorkgroup
+; CHECK-SPIRV-NEXT: OpGenericCastToPtrExplicit %[[#LocalCharPtr]] %{{.*}} Workgroup
+; CHECK-SPIRV-NEXT: OpGenericCastToPtrExplicit %[[#PrivateIntPtr]] %{{.*}} Function
 ; CHECK-SPIRV:      OpFunctionEnd
 
 define spir_kernel void @test1(ptr addrspace(1) %_arg_GlobalA, ptr byval(%id) %_arg_GlobalId, ptr addrspace(3) %_arg_LocalA) {
@@ -54,9 +52,9 @@ entry:
 ; CHECK-SPIRV:      OpPtrCastToGeneric %[[#GenericIntPtr]]
 ; CHECK-SPIRV-NEXT: OpPtrCastToGeneric %[[#GenericCharPtr]]
 ; CHECK-SPIRV-NEXT: OpPtrCastToGeneric %[[#GenericIntPtr]]
-; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#GlobalIntPtr]]
-; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#LocalCharPtr]]
-; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#PrivateIntPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtrExplicit %[[#GlobalIntPtr]] %{{.*}} CrossWorkgroup
+; CHECK-SPIRV-NEXT: OpGenericCastToPtrExplicit %[[#LocalCharPtr]] %{{.*}} Workgroup
+; CHECK-SPIRV-NEXT: OpGenericCastToPtrExplicit %[[#PrivateIntPtr]] %{{.*}} Function
 ; CHECK-SPIRV:      OpFunctionEnd
 
 define spir_kernel void @test2(ptr addrspace(1) %_arg_GlobalA, ptr byval(%id) %_arg_GlobalId, ptr addrspace(3) %_arg_LocalA) {
@@ -95,18 +93,9 @@ declare spir_func ptr @_Z10to_privatePv(ptr addrspace(4))
 ; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#GlobalIntPtr]]
 ; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#LocalCharPtr]]
 ; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#PrivateIntPtr]]
-; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#GlobalIntPtr]]
-; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#LocalCharPtr]]
-; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#PrivateIntPtr]]
-; CHECK-SPIRV:      OpFunctionEnd
-
-; CHECK-SPIRV:      OpFunction
-; CHECK-SPIRV:      OpPtrCastToGeneric %[[#GenericIntPtr]]
-; CHECK-SPIRV-NEXT: OpPtrCastToGeneric %[[#GenericCharPtr]]
-; CHECK-SPIRV-NEXT: OpPtrCastToGeneric %[[#GenericIntPtr]]
-; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#GlobalIntPtr]]
-; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#LocalCharPtr]]
-; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#PrivateIntPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtrExplicit %[[#GlobalIntPtr]] %{{.*}} CrossWorkgroup
+; CHECK-SPIRV-NEXT: OpGenericCastToPtrExplicit %[[#LocalCharPtr]] %{{.*}} Workgroup
+; CHECK-SPIRV-NEXT: OpGenericCastToPtrExplicit %[[#PrivateIntPtr]] %{{.*}} Function
 ; CHECK-SPIRV:      OpFunctionEnd
 
 define spir_kernel void @test3(ptr addrspace(1) %_arg_GlobalA, ptr byval(%id) %_arg_GlobalId, ptr addrspace(3) %_arg_LocalA) {
@@ -127,6 +116,15 @@ entry:
   %PE = call spir_func ptr @__spirv_GenericCastToPtrExplicit_ToPrivate(ptr addrspace(4) %var3, i32 7)
   ret void
 }
+
+; CHECK-SPIRV:      OpFunction
+; CHECK-SPIRV:      OpPtrCastToGeneric %[[#GenericIntPtr]]
+; CHECK-SPIRV-NEXT: OpPtrCastToGeneric %[[#GenericCharPtr]]
+; CHECK-SPIRV-NEXT: OpPtrCastToGeneric %[[#GenericIntPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtrExplicit %[[#GlobalIntPtr]] %{{.*}} CrossWorkgroup
+; CHECK-SPIRV-NEXT: OpGenericCastToPtrExplicit %[[#LocalCharPtr]] %{{.*}} Workgroup
+; CHECK-SPIRV-NEXT: OpGenericCastToPtrExplicit %[[#PrivateIntPtr]] %{{.*}} Function
+; CHECK-SPIRV:      OpFunctionEnd
 
 define spir_kernel void @test4(ptr addrspace(1) %_arg_GlobalA, ptr byval(%id) %_arg_GlobalId, ptr addrspace(3) %_arg_LocalA) {
 entry:

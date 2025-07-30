@@ -1,0 +1,21 @@
+set(TARGET_PUBLIC_HEADERS
+    libc.include.assert
+    libc.include.ctype
+    libc.include.string
+    libc.include.strings
+    libc.include.signal
+    libc.include.float
+    libc.include.stdint
+    libc.include.inttypes
+    libc.include.limits
+    libc.include.math
+    libc.include.fenv
+    libc.include.time
+    libc.include.errno
+    libc.include.stdlib
+    libc.include.stdio
+    libc.include.wchar
+    libc.include.uchar
+    libc.include.features
+    libc.include.locale
+)

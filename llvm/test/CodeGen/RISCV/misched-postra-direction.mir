@@ -11,6 +11,19 @@
 # RUN:   -misched-dump-schedule-trace -misched-postra-direction=bidirectional \
 # RUN:   -o - %s 2>&1 | FileCheck --check-prefix=BIDIRECTIONAL %s
 
+# RUN: llc -mtriple=riscv64 -mcpu=sifive-x280 -passes=postmisched \
+# RUN:   -enable-post-misched -debug-only=machine-scheduler \
+# RUN:  -misched-dump-schedule-trace -misched-postra-direction=topdown \
+# RUN:  -o - %s 2>&1 | FileCheck --check-prefix=TOPDOWN %s
+# RUN: llc -mtriple=riscv64 -mcpu=sifive-x280 -passes=postmisched \
+# RUN:   -enable-post-misched -debug-only=machine-scheduler \
+# RUN:   -misched-dump-schedule-trace -misched-postra-direction=bottomup \
+# RUN:   -o - %s 2>&1 | FileCheck --check-prefix=BOTTOMUP %s
+# RUN: llc -mtriple=riscv64 -mcpu=sifive-x280 -passes=postmisched \
+# RUN:   -enable-post-misched -debug-only=machine-scheduler \
+# RUN:   -misched-dump-schedule-trace -misched-postra-direction=bidirectional \
+# RUN:   -o - %s 2>&1 | FileCheck --check-prefix=BIDIRECTIONAL %s
+
 # REQUIRES: asserts
 
 ---

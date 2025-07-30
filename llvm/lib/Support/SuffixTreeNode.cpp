@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/SuffixTreeNode.h"
-#include "llvm/Support/Casting.h"
 
 using namespace llvm;
 

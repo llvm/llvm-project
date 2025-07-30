@@ -7,16 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "Fuchsia.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/MultilibBuilder.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -93,7 +91,9 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--execute-only");
 
     std::string CPU = getCPUName(D, Args, Triple);
-    if (CPU.empty() || CPU == "generic" || CPU == "cortex-a53")
+    if (Args.hasFlag(options::OPT_mfix_cortex_a53_843419,
+                     options::OPT_mno_fix_cortex_a53_843419, true) &&
+        (CPU.empty() || CPU == "generic" || CPU == "cortex-a53"))
       CmdArgs.push_back("--fix-cortex-a53-843419");
   }
 
@@ -139,23 +139,19 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  if (D.isUsingLTO()) {
-    assert(!Inputs.empty() && "Must have at least one input.");
-    // Find the first filename InputInfo object.
-    auto Input = llvm::find_if(
-        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
-    if (Input == Inputs.end())
-      // For a very rare case, all of the inputs to the linker are
-      // InputArg. If that happens, just use the first InputInfo.
-      Input = Inputs.begin();
-
-    addLTOOptions(ToolChain, Args, CmdArgs, Output, *Input,
+  if (D.isUsingLTO())
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs,
                   D.getLTOMode() == LTOK_Thin);
-  }
 
   addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
+  // Sample these options first so they are claimed even under -nostdlib et al.
+  bool NoLibc = Args.hasArg(options::OPT_nolibc);
+  bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
+                             !Args.hasArg(options::OPT_static);
+  bool Pthreads = Args.hasArg(options::OPT_pthread, options::OPT_pthreads);
+  bool SplitStack = Args.hasArg(options::OPT_fsplit_stack);
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
                    options::OPT_r)) {
     if (Args.hasArg(options::OPT_static))
@@ -163,8 +159,6 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     if (D.CCCIsCXX()) {
       if (ToolChain.ShouldLinkCXXStdlib(Args)) {
-        bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
-                                   !Args.hasArg(options::OPT_static);
         CmdArgs.push_back("--push-state");
         CmdArgs.push_back("--as-needed");
         if (OnlyLibstdcxxStatic)
@@ -188,14 +182,13 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
 
-    if (Args.hasArg(options::OPT_pthread) ||
-        Args.hasArg(options::OPT_pthreads))
+    if (Pthreads)
       CmdArgs.push_back("-lpthread");
 
-    if (Args.hasArg(options::OPT_fsplit_stack))
+    if (SplitStack)
       CmdArgs.push_back("--wrap=pthread_create");
 
-    if (!Args.hasArg(options::OPT_nolibc))
+    if (!NoLibc)
       CmdArgs.push_back("-lc");
   }
 
@@ -229,7 +222,7 @@ void fuchsia::StaticLibTool::ConstructJob(Compilation &C, const JobAction &JA,
 
   for (const auto &II : Inputs) {
     if (II.isFilename()) {
-       CmdArgs.push_back(II.getFilename());
+      CmdArgs.push_back(II.getFilename());
     }
   }
 
@@ -343,16 +336,14 @@ std::string Fuchsia::ComputeEffectiveClangTriple(const ArgList &Args,
   return Triple.str();
 }
 
-Tool *Fuchsia::buildLinker() const {
-  return new tools::fuchsia::Linker(*this);
-}
+Tool *Fuchsia::buildLinker() const { return new tools::fuchsia::Linker(*this); }
 
 Tool *Fuchsia::buildStaticLibTool() const {
   return new tools::fuchsia::StaticLibTool(*this);
 }
 
-ToolChain::RuntimeLibType Fuchsia::GetRuntimeLibType(
-    const ArgList &Args) const {
+ToolChain::RuntimeLibType
+Fuchsia::GetRuntimeLibType(const ArgList &Args) const {
   if (Arg *A = Args.getLastArg(clang::driver::options::OPT_rtlib_EQ)) {
     StringRef Value = A->getValue();
     if (Value != "compiler-rt")
@@ -363,13 +354,12 @@ ToolChain::RuntimeLibType Fuchsia::GetRuntimeLibType(
   return ToolChain::RLT_CompilerRT;
 }
 
-ToolChain::CXXStdlibType
-Fuchsia::GetCXXStdlibType(const ArgList &Args) const {
+ToolChain::CXXStdlibType Fuchsia::GetCXXStdlibType(const ArgList &Args) const {
   if (Arg *A = Args.getLastArg(options::OPT_stdlib_EQ)) {
     StringRef Value = A->getValue();
     if (Value != "libc++")
       getDriver().Diag(diag::err_drv_invalid_stdlib_name)
-        << A->getAsString(Args);
+          << A->getAsString(Args);
   }
 
   return ToolChain::CST_Libcxx;

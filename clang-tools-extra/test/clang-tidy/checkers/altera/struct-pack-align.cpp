@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s altera-struct-pack-align %t -- -header-filter=.*
+// RUN: %check_clang_tidy --match-partial-fixes %s altera-struct-pack-align %t -- -header-filter=.*
 
 // Struct needs both alignment and packing
 struct error {

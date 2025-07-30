@@ -39,28 +39,28 @@ spirv.module Logical GLSL450 {
     %arg6: i32
     {spirv.interface_var_abi = #spirv.interface_var_abi<(0, 6), StorageBuffer>}) "None"
   attributes  {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [32, 1, 1]>} {
-    // CHECK: [[ADDRESSARG6:%.*]] = spirv.mlir.addressof [[VAR6]]
-    // CHECK: [[CONST6:%.*]] = spirv.Constant 0 : i32
-    // CHECK: [[ARG6PTR:%.*]] = spirv.AccessChain [[ADDRESSARG6]]{{\[}}[[CONST6]]
-    // CHECK: {{%.*}} = spirv.Load "StorageBuffer" [[ARG6PTR]]
-    // CHECK: [[ADDRESSARG5:%.*]] = spirv.mlir.addressof [[VAR5]]
-    // CHECK: [[CONST5:%.*]] = spirv.Constant 0 : i32
-    // CHECK: [[ARG5PTR:%.*]] = spirv.AccessChain [[ADDRESSARG5]]{{\[}}[[CONST5]]
-    // CHECK: {{%.*}} = spirv.Load "StorageBuffer" [[ARG5PTR]]
-    // CHECK: [[ADDRESSARG4:%.*]] = spirv.mlir.addressof [[VAR4]]
-    // CHECK: [[CONST4:%.*]] = spirv.Constant 0 : i32
-    // CHECK: [[ARG4PTR:%.*]] = spirv.AccessChain [[ADDRESSARG4]]{{\[}}[[CONST4]]
-    // CHECK: [[ARG4:%.*]] = spirv.Load "StorageBuffer" [[ARG4PTR]]
+    // CHECK: [[ADDRESSARG0:%.*]] = spirv.mlir.addressof [[VAR0]]
+    // CHECK: [[ARG0:%.*]] = spirv.Bitcast [[ADDRESSARG0]]
+    // CHECK: [[ADDRESSARG1:%.*]] = spirv.mlir.addressof [[VAR1]]
+    // CHECK: [[ARG1:%.*]] = spirv.Bitcast [[ADDRESSARG1]]
+    // CHECK: [[ADDRESSARG2:%.*]] = spirv.mlir.addressof [[VAR2]]
+    // CHECK: [[ARG2:%.*]] = spirv.Bitcast [[ADDRESSARG2]]
     // CHECK: [[ADDRESSARG3:%.*]] = spirv.mlir.addressof [[VAR3]]
     // CHECK: [[CONST3:%.*]] = spirv.Constant 0 : i32
     // CHECK: [[ARG3PTR:%.*]] = spirv.AccessChain [[ADDRESSARG3]]{{\[}}[[CONST3]]
     // CHECK: [[ARG3:%.*]] = spirv.Load "StorageBuffer" [[ARG3PTR]]
-    // CHECK: [[ADDRESSARG2:%.*]] = spirv.mlir.addressof [[VAR2]]
-    // CHECK: [[ARG2:%.*]] = spirv.Bitcast [[ADDRESSARG2]]
-    // CHECK: [[ADDRESSARG1:%.*]] = spirv.mlir.addressof [[VAR1]]
-    // CHECK: [[ARG1:%.*]] = spirv.Bitcast [[ADDRESSARG1]]
-    // CHECK: [[ADDRESSARG0:%.*]] = spirv.mlir.addressof [[VAR0]]
-    // CHECK: [[ARG0:%.*]] = spirv.Bitcast [[ADDRESSARG0]]
+    // CHECK: [[ADDRESSARG4:%.*]] = spirv.mlir.addressof [[VAR4]]
+    // CHECK: [[CONST4:%.*]] = spirv.Constant 0 : i32
+    // CHECK: [[ARG4PTR:%.*]] = spirv.AccessChain [[ADDRESSARG4]]{{\[}}[[CONST4]]
+    // CHECK: [[ARG4:%.*]] = spirv.Load "StorageBuffer" [[ARG4PTR]]
+    // CHECK: [[ADDRESSARG5:%.*]] = spirv.mlir.addressof [[VAR5]]
+    // CHECK: [[CONST5:%.*]] = spirv.Constant 0 : i32
+    // CHECK: [[ARG5PTR:%.*]] = spirv.AccessChain [[ADDRESSARG5]]{{\[}}[[CONST5]]
+    // CHECK: {{%.*}} = spirv.Load "StorageBuffer" [[ARG5PTR]]
+    // CHECK: [[ADDRESSARG6:%.*]] = spirv.mlir.addressof [[VAR6]]
+    // CHECK: [[CONST6:%.*]] = spirv.Constant 0 : i32
+    // CHECK: [[ARG6PTR:%.*]] = spirv.AccessChain [[ADDRESSARG6]]{{\[}}[[CONST6]]
+    // CHECK: {{%.*}} = spirv.Load "StorageBuffer" [[ARG6PTR]] 
     %0 = spirv.mlir.addressof @__builtin_var_WorkgroupId__ : !spirv.ptr<vector<3xi32>, Input>
     %1 = spirv.Load "Input" %0 : vector<3xi32>
     %2 = spirv.CompositeExtract %1[0 : i32] : vector<3xi32>
@@ -103,14 +103,14 @@ spirv.module Logical GLSL450 {
     %37 = spirv.IAdd %arg4, %11 : i32
     // CHECK: spirv.AccessChain [[ARG0]]
     %c0 = spirv.Constant 0 : i32
-    %38 = spirv.AccessChain %arg0[%c0, %36, %37] : !spirv.ptr<!spirv.struct<(!spirv.array<12 x !spirv.array<4 x f32>>)>, StorageBuffer>, i32, i32, i32
+    %38 = spirv.AccessChain %arg0[%c0, %36, %37] : !spirv.ptr<!spirv.struct<(!spirv.array<12 x !spirv.array<4 x f32>>)>, StorageBuffer>, i32, i32, i32 -> !spirv.ptr<f32, StorageBuffer>
     %39 = spirv.Load "StorageBuffer" %38 : f32
     // CHECK: spirv.AccessChain [[ARG1]]
-    %40 = spirv.AccessChain %arg1[%c0, %36, %37] : !spirv.ptr<!spirv.struct<(!spirv.array<12 x !spirv.array<4 x f32>>)>, StorageBuffer>, i32, i32, i32
+    %40 = spirv.AccessChain %arg1[%c0, %36, %37] : !spirv.ptr<!spirv.struct<(!spirv.array<12 x !spirv.array<4 x f32>>)>, StorageBuffer>, i32, i32, i32 -> !spirv.ptr<f32, StorageBuffer>
     %41 = spirv.Load "StorageBuffer" %40 : f32
     %42 = spirv.FAdd %39, %41 : f32
     // CHECK: spirv.AccessChain [[ARG2]]
-    %43 = spirv.AccessChain %arg2[%c0, %36, %37] : !spirv.ptr<!spirv.struct<(!spirv.array<12 x !spirv.array<4 x f32>>)>, StorageBuffer>, i32, i32, i32
+    %43 = spirv.AccessChain %arg2[%c0, %36, %37] : !spirv.ptr<!spirv.struct<(!spirv.array<12 x !spirv.array<4 x f32>>)>, StorageBuffer>, i32, i32, i32 -> !spirv.ptr<f32, StorageBuffer>
     spirv.Store "StorageBuffer" %43, %42 : f32
     spirv.Return
   }

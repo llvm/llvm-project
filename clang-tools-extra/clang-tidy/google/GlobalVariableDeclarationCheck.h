@@ -20,7 +20,7 @@ namespace clang::tidy::google::objc {
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/google/objc-global-variable-declaration.html
 class GlobalVariableDeclarationCheck : public ClangTidyCheck {
- public:
+public:
   GlobalVariableDeclarationCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
@@ -32,4 +32,4 @@ class GlobalVariableDeclarationCheck : public ClangTidyCheck {
 
 } // namespace clang::tidy::google::objc
 
-#endif  // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GOOGLE_OBJC_GLOBAL_VARIABLE_DECLARATION_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GOOGLE_OBJC_GLOBAL_VARIABLE_DECLARATION_H

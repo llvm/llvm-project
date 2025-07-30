@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s abseil-redundant-strcat-calls %t -- -- -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy --match-partial-fixes %s abseil-redundant-strcat-calls %t -- -- -isystem %clang_tidy_headers
 #include <string>
 
 namespace absl {

@@ -25,6 +25,8 @@
 #include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"
 
+#include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
+
 #include <mutex>
 
 LLDB_PLUGIN_DEFINE(ScriptedProcess)
@@ -165,7 +167,7 @@ Status ScriptedProcess::DoLoadCore() {
 Status ScriptedProcess::DoLaunch(Module *exe_module,
                                  ProcessLaunchInfo &launch_info) {
   LLDB_LOGF(GetLog(LLDBLog::Process), "ScriptedProcess::%s launching process", __FUNCTION__);
-  
+
   /* MARK: This doesn't reflect how lldb actually launches a process.
            In reality, it attaches to debugserver, then resume the process.
            That's not true in all cases.  If debugserver is remote, lldb
@@ -182,10 +184,14 @@ void ScriptedProcess::DidResume() {
   m_pid = GetInterface().GetProcessID();
 }
 
-Status ScriptedProcess::DoResume() {
+Status ScriptedProcess::DoResume(RunDirection direction) {
   LLDB_LOGF(GetLog(LLDBLog::Process), "ScriptedProcess::%s resuming process", __FUNCTION__);
 
-  return GetInterface().Resume();
+  if (direction == RunDirection::eRunForward)
+    return GetInterface().Resume();
+  // FIXME: Pipe reverse continue through Scripted Processes
+  return Status::FromErrorStringWithFormatv(
+      "{0} does not support reverse execution of processes", GetPluginName());
 }
 
 Status ScriptedProcess::DoAttach(const ProcessAttachInfo &attach_info) {
@@ -444,7 +450,6 @@ ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
       return error_with_message("Couldn't cast image object into dictionary.");
 
     ModuleSpec module_spec;
-    llvm::StringRef value;
 
     bool has_path = dict->HasKey("path");
     bool has_uuid = dict->HasKey("uuid");
@@ -453,22 +458,17 @@ ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
     if (!dict->HasKey("load_addr"))
       return error_with_message("Dictionary is missing key 'load_addr'");
 
+    llvm::StringRef path = "";
     if (has_path) {
-      dict->GetValueForKeyAsString("path", value);
-      module_spec.GetFileSpec().SetPath(value);
+      dict->GetValueForKeyAsString("path", path);
+      module_spec.GetFileSpec().SetPath(path);
     }
 
+    llvm::StringRef uuid = "";
     if (has_uuid) {
-      dict->GetValueForKeyAsString("uuid", value);
-      module_spec.GetUUID().SetFromStringRef(value);
+      dict->GetValueForKeyAsString("uuid", uuid);
+      module_spec.GetUUID().SetFromStringRef(uuid);
     }
-    module_spec.GetArchitecture() = target.GetArchitecture();
-
-    ModuleSP module_sp =
-        target.GetOrCreateModule(module_spec, true /* notify */);
-
-    if (!module_sp)
-      return error_with_message("Couldn't create or get module.");
 
     lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
     lldb::offset_t slide = LLDB_INVALID_OFFSET;
@@ -481,6 +481,27 @@ ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
     if (slide != LLDB_INVALID_OFFSET)
       load_addr += slide;
 
+    module_spec.GetArchitecture() = target.GetArchitecture();
+
+    ModuleSP module_sp =
+        target.GetOrCreateModule(module_spec, true /* notify */);
+
+    bool is_placeholder_module = false;
+
+    if (!module_sp) {
+      // Create a placeholder module
+      LLDB_LOGF(
+          GetLog(LLDBLog::Process),
+          "ScriptedProcess::%s unable to locate the matching "
+          "object file path %s, creating a placeholder module at 0x%" PRIx64,
+          __FUNCTION__, path.str().c_str(), load_addr);
+
+      module_sp = Module::CreateModuleFromObjectFile<ObjectFilePlaceholder>(
+          module_spec, load_addr, module_spec.GetFileSpec().MemorySize());
+
+      is_placeholder_module = true;
+    }
+
     bool changed = false;
     module_sp->SetLoadAddress(target, load_addr, false /*=value_is_offset*/,
                               changed);
@@ -488,16 +509,27 @@ ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
     if (!changed && !module_sp->GetObjectFile())
       return error_with_message("Couldn't set the load address for module.");
 
-    dict->GetValueForKeyAsString("path", value);
-    FileSpec objfile(value);
+    FileSpec objfile(path);
     module_sp->SetFileSpecAndObjectName(objfile, objfile.GetFilename());
+
+    if (is_placeholder_module) {
+      target.GetImages().AppendIfNeeded(module_sp, true /*notify=*/);
+      return true;
+    }
 
     return module_list.AppendIfNeeded(module_sp);
   };
 
-  if (!loaded_images_sp->ForEach(reload_image))
-    return ScriptedInterface::ErrorWithMessage<StructuredData::ObjectSP>(
-        LLVM_PRETTY_FUNCTION, "Couldn't reload all images.", error);
+  size_t loaded_images_size = loaded_images_sp->GetSize();
+  bool print_error = true;
+  for (size_t idx = 0; idx < loaded_images_size; idx++) {
+    const auto &loaded_image = loaded_images_sp->GetItemAtIndex(idx);
+    if (!reload_image(loaded_image.get()) && print_error) {
+      print_error = false;
+      ScriptedInterface::ErrorWithMessage<StructuredData::ObjectSP>(
+          LLVM_PRETTY_FUNCTION, "Couldn't reload all images.", error);
+    }
+  }
 
   target.ModulesDidLoad(module_list);
 

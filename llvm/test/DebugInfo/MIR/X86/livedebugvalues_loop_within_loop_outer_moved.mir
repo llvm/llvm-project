@@ -1,7 +1,7 @@
 --- |
-  ; RUN: llc %s -march=x86-64 -run-pass=livedebugvalues -o - | FileCheck %s -implicit-check-not=DBG_VALUE
+ ; RUN: llc %s -mtriple=x86_64 -run-pass=livedebugvalues -o - | FileCheck %s -implicit-check-not=DBG_VALUE
 
-  ; Check that DBG_VALUE instructions are not propogated into loops with inner
+  ; Check that DBG_VALUE instructions are not propagated into loops with inner
   ; loops that move their locations.
 
   ; CHECK-LABEL: bb.0.entry:

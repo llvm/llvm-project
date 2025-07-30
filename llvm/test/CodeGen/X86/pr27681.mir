@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=i386-unknown-linux-gnu -mcpu=slm -run-pass post-RA-sched -o - %s | FileCheck %s
+# RUN: llc -mtriple=i386-unknown-linux-gnu -mcpu=slm -passes=post-RA-sched -o - %s | FileCheck %s
 #
 # Verify that the critical antidependence breaker does not consider
 # a high byte register as available as a replacement register

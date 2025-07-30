@@ -419,7 +419,6 @@ define <1 x i64> @insertelement_v1i64(<1 x i64> %op1) {
 ; CHECK-LABEL: insertelement_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, #5 // =0x5
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: insertelement_v1i64:
@@ -506,14 +505,10 @@ define <4 x i64> @insertelement_v4i64(ptr %a) {
 define <2 x half> @insertelement_v2f16(<2 x half> %op1) {
 ; CHECK-LABEL: insertelement_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    fmov h1, #5.00000000
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    str h0, [sp, #8]
-; CHECK-NEXT:    str h1, [sp, #10]
-; CHECK-NEXT:    ldr d0, [sp, #8]
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    zip1 z0.h, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: insertelement_v2f16:

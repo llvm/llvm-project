@@ -30,7 +30,7 @@ class MachineModuleInfo;
 /// Represents the location at which a variable is stored.
 struct DbgVariableLocation {
   /// Base register.
-  unsigned Register;
+  MCRegister Register;
 
   /// Chain of offsetted loads necessary to load the value if it lives in
   /// memory. Every load except for the last is pointer-sized.
@@ -50,14 +50,10 @@ struct DbgVariableLocation {
 
 /// Base class for debug information backends. Common functionality related to
 /// tracking which variables and scopes are alive at a given PC live here.
-class DebugHandlerBase {
+class DebugHandlerBase : public AsmPrinterHandler {
 protected:
   DebugHandlerBase(AsmPrinter *A);
 
-public:
-  virtual ~DebugHandlerBase();
-
-protected:
   /// Target of debug info emission.
   AsmPrinter *Asm = nullptr;
 
@@ -105,12 +101,12 @@ protected:
 
   /// Ensure that a label will be emitted before MI.
   void requestLabelBeforeInsn(const MachineInstr *MI) {
-    LabelsBeforeInsn.insert(std::make_pair(MI, nullptr));
+    LabelsBeforeInsn.try_emplace(MI);
   }
 
   /// Ensure that a label will be emitted after MI.
   void requestLabelAfterInsn(const MachineInstr *MI) {
-    LabelsAfterInsn.insert(std::make_pair(MI, nullptr));
+    LabelsAfterInsn.try_emplace(MI);
   }
 
   virtual void beginFunctionImpl(const MachineFunction *MF) = 0;
@@ -120,24 +116,20 @@ protected:
 private:
   InstructionOrdering InstOrdering;
 
+  // AsmPrinterHandler overrides.
 public:
-  /// For symbols that have a size designated (e.g. common symbols),
-  /// this tracks that size. Only used by DWARF.
-  virtual void setSymbolSize(const MCSymbol *Sym, uint64_t Size) {}
+  virtual ~DebugHandlerBase() override;
 
-  virtual void beginModule(Module *M);
-  virtual void endModule() = 0;
+  void beginModule(Module *M) override;
 
-  virtual void beginInstruction(const MachineInstr *MI);
-  virtual void endInstruction();
+  void beginInstruction(const MachineInstr *MI) override;
+  void endInstruction() override;
 
-  void beginFunction(const MachineFunction *MF);
-  void endFunction(const MachineFunction *MF);
+  void beginFunction(const MachineFunction *MF) override;
+  void endFunction(const MachineFunction *MF) override;
 
-  void beginBasicBlockSection(const MachineBasicBlock &MBB);
-  void endBasicBlockSection(const MachineBasicBlock &MBB);
-
-  virtual void beginCodeAlignment(const MachineBasicBlock &MBB) {}
+  void beginBasicBlockSection(const MachineBasicBlock &MBB) override;
+  void endBasicBlockSection(const MachineBasicBlock &MBB) override;
 
   /// Return Label preceding the instruction.
   MCSymbol *getLabelBeforeInsn(const MachineInstr *MI);

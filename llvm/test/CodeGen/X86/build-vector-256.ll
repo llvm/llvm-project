@@ -412,6 +412,383 @@ define <32 x i8> @test_buildvector_v32i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
   ret <32 x i8> %ins31
 }
 
+; build vectors of repeated elements
+
+define <4 x double> @test_buildvector_4f64_2_var(double %a0, double %a1) {
+; AVX1-32-LABEL: test_buildvector_4f64_2_var:
+; AVX1-32:       # %bb.0:
+; AVX1-32-NEXT:    vmovups {{[0-9]+}}(%esp), %xmm0
+; AVX1-32-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX1-32-NEXT:    vmovhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
+; AVX1-32-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-32-NEXT:    retl
+;
+; AVX1-64-LABEL: test_buildvector_4f64_2_var:
+; AVX1-64:       # %bb.0:
+; AVX1-64-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; AVX1-64-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX1-64-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-64-NEXT:    retq
+;
+; AVX2-32-LABEL: test_buildvector_4f64_2_var:
+; AVX2-32:       # %bb.0:
+; AVX2-32-NEXT:    vbroadcastsd {{[0-9]+}}(%esp), %ymm0
+; AVX2-32-NEXT:    vbroadcastsd {{[0-9]+}}(%esp), %ymm1
+; AVX2-32-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5],ymm1[6,7]
+; AVX2-32-NEXT:    retl
+;
+; AVX2-64-LABEL: test_buildvector_4f64_2_var:
+; AVX2-64:       # %bb.0:
+; AVX2-64-NEXT:    vbroadcastsd %xmm1, %ymm1
+; AVX2-64-NEXT:    vbroadcastsd %xmm0, %ymm0
+; AVX2-64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5],ymm0[6,7]
+; AVX2-64-NEXT:    retq
+  %v0 = insertelement <4 x double> poison, double %a0, i32 0
+  %v1 = insertelement <4 x double> %v0, double %a1, i32 1
+  %v2 = insertelement <4 x double> %v1, double %a1, i32 2
+  %v3 = insertelement <4 x double> %v2, double %a0, i32 3
+  ret <4 x double> %v3
+}
+
+define <4 x double> @test_buildvector_4f64_2_load(ptr %p0, ptr %p1) {
+; AVX1-32-LABEL: test_buildvector_4f64_2_load:
+; AVX1-32:       # %bb.0:
+; AVX1-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; AVX1-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; AVX1-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX1-32-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX1-32-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; AVX1-32-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX1-32-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-32-NEXT:    retl
+;
+; AVX1-64-LABEL: test_buildvector_4f64_2_load:
+; AVX1-64:       # %bb.0:
+; AVX1-64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX1-64-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX1-64-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; AVX1-64-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX1-64-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-64-NEXT:    retq
+;
+; AVX2-32-LABEL: test_buildvector_4f64_2_load:
+; AVX2-32:       # %bb.0:
+; AVX2-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; AVX2-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; AVX2-32-NEXT:    vbroadcastsd (%ecx), %ymm0
+; AVX2-32-NEXT:    vbroadcastsd (%eax), %ymm1
+; AVX2-32-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5],ymm1[6,7]
+; AVX2-32-NEXT:    retl
+;
+; AVX2-64-LABEL: test_buildvector_4f64_2_load:
+; AVX2-64:       # %bb.0:
+; AVX2-64-NEXT:    vbroadcastsd (%rsi), %ymm0
+; AVX2-64-NEXT:    vbroadcastsd (%rdi), %ymm1
+; AVX2-64-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5],ymm1[6,7]
+; AVX2-64-NEXT:    retq
+  %a0 = load double, ptr %p0
+  %a1 = load double, ptr %p1
+  %v0 = insertelement <4 x double> poison, double %a0, i32 0
+  %v1 = insertelement <4 x double> %v0, double %a1, i32 1
+  %v2 = insertelement <4 x double> %v1, double %a1, i32 2
+  %v3 = insertelement <4 x double> %v2, double %a0, i32 3
+  ret <4 x double> %v3
+}
+
+define <8 x float> @test_buildvector_8f32_2_var(float %a0, float %a1) {
+; AVX-32-LABEL: test_buildvector_8f32_2_var:
+; AVX-32:       # %bb.0:
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm1
+; AVX-32-NEXT:    vinsertps {{.*#+}} xmm2 = xmm1[0,1,2],xmm0[0]
+; AVX-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; AVX-32-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX-32-NEXT:    retl
+;
+; AVX1-64-LABEL: test_buildvector_8f32_2_var:
+; AVX1-64:       # %bb.0:
+; AVX1-64-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[0,0,0,3]
+; AVX1-64-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm1[0]
+; AVX1-64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX1-64-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0,0]
+; AVX1-64-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-64-NEXT:    retq
+;
+; AVX2-64-LABEL: test_buildvector_8f32_2_var:
+; AVX2-64:       # %bb.0:
+; AVX2-64-NEXT:    vbroadcastss %xmm0, %xmm0
+; AVX2-64-NEXT:    vinsertps {{.*#+}} xmm2 = xmm0[0,1,2],xmm1[0]
+; AVX2-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX2-64-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX2-64-NEXT:    retq
+  %v0 = insertelement <8 x float> poison, float %a0, i32 0
+  %v1 = insertelement <8 x float> %v0, float %a1, i32 1
+  %v2 = insertelement <8 x float> %v1, float %a0, i32 2
+  %v3 = insertelement <8 x float> %v2, float %a0, i32 3
+  %v4 = insertelement <8 x float> %v3, float %a0, i32 4
+  %v5 = insertelement <8 x float> %v4, float %a0, i32 5
+  %v6 = insertelement <8 x float> %v5, float %a0, i32 6
+  %v7 = insertelement <8 x float> %v6, float %a1, i32 7
+  ret <8 x float> %v7
+}
+
+define <8 x float> @test_buildvector_8f32_2_load(ptr %p0, ptr %p1) {
+; AVX-32-LABEL: test_buildvector_8f32_2_load:
+; AVX-32:       # %bb.0:
+; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vbroadcastss (%eax), %xmm1
+; AVX-32-NEXT:    vinsertps {{.*#+}} xmm2 = xmm1[0,1,2],xmm0[0]
+; AVX-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; AVX-32-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX-32-NEXT:    retl
+;
+; AVX-64-LABEL: test_buildvector_8f32_2_load:
+; AVX-64:       # %bb.0:
+; AVX-64-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-64-NEXT:    vbroadcastss (%rdi), %xmm1
+; AVX-64-NEXT:    vinsertps {{.*#+}} xmm2 = xmm1[0,1,2],xmm0[0]
+; AVX-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; AVX-64-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX-64-NEXT:    retq
+  %a0 = load float, ptr %p0
+  %a1 = load float, ptr %p1
+  %v0 = insertelement <8 x float> poison, float %a0, i32 0
+  %v1 = insertelement <8 x float> %v0, float %a1, i32 1
+  %v2 = insertelement <8 x float> %v1, float %a0, i32 2
+  %v3 = insertelement <8 x float> %v2, float %a0, i32 3
+  %v4 = insertelement <8 x float> %v3, float %a0, i32 4
+  %v5 = insertelement <8 x float> %v4, float %a0, i32 5
+  %v6 = insertelement <8 x float> %v5, float %a0, i32 6
+  %v7 = insertelement <8 x float> %v6, float %a1, i32 7
+  ret <8 x float> %v7
+}
+
+define <16 x i16> @test_buildvector_16i16_2_var(i16 %a0, i16 %a1) {
+; AVX1-32-LABEL: test_buildvector_16i16_2_var:
+; AVX1-32:       # %bb.0:
+; AVX1-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; AVX1-32-NEXT:    vmovd %eax, %xmm0
+; AVX1-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; AVX1-32-NEXT:    vpinsrw $1, %ecx, %xmm0, %xmm0
+; AVX1-32-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
+; AVX1-32-NEXT:    vpinsrw $3, %eax, %xmm0, %xmm0
+; AVX1-32-NEXT:    vpinsrw $4, %eax, %xmm0, %xmm0
+; AVX1-32-NEXT:    vpinsrw $5, %ecx, %xmm0, %xmm0
+; AVX1-32-NEXT:    vpinsrw $6, %ecx, %xmm0, %xmm0
+; AVX1-32-NEXT:    vpinsrw $7, %ecx, %xmm0, %xmm0
+; AVX1-32-NEXT:    vmovd %ecx, %xmm1
+; AVX1-32-NEXT:    vpinsrw $1, %eax, %xmm1, %xmm1
+; AVX1-32-NEXT:    vpinsrw $2, %ecx, %xmm1, %xmm1
+; AVX1-32-NEXT:    vpinsrw $3, %ecx, %xmm1, %xmm1
+; AVX1-32-NEXT:    vpinsrw $4, %ecx, %xmm1, %xmm1
+; AVX1-32-NEXT:    vpinsrw $5, %ecx, %xmm1, %xmm1
+; AVX1-32-NEXT:    vpinsrw $6, %ecx, %xmm1, %xmm1
+; AVX1-32-NEXT:    vpinsrw $7, %eax, %xmm1, %xmm1
+; AVX1-32-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-32-NEXT:    retl
+;
+; AVX1-64-LABEL: test_buildvector_16i16_2_var:
+; AVX1-64:       # %bb.0:
+; AVX1-64-NEXT:    vmovd %esi, %xmm0
+; AVX1-64-NEXT:    vpinsrw $1, %edi, %xmm0, %xmm0
+; AVX1-64-NEXT:    vpinsrw $2, %esi, %xmm0, %xmm0
+; AVX1-64-NEXT:    vpinsrw $3, %esi, %xmm0, %xmm0
+; AVX1-64-NEXT:    vpinsrw $4, %esi, %xmm0, %xmm0
+; AVX1-64-NEXT:    vpinsrw $5, %edi, %xmm0, %xmm0
+; AVX1-64-NEXT:    vpinsrw $6, %edi, %xmm0, %xmm0
+; AVX1-64-NEXT:    vpinsrw $7, %edi, %xmm0, %xmm0
+; AVX1-64-NEXT:    vmovd %edi, %xmm1
+; AVX1-64-NEXT:    vpinsrw $1, %esi, %xmm1, %xmm1
+; AVX1-64-NEXT:    vpinsrw $2, %edi, %xmm1, %xmm1
+; AVX1-64-NEXT:    vpinsrw $3, %edi, %xmm1, %xmm1
+; AVX1-64-NEXT:    vpinsrw $4, %edi, %xmm1, %xmm1
+; AVX1-64-NEXT:    vpinsrw $5, %edi, %xmm1, %xmm1
+; AVX1-64-NEXT:    vpinsrw $6, %edi, %xmm1, %xmm1
+; AVX1-64-NEXT:    vpinsrw $7, %esi, %xmm1, %xmm1
+; AVX1-64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-64-NEXT:    retq
+;
+; AVX2-32-LABEL: test_buildvector_16i16_2_var:
+; AVX2-32:       # %bb.0:
+; AVX2-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; AVX2-32-NEXT:    vmovd %eax, %xmm0
+; AVX2-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; AVX2-32-NEXT:    vpinsrw $1, %ecx, %xmm0, %xmm0
+; AVX2-32-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
+; AVX2-32-NEXT:    vpinsrw $3, %eax, %xmm0, %xmm0
+; AVX2-32-NEXT:    vpinsrw $4, %eax, %xmm0, %xmm0
+; AVX2-32-NEXT:    vpinsrw $5, %ecx, %xmm0, %xmm0
+; AVX2-32-NEXT:    vpinsrw $6, %ecx, %xmm0, %xmm0
+; AVX2-32-NEXT:    vpinsrw $7, %ecx, %xmm0, %xmm0
+; AVX2-32-NEXT:    vmovd %ecx, %xmm1
+; AVX2-32-NEXT:    vpinsrw $1, %eax, %xmm1, %xmm1
+; AVX2-32-NEXT:    vpinsrw $2, %ecx, %xmm1, %xmm1
+; AVX2-32-NEXT:    vpinsrw $3, %ecx, %xmm1, %xmm1
+; AVX2-32-NEXT:    vpinsrw $4, %ecx, %xmm1, %xmm1
+; AVX2-32-NEXT:    vpinsrw $5, %ecx, %xmm1, %xmm1
+; AVX2-32-NEXT:    vpinsrw $6, %ecx, %xmm1, %xmm1
+; AVX2-32-NEXT:    vpinsrw $7, %eax, %xmm1, %xmm1
+; AVX2-32-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX2-32-NEXT:    retl
+;
+; AVX2-64-LABEL: test_buildvector_16i16_2_var:
+; AVX2-64:       # %bb.0:
+; AVX2-64-NEXT:    vmovd %esi, %xmm0
+; AVX2-64-NEXT:    vpinsrw $1, %edi, %xmm0, %xmm0
+; AVX2-64-NEXT:    vpinsrw $2, %esi, %xmm0, %xmm0
+; AVX2-64-NEXT:    vpinsrw $3, %esi, %xmm0, %xmm0
+; AVX2-64-NEXT:    vpinsrw $4, %esi, %xmm0, %xmm0
+; AVX2-64-NEXT:    vpinsrw $5, %edi, %xmm0, %xmm0
+; AVX2-64-NEXT:    vpinsrw $6, %edi, %xmm0, %xmm0
+; AVX2-64-NEXT:    vpinsrw $7, %edi, %xmm0, %xmm0
+; AVX2-64-NEXT:    vmovd %edi, %xmm1
+; AVX2-64-NEXT:    vpinsrw $1, %esi, %xmm1, %xmm1
+; AVX2-64-NEXT:    vpinsrw $2, %edi, %xmm1, %xmm1
+; AVX2-64-NEXT:    vpinsrw $3, %edi, %xmm1, %xmm1
+; AVX2-64-NEXT:    vpinsrw $4, %edi, %xmm1, %xmm1
+; AVX2-64-NEXT:    vpinsrw $5, %edi, %xmm1, %xmm1
+; AVX2-64-NEXT:    vpinsrw $6, %edi, %xmm1, %xmm1
+; AVX2-64-NEXT:    vpinsrw $7, %esi, %xmm1, %xmm1
+; AVX2-64-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX2-64-NEXT:    retq
+  %v0 = insertelement <16 x i16> poison, i16 %a0, i16 0
+  %v1 = insertelement <16 x i16> %v0, i16 %a1, i16 1
+  %v2 = insertelement <16 x i16> %v1, i16 %a0, i16 2
+  %v3 = insertelement <16 x i16> %v2, i16 %a0, i16 3
+  %v4 = insertelement <16 x i16> %v3, i16 %a0, i16 4
+  %v5 = insertelement <16 x i16> %v4, i16 %a0, i16 5
+  %v6 = insertelement <16 x i16> %v5, i16 %a0, i16 6
+  %v7 = insertelement <16 x i16> %v6, i16 %a1, i16 7
+  %v8 = insertelement <16 x i16> %v7, i16 %a1, i16 8
+  %v9 = insertelement <16 x i16> %v8, i16 %a0, i16 9
+  %v10 = insertelement <16 x i16> %v9, i16 %a1, i16 10
+  %v11 = insertelement <16 x i16> %v10, i16 %a1, i16 11
+  %v12 = insertelement <16 x i16> %v11, i16 %a1, i16 12
+  %v13 = insertelement <16 x i16> %v12, i16 %a0, i16 13
+  %v14 = insertelement <16 x i16> %v13, i16 %a0, i16 14
+  %v15 = insertelement <16 x i16> %v14, i16 %a0, i16 15
+  ret <16 x i16> %v15
+}
+
+define <16 x i16> @test_buildvector_16i16_2_load(ptr %p0, ptr %p1) {
+; AVX1-32-LABEL: test_buildvector_16i16_2_load:
+; AVX1-32:       # %bb.0:
+; AVX1-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; AVX1-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; AVX1-32-NEXT:    movzwl (%eax), %eax
+; AVX1-32-NEXT:    movzwl (%ecx), %ecx
+; AVX1-32-NEXT:    vmovd %ecx, %xmm0
+; AVX1-32-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0
+; AVX1-32-NEXT:    vpinsrw $2, %ecx, %xmm0, %xmm0
+; AVX1-32-NEXT:    vpinsrw $3, %ecx, %xmm0, %xmm0
+; AVX1-32-NEXT:    vpinsrw $4, %ecx, %xmm0, %xmm0
+; AVX1-32-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0
+; AVX1-32-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0
+; AVX1-32-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0
+; AVX1-32-NEXT:    vmovd %eax, %xmm1
+; AVX1-32-NEXT:    vpinsrw $1, %ecx, %xmm1, %xmm1
+; AVX1-32-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
+; AVX1-32-NEXT:    vpinsrw $3, %eax, %xmm1, %xmm1
+; AVX1-32-NEXT:    vpinsrw $4, %eax, %xmm1, %xmm1
+; AVX1-32-NEXT:    vpinsrw $5, %eax, %xmm1, %xmm1
+; AVX1-32-NEXT:    vpinsrw $6, %eax, %xmm1, %xmm1
+; AVX1-32-NEXT:    vpinsrw $7, %ecx, %xmm1, %xmm1
+; AVX1-32-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-32-NEXT:    retl
+;
+; AVX1-64-LABEL: test_buildvector_16i16_2_load:
+; AVX1-64:       # %bb.0:
+; AVX1-64-NEXT:    movzwl (%rdi), %eax
+; AVX1-64-NEXT:    movzwl (%rsi), %ecx
+; AVX1-64-NEXT:    vmovd %ecx, %xmm0
+; AVX1-64-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0
+; AVX1-64-NEXT:    vpinsrw $2, %ecx, %xmm0, %xmm0
+; AVX1-64-NEXT:    vpinsrw $3, %ecx, %xmm0, %xmm0
+; AVX1-64-NEXT:    vpinsrw $4, %ecx, %xmm0, %xmm0
+; AVX1-64-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0
+; AVX1-64-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0
+; AVX1-64-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0
+; AVX1-64-NEXT:    vmovd %eax, %xmm1
+; AVX1-64-NEXT:    vpinsrw $1, %ecx, %xmm1, %xmm1
+; AVX1-64-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
+; AVX1-64-NEXT:    vpinsrw $3, %eax, %xmm1, %xmm1
+; AVX1-64-NEXT:    vpinsrw $4, %eax, %xmm1, %xmm1
+; AVX1-64-NEXT:    vpinsrw $5, %eax, %xmm1, %xmm1
+; AVX1-64-NEXT:    vpinsrw $6, %eax, %xmm1, %xmm1
+; AVX1-64-NEXT:    vpinsrw $7, %ecx, %xmm1, %xmm1
+; AVX1-64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-64-NEXT:    retq
+;
+; AVX2-32-LABEL: test_buildvector_16i16_2_load:
+; AVX2-32:       # %bb.0:
+; AVX2-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; AVX2-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; AVX2-32-NEXT:    movzwl (%eax), %eax
+; AVX2-32-NEXT:    movzwl (%ecx), %ecx
+; AVX2-32-NEXT:    vmovd %ecx, %xmm0
+; AVX2-32-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0
+; AVX2-32-NEXT:    vpinsrw $2, %ecx, %xmm0, %xmm0
+; AVX2-32-NEXT:    vpinsrw $3, %ecx, %xmm0, %xmm0
+; AVX2-32-NEXT:    vpinsrw $4, %ecx, %xmm0, %xmm0
+; AVX2-32-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0
+; AVX2-32-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0
+; AVX2-32-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0
+; AVX2-32-NEXT:    vmovd %eax, %xmm1
+; AVX2-32-NEXT:    vpinsrw $1, %ecx, %xmm1, %xmm1
+; AVX2-32-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
+; AVX2-32-NEXT:    vpinsrw $3, %eax, %xmm1, %xmm1
+; AVX2-32-NEXT:    vpinsrw $4, %eax, %xmm1, %xmm1
+; AVX2-32-NEXT:    vpinsrw $5, %eax, %xmm1, %xmm1
+; AVX2-32-NEXT:    vpinsrw $6, %eax, %xmm1, %xmm1
+; AVX2-32-NEXT:    vpinsrw $7, %ecx, %xmm1, %xmm1
+; AVX2-32-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX2-32-NEXT:    retl
+;
+; AVX2-64-LABEL: test_buildvector_16i16_2_load:
+; AVX2-64:       # %bb.0:
+; AVX2-64-NEXT:    movzwl (%rdi), %eax
+; AVX2-64-NEXT:    movzwl (%rsi), %ecx
+; AVX2-64-NEXT:    vmovd %ecx, %xmm0
+; AVX2-64-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0
+; AVX2-64-NEXT:    vpinsrw $2, %ecx, %xmm0, %xmm0
+; AVX2-64-NEXT:    vpinsrw $3, %ecx, %xmm0, %xmm0
+; AVX2-64-NEXT:    vpinsrw $4, %ecx, %xmm0, %xmm0
+; AVX2-64-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0
+; AVX2-64-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0
+; AVX2-64-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0
+; AVX2-64-NEXT:    vmovd %eax, %xmm1
+; AVX2-64-NEXT:    vpinsrw $1, %ecx, %xmm1, %xmm1
+; AVX2-64-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
+; AVX2-64-NEXT:    vpinsrw $3, %eax, %xmm1, %xmm1
+; AVX2-64-NEXT:    vpinsrw $4, %eax, %xmm1, %xmm1
+; AVX2-64-NEXT:    vpinsrw $5, %eax, %xmm1, %xmm1
+; AVX2-64-NEXT:    vpinsrw $6, %eax, %xmm1, %xmm1
+; AVX2-64-NEXT:    vpinsrw $7, %ecx, %xmm1, %xmm1
+; AVX2-64-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX2-64-NEXT:    retq
+  %a0 = load i16, ptr %p0
+  %a1 = load i16, ptr %p1
+  %v0 = insertelement <16 x i16> poison, i16 %a0, i16 0
+  %v1 = insertelement <16 x i16> %v0, i16 %a1, i16 1
+  %v2 = insertelement <16 x i16> %v1, i16 %a0, i16 2
+  %v3 = insertelement <16 x i16> %v2, i16 %a0, i16 3
+  %v4 = insertelement <16 x i16> %v3, i16 %a0, i16 4
+  %v5 = insertelement <16 x i16> %v4, i16 %a0, i16 5
+  %v6 = insertelement <16 x i16> %v5, i16 %a0, i16 6
+  %v7 = insertelement <16 x i16> %v6, i16 %a1, i16 7
+  %v8 = insertelement <16 x i16> %v7, i16 %a1, i16 8
+  %v9 = insertelement <16 x i16> %v8, i16 %a0, i16 9
+  %v10 = insertelement <16 x i16> %v9, i16 %a1, i16 10
+  %v11 = insertelement <16 x i16> %v10, i16 %a1, i16 11
+  %v12 = insertelement <16 x i16> %v11, i16 %a1, i16 12
+  %v13 = insertelement <16 x i16> %v12, i16 %a0, i16 13
+  %v14 = insertelement <16 x i16> %v13, i16 %a0, i16 14
+  %v15 = insertelement <16 x i16> %v14, i16 %a0, i16 15
+  ret <16 x i16> %v15
+}
+
 ; PR30780
 
 define <8 x i32> @test_buildvector_v8i32_splat_sext_i8(i8 %in) {
@@ -485,3 +862,4 @@ define <8 x i32> @test_buildvector_v8i32_splat_zext_i8(i8 %in) {
   %splat = shufflevector <8 x i32> %insert, <8 x i32> undef, <8 x i32> zeroinitializer
   ret <8 x i32> %splat
 }
+

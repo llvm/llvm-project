@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; The early return is predicated, and the save-restore code is mixed together:
 ; {
@@ -12,10 +12,11 @@
 ; The problem is that the load will execute before the store, clobbering the
 ; pair r17:16.
 ;
-; Check that the store and the load are not in the same packet.
+
+; Validate that store executes before load.
 ; CHECK: memd{{.*}} = r17:16
-; CHECK: }
 ; CHECK: r17:16 = memd
+; CHECK: } :mem_noshuf
 ; CHECK-LABEL: LBB0_1:
 
 target triple = "hexagon"

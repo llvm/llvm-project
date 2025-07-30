@@ -111,3 +111,9 @@ __attribute__((target_version("default"))) int invalidVerson4(void) { return 2; 
 __attribute__((target_version("priority=1"))) int prioriyWithoutArch(void) { return 2; }
 // expected-error@+1 {{redefinition of 'prioriyWithoutArch'}}
 __attribute__((target_version("default"))) int prioriyWithoutArch(void) { return 2; }
+
+// expected-warning@+2 {{unsupported '-1' in the 'target_version' attribute string; 'target_version' attribute ignored}}
+// expected-note@+1 {{previous definition is here}}
+__attribute__((target_version("arch=+c;priority=-1"))) int UnsupportNegativePriority(void) { return 2; }
+// expected-error@+1 {{redefinition of 'UnsupportNegativePriority'}}
+__attribute__((target_version("default"))) int UnsupportNegativePriority(void) { return 2; }

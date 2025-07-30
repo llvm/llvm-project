@@ -13,36 +13,13 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/Support/EndianStream.h"
 
 using namespace llvm;
 
 MCDXContainerTargetWriter::~MCDXContainerTargetWriter() {}
 
-namespace {
-class DXContainerObjectWriter : public MCObjectWriter {
-  ::support::endian::Writer W;
-
-  /// The target specific DXContainer writer instance.
-  std::unique_ptr<MCDXContainerTargetWriter> TargetObjectWriter;
-
-public:
-  DXContainerObjectWriter(std::unique_ptr<MCDXContainerTargetWriter> MOTW,
-                          raw_pwrite_stream &OS)
-      : W(OS, llvm::endianness::little), TargetObjectWriter(std::move(MOTW)) {}
-
-  ~DXContainerObjectWriter() override {}
-
-private:
-  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override {}
-
-  uint64_t writeObject(MCAssembler &Asm) override;
-};
-} // namespace
-
-uint64_t DXContainerObjectWriter::writeObject(MCAssembler &Asm) {
+uint64_t DXContainerObjectWriter::writeObject() {
+  auto &Asm = *this->Asm;
   // Start the file size as the header plus the size of the part offsets.
   // Presently DXContainer files usually contain 7-10 parts. Reserving space for
   // 16 part offsets gives us a little room for growth.
@@ -110,7 +87,7 @@ uint64_t DXContainerObjectWriter::writeObject(MCAssembler &Asm) {
       dxbc::ProgramHeader Header;
       memset(reinterpret_cast<void *>(&Header), 0, sizeof(dxbc::ProgramHeader));
 
-      const Triple &TT = Asm.getContext().getTargetTriple();
+      const Triple &TT = getContext().getTargetTriple();
       VersionTuple Version = TT.getOSVersion();
       uint8_t MajorVersion = static_cast<uint8_t>(Version.getMajor());
       uint8_t MinorVersion =
@@ -139,9 +116,4 @@ uint64_t DXContainerObjectWriter::writeObject(MCAssembler &Asm) {
     W.OS.write_zeros(offsetToAlignment(Size, Align(4)));
   }
   return 0;
-}
-
-std::unique_ptr<MCObjectWriter> llvm::createDXContainerObjectWriter(
-    std::unique_ptr<MCDXContainerTargetWriter> MOTW, raw_pwrite_stream &OS) {
-  return std::make_unique<DXContainerObjectWriter>(std::move(MOTW), OS);
 }

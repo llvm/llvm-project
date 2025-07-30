@@ -14,6 +14,7 @@
 
 #include <array>
 #include <concepts>
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <type_traits>

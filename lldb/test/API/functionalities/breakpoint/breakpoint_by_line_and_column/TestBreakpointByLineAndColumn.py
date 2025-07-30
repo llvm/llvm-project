@@ -60,7 +60,7 @@ class BreakpointByLineAndColumnTestCase(TestBase):
 
         for pattern in patterns:
             line = line_number("main.cpp", pattern) + 1
-            column = int(re.search("\(col:([0-9]+)\)", pattern).group(1))
+            column = int(re.search(r"\(col:([0-9]+)\)", pattern).group(1))
             source_loc.append({"line": line, "column": column})
 
         target = self.createTestTarget()
