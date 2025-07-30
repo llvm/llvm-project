@@ -13,17 +13,21 @@ DESCRIPTION
 
 :program:`llvm-ir2vec` is a standalone command-line tool for IR2Vec. It
 generates IR2Vec embeddings for LLVM IR and supports triplet generation 
-for vocabulary training. It provides two main operation modes:
+for vocabulary training. It provides three main operation modes:
 
-1. **Triplet Mode**: Generates triplets (opcode, type, operands) for vocabulary
+1. **Triplet Mode**: Generates numeric triplets in train2id format for vocabulary
    training from LLVM IR.
 
-2. **Embedding Mode**: Generates IR2Vec embeddings using a trained vocabulary
+2. **Entity Mode**: Generates entity mapping files (entity2id.txt) for vocabulary 
+   training.
+
+3. **Embedding Mode**: Generates IR2Vec embeddings using a trained vocabulary
    at different granularity levels (instruction, basic block, or function).
 
 The tool is designed to facilitate machine learning applications that work with
 LLVM IR by converting the IR into numerical representations that can be used by
-ML models.
+ML models. The triplet mode generates numeric IDs directly instead of string 
+triplets, streamlining the training data preparation workflow.
 
 .. note::
 
@@ -34,18 +38,46 @@ ML models.
 OPERATION MODES
 ---------------
 
+Triplet Generation and Entity Mapping Modes are used for preparing
+vocabulary and training data for knowledge graph embeddings. The Embedding Mode
+is used for generating embeddings from LLVM IR using a pre-trained vocabulary.
+
+The Seed Embedding Vocabulary of IR2Vec is trained on a large corpus of LLVM IR
+by modeling the relationships between opcodes, types, and operands as a knowledge
+graph. For this purpose, Triplet Generation and Entity Mapping Modes generate
+triplets and entity mappings in the standard format used for knowledge graph
+embedding training (see 
+<https://github.com/thunlp/OpenKE/tree/OpenKE-PyTorch?tab=readme-ov-file#data-format> 
+for details).
+
 Triplet Generation Mode
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-In triplet mode, :program:`llvm-ir2vec` analyzes LLVM IR and extracts triplets
-consisting of opcodes, types, and operands. These triplets can be used to train
-vocabularies for embedding generation.
+In triplet mode, :program:`llvm-ir2vec` analyzes LLVM IR and extracts numeric
+triplets consisting of opcode IDs, type IDs, and operand IDs. These triplets 
+are generated in the standard format used for knowledge graph embedding training. 
+The tool outputs numeric IDs directly using the ir2vec::Vocabulary mapping 
+infrastructure, eliminating the need for string-to-ID preprocessing.
 
 Usage:
 
 .. code-block:: bash
 
-   llvm-ir2vec --mode=triplets input.bc -o triplets.txt
+   llvm-ir2vec --mode=triplets input.bc -o triplets_train2id.txt
+
+Entity Mapping Generation Mode
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In entity mode, :program:`llvm-ir2vec` generates the entity mappings supported by
+IR2Vec in the standard format used for knowledge graph embedding training. This
+mode outputs all supported entities (opcodes, types, and operands) with their
+corresponding numeric IDs, and is not specific for an LLVM IR file.
+
+Usage:
+
+.. code-block:: bash
+
+   llvm-ir2vec --mode=entities -o entity2id.txt
 
 Embedding Generation Mode
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -67,6 +99,7 @@ OPTIONS
  Specify the operation mode. Valid values are:
 
  * ``triplets`` - Generate triplets for vocabulary training
+ * ``entities`` - Generate entity mappings for vocabulary training
  * ``embeddings`` - Generate embeddings using trained vocabulary (default)
 
 .. option:: --level=<level>
@@ -115,7 +148,7 @@ OPTIONS
 
    ``--level``, ``--function``, ``--ir2vec-vocab-path``, ``--ir2vec-opc-weight``, 
    ``--ir2vec-type-weight``, and ``--ir2vec-arg-weight`` are only used in embedding 
-   mode. These options are ignored in triplet mode.
+   mode. These options are ignored in triplet and entity modes.
 
 INPUT FILE FORMAT
 -----------------
@@ -129,14 +162,34 @@ OUTPUT FORMAT
 Triplet Mode Output
 ~~~~~~~~~~~~~~~~~~~
 
-In triplet mode, the output consists of lines containing space-separated triplets:
+In triplet mode, the output consists of numeric triplets in train2id format with
+metadata headers. The format includes:
 
 .. code-block:: text
 
-   <opcode> <type> <operand1> <operand2> ...
+   MAX_RELATIONS=<max_relations_count>
+   <head_entity_id> <tail_entity_id> <relation_id>
+   <head_entity_id> <tail_entity_id> <relation_id>
+   ...
 
-Each line represents the information of one instruction, with the opcode, type,
-and operands.
+Each line after the metadata header represents one instruction relationship,
+with numeric IDs for head entity, relation, and tail entity. The metadata 
+header (MAX_RELATIONS) provides counts for post-processing and training setup.
+
+Entity Mode Output
+~~~~~~~~~~~~~~~~~~
+
+In entity mode, the output consists of entity mapping in the format:
+
+.. code-block:: text
+
+   <total_entities>
+   <entity_string>	<numeric_id>
+   <entity_string>	<numeric_id>
+   ...
+
+The first line contains the total number of entities, followed by one entity
+mapping per line with tab-separated entity string and numeric ID.
 
 Embedding Mode Output
 ~~~~~~~~~~~~~~~~~~~~~

@@ -92,7 +92,7 @@ private:
 
 public:
   SymbolSet() = default;
-  ~SymbolSet();
+  LLVM_ABI ~SymbolSet();
   LLVM_ABI Symbol *addGlobal(EncodeKind Kind, StringRef Name, SymbolFlags Flags,
                              const Target &Targ);
   size_t size() const { return Symbols.size(); }

@@ -1883,7 +1883,8 @@ define void @store_factor4_one_active_slidedown(ptr %ptr, <4 x i32> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
-; CHECK-NEXT:    vsseg4e32.v v8, (a0)
+; CHECK-NEXT:    li a1, 16
+; CHECK-NEXT:    vsse32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
   %v0 = shufflevector <4 x i32> %v, <4 x i32> poison, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3, i32 undef, i32 undef, i32 undef, i32 4,  i32 undef, i32 undef, i32 undef>
   store <16 x i32> %v0, ptr %ptr

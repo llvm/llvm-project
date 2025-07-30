@@ -18,6 +18,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::acoshf16(1.0f16));
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::acospif16(1.0f16));
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::asinf16(0.0f16));
+  EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::asinhf16(0.0f16));
 
   EXPECT_FP_EQ(0x1p+0f16, LIBC_NAMESPACE::shared::exp10f16(0.0f16));
 
@@ -58,6 +59,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
 TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_FP_EQ(0x1.921fb54442d18p+0, LIBC_NAMESPACE::shared::acos(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::asin(0.0));
+  EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::atan(0.0));
   EXPECT_FP_EQ(0x1p+0, LIBC_NAMESPACE::shared::exp(0.0));
   EXPECT_FP_EQ(0x1p+0, LIBC_NAMESPACE::shared::exp10(0.0));
 }

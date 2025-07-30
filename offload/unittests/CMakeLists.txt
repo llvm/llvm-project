@@ -41,7 +41,7 @@ function(add_offload_test_device_code test_filename test_name)
         COMMAND ${CMAKE_C_COMPILER}
         --target=nvptx64-nvidia-cuda -march=${nvptx_arch}
         -nogpulib --cuda-path=${CUDA_ROOT} -flto ${ARGN}
-        -c ${SRC_PATH} -o ${output_file}
+        ${SRC_PATH} -o ${output_file}
         DEPENDS ${SRC_PATH}
       )
       add_custom_target(${test_name}.nvptx64 DEPENDS ${output_file})
@@ -64,7 +64,7 @@ function(add_offload_test_device_code test_filename test_name)
         OUTPUT ${output_file}
         COMMAND ${CMAKE_C_COMPILER}
         --target=amdgcn-amd-amdhsa -mcpu=${amdgpu_arch}
-        -nogpulib -flto ${ARGN} -c ${SRC_PATH} -o ${output_file}
+        -nogpulib -flto ${ARGN} ${SRC_PATH} -o ${output_file}
         DEPENDS ${SRC_PATH}
       )
       add_custom_target(${test_name}.amdgpu DEPENDS ${output_file})
@@ -106,16 +106,15 @@ function(add_conformance_test test_name)
   endif()
 
   add_executable(${target_name} ${files})
-  add_dependencies(${target_name} ${PLUGINS_TEST_COMMON} ${test_name}.bin)
-  target_compile_definitions(${target_name} PRIVATE DEVICE_CODE_PATH="${CONFORMANCE_TEST_DEVICE_CODE_PATH}")
+  add_dependencies(${target_name} conformance_device_binaries)
+  target_compile_definitions(${target_name}
+    PRIVATE DEVICE_BINARY_DIR="${OFFLOAD_CONFORMANCE_DEVICE_BINARY_DIR}")
   target_link_libraries(${target_name} PRIVATE ${PLUGINS_TEST_COMMON} libc)
-  target_include_directories(${target_name} PRIVATE ${PLUGINS_TEST_INCLUDE})
   set_target_properties(${target_name} PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
   add_custom_target(offload.conformance.${test_name}
     COMMAND $<TARGET_FILE:${target_name}>
-    DEPENDS ${target_name}
-    COMMENT "Running conformance test ${test_name}")
+    DEPENDS ${target_name})
   add_dependencies(offload.conformance offload.conformance.${test_name})
 endfunction()
 

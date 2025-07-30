@@ -235,7 +235,7 @@ define ptr @return_unknown_call(ptr %fn) {
 }
 
 define ptr @return_unknown_noalias_call(ptr %fn) {
-; CHECK-LABEL: define ptr @return_unknown_noalias_call(
+; CHECK-LABEL: define noalias ptr @return_unknown_noalias_call(
 ; CHECK-SAME: ptr readonly captures(none) [[FN:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = call noalias ptr [[FN]]()
 ; CHECK-NEXT:    ret ptr [[A]]

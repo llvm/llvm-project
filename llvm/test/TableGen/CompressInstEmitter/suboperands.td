@@ -115,7 +115,7 @@ def : CompressPat<(BigInst3 RegsC:$dst, RegsC:$src, simm6:$imm),
 // CHECK-NEXT: ArchMCRegisterClasses[Arch::RegsCRegClassID].contains(MI.getOperand(0).getReg()) &&
 // CHECK-NEXT: MI.getOperand(1).isReg() &&
 // CHECK-NEXT: ArchMCRegisterClasses[Arch::RegsCRegClassID].contains(MI.getOperand(1).getReg()) &&
-// CHECK-NEXT: ArchValidateMCOperandForCompress(MI.getOperand(2), STI, 1)) {
+// CHECK-NEXT: ArchValidateMCOperandForCompress(MI.getOperand(2), STI, 1 /* simm6 */)) {
 // CHECK-NEXT: // small $dst, $addr
 // CHECK-NEXT: OutInst.setOpcode(Arch::SmallInst);
 // CHECK-NEXT: // Operand: dst
@@ -131,7 +131,7 @@ def : CompressPat<(BigInst3 RegsC:$dst, RegsC:$src, simm6:$imm),
 // CHECK-NEXT: ArchMCRegisterClasses[Arch::RegsCRegClassID].contains(MI.getOperand(0).getReg()) &&
 // CHECK-NEXT: MI.getOperand(1).isReg() &&
 // CHECK-NEXT: ArchMCRegisterClasses[Arch::RegsCRegClassID].contains(MI.getOperand(1).getReg()) &&
-// CHECK-NEXT: ArchValidateMCOperandForCompress(MI.getOperand(2), STI, 1)) {
+// CHECK-NEXT: ArchValidateMCOperandForCompress(MI.getOperand(2), STI, 1 /* simm6 */)) {
 // CHECK-NEXT: // small $dst, $src, $imm
 // CHECK-NEXT: OutInst.setOpcode(Arch::SmallInst2);
 // CHECK-NEXT: // Operand: dst
@@ -148,7 +148,7 @@ def : CompressPat<(BigInst3 RegsC:$dst, RegsC:$src, simm6:$imm),
 // CHECK-NEXT: ArchMCRegisterClasses[Arch::RegsCRegClassID].contains(MI.getOperand(0).getReg()) &&
 // CHECK-NEXT: MI.getOperand(1).isReg() &&
 // CHECK-NEXT: ArchMCRegisterClasses[Arch::RegsCRegClassID].contains(MI.getOperand(1).getReg()) &&
-// CHECK-NEXT: ArchValidateMCOperandForCompress(MI.getOperand(2), STI, 1)) {
+// CHECK-NEXT: ArchValidateMCOperandForCompress(MI.getOperand(2), STI, 1 /* simm6 */)) {
 // CHECK-NEXT: // small $dst, $addr
 // CHECK-NEXT: OutInst.setOpcode(Arch::SmallInst3);
 // CHECK-NEXT: // Operand: dst
@@ -170,7 +170,8 @@ def : CompressPat<(BigInst3 RegsC:$dst, RegsC:$src, simm6:$imm),
 // CHECK-NEXT: ArchMCRegisterClasses[Arch::RegsCRegClassID].contains(MI.getOperand(0).getReg()) &&
 // CHECK-NEXT: MI.getOperand(1).isReg() &&
 // CHECK-NEXT: ArchMCRegisterClasses[Arch::RegsCRegClassID].contains(MI.getOperand(1).getReg()) &&
-// CHECK-NEXT: ArchValidateMCOperandForUncompress(MI.getOperand(2), STI, 1)) {
+// CHECK-NEXT: ArchValidateMCOperandForUncompress(MI.getOperand(2), STI, 1 /* simm6 */) &&
+// CHECK-NEXT: ArchValidateMCOperandForUncompress(MI.getOperand(2), STI, 2 /* simm12 */))
 // CHECK-NEXT: // big $dst, $addr
 // CHECK-NEXT: OutInst.setOpcode(Arch::BigInst);
 // CHECK-NEXT: // Operand: dst
@@ -186,7 +187,8 @@ def : CompressPat<(BigInst3 RegsC:$dst, RegsC:$src, simm6:$imm),
 // CHECK-NEXT: ArchMCRegisterClasses[Arch::RegsCRegClassID].contains(MI.getOperand(0).getReg()) &&
 // CHECK-NEXT: MI.getOperand(1).isReg() &&
 // CHECK-NEXT: ArchMCRegisterClasses[Arch::RegsCRegClassID].contains(MI.getOperand(1).getReg()) &&
-// CHECK-NEXT: ArchValidateMCOperandForUncompress(MI.getOperand(2), STI, 1)) {
+// CHECK-NEXT: ArchValidateMCOperandForUncompress(MI.getOperand(2), STI, 1 /* simm6 */) &&
+// CHECK-NEXT: ArchValidateMCOperandForUncompress(MI.getOperand(2), STI, 2 /* simm12 */)) {
 // CHECK-NEXT: // big $dst, $addr
 // CHECK-NEXT: OutInst.setOpcode(Arch::BigInst2);
 // CHECK-NEXT: // Operand: dst
@@ -202,7 +204,8 @@ def : CompressPat<(BigInst3 RegsC:$dst, RegsC:$src, simm6:$imm),
 // CHECK-NEXT: ArchMCRegisterClasses[Arch::RegsCRegClassID].contains(MI.getOperand(0).getReg()) &&
 // CHECK-NEXT: MI.getOperand(1).isReg() &&
 // CHECK-NEXT: ArchMCRegisterClasses[Arch::RegsCRegClassID].contains(MI.getOperand(1).getReg()) &&
-// CHECK-NEXT: ArchValidateMCOperandForUncompress(MI.getOperand(2), STI, 1)) {
+// CHECK-NEXT: ArchValidateMCOperandForUncompress(MI.getOperand(2), STI, 1 /* simm6 */) &&
+// CHECK-NEXT: ArchValidateMCOperandForUncompress(MI.getOperand(2), STI, 2 /* simm12 */)) {
 // CHECK-NEXT: // big $dst, $src, $imm
 // CHECK-NEXT: OutInst.setOpcode(Arch::BigInst3);
 // CHECK-NEXT: // Operand: dst
@@ -226,7 +229,7 @@ def : CompressPat<(BigInst3 RegsC:$dst, RegsC:$src, simm6:$imm),
 // CHECK-NEXT:    MI.getOperand(1).isReg() && MI.getOperand(1).getReg().isPhysical() &&
 // CHECK-NEXT:    ArchMCRegisterClasses[Arch::RegsCRegClassID].contains(MI.getOperand(1).getReg()) &&
 // CHECK-NEXT:    MI.getOperand(2).isImm() &&
-// CHECK-NEXT:    ArchValidateMachineOperand(MI.getOperand(2), &STI, 1)) {
+// CHECK-NEXT:    ArchValidateMachineOperand(MI.getOperand(2), &STI, 1 /* simm6 */)) {
 // CHECK-NEXT:    // small $dst, $addr
 // CHECK-NEXT:    // Operand: dst
 // CHECK-NEXT:    // Operand: addr
@@ -238,7 +241,7 @@ def : CompressPat<(BigInst3 RegsC:$dst, RegsC:$src, simm6:$imm),
 // CHECK-NEXT:    MI.getOperand(1).isReg() && MI.getOperand(1).getReg().isPhysical() &&
 // CHECK-NEXT:    ArchMCRegisterClasses[Arch::RegsCRegClassID].contains(MI.getOperand(1).getReg()) &&
 // CHECK-NEXT:    MI.getOperand(2).isImm() &&
-// CHECK-NEXT:    ArchValidateMachineOperand(MI.getOperand(2), &STI, 1)) {
+// CHECK-NEXT:    ArchValidateMachineOperand(MI.getOperand(2), &STI, 1 /* simm6 */)) {
 // CHECK-NEXT:    // small $dst, $src, $imm
 // CHECK-NEXT:    // Operand: dst
 // CHECK-NEXT:    // Operand: src
@@ -251,7 +254,7 @@ def : CompressPat<(BigInst3 RegsC:$dst, RegsC:$src, simm6:$imm),
 // CHECK-NEXT:    MI.getOperand(1).isReg() && MI.getOperand(1).getReg().isPhysical() &&
 // CHECK-NEXT:    ArchMCRegisterClasses[Arch::RegsCRegClassID].contains(MI.getOperand(1).getReg()) &&
 // CHECK-NEXT:    MI.getOperand(2).isImm() &&
-// CHECK-NEXT:    ArchValidateMachineOperand(MI.getOperand(2), &STI, 1)) {
+// CHECK-NEXT:    ArchValidateMachineOperand(MI.getOperand(2), &STI, 1 /* simm6 */)) {
 // CHECK-NEXT:    // small $dst, $addr
 // CHECK-NEXT:    // Operand: dst
 // CHECK-NEXT:    // Operand: addr

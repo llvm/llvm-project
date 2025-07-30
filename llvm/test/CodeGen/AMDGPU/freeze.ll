@@ -11532,15 +11532,13 @@ define void @freeze_v8p5(ptr addrspace(5) %ptra, ptr addrspace(5) %ptrb) {
 ; GFX11-GISEL-LABEL: freeze_v8p5:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_add_nc_u32_e32 v6, 16, v0
 ; GFX11-GISEL-NEXT:    s_clause 0x1
 ; GFX11-GISEL-NEXT:    scratch_load_b128 v[2:5], v0, off
-; GFX11-GISEL-NEXT:    scratch_load_b128 v[6:9], v6, off
-; GFX11-GISEL-NEXT:    v_add_nc_u32_e32 v0, 16, v1
+; GFX11-GISEL-NEXT:    scratch_load_b128 v[6:9], v0, off offset:16
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-GISEL-NEXT:    scratch_store_b128 v1, v[2:5], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GISEL-NEXT:    scratch_store_b128 v0, v[6:9], off
+; GFX11-GISEL-NEXT:    scratch_store_b128 v1, v[6:9], off offset:16
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %a = load <8 x ptr addrspace(5)>, ptr addrspace(5) %ptra
   %freeze = freeze <8 x ptr addrspace(5)> %a
@@ -12072,25 +12070,19 @@ define void @freeze_v16p5(ptr addrspace(5) %ptra, ptr addrspace(5) %ptrb) {
 ; GFX11-GISEL-LABEL: freeze_v16p5:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_add_nc_u32_e32 v6, 16, v0
-; GFX11-GISEL-NEXT:    v_add_nc_u32_e32 v10, 32, v0
-; GFX11-GISEL-NEXT:    v_add_nc_u32_e32 v14, 48, v0
-; GFX11-GISEL-NEXT:    v_add_nc_u32_e32 v18, 32, v1
 ; GFX11-GISEL-NEXT:    s_clause 0x3
 ; GFX11-GISEL-NEXT:    scratch_load_b128 v[2:5], v0, off
-; GFX11-GISEL-NEXT:    scratch_load_b128 v[6:9], v6, off
-; GFX11-GISEL-NEXT:    scratch_load_b128 v[10:13], v10, off
-; GFX11-GISEL-NEXT:    scratch_load_b128 v[14:17], v14, off
-; GFX11-GISEL-NEXT:    v_add_nc_u32_e32 v0, 16, v1
-; GFX11-GISEL-NEXT:    v_add_nc_u32_e32 v19, 48, v1
+; GFX11-GISEL-NEXT:    scratch_load_b128 v[6:9], v0, off offset:16
+; GFX11-GISEL-NEXT:    scratch_load_b128 v[10:13], v0, off offset:32
+; GFX11-GISEL-NEXT:    scratch_load_b128 v[14:17], v0, off offset:48
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(3)
 ; GFX11-GISEL-NEXT:    scratch_store_b128 v1, v[2:5], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-GISEL-NEXT:    scratch_store_b128 v0, v[6:9], off
+; GFX11-GISEL-NEXT:    scratch_store_b128 v1, v[6:9], off offset:16
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-GISEL-NEXT:    scratch_store_b128 v18, v[10:13], off
+; GFX11-GISEL-NEXT:    scratch_store_b128 v1, v[10:13], off offset:32
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GISEL-NEXT:    scratch_store_b128 v19, v[14:17], off
+; GFX11-GISEL-NEXT:    scratch_store_b128 v1, v[14:17], off offset:48
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %a = load <16 x ptr addrspace(5)>, ptr addrspace(5) %ptra
   %freeze = freeze <16 x ptr addrspace(5)> %a

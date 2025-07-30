@@ -725,6 +725,10 @@ public:
 
   /// Initializes a field.
   void initialize() const;
+  /// Initialize all elements of a primitive array at once. This can be
+  /// used in situations where we *know* we have initialized *all* elements
+  /// of a primtive array.
+  void initializeAllElements() const;
   /// Activats a field.
   void activate() const;
   /// Deactivates an entire strurcutre.
