@@ -1461,6 +1461,28 @@ func.func @execute_region_elim() {
 
 // -----
 
+// CHECK-LABEL: func @execute_region_elim_noinline
+func.func @execute_region_elim_noinline() {
+  affine.for %i = 0 to 100 {
+    "test.foo"() : () -> ()
+    %v = scf.execute_region -> i64 {
+      %x = "test.val"() : () -> i64
+      scf.yield %x : i64
+    } {no_inline}
+    "test.bar"(%v) : (i64) -> ()
+  }
+  return
+}
+
+// CHECK-NEXT:     affine.for %arg0 = 0 to 100 {
+// CHECK-NEXT:       "test.foo"() : () -> ()
+// CHECK-NEXT:       scf.execute_region
+// CHECK-NEXT:       %[[VAL:.*]] = "test.val"() : () -> i64
+// CHECK-NEXT:       scf.yield %[[VAL]] : i64
+// CHECK-NEXT:     }
+
+// -----
+
 // CHECK-LABEL: func @func_execute_region_elim
 func.func @func_execute_region_elim() {
     "test.foo"() : () -> ()

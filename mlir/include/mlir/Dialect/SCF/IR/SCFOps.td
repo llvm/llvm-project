@@ -119,6 +119,10 @@ def ExecuteRegionOp : SCF_Op<"execute_region", [
     ```
   }];
 
+  let arguments = (ins
+    UnitAttr:$no_inline
+  );
+
   let results = (outs Variadic<AnyType>);
 
   let regions = (region AnyRegion:$region);

@@ -184,7 +184,7 @@ struct SingleBlockExecuteInliner : public OpRewritePattern<ExecuteRegionOp> {
 
   LogicalResult matchAndRewrite(ExecuteRegionOp op,
                                 PatternRewriter &rewriter) const override {
-    if (!op.getRegion().hasOneBlock())
+    if (!op.getRegion().hasOneBlock() || op.getNoInline())
       return failure();
     replaceOpWithRegion(rewriter, op, op.getRegion());
     return success();
