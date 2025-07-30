@@ -171,7 +171,7 @@ void NextUseResult::analyze(const MachineFunction &MF) {
     }
     dumpUsedInBlock();
     T1->stopTimer();
-    TG->print(llvm::errs());
+    LLVM_DEBUG(TG->print(llvm::errs()));
   }
 
 void NextUseResult::getFromSortedRecords(

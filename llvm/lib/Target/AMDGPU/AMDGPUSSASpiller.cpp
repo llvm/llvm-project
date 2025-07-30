@@ -96,6 +96,7 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
       dbgs() << printReg(P.VReg) << "]\n";
   }
 
+  #ifndef NDEBUG
   void dump() {
     for (auto SI : RegisterMap) {
       dbgs() << "\nMBB: " << SI.first;
@@ -110,6 +111,7 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
       dbgs() << "\n";
     }
   }
+  #endif
 
   void init(MachineFunction &MF, bool IsVGPRs) {
     IsVGPRsPass = IsVGPRs;
@@ -204,6 +206,7 @@ public:
   bool run(MachineFunction &MF);
 };
 
+#ifndef NDEBUG
 LLVM_ATTRIBUTE_NOINLINE void
 AMDGPUSSASpiller::dumpRegSet(RegisterSet VMPs) {
   dbgs() << "\n";
@@ -225,6 +228,7 @@ AMDGPUSSASpiller::printVRegMaskPair(const VRegMaskPair P) {
     dbgs() << printReg(P.getVReg(), TRI, SubRegIndex, MRI) << "] ";
   }
 }
+#endif
 
 AMDGPUSSASpiller::SpillInfo &
 AMDGPUSSASpiller::getBlockInfo(const MachineBasicBlock &MBB) {
@@ -484,9 +488,9 @@ void AMDGPUSSASpiller::connectToPredecessors(MachineBasicBlock &MBB,
   }
 
   for (auto Pred : Preds) {
-    dumpRegSet(getBlockInfo(*Pred).SpillSet);
+    LLVM_DEBUG(dumpRegSet(getBlockInfo(*Pred).SpillSet));
     Entry.SpillSet.set_union(getBlockInfo(*Pred).SpillSet);
-    dumpRegSet(Entry.SpillSet);
+    LLVM_DEBUG(dumpRegSet(Entry.SpillSet));
   }
   // The line below was added according to algorithm proposed in Hack&Broun.
   // It is commented out because of the following observation:
@@ -529,7 +533,6 @@ void AMDGPUSSASpiller::connectToPredecessors(MachineBasicBlock &MBB,
                dumpRegSet(PE.SpillSet));
     for (auto S : set_intersection(set_difference(Entry.SpillSet, PE.SpillSet),
                                    PE.ActiveSet)) {
-      printVRegMaskPair(S);
       ToSpill[Pred].insert(S);
     }
   }
@@ -541,10 +544,14 @@ void AMDGPUSSASpiller::connectToPredecessors(MachineBasicBlock &MBB,
       spillAtEnd(*Pred, S);
       PE.SpillSet.insert(S);
       PE.ActiveSet.remove(S);
-      dumpRegSet(PE.ActiveSet);
+      LLVM_DEBUG(dbgs() << "\nPred [ MBB_" << Pred->getNumber()
+                        << "] Active set after spilling:\n";
+                 dumpRegSet(PE.ActiveSet));
       Entry.SpillSet.insert(S);
       Entry.ActiveSet.remove(S);
-      dumpRegSet(Entry.ActiveSet);
+      LLVM_DEBUG(dbgs() << "\nBlock [ MBB_" << MBB.getNumber()
+                        << "] Active set after spilling:\n";
+                 dumpRegSet(Entry.ActiveSet));
     }
   }
 
@@ -559,13 +566,18 @@ void AMDGPUSSASpiller::connectToPredecessors(MachineBasicBlock &MBB,
                       << Pred->getName() << " ] ActiveSet:\n";
                dumpRegSet(PE.ActiveSet));
     RegisterSet Tmp = set_difference(Entry.ActiveSet, PE.ActiveSet);
-    dumpRegSet(Tmp);
+    LLVM_DEBUG(dbgs() << "\nMBB_" << MBB.getNumber() << "." << MBB.getName()
+                      << " Active Set and Pred MBB_" << Pred->getNumber() << "."
+                      << Pred->getName() << " ActiveSet DIFFERENCE:\n";
+               dumpRegSet(Tmp));
     // Pred LiveOuts which are current block PHI operands don't need to be
     // active across both edges.
     RegisterSet ReloadInPred = set_difference(Tmp, PHIOps);
-    dumpRegSet(ReloadInPred);
+    LLVM_DEBUG(dbgs() << "\nPHI operands removed from set:\n";
+               dumpRegSet(ReloadInPred));
     set_intersect(ReloadInPred, PE.SpillSet);
-    dumpRegSet(ReloadInPred);
+    LLVM_DEBUG(dbgs() << "Reloads and Spilled INTERSECTION:\n";
+               dumpRegSet(ReloadInPred));
     if (!ReloadInPred.empty()) {
 
       // Since we operate on SSA, any register that is live across the edge
@@ -873,8 +885,6 @@ unsigned AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
 unsigned AMDGPUSSASpiller::getRegSetSizeInRegs(const RegisterSet VRegs) {
   unsigned Size = 0;
   for (auto VMP : VRegs) {
-    printVRegMaskPair(VMP);
-    dbgs() << "\n";
     Size += VMP.getSizeInRegs(TRI);
   }
   return Size;
@@ -908,9 +918,9 @@ bool AMDGPUSSASpiller::run(MachineFunction &MF) {
   init(MF, true);
 
   processFunction(MF);
-  MF.viewCFG();
+  // MF.viewCFG();
   T1->stopTimer();
-  TG->print(llvm::errs());
+  LLVM_DEBUG(TG->print(llvm::errs()));
   return false;
 }
 } // namespace
