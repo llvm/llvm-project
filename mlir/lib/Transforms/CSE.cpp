@@ -19,7 +19,6 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/RecyclingAllocator.h"
@@ -239,9 +238,8 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
 
   // Don't simplify operations with regions that have multiple blocks.
   // TODO: We need additional tests to verify that we handle such IR correctly.
-  if (!llvm::all_of(op->getRegions(), [](Region &r) {
-        return r.getBlocks().empty() || llvm::hasSingleElement(r.getBlocks());
-      }))
+  if (!llvm::all_of(op->getRegions(),
+                    [](Region &r) { return r.empty() || r.hasOneBlock(); }))
     return failure();
 
   // Some simple use case of operation with memory side-effect are dealt with

@@ -32,9 +32,10 @@ class VOP3b_Profile<ValueType vt> : VOPProfile<[vt, vt, vt, vt]> {
   let HasExtDPP = 0;
 }
 
-let HasExt64BitDPP = 1 in {
-def VOP3b_F32_I1_F32_F32_F32 : VOP3b_Profile<f32>;
-def VOP3b_F64_I1_F64_F64_F64 : VOP3b_Profile<f64>;
+def DIV_FIXUP_F32_PROF : VOP3_Profile<VOP_F32_F32_F32_F32> {
+  let HasExtVOP3DPP = 0;
+  let HasExtDPP = 0;
+}
 
 def VOP3b_I64_I1_I32_I32_I64 : VOPProfile<[i64, i32, i32, i64]> {
   let HasClamp = 1;
@@ -44,6 +45,10 @@ def VOP3b_I64_I1_I32_I32_I64 : VOPProfile<[i64, i32, i32, i64]> {
   let Asm64 = "$vdst, $sdst, $src0, $src1, $src2$clamp";
 }
 
+let HasExt64BitDPP = 1 in {
+def VOP3b_F32_I1_F32_F32_F32 : VOP3b_Profile<f32>;
+def VOP3b_F64_I1_F64_F64_F64 : VOP3b_Profile<f64>;
+
 class V_MUL_PROF<VOPProfile P> : VOP3_Profile<P> {
   let HasExtVOP3DPP = 0;
   let HasExtDPP = 0;
@@ -52,10 +57,13 @@ class V_MUL_PROF<VOPProfile P> : VOP3_Profile<P> {
 def V_LSHL_ADD_U64_PROF : VOP3_Profile<VOP_I64_I64_I32_I64>;
 
 def VOP_F64_F64_F64_F64_DPP_PROF : VOP3_Profile<VOP_F64_F64_F64_F64>;
-
-def DIV_FIXUP_F32_PROF : VOP3_Profile<VOP_F32_F32_F32_F32> {
+def V_MAD_U32_PROF: VOP3_Profile<VOP_I32_I32_I32_I32> {
   let HasExtVOP3DPP = 0;
-  let HasExtDPP = 0;
+  let HasExt64BitDPP = 1;
+}
+def VOP_I64_I64_I64_DPP : VOP3_Profile<VOP_I64_I64_I64>;
+def VOP_I32_I32_I64_DPP : VOP3_Profile<VOPProfile<[i64, i32, i32, i64]>> {
+  let HasClamp = 1;
 }
 } // End HasExt64BitDPP = 1;
 
@@ -152,6 +160,15 @@ defm V_MAD_U32_U24 : VOP3Inst <"v_mad_u32_u24", VOP3_Profile<VOP_I32_I32_I32_I32
 defm V_FMA_F32 : VOP3Inst <"v_fma_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, any_fma>, VOPD_Component<0x13, "v_fma_f32">;
 defm V_LERP_U8 : VOP3Inst <"v_lerp_u8", VOP3_Profile<VOP_I32_I32_I32_I32>, int_amdgcn_lerp>;
 
+let SchedRW = [WriteIntMul] in {
+  let SubtargetPredicate = HasMadU32Inst in
+    defm V_MAD_U32 : VOP3Inst <"v_mad_u32", V_MAD_U32_PROF>;
+  let SubtargetPredicate = isGFX1250Plus in {
+    defm V_MAD_NC_U64_U32 : VOP3Inst<"v_mad_nc_u64_u32", VOP_I32_I32_I64_DPP>;
+    defm V_MAD_NC_I64_I32 : VOP3Inst<"v_mad_nc_i64_i32", VOP_I32_I32_I64_DPP>;
+  }
+}
+
 let SchedRW = [WriteDoubleAdd] in {
 let FPDPRounding = 1 in {
 defm V_FMA_F64 : VOP3Inst <"v_fma_f64", VOP_F64_F64_F64_F64_DPP_PROF, any_fma>, VOPD_Component<0x20, "v_fma_f64">;
@@ -184,6 +201,13 @@ defm V_MINIMUM_F64 : VOP3Inst <"v_minimum_f64", VOP3_Profile<VOP_F64_F64_F64>, f
 defm V_MAXIMUM_F64 : VOP3Inst <"v_maximum_f64", VOP3_Profile<VOP_F64_F64_F64>, fmaximum>;
 } // End SchedRW = [WriteDoubleAdd]
 } // End SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0, AddedComplexity = 1
+
+let SubtargetPredicate = isGFX1250Plus, SchedRW = [WriteDoubleAdd] in {
+defm V_MAX_I64 : VOP3Inst <"v_max_i64", VOP_I64_I64_I64_DPP, smax>;
+defm V_MAX_U64 : VOP3Inst <"v_max_u64", VOP_I64_I64_I64_DPP, umax>;
+defm V_MIN_I64 : VOP3Inst <"v_min_i64", VOP_I64_I64_I64_DPP, smin>;
+defm V_MIN_U64 : VOP3Inst <"v_min_u64", VOP_I64_I64_I64_DPP, umin>;
+} // End SubtargetPredicate = isGFX1250Plus, SchedRW = [WriteDoubleAdd]
 
 } // End isReMaterializable = 1
 
@@ -848,6 +872,9 @@ def : ThreeOp_i32_Pats<and, or, V_AND_OR_B32_e64>;
 def : ThreeOp_i32_Pats<or, or, V_OR3_B32_e64>;
 def : ThreeOp_i32_Pats<xor, add, V_XAD_U32_e64>;
 
+let SubtargetPredicate = HasMadU32Inst, AddedComplexity = 10 in
+  def : ThreeOp_i32_Pats<mul, add, V_MAD_U32_e64>;
+
 def : GCNPat<
  (DivergentBinFrag<mul> i32:$src0, IsPow2Plus1:$src1),
  (V_LSHL_ADD_U32_e64 i32:$src0, (i32 (Log2_32 imm:$src1)), i32:$src0)>;
@@ -1427,22 +1454,27 @@ let SubtargetPredicate = isGFX12Plus in {
 
 } // End SubtargetPredicate = isGFX12Plus
 
-let SubtargetPredicate = HasBitOp3Insts  in {
+let HasClamp = 0, HasModifiers = 1 in {
+def BitOp3_B16_Profile : VOP3_BITOP3_Profile<VOPProfile <[i16, i16, i16, i16, i32]>, VOP3_OPSEL>;
+def BitOp3_B16_t16_Profile : VOP3_Profile_True16<BitOp3_B16_Profile>;
+def BitOp3_B16_fake16_Profile : VOP3_Profile_Fake16<BitOp3_B16_Profile>;
+}
+
+let OtherPredicates = [HasBitOp3Insts] in {
   let isReMaterializable = 1 in {
-    defm V_BITOP3_B16 : VOP3Inst <"v_bitop3_b16",
-                                  VOP3_BITOP3_Profile<VOPProfile <[i16, i16, i16, i16, i32]>, VOP3_OPSEL>>;
+    let SubtargetPredicate = isGFX940Plus in
+      defm V_BITOP3_B16 : VOP3Inst <"v_bitop3_b16", BitOp3_B16_Profile>;
+    let SubtargetPredicate = isGFX1250Plus in
+      defm V_BITOP3_B16_gfx1250 : VOP3Inst_t16_with_profiles <"v_bitop3_b16_gfx1250", BitOp3_B16_Profile,
+                                    BitOp3_B16_t16_Profile, BitOp3_B16_fake16_Profile>;
     defm V_BITOP3_B32 : VOP3Inst <"v_bitop3_b32",
                                   VOP3_BITOP3_Profile<VOPProfile <[i32, i32, i32, i32, i32]>, VOP3_REGULAR>>,
                         VOPD_Component<0x12, "v_bitop2_b32">;
   }
+
   def : GCNPat<
     (i32 (int_amdgcn_bitop3 i32:$src0, i32:$src1, i32:$src2, i32:$bitop3)),
     (i32 (V_BITOP3_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1, VSrc_b32:$src2, timm:$bitop3))
-  >;
-
-  def : GCNPat<
-    (i16 (int_amdgcn_bitop3 i16:$src0, i16:$src1, i16:$src2, i32:$bitop3)),
-    (i16 (V_BITOP3_B16_e64 0, VSrc_b16:$src0, 0, VSrc_b16:$src1, 0, VSrc_b16:$src2, timm:$bitop3, 0))
   >;
 
   def : GCNPat<
@@ -1450,11 +1482,44 @@ let SubtargetPredicate = HasBitOp3Insts  in {
     (i32 (V_BITOP3_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1, VSrc_b32:$src2, timm:$bitop3))
   >;
 
-  def : GCNPat<
-    (i16 (BITOP3_16 i16:$src0, i16:$src1, i16:$src2, i32:$bitop3)),
-    (i16 (V_BITOP3_B16_e64 0, VSrc_b16:$src0, 0, VSrc_b16:$src1, 0, VSrc_b16:$src2, timm:$bitop3, 0))
-  >;
-} // End SubtargetPredicate = HasBitOp3Insts
+  let SubtargetPredicate = isGFX940Plus in {
+    def : GCNPat<
+      (i16 (int_amdgcn_bitop3 i16:$src0, i16:$src1, i16:$src2, i32:$bitop3)),
+      (i16 (V_BITOP3_B16_e64 0, VSrc_b16:$src0, 0, VSrc_b16:$src1, 0, VSrc_b16:$src2, timm:$bitop3, 0))
+    >;
+
+    def : GCNPat<
+      (i16 (BITOP3_16 i16:$src0, i16:$src1, i16:$src2, i32:$bitop3)),
+      (i16 (V_BITOP3_B16_e64 0, VSrc_b16:$src0, 0, VSrc_b16:$src1, 0, VSrc_b16:$src2, timm:$bitop3, 0))
+    >;
+  } // End SubtargetPredicate = isGFX940Plus
+
+  let SubtargetPredicate = isGFX1250Plus in {
+    let True16Predicate = UseFakeTrue16Insts in {
+      def : GCNPat<
+        (i16 (int_amdgcn_bitop3 i16:$src0, i16:$src1, i16:$src2, i32:$bitop3)),
+        (i16 (V_BITOP3_B16_gfx1250_fake16_e64 0, VSrc_b16:$src0, 0, VSrc_b16:$src1, 0, VSrc_b16:$src2, timm:$bitop3, 0))
+      >;
+
+      def : GCNPat<
+        (i16 (BITOP3_16 i16:$src0, i16:$src1, i16:$src2, i32:$bitop3)),
+        (i16 (V_BITOP3_B16_gfx1250_fake16_e64 0, VSrc_b16:$src0, 0, VSrc_b16:$src1, 0, VSrc_b16:$src2, timm:$bitop3, 0))
+      >;
+    }
+    let True16Predicate = UseRealTrue16Insts in {
+      def : GCNPat<
+        (i16 (int_amdgcn_bitop3 i16:$src0, i16:$src1, i16:$src2, i32:$bitop3)),
+        (i16 (V_BITOP3_B16_gfx1250_t16_e64 0, VSrcT_b16:$src0, 0, VSrcT_b16:$src1, 0, VSrcT_b16:$src2, timm:$bitop3, 0))
+      >;
+
+      def : GCNPat<
+        (i16 (BITOP3_16 i16:$src0, i16:$src1, i16:$src2, i32:$bitop3)),
+        (i16 (V_BITOP3_B16_gfx1250_t16_e64 0, VSrcT_b16:$src0, 0, VSrcT_b16:$src1, 0, VSrcT_b16:$src2, timm:$bitop3, 0))
+      >;
+    }
+  } // End SubtargetPredicate = isGFX1250Plus
+
+} // End OtherPredicates = [HasBitOp3Insts]
 
 class DivFmasPat<ValueType vt, Instruction inst, Register CondReg> : GCNPat<
   (AMDGPUdiv_fmas (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
@@ -1746,6 +1811,17 @@ defm V_MAXIMUM_F16        : VOP3Only_Realtriple_t16_and_fake16_gfx12<0x368, "v_m
 defm V_PERMLANE16_VAR_B32  : VOP3Only_Real_Base_gfx12<0x30f>;
 defm V_PERMLANEX16_VAR_B32 : VOP3Only_Real_Base_gfx12<0x310>;
 
+defm V_BITOP3_B16_gfx1250 : VOP3_Real_BITOP3_t16_and_fake16_gfx1250<0x233, "v_bitop3_b16">;
+defm V_BITOP3_B32         : VOP3_Real_BITOP3_gfx1250<0x234>;
+
+defm V_MAD_U32 : VOP3Only_Realtriple_gfx1250<0x235>;
+defm V_MAD_NC_U64_U32 : VOP3Only_Realtriple_gfx1250<0x2fa>;
+defm V_MAD_NC_I64_I32 : VOP3Only_Realtriple_gfx1250<0x2fb>;
+defm V_MIN_U64 : VOP3Only_Realtriple_gfx1250<0x318>;
+defm V_MAX_U64 : VOP3Only_Realtriple_gfx1250<0x319>;
+defm V_MIN_I64 : VOP3Only_Realtriple_gfx1250<0x31a>;
+defm V_MAX_I64 : VOP3Only_Realtriple_gfx1250<0x31b>;
+
 defm V_CVT_PK_FP8_F32  : VOP3Only_Realtriple_t16_and_fake16_gfx12<0x369, "v_cvt_pk_fp8_f32">;
 defm V_CVT_PK_BF8_F32  : VOP3Only_Realtriple_t16_and_fake16_gfx12<0x36a, "v_cvt_pk_bf8_f32">;
 defm V_CVT_SR_FP8_F32_gfx12 : VOP3_Realtriple_with_name_gfx12<0x36b, "V_CVT_SR_FP8_F32_gfx12", "v_cvt_sr_fp8_f32" >;
@@ -1918,6 +1994,7 @@ let AssemblerPredicate = isGFX11Plus in {
 
 // These instructions differ from GFX12 variant by supporting DPP:
 defm V_LSHL_ADD_U64                  : VOP3Only_Realtriple_gfx1250<0x252>;
+defm V_CVT_PK_BF16_F32               : VOP3Only_Realtriple_gfx1250<0x36d>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.
