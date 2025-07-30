@@ -369,11 +369,6 @@ void FileManager::trackVFSUsage(bool Active) {
   });
 }
 
-const FileEntry *FileManager::getVirtualFile(StringRef Filename, off_t Size,
-                                             time_t ModificationTime) {
-  return &getVirtualFileRef(Filename, Size, ModificationTime).getFileEntry();
-}
-
 FileEntryRef FileManager::getVirtualFileRef(StringRef Filename, off_t Size,
                                             time_t ModificationTime) {
   ++NumFileLookups;
