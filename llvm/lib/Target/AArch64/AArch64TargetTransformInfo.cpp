@@ -4827,7 +4827,7 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
           // Included 1st users of loaded values
           for (auto *U : I.users()) {
             auto *Inst = cast<Instruction>(U);
-            if (!Inst || Inst->getParent() != BB)
+            if (!Inst)
               continue;
             LoadedValuesPlus.insert(U);
           }
