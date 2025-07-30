@@ -1939,22 +1939,21 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
   SmallVector<bool> readScalableVectorFlags;
   SmallVector<bool> writeScalableVectorFlags;
 
-  // CASE 1.1: Vector sizes are user-specified.
   if (!inputVectorSizes.empty()) {
-    readVectorSizes.append(inputVectorSizes.begin(),
+    // CASE 1.1: Vector sizes are user-specified.
+    readVectorSizes.assign(inputVectorSizes.begin(),
                            inputVectorSizes.begin() + sourceShape.size());
-    writeVectorSizes.append(inputVectorSizes.begin() + sourceShape.size(),
+    writeVectorSizes.assign(inputVectorSizes.begin() + sourceShape.size(),
                             inputVectorSizes.end());
-    readScalableVectorFlags.append(inputScalableVecDims.begin(),
+    readScalableVectorFlags.assign(inputScalableVecDims.begin(),
                                    inputScalableVecDims.begin() +
                                        sourceShape.size());
-    writeScalableVectorFlags.append(inputScalableVecDims.begin() +
+    writeScalableVectorFlags.assign(inputScalableVecDims.begin() +
                                         sourceShape.size(),
                                     inputScalableVecDims.end());
-  }
-
-  // CASE 1. 2: Vector sizes have to be inferred.
-  if (writeVectorSizes.empty()) {
+  } else {
+    // CASE 1.2: Vector sizes are inferred from the static input tensor
+    // shapes.
     if (ShapedType::isDynamicShape(destShape) ||
         ShapedType::isDynamicShape(sourceShape))
       return failure();
@@ -2112,12 +2111,11 @@ vectorizeUnPackOpPrecondition(linalg::UnPackOp unpackOp,
 
   // The input vector sizes must be equal to:
   //  * read-vector-rank + write-vector-rank
-  if (!inputVectorSizes.empty()) {
-    if (inputVectorSizes.size() !=
-        unpackOp.getDestRank() + unpackOp.getSourceRank()) {
-      LDBG() << "Incorrect number of input vector sizes";
-      return failure();
-    }
+  if (!inputVectorSizes.empty() &&
+      (inputVectorSizes.size() !=
+       unpackOp.getDestRank() + unpackOp.getSourceRank())) {
+    LDBG() << "Incorrect number of input vector sizes";
+    return failure();
   }
 
   // Check the vector sizes for the read operation.
