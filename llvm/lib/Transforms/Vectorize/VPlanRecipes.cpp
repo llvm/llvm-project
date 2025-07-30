@@ -948,9 +948,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case VPInstruction::ResumeForEpilogue:
     return State.get(getOperand(0), true);
-  case VPInstruction::Reverse: {
+  case VPInstruction::Reverse:
     return Builder.CreateVectorReverse(State.get(getOperand(0)), "reverse");
-  }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
