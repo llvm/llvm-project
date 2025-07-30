@@ -263,6 +263,11 @@ exit:
   ret void
 }
 
+; The type-size of the source is different from that of the sink,
+; and the dependence distance is 10.
+; TODO: Relax the HasSameSize check; the strided accesses are
+; independent, as determined by both the source size and the sink size.
+; This test should report no dependencies.
 define void @different_type_sizes_strided_accesses_independent(ptr %dst) {
 ; CHECK-LABEL: 'different_type_sizes_strided_accesses_independent'
 ; CHECK-NEXT:    loop:
@@ -299,6 +304,10 @@ exit:
   ret void
 }
 
+; Variant of the above, where the source size forbids strided access
+; independence.
+; TODO: Relax the HasSameSize check; this test should report a backward
+; loop-carried dependence.
 define void @different_type_sizes_strided_accesses_dependent(ptr %dst) {
 ; CHECK-LABEL: 'different_type_sizes_strided_accesses_dependent'
 ; CHECK-NEXT:    loop:
@@ -335,6 +344,11 @@ exit:
   ret void
 }
 
+; Source type-size differs from that of the sink, but when
+; determining backward dependence, only the source size
+; is relevant.
+; TODO: Relax the HasSameSize check; this test should report
+; BackwardVectorizable.
 define void @different_type_sizes_source_size_backwardvectorizible(ptr %dst) {
 ; CHECK-LABEL: 'different_type_sizes_source_size_backwardvectorizible'
 ; CHECK-NEXT:    loop:
@@ -371,6 +385,9 @@ exit:
   ret void
 }
 
+; Source type-size differs from that of the sink, and when
+; determining forward dependence, the source size can
+; prevent forwarding.
 define void @different_type_sizes_forward(ptr %dst) {
 ; CHECK-LABEL: 'different_type_sizes_forward'
 ; CHECK-NEXT:    loop:
@@ -406,6 +423,10 @@ exit:
   ret void
 }
 
+; Same as the above, but here, the store size should not prevent
+; ld->st forwarding.
+; TODO: Relax the HasSameSize check; this test should report a
+; forward dependence.
 define void @different_type_sizes_store_size_cannot_prevent_forwarding(ptr %A, ptr noalias %B) {
 ; CHECK-LABEL: 'different_type_sizes_store_size_cannot_prevent_forwarding'
 ; CHECK-NEXT:    loop:
@@ -443,6 +464,8 @@ exit:
   ret void
 }
 
+; Same as the above, but here, the load size prevents
+; ld->st forwarding.
 define void @different_type_sizes_load_size_prevents_forwarding(ptr %A, ptr noalias %B) {
 ; CHECK-LABEL: 'different_type_sizes_load_size_prevents_forwarding'
 ; CHECK-NEXT:    loop:
