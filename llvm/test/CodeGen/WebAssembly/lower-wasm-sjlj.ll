@@ -25,26 +25,24 @@ entry:
   unreachable
 
 ; CHECK:    entry:
+; CHECK-NEXT: %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
 ; CHECK-NEXT: %functionInvocationId = alloca i32, align 4
 ; CHECK-NEXT: br label %setjmp.dispatch
 
 ; CHECK:    setjmp.dispatch:
 ; CHECK-NEXT: %[[VAL2:.*]] = phi i32 [ %val, %if.end ], [ undef, %entry ]
-; CHECK-NEXT: %[[BUF:.*]] = phi ptr [ %[[BUF2:.*]], %if.end ], [ undef, %entry ]
 ; CHECK-NEXT: %label.phi = phi i32 [ %label, %if.end ], [ -1, %entry ]
 ; CHECK-NEXT: switch i32 %label.phi, label %entry.split [
 ; CHECK-NEXT:   i32 1, label %entry.split.split
 ; CHECK-NEXT: ]
 
 ; CHECK:    entry.split:
-; CHECK-NEXT: %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
 ; CHECK-NEXT: call void @__wasm_setjmp(ptr %buf, i32 1, ptr %functionInvocationId)
 ; CHECK-NEXT: br label %entry.split.split
 
 ; CHECK:    entry.split.split:
-; CHECK-NEXT: %[[BUF2]] = phi ptr [ %[[BUF]], %setjmp.dispatch ], [ %buf, %entry.split ]
 ; CHECK-NEXT: %setjmp.ret = phi i32 [ 0, %entry.split ], [ %[[VAL2]], %setjmp.dispatch ]
-; CHECK-NEXT: invoke void @__wasm_longjmp(ptr %[[BUF2]], i32 1)
+; CHECK-NEXT: invoke void @__wasm_longjmp(ptr %buf, i32 1)
 ; CHECK-NEXT:         to label %.noexc unwind label %catch.dispatch.longjmp
 
 ; CHECK:    .noexc:

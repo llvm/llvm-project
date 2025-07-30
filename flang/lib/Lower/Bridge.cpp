@@ -2125,9 +2125,11 @@ private:
 
     llvm::SmallVector<mlir::Value> reduceVars;
     Fortran::lower::omp::ReductionProcessor rp;
-    rp.processReductionArguments<fir::DeclareReductionOp>(
+    bool result = rp.processReductionArguments<fir::DeclareReductionOp>(
         toLocation(), *this, info.reduceOperatorList, reduceVars,
         reduceVarByRef, reductionDeclSymbols, info.reduceSymList);
+    assert(result && "Failed to process `do concurrent` reductions");
+    (void)result;
 
     doConcurrentLoopOp.getReduceVarsMutable().assign(reduceVars);
     doConcurrentLoopOp.setReduceSymsAttr(
@@ -2165,10 +2167,35 @@ private:
   ///  - structured and unstructured concurrent loops
   void genFIR(const Fortran::parser::DoConstruct &doConstruct) {
     setCurrentPositionAt(doConstruct);
-    // Collect loop nest information.
-    // Generate begin loop code directly for infinite and while loops.
     Fortran::lower::pft::Evaluation &eval = getEval();
     bool unstructuredContext = eval.lowerAsUnstructured();
+
+    // Loops with induction variables inside OpenACC compute constructs
+    // need special handling to ensure that the IVs are privatized.
+    if (Fortran::lower::isInsideOpenACCComputeConstruct(*builder)) {
+      mlir::Operation *loopOp = Fortran::lower::genOpenACCLoopFromDoConstruct(
+          *this, bridge.getSemanticsContext(), localSymbols, doConstruct, eval);
+      bool success = loopOp != nullptr;
+      if (success) {
+        // Sanity check that the builder insertion point is inside the newly
+        // generated loop.
+        assert(
+            loopOp->getRegion(0).isAncestor(
+                builder->getInsertionPoint()->getBlock()->getParent()) &&
+            "builder insertion point is not inside the newly generated loop");
+
+        // Loop body code.
+        auto iter = eval.getNestedEvaluations().begin();
+        for (auto end = --eval.getNestedEvaluations().end(); iter != end;
+             ++iter)
+          genFIR(*iter, unstructuredContext);
+        return;
+      }
+      // Fall back to normal loop handling.
+    }
+
+    // Collect loop nest information.
+    // Generate begin loop code directly for infinite and while loops.
     Fortran::lower::pft::Evaluation &doStmtEval =
         eval.getFirstNestedEvaluation();
     auto *doStmt = doStmtEval.getIf<Fortran::parser::NonLabelDoStmt>();
@@ -3122,7 +3149,7 @@ private:
     Fortran::lower::pft::Evaluation *curEval = &getEval();
 
     if (accLoop || accCombined) {
-      int64_t loopCount;
+      uint64_t loopCount;
       if (accLoop) {
         const Fortran::parser::AccBeginLoopDirective &beginLoopDir =
             std::get<Fortran::parser::AccBeginLoopDirective>(accLoop->t);
@@ -3140,7 +3167,7 @@ private:
 
       if (curEval->lowerAsStructured()) {
         curEval = &curEval->getFirstNestedEvaluation();
-        for (int64_t i = 1; i < loopCount; i++)
+        for (uint64_t i = 1; i < loopCount; i++)
           curEval = &*std::next(curEval->getNestedEvaluations().begin());
       }
     }
@@ -5508,10 +5535,34 @@ private:
   void genFIR(const Fortran::parser::AssignStmt &stmt) {
     const Fortran::semantics::Symbol &symbol =
         *std::get<Fortran::parser::Name>(stmt.t).symbol;
+
     mlir::Location loc = toLocation();
+    mlir::Type symbolType = genType(symbol);
+    mlir::Value addr = getSymbolAddress(symbol);
+
+    // Handle the case where the assigned variable is declared as a pointer
+    if (auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(symbolType)) {
+      if (auto ptrType = mlir::dyn_cast<fir::PointerType>(eleTy)) {
+        symbolType = ptrType.getEleTy();
+      } else {
+        symbolType = eleTy;
+      }
+    } else if (auto ptrType = mlir::dyn_cast<fir::PointerType>(symbolType)) {
+      symbolType = ptrType.getEleTy();
+    }
+
     mlir::Value labelValue = builder->createIntegerConstant(
-        loc, genType(symbol), std::get<Fortran::parser::Label>(stmt.t));
-    builder->create<fir::StoreOp>(loc, labelValue, getSymbolAddress(symbol));
+        loc, symbolType, std::get<Fortran::parser::Label>(stmt.t));
+
+    // If the address points to a boxed pointer, we need to dereference it
+    if (auto refType = mlir::dyn_cast<fir::ReferenceType>(addr.getType())) {
+      if (auto boxType = mlir::dyn_cast<fir::BoxType>(refType.getEleTy())) {
+        mlir::Value boxValue = builder->create<fir::LoadOp>(loc, addr);
+        addr = builder->create<fir::BoxAddrOp>(loc, boxValue);
+      }
+    }
+
+    builder->create<fir::StoreOp>(loc, labelValue, addr);
   }
 
   void genFIR(const Fortran::parser::FormatStmt &) {
@@ -6707,6 +6758,10 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setKindMapping(*module, kindMap);
   fir::setTargetCPU(*module, targetMachine.getTargetCPU());
   fir::setTuneCPU(*module, targetOpts.cpuToTuneFor);
+  fir::setAtomicIgnoreDenormalMode(*module,
+                                   targetOpts.atomicIgnoreDenormalMode);
+  fir::setAtomicFineGrainedMemory(*module, targetOpts.atomicFineGrainedMemory);
+  fir::setAtomicRemoteMemory(*module, targetOpts.atomicRemoteMemory);
   fir::setTargetFeatures(*module, targetMachine.getTargetFeatureString());
   fir::support::setMLIRDataLayout(*module, targetMachine.createDataLayout());
   fir::setIdent(*module, Fortran::common::getFlangFullVersion());
