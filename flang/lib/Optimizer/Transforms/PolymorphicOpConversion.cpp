@@ -183,49 +183,51 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
     mlir::Type tdescType =
         fir::TypeDescType::get(mlir::NoneType::get(rewriter.getContext()));
     mlir::Value boxDesc =
-        rewriter.create<fir::BoxTypeDescOp>(loc, tdescType, passedObject);
-    boxDesc = rewriter.create<fir::ConvertOp>(
-        loc, fir::ReferenceType::get(typeDescTy), boxDesc);
+        fir::BoxTypeDescOp::create(rewriter, loc, tdescType, passedObject);
+    boxDesc = fir::ConvertOp::create(
+        rewriter, loc, fir::ReferenceType::get(typeDescTy), boxDesc);
 
     // Load the bindings descriptor.
     auto bindingsCompName = Fortran::semantics::bindingDescCompName;
     fir::RecordType typeDescRecTy = mlir::cast<fir::RecordType>(typeDescTy);
-    mlir::Value field = rewriter.create<fir::FieldIndexOp>(
-        loc, fieldTy, bindingsCompName, typeDescRecTy, mlir::ValueRange{});
+    mlir::Value field =
+        fir::FieldIndexOp::create(rewriter, loc, fieldTy, bindingsCompName,
+                                  typeDescRecTy, mlir::ValueRange{});
     mlir::Type coorTy =
         fir::ReferenceType::get(typeDescRecTy.getType(bindingsCompName));
     mlir::Value bindingBoxAddr =
-        rewriter.create<fir::CoordinateOp>(loc, coorTy, boxDesc, field);
-    mlir::Value bindingBox = rewriter.create<fir::LoadOp>(loc, bindingBoxAddr);
+        fir::CoordinateOp::create(rewriter, loc, coorTy, boxDesc, field);
+    mlir::Value bindingBox = fir::LoadOp::create(rewriter, loc, bindingBoxAddr);
 
     // Load the correct binding.
-    mlir::Value bindings = rewriter.create<fir::BoxAddrOp>(loc, bindingBox);
+    mlir::Value bindings = fir::BoxAddrOp::create(rewriter, loc, bindingBox);
     fir::RecordType bindingTy = fir::unwrapIfDerived(
         mlir::cast<fir::BaseBoxType>(bindingBox.getType()));
     mlir::Type bindingAddrTy = fir::ReferenceType::get(bindingTy);
-    mlir::Value bindingIdxVal = rewriter.create<mlir::arith::ConstantOp>(
-        loc, rewriter.getIndexType(), rewriter.getIndexAttr(bindingIdx));
-    mlir::Value bindingAddr = rewriter.create<fir::CoordinateOp>(
-        loc, bindingAddrTy, bindings, bindingIdxVal);
+    mlir::Value bindingIdxVal =
+        mlir::arith::ConstantOp::create(rewriter, loc, rewriter.getIndexType(),
+                                        rewriter.getIndexAttr(bindingIdx));
+    mlir::Value bindingAddr = fir::CoordinateOp::create(
+        rewriter, loc, bindingAddrTy, bindings, bindingIdxVal);
 
     // Get the function pointer.
     auto procCompName = Fortran::semantics::procCompName;
-    mlir::Value procField = rewriter.create<fir::FieldIndexOp>(
-        loc, fieldTy, procCompName, bindingTy, mlir::ValueRange{});
+    mlir::Value procField = fir::FieldIndexOp::create(
+        rewriter, loc, fieldTy, procCompName, bindingTy, mlir::ValueRange{});
     fir::RecordType procTy =
         mlir::cast<fir::RecordType>(bindingTy.getType(procCompName));
     mlir::Type procRefTy = fir::ReferenceType::get(procTy);
-    mlir::Value procRef = rewriter.create<fir::CoordinateOp>(
-        loc, procRefTy, bindingAddr, procField);
+    mlir::Value procRef = fir::CoordinateOp::create(rewriter, loc, procRefTy,
+                                                    bindingAddr, procField);
 
     auto addressFieldName = Fortran::lower::builtin::cptrFieldName;
-    mlir::Value addressField = rewriter.create<fir::FieldIndexOp>(
-        loc, fieldTy, addressFieldName, procTy, mlir::ValueRange{});
+    mlir::Value addressField = fir::FieldIndexOp::create(
+        rewriter, loc, fieldTy, addressFieldName, procTy, mlir::ValueRange{});
     mlir::Type addressTy = procTy.getType(addressFieldName);
     mlir::Type addressRefTy = fir::ReferenceType::get(addressTy);
-    mlir::Value addressRef = rewriter.create<fir::CoordinateOp>(
-        loc, addressRefTy, procRef, addressField);
-    mlir::Value address = rewriter.create<fir::LoadOp>(loc, addressRef);
+    mlir::Value addressRef = fir::CoordinateOp::create(
+        rewriter, loc, addressRefTy, procRef, addressField);
+    mlir::Value address = fir::LoadOp::create(rewriter, loc, addressRef);
 
     // Get the function type.
     llvm::SmallVector<mlir::Type> argTypes;
@@ -237,7 +239,7 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
 
     mlir::Type funTy =
         mlir::FunctionType::get(rewriter.getContext(), argTypes, resTypes);
-    mlir::Value funcPtr = rewriter.create<fir::ConvertOp>(loc, funTy, address);
+    mlir::Value funcPtr = fir::ConvertOp::create(rewriter, loc, funTy, address);
 
     // Make the call.
     llvm::SmallVector<mlir::Value> args{funcPtr};
@@ -398,12 +400,13 @@ llvm::LogicalResult SelectTypeConv::genTypeLadderStep(
       if (code == 0)
         return mlir::emitError(loc)
                << "type code unavailable for " << a.getType();
-      mlir::Value typeCode = rewriter.create<mlir::arith::ConstantOp>(
-          loc, rewriter.getI8IntegerAttr(code));
-      mlir::Value selectorTypeCode = rewriter.create<fir::BoxTypeCodeOp>(
-          loc, rewriter.getI8Type(), selector);
-      cmp = rewriter.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::eq, selectorTypeCode, typeCode);
+      mlir::Value typeCode = mlir::arith::ConstantOp::create(
+          rewriter, loc, rewriter.getI8IntegerAttr(code));
+      mlir::Value selectorTypeCode = fir::BoxTypeCodeOp::create(
+          rewriter, loc, rewriter.getI8Type(), selector);
+      cmp = mlir::arith::CmpIOp::create(rewriter, loc,
+                                        mlir::arith::CmpIPredicate::eq,
+                                        selectorTypeCode, typeCode);
     } else {
       // Flang inline the kind parameter in the type descriptor so we can
       // directly check if the type descriptor addresses are identical for
@@ -418,16 +421,16 @@ llvm::LogicalResult SelectTypeConv::genTypeLadderStep(
   } else if (auto a = mlir::dyn_cast<fir::SubclassAttr>(attr)) {
     // Retrieve the type descriptor from the type guard statement record type.
     assert(mlir::isa<fir::RecordType>(a.getType()) && "expect fir.record type");
-    mlir::Value typeDescAddr =
-        rewriter.create<fir::TypeDescOp>(loc, mlir::TypeAttr::get(a.getType()));
+    mlir::Value typeDescAddr = fir::TypeDescOp::create(
+        rewriter, loc, mlir::TypeAttr::get(a.getType()));
     mlir::Type refNoneType = ReferenceType::get(rewriter.getNoneType());
     mlir::Value typeDesc =
-        rewriter.create<ConvertOp>(loc, refNoneType, typeDescAddr);
+        ConvertOp::create(rewriter, loc, refNoneType, typeDescAddr);
 
     // Prepare the selector descriptor for the runtime call.
     mlir::Type descNoneTy = fir::BoxType::get(rewriter.getNoneType());
     mlir::Value descSelector =
-        rewriter.create<ConvertOp>(loc, descNoneTy, selector);
+        ConvertOp::create(rewriter, loc, descNoneTy, selector);
 
     // Generate runtime call.
     llvm::StringRef fctName = RTNAME_STRING(ClassIs);
@@ -455,10 +458,10 @@ llvm::LogicalResult SelectTypeConv::genTypeLadderStep(
       rewriter.createBlock(dest->getParent(), mlir::Region::iterator(dest));
   rewriter.setInsertionPointToEnd(thisBlock);
   if (destOps.has_value())
-    rewriter.create<mlir::cf::CondBranchOp>(loc, cmp, dest, destOps.value(),
-                                            newBlock, mlir::ValueRange{});
+    mlir::cf::CondBranchOp::create(rewriter, loc, cmp, dest, destOps.value(),
+                                   newBlock, mlir::ValueRange{});
   else
-    rewriter.create<mlir::cf::CondBranchOp>(loc, cmp, dest, newBlock);
+    mlir::cf::CondBranchOp::create(rewriter, loc, cmp, dest, newBlock);
   rewriter.setInsertionPointToEnd(newBlock);
   return mlir::success();
 }
@@ -470,16 +473,17 @@ SelectTypeConv::genTypeDescCompare(mlir::Location loc, mlir::Value selector,
                                    mlir::PatternRewriter &rewriter) const {
   assert(mlir::isa<fir::RecordType>(ty) && "expect fir.record type");
   mlir::Value typeDescAddr =
-      rewriter.create<fir::TypeDescOp>(loc, mlir::TypeAttr::get(ty));
-  mlir::Value selectorTdescAddr = rewriter.create<fir::BoxTypeDescOp>(
-      loc, typeDescAddr.getType(), selector);
+      fir::TypeDescOp::create(rewriter, loc, mlir::TypeAttr::get(ty));
+  mlir::Value selectorTdescAddr = fir::BoxTypeDescOp::create(
+      rewriter, loc, typeDescAddr.getType(), selector);
   auto intPtrTy = rewriter.getIndexType();
   auto typeDescInt =
-      rewriter.create<fir::ConvertOp>(loc, intPtrTy, typeDescAddr);
+      fir::ConvertOp::create(rewriter, loc, intPtrTy, typeDescAddr);
   auto selectorTdescInt =
-      rewriter.create<fir::ConvertOp>(loc, intPtrTy, selectorTdescAddr);
-  return rewriter.create<mlir::arith::CmpIOp>(
-      loc, mlir::arith::CmpIPredicate::eq, typeDescInt, selectorTdescInt);
+      fir::ConvertOp::create(rewriter, loc, intPtrTy, selectorTdescAddr);
+  return mlir::arith::CmpIOp::create(rewriter, loc,
+                                     mlir::arith::CmpIPredicate::eq,
+                                     typeDescInt, selectorTdescInt);
 }
 
 llvm::SmallSet<llvm::StringRef, 4>

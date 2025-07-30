@@ -59,6 +59,9 @@ bool IsExtendedListItem(const Symbol &sym);
 bool IsVariableListItem(const Symbol &sym);
 bool IsVarOrFunctionRef(const MaybeExpr &expr);
 
+bool IsMapEnteringType(parser::OmpMapType::Value type);
+bool IsMapExitingType(parser::OmpMapType::Value type);
+
 std::optional<SomeExpr> GetEvaluateExpr(const parser::Expr &parserExpr);
 std::optional<evaluate::DynamicType> GetDynamicType(
     const parser::Expr &parserExpr);
@@ -69,7 +72,6 @@ std::optional<bool> IsContiguous(
 std::vector<SomeExpr> GetAllDesignators(const SomeExpr &expr);
 const SomeExpr *HasStorageOverlap(
     const SomeExpr &base, llvm::ArrayRef<SomeExpr> exprs);
-bool IsSubexpressionOf(const SomeExpr &sub, const SomeExpr &super);
 bool IsAssignment(const parser::ActionStmt *x);
 bool IsPointerAssignment(const evaluate::Assignment &x);
 const parser::Block &GetInnermostExecPart(const parser::Block &block);
