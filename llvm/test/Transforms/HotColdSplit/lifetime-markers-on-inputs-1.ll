@@ -36,11 +36,10 @@ outlinedPath:
   ; These two uses of stack slots are overlapping. This should prevent
   ; merging of stack slots. CodeExtractor must replicate the effects of
   ; these markers in the caller to inhibit stack coloring.
-  %gep1 = getelementptr inbounds i8, ptr %local1, i64 1
-  call void @llvm.lifetime.start.p0(i64 1, ptr %gep1)
+  call void @llvm.lifetime.start.p0(i64 1, ptr %local1)
   call void @llvm.lifetime.start.p0(i64 1, ptr %local2)
   call void @cold_use2(ptr %local1, ptr %local2)
-  call void @llvm.lifetime.end.p0(i64 1, ptr %gep1)
+  call void @llvm.lifetime.end.p0(i64 1, ptr %local1)
   call void @llvm.lifetime.end.p0(i64 1, ptr %local2)
   br i1 undef, label %outlinedPath2, label %outlinedPathExit
 

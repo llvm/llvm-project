@@ -502,6 +502,7 @@ cleanupret2:
 define void @f11() personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: @f11(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    invoke void @g()
 ; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       invoke.cont:
@@ -519,6 +520,7 @@ define void @f11() personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    ret void
 ;
 entry:
+  %x = alloca i8
   invoke void @g()
   to label %invoke.cont unwind label %ehcleanup
 
@@ -531,7 +533,6 @@ invoke.cont2:                                     ; preds = %invoke.cont
   to label %return unwind label %catch.dispatch
 
 ehcleanup:                                        ; preds = %invoke.cont, %entry
-  %x = phi ptr [ undef, %invoke.cont ], [ undef, %entry ]
   %0 = cleanuppad within none []
   call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %x)
   cleanupret from %0 unwind label %catch.dispatch
