@@ -296,8 +296,8 @@ public:
   /// Remove any global modules which are no longer needed.
   static void GarbageCollectAllocatedModules();
 
-  /// Return the name of the module.
-  const char *GetName() const;
+  /// Return the name of the module (m_object_name).
+  const char *GetObjectName() const;
 
 private:
   friend class SBAddress;

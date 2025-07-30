@@ -672,11 +672,10 @@ void SBModule::GarbageCollectAllocatedModules() {
   ModuleList::RemoveOrphanSharedModules(mandatory);
 }
 
-const char *SBModule::GetName() const {
+const char *SBModule::GetObjectName() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (!m_opaque_sp)
     return nullptr; 
-  m_opaque_sp->GetObjectFile();
   return m_opaque_sp->GetObjectName().AsCString();
 }
