@@ -537,10 +537,16 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   if (!memrefType.getElementType().isSignlessInteger())
     return failure();
 
-  if (memrefType.getMemorySpace() ==
-      spirv::StorageClassAttr::get(rewriter.getContext(),
-                                   spirv::StorageClass::Image))
-    return failure();
+  auto memorySpaceAttr =
+      dyn_cast_if_present<spirv::StorageClassAttr>(memrefType.getMemorySpace());
+  if (!memorySpaceAttr)
+    return rewriter.notifyMatchFailure(
+        loadOp, "missing memory space SPIR-V storage class attribute");
+
+  if (memorySpaceAttr.getValue() == spirv::StorageClass::Image)
+    return rewriter.notifyMatchFailure(
+        loadOp,
+        "failed to lower memref in image storage class to storage buffer");
 
   const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
   Value accessChain =
@@ -659,10 +665,16 @@ LoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   if (memrefType.getElementType().isSignlessInteger())
     return failure();
 
-  if (memrefType.getMemorySpace() ==
-      spirv::StorageClassAttr::get(rewriter.getContext(),
-                                   spirv::StorageClass::Image))
-    return failure();
+  auto memorySpaceAttr =
+      dyn_cast_if_present<spirv::StorageClassAttr>(memrefType.getMemorySpace());
+  if (!memorySpaceAttr)
+    return rewriter.notifyMatchFailure(
+        loadOp, "missing memory space SPIR-V storage class attribute");
+
+  if (memorySpaceAttr.getValue() == spirv::StorageClass::Image)
+    return rewriter.notifyMatchFailure(
+        loadOp,
+        "failed to lower memref in image storage class to storage buffer");
 
   Value loadPtr = spirv::getElementPtr(
       *getTypeConverter<SPIRVTypeConverter>(), memrefType, adaptor.getMemref(),
@@ -686,12 +698,18 @@ LogicalResult
 ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
                                     ConversionPatternRewriter &rewriter) const {
   auto memrefType = cast<MemRefType>(loadOp.getMemref().getType());
-  if (memrefType.getMemorySpace() !=
-      spirv::StorageClassAttr::get(rewriter.getContext(),
-                                   spirv::StorageClass::Image))
-    return failure();
 
-  auto loadPtr = adaptor.getMemref();
+  auto memorySpaceAttr =
+      dyn_cast_if_present<spirv::StorageClassAttr>(memrefType.getMemorySpace());
+  if (!memorySpaceAttr)
+    return rewriter.notifyMatchFailure(
+        loadOp, "missing memory space SPIR-V storage class attribute");
+
+  if (memorySpaceAttr.getValue() != spirv::StorageClass::Image)
+    return rewriter.notifyMatchFailure(
+        loadOp, "failed to lower memref in non-image storage class to image");
+
+  Value loadPtr = adaptor.getMemref();
   auto memoryRequirements = calculateMemoryRequirements(loadPtr, loadOp);
   if (failed(memoryRequirements))
     return rewriter.notifyMatchFailure(
