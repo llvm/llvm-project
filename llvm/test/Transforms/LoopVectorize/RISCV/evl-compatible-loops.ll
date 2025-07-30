@@ -23,7 +23,6 @@ define void @test_wide_integer_induction(ptr noalias %a, i64 %N) {
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i64> zeroinitializer, [[TMP10]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDEX_EVL_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[INDUCTION]], [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = sub i64 [[N]], [[EVL_BASED_IV]]
@@ -36,9 +35,8 @@ define void @test_wide_integer_induction(ptr noalias %a, i64 %N) {
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[VEC_IND]], ptr align 8 [[TMP14]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP11]])
 ; CHECK-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP11]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP16]], [[EVL_BASED_IV]]
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], [[TMP8]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[IV_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]

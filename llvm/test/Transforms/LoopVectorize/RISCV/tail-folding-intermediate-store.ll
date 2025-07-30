@@ -42,7 +42,6 @@ define void @reduction_intermediate_store(ptr %a, i64 %n, i32 %start, ptr %addr)
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP10:%.*]] = insertelement <vscale x 4 x i32> zeroinitializer, i32 [[START]], i32 0
 ; IF-EVL-OUTLOOP-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL-OUTLOOP:       vector.body:
-; IF-EVL-OUTLOOP-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-OUTLOOP-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDEX_EVL_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-OUTLOOP-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ [[TMP10]], [[ENTRY]] ], [ [[TMP19:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP11:%.*]] = sub i64 [[N]], [[EVL_BASED_IV]]
@@ -53,9 +52,8 @@ define void @reduction_intermediate_store(ptr %a, i64 %n, i32 %start, ptr %addr)
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP19]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[VP_OP]], <vscale x 4 x i32> [[VEC_PHI]], i32 [[TMP12]])
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP21:%.*]] = zext i32 [[TMP12]] to i64
 ; IF-EVL-OUTLOOP-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP21]], [[EVL_BASED_IV]]
-; IF-EVL-OUTLOOP-NEXT:    [[IV_NEXT]] = add i64 [[IV]], [[TMP9]]
-; IF-EVL-OUTLOOP-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[IV_NEXT]], [[N_VEC]]
-; IF-EVL-OUTLOOP-NEXT:    br i1 [[TMP22]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; IF-EVL-OUTLOOP-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[N]]
+; IF-EVL-OUTLOOP-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; IF-EVL-OUTLOOP:       middle.block:
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP23:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP19]])
 ; IF-EVL-OUTLOOP-NEXT:    store i32 [[TMP23]], ptr [[ADDR]], align 4, !alias.scope [[META7:![0-9]+]], !noalias [[META0]]
@@ -100,7 +98,6 @@ define void @reduction_intermediate_store(ptr %a, i64 %n, i32 %start, ptr %addr)
 ; IF-EVL-INLOOP-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 4
 ; IF-EVL-INLOOP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL-INLOOP:       vector.body:
-; IF-EVL-INLOOP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-INLOOP-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-INLOOP-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ [[START]], [[VECTOR_PH]] ], [ [[TMP22:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-INLOOP-NEXT:    [[TMP13:%.*]] = sub i64 [[N]], [[EVL_BASED_IV]]
@@ -111,9 +108,8 @@ define void @reduction_intermediate_store(ptr %a, i64 %n, i32 %start, ptr %addr)
 ; IF-EVL-INLOOP-NEXT:    [[TMP22]] = add i32 [[TMP21]], [[VEC_PHI]]
 ; IF-EVL-INLOOP-NEXT:    [[TMP23:%.*]] = zext i32 [[TMP14]] to i64
 ; IF-EVL-INLOOP-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP23]], [[EVL_BASED_IV]]
-; IF-EVL-INLOOP-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP12]]
-; IF-EVL-INLOOP-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-INLOOP-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; IF-EVL-INLOOP-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[N]]
+; IF-EVL-INLOOP-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; IF-EVL-INLOOP:       middle.block:
 ; IF-EVL-INLOOP-NEXT:    store i32 [[TMP22]], ptr [[ADDR]], align 4, !alias.scope [[META7:![0-9]+]], !noalias [[META0]]
 ; IF-EVL-INLOOP-NEXT:    br label [[FOR_END:%.*]]
