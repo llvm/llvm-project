@@ -191,7 +191,7 @@ KnownBits ValueEvolution::computeInstr(const Instruction *I) {
     return KnownPhis.lookup_or(P, BitWidth);
 
   // Compute the KnownBits for a Select(Cmp()), forcing it to take the branch
-  // that is predicated on the (least|most)-significant-bit check.
+  // that is (least|most)-significant-bit-clear.
   CmpPredicate Pred;
   Value *L, *R;
   Instruction *TV, *FV;
@@ -199,13 +199,22 @@ KnownBits ValueEvolution::computeInstr(const Instruction *I) {
                         m_Instruction(FV)))) {
     Visited.insert(cast<Instruction>(I->getOperand(0)));
 
-    // Check that the predication is on (most|least) significant bit.
+    // Check that the predication is on (most|least) significant bit. We check
+    // that the compare is `>= 0` in the big-endian case, and `== 0` in the
+    // little-endian case (or the inverse, in which case the branches of the
+    // compare are swapped). We check LCR against CheckLCR, which is full-set,
+    // [0, -1), [0, -3), [0, -7), etc. depending on AtIter in the big-endian
+    // case, and [0, 2) in the little-endian case: CheckLCR checks that we are
+    // shifting in zero bits in every loop iteration in the big-endian case, and
+    // the compare 0 or 1 in the little-endian case (as a value and'ed with 1 is
+    // passed as the operand). We then check AllowedByR against CheckAllowedByR,
+    // which is [0, smin) in the big-endian case, and [0, 1) in the
+    // little-endian case: CheckAllowedByR checks for significant-bit-clear,
+    // which means that we visit the bit-shift branch instead of the
+    // bit-shift-and-xor-poly branch.
     KnownBits KnownL = compute(L);
     unsigned ICmpBW = KnownL.getBitWidth();
     auto LCR = ConstantRange::fromKnownBits(KnownL, false);
-    // Check LCR against full-set, [0, -1), [0, -3), [0, -7), etc. depending on
-    // AtIter in the big-endian case, and against [0, 2) in the little-endian
-    // case.
     auto CheckLCR = ConstantRange::getNonEmpty(
         APInt::getZero(ICmpBW), ByteOrderSwapped
                                     ? -APInt::getLowBitsSet(ICmpBW, AtIter)
@@ -217,20 +226,19 @@ KnownBits ValueEvolution::computeInstr(const Instruction *I) {
 
     KnownBits KnownR = compute(R);
     auto RCR = ConstantRange::fromKnownBits(KnownR, false);
-    auto AllowedR = ConstantRange::makeAllowedICmpRegion(Pred, RCR);
-    // Check AllowedR against [0, smin) in the big-endian case, and against
-    // [0, 1) in the little-endian case.
-    ConstantRange CheckAllowedR(
+    auto AllowedByR = ConstantRange::makeAllowedICmpRegion(Pred, RCR);
+    ConstantRange CheckAllowedByR(
         APInt::getZero(ICmpBW),
         ByteOrderSwapped ? APInt::getSignedMinValue(ICmpBW) : APInt(ICmpBW, 1));
 
-    // We only compute KnownBits of either TV or FV, as the other value would
-    // just be a bit-shift as checked by isBigEndianBitShift.
-    if (AllowedR == CheckAllowedR) {
+    // We only compute KnownBits of either TV or FV, as the other branch would
+    // be the bit-shift-and-xor-poly branch, as determined by the conditional
+    // recurrence.
+    if (AllowedByR == CheckAllowedByR) {
       Visited.insert(FV);
       return compute(TV);
     }
-    if (AllowedR.inverse() == CheckAllowedR) {
+    if (AllowedByR.inverse() == CheckAllowedByR) {
       Visited.insert(TV);
       return compute(FV);
     }
