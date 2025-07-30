@@ -26,9 +26,8 @@ module @add attributes {gpu.container_module} {
     %memref_0 = gpu.alloc () : memref<2x2x2xf32>
     gpu.memcpy %memref_0, %arg1 : memref<2x2x2xf32>, memref<2x2x2xf32>
     %memref_1 = gpu.alloc () : memref<2x2x2xf32>
-
-    gpu.launch_func @test_kernel::@test_kernel blocks in (%c2, %c2, %c2) threads in (%c1, %c1, %c1) args(%memref : memref<2x2x2xf32>, %memref_0 : memref<2x2x2xf32>, %memref_1 : memref<2x2x2xf32>)
-
+    gpu.launch_func @test_kernel::@test_kernel blocks in (%c2, %c2, %c2) threads in (%c1, %c1, %c1)
+      args(%memref : memref<2x2x2xf32>, %memref_0 : memref<2x2x2xf32>, %memref_1 : memref<2x2x2xf32>)
     %alloc = memref.alloc() : memref<2x2x2xf32>
     gpu.memcpy %alloc, %memref_1 : memref<2x2x2xf32>, memref<2x2x2xf32>
     gpu.dealloc %memref_1 : memref<2x2x2xf32>
@@ -36,8 +35,10 @@ module @add attributes {gpu.container_module} {
     gpu.dealloc %memref : memref<2x2x2xf32>
     return %alloc : memref<2x2x2xf32>
   }
-  gpu.module @test_kernel attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Addresses, Int64, Kernel], []>, api=OpenCL, #spirv.resource_limits<>>} {
-    gpu.func @test_kernel(%arg0: memref<2x2x2xf32>, %arg1: memref<2x2x2xf32>, %arg2: memref<2x2x2xf32>) kernel attributes {gpu.known_block_size = array<i32: 1, 1, 1>, gpu.known_grid_size = array<i32: 2, 2, 2>, spirv.entry_point_abi = #spirv.entry_point_abi<>} {
+  gpu.module @test_kernel
+  attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Addresses, Int64, Kernel], []>, api=OpenCL, #spirv.resource_limits<>>} {
+    gpu.func @test_kernel(%arg0: memref<2x2x2xf32>, %arg1: memref<2x2x2xf32>, %arg2: memref<2x2x2xf32>) kernel
+    attributes {gpu.known_block_size = array<i32: 1, 1, 1>, gpu.known_grid_size = array<i32: 2, 2, 2>, spirv.entry_point_abi = #spirv.entry_point_abi<>} {
       %0 = gpu.block_id  x
       %1 = gpu.block_id  y
       %2 = gpu.block_id  z
