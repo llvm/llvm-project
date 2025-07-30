@@ -6,10 +6,10 @@ define void @do_not_sink_scalable_vector_compare(ptr %a, ptr %b) {
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[STEP_VECTOR:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult <vscale x 4 x i32> [[STEP_VECTOR]], splat (i32 16)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult <vscale x 4 x i32> [[STEP_VECTOR]], splat (i32 16)
 ; CHECK-NEXT:    [[SRC:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr [[SRC]], i32 4, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x i32> poison)
 ; CHECK-NEXT:    [[DST:%.*]] = getelementptr inbounds ptr, ptr [[B]], i64 [[INDEX]]

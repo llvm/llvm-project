@@ -6225,10 +6225,17 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     }
   }
 
-  auto ShouldSinkCondition = [](Value *Cond) -> bool {
+  auto ShouldSinkCondition = [](Value *Cond,
+                                SmallVectorImpl<Use *> &Ops) -> bool {
+    if (!isa<IntrinsicInst>(Cond))
+      return false;
     auto *II = dyn_cast<IntrinsicInst>(Cond);
-    return II && II->getIntrinsicID() == Intrinsic::vector_reduce_or &&
-           isa<ScalableVectorType>(II->getOperand(0)->getType());
+    if (II->getIntrinsicID() != Intrinsic::vector_reduce_or ||
+        !isa<ScalableVectorType>(II->getOperand(0)->getType()))
+      return false;
+    if (isa<CmpInst>(II->getOperand(0)))
+      Ops.push_back(&II->getOperandUse(0));
+    return true;
   };
 
   switch (I->getOpcode()) {
@@ -6244,7 +6251,7 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     }
     break;
   case Instruction::Select: {
-    if (!ShouldSinkCondition(I->getOperand(0)))
+    if (!ShouldSinkCondition(I->getOperand(0), Ops))
       return false;
 
     Ops.push_back(&I->getOperandUse(0));
@@ -6254,7 +6261,7 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     if (cast<BranchInst>(I)->isUnconditional())
       return false;
 
-    if (!ShouldSinkCondition(cast<BranchInst>(I)->getCondition()))
+    if (!ShouldSinkCondition(cast<BranchInst>(I)->getCondition(), Ops))
       return false;
 
     Ops.push_back(&I->getOperandUse(0));
