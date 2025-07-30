@@ -295,17 +295,22 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
     Format = A->getValue();
 
   SmallString<128> F;
-  const Arg *A = Args.getLastArg(options::OPT_foptimization_record_file_EQ);
-  if (A)
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_foptimization_record_file_EQ)) {
     F = A->getValue();
-  else if (Output.isFilename())
+    F += ".";
+  } else if (const Arg *A = Args.getLastArg(options::OPT_dumpdir)) {
+    F = A->getValue();
+  } else if (Output.isFilename()) {
     F = Output.getFilename();
+    F += ".";
+  }
 
   assert(!F.empty() && "Cannot determine remarks output name.");
   // Append "opt.ld.<format>" to the end of the file name.
   CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
-                                       "opt-remarks-filename=" + F +
-                                       ".opt.ld." + Format));
+                                       "opt-remarks-filename=" + F + "opt.ld." +
+                                       Format));
 
   if (const Arg *A =
           Args.getLastArg(options::OPT_foptimization_record_passes_EQ))
@@ -1075,9 +1080,17 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     }
   }
 
-  if (Args.hasArg(options::OPT_gsplit_dwarf))
-    CmdArgs.push_back(Args.MakeArgString(
-        Twine(PluginOptPrefix) + "dwo_dir=" + Output.getFilename() + "_dwo"));
+  if (Args.hasArg(options::OPT_gsplit_dwarf)) {
+    SmallString<128> F;
+    if (const Arg *A = Args.getLastArg(options::OPT_dumpdir)) {
+      F = A->getValue();
+    } else {
+      F = Output.getFilename();
+      F += "_";
+    }
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine(PluginOptPrefix) + "dwo_dir=" + F + "dwo"));
+  }
 
   if (IsThinLTO && !IsOSAIX)
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + "thinlto"));
