@@ -746,6 +746,13 @@ let SubtargetPredicate = HasMinimum3Maximum3F16, ReadsModeReg = 0 in {
   defm V_MAXIMUM3_F16 : VOP3Inst_t16 <"v_maximum3_f16", VOP_F16_F16_F16_F16, AMDGPUfmaximum3>;
 } // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0
 
+let SubtargetPredicate = HasAddMinMaxInsts, isCommutable = 1, isReMaterializable = 1 in {
+  defm V_ADD_MAX_I32 : VOP3Inst <"v_add_max_i32", VOP_I32_I32_I32_I32>;
+  defm V_ADD_MAX_U32 : VOP3Inst <"v_add_max_u32", VOP_I32_I32_I32_I32>;
+  defm V_ADD_MIN_I32 : VOP3Inst <"v_add_min_i32", VOP_I32_I32_I32_I32>;
+  defm V_ADD_MIN_U32 : VOP3Inst <"v_add_min_u32", VOP_I32_I32_I32_I32>;
+}
+
 defm V_ADD_I16 : VOP3Inst_t16 <"v_add_i16", VOP_I16_I16_I16>;
 defm V_SUB_I16 : VOP3Inst_t16 <"v_sub_i16", VOP_I16_I16_I16>;
 
@@ -885,6 +892,13 @@ def : GCNPat<
   (V_LSHL_ADD_U64_e64 VSrc_b64:$src0, VSrc_b32:$src1, VSrc_b64:$src2)
 >;
 
+let SubtargetPredicate = HasAddMinMaxInsts in {
+def : ThreeOp_i32_Pats<add, smax, V_ADD_MAX_I32_e64>;
+def : ThreeOp_i32_Pats<add, umax, V_ADD_MAX_U32_e64>;
+def : ThreeOp_i32_Pats<add, smin, V_ADD_MIN_I32_e64>;
+def : ThreeOp_i32_Pats<add, umin, V_ADD_MIN_U32_e64>;
+}
+
 def : VOPBinOpClampPat<saddsat, V_ADD_I32_e64, i32>;
 def : VOPBinOpClampPat<ssubsat, V_SUB_I32_e64, i32>;
 
@@ -999,10 +1013,10 @@ class SrcAndDstSelToOpSelXForm<int modifier_idx, bit dest_sel> : SDNodeXForm<tim
   unsigned Val = N->getZExtValue();
   unsigned New = 0;
   if (}] # modifier_idx # [{ == 0) {
-    New = (}] # dest_sel # [{ == 1) ? ((Val & 0x2) ? (SISrcMods::OP_SEL_0 | SISrcMods::DST_OP_SEL) : SISrcMods::DST_OP_SEL)
-                                    : ((Val & 0x2) ? SISrcMods::OP_SEL_0 : SISrcMods::NONE);
+    New = (}] # dest_sel # [{ == 1) ? ((Val & 0x1) ? (SISrcMods::OP_SEL_0 | SISrcMods::DST_OP_SEL) : SISrcMods::DST_OP_SEL)
+                                    : ((Val & 0x1) ? SISrcMods::OP_SEL_0 : SISrcMods::NONE);
   } else if (}] # modifier_idx # [{== 1 || }] # modifier_idx # [{ == 2) {
-      New = (Val & 0x1) ? SISrcMods::OP_SEL_0 : SISrcMods::NONE;
+      New = (Val & 0x2) ? SISrcMods::OP_SEL_0 : SISrcMods::NONE;
   }
   return CurDAG->getTargetConstant(New, SDLoc(N), MVT::i32);
 }]>;
@@ -1046,7 +1060,7 @@ def gi_SrcSelToOpSelXForm : GICustomOperandRenderer<"renderSrcSelToOpSelXForm">,
 def DstSelToOpSel3XForm : SDNodeXForm<timm, [{
   uint32_t V = N->getZExtValue();
   return CurDAG->getTargetConstant(
-      (V & 0x2) ? SISrcMods::DST_OP_SEL : SISrcMods::NONE,
+      (V & 0x1) ? SISrcMods::DST_OP_SEL : SISrcMods::NONE,
       SDLoc(N), MVT::i32);
 }]>;
 def gi_DstSelToOpSel3XForm : GICustomOperandRenderer<"renderDstSelToOpSel3XFormXForm">,
@@ -1596,6 +1610,7 @@ def bf16_fpround : PatFrag <(ops node:$src0),  (fpround $src0), [{ return true; 
 let SubtargetPredicate = HasBF16ConversionInsts in {
   let ReadsModeReg = 0 in {
     defm V_CVT_PK_BF16_F32    : VOP3Inst<"v_cvt_pk_bf16_f32", VOP3_Profile<VOP_V2BF16_F32_F32>>;
+    defm V_CVT_SR_PK_BF16_F32 : VOP3Inst<"v_cvt_sr_pk_bf16_f32", VOP3_Profile<VOP_V2BF16_F32_F32_I32>, int_amdgcn_cvt_sr_pk_bf16_f32>;
   }
   def : GCNPat<(v2bf16 (bf16_fpround v2f32:$src)),
                (V_CVT_PK_BF16_F32_e64 0, (EXTRACT_SUBREG VReg_64:$src, sub0), 0, (EXTRACT_SUBREG VReg_64:$src, sub1))>;
@@ -1821,6 +1836,10 @@ defm V_MIN_U64 : VOP3Only_Realtriple_gfx1250<0x318>;
 defm V_MAX_U64 : VOP3Only_Realtriple_gfx1250<0x319>;
 defm V_MIN_I64 : VOP3Only_Realtriple_gfx1250<0x31a>;
 defm V_MAX_I64 : VOP3Only_Realtriple_gfx1250<0x31b>;
+defm V_ADD_MAX_I32 : VOP3Only_Realtriple_gfx1250<0x25e>;
+defm V_ADD_MAX_U32 : VOP3Only_Realtriple_gfx1250<0x25f>;
+defm V_ADD_MIN_I32 : VOP3Only_Realtriple_gfx1250<0x260>;
+defm V_ADD_MIN_U32 : VOP3Only_Realtriple_gfx1250<0x261>;
 
 defm V_CVT_PK_FP8_F32  : VOP3Only_Realtriple_t16_and_fake16_gfx12<0x369, "v_cvt_pk_fp8_f32">;
 defm V_CVT_PK_BF8_F32  : VOP3Only_Realtriple_t16_and_fake16_gfx12<0x36a, "v_cvt_pk_bf8_f32">;
@@ -1995,6 +2014,7 @@ let AssemblerPredicate = isGFX11Plus in {
 // These instructions differ from GFX12 variant by supporting DPP:
 defm V_LSHL_ADD_U64                  : VOP3Only_Realtriple_gfx1250<0x252>;
 defm V_CVT_PK_BF16_F32               : VOP3Only_Realtriple_gfx1250<0x36d>;
+defm V_CVT_SR_PK_BF16_F32            : VOP3Only_Realtriple_gfx1250<0x36e>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.
