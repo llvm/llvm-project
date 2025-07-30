@@ -267,7 +267,6 @@ public:
 class LLVM_ABI FileSystem : public llvm::ThreadSafeRefCountedBase<FileSystem>,
                             public RTTIExtends<FileSystem, RTTIRoot> {
 public:
-  static constexpr bool UseStrictIRC = true;
   static const char ID;
   virtual ~FileSystem();
 
