@@ -7094,8 +7094,14 @@ LValue CodeGenFunction::EmitMaterializeSequenceExprLValue(
                                            const MaterializeSequenceExpr *MSE) {
   if (MSE->isBinding()) {
     for (auto *OVE : MSE->opaquevalues()) {
-      CodeGenFunction::OpaqueValueMappingData::bind(
-          *this, OVE, OVE->getSourceExpr());
+      if (CodeGenFunction::OpaqueValueMappingData::shouldBindAsLValue(OVE)) {
+        RValue PtrRV = EmitAnyExpr(OVE->getSourceExpr());
+        LValue LV = MakeAddrLValue(PtrRV.getAggregateAddress(), OVE->getType());
+        CodeGenFunction::OpaqueValueMappingData::bind(*this, OVE, LV);
+      } else {
+        CodeGenFunction::OpaqueValueMappingData::bind(
+            *this, OVE, OVE->getSourceExpr());
+      }
     }
   }
 
