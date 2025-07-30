@@ -91,8 +91,8 @@ TEST_P(olLaunchKernelFooTest, Success) {
     void *Mem;
   } Args{Mem};
 
-  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
-                                &LaunchArgs, nullptr));
+  ASSERT_SUCCESS(
+      olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args), &LaunchArgs));
 
   ASSERT_SUCCESS(olSyncQueue(Queue));
 
@@ -106,7 +106,7 @@ TEST_P(olLaunchKernelFooTest, Success) {
 
 TEST_P(olLaunchKernelNoArgsTest, Success) {
   ASSERT_SUCCESS(
-      olLaunchKernel(Queue, Device, Kernel, nullptr, 0, &LaunchArgs, nullptr));
+      olLaunchKernel(Queue, Device, Kernel, nullptr, 0, &LaunchArgs));
 
   ASSERT_SUCCESS(olSyncQueue(Queue));
 }
@@ -121,7 +121,7 @@ TEST_P(olLaunchKernelFooTest, SuccessSynchronous) {
   } Args{Mem};
 
   ASSERT_SUCCESS(olLaunchKernel(nullptr, Device, Kernel, &Args, sizeof(Args),
-                                &LaunchArgs, nullptr));
+                                &LaunchArgs));
 
   uint32_t *Data = (uint32_t *)Mem;
   for (uint32_t i = 0; i < 64; i++) {
@@ -144,8 +144,8 @@ TEST_P(olLaunchKernelLocalMemTest, Success) {
     void *Mem;
   } Args{Mem};
 
-  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
-                                &LaunchArgs, nullptr));
+  ASSERT_SUCCESS(
+      olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args), &LaunchArgs));
 
   ASSERT_SUCCESS(olSyncQueue(Queue));
 
@@ -167,8 +167,8 @@ TEST_P(olLaunchKernelLocalMemReductionTest, Success) {
     void *Mem;
   } Args{Mem};
 
-  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
-                                &LaunchArgs, nullptr));
+  ASSERT_SUCCESS(
+      olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args), &LaunchArgs));
 
   ASSERT_SUCCESS(olSyncQueue(Queue));
 
@@ -190,8 +190,8 @@ TEST_P(olLaunchKernelLocalMemStaticTest, Success) {
     void *Mem;
   } Args{Mem};
 
-  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
-                                &LaunchArgs, nullptr));
+  ASSERT_SUCCESS(
+      olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args), &LaunchArgs));
 
   ASSERT_SUCCESS(olSyncQueue(Queue));
 
@@ -210,11 +210,11 @@ TEST_P(olLaunchKernelGlobalTest, Success) {
     void *Mem;
   } Args{Mem};
 
-  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernels[0], nullptr, 0,
-                                &LaunchArgs, nullptr));
+  ASSERT_SUCCESS(
+      olLaunchKernel(Queue, Device, Kernels[0], nullptr, 0, &LaunchArgs));
   ASSERT_SUCCESS(olSyncQueue(Queue));
   ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernels[1], &Args, sizeof(Args),
-                                &LaunchArgs, nullptr));
+                                &LaunchArgs));
   ASSERT_SUCCESS(olSyncQueue(Queue));
 
   uint32_t *Data = (uint32_t *)Mem;
@@ -229,9 +229,8 @@ TEST_P(olLaunchKernelGlobalTest, InvalidNotAKernel) {
   ol_symbol_handle_t Global = nullptr;
   ASSERT_SUCCESS(
       olGetSymbol(Program, "global", OL_SYMBOL_KIND_GLOBAL_VARIABLE, &Global));
-  ASSERT_ERROR(
-      OL_ERRC_SYMBOL_KIND,
-      olLaunchKernel(Queue, Device, Global, nullptr, 0, &LaunchArgs, nullptr));
+  ASSERT_ERROR(OL_ERRC_SYMBOL_KIND,
+               olLaunchKernel(Queue, Device, Global, nullptr, 0, &LaunchArgs));
 }
 
 TEST_P(olLaunchKernelGlobalCtorTest, Success) {
@@ -242,8 +241,8 @@ TEST_P(olLaunchKernelGlobalCtorTest, Success) {
     void *Mem;
   } Args{Mem};
 
-  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
-                                &LaunchArgs, nullptr));
+  ASSERT_SUCCESS(
+      olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args), &LaunchArgs));
   ASSERT_SUCCESS(olSyncQueue(Queue));
 
   uint32_t *Data = (uint32_t *)Mem;
@@ -259,6 +258,6 @@ TEST_P(olLaunchKernelGlobalDtorTest, Success) {
   // find/implement a way, update this test. For now we just check that nothing
   // crashes
   ASSERT_SUCCESS(
-      olLaunchKernel(Queue, Device, Kernel, nullptr, 0, &LaunchArgs, nullptr));
+      olLaunchKernel(Queue, Device, Kernel, nullptr, 0, &LaunchArgs));
   ASSERT_SUCCESS(olSyncQueue(Queue));
 }

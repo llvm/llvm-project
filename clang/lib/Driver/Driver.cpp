@@ -209,8 +209,8 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
       CCLogDiagnostics(false), CCGenDiagnostics(false),
       CCPrintProcessStats(false), CCPrintInternalStats(false),
       TargetTriple(TargetTriple), Saver(Alloc), PrependArg(nullptr),
-      CheckInputsExist(true), ProbePrecompiled(true),
-      SuppressMissingInputWarning(false) {
+      PreferredLinker(CLANG_DEFAULT_LINKER), CheckInputsExist(true),
+      ProbePrecompiled(true), SuppressMissingInputWarning(false) {
   // Provide a sane fallback if no VFS is specified.
   if (!this->VFS)
     this->VFS = llvm::vfs::getRealFileSystem();
@@ -910,7 +910,7 @@ getSystemOffloadArchs(Compilation &C, Action::OffloadKind Kind) {
 
   SmallVector<std::string> GPUArchs;
   if (llvm::ErrorOr<std::string> Executable =
-          llvm::sys::findProgramByName(Program)) {
+          llvm::sys::findProgramByName(Program, {C.getDriver().Dir})) {
     llvm::SmallVector<StringRef> Args{*Executable};
     if (Kind == Action::OFK_HIP)
       Args.push_back("--only=amdgpu");
@@ -4919,13 +4919,14 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
   }
 
   // HIP code in device-only non-RDC mode will bundle the output if it invoked
-  // the linker.
+  // the linker or if the user explicitly requested it.
   bool ShouldBundleHIP =
-      HIPNoRDC && offloadDeviceOnly() &&
       Args.hasFlag(options::OPT_gpu_bundle_output,
-                   options::OPT_no_gpu_bundle_output, true) &&
-      !llvm::any_of(OffloadActions,
-                    [](Action *A) { return A->getType() != types::TY_Image; });
+                   options::OPT_no_gpu_bundle_output, false) ||
+      (HIPNoRDC && offloadDeviceOnly() &&
+       llvm::none_of(OffloadActions, [](Action *A) {
+         return A->getType() != types::TY_Image;
+       }));
 
   // All kinds exit now in device-only mode except for non-RDC mode HIP.
   if (offloadDeviceOnly() && !ShouldBundleHIP)
