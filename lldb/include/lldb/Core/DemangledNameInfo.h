@@ -74,14 +74,15 @@ struct DemangledNameInfo {
   std::pair<size_t, size_t> QualifiersRange;
 
   /// Indicates the [start, end) of the function's name qualifiers. This is a
-  /// catch-all range for anything in between the basename and the arguments,
-  /// that is not tracked by the rest of the pairs.
+  /// catch-all range for anything in between the basename and the function's
+  /// arguments or template arguments, that is not tracked by the rest of the
+  /// pairs.
   ///
   /// E.g.,
   /// \code{.swift}
-  ///    void foo::bar<int>::qux<float>(int) const &&
-  ///                                       ^        ^
-  ///                                     start     end
+  ///    closure #1 in A.foo<Int>()
+  ///              ^        ^
+  ///            start     end
   /// \endcode
   std::pair<size_t, size_t> NameQualifiersRange;
 
