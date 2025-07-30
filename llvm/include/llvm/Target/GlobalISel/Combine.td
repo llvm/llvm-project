@@ -194,6 +194,7 @@ def IsExact     : MIFlagEnum<"IsExact">;
 def NoSWrap     : MIFlagEnum<"NoSWrap">;
 def NoUWrap     : MIFlagEnum<"NoUWrap">;
 def NonNeg      : MIFlagEnum<"NonNeg">;
+def InBounds    : MIFlagEnum<"InBounds">;
 
 def MIFlags;
 // def not; -> Already defined as a SDNode

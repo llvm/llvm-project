@@ -78,7 +78,7 @@ body: |
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX8-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s16), align 4, addrspace 1)
     ; GFX8-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; GFX8-NEXT: [[PTR_ADD:%[0-9]+]]:_(p1) = nuw G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX8-NEXT: [[PTR_ADD:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
     ; GFX8-NEXT: [[ZEXTLOAD1:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[PTR_ADD]](p1) :: (load (s8) from unknown-address + 2, align 2, addrspace 1)
     ; GFX8-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXTLOAD1]], [[C1]](s32)
@@ -91,7 +91,7 @@ body: |
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX6-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s16), align 4, addrspace 1)
     ; GFX6-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; GFX6-NEXT: [[PTR_ADD:%[0-9]+]]:_(p1) = nuw G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX6-NEXT: [[PTR_ADD:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
     ; GFX6-NEXT: [[ZEXTLOAD1:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[PTR_ADD]](p1) :: (load (s8) from unknown-address + 2, align 2, addrspace 1)
     ; GFX6-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXTLOAD1]], [[C1]](s32)
@@ -319,7 +319,7 @@ body: |
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX6-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; GFX6-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; GFX6-NEXT: [[PTR_ADD:%[0-9]+]]:_(p1) = nuw G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX6-NEXT: [[PTR_ADD:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
     ; GFX6-NEXT: [[ZEXTLOAD1:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[PTR_ADD]](p1) :: (load (s8) from unknown-address + 1, addrspace 1)
     ; GFX6-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXTLOAD1]], [[C1]](s32)
@@ -350,7 +350,7 @@ body: |
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX6-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; GFX6-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; GFX6-NEXT: [[PTR_ADD:%[0-9]+]]:_(p1) = nuw G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX6-NEXT: [[PTR_ADD:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
     ; GFX6-NEXT: [[ZEXTLOAD1:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[PTR_ADD]](p1) :: (load (s8) from unknown-address + 1, addrspace 1)
     ; GFX6-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXTLOAD1]], [[C1]](s32)
