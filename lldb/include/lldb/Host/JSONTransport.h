@@ -110,19 +110,23 @@ public:
             return;
           }
 
-          m_buffer.append(std::string(buffer, len));
+          if (len)
+            m_buffer.append(std::string(buffer, len));
 
-          llvm::Expected<std::vector<std::string>> messages = Parse();
-          if (llvm::Error error = messages.takeError()) {
-            callback(loop, std::move(error));
-            return;
+          // If the buffer has contents, try parsing any pending messages.
+          if (!m_buffer.empty()) {
+            llvm::Expected<std::vector<std::string>> messages = Parse();
+            if (llvm::Error error = messages.takeError()) {
+              callback(loop, std::move(error));
+              return;
+            }
+
+            for (const auto &message : *messages)
+              if constexpr (std::is_same<T, std::string>::value)
+                callback(loop, message);
+              else
+                callback(loop, llvm::json::parse<T>(message));
           }
-
-          for (const auto &message : *messages)
-            if constexpr (std::is_same<T, std::string>::value)
-              callback(loop, message);
-            else
-              callback(loop, llvm::json::parse<T>(message));
 
           // On EOF, notify the callback after the remaining messages were
           // handled.

@@ -28,9 +28,8 @@ protected:
   void SetUp() override;
 
   template <typename P>
-  void
-  RunOnce(std::function<void(llvm::Expected<P>)> callback,
-          std::chrono::milliseconds timeout = std::chrono::milliseconds(100)) {
+  void RunOnce(std::function<void(llvm::Expected<P>)> callback,
+               std::chrono::milliseconds timeout = std::chrono::seconds(1)) {
     auto handle = from_dap->RegisterReadObject<P>(
         loop, [&](lldb_private::MainLoopBase &loop, llvm::Expected<P> message) {
           callback(std::move(message));

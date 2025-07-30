@@ -1004,10 +1004,8 @@ Status DAP::TransportHandler() {
           }
         }
 
-        {
-          std::lock_guard<std::mutex> guard(m_queue_mutex);
-          m_queue.push_back(std::move(*message));
-        }
+        std::lock_guard<std::mutex> guard(m_queue_mutex);
+        m_queue.push_back(std::move(*message));
         m_queue_cv.notify_one();
       });
   if (auto err = handle.takeError())

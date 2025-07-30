@@ -173,6 +173,25 @@ TEST_F(HTTPDelimitedJSONTransportTest, ReadPartialMessage) {
                        HasValue(testing::FieldsAre(/*str=*/"foo")));
 }
 
+TEST_F(HTTPDelimitedJSONTransportTest, ReadWithZeroByteWrites) {
+  std::future<void> background_task = std::async(std::launch::async, [&]() {
+    std::string json = R"({"str": "foo"})";
+    std::string message =
+        formatv("Content-Length: {0}\r\n\r\n{1}", json.size(), json).str();
+    std::string part1 = message.substr(0, 28);
+    std::string part2 = message.substr(28);
+
+    ASSERT_THAT_EXPECTED(input.Write(part1.data(), part1.size()), Succeeded());
+    ASSERT_THAT_EXPECTED(input.Write(part1.data(), 0),
+                         Succeeded()); // zero-byte write.
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    ASSERT_THAT_EXPECTED(input.Write(part2.data(), part2.size()), Succeeded());
+  });
+
+  ASSERT_THAT_EXPECTED(RunOnce<JSONTestType>(),
+                       HasValue(testing::FieldsAre(/*str=*/"foo")));
+}
+
 TEST_F(HTTPDelimitedJSONTransportTest, ReadWithEOF) {
   input.CloseWriteFileDescriptor();
   ASSERT_THAT_EXPECTED(RunOnce<JSONTestType>(), Failed<TransportEOFError>());
