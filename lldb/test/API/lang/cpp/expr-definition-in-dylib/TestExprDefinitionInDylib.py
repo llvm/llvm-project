@@ -12,8 +12,6 @@ class ExprDefinitionInDylibTestCase(TestBase):
         """
         self.build()
 
-        lldbutil.run_to_source_breakpoint(
-            self, "return", lldb.SBFileSpec("main.cpp")
-        )
+        lldbutil.run_to_source_breakpoint(self, "return", lldb.SBFileSpec("main.cpp"))
 
         self.expect_expr("f.method()", result_value="-72", result_type="int")
