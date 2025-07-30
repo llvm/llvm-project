@@ -543,9 +543,8 @@ private:
                             bool InSummary);
 
   // These functions take a range of symbol resolutions and consume the
-  // resolutions used by a single input module by incrementing ResI. Functions
-  // return ranges refering to the resolutions for the remaining modules in the
-  // InputFile.
+  // resolutions used by a single input module. Functions return ranges refering
+  // to the resolutions for the remaining modules in the InputFile.
   Expected<ArrayRef<SymbolResolution>>
   addModule(InputFile &Input, unsigned ModI, ArrayRef<SymbolResolution> Res);
 

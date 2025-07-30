@@ -907,8 +907,7 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
   SmallSet<StringRef, 2> NonPrevailingAsmSymbols;
   for (const InputFile::Symbol &Sym : Syms) {
     assert(!Res.empty());
-    SymbolResolution R = Res.front();
-    Res = Res.drop_front();
+    const SymbolResolution &R = Res.consume_front();
 
     assert(MsymI != MsymE);
     ModuleSymbolTable::Symbol Msym = *MsymI++;
@@ -1046,14 +1045,13 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
   ArrayRef<SymbolResolution> ResTmp = Res;
   for (const InputFile::Symbol &Sym : Syms) {
     assert(!ResTmp.empty());
-    SymbolResolution Res = ResTmp.front();
-    ResTmp = ResTmp.drop_front();
+    const SymbolResolution &R = ResTmp.consume_front();
 
     if (!Sym.getIRName().empty()) {
       auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(
           GlobalValue::getGlobalIdentifier(Sym.getIRName(),
                                            GlobalValue::ExternalLinkage, ""));
-      if (Res.Prevailing)
+      if (R.Prevailing)
         ThinLTO.PrevailingModuleForGUID[GUID] = BM.getModuleIdentifier();
     }
   }
@@ -1069,8 +1067,7 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
 
   for (const InputFile::Symbol &Sym : Syms) {
     assert(!Res.empty());
-    SymbolResolution R = Res.front();
-    Res = Res.drop_front();
+    const SymbolResolution &R = Res.consume_front();
 
     if (!Sym.getIRName().empty()) {
       auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(
