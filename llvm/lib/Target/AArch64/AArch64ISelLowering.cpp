@@ -24174,13 +24174,6 @@ static SDValue combineStoreValueFPToInt(StoreSDNode *ST,
   SDValue VecFP = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecSrcVT, FPSrc);
   SDValue VecConv = DAG.getNode(Value.getOpcode(), DL, VecDstVT, VecFP);
 
-  if (ST->isTruncatingStore()) {
-    EVT NewVecDstVT = EVT::getVectorVT(
-        *DAG.getContext(), ST->getMemoryVT(),
-        VecDstVT.getFixedSizeInBits() / ST->getMemoryVT().getFixedSizeInBits());
-    VecConv = DAG.getNode(AArch64ISD::NVCAST, DL, NewVecDstVT, VecConv);
-  }
-
   SDValue Zero = DAG.getVectorIdxConstant(0, DL);
   SDValue Extracted =
       DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, VecConv, Zero);
