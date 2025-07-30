@@ -11,6 +11,7 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/BasicOperations.h"
