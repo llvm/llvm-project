@@ -918,7 +918,8 @@ struct StoreOpLowering : public LoadStoreOpLowering<memref::StoreOp> {
         getStridedElementPtr(rewriter, op.getLoc(), type, adaptor.getMemref(),
                              adaptor.getIndices(), kNoWrapFlags);
     rewriter.replaceOpWithNewOp<LLVM::StoreOp>(op, adaptor.getValue(), dataPtr,
-                                               0, false, op.getNontemporal());
+                                               op.getAlignment().value_or(0),
+                                               false, op.getNontemporal());
     return success();
   }
 };
