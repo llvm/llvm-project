@@ -11,6 +11,7 @@
 #include "lldb/Target/Target.h"
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
@@ -31,62 +32,35 @@ Expression::Expression(ExecutionContextScope &exe_scope)
   assert(m_target_wp.lock());
 }
 
-/// Returns the components of the specified function call label.
-///
-/// The format of \c label is described in \c FunctionCallLabel.
-/// The label prefix is not one of the components.
-static llvm::Expected<llvm::SmallVector<llvm::StringRef, 3>>
-splitFunctionCallLabel(llvm::StringRef label) {
-  if (!label.consume_front(FunctionCallLabelPrefix))
-    return llvm::createStringError(
-        "expected function call label prefix not found.");
-  if (!label.consume_front(":"))
-    return llvm::createStringError(
-        "expected ':' as the first character after prefix.");
-
-  auto sep1 = label.find_first_of(":");
-  if (sep1 == llvm::StringRef::npos)
-    return llvm::createStringError("no ':' separator found.");
-
-  auto sep2 = label.find_first_of(":", sep1 + 1);
-  if (sep2 == llvm::StringRef::npos)
-    return llvm::createStringError("only single ':' separator found.");
-
-  llvm::SmallVector<llvm::StringRef, 3> components;
-  components.push_back(label.slice(0, sep1));
-  components.push_back(label.slice(sep1 + 1, sep2));
-  components.push_back(label.slice(sep2 + 1, llvm::StringRef::npos));
-
-  return components;
-}
-
 llvm::Expected<FunctionCallLabel>
 lldb_private::FunctionCallLabel::fromString(llvm::StringRef label) {
-  auto components_or_err = splitFunctionCallLabel(label);
-  if (!components_or_err)
-    return llvm::joinErrors(
-        llvm::createStringError("failed to split function call label '%s'",
-                                label.data()),
-        components_or_err.takeError());
+  llvm::SmallVector<llvm::StringRef, 4> components;
+  label.split(components, ":", /*MaxSplit=*/3);
 
-  const auto &components = *components_or_err;
+  if (components.size() != 4)
+    return llvm::createStringError("malformed function call label.");
 
-  llvm::StringRef module_label = components[0];
-  llvm::StringRef die_label = components[1];
+  if (components[0] != FunctionCallLabelPrefix)
+    return llvm::createStringError(llvm::formatv(
+        "expected function call label prefix '{0}' but found '{1}' instead.",
+        FunctionCallLabelPrefix, components[0]));
+
+  llvm::StringRef module_label = components[1];
+  llvm::StringRef die_label = components[2];
 
   lldb::user_id_t module_id = 0;
-  if (module_label.consumeInteger(0, module_id))
+  if (!llvm::to_integer(module_label, module_id))
     return llvm::createStringError(
-        llvm::formatv("failed to parse module ID from '{0}'.", components[0]));
+        llvm::formatv("failed to parse module ID from '{0}'.", module_label));
 
   lldb::user_id_t die_id;
-  if (die_label.consumeInteger(/*Radix=*/0, die_id))
+  if (!llvm::to_integer(die_label, die_id))
     return llvm::createStringError(
-        llvm::formatv("failed to parse symbol ID from '{0}'.", components[1]));
+        llvm::formatv("failed to parse symbol ID from '{0}'.", die_label));
 
   return FunctionCallLabel{/*.module_id=*/module_id,
                            /*.symbol_id=*/die_id,
-                           /*.lookup_name=*/components[2]};
+                           /*.lookup_name=*/components[3]};
 }
 
 std::string lldb_private::FunctionCallLabel::toString() const {
