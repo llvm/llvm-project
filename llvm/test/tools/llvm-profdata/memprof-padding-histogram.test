@@ -7,7 +7,7 @@ We expect 2 different MIBs with histogram values. This test is to make sure we p
 
 CHECK: MemprofProfile:
 CHECK-NEXT:   Summary:
-CHECK-NEXT:     Version: 5
+CHECK-NEXT:     Version: 4
 CHECK-NEXT:     NumSegments: {{[0-9]+}}
 CHECK-NEXT:     NumMibInfo: 2
 CHECK-NEXT:     NumAllocFunctions: 1

@@ -743,8 +743,9 @@ Error LTO::add(std::unique_ptr<InputFile> Input,
       Conf.VisibilityScheme = Config::ELF;
   }
 
+  ArrayRef<SymbolResolution> InputRes = Res;
   for (unsigned I = 0; I != Input->Mods.size(); ++I) {
-    if (auto Err = addModule(*Input, I, Res).moveInto(Res))
+    if (auto Err = addModule(*Input, InputRes, I, Res).moveInto(Res))
       return Err;
   }
 
@@ -753,8 +754,8 @@ Error LTO::add(std::unique_ptr<InputFile> Input,
 }
 
 Expected<ArrayRef<SymbolResolution>>
-LTO::addModule(InputFile &Input, unsigned ModI,
-               ArrayRef<SymbolResolution> Res) {
+LTO::addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
+               unsigned ModI, ArrayRef<SymbolResolution> Res) {
   Expected<BitcodeLTOInfo> LTOInfo = Input.Mods[ModI].getLTOInfo();
   if (!LTOInfo)
     return LTOInfo.takeError();
@@ -791,7 +792,7 @@ LTO::addModule(InputFile &Input, unsigned ModI,
     return addThinLTO(BM, ModSyms, Res);
 
   RegularLTO.EmptyCombinedModule = false;
-  auto ModOrErr = addRegularLTO(Input, BM, ModSyms, Res);
+  auto ModOrErr = addRegularLTO(Input, InputRes, BM, ModSyms, Res);
   if (!ModOrErr)
     return ModOrErr.takeError();
   Res = ModOrErr->second;
@@ -846,8 +847,8 @@ handleNonPrevailingComdat(GlobalValue &GV,
 // linkRegularLTO.
 Expected<
     std::pair<LTO::RegularLTOState::AddedModule, ArrayRef<SymbolResolution>>>
-LTO::addRegularLTO(InputFile &Input, BitcodeModule BM,
-                   ArrayRef<InputFile::Symbol> Syms,
+LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
+                   BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
                    ArrayRef<SymbolResolution> Res) {
   RegularLTOState::AddedModule Mod;
   Expected<std::unique_ptr<Module>> MOrErr =
