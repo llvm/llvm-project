@@ -806,26 +806,14 @@ static lldb::ModuleSP FindDebugModule(lldb::user_id_t uid,
 
 /// Returns address of the function referred to by the special function call
 /// label \c label.
-///
-/// \param[in] label Function call label encoding the unique location of the
-/// function to look up.
 static llvm::Expected<lldb::addr_t>
-ResolveFunctionCallLabel(llvm::StringRef name,
+ResolveFunctionCallLabel(const FunctionCallLabel &label,
                          const lldb_private::SymbolContext &sc,
                          bool &symbol_was_missing_weak) {
   symbol_was_missing_weak = false;
 
   if (!sc.target_sp)
     return llvm::createStringError("target not available.");
-
-  auto label_or_err = FunctionCallLabel::fromString(name);
-  if (!label_or_err)
-    return llvm::joinErrors(
-        llvm::createStringError("failed to create FunctionCallLabel from: %s",
-                                name.data()),
-        label_or_err.takeError());
-
-  const auto &label = *label_or_err;
 
   auto module_sp = sc.target_sp->GetImages().FindModule(label.module_id);
   if (!module_sp)
@@ -983,18 +971,29 @@ lldb::addr_t IRExecutionUnit::FindInUserDefinedSymbols(
 lldb::addr_t IRExecutionUnit::FindSymbol(lldb_private::ConstString name,
                                          bool &missing_weak) {
   if (name.GetStringRef().starts_with(FunctionCallLabelPrefix)) {
-    if (auto addr_or_err = ResolveFunctionCallLabel(name.GetStringRef(),
-                                                    m_sym_ctx, missing_weak)) {
+    auto label_or_err = FunctionCallLabel::fromString(name);
+    if (!label_or_err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), label_or_err.takeError(),
+                     "failed to create FunctionCallLabel from '{0}': {1}",
+                     name.GetStringRef());
+      return LLDB_INVALID_ADDRESS;
+    }
+
+    if (auto addr_or_err =
+            ResolveFunctionCallLabel(*label_or_err, m_sym_ctx, missing_weak)) {
       return *addr_or_err;
     } else {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), addr_or_err.takeError(),
                      "Failed to resolve function call label '{1}': {0}",
                      name.GetStringRef());
-      return LLDB_INVALID_ADDRESS;
+
+      // Fall back to lookup by name despite error in resolving the label.
+      // May happen in practice if the definition of a function lives in
+      // a different lldb_private::Module than it's declaration. Meaning
+      // we couldn't pin-point it using the information encoded in the label.
+      name.SetString(label_or_err->lookup_name);
     }
   }
-
-  // TODO: do we still need the following lookups?
 
   std::vector<ConstString> candidate_C_names;
   std::vector<ConstString> candidate_CPlusPlus_names;
