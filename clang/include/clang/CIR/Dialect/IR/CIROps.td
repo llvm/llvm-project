@@ -1747,7 +1747,7 @@ def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
   let arguments = (ins
     Arg<CIR_PointerType, "the address to store the value", [MemWrite]>:$addr,
     CIR_AnyType:$src,
-    BitfieldInfoAttr:$bitfield_info,
+    CIR_BitfieldInfoAttr:$bitfield_info,
     DefaultValuedOptionalAttr<I64Attr, "0">:$alignment,
     UnitAttr:$is_volatile
   );
@@ -1834,7 +1834,7 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
 
   let arguments = (ins
     Arg<CIR_PointerType, "the address to load from", [MemRead]>:$addr,
-    BitfieldInfoAttr:$bitfield_info,
+    CIR_BitfieldInfoAttr:$bitfield_info,
     DefaultValuedOptionalAttr<I64Attr, "0">:$alignment,
     UnitAttr:$is_volatile
     );
