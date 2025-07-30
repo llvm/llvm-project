@@ -968,6 +968,9 @@ lldb::addr_t IRExecutionUnit::FindSymbol(lldb_private::ConstString name,
     }
   }
 
+  // TODO: now with function call labels, do we still need to
+  // generate alternate manglings?
+
   std::vector<ConstString> candidate_C_names;
   std::vector<ConstString> candidate_CPlusPlus_names;
 
