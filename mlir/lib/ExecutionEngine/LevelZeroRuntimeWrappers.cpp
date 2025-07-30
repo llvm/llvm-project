@@ -23,7 +23,6 @@
 #include <vector>
 
 namespace {
-
 template <typename F>
 auto catchAll(F &&func) {
   try {
@@ -41,7 +40,9 @@ auto catchAll(F &&func) {
   {                                                                            \
     ze_result_t status = (call);                                               \
     if (status != ZE_RESULT_SUCCESS) {                                         \
-      std::cerr << "L0 error " << status << std::endl;                         \
+      const char *errorString;                                                 \
+      zeDriverGetLastErrorDescription(NULL, &errorString);                     \
+      std::cerr << "L0 error " << status << ": " << errorString << std::endl;  \
       std::abort();                                                            \
     }                                                                          \
   }
@@ -78,21 +79,20 @@ static ze_driver_handle_t getDriver(uint32_t idx = 0) {
   return drivers[idx];
 }
 
-static ze_device_handle_t getDefaultDevice(const uint32_t driverIdx = 0,
-                                           const int32_t devIdx = 0) {
+static ze_device_handle_t getDevice(const uint32_t driverIdx = 0,
+                                    const int32_t devIdx = 0) {
   thread_local static ze_device_handle_t l0Device;
-  thread_local static int32_t currDevIdx{-1};
-  thread_local static uint32_t currDriverIdx{0};
+  thread_local int32_t currDevIdx{-1};
+  thread_local uint32_t currDriverIdx{0};
   if (currDriverIdx == driverIdx && currDevIdx == devIdx)
     return l0Device;
   auto driver = getDriver(driverIdx);
   uint32_t deviceCount{0};
   L0_SAFE_CALL(zeDeviceGet(driver, &deviceCount, nullptr));
   if (!deviceCount)
-    throw std::runtime_error(
-        "getDefaultDevice failed: did not find L0 device.");
+    throw std::runtime_error("getDevice failed: did not find L0 device.");
   if (static_cast<int>(deviceCount) < devIdx + 1)
-    throw std::runtime_error("getDefaultDevice failed: devIdx out-of-bounds.");
+    throw std::runtime_error("getDevice failed: devIdx out-of-bounds.");
   std::vector<ze_device_handle_t> devices(deviceCount);
   L0_SAFE_CALL(zeDeviceGet(driver, &deviceCount, devices.data()));
   l0Device = devices[devIdx];
@@ -150,8 +150,8 @@ struct L0RtContext {
   uint32_t copyEngineMaxMemoryFillPatternSize{-1u};
 
   L0RtContext() = default;
-  L0RtContext(const int32_t devIdx = 0)
-      : driver(getDriver()), device(getDefaultDevice(devIdx)) {
+  L0RtContext(const uint32_t driverIdx = 0, const int32_t devIdx = 0)
+      : driver(getDriver(driverIdx)), device(getDevice(devIdx)) {
     // Create context
     ze_context_handle_t defaultCtx = getDefaultContext();
     context.reset(defaultCtx);
@@ -488,10 +488,11 @@ extern "C" void mgpuMemcpy(void *dst, void *src, size_t sizeBytes,
 template <typename PATTERN_TYPE>
 void mgpuMemset(void *dst, PATTERN_TYPE value, size_t count,
                 StreamWrapper *stream) {
+  L0RtContext &rtContext = getRtContext();
   auto listType =
-      getRtContext().copyEngineMaxMemoryFillPatternSize >= sizeof(PATTERN_TYPE)
-          ? getRtContext().immCmdListCopy.get()
-          : getRtContext().immCmdListCompute.get();
+      rtContext.copyEngineMaxMemoryFillPatternSize >= sizeof(PATTERN_TYPE)
+          ? rtContext.immCmdListCopy.get()
+          : rtContext.immCmdListCompute.get();
   stream->enqueueOp([&](ze_event_handle_t newEvent, uint32_t numWaitEvents,
                         ze_event_handle_t *waitEvents) {
     L0_SAFE_CALL(zeCommandListAppendMemoryFill(
