@@ -12,7 +12,6 @@
 
 #include "llvm/Transforms/Utils/PredicateInfo.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AssumptionCache.h"

@@ -409,7 +409,10 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   }
 
   auto *retBlock = curLexScope->getOrCreateRetBlock(*this, loc);
+  // This should emit a branch through the cleanup block if one exists.
   builder.create<cir::BrOp>(loc, retBlock);
+  if (ehStack.getStackDepth() != currentCleanupStackDepth)
+    cgm.errorNYI(s.getSourceRange(), "return with cleanup stack");
   builder.createBlock(builder.getBlock()->getParent());
 
   return mlir::success();
