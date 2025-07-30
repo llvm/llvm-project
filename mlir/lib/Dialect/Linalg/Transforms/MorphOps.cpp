@@ -6,21 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements conversions between:
-//    named <--> category (elementwise, contraction, ..) <--> generic ops.
-//
-// For example, a named op such `linalg.add` can also be re-written as an
-// equivalent category op `linalg.elementwise` and also as a `linalg.generic`.
-//
-// Generic is a bigger set than named ops and so not all generics can be
-// converted to single category-op or named-op. Similarly, category-ops
-// are bigger in representational possiblities than named ops e.g.
-// `linalg.add` has no affine maps attached, but `linalg.elementwise` does.
-//
-// Note:
-//  Legacy converters (will be deprecated):
-//    `--linalg-generalize-named-ops` is the path `named-op --> generic-op`
-//    `--linalg-specialize-generic-ops` is the path `named-op <-- generic-op`
+// This file implements conversions between linalg ops:
+//    named <--> category (elementwise, contraction, ..) <--> generic.
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Complex/IR/Complex.h"
@@ -58,7 +45,6 @@ void LinalgMorphOpsPass::runOnOperation() {
 
   // Lowering paths (named -> category -> generic)
   if (namedToCategory) {
-    // TODO: named -> contraction-op
     populateLinalgNamedToElementwisePatterns(patterns);
   }
   if (namedToGeneric || categoryToGeneric) {
@@ -66,12 +52,6 @@ void LinalgMorphOpsPass::runOnOperation() {
   }
 
   // Lifting paths (named <- category <- generic)
-  if (genericToCategory) {
-    // TODO.
-  }
-  if (categoryToNamed) {
-    // TODO: if there is a case for this.
-  }
   if (genericToNamed) {
     populateLinalgGenericOpsSpecializationPatterns(patterns);
   }

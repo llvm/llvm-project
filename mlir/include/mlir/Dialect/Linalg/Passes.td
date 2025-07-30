@@ -100,12 +100,12 @@ def LinalgMorphOpsPass : Pass<"linalg-morph-ops"> {
 
       named-op <--> category_op (elementwise, contraction, ..) <--> generic
 
-    Generic is a bigger set than named and category ops and so not all generics
-    can be converted to single category-op or named-op. Similarly,  category
-     ops are  bigger set than named ops.
+    Note that the set of `linalg.generic` subsumes named and category ops
+    and therefore not all `linalg.genric` can be converted to  named or
+    category op. Similarly, catgory ops subsume named ops.
 
     Note:
-     Legacy converters (will be deprecated):
+     Legacy converters:
      `--linalg-generalize-named-ops` is the path `named-op --> generic-op`
      `--linalg-specialize-generic-ops` is the path `named-op <-- generic-op`
   }];
@@ -113,16 +113,17 @@ def LinalgMorphOpsPass : Pass<"linalg-morph-ops"> {
 
   let options = [
     // named-op <--> category <--> generic
+
+    // Lowering options
     Option<"namedToCategory", "named-to-category", "bool", /*default=*/"false",
            "convert named ops to category op e.g. `linalg.elementwise`">,
     Option<"categoryToGeneric", "category-to-generic", "bool", /*default=*/"false",
            "convert category ops e.g. `linalg.elementwise` to `linalg.generic`">,
     Option<"namedToGeneric", "named-to-generic", "bool", /*default=*/"false",
            "convert named ops e.g. `linalg.add` to `linalg.generic`">,
-    Option<"genericToCategory", "generic-to-category", "bool", /*default=*/"false",
-           "convert generic ops to category op e.g. `linalg.contraction`">,
-    Option<"categoryToNamed", "category-to-named", "bool", /*default=*/"false",
-           "convert category ops to equivalent named ops">,
+
+    // Lifting options
+    //  TODOs: `generic-to-category`, `category-to-named`
     Option<"genericToNamed", "generic-to-named", "bool", /*default=*/"false",
            "convert linalg.generic to equivalent named ops"> ];
 }

@@ -75,6 +75,7 @@ struct NamedToElementwisePattern : public OpRewritePattern<NamedOpTy> {
 
 void mlir::linalg::populateLinalgNamedToElementwisePatterns(
     RewritePatternSet &patterns) {
+  patterns.add<NamedToElementwisePattern<SelectOp>>(patterns.getContext());
   patterns.add<NamedToElementwisePattern<AddOp>>(patterns.getContext());
   patterns.add<NamedToElementwisePattern<SubOp>>(patterns.getContext());
   patterns.add<NamedToElementwisePattern<MulOp>>(patterns.getContext());
