@@ -20886,7 +20886,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
         /*VL=*/Tuple.getOperand(5),
         /*Policy=*/Tuple.getOperand(6)};
 
-    auto TupleMemSD = cast<MemIntrinsicSDNode>(Tuple);
+    auto *TupleMemSD = cast<MemIntrinsicSDNode>(Tuple);
     // Match getTgtMemIntrinsic for non-unit stride case
     EVT MemVT = TupleMemSD->getMemoryVT().getScalarType();
     MachineFunction &MF = DAG.getMachineFunction();
