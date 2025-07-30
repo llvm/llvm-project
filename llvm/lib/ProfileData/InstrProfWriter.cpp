@@ -158,10 +158,10 @@ void InstrProfWriter::setValueProfDataEndianness(llvm::endianness Endianness) {
 void InstrProfWriter::setOutputSparse(bool Sparse) { this->Sparse = Sparse; }
 
 void InstrProfWriter::addRecord(NamedInstrProfRecord &&I, uint64_t Weight,
-                                function_ref<void(Error)> Warn, StringRef Architecture) {
+                                function_ref<void(Error)> Warn, StringRef ObjectFilename) {
   auto Name = I.Name;
   auto Hash = I.Hash;
-  addRecord(Name, Hash, std::move(I), Weight, Warn, Architecture);
+  addRecord(Name, Hash, std::move(I), Weight, Warn, ObjectFilename);
 }
 
 void InstrProfWriter::overlapRecord(NamedInstrProfRecord &&Other,
@@ -252,11 +252,11 @@ StringRef hashSourceFile(llvm::StringRef FilePath) {
 
 void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
                                 InstrProfRecord &&I, uint64_t Weight,
-                                function_ref<void(Error)> Warn, StringRef Architecture) {
+                                function_ref<void(Error)> Warn, StringRef ObjectFilename) {
   auto &ProfileDataMap = FunctionData[Name];
   // StringRef SHAHash = hashSourceFile(Architecture);
-  if(!Architecture.empty()){
-    std::string HashStr = std::to_string(Hash) + ":" + Architecture.str();
+  if(!ObjectFilename.empty()){
+    std::string HashStr = std::to_string(Hash) + ":" + ObjectFilename.str();
     llvm::StringRef HashRef(HashStr);
     Hash = IndexedInstrProf::ComputeHash(HashRef);
   }

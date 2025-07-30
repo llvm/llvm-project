@@ -1031,7 +1031,7 @@ class CoverageMapping {
     ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
     std::optional<std::reference_wrapper<IndexedInstrProfReader>>
         &ProfileReader,
-    CoverageMapping &Coverage, StringRef Arch, StringRef ObjectFilename = "", bool ShowArchExecutables = false);
+    CoverageMapping &Coverage, StringRef Arch, StringRef ObjectFilename = "", bool ShowArchExecutables = false, bool MergeBinaryCoverage = false);
   
   static Error loadFromReaders(
     ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
@@ -1046,13 +1046,13 @@ class CoverageMapping {
                    &ProfileReader,
                CoverageMapping &Coverage, bool &DataFound,
                SmallVectorImpl<object::BuildID> *FoundBinaryIDs = nullptr, StringRef ObjectFilename = "", 
-                bool ShowArchExecutables = false);
+                bool ShowArchExecutables = false, bool MergeBinaryCoverage = false);
 
   /// Add a function record corresponding to \p Record.
   Error loadFunctionRecord(
       const CoverageMappingRecord &Record,
       const std::optional<std::reference_wrapper<IndexedInstrProfReader>>
-          &ProfileReader, StringRef ObjectFilename = "", bool ShowArchExecutables = false);
+          &ProfileReader, StringRef ObjectFilename = "", bool ShowArchExecutables = false, bool MergeBinaryCoverage = false);
   
   Error loadFunctionRecord(const CoverageMappingRecord &Record, 
     const std::optional<std::reference_wrapper<IndexedInstrProfReader>> &ProfileReader, 
@@ -1090,7 +1090,7 @@ public:
        std::optional<StringRef> ProfileFilename, vfs::FileSystem &FS,
        ArrayRef<StringRef> Arches = {}, StringRef CompilationDir = "",
        const object::BuildIDFetcher *BIDFetcher = nullptr,
-       bool CheckBinaryIDs = false, bool ShowArchExecutables = false);
+       bool CheckBinaryIDs = false, bool ShowArchExecutables = false, bool MergeBinaryCoverage = false);
 
   /// The number of functions that couldn't have their profiles mapped.
   ///
@@ -1115,7 +1115,7 @@ public:
   /// The given filename must be the name as recorded in the coverage
   /// information. That is, only names returned from getUniqueSourceFiles will
   /// yield a result.
-  LLVM_ABI CoverageData getCoverageForFile(StringRef Filename, bool ShowArchExecutables = false) const;
+  LLVM_ABI CoverageData getCoverageForFile(StringRef Filename, bool ShowArchExecutables = false, bool MergeBinaryCoverage = false) const;
 
   /// Get the coverage for a particular function.
   LLVM_ABI CoverageData
@@ -1280,9 +1280,9 @@ uint64_t getFuncNameRef(const FuncRecordTy *Record) {
 /// a hash.
 template <class FuncRecordTy, llvm::endianness Endian>
 Error getFuncNameViaRef(const FuncRecordTy *Record,
-                        InstrProfSymtab &ProfileNames, StringRef &FuncName, StringRef Arch = "") {
+                        InstrProfSymtab &ProfileNames, StringRef &FuncName, StringRef ObjectFilename = "") {
   uint64_t NameRef = getFuncNameRef<FuncRecordTy, Endian>(Record);
-  ProfileNames.setArchitecture(Arch.str());
+  ProfileNames.setObjectFilename(ObjectFilename);
   FuncName = ProfileNames.getFuncOrVarName(NameRef);
   return Error::success();
 }
@@ -1425,9 +1425,9 @@ struct CovMapFunctionRecordV3 {
   }
 
   template <llvm::endianness Endian>
-  Error getFuncName(InstrProfSymtab &ProfileNames, StringRef &FuncName, StringRef Arch = "") const {
+  Error getFuncName(InstrProfSymtab &ProfileNames, StringRef &FuncName, StringRef ObjectFilename = "") const {
     return accessors::getFuncNameViaRef<ThisT, Endian>(this, ProfileNames,
-                                                       FuncName, Arch);
+                                                       FuncName, ObjectFilename);
   }
 
   /// Get the filename set reference.

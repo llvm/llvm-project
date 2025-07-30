@@ -618,7 +618,7 @@ Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
 // }
 
 Error readAndDecodeStrings(StringRef NameStrings,
-                           std::function<Error(StringRef)> NameCallback, StringRef Architecture) {
+                           std::function<Error(StringRef)> NameCallback, StringRef ObjectFilename) {
   const uint8_t *P = NameStrings.bytes_begin();
   const uint8_t *EndP = NameStrings.bytes_end();
   while (P < EndP) {
@@ -660,8 +660,8 @@ Error readAndDecodeStrings(StringRef NameStrings,
 }
 
 Error InstrProfSymtab::create(StringRef NameStrings) {
-  StringRef Architecture = getArchitecture();
-  return readAndDecodeStrings(NameStrings, std::bind(&InstrProfSymtab::addFuncName, this, std::placeholders::_1), Architecture);
+  StringRef ObjectFilename = getObjectFilename();
+  return readAndDecodeStrings(NameStrings, std::bind(&InstrProfSymtab::addFuncName, this, std::placeholders::_1), ObjectFilename);
 }
 
 Error InstrProfSymtab::create(StringRef FuncNameStrings,

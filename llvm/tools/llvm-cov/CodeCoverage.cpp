@@ -397,7 +397,7 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
   auto SourceBuffer = getSourceFile(SourceFile);
   if (!SourceBuffer)
     return nullptr;
-  auto FileCoverage = Coverage.getCoverageForFile(SourceFile, ViewOpts.ShowArchExecutables);
+  auto FileCoverage = Coverage.getCoverageForFile(SourceFile, ViewOpts.ShowArchExecutables, ViewOpts.MergeBinaryCoverage);
   if (FileCoverage.empty())
     return nullptr;
 
@@ -488,7 +488,7 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
   auto CoverageOrErr = CoverageMapping::load(
       ObjectFilenames, PGOFilename, *FS, CoverageArches,
       ViewOpts.CompilationDirectory, BIDFetcher.get(), CheckBinaryIDs, 
-      ViewOpts.ShowArchExecutables);
+      ViewOpts.ShowArchExecutables, ViewOpts.MergeBinaryCoverage);
   if (Error E = CoverageOrErr.takeError()) {
     error("failed to load coverage: " + toString(std::move(E)));
     return nullptr;
@@ -830,6 +830,11 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     "show-arch-executables",
     cl::desc("Show coverage per architecture and the associated executable slice"),
     cl::init(false));
+  
+  cl::opt<bool> MergeBinaryCoverage(
+    "merge-binary-coverage",
+    cl::desc("Enable merging of coverage profiles from binaries compiled for different architectures"),
+    cl::init(false));
 
   auto commandLineParser = [&, this](int argc, const char **argv) -> int {
     cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
@@ -997,6 +1002,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     ViewOpts.NumThreads = NumThreads;
     ViewOpts.CompilationDirectory = CompilationDirectory;
     ViewOpts.ShowArchExecutables = ShowArchExecutables;
+    ViewOpts.MergeBinaryCoverage = MergeBinaryCoverage;
 
     return 0;
   };

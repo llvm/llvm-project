@@ -369,7 +369,7 @@ LLVM_ABI bool needsComdatForCounter(const GlobalObject &GV, const Module &M);
 /// InstrProf.h:getInstrProfNameSeparator). This method decodes the string and
 /// calls `NameCallback` for each substring.
 LLVM_ABI Error readAndDecodeStrings(
-    StringRef NameStrings, std::function<Error(StringRef)> NameCallback, StringRef Architecture = "");
+    StringRef NameStrings, std::function<Error(StringRef)> NameCallback, StringRef ObjectFilename = "");
 
 
 /// An enum describing the attributes of an instrumented profile.
@@ -513,12 +513,14 @@ public:
   // suffixes that begins with "." except ".__uniq." are stripped.
   // FIXME: Unify this with `FunctionSamples::getCanonicalFnName`.
   LLVM_ABI static StringRef getCanonicalName(StringRef PGOName);
-
   //ANDRES Function
+  StringRef getObjectFilename() {return ObjectFilename;}
+  void setObjectFilename(StringRef ObjectFilename) {this->ObjectFilename = ObjectFilename;}
   StringRef getArchitecture() {return Architecture;}
-  void setArchitecture(StringRef Arch) {Architecture = Arch;}
+  void setArchitecture(StringRef Architecture) {this->Architecture = Architecture;}
   //ANDRES Function
 private:
+  StringRef ObjectFilename;
   StringRef Architecture;
   using AddrIntervalMap =
       IntervalMap<uint64_t, uint64_t, 4, IntervalMapHalfOpenInfo<uint64_t>>;
@@ -643,19 +645,18 @@ public:
     // won't have duplicated entries in the first place.
 
     uint64_t HashValue = IndexedInstrProf::ComputeHash(SymbolName);
-    llvm::StringRef HashRef(SymbolName);
-    if(!Architecture.empty()){
-      std::string HashStr = std::to_string(HashValue);
-      std::string CombinedStr = HashStr + ":" + Architecture.str();
-      HashRef = CombinedStr;
+    std::string HashStr(std::to_string(HashValue));
+    // llvm::errs() << "HELLLOOOOOOOOO" << "\n";
+    if(!ObjectFilename.empty()){
+      std::string CombinedStr = HashStr + ":" + ObjectFilename.str();
+      llvm::errs() << CombinedStr << "\n";
+      StringRef HashRef = CombinedStr;
       HashValue = IndexedInstrProf::ComputeHash(HashRef);
     }
     auto Ins = NameTab.insert(SymbolName);
     if (Ins.second) {
       MD5NameMap.push_back(std::make_pair(HashValue /*IndexedInstrProf::ComputeHash(HashRef)*/, Ins.first->getKey()));
       Sorted = false;
-    }
-    for(int I = 0; I < int(MD5NameMap.size()); ++I){
     }
     return Error::success();
   }
@@ -784,19 +785,20 @@ StringRef InstrProfSymtab::getFuncOrVarNameIfDefined(uint64_t MD5Hash) {
 StringRef InstrProfSymtab::getFuncOrVarName(uint64_t MD5Hash) {
   finalizeSymtab();
   std::string TempMD5HashStr = std::to_string(MD5Hash);
-  if(!Architecture.empty()){
-    std::string CombinedHashStr = TempMD5HashStr + ":" + Architecture.str();
+  if(!ObjectFilename.empty()){
+    std::string CombinedHashStr = TempMD5HashStr + ":" + ObjectFilename.str();
     llvm::StringRef CombinedHashRef(CombinedHashStr);
     MD5Hash = IndexedInstrProf::ComputeHash(CombinedHashRef);
   }
   auto Result = llvm::lower_bound(MD5NameMap, MD5Hash, [](const std::pair<uint64_t, StringRef> &LHS, uint64_t RHS) { return LHS.first < RHS; });
 
-  // for(auto name : MD5NameMap){
-  //   llvm::errs() << "Function Name " << name.second  << " Result->first: " << name.first << "\n";
-  // }
-  // llvm::errs() << "Function Name " << Result->second  << " Result->first: " << Result->first << " vs. " << MD5Hash << "\n";
+  for(auto name : MD5NameMap){
+    llvm::errs() << "Function Name " << name.second  << " Result->first: " << name.first << "\n";
+  }
+  llvm::errs() << "Function Name " << Result->second  << " Result->first: " << Result->first << " vs. " << MD5Hash << "\n";
   if (Result != MD5NameMap.end() && Result->first == MD5Hash)
     return Result->second;
+  llvm::errs() << "MISMATCH HERE" << "\n";
   return StringRef();
 }
 

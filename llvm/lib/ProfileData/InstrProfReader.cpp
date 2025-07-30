@@ -160,20 +160,20 @@ Expected<std::unique_ptr<InstrProfReader>> InstrProfReader::create( //STEP 1
     const object::BuildIDFetcher *BIDFetcher,
     const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind,
     std::function<void(Error)> Warn, 
-    StringRef Architecture) {
+    StringRef ObjectFilename) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path, FS);
   if (Error E = BufferOrError.takeError())
     return std::move(E);
   return InstrProfReader::create(std::move(BufferOrError.get()), Correlator,
-                                 BIDFetcher, BIDFetcherCorrelatorKind, Warn, Architecture);
+                                 BIDFetcher, BIDFetcherCorrelatorKind, Warn, ObjectFilename);
 }
 
 Expected<std::unique_ptr<InstrProfReader>> InstrProfReader::create(
     std::unique_ptr<MemoryBuffer> Buffer, const InstrProfCorrelator *Correlator,
     const object::BuildIDFetcher *BIDFetcher,
     const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind,
-    std::function<void(Error)> Warn, StringRef Architecture) {
+    std::function<void(Error)> Warn, StringRef ObjectFilename) {
   if (Buffer->getBufferSize() == 0)
     return make_error<InstrProfError>(instrprof_error::empty_raw_profile);
 
@@ -197,7 +197,7 @@ Expected<std::unique_ptr<InstrProfReader>> InstrProfReader::create(
   // Initialize the reader and return the result.
 
   if(Result){
-    Result->setArchitecture(Architecture);
+    Result->setObjectFilename(ObjectFilename);
   }
   if (Error E = initializeReader(*Result))
     return std::move(E);
@@ -228,7 +228,7 @@ IndexedInstrProfReader::create(const Twine &Path, vfs::FileSystem &FS,
 
 Expected<std::unique_ptr<IndexedInstrProfReader>>
 IndexedInstrProfReader::create(const Twine &Path, vfs::FileSystem &FS,
-                               const std::string &Arch, const Twine &RemappingPath) {
+                               const std::string &ObjectFilename, const Twine &RemappingPath) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path, FS);
   if (Error E = BufferOrError.takeError())
@@ -578,7 +578,7 @@ Error RawInstrProfReader<IntPtrT>::readNextHeader(const char *CurrentPos) {
 template <class IntPtrT>
 Error RawInstrProfReader<IntPtrT>::createSymtab(InstrProfSymtab &Symtab) { //STEP 5
   
-  Symtab.setArchitecture(Architecture);
+  Symtab.setObjectFilename(ObjectFilename);
   
   if (Error E = Symtab.create(StringRef(NamesStart, NamesEnd - NamesStart),
                               StringRef(VNamesStart, VNamesEnd - VNamesStart)))

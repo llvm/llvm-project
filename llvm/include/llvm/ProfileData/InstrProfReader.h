@@ -162,8 +162,8 @@ public:
   LLVM_ABI void accumulateCounts(CountSumOrPercent &Sum, bool IsCS);
 
 protected:
-  //ANDRES Storing Architecture Information as a string
-  std::string Architecture;
+  //ANDRES Storing ObjectFilename Information as a string
+  std::string ObjectFilename;
 
   std::unique_ptr<InstrProfSymtab> Symtab;
   /// A list of temporal profile traces.
@@ -213,7 +213,7 @@ public:
       const object::BuildIDFetcher *BIDFetcher = nullptr,
       const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind =
           InstrProfCorrelator::ProfCorrelatorKind::NONE,
-      std::function<void(Error)> Warn = nullptr, StringRef Architecture = "");
+      std::function<void(Error)> Warn = nullptr, StringRef ObjectFilename = "");
 
   LLVM_ABI static Expected<std::unique_ptr<InstrProfReader>> create(
       std::unique_ptr<MemoryBuffer> Buffer,
@@ -221,11 +221,11 @@ public:
       const object::BuildIDFetcher *BIDFetcher = nullptr,
       const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind =
           InstrProfCorrelator::ProfCorrelatorKind::NONE,
-      std::function<void(Error)> Warn = nullptr, StringRef Architecture = "");
+      std::function<void(Error)> Warn = nullptr, StringRef ObjectFilename = "");
   
-  StringRef getArchitecture() {return Architecture;}
+  StringRef getObjectFilename() {return ObjectFilename;}
 
-  void setArchitecture(StringRef Arch) {Architecture = Arch;}
+  void setObjectFilename(StringRef ObjectFilename) {this->ObjectFilename = ObjectFilename;}
   /// \param Weight for raw profiles use this as the temporal profile trace
   ///               weight
   /// \returns a list of temporal profile traces.
@@ -877,7 +877,7 @@ public:
 
   static Expected<std::unique_ptr<IndexedInstrProfReader>>
   create(const Twine &Path, vfs::FileSystem &FS,
-        const std::string &Arch, const Twine &RemappingPath = "");
+        const std::string &ObjectFilename, const Twine &RemappingPath = "");
 
   static Expected<std::unique_ptr<IndexedInstrProfReader>>
   create(std::unique_ptr<MemoryBuffer> Buffer,
