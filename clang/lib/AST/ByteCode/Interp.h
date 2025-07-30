@@ -481,13 +481,11 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
     Floating RA = S.allocFloat(A.getSemantics());
     RA.copy(ResR);
     Result.elem<Floating>(0) = RA; // Floating(ResR);
-    Result.atIndex(0).initialize();
 
     Floating RI = S.allocFloat(A.getSemantics());
     RI.copy(ResI);
     Result.elem<Floating>(1) = RI; // Floating(ResI);
-    Result.atIndex(1).initialize();
-    Result.initialize();
+    Result.initializeAllElements();
   } else {
     // Integer element type.
     const T &LHSR = LHS.elem<T>(0);
@@ -505,7 +503,6 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
       return false;
     if (T::sub(A, B, Bits, &Result.elem<T>(0)))
       return false;
-    Result.atIndex(0).initialize();
 
     // imag(Result) = (real(LHS) * imag(RHS)) + (imag(LHS) * real(RHS))
     if (T::mul(LHSR, RHSI, Bits, &A))
@@ -514,8 +511,8 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
       return false;
     if (T::add(A, B, Bits, &Result.elem<T>(1)))
       return false;
-    Result.atIndex(1).initialize();
     Result.initialize();
+    Result.initializeAllElements();
   }
 
   return true;
@@ -541,14 +538,12 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
     Floating RA = S.allocFloat(A.getSemantics());
     RA.copy(ResR);
     Result.elem<Floating>(0) = RA; // Floating(ResR);
-    Result.atIndex(0).initialize();
 
     Floating RI = S.allocFloat(A.getSemantics());
     RI.copy(ResI);
     Result.elem<Floating>(1) = RI; // Floating(ResI);
-    Result.atIndex(1).initialize();
 
-    Result.initialize();
+    Result.initializeAllElements();
   } else {
     // Integer element type.
     const T &LHSR = LHS.elem<T>(0);
@@ -590,7 +585,6 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
       return false;
     if (T::div(ResultR, Den, Bits, &ResultR))
       return false;
-    Result.atIndex(0).initialize();
 
     // imag(Result) = ((imag(LHS) * real(RHS)) - (real(LHS) * imag(RHS))) / Den
     if (T::mul(LHSI, RHSR, Bits, &A) || T::mul(LHSR, RHSI, Bits, &B))
@@ -599,8 +593,7 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
       return false;
     if (T::div(ResultI, Den, Bits, &ResultI))
       return false;
-    Result.atIndex(1).initialize();
-    Result.initialize();
+    Result.initializeAllElements();
   }
 
   return true;
@@ -1980,6 +1973,16 @@ static inline bool Activate(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (Ptr.canBeInitialized())
     Ptr.activate();
+  return true;
+}
+
+static inline bool ActivateThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
+  if (S.checkingPotentialConstantExpression())
+    return false;
+
+  const Pointer &Ptr = S.Current->getThis();
+  assert(Ptr.atField(I).canBeInitialized());
+  Ptr.atField(I).activate();
   return true;
 }
 
@@ -3557,12 +3560,22 @@ inline bool BitCastPrim(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
       Floating Result = S.allocFloat(*Sem);
       Floating::bitcastFromMemory(Buff.data(), *Sem, &Result);
       S.Stk.push<Floating>(Result);
-
-      // S.Stk.push<Floating>(T::bitcastFromMemory(Buff.data(), *Sem));
     } else if constexpr (needsAlloc<T>()) {
       T Result = S.allocAP<T>(ResultBitWidth);
       T::bitcastFromMemory(Buff.data(), ResultBitWidth, &Result);
       S.Stk.push<T>(Result);
+    } else if constexpr (std::is_same_v<T, Boolean>) {
+      // Only allow to cast single-byte integers to bool if they are either 0
+      // or 1.
+      assert(FullBitWidth.getQuantity() == 8);
+      auto Val = static_cast<unsigned int>(Buff[0]);
+      if (Val > 1) {
+        S.FFDiag(S.Current->getSource(OpPC),
+                 diag::note_constexpr_bit_cast_unrepresentable_value)
+            << S.getASTContext().BoolTy << Val;
+        return false;
+      }
+      S.Stk.push<T>(T::bitcastFromMemory(Buff.data(), ResultBitWidth));
     } else {
       assert(!Sem);
       S.Stk.push<T>(T::bitcastFromMemory(Buff.data(), ResultBitWidth));

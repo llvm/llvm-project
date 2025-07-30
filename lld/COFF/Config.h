@@ -319,7 +319,7 @@ struct Configuration {
   bool warnDebugInfoUnusable = true;
   bool warnLongSectionNames = true;
   bool warnStdcallFixup = true;
-  bool warnExportedDllMain = true;
+  bool warnImportedDllMain = true;
   bool incremental = true;
   bool integrityCheck = false;
   bool killAt = false;

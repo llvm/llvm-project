@@ -206,21 +206,15 @@ def CallAndMessageChecker : Checker<"CallAndMessage">,
   Documentation<HasDocumentation>,
   Dependencies<[CallAndMessageModeling]>;
 
-def DereferenceModeling : Checker<"DereferenceModeling">,
-  HelpText<"General support for dereference related checkers">,
-  Documentation<NotDocumented>,
-  Hidden;
-
 def FixedAddressDereferenceChecker
     : Checker<"FixedAddressDereference">,
       HelpText<"Check for dereferences of fixed addresses">,
-      Documentation<HasDocumentation>,
-      Dependencies<[DereferenceModeling]>;
+      Documentation<HasDocumentation>;
 
-def NullDereferenceChecker : Checker<"NullDereference">,
-  HelpText<"Check for dereferences of null pointers">,
-  Documentation<HasDocumentation>,
-  Dependencies<[DereferenceModeling]>;
+def NullDereferenceChecker
+    : Checker<"NullDereference">,
+      HelpText<"Check for dereferences of null pointers">,
+      Documentation<HasDocumentation>;
 
 def NonNullParamChecker : Checker<"NonNullParamChecker">,
   HelpText<"Check for null pointers passed as arguments to a function whose "
@@ -1656,8 +1650,8 @@ def CloneChecker : Checker<"CloneChecker">,
 let ParentPackage = PortabilityOptIn in {
 
 def UnixAPIPortabilityChecker : Checker<"UnixAPI">,
-  HelpText<"Finds implementation-defined behavior in UNIX/Posix functions">,
-  Documentation<NotDocumented>;
+  HelpText<"Finds dynamic memory allocation with size zero">,
+  Documentation<HasDocumentation>;
 
 } // end optin.portability
 

@@ -136,12 +136,13 @@ int64_t GPUMappingMaskAttr::getMaxNumPhysicalIds() const { return 64; }
 Value GPUMappingMaskAttr::createLogicalLinearMappingId(
     OpBuilder &b, Value physicalLinearMappingId) const {
   Location loc = physicalLinearMappingId.getLoc();
-  Value mask = b.create<arith::ConstantOp>(loc, b.getI64IntegerAttr(getMask()));
-  Value one = b.create<arith::ConstantOp>(loc, b.getI64IntegerAttr(1));
-  Value filter = b.create<arith::ShLIOp>(loc, one, physicalLinearMappingId);
-  filter = b.create<arith::SubIOp>(loc, filter, one);
-  Value filteredId = b.create<arith::AndIOp>(loc, mask, filter);
-  return b.create<math::CtPopOp>(loc, filteredId);
+  Value mask =
+      arith::ConstantOp::create(b, loc, b.getI64IntegerAttr(getMask()));
+  Value one = arith::ConstantOp::create(b, loc, b.getI64IntegerAttr(1));
+  Value filter = arith::ShLIOp::create(b, loc, one, physicalLinearMappingId);
+  filter = arith::SubIOp::create(b, loc, filter, one);
+  Value filteredId = arith::AndIOp::create(b, loc, mask, filter);
+  return math::CtPopOp::create(b, loc, filteredId);
 }
 
 ///                 8       4       0
@@ -157,12 +158,14 @@ Value GPUMappingMaskAttr::createLogicalLinearMappingId(
 Value GPUMappingMaskAttr::createIsActiveIdPredicate(
     OpBuilder &b, Value physicalLinearMappingId) const {
   Location loc = physicalLinearMappingId.getLoc();
-  Value mask = b.create<arith::ConstantOp>(loc, b.getI64IntegerAttr(getMask()));
-  Value one = b.create<arith::ConstantOp>(loc, b.getI64IntegerAttr(1));
-  Value filter = b.create<arith::ShLIOp>(loc, one, physicalLinearMappingId);
-  Value filtered = b.create<arith::AndIOp>(loc, mask, filter);
-  Value zero = b.create<arith::ConstantOp>(loc, b.getI64IntegerAttr(0));
-  return b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne, filtered, zero);
+  Value mask =
+      arith::ConstantOp::create(b, loc, b.getI64IntegerAttr(getMask()));
+  Value one = arith::ConstantOp::create(b, loc, b.getI64IntegerAttr(1));
+  Value filter = arith::ShLIOp::create(b, loc, one, physicalLinearMappingId);
+  Value filtered = arith::AndIOp::create(b, loc, mask, filter);
+  Value zero = arith::ConstantOp::create(b, loc, b.getI64IntegerAttr(0));
+  return arith::CmpIOp::create(b, loc, arith::CmpIPredicate::ne, filtered,
+                               zero);
 }
 
 int64_t GPUMemorySpaceMappingAttr::getMappingId() const {
@@ -1137,7 +1140,7 @@ struct FoldLaunchArguments : public OpRewritePattern<LaunchOp> {
         OpBuilder::InsertionGuard guard(rewriter);
         rewriter.setInsertionPointToStart(&op.getBody().front());
         zero =
-            rewriter.create<arith::ConstantIndexOp>(op.getLoc(), /*value=*/0);
+            arith::ConstantIndexOp::create(rewriter, op.getLoc(), /*value=*/0);
       }
       rewriter.replaceAllUsesWith(id, zero);
       simplified = true;
@@ -1381,10 +1384,10 @@ static void printLaunchFuncOperands(OpAsmPrinter &printer, Operation *,
 void ShuffleOp::build(OpBuilder &builder, OperationState &result, Value value,
                       int32_t offset, int32_t width, ShuffleMode mode) {
   build(builder, result, value,
-        builder.create<arith::ConstantOp>(result.location,
-                                          builder.getI32IntegerAttr(offset)),
-        builder.create<arith::ConstantOp>(result.location,
-                                          builder.getI32IntegerAttr(width)),
+        arith::ConstantOp::create(builder, result.location,
+                                  builder.getI32IntegerAttr(offset)),
+        arith::ConstantOp::create(builder, result.location,
+                                  builder.getI32IntegerAttr(width)),
         mode);
 }
 
@@ -1392,40 +1395,12 @@ void ShuffleOp::build(OpBuilder &builder, OperationState &result, Value value,
 // RotateOp
 //===----------------------------------------------------------------------===//
 
-void RotateOp::build(OpBuilder &builder, OperationState &result, Value value,
-                     int32_t offset, int32_t width) {
-  build(builder, result, value,
-        builder.create<arith::ConstantOp>(result.location,
-                                          builder.getI32IntegerAttr(offset)),
-        builder.create<arith::ConstantOp>(result.location,
-                                          builder.getI32IntegerAttr(width)));
-}
-
 LogicalResult RotateOp::verify() {
-  auto offsetConstOp = getOffset().getDefiningOp<arith::ConstantOp>();
-  if (!offsetConstOp)
-    return emitOpError() << "offset is not a constant value";
+  uint32_t offset = getOffset();
+  uint32_t width = getWidth();
 
-  auto offsetIntAttr =
-      llvm::dyn_cast<mlir::IntegerAttr>(offsetConstOp.getValue());
-
-  auto widthConstOp = getWidth().getDefiningOp<arith::ConstantOp>();
-  if (!widthConstOp)
-    return emitOpError() << "width is not a constant value";
-
-  auto widthIntAttr =
-      llvm::dyn_cast<mlir::IntegerAttr>(widthConstOp.getValue());
-
-  llvm::APInt offsetValue = offsetIntAttr.getValue();
-  llvm::APInt widthValue = widthIntAttr.getValue();
-
-  if (!widthValue.isPowerOf2())
-    return emitOpError() << "width must be a power of two";
-
-  if (offsetValue.sge(widthValue) || offsetValue.slt(0)) {
-    int64_t widthValueInt = widthValue.getSExtValue();
-    return emitOpError() << "offset must be in the range [0, " << widthValueInt
-                         << ")";
+  if (offset >= width) {
+    return emitOpError() << "offset must be in the range [0, " << width << ")";
   }
 
   return success();
