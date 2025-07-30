@@ -183,14 +183,6 @@ private:
   /// the basename range to the current \c OB position.
   void updateBasenameEnd();
 
-  /// If this object \ref shouldTrack, then update the beginning of
-  /// the template arguments range to the current \c OB position.
-  void updateTemplateArgumentsStart();
-
-  /// If this object \ref shouldTrack, then update the end of
-  /// the template arguments range to the current \c OB position.
-  void updateTemplateArgumentsEnd();
-
   /// If this object \ref shouldTrack, then update the beginning
   /// of the scope range to the current \c OB position.
   void updateScopeStart();
