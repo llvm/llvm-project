@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load("//llvm:lit_test.bzl", "package_path")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_sharded_ops", "td_library")
 
