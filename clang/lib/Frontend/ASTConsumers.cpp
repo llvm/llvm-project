@@ -27,7 +27,7 @@ using namespace clang;
 namespace {
   class ASTPrinter : public ASTConsumer,
                      public RecursiveASTVisitor<ASTPrinter> {
-    using base = RecursiveASTVisitor<ASTPrinter>;
+    typedef RecursiveASTVisitor<ASTPrinter> base;
 
   public:
     enum Kind { DumpFull, Dump, Print, None };

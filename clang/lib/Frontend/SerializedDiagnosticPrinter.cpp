@@ -44,9 +44,9 @@ public:
   }
 };
 
-using RecordData = SmallVector<uint64_t, 64>;
-using RecordDataImpl = SmallVectorImpl<uint64_t>;
-using RecordDataRef = ArrayRef<uint64_t>;
+typedef SmallVector<uint64_t, 64> RecordData;
+typedef SmallVectorImpl<uint64_t> RecordDataImpl;
+typedef ArrayRef<uint64_t> RecordDataRef;
 
 class SDiagsWriter;
 
@@ -81,7 +81,7 @@ protected:
                      DiagnosticsEngine::Level Level) override;
 };
 
-using AbbrevLookup = llvm::DenseMap<unsigned, unsigned>;
+typedef llvm::DenseMap<unsigned, unsigned> AbbrevLookup;
 
 class SDiagsMerger : SerializedDiagnosticReader {
   SDiagsWriter &Writer;
@@ -270,8 +270,8 @@ private:
     /// The collection of files used.
     llvm::DenseMap<const char *, unsigned> Files;
 
-    using DiagFlagsTy =
-        llvm::DenseMap<const void *, std::pair<unsigned, StringRef>>;
+    typedef llvm::DenseMap<const void *, std::pair<unsigned, StringRef> >
+    DiagFlagsTy;
 
     /// Map for uniquing strings.
     DiagFlagsTy DiagFlags;

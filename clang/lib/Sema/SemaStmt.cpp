@@ -945,7 +945,7 @@ bool Sema::checkMustTailAttr(const Stmt *St, const Attr &MTA) {
 
 namespace {
 class CommaVisitor : public EvaluatedExprVisitor<CommaVisitor> {
-  using Inherited = EvaluatedExprVisitor<CommaVisitor>;
+  typedef EvaluatedExprVisitor<CommaVisitor> Inherited;
   Sema &SemaRef;
 public:
   CommaVisitor(Sema &SemaRef) : Inherited(SemaRef.Context), SemaRef(SemaRef) {}
@@ -1240,7 +1240,7 @@ static void checkCaseValue(Sema &S, SourceLocation Loc, const llvm::APSInt &Val,
   }
 }
 
-using EnumValsTy = SmallVector<std::pair<llvm::APSInt, EnumConstantDecl *>, 64>;
+typedef SmallVector<std::pair<llvm::APSInt, EnumConstantDecl*>, 64> EnumValsTy;
 
 /// Returns true if we should emit a diagnostic about this case expression not
 /// being a part of the enum used in the switch controlling expression.
@@ -1360,11 +1360,11 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
   // Accumulate all of the case values in a vector so that we can sort them
   // and detect duplicates.  This vector contains the APInt for the case after
   // it has been converted to the condition type.
-  using CaseValsTy = SmallVector<std::pair<llvm::APSInt, CaseStmt *>, 64>;
+  typedef SmallVector<std::pair<llvm::APSInt, CaseStmt*>, 64> CaseValsTy;
   CaseValsTy CaseVals;
 
   // Keep track of any GNU case ranges we see.  The APSInt is the low value.
-  using CaseRangesTy = std::vector<std::pair<llvm::APSInt, CaseStmt *>>;
+  typedef std::vector<std::pair<llvm::APSInt, CaseStmt*> > CaseRangesTy;
   CaseRangesTy CaseRanges;
 
   DefaultStmt *TheDefaultStmt = nullptr;
@@ -1771,8 +1771,8 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
     return;
   }
 
-  using EnumValsTy =
-      SmallVector<std::pair<llvm::APSInt, EnumConstantDecl *>, 64>;
+  typedef SmallVector<std::pair<llvm::APSInt, EnumConstantDecl *>, 64>
+      EnumValsTy;
   EnumValsTy EnumVals;
 
   // Gather all enum values, set their type and sort them,
@@ -1872,7 +1872,7 @@ namespace {
     SmallVectorImpl<SourceRange> &Ranges;
     bool Simple;
   public:
-    using Inherited = EvaluatedExprVisitor<DeclExtractor>;
+    typedef EvaluatedExprVisitor<DeclExtractor> Inherited;
 
     DeclExtractor(Sema &S, DeclSetVector &Decls,
                   SmallVectorImpl<SourceRange> &Ranges) :
@@ -1953,7 +1953,7 @@ namespace {
     bool FoundDecl;
 
   public:
-    using Inherited = EvaluatedExprVisitor<DeclMatcher>;
+    typedef EvaluatedExprVisitor<DeclMatcher> Inherited;
 
     DeclMatcher(Sema &S, DeclSetVector &Decls, Stmt *Statement) :
         Inherited(S.Context), Decls(Decls), FoundDecl(false) {
@@ -2129,7 +2129,7 @@ namespace {
       Visit(Body);
     }
 
-    using Inherited = ConstEvaluatedExprVisitor<BreakContinueFinder>;
+    typedef ConstEvaluatedExprVisitor<BreakContinueFinder> Inherited;
 
     void VisitContinueStmt(const ContinueStmt* E) {
       ContinueLoc = E->getContinueLoc();

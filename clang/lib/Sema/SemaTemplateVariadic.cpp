@@ -759,7 +759,7 @@ bool Sema::CheckParameterPacksForExpansion(
   bool HaveFirstPack = false;
   UnsignedOrNone NumPartialExpansions = std::nullopt;
   SourceLocation PartiallySubstitutedPackLoc;
-  using DeclArgumentPack = LocalInstantiationScope::DeclArgumentPack;
+  typedef LocalInstantiationScope::DeclArgumentPack DeclArgumentPack;
 
   for (UnexpandedParameterPack ParmPack : Unexpanded) {
     // Compute the depth and index for this parameter pack.
@@ -957,7 +957,7 @@ UnsignedOrNone Sema::getNumArgumentsInExpansionFromUnexpanded(
       NamedDecl *ND = cast<NamedDecl *>(Unexpanded[I].first);
       if (isa<VarDecl>(ND)) {
         // Function parameter pack or init-capture pack.
-        using DeclArgumentPack = LocalInstantiationScope::DeclArgumentPack;
+        typedef LocalInstantiationScope::DeclArgumentPack DeclArgumentPack;
 
         llvm::PointerUnion<Decl *, DeclArgumentPack *> *Instantiation =
             CurrentInstantiationScope->findInstantiationOf(

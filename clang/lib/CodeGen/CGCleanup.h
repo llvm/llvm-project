@@ -234,7 +234,7 @@ public:
       delete getHandler(I).Block;
   }
 
-  using iterator = const Handler *;
+  typedef const Handler *iterator;
   iterator begin() const { return getHandlers(); }
   iterator end() const { return getHandlers() + getNumHandlers(); }
 

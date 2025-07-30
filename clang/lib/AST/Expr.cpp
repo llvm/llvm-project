@@ -835,7 +835,7 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
         POut << " &&";
     }
 
-    using SpecsTy = SmallVector<const ClassTemplateSpecializationDecl *, 8>;
+    typedef SmallVector<const ClassTemplateSpecializationDecl *, 8> SpecsTy;
     SpecsTy Specs;
     const DeclContext *Ctx = FD->getDeclContext();
     while (isa_and_nonnull<NamedDecl>(Ctx)) {
@@ -3549,7 +3549,7 @@ bool CallExpr::isCallToStdMove() const {
 namespace {
   /// Look for any side effects within a Stmt.
   class SideEffectFinder : public ConstEvaluatedExprVisitor<SideEffectFinder> {
-    using Inherited = ConstEvaluatedExprVisitor<SideEffectFinder>;
+    typedef ConstEvaluatedExprVisitor<SideEffectFinder> Inherited;
     const bool IncludePossibleEffects;
     bool HasSideEffects;
 
@@ -3904,7 +3904,7 @@ namespace {
   /// Look for a call to a non-trivial function within an expression.
   class NonTrivialCallFinder : public ConstEvaluatedExprVisitor<NonTrivialCallFinder>
   {
-    using Inherited = ConstEvaluatedExprVisitor<NonTrivialCallFinder>;
+    typedef ConstEvaluatedExprVisitor<NonTrivialCallFinder> Inherited;
 
     bool NonTrivial;
 

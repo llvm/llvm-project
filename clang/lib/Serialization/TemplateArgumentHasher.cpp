@@ -218,7 +218,7 @@ void TemplateArgumentHasher::AddQualType(QualType T) {
 // while Visit* methods process the relevant parts of the Type.
 // Any unhandled type will make the hash computation bail out.
 class TypeVisitorHelper : public TypeVisitor<TypeVisitorHelper> {
-  using Inherited = TypeVisitor<TypeVisitorHelper>;
+  typedef TypeVisitor<TypeVisitorHelper> Inherited;
   llvm::FoldingSetNodeID &ID;
   TemplateArgumentHasher &Hash;
 

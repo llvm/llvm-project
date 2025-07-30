@@ -118,7 +118,7 @@ namespace {
       return CategoryIDs[CategoryString];
     }
 
-    using const_iterator = std::vector<StringRef>::const_iterator;
+    typedef std::vector<StringRef>::const_iterator const_iterator;
     const_iterator begin() const { return CategoryStrings.begin(); }
     const_iterator end() const { return CategoryStrings.end(); }
   };
@@ -232,14 +232,14 @@ static void groupDiagnostics(ArrayRef<const Record *> Diags,
 // Infer members of -Wpedantic.
 //===----------------------------------------------------------------------===//
 
-using RecordVec = std::vector<const Record *>;
-using RecordSet = DenseSet<const Record *>;
-using VecOrSet = PointerUnion<RecordVec *, RecordSet *>;
+typedef std::vector<const Record *> RecordVec;
+typedef DenseSet<const Record *> RecordSet;
+typedef PointerUnion<RecordVec *, RecordSet *> VecOrSet;
 
 namespace {
 class InferPedantic {
-  using GMap =
-      DenseMap<const Record *, std::pair<unsigned, std::optional<unsigned>>>;
+  typedef DenseMap<const Record *, std::pair<unsigned, std::optional<unsigned>>>
+      GMap;
 
   DiagGroupParentMap &DiagGroupParents;
   ArrayRef<const Record *> Diags;

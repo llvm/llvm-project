@@ -364,7 +364,7 @@ public:
   /// Interface class for filling custom fields of a block literal for OpenCL.
   class TargetOpenCLBlockHelper {
   public:
-    using ValueTy = std::pair<llvm::Value *, StringRef>;
+    typedef std::pair<llvm::Value *, StringRef> ValueTy;
     TargetOpenCLBlockHelper() {}
     virtual ~TargetOpenCLBlockHelper() {}
     /// Get the custom field types for OpenCL blocks.

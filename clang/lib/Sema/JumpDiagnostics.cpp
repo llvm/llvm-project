@@ -136,7 +136,7 @@ unsigned JumpScopeChecker::GetDeepestCommonScope(unsigned A, unsigned B) {
   return A;
 }
 
-using ScopePair = std::pair<unsigned, unsigned>;
+typedef std::pair<unsigned,unsigned> ScopePair;
 
 /// GetDiagForGotoScopeDecl - If this decl induces a new goto scope, return a
 /// diagnostic that should be emitted if control goes over it. If not, return 0.

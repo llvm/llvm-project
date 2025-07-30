@@ -358,7 +358,7 @@ inline bool operator==(const SingleDeclTableKey &lhs,
 
 namespace llvm {
 template <> struct DenseMapInfo<clang::api_notes::StoredObjCSelector> {
-  using UnsignedInfo = DenseMapInfo<unsigned>;
+  typedef DenseMapInfo<unsigned> UnsignedInfo;
 
   static inline clang::api_notes::StoredObjCSelector getEmptyKey() {
     return clang::api_notes::StoredObjCSelector{UnsignedInfo::getEmptyKey(),

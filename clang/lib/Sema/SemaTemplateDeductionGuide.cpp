@@ -64,7 +64,7 @@ class ExtractTypeForDeductionGuide
   std::optional<TemplateDeclInstantiator> TypedefNameInstantiator;
 
 public:
-  using Base = TreeTransform<ExtractTypeForDeductionGuide>;
+  typedef TreeTransform<ExtractTypeForDeductionGuide> Base;
   ExtractTypeForDeductionGuide(
       Sema &SemaRef,
       llvm::SmallVectorImpl<TypedefNameDecl *> &MaterializedTypedefs,

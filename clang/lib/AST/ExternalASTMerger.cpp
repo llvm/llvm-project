@@ -31,7 +31,7 @@ template <typename T> struct Source {
   template <typename U> operator Source<U>() { return Source<U>(t); }
 };
 
-using Candidate = std::pair<Source<NamedDecl *>, ASTImporter *>;
+typedef std::pair<Source<NamedDecl *>, ASTImporter *> Candidate;
 
 /// For the given DC, return the DC that is safe to perform lookups on.  This is
 /// the DC we actually want to work with most of the time.

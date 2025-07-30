@@ -248,7 +248,7 @@ namespace {
   // warnings.
   static good is_good(good) { return good(); }
 
-  using children_t = Stmt::child_range();
+  typedef Stmt::child_range children_t();
   template <class T> good implements_children(children_t T::*) {
     return good();
   }
@@ -257,14 +257,14 @@ namespace {
     return bad();
   }
 
-  using getBeginLoc_t = SourceLocation() const;
+  typedef SourceLocation getBeginLoc_t() const;
   template <class T> good implements_getBeginLoc(getBeginLoc_t T::*) {
     return good();
   }
   LLVM_ATTRIBUTE_UNUSED
   static bad implements_getBeginLoc(getBeginLoc_t Stmt::*) { return bad(); }
 
-  using getLocEnd_t = SourceLocation() const;
+  typedef SourceLocation getLocEnd_t() const;
   template <class T> good implements_getEndLoc(getLocEnd_t T::*) {
     return good();
   }

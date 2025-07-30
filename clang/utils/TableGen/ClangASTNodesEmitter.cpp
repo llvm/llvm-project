@@ -29,8 +29,8 @@ using namespace clang::tblgen;
 namespace {
 class ClangASTNodesEmitter {
   // A map from a node to each of its derived nodes.
-  using ChildMap = std::multimap<ASTNode, ASTNode>;
-  using ChildIterator = ChildMap::const_iterator;
+  typedef std::multimap<ASTNode, ASTNode> ChildMap;
+  typedef ChildMap::const_iterator ChildIterator;
 
   std::set<ASTNode> PrioritizedClasses;
   const RecordKeeper &Records;

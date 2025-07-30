@@ -54,11 +54,11 @@ namespace diagtool {
       }
 
     public:
-      using value_type = RecordType;
-      using reference = const value_type &;
-      using pointer = const value_type *;
-      using iterator_category = std::forward_iterator_tag;
-      using difference_type = std::ptrdiff_t;
+      typedef RecordType                 value_type;
+      typedef const value_type &         reference;
+      typedef const value_type *         pointer;
+      typedef std::forward_iterator_tag  iterator_category;
+      typedef std::ptrdiff_t             difference_type;
 
       inline reference operator*() const;
       inline pointer operator->() const {
@@ -85,12 +85,12 @@ namespace diagtool {
       }
     };
 
-    using subgroup_iterator = group_iterator<GroupRecord>;
+    typedef group_iterator<GroupRecord> subgroup_iterator;
     subgroup_iterator subgroup_begin() const;
     subgroup_iterator subgroup_end() const;
     llvm::iterator_range<subgroup_iterator> subgroups() const;
 
-    using diagnostics_iterator = group_iterator<DiagnosticRecord>;
+    typedef group_iterator<DiagnosticRecord> diagnostics_iterator;
     diagnostics_iterator diagnostics_begin() const;
     diagnostics_iterator diagnostics_end() const;
     llvm::iterator_range<diagnostics_iterator> diagnostics() const;

@@ -954,7 +954,7 @@ namespace {
   enum OpenCLExtState : char {
     Disable, Enable, Begin, End
   };
-  using OpenCLExtData = std::pair<const IdentifierInfo *, OpenCLExtState>;
+  typedef std::pair<const IdentifierInfo *, OpenCLExtState> OpenCLExtData;
 }
 
 void Parser::HandlePragmaOpenCLExtension() {
@@ -1028,7 +1028,7 @@ void Parser::HandlePragmaMSPragma() {
 
   // Figure out which #pragma we're dealing with.  The switch has no default
   // because lex shouldn't emit the annotation token for unrecognized pragmas.
-  using PragmaHandler = bool (Parser::*)(StringRef, SourceLocation);
+  typedef bool (Parser::*PragmaHandler)(StringRef, SourceLocation);
   PragmaHandler Handler =
       llvm::StringSwitch<PragmaHandler>(PragmaName)
           .Case("data_seg", &Parser::HandlePragmaMSSegment)

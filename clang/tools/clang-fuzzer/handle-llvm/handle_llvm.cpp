@@ -45,7 +45,7 @@
 using namespace llvm;
 
 // Define a type for the functions that are compiled and executed
-using LLVMFunc = void (*)(int *, int *, int *, int);
+typedef void (*LLVMFunc)(int*, int*, int*, int);
 
 // Helper function to parse command line args and find the optimization level
 static CodeGenOptLevel getOptLevel(const std::vector<const char *> &ExtraArgs) {

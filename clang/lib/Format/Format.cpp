@@ -3848,8 +3848,9 @@ reformat(const FormatStyle &Style, StringRef Code,
   if (!Env)
     return {};
 
-  using AnalyzerPass = std::function<std::pair<tooling::Replacements, unsigned>(
-      const Environment &)>;
+  typedef std::function<std::pair<tooling::Replacements, unsigned>(
+      const Environment &)>
+      AnalyzerPass;
 
   SmallVector<AnalyzerPass, 16> Passes;
 

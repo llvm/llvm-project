@@ -39,7 +39,7 @@ class RecordDecl;
 class TagDecl;
 class TargetInfo;
 class Type;
-using CanQualType = CanQual<Type>;
+typedef CanQual<Type> CanQualType;
 class GlobalDecl;
 
 namespace CodeGen {

@@ -21,7 +21,7 @@ namespace driver {
 namespace tools {
 
 namespace mips {
-using IEEE754Standard = enum { Legacy = 1, Std2008 = 2 };
+typedef enum { Legacy = 1, Std2008 = 2 } IEEE754Standard;
 
 enum class FloatABI {
   Invalid,

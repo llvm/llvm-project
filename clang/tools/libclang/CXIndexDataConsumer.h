@@ -278,17 +278,17 @@ class CXIndexDataConsumer : public index::IndexDataConsumer {
   IndexerCallbacks &CB;
   unsigned IndexOptions;
   CXTranslationUnit CXTU;
-
-  using FileMapTy = llvm::DenseMap<const FileEntry *, CXIdxClientFile>;
-  using ContainerMapTy =
-      llvm::DenseMap<const DeclContext *, CXIdxClientContainer>;
-  using EntityMapTy = llvm::DenseMap<const Decl *, CXIdxClientEntity>;
+  
+  typedef llvm::DenseMap<const FileEntry *, CXIdxClientFile> FileMapTy;
+  typedef llvm::DenseMap<const DeclContext *, CXIdxClientContainer>
+    ContainerMapTy;
+  typedef llvm::DenseMap<const Decl *, CXIdxClientEntity> EntityMapTy;
 
   FileMapTy FileMap;
   ContainerMapTy ContainerMap;
   EntityMapTy EntityMap;
 
-  using RefFileOccurrence = std::pair<const FileEntry *, const Decl *>;
+  typedef std::pair<const FileEntry *, const Decl *> RefFileOccurrence;
   llvm::DenseSet<RefFileOccurrence> RefFileOccurrences;
 
   llvm::BumpPtrAllocator StrScratch;

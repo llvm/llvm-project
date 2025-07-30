@@ -816,7 +816,7 @@ static void diagnoseAndRemoveTypeQualifiers(Sema &S, const DeclSpec &DS,
                                             unsigned DiagID) {
   // If this occurs outside a template instantiation, warn the user about
   // it; they probably didn't mean to specify a redundant qualifier.
-  using QualLoc = std::pair<DeclSpec::TQ, SourceLocation>;
+  typedef std::pair<DeclSpec::TQ, SourceLocation> QualLoc;
   for (QualLoc Qual : {QualLoc(DeclSpec::TQ_const, DS.getConstSpecLoc()),
                        QualLoc(DeclSpec::TQ_restrict, DS.getRestrictSpecLoc()),
                        QualLoc(DeclSpec::TQ_volatile, DS.getVolatileSpecLoc()),

@@ -528,7 +528,7 @@ namespace {
   /// A visitor which checks whether an initializer uses 'this' in a
   /// way which requires the vtable to be properly set.
   struct DynamicThisUseChecker : ConstEvaluatedExprVisitor<DynamicThisUseChecker> {
-    using super = ConstEvaluatedExprVisitor<DynamicThisUseChecker>;
+    typedef ConstEvaluatedExprVisitor<DynamicThisUseChecker> super;
 
     bool UsesThis;
 

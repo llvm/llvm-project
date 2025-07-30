@@ -119,7 +119,7 @@ enum TypeEvaluationKind {
 /// Helper class with most of the code for saving a value for a
 /// conditional expression cleanup.
 struct DominatingLLVMValue {
-  using saved_type = llvm::PointerIntPair<llvm::Value *, 1, bool>;
+  typedef llvm::PointerIntPair<llvm::Value *, 1, bool> saved_type;
 
   /// Answer whether the given value needs extra work to be saved.
   static bool needsSaving(llvm::Value *value) {
@@ -142,7 +142,7 @@ struct DominatingLLVMValue {
 /// A partial specialization of DominatingValue for llvm::Values that
 /// might be llvm::Instructions.
 template <class T> struct DominatingPointer<T, true> : DominatingLLVMValue {
-  using type = T *;
+  typedef T *type;
   static type restore(CodeGenFunction &CGF, saved_type value) {
     return static_cast<T *>(DominatingLLVMValue::restore(CGF, value));
   }
@@ -150,7 +150,7 @@ template <class T> struct DominatingPointer<T, true> : DominatingLLVMValue {
 
 /// A specialization of DominatingValue for Address.
 template <> struct DominatingValue<Address> {
-  using type = Address;
+  typedef Address type;
 
   struct saved_type {
     DominatingLLVMValue::saved_type BasePtr;
@@ -180,7 +180,7 @@ template <> struct DominatingValue<Address> {
 
 /// A specialization of DominatingValue for RValue.
 template <> struct DominatingValue<RValue> {
-  using type = RValue;
+  typedef RValue type;
   class saved_type {
     enum Kind {
       ScalarLiteral,
@@ -281,7 +281,7 @@ public:
   // For EH/SEH outlined funclets, this field points to parent's CGF
   CodeGenFunction *ParentCGF = nullptr;
 
-  using ComplexPairTy = std::pair<llvm::Value *, llvm::Value *>;
+  typedef std::pair<llvm::Value *, llvm::Value *> ComplexPairTy;
   LoopInfoStack LoopStack;
   CGBuilderTy Builder;
 
@@ -314,20 +314,23 @@ public:
   int ExpectedOMPLoopDepth = 0;
 
   // CodeGen lambda for loops and support for ordered clause
-  using CodeGenLoopTy = llvm::function_ref<void(
-      CodeGenFunction &, const OMPLoopDirective &, JumpDest)>;
-  using CodeGenOrderedTy = llvm::function_ref<void(
-      CodeGenFunction &, SourceLocation, const unsigned, const bool)>;
+  typedef llvm::function_ref<void(CodeGenFunction &, const OMPLoopDirective &,
+                                  JumpDest)>
+      CodeGenLoopTy;
+  typedef llvm::function_ref<void(CodeGenFunction &, SourceLocation,
+                                  const unsigned, const bool)>
+      CodeGenOrderedTy;
 
   // Codegen lambda for loop bounds in worksharing loop constructs
-  using CodeGenLoopBoundsTy = llvm::function_ref<std::pair<LValue, LValue>(
-      CodeGenFunction &, const OMPExecutableDirective &S)>;
+  typedef llvm::function_ref<std::pair<LValue, LValue>(
+      CodeGenFunction &, const OMPExecutableDirective &S)>
+      CodeGenLoopBoundsTy;
 
   // Codegen lambda for loop bounds in dispatch-based loop implementation
-  using CodeGenDispatchBoundsTy =
-      llvm::function_ref<std::pair<llvm::Value *, llvm::Value *>(
-          CodeGenFunction &, const OMPExecutableDirective &S, Address LB,
-          Address UB)>;
+  typedef llvm::function_ref<std::pair<llvm::Value *, llvm::Value *>(
+      CodeGenFunction &, const OMPExecutableDirective &S, Address LB,
+      Address UB)>
+      CodeGenDispatchBoundsTy;
 
   /// CGBuilder insert helper. This function is called after an
   /// instruction is created using Builder.
@@ -907,10 +910,10 @@ public:
       return EHStack.pushCleanup<T>(kind, A...);
 
     // Stash values in a tuple so we can guarantee the order of saves.
-    using SavedTuple = std::tuple<typename DominatingValue<As>::saved_type...>;
+    typedef std::tuple<typename DominatingValue<As>::saved_type...> SavedTuple;
     SavedTuple Saved{saveValueInCond(A)...};
 
-    using CleanupType = EHScopeStack::ConditionalCleanup<T, As...>;
+    typedef EHScopeStack::ConditionalCleanup<T, As...> CleanupType;
     EHStack.pushCleanupTuple<CleanupType>(kind, Saved);
     initFullExprCleanup();
   }
@@ -927,10 +930,10 @@ public:
     assert(!DominatingValue<Address>::needsSaving(ActiveFlag) &&
            "cleanup active flag should never need saving");
 
-    using SavedTuple = std::tuple<typename DominatingValue<As>::saved_type...>;
+    typedef std::tuple<typename DominatingValue<As>::saved_type...> SavedTuple;
     SavedTuple Saved{saveValueInCond(A)...};
 
-    using CleanupType = EHScopeStack::ConditionalCleanup<T, As...>;
+    typedef EHScopeStack::ConditionalCleanup<T, As...> CleanupType;
     pushCleanupAfterFullExprWithActiveFlag<CleanupType>(Kind, ActiveFlag,
                                                         Saved);
   }
@@ -1115,7 +1118,7 @@ public:
     void rescopeLabels();
   };
 
-  using DeclMapTy = llvm::DenseMap<const Decl *, Address>;
+  typedef llvm::DenseMap<const Decl *, Address> DeclMapTy;
 
   /// The class used to assign some variables some temporarily addresses.
   class OMPMapVars {
@@ -2191,7 +2194,7 @@ public:
   //                                  Cleanups
   //===--------------------------------------------------------------------===//
 
-  using Destroyer = void(CodeGenFunction &CGF, Address addr, QualType ty);
+  typedef void Destroyer(CodeGenFunction &CGF, Address addr, QualType ty);
 
   void pushIrregularPartialArrayCleanup(llvm::Value *arrayBegin,
                                         Address arrayEndPointer,
@@ -2443,9 +2446,9 @@ public:
   /// Initialize the vtable pointer of the given subobject.
   void InitializeVTablePointer(const VPtr &vptr);
 
-  using VPtrsVector = llvm::SmallVector<VPtr, 4>;
+  typedef llvm::SmallVector<VPtr, 4> VPtrsVector;
 
-  using VisitedVirtualBasesSetTy = llvm::SmallPtrSet<const CXXRecordDecl *, 4>;
+  typedef llvm::SmallPtrSet<const CXXRecordDecl *, 4> VisitedVirtualBasesSetTy;
   VPtrsVector getVTablePointers(const CXXRecordDecl *VTableClass);
 
   void getVTablePointers(BaseSubobject Base, const CXXRecordDecl *NearestVBase,
@@ -3381,7 +3384,7 @@ public:
   void EmitScalarInit(const Expr *init, const ValueDecl *D, LValue lvalue,
                       bool capturedByInit);
 
-  using SpecialInitFn = void(CodeGenFunction &Init, const VarDecl &D,
+  typedef void SpecialInitFn(CodeGenFunction &Init, const VarDecl &D,
                              llvm::Value *Address);
 
   /// Determine whether the given initializer is trivial in the sense
@@ -3819,9 +3822,10 @@ public:
   /// initialized with the value of the original variable, false otherwise.
   bool EmitOMPLinearClauseInit(const OMPLoopDirective &D);
 
-  using TaskGenTy = const llvm::function_ref<void(
-      CodeGenFunction & /*CGF*/, llvm::Function * /*OutlinedFn*/,
-      const OMPTaskDataTy & /*Data*/)>;
+  typedef const llvm::function_ref<void(CodeGenFunction & /*CGF*/,
+                                        llvm::Function * /*OutlinedFn*/,
+                                        const OMPTaskDataTy & /*Data*/)>
+      TaskGenTy;
   void EmitOMPTaskBasedDirective(const OMPExecutableDirective &S,
                                  const OpenMPDirectiveKind CapturedRegion,
                                  const RegionCodeGenTy &BodyGen,

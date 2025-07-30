@@ -4729,7 +4729,7 @@ TemplateDeclInstantiator::SubstTemplateParams(TemplateParameterList *L) {
   bool Invalid = false;
 
   unsigned N = L->size();
-  using ParamVector = SmallVector<NamedDecl *, 8>;
+  typedef SmallVector<NamedDecl *, 8> ParamVector;
   ParamVector Params;
   Params.reserve(N);
   for (auto &P : *L) {
@@ -5310,7 +5310,7 @@ TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
   // further errors in the declaration itself.
   //
   // FIXME: This is a hack.
-  using ActiveInstType = Sema::CodeSynthesisContext;
+  typedef Sema::CodeSynthesisContext ActiveInstType;
   ActiveInstType &ActiveInst = SemaRef.CodeSynthesisContexts.back();
   if (ActiveInst.Kind == ActiveInstType::ExplicitTemplateArgumentSubstitution ||
       ActiveInst.Kind == ActiveInstType::DeducedTemplateArgumentSubstitution) {
@@ -6806,7 +6806,7 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
 
         assert(ArgPackSubstIndex &&
                "found declaration pack but not pack expanding");
-        using DeclArgumentPack = LocalInstantiationScope::DeclArgumentPack;
+        typedef LocalInstantiationScope::DeclArgumentPack DeclArgumentPack;
         return cast<NamedDecl>(
             (*cast<DeclArgumentPack *>(*Found))[*ArgPackSubstIndex]);
       }

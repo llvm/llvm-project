@@ -357,11 +357,12 @@ protected:
   /// string.  Selector references are all done via the module's selector table,
   /// so we create an alias as a placeholder and then replace it with the real
   /// value later.
-  using TypedSelector = std::pair<std::string, llvm::GlobalAlias *>;
+  typedef std::pair<std::string, llvm::GlobalAlias*> TypedSelector;
   /// Type of the selector map.  This is roughly equivalent to the structure
   /// used in the GNUstep runtime, which maintains a list of all of the valid
   /// types for a selector in a table.
-  using SelectorMap = llvm::DenseMap<Selector, SmallVector<TypedSelector, 2>>;
+  typedef llvm::DenseMap<Selector, SmallVector<TypedSelector, 2> >
+    SelectorMap;
   /// A map from selectors to selector types.  This allows us to emit all
   /// selectors of the same name and type together.
   SelectorMap SelectorTable;
@@ -375,7 +376,7 @@ protected:
   LazyRuntimeFunction IvarAssignFn, StrongCastAssignFn, MemMoveFn, WeakReadFn,
     WeakAssignFn, GlobalAssignFn;
 
-  using ClassAliasPair = std::pair<std::string, std::string>;
+  typedef std::pair<std::string, std::string> ClassAliasPair;
   /// All classes that have aliases set for them.
   std::vector<ClassAliasPair> ClassAliases;
 
@@ -963,8 +964,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
   /// Generate the name of a symbol for a reference to a class.  Accesses to
   /// classes should be indirected via this.
 
-  using EarlyInitPair =
-      std::pair<std::string, std::pair<llvm::GlobalVariable *, int>>;
+  typedef std::pair<std::string, std::pair<llvm::GlobalVariable*, int>>
+      EarlyInitPair;
   std::vector<EarlyInitPair> EarlyInitList;
 
   std::string SymbolForClassRef(StringRef Name, bool isWeak) {

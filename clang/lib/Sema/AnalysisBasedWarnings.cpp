@@ -888,7 +888,7 @@ class ContainsReference : public ConstEvaluatedExprVisitor<ContainsReference> {
   const DeclRefExpr *Needle;
 
 public:
-  using Inherited = ConstEvaluatedExprVisitor<ContainsReference>;
+  typedef ConstEvaluatedExprVisitor<ContainsReference> Inherited;
 
   ContainsReference(ASTContext &Context, const DeclRefExpr *Needle)
     : Inherited(Context), FoundReference(false), Needle(Needle) {}
@@ -1221,7 +1221,7 @@ public:
     (void)Found;
   }
 
-  using AttrStmts = llvm::SmallPtrSet<const AttributedStmt *, 8>;
+  typedef llvm::SmallPtrSet<const AttributedStmt *, 8> AttrStmts;
 
   const AttrStmts &getFallthroughStmts() const { return FallthroughStmts; }
 
@@ -1509,11 +1509,11 @@ static void diagnoseRepeatedUseOfWeak(Sema &S,
                                       const sema::FunctionScopeInfo *CurFn,
                                       const Decl *D,
                                       const ParentMap &PM) {
-  using WeakObjectProfileTy = sema::FunctionScopeInfo::WeakObjectProfileTy;
-  using WeakObjectUseMap = sema::FunctionScopeInfo::WeakObjectUseMap;
-  using WeakUseVector = sema::FunctionScopeInfo::WeakUseVector;
-  using StmtUsesPair =
-      std::pair<const Stmt *, WeakObjectUseMap::const_iterator>;
+  typedef sema::FunctionScopeInfo::WeakObjectProfileTy WeakObjectProfileTy;
+  typedef sema::FunctionScopeInfo::WeakObjectUseMap WeakObjectUseMap;
+  typedef sema::FunctionScopeInfo::WeakUseVector WeakUseVector;
+  typedef std::pair<const Stmt *, WeakObjectUseMap::const_iterator>
+  StmtUsesPair;
 
   ASTContext &Ctx = S.getASTContext();
 
@@ -1663,9 +1663,9 @@ static void diagnoseRepeatedUseOfWeak(Sema &S,
 
 namespace clang {
 namespace {
-using OptionalNotes = SmallVector<PartialDiagnosticAt, 1>;
-using DelayedDiag = std::pair<PartialDiagnosticAt, OptionalNotes>;
-using DiagList = std::list<DelayedDiag>;
+typedef SmallVector<PartialDiagnosticAt, 1> OptionalNotes;
+typedef std::pair<PartialDiagnosticAt, OptionalNotes> DelayedDiag;
+typedef std::list<DelayedDiag> DiagList;
 
 struct SortDiagBySourceLocation {
   SourceManager &SM;
@@ -1683,12 +1683,12 @@ struct SortDiagBySourceLocation {
 namespace {
 class UninitValsDiagReporter : public UninitVariablesHandler {
   Sema &S;
-  using UsesVec = SmallVector<UninitUse, 2>;
-  using MappedType = llvm::PointerIntPair<UsesVec *, 1, bool>;
+  typedef SmallVector<UninitUse, 2> UsesVec;
+  typedef llvm::PointerIntPair<UsesVec *, 1, bool> MappedType;
   // Prefer using MapVector to DenseMap, so that iteration order will be
   // the same as insertion order. This is needed to obtain a deterministic
   // order of diagnostics when calling flushDiagnostics().
-  using UsesMap = llvm::MapVector<const VarDecl *, MappedType>;
+  typedef llvm::MapVector<const VarDecl *, MappedType> UsesMap;
   UsesMap uses;
 
 public:

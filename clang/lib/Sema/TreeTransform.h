@@ -4975,11 +4975,11 @@ class TemplateArgumentLocInventIterator {
   InputIterator Iter;
 
 public:
-  using value_type = TemplateArgumentLoc;
-  using reference = TemplateArgumentLoc;
-  using difference_type =
-      typename std::iterator_traits<InputIterator>::difference_type;
-  using iterator_category = std::input_iterator_tag;
+  typedef TemplateArgumentLoc value_type;
+  typedef TemplateArgumentLoc reference;
+  typedef typename std::iterator_traits<InputIterator>::difference_type
+    difference_type;
+  typedef std::input_iterator_tag iterator_category;
 
   class pointer {
     TemplateArgumentLoc Arg;
@@ -5039,9 +5039,9 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
       // FIXME: We could do much better if we could guarantee that the
       // TemplateArgumentLocInfo for the pack expansion would be usable for
       // all of the template arguments in the argument pack.
-      using PackLocIterator =
-          TemplateArgumentLocInventIterator<Derived,
-                                            TemplateArgument::pack_iterator>;
+      typedef TemplateArgumentLocInventIterator<Derived,
+                                                TemplateArgument::pack_iterator>
+        PackLocIterator;
       if (TransformTemplateArguments(PackLocIterator(*this,
                                                  In.getArgument().pack_begin()),
                                      PackLocIterator(*this,
@@ -7262,10 +7262,10 @@ QualType TreeTransform<Derived>::TransformPredefinedSugarType(
     unsigned Index;
 
   public:
-    using value_type = TemplateArgumentLoc;
-    using reference = TemplateArgumentLoc;
-    using difference_type = int;
-    using iterator_category = std::input_iterator_tag;
+    typedef TemplateArgumentLoc value_type;
+    typedef TemplateArgumentLoc reference;
+    typedef int difference_type;
+    typedef std::input_iterator_tag iterator_category;
 
     class pointer {
       TemplateArgumentLoc Arg;
@@ -7337,7 +7337,7 @@ QualType TreeTransform<Derived>::TransformAutoType(TypeLocBuilder &TLB,
 
     NewTemplateArgs.setLAngleLoc(TL.getLAngleLoc());
     NewTemplateArgs.setRAngleLoc(TL.getRAngleLoc());
-    using ArgIterator = TemplateArgumentLocContainerIterator<AutoTypeLoc>;
+    typedef TemplateArgumentLocContainerIterator<AutoTypeLoc> ArgIterator;
     if (getDerived().TransformTemplateArguments(
             ArgIterator(TL, 0), ArgIterator(TL, TL.getNumArgs()),
             NewTemplateArgs))
@@ -7394,8 +7394,8 @@ QualType TreeTransform<Derived>::TransformTemplateSpecializationType(
   TemplateArgumentListInfo NewTemplateArgs;
   NewTemplateArgs.setLAngleLoc(TL.getLAngleLoc());
   NewTemplateArgs.setRAngleLoc(TL.getRAngleLoc());
-  using ArgIterator =
-      TemplateArgumentLocContainerIterator<TemplateSpecializationTypeLoc>;
+  typedef TemplateArgumentLocContainerIterator<TemplateSpecializationTypeLoc>
+    ArgIterator;
   if (getDerived().TransformTemplateArguments(ArgIterator(TL, 0),
                                               ArgIterator(TL, TL.getNumArgs()),
                                               NewTemplateArgs))
@@ -7451,8 +7451,8 @@ QualType TreeTransform<Derived>::TransformDependentTemplateSpecializationType(
   TemplateArgumentListInfo NewTemplateArgs;
   NewTemplateArgs.setLAngleLoc(TL.getLAngleLoc());
   NewTemplateArgs.setRAngleLoc(TL.getRAngleLoc());
-  using ArgIterator = TemplateArgumentLocContainerIterator<
-      DependentTemplateSpecializationTypeLoc>;
+  typedef TemplateArgumentLocContainerIterator<
+            DependentTemplateSpecializationTypeLoc> ArgIterator;
   if (getDerived().TransformTemplateArguments(ArgIterator(TL, 0),
                                               ArgIterator(TL, TL.getNumArgs()),
                                               NewTemplateArgs))
@@ -13070,7 +13070,7 @@ TreeTransform<Derived>::TransformOffsetOfExpr(OffsetOfExpr *E) {
   // the fields again. However, __builtin_offsetof is rare enough in
   // template code that we don't care.
   bool ExprChanged = false;
-  using Component = Sema::OffsetOfComponent;
+  typedef Sema::OffsetOfComponent Component;
   SmallVector<Component, 4> Components;
   for (unsigned I = 0, N = E->getNumComponents(); I != N; ++I) {
     const OffsetOfNode &ON = E->getComponent(I);
@@ -15403,7 +15403,7 @@ ExprResult
 TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   // Transform any init-capture expressions before entering the scope of the
   // lambda body, because they are not semantically within that scope.
-  using InitCaptureInfoTy = std::pair<ExprResult, QualType>;
+  typedef std::pair<ExprResult, QualType> InitCaptureInfoTy;
   struct TransformedInitCapture {
     // The location of the ... if the result is retaining a pack expansion.
     SourceLocation EllipsisLoc;
@@ -16203,8 +16203,8 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
                                                E->getPackLoc());
   {
     TemporaryBase Rebase(*this, E->getPackLoc(), getBaseEntity());
-    using PackLocIterator =
-        TemplateArgumentLocInventIterator<Derived, const TemplateArgument *>;
+    typedef TemplateArgumentLocInventIterator<
+        Derived, const TemplateArgument*> PackLocIterator;
     if (TransformTemplateArguments(PackLocIterator(*this, PackArgs.begin()),
                                    PackLocIterator(*this, PackArgs.end()),
                                    TransformedPackArgs, /*Uneval*/true))

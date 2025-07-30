@@ -194,7 +194,7 @@ class CallExprFinder : public ConstEvaluatedExprVisitor<CallExprFinder> {
   std::vector<const CallExpr *> CallExprs;
 
 public:
-  using Inherited = ConstEvaluatedExprVisitor<CallExprFinder>;
+  typedef ConstEvaluatedExprVisitor<CallExprFinder> Inherited;
 
   CallExprFinder(Sema &S, const Stmt *St) : Inherited(S.Context) { Visit(St); }
 

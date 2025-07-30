@@ -664,7 +664,7 @@ public:
 void CGHLSLRuntime::emitInitListOpaqueValues(CodeGenFunction &CGF,
                                              InitListExpr *E) {
 
-  using OpaqueValueMappingData = CodeGenFunction::OpaqueValueMappingData;
+  typedef CodeGenFunction::OpaqueValueMappingData OpaqueValueMappingData;
   OpaqueValueVisitor Visitor;
   Visitor.TraverseStmt(E);
   for (auto *OVE : Visitor.OVEs) {

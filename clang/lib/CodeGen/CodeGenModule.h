@@ -341,7 +341,7 @@ public:
     llvm::Constant *AssociatedData;
   };
 
-  using CtorList = std::vector<Structor>;
+  typedef std::vector<Structor> CtorList;
 
 private:
   ASTContext &Context;
@@ -506,8 +506,8 @@ private:
 
   /// Map used to track internal linkage functions declared within
   /// extern "C" regions.
-  using StaticExternCMap =
-      llvm::MapVector<IdentifierInfo *, llvm::GlobalValue *>;
+  typedef llvm::MapVector<IdentifierInfo *,
+                          llvm::GlobalValue *> StaticExternCMap;
   StaticExternCMap StaticExternCValues;
 
   /// thread_local variables defined or used in this TU.
@@ -528,8 +528,8 @@ private:
   /// that we don't re-emit the initializer.
   llvm::DenseMap<const Decl*, unsigned> DelayedCXXInitPosition;
 
-  using GlobalInitData =
-      std::pair<OrderGlobalInitsOrStermFinalizers, llvm::Function *>;
+  typedef std::pair<OrderGlobalInitsOrStermFinalizers, llvm::Function *>
+      GlobalInitData;
 
   // When a tail call is performed on an "undefined" symbol, on PPC without pc
   // relative feature, the tail call is not allowed. In "EmitCall" for such
@@ -553,13 +553,14 @@ private:
   /// Global destructor functions and arguments that need to run on termination.
   /// When UseSinitAndSterm is set, it instead contains sterm finalizer
   /// functions, which also run on unloading a shared library.
-  using CXXGlobalDtorsOrStermFinalizer_t =
-      std::tuple<llvm::FunctionType *, llvm::WeakTrackingVH, llvm::Constant *>;
+  typedef std::tuple<llvm::FunctionType *, llvm::WeakTrackingVH,
+                     llvm::Constant *>
+      CXXGlobalDtorsOrStermFinalizer_t;
   SmallVector<CXXGlobalDtorsOrStermFinalizer_t, 8>
       CXXGlobalDtorsOrStermFinalizers;
 
-  using StermFinalizerData =
-      std::pair<OrderGlobalInitsOrStermFinalizers, llvm::Function *>;
+  typedef std::pair<OrderGlobalInitsOrStermFinalizers, llvm::Function *>
+      StermFinalizerData;
 
   struct StermFinalizerPriorityCmp {
     bool operator()(const StermFinalizerData &LHS,
@@ -658,7 +659,7 @@ private:
   /// Mapping from canonical types to their metadata identifiers. We need to
   /// maintain this mapping because identifiers may be formed from distinct
   /// MDNodes.
-  using MetadataTypeMap = llvm::DenseMap<QualType, llvm::Metadata *>;
+  typedef llvm::DenseMap<QualType, llvm::Metadata *> MetadataTypeMap;
   MetadataTypeMap MetadataIdMap;
   MetadataTypeMap VirtualMetadataIdMap;
   MetadataTypeMap GeneralizedMetadataIdMap;

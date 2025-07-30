@@ -282,7 +282,7 @@ namespace {
     /// The type of the most derived object referred to by this address.
     QualType MostDerivedType;
 
-    using PathEntry = APValue::LValuePathEntry;
+    typedef APValue::LValuePathEntry PathEntry;
 
     /// The entries on the path from the glvalue to the designated subobject.
     SmallVector<PathEntry, 8> Entries;
@@ -571,8 +571,8 @@ namespace {
 
     // Note that we intentionally use std::map here so that references to
     // values are stable.
-    using MapKeyTy = std::pair<const void *, unsigned>;
-    using MapTy = std::map<MapKeyTy, APValue>;
+    typedef std::pair<const void *, unsigned> MapKeyTy;
+    typedef std::map<MapKeyTy, APValue> MapTy;
     /// Temporaries - Temporary lvalues materialized within this stack frame.
     MapTy Temporaries;
 
@@ -1468,9 +1468,9 @@ namespace {
       return Success;
     }
   };
-  using BlockScopeRAII = ScopeRAII<ScopeKind::Block>;
-  using FullExpressionRAII = ScopeRAII<ScopeKind::FullExpression>;
-  using CallScopeRAII = ScopeRAII<ScopeKind::Call>;
+  typedef ScopeRAII<ScopeKind::Block> BlockScopeRAII;
+  typedef ScopeRAII<ScopeKind::FullExpression> FullExpressionRAII;
+  typedef ScopeRAII<ScopeKind::Call> CallScopeRAII;
 }
 
 bool SubobjectDesignator::checkSubobject(EvalInfo &Info, const Expr *E,
@@ -4156,7 +4156,7 @@ struct ExtractSubobjectHandler {
   APValue &Result;
   const AccessKinds AccessKind;
 
-  using result_type = bool;
+  typedef bool result_type;
   bool failed() { return false; }
   bool found(APValue &Subobj, QualType SubobjType) {
     Result = Subobj;
@@ -4191,7 +4191,7 @@ struct ModifySubobjectHandler {
   APValue &NewVal;
   const Expr *E;
 
-  using result_type = bool;
+  typedef bool result_type;
   static const AccessKinds AccessKind = AK_Assign;
 
   bool checkConst(QualType QT) {
@@ -4698,7 +4698,7 @@ struct CompoundAssignSubobjectHandler {
 
   static const AccessKinds AccessKind = AK_Assign;
 
-  using result_type = bool;
+  typedef bool result_type;
 
   bool checkConst(QualType QT) {
     // Assigning to a const object has undefined behavior.
@@ -4845,7 +4845,7 @@ struct IncDecSubobjectHandler {
   AccessKinds AccessKind;
   APValue *Old;
 
-  using result_type = bool;
+  typedef bool result_type;
 
   bool checkConst(QualType QT) {
     // Assigning to a const object has undefined behavior.
@@ -6070,7 +6070,7 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
 namespace {
 struct CheckDynamicTypeHandler {
   AccessKinds AccessKind;
-  using result_type = bool;
+  typedef bool result_type;
   bool failed() { return false; }
   bool found(APValue &Subobj, QualType SubobjType) { return true; }
   bool found(APSInt &Value, QualType SubobjType) { return true; }
@@ -6417,7 +6417,7 @@ struct StartLifetimeOfUnionMemberHandler {
   bool Failed = false;
   static const AccessKinds AccessKind = AK_Assign;
 
-  using result_type = bool;
+  typedef bool result_type;
   bool failed() { return Failed; }
   bool found(APValue &Subobj, QualType SubobjType) {
     // We are supposed to perform no initialization but begin the lifetime of
@@ -7135,7 +7135,7 @@ struct DestroyObjectHandler {
   const LValue &This;
   const AccessKinds AccessKind;
 
-  using result_type = bool;
+  typedef bool result_type;
   bool failed() { return false; }
   bool found(APValue &Subobj, QualType SubobjType) {
     return HandleDestructionImpl(Info, E->getSourceRange(), This, Subobj,
@@ -8096,8 +8096,8 @@ private:
 
 protected:
   EvalInfo &Info;
-  using StmtVisitorTy = ConstStmtVisitor<Derived, bool>;
-  using ExprEvaluatorBaseTy = ExprEvaluatorBase;
+  typedef ConstStmtVisitor<Derived, bool> StmtVisitorTy;
+  typedef ExprEvaluatorBase ExprEvaluatorBaseTy;
 
   OptionalDiagnostic CCEDiag(const Expr *E, diag::kind D) {
     return Info.CCEDiag(E, D);
@@ -8750,8 +8750,8 @@ class LValueExprEvaluatorBase
 protected:
   LValue &Result;
   bool InvalidBaseOK;
-  using LValueExprEvaluatorBaseTy = LValueExprEvaluatorBase;
-  using ExprEvaluatorBaseTy = ExprEvaluatorBase<Derived>;
+  typedef LValueExprEvaluatorBase LValueExprEvaluatorBaseTy;
+  typedef ExprEvaluatorBase<Derived> ExprEvaluatorBaseTy;
 
   bool Success(APValue::LValueBase B) {
     Result.set(B);
@@ -10517,7 +10517,7 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
       const AccessKinds AccessKind;
       APValue *Value;
 
-      using result_type = bool;
+      typedef bool result_type;
       bool failed() { return false; }
       bool checkConst(QualType QT) {
         if (QT.isConstQualified()) {
@@ -10656,7 +10656,7 @@ bool MemberPointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
     // Base-to-derived member pointer casts store the path in derived-to-base
     // order, so iterate backwards. The CXXBaseSpecifier also provides us with
     // the wrong end of the derived->base arc, so stagger the path by one class.
-    using ReverseIter = std::reverse_iterator<CastExpr::path_const_iterator>;
+    typedef std::reverse_iterator<CastExpr::path_const_iterator> ReverseIter;
     for (ReverseIter PathI(E->path_end() - 1), PathE(E->path_begin());
          PathI != PathE; ++PathI) {
       assert(!(*PathI)->isVirtual() && "memptr cast through vbase");

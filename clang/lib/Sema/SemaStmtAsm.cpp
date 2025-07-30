@@ -757,7 +757,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
     targetDiag(ConstraintLoc, diag::error_inoutput_conflict_with_clobber);
 
   // Check for duplicate asm operand name between input, output and label lists.
-  using NamedOperand = std::pair<StringRef, Expr *>;
+  typedef std::pair<StringRef , Expr *> NamedOperand;
   SmallVector<NamedOperand, 4> NamedOperandList;
   for (unsigned i = 0, e = NumOutputs + NumInputs + NumLabels; i != e; ++i)
     if (Names[i])

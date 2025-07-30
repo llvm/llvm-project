@@ -46,7 +46,7 @@ namespace {
   struct Rebuilder {
     Sema &S;
     unsigned MSPropertySubscriptCount;
-    using SpecificRebuilderRefTy = llvm::function_ref<Expr *(Expr *, unsigned)>;
+    typedef llvm::function_ref<Expr *(Expr *, unsigned)> SpecificRebuilderRefTy;
     const SpecificRebuilderRefTy &SpecificCallback;
     Rebuilder(Sema &S, const SpecificRebuilderRefTy &SpecificCallback)
         : S(S), MSPropertySubscriptCount(0),

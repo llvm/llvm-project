@@ -33,7 +33,7 @@
 using namespace clang;
 using namespace CodeGen;
 
-using TryEmitResult = llvm::PointerIntPair<llvm::Value *, 1, bool>;
+typedef llvm::PointerIntPair<llvm::Value*,1,bool> TryEmitResult;
 static TryEmitResult
 tryEmitARCRetainScalarExpr(CodeGenFunction &CGF, const Expr *e);
 static RValue AdjustObjCObjectType(CodeGenFunction &CGF,
@@ -2996,8 +2996,9 @@ static TryEmitResult tryEmitARCRetainLoadOfScalar(CodeGenFunction &CGF,
   return tryEmitARCRetainLoadOfScalar(CGF, CGF.EmitLValue(e), type);
 }
 
-using ValueTransform =
-    llvm::function_ref<llvm::Value *(CodeGenFunction &CGF, llvm::Value *value)>;
+typedef llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
+                                         llvm::Value *value)>
+  ValueTransform;
 
 /// Insert code immediately after a call.
 
@@ -3187,7 +3188,7 @@ ARCExprEmitter<Impl,Result>::visitPseudoObjectExpr(const PseudoObjectExpr *E) {
     // If this semantic expression is an opaque value, bind it
     // to the result of its source expression.
     if (const OpaqueValueExpr *ov = dyn_cast<OpaqueValueExpr>(semantic)) {
-      using OVMA = CodeGenFunction::OpaqueValueMappingData;
+      typedef CodeGenFunction::OpaqueValueMappingData OVMA;
       OVMA opaqueData;
 
       // If this semantic is the result of the pseudo-object

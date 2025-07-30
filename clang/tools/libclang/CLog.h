@@ -27,7 +27,7 @@ namespace clang {
 namespace cxindex {
 
 class Logger;
-using LogRef = IntrusiveRefCntPtr<Logger>;
+typedef IntrusiveRefCntPtr<Logger> LogRef;
 
 /// Collects logging output and writes it to stderr when it's destructed.
 /// Common use case:

@@ -2898,7 +2898,7 @@ BaseResult Sema::ActOnBaseSpecifier(Decl *classdecl, SourceRange SpecifierRange,
 
 /// Use small set to collect indirect bases.  As this is only used
 /// locally, there's no need to abstract the small size parameter.
-using IndirectBaseSet = llvm::SmallPtrSet<QualType, 4>;
+typedef llvm::SmallPtrSet<QualType, 4> IndirectBaseSet;
 
 /// Recursively add the bases of Type.  Don't add Type itself.
 static void
@@ -3742,7 +3742,7 @@ namespace {
     llvm::SmallVector<unsigned, 4> InitFieldIndex;
 
   public:
-    using Inherited = EvaluatedExprVisitor<UninitializedFieldVisitor>;
+    typedef EvaluatedExprVisitor<UninitializedFieldVisitor> Inherited;
     UninitializedFieldVisitor(Sema &S,
                               llvm::SmallPtrSetImpl<ValueDecl*> &Decls,
                               llvm::SmallPtrSetImpl<QualType> &BaseClasses)
@@ -5787,8 +5787,8 @@ bool CheckRedundantInit(Sema &S,
   return true;
 }
 
-using UnionEntry = std::pair<NamedDecl *, CXXCtorInitializer *>;
-using RedundantUnionMap = llvm::DenseMap<RecordDecl *, UnionEntry>;
+typedef std::pair<NamedDecl *, CXXCtorInitializer *> UnionEntry;
+typedef llvm::DenseMap<RecordDecl*, UnionEntry> RedundantUnionMap;
 
 bool CheckRedundantUnionInit(Sema &S,
                              CXXCtorInitializer *Init,
@@ -9387,7 +9387,7 @@ struct SpecialMemberVisitor {
   }
 
   /// A base or member subobject.
-  using Subobject = llvm::PointerUnion<CXXBaseSpecifier *, FieldDecl *>;
+  typedef llvm::PointerUnion<CXXBaseSpecifier*, FieldDecl*> Subobject;
 
   /// Get the location to use for a subobject in diagnostics.
   static SourceLocation getSubobjectLoc(Subobject Subobj) {
@@ -10121,7 +10121,7 @@ static CXXConstructorDecl *findUserDeclaredCtor(CXXRecordDecl *RD) {
       return CI;
 
   // Look for constructor templates.
-  using tmpl_iter = CXXRecordDecl::specific_decl_iterator<FunctionTemplateDecl>;
+  typedef CXXRecordDecl::specific_decl_iterator<FunctionTemplateDecl> tmpl_iter;
   for (tmpl_iter TI(RD->decls_begin()), TE(RD->decls_end()); TI != TE; ++TI) {
     if (CXXConstructorDecl *CD =
           dyn_cast<CXXConstructorDecl>(TI->getTemplatedDecl()))
@@ -15483,7 +15483,7 @@ static void checkMoveAssignmentForRepeatedMove(Sema &S, CXXRecordDecl *Class,
     return;
 
   llvm::SmallVector<CXXBaseSpecifier *, 16> Worklist;
-  using VBaseMap = llvm::DenseMap<CXXRecordDecl *, CXXBaseSpecifier *>;
+  typedef llvm::DenseMap<CXXRecordDecl*, CXXBaseSpecifier*> VBaseMap;
   VBaseMap VBases;
 
   for (auto &BI : Class->bases()) {

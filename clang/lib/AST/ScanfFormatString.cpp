@@ -25,8 +25,8 @@ using clang::analyze_scanf::ScanfSpecifier;
 using clang::UpdateOnReturn;
 using namespace clang;
 
-using ScanfSpecifierResult =
-    clang::analyze_format_string::SpecifierResult<ScanfSpecifier>;
+typedef clang::analyze_format_string::SpecifierResult<ScanfSpecifier>
+        ScanfSpecifierResult;
 
 static bool ParseScanList(FormatStringHandler &H,
                           ScanfConversionSpecifier &CS,

@@ -225,9 +225,9 @@ CXCursor MakeCursorOverloadedDeclRef(TemplateName Template,
                                      CXTranslationUnit TU);
 
 /// Internal storage for an overloaded declaration reference cursor;
-using OverloadedDeclRefStorage =
-    llvm::PointerUnion<const OverloadExpr *, const Decl *,
-                       OverloadedTemplateStorage *>;
+typedef llvm::PointerUnion<const OverloadExpr *, const Decl *,
+                           OverloadedTemplateStorage *>
+    OverloadedDeclRefStorage;
 
 /// Unpack an overloaded declaration reference into an expression,
 /// declaration, or template name along with the source location.

@@ -186,7 +186,7 @@ static StringRef NormalizeGNUAttrSpelling(StringRef AttrSpelling) {
   return AttrSpelling;
 }
 
-using ParsedAttrMap = std::vector<std::pair<std::string, const Record *>>;
+typedef std::vector<std::pair<std::string, const Record *>> ParsedAttrMap;
 
 static ParsedAttrMap getParsedAttrList(const RecordKeeper &Records,
                                        ParsedAttrMap *Dupes = nullptr,
@@ -1774,7 +1774,7 @@ SpellingNamesAreCommon(const std::vector<FlattenedSpelling>& Spellings) {
   return true;
 }
 
-using SemanticSpellingMap = std::map<unsigned, std::string>;
+typedef std::map<unsigned, std::string> SemanticSpellingMap;
 static std::string
 CreateSemanticSpellings(const std::vector<FlattenedSpelling> &Spellings,
                         SemanticSpellingMap &Map) {

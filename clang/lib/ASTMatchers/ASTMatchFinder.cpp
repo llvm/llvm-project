@@ -34,7 +34,7 @@ namespace ast_matchers {
 namespace internal {
 namespace {
 
-using MatchCallback = MatchFinder::MatchCallback;
+typedef MatchFinder::MatchCallback MatchCallback;
 
 // The maximum number of memoization entries to store.
 // 10k has been experimentally found to give a good trade-off
@@ -90,7 +90,7 @@ struct MemoizedMatchResult {
 class MatchChildASTVisitor
     : public RecursiveASTVisitor<MatchChildASTVisitor> {
 public:
-  using VisitorBase = RecursiveASTVisitor<MatchChildASTVisitor>;
+  typedef RecursiveASTVisitor<MatchChildASTVisitor> VisitorBase;
 
   // Creates an AST visitor that matches 'matcher' on all children or
   // descendants of a traversed node. max_depth is the maximum depth
@@ -1363,7 +1363,7 @@ private:
       CompatibleAliases;
 
   // Maps (matcher, node) -> the match result for memoization.
-  using MemoizationMap = std::map<MatchKey, MemoizedMatchResult>;
+  typedef std::map<MatchKey, MemoizedMatchResult> MemoizationMap;
   MemoizationMap ResultCache;
 };
 

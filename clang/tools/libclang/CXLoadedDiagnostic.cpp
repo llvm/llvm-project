@@ -30,7 +30,7 @@ using namespace clang;
 // Extend CXDiagnosticSetImpl which contains strings for diagnostics.
 //===----------------------------------------------------------------------===//
 
-using Strings = llvm::DenseMap<unsigned, const char *>;
+typedef llvm::DenseMap<unsigned, const char *> Strings;
 
 namespace {
 class CXLoadedDiagnosticSetImpl : public CXDiagnosticSetImpl {

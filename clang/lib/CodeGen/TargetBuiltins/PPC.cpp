@@ -145,7 +145,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
     llvm::Triple Triple = getTarget().getTriple();
 
-    using CPUInfo = std::tuple<unsigned, unsigned, unsigned, unsigned>;
+    typedef std::tuple<unsigned, unsigned, unsigned, unsigned> CPUInfo;
 
     auto [LinuxSupportMethod, LinuxIDValue, AIXSupportMethod, AIXIDValue] =
         static_cast<CPUInfo>(StringSwitch<CPUInfo>(CPUStr)
@@ -183,8 +183,9 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
     StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
     if (Triple.isOSAIX()) {
-      using CPUSupportType = std::tuple<unsigned, unsigned, unsigned,
-                                        CmpInst::Predicate, unsigned>;
+      typedef std::tuple<unsigned, unsigned, unsigned, CmpInst::Predicate,
+                         unsigned>
+          CPUSupportType;
       auto [SupportMethod, FieldIdx, Mask, CompOp, Value] =
           static_cast<CPUSupportType>(StringSwitch<CPUSupportType>(CPUStr)
 #define PPC_AIX_FEATURE(NAME, DESC, SUPPORT_METHOD, INDEX, MASK, COMP_OP,      \

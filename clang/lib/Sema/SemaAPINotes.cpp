@@ -521,7 +521,7 @@ static void ProcessAPINotes(Sema &S, ObjCPropertyDecl *D,
 }
 
 namespace {
-using FunctionOrMethod = llvm::PointerUnion<FunctionDecl *, ObjCMethodDecl *>;
+typedef llvm::PointerUnion<FunctionDecl *, ObjCMethodDecl *> FunctionOrMethod;
 }
 
 /// Process API notes for a function or method.

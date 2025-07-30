@@ -22,7 +22,7 @@ DiagTool::DiagTool(llvm::StringRef toolCmd, llvm::StringRef toolDesc)
 
 DiagTool::~DiagTool() {}
 
-using ToolMap = llvm::StringMap<DiagTool *>;
+typedef llvm::StringMap<DiagTool *> ToolMap;
 static inline ToolMap *getTools(void *v) { return static_cast<ToolMap*>(v); }
 
 DiagTools::DiagTools() : tools(new ToolMap()) {}

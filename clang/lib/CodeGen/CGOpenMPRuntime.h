@@ -67,7 +67,7 @@ public:
 /// an advanced with possible pre|post-actions in codegen.
 class RegionCodeGenTy final {
   intptr_t CodeGen;
-  using CodeGenTy = void (*)(intptr_t, CodeGenFunction &, PrePostActionTy &);
+  typedef void (*CodeGenTy)(intptr_t, CodeGenFunction &, PrePostActionTy &);
   CodeGenTy Callback;
   mutable PrePostActionTy *PrePostAction;
   RegionCodeGenTy() = delete;
@@ -384,7 +384,7 @@ protected:
 
 protected:
   /// Map for SourceLocation and OpenMP runtime library debug locations.
-  using OpenMPDebugLocMapTy = llvm::DenseMap<SourceLocation, llvm::Value *>;
+  typedef llvm::DenseMap<SourceLocation, llvm::Value *> OpenMPDebugLocMapTy;
   OpenMPDebugLocMapTy OpenMPDebugLocMap;
   /// Stores debug location and ThreadID for the function.
   struct DebugLocThreadIdTy {
@@ -394,18 +394,18 @@ protected:
     llvm::AssertingVH<llvm::Instruction> ServiceInsertPt = nullptr;
   };
   /// Map of local debug location, ThreadId and functions.
-  using OpenMPLocThreadIDMapTy =
-      llvm::DenseMap<llvm::Function *, DebugLocThreadIdTy>;
+  typedef llvm::DenseMap<llvm::Function *, DebugLocThreadIdTy>
+      OpenMPLocThreadIDMapTy;
   OpenMPLocThreadIDMapTy OpenMPLocThreadIDMap;
   /// Map of UDRs and corresponding combiner/initializer.
-  using UDRMapTy =
-      llvm::DenseMap<const OMPDeclareReductionDecl *,
-                     std::pair<llvm::Function *, llvm::Function *>>;
+  typedef llvm::DenseMap<const OMPDeclareReductionDecl *,
+                         std::pair<llvm::Function *, llvm::Function *>>
+      UDRMapTy;
   UDRMapTy UDRMap;
   /// Map of functions and locally defined UDRs.
-  using FunctionUDRMapTy =
-      llvm::DenseMap<llvm::Function *,
-                     SmallVector<const OMPDeclareReductionDecl *, 4>>;
+  typedef llvm::DenseMap<llvm::Function *,
+                         SmallVector<const OMPDeclareReductionDecl *, 4>>
+      FunctionUDRMapTy;
   FunctionUDRMapTy FunctionUDRMap;
   /// Map from the user-defined mapper declaration to its corresponding
   /// functions.

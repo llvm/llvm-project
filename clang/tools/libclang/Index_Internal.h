@@ -29,13 +29,13 @@
 
 #define INVOKE_BLOCK2(block, arg1, arg2) block->invoke(block, arg1, arg2)
 
-using CXCursorAndRangeVisitorBlock = struct _CXCursorAndRangeVisitorBlock {
+typedef struct _CXCursorAndRangeVisitorBlock {
   void *isa;
   int flags;
   int reserved;
   enum CXVisitorResult (*invoke)(_CXCursorAndRangeVisitorBlock *,
                                  CXCursor, CXSourceRange);
-} *;
+} *CXCursorAndRangeVisitorBlock;
 
 #endif // !__has_feature(blocks)
 

@@ -804,9 +804,9 @@ public:
   isPermittedToBeHomogeneousAggregate(const CXXRecordDecl *RD) const override;
 
 private:
-  using VFTableIdTy = std::pair<const CXXRecordDecl *, CharUnits>;
-  using VTablesMapTy = llvm::DenseMap<VFTableIdTy, llvm::GlobalVariable *>;
-  using VFTablesMapTy = llvm::DenseMap<VFTableIdTy, llvm::GlobalValue *>;
+  typedef std::pair<const CXXRecordDecl *, CharUnits> VFTableIdTy;
+  typedef llvm::DenseMap<VFTableIdTy, llvm::GlobalVariable *> VTablesMapTy;
+  typedef llvm::DenseMap<VFTableIdTy, llvm::GlobalValue *> VFTablesMapTy;
   /// All the vftables that have been referenced.
   VFTablesMapTy VFTablesMap;
   VTablesMapTy VTablesMap;
@@ -1250,7 +1250,7 @@ void MicrosoftCXXABI::initializeHiddenVirtualInheritanceMembers(
   // Outside the ctors and dtors, the values of vtorDisps are zero.
 
   const ASTRecordLayout &Layout = getContext().getASTRecordLayout(RD);
-  using VBOffsets = ASTRecordLayout::VBaseOffsetsMapTy;
+  typedef ASTRecordLayout::VBaseOffsetsMapTy VBOffsets;
   const VBOffsets &VBaseMap = Layout.getVBaseOffsetsMap();
   CGBuilderTy &Builder = CGF.Builder;
 

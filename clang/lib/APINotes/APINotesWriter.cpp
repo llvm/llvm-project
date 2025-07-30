@@ -384,9 +384,7 @@ public:
 
 /// Localized helper to make a type dependent, thwarting template argument
 /// deduction.
-template <typename T> struct MakeDependent {
-  using Type = T;
-};
+template <typename T> struct MakeDependent { typedef T Type; };
 
 /// Retrieve the serialized size of the given VersionTuple, for use in
 /// on-disk hash tables.

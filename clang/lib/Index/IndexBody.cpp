@@ -26,7 +26,7 @@ class BodyIndexer : public RecursiveASTVisitor<BodyIndexer> {
   const DeclContext *ParentDC;
   SmallVector<Stmt*, 16> StmtStack;
 
-  using base = RecursiveASTVisitor<BodyIndexer>;
+  typedef RecursiveASTVisitor<BodyIndexer> base;
 
   Stmt *getParentStmt() const {
     return StmtStack.size() < 2 ? nullptr : StmtStack.end()[-2];

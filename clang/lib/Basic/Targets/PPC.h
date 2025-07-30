@@ -27,7 +27,7 @@ namespace targets {
 class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
 
   /// Flags for architecture specific defines.
-  using ArchDefineTypes = enum {
+  typedef enum {
     ArchDefineNone = 0,
     ArchDefineName = 1 << 0, // <name> is substituted for arch name.
     ArchDefinePpcgr = 1 << 1,
@@ -48,7 +48,7 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
     ArchDefineFuture = 1 << 16,
     ArchDefineA2 = 1 << 17,
     ArchDefineE500 = 1 << 18
-  };
+  } ArchDefineTypes;
 
   ArchDefineTypes ArchDefs = ArchDefineNone;
   static const char *const GCCRegNames[];

@@ -26,7 +26,7 @@ class TypeIndexer : public RecursiveASTVisitor<TypeIndexer> {
   bool IsBase;
   SmallVector<SymbolRelation, 3> Relations;
 
-  using base = RecursiveASTVisitor<TypeIndexer>;
+  typedef RecursiveASTVisitor<TypeIndexer> base;
 
 public:
   TypeIndexer(IndexingContext &indexCtx, const NamedDecl *parent,

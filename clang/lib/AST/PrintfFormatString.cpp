@@ -26,8 +26,8 @@ using clang::analyze_printf::PrintfSpecifier;
 
 using namespace clang;
 
-using PrintfSpecifierResult =
-    clang::analyze_format_string::SpecifierResult<PrintfSpecifier>;
+typedef clang::analyze_format_string::SpecifierResult<PrintfSpecifier>
+        PrintfSpecifierResult;
 
 //===----------------------------------------------------------------------===//
 // Methods for parsing format strings.

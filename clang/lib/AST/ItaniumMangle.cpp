@@ -68,7 +68,7 @@ static bool isLambda(const NamedDecl *ND) {
 static const unsigned UnknownArity = ~0U;
 
 class ItaniumMangleContextImpl : public ItaniumMangleContext {
-  using DiscriminatorKeyTy = std::pair<const DeclContext *, IdentifierInfo *>;
+  typedef std::pair<const DeclContext*, IdentifierInfo*> DiscriminatorKeyTy;
   llvm::DenseMap<DiscriminatorKeyTy, unsigned> Discriminator;
   llvm::DenseMap<const NamedDecl*, unsigned> Uniquifier;
   const DiscriminatorOverrideTy DiscriminatorOverride = nullptr;
@@ -283,7 +283,7 @@ class CXXNameMangler {
   // The goal is to annotate against which version of a library an object was
   // built and to be able to provide backwards compatibility ("dual abi").
   // For more information see docs/ItaniumMangleAbiTags.rst.
-  using AbiTagList = SmallVector<StringRef, 4>;
+  typedef SmallVector<StringRef, 4> AbiTagList;
 
   // State to gather all implicit and explicit tags used in a mangled name.
   // Must always have an instance of this while emitting any name to keep

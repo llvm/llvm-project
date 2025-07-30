@@ -18,7 +18,7 @@
 
 using namespace clang;
 
-using MapTy = llvm::DenseMap<Stmt *, Stmt *>;
+typedef llvm::DenseMap<Stmt*, Stmt*> MapTy;
 
 enum OpaqueValueMode {
   OV_Transparent,

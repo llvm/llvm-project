@@ -25,7 +25,7 @@
 using namespace clang;
 using namespace sema;
 
-using BaseSet = llvm::SmallPtrSet<const CXXRecordDecl *, 4>;
+typedef llvm::SmallPtrSet<const CXXRecordDecl*, 4> BaseSet;
 
 /// Determines if the given class is provably not derived from all of
 /// the prospective base classes.

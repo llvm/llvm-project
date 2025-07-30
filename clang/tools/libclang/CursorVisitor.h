@@ -64,7 +64,7 @@ public:
   const CXCursor &getParent() const { return parent; }
 };
 
-using VisitorWorkList = SmallVector<VisitorJob, 10>;
+typedef SmallVector<VisitorJob, 10> VisitorWorkList;
 
 // Cursor visitor.
 class CursorVisitor : public DeclVisitor<CursorVisitor, bool>,
@@ -72,8 +72,8 @@ class CursorVisitor : public DeclVisitor<CursorVisitor, bool>,
 public:
   /// Callback called after child nodes of a cursor have been visited.
   /// Return true to break visitation or false to continue.
-  using PostChildrenVisitorTy = bool (*)(CXCursor cursor,
-                                         CXClientData client_data);
+  typedef bool (*PostChildrenVisitorTy)(CXCursor cursor,
+                                        CXClientData client_data);
 
 private:
   /// The translation unit we are traversing.
