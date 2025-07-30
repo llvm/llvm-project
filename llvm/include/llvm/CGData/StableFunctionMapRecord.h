@@ -40,6 +40,14 @@ struct StableFunctionMapRecord {
                                  const StableFunctionMap *FunctionMap,
                                  std::vector<CGDataPatchItem> &PatchItems);
 
+  /// A static helper function to deserialize the stable function map entry.
+  /// Ptr should be pointing to the start of the fixed-sized fields of the
+  /// entry when passed in.
+  LLVM_ABI static void deserializeEntry(const unsigned char *Ptr,
+                                        stable_hash Hash,
+                                        StableFunctionMap *FunctionMap,
+                                        bool ReadStableFunctionMapNames = true);
+
   /// Serialize the stable function map to a raw_ostream.
   LLVM_ABI void serialize(raw_ostream &OS,
                           std::vector<CGDataPatchItem> &PatchItems) const;
@@ -47,6 +55,13 @@ struct StableFunctionMapRecord {
   /// Deserialize the stable function map from a raw_ostream.
   LLVM_ABI void deserialize(const unsigned char *&Ptr,
                             bool ReadStableFunctionMapNames = true);
+
+  /// Lazily deserialize the stable function map from `Buffer` starting at
+  /// `Offset`. The individial stable function entry would be read lazily from
+  /// `Buffer` when the function map is accessed.
+  LLVM_ABI void lazyDeserialize(std::shared_ptr<MemoryBuffer> Buffer,
+                                uint64_t Offset,
+                                bool ReadStableFunctionMapNames = true);
 
   /// Serialize the stable function map to a YAML stream.
   LLVM_ABI void serializeYAML(yaml::Output &YOS) const;
@@ -70,6 +85,10 @@ struct StableFunctionMapRecord {
     yaml::Output YOS(OS);
     serializeYAML(YOS);
   }
+
+private:
+  void deserialize(const unsigned char *&Ptr, bool ReadStableFunctionMapNames,
+                   bool Lazy);
 };
 
 } // namespace llvm
