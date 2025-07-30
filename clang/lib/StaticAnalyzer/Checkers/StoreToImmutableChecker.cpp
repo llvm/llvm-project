@@ -108,24 +108,14 @@ static bool isEffectivelyConstRegionAux(const MemRegion *MR,
 
 bool StoreToImmutableChecker::isEffectivelyConstRegion(
     const MemRegion *MR, CheckerContext &C) const {
-  // If the region is an ElementRegion, we need to check if any of the super
-  // regions have const-qualified type.
-  if (const auto *ER = dyn_cast<ElementRegion>(MR)) {
-    SmallVector<const MemRegion *, 8> SuperRegions;
-    const MemRegion *Current = MR;
-    const MemRegion *Base = ER->getBaseRegion();
-    while (Current != Base) {
-      SuperRegions.push_back(Current);
-      assert(isa<SubRegion>(Current));
-      Current = cast<SubRegion>(Current)->getSuperRegion();
-    }
-    SuperRegions.push_back(Base);
-    return llvm::any_of(SuperRegions, [&C](const MemRegion *MR) {
-      return isEffectivelyConstRegionAux(MR, C);
-    });
+  while (true) {
+    if (isEffectivelyConstRegionAux(MR, C))
+      return true;
+    if (auto *SR = dyn_cast<SubRegion>(MR))
+      MR = SR->getSuperRegion();
+    else
+      return false;
   }
-
-  return isEffectivelyConstRegionAux(MR, C);
 }
 
 void StoreToImmutableChecker::checkBind(SVal Loc, SVal Val, const Stmt *S,

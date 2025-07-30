@@ -60,3 +60,14 @@ void test_multiple_layer_struct_array_array_member() {
   int *p = (int*)&MLS[2].buf[3];
   *p = 4; // expected-warning {{Trying to write to immutable memory}}
 }
+
+struct StructWithNonConstMember {
+  int x; // expected-note {{Memory region is declared as immutable here}}
+  // FIXME: this note should really appear on the line where the const struct is declared.
+};
+
+const StructWithNonConstMember SWNCM{0};
+
+void test_write_to_non_const_member_of_const_struct() {
+  *(int*)&SWNCM.x = 100; // expected-warning {{Trying to write to immutable memory}}
+}
