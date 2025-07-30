@@ -299,9 +299,9 @@ class SerialBackgroundQueue {
   std::mutex mutex;
 
 public:
-  void queueWork(std::function<void()> work, bool reap) {
+  void queueWork(std::function<void()> work) {
     mutex.lock();
-    if (running && (queue.empty() || reap)) {
+    if (running && queue.empty()) {
       mutex.unlock();
       running->join();
       mutex.lock();
@@ -309,7 +309,7 @@ public:
       running = nullptr;
     }
 
-    if (!reap) {
+    if (work) {
       queue.emplace_back(std::move(work));
       if (!running)
         running = new std::thread([&]() {
@@ -331,11 +331,6 @@ public:
     mutex.unlock();
   }
 };
-
-#ifndef NDEBUG
-#include <iomanip>
-#include <iostream>
-#endif
 
 // Most input files have been mapped but not yet paged in.
 // This code forces the page-ins on multiple threads so
@@ -374,22 +369,18 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
 #ifndef NDEBUG
   auto dt = high_resolution_clock::now() - t0;
   if (Process::GetEnv("LLD_MULTI_THREAD_PAGE"))
-    std::cerr << "multiThreadedPageIn " << totalBytes << "/"
-              << numDeferedFilesTouched << "/" << deferred.size() << "/"
-              << std::setprecision(4)
-              << duration_cast<milliseconds>(dt).count() / 1000. << "\n";
+    llvm::dbgs() << "multiThreadedPageIn " << totalBytes << "/"
+                 << numDeferedFilesTouched << "/" << deferred.size() << "/"
+                 << duration_cast<milliseconds>(dt).count() / 1000. << "\n";
 #endif
 }
 
-static void multiThreadedPageIn(const DeferredFiles &deferred,
-                                bool reap = false) {
+static void multiThreadedPageIn(const DeferredFiles &deferred) {
   static SerialBackgroundQueue pageInQueue;
-  pageInQueue.queueWork(
-      [=]() {
-        DeferredFiles files = deferred;
-        multiThreadedPageInBackground(files);
-      },
-      reap);
+  pageInQueue.queueWork([=]() {
+    DeferredFiles files = deferred;
+    multiThreadedPageInBackground(files);
+  });
 }
 
 static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
@@ -491,7 +482,7 @@ static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
           }
 
           if (archiveContents)
-            archiveContents->emplace_back(path, isLazy, *mb);
+            archiveContents->push_back({path, isLazy, *mb});
           if (!hasObjCSection(*mb))
             continue;
           if (Error e = file->fetch(c, "-ObjC"))
@@ -568,7 +559,7 @@ static void deferFile(StringRef path, bool isLazy, DeferredFiles &deferred) {
   if (!buffer)
     return;
   if (config->readThreads)
-    deferred.emplace_back(path, isLazy, *buffer);
+    deferred.push_back({path, isLazy, *buffer});
   else
     processFile(buffer, nullptr, path, LoadType::CommandLine, isLazy);
 }
