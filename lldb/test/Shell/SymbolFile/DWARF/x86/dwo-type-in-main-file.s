@@ -3,9 +3,9 @@
 # file.
 
 # RUN: mkdir -p %t.dir
-# RUN: llvm-mc %s -o %t --triple=x86_64-pc-linux --filetype=obj --defsym MAIN=0
+# RUN: llvm-mc %s -o %t.dir/obj.o --triple=x86_64-pc-linux --filetype=obj --defsym MAIN=0
 # RUN: llvm-mc %s -o %t.dir/dwo-type-in-main-file-cu2.dwo --triple=x86_64-pc-linux --filetype=obj --defsym DWO=0
-# RUN: %lldb %t -o "target var a" -b 2>&1 | FileCheck %s
+# RUN: %lldb %t.dir/obj.o -o "target var a" -b 2>&1 | FileCheck %s
 
 # CHECK: (A) a = (b = 47)
 
