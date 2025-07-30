@@ -429,15 +429,18 @@ static void TestPTrace() {
   if (pid == 0) {
     // Child subprocess
     internal_ptrace(PTRACE_ATTACH, 0, nullptr, nullptr);
-    _exit (0);
+    _exit(0);
   } else {
     int wstatus;
     internal_waitpid(pid, &wstatus, 0);
 
     if (WIFSIGNALED(wstatus)) {
-      VReport(0, "Warning: ptrace appears to be blocked (is seccomp enabled?). LeakSanitizer may hang.\n");
+      VReport(0,
+              "Warning: ptrace appears to be blocked (is seccomp enabled?). "
+              "LeakSanitizer may hang.\n");
       VReport(0, "Child exited with signal %d.\n", WTERMSIG(wstatus));
-      // We don't abort the sanitizer - it's still worth letting the sanitizer try.
+      // We don't abort the sanitizer - it's still worth letting the sanitizer
+      // try.
     }
   }
 }
