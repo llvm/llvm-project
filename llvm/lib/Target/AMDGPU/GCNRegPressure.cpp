@@ -413,9 +413,13 @@ bool GCNRPTarget::isSaveBeneficial(Register Reg) const {
 
   if (SRI->isSGPRClass(RC))
     return RP.getSGPRNum() > MaxSGPRs;
-  if (SRI->isAGPRClass(RC))
-    return isVGPRSaveBeneficial(RP.getAGPRNum(), RP.getArchVGPRNum());
-  return isVGPRSaveBeneficial(RP.getArchVGPRNum(), RP.getAGPRNum());
+  unsigned NumVGPRs =
+      SRI->isAGPRClass(RC) ? RP.getAGPRNum() : RP.getArchVGPRNum();
+  // The addressable limit must always be respected.
+  if (NumVGPRs > MaxVGPRs)
+    return true;
+  // For unified RFs, combined VGPR usage limit must be respected as well.
+  return UnifiedRF && RP.getVGPRNum(true) > MaxUnifiedVGPRs;
 }
 
 bool GCNRPTarget::satisfied() const {
@@ -424,25 +428,6 @@ bool GCNRPTarget::satisfied() const {
   if (UnifiedRF && RP.getVGPRNum(true) > MaxVGPRs)
     return false;
   return true;
-}
-
-bool GCNRPTarget::isVGPRSaveBeneficial(unsigned NumRegsInRC,
-                                       unsigned NumRegsInOtherRC) const {
-  // The addressable limit must always be respected.
-  if (NumRegsInRC > MaxVGPRs)
-    return true;
-  if (UnifiedRF) {
-    // Combined VGPR usage must be respected in unified RFs.
-    if (RP.getVGPRNum(true) > MaxUnifiedVGPRs)
-      return true;
-    // When the other VGPR RC is above its addressable limit and there is not
-    // enough space in this VGPR RC to fit all that excess through copies, we
-    // consider savings in this VGPR RC beneficial as well.
-    if (NumRegsInOtherRC > MaxVGPRs &&
-        2 * MaxVGPRs < NumRegsInRC + NumRegsInOtherRC)
-      return true;
-  }
-  return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

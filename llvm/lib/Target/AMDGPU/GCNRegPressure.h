@@ -252,12 +252,6 @@ private:
   GCNRPTarget(const GCNRegPressure &RP, const MachineFunction &MF)
       : MF(MF), UnifiedRF(MF.getSubtarget<GCNSubtarget>().hasGFX90AInsts()),
         RP(RP) {}
-
-  /// Determines whether saving a VGPR from a VGPR RC (ArchVGPR or AGPR) where
-  /// \p NumRegsInRC VGPRs are used is beneficial. \p NumRegsInOtherRC is the
-  /// number of VGPRs in the other VGPR RC.
-  bool isVGPRSaveBeneficial(unsigned NumRegsInRC,
-                            unsigned NumRegsInOtherRC) const;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
