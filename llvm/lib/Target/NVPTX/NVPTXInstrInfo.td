@@ -125,8 +125,6 @@ def doF32FTZ : Predicate<"useF32FTZ()">;
 def doNoF32FTZ : Predicate<"!useF32FTZ()">;
 def doRsqrtOpt : Predicate<"doRsqrtOpt()">;
 
-def doMulWide      : Predicate<"doMulWide">;
-
 def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
 def hasDotInstructions : Predicate<"Subtarget->hasDotInstructions()">;
@@ -836,36 +834,28 @@ def MULWIDES64 :
   BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, B32:$b), "mul.wide.s32">;
 def MULWIDES64Imm :
   BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, i32imm:$b), "mul.wide.s32">;
-def MULWIDES64Imm64 :
-  BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, i64imm:$b), "mul.wide.s32">;
 
 def MULWIDEU64 :
   BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, B32:$b), "mul.wide.u32">;
 def MULWIDEU64Imm :
   BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, i32imm:$b), "mul.wide.u32">;
-def MULWIDEU64Imm64 :
-  BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, i64imm:$b), "mul.wide.u32">;
 
 def MULWIDES32 :
   BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B16:$b), "mul.wide.s16">;
 def MULWIDES32Imm :
   BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, i16imm:$b), "mul.wide.s16">;
-def MULWIDES32Imm32 :
-  BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, i32imm:$b), "mul.wide.s16">;
 
 def MULWIDEU32 :
   BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B16:$b), "mul.wide.u16">;
 def MULWIDEU32Imm :
   BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, i16imm:$b), "mul.wide.u16">;
-def MULWIDEU32Imm32 :
-  BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, i32imm:$b), "mul.wide.u16">;
 
-def SDTMulWide : SDTypeProfile<1, 2, [SDTCisSameAs<1, 2>]>;
-def mul_wide_signed : SDNode<"NVPTXISD::MUL_WIDE_SIGNED", SDTMulWide>;
-def mul_wide_unsigned : SDNode<"NVPTXISD::MUL_WIDE_UNSIGNED", SDTMulWide>;
+def SDTMulWide : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>, SDTCisSameAs<1, 2>]>;
+def mul_wide_signed : SDNode<"NVPTXISD::MUL_WIDE_SIGNED", SDTMulWide, [SDNPCommutative]>;
+def mul_wide_unsigned : SDNode<"NVPTXISD::MUL_WIDE_UNSIGNED", SDTMulWide, [SDNPCommutative]>;
 
 // Matchers for signed, unsigned mul.wide ISD nodes.
-let Predicates = [doMulWide] in {
+let Predicates = [hasOptEnabled] in {
   def : Pat<(i32 (mul_wide_signed i16:$a, i16:$b)), (MULWIDES32 $a, $b)>;
   def : Pat<(i32 (mul_wide_signed i16:$a, imm:$b)), (MULWIDES32Imm $a, imm:$b)>;
   def : Pat<(i32 (mul_wide_unsigned i16:$a, i16:$b)), (MULWIDEU32 $a, $b)>;
@@ -875,85 +865,6 @@ let Predicates = [doMulWide] in {
   def : Pat<(i64 (mul_wide_signed i32:$a, imm:$b)), (MULWIDES64Imm $a, imm:$b)>;
   def : Pat<(i64 (mul_wide_unsigned i32:$a, i32:$b)), (MULWIDEU64 $a, $b)>;
   def : Pat<(i64 (mul_wide_unsigned i32:$a, imm:$b)), (MULWIDEU64Imm $a, imm:$b)>;
-}
-
-// Predicates used for converting some patterns to mul.wide.
-def SInt32Const : PatLeaf<(imm), [{
-  const APInt &v = N->getAPIntValue();
-  return v.isSignedIntN(32);
-}]>;
-
-def UInt32Const : PatLeaf<(imm), [{
-  const APInt &v = N->getAPIntValue();
-  return v.isIntN(32);
-}]>;
-
-def SInt16Const : PatLeaf<(imm), [{
-  const APInt &v = N->getAPIntValue();
-  return v.isSignedIntN(16);
-}]>;
-
-def UInt16Const : PatLeaf<(imm), [{
-  const APInt &v = N->getAPIntValue();
-  return v.isIntN(16);
-}]>;
-
-def IntConst_0_30 : PatLeaf<(imm), [{
-  // Check if 0 <= v < 31; only then will the result of (x << v) be an int32.
-  const APInt &v = N->getAPIntValue();
-  return v.sge(0) && v.slt(31);
-}]>;
-
-def IntConst_0_14 : PatLeaf<(imm), [{
-  // Check if 0 <= v < 15; only then will the result of (x << v) be an int16.
-  const APInt &v = N->getAPIntValue();
-  return v.sge(0) && v.slt(15);
-}]>;
-
-def SHL2MUL32 : SDNodeXForm<imm, [{
-  const APInt &v = N->getAPIntValue();
-  APInt temp(32, 1);
-  return CurDAG->getTargetConstant(temp.shl(v), SDLoc(N), MVT::i32);
-}]>;
-
-def SHL2MUL16 : SDNodeXForm<imm, [{
-  const APInt &v = N->getAPIntValue();
-  APInt temp(16, 1);
-  return CurDAG->getTargetConstant(temp.shl(v), SDLoc(N), MVT::i16);
-}]>;
-
-// Convert "sign/zero-extend, then shift left by an immediate" to mul.wide.
-let Predicates = [doMulWide] in {
-  def : Pat<(shl (sext i32:$a), (i32 IntConst_0_30:$b)),
-            (MULWIDES64Imm $a, (SHL2MUL32 $b))>;
-  def : Pat<(shl (zext i32:$a), (i32 IntConst_0_30:$b)),
-            (MULWIDEU64Imm $a, (SHL2MUL32 $b))>;
-
-  def : Pat<(shl (sext i16:$a), (i16 IntConst_0_14:$b)),
-            (MULWIDES32Imm $a, (SHL2MUL16 $b))>;
-  def : Pat<(shl (zext i16:$a), (i16 IntConst_0_14:$b)),
-            (MULWIDEU32Imm $a, (SHL2MUL16 $b))>;
-
-  // Convert "sign/zero-extend then multiply" to mul.wide.
-  def : Pat<(mul (sext i32:$a), (sext i32:$b)),
-            (MULWIDES64 $a, $b)>;
-  def : Pat<(mul (sext i32:$a), (i64 SInt32Const:$b)),
-            (MULWIDES64Imm64 $a, (i64 SInt32Const:$b))>;
-
-  def : Pat<(mul (zext i32:$a), (zext i32:$b)),
-            (MULWIDEU64 $a, $b)>;
-  def : Pat<(mul (zext i32:$a), (i64 UInt32Const:$b)),
-            (MULWIDEU64Imm64 $a, (i64 UInt32Const:$b))>;
-
-  def : Pat<(mul (sext i16:$a), (sext i16:$b)),
-            (MULWIDES32 $a, $b)>;
-  def : Pat<(mul (sext i16:$a), (i32 SInt16Const:$b)),
-            (MULWIDES32Imm32 $a, (i32 SInt16Const:$b))>;
-
-  def : Pat<(mul (zext i16:$a), (zext i16:$b)),
-            (MULWIDEU32 $a, $b)>;
-  def : Pat<(mul (zext i16:$a), (i32 UInt16Const:$b)),
-            (MULWIDEU32Imm32 $a, (i32 UInt16Const:$b))>;
 }
 
 //
@@ -989,6 +900,39 @@ let Predicates = [hasOptEnabled] in {
 defm MAD16 : MAD<"mad.lo.s16", i16, B16, i16imm>;
 defm MAD32 : MAD<"mad.lo.s32", i32, B32, i32imm>;
 defm MAD64 : MAD<"mad.lo.s64", i64, B64, i64imm>;
+}
+
+multiclass MAD_WIDE<string PtxSuffix, OneUse2 Op, RegTyInfo BigT, RegTyInfo SmallT> {
+  def rrr:
+    BasicNVPTXInst<(outs BigT.RC:$dst),
+              (ins SmallT.RC:$a, SmallT.RC:$b, BigT.RC:$c),
+              "mad.wide." # PtxSuffix,
+              [(set BigT.Ty:$dst, (add (Op SmallT.Ty:$a, SmallT.Ty:$b), BigT.Ty:$c))]>;
+  def rri:
+    BasicNVPTXInst<(outs BigT.RC:$dst),
+              (ins SmallT.RC:$a, SmallT.RC:$b, BigT.Imm:$c),
+              "mad.wide." # PtxSuffix,
+              [(set BigT.Ty:$dst, (add (Op SmallT.Ty:$a, SmallT.Ty:$b), imm:$c))]>;
+  def rir:
+    BasicNVPTXInst<(outs BigT.RC:$dst),
+              (ins SmallT.RC:$a, SmallT.Imm:$b, BigT.RC:$c),
+              "mad.wide." # PtxSuffix,
+              [(set BigT.Ty:$dst, (add (Op SmallT.Ty:$a, imm:$b), BigT.Ty:$c))]>;
+  def rii:
+    BasicNVPTXInst<(outs BigT.RC:$dst),
+              (ins SmallT.RC:$a, SmallT.Imm:$b, BigT.Imm:$c),
+              "mad.wide." # PtxSuffix,
+              [(set BigT.Ty:$dst, (add (Op SmallT.Ty:$a, imm:$b), imm:$c))]>;
+}
+
+def mul_wide_unsigned_oneuse : OneUse2<mul_wide_unsigned>;
+def mul_wide_signed_oneuse : OneUse2<mul_wide_signed>;
+
+let Predicates = [hasOptEnabled] in {
+defm MAD_WIDE_U16 : MAD_WIDE<"u16", mul_wide_unsigned_oneuse, I32RT, I16RT>;
+defm MAD_WIDE_S16 : MAD_WIDE<"s16", mul_wide_signed_oneuse, I32RT, I16RT>;
+defm MAD_WIDE_U32 : MAD_WIDE<"u32", mul_wide_unsigned_oneuse, I64RT, I32RT>;
+defm MAD_WIDE_S32 : MAD_WIDE<"s32", mul_wide_signed_oneuse, I64RT, I32RT>;
 }
 
 foreach t = [I16RT, I32RT, I64RT] in {
