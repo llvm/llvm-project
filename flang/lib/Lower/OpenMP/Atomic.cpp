@@ -625,7 +625,8 @@ genAtomicUpdate(lower::AbstractConverter &converter,
     // operations with exactly two (non-optional) arguments.
     rhs = genReducedMinMax(rhs, atomArg, args);
     input = *evaluate::GetConvertInput(rhs);
-    auto [opcode, args] = evaluate::GetTopLevelOperationIgnoreResizing(input);
+    std::tie(opcode, args) =
+        evaluate::GetTopLevelOperationIgnoreResizing(input);
     atomArg = nullptr; // No longer valid.
   }
   for (auto &arg : args) {
