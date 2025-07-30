@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -fsyntax-only -verify %s
 
+// REQUIRES: aarch64-registered-target
+
 #include <arm_sme.h>
 
 void test_streaming(svint32_t *out, svint32_t *in) __arm_streaming {
