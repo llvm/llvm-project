@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "mlir/Dialect/WasmSSA/IR/WasmSSAInterfaces.h"
 #include "mlir/Dialect/WasmSSA/IR/WasmSSA.h"
+#include "mlir/Dialect/WasmSSA/IR/WasmSSAInterfaces.h"
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -260,9 +260,10 @@ void GlobalOp::print(OpAsmPrinter &printer) {
 
 LogicalResult
 GlobalGetOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  // If the parent requires a constant context, verify that global.get is a constant
-  // as defined per the wasm standard.
-  if(!this->getOperation()->getParentWithTrait<ConstantExpressionInitializerOpTrait>())
+  // If the parent requires a constant context, verify that global.get is a
+  // constant as defined per the wasm standard.
+  if (!this->getOperation()
+           ->getParentWithTrait<ConstantExpressionInitializerOpTrait>())
     return success();
   Operation *symTabOp = SymbolTable::getNearestSymbolTable(*this);
   StringRef referencedSymbol = getGlobal();
@@ -286,7 +287,8 @@ void GlobalImportOp::build(::mlir::OpBuilder &odsBuilder,
                            ::mlir::OperationState &odsState, StringRef symbol,
                            StringRef moduleName, StringRef importName,
                            Type type, bool isMutable) {
-  GlobalImportOp::build(odsBuilder, odsState, symbol, moduleName, importName, type, isMutable, odsBuilder.getStringAttr("nested"));
+  GlobalImportOp::build(odsBuilder, odsState, symbol, moduleName, importName,
+                        type, isMutable, odsBuilder.getStringAttr("nested"));
 }
 
 ParseResult GlobalImportOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -381,9 +383,8 @@ LogicalResult LocalTeeOp::inferReturnTypes(
 }
 
 LogicalResult LocalTeeOp::verify() {
- if (getLocalVar().getType().getElementType() !=
-                     getValue().getType() ||
-                 getValue().getType() != getResult().getType())
+  if (getLocalVar().getType().getElementType() != getValue().getType() ||
+      getValue().getType() != getResult().getType())
     return emitError("input type and output type of local.tee do not match");
   return llvm::success();
 }
@@ -401,7 +402,8 @@ Block *LoopOp::getLabelTarget() { return &getBody().front(); }
 void MemOp::build(::mlir::OpBuilder &odsBuilder,
                   ::mlir::OperationState &odsState, llvm::StringRef symbol,
                   LimitType limit) {
-  MemOp::build(odsBuilder, odsState, symbol, limit, odsBuilder.getStringAttr("nested"));
+  MemOp::build(odsBuilder, odsState, symbol, limit,
+               odsBuilder.getStringAttr("nested"));
 }
 
 //===----------------------------------------------------------------------===//
@@ -445,7 +447,8 @@ void ReturnOp::build(::mlir::OpBuilder &odsBuilder,
 void TableOp::build(::mlir::OpBuilder &odsBuilder,
                     ::mlir::OperationState &odsState, llvm::StringRef symbol,
                     TableType type) {
-  TableOp::build(odsBuilder, odsState, symbol, type, odsBuilder.getStringAttr("nested"));
+  TableOp::build(odsBuilder, odsState, symbol, type,
+                 odsBuilder.getStringAttr("nested"));
 }
 
 //===----------------------------------------------------------------------===//
