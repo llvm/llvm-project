@@ -872,7 +872,7 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
     // Delete aliases entries for non-prevailing symbols on the ThinLTO side of
     // this input file.
     DenseSet<StringRef> Prevailing;
-    for (auto [I, R] : zip(Input.symbols(), Res))
+    for (auto [I, R] : zip(Input.symbols(), InputRes))
       if (R.Prevailing && !I.getIRName().empty())
         Prevailing.insert(I.getIRName());
     std::vector<MDNode *> AliasGroups;
