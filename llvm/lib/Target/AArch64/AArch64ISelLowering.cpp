@@ -20822,6 +20822,9 @@ static bool isNegatedInteger(SDValue Op) {
 }
 
 static SDValue getNegatedInteger(SDValue Op, SelectionDAG &DAG) {
+  if (isNegatedInteger(Op))
+    return Op.getOperand(1);
+
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
   SDValue Zero = DAG.getConstant(0, DL, VT);
@@ -20851,17 +20854,11 @@ static SDValue performNegCSelCombine(SDNode *N, SelectionDAG &DAG) {
   if (!isNegatedInteger(N0) && !isNegatedInteger(N1))
     return SDValue();
 
-  SDLoc DL(N);
-  EVT VT = CSel.getValueType();
-
-  // If the operands are negations of each other, reverse them.
-  if ((isNegatedInteger(N0) && N0.getOperand(1) == N1) ||
-      (isNegatedInteger(N1) && N1.getOperand(1) == N0))
-    return DAG.getNode(AArch64ISD::CSEL, DL, VT, N1, N0, CSel.getOperand(2),
-                       CSel.getOperand(3));
-
   SDValue N0N = getNegatedInteger(N0, DAG);
   SDValue N1N = getNegatedInteger(N1, DAG);
+
+  SDLoc DL(N);
+  EVT VT = CSel.getValueType();
   return DAG.getNode(AArch64ISD::CSEL, DL, VT, N0N, N1N, CSel.getOperand(2),
                      CSel.getOperand(3));
 }
