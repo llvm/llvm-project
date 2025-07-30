@@ -321,9 +321,9 @@ private:
   bool CanTraceInto(bool SignExtended, bool ZeroExtended, BinaryOperator *BO,
                     bool NonNegative);
 
-  /// Check if Xor instruction should be considered and updated for
-  /// optimization.
-  bool shouldConsiderAndUpdateXor(BinaryOperator *XorInst);
+  /// Analyze XOR instruction to extract disjoint constant bits that behave
+  /// like addition operations for improved address mode folding.
+  APInt extractDisjointBitsFromXor(BinaryOperator *XorInst);
 
   /// The path from the constant offset to the old GEP index. e.g., if the GEP
   /// index is "a * b + (c + 5)". After running function find, UserChain[0] will
@@ -518,14 +518,12 @@ bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended,
                                             bool ZeroExtended,
                                             BinaryOperator *BO,
                                             bool NonNegative) {
-  // We only consider ADD, SUB, OR and XOR, because a non-zero constant found in
+  // We only consider ADD, SUB and OR, because a non-zero constant found in
   // expressions composed of these operations can be easily hoisted as a
-  // constant offset by reassociation. XOR is a special case and can be folded
-  // in to gep if the constant is proven to be disjoint.
+  // constant offset by reassociation.
   if (BO->getOpcode() != Instruction::Add &&
       BO->getOpcode() != Instruction::Sub &&
-      BO->getOpcode() != Instruction::Or &&
-      BO->getOpcode() != Instruction::Xor) {
+      BO->getOpcode() != Instruction::Or) {
     return false;
   }
 
@@ -535,10 +533,6 @@ bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended,
   if (BO->getOpcode() == Instruction::Or &&
       !cast<PossiblyDisjointInst>(BO)->isDisjoint())
     return false;
-
-  // Handle Xor decomposition.
-  if (BO->getOpcode() == Instruction::Xor)
-    return shouldConsiderAndUpdateXor(BO);
 
   // FIXME: We don't currently support constants from the RHS of subs,
   // when we are zero-extended, because we need a way to zero-extended
@@ -643,6 +637,9 @@ APInt ConstantOffsetExtractor::find(Value *V, bool SignExtended,
     // Trace into subexpressions for more hoisting opportunities.
     if (CanTraceInto(SignExtended, ZeroExtended, BO, NonNegative))
       ConstantOffset = findInEitherOperand(BO, SignExtended, ZeroExtended);
+    // Handle XOR with disjoint bits that can be treated as addition.
+    else if (BO->getOpcode() == Instruction::Xor)
+      ConstantOffset = extractDisjointBitsFromXor(BO);
   } else if (isa<TruncInst>(V)) {
     ConstantOffset =
         find(U->getOperand(0), SignExtended, ZeroExtended, NonNegative)
@@ -755,11 +752,19 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   Value *NextInChain = removeConstOffset(ChainIndex - 1);
   Value *TheOther = BO->getOperand(1 - OpNo);
 
-  // If NextInChain is 0 and not the LHS of a sub, we can simplify the
-  // sub-expression to be just TheOther.
   if (ConstantInt *CI = dyn_cast<ConstantInt>(NextInChain)) {
-    if (CI->isZero() && !(BO->getOpcode() == Instruction::Sub && OpNo == 0))
-      return TheOther;
+    if (CI->isZero()) {
+      // Special handling for XOR with disjoint bits:
+      // Keep the original XOR instruction with the non disjoint part of
+      // the constant, and the remaining operation is still meaningful.
+      if (BO->getOpcode() == Instruction::Xor)
+        return BO;
+
+      // If NextInChain is 0 and not the LHS of a sub, we can simplify the
+      // sub-expression to be just TheOther.
+      if (!(BO->getOpcode() == Instruction::Sub && OpNo == 0))
+        return TheOther;
+    }
   }
 
   BinaryOperator::BinaryOps NewOp = BO->getOpcode();
@@ -790,58 +795,59 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   return NewBO;
 }
 
-/// \brief Tries to canonicalize a 'xor' with a constant into a form that is
-/// more amenable to address-mode matching.
+/// Analyze XOR instruction to extract disjoint constant bits for address
+/// folding
 ///
-/// The transformation rewrites `Base ^ Const` into
-/// `(Base ^ NonDisjointBits) ^ DisjointBits`.
+/// This function identifies bits in an XOR constant operand that are disjoint
+/// from the base operand's known set bits. For these disjoint bits, XOR behaves
+/// identically to addition, allowing us to extract them as constant offsets
+/// that can be folded into addressing modes.
 ///
-/// `DisjointBits` are the bits set in `Const` operand that are known to be zero
-/// in `Base` operand. For these bits, the `xor` operation is equivalent to
-/// `add`, which exposes an offset that can be more easily folded into a memory
-/// access.
+/// Transformation: `Base ^ Const` becomes `(Base ^ NonDisjointBits) +
+/// DisjointBits` where DisjointBits = Const & KnownZeros(Base)
 ///
-/// For example, if we know the low bit of `%ptr` is 0:
-///   `xor %ptr, 3`  ; 3 is `0b11`
-/// becomes:
-///   `%tmp = xor %ptr, 2` ; NonDisjointBits is `0b10`
-///   `xor %tmp, 1`        ; DisjointBits is `0b01`
+/// Example with ptr having known-zero low bit:
+///   Original: `xor %ptr, 3`    ; 3 = 0b11
+///   Analysis: DisjointBits = 3 & KnownZeros(%ptr) = 0b11 & 0b01 = 0b01
+///   Result:   `(xor %ptr, 2) + 1` where 1 can be folded into address mode
 ///
-/// The final `xor %tmp, 1` is an addition of 1.
-///
-/// \returns `true` if the transformation was applied, `false` otherwise.
-bool ConstantOffsetExtractor::shouldConsiderAndUpdateXor(
+/// \param XorInst The XOR binary operator to analyze
+/// \return APInt containing the disjoint bits that can be extracted as offset,
+///         or zero if no disjoint bits exist
+APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
     BinaryOperator *XorInst) {
+  assert(XorInst && XorInst->getOpcode() == Instruction::Xor &&
+         "Expected XOR instruction");
+
+  const unsigned BitWidth = XorInst->getType()->getScalarSizeInBits();
   Value *BaseOperand;
-  ConstantInt *XorConst;
-  if (!match(XorInst, m_Xor(m_Value(BaseOperand), m_ConstantInt(XorConst))))
-    return false;
+  ConstantInt *XorConstant;
 
+  // Match pattern: xor BaseOperand, Constant.
+  if (!match(XorInst, m_Xor(m_Value(BaseOperand), m_ConstantInt(XorConstant))))
+    return APInt::getZero(BitWidth);
+
+  // Compute known bits for the base operand.
   const SimplifyQuery SQ(DL);
-  const KnownBits BaseKnown = computeKnownBits(BaseOperand, SQ);
-  const APInt &ConstValue = XorConst->getValue();
+  const KnownBits BaseKnownBits = computeKnownBits(BaseOperand, SQ);
+  const APInt &ConstantValue = XorConstant->getValue();
 
-  // Check if any bits of the constant can be treated as disjoint
-  // (addition-like).
-  const APInt DisjointBits = ConstValue & BaseKnown.Zero;
+  // Identify disjoint bits: constant bits that are known zero in base.
+  const APInt DisjointBits = ConstantValue & BaseKnownBits.Zero;
+
+  // Early exit if no disjoint bits found.
   if (DisjointBits.isZero())
-    return false;
+    return APInt::getZero(BitWidth);
 
-  // Split the xor into disjoint and non-disjoint parts.
-  const APInt NonDisjointBits = ConstValue & ~DisjointBits;
+  // Compute the remaining non-disjoint bits that stay in the XOR.
+  const APInt NonDisjointBits = ConstantValue & ~DisjointBits;
 
-  IRBuilder<> Builder(XorInst);
-  Type *Ty = XorConst->getType();
+  // Add the non-disjoint constant to the user chain for later transformation
+  // This will replace the original constant in the XOR with the reduced
+  // constant.
+  UserChain.push_back(ConstantInt::get(XorInst->getType(), NonDisjointBits));
 
-  // Transform: (base ^ constant) -> ((base ^ non_disjoint) ^ disjoint).
-  if (!NonDisjointBits.isZero()) {
-    Value *NewBase =
-        Builder.CreateXor(BaseOperand, ConstantInt::get(Ty, NonDisjointBits));
-    XorInst->setOperand(0, NewBase);
-  }
-
-  XorInst->setOperand(1, ConstantInt::get(Ty, DisjointBits));
-  return true;
+  return DisjointBits;
 }
 
 /// A helper function to check if reassociating through an entry in the user

@@ -6,25 +6,27 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=separate-const-offset-from-gep,gvn \
 ; RUN: -S < %s | FileCheck --check-prefix=GVN %s
 
+; Check that disjoint constants are properly extracted and folded into GEP
+; addressing modes and GVN to eliminate redundant computations
 define amdgpu_kernel void @test1(i1 %0, ptr addrspace(3) %1) {
 ; CHECK-LABEL: define amdgpu_kernel void @test1(
 ; CHECK-SAME: i1 [[TMP0:%.*]], ptr addrspace(3) [[TMP1:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i32 0, i32 288
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 32
-; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP2]], 32
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP2]], 32
-; CHECK-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP2]], 32
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP4]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP8]], i32 8192
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP10]], i32 16384
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP6]], i32 8192
+; CHECK-NEXT:    [[TMP8:%.*]] = xor i32 [[TMP2]], 32
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP9]], i32 16384
+; CHECK-NEXT:    [[TMP11:%.*]] = xor i32 [[TMP2]], 32
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP12]], i32 24576
-; CHECK-NEXT:    [[TMP14:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP7]], align 16
-; CHECK-NEXT:    [[TMP15:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP9]], align 16
-; CHECK-NEXT:    [[TMP16:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP11]], align 16
+; CHECK-NEXT:    [[TMP14:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP4]], align 16
+; CHECK-NEXT:    [[TMP15:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP7]], align 16
+; CHECK-NEXT:    [[TMP16:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP10]], align 16
 ; CHECK-NEXT:    [[TMP17:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP13]], align 16
 ; CHECK-NEXT:    [[TMP18:%.*]] = fadd <8 x half> [[TMP14]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = fadd <8 x half> [[TMP16]], [[TMP17]]
@@ -72,6 +74,8 @@ entry:
   ret void
 }
 
+; Check that disjoint constants are properly extracted and folded into GEP
+; addressing modes and GVN to eliminate redundant computations
 define amdgpu_kernel void @test2(i1 %0, ptr addrspace(3) %1) {
 ; CHECK-LABEL: define amdgpu_kernel void @test2(
 ; CHECK-SAME: i1 [[TMP0:%.*]], ptr addrspace(3) [[TMP1:%.*]]) {
@@ -79,17 +83,17 @@ define amdgpu_kernel void @test2(i1 %0, ptr addrspace(3) %1) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i32 0, i32 288
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 32
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP2]], 32
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP2]], 32
-; CHECK-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP2]], 32
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP7]], i32 24576
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP4]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP9]], i32 16384
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP5]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP5]], i32 24576
+; CHECK-NEXT:    [[TMP7:%.*]] = xor i32 [[TMP2]], 32
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP8]], i32 16384
+; CHECK-NEXT:    [[TMP10:%.*]] = xor i32 [[TMP2]], 32
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP11]], i32 8192
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP6]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP8]], align 16
-; CHECK-NEXT:    [[TMP15:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP10]], align 16
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP14:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP6]], align 16
+; CHECK-NEXT:    [[TMP15:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP9]], align 16
 ; CHECK-NEXT:    [[TMP16:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP12]], align 16
 ; CHECK-NEXT:    [[TMP17:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP13]], align 16
 ; CHECK-NEXT:    [[TMP18:%.*]] = fadd <8 x half> [[TMP14]], [[TMP15]]
@@ -138,21 +142,22 @@ entry:
   ret void
 }
 
+; Verify that xor instructions with different non-disjoint constants are optimized
 define amdgpu_kernel void @test3(i1 %0, ptr addrspace(3) %1) {
 ; CHECK-LABEL: define amdgpu_kernel void @test3(
 ; CHECK-SAME: i1 [[TMP0:%.*]], ptr addrspace(3) [[TMP1:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i32 0, i32 288
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 32
-; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP2]], 288
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP2]], 32
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP7]], i32 4096
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP5]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP2]], 288
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP6]], i32 4096
+; CHECK-NEXT:    [[TMP8:%.*]] = xor i32 [[TMP2]], 32
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP9]], i32 8192
-; CHECK-NEXT:    [[TMP11:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP6]], align 16
-; CHECK-NEXT:    [[TMP12:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP8]], align 16
+; CHECK-NEXT:    [[TMP11:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP4]], align 16
+; CHECK-NEXT:    [[TMP12:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP7]], align 16
 ; CHECK-NEXT:    [[TMP13:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP10]], align 16
 ; CHECK-NEXT:    [[TMP14:%.*]] = fadd <8 x half> [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = fadd <8 x half> [[TMP13]], [[TMP14]]
@@ -164,12 +169,12 @@ define amdgpu_kernel void @test3(i1 %0, ptr addrspace(3) %1) {
 ; GVN-NEXT:  [[ENTRY:.*:]]
 ; GVN-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i32 0, i32 288
 ; GVN-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 32
-; GVN-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP2]], 288
-; GVN-NEXT:    [[TMP5:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
-; GVN-NEXT:    [[TMP6:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP4]]
+; GVN-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
+; GVN-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP2]], 288
+; GVN-NEXT:    [[TMP6:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP5]]
 ; GVN-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP6]], i32 4096
-; GVN-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP5]], i32 8192
-; GVN-NEXT:    [[TMP9:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP5]], align 16
+; GVN-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP4]], i32 8192
+; GVN-NEXT:    [[TMP9:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP4]], align 16
 ; GVN-NEXT:    [[TMP10:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP7]], align 16
 ; GVN-NEXT:    [[TMP11:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP8]], align 16
 ; GVN-NEXT:    [[TMP12:%.*]] = fadd <8 x half> [[TMP9]], [[TMP10]]
@@ -193,3 +198,190 @@ entry:
   store <8 x half> %13, ptr addrspace(3) %1, align 16
   ret void
 }
+
+; Verify that no optimization occurs when disjoint constants are absent
+define amdgpu_kernel void @test4(i1 %0, ptr addrspace(3) %1) {
+; CHECK-LABEL: define amdgpu_kernel void @test4(
+; CHECK-SAME: i1 [[TMP0:%.*]], ptr addrspace(3) [[TMP1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i32 0, i32 288
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 32
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP2]], 288
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP5]], align 16
+; CHECK-NEXT:    [[TMP8:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP6]], align 16
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd <8 x half> [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    store <8 x half> [[TMP9]], ptr addrspace(3) [[TMP1]], align 16
+; CHECK-NEXT:    ret void
+;
+; GVN-LABEL: define amdgpu_kernel void @test4(
+; GVN-SAME: i1 [[TMP0:%.*]], ptr addrspace(3) [[TMP1:%.*]]) {
+; GVN-NEXT:  [[ENTRY:.*:]]
+; GVN-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i32 0, i32 288
+; GVN-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 32
+; GVN-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP2]], 288
+; GVN-NEXT:    [[TMP5:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
+; GVN-NEXT:    [[TMP6:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP4]]
+; GVN-NEXT:    [[TMP7:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP5]], align 16
+; GVN-NEXT:    [[TMP8:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP6]], align 16
+; GVN-NEXT:    [[TMP9:%.*]] = fadd <8 x half> [[TMP7]], [[TMP8]]
+; GVN-NEXT:    store <8 x half> [[TMP9]], ptr addrspace(3) [[TMP1]], align 16
+; GVN-NEXT:    ret void
+;
+entry:
+  %2 = select i1 %0, i32 0, i32 288
+  %3 = xor i32 %2, 32
+  %4 = xor i32 %2, 288
+  %5 = getelementptr half, ptr addrspace(3) %1, i32 %3
+  %6 = getelementptr half, ptr addrspace(3) %1, i32 %4
+  %7 = load <8 x half>, ptr addrspace(3) %5, align 16
+  %8 = load <8 x half>, ptr addrspace(3) %6, align 16
+  %9 = fadd <8 x half> %7, %8
+  store <8 x half> %9, ptr addrspace(3) %1, align 16
+  ret void
+}
+
+
+; Verify that XOR-BinOp-GEP usage chains are properly optimized
+define amdgpu_kernel void @test5(i1 %0, ptr addrspace(3) %1) {
+; CHECK-LABEL: define amdgpu_kernel void @test5(
+; CHECK-SAME: i1 [[TMP0:%.*]], ptr addrspace(3) [[TMP1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i32 0, i32 288
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 32
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP2]], 32
+; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], 256
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP7]], i32 8192
+; CHECK-NEXT:    [[TMP9:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP4]], align 16
+; CHECK-NEXT:    [[TMP10:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP8]], align 16
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd <8 x half> [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    store <8 x half> [[TMP11]], ptr addrspace(3) [[TMP1]], align 16
+; CHECK-NEXT:    ret void
+;
+; GVN-LABEL: define amdgpu_kernel void @test5(
+; GVN-SAME: i1 [[TMP0:%.*]], ptr addrspace(3) [[TMP1:%.*]]) {
+; GVN-NEXT:  [[ENTRY:.*:]]
+; GVN-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i32 0, i32 288
+; GVN-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 32
+; GVN-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
+; GVN-NEXT:    [[TMP5:%.*]] = add i32 [[TMP3]], 256
+; GVN-NEXT:    [[TMP6:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP5]]
+; GVN-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP6]], i32 8192
+; GVN-NEXT:    [[TMP8:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP4]], align 16
+; GVN-NEXT:    [[TMP9:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP7]], align 16
+; GVN-NEXT:    [[TMP10:%.*]] = fadd <8 x half> [[TMP8]], [[TMP9]]
+; GVN-NEXT:    store <8 x half> [[TMP10]], ptr addrspace(3) [[TMP1]], align 16
+; GVN-NEXT:    ret void
+;
+entry:
+  %2 = select i1 %0, i32 0, i32 288
+  %3 = xor i32 %2, 32
+  %4 = xor i32 %2, 4128
+  %5 = add i32 %4, 256
+  %6 = getelementptr half, ptr addrspace(3) %1, i32 %3
+  %7 = getelementptr half, ptr addrspace(3) %1, i32 %5
+  %8 = load <8 x half>, ptr addrspace(3) %6, align 16
+  %9 = load <8 x half>, ptr addrspace(3) %7, align 16
+  %10 = fadd <8 x half> %8, %9
+  store <8 x half> %10, ptr addrspace(3) %1, align 16
+  ret void
+}
+
+
+; Verify that BinOp-XOR-GEP usage chains are properly optimized
+; This represents the common pattern found in real target workloads
+define amdgpu_kernel void @test6(i1 %0, ptr addrspace(3) %1) {
+; CHECK-LABEL: define amdgpu_kernel void @test6(
+; CHECK-SAME: i1 [[TMP0:%.*]], ptr addrspace(3) [[TMP1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i32 0, i32 288
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 32
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP2]], 256
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP4]], 32
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP7]], i32 8192
+; CHECK-NEXT:    [[TMP9:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP5]], align 16
+; CHECK-NEXT:    [[TMP10:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP8]], align 16
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd <8 x half> [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    store <8 x half> [[TMP11]], ptr addrspace(3) [[TMP1]], align 16
+; CHECK-NEXT:    ret void
+;
+; GVN-LABEL: define amdgpu_kernel void @test6(
+; GVN-SAME: i1 [[TMP0:%.*]], ptr addrspace(3) [[TMP1:%.*]]) {
+; GVN-NEXT:  [[ENTRY:.*:]]
+; GVN-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i32 0, i32 288
+; GVN-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 32
+; GVN-NEXT:    [[TMP4:%.*]] = add i32 [[TMP2]], 256
+; GVN-NEXT:    [[TMP5:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
+; GVN-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP4]], 32
+; GVN-NEXT:    [[TMP7:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP6]]
+; GVN-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP7]], i32 8192
+; GVN-NEXT:    [[TMP9:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP5]], align 16
+; GVN-NEXT:    [[TMP10:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP8]], align 16
+; GVN-NEXT:    [[TMP11:%.*]] = fadd <8 x half> [[TMP9]], [[TMP10]]
+; GVN-NEXT:    store <8 x half> [[TMP11]], ptr addrspace(3) [[TMP1]], align 16
+; GVN-NEXT:    ret void
+;
+entry:
+  %2 = select i1 %0, i32 0, i32 288
+  %3 = xor i32 %2, 32
+  %4 = add i32 %2, 256
+  %5 = xor i32 %4, 4128
+  %6 = getelementptr half, ptr addrspace(3) %1, i32 %3
+  %7 = getelementptr half, ptr addrspace(3) %1, i32 %5
+  %8 = load <8 x half>, ptr addrspace(3) %6, align 16
+  %9 = load <8 x half>, ptr addrspace(3) %7, align 16
+  %10 = fadd <8 x half> %8, %9
+  store <8 x half> %10, ptr addrspace(3) %1, align 16
+  ret void
+}
+
+
+; Ensure disjoint constants exceeding addressing mode limits (e.g., 32768) are
+; not extracted
+define amdgpu_kernel void @test7(i1 %0, ptr addrspace(3) %1) {
+; CHECK-LABEL: define amdgpu_kernel void @test7(
+; CHECK-SAME: i1 [[TMP0:%.*]], ptr addrspace(3) [[TMP1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i32 0, i32 288
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 32
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP2]], 32800
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP5]], align 16
+; CHECK-NEXT:    [[TMP8:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP6]], align 16
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd <8 x half> [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    store <8 x half> [[TMP9]], ptr addrspace(3) [[TMP1]], align 16
+; CHECK-NEXT:    ret void
+;
+; GVN-LABEL: define amdgpu_kernel void @test7(
+; GVN-SAME: i1 [[TMP0:%.*]], ptr addrspace(3) [[TMP1:%.*]]) {
+; GVN-NEXT:  [[ENTRY:.*:]]
+; GVN-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i32 0, i32 288
+; GVN-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 32
+; GVN-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP2]], 32800
+; GVN-NEXT:    [[TMP5:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
+; GVN-NEXT:    [[TMP6:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP4]]
+; GVN-NEXT:    [[TMP7:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP5]], align 16
+; GVN-NEXT:    [[TMP8:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP6]], align 16
+; GVN-NEXT:    [[TMP9:%.*]] = fadd <8 x half> [[TMP7]], [[TMP8]]
+; GVN-NEXT:    store <8 x half> [[TMP9]], ptr addrspace(3) [[TMP1]], align 16
+; GVN-NEXT:    ret void
+;
+entry:
+  %2 = select i1 %0, i32 0, i32 288
+  %3 = xor i32 %2, 32
+  %4 = xor i32 %2, 32800
+  %5 = getelementptr half, ptr addrspace(3) %1, i32 %3
+  %6 = getelementptr half, ptr addrspace(3) %1, i32 %4
+  %7 = load <8 x half>, ptr addrspace(3) %5, align 16
+  %8 = load <8 x half>, ptr addrspace(3) %6, align 16
+  %9 = fadd <8 x half> %7, %8
+  store <8 x half> %9, ptr addrspace(3) %1, align 16
+  ret void
+}
+
