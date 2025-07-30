@@ -23,6 +23,7 @@
 #include "Hexagon.h"
 #include "MSP430.h"
 #include "Solaris.h"
+#include "ToolChains/Cuda.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"

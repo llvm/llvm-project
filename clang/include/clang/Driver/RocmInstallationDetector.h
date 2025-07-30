@@ -1,4 +1,4 @@
-//===--- ROCm.h - ROCm installation detector --------------------*- C++ -*-===//
+//===-- RocmInstallationDetector.h - ROCm Instalation Detector --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,21 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_ROCM_H
-#define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_ROCM_H
+#ifndef LLVM_CLANG_DRIVER_ROCMINSTALLATIONDETECTOR_H
+#define LLVM_CLANG_DRIVER_ROCMINSTALLATIONDETECTOR_H
 
-#include "clang/Basic/Cuda.h"
-#include "clang/Basic/LLVM.h"
-#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
-#include "clang/Driver/SanitizerArgs.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/Option/ArgList.h"
-#include "llvm/Support/VersionTuple.h"
-#include "llvm/TargetParser/TargetParser.h"
-#include "llvm/TargetParser/Triple.h"
 
 namespace clang {
 namespace driver {
@@ -308,7 +297,7 @@ public:
   StringRef getHIPVersion() const { return DetectedVersion; }
 };
 
-} // end namespace driver
-} // end namespace clang
+} // namespace driver
+} // namespace clang
 
-#endif // LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_ROCM_H
+#endif // LLVM_CLANG_DRIVER_ROCMINSTALLATIONDETECTOR_H

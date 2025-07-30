@@ -10,7 +10,6 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_AMDGPU_H
 
 #include "Gnu.h"
-#include "ROCm.h"
 #include "clang/Basic/TargetID.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
