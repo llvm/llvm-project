@@ -255,7 +255,7 @@ void ProcedureRef::DetermineCopyInOut() {
   // Get folding context of the call site owner
   FoldingContext &fc{proc_.GetSymbol()->owner().context().foldingContext()};
   auto procInfo{characteristics::Procedure::Characterize(
-      proc(), fc, /*emitError=*/false)};
+      proc_, fc, /*emitError=*/true)};
   if (!procInfo) {
     return;
   }

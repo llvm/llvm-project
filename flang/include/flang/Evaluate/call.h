@@ -248,7 +248,11 @@ public:
   ProcedureRef(ProcedureDesignator &&p, ActualArguments &&a,
       bool hasAlternateReturns = false)
       : proc_{std::move(p)}, arguments_{std::move(a)},
-        hasAlternateReturns_{hasAlternateReturns} {}
+        hasAlternateReturns_{hasAlternateReturns} {
+    // Gathers necessary information to determine the need for copy-in and
+    // copy-out
+    DetermineCopyInOut();
+  }
   ~ProcedureRef();
   static void Deleter(ProcedureRef *);
 
@@ -285,9 +289,9 @@ public:
   bool operator==(const ProcedureRef &) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
+protected:
   void DetermineCopyInOut();
 
-protected:
   ProcedureDesignator proc_;
   ActualArguments arguments_;
   Chevrons chevrons_;
