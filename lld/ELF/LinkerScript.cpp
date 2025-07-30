@@ -1230,6 +1230,9 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
   if (sec->firstInOverlay)
     state->overlaySize = 0;
 
+  bool synthesizeAlign =
+      (sec->flags & SHF_EXECINSTR) && ctx.arg.relocatable && ctx.arg.relax &&
+      is_contained({EM_RISCV, EM_LOONGARCH}, ctx.arg.emachine);
   // We visited SectionsCommands from processSectionCommands to
   // layout sections. Now, we visit SectionsCommands again to fix
   // section offsets.
@@ -1260,7 +1263,8 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
       if (isa<PotentialSpillSection>(isec))
         continue;
       const uint64_t pos = dot;
-      dot = alignToPowerOf2(dot, isec->addralign);
+      if (!(synthesizeAlign && ctx.target->maybeSynthesizeAlign(dot, isec)))
+        dot = alignToPowerOf2(dot, isec->addralign);
       isec->outSecOff = dot - sec->addr;
       dot += isec->getSize();
 
@@ -1275,6 +1279,12 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
   // boundary to protect the last page.
   if (ctx.in.relroPadding && sec == ctx.in.relroPadding->getParent())
     expandOutputSection(alignToPowerOf2(dot, ctx.arg.commonPageSize) - dot);
+
+  if (synthesizeAlign) {
+    const uint64_t pos = dot;
+    ctx.target->maybeSynthesizeAlign(dot, nullptr);
+    expandOutputSection(dot - pos);
+  }
 
   // Non-SHF_ALLOC sections do not affect the addresses of other OutputSections
   // as they are not part of the process image.

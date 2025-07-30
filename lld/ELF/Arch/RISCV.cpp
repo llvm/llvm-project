@@ -45,7 +45,15 @@ public:
                 uint64_t val) const override;
   void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
   bool relaxOnce(int pass) const override;
+  template <class ELFT, class RelTy>
+  bool synthesizeAlign(uint64_t &dot, InputSection *sec, Relocs<RelTy> rels);
+  template <class ELFT, class RelTy>
+  bool synthesizeAlignEnd(uint64_t &dot, InputSection *sec, Relocs<RelTy> rels);
+  bool maybeSynthesizeAlign(uint64_t &dot, InputSection *sec) override;
   void finalizeRelax(int passes) const override;
+
+  InputSection *baseSec = nullptr;
+  SmallVector<std::pair<uint64_t, uint64_t>, 0> synthesizedAligns;
 };
 
 } // end anonymous namespace
@@ -959,10 +967,102 @@ bool RISCV::relaxOnce(int pass) const {
   return changed;
 }
 
+template <class ELFT, class RelTy>
+bool RISCV::synthesizeAlign(uint64_t &dot, InputSection *sec,
+                            Relocs<RelTy> rels) {
+  if (!baseSec) {
+    // Record the first section with RELAX relocations.
+    for (auto rel : rels) {
+      if (rel.getType(false) == R_RISCV_RELAX) {
+        baseSec = sec;
+        break;
+      }
+    }
+  } else if (sec->addralign >= 4) {
+    // If the alignment is >= 4 and the section does not start with an ALIGN
+    // relocation, synthesize one.
+    bool alignRel = false;
+    for (auto rel : rels) {
+      if (rel.r_offset == 0 && rel.getType(false) == R_RISCV_ALIGN)
+        alignRel = true;
+      break;
+    }
+    if (!alignRel) {
+      synthesizedAligns.emplace_back(dot - baseSec->getVA(),
+                                     sec->addralign - 2);
+      dot += sec->addralign - 2;
+      return true;
+    }
+  }
+  return false;
+}
+
+template <class ELFT, class RelTy>
+bool RISCV::synthesizeAlignEnd(uint64_t &dot, InputSection *sec,
+                               Relocs<RelTy> rels) {
+  auto *f = cast<ObjFile<ELFT>>(baseSec->file);
+  auto shdr = f->template getELFShdrs<ELFT>()[baseSec->relSecIdx];
+  sec = make<InputSection>(*f, shdr, baseSec->name);
+  auto *baseRelSec = cast<InputSection>(f->getSections()[baseSec->relSecIdx]);
+  baseSec = nullptr;
+  *sec = *baseRelSec;
+
+  auto newSize = rels.size() + synthesizedAligns.size();
+  auto *relas = makeThreadLocalN<typename ELFT::Rela>(newSize);
+  sec->size = newSize * sizeof(typename ELFT::Rela);
+  sec->content_ = reinterpret_cast<uint8_t *>(relas);
+  // Copy original relocations.
+  for (auto [i, r] : llvm::enumerate(rels)) {
+    relas[i].r_offset = r.r_offset;
+    relas[i].setRInfo(r.getRInfo(false), false);
+    relas[i].r_addend = r.r_addend;
+  }
+  // Append synthesized ALIGN relocations.
+  for (auto [i, r] : llvm::enumerate(synthesizedAligns)) {
+    auto &rela = relas[rels.size() + i];
+    rela.r_offset = r.first;
+    rela.setSymbolAndType(0, R_RISCV_ALIGN, false);
+    rela.r_addend = r.second;
+  }
+  // In the output relocation section, replace the old relocation section with
+  // the new one.
+  for (SectionCommand *cmd : sec->getParent()->commands) {
+    auto *isd = dyn_cast<InputSectionDescription>(cmd);
+    if (!isd)
+      continue;
+    for (auto *&isec : isd->sections)
+      if (isec == baseRelSec)
+        isec = sec;
+  }
+  return false;
+}
+
+bool RISCV::maybeSynthesizeAlign(uint64_t &dot, InputSection *sec) {
+  if (sec) {
+    if (ctx.arg.is64) {
+      const RelsOrRelas<ELF64LE> rs = sec->template relsOrRelas<ELF64LE>();
+      return synthesizeAlign<ELF64LE>(dot, sec, rs.relas);
+    } else {
+      const RelsOrRelas<ELF32LE> rs = sec->template relsOrRelas<ELF32LE>();
+      return synthesizeAlign<ELF32LE>(dot, sec, rs.relas);
+    }
+  }
+  if (!baseSec)
+    return false;
+  if (ctx.arg.is64) {
+    const RelsOrRelas<ELF64LE> rs = baseSec->template relsOrRelas<ELF64LE>();
+    return synthesizeAlignEnd<ELF64LE>(dot, sec, rs.relas);
+  } else {
+    const RelsOrRelas<ELF32LE> rs = baseSec->template relsOrRelas<ELF32LE>();
+    return synthesizeAlignEnd<ELF32LE>(dot, sec, rs.relas);
+  }
+}
+
 void RISCV::finalizeRelax(int passes) const {
   llvm::TimeTraceScope timeScope("Finalize RISC-V relaxation");
   Log(ctx) << "relaxation passes: " << passes;
   SmallVector<InputSection *, 0> storage;
+
   for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
