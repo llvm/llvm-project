@@ -124,6 +124,7 @@
 #include "llvm/CodeGen/MachineCopyPropagation.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineLICM.h"
 #include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachinePassManager.h"
@@ -363,6 +364,7 @@
 #include "llvm/Transforms/Utils/MoveAutoInit.h"
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
 #include "llvm/Transforms/Utils/PredicateInfo.h"
+#include "llvm/Transforms/Utils/ProfileVerify.h"
 #include "llvm/Transforms/Utils/RelLookupTableConverter.h"
 #include "llvm/Transforms/Utils/StripGCRelocates.h"
 #include "llvm/Transforms/Utils/StripNonLineTableDebugInfo.h"
@@ -1189,9 +1191,13 @@ Expected<GVNOptions> parseGVNOptions(StringRef Params) {
     } else if (ParamName == "split-backedge-load-pre") {
       Result.setLoadPRESplitBackedge(Enable);
     } else if (ParamName == "memdep") {
+      // MemDep and MemorySSA are mutually exclusive.
       Result.setMemDep(Enable);
+      Result.setMemorySSA(!Enable);
     } else if (ParamName == "memoryssa") {
+      // MemDep and MemorySSA are mutually exclusive.
       Result.setMemorySSA(Enable);
+      Result.setMemDep(!Enable);
     } else {
       return make_error<StringError>(
           formatv("invalid GVN pass parameter '{}'", ParamName).str(),
