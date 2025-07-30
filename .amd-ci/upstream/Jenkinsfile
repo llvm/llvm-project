@@ -41,6 +41,7 @@ String abortedResultStr = Result.ABORTED, failureResultStr = Result.FAILURE
 String notBuiltResultStr = Result.NOT_BUILT, successResultStr = Result.SUCCESS
 
 String space = ' ', andChain = '&&', underScore = '_', slash = '/'
+String gitCommitEnv = 'GIT_COMMIT'
 
 List propsList = []
 if (isPrBranch) {
@@ -82,6 +83,8 @@ String jobName = (
 if (env.CHANGE_BRANCH) {
     jobName += underScore + env.BRANCH_NAME // Sic, the PR-<n> string.
 }
+
+def gitVars // groovylint-disable-line NoDef,VariableTypeRequired
 
 Integer fullTimeoutH = 15
 
@@ -154,11 +157,19 @@ try {
                                     '''git merge main -m "Merge from main on $(date +'%Y-%m-%d')"'''
                             )
                         )
+                        dir(llvmProj) {
+                            String gitCommit = sh(
+                                label: 'rev-parse',
+                                script: 'git rev-parse HEAD',
+                                returnStdout: true
+                            ).trim()
+                            gitVars = [(gitCommitEnv): gitCommit]
+                        }
                     }
                 } else {
                     theUrl = 'https://github.amd.com/AOCC/llvm-project'
                     dir (llvmProj) {
-                        def gitVars = checkout( // groovylint-disable-line NoDef,VariableTypeRequired
+                        gitVars = checkout(
                             changelog: true,
                             scm: scmGit(
                                 gitTool: gitTool,
@@ -230,7 +241,7 @@ try {
                         }
 
                         String mstat
-                        withEnv([gitPathEnv, 'GIT_COMMIT=' + gitVars.GIT_COMMIT]) {
+                        withEnv([gitPathEnv, gitCommitEnv + '=' + gitVars.GIT_COMMIT]) {
                             withCredentials([
                                 usernamePassword(
                                     credentialsId: gitHubAppCredsId,
@@ -305,7 +316,8 @@ try {
                                 jobName + '-' + env.BUILD_NUMBER + '.tar.xz'
                         )
                     ),
-                    string(name: 'CHANGE_ID', value: env.CHANGE_ID)
+                    string(name: 'CHANGE_ID', value: env.CHANGE_ID ?: ''),
+                    string(name: gitCommitEnv, value: gitVars.GIT_COMMIT ?: '')
                 ]
             )
         }
