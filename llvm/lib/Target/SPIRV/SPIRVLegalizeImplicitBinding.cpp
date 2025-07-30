@@ -68,7 +68,7 @@ struct BindingInfoCollector : public InstVisitor<BindingInfoCollector> {
         UsedBindings[DescSet].resize(64);
       }
       if (UsedBindings[DescSet].size() <= Binding) {
-        UsedBindings[DescSet].resize(2 * Binding);
+        UsedBindings[DescSet].resize(2 * Binding + 1);
       }
       UsedBindings[DescSet].set(Binding);
     } else if (CI.getIntrinsicID() ==
