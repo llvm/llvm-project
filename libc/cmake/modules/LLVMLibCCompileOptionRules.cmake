@@ -13,7 +13,7 @@ endif()
 function(_get_compile_options_from_flags output_var)
   set(compile_options "")
 
-  if(LIBC_TARGET_ARCHITECTURE_IS_RISCV64 OR(LIBC_CPU_FEATURES MATCHES "FMA"))
+  if(LIBC_CPU_FEATURES MATCHES "FMA")
     check_flag(ADD_FMA_FLAG ${FMA_OPT_FLAG} ${ARGN})
   endif()
   check_flag(ADD_ROUND_OPT_FLAG ${ROUND_OPT_FLAG} ${ARGN})
@@ -25,8 +25,6 @@ function(_get_compile_options_from_flags output_var)
       if(LIBC_TARGET_ARCHITECTURE_IS_X86_64)
         list(APPEND compile_options "-mavx2")
         list(APPEND compile_options "-mfma")
-      elseif(LIBC_TARGET_ARCHITECTURE_IS_RISCV64)
-        list(APPEND compile_options "-D__LIBC_RISCV_USE_FMA")
       endif()
       # For clang, we will build the math functions with `-fno-math-errno` so that
       # __builtin_fma* will generate the fused-mutliply-add instructions.  We

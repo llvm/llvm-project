@@ -362,6 +362,7 @@ enum {
   ELFOSABI_FENIXOS = 16,       // FenixOS
   ELFOSABI_CLOUDABI = 17,      // Nuxi CloudABI
   ELFOSABI_CUDA = 51,          // NVIDIA CUDA architecture.
+  ELFOSABI_CUDA_V2 = 41,       // NVIDIA CUDA architecture.
   ELFOSABI_FIRST_ARCH = 64,    // First architecture-specific OS ABI
   ELFOSABI_AMDGPU_HSA = 64,    // AMD HSA runtime
   ELFOSABI_AMDGPU_PAL = 65,    // AMD PAL runtime
@@ -383,6 +384,12 @@ enum {
   ELFABIVERSION_AMDGPU_HSA_V4 = 2,
   ELFABIVERSION_AMDGPU_HSA_V5 = 3,
   ELFABIVERSION_AMDGPU_HSA_V6 = 4,
+};
+
+// CUDA OS ABI Version identification.
+enum {
+  ELFABIVERSION_CUDA_V1 = 7,
+  ELFABIVERSION_CUDA_V2 = 8,
 };
 
 #define ELF_RELOC(name, value) name = value,
@@ -921,7 +928,7 @@ enum {
 
 // NVPTX specific e_flags.
 enum : unsigned {
-  // Processor selection mask for EF_CUDA_SM* values.
+  // Processor selection mask for EF_CUDA_SM* values prior to blackwell.
   EF_CUDA_SM = 0xff,
 
   // SM based processor values.
@@ -954,12 +961,22 @@ enum : unsigned {
   // The target is using 64-bit addressing.
   EF_CUDA_64BIT_ADDRESS = 0x400,
   // Set when using the sm_90a processor.
-  EF_CUDA_ACCELERATORS = 0x800,
+  EF_CUDA_ACCELERATORS_V1 = 0x800,
   // Undocumented software feature.
   EF_CUDA_SW_FLAG_V2 = 0x1000,
 
   // Virtual processor selection mask for EF_CUDA_VIRTUAL_SM* values.
   EF_CUDA_VIRTUAL_SM = 0xff0000,
+
+  // Processor selection mask for EF_CUDA_SM* values following blackwell.
+  EF_CUDA_SM_MASK = 0xff00,
+
+  // SM based processor values.
+  EF_CUDA_SM100 = 0x6400,
+  EF_CUDA_SM120 = 0x7800,
+
+  // Set when using an accelerator variant like sm_100a.
+  EF_CUDA_ACCELERATORS = 0x8,
 };
 
 // ELF Relocation types for BPF

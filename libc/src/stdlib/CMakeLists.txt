@@ -191,8 +191,9 @@ add_entrypoint_object(
   HDRS
     a64l.h
   DEPENDS
-    libc.src.__support.ctype_utils
+    libc.hdr.stdint_proxy
     libc.hdr.types.size_t
+    libc.src.__support.ctype_utils
 )
 
 add_entrypoint_object(
@@ -202,8 +203,9 @@ add_entrypoint_object(
   HDRS
     l64a.h
   DEPENDS
-    libc.src.__support.ctype_utils
+    libc.hdr.stdint_proxy
     libc.hdr.types.size_t
+    libc.src.__support.ctype_utils
 )
 
 add_entrypoint_object(
@@ -287,6 +289,7 @@ add_header_library(
     heap_sort.h
     quick_sort.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.stdlib
     libc.src.__support.CPP.cstddef
 )
@@ -299,6 +302,7 @@ add_entrypoint_object(
     qsort.h
   DEPENDS
     .qsort_util
+    libc.hdr.stdint_proxy
     libc.hdr.types.size_t
 )
 
@@ -310,6 +314,7 @@ add_entrypoint_object(
     qsort_r.h
   DEPENDS
     .qsort_util
+    libc.hdr.stdint_proxy
     libc.hdr.types.size_t
 )
 
