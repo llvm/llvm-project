@@ -4440,6 +4440,12 @@ defm data_sections : BoolFOption<"data-sections",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Place each data in its own section">,
   NegFlag<SetFalse>>;
+defm experimental_call_graph_section
+    : BoolFOption<"experimental-call-graph-section",
+                  CodeGenOpts<"CallGraphSection">, DefaultFalse,
+                  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+                          "Emit a call graph section">,
+                  NegFlag<SetFalse>>;
 defm stack_size_section : BoolFOption<"stack-size-section",
   CodeGenOpts<"StackSizeSection">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
