@@ -1,4 +1,7 @@
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.core.StoreToImmutable -std=c++11 -verify %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.core.StoreToImmutable -std=c++14 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.core.StoreToImmutable -std=c++17 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.core.StoreToImmutable -std=c++20 -verify %s
 
 // expected-no-diagnostics
 
