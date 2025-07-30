@@ -166,9 +166,8 @@ MCSection *RISCVELFTargetObjectFile::getSectionForConstant(
   // put them in the .text section. Large code model doesn't support PIC, so
   // there should be no dynamic relocations that would require `.data.rel.ro`
   // (which could be too far away anyway).
-  if (TM->getCodeModel() == CodeModel::Large) {
+  if (TM->getCodeModel() == CodeModel::Large)
     return TextSection;
-  }
 
   if (C && isConstantInSmallSection(DL, C)) {
     if (Kind.isMergeableConst4())
