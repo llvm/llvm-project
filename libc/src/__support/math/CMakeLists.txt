@@ -158,7 +158,7 @@ add_header_library(
   asinhf16
   HDRS
     asinhf16.h
-DEPENDS
+  DEPENDS
     .acoshf_utils
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
@@ -176,7 +176,7 @@ add_header_library(
   atan_utils
   HDRS
     atan_utils.h
-DEPENDS
+  DEPENDS
     libc.src.__support.integer_literals
     libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.dyadic_float
@@ -189,7 +189,21 @@ add_header_library(
   atan
   HDRS
     atan.h
-DEPENDS
+  DEPENDS
+    .atan_utils
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  atan2
+  HDRS
+    atan2.h
+  DEPENDS
     .atan_utils
     libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.fenv_impl
