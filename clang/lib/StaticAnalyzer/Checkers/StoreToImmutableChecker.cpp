@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/ParentMap.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -73,14 +72,8 @@ bool StoreToImmutableChecker::isInitializationContext(const Stmt *S,
   // distinguish between initialization and assignment, because this information
   // is already available in the engine, it is just not passed to the checker
   // API.
-  if (!isa<CXXConstructExpr>(S))
-    return false;
-
-  // We use elidable construction to detect initialization.
-  if (cast<CXXConstructExpr>(S)->isElidable())
-    return true;
-
-  return false;
+  const auto *ConstructExp = dyn_cast<CXXConstructExpr>(S);
+  return ConstructExp && ConstructExp->isElidable();
 }
 
 static bool isEffectivelyConstRegionAux(const MemRegion *MR,
@@ -158,9 +151,7 @@ void StoreToImmutableChecker::checkBind(SVal Loc, SVal Val, const Stmt *S,
   if (!N)
     return;
 
-  constexpr llvm::StringLiteral Msg =
-      "Writing to immutable memory is undefined behavior. "
-      "This memory region is marked as immutable and should not be modified.";
+  constexpr llvm::StringLiteral Msg = "Trying to write to immutable memory.";
 
   auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
   R->addRange(S->getSourceRange());
@@ -168,7 +159,7 @@ void StoreToImmutableChecker::checkBind(SVal Loc, SVal Val, const Stmt *S,
   // If the location that is being written to has a declaration, place a note.
   if (const DeclRegion *DR = dyn_cast<DeclRegion>(MR)) {
     R->addNote(
-        "Memory region is in immutable space",
+        "Memory region is declared as immutable here",
         PathDiagnosticLocation::create(DR->getDecl(), C.getSourceManager()));
   }
 
