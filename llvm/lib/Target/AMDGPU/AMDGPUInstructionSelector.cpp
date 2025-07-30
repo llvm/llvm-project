@@ -574,13 +574,22 @@ bool AMDGPUInstructionSelector::selectG_AMDGPU_MAD_64_32(
   MachineBasicBlock *BB = I.getParent();
   MachineFunction *MF = BB->getParent();
   const bool IsUnsigned = I.getOpcode() == AMDGPU::G_AMDGPU_MAD_U64_U32;
+  bool UseNoCarry = Subtarget->hasMadU64U32NoCarry() &&
+                    MRI->use_nodbg_empty(I.getOperand(1).getReg());
 
   unsigned Opc;
   if (Subtarget->hasMADIntraFwdBug())
     Opc = IsUnsigned ? AMDGPU::V_MAD_U64_U32_gfx11_e64
                      : AMDGPU::V_MAD_I64_I32_gfx11_e64;
+  else if (UseNoCarry)
+    Opc = IsUnsigned ? AMDGPU::V_MAD_NC_U64_U32_e64
+                     : AMDGPU::V_MAD_NC_I64_I32_e64;
   else
     Opc = IsUnsigned ? AMDGPU::V_MAD_U64_U32_e64 : AMDGPU::V_MAD_I64_I32_e64;
+
+  if (UseNoCarry)
+    I.removeOperand(1);
+
   I.setDesc(TII.get(Opc));
   I.addOperand(*MF, MachineOperand::CreateImm(0));
   I.addImplicitDefUseOperands(*MF);
@@ -3995,6 +4004,9 @@ bool AMDGPUInstructionSelector::selectBITOP3(MachineInstr &MI) const {
   }
 
   unsigned Opc = IsB32 ? AMDGPU::V_BITOP3_B32_e64 : AMDGPU::V_BITOP3_B16_e64;
+  if (!IsB32 && STI.hasTrue16BitInsts())
+    Opc = STI.useRealTrue16Insts() ? AMDGPU::V_BITOP3_B16_gfx1250_t16_e64
+                                   : AMDGPU::V_BITOP3_B16_gfx1250_fake16_e64;
   unsigned CBL = STI.getConstantBusLimit(Opc);
   MachineBasicBlock *MBB = MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
@@ -5786,6 +5798,17 @@ AMDGPUInstructionSelector::selectGlobalSAddrCPol(MachineOperand &Root) const {
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectGlobalSAddrGLC(MachineOperand &Root) const {
   return selectGlobalSAddr(Root, AMDGPU::CPol::GLC);
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectGlobalSAddrNoIOffset(
+    MachineOperand &Root) const {
+  const MachineInstr &I = *Root.getParent();
+
+  // We are assuming CPol is always the last operand of the intrinsic.
+  auto PassedCPol =
+      I.getOperand(I.getNumOperands() - 1).getImm() & ~AMDGPU::CPol::SCAL;
+  return selectGlobalSAddr(Root, PassedCPol, false);
 }
 
 InstructionSelector::ComplexRendererFns
