@@ -3,6 +3,10 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
   return()
 endif()
 
+if(LIBC_CONF_MALLOC_DISABLE_SLAB_RECLAIMING)
+  list(APPEND malloc_config_copts "-DLIBC_CONF_MALLOC_DISABLE_SLAB_RECLAIMING")
+endif()
+
 add_header_library(
   utils
   HDRS
@@ -23,4 +27,5 @@ add_object_library(
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.new
     .utils
+  ${malloc_config_copts}
 )
