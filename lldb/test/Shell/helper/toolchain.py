@@ -119,6 +119,17 @@ def use_lldb_substitutions(config):
 
     lldb_init = _get_lldb_init_path(config)
 
+    sysroot_arg = ""
+    if platform.system() in ["Darwin"]:
+        try:
+            out = subprocess.check_output(["xcrun", "--show-sdk-path"]).strip()
+            res = 0
+        except OSError:
+            res = -1
+        if res == 0 and out:
+            sdk_path = lit.util.to_string(out)
+            sysroot_arg = '--extra-arg="--sysroot=' + sdk_path + '"'
+
     primary_tools = [
         ToolSubst(
             "%lldb",
@@ -163,6 +174,7 @@ def use_lldb_substitutions(config):
             extra_args=[
                 "-p " + config.lldb_build_directory + "/..",
                 '--extra-arg="-resource-dir=' + config.clang_resource_dir + '"',
+                sysroot_arg,
             ],
             unresolved="ignore",
         ),
