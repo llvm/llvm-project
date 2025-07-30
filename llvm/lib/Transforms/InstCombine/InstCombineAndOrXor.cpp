@@ -3642,21 +3642,21 @@ static bool matchSubIntegerPackFromVector(Value *V, Value *&Vec,
   }
 
   // Now try to match a bitcasted subvector.
-  Instruction *DstVecI;
-  if (!match(V, m_BitCast(m_Instruction(DstVecI))))
+  Instruction *SrcVecI;
+  if (!match(V, m_BitCast(m_Instruction(SrcVecI))))
     return false;
 
-  auto *DstTy = dyn_cast<FixedVectorType>(DstVecI->getType());
-  if (!DstTy)
+  auto *SrcTy = dyn_cast<FixedVectorType>(SrcVecI->getType());
+  if (!SrcTy)
     return false;
 
-  Mask.resize(DstTy->getNumElements());
+  Mask.resize(SrcTy->getNumElements());
 
   // First check for a subvector obtained from a shufflevector.
-  if (isa<ShuffleVectorInst>(DstVecI)) {
+  if (isa<ShuffleVectorInst>(SrcVecI)) {
     Constant *ConstVec;
     ArrayRef<int> ShuffleMask;
-    if (!match(DstVecI, m_Shuffle(m_Value(Vec), m_Constant(ConstVec),
+    if (!match(SrcVecI, m_Shuffle(m_Value(Vec), m_Constant(ConstVec),
                                   m_Mask(ShuffleMask))))
       return false;
 
@@ -3695,7 +3695,7 @@ static bool matchSubIntegerPackFromVector(Value *V, Value *&Vec,
 
   // Check for a subvector obtained as an (insertelement V, 0, idx)
   uint64_t InsertIdx;
-  if (!match(DstVecI,
+  if (!match(SrcVecI,
              m_InsertElt(m_Value(Vec), m_Zero(), m_ConstantInt(InsertIdx))))
     return false;
 
@@ -3712,9 +3712,9 @@ static bool matchSubIntegerPackFromVector(Value *V, Value *&Vec,
 
 /// Try to fold the join of two scalar integers whose contents are packed
 /// elements of the same vector.
-Instruction *foldIntegerPackFromVector(Instruction &I,
-                                       InstCombiner::BuilderTy &Builder,
-                                       const DataLayout &DL) {
+static Instruction *foldIntegerPackFromVector(Instruction &I,
+                                              InstCombiner::BuilderTy &Builder,
+                                              const DataLayout &DL) {
   assert(I.getOpcode() == Instruction::Or);
   Value *LhsVec, *RhsVec;
   int64_t LhsVecOffset, RhsVecOffset;
