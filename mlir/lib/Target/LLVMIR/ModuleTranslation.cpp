@@ -2277,8 +2277,11 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
         llvm::Triple(cast<StringAttr>(targetTripleAttr).getValue()));
 
   if (auto asmAttr =
-          m->getDiscardableAttr(LLVM::LLVMDialect::getModuleLevelAsmAttrName()))
-    llvmModule->setModuleInlineAsm(cast<StringAttr>(asmAttr).getValue());
+          m->getDiscardableAttr(LLVM::LLVMDialect::getModuleLevelAsmAttrName())) {
+    auto arr = cast<ArrayAttr>(asmAttr);
+    for (unsigned i = 0; i < arr.size(); ++i)
+      llvmModule->appendModuleInlineAsm(cast<StringAttr>(arr[i]).getValue());
+  }
 
   return llvmModule;
 }
