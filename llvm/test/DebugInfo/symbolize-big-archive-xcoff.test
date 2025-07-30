@@ -1,5 +1,4 @@
 // Test big archive recognition and error handling in llvm-symbolizer
-// REQUIRES: system-aix, target={{.*}}-aix{{.*}}
 
 // Generate object files
 // RUN: yaml2obj -o %t-32.o %S/Inputs/big-archive-32.yaml
@@ -7,21 +6,38 @@
 
 // Create archive with same-named members using different modes
 // RUN: rm -f %t.a
-// RUN: cp %t-32.o %t.o && llvm-ar -X32 crv %t.a %t.o
-// RUN: cp %t-64.o %t.o && llvm-ar -X64 qv %t.a %t.o
- 
+// RUN: cp %t-32.o %t.o
+// RUN: if [ "$(uname)" = "AIX" ]; then \
+          llvm-ar -X32 crv %t.a %t.o; \
+        else \
+          llvm-ar crv %t.a %t.o; \
+        fi
+// RUN: cp %t-64.o %t.o
+// RUN: if [ "$(uname)" = "AIX" ]; then \
+          llvm-ar -X64 rv %t.a %t.o; \
+        else \
+          llvm-ar qv %t.a %t.o; \
+        fi
+
+
 // Verify archive contains two members with same name
-// RUN: llvm-ar tv -X32_64 %t.a | FileCheck %s --check-prefix=CHECK-ARCHIVE
+// RUN: if [ "$(uname)" = "AIX" ]; then \
+          llvm-ar tv -X32_64 %t.a | FileCheck %s --check-prefix=CHECK-ARCHIVE; \
+        else \
+          llvm-ar tv %t.a | FileCheck %s --check-prefix=CHECK-ARCHIVE; \
+        fi
 // CHECK-ARCHIVE: {{.*}}symbolize-big-archive-xcoff.test.tmp.o{{$}}
 // CHECK-ARCHIVE: {{.*}}symbolize-big-archive-xcoff.test.tmp.o{{$}}
 
 // Test successful symbolization
-// RUN: llvm-symbolizer --default-arch=ppc --obj="%t.a(%t.o)" 0x0 | FileCheck %s --check-prefix=CHECK-32
-// RUN: llvm-symbolizer --default-arch=ppc64 --obj="%t.a(%t.o)" 0x0 | FileCheck %s --check-prefix=CHECK-64
+// RUN: MEMBER=$(basename %t.o)
+// RUN: llvm-symbolizer --default-arch=ppc --obj="%t.a($MEMBER)" 0x0 | FileCheck %s --check-prefix=CHECK-32
+// RUN: llvm-symbolizer --default-arch=ppc64 --obj="%t.a($MEMBER)" 0x0 | FileCheck %s --check-prefix=CHECK-64
+// RUN: llvm-symbolizer --obj="%t.a($MEMBER):ppc" 0x0 | FileCheck %s --check-prefix=CHECK-32
+// RUN: llvm-symbolizer --obj="%t.a($MEMBER):ppc64" 0x0 | FileCheck %s --check-prefix=CHECK-64
 // CHECK-32: foo
 // CHECK-64: foo
 
 // Test error cases
 // RUN: not llvm-symbolizer --obj="%t.a(nonexistent.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
-
 // CHECK-ERROR: error: {{.*}}No object file for requested architecture

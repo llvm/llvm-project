@@ -547,8 +547,8 @@ MACH-O SPECIFIC OPTIONS
     $ cat addr.txt
     /tmp/mach_universal_binary:i386 0x1f84
     /tmp/mach_universal_binary:x86_64 0x100000f24
-    /tmp/archive.a(member.o):ppc 0x1000
-    /tmp/archive.a(member.o):ppc64 0x2000
+    /tmp/big-archive.a(member.o):ppc 0x1000
+    /tmp/big-archive.a(member.o):ppc64 0x2000
 
     $ llvm-symbolizer < addr.txt
     _main
@@ -559,7 +559,7 @@ MACH-O SPECIFIC OPTIONS
 
     _foo
     /tmp/source_ppc.cc:12
-    
+
     _foo
     /tmp/source_ppc64.cc:12
 

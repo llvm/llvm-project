@@ -21,6 +21,7 @@
 #include "llvm/DebugInfo/PDB/PDBContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableObjectFile.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Object/Archive.h"
 #include "llvm/Object/BuildID.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -33,7 +34,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Object/Archive.h"
 #include <cassert>
 #include <cstring>
 
@@ -323,7 +323,7 @@ bool checkFileCRC(StringRef Path, uint32_t CRCHash) {
 
 bool getGNUDebuglinkContents(const ObjectFile *Obj, std::string &DebugName,
                              uint32_t &CRCHash) {
-  if (!Obj || !isa<ObjectFile>(Obj))
+  if (!Obj)
     return false;
   for (const SectionRef &Section : Obj->sections()) {
     StringRef Name;
@@ -564,16 +564,14 @@ LLVMSymbolizer::getOrCreateObjectPair(const std::string &Path,
   std::string DbgObjPath = DbgObj->getFileName().str();
   auto BinIter = BinaryForPath.find(DbgObjPath);
   if (BinIter != BinaryForPath.end()) {
-    BinIter->second.pushEvictor([this, I = Pair.first]() {
-    ObjectPairForPathArch.erase(I);
-    });
+    BinIter->second.pushEvictor(
+        [this, I = Pair.first]() { ObjectPairForPathArch.erase(I); });
   }
   return Res;
 }
 
-Expected<ObjectFile *> LLVMSymbolizer::getOrCreateObjectFromArchive(StringRef ArchivePath, 
-                                                                    StringRef MemberName, 
-                                                                    const std::string &ArchName) {
+Expected<ObjectFile *> LLVMSymbolizer::getOrCreateObjectFromArchive(
+    StringRef ArchivePath, StringRef MemberName, StringRef ArchName) {
   Binary *Bin = nullptr;
   auto Pair = BinaryForPath.emplace(ArchivePath.str(), OwningBinary<Binary>());
   if (!Pair.second) {
@@ -581,9 +579,8 @@ Expected<ObjectFile *> LLVMSymbolizer::getOrCreateObjectFromArchive(StringRef Ar
     recordAccess(Pair.first->second);
   } else {
     Expected<OwningBinary<Binary>> ArchiveOrErr = createBinary(ArchivePath);
-    if (!ArchiveOrErr) {
+    if (!ArchiveOrErr)
       return ArchiveOrErr.takeError();
-    }
 
     CachedBinary &CachedBin = Pair.first->second;
     CachedBin = std::move(ArchiveOrErr.get());
@@ -593,26 +590,28 @@ Expected<ObjectFile *> LLVMSymbolizer::getOrCreateObjectFromArchive(StringRef Ar
     Bin = CachedBin->getBinary();
   }
 
-  if (!Bin || !isa<object::Archive>(Bin))
+  object::Archive *Archive = dyn_cast_if_present<object::Archive>(Bin);
+  if (!Archive)
     return errorCodeToError(object_error::invalid_file_type);
 
-  object::Archive *Archive = cast<object::Archive>(Bin);
   Error Err = Error::success();
   
-  // On AIX, archives can contain multiple members with same name but different types
-  // We need to check all matches and find one that matches both name and architecture
+  // On AIX, archives can contain multiple members with same name but different
+  // types. We need to check all matches and find one that matches both name and 
+  // architecture.
   for (auto &Child : Archive->children(Err, /*SkipInternal=*/true)) {
     Expected<StringRef> NameOrErr = Child.getName();
     if (!NameOrErr)
-      continue; 
-    if (*NameOrErr == llvm::sys::path::filename(MemberName)) {
-      Expected<std::unique_ptr<object::Binary>> MemberOrErr = Child.getAsBinary();
+      continue;
+    if (*NameOrErr == sys::path::filename(MemberName)) {
+      Expected<std::unique_ptr<object::Binary>> MemberOrErr =
+          Child.getAsBinary();
       if (!MemberOrErr)
-        continue; 
+        continue;
       
       std::unique_ptr<object::Binary> Binary = std::move(*MemberOrErr);
       if (auto *Obj = dyn_cast<object::ObjectFile>(Binary.get())) {
-#if defined(_AIX)
+#ifdef _AIX
         Triple::ArchType ObjArch = Obj->makeTriple().getArch();
         Triple RequestedTriple;
         RequestedTriple.setArch(Triple::getArchTypeForLLVMName(ArchName));
@@ -625,11 +624,13 @@ Expected<ObjectFile *> LLVMSymbolizer::getOrCreateObjectFromArchive(StringRef Ar
           return I->second.get();
 
         auto CachedObj = std::unique_ptr<ObjectFile>(Obj);
-        auto NewEntry = ObjectForArchivePathAndArch.emplace(
-            CacheKey, std::move(CachedObj));
+        auto NewEntry =
+            ObjectForArchivePathAndArch.emplace(CacheKey, std::move(CachedObj));
         Binary.release();
-        BinaryForPath.find(ArchivePath.str())->second.pushEvictor(
-            [this, Iter = NewEntry.first]() { ObjectForArchivePathAndArch.erase(Iter); });
+        BinaryForPath.find(ArchivePath.str())
+            ->second.pushEvictor([this, Iter = NewEntry.first]() {
+              ObjectForArchivePathAndArch.erase(Iter);
+            });
         return NewEntry.first->second.get();
       }
     }
@@ -642,13 +643,15 @@ Expected<ObjectFile *> LLVMSymbolizer::getOrCreateObjectFromArchive(StringRef Ar
 Expected<ObjectFile *>
 LLVMSymbolizer::getOrCreateObject(const std::string &Path,
                                   const std::string &ArchName) {
-  // First check for archive(member) format - more efficient to check closing paren first
+  // First check for archive(member) format - more efficient to check closing
+  // paren first.
   size_t CloseParen = Path.rfind(')');
   if (CloseParen != std::string::npos && CloseParen == Path.length() - 1) {
     size_t OpenParen = Path.rfind('(', CloseParen);
     if (OpenParen != std::string::npos) {
       StringRef ArchivePath = StringRef(Path).substr(0, OpenParen);
-      StringRef MemberName = StringRef(Path).substr(OpenParen + 1, CloseParen - OpenParen - 1);
+      StringRef MemberName =
+          StringRef(Path).substr(OpenParen + 1, CloseParen - OpenParen - 1);
       return getOrCreateObjectFromArchive(ArchivePath, MemberName, ArchName);
     }
   }
@@ -803,10 +806,8 @@ LLVMSymbolizer::getOrCreateModuleInfo(StringRef ModuleName) {
   if (ModuleOrErr) {
     auto I = Modules.find(ModuleName);
     auto BinIter = BinaryForPath.find(BinaryName);
-    if (BinIter != BinaryForPath.end()) 
-      BinIter->second.pushEvictor([this, I]() {
-      Modules.erase(I);
-    });
+    if (BinIter != BinaryForPath.end())
+      BinIter->second.pushEvictor([this, I]() { Modules.erase(I); });
   }
   return ModuleOrErr;
 }
