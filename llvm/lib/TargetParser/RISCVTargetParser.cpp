@@ -159,7 +159,7 @@ namespace RISCVVType {
 // 5:3  | vsew[2:0]  | Standard element width (SEW) setting
 // 2:0  | vlmul[2:0] | Vector register group multiplier (LMUL) setting
 unsigned encodeVTYPE(VLMUL VLMul, unsigned SEW, bool TailAgnostic,
-                     bool MaskAgnostic, bool Altfmt) {
+                     bool MaskAgnostic, bool AltFmt) {
   assert(isValidSEW(SEW) && "Invalid SEW");
   unsigned VLMulBits = static_cast<unsigned>(VLMul);
   unsigned VSEWBits = encodeSEW(SEW);
