@@ -8622,6 +8622,7 @@ bool ASTReader::LoadExternalSpecializationsImpl(SpecLookupTableTy &SpecLookups,
 bool ASTReader::LoadExternalSpecializations(const Decl *D, bool OnlyPartial) {
   assert(D);
 
+  CompleteRedeclChain(D);
   bool NewSpecsFound =
       LoadExternalSpecializationsImpl(PartialSpecializationsLookups, D);
   if (OnlyPartial)
