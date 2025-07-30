@@ -135,7 +135,7 @@ readMemInfoBlocksV3(const char *Ptr) {
 }
 
 llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
-readMemInfoBlocksCommon(const char *Ptr, bool IsHistogramEncoded = false) {
+readMemInfoBlocksV4(const char *Ptr) {
   using namespace support;
 
   const uint64_t NumItemsToRead =
@@ -145,41 +145,25 @@ readMemInfoBlocksCommon(const char *Ptr, bool IsHistogramEncoded = false) {
   for (uint64_t I = 0; I < NumItemsToRead; I++) {
     const uint64_t Id =
         endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
-
+    // We cheat a bit here and remove the const from cast to set the
+    // Histogram Pointer to newly allocated buffer.
     MemInfoBlock MIB = *reinterpret_cast<const MemInfoBlock *>(Ptr);
+
+    // Only increment by size of MIB since readNext implicitly increments.
     Ptr += sizeof(MemInfoBlock);
 
     if (MIB.AccessHistogramSize > 0) {
-      // The in-memory representation uses uint64_t for histogram entries.
       MIB.AccessHistogram =
           (uintptr_t)malloc(MIB.AccessHistogramSize * sizeof(uint64_t));
-      for (uint64_t J = 0; J < MIB.AccessHistogramSize; J++) {
-        if (!IsHistogramEncoded) {
-          ((uint64_t *)MIB.AccessHistogram)[J] =
-              endian::readNext<uint64_t, llvm::endianness::little, unaligned>(
-                  Ptr);
-        } else {
-          // The encoded on-disk format (V5 onwards) uses uint16_t.
-          const uint16_t Val =
-              endian::readNext<uint16_t, llvm::endianness::little, unaligned>(
-                  Ptr);
-          ((uint64_t *)MIB.AccessHistogram)[J] = decodeHistogramCount(Val);
-        }
-      }
+    }
+
+    for (uint64_t J = 0; J < MIB.AccessHistogramSize; J++) {
+      ((uint64_t *)MIB.AccessHistogram)[J] =
+          endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
     }
     Items.push_back({Id, MIB});
   }
   return Items;
-}
-
-llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
-readMemInfoBlocksV4(const char *Ptr) {
-  return readMemInfoBlocksCommon(Ptr);
-}
-
-llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
-readMemInfoBlocksV5(const char *Ptr) {
-  return readMemInfoBlocksCommon(Ptr, /*IsHistogramEncoded=*/true);
 }
 
 CallStackMap readStackInfo(const char *Ptr) {
@@ -674,8 +658,6 @@ RawMemProfReader::readMemInfoBlocks(const char *Ptr) {
     return readMemInfoBlocksV3(Ptr);
   if (MemprofRawVersion == 4ULL)
     return readMemInfoBlocksV4(Ptr);
-  if (MemprofRawVersion == 5ULL)
-    return readMemInfoBlocksV5(Ptr);
   llvm_unreachable(
       "Panic: Unsupported version number when reading MemInfoBlocks");
 }

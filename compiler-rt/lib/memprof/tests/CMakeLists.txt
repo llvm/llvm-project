@@ -26,7 +26,6 @@ set(MEMPROF_SOURCES
   ../memprof_rawprofile.cpp)
 
 set(MEMPROF_UNITTESTS
-  histogram_encoding.cpp
   rawprofile.cpp
   driver.cpp)
 
