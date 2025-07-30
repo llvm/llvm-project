@@ -100,5 +100,6 @@ uint64_t SFrameParser<E>::getAbsoluteStartAddress(
   return Result;
 }
 
-template class llvm::object::SFrameParser<endianness::big>;
-template class llvm::object::SFrameParser<endianness::little>;
+template class LLVM_EXPORT_TEMPLATE llvm::object::SFrameParser<endianness::big>;
+template class LLVM_EXPORT_TEMPLATE
+    llvm::object::SFrameParser<endianness::little>;

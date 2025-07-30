@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Endian.h"
 
@@ -161,13 +162,13 @@ template <endianness E> using FrameRowEntryAddr1 = FrameRowEntry<uint8_t, E>;
 template <endianness E> using FrameRowEntryAddr2 = FrameRowEntry<uint16_t, E>;
 template <endianness E> using FrameRowEntryAddr4 = FrameRowEntry<uint32_t, E>;
 
-ArrayRef<EnumEntry<Version>> getVersions();
-ArrayRef<EnumEntry<Flags>> getFlags();
-ArrayRef<EnumEntry<ABI>> getABIs();
-ArrayRef<EnumEntry<FREType>> getFRETypes();
-ArrayRef<EnumEntry<FDEType>> getFDETypes();
-ArrayRef<EnumEntry<AArch64PAuthKey>> getAArch64PAuthKeys();
-ArrayRef<EnumEntry<FREOffset>> getFREOffsets();
+LLVM_ABI ArrayRef<EnumEntry<Version>> getVersions();
+LLVM_ABI ArrayRef<EnumEntry<Flags>> getFlags();
+LLVM_ABI ArrayRef<EnumEntry<ABI>> getABIs();
+LLVM_ABI ArrayRef<EnumEntry<FREType>> getFRETypes();
+LLVM_ABI ArrayRef<EnumEntry<FDEType>> getFDETypes();
+LLVM_ABI ArrayRef<EnumEntry<AArch64PAuthKey>> getAArch64PAuthKeys();
+LLVM_ABI ArrayRef<EnumEntry<FREOffset>> getFREOffsets();
 
 } // namespace sframe
 } // namespace llvm
