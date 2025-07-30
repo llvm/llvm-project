@@ -1338,6 +1338,7 @@ module std [system] {
     module enable_insertable                  { header "__format/enable_insertable.h" }
     module escaped_output_table               { header "__format/escaped_output_table.h" }
     module extended_grapheme_cluster_table    { header "__format/extended_grapheme_cluster_table.h" }
+    module fmt_pair_like                      { header "__format/fmt_pair_like.h" }
     module format_arg                         { header "__format/format_arg.h" }
     module format_arg_store                   { header "__format/format_arg_store.h" }
     module format_args                        { header "__format/format_args.h" }

@@ -1428,10 +1428,9 @@ public:
                                        EVT MemVT, MachineMemOperand *MMO);
 
   /// Creates a LifetimeSDNode that starts (`IsStart==true`) or ends
-  /// (`IsStart==false`) the lifetime of the portion of `FrameIndex` between
-  /// offsets `0` and `Size`.
+  /// (`IsStart==false`) the lifetime of the `FrameIndex`.
   LLVM_ABI SDValue getLifetimeNode(bool IsStart, const SDLoc &dl, SDValue Chain,
-                                   int FrameIndex, int64_t Size);
+                                   int FrameIndex);
 
   /// Creates a PseudoProbeSDNode with function GUID `Guid` and
   /// the index of the block `Index` it is probing, as well as the attributes

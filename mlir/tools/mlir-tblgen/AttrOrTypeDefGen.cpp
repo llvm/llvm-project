@@ -495,7 +495,7 @@ void DefGen::emitCheckedBuilder() {
   MethodBody &body = m->body().indent();
   auto scope = body.scope("return Base::getChecked(emitError, context", ");");
   for (const auto &param : params)
-    body << ", " << param.getName();
+    body << ", std::move(" << param.getName() << ")";
 }
 
 static SmallVector<MethodParameter>

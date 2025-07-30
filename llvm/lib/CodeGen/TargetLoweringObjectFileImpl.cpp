@@ -1060,27 +1060,27 @@ MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
 
   auto &Context = getContext();
   if (Kind.isMergeableConst4() && MergeableConst4Section)
-    return Context.getELFSection(".rodata.cst4." + SectionSuffix,
+    return Context.getELFSection(".rodata.cst4." + SectionSuffix + ".",
                                  ELF::SHT_PROGBITS,
                                  ELF::SHF_ALLOC | ELF::SHF_MERGE, 4);
   if (Kind.isMergeableConst8() && MergeableConst8Section)
-    return Context.getELFSection(".rodata.cst8." + SectionSuffix,
+    return Context.getELFSection(".rodata.cst8." + SectionSuffix + ".",
                                  ELF::SHT_PROGBITS,
                                  ELF::SHF_ALLOC | ELF::SHF_MERGE, 8);
   if (Kind.isMergeableConst16() && MergeableConst16Section)
-    return Context.getELFSection(".rodata.cst16." + SectionSuffix,
+    return Context.getELFSection(".rodata.cst16." + SectionSuffix + ".",
                                  ELF::SHT_PROGBITS,
                                  ELF::SHF_ALLOC | ELF::SHF_MERGE, 16);
   if (Kind.isMergeableConst32() && MergeableConst32Section)
-    return Context.getELFSection(".rodata.cst32." + SectionSuffix,
+    return Context.getELFSection(".rodata.cst32." + SectionSuffix + ".",
                                  ELF::SHT_PROGBITS,
                                  ELF::SHF_ALLOC | ELF::SHF_MERGE, 32);
   if (Kind.isReadOnly())
-    return Context.getELFSection(".rodata." + SectionSuffix, ELF::SHT_PROGBITS,
-                                 ELF::SHF_ALLOC);
+    return Context.getELFSection(".rodata." + SectionSuffix + ".",
+                                 ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
 
   assert(Kind.isReadOnlyWithRel() && "Unknown section kind");
-  return Context.getELFSection(".data.rel.ro." + SectionSuffix,
+  return Context.getELFSection(".data.rel.ro." + SectionSuffix + ".",
                                ELF::SHT_PROGBITS,
                                ELF::SHF_ALLOC | ELF::SHF_WRITE);
 }

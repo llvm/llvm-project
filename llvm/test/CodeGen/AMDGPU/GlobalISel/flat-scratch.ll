@@ -2548,54 +2548,40 @@ define void @store_load_i64_unaligned(ptr addrspace(5) nocapture %arg) {
 ; UNALIGNED_GFX9-LABEL: store_load_i64_unaligned:
 ; UNALIGNED_GFX9:       ; %bb.0: ; %bb
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; UNALIGNED_GFX9-NEXT:    v_mov_b32_e32 v4, 15
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v1, 4, v0
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v2, 2, v0
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v3, 1, v0
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v4, off
+; UNALIGNED_GFX9-NEXT:    v_mov_b32_e32 v1, 15
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    v_mov_b32_e32 v4, 0
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v6, 6, v0
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v3, v4, off
+; UNALIGNED_GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:1
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v5, 3, v0
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v2, v4, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:2
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v5, v4, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:3
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v7, 5, v0
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v1, v4, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:4
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v7, v4, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:5
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v8, 7, v0
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v6, v4, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:6
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v8, v4, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:7
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v4, v0, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr7
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr2
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr6
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr1
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr3
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr5
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr8
 ; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr0
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v4, v3, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:1 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v4, v2, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:2 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v4, v5, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:3 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v4, v1, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:4 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v4, v7, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:5 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v4, v6, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:6 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v4, v8, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:7 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; UNALIGNED_GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2604,98 +2590,77 @@ define void @store_load_i64_unaligned(ptr addrspace(5) nocapture %arg) {
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; UNALIGNED_GFX10-NEXT:    v_mov_b32_e32 v1, 15
 ; UNALIGNED_GFX10-NEXT:    v_mov_b32_e32 v2, 0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v4, 1, v0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v3, 4, v0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v5, 2, v0
 ; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v1, off
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v1, 3, v0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v6, 5, v0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v7, 6, v0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v8, 7, v0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v4, v2, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:1
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v5, v2, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:2
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v1, v2, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:3
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v3, v2, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:4
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v6, v2, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:5
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v7, v2, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:6
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v8, v2, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:7
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v0, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v4, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:1 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v5, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:2 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v1, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:3 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v3, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:4 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v6, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:5 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v7, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:6 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v8, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v0, off offset:7 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; UNALIGNED_GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; UNALIGNED_GFX942-LABEL: store_load_i64_unaligned:
 ; UNALIGNED_GFX942:       ; %bb.0: ; %bb
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; UNALIGNED_GFX942-NEXT:    v_mov_b32_e32 v4, 15
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v1, 4, v0
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v2, 2, v0
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v3, 1, v0
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v4, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    v_mov_b32_e32 v1, 15
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    v_mov_b32_e32 v4, 0
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v6, 6, v0
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v3, v4, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    v_mov_b32_e32 v1, 0
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:1 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v5, 3, v0
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v2, v4, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:2 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v5, v4, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:3 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v7, 5, v0
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v1, v4, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:4 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v7, v4, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:5 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v8, 7, v0
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v6, v4, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:6 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v8, v4, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:7 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v4, v0, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr7
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr2
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr6
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr1
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr3
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr5
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr8
 ; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr0
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v4, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:1 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v4, v2, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:2 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v4, v5, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:3 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v4, v1, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:4 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v4, v7, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:5 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v4, v6, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:6 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v4, v8, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:7 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; UNALIGNED_GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2703,44 +2668,37 @@ define void @store_load_i64_unaligned(ptr addrspace(5) nocapture %arg) {
 ; UNALIGNED_GFX11:       ; %bb.0: ; %bb
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; UNALIGNED_GFX11-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_mov_b32 v2, 0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v4, 1, v0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v3, 4, v0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v5, 2, v0
 ; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v1, off dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v1, 3, v0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v6, 5, v0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v7, 6, v0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v8, 7, v0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v4, v2, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:1 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v5, v2, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:2 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v1, v2, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:3 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v3, v2, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:4 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v6, v2, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:5 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v7, v2, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:6 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v8, v2, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:7 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v0, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v4, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:1 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v5, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:2 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v1, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:3 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v3, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:4 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v6, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:5 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v7, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:6 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v8, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v0, off offset:7 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; UNALIGNED_GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2875,80 +2833,58 @@ define void @store_load_v3i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; UNALIGNED_GFX9-LABEL: store_load_v3i32_unaligned:
 ; UNALIGNED_GFX9:       ; %bb.0: ; %bb
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; UNALIGNED_GFX9-NEXT:    v_mov_b32_e32 v3, 1
-; UNALIGNED_GFX9-NEXT:    v_mov_b32_e32 v1, 2
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v2, 2, v0
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v4, 1, v0
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v3, off
+; UNALIGNED_GFX9-NEXT:    v_mov_b32_e32 v1, 1
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    v_mov_b32_e32 v3, 0
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v6, 4, v0
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v7, 6, v0
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v9, 8, v0
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v10, 10, v0
-; UNALIGNED_GFX9-NEXT:    v_mov_b32_e32 v12, 3
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v4, v3, off
+; UNALIGNED_GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; UNALIGNED_GFX9-NEXT:    v_mov_b32_e32 v2, 2
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:1
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v5, 3, v0
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v2, v3, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:2
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v5, v3, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:3
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v8, 5, v0
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v6, v1, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v2, off offset:4
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v8, v3, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:5
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v1, 7, v0
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v7, v3, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:6
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v1, v3, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:7
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v11, 9, v0
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v9, v12, off
+; UNALIGNED_GFX9-NEXT:    v_mov_b32_e32 v2, 3
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v2, off offset:8
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v11, v3, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:9
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v12, 11, v0
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v10, v3, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:10
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v12, v3, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:11
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v0, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr12
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr4
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr11
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr7
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr6
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr10
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr5
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr9
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr1
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr8
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr2
 ; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr0
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v4, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:1 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v2, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:2 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v5, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:3 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v6, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:4 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v8, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:5 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v7, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:6 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v1, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:7 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v9, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:8 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v11, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:9 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v10, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:10 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v12, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:11 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; UNALIGNED_GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2956,212 +2892,170 @@ define void @store_load_v3i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; UNALIGNED_GFX10:       ; %bb.0: ; %bb
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; UNALIGNED_GFX10-NEXT:    v_mov_b32_e32 v1, 1
-; UNALIGNED_GFX10-NEXT:    v_mov_b32_e32 v3, 0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v5, 1, v0
-; UNALIGNED_GFX10-NEXT:    v_mov_b32_e32 v2, 2
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v4, 2, v0
+; UNALIGNED_GFX10-NEXT:    v_mov_b32_e32 v2, 0
+; UNALIGNED_GFX10-NEXT:    v_mov_b32_e32 v3, 2
 ; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v1, off
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v1, 3, v0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v6, 4, v0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v7, 5, v0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v5, v3, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:1
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v4, v3, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:2
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v8, 6, v0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v1, v3, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:3
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v6, v2, off
+; UNALIGNED_GFX10-NEXT:    v_mov_b32_e32 v1, 3
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v3, off offset:4
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v7, v3, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:5
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v2, 7, v0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v9, 8, v0
-; UNALIGNED_GFX10-NEXT:    v_mov_b32_e32 v10, 3
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v11, 9, v0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v12, 10, v0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v13, 11, v0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v8, v3, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:6
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v2, v3, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:7
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v9, v10, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v1, off offset:8
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v11, v3, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:9
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v12, v3, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:10
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v13, v3, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:11
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v0, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v5, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:1 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v4, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:2 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v1, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:3 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v6, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:4 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v7, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:5 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v8, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:6 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v2, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:7 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v9, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:8 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v11, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:9 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v12, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:10 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v13, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v0, off offset:11 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; UNALIGNED_GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; UNALIGNED_GFX942-LABEL: store_load_v3i32_unaligned:
 ; UNALIGNED_GFX942:       ; %bb.0: ; %bb
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; UNALIGNED_GFX942-NEXT:    v_mov_b32_e32 v3, 1
-; UNALIGNED_GFX942-NEXT:    v_mov_b32_e32 v1, 2
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v2, 2, v0
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v4, 1, v0
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    v_mov_b32_e32 v1, 1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    v_mov_b32_e32 v3, 0
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v6, 4, v0
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v7, 6, v0
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v9, 8, v0
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v10, 10, v0
-; UNALIGNED_GFX942-NEXT:    v_mov_b32_e32 v12, 3
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v4, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    v_mov_b32_e32 v1, 0
+; UNALIGNED_GFX942-NEXT:    v_mov_b32_e32 v2, 2
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:1 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v5, 3, v0
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v2, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:2 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v5, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:3 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v8, 5, v0
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v6, v1, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v2, off offset:4 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v8, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:5 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v1, 7, v0
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v7, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:6 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v1, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:7 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v11, 9, v0
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v9, v12, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    v_mov_b32_e32 v2, 3
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v2, off offset:8 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v11, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:9 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v12, 11, v0
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v10, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:10 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v12, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:11 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v0, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr12
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr4
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr11
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr7
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr6
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr10
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr5
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr9
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr1
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr8
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr2
 ; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr0
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v4, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:1 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v2, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:2 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v5, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:3 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v6, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:4 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v8, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:5 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v7, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:6 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v1, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:7 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v9, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:8 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v11, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:9 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v10, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:10 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v12, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:11 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; UNALIGNED_GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; UNALIGNED_GFX11-LABEL: store_load_v3i32_unaligned:
 ; UNALIGNED_GFX11:       ; %bb.0: ; %bb
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; UNALIGNED_GFX11-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_mov_b32 v2, 2
-; UNALIGNED_GFX11-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_add_nc_u32 v4, 2, v0
-; UNALIGNED_GFX11-NEXT:    v_dual_mov_b32 v10, 3 :: v_dual_add_nc_u32 v5, 1, v0
+; UNALIGNED_GFX11-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_mov_b32 v2, 0
+; UNALIGNED_GFX11-NEXT:    v_mov_b32_e32 v3, 2
 ; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v1, off dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v1, 3, v0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v6, 4, v0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v7, 5, v0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v5, v3, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:1 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v4, v3, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:2 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v8, 6, v0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v1, v3, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:3 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v6, v2, off dlc
+; UNALIGNED_GFX11-NEXT:    v_mov_b32_e32 v1, 3
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v3, off offset:4 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v7, v3, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:5 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v2, 7, v0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v9, 8, v0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v11, 9, v0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v12, 10, v0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v13, 11, v0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v8, v3, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:6 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v2, v3, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:7 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v9, v10, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v1, off offset:8 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v11, v3, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:9 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v12, v3, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:10 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v13, v3, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:11 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v0, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v5, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:1 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v4, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:2 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v1, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:3 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v6, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:4 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v7, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:5 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v8, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:6 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v2, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:7 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v9, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:8 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v11, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:9 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v12, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:10 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v13, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v0, off offset:11 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; UNALIGNED_GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3320,104 +3214,74 @@ define void @store_load_v4i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; UNALIGNED_GFX9-LABEL: store_load_v4i32_unaligned:
 ; UNALIGNED_GFX9:       ; %bb.0: ; %bb
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; UNALIGNED_GFX9-NEXT:    v_mov_b32_e32 v3, 1
-; UNALIGNED_GFX9-NEXT:    v_mov_b32_e32 v1, 2
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v2, 2, v0
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v4, 1, v0
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v3, off
+; UNALIGNED_GFX9-NEXT:    v_mov_b32_e32 v1, 1
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    v_mov_b32_e32 v3, 0
-; UNALIGNED_GFX9-NEXT:    v_mov_b32_e32 v6, 4
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v7, 4, v0
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v8, 6, v0
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v10, 8, v0
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v11, 10, v0
-; UNALIGNED_GFX9-NEXT:    v_mov_b32_e32 v13, 3
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v14, 12, v0
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v15, 14, v0
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v4, v3, off
+; UNALIGNED_GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; UNALIGNED_GFX9-NEXT:    v_mov_b32_e32 v2, 2
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:1
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v5, 3, v0
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v2, v3, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:2
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v5, v3, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:3
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v9, 5, v0
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v7, v1, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v2, off offset:4
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v9, v3, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:5
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v1, 7, v0
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v8, v3, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:6
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v1, v3, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:7
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v12, 9, v0
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v10, v13, off
+; UNALIGNED_GFX9-NEXT:    v_mov_b32_e32 v2, 3
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v2, off offset:8
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v12, v3, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:9
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v13, 11, v0
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v11, v3, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:10
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v13, v3, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:11
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v16, 13, v0
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v14, v6, off
+; UNALIGNED_GFX9-NEXT:    v_mov_b32_e32 v2, 4
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v2, off offset:12
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v16, v3, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:13
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    v_add_u32_e32 v6, 15, v0
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v15, v3, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:14
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_store_byte v6, v3, off
+; UNALIGNED_GFX9-NEXT:    scratch_store_byte v0, v1, off offset:15
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v0, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v4, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:1 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v2, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:2 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v5, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:3 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v7, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:4 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v9, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:5 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v8, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:6 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v1, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:7 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v10, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:8 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v12, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:9 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v11, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:10 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v13, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:11 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v14, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:12 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v16, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:13 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v3, v15, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:14 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr2
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr1
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr9
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr16
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr11
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr4
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr15
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr10
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr7
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr13
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr5
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr14
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr12
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr8
-; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr0
-; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v0, v6, off glc
+; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v0, v0, off offset:15 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; UNALIGNED_GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3425,277 +3289,220 @@ define void @store_load_v4i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; UNALIGNED_GFX10:       ; %bb.0: ; %bb
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; UNALIGNED_GFX10-NEXT:    v_mov_b32_e32 v1, 1
-; UNALIGNED_GFX10-NEXT:    v_mov_b32_e32 v2, 2
-; UNALIGNED_GFX10-NEXT:    v_mov_b32_e32 v3, 0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v4, 1, v0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v6, 4, v0
+; UNALIGNED_GFX10-NEXT:    v_mov_b32_e32 v2, 0
+; UNALIGNED_GFX10-NEXT:    v_mov_b32_e32 v3, 2
 ; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v1, off
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v1, 3, v0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v5, 2, v0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v7, 5, v0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v4, v3, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:1
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v5, v3, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:2
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v1, v3, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:3
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v9, 6, v0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v6, v2, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v3, off offset:4
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v7, v3, off
+; UNALIGNED_GFX10-NEXT:    v_mov_b32_e32 v1, 3
+; UNALIGNED_GFX10-NEXT:    v_mov_b32_e32 v3, 4
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:5
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v2, 7, v0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v10, 8, v0
-; UNALIGNED_GFX10-NEXT:    v_mov_b32_e32 v11, 3
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v12, 9, v0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v9, v3, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:6
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v13, 10, v0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v2, v3, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:7
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v10, v11, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v1, off offset:8
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v12, v3, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:9
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v11, 11, v0
-; UNALIGNED_GFX10-NEXT:    v_mov_b32_e32 v8, 4
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v14, 12, v0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v15, 13, v0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v16, 14, v0
-; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v17, 15, v0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v13, v3, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:10
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v11, v3, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:11
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v14, v8, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v3, off offset:12
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v15, v3, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:13
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v16, v3, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:14
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_store_byte v17, v3, off
+; UNALIGNED_GFX10-NEXT:    scratch_store_byte v0, v2, off offset:15
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v0, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v4, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:1 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v5, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:2 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v1, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:3 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v6, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:4 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v7, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:5 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v9, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:6 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v2, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:7 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v10, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:8 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v12, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:9 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v13, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:10 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v11, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:11 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v14, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:12 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v15, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:13 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v16, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v1, v0, off offset:14 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v17, off glc dlc
+; UNALIGNED_GFX10-NEXT:    scratch_load_ubyte v0, v0, off offset:15 glc dlc
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; UNALIGNED_GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; UNALIGNED_GFX942-LABEL: store_load_v4i32_unaligned:
 ; UNALIGNED_GFX942:       ; %bb.0: ; %bb
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; UNALIGNED_GFX942-NEXT:    v_mov_b32_e32 v3, 1
-; UNALIGNED_GFX942-NEXT:    v_mov_b32_e32 v1, 2
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v2, 2, v0
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v4, 1, v0
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    v_mov_b32_e32 v1, 1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    v_mov_b32_e32 v3, 0
-; UNALIGNED_GFX942-NEXT:    v_mov_b32_e32 v6, 4
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v7, 4, v0
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v8, 6, v0
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v10, 8, v0
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v11, 10, v0
-; UNALIGNED_GFX942-NEXT:    v_mov_b32_e32 v13, 3
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v14, 12, v0
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v15, 14, v0
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v4, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    v_mov_b32_e32 v1, 0
+; UNALIGNED_GFX942-NEXT:    v_mov_b32_e32 v2, 2
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:1 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v5, 3, v0
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v2, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:2 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v5, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:3 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v9, 5, v0
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v7, v1, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v2, off offset:4 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v9, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:5 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v1, 7, v0
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v8, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:6 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v1, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:7 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v12, 9, v0
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v10, v13, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    v_mov_b32_e32 v2, 3
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v2, off offset:8 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v12, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:9 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v13, 11, v0
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v11, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:10 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v13, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:11 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v16, 13, v0
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v14, v6, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    v_mov_b32_e32 v2, 4
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v2, off offset:12 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v16, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:13 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    v_add_u32_e32 v6, 15, v0
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v15, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:14 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_store_byte v6, v3, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_store_byte v0, v1, off offset:15 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v0, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v4, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:1 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v2, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:2 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v5, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:3 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v7, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:4 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v9, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:5 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v8, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:6 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v1, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:7 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v10, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:8 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v12, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:9 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v11, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:10 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v13, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:11 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v14, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:12 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v16, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:13 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v3, v15, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:14 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr2
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr1
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr9
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr16
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr11
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr4
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr15
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr10
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr7
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr13
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr5
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr14
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr12
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr8
-; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr0
-; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v0, v6, off sc0 sc1
+; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v0, v0, off offset:15 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; UNALIGNED_GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; UNALIGNED_GFX11-LABEL: store_load_v4i32_unaligned:
 ; UNALIGNED_GFX11:       ; %bb.0: ; %bb
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; UNALIGNED_GFX11-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_mov_b32 v2, 2
-; UNALIGNED_GFX11-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_add_nc_u32 v4, 1, v0
-; UNALIGNED_GFX11-NEXT:    v_dual_mov_b32 v11, 3 :: v_dual_add_nc_u32 v6, 4, v0
+; UNALIGNED_GFX11-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_mov_b32 v2, 0
+; UNALIGNED_GFX11-NEXT:    v_mov_b32_e32 v3, 2
 ; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v1, off dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v1, 3, v0
-; UNALIGNED_GFX11-NEXT:    v_dual_mov_b32 v8, 4 :: v_dual_add_nc_u32 v5, 2, v0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v7, 5, v0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v4, v3, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:1 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v5, v3, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:2 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v1, v3, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:3 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v9, 6, v0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v6, v2, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v3, off offset:4 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v7, v3, off dlc
+; UNALIGNED_GFX11-NEXT:    v_mov_b32_e32 v1, 3
+; UNALIGNED_GFX11-NEXT:    v_mov_b32_e32 v3, 4
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:5 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v2, 7, v0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v10, 8, v0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v12, 9, v0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v9, v3, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:6 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v13, 10, v0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v2, v3, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:7 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v10, v11, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v1, off offset:8 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v12, v3, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:9 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v11, 11, v0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v14, 12, v0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v15, 13, v0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v16, 14, v0
-; UNALIGNED_GFX11-NEXT:    v_add_nc_u32_e32 v17, 15, v0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v13, v3, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:10 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v11, v3, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:11 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v14, v8, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v3, off offset:12 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v15, v3, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:13 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v16, v3, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:14 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v17, v3, off dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:15 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v0, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v4, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:1 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v5, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:2 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v1, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:3 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v6, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:4 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v7, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:5 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v9, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:6 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v2, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:7 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v10, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:8 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v12, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:9 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v13, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:10 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v11, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:11 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v14, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:12 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v15, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:13 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v16, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off offset:14 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
-; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v17, off glc dlc
+; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v0, v0, off offset:15 glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; UNALIGNED_GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;

@@ -634,7 +634,7 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
   // Transform (sra (shl X, C1) C2) with C1 < C2
   //        -> (SignedBitfieldExtract X, msb, lsb)
   if (N0.getOpcode() == ISD::SHL) {
-    auto *N01C = dyn_cast<ConstantSDNode>(N0->getOperand(1));
+    auto *N01C = dyn_cast<ConstantSDNode>(N0.getOperand(1));
     if (!N01C)
       return false;
 
@@ -750,7 +750,7 @@ bool RISCVDAGToDAGISel::trySignedBitfieldInsertInSign(SDNode *Node) {
   // Transform (sra (shl X, C1) C2) with C1 > C2
   //        -> (NDS.BFOS X, lsb, msb)
   if (N0.getOpcode() == ISD::SHL) {
-    auto *N01C = dyn_cast<ConstantSDNode>(N0->getOperand(1));
+    auto *N01C = dyn_cast<ConstantSDNode>(N0.getOperand(1));
     if (!N01C)
       return false;
 
@@ -1191,7 +1191,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         // Optimize (shl (and X, C2), C) -> (slli (srliw X, C3), C3+C)
         // where C2 has 32 leading zeros and C3 trailing zeros.
         SDNode *SRLIW = CurDAG->getMachineNode(
-            RISCV::SRLIW, DL, VT, N0->getOperand(0),
+            RISCV::SRLIW, DL, VT, N0.getOperand(0),
             CurDAG->getTargetConstant(TrailingZeros, DL, VT));
         SDNode *SLLI = CurDAG->getMachineNode(
             RISCV::SLLI, DL, VT, SDValue(SRLIW, 0),
@@ -1210,7 +1210,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         // - without Zba a tablegen pattern applies the very same
         //   transform as we would have done here
         SDNode *SLLI = CurDAG->getMachineNode(
-            RISCV::SLLI, DL, VT, N0->getOperand(0),
+            RISCV::SLLI, DL, VT, N0.getOperand(0),
             CurDAG->getTargetConstant(LeadingZeros, DL, VT));
         SDNode *SRLI = CurDAG->getMachineNode(
             RISCV::SRLI, DL, VT, SDValue(SLLI, 0),
@@ -1239,7 +1239,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       unsigned TrailingZeros = llvm::countr_zero(Mask);
       if (LeadingZeros == 32 && TrailingZeros > ShAmt) {
         SDNode *SRLIW = CurDAG->getMachineNode(
-            RISCV::SRLIW, DL, VT, N0->getOperand(0),
+            RISCV::SRLIW, DL, VT, N0.getOperand(0),
             CurDAG->getTargetConstant(TrailingZeros, DL, VT));
         SDNode *SLLI = CurDAG->getMachineNode(
             RISCV::SLLI, DL, VT, SDValue(SRLIW, 0),
@@ -1266,7 +1266,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (TrailingOnes == 32) {
       SDNode *SRLI = CurDAG->getMachineNode(
           Subtarget->is64Bit() ? RISCV::SRLIW : RISCV::SRLI, DL, VT,
-          N0->getOperand(0), CurDAG->getTargetConstant(ShAmt, DL, VT));
+          N0.getOperand(0), CurDAG->getTargetConstant(ShAmt, DL, VT));
       ReplaceNode(Node, SRLI);
       return;
     }
@@ -1279,19 +1279,19 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (HasBitTest && ShAmt + 1 == TrailingOnes) {
       SDNode *BEXTI = CurDAG->getMachineNode(
           Subtarget->hasStdExtZbs() ? RISCV::BEXTI : RISCV::TH_TST, DL, VT,
-          N0->getOperand(0), CurDAG->getTargetConstant(ShAmt, DL, VT));
+          N0.getOperand(0), CurDAG->getTargetConstant(ShAmt, DL, VT));
       ReplaceNode(Node, BEXTI);
       return;
     }
 
     const unsigned Msb = TrailingOnes - 1;
     const unsigned Lsb = ShAmt;
-    if (tryUnsignedBitfieldExtract(Node, DL, VT, N0->getOperand(0), Msb, Lsb))
+    if (tryUnsignedBitfieldExtract(Node, DL, VT, N0.getOperand(0), Msb, Lsb))
       return;
 
     unsigned LShAmt = Subtarget->getXLen() - TrailingOnes;
     SDNode *SLLI =
-        CurDAG->getMachineNode(RISCV::SLLI, DL, VT, N0->getOperand(0),
+        CurDAG->getMachineNode(RISCV::SLLI, DL, VT, N0.getOperand(0),
                                CurDAG->getTargetConstant(LShAmt, DL, VT));
     SDNode *SRLI = CurDAG->getMachineNode(
         RISCV::SRLI, DL, VT, SDValue(SLLI, 0),
@@ -1328,7 +1328,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       break;
     unsigned LShAmt = Subtarget->getXLen() - ExtSize;
     SDNode *SLLI =
-        CurDAG->getMachineNode(RISCV::SLLI, DL, VT, N0->getOperand(0),
+        CurDAG->getMachineNode(RISCV::SLLI, DL, VT, N0.getOperand(0),
                                CurDAG->getTargetConstant(LShAmt, DL, VT));
     SDNode *SRAI = CurDAG->getMachineNode(
         RISCV::SRAI, DL, VT, SDValue(SLLI, 0),

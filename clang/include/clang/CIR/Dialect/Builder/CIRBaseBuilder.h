@@ -75,6 +75,12 @@ public:
     return getConstant(loc, cir::IntAttr::get(ty, value));
   }
 
+  mlir::Value getSignedInt(mlir::Location loc, int64_t val, unsigned numBits) {
+    auto type = cir::IntType::get(getContext(), numBits, /*isSigned=*/true);
+    return getConstAPInt(loc, type,
+                         llvm::APInt(numBits, val, /*isSigned=*/true));
+  }
+
   mlir::Value getUnsignedInt(mlir::Location loc, uint64_t val,
                              unsigned numBits) {
     auto type = cir::IntType::get(getContext(), numBits, /*isSigned=*/false);

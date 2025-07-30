@@ -18410,6 +18410,22 @@ intel_sub_group_avc_mce_convert_to_sic_result(
 #pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : end
 #endif // cl_intel_device_side_avc_motion_estimation
 
+#if defined(cl_intel_bfloat16_conversions)
+ushort __ovld intel_convert_bfloat16_as_ushort(float source);
+ushort2 __ovld intel_convert_bfloat162_as_ushort2(float2 source);
+ushort3 __ovld intel_convert_bfloat163_as_ushort3(float3 source);
+ushort4 __ovld intel_convert_bfloat164_as_ushort4(float4 source);
+ushort8 __ovld intel_convert_bfloat168_as_ushort8(float8 source);
+ushort16 __ovld intel_convert_bfloat1616_as_ushort16(float16 source);
+
+float __ovld intel_convert_as_bfloat16_float(ushort source);
+float2 __ovld intel_convert_as_bfloat162_float2(ushort2 source);
+float3 __ovld intel_convert_as_bfloat163_float3(ushort3 source);
+float4 __ovld intel_convert_as_bfloat164_float4(ushort4 source);
+float8 __ovld intel_convert_as_bfloat168_float8(ushort8 source);
+float16 __ovld intel_convert_as_bfloat1616_float16(ushort16 source);
+#endif // cl_intel_bfloat16_conversions
+
 #ifdef cl_amd_media_ops
 uint __ovld amd_bitalign(uint, uint, uint);
 uint2 __ovld amd_bitalign(uint2, uint2, uint2);

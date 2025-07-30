@@ -11,6 +11,8 @@ struct B {
 B::~B() {
 }
 
+// LLVM: @_ZN1BD1Ev = alias void (ptr), ptr @_ZN1BD2Ev
+
 // OGCG: @_ZN1BD1Ev = unnamed_addr alias void (ptr), ptr @_ZN1BD2Ev
 
 // CHECK: cir.func{{.*}} @_ZN1BD2Ev(%arg0: !cir.ptr<!rec_B>
@@ -24,10 +26,6 @@ B::~B() {
 // LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
-
-// This should be an alias, like the similar OGCG alias above, but that's not
-// implemented yet.
-// LLVM: declare dso_local void @_ZN1BD1Ev(ptr)
 
 // OGCG: define{{.*}} @_ZN1BD2Ev(ptr{{.*}} %[[THIS_ARG:.*]])
 // OGCG:   %[[THIS_ADDR:.*]] = alloca ptr

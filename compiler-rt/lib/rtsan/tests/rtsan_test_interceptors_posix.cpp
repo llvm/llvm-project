@@ -752,8 +752,8 @@ TEST_F(RtsanOpenedFileTest, RewindDieWhenRealtime) {
 }
 #endif
 
-TEST(TestRtsanInterceptors, IoctlDiesWhenRealtime) {
-  auto Func = []() { ioctl(0, FIONREAD); };
+TEST_F(RtsanOpenedFileTest, IoctlDiesWhenRealtime) {
+  auto Func = [this]() { ioctl(GetOpenFd(), FIONREAD); };
   ExpectRealtimeDeath(Func, "ioctl");
   ExpectNonRealtimeSurvival(Func);
 }

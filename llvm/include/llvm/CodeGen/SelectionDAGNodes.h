@@ -1999,22 +1999,18 @@ public:
   }
 };
 
-/// This SDNode is used for LIFETIME_START/LIFETIME_END values, which indicate
-/// the offet and size that are started/ended in the underlying FrameIndex.
+/// This SDNode is used for LIFETIME_START/LIFETIME_END values.
 class LifetimeSDNode : public SDNode {
   friend class SelectionDAG;
-  int64_t Size;
 
   LifetimeSDNode(unsigned Opcode, unsigned Order, const DebugLoc &dl,
-                 SDVTList VTs, int64_t Size)
-      : SDNode(Opcode, Order, dl, VTs), Size(Size) {}
+                 SDVTList VTs)
+      : SDNode(Opcode, Order, dl, VTs) {}
 
 public:
   int64_t getFrameIndex() const {
     return cast<FrameIndexSDNode>(getOperand(1))->getIndex();
   }
-
-  int64_t getSize() const { return Size; }
 
   // Methods to support isa and dyn_cast
   static bool classof(const SDNode *N) {

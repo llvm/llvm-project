@@ -53,6 +53,15 @@
 // FP16: #define __wasm_fp16__ 1{{$}}
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm32-unknown-unknown -mgc \
+// RUN:   | FileCheck %s -check-prefix=GC
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm64-unknown-unknown -mgc \
+// RUN:   | FileCheck %s -check-prefix=GC
+//
+// GC: #define __wasm_gc__ 1{{$}}
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target wasm32-unknown-unknown -mmultimemory \
 // RUN:   | FileCheck %s -check-prefix=MULTIMEMORY
 // RUN: %clang -E -dM %s -o - 2>&1 \
@@ -145,6 +154,7 @@
 // MVP-NOT: #define __wasm_exception_handling__ 1{{$}}
 // MVP-NOT: #define __wasm_extended_const__ 1{{$}}
 // MVP-NOT: #define __wasm_fp16__ 1{{$}}
+// MVP-NOT: #define __wasm_gc__ 1{{$}}
 // MVP-NOT: #define __wasm_multimemory__ 1{{$}}
 // MVP-NOT: #define __wasm_multivalue__ 1{{$}}
 // MVP-NOT: #define __wasm_mutable_globals__ 1{{$}}
@@ -181,6 +191,7 @@
 // GENERIC-NOT: #define __wasm_exception_handling__ 1{{$}}
 // GENERIC-NOT: #define __wasm_extended_const__ 1{{$}}
 // GENERIC-NOT: #define __wasm__fp16__ 1{{$}}
+// GENERIC-NOT: #define __wasm_gc__ 1{{$}}
 // GENERIC-NOT: #define __wasm_multimemory__ 1{{$}}
 // GENERIC-NOT: #define __wasm_relaxed_simd__ 1{{$}}
 // GENERIC-NOT: #define __wasm_simd128__ 1{{$}}
@@ -199,6 +210,7 @@
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_exception_handling__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_extended_const__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_fp16__ 1{{$}}
+// BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_gc__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_multimemory__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_multivalue__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_mutable_globals__ 1{{$}}

@@ -438,9 +438,7 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
           } else if (cirGenTypes.getCGModule()
                          .getCodeGenOpts()
                          .FineGrainedBitfieldAccesses) {
-            assert(!cir::MissingFeatures::nonFineGrainedBitfields());
-            cirGenTypes.getCGModule().errorNYI(field->getSourceRange(),
-                                               "NYI FineGrainedBitfield");
+            installBest = true;
           } else {
             // Otherwise, we're not installing. Update the bit size
             // of the current span to go all the way to limitOffset, which is

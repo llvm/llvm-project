@@ -297,8 +297,8 @@ LLVM_ABI PhysRegInfo AnalyzePhysRegInBundle(const MachineInstr &MI,
 
 class FinalizeBundleTestPass : public PassInfoMixin<FinalizeBundleTestPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 };
 
 } // End llvm namespace

@@ -2103,8 +2103,9 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
         DI->eraseFromParent();
         return;
       }
-
-      DI->setDebugValueUndef();
+      // Move DBG_LABELs without modifying them. Set DBG_VALUEs undef.
+      if (!DI->isDebugLabel())
+        DI->setDebugValueUndef();
       DI->moveBefore(&*Loc);
     };
 

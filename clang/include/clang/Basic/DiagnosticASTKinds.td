@@ -511,6 +511,14 @@ def note_odr_number_of_bases : Note<
   "class has %0 base %plural{1:class|:classes}0">;
 def note_odr_enumerator : Note<"enumerator %0 with value %1 here">;
 def note_odr_missing_enumerator : Note<"no corresponding enumerator here">;
+def note_odr_incompatible_fixed_underlying_type : Note<
+  "enumeration %0 declared with incompatible fixed underlying types (%1 vs. "
+  "%2)">;
+def note_odr_fixed_underlying_type : Note<
+  "enumeration %0 has fixed underlying type here">;
+def note_odr_missing_fixed_underlying_type : Note<
+  "enumeration %0 missing fixed underlying type here">;
+
 def err_odr_field_type_inconsistent : Error<
   "field %0 declared with incompatible types in different "
   "translation units (%1 vs. %2)">;

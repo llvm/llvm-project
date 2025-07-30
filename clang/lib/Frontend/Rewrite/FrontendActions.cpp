@@ -103,12 +103,13 @@ bool FixItAction::BeginSourceFileAction(CompilerInstance &CI) {
   }
   Rewriter.reset(new FixItRewriter(CI.getDiagnostics(), CI.getSourceManager(),
                                    CI.getLangOpts(), FixItOpts.get()));
-  return true;
+  return ASTFrontendAction::BeginSourceFileAction(CI);
 }
 
 void FixItAction::EndSourceFileAction() {
   // Otherwise rewrite all files.
   Rewriter->WriteFixedFiles();
+  ASTFrontendAction::EndSourceFileAction();
 }
 
 bool FixItRecompile::BeginInvocation(CompilerInstance &CI) {
@@ -298,7 +299,7 @@ bool RewriteIncludesAction::BeginSourceFileAction(CompilerInstance &CI) {
         std::make_unique<RewriteImportsListener>(CI, OutputStream));
   }
 
-  return true;
+  return PreprocessorFrontendAction::BeginSourceFileAction(CI);
 }
 
 void RewriteIncludesAction::ExecuteAction() {

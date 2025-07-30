@@ -442,9 +442,9 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_multi_use() #1 {
 ;
 ; GFX11-LABEL: add_x_shl_neg_to_sub_multi_use:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX11-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX11-NEXT:    v_and_b32_e32 v0, 0xffc, v0
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v0, 0, v0
 ; GFX11-NEXT:    ds_store_b32 v0, v1 offset:123
 ; GFX11-NEXT:    ds_store_b32 v0, v1 offset:456

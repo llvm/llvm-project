@@ -16,7 +16,7 @@
 
 #include <__concepts/same_as.h>
 #include <__config>
-#include <__format/concepts.h>
+#include <__format/fmt_pair_like.h>
 #include <__ranges/concepts.h>
 #include <__type_traits/remove_cvref.h>
 

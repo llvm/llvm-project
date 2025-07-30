@@ -6,6 +6,8 @@ types:
   - type_name: pthread_once_t
   - type_name: pthread_mutex_t
   - type_name: pthread_mutexattr_t
+  - type_name: pthread_barrier_t
+  - type_name: pthread_barrierattr_t
   - type_name: pthread_key_t
   - type_name: pthread_condattr_t
   - type_name: __pthread_tss_dtor_t
@@ -277,6 +279,26 @@ functions:
     arguments:
       - type: pthread_mutexattr_t *__restrict
       - type: int
+  - name: pthread_barrier_init
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: pthread_barrier_t *__restrict
+      - type: const pthread_barrierattr_t *__restrict
+      - type: int
+  - name: pthread_barrier_wait
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: pthread_barrier_t *
+  - name: pthread_barrier_destroy
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: pthread_barrier_t *
   - name: pthread_once
     standards:
       - POSIX

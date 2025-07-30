@@ -733,8 +733,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
         reportError("target does not support generation of this file type");
     }
 
-    const_cast<TargetLoweringObjectFile *>(Target->getObjFileLowering())
-        ->Initialize(MMIWP->getMMI().getContext(), *Target);
+    Target->getObjFileLowering()->Initialize(MMIWP->getMMI().getContext(),
+                                             *Target);
     if (MIR) {
       assert(MMIWP && "Forgot to create MMIWP?");
       if (MIR->parseMachineFunctions(*M, MMIWP->getMMI()))

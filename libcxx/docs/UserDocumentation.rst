@@ -72,6 +72,11 @@ when ``-fexperimental-library`` is passed:
 * ``std::chrono::tzdb`` and related time zone functionality
 * ``<syncstream>``
 
+Additionally, assertion semantics are an experimental feature that can be used
+to customize the behavior of Hardening (see :ref:`here <assertion-semantics>`).
+Assertion semantics mirror the evaluation semantics of C++26 Contracts but are
+not a standard feature.
+
 .. note::
   Experimental libraries are experimental.
     * The contents of the ``<experimental/...>`` headers and the associated static
