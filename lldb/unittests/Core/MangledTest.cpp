@@ -677,8 +677,6 @@ TEST_P(DemanglingPartsTestFixture, DemanglingParts) {
   auto demangled = std::string_view(*OB);
 
   ASSERT_EQ(OB->NameInfo.hasBasename(), valid_basename);
-  std::cout << demangled << " " << OB->NameInfo.BasenameRange.first << ", "
-            << OB->NameInfo.BasenameRange.second << '\n';
   EXPECT_EQ(OB->NameInfo.BasenameRange, info.BasenameRange);
   EXPECT_EQ(OB->NameInfo.TemplateArgumentsRange, info.TemplateArgumentsRange);
   EXPECT_EQ(OB->NameInfo.ScopeRange, info.ScopeRange);
