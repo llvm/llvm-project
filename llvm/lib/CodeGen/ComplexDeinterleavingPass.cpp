@@ -2194,11 +2194,10 @@ Value *ComplexDeinterleavingGraph::replaceNode(IRBuilderBase &Builder,
       // Splats that are not constant are interleaved where they are located
       Instruction *InsertPoint = (I->comesBefore(R) ? R : I)->getNextNode();
       IRBuilder<> IRB(InsertPoint);
-      ReplacementNode = IRB.CreateIntrinsic(Intrinsic::vector_interleave2,
-                                            NewTy, {Node->Real, Node->Imag});
+      ReplacementNode = IRB.CreateVectorInterleave({Node->Real, Node->Imag});
     } else {
-      ReplacementNode = Builder.CreateIntrinsic(
-          Intrinsic::vector_interleave2, NewTy, {Node->Real, Node->Imag});
+      ReplacementNode =
+          Builder.CreateVectorInterleave({Node->Real, Node->Imag});
     }
     break;
   }
@@ -2228,8 +2227,7 @@ Value *ComplexDeinterleavingGraph::replaceNode(IRBuilderBase &Builder,
     auto *B = replaceNode(Builder, Node->Operands[1]);
     auto *NewMaskTy = VectorType::getDoubleElementsVectorType(
         cast<VectorType>(MaskReal->getType()));
-    auto *NewMask = Builder.CreateIntrinsic(Intrinsic::vector_interleave2,
-                                            NewMaskTy, {MaskReal, MaskImag});
+    auto *NewMask = Builder.CreateVectorInterleave({MaskReal, MaskImag});
     ReplacementNode = Builder.CreateSelect(NewMask, A, B);
     break;
   }
@@ -2260,8 +2258,8 @@ void ComplexDeinterleavingGraph::processReductionSingle(
   }
 
   if (!NewInit)
-    NewInit = Builder.CreateIntrinsic(Intrinsic::vector_interleave2, NewVTy,
-                                      {Init, Constant::getNullValue(VTy)});
+    NewInit =
+        Builder.CreateVectorInterleave({Init, Constant::getNullValue(VTy)});
 
   NewPHI->addIncoming(NewInit, Incoming);
   NewPHI->addIncoming(OperationReplacement, BackEdge);
@@ -2289,8 +2287,7 @@ void ComplexDeinterleavingGraph::processReductionOperation(
   Value *InitImag = OldPHIImag->getIncomingValueForBlock(Incoming);
 
   IRBuilder<> Builder(Incoming->getTerminator());
-  auto *NewInit = Builder.CreateIntrinsic(Intrinsic::vector_interleave2, NewVTy,
-                                          {InitReal, InitImag});
+  auto *NewInit = Builder.CreateVectorInterleave({InitReal, InitImag});
 
   NewPHI->addIncoming(NewInit, Incoming);
   NewPHI->addIncoming(OperationReplacement, BackEdge);
