@@ -744,10 +744,8 @@ Error LTO::add(std::unique_ptr<InputFile> Input,
   }
 
   for (unsigned I = 0; I != Input->Mods.size(); ++I) {
-    auto ResOrErr = addModule(*Input, I, Res);
-    if (!ResOrErr)
-      return ResOrErr.takeError();
-    Res = *ResOrErr;
+    if (auto Err = addModule(*Input, I, Res).moveInto(Res))
+      return Err;
   }
 
   assert(Res.empty());
