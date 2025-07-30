@@ -73,8 +73,8 @@ struct clang::CodeGen::CGCoroData {
   // the address of the coroutine frame of the current coroutine.
   llvm::CallInst *CoroBegin = nullptr;
 
-  // Stores call to promise destruction and the llvm.lifetime.end of promise alloca
-  // We will clone them into deferred promise free block.
+  // Stores call to promise destruction and the llvm.lifetime.end of promise
+  // alloca We will clone them into deferred promise free block.
   llvm::CallInst *PromiseDtor = nullptr;
   llvm::CallInst *PromiseEnd = nullptr;
 
@@ -640,8 +640,7 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
         I->moveBefore(CleanupBB->getTerminator()->getIterator());
         PromiseBB = CleanupBB->splitBasicBlock(I, "promise.free");
         CoroData.PromiseEnd = I;
-      }
-      else {
+      } else {
         assert(!PromiseDtor && "Unexpected multiple destructor call");
         PromiseDtor = I;
       }
@@ -1064,8 +1063,7 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     CallCoroDelete(&S).EmitCoroFree(*this, ".defer");
     Builder.CreateBr(RetBB);
     Builder.ClearInsertionPoint();
-  }
-  else
+  } else
     EndBB->setName("coro.ret");
 
   // LLVM require the frontend to mark the coroutine.
