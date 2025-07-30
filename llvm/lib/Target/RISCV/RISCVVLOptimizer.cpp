@@ -10,9 +10,19 @@
 // instructions are inserted.
 //
 // The purpose of this optimization is to make the VL argument, for instructions
-// that have a VL argument, as small as possible. This is implemented by
-// visiting each instruction in reverse order and checking that if it has a VL
-// argument, whether the VL can be reduced.
+// that have a VL argument, as small as possible.
+//
+// This is split into a sparse dataflow analysis where we determine what VL is
+// demanded by each instruction first, and then afterwards try to reduce the VL
+// of each instruction if it demands less than its VL operand.
+//
+// The analysis is explained in more detail in the 2025 EuroLLVM Developers'
+// Meeting talk "Accidental Dataflow Analysis: Extending the RISC-V VL
+// Optimizer", which is available on YouTube at
+// https://www.youtube.com/watch?v=Mfb5fRSdJAc
+//
+// The slides for the talk are available at
+// https://llvm.org/devmtg/2025-04/slides/technical_talk/lau_accidental_dataflow.pdf
 //
 //===---------------------------------------------------------------------===//
 
