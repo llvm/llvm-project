@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/atan2.h"
-#include "atan_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
@@ -15,6 +14,7 @@
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/math/atan_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -72,6 +72,7 @@ namespace LIBC_NAMESPACE_DECL {
 //   |(atan(u) - P(u)) / P(u)| < u^10 / 11 < 2^-73.
 
 LLVM_LIBC_FUNCTION(double, atan2, (double y, double x)) {
+  using namespace atan_internal;
   using FPBits = fputil::FPBits<double>;
 
   constexpr double IS_NEG[2] = {1.0, -1.0};
