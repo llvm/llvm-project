@@ -977,7 +977,8 @@ amd_comgr_status_t AMDGPUCompiler::addIncludeFlags() {
   if (none_of(InSet->DataObjects, needsPreprocessing))
     return AMD_COMGR_STATUS_SUCCESS;
 
-  switch (ActionInfo->Language) {
+  amd_comgr_language_t Language = ActionInfo->Language;
+  switch (Language) {
   case AMD_COMGR_LANGUAGE_OPENCL_1_2:
   case AMD_COMGR_LANGUAGE_OPENCL_2_0: {
     SmallString<128> OpenCLCBasePath = IncludeDir;
@@ -1017,6 +1018,26 @@ amd_comgr_status_t AMDGPUCompiler::addIncludeFlags() {
     Args.push_back(PrecompiledHeaderPath.c_str());
     Args.push_back("-Xclang");
     Args.push_back("-fno-validate-pch");
+  }
+
+  bool CacheEnabled = CommandCache::get(LogS) != nullptr;
+  if (PrecompiledHeaders.empty() && CacheEnabled) {
+    // The -no-integrated-cpp is used to split the preprocessing stage from the
+    // rest of the compilation jobs. The cache doesn't handle source-code input,
+    // but can handle preprocessed input (to avoid dealing with includes).
+    Args.push_back("-no-integrated-cpp");
+    // The -dD option is used to keep the #define directives in the preprocessed
+    // output. When -fdeclare-opencl-builtins is used, the opencl builtin
+    // semantic analysis queries the preprocessor for macro definitions that
+    // signal that an OpenCL feature is enabled. After preprocessing these
+    // #define are gone, so the semantic analysis during the compilation stage
+    // fails. This flag is used to keep them such that they are present during
+    // the compilation stage.
+    // Additionally, we need to keep the definitions for #pragma directives.
+    // The preprocessor doesn't expand macro identifiers in #pragmas, and if we
+    // do not pass -dD the definitions would be missing when clang parses the
+    // code
+    Args.push_back("-dD");
   }
 
   return AMD_COMGR_STATUS_SUCCESS;
