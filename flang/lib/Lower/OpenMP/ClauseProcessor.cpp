@@ -1116,11 +1116,12 @@ bool ClauseProcessor::processInReduction(
         collectReductionSyms(clause, inReductionSyms);
 
         ReductionProcessor rp;
-        rp.processReductionArguments<mlir::omp::DeclareReductionOp>(
-            currentLocation, converter,
-            std::get<typename omp::clause::ReductionOperatorList>(clause.t),
-            inReductionVars, inReduceVarByRef, inReductionDeclSymbols,
-            inReductionSyms);
+        if (!rp.processReductionArguments<mlir::omp::DeclareReductionOp>(
+                currentLocation, converter,
+                std::get<typename omp::clause::ReductionOperatorList>(clause.t),
+                inReductionVars, inReduceVarByRef, inReductionDeclSymbols,
+                inReductionSyms))
+          inReductionSyms.clear();
 
         // Copy local lists into the output.
         llvm::copy(inReductionVars, std::back_inserter(result.inReductionVars));
@@ -1315,7 +1316,8 @@ bool ClauseProcessor::processMap(
                      const parser::CharBlock &source) {
     using Map = omp::clause::Map;
     mlir::Location clauseLocation = converter.genLocation(source);
-    const auto &[mapType, typeMods, mappers, iterator, objects] = clause.t;
+    const auto &[mapType, typeMods, refMod, mappers, iterator, objects] =
+        clause.t;
     llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
     std::string mapperIdName = "__implicit_mapper";
@@ -1342,16 +1344,13 @@ bool ClauseProcessor::processMap(
       mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
                      llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
       break;
-    case Map::MapType::Alloc:
-    case Map::MapType::Release:
+    case Map::MapType::Storage:
       // alloc and release is the default map_type for the Target Data
       // Ops, i.e. if no bits for map_type is supplied then alloc/release
-      // is implicitly assumed based on the target directive. Default
-      // value for Target Data and Enter Data is alloc and for Exit Data
-      // it is release.
+      // (aka storage in 6.0+) is implicitly assumed based on the target
+      // directive. Default value for Target Data and Enter Data is alloc
+      // and for Exit Data it is release.
       break;
-    case Map::MapType::Delete:
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
     }
 
     if (typeMods) {
@@ -1362,6 +1361,8 @@ bool ClauseProcessor::processMap(
         mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRESENT;
       if (llvm::is_contained(*typeMods, Map::MapTypeModifier::Close))
         mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE;
+      if (llvm::is_contained(*typeMods, Map::MapTypeModifier::Delete))
+        mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
       if (llvm::is_contained(*typeMods, Map::MapTypeModifier::OmpxHold))
         mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_OMPX_HOLD;
     }
@@ -1461,10 +1462,12 @@ bool ClauseProcessor::processReduction(
         }
 
         ReductionProcessor rp;
-        rp.processReductionArguments<mlir::omp::DeclareReductionOp>(
-            currentLocation, converter,
-            std::get<typename omp::clause::ReductionOperatorList>(clause.t),
-            reductionVars, reduceVarByRef, reductionDeclSymbols, reductionSyms);
+        if (!rp.processReductionArguments<mlir::omp::DeclareReductionOp>(
+                currentLocation, converter,
+                std::get<typename omp::clause::ReductionOperatorList>(clause.t),
+                reductionVars, reduceVarByRef, reductionDeclSymbols,
+                reductionSyms))
+          reductionSyms.clear();
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
         llvm::copy(reduceVarByRef, std::back_inserter(result.reductionByref));
@@ -1486,11 +1489,12 @@ bool ClauseProcessor::processTaskReduction(
         collectReductionSyms(clause, taskReductionSyms);
 
         ReductionProcessor rp;
-        rp.processReductionArguments<mlir::omp::DeclareReductionOp>(
-            currentLocation, converter,
-            std::get<typename omp::clause::ReductionOperatorList>(clause.t),
-            taskReductionVars, taskReduceVarByRef, taskReductionDeclSymbols,
-            taskReductionSyms);
+        if (!rp.processReductionArguments<mlir::omp::DeclareReductionOp>(
+                currentLocation, converter,
+                std::get<typename omp::clause::ReductionOperatorList>(clause.t),
+                taskReductionVars, taskReduceVarByRef, taskReductionDeclSymbols,
+                taskReductionSyms))
+          taskReductionSyms.clear();
         // Copy local lists into the output.
         llvm::copy(taskReductionVars,
                    std::back_inserter(result.taskReductionVars));

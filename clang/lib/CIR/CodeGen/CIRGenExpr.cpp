@@ -949,7 +949,6 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_Dynamic:
   case CK_ToUnion:
   case CK_BaseToDerived:
-  case CK_LValueBitCast:
   case CK_AddressSpaceConversion:
   case CK_ObjCObjectLValueCast:
   case CK_VectorSplat:
@@ -963,6 +962,18 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
                      e->getCastKindName());
 
     return {};
+  }
+
+  case CK_LValueBitCast: {
+    // This must be a reinterpret_cast (or c-style equivalent).
+    const auto *ce = cast<ExplicitCastExpr>(e);
+
+    cgm.emitExplicitCastExprType(ce, this);
+    LValue LV = emitLValue(e->getSubExpr());
+    Address V = LV.getAddress().withElementType(
+        builder, convertTypeForMem(ce->getTypeAsWritten()->getPointeeType()));
+
+    return makeAddrLValue(V, e->getType(), LV.getBaseInfo());
   }
 
   case CK_NoOp: {
@@ -1269,7 +1280,7 @@ RValue CIRGenFunction::getUndefRValue(QualType ty) {
 }
 
 RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
-                                const CIRGenCallee &callee,
+                                const CIRGenCallee &origCallee,
                                 const clang::CallExpr *e,
                                 ReturnValueSlot returnValue) {
   // Get the actual function type. The callee type will always be a pointer to
@@ -1279,6 +1290,8 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
 
   calleeTy = getContext().getCanonicalType(calleeTy);
   auto pointeeTy = cast<PointerType>(calleeTy)->getPointeeType();
+
+  CIRGenCallee callee = origCallee;
 
   if (getLangOpts().CPlusPlus)
     assert(!cir::MissingFeatures::sanitizers());
@@ -1296,7 +1309,44 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
   const CIRGenFunctionInfo &funcInfo =
       cgm.getTypes().arrangeFreeFunctionCall(args, fnType);
 
-  assert(!cir::MissingFeatures::opCallNoPrototypeFunc());
+  // C99 6.5.2.2p6:
+  //   If the expression that denotes the called function has a type that does
+  //   not include a prototype, [the default argument promotions are performed].
+  //   If the number of arguments does not equal the number of parameters, the
+  //   behavior is undefined. If the function is defined with a type that
+  //   includes a prototype, and either the prototype ends with an ellipsis (,
+  //   ...) or the types of the arguments after promotion are not compatible
+  //   with the types of the parameters, the behavior is undefined. If the
+  //   function is defined with a type that does not include a prototype, and
+  //   the types of the arguments after promotion are not compatible with those
+  //   of the parameters after promotion, the behavior is undefined [except in
+  //   some trivial cases].
+  // That is, in the general case, we should assume that a call through an
+  // unprototyped function type works like a *non-variadic* call. The way we
+  // make this work is to cast to the exxact type fo the promoted arguments.
+  if (isa<FunctionNoProtoType>(fnType)) {
+    assert(!cir::MissingFeatures::opCallChain());
+    assert(!cir::MissingFeatures::addressSpace());
+    cir::FuncType calleeTy = getTypes().getFunctionType(funcInfo);
+    // get non-variadic function type
+    calleeTy = cir::FuncType::get(calleeTy.getInputs(),
+                                  calleeTy.getReturnType(), false);
+    auto calleePtrTy = cir::PointerType::get(calleeTy);
+
+    mlir::Operation *fn = callee.getFunctionPointer();
+    mlir::Value addr;
+    if (auto funcOp = mlir::dyn_cast<cir::FuncOp>(fn)) {
+      addr = builder.create<cir::GetGlobalOp>(
+          getLoc(e->getSourceRange()),
+          cir::PointerType::get(funcOp.getFunctionType()), funcOp.getSymName());
+    } else {
+      addr = fn->getResult(0);
+    }
+
+    fn = builder.createBitcast(addr, calleePtrTy).getDefiningOp();
+    callee.setFunctionPointer(fn);
+  }
+
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
   assert(!cir::MissingFeatures::hip());
   assert(!cir::MissingFeatures::opCallMustTail());
@@ -1657,37 +1707,38 @@ void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
     return;
   }
 
-  if (getContext().getAsArrayType(e->getType())) {
-    cgm.errorNYI(e->getSourceRange(), "emitCXXConstructExpr: array type");
-    return;
+  if (const ArrayType *arrayType = getContext().getAsArrayType(e->getType())) {
+    assert(!cir::MissingFeatures::sanitizers());
+    emitCXXAggrConstructorCall(cd, arrayType, dest.getAddress(), e, false);
+  } else {
+
+    clang::CXXCtorType type = Ctor_Complete;
+    bool forVirtualBase = false;
+    bool delegating = false;
+
+    switch (e->getConstructionKind()) {
+    case CXXConstructionKind::Complete:
+      type = Ctor_Complete;
+      break;
+    case CXXConstructionKind::Delegating:
+      // We should be emitting a constructor; GlobalDecl will assert this
+      type = curGD.getCtorType();
+      delegating = true;
+      break;
+    case CXXConstructionKind::VirtualBase:
+      // This should just set 'forVirtualBase' to true and fall through, but
+      // virtual base class support is otherwise missing, so this needs to wait
+      // until it can be tested.
+      cgm.errorNYI(e->getSourceRange(),
+                   "emitCXXConstructExpr: virtual base constructor");
+      return;
+    case CXXConstructionKind::NonVirtualBase:
+      type = Ctor_Base;
+      break;
+    }
+
+    emitCXXConstructorCall(cd, type, forVirtualBase, delegating, dest, e);
   }
-
-  clang::CXXCtorType type = Ctor_Complete;
-  bool forVirtualBase = false;
-  bool delegating = false;
-
-  switch (e->getConstructionKind()) {
-  case CXXConstructionKind::Complete:
-    type = Ctor_Complete;
-    break;
-  case CXXConstructionKind::Delegating:
-    // We should be emitting a constructor; GlobalDecl will assert this
-    type = curGD.getCtorType();
-    delegating = true;
-    break;
-  case CXXConstructionKind::VirtualBase:
-    // This should just set 'forVirtualBase' to true and fall through, but
-    // virtual base class support is otherwise missing, so this needs to wait
-    // until it can be tested.
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitCXXConstructExpr: virtual base constructor");
-    return;
-  case CXXConstructionKind::NonVirtualBase:
-    type = Ctor_Base;
-    break;
-  }
-
-  emitCXXConstructorCall(cd, type, forVirtualBase, delegating, dest, e);
 }
 
 RValue CIRGenFunction::emitReferenceBindingToExpr(const Expr *e) {
