@@ -134,7 +134,7 @@ SANITIZER("cfi-nvcall", CFINVCall)
 SANITIZER("cfi-vcall", CFIVCall)
 SANITIZER_GROUP("cfi", CFI,
                 CFIDerivedCast | CFIICall | CFIMFCall | CFIUnrelatedCast |
-                    CFINVCall | CFIVCall)
+                    CFINVCall | CFIVCall | CFICastStrict)
 
 // Kernel Control Flow Integrity
 SANITIZER("kcfi", KCFI)
