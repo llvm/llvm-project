@@ -381,6 +381,7 @@ set(files
   __format/enable_insertable.h
   __format/escaped_output_table.h
   __format/extended_grapheme_cluster_table.h
+  __format/fmt_pair_like.h
   __format/format_arg.h
   __format/format_arg_store.h
   __format/format_args.h

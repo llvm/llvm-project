@@ -1506,13 +1506,13 @@ func.func @test_while_tensor_list_size(%arg0: tensor<1x1x1x1x1x1x1xf32>, %arg1: 
 // -----
 
 func.func @test_cond_if_max_nested_depth(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i1>, %arg3: tensor<i1>) -> tensor<f32> {
-  %0 = tosa.cond_if %arg2 -> (tensor<f32>) {
-    %1 = tosa.cond_if %arg3 -> (tensor<f32>) {
-      %2 = tosa.cond_if %arg2 -> (tensor<f32>) {
-        %3 = tosa.cond_if %arg3 -> (tensor<f32>) {
-          %4 = tosa.cond_if %arg2 -> (tensor<f32>) {
+  %0 = tosa.cond_if %arg2 : tensor<i1> -> tensor<f32> {
+    %1 = tosa.cond_if %arg3 : tensor<i1>-> tensor<f32> {
+      %2 = tosa.cond_if %arg2 : tensor<i1> -> tensor<f32> {
+        %3 = tosa.cond_if %arg3 : tensor<i1> -> tensor<f32> {
+          %4 = tosa.cond_if %arg2 : tensor<i1>  -> tensor<f32> {
             // expected-error@+1 {{'tosa.cond_if' op failed level check: 6 >= MAX_NESTING}}
-            %5 = tosa.cond_if %arg3 -> (tensor<f32>) {
+            %5 = tosa.cond_if %arg3 : tensor<i1> -> tensor<f32> {
               %res = tosa.sub %arg0, %arg1 : (tensor<f32>, tensor<f32>) -> tensor<f32>
               tosa.yield %res : tensor<f32>
             } else {

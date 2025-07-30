@@ -1342,13 +1342,30 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0);
 
     if (ST.hasVOP3PInsts()) {
-      getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS})
-        .legalFor({S32, S16, V2S16})
-        .clampMaxNumElements(0, S16, 2)
-        .minScalar(0, S16)
-        .widenScalarToNextPow2(0)
-        .scalarize(0)
-        .lower();
+      getActionDefinitionsBuilder(G_ABS)
+          .legalFor({S32, S16, V2S16})
+          .clampMaxNumElements(0, S16, 2)
+          .minScalar(0, S16)
+          .widenScalarToNextPow2(0)
+          .scalarize(0)
+          .lower();
+      if (ST.hasIntMinMax64()) {
+        getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
+            .legalFor({S32, S16, S64, V2S16})
+            .clampMaxNumElements(0, S16, 2)
+            .minScalar(0, S16)
+            .widenScalarToNextPow2(0)
+            .scalarize(0)
+            .lower();
+      } else {
+        getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
+            .legalFor({S32, S16, V2S16})
+            .clampMaxNumElements(0, S16, 2)
+            .minScalar(0, S16)
+            .widenScalarToNextPow2(0)
+            .scalarize(0)
+            .lower();
+      }
     } else {
       getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS})
         .legalFor({S32, S16})
@@ -1682,7 +1699,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.hasFlatAtomicFaddF32Inst())
     Atomic.legalFor({{S32, FlatPtr}});
 
-  if (ST.hasGFX90AInsts()) {
+  if (ST.hasGFX90AInsts() || ST.hasGFX1250Insts()) {
     // These are legal with some caveats, and should have undergone expansion in
     // the IR in most situations
     // TODO: Move atomic expansion into legalizer
