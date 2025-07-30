@@ -7379,8 +7379,14 @@ private:
     //     of arguments, hence MEMBER_OF(4)
     //
     // map(p, p[:100])
+    // For "pragma omp target":
+    // &p, &p, sizeof(p), TARGET_PARAM | TO | FROM
+    // &p, &p[0], 100*sizeof(float), PTR_AND_OBJ | TO | FROM (*)
+    // Otherwise:
     // ===> map(p[:100])
     // &p, &p[0], 100*sizeof(float), TARGET_PARAM | PTR_AND_OBJ | TO | FROM
+    // (*) We need to use PTR_AND_OBJ here to ensure that the mapped copies of
+    // p and p[0] get attached.
 
     // Track if the map information being generated is the first for a capture.
     bool IsCaptureFirstInfo = IsFirstComponentList;
@@ -7398,14 +7404,26 @@ private:
     // components.
     bool IsExpressionFirstInfo = true;
     bool FirstPointerInComplexData = false;
+    bool SkipStandalonePtrMapping = false;
     Address BP = Address::invalid();
     const Expr *AssocExpr = I->getAssociatedExpression();
     const auto *AE = dyn_cast<ArraySubscriptExpr>(AssocExpr);
     const auto *OASE = dyn_cast<ArraySectionExpr>(AssocExpr);
     const auto *OAShE = dyn_cast<OMPArrayShapingExpr>(AssocExpr);
 
-    if (AreBothBasePtrAndPteeMapped && std::next(I) == CE)
+    // For map(p, p[0]) on a "target" construct, we need to map "p" by itself
+    // as it has to be passed by-reference as the kernel argument.
+    // For other constructs, we can skip mapping "p" because the PTR_AND_OBJ
+    // mapping for map(p[0]) will take care of mapping p as well.
+    SkipStandalonePtrMapping =
+        AreBothBasePtrAndPteeMapped &&
+        (!isa<const OMPExecutableDirective *>(CurDir) ||
+         !isOpenMPTargetExecutionDirective(
+             cast<const OMPExecutableDirective *>(CurDir)->getDirectiveKind()));
+
+    if (SkipStandalonePtrMapping && std::next(I) == CE)
       return;
+
     if (isa<MemberExpr>(AssocExpr)) {
       // The base is the 'this' pointer. The content of the pointer is going
       // to be the base of the field being mapped.
@@ -7740,7 +7758,7 @@ private:
               getMapTypeBits(MapType, MapModifiers, MotionModifiers, IsImplicit,
                              !IsExpressionFirstInfo || RequiresReference ||
                                  FirstPointerInComplexData || IsMemberReference,
-                             AreBothBasePtrAndPteeMapped ||
+                             SkipStandalonePtrMapping ||
                                  (IsCaptureFirstInfo && !RequiresReference),
                              IsNonContiguous);
 
@@ -8926,8 +8944,56 @@ public:
           CurCaptureVarInfo.append(CurInfoForComponentLists);
         };
 
-    GenerateInfoForComponentLists(DeclComponentLists,
+    // Next, we break-down the lists of components into lists that should be
+    // handled together.
+    //
+    // For now, we handle maps on pointers by themselves, and everything else
+    // together.
+    //
+    // TODO: Do this based on which lists have the same attachable-base-pointer
+    // e.g. The map clauses below, which are present on the same construct,
+    // should be handled grouped together based on their
+    // attachable-base-pointers:
+    //   map-clause                | attachable-base-pointer
+    //   --------------------------+------------------------
+    //   map(p, ps)                | none
+    //   map(p[0])                 | p
+    //   map(p[0]->b, p[0]->c)     | p[0]
+    //   map(ps->d, ps->e, ps->pt) | ps
+    //   map(ps->pt->d, ps->pt->e) | ps->pt
+
+    MapDataArrayTy ListsThatMapPointerVDItself;
+    MapDataArrayTy RemainingLists;
+    bool IsVDPointerType = VD && VD->getType()->isPointerType();
+
+    for (const MapData &L : DeclComponentLists) {
+      if (IsVDPointerType) {
+        OMPClauseMappableExprCommon::MappableExprComponentListRef Components =
+            std::get<0>(L);
+        bool IsMapOfPointerVD =
+            Components.size() == 1 &&
+            Components[0].getAssociatedDeclaration() &&
+            Components[0].getAssociatedDeclaration()->getCanonicalDecl() == VD;
+        if (IsMapOfPointerVD) {
+          ListsThatMapPointerVDItself.push_back(L);
+          continue;
+        }
+      }
+      RemainingLists.push_back(L);
+    }
+
+    // If VD is a pointer, and there are component-lists mapping VD itself,
+    // like: `int *p; ... map(p)`, we handle them first, and
+    // the first one from the should get the TARGET_PARAM flag.
+    GenerateInfoForComponentLists(ListsThatMapPointerVDItself,
                                   /*IsEligibleForTargetParamFlag=*/true);
+    // Then we handle all the other lists together. Note that since we already
+    // added TARGET_PARAM for the pointer case, we shouldn't add it again if
+    // if there are other lists that get handled here, for example, the list
+    // for `map(p[0:10]` in `int *p; ... map(p, p[0:10])`.
+    GenerateInfoForComponentLists(
+        RemainingLists,
+        /*IsEligibleForTargetParamFlag=*/ListsThatMapPointerVDItself.empty());
   }
 
   /// Generate the base pointers, section pointers, sizes, map types, and
