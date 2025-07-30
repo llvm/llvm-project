@@ -2001,7 +2001,38 @@ void COFFDumper::printCOFFBaseReloc() {
   }
 }
 
-void COFFDumper::printCOFFPseudoReloc() { ListScope D(W, "PseudoReloc"); }
+void COFFDumper::printCOFFPseudoReloc() {
+  const StringRef RelocBeginName = Obj->getArch() == Triple::x86
+                                       ? "___RUNTIME_PSEUDO_RELOC_LIST__"
+                                       : "__RUNTIME_PSEUDO_RELOC_LIST__";
+  const StringRef RelocEndName = Obj->getArch() == Triple::x86
+                                     ? "___RUNTIME_PSEUDO_RELOC_LIST_END__"
+                                     : "__RUNTIME_PSEUDO_RELOC_LIST_END__";
+
+  COFFSymbolRef RelocBegin, RelocEnd;
+  auto Count = Obj->getNumberOfSymbols();
+  if (Count == 0) {
+    W.startLine() << "The symbol table has been stripped\n";
+    return;
+  }
+  for (auto i = 0u;
+       i < Count && (!RelocBegin.getRawPtr() || !RelocEnd.getRawPtr()); ++i) {
+    auto Sym = Obj->getSymbol(i);
+    if (Sym.takeError())
+      continue;
+    auto Name = Obj->getSymbolName(*Sym);
+    if (*Name == RelocBeginName)
+      RelocBegin = *Sym;
+    else if (*Name == RelocEndName)
+      RelocEnd = *Sym;
+  }
+  if (!RelocBegin.getRawPtr() || !RelocEnd.getRawPtr()) {
+    W.startLine()
+        << "The symbols for runtime pseudo-relocation are not found\n";
+    return;
+  }
+  ListScope D(W, "PseudoReloc");
+}
 
 void COFFDumper::printCOFFResources() {
   ListScope ResourcesD(W, "Resources");
