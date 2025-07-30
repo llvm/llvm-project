@@ -101,6 +101,14 @@ bool isUniformAcrossVFsAndUFs(VPValue *V);
 /// Returns the header block of the first, top-level loop, or null if none
 /// exist.
 VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);
+
+/// Returns the VPValue representing the uncounted exit comparison if all the
+/// recipes needed to form the condition within the vector loop body were
+/// matched.
+std::optional<VPValue *>
+getRecipesForUncountedExit(VPlan &Plan,
+                           SmallVectorImpl<VPRecipeBase *> &Recipes,
+                           SmallVectorImpl<VPReplicateRecipe *> &GEPs);
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//
