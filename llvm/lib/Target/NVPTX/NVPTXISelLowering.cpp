@@ -843,7 +843,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setTargetDAGCombine({ISD::ADD, ISD::AND, ISD::EXTRACT_VECTOR_ELT, ISD::FADD,
                        ISD::MUL, ISD::SHL, ISD::SREM, ISD::UREM, ISD::VSELECT,
                        ISD::BUILD_VECTOR, ISD::ADDRSPACECAST, ISD::LOAD,
-                       ISD::STORE});
+                       ISD::STORE, ISD::ZERO_EXTEND, ISD::SIGN_EXTEND});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
@@ -5219,6 +5219,42 @@ static SDValue PerformREMCombine(SDNode *N,
   return SDValue();
 }
 
+// (sign_extend|zero_extend (mul|shl) x, y) -> (mul.wide x, y)
+static SDValue combineMulWide(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                              CodeGenOptLevel OptLevel) {
+  if (OptLevel == CodeGenOptLevel::None)
+    return SDValue();
+
+  SDValue Op = N->getOperand(0);
+  if (!Op.hasOneUse())
+    return SDValue();
+  EVT ToVT = N->getValueType(0);
+  EVT FromVT = Op.getValueType();
+  if (!((ToVT == MVT::i32 && FromVT == MVT::i16) ||
+        (ToVT == MVT::i64 && FromVT == MVT::i32)))
+    return SDValue();
+  if (!(Op.getOpcode() == ISD::MUL ||
+        (Op.getOpcode() == ISD::SHL && isa<ConstantSDNode>(Op.getOperand(1)))))
+    return SDValue();
+
+  SDLoc DL(N);
+  unsigned ExtOpcode = N->getOpcode();
+  unsigned Opcode = 0;
+  if (ExtOpcode == ISD::SIGN_EXTEND && Op->getFlags().hasNoSignedWrap())
+    Opcode = NVPTXISD::MUL_WIDE_SIGNED;
+  else if (ExtOpcode == ISD::ZERO_EXTEND && Op->getFlags().hasNoUnsignedWrap())
+    Opcode = NVPTXISD::MUL_WIDE_UNSIGNED;
+  else
+    return SDValue();
+  SDValue RHS = Op.getOperand(1);
+  if (Op.getOpcode() == ISD::SHL) {
+    const auto ShiftAmt = Op.getConstantOperandVal(1);
+    const auto MulVal = APInt(ToVT.getSizeInBits(), 1) << ShiftAmt;
+    RHS = DCI.DAG.getConstant(MulVal, DL, ToVT);
+  }
+  return DCI.DAG.getNode(Opcode, DL, ToVT, Op.getOperand(0), RHS);
+}
+
 enum OperandSignedness {
   Signed = 0,
   Unsigned,
@@ -5825,6 +5861,9 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     return combineADDRSPACECAST(N, DCI);
   case ISD::AND:
     return PerformANDCombine(N, DCI);
+  case ISD::SIGN_EXTEND:
+  case ISD::ZERO_EXTEND:
+    return combineMulWide(N, DCI, OptLevel);
   case ISD::BUILD_VECTOR:
     return PerformBUILD_VECTORCombine(N, DCI);
   case ISD::EXTRACT_VECTOR_ELT:
