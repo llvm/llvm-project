@@ -15,12 +15,14 @@
 // CHECK: define linkonce_odr spir_func noundef i32 @_Z13squareInlinedi
 
 // Function declared but not defined or used - no symbols emitted
-[[clang::sycl_external]] int decl();
+[[clang::sycl_external]] int declOnly();
+// CHECK-NOT: define {{.*}} i32 @_Z8declOnlyv
+
 
 // FIXME: Function declared and used but not defined - emit external reference
-[[clang::sycl_external]] void declused(int y);
+[[clang::sycl_external]] void declUsed(int y);
 
-// Function overload with definition - symbols emitted
+// Function declared with the attribute and later defined - symbols emitted
 [[clang::sycl_external]] int func1(int arg);
 int func1(int arg) { return arg; }
 // CHECK: define dso_local spir_func noundef i32 @_Z5func1i
@@ -54,19 +56,21 @@ template<>
 [[clang::sycl_external]] void tFunc1<int>(int arg) {}
 // CHECK: define dso_local spir_func void @_Z6tFunc1IiEvT_
 
-// FIXME: symbols should be emitted for the instantiation and the specialization
-// tFunc2 below
 template <typename T>
-void tFunc2(T arg) {}
-template void tFunc2<int>(int arg); // emit code for this
-template<> void tFunc2<char>(char arg) {} // and this
+[[clang::sycl_external]] void tFunc2(T arg) {}
+template void tFunc2<int>(int arg);
+// CHECK: define weak_odr spir_func void @_Z6tFunc2IiEvT_
+template<> void tFunc2<char>(char arg) {}
+// CHECK: define dso_local spir_func void @_Z6tFunc2IcEvT_
+template<> [[clang::sycl_external]] void  tFunc2<long>(long arg) {}
+// CHECK: define dso_local spir_func void @_Z6tFunc2IlEvT_
 
 // Test that symbols are not emitted without the sycl_external attribute
 int squareNoAttr(int x) { return x*x; }
 // CHECK-NOT: define {{.*}} i32 @_Z12squareNoAttri
 
 int main() {
-  declused(4);
+  declUsed(4);
   int i = squareUsed(5);
   int j = squareNoAttr(6);
   return 0;

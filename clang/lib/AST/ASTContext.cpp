@@ -12975,23 +12975,17 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
   if (D->hasAttr<WeakRefAttr>())
     return false;
 
-  if (LangOpts.SYCLIsDevice && !D->hasAttr<SYCLKernelEntryPointAttr>() &&
-      !D->hasAttr<SYCLExternalAttr>())
-    return false;
+  // SYCL device compilation requires that functions defined with the
+  // sycl_kernel_entry_point or sycl_external attributes be emitted. All
+  // other entities are emitted only if they are used by a function
+  // defined with one of those attributes.
+  if (LangOpts.SYCLIsDevice)
+    return isa<FunctionDecl>(D) && (D->hasAttr<SYCLKernelEntryPointAttr>() ||
+                                    D->hasAttr<SYCLExternalAttr>());
 
   // Aliases and used decls are required.
   if (D->hasAttr<AliasAttr>() || D->hasAttr<UsedAttr>())
     return true;
-
-  // SYCL device compilation emits code only for functions defined with either
-  // sycl_kernel_entry_point or sycl_external attributes are emitted.
-  // Function definitions with the sycl_kernel_entry_point attribute are
-  // required during device compilation so that SYCL kernel caller offload
-  // entry points are emitted and those with sycl_external attribute are
-  // required regardless of whether they are reachable from a SYCL kernel.
-  if (LangOpts.SYCLIsDevice)
-    return isa<FunctionDecl>(D) && (D->hasAttr<SYCLKernelEntryPointAttr>() ||
-                                    D->hasAttr<SYCLExternalAttr>());
 
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     // Forward declarations aren't required.
