@@ -1045,7 +1045,6 @@ struct ReorderElementwiseOpsOnBroadcast final
     Type resultElemType = resultType.getElementType();
 
     // Get the type of the first non-constant operand
-    // Operation *firstBroadcastOrSplat = nullptr;
     Value splatSource;
     for (Value operand : op->getOperands()) {
       Operation *definingOp = operand.getDefiningOp();
@@ -1057,26 +1056,24 @@ struct ReorderElementwiseOpsOnBroadcast final
       break;
     }
     if (!splatSource)
-      // TODO: why?
       return failure();
-
     Type unbroadcastResultType =
         cloneOrReplace(splatSource.getType(), resultElemType);
-
-    Type lhsBcastOrSplatType = splatSource.getType();
 
     // Make sure that all operands are broadcast from identically-shaped types:
     //  * scalar (`vector.broadcast` + `vector.splat`), or
     //  * vector (`vector.broadcast`).
     // Otherwise the re-ordering wouldn't be safe.
-    if (!llvm::all_of(op->getOperands(), [lhsBcastOrSplatType](Value val) {
+    if (!llvm::all_of(op->getOperands(), [splatSource](Value val) {
           if (auto source = getBroadcastLikeSource(val))
-            return source.getType() == lhsBcastOrSplatType;
+            return haveSameShapeAndScaling(source.getType(),
+                                           splatSource.getType());
           SplatElementsAttr splatConst;
           return matchPattern(val, m_Constant(&splatConst));
         })) {
       return rewriter.notifyMatchFailure(
-          op, "not all operands are broadcasts from the sametype");
+          op,
+          "not all operands are constants or broadcasts from the same type");
     }
 
     // Collect the source values before broadcasting
