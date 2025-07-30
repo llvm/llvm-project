@@ -136,3 +136,7 @@ CHECKHOTPATCHABLE2:  }
 // ---- /hotpatchcompatible requires at least 6 bytes function padding
 RUN: env LLD_IN_TEST=1 not lld-link /out:%t.exe /entry:main /hotpatchcompatible /functionpadmin:5 %t.obj 2>&1 | FileCheck -check-prefix=CHECKHOTPATCHNOT %s
 CHECKHOTPATCHNOT: lld-link: error: /hotpatchcompatible: requires at least 6 bytes of /functionpadmin
+
+// ---- /hotpatchcompatible requires at least 6 bytes function padding -- without /functionpadmin should raise an error
+RUN: env LLD_IN_TEST=1 not lld-link /out:%t.exe /entry:main /hotpatchcompatible %t.obj 2>&1 | FileCheck -check-prefix=CHECKHOTPATCHNOT2 %s
+CHECKHOTPATCHNOT2: lld-link: error: /hotpatchcompatible: requires at least 6 bytes of /functionpadmin
