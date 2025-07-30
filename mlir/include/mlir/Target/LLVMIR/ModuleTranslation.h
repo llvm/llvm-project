@@ -30,6 +30,7 @@
 
 namespace llvm {
 class BasicBlock;
+class CallBase;
 class CanonicalLoopInfo;
 class Function;
 class IRBuilderBase;
