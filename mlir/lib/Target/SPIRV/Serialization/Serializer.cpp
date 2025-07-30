@@ -958,6 +958,25 @@ Serializer::prepareDenseElementsConstant(Location loc, Type constType,
     } else {
       return 0;
     }
+  } else if (isa<spirv::TensorArmType>(constType)) {
+    numberOfConstituents = shapedType.getNumElements();
+    operands.reserve(numberOfConstituents + 2);
+    for (int i = 0; i < numberOfConstituents; ++i) {
+      uint32_t elementID = 0;
+      if (auto attr = dyn_cast<DenseIntElementsAttr>(valueAttr)) {
+        elementID =
+            elementType.isInteger(1)
+                ? prepareConstantBool(loc, attr.getValues<BoolAttr>()[i])
+                : prepareConstantInt(loc, attr.getValues<IntegerAttr>()[i]);
+      }
+      if (auto attr = dyn_cast<DenseFPElementsAttr>(valueAttr)) {
+        elementID = prepareConstantFp(loc, attr.getValues<FloatAttr>()[i]);
+      }
+      if (!elementID) {
+        return 0;
+      }
+      operands.push_back(elementID);
+    }
   } else {
     operands.reserve(numberOfConstituents + 2);
     for (int i = 0; i < numberOfConstituents; ++i) {
