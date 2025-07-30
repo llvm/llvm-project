@@ -10,7 +10,8 @@
 #include "llvm/ADT/StringMap.h"    
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Path.h"
-
+#include "clang/Driver/RocmInstallationDetector.h"
+#include "AMDGPU.h"
 using namespace clang::driver;
 using namespace clang::driver::tools;
 using namespace clang;

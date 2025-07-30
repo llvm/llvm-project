@@ -2700,6 +2700,8 @@ void CGDebugInfo::emitVTableSymbol(llvm::GlobalVariable *VTable,
                                    const CXXRecordDecl *RD) {
   if (!CGM.getTarget().getCXXABI().isItaniumFamily())
     return;
+  if (DebugKind <= llvm::codegenoptions::DebugLineTablesOnly)
+    return;
 
   ASTContext &Context = CGM.getContext();
   StringRef SymbolName = "_vtable$";
