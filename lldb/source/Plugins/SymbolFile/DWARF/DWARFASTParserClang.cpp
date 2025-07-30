@@ -249,10 +249,10 @@ static unsigned GetCXXMethodCVQuals(const DWARFDIE &subprogram,
   return cv_quals;
 }
 
-static std::optional<std::string> MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
+static std::string MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
   char const *name = die.GetMangledName(/*substitute_name_allowed*/ false);
   if (!name)
-    return std::nullopt;
+    return {};
 
   return name;
 }
@@ -1402,7 +1402,7 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
               ignore_containing_context ? m_ast.GetTranslationUnitDecl()
                                         : containing_decl_ctx,
               GetOwningClangModule(die), attrs.name.GetStringRef(), clang_type,
-              attrs.storage, attrs.is_inline, /*asm_label=*/std::nullopt);
+              attrs.storage, attrs.is_inline, /*asm_label=*/{});
           clang::FunctionTemplateDecl *func_template_decl =
               m_ast.CreateFunctionTemplateDecl(
                   containing_decl_ctx, GetOwningClangModule(die),

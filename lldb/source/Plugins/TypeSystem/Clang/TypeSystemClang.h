@@ -477,8 +477,7 @@ public:
   clang::FunctionDecl *CreateFunctionDeclaration(
       clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
       llvm::StringRef name, const CompilerType &function_Type,
-      clang::StorageClass storage, bool is_inline,
-      std::optional<std::string> asm_label);
+      clang::StorageClass storage, bool is_inline, llvm::StringRef asm_label);
 
   CompilerType
   CreateFunctionType(const CompilerType &result_type,
@@ -1002,7 +1001,7 @@ public:
 
   clang::CXXMethodDecl *AddMethodToCXXRecordType(
       lldb::opaque_compiler_type_t type, llvm::StringRef name,
-      std::optional<std::string> mangled_name, const CompilerType &method_type,
+      llvm::StringRef asm_label, const CompilerType &method_type,
       lldb::AccessType access, bool is_virtual, bool is_static, bool is_inline,
       bool is_explicit, bool is_attr_used, bool is_artificial);
 
