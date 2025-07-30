@@ -856,7 +856,7 @@ private:
 };
 
 class InquireIOLengthState : public NoUnitIoStatementState,
-                             public IoDirectionState<Direction::Output> {
+                             public OutputStatementState {
 public:
   RT_API_ATTRS InquireIOLengthState(
       const char *sourceFile = nullptr, int sourceLine = 0);
