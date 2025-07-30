@@ -216,7 +216,7 @@ void CIRGenFunction::emitAndUpdateRetAlloca(QualType type, mlir::Location loc,
 void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
                              mlir::Location loc, CharUnits alignment,
                              bool isParam) {
-  const auto *namedVar = dyn_cast_or_null<NamedDecl>(var);
+  [[maybe_unused]] const auto *namedVar = dyn_cast_or_null<NamedDecl>(var);
   assert(namedVar && "Needs a named decl");
   assert(!cir::MissingFeatures::cgfSymbolTable());
 

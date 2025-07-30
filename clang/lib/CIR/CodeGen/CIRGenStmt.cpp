@@ -80,12 +80,12 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
 #include "clang/AST/StmtNodes.inc"
     {
       // Remember the block we came in on.
-      mlir::Block *incoming = builder.getInsertionBlock();
+      [[maybe_unused]] mlir::Block *incoming = builder.getInsertionBlock();
       assert(incoming && "expression emission must have an insertion point");
 
       emitIgnoredExpr(cast<Expr>(s));
 
-      mlir::Block *outgoing = builder.getInsertionBlock();
+      [[maybe_unused]] mlir::Block *outgoing = builder.getInsertionBlock();
       assert(outgoing && "expression emission cleared block!");
       return mlir::success();
     }
