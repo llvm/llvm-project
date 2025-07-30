@@ -330,25 +330,65 @@ LogicalResult LLVM::detail::oneToOneRewrite(
       return failure();
   }
 
-  // If the targetAttrs contains DenseElementsAttr,
-  // and the element type of the DenseElementsAttr and result type is
-  // inconsistent after the conversion of result types, we need to convert the
-  // element type of the DenseElementsAttr to the target type by creating a new
-  // DenseElementsAttr with the converted element type, and use the new
-  // DenseElementsAttr to replace the old one in the targetAttrs
+  // Convert attribute element types to match the converted result types.
+  // This ensures that attributes like
+  // dense<0.0> : vector<4xf8E4M3FN> become
+  // dense<0> : vector<4xi8>
+  // when the result type is converted to i8.
   SmallVector<NamedAttribute> convertedAttrs;
   for (auto attr : targetAttrs) {
-    if (auto denseAttr = dyn_cast<DenseElementsAttr>(attr.getValue())) {
-      VectorType vectorType = dyn_cast<VectorType>(denseAttr.getType());
-      if (vectorType) {
-        auto convertedElementType =
-            typeConverter.convertType(vectorType.getElementType());
-        VectorType convertedVectorType =
-            VectorType::get(vectorType.getShape(), convertedElementType,
-                            vectorType.getScalableDims());
+    if (auto floatAttr = dyn_cast<FloatAttr>(attr.getValue())) {
+      auto convertedElementType =
+          typeConverter.convertType(floatAttr.getType());
+      if (convertedElementType != floatAttr.getType()) {
+        // Currently, only 1-byte or sub-byte float types will be converted and
+        // converted to integer types.
         convertedAttrs.emplace_back(
-            attr.getName(), DenseElementsAttr::getFromRawBuffer(
-                                convertedVectorType, denseAttr.getRawData()));
+            attr.getName(),
+            IntegerAttr::get(convertedElementType,
+                             floatAttr.getValue().bitcastToAPInt()));
+      } else {
+        convertedAttrs.emplace_back(attr);
+      }
+    } else if (auto intAttr = dyn_cast<IntegerAttr>(attr.getValue())) {
+      auto convertedElementType = typeConverter.convertType(intAttr.getType());
+      if (convertedElementType != intAttr.getType()) {
+        convertedAttrs.emplace_back(
+            attr.getName(),
+            IntegerAttr::get(convertedElementType, intAttr.getValue()));
+      } else {
+        convertedAttrs.emplace_back(attr);
+      }
+    } else if (auto denseAttr = dyn_cast<DenseElementsAttr>(attr.getValue())) {
+      if (auto shapedType = dyn_cast<ShapedType>(denseAttr.getType())) {
+        auto convertedElementType =
+            typeConverter.convertType(shapedType.getElementType());
+        if (convertedElementType != shapedType.getElementType()) {
+          ShapedType convertedShapedType =
+              shapedType.cloneWith(std::nullopt, convertedElementType);
+          convertedAttrs.emplace_back(
+              attr.getName(), DenseElementsAttr::getFromRawBuffer(
+                                  convertedShapedType, denseAttr.getRawData()));
+        } else {
+          convertedAttrs.emplace_back(attr);
+        }
+      }
+    } else if (auto sparseAttr =
+                   dyn_cast<SparseElementsAttr>(attr.getValue())) {
+      if (auto shapedType = dyn_cast<ShapedType>(sparseAttr.getType())) {
+        auto convertedElementType =
+            typeConverter.convertType(shapedType.getElementType());
+        if (convertedElementType != shapedType.getElementType()) {
+          ShapedType convertedShapedType =
+              shapedType.cloneWith(std::nullopt, convertedElementType);
+          convertedAttrs.emplace_back(
+              attr.getName(),
+              SparseElementsAttr::get(
+                  convertedShapedType, sparseAttr.getIndices(),
+                  sparseAttr.getValues().bitcast(convertedElementType)));
+        } else {
+          convertedAttrs.emplace_back(attr);
+        }
       }
     } else {
       convertedAttrs.push_back(attr);
