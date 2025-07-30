@@ -313,19 +313,18 @@ public:
       queue.emplace_back(std::move(work));
       if (!running)
         running = new std::thread([&]() {
-          bool shouldPop = false;
           while (true) {
             mutex.lock();
-            if (shouldPop)
-              queue.pop_front();
             if (queue.empty()) {
               mutex.unlock();
               break;
             }
             auto work = std::move(queue.front());
-            shouldPop = true;
             mutex.unlock();
             work();
+            mutex.lock();
+            queue.pop_front();
+            mutex.unlock();
           }
         });
     }
