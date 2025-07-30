@@ -8,13 +8,13 @@
 #error Missing kcfi?
 #endif
 
-#define __cfi_salt __attribute__((cfi_salt("pepper")))
+#define __cfi_salt [[clang::cfi_salt("pepper")]]
 
 typedef int (*fn_t)(void);
-typedef int __cfi_salt (*fn_salt_t)(void);
+typedef int (* __cfi_salt fn_salt_t)(void);
 
 typedef unsigned int (*ufn_t)(void);
-typedef unsigned int __cfi_salt (*ufn_salt_t)(void);
+typedef unsigned int (* __cfi_salt ufn_salt_t)(void);
 
 /// Must emit __kcfi_typeid symbols for address-taken function declarations
 // CHECK: module asm ".weak __kcfi_typeid_[[F4:[a-zA-Z0-9_]+]]"
@@ -23,7 +23,7 @@ typedef unsigned int __cfi_salt (*ufn_salt_t)(void);
 // CHECK: module asm ".set __kcfi_typeid_[[F4_SALT]], [[#%d,ASM_SALTY_HASH:]]"
 
 /// Must not __kcfi_typeid symbols for non-address-taken declarations
-// CHECK-NOT: module asm ".weak __kcfi_typeid_{{f6|_Z2f6v}}"
+// CHECK-NOT: module asm ".weak __kcfi_typeid_f6"
 
 int f1(void);
 int f1_salt(void) __cfi_salt;
@@ -51,7 +51,7 @@ struct cfi_struct {
 int f7_salt(struct cfi_struct *ptr);
 int f7_typedef_salt(struct cfi_struct *ptr);
 
-// CHECK-LABEL: @{{__call|_Z6__callPFivE}}
+// CHECK-LABEL: @__call
 // CHECK:         call{{.*}} i32
 // CHECK-NOT:     "kcfi"
 // CHECK-SAME:    ()
@@ -59,21 +59,21 @@ int __call(fn_t f) __attribute__((__no_sanitize__("kcfi"))) {
   return f();
 }
 
-// CHECK-LABEL: @{{call|_Z4callPFivE}}
+// CHECK-LABEL: @call
 // CHECK:         call{{.*}} i32 %{{.}}(){{.*}} [ "kcfi"(i32 [[#LOW_SODIUM_HASH]]) ]
-// CHECK-LABEL: @{{call_salt|_Z9call_saltPFivE}}
+// CHECK-LABEL: @call_salt
 // CHECK:         call{{.*}} i32 %{{.}}(){{.*}} [ "kcfi"(i32 [[#%d,SALTY_HASH:]]) ]
-// CHECK-LABEL: @{{call_salt_ty|_Z12call_salt_tyPFivE}}
+// CHECK-LABEL: @call_salt_ty
 // CHECK:         call{{.*}} i32 %{{.}}(){{.*}} [ "kcfi"(i32 [[#SALTY_HASH]]) ]
 int call(fn_t f) { return f(); }
 int call_salt(fn_t __cfi_salt f) { return f(); }
 int call_salt_ty(fn_salt_t f) { return f(); }
 
-// CHECK-LABEL: @{{ucall|_Z5ucallPFjvE}}
+// CHECK-LABEL: @ucall
 // CHECK:         call{{.*}} i32 %{{.}}(){{.*}} [ "kcfi"(i32 [[#%d,LOW_SODIUM_UHASH:]]) ]
-// CHECK-LABEL: @{{ucall_salt|_Z10ucall_saltPFjvE}}
+// CHECK-LABEL: @ucall_salt
 // CHECK:         call{{.*}} i32 %{{.}}(){{.*}} [ "kcfi"(i32 [[#%d,SALTY_UHASH:]]) ]
-// CHECK-LABEL: @{{ucall_salt_ty|_Z13ucall_salt_tyPFjvE}}
+// CHECK-LABEL: @ucall_salt_ty
 // CHECK:         call{{.*}} i32 %{{.}}(){{.*}} [ "kcfi"(i32 [[#SALTY_UHASH]]) ]
 unsigned int ucall(ufn_t f) { return f(); }
 unsigned int ucall_salt(ufn_t __cfi_salt f) { return f(); }
@@ -109,23 +109,23 @@ int test1(struct cfi_struct *ptr) {
          f7_typedef_salt(ptr);
 }
 
-// CHECK-LABEL: define dso_local{{.*}} i32 @{{f1|_Z2f1v}}(){{.*}} !kcfi_type
+// CHECK-LABEL: define dso_local{{.*}} i32 @f1(){{.*}} !kcfi_type
 // CHECK-SAME:  ![[#LOW_SODIUM_TYPE:]]
-// CHECK-LABEL: define dso_local{{.*}} i32 @{{f1_salt|_Z7f1_saltv}}(){{.*}} !kcfi_type
+// CHECK-LABEL: define dso_local{{.*}} i32 @f1_salt(){{.*}} !kcfi_type
 // CHECK-SAME:  ![[#SALTY_TYPE:]]
 int f1(void) { return 0; }
 int f1_salt(void) __cfi_salt { return 0; }
 
-// CHECK-LABEL: define dso_local{{.*}} i32 @{{f2|_Z2f2v}}(){{.*}} !kcfi_type
+// CHECK-LABEL: define dso_local{{.*}} i32 @f2(){{.*}} !kcfi_type
 // CHECK-SAME:  ![[#LOW_SODIUM_UTYPE:]]
-// CHECK: define dso_local{{.*}} i32 @{{f2_salt|_Z7f2_saltv}}(){{.*}} !kcfi_type
+// CHECK: define dso_local{{.*}} i32 @f2_salt(){{.*}} !kcfi_type
 // CHECK-SAME:  ![[#SALTY_UTYPE:]]
 unsigned int f2(void) { return 2; }
 unsigned int f2_salt(void) __cfi_salt { return 2; }
 
-// CHECK-LABEL: define internal{{.*}} i32 @{{f3|_ZL2f3v}}(){{.*}} !kcfi_type
+// CHECK-LABEL: define internal{{.*}} i32 @f3(){{.*}} !kcfi_type
 // CHECK-SAME:  ![[#LOW_SODIUM_TYPE]]
-// CHECK-LABEL: define internal{{.*}} i32 @{{f3_salt|_ZL7f3_saltv}}(){{.*}} !kcfi_type
+// CHECK-LABEL: define internal{{.*}} i32 @f3_salt(){{.*}} !kcfi_type
 // CHECK-SAME:  ![[#SALTY_TYPE]]
 static int f3(void) { return 1; }
 static int f3_salt(void) __cfi_salt { return 1; }
@@ -134,21 +134,21 @@ static int f3_salt(void) __cfi_salt { return 1; }
 // CHECK: declare !kcfi_type ![[#SALTY_TYPE]]{{.*}} i32 @[[F4_SALT]]()
 
 /// Must not emit !kcfi_type for non-address-taken local functions
-// CHECK-LABEL: define internal{{.*}} i32 @{{f5|_ZL2f5v}}()
+// CHECK-LABEL: define internal{{.*}} i32 @f5()
 // CHECK-NOT:   !kcfi_type
 // CHECK-SAME:  {
-// CHECK-LABEL: define internal{{.*}} i32 @{{f5_salt|_ZL7f5_saltv}}()
+// CHECK-LABEL: define internal{{.*}} i32 @f5_salt()
 // CHECK-NOT:   !kcfi_type
 // CHECK-SAME:  {
 static int f5(void) { return 2; }
 static int f5_salt(void) __cfi_salt { return 2; }
 
-// CHECK: declare !kcfi_type ![[#LOW_SODIUM_TYPE]]{{.*}} i32 @{{f6|_Z2f6v}}()
-// CHECK: declare !kcfi_type ![[#SALTY_TYPE]]{{.*}} i32 @{{f6_salt|_Z7f6_saltv}}()
+// CHECK: declare !kcfi_type ![[#LOW_SODIUM_TYPE]]{{.*}} i32 @f6()
+// CHECK: declare !kcfi_type ![[#SALTY_TYPE]]{{.*}} i32 @f6_salt()
 
-// CHECK-LABEL: @{{f7_salt|_Z7f7_saltP10cfi_struct}}
+// CHECK-LABEL: @f7_salt
 // CHECK:         call{{.*}} i32 %{{.*}}() [ "kcfi"(i32 [[#SALTY_HASH]]) ]
-// CHECK-LABEL: @{{f7_typedef_salt|_Z15f7_typedef_saltP10cfi_struct}}
+// CHECK-LABEL: @f7_typedef_salt
 // CHECK:         call{{.*}} i32 %{{.*}}() [ "kcfi"(i32 [[#SALTY_HASH]]) ]
 int f7_salt(struct cfi_struct *ptr) { return ptr->fptr(); }
 int f7_typedef_salt(struct cfi_struct *ptr) { return ptr->td_fptr(); }
