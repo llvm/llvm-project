@@ -649,6 +649,38 @@ void CIRGenFunction::emitNullabilityCheck(LValue lhs, mlir::Value rhs,
   assert(!cir::MissingFeatures::sanitizers());
 }
 
+/// Destroys all the elements of the given array, beginning from last to first.
+/// The array cannot be zero-length.
+///
+/// \param begin - a type* denoting the first element of the array
+/// \param end - a type* denoting one past the end of the array
+/// \param elementType - the element type of the array
+/// \param destroyer - the function to call to destroy elements
+void CIRGenFunction::emitArrayDestroy(mlir::Value begin, mlir::Value end,
+                                      QualType elementType,
+                                      CharUnits elementAlign,
+                                      Destroyer *destroyer) {
+  assert(!elementType->isArrayType());
+
+  // Differently from LLVM traditional codegen, use a higher level
+  // representation instead of lowering directly to a loop.
+  mlir::Type cirElementType = convertTypeForMem(elementType);
+  cir::PointerType ptrToElmType = builder.getPointerTo(cirElementType);
+
+  // Emit the dtor call that will execute for every array element.
+  cir::ArrayDtor::create(
+      builder, *currSrcLoc, begin, [&](mlir::OpBuilder &b, mlir::Location loc) {
+        auto arg = b.getInsertionBlock()->addArgument(ptrToElmType, loc);
+        Address curAddr = Address(arg, cirElementType, elementAlign);
+        assert(!cir::MissingFeatures::dtorCleanups());
+
+        // Perform the actual destruction there.
+        destroyer(*this, curAddr, elementType);
+
+        cir::YieldOp::create(builder, loc);
+      });
+}
+
 /// Immediately perform the destruction of the given object.
 ///
 /// \param addr - the address of the object; a type*
@@ -658,10 +690,34 @@ void CIRGenFunction::emitNullabilityCheck(LValue lhs, mlir::Value rhs,
 ///   elements
 void CIRGenFunction::emitDestroy(Address addr, QualType type,
                                  Destroyer *destroyer) {
-  if (getContext().getAsArrayType(type))
-    cgm.errorNYI("emitDestroy: array type");
+  const ArrayType *arrayType = getContext().getAsArrayType(type);
+  if (!arrayType)
+    return destroyer(*this, addr, type);
 
-  return destroyer(*this, addr, type);
+  mlir::Value length = emitArrayLength(arrayType, type, addr);
+
+  CharUnits elementAlign = addr.getAlignment().alignmentOfArrayElement(
+      getContext().getTypeSizeInChars(type));
+
+  auto constantCount = length.getDefiningOp<cir::ConstantOp>();
+  if (!constantCount) {
+    assert(!cir::MissingFeatures::vlas());
+    cgm.errorNYI("emitDestroy: variable length array");
+    return;
+  }
+
+  auto constIntAttr = mlir::dyn_cast<cir::IntAttr>(constantCount.getValue());
+  // If it's constant zero, we can just skip the entire thing.
+  if (constIntAttr && constIntAttr.getUInt() == 0)
+    return;
+
+  mlir::Value begin = addr.getPointer();
+  mlir::Value end; // This will be used for future non-constant counts.
+  emitArrayDestroy(begin, end, type, elementAlign, destroyer);
+
+  // If the array destroy didn't use the length op, we can erase it.
+  if (constantCount.use_empty())
+    constantCount.erase();
 }
 
 CIRGenFunction::Destroyer *

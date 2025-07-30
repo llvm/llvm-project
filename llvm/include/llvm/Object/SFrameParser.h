@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/BinaryFormat/SFrame.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 
@@ -39,8 +40,8 @@ private:
       : Data(Data), Header(Header) {}
 };
 
-extern template class SFrameParser<endianness::big>;
-extern template class SFrameParser<endianness::little>;
+extern template class LLVM_TEMPLATE_ABI SFrameParser<endianness::big>;
+extern template class LLVM_TEMPLATE_ABI SFrameParser<endianness::little>;
 
 } // end namespace object
 } // end namespace llvm
