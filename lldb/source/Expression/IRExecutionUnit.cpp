@@ -774,6 +774,36 @@ private:
   lldb::addr_t m_best_internal_load_address = LLDB_INVALID_ADDRESS;
 };
 
+/// Find a module by LLDB-specific unique identifier.
+///
+/// \param[in] uid The UID of the module assigned to it on construction.
+///
+/// \returns ModuleSP of module with \c uid. Returns nullptr if no such
+/// module could be found.
+static lldb::ModuleSP FindDebugModule(lldb::user_id_t uid,
+                                      const ModuleList &modules) {
+  lldb::ModuleSP module_sp;
+  modules.ForEach([&](const lldb::ModuleSP &m) {
+    if (m->GetID() == uid) {
+      module_sp = m;
+      return IterationAction::Stop;
+    }
+
+    auto *sym = m->GetSymbolFile();
+    if (!sym)
+      return IterationAction::Continue;
+
+    auto debug_modules = sym->GetDebugInfoModules();
+    module_sp = FindDebugModule(uid, debug_modules);
+    if (module_sp)
+      return IterationAction::Stop;
+
+    return IterationAction::Continue;
+  });
+
+  return module_sp;
+}
+
 /// Returns address of the function referred to by the special function call
 /// label \c label.
 ///
@@ -799,8 +829,7 @@ ResolveFunctionCallLabel(llvm::StringRef name,
 
   const auto &label = *label_or_err;
 
-  auto module_sp = sc.target_sp->GetImages().FindModule(label.module_id);
-
+  auto module_sp = FindDebugModule(label.module_id, sc.target_sp->GetImages());
   if (!module_sp)
     return llvm::createStringError(
         llvm::formatv("failed to find module by UID {0}", label.module_id));
