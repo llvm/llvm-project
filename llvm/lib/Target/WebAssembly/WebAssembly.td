@@ -49,8 +49,6 @@ def FeatureFP16 :
       SubtargetFeature<"fp16", "HasFP16", "true",
                        "Enable FP16 instructions">;
 
-def FeatureGC : SubtargetFeature<"gc", "HasGC", "true", "Enable wasm gc">;
-
 def FeatureMultiMemory :
       SubtargetFeature<"multimemory", "HasMultiMemory", "true",
                        "Enable multiple memories">;
@@ -73,6 +71,7 @@ def FeatureReferenceTypes :
       SubtargetFeature<"reference-types", "HasReferenceTypes", "true",
                        "Enable reference types">;
 
+def FeatureGC : SubtargetFeature<"gc", "HasGC", "true", "Enable wasm gc">;
 def FeatureRelaxedSIMD :
       SubtargetFeature<"relaxed-simd", "SIMDLevel", "RelaxedSIMD",
                        "Enable relaxed-simd instructions">;
@@ -140,10 +139,10 @@ def : ProcessorModel<"lime1", NoSchedModel,
 def : ProcessorModel<"bleeding-edge", NoSchedModel,
                      [FeatureAtomics, FeatureBulkMemory, FeatureBulkMemoryOpt,
                       FeatureCallIndirectOverlong, FeatureExceptionHandling,
-                      FeatureExtendedConst, FeatureFP16, FeatureGC,
-                      FeatureMultiMemory, FeatureMultivalue, FeatureMutableGlobals,
+                      FeatureExtendedConst, FeatureFP16, FeatureMultiMemory,
+                      FeatureMultivalue, FeatureMutableGlobals,
                       FeatureNontrappingFPToInt, FeatureRelaxedSIMD,
-                      FeatureReferenceTypes, FeatureSIMD128,
+                      FeatureReferenceTypes, FeatureGC, FeatureSIMD128,
                       FeatureSignExt, FeatureTailCall]>;
 
 //===----------------------------------------------------------------------===//
