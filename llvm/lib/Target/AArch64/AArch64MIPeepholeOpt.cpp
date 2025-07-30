@@ -12,7 +12,7 @@
 //    MOVi64imm + ANDS?Xrr ==> ANDXri + ANDS?Xri
 //
 // 2. MOVi32imm + ADDWrr ==> ADDWRi + ADDWRi
-//    MOVi64imm + ADDXrr ==> ANDXri + ANDXri
+//    MOVi64imm + ADDXrr ==> ADDXri + ADDXri
 //
 // 3. MOVi32imm + SUBWrr ==> SUBWRi + SUBWRi
 //    MOVi64imm + SUBXrr ==> SUBXri + SUBXri
@@ -125,8 +125,13 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   template <typename T>
   bool visitADDSSUBS(OpcodePair PosOpcs, OpcodePair NegOpcs, MachineInstr &MI);
 
+  // Strategy used to split logical immediate bitmasks.
+  enum class SplitStrategy {
+    Intersect,
+  };
   template <typename T>
-  bool visitAND(unsigned Opc, MachineInstr &MI, unsigned OtherOpc = 0);
+  bool trySplitLogicalImm(unsigned Opc, MachineInstr &MI,
+                          SplitStrategy Strategy, unsigned OtherOpc = 0);
   bool visitORR(MachineInstr &MI);
   bool visitCSEL(MachineInstr &MI);
   bool visitINSERT(MachineInstr &MI);
@@ -158,14 +163,6 @@ INITIALIZE_PASS(AArch64MIPeepholeOpt, "aarch64-mi-peephole-opt",
 template <typename T>
 static bool splitBitmaskImm(T Imm, unsigned RegSize, T &Imm1Enc, T &Imm2Enc) {
   T UImm = static_cast<T>(Imm);
-  if (AArch64_AM::isLogicalImmediate(UImm, RegSize))
-    return false;
-
-  // If this immediate can be handled by one instruction, do not split it.
-  SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
-  AArch64_IMM::expandMOVImm(UImm, RegSize, Insn);
-  if (Insn.size() == 1)
-    return false;
 
   // The bitmask immediate consists of consecutive ones.  Let's say there is
   // constant 0b00000000001000000000010000000000 which does not consist of
@@ -194,8 +191,9 @@ static bool splitBitmaskImm(T Imm, unsigned RegSize, T &Imm1Enc, T &Imm2Enc) {
 }
 
 template <typename T>
-bool AArch64MIPeepholeOpt::visitAND(unsigned Opc, MachineInstr &MI,
-                                    unsigned OtherOpc) {
+bool AArch64MIPeepholeOpt::trySplitLogicalImm(unsigned Opc, MachineInstr &MI,
+                                              SplitStrategy Strategy,
+                                              unsigned OtherOpc) {
   // Try below transformation.
   //
   // MOVi32imm + ANDS?Wrr ==> ANDWri + ANDS?Wri
@@ -208,9 +206,26 @@ bool AArch64MIPeepholeOpt::visitAND(unsigned Opc, MachineInstr &MI,
 
   return splitTwoPartImm<T>(
       MI,
-      [Opc, OtherOpc](T Imm, unsigned RegSize, T &Imm0,
-                      T &Imm1) -> std::optional<OpcodePair> {
-        if (splitBitmaskImm(Imm, RegSize, Imm0, Imm1))
+      [Opc, Strategy, OtherOpc](T Imm, unsigned RegSize, T &Imm0,
+                                T &Imm1) -> std::optional<OpcodePair> {
+        // If this immediate is already a suitable bitmask, don't split it.
+        // TODO: Should we just combine the two instructions in this case?
+        if (AArch64_AM::isLogicalImmediate(Imm, RegSize))
+          return std::nullopt;
+
+        // If this immediate can be handled by one instruction, don't split it.
+        SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
+        AArch64_IMM::expandMOVImm(Imm, RegSize, Insn);
+        if (Insn.size() == 1)
+          return std::nullopt;
+
+        bool SplitSucc = false;
+        switch (Strategy) {
+        case SplitStrategy::Intersect:
+          SplitSucc = splitBitmaskImm(Imm, RegSize, Imm0, Imm1);
+          break;
+        }
+        if (SplitSucc)
           return std::make_pair(Opc, !OtherOpc ? Opc : OtherOpc);
         return std::nullopt;
       },
@@ -859,16 +874,20 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
         Changed |= visitINSERT(MI);
         break;
       case AArch64::ANDWrr:
-        Changed |= visitAND<uint32_t>(AArch64::ANDWri, MI);
+        Changed |= trySplitLogicalImm<uint32_t>(AArch64::ANDWri, MI,
+                                                SplitStrategy::Intersect);
         break;
       case AArch64::ANDXrr:
-        Changed |= visitAND<uint64_t>(AArch64::ANDXri, MI);
+        Changed |= trySplitLogicalImm<uint64_t>(AArch64::ANDXri, MI,
+                                                SplitStrategy::Intersect);
         break;
       case AArch64::ANDSWrr:
-        Changed |= visitAND<uint32_t>(AArch64::ANDWri, MI, AArch64::ANDSWri);
+        Changed |= trySplitLogicalImm<uint32_t>(
+            AArch64::ANDWri, MI, SplitStrategy::Intersect, AArch64::ANDSWri);
         break;
       case AArch64::ANDSXrr:
-        Changed |= visitAND<uint64_t>(AArch64::ANDXri, MI, AArch64::ANDSXri);
+        Changed |= trySplitLogicalImm<uint64_t>(
+            AArch64::ANDXri, MI, SplitStrategy::Intersect, AArch64::ANDSXri);
         break;
       case AArch64::ORRWrs:
         Changed |= visitORR(MI);
