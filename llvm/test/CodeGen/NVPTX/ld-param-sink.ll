@@ -21,10 +21,10 @@ define ptr @foo(i1 %cond) {
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .b64 retval0;
 ; CHECK-NEXT:    call.uni (retval0), baz, ();
+; CHECK-NEXT:    ld.param.b64 %rd2, [retval0];
 ; CHECK-NEXT:    } // callseq 0
 ; CHECK-NEXT:    @%p1 bra $L__BB0_2;
 ; CHECK-NEXT:  // %bb.1: // %bb
-; CHECK-NEXT:    ld.param.b64 %rd2, [retval0];
 ; CHECK-NEXT:    { // callseq 1, 0
 ; CHECK-NEXT:    .param .b64 param0;
 ; CHECK-NEXT:    .param .b64 retval0;
