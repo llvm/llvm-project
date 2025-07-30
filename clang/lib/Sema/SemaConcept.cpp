@@ -1105,10 +1105,6 @@ static bool CheckFunctionConstraintsWithoutInstantiation(
   }
 
   Sema::ContextRAII SavedContext(SemaRef, FD);
-  std::optional<Sema::CXXThisScopeRAII> ThisScope;
-  if (auto *Method = dyn_cast<CXXMethodDecl>(FD))
-    ThisScope.emplace(SemaRef, /*Record=*/Method->getParent(),
-                      /*ThisQuals=*/Method->getMethodQualifiers());
   return SemaRef.CheckConstraintSatisfaction(
       Template, TemplateAC, MLTAL, PointOfInstantiation, Satisfaction);
 }
