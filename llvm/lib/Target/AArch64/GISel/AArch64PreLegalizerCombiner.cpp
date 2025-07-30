@@ -228,13 +228,13 @@ void applyFoldGlobalOffset(MachineInstr &MI, MachineRegisterInfo &MRI,
       B.buildConstant(LLT::scalar(64), -static_cast<int64_t>(MinOffset)));
 }
 
-// Combines vecreduce_add(mul(ext(x), ext(y))) -> vecreduce_add(udot(x, y))
-// Or vecreduce_add(ext(mul(ext(x), ext(y)))) -> vecreduce_add(udot(x, y))
-// Or vecreduce_add(ext(x)) -> vecreduce_add(udot(x, 1))
+// Combines vecreduce_add(mul(ext(x), ext(y))) -> vecreduce_add([us]dot(x, y))
+// Or vecreduce_add(ext(mul(ext(x), ext(y)))) -> vecreduce_add([us]dot(x, y))
+// Or vecreduce_add(ext(x)) -> vecreduce_add([us]dot(x, 1))
 // Similar to performVecReduceAddCombine in SelectionDAG
-bool matchExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
-                            const AArch64Subtarget &STI,
-                            std::tuple<Register, Register, bool> &MatchInfo) {
+bool matchExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           const AArch64Subtarget &STI,
+                           std::tuple<Register, Register, bool> &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_VECREDUCE_ADD &&
          "Expected a G_VECREDUCE_ADD instruction");
   assert(STI.hasDotProd() && "Target should have Dot Product feature");
@@ -247,8 +247,8 @@ bool matchExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
   if (DstTy.getScalarSizeInBits() != 32 || MidTy.getScalarSizeInBits() != 32)
     return false;
 
-  // Detect mul(ext, ext) with symetric ext's. If I1Opc is G_ZEXT or G_SEXT then
-  // the ext's must match the same opcode. It is set to the ext opcode on
+  // Detect mul(ext, ext) with symmetric ext's. If I1Opc is G_ZEXT or G_SEXT
+  // then the ext's must match the same opcode. It is set to the ext opcode on
   // output.
   auto tryMatchingMulOfExt = [&MRI](MachineInstr *MI, Register &Out1,
                                     Register &Out2, unsigned &I1Opc) {
@@ -315,11 +315,11 @@ bool matchExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
   return true;
 }
 
-void applyExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
-                            MachineIRBuilder &Builder,
-                            GISelChangeObserver &Observer,
-                            const AArch64Subtarget &STI,
-                            std::tuple<Register, Register, bool> &MatchInfo) {
+void applyExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           MachineIRBuilder &Builder,
+                           GISelChangeObserver &Observer,
+                           const AArch64Subtarget &STI,
+                           std::tuple<Register, Register, bool> &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_VECREDUCE_ADD &&
          "Expected a G_VECREDUCE_ADD instruction");
   assert(STI.hasDotProd() && "Target should have Dot Product feature");
@@ -581,14 +581,14 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
 }
 
 // Pushes ADD/SUB/MUL through extend instructions to decrease the number of
-// extend instruction at the end by allowing selection of {s|u}addl sooner i32
-// add(i32 ext i8, i32 ext i8) => i32 ext(i16 add(i16 ext i8, i16 ext i8))
+// extend instruction at the end by allowing selection of {s|u}addl sooner
+// i32 add(i32 ext i8, i32 ext i8) => i32 ext(i16 add(i16 ext i8, i16 ext i8))
 bool matchPushAddSubExt(MachineInstr &MI, MachineRegisterInfo &MRI,
                         Register DstReg, Register SrcReg1, Register SrcReg2) {
   assert((MI.getOpcode() == TargetOpcode::G_ADD ||
           MI.getOpcode() == TargetOpcode::G_SUB ||
           MI.getOpcode() == TargetOpcode::G_MUL) &&
-         "Expected a G_ADD or G_SUB instruction\n");
+         "Expected a G_ADD, G_SUB or G_MUL instruction\n");
 
   // Deal with vector types only
   LLT DstTy = MRI.getType(DstReg);
@@ -623,7 +623,8 @@ void applyPushAddSubExt(MachineInstr &MI, MachineRegisterInfo &MRI,
   // G_SUB has to sign-extend the result.
   // G_ADD needs to sext from sext and can sext or zext from zext, and G_MUL
   // needs to use the original opcode so the original opcode is used for both.
-  if (MI.getOpcode() != TargetOpcode::G_SUB)
+  if (MI.getOpcode() == TargetOpcode::G_ADD ||
+      MI.getOpcode() == TargetOpcode::G_MUL)
     B.buildInstr(Opc, {DstReg}, {AddReg});
   else
     B.buildSExt(DstReg, AddReg);
