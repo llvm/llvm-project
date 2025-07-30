@@ -13,7 +13,6 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
@@ -137,6 +136,46 @@ convertOperandBundles(OperandRangeRange bundleOperands,
   return convertOperandBundles(bundleOperands, *bundleTags, moduleTranslation);
 }
 
+static LogicalResult
+convertParameterAndResultAttrs(mlir::Location loc, ArrayAttr argAttrsArray,
+                               ArrayAttr resAttrsArray, llvm::CallBase *call,
+                               LLVM::ModuleTranslation &moduleTranslation) {
+  if (argAttrsArray) {
+    for (auto [argIdx, argAttrsAttr] : llvm::enumerate(argAttrsArray)) {
+      if (auto argAttrs = cast<DictionaryAttr>(argAttrsAttr);
+          !argAttrs.empty()) {
+        FailureOr<llvm::AttrBuilder> attrBuilder =
+            moduleTranslation.convertParameterAttrs(loc, argAttrs);
+        if (failed(attrBuilder))
+          return failure();
+        call->addParamAttrs(argIdx, *attrBuilder);
+      }
+    }
+  }
+
+  if (resAttrsArray && resAttrsArray.size() > 0) {
+    if (resAttrsArray.size() != 1)
+      return mlir::emitError(loc, "llvm.func cannot have multiple results");
+    if (auto resAttrs = cast<DictionaryAttr>(resAttrsArray[0]);
+        !resAttrs.empty()) {
+      FailureOr<llvm::AttrBuilder> attrBuilder =
+          moduleTranslation.convertParameterAttrs(loc, resAttrs);
+      if (failed(attrBuilder))
+        return failure();
+      call->addRetAttrs(*attrBuilder);
+    }
+  }
+  return success();
+}
+
+static LogicalResult
+convertParameterAndResultAttrs(CallOpInterface callOp, llvm::CallBase *call,
+                               LLVM::ModuleTranslation &moduleTranslation) {
+  return convertParameterAndResultAttrs(
+      callOp.getLoc(), callOp.getArgAttrsAttr(), callOp.getResAttrsAttr(), call,
+      moduleTranslation);
+}
+
 /// Builder for LLVM_CallIntrinsicOp
 static LogicalResult
 convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
@@ -204,7 +243,9 @@ convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
       convertOperandBundles(op.getOpBundleOperands(), op.getOpBundleTags(),
                             moduleTranslation));
 
-  if (failed(moduleTranslation.convertArgAndResultAttrs(op, inst)))
+  if (failed(convertParameterAndResultAttrs(op.getLoc(), op.getArgAttrsAttr(),
+                                            op.getResAttrsAttr(), inst,
+                                            moduleTranslation)))
     return failure();
 
   if (op.getNumResults() == 1)
@@ -414,7 +455,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     if (callOp.getInlineHintAttr())
       call->addFnAttr(llvm::Attribute::InlineHint);
 
-    if (failed(moduleTranslation.convertArgAndResultAttrs(callOp, call)))
+    if (failed(convertParameterAndResultAttrs(callOp, call, moduleTranslation)))
       return failure();
 
     if (MemoryEffectsAttr memAttr = callOp.getMemoryEffectsAttr()) {
@@ -528,7 +569,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
           operandsRef.drop_front(), opBundles);
     }
     result->setCallingConv(convertCConvToLLVM(invOp.getCConv()));
-    if (failed(moduleTranslation.convertArgAndResultAttrs(invOp, result)))
+    if (failed(
+            convertParameterAndResultAttrs(invOp, result, moduleTranslation)))
       return failure();
     moduleTranslation.mapBranch(invOp, result);
     // InvokeOp can only have 0 or 1 result
