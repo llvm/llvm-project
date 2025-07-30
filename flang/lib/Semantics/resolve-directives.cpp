@@ -138,6 +138,9 @@ public:
   void Post(const parser::OpenACCBlockConstruct &) { PopContext(); }
   bool Pre(const parser::OpenACCCombinedConstruct &);
   void Post(const parser::OpenACCCombinedConstruct &) { PopContext(); }
+  void Post(const parser::AccBeginCombinedDirective &) {
+    GetContext().withinConstruct = true;
+  }
 
   bool Pre(const parser::OpenACCDeclarativeConstruct &);
   void Post(const parser::OpenACCDeclarativeConstruct &) { PopContext(); }
@@ -158,6 +161,18 @@ public:
   void Post(const parser::OpenACCLoopConstruct &) { PopContext(); }
   void Post(const parser::AccLoopDirective &) {
     GetContext().withinConstruct = true;
+  }
+
+  // TODO: We should probably also privatize ConcurrentBounds.
+  template <typename A>
+  bool Pre(const parser::LoopBounds<parser::ScalarName, A> &x) {
+    if (!dirContext_.empty() && GetContext().withinConstruct) {
+      if (auto *symbol{ResolveAcc(
+              x.name.thing, Symbol::Flag::AccPrivate, currScope())}) {
+        AddToContextObjectWithDSA(*symbol, Symbol::Flag::AccPrivate);
+      }
+    }
+    return true;
   }
 
   bool Pre(const parser::OpenACCStandaloneConstruct &);
@@ -712,7 +727,9 @@ public:
   void Post(const parser::EorLabel &eorLabel) { CheckSourceLabel(eorLabel.v); }
 
   void Post(const parser::OmpMapClause &x) {
-    Symbol::Flag ompFlag = Symbol::Flag::OmpMapToFrom;
+    unsigned version{context_.langOptions().OpenMPVersion};
+    std::optional<Symbol::Flag> ompFlag;
+
     auto &mods{OmpGetModifiers(x)};
     if (auto *mapType{OmpGetUniqueModifier<parser::OmpMapType>(mods)}) {
       switch (mapType->v) {
@@ -726,16 +743,33 @@ public:
         ompFlag = Symbol::Flag::OmpMapToFrom;
         break;
       case parser::OmpMapType::Value::Alloc:
-        ompFlag = Symbol::Flag::OmpMapAlloc;
-        break;
       case parser::OmpMapType::Value::Release:
-        ompFlag = Symbol::Flag::OmpMapRelease;
+      case parser::OmpMapType::Value::Storage:
+        ompFlag = Symbol::Flag::OmpMapStorage;
         break;
       case parser::OmpMapType::Value::Delete:
         ompFlag = Symbol::Flag::OmpMapDelete;
         break;
       }
     }
+    if (!ompFlag) {
+      if (version >= 60) {
+        // [6.0:275:12-15]
+        // When a map-type is not specified for a clause on which it may be
+        // specified, the map-type defaults to storage if the delete-modifier
+        // is present on the clause or if the list item for which the map-type
+        // is not specified is an assumed-size array.
+        if (OmpGetUniqueModifier<parser::OmpDeleteModifier>(mods)) {
+          ompFlag = Symbol::Flag::OmpMapStorage;
+        }
+        // Otherwise, if delete-modifier is absent, leave ompFlag unset.
+      } else {
+        // [5.2:151:10]
+        // If a map-type is not specified, the map-type defaults to tofrom.
+        ompFlag = Symbol::Flag::OmpMapToFrom;
+      }
+    }
+
     const auto &ompObjList{std::get<parser::OmpObjectList>(x.t)};
     for (const auto &ompObj : ompObjList.v) {
       common::visit(
@@ -744,15 +778,15 @@ public:
                 if (const auto *name{
                         semantics::getDesignatorNameIfDataRef(designator)}) {
                   if (name->symbol) {
-                    name->symbol->set(ompFlag);
-                    AddToContextObjectWithDSA(*name->symbol, ompFlag);
-                  }
-                  if (name->symbol &&
-                      semantics::IsAssumedSizeArray(*name->symbol)) {
-                    context_.Say(designator.source,
-                        "Assumed-size whole arrays may not appear on the %s "
-                        "clause"_err_en_US,
-                        "MAP");
+                    name->symbol->set(
+                        ompFlag.value_or(Symbol::Flag::OmpMapStorage));
+                    AddToContextObjectWithDSA(*name->symbol, *ompFlag);
+                    if (semantics::IsAssumedSizeArray(*name->symbol)) {
+                      context_.Say(designator.source,
+                          "Assumed-size whole arrays may not appear on the %s "
+                          "clause"_err_en_US,
+                          "MAP");
+                    }
                   }
                 }
               },
@@ -760,7 +794,7 @@ public:
           },
           ompObj.u);
 
-      ResolveOmpObject(ompObj, ompFlag);
+      ResolveOmpObject(ompObj, ompFlag.value_or(Symbol::Flag::OmpMapStorage));
     }
   }
 
@@ -2759,9 +2793,8 @@ void OmpAttributeVisitor::ResolveOmpObject(
                   }
                   Symbol::Flag dataMappingAttributeFlags[] = {
                       Symbol::Flag::OmpMapTo, Symbol::Flag::OmpMapFrom,
-                      Symbol::Flag::OmpMapToFrom, Symbol::Flag::OmpMapAlloc,
-                      Symbol::Flag::OmpMapRelease, Symbol::Flag::OmpMapDelete,
-                      Symbol::Flag::OmpIsDevicePtr,
+                      Symbol::Flag::OmpMapToFrom, Symbol::Flag::OmpMapStorage,
+                      Symbol::Flag::OmpMapDelete, Symbol::Flag::OmpIsDevicePtr,
                       Symbol::Flag::OmpHasDeviceAddr};
 
                   Symbol::Flag dataSharingAttributeFlags[] = {

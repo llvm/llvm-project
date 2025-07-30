@@ -143,19 +143,19 @@ define amdgpu_kernel void @main(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf,
 ; CHECK-NEXT:    s_cmp_eq_u32 s3, 0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB3_2
 ; CHECK-NEXT:  ; %bb.1:
-; CHECK-NEXT:    s_add_pc_i64 input@rel64
+; CHECK-NEXT:    s_add_pc_i64 input@rel64-8
 ; CHECK-NEXT:  .LBB3_2: ; %entry
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, 18
 ; CHECK-NEXT:    s_cmp_eq_u32 s3, 1
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB3_4
 ; CHECK-NEXT:  ; %bb.3:
-; CHECK-NEXT:    s_add_pc_i64 compute@rel64
+; CHECK-NEXT:    s_add_pc_i64 compute@rel64-8
 ; CHECK-NEXT:  .LBB3_4: ; %entry
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, 0
 ; CHECK-NEXT:    s_cmp_eq_u32 s3, 2
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB3_6
 ; CHECK-NEXT:  ; %bb.5:
-; CHECK-NEXT:    s_add_pc_i64 output@rel64
+; CHECK-NEXT:    s_add_pc_i64 output@rel64-8
 ; CHECK-NEXT:  .LBB3_6: ; %entry
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, 1
 ; CHECK-NEXT:    s_endpgm

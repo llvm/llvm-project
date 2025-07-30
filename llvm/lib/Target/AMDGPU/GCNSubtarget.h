@@ -1087,7 +1087,7 @@ public:
   }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                           unsigned NumRegionInstrs) const override;
+                           const SchedRegion &Region) const override;
 
   void mirFileLoaded(MachineFunction &MF) const override;
 

@@ -115,7 +115,7 @@ public:
   MLIRContext *getContext() { return getOperation()->getContext(); }
 
   /// Print the operation to the given stream.
-  void print(raw_ostream &os, OpPrintingFlags flags = std::nullopt) {
+  void print(raw_ostream &os, OpPrintingFlags flags = {}) {
     state->print(os, flags);
   }
   void print(raw_ostream &os, AsmState &asmState) {

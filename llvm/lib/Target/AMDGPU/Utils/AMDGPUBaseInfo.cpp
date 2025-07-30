@@ -3841,9 +3841,8 @@ std::string ClusterDimsAttr::to_string() const {
     OS << Dims[0] << ',' << Dims[1] << ',' << Dims[2];
     return Buffer.c_str();
   }
-  default:
-    llvm_unreachable("Unknown ClusterDimsAttr kind");
   }
+  llvm_unreachable("Unknown ClusterDimsAttr kind");
 }
 
 ClusterDimsAttr ClusterDimsAttr::get(const Function &F) {

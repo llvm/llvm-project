@@ -262,6 +262,7 @@ public:
   bool tryFoldLoad(MachineInstr &MI);
   bool tryFoldDynamicIdxOffset(MachineOperand *Idx, MachineOperand *Offset,
                                MachineInstr *&SMovImmZero);
+  bool tryFoldDynamicIdxMI(MachineInstr &MI, MachineInstr *&SMovImmZero);
 
   bool tryOptimizeAGPRPhis(MachineBasicBlock &MBB);
 
@@ -1779,6 +1780,7 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
   for (MachineInstr *Copy : CopiesToReplace)
     Copy->addImplicitDefUseOperands(*MF);
 
+  SetVector<MachineInstr *> ConstantFoldCandidates;
   for (FoldCandidate &Fold : FoldList) {
     assert(!Fold.isReg() || Fold.Def.OpToFold);
     if (Fold.isReg() && Fold.getReg().isVirtual()) {
@@ -1801,14 +1803,19 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
                         << static_cast<int>(Fold.UseOpNo) << " of "
                         << *Fold.UseMI);
 
-      if (Fold.isImm() && tryConstantFoldOp(Fold.UseMI)) {
-        LLVM_DEBUG(dbgs() << "Constant folded " << *Fold.UseMI);
-        Changed = true;
-      }
+      if (Fold.isImm())
+        ConstantFoldCandidates.insert(Fold.UseMI);
 
     } else if (Fold.Commuted) {
       // Restoring instruction's original operand order if fold has failed.
       TII->commuteInstruction(*Fold.UseMI, false);
+    }
+  }
+
+  for (MachineInstr *MI : ConstantFoldCandidates) {
+    if (tryConstantFoldOp(MI)) {
+      LLVM_DEBUG(dbgs() << "Constant folded " << *MI);
+      Changed = true;
     }
   }
   return true;
@@ -2682,6 +2689,28 @@ bool SIFoldOperandsImpl::tryFoldDynamicIdxOffset(MachineOperand *IdxOpnd,
   return false;
 }
 
+bool SIFoldOperandsImpl::tryFoldDynamicIdxMI(MachineInstr &MI,
+                                             MachineInstr *&SMovImmZero) {
+  bool Changed = false;
+  if (SIInstrInfo::isVLdStIdx(MI.getOpcode())) {
+    MachineOperand *IdxOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::idx),
+                   *OffOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::offset);
+    Changed |= tryFoldDynamicIdxOffset(IdxOpnd, OffOpnd, SMovImmZero);
+  }
+  else if (SIInstrInfo::mustHaveLanesharedResult(MI)) {
+    MachineOperand *IdxOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::idx),
+                   *OffOpnd =
+                       TII->getNamedOperand(MI, AMDGPU::OpName::dyn_offset),
+                   *IdxOpndRefl =
+                       TII->getNamedOperand(MI, AMDGPU::OpName::idx_refl),
+                   *OffOpndRefl = TII->getNamedOperand(
+                       MI, AMDGPU::OpName::dyn_offset_refl);
+    Changed |= tryFoldDynamicIdxOffset(IdxOpnd, OffOpnd, SMovImmZero);
+    Changed |= tryFoldDynamicIdxOffset(IdxOpndRefl, OffOpndRefl, SMovImmZero);
+  }
+  return Changed;
+}
+
 // tryFoldPhiAGPR will aggressively try to create AGPR PHIs.
 // For GFX90A and later, this is pretty much always a good thing, but for GFX908
 // there's cases where it can create a lot more AGPR-AGPR copies, which are
@@ -2820,23 +2849,9 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
         continue;
       }
 
-      if (SIInstrInfo::isVLdStIdx(MI.getOpcode())) {
-        MachineOperand *IdxOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::idx),
-                       *OffOpnd =
-                           TII->getNamedOperand(MI, AMDGPU::OpName::offset);
-        if (tryFoldDynamicIdxOffset(IdxOpnd, OffOpnd, SMovImmZero)) {
-          Changed = true;
-          continue;
-        }
-      }
-      if (SIInstrInfo::mustHaveLanesharedResult(MI)) {
-        MachineOperand *IdxOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::idx),
-                       *OffOpnd =
-                           TII->getNamedOperand(MI, AMDGPU::OpName::dyn_offset);
-        if (tryFoldDynamicIdxOffset(IdxOpnd, OffOpnd, SMovImmZero)) {
-          Changed = true;
-          continue;
-        }
+      if (tryFoldDynamicIdxMI(MI, SMovImmZero)) {
+        Changed = true;
+        continue;
       }
 
       if (TII->isFoldableCopy(MI)) {

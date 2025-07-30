@@ -552,7 +552,7 @@ public:
   template <typename OpTy, typename... Args>
   std::enable_if_t<OpTy::template hasTrait<OpTrait::ZeroResults>(), OpTy>
   createOrFold(Location location, Args &&...args) {
-    auto op = create<OpTy>(location, std::forward<Args>(args)...);
+    auto op = OpTy::create(*this, location, std::forward<Args>(args)...);
     SmallVector<Value, 0> unused;
     (void)tryFold(op.getOperation(), unused);
 
@@ -662,7 +662,7 @@ public:
   /// location.
   template <typename OpTy, typename... Args>
   OpTy create(Args &&...args) {
-    return OpBuilder::create<OpTy>(curLoc, std::forward<Args>(args)...);
+    return OpTy::create(*this, curLoc, std::forward<Args>(args)...);
   }
 
   /// Create an operation of specific op type at the current insertion point,

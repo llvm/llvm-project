@@ -432,6 +432,8 @@ bool InferAddressSpacesImpl::rewriteIntrinsicOperands(IntrinsicInst *II,
   }
   case Intrinsic::lifetime_start:
   case Intrinsic::lifetime_end: {
+    // Always force lifetime markers to work directly on the alloca.
+    NewV = NewV->stripPointerCasts();
     Function *NewDecl = Intrinsic::getOrInsertDeclaration(
         M, II->getIntrinsicID(), {NewV->getType()});
     II->setArgOperand(1, NewV);
@@ -871,7 +873,11 @@ Value *InferAddressSpacesImpl::cloneValueWithNewAddressSpace(
         NewI->setDebugLoc(I->getDebugLoc());
       }
     }
-    if (NewV) {
+    // Move debug markers to the inferred aspace, unless they already refer
+    // directly to an alloca. The alloca should reflect the "true" location
+    // anyway, and if it is optimized out later and infer-address-spaces runs
+    // again we should be no worse off.
+    if (NewV && !isa<AllocaInst>(I)) {
       Instruction *DomPoint =
           isa<Instruction>(NewV) ? cast<Instruction>(NewV) : I;
       replaceAllDbgUsesWith(*I, *NewV, *DomPoint, *DT);

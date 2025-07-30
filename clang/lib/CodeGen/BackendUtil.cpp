@@ -407,13 +407,13 @@ static bool initTargetOptions(const CompilerInstance &CI,
   // Set EABI version.
   Options.EABIVersion = TargetOpts.EABIVersion;
 
-  if (LangOpts.hasSjLjExceptions())
+  if (CodeGenOpts.hasSjLjExceptions())
     Options.ExceptionModel = llvm::ExceptionHandling::SjLj;
-  if (LangOpts.hasSEHExceptions())
+  if (CodeGenOpts.hasSEHExceptions())
     Options.ExceptionModel = llvm::ExceptionHandling::WinEH;
-  if (LangOpts.hasDWARFExceptions())
+  if (CodeGenOpts.hasDWARFExceptions())
     Options.ExceptionModel = llvm::ExceptionHandling::DwarfCFI;
-  if (LangOpts.hasWasmExceptions())
+  if (CodeGenOpts.hasWasmExceptions())
     Options.ExceptionModel = llvm::ExceptionHandling::Wasm;
 
   Options.NoInfsFPMath = LangOpts.NoHonorInfs;

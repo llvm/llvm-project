@@ -2509,9 +2509,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //
     //    S = (S1 & S2) | (~V1 & S2) | (S1 & ~V2)
     //
-    //  Addendum if the "Or" is "disjoint":
-    //    1|1 => p;
-    //    S = S | (V1 & V2)
+    //  If the "disjoint OR" property is violated, the result is poison, and
+    //  hence the entire shadow is uninitialized:
+    //    S = S | SignExt(V1 & V2 != 0)
     Value *S1 = getShadow(&I, 0);
     Value *S2 = getShadow(&I, 1);
     Value *V1 = I.getOperand(0);
@@ -2532,7 +2532,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     if (ClPreciseDisjointOr && cast<PossiblyDisjointInst>(&I)->isDisjoint()) {
       Value *V1V2 = IRB.CreateAnd(V1, V2);
-      S = IRB.CreateOr(S, V1V2, "_ms_disjoint");
+      Value *DisjointOrShadow = IRB.CreateSExt(
+          IRB.CreateICmpNE(V1V2, getCleanShadow(V1V2)), V1V2->getType());
+      S = IRB.CreateOr(S, DisjointOrShadow, "_ms_disjoint");
     }
 
     setShadow(&I, S);

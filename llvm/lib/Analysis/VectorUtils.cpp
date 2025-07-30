@@ -306,6 +306,15 @@ unsigned llvm::getDeinterleaveIntrinsicFactor(Intrinsic::ID ID) {
   }
 }
 
+VectorType *llvm::getDeinterleavedVectorType(IntrinsicInst *DI) {
+  [[maybe_unused]] unsigned Factor =
+      getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
+  ArrayRef<Type *> DISubtypes = DI->getType()->subtypes();
+  assert(Factor && Factor == DISubtypes.size() &&
+         "unexpected deinterleave factor or result type");
+  return cast<VectorType>(DISubtypes[0]);
+}
+
 /// Given a vector and an element number, see if the scalar value is
 /// already around as a register, for example if it were inserted then extracted
 /// from the vector.

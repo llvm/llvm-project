@@ -33,10 +33,10 @@ define i64 @pr97452_scalable_vf1_for_live_out(ptr %src) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[TMP9]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <vscale x 1 x i64> [[TMP7]], i32 [[TMP10]]
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 1 x i64> [[WIDE_LOAD]], i32 [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP13:%.*]] = sub i32 [[TMP12]], 1
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 1 x i64> [[WIDE_LOAD]], i32 [[TMP13]]
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <vscale x 1 x i64> [[TMP7]], i32 [[TMP13]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 23, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -52,7 +52,7 @@ define i64 @pr97452_scalable_vf1_for_live_out(ptr %src) {
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 22
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[FOR]], %[[LOOP]] ], [ [[TMP11]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[FOR]], %[[LOOP]] ], [ [[TMP14]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:

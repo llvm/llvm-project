@@ -424,13 +424,8 @@ public:
                        const MCPseudoProbeInlineStack &InlineStack,
                        MCSymbol *FnSym) override;
 
-  void emitBundleAlignMode(Align Alignment) override;
-  void emitBundleLock(bool AlignToEnd) override;
-  void emitBundleUnlock() override;
-
-  std::optional<std::pair<bool, std::string>>
-  emitRelocDirective(const MCExpr &Offset, StringRef Name, const MCExpr *Expr,
-                     SMLoc Loc, const MCSubtargetInfo &STI) override;
+  void emitRelocDirective(const MCExpr &Offset, StringRef Name,
+                          const MCExpr *Expr, SMLoc Loc) override;
 
   void emitAddrsig() override;
   void emitAddrsigSym(const MCSymbol *Sym) override;
@@ -2550,27 +2545,8 @@ void MCAsmStreamer::emitPseudoProbe(uint64_t Guid, uint64_t Index,
   EmitEOL();
 }
 
-void MCAsmStreamer::emitBundleAlignMode(Align Alignment) {
-  OS << "\t.bundle_align_mode " << Log2(Alignment);
-  EmitEOL();
-}
-
-void MCAsmStreamer::emitBundleLock(bool AlignToEnd) {
-  OS << "\t.bundle_lock";
-  if (AlignToEnd)
-    OS << " align_to_end";
-  EmitEOL();
-}
-
-void MCAsmStreamer::emitBundleUnlock() {
-  OS << "\t.bundle_unlock";
-  EmitEOL();
-}
-
-std::optional<std::pair<bool, std::string>>
-MCAsmStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
-                                  const MCExpr *Expr, SMLoc,
-                                  const MCSubtargetInfo &STI) {
+void MCAsmStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
+                                       const MCExpr *Expr, SMLoc) {
   OS << "\t.reloc ";
   MAI->printExpr(OS, Offset);
   OS << ", " << Name;
@@ -2579,7 +2555,6 @@ MCAsmStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
     MAI->printExpr(OS, *Expr);
   }
   EmitEOL();
-  return std::nullopt;
 }
 
 void MCAsmStreamer::emitAddrsig() {

@@ -6,17 +6,17 @@
 define amdgpu_kernel void @remat_constant_voids_spill(ptr addrspace(1) %p) #1 {
 ; GFX908-LABEL: remat_constant_voids_spill:
 ; GFX908:       ; %bb.0:
-; GFX908-NEXT:    v_accvgpr_write_b32 a1, 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a5, 6
-; GFX908-NEXT:    v_accvgpr_write_b32 a6, 7
-; GFX908-NEXT:    v_accvgpr_write_b32 a7, 8
-; GFX908-NEXT:    v_accvgpr_write_b32 a0, 9
-; GFX908-NEXT:    v_accvgpr_write_b32 a2, 2
-; GFX908-NEXT:    v_accvgpr_write_b32 a3, 3
-; GFX908-NEXT:    v_accvgpr_write_b32 a4, 4
+; GFX908-NEXT:    v_accvgpr_write_b32 a0, 1
+; GFX908-NEXT:    v_accvgpr_write_b32 a1, 2
+; GFX908-NEXT:    v_accvgpr_write_b32 a2, 3
+; GFX908-NEXT:    v_accvgpr_write_b32 a3, 4
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ;;#ASMEND
-; GFX908-NEXT:    v_accvgpr_write_b32 a1, 5
+; GFX908-NEXT:    v_accvgpr_write_b32 a0, 5
+; GFX908-NEXT:    v_accvgpr_write_b32 a1, 6
+; GFX908-NEXT:    v_accvgpr_write_b32 a2, 7
+; GFX908-NEXT:    v_accvgpr_write_b32 a3, 8
+; GFX908-NEXT:    v_accvgpr_write_b32 a4, 9
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ;;#ASMEND
 ; GFX908-NEXT:    s_endpgm

@@ -750,7 +750,8 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
         if (!SafeToPropagate)
           break;
 
-        DefOp.setIsKill(false);
+        for (auto I = Def; I != MI; ++I)
+          I->clearRegisterKills(DefOp.getReg(), &RI);
       }
 
       MachineInstrBuilder Builder =
@@ -1720,50 +1721,6 @@ static unsigned getVGPRSpillSaveOpcode(unsigned Size, bool NeedsCFI) {
   }
 }
 
-static unsigned getAGPRSpillSaveOpcode(unsigned Size, bool NeedsCFI) {
-  switch (Size) {
-  case 4:
-    return NeedsCFI ? AMDGPU::SI_SPILL_A32_CFI_SAVE : AMDGPU::SI_SPILL_A32_SAVE;
-  case 8:
-    return NeedsCFI ? AMDGPU::SI_SPILL_A64_CFI_SAVE : AMDGPU::SI_SPILL_A64_SAVE;
-  case 12:
-    return NeedsCFI ? AMDGPU::SI_SPILL_A96_CFI_SAVE : AMDGPU::SI_SPILL_A96_SAVE;
-  case 16:
-    return NeedsCFI ? AMDGPU::SI_SPILL_A128_CFI_SAVE
-                    : AMDGPU::SI_SPILL_A128_SAVE;
-  case 20:
-    return NeedsCFI ? AMDGPU::SI_SPILL_A160_CFI_SAVE
-                    : AMDGPU::SI_SPILL_A160_SAVE;
-  case 24:
-    return NeedsCFI ? AMDGPU::SI_SPILL_A192_CFI_SAVE
-                    : AMDGPU::SI_SPILL_A192_SAVE;
-  case 28:
-    return NeedsCFI ? AMDGPU::SI_SPILL_A224_CFI_SAVE
-                    : AMDGPU::SI_SPILL_A224_SAVE;
-  case 32:
-    return NeedsCFI ? AMDGPU::SI_SPILL_A256_CFI_SAVE
-                    : AMDGPU::SI_SPILL_A256_SAVE;
-  case 36:
-    return AMDGPU::SI_SPILL_A288_SAVE;
-  case 40:
-    return AMDGPU::SI_SPILL_A320_SAVE;
-  case 44:
-    return AMDGPU::SI_SPILL_A352_SAVE;
-  case 48:
-    return AMDGPU::SI_SPILL_A384_SAVE;
-  case 64:
-    return NeedsCFI ? AMDGPU::SI_SPILL_A512_CFI_SAVE
-                    : AMDGPU::SI_SPILL_A512_SAVE;
-  case 72:
-    return AMDGPU::SI_SPILL_A576_SAVE;
-  case 128:
-    return NeedsCFI ? AMDGPU::SI_SPILL_A1024_CFI_SAVE
-                    : AMDGPU::SI_SPILL_A1024_SAVE;
-  default:
-    llvm_unreachable("unknown register size");
-  }
-}
-
 static unsigned getAVSpillSaveOpcode(unsigned Size, bool NeedsCFI) {
   switch (Size) {
   case 4:
@@ -1820,23 +1777,20 @@ static unsigned getWWMRegSpillSaveOpcode(unsigned Size,
   return AMDGPU::SI_SPILL_WWM_V32_SAVE;
 }
 
-static unsigned getVectorRegSpillSaveOpcode(Register Reg,
-                                            const TargetRegisterClass *RC,
-                                            unsigned Size,
-                                            const SIRegisterInfo &TRI,
-                                            const SIMachineFunctionInfo &MFI,
-					    bool NeedsCFI) {
-  bool IsVectorSuperClass = TRI.isVectorSuperClass(RC);
+unsigned SIInstrInfo::getVectorRegSpillSaveOpcode(
+    Register Reg, const TargetRegisterClass *RC, unsigned Size,
+    const SIMachineFunctionInfo &MFI, bool NeedsCFI) const {
+  bool IsVectorSuperClass = RI.isVectorSuperClass(RC);
 
   // Choose the right opcode if spilling a WWM register.
   if (MFI.checkFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG))
     return getWWMRegSpillSaveOpcode(Size, IsVectorSuperClass);
 
-  if (IsVectorSuperClass)
+  // TODO: Check if AGPRs are available
+  if (ST.hasMAIInsts())
     return getAVSpillSaveOpcode(Size, NeedsCFI);
 
-  return TRI.isAGPRClass(RC) ? getAGPRSpillSaveOpcode(Size, NeedsCFI)
-                             : getVGPRSpillSaveOpcode(Size, NeedsCFI);
+  return getVGPRSpillSaveOpcode(Size, NeedsCFI);
 }
 
 void SIInstrInfo::storeRegToStackSlotImpl(
@@ -1885,8 +1839,9 @@ void SIInstrInfo::storeRegToStackSlotImpl(
     return;
   }
 
-  unsigned Opcode = getVectorRegSpillSaveOpcode(VReg ? VReg : SrcReg, RC,
-                                                SpillSize, RI, *MFI, NeedsCFI);
+  unsigned Opcode =
+      getVectorRegSpillSaveOpcode(VReg ? VReg : SrcReg, RC, SpillSize, *MFI, NeedsCFI);
+
   MFI->setHasSpilledVGPRs();
 
   BuildMI(MBB, MI, DL, get(Opcode))
@@ -1992,43 +1947,6 @@ static unsigned getVGPRSpillRestoreOpcode(unsigned Size) {
   }
 }
 
-static unsigned getAGPRSpillRestoreOpcode(unsigned Size) {
-  switch (Size) {
-  case 4:
-    return AMDGPU::SI_SPILL_A32_RESTORE;
-  case 8:
-    return AMDGPU::SI_SPILL_A64_RESTORE;
-  case 12:
-    return AMDGPU::SI_SPILL_A96_RESTORE;
-  case 16:
-    return AMDGPU::SI_SPILL_A128_RESTORE;
-  case 20:
-    return AMDGPU::SI_SPILL_A160_RESTORE;
-  case 24:
-    return AMDGPU::SI_SPILL_A192_RESTORE;
-  case 28:
-    return AMDGPU::SI_SPILL_A224_RESTORE;
-  case 32:
-    return AMDGPU::SI_SPILL_A256_RESTORE;
-  case 36:
-    return AMDGPU::SI_SPILL_A288_RESTORE;
-  case 40:
-    return AMDGPU::SI_SPILL_A320_RESTORE;
-  case 44:
-    return AMDGPU::SI_SPILL_A352_RESTORE;
-  case 48:
-    return AMDGPU::SI_SPILL_A384_RESTORE;
-  case 64:
-    return AMDGPU::SI_SPILL_A512_RESTORE;
-  case 72:
-    return AMDGPU::SI_SPILL_A576_RESTORE;
-  case 128:
-    return AMDGPU::SI_SPILL_A1024_RESTORE;
-  default:
-    llvm_unreachable("unknown register size");
-  }
-}
-
 static unsigned getAVSpillRestoreOpcode(unsigned Size) {
   switch (Size) {
   case 4:
@@ -2072,27 +1990,27 @@ static unsigned getWWMRegSpillRestoreOpcode(unsigned Size,
   if (Size != 4)
     llvm_unreachable("unknown wwm register spill size");
 
-  if (IsVectorSuperClass)
+  if (IsVectorSuperClass) // TODO: Always use this if there are AGPRs
     return AMDGPU::SI_SPILL_WWM_AV32_RESTORE;
 
   return AMDGPU::SI_SPILL_WWM_V32_RESTORE;
 }
 
-static unsigned
-getVectorRegSpillRestoreOpcode(Register Reg, const TargetRegisterClass *RC,
-                               unsigned Size, const SIRegisterInfo &TRI,
-                               const SIMachineFunctionInfo &MFI) {
-  bool IsVectorSuperClass = TRI.isVectorSuperClass(RC);
+unsigned SIInstrInfo::getVectorRegSpillRestoreOpcode(
+    Register Reg, const TargetRegisterClass *RC, unsigned Size,
+    const SIMachineFunctionInfo &MFI) const {
+  bool IsVectorSuperClass = RI.isVectorSuperClass(RC);
 
   // Choose the right opcode if restoring a WWM register.
   if (MFI.checkFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG))
     return getWWMRegSpillRestoreOpcode(Size, IsVectorSuperClass);
 
-  if (IsVectorSuperClass)
+  // TODO: Check if AGPRs are available
+  if (ST.hasMAIInsts())
     return getAVSpillRestoreOpcode(Size);
 
-  return TRI.isAGPRClass(RC) ? getAGPRSpillRestoreOpcode(Size)
-                             : getVGPRSpillRestoreOpcode(Size);
+  assert(!RI.isAGPRClass(RC));
+  return getVGPRSpillRestoreOpcode(Size);
 }
 
 void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
@@ -2140,7 +2058,7 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   }
 
   unsigned Opcode = getVectorRegSpillRestoreOpcode(VReg ? VReg : DestReg, RC,
-                                                   SpillSize, RI, *MFI);
+                                                   SpillSize, *MFI);
   BuildMI(MBB, MI, DL, get(Opcode), DestReg)
       .addFrameIndex(FrameIndex)           // vaddr
       .addReg(MFI->getStackPtrOffsetReg()) // scratch_offset
@@ -2688,6 +2606,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64));
     break;
   }
+  case AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN:
   case AMDGPU::SI_RETURN: {
     const MachineFunction *MF = MBB.getParent();
     const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
@@ -6061,6 +5980,19 @@ void SIInstrInfo::restoreExec(MachineFunction &MF, MachineBasicBlock &MBB,
     Indexes->insertMachineInstrInMaps(*ExecRestoreMI);
 }
 
+MachineInstr *
+SIInstrInfo::getWholeWaveFunctionSetup(MachineFunction &MF) const {
+  assert(MF.getInfo<SIMachineFunctionInfo>()->isWholeWaveFunction() &&
+         "Not a whole wave func");
+  MachineBasicBlock &MBB = *MF.begin();
+  for (MachineInstr &MI : MBB)
+    if (MI.getOpcode() == AMDGPU::SI_WHOLE_WAVE_FUNC_SETUP ||
+        MI.getOpcode() == AMDGPU::G_AMDGPU_WHOLE_WAVE_FUNC_SETUP)
+      return &MI;
+
+  llvm_unreachable("Couldn't find SI_SETUP_WHOLE_WAVE_FUNC instruction");
+}
+
 static const TargetRegisterClass *
 adjustAllocatableRegClass(const GCNSubtarget &ST, const SIRegisterInfo &RI,
                           const MachineRegisterInfo &MRI,
@@ -6823,7 +6755,7 @@ bool SIInstrInfo::moveFlatAddrToVGPR(MachineInstr &Inst) const {
   if (OldVAddrIdx >= 0) {
     MachineOperand &VAddr = Inst.getOperand(OldVAddrIdx);
     VAddrDef = MRI.getUniqueVRegDef(VAddr.getReg());
-    if (!VAddrDef || VAddrDef->getOpcode() != AMDGPU::V_MOV_B32_e32 ||
+    if (!VAddrDef || !VAddrDef->isMoveImmediate() ||
         !VAddrDef->getOperand(1).isImm() ||
         VAddrDef->getOperand(1).getImm() != 0)
       return false;
@@ -7269,6 +7201,13 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
 
   if (mustHaveLanesharedResult(MI)) {
     switch (MI.getOpcode()) {
+    case AMDGPU::V_SEND_VGPR_NEXT_B32_LANESHARED:
+    case AMDGPU::V_SEND_VGPR_PREV_B32_LANESHARED: {
+      unsigned OpNoRefl =
+          AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::idx_refl);
+      legalizeOperandsVLdStIdx(MRI, MI, OpNoRefl);
+      [[fallthrough]];
+    }
     case AMDGPU::CLUSTER_LOAD_B32_LANESHARED:
     case AMDGPU::CLUSTER_LOAD_B64_LANESHARED:
     case AMDGPU::CLUSTER_LOAD_B128_LANESHARED:

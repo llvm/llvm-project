@@ -336,8 +336,12 @@ public:
                                               bool IsNonTemporal,
                                               bool IsLastUse = false) const = 0;
 
-  virtual bool finalizeStore(MachineBasicBlock::iterator &MI,
-                             bool Atomic) const {
+  /// Add final touches to a `mayStore` instruction \p MI, which may be a
+  /// Store or RMW instruction.
+  /// FIXME: This takes a MI because iterators aren't handled properly. When
+  /// this is called, they often point to entirely different insts. Thus we back
+  /// up the inst early and pass it here instead.
+  virtual bool finalizeStore(MachineInstr &MI, bool Atomic) const {
     return false;
   };
 
@@ -636,8 +640,7 @@ public:
                                       bool IsVolatile, bool IsNonTemporal,
                                       bool IsLastUse) const override;
 
-  bool finalizeStore(MachineBasicBlock::iterator &MI,
-                     bool Atomic) const override;
+  bool finalizeStore(MachineInstr &MI, bool Atomic) const override;
 
   virtual bool handleCooperativeAtomic(MachineInstr &MI) const override;
 
@@ -2633,9 +2636,6 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
   if (IsVolatile) {
     Changed |= setScope(MI, AMDGPU::CPol::SCOPE_SYS);
 
-    if (Op == SIMemOp::STORE)
-      Changed |= insertWaitsBeforeSystemScopeStore(MI);
-
     // Ensure operation has completed at system scope to cause all volatile
     // operations to be visible outside the program in a global order. Do not
     // request cross address space as only the global address space can be
@@ -2648,39 +2648,48 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
   return Changed;
 }
 
-bool SIGfx12CacheControl::finalizeStore(MachineBasicBlock::iterator &MI,
-                                        bool Atomic) const {
+bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
   // Only required on gfx120x.
-  auto CoreMI = &*MI;
-  if (MI->isBundle()) {
-    CoreMI = SIInstrInfo::bundleWithGPRIndexing(*MI);
+  auto CoreMI = &MI;
+  if (MI.isBundle()) {
+    CoreMI = SIInstrInfo::bundleWithGPRIndexing(MI);
     assert(CoreMI);
   }
 
-  // GFX120x specific: we must add waits before a system scope store.
-  MachineOperand *CPol = TII->getNamedOperand(*MI, OpName::cpol);
-  if (!CPol)
-    return false;
+  assert(MI.mayStore() && "Not a Store inst");
+  const bool IsRMW = (MI.mayLoad() && MI.mayStore());
+  bool Changed = false;
 
-  // No scope operand means SCOPE_CU.
-  const unsigned Scope = CPol->getImm() & CPol::SCOPE;
-
-  // GFX120x only: Extra waits needed before system scope stores.
-  if (!ST.hasGFX1250Insts()) {
-    if (!Atomic && Scope == CPol::SCOPE_SYS)
-      return insertWaitsBeforeSystemScopeStore(MI);
-    return false;
+  // GFX125x only: xcnt wait is needed before atomics stores/rmw
+  if (Atomic && ST.hasWaitXCnt()) {
+    // TODO: add isAtomic once I figured out this bug.
+    MachineBasicBlock &MBB = *MI.getParent();
+    BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(S_WAIT_XCNT_soft)).addImm(0);
+    Changed = true;
   }
 
-  // GFX1250 only: Require SCOPE_SE on stores that may hit the scratch address
+  // Remaining fixes do not apply to RMWs
+  if (IsRMW)
+    return Changed;
+
+  MachineOperand *CPol = TII->getNamedOperand(MI, OpName::cpol);
+  if (!CPol) // Some vmem operations do not have a scope and are not concerned.
+    return Changed;
+  const unsigned Scope = CPol->getImm() & CPol::SCOPE;
+
+  // GFX120x only: Extra waits needed before non-atomic system scope stores.
+  if (!ST.hasGFX1250Insts()) {
+    if (!Atomic && Scope == CPol::SCOPE_SYS)
+      Changed |= insertWaitsBeforeSystemScopeStore(MI.getIterator());
+    return Changed;
+  }
+
+  // GFX125x only: Require SCOPE_SE on stores that may hit the scratch address
   // space, or if the "cu-stores" target feature is disabled.
-  if (Scope != CPol::SCOPE_CU)
-    return false;
-
-  if (!ST.hasCUStores() || TII->mayAccessScratchThroughFlat(*MI))
-    return setScope(MI, CPol::SCOPE_SE);
-
-  return false;
+  if (Scope == CPol::SCOPE_CU &&
+      (!ST.hasCUStores() || TII->mayAccessScratchThroughFlat(MI)))
+    Changed |= setScope(MI, CPol::SCOPE_SE);
+  return Changed;
 }
 
 bool SIGfx12CacheControl::handleCooperativeAtomic(MachineInstr &MI) const {
@@ -2825,6 +2834,7 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
                                     MachineBasicBlock::iterator &MI) {
 
   bool Changed = false;
+  MachineInstr &StoreMI = *MI;
 
   if (MOI.isAtomic()) {
     if (MOI.getOrdering() == AtomicOrdering::Monotonic ||
@@ -2846,7 +2856,7 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
                                    MOI.getIsCrossAddressSpaceOrdering(),
                                    Position::BEFORE);
 
-    Changed |= CC->finalizeStore(MI, /*Atomic=*/true);
+    Changed |= CC->finalizeStore(StoreMI, /*Atomic=*/true);
     return Changed;
   }
 
@@ -2857,7 +2867,7 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
       MI, MOI.getInstrAddrSpace(), SIMemOp::STORE, MOI.isVolatile(),
       MOI.isNonTemporal());
 
-  Changed |= CC->finalizeStore(MI, /*Atomic=*/false);
+  Changed |= CC->finalizeStore(StoreMI, /*Atomic=*/false);
 
   Changed |= CC->setCFS(MI, MOI.getCFS());
   return Changed;
@@ -2916,6 +2926,7 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
 bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(
     const SIMemOpInfo &MOI, MachineBasicBlock::iterator &MI) {
   bool Changed = false;
+  MachineInstr &RMWMI = *MI;
 
   if (MOI.isAtomic()) {
     const AtomicOrdering Order = MOI.getOrdering();
@@ -2950,6 +2961,7 @@ bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(
                                    Position::AFTER);
     }
 
+    Changed |= CC->finalizeStore(RMWMI, /*Atomic=*/true);
     return Changed;
   }
 

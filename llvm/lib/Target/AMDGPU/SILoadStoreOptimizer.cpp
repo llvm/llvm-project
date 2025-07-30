@@ -60,8 +60,8 @@
 #include "SILoadStoreOptimizer.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "SIDefines.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIDefines.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
@@ -2325,8 +2325,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
   MachineBasicBlock::iterator E = MBB->end();
   MachineBasicBlock::iterator MBBI = MI.getIterator();
   ++MBBI;
-  const SITargetLowering *TLI =
-    static_cast<const SITargetLowering *>(STM->getTargetLowering());
+  const SITargetLowering *TLI = STM->getTargetLowering();
 
   for ( ; MBBI != E; ++MBBI) {
     MachineInstr &MINext = *MBBI;

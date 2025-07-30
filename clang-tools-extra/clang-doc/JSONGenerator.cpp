@@ -45,7 +45,7 @@ static auto SerializeReferenceLambda = [](const auto &Ref, Object &Object) {
 
 static json::Object
 serializeLocation(const Location &Loc,
-                  const std::optional<StringRef> &RepositoryUrl) {
+                  const std::optional<StringRef> RepositoryUrl) {
   Object LocationObj = Object();
   LocationObj["LineNumber"] = Loc.StartLineNumber;
   LocationObj["Filename"] = Loc.Filename;
@@ -169,7 +169,7 @@ static json::Value serializeComment(const CommentInfo &I) {
 
 static void
 serializeCommonAttributes(const Info &I, json::Object &Obj,
-                          const std::optional<StringRef> &RepositoryUrl) {
+                          const std::optional<StringRef> RepositoryUrl) {
   Obj["Name"] = I.Name;
   Obj["USR"] = toHex(toStringRef(I.USR));
 
@@ -211,9 +211,9 @@ static void serializeReference(const Reference &Ref, Object &ReferenceObj) {
 // differently. Only enums, records, and typedefs are handled here.
 static void
 serializeCommonChildren(const ScopeChildren &Children, json::Object &Obj,
-                        const std::optional<StringRef> &RepositoryUrl) {
-  static auto SerializeInfo = [&RepositoryUrl](const auto &Info,
-                                               Object &Object) {
+                        const std::optional<StringRef> RepositoryUrl) {
+  static auto SerializeInfo = [RepositoryUrl](const auto &Info,
+                                              Object &Object) {
     serializeInfo(Info, Object, RepositoryUrl);
   };
 
@@ -304,7 +304,7 @@ static void serializeInfo(const FieldTypeInfo &I, Object &Obj) {
 }
 
 static void serializeInfo(const FunctionInfo &F, json::Object &Obj,
-                          const std::optional<StringRef> &RepositoryURL) {
+                          const std::optional<StringRef> RepositoryURL) {
   serializeCommonAttributes(F, Obj, RepositoryURL);
   Obj["IsStatic"] = F.IsStatic;
 
@@ -459,7 +459,7 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
 }
 
 static void serializeInfo(const VarInfo &I, json::Object &Obj,
-                          const std::optional<StringRef> &RepositoryUrl) {
+                          const std::optional<StringRef> RepositoryUrl) {
   serializeCommonAttributes(I, Obj, RepositoryUrl);
   Obj["IsStatic"] = I.IsStatic;
   auto TypeObj = Object();
@@ -468,15 +468,15 @@ static void serializeInfo(const VarInfo &I, json::Object &Obj,
 }
 
 static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
-                          const std::optional<StringRef> &RepositoryUrl) {
+                          const std::optional<StringRef> RepositoryUrl) {
   serializeCommonAttributes(I, Obj, RepositoryUrl);
 
   if (!I.Children.Namespaces.empty())
     serializeArray(I.Children.Namespaces, Obj, "Namespaces",
                    SerializeReferenceLambda);
 
-  static auto SerializeInfo = [&RepositoryUrl](const auto &Info,
-                                               Object &Object) {
+  static auto SerializeInfo = [RepositoryUrl](const auto &Info,
+                                              Object &Object) {
     serializeInfo(Info, Object, RepositoryUrl);
   };
 

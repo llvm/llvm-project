@@ -56,6 +56,8 @@ CODEGENOPT(XCOFFReadOnlyPointers, 1, 0, Benign) ///< Set for -mxcoff-roptr.
 CODEGENOPT(AllTocData, 1, 0, Benign) ///< AIX -mtocdata
 ENUM_CODEGENOPT(FramePointer, FramePointerKind, 2, FramePointerKind::None, Benign) /// frame-pointer: all,non-leaf,reserved,none
 
+ENUM_CODEGENOPT(ExceptionHandling, ExceptionHandlingKind, 3, ExceptionHandlingKind::None, NotCompatible)
+
 CODEGENOPT(ClearASTBeforeBackend , 1, 0, Benign) ///< Free the AST before running backend code generation. Only works with -disable-free.
 CODEGENOPT(DisableFree       , 1, 0, Benign) ///< Don't free memory.
 CODEGENOPT(DiscardValueNames , 1, 0, Benign) ///< Discard Value Names from the IR (LLVMContext flag)

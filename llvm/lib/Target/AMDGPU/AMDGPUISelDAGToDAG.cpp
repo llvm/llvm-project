@@ -2335,8 +2335,7 @@ bool AMDGPUDAGToDAGISel::isSOffsetLegalWithImmOffset(SDValue *SOffset,
 // Given \p Offset and load node \p N check if an \p Offset is a multiple of
 // the load byte size. If it is update \p Offset to a pre-scaled value and
 // return true.
-bool AMDGPUDAGToDAGISel::SelectScaleOffset(SDNode *N,
-                                           SDValue &Offset,
+bool AMDGPUDAGToDAGISel::SelectScaleOffset(SDNode *N, SDValue &Offset,
                                            bool IsSigned) const {
   bool ScaleOffset = false;
   if (!Subtarget->hasScaleOffset() || !Offset)
@@ -4019,7 +4018,7 @@ void AMDGPUDAGToDAGISel::SelectSpatialClusterVNBR(SDNode *N, unsigned IntrID) {
   case Intrinsic::amdgcn_spatial_cluster_send_next:
     switch (dyn_cast<ConstantSDNode>(N->getOperand(7))->getZExtValue()) {
     case 0:
-      Opcode = AMDGPU::V_SEND_VGPR_NEXT_B32;
+      Opcode = AMDGPU::V_SEND_VGPR_NEXT_B32_LANESHARED;
       break;
     default:
       return SelectCode(N);
@@ -4029,7 +4028,7 @@ void AMDGPUDAGToDAGISel::SelectSpatialClusterVNBR(SDNode *N, unsigned IntrID) {
   case Intrinsic::amdgcn_spatial_cluster_send_prev:
     switch (dyn_cast<ConstantSDNode>(N->getOperand(7))->getZExtValue()) {
     case 0:
-      Opcode = AMDGPU::V_SEND_VGPR_PREV_B32;
+      Opcode = AMDGPU::V_SEND_VGPR_PREV_B32_LANESHARED;
       break;
     default:
       return SelectCode(N);
@@ -4070,45 +4069,25 @@ void AMDGPUDAGToDAGISel::SelectSpatialClusterVNBR(SDNode *N, unsigned IntrID) {
   // TODO-GFX13: Make this 15 and handle in SIInsertWaitcnts.
   SDValue WaitVDst = CurDAG->getTargetConstant(0, SL, MVT::i32);
   if (IsSend) {
-    SmallVector<SDValue, 9> SendOps = {// regIns
-                                       N->getOperand(2),
-                                       // ins
-                                       SemID, WaveID, SemReflID, SemReflWaveID,
-                                       WaitVDst, Chain};
-    MachineSDNode *Send = CurDAG->getMachineNode(Opcode, SL, MVT::i32, MVT::i32,
-                                                 MVT::Other, SendOps);
-    SmallVector<SDValue, 4> StoreOps;
+    SmallVector<SDValue, 11> SendOps = {// regIns
+                                        N->getOperand(2),
+                                        // ins
+                                        SemID, WaveID, SemReflID, SemReflWaveID,
+                                        WaitVDst};
     SDNode *Shift =
         CurDAG->getMachineNode(AMDGPU::S_LSHR_B32, SL, MVT::i32,
-                               {N->getOperand(3), // offset refl
+                               {N->getOperand(3), // offset
                                 CurDAG->getTargetConstant(2, SL, MVT::i32)});
-    StoreOps.push_back(SDValue(Send, 0));
-    StoreOps.push_back(SDValue(Shift, 0)); // dst
-    StoreOps.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32));
-    StoreOps.push_back(SDValue(Send, 2)); // chain
-    MachineSDNode *VStore =
-        CurDAG->getMachineNode(AMDGPU::V_STORE_IDX, SL, MVT::Other, StoreOps);
-    SmallVector<SDValue, 4> StoreOpsRefl;
+    SendOps.push_back(SDValue(Shift, 0));
+    SendOps.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32));
     SDNode *ShiftRefl =
         CurDAG->getMachineNode(AMDGPU::S_LSHR_B32, SL, MVT::i32,
                                {N->getOperand(5), // offset refl
                                 CurDAG->getTargetConstant(2, SL, MVT::i32)});
-    StoreOpsRefl.push_back(SDValue(Send, 1));
-    StoreOpsRefl.push_back(SDValue(ShiftRefl, 0)); // dst
-    StoreOpsRefl.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32));
-    StoreOpsRefl.push_back(SDValue(VStore, 0)); // chain
-    SDNode *Selected =
-        CurDAG->SelectNodeTo(N, AMDGPU::V_STORE_IDX, MVT::Other, StoreOpsRefl);
-    // Synthesize MMOs for V_STORE_IDX.
-    MachinePointerInfo StorePtrI = MachinePointerInfo(AMDGPUAS::LANE_SHARED);
-    MachineFunction &MF = CurDAG->getMachineFunction();
-    MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
-        StorePtrI, MachineMemOperand::MOStore, 4, Align(4));
-    CurDAG->setNodeMemRefs(cast<MachineSDNode>(VStore), {StoreMMO});
-    MachineMemOperand *StoreReflMMO = MF.getMachineMemOperand(
-        StorePtrI, StoreMMO->getFlags(), StoreMMO->getSize(),
-        StoreMMO->getBaseAlign(), StoreMMO->getAAInfo());
-    CurDAG->setNodeMemRefs(cast<MachineSDNode>(Selected), {StoreReflMMO});
+    SendOps.push_back(SDValue(ShiftRefl, 0));
+    SendOps.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32));
+    SendOps.push_back(N->getOperand(0));
+    SDNode *Selected = CurDAG->SelectNodeTo(N, Opcode, MVT::Other, SendOps);
   } else {
     CurDAG->SelectNodeTo(
         N, Opcode, N->getVTList(),

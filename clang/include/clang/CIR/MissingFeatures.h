@@ -252,8 +252,8 @@ struct MissingFeatures {
   static bool writebacks() { return false; }
   static bool appleKext() { return false; }
   static bool dtorCleanups() { return false; }
-  static bool completeDtors() { return false; }
   static bool vtableInitialization() { return false; }
+  static bool msvcBuiltins() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
