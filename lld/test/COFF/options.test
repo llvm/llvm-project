@@ -50,56 +50,6 @@ NXCOMPAT: IMAGE_DLL_CHARACTERISTICS_NX_COMPAT
 # RUN: llvm-readobj --file-headers %t.exe | FileCheck -check-prefix=NONXCOMPAT %s
 NONXCOMPAT-NOT: IMAGE_DLL_CHARACTERISTICS_NX_COMPAT
 
-# RUN: lld-link /out:%t.exe /entry:main /cetcompat %t.obj
-# RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=CETCOMPAT %s
-CETCOMPAT: IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT
-
-# RUN: lld-link /out:%t.exe /entry:main %t.obj
-# RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=NONCETCOMPAT %s
-# RUN: lld-link /out:%t.exe /entry:main /cetcompat:no %t.obj
-# RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=NONCETCOMPAT %s
-NONCETCOMPAT-NOT: IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT
-
-# RUN: lld-link /out:%t.exe /entry:main /cetcompatstrict %t.obj
-# RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=CETCOMPATSTRICT %s
-CETCOMPATSTRICT: IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT_STRICT_MODE
-
-# RUN: lld-link /out:%t.exe /entry:main %t.obj
-# RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=NONCETCOMPATSTRICT %s
-# RUN: lld-link /out:%t.exe /entry:main /cetcompatstrict:no %t.obj
-# RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=NONCETCOMPATSTRICT %s
-NONCETCOMPATSTRICT-NOT: IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT_STRICT_MODE
-
-# RUN: lld-link /out:%t.exe /entry:main /cetipvalidationrelaxed %t.obj
-# RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=CETCOMPATSTIPVALIDATIONRELAXED %s
-CETCOMPATSTIPVALIDATIONRELAXED: IMAGE_DLL_CHARACTERISTICS_EX_CET_SET_CONTEXT_IP_VALIDATION_RELAXED_MODE
-
-# RUN: lld-link /out:%t.exe /entry:main %t.obj
-# RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=NONCETCOMPATSTIPVALIDATIONRELAXED %s
-# RUN: lld-link /out:%t.exe /entry:main /cetipvalidationrelaxed:no %t.obj
-# RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=NONCETCOMPATSTIPVALIDATIONRELAXED %s
-NONCETCOMPATSTIPVALIDATIONRELAXED-NOT: IMAGE_DLL_CHARACTERISTICS_EX_CET_SET_CONTEXT_IP_VALIDATION_RELAXED_MODE
-
-# RUN: lld-link /out:%t.exe /entry:main /cetdynamicapisinproc %t.obj
-# RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=CETDYNAMICAPISINPROC %s
-CETDYNAMICAPISINPROC: IMAGE_DLL_CHARACTERISTICS_EX_CET_DYNAMIC_APIS_ALLOW_IN_PROC_ONLY
-
-# RUN: lld-link /out:%t.exe /entry:main %t.obj
-# RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=NONCETDYNAMICAPISINPROC %s
-# RUN: lld-link /out:%t.exe /entry:main /cetdynamicapisinproc:no %t.obj
-# RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=NONCETDYNAMICAPISINPROC %s
-NONCETDYNAMICAPISINPROC-NOT: IMAGE_DLL_CHARACTERISTICS_EX_CET_DYNAMIC_APIS_ALLOW_IN_PROC_ONLY
-
-# RUN: lld-link /out:%t.exe /entry:main /hotpatchcompatible /functionpadmin:6 %t.obj
-# RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=HOTPATCHCOMPATIBLE %s
-HOTPATCHCOMPATIBLE: IMAGE_DLL_CHARACTERISTICS_EX_HOTPATCH_COMPATIBLE
-
-# RUN: lld-link /out:%t.exe /entry:main %t.obj
-# RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=NONHOTPATCHCOMPATIBLE %s
-# RUN: lld-link /out:%t.exe /entry:main /hotpatchcompatible:no %t.obj
-# RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=NONHOTPATCHCOMPATIBLE %s
-NONHOTPATCHCOMPATIBLE-NOT: IMAGE_DLL_CHARACTERISTICS_EX_HOTPATCH_COMPATIBLE
-
 # RUN: lld-link /out:%t.exe /entry:main /swaprun:CD %t.obj
 # RUN: llvm-readobj --file-headers %t.exe | FileCheck -check-prefix=SWAPCD %s
 # RUN: lld-link /out:%t.exe /entry:main /swaprun:cd,net %t.obj
