@@ -69,6 +69,9 @@ public:
   // symbols and warn about imported local symbols.
   void resolveRemainingUndefines();
 
+  // Try to resolve undefined symbols with alternate names.
+  void resolveAlternateNames();
+
   // Load lazy objects that are needed for MinGW automatic import and for
   // doing stdcall fixups.
   void loadMinGWSymbols();

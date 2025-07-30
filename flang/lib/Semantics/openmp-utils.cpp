@@ -143,6 +143,31 @@ bool IsVarOrFunctionRef(const MaybeExpr &expr) {
   }
 }
 
+bool IsMapEnteringType(parser::OmpMapType::Value type) {
+  switch (type) {
+  case parser::OmpMapType::Value::Alloc:
+  case parser::OmpMapType::Value::Storage:
+  case parser::OmpMapType::Value::To:
+  case parser::OmpMapType::Value::Tofrom:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool IsMapExitingType(parser::OmpMapType::Value type) {
+  switch (type) {
+  case parser::OmpMapType::Value::Delete:
+  case parser::OmpMapType::Value::From:
+  case parser::OmpMapType::Value::Release:
+  case parser::OmpMapType::Value::Storage:
+  case parser::OmpMapType::Value::Tofrom:
+    return true;
+  default:
+    return false;
+  }
+}
+
 std::optional<SomeExpr> GetEvaluateExpr(const parser::Expr &parserExpr) {
   const parser::TypedExpr &typedExpr{parserExpr.typedExpr};
   // ForwardOwningPointer           typedExpr

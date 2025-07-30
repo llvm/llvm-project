@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+def flat_ptr_ty : LLVMQualPointerType<0>;
 def global_ptr_ty : LLVMQualPointerType<1>;
 def local_ptr_ty : LLVMQualPointerType<3>;
 
@@ -3045,6 +3046,24 @@ def int_amdgcn_ds_bpermute_fi_b32 :
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
     [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+def int_amdgcn_flat_prefetch : ClangBuiltin<"__builtin_amdgcn_flat_prefetch">,
+  Intrinsic<[],
+  [llvm_ptr_ty,    // Pointer
+   llvm_i32_ty],   // cachepolicy(imm), bits [0-2] = th, bits [3-4] = scope
+    [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>,
+     IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<1>>],
+    "", [SDNPMemOperand]
+  >;
+
+def int_amdgcn_global_prefetch : ClangBuiltin<"__builtin_amdgcn_global_prefetch">,
+  Intrinsic<[],
+  [LLVMQualPointerType<1>,    // Pointer
+   llvm_i32_ty],              // cachepolicy(imm), bits [0-2] = th, bits [3-4] = scope
+    [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>,
+     IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<1>>],
+    "", [SDNPMemOperand]
+  >;
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//
@@ -3572,6 +3591,12 @@ def int_amdgcn_cvt_f16_bf8 : ClangBuiltin<"__builtin_amdgcn_cvt_f16_bf8">,
             [llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
+def int_amdgcn_sat_pk4_i4_i8 : ClangBuiltin<"__builtin_amdgcn_sat_pk4_i4_i8">,
+  DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
+
+def int_amdgcn_sat_pk4_u4_u8 : ClangBuiltin<"__builtin_amdgcn_sat_pk4_u4_u8">,
+  DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
+
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend
 // should emit calls to these.
@@ -3617,6 +3642,50 @@ def int_amdgcn_fdiv_fast : DefaultAttrsIntrinsic<
   [llvm_float_ty], [llvm_float_ty, llvm_float_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
+
+class AMDGPUAsyncGlobalLoadToLDS : Intrinsic <
+  [],
+  [global_ptr_ty,          // Base global pointer to load from
+   local_ptr_ty,           // LDS base pointer to store to.
+   llvm_i32_ty,            // offset
+   llvm_i32_ty],           // gfx12+ cachepolicy:
+                           //   bits [0-2] = th
+                           //   bits [3-4] = scope
+  [IntrInaccessibleMemOrArgMemOnly, ReadOnly<ArgIndex<0>>, WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<0>>,
+   NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, IntrWillReturn, IntrNoCallback, IntrNoFree],
+  "", [SDNPMemOperand]
+>;
+
+class AMDGPUAsyncGlobalStoreFromLDS : Intrinsic <
+  [],
+  [global_ptr_ty,          // Base global pointer to store to
+   local_ptr_ty,           // LDS base pointer to load from
+   llvm_i32_ty,            // offset
+   llvm_i32_ty],           // gfx12+ cachepolicy:
+                           //   bits [0-2] = th
+                           //   bits [3-4] = scope
+  [IntrInaccessibleMemOrArgMemOnly, WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>, NoCapture<ArgIndex<0>>,
+   NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, IntrWillReturn, IntrNoCallback, IntrNoFree],
+  "", [SDNPMemOperand]
+>;
+
+def int_amdgcn_global_load_async_to_lds_b8      :
+  ClangBuiltin<"__builtin_amdgcn_global_load_async_to_lds_b8">, AMDGPUAsyncGlobalLoadToLDS;
+def int_amdgcn_global_load_async_to_lds_b32     :
+  ClangBuiltin<"__builtin_amdgcn_global_load_async_to_lds_b32">, AMDGPUAsyncGlobalLoadToLDS;
+def int_amdgcn_global_load_async_to_lds_b64      :
+  ClangBuiltin<"__builtin_amdgcn_global_load_async_to_lds_b64">, AMDGPUAsyncGlobalLoadToLDS;
+def int_amdgcn_global_load_async_to_lds_b128    :
+  ClangBuiltin<"__builtin_amdgcn_global_load_async_to_lds_b128">, AMDGPUAsyncGlobalLoadToLDS;
+
+def int_amdgcn_global_store_async_from_lds_b8   :
+  ClangBuiltin<"__builtin_amdgcn_global_store_async_from_lds_b8">, AMDGPUAsyncGlobalStoreFromLDS;
+def int_amdgcn_global_store_async_from_lds_b32  :
+  ClangBuiltin<"__builtin_amdgcn_global_store_async_from_lds_b32">, AMDGPUAsyncGlobalStoreFromLDS;
+def int_amdgcn_global_store_async_from_lds_b64  :
+  ClangBuiltin<"__builtin_amdgcn_global_store_async_from_lds_b64">, AMDGPUAsyncGlobalStoreFromLDS;
+def int_amdgcn_global_store_async_from_lds_b128 :
+  ClangBuiltin<"__builtin_amdgcn_global_store_async_from_lds_b128">, AMDGPUAsyncGlobalStoreFromLDS;
 
 // WMMA intrinsics.
 class AMDGPUWmmaIntrinsicModsAB<LLVMType AB, LLVMType CD> :
@@ -3711,6 +3780,20 @@ class AMDGPUWmmaIntrinsicModsAllDiff<LLVMType DstTy, LLVMType AB, LLVMType C> :
      IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
+class AMDGPUWmmaIntrinsicModsC_MatrixFMT :
+  Intrinsic<
+    [llvm_anyfloat_ty], // %D
+    [
+      llvm_i32_ty,      // matrix_a_fmt
+      llvm_anyint_ty,   // %A
+      llvm_i32_ty,      // matrix_b_fmt
+      llvm_anyint_ty,   // %B
+      llvm_i16_ty,      // %C_mod: 0 - none, 1 - neg, 2 - abs, 3 - neg(abs)
+      LLVMMatchType<0>, // %C
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
+>;
+
 defset list<Intrinsic> AMDGPUWMMAIntrinsicsGFX1250 = {
 def int_amdgcn_wmma_f32_16x16x4_f32       : AMDGPUWmmaIntrinsicModsAllReuse<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x32_bf16     : AMDGPUWmmaIntrinsicModsAllReuse<llvm_anyfloat_ty, llvm_anyfloat_ty>;
@@ -3735,6 +3818,7 @@ def int_amdgcn_wmma_f32_16x16x128_fp8_bf8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint
 def int_amdgcn_wmma_f32_16x16x128_bf8_fp8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x128_bf8_bf8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_i32_16x16x64_iu8      : AMDGPUWmmaIntrinsicModsAB<llvm_anyint_ty, llvm_anyint_ty>;
+def int_amdgcn_wmma_f32_16x16x128_f8f6f4  : AMDGPUWmmaIntrinsicModsC_MatrixFMT;
 def int_amdgcn_wmma_f32_32x16x128_f4       : AMDGPUWmmaIntrinsicF4ModsC<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty>;
 }
 
@@ -3806,6 +3890,26 @@ def int_amdgcn_tensor_load_to_lds_d2 :
   ClangBuiltin<"__builtin_amdgcn_tensor_load_to_lds_d2">, AMDGPUTensorLoadStoreD2;
 def int_amdgcn_tensor_store_from_lds_d2 :
   ClangBuiltin<"__builtin_amdgcn_tensor_store_from_lds_d2">, AMDGPUTensorLoadStoreD2;
+
+class AMDGPULoadMonitor<LLVMType ptr_ty>:
+  Intrinsic<
+    [llvm_any_ty],
+    [ptr_ty,
+     llvm_i32_ty],  // gfx12+ cachepolicy:
+                    //   bits [0-2] = th
+                    //   bits [3-4] = scope
+    [IntrArgMemOnly, IntrReadMem, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
+     IntrWillReturn, IntrConvergent, IntrNoCallback, IntrNoFree],
+    "",
+    [SDNPMemOperand]
+  >;
+
+def int_amdgcn_flat_load_monitor_b32    : AMDGPULoadMonitor<flat_ptr_ty>;
+def int_amdgcn_flat_load_monitor_b64    : AMDGPULoadMonitor<flat_ptr_ty>;
+def int_amdgcn_flat_load_monitor_b128   : AMDGPULoadMonitor<flat_ptr_ty>;
+def int_amdgcn_global_load_monitor_b32  : AMDGPULoadMonitor<global_ptr_ty>;
+def int_amdgcn_global_load_monitor_b64  : AMDGPULoadMonitor<global_ptr_ty>;
+def int_amdgcn_global_load_monitor_b128 : AMDGPULoadMonitor<global_ptr_ty>;
 
 /// Emit an addrspacecast without null pointer checking.
 /// Should only be inserted by a pass based on analysis of an addrspacecast's src.
