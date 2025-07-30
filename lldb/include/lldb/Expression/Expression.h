@@ -129,7 +129,7 @@ struct FunctionCallLabel {
   /// Decodes the specified function \c label into a \c FunctionCallLabel.
   static llvm::Expected<FunctionCallLabel> fromString(llvm::StringRef label);
 
-  /// Encode this FunctionCallLabel into it's string representation.
+  /// Encode this FunctionCallLabel into its string representation.
   ///
   /// The representation roundtrips through \c fromString:
   /// \code{.cpp}
