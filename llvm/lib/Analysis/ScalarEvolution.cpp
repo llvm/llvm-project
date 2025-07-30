@@ -5114,10 +5114,6 @@ static SCEV::NoWrapFlags proveNoWrapViaBTC(const SCEVAddRecExpr *AR,
   if (!AR->hasNoUnsignedWrap() &&
       SE.willNotOverflow(Instruction::Add, false, AR->getStart(), ExtBTC))
     Result = ScalarEvolution::setFlags(Result, SCEV::FlagNUW);
-  if (!AR->hasNoSignedWrap() &&
-      SE.willNotOverflow(Instruction::Add, true, AR->getStart(), ExtBTC) &&
-      SE.isKnownPredicate(CmpInst::ICMP_SGE, Add, AR->getStart()))
-    Result = ScalarEvolution::setFlags(Result, SCEV::FlagNSW);
 
   return Result;
 }
