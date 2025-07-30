@@ -576,7 +576,6 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     int64_t Val = Offset.getFixed();
     int64_t Lo12 = SignExtend64<12>(Val);
     unsigned Opc = MI.getOpcode();
-    auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
     if (Opc == RISCV::ADDI && !isInt<12>(Val)) {
       // We chose to emit the canonical immediate sequence rather than folding
