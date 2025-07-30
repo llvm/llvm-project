@@ -12,8 +12,8 @@
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/tools.h"
-#include "flang/Semantics/symbol.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Semantics/symbol.h"
 #include "flang/Support/Fortran.h"
 
 namespace Fortran::evaluate {
