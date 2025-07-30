@@ -70,7 +70,7 @@ RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=CHECKN
 CHECKNOCETDYNAPI-NOT: Type: ExtendedDLLCharacteristics (0x14)
 CHECKNOCETDYNAPI-NOT: Type: IMAGE_DLL_CHARACTERISTICS_EX_CET_DYNAMIC_APIS_ALLOW_IN_PROC_ONLY (0x8)
 
-// ---- /cetipvalidationrelaxed
+// ---- /cetipvalidationrelaxed (image is not CET in context ip validation relaxed mode)
 RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.obj
 RUN: lld-link /out:%t.exe /entry:main /cetipvalidationrelaxed %t.obj
 RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=CHECKCETIPRELAXED %s
