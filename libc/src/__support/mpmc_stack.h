@@ -32,9 +32,8 @@ public:
   LIBC_INLINE bool push(T value) {
     AllocChecker ac;
     Node *new_node = new Node(value, ac);
-    if (!ac) {
+    if (!ac)
       return false;
-    }
     head.transaction([new_node](Node *old_head) {
       new_node->next = old_head;
       return new_node;
