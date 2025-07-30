@@ -1774,6 +1774,18 @@ def : Pat<(declare_array_param externalsym:$a, imm:$align, imm:$size),
 def : Pat<(declare_scalar_param externalsym:$a, imm:$size),
           (DECLARE_PARAM_scalar (to_texternsym $a), imm:$size)>;
 
+// Call prototype wrapper, this is a dummy instruction that just prints it's
+// operand which is string defining the prototype.
+def SDTCallPrototype : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
+def CallPrototype :
+  SDNode<"NVPTXISD::CallPrototype", SDTCallPrototype,
+         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
+def ProtoIdent : Operand<i32> { let PrintMethod = "printProtoIdent"; }
+def CALL_PROTOTYPE :
+  NVPTXInst<(outs), (ins ProtoIdent:$ident),
+            "$ident", [(CallPrototype (i32 texternalsym:$ident))]>;
+
+
 foreach t = [I32RT, I64RT] in {
   defvar inst_name = "MOV" # t.Size # "_PARAM";
   def inst_name : BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$src), "mov.b" # t.Size>;
@@ -1792,6 +1804,32 @@ defm ProxyRegB1  : ProxyRegInst<"pred", B1>;
 defm ProxyRegB16 : ProxyRegInst<"b16",  B16>;
 defm ProxyRegB32 : ProxyRegInst<"b32",  B32>;
 defm ProxyRegB64 : ProxyRegInst<"b64",  B64>;
+
+
+// Callseq start and end
+
+// Note: these nodes are marked as SDNPMayStore and SDNPMayLoad because
+// they define the scope in which the declared params may be used. Therefore
+// we add these flags to ensure ld.param and st.param are not sunk or hoisted
+// out of that scope.
+
+def callseq_start : SDNode<"ISD::CALLSEQ_START",
+                           SDCallSeqStart<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>,
+                           [SDNPHasChain, SDNPOutGlue,
+                            SDNPSideEffect, SDNPMayStore, SDNPMayLoad]>;
+def callseq_end   : SDNode<"ISD::CALLSEQ_END",
+                           SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>,
+                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                            SDNPSideEffect, SDNPMayStore, SDNPMayLoad]>;
+
+def Callseq_Start :
+  NVPTXInst<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+            "\\{ // callseq $amt1, $amt2",
+            [(callseq_start timm:$amt1, timm:$amt2)]>;
+def Callseq_End :
+  NVPTXInst<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+            "\\} // callseq $amt1",
+            [(callseq_end timm:$amt1, timm:$amt2)]>;
 
 //
 // Load / Store Handling
@@ -2336,26 +2374,6 @@ def : Pat<(brcond i32:$a, bb:$target),
 def : Pat<(brcond (i1 (setne i1:$a, -1)), bb:$target),
           (CBranchOther $a, bb:$target)>;
 
-// Call
-def SDT_NVPTXCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>,
-                                            SDTCisVT<1, i32>]>;
-def SDT_NVPTXCallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
-
-def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_NVPTXCallSeqStart,
-                           [SDNPHasChain, SDNPOutGlue, SDNPSideEffect]>;
-def callseq_end   : SDNode<"ISD::CALLSEQ_END", SDT_NVPTXCallSeqEnd,
-                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                            SDNPSideEffect]>;
-
-def Callseq_Start :
-  NVPTXInst<(outs), (ins i32imm:$amt1, i32imm:$amt2),
-            "\\{ // callseq $amt1, $amt2",
-            [(callseq_start timm:$amt1, timm:$amt2)]>;
-def Callseq_End :
-  NVPTXInst<(outs), (ins i32imm:$amt1, i32imm:$amt2),
-            "\\} // callseq $amt1",
-            [(callseq_end timm:$amt1, timm:$amt2)]>;
-
 // trap instruction
 def trapinst : BasicNVPTXInst<(outs), (ins), "trap", [(trap)]>, Requires<[noPTXASUnreachableBug]>;
 // Emit an `exit` as well to convey to ptxas that `trap` exits the CFG.
@@ -2363,18 +2381,6 @@ def trapinst : BasicNVPTXInst<(outs), (ins), "trap", [(trap)]>, Requires<[noPTXA
 def trapexitinst : NVPTXInst<(outs), (ins), "trap; exit;", [(trap)]>, Requires<[hasPTXASUnreachableBug]>;
 // brkpt instruction
 def debugtrapinst : BasicNVPTXInst<(outs), (ins), "brkpt", [(debugtrap)]>;
-
-// Call prototype wrapper
-def SDTCallPrototype : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
-def CallPrototype :
-  SDNode<"NVPTXISD::CallPrototype", SDTCallPrototype,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def ProtoIdent : Operand<i32> {
-  let PrintMethod = "printProtoIdent";
-}
-def CALL_PROTOTYPE :
-  NVPTXInst<(outs), (ins ProtoIdent:$ident),
-            "$ident", [(CallPrototype (i32 texternalsym:$ident))]>;
 
 def SDTDynAllocaOp :
   SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>, SDTCisInt<1>, SDTCisVT<2, i32>]>;
