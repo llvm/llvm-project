@@ -79,6 +79,7 @@ TEST(AllocatableCUFTest, CUFSetAllocatorIndex) {
   // REAL(4), DEVICE, ALLOCATABLE :: a(:)
   auto a{createAllocatable(TypeCategory::Real, 4)};
   EXPECT_EQ((int)kDefaultAllocator, a->GetAllocIdx());
-  RTNAME(CUFSetAllocatorIndex)(*a, kDeviceAllocatorPos, __FILE__, __LINE__);
+  RTNAME(CUFSetAllocatorIndex)(
+      a.get(), kDeviceAllocatorPos, __FILE__, __LINE__);
   EXPECT_EQ((int)kDeviceAllocatorPos, a->GetAllocIdx());
 }
