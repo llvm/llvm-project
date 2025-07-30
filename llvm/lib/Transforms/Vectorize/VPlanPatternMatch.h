@@ -703,6 +703,37 @@ m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3) {
   return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1, Op2), m_Argument<3>(Op3));
 }
 
+struct loop_invariant_vpvalue {
+  template <typename ITy> bool match(ITy *V) const {
+    VPValue *Val = dyn_cast<VPValue>(V);
+    return Val && Val->isDefinedOutsideLoopRegions();
+  }
+};
+
+inline loop_invariant_vpvalue m_LoopInvVPValue() {
+  return loop_invariant_vpvalue();
+}
+
+template <typename Op0_t>
+inline UnaryVPInstruction_match<Op0_t, VPInstruction::AnyOf>
+m_AnyOf(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::AnyOf>(Op0);
+}
+
+template <typename SubPattern_t> struct OneUse_match {
+  SubPattern_t SubPattern;
+
+  OneUse_match(const SubPattern_t &SP) : SubPattern(SP) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    return V->hasOneUse() && SubPattern.match(V);
+  }
+};
+
+template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
+  return SubPattern;
+}
+
 } // namespace VPlanPatternMatch
 } // namespace llvm
 

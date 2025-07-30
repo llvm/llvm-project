@@ -141,3 +141,103 @@ VPBasicBlock *vputils::getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT) {
   });
   return I == DepthFirst.end() ? nullptr : cast<VPBasicBlock>(*I);
 }
+
+std::optional<VPValue *> vputils::getRecipesForUncountedExit(
+    VPlan &Plan, SmallVectorImpl<VPRecipeBase *> &Recipes,
+    SmallVectorImpl<VPReplicateRecipe *> &GEPs) {
+  using namespace llvm::VPlanPatternMatch;
+  // Given a vplan like the following (just including the recipes contributing
+  // to loop control exiting here, not the actual work), we're looking to match
+  // the recipes contributing to the uncounted exit condition comparison
+  // (here, vp<%4>) back to the canonical induction for the vector body so that
+  // we can copy them to a preheader and rotate the address in the loop to the
+  // next vector iteration.
+  //
+  // VPlan ' for UF>=1' {
+  // Live-in vp<%0> = VF
+  // Live-in ir<64> = original trip-count
+  //
+  // entry:
+  // Successor(s): preheader, vector.ph
+  //
+  // vector.ph:
+  // Successor(s): vector loop
+  //
+  // <x1> vector loop: {
+  //   vector.body:
+  //     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>
+  //     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>, vp<%0>
+  //     CLONE ir<%ee.addr> = getelementptr ir<0>, vp<%3>
+  //     WIDEN ir<%ee.load> = load ir<%ee.addr>
+  //     WIDEN vp<%4> = icmp eq ir<%ee.load>, ir<0>
+  //     EMIT vp<%5> = any-of vp<%4>
+  //     EMIT vp<%6> = add vp<%2>, vp<%0>
+  //     EMIT vp<%7> = icmp eq vp<%6>, ir<64>
+  //     EMIT vp<%8> = or vp<%5>, vp<%7>
+  //     EMIT branch-on-cond vp<%8>
+  //   No successors
+  // }
+  // Successor(s): middle.block
+  //
+  // middle.block:
+  // Successor(s): preheader
+  //
+  // preheader:
+  // No successors
+  // }
+
+  // Find the uncounted loop exit condition.
+  auto *Region = Plan.getVectorLoopRegion();
+  VPValue *UncountedCondition = nullptr;
+  if (!match(
+          Region->getExitingBasicBlock()->getTerminator(),
+          m_BranchOnCond(m_OneUse(m_c_BinaryOr(
+              m_OneUse(m_AnyOf(m_VPValue(UncountedCondition))), m_VPValue())))))
+    return std::nullopt;
+
+  SmallVector<VPValue *, 4> Worklist;
+  bool LoadFound = false;
+  Worklist.push_back(UncountedCondition);
+  while (!Worklist.empty()) {
+    VPValue *V = Worklist.pop_back_val();
+
+    if (V->isDefinedOutsideLoopRegions())
+      continue;
+    if (V->getNumUsers() > 1)
+      return std::nullopt;
+
+    if (auto *Cmp = dyn_cast<VPWidenRecipe>(V)) {
+      if (Cmp->getOpcode() != Instruction::ICmp)
+        return std::nullopt;
+      Worklist.push_back(Cmp->getOperand(0));
+      Worklist.push_back(Cmp->getOperand(1));
+      Recipes.push_back(Cmp);
+    } else if (auto *Load = dyn_cast<VPWidenLoadRecipe>(V)) {
+      if (!Load->isConsecutive() || Load->isMasked())
+        return std::nullopt;
+      Worklist.push_back(Load->getAddr());
+      Recipes.push_back(Load);
+      LoadFound = true;
+    } else if (auto *VecPtr = dyn_cast<VPVectorPointerRecipe>(V)) {
+      Worklist.push_back(VecPtr->getOperand(0));
+      Recipes.push_back(VecPtr);
+    } else if (auto *GEP = dyn_cast<VPReplicateRecipe>(V)) {
+      if (GEP->getNumOperands() != 2)
+        return std::nullopt;
+      if (!match(GEP, m_GetElementPtr(
+                          m_LoopInvVPValue(),
+                          m_ScalarIVSteps(m_Specific(Plan.getCanonicalIV()),
+                                          m_SpecificInt(1),
+                                          m_Specific(&Plan.getVF())))))
+        return std::nullopt;
+      GEPs.push_back(GEP);
+      Recipes.push_back(GEP);
+    } else
+      return std::nullopt;
+  }
+
+  if (GEPs.empty() || !LoadFound)
+    return std::nullopt;
+
+  return UncountedCondition;
+}
