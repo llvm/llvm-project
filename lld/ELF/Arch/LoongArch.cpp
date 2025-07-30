@@ -809,10 +809,13 @@ static void relaxPCHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
   // address.
   // Meanwhile skip undefined, preemptible and STT_GNU_IFUNC symbols, because
   // these symbols may be resolve in runtime.
+  // Moreover, relaxation can only occur if the addends of both relocations are
+  // zero for GOT references.
   if (rHi20.type == R_LARCH_GOT_PC_HI20 &&
-      (!rHi20.sym->isDefined() || rHi20.sym->isPreemptible ||
-       rHi20.sym->isGnuIFunc() ||
-       (ctx.arg.isPic && !cast<Defined>(*rHi20.sym).section)))
+      (!rHi20.sym || rHi20.sym != rLo12.sym || !rHi20.sym->isDefined() ||
+       rHi20.sym->isPreemptible || rHi20.sym->isGnuIFunc() ||
+       (ctx.arg.isPic && !cast<Defined>(*rHi20.sym).section) ||
+       rHi20.addend != 0 || rLo12.addend != 0))
     return;
 
   uint64_t dest = 0;
