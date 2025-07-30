@@ -233,15 +233,11 @@ def UndefResultChecker : Checker<"UndefinedBinaryOperatorResult">,
   HelpText<"Check for undefined results of binary operators">,
   Documentation<HasDocumentation>;
 
-def StackAddrEscapeBase : Checker<"StackAddrEscapeBase">,
-  HelpText<"Generate information about stack address escapes.">,
-  Documentation<NotDocumented>,
-  Hidden;
-
-def StackAddrEscapeChecker : Checker<"StackAddressEscape">,
-  HelpText<"Check that addresses to stack memory do not escape the function">,
-  Dependencies<[StackAddrEscapeBase]>,
-  Documentation<HasDocumentation>;
+def StackAddrEscapeChecker
+    : Checker<"StackAddressEscape">,
+      HelpText<
+          "Check that addresses to stack memory do not escape the function">,
+      Documentation<HasDocumentation>;
 
 def DynamicTypePropagation : Checker<"DynamicTypePropagation">,
   HelpText<"Generate dynamic type information">,
@@ -295,10 +291,11 @@ def DynamicTypeChecker
       Dependencies<[DynamicTypePropagation]>,
       Documentation<HasDocumentation>;
 
-def StackAddrAsyncEscapeChecker : Checker<"StackAddressAsyncEscape">,
-  HelpText<"Check that addresses to stack memory do not escape the function">,
-  Dependencies<[StackAddrEscapeBase]>,
-  Documentation<HasDocumentation>;
+def StackAddrAsyncEscapeChecker
+    : Checker<"StackAddressAsyncEscape">,
+      HelpText<
+          "Check that addresses to stack memory do not escape the function">,
+      Documentation<HasDocumentation>;
 
 def PthreadLockBase : Checker<"PthreadLockBase">,
   HelpText<"Helper registering multiple checks.">,
