@@ -150,7 +150,8 @@ define ptr @test_too_many_indices(ptr %base, i64 %a, i64 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[B]]
 ; CHECK-NEXT:    [[INDEX:%.*]] = add i64 [[A]], 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr [8 x i32], ptr [[P1]], i64 1, i64 [[INDEX]]
+; CHECK-NEXT:    [[P2_SPLIT:%.*]] = getelementptr i8, ptr [[P1]], i64 32
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr [8 x i32], ptr [[P2_SPLIT]], i64 0, i64 [[INDEX]]
 ; CHECK-NEXT:    ret ptr [[P2]]
 ;
 entry:

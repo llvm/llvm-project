@@ -161,8 +161,10 @@ define ptr @test2d(ptr %p, i64 %x, i64 %y) {
 
 define ptr @test3a(ptr %p, i64 %x, i64 %y) {
 ; CHECK-LABEL: @test3a(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [4 x i32], ptr [[P:%.*]], i64 2, i64 [[X:%.*]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [4 x i32], ptr [[P]], i64 2, i64 [[Y:%.*]]
+; CHECK-NEXT:    [[GEP1_SPLIT:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 32
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [4 x i32], ptr [[GEP1_SPLIT]], i64 0, i64 [[X:%.*]]
+; CHECK-NEXT:    [[GEP2_SPLIT:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 32
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [4 x i32], ptr [[GEP2_SPLIT]], i64 0, i64 [[Y:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[X]], [[Y]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], ptr [[GEP1]], ptr [[GEP2]]
 ; CHECK-NEXT:    ret ptr [[SELECT]]
@@ -176,8 +178,10 @@ define ptr @test3a(ptr %p, i64 %x, i64 %y) {
 
 define ptr @test3b(ptr %p, ptr %q, i64 %x, i64 %y) {
 ; CHECK-LABEL: @test3b(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [4 x i32], ptr [[P:%.*]], i64 2, i64 [[X:%.*]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [4 x i32], ptr [[Q:%.*]], i64 2, i64 [[X]]
+; CHECK-NEXT:    [[GEP1_SPLIT:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 32
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [4 x i32], ptr [[GEP1_SPLIT]], i64 0, i64 [[X:%.*]]
+; CHECK-NEXT:    [[GEP2_SPLIT:%.*]] = getelementptr inbounds nuw i8, ptr [[Q:%.*]], i64 32
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [4 x i32], ptr [[GEP2_SPLIT]], i64 0, i64 [[X]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], ptr [[GEP1]], ptr [[GEP2]]
 ; CHECK-NEXT:    ret ptr [[SELECT]]
@@ -191,7 +195,8 @@ define ptr @test3b(ptr %p, ptr %q, i64 %x, i64 %y) {
 
 define ptr @test3c(ptr %p, ptr %q, i64 %x, i64 %y) {
 ; CHECK-LABEL: @test3c(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [4 x i32], ptr [[P:%.*]], i64 [[X:%.*]], i64 2
+; CHECK-NEXT:    [[GEP1_SPLIT:%.*]] = getelementptr inbounds [4 x i32], ptr [[P:%.*]], i64 [[X:%.*]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds nuw i8, ptr [[GEP1_SPLIT]], i64 8
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[Q:%.*]], i64 [[X]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], ptr [[GEP1]], ptr [[GEP2]]
@@ -207,7 +212,8 @@ define ptr @test3c(ptr %p, ptr %q, i64 %x, i64 %y) {
 define ptr @test3d(ptr %p, ptr %q, i64 %x, i64 %y) {
 ; CHECK-LABEL: @test3d(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[X:%.*]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [4 x i32], ptr [[Q:%.*]], i64 [[X]], i64 2
+; CHECK-NEXT:    [[GEP2_SPLIT:%.*]] = getelementptr inbounds [4 x i32], ptr [[Q:%.*]], i64 [[X]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds nuw i8, ptr [[GEP2_SPLIT]], i64 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], ptr [[GEP1]], ptr [[GEP2]]
 ; CHECK-NEXT:    ret ptr [[SELECT]]
