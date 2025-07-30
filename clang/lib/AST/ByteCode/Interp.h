@@ -468,10 +468,10 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
   const Pointer &Result = S.Stk.peek<Pointer>();
 
   if constexpr (std::is_same_v<T, Floating>) {
-    APFloat A = LHS.atIndex(0).deref<Floating>().getAPFloat();
-    APFloat B = LHS.atIndex(1).deref<Floating>().getAPFloat();
-    APFloat C = RHS.atIndex(0).deref<Floating>().getAPFloat();
-    APFloat D = RHS.atIndex(1).deref<Floating>().getAPFloat();
+    APFloat A = LHS.elem<Floating>(0).getAPFloat();
+    APFloat B = LHS.elem<Floating>(1).getAPFloat();
+    APFloat C = RHS.elem<Floating>(0).getAPFloat();
+    APFloat D = RHS.elem<Floating>(1).getAPFloat();
 
     APFloat ResR(A.getSemantics());
     APFloat ResI(A.getSemantics());
@@ -480,20 +480,18 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
     // Copy into the result.
     Floating RA = S.allocFloat(A.getSemantics());
     RA.copy(ResR);
-    Result.atIndex(0).deref<Floating>() = RA; // Floating(ResR);
-    Result.atIndex(0).initialize();
+    Result.elem<Floating>(0) = RA; // Floating(ResR);
 
     Floating RI = S.allocFloat(A.getSemantics());
     RI.copy(ResI);
-    Result.atIndex(1).deref<Floating>() = RI; // Floating(ResI);
-    Result.atIndex(1).initialize();
-    Result.initialize();
+    Result.elem<Floating>(1) = RI; // Floating(ResI);
+    Result.initializeAllElements();
   } else {
     // Integer element type.
-    const T &LHSR = LHS.atIndex(0).deref<T>();
-    const T &LHSI = LHS.atIndex(1).deref<T>();
-    const T &RHSR = RHS.atIndex(0).deref<T>();
-    const T &RHSI = RHS.atIndex(1).deref<T>();
+    const T &LHSR = LHS.elem<T>(0);
+    const T &LHSI = LHS.elem<T>(1);
+    const T &RHSR = RHS.elem<T>(0);
+    const T &RHSI = RHS.elem<T>(1);
     unsigned Bits = LHSR.bitWidth();
 
     // real(Result) = (real(LHS) * real(RHS)) - (imag(LHS) * imag(RHS))
@@ -503,19 +501,18 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
     T B;
     if (T::mul(LHSI, RHSI, Bits, &B))
       return false;
-    if (T::sub(A, B, Bits, &Result.atIndex(0).deref<T>()))
+    if (T::sub(A, B, Bits, &Result.elem<T>(0)))
       return false;
-    Result.atIndex(0).initialize();
 
     // imag(Result) = (real(LHS) * imag(RHS)) + (imag(LHS) * real(RHS))
     if (T::mul(LHSR, RHSI, Bits, &A))
       return false;
     if (T::mul(LHSI, RHSR, Bits, &B))
       return false;
-    if (T::add(A, B, Bits, &Result.atIndex(1).deref<T>()))
+    if (T::add(A, B, Bits, &Result.elem<T>(1)))
       return false;
-    Result.atIndex(1).initialize();
     Result.initialize();
+    Result.initializeAllElements();
   }
 
   return true;
@@ -528,10 +525,10 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
   const Pointer &Result = S.Stk.peek<Pointer>();
 
   if constexpr (std::is_same_v<T, Floating>) {
-    APFloat A = LHS.atIndex(0).deref<Floating>().getAPFloat();
-    APFloat B = LHS.atIndex(1).deref<Floating>().getAPFloat();
-    APFloat C = RHS.atIndex(0).deref<Floating>().getAPFloat();
-    APFloat D = RHS.atIndex(1).deref<Floating>().getAPFloat();
+    APFloat A = LHS.elem<Floating>(0).getAPFloat();
+    APFloat B = LHS.elem<Floating>(1).getAPFloat();
+    APFloat C = RHS.elem<Floating>(0).getAPFloat();
+    APFloat D = RHS.elem<Floating>(1).getAPFloat();
 
     APFloat ResR(A.getSemantics());
     APFloat ResI(A.getSemantics());
@@ -540,21 +537,19 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
     // Copy into the result.
     Floating RA = S.allocFloat(A.getSemantics());
     RA.copy(ResR);
-    Result.atIndex(0).deref<Floating>() = RA; // Floating(ResR);
-    Result.atIndex(0).initialize();
+    Result.elem<Floating>(0) = RA; // Floating(ResR);
 
     Floating RI = S.allocFloat(A.getSemantics());
     RI.copy(ResI);
-    Result.atIndex(1).deref<Floating>() = RI; // Floating(ResI);
-    Result.atIndex(1).initialize();
+    Result.elem<Floating>(1) = RI; // Floating(ResI);
 
-    Result.initialize();
+    Result.initializeAllElements();
   } else {
     // Integer element type.
-    const T &LHSR = LHS.atIndex(0).deref<T>();
-    const T &LHSI = LHS.atIndex(1).deref<T>();
-    const T &RHSR = RHS.atIndex(0).deref<T>();
-    const T &RHSI = RHS.atIndex(1).deref<T>();
+    const T &LHSR = LHS.elem<T>(0);
+    const T &LHSI = LHS.elem<T>(1);
+    const T &RHSR = RHS.elem<T>(0);
+    const T &RHSI = RHS.elem<T>(1);
     unsigned Bits = LHSR.bitWidth();
     const T Zero = T::from(0, Bits);
 
@@ -581,8 +576,8 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
     }
 
     // real(Result) = ((real(LHS) * real(RHS)) + (imag(LHS) * imag(RHS))) / Den
-    T &ResultR = Result.atIndex(0).deref<T>();
-    T &ResultI = Result.atIndex(1).deref<T>();
+    T &ResultR = Result.elem<T>(0);
+    T &ResultI = Result.elem<T>(1);
 
     if (T::mul(LHSR, RHSR, Bits, &A) || T::mul(LHSI, RHSI, Bits, &B))
       return false;
@@ -590,7 +585,6 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
       return false;
     if (T::div(ResultR, Den, Bits, &ResultR))
       return false;
-    Result.atIndex(0).initialize();
 
     // imag(Result) = ((imag(LHS) * real(RHS)) - (real(LHS) * imag(RHS))) / Den
     if (T::mul(LHSI, RHSR, Bits, &A) || T::mul(LHSR, RHSI, Bits, &B))
@@ -599,8 +593,7 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
       return false;
     if (T::div(ResultI, Den, Bits, &ResultI))
       return false;
-    Result.atIndex(1).initialize();
-    Result.initialize();
+    Result.initializeAllElements();
   }
 
   return true;
@@ -1308,7 +1301,7 @@ bool Dup(InterpState &S, CodePtr OpPC) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Pop(InterpState &S, CodePtr OpPC) {
-  S.Stk.pop<T>();
+  S.Stk.discard<T>();
   return true;
 }
 
@@ -1885,6 +1878,16 @@ inline bool Dump(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+inline bool CheckNull(InterpState &S, CodePtr OpPC) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+  if (Ptr.isZero()) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_dereferencing_null);
+    return S.noteUndefinedBehavior();
+  }
+  return true;
+}
+
 inline bool VirtBaseHelper(InterpState &S, CodePtr OpPC, const RecordDecl *Decl,
                            const Pointer &Ptr) {
   Pointer Base = Ptr;
@@ -1970,6 +1973,16 @@ static inline bool Activate(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (Ptr.canBeInitialized())
     Ptr.activate();
+  return true;
+}
+
+static inline bool ActivateThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
+  if (S.checkingPotentialConstantExpression())
+    return false;
+
+  const Pointer &Ptr = S.Current->getThis();
+  assert(Ptr.atField(I).canBeInitialized());
+  Ptr.atField(I).activate();
   return true;
 }
 
@@ -3093,7 +3106,7 @@ inline bool ArrayElem(InterpState &S, CodePtr OpPC, uint32_t Index) {
     return false;
 
   assert(Ptr.atIndex(Index).getFieldDesc()->getPrimType() == Name);
-  S.Stk.push<T>(Ptr.atIndex(Index).deref<T>());
+  S.Stk.push<T>(Ptr.elem<T>(Index));
   return true;
 }
 
@@ -3105,7 +3118,7 @@ inline bool ArrayElemPop(InterpState &S, CodePtr OpPC, uint32_t Index) {
     return false;
 
   assert(Ptr.atIndex(Index).getFieldDesc()->getPrimType() == Name);
-  S.Stk.push<T>(Ptr.atIndex(Index).deref<T>());
+  S.Stk.push<T>(Ptr.elem<T>(Index));
   return true;
 }
 
@@ -3547,12 +3560,22 @@ inline bool BitCastPrim(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
       Floating Result = S.allocFloat(*Sem);
       Floating::bitcastFromMemory(Buff.data(), *Sem, &Result);
       S.Stk.push<Floating>(Result);
-
-      // S.Stk.push<Floating>(T::bitcastFromMemory(Buff.data(), *Sem));
     } else if constexpr (needsAlloc<T>()) {
       T Result = S.allocAP<T>(ResultBitWidth);
       T::bitcastFromMemory(Buff.data(), ResultBitWidth, &Result);
       S.Stk.push<T>(Result);
+    } else if constexpr (std::is_same_v<T, Boolean>) {
+      // Only allow to cast single-byte integers to bool if they are either 0
+      // or 1.
+      assert(FullBitWidth.getQuantity() == 8);
+      auto Val = static_cast<unsigned int>(Buff[0]);
+      if (Val > 1) {
+        S.FFDiag(S.Current->getSource(OpPC),
+                 diag::note_constexpr_bit_cast_unrepresentable_value)
+            << S.getASTContext().BoolTy << Val;
+        return false;
+      }
+      S.Stk.push<T>(T::bitcastFromMemory(Buff.data(), ResultBitWidth));
     } else {
       assert(!Sem);
       S.Stk.push<T>(T::bitcastFromMemory(Buff.data(), ResultBitWidth));

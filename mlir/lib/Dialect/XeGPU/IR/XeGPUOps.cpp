@@ -12,6 +12,7 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 
 #include "llvm/Support/Debug.h"
 
@@ -112,6 +113,68 @@ isValidGatherScatterParams(Type maskTy, VectorType valueTy,
 //===----------------------------------------------------------------------===//
 // XeGPU_CreateNdDescOp
 //===----------------------------------------------------------------------===//
+
+void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
+                           Type tdesc, TypedValue<MemRefType> source) {
+  [[maybe_unused]] auto ty = source.getType();
+  assert(ty.hasStaticShape() && "expecting a memref with static shape");
+
+  build(builder, state, tdesc, source, ValueRange({}) /* dynamic offsets */,
+        ValueRange({}) /* empty dynamic shape */,
+        ValueRange({}) /* empty dynamic strides */,
+        DenseI64ArrayAttr({}) /* const offsets */,
+        DenseI64ArrayAttr({}) /* empty const shape*/,
+        DenseI64ArrayAttr({}) /* empty const strides*/);
+}
+
+void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
+                           Type tdesc, TypedValue<MemRefType> source,
+                           llvm::ArrayRef<OpFoldResult> shape,
+                           llvm::ArrayRef<OpFoldResult> strides) {
+  assert(shape.size() && strides.size() && shape.size() == strides.size() &&
+         "Shape and strides must be present and of equal size for ui64 "
+         "initialization.");
+
+  llvm::SmallVector<int64_t> staticShape;
+  llvm::SmallVector<int64_t> staticStrides;
+  llvm::SmallVector<Value> dynamicShape;
+  llvm::SmallVector<Value> dynamicStrides;
+
+  dispatchIndexOpFoldResults(shape, dynamicShape, staticShape);
+  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
+
+  auto staticShapeAttr = builder.getDenseI64ArrayAttr(staticShape);
+  auto staticStridesAttr = builder.getDenseI64ArrayAttr(staticStrides);
+
+  build(builder, state, tdesc, source, ValueRange({}), dynamicShape,
+        dynamicStrides, builder.getDenseI64ArrayAttr({}), staticShapeAttr,
+        staticStridesAttr);
+}
+
+void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
+                           Type tdesc, TypedValue<IntegerType> source,
+                           llvm::ArrayRef<OpFoldResult> shape,
+                           llvm::ArrayRef<OpFoldResult> strides) {
+  assert(shape.size() && strides.size() && shape.size() == strides.size() &&
+         "Shape and strides must be present and of equal size for ui64 "
+         "initialization.");
+
+  llvm::SmallVector<int64_t> staticShape;
+  llvm::SmallVector<int64_t> staticStrides;
+  llvm::SmallVector<Value> dynamicShape;
+  llvm::SmallVector<Value> dynamicStrides;
+
+  dispatchIndexOpFoldResults(shape, dynamicShape, staticShape);
+  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
+
+  auto staticShapeAttr = builder.getDenseI64ArrayAttr(staticShape);
+  auto staticStridesAttr = builder.getDenseI64ArrayAttr(staticStrides);
+
+  build(builder, state, tdesc, source, ValueRange({}), dynamicShape,
+        dynamicStrides, builder.getDenseI64ArrayAttr({}), staticShapeAttr,
+        staticStridesAttr);
+}
+
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
                            Type tdesc, TypedValue<MemRefType> source,
                            llvm::ArrayRef<OpFoldResult> offsets) {
@@ -125,8 +188,8 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
   build(builder, state, tdesc, source, dynamicOffsets /* dynamic offsets */,
         ValueRange({}) /* empty dynamic shape */,
         ValueRange({}) /* empty dynamic strides */,
-        staticOffsets /* const offsets */, {} /* empty const shape*/,
-        {} /* empty const strides*/);
+        builder.getDenseI64ArrayAttr(staticOffsets) /* const offsets */,
+        {} /* empty const shape*/, {} /* empty const strides*/);
 }
 
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
@@ -197,6 +260,13 @@ LogicalResult CreateNdDescOp::verify() {
     invalidElemTy |= memrefTy.getElementType() != getElementType();
   }
 
+  if (llvm::isa<IntegerType>(getSourceType())) {
+    // strides and shape must present for integer source.
+    if (getMixedStrides().empty() || getMixedSizes().empty())
+      return emitOpError("Expecting strides and shape to be present for "
+                         "integer source.");
+  }
+
   // mismatches among shape, strides, and offsets are
   // already handeled by OffsetSizeAndStrideOpInterface.
   // So they are not check here.
@@ -221,9 +291,68 @@ LogicalResult CreateNdDescOp::verify() {
   return success();
 }
 
+ParseResult parseOptionalDynamicIndexList(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+    DenseI64ArrayAttr &integers, SmallVectorImpl<Type> *valueTypes = nullptr,
+    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
+
+  SmallVector<int64_t, 4> integerVals;
+  auto parseIntegerOrValue = [&]() {
+    OpAsmParser::UnresolvedOperand operand;
+    auto res = parser.parseOptionalOperand(operand);
+
+    if (res.has_value() && succeeded(res.value())) {
+      values.push_back(operand);
+      integerVals.push_back(ShapedType::kDynamic);
+      if (valueTypes && parser.parseColonType(valueTypes->emplace_back()))
+        return failure();
+    } else {
+      int64_t integer;
+      if (failed(parser.parseInteger(integer)))
+        return failure();
+      integerVals.push_back(integer);
+    }
+    return success();
+  };
+
+  // If the optional values are given there must be left bracket
+  if (parser.parseOptionalLSquare().succeeded()) {
+    if (parser.parseCommaSeparatedList(parseIntegerOrValue) ||
+        parser.parseRSquare())
+      return parser.emitError(parser.getNameLoc())
+             << "expected a list of SSA values or integers";
+    integers = parser.getBuilder().getDenseI64ArrayAttr(integerVals);
+    return success();
+  }
+
+  return success();
+}
+
+void printOptionalDynamicIndexList(OpAsmPrinter &printer, Operation *op,
+                                   OperandRange values,
+                                   DenseI64ArrayAttr integers) {
+
+  if (!integers)
+    return;
+
+  return printDynamicIndexList(printer, op, values, integers,
+                               /*scalableFlags=*/{}, {},
+                               AsmParser::Delimiter::Square);
+}
 //===----------------------------------------------------------------------===//
 // XeGPU_PrefetchNdOp
 //===----------------------------------------------------------------------===//
+
+void PrefetchNdOp::build(OpBuilder &builder, OperationState &state,
+                         Value tensorDesc, xegpu::CachePolicyAttr l1_hint,
+                         xegpu::CachePolicyAttr l2_hint,
+                         xegpu::CachePolicyAttr l3_hint) {
+
+  return build(builder, state, tensorDesc, ValueRange(), DenseI64ArrayAttr(),
+               l1_hint, l2_hint, l3_hint);
+}
+
 LogicalResult PrefetchNdOp::verify() {
   auto tdescTy = getTensorDescType();
   if (tdescTy.isScattered())
@@ -238,12 +367,34 @@ LogicalResult PrefetchNdOp::verify() {
   if (!isReadHintOrNone(getL3HintAttr()))
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
+  int64_t tDescRank = tdescTy.getRank();
+  int64_t offsetSize = static_cast<int64_t>(getOffsets().size());
+  int64_t constOffsetSize =
+      getConstOffsetsAttr() ? getConstOffsetsAttr().size() : 0;
+  if (((offsetSize != 0) && (offsetSize != tDescRank)) ||
+      ((constOffsetSize != 0) && (constOffsetSize != tDescRank)))
+    return emitOpError(
+        "Mismatched ranks between offsets and tensor descriptor");
+
   return success();
 }
 
 //===----------------------------------------------------------------------===//
 // XeGPU_LoadNdOp
 //===----------------------------------------------------------------------===//
+
+void LoadNdOp::build(OpBuilder &builder, OperationState &state, Type retType,
+                     Value tensorDesc, UnitAttr packed,
+                     DenseI64ArrayAttr transpose,
+                     xegpu::CachePolicyAttr l1_hint,
+                     xegpu::CachePolicyAttr l2_hint,
+                     xegpu::CachePolicyAttr l3_hint) {
+
+  return build(builder, state, retType, tensorDesc, ValueRange(),
+               DenseI64ArrayAttr(), packed, transpose, l1_hint, l2_hint,
+               l3_hint);
+}
+
 LogicalResult LoadNdOp::verify() {
   auto tdescTy = getTensorDescType();
   auto valueTy = getType();
@@ -325,12 +476,31 @@ LogicalResult LoadNdOp::verify() {
                          << " is not consistent with tensor descriptor "
                          << tdescTy;
 
+  int64_t tDescRank = tdescTy.getRank();
+  int64_t offsetSize = static_cast<int64_t>(getOffsets().size());
+  int64_t constOffsetSize =
+      getConstOffsetsAttr() ? getConstOffsetsAttr().size() : 0;
+  if (((offsetSize != 0) && (offsetSize != tDescRank)) ||
+      ((constOffsetSize != 0) && (constOffsetSize != tDescRank)))
+    return emitOpError(
+        "Mismatched ranks between offsets and tensor descriptor");
+
   return success();
 }
 
 //===----------------------------------------------------------------------===//
 // XeGPU_StoreNdOp
 //===----------------------------------------------------------------------===//
+
+void StoreNdOp::build(OpBuilder &builder, OperationState &state, Value value,
+                      Value tensorDesc, xegpu::CachePolicyAttr l1_hint,
+                      xegpu::CachePolicyAttr l2_hint,
+                      xegpu::CachePolicyAttr l3_hint) {
+
+  return build(builder, state, value, tensorDesc, ValueRange(),
+               DenseI64ArrayAttr(), l1_hint, l2_hint, l3_hint);
+}
+
 LogicalResult StoreNdOp::verify() {
   auto dstTy = getTensorDescType(); // Tile
   auto valTy = getValueType();      // Vector
@@ -385,6 +555,15 @@ LogicalResult StoreNdOp::verify() {
                          << " is not consistent with tensor descriptor "
                          << dstTy;
 
+  int64_t tDescRank = dstTy.getRank();
+  int64_t offsetSize = static_cast<int64_t>(getOffsets().size());
+  int64_t constOffsetSize =
+      getConstOffsetsAttr() ? getConstOffsetsAttr().size() : 0;
+  if (((offsetSize != 0) && (offsetSize != tDescRank)) ||
+      ((constOffsetSize != 0) && (constOffsetSize != tDescRank)))
+    return emitOpError(
+        "Mismatched ranks between offsets and tensor descriptor");
+
   return success();
 }
 
@@ -414,7 +593,7 @@ void CreateDescOp::build(OpBuilder &builder, OperationState &state,
   int64_t size = static_cast<int64_t>(offsets.size());
   auto type = VectorType::get(size, builder.getIndexType());
   auto values = getValueOrCreateConstantIndexOp(builder, loc, offsets);
-  auto offset = builder.create<vector::FromElementsOp>(loc, type, values);
+  auto offset = vector::FromElementsOp::create(builder, loc, type, values);
   build(builder, state, TensorDesc, source, offset);
 }
 
@@ -534,7 +713,7 @@ void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
   int64_t size = static_cast<int64_t>(offsets.size());
   auto type = VectorType::get({size}, builder.getIndexType());
   auto values = getValueOrCreateConstantIndexOp(builder, loc, offsets);
-  auto offset = builder.create<vector::FromElementsOp>(loc, type, values);
+  auto offset = vector::FromElementsOp::create(builder, loc, type, values);
   build(builder, state, tdescTy, tensorDesc, offset);
 }
 
@@ -607,30 +786,53 @@ LogicalResult DpasOp::verify() {
 // XeGPU_ConvertLayoutOp
 //===----------------------------------------------------------------------===//
 LogicalResult ConvertLayoutOp::verify() {
-  auto srcMap = getSrcMapAttr();
-  auto resMap = getResMapAttr();
-  if (!srcMap)
-    return emitOpError("expected srcMap.");
-  if (!resMap)
-    return emitOpError("expected resMap.");
+  auto srcLayout = getInputLayout();
+  auto resLayout = getTargetLayout();
+  if (!srcLayout)
+    return emitOpError("expected input layout.");
+  if (!resLayout)
+    return emitOpError("expected target layout.");
 
-  if (srcMap == resMap)
-    return emitOpError("expected different srcMap and resMap.");
-
-  // both srcMap and resMap should be WgLayout or SgLayout at the same time.
-  if ((!srcMap.isWgLayout() || !resMap.isWgLayout()) &&
-      (!srcMap.isSgLayout() || !resMap.isSgLayout()))
-    return emitOpError(
-        "expected srcMap and resMap be WgLayout or SgLayout at the same time.");
+  // both input and target layouts should be WgLayout or SgLayout at the same
+  // time.
+  if ((!srcLayout.isWgLayout() || !resLayout.isWgLayout()) &&
+      (!srcLayout.isSgLayout() || !resLayout.isSgLayout()))
+    return emitOpError("expected input layout and target layout be WgLayout or "
+                       "SgLayout at the same time.");
 
   auto shape = getSource().getType().getShape();
-  if (!XeGPUDialect::isEvenlyDistributable(shape, srcMap))
-    return emitOpError("invalid srcMap, data cannot be evenly distributed.");
+  if (!XeGPUDialect::isEvenlyDistributable(shape, srcLayout))
+    return emitOpError(
+        "invalid input layout, data cannot be evenly distributed.");
 
-  if (!XeGPUDialect::isEvenlyDistributable(shape, resMap))
-    return emitOpError("invalid resMap, data cannot be evenly distributed.");
+  if (!XeGPUDialect::isEvenlyDistributable(shape, resLayout))
+    return emitOpError(
+        "invalid target layout, data cannot be evenly distributed.");
 
   return mlir::success();
+}
+
+OpFoldResult ConvertLayoutOp::fold(FoldAdaptor adaptor) {
+  if (getInputLayout() == getTargetLayout())
+    return getSource();
+  return {};
+}
+
+struct FoldConvertLayoutOp : public OpRewritePattern<xegpu::ConvertLayoutOp> {
+  using OpRewritePattern<xegpu::ConvertLayoutOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
+                                PatternRewriter &rewriter) const override {
+    if (op.getInputLayout() == op.getTargetLayout()) {
+      rewriter.replaceOp(op, op.getSource());
+      return success();
+    }
+    return failure();
+  }
+};
+
+void ConvertLayoutOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                  MLIRContext *context) {
+  patterns.add<FoldConvertLayoutOp>(context);
 }
 
 } // namespace xegpu

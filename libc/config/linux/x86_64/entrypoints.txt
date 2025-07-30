@@ -377,6 +377,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.wcsrchr
     libc.src.wchar.wcsspn
     libc.src.wchar.wcscspn
+    libc.src.wchar.wcsdup
     libc.src.wchar.wmemcmp
     libc.src.wchar.wmempcpy
     libc.src.wchar.wmemcpy
@@ -396,6 +397,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.wcstoul
     libc.src.wchar.wcstoull
 
+    # wctype.h entrypoints
+    libc.src.wctype.iswalpha
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
@@ -889,6 +892,12 @@ if(LIBC_TYPES_HAS_FLOAT128)
   )
 endif()
 
+
+list(APPEND TARGET_LIBM_ENTRYPOINTS
+  # bfloat16 entrypoints
+  libc.src.math.fabsbf16
+)
+
 if(LIBC_COMPILER_HAS_FIXED_POINT)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # stdfix.h _Fract and _Accum entrypoints
@@ -1047,6 +1056,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_join
     libc.src.pthread.pthread_key_create
     libc.src.pthread.pthread_key_delete
+    libc.src.pthread.pthread_barrier_init
+    libc.src.pthread.pthread_barrier_wait
+    libc.src.pthread.pthread_barrier_destroy
     libc.src.pthread.pthread_mutex_destroy
     libc.src.pthread.pthread_mutex_init
     libc.src.pthread.pthread_mutex_lock
@@ -1259,10 +1271,19 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.socket.recvmsg
 
     # wchar.h entrypoints
+    libc.src.wchar.mblen
+    libc.src.wchar.mbrlen
+    libc.src.wchar.mbsinit
     libc.src.wchar.mbrtowc
     libc.src.wchar.mbtowc
+    libc.src.wchar.mbstowcs
+    libc.src.wchar.mbsrtowcs
+    libc.src.wchar.mbsnrtowcs
     libc.src.wchar.wcrtomb
     libc.src.wchar.wctomb
+    libc.src.wchar.wcstombs
+    libc.src.wchar.wcsrtombs
+    libc.src.wchar.wcsnrtombs
   )
 endif()
 

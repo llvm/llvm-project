@@ -10,7 +10,7 @@
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   Call graph node for function: 'bitcast_only'<<{{.*}}>>  #uses=0
 ; CHECK-EMPTY:
-; CHECK-NEXT:   Call graph node for function: 'llvm.lifetime.start.p0'<<{{.*}}>>  #uses=3
+; CHECK-NEXT:   Call graph node for function: 'llvm.lifetime.start.p0'<<{{.*}}>>  #uses=2
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   Call graph node for function: 'llvm.memset.p0.i64'<<{{.*}}>>  #uses=2
 ; CHECK-EMPTY:
@@ -25,18 +25,11 @@
 ; CHECK-NEXT:   Call graph node for function: 'used_by_lifetime'<<{{.*}}>>  #uses=0
 ; CHECK-NEXT:   CS<{{.*}}> calls function 'llvm.lifetime.start.p0'
 ; CHECK-EMPTY:
-; CHECK-NEXT:   Call graph node for function: 'used_by_lifetime_cast'<<{{.*}}>>  #uses=0
-; CHECK-NEXT:   CS<{{.*}}> calls function 'llvm.lifetime.start.p0'
-; CHECK-EMPTY:
 
 define internal void @used_by_lifetime() {
 entry:
-  call void @llvm.lifetime.start.p0(i64 4, ptr @used_by_lifetime)
-  ret void
-}
-
-define internal void @used_by_lifetime_cast() addrspace(1) {
-  call void @llvm.lifetime.start.p0(i64 4, ptr addrspacecast (ptr addrspace(1) @used_by_lifetime_cast to ptr))
+  %a = alloca i8
+  call void @llvm.lifetime.start.p0(i64 4, ptr %a)
   ret void
 }
 

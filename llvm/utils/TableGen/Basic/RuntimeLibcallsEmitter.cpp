@@ -236,8 +236,18 @@ public:
     for (RuntimeLibcall &LibCall : RuntimeLibcallDefList)
       Def2RuntimeLibcall[LibCall.getDef()] = &LibCall;
 
-    ArrayRef<const Record *> AllRuntimeLibcallImpls =
+    ArrayRef<const Record *> AllRuntimeLibcallImplsRaw =
         Records.getAllDerivedDefinitions("RuntimeLibcallImpl");
+
+    SmallVector<const Record *, 1024> AllRuntimeLibcallImpls(
+        AllRuntimeLibcallImplsRaw);
+
+    // Sort by libcall impl name and secondarily by the enum name.
+    sort(AllRuntimeLibcallImpls, [](const Record *A, const Record *B) {
+      return std::pair(A->getValueAsString("LibCallFuncName"), A->getName()) <
+             std::pair(B->getValueAsString("LibCallFuncName"), B->getName());
+    });
+
     RuntimeLibcallImplDefList.reserve(AllRuntimeLibcallImpls.size());
 
     size_t LibCallImplEnumVal = 1;

@@ -1250,3 +1250,11 @@ class SVGCircleElement {
 int i = SVGPropertyOwnerRegistry<SVGCircleElement>::fastAnimatedPropertyLookup();
 
 }
+
+
+namespace GH149986 {
+template <typename T> concept PerfectSquare = [](){} // expected-note 2{{here}}
+([](auto) { return true; }) < PerfectSquare <class T>;
+// expected-error@-1 {{declaration of 'T' shadows template parameter}} \
+// expected-error@-1 {{a concept definition cannot refer to itself}}
+}

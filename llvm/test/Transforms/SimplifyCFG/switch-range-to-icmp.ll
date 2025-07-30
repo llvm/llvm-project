@@ -149,7 +149,7 @@ unreach2:
 
 define void @pr53208_single_reachable_dest(i8 %sw, ptr %p0) {
 ; CHECK-LABEL: @pr53208_single_reachable_dest(
-; CHECK-NEXT:  group2:
+; CHECK-NEXT:  exit:
 ; CHECK-NEXT:    call void @bar(ptr [[P0:%.*]])
 ; CHECK-NEXT:    ret void
 ;

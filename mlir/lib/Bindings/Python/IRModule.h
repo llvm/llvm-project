@@ -599,18 +599,18 @@ class PyOperationBase {
 public:
   virtual ~PyOperationBase() = default;
   /// Implements the bound 'print' method and helps with others.
-  void print(std::optional<int64_t> largeElementsLimit, bool enableDebugInfo,
+  void print(std::optional<int64_t> largeElementsLimit,
+             std::optional<int64_t> largeResourceLimit, bool enableDebugInfo,
              bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope,
              bool useNameLocAsPrefix, bool assumeVerified,
              nanobind::object fileObject, bool binary, bool skipRegions);
   void print(PyAsmState &state, nanobind::object fileObject, bool binary);
 
-  nanobind::object getAsm(bool binary,
-                          std::optional<int64_t> largeElementsLimit,
-                          bool enableDebugInfo, bool prettyDebugInfo,
-                          bool printGenericOpForm, bool useLocalScope,
-                          bool useNameLocAsPrefix, bool assumeVerified,
-                          bool skipRegions);
+  nanobind::object
+  getAsm(bool binary, std::optional<int64_t> largeElementsLimit,
+         std::optional<int64_t> largeResourceLimit, bool enableDebugInfo,
+         bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope,
+         bool useNameLocAsPrefix, bool assumeVerified, bool skipRegions);
 
   // Implement the bound 'writeBytecode' method.
   void writeBytecode(const nanobind::object &fileObject,
@@ -623,6 +623,13 @@ public:
   /// Moves the operation before or after the other operation.
   void moveAfter(PyOperationBase &other);
   void moveBefore(PyOperationBase &other);
+
+  /// Given an operation 'other' that is within the same parent block, return
+  /// whether the current operation is before 'other' in the operation list
+  /// of the parent block.
+  /// Note: This function has an average complexity of O(1), but worst case may
+  /// take O(N) where N is the number of operations within the parent block.
+  bool isBeforeInBlock(PyOperationBase &other);
 
   /// Verify the operation. Throws `MLIRError` if verification fails, and
   /// returns `true` otherwise.
