@@ -1568,7 +1568,7 @@ private:
         if (DebugLoc SuspendLoc = S->getDebugLoc()) {
           std::string LabelName =
               ("__coro_resume_" + Twine(SuspendIndex)).str();
-          DILocation &DILoc = *SuspendLoc.get();
+          DILocation &DILoc = *SuspendLoc;
           DILabel *ResumeLabel =
               DBuilder.createLabel(DIS, LabelName, DILoc.getFile(),
                                    SuspendLoc.getLine(), SuspendLoc.getCol(),
