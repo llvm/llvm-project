@@ -153,29 +153,6 @@ static int f5_salt(void) __cfi_salt { return 2; }
 int f7_salt(struct cfi_struct *ptr) { return ptr->fptr(); }
 int f7_typedef_salt(struct cfi_struct *ptr) { return ptr->td_fptr(); }
 
-#ifdef __cplusplus
-// MEMBER-LABEL: define dso_local void @_Z16test_member_callv() #0 !kcfi_type
-// MEMBER:         call void %[[#]](ptr{{.*}} [ "kcfi"(i32 [[#%d,MEMBER_LOW_SODIUM_HASH:]]) ]
-// MEMBER:         call void %[[#]](ptr{{.*}} [ "kcfi"(i32 [[#%d,MEMBER_SALT_HASH:]]) ]
-
-// MEMBER-LABEL: define{{.*}} void @_ZN1A1fEv(ptr{{.*}} %this){{.*}} !kcfi_type
-// MEMBER-SAME:  [[#MEMBER_LOW_SODIUM_TYPE:]]
-// MEMBER-LABEL: define{{.*}} void @_ZN1A1gEv(ptr{{.*}} %this){{.*}} !kcfi_type
-// MEMBER-SAME:  [[#MEMBER_SALT_TYPE:]]
-struct A {
-  void f() {}
-  void __cfi_salt g() {}
-};
-
-void test_member_call(void) {
-  void (A::* p)() = &A::f;
-  (A().*p)();
-
-  void __cfi_salt (A::* q)() = &A::g;
-  (A().*q)();
-}
-#endif
-
 // CHECK:  ![[#]] = !{i32 4, !"kcfi", i32 1}
 // OFFSET: ![[#]] = !{i32 4, !"kcfi-offset", i32 3}
 //
@@ -184,6 +161,3 @@ void test_member_call(void) {
 //
 // CHECK:  ![[#LOW_SODIUM_UTYPE]] = !{i32 [[#LOW_SODIUM_UHASH]]}
 // CHECK:  ![[#SALTY_UTYPE]] = !{i32 [[#SALTY_UHASH]]}
-//
-// MEMBER: ![[#MEMBER_LOW_SODIUM_TYPE]] = !{i32 [[#MEMBER_LOW_SODIUM_HASH]]}
-// MEMBER: ![[#MEMBER_SALT_TYPE]] = !{i32 [[#MEMBER_SALT_HASH]]}

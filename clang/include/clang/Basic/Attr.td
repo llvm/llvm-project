@@ -3929,7 +3929,7 @@ def CFICanonicalJumpTable : InheritableAttr {
   let SimpleHandler = 1;
 }
 
-def CFISalt : DeclOrTypeAttr {
+def CFISalt : TypeAttr {
   let Spellings = [Clang<"cfi_salt">];
   let Args = [StringArgument<"Salt">];
   let Subjects = SubjectList<[Function, Field, Var, TypedefName], ErrorDiag>;
