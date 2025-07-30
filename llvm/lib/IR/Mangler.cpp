@@ -292,6 +292,9 @@ void llvm::emitLinkerFlagsForUsedCOFF(raw_ostream &OS, const GlobalValue *GV,
 }
 
 std::optional<std::string> llvm::getArm64ECMangledFunctionName(StringRef Name) {
+  if (Name.empty())
+    reportFatalUsageError("ARM64EC does not support empty function names");
+
   if (Name[0] != '?') {
     // For non-C++ symbols, prefix the name with "#" unless it's already
     // mangled.
