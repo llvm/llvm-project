@@ -51,5 +51,6 @@ Expected<SFrameParser<E>> SFrameParser<E>::create(ArrayRef<uint8_t> Contents) {
   return SFrameParser(Contents, *Header);
 }
 
-template class llvm::object::SFrameParser<endianness::big>;
-template class llvm::object::SFrameParser<endianness::little>;
+template class LLVM_EXPORT_TEMPLATE llvm::object::SFrameParser<endianness::big>;
+template class LLVM_EXPORT_TEMPLATE
+    llvm::object::SFrameParser<endianness::little>;
