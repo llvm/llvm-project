@@ -1,5 +1,3 @@
 #include "lib.h"
 
-int Foo::method() {
-  return -72;
-}
+int Foo::method() { return -72; }
