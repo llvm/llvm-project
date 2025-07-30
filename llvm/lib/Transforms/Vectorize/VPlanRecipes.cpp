@@ -818,7 +818,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
           if (RK == RecurKind::Sub)
             Opcode = Instruction::Add;
           else
-            Opcode = (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK);
+            Opcode =
+                (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK);
           ReducedPartRdx =
               Builder.CreateBinOp(Opcode, RdxPart, ReducedPartRdx, "bin.rdx");
         }
