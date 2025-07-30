@@ -44,6 +44,12 @@ MLIR components pertaining to egress flows from MLIR, in particular to LLVM IR.
   [@gysit](https://github.com/gysit) (GitHub),
   gysit (Discourse)
 
+### Dialects
+
+#### CPU Dialects
+
+* 'vcix' Dialect ([@mshockwave](https://github.com/mshockwave))
+
 ## Tensor Compiler
 
 MLIR components specific to construction of compilers for tensor algebra, in
