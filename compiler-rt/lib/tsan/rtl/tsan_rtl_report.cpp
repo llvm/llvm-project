@@ -200,7 +200,7 @@ void ScopedReportBase::AddMemoryAccess(uptr addr, uptr external_tag, Shadow s,
 
 void ScopedReportBase::SymbolizeStackElems() {
   // symbolize memory ops
-  for (usize i = 0; i < rep_->mops.Size(); i++) {
+  for (usize i = 0, size = rep_->mops.Size(); i < size; i++) {
     ReportMop *mop = rep_->mops[i];
     mop->stack = SymbolizeStack(mop->stack_trace);
     if (mop->stack)
@@ -208,14 +208,14 @@ void ScopedReportBase::SymbolizeStackElems() {
   }
 
   // symbolize locations
-  for (usize i = 0; i < rep_->locs.Size(); i++) {
+  for (usize i = 0, size = rep_->locs.Size(); i < size; i++) {
     // added locations have a NULL placeholder - don't dereference them
     if (ReportLocation *loc = rep_->locs[i])
       loc->stack = SymbolizeStackId(loc->stack_id);
   }
 
   // symbolize any added locations
-  for (usize i = 0; i < rep_->added_location_addrs.Size(); i++) {
+  for (usize i = 0, size = rep_->added_location_addrs.Size(); i < size; i++) {
     AddedLocationAddr *added_loc = &rep_->added_location_addrs[i];
     if (ReportLocation *loc = SymbolizeData(added_loc->addr)) {
       loc->suppressable = true;
@@ -224,16 +224,17 @@ void ScopedReportBase::SymbolizeStackElems() {
   }
 
   // Filter out any added location placeholders that could not be symbolized
-  Vector<ReportLocation *> filtered_locs;
-  for (usize i = 0; i < rep_->locs.Size(); i++)
-    if (rep_->locs[i] != nullptr)
-      filtered_locs.PushBack(rep_->locs[i]);
-  rep_->locs.Resize(filtered_locs.Size());
-  for (usize i = 0; i < filtered_locs.Size(); i++)
-    rep_->locs[i] = (filtered_locs[i]);
+  usize j = 0;
+  for (usize i = 0, size = rep_->locs.Size(); i < size; i++) {
+    if (rep_->locs[i] != nullptr) {
+      rep_->locs[j] = rep_->locs[i];
+      j++;
+    }
+  }
+  rep_->locs.Resize(j);
 
   // symbolize threads
-  for (usize i = 0; i < rep_->threads.Size(); i++) {
+  for (usize i = 0, size = rep_->threads.Size(); i < size; i++) {
     ReportThread *rt = rep_->threads[i];
     rt->stack = SymbolizeStackId(rt->stack_id);
     if (rt->stack)
@@ -241,7 +242,7 @@ void ScopedReportBase::SymbolizeStackElems() {
   }
 
   // symbolize mutexes
-  for (usize i = 0; i < rep_->mutexes.Size(); i++) {
+  for (usize i = 0, size = rep_->mutexes.Size(); i < size; i++) {
     ReportMutex *rm = rep_->mutexes[i];
     rm->stack = SymbolizeStackId(rm->stack_id);
   }
