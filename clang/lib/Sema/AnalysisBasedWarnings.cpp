@@ -503,8 +503,12 @@ static bool areAllValuesNoReturn(const VarDecl *VD, const CFGBlock &VarBlk,
 
   TransferFunctions TF(VD);
   BackwardDataflowWorklist Worklist(*AC.getCFG(), AC);
+  llvm::DenseSet<const CFGBlock *> Visited;
   Worklist.enqueueBlock(&VarBlk);
   while (const CFGBlock *B = Worklist.dequeue()) {
+    if (Visited.contains(B))
+      continue;
+    Visited.insert(B);
     // First check the current block.
     for (CFGBlock::const_reverse_iterator ri = B->rbegin(), re = B->rend();
          ri != re; ++ri) {
