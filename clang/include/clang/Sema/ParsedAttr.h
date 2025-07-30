@@ -1110,6 +1110,18 @@ enum AttributeDeclKind {
   ExpectedTypedef,
 };
 
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const ParsedAttr &At) {
+
+  if (At.printMacroName()) {
+    const IdentifierInfo *AttrName = At.getMacroIdentifier();
+    DB.AddTaggedVal(reinterpret_cast<uint64_t>(AttrName),
+                  DiagnosticsEngine::ak_identifierinfo);
+    return DB;
+  }
+  return DB << &At;
+}
+
 } // namespace clang
 
 #endif // LLVM_CLANG_SEMA_PARSEDATTR_H
