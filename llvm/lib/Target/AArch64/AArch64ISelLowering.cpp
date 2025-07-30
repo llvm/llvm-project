@@ -11386,6 +11386,22 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
       return DAG.getNode(ISD::AND, DL, VT, LHS, Shift);
     }
 
+    // Canonicalise absolute difference patterns:
+    //   select_cc lhs, rhs, sub(lhs, rhs), sub(rhs, lhs), cc ->
+    //   select_cc lhs, rhs, sub(lhs, rhs), neg(sub(lhs, rhs)), cc
+    //
+    //   select_cc lhs, rhs, sub(rhs, lhs), sub(lhs, rhs), cc ->
+    //   select_cc lhs, rhs, neg(sub(lhs, rhs)), sub(lhs, rhs), cc
+    // The second forms can be matched into subs+cneg.
+    if (TVal.getOpcode() == ISD::SUB && FVal.getOpcode() == ISD::SUB) {
+      if (TVal.getOperand(0) == LHS && TVal.getOperand(1) == RHS &&
+          FVal.getOperand(0) == RHS && FVal.getOperand(1) == LHS)
+        FVal = DAG.getNegative(TVal, DL, TVal.getValueType());
+      else if (TVal.getOperand(0) == RHS && TVal.getOperand(1) == LHS &&
+               FVal.getOperand(0) == LHS && FVal.getOperand(1) == RHS)
+        TVal = DAG.getNegative(FVal, DL, FVal.getValueType());
+    }
+
     unsigned Opcode = AArch64ISD::CSEL;
 
     // If both the TVal and the FVal are constants, see if we can swap them in
