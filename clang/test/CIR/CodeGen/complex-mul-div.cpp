@@ -42,68 +42,186 @@ void foo() {
 
 // CIR-BEFORE-BASIC: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(basic) : !cir.complex<!cir.float>
 
+// CIR-AFTER-BASIC: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
+// CIR-AFTER-BASIC: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b"]
+// CIR-AFTER-BASIC: %[[C_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["c", init]
+// CIR-AFTER-BASIC: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR-AFTER-BASIC: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR-AFTER-BASIC: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
+// CIR-AFTER-BASIC: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
+// CIR-AFTER-BASIC: %[[B_REAL:.*]] = cir.complex.real %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
+// CIR-AFTER-BASIC: %[[B_IMAG:.*]] = cir.complex.imag %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
+// CIR-AFTER-BASIC: %[[MUL_AR_BR:.*]] = cir.binop(mul, %[[A_REAL]], %[[B_REAL]]) : !cir.float
+// CIR-AFTER-BASIC: %[[MUL_AI_BI:.*]] = cir.binop(mul, %[[A_IMAG]], %[[B_IMAG]]) : !cir.float
+// CIR-AFTER-BASIC: %[[MUL_AR_BI:.*]] = cir.binop(mul, %[[A_REAL]], %[[B_IMAG]]) : !cir.float
+// CIR-AFTER-BASIC: %[[MUL_AI_BR:.*]] = cir.binop(mul, %[[A_IMAG]], %[[B_REAL]]) : !cir.float
+// CIR-AFTER-BASIC: %[[C_REAL:.*]] = cir.binop(sub, %[[MUL_AR_BR]], %[[MUL_AI_BI]]) : !cir.float
+// CIR-AFTER-BASIC: %[[C_IMAG:.*]] = cir.binop(add, %[[MUL_AR_BI]], %[[MUL_AI_BR]]) : !cir.float
+// CIR-AFTER-BASIC: %[[RESULT:.*]] = cir.complex.create %[[C_REAL]], %[[C_IMAG]] : !cir.float -> !cir.complex<!cir.float>
+// CIR-AFTER-BASIC: cir.store{{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+
+// LLVM-BASIC: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM-BASIC: %[[B_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM-BASIC: %[[C_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM-BASIC: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
+// LLVM-BASIC: %[[TMP_B:.*]] = load { float, float }, ptr %[[B_ADDR]], align 4
+// LLVM-BASIC: %[[A_REAL:.*]] = extractvalue { float, float } %[[TMP_A]], 0
+// LLVM-BASIC: %[[A_IMAG:.*]] = extractvalue { float, float } %[[TMP_A]], 1
+// LLVM-BASIC: %[[B_REAL:.*]] = extractvalue { float, float } %[[TMP_B]], 0
+// LLVM-BASIC: %[[B_IMAG:.*]] = extractvalue { float, float } %[[TMP_B]], 1
+// LLVM-BASIC: %[[MUL_AR_BR:.*]] = fmul float %[[A_REAL]], %[[B_REAL]]
+// LLVM-BASIC: %[[MUL_AI_BI:.*]] = fmul float %[[A_IMAG]], %[[B_IMAG]]
+// LLVM-BASIC: %[[MUL_AR_BI:.*]] = fmul float %[[A_REAL]], %[[B_IMAG]]
+// LLVM-BASIC: %[[MUL_AI_BR:.*]] = fmul float %[[A_IMAG]], %[[B_REAL]]
+// LLVM-BASIC: %[[C_REAL:.*]] = fsub float %[[MUL_AR_BR]], %[[MUL_AI_BI]]
+// LLVM-BASIC: %[[C_IMAG:.*]] = fadd float %[[MUL_AR_BI]], %[[MUL_AI_BR]]
+// LLVM-BASIC: %[[MUL_A_B:.*]] = insertvalue { float, float } {{.*}}, float %[[C_REAL]], 0
+// LLVM-BASIC: %[[RESULT:.*]] = insertvalue { float, float } %[[MUL_A_B]], float %[[C_IMAG]], 1
+// LLVM-BASIC: store { float, float } %[[RESULT]], ptr %[[C_ADDR]], align 4
+
+// OGCG-BASIC: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG-BASIC: %[[B_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG-BASIC: %[[C_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG-BASIC: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 0
+// OGCG-BASIC: %[[A_REAL:.*]] = load float, ptr %[[A_REAL_PTR]], align 4
+// OGCG-BASIC: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
+// OGCG-BASIC: %[[A_IMAG:.*]] = load float, ptr %[[A_IMAG_PTR]], align 4
+// OGCG-BASIC: %[[B_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[B_ADDR]], i32 0, i32 0
+// OGCG-BASIC: %[[B_REAL:.*]] = load float, ptr %[[B_REAL_PTR]], align 4
+// OGCG-BASIC: %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[B_ADDR]], i32 0, i32 1
+// OGCG-BASIC: %[[B_IMAG:.*]] = load float, ptr %[[B_IMAG_PTR]], align 4
+// OGCG-BASIC: %[[MUL_AR_BR:.*]] = fmul float %[[A_REAL]], %[[B_REAL]]
+// OGCG-BASIC: %[[MUL_AI_BI:.*]] = fmul float %[[A_IMAG]], %[[B_IMAG]]
+// OGCG-BASIC: %[[MUL_AR_BI:.*]] = fmul float %[[A_REAL]], %[[B_IMAG]]
+// OGCG-BASIC: %[[MUL_AI_BR:.*]] = fmul float %[[A_IMAG]], %[[B_REAL]]
+// OGCG-BASIC: %[[C_REAL:.*]] = fsub float %[[MUL_AR_BR]], %[[MUL_AI_BI]]
+// OGCG-BASIC: %[[C_IMAG:.*]] = fadd float %[[MUL_AR_BI]], %[[MUL_AI_BR]]
+// OGCG-BASIC: %[[C_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[C_ADDR]], i32 0, i32 0
+// OGCG-BASIC: %[[C_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[C_ADDR]], i32 0, i32 1
+// OGCG-BASIC: store float %[[C_REAL]], ptr %[[C_REAL_PTR]], align 4
+// OGCG-BASIC: store float %[[C_IMAG]], ptr %[[C_IMAG_PTR]], align 4
+
 // CIR-BEFORE-IMPROVED: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(improved) : !cir.complex<!cir.float>
+
+// CIR-AFTER-IMPROVED: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
+// CIR-AFTER-IMPROVED: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b"]
+// CIR-AFTER-IMPROVED: %[[C_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["c", init]
+// CIR-AFTER-IMPROVED: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR-AFTER-IMPROVED: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR-AFTER-IMPROVED: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
+// CIR-AFTER-IMPROVED: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
+// CIR-AFTER-IMPROVED: %[[B_REAL:.*]] = cir.complex.real %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
+// CIR-AFTER-IMPROVED: %[[B_IMAG:.*]] = cir.complex.imag %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
+// CIR-AFTER-IMPROVED: %[[MUL_AR_BR:.*]] = cir.binop(mul, %[[A_REAL]], %[[B_REAL]]) : !cir.float
+// CIR-AFTER-IMPROVED: %[[MUL_AI_BI:.*]] = cir.binop(mul, %[[A_IMAG]], %[[B_IMAG]]) : !cir.float
+// CIR-AFTER-IMPROVED: %[[MUL_AR_BI:.*]] = cir.binop(mul, %[[A_REAL]], %[[B_IMAG]]) : !cir.float
+// CIR-AFTER-IMPROVED: %[[MUL_AI_BR:.*]] = cir.binop(mul, %[[A_IMAG]], %[[B_REAL]]) : !cir.float
+// CIR-AFTER-IMPROVED: %[[C_REAL:.*]] = cir.binop(sub, %[[MUL_AR_BR]], %[[MUL_AI_BI]]) : !cir.float
+// CIR-AFTER-IMPROVED: %[[C_IMAG:.*]] = cir.binop(add, %[[MUL_AR_BI]], %[[MUL_AI_BR]]) : !cir.float
+// CIR-AFTER-IMPROVED: %[[RESULT:.*]] = cir.complex.create %[[C_REAL]], %[[C_IMAG]] : !cir.float -> !cir.complex<!cir.float>
+// CIR-AFTER-IMPROVED: cir.store{{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+
+// LLVM-IMPROVED: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM-IMPROVED: %[[B_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM-IMPROVED: %[[C_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM-IMPROVED: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
+// LLVM-IMPROVED: %[[TMP_B:.*]] = load { float, float }, ptr %[[B_ADDR]], align 4
+// LLVM-IMPROVED: %[[A_REAL:.*]] = extractvalue { float, float } %[[TMP_A]], 0
+// LLVM-IMPROVED: %[[A_IMAG:.*]] = extractvalue { float, float } %[[TMP_A]], 1
+// LLVM-IMPROVED: %[[B_REAL:.*]] = extractvalue { float, float } %[[TMP_B]], 0
+// LLVM-IMPROVED: %[[B_IMAG:.*]] = extractvalue { float, float } %[[TMP_B]], 1
+// LLVM-IMPROVED: %[[MUL_AR_BR:.*]] = fmul float %[[A_REAL]], %[[B_REAL]]
+// LLVM-IMPROVED: %[[MUL_AI_BI:.*]] = fmul float %[[A_IMAG]], %[[B_IMAG]]
+// LLVM-IMPROVED: %[[MUL_AR_BI:.*]] = fmul float %[[A_REAL]], %[[B_IMAG]]
+// LLVM-IMPROVED: %[[MUL_AI_BR:.*]] = fmul float %[[A_IMAG]], %[[B_REAL]]
+// LLVM-IMPROVED: %[[C_REAL:.*]] = fsub float %[[MUL_AR_BR]], %[[MUL_AI_BI]]
+// LLVM-IMPROVED: %[[C_IMAG:.*]] = fadd float %[[MUL_AR_BI]], %[[MUL_AI_BR]]
+// LLVM-IMPROVED: %[[MUL_A_B:.*]] = insertvalue { float, float } {{.*}}, float %[[C_REAL]], 0
+// LLVM-IMPROVED: %[[RESULT:.*]] = insertvalue { float, float } %[[MUL_A_B]], float %[[C_IMAG]], 1
+// LLVM-IMPROVED: store { float, float } %[[RESULT]], ptr %[[C_ADDR]], align 4
+
+// OGCG-IMPROVED: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG-IMPROVED: %[[B_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG-IMPROVED: %[[C_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG-IMPROVED: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 0
+// OGCG-IMPROVED: %[[A_REAL:.*]] = load float, ptr %[[A_REAL_PTR]], align 4
+// OGCG-IMPROVED: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
+// OGCG-IMPROVED: %[[A_IMAG:.*]] = load float, ptr %[[A_IMAG_PTR]], align 4
+// OGCG-IMPROVED: %[[B_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[B_ADDR]], i32 0, i32 0
+// OGCG-IMPROVED: %[[B_REAL:.*]] = load float, ptr %[[B_REAL_PTR]], align 4
+// OGCG-IMPROVED: %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[B_ADDR]], i32 0, i32 1
+// OGCG-IMPROVED: %[[B_IMAG:.*]] = load float, ptr %[[B_IMAG_PTR]], align 4
+// OGCG-IMPROVED: %[[MUL_AR_BR:.*]] = fmul float %[[A_REAL]], %[[B_REAL]]
+// OGCG-IMPROVED: %[[MUL_AI_BI:.*]] = fmul float %[[A_IMAG]], %[[B_IMAG]]
+// OGCG-IMPROVED: %[[MUL_AR_BI:.*]] = fmul float %[[A_REAL]], %[[B_IMAG]]
+// OGCG-IMPROVED: %[[MUL_AI_BR:.*]] = fmul float %[[A_IMAG]], %[[B_REAL]]
+// OGCG-IMPROVED: %[[C_REAL:.*]] = fsub float %[[MUL_AR_BR]], %[[MUL_AI_BI]]
+// OGCG-IMPROVED: %[[C_IMAG:.*]] = fadd float %[[MUL_AR_BI]], %[[MUL_AI_BR]]
+// OGCG-IMPROVED: %[[C_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[C_ADDR]], i32 0, i32 0
+// OGCG-IMPROVED: %[[C_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[C_ADDR]], i32 0, i32 1
+// OGCG-IMPROVED: store float %[[C_REAL]], ptr %[[C_REAL_PTR]], align 4
+// OGCG-IMPROVED: store float %[[C_IMAG]], ptr %[[C_IMAG_PTR]], align 4
 
 // CIR-BEFORE-PROMOTED: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(promoted) : !cir.complex<!cir.float>
 
-// CIR-AFTER-BASIC, CIR-AFTER-PROMOTED, CIR-AFTER-IMPROVED: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// CIR-AFTER-BASIC, CIR-AFTER-PROMOTED, CIR-AFTER-IMPROVED: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b"]
-// CIR-AFTER-BASIC, CIR-AFTER-PROMOTED, CIR-AFTER-IMPROVED: %[[C_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["c", init]
-// CIR-AFTER-BASIC, CIR-AFTER-PROMOTED, CIR-AFTER-IMPROVED: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
-// CIR-AFTER-BASIC, CIR-AFTER-PROMOTED, CIR-AFTER-IMPROVED: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
-// CIR-AFTER-BASIC, CIR-AFTER-PROMOTED, CIR-AFTER-IMPROVED: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
-// CIR-AFTER-BASIC, CIR-AFTER-PROMOTED, CIR-AFTER-IMPROVED: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
-// CIR-AFTER-BASIC, CIR-AFTER-PROMOTED, CIR-AFTER-IMPROVED: %[[B_REAL:.*]] = cir.complex.real %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
-// CIR-AFTER-BASIC, CIR-AFTER-PROMOTED, CIR-AFTER-IMPROVED: %[[B_IMAG:.*]] = cir.complex.imag %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
-// CIR-AFTER-BASIC, CIR-AFTER-PROMOTED, CIR-AFTER-IMPROVED: %[[MUL_AR_BR:.*]] = cir.binop(mul, %[[A_REAL]], %[[B_REAL]]) : !cir.float
-// CIR-AFTER-BASIC, CIR-AFTER-PROMOTED, CIR-AFTER-IMPROVED: %[[MUL_AI_BI:.*]] = cir.binop(mul, %[[A_IMAG]], %[[B_IMAG]]) : !cir.float
-// CIR-AFTER-BASIC, CIR-AFTER-PROMOTED, CIR-AFTER-IMPROVED: %[[MUL_AR_BI:.*]] = cir.binop(mul, %[[A_REAL]], %[[B_IMAG]]) : !cir.float
-// CIR-AFTER-BASIC, CIR-AFTER-PROMOTED, CIR-AFTER-IMPROVED: %[[MUL_AI_BR:.*]] = cir.binop(mul, %[[A_IMAG]], %[[B_REAL]]) : !cir.float
-// CIR-AFTER-BASIC, CIR-AFTER-PROMOTED, CIR-AFTER-IMPROVED: %[[C_REAL:.*]] = cir.binop(sub, %[[MUL_AR_BR]], %[[MUL_AI_BI]]) : !cir.float
-// CIR-AFTER-BASIC, CIR-AFTER-PROMOTED, CIR-AFTER-IMPROVED: %[[C_IMAG:.*]] = cir.binop(add, %[[MUL_AR_BI]], %[[MUL_AI_BR]]) : !cir.float
-// CIR-AFTER-BASIC, CIR-AFTER-PROMOTED, CIR-AFTER-IMPROVED: %[[RESULT:.*]] = cir.complex.create %[[C_REAL]], %[[C_IMAG]] : !cir.float -> !cir.complex<!cir.float>
-// CIR-AFTER-BASIC, CIR-AFTER-PROMOTED, CIR-AFTER-IMPROVED: cir.store{{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+// CIR-AFTER-PROMOTED: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
+// CIR-AFTER-PROMOTED: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b"]
+// CIR-AFTER-PROMOTED: %[[C_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["c", init]
+// CIR-AFTER-PROMOTED: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR-AFTER-PROMOTED: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR-AFTER-PROMOTED: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
+// CIR-AFTER-PROMOTED: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
+// CIR-AFTER-PROMOTED: %[[B_REAL:.*]] = cir.complex.real %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
+// CIR-AFTER-PROMOTED: %[[B_IMAG:.*]] = cir.complex.imag %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
+// CIR-AFTER-PROMOTED: %[[MUL_AR_BR:.*]] = cir.binop(mul, %[[A_REAL]], %[[B_REAL]]) : !cir.float
+// CIR-AFTER-PROMOTED: %[[MUL_AI_BI:.*]] = cir.binop(mul, %[[A_IMAG]], %[[B_IMAG]]) : !cir.float
+// CIR-AFTER-PROMOTED: %[[MUL_AR_BI:.*]] = cir.binop(mul, %[[A_REAL]], %[[B_IMAG]]) : !cir.float
+// CIR-AFTER-PROMOTED: %[[MUL_AI_BR:.*]] = cir.binop(mul, %[[A_IMAG]], %[[B_REAL]]) : !cir.float
+// CIR-AFTER-PROMOTED: %[[C_REAL:.*]] = cir.binop(sub, %[[MUL_AR_BR]], %[[MUL_AI_BI]]) : !cir.float
+// CIR-AFTER-PROMOTED: %[[C_IMAG:.*]] = cir.binop(add, %[[MUL_AR_BI]], %[[MUL_AI_BR]]) : !cir.float
+// CIR-AFTER-PROMOTED: %[[RESULT:.*]] = cir.complex.create %[[C_REAL]], %[[C_IMAG]] : !cir.float -> !cir.complex<!cir.float>
+// CIR-AFTER-PROMOTED: cir.store{{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// LLVM-BASIC, LLVM-PROMOTED, LLVM-IMPROVED: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM-BASIC, LLVM-PROMOTED, LLVM-IMPROVED: %[[B_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM-BASIC, LLVM-PROMOTED, LLVM-IMPROVED: %[[C_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM-BASIC, LLVM-PROMOTED, LLVM-IMPROVED: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
-// LLVM-BASIC, LLVM-PROMOTED, LLVM-IMPROVED: %[[TMP_B:.*]] = load { float, float }, ptr %[[B_ADDR]], align 4
-// LLVM-BASIC, LLVM-PROMOTED, LLVM-IMPROVED: %[[A_REAL:.*]] = extractvalue { float, float } %[[TMP_A]], 0
-// LLVM-BASIC, LLVM-PROMOTED, LLVM-IMPROVED: %[[A_IMAG:.*]] = extractvalue { float, float } %[[TMP_A]], 1
-// LLVM-BASIC, LLVM-PROMOTED, LLVM-IMPROVED: %[[B_REAL:.*]] = extractvalue { float, float } %[[TMP_B]], 0
-// LLVM-BASIC, LLVM-PROMOTED, LLVM-IMPROVED: %[[B_IMAG:.*]] = extractvalue { float, float } %[[TMP_B]], 1
-// LLVM-BASIC, LLVM-PROMOTED, LLVM-IMPROVED: %[[MUL_AR_BR:.*]] = fmul float %[[A_REAL]], %[[B_REAL]]
-// LLVM-BASIC, LLVM-PROMOTED, LLVM-IMPROVED: %[[MUL_AI_BI:.*]] = fmul float %[[A_IMAG]], %[[B_IMAG]]
-// LLVM-BASIC, LLVM-PROMOTED, LLVM-IMPROVED: %[[MUL_AR_BI:.*]] = fmul float %[[A_REAL]], %[[B_IMAG]]
-// LLVM-BASIC, LLVM-PROMOTED, LLVM-IMPROVED: %[[MUL_AI_BR:.*]] = fmul float %[[A_IMAG]], %[[B_REAL]]
-// LLVM-BASIC, LLVM-PROMOTED, LLVM-IMPROVED: %[[C_REAL:.*]] = fsub float %[[MUL_AR_BR]], %[[MUL_AI_BI]]
-// LLVM-BASIC, LLVM-PROMOTED, LLVM-IMPROVED: %[[C_IMAG:.*]] = fadd float %[[MUL_AR_BI]], %[[MUL_AI_BR]]
-// LLVM-BASIC, LLVM-PROMOTED, LLVM-IMPROVED: %[[MUL_A_B:.*]] = insertvalue { float, float } {{.*}}, float %[[C_REAL]], 0
-// LLVM-BASIC, LLVM-PROMOTED, LLVM-IMPROVED: %[[RESULT:.*]] = insertvalue { float, float } %[[MUL_A_B]], float %[[C_IMAG]], 1
-// LLVM-BASIC, LLVM-PROMOTED, LLVM-IMPROVED: store { float, float } %[[RESULT]], ptr %[[C_ADDR]], align 4
+// LLVM-PROMOTED: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM-PROMOTED: %[[B_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM-PROMOTED: %[[C_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM-PROMOTED: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
+// LLVM-PROMOTED: %[[TMP_B:.*]] = load { float, float }, ptr %[[B_ADDR]], align 4
+// LLVM-PROMOTED: %[[A_REAL:.*]] = extractvalue { float, float } %[[TMP_A]], 0
+// LLVM-PROMOTED: %[[A_IMAG:.*]] = extractvalue { float, float } %[[TMP_A]], 1
+// LLVM-PROMOTED: %[[B_REAL:.*]] = extractvalue { float, float } %[[TMP_B]], 0
+// LLVM-PROMOTED: %[[B_IMAG:.*]] = extractvalue { float, float } %[[TMP_B]], 1
+// LLVM-PROMOTED: %[[MUL_AR_BR:.*]] = fmul float %[[A_REAL]], %[[B_REAL]]
+// LLVM-PROMOTED: %[[MUL_AI_BI:.*]] = fmul float %[[A_IMAG]], %[[B_IMAG]]
+// LLVM-PROMOTED: %[[MUL_AR_BI:.*]] = fmul float %[[A_REAL]], %[[B_IMAG]]
+// LLVM-PROMOTED: %[[MUL_AI_BR:.*]] = fmul float %[[A_IMAG]], %[[B_REAL]]
+// LLVM-PROMOTED: %[[C_REAL:.*]] = fsub float %[[MUL_AR_BR]], %[[MUL_AI_BI]]
+// LLVM-PROMOTED: %[[C_IMAG:.*]] = fadd float %[[MUL_AR_BI]], %[[MUL_AI_BR]]
+// LLVM-PROMOTED: %[[MUL_A_B:.*]] = insertvalue { float, float } {{.*}}, float %[[C_REAL]], 0
+// LLVM-PROMOTED: %[[RESULT:.*]] = insertvalue { float, float } %[[MUL_A_B]], float %[[C_IMAG]], 1
+// LLVM-PROMOTED: store { float, float } %[[RESULT]], ptr %[[C_ADDR]], align 4
 
-// OGCG-BASIC, OGCG-PROMOTED, OGCG-IMPROVED: %[[A_ADDR:.*]] = alloca { float, float }, align 4
-// OGCG-BASIC, OGCG-PROMOTED, OGCG-IMPROVED: %[[B_ADDR:.*]] = alloca { float, float }, align 4
-// OGCG-BASIC, OGCG-PROMOTED, OGCG-IMPROVED: %[[C_ADDR:.*]] = alloca { float, float }, align 4
-// OGCG-BASIC, OGCG-PROMOTED, OGCG-IMPROVED: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 0
-// OGCG-BASIC, OGCG-PROMOTED, OGCG-IMPROVED: %[[A_REAL:.*]] = load float, ptr %[[A_REAL_PTR]], align 4
-// OGCG-BASIC, OGCG-PROMOTED, OGCG-IMPROVED: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
-// OGCG-BASIC, OGCG-PROMOTED, OGCG-IMPROVED: %[[A_IMAG:.*]] = load float, ptr %[[A_IMAG_PTR]], align 4
-// OGCG-BASIC, OGCG-PROMOTED, OGCG-IMPROVED: %[[B_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[B_ADDR]], i32 0, i32 0
-// OGCG-BASIC, OGCG-PROMOTED, OGCG-IMPROVED: %[[B_REAL:.*]] = load float, ptr %[[B_REAL_PTR]], align 4
-// OGCG-BASIC, OGCG-PROMOTED, OGCG-IMPROVED: %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[B_ADDR]], i32 0, i32 1
-// OGCG-BASIC, OGCG-PROMOTED, OGCG-IMPROVED: %[[B_IMAG:.*]] = load float, ptr %[[B_IMAG_PTR]], align 4
-// OGCG-BASIC, OGCG-PROMOTED, OGCG-IMPROVED: %[[MUL_AR_BR:.*]] = fmul float %[[A_REAL]], %[[B_REAL]]
-// OGCG-BASIC, OGCG-PROMOTED, OGCG-IMPROVED: %[[MUL_AI_BI:.*]] = fmul float %[[A_IMAG]], %[[B_IMAG]]
-// OGCG-BASIC, OGCG-PROMOTED, OGCG-IMPROVED: %[[MUL_AR_BI:.*]] = fmul float %[[A_REAL]], %[[B_IMAG]]
-// OGCG-BASIC, OGCG-PROMOTED, OGCG-IMPROVED: %[[MUL_AI_BR:.*]] = fmul float %[[A_IMAG]], %[[B_REAL]]
-// OGCG-BASIC, OGCG-PROMOTED, OGCG-IMPROVED: %[[C_REAL:.*]] = fsub float %[[MUL_AR_BR]], %[[MUL_AI_BI]]
-// OGCG-BASIC, OGCG-PROMOTED, OGCG-IMPROVED: %[[C_IMAG:.*]] = fadd float %[[MUL_AR_BI]], %[[MUL_AI_BR]]
-// OGCG-BASIC, OGCG-PROMOTED, OGCG-IMPROVED: %[[C_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[C_ADDR]], i32 0, i32 0
-// OGCG-BASIC, OGCG-PROMOTED, OGCG-IMPROVED: %[[C_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[C_ADDR]], i32 0, i32 1
-// OGCG-BASIC, OGCG-PROMOTED, OGCG-IMPROVED: store float %[[C_REAL]], ptr %[[C_REAL_PTR]], align 4
-// OGCG-BASIC, OGCG-PROMOTED, OGCG-IMPROVED: store float %[[C_IMAG]], ptr %[[C_IMAG_PTR]], align 4
+// OGCG-PROMOTED: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG-PROMOTED: %[[B_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG-PROMOTED: %[[C_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG-PROMOTED: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 0
+// OGCG-PROMOTED: %[[A_REAL:.*]] = load float, ptr %[[A_REAL_PTR]], align 4
+// OGCG-PROMOTED: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
+// OGCG-PROMOTED: %[[A_IMAG:.*]] = load float, ptr %[[A_IMAG_PTR]], align 4
+// OGCG-PROMOTED: %[[B_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[B_ADDR]], i32 0, i32 0
+// OGCG-PROMOTED: %[[B_REAL:.*]] = load float, ptr %[[B_REAL_PTR]], align 4
+// OGCG-PROMOTED: %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[B_ADDR]], i32 0, i32 1
+// OGCG-PROMOTED: %[[B_IMAG:.*]] = load float, ptr %[[B_IMAG_PTR]], align 4
+// OGCG-PROMOTED: %[[MUL_AR_BR:.*]] = fmul float %[[A_REAL]], %[[B_REAL]]
+// OGCG-PROMOTED: %[[MUL_AI_BI:.*]] = fmul float %[[A_IMAG]], %[[B_IMAG]]
+// OGCG-PROMOTED: %[[MUL_AR_BI:.*]] = fmul float %[[A_REAL]], %[[B_IMAG]]
+// OGCG-PROMOTED: %[[MUL_AI_BR:.*]] = fmul float %[[A_IMAG]], %[[B_REAL]]
+// OGCG-PROMOTED: %[[C_REAL:.*]] = fsub float %[[MUL_AR_BR]], %[[MUL_AI_BI]]
+// OGCG-PROMOTED: %[[C_IMAG:.*]] = fadd float %[[MUL_AR_BI]], %[[MUL_AI_BR]]
+// OGCG-PROMOTED: %[[C_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[C_ADDR]], i32 0, i32 0
+// OGCG-PROMOTED: %[[C_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[C_ADDR]], i32 0, i32 1
+// OGCG-PROMOTED: store float %[[C_REAL]], ptr %[[C_REAL_PTR]], align 4
+// OGCG-PROMOTED: store float %[[C_IMAG]], ptr %[[C_IMAG_PTR]], align 4
 
 // CIR-BEFORE-FULL: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(full) : !cir.complex<!cir.float>
 
