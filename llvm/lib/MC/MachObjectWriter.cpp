@@ -813,7 +813,7 @@ void MachObjectWriter::prepareObject(MCAssembler &Asm) {
     }
     MCSection *Sec = getContext().getMachOSection("__LLVM", "__cg_profile", 0,
                                                   SectionKind::getMetadata());
-    llvm::copy(OS.str(), Sec->curFragList()->Head->getContents().data());
+    llvm::copy(OS.str(), Sec->curFragList()->Head->getVarContents().data());
   }
 }
 // BEGIN MCCAS
