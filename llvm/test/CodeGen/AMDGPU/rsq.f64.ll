@@ -4800,8 +4800,8 @@ define double @v_rsq_f64_unsafe(double %x) {
 ; VI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[2:3], 1.0
 ; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
 ; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %sqrt = call afn double @llvm.sqrt.f64(double %x)
-  %rsq = fdiv afn double 1.0, %sqrt
+  %sqrt = call afn contract double @llvm.sqrt.f64(double %x)
+  %rsq = fdiv afn contract double 1.0, %sqrt
   ret double %rsq
 }
 
