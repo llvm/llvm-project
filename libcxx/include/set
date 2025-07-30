@@ -660,7 +660,7 @@ public:
       : set(from_range, std::forward<_Range>(__range), key_compare(), __a) {}
 #  endif
 
-  _LIBCPP_HIDE_FROM_ABI set(const set& __s) : __tree_(__s.__tree_) { insert(__s.begin(), __s.end()); }
+  _LIBCPP_HIDE_FROM_ABI set(const set& __s) = default;
 
   _LIBCPP_HIDE_FROM_ABI set& operator=(const set& __s) = default;
 
@@ -1119,11 +1119,7 @@ public:
       : multiset(from_range, std::forward<_Range>(__range), key_compare(), __a) {}
 #  endif
 
-  _LIBCPP_HIDE_FROM_ABI multiset(const multiset& __s)
-      : __tree_(__s.__tree_.value_comp(),
-                __alloc_traits::select_on_container_copy_construction(__s.__tree_.__alloc())) {
-    insert(__s.begin(), __s.end());
-  }
+  _LIBCPP_HIDE_FROM_ABI multiset(const multiset& __s) = default;
 
   _LIBCPP_HIDE_FROM_ABI multiset& operator=(const multiset& __s) = default;
 
