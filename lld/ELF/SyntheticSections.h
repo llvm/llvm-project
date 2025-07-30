@@ -419,6 +419,9 @@ private:
 class DynamicReloc {
 public:
   enum Kind {
+    /// The resulting dynamic relocation has already had its addend computed.
+    /// Calling computeAddend() is an error. Only for internal use.
+    Computed,
     /// The resulting dynamic relocation does not reference a symbol (#sym must
     /// be nullptr) and uses #addend as the result of computeAddend(ctx).
     AddendOnly,
@@ -461,6 +464,7 @@ public:
   uint64_t getOffset() const;
   uint32_t getSymIndex(SymbolTableBaseSection *symTab) const;
   bool needsDynSymIndex() const {
+    assert(kind != Computed && "cannot check kind after computeRaw");
     return kind == AgainstSymbol || kind == AgainstSymbolWithTargetVA;
   }
 
