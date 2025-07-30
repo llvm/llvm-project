@@ -708,7 +708,7 @@ LogicalResult LoadGatherOp::verify() {
   auto valueTy = getValueType();
 
   if (tdescTy && !tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.\n");
+    return emitOpError("Expects a scattered TensorDesc.");
 
   if (!tdescTy && getRankOf(getSource()) > 1)
     return emitOpError(

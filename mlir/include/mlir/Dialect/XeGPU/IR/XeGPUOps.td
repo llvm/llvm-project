@@ -637,7 +637,10 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
     ```
     
     Example 2:
-    A variant accepts memref as base pointer and an offset instead of scattered TensorTdesc. It combines "create scattered TensorTdesc" and "prefetch with scattered TensorTdesc". The source operand could be a raw pointer (uint64_t). Please refer to create_tdesc for the restriction of memref. 
+    A variant accepts memref as base pointer and an offset instead of scattered TensorTdesc.
+    It combines "create scattered TensorTdesc" and "prefetch with scattered TensorTdesc".
+    The source operand could be a raw pointer (uint64_t).
+    Please refer to create_tdesc for the restriction of memref. 
     ```mlir
       %a = memref.alloc() : memref<1024xf32>
       %0 = arith.constant dense<[0, 16, 32, 64]> : vector<4xindex>
@@ -660,8 +663,11 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
       return getSource().getType();
     }
 
-    Value getTensorDesc() {
-       return getSource();
+    TypedValue<xegpu::TensorDescType> getTensorDesc() {
+      if (auto tdescType = getTensorDescType()) {
+        return llvm::cast<TypedValue<xegpu::TensorDescType>>(getSource());
+      }
+      return TypedValue<xegpu::TensorDescType>();
     }
 
     xegpu::TensorDescType getTensorDescType() {
@@ -728,7 +734,10 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
   ```
   
   Example 4:
-  A variant accepts memref as base pointer and an offset instead of scattered TensorTdesc. It combines "create scattered TensorTdesc" and "load with scattered TensorTdesc". The source operand could be a raw pointer (uint64_t). Please refer to create_tdesc for the restriction of memref. 
+  A variant accepts memref as base pointer and an offset instead of scattered TensorTdesc.
+  It combines "create scattered TensorTdesc" and "load with scattered TensorTdesc".
+  The source operand could be a raw pointer (uint64_t). Please refer to create_tdesc
+  for the restriction of memref. 
   ```mlir
     %a = memref.alloc() : memref<1024xf32>
     %offsets = vector.step : vector<16xindex>
@@ -756,8 +765,11 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
       return getSource().getType();
     }
 
-    Value getTensorDesc() {
-       return getSource();
+    TypedValue<xegpu::TensorDescType> getTensorDesc() {
+      if (auto tdescType = getTensorDescType()) {
+        return llvm::cast<TypedValue<xegpu::TensorDescType>>(getSource());
+      }
+      return TypedValue<xegpu::TensorDescType>();
     }
 
     xegpu::TensorDescType getTensorDescType() {
@@ -833,7 +845,10 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
   ```
 
   Example 4:
-  A variant accepts memref as base pointer and an offset instead of scattered TensorTdesc. It combines "create scattered TensorTdesc" and "store with scattered TensorTdesc". The dest operand could be a raw pointer (uint64_t). Please refer to create_tdesc for the restriction of memref. 
+  A variant accepts memref as base pointer and an offset instead of scattered TensorTdesc.
+  It combines "create scattered TensorTdesc" and "store with scattered TensorTdesc".
+  The dest operand could be a raw pointer (uint64_t).
+  Please refer to create_tdesc for the restriction of memref. 
   ```mlir
     %a = memref.alloc() : memref<1024xf32>
     %val = arith.constant dense<0.0> : vector<16xf32>
@@ -862,9 +877,11 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
       return getDest().getType();
     }
 
-    Value getTensorDesc() {
-      assert(getTensorDescType() && "Expected dest to be a TensorDescType");
-      return getDest();
+    TypedValue<xegpu::TensorDescType> getTensorDesc() {
+      if (auto tdescType = getTensorDescType()) {
+        return llvm::cast<TypedValue<xegpu::TensorDescType>>(getDest());
+      }
+      return TypedValue<xegpu::TensorDescType>();
     }
 
     xegpu::TensorDescType getTensorDescType() {
