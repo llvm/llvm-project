@@ -262,6 +262,9 @@ public:
 
   bool tryOptimizeAGPRPhis(MachineBasicBlock &MBB);
 
+  bool checkIsSourceSGPR(const FoldableDef &FD, const MachineRegisterInfo &MRI,
+                         const SIRegisterInfo *TRI, int MaxDepth = 6) const;
+
 public:
   SIFoldOperandsImpl() = default;
 
@@ -1134,6 +1137,74 @@ bool SIFoldOperandsImpl::tryToFoldACImm(
   return false;
 }
 
+// Check to see if the ultimate source of a readfirstlane is SGPR. If it is,
+// readfirstlane can be omitted, and the source of the value can be used
+// directly.
+bool SIFoldOperandsImpl::checkIsSourceSGPR(const FoldableDef &FD,
+                                           const MachineRegisterInfo &MRI,
+                                           const SIRegisterInfo *TRI,
+                                           int MaxDepth) const {
+  assert(FD.isReg());
+
+  MachineOperand MOperand = *FD.OpToFold;
+
+  while (MaxDepth > 0) {
+    Register PotentialSGPR = MOperand.getReg();
+
+    // While we could return a physical SGPR source, we would need to guarantee
+    // it has not been redefined.
+    if (PotentialSGPR.isPhysical())
+      return false;
+
+    assert(MRI.hasOneDef(PotentialSGPR));
+
+    if (TRI->isSGPRReg(MRI, PotentialSGPR))
+      return true;
+
+    MachineInstr *MI = MRI.getVRegDef(PotentialSGPR);
+    unsigned MIOpc = MI->getOpcode();
+
+    switch (MIOpc) {
+    case AMDGPU::COPY: {
+      MachineOperand CopySource = MI->getOperand(1);
+      MOperand = CopySource;
+      break;
+    }
+    case AMDGPU::REG_SEQUENCE: {
+      unsigned SubRegToFind = MOperand.getSubReg();
+      unsigned SubRegOperandIndex = 2;
+      unsigned CopySourceIndex = 0;
+
+      // Since subregs may be listed out of order, we need to
+      // loop over operands to find the subreg we are looking for.
+      while (SubRegOperandIndex < MI->getNumOperands()) {
+        assert(MI->isOperandSubregIdx(SubRegOperandIndex));
+
+        unsigned SubRegIndex = MI->getOperand(SubRegOperandIndex).getImm();
+        if (SubRegIndex == SubRegToFind) {
+          CopySourceIndex = SubRegOperandIndex - 1;
+          break;
+        }
+
+        SubRegOperandIndex += 2;
+      }
+
+      if (SubRegOperandIndex >= MI->getNumOperands())
+        return false;
+
+      MachineOperand CopySource = MI->getOperand(CopySourceIndex);
+      MOperand = CopySource;
+      break;
+    }
+    default:
+      return false;
+    }
+    --MaxDepth;
+  }
+
+  return false;
+}
+
 void SIFoldOperandsImpl::foldOperand(
     FoldableDef OpToFold, MachineInstr *UseMI, int UseOpIdx,
     SmallVectorImpl<FoldCandidate> &FoldList,
@@ -1147,10 +1218,12 @@ void SIFoldOperandsImpl::foldOperand(
   if (UseOp->isReg() && OpToFold.isReg()) {
     if (UseOp->isImplicit())
       return;
-    // Allow folding from SGPRs to 16-bit VGPRs.
+    // Allow folding from SGPRs to 16-bit VGPRs
+    // or any VGPR if the ultimate source is SGPR.
     if (UseOp->getSubReg() != AMDGPU::NoSubRegister &&
         (UseOp->getSubReg() != AMDGPU::lo16 ||
-         !TRI->isSGPRReg(*MRI, OpToFold.getReg())))
+         !TRI->isSGPRReg(*MRI, OpToFold.getReg())) &&
+        !checkIsSourceSGPR(OpToFold, *MRI, ST->getRegisterInfo()))
       return;
   }
 
