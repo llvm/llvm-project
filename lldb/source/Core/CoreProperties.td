@@ -40,6 +40,9 @@ let Definition = "modulelist" in {
     DefaultEnumValue<"eSwiftModuleLoadingModePreferSerialized">,
     EnumValues<"OptionEnumValues(g_swift_module_loading_mode_enums)">,
     Desc<"The module loading mode to use when loading modules for Swift.">;
+  def SwiftPreferSerializedBridgingHeader: Property<"swift-prefer-serialized-bridging-header", "Boolean">,
+    DefaultTrue,
+    Desc<"Prefer serialized preprocessed bridging headers in Swift modules over on-disk headers.">;
   def EnableSwiftMetadataCache: Property<"enable-swift-metadata-cache", "Boolean">,
     Global,
     DefaultTrue,

@@ -86,6 +86,7 @@ public:
   bool GetSwiftLoadConformances() const;
   SwiftModuleLoadingMode GetSwiftModuleLoadingMode() const;
   bool SetSwiftModuleLoadingMode(SwiftModuleLoadingMode);
+  bool GetSwiftPreferSerializedBridgingHeader() const;
 
   bool GetEnableSwiftMetadataCache() const;
   uint64_t GetSwiftMetadataCacheMaxByteSize();
