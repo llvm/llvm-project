@@ -542,6 +542,12 @@ static void skipWhitespace(const char *&First, const char *const End) {
 
 bool Scanner::lexModuleDirectiveBody(DirectiveKind Kind, const char *&First,
                                      const char *const End) {
+  assert(Kind == DirectiveKind::cxx_export_import_decl ||
+         Kind == DirectiveKind::cxx_export_module_decl ||
+         Kind == DirectiveKind::cxx_import_decl ||
+         Kind == DirectiveKind::cxx_module_decl ||
+         Kind == DirectiveKind::decl_at_import);
+
   const char *DirectiveLoc = Input.data() + CurDirToks.front().Offset;
   for (;;) {
     // Keep a copy of the First char incase it needs to be reset.
@@ -553,7 +559,7 @@ bool Scanner::lexModuleDirectiveBody(DirectiveKind Kind, const char *&First,
       First = Previous;
       return false;
     }
-    if (Tok.is(tok::eof) || (LangOpts.CPlusPlusModules && Tok.is(tok::eod)))
+    if (Tok.isOneOf(tok::eof, tok::eod))
       return reportError(
           DirectiveLoc,
           diag::err_dep_source_scanner_missing_semi_after_at_import);
@@ -561,21 +567,24 @@ bool Scanner::lexModuleDirectiveBody(DirectiveKind Kind, const char *&First,
       break;
   }
 
-  // Skip extra tokens after semi in C++20 Modules directive.
   bool IsCXXModules = Kind == DirectiveKind::cxx_export_import_decl ||
                       Kind == DirectiveKind::cxx_export_module_decl ||
                       Kind == DirectiveKind::cxx_import_decl ||
                       Kind == DirectiveKind::cxx_module_decl;
-  if (IsCXXModules)
+  if (IsCXXModules) {
     lexPPDirectiveBody(First, End);
-
-  if (!IsCXXModules) {
-    if (!isVerticalWhitespace(*First))
-      return reportError(
-          DirectiveLoc,
-          diag::err_dep_source_scanner_unexpected_tokens_at_import);
-    skipNewline(First, End);
+    pushDirective(Kind);
+    return false;
   }
+
+  pushDirective(Kind);
+  skipWhitespace(First, End);
+  if (First == End)
+    return false;
+  if (!isVerticalWhitespace(*First))
+    return reportError(
+        DirectiveLoc, diag::err_dep_source_scanner_unexpected_tokens_at_import);
+  skipNewline(First, End);
   return false;
 }
 
@@ -920,6 +929,10 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
     CurDirToks.clear();
   });
 
+  // FIXME: Shoule we handle @import as a preprocessing directive?
+  if (*First == '@')
+    return lexAt(First, End);
+
   if (*First == '_') {
     if (isNextIdentifierOrSkipLine("_Pragma", First, End))
       return lex_Pragma(First, End);
@@ -931,9 +944,6 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
   TheLexer.setParsingPreprocessorDirective(true);
   auto ScEx2 = make_scope_exit(
       [&]() { TheLexer.setParsingPreprocessorDirective(false); });
-
-  if (*First == '@')
-    return lexAt(First, End);
 
   // Handle module directives for C++20 modules.
   if (*First == 'i' || *First == 'e' || *First == 'm')
