@@ -519,7 +519,7 @@ public:
                                   std::optional<unsigned> Flags = std::nullopt);
 
   /// Build and insert an instruction with appropriate flags for addressing some
-  /// offset of an object, i.e.: \p Res = nuw G_PTR_ADD \p Op0, \p Op1
+  /// offset of an object, i.e.: \p Res = nuw inbounds G_PTR_ADD \p Op0, \p Op1
   /// The value of \p Op0 must be a pointer into or just after an object, adding
   /// the value of \p Op1 to it must yield to a pointer into or just after the
   /// same object.
@@ -556,7 +556,7 @@ public:
 
   /// Materialize and insert an instruction with appropriate flags for
   /// addressing some offset of an object, i.e.:
-  ///   \p Res = nuw G_PTR_ADD \p Op0, (G_CONSTANT \p Value)
+  ///   \p Res = nuw inbounds G_PTR_ADD \p Op0, (G_CONSTANT \p Value)
   /// The value of \p Op0 must be a pointer into or just after an object, adding
   /// \p Value to it must yield to a pointer into or just after the same object.
   ///

@@ -48,10 +48,10 @@ body:             |
     ; X32: [[DEF:%[0-9]+]]:_(p0) = IMPLICIT_DEF
     ; X32-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p0) :: (load (s32), align 8)
     ; X32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-    ; X32-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[DEF]], [[C]](s32)
+    ; X32-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[DEF]], [[C]](s32)
     ; X32-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32) from unknown-address + 4)
     ; X32-NEXT: G_STORE [[LOAD]](s32), [[DEF]](p0) :: (store (s32), align 8)
-    ; X32-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[DEF]], [[C]](s32)
+    ; X32-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[DEF]], [[C]](s32)
     ; X32-NEXT: G_STORE [[LOAD1]](s32), [[PTR_ADD1]](p0) :: (store (s32) into unknown-address + 4)
     %0:_(p0) = IMPLICIT_DEF
     %1:_(s64) = G_LOAD %0 :: (load (s64))
