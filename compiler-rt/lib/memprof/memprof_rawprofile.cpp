@@ -19,7 +19,6 @@ using ::__sanitizer::Vector;
 using ::llvm::memprof::MemInfoBlock;
 using SegmentEntry = ::llvm::memprof::SegmentEntry;
 using Header = ::llvm::memprof::Header;
-using ::llvm::memprof::encodeHistogramCount;
 
 namespace {
 template <class T> char *WriteBytes(const T &Pod, char *Buffer) {
@@ -170,15 +169,13 @@ void SerializeMIBInfoToBuffer(MIBMapTy &MIBMap, const Vector<u64> &StackIds,
     // FIXME: We unnecessarily serialize the AccessHistogram pointer. Adding a
     // serialization schema will fix this issue. See also FIXME in
     // deserialization.
-    auto &MIB = (*h)->mib;
-    Ptr = WriteBytes(MIB, Ptr);
-    for (u64 j = 0; j < MIB.AccessHistogramSize; ++j) {
-      u16 HistogramEntry =
-          encodeHistogramCount(((u64 *)(MIB.AccessHistogram))[j]);
+    Ptr = WriteBytes((*h)->mib, Ptr);
+    for (u64 j = 0; j < (*h)->mib.AccessHistogramSize; ++j) {
+      u64 HistogramEntry = ((u64 *)((*h)->mib.AccessHistogram))[j];
       Ptr = WriteBytes(HistogramEntry, Ptr);
     }
-    if (MIB.AccessHistogramSize > 0) {
-      InternalFree((void *)MIB.AccessHistogram);
+    if ((*h)->mib.AccessHistogramSize > 0) {
+      InternalFree((void *)((*h)->mib.AccessHistogram));
     }
   }
   CHECK(ExpectedNumBytes >= static_cast<u64>(Ptr - Buffer) &&
@@ -252,7 +249,7 @@ u64 SerializeToRawProfile(MIBMapTy &MIBMap, ArrayRef<LoadedModule> Modules,
       },
       reinterpret_cast<void *>(&TotalAccessHistogramEntries));
   const u64 NumHistogramBytes =
-      RoundUpTo(TotalAccessHistogramEntries * sizeof(uint16_t), 8);
+      RoundUpTo(TotalAccessHistogramEntries * sizeof(uint64_t), 8);
 
   const u64 NumStackBytes = RoundUpTo(StackSizeBytes(StackIds), 8);
 
