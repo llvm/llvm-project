@@ -546,17 +546,18 @@ private:
   // the resolutions used by a single input module by incrementing ResI. After
   // these functions return, [ResI, ResE) will refer to the resolution range for
   // the remaining modules in the InputFile.
-  Error addModule(InputFile &Input, unsigned ModI,
-                  const SymbolResolution *&ResI, const SymbolResolution *ResE);
+  Expected<ArrayRef<SymbolResolution>>
+  addModule(InputFile &Input, unsigned ModI, ArrayRef<SymbolResolution> Res);
 
-  Expected<RegularLTOState::AddedModule>
+  Expected<std::pair<RegularLTOState::AddedModule, ArrayRef<SymbolResolution>>>
   addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
-                const SymbolResolution *&ResI, const SymbolResolution *ResE);
+                ArrayRef<SymbolResolution> Res);
   Error linkRegularLTO(RegularLTOState::AddedModule Mod,
                        bool LivenessFromIndex);
 
-  Error addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
-                   const SymbolResolution *&ResI, const SymbolResolution *ResE);
+  Expected<ArrayRef<SymbolResolution>>
+  addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
+             ArrayRef<SymbolResolution> Res);
 
   Error runRegularLTO(AddStreamFn AddStream);
   Error runThinLTO(AddStreamFn AddStream, FileCache Cache,

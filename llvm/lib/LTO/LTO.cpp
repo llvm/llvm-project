@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/LTO/LTO.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StableHashing.h"
@@ -742,18 +743,20 @@ Error LTO::add(std::unique_ptr<InputFile> Input,
       Conf.VisibilityScheme = Config::ELF;
   }
 
-  const SymbolResolution *ResI = Res.begin();
-  for (unsigned I = 0; I != Input->Mods.size(); ++I)
-    if (Error Err = addModule(*Input, I, ResI, Res.end()))
-      return Err;
+  for (unsigned I = 0; I != Input->Mods.size(); ++I) {
+    auto ResOrErr = addModule(*Input, I, Res);
+    if (!ResOrErr)
+      return ResOrErr.takeError();
+    Res = *ResOrErr;
+  }
 
-  assert(ResI == Res.end());
+  assert(Res.empty());
   return Error::success();
 }
 
-Error LTO::addModule(InputFile &Input, unsigned ModI,
-                     const SymbolResolution *&ResI,
-                     const SymbolResolution *ResE) {
+Expected<ArrayRef<SymbolResolution>>
+LTO::addModule(InputFile &Input, unsigned ModI,
+               ArrayRef<SymbolResolution> Res) {
   Expected<BitcodeLTOInfo> LTOInfo = Input.Mods[ModI].getLTOInfo();
   if (!LTOInfo)
     return LTOInfo.takeError();
@@ -782,28 +785,32 @@ Error LTO::addModule(InputFile &Input, unsigned ModI,
   bool IsThinLTO = LTOInfo->IsThinLTO && (LTOMode != LTOK_UnifiedRegular);
 
   auto ModSyms = Input.module_symbols(ModI);
-  addModuleToGlobalRes(ModSyms, {ResI, ResE},
+  addModuleToGlobalRes(ModSyms, Res,
                        IsThinLTO ? ThinLTO.ModuleMap.size() + 1 : 0,
                        LTOInfo->HasSummary);
 
   if (IsThinLTO)
-    return addThinLTO(BM, ModSyms, ResI, ResE);
+    return addThinLTO(BM, ModSyms, Res);
 
   RegularLTO.EmptyCombinedModule = false;
-  Expected<RegularLTOState::AddedModule> ModOrErr =
-      addRegularLTO(BM, ModSyms, ResI, ResE);
+  auto ModOrErr = addRegularLTO(BM, ModSyms, Res);
   if (!ModOrErr)
     return ModOrErr.takeError();
+  Res = ModOrErr->second;
 
-  if (!LTOInfo->HasSummary)
-    return linkRegularLTO(std::move(*ModOrErr), /*LivenessFromIndex=*/false);
+  if (!LTOInfo->HasSummary) {
+    if (Error Err = linkRegularLTO(std::move(ModOrErr->first),
+                                   /*LivenessFromIndex=*/false))
+      return Err;
+    return Res;
+  }
 
   // Regular LTO module summaries are added to a dummy module that represents
   // the combined regular LTO module.
   if (Error Err = BM.readSummary(ThinLTO.CombinedIndex, ""))
     return Err;
-  RegularLTO.ModsWithSummaries.push_back(std::move(*ModOrErr));
-  return Error::success();
+  RegularLTO.ModsWithSummaries.push_back(std::move(ModOrErr->first));
+  return Res;
 }
 
 // Checks whether the given global value is in a non-prevailing comdat
@@ -839,10 +846,10 @@ handleNonPrevailingComdat(GlobalValue &GV,
 // Add a regular LTO object to the link.
 // The resulting module needs to be linked into the combined LTO module with
 // linkRegularLTO.
-Expected<LTO::RegularLTOState::AddedModule>
+Expected<
+    std::pair<LTO::RegularLTOState::AddedModule, ArrayRef<SymbolResolution>>>
 LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
-                   const SymbolResolution *&ResI,
-                   const SymbolResolution *ResE) {
+                   ArrayRef<SymbolResolution> Res) {
   RegularLTOState::AddedModule Mod;
   Expected<std::unique_ptr<Module>> MOrErr =
       BM.getLazyModule(RegularLTO.Ctx, /*ShouldLazyLoadMetadata*/ true,
@@ -899,22 +906,23 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
   std::set<const Comdat *> NonPrevailingComdats;
   SmallSet<StringRef, 2> NonPrevailingAsmSymbols;
   for (const InputFile::Symbol &Sym : Syms) {
-    assert(ResI != ResE);
-    SymbolResolution Res = *ResI++;
+    assert(!Res.empty());
+    SymbolResolution R = Res.front();
+    Res = Res.drop_front();
 
     assert(MsymI != MsymE);
     ModuleSymbolTable::Symbol Msym = *MsymI++;
     Skip();
 
     if (GlobalValue *GV = dyn_cast_if_present<GlobalValue *>(Msym)) {
-      if (Res.Prevailing) {
+      if (R.Prevailing) {
         if (Sym.isUndefined())
           continue;
         Mod.Keep.push_back(GV);
         // For symbols re-defined with linker -wrap and -defsym options,
         // set the linkage to weak to inhibit IPO. The linkage will be
         // restored by the linker.
-        if (Res.LinkerRedefined)
+        if (R.LinkerRedefined)
           GV->setLinkage(GlobalValue::WeakAnyLinkage);
 
         GlobalValue::LinkageTypes OriginalLinkage = GV->getLinkage();
@@ -938,7 +946,7 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
       }
 
       // Set the 'local' flag based on the linker resolution for this symbol.
-      if (Res.FinalDefinitionInLinkageUnit) {
+      if (R.FinalDefinitionInLinkageUnit) {
         GV->setDSOLocal(true);
         if (GV->hasDLLImportStorageClass())
           GV->setDLLStorageClass(GlobalValue::DLLStorageClassTypes::
@@ -947,7 +955,7 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
     } else if (auto *AS =
                    dyn_cast_if_present<ModuleSymbolTable::AsmSymbol *>(Msym)) {
       // Collect non-prevailing symbols.
-      if (!Res.Prevailing)
+      if (!R.Prevailing)
         NonPrevailingAsmSymbols.insert(AS->first);
     } else {
       llvm_unreachable("unknown symbol type");
@@ -965,7 +973,7 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
         CommonRes.Alignment =
             std::max(Align(SymAlignValue), CommonRes.Alignment);
       }
-      CommonRes.Prevailing |= Res.Prevailing;
+      CommonRes.Prevailing |= R.Prevailing;
     }
   }
 
@@ -991,7 +999,7 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
   }
 
   assert(MsymI == MsymE);
-  return std::move(Mod);
+  return std::make_pair(std::move(Mod), Res);
 }
 
 Error LTO::linkRegularLTO(RegularLTOState::AddedModule Mod,
@@ -1032,13 +1040,14 @@ Error LTO::linkRegularLTO(RegularLTOState::AddedModule Mod,
 }
 
 // Add a ThinLTO module to the link.
-Error LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
-                      const SymbolResolution *&ResI,
-                      const SymbolResolution *ResE) {
-  const SymbolResolution *ResITmp = ResI;
+Expected<ArrayRef<SymbolResolution>>
+LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
+                ArrayRef<SymbolResolution> Res) {
+  ArrayRef<SymbolResolution> ResTmp = Res;
   for (const InputFile::Symbol &Sym : Syms) {
-    assert(ResITmp != ResE);
-    SymbolResolution Res = *ResITmp++;
+    assert(!ResTmp.empty());
+    SymbolResolution Res = ResTmp.front();
+    ResTmp = ResTmp.drop_front();
 
     if (!Sym.getIRName().empty()) {
       auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(
@@ -1059,14 +1068,15 @@ Error LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
   LLVM_DEBUG(dbgs() << "Module " << BM.getModuleIdentifier() << "\n");
 
   for (const InputFile::Symbol &Sym : Syms) {
-    assert(ResI != ResE);
-    SymbolResolution Res = *ResI++;
+    assert(!Res.empty());
+    SymbolResolution R = Res.front();
+    Res = Res.drop_front();
 
     if (!Sym.getIRName().empty()) {
       auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(
           GlobalValue::getGlobalIdentifier(Sym.getIRName(),
                                            GlobalValue::ExternalLinkage, ""));
-      if (Res.Prevailing) {
+      if (R.Prevailing) {
         assert(ThinLTO.PrevailingModuleForGUID[GUID] ==
                BM.getModuleIdentifier());
 
@@ -1074,7 +1084,7 @@ Error LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
         // switch the linkage to `weak` to prevent IPOs from happening.
         // Find the summary in the module for this very GV and record the new
         // linkage so that we can switch it when we import the GV.
-        if (Res.LinkerRedefined)
+        if (R.LinkerRedefined)
           if (auto S = ThinLTO.CombinedIndex.findSummaryInModule(
                   GUID, BM.getModuleIdentifier()))
             S->setLinkage(GlobalValue::WeakAnyLinkage);
@@ -1082,7 +1092,7 @@ Error LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
 
       // If the linker resolved the symbol to a local definition then mark it
       // as local in the summary for the module we are adding.
-      if (Res.FinalDefinitionInLinkageUnit) {
+      if (R.FinalDefinitionInLinkageUnit) {
         if (auto S = ThinLTO.CombinedIndex.findSummaryInModule(
                 GUID, BM.getModuleIdentifier())) {
           S->setDSOLocal(true);
@@ -1110,7 +1120,7 @@ Error LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
     }
   }
 
-  return Error::success();
+  return Res;
 }
 
 unsigned LTO::getMaxTasks() const {
