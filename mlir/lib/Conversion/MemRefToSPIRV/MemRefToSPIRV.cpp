@@ -724,10 +724,11 @@ ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   // We currently only support lowering of scalar memref elements to texels in
   // the R[16|32][f|i|ui] formats. Future work will enable lowering of vector
   // elements to texels in richer formats.
-  if (!loadOp.getMemRefType().getElementType().isIntOrFloat())
+  if (!isa<spirv::ScalarType>(loadOp.getMemRefType().getElementType()))
     return rewriter.notifyMatchFailure(
-        loadOp, "cannot lower memrefs who's element type is not int or float "
-                "to SPIR-V images");
+        loadOp,
+        "cannot lower memrefs who's element type is not a SPIR-V scalar type"
+        "to SPIR-V images");
 
   // We currently only support sampled images since OpImageFetch does not work
   // for plain images and the OpImageRead instruction needs to be materialized
@@ -741,19 +742,19 @@ ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
                                        "convert to SPIR-V sampled images");
 
   // Materialize the lowering.
-  auto imageLoadOp = spirv::LoadOp::create(rewriter, loadOp->getLoc(), loadPtr,
-                                           memoryAccess, alignment);
+  Location loc = loadOp->getLoc();
+  auto imageLoadOp =
+      spirv::LoadOp::create(rewriter, loc, loadPtr, memoryAccess, alignment);
   // Extract the image from the sampled image.
-  auto imageOp =
-      spirv::ImageOp::create(rewriter, loadOp->getLoc(), imageLoadOp);
+  auto imageOp = spirv::ImageOp::create(rewriter, loc, imageLoadOp);
 
   // Build a vector of coordinates or just a scalar index if we have a 1D image.
   Value coords;
   if (memrefType.getRank() != 1) {
-    const auto coordVectorType = VectorType::get(
-        {loadOp.getMemRefType().getRank()}, adaptor.getIndices().getType()[0]);
-    coords = spirv::CompositeConstructOp::create(
-        rewriter, loadOp->getLoc(), coordVectorType, adaptor.getIndices());
+    auto coordVectorType = VectorType::get({loadOp.getMemRefType().getRank()},
+                                           adaptor.getIndices().getType()[0]);
+    coords = spirv::CompositeConstructOp::create(rewriter, loc, coordVectorType,
+                                                 adaptor.getIndices());
   } else {
     coords = adaptor.getIndices()[0];
   }
@@ -761,14 +762,14 @@ ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   // Fetch the value out of the image.
   auto resultVectorType = VectorType::get({4}, loadOp.getType());
   auto fetchOp = spirv::ImageFetchOp::create(
-      rewriter, loadOp->getLoc(), resultVectorType, imageOp, coords,
+      rewriter, loc, resultVectorType, imageOp, coords,
       mlir::spirv::ImageOperandsAttr{}, ValueRange{});
 
   // Note that because OpImageFetch returns a rank 4 vector we need to extract
   // the elements corresponding to the load which will since we only support the
   // R[16|32][f|i|ui] formats will always be the R(red) 0th vector element.
   auto compositeExtractOp =
-      spirv::CompositeExtractOp::create(rewriter, loadOp->getLoc(), fetchOp, 0);
+      spirv::CompositeExtractOp::create(rewriter, loc, fetchOp, 0);
 
   rewriter.replaceOp(loadOp, compositeExtractOp);
   return success();

@@ -560,6 +560,45 @@ static Type convertSubByteMemrefType(const spirv::TargetEnv &targetEnv,
   return wrapInStructAndGetPointer(arrayType, storageClass);
 }
 
+static spirv::Dim convertRank(int64_t rank) {
+  switch (rank) {
+  case 1:
+    return spirv::Dim::Dim1D;
+  case 2:
+    return spirv::Dim::Dim2D;
+  case 3:
+    return spirv::Dim::Dim3D;
+  default:
+    llvm_unreachable("Invalid memref rank!");
+  }
+}
+
+static spirv::ImageFormat getImageFormat(Type elementType) {
+  return llvm::TypeSwitch<Type, spirv::ImageFormat>(elementType)
+      .Case<Float16Type>([](Float16Type) { return spirv::ImageFormat::R16f; })
+      .Case<Float32Type>([](Float32Type) { return spirv::ImageFormat::R32f; })
+      .Case<IntegerType>([](IntegerType intType) {
+        auto const isSigned = intType.isSigned() || intType.isSignless();
+#define BIT_WIDTH_CASE(BIT_WIDTH)                                              \
+  case BIT_WIDTH:                                                              \
+    return isSigned ? spirv::ImageFormat::R##BIT_WIDTH##i                      \
+                    : spirv::ImageFormat::R##BIT_WIDTH##ui
+
+        switch (intType.getWidth()) {
+          BIT_WIDTH_CASE(16);
+          BIT_WIDTH_CASE(32);
+        default:
+          llvm_unreachable("Unhandled integer type!");
+        }
+      })
+      .Default([](Type) {
+        llvm_unreachable("Unhandled element type!");
+        // We need to return something here to satisfy the type switch.
+        return spirv::ImageFormat::R32f;
+      });
+#undef BIT_WIDTH_CASE
+}
+
 static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
                               const SPIRVConversionOptions &options,
                               MemRefType type) {
@@ -587,64 +626,23 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
       return nullptr;
     }
 
-    const auto dim = [rank]() {
-      switch (rank) {
-      case 1:
-        return spirv::Dim::Dim1D;
-      case 2:
-        return spirv::Dim::Dim2D;
-      case 3:
-        return spirv::Dim::Dim3D;
-      default:
-        llvm_unreachable("Invalid memref rank!");
-      }
-    }();
-
     // Note that we currently only support lowering to single element texels
     // e.g. R32f.
     auto elementType = type.getElementType();
-    if (!elementType.isIntOrFloat()) {
+    if (!isa<spirv::ScalarType>(elementType)) {
       LLVM_DEBUG(llvm::dbgs() << type << " illegal: cannot lower memref of "
                               << elementType << " to a  SPIR-V Image\n");
       return nullptr;
     }
 
-    const auto imageFormat = [&elementType]() {
-      return llvm::TypeSwitch<Type, spirv::ImageFormat>(elementType)
-          .Case<Float16Type>(
-              [](Float16Type) { return spirv::ImageFormat::R16f; })
-          .Case<Float32Type>(
-              [](Float32Type) { return spirv::ImageFormat::R32f; })
-          .Case<IntegerType>([](IntegerType intType) {
-            auto const isSigned = intType.isSigned() || intType.isSignless();
-#define BIT_WIDTH_CASE(BIT_WIDTH)                                              \
-  case BIT_WIDTH:                                                              \
-    return isSigned ? spirv::ImageFormat::R##BIT_WIDTH##i                      \
-                    : spirv::ImageFormat::R##BIT_WIDTH##ui
-
-            switch (intType.getWidth()) {
-              BIT_WIDTH_CASE(16);
-              BIT_WIDTH_CASE(32);
-            default:
-              llvm_unreachable("Unhandled integer type!");
-            }
-          })
-          .Default([](Type) {
-            llvm_unreachable("Unhandled element type!");
-            // We need to return something here to satisfy the type switch.
-            return spirv::ImageFormat::R32f;
-          });
-#undef BIT_WIDTH_CASE
-    }();
-
     // Currently every memref in the image storage class is converted to a
     // sampled image so we can hardcode the NeedSampler field. Future work
     // will generalize this to support regular non-sampled images.
     auto spvImageType = spirv::ImageType::get(
-        elementType, dim, spirv::ImageDepthInfo::DepthUnknown,
+        elementType, convertRank(rank), spirv::ImageDepthInfo::DepthUnknown,
         spirv::ImageArrayedInfo::NonArrayed,
         spirv::ImageSamplingInfo::SingleSampled,
-        spirv::ImageSamplerUseInfo::NeedSampler, imageFormat);
+        spirv::ImageSamplerUseInfo::NeedSampler, getImageFormat(elementType));
     auto spvSampledImageType = spirv::SampledImageType::get(spvImageType);
     auto imagePtrType = spirv::PointerType::get(
         spvSampledImageType, spirv::StorageClass::UniformConstant);
