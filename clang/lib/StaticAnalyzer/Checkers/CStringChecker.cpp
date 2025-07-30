@@ -78,35 +78,30 @@ static QualType getCharPtrType(ASTContext &Ctx, CharKind CK) {
                                                     : Ctx.WideCharTy);
 }
 
-class CStringChecker : public Checker< eval::Call,
-                                         check::PreStmt<DeclStmt>,
-                                         check::LiveSymbols,
-                                         check::DeadSymbols,
-                                         check::RegionChanges
-                                         > {
-  mutable std::unique_ptr<BugType> BT_Null, BT_Bounds, BT_Overlap,
-      BT_NotCString, BT_AdditionOverflow, BT_UninitRead;
-
+class CStringChecker
+    : public CheckerFamily<eval::Call, check::PreStmt<DeclStmt>,
+                           check::LiveSymbols, check::DeadSymbols,
+                           check::RegionChanges> {
   mutable const char *CurrentFunctionDescription = nullptr;
 
 public:
-  /// The filter is used to filter out the diagnostics which are not enabled by
-  /// the user.
-  struct CStringChecksFilter {
-    bool CheckCStringNullArg = false;
-    bool CheckCStringOutOfBounds = false;
-    bool CheckCStringBufferOverlap = false;
-    bool CheckCStringNotNullTerm = false;
-    bool CheckCStringUninitializedRead = false;
+  // FIXME: The bug types emitted by this checker family have confused garbage
+  // in their Description and Category fields (e.g. `categories::UnixAPI` is
+  // passed as the description in several cases and `uninitialized` is mistyped
+  // as `unitialized`). This should be cleaned up.
+  CheckerFrontendWithBugType NullArg{categories::UnixAPI};
+  CheckerFrontendWithBugType OutOfBounds{"Out-of-bound array access"};
+  CheckerFrontendWithBugType BufferOverlap{categories::UnixAPI,
+                                           "Improper arguments"};
+  CheckerFrontendWithBugType NotNullTerm{categories::UnixAPI};
+  CheckerFrontendWithBugType UninitializedRead{
+      "Accessing unitialized/garbage values"};
 
-    CheckerNameRef CheckNameCStringNullArg;
-    CheckerNameRef CheckNameCStringOutOfBounds;
-    CheckerNameRef CheckNameCStringBufferOverlap;
-    CheckerNameRef CheckNameCStringNotNullTerm;
-    CheckerNameRef CheckNameCStringUninitializedRead;
-  };
+  // FIXME: This bug type should be removed because it is only emitted in a
+  // situation that is practically impossible.
+  const BugType AdditionOverflow{&OutOfBounds, "API"};
 
-  CStringChecksFilter Filter;
+  StringRef getDebugTag() const override { return "MallocChecker"; }
 
   static void *getTag() { static int tag; return &tag; }
 
@@ -384,7 +379,7 @@ ProgramStateRef CStringChecker::checkNonNull(CheckerContext &C,
       assumeZero(C, State, l, Arg.Expression->getType());
 
   if (stateNull && !stateNonNull) {
-    if (Filter.CheckCStringNullArg) {
+    if (NullArg.isEnabled()) {
       SmallString<80> buf;
       llvm::raw_svector_ostream OS(buf);
       assert(CurrentFunctionDescription);
@@ -468,7 +463,7 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
     return State;
 
   // Ensure that we wouldn't read uninitialized value.
-  if (Filter.CheckCStringUninitializedRead &&
+  if (UninitializedRead.isEnabled() &&
       State->getSVal(*FirstElementVal).isUndef()) {
     llvm::SmallString<258> Buf;
     llvm::raw_svector_ostream OS(Buf);
@@ -524,7 +519,7 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
   if (!isa<Loc>(LastElementVal))
     return State;
 
-  if (Filter.CheckCStringUninitializedRead &&
+  if (UninitializedRead.isEnabled() &&
       State->getSVal(LastElementVal.castAs<Loc>()).isUndef()) {
     const llvm::APSInt *IdxInt = LastIdx.getAsInteger();
     // If we can't get emit a sensible last element index, just bail out --
@@ -581,13 +576,9 @@ ProgramStateRef CStringChecker::CheckLocation(CheckerContext &C,
 
   auto [StInBound, StOutBound] = state->assumeInBoundDual(*Idx, Size);
   if (StOutBound && !StInBound) {
-    // These checks are either enabled by the CString out-of-bounds checker
-    // explicitly or implicitly by the Malloc checker.
-    // In the latter case we only do modeling but do not emit warning.
-    if (!Filter.CheckCStringOutOfBounds)
+    if (!OutOfBounds.isEnabled())
       return nullptr;
 
-    // Emit a bug report.
     ErrorMessage Message =
         createOutOfBoundErrorMsg(CurrentFunctionDescription, Access);
     emitOutOfBoundsBug(C, StOutBound, Buffer.Expression, Message);
@@ -620,7 +611,7 @@ CStringChecker::CheckBufferAccess(CheckerContext &C, ProgramStateRef State,
     return nullptr;
 
   // If out-of-bounds checking is turned off, skip the rest.
-  if (!Filter.CheckCStringOutOfBounds)
+  if (!OutOfBounds.isEnabled())
     return State;
 
   SVal BufStart =
@@ -670,7 +661,7 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
                                              SizeArgExpr Size, AnyArgExpr First,
                                              AnyArgExpr Second,
                                              CharKind CK) const {
-  if (!Filter.CheckCStringBufferOverlap)
+  if (!BufferOverlap.isEnabled())
     return state;
 
   // Do a simple check for overlap: if the two arguments are from the same
@@ -789,13 +780,9 @@ void CStringChecker::emitOverlapBug(CheckerContext &C, ProgramStateRef state,
   if (!N)
     return;
 
-  if (!BT_Overlap)
-    BT_Overlap.reset(new BugType(Filter.CheckNameCStringBufferOverlap,
-                                 categories::UnixAPI, "Improper arguments"));
-
   // Generate a report for this bug.
   auto report = std::make_unique<PathSensitiveBugReport>(
-      *BT_Overlap, "Arguments must not be overlapping buffers", N);
+      BufferOverlap, "Arguments must not be overlapping buffers", N);
   report->addRange(First->getSourceRange());
   report->addRange(Second->getSourceRange());
 
@@ -805,15 +792,8 @@ void CStringChecker::emitOverlapBug(CheckerContext &C, ProgramStateRef state,
 void CStringChecker::emitNullArgBug(CheckerContext &C, ProgramStateRef State,
                                     const Stmt *S, StringRef WarningMsg) const {
   if (ExplodedNode *N = C.generateErrorNode(State)) {
-    if (!BT_Null) {
-      // FIXME: This call uses the string constant 'categories::UnixAPI' as the
-      // description of the bug; it should be replaced by a real description.
-      BT_Null.reset(
-          new BugType(Filter.CheckNameCStringNullArg, categories::UnixAPI));
-    }
-
     auto Report =
-        std::make_unique<PathSensitiveBugReport>(*BT_Null, WarningMsg, N);
+        std::make_unique<PathSensitiveBugReport>(NullArg, WarningMsg, N);
     Report->addRange(S->getSourceRange());
     if (const auto *Ex = dyn_cast<Expr>(S))
       bugreporter::trackExpressionValue(N, Ex, *Report);
@@ -826,12 +806,8 @@ void CStringChecker::emitUninitializedReadBug(CheckerContext &C,
                                               const Expr *E, const MemRegion *R,
                                               StringRef Msg) const {
   if (ExplodedNode *N = C.generateErrorNode(State)) {
-    if (!BT_UninitRead)
-      BT_UninitRead.reset(new BugType(Filter.CheckNameCStringUninitializedRead,
-                                      "Accessing unitialized/garbage values"));
-
     auto Report =
-        std::make_unique<PathSensitiveBugReport>(*BT_UninitRead, Msg, N);
+        std::make_unique<PathSensitiveBugReport>(UninitializedRead, Msg, N);
     Report->addNote("Other elements might also be undefined",
                     Report->getLocation());
     Report->addRange(E->getSourceRange());
@@ -845,17 +821,11 @@ void CStringChecker::emitOutOfBoundsBug(CheckerContext &C,
                                         ProgramStateRef State, const Stmt *S,
                                         StringRef WarningMsg) const {
   if (ExplodedNode *N = C.generateErrorNode(State)) {
-    if (!BT_Bounds)
-      BT_Bounds.reset(new BugType(Filter.CheckCStringOutOfBounds
-                                      ? Filter.CheckNameCStringOutOfBounds
-                                      : Filter.CheckNameCStringNullArg,
-                                  "Out-of-bound array access"));
-
     // FIXME: It would be nice to eventually make this diagnostic more clear,
     // e.g., by referencing the original declaration or by saying *why* this
     // reference is outside the range.
     auto Report =
-        std::make_unique<PathSensitiveBugReport>(*BT_Bounds, WarningMsg, N);
+        std::make_unique<PathSensitiveBugReport>(OutOfBounds, WarningMsg, N);
     Report->addRange(S->getSourceRange());
     C.emitReport(std::move(Report));
   }
@@ -865,15 +835,8 @@ void CStringChecker::emitNotCStringBug(CheckerContext &C, ProgramStateRef State,
                                        const Stmt *S,
                                        StringRef WarningMsg) const {
   if (ExplodedNode *N = C.generateNonFatalErrorNode(State)) {
-    if (!BT_NotCString) {
-      // FIXME: This call uses the string constant 'categories::UnixAPI' as the
-      // description of the bug; it should be replaced by a real description.
-      BT_NotCString.reset(
-          new BugType(Filter.CheckNameCStringNotNullTerm, categories::UnixAPI));
-    }
-
     auto Report =
-        std::make_unique<PathSensitiveBugReport>(*BT_NotCString, WarningMsg, N);
+        std::make_unique<PathSensitiveBugReport>(NotNullTerm, WarningMsg, N);
 
     Report->addRange(S->getSourceRange());
     C.emitReport(std::move(Report));
@@ -883,14 +846,6 @@ void CStringChecker::emitNotCStringBug(CheckerContext &C, ProgramStateRef State,
 void CStringChecker::emitAdditionOverflowBug(CheckerContext &C,
                                              ProgramStateRef State) const {
   if (ExplodedNode *N = C.generateErrorNode(State)) {
-    if (!BT_AdditionOverflow) {
-      // FIXME: This call uses the word "API" as the description of the bug;
-      // it should be replaced by a better error message (if this unlikely
-      // situation continues to exist as a separate bug type).
-      BT_AdditionOverflow.reset(
-          new BugType(Filter.CheckNameCStringOutOfBounds, "API"));
-    }
-
     // This isn't a great error message, but this should never occur in real
     // code anyway -- you'd have to create a buffer longer than a size_t can
     // represent, which is sort of a contradiction.
@@ -898,7 +853,7 @@ void CStringChecker::emitAdditionOverflowBug(CheckerContext &C,
         "This expression will create a string whose length is too big to "
         "be represented as a size_t";
 
-    auto Report = std::make_unique<PathSensitiveBugReport>(*BT_AdditionOverflow,
+    auto Report = std::make_unique<PathSensitiveBugReport>(AdditionOverflow,
                                                            WarningMsg, N);
     C.emitReport(std::move(Report));
   }
@@ -909,7 +864,7 @@ ProgramStateRef CStringChecker::checkAdditionOverflow(CheckerContext &C,
                                                      NonLoc left,
                                                      NonLoc right) const {
   // If out-of-bounds checking is turned off, skip the rest.
-  if (!Filter.CheckCStringOutOfBounds)
+  if (!OutOfBounds.isEnabled())
     return state;
 
   // If a previous check has failed, propagate the failure.
@@ -1048,7 +1003,7 @@ SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
     // C string. In the context of locations, the only time we can issue such
     // a warning is for labels.
     if (std::optional<loc::GotoLabel> Label = Buf.getAs<loc::GotoLabel>()) {
-      if (Filter.CheckCStringNotNullTerm) {
+      if (NotNullTerm.isEnabled()) {
         SmallString<120> buf;
         llvm::raw_svector_ostream os(buf);
         assert(CurrentFunctionDescription);
@@ -1110,7 +1065,7 @@ SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
     // Other regions (mostly non-data) can't have a reliable C string length.
     // In this case, an error is emitted and UndefinedVal is returned.
     // The caller should always be prepared to handle this case.
-    if (Filter.CheckCStringNotNullTerm) {
+    if (NotNullTerm.isEnabled()) {
       SmallString<120> buf;
       llvm::raw_svector_ostream os(buf);
 
@@ -2873,24 +2828,27 @@ void CStringChecker::checkDeadSymbols(SymbolReaper &SR,
 }
 
 void ento::registerCStringModeling(CheckerManager &Mgr) {
-  Mgr.registerChecker<CStringChecker>();
+  // Other checker relies on the modeling implemented in this checker family,
+  // so this "modeling checker" can register the 'CStringChecker' backend for
+  // its callbacks without enabling any of its frontends.
+  Mgr.getChecker<CStringChecker>();
 }
 
-bool ento::shouldRegisterCStringModeling(const CheckerManager &mgr) {
+bool ento::shouldRegisterCStringModeling(const CheckerManager &) {
   return true;
 }
 
-#define REGISTER_CHECKER(name)                                                 \
-  void ento::register##name(CheckerManager &mgr) {                             \
-    CStringChecker *checker = mgr.getChecker<CStringChecker>();                \
-    checker->Filter.Check##name = true;                                        \
-    checker->Filter.CheckName##name = mgr.getCurrentCheckerName();             \
+#define REGISTER_CHECKER(NAME)                                                 \
+  void ento::registerCString##NAME(CheckerManager &Mgr) {                      \
+    Mgr.getChecker<CStringChecker>()->NAME.enable(Mgr);                        \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##name(const CheckerManager &mgr) { return true; }
+  bool ento::shouldRegisterCString##NAME(const CheckerManager &) {             \
+    return true;                                                               \
+  }
 
-REGISTER_CHECKER(CStringNullArg)
-REGISTER_CHECKER(CStringOutOfBounds)
-REGISTER_CHECKER(CStringBufferOverlap)
-REGISTER_CHECKER(CStringNotNullTerm)
-REGISTER_CHECKER(CStringUninitializedRead)
+REGISTER_CHECKER(NullArg)
+REGISTER_CHECKER(OutOfBounds)
+REGISTER_CHECKER(BufferOverlap)
+REGISTER_CHECKER(NotNullTerm)
+REGISTER_CHECKER(UninitializedRead)
