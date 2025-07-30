@@ -1085,7 +1085,7 @@ int runOrcJIT(const char *ProgName) {
   // If this is a Mingw or Cygwin executor then we need to alias __main to
   // orc_rt_int_void_return_0.
   if (J->getTargetTriple().isOSCygMing())
-    ExitOnErr(J->getProcessSymbolsJITDylib()->define(
+    ExitOnErr(J->getMainJITDylib().define(
         orc::absoluteSymbols({{J->mangleAndIntern("__main"),
                                {orc::ExecutorAddr::fromPtr(mingw_noop_main),
                                 JITSymbolFlags::Exported}}})));
