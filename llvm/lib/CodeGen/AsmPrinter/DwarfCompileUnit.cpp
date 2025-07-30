@@ -1379,7 +1379,7 @@ void DwarfCompileUnit::constructCallSiteParmEntryDIEs(
 
 DIE *DwarfCompileUnit::constructImportedEntityDIE(
     const DIImportedEntity *Module) {
-  DIE *IMDie = DIE::get(DIEValueAllocator, (dwarf::Tag)Module->getTag());
+  DIE *IMDie = DIE::get(DIEValueAllocator, Module->getTag());
   insertDIE(Module, IMDie);
   DIE *EntityDie;
   auto *Entity = Module->getEntity();

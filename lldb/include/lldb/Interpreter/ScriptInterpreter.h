@@ -18,6 +18,7 @@
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBSymbolContext.h"
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SearchFilter.h"
@@ -29,6 +30,7 @@
 #include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
 #include "lldb/Interpreter/ScriptObject.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
@@ -255,26 +257,6 @@ public:
   virtual bool ShouldHide(const StructuredData::ObjectSP &implementor,
                           lldb::StackFrameSP frame_sp) {
     return false;
-  }
-
-  virtual StructuredData::GenericSP
-  CreateScriptedBreakpointResolver(const char *class_name,
-                                   const StructuredDataImpl &args_data,
-                                   lldb::BreakpointSP &bkpt_sp) {
-    return StructuredData::GenericSP();
-  }
-
-  virtual bool
-  ScriptedBreakpointResolverSearchCallback(StructuredData::GenericSP implementor_sp,
-                                           SymbolContext *sym_ctx)
-  {
-    return false;
-  }
-
-  virtual lldb::SearchDepth
-  ScriptedBreakpointResolverSearchDepth(StructuredData::GenericSP implementor_sp)
-  {
-    return lldb::eSearchDepthModule;
   }
 
   virtual StructuredData::ObjectSP
@@ -566,6 +548,11 @@ public:
     return {};
   }
 
+  virtual lldb::ScriptedBreakpointInterfaceSP
+  CreateScriptedBreakpointInterface() {
+    return {};
+  }
+
   virtual StructuredData::ObjectSP
   CreateStructuredDataFromScriptObject(ScriptObject obj) {
     return {};
@@ -579,6 +566,9 @@ public:
   Event *GetOpaqueTypeFromSBEvent(const lldb::SBEvent &event) const;
 
   lldb::StreamSP GetOpaqueTypeFromSBStream(const lldb::SBStream &stream) const;
+
+  SymbolContext
+  GetOpaqueTypeFromSBSymbolContext(const lldb::SBSymbolContext &sym_ctx) const;
 
   lldb::BreakpointSP
   GetOpaqueTypeFromSBBreakpoint(const lldb::SBBreakpoint &breakpoint) const;
