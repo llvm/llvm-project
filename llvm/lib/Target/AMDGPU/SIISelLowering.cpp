@@ -92,6 +92,11 @@ static unsigned findFirstFreeSGPR(CCState &CCInfo) {
   llvm_unreachable("Cannot allocate sgpr");
 }
 
+static constexpr MVT MLMathVectorTypes[] = {
+    MVT::v6i16,   MVT::v6f16,   MVT::v6bf16, MVT::v10i16,
+    MVT::v10f16,  MVT::v10bf16, MVT::v18i16, MVT::v18f16,
+    MVT::v18bf16, MVT::v36i16,  MVT::v36f16, MVT::v36bf16};
+
 SITargetLowering::SITargetLowering(const TargetMachine &TM,
                                    const GCNSubtarget &STI)
     : AMDGPUTargetLowering(TM, STI), Subtarget(&STI) {
@@ -192,21 +197,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   if (Subtarget->hasMLMathInsts()) {
     assert(Subtarget->has16BitInsts());
-    addRegisterClass(MVT::v6i16, &AMDGPU::SGPR_96RegClass);
-    addRegisterClass(MVT::v6f16, &AMDGPU::SGPR_96RegClass);
-    addRegisterClass(MVT::v6bf16, &AMDGPU::SGPR_96RegClass);
-
-    addRegisterClass(MVT::v10i16, &AMDGPU::SGPR_160RegClass);
-    addRegisterClass(MVT::v10f16, &AMDGPU::SGPR_160RegClass);
-    addRegisterClass(MVT::v10bf16, &AMDGPU::SGPR_160RegClass);
-
-    addRegisterClass(MVT::v18i16, &AMDGPU::SGPR_288RegClass);
-    addRegisterClass(MVT::v18f16, &AMDGPU::SGPR_288RegClass);
-    addRegisterClass(MVT::v18bf16, &AMDGPU::SGPR_288RegClass);
-
-    addRegisterClass(MVT::v36i16, &AMDGPU::SGPR_576RegClass);
-    addRegisterClass(MVT::v36f16, &AMDGPU::SGPR_576RegClass);
-    addRegisterClass(MVT::v36bf16, &AMDGPU::SGPR_576RegClass);
+    for (MVT VT : MLMathVectorTypes) {
+      addRegisterClass(VT,
+                       TRI->getVGPRClassForBitWidth(VT.getFixedSizeInBits()));
+    }
   }
 
   addRegisterClass(MVT::v32i32, &AMDGPU::VReg_1024RegClass);
@@ -348,15 +342,18 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   // We only support LOAD/STORE and vector manipulation ops for vectors
   // with > 4 elements.
-  for (MVT VT :
-       {MVT::v8i32,   MVT::v8f32,  MVT::v9i32,  MVT::v9f32,  MVT::v10i32,
-        MVT::v10f32,  MVT::v11i32, MVT::v11f32, MVT::v12i32, MVT::v12f32,
-        MVT::v16i32,  MVT::v16f32, MVT::v2i64,  MVT::v2f64,  MVT::v4i16,
-        MVT::v4f16,   MVT::v4bf16, MVT::v3i64,  MVT::v3f64,  MVT::v6i32,
-        MVT::v6f32,   MVT::v4i64,  MVT::v4f64,  MVT::v8i64,  MVT::v8f64,
-        MVT::v8i16,   MVT::v8f16,  MVT::v8bf16, MVT::v16i16, MVT::v16f16,
-        MVT::v16bf16, MVT::v16i64, MVT::v16f64, MVT::v32i32, MVT::v32f32,
-        MVT::v32i16,  MVT::v32f16, MVT::v32bf16}) {
+  SmallVector<MVT> LargeVectorTypes(
+      {MVT::v8i32,   MVT::v8f32,  MVT::v9i32,  MVT::v9f32,  MVT::v10i32,
+       MVT::v10f32,  MVT::v11i32, MVT::v11f32, MVT::v12i32, MVT::v12f32,
+       MVT::v16i32,  MVT::v16f32, MVT::v2i64,  MVT::v2f64,  MVT::v4i16,
+       MVT::v4f16,   MVT::v4bf16, MVT::v3i64,  MVT::v3f64,  MVT::v6i32,
+       MVT::v6f32,   MVT::v4i64,  MVT::v4f64,  MVT::v8i64,  MVT::v8f64,
+       MVT::v8i16,   MVT::v8f16,  MVT::v8bf16, MVT::v16i16, MVT::v16f16,
+       MVT::v16bf16, MVT::v16i64, MVT::v16f64, MVT::v32i32, MVT::v32f32,
+       MVT::v32i16,  MVT::v32f16, MVT::v32bf16});
+  if (Subtarget->hasMLMathInsts())
+    append_range(LargeVectorTypes, MLMathVectorTypes);
+  for (MVT VT : LargeVectorTypes) {
     for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op) {
       switch (Op) {
       case ISD::LOAD:
@@ -738,61 +735,14 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     AddPromotedToType(ISD::STORE, MVT::v4bf16, MVT::v2i32);
 
     if (Subtarget->hasMLMathInsts()) {
-      setOperationAction(ISD::LOAD, MVT::v6i16, Promote);
-      AddPromotedToType(ISD::LOAD, MVT::v6i16, MVT::v3i32);
-      setOperationAction(ISD::LOAD, MVT::v6f16, Promote);
-      AddPromotedToType(ISD::LOAD, MVT::v6f16, MVT::v3i32);
-      setOperationAction(ISD::LOAD, MVT::v6bf16, Promote);
-      AddPromotedToType(ISD::LOAD, MVT::v6bf16, MVT::v3i32);
-
-      setOperationAction(ISD::STORE, MVT::v6i16, Promote);
-      AddPromotedToType(ISD::STORE, MVT::v6i16, MVT::v3i32);
-      setOperationAction(ISD::STORE, MVT::v6f16, Promote);
-      AddPromotedToType(ISD::STORE, MVT::v6f16, MVT::v3i32);
-      setOperationAction(ISD::STORE, MVT::v6bf16, Promote);
-      AddPromotedToType(ISD::STORE, MVT::v6bf16, MVT::v3i32);
-
-      setOperationAction(ISD::LOAD, MVT::v10i16, Promote);
-      AddPromotedToType(ISD::LOAD, MVT::v10i16, MVT::v5i32);
-      setOperationAction(ISD::LOAD, MVT::v10f16, Promote);
-      AddPromotedToType(ISD::LOAD, MVT::v10f16, MVT::v5i32);
-      setOperationAction(ISD::LOAD, MVT::v10bf16, Promote);
-      AddPromotedToType(ISD::LOAD, MVT::v10bf16, MVT::v5i32);
-
-      setOperationAction(ISD::STORE, MVT::v10i16, Promote);
-      AddPromotedToType(ISD::STORE, MVT::v10i16, MVT::v5i32);
-      setOperationAction(ISD::STORE, MVT::v10f16, Promote);
-      AddPromotedToType(ISD::STORE, MVT::v10f16, MVT::v5i32);
-      setOperationAction(ISD::STORE, MVT::v10bf16, Promote);
-      AddPromotedToType(ISD::STORE, MVT::v10bf16, MVT::v5i32);
-
-      setOperationAction(ISD::LOAD, MVT::v18i16, Promote);
-      AddPromotedToType(ISD::LOAD, MVT::v18i16, MVT::v9i32);
-      setOperationAction(ISD::LOAD, MVT::v18f16, Promote);
-      AddPromotedToType(ISD::LOAD, MVT::v18f16, MVT::v9i32);
-      setOperationAction(ISD::LOAD, MVT::v18bf16, Promote);
-      AddPromotedToType(ISD::LOAD, MVT::v18bf16, MVT::v9i32);
-
-      setOperationAction(ISD::STORE, MVT::v18i16, Promote);
-      AddPromotedToType(ISD::STORE, MVT::v18i16, MVT::v9i32);
-      setOperationAction(ISD::STORE, MVT::v18f16, Promote);
-      AddPromotedToType(ISD::STORE, MVT::v18f16, MVT::v9i32);
-      setOperationAction(ISD::STORE, MVT::v18bf16, Promote);
-      AddPromotedToType(ISD::STORE, MVT::v18bf16, MVT::v9i32);
-
-      setOperationAction(ISD::LOAD, MVT::v36i16, Promote);
-      AddPromotedToType(ISD::LOAD, MVT::v36i16, MVT::v18i32);
-      setOperationAction(ISD::LOAD, MVT::v36f16, Promote);
-      AddPromotedToType(ISD::LOAD, MVT::v36f16, MVT::v18i32);
-      setOperationAction(ISD::LOAD, MVT::v36bf16, Promote);
-      AddPromotedToType(ISD::LOAD, MVT::v36bf16, MVT::v18i32);
-
-      setOperationAction(ISD::STORE, MVT::v36i16, Promote);
-      AddPromotedToType(ISD::STORE, MVT::v36i16, MVT::v18i32);
-      setOperationAction(ISD::STORE, MVT::v36f16, Promote);
-      AddPromotedToType(ISD::STORE, MVT::v36f16, MVT::v18i32);
-      setOperationAction(ISD::STORE, MVT::v36bf16, Promote);
-      AddPromotedToType(ISD::STORE, MVT::v36bf16, MVT::v18i32);
+      for (MVT VT : MLMathVectorTypes) {
+        for (unsigned Opc : {ISD::LOAD, ISD::STORE}) {
+          setOperationAction(Opc, VT, Promote);
+          AddPromotedToType(
+              Opc, VT,
+              MVT::getVectorVT(MVT::i32, VT.getFixedSizeInBits() / 32));
+        }
+      }
     }
     setOperationAction(ISD::LOAD, MVT::v8i16, Promote);
     AddPromotedToType(ISD::LOAD, MVT::v8i16, MVT::v4i32);
@@ -855,9 +805,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        Subtarget->hasVOP3PInsts() ? Legal : Custom);
 
     if (Subtarget->hasMLMathInsts()) {
-      for (MVT VT : {MVT::v6i16, MVT::v6f16, MVT::v6bf16, MVT::v10i16,
-                     MVT::v10f16, MVT::v10bf16, MVT::v18i16, MVT::v18f16,
-                     MVT::v18bf16, MVT::v36i16, MVT::v36f16, MVT::v36bf16}) {
+      for (MVT VT : MLMathVectorTypes) {
         setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
         setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Custom);
         setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
@@ -7050,12 +6998,10 @@ SDValue SITargetLowering::splitUnaryVectorOp(SDValue Op,
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
   assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4f32 ||
-         VT == MVT::v6i16 || VT == MVT::v6f16 || VT == MVT::v8i16 ||
-         VT == MVT::v8f16 || VT == MVT::v10i16 || VT == MVT::v10f16 ||
-         VT == MVT::v16i16 || VT == MVT::v16f16 || VT == MVT::v18i16 ||
-         VT == MVT::v18f16 || VT == MVT::v36i16 || VT == MVT::v36f16 ||
-         VT == MVT::v8f32 || VT == MVT::v16f32 || VT == MVT::v32f32 ||
-         VT == MVT::v32i16 || VT == MVT::v32f16);
+         VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v16i16 ||
+         VT == MVT::v16f16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
+         VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16 ||
+         is_contained(MLMathVectorTypes, VT.getSimpleVT()));
 
   auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
 
@@ -8947,11 +8893,7 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   if (SDValue Combined = performExtractVectorEltCombine(Op.getNode(), DCI))
     return Combined;
 
-  if (VecVT == MVT::v6i16 || VecVT == MVT::v6f16 || VecVT == MVT::v6bf16 ||
-      VecVT == MVT::v10i16 || VecVT == MVT::v10f16 || VecVT == MVT::v10bf16 ||
-      VecVT == MVT::v18i16 || VecVT == MVT::v18f16 || VecVT == MVT::v18bf16 ||
-      VecVT == MVT::v36i16 || VecVT == MVT::v36f16 || VecVT == MVT::v36bf16) {
-
+  if (is_contained(MLMathVectorTypes, VecVT.getSimpleVT())) {
     NElem = llvm::bit_ceil(NElem);
     VecVT = MVT::getVectorVT(VecVT.getVectorElementType().getSimpleVT(), NElem);
     Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, SL, VecVT, DAG.getUNDEF(VecVT),
