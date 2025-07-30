@@ -2276,6 +2276,10 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
     llvmModule->setTargetTriple(
         llvm::Triple(cast<StringAttr>(targetTripleAttr).getValue()));
 
+  if (auto asmAttr =
+          m->getDiscardableAttr(LLVM::LLVMDialect::getModuleLevelAsmAttrName()))
+    llvmModule->setModuleInlineAsm(cast<StringAttr>(asmAttr).getValue());
+
   return llvmModule;
 }
 
