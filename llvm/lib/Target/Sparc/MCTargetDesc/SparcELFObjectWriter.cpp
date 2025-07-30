@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/SparcFixupKinds.h"
-#include "MCTargetDesc/SparcMCAsmInfo.h"
 #include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
@@ -68,7 +67,7 @@ unsigned SparcELFObjectWriter::getRelocType(const MCFixup &Fixup,
 
   // Extract the relocation type from the fixup kind, after applying STT_TLS as
   // needed.
-  unsigned Kind = Fixup.getTargetKind();
+  auto Kind = Fixup.getKind();
   if (mc::isRelocation(Fixup.getKind()))
     return Kind;
 
@@ -93,7 +92,7 @@ unsigned SparcELFObjectWriter::getRelocType(const MCFixup &Fixup,
   }
 
   // clang-format off
-  switch(Fixup.getTargetKind()) {
+  switch(Fixup.getKind()) {
   default:
     llvm_unreachable("Unimplemented fixup -> relocation");
   case FK_NONE:                  return ELF::R_SPARC_NONE;

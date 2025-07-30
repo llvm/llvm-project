@@ -6,8 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_FUNCTION atomic_xchg
+#ifndef __CLC_OPENCL_ATOMIC_ATOMIC_XCHG_H__
+#define __CLC_OPENCL_ATOMIC_ATOMIC_XCHG_H__
 
-_CLC_OVERLOAD _CLC_DECL float __CLC_FUNCTION(volatile local float *, float);
-_CLC_OVERLOAD _CLC_DECL float __CLC_FUNCTION(volatile global float *, float);
-#include <clc/opencl/atomic/atomic_decl.inc>
+#include <clc/opencl/opencl-base.h>
+
+#define FUNCTION atomic_xchg
+
+_CLC_OVERLOAD _CLC_DECL float FUNCTION(volatile local float *, float);
+_CLC_OVERLOAD _CLC_DECL float FUNCTION(volatile global float *, float);
+#include <clc/opencl/atomic/atomic_decl_legacy.inc>
+
+#endif // __CLC_OPENCL_ATOMIC_ATOMIC_XCHG_H__

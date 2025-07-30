@@ -1,5 +1,5 @@
 ; RUN: opt < %s -passes=loop-vectorize -scalable-vectorization=on \
-; RUN:   -riscv-v-vector-bits-min=128 -riscv-v-vector-bits-max=128 \
+; RUN:   -riscv-v-vector-bits-max=128 \
 ; RUN:   -pass-remarks=loop-vectorize -pass-remarks-analysis=loop-vectorize \
 ; RUN:   -pass-remarks-missed=loop-vectorize -mtriple riscv64-linux-gnu \
 ; RUN:   -force-target-max-vector-interleave=2 -mattr=+v,+f -S 2>%t \

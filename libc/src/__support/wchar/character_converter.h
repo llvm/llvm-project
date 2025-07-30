@@ -11,6 +11,7 @@
 
 #include "hdr/types/char32_t.h"
 #include "hdr/types/char8_t.h"
+#include "hdr/types/size_t.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/wchar/mbstate.h"
@@ -26,7 +27,12 @@ public:
   CharacterConverter(mbstate *mbstate);
 
   void clear();
-  bool isComplete();
+  bool isFull();
+  bool isEmpty();
+  bool isValidState();
+
+  size_t sizeAsUTF32();
+  size_t sizeAsUTF8();
 
   int push(char8_t utf8_byte);
   int push(char32_t utf32);

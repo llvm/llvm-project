@@ -153,17 +153,25 @@ def CondBranchOp
   let builders = [OpBuilder<(ins "Value":$condition, "Block *":$trueDest,
                                 "ValueRange":$trueOperands,
                                 "Block *":$falseDest,
-                                "ValueRange":$falseOperands),
+                                "ValueRange":$falseOperands,
+                                CArg<"ArrayRef<int32_t>", "{}">:$branchWeights),
                             [{
-      build($_builder, $_state, condition, trueOperands, falseOperands, /*branch_weights=*/{}, trueDest,
-            falseDest);
+      DenseI32ArrayAttr weights;
+      if (!branchWeights.empty())
+        weights = $_builder.getDenseI32ArrayAttr(branchWeights);
+      build($_builder, $_state, condition, trueOperands, falseOperands,
+            weights, trueDest, falseDest);
     }]>,
                   OpBuilder<(ins "Value":$condition, "Block *":$trueDest,
                                 "Block *":$falseDest,
-                                CArg<"ValueRange", "{}">:$falseOperands),
+                                CArg<"ValueRange", "{}">:$falseOperands,
+                                CArg<"ArrayRef<int32_t>", "{}">:$branchWeights),
                             [{
-      build($_builder, $_state, condition, trueDest, ValueRange(), falseDest,
-            falseOperands);
+      DenseI32ArrayAttr weights;
+      if (!branchWeights.empty())
+        weights = $_builder.getDenseI32ArrayAttr(branchWeights);
+      build($_builder, $_state, condition, ValueRange(), falseOperands,
+            weights, trueDest, falseDest);
     }]>];
 
   let extraClassDeclaration = [{

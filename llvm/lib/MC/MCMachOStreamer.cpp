@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -18,7 +17,6 @@
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
@@ -58,8 +56,6 @@ private:
   /// label emitted to them. Used so we don't emit extraneous linker local
   /// labels in the middle of the section.
   DenseMap<const MCSection*, bool> HasSectionLabel;
-
-  void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   void emitDataRegion(MachO::DataRegionType Kind);
   void emitDataRegionEnd();
@@ -135,8 +131,7 @@ public:
 } // end anonymous namespace.
 
 void MCMachOStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
-  // Change the section normally.
-  changeSectionImpl(Section, Subsection);
+  MCObjectStreamer::changeSection(Section, Subsection);
 
   // Output a linker-local symbol so we don't need section-relative local
   // relocations. The linker hates us when we do that.
@@ -145,6 +140,8 @@ void MCMachOStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
     MCSymbol *Label = getContext().createLinkerPrivateTempSymbol();
     Section->setBeginSymbol(Label);
     HasSectionLabel[Section] = true;
+    if (!Label->isInSection())
+      emitLabel(Label);
   }
 }
 
@@ -164,7 +161,7 @@ void MCMachOStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   // We have to create a new fragment if this is an atom defining symbol,
   // fragments cannot span atoms.
   if (cast<MCSymbolMachO>(Symbol)->isSymbolLinkerVisible())
-    insert(getContext().allocFragment<MCDataFragment>());
+    newFragment();
 
   MCObjectStreamer::emitLabel(Symbol, Loc);
 
@@ -396,7 +393,7 @@ void MCMachOStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
   // On darwin all virtual sections have zerofill type. Disallow the usage of
   // .zerofill in non-virtual functions. If something similar is needed, use
   // .space or .zero.
-  if (!Section->isVirtualSection()) {
+  if (!Section->isBssSection()) {
     getContext().reportError(
         Loc, "The usage of .zerofill is restricted to sections of "
              "ZEROFILL type. Use .zero or .space instead.");
@@ -423,23 +420,6 @@ void MCMachOStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
   emitZerofill(Section, Symbol, Size, ByteAlignment);
 }
 
-void MCMachOStreamer::emitInstToData(const MCInst &Inst,
-                                     const MCSubtargetInfo &STI) {
-  MCDataFragment *DF = getOrCreateDataFragment();
-
-  SmallVector<MCFixup, 4> Fixups;
-  SmallString<256> Code;
-  getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
-
-  // Add the fixups and data.
-  for (MCFixup &Fixup : Fixups) {
-    Fixup.setOffset(Fixup.getOffset() + DF->getContents().size());
-    DF->getFixups().push_back(Fixup);
-  }
-  DF->setHasInstructions(STI);
-  DF->appendContents(Code);
-}
-
 void MCMachOStreamer::finishImpl() {
   emitFrames(&getAssembler().getBackend());
 
@@ -463,13 +443,13 @@ void MCMachOStreamer::finishImpl() {
   // Set the fragment atom associations by tracking the last seen atom defining
   // symbol.
   for (MCSection &Sec : getAssembler()) {
-    cast<MCSectionMachO>(Sec).allocAtoms();
+    static_cast<MCSectionMachO &>(Sec).allocAtoms();
     const MCSymbol *CurrentAtom = nullptr;
     size_t I = 0;
     for (MCFragment &Frag : Sec) {
       if (const MCSymbol *Symbol = DefiningSymbolMap.lookup(&Frag))
         CurrentAtom = Symbol;
-      cast<MCSectionMachO>(Sec).setAtom(I++, CurrentAtom);
+      static_cast<MCSectionMachO &>(Sec).setAtom(I++, CurrentAtom);
     }
   }
 
@@ -499,12 +479,13 @@ void MCMachOStreamer::finalizeCGProfile() {
   // and set its size now so that it's accounted for in layout.
   MCSection *CGProfileSection = Asm.getContext().getMachOSection(
       "__LLVM", "__cg_profile", 0, SectionKind::getMetadata());
-  changeSection(CGProfileSection);
+  // Call the base class changeSection to omit the linker-local label.
+  MCObjectStreamer::changeSection(CGProfileSection);
   // For each entry, reserve space for 2 32-bit indices and a 64-bit count.
   size_t SectionBytes =
       W.getCGProfile().size() * (2 * sizeof(uint32_t) + sizeof(uint64_t));
-  cast<MCDataFragment>(*CGProfileSection->begin())
-      .appendContents(SectionBytes, 0);
+  (*CGProfileSection->begin())
+      .setVarContents(std::vector<char>(SectionBytes, 0));
 }
 
 MCStreamer *llvm::createMachOStreamer(MCContext &Context,
@@ -532,12 +513,14 @@ void MCMachOStreamer::createAddrSigSection() {
   // to be computed immediately after in order for it to be exported correctly.
   MCSection *AddrSigSection =
       Asm.getContext().getObjectFileInfo()->getAddrSigSection();
-  changeSection(AddrSigSection);
-  auto *Frag = cast<MCDataFragment>(AddrSigSection->curFragList()->Head);
+  // Call the base class changeSection to omit the linker-local label.
+  MCObjectStreamer::changeSection(AddrSigSection);
+  auto *Frag = cast<MCFragment>(AddrSigSection->curFragList()->Head);
   // We will generate a series of pointer-sized symbol relocations at offset
   // 0x0. Set the section size to be large enough to contain a single pointer
   // (instead of emitting a zero-sized section) so these relocations are
   // technically valid, even though we don't expect these relocations to
   // actually be applied by the linker.
-  Frag->appendContents(8, 0);
+  constexpr char zero[8] = {};
+  Frag->setVarContents(zero);
 }

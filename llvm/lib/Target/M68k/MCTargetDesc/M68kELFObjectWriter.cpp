@@ -49,12 +49,9 @@ static M68kRelType getType(unsigned Kind, M68k::Specifier &Modifier,
                            bool &IsPCRel) {
   switch (Kind) {
   case FK_Data_4:
-  case FK_PCRel_4:
     return RT_32;
-  case FK_PCRel_2:
   case FK_Data_2:
     return RT_16;
-  case FK_PCRel_1:
   case FK_Data_1:
     return RT_8;
   }

@@ -57,9 +57,7 @@ public:
   AssumptionCache *AC = nullptr;
   GCFunctionInfo *GFI = nullptr;
   SSPLayoutInfo *SP = nullptr;
-#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
   TargetTransformInfo *TTI = nullptr;
-#endif
   CodeGenOptLevel OptLevel;
   const TargetInstrInfo *TII;
   const TargetLowering *TLI;
@@ -435,9 +433,9 @@ public:
   /// It runs node predicate number PredNo and returns true if it succeeds or
   /// false if it fails.  The number is a private implementation detail to the
   /// code tblgen produces.
-  virtual bool CheckNodePredicateWithOperands(
-      SDValue Op, unsigned PredNo,
-      const SmallVectorImpl<SDValue> &Operands) const {
+  virtual bool
+  CheckNodePredicateWithOperands(SDValue Op, unsigned PredNo,
+                                 ArrayRef<SDValue> Operands) const {
     llvm_unreachable("Tblgen should generate the implementation of this!");
   }
 

@@ -54,7 +54,7 @@ void f() {
   __c11_atomic_exchange(ATOMIZE(j), ATOMIZE(non_addr_discriminatedauthenticated_ptr), memory_order_seq_cst);
   // expected-error@-1 {{incompatible pointer to integer conversion passing 'volatile __ptrauth(2,0,200) _Atomic(int *) *' to parameter of type 'typeof (j)' (aka 'int')}}
   __c11_atomic_fetch_add(ATOMIZE(non_addr_discriminatedauthenticated_ptr), ATOMIZE(j), memory_order_seq_cst);
-  // expected-error@-1 {{incompatible pointer to integer conversion passing 'volatile _Atomic(typeof (j)) *' to parameter of type 'long'}}
+  // expected-error@-1 {{incompatible pointer to integer conversion passing 'volatile _Atomic(typeof (j)) *' to parameter of type '__ptrdiff_t'}}
   __c11_atomic_fetch_and(ATOMIZE(j), ATOMIZE(non_addr_discriminatedauthenticated_ptr), memory_order_seq_cst);
   // expected-error@-1 {{incompatible pointer to integer conversion passing 'volatile __ptrauth(2,0,200) _Atomic(int *) *' to parameter of type 'typeof (j)' (aka 'int')}}
 

@@ -9,11 +9,11 @@
 #ifndef __CLC_RELATIONAL_CLC_ISFINITE_H__
 #define __CLC_RELATIONAL_CLC_ISFINITE_H__
 
-#define __CLC_FUNCTION __clc_isfinite
+#define FUNCTION __clc_isfinite
 #define __CLC_BODY <clc/relational/unary_decl.inc>
 
-#include <clc/relational/floatn.inc>
+#include <clc/math/gentype.inc>
 
-#undef __CLC_FUNCTION
+#undef FUNCTION
 
 #endif // __CLC_RELATIONAL_CLC_ISFINITE_H__

@@ -48,3 +48,10 @@ void test_zvfbfwma_vfwmaccbf16(vfloat32m4_t vd, __bf16 vs1, vbfloat16m2_t vs2, s
   // expected-error@-1 {{RISC-V type '__rvv_bfloat16m2_t' requires the 'zvfbfmin' extension}}
   // expected-error@-2 {{builtin requires at least one of the following extensions: zvfbfwma}}
 }
+
+void test_zvfbfmin_vfwcvtbf16(vbfloat16m2_t vs2, size_t vl) {
+  // expected-error@-1 {{RISC-V type 'vbfloat16m2_t' (aka '__rvv_bfloat16m2_t') requires the 'zvfbfmin' extension}}
+  __riscv_vfwcvtbf16_f_f_v_f32m4(vs2, vl);; // expected-error {{RISC-V type 'vbfloat16m2_t' (aka '__rvv_bfloat16m2_t') requires the 'zvfbfmin' extension}}
+  // expected-error@-1 {{RISC-V type '__rvv_bfloat16m2_t' requires the 'zvfbfmin' extension}}
+  // expected-error@-2 {{builtin requires at least one of the following extensions: zvfbfmin}}
+}

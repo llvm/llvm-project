@@ -18,8 +18,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPCELFStreamer.h"
+#include "PPCMCAsmInfo.h"
 #include "PPCMCCodeEmitter.h"
-#include "PPCMCExpr.h"
 #include "PPCMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -155,13 +155,10 @@ void PPCELFStreamer::emitGOTToPCRelReloc(const MCInst &Inst) {
   const MCExpr *SubExpr2 =
       MCBinaryExpr::createSub(CurrentLocationExpr, SubExpr, getContext());
 
-  MCDataFragment *DF = static_cast<MCDataFragment *>(LabelSym->getFragment());
-  assert(DF && "Expecting a valid data fragment.");
-  MCFixupKind FixupKind = static_cast<MCFixupKind>(FirstLiteralRelocationKind +
-                                                   ELF::R_PPC64_PCREL_OPT);
-  DF->getFixups().push_back(
+  MCFragment *F = LabelSym->getFragment();
+  F->addFixup(
       MCFixup::create(LabelSym->getOffset() - 8, SubExpr2,
-                      FixupKind, Inst.getLoc()));
+                      FirstLiteralRelocationKind + ELF::R_PPC64_PCREL_OPT));
   emitLabel(CurrentLocation, Inst.getLoc());
 }
 

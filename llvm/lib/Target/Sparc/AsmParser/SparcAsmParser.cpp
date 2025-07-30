@@ -373,7 +373,7 @@ public:
     return EndLoc;
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case k_Token:     OS << "Token: " << getToken() << "\n"; break;
     case k_Register:  OS << "Reg: #" << getReg() << "\n"; break;
@@ -381,9 +381,10 @@ public:
     case k_MemoryReg: OS << "Mem: " << getMemBase() << "+"
                          << getMemOffsetReg() << "\n"; break;
     case k_MemoryImm: assert(getMemOff() != nullptr);
-      OS << "Mem: " << getMemBase()
-         << "+" << *getMemOff()
-         << "\n"; break;
+      OS << "Mem: " << getMemBase() << "+";
+      MAI.printExpr(OS, *getMemOff());
+      OS << "\n";
+      break;
     case k_ASITag:
       OS << "ASI tag: " << getASITag() << "\n";
       break;

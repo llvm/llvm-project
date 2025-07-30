@@ -43,6 +43,7 @@
 #include "UseNullptrCheck.h"
 #include "UseOverrideCheck.h"
 #include "UseRangesCheck.h"
+#include "UseScopedLockCheck.h"
 #include "UseStartsEndsWithCheck.h"
 #include "UseStdFormatCheck.h"
 #include "UseStdNumbersCheck.h"
@@ -80,6 +81,8 @@ public:
     CheckFactories.registerCheck<UseIntegerSignComparisonCheck>(
         "modernize-use-integer-sign-comparison");
     CheckFactories.registerCheck<UseRangesCheck>("modernize-use-ranges");
+    CheckFactories.registerCheck<UseScopedLockCheck>(
+        "modernize-use-scoped-lock");
     CheckFactories.registerCheck<UseStartsEndsWithCheck>(
         "modernize-use-starts-ends-with");
     CheckFactories.registerCheck<UseStdFormatCheck>("modernize-use-std-format");

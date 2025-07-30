@@ -8,6 +8,7 @@ from dap_server import Source
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbplatformutil
 import lldbgdbserverutils
+import base64
 
 
 class DAPTestCaseBase(TestBase):
@@ -171,6 +172,28 @@ class DAPTestCaseBase(TestBase):
                     if match_desc in description:
                         return
         self.assertTrue(False, f"breakpoint not hit, stopped_events={stopped_events}")
+
+    def verify_all_breakpoints_hit(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
+        """Wait for the process we are debugging to stop, and verify we hit
+        all of the breakpoint locations in the "breakpoint_ids" array.
+        "breakpoint_ids" should be a list of int breakpoint IDs ([1, 2])."""
+        stopped_events = self.dap_server.wait_for_stopped(timeout)
+        for stopped_event in stopped_events:
+            if "body" in stopped_event:
+                body = stopped_event["body"]
+                if "reason" not in body:
+                    continue
+                if (
+                    body["reason"] != "breakpoint"
+                    and body["reason"] != "instruction breakpoint"
+                ):
+                    continue
+                if "hitBreakpointIds" not in body:
+                    continue
+                hit_bps = body["hitBreakpointIds"]
+                if all(breakpoint_id in hit_bps for breakpoint_id in breakpoint_ids):
+                    return
+        self.assertTrue(False, f"breakpoints not hit, stopped_events={stopped_events}")
 
     def verify_stop_exception_info(self, expected_description, timeout=DEFAULT_TIMEOUT):
         """Wait for the process we are debugging to stop, and verify the stop
@@ -344,7 +367,12 @@ class DAPTestCaseBase(TestBase):
         granularity="statement",
         timeout=DEFAULT_TIMEOUT,
     ):
-        self.dap_server.request_next(threadId=threadId, granularity=granularity)
+        response = self.dap_server.request_next(
+            threadId=threadId, granularity=granularity
+        )
+        self.assertTrue(
+            response["success"], f"next request failed: response {response}"
+        )
         if waitForStop:
             return self.dap_server.wait_for_stopped(timeout)
         return None
@@ -501,3 +529,20 @@ class DAPTestCaseBase(TestBase):
                 self.dap_server.request_disconnect(terminateDebuggee=True)
                 self.assertIsNotNone(server_tool, "debugserver not found.")
         return server_tool
+
+    def writeMemory(self, memoryReference, data=None, offset=0, allowPartial=False):
+        # This function accepts data in decimal and hexadecimal format,
+        # converts it to a Base64 string, and send it to the DAP,
+        # which expects Base64 encoded data.
+        encodedData = (
+            ""
+            if data is None
+            else base64.b64encode(
+                # (bit_length + 7 (rounding up to nearest byte) ) //8 = converts to bytes.
+                data.to_bytes((data.bit_length() + 7) // 8, "little")
+            ).decode()
+        )
+        response = self.dap_server.request_writeMemory(
+            memoryReference, encodedData, offset=offset, allowPartial=allowPartial
+        )
+        return response

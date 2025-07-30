@@ -608,3 +608,97 @@ TEST(IntegerRelationTest, convertVarKindToLocal) {
   EXPECT_EQ(space.getId(VarKind::Symbol, 0), Identifier(&identifiers[3]));
   EXPECT_EQ(space.getId(VarKind::Symbol, 1), Identifier(&identifiers[4]));
 }
+
+TEST(IntegerRelationTest, rangeProduct) {
+  IntegerRelation r1 = parseRelationFromSet(
+      "(i, j, k) : (2*i + 3*k == 0, i >= 0, j >= 0, k >= 0)", 2);
+  IntegerRelation r2 = parseRelationFromSet(
+      "(i, j, l) : (4*i + 6*j + 9*l == 0, i >= 0, j >= 0, l >= 0)", 2);
+
+  IntegerRelation rangeProd = r1.rangeProduct(r2);
+  IntegerRelation expected =
+      parseRelationFromSet("(i, j, k, l) : (2*i + 3*k == 0, 4*i + 6*j + 9*l == "
+                           "0, i >= 0, j >= 0, k >= 0, l >= 0)",
+                           2);
+
+  EXPECT_TRUE(expected.isEqual(rangeProd));
+}
+
+TEST(IntegerRelationTest, rangeProductMultdimRange) {
+  IntegerRelation r1 =
+      parseRelationFromSet("(i, k) : (2*i + 3*k == 0, i >= 0, k >= 0)", 1);
+  IntegerRelation r2 = parseRelationFromSet(
+      "(i, l, m) : (4*i + 6*m + 9*l == 0, i >= 0, l >= 0, m >= 0)", 1);
+
+  IntegerRelation rangeProd = r1.rangeProduct(r2);
+  IntegerRelation expected =
+      parseRelationFromSet("(i, k, l, m) : (2*i + 3*k == 0, 4*i + 6*m + 9*l == "
+                           "0, i >= 0, k >= 0, l >= 0, m >= 0)",
+                           1);
+
+  EXPECT_TRUE(expected.isEqual(rangeProd));
+}
+
+TEST(IntegerRelationTest, rangeProductMultdimRangeSwapped) {
+  IntegerRelation r1 = parseRelationFromSet(
+      "(i, l, m) : (4*i + 6*m + 9*l == 0, i >= 0, l >= 0, m >= 0)", 1);
+  IntegerRelation r2 =
+      parseRelationFromSet("(i, k) : (2*i + 3*k == 0, i >= 0, k >= 0)", 1);
+
+  IntegerRelation rangeProd = r1.rangeProduct(r2);
+  IntegerRelation expected =
+      parseRelationFromSet("(i, l, m, k) : (2*i + 3*k == 0, 4*i + 6*m + 9*l == "
+                           "0, i >= 0, k >= 0, l >= 0, m >= 0)",
+                           1);
+
+  EXPECT_TRUE(expected.isEqual(rangeProd));
+}
+
+TEST(IntegerRelationTest, rangeProductEmptyDomain) {
+  IntegerRelation r1 =
+      parseRelationFromSet("(i, j) : (4*i + 9*j == 0, i >= 0, j >= 0)", 0);
+  IntegerRelation r2 =
+      parseRelationFromSet("(k, l) : (2*k + 3*l == 0, k >= 0, l >= 0)", 0);
+  IntegerRelation rangeProd = r1.rangeProduct(r2);
+  IntegerRelation expected =
+      parseRelationFromSet("(i, j, k, l) : (2*k + 3*l == 0, 4*i + 9*j == "
+                           "0, i >= 0, j >= 0, k >= 0, l >= 0)",
+                           0);
+  EXPECT_TRUE(expected.isEqual(rangeProd));
+}
+
+TEST(IntegerRelationTest, rangeProductEmptyRange) {
+  IntegerRelation r1 =
+      parseRelationFromSet("(i, j) : (4*i + 9*j == 0, i >= 0, j >= 0)", 2);
+  IntegerRelation r2 =
+      parseRelationFromSet("(i, j) : (2*i + 3*j == 0, i >= 0, j >= 0)", 2);
+  IntegerRelation rangeProd = r1.rangeProduct(r2);
+  IntegerRelation expected =
+      parseRelationFromSet("(i, j) : (2*i + 3*j == 0, 4*i + 9*j == "
+                           "0, i >= 0, j >= 0)",
+                           2);
+  EXPECT_TRUE(expected.isEqual(rangeProd));
+}
+
+TEST(IntegerRelationTest, rangeProductEmptyDomainAndRange) {
+  IntegerRelation r1 = parseRelationFromSet("() : ()", 0);
+  IntegerRelation r2 = parseRelationFromSet("() : ()", 0);
+  IntegerRelation rangeProd = r1.rangeProduct(r2);
+  IntegerRelation expected = parseRelationFromSet("() : ()", 0);
+  EXPECT_TRUE(expected.isEqual(rangeProd));
+}
+
+TEST(IntegerRelationTest, rangeProductSymbols) {
+  IntegerRelation r1 = parseRelationFromSet(
+      "(i, j)[s] : (2*i + 3*j + s == 0, i >= 0, j >= 0)", 1);
+  IntegerRelation r2 = parseRelationFromSet(
+      "(i, l)[s] : (3*i + 4*l + s == 0, i >= 0, l >= 0)", 1);
+
+  IntegerRelation rangeProd = r1.rangeProduct(r2);
+  IntegerRelation expected = parseRelationFromSet(
+      "(i, j, l)[s] : (2*i + 3*j + s == 0, 3*i + 4*l + s == "
+      "0, i >= 0, j >= 0, l >= 0)",
+      1);
+
+  EXPECT_TRUE(expected.isEqual(rangeProd));
+}

@@ -43,7 +43,7 @@ define float @test_rsqrt_ftz(float %a) #0 #1 {
   ret float %ret
 }
 
-define double @test_rsqrt64(double %a) #0 {
+define double @test_rsqrt64(double %a) {
 ; CHECK-LABEL: test_rsqrt64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
@@ -54,12 +54,12 @@ define double @test_rsqrt64(double %a) #0 {
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
   %val = tail call double @llvm.sqrt.f64(double %a)
-  %ret = fdiv double 1.0, %val
+  %ret = fdiv arcp double 1.0, %val
   ret double %ret
 }
 
 ; There's no rsqrt.approx.ftz.f64 instruction; we just use the non-ftz version.
-define double @test_rsqrt64_ftz(double %a) #0 #1 {
+define double @test_rsqrt64_ftz(double %a) #1 {
 ; CHECK-LABEL: test_rsqrt64_ftz(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
@@ -70,7 +70,7 @@ define double @test_rsqrt64_ftz(double %a) #0 #1 {
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
   %val = tail call double @llvm.sqrt.f64(double %a)
-  %ret = fdiv double 1.0, %val
+  %ret = fdiv arcp double 1.0, %val
   ret double %ret
 }
 
@@ -229,7 +229,7 @@ define float @test_rsqrt32_refined(float %a) #0 #2 {
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NEXT:    ret;
   %val = tail call float @llvm.sqrt.f32(float %a)
-  %ret = fdiv float 1.0, %val
+  %ret = fdiv arcp float 1.0, %val
   ret float %ret
 }
 
@@ -284,7 +284,7 @@ define double @test_rsqrt64_refined(double %a) #0 #2 {
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd6;
 ; CHECK-NEXT:    ret;
   %val = tail call double @llvm.sqrt.f64(double %a)
-  %ret = fdiv double 1.0, %val
+  %ret = fdiv arcp double 1.0, %val
   ret double %ret
 }
 
@@ -341,7 +341,7 @@ define float @test_rsqrt32_refined_ftz(float %a) #0 #1 #2 {
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NEXT:    ret;
   %val = tail call float @llvm.sqrt.f32(float %a)
-  %ret = fdiv float 1.0, %val
+  %ret = fdiv arcp float 1.0, %val
   ret float %ret
 }
 
@@ -396,7 +396,7 @@ define double @test_rsqrt64_refined_ftz(double %a) #0 #1 #2 {
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd6;
 ; CHECK-NEXT:    ret;
   %val = tail call double @llvm.sqrt.f64(double %a)
-  %ret = fdiv double 1.0, %val
+  %ret = fdiv arcp double 1.0, %val
   ret double %ret
 }
 
