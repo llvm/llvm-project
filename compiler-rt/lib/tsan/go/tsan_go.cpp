@@ -118,6 +118,26 @@ ReportLocation *SymbolizeData(uptr addr) {
   }
 }
 
+bool SymbolizeData(uptr addr, DataInfo *info) {
+  SymbolizeDataContext cbctx;
+  internal_memset(&cbctx, 0, sizeof(cbctx));
+  cbctx.addr = addr;
+  go_runtime_cb(CallbackSymbolizeData, &cbctx);
+  if (!cbctx.res)
+    return false;
+  if (cbctx.heap) {
+    return false;
+  } else {
+    info->Clear();
+    info->name = internal_strdup(cbctx.name ? cbctx.name : "??");
+    info->file = internal_strdup(cbctx.file ? cbctx.file : "??");
+    info->line = cbctx.line;
+    info->start = cbctx.start;
+    info->size = cbctx.size;
+    return true;
+  }
+}
+
 static ThreadState *main_thr;
 static bool inited;
 
