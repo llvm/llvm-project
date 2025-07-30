@@ -9,13 +9,6 @@ define void @insert_store(ptr %q, i8 zeroext %s) {
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
-; SPIRV-LABEL: @insert_store(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 3
-; SPIRV-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
-;
 entry:
   %0 = load <16 x i8>, ptr %q
   %vecins = insertelement <16 x i8> %0, i8 %s, i32 3
@@ -29,13 +22,6 @@ define void @insert_store_i16_align1(ptr %q, i16 zeroext %s) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q:%.*]], i32 0, i32 3
 ; CHECK-NEXT:    store i16 [[S:%.*]], ptr [[TMP0]], align 2
 ; CHECK-NEXT:    ret void
-;
-; SPIRV-LABEL: @insert_store_i16_align1(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[S:%.*]], i32 3
-; SPIRV-NEXT:    store <8 x i16> [[VECINS]], ptr [[Q]], align 1
-; SPIRV-NEXT:    ret void
 ;
 entry:
   %0 = load <8 x i16>, ptr %q
@@ -53,13 +39,6 @@ define void @insert_store_outofbounds(ptr %q, i16 zeroext %s) {
 ; CHECK-NEXT:    store <8 x i16> [[VECINS]], ptr [[Q]], align 16
 ; CHECK-NEXT:    ret void
 ;
-; SPIRV-LABEL: @insert_store_outofbounds(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[S:%.*]], i32 9
-; SPIRV-NEXT:    store <8 x i16> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
-;
 entry:
   %0 = load <8 x i16>, ptr %q
   %vecins = insertelement <8 x i16> %0, i16 %s, i32 9
@@ -73,13 +52,6 @@ define void @insert_store_vscale(ptr %q, i16 zeroext %s) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <vscale x 8 x i16>, ptr [[Q:%.*]], i32 0, i32 3
 ; CHECK-NEXT:    store i16 [[S:%.*]], ptr [[TMP0]], align 2
 ; CHECK-NEXT:    ret void
-;
-; SPIRV-LABEL: @insert_store_vscale(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <vscale x 8 x i16>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <vscale x 8 x i16> [[TMP0]], i16 [[S:%.*]], i32 3
-; SPIRV-NEXT:    store <vscale x 8 x i16> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
 ;
 entry:
   %0 = load <vscale x 8 x i16>, ptr %q
@@ -98,13 +70,6 @@ define void @insert_store_vscale_exceeds(ptr %q, i16 zeroext %s) {
 ; CHECK-NEXT:    store <vscale x 8 x i16> [[VECINS]], ptr [[Q]], align 16
 ; CHECK-NEXT:    ret void
 ;
-; SPIRV-LABEL: @insert_store_vscale_exceeds(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <vscale x 8 x i16>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <vscale x 8 x i16> [[TMP0]], i16 [[S:%.*]], i32 9
-; SPIRV-NEXT:    store <vscale x 8 x i16> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
-;
 entry:
   %0 = load <vscale x 8 x i16>, ptr %q
   %vecins = insertelement <vscale x 8 x i16> %0, i16 %s, i32 9
@@ -119,13 +84,6 @@ define void @insert_store_v9i4(ptr %q, i4 zeroext %s) {
 ; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <9 x i4> [[TMP0]], i4 [[S:%.*]], i32 3
 ; CHECK-NEXT:    store <9 x i4> [[VECINS]], ptr [[Q]], align 1
 ; CHECK-NEXT:    ret void
-;
-; SPIRV-LABEL: @insert_store_v9i4(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <9 x i4>, ptr [[Q:%.*]], align 8
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <9 x i4> [[TMP0]], i4 [[S:%.*]], i32 3
-; SPIRV-NEXT:    store <9 x i4> [[VECINS]], ptr [[Q]], align 1
-; SPIRV-NEXT:    ret void
 ;
 entry:
   %0 = load <9 x i4>, ptr %q
@@ -142,13 +100,6 @@ define void @insert_store_v4i27(ptr %q, i27 zeroext %s) {
 ; CHECK-NEXT:    store <4 x i27> [[VECINS]], ptr [[Q]], align 1
 ; CHECK-NEXT:    ret void
 ;
-; SPIRV-LABEL: @insert_store_v4i27(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <4 x i27>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <4 x i27> [[TMP0]], i27 [[S:%.*]], i32 3
-; SPIRV-NEXT:    store <4 x i27> [[VECINS]], ptr [[Q]], align 1
-; SPIRV-NEXT:    ret void
-;
 entry:
   %0 = load <4 x i27>, ptr %q
   %vecins = insertelement <4 x i27> %0, i27 %s, i32 3
@@ -162,12 +113,6 @@ define void @insert_store_v32i1(ptr %p) {
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <32 x i1> [[VEC]], i1 true, i64 0
 ; CHECK-NEXT:    store <32 x i1> [[INS]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
-;
-; SPIRV-LABEL: @insert_store_v32i1(
-; SPIRV-NEXT:    [[VEC:%.*]] = load <32 x i1>, ptr [[P:%.*]], align 4
-; SPIRV-NEXT:    [[INS:%.*]] = insertelement <32 x i1> [[VEC]], i1 true, i64 0
-; SPIRV-NEXT:    store <32 x i1> [[INS]], ptr [[P]], align 4
-; SPIRV-NEXT:    ret void
 ;
   %vec = load <32 x i1>, ptr %p
   %ins = insertelement <32 x i1> %vec, i1 true, i64 0
@@ -184,15 +129,6 @@ define void @insert_store_blk_differ(ptr %q, i16 zeroext %s) {
 ; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[S:%.*]], i32 3
 ; CHECK-NEXT:    store <8 x i16> [[VECINS]], ptr [[Q]], align 16
 ; CHECK-NEXT:    ret void
-;
-; SPIRV-LABEL: @insert_store_blk_differ(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    br label [[CONT:%.*]]
-; SPIRV:       cont:
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[S:%.*]], i32 3
-; SPIRV-NEXT:    store <8 x i16> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
 ;
 entry:
   %0 = load <8 x i16>, ptr %q
@@ -211,13 +147,6 @@ define void @insert_store_nonconst(ptr %q, i8 zeroext %s, i32 %idx) {
 ; CHECK-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
 ; CHECK-NEXT:    ret void
 ;
-; SPIRV-LABEL: @insert_store_nonconst(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX:%.*]]
-; SPIRV-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
-;
 entry:
   %0 = load <16 x i8>, ptr %q
   %vecins = insertelement <16 x i8> %0, i8 %s, i32 %idx
@@ -234,13 +163,6 @@ define void @insert_store_vscale_nonconst(ptr %q, i8 zeroext %s, i32 %idx) {
 ; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <vscale x 16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX:%.*]]
 ; CHECK-NEXT:    store <vscale x 16 x i8> [[VECINS]], ptr [[Q]], align 16
 ; CHECK-NEXT:    ret void
-;
-; SPIRV-LABEL: @insert_store_vscale_nonconst(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <vscale x 16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX:%.*]]
-; SPIRV-NEXT:    store <vscale x 16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
 ;
 entry:
   %0 = load <vscale x 16 x i8>, ptr %q
@@ -259,15 +181,6 @@ define void @insert_store_nonconst_large_alignment(ptr %q, i32 zeroext %s, i32 %
 ; CHECK-NEXT:    store i32 [[S:%.*]], ptr [[TMP0]], align 4
 ; CHECK-NEXT:    ret void
 ;
-; SPIRV-LABEL: @insert_store_nonconst_large_alignment(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 4
-; SPIRV-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; SPIRV-NEXT:    [[I:%.*]] = load <4 x i32>, ptr [[Q:%.*]], align 128
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <4 x i32> [[I]], i32 [[S:%.*]], i32 [[IDX]]
-; SPIRV-NEXT:    store <4 x i32> [[VECINS]], ptr [[Q]], align 128
-; SPIRV-NEXT:    ret void
-;
 entry:
   %cmp = icmp ult i32 %idx, 4
   call void @llvm.assume(i1 %cmp)
@@ -285,14 +198,6 @@ define void @insert_store_nonconst_align_maximum_8(ptr %q, i64 %s, i32 %idx) {
 ; CHECK-NEXT:    store i64 [[S:%.*]], ptr [[TMP1]], align 8
 ; CHECK-NEXT:    ret void
 ;
-; SPIRV-LABEL: @insert_store_nonconst_align_maximum_8(
-; SPIRV-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 2
-; SPIRV-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; SPIRV-NEXT:    [[I:%.*]] = load <8 x i64>, ptr [[Q:%.*]], align 8
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <8 x i64> [[I]], i64 [[S:%.*]], i32 [[IDX]]
-; SPIRV-NEXT:    store <8 x i64> [[VECINS]], ptr [[Q]], align 8
-; SPIRV-NEXT:    ret void
-;
   %cmp = icmp ult i32 %idx, 2
   call void @llvm.assume(i1 %cmp)
   %i = load <8 x i64>, ptr %q, align 8
@@ -308,14 +213,6 @@ define void @insert_store_nonconst_align_maximum_4(ptr %q, i64 %s, i32 %idx) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i64>, ptr [[Q:%.*]], i32 0, i32 [[IDX]]
 ; CHECK-NEXT:    store i64 [[S:%.*]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
-;
-; SPIRV-LABEL: @insert_store_nonconst_align_maximum_4(
-; SPIRV-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 2
-; SPIRV-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; SPIRV-NEXT:    [[I:%.*]] = load <8 x i64>, ptr [[Q:%.*]], align 4
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <8 x i64> [[I]], i64 [[S:%.*]], i32 [[IDX]]
-; SPIRV-NEXT:    store <8 x i64> [[VECINS]], ptr [[Q]], align 4
-; SPIRV-NEXT:    ret void
 ;
   %cmp = icmp ult i32 %idx, 2
   call void @llvm.assume(i1 %cmp)
@@ -333,14 +230,6 @@ define void @insert_store_nonconst_align_larger(ptr %q, i64 %s, i32 %idx) {
 ; CHECK-NEXT:    store i64 [[S:%.*]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
-; SPIRV-LABEL: @insert_store_nonconst_align_larger(
-; SPIRV-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 2
-; SPIRV-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; SPIRV-NEXT:    [[I:%.*]] = load <8 x i64>, ptr [[Q:%.*]], align 4
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <8 x i64> [[I]], i64 [[S:%.*]], i32 [[IDX]]
-; SPIRV-NEXT:    store <8 x i64> [[VECINS]], ptr [[Q]], align 2
-; SPIRV-NEXT:    ret void
-;
   %cmp = icmp ult i32 %idx, 2
   call void @llvm.assume(i1 %cmp)
   %i = load <8 x i64>, ptr %q, align 4
@@ -357,15 +246,6 @@ define void @insert_store_nonconst_index_known_valid_by_assume(ptr %q, i8 zeroex
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i32 0, i32 [[IDX]]
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
-;
-; SPIRV-LABEL: @insert_store_nonconst_index_known_valid_by_assume(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 4
-; SPIRV-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX]]
-; SPIRV-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
 ;
 entry:
   %cmp = icmp ult i32 %idx, 4
@@ -386,15 +266,6 @@ define void @insert_store_vscale_nonconst_index_known_valid_by_assume(ptr %q, i8
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <vscale x 16 x i8>, ptr [[Q:%.*]], i32 0, i32 [[IDX]]
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
-;
-; SPIRV-LABEL: @insert_store_vscale_nonconst_index_known_valid_by_assume(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 4
-; SPIRV-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <vscale x 16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX]]
-; SPIRV-NEXT:    store <vscale x 16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
 ;
 entry:
   %cmp = icmp ult i32 %idx, 4
@@ -418,16 +289,6 @@ define void @insert_store_nonconst_index_not_known_valid_by_assume_after_load(pt
 ; CHECK-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
 ; CHECK-NEXT:    ret void
 ;
-; SPIRV-LABEL: @insert_store_nonconst_index_not_known_valid_by_assume_after_load(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 4
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    call void @maythrow()
-; SPIRV-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX]]
-; SPIRV-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
-;
 entry:
   %cmp = icmp ult i32 %idx, 4
   %0 = load <16 x i8>, ptr %q
@@ -447,15 +308,6 @@ define void @insert_store_nonconst_index_not_known_valid_by_assume(ptr %q, i8 ze
 ; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX]]
 ; CHECK-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
 ; CHECK-NEXT:    ret void
-;
-; SPIRV-LABEL: @insert_store_nonconst_index_not_known_valid_by_assume(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 17
-; SPIRV-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX]]
-; SPIRV-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
 ;
 entry:
   %cmp = icmp ult i32 %idx, 17
@@ -478,15 +330,6 @@ define void @insert_store_vscale_nonconst_index_not_known_valid_by_assume(ptr %q
 ; CHECK-NEXT:    store <vscale x 16 x i8> [[VECINS]], ptr [[Q]], align 16
 ; CHECK-NEXT:    ret void
 ;
-; SPIRV-LABEL: @insert_store_vscale_nonconst_index_not_known_valid_by_assume(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 17
-; SPIRV-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <vscale x 16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX]]
-; SPIRV-NEXT:    store <vscale x 16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
-;
 entry:
   %cmp = icmp ult i32 %idx, 17
   call void @llvm.assume(i1 %cmp)
@@ -506,14 +349,6 @@ define void @insert_store_nonconst_index_known_noundef_and_valid_by_and(ptr %q, 
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
-; SPIRV-LABEL: @insert_store_nonconst_index_known_noundef_and_valid_by_and(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[IDX_CLAMPED:%.*]] = and i32 [[IDX:%.*]], 7
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED]]
-; SPIRV-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
-;
 entry:
   %0 = load <16 x i8>, ptr %q
   %idx.clamped = and i32 %idx, 7
@@ -532,14 +367,6 @@ define void @insert_store_vscale_nonconst_index_known_noundef_and_valid_by_and(p
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
-; SPIRV-LABEL: @insert_store_vscale_nonconst_index_known_noundef_and_valid_by_and(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[IDX_CLAMPED:%.*]] = and i32 [[IDX:%.*]], 7
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <vscale x 16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED]]
-; SPIRV-NEXT:    store <vscale x 16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
-;
 entry:
   %0 = load <vscale x 16 x i8>, ptr %q
   %idx.clamped = and i32 %idx, 7
@@ -556,15 +383,6 @@ define void @insert_store_nonconst_index_base_frozen_and_valid_by_and(ptr %q, i8
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i32 0, i32 [[IDX_CLAMPED]]
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
-;
-; SPIRV-LABEL: @insert_store_nonconst_index_base_frozen_and_valid_by_and(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[IDX_FROZEN:%.*]] = freeze i32 [[IDX:%.*]]
-; SPIRV-NEXT:    [[IDX_CLAMPED:%.*]] = and i32 [[IDX_FROZEN]], 7
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED]]
-; SPIRV-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
 ;
 entry:
   %0 = load <16 x i8>, ptr %q
@@ -585,15 +403,6 @@ define void @insert_store_nonconst_index_frozen_and_valid_by_and(ptr %q, i8 zero
 ; CHECK-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
 ; CHECK-NEXT:    ret void
 ;
-; SPIRV-LABEL: @insert_store_nonconst_index_frozen_and_valid_by_and(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[IDX_CLAMPED:%.*]] = and i32 [[IDX:%.*]], 7
-; SPIRV-NEXT:    [[IDX_CLAMPED_FROZEN:%.*]] = freeze i32 [[IDX_CLAMPED]]
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED_FROZEN]]
-; SPIRV-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
-;
 entry:
   %0 = load <16 x i8>, ptr %q
   %idx.clamped = and i32 %idx, 7
@@ -612,14 +421,6 @@ define void @insert_store_nonconst_index_known_valid_by_and_but_may_be_poison(pt
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
-; SPIRV-LABEL: @insert_store_nonconst_index_known_valid_by_and_but_may_be_poison(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[IDX_CLAMPED:%.*]] = and i32 [[IDX:%.*]], 7
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED]]
-; SPIRV-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
-;
 entry:
   %0 = load <16 x i8>, ptr %q
   %idx.clamped = and i32 %idx, 7
@@ -637,14 +438,6 @@ define void @insert_store_nonconst_index_not_known_valid_by_and(ptr %q, i8 zeroe
 ; CHECK-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
 ; CHECK-NEXT:    ret void
 ;
-; SPIRV-LABEL: @insert_store_nonconst_index_not_known_valid_by_and(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[IDX_CLAMPED:%.*]] = and i32 [[IDX:%.*]], 16
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED]]
-; SPIRV-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
-;
 entry:
   %0 = load <16 x i8>, ptr %q
   %idx.clamped = and i32 %idx, 16
@@ -661,14 +454,6 @@ define void @insert_store_nonconst_index_known_noundef_not_known_valid_by_and(pt
 ; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED]]
 ; CHECK-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
 ; CHECK-NEXT:    ret void
-;
-; SPIRV-LABEL: @insert_store_nonconst_index_known_noundef_not_known_valid_by_and(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[IDX_CLAMPED:%.*]] = and i32 [[IDX:%.*]], 16
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED]]
-; SPIRV-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
 ;
 entry:
   %0 = load <16 x i8>, ptr %q
@@ -689,14 +474,6 @@ define void @insert_store_vscale_nonconst_index_not_known_valid_by_and(ptr %q, i
 ; CHECK-NEXT:    store <vscale x 16 x i8> [[VECINS]], ptr [[Q]], align 16
 ; CHECK-NEXT:    ret void
 ;
-; SPIRV-LABEL: @insert_store_vscale_nonconst_index_not_known_valid_by_and(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[IDX_CLAMPED:%.*]] = and i32 [[IDX:%.*]], 31
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <vscale x 16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED]]
-; SPIRV-NEXT:    store <vscale x 16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
-;
 entry:
   %0 = load <vscale x 16 x i8>, ptr %q
   %idx.clamped = and i32 %idx, 31
@@ -712,14 +489,6 @@ define void @insert_store_nonconst_index_known_noundef_and_valid_by_urem(ptr %q,
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i32 0, i32 [[IDX_CLAMPED]]
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
-;
-; SPIRV-LABEL: @insert_store_nonconst_index_known_noundef_and_valid_by_urem(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[IDX_CLAMPED:%.*]] = urem i32 [[IDX:%.*]], 16
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED]]
-; SPIRV-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
 ;
 entry:
   %0 = load <16 x i8>, ptr %q
@@ -739,14 +508,6 @@ define void @insert_store_vscale_nonconst_index_known_noundef_and_valid_by_urem(
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
-; SPIRV-LABEL: @insert_store_vscale_nonconst_index_known_noundef_and_valid_by_urem(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[IDX_CLAMPED:%.*]] = urem i32 [[IDX:%.*]], 16
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <vscale x 16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED]]
-; SPIRV-NEXT:    store <vscale x 16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
-;
 entry:
   %0 = load <vscale x 16 x i8>, ptr %q
   %idx.clamped = urem i32 %idx, 16
@@ -763,15 +524,6 @@ define void @insert_store_nonconst_index_base_frozen_and_valid_by_urem(ptr %q, i
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i32 0, i32 [[IDX_CLAMPED]]
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
-;
-; SPIRV-LABEL: @insert_store_nonconst_index_base_frozen_and_valid_by_urem(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[IDX_FROZEN:%.*]] = freeze i32 [[IDX:%.*]]
-; SPIRV-NEXT:    [[IDX_CLAMPED:%.*]] = urem i32 [[IDX_FROZEN]], 16
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED]]
-; SPIRV-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
 ;
 entry:
   %0 = load <16 x i8>, ptr %q
@@ -792,15 +544,6 @@ define void @insert_store_nonconst_index_frozen_and_valid_by_urem(ptr %q, i8 zer
 ; CHECK-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
 ; CHECK-NEXT:    ret void
 ;
-; SPIRV-LABEL: @insert_store_nonconst_index_frozen_and_valid_by_urem(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[IDX_CLAMPED:%.*]] = urem i32 [[IDX:%.*]], 16
-; SPIRV-NEXT:    [[IDX_CLAMPED_FROZEN:%.*]] = freeze i32 [[IDX_CLAMPED]]
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED_FROZEN]]
-; SPIRV-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
-;
 entry:
   %0 = load <16 x i8>, ptr %q
   %idx.clamped = urem i32 %idx, 16
@@ -819,14 +562,6 @@ define void @insert_store_nonconst_index_known_valid_by_urem_but_may_be_poison(p
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
-; SPIRV-LABEL: @insert_store_nonconst_index_known_valid_by_urem_but_may_be_poison(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[IDX_CLAMPED:%.*]] = urem i32 [[IDX:%.*]], 16
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED]]
-; SPIRV-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
-;
 entry:
   %0 = load <16 x i8>, ptr %q
   %idx.clamped = urem i32 %idx, 16
@@ -843,14 +578,6 @@ define void @insert_store_nonconst_index_not_known_valid_by_urem(ptr %q, i8 zero
 ; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED]]
 ; CHECK-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
 ; CHECK-NEXT:    ret void
-;
-; SPIRV-LABEL: @insert_store_nonconst_index_not_known_valid_by_urem(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[IDX_CLAMPED:%.*]] = urem i32 [[IDX:%.*]], 17
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED]]
-; SPIRV-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
 ;
 entry:
   %0 = load <16 x i8>, ptr %q
@@ -871,14 +598,6 @@ define void @insert_store_vscale_nonconst_index_not_known_valid_by_urem(ptr %q, 
 ; CHECK-NEXT:    store <vscale x 16 x i8> [[VECINS]], ptr [[Q]], align 16
 ; CHECK-NEXT:    ret void
 ;
-; SPIRV-LABEL: @insert_store_vscale_nonconst_index_not_known_valid_by_urem(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[IDX_CLAMPED:%.*]] = urem i32 [[IDX:%.*]], 17
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <vscale x 16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED]]
-; SPIRV-NEXT:    store <vscale x 16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
-;
 entry:
   %0 = load <vscale x 16 x i8>, ptr %q
   %idx.clamped = urem i32 %idx, 17
@@ -896,14 +615,6 @@ define void @insert_store_nonconst_index_known_noundef_not_known_valid_by_urem(p
 ; CHECK-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
 ; CHECK-NEXT:    ret void
 ;
-; SPIRV-LABEL: @insert_store_nonconst_index_known_noundef_not_known_valid_by_urem(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[IDX_CLAMPED:%.*]] = urem i32 [[IDX:%.*]], 17
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED]]
-; SPIRV-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
-;
 entry:
   %0 = load <16 x i8>, ptr %q
   %idx.clamped = urem i32 %idx, 17
@@ -918,13 +629,6 @@ define void @insert_store_ptr_strip(ptr %q, i8 zeroext %s) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i32 0, i32 3
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
-;
-; SPIRV-LABEL: @insert_store_ptr_strip(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 3
-; SPIRV-NEXT:    store <16 x i8> [[VECINS]], ptr [[Q]], align 16
-; SPIRV-NEXT:    ret void
 ;
 entry:
   %0 = load <16 x i8>, ptr %q
@@ -944,16 +648,6 @@ define void @volatile_update(ptr %q, ptr %p, i8 zeroext %s) {
 ; CHECK-NEXT:    store <16 x i8> [[VECINS1]], ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
 ;
-; SPIRV-LABEL: @volatile_update(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[VECINS0:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 3
-; SPIRV-NEXT:    store volatile <16 x i8> [[VECINS0]], ptr [[Q]], align 16
-; SPIRV-NEXT:    [[TMP1:%.*]] = load volatile <16 x i8>, ptr [[P:%.*]], align 16
-; SPIRV-NEXT:    [[VECINS1:%.*]] = insertelement <16 x i8> [[TMP1]], i8 [[S]], i32 1
-; SPIRV-NEXT:    store <16 x i8> [[VECINS1]], ptr [[P]], align 16
-; SPIRV-NEXT:    ret void
-;
 entry:
   %0 = load <16 x i8>, ptr %q
   %vecins0 = insertelement <16 x i8> %0, i8 %s, i32 3
@@ -972,13 +666,6 @@ define void @insert_store_addr_differ(ptr %p, ptr %q, i8 %s) {
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <16 x i8> [[LD]], i8 [[S:%.*]], i32 3
 ; CHECK-NEXT:    store <16 x i8> [[INS]], ptr [[Q:%.*]], align 16
 ; CHECK-NEXT:    ret void
-;
-; SPIRV-LABEL: @insert_store_addr_differ(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[LD:%.*]] = load <16 x i8>, ptr [[P:%.*]], align 16
-; SPIRV-NEXT:    [[INS:%.*]] = insertelement <16 x i8> [[LD]], i8 [[S:%.*]], i32 3
-; SPIRV-NEXT:    store <16 x i8> [[INS]], ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    ret void
 ;
 entry:
   %ld = load <16 x i8>, ptr %p
@@ -1003,22 +690,6 @@ define void @insert_store_mem_modify(ptr %p, ptr %q, ptr noalias %r, i8 %s, i32 
 ; CHECK-NEXT:    [[INS3:%.*]] = insertelement <4 x i32> [[LD3]], i32 [[M:%.*]], i32 0
 ; CHECK-NEXT:    store <4 x i32> [[INS3]], ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
-;
-; SPIRV-LABEL: @insert_store_mem_modify(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[LD:%.*]] = load <16 x i8>, ptr [[P:%.*]], align 16
-; SPIRV-NEXT:    store <16 x i8> zeroinitializer, ptr [[Q:%.*]], align 16
-; SPIRV-NEXT:    [[INS:%.*]] = insertelement <16 x i8> [[LD]], i8 [[S:%.*]], i32 3
-; SPIRV-NEXT:    store <16 x i8> [[INS]], ptr [[P]], align 16
-; SPIRV-NEXT:    [[LD2:%.*]] = load <16 x i8>, ptr [[Q]], align 16
-; SPIRV-NEXT:    store <16 x i8> zeroinitializer, ptr [[R:%.*]], align 16
-; SPIRV-NEXT:    [[INS2:%.*]] = insertelement <16 x i8> [[LD2]], i8 [[S]], i32 7
-; SPIRV-NEXT:    store <16 x i8> [[INS2]], ptr [[Q]], align 16
-; SPIRV-NEXT:    [[LD3:%.*]] = load <4 x i32>, ptr [[P]], align 16
-; SPIRV-NEXT:    store <16 x i8> zeroinitializer, ptr [[P]], align 16
-; SPIRV-NEXT:    [[INS3:%.*]] = insertelement <4 x i32> [[LD3]], i32 [[M:%.*]], i32 0
-; SPIRV-NEXT:    store <4 x i32> [[INS3]], ptr [[P]], align 16
-; SPIRV-NEXT:    ret void
 ;
 entry:
   ; p may alias q
@@ -1055,19 +726,6 @@ define void @insert_store_with_call(ptr %p, ptr %q, i8 %s) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[P]], i32 0, i32 7
 ; CHECK-NEXT:    store i8 [[S]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
-;
-; SPIRV-LABEL: @insert_store_with_call(
-; SPIRV-NEXT:  entry:
-; SPIRV-NEXT:    [[LD:%.*]] = load <16 x i8>, ptr [[P:%.*]], align 16
-; SPIRV-NEXT:    call void @maywrite(ptr [[P]])
-; SPIRV-NEXT:    [[INS:%.*]] = insertelement <16 x i8> [[LD]], i8 [[S:%.*]], i32 3
-; SPIRV-NEXT:    store <16 x i8> [[INS]], ptr [[P]], align 16
-; SPIRV-NEXT:    call void @foo()
-; SPIRV-NEXT:    [[LD2:%.*]] = load <16 x i8>, ptr [[P]], align 16
-; SPIRV-NEXT:    call void @nowrite(ptr [[P]])
-; SPIRV-NEXT:    [[INS2:%.*]] = insertelement <16 x i8> [[LD2]], i8 [[S]], i32 7
-; SPIRV-NEXT:    store <16 x i8> [[INS2]], ptr [[P]], align 16
-; SPIRV-NEXT:    ret void
 ;
 entry:
   %ld = load <16 x i8>, ptr %p
@@ -1127,45 +785,6 @@ define i32 @insert_store_maximum_scan_instrs(i32 %arg, ptr %arg1, ptr %arg2, i8 
 ; CHECK-NEXT:    [[I36:%.*]] = insertelement <16 x i8> [[I4]], i8 [[ARG3:%.*]], i32 3
 ; CHECK-NEXT:    store <16 x i8> [[I36]], ptr [[ARG2]], align 16
 ; CHECK-NEXT:    ret i32 [[I35]]
-;
-; SPIRV-LABEL: @insert_store_maximum_scan_instrs(
-; SPIRV-NEXT:  bb:
-; SPIRV-NEXT:    [[I:%.*]] = or i32 [[ARG:%.*]], 1
-; SPIRV-NEXT:    [[I4:%.*]] = load <16 x i8>, ptr [[ARG2:%.*]], align 16
-; SPIRV-NEXT:    [[I5:%.*]] = tail call i32 @bar(i32 [[I]], i1 true)
-; SPIRV-NEXT:    [[I6:%.*]] = shl i32 [[ARG]], [[I5]]
-; SPIRV-NEXT:    [[I7:%.*]] = lshr i32 [[I6]], 26
-; SPIRV-NEXT:    [[I8:%.*]] = trunc i32 [[I7]] to i8
-; SPIRV-NEXT:    [[I9:%.*]] = and i8 [[I8]], 31
-; SPIRV-NEXT:    [[I10:%.*]] = lshr i32 [[I6]], 11
-; SPIRV-NEXT:    [[I11:%.*]] = and i32 [[I10]], 32767
-; SPIRV-NEXT:    [[I12:%.*]] = zext i8 [[I9]] to i64
-; SPIRV-NEXT:    [[I13:%.*]] = getelementptr inbounds i16, ptr [[ARG1:%.*]], i64 [[I12]]
-; SPIRV-NEXT:    [[I14:%.*]] = load i16, ptr [[I13]], align 2
-; SPIRV-NEXT:    [[I15:%.*]] = zext i16 [[I14]] to i32
-; SPIRV-NEXT:    [[I16:%.*]] = add nuw nsw i8 [[I9]], 1
-; SPIRV-NEXT:    [[I17:%.*]] = zext i8 [[I16]] to i64
-; SPIRV-NEXT:    [[I18:%.*]] = getelementptr inbounds i16, ptr [[ARG1]], i64 [[I17]]
-; SPIRV-NEXT:    [[I19:%.*]] = load i16, ptr [[I18]], align 2
-; SPIRV-NEXT:    [[I20:%.*]] = zext i16 [[I19]] to i32
-; SPIRV-NEXT:    [[I21:%.*]] = sub nsw i32 [[I20]], [[I15]]
-; SPIRV-NEXT:    [[I22:%.*]] = mul nsw i32 [[I11]], [[I21]]
-; SPIRV-NEXT:    [[I23:%.*]] = ashr i32 [[I22]], 15
-; SPIRV-NEXT:    [[I24:%.*]] = shl nuw nsw i32 [[I5]], 15
-; SPIRV-NEXT:    [[I25:%.*]] = xor i32 [[I24]], 1015808
-; SPIRV-NEXT:    [[I26:%.*]] = add nuw nsw i32 [[I25]], [[I15]]
-; SPIRV-NEXT:    [[I27:%.*]] = add nsw i32 [[I26]], [[I23]]
-; SPIRV-NEXT:    [[I28:%.*]] = sitofp i32 [[ARG]] to double
-; SPIRV-NEXT:    [[I29:%.*]] = tail call double @llvm.log2.f64(double [[I28]])
-; SPIRV-NEXT:    [[I30:%.*]] = fptosi double [[I29]] to i32
-; SPIRV-NEXT:    [[I31:%.*]] = shl nsw i32 [[I30]], 15
-; SPIRV-NEXT:    [[I32:%.*]] = or i32 [[I31]], 4
-; SPIRV-NEXT:    [[I33:%.*]] = icmp eq i32 [[I27]], [[I32]]
-; SPIRV-NEXT:    [[I34:%.*]] = select i1 [[I33]], i32 [[ARG]], i32 [[I31]]
-; SPIRV-NEXT:    [[I35:%.*]] = lshr i32 [[I34]], 1
-; SPIRV-NEXT:    [[I36:%.*]] = insertelement <16 x i8> [[I4]], i8 [[ARG3:%.*]], i32 3
-; SPIRV-NEXT:    store <16 x i8> [[I36]], ptr [[ARG2]], align 16
-; SPIRV-NEXT:    ret i32 [[I35]]
 ;
 bb:
   %i = or i32 %arg, 1
