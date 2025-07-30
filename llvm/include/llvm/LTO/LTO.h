@@ -542,10 +542,10 @@ private:
                             ArrayRef<SymbolResolution> Res, unsigned Partition,
                             bool InSummary);
 
-  // These functions take a range of symbol resolutions [ResI, ResE) and consume
-  // the resolutions used by a single input module by incrementing ResI. After
-  // these functions return, [ResI, ResE) will refer to the resolution range for
-  // the remaining modules in the InputFile.
+  // These functions take a range of symbol resolutions and consume the
+  // resolutions used by a single input module by incrementing ResI. Functions
+  // return ranges refering to the resolutions for the remaining modules in the
+  // InputFile.
   Expected<ArrayRef<SymbolResolution>>
   addModule(InputFile &Input, unsigned ModI, ArrayRef<SymbolResolution> Res);
 
