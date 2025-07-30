@@ -32,7 +32,11 @@ class SFrameEmitterImpl {
 
 public:
   SFrameEmitterImpl(MCObjectStreamer &Streamer) : Streamer(Streamer) {
-    SFrameABI = Streamer.getContext().getObjectFileInfo()->getSFrameABIArch();
+    assert(Streamer.getContext()
+               .getObjectFileInfo()
+               ->getSFrameABIArch()
+               .has_value());
+    SFrameABI = *Streamer.getContext().getObjectFileInfo()->getSFrameABIArch();
     FDESubSectionStart = Streamer.getContext().createTempSymbol();
     FRESubSectionStart = Streamer.getContext().createTempSymbol();
     FRESubSectionEnd = Streamer.getContext().createTempSymbol();
@@ -40,14 +44,14 @@ public:
 
   void EmitPreamble() {
     Streamer.emitInt16(Magic);
-    Streamer.emitInt8(static_cast<uint64_t>(Version::V2));
+    Streamer.emitInt8(static_cast<uint8_t>(Version::V2));
     Streamer.emitInt8(0);
   }
 
   void EmitHeader() {
     EmitPreamble();
     // sfh_abi_arch
-    Streamer.emitInt8(static_cast<uint64_t>(SFrameABI));
+    Streamer.emitInt8(static_cast<uint8_t>(SFrameABI));
     // sfh_cfa_fixed_fp_offset
     Streamer.emitInt8(0);
     // sfh_cfa_fixed_ra_offset

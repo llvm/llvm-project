@@ -52,7 +52,7 @@ protected:
   unsigned CompactUnwindDwarfEHFrameOnly = 0;
 
   /// SFrame ABI architecture byte
-  sframe::ABI SFrameABIArch = sframe::ABI::Undefined;
+  std::optional<sframe::ABI> SFrameABIArch = {};
 
   /// Section directive for standard text.
   MCSection *TextSection = nullptr;
@@ -273,7 +273,7 @@ public:
     return CompactUnwindDwarfEHFrameOnly;
   }
 
-  sframe::ABI getSFrameABIArch() const { return SFrameABIArch; }
+  std::optional<sframe::ABI> getSFrameABIArch() const { return SFrameABIArch; }
   virtual unsigned getTextSectionAlignment() const { return 4; }
   MCSection *getTextSection() const { return TextSection; }
   MCSection *getDataSection() const { return DataSection; }

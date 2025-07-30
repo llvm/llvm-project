@@ -392,7 +392,6 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
     SFrameABIArch = sframe::ABI::AArch64EndianBig;
     break;
   default:
-    SFrameABIArch = sframe::ABI::Undefined;
     break;
   }
 
