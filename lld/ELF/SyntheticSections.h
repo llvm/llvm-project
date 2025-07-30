@@ -442,9 +442,8 @@ public:
   /// This constructor records a relative relocation with no symbol.
   DynamicReloc(RelType type, const InputSectionBase *inputSec,
                uint64_t offsetInSec, int64_t addend = 0)
-      : sym(inputSec->getCtx().dummySym), inputSec(inputSec),
-        offsetInSec(offsetInSec), type(type), addend(addend), kind(AddendOnly),
-        expr(R_ADDEND) {}
+      : DynamicReloc(type, inputSec, offsetInSec, AddendOnly,
+                     *inputSec->getCtx().dummySym, addend, R_ADDEND) {}
 
   uint64_t getOffset() const;
   uint32_t getSymIndex(SymbolTableBaseSection *symTab) const;
