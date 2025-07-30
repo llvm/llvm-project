@@ -2691,9 +2691,9 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
       if (isa<SCEVAddExpr>(B) &&
           NarrowA == getNegativeSCEV(cast<SCEVAddExpr>(B)->getOperand(0)) &&
           getZeroExtendExpr(NarrowA, ZExt->getType()) == A &&
-          hasFlags(
-              StrengthenNoWrapFlags(this, scAddExpr, {NarrowA, B}, OrigFlags),
-              SCEV::FlagNUW)) {
+          hasFlags(StrengthenNoWrapFlags(this, scAddExpr, {NarrowA, B},
+                                         SCEV::FlagAnyWrap),
+                   SCEV::FlagNUW)) {
         return getZeroExtendExpr(getAddExpr(NarrowA, B), ZExt->getType());
       }
     }
