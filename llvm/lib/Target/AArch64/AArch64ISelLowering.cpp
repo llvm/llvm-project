@@ -7118,21 +7118,12 @@ SDValue AArch64TargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABS_MERGE_PASSTHRU);
 
   SDLoc DL(Op);
-  SDValue Val = Op.getOperand(0);
-  SDValue Neg = DAG.getNegative(Val, DL, VT);
-  SDValue Cmp;
-
-  // For abs(sub(lhs, rhs)), we can compare lhs and rhs directly. This allows
-  // reusing the subs operation for the calculation and comparison.
-  if (Val.getOpcode() == ISD::SUB)
-    Cmp = DAG.getNode(AArch64ISD::SUBS, DL, DAG.getVTList(VT, FlagsVT),
-                      Val.getOperand(0), Val.getOperand(1));
-  else
-    // Otherwise, compare with zero.
-    Cmp = DAG.getNode(AArch64ISD::SUBS, DL, DAG.getVTList(VT, FlagsVT), Val,
-                      DAG.getConstant(0, DL, VT));
-
-  return DAG.getNode(AArch64ISD::CSEL, DL, VT, Val, Neg,
+  SDValue Neg = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
+                            Op.getOperand(0));
+  // Generate SUBS & CSEL.
+  SDValue Cmp = DAG.getNode(AArch64ISD::SUBS, DL, DAG.getVTList(VT, FlagsVT),
+                            Op.getOperand(0), DAG.getConstant(0, DL, VT));
+  return DAG.getNode(AArch64ISD::CSEL, DL, VT, Op.getOperand(0), Neg,
                      DAG.getConstant(AArch64CC::PL, DL, MVT::i32),
                      Cmp.getValue(1));
 }
@@ -25476,6 +25467,24 @@ static SDValue performCSELCombine(SDNode *N,
                          N->getOperand(1),
                          DAG.getConstant(NewCond, DL, MVT::i32),
                          Sub.getValue(1));
+    }
+  }
+
+  // CSEL a, b, cc, SUBS(SUB(x,y), 0) -> CSEL a, b, cc, SUBS(x,y) if cc doesn't
+  // use overflow flags to avoid the comparison with zero.
+  if (Cond.getOpcode() == AArch64ISD::SUBS &&
+      isNullConstant(Cond.getOperand(1))) {
+    SDValue Sub = Cond.getOperand(0);
+    AArch64CC::CondCode CC =
+        static_cast<AArch64CC::CondCode>(N->getConstantOperandVal(2));
+    if (Sub.getOpcode() == ISD::SUB &&
+        (CC == AArch64CC::EQ || CC == AArch64CC::NE || CC == AArch64CC::MI ||
+         CC == AArch64CC::PL)) {
+      SDLoc DL(N);
+      SDValue Subs = DAG.getNode(AArch64ISD::SUBS, DL, Cond->getVTList(),
+                                 Sub.getOperand(0), Sub.getOperand(1));
+      return DAG.getNode(AArch64ISD::CSEL, DL, N->getVTList(), N->getOperand(0),
+                         N->getOperand(1), N->getOperand(2), Subs.getValue(1));
     }
   }
 
