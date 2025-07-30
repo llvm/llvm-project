@@ -11387,11 +11387,11 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
     }
 
     // Canonicalise absolute difference patterns:
-    //   select(cc, sub(lhs, rhs), sub(rhs, lhs)) ->
-    //   select(cc, sub(lhs, rhs), neg(sub(lhs, rhs)))
+    //   select_cc lhs, rhs, sub(lhs, rhs), sub(rhs, lhs), cc ->
+    //   select_cc lhs, rhs, sub(lhs, rhs), neg(sub(lhs, rhs)), cc
     //
-    //   select(cc, sub(rhs, lhs), sub(lhs, rhs)) ->
-    //   select(cc, neg(sub(lhs, rhs)), sub(lhs, rhs))
+    //   select_cc lhs, rhs, sub(rhs, lhs), sub(lhs, rhs), cc ->
+    //   select_cc lhs, rhs, neg(sub(lhs, rhs)), sub(lhs, rhs), cc
     // The second forms can be matched into subs+cneg.
     if (TVal.getOpcode() == ISD::SUB && FVal.getOpcode() == ISD::SUB) {
       if (TVal.getOperand(0) == LHS && TVal.getOperand(1) == RHS &&
