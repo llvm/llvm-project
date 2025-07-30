@@ -52,6 +52,7 @@ class LLVM_ABI MCSectionGOFF final : public MCSection {
   mutable unsigned Emitted : 1;
 
   friend class MCContext;
+  friend class MCAsmInfoGOFF;
   friend class MCSymbolGOFF;
 
   MCSectionGOFF(StringRef Name, SectionKind K, bool IsVirtual,
@@ -73,10 +74,6 @@ class LLVM_ABI MCSectionGOFF final : public MCSection {
         IsBSS(K.isBSS()), RequiresNonZeroLength(0), Emitted(0) {}
 
 public:
-  void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
-                            raw_ostream &OS,
-                            uint32_t Subsection) const override;
-
   // Return the parent section.
   MCSectionGOFF *getParent() const { return Parent; }
 

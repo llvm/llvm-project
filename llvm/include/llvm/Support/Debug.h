@@ -39,13 +39,19 @@ class raw_ostream;
 /// isCurrentDebugType - Return true if the specified string is the debug type
 /// specified on the command line, or if none was specified on the command line
 /// with the -debug-only=X option.
-///
-bool isCurrentDebugType(const char *Type);
+/// An optional level can be provided to control the verbosity of the output.
+/// If the provided level is not 0 and user specified a level below the provided
+/// level, return false.
+bool isCurrentDebugType(const char *Type, int Level = 0);
 
 /// setCurrentDebugType - Set the current debug type, as if the -debug-only=X
 /// option were specified.  Note that DebugFlag also needs to be set to true for
 /// debug output to be produced.
-///
+/// The debug type format is "type[:level]", where the level is an optional
+/// integer. If a level is provided, the debug output is enabled only if the
+/// user specified a level at least as high as the provided level.
+/// 0 is a special level that acts as an opt-out for this specific debug type
+/// without affecting the other debug output.
 void setCurrentDebugType(const char *Type);
 
 /// setCurrentDebugTypes - Set the current debug type, as if the
