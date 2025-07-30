@@ -179,7 +179,7 @@ TEST(BoundsSafetyBringUpMissingChecks, ChkPairValidMask) {
   static_assert(LangOptions::BS_CHK_None == 0, "expected 0");
   for (size_t Idx = 0; Idx < NumChkDescs; ++Idx) {
     unsigned CurrentMask = CheckKinds[Idx].Mask;
-    EXPECT_EQ(__builtin_popcount(CurrentMask), 1); // Check is a power of 2
+    EXPECT_EQ(llvm::popcount(CurrentMask), 1); // Check is a power of 2
     EXPECT_EQ(SeenBits & CurrentMask,
               0U); // Doesn't overlap with a previously seen value
     SeenBits |= CurrentMask;
