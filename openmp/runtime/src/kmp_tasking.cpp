@@ -1430,7 +1430,7 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
     taskdata->is_taskgraph = 1;
     taskdata->tdg = __kmp_global_tdgs[__kmp_curr_tdg_idx];
     taskdata->td_task_id = KMP_GEN_TASK_ID();
-    taskdata->td_tdg_task_id = KMP_ATOMIC_INC(&__kmp_tdg_task_id);
+    taskdata->td_tdg_task_id = KMP_ATOMIC_INC(&tdg->__kmp_tdg_task_id_next);
   }
 #endif
   KA_TRACE(20, ("__kmp_task_alloc(exit): T#%d created task %p parent=%p\n",
@@ -4436,7 +4436,7 @@ kmp_task_t *__kmp_task_dup_alloc(kmp_info_t *thread, kmp_task_t *task_src
 #if OMPX_TASKGRAPH
   if (taskdata->is_taskgraph && !taskloop_recur &&
       __kmp_tdg_is_recording(taskdata_src->tdg->tdg_status))
-    taskdata->td_tdg_task_id = KMP_ATOMIC_INC(&__kmp_tdg_task_id);
+    taskdata->td_tdg_task_id = KMP_ATOMIC_INC(&taskdata_src->tdg->__kmp_tdg_task_id_next);
 #endif
   taskdata->td_task_id = KMP_GEN_TASK_ID();
   if (task->shareds != NULL) { // need setup shareds pointer
@@ -4951,10 +4951,10 @@ static void __kmp_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
     __kmpc_taskgroup(loc, gtid);
   }
 
-#if OMPX_TASKGRAPH
-  if (taskdata->is_taskgraph)
-    KMP_ATOMIC_DEC(&__kmp_tdg_task_id);
-#endif
+/* #if OMPX_TASKGRAPH */
+/*   if (taskdata->is_taskgraph) */
+/*     KMP_ATOMIC_DEC(&__kmp_tdg_task_id); */
+/* #endif */
   // =========================================================================
   // calculate loop parameters
   kmp_taskloop_bounds_t task_bounds(task, lb, ub);
@@ -5425,7 +5425,7 @@ void __kmp_end_record(kmp_int32 gtid, kmp_tdg_info_t *tdg) {
     KMP_ATOMIC_ST_RLX(&this_record_map[i].npredecessors_counter,
                       this_record_map[i].npredecessors);
   }
-  KMP_ATOMIC_ST_RLX(&__kmp_tdg_task_id, 0);
+  /* KMP_ATOMIC_ST_RLX(&__kmp_tdg_task_id, 0); */
 
   if (__kmp_tdg_dot)
     __kmp_print_tdg_dot(tdg, gtid);
