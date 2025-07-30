@@ -20,7 +20,7 @@ set(LLVM_OPTIONAL_SOURCES
   VulkanRuntimeWrappers.cpp
   VulkanRuntime.cpp
   VulkanRuntime.h
-)
+  )
 
 # Use a separate library for OptUtils, to avoid pulling in the entire JIT and
 # codegen infrastructure. Unlike MLIRExecutionEngine, this is part of
@@ -46,7 +46,7 @@ add_mlir_library(MLIRExecutionEngineUtils
   IPO
   Passes
   TargetParser
-)
+  )
 
 if(NOT MLIR_ENABLE_EXECUTION_ENGINE)
   return()
@@ -54,12 +54,12 @@ endif()
 
 if(LLVM_USE_INTEL_JITEVENTS)
   set(LLVM_JIT_LISTENER_LIB
-    IntelJITEvents)
+      IntelJITEvents)
 endif(LLVM_USE_INTEL_JITEVENTS)
 
 if(LLVM_USE_PERF)
   set(LLVM_JIT_LISTENER_LIB
-    PerfJITEvents)
+      PerfJITEvents)
 endif(LLVM_USE_PERF)
 
 add_mlir_library(MLIRExecutionEngine
@@ -92,7 +92,7 @@ add_mlir_library(MLIRExecutionEngine
   IPO
   Passes
   ${LLVM_JIT_LISTENER_LIB}
-)
+  )
 
 mlir_target_link_libraries(MLIRExecutionEngine PUBLIC
   MLIRBuiltinToLLVMIRTranslation
@@ -101,9 +101,9 @@ mlir_target_link_libraries(MLIRExecutionEngine PUBLIC
   MLIRLLVMToLLVMIRTranslation
   MLIROpenMPToLLVMIRTranslation
   MLIRTargetLLVMIRExport
-)
+  )
 
-if(LLVM_BUILD_LLVM_DYLIB AND NOT(WIN32 OR MINGW OR CYGWIN)) # Does not build on windows currently, see #106859
+if(LLVM_BUILD_LLVM_DYLIB AND NOT (WIN32 OR MINGW OR CYGWIN)) # Does not build on windows currently, see #106859
   # Build a shared library for the execution engine. Some downstream projects
   # use this library to build their own CPU runners while preserving dynamic
   # linkage.
@@ -123,7 +123,7 @@ if(LLVM_BUILD_LLVM_DYLIB AND NOT(WIN32 OR MINGW OR CYGWIN)) # Does not build on 
     LINK_LIBS PUBLIC
     LLVM
     MLIR
-  )
+    )
 endif()
 
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
@@ -163,7 +163,7 @@ if(LLVM_ENABLE_PIC)
     Float16bits.cpp
 
     EXCLUDE_FROM_LIBMLIR
-  )
+    )
   set_property(TARGET mlir_float16_utils PROPERTY CXX_STANDARD 17)
   target_compile_definitions(mlir_float16_utils PRIVATE mlir_float16_utils_EXPORTS)
 
@@ -180,7 +180,7 @@ if(LLVM_ENABLE_PIC)
     mlir_float16_utils
     MLIRSparseTensorEnums
     MLIRSparseTensorRuntime
-  )
+    )
   set_property(TARGET mlir_c_runner_utils PROPERTY CXX_STANDARD 17)
   target_compile_definitions(mlir_c_runner_utils PRIVATE mlir_c_runner_utils_EXPORTS)
 
@@ -206,7 +206,6 @@ if(LLVM_ENABLE_PIC)
   )
   set_property(TARGET mlir_async_runtime PROPERTY CXX_VISIBILITY_PRESET hidden)
   target_compile_definitions(mlir_async_runtime PRIVATE mlir_async_runtime_EXPORTS)
-
   if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # Don't export symbols from link-time dependencies, these are internal
     # implementation details.
@@ -228,8 +227,7 @@ if(LLVM_ENABLE_PIC)
     # custom error message.
     include(CheckLanguage)
     check_language(CUDA)
-
-    if(CMAKE_CUDA_COMPILER)
+    if (CMAKE_CUDA_COMPILER)
       enable_language(CUDA)
     else()
       message(SEND_ERROR
@@ -293,14 +291,13 @@ if(LLVM_ENABLE_PIC)
 
   if(MLIR_ENABLE_ROCM_RUNNER)
     # Configure ROCm support.
-    if(NOT DEFINED ROCM_PATH)
-      if(NOT DEFINED ENV{ROCM_PATH})
+    if (NOT DEFINED ROCM_PATH)
+      if (NOT DEFINED ENV{ROCM_PATH})
         set(ROCM_PATH "/opt/rocm" CACHE PATH "Path to which ROCm has been installed")
       else()
         set(ROCM_PATH $ENV{ROCM_PATH} CACHE PATH "Path to which ROCm has been installed")
       endif()
     endif()
-
     # A lot of the ROCm CMake files expect to find their own dependencies in
     # CMAKE_PREFIX_PATH and don't respect PATHS or HINTS :( .
     # Therefore, temporarily add the ROCm path to CMAKE_PREFIX_PATH so we can
@@ -310,28 +307,24 @@ if(LLVM_ENABLE_PIC)
     find_package(hip REQUIRED)
     set(CMAKE_PREFIX_PATH "${REAL_CMAKE_PREFIX_PATH}")
 
-    if(NOT DEFINED ROCM_TEST_CHIPSET)
+    if (NOT DEFINED ROCM_TEST_CHIPSET)
       find_program(ROCM_AGENT_ENUMERATOR rocm_agent_enumerator "${ROCM_PATH}/bin" /usr/bin /usr/local/bin)
-
       if(ROCM_AGENT_ENUMERATOR)
-        execute_process(COMMAND "${ROCM_AGENT_ENUMERATOR}"
+          execute_process(COMMAND "${ROCM_AGENT_ENUMERATOR}"
           OUTPUT_VARIABLE AGENTS_STRING
           ERROR_VARIABLE AGENTS_STRING
           RESULT_VARIABLE AGENT_ENUMERATOR_RESULT)
       else()
         message(SEND_ERROR "Could not find rocm_agent_enumerator")
       endif()
-
-      if(NOT AGENT_ENUMERATOR_RESULT EQUAL 0)
+      if (NOT AGENT_ENUMERATOR_RESULT EQUAL 0)
         message(SEND_ERROR "Could not run rocm_agent_enumerator and ROCM_TEST_CHIPSET is not defined")
         set(AGENTS_STRING "")
       endif()
-
       string(STRIP AGENTS_STRING ${AGENTS_STRING})
       string(REPLACE "\n" ";" AGENTS_LIST ${AGENTS_STRING})
       list(FILTER AGENTS_LIST EXCLUDE REGEX "gfx000")
-
-      if(AGENTS_LIST STREQUAL "")
+      if (AGENTS_LIST STREQUAL "")
         message(SEND_ERROR "No non-CPU ROCm agents found on the system, and ROCM_TEST_CHIPSET is not defined")
       else()
         list(GET AGENTS_LIST 0 FIRST_AGENT)
@@ -350,34 +343,27 @@ if(LLVM_ENABLE_PIC)
     # Supress compiler warnings from HIP headers
     check_cxx_compiler_flag(-Wno-c++98-compat-extra-semi
       CXX_SUPPORTS_NO_CXX98_COMPAT_EXTRA_SEMI_FLAG)
-
-    if(CXX_SUPPORTS_CXX98_COMPAT_EXTRA_SEMI_FLAG)
+    if (CXX_SUPPORTS_CXX98_COMPAT_EXTRA_SEMI_FLAG)
       target_compile_options(mlir_rocm_runtime PRIVATE
         "-Wno-c++98-compat-extra-semi")
     endif()
-
     check_cxx_compiler_flag(-Wno-return-type-c-linkage
-      CXX_SUPPORTS_WNO_RETURN_TYPE_C_LINKAGE_FLAG)
-
-    if(CXX_SUPPORTS_WNO_RETURN_TYPE_C_LINKAGE_FLAG)
+        CXX_SUPPORTS_WNO_RETURN_TYPE_C_LINKAGE_FLAG)
+    if (CXX_SUPPORTS_WNO_RETURN_TYPE_C_LINKAGE_FLAG)
       target_compile_options(mlir_rocm_runtime PRIVATE
         "-Wno-return-type-c-linkage")
     endif()
-
     check_cxx_compiler_flag(-Wno-nested-anon-types
       CXX_SUPPORTS_WNO_NESTED_ANON_TYPES_FLAG)
-
-    if(CXX_SUPPORTS_WNO_NESTED_ANON_TYPES_FLAG)
+    if (CXX_SUPPORTS_WNO_NESTED_ANON_TYPES_FLAG)
       target_compile_options(mlir_rocm_runtime PRIVATE
         "-Wno-nested-anon-types")
     endif()
-
     check_cxx_compiler_flag(-Wno-gnu-anonymous-struct
       CXX_SUPPORTS_WNO_GNU_ANONYMOUS_STRUCT_FLAG)
-
-    if(CXX_SUPPORTS_WNO_GNU_ANONYMOUS_STRUCT_FLAG)
+    if (CXX_SUPPORTS_WNO_GNU_ANONYMOUS_STRUCT_FLAG)
       target_compile_options(mlir_rocm_runtime PRIVATE
-        "-Wno-gnu-anonymous-struct")
+      "-Wno-gnu-anonymous-struct")
     endif()
 
     set_property(TARGET mlir_rocm_runtime
@@ -413,12 +399,10 @@ if(LLVM_ENABLE_PIC)
     )
 
     check_cxx_compiler_flag("-frtti" CXX_HAS_FRTTI_FLAG)
-
     if(NOT CXX_HAS_FRTTI_FLAG)
       message(FATAL_ERROR "CXX compiler does not accept flag -frtti")
     endif()
-
-    target_compile_options(mlir_sycl_runtime PUBLIC -fexceptions -frtti)
+    target_compile_options (mlir_sycl_runtime PUBLIC -fexceptions -frtti)
 
     target_include_directories(mlir_sycl_runtime PRIVATE
       ${MLIR_INCLUDE_DIRS}
@@ -466,26 +450,25 @@ if(LLVM_ENABLE_PIC)
       mlir_spirv_cpu_runtime_EXPORTS)
   endif()
 
-  if(MLIR_ENABLE_VULKAN_RUNNER)
+  if (MLIR_ENABLE_VULKAN_RUNNER)
     find_package(Vulkan)
 
     # If Vulkan is not found try a path specified by VULKAN_SDK.
-    if(NOT Vulkan_FOUND)
-      if("$ENV{VULKAN_SDK}" STREQUAL "")
+    if (NOT Vulkan_FOUND)
+      if ("$ENV{VULKAN_SDK}" STREQUAL "")
         message(FATAL_ERROR "Vulkan not found through CMake; please provide "
-          "VULKAN_SDK path as an environment variable")
+                            "VULKAN_SDK path as an environment variable")
       endif()
 
       find_library(Vulkan_LIBRARY vulkan HINTS "$ENV{VULKAN_SDK}/lib" REQUIRED)
-
-      if(Vulkan_LIBRARY)
+      if (Vulkan_LIBRARY)
         set(Vulkan_FOUND ON)
         set(Vulkan_INCLUDE_DIR "$ENV{VULKAN_SDK}/include")
         message(STATUS "Found Vulkan: " ${Vulkan_LIBRARY})
       endif()
     endif()
 
-    if(NOT Vulkan_FOUND)
+    if (NOT Vulkan_FOUND)
       message(FATAL_ERROR "Cannot find Vulkan library")
     endif()
 
