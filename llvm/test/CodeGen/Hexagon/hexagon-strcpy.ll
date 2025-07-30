@@ -7,7 +7,7 @@
 declare i32 @printf(i8* nocapture readonly, ...)
 
 ; Function Attrs: nounwind
-define i32 @main() nounwind{
+define i32 @main() nounwind {
 ; CHECK-LABEL: main:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    {
