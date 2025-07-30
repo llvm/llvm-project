@@ -1193,7 +1193,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetKernel(
   Builder.restoreIP(AllocaIP);
   auto *KernelArgsPtr =
       Builder.CreateAlloca(OpenMPIRBuilder::KernelArgs, nullptr, "kernel_args");
-  Builder.restoreIP(Loc.IP);
+  updateToLocation(Loc);
 
   for (unsigned I = 0, Size = KernelArgs.size(); I != Size; ++I) {
     llvm::Value *Arg =
@@ -1220,7 +1220,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitKernelLaunch(
   if (!updateToLocation(Loc))
     return Loc.IP;
 
-  Builder.restoreIP(Loc.IP);
   // On top of the arrays that were filled up, the target offloading call
   // takes as arguments the device id as well as the host pointer. The host
   // pointer is used by the runtime library to identify the current target
@@ -5986,7 +5985,7 @@ OpenMPIRBuilder::createOrderedDepend(const LocationDescription &Loc,
   Builder.restoreIP(AllocaIP);
   AllocaInst *ArgsBase = Builder.CreateAlloca(ArrI64Ty, nullptr, Name);
   ArgsBase->setAlignment(Align(8));
-  Builder.restoreIP(Loc.IP);
+  updateToLocation(Loc);
 
   // Store the index value with offset in depend vector.
   for (unsigned I = 0; I < NumLoops; ++I) {
@@ -8191,7 +8190,7 @@ void OpenMPIRBuilder::createMapperAllocas(const LocationDescription &Loc,
                                           ".offload_ptrs");
   AllocaInst *ArgSizes = Builder.CreateAlloca(
       ArrI64Ty, /* ArraySize = */ nullptr, ".offload_sizes");
-  Builder.restoreIP(Loc.IP);
+  updateToLocation(Loc);
   MapperAllocas.ArgsBase = ArgsBase;
   MapperAllocas.Args = Args;
   MapperAllocas.ArgSizes = ArgSizes;
