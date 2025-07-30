@@ -13594,9 +13594,9 @@ static bool isDefaultStdCall(FunctionDecl *FD, Sema &S) {
   if (FD->getName() == "main" || FD->getName() == "wmain")
     return false;
 
-  // Default calling convention for MinGW is __cdecl
+  // Default calling convention for MinGW and Cygwin is __cdecl
   const llvm::Triple &T = S.Context.getTargetInfo().getTriple();
-  if (T.isWindowsGNUEnvironment())
+  if (T.isOSCygMing())
     return false;
 
   // Default calling convention for WinMain, wWinMain and DllMain
