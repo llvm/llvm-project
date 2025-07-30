@@ -286,6 +286,12 @@ def FeatureSafeCUPrefetch : SubtargetFeature<"safe-cu-prefetch",
   "VMEM CU scope prefetches do not fail on illegal address"
 >;
 
+def FeatureCUStores : SubtargetFeature<"cu-stores",
+  "HasCUStores",
+  "true",
+  "Whether SCOPE_CU stores can be used on GFX12.5"
+>;
+
 def FeatureVcmpxExecWARHazard : SubtargetFeature<"vcmpx-exec-war-hazard",
   "HasVcmpxExecWARHazard",
   "true",
@@ -1383,6 +1389,9 @@ def FeatureAddSubU64Insts
     : SubtargetFeature<"add-sub-u64-insts", "HasAddSubU64Insts", "true",
                        "Has v_add_u64 and v_sub_u64 instructions">;
 
+def FeatureMadU32Inst : SubtargetFeature<"mad-u32-inst", "HasMadU32Inst",
+                                         "true", "Has v_mad_u32 instruction">;
+
 def FeatureMemToLDSLoad : SubtargetFeature<"vmem-to-lds-load-insts",
   "HasVMemToLDSLoad",
   "true",
@@ -1988,6 +1997,7 @@ def FeatureISAVersion12 : FeatureSet<
 def FeatureISAVersion12_50 : FeatureSet<
   [FeatureGFX12,
    FeatureGFX1250Insts,
+   FeatureCUStores,
    FeatureCuMode,
    Feature64BitLiterals,
    FeatureLDSBankCount32,
@@ -2042,6 +2052,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureVmemPrefInsts,
    FeatureLshlAddU64Inst,
    FeatureAddSubU64Insts,
+   FeatureMadU32Inst,
    FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
 ]>;
@@ -2422,7 +2433,7 @@ def HasAtomicFMinFMaxF64FlatInsts :
 
 def HasLdsAtomicAddF64 :
   Predicate<"Subtarget->hasLdsAtomicAddF64()">,
-  AssemblerPredicate<(any_of FeatureGFX90AInsts)>;
+  AssemblerPredicate<(any_of FeatureGFX90AInsts, FeatureGFX1250Insts)>;
 
 def HasFlatGlobalInsts : Predicate<"Subtarget->hasFlatGlobalInsts()">,
   AssemblerPredicate<(all_of FeatureFlatGlobalInsts)>;
@@ -2831,6 +2842,9 @@ def HasLshlAddU64Inst : Predicate<"Subtarget->hasLshlAddU64Inst()">,
 
 def HasAddSubU64Insts : Predicate<"Subtarget->hasAddSubU64Insts()">,
                         AssemblerPredicate<(all_of FeatureAddSubU64Insts)>;
+
+def HasMadU32Inst : Predicate<"Subtarget->hasMadU32Inst()">,
+                    AssemblerPredicate<(all_of FeatureMadU32Inst)>;
 
 def HasLdsBarrierArriveAtomic : Predicate<"Subtarget->hasLdsBarrierArriveAtomic()">,
   AssemblerPredicate<(all_of FeatureLdsBarrierArriveAtomic)>;
