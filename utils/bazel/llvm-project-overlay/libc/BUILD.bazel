@@ -2039,19 +2039,6 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "atan_utils",
-    hdrs = ["src/math/generic/atan_utils.h"],
-    deps = [
-        ":__support_fputil_double_double",
-        ":__support_fputil_dyadic_float",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_polyeval",
-        ":__support_integer_literals",
-        ":__support_macros_optimization",
-    ],
-)
-
-libc_support_library(
     name = "log_range_reduction",
     hdrs = ["src/math/generic/log_range_reduction.h"],
     deps = [
@@ -2242,6 +2229,62 @@ libc_support_library(
         ":__support_fputil_sqrt",
         ":__support_macros_config",
         ":__support_macros_optimization",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_asinhf16",
+    hdrs = ["src/__support/math/asinhf16.h"],
+    deps = [
+        ":__support_math_acoshf_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_cast",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_rounding_mode",
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_atan_utils",
+    hdrs = ["src/__support/math/atan_utils.h"],
+    deps = [
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_integer_literals",
+        ":__support_macros_optimization",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_atan",
+    hdrs = ["src/__support/math/atan.h"],
+    deps = [
+        ":__support_fputil_double_double",
+        ":__support_fputil_nearest_integer",
+        ":__support_macros_optimization",
+        ":__support_math_atan_utils",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_atanf",
+    hdrs = ["src/__support/math/atanf.h"],
+    deps = [
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_optimization",
+        ":__support_math_inv_trigf_utils",
     ],
 )
 
@@ -2848,25 +2891,23 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "asinhf16",
+    additional_deps = [
+        ":__support_math_asinhf16",
+    ],
+)
+
+libc_math_function(
     name = "atanf",
     additional_deps = [
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
-        ":__support_fputil_rounding_mode",
-        ":__support_macros_optimization",
-        ":__support_math_inv_trigf_utils",
+        ":__support_math_atanf"
     ],
 )
 
 libc_math_function(
     name = "atan",
     additional_deps = [
-        ":__support_fputil_double_double",
-        ":__support_fputil_nearest_integer",
-        ":__support_macros_optimization",
-        ":atan_utils",
+        ":__support_math_atan"
     ],
 )
 
@@ -2884,7 +2925,7 @@ libc_math_function(
     additional_deps = [
         ":__support_fputil_double_double",
         ":__support_fputil_nearest_integer",
-        ":atan_utils",
+        ":__support_math_atan_utils",
     ],
 )
 
