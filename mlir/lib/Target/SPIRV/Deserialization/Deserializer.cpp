@@ -347,10 +347,6 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
       return emitError(unknownLoc, "OpDecoration with ")
              << decorationName << "needs a single target <id>";
     }
-    // Block decoration does not affect spirv.struct type, but is still stored
-    // for verification.
-    // TODO: Update StructType to contain this information since
-    // it is needed for many validation rules.
     decorations[words[0]].set(symbol, opBuilder.getUnitAttr());
     break;
   case spirv::Decoration::Location:
@@ -993,7 +989,8 @@ spirv::Deserializer::processOpTypePointer(ArrayRef<uint32_t> operands) {
 
       if (failed(structType.trySetBody(
               deferredStructIt->memberTypes, deferredStructIt->offsetInfo,
-              deferredStructIt->memberDecorationsInfo)))
+              deferredStructIt->memberDecorationsInfo,
+              deferredStructIt->structDecorationsInfo)))
         return failure();
 
       deferredStructIt = deferredStructTypesInfos.erase(deferredStructIt);
@@ -1188,17 +1185,30 @@ spirv::Deserializer::processStructType(ArrayRef<uint32_t> operands) {
             }
             offsetInfo[memberIndex] = memberDecoration.second[0];
           } else {
+            auto intType = mlir::IntegerType::get(context, 32);
             if (!memberDecoration.second.empty()) {
-              memberDecorationsInfo.emplace_back(memberIndex, /*hasValue=*/1,
-                                                 memberDecoration.first,
-                                                 memberDecoration.second[0]);
+              memberDecorationsInfo.emplace_back(
+                  memberIndex, memberDecoration.first,
+                  IntegerAttr::get(intType, memberDecoration.second[0]));
             } else {
-              memberDecorationsInfo.emplace_back(memberIndex, /*hasValue=*/0,
-                                                 memberDecoration.first, 0);
+              memberDecorationsInfo.emplace_back(
+                  memberIndex, memberDecoration.first, UnitAttr::get(context));
             }
           }
         }
       }
+    }
+  }
+
+  SmallVector<spirv::StructType::StructDecorationInfo, 0> structDecorationsInfo;
+  if (decorations.count(operands[0])) {
+    NamedAttrList &allDecorations = decorations[operands[0]];
+    for (NamedAttribute &decorationAttr : allDecorations) {
+      std::optional<spirv::Decoration> decoration = spirv::symbolizeDecoration(
+          llvm::convertToCamelFromSnakeCase(decorationAttr.getName(), true));
+      assert(decoration.has_value());
+      structDecorationsInfo.emplace_back(decoration.value(),
+                                         decorationAttr.getValue());
     }
   }
 
@@ -1208,18 +1218,19 @@ spirv::Deserializer::processStructType(ArrayRef<uint32_t> operands) {
   if (structIdentifier.empty()) {
     assert(unresolvedMemberTypes.empty() &&
            "didn't expect unresolved member types");
-    typeMap[structID] =
-        spirv::StructType::get(memberTypes, offsetInfo, memberDecorationsInfo);
+    typeMap[structID] = spirv::StructType::get(
+        memberTypes, offsetInfo, memberDecorationsInfo, structDecorationsInfo);
   } else {
     auto structTy = spirv::StructType::getIdentified(context, structIdentifier);
     typeMap[structID] = structTy;
 
     if (!unresolvedMemberTypes.empty())
-      deferredStructTypesInfos.push_back({structTy, unresolvedMemberTypes,
-                                          memberTypes, offsetInfo,
-                                          memberDecorationsInfo});
+      deferredStructTypesInfos.push_back(
+          {structTy, unresolvedMemberTypes, memberTypes, offsetInfo,
+           memberDecorationsInfo, structDecorationsInfo});
     else if (failed(structTy.trySetBody(memberTypes, offsetInfo,
-                                        memberDecorationsInfo)))
+                                        memberDecorationsInfo,
+                                        structDecorationsInfo)))
       return failure();
   }
 

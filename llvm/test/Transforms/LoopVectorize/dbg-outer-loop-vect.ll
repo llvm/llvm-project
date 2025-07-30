@@ -30,8 +30,8 @@ define void @foo(ptr %h) !dbg !4 {
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[FOR_COND_CLEANUP32]], label [[FOR_COND5_PREHEADER1]], !dbg [[DBG28]]
 ; CHECK:       vector.latch:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4, !dbg [[DBG222]]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20, !dbg [[DBG222]]
-; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !dbg [[DBG222]], !llvm.loop [[LOOP29:![0-9]+]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20, !dbg [[DBG21]]
+; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !dbg [[DBG21]], !llvm.loop [[LOOP29:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]], !dbg [[DBG21]]
 ; CHECK:       scalar.ph:
