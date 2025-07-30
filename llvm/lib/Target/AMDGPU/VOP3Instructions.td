@@ -2015,6 +2015,8 @@ let AssemblerPredicate = isGFX11Plus in {
 
 // These instructions differ from GFX12 variant by supporting DPP:
 defm V_LSHL_ADD_U64                  : VOP3Only_Realtriple_gfx1250<0x252>;
+defm V_ASHR_PK_I8_I32                : VOP3Only_Realtriple_gfx1250<0x290>;
+defm V_ASHR_PK_U8_I32                : VOP3Only_Realtriple_gfx1250<0x291>;
 defm V_CVT_PK_BF16_F32               : VOP3Only_Realtriple_gfx1250<0x36d>;
 defm V_CVT_SR_PK_BF16_F32            : VOP3Only_Realtriple_gfx1250<0x36e>;
 
