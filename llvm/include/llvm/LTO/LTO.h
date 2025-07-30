@@ -541,23 +541,23 @@ private:
   void addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
                             ArrayRef<SymbolResolution> Res, unsigned Partition,
                             bool InSummary);
-  Error addModule(InputFile &Input, unsigned ModI,
-                  const SymbolResolution *&ResI,
-                  ArrayRef<SymbolResolution> Res);
 
-  Expected<RegularLTOState::AddedModule>
+  // These functions take a range of symbol resolutions and consume the
+  // resolutions used by a single input module. Functions return ranges refering
+  // to the resolutions for the remaining modules in the InputFile.
+  Expected<ArrayRef<SymbolResolution>>
+  addModule(InputFile &Input, unsigned ModI, ArrayRef<SymbolResolution> Res);
+
+  Expected<std::pair<RegularLTOState::AddedModule, ArrayRef<SymbolResolution>>>
   addRegularLTO(InputFile &Input, BitcodeModule BM,
-                ArrayRef<InputFile::Symbol> Syms, const SymbolResolution *&ResI,
+                ArrayRef<InputFile::Symbol> Syms,
                 ArrayRef<SymbolResolution> Res);
   Error linkRegularLTO(RegularLTOState::AddedModule Mod,
                        bool LivenessFromIndex);
 
-  // This function takes a range of symbol resolutions [ResI, ResE) and consume
-  // the resolutions used by a single input module by incrementing ResI. After
-  // these functions return, [ResI, ResE) will refer to the resolution range for
-  // the remaining modules in the InputFile.
-  Error addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
-                   const SymbolResolution *&ResI, const SymbolResolution *ResE);
+  Expected<ArrayRef<SymbolResolution>>
+  addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
+             ArrayRef<SymbolResolution> Res);
 
   Error runRegularLTO(AddStreamFn AddStream);
   Error runThinLTO(AddStreamFn AddStream, FileCache Cache,

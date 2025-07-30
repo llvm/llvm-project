@@ -4,6 +4,7 @@
 
 # A wrapper library over MPFR for use with LLVM libc math unittests.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load("//libc/test:libc_test_rules.bzl", "libc_test_library")
 
 package(default_visibility = ["//visibility:public"])
@@ -38,6 +39,7 @@ libc_test_library(
         },
     ),
     deps = [
+        ":mpfr_impl",
         "//libc:__support_common",
         "//libc:__support_cpp_string",
         "//libc:__support_cpp_string_view",
@@ -48,8 +50,8 @@ libc_test_library(
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_macros_config",
         "//libc:__support_macros_properties_types",
+        "//libc:hdr_stdint_proxy",
         "//libc/test/UnitTest:fp_test_helpers",
-        "//libc/utils/MPFRWrapper:mpfr_impl",
     ],
 )
 
@@ -66,6 +68,7 @@ libc_test_library(
     ),
     deps = [
         ":mp_common",
+        ":mpfr_impl",
         "//libc:__support_common",
         "//libc:__support_cpp_array",
         "//libc:__support_cpp_bit",
@@ -80,8 +83,8 @@ libc_test_library(
         "//libc:__support_macros_config",
         "//libc:__support_macros_properties_types",
         "//libc:hdr_math_macros",
+        "//libc:hdr_stdint_proxy",
         "//libc/test/UnitTest:LibcUnitTest",
         "//libc/test/UnitTest:fp_test_helpers",
-        "//libc/utils/MPFRWrapper:mpfr_impl",
     ],
 )
