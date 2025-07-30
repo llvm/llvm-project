@@ -2337,6 +2337,11 @@ class BitPermutationSelector {
                         ANDIVal, ANDISVal), 0);
     }
 
+    // Caller assumes ResNo == 0, but we might have ResNo != 0 after
+    // optimizing away a permutation.  Kludge with an extra node.
+    if (Res.getResNo() != 0)
+      return CurDAG->getMachineNode(PPC::OR, dl, MVT::i32, Res, Res);
+
     return Res.getNode();
   }
 
