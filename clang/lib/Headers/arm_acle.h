@@ -55,11 +55,27 @@ __chkfeat(uint64_t __features) {
 /* 7.5 Swap */
 static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
 __swp(uint32_t __x, volatile uint32_t *__p) {
-  uint32_t v;
+  uint32_t __v;
+#if __ARM_FEATURE_LDREX & 4
   do
-    v = __builtin_arm_ldrex(__p);
+    __v = __builtin_arm_ldrex(__p);
   while (__builtin_arm_strex(__x, __p));
-  return v;
+#elif !__ARM_ARCH_6M__
+  /* Fall back to the deprecated SWP instruction, on historic architecture
+   * versions without load/store exclusive instructions on 32-bit data. ACLE is
+   * clear that we mustn't use SWP in any _other_ situation, but permits us to
+   * use it if there's no other option. */
+  __asm__("swp %0, %1, [%2]" : "=r"(__v) : "r"(__x), "r"(__p) : "memory");
+#else
+  /* Armv6-M doesn't have either of LDREX or SWP. ACLE suggests this
+   * implementation, which Clang lowers to the 'cmpxchg' operation in LLVM IR.
+   * On Armv6-M, LLVM turns that into a libcall to __atomic_compare_exchange_4,
+   * so the runtime will need to implement that. */
+  do
+    __v = *__p;
+  while (__sync_bool_compare_and_swap(__p, __v, __x));
+#endif
+  return __v;
 }
 
 /* 7.6 Memory prefetch intrinsics */
