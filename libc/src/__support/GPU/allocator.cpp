@@ -460,11 +460,13 @@ public:
       result->initialize(uniform);
       if (gpu::get_lane_id() == uint32_t(cpp::countr_zero(uniform)))
         finalize(result, cpp::popcount(uniform), count);
+      count =
+          gpu::shuffle(gpu::get_lane_mask(), cpp::countr_zero(uniform), count);
     }
 
     if (!impl::is_sentinel(count))
       count = count - cpp::popcount(uniform) +
-              impl::lane_count(uniform, gpu::get_lane_id()) + 1;
+              impl::lane_count(uniform, gpu::get_lane_id());
 
     return result;
   }
@@ -536,13 +538,13 @@ static Slab *find_slab(uint32_t chunk_size, uint64_t &uniform) {
       // If we find a slab with a matching chunk size then we store the result.
       // Otherwise, we need to free the claimed lock and continue. In the case
       // of out-of-memory we receive a sentinel value and return a failure.
-      if (slab && reserved <= Slab::available_chunks(chunk_size) &&
+      if (slab && reserved < Slab::available_chunks(chunk_size) &&
           slab->get_chunk_size() == chunk_size) {
         if (index != start)
           indices[chunk_id].store(index, cpp::MemoryOrder::RELAXED);
         uniform = uniform & gpu::get_lane_mask();
         return slab;
-      } else if (slab && (reserved > Slab::available_chunks(chunk_size) ||
+      } else if (slab && (reserved >= Slab::available_chunks(chunk_size) ||
                           slab->get_chunk_size() != chunk_size)) {
         slots[index].unlock(gpu::get_lane_mask(),
                             gpu::get_lane_mask() & uniform);
