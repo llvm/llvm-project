@@ -21,7 +21,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/Basic/TargetInfo.h"
 
 namespace clang {
 class QualType;
@@ -400,6 +399,8 @@ private:
 
   bool checkLiteralType(const Expr *E);
   bool maybeEmitDeferredVarInit(const VarDecl *VD);
+
+  bool refersToUnion(const Expr *E);
 
 protected:
   /// Variable to storage mapping.
