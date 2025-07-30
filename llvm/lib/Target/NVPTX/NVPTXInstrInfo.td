@@ -125,8 +125,6 @@ def doF32FTZ : Predicate<"useF32FTZ()">;
 def doNoF32FTZ : Predicate<"!useF32FTZ()">;
 def doRsqrtOpt : Predicate<"doRsqrtOpt()">;
 
-def doMulWide      : Predicate<"doMulWide">;
-
 def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
 def hasDotInstructions : Predicate<"Subtarget->hasDotInstructions()">;
@@ -836,36 +834,28 @@ def MULWIDES64 :
   BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, B32:$b), "mul.wide.s32">;
 def MULWIDES64Imm :
   BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, i32imm:$b), "mul.wide.s32">;
-def MULWIDES64Imm64 :
-  BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, i64imm:$b), "mul.wide.s32">;
 
 def MULWIDEU64 :
   BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, B32:$b), "mul.wide.u32">;
 def MULWIDEU64Imm :
   BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, i32imm:$b), "mul.wide.u32">;
-def MULWIDEU64Imm64 :
-  BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, i64imm:$b), "mul.wide.u32">;
 
 def MULWIDES32 :
   BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B16:$b), "mul.wide.s16">;
 def MULWIDES32Imm :
   BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, i16imm:$b), "mul.wide.s16">;
-def MULWIDES32Imm32 :
-  BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, i32imm:$b), "mul.wide.s16">;
 
 def MULWIDEU32 :
   BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B16:$b), "mul.wide.u16">;
 def MULWIDEU32Imm :
   BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, i16imm:$b), "mul.wide.u16">;
-def MULWIDEU32Imm32 :
-  BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, i32imm:$b), "mul.wide.u16">;
 
-def SDTMulWide : SDTypeProfile<1, 2, [SDTCisSameAs<1, 2>]>;
-def mul_wide_signed : SDNode<"NVPTXISD::MUL_WIDE_SIGNED", SDTMulWide>;
-def mul_wide_unsigned : SDNode<"NVPTXISD::MUL_WIDE_UNSIGNED", SDTMulWide>;
+def SDTMulWide : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>, SDTCisSameAs<1, 2>]>;
+def mul_wide_signed : SDNode<"NVPTXISD::MUL_WIDE_SIGNED", SDTMulWide, [SDNPCommutative]>;
+def mul_wide_unsigned : SDNode<"NVPTXISD::MUL_WIDE_UNSIGNED", SDTMulWide, [SDNPCommutative]>;
 
 // Matchers for signed, unsigned mul.wide ISD nodes.
-let Predicates = [doMulWide] in {
+let Predicates = [hasOptEnabled] in {
   def : Pat<(i32 (mul_wide_signed i16:$a, i16:$b)), (MULWIDES32 $a, $b)>;
   def : Pat<(i32 (mul_wide_signed i16:$a, imm:$b)), (MULWIDES32Imm $a, imm:$b)>;
   def : Pat<(i32 (mul_wide_unsigned i16:$a, i16:$b)), (MULWIDEU32 $a, $b)>;
@@ -875,85 +865,6 @@ let Predicates = [doMulWide] in {
   def : Pat<(i64 (mul_wide_signed i32:$a, imm:$b)), (MULWIDES64Imm $a, imm:$b)>;
   def : Pat<(i64 (mul_wide_unsigned i32:$a, i32:$b)), (MULWIDEU64 $a, $b)>;
   def : Pat<(i64 (mul_wide_unsigned i32:$a, imm:$b)), (MULWIDEU64Imm $a, imm:$b)>;
-}
-
-// Predicates used for converting some patterns to mul.wide.
-def SInt32Const : PatLeaf<(imm), [{
-  const APInt &v = N->getAPIntValue();
-  return v.isSignedIntN(32);
-}]>;
-
-def UInt32Const : PatLeaf<(imm), [{
-  const APInt &v = N->getAPIntValue();
-  return v.isIntN(32);
-}]>;
-
-def SInt16Const : PatLeaf<(imm), [{
-  const APInt &v = N->getAPIntValue();
-  return v.isSignedIntN(16);
-}]>;
-
-def UInt16Const : PatLeaf<(imm), [{
-  const APInt &v = N->getAPIntValue();
-  return v.isIntN(16);
-}]>;
-
-def IntConst_0_30 : PatLeaf<(imm), [{
-  // Check if 0 <= v < 31; only then will the result of (x << v) be an int32.
-  const APInt &v = N->getAPIntValue();
-  return v.sge(0) && v.slt(31);
-}]>;
-
-def IntConst_0_14 : PatLeaf<(imm), [{
-  // Check if 0 <= v < 15; only then will the result of (x << v) be an int16.
-  const APInt &v = N->getAPIntValue();
-  return v.sge(0) && v.slt(15);
-}]>;
-
-def SHL2MUL32 : SDNodeXForm<imm, [{
-  const APInt &v = N->getAPIntValue();
-  APInt temp(32, 1);
-  return CurDAG->getTargetConstant(temp.shl(v), SDLoc(N), MVT::i32);
-}]>;
-
-def SHL2MUL16 : SDNodeXForm<imm, [{
-  const APInt &v = N->getAPIntValue();
-  APInt temp(16, 1);
-  return CurDAG->getTargetConstant(temp.shl(v), SDLoc(N), MVT::i16);
-}]>;
-
-// Convert "sign/zero-extend, then shift left by an immediate" to mul.wide.
-let Predicates = [doMulWide] in {
-  def : Pat<(shl (sext i32:$a), (i32 IntConst_0_30:$b)),
-            (MULWIDES64Imm $a, (SHL2MUL32 $b))>;
-  def : Pat<(shl (zext i32:$a), (i32 IntConst_0_30:$b)),
-            (MULWIDEU64Imm $a, (SHL2MUL32 $b))>;
-
-  def : Pat<(shl (sext i16:$a), (i16 IntConst_0_14:$b)),
-            (MULWIDES32Imm $a, (SHL2MUL16 $b))>;
-  def : Pat<(shl (zext i16:$a), (i16 IntConst_0_14:$b)),
-            (MULWIDEU32Imm $a, (SHL2MUL16 $b))>;
-
-  // Convert "sign/zero-extend then multiply" to mul.wide.
-  def : Pat<(mul (sext i32:$a), (sext i32:$b)),
-            (MULWIDES64 $a, $b)>;
-  def : Pat<(mul (sext i32:$a), (i64 SInt32Const:$b)),
-            (MULWIDES64Imm64 $a, (i64 SInt32Const:$b))>;
-
-  def : Pat<(mul (zext i32:$a), (zext i32:$b)),
-            (MULWIDEU64 $a, $b)>;
-  def : Pat<(mul (zext i32:$a), (i64 UInt32Const:$b)),
-            (MULWIDEU64Imm64 $a, (i64 UInt32Const:$b))>;
-
-  def : Pat<(mul (sext i16:$a), (sext i16:$b)),
-            (MULWIDES32 $a, $b)>;
-  def : Pat<(mul (sext i16:$a), (i32 SInt16Const:$b)),
-            (MULWIDES32Imm32 $a, (i32 SInt16Const:$b))>;
-
-  def : Pat<(mul (zext i16:$a), (zext i16:$b)),
-            (MULWIDEU32 $a, $b)>;
-  def : Pat<(mul (zext i16:$a), (i32 UInt16Const:$b)),
-            (MULWIDEU32Imm32 $a, (i32 UInt16Const:$b))>;
 }
 
 //
@@ -989,6 +900,39 @@ let Predicates = [hasOptEnabled] in {
 defm MAD16 : MAD<"mad.lo.s16", i16, B16, i16imm>;
 defm MAD32 : MAD<"mad.lo.s32", i32, B32, i32imm>;
 defm MAD64 : MAD<"mad.lo.s64", i64, B64, i64imm>;
+}
+
+multiclass MAD_WIDE<string PtxSuffix, OneUse2 Op, RegTyInfo BigT, RegTyInfo SmallT> {
+  def rrr:
+    BasicNVPTXInst<(outs BigT.RC:$dst),
+              (ins SmallT.RC:$a, SmallT.RC:$b, BigT.RC:$c),
+              "mad.wide." # PtxSuffix,
+              [(set BigT.Ty:$dst, (add (Op SmallT.Ty:$a, SmallT.Ty:$b), BigT.Ty:$c))]>;
+  def rri:
+    BasicNVPTXInst<(outs BigT.RC:$dst),
+              (ins SmallT.RC:$a, SmallT.RC:$b, BigT.Imm:$c),
+              "mad.wide." # PtxSuffix,
+              [(set BigT.Ty:$dst, (add (Op SmallT.Ty:$a, SmallT.Ty:$b), imm:$c))]>;
+  def rir:
+    BasicNVPTXInst<(outs BigT.RC:$dst),
+              (ins SmallT.RC:$a, SmallT.Imm:$b, BigT.RC:$c),
+              "mad.wide." # PtxSuffix,
+              [(set BigT.Ty:$dst, (add (Op SmallT.Ty:$a, imm:$b), BigT.Ty:$c))]>;
+  def rii:
+    BasicNVPTXInst<(outs BigT.RC:$dst),
+              (ins SmallT.RC:$a, SmallT.Imm:$b, BigT.Imm:$c),
+              "mad.wide." # PtxSuffix,
+              [(set BigT.Ty:$dst, (add (Op SmallT.Ty:$a, imm:$b), imm:$c))]>;
+}
+
+def mul_wide_unsigned_oneuse : OneUse2<mul_wide_unsigned>;
+def mul_wide_signed_oneuse : OneUse2<mul_wide_signed>;
+
+let Predicates = [hasOptEnabled] in {
+defm MAD_WIDE_U16 : MAD_WIDE<"u16", mul_wide_unsigned_oneuse, I32RT, I16RT>;
+defm MAD_WIDE_S16 : MAD_WIDE<"s16", mul_wide_signed_oneuse, I32RT, I16RT>;
+defm MAD_WIDE_U32 : MAD_WIDE<"u32", mul_wide_unsigned_oneuse, I64RT, I32RT>;
+defm MAD_WIDE_S32 : MAD_WIDE<"s32", mul_wide_signed_oneuse, I64RT, I32RT>;
 }
 
 foreach t = [I16RT, I32RT, I64RT] in {
@@ -1234,7 +1178,7 @@ defm FMA_F32    : FMA<F32RT,    allow_ftz = true>;
 defm FMA_F32x2  : FMA<F32X2RT,  allow_ftz = true, preds = [hasF32x2Instructions]>;
 defm FMA_F64    : FMA<F64RT,    allow_ftz = false>;
 
-// sin/cos
+// sin/cos/tanh
 
 class UnaryOpAllowsApproxFn<SDPatternOperator operator>
     : PatFrag<(ops node:$A),
@@ -1250,6 +1194,10 @@ def COS_APPROX_f32 :
   BasicFlagsNVPTXInst<(outs B32:$dst), (ins B32:$src), (ins FTZFlag:$ftz),
                       "cos.approx$ftz.f32",
                       [(set f32:$dst, (UnaryOpAllowsApproxFn<fcos> f32:$src))]>;
+def TANH_APPROX_f32 :
+  BasicNVPTXInst<(outs B32:$dst), (ins B32:$src), "tanh.approx.f32",
+                 [(set f32:$dst, (UnaryOpAllowsApproxFn<ftanh> f32:$src))]>,
+                 Requires<[hasPTX<70>, hasSM<75>]>;
 
 //-----------------------------------
 // Bitwise operations
@@ -1753,12 +1701,6 @@ def SDTDeclareArrayParam :
   SDTypeProfile<0, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisVT<2, i32>]>;
 def SDTDeclareScalarParam :
   SDTypeProfile<0, 2, [SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
-def SDTLoadParamProfile : SDTypeProfile<1, 2, [SDTCisInt<1>, SDTCisInt<2>]>;
-def SDTLoadParamV2Profile : SDTypeProfile<2, 2, [SDTCisSameAs<0, 1>, SDTCisInt<2>, SDTCisInt<3>]>;
-def SDTLoadParamV4Profile : SDTypeProfile<4, 2, [SDTCisInt<4>, SDTCisInt<5>]>;
-def SDTStoreParamProfile : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>]>;
-def SDTStoreParamV2Profile : SDTypeProfile<0, 4, [SDTCisInt<0>, SDTCisInt<1>]>;
-def SDTStoreParamV4Profile : SDTypeProfile<0, 6, [SDTCisInt<0>, SDTCisInt<1>]>;
 def SDTMoveParamProfile : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisSameAs<0, 1>]>;
 
 def SDTProxyReg : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>]>;
@@ -1770,104 +1712,20 @@ def declare_array_param :
 def declare_scalar_param :
   SDNode<"NVPTXISD::DeclareScalarParam", SDTDeclareScalarParam,
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-
-def LoadParam :
-  SDNode<"NVPTXISD::LoadParam", SDTLoadParamProfile,
-         [SDNPHasChain, SDNPMayLoad, SDNPOutGlue, SDNPInGlue]>;
-def LoadParamV2 :
-  SDNode<"NVPTXISD::LoadParamV2", SDTLoadParamV2Profile,
-         [SDNPHasChain, SDNPMayLoad, SDNPOutGlue, SDNPInGlue]>;
-def LoadParamV4 :
-  SDNode<"NVPTXISD::LoadParamV4", SDTLoadParamV4Profile,
-         [SDNPHasChain, SDNPMayLoad, SDNPOutGlue, SDNPInGlue]>;
-def StoreParam :
-  SDNode<"NVPTXISD::StoreParam", SDTStoreParamProfile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def StoreParamV2 :
-  SDNode<"NVPTXISD::StoreParamV2", SDTStoreParamV2Profile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def StoreParamV4 :
-  SDNode<"NVPTXISD::StoreParamV4", SDTStoreParamV4Profile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
 def MoveParam :
   SDNode<"NVPTXISD::MoveParam", SDTMoveParamProfile, []>;
 def proxy_reg :
   SDNode<"NVPTXISD::ProxyReg", SDTProxyReg, [SDNPHasChain]>;
 
   /// CALL(Chain, IsConvergent, IsIndirectCall/IsUniform, NumReturns,
-  ///      NumParams, Callee, Proto, InGlue)
+  ///      NumParams, Callee, Proto)
 def SDTCallProfile : SDTypeProfile<0, 6,
                        [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisVT<2, i32>,
                         SDTCisVT<3, i32>, SDTCisVT<5, i32>]>;
-def call :
-  SDNode<"NVPTXISD::CALL", SDTCallProfile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-
-let mayLoad = true in {
-  class LoadParamMemInst<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs regclass:$dst), (ins Offseti32imm:$b),
-                  !strconcat("ld.param", opstr, " \t$dst, [retval0$b];"),
-                  []>;
-
-  class LoadParamV2MemInst<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs regclass:$dst, regclass:$dst2), (ins Offseti32imm:$b),
-                  !strconcat("ld.param.v2", opstr,
-                             " \t{{$dst, $dst2}}, [retval0$b];"), []>;
-
-  class LoadParamV4MemInst<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs regclass:$dst, regclass:$dst2, regclass:$dst3,
-                        regclass:$dst4),
-                  (ins Offseti32imm:$b),
-                  !strconcat("ld.param.v4", opstr,
-                             " \t{{$dst, $dst2, $dst3, $dst4}}, [retval0$b];"),
-                  []>;
-}
-
-let mayStore = true in {
-
-  multiclass StoreParamInst<NVPTXRegClass regclass, Operand IMMType, string opstr, bit support_imm = true> {
-    foreach op = [IMMType, regclass] in
-      if !or(support_imm, !isa<NVPTXRegClass>(op)) then
-        def _ # !if(!isa<NVPTXRegClass>(op), "r", "i")
-          : NVPTXInst<(outs),
-                      (ins op:$val, i32imm:$a, Offseti32imm:$b),
-                      "st.param" # opstr # " \t[param$a$b], $val;",
-                      []>;
-  }
-
-  multiclass StoreParamV2Inst<NVPTXRegClass regclass, Operand IMMType, string opstr> {
-    foreach op1 = [IMMType, regclass] in
-      foreach op2 = [IMMType, regclass] in
-        def _ # !if(!isa<NVPTXRegClass>(op1), "r", "i")
-              # !if(!isa<NVPTXRegClass>(op2), "r", "i")
-          : NVPTXInst<(outs),
-                      (ins op1:$val1, op2:$val2,
-                           i32imm:$a, Offseti32imm:$b),
-                      "st.param.v2" # opstr # " \t[param$a$b], {{$val1, $val2}};",
-                      []>;
-  }
-
-  multiclass StoreParamV4Inst<NVPTXRegClass regclass, Operand IMMType, string opstr> {
-    foreach op1 = [IMMType, regclass] in
-      foreach op2 = [IMMType, regclass] in
-        foreach op3 = [IMMType, regclass] in
-          foreach op4 = [IMMType, regclass] in
-            def _ # !if(!isa<NVPTXRegClass>(op1), "r", "i")
-                  # !if(!isa<NVPTXRegClass>(op2), "r", "i")
-                  # !if(!isa<NVPTXRegClass>(op3), "r", "i")
-                  # !if(!isa<NVPTXRegClass>(op4), "r", "i")
-
-              : NVPTXInst<(outs),
-                          (ins op1:$val1, op2:$val2, op3:$val3, op4:$val4,
-                               i32imm:$a, Offseti32imm:$b),
-                          "st.param.v4" # opstr #
-                          " \t[param$a$b], {{$val1, $val2, $val3, $val4}};",
-                          []>;
-  }
-}
+def call : SDNode<"NVPTXISD::CALL", SDTCallProfile, [SDNPHasChain, SDNPSideEffect]>;
 
 /// CALL(Chain, IsConvergent, IsIndirectCall/IsUniform, NumReturns,
-///      NumParams, Callee, Proto, InGlue)
+///      NumParams, Callee, Proto)
 
 def CallOperand : Operand<i32> { let PrintMethod = "printCallOperand"; }
 
@@ -1903,43 +1761,6 @@ foreach is_convergent = [0, 1] in {
   def : Pat<(call is_convergent, 0, imm:$rets, imm:$params, i64:$addr, 0),
             (call_uni_inst $addr, imm:$rets, imm:$params)>;
 }
-
-def LoadParamMemI64    : LoadParamMemInst<B64, ".b64">;
-def LoadParamMemI32    : LoadParamMemInst<B32, ".b32">;
-def LoadParamMemI16    : LoadParamMemInst<B16, ".b16">;
-def LoadParamMemI8     : LoadParamMemInst<B16, ".b8">;
-def LoadParamMemV2I64  : LoadParamV2MemInst<B64, ".b64">;
-def LoadParamMemV2I32  : LoadParamV2MemInst<B32, ".b32">;
-def LoadParamMemV2I16  : LoadParamV2MemInst<B16, ".b16">;
-def LoadParamMemV2I8   : LoadParamV2MemInst<B16, ".b8">;
-def LoadParamMemV4I32  : LoadParamV4MemInst<B32, ".b32">;
-def LoadParamMemV4I16  : LoadParamV4MemInst<B16, ".b16">;
-def LoadParamMemV4I8   : LoadParamV4MemInst<B16, ".b8">;
-
-defm StoreParamI64    : StoreParamInst<B64, i64imm, ".b64">;
-defm StoreParamI32    : StoreParamInst<B32, i32imm, ".b32">;
-defm StoreParamI16    : StoreParamInst<B16, i16imm, ".b16">;
-defm StoreParamI8     : StoreParamInst<B16, i8imm,  ".b8">;
-
-defm StoreParamI8TruncI32 : StoreParamInst<B32, i8imm, ".b8", /* support_imm */ false>;
-defm StoreParamI8TruncI64 : StoreParamInst<B64, i8imm, ".b8", /* support_imm */ false>;
-
-defm StoreParamV2I64  : StoreParamV2Inst<B64, i64imm, ".b64">;
-defm StoreParamV2I32  : StoreParamV2Inst<B32, i32imm, ".b32">;
-defm StoreParamV2I16  : StoreParamV2Inst<B16, i16imm, ".b16">;
-defm StoreParamV2I8   : StoreParamV2Inst<B16, i8imm,  ".b8">;
-
-defm StoreParamV4I32  : StoreParamV4Inst<B32, i32imm, ".b32">;
-defm StoreParamV4I16  : StoreParamV4Inst<B16, i16imm, ".b16">;
-defm StoreParamV4I8   : StoreParamV4Inst<B16, i8imm,  ".b8">;
-
-defm StoreParamF32    : StoreParamInst<B32, f32imm, ".b32">;
-defm StoreParamF64    : StoreParamInst<B64, f64imm, ".b64">;
-
-defm StoreParamV2F32  : StoreParamV2Inst<B32, f32imm, ".b32">;
-defm StoreParamV2F64  : StoreParamV2Inst<B64, f64imm, ".b64">;
-
-defm StoreParamV4F32  : StoreParamV4Inst<B32, f32imm, ".b32">;
 
 def DECLARE_PARAM_array :
   NVPTXInst<(outs), (ins i32imm:$a, i32imm:$align, i32imm:$size),
