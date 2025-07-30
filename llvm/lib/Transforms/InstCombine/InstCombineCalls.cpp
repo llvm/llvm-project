@@ -3891,7 +3891,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   }
 
-  // Try to fold intrinsic into select operands. This is legal if:
+  // Try to fold intrinsic into select/phi operands. This is legal if:
   //  * The intrinsic is speculatable.
   //  * The select condition is not a vector, or the intrinsic does not
   //    perform cross-lane operations.
