@@ -35,7 +35,9 @@ class StackAddrEscapeChecker
 public:
   StringRef getDebugTag() const override { return "StackAddrEscapeChecker"; }
 
-  CheckerFrontend StackAddrEscape, StackAddrAsyncEscape;
+  CheckerFrontend StackAddrEscape;
+  CheckerFrontend StackAddrAsyncEscape;
+
   const BugType StackLeak{&StackAddrEscape,
                           "Stack address leaks outside of stack frame"};
   const BugType ReturnStack{&StackAddrEscape,
