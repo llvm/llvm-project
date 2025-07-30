@@ -689,6 +689,10 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
     if (!TII->isOperandLegal(*MI, OpNo, &New))
       return false;
 
+    const MCInstrDesc &MCID = MI->getDesc();
+    if (MCID.getOperandConstraint(0, MCOI::EARLY_CLOBBER) != -1) {
+      MI->getOperand(0).setIsEarlyClobber(true);
+    }
     Old.ChangeToImmediate(*ImmVal);
     return true;
   }

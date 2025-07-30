@@ -116,8 +116,13 @@ bool AMDGPUInstructionSelector::constrainCopyLikeIntrin(MachineInstr &MI,
   if (!DstRC || DstRC != SrcRC)
     return false;
 
-  return RBI.constrainGenericRegister(Dst.getReg(), *DstRC, *MRI) &&
-         RBI.constrainGenericRegister(Src.getReg(), *SrcRC, *MRI);
+  auto result = RBI.constrainGenericRegister(Dst.getReg(), *DstRC, *MRI) &&
+                RBI.constrainGenericRegister(Src.getReg(), *SrcRC, *MRI);
+  const MCInstrDesc &MCID = MI.getDesc();
+  if (MCID.getOperandConstraint(0, MCOI::EARLY_CLOBBER) != -1) {
+    MI.getOperand(0).setIsEarlyClobber(true);
+  }
+  return result;
 }
 
 bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
@@ -593,6 +598,7 @@ bool AMDGPUInstructionSelector::selectG_AMDGPU_MAD_64_32(
   I.setDesc(TII.get(Opc));
   I.addOperand(*MF, MachineOperand::CreateImm(0));
   I.addImplicitDefUseOperands(*MF);
+  I.getOperand(0).setIsEarlyClobber(true);
   return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 }
 
@@ -3768,6 +3774,10 @@ bool AMDGPUInstructionSelector::selectSMFMACIntrin(MachineInstr &MI) const {
   MI.removeOperand(1); // Intrinsic ID
   MI.addOperand(VDst_In); // Readd VDst_In to the end
   MI.addImplicitDefUseOperands(*MI.getParent()->getParent());
+  const MCInstrDesc &MCID = MI.getDesc();
+  if (MCID.getOperandConstraint(0, MCOI::EARLY_CLOBBER) != -1) {
+    MI.getOperand(0).setIsEarlyClobber(true);
+  }
   return true;
 }
 
