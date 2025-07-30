@@ -17,7 +17,7 @@
 // Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZvfbfminOrZvfbfa], Constraints = "@earlyclobber $vd",
+let Predicates = [HasStdExtZvfbfmin], Constraints = "@earlyclobber $vd",
     mayRaiseFPException = true in {
 let RVVConstraint = WidenCvt, DestEEW = EEWSEWx2 in
 defm VFWCVTBF16_F_F_V : VWCVTF_FV_VS2<"vfwcvtbf16.f.f.v", 0b010010, 0b01101>;
@@ -25,7 +25,7 @@ let Uses = [FRM, VL, VTYPE] in
 defm VFNCVTBF16_F_F_W : VNCVTF_FV_VS2<"vfncvtbf16.f.f.w", 0b010010, 0b11101>;
 }
 
-let Predicates = [HasStdExtZvfbfwmaOrZvfbfa],
+let Predicates = [HasStdExtZvfbfwma],
     Constraints = "@earlyclobber $vd_wb, $vd = $vd_wb",
     RVVConstraint = WidenV, Uses = [FRM, VL, VTYPE], mayRaiseFPException = true,
     DestEEW = EEWSEWx2 in {

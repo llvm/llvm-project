@@ -693,24 +693,12 @@ def HasStdExtZvfbfmin : Predicate<"Subtarget->hasStdExtZvfbfmin()">,
                         AssemblerPredicate<(all_of FeatureStdExtZvfbfmin),
                             "'Zvfbfmin' (Vector BF16 Converts)">;
 
-def HasStdExtZvfbfminOrZvfbfa
-    : Predicate<"Subtarget->hasStdExtZvfbfmin() || Subtarget->hasStdExtZvfbfa()">,
-      AssemblerPredicate<(any_of FeatureStdExtZvfbfmin, FeatureStdExtZvfbfa),
-                         "'Zvfbfmin' (Vector BF16 Converts) or "
-                         "'Zvfbfa' (Additional BF16 vector compute support)">;
-
 def FeatureStdExtZvfbfwma
     : RISCVExtension<1, 0, "Vector BF16 widening mul-add",
                      [FeatureStdExtZvfbfmin, FeatureStdExtZfbfmin]>;
 def HasStdExtZvfbfwma : Predicate<"Subtarget->hasStdExtZvfbfwma()">,
                         AssemblerPredicate<(all_of FeatureStdExtZvfbfwma),
                             "'Zvfbfwma' (Vector BF16 widening mul-add)">;
-
-def HasStdExtZvfbfwmaOrZvfbfa
-    : Predicate<"Subtarget->hasStdExtZvfbfwma() || Subtarget->hasStdExtZvfbfa()">,
-      AssemblerPredicate<(any_of FeatureStdExtZvfbfwma, FeatureStdExtZvfbfa),
-                         "'Zvfbfwma' (Vector BF16 widening mul-add) or "
-                         "'Zvfbfa' (Additional BF16 vector compute support)">;
 
 def FeatureStdExtZvfhmin
     : RISCVExtension<1, 0,
