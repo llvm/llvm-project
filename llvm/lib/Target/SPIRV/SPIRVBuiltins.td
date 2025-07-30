@@ -1559,8 +1559,8 @@ foreach conv = ["FToBF16INTEL", "BF16ToFINTEL"] in {
 }
 
 // cl_intel_tensor_float32_conversions / SPV_INTEL_tensor_float32_conversion
-// Multiclass used to define at the same time both a demangled builtin records
-// and a corresponding convert builtin records.
+// Multiclass used to define at the same time both a demangled builtin record
+// and a corresponding convert builtin record.
 multiclass DemangledTF32RoundBuiltin<string name1, string name2> {
   // Create records for scalar and vector conversions.
   foreach i = ["", "2", "3", "4", "8", "16"] in {
