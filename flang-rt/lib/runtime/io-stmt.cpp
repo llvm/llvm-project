@@ -839,10 +839,7 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     edit.descriptor = DataEdit::ListDirectedNullValue;
     return edit;
   }
-  char32_t comma{','};
-  if (edit.modes.editingFlags & decimalComma) {
-    comma = ';';
-  }
+  const char32_t comma{edit.modes.GetSeparatorChar()};
   std::size_t byteCount{0};
   if (remaining_ > 0 && !realPart_) { // "r*c" repetition in progress
     RUNTIME_CHECK(io.GetIoErrorHandler(), repeatPosition_.has_value());
