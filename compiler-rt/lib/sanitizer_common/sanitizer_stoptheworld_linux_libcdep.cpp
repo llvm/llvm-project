@@ -403,7 +403,48 @@ struct ScopedSetTracerPID {
   }
 };
 
+// This detects whether ptrace is blocked (e.g., by seccomp), by forking and
+// then attempting ptrace.
+// This separate check is necessary because StopTheWorld() creates a *thread*,
+// and therefore cannot use waitpid() due to the shared errno.
+static void TestPTrace() {
+  // Only check the first time this is called.
+  static bool checked = false;
+  if (checked)
+    return;
+  checked = true;
+
+  // fork() should be cheap because of copy-on-write. Besides, this is only
+  // called the first time.
+  int pid = internal_fork();
+
+  if (pid < 0) {
+    int rverrno;
+    if (internal_iserror(pid, &rverrno)) {
+      Report("WARNING: TestPTrace() failed to fork (errno %d)\n", rverrno);
+    }
+    _exit(-1);
+  }
+
+  if (pid == 0) {
+    // Child subprocess
+    internal_ptrace(PTRACE_ATTACH, 0, nullptr, nullptr);
+    _exit (0);
+  } else {
+    int wstatus;
+    internal_waitpid(pid, &wstatus, 0);
+
+    if (WIFSIGNALED(wstatus)) {
+      VReport(0, "Warning: ptrace appears to be blocked (is seccomp enabled?). LeakSanitizer may hang.\n");
+      VReport(0, "Child exited with signal %d.\n", WTERMSIG(wstatus));
+      // We don't abort the sanitizer - it's still worth letting the sanitizer try.
+    }
+  }
+}
+
 void StopTheWorld(StopTheWorldCallback callback, void *argument) {
+  TestPTrace();
+
   StopTheWorldScope in_stoptheworld;
   // Prepare the arguments for TracerThread.
   struct TracerThreadArgument tracer_thread_argument;
