@@ -499,7 +499,7 @@ void ForkChildAfter(ThreadState *thr, uptr pc, bool start_thread);
 
 void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
                 AccessType typ);
-bool OutputReport(ThreadState *thr, const ScopedReport &srep);
+bool OutputReport(ThreadState *thr, ScopedReport &srep);
 bool IsFiredSuppression(Context *ctx, ReportType type, StackTrace trace);
 bool IsExpectedReport(uptr addr, uptr size);
 

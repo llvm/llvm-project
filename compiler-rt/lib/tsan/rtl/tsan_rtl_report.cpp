@@ -672,11 +672,12 @@ static bool HandleRacyStacks(ThreadState *thr, VarSizeStackTrace traces[2]) {
   return false;
 }
 
-bool OutputReport(ThreadState *thr, const ScopedReport &srep) {
+bool OutputReport(ThreadState *thr, ScopedReport &srep) {
   // These should have been checked in ShouldReport.
   // It's too late to check them here, we have already taken locks.
   CHECK(flags()->report_bugs);
   CHECK(!thr->suppress_reports);
+  srep.SymbolizeStackElems();
   atomic_store_relaxed(&ctx->last_symbolize_time_ns, NanoTime());
   const ReportDesc *rep = srep.GetReport();
   CHECK_EQ(thr->current_report, nullptr);
@@ -863,7 +864,6 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
       s[1].epoch() <= thr->last_sleep_clock.Get(s[1].sid()))
     rep.AddSleep(thr->last_sleep_stack_id);
 #endif
-  rep.SymbolizeStackElems();
   OutputReport(thr, rep);
 }
 

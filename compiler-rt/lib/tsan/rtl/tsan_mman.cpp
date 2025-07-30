@@ -185,7 +185,6 @@ static void SignalUnsafeCall(ThreadState *thr, uptr pc) {
   ThreadRegistryLock l(&ctx->thread_registry);
   ScopedReport rep(ReportTypeSignalUnsafe);
   rep.AddStack(stack, true);
-  rep.SymbolizeStackElems();
   OutputReport(thr, rep);
 }
 
