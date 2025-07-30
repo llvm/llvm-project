@@ -402,6 +402,8 @@ enum CPol {
 
   SWZ = 1 << 6, // Swizzle bit
 
+  SCAL = 1 << 11, // Scale offset bit
+
   ALL = TH | SCOPE,
 
   // Helper bits
@@ -1004,6 +1006,16 @@ enum Target : unsigned {
 };
 
 } // namespace Exp
+
+namespace WMMA {
+enum MatrixFMT : unsigned {
+  MATRIX_FMT_FP8 = 0,
+  MATRIX_FMT_BF8 = 1,
+  MATRIX_FMT_FP6 = 2,
+  MATRIX_FMT_BF6 = 3,
+  MATRIX_FMT_FP4 = 4
+};
+} // namespace WMMA
 
 namespace VOP3PEncoding {
 
