@@ -46,7 +46,7 @@ LogicalResult verifyConstantExpressionInterface(Operation *op) {
 LogicalResult verifyLabelLevelInterface(Operation *op) {
   Block *target = cast<LabelLevelOpInterface>(op).getLabelTarget();
   Region *targetRegion = target->getParent();
-  if (targetRegion != op->getParentRegion() ||
+  if (targetRegion != op->getParentRegion() &&
       targetRegion->getParentOp() != op)
     return op->emitError("target should be a block defined in same level than "
                          "operation or in its region.");
