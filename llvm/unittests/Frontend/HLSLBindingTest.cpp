@@ -48,8 +48,7 @@ TEST(HLSLBindingTest, TestTrivialCase) {
       Info.getBindingSpaces(ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.RC, ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.Spaces.size(), 1u);
-  checkExpectedSpaceAndFreeRanges(UAVSpaces.Spaces[0], 0,
-                                  {0u, 4u, 6u, ~0u});
+  checkExpectedSpaceAndFreeRanges(UAVSpaces.Spaces[0], 0, {0u, 4u, 6u, ~0u});
 
   // check that other kinds of register spaces are all available
   for (auto RC :
