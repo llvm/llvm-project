@@ -813,7 +813,7 @@ define i32 @test_cvt_scale_fp4_f32_byte1(i32 %old, float %src0, float %src1, flo
 ; GCN-LABEL: test_cvt_scale_fp4_f32_byte1:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cvt_scalef32_pk_fp4_f32 v0, v1, v2, v3 op_sel:[0,0,0,1]
+; GCN-NEXT:    v_cvt_scalef32_pk_fp4_f32 v0, v1, v2, v3 op_sel:[0,0,1,0]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %ret = tail call i32 @llvm.amdgcn.cvt.scalef32.pk.fp4.f32(i32 %old, float %src0, float %src1, float %scale, i32 1)
   ret i32 %ret
@@ -823,7 +823,7 @@ define i32 @test_cvt_scale_fp4_f32_byte2(i32 %old, float %src0, float %src1, flo
 ; GCN-LABEL: test_cvt_scale_fp4_f32_byte2:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cvt_scalef32_pk_fp4_f32 v0, v1, v2, v3 op_sel:[0,0,1,0]
+; GCN-NEXT:    v_cvt_scalef32_pk_fp4_f32 v0, v1, v2, v3 op_sel:[0,0,0,1]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %ret = tail call i32 @llvm.amdgcn.cvt.scalef32.pk.fp4.f32(i32 %old, float %src0, float %src1, float %scale, i32 2)
   ret i32 %ret
@@ -1302,7 +1302,7 @@ define i32 @test_cvt_scalef32_fp4_f16_byte1(<2 x half> %src0, float %scale, i32 
 ; GCN-LABEL: test_cvt_scalef32_fp4_f16_byte1:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cvt_scalef32_pk_fp4_f16 v2, v0, v1 op_sel:[0,0,0,1]
+; GCN-NEXT:    v_cvt_scalef32_pk_fp4_f16 v2, v0, v1 op_sel:[0,0,1,0]
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -1314,7 +1314,7 @@ define i32 @test_cvt_scalef32_fp4_f16_byte2(<2 x half> %src0, float %scale, i32 
 ; GCN-LABEL: test_cvt_scalef32_fp4_f16_byte2:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cvt_scalef32_pk_fp4_f16 v2, v0, v1 op_sel:[0,0,1,0]
+; GCN-NEXT:    v_cvt_scalef32_pk_fp4_f16 v2, v0, v1 op_sel:[0,0,0,1]
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -1380,7 +1380,7 @@ define i32 @test_cvt_scalef32_fp4_bf16_byte1(<2 x bfloat> %src0, float %scale, i
 ; GCN-LABEL: test_cvt_scalef32_fp4_bf16_byte1:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cvt_scalef32_pk_fp4_bf16 v2, v0, v1 op_sel:[0,0,0,1]
+; GCN-NEXT:    v_cvt_scalef32_pk_fp4_bf16 v2, v0, v1 op_sel:[0,0,1,0]
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -1392,7 +1392,7 @@ define i32 @test_cvt_scalef32_fp4_bf16_byte2(<2 x bfloat> %src0, float %scale, i
 ; GCN-LABEL: test_cvt_scalef32_fp4_bf16_byte2:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cvt_scalef32_pk_fp4_bf16 v2, v0, v1 op_sel:[0,0,1,0]
+; GCN-NEXT:    v_cvt_scalef32_pk_fp4_bf16 v2, v0, v1 op_sel:[0,0,0,1]
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -2072,7 +2072,7 @@ define i32 @test_cvt_scale_fp4_f32_byte1_inreg_src(i32 %old, float inreg %src0, 
 ; GCN-LABEL: test_cvt_scale_fp4_f32_byte1_inreg_src:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cvt_scalef32_pk_fp4_f32 v0, s0, v1, v2 op_sel:[0,0,0,1]
+; GCN-NEXT:    v_cvt_scalef32_pk_fp4_f32 v0, s0, v1, v2 op_sel:[0,0,1,0]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %ret = tail call i32 @llvm.amdgcn.cvt.scalef32.pk.fp4.f32(i32 %old, float %src0, float %src1, float %scale, i32 1)
   ret i32 %ret
@@ -2082,7 +2082,7 @@ define i32 @test_cvt_scale_fp4_f32_byte2_inreg_src(i32 %old, float inreg %src0, 
 ; GCN-LABEL: test_cvt_scale_fp4_f32_byte2_inreg_src:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cvt_scalef32_pk_fp4_f32 v0, s0, v1, v2 op_sel:[0,0,1,0]
+; GCN-NEXT:    v_cvt_scalef32_pk_fp4_f32 v0, s0, v1, v2 op_sel:[0,0,0,1]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %ret = tail call i32 @llvm.amdgcn.cvt.scalef32.pk.fp4.f32(i32 %old, float %src0, float %src1, float %scale, i32 2)
   ret i32 %ret
@@ -2515,7 +2515,7 @@ define i32 @test_cvt_scalef32_fp4_f16_byte1_inreg_src(<2 x half> inreg %src0, fl
 ; GCN-LABEL: test_cvt_scalef32_fp4_f16_byte1_inreg_src:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cvt_scalef32_pk_fp4_f16 v1, s0, v0 op_sel:[0,0,0,1]
+; GCN-NEXT:    v_cvt_scalef32_pk_fp4_f16 v1, s0, v0 op_sel:[0,0,1,0]
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -2527,7 +2527,7 @@ define i32 @test_cvt_scalef32_fp4_f16_byte2_inreg_src(<2 x half> inreg %src0, fl
 ; GCN-LABEL: test_cvt_scalef32_fp4_f16_byte2_inreg_src:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cvt_scalef32_pk_fp4_f16 v1, s0, v0 op_sel:[0,0,1,0]
+; GCN-NEXT:    v_cvt_scalef32_pk_fp4_f16 v1, s0, v0 op_sel:[0,0,0,1]
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -2562,7 +2562,7 @@ define i32 @test_cvt_scalef32_fp4_bf16_byte1_inreg_src(<2 x bfloat> inreg %src0,
 ; GCN-LABEL: test_cvt_scalef32_fp4_bf16_byte1_inreg_src:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cvt_scalef32_pk_fp4_bf16 v1, s0, v0 op_sel:[0,0,0,1]
+; GCN-NEXT:    v_cvt_scalef32_pk_fp4_bf16 v1, s0, v0 op_sel:[0,0,1,0]
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -2574,7 +2574,7 @@ define i32 @test_cvt_scalef32_fp4_bf16_byte2_inreg_src(<2 x bfloat> inreg %src0,
 ; GCN-LABEL: test_cvt_scalef32_fp4_bf16_byte2_inreg_src:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cvt_scalef32_pk_fp4_bf16 v1, s0, v0 op_sel:[0,0,1,0]
+; GCN-NEXT:    v_cvt_scalef32_pk_fp4_bf16 v1, s0, v0 op_sel:[0,0,0,1]
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
