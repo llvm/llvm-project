@@ -6120,10 +6120,11 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
           !Op.isIdenticalTo(*MO))
         return false;
 
-      // Do not fold a frame index into an instruction that already has a frame
-      // index. The frame index handling code doesn't handle fixing up operand
-      // constraints if there are multiple indexes.
-      if (Op.isFI() && MO->isFI())
+      // Do not fold a frame index or an immediate into an instruction that
+      // already has a frame index. The frame index handling code doesn't handle
+      // fixing up operand constraints if there are multiple indexes, and a
+      // frame index could possibly turn out to be another immediate.
+      if (Op.isFI() && (MO->isFI() || MO->isImm()))
         return false;
     }
   } else if (IsInlineConst && ST.hasNoF16PseudoScalarTransInlineConstants() &&
