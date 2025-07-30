@@ -30,10 +30,19 @@ SymbolFileWasm::GetVendorDWARFOpcodeSize(const DataExtractor &data,
 
   lldb::offset_t offset = data_offset;
   const uint8_t wasm_op = data.GetU8(&offset);
-  if (wasm_op == eWasmTagOperandStack)
-    data.GetU32(&offset);
-  else
+  switch (wasm_op) {
+  case 0: // LOCAL
+  case 1: // GLOBAL_FIXED
+  case 2: // OPERAND_STACK
     data.GetULEB128(&offset);
+    break;
+  case 3: // GLOBAL_RELOC
+    data.GetU32(&offset);
+    break;
+  default:
+    return LLDB_INVALID_OFFSET;
+  }
+
   return offset - data_offset;
 }
 
