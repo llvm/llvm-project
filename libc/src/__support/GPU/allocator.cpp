@@ -16,6 +16,7 @@
 
 #include "allocator.h"
 
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/new.h"
@@ -31,6 +32,7 @@ constexpr static uint64_t SLAB_SIZE = /* 2 MiB */ 2ull * 1024 * 1024;
 constexpr static uint64_t ARRAY_SIZE = MAX_SIZE / SLAB_SIZE;
 constexpr static uint64_t SLAB_ALIGNMENT = SLAB_SIZE - 1;
 constexpr static uint32_t BITS_IN_WORD = sizeof(uint32_t) * 8;
+constexpr static uint32_t BITS_IN_DWORD = sizeof(uint64_t) * 8;
 constexpr static uint32_t MIN_SIZE = 16;
 constexpr static uint32_t MIN_ALIGNMENT = MIN_SIZE - 1;
 
@@ -70,8 +72,8 @@ static void rpc_free(void *ptr) {
 
 // Convert a potentially disjoint bitmask into an increasing integer per-lane
 // for use with indexing between gpu lanes.
-static inline uint32_t lane_count(uint64_t lane_mask) {
-  return cpp::popcount(lane_mask & ((uint64_t(1) << gpu::get_lane_id()) - 1));
+static inline uint32_t lane_count(uint64_t lane_mask, uint32_t id) {
+  return cpp::popcount(lane_mask & ((uint64_t(1) << id) - 1));
 }
 
 // Obtain an initial value to seed a random number generator. We use the rounded
@@ -133,7 +135,8 @@ static inline constexpr T round_up(const T x) {
 void uniform_memset(uint32_t *s, uint32_t c, uint32_t n, uint64_t uniform) {
   uint64_t mask = gpu::get_lane_mask();
   uint32_t workers = cpp::popcount(uniform);
-  for (uint32_t i = impl::lane_count(mask & uniform); i < n; i += workers)
+  for (uint32_t i = impl::lane_count(mask & uniform, gpu::get_lane_id()); i < n;
+       i += workers)
     s[i] = c;
 }
 
@@ -152,6 +155,12 @@ static inline constexpr uint32_t get_start_index(uint32_t chunk_size) {
   uint64_t bias = (norm * norm * norm) >> 32;
   uint64_t inv = (1 << 16) - bias;
   return static_cast<uint32_t>(((ARRAY_SIZE - 1) * inv) >> 16);
+}
+
+// Returns the id of the lane below this one that acts as its leader.
+static inline uint32_t get_leader_id(uint64_t ballot, uint32_t id) {
+  uint64_t mask = id < BITS_IN_DWORD ? ~0ull << (id + 1) : 0;
+  return BITS_IN_DWORD - cpp::countl_zero(ballot & ~mask) - 1;
 }
 
 } // namespace impl
@@ -275,23 +284,28 @@ struct Slab {
           ~after ? (old_index & ~(BITS_IN_WORD - 1)) + cpp::countr_zero(~after)
                  : __builtin_align_down(impl::xorshift32(state), BITS_IN_WORD));
 
-      uint32_t id = impl::lane_count(uniform & mask);
+      // Each lane tries to claim one bit in a single contiguous mask.
+      uint32_t id = impl::lane_count(uniform & mask, gpu::get_lane_id());
       uint32_t index = (start + id) % usable_bits(chunk_size);
       uint32_t slot = index / BITS_IN_WORD;
       uint32_t bit = index % BITS_IN_WORD;
 
       // Get the mask of bits destined for the same slot and coalesce it.
-      uint64_t match = uniform & gpu::match_any(mask, slot);
-      uint32_t length = cpp::popcount(match);
-      uint32_t bitmask = gpu::shuffle(
-          mask, cpp::countr_zero(match),
-          static_cast<uint32_t>((uint64_t(1) << length) - 1) << bit);
+      uint32_t leader = impl::get_leader_id(
+          uniform & gpu::ballot(mask, !id || index % BITS_IN_WORD == 0),
+          gpu::get_lane_id());
+      uint32_t length = cpp::popcount(uniform & mask) -
+                        impl::lane_count(uniform & mask, leader);
+      uint32_t bitmask =
+          static_cast<uint32_t>(
+              (uint64_t(1) << cpp::min(length, BITS_IN_WORD)) - 1)
+          << bit;
 
       uint32_t before = 0;
-      if (gpu::get_lane_id() == static_cast<uint32_t>(cpp::countr_zero(match)))
+      if (gpu::get_lane_id() == leader)
         before = cpp::AtomicRef(get_bitfield()[slot])
                      .fetch_or(bitmask, cpp::MemoryOrder::RELAXED);
-      before = gpu::shuffle(mask, cpp::countr_zero(match), before);
+      before = gpu::shuffle(mask, leader, before);
       if (~before & (1 << bit))
         result = ptr_from_index(index, chunk_size);
       else
@@ -446,7 +460,8 @@ public:
     }
 
     if (count != cpp::numeric_limits<uint64_t>::max())
-      count = count - cpp::popcount(uniform) + impl::lane_count(uniform) + 1;
+      count = count - cpp::popcount(uniform) +
+              impl::lane_count(uniform, gpu::get_lane_id()) + 1;
 
     return result;
   }
