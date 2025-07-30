@@ -193,8 +193,10 @@ define i1 @test8(i32 %X) {
 
 define i1 @test9(i32 %X) {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[TMP1]], 2
+; CHECK-NEXT:    [[P_SPLIT:%.*]] = getelementptr inbounds [4 x { i32, i32 }], ptr @GA, i32 0, i32 [[X:%.*]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds nuw i8, ptr [[P_SPLIT]], i32 4
+; CHECK-NEXT:    [[Q:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[Q]], 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %P = getelementptr inbounds [4 x { i32, i32 } ], ptr @GA, i32 0, i32 %X, i32 1
@@ -266,7 +268,10 @@ define i1 @test10_struct_noinbounds_i16(i16 %x) {
 
 define i1 @test10_struct_arr(i32 %x) {
 ; CHECK-LABEL: @test10_struct_arr(
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[P_SPLIT:%.*]] = getelementptr inbounds [4 x %Foo], ptr @GStructArr, i32 0, i32 [[X:%.*]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds nuw i8, ptr [[P_SPLIT]], i32 8
+; CHECK-NEXT:    [[Q:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[Q]], 9
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %p = getelementptr inbounds [4 x %Foo], ptr @GStructArr, i32 0, i32 %x, i32 2
@@ -277,8 +282,10 @@ define i1 @test10_struct_arr(i32 %x) {
 
 define i1 @test10_struct_arr_noinbounds(i32 %x) {
 ; CHECK-LABEL: @test10_struct_arr_noinbounds(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 268435455
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP1]], 1
+; CHECK-NEXT:    [[P_SPLIT:%.*]] = getelementptr [4 x %Foo], ptr @GStructArr, i32 0, i32 [[X:%.*]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr [[P_SPLIT]], i32 8
+; CHECK-NEXT:    [[Q:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[Q]], 9
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %p = getelementptr [4 x %Foo], ptr @GStructArr, i32 0, i32 %x, i32 2
@@ -289,7 +296,11 @@ define i1 @test10_struct_arr_noinbounds(i32 %x) {
 
 define i1 @test10_struct_arr_i16(i16 %x) {
 ; CHECK-LABEL: @test10_struct_arr_i16(
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i16 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[P_SPLIT:%.*]] = getelementptr inbounds [4 x %Foo], ptr @GStructArr, i32 0, i32 [[TMP1]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds nuw i8, ptr [[P_SPLIT]], i32 8
+; CHECK-NEXT:    [[Q:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[Q]], 9
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %p = getelementptr inbounds [4 x %Foo], ptr @GStructArr, i16 0, i16 %x, i32 2
@@ -300,8 +311,11 @@ define i1 @test10_struct_arr_i16(i16 %x) {
 
 define i1 @test10_struct_arr_i64(i64 %x) {
 ; CHECK-LABEL: @test10_struct_arr_i64(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[X:%.*]], 4294967295
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X:%.*]] to i32
+; CHECK-NEXT:    [[P_SPLIT:%.*]] = getelementptr inbounds [4 x %Foo], ptr @GStructArr, i32 0, i32 [[TMP1]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds nuw i8, ptr [[P_SPLIT]], i32 8
+; CHECK-NEXT:    [[Q:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[Q]], 9
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %p = getelementptr inbounds [4 x %Foo], ptr @GStructArr, i64 0, i64 %x, i32 2
@@ -312,7 +326,11 @@ define i1 @test10_struct_arr_i64(i64 %x) {
 
 define i1 @test10_struct_arr_noinbounds_i16(i16 %x) {
 ; CHECK-LABEL: @test10_struct_arr_noinbounds_i16(
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i16 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[P_SPLIT:%.*]] = getelementptr [4 x %Foo], ptr @GStructArr, i32 0, i32 [[TMP1]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr [[P_SPLIT]], i32 8
+; CHECK-NEXT:    [[Q:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[Q]], 9
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %p = getelementptr [4 x %Foo], ptr @GStructArr, i32 0, i16 %x, i32 2
@@ -323,8 +341,11 @@ define i1 @test10_struct_arr_noinbounds_i16(i16 %x) {
 
 define i1 @test10_struct_arr_noinbounds_i64(i64 %x) {
 ; CHECK-LABEL: @test10_struct_arr_noinbounds_i64(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[X:%.*]], 268435455
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X:%.*]] to i32
+; CHECK-NEXT:    [[P_SPLIT:%.*]] = getelementptr [4 x %Foo], ptr @GStructArr, i32 0, i32 [[TMP1]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr [[P_SPLIT]], i32 8
+; CHECK-NEXT:    [[Q:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[Q]], 9
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %p = getelementptr [4 x %Foo], ptr @GStructArr, i32 0, i64 %x, i32 2
