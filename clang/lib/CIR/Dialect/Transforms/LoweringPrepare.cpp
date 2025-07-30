@@ -155,7 +155,8 @@ void LoweringPreparePass::lowerUnaryOp(cir::UnaryOp op) {
 
   case cir::UnaryOpKind::Plus:
   case cir::UnaryOpKind::Minus:
-    llvm_unreachable("Complex unary Plus/Minus NYI");
+    resultReal = builder.createUnaryOp(loc, opKind, operandReal);
+    resultImag = builder.createUnaryOp(loc, opKind, operandImag);
     break;
 
   case cir::UnaryOpKind::Not:
