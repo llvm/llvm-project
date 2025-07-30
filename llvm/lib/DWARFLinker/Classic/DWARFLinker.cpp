@@ -475,13 +475,18 @@ static void constructSeqOffsettoOrigRowMapping(
   constexpr unsigned DummyVal = UINT32_MAX;
   LineTableMapping[DummyKey] = DummyVal;
 
-  for (auto [NextSeqOff, NextRow] : LineTableMapping) {
-    auto StmtAttrSmallerThanNext = [NextSeqOff](const PatchLocation &SA) {
-      return SA.get() < NextSeqOff;
-    };
-    auto SeqStartSmallerThanNext = [NextRow](const size_t &Row) {
-      return Row < NextRow;
-    };
+  uint64_t NextSeqOff = 0;
+  unsigned NextRow = 0;
+  auto StmtAttrSmallerThanNext = [&](const PatchLocation &SA) {
+    return SA.get() < NextSeqOff;
+  };
+  auto SeqStartSmallerThanNext = [&](const size_t &Row) {
+    return Row < NextRow;
+  };
+
+  for (auto It : LineTableMapping) {
+    NextSeqOff = It.first;
+    NextRow = It.second;
 
     // If both StmtAttrs and SeqStartRows points to value not in
     // the LineTableMapping yet, we do a dummy one to one mapping and
