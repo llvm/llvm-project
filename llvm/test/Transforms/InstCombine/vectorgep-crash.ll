@@ -10,10 +10,14 @@ target triple = "x86_64-unknown-linux-gnu"
 %Partials = type { [2 x double] }
 %Partials.73 = type { [2 x %Dual.72] }
 
-; Function Attrs: sspreq
-define <8 x ptr> @"julia_axpy!_65480"(ptr %arg1, <8 x i64> %arg2) {
+define <8 x ptr> @test_vector_gep(ptr %arg1, <8 x i64> %arg2) {
+; CHECK-LABEL: define <8 x ptr> @test_vector_gep(
+; CHECK-SAME: ptr [[ARG1:%.*]], <8 x i64> [[ARG2:%.*]]) {
+; CHECK-NEXT:  [[TOP:.*:]]
+; CHECK-NEXT:    [[VECTORGEP14:%.*]] = getelementptr inbounds [[DUAL:%.*]], ptr [[ARG1]], <8 x i64> [[ARG2]], i32 1, i32 0, i64 0, i32 1, i32 0, i64 0
+; CHECK-NEXT:    ret <8 x ptr> [[VECTORGEP14]]
+;
 top:
-; CHECK: %VectorGep14 = getelementptr inbounds %Dual, ptr %arg1, <8 x i64> %arg2, i32 1, i32 0, i64 0, i32 1, i32 0, i64 0
   %VectorGep14 = getelementptr inbounds %Dual, ptr %arg1, <8 x i64> %arg2, i32 1, i32 0, i64 0, i32 1, i32 0, i64 0
   %0 = bitcast <8 x ptr> %VectorGep14 to <8 x ptr>
   ret <8 x ptr> %0
