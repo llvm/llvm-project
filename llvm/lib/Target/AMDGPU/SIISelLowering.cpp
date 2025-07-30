@@ -4292,7 +4292,7 @@ SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   Chain = BaseAddr.getValue(1);
   Align StackAlign = TFL->getStackAlign();
   if (Alignment > StackAlign) {
-    uint64_t ScaledAlignment = (uint64_t)Alignment.value()
+    uint64_t ScaledAlignment = Alignment.value()
                                << Subtarget->getWavefrontSizeLog2();
     uint64_t StackAlignMask = ScaledAlignment - 1;
     SDValue TmpAddr = DAG.getNode(ISD::ADD, dl, VT, BaseAddr,
