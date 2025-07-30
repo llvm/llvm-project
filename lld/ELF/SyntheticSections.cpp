@@ -769,10 +769,6 @@ void GotSection::writeTo(uint8_t *buf) {
   }
 }
 
-static uint64_t getMipsPageAddr(uint64_t addr) {
-  return (addr + 0x8000) & ~0xffff;
-}
-
 static uint64_t getMipsPageCount(uint64_t size) {
   return (size + 0xfffe) / 0xffff + 1;
 }
@@ -786,7 +782,7 @@ void MipsGotSection::addEntry(InputFile &file, Symbol &sym, int64_t addend,
   FileGot &g = getGot(file);
   if (expr == RE_MIPS_GOT_LOCAL_PAGE) {
     if (const OutputSection *os = sym.getOutputSection())
-      g.pagesMap.insert({os, {}});
+      g.pagesMap.insert({os, {&sym}});
     else
       g.local16.insert({{nullptr, getMipsPageAddr(sym.getVA(ctx, addend))}, 0});
   } else if (sym.isTls())
@@ -1115,8 +1111,9 @@ void MipsGotSection::build() {
       size_t pageCount = l.second.count;
       for (size_t pi = 0; pi < pageCount; ++pi) {
         uint64_t offset = (l.second.firstIndex + pi) * ctx.arg.wordsize;
-        ctx.mainPart->relaDyn->addReloc({ctx.target->relativeRel, this, offset,
-                                         l.first, int64_t(pi * 0x10000)});
+        ctx.mainPart->relaDyn->addReloc(
+            {ctx.target->relativeRel, this, offset, DynamicReloc::AddendOnly,
+             *l.second.repSym, int64_t(pi * 0x10000), RE_MIPS_OSEC_LOCAL_PAGE});
       }
     }
     for (const std::pair<GotEntry, size_t> &p : got.local16) {
@@ -1655,9 +1652,6 @@ int64_t DynamicReloc::computeAddend(Ctx &ctx) const {
         ctx, Relocation{expr, type, 0, addend, sym}, getOffset());
     return ctx.arg.is64 ? ca : SignExtend64<32>(ca);
   }
-  case MipsMultiGotPage:
-    assert(sym == nullptr);
-    return getMipsPageAddr(outputSec->addr) + addend;
   }
   llvm_unreachable("Unknown DynamicReloc::Kind enum");
 }
