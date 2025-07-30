@@ -5680,10 +5680,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // AVX Galois Field New Instructions
     case Intrinsic::x86_vgf2p8affineqb_128:
     case Intrinsic::x86_vgf2p8affineqb_256:
-    case Intrinsic::x86_vgf2p8affineqb_512: {
+    case Intrinsic::x86_vgf2p8affineqb_512:
       handleAVXGF2P8Affine(I);
       break;
-    }
 
     case Intrinsic::fshl:
     case Intrinsic::fshr:
