@@ -1070,8 +1070,8 @@ struct ReorderElementwiseOpsOnBroadcast final
         Attribute newConst;
         Type elementType = getElementTypeOrSelf(operand.getType());
         Type newType = cloneOrReplace(unbroadcastResultType, elementType);
-        if (auto shapedTy = dyn_cast<ShapedType>(unbroadcastResultType)) {
-          newConst = splatConst.resizeSplat(cast<ShapedType>(newType));
+        if (auto newTypeShaped = dyn_cast<ShapedType>(newType)) {
+          newConst = splatConst.resizeSplat(newTypeShaped);
         } else {
           newConst = splatConst.getSplatValue<Attribute>();
         }
