@@ -87,12 +87,23 @@ def ExecuteRegionOp : SCF_Op<"execute_region", [
     be accessed inside the op. The op's region can have multiple blocks and the
     blocks can have multiple distinct terminators. Values returned from this op's
     region define the op's results.
+    Canonicalizer inlines an ExecuteRegionOp into its parent if it only contains 
+    one block or its parent can contain multiple blocks, 'no_inline' attribute
+    can be set to prevent an ExecuteRegionOp from being inlined.
 
     Example:
 
     ```mlir
     scf.for %i = 0 to 128 step %c1 {
       %y = scf.execute_region -> i32 {
+        %x = load %A[%i] : memref<128xi32>
+        scf.yield %x : i32
+      }
+    }
+
+    // the same as above but with no_inline attribute
+    scf.for %i = 0 to 128 step %c1 {
+      %y = scf.execute_region -> i32 no_inline {
         %x = load %A[%i] : memref<128xi32>
         scf.yield %x : i32
       }
