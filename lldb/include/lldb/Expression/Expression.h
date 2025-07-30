@@ -142,7 +142,7 @@ struct FunctionCallLabel {
   std::string toString() const;
 };
 
-/// LLDB attaches this prefix to mangled names of functions that it get called
+/// LLDB attaches this prefix to mangled names of functions that get called
 /// from JITted expressions.
 inline constexpr llvm::StringRef FunctionCallLabelPrefix = "$__lldb_func";
 
