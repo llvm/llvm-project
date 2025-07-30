@@ -548,7 +548,6 @@ public:
   bool GetHasForcefullyCompletedTypes() const {
     return m_has_forcefully_completed_types;
   }
-
 protected:
   SymbolFile *m_sym_file = nullptr;
   /// Used for reporting statistics.
