@@ -2381,11 +2381,12 @@ SPIRVEmitIntrinsics::simplifyZeroLengthArrayGepInst(GetElementPtrInst *GEP) {
   assert(GEP && "GEP is null");
   Type *SrcTy = GEP->getSourceElementType();
   SmallVector<Value *, 8> Indices(GEP->indices());
-  if (SrcTy->isArrayTy() && cast<ArrayType>(SrcTy)->getNumElements() == 0 &&
+  ArrayType *ArrTy = dyn_cast<ArrayType>(SrcTy);
+  if (ArrTy && ArrTy->getNumElements() == 0 &&
       PatternMatch::match(Indices[0], PatternMatch::m_Zero())) {
     IRBuilder<> Builder(GEP);
     Indices.erase(Indices.begin());
-    SrcTy = cast<ArrayType>(SrcTy)->getElementType();
+    SrcTy = ArrTy->getElementType();
     Value *NewGEP = Builder.CreateGEP(SrcTy, GEP->getPointerOperand(), Indices,
                                       "", GEP->getNoWrapFlags());
     assert(llvm::isa<GetElementPtrInst>(NewGEP) && "NewGEP should be a GEP");
