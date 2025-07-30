@@ -38,6 +38,7 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
 
   using VRegDefStack = std::vector<CurVRegInfo>;
 
+#ifndef NDEBUG
   void printVRegDefStack(VRegDefStack VregDefs) {
     VRegDefStack::reverse_iterator It = VregDefs.rbegin();
     dbgs() << "\n####################################\n";
@@ -51,6 +52,7 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
     }
     dbgs() << "####################################\n";
   }
+#endif
 
   SetVector<VRegMaskPair> CrossBlockVRegs;
   DenseMap<VRegMaskPair, SmallPtrSet<MachineBasicBlock *, 8>> DefBlocks;
@@ -98,31 +100,30 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
            "Error: use does not dominated by definition!\n");
     SmallVector<std::tuple<unsigned, unsigned, unsigned>> RegSeqOps;
     LaneBitmask UseMask = getOperandLaneMask(Op, TRI, MRI);
-    dbgs() << "Use mask : " << PrintLaneMask(UseMask) << "\n";
+    LLVM_DEBUG(dbgs() << "Use mask : " << PrintLaneMask(UseMask)
+                      << "\nLooking for appropriate definiton...\n");
     LaneBitmask UndefSubRegs = UseMask;
     LaneBitmask DefinedLanes = LaneBitmask::getNone();
     unsigned SubRegIdx = AMDGPU::NoRegister;
-    dbgs() << "Looking for appropriate definiton...\n";
     Register CurVReg = AMDGPU::NoRegister;
     VRegDefStack VregDefs = VregNames[VReg];
     VRegDefStack::reverse_iterator It = VregDefs.rbegin();
     for (; It != VregDefs.rend(); ++It) {
       CurVRegInfo VRInfo = *It;
-      dbgs() << "Def:\n";
       CurVReg = VRInfo.CurName;
       MachineInstr *DefMI = VRInfo.DefMI;
       MachineOperand *DefOp = DefMI->findRegisterDefOperand(CurVReg, TRI);
       const TargetRegisterClass *RC =
           TRI->getRegClassForOperandReg(*MRI, *DefOp);
-      dbgs() << "DefMI: " << *DefMI << "\n";
-      dbgs() << "Operand: " << *DefOp << "\n";
       LaneBitmask DefMask = VRInfo.PrevMask;
-      dbgs() << "Def mask : " << PrintLaneMask(DefMask) << "\n";
       LaneBitmask LanesDefinedyCurrentDef = (UndefSubRegs & DefMask) & UseMask;
-      dbgs() << "Lanes defined by current Def: "
-             << PrintLaneMask(LanesDefinedyCurrentDef) << "\n";
       DefinedLanes |= LanesDefinedyCurrentDef;
-      dbgs() << "Total defined lanes: " << PrintLaneMask(DefinedLanes) << "\n";
+      LLVM_DEBUG(dbgs() << "Def:\nDefMI: " << *DefMI << "\nOperand : " << *DefOp
+             << "\nDef mask : " << PrintLaneMask(DefMask)
+             << "\nLanes defined by current Def: "
+             << PrintLaneMask(LanesDefinedyCurrentDef)
+             << "\nTotal defined lanes: " << PrintLaneMask(DefinedLanes)
+             << "\n");
 
       if (LanesDefinedyCurrentDef == UseMask) {
         // All lanes used here are defined by this def.
@@ -148,9 +149,9 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
           SmallVector<unsigned> Idxs =
               getCoveringSubRegsForLaneMask(LanesDefinedyCurrentDef, RC, TRI);
           for (unsigned SubIdx : Idxs) {
-            dbgs() << "Matching subreg: " << SubIdx << " : "
+            LLVM_DEBUG(dbgs() << "Matching subreg: " << SubIdx << " : "
                    << PrintLaneMask(TRI->getSubRegIndexLaneMask(SubIdx))
-                   << "\n";
+                   << "\n");
             RegSeqOps.push_back({CurVReg, SubIdx, SubIdx});
           }
         } else {
@@ -160,13 +161,13 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
           RegSeqOps.push_back({CurVReg, SrcSubReg, DstSubReg});
         }
         UndefSubRegs = UseMask & ~DefinedLanes;
-        dbgs() << "UndefSubRegs: " << PrintLaneMask(UndefSubRegs) << "\n";
+        LLVM_DEBUG(dbgs() << "UndefSubRegs: " << PrintLaneMask(UndefSubRegs) << "\n");
         if (UndefSubRegs.none())
           break;
       } else {
         // The current definition does not define any of the lanes used
         // here. Continue to search for the definition.
-        dbgs() << "No lanes defined by this def!\n";
+        LLVM_DEBUG(dbgs() << "No lanes defined by this def!\n");
         continue;
       }
     }
@@ -207,8 +208,8 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
            "Use is not dominated by definition!\n");
 
     if (RewriteOp) {
-      dbgs() << "Rewriting use: " << Op << " to "
-             << printReg(CurVReg, TRI, SubRegIdx, MRI) << "\n";
+      LLVM_DEBUG(dbgs() << "Rewriting use: " << Op << " to "
+             << printReg(CurVReg, TRI, SubRegIdx, MRI) << "\n");
       Op.setReg(CurVReg);
       Op.setSubReg(SubRegIdx);
     }
@@ -223,7 +224,6 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
     for (auto &PHI : MBB.phis()) {
       MachineOperand &Op = PHI.getOperand(0);
       Register Res = Op.getReg();
-      printVRegDefStack(VregNames[Res]);
       unsigned SubRegIdx = Op.getSubReg();
       const TargetRegisterClass *RC =
           SubRegIdx ? TRI->getSubRegisterClass(
@@ -237,7 +237,7 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
                                     ? MRI->getMaxLaneMaskForVReg(Res)
                                     : TRI->getSubRegIndexLaneMask(SubRegIdx),
                                 AMDGPU::NoRegister, &PHI});
-      printVRegDefStack(VregNames[Res]);
+      LLVM_DEBUG(dbgs() << "\nNames stack:\n";printVRegDefStack(VregNames[Res]));
       DefSeen.insert(NewVReg);
       Renamed.insert(Res);
     }
@@ -261,8 +261,8 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
             VregNames[VReg].push_back({NewVReg,
                                        getOperandLaneMask(Op, TRI, MRI),
                                        Op.getSubReg(), &I});
-            printVRegDefStack(VregNames[VReg]);
-
+            LLVM_DEBUG(dbgs() << "\nNames stack:\n";
+                       printVRegDefStack(VregNames[VReg]));
 
             Op.ChangeToRegister(NewVReg, true, false, false, false, false);
             Op.setSubReg(AMDGPU::NoRegister);
@@ -273,8 +273,9 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
           } else {
             VregNames[VReg].push_back(
                 {VReg, getOperandLaneMask(Op, TRI, MRI), Op.getSubReg(), &I});
-            printVRegDefStack(VregNames[VReg]);
-            
+            LLVM_DEBUG(dbgs() << "\nNames stack:\n";
+                       printVRegDefStack(VregNames[VReg]));
+
             DefSeen.insert(VReg);
           }
         }
@@ -367,6 +368,9 @@ bool AMDGPURebuildSSALegacy::runOnMachineFunction(MachineFunction &MF) {
   TII = MF.getSubtarget<GCNSubtarget>().getInstrInfo();
   MRI = &MF.getRegInfo();
   TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
+
+  if (MRI->isSSA())
+    return false;
 
   CrossBlockVRegs.clear();
   DefBlocks.clear();
