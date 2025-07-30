@@ -62,7 +62,10 @@ function(llvm_process_sources OUT_VAR)
     get_filename_component(suf ${fn} EXT)
     if("${suf}" STREQUAL ".cpp" OR "${suf}" STREQUAL ".c")
       get_filename_component(short_name ${fn} NAME)
-      set_source_files_properties(${fn} PROPERTIES COMPILE_DEFINITIONS "__SHORT_FILE__=\"${short_name}\"")
+      set_property(
+          SOURCE ${fn}
+          APPEND
+          PROPERTY COMPILE_DEFINITIONS __SHORT_FILE__="${short_name}")
     endif()
   endforeach()
 
