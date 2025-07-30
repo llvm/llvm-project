@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+f,+zfh -target-abi=lp64f -code-model=large -verify-machineinstrs < %s \
-; RUN:   -filetype=obj -o - | llvm-objdump -htr - \
+; RUN:   -filetype=obj -o - | llvm-readobj -r - \
 ; RUN:   | FileCheck %s -check-prefix=RV64I
 ; RUN: llc -mtriple=riscv64 -mattr=+zfinx,+zhinx -target-abi=lp64 -code-model=large -verify-machineinstrs < %s \
-; RUN:   -filetype=obj -o - | llvm-objdump -htr - \
+; RUN:   -filetype=obj -o - | llvm-readobj -r - \
 ; RUN:   | FileCheck %s -check-prefix=RV64I
 
 
@@ -10,31 +10,16 @@
 ;; constant pools, so that accessing them is close to `.text`, rather than
 ;; far away in `.data`. The other choices are `.rodata` and `.data.rel.ro`,
 ;; both of which may not be close enough to `.text` to be referenced.
+;;
+;; The test uses `readobj` to check that there are relocations against the
+;; `.text` section for these addresses. This is not compatible with PIC,
+;; just like the rest of the large code model.
 
-; RV64I-LABEL: Sections:
-; RV64I: .text 000000b4
-; RV64I: .rela.text 00000060
-; RV64I: .bss 00000010
-; RV64I: .data 00000002
-
-; RV64I-LABEL: SYMBOL TABLE:
-; RV64I: g O .bss 0000000000000004 G
-; RV64I: g F .text {{[0-9a-f]+}} lower_global
-; RV64I: g O .bss 0000000000000008 addr
-; RV64I: g F .text {{[0-9a-f]+}} lower_blockaddress
-; RV64I: g F .text {{[0-9a-f]+}} lower_blockaddress_displ
-; RV64I: g F .text {{[0-9a-f]+}} lower_constantpool
-; RV64I: w *UND* 0000000000000000 W
-; RV64I: g F .text {{[0-9a-f]+}} lower_extern_weak
-; RV64I: g O .data 0000000000000002 X
-; RV64I: g F .text {{[0-9a-f]+}} lower_global_half
-
-; RV64I-LABEL: RELOCATION RECORDS FOR [.text]:
-; RV64I: R_RISCV_64 G
-; RV64I: R_RISCV_64 addr
-; RV64I: R_RISCV_64 W
-; RV64I: R_RISCV_64 X
-
+; RV64I: Section (3) .rela.text {
+; RV64I-NEXT: R_RISCV_64 G 0x0
+; RV64I-NEXT: R_RISCV_64 addr 0x0
+; RV64I-NEXT: R_RISCV_64 W 0x0
+; RV64I-NEXT: R_RISCV_64 X 0x0
 
 ; Check lowering of globals
 @G = global i32 0
