@@ -17,7 +17,7 @@ define void @test_push_constant_into_zext(ptr %dst, ptr %src, i32 %n, i64 %offse
 ; CHECK-NEXT:    %l = load i8, ptr %outer.ptr, align 1
 ; CHECK-NEXT:    --> %l U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %inner.loop: Variant, %outer.loop: Variant }
 ; CHECK-NEXT:    %ptr.iv.next = getelementptr i8, ptr %ptr.iv, i64 %offset
-; CHECK-NEXT:    --> {(%offset + %src),+,%offset}<%inner.loop> U: full-set S: full-set Exits: (((1 + (zext i32 (-1 + (1 smax %n))<nsw> to i64))<nuw><nsw> * %offset) + %src) LoopDispositions: { %inner.loop: Computable, %outer.loop: Variant }
+; CHECK-NEXT:    --> {(%offset + %src),+,%offset}<%inner.loop> U: full-set S: full-set Exits: (((zext i32 (1 smax %n) to i64) * %offset) + %src) LoopDispositions: { %inner.loop: Computable, %outer.loop: Variant }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%inner.loop> U: [1,-2147483648) S: [1,-2147483648) Exits: (1 smax %n) LoopDispositions: { %inner.loop: Computable, %outer.loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_push_constant_into_zext
