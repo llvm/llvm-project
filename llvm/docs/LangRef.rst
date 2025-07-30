@@ -413,6 +413,8 @@ added in the future:
     - On AArch64 the callee preserves all general purpose registers, except
       X0-X8 and X16-X18. Not allowed with ``nest``.
 
+    - On RISC-V the callee preserve x5-x31 except x6, x7 and x28 registers.
+
     The idea behind this convention is to support calls to runtime functions
     that have a hot path and a cold path. The hot path is usually a small piece
     of code that doesn't use many registers. The cold path might need to call out to
@@ -26653,9 +26655,10 @@ object's lifetime.
 Arguments:
 """"""""""
 
-The first argument is a constant integer representing the size of the
-object, or -1 if it is variable sized. The second argument is a pointer
-to an ``alloca`` instruction.
+The first argument is a constant integer, which is ignored and will be removed
+in the future.
+
+The second argument is a pointer to an ``alloca`` instruction.
 
 Semantics:
 """"""""""
@@ -26693,9 +26696,10 @@ The '``llvm.lifetime.end``' intrinsic specifies the end of a
 Arguments:
 """"""""""
 
-The first argument is a constant integer representing the size of the
-object, or -1 if it is variable sized. The second argument is a pointer
-to an ``alloca`` instruction.
+The first argument is a constant integer, which is ignored and will be removed
+in the future.
+
+The second argument is a pointer to an ``alloca`` instruction.
 
 Semantics:
 """"""""""

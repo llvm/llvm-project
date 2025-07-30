@@ -50,23 +50,23 @@ struct TestSCFWhileOpBuilderPass
       // Create a WhileOp with the same operands and result types.
       TypeRange resultTypes = whileOp->getResultTypes();
       ValueRange operands = whileOp->getOperands();
-      builder.create<WhileOp>(
-          loc, resultTypes, operands, /*beforeBuilder=*/
+      WhileOp::create(
+          builder, loc, resultTypes, operands, /*beforeBuilder=*/
           [&](OpBuilder &b, Location loc, ValueRange args) {
             // Just cast the before args into the right types for condition.
             ImplicitLocOpBuilder builder(loc, b);
             auto castOp =
-                builder.create<UnrealizedConversionCastOp>(resultTypes, args);
-            auto cmp = builder.create<ConstantIntOp>(/*value=*/1, /*width=*/1);
-            builder.create<ConditionOp>(cmp, castOp->getResults());
+                UnrealizedConversionCastOp::create(builder, resultTypes, args);
+            auto cmp = ConstantIntOp::create(builder, /*value=*/1, /*width=*/1);
+            ConditionOp::create(builder, cmp, castOp->getResults());
           },
           /*afterBuilder=*/
           [&](OpBuilder &b, Location loc, ValueRange args) {
             // Just cast the after args into the right types for yield.
             ImplicitLocOpBuilder builder(loc, b);
-            auto castOp = builder.create<UnrealizedConversionCastOp>(
-                operands.getTypes(), args);
-            builder.create<YieldOp>(castOp->getResults());
+            auto castOp = UnrealizedConversionCastOp::create(
+                builder, operands.getTypes(), args);
+            YieldOp::create(builder, castOp->getResults());
           });
     });
   }

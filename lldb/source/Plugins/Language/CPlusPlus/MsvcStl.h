@@ -29,6 +29,15 @@ bool MsvcStlWStringSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // VC 2015+ std::wstring
 
+template <StringPrinter::StringElementType element_type>
+bool MsvcStlStringViewSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &summary_options); // std::{u8,u16,u32}?string_view
+
+bool MsvcStlWStringViewSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // std::wstring_view
+
 // MSVC STL std::shared_ptr<> and std::weak_ptr<>
 bool IsMsvcStlSmartPointer(ValueObject &valobj);
 bool MsvcStlSmartPointerSummaryProvider(ValueObject &valobj, Stream &stream,
@@ -102,6 +111,12 @@ MsvcStlTreeIterSyntheticFrontEndCreator(CXXSyntheticChildren *,
 bool IsMsvcStlMapLike(ValueObject &valobj);
 lldb_private::SyntheticChildrenFrontEnd *
 MsvcStlMapLikeSyntheticFrontEndCreator(lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::deque<>
+bool IsMsvcStlDeque(ValueObject &valobj);
+SyntheticChildrenFrontEnd *
+MsvcStlDequeSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                     lldb::ValueObjectSP valobj_sp);
 
 } // namespace formatters
 } // namespace lldb_private
