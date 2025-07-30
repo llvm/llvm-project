@@ -639,7 +639,6 @@ protected:
   static bool isLBRSample(StringRef Line);
   // Check whether a given line is MMAP event
   static bool isMMapEvent(StringRef Line);
-
   // Update base address based on mmap events
   void updateBinaryAddress(const MMapEvent &Event);
   // Parse mmap event and update binary address

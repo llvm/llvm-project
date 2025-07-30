@@ -358,7 +358,7 @@ uint64_t ProfiledBinary::CanonicalizeNonTextAddress(uint64_t Address) {
 
   const auto &MMapEvent = MMapIter->second;
 
-  // If the address is within the non-text mmap event, calculates its file
+  // If the address is within the non-text mmap event, calculate its file
   // offset in the binary.
   if (MMapEvent.Address <= Address &&
       Address < MMapEvent.Address + MMapEvent.Size)
