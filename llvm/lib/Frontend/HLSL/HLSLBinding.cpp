@@ -99,8 +99,8 @@ BindingInfo BindingInfoBuilder::calculateBindingInfo(
       S = &BS->Spaces.emplace_back(B.Space);
 
     // The space is full - there are no free slots left, or the rest of the
-    // slots are taken by an unbounded array. Set flag to report overlapping
-    // binding later.
+    // slots are taken by an unbounded array. Report the overlapping to the
+    // caller.
     if (S->FreeRanges.empty() || S->FreeRanges.back().UpperBound < ~0u) {
       ReportOverlap(*this, B);
       continue;
@@ -117,6 +117,8 @@ BindingInfo BindingInfoBuilder::calculateBindingInfo(
       if (B.UpperBound < ~0u)
         S->FreeRanges.emplace_back(B.UpperBound + 1, ~0u);
     } else {
+      // We don't have room here. Report the overlapping binding to the caller
+      // and mark any extra space this binding would use as unavailable.
       ReportOverlap(*this, B);
       if (B.UpperBound < ~0u)
         LastFreeRange.LowerBound =
