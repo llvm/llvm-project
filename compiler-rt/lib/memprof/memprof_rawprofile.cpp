@@ -22,13 +22,13 @@ namespace {
 template <class T> char *WriteBytes(const T &Pod, char *Buffer) {
   static_assert(is_trivially_copyable<T>::value, "T must be POD");
   const uint8_t *Src = reinterpret_cast<const uint8_t *>(&Pod);
-  for (size_t I = 0; I < sizeof(T); ++I) {
-    Buffer[I] = Src[I];
-  }
+
+  for (size_t I = 0; I < sizeof(T); ++I)
 #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-  for (size_t i = 0; i < sizeof(T) / 2; ++i) {
-    std::swap(buffer[i], buffer[sizeof(T) - 1 - i]);
-  }
+  // Reverse byte order since reader is little-endian.
+    Buffer[I] = Src[sizeof(T) - 1 - I];
+#else
+    Buffer[I] = Src[I];
 #endif
   return Buffer + sizeof(T);
 }
