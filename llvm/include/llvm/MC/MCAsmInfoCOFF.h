@@ -15,6 +15,7 @@ namespace llvm {
 
 class MCAsmInfoCOFF : public MCAsmInfo {
   virtual void anchor();
+  bool useCodeAlign(const MCSection &Sec) const final;
 
 protected:
   explicit MCAsmInfoCOFF();
