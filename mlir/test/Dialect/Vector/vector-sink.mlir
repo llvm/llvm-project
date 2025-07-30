@@ -211,53 +211,6 @@ func.func @negative_op_only_supports_vectors(%arg0 : f32) -> vector<1xf32> {
   return %1 : vector<1xf32>
 }
 
-//===----------------------------------------------------------------------===//
-// [Pattern: ReorderCastOpsOnBroadcast]
-//
-// Reorder casting ops and vector ops. The casting ops have almost identical
-// pattern, so only arith.extsi op is tested.
-//===----------------------------------------------------------------------===//
-
-// -----
-
-func.func @broadcast_vector_extsi(%a : vector<4xi8>) -> vector<2x4xi32> {
-  // CHECK: %[[EXT:.+]] = arith.extsi %{{.+}} : vector<4xi8> to vector<4xi32>
-  // CHECK: vector.broadcast %[[EXT:.+]] : vector<4xi32> to vector<2x4xi32>
-  %b = vector.broadcast %a : vector<4xi8> to vector<2x4xi8>
-  %r = arith.extsi %b : vector<2x4xi8> to vector<2x4xi32>
-  return %r : vector<2x4xi32>
-}
-
-// -----
-
-func.func @broadcast_vector_extsi_scalable(%a : vector<[4]xi8>) -> vector<2x[4]xi32> {
-  // CHECK: %[[EXT:.+]] = arith.extsi %{{.+}} : vector<[4]xi8> to vector<[4]xi32>
-  // CHECK: vector.broadcast %[[EXT:.+]] : vector<[4]xi32> to vector<2x[4]xi32>
-  %b = vector.broadcast %a : vector<[4]xi8> to vector<2x[4]xi8>
-  %r = arith.extsi %b : vector<2x[4]xi8> to vector<2x[4]xi32>
-  return %r : vector<2x[4]xi32>
-}
-
-// -----
-
-func.func @broadcast_scalar_extsi(%a : i8) -> vector<2x4xi32> {
-  // CHECK: %[[EXT:.+]] = arith.extsi %{{.+}} : i8 to i32
-  // CHECK: vector.broadcast %[[EXT]] : i32 to vector<2x4xi32>
-  %b = vector.broadcast %a : i8 to vector<2x4xi8>
-  %r = arith.extsi %b : vector<2x4xi8> to vector<2x4xi32>
-  return %r : vector<2x4xi32>
-}
-
-// -----
-
-func.func @broadcast_scalar_extsi_scalable(%a : i8) -> vector<2x[4]xi32> {
-  // CHECK: %[[EXT:.+]] = arith.extsi %{{.+}} : i8 to i32
-  // CHECK: vector.broadcast %[[EXT]] : i32 to vector<2x[4]xi32>
-  %b = vector.broadcast %a : i8 to vector<2x[4]xi8>
-  %r = arith.extsi %b : vector<2x[4]xi8> to vector<2x[4]xi32>
-  return %r : vector<2x[4]xi32>
-}
-
 // -----
 
 // CHECK-LABEL:   func.func @broadcast_scalar_and_splat_const(
@@ -380,6 +333,53 @@ func.func @broadcast_vector_and_splat_const_mixed_type(%arg0: vector<4xf32>) -> 
   %cst = arith.constant dense<3> : vector<3x4xi32>
   %2 = math.fpowi %0, %cst : vector<3x4xf32>, vector<3x4xi32>
   return %2 : vector<3x4xf32>
+}
+
+//===----------------------------------------------------------------------===//
+// [Pattern: ReorderCastOpsOnBroadcast]
+//
+// Reorder casting ops and vector ops. The casting ops have almost identical
+// pattern, so only arith.extsi op is tested.
+//===----------------------------------------------------------------------===//
+
+// -----
+
+func.func @broadcast_vector_extsi(%a : vector<4xi8>) -> vector<2x4xi32> {
+  // CHECK: %[[EXT:.+]] = arith.extsi %{{.+}} : vector<4xi8> to vector<4xi32>
+  // CHECK: vector.broadcast %[[EXT:.+]] : vector<4xi32> to vector<2x4xi32>
+  %b = vector.broadcast %a : vector<4xi8> to vector<2x4xi8>
+  %r = arith.extsi %b : vector<2x4xi8> to vector<2x4xi32>
+  return %r : vector<2x4xi32>
+}
+
+// -----
+
+func.func @broadcast_vector_extsi_scalable(%a : vector<[4]xi8>) -> vector<2x[4]xi32> {
+  // CHECK: %[[EXT:.+]] = arith.extsi %{{.+}} : vector<[4]xi8> to vector<[4]xi32>
+  // CHECK: vector.broadcast %[[EXT:.+]] : vector<[4]xi32> to vector<2x[4]xi32>
+  %b = vector.broadcast %a : vector<[4]xi8> to vector<2x[4]xi8>
+  %r = arith.extsi %b : vector<2x[4]xi8> to vector<2x[4]xi32>
+  return %r : vector<2x[4]xi32>
+}
+
+// -----
+
+func.func @broadcast_scalar_extsi(%a : i8) -> vector<2x4xi32> {
+  // CHECK: %[[EXT:.+]] = arith.extsi %{{.+}} : i8 to i32
+  // CHECK: vector.broadcast %[[EXT]] : i32 to vector<2x4xi32>
+  %b = vector.broadcast %a : i8 to vector<2x4xi8>
+  %r = arith.extsi %b : vector<2x4xi8> to vector<2x4xi32>
+  return %r : vector<2x4xi32>
+}
+
+// -----
+
+func.func @broadcast_scalar_extsi_scalable(%a : i8) -> vector<2x[4]xi32> {
+  // CHECK: %[[EXT:.+]] = arith.extsi %{{.+}} : i8 to i32
+  // CHECK: vector.broadcast %[[EXT]] : i32 to vector<2x[4]xi32>
+  %b = vector.broadcast %a : i8 to vector<2x[4]xi8>
+  %r = arith.extsi %b : vector<2x[4]xi8> to vector<2x[4]xi32>
+  return %r : vector<2x[4]xi32>
 }
 
 //===----------------------------------------------------------------------===//
