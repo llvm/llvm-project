@@ -746,6 +746,13 @@ let SubtargetPredicate = HasMinimum3Maximum3F16, ReadsModeReg = 0 in {
   defm V_MAXIMUM3_F16 : VOP3Inst_t16 <"v_maximum3_f16", VOP_F16_F16_F16_F16, AMDGPUfmaximum3>;
 } // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0
 
+let SubtargetPredicate = HasAddMinMaxInsts, isCommutable = 1, isReMaterializable = 1 in {
+  defm V_ADD_MAX_I32 : VOP3Inst <"v_add_max_i32", VOP_I32_I32_I32_I32>;
+  defm V_ADD_MAX_U32 : VOP3Inst <"v_add_max_u32", VOP_I32_I32_I32_I32>;
+  defm V_ADD_MIN_I32 : VOP3Inst <"v_add_min_i32", VOP_I32_I32_I32_I32>;
+  defm V_ADD_MIN_U32 : VOP3Inst <"v_add_min_u32", VOP_I32_I32_I32_I32>;
+}
+
 defm V_ADD_I16 : VOP3Inst_t16 <"v_add_i16", VOP_I16_I16_I16>;
 defm V_SUB_I16 : VOP3Inst_t16 <"v_sub_i16", VOP_I16_I16_I16>;
 
@@ -884,6 +891,13 @@ def : GCNPat<
   (ThreeOpFrag<shl_0_to_4, add> i64:$src0, i32:$src1, i64:$src2),
   (V_LSHL_ADD_U64_e64 VSrc_b64:$src0, VSrc_b32:$src1, VSrc_b64:$src2)
 >;
+
+let SubtargetPredicate = HasAddMinMaxInsts in {
+def : ThreeOp_i32_Pats<add, smax, V_ADD_MAX_I32_e64>;
+def : ThreeOp_i32_Pats<add, umax, V_ADD_MAX_U32_e64>;
+def : ThreeOp_i32_Pats<add, smin, V_ADD_MIN_I32_e64>;
+def : ThreeOp_i32_Pats<add, umin, V_ADD_MIN_U32_e64>;
+}
 
 def : VOPBinOpClampPat<saddsat, V_ADD_I32_e64, i32>;
 def : VOPBinOpClampPat<ssubsat, V_SUB_I32_e64, i32>;
@@ -1821,6 +1835,10 @@ defm V_MIN_U64 : VOP3Only_Realtriple_gfx1250<0x318>;
 defm V_MAX_U64 : VOP3Only_Realtriple_gfx1250<0x319>;
 defm V_MIN_I64 : VOP3Only_Realtriple_gfx1250<0x31a>;
 defm V_MAX_I64 : VOP3Only_Realtriple_gfx1250<0x31b>;
+defm V_ADD_MAX_I32 : VOP3Only_Realtriple_gfx1250<0x25e>;
+defm V_ADD_MAX_U32 : VOP3Only_Realtriple_gfx1250<0x25f>;
+defm V_ADD_MIN_I32 : VOP3Only_Realtriple_gfx1250<0x260>;
+defm V_ADD_MIN_U32 : VOP3Only_Realtriple_gfx1250<0x261>;
 
 defm V_CVT_PK_FP8_F32  : VOP3Only_Realtriple_t16_and_fake16_gfx12<0x369, "v_cvt_pk_fp8_f32">;
 defm V_CVT_PK_BF8_F32  : VOP3Only_Realtriple_t16_and_fake16_gfx12<0x36a, "v_cvt_pk_bf8_f32">;
