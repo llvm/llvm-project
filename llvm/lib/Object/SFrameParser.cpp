@@ -91,8 +91,8 @@ uint64_t SFrameParser<E>::getAbsoluteStartAddress(
     uintptr_t DataPtr = reinterpret_cast<uintptr_t>(Data.data());
     uintptr_t FDEPtr = reinterpret_cast<uintptr_t>(&*FDE);
 
-    assert(DataPtr <= FDEPtr);
-    assert(FDEPtr < DataPtr + Data.size());
+    assert(DataPtr <= FDEPtr && FDEPtr < DataPtr + Data.size() &&
+           "Iterator does not belong to this object!");
 
     Result += FDEPtr - DataPtr;
   }
