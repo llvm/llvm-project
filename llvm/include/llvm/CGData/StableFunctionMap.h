@@ -20,6 +20,8 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/StructuralHash.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include <mutex>
 
 namespace llvm {
 
@@ -72,11 +74,29 @@ struct StableFunctionMap {
           IndexOperandHashMap(std::move(IndexOperandHashMap)) {}
   };
 
-  using HashFuncsMapType =
-      DenseMap<stable_hash, SmallVector<std::unique_ptr<StableFunctionEntry>>>;
+  using StableFunctionEntries =
+      SmallVector<std::unique_ptr<StableFunctionEntry>>;
+
+  /// In addition to the deserialized StableFunctionEntry, the struct stores
+  /// the offsets of corresponding serialized stable function entries, and a
+  /// once flag for safe lazy loading in a multithreaded environment.
+  struct EntryStorage {
+    StableFunctionEntries Entries;
+
+  private:
+    SmallVector<uint64_t> Offsets;
+    std::once_flag LazyLoadFlag;
+    friend struct StableFunctionMap;
+    friend struct StableFunctionMapRecord;
+  };
+
+  // Note: DenseMap requires value type to be copyable even if only using
+  // in-place insertion. Use STL instead. This also affects the
+  // deletion-while-iteration in finalize().
+  using HashFuncsMapType = std::unordered_map<stable_hash, EntryStorage>;
 
   /// Get the HashToFuncs map for serialization.
-  const HashFuncsMapType &getFunctionMap() const { return HashToFuncs; }
+  const HashFuncsMapType &getFunctionMap() const;
 
   /// Get the NameToId vector for serialization.
   ArrayRef<std::string> getNames() const { return IdToName; }
@@ -99,6 +119,13 @@ struct StableFunctionMap {
   /// \returns true if there is no stable function entry.
   bool empty() const { return size() == 0; }
 
+  bool contains(HashFuncsMapType::key_type FunctionHash) const {
+    return HashToFuncs.count(FunctionHash) > 0;
+  }
+
+  const StableFunctionEntries &
+  at(HashFuncsMapType::key_type FunctionHash) const;
+
   enum SizeType {
     UniqueHashCount,        // The number of unique hashes in HashToFuncs.
     TotalFunctionCount,     // The number of total functions in HashToFuncs.
@@ -119,17 +146,31 @@ private:
   /// `StableFunctionEntry` is ready for insertion.
   void insert(std::unique_ptr<StableFunctionEntry> FuncEntry) {
     assert(!Finalized && "Cannot insert after finalization");
-    HashToFuncs[FuncEntry->Hash].emplace_back(std::move(FuncEntry));
+    HashToFuncs[FuncEntry->Hash].Entries.emplace_back(std::move(FuncEntry));
   }
 
+  void deserializeLazyLoadingEntry(HashFuncsMapType::iterator It);
+
+  /// Eagerly deserialize all the unloaded entries in the lazy loading map.
+  void deserializeLazyLoadingEntries();
+
+  bool isLazilyLoaded() const { return (bool)Buffer; }
+
   /// A map from a stable_hash to a vector of functions with that hash.
-  HashFuncsMapType HashToFuncs;
+  mutable HashFuncsMapType HashToFuncs;
   /// A vector of strings to hold names.
   SmallVector<std::string> IdToName;
   /// A map from StringRef (name) to an ID.
   StringMap<unsigned> NameToId;
   /// True if the function map is finalized with minimal content.
   bool Finalized = false;
+  /// The memory buffer that contains the serialized stable function map for
+  /// lazy loading.
+  /// Non-empty only if this StableFunctionMap is created from a MemoryBuffer
+  /// (i.e. by IndexedCodeGenDataReader::read()) and lazily deserialized.
+  std::shared_ptr<MemoryBuffer> Buffer;
+  /// Whether to read stable function names from the buffer.
+  bool ReadStableFunctionMapNames = true;
 
   friend struct StableFunctionMapRecord;
 };
