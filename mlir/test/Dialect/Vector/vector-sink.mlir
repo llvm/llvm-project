@@ -180,13 +180,14 @@ func.func @negative_not_elementwise() -> vector<2x2xf32> {
 
 // -----
 
-// The source and the result for arith.cmp have different types - not supported
+// The source and the result for arith.cmp have different types
 
-// CHECK-LABEL: func.func @negative_source_and_result_mismatch
-//       CHECK:   %[[BROADCAST:.+]] = vector.broadcast
-//       CHECK:   %[[RETURN:.+]] = arith.cmpf uno, %[[BROADCAST]], %[[BROADCAST]]
-//       CHECK:   return %[[RETURN]]
-func.func @negative_source_and_result_mismatch(%arg0 : f32, %arg1 : vector<1xf32>) -> vector<1xi1> {
+// CHECK-LABEL: func.func @source_and_result_mismatch(
+//  CHECK-SAME: %[[ARG0:.+]]: f32)
+//       CHECK:   %[[COMPARE:.+]] = arith.cmpf uno, %[[ARG0]], %[[ARG0]]
+//       CHECK:   %[[BROADCAST:.+]] = vector.broadcast %[[COMPARE]] : i1 to vector<1xi1>
+//       CHECK:   return %[[BROADCAST]]
+func.func @source_and_result_mismatch(%arg0 : f32) -> vector<1xi1> {
   %0 = vector.broadcast %arg0 : f32 to vector<1xf32>
   %1 = arith.cmpf uno, %0, %0 : vector<1xf32>
   return %1 : vector<1xi1>
@@ -208,53 +209,6 @@ func.func @negative_op_only_supports_vectors(%arg0 : f32) -> vector<1xf32> {
   %0 = vector.broadcast %arg0 : f32 to vector<1xf32>
   %1 = vector.fma %0, %0, %0 : vector<1xf32>
   return %1 : vector<1xf32>
-}
-
-//===----------------------------------------------------------------------===//
-// [Pattern: ReorderCastOpsOnBroadcast]
-//
-// Reorder casting ops and vector ops. The casting ops have almost identical
-// pattern, so only arith.extsi op is tested.
-//===----------------------------------------------------------------------===//
-
-// -----
-
-func.func @broadcast_vector_extsi(%a : vector<4xi8>) -> vector<2x4xi32> {
-  // CHECK: %[[EXT:.+]] = arith.extsi %{{.+}} : vector<4xi8> to vector<4xi32>
-  // CHECK: vector.broadcast %[[EXT:.+]] : vector<4xi32> to vector<2x4xi32>
-  %b = vector.broadcast %a : vector<4xi8> to vector<2x4xi8>
-  %r = arith.extsi %b : vector<2x4xi8> to vector<2x4xi32>
-  return %r : vector<2x4xi32>
-}
-
-// -----
-
-func.func @broadcast_vector_extsi_scalable(%a : vector<[4]xi8>) -> vector<2x[4]xi32> {
-  // CHECK: %[[EXT:.+]] = arith.extsi %{{.+}} : vector<[4]xi8> to vector<[4]xi32>
-  // CHECK: vector.broadcast %[[EXT:.+]] : vector<[4]xi32> to vector<2x[4]xi32>
-  %b = vector.broadcast %a : vector<[4]xi8> to vector<2x[4]xi8>
-  %r = arith.extsi %b : vector<2x[4]xi8> to vector<2x[4]xi32>
-  return %r : vector<2x[4]xi32>
-}
-
-// -----
-
-func.func @broadcast_scalar_extsi(%a : i8) -> vector<2x4xi32> {
-  // CHECK: %[[EXT:.+]] = arith.extsi %{{.+}} : i8 to i32
-  // CHECK: vector.broadcast %[[EXT]] : i32 to vector<2x4xi32>
-  %b = vector.broadcast %a : i8 to vector<2x4xi8>
-  %r = arith.extsi %b : vector<2x4xi8> to vector<2x4xi32>
-  return %r : vector<2x4xi32>
-}
-
-// -----
-
-func.func @broadcast_scalar_extsi_scalable(%a : i8) -> vector<2x[4]xi32> {
-  // CHECK: %[[EXT:.+]] = arith.extsi %{{.+}} : i8 to i32
-  // CHECK: vector.broadcast %[[EXT]] : i32 to vector<2x[4]xi32>
-  %b = vector.broadcast %a : i8 to vector<2x[4]xi8>
-  %r = arith.extsi %b : vector<2x[4]xi8> to vector<2x[4]xi32>
-  return %r : vector<2x[4]xi32>
 }
 
 // -----
@@ -319,6 +273,113 @@ func.func @negative_broadcast_with_non_splat_const(%arg0: index) -> vector<1x4xi
   %cst = arith.constant dense<[[0, 1, 2, 3]]> : vector<1x4xindex>
   %2 = arith.addi %0, %cst : vector<1x4xindex>
   return %2 : vector<1x4xindex>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_scalar_mixed_type(
+// CHECK-SAME:     %[[ARG_0:.*]]: f16) -> vector<1x4xf32> {
+// CHECK:           %[[EXTF:.*]] = arith.extf %[[ARG_0]] : f16 to f32
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[EXTF]] : f32 to vector<1x4xf32>
+// CHECK:           return %[[BCAST]] : vector<1x4xf32>
+
+func.func @broadcast_scalar_mixed_type(%arg0: f16) -> vector<1x4xf32> {
+  %0 = vector.broadcast %arg0 : f16 to vector<1x4xf16>
+  %1 = arith.extf %0 : vector<1x4xf16> to vector<1x4xf32>
+  return %1 : vector<1x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_vector_mixed_type(
+// CHECK-SAME:     %[[ARG_0:.*]]: vector<4xf16>) -> vector<3x4xf32> {
+// CHECK:           %[[EXTF:.*]] = arith.extf %[[ARG_0]] : vector<4xf16> to vector<4xf32>
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[EXTF]] : vector<4xf32> to vector<3x4xf32>
+// CHECK:           return %[[BCAST]] : vector<3x4xf32>
+
+func.func @broadcast_vector_mixed_type(%arg0: vector<4xf16>) -> vector<3x4xf32> {
+  %0 = vector.broadcast %arg0 : vector<4xf16> to vector<3x4xf16>
+  %1 = arith.extf %0 : vector<3x4xf16> to vector<3x4xf32>
+  return %1 : vector<3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_scalar_and_splat_const_mixed_type(
+// CHECK-SAME:     %[[ARG_0:.*]]: f32) -> vector<1x4xf32> {
+// CHECK:           %[[NEW_CST:.*]] = arith.constant 3 : i32
+// CHECK:           %[[POW:.*]] = math.fpowi %[[ARG_0]], %[[NEW_CST]] : f32, i32
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[POW]] : f32 to vector<1x4xf32>
+// CHECK:           return %[[BCAST]] : vector<1x4xf32>
+
+func.func @broadcast_scalar_and_splat_const_mixed_type(%arg0: f32) -> vector<1x4xf32> {
+  %0 = vector.broadcast %arg0 : f32 to vector<1x4xf32>
+  %cst = arith.constant dense<3> : vector<1x4xi32>
+  %2 = math.fpowi %0, %cst : vector<1x4xf32>, vector<1x4xi32>
+  return %2 : vector<1x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_vector_and_splat_const_mixed_type(
+// CHECK-SAME:     %[[ARG_0:.*]]: vector<4xf32>) -> vector<3x4xf32> {
+// CHECK:           %[[NEW_CST:.*]] = arith.constant dense<3> : vector<4xi32>
+// CHECK:           %[[POW:.*]] = math.fpowi %[[ARG_0]], %[[NEW_CST]] : vector<4xf32>, vector<4xi32>
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[POW]] : vector<4xf32> to vector<3x4xf32>
+// CHECK:           return %[[BCAST]] : vector<3x4xf32>
+
+func.func @broadcast_vector_and_splat_const_mixed_type(%arg0: vector<4xf32>) -> vector<3x4xf32> {
+  %0 = vector.broadcast %arg0 : vector<4xf32> to vector<3x4xf32>
+  %cst = arith.constant dense<3> : vector<3x4xi32>
+  %2 = math.fpowi %0, %cst : vector<3x4xf32>, vector<3x4xi32>
+  return %2 : vector<3x4xf32>
+}
+
+//===----------------------------------------------------------------------===//
+// [Pattern: ReorderCastOpsOnBroadcast]
+//
+// Reorder casting ops and vector ops. The casting ops have almost identical
+// pattern, so only arith.extsi op is tested.
+//===----------------------------------------------------------------------===//
+
+// -----
+
+func.func @broadcast_vector_extsi(%a : vector<4xi8>) -> vector<2x4xi32> {
+  // CHECK: %[[EXT:.+]] = arith.extsi %{{.+}} : vector<4xi8> to vector<4xi32>
+  // CHECK: vector.broadcast %[[EXT:.+]] : vector<4xi32> to vector<2x4xi32>
+  %b = vector.broadcast %a : vector<4xi8> to vector<2x4xi8>
+  %r = arith.extsi %b : vector<2x4xi8> to vector<2x4xi32>
+  return %r : vector<2x4xi32>
+}
+
+// -----
+
+func.func @broadcast_vector_extsi_scalable(%a : vector<[4]xi8>) -> vector<2x[4]xi32> {
+  // CHECK: %[[EXT:.+]] = arith.extsi %{{.+}} : vector<[4]xi8> to vector<[4]xi32>
+  // CHECK: vector.broadcast %[[EXT:.+]] : vector<[4]xi32> to vector<2x[4]xi32>
+  %b = vector.broadcast %a : vector<[4]xi8> to vector<2x[4]xi8>
+  %r = arith.extsi %b : vector<2x[4]xi8> to vector<2x[4]xi32>
+  return %r : vector<2x[4]xi32>
+}
+
+// -----
+
+func.func @broadcast_scalar_extsi(%a : i8) -> vector<2x4xi32> {
+  // CHECK: %[[EXT:.+]] = arith.extsi %{{.+}} : i8 to i32
+  // CHECK: vector.broadcast %[[EXT]] : i32 to vector<2x4xi32>
+  %b = vector.broadcast %a : i8 to vector<2x4xi8>
+  %r = arith.extsi %b : vector<2x4xi8> to vector<2x4xi32>
+  return %r : vector<2x4xi32>
+}
+
+// -----
+
+func.func @broadcast_scalar_extsi_scalable(%a : i8) -> vector<2x[4]xi32> {
+  // CHECK: %[[EXT:.+]] = arith.extsi %{{.+}} : i8 to i32
+  // CHECK: vector.broadcast %[[EXT]] : i32 to vector<2x[4]xi32>
+  %b = vector.broadcast %a : i8 to vector<2x[4]xi8>
+  %r = arith.extsi %b : vector<2x[4]xi8> to vector<2x[4]xi32>
+  return %r : vector<2x[4]xi32>
 }
 
 //===----------------------------------------------------------------------===//
