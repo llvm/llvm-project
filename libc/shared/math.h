@@ -23,6 +23,7 @@
 #include "math/asinhf.h"
 #include "math/asinhf16.h"
 #include "math/atan.h"
+#include "math/atanf.h"
 #include "math/erff.h"
 #include "math/exp.h"
 #include "math/exp10.h"
