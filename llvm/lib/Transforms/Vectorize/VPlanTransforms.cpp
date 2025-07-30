@@ -2420,12 +2420,11 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
 
   // Replace CanonicalIVInc with EVL-PHI increment.
   auto *CanonicalIV = cast<VPPhi>(&*HeaderVPBB->begin());
-  assert(
-      match(CanonicalIV->getIncomingValue(1),
-            m_c_Binary<Instruction::Add>(m_Specific(cast<VPPhi>(CanonicalIV)),
-                                         m_Specific(&Plan.getVFxUF()))) &&
-      "Unexpected canonical iv");
   VPValue *Backedge = CanonicalIV->getIncomingValue(1);
+  assert(match(Backedge,
+               m_c_Binary<Instruction::Add>(m_Specific(CanonicalIV),
+                                            m_Specific(&Plan.getVFxUF()))) &&
+         "Unexpected canonical iv");
   Backedge->replaceAllUsesWith(EVLIncrement);
 
   // Remove unused phi and increment.
