@@ -376,9 +376,13 @@ DataExtractor ObjectFileWasm::ReadImageData(offset_t offset, uint32_t size) {
         DataBufferSP buffer_sp(data_up.release());
         data.SetData(buffer_sp, 0, buffer_sp->GetByteSize());
       }
+    } else if (offset < m_data.GetByteSize()) {
+      size =
+          std::min(static_cast<uint64_t>(size), m_data.GetByteSize() - offset);
+      return DataExtractor(m_data.GetDataStart() + offset, size, GetByteOrder(),
+                           GetAddressByteSize());
     }
   }
-
   data.SetByteOrder(GetByteOrder());
   return data;
 }
