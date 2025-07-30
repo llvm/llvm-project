@@ -430,6 +430,8 @@ bool InferAddressSpacesImpl::rewriteIntrinsicOperands(IntrinsicInst *II,
   }
   case Intrinsic::lifetime_start:
   case Intrinsic::lifetime_end: {
+    // Always force lifetime markers to work directly on the alloca.
+    NewV = NewV->stripPointerCasts();
     Function *NewDecl = Intrinsic::getOrInsertDeclaration(
         M, II->getIntrinsicID(), {NewV->getType()});
     II->setArgOperand(1, NewV);

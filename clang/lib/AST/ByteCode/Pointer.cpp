@@ -16,6 +16,7 @@
 #include "MemberPointer.h"
 #include "PrimType.h"
 #include "Record.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
 
@@ -30,8 +31,8 @@ Pointer::Pointer(Block *Pointee, uint64_t BaseAndOffset)
     : Pointer(Pointee, BaseAndOffset, BaseAndOffset) {}
 
 Pointer::Pointer(const Pointer &P)
-    : Offset(P.Offset), PointeeStorage(P.PointeeStorage),
-      StorageKind(P.StorageKind) {
+    : Offset(P.Offset), StorageKind(P.StorageKind),
+      PointeeStorage(P.PointeeStorage) {
 
   if (isBlockPointer() && PointeeStorage.BS.Pointee)
     PointeeStorage.BS.Pointee->addPointer(this);
@@ -48,8 +49,8 @@ Pointer::Pointer(Block *Pointee, unsigned Base, uint64_t Offset)
 }
 
 Pointer::Pointer(Pointer &&P)
-    : Offset(P.Offset), PointeeStorage(P.PointeeStorage),
-      StorageKind(P.StorageKind) {
+    : Offset(P.Offset), StorageKind(P.StorageKind),
+      PointeeStorage(P.PointeeStorage) {
 
   if (StorageKind == Storage::Block && PointeeStorage.BS.Pointee)
     PointeeStorage.BS.Pointee->replacePointer(&P, this);
@@ -66,14 +67,14 @@ Pointer::~Pointer() {
   }
 }
 
-void Pointer::operator=(const Pointer &P) {
+Pointer &Pointer::operator=(const Pointer &P) {
   // If the current storage type is Block, we need to remove
   // this pointer from the block.
   if (isBlockPointer()) {
     if (P.isBlockPointer() && this->block() == P.block()) {
       Offset = P.Offset;
       PointeeStorage.BS.Base = P.PointeeStorage.BS.Base;
-      return;
+      return *this;
     }
 
     if (Block *Pointee = PointeeStorage.BS.Pointee) {
@@ -101,16 +102,17 @@ void Pointer::operator=(const Pointer &P) {
   } else {
     assert(false && "Unhandled storage kind");
   }
+  return *this;
 }
 
-void Pointer::operator=(Pointer &&P) {
+Pointer &Pointer::operator=(Pointer &&P) {
   // If the current storage type is Block, we need to remove
   // this pointer from the block.
   if (isBlockPointer()) {
     if (P.isBlockPointer() && this->block() == P.block()) {
       Offset = P.Offset;
       PointeeStorage.BS.Base = P.PointeeStorage.BS.Base;
-      return;
+      return *this;
     }
 
     if (Block *Pointee = PointeeStorage.BS.Pointee) {
@@ -138,6 +140,7 @@ void Pointer::operator=(Pointer &&P) {
   } else {
     assert(false && "Unhandled storage kind");
   }
+  return *this;
 }
 
 APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
@@ -502,8 +505,17 @@ void Pointer::activate() const {
   if (!getInlineDesc()->InUnion)
     return;
 
-  auto activate = [](Pointer &P) -> void {
+  std::function<void(Pointer &)> activate;
+  activate = [&activate](Pointer &P) -> void {
     P.getInlineDesc()->IsActive = true;
+    if (const Record *R = P.getRecord(); R && !R->isUnion()) {
+      for (const Record::Field &F : R->fields()) {
+        Pointer FieldPtr = P.atField(F.Offset);
+        if (!FieldPtr.getInlineDesc()->IsActive)
+          activate(FieldPtr);
+      }
+      // FIXME: Bases?
+    }
   };
 
   std::function<void(Pointer &)> deactivate;
@@ -594,7 +606,7 @@ bool Pointer::pointsToStringLiteral() const {
     return false;
 
   const Expr *E = block()->getDescriptor()->asExpr();
-  return E && isa<StringLiteral>(E);
+  return isa_and_nonnull<StringLiteral>(E);
 }
 
 std::optional<std::pair<Pointer, Pointer>>
@@ -656,7 +668,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
       return false;
 
     // Primitive values.
-    if (std::optional<PrimType> T = Ctx.classify(Ty)) {
+    if (OptPrimType T = Ctx.classify(Ty)) {
       TYPE_SWITCH(*T, R = Ptr.deref<T>().toAPValue(ASTCtx));
       return true;
     }
@@ -673,7 +685,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
           const Pointer &FP = Ptr.atField(F.Offset);
           QualType FieldTy = F.Decl->getType();
           if (FP.isActive()) {
-            if (std::optional<PrimType> T = Ctx.classify(FieldTy)) {
+            if (OptPrimType T = Ctx.classify(FieldTy)) {
               TYPE_SWITCH(*T, Value = FP.deref<T>().toAPValue(ASTCtx));
             } else {
               Ok &= Composite(FieldTy, FP, Value);
@@ -696,7 +708,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
           const Pointer &FP = Ptr.atField(FD->Offset);
           APValue &Value = R.getStructField(I);
 
-          if (std::optional<PrimType> T = Ctx.classify(FieldTy)) {
+          if (OptPrimType T = Ctx.classify(FieldTy)) {
             TYPE_SWITCH(*T, Value = FP.deref<T>().toAPValue(ASTCtx));
           } else {
             Ok &= Composite(FieldTy, FP, Value);
@@ -734,7 +746,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
       for (unsigned I = 0; I < NumElems; ++I) {
         APValue &Slot = R.getArrayInitializedElt(I);
         const Pointer &EP = Ptr.atIndex(I);
-        if (std::optional<PrimType> T = Ctx.classify(ElemTy)) {
+        if (OptPrimType T = Ctx.classify(ElemTy)) {
           TYPE_SWITCH(*T, Slot = EP.deref<T>().toAPValue(ASTCtx));
         } else {
           Ok &= Composite(ElemTy, EP.narrow(), Slot);
@@ -748,17 +760,17 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
       QualType ElemTy = CT->getElementType();
 
       if (ElemTy->isIntegerType()) {
-        std::optional<PrimType> ElemT = Ctx.classify(ElemTy);
+        OptPrimType ElemT = Ctx.classify(ElemTy);
         assert(ElemT);
         INT_TYPE_SWITCH(*ElemT, {
-          auto V1 = Ptr.atIndex(0).deref<T>();
-          auto V2 = Ptr.atIndex(1).deref<T>();
+          auto V1 = Ptr.elem<T>(0);
+          auto V2 = Ptr.elem<T>(1);
           R = APValue(V1.toAPSInt(), V2.toAPSInt());
           return true;
         });
       } else if (ElemTy->isFloatingType()) {
-        R = APValue(Ptr.atIndex(0).deref<Floating>().getAPFloat(),
-                    Ptr.atIndex(1).deref<Floating>().getAPFloat());
+        R = APValue(Ptr.elem<Floating>(0).getAPFloat(),
+                    Ptr.elem<Floating>(1).getAPFloat());
         return true;
       }
       return false;
@@ -773,9 +785,8 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
       SmallVector<APValue> Values;
       Values.reserve(VT->getNumElements());
       for (unsigned I = 0; I != VT->getNumElements(); ++I) {
-        TYPE_SWITCH(ElemT, {
-          Values.push_back(Ptr.atIndex(I).deref<T>().toAPValue(ASTCtx));
-        });
+        TYPE_SWITCH(ElemT,
+                    { Values.push_back(Ptr.elem<T>(I).toAPValue(ASTCtx)); });
       }
 
       assert(Values.size() == VT->getNumElements());
@@ -795,7 +806,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
     return toAPValue(ASTCtx);
 
   // Just load primitive types.
-  if (std::optional<PrimType> T = Ctx.classify(ResultType)) {
+  if (OptPrimType T = Ctx.classify(ResultType)) {
     TYPE_SWITCH(*T, return this->deref<T>().toAPValue(ASTCtx));
   }
 

@@ -233,3 +233,34 @@ TEST(DependencyScanningFilesystem, DiagnoseCachedFileSizeChange) {
   ASSERT_EQ(SizeInfo->CachedSize, 0u);
   ASSERT_EQ(SizeInfo->ActualSize, 8u);
 }
+
+TEST(DependencyScanningFilesystem, DoNotDiagnoseDirSizeChange) {
+  llvm::SmallString<128> Dir;
+  ASSERT_FALSE(llvm::sys::fs::createUniqueDirectory("tmp", Dir));
+
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
+      llvm::vfs::createPhysicalFileSystem();
+
+  DependencyScanningFilesystemSharedCache SharedCache;
+  DependencyScanningWorkerFilesystem DepFS(SharedCache, FS);
+
+  // Trigger the file system cache.
+  ASSERT_EQ(DepFS.exists(Dir), true);
+
+  // Add a file to the FS to change its size.
+  // It seems that directory sizes reported are not meaningful,
+  // and should not be used to check for size changes.
+  // This test is setup only to trigger a size change so that we
+  // know we are excluding directories from reporting.
+  llvm::SmallString<128> FilePath = Dir;
+  llvm::sys::path::append(FilePath, "file.h");
+  {
+    std::error_code EC;
+    llvm::raw_fd_ostream TempFile(FilePath, EC);
+    ASSERT_FALSE(EC);
+  }
+
+  // We do not report directory size changes.
+  auto InvalidEntries = SharedCache.getOutOfDateEntries(*FS);
+  EXPECT_EQ(InvalidEntries.size(), 0u);
+}

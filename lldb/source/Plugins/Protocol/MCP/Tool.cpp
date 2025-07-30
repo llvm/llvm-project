@@ -45,7 +45,7 @@ Tool::Tool(std::string name, std::string description)
 protocol::ToolDefinition Tool::GetDefinition() const {
   protocol::ToolDefinition definition;
   definition.name = m_name;
-  definition.description.emplace(m_description);
+  definition.description = m_description;
 
   if (std::optional<llvm::json::Value> input_schema = GetSchema())
     definition.inputSchema = *input_schema;
@@ -65,7 +65,7 @@ CommandTool::Call(const protocol::ToolArguments &args) {
     return root.getError();
 
   lldb::DebuggerSP debugger_sp =
-      Debugger::GetDebuggerAtIndex(arguments.debugger_id);
+      Debugger::FindDebuggerWithID(arguments.debugger_id);
   if (!debugger_sp)
     return createStringError(
         llvm::formatv("no debugger with id {0}", arguments.debugger_id));
@@ -100,51 +100,4 @@ std::optional<llvm::json::Value> CommandTool::GetSchema() const {
                             {"properties", std::move(properties)},
                             {"required", std::move(required)}};
   return schema;
-}
-
-llvm::Expected<protocol::TextResult>
-DebuggerListTool::Call(const protocol::ToolArguments &args) {
-  if (!std::holds_alternative<std::monostate>(args))
-    return createStringError("DebuggerListTool takes no arguments");
-
-  llvm::json::Path::Root root;
-
-  // Return a nested Markdown list with debuggers and target.
-  // Example output:
-  //
-  // - debugger 0
-  //     - target 0 /path/to/foo
-  //     - target 1
-  // - debugger 1
-  //     - target 0 /path/to/bar
-  //
-  // FIXME: Use Structured Content when we adopt protocol version 2025-06-18.
-  std::string output;
-  llvm::raw_string_ostream os(output);
-
-  const size_t num_debuggers = Debugger::GetNumDebuggers();
-  for (size_t i = 0; i < num_debuggers; ++i) {
-    lldb::DebuggerSP debugger_sp = Debugger::GetDebuggerAtIndex(i);
-    if (!debugger_sp)
-      continue;
-
-    os << "- debugger " << i << '\n';
-
-    TargetList &target_list = debugger_sp->GetTargetList();
-    const size_t num_targets = target_list.GetNumTargets();
-    for (size_t j = 0; j < num_targets; ++j) {
-      lldb::TargetSP target_sp = target_list.GetTargetAtIndex(j);
-      if (!target_sp)
-        continue;
-      os << "    - target " << j;
-      if (target_sp == target_list.GetSelectedTarget())
-        os << " (selected)";
-      // Append the module path if we have one.
-      if (Module *exe_module = target_sp->GetExecutableModulePointer())
-        os << " " << exe_module->GetFileSpec().GetPath();
-      os << '\n';
-    }
-  }
-
-  return createTextResult(output);
 }

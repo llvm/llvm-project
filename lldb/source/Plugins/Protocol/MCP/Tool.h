@@ -48,15 +48,6 @@ public:
   virtual std::optional<llvm::json::Value> GetSchema() const override;
 };
 
-class DebuggerListTool : public mcp::Tool {
-public:
-  using mcp::Tool::Tool;
-  ~DebuggerListTool() = default;
-
-  virtual llvm::Expected<protocol::TextResult>
-  Call(const protocol::ToolArguments &args) override;
-};
-
 } // namespace lldb_private::mcp
 
 #endif

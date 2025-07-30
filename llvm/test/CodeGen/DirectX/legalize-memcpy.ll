@@ -6,9 +6,9 @@ define void @replace_int_memcpy_test() #0 {
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca [1 x i32], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [1 x i32], align 4
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [1 x i32], ptr [[TMP1]], i32 0, i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 0
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [1 x i32], ptr [[TMP2]], i32 0, i32 0
 ; CHECK-NEXT:    store i32 [[TMP3]], ptr [[GEP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -23,17 +23,17 @@ define void @replace_3int_memcpy_test() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca [3 x i32], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [3 x i32], align 4
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [3 x i32], ptr [[TMP1]], i32 0, i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 0
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [3 x i32], ptr [[TMP2]], i32 0, i32 0
 ; CHECK-NEXT:    store i32 [[TMP3]], ptr [[GEP1]], align 4
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [3 x i32], ptr [[TMP1]], i32 0, i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[GEP2]], align 4
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 1
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds [3 x i32], ptr [[TMP2]], i32 0, i32 1
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr [[GEP3]], align 4
-; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 2
+; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr inbounds [3 x i32], ptr [[TMP1]], i32 0, i32 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[GEP4]], align 4
-; CHECK-NEXT:    [[GEP5:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 2
+; CHECK-NEXT:    [[GEP5:%.*]] = getelementptr inbounds [3 x i32], ptr [[TMP2]], i32 0, i32 2
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr [[GEP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -48,13 +48,13 @@ define void @replace_mismatched_size_int_memcpy_test() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca [2 x i32], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [3 x i32], align 4
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP1]], i32 0, i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 0
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [3 x i32], ptr [[TMP2]], i32 0, i32 0
 ; CHECK-NEXT:    store i32 [[TMP3]], ptr [[GEP1]], align 4
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP1]], i32 0, i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[GEP2]], align 4
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 1
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds [3 x i32], ptr [[TMP2]], i32 0, i32 1
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr [[GEP3]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -69,13 +69,13 @@ define void @replace_int16_memcpy_test() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca [2 x i16], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [2 x i16], align 2
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x i16], ptr [[TMP1]], i32 0, i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[GEP]], align 2
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i16, ptr [[TMP2]], i32 0
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [2 x i16], ptr [[TMP2]], i32 0, i32 0
 ; CHECK-NEXT:    store i16 [[TMP3]], ptr [[GEP1]], align 2
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [2 x i16], ptr [[TMP1]], i32 0, i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr [[GEP2]], align 2
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i16, ptr [[TMP2]], i32 1
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds [2 x i16], ptr [[TMP2]], i32 0, i32 1
 ; CHECK-NEXT:    store i16 [[TMP4]], ptr [[GEP3]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -90,13 +90,13 @@ define void @replace_float_memcpy_test() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca [2 x float], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [2 x float], align 4
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x float], ptr [[TMP1]], i32 0, i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 0
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [2 x float], ptr [[TMP2]], i32 0, i32 0
 ; CHECK-NEXT:    store float [[TMP3]], ptr [[GEP1]], align 4
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [2 x float], ptr [[TMP1]], i32 0, i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[GEP2]], align 4
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 1
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds [2 x float], ptr [[TMP2]], i32 0, i32 1
 ; CHECK-NEXT:    store float [[TMP4]], ptr [[GEP3]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -111,13 +111,13 @@ define void @replace_double_memcpy_test() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca [2 x double], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [2 x double], align 4
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x double], ptr [[TMP1]], i32 0, i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr [[GEP]], align 8
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds double, ptr [[TMP2]], i32 0
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [2 x double], ptr [[TMP2]], i32 0, i32 0
 ; CHECK-NEXT:    store double [[TMP3]], ptr [[GEP1]], align 8
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [2 x double], ptr [[TMP1]], i32 0, i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = load double, ptr [[GEP2]], align 8
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds double, ptr [[TMP2]], i32 1
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds [2 x double], ptr [[TMP2]], i32 0, i32 1
 ; CHECK-NEXT:    store double [[TMP4]], ptr [[GEP3]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -132,13 +132,13 @@ define void @replace_half_memcpy_test() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca [2 x half], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [2 x half], align 2
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds half, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x half], ptr [[TMP1]], i32 0, i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load half, ptr [[GEP]], align 2
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds half, ptr [[TMP2]], i32 0
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [2 x half], ptr [[TMP2]], i32 0, i32 0
 ; CHECK-NEXT:    store half [[TMP3]], ptr [[GEP1]], align 2
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds half, ptr [[TMP1]], i32 1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [2 x half], ptr [[TMP1]], i32 0, i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = load half, ptr [[GEP2]], align 2
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds half, ptr [[TMP2]], i32 1
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds [2 x half], ptr [[TMP2]], i32 0, i32 1
 ; CHECK-NEXT:    store half [[TMP4]], ptr [[GEP3]], align 2
 ; CHECK-NEXT:    ret void
 ;

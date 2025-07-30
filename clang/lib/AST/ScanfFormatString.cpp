@@ -251,9 +251,11 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
         case LengthModifier::AsIntMax:
           return ArgType::PtrTo(ArgType(Ctx.getIntMaxType(), "intmax_t"));
         case LengthModifier::AsSizeT:
-          return ArgType::PtrTo(ArgType(Ctx.getSignedSizeType(), "ssize_t"));
+          return ArgType::PtrTo(ArgType::makeSizeT(
+              ArgType(Ctx.getSignedSizeType(), "signed size_t")));
         case LengthModifier::AsPtrDiff:
-          return ArgType::PtrTo(ArgType(Ctx.getPointerDiffType(), "ptrdiff_t"));
+          return ArgType::PtrTo(ArgType::makePtrdiffT(
+              ArgType(Ctx.getPointerDiffType(), "ptrdiff_t")));
         case LengthModifier::AsLongDouble:
           // GNU extension.
           return ArgType::PtrTo(Ctx.LongLongTy);
@@ -292,10 +294,11 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
         case LengthModifier::AsIntMax:
           return ArgType::PtrTo(ArgType(Ctx.getUIntMaxType(), "uintmax_t"));
         case LengthModifier::AsSizeT:
-          return ArgType::PtrTo(ArgType(Ctx.getSizeType(), "size_t"));
-        case LengthModifier::AsPtrDiff:
           return ArgType::PtrTo(
-              ArgType(Ctx.getUnsignedPointerDiffType(), "unsigned ptrdiff_t"));
+              ArgType::makeSizeT(ArgType(Ctx.getSizeType(), "size_t")));
+        case LengthModifier::AsPtrDiff:
+          return ArgType::PtrTo(ArgType::makePtrdiffT(
+              ArgType(Ctx.getUnsignedPointerDiffType(), "unsigned ptrdiff_t")));
         case LengthModifier::AsLongDouble:
           // GNU extension.
           return ArgType::PtrTo(Ctx.UnsignedLongLongTy);
@@ -390,9 +393,11 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
         case LengthModifier::AsIntMax:
           return ArgType::PtrTo(ArgType(Ctx.getIntMaxType(), "intmax_t"));
         case LengthModifier::AsSizeT:
-          return ArgType::PtrTo(ArgType(Ctx.getSignedSizeType(), "ssize_t"));
+          return ArgType::PtrTo(ArgType::makeSizeT(
+              ArgType(Ctx.getSignedSizeType(), "signed size_t")));
         case LengthModifier::AsPtrDiff:
-          return ArgType::PtrTo(ArgType(Ctx.getPointerDiffType(), "ptrdiff_t"));
+          return ArgType::PtrTo(ArgType::makePtrdiffT(
+              ArgType(Ctx.getPointerDiffType(), "ptrdiff_t")));
         case LengthModifier::AsLongDouble:
           return ArgType(); // FIXME: Is this a known extension?
         case LengthModifier::AsAllocate:
@@ -501,7 +506,7 @@ bool ScanfSpecifier::fixType(QualType QT, QualType RawQT,
 
   // Handle size_t, ptrdiff_t, etc. that have dedicated length modifiers in C99.
   if (LangOpt.C99 || LangOpt.CPlusPlus11)
-    namedTypeToLengthModifier(PT, LM);
+    namedTypeToLengthModifier(Ctx, PT, LM);
 
   // If fixing the length modifier was enough, we are done.
   if (hasValidLengthModifier(Ctx.getTargetInfo(), LangOpt)) {

@@ -59,7 +59,9 @@ protected:
   bool HasCvtPkF16F32Inst = false;
   bool HasF32ToF16BF16ConversionSRInsts = false;
   bool EnableRealTrue16Insts = false;
+  bool HasBF16TransInsts = false;
   bool HasBF16ConversionInsts = false;
+  bool HasBF16PackedInsts = false;
   bool HasMadMixInsts = false;
   bool HasMadMacF32Insts = false;
   bool HasDsSrc2Insts = false;
@@ -202,9 +204,13 @@ public:
   // supported and the support for fake True16 instructions is removed.
   bool useRealTrue16Insts() const;
 
+  bool hasBF16TransInsts() const { return HasBF16TransInsts; }
+
   bool hasBF16ConversionInsts() const {
     return HasBF16ConversionInsts;
   }
+
+  bool hasBF16PackedInsts() const { return HasBF16PackedInsts; }
 
   bool hasMadMixInsts() const {
     return HasMadMixInsts;

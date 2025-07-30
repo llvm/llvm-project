@@ -571,7 +571,7 @@ bool ELFAsmParser::parseSectionArguments(bool IsPush, SMLoc loc) {
         return TokError("expected end of directive");
     }
 
-    if (Mergeable)
+    if (Mergeable || TypeName == "llvm_cfi_jump_table")
       if (parseMergeSize(Size))
         return true;
     if (Flags & ELF::SHF_LINK_ORDER)
@@ -637,13 +637,15 @@ EndStmt:
       Type = ELF::SHT_LLVM_LTO;
     else if (TypeName == "llvm_jt_sizes")
       Type = ELF::SHT_LLVM_JT_SIZES;
+    else if (TypeName == "llvm_cfi_jump_table")
+      Type = ELF::SHT_LLVM_CFI_JUMP_TABLE;
     else if (TypeName.getAsInteger(0, Type))
       return TokError("unknown section type");
   }
 
   if (UseLastGroup) {
-    if (const MCSectionELF *Section =
-            cast_or_null<MCSectionELF>(getStreamer().getCurrentSectionOnly()))
+    if (auto *Section = static_cast<const MCSectionELF *>(
+            getStreamer().getCurrentSectionOnly()))
       if (const MCSymbol *Group = Section->getGroup()) {
         GroupName = Group->getName();
         IsComdat = Section->isComdat();

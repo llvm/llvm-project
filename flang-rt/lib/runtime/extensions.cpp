@@ -27,10 +27,7 @@
 #include <thread>
 
 #ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
-
+#include "flang/Common/windows-include.h"
 #include <synchapi.h>
 
 inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
@@ -308,6 +305,9 @@ void RTNAME(Perror)(const char *str) { perror(str); }
 
 // GNU extension function TIME()
 std::int64_t RTNAME(time)() { return time(nullptr); }
+
+// MCLOCK: returns accumulated CPU time in ticks
+std::int32_t FORTRAN_PROCEDURE_NAME(mclock)() { return std::clock(); }
 
 // Extension procedures related to I/O
 
