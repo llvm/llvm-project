@@ -126,7 +126,7 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: DeclRefExpr {{.*}} 'const char *' ParmVar {{.*}} 'name' 'const char *'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// Subsctript operators
+// Subscript operators
 
 // CHECK: CXXMethodDecl {{.*}} operator[] 'const hlsl_device element_type &(unsigned int) const'
 // CHECK-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
@@ -145,22 +145,21 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'Index' 'unsigned int'
 // CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
-// CHECK-NEXT: CXXMethodDecl {{.*}} operator[] 'hlsl_device element_type &(unsigned int)'
-// CHECK-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
-// CHECK-NEXT: CallExpr {{.*}} 'hlsl_device element_type *'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// CHECK-UAV-NEXT: CXXMethodDecl {{.*}} operator[] 'hlsl_device element_type &(unsigned int)'
+// CHECK-UAV-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
+// CHECK-UAV-NEXT: CompoundStmt
+// CHECK-UAV-NEXT: ReturnStmt
+// CHECK-UAV-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK-UAV-NEXT: CallExpr {{.*}} 'hlsl_device element_type *'
+// CHECK-UAV-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
+// CHECK-UAV-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
+// CHECK-UAV-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
-// CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
-// CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME: ' lvalue .__handle {{.*}}
-// CHECK-NEXT: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
-// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'Index' 'unsigned int'
-// CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
+// CHECK-UAV-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// CHECK-UAV-SAME: ' lvalue .__handle {{.*}}
+// CHECK-UAV-NEXT: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-UAV-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'Index' 'unsigned int'
+// CHECK-UAV-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // Load method
 

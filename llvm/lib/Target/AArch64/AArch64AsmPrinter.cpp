@@ -179,6 +179,9 @@ public:
                              std::optional<AArch64PACKey::ID> PACKey,
                              uint64_t PACDisc, Register PACAddrDisc);
 
+  // Emit the sequence for PAC.
+  void emitPtrauthSign(const MachineInstr *MI);
+
   // Emit the sequence to compute the discriminator.
   //
   // The returned register is either unmodified AddrDisc or ScratchReg.
@@ -2182,6 +2185,37 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
     OutStreamer->emitLabel(EndSym);
 }
 
+void AArch64AsmPrinter::emitPtrauthSign(const MachineInstr *MI) {
+  Register Val = MI->getOperand(1).getReg();
+  auto Key = (AArch64PACKey::ID)MI->getOperand(2).getImm();
+  uint64_t Disc = MI->getOperand(3).getImm();
+  Register AddrDisc = MI->getOperand(4).getReg();
+  bool AddrDiscKilled = MI->getOperand(4).isKill();
+
+  // As long as at least one of Val and AddrDisc is in GPR64noip, a scratch
+  // register is available.
+  Register ScratchReg = Val == AArch64::X16 ? AArch64::X17 : AArch64::X16;
+  assert(ScratchReg != AddrDisc &&
+         "Neither X16 nor X17 is available as a scratch register");
+
+  // Compute pac discriminator
+  assert(isUInt<16>(Disc));
+  Register DiscReg = emitPtrauthDiscriminator(
+      Disc, AddrDisc, ScratchReg, /*MayUseAddrAsScratch=*/AddrDiscKilled);
+  bool IsZeroDisc = DiscReg == AArch64::XZR;
+  unsigned Opc = getPACOpcodeForKey(Key, IsZeroDisc);
+
+  //  paciza x16      ; if  IsZeroDisc
+  //  pacia x16, x17  ; if !IsZeroDisc
+  MCInst PACInst;
+  PACInst.setOpcode(Opc);
+  PACInst.addOperand(MCOperand::createReg(Val));
+  PACInst.addOperand(MCOperand::createReg(Val));
+  if (!IsZeroDisc)
+    PACInst.addOperand(MCOperand::createReg(DiscReg));
+  EmitToStreamer(*OutStreamer, PACInst);
+}
+
 void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
   bool IsCall = MI->getOpcode() == AArch64::BLRA;
   unsigned BrTarget = MI->getOperand(0).getReg();
@@ -2353,9 +2387,6 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
     emitMOVZ(AArch64::X1, Disc, 0);
   }
 
-  MCSymbol *PrePACInst = OutStreamer->getContext().createTempSymbol();
-  OutStreamer->emitLabel(PrePACInst);
-
   // We don't know the subtarget because this is being emitted for a global
   // initializer. Because the performance of IFUNC resolvers is unimportant, we
   // always call the EmuPAC runtime, which will end up using the PAC instruction
@@ -2368,7 +2399,7 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
                                *STI);
   OutStreamer->popSection();
 
-  return MCSpecifierExpr::create(IRelativeSym, AArch64::S_FUNCINIT,
+  return MCSymbolRefExpr::create(IRelativeSym, AArch64::S_FUNCINIT,
                                  OutStreamer->getContext());
 }
 
@@ -3038,6 +3069,10 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
         MI->getOperand(1).getImm(), &MI->getOperand(2), AArch64::X17,
         (AArch64PACKey::ID)MI->getOperand(3).getImm(),
         MI->getOperand(4).getImm(), MI->getOperand(5).getReg());
+    return;
+
+  case AArch64::PAC:
+    emitPtrauthSign(MI);
     return;
 
   case AArch64::LOADauthptrstatic:

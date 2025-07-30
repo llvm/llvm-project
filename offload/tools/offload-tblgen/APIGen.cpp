@@ -48,7 +48,7 @@ static void ProcessHandle(const HandleRec &H, raw_ostream &OS) {
     exit(1);
   }
 
-  auto ImplName = H.getName().substr(0, H.getName().size() - 9) + "_impl_t";
+  auto ImplName = getHandleImplName(H);
   OS << CommentsHeader;
   OS << formatv("/// @brief {0}\n", H.getDesc());
   OS << formatv("typedef struct {0} *{1};\n", ImplName, H.getName());

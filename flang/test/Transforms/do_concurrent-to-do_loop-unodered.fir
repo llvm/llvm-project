@@ -86,7 +86,7 @@ func.func @dc_2d_reduction(%i_lb: index, %i_ub: index, %i_st: index,
     %j = fir.alloca i32
     fir.do_concurrent.loop
       (%i_iv, %j_iv) = (%i_lb, %j_lb) to (%i_ub, %j_ub) step (%i_st, %j_st) 
-      reduce(#fir.reduce_attr<add> -> %sum : !fir.ref<i32>) {
+      reduce(@add_reduction_i32 #fir.reduce_attr<add> %sum -> %sum_arg : !fir.ref<i32>) {
       %0 = fir.convert %i_iv : (index) -> i32
       fir.store %0 to %i : !fir.ref<i32>
 

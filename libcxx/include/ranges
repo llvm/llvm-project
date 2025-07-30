@@ -339,6 +339,16 @@ namespace std::ranges {
 
   namespace views { inline constexpr unspecified zip = unspecified; }       // C++23
 
+  // [range.zip.transform], zip transform view
+  template<move_constructible F, input_range... Views>
+    requires (view<Views> && ...) && (sizeof...(Views) > 0) && is_object_v<F> &&
+             regular_invocable<F&, range_reference_t<Views>...> &&
+             can-reference<invoke_result_t<F&, range_reference_t<Views>...>>
+  class zip_transform_view;                                                         // C++23
+
+  namespace views { inline constexpr unspecified zip_transform = unspecified; }     // C++23
+
+
   // [range.as.rvalue]
   template <view V>
     requires input_range<V>
@@ -439,6 +449,7 @@ namespace std {
 #    include <__ranges/join_with_view.h>
 #    include <__ranges/repeat_view.h>
 #    include <__ranges/to.h>
+#    include <__ranges/zip_transform_view.h>
 #    include <__ranges/zip_view.h>
 #  endif
 

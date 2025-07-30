@@ -235,7 +235,8 @@ contain the following key/value pairs:
 | **cwd**                           | string      |     | The program working directory.
 | **env**                           | dictionary  |     | Environment variables to set when launching the program. The format of each environment variable string is "VAR=VALUE" for environment variables with values or just "VAR" for environment variables with no values.
 | **stopOnEntry**                   | boolean     |     | Whether to stop program immediately after launching.
-| **runInTerminal**                 | boolean     |     | Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs.
+| **runInTerminal** (deprecated)    | boolean     |     | Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs.
+| **console**                       | string      |     | Specify where to launch the program: internal console (`internalConsole`), integrated terminal (`integratedTerminal`) or external terminal (`externalTerminal`). Supported from lldb-dap 21.0 version.
 | **launchCommands**                | [string]    |     | LLDB commands executed to launch the program.
 
 For JSON configurations of `"type": "attach"`, the JSON configuration can contain

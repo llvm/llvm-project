@@ -431,3 +431,94 @@ define <4 x i8> @bsl2n_v4i8(<4 x i8> %0, <4 x i8> %1, <4 x i8> %2) {
   %7 = or <4 x i8> %4, %6
   ret <4 x i8> %7
 }
+
+; NOT (a) has a dedicated instruction (MVN).
+define <2 x i64> @not_q(<2 x i64> %0) #0 {
+; NEON-LABEL: not_q:
+; NEON:       // %bb.0:
+; NEON-NEXT:    mvn v0.16b, v0.16b
+; NEON-NEXT:    ret
+;
+; SVE2-LABEL: not_q:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    mvn v0.16b, v0.16b
+; SVE2-NEXT:    ret
+  %2 = xor <2 x i64> %0, splat (i64 -1)
+  ret <2 x i64> %2
+}
+
+; NAND (a, b) = NBSL (a, b, b) = NBSL (b, a, a).
+define <2 x i64> @nand_q(<2 x i64> %0, <2 x i64> %1) #0 {
+; NEON-LABEL: nand_q:
+; NEON:       // %bb.0:
+; NEON-NEXT:    and v0.16b, v1.16b, v0.16b
+; NEON-NEXT:    mvn v0.16b, v0.16b
+; NEON-NEXT:    ret
+;
+; SVE2-LABEL: nand_q:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE2-NEXT:    nbsl z0.d, z0.d, z1.d, z1.d
+; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; SVE2-NEXT:    ret
+  %3 = and <2 x i64> %1, %0
+  %4 = xor <2 x i64> %3, splat (i64 -1)
+  ret <2 x i64> %4
+}
+
+; NOR (a, b) = NBSL (a, b, a) = NBSL (b, a, b).
+define <2 x i64> @nor_q(<2 x i64> %0, <2 x i64> %1) #0 {
+; NEON-LABEL: nor_q:
+; NEON:       // %bb.0:
+; NEON-NEXT:    orr v0.16b, v1.16b, v0.16b
+; NEON-NEXT:    mvn v0.16b, v0.16b
+; NEON-NEXT:    ret
+;
+; SVE2-LABEL: nor_q:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE2-NEXT:    nbsl z0.d, z0.d, z1.d, z0.d
+; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; SVE2-NEXT:    ret
+  %3 = or <2 x i64> %1, %0
+  %4 = xor <2 x i64> %3, splat (i64 -1)
+  ret <2 x i64> %4
+}
+
+; EON (a, b) = BSL2N (a, a, b) = BSL2N (b, b, a).
+define <2 x i64> @eon_q(<2 x i64> %0, <2 x i64> %1) #0 {
+; NEON-LABEL: eon_q:
+; NEON:       // %bb.0:
+; NEON-NEXT:    eor v0.16b, v0.16b, v1.16b
+; NEON-NEXT:    mvn v0.16b, v0.16b
+; NEON-NEXT:    ret
+;
+; SVE2-LABEL: eon_q:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE2-NEXT:    bsl2n z0.d, z0.d, z0.d, z1.d
+; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; SVE2-NEXT:    ret
+  %3 = xor <2 x i64> %0, %1
+  %4 = xor <2 x i64> %3, splat (i64 -1)
+  ret <2 x i64> %4
+}
+
+; ORN (a, b) has a dedicated instruction (ORN).
+define <2 x i64> @orn_q(<2 x i64> %0, <2 x i64> %1) #0 {
+; NEON-LABEL: orn_q:
+; NEON:       // %bb.0:
+; NEON-NEXT:    orn v0.16b, v0.16b, v1.16b
+; NEON-NEXT:    ret
+;
+; SVE2-LABEL: orn_q:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    orn v0.16b, v0.16b, v1.16b
+; SVE2-NEXT:    ret
+  %3 = xor <2 x i64> %1, splat (i64 -1)
+  %4 = or <2 x i64> %0, %3
+  ret <2 x i64> %4
+}
