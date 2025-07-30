@@ -64,12 +64,12 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasExceptionHandling = false;
   bool HasExtendedConst = false;
   bool HasFP16 = false;
-  bool HasGC = false;
   bool HasMultiMemory = false;
   bool HasMultivalue = false;
   bool HasMutableGlobals = false;
   bool HasNontrappingFPToInt = false;
   bool HasReferenceTypes = false;
+  bool HasGC = false;
   bool HasSignExt = false;
   bool HasTailCall = false;
   bool HasWideArithmetic = false;
