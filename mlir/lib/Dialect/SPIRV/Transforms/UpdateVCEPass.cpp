@@ -174,10 +174,9 @@ void UpdateVCEPass::runOnOperation() {
   if (walkResult.wasInterrupted())
     return signalPassFailure();
 
-  // Update min version requirement for capabilities after deducing them
-  for (auto &cap : deducedCapabilities) {
-    std::optional<spirv::Version> minVersion = spirv::getMinVersion(cap);
-    if (minVersion) {
+  // Update min version requirement for capabilities after deducing them.
+  for (spirv::Capability cap : deducedCapabilities) {
+    if (std::optional<spirv::Version> minVersion = spirv::getMinVersion(cap)) {
       deducedVersion = std::max(deducedVersion, *minVersion);
       if (deducedVersion > allowedVersion) {
         module.emitError("Capability '")
