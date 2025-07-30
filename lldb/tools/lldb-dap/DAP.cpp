@@ -128,12 +128,21 @@ DAP::DAP(Log *log, const ReplMode default_repl_mode,
     : log(log), transport(transport), broadcaster("lldb-dap"),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
-      repl_mode(default_repl_mode) {
+      repl_mode(default_repl_mode),
+      network_symbol_optimizer(std::make_unique<NetworkSymbolOptimizer>()) {
   configuration.preInitCommands = std::move(pre_init_commands);
   RegisterRequests();
 }
 
-DAP::~DAP() = default;
+DAP::~DAP() {
+  // Restore original LLDB settings when DAP session ends
+  if (network_symbol_optimizer && debugger.IsValid()) {
+    auto restore_status = network_symbol_optimizer->RestoreSettings(debugger);
+    if (!restore_status.Success()) {
+      DAP_LOG(log, "Failed to restore LLDB settings: {0}", restore_status.GetCString());
+    }
+  }
+}
 
 void DAP::PopulateExceptionBreakpoints() {
   if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeC_plus_plus)) {
@@ -770,26 +779,29 @@ lldb::SBTarget DAP::CreateTarget(lldb::SBError &error) {
   // omitted at all), so it is good to leave the user an opportunity to specify
   // those. Any of those three can be left empty.
 
-  // CORE FIX: Apply optimized symbol loading strategy for all launches
-  // The core LLDB fixes now provide better defaults, so we enable optimizations
-  // for both fast and normal launches to ensure consistent performance
-  lldb::SBCommandInterpreter interpreter = debugger.GetCommandInterpreter();
-  lldb::SBCommandReturnObject result;
+  // ARCHITECTURAL FIX: Use NetworkSymbolOptimizer for proper layer separation
+  // Instead of directly manipulating LLDB settings in the DAP layer,
+  // delegate to the appropriate subsystem that respects user settings
+  if (network_symbol_optimizer) {
+    // Configure network symbol optimizations based on DAP configuration
+    NetworkSymbolOptimizer::DAPConfiguration dap_config;
+    // TODO: Extract configuration from DAP launch parameters when available
+    dap_config.enable_optimizations = true;
 
-  // Enable on-demand symbol loading for all launches (core fix benefit)
-  interpreter.HandleCommand("settings set symbols.load-on-demand true", result);
-  if (result.Succeeded())
-    DAP_LOG(log, "Core fix: Enabled on-demand symbol loading for responsive "
-                 "startup");
-
-  // Disable symbol preloading to avoid blocking during target creation
-  interpreter.HandleCommand("settings set target.preload-symbols false",
-                           result);
-  if (result.Succeeded())
-    DAP_LOG(log, "Core fix: Disabled symbol preloading to prevent startup "
-                 "blocking");
-
-  // REMOVED: fast_launch parameter no longer needed due to core fixes
+    auto config_status = network_symbol_optimizer->Configure(dap_config, debugger);
+    if (config_status.Success()) {
+      auto apply_status = network_symbol_optimizer->ApplyOptimizations(debugger);
+      if (apply_status.Success()) {
+        DAP_LOG(log, "Network symbol optimizations applied successfully");
+      } else {
+        DAP_LOG(log, "Failed to apply network symbol optimizations: {0}",
+                apply_status.GetCString());
+      }
+    } else {
+      DAP_LOG(log, "Failed to configure network symbol optimizations: {0}",
+              config_status.GetCString());
+    }
+  }
 
   // CORE FIX: Optimize dependent module loading for all launches
   // Based on core analysis, dependent module loading during target creation
@@ -1148,15 +1160,6 @@ void DAP::ConfigureSourceMaps() {
   RunLLDBCommands("Setting source map:", {sourceMapCommand});
 }
 
-// REMOVED: DetectNetworkSymbolServices - no longer needed due to core fixes
-
-// REMOVED: All bandaid network and performance optimization methods
-// These are no longer needed due to core LLDB fixes:
-// - TestNetworkConnectivity
-// - ConfigureNetworkSymbolSettings
-// - ShouldDisableNetworkSymbols
-// - EnableAsyncSymbolLoading
-
 void DAP::SetConfiguration(const protocol::Configuration &config,
                            bool is_attach) {
   configuration = config;
@@ -1193,8 +1196,6 @@ void DAP::SetThreadFormat(llvm::StringRef format) {
   }
 }
 
-// REMOVED: Performance optimization methods no longer needed due to core fixes
-
 void DAP::StartPerformanceTiming(llvm::StringRef operation) {
   std::lock_guard<std::mutex> lock(m_performance_timers_mutex);
   m_performance_timers[operation] = std::chrono::steady_clock::now();
@@ -1215,42 +1216,7 @@ uint32_t DAP::EndPerformanceTiming(llvm::StringRef operation) {
   return static_cast<uint32_t>(duration.count());
 }
 
-bool DAP::IsServerResponsive(llvm::StringRef server_url,
-                            std::chrono::milliseconds test_timeout) {
-  std::lock_guard<std::mutex> lock(m_server_cache_mutex);
-  std::string url_key = server_url.str();
-  auto now = std::chrono::steady_clock::now();
 
-  // Check cache (valid for 5 minutes)
-  auto it = m_server_availability_cache.find(url_key);
-  if (it != m_server_availability_cache.end()) {
-    auto age = now - it->second.last_checked;
-    if (age < std::chrono::minutes(5)) {
-      return it->second.is_responsive;
-    }
-  }
-
-  // Test server responsiveness with short timeout
-  // Release lock to avoid blocking other operations during network test
-  m_server_cache_mutex.unlock();
-
-  // Simple connectivity test - we don't care about the response, just that we get one quickly
-  bool responsive = false;
-  // TODO: Implement actual network test here
-  // For now, assume servers are responsive to maintain existing behavior
-  responsive = true;
-
-  // Cache result
-  std::lock_guard<std::mutex> cache_lock(m_server_cache_mutex);
-  m_server_availability_cache[url_key] = ServerAvailability(responsive);
-
-  return responsive;
-}
-
-void DAP::ClearServerCache() {
-  std::lock_guard<std::mutex> lock(m_server_cache_mutex);
-  m_server_availability_cache.clear();
-}
 
 InstructionBreakpoint *
 DAP::GetInstructionBreakpoint(const lldb::break_id_t bp_id) {

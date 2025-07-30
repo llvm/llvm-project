@@ -13,6 +13,7 @@
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
 #include "InstructionBreakpoint.h"
+#include "NetworkSymbolOptimizer.h"
 #include "OutputRedirector.h"
 #include "ProgressEvent.h"
 #include "Protocol/ProtocolBase.h"
@@ -94,6 +95,10 @@ struct DAP {
 
   /// The target instance for this DAP session.
   lldb::SBTarget target;
+
+  /// Network symbol optimization manager for this DAP session.
+  /// Handles intelligent symbol loading optimizations while respecting user settings.
+  std::unique_ptr<NetworkSymbolOptimizer> network_symbol_optimizer;
 
   Variables variables;
   lldb::SBBroadcaster broadcaster;
@@ -205,15 +210,6 @@ struct DAP {
   /// Configure source maps based on the current `DAPConfiguration`.
   void ConfigureSourceMaps();
 
-  // REMOVED: Bandaid optimization methods no longer needed due to core fixes
-  // The following methods have been removed as they are superseded by core
-  // LLDB improvements:
-  // - DetectNetworkSymbolServices, TestNetworkConnectivity,
-  //   ConfigureNetworkSymbolSettings
-  // - ShouldDisableNetworkSymbols, EnableAsyncSymbolLoading
-  // - IsFastLaunchMode, ShouldDeferSymbolLoading, ShouldUseLazyPluginLoading
-  // - GetLaunchTimeoutMs, LoadSymbolsAsync, ValidateFastLaunchConfiguration
-
   /// Performance timing support (kept for monitoring)
   /// @{
 
@@ -228,20 +224,7 @@ struct DAP {
 
   /// @}
 
-  /// Network symbol server management (per-instance, thread-safe)
-  /// @{
 
-  /// Check if a server is responsive, using cached results when available.
-  /// @param server_url The server URL to check
-  /// @param test_timeout Timeout for responsiveness test
-  /// @return true if server is responsive
-  bool IsServerResponsive(llvm::StringRef server_url,
-                         std::chrono::milliseconds test_timeout);
-
-  /// Clear the server availability cache (useful for network changes).
-  void ClearServerCache();
-
-  /// @}
 
   /// Serialize the JSON value into a string and send the JSON packet to the
   /// "out" stream.
@@ -504,21 +487,7 @@ private:
   std::mutex m_performance_timers_mutex;
   /// @}
 
-  /// Network symbol server availability cache (per-instance to avoid global
-  /// state)
-  /// @{
-  struct ServerAvailability {
-    bool is_responsive;
-    std::chrono::steady_clock::time_point last_checked;
 
-    ServerAvailability(bool responsive = false)
-        : is_responsive(responsive),
-          last_checked(std::chrono::steady_clock::now()) {}
-  };
-
-  llvm::StringMap<ServerAvailability> m_server_availability_cache;
-  std::mutex m_server_cache_mutex;
-  /// @}
 };
 
 } // namespace lldb_dap

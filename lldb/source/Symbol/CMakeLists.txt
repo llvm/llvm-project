@@ -14,6 +14,7 @@ add_lldb_library(lldbSymbol NO_PLUGIN_DEPENDENCIES
   Function.cpp
   LineEntry.cpp
   LineTable.cpp
+  NetworkSymbolManager.cpp
   ObjectContainer.cpp
   ObjectFile.cpp
   PostfixExpression.cpp
