@@ -389,17 +389,20 @@ if(LLVM_ENABLE_PIC)
     )
   endif()
 
+  if(MLIR_ENABLE_SYCL_RUNNER OR MLIR_ENABLE_LEVELZERO_RUNNER)
+    # Both runtimes require LevelZero, so we can find it once.
+    find_package(LevelZeroRuntime)
+
+    if(NOT LevelZeroRuntime_FOUND)
+      message(FATAL_ERROR "LevelZero not found. Please set LEVEL_ZERO_DIR.")
+    endif()
+  endif()
+
   if(MLIR_ENABLE_SYCL_RUNNER)
     find_package(SyclRuntime)
 
     if(NOT SyclRuntime_FOUND)
       message(FATAL_ERROR "syclRuntime not found. Please set check oneapi installation and run setvars.sh.")
-    endif()
-
-    find_package(LevelZeroRuntime)
-
-    if(NOT LevelZeroRuntime_FOUND)
-      message(FATAL_ERROR "LevelZero not found. Please set LEVEL_ZERO_DIR.")
     endif()
 
     add_mlir_library(mlir_sycl_runtime
@@ -427,12 +430,6 @@ if(LLVM_ENABLE_PIC)
   endif()
 
   if(MLIR_ENABLE_LEVELZERO_RUNNER)
-    find_package(LevelZeroRuntime)
-
-    if(NOT LevelZeroRuntime_FOUND)
-      message(FATAL_ERROR "LevelZero not found. Please set LEVEL_ZERO_DIR.")
-    endif()
-
     add_mlir_library(mlir_levelzero_runtime
       SHARED
       LevelZeroRuntimeWrappers.cpp
@@ -440,12 +437,11 @@ if(LLVM_ENABLE_PIC)
       EXCLUDE_FROM_LIBMLIR
     )
 
-    check_cxx_compiler_flag("-frtti" CXX_HAS_FRTTI_FLAG)
+    # check_cxx_compiler_flag("-frtti" CXX_HAS_FRTTI_FLAG)
 
-    if(NOT CXX_HAS_FRTTI_FLAG)
-      message(FATAL_ERROR "CXX compiler does not accept flag -frtti")
-    endif()
-
+    # if(NOT CXX_HAS_FRTTI_FLAG)
+    # message(FATAL_ERROR "CXX compiler does not accept flag -frtti")
+    # endif()
     target_compile_options(mlir_levelzero_runtime PUBLIC -fexceptions -frtti)
 
     target_include_directories(mlir_levelzero_runtime PRIVATE
