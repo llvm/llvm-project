@@ -1280,8 +1280,13 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       } else {
         Ops = {RISCV::VFCVT_X_F_V};
       }
-      return std::max(SrcLT.first, LT.first) *
-             getRISCVInstructionCost(Ops, LT.second, CostKind);
+
+      // We need to use the source LMUL in the case of a narrowing op, and the
+      // destination LMUL otherwise.
+      if (SrcEltSz > DstEltSz)
+        return SrcLT.first *
+               getRISCVInstructionCost(Ops, SrcLT.second, CostKind);
+      return LT.first * getRISCVInstructionCost(Ops, LT.second, CostKind);
     }
     break;
   }
