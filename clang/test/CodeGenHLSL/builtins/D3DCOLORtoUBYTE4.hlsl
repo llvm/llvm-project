@@ -10,3 +10,11 @@ int4 test_D3DCOLORtoUBYTE4(float4 p1) {
   // CHECK: ret [[INT_TYPE]] %[[SHUFFLED]]
   return D3DCOLORtoUBYTE4(p1);
 }
+
+// Note this test confirms issue 150673 is fixed 
+// by confirming the negative does not become a poison
+// CHECK-LABEL: test_constant_inputs
+int4 test_constant_inputs() {
+  // CHECK: ret <4 x i32> <i32 -12877, i32 2833, i32 0, i32 25500>
+  return D3DCOLORtoUBYTE4(float4(0, 11.11, -50.5, 100));
+}
