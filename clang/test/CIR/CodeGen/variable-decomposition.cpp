@@ -6,14 +6,14 @@
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
 struct some_struct {
-    int a;
-    float b;
+  int a;
+  float b;
 };
 
 float function() {
-    auto[a, b] = some_struct{1, 2.f};
+  auto[a, b] = some_struct{1, 2.f};
 
-    return a + b;
+  return a + b;
 }
 
 // CIR-LABEL: cir.func dso_local @_Z8functionv() -> !cir.float

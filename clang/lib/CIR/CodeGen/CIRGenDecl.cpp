@@ -520,7 +520,7 @@ void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
   llvm_unreachable("bad evaluation kind");
 }
 
-void CIRGenFunction::emitDecl(const Decl &d) {
+void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
   switch (d.getKind()) {
   case Decl::BuiltinTemplate:
   case Decl::TranslationUnit:
@@ -614,10 +614,8 @@ void CIRGenFunction::emitDecl(const Decl &d) {
     assert(vd.isLocalVarDecl() &&
            "Should not see file-scope variables inside a function!");
     emitVarDecl(vd);
-    if (auto *dd = dyn_cast<DecompositionDecl>(&vd))
-      for (BindingDecl *b : dd->bindings())
-        if (VarDecl *hd = b->getHoldingVar())
-          emitVarDecl(*hd);
+    if (evaluateConditionDecl)
+      maybeEmitDeferredVarDeclInit(&vd);
     return;
   }
   case Decl::OpenACCDeclare:
@@ -800,4 +798,12 @@ void CIRGenFunction::emitAutoVarTypeCleanup(
 
   assert(!cir::MissingFeatures::ehCleanupFlags());
   ehStack.pushCleanup<DestroyObject>(cleanupKind, addr, type, destroyer);
+}
+
+void CIRGenFunction::maybeEmitDeferredVarDeclInit(const VarDecl *vd) {
+  if (auto *dd = dyn_cast_if_present<DecompositionDecl>(vd)) {
+    for (auto *b : dd->flat_bindings())
+      if (auto *hd = b->getHoldingVar())
+        emitVarDecl(*hd);
+  }
 }
