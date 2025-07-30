@@ -684,10 +684,11 @@ Improvements to Clang's diagnostics
 - Clang now tries to avoid printing file paths that contain ``..``, instead preferring
   the canonical file path if it ends up being shorter.
 
-- Clang rejects the ``#`` and ``##`` preprocessor tokens in an attribute
+- Clang now rejects the ``#`` and ``##`` preprocessor tokens in an attribute
   argument list in C++. The operators can be used in macro replacement lists
-  with the usual preprocessor semantics. What is rejected are non-preprocessor
-  uses of the tokens. The same restrictions do not apply in C. (#GH147217)
+  with the usual preprocessor semantics, however non-preprocessor use of
+  tokens are now rejected in C++. Compilation in C mode is unchanged, and
+  still permits these tokens to be used. (#GH147217)
 
 Improvements to Clang's time-trace
 ----------------------------------
