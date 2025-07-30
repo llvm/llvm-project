@@ -51,7 +51,7 @@ private:
                const sframe::Header<E> &Header)
       : Data(Data), SectionAddress(SectionAddress), Header(Header) {}
 
-  uint64_t getFDEBegin() const {
+  uint64_t getFDEBase() const {
     return sizeof(Header) + Header.AuxHdrLen + Header.FDEOff;
   }
 };

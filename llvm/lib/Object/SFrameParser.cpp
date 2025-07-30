@@ -73,7 +73,7 @@ Expected<ArrayRef<uint8_t>> SFrameParser<E>::getAuxHeader() const {
 template <endianness E>
 Expected<ArrayRef<sframe::FuncDescEntry<E>>> SFrameParser<E>::fdes() const {
   Expected<ArrayRef<uint8_t>> Slice = getDataSlice(
-      Data, getFDEBegin(), Header.NumFDEs * sizeof(sframe::FuncDescEntry<E>));
+      Data, getFDEBase(), Header.NumFDEs * sizeof(sframe::FuncDescEntry<E>));
   if (!Slice)
     return Slice.takeError();
   return ArrayRef(
