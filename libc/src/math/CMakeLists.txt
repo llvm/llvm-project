@@ -58,8 +58,6 @@ add_math_entrypoint_object(asinh)
 add_math_entrypoint_object(asinhf)
 add_math_entrypoint_object(asinhf16)
 
-add_math_entrypoint_object(asinpif16)
-
 add_math_entrypoint_object(atan)
 add_math_entrypoint_object(atanf)
 add_math_entrypoint_object(atanf16)
@@ -191,6 +189,7 @@ add_math_entrypoint_object(fabsf)
 add_math_entrypoint_object(fabsl)
 add_math_entrypoint_object(fabsf16)
 add_math_entrypoint_object(fabsf128)
+add_math_entrypoint_object(fabsbf16)
 
 add_math_entrypoint_object(fadd)
 add_math_entrypoint_object(faddl)

@@ -221,6 +221,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fabsbf16_test
+  SUITE
+  libc-math-smoke-tests
+  SRCS
+    fabsbf16_test.cpp
+  HDRS
+    FAbsTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.math.fabsbf16
+)
+
+add_fp_unittest(
   fadd_test
   SUITE
     libc-math-smoke-tests
@@ -3986,18 +3999,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.errno.errno
     libc.src.math.asinhf16
-)
-
-add_fp_unittest(
-  asinpif16_test
-  NEED_MPFR
-  SUITE
-    libc-math-unittests
-  SRCS
-    asinpif16_test.cpp
-  DEPENDS
-    libc.src.math.asinpif16
-    libc.src.errno.errno
 )
 
 add_fp_unittest(

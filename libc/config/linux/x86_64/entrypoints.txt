@@ -703,8 +703,6 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.acospif16
     libc.src.math.asinf16
     libc.src.math.asinhf16
-    # Temporarily disabled due to mpfr_asinpi requiring MPFR >= 4.2.0.
-    # libc.src.math.asinpif16
     libc.src.math.atanf16
     libc.src.math.atanhf16
     libc.src.math.canonicalizef16
@@ -893,6 +891,12 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.ufromfpxf128
   )
 endif()
+
+
+list(APPEND TARGET_LIBM_ENTRYPOINTS
+  # bfloat16 entrypoints
+  libc.src.math.fabsbf16
+)
 
 if(LIBC_COMPILER_HAS_FIXED_POINT)
   list(APPEND TARGET_LIBM_ENTRYPOINTS

@@ -6,10 +6,10 @@ func.func private @foo()
 
 // -----
 
-// expected-error@-3 {{source must contain a single top-level operation, found: 2}}
+// expected-error@-9 {{source must contain a single top-level operation, found: 2}}
 func.func private @bar()
 func.func private @baz()
 
 // -----
 
-// expected-error@-3 {{source must contain a single top-level operation, found: 0}}
+// expected-error@-15 {{source must contain a single top-level operation, found: 0}}
