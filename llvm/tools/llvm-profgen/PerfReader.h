@@ -566,16 +566,6 @@ private:
   std::set<uint64_t> UntrackedCallsites;
 };
 
-// The parsed MMap event
-struct MMapEvent {
-  int64_t PID = 0;
-  uint64_t Address = 0;
-  uint64_t Size = 0;
-  uint64_t Offset = 0;
-  StringRef MemProtectionFlag;
-  StringRef BinaryPath;
-};
-
 // Read perf trace to parse the events and samples.
 class PerfReaderBase {
 public:

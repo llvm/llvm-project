@@ -185,15 +185,17 @@ private:
 
 using AddressRange = std::pair<uint64_t, uint64_t>;
 
+// The parsed MMap event
+struct MMapEvent {
+  int64_t PID = 0;
+  uint64_t Address = 0;
+  uint64_t Size = 0;
+  uint64_t Offset = 0;
+  StringRef MemProtectionFlag;
+  StringRef BinaryPath;
+};
+
 class ProfiledBinary {
-  struct MMapInfo {
-    uint64_t StartAddr;
-    uint64_t Size;
-    uint64_t FileOffset;
-    MMapInfo(uint64_t Start, uint64_t Size, uint64_t FileOffset)
-        : StartAddr(Start), Size(Size), FileOffset(FileOffset) {}
-    MMapInfo() : StartAddr(0), Size(0), FileOffset(0) {}
-  };
   // Absolute path of the executable binary.
   std::string Path;
   // Path of the debug info binary.
@@ -285,7 +287,7 @@ class ProfiledBinary {
   std::unordered_set<std::string> NameStrings;
 
   // MMap events for PT_LOAD segments without 'x' memory protection flag.
-  std::map<uint64_t, MMapInfo, std::greater<uint64_t>> NonTextMMapInfo;
+  std::map<uint64_t, MMapEvent, std::greater<uint64_t>> NonTextMMapEvents;
 
   // Records the file offset, file size and virtual address of program headers.
   struct PhdrInfo {
@@ -645,24 +647,30 @@ public:
     return false;
   }
 
-  Error addMMapNonTextEvent(uint64_t Address, uint64_t Size,
-                            uint64_t FileOffset) {
-    for (const auto &ExistingMMap : NonTextMMapInfo) {
+  Error addMMapNonTextEvent(MMapEvent Event) {
+    // Given the mmap events of the profiled binary, the virtual address
+    // intervals of mmaps most often doesn't overlap with each other. The
+    // implementation validates so, and runtime data address is mapped to
+    // a mmap event using look-up. With this implementation, data addresses
+    // from dynamic shared libraries (not the profiled binary) are not mapped or
+    // symbolized. To map runtime address to binary address in case of
+    // overlapping mmap events, the implementation could store all the mmap
+    // events in a vector and in the order they are added and reverse iterate
+    // the vector to find the mmap events. We opt'ed for the non-overlapping
+    // implementation for simplicity.
+    for (const auto &ExistingMMap : NonTextMMapEvents) {
       if (isNonOverlappingAddressInterval(
-              {ExistingMMap.second.StartAddr,
-               ExistingMMap.second.StartAddr + ExistingMMap.second.Size},
-              {Address, Address + Size})) {
+              {ExistingMMap.second.Address,
+               ExistingMMap.second.Address + ExistingMMap.second.Size},
+              {Event.Address, Event.Address + Event.Size})) {
         continue;
       }
       return createStringError(
           inconvertibleErrorCode(),
           "Non-text mmap event overlaps with existing event at address: %lx",
-          Address);
+          Event.Address);
     }
-    MMapInfo &MMap = NonTextMMapInfo[Address];
-    MMap.StartAddr = Address;
-    MMap.Size = Size;
-    MMap.FileOffset = FileOffset;
+    NonTextMMapEvents[Event.Address] = Event;
     return Error::success();
   }
 

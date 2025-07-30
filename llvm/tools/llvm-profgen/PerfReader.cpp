@@ -404,8 +404,7 @@ Error PerfReaderBase::parseDataAccessPerfTraces(
     if (Line.contains("PERF_RECORD_MMAP2")) {
       if (PerfScriptReader::extractMMapEventForBinary(Binary, Line, MMap)) {
         if (!MMap.MemProtectionFlag.contains("x")) {
-          if (Error E = Binary->addMMapNonTextEvent(MMap.Address, MMap.Size,
-                                                    MMap.Offset)) {
+          if (Error E = Binary->addMMapNonTextEvent(MMap)) {
             return E;
           }
         }
