@@ -45,17 +45,15 @@ template <class T, bool IsAtomic> struct AbaPtrImpl {
         // Wrapping add for unsigned integers.
         next.tag = snapshot.tag + 1;
         if (__atomic_compare_exchange(&impl.atomic, &snapshot, &next, true,
-                                      __ATOMIC_ACQ_REL, __ATOMIC_RELAXED)) {
+                                      __ATOMIC_ACQ_REL, __ATOMIC_RELAXED))
           return;
-        }
       }
     } else {
       // Acquire the lock.
-      while (__atomic_exchange_n(&impl.mutex.locked, true, __ATOMIC_ACQUIRE)) {
-        while (__atomic_load_n(&impl.mutex.locked, __ATOMIC_RELAXED)) {
+      while (__atomic_exchange_n(&impl.mutex.locked, true, __ATOMIC_ACQUIRE))
+        while (__atomic_load_n(&impl.mutex.locked, __ATOMIC_RELAXED))
           LIBC_NAMESPACE::sleep_briefly();
-        }
-      }
+
       impl.mutex.ptr = op(impl.mutex.ptr);
       // Release the lock.
       __atomic_store_n(&impl.mutex.locked, false, __ATOMIC_RELEASE);
