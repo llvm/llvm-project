@@ -2621,9 +2621,38 @@ LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
 SDValue
 LoongArchTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
                                                 SelectionDAG &DAG) const {
-  if (isa<ConstantSDNode>(Op->getOperand(2)))
+  MVT VT = Op.getSimpleValueType();
+  MVT EltVT = VT.getVectorElementType();
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned EltSizeInBits = EltVT.getScalarSizeInBits();
+  SDLoc DL(Op);
+  SDValue Op0 = Op.getOperand(0);
+  SDValue Op1 = Op.getOperand(1);
+  SDValue Op2 = Op.getOperand(2);
+
+  if (isa<ConstantSDNode>(Op2))
     return Op;
-  return SDValue();
+
+  MVT IdxTy = MVT::getIntegerVT(EltSizeInBits);
+  MVT IdxVTy = MVT::getVectorVT(IdxTy, NumElts);
+
+  if (!isTypeLegal(VT) || !isTypeLegal(IdxVTy))
+    return SDValue();
+
+  SDValue SplatElt = DAG.getSplatBuildVector(VT, DL, Op1);
+  SDValue SplatIdx = DAG.getSplatBuildVector(IdxVTy, DL, Op2);
+
+  SmallVector<SDValue, 32> RawIndices;
+  for (unsigned i = 0; i < NumElts; ++i)
+    RawIndices.push_back(DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
+  SDValue Indices = DAG.getBuildVector(IdxVTy, DL, RawIndices);
+
+  // insert vec, elt, idx
+  // =>
+  // select (splatidx == {0,1,2...}) ? splatelt : vec
+  SDValue SelectCC =
+      DAG.getSetCC(DL, IdxVTy, SplatIdx, Indices, ISD::CondCode::SETEQ);
+  return DAG.getNode(ISD::VSELECT, DL, VT, SelectCC, SplatElt, Op0);
 }
 
 SDValue LoongArchTargetLowering::lowerATOMIC_FENCE(SDValue Op,
