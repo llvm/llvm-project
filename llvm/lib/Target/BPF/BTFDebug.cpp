@@ -957,47 +957,47 @@ void BTFDebug::visitMapDefType(const DIType *Ty, uint32_t &TypeId) {
     return;
   }
 
-  // MapDef type may be a struct type or a non-pointer derived type
-  const DIType *OrigTy = Ty;
-  while (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
-    auto Tag = DTy->getTag();
-    if (Tag != dwarf::DW_TAG_typedef && Tag != dwarf::DW_TAG_const_type &&
-        Tag != dwarf::DW_TAG_volatile_type &&
-        Tag != dwarf::DW_TAG_restrict_type)
-      break;
-    Ty = DTy->getBaseType();
-  }
-
-  const auto *CTy = dyn_cast<DICompositeType>(Ty);
-  if (!CTy)
-    return;
-
-  auto Tag = CTy->getTag();
-  if (Tag != dwarf::DW_TAG_structure_type || CTy->isForwardDecl())
-    return;
-
-  // Visit all struct members to ensure their types are visited.
-  const DINodeArray Elements = CTy->getElements();
-  for (const auto *Element : Elements) {
-    const auto *MemberType = cast<DIDerivedType>(Element);
-    const DIType *MemberBaseType = MemberType->getBaseType();
-
-    // If the member is a composite type, that may indicate the currently
-    // visited composite type is a wrapper, and the member represents the
-    // actual map definition.
-    // In that case, visit the member with `visitMapDefType` instead of
-    // `visitTypeEntry`, treating it specifically as a map definition rather
-    // than as a regular composite type.
-    const auto *MemberCTy = dyn_cast<DICompositeType>(MemberBaseType);
-    if (MemberCTy) {
-      visitMapDefType(MemberBaseType, TypeId);
-    } else {
-      visitTypeEntry(MemberBaseType);
+  uint32_t TmpId;
+  switch (Ty->getTag()) {
+  case dwarf::DW_TAG_typedef:
+  case dwarf::DW_TAG_const_type:
+  case dwarf::DW_TAG_volatile_type:
+  case dwarf::DW_TAG_restrict_type:
+  case dwarf::DW_TAG_pointer_type:
+    visitMapDefType(dyn_cast<DIDerivedType>(Ty)->getBaseType(), TmpId);
+    break;
+  case dwarf::DW_TAG_array_type:
+    // Visit nested map array and jump to the element type
+    visitMapDefType(dyn_cast<DICompositeType>(Ty)->getBaseType(), TmpId);
+    break;
+  case dwarf::DW_TAG_structure_type: {
+    // Visit all struct members to ensure their types are visited.
+    const auto *CTy = cast<DICompositeType>(Ty);
+    const DINodeArray Elements = CTy->getElements();
+    for (const auto *Element : Elements) {
+      const auto *MemberType = cast<DIDerivedType>(Element);
+      const DIType *MemberBaseType = MemberType->getBaseType();
+      // If the member is a composite type, that may indicate the currently
+      // visited composite type is a wrapper, and the member represents the
+      // actual map definition.
+      // In that case, visit the member with `visitMapDefType` instead of
+      // `visitTypeEntry`, treating it specifically as a map definition rather
+      // than as a regular composite type.
+      const auto *MemberCTy = dyn_cast<DICompositeType>(MemberBaseType);
+      if (MemberCTy) {
+        visitMapDefType(MemberBaseType, TmpId);
+      } else {
+        visitTypeEntry(MemberBaseType);
+      }
     }
+    break;
+  }
+  default:
+    break;
   }
 
   // Visit this type, struct or a const/typedef/volatile/restrict type
-  visitTypeEntry(OrigTy, TypeId, false, false);
+  visitTypeEntry(Ty, TypeId, false, false);
 }
 
 /// Read file contents from the actual file or from the source
@@ -1255,10 +1255,8 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
   FuncInfo.Label = FuncLabel;
   FuncInfo.TypeId = FuncTypeId;
   if (FuncLabel->isInSection()) {
-    MCSection &Section = FuncLabel->getSection();
-    const MCSectionELF *SectionELF = dyn_cast<MCSectionELF>(&Section);
-    assert(SectionELF && "Null section for Function Label");
-    SecNameOff = addString(SectionELF->getName());
+    auto &Sec = static_cast<const MCSectionELF &>(FuncLabel->getSection());
+    SecNameOff = addString(Sec.getName());
   } else {
     SecNameOff = addString(".text");
   }

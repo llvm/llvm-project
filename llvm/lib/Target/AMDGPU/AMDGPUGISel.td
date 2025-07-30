@@ -137,9 +137,15 @@ def gi_global_offset :
 def gi_global_saddr :
     GIComplexOperandMatcher<s64, "selectGlobalSAddr">,
     GIComplexPatternEquiv<GlobalSAddr>;
+def gi_global_saddr_cpol :
+    GIComplexOperandMatcher<s64, "selectGlobalSAddrCPol">,
+    GIComplexPatternEquiv<GlobalSAddrCPol>;
 def gi_global_saddr_glc :
     GIComplexOperandMatcher<s64, "selectGlobalSAddrGLC">,
     GIComplexPatternEquiv<GlobalSAddrGLC>;
+def gi_global_saddr_no_ioffset :
+    GIComplexOperandMatcher<s64, "selectGlobalSAddrNoIOffset">,
+    GIComplexPatternEquiv<GlobalSAddrNoIOffset>;
 
 def gi_mubuf_scratch_offset :
     GIComplexOperandMatcher<s32, "selectMUBUFScratchOffset">,
@@ -445,6 +451,9 @@ def gi_fp_pow2_to_exponent : GICustomOperandRenderer<"renderFPPow2ToExponent">,
 
 def gi_as_hw_round_mode : GICustomOperandRenderer<"renderRoundMode">,
   GISDNodeXFormEquiv<as_hw_round_mode>;
+
+def gi_prefetch_loc : GICustomOperandRenderer<"renderPrefetchLoc">,
+  GISDNodeXFormEquiv<PrefetchLoc>;
 
 def gi_MFMALdScaleModifierOp : GICustomOperandRenderer<"renderScaledMAIIntrinsicOperand">,
   GISDNodeXFormEquiv<MFMALdScaleXForm>;
