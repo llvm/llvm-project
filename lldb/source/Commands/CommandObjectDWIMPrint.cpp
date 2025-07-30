@@ -18,6 +18,8 @@
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
@@ -182,11 +184,13 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
                                      expr);
       }
 
-      bool failed = errorToBool(dump_val_object(*valobj_sp));
-      if (!failed)
+      Error err = dump_val_object(*valobj_sp);
+      if (!err)
         return;
 
       // Dump failed, continue on to expression evaluation.
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), std::move(err),
+                     "could not print frame variable '{1}': {0}", expr);
     }
   }
 
@@ -195,9 +199,14 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     if (auto *state = target.GetPersistentExpressionStateForLanguage(language))
       if (auto var_sp = state->GetVariable(expr))
         if (auto valobj_sp = var_sp->GetValueObject()) {
-          bool failed = errorToBool(dump_val_object(*valobj_sp));
-          if (!failed)
+          Error err = dump_val_object(*valobj_sp);
+          if (!err)
             return;
+
+          // Dump failed, continue on to expression evaluation.
+          LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), std::move(err),
+                         "could not print persistent variable '{1}': {0}",
+                         expr);
         }
 
   // Third, and lastly, try `expr` as a source expression to evaluate.
