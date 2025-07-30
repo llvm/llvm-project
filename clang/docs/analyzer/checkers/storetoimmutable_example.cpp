@@ -9,7 +9,7 @@ struct TestStruct {
 
 void immutable_violation_examples() {
   *(int *)&global_const = 100; // warn: Trying to write to immutable memory
-  
+
   const int local_const = 42;
   *(int *)&local_const = 43; // warn: Trying to write to immutable memory
 
