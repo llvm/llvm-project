@@ -3922,10 +3922,7 @@ add_entrypoint_object(
   HDRS
     ../atanhf.h
   DEPENDS
-    .explogxf
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.macros.optimization
+    libc.src.__support.math.atanhf
 )
 
 add_entrypoint_object(
