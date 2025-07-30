@@ -71,7 +71,7 @@ function(libomp_get_architecture return_arch)
   file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/libomp_detect_arch.c" ${detect_arch_src_txt})
 
   # Try to compile using the C Compiler.  It will always error out with an #error directive, so store error output to ${local_architecture}
-  try_run(run_dummy compile_dummy "${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/libomp_detect_arch.c" COMPILE_OUTPUT_VARIABLE local_architecture)
+  try_compile(compile_dummy "${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/libomp_detect_arch.c" OUTPUT_VARIABLE local_architecture)
 
   # Match the important architecture line and store only that matching string in ${local_architecture}
   string(REGEX MATCH "ARCHITECTURE=([a-zA-Z0-9_]+)" local_architecture "${local_architecture}")
@@ -81,9 +81,6 @@ function(libomp_get_architecture return_arch)
 
   # set the return value to the architecture detected (e.g., 32e, 32, arm, ppc64, etc.)
   set(${return_arch} "${local_architecture}" PARENT_SCOPE)
-
-  # Remove ${detect_arch_src_txt} from cmake/ subdirectory
-  file(REMOVE "${CMAKE_CURRENT_BINARY_DIR}/libomp_detect_arch.c")
 endfunction()
 
 function(libomp_is_aarch64_a64fx return_is_aarch64_a64fx)
