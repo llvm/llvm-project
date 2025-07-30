@@ -471,7 +471,7 @@ public:
   }
 
   /// setSourceManager - Replace the current source manager.
-  void setSourceManager(SourceManager *Value);
+  void setSourceManager(llvm::IntrusiveRefCntPtr<SourceManager> Value);
 
   /// @}
   /// @name Preprocessor

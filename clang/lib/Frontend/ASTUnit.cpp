@@ -833,9 +833,8 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   AST->Diagnostics = Diags;
   AST->FileMgr = new FileManager(FileSystemOpts, VFS);
   AST->UserFilesAreVolatile = UserFilesAreVolatile;
-  AST->SourceMgr = new SourceManager(AST->getDiagnostics(),
-                                     AST->getFileManager(),
-                                     UserFilesAreVolatile);
+  AST->SourceMgr = llvm::makeIntrusiveRefCnt<SourceManager>(
+      AST->getDiagnostics(), AST->getFileManager(), UserFilesAreVolatile);
   AST->ModCache = createCrossProcessModuleCache();
   AST->HSOpts = std::make_unique<HeaderSearchOptions>(HSOpts);
   AST->HSOpts->ModuleFormat = std::string(PCHContainerRdr.getFormats().front());
@@ -1226,15 +1225,15 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
 
   ResetForParse();
 
-  SourceMgr = new SourceManager(getDiagnostics(), *FileMgr,
-                                UserFilesAreVolatile);
+  SourceMgr = llvm::makeIntrusiveRefCnt<SourceManager>(
+      getDiagnostics(), *FileMgr, +UserFilesAreVolatile);
   if (!OverrideMainBuffer) {
     checkAndRemoveNonDriverDiags(StoredDiagnostics);
     TopLevelDeclsInPreamble.clear();
   }
 
   // Create the source manager.
-  Clang->setSourceManager(&getSourceManager());
+  Clang->setSourceManager(getSourceManagerPtr());
 
   // If the main file has been overridden due to the use of a preamble,
   // make that override happen and introduce the preamble.
@@ -1557,8 +1556,8 @@ ASTUnit::create(std::shared_ptr<CompilerInvocation> CI,
   AST->Invocation = std::move(CI);
   AST->FileMgr = new FileManager(AST->FileSystemOpts, VFS);
   AST->UserFilesAreVolatile = UserFilesAreVolatile;
-  AST->SourceMgr = new SourceManager(AST->getDiagnostics(), *AST->FileMgr,
-                                     UserFilesAreVolatile);
+  AST->SourceMgr = llvm::makeIntrusiveRefCnt<SourceManager>(
+      AST->getDiagnostics(), *AST->FileMgr, UserFilesAreVolatile);
   AST->ModCache = createCrossProcessModuleCache();
 
   return AST;
@@ -1649,7 +1648,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
   Clang->setFileManager(&AST->getFileManager());
 
   // Create the source manager.
-  Clang->setSourceManager(&AST->getSourceManager());
+  Clang->setSourceManager(AST->getSourceManagerPtr());
 
   FrontendAction *Act = Action;
 
@@ -2210,7 +2209,7 @@ void ASTUnit::CodeComplete(
     CodeCompleteConsumer &Consumer,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diag, LangOptions &LangOpts,
-    SourceManager &SourceMgr, FileManager &FileMgr,
+    llvm::IntrusiveRefCntPtr<SourceManager> SourceMgr, FileManager &FileMgr,
     SmallVectorImpl<StoredDiagnostic> &StoredDiagnostics,
     SmallVectorImpl<const llvm::MemoryBuffer *> &OwnedBuffers,
     std::unique_ptr<SyntaxOnlyAction> Act) {
@@ -2283,7 +2282,7 @@ void ASTUnit::CodeComplete(
 
   // Use the source and file managers that we were given.
   Clang->setFileManager(&FileMgr);
-  Clang->setSourceManager(&SourceMgr);
+  Clang->setSourceManager(SourceMgr);
 
   // Remap files.
   PreprocessorOpts.clearRemappedFiles();

@@ -49,7 +49,7 @@ protected:
   IntrusiveRefCntPtr<FileManager> FileMgr =
       new FileManager(FileSystemOptions(), FS);
   IntrusiveRefCntPtr<SourceManager> SourceMgr =
-      new SourceManager(*Diags, *FileMgr);
+      llvm::makeIntrusiveRefCnt<SourceManager>(*Diags, *FileMgr);
   std::shared_ptr<CompilerInvocation> Invocation;
   // Set after calling buildTree().
   std::unique_ptr<syntax::TokenBuffer> TB;

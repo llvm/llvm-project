@@ -486,8 +486,8 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
   Clang->setFileManager(new FileManager(Clang->getFileSystemOpts(), VFS));
 
   // Create the source manager.
-  Clang->setSourceManager(
-      new SourceManager(*Diagnostics, Clang->getFileManager()));
+  Clang->setSourceManager(llvm::makeIntrusiveRefCnt<SourceManager>(
+      *Diagnostics, Clang->getFileManager()));
 
   auto PreambleDepCollector = std::make_shared<PreambleDependencyCollector>();
   Clang->addDependencyCollector(PreambleDepCollector);

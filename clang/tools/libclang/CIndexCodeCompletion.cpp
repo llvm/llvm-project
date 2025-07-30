@@ -360,7 +360,8 @@ AllocatedCXCodeCompleteResults::AllocatedCXCodeCompleteResults(
       Diag(llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(DiagnosticIDs::create(),
                                                         DiagOpts)),
       FileMgr(std::move(FileMgr)),
-      SourceMgr(new SourceManager(*Diag, *this->FileMgr)),
+      SourceMgr(
+          llvm::makeIntrusiveRefCnt<SourceManager>(*Diag, *this->FileMgr)),
       CodeCompletionAllocator(
           std::make_shared<clang::GlobalCodeCompletionAllocator>()),
       Contexts(CXCompletionContext_Unknown),
@@ -764,7 +765,7 @@ clang_codeCompleteAt_Impl(CXTranslationUnit TU, const char *complete_filename,
                     (options & CXCodeComplete_IncludeCodePatterns),
                     IncludeBriefComments, Capture,
                     CXXIdx->getPCHContainerOperations(), Results->Diag,
-                    Results->LangOpts, *Results->SourceMgr, *Results->FileMgr,
+                    Results->LangOpts, Results->SourceMgr, *Results->FileMgr,
                     Results->Diagnostics, Results->TemporaryBuffers,
                     /*SyntaxOnlyAction=*/nullptr);
 

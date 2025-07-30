@@ -170,8 +170,9 @@ void CompilerInstance::setFileManager(FileManager *Value) {
   FileMgr = Value;
 }
 
-void CompilerInstance::setSourceManager(SourceManager *Value) {
-  SourceMgr = Value;
+void CompilerInstance::setSourceManager(
+    llvm::IntrusiveRefCntPtr<SourceManager> Value) {
+  SourceMgr = std::move(Value);
 }
 
 void CompilerInstance::setPreprocessor(std::shared_ptr<Preprocessor> Value) {
@@ -395,7 +396,8 @@ FileManager *CompilerInstance::createFileManager(
 // Source Manager
 
 void CompilerInstance::createSourceManager(FileManager &FileMgr) {
-  SourceMgr = new SourceManager(getDiagnostics(), FileMgr);
+  SourceMgr =
+      llvm::makeIntrusiveRefCnt<SourceManager>(getDiagnostics(), FileMgr);
 }
 
 // Initialize the remapping of files to alternative contents, e.g.,

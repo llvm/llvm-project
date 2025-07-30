@@ -451,6 +451,9 @@ public:
 
   const SourceManager &getSourceManager() const { return *SourceMgr; }
   SourceManager &getSourceManager() { return *SourceMgr; }
+  llvm::IntrusiveRefCntPtr<SourceManager> getSourceManagerPtr() {
+    return SourceMgr;
+  }
 
   const Preprocessor &getPreprocessor() const { return *PP; }
   Preprocessor &getPreprocessor() { return *PP; }
@@ -925,7 +928,8 @@ public:
                     CodeCompleteConsumer &Consumer,
                     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                     llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diag,
-                    LangOptions &LangOpts, SourceManager &SourceMgr,
+                    LangOptions &LangOpts,
+                    llvm::IntrusiveRefCntPtr<SourceManager> SourceMgr,
                     FileManager &FileMgr,
                     SmallVectorImpl<StoredDiagnostic> &StoredDiagnostics,
                     SmallVectorImpl<const llvm::MemoryBuffer *> &OwnedBuffers,

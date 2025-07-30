@@ -913,7 +913,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     // Set the shared objects, these are reset when we finish processing the
     // file, otherwise the CompilerInstance will happily destroy them.
     CI.setFileManager(&AST->getFileManager());
-    CI.setSourceManager(&AST->getSourceManager());
+    CI.setSourceManager(AST->getSourceManagerPtr());
     CI.setPreprocessor(AST->getPreprocessorPtr());
     Preprocessor &PP = CI.getPreprocessor();
     PP.getBuiltinInfo().initializeBuiltins(PP.getIdentifierTable(),

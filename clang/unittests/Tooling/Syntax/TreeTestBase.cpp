@@ -154,7 +154,7 @@ SyntaxTreeTest::buildTree(StringRef Code, const TestClangConfig &ClangConfig) {
   CompilerInstance Compiler(Invocation);
   Compiler.setDiagnostics(Diags);
   Compiler.setFileManager(FileMgr.get());
-  Compiler.setSourceManager(SourceMgr.get());
+  Compiler.setSourceManager(SourceMgr);
 
   syntax::TranslationUnit *Root = nullptr;
   BuildSyntaxTreeAction Recorder(Root, this->TM, this->TB, this->Arena);
