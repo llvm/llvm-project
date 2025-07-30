@@ -25,7 +25,7 @@ template <class T> char *WriteBytes(const T &Pod, char *Buffer) {
 
   for (size_t I = 0; I < sizeof(T); ++I)
 #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-  // Reverse byte order since reader is little-endian.
+    // Reverse byte order since reader is little-endian.
     Buffer[I] = Src[sizeof(T) - 1 - I];
 #else
     Buffer[I] = Src[I];
