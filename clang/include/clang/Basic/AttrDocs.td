@@ -3336,6 +3336,19 @@ rank.
   }];
 }
 
+def AMDGPUSpecializeKernelDocs : Documentation {
+  let Category = DocCatAMDGPUAttributes;
+  let Content = [{
+When marked with this attribute, function will be split into three wave specialized kernels. 
+
+Clang supports the
+``__attribute__((amdgpu_no_rank_specialization()))``
+attribute for the AMDGPU target when compiling for a GFX13 target. This attribute may be attached
+to HIP wavegroup kernel function definitions to enable the specialization of waves by wavegroup 
+rank.
+  }];
+}
+
 def DocCatCallingConvs : DocumentationCategory<"Calling Conventions"> {
   let Content = [{
 Clang supports several different calling conventions, depending on the target

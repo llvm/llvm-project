@@ -37,6 +37,7 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
 
   switch (BuiltinID) {
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_load_lds:
+  case AMDGPU::BI__builtin_amdgcn_struct_ptr_buffer_load_lds:
   case AMDGPU::BI__builtin_amdgcn_load_to_lds:
   case AMDGPU::BI__builtin_amdgcn_global_load_lds: {
     constexpr const int SizeIdx = 2;
@@ -545,6 +546,13 @@ void SemaAMDGPU::handleAMDGPUNoRankSpecializationAttr(Decl *D,
                                                       const ParsedAttr &AL) {
   auto *Addr = ::new (getASTContext())
       AMDGPUNoRankSpecializationAttr(getASTContext(), AL);
+  D->addAttr(Addr);
+}
+
+void SemaAMDGPU::handleAMDGPUSpecializeKernelAttr(Decl *D,
+                                                  const ParsedAttr &AL) {
+  auto *Addr =
+      ::new (getASTContext()) AMDGPUSpecializeKernelAttr(getASTContext(), AL);
   D->addAttr(Addr);
 }
 

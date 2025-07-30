@@ -191,6 +191,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/time.h entrypoints
     libc.src.sys.time.setitimer
     libc.src.sys.time.getitimer
+
+    # wctype.h entrypoints
+    libc.src.wctype.iswalpha
 )
 
 if(LLVM_LIBC_FULL_BUILD)

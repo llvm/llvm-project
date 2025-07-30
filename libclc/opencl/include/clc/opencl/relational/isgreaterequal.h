@@ -14,7 +14,7 @@
 #define FUNCTION isgreaterequal
 #define __CLC_BODY <clc/relational/binary_decl.inc>
 
-#include <clc/relational/floatn.inc>
+#include <clc/math/gentype.inc>
 
 #undef FUNCTION
 

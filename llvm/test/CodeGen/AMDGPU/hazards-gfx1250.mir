@@ -493,3 +493,57 @@ body: |
     liveins: $vgpr0
     $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
 ...
+
+---
+name: s_setreg_b32_hwreg_mode
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0
+    ; GCN-LABEL: name: s_setreg_b32_hwreg_mode
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
+    ; GCN-NEXT: S_SETREG_B32 $sgpr0, 1, implicit-def $mode, implicit $mode
+    S_SETREG_B32 $sgpr0, 1, implicit-def $mode, implicit $mode
+...
+
+---
+name: s_setreg_b32_mode
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0
+    ; GCN-LABEL: name: s_setreg_b32_mode
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
+    ; GCN-NEXT: S_SETREG_B32_mode $sgpr0, 1, implicit-def $mode, implicit $mode
+    S_SETREG_B32_mode $sgpr0, 1, implicit-def $mode, implicit $mode
+...
+
+---
+name: s_setreg_imm32_b32_hwreg_mode
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; GCN-LABEL: name: s_setreg_imm32_b32_hwreg_mode
+    ; GCN: V_NOP_e32 implicit $exec
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1, implicit-def $mode, implicit $mode
+    S_SETREG_IMM32_B32 1, 1, implicit-def $mode, implicit $mode
+...
+
+---
+name: s_setreg_imm32_b32_mode
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; GCN-LABEL: name: s_setreg_imm32_b32_mode
+    ; GCN: V_NOP_e32 implicit $exec
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
+    ; GCN-NEXT: S_SETREG_IMM32_B32_mode 1, 1, implicit-def $mode, implicit $mode
+    S_SETREG_IMM32_B32_mode 1, 1, implicit-def $mode, implicit $mode
+...

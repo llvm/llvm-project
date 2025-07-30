@@ -190,6 +190,26 @@ public:
     return true;
   }
 
+  // \return if scopes are different on gfx1250 and disallowed to be claused.
+  // TODO: This is the fix for SWDEV-546277 and DEGFXMI400-12374. This shall be
+  // fixed in HW with gfx1250 B0. Remove the w/a after that.
+  // Do not upstream.
+  bool incompatibleScope(const MachineInstr &MI1, const MachineInstr &MI2,
+                         const SIInstrInfo *SII) const {
+    if (ST->getGeneration() != AMDGPUSubtarget::GFX12 || !ST->hasGFX1250Insts())
+      return false;
+    int CPol1 = 0, CPol2 = 0;
+    if (const MachineOperand *Op =
+            SII->getNamedOperand(MI1, AMDGPU::OpName::cpol)) {
+      CPol1 = Op->getImm() & AMDGPU::CPol::SCOPE;
+    }
+    if (const MachineOperand *Op =
+            SII->getNamedOperand(MI2, AMDGPU::OpName::cpol)) {
+      CPol2 = Op->getImm() & AMDGPU::CPol::SCOPE;
+    }
+    return CPol1 != CPol2;
+  }
+
   bool run(MachineFunction &MF) {
     ST = &MF.getSubtarget<GCNSubtarget>();
     if (!ST->hasHardClauses())
@@ -237,7 +257,8 @@ public:
               // We also lie about the Offset and OffsetIsScalable parameters,
               // as they aren't used in the SIInstrInfo implementation.
               !SII->shouldClusterMemOps(CI.BaseOps, 0, false, BaseOps, 0, false,
-                                        2, 2)))) {
+                                        2, 2))) ||
+            (CI.Length && incompatibleScope(MI, *CI.Last, SII))) {
           // Finish the current clause.
           Changed |= emitClause(CI, SII);
           CI = ClauseInfo();

@@ -34,8 +34,8 @@ static void insertCopyLoops(ImplicitLocOpBuilder &b, Value from, Value to) {
   auto rank = memRefType.getRank();
 
   SmallVector<Value, 4> lbs, ubs, steps;
-  Value zero = b.create<arith::ConstantIndexOp>(0);
-  Value one = b.create<arith::ConstantIndexOp>(1);
+  Value zero = arith::ConstantIndexOp::create(b, 0);
+  Value one = arith::ConstantIndexOp::create(b, 1);
 
   // Make sure we have enough loops to use all thread dimensions, these trivial
   // loops should be outermost and therefore inserted first.
@@ -59,8 +59,8 @@ static void insertCopyLoops(ImplicitLocOpBuilder &b, Value from, Value to) {
   auto indexType = b.getIndexType();
   SmallVector<Value, 3> threadIds, blockDims;
   for (auto dim : {gpu::Dimension::x, gpu::Dimension::y, gpu::Dimension::z}) {
-    threadIds.push_back(b.create<gpu::ThreadIdOp>(indexType, dim));
-    blockDims.push_back(b.create<gpu::BlockDimOp>(indexType, dim));
+    threadIds.push_back(gpu::ThreadIdOp::create(b, indexType, dim));
+    blockDims.push_back(gpu::BlockDimOp::create(b, indexType, dim));
   }
 
   // Produce the loop nest with copies.
@@ -70,8 +70,8 @@ static void insertCopyLoops(ImplicitLocOpBuilder &b, Value from, Value to) {
       [&](OpBuilder &b, Location loc, ValueRange loopIvs) {
         ivs.assign(loopIvs.begin(), loopIvs.end());
         auto activeIvs = llvm::ArrayRef(ivs).take_back(rank);
-        Value loaded = b.create<memref::LoadOp>(loc, from, activeIvs);
-        b.create<memref::StoreOp>(loc, loaded, to, activeIvs);
+        Value loaded = memref::LoadOp::create(b, loc, from, activeIvs);
+        memref::StoreOp::create(b, loc, loaded, to, activeIvs);
       });
 
   // Map the innermost loops to threads in reverse order.
@@ -131,10 +131,10 @@ static void insertCopies(Region &region, Location loc, Value from, Value to) {
 
   auto b = ImplicitLocOpBuilder::atBlockBegin(loc, &region.front());
   insertCopyLoops(b, from, to);
-  b.create<gpu::BarrierOp>();
+  gpu::BarrierOp::create(b);
 
   b.setInsertionPoint(&region.front().back());
-  b.create<gpu::BarrierOp>();
+  gpu::BarrierOp::create(b);
   insertCopyLoops(b, to, from);
 }
 

@@ -2487,6 +2487,12 @@ def AMDGPUNoRankSpecialization : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
 
+def AMDGPUSpecializeKernel : InheritableAttr {
+  let Spellings = [Clang<"amdgpu_specialize_kernel", 0>];
+  let Documentation = [AMDGPUSpecializeKernelDocs];
+  let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
+}
+
 def BPFPreserveAccessIndex : InheritableAttr,
                              TargetSpecificAttr<TargetBPF>  {
   let Spellings = [Clang<"preserve_access_index">];
