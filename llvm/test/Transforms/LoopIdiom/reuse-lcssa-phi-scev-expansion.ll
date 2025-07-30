@@ -161,4 +161,3 @@ loop.0.latch:
 exit:
   ret ptr %res
 }
->>>>>>> f9f68af4b8d5 ([SCEV] Make sure LCSSA is preserved when re-using phi if needed.)
