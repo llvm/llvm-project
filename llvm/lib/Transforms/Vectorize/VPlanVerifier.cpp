@@ -17,6 +17,7 @@
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanHelpers.h"
+#include "VPlanPatternMatch.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -193,7 +194,13 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
             errs() << "EVL used by unexpected VPInstruction\n";
             return false;
           }
-          if (I->getNumUsers() != 1) {
+          // EVLIVIncrement is only used by EVLIV & BranchOnCount.
+          // Having more than two users is unexpected.
+          if ((I->getNumUsers() != 1) &&
+              (I->getNumUsers() != 2 || none_of(I->users(), [&I](VPUser *U) {
+                 using namespace llvm::VPlanPatternMatch;
+                 return match(U, m_BranchOnCount(m_Specific(I), m_VPValue()));
+               }))) {
             errs() << "EVL is used in VPInstruction with multiple users\n";
             return false;
           }
