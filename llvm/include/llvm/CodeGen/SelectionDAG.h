@@ -1203,13 +1203,16 @@ public:
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                            ArrayRef<SDValue> Ops, const SDNodeFlags Flags);
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL,
-                           ArrayRef<EVT> ResultTys, ArrayRef<SDValue> Ops);
+                           ArrayRef<EVT> ResultTys, ArrayRef<SDValue> Ops,
+                           const SDNodeFlags Flags);
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
                            ArrayRef<SDValue> Ops, const SDNodeFlags Flags);
 
   // Use flags from current flag inserter.
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                            ArrayRef<SDValue> Ops);
+  LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL,
+                           ArrayRef<EVT> ResultTys, ArrayRef<SDValue> Ops);
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
                            ArrayRef<SDValue> Ops);
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
@@ -1347,9 +1350,10 @@ public:
   /// Helper function to make it easier to build SelectCC's if you just have an
   /// ISD::CondCode instead of an SDValue.
   SDValue getSelectCC(const SDLoc &DL, SDValue LHS, SDValue RHS, SDValue True,
-                      SDValue False, ISD::CondCode Cond) {
+                      SDValue False, ISD::CondCode Cond,
+                      SDNodeFlags Flags = SDNodeFlags()) {
     return getNode(ISD::SELECT_CC, DL, True.getValueType(), LHS, RHS, True,
-                   False, getCondCode(Cond));
+                   False, getCondCode(Cond), Flags);
   }
 
   /// Try to simplify a select/vselect into 1 of its operands or a constant.
@@ -1426,10 +1430,9 @@ public:
 
   /// Creates a LifetimeSDNode that starts (`IsStart==true`) or ends
   /// (`IsStart==false`) the lifetime of the portion of `FrameIndex` between
-  /// offsets `Offset` and `Offset + Size`.
+  /// offsets `0` and `Size`.
   LLVM_ABI SDValue getLifetimeNode(bool IsStart, const SDLoc &dl, SDValue Chain,
-                                   int FrameIndex, int64_t Size,
-                                   int64_t Offset = -1);
+                                   int FrameIndex, int64_t Size);
 
   /// Creates a PseudoProbeSDNode with function GUID `Guid` and
   /// the index of the block `Index` it is probing, as well as the attributes
@@ -2489,8 +2492,7 @@ public:
 
   /// Check if a value \op N is a constant using the target's BooleanContent for
   /// its type.
-  LLVM_ABI std::optional<bool>
-  isBoolConstant(SDValue N, bool AllowTruncation = false) const;
+  LLVM_ABI std::optional<bool> isBoolConstant(SDValue N) const;
 
   /// Set CallSiteInfo to be associated with Node.
   void addCallSiteInfo(const SDNode *Node, CallSiteInfo &&CallInfo) {

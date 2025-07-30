@@ -42,7 +42,7 @@ bool fromJSON(const llvm::json::Value &V, Request &R, llvm::json::Path P) {
 
 llvm::json::Value toJSON(const ErrorInfo &EI) {
   llvm::json::Object Result{{"code", EI.code}, {"message", EI.message}};
-  if (EI.data)
+  if (!EI.data.empty())
     Result.insert({"data", EI.data});
   return Result;
 }
@@ -107,13 +107,65 @@ bool fromJSON(const llvm::json::Value &V, ToolCapability &TC,
   return O && O.map("listChanged", TC.listChanged);
 }
 
+llvm::json::Value toJSON(const ResourceCapability &RC) {
+  return llvm::json::Object{{"listChanged", RC.listChanged},
+                            {"subscribe", RC.subscribe}};
+}
+
+bool fromJSON(const llvm::json::Value &V, ResourceCapability &RC,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(V, P);
+  return O && O.map("listChanged", RC.listChanged) &&
+         O.map("subscribe", RC.subscribe);
+}
+
 llvm::json::Value toJSON(const Capabilities &C) {
-  return llvm::json::Object{{"tools", C.tools}};
+  return llvm::json::Object{{"tools", C.tools}, {"resources", C.resources}};
+}
+
+bool fromJSON(const llvm::json::Value &V, Resource &R, llvm::json::Path P) {
+  llvm::json::ObjectMapper O(V, P);
+  return O && O.map("uri", R.uri) && O.map("name", R.name) &&
+         O.mapOptional("description", R.description) &&
+         O.mapOptional("mimeType", R.mimeType);
+}
+
+llvm::json::Value toJSON(const Resource &R) {
+  llvm::json::Object Result{{"uri", R.uri}, {"name", R.name}};
+  if (!R.description.empty())
+    Result.insert({"description", R.description});
+  if (!R.mimeType.empty())
+    Result.insert({"mimeType", R.mimeType});
+  return Result;
 }
 
 bool fromJSON(const llvm::json::Value &V, Capabilities &C, llvm::json::Path P) {
   llvm::json::ObjectMapper O(V, P);
   return O && O.map("tools", C.tools);
+}
+
+llvm::json::Value toJSON(const ResourceContents &RC) {
+  llvm::json::Object Result{{"uri", RC.uri}, {"text", RC.text}};
+  if (!RC.mimeType.empty())
+    Result.insert({"mimeType", RC.mimeType});
+  return Result;
+}
+
+bool fromJSON(const llvm::json::Value &V, ResourceContents &RC,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(V, P);
+  return O && O.map("uri", RC.uri) && O.map("text", RC.text) &&
+         O.mapOptional("mimeType", RC.mimeType);
+}
+
+llvm::json::Value toJSON(const ResourceResult &RR) {
+  return llvm::json::Object{{"contents", RR.contents}};
+}
+
+bool fromJSON(const llvm::json::Value &V, ResourceResult &RR,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(V, P);
+  return O && O.map("contents", RR.contents);
 }
 
 llvm::json::Value toJSON(const TextContent &TC) {
@@ -136,7 +188,7 @@ bool fromJSON(const llvm::json::Value &V, TextResult &TR, llvm::json::Path P) {
 
 llvm::json::Value toJSON(const ToolDefinition &TD) {
   llvm::json::Object Result{{"name", TD.name}};
-  if (TD.description)
+  if (!TD.description.empty())
     Result.insert({"description", TD.description});
   if (TD.inputSchema)
     Result.insert({"inputSchema", TD.inputSchema});

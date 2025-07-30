@@ -63,14 +63,20 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
   "Bases": [
     {
       "Access": "public",
+      "End": true,
       "FullName": "",
+      "HasPublicFunctions": true,
+      "HasPublicMembers": true,
+      "InfoType": "record",
       "IsParent": true,
       "IsTypedef": false,
       "IsVirtual": true,
+      "MangledName": "",
       "Name": "F",
       "Path": "path/to/F",
       "PublicFunctions": [
         {
+          "InfoType": "function",
           "IsStatic": false,
           "Name": "InheritedFunctionOne",
           "ReturnType": {
@@ -95,8 +101,11 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
   ],
   "Enums": [
     {
+      "End": true,
+      "InfoType": "enum",
       "Members": [
         {
+          "End": true,
           "Name": "RED",
           "Value": "0"
         }
@@ -107,17 +116,23 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
     }
   ],
   "FullName": "",
+  "HasEnums": true,
+  "HasPublicFunctions": true,
+  "HasRecords": true,
+  "InfoType": "record",
   "IsTypedef": false,
   "Location": {
     "Filename": "main.cpp",
     "LineNumber": 1
   },
+  "MangledName": "",
   "Name": "Foo",
   "Namespace": [
     "GlobalNamespace"
   ],
   "Parents": [
     {
+      "End": true,
       "Name": "F",
       "Path": "",
       "QualName": "",
@@ -133,6 +148,7 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
   ],
   "PublicFunctions": [
     {
+      "InfoType": "function",
       "IsStatic": false,
       "Name": "OneFunction",
       "ReturnType": {
@@ -147,6 +163,7 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
   ],
   "Records": [
     {
+      "End": true,
       "Name": "ChildStruct",
       "Path": "path/to/A/r",
       "QualName": "path::to::A::r::ChildStruct",
@@ -162,6 +179,7 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
   "USR": "0000000000000000000000000000000000000000",
   "VirtualParents": [
     {
+      "End": true,
       "Name": "G",
       "Path": "path/to/G",
       "QualName": "path::to::G::G",
@@ -199,6 +217,8 @@ TEST(JSONGeneratorTest, emitNamespaceJSON) {
   std::string Expected = R"raw({
   "Enums": [
     {
+      "End": true,
+      "InfoType": "enum",
       "Name": "OneEnum",
       "Scoped": false,
       "USR": "0000000000000000000000000000000000000000"
@@ -206,6 +226,8 @@ TEST(JSONGeneratorTest, emitNamespaceJSON) {
   ],
   "Functions": [
     {
+      "End": true,
+      "InfoType": "function",
       "IsStatic": false,
       "Name": "OneFunction",
       "ReturnType": {
@@ -218,12 +240,16 @@ TEST(JSONGeneratorTest, emitNamespaceJSON) {
       "USR": "0000000000000000000000000000000000000000"
     }
   ],
+  "HasEnums": true,
+  "HasRecords": true,
+  "InfoType": "namespace",
   "Name": "Namespace",
   "Namespace": [
     "A"
   ],
   "Namespaces": [
     {
+      "End": true,
       "Name": "ChildNamespace",
       "Path": "path/to/A/Namespace",
       "QualName": "path::to::A::Namespace::ChildNamespace",
@@ -233,6 +259,7 @@ TEST(JSONGeneratorTest, emitNamespaceJSON) {
   "Path": "path/to/A",
   "Records": [
     {
+      "End": true,
       "Name": "ChildStruct",
       "Path": "path/to/A/Namespace",
       "QualName": "path::to::A::Namespace::ChildStruct",

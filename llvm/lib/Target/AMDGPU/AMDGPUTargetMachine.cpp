@@ -25,8 +25,10 @@
 #include "AMDGPUMacroFusion.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUPreloadKernArgProlog.h"
+#include "AMDGPUPrepareAGPRAlloc.h"
 #include "AMDGPURemoveIncompatibleFunctions.h"
 #include "AMDGPUReserveWWMRegs.h"
+#include "AMDGPUResourceUsageAnalysis.h"
 #include "AMDGPUSplitModule.h"
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
@@ -498,6 +500,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeGlobalISel(*PR);
   initializeAMDGPUAsmPrinterPass(*PR);
   initializeAMDGPUDAGToDAGISelLegacyPass(*PR);
+  initializeAMDGPUPrepareAGPRAllocLegacyPass(*PR);
   initializeGCNDPPCombineLegacyPass(*PR);
   initializeSILowerI1CopiesLegacyPass(*PR);
   initializeAMDGPUGlobalISelDivergenceLoweringPass(*PR);
@@ -557,7 +560,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUExternalAAWrapperPass(*PR);
   initializeAMDGPUImageIntrinsicOptimizerPass(*PR);
   initializeAMDGPUPrintfRuntimeBindingPass(*PR);
-  initializeAMDGPUResourceUsageAnalysisPass(*PR);
+  initializeAMDGPUResourceUsageAnalysisWrapperPassPass(*PR);
   initializeGCNNSAReassignLegacyPass(*PR);
   initializeGCNPreRAOptimizationsLegacyPass(*PR);
   initializeGCNPreRALongBranchRegLegacyPass(*PR);
@@ -833,8 +836,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           // When we are not using -fgpu-rdc, we can run accelerator code
           // selection relatively early, but still after linking to prevent
           // eager removal of potentially reachable symbols.
-          if (EnableHipStdPar)
+          if (EnableHipStdPar) {
+            PM.addPass(HipStdParMathFixupPass());
             PM.addPass(HipStdParAcceleratorCodeSelectionPass());
+          }
           PM.addPass(AMDGPUPrintfRuntimeBindingPass());
         }
 
@@ -913,8 +918,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         // selection after linking to prevent, otherwise we end up removing
         // potentially reachable symbols that were exported as external in other
         // modules.
-        if (EnableHipStdPar)
+        if (EnableHipStdPar) {
+          PM.addPass(HipStdParMathFixupPass());
           PM.addPass(HipStdParAcceleratorCodeSelectionPass());
+        }
         // We want to support the -lto-partitions=N option as "best effort".
         // For that, we need to lower LDS earlier in the pipeline before the
         // module is partitioned for codegen.
@@ -1195,6 +1202,7 @@ public:
   bool addRegBankSelect() override;
   void addPreGlobalInstructionSelect() override;
   bool addGlobalInstructionSelect() override;
+  void addPreRegAlloc() override;
   void addFastRegAlloc() override;
   void addOptimizedRegAlloc() override;
 
@@ -1536,6 +1544,11 @@ void GCNPassConfig::addFastRegAlloc() {
   insertPass(&TwoAddressInstructionPassID, &SIWholeQuadModeID);
 
   TargetPassConfig::addFastRegAlloc();
+}
+
+void GCNPassConfig::addPreRegAlloc() {
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(&AMDGPUPrepareAGPRAllocLegacyID);
 }
 
 void GCNPassConfig::addOptimizedRegAlloc() {
@@ -2234,6 +2247,11 @@ void AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
   Base::addOptimizedRegAlloc(addPass);
 }
 
+void AMDGPUCodeGenPassBuilder::addPreRegAlloc(AddMachinePass &addPass) const {
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(AMDGPUPrepareAGPRAllocPass());
+}
+
 Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
     AddMachinePass &addPass) const {
   // TODO: Check --regalloc-npm option
@@ -2281,6 +2299,12 @@ void AMDGPUCodeGenPassBuilder::addPostRegAlloc(AddMachinePass &addPass) const {
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addPass(SIOptimizeExecMaskingPass());
   Base::addPostRegAlloc(addPass);
+}
+
+void AMDGPUCodeGenPassBuilder::addPreSched2(AddMachinePass &addPass) const {
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addPass(SIShrinkInstructionsPass());
+  addPass(SIPostRABundlerPass());
 }
 
 void AMDGPUCodeGenPassBuilder::addPreEmitPass(AddMachinePass &addPass) const {

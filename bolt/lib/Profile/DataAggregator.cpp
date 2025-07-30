@@ -77,6 +77,11 @@ FilterPID("pid",
   cl::Optional,
   cl::cat(AggregatorCategory));
 
+static cl::opt<bool> ImputeTraceFallthrough(
+    "impute-trace-fall-through",
+    cl::desc("impute missing fall-throughs for branch-only traces"),
+    cl::Optional, cl::cat(AggregatorCategory));
+
 static cl::opt<bool>
 IgnoreBuildID("ignore-build-id",
   cl::desc("continue even if build-ids in input binary and perf.data mismatch"),
@@ -513,6 +518,89 @@ void DataAggregator::parsePerfData(BinaryContext &BC) {
   deleteTempFiles();
 }
 
+void DataAggregator::imputeFallThroughs() {
+  if (Traces.empty())
+    return;
+
+  std::pair PrevBranch(Trace::EXTERNAL, Trace::EXTERNAL);
+  uint64_t AggregateCount = 0;
+  uint64_t AggregateFallthroughSize = 0;
+  uint64_t InferredTraces = 0;
+
+  // Helper map with whether the instruction is a call/ret/unconditional branch
+  std::unordered_map<uint64_t, bool> IsUncondCTMap;
+  auto checkUnconditionalControlTransfer = [&](const uint64_t Addr) {
+    auto isUncondCT = [&](const MCInst &MI) -> bool {
+      return BC->MIB->isUnconditionalControlTransfer(MI);
+    };
+    return testAndSet<bool>(Addr, isUncondCT, IsUncondCTMap).value_or(true);
+  };
+
+  // Traces are sorted by their component addresses (Branch, From, To).
+  // assert(is_sorted(Traces));
+
+  // Traces corresponding to the top-of-stack branch entry with a missing
+  // fall-through have BR_ONLY(-1ULL/UINT64_MAX) in To field, meaning that for
+  // fixed values of Branch and From branch-only traces are stored after all
+  // traces with valid fall-through.
+  //
+  // Group traces by (Branch, From) and compute weighted average fall-through
+  // length for the top-of-stack trace (closing the group) by accumulating the
+  // fall-through lengths of traces with valid fall-throughs earlier in the
+  // group.
+  for (auto &[Trace, Info] : Traces) {
+    // Skip fall-throughs in external code.
+    if (Trace.From == Trace::EXTERNAL)
+      continue;
+    std::pair CurrentBranch(Trace.Branch, Trace.From);
+    // BR_ONLY must be the last trace in the group
+    if (Trace.To == Trace::BR_ONLY) {
+      // If the group is not empty, use aggregate values, otherwise 0-length
+      // for unconditional jumps (call/ret/uncond branch) or 1-length for others
+      uint64_t InferredBytes =
+          PrevBranch == CurrentBranch
+              ? AggregateFallthroughSize / AggregateCount
+              : !checkUnconditionalControlTransfer(Trace.From);
+      Trace.To = Trace.From + InferredBytes;
+      LLVM_DEBUG(dbgs() << "imputed " << Trace << " (" << InferredBytes
+                        << " bytes)\n");
+      ++InferredTraces;
+    } else {
+      // Trace with a valid fall-through
+      // New group: reset aggregates.
+      if (CurrentBranch != PrevBranch)
+        AggregateCount = AggregateFallthroughSize = 0;
+      // Only use valid fall-through lengths
+      if (Trace.To != Trace::EXTERNAL)
+        AggregateFallthroughSize += (Trace.To - Trace.From) * Info.TakenCount;
+      AggregateCount += Info.TakenCount;
+    }
+    PrevBranch = CurrentBranch;
+  }
+  if (opts::Verbosity >= 1)
+    outs() << "BOLT-INFO: imputed " << InferredTraces << " traces\n";
+}
+
+void DataAggregator::registerProfiledFunctions() {
+  DenseSet<uint64_t> Addrs;
+  for (const auto &Trace : llvm::make_first_range(Traces)) {
+    if (Trace.Branch != Trace::FT_ONLY &&
+        Trace.Branch != Trace::FT_EXTERNAL_ORIGIN)
+      Addrs.insert(Trace.Branch);
+    Addrs.insert(Trace.From);
+  }
+
+  for (const auto [PC, _] : BasicSamples)
+    Addrs.insert(PC);
+
+  for (const PerfMemSample &MemSample : MemSamples)
+    Addrs.insert(MemSample.PC);
+
+  for (const uint64_t Addr : Addrs)
+    if (BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr))
+      Func->setHasProfileAvailable();
+}
+
 Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   this->BC = &BC;
 
@@ -525,6 +613,9 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   // Sort parsed traces for faster processing.
   llvm::sort(Traces, llvm::less_first());
 
+  if (opts::ImputeTraceFallthrough)
+    imputeFallThroughs();
+
   if (opts::HeatmapMode) {
     if (std::error_code EC = printLBRHeatMap())
       return errorCodeToError(EC);
@@ -532,6 +623,7 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
       exit(0);
   }
 
+  registerProfiledFunctions();
   return Error::success();
 }
 
@@ -726,22 +818,10 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
 }
 
 bool DataAggregator::checkReturn(uint64_t Addr) {
-  auto isReturn = [&](auto MI) { return MI && BC->MIB->isReturn(*MI); };
-  if (llvm::is_contained(Returns, Addr))
-    return true;
-
-  BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr);
-  if (!Func)
-    return false;
-
-  const uint64_t Offset = Addr - Func->getAddress();
-  if (Func->hasInstructions()
-          ? isReturn(Func->getInstructionAtOffset(Offset))
-          : isReturn(Func->disassembleInstructionAtOffset(Offset))) {
-    Returns.emplace(Addr);
-    return true;
-  }
-  return false;
+  auto isReturn = [&](const MCInst &MI) -> bool {
+    return BC->MIB->isReturn(MI);
+  };
+  return testAndSet<bool>(Addr, isReturn, Returns).value_or(false);
 }
 
 bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
@@ -847,10 +927,9 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
   if (BF.isPseudo())
     return Branches;
 
-  if (!BF.isSimple())
+  // Can only record traces in CFG state
+  if (!BF.hasCFG())
     return std::nullopt;
-
-  assert(BF.hasCFG() && "can only record traces in CFG state");
 
   const BinaryBasicBlock *FromBB = BF.getBasicBlockContainingOffset(From);
   const BinaryBasicBlock *ToBB = BF.getBasicBlockContainingOffset(To);
@@ -1289,10 +1368,6 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   }
 
   const uint64_t FromOffset = Addr[0]->Offset;
-  BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(FromOffset);
-  if (FromFunc)
-    FromFunc->setHasProfileAvailable();
-
   int64_t Count = Counters[0];
   int64_t Mispreds = Counters[1];
 
@@ -1302,11 +1377,6 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     NumTotalSamples += Count;
     return std::error_code();
   }
-
-  const uint64_t ToOffset = Addr[1]->Offset;
-  BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(ToOffset);
-  if (ToFunc)
-    ToFunc->setHasProfileAvailable();
 
   /// For fall-through types, adjust locations to match Trace container.
   if (Type == FT || Type == FT_EXTERNAL_ORIGIN || Type == FT_EXTERNAL_RETURN) {
@@ -1331,7 +1401,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     if (!Addr[0]->Offset)
       Addr[0]->Offset = Trace::FT_EXTERNAL_RETURN;
     else
-      Returns.emplace(Addr[0]->Offset);
+      Returns.emplace(Addr[0]->Offset, true);
   }
 
   /// Record a trace.
@@ -1555,9 +1625,6 @@ std::error_code DataAggregator::parseBranchEvents() {
   Traces.reserve(TraceMap.size());
   for (const auto &[Trace, Info] : TraceMap) {
     Traces.emplace_back(Trace, Info);
-    for (const uint64_t Addr : {Trace.Branch, Trace.From})
-      if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Addr))
-        BF->setHasProfileAvailable();
   }
   clear(TraceMap);
 
@@ -1592,7 +1659,7 @@ void DataAggregator::processBranchEvents() {
   NamedRegionTimer T("processBranch", "Processing branch events",
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
-  Returns.emplace(Trace::FT_EXTERNAL_RETURN);
+  Returns.emplace(Trace::FT_EXTERNAL_RETURN, true);
   for (const auto &[Trace, Info] : Traces) {
     bool IsReturn = checkReturn(Trace.Branch);
     // Ignore returns.
@@ -1617,9 +1684,6 @@ std::error_code DataAggregator::parseBasicEvents() {
     if (!Sample->PC)
       continue;
     ++NumTotalSamples;
-
-    if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Sample->PC))
-      BF->setHasProfileAvailable();
 
     ++BasicSamples[Sample->PC];
     EventNames.insert(Sample->EventName);
@@ -1657,9 +1721,6 @@ std::error_code DataAggregator::parseMemEvents() {
     ErrorOr<PerfMemSample> Sample = parseMemSample();
     if (std::error_code EC = Sample.getError())
       return EC;
-
-    if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Sample->PC))
-      BF->setHasProfileAvailable();
 
     MemSamples.emplace_back(std::move(Sample.get()));
   }

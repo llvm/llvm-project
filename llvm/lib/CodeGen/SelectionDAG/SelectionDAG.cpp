@@ -786,10 +786,7 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
     break;
   case ISD::LIFETIME_START:
   case ISD::LIFETIME_END:
-    if (cast<LifetimeSDNode>(N)->hasOffset()) {
-      ID.AddInteger(cast<LifetimeSDNode>(N)->getSize());
-      ID.AddInteger(cast<LifetimeSDNode>(N)->getOffset());
-    }
+    ID.AddInteger(cast<LifetimeSDNode>(N)->getSize());
     break;
   case ISD::PSEUDO_PROBE:
     ID.AddInteger(cast<PseudoProbeSDNode>(N)->getGuid());
@@ -3051,7 +3048,7 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
       return TLI->isSplatValueForTargetNode(V, DemandedElts, UndefElts, *this,
                                             Depth);
     break;
-}
+  }
 
   // We don't support other cases than those above for scalable vectors at
   // the moment.
@@ -5559,6 +5556,8 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::USUBSAT:
   case ISD::MULHU:
   case ISD::MULHS:
+  case ISD::ABDU:
+  case ISD::ABDS:
   case ISD::SMIN:
   case ISD::SMAX:
   case ISD::UMIN:
@@ -5584,6 +5583,12 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BUILD_VECTOR:
   case ISD::BUILD_PAIR:
   case ISD::SPLAT_VECTOR:
+  case ISD::FABS:
+    return false;
+
+  case ISD::ABS:
+    // ISD::ABS defines abs(INT_MIN) -> INT_MIN and never generates poison.
+    // Different to Intrinsic::abs.
     return false;
 
   case ISD::ADDC:
@@ -5635,6 +5640,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::FMUL:
   case ISD::FDIV:
   case ISD::FREM:
+  case ISD::FCOPYSIGN:
     // No poison except from flags (which is handled above)
     return false;
 
@@ -6759,7 +6765,9 @@ SDValue SelectionDAG::FoldSymbolOffset(unsigned Opcode, EVT VT,
     return SDValue();
   int64_t Offset = C2->getSExtValue();
   switch (Opcode) {
-  case ISD::ADD: break;
+  case ISD::ADD:
+  case ISD::PTRADD:
+    break;
   case ISD::SUB: Offset = -uint64_t(Offset); break;
   default: return SDValue();
   }
@@ -8425,7 +8433,7 @@ static SDValue getMemcpyLoadsAndStores(
                        : MemOp::Copy(Size, DstAlignCanChange, Alignment,
                                      *SrcAlign, isVol, CopyFromConstant);
   if (!TLI.findOptimalMemOpLowering(
-          MemOps, Limit, Op, DstPtrInfo.getAddrSpace(),
+          C, MemOps, Limit, Op, DstPtrInfo.getAddrSpace(),
           SrcPtrInfo.getAddrSpace(), MF.getFunction().getAttributes()))
     return SDValue();
 
@@ -8617,7 +8625,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
   assert(SrcAlign && "SrcAlign must be set");
   unsigned Limit = AlwaysInline ? ~0U : TLI.getMaxStoresPerMemmove(OptSize);
   if (!TLI.findOptimalMemOpLowering(
-          MemOps, Limit,
+          C, MemOps, Limit,
           MemOp::Copy(Size, DstAlignCanChange, Alignment, *SrcAlign,
                       /*IsVolatile*/ true),
           DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
@@ -8726,6 +8734,7 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   std::vector<EVT> MemOps;
   bool DstAlignCanChange = false;
+  LLVMContext &C = *DAG.getContext();
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   bool OptSize = shouldLowerMemFuncForSize(MF, DAG);
@@ -8736,7 +8745,7 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
   unsigned Limit = AlwaysInline ? ~0 : TLI.getMaxStoresPerMemset(OptSize);
 
   if (!TLI.findOptimalMemOpLowering(
-          MemOps, Limit,
+          C, MemOps, Limit,
           MemOp::Set(Size, DstAlignCanChange, Alignment, IsZeroVal, isVol),
           DstPtrInfo.getAddrSpace(), ~0u, MF.getFunction().getAttributes()))
     return SDValue();
@@ -9367,7 +9376,7 @@ SDValue SelectionDAG::getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
 
 SDValue SelectionDAG::getLifetimeNode(bool IsStart, const SDLoc &dl,
                                       SDValue Chain, int FrameIndex,
-                                      int64_t Size, int64_t Offset) {
+                                      int64_t Size) {
   const unsigned Opcode = IsStart ? ISD::LIFETIME_START : ISD::LIFETIME_END;
   const auto VTs = getVTList(MVT::Other);
   SDValue Ops[2] = {
@@ -9380,13 +9389,12 @@ SDValue SelectionDAG::getLifetimeNode(bool IsStart, const SDLoc &dl,
   AddNodeIDNode(ID, Opcode, VTs, Ops);
   ID.AddInteger(FrameIndex);
   ID.AddInteger(Size);
-  ID.AddInteger(Offset);
   void *IP = nullptr;
   if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP))
     return SDValue(E, 0);
 
-  LifetimeSDNode *N = newSDNode<LifetimeSDNode>(
-      Opcode, dl.getIROrder(), dl.getDebugLoc(), VTs, Size, Offset);
+  LifetimeSDNode *N = newSDNode<LifetimeSDNode>(Opcode, dl.getIROrder(),
+                                                dl.getDebugLoc(), VTs, Size);
   createOperands(N, Ops);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
@@ -10473,7 +10481,7 @@ SDValue SelectionDAG::simplifySelect(SDValue Cond, SDValue T, SDValue F) {
 
   // select true, T, F --> T
   // select false, T, F --> F
-  if (auto C = isBoolConstant(Cond, /*AllowTruncation=*/true))
+  if (auto C = isBoolConstant(Cond))
     return *C ? T : F;
 
   // select ?, T, T --> T
@@ -10566,7 +10574,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                               ArrayRef<SDUse> Ops) {
   switch (Ops.size()) {
   case 0: return getNode(Opcode, DL, VT);
-  case 1: return getNode(Opcode, DL, VT, static_cast<const SDValue>(Ops[0]));
+  case 1: return getNode(Opcode, DL, VT, Ops[0].get());
   case 2: return getNode(Opcode, DL, VT, Ops[0], Ops[1]);
   case 3: return getNode(Opcode, DL, VT, Ops[0], Ops[1], Ops[2]);
   default: break;
@@ -10702,7 +10710,16 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL,
                               ArrayRef<EVT> ResultTys, ArrayRef<SDValue> Ops) {
-  return getNode(Opcode, DL, getVTList(ResultTys), Ops);
+  SDNodeFlags Flags;
+  if (Inserter)
+    Flags = Inserter->getFlags();
+  return getNode(Opcode, DL, getVTList(ResultTys), Ops, Flags);
+}
+
+SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL,
+                              ArrayRef<EVT> ResultTys, ArrayRef<SDValue> Ops,
+                              const SDNodeFlags Flags) {
+  return getNode(Opcode, DL, getVTList(ResultTys), Ops, Flags);
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
@@ -10858,26 +10875,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
            (Ops[2]->getAsZExtVal() == 0 || Ops[2]->getAsZExtVal() == 1) &&
            "Invalid STRICT_FP_ROUND!");
     break;
-#if 0
-  // FIXME: figure out how to safely handle things like
-  // int foo(int x) { return 1 << (x & 255); }
-  // int bar() { return foo(256); }
-  case ISD::SRA_PARTS:
-  case ISD::SRL_PARTS:
-  case ISD::SHL_PARTS:
-    if (N3.getOpcode() == ISD::SIGN_EXTEND_INREG &&
-        cast<VTSDNode>(N3.getOperand(1))->getVT() != MVT::i1)
-      return getNode(Opcode, DL, VT, N1, N2, N3.getOperand(0));
-    else if (N3.getOpcode() == ISD::AND)
-      if (ConstantSDNode *AndRHS = dyn_cast<ConstantSDNode>(N3.getOperand(1))) {
-        // If the and is only masking out bits that cannot effect the shift,
-        // eliminate the and.
-        unsigned NumBits = VT.getScalarSizeInBits()*2;
-        if ((AndRHS->getValue() & (NumBits-1)) == NumBits-1)
-          return getNode(Opcode, DL, VT, N1, N2, N3.getOperand(0));
-      }
-    break;
-#endif
   }
 
   // Memoize the node unless it returns a glue result.
@@ -13702,13 +13699,14 @@ bool SelectionDAG::isConstantFPBuildVectorOrConstantFP(SDValue N) const {
   return false;
 }
 
-std::optional<bool> SelectionDAG::isBoolConstant(SDValue N,
-                                                 bool AllowTruncation) const {
-  ConstantSDNode *Const = isConstOrConstSplat(N, false, AllowTruncation);
+std::optional<bool> SelectionDAG::isBoolConstant(SDValue N) const {
+  ConstantSDNode *Const =
+      isConstOrConstSplat(N, false, /*AllowTruncation=*/true);
   if (!Const)
     return std::nullopt;
 
-  const APInt &CVal = Const->getAPIntValue();
+  EVT VT = N->getValueType(0);
+  const APInt CVal = Const->getAPIntValue().trunc(VT.getScalarSizeInBits());
   switch (TLI->getBooleanContents(N.getValueType())) {
   case TargetLowering::ZeroOrOneBooleanContent:
     if (CVal.isOne())
@@ -13879,6 +13877,8 @@ void SelectionDAG::copyExtraInfo(SDNode *From, SDNode *To) {
     return;
   }
 
+  const SDNode *EntrySDN = getEntryNode().getNode();
+
   // We need to copy NodeExtraInfo to all _new_ nodes that are being introduced
   // through the replacement of From with To. Otherwise, replacements of a node
   // (From) with more complex nodes (To and its operands) may result in lost
@@ -13910,9 +13910,14 @@ void SelectionDAG::copyExtraInfo(SDNode *From, SDNode *To) {
       return true;
     if (!Visited.insert(N).second)
       return true;
-    if (getEntryNode().getNode() == N)
+    if (EntrySDN == N)
       return false;
     for (const SDValue &Op : N->op_values()) {
+      if (N == To && Op.getNode() == EntrySDN) {
+        // Special case: New node's operand is the entry node; just need to
+        // copy extra info to new node.
+        break;
+      }
       if (!Self(Self, Op.getNode()))
         return false;
     }

@@ -1429,7 +1429,7 @@ namespace cwg299 { // cwg299: 2.8 c++11
   // cxx98-11-error@#cwg299-q {{ambiguous conversion of array size expression of type 'T' to an integral or enumeration type}}
   //  cxx98-11-note@#cwg299-int {{conversion to integral type 'int' declared here}}
   //  cxx98-11-note@#cwg299-ushort {{conversion to integral type 'unsigned short' declared here}}
-  // since-cxx14-error-re@#cwg299-q {{{{conversion from 'T' to 'unsigned (long long|long|int)' is ambiguous}}}}
+  // since-cxx14-error-re@#cwg299-q {{conversion from 'T' to '__size_t' (aka 'unsigned {{long long|long|int}}') is ambiguous}}
   //  since-cxx14-note@#cwg299-int {{candidate function}}
   //  since-cxx14-note@#cwg299-ushort {{candidate function}}
 } // namespace cwg299

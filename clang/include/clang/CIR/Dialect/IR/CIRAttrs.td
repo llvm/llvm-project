@@ -10,14 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_CIR_DIALECT_IR_CIRATTRS_TD
-#define LLVM_CLANG_CIR_DIALECT_IR_CIRATTRS_TD
+#ifndef CLANG_CIR_DIALECT_IR_CIRATTRS_TD
+#define CLANG_CIR_DIALECT_IR_CIRATTRS_TD
 
 include "mlir/IR/BuiltinAttributeInterfaces.td"
-include "mlir/IR/EnumAttr.td"
 
-include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "clang/CIR/Dialect/IR/CIRAttrConstraints.td"
+include "clang/CIR/Dialect/IR/CIRDialect.td"
+include "clang/CIR/Dialect/IR/CIREnumAttr.td"
 
 //===----------------------------------------------------------------------===//
 // CIR Attrs
@@ -40,21 +40,6 @@ class CIR_TypedAttr<string name, string attrMnemonic, list<Trait> traits = []>
   ];
 
   let assemblyFormat = [{}];
-}
-
-class CIR_I32EnumAttr<string name, string summary, list<I32EnumAttrCase> cases>
-    : I32EnumAttr<name, summary, cases> {
-  let cppNamespace = "::cir";
-}
-
-class CIR_I64EnumAttr<string name, string summary, list<I64EnumAttrCase> cases>
-    : I64EnumAttr<name, summary, cases> {
-  let cppNamespace = "::cir";
-}
-
-class CIR_EnumAttr<EnumAttrInfo info, string name = "", list<Trait> traits = []>
-    : EnumAttr<CIR_Dialect, info, name, traits> {
-  let assemblyFormat = "`<` $value `>`";
 }
 
 class CIRUnitAttr<string name, string attrMnemonic, list<Trait> traits = []>
@@ -158,6 +143,18 @@ def UndefAttr : CIR_TypedAttr<"Undef", "undef"> {
   let description = [{
     The UndefAttr represents an undef constant, corresponding to LLVM's notion
     of undef.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// PoisonAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_PoisonAttr : CIR_TypedAttr<"Poison", "poison"> {
+  let summary = "Represent a typed poison constant";
+  let description = [{
+    The PoisonAttr represents a typed poison constant, corresponding to LLVM's
+    notion of poison.
   }];
 }
 
@@ -516,4 +513,4 @@ def BitfieldInfoAttr : CIR_Attr<"BitfieldInfo", "bitfield_info"> {
 }
 
 
-#endif // LLVM_CLANG_CIR_DIALECT_IR_CIRATTRS_TD
+#endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD

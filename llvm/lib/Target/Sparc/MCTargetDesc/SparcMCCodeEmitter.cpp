@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/SparcFixupKinds.h"
-#include "MCTargetDesc/SparcMCAsmInfo.h"
 #include "SparcMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"

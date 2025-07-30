@@ -122,6 +122,19 @@ struct __get_hash_node_value_type<__hash_value_type<_Key, _Tp> > {
 template <class _Tp>
 using __get_hash_node_value_type_t _LIBCPP_NODEBUG = typename __get_hash_node_value_type<_Tp>::type;
 
+template <class _Tp>
+struct __get_hash_node_key_type {
+  using type _LIBCPP_NODEBUG = _Tp;
+};
+
+template <class _Key, class _Tp>
+struct __get_hash_node_key_type<__hash_value_type<_Key, _Tp> > {
+  using type _LIBCPP_NODEBUG = _Key;
+};
+
+template <class _Tp>
+using __get_hash_node_key_type_t _LIBCPP_NODEBUG = typename __get_hash_node_key_type<_Tp>::type;
+
 template <class _Tp, class _VoidPtr>
 struct __hash_node : public __hash_node_base< __rebind_pointer_t<_VoidPtr, __hash_node<_Tp, _VoidPtr> > > {
   using __node_value_type _LIBCPP_NODEBUG = __get_hash_node_value_type_t<_Tp>;
@@ -182,69 +195,11 @@ class __hash_map_iterator;
 template <class _HashIterator>
 class __hash_map_const_iterator;
 
-template <class _Tp>
-struct __hash_key_value_types {
-  static_assert(!is_reference<_Tp>::value && !is_const<_Tp>::value, "");
-  typedef _Tp key_type;
-  typedef _Tp __node_value_type;
-  typedef _Tp __container_value_type;
-  static const bool __is_map = false;
-
-  _LIBCPP_HIDE_FROM_ABI static key_type const& __get_key(_Tp const& __v) { return __v; }
-  _LIBCPP_HIDE_FROM_ABI static __container_value_type const& __get_value(__node_value_type const& __v) { return __v; }
-  _LIBCPP_HIDE_FROM_ABI static __container_value_type* __get_ptr(__node_value_type& __n) { return std::addressof(__n); }
-  _LIBCPP_HIDE_FROM_ABI static __container_value_type&& __move(__node_value_type& __v) { return std::move(__v); }
-};
-
-template <class _Key, class _Tp>
-struct __hash_key_value_types<__hash_value_type<_Key, _Tp> > {
-  typedef _Key key_type;
-  typedef _Tp mapped_type;
-  typedef __hash_value_type<_Key, _Tp> __node_value_type;
-  typedef pair<const _Key, _Tp> __container_value_type;
-  typedef __container_value_type __map_value_type;
-  static const bool __is_map = true;
-
-  _LIBCPP_HIDE_FROM_ABI static key_type const& __get_key(__container_value_type const& __v) { return __v.first; }
-
-  template <class _Up, __enable_if_t<is_same<__remove_cvref_t<_Up>, __node_value_type>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI static __container_value_type const& __get_value(_Up& __t) {
-    return __t.__get_value();
-  }
-
-  template <class _Up, __enable_if_t<is_same<__remove_cvref_t<_Up>, __container_value_type>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI static __container_value_type const& __get_value(_Up& __t) {
-    return __t;
-  }
-
-  _LIBCPP_HIDE_FROM_ABI static __container_value_type* __get_ptr(__container_value_type& __n) {
-    return std::addressof(__n);
-  }
-  _LIBCPP_HIDE_FROM_ABI static pair<key_type&&, mapped_type&&> __move(__node_value_type& __v) { return __v.__move(); }
-};
-
-template <class _Tp, class _AllocPtr, class _KVTypes = __hash_key_value_types<_Tp>, bool = _KVTypes::__is_map>
-struct __hash_map_pointer_types {};
-
-template <class _Tp, class _AllocPtr, class _KVTypes>
-struct __hash_map_pointer_types<_Tp, _AllocPtr, _KVTypes, true> {
-  typedef typename _KVTypes::__map_value_type _Mv;
-  typedef __rebind_pointer_t<_AllocPtr, _Mv> __map_value_type_pointer;
-  typedef __rebind_pointer_t<_AllocPtr, const _Mv> __const_map_value_type_pointer;
-};
-
 template <class _NodePtr, class _NodeT = typename pointer_traits<_NodePtr>::element_type>
 struct __hash_node_types;
 
 template <class _NodePtr, class _Tp, class _VoidPtr>
-struct __hash_node_types<_NodePtr, __hash_node<_Tp, _VoidPtr> >
-    : public __hash_key_value_types<_Tp>,
-      __hash_map_pointer_types<_Tp, _VoidPtr>
-
-{
-  typedef __hash_key_value_types<_Tp> __base;
-
-public:
+struct __hash_node_types<_NodePtr, __hash_node<_Tp, _VoidPtr> > {
   typedef ptrdiff_t difference_type;
   typedef size_t size_type;
 
@@ -617,8 +572,6 @@ public:
   typedef typename __alloc_traits::pointer pointer;
 
 private:
-  typedef __hash_node_types<pointer> _NodeTypes;
-
   allocator_type& __na_;
 
 public:
@@ -633,7 +586,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void operator()(pointer __p) _NOEXCEPT {
     if (__value_constructed) {
-      __alloc_traits::destroy(__na_, _NodeTypes::__get_ptr(__p->__get_value()));
+      __alloc_traits::destroy(__na_, std::addressof(__p->__get_value()));
       std::__destroy_at(std::addressof(*__p));
     }
     if (__p)
@@ -684,6 +637,8 @@ template <class _Tp, class _Hash, class _Equal, class _Alloc>
 class __hash_table {
 public:
   using value_type = __get_hash_node_value_type_t<_Tp>;
+  using key_type   = __get_hash_node_key_type_t<_Tp>;
+
   typedef _Hash hasher;
   typedef _Equal key_equal;
   typedef _Alloc allocator_type;
@@ -694,8 +649,6 @@ private:
 
 public:
   typedef typename _NodeTypes::__node_value_type __node_value_type;
-  typedef typename _NodeTypes::__container_value_type __container_value_type;
-  typedef typename _NodeTypes::key_type key_type;
   typedef value_type& reference;
   typedef const value_type& const_reference;
   typedef typename __alloc_traits::pointer pointer;
@@ -824,7 +777,7 @@ public:
 
   template <class _First,
             class _Second,
-            __enable_if_t<__can_extract_map_key<_First, key_type, __container_value_type>::value, int> = 0>
+            __enable_if_t<__can_extract_map_key<_First, key_type, value_type>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __emplace_unique(_First&& __f, _Second&& __s) {
     return __emplace_unique_key_args(__f, std::forward<_First>(__f), std::forward<_Second>(__s));
   }
@@ -852,20 +805,9 @@ public:
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI iterator __emplace_hint_multi(const_iterator __p, _Args&&... __args);
 
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __insert_unique(__container_value_type&& __x) {
-    return __emplace_unique_key_args(_NodeTypes::__get_key(__x), std::move(__x));
-  }
-
-  template <class _Pp, __enable_if_t<!is_same<__remove_cvref_t<_Pp>, __container_value_type>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __insert_unique(_Pp&& __x) {
-    return __emplace_unique(std::forward<_Pp>(__x));
-  }
-
   template <class _ValueT = _Tp, __enable_if_t<__is_hash_value_type<_ValueT>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void __insert_unique_from_orphaned_node(value_type&& __value) {
-    using __key_type = typename _NodeTypes::key_type;
-
-    __node_holder __h = __construct_node(const_cast<__key_type&&>(__value.first), std::move(__value.second));
+    __node_holder __h = __construct_node(const_cast<key_type&&>(__value.first), std::move(__value.second));
     __node_insert_unique(__h.get());
     __h.release();
   }
@@ -877,21 +819,9 @@ public:
     __h.release();
   }
 
-  template <class _Pp>
-  _LIBCPP_HIDE_FROM_ABI iterator __insert_multi(_Pp&& __x) {
-    return __emplace_multi(std::forward<_Pp>(__x));
-  }
-
-  template <class _Pp>
-  _LIBCPP_HIDE_FROM_ABI iterator __insert_multi(const_iterator __p, _Pp&& __x) {
-    return __emplace_hint_multi(__p, std::forward<_Pp>(__x));
-  }
-
   template <class _ValueT = _Tp, __enable_if_t<__is_hash_value_type<_ValueT>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void __insert_multi_from_orphaned_node(value_type&& __value) {
-    using __key_type = typename _NodeTypes::key_type;
-
-    __node_holder __h = __construct_node(const_cast<__key_type&&>(__value.first), std::move(__value.second));
+    __node_holder __h = __construct_node(const_cast<key_type&&>(__value.first), std::move(__value.second));
     __node_insert_multi(__h.get());
     __h.release();
   }
@@ -901,10 +831,6 @@ public:
     __node_holder __h = __construct_node(std::move(__value));
     __node_insert_multi(__h.get());
     __h.release();
-  }
-
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __insert_unique(const __container_value_type& __x) {
-    return __emplace_unique_key_args(_NodeTypes::__get_key(__x), __x);
   }
 
 #if _LIBCPP_STD_VER >= 17
@@ -1070,12 +996,10 @@ private:
 
   template <class _From, class _ValueT = _Tp, __enable_if_t<__is_hash_value_type<_ValueT>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void __assign_value(__get_hash_node_value_type_t<_Tp>& __lhs, _From&& __rhs) {
-    using __key_type = typename _NodeTypes::key_type;
-
     // This is technically UB, since the object was constructed as `const`.
     // Clang doesn't optimize on this currently though.
-    const_cast<__key_type&>(__lhs.first) = const_cast<__copy_cvref_t<_From, __key_type>&&>(__rhs.first);
-    __lhs.second                         = std::forward<_From>(__rhs).second;
+    const_cast<key_type&>(__lhs.first) = const_cast<__copy_cvref_t<_From, key_type>&&>(__rhs.first);
+    __lhs.second                       = std::forward<_From>(__rhs).second;
   }
 
   template <class _From, class _ValueT = _Tp, __enable_if_t<!__is_hash_value_type<_ValueT>::value, int> = 0>
@@ -1224,7 +1148,7 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__deallocate_node(__next_pointer 
   while (__np != nullptr) {
     __next_pointer __next    = __np->__next_;
     __node_pointer __real_np = __np->__upcast();
-    __node_traits::destroy(__na, _NodeTypes::__get_ptr(__real_np->__get_value()));
+    __node_traits::destroy(__na, std::addressof(__real_np->__get_value()));
     std::__destroy_at(std::addressof(*__real_np));
     __node_traits::deallocate(__na, __real_np, 1);
     __np = __next;
@@ -1313,8 +1237,8 @@ template <class _InputIterator>
 void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_unique(_InputIterator __first, _InputIterator __last) {
   typedef iterator_traits<_InputIterator> _ITraits;
   typedef typename _ITraits::value_type _ItValueType;
-  static_assert(is_same<_ItValueType, __container_value_type>::value,
-                "__assign_unique may only be called with the containers value type");
+  static_assert(
+      is_same<_ItValueType, value_type>::value, "__assign_unique may only be called with the containers value type");
 
   if (bucket_count() != 0) {
     __next_pointer __cache = __detach();
@@ -1336,7 +1260,7 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_unique(_InputIterator __
     __deallocate_node(__cache);
   }
   for (; __first != __last; ++__first)
-    __insert_unique(*__first);
+    __emplace_unique(*__first);
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -1344,10 +1268,8 @@ template <class _InputIterator>
 void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_multi(_InputIterator __first, _InputIterator __last) {
   typedef iterator_traits<_InputIterator> _ITraits;
   typedef typename _ITraits::value_type _ItValueType;
-  static_assert(
-      (is_same<_ItValueType, __container_value_type>::value || is_same<_ItValueType, __node_value_type>::value),
-      "__assign_multi may only be called with the containers value type"
-      " or the nodes value type");
+  static_assert(is_same<_ItValueType, value_type>::value,
+                "__assign_multi may only be called with the containers value type or the nodes value type");
   if (bucket_count() != 0) {
     __next_pointer __cache = __detach();
 #if _LIBCPP_HAS_EXCEPTIONS
@@ -1368,7 +1290,7 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_multi(_InputIterator __f
     __deallocate_node(__cache);
   }
   for (; __first != __last; ++__first)
-    __insert_multi(_NodeTypes::__get_value(*__first));
+    __emplace_multi(*__first);
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -1886,7 +1808,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__construct_node(_Args&&... __args) {
   std::__construct_at(std::addressof(*__h), /* next = */ nullptr, /* hash = */ 0);
 
   // Now construct the value_type using the allocator's construct() method.
-  __node_traits::construct(__na, _NodeTypes::__get_ptr(__h->__get_value()), std::forward<_Args>(__args)...);
+  __node_traits::construct(__na, std::addressof(__h->__get_value()), std::forward<_Args>(__args)...);
   __h.get_deleter().__value_constructed = true;
 
   __h->__hash_ = hash_function()(__h->__get_value());
@@ -1902,7 +1824,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__construct_node_hash(size_t __hash, _
   __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
   std::__construct_at(std::addressof(*__h), /* next = */ nullptr, /* hash = */ __hash);
   __node_traits::construct(
-      __na, _NodeTypes::__get_ptr(__h->__get_value()), std::forward<_First>(__f), std::forward<_Rest>(__rest)...);
+      __na, std::addressof(__h->__get_value()), std::forward<_First>(__f), std::forward<_Rest>(__rest)...);
   __h.get_deleter().__value_constructed = true;
   return __h;
 }

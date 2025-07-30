@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -525,23 +526,29 @@ static void convertCallSiteObjects(yaml::MachineFunction &YMF,
                                    const MachineFunction &MF,
                                    ModuleSlotTracker &MST) {
   const auto *TRI = MF.getSubtarget().getRegisterInfo();
-  for (auto CSInfo : MF.getCallSitesInfo()) {
+  for (auto [MI, CallSiteInfo] : MF.getCallSitesInfo()) {
     yaml::CallSiteInfo YmlCS;
     yaml::MachineInstrLoc CallLocation;
 
     // Prepare instruction position.
-    MachineBasicBlock::const_instr_iterator CallI = CSInfo.first->getIterator();
+    MachineBasicBlock::const_instr_iterator CallI = MI->getIterator();
     CallLocation.BlockNum = CallI->getParent()->getNumber();
     // Get call instruction offset from the beginning of block.
     CallLocation.Offset =
         std::distance(CallI->getParent()->instr_begin(), CallI);
     YmlCS.CallLocation = CallLocation;
+
+    auto [ArgRegPairs, CalleeTypeIds] = CallSiteInfo;
     // Construct call arguments and theirs forwarding register info.
-    for (auto ArgReg : CSInfo.second.ArgRegPairs) {
+    for (auto ArgReg : ArgRegPairs) {
       yaml::CallSiteInfo::ArgRegPair YmlArgReg;
       YmlArgReg.ArgNo = ArgReg.ArgNo;
       printRegMIR(ArgReg.Reg, YmlArgReg.Reg, TRI);
       YmlCS.ArgForwardingRegs.emplace_back(YmlArgReg);
+    }
+    // Get type ids.
+    for (auto *CalleeTypeId : CalleeTypeIds) {
+      YmlCS.CalleeTypeIds.push_back(CalleeTypeId->getZExtValue());
     }
     YMF.CallSitesInfo.push_back(std::move(YmlCS));
   }
@@ -815,6 +822,9 @@ static void printMI(raw_ostream &OS, MFPrintState &State,
   if (MI.getFlag(MachineInstr::SameSign))
     OS << "samesign ";
 
+  // NOTE: Please add new MIFlags also to the MI_FLAGS_STR in
+  // llvm/utils/update_mir_test_checks.py.
+
   OS << TII->getName(MI.getOpcode());
 
   LS = ListSeparator();
@@ -852,6 +862,10 @@ static void printMI(raw_ostream &OS, MFPrintState &State,
   }
   if (uint32_t CFIType = MI.getCFIType())
     OS << LS << " cfi-type " << CFIType;
+  if (Value *DS = MI.getDeactivationSymbol()) {
+    OS << LS << "deactivation-symbol ";
+    MIRFormatter::printIRValue(OS, *DS, State.MST);
+  }
 
   if (auto Num = MI.peekDebugInstrNum())
     OS << LS << " debug-instr-number " << Num;

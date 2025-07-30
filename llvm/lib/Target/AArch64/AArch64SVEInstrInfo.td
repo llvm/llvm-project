@@ -737,15 +737,6 @@ let Predicates = [HasSVE_or_SME] in {
   defm FABS_ZPmZ : sve_int_un_pred_arit_bitwise_fp<0b100, "fabs", AArch64fabs_mt>;
   defm FNEG_ZPmZ : sve_int_un_pred_arit_bitwise_fp<0b101, "fneg", AArch64fneg_mt>;
 
-  foreach VT = [nxv2bf16, nxv4bf16, nxv8bf16] in {
-    // No dedicated instruction, so just clear the sign bit.
-    def : Pat<(VT (fabs VT:$op)),
-              (AND_ZI $op, (i64 (logical_imm64_XFORM(i64 0x7fff7fff7fff7fff))))>;
-    // No dedicated instruction, so just invert the sign bit.
-    def : Pat<(VT (fneg VT:$op)),
-              (EOR_ZI $op, (i64 (logical_imm64_XFORM(i64 0x8000800080008000))))>;
-  }
-
   // zext(cmpeq(x, splat(0))) -> cnot(x)
   def : Pat<(nxv16i8 (zext (nxv16i1 (AArch64setcc_z (nxv16i1 (SVEAllActive):$Pg), nxv16i8:$Op2, (SVEDup0), SETEQ)))),
             (CNOT_ZPmZ_B $Op2, $Pg, $Op2)>;
@@ -2634,16 +2625,22 @@ let Predicates = [HasSVE_or_SME] in {
   // These get expanded to individual LDR_ZXI/STR_ZXI instructions in
   // AArch64ExpandPseudoInsts.
   let mayLoad = 1, hasSideEffects = 0 in {
-    def LDR_ZZXI   : Pseudo<(outs   ZZ_b_strided_and_contiguous:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def LDR_ZZXI_STRIDED_CONTIGUOUS   : Pseudo<(outs   ZZ_b_strided_and_contiguous:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def LDR_ZZZZXI_STRIDED_CONTIGUOUS : Pseudo<(outs ZZZZ_b_strided_and_contiguous:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+
+    def LDR_ZZXI   : Pseudo<(outs   ZZ_b:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
     def LDR_ZZZXI  : Pseudo<(outs  ZZZ_b:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def LDR_ZZZZXI : Pseudo<(outs ZZZZ_b_strided_and_contiguous:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def LDR_PPXI   : Pseudo<(outs PPR2:$pp), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def LDR_ZZZZXI : Pseudo<(outs ZZZZ_b:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def LDR_PPXI   : Pseudo<(outs   PPR2:$pp), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
   }
   let mayStore = 1, hasSideEffects = 0 in {
-    def STR_ZZXI   : Pseudo<(outs), (ins   ZZ_b_strided_and_contiguous:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def STR_ZZXI_STRIDED_CONTIGUOUS   : Pseudo<(outs), (ins   ZZ_b_strided_and_contiguous:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def STR_ZZZZXI_STRIDED_CONTIGUOUS : Pseudo<(outs), (ins ZZZZ_b_strided_and_contiguous:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+
+    def STR_ZZXI   : Pseudo<(outs), (ins   ZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
     def STR_ZZZXI  : Pseudo<(outs), (ins  ZZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def STR_ZZZZXI : Pseudo<(outs), (ins ZZZZ_b_strided_and_contiguous:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def STR_PPXI   : Pseudo<(outs), (ins PPR2:$pp, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def STR_ZZZZXI : Pseudo<(outs), (ins ZZZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def STR_PPXI   : Pseudo<(outs), (ins   PPR2:$pp, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
   }
 
   let AddedComplexity = 1 in {
@@ -4033,6 +4030,36 @@ let Predicates = [HasSVE2_or_SME] in {
   defm BSL1N_ZZZZ : sve2_int_bitwise_ternary_op<0b011, "bsl1n", AArch64bsl1n>;
   defm BSL2N_ZZZZ : sve2_int_bitwise_ternary_op<0b101, "bsl2n", AArch64bsl2n>;
   defm NBSL_ZZZZ  : sve2_int_bitwise_ternary_op<0b111, "nbsl",  AArch64nbsl>;
+
+  multiclass binary_bitwise<ValueType VT, SDPatternOperator InOp, SDPatternOperator OutOp> {
+    def : Pat<(InOp VT:$op1, VT:$op2), (OutOp $op1, $op2)>;
+
+    def : Pat<(SVEType<VT>.DSub (InOp V64:$op1, V64:$op2)),
+              (EXTRACT_SUBREG (OutOp (INSERT_SUBREG (IMPLICIT_DEF), (SVEType<VT>.DSub $op1), dsub),
+                                     (INSERT_SUBREG (IMPLICIT_DEF), (SVEType<VT>.DSub $op2), dsub)), dsub)>;
+
+    def : Pat<(SVEType<VT>.ZSub (InOp V128:$op1, V128:$op2)),
+              (EXTRACT_SUBREG (OutOp (INSERT_SUBREG (IMPLICIT_DEF), (SVEType<VT>.ZSub $op1), zsub),
+                                     (INSERT_SUBREG (IMPLICIT_DEF), (SVEType<VT>.ZSub $op2), zsub)), zsub)>;
+  }
+
+  foreach VT = [nxv16i8, nxv8i16, nxv4i32, nxv2i64] in {
+    // EON (a, b) = BSL2N (a, a, b) = BSL2N (b, b, a)
+    defm : binary_bitwise<VT, PatFrag<(ops node:$op1, node:$op2), (vnot (xor node:$op1, node:$op2))>,
+                              OutPatFrag<(ops node:$op1, node:$op2), (BSL2N_ZZZZ $op1, $op1, $op2)>>;
+
+    // NAND (a, b) = NBSL (a, b, b) = NBSL (b, a, a)
+    defm : binary_bitwise<VT, PatFrag<(ops node:$op1, node:$op2), (vnot (and node:$op1, node:$op2))>,
+                              OutPatFrag<(ops node:$op1, node:$op2), (NBSL_ZZZZ $op2, $op1, $op1)>>;
+
+    // NOR (a, b) = NBSL (a, b, a) = NBSL (b, a, b)
+    defm : binary_bitwise<VT, PatFrag<(ops node:$op1, node:$op2), (vnot (or node:$op1, node:$op2))>,
+                              OutPatFrag<(ops node:$op1, node:$op2), (NBSL_ZZZZ $op2, $op1, $op2)>>;
+
+    // ORN (a, b) = BSL2N (a, b, a)
+    defm : binary_bitwise<VT, PatFrag<(ops node:$op1, node:$op2), (or node:$op1, (vnot node:$op2))>,
+                              OutPatFrag<(ops node:$op1, node:$op2), (BSL2N_ZZZZ $op1, $op2, $op1)>>;
+  }
 
   // SVE2 bitwise xor and rotate right by immediate
   defm XAR_ZZZI : sve2_int_rotate_right_imm<"xar", int_aarch64_sve_xar>;
