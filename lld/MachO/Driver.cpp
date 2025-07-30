@@ -286,10 +286,7 @@ static void saveThinArchiveToRepro(ArchiveFile const *file) {
           ": Archive::children failed: " + toString(std::move(e)));
 }
 
-class DeferredFile {
-public:
-  DeferredFile(StringRef path, bool isLazy, MemoryBufferRef buffer)
-      : path(path), isLazy(isLazy), buffer(buffer) {}
+struct DeferredFile {
   StringRef path;
   bool isLazy;
   MemoryBufferRef buffer;
