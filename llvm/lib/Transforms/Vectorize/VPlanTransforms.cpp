@@ -3820,34 +3820,3 @@ void VPlanTransforms::addBranchWeightToMiddleTerminator(
       MDB.createBranchWeights({1, VectorStep - 1}, /*IsExpected=*/false);
   MiddleTerm->addMetadata(LLVMContext::MD_prof, BranchWeights);
 }
-
-void VPlanTransforms::adjustRecipesForReverseAccesses(VPlan &Plan) {
-  if (Plan.hasScalarVFOnly())
-    return;
-
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
-    for (VPRecipeBase &R : *VPBB) {
-      auto *MemR = dyn_cast<VPWidenMemoryRecipe>(&R);
-      if (!MemR || !MemR->isReverse())
-        continue;
-
-      if (auto *L = dyn_cast<VPWidenLoadRecipe>(MemR)) {
-        auto *Reverse =
-            new VPInstruction(VPInstruction::Reverse, {L}, L->getDebugLoc());
-        Reverse->insertAfter(L);
-        L->replaceAllUsesWith(Reverse);
-        Reverse->setOperand(0, L);
-        continue;
-      }
-
-      if (auto *S = dyn_cast<VPWidenStoreRecipe>(MemR)) {
-        VPValue *StoredVal = S->getStoredValue();
-        auto *Reverse = new VPInstruction(VPInstruction::Reverse, {StoredVal},
-                                          S->getDebugLoc());
-        Reverse->insertBefore(S);
-        S->setOperand(1, Reverse);
-      }
-    }
-  }
-}

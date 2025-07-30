@@ -7608,9 +7608,9 @@ void EpilogueVectorizerEpilogueLoop::printDebugTracesAtEnd() {
   });
 }
 
-VPWidenMemoryRecipe *
-VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
-                                  VFRange &Range) {
+VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(Instruction *I,
+                                                ArrayRef<VPValue *> Operands,
+                                                VFRange &Range) {
   assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
          "Must be called with either a load or store");
 
@@ -7667,14 +7667,30 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
     Builder.insert(VectorPtr);
     Ptr = VectorPtr;
   }
-  if (LoadInst *Load = dyn_cast<LoadInst>(I))
-    return new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
-                                 VPIRMetadata(*Load, LVer), I->getDebugLoc());
 
-  StoreInst *Store = cast<StoreInst>(I);
-  return new VPWidenStoreRecipe(*Store, Ptr, Operands[0], Mask, Consecutive,
+  if (auto *Load = dyn_cast<LoadInst>(I)) {
+    auto *LoadR =
+        new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
+                              VPIRMetadata(*Load, LVer), Load->getDebugLoc());
+    if (Reverse) {
+      Builder.insert(LoadR);
+      return new VPInstruction(VPInstruction::Reverse, {LoadR},
+                               LoadR->getDebugLoc());
+    }
+    return LoadR;
+  }
+
+  auto *Store = cast<StoreInst>(I);
+  VPValue *StoredVal = Operands[0];
+  if (Reverse) {
+    auto *ReverseR = new VPInstruction(VPInstruction::Reverse, {StoredVal},
+                                       Store->getDebugLoc());
+    Builder.insert(ReverseR);
+    StoredVal = ReverseR;
+  }
+  return new VPWidenStoreRecipe(*Store, Ptr, StoredVal, Mask, Consecutive,
                                 Reverse, VPIRMetadata(*Store, LVer),
-                                I->getDebugLoc());
+                                Store->getDebugLoc());
 }
 
 /// Creates a VPWidenIntOrFpInductionRecpipe for \p Phi. If needed, it will also
@@ -8746,10 +8762,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Transform initial VPlan: Apply previously taken decisions, in order, to
   // bring the VPlan to its final state.
   // ---------------------------------------------------------------------------
-
-  // Adjust the result of reverse memory accesses.
-  VPlanTransforms::runPass(VPlanTransforms::adjustRecipesForReverseAccesses,
-                           *Plan);
 
   // Adjust the recipes for any inloop reductions.
   adjustRecipesForReductions(Plan, RecipeBuilder, Range.Start);
