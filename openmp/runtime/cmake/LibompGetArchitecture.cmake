@@ -71,7 +71,7 @@ function(libomp_get_architecture return_arch)
   file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/libomp_detect_arch.c" ${detect_arch_src_txt})
 
   # Try to compile using the C Compiler.  It will always error out with an #error directive, so store error output to ${local_architecture}
-  try_compile(compile_dummy "${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/libomp_detect_arch.c" OUTPUT_VARIABLE local_architecture)
+  try_compile(compile_dummy "${CMAKE_CURRENT_BINARY_DIR}" SOURCES "${CMAKE_CURRENT_BINARY_DIR}/libomp_detect_arch.c" OUTPUT_VARIABLE local_architecture)
 
   # Match the important architecture line and store only that matching string in ${local_architecture}
   string(REGEX MATCH "ARCHITECTURE=([a-zA-Z0-9_]+)" local_architecture "${local_architecture}")
