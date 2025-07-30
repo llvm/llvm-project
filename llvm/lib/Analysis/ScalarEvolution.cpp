@@ -5110,7 +5110,6 @@ static SCEV::NoWrapFlags proveNoWrapViaBTC(const SCEVAddRecExpr *AR,
 
   const SCEV *ExtBTC = SE.getNoopOrZeroExtend(BTC, WTy);
   // AR has a step of 1, it is NUW/NSW if Start + BTC >= Start.
-  const SCEV *Add = SE.getAddExpr(AR->getStart(), ExtBTC);
   if (!AR->hasNoUnsignedWrap() &&
       SE.willNotOverflow(Instruction::Add, false, AR->getStart(), ExtBTC))
     Result = ScalarEvolution::setFlags(Result, SCEV::FlagNUW);
