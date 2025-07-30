@@ -212,9 +212,18 @@ entry:
 }
 
 define void @test_lshr_i128_outofrange(i128 %x, ptr nocapture %r) nounwind {
-; ALL-LABEL: test_lshr_i128_outofrange:
-; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    ret{{[l|q]}}
+; i686-LABEL: test_lshr_i128_outofrange:
+; i686:       # %bb.0: # %entry
+; i686-NEXT:    pushl %ebp
+; i686-NEXT:    movl %esp, %ebp
+; i686-NEXT:    andl $-16, %esp
+; i686-NEXT:    movl %ebp, %esp
+; i686-NEXT:    popl %ebp
+; i686-NEXT:    retl
+;
+; x86_64-LABEL: test_lshr_i128_outofrange:
+; x86_64:       # %bb.0: # %entry
+; x86_64-NEXT:    retq
 entry:
 	%0 = lshr i128 %x, -1
 	store i128 %0, ptr %r, align 16
@@ -222,9 +231,18 @@ entry:
 }
 
 define void @test_ashr_i128_outofrange(i128 %x, ptr nocapture %r) nounwind {
-; ALL-LABEL: test_ashr_i128_outofrange:
-; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    ret{{[l|q]}}
+; i686-LABEL: test_ashr_i128_outofrange:
+; i686:       # %bb.0: # %entry
+; i686-NEXT:    pushl %ebp
+; i686-NEXT:    movl %esp, %ebp
+; i686-NEXT:    andl $-16, %esp
+; i686-NEXT:    movl %ebp, %esp
+; i686-NEXT:    popl %ebp
+; i686-NEXT:    retl
+;
+; x86_64-LABEL: test_ashr_i128_outofrange:
+; x86_64:       # %bb.0: # %entry
+; x86_64-NEXT:    retq
 entry:
 	%0 = ashr i128 %x, -1
 	store i128 %0, ptr %r, align 16
@@ -232,9 +250,18 @@ entry:
 }
 
 define void @test_shl_i128_outofrange(i128 %x, ptr nocapture %r) nounwind {
-; ALL-LABEL: test_shl_i128_outofrange:
-; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    ret{{[l|q]}}
+; i686-LABEL: test_shl_i128_outofrange:
+; i686:       # %bb.0: # %entry
+; i686-NEXT:    pushl %ebp
+; i686-NEXT:    movl %esp, %ebp
+; i686-NEXT:    andl $-16, %esp
+; i686-NEXT:    movl %ebp, %esp
+; i686-NEXT:    popl %ebp
+; i686-NEXT:    retl
+;
+; x86_64-LABEL: test_shl_i128_outofrange:
+; x86_64:       # %bb.0: # %entry
+; x86_64-NEXT:    retq
 entry:
 	%0 = shl i128 %x, -1
 	store i128 %0, ptr %r, align 16
@@ -874,26 +901,31 @@ define <2 x i256> @shl_zext_lshr_outofrange(<2 x i128> %a0) {
 define i128 @lshr_shl_mask(i128 %a0) {
 ; i686-LABEL: lshr_shl_mask:
 ; i686:       # %bb.0:
-; i686-NEXT:    pushl %edi
+; i686-NEXT:    pushl %ebp
 ; i686-NEXT:    .cfi_def_cfa_offset 8
+; i686-NEXT:    .cfi_offset %ebp, -8
+; i686-NEXT:    movl %esp, %ebp
+; i686-NEXT:    .cfi_def_cfa_register %ebp
+; i686-NEXT:    pushl %edi
 ; i686-NEXT:    pushl %esi
-; i686-NEXT:    .cfi_def_cfa_offset 12
-; i686-NEXT:    .cfi_offset %esi, -12
-; i686-NEXT:    .cfi_offset %edi, -8
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; i686-NEXT:    andl $-16, %esp
+; i686-NEXT:    .cfi_offset %esi, -16
+; i686-NEXT:    .cfi_offset %edi, -12
+; i686-NEXT:    movl 8(%ebp), %eax
+; i686-NEXT:    movl 24(%ebp), %ecx
+; i686-NEXT:    movl 28(%ebp), %edx
+; i686-NEXT:    movl 32(%ebp), %esi
 ; i686-NEXT:    movl $2147483647, %edi # imm = 0x7FFFFFFF
-; i686-NEXT:    andl {{[0-9]+}}(%esp), %edi
+; i686-NEXT:    andl 36(%ebp), %edi
 ; i686-NEXT:    movl %edi, 12(%eax)
 ; i686-NEXT:    movl %esi, 8(%eax)
 ; i686-NEXT:    movl %edx, 4(%eax)
 ; i686-NEXT:    movl %ecx, (%eax)
+; i686-NEXT:    leal -8(%ebp), %esp
 ; i686-NEXT:    popl %esi
-; i686-NEXT:    .cfi_def_cfa_offset 8
 ; i686-NEXT:    popl %edi
-; i686-NEXT:    .cfi_def_cfa_offset 4
+; i686-NEXT:    popl %ebp
+; i686-NEXT:    .cfi_def_cfa %esp, 4
 ; i686-NEXT:    retl $4
 ;
 ; x86_64-LABEL: lshr_shl_mask:

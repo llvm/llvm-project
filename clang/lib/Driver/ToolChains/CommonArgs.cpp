@@ -23,6 +23,7 @@
 #include "Hexagon.h"
 #include "MSP430.h"
 #include "Solaris.h"
+#include "ToolChains/Cuda.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
@@ -547,15 +548,22 @@ const char *tools::getLDMOption(const llvm::Triple &T, const ArgList &Args) {
   case llvm::Triple::aarch64:
     if (T.isOSManagarm())
       return "aarch64managarm";
+    else if (aarch64::isAArch64BareMetal(T))
+      return "aarch64elf";
     return "aarch64linux";
   case llvm::Triple::aarch64_be:
+    if (aarch64::isAArch64BareMetal(T))
+      return "aarch64elfb";
     return "aarch64linuxb";
   case llvm::Triple::arm:
   case llvm::Triple::thumb:
   case llvm::Triple::armeb:
-  case llvm::Triple::thumbeb:
-    return tools::arm::isARMBigEndian(T, Args) ? "armelfb_linux_eabi"
-                                               : "armelf_linux_eabi";
+  case llvm::Triple::thumbeb: {
+    bool IsBigEndian = tools::arm::isARMBigEndian(T, Args);
+    if (arm::isARMEABIBareMetal(T))
+      return IsBigEndian ? "armelfb" : "armelf";
+    return IsBigEndian ? "armelfb_linux_eabi" : "armelf_linux_eabi";
+  }
   case llvm::Triple::m68k:
     return "m68kelf";
   case llvm::Triple::ppc:
@@ -856,7 +864,7 @@ void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
   case llvm::Triple::sparcv9:
-    sparc::getSparcTargetFeatures(D, Args, Features);
+    sparc::getSparcTargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
@@ -1320,6 +1328,17 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   if (Args.hasArg(options::OPT_ftime_report))
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-time-passes"));
+
+  if (Arg *A = Args.getLastArg(options::OPT_fthinlto_distributor_EQ)) {
+    CmdArgs.push_back(
+        Args.MakeArgString("--thinlto-distributor=" + Twine(A->getValue())));
+    CmdArgs.push_back(
+        Args.MakeArgString("--thinlto-remote-compiler=" +
+                           Twine(ToolChain.getDriver().getClangProgramPath())));
+
+    for (auto A : Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))
+      CmdArgs.push_back(Args.MakeArgString("--thinlto-distributor-arg=" + A));
+  }
 }
 
 void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,
@@ -3419,4 +3438,31 @@ StringRef tools::parseMRecipOption(clang::DiagnosticsEngine &Diags,
   }
 
   return Out;
+}
+
+std::string tools::complexRangeKindToStr(LangOptions::ComplexRangeKind Range) {
+  switch (Range) {
+  case LangOptions::ComplexRangeKind::CX_Full:
+    return "full";
+    break;
+  case LangOptions::ComplexRangeKind::CX_Basic:
+    return "basic";
+    break;
+  case LangOptions::ComplexRangeKind::CX_Improved:
+    return "improved";
+    break;
+  case LangOptions::ComplexRangeKind::CX_Promoted:
+    return "promoted";
+    break;
+  default:
+    return "";
+  }
+}
+
+std::string
+tools::renderComplexRangeOption(LangOptionsBase::ComplexRangeKind Range) {
+  std::string ComplexRangeStr = complexRangeKindToStr(Range);
+  if (!ComplexRangeStr.empty())
+    return "-complex-range=" + ComplexRangeStr;
+  return ComplexRangeStr;
 }

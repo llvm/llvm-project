@@ -421,9 +421,6 @@ private:
     DK_ORG,
     DK_FILL,
     DK_ENDR,
-    DK_BUNDLE_ALIGN_MODE,
-    DK_BUNDLE_LOCK,
-    DK_BUNDLE_UNLOCK,
     DK_ZERO,
     DK_EXTERN,
     DK_GLOBL,
@@ -567,7 +564,7 @@ private:
   bool parseDirectiveSet(StringRef IDVal, AssignmentKind Kind);
   bool parseDirectiveOrg(); // ".org"
   // ".align{,32}", ".p2align{,w,l}"
-  bool parseDirectiveAlign(bool IsPow2, unsigned ValueSize);
+  bool parseDirectiveAlign(bool IsPow2, uint8_t ValueSize);
 
   // ".file", ".line", ".loc", ".loc_label", ".stabs"
   bool parseDirectiveFile(SMLoc DirectiveLoc);
@@ -624,12 +621,6 @@ private:
   bool parseDirectiveMacrosOnOff(StringRef Directive);
   // alternate macro mode directives
   bool parseDirectiveAltmacro(StringRef Directive);
-  // ".bundle_align_mode"
-  bool parseDirectiveBundleAlignMode();
-  // ".bundle_lock"
-  bool parseDirectiveBundleLock();
-  // ".bundle_unlock"
-  bool parseDirectiveBundleUnlock();
 
   // ".space", ".skip"
   bool parseDirectiveSpace(StringRef IDVal);
@@ -2062,12 +2053,6 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveIrpc(IDLoc);
     case DK_ENDR:
       return parseDirectiveEndr(IDLoc);
-    case DK_BUNDLE_ALIGN_MODE:
-      return parseDirectiveBundleAlignMode();
-    case DK_BUNDLE_LOCK:
-      return parseDirectiveBundleLock();
-    case DK_BUNDLE_UNLOCK:
-      return parseDirectiveBundleUnlock();
     case DK_SLEB128:
       return parseDirectiveLEB128(true);
     case DK_ULEB128:
@@ -3094,7 +3079,6 @@ bool AsmParser::parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated) {
 bool AsmParser::parseDirectiveReloc(SMLoc DirectiveLoc) {
   const MCExpr *Offset;
   const MCExpr *Expr = nullptr;
-  SMLoc OffsetLoc = Lexer.getTok().getLoc();
 
   if (parseExpression(Offset))
     return true;
@@ -3120,13 +3104,7 @@ bool AsmParser::parseDirectiveReloc(SMLoc DirectiveLoc) {
   if (parseEOL())
     return true;
 
-  const MCTargetAsmParser &MCT = getTargetParser();
-  const MCSubtargetInfo &STI = MCT.getSTI();
-  if (std::optional<std::pair<bool, std::string>> Err =
-          getStreamer().emitRelocDirective(*Offset, Name, Expr, DirectiveLoc,
-                                           STI))
-    return Error(Err->first ? NameLoc : OffsetLoc, Err->second);
-
+  getStreamer().emitRelocDirective(*Offset, Name, Expr, NameLoc);
   return false;
 }
 
@@ -3340,7 +3318,7 @@ bool AsmParser::parseDirectiveOrg() {
 
 /// parseDirectiveAlign
 ///  ::= {.align, ...} expression [ , expression [ , expression ]]
-bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
+bool AsmParser::parseDirectiveAlign(bool IsPow2, uint8_t ValueSize) {
   SMLoc AlignmentLoc = getLexer().getLoc();
   int64_t Alignment;
   SMLoc MaxBytesLoc;
@@ -3426,17 +3404,16 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
   const MCSection *Section = getStreamer().getCurrentSectionOnly();
   assert(Section && "must have section to emit alignment");
 
-  if (HasFillExpr && FillExpr != 0 && Section->isVirtualSection()) {
+  if (HasFillExpr && FillExpr != 0 && Section->isBssSection()) {
     ReturnVal |=
-        Warning(FillExprLoc, "ignoring non-zero fill value in " +
-                                 Section->getVirtualSectionKind() +
-                                 " section '" + Section->getName() + "'");
+        Warning(FillExprLoc, "ignoring non-zero fill value in BSS section '" +
+                                 Section->getName() + "'");
     FillExpr = 0;
   }
 
   // Check whether we should use optimal code alignment for this .align
   // directive.
-  if (Section->useCodeAlign() && !HasFillExpr) {
+  if (MAI.useCodeAlign(*Section) && !HasFillExpr) {
     getStreamer().emitCodeAlignment(
         Align(Alignment), &getTargetParser().getSTI(), MaxBytesToFill);
   } else {
@@ -4116,27 +4093,30 @@ bool AsmParser::parseDirectiveCVFPOData() {
 }
 
 /// parseDirectiveCFISections
-/// ::= .cfi_sections section [, section]
+/// ::= .cfi_sections section [, section][, section]
 bool AsmParser::parseDirectiveCFISections() {
   StringRef Name;
   bool EH = false;
   bool Debug = false;
+  bool SFrame = false;
 
   if (!parseOptionalToken(AsmToken::EndOfStatement)) {
     for (;;) {
       if (parseIdentifier(Name))
-        return TokError("expected .eh_frame or .debug_frame");
+        return TokError("expected .eh_frame, .debug_frame, or .sframe");
       if (Name == ".eh_frame")
         EH = true;
       else if (Name == ".debug_frame")
         Debug = true;
+      else if (Name == ".sframe")
+        SFrame = true;
       if (parseOptionalToken(AsmToken::EndOfStatement))
         break;
       if (parseComma())
         return true;
     }
   }
-  getStreamer().emitCFISections(EH, Debug);
+  getStreamer().emitCFISections(EH, Debug, SFrame);
   return false;
 }
 
@@ -4776,56 +4756,6 @@ bool AsmParser::parseDirectivePurgeMacro(SMLoc DirectiveLoc) {
   getContext().undefineMacro(Name);
   DEBUG_WITH_TYPE("asm-macros", dbgs()
                                     << "Un-defining macro: " << Name << "\n");
-  return false;
-}
-
-/// parseDirectiveBundleAlignMode
-/// ::= {.bundle_align_mode} expression
-bool AsmParser::parseDirectiveBundleAlignMode() {
-  // Expect a single argument: an expression that evaluates to a constant
-  // in the inclusive range 0-30.
-  SMLoc ExprLoc = getLexer().getLoc();
-  int64_t AlignSizePow2;
-  if (checkForValidSection() || parseAbsoluteExpression(AlignSizePow2) ||
-      parseEOL() ||
-      check(AlignSizePow2 < 0 || AlignSizePow2 > 30, ExprLoc,
-            "invalid bundle alignment size (expected between 0 and 30)"))
-    return true;
-
-  getStreamer().emitBundleAlignMode(Align(1ULL << AlignSizePow2));
-  return false;
-}
-
-/// parseDirectiveBundleLock
-/// ::= {.bundle_lock} [align_to_end]
-bool AsmParser::parseDirectiveBundleLock() {
-  if (checkForValidSection())
-    return true;
-  bool AlignToEnd = false;
-
-  StringRef Option;
-  SMLoc Loc = getTok().getLoc();
-  const char *kInvalidOptionError =
-      "invalid option for '.bundle_lock' directive";
-
-  if (!parseOptionalToken(AsmToken::EndOfStatement)) {
-    if (check(parseIdentifier(Option), Loc, kInvalidOptionError) ||
-        check(Option != "align_to_end", Loc, kInvalidOptionError) || parseEOL())
-      return true;
-    AlignToEnd = true;
-  }
-
-  getStreamer().emitBundleLock(AlignToEnd);
-  return false;
-}
-
-/// parseDirectiveBundleLock
-/// ::= {.bundle_lock}
-bool AsmParser::parseDirectiveBundleUnlock() {
-  if (checkForValidSection() || parseEOL())
-    return true;
-
-  getStreamer().emitBundleUnlock();
   return false;
 }
 
@@ -5477,9 +5407,6 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".irp"] = DK_IRP;
   DirectiveKindMap[".irpc"] = DK_IRPC;
   DirectiveKindMap[".endr"] = DK_ENDR;
-  DirectiveKindMap[".bundle_align_mode"] = DK_BUNDLE_ALIGN_MODE;
-  DirectiveKindMap[".bundle_lock"] = DK_BUNDLE_LOCK;
-  DirectiveKindMap[".bundle_unlock"] = DK_BUNDLE_UNLOCK;
   DirectiveKindMap[".if"] = DK_IF;
   DirectiveKindMap[".ifeq"] = DK_IFEQ;
   DirectiveKindMap[".ifge"] = DK_IFGE;

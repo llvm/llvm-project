@@ -80,30 +80,21 @@ struct ImplicitlyCopyable {
 static_assert(__is_constructible(ImplicitlyCopyable, const ImplicitlyCopyable&));
 
 
-struct Movable { // #Movable
+struct Movable {
   template <typename T>
   requires __is_constructible(Movable, T) // #err-self-constraint-1
-  explicit Movable(T op) noexcept; // #Movable1
-  Movable(Movable&&) noexcept = default; // #Movable2
+  explicit Movable(T op) noexcept; // #1
+  Movable(Movable&&) noexcept = default; // #2
 };
 static_assert(__is_constructible(Movable, Movable&&));
 static_assert(__is_constructible(Movable, const Movable&));
-// expected-error@-1 {{static assertion failed due to requirement '__is_constructible(Movable, const Movable &)'}} \
-// expected-error@-1 {{call to implicitly-deleted copy constructor of 'Movable'}} \
-// expected-note@#Movable  {{'Movable' defined here}} \
-// expected-note@#Movable  {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'int' to 'const Movable' for 1st argument}} \
-// expected-note@#Movable2  {{copy constructor is implicitly deleted because 'Movable' has a user-declared move constructor}} \
-// expected-note@#Movable2  {{candidate constructor not viable: no known conversion from 'int' to 'Movable' for 1st argument}} \
-// expected-note@#Movable1  {{candidate template ignored: constraints not satisfied [with T = int]}}
-
+// expected-error@-1 {{static assertion failed due to requirement '__is_constructible(Movable, const Movable &)'}}
 
 static_assert(__is_constructible(Movable, int));
-// expected-error@-1 {{static assertion failed due to requirement '__is_constructible(Movable, int)'}} \
-// expected-error@-1 {{no matching constructor for initialization of 'Movable'}} \
+// expected-error@-1{{static assertion failed due to requirement '__is_constructible(Movable, int)'}} \
 // expected-note@-1 2{{}}
 // expected-error@#err-self-constraint-1{{satisfaction of constraint '__is_constructible(Movable, T)' depends on itself}}
 // expected-note@#err-self-constraint-1 4{{}}
-// expected-note@#Movable  {{'Movable' defined here}}
 
 template <typename T>
 struct Members {
@@ -283,3 +274,31 @@ void f() {
 }
 
 #endif
+
+namespace GH147374 {
+
+struct String {};
+template <typename T> void operator+(T, String &&) = delete;
+
+struct Bar {
+    void operator+(String) const; // expected-note {{candidate function}}
+    friend void operator+(Bar, String) {};  // expected-note {{candidate function}}
+};
+
+struct Baz {
+    void operator+(String); // expected-note {{candidate function}}
+    friend void operator+(Baz, String) {}; // expected-note {{candidate function}}
+};
+
+void test() {
+    Bar a;
+    String b;
+    a + b;
+    //expected-error@-1 {{use of overloaded operator '+' is ambiguous (with operand types 'Bar' and 'String')}}
+
+    Baz z;
+    z + b;
+    //expected-error@-1 {{use of overloaded operator '+' is ambiguous (with operand types 'Baz' and 'String')}}
+}
+
+}

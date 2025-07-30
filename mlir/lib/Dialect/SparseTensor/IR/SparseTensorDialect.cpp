@@ -21,10 +21,8 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
-#include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -561,7 +559,8 @@ SparseTensorEncodingAttr::translateCrds(OpBuilder &builder, Location loc,
   SmallVector<Type> retType(
       dir == CrdTransDirectionKind::lvl2dim ? getDimRank() : getLvlRank(),
       builder.getIndexType());
-  auto transOp = builder.create<CrdTranslateOp>(loc, retType, crds, dir, *this);
+  auto transOp =
+      CrdTranslateOp::create(builder, loc, retType, crds, dir, *this);
   return transOp.getOutCrds();
 }
 
@@ -1483,7 +1482,7 @@ LogicalResult CrdTranslateOp::fold(FoldAdaptor adaptor,
 
 void LvlOp::build(OpBuilder &builder, OperationState &state, Value source,
                   int64_t index) {
-  Value val = builder.create<arith::ConstantIndexOp>(state.location, index);
+  Value val = arith::ConstantIndexOp::create(builder, state.location, index);
   return build(builder, state, source, val);
 }
 

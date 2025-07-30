@@ -344,10 +344,6 @@ endif
 #----------------------------------------------------------------------
 ifeq "$(OS)" "Windows_NT"
 	ifeq ($(CC_TYPE), clang)
-		# Clang for Windows doesn't support C++ Exceptions
-		CXXFLAGS += -fno-exceptions
-		CXXFLAGS += -D_HAS_EXCEPTIONS=0
-
 		# MSVC 2015 or higher is required, which depends on c++14, so
 		# append these values unconditionally.
 		CXXFLAGS += -fms-compatibility-version=19.0

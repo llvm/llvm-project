@@ -169,6 +169,20 @@ class SiFive7GetOrderedReductionCycles<string mx, int sew, int VLEN> {
   int c = !mul(6, VLUpperBound);
 }
 
+class SiFive7GetSiFiveVFNRClipCycles<string mx, int VLEN> {
+  int latency = !cond(
+    !eq(mx, "MF8"): 7,
+    !eq(mx, "MF4"): 8,
+    !eq(mx, "MF2"): 10,
+    !eq(mx, "M1"): 13,
+    !eq(mx, "M2"): 19,
+  );
+
+  defvar DLEN = !div(VLEN, 2);
+  int occupancy = SiFive7GetCyclesOnePerElement<mx, sew=!div(DLEN, 4),
+                                                VLEN=VLEN>.c;
+}
+
 class SiFive7FPLatencies {
   int BasicFP16ALU;
   int BasicFP32ALU;
@@ -1049,6 +1063,45 @@ multiclass SiFive7WriteResBase<int VLEN,
       }
     }
   }
+
+  foreach mx = !listremove(SchedMxListW, ["M4"]) in {
+    defvar Cycles = SiFive7GetSiFiveVFNRClipCycles<mx, VLEN>;
+    let Latency = Cycles.latency,
+        AcquireAtCycles = [0, 1],
+        ReleaseAtCycles = [1, !add(1, Cycles.occupancy)] in
+    defm : LMULWriteResMX<"WriteSF_VFNRClipV", [VCQ, VA1], mx,
+                          IsWorstCase=!eq(mx, "M2")>;
+  }
+
+  // XSfvqmaccdod
+  foreach mx = ["M1", "M2", "M4", "M8"] in {
+    defvar Cycles = SiFive7GetCyclesDefault<mx>.c;
+    let Latency = 8,
+        AcquireAtCycles = [0, 1],
+        ReleaseAtCycles = [1, !add(1, Cycles)] in
+    defm : LMULWriteResMX<"WriteSF_VQMACC_DOD", [VCQ, VA1], mx,
+                          IsWorstCase=!eq(mx, "M8")>;
+  }
+
+  // XSfvqmaccqoq
+  foreach mx = ["MF2", "M1", "M2", "M4"] in {
+    defvar Cycles = SiFive7GetCyclesDefault<mx>.c;
+    let Latency = 8,
+        AcquireAtCycles = [0, 1],
+        ReleaseAtCycles = [1, !add(1, Cycles)] in
+    defm : LMULWriteResMX<"WriteSF_VQMACC_QOQ", [VCQ, VA1], mx,
+                          IsWorstCase=!eq(mx, "M4")>;
+  }
+
+  // XSfvfwmaccqqq
+  foreach mx = SchedMxListFW in {
+    defvar Cycles = SiFive7GetCyclesDefault<mx>.c;
+    defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxListFW>.c;
+    let Latency = 8,
+        AcquireAtCycles = [0, 1],
+        ReleaseAtCycles = [1, !add(1, Cycles)] in
+    defm : LMULWriteResMX<"WriteSF_VFWMACC_QQQ", [VCQ, VA1], mx, IsWorstCase>;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -1325,6 +1378,15 @@ multiclass SiFive7ReadAdvance {
   def : ReadAdvance<ReadVMov2V, 0>;
   def : ReadAdvance<ReadVMov4V, 0>;
   def : ReadAdvance<ReadVMov8V, 0>;
+
+  // XSfvfnrclipxfqf
+  defm : LMULReadAdvance<"ReadSF_VFNRClipV", 0>;
+  defm : LMULReadAdvance<"ReadSF_VFNRClipF", 0>;
+
+  // SiFive VMACC
+  defm : LMULReadAdvance<"ReadSF_VQMACC_DOD",  0>;
+  defm : LMULReadAdvance<"ReadSF_VQMACC_QOQ",  0>;
+  defm : LMULReadAdvance<"ReadSF_VFWMACC_QQQ", 0>;
 
   // Others
   def : ReadAdvance<ReadVMask, 0>;

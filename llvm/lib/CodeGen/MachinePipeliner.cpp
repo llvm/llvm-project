@@ -338,6 +338,17 @@ private:
   void addLoopCarriedDepenenciesForChunks(const LoadStoreChunk &From,
                                           const LoadStoreChunk &To);
 
+  /// Add a loop-carried order dependency between \p Src and \p Dst if we
+  /// cannot prove they are independent. When \p PerformCheapCheck is true, a
+  /// lightweight dependency test (referred to as "cheap check" below) is
+  /// performed at first. Note that the cheap check is retained to maintain the
+  /// existing behavior and not expected to be used anymore.
+  ///
+  /// TODO: Remove \p PerformCheapCheck and the corresponding cheap check.
+  void addDependenciesBetweenSUs(const SUnitWithMemInfo &Src,
+                                 const SUnitWithMemInfo &Dst,
+                                 bool PerformCheapCheck = false);
+
   void computeDependenciesAux();
 };
 
@@ -673,7 +684,7 @@ void SwingSchedulerDAG::schedule() {
   Topo.InitDAGTopologicalSorting();
   changeDependences();
   postProcessDAG();
-  DDG = std::make_unique<SwingSchedulerDDG>(SUnits, &EntrySU, &ExitSU);
+  DDG = std::make_unique<SwingSchedulerDDG>(SUnits, &EntrySU, &ExitSU, LCE);
   LLVM_DEBUG({
     dump();
     dbgs() << "===== Loop Carried Edges Begin =====\n";
@@ -958,11 +969,11 @@ bool SUnitWithMemInfo::getUnderlyingObjects() {
 
 /// Returns true if there is a loop-carried order dependency from \p Src to \p
 /// Dst.
-static bool hasLoopCarriedMemDep(const SUnitWithMemInfo &Src,
-                                 const SUnitWithMemInfo &Dst,
-                                 BatchAAResults &BAA,
-                                 const TargetInstrInfo *TII,
-                                 const TargetRegisterInfo *TRI) {
+static bool
+hasLoopCarriedMemDep(const SUnitWithMemInfo &Src, const SUnitWithMemInfo &Dst,
+                     BatchAAResults &BAA, const TargetInstrInfo *TII,
+                     const TargetRegisterInfo *TRI,
+                     const SwingSchedulerDAG *SSD, bool PerformCheapCheck) {
   if (Src.isTriviallyDisjoint(Dst))
     return false;
   if (isSuccOrder(Src.SU, Dst.SU))
@@ -970,23 +981,31 @@ static bool hasLoopCarriedMemDep(const SUnitWithMemInfo &Src,
 
   MachineInstr &SrcMI = *Src.SU->getInstr();
   MachineInstr &DstMI = *Dst.SU->getInstr();
-  // First, perform the cheaper check that compares the base register.
-  // If they are the same and the load offset is less than the store
-  // offset, then mark the dependence as loop carried potentially.
-  const MachineOperand *BaseOp1, *BaseOp2;
-  int64_t Offset1, Offset2;
-  bool Offset1IsScalable, Offset2IsScalable;
-  if (TII->getMemOperandWithOffset(SrcMI, BaseOp1, Offset1, Offset1IsScalable,
-                                   TRI) &&
-      TII->getMemOperandWithOffset(DstMI, BaseOp2, Offset2, Offset2IsScalable,
-                                   TRI)) {
-    if (BaseOp1->isIdenticalTo(*BaseOp2) &&
-        Offset1IsScalable == Offset2IsScalable && (int)Offset1 < (int)Offset2) {
-      assert(TII->areMemAccessesTriviallyDisjoint(SrcMI, DstMI) &&
-             "What happened to the chain edge?");
-      return true;
+  if (PerformCheapCheck) {
+    // First, perform the cheaper check that compares the base register.
+    // If they are the same and the load offset is less than the store
+    // offset, then mark the dependence as loop carried potentially.
+    //
+    // TODO: This check will be removed.
+    const MachineOperand *BaseOp1, *BaseOp2;
+    int64_t Offset1, Offset2;
+    bool Offset1IsScalable, Offset2IsScalable;
+    if (TII->getMemOperandWithOffset(SrcMI, BaseOp1, Offset1, Offset1IsScalable,
+                                     TRI) &&
+        TII->getMemOperandWithOffset(DstMI, BaseOp2, Offset2, Offset2IsScalable,
+                                     TRI)) {
+      if (BaseOp1->isIdenticalTo(*BaseOp2) &&
+          Offset1IsScalable == Offset2IsScalable &&
+          (int)Offset1 < (int)Offset2) {
+        assert(TII->areMemAccessesTriviallyDisjoint(SrcMI, DstMI) &&
+               "What happened to the chain edge?");
+        return true;
+      }
     }
   }
+
+  if (!SSD->mayOverlapInLaterIter(&SrcMI, &DstMI))
+    return false;
 
   // Second, the more expensive check that uses alias analysis on the
   // base registers. If they alias, and the load offset is less than
@@ -1056,20 +1075,34 @@ LoopCarriedOrderDepsTracker::getInstrTag(SUnit *SU) const {
   return std::nullopt;
 }
 
+void LoopCarriedOrderDepsTracker::addDependenciesBetweenSUs(
+    const SUnitWithMemInfo &Src, const SUnitWithMemInfo &Dst,
+    bool PerformCheapCheck) {
+  // Avoid self-dependencies.
+  if (Src.SU == Dst.SU)
+    return;
+
+  if (hasLoopCarriedMemDep(Src, Dst, *BAA, TII, TRI, DAG, PerformCheapCheck))
+    LoopCarried[Src.SU->NodeNum].set(Dst.SU->NodeNum);
+}
+
 void LoopCarriedOrderDepsTracker::addLoopCarriedDepenenciesForChunks(
     const LoadStoreChunk &From, const LoadStoreChunk &To) {
-  // Add dependencies for load-to-store (WAR) from top to bottom.
+  // Add load-to-store dependencies (WAR).
   for (const SUnitWithMemInfo &Src : From.Loads)
     for (const SUnitWithMemInfo &Dst : To.Stores)
-      if (Src.SU->NodeNum < Dst.SU->NodeNum &&
-          hasLoopCarriedMemDep(Src, Dst, *BAA, TII, TRI))
-        LoopCarried[Src.SU->NodeNum].set(Dst.SU->NodeNum);
+      // Perform a cheap check first if this is a forward dependency.
+      addDependenciesBetweenSUs(Src, Dst, Src.SU->NodeNum < Dst.SU->NodeNum);
 
-  // TODO: The following dependencies are missed.
-  //
-  // - Dependencies for load-to-store from bottom to top.
-  // - Dependencies for store-to-load (RAW).
-  // - Dependencies for store-to-store (WAW).
+  // Add store-to-load dependencies (RAW).
+  for (const SUnitWithMemInfo &Src : From.Stores)
+    for (const SUnitWithMemInfo &Dst : To.Loads)
+      addDependenciesBetweenSUs(Src, Dst);
+
+  // Add store-to-store dependencies (WAW).
+  for (const SUnitWithMemInfo &Src : From.Stores)
+    for (const SUnitWithMemInfo &Dst : To.Stores)
+      addDependenciesBetweenSUs(Src, Dst);
 }
 
 void LoopCarriedOrderDepsTracker::computeDependenciesAux() {
@@ -1116,7 +1149,7 @@ LoopCarriedEdges SwingSchedulerDAG::addLoopCarriedDependences() {
     for (const int Succ : LCODTracker.getLoopCarried(I).set_bits())
       LCE.OrderDeps[&SUnits[I]].insert(&SUnits[Succ]);
 
-  LCE.modifySUnits(SUnits);
+  LCE.modifySUnits(SUnits, TII);
   return LCE;
 }
 
@@ -2676,6 +2709,11 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
       });
     } while (++NI != NE && scheduleFound);
 
+    // If a schedule is found, validate it against the validation-only
+    // dependencies.
+    if (scheduleFound)
+      scheduleFound = DDG->isValidSchedule(Schedule);
+
     // If a schedule is found, ensure non-pipelined instructions are in stage 0
     if (scheduleFound)
       scheduleFound =
@@ -4118,6 +4156,8 @@ SwingSchedulerDDG::getEdges(const SUnit *SU) const {
 
 void SwingSchedulerDDG::addEdge(const SUnit *SU,
                                 const SwingSchedulerDDGEdge &Edge) {
+  assert(!Edge.isValidationOnly() &&
+         "Validation-only edges are not expected here.");
   auto &Edges = getEdges(SU);
   if (Edge.getSrc() == SU)
     Edges.Succs.push_back(Edge);
@@ -4127,25 +4167,43 @@ void SwingSchedulerDDG::addEdge(const SUnit *SU,
 
 void SwingSchedulerDDG::initEdges(SUnit *SU) {
   for (const auto &PI : SU->Preds) {
-    SwingSchedulerDDGEdge Edge(SU, PI, false);
+    SwingSchedulerDDGEdge Edge(SU, PI, /*IsSucc=*/false,
+                               /*IsValidationOnly=*/false);
     addEdge(SU, Edge);
   }
 
   for (const auto &SI : SU->Succs) {
-    SwingSchedulerDDGEdge Edge(SU, SI, true);
+    SwingSchedulerDDGEdge Edge(SU, SI, /*IsSucc=*/true,
+                               /*IsValidationOnly=*/false);
     addEdge(SU, Edge);
   }
 }
 
 SwingSchedulerDDG::SwingSchedulerDDG(std::vector<SUnit> &SUnits, SUnit *EntrySU,
-                                     SUnit *ExitSU)
+                                     SUnit *ExitSU, const LoopCarriedEdges &LCE)
     : EntrySU(EntrySU), ExitSU(ExitSU) {
   EdgesVec.resize(SUnits.size());
 
+  // Add non-loop-carried edges based on the DAG.
   initEdges(EntrySU);
   initEdges(ExitSU);
   for (auto &SU : SUnits)
     initEdges(&SU);
+
+  // Add loop-carried edges, which are not represented in the DAG.
+  for (SUnit &SU : SUnits) {
+    SUnit *Src = &SU;
+    if (const LoopCarriedEdges::OrderDep *OD = LCE.getOrderDepOrNull(Src)) {
+      SDep Base(Src, SDep::Barrier);
+      Base.setLatency(1);
+      for (SUnit *Dst : *OD) {
+        SwingSchedulerDDGEdge Edge(Dst, Base, /*IsSucc=*/false,
+                                   /*IsValidationOnly=*/true);
+        Edge.setDistance(1);
+        ValidationOnlyEdges.push_back(Edge);
+      }
+    }
+  }
 }
 
 const SwingSchedulerDDG::EdgesType &
@@ -4158,17 +4216,73 @@ SwingSchedulerDDG::getOutEdges(const SUnit *SU) const {
   return getEdges(SU).Succs;
 }
 
-void LoopCarriedEdges::modifySUnits(std::vector<SUnit> &SUnits) {
-  // Currently this function simply adds all dependencies represented by this
-  // object. After we properly handle missed dependencies, the logic here will
-  // be more complex, as currently missed edges should not be added to the DAG.
+/// Check if \p Schedule doesn't violate the validation-only dependencies.
+bool SwingSchedulerDDG::isValidSchedule(const SMSchedule &Schedule) const {
+  unsigned II = Schedule.getInitiationInterval();
+
+  auto ExpandCycle = [&](SUnit *SU) {
+    int Stage = Schedule.stageScheduled(SU);
+    int Cycle = Schedule.cycleScheduled(SU);
+    return Cycle + (Stage * II);
+  };
+
+  for (const SwingSchedulerDDGEdge &Edge : ValidationOnlyEdges) {
+    SUnit *Src = Edge.getSrc();
+    SUnit *Dst = Edge.getDst();
+    if (!Src->isInstr() || !Dst->isInstr())
+      continue;
+    int CycleSrc = ExpandCycle(Src);
+    int CycleDst = ExpandCycle(Dst);
+    int MaxLateStart = CycleDst + Edge.getDistance() * II - Edge.getLatency();
+    if (CycleSrc > MaxLateStart) {
+      LLVM_DEBUG({
+        dbgs() << "Validation failed for edge from " << Src->NodeNum << " to "
+               << Dst->NodeNum << "\n";
+      });
+      return false;
+    }
+  }
+  return true;
+}
+
+void LoopCarriedEdges::modifySUnits(std::vector<SUnit> &SUnits,
+                                    const TargetInstrInfo *TII) {
   for (SUnit &SU : SUnits) {
     SUnit *Src = &SU;
     if (auto *OrderDep = getOrderDepOrNull(Src)) {
       SDep Dep(Src, SDep::Barrier);
       Dep.setLatency(1);
-      for (SUnit *Dst : *OrderDep)
-        Dst->addPred(Dep);
+      for (SUnit *Dst : *OrderDep) {
+        SUnit *From = Src;
+        SUnit *To = Dst;
+        if (From->NodeNum > To->NodeNum)
+          std::swap(From, To);
+
+        // Add a forward edge if the following conditions are met:
+        //
+        // - The instruction of the source node (FromMI) may read memory.
+        // - The instruction of the target node (ToMI) may modify memory, but
+        //   does not read it.
+        // - Neither instruction is a global barrier.
+        // - The load appears before the store in the original basic block.
+        // - There are no barrier or store instructions between the two nodes.
+        // - The target node is unreachable from the source node in the current
+        //   DAG.
+        //
+        // TODO: These conditions are inherited from a previous implementation,
+        // and some may no longer be necessary. For now, we conservatively
+        // retain all of them to avoid regressions, but the logic could
+        // potentially be simplified
+        MachineInstr *FromMI = From->getInstr();
+        MachineInstr *ToMI = To->getInstr();
+        if (FromMI->mayLoad() && !ToMI->mayLoad() && ToMI->mayStore() &&
+            !TII->isGlobalMemoryObject(FromMI) &&
+            !TII->isGlobalMemoryObject(ToMI) && !isSuccOrder(From, To)) {
+          SDep Pred = Dep;
+          Pred.setSUnit(From);
+          To->addPred(Pred);
+        }
+      }
     }
   }
 }
