@@ -12,6 +12,14 @@ add_fp_unittest(
     libc.src.__support.math.acosf16
     libc.src.__support.math.acoshf
     libc.src.__support.math.acoshf16
+    libc.src.__support.math.acospif16
+    libc.src.__support.math.asin
+    libc.src.__support.math.asinf
+    libc.src.__support.math.asinf16
+    libc.src.__support.math.asinhf
+    libc.src.__support.math.asinhf16
+    libc.src.__support.math.atan
+    libc.src.__support.math.atanf
     libc.src.__support.math.erff
     libc.src.__support.math.exp
     libc.src.__support.math.exp10

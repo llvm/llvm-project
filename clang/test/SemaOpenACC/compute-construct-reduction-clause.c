@@ -68,7 +68,6 @@ void uses(unsigned Parm) {
 #pragma acc parallel reduction(&: ChC)
   while (1);
 
-  // expected-error@+1{{OpenACC 'reduction' variable must be of scalar type, sub-array, or a composite of scalar types; type is 'int[5]'}}
 #pragma acc parallel reduction(&: Array)
   while (1);
 
@@ -76,7 +75,7 @@ void uses(unsigned Parm) {
   while (1);
 
   struct CompositeHasComposite ChCArray[5];
-  // expected-error@+1{{OpenACC 'reduction' variable must be of scalar type, sub-array, or a composite of scalar types; sub-array base type is 'struct CompositeHasComposite'}}
+  // expected-error@+1{{OpenACC 'reduction' variable must be of scalar type, aggregate, sub-array, or a composite of scalar types; sub-array base type is 'struct CompositeHasComposite'}}
 #pragma acc parallel reduction(&: CoS, Array[I], ChCArray[0:I])
   while (1);
 
