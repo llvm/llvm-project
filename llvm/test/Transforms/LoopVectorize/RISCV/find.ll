@@ -97,8 +97,7 @@ define i32 @find_without_liveout(ptr %first, ptr %last, ptr %value) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[EVL_BASED_IV]], 4
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[FIRST]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[NEXT_GEP]], i32 0
-; CHECK-NEXT:    [[VP_OP_LOAD_FF:%.*]] = call { <vscale x 4 x i32>, i32 } @llvm.vp.load.ff.nxv4i32.p0(ptr align 4 [[TMP15]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP14]])
+; CHECK-NEXT:    [[VP_OP_LOAD_FF:%.*]] = call { <vscale x 4 x i32>, i32 } @llvm.vp.load.ff.nxv4i32.p0(ptr align 4 [[NEXT_GEP]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP14]])
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractvalue { <vscale x 4 x i32>, i32 } [[VP_OP_LOAD_FF]], 0
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractvalue { <vscale x 4 x i32>, i32 } [[VP_OP_LOAD_FF]], 1
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq <vscale x 4 x i32> [[TMP16]], [[BROADCAST_SPLAT]]
