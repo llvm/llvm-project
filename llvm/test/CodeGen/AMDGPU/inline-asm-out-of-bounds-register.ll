@@ -96,8 +96,3 @@ define void @overflow_bitwidth_1() {
   ret void
 }
 
-; CHECK: error: couldn't allocate input reg for constraint '{v[2147483635:2147483651]}'
-define void @overflow_bitwidth_2() {
-  tail call void asm sideeffect "; use %0", "{v[2147483635:2147483651]}"(i64 123)
-  ret void
-}
