@@ -859,7 +859,7 @@ struct RemoveConstantIfCondition : public OpRewritePattern<OpTy> {
 /// using the operands of the block terminator to replace operation results.
 static void replaceOpWithRegion(PatternRewriter &rewriter, Operation *op,
                                 Region &region, ValueRange blockArgs = {}) {
-  assert(llvm::hasSingleElement(region) && "expected single-region block");
+  assert(region.hasOneBlock() && "expected single-block region");
   Block *block = &region.front();
   Operation *terminator = block->getTerminator();
   ValueRange results = terminator->getOperands();

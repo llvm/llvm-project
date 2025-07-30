@@ -623,13 +623,15 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       LDREX = LDREX_W;
     break;
   case 7:
+  case 8:
     if (ArchProfile == llvm::ARM::ProfileKind::M)
       LDREX = LDREX_W | LDREX_H | LDREX_B;
     else
       LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
     break;
-  case 8:
   case 9:
+    assert(ArchProfile != llvm::ARM::ProfileKind::M &&
+           "No Armv9-M architectures defined");
     LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
   }
 
