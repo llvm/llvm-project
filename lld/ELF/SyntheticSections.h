@@ -327,9 +327,11 @@ private:
     size_t startIndex = 0;
 
     struct PageBlock {
+      Symbol *repSym; // Representative symbol for the OutputSection
       size_t firstIndex;
       size_t count;
-      PageBlock() : firstIndex(0), count(0) {}
+      PageBlock(Symbol *repSym = nullptr)
+          : repSym(repSym), firstIndex(0), count(0) {}
     };
 
     // Map output sections referenced by MIPS GOT relocations
@@ -430,9 +432,6 @@ public:
     /// symbol table and uses InputSection::getRelocTargetVA() for the final
     /// addend.
     AgainstSymbol,
-    /// This is used by the MIPS multi-GOT implementation. It relocates
-    /// addresses of 64kb pages that lie inside the output section.
-    MipsMultiGotPage,
   };
   /// This constructor records a normal relocation.
   DynamicReloc(RelType type, const InputSectionBase *inputSec,
@@ -446,14 +445,6 @@ public:
       : sym(inputSec->getCtx().dummySym), inputSec(inputSec),
         offsetInSec(offsetInSec), type(type), addend(addend), kind(AddendOnly),
         expr(R_ADDEND) {}
-  /// This constructor records dynamic relocation settings used by the MIPS
-  /// multi-GOT implementation.
-  DynamicReloc(RelType type, const InputSectionBase *inputSec,
-               uint64_t offsetInSec, const OutputSection *outputSec,
-               int64_t addend)
-      : sym(nullptr), outputSec(outputSec), inputSec(inputSec),
-        offsetInSec(offsetInSec), type(type), addend(addend),
-        kind(MipsMultiGotPage), expr(R_ADDEND) {}
 
   uint64_t getOffset() const;
   uint32_t getSymIndex(SymbolTableBaseSection *symTab) const;
@@ -470,7 +461,6 @@ public:
   void computeRaw(Ctx &, SymbolTableBaseSection *symt);
 
   Symbol *sym;
-  const OutputSection *outputSec = nullptr;
   const InputSectionBase *inputSec;
   uint64_t offsetInSec;
   uint64_t r_offset;
