@@ -14,6 +14,19 @@ class ExprDefinitionInDylibTestCase(TestBase):
         """
         self.build()
 
-        lldbutil.run_to_source_breakpoint(self, "return", lldb.SBFileSpec("main.cpp"))
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+
+        env = self.registerSharedLibrariesWithTarget(target, ["lib"])
+
+        breakpoint = lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", line_number("main.cpp", "return")
+        )
+
+        process = target.LaunchSimple(None, env, self.get_process_working_directory())
+
+        self.assertIsNotNone(
+            lldbutil.get_one_thread_stopped_at_breakpoint_id(self.process(), breakpoint)
+        )
 
         self.expect_expr("f.method()", result_value="-72", result_type="int")
