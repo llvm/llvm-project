@@ -93,6 +93,7 @@ static llvm::StringRef GetUBSanTrapForHandler(SanitizerHandler ID) {
     LIST_SANITIZER_CHECKS
 #undef SANITIZER_CHECK
   }
+  llvm_unreachable("unhandled switch case");
 }
 
 /// CreateTempAlloca - This creates a alloca and inserts it into the entry
