@@ -235,7 +235,7 @@ define <3 x i16> @v_saddsat_v3i16(<3 x i16> %lhs, <3 x i16> %rhs) {
 ; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX6-NEXT:    v_med3_i32 v3, v2, s4, v4
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v1
-; GFX6-NEXT:    v_or_b32_e32 v2, 0xffff0000, v3
+; GFX6-NEXT:    v_and_b32_e32 v2, 0xffff, v3
 ; GFX6-NEXT:    v_alignbit_b32 v1, v3, v1, 16
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
