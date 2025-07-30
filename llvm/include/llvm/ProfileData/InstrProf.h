@@ -513,12 +513,12 @@ public:
   // suffixes that begins with "." except ".__uniq." are stripped.
   // FIXME: Unify this with `FunctionSamples::getCanonicalFnName`.
   LLVM_ABI static StringRef getCanonicalName(StringRef PGOName);
-  //ANDRES Function
+
   StringRef getObjectFilename() {return ObjectFilename;}
   void setObjectFilename(StringRef ObjectFilename) {this->ObjectFilename = ObjectFilename;}
   StringRef getArchitecture() {return Architecture;}
   void setArchitecture(StringRef Architecture) {this->Architecture = Architecture;}
-  //ANDRES Function
+
 private:
   StringRef ObjectFilename;
   StringRef Architecture;
@@ -646,16 +646,15 @@ public:
 
     uint64_t HashValue = IndexedInstrProf::ComputeHash(SymbolName);
     std::string HashStr(std::to_string(HashValue));
-    // llvm::errs() << "HELLLOOOOOOOOO" << "\n";
+    //if ObjectFilename is not empty from the --object-aware-hashing flag, add ObjectFilename to hash context
     if(!ObjectFilename.empty()){
       std::string CombinedStr = HashStr + ":" + ObjectFilename.str();
-      llvm::errs() << CombinedStr << "\n";
       StringRef HashRef = CombinedStr;
       HashValue = IndexedInstrProf::ComputeHash(HashRef);
     }
     auto Ins = NameTab.insert(SymbolName);
     if (Ins.second) {
-      MD5NameMap.push_back(std::make_pair(HashValue /*IndexedInstrProf::ComputeHash(HashRef)*/, Ins.first->getKey()));
+      MD5NameMap.push_back(std::make_pair(HashValue, Ins.first->getKey()));
       Sorted = false;
     }
     return Error::success();
@@ -792,13 +791,8 @@ StringRef InstrProfSymtab::getFuncOrVarName(uint64_t MD5Hash) {
   }
   auto Result = llvm::lower_bound(MD5NameMap, MD5Hash, [](const std::pair<uint64_t, StringRef> &LHS, uint64_t RHS) { return LHS.first < RHS; });
 
-  for(auto name : MD5NameMap){
-    llvm::errs() << "Function Name " << name.second  << " Result->first: " << name.first << "\n";
-  }
-  llvm::errs() << "Function Name " << Result->second  << " Result->first: " << Result->first << " vs. " << MD5Hash << "\n";
   if (Result != MD5NameMap.end() && Result->first == MD5Hash)
     return Result->second;
-  llvm::errs() << "MISMATCH HERE" << "\n";
   return StringRef();
 }
 

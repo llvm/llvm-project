@@ -195,66 +195,13 @@ void InstrProfWriter::overlapRecord(NamedInstrProfRecord &&Other,
   Dest.overlap(Other, Overlap, FuncLevelOverlap, ValueCutoff);
 }
 
-// void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
-//                                 InstrProfRecord &&I, uint64_t Weight,
-//                                 function_ref<void(Error)> Warn) {
-//   auto &ProfileDataMap = FunctionData[Name];
-
-//   auto [Where, NewFunc] = ProfileDataMap.try_emplace(Hash);
-//   InstrProfRecord &Dest = Where->second;
-
-//   auto MapWarn = [&](instrprof_error E) {
-//     Warn(make_error<InstrProfError>(E));
-//   };
-
-//   if (NewFunc) {
-//     // We've never seen a function with this name and hash, add it.
-//     Dest = std::move(I);
-//     if (Weight > 1)
-//       Dest.scale(Weight, 1, MapWarn);
-//   } else {
-//     // We're updating a function we've seen before.
-//     Dest.merge(I, Weight, MapWarn);
-//   }
-
-//   Dest.sortValueData();
-// }
-
-
-
-// #include "llvm/DebugInfo/DWARF/DWARFContext.h"
-
-
-#include <llvm/Support/raw_ostream.h>
-#include <llvm/Support/MemoryBuffer.h>
-#include <llvm/Support/SHA1.h>
-#include <array>
-
-StringRef hashSourceFile(llvm::StringRef FilePath) {
-    auto FileOrErr = llvm::MemoryBuffer::getFile(FilePath);
-    if (!FileOrErr) {
-        llvm::errs() << "Error reading file: " << FilePath << "\n";
-        return "";
-    }
-
-    const auto &Buffer = *FileOrErr.get();
-    llvm::SHA1 Hasher;
-    Hasher.update(Buffer.getBuffer());
-
-    std::array<uint8_t, 20> Hash = Hasher.final();
-    
-    std::string HexStr = llvm::toHex(llvm::ArrayRef<uint8_t>(Hash));
-    llvm::StringRef HashRef(HexStr);
-    return HashRef;
-}
-
 
 
 void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
                                 InstrProfRecord &&I, uint64_t Weight,
                                 function_ref<void(Error)> Warn, StringRef ObjectFilename) {
   auto &ProfileDataMap = FunctionData[Name];
-  // StringRef SHAHash = hashSourceFile(Architecture);
+  //add objectFilename to hash value if --object-aware-hashing is used
   if(!ObjectFilename.empty()){
     std::string HashStr = std::to_string(Hash) + ":" + ObjectFilename.str();
     llvm::StringRef HashRef(HashStr);

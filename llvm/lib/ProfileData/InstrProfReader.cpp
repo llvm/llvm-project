@@ -154,7 +154,7 @@ static void printBinaryIdsInternal(raw_ostream &OS,
   }
 }
 
-Expected<std::unique_ptr<InstrProfReader>> InstrProfReader::create( //STEP 1
+Expected<std::unique_ptr<InstrProfReader>> InstrProfReader::create(
     const Twine &Path, vfs::FileSystem &FS,
     const InstrProfCorrelator *Correlator,
     const object::BuildIDFetcher *BIDFetcher,
@@ -196,6 +196,7 @@ Expected<std::unique_ptr<InstrProfReader>> InstrProfReader::create(
 
   // Initialize the reader and return the result.
 
+  //Pass the ObjectFilename to Result
   if(Result){
     Result->setObjectFilename(ObjectFilename);
   }
@@ -536,7 +537,7 @@ bool RawInstrProfReader<IntPtrT>::hasFormat(const MemoryBuffer &DataBuffer) {
 }
 
 template <class IntPtrT>
-Error RawInstrProfReader<IntPtrT>::readHeader() { //STEP 2
+Error RawInstrProfReader<IntPtrT>::readHeader() {
   if (!hasFormat(*DataBuffer))
     return error(instrprof_error::bad_magic);
   if (DataBuffer->getBufferSize() < sizeof(RawInstrProf::Header))
@@ -576,8 +577,7 @@ Error RawInstrProfReader<IntPtrT>::readNextHeader(const char *CurrentPos) {
 }
 
 template <class IntPtrT>
-Error RawInstrProfReader<IntPtrT>::createSymtab(InstrProfSymtab &Symtab) { //STEP 5
-  
+Error RawInstrProfReader<IntPtrT>::createSymtab(InstrProfSymtab &Symtab) {
   Symtab.setObjectFilename(ObjectFilename);
   
   if (Error E = Symtab.create(StringRef(NamesStart, NamesEnd - NamesStart),
@@ -610,7 +610,7 @@ Error RawInstrProfReader<IntPtrT>::createSymtab(InstrProfSymtab &Symtab) { //STE
 template <class IntPtrT>
 Error RawInstrProfReader<IntPtrT>::readHeader(
     const RawInstrProf::Header &Header) {
-  Version = swap(Header.Version); //STEP 4
+  Version = swap(Header.Version);
   if (GET_VERSION(Version) != RawInstrProf::Version)
     return error(instrprof_error::raw_profile_version_mismatch,
                  ("Profile uses raw profile format version = " +

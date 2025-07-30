@@ -695,26 +695,6 @@ static void overlapInput(const std::string &BaseFilename,
   }
 }
 
-// //ANDRES FUNCTION
-// Expected<std::string> getArchitectureFromExecutable(StringRef ExecutablePath){
-//   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrError = MemoryBuffer::getFile(ExecutablePath);
-//   if(!BufferOrError){
-//     return createStringError(BufferOrError.getError(), "Failed to load input file");
-//   }
-
-//   Expected<std::unique_ptr<object::ObjectFile>> ObjectOrError = object::ObjectFile::createObjectFile(BufferOrError.get()->getMemBufferRef());
-//   if(!ObjectOrError){
-//     return ObjectOrError.takeError();
-//   }
-
-//   std::unique_ptr<llvm::object::ObjectFile> &Object = ObjectOrError.get();
-
-//   StringRef ArchStr = Object->getArch() != Triple::UnknownArch ? Triple::getArchTypeName(Object->getArch()) : "unknown";
-
-//   return ArchStr.str();
-// }
-// //ANDRES FUNCTION
-
 /// Load an input into a writer context.
 static void
 loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
@@ -727,30 +707,14 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   // WeightedFile &" by value, making a reference to the filename within it
   // invalid outside of this packaged task.
   std::string Filename = Input.Filename;
-
-  //ANDRES CODE
   std::string ExecutableName;
   std::string ProfileFile = Input.Filename;
   StringRef ObjectFilename = "";
 
   StringRef FilenameRef = Filename;
   if(!ObjectAwareHashing.empty()){
-    // StringRef ExeRef, ProfRef;
-    // std::tie(ExeRef, ProfRef) = FilenameRef.split(':');
-    // if(!ExeRef.empty() && !ProfRef.empty()){
     ObjectFilename = ObjectAwareHashing.data();
-      // ProfileFile = ProfRef.str();
-    // }
-    // Expected<std::string> ArchOrError = getArchitectureFromExecutable(ExeRef);
-    // if(ArchOrError){
-    //   Architecture = std::move(ArchOrError.get());
-    // }else{
-    //   consumeError(ArchOrError.takeError());
-    //   Architecture = "unknown";
-    // }
-    // ObjectFilename = ExeRef;
   }
-  //ANDRES CODE
 
 
   using ::llvm::memprof::RawMemProfReader;
@@ -841,8 +805,8 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   const ProfCorrelatorKind CorrelatorKind = BIDFetcherCorrelatorKind
                                                 ? *BIDFetcherCorrelatorKind
                                                 : ProfCorrelatorKind::NONE;
-  auto ReaderOrErr = InstrProfReader::create(ProfileFile /*ANDRES changed from Input.Filename to ProfileFile*/, *FS, Correlator, //THIS IS THE IMPORTANT LINE!!!!
-                                             BIDFetcher, CorrelatorKind, Warn, ObjectFilename /*ANDRES added this parameter*/);
+  auto ReaderOrErr = InstrProfReader::create(ProfileFile, *FS, Correlator,
+                                             BIDFetcher, CorrelatorKind, Warn, ObjectFilename);
   if (Error E = ReaderOrErr.takeError()) {
     // Skip the empty profiles by returning silently.
     auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
@@ -1770,28 +1734,6 @@ static void addWeightedInput(WeightedFileVector &WNI, const WeightedFile &WF) {
     WNI.push_back({std::string(Filename), Weight});
     return;
   }
-
-  //ANDRES ADDED CODE UPDATED CODE TO HANDLE ARCH SPECIFIC EXECUTABLE
-  StringRef ExecutableName, ProfileFile;
-  if(Filename.contains(':')){
-    std::tie(ExecutableName, ProfileFile) = Filename.split(':');
-
-
-    if(!ExecutableName.empty() && !ProfileFile.empty()){
-      llvm::sys::fs::file_status Status;
-      llvm::sys::fs::status(ProfileFile, Status);
-      if(!llvm::sys::fs::exists(Status)){
-        exitWithErrorCode(make_error_code(errc::no_such_file_or_directory),ProfileFile);
-      }
-      if(llvm::sys::fs::is_regular_file(Status)){
-        WNI.push_back({std::string(Filename), Weight});
-        return;
-      }
-
-      Filename = ProfileFile;
-    }
-  }
-  //ANDRES ADDED CODE
 
   llvm::sys::fs::file_status Status;
   llvm::sys::fs::status(Filename, Status);
