@@ -4,7 +4,6 @@
 
 # RUN: llvm-mc %s -o %t --triple=x86_64-pc-linux --filetype=obj --defsym MAIN=0
 # RUN: llvm-mc %s -o %T/dwo-type-in-main-file-cu2.dwo --triple=x86_64-pc-linux --filetype=obj --defsym DWO=0
-# RUN: cd %T
 # RUN: %lldb %t -o "target var a" -b 2>&1 | FileCheck %s
 
 # CHECK: (A) a = (b = 47)
