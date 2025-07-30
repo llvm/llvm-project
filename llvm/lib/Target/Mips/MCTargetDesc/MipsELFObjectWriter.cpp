@@ -385,11 +385,12 @@ void MipsELFObjectWriter::sortRelocs(std::vector<ELFRelocationEntry> &Relocs) {
   if (hasRelocationAddend())
     return;
 
-  // Sort relocations by the address they are applied to.
-  llvm::sort(Relocs,
-             [](const ELFRelocationEntry &A, const ELFRelocationEntry &B) {
-               return A.Offset < B.Offset;
-             });
+  // Sort relocations by r_offset. There might be more than one at an offset
+  // with composed relocations or .reloc directives.
+  llvm::stable_sort(
+      Relocs, [](const ELFRelocationEntry &A, const ELFRelocationEntry &B) {
+        return A.Offset < B.Offset;
+      });
 
   // Place relocations in a list for reorder convenience. Hi16 contains the
   // iterators of high-part relocations.

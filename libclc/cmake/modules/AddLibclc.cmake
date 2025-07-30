@@ -207,6 +207,8 @@ endfunction()
 #      libclc architecture/triple suffix
 #  * TRIPLE <string>
 #      Triple used to compile
+#  * PARENT_TARGET <string>
+#      Target into which to group the target builtins
 #
 # Optional Arguments:
 # * CLC_INTERNAL
@@ -229,7 +231,7 @@ endfunction()
 function(add_libclc_builtin_set)
   cmake_parse_arguments(ARG
     "CLC_INTERNAL"
-    "ARCH;TRIPLE;ARCH_SUFFIX"
+    "ARCH;TRIPLE;ARCH_SUFFIX;PARENT_TARGET"
     "LIB_FILES;GEN_FILES;COMPILE_FLAGS;OPT_FLAGS;ALIASES;INTERNAL_LINK_DEPENDENCIES"
     ${ARGN}
   )
@@ -403,6 +405,9 @@ function(add_libclc_builtin_set)
     add_custom_target( prepare-${ARG_TRIPLE} ALL )
   endif()
   add_dependencies( prepare-${ARG_TRIPLE} prepare-${obj_suffix} )
+  # Add dependency to top-level pseudo target to ease making other
+  # targets dependent on libclc.
+  add_dependencies( ${ARG_PARENT_TARGET} prepare-${ARG_TRIPLE} )
 
   install(
     FILES ${libclc_builtins_lib}
@@ -425,22 +430,27 @@ function(add_libclc_builtin_set)
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
   endif()
 
-  if(CMAKE_HOST_UNIX OR LLVM_USE_SYMLINKS)
-    set(LIBCLC_LINK_OR_COPY create_symlink)
-  else()
-    set(LIBCLC_LINK_OR_COPY copy)
-  endif()
-
   foreach( a IN LISTS ARG_ALIASES )
+    if(CMAKE_HOST_UNIX OR LLVM_USE_SYMLINKS)
+      cmake_path(RELATIVE_PATH libclc_builtins_lib
+        BASE_DIRECTORY ${LIBCLC_OUTPUT_LIBRARY_DIR}
+        OUTPUT_VARIABLE LIBCLC_LINK_OR_COPY_SOURCE)
+      set(LIBCLC_LINK_OR_COPY create_symlink)
+    else()
+      set(LIBCLC_LINK_OR_COPY_SOURCE ${libclc_builtins_lib})
+      set(LIBCLC_LINK_OR_COPY copy)
+    endif()
+
     set( alias_suffix "${a}-${ARG_TRIPLE}.bc" )
     add_custom_command(
       OUTPUT ${LIBCLC_OUTPUT_LIBRARY_DIR}/${alias_suffix}
-      COMMAND ${CMAKE_COMMAND} -E ${LIBCLC_LINK_OR_COPY} ${libclc_builtins_lib} ${LIBCLC_OUTPUT_LIBRARY_DIR}/${alias_suffix}
+      COMMAND ${CMAKE_COMMAND} -E ${LIBCLC_LINK_OR_COPY} ${LIBCLC_LINK_OR_COPY_SOURCE} ${LIBCLC_OUTPUT_LIBRARY_DIR}/${alias_suffix}
       DEPENDS prepare-${obj_suffix}
     )
     add_custom_target( alias-${alias_suffix} ALL
       DEPENDS ${LIBCLC_OUTPUT_LIBRARY_DIR}/${alias_suffix}
     )
+    add_dependencies( ${ARG_PARENT_TARGET} alias-${alias_suffix} )
     set_target_properties( alias-${alias_suffix}
       PROPERTIES FOLDER "libclc/Device IR/Aliases"
     )

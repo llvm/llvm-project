@@ -435,7 +435,7 @@ CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
   llvm::FunctionType *LTy = CGM.getTypes().GetFunctionType(FI);
 
   llvm::Function *Fn = llvm::Function::Create(
-      LTy, llvm::GlobalValue::PrivateLinkage, FuncName, &CGM.getModule());
+      LTy, llvm::GlobalValue::InternalLinkage, FuncName, &CGM.getModule());
 
   Fn->addParamAttr(0, llvm::Attribute::AttrKind::NonNull);
   Fn->addParamAttr(0, llvm::Attribute::AttrKind::NoUndef);
@@ -1006,15 +1006,15 @@ RValue CodeGenFunction::EmitCoroutineIntrinsic(const CallExpr *E,
   }
   case llvm::Intrinsic::coro_size: {
     auto &Context = getContext();
-    CanQualType SizeTy = Context.getSizeType();
-    llvm::IntegerType *T = Builder.getIntNTy(Context.getTypeSize(SizeTy));
+    llvm::IntegerType *T =
+        Builder.getIntNTy(Context.getTypeSize(Context.getSizeType()));
     llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::coro_size, T);
     return RValue::get(Builder.CreateCall(F));
   }
   case llvm::Intrinsic::coro_align: {
     auto &Context = getContext();
-    CanQualType SizeTy = Context.getSizeType();
-    llvm::IntegerType *T = Builder.getIntNTy(Context.getTypeSize(SizeTy));
+    llvm::IntegerType *T =
+        Builder.getIntNTy(Context.getTypeSize(Context.getSizeType()));
     llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::coro_align, T);
     return RValue::get(Builder.CreateCall(F));
   }

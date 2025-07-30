@@ -139,6 +139,7 @@ public:
   virtual void printSectionDetails() {}
   virtual void printArchSpecificInfo() {}
   virtual void printMemtag() {}
+  virtual void printSectionsAsSFrame(ArrayRef<std::string> Sections) {}
 
   // Only implemented for PE/COFF.
   virtual void printCOFFImports() { }
@@ -189,6 +190,10 @@ public:
 
 protected:
   ScopedPrinter &W;
+
+  static std::vector<object::SectionRef>
+  getSectionRefsByNameOrIndex(const object::ObjectFile &Obj,
+                              ArrayRef<std::string> Sections);
 
 private:
   virtual void printSymbols(bool ExtraSymInfo) {}

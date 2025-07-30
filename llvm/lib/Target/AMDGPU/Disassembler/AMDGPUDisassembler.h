@@ -161,6 +161,7 @@ public:
   void convertFMAanyK(MCInst &MI) const;
   void convertSDWAInst(MCInst &MI) const;
   void convertMAIInst(MCInst &MI) const;
+  void convertWMMAInst(MCInst &MI) const;
   void convertDPP8Inst(MCInst &MI) const;
   void convertMIMGInst(MCInst &MI) const;
   void convertVOP3DPPInst(MCInst &MI) const;

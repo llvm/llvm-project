@@ -1,9 +1,9 @@
-<!--===- docs/Extensions.md 
-  
+<!--===- docs/Extensions.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # Fortran Extensions supported by Flang
@@ -170,6 +170,18 @@ end
   In the case of `DEFERRED` bindings in an `ABSTRACT` derived type,
   however, overrides are necessary, so they are permitted for inaccessible
   bindings with an optional warning.
+* Main program name is allowed to be the same as the other symbols used
+  in the main program, for example:
+```
+module m
+end
+program m
+use m
+end
+```
+  Note that internally the main program symbol name is all uppercase, unlike
+  the names of all other symbols, which are usually all lowercase. This
+  may make a difference in testing/debugging.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -408,8 +420,9 @@ end
 * A `NAMELIST` input group may omit its trailing `/` character if
   it is followed by another `NAMELIST` input group.
 * A `NAMELIST` input group may begin with either `&` or `$`.
-* A comma in a fixed-width numeric input field terminates the
-  field rather than signaling an invalid character error.
+* A comma (or semicolon in `DECIMAL='COMMA'` or `DC` mode) in a
+  fixed-width numeric input field terminates the field rather than
+  signaling an invalid character error.
 * Arguments to the intrinsic functions `MAX` and `MIN` are converted
   when necessary to the type of the result.
   An `OPTIONAL`, `POINTER`, or `ALLOCATABLE` argument after

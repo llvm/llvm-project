@@ -639,16 +639,8 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     }
   }
 
-  if (LangOpts.OpenACC) {
-    // FIXME: When we have full support for OpenACC, we should set this to the
-    // version we support. Until then, set as '1' by default, but provide a
-    // temporary mechanism for users to override this so real-world examples can
-    // be tested against.
-    if (!LangOpts.OpenACCMacroOverride.empty())
-      Builder.defineMacro("_OPENACC", LangOpts.OpenACCMacroOverride);
-    else
-      Builder.defineMacro("_OPENACC", "1");
-  }
+  if (LangOpts.OpenACC)
+    Builder.defineMacro("_OPENACC", "202506");
 }
 
 /// Initialize the predefined C++ language feature test macros defined in
@@ -953,8 +945,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (LangOpts.GNUCVersion && LangOpts.CPlusPlus11)
     Builder.defineMacro("__GXX_EXPERIMENTAL_CXX0X__");
 
-  if (TI.getTriple().isWindowsGNUEnvironment()) {
-    // Set ABI defining macros for libstdc++ for MinGW, where the
+  if (TI.getTriple().isOSCygMing()) {
+    // Set ABI defining macros for libstdc++ for MinGW and Cygwin, where the
     // default in libstdc++ differs from the defaults for this target.
     Builder.defineMacro("__GXX_TYPEINFO_EQUALITY_INLINE", "0");
   }

@@ -128,12 +128,12 @@ def CIR_CastKind : CIR_I32EnumAttr<"CastKind", "cast kind", [
   // CK_BlockPointerToObjCPointerCast
   // CK_AnyPointerToBlockPointerCast
   // CK_ObjCObjectLValueCast
-  // I32EnumAttrCase<"float_to_complex", 44>,
-  // I32EnumAttrCase<"float_complex_to_real", 45>,
-  // I32EnumAttrCase<"float_complex_to_bool", 46>,
+  I32EnumAttrCase<"float_to_complex", 44>,
+  I32EnumAttrCase<"float_complex_to_real", 45>,
+  I32EnumAttrCase<"float_complex_to_bool", 46>,
   I32EnumAttrCase<"float_complex", 47>,
-  // I32EnumAttrCase<"float_complex_to_int_complex", 48>,
-  // I32EnumAttrCase<"int_to_complex", 49>,
+  I32EnumAttrCase<"float_complex_to_int_complex", 48>,
+  I32EnumAttrCase<"int_to_complex", 49>,
   I32EnumAttrCase<"int_complex_to_real", 50>,
   I32EnumAttrCase<"int_complex_to_bool", 51>,
   I32EnumAttrCase<"int_complex", 52>,
@@ -607,8 +607,8 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 defvar CIR_YieldableScopes = [
-  "CaseOp", "DoWhileOp", "ForOp", "IfOp", "ScopeOp", "SwitchOp",
-  "TernaryOp", "WhileOp"
+  "ArrayCtor", "ArrayDtor", "CaseOp", "DoWhileOp", "ForOp", "IfOp", "ScopeOp",
+  "SwitchOp", "TernaryOp", "WhileOp"
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
@@ -1739,20 +1739,24 @@ def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
     %2 = cir.load %0 : !cir.ptr<!cir.ptr<!record_type>>, !cir.ptr<!record_type>
     %3 = cir.get_member %2[1] {name = "e"} : !cir.ptr<!record_type>
                                                              -> !cir.ptr<!u16i>
-    %4 = cir.set_bitfield(#bfi_e, %3 : !cir.ptr<!u16i>, %1 : !s32i) -> !s32i
+    %4 = cir.set_bitfield align(4) (#bfi_e, %3 : !cir.ptr<!u16i>, %1 : !s32i)
+                                                                       -> !s32i
     ```
    }];
 
   let arguments = (ins
     Arg<CIR_PointerType, "the address to store the value", [MemWrite]>:$addr,
     CIR_AnyType:$src,
-    BitfieldInfoAttr:$bitfield_info,
+    CIR_BitfieldInfoAttr:$bitfield_info,
+    DefaultValuedOptionalAttr<I64Attr, "0">:$alignment,
     UnitAttr:$is_volatile
   );
 
   let results = (outs CIR_IntType:$result);
 
-  let assemblyFormat = [{ `(`$bitfield_info`,` $addr`:`qualified(type($addr))`,`
+  let assemblyFormat = [{
+    (`align` `(` $alignment^ `)`)?
+    `(`$bitfield_info`,` $addr`:`qualified(type($addr))`,`
     $src`:`type($src) `)`  attr-dict `->` type($result) }];
 
   let builders = [
@@ -1764,14 +1768,15 @@ def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
                    "unsigned":$size,
                    "unsigned":$offset,
                    "bool":$is_signed,
-                   "bool":$is_volatile
+                   "bool":$is_volatile,
+                   CArg<"unsigned", "0">:$alignment
                    ),
    [{
       BitfieldInfoAttr info =
         BitfieldInfoAttr::get($_builder.getContext(),
                               name, storage_type,
                               size, offset, is_signed);
-      build($_builder, $_state, type, addr, src, info, is_volatile);
+      build($_builder, $_state, type, addr, src, info, alignment, is_volatile);
     }]>
   ];
 }
@@ -1823,20 +1828,23 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
     %2 = cir.load %0 : !cir.ptr<!cir.ptr<!record_type>>, !cir.ptr<!record_type>
     %3 = cir.get_member %2[1] {name = "e"} : !cir.ptr<!record_type>
                                                              -> !cir.ptr<!u16i>
-    %4 = cir.get_bitfield(#bfi_e, %3 : !cir.ptr<!u16i>) -> !s32i
+    %4 = cir.get_bitfield align(4) (#bfi_e, %3 : !cir.ptr<!u16i>) -> !s32i
     ```
     }];
 
   let arguments = (ins
     Arg<CIR_PointerType, "the address to load from", [MemRead]>:$addr,
-    BitfieldInfoAttr:$bitfield_info,
+    CIR_BitfieldInfoAttr:$bitfield_info,
+    DefaultValuedOptionalAttr<I64Attr, "0">:$alignment,
     UnitAttr:$is_volatile
     );
 
   let results = (outs CIR_IntType:$result);
 
-  let assemblyFormat = [{ `(`$bitfield_info `,` $addr attr-dict `:`
-   qualified(type($addr)) `)` `->` type($result) }];
+  let assemblyFormat = [{
+    (`align` `(` $alignment^ `)`)?
+    `(`$bitfield_info `,` $addr attr-dict `:`
+    qualified(type($addr)) `)` `->` type($result) }];
 
   let builders = [
     OpBuilder<(ins "mlir::Type":$type,
@@ -1846,14 +1854,15 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
                    "unsigned":$size,
                    "unsigned":$offset,
                    "bool":$is_signed,
-                   "bool":$is_volatile
+                   "bool":$is_volatile,
+                   CArg<"unsigned", "0">:$alignment
                    ),
    [{
       BitfieldInfoAttr info =
         BitfieldInfoAttr::get($_builder.getContext(),
                               name, storage_type,
                               size, offset, is_signed);
-      build($_builder, $_state, type, addr, info, is_volatile);
+      build($_builder, $_state, type, addr, info, alignment, is_volatile);
     }]>
   ];
 }
@@ -1937,6 +1946,10 @@ def CIR_FuncOp : CIR_Op<"func", [
     The function linkage information is specified by `linkage`, as defined by
     `GlobalLinkageKind` attribute.
 
+    The `no_proto` keyword is used to identify functions that were declared
+    without a prototype and, consequently, may contain calls with invalid
+    arguments and undefined behavior.
+
     Example:
 
     ```mlir
@@ -1955,6 +1968,7 @@ def CIR_FuncOp : CIR_Op<"func", [
   let arguments = (ins SymbolNameAttr:$sym_name,
                        CIR_VisibilityAttr:$global_visibility,
                        TypeAttrOf<CIR_FuncType>:$function_type,
+                       UnitAttr:$no_proto,
                        UnitAttr:$dso_local,
                        DefaultValuedAttr<CIR_GlobalLinkageKind,
                                          "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
@@ -1994,13 +2008,6 @@ def CIR_FuncOp : CIR_Op<"func", [
     /// returing void)
     llvm::ArrayRef<mlir::Type> getResultTypes() {
        return getFunctionType().getReturnTypes();
-    }
-
-    // TODO(cir): this should be an operand attribute, but for now we just hard-
-    // wire this as a function. Will later add a $no_proto argument to this op.
-    bool getNoProto() {
-      assert(!cir::MissingFeatures::opFuncNoProto());
-      return false;
     }
 
     //===------------------------------------------------------------------===//
@@ -2217,6 +2224,71 @@ def CIR_TrapOp : CIR_Op<"trap", [Terminator]> {
   }];
 
   let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// ArrayCtor & ArrayDtor
+//===----------------------------------------------------------------------===//
+
+class CIR_ArrayInitDestroy<string mnemonic> : CIR_Op<mnemonic> {
+  let arguments = (ins
+    Arg<CIR_PtrToArray, "array address", [MemWrite, MemRead]>:$addr
+  );
+
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = [{
+    $addr `:` qualified(type($addr)) $body attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$addr,
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$regionBuilder), [{
+        assert(regionBuilder && "builder callback expected");
+        mlir::OpBuilder::InsertionGuard guard($_builder);
+        mlir::Region *r = $_state.addRegion();
+        $_state.addOperands(ValueRange{addr});
+        $_builder.createBlock(r);
+        regionBuilder($_builder, $_state.location);
+    }]>
+  ];
+}
+
+def CIR_ArrayCtor : CIR_ArrayInitDestroy<"array.ctor"> {
+  let summary = "Initialize array elements with C++ constructors";
+  let description = [{
+    Initialize each array element using the same C++ constructor. This
+    operation has one region, with one single block. The block has an
+    incoming argument for the current array element to initialize.
+
+    Example:
+
+    ```mlir
+    cir.array.ctor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {
+      ^bb0(%arg0: !cir.ptr<!rec_S>):
+        cir.call @some_ctor(%arg0) : (!cir.ptr<!rec_S>) -> ()
+        cir.yield
+    }
+    ```
+  }];
+}
+
+def CIR_ArrayDtor : CIR_ArrayInitDestroy<"array.dtor"> {
+  let summary = "Destroy array elements with C++ dtors";
+  let description = [{
+    Destroy each array element using the same C++ destructor. This
+    operation has one region, with one single block. The block has an
+    incoming argument for the current array element to destruct.
+
+    Example:
+
+    ```mlir
+    cir.array.dtor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {
+      ^bb0(%arg0: !cir.ptr<!rec_S>):
+        cir.call @some_dtor(%arg0) : (!cir.ptr<!rec_S>) -> ()
+        cir.yield
+    }
+    ```
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -2764,6 +2836,8 @@ class CIR_BitOpBase<string mnemonic, TypeConstraint operandTy>
   let assemblyFormat = [{
     $input `:` type($result) attr-dict
   }];
+
+  let hasFolder = 1;
 }
 
 class CIR_BitZeroCountOpBase<string mnemonic, TypeConstraint operandTy>
@@ -2852,6 +2926,28 @@ def CIR_BitCtzOp : CIR_BitZeroCountOpBase<"ctz",
     %0 = cir.const #cir.int<8> : !u32i
     // %1 will be 3
     %1 = cir.ctz %0 poison_zero : !u32i
+    ```
+  }];
+}
+
+def CIR_BitFfsOp : CIR_BitOpBase<"ffs", CIR_SIntOfWidths<[32, 64]>> {
+  let summary = "Get the position of the least significant 1-bit in input";
+  let description = [{
+    Compute the 1-based position of the least significant 1-bit of the input.
+
+    The input integer must be a signed integer. The `cir.ffs` operation returns
+    one plus the index of the least significant 1-bit of the input signed
+    integer. If the input integer is 0, `cir.ffs` yields 0.
+
+    Example:
+
+    ```mlir
+    !s32i = !cir.int<s, 32>
+
+    // %0 = 0x0010_1000
+    %0 = cir.const #cir.int<40> : !s32i
+    // #1 will be 4 since the 4th least significant bit is 1.
+    %1 = cir.ffs %0 : !s32i
     ```
   }];
 }
@@ -2971,6 +3067,8 @@ def CIR_RotateOp : CIR_Op<"rotate", [Pure, SameOperandsAndResultType]> {
     bool isRotateLeft() { return getRotateLeft(); }
     bool isRotateRight() { return !getRotateLeft(); }
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2992,6 +3090,27 @@ def CIR_AssumeOp : CIR_Op<"assume"> {
 
   let assemblyFormat = [{
     $predicate `:` type($predicate) attr-dict
+  }];
+}
+
+def CIR_AssumeSepStorageOp : CIR_Op<"assume_separate_storage", [
+  SameTypeOperands
+]> {
+  let summary =
+      "Tell the optimizer that two pointers point to different allocations";
+  let description = [{
+    The `cir.assume_separate_storage` operation takes two pointers as arguments,
+    and the operation tells the optimizer that these two pointers point to
+    different allocations.
+
+    This operation corresponds to the `__builtin_assume_separate_storage`
+    builtin function.
+  }];
+
+  let arguments = (ins CIR_VoidPtrType:$ptr1, CIR_VoidPtrType:$ptr2);
+
+  let assemblyFormat = [{
+    $ptr1 `,` $ptr2 `:` qualified(type($ptr1)) attr-dict
   }];
 }
 

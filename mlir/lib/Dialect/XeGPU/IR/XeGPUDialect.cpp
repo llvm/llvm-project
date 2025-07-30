@@ -112,6 +112,11 @@ BlockTensorDescAttr BlockTensorDescAttr::get(mlir::MLIRContext *context,
   return Base::get(context, scopeAttr, lengthAttr, boundaryAttr);
 }
 
+bool BlockTensorDescAttr::hasDefaultsOnly() {
+  return getMemorySpace().getValue() == xegpu::MemorySpace::Global &&
+         getArrayLength().getInt() == 1 && getBoundaryCheck().getValue();
+}
+
 //===----------------------------------------------------------------------===//
 // XeGPU_ScatterTensorDescAttr
 //===----------------------------------------------------------------------===//
@@ -207,6 +212,21 @@ LayoutAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// XeGPU_RangeAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+RangeAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                  IntegerAttr startOfRange, IntegerAttr endOfRange) {
+  if (startOfRange.getInt() >= endOfRange.getInt())
+    return emitError() << "'end' : " << endOfRange.getInt()
+                       << " must be greater than 'start' : "
+                       << startOfRange.getInt();
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // XeGPU_TensorDescType
 //===----------------------------------------------------------------------===//
 
@@ -253,10 +273,11 @@ mlir::Type TensorDescType::parse(::mlir::AsmParser &parser) {
   if (parser.parseGreater())
     return {};
 
+  MLIRContext *ctxt = parser.getContext();
   return TensorDescType::getChecked(
-      [&]() { return parser.emitError(parser.getNameLoc()); },
-      parser.getContext(), shape, elementType,
-      encoding.value_or(mlir::Attribute()), layout.value_or(mlir::Attribute()));
+      [&]() { return parser.emitError(parser.getNameLoc()); }, ctxt, shape,
+      elementType, encoding.value_or(BlockTensorDescAttr::get(ctxt)),
+      layout.value_or(mlir::Attribute()));
 }
 
 void TensorDescType::print(::mlir::AsmPrinter &printer) const {
@@ -273,7 +294,9 @@ void TensorDescType::print(::mlir::AsmPrinter &printer) const {
 
   printer << getElementType();
 
-  if (auto encoding = getEncoding())
+  auto encoding = getEncoding();
+  auto blockAttr = llvm::dyn_cast_if_present<BlockTensorDescAttr>(encoding);
+  if (encoding && (!blockAttr || !blockAttr.hasDefaultsOnly()))
     printer << ", " << encoding;
 
   if (auto layout = getLayout())

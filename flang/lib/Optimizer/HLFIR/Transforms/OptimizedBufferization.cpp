@@ -727,8 +727,8 @@ llvm::LogicalResult ElementalAssignBufferization::matchAndRewrite(
   // Assign the element value to the array element for this iteration.
   auto arrayElement =
       hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
-  builder.create<hlfir::AssignOp>(
-      loc, elementValue, arrayElement, /*realloc=*/false,
+  hlfir::AssignOp::create(
+      builder, loc, elementValue, arrayElement, /*realloc=*/false,
       /*keep_lhs_length_if_realloc=*/false, match->assign.getTemporaryLhs());
 
   rewriter.eraseOp(match->assign);
@@ -793,7 +793,7 @@ llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
     // optimized.
     mlir::Value n = extents[0];
     for (size_t i = 1; i < extents.size(); ++i)
-      n = builder.create<mlir::arith::MulIOp>(loc, n, extents[i]);
+      n = mlir::arith::MulIOp::create(builder, loc, n, extents[i]);
     llvm::SmallVector<mlir::Value> flatExtents = {n};
 
     mlir::Type flatArrayType;
@@ -801,8 +801,8 @@ llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
     if (mlir::isa<fir::BoxType>(lhs.getType())) {
       shape = builder.genShape(loc, flatExtents);
       flatArrayType = fir::BoxType::get(fir::SequenceType::get(eleTy, 1));
-      flatArray = builder.create<fir::ReboxOp>(loc, flatArrayType, flatArray,
-                                               shape, /*slice=*/mlir::Value{});
+      flatArray = fir::ReboxOp::create(builder, loc, flatArrayType, flatArray,
+                                       shape, /*slice=*/mlir::Value{});
     } else {
       // Array references must have fixed shape, when used in assignments.
       auto seqTy =
@@ -822,9 +822,9 @@ llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
     builder.setInsertionPointToStart(loopNest.body);
 
     mlir::Value arrayElement =
-        builder.create<hlfir::DesignateOp>(loc, fir::ReferenceType::get(eleTy),
-                                           flatArray, loopNest.oneBasedIndices);
-    builder.create<hlfir::AssignOp>(loc, rhs, arrayElement);
+        hlfir::DesignateOp::create(builder, loc, fir::ReferenceType::get(eleTy),
+                                   flatArray, loopNest.oneBasedIndices);
+    hlfir::AssignOp::create(builder, loc, rhs, arrayElement);
   } else {
     hlfir::LoopNest loopNest =
         hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
@@ -832,7 +832,7 @@ llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
     builder.setInsertionPointToStart(loopNest.body);
     auto arrayElement =
         hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
-    builder.create<hlfir::AssignOp>(loc, rhs, arrayElement);
+    hlfir::AssignOp::create(builder, loc, rhs, arrayElement);
   }
 
   rewriter.eraseOp(assign);

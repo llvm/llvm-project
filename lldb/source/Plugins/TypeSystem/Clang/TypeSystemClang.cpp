@@ -87,8 +87,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 using namespace clang;
 using llvm::StringSwitch;
 
@@ -2555,6 +2555,7 @@ RemoveWrappingTypes(QualType type, ArrayRef<clang::Type::TypeClass> mask = {}) {
     case clang::Type::TypeOf:
     case clang::Type::TypeOfExpr:
     case clang::Type::Using:
+    case clang::Type::PredefinedSugar:
       type = type->getLocallyUnqualifiedSingleStepDesugaredType();
       break;
     default:
@@ -4130,6 +4131,7 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   case clang::Type::TypeOf:
   case clang::Type::TypeOfExpr:
   case clang::Type::Using:
+  case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
   case clang::Type::UnaryTransform:
     break;
@@ -4840,6 +4842,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   case clang::Type::TypeOf:
   case clang::Type::TypeOfExpr:
   case clang::Type::Using:
+  case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
 
   case clang::Type::UnaryTransform:
@@ -5141,6 +5144,7 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::TypeOf:
   case clang::Type::TypeOfExpr:
   case clang::Type::Using:
+  case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
   case clang::Type::UnaryTransform:
     break;
@@ -5456,7 +5460,7 @@ CompilerType TypeSystemClang::GetBuiltinTypeByName(ConstString name) {
 lldb::BasicType
 TypeSystemClang::GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) {
   if (type) {
-    clang::QualType qual_type(GetQualType(type));
+    clang::QualType qual_type(GetCanonicalQualType(type));
     const clang::Type::TypeClass type_class = qual_type->getTypeClass();
     if (type_class == clang::Type::Builtin) {
       switch (llvm::cast<clang::BuiltinType>(qual_type)->getKind()) {

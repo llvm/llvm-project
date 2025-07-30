@@ -541,7 +541,8 @@ StmtResult Parser::ParseExprStatement(ParsedStmtContext StmtCtx) {
   }
 
   Token *CurTok = nullptr;
-  // Note we shouldn't eat the token since the callback needs it.
+  // If the semicolon is missing at the end of REPL input, we want to print
+  // the result. Note we shouldn't eat the token since the callback needs it.
   if (Tok.is(tok::annot_repl_input_end))
     CurTok = &Tok;
   else

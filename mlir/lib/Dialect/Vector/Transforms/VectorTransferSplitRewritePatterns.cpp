@@ -57,12 +57,12 @@ static Value createInBoundsCond(RewriterBase &b,
     if (maybeCstSum && maybeCstDimSz && *maybeCstSum <= *maybeCstDimSz)
       return;
     Value cond =
-        b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sle,
-                                getValueOrCreateConstantIndexOp(b, loc, sum),
-                                getValueOrCreateConstantIndexOp(b, loc, dimSz));
+        arith::CmpIOp::create(b, loc, arith::CmpIPredicate::sle,
+                              getValueOrCreateConstantIndexOp(b, loc, sum),
+                              getValueOrCreateConstantIndexOp(b, loc, dimSz));
     // Conjunction over all dims for which we are in-bounds.
     if (inBoundsCond)
-      inBoundsCond = b.create<arith::AndIOp>(loc, inBoundsCond, cond);
+      inBoundsCond = arith::AndIOp::create(b, loc, inBoundsCond, cond);
     else
       inBoundsCond = cond;
   });
@@ -170,11 +170,12 @@ static Value castToCompatibleMemRefType(OpBuilder &b, Value memref,
     sourceType = MemRefType::get(
         sourceType.getShape(), sourceType.getElementType(),
         sourceType.getLayout(), compatibleMemRefType.getMemorySpace());
-    res = b.create<memref::MemorySpaceCastOp>(memref.getLoc(), sourceType, res);
+    res =
+        memref::MemorySpaceCastOp::create(b, memref.getLoc(), sourceType, res);
   }
   if (sourceType == compatibleMemRefType)
     return res;
-  return b.create<memref::CastOp>(memref.getLoc(), compatibleMemRefType, res);
+  return memref::CastOp::create(b, memref.getLoc(), compatibleMemRefType, res);
 }
 
 /// Operates under a scoped context to build the intersection between the
@@ -196,16 +197,17 @@ createSubViewIntersection(RewriterBase &b, VectorTransferOpInterface xferOp,
   xferOp.zipResultAndIndexing([&](int64_t resultIdx, int64_t indicesIdx) {
     using MapList = ArrayRef<ArrayRef<AffineExpr>>;
     Value dimMemRef =
-        b.create<memref::DimOp>(xferOp.getLoc(), xferOp.getBase(), indicesIdx);
-    Value dimAlloc = b.create<memref::DimOp>(loc, alloc, resultIdx);
+        memref::DimOp::create(b, xferOp.getLoc(), xferOp.getBase(), indicesIdx);
+    Value dimAlloc = memref::DimOp::create(b, loc, alloc, resultIdx);
     Value index = xferOp.getIndices()[indicesIdx];
     AffineExpr i, j, k;
     bindDims(xferOp.getContext(), i, j, k);
     SmallVector<AffineMap, 4> maps =
         AffineMap::inferFromExprList(MapList{{i - j, k}}, b.getContext());
     // affine_min(%dimMemRef - %index, %dimAlloc)
-    Value affineMin = b.create<affine::AffineMinOp>(
-        loc, index.getType(), maps[0], ValueRange{dimMemRef, index, dimAlloc});
+    Value affineMin =
+        affine::AffineMinOp::create(b, loc, index.getType(), maps[0],
+                                    ValueRange{dimMemRef, index, dimAlloc});
     sizes.push_back(affineMin);
   });
 
@@ -213,10 +215,10 @@ createSubViewIntersection(RewriterBase &b, VectorTransferOpInterface xferOp,
       xferOp.getIndices(), [](Value idx) -> OpFoldResult { return idx; }));
   SmallVector<OpFoldResult> destIndices(memrefRank, b.getIndexAttr(0));
   SmallVector<OpFoldResult> strides(memrefRank, b.getIndexAttr(1));
-  auto copySrc = b.create<memref::SubViewOp>(
-      loc, isaWrite ? alloc : xferOp.getBase(), srcIndices, sizes, strides);
-  auto copyDest = b.create<memref::SubViewOp>(
-      loc, isaWrite ? xferOp.getBase() : alloc, destIndices, sizes, strides);
+  auto copySrc = memref::SubViewOp::create(
+      b, loc, isaWrite ? alloc : xferOp.getBase(), srcIndices, sizes, strides);
+  auto copyDest = memref::SubViewOp::create(
+      b, loc, isaWrite ? xferOp.getBase() : alloc, destIndices, sizes, strides);
   return std::make_pair(copySrc, copyDest);
 }
 
@@ -244,32 +246,32 @@ createFullPartialLinalgCopy(RewriterBase &b, vector::TransferReadOp xferOp,
                             TypeRange returnTypes, Value inBoundsCond,
                             MemRefType compatibleMemRefType, Value alloc) {
   Location loc = xferOp.getLoc();
-  Value zero = b.create<arith::ConstantIndexOp>(loc, 0);
+  Value zero = arith::ConstantIndexOp::create(b, loc, 0);
   Value memref = xferOp.getBase();
-  return b.create<scf::IfOp>(
-      loc, inBoundsCond,
+  return scf::IfOp::create(
+      b, loc, inBoundsCond,
       [&](OpBuilder &b, Location loc) {
         Value res = castToCompatibleMemRefType(b, memref, compatibleMemRefType);
         scf::ValueVector viewAndIndices{res};
         llvm::append_range(viewAndIndices, xferOp.getIndices());
-        b.create<scf::YieldOp>(loc, viewAndIndices);
+        scf::YieldOp::create(b, loc, viewAndIndices);
       },
       [&](OpBuilder &b, Location loc) {
-        b.create<linalg::FillOp>(loc, ValueRange{xferOp.getPadding()},
-                                 ValueRange{alloc});
+        linalg::FillOp::create(b, loc, ValueRange{xferOp.getPadding()},
+                               ValueRange{alloc});
         // Take partial subview of memref which guarantees no dimension
         // overflows.
         IRRewriter rewriter(b);
         std::pair<Value, Value> copyArgs = createSubViewIntersection(
             rewriter, cast<VectorTransferOpInterface>(xferOp.getOperation()),
             alloc);
-        b.create<memref::CopyOp>(loc, copyArgs.first, copyArgs.second);
+        memref::CopyOp::create(b, loc, copyArgs.first, copyArgs.second);
         Value casted =
             castToCompatibleMemRefType(b, alloc, compatibleMemRefType);
         scf::ValueVector viewAndIndices{casted};
         viewAndIndices.insert(viewAndIndices.end(), xferOp.getTransferRank(),
                               zero);
-        b.create<scf::YieldOp>(loc, viewAndIndices);
+        scf::YieldOp::create(b, loc, viewAndIndices);
       });
 }
 
@@ -297,30 +299,30 @@ static scf::IfOp createFullPartialVectorTransferRead(
     Value inBoundsCond, MemRefType compatibleMemRefType, Value alloc) {
   Location loc = xferOp.getLoc();
   scf::IfOp fullPartialIfOp;
-  Value zero = b.create<arith::ConstantIndexOp>(loc, 0);
+  Value zero = arith::ConstantIndexOp::create(b, loc, 0);
   Value memref = xferOp.getBase();
-  return b.create<scf::IfOp>(
-      loc, inBoundsCond,
+  return scf::IfOp::create(
+      b, loc, inBoundsCond,
       [&](OpBuilder &b, Location loc) {
         Value res = castToCompatibleMemRefType(b, memref, compatibleMemRefType);
         scf::ValueVector viewAndIndices{res};
         llvm::append_range(viewAndIndices, xferOp.getIndices());
-        b.create<scf::YieldOp>(loc, viewAndIndices);
+        scf::YieldOp::create(b, loc, viewAndIndices);
       },
       [&](OpBuilder &b, Location loc) {
         Operation *newXfer = b.clone(*xferOp.getOperation());
         Value vector = cast<VectorTransferOpInterface>(newXfer).getVector();
-        b.create<memref::StoreOp>(
-            loc, vector,
-            b.create<vector::TypeCastOp>(
-                loc, MemRefType::get({}, vector.getType()), alloc));
+        memref::StoreOp::create(
+            b, loc, vector,
+            vector::TypeCastOp::create(
+                b, loc, MemRefType::get({}, vector.getType()), alloc));
 
         Value casted =
             castToCompatibleMemRefType(b, alloc, compatibleMemRefType);
         scf::ValueVector viewAndIndices{casted};
         viewAndIndices.insert(viewAndIndices.end(), xferOp.getTransferRank(),
                               zero);
-        b.create<scf::YieldOp>(loc, viewAndIndices);
+        scf::YieldOp::create(b, loc, viewAndIndices);
       });
 }
 
@@ -344,26 +346,25 @@ getLocationToWriteFullVec(RewriterBase &b, vector::TransferWriteOp xferOp,
                           TypeRange returnTypes, Value inBoundsCond,
                           MemRefType compatibleMemRefType, Value alloc) {
   Location loc = xferOp.getLoc();
-  Value zero = b.create<arith::ConstantIndexOp>(loc, 0);
+  Value zero = arith::ConstantIndexOp::create(b, loc, 0);
   Value memref = xferOp.getBase();
-  return b
-      .create<scf::IfOp>(
-          loc, inBoundsCond,
-          [&](OpBuilder &b, Location loc) {
-            Value res =
-                castToCompatibleMemRefType(b, memref, compatibleMemRefType);
-            scf::ValueVector viewAndIndices{res};
-            llvm::append_range(viewAndIndices, xferOp.getIndices());
-            b.create<scf::YieldOp>(loc, viewAndIndices);
-          },
-          [&](OpBuilder &b, Location loc) {
-            Value casted =
-                castToCompatibleMemRefType(b, alloc, compatibleMemRefType);
-            scf::ValueVector viewAndIndices{casted};
-            viewAndIndices.insert(viewAndIndices.end(),
-                                  xferOp.getTransferRank(), zero);
-            b.create<scf::YieldOp>(loc, viewAndIndices);
-          })
+  return scf::IfOp::create(
+             b, loc, inBoundsCond,
+             [&](OpBuilder &b, Location loc) {
+               Value res =
+                   castToCompatibleMemRefType(b, memref, compatibleMemRefType);
+               scf::ValueVector viewAndIndices{res};
+               llvm::append_range(viewAndIndices, xferOp.getIndices());
+               scf::YieldOp::create(b, loc, viewAndIndices);
+             },
+             [&](OpBuilder &b, Location loc) {
+               Value casted =
+                   castToCompatibleMemRefType(b, alloc, compatibleMemRefType);
+               scf::ValueVector viewAndIndices{casted};
+               viewAndIndices.insert(viewAndIndices.end(),
+                                     xferOp.getTransferRank(), zero);
+               scf::YieldOp::create(b, loc, viewAndIndices);
+             })
       ->getResults();
 }
 
@@ -384,15 +385,15 @@ static void createFullPartialLinalgCopy(RewriterBase &b,
                                         vector::TransferWriteOp xferOp,
                                         Value inBoundsCond, Value alloc) {
   Location loc = xferOp.getLoc();
-  auto notInBounds = b.create<arith::XOrIOp>(
-      loc, inBoundsCond, b.create<arith::ConstantIntOp>(loc, true, 1));
-  b.create<scf::IfOp>(loc, notInBounds, [&](OpBuilder &b, Location loc) {
+  auto notInBounds = arith::XOrIOp::create(
+      b, loc, inBoundsCond, arith::ConstantIntOp::create(b, loc, true, 1));
+  scf::IfOp::create(b, loc, notInBounds, [&](OpBuilder &b, Location loc) {
     IRRewriter rewriter(b);
     std::pair<Value, Value> copyArgs = createSubViewIntersection(
         rewriter, cast<VectorTransferOpInterface>(xferOp.getOperation()),
         alloc);
-    b.create<memref::CopyOp>(loc, copyArgs.first, copyArgs.second);
-    b.create<scf::YieldOp>(loc, ValueRange{});
+    memref::CopyOp::create(b, loc, copyArgs.first, copyArgs.second);
+    scf::YieldOp::create(b, loc, ValueRange{});
   });
 }
 
@@ -413,18 +414,18 @@ static void createFullPartialVectorTransferWrite(RewriterBase &b,
                                                  Value inBoundsCond,
                                                  Value alloc) {
   Location loc = xferOp.getLoc();
-  auto notInBounds = b.create<arith::XOrIOp>(
-      loc, inBoundsCond, b.create<arith::ConstantIntOp>(loc, true, 1));
-  b.create<scf::IfOp>(loc, notInBounds, [&](OpBuilder &b, Location loc) {
+  auto notInBounds = arith::XOrIOp::create(
+      b, loc, inBoundsCond, arith::ConstantIntOp::create(b, loc, true, 1));
+  scf::IfOp::create(b, loc, notInBounds, [&](OpBuilder &b, Location loc) {
     IRMapping mapping;
-    Value load = b.create<memref::LoadOp>(
-        loc,
-        b.create<vector::TypeCastOp>(
-            loc, MemRefType::get({}, xferOp.getVector().getType()), alloc),
+    Value load = memref::LoadOp::create(
+        b, loc,
+        vector::TypeCastOp::create(
+            b, loc, MemRefType::get({}, xferOp.getVector().getType()), alloc),
         ValueRange());
     mapping.map(xferOp.getVector(), load);
     b.clone(*xferOp.getOperation(), mapping);
-    b.create<scf::YieldOp>(loc, ValueRange{});
+    scf::YieldOp::create(b, loc, ValueRange{});
   });
 }
 
@@ -554,9 +555,9 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
     b.setInsertionPointToStart(&scope->getRegion(0).front());
     auto shape = xferOp.getVectorType().getShape();
     Type elementType = xferOp.getVectorType().getElementType();
-    alloc = b.create<memref::AllocaOp>(scope->getLoc(),
-                                       MemRefType::get(shape, elementType),
-                                       ValueRange{}, b.getI64IntegerAttr(32));
+    alloc = memref::AllocaOp::create(b, scope->getLoc(),
+                                     MemRefType::get(shape, elementType),
+                                     ValueRange{}, b.getI64IntegerAttr(32));
   }
 
   MemRefType compatibleMemRefType =

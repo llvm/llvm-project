@@ -522,9 +522,6 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
 
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
 
-  setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
-  setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
-
   setTargetDAGCombine({ISD::SDIVREM, ISD::UDIVREM, ISD::SELECT, ISD::AND,
                        ISD::OR, ISD::ADD, ISD::SUB, ISD::AssertZext, ISD::SHL,
                        ISD::SIGN_EXTEND});
@@ -1360,8 +1357,6 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::FP_TO_SINT:         return lowerFP_TO_SINT(Op, DAG);
   case ISD::READCYCLECOUNTER:
     return lowerREADCYCLECOUNTER(Op, DAG);
-  case ISD::ConstantFP:
-    return lowerConstantFP(Op, DAG);
   }
   return SDValue();
 }
@@ -3019,30 +3014,6 @@ SDValue MipsTargetLowering::lowerFP_TO_SINT(SDValue Op,
   return DAG.getNode(ISD::BITCAST, SDLoc(Op), Op.getValueType(), Trunc);
 }
 
-SDValue MipsTargetLowering::lowerConstantFP(SDValue Op,
-                                            SelectionDAG &DAG) const {
-  SDLoc DL(Op);
-  EVT VT = Op.getSimpleValueType();
-  SDNode *N = Op.getNode();
-  ConstantFPSDNode *CFP = cast<ConstantFPSDNode>(N);
-
-  if (!CFP->isNaN() || Subtarget.isNaN2008()) {
-    return SDValue();
-  }
-
-  APFloat NaNValue = CFP->getValueAPF();
-  auto &Sem = NaNValue.getSemantics();
-
-  // The MSB of the mantissa should be zero for QNaNs in the MIPS legacy NaN
-  // encodings, and one for sNaNs. Check every NaN constants and make sure
-  // they are correctly encoded for legacy encodings.
-  if (!NaNValue.isSignaling()) {
-    APFloat RealQNaN = NaNValue.getSNaN(Sem);
-    return DAG.getConstantFP(RealQNaN, DL, VT);
-  }
-  return SDValue();
-}
-
 //===----------------------------------------------------------------------===//
 //                      Calling Convention Implementation
 //===----------------------------------------------------------------------===//
@@ -3370,6 +3341,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool &IsTailCall                      = CLI.IsTailCall;
   CallingConv::ID CallConv              = CLI.CallConv;
   bool IsVarArg                         = CLI.IsVarArg;
+  const CallBase *CB = CLI.CB;
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -3426,8 +3398,11 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned StackSize = CCInfo.getStackSize();
 
-  // Call site info for function parameters tracking.
+  // Call site info for function parameters tracking and call base type info.
   MachineFunction::CallSiteInfo CSInfo;
+  // Set type id for call site info.
+  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
+    CSInfo = MachineFunction::CallSiteInfo(*CB);
 
   // Check if it's really possible to do a tail call. Restrict it to functions
   // that are part of this compilation unit.

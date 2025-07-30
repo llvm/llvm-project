@@ -231,7 +231,7 @@ class PaperInfo:
 
         return PaperInfo(
             paper_number=paper,
-            paper_name=issue['title'],
+            paper_name=issue['title'].removeprefix(paper + ': '),
             status=PaperStatus.from_github_issue(issue),
             meeting=issue.get('meeting Voted', None),
             first_released_version=None, # TODO
@@ -269,14 +269,14 @@ def merge(paper: PaperInfo, gh: PaperInfo) -> PaperInfo:
 
 def load_csv(file: pathlib.Path) -> List[Tuple]:
     rows = []
-    with open(file, newline='') as f:
+    with open(file, newline='', encoding='utf-8') as f:
         reader = csv.reader(f, delimiter=',')
         for row in reader:
             rows.append(row)
     return rows
 
 def write_csv(output: pathlib.Path, rows: List[Tuple]):
-    with open(output, 'w', newline='') as f:
+    with open(output, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f, quoting=csv.QUOTE_ALL, lineterminator='\n')
         for row in rows:
             writer.writerow(row)
@@ -417,7 +417,7 @@ def main(argv):
     # Load all the Github issues tracking papers from Github.
     if args.load_github_from:
         print(f"Loading all issues from {args.load_github_from}")
-        with open(args.load_github_from, 'r') as f:
+        with open(args.load_github_from, 'r', encoding='utf-8') as f:
             project_info = json.load(f)
     else:
         print("Loading all issues from Github")

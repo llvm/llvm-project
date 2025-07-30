@@ -54,3 +54,84 @@ body:             |
     renamable $z0 = FADD_ZPZZ_D_UNDEF killed $p0, killed $z1, killed $z2, implicit-def $z0_z1_z2_z3
     RET_ReallyLR implicit $z0_z1_z2_z3
 ...
+
+---
+name: unary_undef_operand
+body:             |
+  bb.0:
+    liveins: $p0, $z0
+
+    ; CHECK: name: unary_undef_operand
+    ; CHECK: $z0 = MOVPRFX_ZZ undef $z1
+    ; CHECK: $z0 = ABS_ZPmZ_S internal killed $z0, renamable $p0, killed undef renamable $z1
+    ; NOTE: Unary _UNDEF psuedo instructions ignore the passthru operand.
+    renamable $z0 = ABS_ZPmZ_S_UNDEF renamable $z0, renamable $p0, killed undef renamable $z1
+    RET_ReallyLR
+
+...
+
+---
+name: binop_undef_operand
+body:             |
+  bb.0:
+    liveins: $p0, $z1
+
+    ; CHECK: name: binop_undef_operand
+    ; CHECK-NOT: MOVPRFX
+    ; CHECK: $z0 = SMIN_ZPmZ_S renamable $p0, killed undef $z0, killed renamable $z1
+    renamable $z0 = SMIN_ZPZZ_S_UNDEF renamable $p0, undef renamable $z0, killed renamable $z1
+    RET_ReallyLR
+
+...
+
+---
+name: binop_undef_operand_requires_movpfrx
+body:             |
+  bb.0:
+    liveins: $p0, $z1
+
+    ; CHECK: name: binop_undef_operand_requires_movpfrx
+    ; CHECK: $z0 = MOVPRFX_ZZ undef $z2
+    ; CHECK: $z0 = SMIN_ZPmZ_S renamable $p0, internal killed $z0, killed renamable $z1
+    renamable $z0 = SMIN_ZPZZ_S_UNDEF renamable $p0, undef renamable $z2, killed renamable $z1
+    RET_ReallyLR
+
+...
+
+---
+name: binop_undef_operand_requires_zeroing_movpfrx
+body:             |
+  bb.0:
+    liveins: $p0, $z1
+
+    ; CHECK: name: binop_undef_operand_requires_zeroing_movpfrx
+    ; CHECK: $z0 = MOVPRFX_ZPzZ_S $p0, undef $z2
+    ; CHECK: $z0 = ADD_ZPmZ_S renamable $p0, internal killed $z0, killed renamable $z1
+    renamable $z0 = ADD_ZPZZ_S_ZERO renamable $p0, undef renamable $z2, killed renamable $z1
+    RET_ReallyLR
+
+...
+
+---
+name: ternaryop_undef_operand
+body:             |
+  bb.0:
+    liveins: $p0, $z1, $z2
+    ; CHECK: name: ternaryop_undef_operand
+    ; CHECK-NOT: MOVPRFX
+    ; CHECK: $z0 = MLA_ZPmZZ_B killed renamable $p0, killed undef $z0, killed renamable $z1, killed renamable $z2
+    renamable $z0 = MLA_ZPZZZ_B_UNDEF killed renamable $p0, killed undef renamable $z0, killed renamable $z1, killed renamable $z2
+    RET_ReallyLR implicit $z0
+...
+
+---
+name: ternaryop_undef_operand_requires_movprfx
+body:             |
+  bb.0:
+    liveins: $p0, $z1, $z2
+    ; CHECK: name: ternaryop_undef_operand_requires_movprfx
+    ; CHECK: $z0 = MOVPRFX_ZZ undef $z3
+    ; CHECK: $z0 = MLA_ZPmZZ_B killed renamable $p0, internal killed $z0, killed renamable $z1, killed renamable $z2
+    renamable $z0 = MLA_ZPZZZ_B_UNDEF killed renamable $p0, killed undef renamable $z3, killed renamable $z1, killed renamable $z2
+    RET_ReallyLR implicit $z0
+...

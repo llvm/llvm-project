@@ -162,7 +162,7 @@ entry:
 define void @load_zext(i1 %cond, ptr %b, ptr %p) {
 ; CHECK-LABEL: load_zext:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andb $1, %dil
+; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    cfcmovnew (%rsi), %ax
 ; CHECK-NEXT:    movzwl %ax, %eax
 ; CHECK-NEXT:    cfcmovnel %eax, (%rdx)
@@ -180,7 +180,7 @@ entry:
 define void @load_sext(i1 %cond, ptr %b, ptr %p) {
 ; CHECK-LABEL: load_sext:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andb $1, %dil
+; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    cfcmovnel (%rsi), %eax
 ; CHECK-NEXT:    cltq
 ; CHECK-NEXT:    cfcmovneq %rax, (%rdx)

@@ -791,8 +791,19 @@ void __kmp_msg(kmp_msg_severity_t severity, kmp_msg_t message, va_list args) {
   kmp_msg_t fmsg; // formatted message
   kmp_str_buf_t buffer;
 
-  if (severity != kmp_ms_fatal && __kmp_generate_warnings == kmp_warnings_off)
+  if (severity != kmp_ms_fatal && __kmp_generate_warnings == kmp_warnings_off) {
+    // Have to free all possible pre-allocated messages
+    // sent in through message and args
+    __kmp_str_free(&message.str);
+    for (;;) {
+      message = va_arg(args, kmp_msg_t);
+      if (message.type == kmp_mt_dummy && message.str == NULL) {
+        break;
+      }
+      __kmp_str_free(&message.str);
+    }
     return; // no reason to form a string in order to not print it
+  }
 
   __kmp_str_buf_init(&buffer);
 

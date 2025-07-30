@@ -91,7 +91,7 @@ static Value unrankedMemRefMaterialization(OpBuilder &builder,
       packUnrankedMemRefDesc(builder, resultType, inputs, loc, converter);
   if (!packed)
     return Value();
-  return builder.create<UnrealizedConversionCastOp>(loc, resultType, packed)
+  return UnrealizedConversionCastOp::create(builder, loc, resultType, packed)
       .getResult(0);
 }
 
@@ -107,7 +107,7 @@ static Value rankedMemRefMaterialization(OpBuilder &builder,
       packRankedMemRefDesc(builder, resultType, inputs, loc, converter);
   if (!packed)
     return Value();
-  return builder.create<UnrealizedConversionCastOp>(loc, resultType, packed)
+  return UnrealizedConversionCastOp::create(builder, loc, resultType, packed)
       .getResult(0);
 }
 
@@ -224,12 +224,12 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
   // non-LLVM types persist after an LLVM conversion.
   addSourceMaterialization([&](OpBuilder &builder, Type resultType,
                                ValueRange inputs, Location loc) {
-    return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+    return UnrealizedConversionCastOp::create(builder, loc, resultType, inputs)
         .getResult(0);
   });
   addTargetMaterialization([&](OpBuilder &builder, Type resultType,
                                ValueRange inputs, Location loc) {
-    return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+    return UnrealizedConversionCastOp::create(builder, loc, resultType, inputs)
         .getResult(0);
   });
 
@@ -731,12 +731,12 @@ Value LLVMTypeConverter::promoteOneMemRefDescriptor(Location loc, Value operand,
   // Alloca with proper alignment. We do not expect optimizations of this
   // alloca op and so we omit allocating at the entry block.
   auto ptrType = LLVM::LLVMPointerType::get(builder.getContext());
-  Value one = builder.create<LLVM::ConstantOp>(loc, builder.getI64Type(),
-                                               builder.getIndexAttr(1));
+  Value one = LLVM::ConstantOp::create(builder, loc, builder.getI64Type(),
+                                       builder.getIndexAttr(1));
   Value allocated =
-      builder.create<LLVM::AllocaOp>(loc, ptrType, operand.getType(), one);
+      LLVM::AllocaOp::create(builder, loc, ptrType, operand.getType(), one);
   // Store into the alloca'ed descriptor.
-  builder.create<LLVM::StoreOp>(loc, operand, allocated);
+  LLVM::StoreOp::create(builder, loc, operand, allocated);
   return allocated;
 }
 

@@ -40,11 +40,11 @@ static constexpr double LOG2_E = 0x1.71547652b82fep+0;
 
 // Error bounds:
 // Errors when using double precision.
-static constexpr double ERR_D = 0x1.8p-63;
+static constexpr double EXP_ERR_D = 0x1.8p-63;
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 // Errors when using double-double precision.
-static constexpr double ERR_DD = 0x1.0p-99;
+static constexpr double EXP_ERR_DD = 0x1.0p-99;
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 // -2^-12 * log(2)
@@ -67,7 +67,7 @@ namespace {
 // Return expm1(dx) / x ~ 1 + dx / 2 + dx^2 / 6 + dx^3 / 24.
 // For |dx| < 2^-13 + 2^-30:
 //   | output - expm1(dx) / dx | < 2^-51.
-static double poly_approx_d(double dx) {
+LIBC_INLINE static double poly_approx_d(double dx) {
   // dx^2
   double dx2 = dx * dx;
   // c0 = 1 + dx / 2
@@ -85,7 +85,7 @@ static double poly_approx_d(double dx) {
 // Return exp(dx) ~ 1 + dx + dx^2 / 2 + ... + dx^6 / 720
 // For |dx| < 2^-13 + 2^-30:
 //   | output - exp(dx) | < 2^-101
-static DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
+LIBC_INLINE static DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
   // Taylor polynomial.
   constexpr DoubleDouble COEFFS[] = {
       {0, 0x1p0},                                      // 1
@@ -106,7 +106,7 @@ static DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
 // Return exp(dx) ~ 1 + dx + dx^2 / 2 + ... + dx^7 / 5040
 // For |dx| < 2^-13 + 2^-30:
 //   | output - exp(dx) | < 2^-126.
-static Float128 poly_approx_f128(const Float128 &dx) {
+LIBC_INLINE static Float128 poly_approx_f128(const Float128 &dx) {
   constexpr Float128 COEFFS_128[]{
       {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
       {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
@@ -127,7 +127,7 @@ static Float128 poly_approx_f128(const Float128 &dx) {
 // Compute exp(x) using 128-bit precision.
 // TODO(lntue): investigate triple-double precision implementation for this
 // step.
-static Float128 exp_f128(double x, double kd, int idx1, int idx2) {
+LIBC_INLINE static Float128 exp_f128(double x, double kd, int idx1, int idx2) {
   // Recalculate dx:
 
   double t1 = fputil::multiply_add(kd, MLOG_2_EXP2_M12_HI, x); // exact
@@ -160,8 +160,8 @@ static Float128 exp_f128(double x, double kd, int idx1, int idx2) {
 }
 
 // Compute exp(x) with double-double precision.
-static DoubleDouble exp_double_double(double x, double kd,
-                                      const DoubleDouble &exp_mid) {
+LIBC_INLINE static DoubleDouble exp_double_double(double x, double kd,
+                                                  const DoubleDouble &exp_mid) {
   // Recalculate dx:
   //   dx = x - k * 2^-12 * log(2)
   double t1 = fputil::multiply_add(kd, MLOG_2_EXP2_M12_HI, x); // exact
@@ -184,7 +184,7 @@ static DoubleDouble exp_double_double(double x, double kd,
 
 // Check for exceptional cases when
 // |x| <= 2^-53 or x < log(2^-1075) or x >= 0x1.6232bdd7abcd3p+9
-static double set_exceptional(double x) {
+LIBC_INLINE static double set_exceptional(double x) {
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
 
@@ -234,7 +234,7 @@ static double set_exceptional(double x) {
 
 namespace math {
 
-static double exp(double x) {
+LIBC_INLINE static double exp(double x) {
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
 
@@ -387,7 +387,8 @@ static double exp(double x) {
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   if (LIBC_UNLIKELY(denorm)) {
-    return ziv_test_denorm</*SKIP_ZIV_TEST=*/true>(hi, exp_mid.hi, lo, ERR_D)
+    return ziv_test_denorm</*SKIP_ZIV_TEST=*/true>(hi, exp_mid.hi, lo,
+                                                   EXP_ERR_D)
         .value();
   } else {
     // to multiply by 2^hi, a fast way is to simply add hi to the exponent
@@ -399,12 +400,12 @@ static double exp(double x) {
   }
 #else
   if (LIBC_UNLIKELY(denorm)) {
-    if (auto r = ziv_test_denorm(hi, exp_mid.hi, lo, ERR_D);
+    if (auto r = ziv_test_denorm(hi, exp_mid.hi, lo, EXP_ERR_D);
         LIBC_LIKELY(r.has_value()))
       return r.value();
   } else {
-    double upper = exp_mid.hi + (lo + ERR_D);
-    double lower = exp_mid.hi + (lo - ERR_D);
+    double upper = exp_mid.hi + (lo + EXP_ERR_D);
+    double lower = exp_mid.hi + (lo - EXP_ERR_D);
 
     if (LIBC_LIKELY(upper == lower)) {
       // to multiply by 2^hi, a fast way is to simply add hi to the exponent
@@ -419,12 +420,12 @@ static double exp(double x) {
   DoubleDouble r_dd = exp_double_double(x, kd, exp_mid);
 
   if (LIBC_UNLIKELY(denorm)) {
-    if (auto r = ziv_test_denorm(hi, r_dd.hi, r_dd.lo, ERR_DD);
+    if (auto r = ziv_test_denorm(hi, r_dd.hi, r_dd.lo, EXP_ERR_DD);
         LIBC_LIKELY(r.has_value()))
       return r.value();
   } else {
-    double upper_dd = r_dd.hi + (r_dd.lo + ERR_DD);
-    double lower_dd = r_dd.hi + (r_dd.lo - ERR_DD);
+    double upper_dd = r_dd.hi + (r_dd.lo + EXP_ERR_DD);
+    double lower_dd = r_dd.hi + (r_dd.lo - EXP_ERR_DD);
 
     if (LIBC_LIKELY(upper_dd == lower_dd)) {
       int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;

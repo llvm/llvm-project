@@ -47,7 +47,9 @@ public:
   ~Context();
 
   /// Checks if a function is a potential constant expression.
-  bool isPotentialConstantExpr(State &Parent, const FunctionDecl *FnDecl);
+  bool isPotentialConstantExpr(State &Parent, const FunctionDecl *FD);
+  void isPotentialConstantExprUnevaluated(State &Parent, const Expr *E,
+                                          const FunctionDecl *FD);
 
   /// Evaluates a toplevel expression as an rvalue.
   bool evaluateAsRValue(State &Parent, const Expr *E, APValue &Result);
@@ -64,6 +66,10 @@ public:
   bool evaluateCharRange(State &Parent, const Expr *SizeExpr,
                          const Expr *PtrExpr, std::string &Result);
 
+  /// Evalute \param E and if it can be evaluated to a string literal,
+  /// run strlen() on it.
+  bool evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result);
+
   /// Returns the AST context.
   ASTContext &getASTContext() const { return Ctx; }
   /// Returns the language options.
@@ -76,10 +82,10 @@ public:
   uint32_t getBitWidth(QualType T) const { return Ctx.getIntWidth(T); }
 
   /// Classifies a type.
-  std::optional<PrimType> classify(QualType T) const;
+  OptPrimType classify(QualType T) const;
 
   /// Classifies an expression.
-  std::optional<PrimType> classify(const Expr *E) const {
+  OptPrimType classify(const Expr *E) const {
     assert(E);
     if (E->isGLValue())
       return PT_Ptr;

@@ -30,6 +30,10 @@ public:
   bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
                       LostDebugLocObserver &LocObserver) const override;
   SPIRVLegalizerInfo(const SPIRVSubtarget &ST);
+
+private:
+  bool legalizeIsFPClass(LegalizerHelper &Helper, MachineInstr &MI,
+                         LostDebugLocObserver &LocObserver) const;
 };
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVMACHINELEGALIZER_H

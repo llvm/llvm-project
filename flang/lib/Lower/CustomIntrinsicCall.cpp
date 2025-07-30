@@ -101,7 +101,7 @@ Fortran::lower::genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
     mlir::Value addr = fir::getBase(result);
     if (auto *box = result.getBoxOf<fir::BoxValue>())
       addr =
-          builder.create<fir::BoxAddrOp>(loc, box->getMemTy(), box->getAddr());
+          fir::BoxAddrOp::create(builder, loc, box->getMemTy(), box->getAddr());
     fir::FirOpBuilder *bldr = &builder;
     stmtCtx.attachCleanup([=]() { bldr->create<fir::FreeMemOp>(loc, addr); });
   }
@@ -171,9 +171,9 @@ lowerMinOrMax(fir::FirOpBuilder &builder, mlir::Location loc,
                 args.emplace_back(getOperand(opIndex, loadOperand));
                 fir::ExtendedValue newExtremum = genIntrinsicCall(
                     builder, loc, name, resultType, args, stmtCtx);
-                builder.create<fir::ResultOp>(loc, fir::getBase(newExtremum));
+                fir::ResultOp::create(builder, loc, fir::getBase(newExtremum));
               })
-              .genElse([&]() { builder.create<fir::ResultOp>(loc, extremum); })
+              .genElse([&]() { fir::ResultOp::create(builder, loc, extremum); })
               .getResults()[0];
     } else {
       // Argument is know to be present at compile time.
@@ -235,13 +235,13 @@ lowerIshftc(fir::FirOpBuilder &builder, mlir::Location loc,
             fir::ExtendedValue sizeExv = getOperand(2, loadOperand);
             mlir::Value size =
                 builder.createConvert(loc, resultType, fir::getBase(sizeExv));
-            builder.create<fir::ResultOp>(loc, size);
+            fir::ResultOp::create(builder, loc, size);
           })
           .genElse([&]() {
             mlir::Value bitSize = builder.createIntegerConstant(
                 loc, resultType,
                 mlir::cast<mlir::IntegerType>(resultType).getWidth());
-            builder.create<fir::ResultOp>(loc, bitSize);
+            fir::ResultOp::create(builder, loc, bitSize);
           })
           .getResults()[0]);
   return genIntrinsicCall(builder, loc, name, resultType, args, stmtCtx);
@@ -280,7 +280,7 @@ lowerAssociated(fir::FirOpBuilder &builder, mlir::Location loc,
   // while the optionality of the target pointer/allocatable is what must be
   // checked here.
   mlir::Value isPresent =
-      builder.create<fir::IsPresentOp>(loc, builder.getI1Type(), targetBase);
+      fir::IsPresentOp::create(builder, loc, builder.getI1Type(), targetBase);
   mlir::Type targetType = fir::unwrapRefType(targetBase.getType());
   mlir::Type targetValueType = fir::unwrapPassByRefType(targetType);
   mlir::Type boxType = mlir::isa<fir::BaseBoxType>(targetType)
@@ -293,11 +293,12 @@ lowerAssociated(fir::FirOpBuilder &builder, mlir::Location loc,
           .genThen([&]() {
             mlir::Value box = builder.createBox(loc, targetExv);
             mlir::Value cast = builder.createConvert(loc, boxType, box);
-            builder.create<fir::ResultOp>(loc, cast);
+            fir::ResultOp::create(builder, loc, cast);
           })
           .genElse([&]() {
-            mlir::Value absentBox = builder.create<fir::AbsentOp>(loc, boxType);
-            builder.create<fir::ResultOp>(loc, absentBox);
+            mlir::Value absentBox =
+                fir::AbsentOp::create(builder, loc, boxType);
+            fir::ResultOp::create(builder, loc, absentBox);
           })
           .getResults()[0];
   args.emplace_back(std::move(targetBox));

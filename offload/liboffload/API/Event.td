@@ -11,6 +11,19 @@
 //===----------------------------------------------------------------------===//
 
 def : Function {
+    let name = "olCreateEvent";
+    let desc = "Enqueue an event to `Queue` and return it.";
+    let details = [
+      "This event can be used with `olSyncEvent` and `olWaitEvents` and will be complete once all enqueued work prior to the `olCreateEvent` call is complete.",
+    ];
+    let params = [
+        Param<"ol_queue_handle_t", "Queue", "queue to create the event for", PARAM_IN>,
+        Param<"ol_event_handle_t*", "Event", "output pointer for the created event", PARAM_OUT>
+    ];
+    let returns = [];
+}
+
+def : Function {
     let name = "olDestroyEvent";
     let desc = "Destroy the event and free all underlying resources.";
     let details = [];
@@ -21,8 +34,8 @@ def : Function {
 }
 
 def : Function {
-    let name = "olWaitEvent";
-    let desc = "Wait for the event to be complete.";
+    let name = "olSyncEvent";
+    let desc = "Block the calling thread until the event is complete.";
     let details = [];
     let params = [
         Param<"ol_event_handle_t", "Event", "handle of the event", PARAM_IN>

@@ -396,10 +396,9 @@ namespace ComplexConstexpr {
                                     // both-note {{cannot refer to element 3 of array of 2 elements}}
   constexpr _Complex float *p = 0;
   constexpr float pr = __real *p; // both-error {{constant expr}} \
-                                  // expected-note {{read of dereferenced null pointer}} \
-                                  // ref-note {{dereferencing a null pointer}}
+                                  // both-note {{dereferencing a null pointer}}
   constexpr float pi = __imag *p; // both-error {{constant expr}} \
-                                  // ref-note {{dereferencing a null pointer}}
+                                  // both-note {{dereferencing a null pointer}}
   constexpr const _Complex double *q = &test3 + 1;
   constexpr double qr = __real *q; // ref-error {{constant expr}} \
                                    // ref-note {{cannot access real component of pointer past the end}}

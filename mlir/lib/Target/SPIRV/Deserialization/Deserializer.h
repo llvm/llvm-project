@@ -95,6 +95,7 @@ struct DeferredStructTypeInfo {
   SmallVector<Type, 4> memberTypes;
   SmallVector<spirv::StructType::OffsetInfo, 0> offsetInfo;
   SmallVector<spirv::StructType::MemberDecorationInfo, 0> memberDecorationsInfo;
+  SmallVector<spirv::StructType::StructDecorationInfo, 0> structDecorationsInfo;
 };
 
 /// A struct that collects the info needed to materialize/emit a

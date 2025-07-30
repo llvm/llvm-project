@@ -510,6 +510,7 @@ def StoreBitFieldActivate : StoreBitFieldOpcode {}
 def StoreBitFieldActivatePop : StoreBitFieldOpcode {}
 
 def Activate : Opcode {}
+def ActivateThisField : Opcode { let Args = [ArgUint32]; }
 
 // [Pointer, Value] -> []
 def Init : StoreOpcode {}
@@ -865,6 +866,7 @@ def CheckNewTypeMismatchArray : Opcode {
 
 def IsConstantContext: Opcode;
 def CheckAllocations : Opcode;
+def CheckNull : Opcode;
 
 def BitCastTypeClass : TypeClass {
   let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64,

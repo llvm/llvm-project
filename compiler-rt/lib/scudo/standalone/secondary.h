@@ -269,7 +269,8 @@ public:
     Entry.MemMap = MemMap;
     Entry.Time = UINT64_MAX;
 
-    if (useMemoryTagging<Config>(Options)) {
+    bool MemoryTaggingEnabled = useMemoryTagging<Config>(Options);
+    if (MemoryTaggingEnabled) {
       if (Interval == 0 && !SCUDO_FUCHSIA) {
         // Release the memory and make it inaccessible at the same time by
         // creating a new MAP_NOACCESS mapping on top of the existing mapping.
@@ -302,7 +303,7 @@ public:
       if (Entry.Time != 0)
         Entry.Time = Time;
 
-      if (useMemoryTagging<Config>(Options) && QuarantinePos == -1U) {
+      if (MemoryTaggingEnabled && !useMemoryTagging<Config>(Options)) {
         // If we get here then memory tagging was disabled in between when we
         // read Options and when we locked Mutex. We can't insert our entry into
         // the quarantine or the cache because the permissions would be wrong so
@@ -310,7 +311,8 @@ public:
         unmapCallBack(Entry.MemMap);
         break;
       }
-      if (Config::getQuarantineSize() && useMemoryTagging<Config>(Options)) {
+
+      if (Config::getQuarantineSize()) {
         QuarantinePos =
             (QuarantinePos + 1) % Max(Config::getQuarantineSize(), 1u);
         if (!Quarantine[QuarantinePos].isValid()) {
@@ -513,9 +515,10 @@ public:
         Quarantine[I].invalidate();
       }
     }
+    QuarantinePos = -1U;
+
     for (CachedBlock &Entry : LRUEntries)
       Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize, 0);
-    QuarantinePos = -1U;
   }
 
   void disable() NO_THREAD_SAFETY_ANALYSIS { Mutex.lock(); }

@@ -13,7 +13,7 @@ n=1000
 !$omp end parallel
 end program
 
-! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "main"} {
+! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "MAIN"} {
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 1000 : i32
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 0 : i32

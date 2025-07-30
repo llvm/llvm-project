@@ -564,12 +564,11 @@ struct A {
 namespace ex2 {
 #if __cplusplus >= 201103L
 struct Bar {
-  struct Baz { // #cwg1890-Baz
+  struct Baz {
     int a = 0;
   };
   static_assert(__is_constructible(Baz), "");
   // since-cxx11-error@-1 {{static assertion failed due to requirement '__is_constructible(cwg1890::ex2::Bar::Baz)'}}
-  // since-cxx11-note@#cwg1890-Baz {{'Baz' defined here}}
 };
 #endif
 } // namespace ex2

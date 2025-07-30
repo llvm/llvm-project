@@ -469,17 +469,14 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI scoped_lock(adopt_lock_t, _MArgs&... __margs) : __t_(__margs...) {}
 
-  _LIBCPP_HIDE_FROM_ABI ~scoped_lock() {
-    typedef typename __make_tuple_indices<sizeof...(_MArgs)>::type _Indices;
-    __unlock_unpack(_Indices{}, __t_);
-  }
+  _LIBCPP_HIDE_FROM_ABI ~scoped_lock() { __unlock_unpack(make_index_sequence<sizeof...(_MArgs)>(), __t_); }
 
   scoped_lock(scoped_lock const&)            = delete;
   scoped_lock& operator=(scoped_lock const&) = delete;
 
 private:
   template <size_t... _Indx>
-  _LIBCPP_HIDE_FROM_ABI static void __unlock_unpack(__tuple_indices<_Indx...>, _MutexTuple& __mt) {
+  _LIBCPP_HIDE_FROM_ABI static void __unlock_unpack(index_sequence<_Indx...>, _MutexTuple& __mt) {
     (std::get<_Indx>(__mt).unlock(), ...);
   }
 

@@ -350,11 +350,6 @@ class Sema;
     LLVM_PREFERRED_TYPE(bool)
     unsigned BindsToRvalue : 1;
 
-    /// Whether this was an identity conversion with qualification
-    /// conversion for the implicit object argument.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned IsImplicitObjectArgumentQualificationConversion : 1;
-
     /// Whether this binds an implicit object argument to a
     /// non-static member function without a ref-qualifier.
     LLVM_PREFERRED_TYPE(bool)
@@ -453,11 +448,11 @@ class Sema;
 #endif
         return true;
       }
+      if (!C.hasSameType(getFromType(), getToType(2)))
+        return false;
       if (BindsToRvalue && IsLvalueReference)
         return false;
-      if (IsImplicitObjectArgumentQualificationConversion)
-        return C.hasSameUnqualifiedType(getFromType(), getToType(2));
-      return C.hasSameType(getFromType(), getToType(2));
+      return true;
     }
 
     ImplicitConversionRank getRank() const;
@@ -1496,8 +1491,6 @@ class Sema;
     OverloadingResult
     BestViableFunctionImpl(Sema &S, SourceLocation Loc,
                            OverloadCandidateSet::iterator &Best);
-    void PerfectViableFunction(Sema &S, SourceLocation Loc,
-                               OverloadCandidateSet::iterator &Best);
   };
 
   bool isBetterOverloadCandidate(Sema &S, const OverloadCandidate &Cand1,

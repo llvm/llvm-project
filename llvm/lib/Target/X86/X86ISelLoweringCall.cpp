@@ -237,9 +237,18 @@ EVT X86TargetLowering::getSetCCResultType(const DataLayout &DL,
 bool X86TargetLowering::functionArgumentNeedsConsecutiveRegisters(
     Type *Ty, CallingConv::ID CallConv, bool isVarArg,
     const DataLayout &DL) const {
-  // i128 split into i64 needs to be allocated to two consecutive registers,
-  // or spilled to the stack as a whole.
-  return Ty->isIntegerTy(128);
+  // On x86-64 i128 is split into two i64s and needs to be allocated to two
+  // consecutive registers, or spilled to the stack as a whole. On x86-32 i128
+  // is split to four i32s and never actually passed in registers, but we use
+  // the consecutive register mark to match it in TableGen.
+  if (Ty->isIntegerTy(128))
+    return true;
+
+  // On x86-32, fp128 acts the same as i128.
+  if (Subtarget.is32Bit() && Ty->isFP128Ty())
+    return true;
+
+  return false;
 }
 
 /// Helper for getByValTypeAlignment to determine
@@ -2050,6 +2059,10 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   MachineFunction::CallSiteInfo CSInfo;
   if (CallConv == CallingConv::X86_INTR)
     report_fatal_error("X86 interrupts may not be called directly");
+
+  // Set type id for call site info.
+  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
+    CSInfo = MachineFunction::CallSiteInfo(*CB);
 
   if (IsIndirectCall && !IsWin64 &&
       M->getModuleFlag("import-call-optimization"))
