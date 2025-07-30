@@ -267,6 +267,7 @@ public:
 class LLVM_ABI FileSystem : public llvm::ThreadSafeRefCountedBase<FileSystem>,
                             public RTTIExtends<FileSystem, RTTIRoot> {
 public:
+  static constexpr bool UseStrictIRC = true;
   static const char ID;
   virtual ~FileSystem();
 
@@ -1069,7 +1070,7 @@ public:
   /// Redirect each of the remapped files from first to second.
   static std::unique_ptr<RedirectingFileSystem>
   create(ArrayRef<std::pair<std::string, std::string>> RemappedFiles,
-         bool UseExternalNames, FileSystem &ExternalFS);
+         bool UseExternalNames, IntrusiveRefCntPtr<FileSystem> ExternalFS);
 
   ErrorOr<Status> status(const Twine &Path) override;
   bool exists(const Twine &Path) override;
