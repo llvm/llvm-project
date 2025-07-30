@@ -96,11 +96,16 @@ static LogicalResult checkAndUpdateCapabilityRequirements(
 }
 
 static SetVector<spirv::Capability>
-withImpliedCapabilities(SetVector<spirv::Capability> &caps) {
-  SetVector<spirv::Capability> allCaps(caps.begin(), caps.end());
-  for (auto cap : caps) {
-    ArrayRef<spirv::Capability> directCaps = getDirectImpliedCapabilities(cap);
-    allCaps.insert(directCaps.begin(), directCaps.end());
+addAllImpliedCapabilities(SetVector<spirv::Capability> &caps) {
+  SetVector<spirv::Capability> allCaps;
+  while (!caps.empty()) {
+    spirv::Capability cap = caps.pop_back_val();
+    allCaps.insert(cap);
+    ArrayRef<spirv::Capability> impliedCaps = getDirectImpliedCapabilities(cap);
+    for (spirv::Capability impliedCap : impliedCaps) {
+      if (!allCaps.contains(impliedCap))
+        caps.insert(impliedCap);
+    }
   }
   return allCaps;
 }
@@ -178,7 +183,7 @@ void UpdateVCEPass::runOnOperation() {
         return WalkResult::interrupt();
     }
 
-    deducedCapabilities = withImpliedCapabilities(deducedCapabilities);
+    deducedCapabilities = addAllImpliedCapabilities(deducedCapabilities);
 
     return WalkResult::advance();
   });
