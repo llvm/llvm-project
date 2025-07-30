@@ -961,23 +961,9 @@ TEST_F(SelectionDAGPatternMatchTest, MatchSelectCCLike) {
                                 TVal, FVal, DAG->getCondCode(ISD::SETLT));
 
   ISD::CondCode CC = ISD::SETLT;
-  auto Matcher =
-      m_SelectCCLike(m_Specific(LHS), m_Specific(RHS), m_Specific(TVal),
-                     m_Specific(FVal), m_CondCode(CC));
-
-  struct DAGMatchContext {
-    SelectionDAG &DAG;
-    DAGMatchContext(SelectionDAG &DAG) : DAG(DAG) {}
-
-    bool match(SDValue N, unsigned Opcode) const {
-      return N.getOpcode() == Opcode;
-    }
-
-    unsigned getNumOperands(SDValue N) const { return N.getNumOperands(); }
-  };
-
-  DAGMatchContext Ctx(*DAG);
-  EXPECT_TRUE(Matcher.match(Ctx, Select));
+  EXPECT_TRUE(sd_match(
+      Select, m_SelectCCLike(m_Specific(LHS), m_Specific(RHS), m_Specific(TVal),
+                             m_Specific(FVal), m_CondCode(CC))));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, MatchSelectCC) {
@@ -991,20 +977,7 @@ TEST_F(SelectionDAGPatternMatchTest, MatchSelectCC) {
                                 TVal, FVal, DAG->getCondCode(ISD::SETLT));
 
   ISD::CondCode CC = ISD::SETLT;
-  auto Matcher = m_SelectCC(m_Specific(LHS), m_Specific(RHS), m_Specific(TVal),
-                            m_Specific(FVal), m_CondCode(CC));
-
-  struct DAGMatchContext {
-    SelectionDAG &DAG;
-    DAGMatchContext(SelectionDAG &DAG) : DAG(DAG) {}
-
-    bool match(SDValue N, unsigned Opcode) const {
-      return N.getOpcode() == Opcode;
-    }
-
-    unsigned getNumOperands(SDValue N) const { return N.getNumOperands(); }
-  };
-
-  DAGMatchContext Ctx(*DAG);
-  EXPECT_TRUE(Matcher.match(Ctx, Select));
+  EXPECT_TRUE(sd_match(Select, m_SelectCC(m_Specific(LHS), m_Specific(RHS),
+                                          m_Specific(TVal), m_Specific(FVal),
+                                          m_CondCode(CC))));
 }
