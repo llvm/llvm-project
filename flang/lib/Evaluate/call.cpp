@@ -13,6 +13,7 @@
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Semantics/semantics.h"
 #include "flang/Support/Fortran.h"
 
 namespace Fortran::evaluate {
@@ -246,5 +247,20 @@ int ProcedureRef::Rank() const {
 ProcedureRef::~ProcedureRef() {}
 
 void ProcedureRef::Deleter(ProcedureRef *p) { delete p; }
+
+void ProcedureRef::DetermineCopyInOut() {
+  if (!proc().GetSymbol()) {
+    return;
+  }
+  // Get folding context of the call site owner
+  FoldingContext &fc{proc_.GetSymbol()->owner().context().foldingContext()};
+  auto procInfo{characteristics::Procedure::Characterize(
+      proc(), fc, /*emitError=*/false)};
+  if (!procInfo) {
+    return;
+  }
+  // TODO: at this point have dummy arguments as procInfo->dummyArguments
+  // and have actual arguments via arguments_
+}
 
 } // namespace Fortran::evaluate
