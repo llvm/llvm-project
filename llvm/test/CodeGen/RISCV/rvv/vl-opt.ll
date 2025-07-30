@@ -198,3 +198,56 @@ define void @fadd_fcmp_select_copy(<vscale x 4 x float> %v, <vscale x 4 x i1> %c
   call void @llvm.riscv.vsm(<vscale x 4 x i1> %select, ptr %p, iXLen %vl)
   ret void
 }
+
+define void @recurrence(<vscale x 4 x i32> %v, ptr %p, iXLen %n, iXLen %vl) {
+; CHECK-LABEL: recurrence:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a3, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:  .LBB13_1: # %loop
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    vadd.vv v10, v10, v8
+; CHECK-NEXT:    bnez a1, .LBB13_1
+; CHECK-NEXT:  # %bb.2: # %exit
+; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
+; CHECK-NEXT:    vse32.v v10, (a0)
+; CHECK-NEXT:    ret
+entry:
+  br label %loop
+loop:
+  %iv = phi iXLen [ 0, %entry ], [ %iv.next, %loop ]
+  %phi = phi <vscale x 4 x i32> [ zeroinitializer, %entry ], [ %x, %loop ]
+  %x = add <vscale x 4 x i32> %phi, %v
+  %iv.next = add iXLen %iv, 1
+  %done = icmp eq iXLen %iv.next, %n
+  br i1 %done, label %exit, label %loop
+exit:
+  call void @llvm.riscv.vse(<vscale x 4 x i32> %x, ptr %p, iXLen %vl)
+  ret void
+}
+
+define <vscale x 4 x i32> @phi(<vscale x 4 x i32> %v, i1 %cond, iXLen %vl) {
+; CHECK-LABEL: phi:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
+; CHECK-NEXT:    vadd.vi v8, v8, 1
+; CHECK-NEXT:    beqz a0, .LBB14_2
+; CHECK-NEXT:  # %bb.1: # %foo
+; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
+; CHECK-NEXT:    vadd.vi v8, v8, 1
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB14_2: # %bar
+; CHECK-NEXT:    vadd.vi v8, v8, 2
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 4 x i32> @llvm.riscv.vadd(<vscale x 4 x i32> poison, <vscale x 4 x i32> %v, iXLen 1, iXLen -1)
+  br i1 %cond, label %foo, label %bar
+foo:
+  %b = call <vscale x 4 x i32> @llvm.riscv.vadd(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen 1, iXLen 1)
+  ret <vscale x 4 x i32> %b
+bar:
+  %c = call <vscale x 4 x i32> @llvm.riscv.vadd(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen 2, iXLen 2)
+  ret <vscale x 4 x i32> %c
+}
