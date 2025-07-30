@@ -2189,26 +2189,26 @@ class NVVM_MMA_SP<WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D>
               !listconcat(A.regs, B.regs, C.regs, [llvm_i32_ty], [llvm_i32_ty])> {
     int pos = !size(!listconcat(A.regs, B.regs, C.regs, [llvm_i32_ty]));
 
-    // The range [0;range) is for the sparsity selector that indicates the threads
+    // The range [0;num_threads) is for the sparsity selector that indicates the threads
     // which contribute metadata.
-    int range = !if(!or(!and(!eq(A.geom, "m16n8k32"), !eq(A.ptx_elt_type, "bf16")),
-                        !and(!eq(A.geom, "m16n8k16"), !eq(A.ptx_elt_type, "tf32")),
-                        !and(!eq(A.geom, "m16n8k32"), !eq(A.ptx_elt_type, "u8")),
-                        !and(!eq(A.geom, "m16n8k32"), !eq(A.ptx_elt_type, "s8")),
-                        !and(!eq(A.geom, "m16n8k64"), !eq(A.ptx_elt_type, "u4")),
-                        !and(!eq(A.geom, "m16n8k64"), !eq(A.ptx_elt_type, "s4"))),
-                    2,
-                    !if(!and(!eq(A.geom, "m16n8k64"),
-                             !or(!eq(A.ptx_elt_type, "u8"),
-                                 !eq(A.ptx_elt_type, "s8"),
-                                 !eq(A.ptx_elt_type, "e4m3"),
-                                 !eq(A.ptx_elt_type, "e5m2"),
-                                 !eq(A.ptx_elt_type, "e3m2"),
-                                 !eq(A.ptx_elt_type, "e2m3"),
-                                 !eq(A.ptx_elt_type, "e2m1"))),
-                        1, 4));
+    int num_threads = !if(!or(!and(!eq(A.geom, "m16n8k32"), !eq(A.ptx_elt_type, "bf16")),
+                              !and(!eq(A.geom, "m16n8k16"), !eq(A.ptx_elt_type, "tf32")),
+                              !and(!eq(A.geom, "m16n8k32"), !eq(A.ptx_elt_type, "u8")),
+                              !and(!eq(A.geom, "m16n8k32"), !eq(A.ptx_elt_type, "s8")),
+                              !and(!eq(A.geom, "m16n8k64"), !eq(A.ptx_elt_type, "u4")),
+                              !and(!eq(A.geom, "m16n8k64"), !eq(A.ptx_elt_type, "s4"))),
+                          2,
+                          !if(!and(!eq(A.geom, "m16n8k64"),
+                                  !or(!eq(A.ptx_elt_type, "u8"),
+                                      !eq(A.ptx_elt_type, "s8"),
+                                      !eq(A.ptx_elt_type, "e4m3"),
+                                      !eq(A.ptx_elt_type, "e5m2"),
+                                      !eq(A.ptx_elt_type, "e3m2"),
+                                      !eq(A.ptx_elt_type, "e2m3"),
+                                      !eq(A.ptx_elt_type, "e2m1"))),
+                              1, 4));
     let IntrProperties = [IntrNoMem, IntrNoCallback, ImmArg<ArgIndex<pos>>,
-                          Range<ArgIndex<pos>, 0, range>];
+                          Range<ArgIndex<pos>, 0, num_threads>];
 }
 
 foreach metadata = ["sp", "sp::ordered_metadata"] in {
