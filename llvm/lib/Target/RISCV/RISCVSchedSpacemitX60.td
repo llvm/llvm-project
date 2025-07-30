@@ -63,22 +63,25 @@ class GetDoublingValueFromLMUL<string startMx, int Value, string targetMx> {
   );
 }
 
-<<<<<<< HEAD
-=======
-class GetLMULValue<list<int> Values, string LMUL> {
+class GetLMULValueNoMF8<list<int> Values, string LMUL> {
   int c = !cond(
-    !and(!eq(LMUL, "MF8"), !ge(!size(Values), 1)) : Values[0],
-    !and(!eq(LMUL, "MF4"), !ge(!size(Values), 2)) : Values[1],
-    !and(!eq(LMUL, "MF2"), !ge(!size(Values), 3)) : Values[2],
-    !and(!eq(LMUL, "M1"),  !ge(!size(Values), 4)) : Values[3],
-    !and(!eq(LMUL, "M2"),  !ge(!size(Values), 5)) : Values[4],
-    !and(!eq(LMUL, "M4"),  !ge(!size(Values), 6)) : Values[5],
-    !and(!eq(LMUL, "M8"),  !ge(!size(Values), 7)) : Values[6],
+    !and(!eq(LMUL, "MF4"), !ge(!size(Values), 1)) : Values[0],
+    !and(!eq(LMUL, "MF2"), !ge(!size(Values), 2)) : Values[1],
+    !and(!eq(LMUL, "M1"), !ge(!size(Values), 3)) : Values[2],
+    !and(!eq(LMUL, "M2"),  !ge(!size(Values), 4)) : Values[3],
+    !and(!eq(LMUL, "M4"),  !ge(!size(Values), 5)) : Values[4],
+    !and(!eq(LMUL, "M8"),  !ge(!size(Values), 6)) : Values[5],
     true : 0
   );
 }
 
->>>>>>> 26699be80fe0 (Added helper class)
+class GetLMULValue<list<int> Values, string LMUL> {
+  int c = !cond(
+    !and(!eq(LMUL, "MF8"), !ge(!size(Values), 1)) : Values[0],
+    true : GetLMULValueNoMF8<Values, LMUL>.c
+  );
+}
+
 class SMX60IsWorstCaseMX<string mx, list<string> MxList> {
   string LLMUL = LargestLMUL<MxList>.r;
   bit c = !eq(mx, LLMUL);
@@ -721,12 +724,9 @@ foreach mx = SchedMxList in {
   foreach sew = SchedSEWSet<mx>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
 
-    defvar VIRedOcc = !cond(
-      !eq(mx, "M8") : 35,
-      !eq(mx, "M4") : 10,
-      true: GetOneMF4AndDouble<mx>.c
-    );
-    let Latency = Get7111935Latency<mx>.c, ReleaseAtCycles = [VIRedOcc] in {
+    defvar VIRedLat = GetLMULValue<[5, 5, 5, 7, 11, 19, 35], mx>.c;
+    defvar VIRedOcc = GetLMULValue<[1, 1, 2, 2, 4, 10, 35], mx>.c;
+    let Latency = VIRedLat, ReleaseAtCycles = [VIRedOcc] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVIRedMinMaxV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
 
       // Pattern for vredsum:                  5/5/5/7/11/19/35
@@ -742,12 +742,9 @@ foreach mx = SchedMxListWRed in {
   foreach sew = SchedSEWSet<mx, 0, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListWRed>.c;
 
-    defvar VIWRedOcc = !cond(
-      !eq(mx, "M8") : 35,
-      !eq(mx, "M4") : 10,
-      true: GetOneMF4AndDouble<mx>.c
-    );
-    let Latency = Get7111935Latency<mx>.c, ReleaseAtCycles = [VIWRedOcc] in {
+    defvar VIRedLat = GetLMULValue<[5, 5, 5, 7, 11, 19, 35], mx>.c;
+    defvar VIRedOcc = GetLMULValue<[1, 1, 2, 2, 4, 10, 35], mx>.c;
+    let Latency = VIRedLat, ReleaseAtCycles = [VIRedOcc] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVIWRedV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
   }
@@ -757,17 +754,12 @@ foreach mx = SchedMxListF in {
   foreach sew = SchedSEWSet<mx, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
 
-    defvar VFRedOcc = !cond(
-      !eq(mx, "M8") : 57,
-      !eq(mx, "M4") : 20,
-      !eq(mx, "M2") : 14,
-      true: 8
-    );
-
     // Latency for vfredmax.vs, vfredmin.vs: 12,12,15,21,33,57
     // Latency for vfredusum.vs is slightly lower for e16/e32
     // We use the worst-case for simplificity
-    let Latency = Get15213357Latency<mx>.c, ReleaseAtCycles = [VFRedOcc] in {
+    defvar VFRedLat = GetLMULValueNoMF8<[12, 12, 15, 21, 33, 57], mx>.c;
+    defvar VFRedOcc = GetLMULValueNoMF8<[8, 8, 8, 14, 20, 57], mx>.c;
+    let Latency = VFRedLat, ReleaseAtCycles = [VFRedOcc] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFRedV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFRedMinMaxV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
     }
