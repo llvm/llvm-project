@@ -55,19 +55,18 @@
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
-// ToyToLLVM RewritePatterns
+// ToyToLLVM Conversion Patterns
 //===----------------------------------------------------------------------===//
 
 namespace {
 /// Lowers `toy.print` to a loop nest calling `printf` on each of the individual
 /// elements of the array.
-class PrintOpLowering : public ConversionPattern {
+class PrintOpLowering : public OpConversionPattern<toy::PrintOp> {
 public:
-  explicit PrintOpLowering(MLIRContext *context)
-      : ConversionPattern(toy::PrintOp::getOperationName(), 1, context) {}
+  using OpConversionPattern<toy::PrintOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(toy::PrintOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto *context = rewriter.getContext();
     auto memRefType = llvm::cast<MemRefType>((*op->operand_type_begin()));
@@ -108,9 +107,8 @@ public:
     }
 
     // Generate a call to printf for the current element of the loop.
-    auto printOp = cast<toy::PrintOp>(op);
     auto elementLoad =
-        memref::LoadOp::create(rewriter, loc, printOp.getInput(), loopIvs);
+        memref::LoadOp::create(rewriter, loc, op.getInput(), loopIvs);
     LLVM::CallOp::create(rewriter, loc, getPrintfType(context), printfRef,
                          ArrayRef<Value>({formatSpecifierCst, elementLoad}));
 
