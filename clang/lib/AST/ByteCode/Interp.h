@@ -25,7 +25,6 @@
 #include "InterpStack.h"
 #include "InterpState.h"
 #include "MemberPointer.h"
-#include "Opcode.h"
 #include "PrimType.h"
 #include "Program.h"
 #include "State.h"
@@ -1131,8 +1130,9 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
         << LHS.toDiagnosticString(S.getASTContext());
     return false;
-  } else if (RHS.isOnePastEnd() && !LHS.isOnePastEnd() && !LHS.isZero() &&
-             LHS.getOffset() == 0) {
+  }
+  if (RHS.isOnePastEnd() && !LHS.isOnePastEnd() && !LHS.isZero() &&
+      LHS.getOffset() == 0) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
         << RHS.toDiagnosticString(S.getASTContext());
@@ -1150,8 +1150,9 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
         const SourceInfo &Loc = S.Current->getSource(OpPC);
         S.FFDiag(Loc, diag::note_constexpr_literal_comparison);
         return false;
-      } else if (const auto *CE = dyn_cast<CallExpr>(E);
-                 CE && IsOpaqueConstantCall(CE)) {
+      }
+      if (const auto *CE = dyn_cast<CallExpr>(E);
+          CE && IsOpaqueConstantCall(CE)) {
         const SourceInfo &Loc = S.Current->getSource(OpPC);
         S.FFDiag(Loc, diag::note_constexpr_opaque_call_comparison)
             << P.toDiagnosticString(S.getASTContext());
@@ -3266,7 +3267,8 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
     S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
         << static_cast<unsigned>(Kind) << S.Current->getRange(OpPC);
     return !Fatal;
-  } else if (Kind == CastKind::Volatile) {
+  }
+  if (Kind == CastKind::Volatile) {
     if (!S.checkingPotentialConstantExpression()) {
       const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
       if (S.getLangOpts().CPlusPlus)
@@ -3277,7 +3279,8 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
     }
 
     return false;
-  } else if (Kind == CastKind::Dynamic) {
+  }
+  if (Kind == CastKind::Dynamic) {
     assert(!S.getLangOpts().CPlusPlus20);
     S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::Dynamic;
