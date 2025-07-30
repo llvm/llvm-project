@@ -76,13 +76,13 @@ void DemandedBits::determineLiveOperandBits(
           computeKnownBits(V2, Known2, DL, &AC, UserI, &DT);
         }
       };
-  auto GetShiftedRange = [&](unsigned Min, unsigned Max, bool ShiftLeft) {
-    auto ShiftF = [&](const APInt &Mask, unsigned ShiftAmnt) {
+  auto GetShiftedRange = [&](uint64_t Min, uint64_t Max, bool ShiftLeft) {
+    auto ShiftF = [ShiftLeft](const APInt &Mask, unsigned ShiftAmnt) {
       return ShiftLeft ? Mask.shl(ShiftAmnt) : Mask.lshr(ShiftAmnt);
     };
     AB = APInt::getZero(BitWidth);
-    unsigned LoopRange = Max - Min;
-    auto Mask = AOut;
+    uint64_t LoopRange = Max - Min;
+    APInt Mask = AOut;
     for (unsigned ShiftAmnt = 1; ShiftAmnt <= LoopRange; ShiftAmnt <<= 1) {
       APInt Shifted = ShiftF(Mask, ShiftAmnt);
       Mask |= Shifted;
@@ -198,8 +198,8 @@ void DemandedBits::determineLiveOperandBits(
           AB |= APInt::getHighBitsSet(BitWidth, ShiftAmt);
       } else {
         ComputeKnownBits(BitWidth, UserI->getOperand(1), nullptr);
-        unsigned Min = Known.getMinValue().getLimitedValue(BitWidth - 1);
-        unsigned Max = Known.getMaxValue().getLimitedValue(BitWidth - 1);
+        uint64_t Min = Known.getMinValue().getLimitedValue(BitWidth - 1);
+        uint64_t Max = Known.getMaxValue().getLimitedValue(BitWidth - 1);
         // similar to Lshr case
         GetShiftedRange(Min, Max, /*ShiftLeft=*/false);
         const auto *S = cast<ShlOperator>(UserI);
@@ -223,8 +223,8 @@ void DemandedBits::determineLiveOperandBits(
           AB |= APInt::getLowBitsSet(BitWidth, ShiftAmt);
       } else {
         ComputeKnownBits(BitWidth, UserI->getOperand(1), nullptr);
-        unsigned Min = Known.getMinValue().getLimitedValue(BitWidth - 1);
-        unsigned Max = Known.getMaxValue().getLimitedValue(BitWidth - 1);
+        uint64_t Min = Known.getMinValue().getLimitedValue(BitWidth - 1);
+        uint64_t Max = Known.getMaxValue().getLimitedValue(BitWidth - 1);
         // Suppose AOut == 0b0000 0001
         // [min, max] = [1, 3]
         // iteration 1 shift by 1 mask is 0b0000 0011
@@ -261,10 +261,11 @@ void DemandedBits::determineLiveOperandBits(
           AB |= APInt::getLowBitsSet(BitWidth, ShiftAmt);
       } else {
         ComputeKnownBits(BitWidth, UserI->getOperand(1), nullptr);
-        unsigned Min = Known.getMinValue().getLimitedValue(BitWidth - 1);
-        unsigned Max = Known.getMaxValue().getLimitedValue(BitWidth - 1);
+        uint64_t Min = Known.getMinValue().getLimitedValue(BitWidth - 1);
+        uint64_t Max = Known.getMaxValue().getLimitedValue(BitWidth - 1);
         GetShiftedRange(Min, Max, /*ShiftLeft=*/true);
-        if (Max) {
+        if (Max &&
+            (AOut & APInt::getHighBitsSet(BitWidth, Max)).getBoolValue()) {
           // Suppose AOut = 0011 1100
           // [min, max] = [1, 3]
           // ShiftAmount = 1 : Mask is 1000 0000
@@ -272,8 +273,7 @@ void DemandedBits::determineLiveOperandBits(
           // ShiftAmount = 3 : Mask is 1110 0000
           // The Mask with Max covers every case in [min, max],
           // so we are done
-          if ((AOut & APInt::getHighBitsSet(BitWidth, Max)).getBoolValue())
-            AB.setSignBit();
+          AB.setSignBit();
         }
         // If the shift is exact, then the low bits are not dead
         // (they must be zero).
