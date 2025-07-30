@@ -699,7 +699,8 @@ static bool buildAtomicStoreInst(const SPIRV::IncomingCall *Call,
                                  MachineIRBuilder &MIRBuilder,
                                  SPIRVGlobalRegistry *GR) {
   if (Call->isSpirvOp())
-    return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call, Register(0));
+    return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call,
+                              Register(0));
 
   Register ScopeRegister =
       buildConstantIntReg32(SPIRV::Scope::Device, MIRBuilder, GR);
@@ -2679,13 +2680,13 @@ static bool generateConvertInst(const StringRef DemangledCall,
       }
     } else if (GR->isScalarOrVectorOfType(Call->ReturnRegister,
                                           SPIRV::OpTypeFloat)) {
-      if(Builtin->IsTF32){
+      if (Builtin->IsTF32) {
         const auto *ST = static_cast<const SPIRVSubtarget *>(
-          &MIRBuilder.getMF().getSubtarget());
+            &MIRBuilder.getMF().getSubtarget());
         if (!ST->canUseExtension(
                 SPIRV::Extension::SPV_INTEL_tensor_float32_conversion))
           NeedExtMsg = "SPV_INTEL_tensor_float32_conversion";
-          IsRightComponentsNumber =
+        IsRightComponentsNumber =
             GR->getScalarOrVectorComponentCount(Call->Arguments[0]) ==
             GR->getScalarOrVectorComponentCount(Call->ReturnRegister);
         Opcode = SPIRV::OpRoundFToTF32INTEL;

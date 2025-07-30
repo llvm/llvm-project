@@ -103,7 +103,7 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
         {"SPV_INTEL_int4", SPIRV::Extension::Extension::SPV_INTEL_int4},
         {"SPV_KHR_float_controls2",
          SPIRV::Extension::Extension::SPV_KHR_float_controls2},
-         {"SPV_INTEL_tensor_float32_conversion",
+        {"SPV_INTEL_tensor_float32_conversion",
          SPIRV::Extension::Extension::SPV_INTEL_tensor_float32_conversion}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
