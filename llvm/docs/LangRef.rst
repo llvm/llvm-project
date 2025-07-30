@@ -280,9 +280,9 @@ linkage:
     linkage are linked together, the two global arrays are appended
     together. This is the LLVM, typesafe, equivalent of having the
     system linker append together "sections" with identical names when
-    .o files are linked.
+    ``.o`` files are linked.
 
-    Unfortunately this doesn't correspond to any feature in .o files, so it
+    Unfortunately this doesn't correspond to any feature in ``.o`` files, so it
     can only be used for variables like ``llvm.global_ctors`` which llvm
     interprets specially.
 
@@ -371,7 +371,7 @@ added in the future:
 
     This calling convention supports `tail call
     optimization <CodeGenerator.html#tail-call-optimization>`_ but requires
-    both the caller and callee are using it.
+    both the caller and callee to use it.
 "``cc 11``" - The HiPE calling convention
     This calling convention has been implemented specifically for use by
     the `High-Performance Erlang
@@ -413,6 +413,8 @@ added in the future:
     - On AArch64 the callee preserves all general purpose registers, except
       X0-X8 and X16-X18. Not allowed with ``nest``.
 
+    - On RISC-V the callee preserve x5-x31 except x6, x7 and x28 registers.
+
     The idea behind this convention is to support calls to runtime functions
     that have a hot path and a cold path. The hot path is usually a small piece
     of code that doesn't use many registers. The cold path might need to call out to
@@ -447,7 +449,7 @@ added in the future:
       R11. R11 can be used as a scratch register. Furthermore it also preserves
       all floating-point registers (XMMs/YMMs).
 
-    - On AArch64 the callee preserve all general purpose registers, except
+    - On AArch64 the callee preserves all general purpose registers, except
       X0-X8 and X16-X18. Furthermore it also preserves lower 128 bits of V8-V31
       SIMD floating point registers. Not allowed with ``nest``.
 
@@ -890,7 +892,7 @@ Syntax::
            [gc] [prefix Constant] [prologue Constant] [personality Constant]
            (!name !N)* { ... }
 
-The argument list is a comma separated sequence of arguments where each
+The argument list is a comma-separated sequence of arguments where each
 argument is of the following form:
 
 Syntax::
@@ -1011,7 +1013,7 @@ some can only be checked when producing an object file:
 IFuncs
 -------
 
-IFuncs, like as aliases, don't create any new data or func. They are just a new
+IFuncs, like aliases, don't create any new data or func. They are just a new
 symbol that is resolved at runtime by calling a resolver function.
 
 On ELF platforms, IFuncs are resolved by the dynamic linker at load time. On
@@ -1211,7 +1213,7 @@ Currently, only the following parameter attributes are defined:
     the callee (for a return value).
 ``noext``
     This indicates to the code generator that the parameter or return
-    value has the high bits undefined, as for a struct in register, and
+    value has the high bits undefined, as for a struct in a register, and
     therefore does not need to be sign or zero extended. This is the same
     as default behavior and is only actually used (by some targets) to
     validate that one of the attributes is always present.
@@ -1252,7 +1254,7 @@ Currently, only the following parameter attributes are defined:
     on the stack. This implies the pointer is dereferenceable up to
     the storage size of the type.
 
-    It is not generally permissible to introduce a write to an
+    It is not generally permissible to introduce a write to a
     ``byref`` pointer. The pointer may have any address space and may
     be read only.
 
@@ -1393,7 +1395,7 @@ Currently, only the following parameter attributes are defined:
     storage for any other object accessible to the caller.
 
 ``captures(...)``
-    This attributes restrict the ways in which the callee may capture the
+    This attribute restricts the ways in which the callee may capture the
     pointer. This is not a valid attribute for return values. This attribute
     applies only to the particular copy of the pointer passed in this argument.
 
@@ -1615,7 +1617,7 @@ Currently, only the following parameter attributes are defined:
     assigning this parameter or return value to a stack slot during calling
     convention lowering. The enforcement of the specified alignment is
     target-dependent, as target-specific calling convention rules may override
-    this value. This attribute serves the purpose of carrying language specific
+    this value. This attribute serves the purpose of carrying language-specific
     alignment information that is not mapped to base types in the backend (for
     example, over-alignment specification through language attributes).
 
@@ -1993,7 +1995,7 @@ For example:
 ``cold``
     This attribute indicates that this function is rarely called. When
     computing edge weights, basic blocks post-dominated by a cold
-    function call are also considered to be cold; and, thus, given low
+    function call are also considered to be cold and, thus, given a low
     weight.
 
 .. _attr_convergent:
@@ -3355,6 +3357,19 @@ behavior is undefined:
    the pointer after the end of the object),
 -  the size of all allocated objects must be non-negative and not exceed the
    largest signed integer that fits into the index type.
+
+Allocated objects that are created with operations recognized by LLVM (such as
+:ref:`alloca <i_alloca>`, heap allocation functions marked as such, and global
+variables) may *not* change their size. (``realloc``-style operations do not
+change the size of an existing allocated object; instead, they create a new
+allocated object. Even if the object is at the same location as the old one, old
+pointers cannot be used to access this new object.) However, allocated objects
+can also be created by means not recognized by LLVM, e.g. by directly calling
+``mmap``. Those allocated objects are allowed to grow to the right (i.e.,
+keeping the same base address, but increasing their size) while maintaining the
+validity of existing pointers, as long as they always satisfy the properties
+described above. Currently, allocated objects are not permitted to grow to the
+left or to shrink, nor can they have holes.
 
 .. _objectlifetime:
 
@@ -11928,6 +11943,9 @@ if the ``getelementptr`` has any non-zero indices, the following rules apply:
    :ref:`based <pointeraliasing>` on. This means that it points into that
    allocated object, or to its end. Note that the object does not have to be
    live anymore; being in-bounds of a deallocated object is sufficient.
+   If the allocated object can grow, then the relevant size for being *in
+   bounds* is the maximal size the object could have while satisfying the
+   allocated object rules, not its current size.
  * During the successive addition of offsets to the address, the resulting
    pointer must remain *in bounds* of the allocated object at each step.
 
@@ -26637,9 +26655,10 @@ object's lifetime.
 Arguments:
 """"""""""
 
-The first argument is a constant integer representing the size of the
-object, or -1 if it is variable sized. The second argument is a pointer
-to an ``alloca`` instruction.
+The first argument is a constant integer, which is ignored and will be removed
+in the future.
+
+The second argument is a pointer to an ``alloca`` instruction.
 
 Semantics:
 """"""""""
@@ -26677,9 +26696,10 @@ The '``llvm.lifetime.end``' intrinsic specifies the end of a
 Arguments:
 """"""""""
 
-The first argument is a constant integer representing the size of the
-object, or -1 if it is variable sized. The second argument is a pointer
-to an ``alloca`` instruction.
+The first argument is a constant integer, which is ignored and will be removed
+in the future.
+
+The second argument is a pointer to an ``alloca`` instruction.
 
 Semantics:
 """"""""""
