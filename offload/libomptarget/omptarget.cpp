@@ -399,8 +399,10 @@ static int performPointerAttachment(DeviceTy &Device, AsyncInfoTy &AsyncInfo,
   int64_t VoidPtrSize = sizeof(void *);
   assert(HstPtrSize >= VoidPtrSize && "PointerSize is too small");
 
-  uint64_t Delta = (uint64_t)HstPteeBegin - (uint64_t)HstPteeBase;
-  void *TgtPteeBase = (void *)((uint64_t)TgtPteeBegin - Delta);
+  uint64_t Delta = reinterpret_cast<uint64_t>(HstPteeBegin) -
+                   reinterpret_cast<uint64_t>(HstPteeBase);
+  void *TgtPteeBase = reinterpret_cast<void *>(
+      reinterpret_cast<uint64_t>(TgtPteeBegin) - Delta);
 
   // Add shadow pointer tracking
   // TODO: Support shadow-tracking of larger than VoidPtrSize pointers,
@@ -463,7 +465,8 @@ static int performPointerAttachment(DeviceTy &Device, AsyncInfoTy &AsyncInfo,
   // And to the remaining bytes, we copy the remaining contents of the host
   // descriptor after the initial VoidPtrSize bytes.
   uint64_t HstDescriptorFieldsSize = HstPtrSize - VoidPtrSize;
-  void *HstDescriptorFieldsAddr = (char *)HstPtrAddr + VoidPtrSize;
+  void *HstDescriptorFieldsAddr =
+      reinterpret_cast<char *>(HstPtrAddr) + VoidPtrSize;
   std::memcpy(DataBuffer + VoidPtrSize, HstDescriptorFieldsAddr,
               HstDescriptorFieldsSize);
 
@@ -613,7 +616,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
          (PointerTpr.Flags.IsNewEntry ? "" : " not"));
       PointerHstPtrBegin = HstPtrBase;
       // modify current entry.
-      HstPtrBase = *(void **)HstPtrBase;
+      HstPtrBase = *reinterpret_cast<void **>(HstPtrBase);
       // No need to update pointee ref count for the first element of the
       // subelement that comes from mapper.
       UpdateRef =
@@ -655,9 +658,10 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 
     if (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ && !IsHostPtr) {
       int Ret = performPointerAttachment(
-          Device, AsyncInfo, (void **)PointerHstPtrBegin, HstPtrBase,
-          HstPtrBegin, (void **)PointerTgtPtrBegin, TgtPtrBegin, sizeof(void *),
-          PointerTpr);
+          Device, AsyncInfo, reinterpret_cast<void **>(PointerHstPtrBegin),
+          HstPtrBase, HstPtrBegin,
+          reinterpret_cast<void **>(PointerTgtPtrBegin), TgtPtrBegin,
+          sizeof(void *), PointerTpr);
       if (Ret != OFFLOAD_SUCCESS)
         return OFFLOAD_FAIL;
     }
@@ -746,7 +750,7 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
        ++EntryIdx) {
     const auto &AttachEntry = AttachInfo.AttachEntries[EntryIdx];
 
-    void **HstPtr = (void **)AttachEntry.PointerBase;
+    void **HstPtr = reinterpret_cast<void **>(AttachEntry.PointerBase);
 
     void *HstPteeBase = *HstPtr;
     void *HstPteeBegin = AttachEntry.PointeeBegin;
@@ -767,7 +771,8 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
             void *AllocPtr = Alloc.first;
             int64_t AllocSize = Alloc.second;
             return Ptr >= AllocPtr &&
-                   Ptr < (void *)((char *)AllocPtr + AllocSize);
+                   Ptr < reinterpret_cast<void *>(
+                             reinterpret_cast<char *>(AllocPtr) + AllocSize);
           });
       DP("ATTACH entry %zu: %s pointer " DPxMOD " was newly allocated: %s\n",
          EntryIdx, PtrName, DPxPTR(Ptr), IsNewlyAllocated ? "yes" : "no");
@@ -823,7 +828,7 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
     if (!PtrTPROpt)
       continue;
     TargetPointerResultTy &PtrTPR = *PtrTPROpt;
-    void **TgtPtrBase = (void **)PtrTPR.TargetPointer;
+    void **TgtPtrBase = reinterpret_cast<void **>(PtrTPR.TargetPointer);
 
     // Get device version of the pointee (e.g., &p[10])
     auto PteeTPROpt = LookupTargetPointer(HstPteeBegin, 0, "pointee");
