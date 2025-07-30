@@ -36,7 +36,6 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #define DEBUG_TYPE "shard-to-mpi"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTSHARDTOMPIPASS

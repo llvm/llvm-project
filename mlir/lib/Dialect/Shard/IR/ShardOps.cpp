@@ -38,7 +38,6 @@
 #include <utility>
 
 #define DEBUG_TYPE "shard-ops"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE << "]: ")
 
 using namespace mlir;
 using namespace mlir::shard;
