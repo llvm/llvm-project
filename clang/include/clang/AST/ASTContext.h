@@ -1818,7 +1818,7 @@ public:
         NumPositiveBits = std::max({NumPositiveBits, ActiveBits, 1u});
       } else {
         NumNegativeBits =
-            std::max(NumNegativeBits, (unsigned)InitVal.getSignificantBits());
+            std::max(NumNegativeBits, InitVal.getSignificantBits());
       }
 
       MembersRepresentableByInt &= isRepresentableIntegerValue(InitVal, IntTy);
