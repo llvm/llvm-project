@@ -96,3 +96,67 @@ loop.3:
 exit:
   ret void
 }
+
+declare i1 @cond()
+
+define ptr @test_lcssa_reuse_preserve_lcssa() {
+; CHECK-LABEL: define ptr @test_lcssa_reuse_preserve_lcssa() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[LOOP_0_HEADER:.*]]
+; CHECK:       [[LOOP_0_HEADER]]:
+; CHECK-NEXT:    br label %[[LOOP_1:.*]]
+; CHECK:       [[LOOP_1]]:
+; CHECK-NEXT:    [[IV_1:%.*]] = phi ptr [ null, %[[LOOP_0_HEADER]] ], [ [[IV_1_NEXT:%.*]], %[[LOOP_1]] ]
+; CHECK-NEXT:    [[IV_1_NEXT]] = getelementptr i8, ptr [[IV_1]], i64 1
+; CHECK-NEXT:    [[EC_1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[EC_1]], label %[[THEN:.*]], label %[[LOOP_1]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[IV_1_LCSSA:%.*]] = phi ptr [ [[IV_1]], %[[LOOP_1]] ]
+; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C_2]], label %[[LOOP_2_PREHEADER:.*]], label %[[LOOP_0_LATCH:.*]]
+; CHECK:       [[LOOP_2_PREHEADER]]:
+; CHECK-NEXT:    [[IV_1_LCSSA_LCSSA:%.*]] = phi ptr [ [[IV_1_LCSSA]], %[[THEN]] ]
+; CHECK-NEXT:    [[STRLEN:%.*]] = call i64 @strlen(ptr null)
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[IV_1_LCSSA]], i64 1
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[STRLEN]]
+; CHECK-NEXT:    br label %[[LOOP_2:.*]]
+; CHECK:       [[LOOP_2]]:
+; CHECK-NEXT:    [[IV_2:%.*]] = phi ptr [ [[RES:%.*]], %[[LOOP_2]] ], [ [[IV_1_LCSSA_LCSSA]], %[[LOOP_2_PREHEADER]] ]
+; CHECK-NEXT:    [[RES]] = getelementptr i8, ptr [[IV_2]], i64 1
+; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[IV_1_LCSSA_LCSSA]], align 1
+; CHECK-NEXT:    [[EC_2:%.*]] = icmp eq i8 [[L]], 0
+; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP_2]]
+; CHECK:       [[LOOP_0_LATCH]]:
+; CHECK-NEXT:    br label %[[LOOP_0_HEADER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret ptr [[SCEVGEP]]
+;
+entry:
+  br label %loop.0.header
+
+loop.0.header:
+  br label %loop.1
+
+loop.1:
+  %iv.1 = phi ptr [ null, %loop.0.header ], [ %iv.1.next, %loop.1 ]
+  %iv.1.next = getelementptr i8, ptr %iv.1, i64 1
+  %ec.1 = call i1 @cond()
+  br i1 %ec.1, label %then, label %loop.1
+
+then:
+  %c.2 = call i1 @cond()
+  br i1 %c.2, label %loop.2, label %loop.0.latch
+
+loop.2:
+  %iv.2 = phi ptr [ %res, %loop.2 ], [ %iv.1, %then ]
+  %res = getelementptr i8, ptr %iv.2, i64 1
+  %l = load i8, ptr %iv.1, align 1
+  %ec.2 = icmp eq i8 %l, 0
+  br i1 %ec.2, label %exit, label %loop.2
+
+loop.0.latch:
+  br label %loop.0.header
+
+exit:
+  ret ptr %res
+}
