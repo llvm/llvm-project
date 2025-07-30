@@ -1,6 +1,6 @@
 # REQUIRES: aarch64-registered-target
 # RUN: rm -rf %t.json
-# RUN: llvm-mc -arch aarch64 -disassemble -o /dev/null %s -num-benchmark-runs=1000 -time-trace -time-trace-file=%t.json
+# RUN: llvm-mc -triple=aarch64 -disassemble -o /dev/null %s -runs=1000 -time-trace -time-trace-file=%t.json
 # RUN: FileCheck --input-file %t.json %s
 
 # Note: Test input taken from llvm/test/MC/Disassembler/AArch64/udf.txt

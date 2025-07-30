@@ -243,8 +243,7 @@ static cl::opt<ActionType> Action(
     cl::cat(MCCategory));
 
 static cl::opt<unsigned>
-    NumBenchmarkRuns("num-benchmark-runs",
-                     cl::desc("Number of runs for decoder benchmarking"),
+    NumBenchmarkRuns("runs", cl::desc("Number of runs for benchmarking"),
                      cl::cat(MCCategory));
 
 static cl::opt<bool> TimeTrace("time-trace", cl::desc("Record time trace"));
