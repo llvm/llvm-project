@@ -10,14 +10,14 @@ In C++ a default initialization is performed if a variable is initialized with
 initializer list or in other implicit ways, and no value is specified at the
 initialization. In such cases the value 0 is used for the initialization.
 This also applies to enumerations even if it does not have an enumerator with
-value 0. In this way a variable with the enum type may contain initially an
+value 0. In this way a variable with the ``enum`` type may contain initially an
 invalid value (if the program expects that it contains only the listed
 enumerator values).
 
-The checker emits a warning only if an enum variable is default-initialized
-(contrary to not initialized) and the enum type does not have an enumerator with
-value of 0. The enum type can be scoped or non-scoped enum. Unions are not
-handled by the check (if it contains a member of enum type).
+The check emits a warning only if an ``enum`` variable is default-initialized
+(contrary to not initialized) and the ``enum`` does not have an enumerator with
+value of 0. The type can be a scoped or non-scoped ``enum``. Unions are not
+handled by the check (if it contains a member of enumeration type).
 
 .. code-block:: c++
 
