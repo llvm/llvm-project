@@ -182,6 +182,14 @@ getTypeNumBytes(const SPIRVConversionOptions &options, Type type) {
     return bitWidth / 8;
   }
 
+  // Handle 8-bit floats.
+  if (options.emulateUnsupportedFloatTypes && isa<FloatType>(type)) {
+    auto bitWidth = type.getIntOrFloatBitWidth();
+    if (bitWidth == 8)
+      return bitWidth / 8;
+    return std::nullopt;
+  }
+
   if (auto complexType = dyn_cast<ComplexType>(type)) {
     auto elementSize = getTypeNumBytes(options, complexType.getElementType());
     if (!elementSize)
@@ -318,6 +326,44 @@ static Type convertSubByteIntegerType(const SPIRVConversionOptions &options,
                           type.getSignedness());
 }
 
+/// Converts 8-bit float types to integer types with the same bit width.
+/// Returns a nullptr for unsupported 8-bit float types.
+static Type convert8BitFloatType(const SPIRVConversionOptions &options,
+                                 FloatType type) {
+  if (!options.emulateUnsupportedFloatTypes)
+    return nullptr;
+  // F8 types are converted to integer types with the same bit width.
+  if (isa<Float8E5M2Type, Float8E4M3Type, Float8E4M3FNType, Float8E5M2FNUZType,
+          Float8E4M3FNUZType, Float8E4M3B11FNUZType, Float8E3M4Type,
+          Float8E8M0FNUType>(type))
+    return IntegerType::get(type.getContext(), type.getWidth());
+  LLVM_DEBUG(llvm::dbgs() << "unsupported 8-bit float type: " << type << "\n");
+  return nullptr;
+}
+
+/// Returns a type with the same shape but with any 8-bit float element type
+/// converted to the same bit width integer type. This is a noop when the
+/// element type is not the 8-bit float type or emulation flag is set to false.
+static ShapedType
+convertShaped8BitFloatType(ShapedType type,
+                           const SPIRVConversionOptions &options) {
+  if (!options.emulateUnsupportedFloatTypes)
+    return type;
+  Type srcElementType = type.getElementType();
+  Type convertedElementType = nullptr;
+  // F8 types are converted to integer types with the same bit width.
+  if (isa<Float8E5M2Type, Float8E4M3Type, Float8E4M3FNType, Float8E5M2FNUZType,
+          Float8E4M3FNUZType, Float8E4M3B11FNUZType, Float8E3M4Type,
+          Float8E8M0FNUType>(srcElementType))
+    convertedElementType = IntegerType::get(
+        type.getContext(), srcElementType.getIntOrFloatBitWidth());
+
+  if (!convertedElementType)
+    return type;
+
+  return type.clone(convertedElementType);
+}
+
 /// Returns a type with the same shape but with any index element type converted
 /// to the matching integer type. This is a noop when the element type is not
 /// the index type.
@@ -337,6 +383,7 @@ convertVectorType(const spirv::TargetEnv &targetEnv,
                   const SPIRVConversionOptions &options, VectorType type,
                   std::optional<spirv::StorageClass> storageClass = {}) {
   type = cast<VectorType>(convertIndexElementType(type, options));
+  type = cast<VectorType>(convertShaped8BitFloatType(type, options));
   auto scalarType = dyn_cast_or_null<spirv::ScalarType>(type.getElementType());
   if (!scalarType) {
     // If this is not a spec allowed scalar type, try to handle sub-byte integer
@@ -433,6 +480,7 @@ static Type convertTensorType(const spirv::TargetEnv &targetEnv,
   }
 
   type = cast<TensorType>(convertIndexElementType(type, options));
+  type = cast<TensorType>(convertShaped8BitFloatType(type, options));
   auto scalarType = dyn_cast_or_null<spirv::ScalarType>(type.getElementType());
   if (!scalarType) {
     LLVM_DEBUG(llvm::dbgs()
@@ -595,6 +643,10 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
         convertScalarType(targetEnv, options, scalarType, storageClass);
   } else if (auto indexType = dyn_cast<IndexType>(elementType)) {
     type = cast<MemRefType>(convertIndexElementType(type, options));
+    arrayElemType = type.getElementType();
+  } else if (auto floatType = dyn_cast<FloatType>(elementType)) {
+    // Hnadle 8 bit float types.
+    type = cast<MemRefType>(convertShaped8BitFloatType(type, options));
     arrayElemType = type.getElementType();
   } else {
     LLVM_DEBUG(
@@ -1444,6 +1496,8 @@ SPIRVTypeConverter::SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,
   addConversion([this](FloatType floatType) -> std::optional<Type> {
     if (auto scalarType = dyn_cast<spirv::ScalarType>(floatType))
       return convertScalarType(this->targetEnv, this->options, scalarType);
+    if (floatType.getWidth() == 8)
+      return convert8BitFloatType(this->options, floatType);
     return Type();
   });
 
