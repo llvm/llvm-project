@@ -92,7 +92,7 @@ struct CIRRecordLowering final {
   }
 
   /// Helper function to check if the target machine is BigEndian.
-  bool isBE() const { return astContext.getTargetInfo().isBigEndian(); }
+  bool isBigEndian() const { return astContext.getTargetInfo().isBigEndian(); }
 
   CharUnits bitsToCharUnits(uint64_t bitOffset) {
     return astContext.toCharUnitsFromBits(bitOffset);
@@ -789,7 +789,7 @@ void CIRRecordLowering::computeVolatileBitfields() {
     // of the type), we first undo that calculation here and redo it once
     // the bit-field offset within the new container is calculated.
     const unsigned oldOffset =
-        isBE() ? info.storageSize - (info.offset + info.size) : info.offset;
+        isBigEndian() ? info.storageSize - (info.offset + info.size) : info.offset;
     // Offset to the bit-field from the beginning of the struct.
     const unsigned absoluteOffset =
         astContext.toBits(info.storageOffset) + oldOffset;
@@ -811,7 +811,7 @@ void CIRRecordLowering::computeVolatileBitfields() {
       continue;
 
     // Re-adjust offsets for big-endian targets.
-    if (isBE())
+    if (isBigEndian())
       offset = storageSize - (offset + info.size);
 
     const CharUnits storageOffset =

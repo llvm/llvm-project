@@ -41,7 +41,7 @@ typedef struct{
     volatile unsigned int a : 3;
     unsigned int : 0; // zero-length bit-field force next field to aligned int boundary
     volatile unsigned int b : 5;
-}st3;
+} st3;
 
 // CIR-LAYOUT: BitFields:[
 // CIR-LAYOUT-NEXT:   <CIRBitFieldInfo name:a offset:0 size:3 isSigned:0 storageSize:8 storageOffset:0 volatileOffset:0 volatileStorageSize:32 volatileStorageOffset:0>
@@ -55,7 +55,7 @@ typedef struct{
     volatile unsigned int a : 3;
     unsigned int z: 2;
     volatile unsigned int b : 5;
-}st4;
+} st4;
 
 // CIR-LAYOUT: BitFields:[
 // CIR-LAYOUT-NEXT:   <CIRBitFieldInfo name:a offset:0 size:3 isSigned:0 storageSize:16 storageOffset:0 volatileOffset:0 volatileStorageSize:32 volatileStorageOffset:0>
