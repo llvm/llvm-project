@@ -2245,7 +2245,7 @@ bool LowerTypeTestsModule::lower() {
   if (ExportSummary) {
     if (NamedMDNode *AliasesMD = M.getNamedMetadata("aliases")) {
       for (auto *AliasMD : AliasesMD->operands()) {
-        std::vector<Function *> Aliases;
+        SmallVector<Function *> Aliases;
         for (Metadata *MD : AliasMD->operands()) {
           auto *MDS = dyn_cast<MDString>(MD);
           if (!MDS)

@@ -444,7 +444,7 @@ void splitAndWriteThinLTOBitcode(
   if (!FunctionAliases.empty()) {
     NamedMDNode *NMD = MergedM->getOrInsertNamedMetadata("aliases");
     for (auto &Alias : FunctionAliases) {
-      std::vector<Metadata *> Elts;
+      SmallVector<Metadata *> Elts;
       Elts.push_back(MDString::get(Ctx, Alias.first->getName()));
       for (auto *A : Alias.second)
         Elts.push_back(MDString::get(Ctx, A->getName()));
