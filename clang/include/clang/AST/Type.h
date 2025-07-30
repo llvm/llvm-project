@@ -5349,6 +5349,12 @@ public:
       return Result;
     }
 
+    ExtProtoInfo withoutAddressSpace() {
+      ExtProtoInfo Result(*this);
+      Result.TypeQuals = TypeQuals.withoutAddressSpace();
+      return Result;
+    }
+
     bool requiresFunctionProtoTypeExtraBitfields() const {
       return ExceptionSpec.Type == EST_Dynamic ||
              requiresFunctionProtoTypeArmAttributes() ||

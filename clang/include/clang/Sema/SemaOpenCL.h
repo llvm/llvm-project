@@ -100,6 +100,9 @@ public:
   bool checkBuiltinKernelWorkGroupSize(CallExpr *TheCall);
 
   bool checkBuiltinNDRangeAndBlock(CallExpr *TheCall);
+
+  void removeFriendFunctionAddressSpace(FunctionDecl *FD,
+                                        TypeSourceInfo *TInfo);
 };
 
 } // namespace clang
