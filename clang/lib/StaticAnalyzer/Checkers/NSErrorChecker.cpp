@@ -145,7 +145,8 @@ namespace {
 class NSOrCFErrorDerefChecker
     : public CheckerFamily<check::Location,
                            check::Event<ImplicitNullDerefEvent>> {
-  mutable IdentifierInfo *NSErrorII = nullptr, *CFErrorII = nullptr;
+  mutable IdentifierInfo *NSErrorII = nullptr;
+  mutable IdentifierInfo *CFErrorII = nullptr;
 
 public:
   CheckerFrontendWithBugType NSError{"NSError** null dereference",
