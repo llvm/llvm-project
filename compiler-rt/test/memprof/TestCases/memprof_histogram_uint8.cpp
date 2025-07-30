@@ -3,8 +3,7 @@
 // aggregating counts across multiple objects are 64b.
 
 // RUN: %clangxx_memprof -O0 -mllvm -memprof-histogram -mllvm -memprof-use-callbacks=true %s -o %t
-// RUN: %env_memprof_opts=print_text=1:histogram=1:log_path=stdout %run %t 2>&1 > /tmp/test.log
-// RUN: cat /tmp/test.log | FileCheck %s
+// RUN: %env_memprof_opts=print_text=1:histogram=1:log_path=stdout %run %t 2>&1 | FileCheck %s
 
 #include <stdio.h>
 #include <stdlib.h>
