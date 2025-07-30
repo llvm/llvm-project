@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_TAGGED_POINTER_H
 #define LLVM_LIBC_SRC___SUPPORT_TAGGED_POINTER_H
 
+#include "hdr/types/size_t.h"
 #include "src/__support/common.h"
 #include "src/__support/threads/sleep.h"
 
@@ -24,7 +25,7 @@ template <class T, bool IsAtomic> struct AbaPtrImpl {
   union Impl {
     struct alignas(2 * alignof(void *)) Atomic {
       T *ptr;
-      __SIZE_TYPE__ tag;
+      size_t tag;
     } atomic;
     struct Mutex {
       T *ptr;
@@ -57,6 +58,20 @@ template <class T, bool IsAtomic> struct AbaPtrImpl {
       impl.mutex.ptr = op(impl.mutex.ptr);
       // Release the lock.
       __atomic_store_n(&impl.mutex.locked, false, __ATOMIC_RELEASE);
+    }
+  }
+
+  LIBC_INLINE T *get() const {
+    if constexpr (IsAtomic) {
+      // Weak micro-architectures typically reguards simultaneous partial word
+      // loading and full word loading as a race condition. While there are
+      // implementations that uses racy read anyway, we still load the whole
+      // word to avoid any complications.
+      typename Impl::Atomic snapshot;
+      __atomic_load(&impl.atomic, &snapshot, __ATOMIC_RELAXED);
+      return snapshot.ptr;
+    } else {
+      return impl.mutex.ptr;
     }
   }
 };
