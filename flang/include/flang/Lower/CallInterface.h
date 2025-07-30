@@ -284,6 +284,9 @@ public:
   CallerInterface(const Fortran::evaluate::ProcedureRef &p,
                   Fortran::lower::AbstractConverter &c)
       : CallInterface{c}, procRef{p} {
+    // Ensure that procRef gathers necessary information to determine the
+    // need for copy-in and copy-out
+    const_cast<Fortran::evaluate::ProcedureRef &>(procRef).DetermineCopyInOut();
     declare();
     mapPassedEntities();
     actualInputs.resize(getNumFIRArguments());
