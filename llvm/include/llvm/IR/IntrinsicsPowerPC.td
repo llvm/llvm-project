@@ -682,7 +682,6 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
   def int_ppc_bcdsetsign : ClangBuiltin<"__builtin_ppc_bcdsetsign">,
     DefaultAttrsIntrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty, llvm_i32_ty], 
     [IntrNoMem, ImmArg<ArgIndex<1>>]>;
- 
 
   def int_ppc_bcdadd : ClangBuiltin<"__builtin_ppc_bcdadd">,
     DefaultAttrsIntrinsic<
