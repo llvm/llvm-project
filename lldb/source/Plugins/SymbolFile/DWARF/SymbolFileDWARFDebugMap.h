@@ -144,8 +144,8 @@ public:
   void
   GetCompileOptions(std::unordered_map<lldb::CompUnitSP, Args> &args) override;
 
-  llvm::Error ResolveFunctionCallLabel(SymbolContextList &sc_list,
-                                       const FunctionCallLabel &label) override;
+  llvm::Expected<SymbolContext>
+  ResolveFunctionCallLabel(const FunctionCallLabel &label) override;
 
 protected:
   enum { kHaveInitializedOSOs = (1 << 0), kNumFlags };

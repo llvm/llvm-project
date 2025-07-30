@@ -825,11 +825,14 @@ ResolveFunctionCallLabel(const FunctionCallLabel &label,
     return llvm::createStringError(
         llvm::formatv("no SymbolFile found on module {0:x}.", module_sp.get()));
 
-  SymbolContextList sc_list;
-  if (auto err = symbol_file->ResolveFunctionCallLabel(sc_list, label))
+  auto sc_or_err = symbol_file->ResolveFunctionCallLabel(label);
+  if (!sc_or_err)
     return llvm::joinErrors(
         llvm::createStringError("failed to resolve function by UID"),
-        std::move(err));
+        sc_or_err.takeError());
+
+  SymbolContextList sc_list;
+  sc_list.Append(*sc_or_err);
 
   LoadAddressResolver resolver(*sc.target_sp, symbol_was_missing_weak);
   return resolver.Resolve(sc_list).value_or(LLDB_INVALID_ADDRESS);

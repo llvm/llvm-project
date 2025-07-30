@@ -2475,9 +2475,8 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
   return false;
 }
 
-llvm::Error
-SymbolFileDWARF::ResolveFunctionCallLabel(SymbolContextList &sc_list,
-                                          const FunctionCallLabel &label) {
+llvm::Expected<SymbolContext>
+SymbolFileDWARF::ResolveFunctionCallLabel(const FunctionCallLabel &label) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
 
   DWARFDIE die = GetDIE(label.symbol_id);
@@ -2511,6 +2510,7 @@ SymbolFileDWARF::ResolveFunctionCallLabel(SymbolContextList &sc_list,
           llvm::formatv("failed to find definition DIE for {0}", label));
   }
 
+  SymbolContextList sc_list;
   if (!ResolveFunction(die, /*include_inlines=*/false, sc_list))
     return llvm::createStringError(
         llvm::formatv("failed to resolve function for {0}", label));
@@ -2519,12 +2519,9 @@ SymbolFileDWARF::ResolveFunctionCallLabel(SymbolContextList &sc_list,
     return llvm::createStringError(
         llvm::formatv("failed to find function for {0}", label));
 
-  if (sc_list.GetSize() > 1)
-    return llvm::createStringError(
-        llvm::formatv("found {0} functions for {1} but expected only 1",
-                      sc_list.GetSize(), label));
+  assert(sc_list.GetSize() == 1);
 
-  return llvm::Error::success();
+  return sc_list[0];
 }
 
 bool SymbolFileDWARF::DIEInDeclContext(const CompilerDeclContext &decl_ctx,

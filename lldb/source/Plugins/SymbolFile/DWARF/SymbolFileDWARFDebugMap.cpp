@@ -1603,13 +1603,13 @@ void SymbolFileDWARFDebugMap::GetCompileOptions(
   });
 }
 
-llvm::Error SymbolFileDWARFDebugMap::ResolveFunctionCallLabel(
-    SymbolContextList &sc_list, const FunctionCallLabel &label) {
+llvm::Expected<SymbolContext> SymbolFileDWARFDebugMap::ResolveFunctionCallLabel(
+    const FunctionCallLabel &label) {
   const uint64_t oso_idx = GetOSOIndexFromUserID(label.symbol_id);
   SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx);
   if (!oso_dwarf)
     return llvm::createStringError(llvm::formatv(
         "couldn't find symbol file for {0} in debug-map.", label));
 
-  return oso_dwarf->ResolveFunctionCallLabel(sc_list, label);
+  return oso_dwarf->ResolveFunctionCallLabel(label);
 }
