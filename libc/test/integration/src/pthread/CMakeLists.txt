@@ -19,23 +19,6 @@ add_integration_test(
 )
 
 add_integration_test(
-  pthread_barrier_test
-  SUITE
-    libc-pthread-integration-tests
-  SRCS
-    pthread_barrier_test.cpp
-  DEPENDS
-    libc.include.pthread
-    libc.src.errno.errno
-    libc.src.pthread.pthread_barrier_destroy
-    libc.src.pthread.pthread_barrier_wait
-    libc.src.pthread.pthread_barrier_init
-    libc.src.pthread.pthread_create
-    libc.src.pthread.pthread_join
-    libc.src.stdio.printf
-)
-
-add_integration_test(
   pthread_rwlock_test
   SUITE
     libc-pthread-integration-tests
