@@ -86,3 +86,13 @@ v_mad_nc_i64_i32 v[4:5], v2, v5, v[6:7] quad_perm:[3,2,1,0]
 // GFX1251-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: DP ALU dpp only supports row_share
 // GFX125X-ERR-NEXT:{{^}}v_mad_nc_i64_i32 v[4:5], v2, v5, v[6:7] quad_perm:[3,2,1,0]
 // GFX125X-ERR-NEXT:{{^}}                                        ^
+
+v_ashr_pk_i8_i32 v1, v2, v3, v4 clamp
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_ashr_pk_i8_i32 v1, v2, v3, v4 clamp
+// GFX125X-ERR-NEXT:{{^}}                                ^
+
+v_ashr_pk_u8_i32 v1, v2, v3, v4 clamp
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_ashr_pk_u8_i32 v1, v2, v3, v4 clamp
+// GFX125X-ERR-NEXT:{{^}}                                ^
