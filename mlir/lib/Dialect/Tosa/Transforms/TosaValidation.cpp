@@ -1193,12 +1193,33 @@ bool checkErrorIfPad(Operation *op) {
   return true;
 }
 
-// Returns true if the operation takes no input operands, excluding attributes.
-static bool isNullaryOperation(Operation *op) {
-  if (isa<tosa::ConstOp>(op) || isa<tosa::ConstShapeOp>(op) ||
-      isa<tosa::YieldOp>(op) || isa<tosa::VariableOp>(op))
-    return true;
-  return false;
+static bool isOpIsolatedWithinRegion(Operation *op, Region *region) {
+  return llvm::all_of(op->getOperands(), [&](auto operand) {
+    Region *operandRegion = operand.getParentRegion();
+    return operandRegion && region->isAncestor(operandRegion);
+  });
+}
+
+static bool isRegionIsolatedFromAbove(Region &regionToCheck) {
+  bool noLiveInValue = true;
+  regionToCheck.walk([&noLiveInValue, &regionToCheck](Operation *op) {
+    if (!isOpIsolatedWithinRegion(op, &regionToCheck)) {
+      noLiveInValue = false;
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  return noLiveInValue;
+}
+
+LogicalResult checkIsolatedRegion(Operation *op, Region &regionToCheck,
+                                  StringRef regionName) {
+  if (isRegionIsolatedFromAbove(regionToCheck))
+    return success();
+  op->emitOpError()
+      << "is not conformant to the TOSA specification. It requires the '"
+      << regionName << "' region is isolated from above.\n";
+  return failure();
 }
 
 bool checkErrorIfCondIf(Operation *op) {
@@ -1206,42 +1227,46 @@ bool checkErrorIfCondIf(Operation *op) {
   if (!ifOp)
     return true;
 
-  // Whether the types and shapes of operands between the input/output list and
-  // internal regions are validated by the operation verifier. However, with
-  // support for the simplified form - where redundant operand notations are
-  // omitted - is not conformant to the specification. According to the
-  // specification, all operands passed into an operation must be explicitly
-  // declared at each operation's structure. This code section verify that the
-  // operation's form complies with this requirement.
+  // Currently the dialect supports declaring cond_if operations that
+  // have then/else regions that reference values from outside these
+  // regions. According to the specification, all values used by the
+  // then/else regions must be explicitly declared within the regions.
+  // Therefore we must check that the then/else regions are
+  // "isolated from above", in order to be conformant to the
+  // specification.
+  //
+  // Note: the dialect currently supports two styles of syntax for
+  // declaring "cond_if" operations. We'll refer to these as follows:
+  //
+  // Generic:
+  // %0 = "tosa.cond_if"(%arg0, %arg1, %arg2) ({
+  //   ^bb0(%arg3, %arg4):
+  //     tosa.yield %arg3
+  // },  {
+  //   ^bb0(%arg3, %arg4):
+  //     tosa.yield %arg4
+  // })
+  //
+  // Simplified:
+  // %0 = tosa.cond_if %arg2 (%arg3 = %arg0, %arg4 = %arg1) {
+  //   ^bb0(%arg3, %arg4):
+  //   tosa.yield %arg3
+  // } else {
+  //   ^bb0(%arg3, %arg4):
+  //   tosa.yield %arg4
+  // }
 
-  // Returns true if the region uses no external input operands.
-  auto isNullaryRegion = [](Region &region) -> bool {
-    bool noLiveInValue = true;
-    region.walk([&noLiveInValue](Operation *op) {
-      if (!isNullaryOperation(op)) {
-        noLiveInValue = false;
-        return WalkResult::interrupt();
-      }
-      return WalkResult::advance();
-    });
-    return noLiveInValue;
-  };
+  return failed(checkIsolatedRegion(op, ifOp.getThenGraph(), "then")) ||
+         failed(checkIsolatedRegion(op, ifOp.getElseGraph(), "else"));
+}
 
-  mlir::Region &thenGraph = ifOp.getThenGraph();
-  mlir::Region &elseGraph = ifOp.getElseGraph();
-  bool isThenGraphNullaryRegion = isNullaryRegion(thenGraph);
-  bool isElseGraphNullaryRegion = isNullaryRegion(elseGraph);
-  bool isInputListEmpty = ifOp.getInputList().size() == 0;
+bool checkErrorIfWhileLoop(Operation *op) {
+  auto whileOp = dyn_cast<tosa::WhileOp>(op);
+  if (!whileOp)
+    return true;
 
-  if ((isInputListEmpty != isThenGraphNullaryRegion) ||
-      (isInputListEmpty != isElseGraphNullaryRegion)) {
-    op->emitOpError()
-        << "the current simplified form is not strictly conformant to the "
-           "spec, please use the generic format\n";
-    return false;
-  }
-
-  return true;
+  return failed(checkIsolatedRegion(op, whileOp.getCondGraph(), "cond")) ||
+         failed(checkIsolatedRegion(op, whileOp.getBodyGraph(), "body"));
 }
 
 bool checkErrorIfScatter(Operation *op) {
@@ -1273,7 +1298,7 @@ LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
   if (!checkErrorIfResize(op) || !checkErrorIfMul(op) ||
       !checkErrorIfTable(op) || !checkErrorIfRescale(op) ||
       !checkErrorIfPad(op) || !checkErrorIfCondIf(op) ||
-      !checkErrorIfScatter(op))
+      !checkErrorIfWhileLoop(op) || !checkErrorIfScatter(op))
     return failure();
   return success();
 }

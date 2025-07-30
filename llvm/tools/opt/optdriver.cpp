@@ -217,6 +217,15 @@ static cl::opt<bool> VerifyDebugInfoPreserve(
     cl::desc("Start the pipeline with collecting and end it with checking of "
              "debug info preservation."));
 
+static cl::opt<bool> EnableProfileVerification(
+    "enable-profcheck",
+#if defined(LLVM_ENABLE_PROFCHECK)
+    cl::init(true),
+#else
+    cl::init(false),
+#endif
+    cl::desc("Start the pipeline with prof-inject and end it with prof-check"));
+
 static cl::opt<std::string> ClDataLayout("data-layout",
                                          cl::desc("data layout string to use"),
                                          cl::value_desc("layout-string"),
@@ -746,7 +755,8 @@ extern "C" int optMain(
                RemarksFile.get(), Pipeline, PluginList, PassBuilderCallbacks,
                OK, VK, PreserveAssemblyUseListOrder,
                PreserveBitcodeUseListOrder, EmitSummaryIndex, EmitModuleHash,
-               EnableDebugify, VerifyDebugInfoPreserve, UnifiedLTO)
+               EnableDebugify, VerifyDebugInfoPreserve,
+               EnableProfileVerification, UnifiedLTO)
                ? 0
                : 1;
   }

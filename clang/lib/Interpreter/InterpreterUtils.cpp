@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InterpreterUtils.h"
+#include "clang/AST/QualTypeNames.h"
 
 namespace clang {
 
@@ -81,7 +82,7 @@ NamedDecl *LookupNamed(Sema &S, llvm::StringRef Name,
   else {
     const DeclContext *PrimaryWithin = nullptr;
     if (const auto *TD = dyn_cast<TagDecl>(Within))
-      PrimaryWithin = llvm::dyn_cast_or_null<DeclContext>(TD->getDefinition());
+      PrimaryWithin = dyn_cast_if_present<DeclContext>(TD->getDefinition());
     else
       PrimaryWithin = Within->getPrimaryContext();
 
@@ -97,15 +98,16 @@ NamedDecl *LookupNamed(Sema &S, llvm::StringRef Name,
   R.resolveKind();
 
   if (R.isSingleResult())
-    return llvm::dyn_cast<NamedDecl>(R.getFoundDecl());
+    return dyn_cast<NamedDecl>(R.getFoundDecl());
 
   return nullptr;
 }
 
 std::string GetFullTypeName(ASTContext &Ctx, QualType QT) {
+  QualType FQT = TypeName::getFullyQualifiedType(QT, Ctx);
   PrintingPolicy Policy(Ctx.getPrintingPolicy());
   Policy.SuppressScope = false;
   Policy.AnonymousTagLocations = false;
-  return QT.getAsString(Policy);
+  return FQT.getAsString(Policy);
 }
 } // namespace clang
