@@ -13,7 +13,7 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTMutationListener.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/ParsedAttr.h"
@@ -1422,14 +1422,14 @@ bool ExposureChecker::checkExposure(const CXXRecordDecl *RD, bool Diag) {
   return IsExposure;
 }
 
-template <typename CallbackTy>
-class ReferenceTULocalChecker
-    : public clang::RecursiveASTVisitor<ReferenceTULocalChecker<CallbackTy>> {
+class ReferenceTULocalChecker : public DynamicRecursiveASTVisitor {
 public:
+  using CallbackTy = std::function<void(DeclRefExpr *, ValueDecl *)>;
+
   ReferenceTULocalChecker(ExposureChecker &C, CallbackTy &&Callback)
       : Checker(C), Callback(std::move(Callback)) {}
 
-  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
     ValueDecl *Referenced = DRE->getDecl();
     if (!Referenced)
       return true;
@@ -1467,10 +1467,6 @@ public:
   ExposureChecker &Checker;
   CallbackTy Callback;
 };
-
-template <typename CallbackTy>
-ReferenceTULocalChecker(ExposureChecker &, CallbackTy &&)
-    -> ReferenceTULocalChecker<CallbackTy>;
 
 bool ExposureChecker::checkExposure(const Stmt *S, bool Diag) {
   if (!S)
