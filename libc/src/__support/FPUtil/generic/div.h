@@ -24,15 +24,6 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil::generic {
 
-template <typename T> struct DyadicFloatType {
-  using type =
-      DyadicFloat<cpp::bit_ceil(static_cast<size_t>(FPBits<T>::SIG_LEN + 1))>;
-};
-
-template <> struct DyadicFloatType<bfloat16> {
-  using type = DyadicFloat<16>;
-};
-
 template <typename OutType, typename InType>
 LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
                                  cpp::is_floating_point_v<InType> &&
@@ -43,7 +34,9 @@ div(InType x, InType y) {
   using OutStorageType = typename OutFPBits::StorageType;
   using InFPBits = FPBits<InType>;
   using InStorageType = typename InFPBits::StorageType;
-  using DyadicFloat = typename DyadicFloatType<InType>::type;
+  using DyadicFloat = DyadicFloat<cpp::max(
+      static_cast<size_t>(16),
+      cpp::bit_ceil(static_cast<size_t>(InFPBits::SIG_LEN + 1)))>;
 
   InFPBits x_bits(x);
   InFPBits y_bits(y);
