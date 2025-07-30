@@ -278,6 +278,8 @@ StringRef Triple::getVendorTypeName(VendorType Kind) {
   case SCEI: return "scei";
   case SUSE: return "suse";
   case Swift: return "swift";
+  case Meta:
+    return "meta";
   }
 
   llvm_unreachable("Invalid VendorType!");
@@ -391,6 +393,8 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case OpenHOS: return "ohos";
   case PAuthTest:
     return "pauthtest";
+  case MTIA:
+    return "mtia";
   case LLVM:
     return "llvm";
   case Mlibc:
@@ -679,6 +683,7 @@ static Triple::VendorType parseVendor(StringRef VendorName) {
       .Case("swift", Triple::Swift)
       .Case("oe", Triple::OpenEmbedded)
       .Case("intel", Triple::Intel)
+      .Case("meta", Triple::Meta)
       .Default(Triple::UnknownVendor);
 }
 
@@ -782,6 +787,7 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
       .StartsWith("pauthtest", Triple::PAuthTest)
       .StartsWith("llvm", Triple::LLVM)
       .StartsWith("mlibc", Triple::Mlibc)
+      .StartsWith("mtia", Triple::MTIA)
       .Default(Triple::UnknownEnvironment);
 }
 
