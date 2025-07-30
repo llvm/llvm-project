@@ -748,7 +748,8 @@ foreach mx = SchedMxList in {
   // Pattern for vslide1down.vx, vslidedown.vi/vx: 4/5/9/17
   // Pattern for vslide1up.vx: 4/4/8/16
   // We use 4/4/8/16 for simplicity
-  let Latency = Get4816Latency<mx>.c, ReleaseAtCycles =[4] in {
+  defvar VSlideLatAndOcc = GetDoublingValueFromLMUL<"M2", 4, mx>.c;
+  let Latency = VSlideLatAndOcc, ReleaseAtCycles =[VSlideLatAndOcc] in {
     defm "" : LMULWriteResMX<"WriteVSlideI", [SMX60_VIEU], mx, IsWorstCase>;
 
     defm "" : LMULWriteResMX<"WriteVISlide1X", [SMX60_VIEU], mx, IsWorstCase>;
@@ -759,39 +760,26 @@ foreach mx = SchedMxList in {
   }
 }
 
+// ReleaseAtCycles is 2/2/2/2/2/3/6, but we can't set based on MX for now
+// TODO: Split this into separate WriteRes for each MX
 let Latency = 6, ReleaseAtCycles = [6] in {
   def : WriteRes<WriteVMovXS, [SMX60_VIEU]>;
 }
 
+// ReleaseAtCycles is 1/1/1/1/1/2/4, but we can't set based on MX for now
+// TODO: Split this into separate WriteRes for each MX
 let Latency = 4, ReleaseAtCycles = [4] in {
   def : WriteRes<WriteVMovSX, [SMX60_VIEU]>;
   def : WriteRes<WriteVMovFS, [SMX60_VIEU]>;
   def : WriteRes<WriteVMovSF, [SMX60_VIEU]>;
 }
 
-// Fractional LMUL Gather and Compress
-foreach mx = ["MF8", "MF4", "MF2", "M1"] in {
-  defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
-
-  let Latency = 4, ReleaseAtCycles = [4] in {
-    defm "" : LMULWriteResMX<"WriteVRGatherVX", [SMX60_VIEU], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVRGatherVI", [SMX60_VIEU], mx, IsWorstCase>;
-
-    foreach sew = SchedSEWSet<mx>.val in {
-      defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherVV", [SMX60_VIEU], mx, sew, IsWorstCase>;
-      defm "" : LMULSEWWriteResMXSEW<"WriteVCompressV", [SMX60_VIEU], mx, sew, IsWorstCase>;
-
-      // Slightly reduced latencies for e8mf1=4 (should be 8)
-      defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherEI16VV", [SMX60_VIEU], mx, sew, IsWorstCase>;
-    }
-  }
-}
-
 // Integer LMUL Gather and Compress
-foreach mx = ["M2", "M4", "M8"] in {
+foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
-  let Latency = Get4816Latency<mx>.c, ReleaseAtCycles = [4] in {
+  defvar VRGatherLat = GetDoublingValueFromLMUL<"M2", 4, mx>.c;
+  let Latency = VRGatherLat, ReleaseAtCycles = [GetOneMF2AndDouble<mx>.c] in {
     defm "" : LMULWriteResMX<"WriteVRGatherVX", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVRGatherVI", [SMX60_VIEU], mx, IsWorstCase>;
   }
@@ -799,21 +787,25 @@ foreach mx = ["M2", "M4", "M8"] in {
   foreach sew = SchedSEWSet<mx>.val in {
     defvar IsWorstCaseSEW = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
 
-    defvar VVLat = !mul(Get4816Latency<mx>.c, Get4816Latency<mx>.c);
-    let Latency = VVLat, ReleaseAtCycles = [4] in {
+    defvar VRGatherVVLat = GetLMULValue<[4, 4, 4, 4, 16, 64, 256], mx>.c;
+    defvar VRGatherVVOcc = GetLMULValue<[1, 1, 1, 4, 16, 64, 256], mx>.c;
+    let Latency = VRGatherVVLat, ReleaseAtCycles = [VRGatherVVOcc] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherVV", [SMX60_VIEU], mx, sew, IsWorstCaseSEW>;
     }
-    let Latency = !if(!eq(sew, 8), !mul(VVLat, 2), VVLat), ReleaseAtCycles = [4] in {
+    // For sew == 8, latency is half of the other cases, except for the fractional LMULs (const 4 cycles)
+    defvar VRGatherEI16Lat = !if(!eq(sew, 8),
+      GetLMULValue<[4, 4, 4, 8, 32, 128], mx>.c,
+      VRGatherVVLat);
+    defvar VRGatherEI16Occ = !if(!eq(sew, 8),
+      GetLMULValue<[1, 1, 2, 8, 32, 128], mx>.c,
+      GetLMULValue<[4, 4, 4, 4, 16, 64, 256], mx>.c);
+    let Latency = VRGatherEI16Lat, ReleaseAtCycles = [VRGatherEI16Occ] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherEI16VV", [SMX60_VIEU], mx, sew, IsWorstCaseSEW>;
     }
 
-    // This could be a helper class but this pattern only ever shows up here
-    defvar CompressLat = !cond(
-      !eq(mx, "M2") : 10,
-      !eq(mx, "M4") : 36,
-      true: 136 // M8
-    );
-    let Latency = CompressLat, ReleaseAtCycles = [4] in {
+    defvar VCompressVLat = GetLMULValue<[4, 4, 4, 4, 10, 36, 136], mx>.c;
+    defvar VCompressVOcc = GetLMULValue<[1, 1, 1, 3, 10, 36, 136], mx>.c;
+    let Latency = VCompressVLat, ReleaseAtCycles = [VCompressVOcc] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVCompressV", [SMX60_VIEU], mx, sew, IsWorstCaseSEW>;
     }
   }
