@@ -294,6 +294,7 @@ define { <2 x double>, <2 x double> } @test_modf_v2f64(<2 x double> %a) {
 ; CHECK-NEXT:    addi r4, r1, 40
 ; CHECK-NEXT:    bl modf
 ; CHECK-NEXT:    nop
+; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-NEXT:    xxmrghd v2, v30, vs1
 ; CHECK-NEXT:    lfd f0, 32(r1)
 ; CHECK-NEXT:    lfd f1, 40(r1)

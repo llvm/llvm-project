@@ -107,6 +107,10 @@ entry:
 define <3 x double> @constrained_vector_fdiv_v3f64(<3 x double> %x, <3 x double> %y) #0 {
 ; PC64LE-LABEL: constrained_vector_fdiv_v3f64:
 ; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    # kill: def $f5 killed $f5 def $vsl5
+; PC64LE-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; PC64LE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 0, 5, 4
 ; PC64LE-NEXT:    xxmrghd 1, 2, 1
 ; PC64LE-NEXT:    xsdivdp 3, 3, 6
@@ -116,6 +120,10 @@ define <3 x double> @constrained_vector_fdiv_v3f64(<3 x double> %x, <3 x double>
 ;
 ; PC64LE9-LABEL: constrained_vector_fdiv_v3f64:
 ; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    # kill: def $f5 killed $f5 def $vsl5
+; PC64LE9-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; PC64LE9-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 0, 5, 4
 ; PC64LE9-NEXT:    xxmrghd 1, 2, 1
 ; PC64LE9-NEXT:    xsdivdp 3, 3, 6
@@ -209,6 +217,7 @@ define <2 x double> @constrained_vector_frem_v2f64(<2 x double> %x, <2 x double>
 ; PC64LE-NEXT:    bl fmod
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 80
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 34, 61, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 64
@@ -239,6 +248,7 @@ define <2 x double> @constrained_vector_frem_v2f64(<2 x double> %x, <2 x double>
 ; PC64LE9-NEXT:    xxswapd 2, 63
 ; PC64LE9-NEXT:    bl fmod
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 34, 61, 1
 ; PC64LE9-NEXT:    lxv 63, 64(1) # 16-byte Folded Reload
 ; PC64LE9-NEXT:    lxv 62, 48(1) # 16-byte Folded Reload
@@ -390,6 +400,7 @@ define <3 x double> @constrained_vector_frem_v3f64(<3 x double> %x, <3 x double>
 ; PC64LE-NEXT:    fmr 2, 30
 ; PC64LE-NEXT:    bl fmod
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE-NEXT:    fmr 1, 29
 ; PC64LE-NEXT:    fmr 2, 31
@@ -431,6 +442,7 @@ define <3 x double> @constrained_vector_frem_v3f64(<3 x double> %x, <3 x double>
 ; PC64LE9-NEXT:    fmr 2, 30
 ; PC64LE9-NEXT:    bl fmod
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE9-NEXT:    fmr 1, 29
 ; PC64LE9-NEXT:    fmr 2, 31
@@ -486,6 +498,7 @@ define <4 x double> @constrained_vector_frem_v4f64(<4 x double> %x, <4 x double>
 ; PC64LE-NEXT:    xxswapd 2, 62
 ; PC64LE-NEXT:    bl fmod
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 62, 59, 1
 ; PC64LE-NEXT:    xxlor 1, 61, 61
 ; PC64LE-NEXT:    xxlor 2, 63, 63
@@ -498,6 +511,7 @@ define <4 x double> @constrained_vector_frem_v4f64(<4 x double> %x, <4 x double>
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 112
 ; PC64LE-NEXT:    vmr 2, 30
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 35, 60, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 96
@@ -536,6 +550,7 @@ define <4 x double> @constrained_vector_frem_v4f64(<4 x double> %x, <4 x double>
 ; PC64LE9-NEXT:    xxswapd 2, 62
 ; PC64LE9-NEXT:    bl fmod
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 62, 59, 1
 ; PC64LE9-NEXT:    xscpsgndp 1, 61, 61
 ; PC64LE9-NEXT:    xscpsgndp 2, 63, 63
@@ -546,6 +561,7 @@ define <4 x double> @constrained_vector_frem_v4f64(<4 x double> %x, <4 x double>
 ; PC64LE9-NEXT:    xxswapd 2, 63
 ; PC64LE9-NEXT:    bl fmod
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 35, 60, 1
 ; PC64LE9-NEXT:    vmr 2, 30
 ; PC64LE9-NEXT:    lxv 63, 96(1) # 16-byte Folded Reload
@@ -670,6 +686,10 @@ entry:
 define <3 x double> @constrained_vector_fmul_v3f64(<3 x double> %x, <3 x double> %y) #0 {
 ; PC64LE-LABEL: constrained_vector_fmul_v3f64:
 ; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    # kill: def $f5 killed $f5 def $vsl5
+; PC64LE-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; PC64LE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 0, 5, 4
 ; PC64LE-NEXT:    xxmrghd 1, 2, 1
 ; PC64LE-NEXT:    xsmuldp 3, 3, 6
@@ -679,6 +699,10 @@ define <3 x double> @constrained_vector_fmul_v3f64(<3 x double> %x, <3 x double>
 ;
 ; PC64LE9-LABEL: constrained_vector_fmul_v3f64:
 ; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    # kill: def $f5 killed $f5 def $vsl5
+; PC64LE9-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; PC64LE9-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 0, 5, 4
 ; PC64LE9-NEXT:    xxmrghd 1, 2, 1
 ; PC64LE9-NEXT:    xsmuldp 3, 3, 6
@@ -820,6 +844,10 @@ entry:
 define <3 x double> @constrained_vector_fadd_v3f64(<3 x double> %x, <3 x double> %y) #0 {
 ; PC64LE-LABEL: constrained_vector_fadd_v3f64:
 ; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    # kill: def $f5 killed $f5 def $vsl5
+; PC64LE-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; PC64LE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 0, 5, 4
 ; PC64LE-NEXT:    xxmrghd 1, 2, 1
 ; PC64LE-NEXT:    xsadddp 3, 3, 6
@@ -829,6 +857,10 @@ define <3 x double> @constrained_vector_fadd_v3f64(<3 x double> %x, <3 x double>
 ;
 ; PC64LE9-LABEL: constrained_vector_fadd_v3f64:
 ; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    # kill: def $f5 killed $f5 def $vsl5
+; PC64LE9-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; PC64LE9-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 0, 5, 4
 ; PC64LE9-NEXT:    xxmrghd 1, 2, 1
 ; PC64LE9-NEXT:    xsadddp 3, 3, 6
@@ -970,6 +1002,10 @@ entry:
 define <3 x double> @constrained_vector_fsub_v3f64(<3 x double> %x, <3 x double> %y) #0 {
 ; PC64LE-LABEL: constrained_vector_fsub_v3f64:
 ; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    # kill: def $f5 killed $f5 def $vsl5
+; PC64LE-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; PC64LE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 0, 5, 4
 ; PC64LE-NEXT:    xxmrghd 1, 2, 1
 ; PC64LE-NEXT:    xssubdp 3, 3, 6
@@ -979,6 +1015,10 @@ define <3 x double> @constrained_vector_fsub_v3f64(<3 x double> %x, <3 x double>
 ;
 ; PC64LE9-LABEL: constrained_vector_fsub_v3f64:
 ; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    # kill: def $f5 killed $f5 def $vsl5
+; PC64LE9-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; PC64LE9-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 0, 5, 4
 ; PC64LE9-NEXT:    xxmrghd 1, 2, 1
 ; PC64LE9-NEXT:    xssubdp 3, 3, 6
@@ -1105,6 +1145,8 @@ entry:
 define <3 x double> @constrained_vector_sqrt_v3f64(<3 x double> %x) #0 {
 ; PC64LE-LABEL: constrained_vector_sqrt_v3f64:
 ; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 0, 2, 1
 ; PC64LE-NEXT:    xssqrtdp 3, 3
 ; PC64LE-NEXT:    xvsqrtdp 2, 0
@@ -1113,6 +1155,8 @@ define <3 x double> @constrained_vector_sqrt_v3f64(<3 x double> %x) #0 {
 ;
 ; PC64LE9-LABEL: constrained_vector_sqrt_v3f64:
 ; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 0, 2, 1
 ; PC64LE9-NEXT:    xssqrtdp 3, 3
 ; PC64LE9-NEXT:    xvsqrtdp 2, 0
@@ -1203,6 +1247,7 @@ define <2 x double> @constrained_vector_pow_v2f64(<2 x double> %x, <2 x double> 
 ; PC64LE-NEXT:    bl pow
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 80
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 34, 61, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 64
@@ -1233,6 +1278,7 @@ define <2 x double> @constrained_vector_pow_v2f64(<2 x double> %x, <2 x double> 
 ; PC64LE9-NEXT:    xxswapd 2, 63
 ; PC64LE9-NEXT:    bl pow
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 34, 61, 1
 ; PC64LE9-NEXT:    lxv 63, 64(1) # 16-byte Folded Reload
 ; PC64LE9-NEXT:    lxv 62, 48(1) # 16-byte Folded Reload
@@ -1384,6 +1430,7 @@ define <3 x double> @constrained_vector_pow_v3f64(<3 x double> %x, <3 x double> 
 ; PC64LE-NEXT:    fmr 2, 30
 ; PC64LE-NEXT:    bl pow
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE-NEXT:    fmr 1, 29
 ; PC64LE-NEXT:    fmr 2, 31
@@ -1425,6 +1472,7 @@ define <3 x double> @constrained_vector_pow_v3f64(<3 x double> %x, <3 x double> 
 ; PC64LE9-NEXT:    fmr 2, 30
 ; PC64LE9-NEXT:    bl pow
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE9-NEXT:    fmr 1, 29
 ; PC64LE9-NEXT:    fmr 2, 31
@@ -1480,6 +1528,7 @@ define <4 x double> @constrained_vector_pow_v4f64(<4 x double> %x, <4 x double> 
 ; PC64LE-NEXT:    xxswapd 2, 62
 ; PC64LE-NEXT:    bl pow
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 62, 59, 1
 ; PC64LE-NEXT:    xxlor 1, 61, 61
 ; PC64LE-NEXT:    xxlor 2, 63, 63
@@ -1492,6 +1541,7 @@ define <4 x double> @constrained_vector_pow_v4f64(<4 x double> %x, <4 x double> 
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 112
 ; PC64LE-NEXT:    vmr 2, 30
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 35, 60, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 96
@@ -1530,6 +1580,7 @@ define <4 x double> @constrained_vector_pow_v4f64(<4 x double> %x, <4 x double> 
 ; PC64LE9-NEXT:    xxswapd 2, 62
 ; PC64LE9-NEXT:    bl pow
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 62, 59, 1
 ; PC64LE9-NEXT:    xscpsgndp 1, 61, 61
 ; PC64LE9-NEXT:    xscpsgndp 2, 63, 63
@@ -1540,6 +1591,7 @@ define <4 x double> @constrained_vector_pow_v4f64(<4 x double> %x, <4 x double> 
 ; PC64LE9-NEXT:    xxswapd 2, 63
 ; PC64LE9-NEXT:    bl pow
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 35, 60, 1
 ; PC64LE9-NEXT:    vmr 2, 30
 ; PC64LE9-NEXT:    lxv 63, 96(1) # 16-byte Folded Reload
@@ -1618,6 +1670,7 @@ define <2 x double> @constrained_vector_powi_v2f64(<2 x double> %x, i32 %y) #0 {
 ; PC64LE-NEXT:    bl __powidf2
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 64
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 34, 62, 1
 ; PC64LE-NEXT:    ld 30, 80(1) # 8-byte Folded Reload
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
@@ -1647,6 +1700,7 @@ define <2 x double> @constrained_vector_powi_v2f64(<2 x double> %x, i32 %y) #0 {
 ; PC64LE9-NEXT:    mr 4, 30
 ; PC64LE9-NEXT:    bl __powidf2
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 34, 62, 1
 ; PC64LE9-NEXT:    lxv 63, 48(1) # 16-byte Folded Reload
 ; PC64LE9-NEXT:    lxv 62, 32(1) # 16-byte Folded Reload
@@ -1790,6 +1844,7 @@ define <3 x double> @constrained_vector_powi_v3f64(<3 x double> %x, i32 %y) #0 {
 ; PC64LE-NEXT:    mr 4, 30
 ; PC64LE-NEXT:    bl __powidf2
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE-NEXT:    fmr 1, 31
 ; PC64LE-NEXT:    mr 4, 30
@@ -1828,6 +1883,7 @@ define <3 x double> @constrained_vector_powi_v3f64(<3 x double> %x, i32 %y) #0 {
 ; PC64LE9-NEXT:    mr 4, 30
 ; PC64LE9-NEXT:    bl __powidf2
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE9-NEXT:    fmr 1, 31
 ; PC64LE9-NEXT:    mr 4, 30
@@ -1878,6 +1934,7 @@ define <4 x double> @constrained_vector_powi_v4f64(<4 x double> %x, i32 %y) #0 {
 ; PC64LE-NEXT:    mr 4, 30
 ; PC64LE-NEXT:    bl __powidf2
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 62, 61, 1
 ; PC64LE-NEXT:    xxlor 1, 63, 63
 ; PC64LE-NEXT:    mr 4, 30
@@ -1890,6 +1947,7 @@ define <4 x double> @constrained_vector_powi_v4f64(<4 x double> %x, i32 %y) #0 {
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 80
 ; PC64LE-NEXT:    vmr 2, 30
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 35, 61, 1
 ; PC64LE-NEXT:    ld 30, 96(1) # 8-byte Folded Reload
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
@@ -1923,6 +1981,7 @@ define <4 x double> @constrained_vector_powi_v4f64(<4 x double> %x, i32 %y) #0 {
 ; PC64LE9-NEXT:    mr 4, 30
 ; PC64LE9-NEXT:    bl __powidf2
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 62, 61, 1
 ; PC64LE9-NEXT:    xscpsgndp 1, 63, 63
 ; PC64LE9-NEXT:    mr 4, 30
@@ -1933,6 +1992,7 @@ define <4 x double> @constrained_vector_powi_v4f64(<4 x double> %x, i32 %y) #0 {
 ; PC64LE9-NEXT:    mr 4, 30
 ; PC64LE9-NEXT:    bl __powidf2
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 35, 61, 1
 ; PC64LE9-NEXT:    vmr 2, 30
 ; PC64LE9-NEXT:    lxv 63, 64(1) # 16-byte Folded Reload
@@ -2003,6 +2063,7 @@ define <2 x double> @constrained_vector_sin_v2f64(<2 x double> %x) #0 {
 ; PC64LE-NEXT:    bl sin
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 64
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 34, 62, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 48
@@ -2027,6 +2088,7 @@ define <2 x double> @constrained_vector_sin_v2f64(<2 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 63
 ; PC64LE9-NEXT:    bl sin
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 34, 62, 1
 ; PC64LE9-NEXT:    lxv 63, 48(1) # 16-byte Folded Reload
 ; PC64LE9-NEXT:    lxv 62, 32(1) # 16-byte Folded Reload
@@ -2149,6 +2211,7 @@ define <3 x double> @constrained_vector_sin_v3f64(<3 x double> %x) #0 {
 ; PC64LE-NEXT:    fmr 1, 30
 ; PC64LE-NEXT:    bl sin
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE-NEXT:    fmr 1, 31
 ; PC64LE-NEXT:    bl sin
@@ -2181,6 +2244,7 @@ define <3 x double> @constrained_vector_sin_v3f64(<3 x double> %x) #0 {
 ; PC64LE9-NEXT:    fmr 1, 30
 ; PC64LE9-NEXT:    bl sin
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE9-NEXT:    fmr 1, 31
 ; PC64LE9-NEXT:    bl sin
@@ -2224,6 +2288,7 @@ define <4 x double> @constrained_vector_sin_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    xxswapd 1, 62
 ; PC64LE-NEXT:    bl sin
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 62, 61, 1
 ; PC64LE-NEXT:    xxlor 1, 63, 63
 ; PC64LE-NEXT:    bl sin
@@ -2234,6 +2299,7 @@ define <4 x double> @constrained_vector_sin_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 80
 ; PC64LE-NEXT:    vmr 2, 30
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 35, 61, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 64
@@ -2262,6 +2328,7 @@ define <4 x double> @constrained_vector_sin_v4f64(<4 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 62
 ; PC64LE9-NEXT:    bl sin
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 62, 61, 1
 ; PC64LE9-NEXT:    xscpsgndp 1, 63, 63
 ; PC64LE9-NEXT:    bl sin
@@ -2270,6 +2337,7 @@ define <4 x double> @constrained_vector_sin_v4f64(<4 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 63
 ; PC64LE9-NEXT:    bl sin
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 35, 61, 1
 ; PC64LE9-NEXT:    vmr 2, 30
 ; PC64LE9-NEXT:    lxv 63, 64(1) # 16-byte Folded Reload
@@ -2338,6 +2406,7 @@ define <2 x double> @constrained_vector_cos_v2f64(<2 x double> %x) #0 {
 ; PC64LE-NEXT:    bl cos
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 64
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 34, 62, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 48
@@ -2362,6 +2431,7 @@ define <2 x double> @constrained_vector_cos_v2f64(<2 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 63
 ; PC64LE9-NEXT:    bl cos
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 34, 62, 1
 ; PC64LE9-NEXT:    lxv 63, 48(1) # 16-byte Folded Reload
 ; PC64LE9-NEXT:    lxv 62, 32(1) # 16-byte Folded Reload
@@ -2484,6 +2554,7 @@ define <3 x double> @constrained_vector_cos_v3f64(<3 x double> %x) #0 {
 ; PC64LE-NEXT:    fmr 1, 30
 ; PC64LE-NEXT:    bl cos
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE-NEXT:    fmr 1, 31
 ; PC64LE-NEXT:    bl cos
@@ -2516,6 +2587,7 @@ define <3 x double> @constrained_vector_cos_v3f64(<3 x double> %x) #0 {
 ; PC64LE9-NEXT:    fmr 1, 30
 ; PC64LE9-NEXT:    bl cos
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE9-NEXT:    fmr 1, 31
 ; PC64LE9-NEXT:    bl cos
@@ -2559,6 +2631,7 @@ define <4 x double> @constrained_vector_cos_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    xxswapd 1, 62
 ; PC64LE-NEXT:    bl cos
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 62, 61, 1
 ; PC64LE-NEXT:    xxlor 1, 63, 63
 ; PC64LE-NEXT:    bl cos
@@ -2569,6 +2642,7 @@ define <4 x double> @constrained_vector_cos_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 80
 ; PC64LE-NEXT:    vmr 2, 30
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 35, 61, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 64
@@ -2597,6 +2671,7 @@ define <4 x double> @constrained_vector_cos_v4f64(<4 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 62
 ; PC64LE9-NEXT:    bl cos
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 62, 61, 1
 ; PC64LE9-NEXT:    xscpsgndp 1, 63, 63
 ; PC64LE9-NEXT:    bl cos
@@ -2605,6 +2680,7 @@ define <4 x double> @constrained_vector_cos_v4f64(<4 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 63
 ; PC64LE9-NEXT:    bl cos
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 35, 61, 1
 ; PC64LE9-NEXT:    vmr 2, 30
 ; PC64LE9-NEXT:    lxv 63, 64(1) # 16-byte Folded Reload
@@ -2673,6 +2749,7 @@ define <2 x double> @constrained_vector_exp_v2f64(<2 x double> %x) #0 {
 ; PC64LE-NEXT:    bl exp
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 64
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 34, 62, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 48
@@ -2697,6 +2774,7 @@ define <2 x double> @constrained_vector_exp_v2f64(<2 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 63
 ; PC64LE9-NEXT:    bl exp
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 34, 62, 1
 ; PC64LE9-NEXT:    lxv 63, 48(1) # 16-byte Folded Reload
 ; PC64LE9-NEXT:    lxv 62, 32(1) # 16-byte Folded Reload
@@ -2819,6 +2897,7 @@ define <3 x double> @constrained_vector_exp_v3f64(<3 x double> %x) #0 {
 ; PC64LE-NEXT:    fmr 1, 30
 ; PC64LE-NEXT:    bl exp
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE-NEXT:    fmr 1, 31
 ; PC64LE-NEXT:    bl exp
@@ -2851,6 +2930,7 @@ define <3 x double> @constrained_vector_exp_v3f64(<3 x double> %x) #0 {
 ; PC64LE9-NEXT:    fmr 1, 30
 ; PC64LE9-NEXT:    bl exp
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE9-NEXT:    fmr 1, 31
 ; PC64LE9-NEXT:    bl exp
@@ -2894,6 +2974,7 @@ define <4 x double> @constrained_vector_exp_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    xxswapd 1, 62
 ; PC64LE-NEXT:    bl exp
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 62, 61, 1
 ; PC64LE-NEXT:    xxlor 1, 63, 63
 ; PC64LE-NEXT:    bl exp
@@ -2904,6 +2985,7 @@ define <4 x double> @constrained_vector_exp_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 80
 ; PC64LE-NEXT:    vmr 2, 30
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 35, 61, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 64
@@ -2932,6 +3014,7 @@ define <4 x double> @constrained_vector_exp_v4f64(<4 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 62
 ; PC64LE9-NEXT:    bl exp
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 62, 61, 1
 ; PC64LE9-NEXT:    xscpsgndp 1, 63, 63
 ; PC64LE9-NEXT:    bl exp
@@ -2940,6 +3023,7 @@ define <4 x double> @constrained_vector_exp_v4f64(<4 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 63
 ; PC64LE9-NEXT:    bl exp
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 35, 61, 1
 ; PC64LE9-NEXT:    vmr 2, 30
 ; PC64LE9-NEXT:    lxv 63, 64(1) # 16-byte Folded Reload
@@ -3008,6 +3092,7 @@ define <2 x double> @constrained_vector_exp2_v2f64(<2 x double> %x) #0 {
 ; PC64LE-NEXT:    bl exp2
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 64
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 34, 62, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 48
@@ -3032,6 +3117,7 @@ define <2 x double> @constrained_vector_exp2_v2f64(<2 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 63
 ; PC64LE9-NEXT:    bl exp2
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 34, 62, 1
 ; PC64LE9-NEXT:    lxv 63, 48(1) # 16-byte Folded Reload
 ; PC64LE9-NEXT:    lxv 62, 32(1) # 16-byte Folded Reload
@@ -3154,6 +3240,7 @@ define <3 x double> @constrained_vector_exp2_v3f64(<3 x double> %x) #0 {
 ; PC64LE-NEXT:    fmr 1, 30
 ; PC64LE-NEXT:    bl exp2
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE-NEXT:    fmr 1, 31
 ; PC64LE-NEXT:    bl exp2
@@ -3186,6 +3273,7 @@ define <3 x double> @constrained_vector_exp2_v3f64(<3 x double> %x) #0 {
 ; PC64LE9-NEXT:    fmr 1, 30
 ; PC64LE9-NEXT:    bl exp2
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE9-NEXT:    fmr 1, 31
 ; PC64LE9-NEXT:    bl exp2
@@ -3229,6 +3317,7 @@ define <4 x double> @constrained_vector_exp2_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    xxswapd 1, 62
 ; PC64LE-NEXT:    bl exp2
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 62, 61, 1
 ; PC64LE-NEXT:    xxlor 1, 63, 63
 ; PC64LE-NEXT:    bl exp2
@@ -3239,6 +3328,7 @@ define <4 x double> @constrained_vector_exp2_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 80
 ; PC64LE-NEXT:    vmr 2, 30
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 35, 61, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 64
@@ -3267,6 +3357,7 @@ define <4 x double> @constrained_vector_exp2_v4f64(<4 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 62
 ; PC64LE9-NEXT:    bl exp2
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 62, 61, 1
 ; PC64LE9-NEXT:    xscpsgndp 1, 63, 63
 ; PC64LE9-NEXT:    bl exp2
@@ -3275,6 +3366,7 @@ define <4 x double> @constrained_vector_exp2_v4f64(<4 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 63
 ; PC64LE9-NEXT:    bl exp2
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 35, 61, 1
 ; PC64LE9-NEXT:    vmr 2, 30
 ; PC64LE9-NEXT:    lxv 63, 64(1) # 16-byte Folded Reload
@@ -3343,6 +3435,7 @@ define <2 x double> @constrained_vector_log_v2f64(<2 x double> %x) #0 {
 ; PC64LE-NEXT:    bl log
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 64
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 34, 62, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 48
@@ -3367,6 +3460,7 @@ define <2 x double> @constrained_vector_log_v2f64(<2 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 63
 ; PC64LE9-NEXT:    bl log
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 34, 62, 1
 ; PC64LE9-NEXT:    lxv 63, 48(1) # 16-byte Folded Reload
 ; PC64LE9-NEXT:    lxv 62, 32(1) # 16-byte Folded Reload
@@ -3489,6 +3583,7 @@ define <3 x double> @constrained_vector_log_v3f64(<3 x double> %x) #0 {
 ; PC64LE-NEXT:    fmr 1, 30
 ; PC64LE-NEXT:    bl log
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE-NEXT:    fmr 1, 31
 ; PC64LE-NEXT:    bl log
@@ -3521,6 +3616,7 @@ define <3 x double> @constrained_vector_log_v3f64(<3 x double> %x) #0 {
 ; PC64LE9-NEXT:    fmr 1, 30
 ; PC64LE9-NEXT:    bl log
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE9-NEXT:    fmr 1, 31
 ; PC64LE9-NEXT:    bl log
@@ -3564,6 +3660,7 @@ define <4 x double> @constrained_vector_log_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    xxswapd 1, 62
 ; PC64LE-NEXT:    bl log
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 62, 61, 1
 ; PC64LE-NEXT:    xxlor 1, 63, 63
 ; PC64LE-NEXT:    bl log
@@ -3574,6 +3671,7 @@ define <4 x double> @constrained_vector_log_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 80
 ; PC64LE-NEXT:    vmr 2, 30
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 35, 61, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 64
@@ -3602,6 +3700,7 @@ define <4 x double> @constrained_vector_log_v4f64(<4 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 62
 ; PC64LE9-NEXT:    bl log
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 62, 61, 1
 ; PC64LE9-NEXT:    xscpsgndp 1, 63, 63
 ; PC64LE9-NEXT:    bl log
@@ -3610,6 +3709,7 @@ define <4 x double> @constrained_vector_log_v4f64(<4 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 63
 ; PC64LE9-NEXT:    bl log
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 35, 61, 1
 ; PC64LE9-NEXT:    vmr 2, 30
 ; PC64LE9-NEXT:    lxv 63, 64(1) # 16-byte Folded Reload
@@ -3678,6 +3778,7 @@ define <2 x double> @constrained_vector_log10_v2f64(<2 x double> %x) #0 {
 ; PC64LE-NEXT:    bl log10
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 64
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 34, 62, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 48
@@ -3702,6 +3803,7 @@ define <2 x double> @constrained_vector_log10_v2f64(<2 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 63
 ; PC64LE9-NEXT:    bl log10
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 34, 62, 1
 ; PC64LE9-NEXT:    lxv 63, 48(1) # 16-byte Folded Reload
 ; PC64LE9-NEXT:    lxv 62, 32(1) # 16-byte Folded Reload
@@ -3824,6 +3926,7 @@ define <3 x double> @constrained_vector_log10_v3f64(<3 x double> %x) #0 {
 ; PC64LE-NEXT:    fmr 1, 30
 ; PC64LE-NEXT:    bl log10
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE-NEXT:    fmr 1, 31
 ; PC64LE-NEXT:    bl log10
@@ -3856,6 +3959,7 @@ define <3 x double> @constrained_vector_log10_v3f64(<3 x double> %x) #0 {
 ; PC64LE9-NEXT:    fmr 1, 30
 ; PC64LE9-NEXT:    bl log10
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE9-NEXT:    fmr 1, 31
 ; PC64LE9-NEXT:    bl log10
@@ -3899,6 +4003,7 @@ define <4 x double> @constrained_vector_log10_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    xxswapd 1, 62
 ; PC64LE-NEXT:    bl log10
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 62, 61, 1
 ; PC64LE-NEXT:    xxlor 1, 63, 63
 ; PC64LE-NEXT:    bl log10
@@ -3909,6 +4014,7 @@ define <4 x double> @constrained_vector_log10_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 80
 ; PC64LE-NEXT:    vmr 2, 30
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 35, 61, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 64
@@ -3937,6 +4043,7 @@ define <4 x double> @constrained_vector_log10_v4f64(<4 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 62
 ; PC64LE9-NEXT:    bl log10
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 62, 61, 1
 ; PC64LE9-NEXT:    xscpsgndp 1, 63, 63
 ; PC64LE9-NEXT:    bl log10
@@ -3945,6 +4052,7 @@ define <4 x double> @constrained_vector_log10_v4f64(<4 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 63
 ; PC64LE9-NEXT:    bl log10
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 35, 61, 1
 ; PC64LE9-NEXT:    vmr 2, 30
 ; PC64LE9-NEXT:    lxv 63, 64(1) # 16-byte Folded Reload
@@ -4013,6 +4121,7 @@ define <2 x double> @constrained_vector_log2_v2f64(<2 x double> %x) #0 {
 ; PC64LE-NEXT:    bl log2
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 64
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 34, 62, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 48
@@ -4037,6 +4146,7 @@ define <2 x double> @constrained_vector_log2_v2f64(<2 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 63
 ; PC64LE9-NEXT:    bl log2
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 34, 62, 1
 ; PC64LE9-NEXT:    lxv 63, 48(1) # 16-byte Folded Reload
 ; PC64LE9-NEXT:    lxv 62, 32(1) # 16-byte Folded Reload
@@ -4159,6 +4269,7 @@ define <3 x double> @constrained_vector_log2_v3f64(<3 x double> %x) #0 {
 ; PC64LE-NEXT:    fmr 1, 30
 ; PC64LE-NEXT:    bl log2
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE-NEXT:    fmr 1, 31
 ; PC64LE-NEXT:    bl log2
@@ -4191,6 +4302,7 @@ define <3 x double> @constrained_vector_log2_v3f64(<3 x double> %x) #0 {
 ; PC64LE9-NEXT:    fmr 1, 30
 ; PC64LE9-NEXT:    bl log2
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE9-NEXT:    fmr 1, 31
 ; PC64LE9-NEXT:    bl log2
@@ -4234,6 +4346,7 @@ define <4 x double> @constrained_vector_log2_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    xxswapd 1, 62
 ; PC64LE-NEXT:    bl log2
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 62, 61, 1
 ; PC64LE-NEXT:    xxlor 1, 63, 63
 ; PC64LE-NEXT:    bl log2
@@ -4244,6 +4357,7 @@ define <4 x double> @constrained_vector_log2_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 80
 ; PC64LE-NEXT:    vmr 2, 30
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 35, 61, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 64
@@ -4272,6 +4386,7 @@ define <4 x double> @constrained_vector_log2_v4f64(<4 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 62
 ; PC64LE9-NEXT:    bl log2
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 62, 61, 1
 ; PC64LE9-NEXT:    xscpsgndp 1, 63, 63
 ; PC64LE9-NEXT:    bl log2
@@ -4280,6 +4395,7 @@ define <4 x double> @constrained_vector_log2_v4f64(<4 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 63
 ; PC64LE9-NEXT:    bl log2
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 35, 61, 1
 ; PC64LE9-NEXT:    vmr 2, 30
 ; PC64LE9-NEXT:    lxv 63, 64(1) # 16-byte Folded Reload
@@ -4387,6 +4503,8 @@ define <3 x float> @constrained_vector_rint_v3f32(<3 x float> %x) #0 {
 define <3 x double> @constrained_vector_rint_v3f64(<3 x double> %x) #0 {
 ; PC64LE-LABEL: constrained_vector_rint_v3f64:
 ; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 0, 2, 1
 ; PC64LE-NEXT:    xsrdpic 3, 3
 ; PC64LE-NEXT:    xvrdpic 2, 0
@@ -4395,6 +4513,8 @@ define <3 x double> @constrained_vector_rint_v3f64(<3 x double> %x) #0 {
 ;
 ; PC64LE9-LABEL: constrained_vector_rint_v3f64:
 ; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 0, 2, 1
 ; PC64LE9-NEXT:    xsrdpic 3, 3
 ; PC64LE9-NEXT:    xvrdpic 2, 0
@@ -4479,6 +4599,7 @@ define <2 x double> @constrained_vector_nearbyint_v2f64(<2 x double> %x) #0 {
 ; PC64LE-NEXT:    bl nearbyint
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 64
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 34, 62, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 48
@@ -4503,6 +4624,7 @@ define <2 x double> @constrained_vector_nearbyint_v2f64(<2 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 63
 ; PC64LE9-NEXT:    bl nearbyint
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 34, 62, 1
 ; PC64LE9-NEXT:    lxv 63, 48(1) # 16-byte Folded Reload
 ; PC64LE9-NEXT:    lxv 62, 32(1) # 16-byte Folded Reload
@@ -4625,6 +4747,7 @@ define <3 x double> @constrained_vector_nearby_v3f64(<3 x double> %x) #0 {
 ; PC64LE-NEXT:    fmr 1, 30
 ; PC64LE-NEXT:    bl nearbyint
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE-NEXT:    fmr 1, 31
 ; PC64LE-NEXT:    bl nearbyint
@@ -4657,6 +4780,7 @@ define <3 x double> @constrained_vector_nearby_v3f64(<3 x double> %x) #0 {
 ; PC64LE9-NEXT:    fmr 1, 30
 ; PC64LE9-NEXT:    bl nearbyint
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE9-NEXT:    fmr 1, 31
 ; PC64LE9-NEXT:    bl nearbyint
@@ -4700,6 +4824,7 @@ define <4 x double> @constrained_vector_nearbyint_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    xxswapd 1, 62
 ; PC64LE-NEXT:    bl nearbyint
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 62, 61, 1
 ; PC64LE-NEXT:    xxlor 1, 63, 63
 ; PC64LE-NEXT:    bl nearbyint
@@ -4710,6 +4835,7 @@ define <4 x double> @constrained_vector_nearbyint_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 80
 ; PC64LE-NEXT:    vmr 2, 30
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 35, 61, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 64
@@ -4738,6 +4864,7 @@ define <4 x double> @constrained_vector_nearbyint_v4f64(<4 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 62
 ; PC64LE9-NEXT:    bl nearbyint
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 62, 61, 1
 ; PC64LE9-NEXT:    xscpsgndp 1, 63, 63
 ; PC64LE9-NEXT:    bl nearbyint
@@ -4746,6 +4873,7 @@ define <4 x double> @constrained_vector_nearbyint_v4f64(<4 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 63
 ; PC64LE9-NEXT:    bl nearbyint
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 35, 61, 1
 ; PC64LE9-NEXT:    vmr 2, 30
 ; PC64LE9-NEXT:    lxv 63, 64(1) # 16-byte Folded Reload
@@ -4927,6 +5055,10 @@ define <3 x double> @constrained_vector_max_v3f64(<3 x double> %x, <3 x double> 
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -64(1)
 ; PC64LE-NEXT:    li 3, 48
+; PC64LE-NEXT:    # kill: def $f5 killed $f5 def $vsl5
+; PC64LE-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; PC64LE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 0, 5, 4
 ; PC64LE-NEXT:    xxmrghd 1, 2, 1
 ; PC64LE-NEXT:    std 0, 80(1)
@@ -4950,6 +5082,10 @@ define <3 x double> @constrained_vector_max_v3f64(<3 x double> %x, <3 x double> 
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
 ; PC64LE9-NEXT:    stdu 1, -48(1)
+; PC64LE9-NEXT:    # kill: def $f5 killed $f5 def $vsl5
+; PC64LE9-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; PC64LE9-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 0, 5, 4
 ; PC64LE9-NEXT:    xxmrghd 1, 2, 1
 ; PC64LE9-NEXT:    std 0, 64(1)
@@ -5159,6 +5295,10 @@ define <3 x double> @constrained_vector_min_v3f64(<3 x double> %x, <3 x double> 
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -64(1)
 ; PC64LE-NEXT:    li 3, 48
+; PC64LE-NEXT:    # kill: def $f5 killed $f5 def $vsl5
+; PC64LE-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; PC64LE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 0, 5, 4
 ; PC64LE-NEXT:    xxmrghd 1, 2, 1
 ; PC64LE-NEXT:    std 0, 80(1)
@@ -5182,6 +5322,10 @@ define <3 x double> @constrained_vector_min_v3f64(<3 x double> %x, <3 x double> 
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
 ; PC64LE9-NEXT:    stdu 1, -48(1)
+; PC64LE9-NEXT:    # kill: def $f5 killed $f5 def $vsl5
+; PC64LE9-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; PC64LE9-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 0, 5, 4
 ; PC64LE9-NEXT:    xxmrghd 1, 2, 1
 ; PC64LE9-NEXT:    std 0, 64(1)
@@ -6520,6 +6664,8 @@ entry:
 define <3 x double> @constrained_vector_ceil_v3f64(<3 x double> %x) #0 {
 ; PC64LE-LABEL: constrained_vector_ceil_v3f64:
 ; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 0, 2, 1
 ; PC64LE-NEXT:    xsrdpip 3, 3
 ; PC64LE-NEXT:    xvrdpip 2, 0
@@ -6528,6 +6674,8 @@ define <3 x double> @constrained_vector_ceil_v3f64(<3 x double> %x) #0 {
 ;
 ; PC64LE9-LABEL: constrained_vector_ceil_v3f64:
 ; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 0, 2, 1
 ; PC64LE9-NEXT:    xsrdpip 3, 3
 ; PC64LE9-NEXT:    xvrdpip 2, 0
@@ -6628,6 +6776,8 @@ entry:
 define <3 x double> @constrained_vector_floor_v3f64(<3 x double> %x) #0 {
 ; PC64LE-LABEL: constrained_vector_floor_v3f64:
 ; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 0, 2, 1
 ; PC64LE-NEXT:    xsrdpim 3, 3
 ; PC64LE-NEXT:    xvrdpim 2, 0
@@ -6636,6 +6786,8 @@ define <3 x double> @constrained_vector_floor_v3f64(<3 x double> %x) #0 {
 ;
 ; PC64LE9-LABEL: constrained_vector_floor_v3f64:
 ; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 0, 2, 1
 ; PC64LE9-NEXT:    xsrdpim 3, 3
 ; PC64LE9-NEXT:    xvrdpim 2, 0
@@ -6736,6 +6888,8 @@ entry:
 define <3 x double> @constrained_vector_round_v3f64(<3 x double> %x) #0 {
 ; PC64LE-LABEL: constrained_vector_round_v3f64:
 ; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 0, 2, 1
 ; PC64LE-NEXT:    xsrdpi 3, 3
 ; PC64LE-NEXT:    xvrdpi 2, 0
@@ -6744,6 +6898,8 @@ define <3 x double> @constrained_vector_round_v3f64(<3 x double> %x) #0 {
 ;
 ; PC64LE9-LABEL: constrained_vector_round_v3f64:
 ; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 0, 2, 1
 ; PC64LE9-NEXT:    xsrdpi 3, 3
 ; PC64LE9-NEXT:    xvrdpi 2, 0
@@ -6843,6 +6999,8 @@ entry:
 define <3 x double> @constrained_vector_trunc_v3f64(<3 x double> %x) #0 {
 ; PC64LE-LABEL: constrained_vector_trunc_v3f64:
 ; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 0, 2, 1
 ; PC64LE-NEXT:    xsrdpiz 3, 3
 ; PC64LE-NEXT:    xvrdpiz 2, 0
@@ -6851,6 +7009,8 @@ define <3 x double> @constrained_vector_trunc_v3f64(<3 x double> %x) #0 {
 ;
 ; PC64LE9-LABEL: constrained_vector_trunc_v3f64:
 ; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 0, 2, 1
 ; PC64LE9-NEXT:    xsrdpiz 3, 3
 ; PC64LE9-NEXT:    xvrdpiz 2, 0
@@ -8049,6 +8209,7 @@ define <2 x double> @constrained_vector_tan_v2f64(<2 x double> %x) #0 {
 ; PC64LE-NEXT:    bl tan
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 64
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 34, 62, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 48
@@ -8073,6 +8234,7 @@ define <2 x double> @constrained_vector_tan_v2f64(<2 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 63
 ; PC64LE9-NEXT:    bl tan
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 34, 62, 1
 ; PC64LE9-NEXT:    lxv 63, 48(1) # 16-byte Folded Reload
 ; PC64LE9-NEXT:    lxv 62, 32(1) # 16-byte Folded Reload
@@ -8195,6 +8357,7 @@ define <3 x double> @constrained_vector_tan_v3f64(<3 x double> %x) #0 {
 ; PC64LE-NEXT:    fmr 1, 30
 ; PC64LE-NEXT:    bl tan
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE-NEXT:    fmr 1, 31
 ; PC64LE-NEXT:    bl tan
@@ -8227,6 +8390,7 @@ define <3 x double> @constrained_vector_tan_v3f64(<3 x double> %x) #0 {
 ; PC64LE9-NEXT:    fmr 1, 30
 ; PC64LE9-NEXT:    bl tan
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE9-NEXT:    fmr 1, 31
 ; PC64LE9-NEXT:    bl tan
@@ -8270,6 +8434,7 @@ define <4 x double> @constrained_vector_tan_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    xxswapd 1, 62
 ; PC64LE-NEXT:    bl tan
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 62, 61, 1
 ; PC64LE-NEXT:    xxlor 1, 63, 63
 ; PC64LE-NEXT:    bl tan
@@ -8280,6 +8445,7 @@ define <4 x double> @constrained_vector_tan_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 80
 ; PC64LE-NEXT:    vmr 2, 30
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 35, 61, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 64
@@ -8308,6 +8474,7 @@ define <4 x double> @constrained_vector_tan_v4f64(<4 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 62
 ; PC64LE9-NEXT:    bl tan
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 62, 61, 1
 ; PC64LE9-NEXT:    xscpsgndp 1, 63, 63
 ; PC64LE9-NEXT:    bl tan
@@ -8316,6 +8483,7 @@ define <4 x double> @constrained_vector_tan_v4f64(<4 x double> %x) #0 {
 ; PC64LE9-NEXT:    xxswapd 1, 63
 ; PC64LE9-NEXT:    bl tan
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 35, 61, 1
 ; PC64LE9-NEXT:    vmr 2, 30
 ; PC64LE9-NEXT:    lxv 63, 64(1) # 16-byte Folded Reload
@@ -8390,6 +8558,7 @@ define <2 x double> @constrained_vector_atan2_v2f64(<2 x double> %x, <2 x double
 ; PC64LE-NEXT:    bl atan2
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 80
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 34, 61, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 64
@@ -8420,6 +8589,7 @@ define <2 x double> @constrained_vector_atan2_v2f64(<2 x double> %x, <2 x double
 ; PC64LE9-NEXT:    xxswapd 2, 63
 ; PC64LE9-NEXT:    bl atan2
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 34, 61, 1
 ; PC64LE9-NEXT:    lxv 63, 64(1) # 16-byte Folded Reload
 ; PC64LE9-NEXT:    lxv 62, 48(1) # 16-byte Folded Reload
@@ -8571,6 +8741,7 @@ define <3 x double> @constrained_vector_atan2_v3f64(<3 x double> %x, <3 x double
 ; PC64LE-NEXT:    fmr 2, 30
 ; PC64LE-NEXT:    bl atan2
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE-NEXT:    fmr 1, 29
 ; PC64LE-NEXT:    fmr 2, 31
@@ -8612,6 +8783,7 @@ define <3 x double> @constrained_vector_atan2_v3f64(<3 x double> %x, <3 x double
 ; PC64LE9-NEXT:    fmr 2, 30
 ; PC64LE9-NEXT:    bl atan2
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 63, 1, 63
 ; PC64LE9-NEXT:    fmr 1, 29
 ; PC64LE9-NEXT:    fmr 2, 31
@@ -8667,6 +8839,7 @@ define <4 x double> @constrained_vector_atan2_v4f64(<4 x double> %x, <4 x double
 ; PC64LE-NEXT:    xxswapd 2, 62
 ; PC64LE-NEXT:    bl atan2
 ; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 62, 59, 1
 ; PC64LE-NEXT:    xxlor 1, 61, 61
 ; PC64LE-NEXT:    xxlor 2, 63, 63
@@ -8679,6 +8852,7 @@ define <4 x double> @constrained_vector_atan2_v4f64(<4 x double> %x, <4 x double
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 112
 ; PC64LE-NEXT:    vmr 2, 30
+; PC64LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE-NEXT:    xxmrghd 35, 60, 1
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PC64LE-NEXT:    li 3, 96
@@ -8717,6 +8891,7 @@ define <4 x double> @constrained_vector_atan2_v4f64(<4 x double> %x, <4 x double
 ; PC64LE9-NEXT:    xxswapd 2, 62
 ; PC64LE9-NEXT:    bl atan2
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 62, 59, 1
 ; PC64LE9-NEXT:    xscpsgndp 1, 61, 61
 ; PC64LE9-NEXT:    xscpsgndp 2, 63, 63
@@ -8727,6 +8902,7 @@ define <4 x double> @constrained_vector_atan2_v4f64(<4 x double> %x, <4 x double
 ; PC64LE9-NEXT:    xxswapd 2, 63
 ; PC64LE9-NEXT:    bl atan2
 ; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; PC64LE9-NEXT:    xxmrghd 35, 60, 1
 ; PC64LE9-NEXT:    vmr 2, 30
 ; PC64LE9-NEXT:    lxv 63, 96(1) # 16-byte Folded Reload
