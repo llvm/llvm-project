@@ -422,13 +422,10 @@ public:
     /// The resulting dynamic relocation has already had its addend computed.
     /// Calling computeAddend() is an error. Only for internal use.
     Computed,
-    /// The resulting dynamic relocation does not reference a symbol (#sym must
-    /// be nullptr) and uses #addend as the result of computeAddend(ctx).
-    AddendOnly,
     /// The resulting dynamic relocation will not reference a symbol: #sym is
     /// only used to compute the addend with InputSection::getRelocTargetVA().
     /// Useful for various relative and TLS relocations (e.g. R_X86_64_TPOFF64).
-    AddendOnlyWithTargetVA,
+    AddendOnly,
     /// The resulting dynamic relocation references symbol #sym from the dynamic
     /// symbol table and uses #addend as the value of computeAddend(ctx).
     AgainstSymbol,
@@ -441,7 +438,7 @@ public:
     /// addresses of 64kb pages that lie inside the output section.
     MipsMultiGotPage,
   };
-  /// This constructor records a relocation against a symbol.
+  /// This constructor records a normal relocation.
   DynamicReloc(RelType type, const InputSectionBase *inputSec,
                uint64_t offsetInSec, Kind kind, Symbol &sym, int64_t addend,
                RelExpr expr)
@@ -450,8 +447,9 @@ public:
   /// This constructor records a relative relocation with no symbol.
   DynamicReloc(RelType type, const InputSectionBase *inputSec,
                uint64_t offsetInSec, int64_t addend = 0)
-      : sym(nullptr), inputSec(inputSec), offsetInSec(offsetInSec), type(type),
-        addend(addend), kind(AddendOnly), expr(R_ADDEND) {}
+      : sym(inputSec->getCtx().dummySym), inputSec(inputSec),
+        offsetInSec(offsetInSec), type(type), addend(addend), kind(AddendOnly),
+        expr(R_ADDEND) {}
   /// This constructor records dynamic relocation settings used by the MIPS
   /// multi-GOT implementation.
   DynamicReloc(RelType type, const InputSectionBase *inputSec,
@@ -532,8 +530,8 @@ public:
                         uint64_t offsetInSec, Symbol &sym, int64_t addend,
                         RelType addendRelType, RelExpr expr) {
     assert(expr != R_ADDEND && "expected non-addend relocation expression");
-    addReloc<shard>(DynamicReloc::AddendOnlyWithTargetVA, dynType, isec,
-                    offsetInSec, sym, addend, expr, addendRelType);
+    addReloc<shard>(DynamicReloc::AddendOnly, dynType, isec, offsetInSec, sym,
+                    addend, expr, addendRelType);
   }
   /// Add a dynamic relocation using the target address of \p sym as the addend
   /// if \p sym is non-preemptible. Otherwise add a relocation against \p sym.
