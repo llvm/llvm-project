@@ -486,16 +486,13 @@ exit:                                 ; preds = %vector.body
 !1 = !{!"llvm.loop.isvectorized", i32 1}
 
 ; On Cortex-A55 we should runtime unroll the scalar epilogue loop, but not the
-; vector loop or vector epilogue loop.
+; vector loop.
 define void @scalar_epilogue(i64 %N, ptr %p, i8 %val) {
 ; APPLE-LABEL: define void @scalar_epilogue(
 ; APPLE-SAME: i64 [[N:%.*]], ptr [[P:%.*]], i8 [[VAL:%.*]]) #[[ATTR0]] {
 ; APPLE-NEXT:  [[ENTRY:.*]]:
-; APPLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
-; APPLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[FOR_BODY_PREHEADER:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
-; APPLE:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; APPLE-NEXT:    [[MIN_ITERS_CHECK7:%.*]] = icmp ult i64 [[N]], 32
-; APPLE-NEXT:    br i1 [[MIN_ITERS_CHECK7]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; APPLE-NEXT:    br i1 [[MIN_ITERS_CHECK7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[VECTOR_PH:.*]]
 ; APPLE:       [[VECTOR_PH]]:
 ; APPLE-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -32
 ; APPLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[VAL]], i64 0
@@ -516,31 +513,9 @@ define void @scalar_epilogue(i64 %N, ptr %p, i8 %val) {
 ; APPLE-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; APPLE:       [[MIDDLE_BLOCK]]:
 ; APPLE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; APPLE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
-; APPLE:       [[VEC_EPILOG_ITER_CHECK]]:
-; APPLE-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[N]], 24
-; APPLE-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
-; APPLE-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[FOR_BODY_PREHEADER]], label %[[VEC_EPILOG_PH]]
-; APPLE:       [[VEC_EPILOG_PH]]:
-; APPLE-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; APPLE-NEXT:    [[N_VEC10:%.*]] = and i64 [[N]], -8
-; APPLE-NEXT:    [[BROADCAST_SPLATINSERT11:%.*]] = insertelement <8 x i8> poison, i8 [[VAL]], i64 0
-; APPLE-NEXT:    [[BROADCAST_SPLAT12:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT11]], <8 x i8> poison, <8 x i32> zeroinitializer
-; APPLE-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
-; APPLE:       [[VEC_EPILOG_VECTOR_BODY]]:
-; APPLE-NEXT:    [[INDEX13:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT15:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; APPLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[INDEX13]]
-; APPLE-NEXT:    [[WIDE_LOAD14:%.*]] = load <8 x i8>, ptr [[TMP5]], align 1
-; APPLE-NEXT:    [[TMP6:%.*]] = add <8 x i8> [[WIDE_LOAD14]], [[BROADCAST_SPLAT12]]
-; APPLE-NEXT:    store <8 x i8> [[TMP6]], ptr [[TMP5]], align 1
-; APPLE-NEXT:    [[INDEX_NEXT15]] = add nuw i64 [[INDEX13]], 8
-; APPLE-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT15]], [[N_VEC10]]
-; APPLE-NEXT:    br i1 [[TMP7]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
-; APPLE:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; APPLE-NEXT:    [[CMP_N16:%.*]] = icmp eq i64 [[N]], [[N_VEC10]]
-; APPLE-NEXT:    br i1 [[CMP_N16]], label %[[EXIT]], label %[[FOR_BODY_PREHEADER]]
+; APPLE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[FOR_BODY_PREHEADER]]
 ; APPLE:       [[FOR_BODY_PREHEADER]]:
-; APPLE-NEXT:    [[I_06_PH:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[N_VEC10]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; APPLE-NEXT:    [[I_06_PH:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[N_VEC]], %[[MIDDLE_BLOCK]] ]
 ; APPLE-NEXT:    br label %[[FOR_BODY:.*]]
 ; APPLE:       [[FOR_BODY]]:
 ; APPLE-NEXT:    [[I_06:%.*]] = phi i64 [ [[INC:%.*]], %[[FOR_BODY]] ], [ [[I_06_PH]], %[[FOR_BODY_PREHEADER]] ]
@@ -550,7 +525,7 @@ define void @scalar_epilogue(i64 %N, ptr %p, i8 %val) {
 ; APPLE-NEXT:    store i8 [[ADD]], ptr [[ARRAYIDX]], align 1
 ; APPLE-NEXT:    [[INC]] = add nuw i64 [[I_06]], 1
 ; APPLE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[N]]
-; APPLE-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT_LOOPEXIT:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; APPLE-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT_LOOPEXIT:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; APPLE:       [[EXIT_LOOPEXIT]]:
 ; APPLE-NEXT:    br label %[[EXIT]]
 ; APPLE:       [[EXIT]]:
@@ -559,11 +534,8 @@ define void @scalar_epilogue(i64 %N, ptr %p, i8 %val) {
 ; CORTEXA55-LABEL: define void @scalar_epilogue(
 ; CORTEXA55-SAME: i64 [[N:%.*]], ptr [[P:%.*]], i8 [[VAL:%.*]]) #[[ATTR0]] {
 ; CORTEXA55-NEXT:  [[ENTRY:.*]]:
-; CORTEXA55-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
-; CORTEXA55-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[FOR_BODY_PREHEADER:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
-; CORTEXA55:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; CORTEXA55-NEXT:    [[MIN_ITERS_CHECK7:%.*]] = icmp ult i64 [[N]], 32
-; CORTEXA55-NEXT:    br i1 [[MIN_ITERS_CHECK7]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; CORTEXA55-NEXT:    br i1 [[MIN_ITERS_CHECK7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[VECTOR_PH:.*]]
 ; CORTEXA55:       [[VECTOR_PH]]:
 ; CORTEXA55-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -32
 ; CORTEXA55-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[VAL]], i64 0
@@ -584,31 +556,9 @@ define void @scalar_epilogue(i64 %N, ptr %p, i8 %val) {
 ; CORTEXA55-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CORTEXA55:       [[MIDDLE_BLOCK]]:
 ; CORTEXA55-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CORTEXA55-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
-; CORTEXA55:       [[VEC_EPILOG_ITER_CHECK]]:
-; CORTEXA55-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[N]], 24
-; CORTEXA55-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
-; CORTEXA55-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[FOR_BODY_PREHEADER]], label %[[VEC_EPILOG_PH]]
-; CORTEXA55:       [[VEC_EPILOG_PH]]:
-; CORTEXA55-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CORTEXA55-NEXT:    [[N_VEC10:%.*]] = and i64 [[N]], -8
-; CORTEXA55-NEXT:    [[BROADCAST_SPLATINSERT11:%.*]] = insertelement <8 x i8> poison, i8 [[VAL]], i64 0
-; CORTEXA55-NEXT:    [[BROADCAST_SPLAT12:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT11]], <8 x i8> poison, <8 x i32> zeroinitializer
-; CORTEXA55-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
-; CORTEXA55:       [[VEC_EPILOG_VECTOR_BODY]]:
-; CORTEXA55-NEXT:    [[INDEX13:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT15:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CORTEXA55-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[INDEX13]]
-; CORTEXA55-NEXT:    [[WIDE_LOAD14:%.*]] = load <8 x i8>, ptr [[TMP5]], align 1
-; CORTEXA55-NEXT:    [[TMP6:%.*]] = add <8 x i8> [[WIDE_LOAD14]], [[BROADCAST_SPLAT12]]
-; CORTEXA55-NEXT:    store <8 x i8> [[TMP6]], ptr [[TMP5]], align 1
-; CORTEXA55-NEXT:    [[INDEX_NEXT15]] = add nuw i64 [[INDEX13]], 8
-; CORTEXA55-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT15]], [[N_VEC10]]
-; CORTEXA55-NEXT:    br i1 [[TMP7]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
-; CORTEXA55:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CORTEXA55-NEXT:    [[CMP_N16:%.*]] = icmp eq i64 [[N]], [[N_VEC10]]
-; CORTEXA55-NEXT:    br i1 [[CMP_N16]], label %[[EXIT]], label %[[FOR_BODY_PREHEADER]]
+; CORTEXA55-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[FOR_BODY_PREHEADER]]
 ; CORTEXA55:       [[FOR_BODY_PREHEADER]]:
-; CORTEXA55-NEXT:    [[I_06_PH:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[N_VEC10]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; CORTEXA55-NEXT:    [[I_06_PH:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[N_VEC]], %[[MIDDLE_BLOCK]] ]
 ; CORTEXA55-NEXT:    [[TMP8:%.*]] = sub i64 [[N]], [[I_06_PH]]
 ; CORTEXA55-NEXT:    [[TMP9:%.*]] = add i64 [[N]], -1
 ; CORTEXA55-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP9]], [[I_06_PH]]
@@ -672,7 +622,7 @@ define void @scalar_epilogue(i64 %N, ptr %p, i8 %val) {
 ; CORTEXA55-NEXT:    store i8 [[ADD_3]], ptr [[ARRAYIDX_3]], align 1
 ; CORTEXA55-NEXT:    [[INC_3]] = add nuw i64 [[I_06]], 4
 ; CORTEXA55-NEXT:    [[EXITCOND_NOT_3:%.*]] = icmp eq i64 [[INC_3]], [[N]]
-; CORTEXA55-NEXT:    br i1 [[EXITCOND_NOT_3]], label %[[EXIT_LOOPEXIT_UNR_LCSSA:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CORTEXA55-NEXT:    br i1 [[EXITCOND_NOT_3]], label %[[EXIT_LOOPEXIT_UNR_LCSSA:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CORTEXA55:       [[EXIT_LOOPEXIT_UNR_LCSSA]]:
 ; CORTEXA55-NEXT:    br label %[[EXIT_LOOPEXIT]]
 ; CORTEXA55:       [[EXIT_LOOPEXIT]]:
@@ -681,12 +631,8 @@ define void @scalar_epilogue(i64 %N, ptr %p, i8 %val) {
 ; CORTEXA55-NEXT:    ret void
 ;
 entry:
-  %min.iters.check = icmp ult i64 %N, 8
-  br i1 %min.iters.check, label %for.body, label %vector.main.loop.iter.check
-
-vector.main.loop.iter.check:
-  %min.iters.check7 = icmp ult i64 %N, 32
-  br i1 %min.iters.check7, label %vec.epilog.ph, label %vector.ph
+  %min.iters.check = icmp ult i64 %N, 32
+  br i1 %min.iters.check, label %for.body, label %vector.ph
 
 vector.ph:
   %n.vec = and i64 %N, -32
@@ -710,43 +656,17 @@ vector.body:
 
 middle.block:
   %cmp.n = icmp eq i64 %N, %n.vec
-  br i1 %cmp.n, label %exit, label %vec.epilog.iter.check
-
-vec.epilog.iter.check:
-  %n.vec.remaining = and i64 %N, 24
-  %min.epilog.iters.check = icmp eq i64 %n.vec.remaining, 0
-  br i1 %min.epilog.iters.check, label %for.body, label %vec.epilog.ph
-
-vec.epilog.ph:
-  %vec.epilog.resume.val = phi i64 [ %n.vec, %vec.epilog.iter.check ], [ 0, %vector.main.loop.iter.check ]
-  %n.vec10 = and i64 %N, -8
-  %broadcast.splatinsert11 = insertelement <8 x i8> poison, i8 %val, i64 0
-  %broadcast.splat12 = shufflevector <8 x i8> %broadcast.splatinsert11, <8 x i8> poison, <8 x i32> zeroinitializer
-  br label %vec.epilog.vector.body
-
-vec.epilog.vector.body:
-  %index13 = phi i64 [ %vec.epilog.resume.val, %vec.epilog.ph ], [ %index.next15, %vec.epilog.vector.body ]
-  %5 = getelementptr inbounds nuw i8, ptr %p, i64 %index13
-  %wide.load14 = load <8 x i8>, ptr %5, align 1
-  %6 = add <8 x i8> %wide.load14, %broadcast.splat12
-  store <8 x i8> %6, ptr %5, align 1
-  %index.next15 = add nuw i64 %index13, 8
-  %7 = icmp eq i64 %index.next15, %n.vec10
-  br i1 %7, label %vec.epilog.middle.block, label %vec.epilog.vector.body, !llvm.loop !3
-
-vec.epilog.middle.block:
-  %cmp.n16 = icmp eq i64 %N, %n.vec10
-  br i1 %cmp.n16, label %exit, label %for.body
+  br i1 %cmp.n, label %exit, label %for.body
 
 for.body:
-  %i.06 = phi i64 [ %inc, %for.body ], [ %n.vec10, %vec.epilog.middle.block ], [ %n.vec, %vec.epilog.iter.check ], [ 0, %entry ]
+  %i.06 = phi i64 [ %inc, %for.body ], [ %n.vec, %middle.block ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds nuw i8, ptr %p, i64 %i.06
   %8 = load i8, ptr %arrayidx, align 1
   %add = add i8 %8, %val
   store i8 %add, ptr %arrayidx, align 1
   %inc = add nuw i64 %i.06, 1
   %exitcond.not = icmp eq i64 %inc, %N
-  br i1 %exitcond.not, label %exit, label %for.body, !llvm.loop !4
+  br i1 %exitcond.not, label %exit, label %for.body, !llvm.loop !3
 
 exit:
   ret void
@@ -754,7 +674,6 @@ exit:
 
 !2 = distinct !{!2, !1}
 !3 = distinct !{!3, !1}
-!4 = distinct !{!4, !1}
 
 ;.
 ; APPLE: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
@@ -763,11 +682,9 @@ exit:
 ; APPLE: [[META3]] = !{!"llvm.loop.isvectorized", i32 1}
 ; APPLE: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]]}
 ; APPLE: [[LOOP5]] = distinct !{[[LOOP5]], [[META3]]}
-; APPLE: [[LOOP6]] = distinct !{[[LOOP6]], [[META3]]}
 ;.
 ; CORTEXA55: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
 ; CORTEXA55: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CORTEXA55: [[LOOP2]] = distinct !{[[LOOP2]], [[META1]]}
 ; CORTEXA55: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
-; CORTEXA55: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]]}
 ;.
