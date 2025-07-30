@@ -17,4 +17,4 @@ program main
     res = dosomething(res)
     !$acc end serial
 end program
-    
+
