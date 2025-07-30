@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/atan2f128.h"
-#include "atan_utils.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/multiply_add.h"
@@ -16,6 +15,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/macros/properties/types.h"
+#include "src/__support/math/atan_utils.h"
 #include "src/__support/uint128.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -103,6 +103,7 @@ static constexpr Float128 CONST_ADJ[2][2][2] = {
 //   |(atan(u) - P(u)) / P(u)| < 2^-114.
 
 LLVM_LIBC_FUNCTION(float128, atan2f128, (float128 y, float128 x)) {
+  using namespace atan_internal;
   using FPBits = fputil::FPBits<float128>;
   using Float128 = fputil::DyadicFloat<128>;
 
