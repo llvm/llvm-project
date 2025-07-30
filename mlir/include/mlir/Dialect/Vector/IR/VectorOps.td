@@ -1876,7 +1876,9 @@ def Vector_MaskedLoadOp :
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$pass_thru)>,
+               AnyVectorOfNonZeroRank:$pass_thru,
+               ConfinedAttr<OptionalAttr<I64Attr>,
+                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
   let summary = "loads elements from memory into a vector as defined by a mask vector";
@@ -1912,6 +1914,12 @@ def Vector_MaskedLoadOp :
     %1 = vector.maskedload %base[%i, %j], %mask, %pass_thru
        : memref<?x?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
     ```
+
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    load operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
   }];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -1932,6 +1940,29 @@ def Vector_MaskedLoadOp :
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
+
+  let builders = [
+    OpBuilder<(ins "VectorType":$resultType,
+                   "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$mask,
+                   "Value":$passthrough,
+                   CArg<"uint64_t", "0">:$alignment), [{
+      return build($_builder, $_state, resultType, base, indices, mask, passthrough,
+                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                                    nullptr);
+    }]>,
+    OpBuilder<(ins "TypeRange":$resultTypes,
+                   "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$mask,
+                   "Value":$passthrough,
+                   CArg<"uint64_t", "0">:$alignment), [{
+      return build($_builder, $_state, resultTypes, base, indices, mask, passthrough,
+                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                                    nullptr);
+    }]>
+  ];
 }
 
 def Vector_MaskedStoreOp :
