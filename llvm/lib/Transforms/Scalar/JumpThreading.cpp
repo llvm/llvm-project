@@ -2547,9 +2547,9 @@ void JumpThreadingPass::updateBlockFreqAndEdgeWeight(BasicBlock *PredBB,
   // Collect updated outgoing edges' frequencies from BB and use them to update
   // edge probabilities.
   SmallVector<uint64_t, 4> BBSuccFreq;
-  for (succ_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
+  for (succ_iterator B = succ_begin(BB), I = B, E = succ_end(BB); I != E; ++I) {
     auto BB2SuccBBFreq =
-        BBOrigFreq * BPI->getEdgeProbability(BB, I.getSuccessorIndex());
+        BBOrigFreq * BPI->getEdgeProbability(BB, std::distance(B, I));
     auto SuccFreq = (*I == SuccBB) ? BB2SuccBBFreq - NewBBFreq : BB2SuccBBFreq;
     BBSuccFreq.push_back(SuccFreq.getFrequency());
   }
