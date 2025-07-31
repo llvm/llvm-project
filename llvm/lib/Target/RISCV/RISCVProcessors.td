@@ -628,7 +628,7 @@ def XIANGSHAN_NANHU : RISCVProcessorModel<"xiangshan-nanhu",
                                             TuneShiftedZExtWFusion]>;
 
 def XIANGSHAN_KUNMINGHU : RISCVProcessorModel<"xiangshan-kunminghu",
-                                              NoSchedModel,
+                                              XiangShanKunMingHuModel,
                                               !listconcat(RVA23S64Features,
                                               [FeatureStdExtZacas,
                                                FeatureStdExtZbc,
