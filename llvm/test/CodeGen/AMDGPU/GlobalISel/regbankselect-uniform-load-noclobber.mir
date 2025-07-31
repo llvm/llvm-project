@@ -17,13 +17,13 @@ body: |
     ; GFX7-NEXT: %out_addr:sgpr(p1) = COPY $sgpr2_sgpr3
     ; GFX7-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD %in_addr(p1) :: (load (<4 x s32>), align 4, addrspace 1)
     ; GFX7-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GFX7-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p1) = G_PTR_ADD %in_addr, [[C]](s64)
+    ; GFX7-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p1) = nuw inbounds G_PTR_ADD %in_addr, [[C]](s64)
     ; GFX7-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p1) :: (load (<4 x s32>) from unknown-address + 16, align 4, addrspace 1)
     ; GFX7-NEXT: [[C1:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 32
-    ; GFX7-NEXT: [[PTR_ADD1:%[0-9]+]]:vgpr(p1) = G_PTR_ADD %in_addr, [[C1]](s64)
+    ; GFX7-NEXT: [[PTR_ADD1:%[0-9]+]]:vgpr(p1) = nuw inbounds G_PTR_ADD %in_addr, [[C1]](s64)
     ; GFX7-NEXT: [[LOAD2:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD1]](p1) :: (load (<4 x s32>) from unknown-address + 32, align 4, addrspace 1)
     ; GFX7-NEXT: [[C2:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 48
-    ; GFX7-NEXT: [[PTR_ADD2:%[0-9]+]]:vgpr(p1) = G_PTR_ADD %in_addr, [[C2]](s64)
+    ; GFX7-NEXT: [[PTR_ADD2:%[0-9]+]]:vgpr(p1) = nuw inbounds G_PTR_ADD %in_addr, [[C2]](s64)
     ; GFX7-NEXT: [[LOAD3:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD2]](p1) :: (load (<4 x s32>) from unknown-address + 48, align 4, addrspace 1)
     ; GFX7-NEXT: %load:vgpr(<16 x s32>) = G_CONCAT_VECTORS [[LOAD]](<4 x s32>), [[LOAD1]](<4 x s32>), [[LOAD2]](<4 x s32>), [[LOAD3]](<4 x s32>)
     ; GFX7-NEXT: %load0_3:vgpr(<4 x s32>), %load4_7:vgpr(<4 x s32>), %load8_11:vgpr(<4 x s32>), %load12_15:vgpr(<4 x s32>) = G_UNMERGE_VALUES %load(<16 x s32>)
@@ -38,6 +38,7 @@ body: |
     ; GFX7-NEXT: %out_addr_plus_48:sgpr(p1) = G_PTR_ADD %out_addr, %cst48(s64)
     ; GFX7-NEXT: G_STORE %load12_15(<4 x s32>), %out_addr_plus_48(p1) :: (store (<4 x s32>), align 4, addrspace 1)
     ; GFX7-NEXT: S_ENDPGM 0
+    ;
     ; GFX1010-LABEL: name: test_uniform_load_without_noclobber
     ; GFX1010: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
     ; GFX1010-NEXT: {{  $}}
@@ -46,13 +47,13 @@ body: |
     ; GFX1010-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY %in_addr(p1)
     ; GFX1010-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD %in_addr(p1) :: (load (<4 x s32>), align 4, addrspace 1)
     ; GFX1010-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GFX1010-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p1) = G_PTR_ADD %in_addr, [[C]](s64)
+    ; GFX1010-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p1) = nuw inbounds G_PTR_ADD %in_addr, [[C]](s64)
     ; GFX1010-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p1) :: (load (<4 x s32>) from unknown-address + 16, align 4, addrspace 1)
     ; GFX1010-NEXT: [[C1:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 32
-    ; GFX1010-NEXT: [[PTR_ADD1:%[0-9]+]]:vgpr(p1) = G_PTR_ADD %in_addr, [[C1]](s64)
+    ; GFX1010-NEXT: [[PTR_ADD1:%[0-9]+]]:vgpr(p1) = nuw inbounds G_PTR_ADD %in_addr, [[C1]](s64)
     ; GFX1010-NEXT: [[LOAD2:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD1]](p1) :: (load (<4 x s32>) from unknown-address + 32, align 4, addrspace 1)
     ; GFX1010-NEXT: [[C2:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 48
-    ; GFX1010-NEXT: [[PTR_ADD2:%[0-9]+]]:vgpr(p1) = G_PTR_ADD %in_addr, [[C2]](s64)
+    ; GFX1010-NEXT: [[PTR_ADD2:%[0-9]+]]:vgpr(p1) = nuw inbounds G_PTR_ADD %in_addr, [[C2]](s64)
     ; GFX1010-NEXT: [[LOAD3:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD2]](p1) :: (load (<4 x s32>) from unknown-address + 48, align 4, addrspace 1)
     ; GFX1010-NEXT: %load:vgpr(<16 x s32>) = G_CONCAT_VECTORS [[LOAD]](<4 x s32>), [[LOAD1]](<4 x s32>), [[LOAD2]](<4 x s32>), [[LOAD3]](<4 x s32>)
     ; GFX1010-NEXT: %load0_3:vgpr(<4 x s32>), %load4_7:vgpr(<4 x s32>), %load8_11:vgpr(<4 x s32>), %load12_15:vgpr(<4 x s32>) = G_UNMERGE_VALUES %load(<16 x s32>)
@@ -103,7 +104,7 @@ body: |
     ; GFX7-NEXT: %out:sgpr(p1) = COPY $sgpr2_sgpr3
     ; GFX7-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD %ptr(p4) :: (load (<4 x s32>), align 1, addrspace 4)
     ; GFX7-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GFX7-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD %ptr, [[C]](s64)
+    ; GFX7-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = nuw inbounds G_PTR_ADD %ptr, [[C]](s64)
     ; GFX7-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load (<4 x s32>) from unknown-address + 16, align 1, addrspace 4)
     ; GFX7-NEXT: %load:vgpr(<8 x s32>) = G_CONCAT_VECTORS [[LOAD]](<4 x s32>), [[LOAD1]](<4 x s32>)
     ; GFX7-NEXT: %load0_3:vgpr(<4 x s32>), %load4_7:vgpr(<4 x s32>) = G_UNMERGE_VALUES %load(<8 x s32>)
@@ -112,6 +113,7 @@ body: |
     ; GFX7-NEXT: %out_plus_16:sgpr(p1) = G_PTR_ADD %out, %cst_16(s64)
     ; GFX7-NEXT: G_STORE %load4_7(<4 x s32>), %out_plus_16(p1) :: (store (<4 x s32>), align 32, addrspace 1)
     ; GFX7-NEXT: S_ENDPGM 0
+    ;
     ; GFX1010-LABEL: name: test_s_load_constant_v8i32_align1
     ; GFX1010: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
     ; GFX1010-NEXT: {{  $}}
@@ -120,7 +122,7 @@ body: |
     ; GFX1010-NEXT: [[COPY:%[0-9]+]]:vgpr(p4) = COPY %ptr(p4)
     ; GFX1010-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD %ptr(p4) :: (load (<4 x s32>), align 1, addrspace 4)
     ; GFX1010-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GFX1010-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD %ptr, [[C]](s64)
+    ; GFX1010-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = nuw inbounds G_PTR_ADD %ptr, [[C]](s64)
     ; GFX1010-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load (<4 x s32>) from unknown-address + 16, align 1, addrspace 4)
     ; GFX1010-NEXT: %load:vgpr(<8 x s32>) = G_CONCAT_VECTORS [[LOAD]](<4 x s32>), [[LOAD1]](<4 x s32>)
     ; GFX1010-NEXT: %load0_3:vgpr(<4 x s32>), %load4_7:vgpr(<4 x s32>) = G_UNMERGE_VALUES %load(<8 x s32>)

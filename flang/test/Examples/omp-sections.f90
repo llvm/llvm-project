@@ -13,11 +13,11 @@ subroutine omp_sections()
 end subroutine omp_sections
 
 !CHECK: - file:            {{.*}}
-!CHECK:   line:            9
+!CHECK:   line:            8
 !CHECK:   construct:       section
 !CHECK:   clauses:         []
 !CHECK: - file:            {{.*}}
-!CHECK:   line:            11
+!CHECK:   line:            10
 !CHECK:   construct:       section
 !CHECK:   clauses:         []
 !CHECK: - file:            {{.*}}

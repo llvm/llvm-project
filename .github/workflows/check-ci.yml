@@ -31,6 +31,7 @@ jobs:
       - name: Install Python Dependencies
         run: |
           pip3 install -r .ci/all_requirements.txt
+          pip3 install -r .ci/metrics/requirements.lock.txt
           pip3 install pytest==8.4.1
       - name: Run Tests
         working-directory: .ci

@@ -216,29 +216,6 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
   if (!isLegalInterleavedAccessType(VTy, Factor, Alignment, AS, DL))
     return false;
 
-  // If the segment load is going to be performed segment at a time anyways
-  // and there's only one element used, use a strided load instead.  This
-  // will be equally fast, and create less vector register pressure.
-  if (Indices.size() == 1 && !Subtarget.hasOptimizedSegmentLoadStore(Factor)) {
-    unsigned ScalarSizeInBytes = DL.getTypeStoreSize(VTy->getElementType());
-    Value *Stride = ConstantInt::get(XLenTy, Factor * ScalarSizeInBytes);
-    Value *Offset = ConstantInt::get(XLenTy, Indices[0] * ScalarSizeInBytes);
-    Value *BasePtr = Builder.CreatePtrAdd(Ptr, Offset);
-    // Note: Same VL as above, but i32 not xlen due to signature of
-    // vp.strided.load
-    VL = Builder.CreateElementCount(Builder.getInt32Ty(),
-                                    VTy->getElementCount());
-    CallInst *CI =
-        Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_load,
-                                {VTy, BasePtr->getType(), Stride->getType()},
-                                {BasePtr, Stride, Mask, VL});
-    Alignment = commonAlignment(Alignment, Indices[0] * ScalarSizeInBytes);
-    CI->addParamAttr(0,
-                     Attribute::getWithAlignment(CI->getContext(), Alignment));
-    Shuffles[0]->replaceAllUsesWith(CI);
-    return true;
-  };
-
   CallInst *VlsegN = Builder.CreateIntrinsic(
       FixedVlsegIntrIds[Factor - 2], {VTy, PtrTy, XLenTy}, {Ptr, Mask, VL});
 
@@ -288,34 +265,6 @@ bool RISCVTargetLowering::lowerInterleavedStore(Instruction *Store,
   unsigned AS = PtrTy->getPointerAddressSpace();
   if (!isLegalInterleavedAccessType(VTy, Factor, Alignment, AS, DL))
     return false;
-
-  unsigned Index;
-  // If the segment store only has one active lane (i.e. the interleave is
-  // just a spread shuffle), we can use a strided store instead.  This will
-  // be equally fast, and create less vector register pressure.
-  if (!Subtarget.hasOptimizedSegmentLoadStore(Factor) &&
-      isSpreadMask(Mask, Factor, Index)) {
-    unsigned ScalarSizeInBytes =
-        DL.getTypeStoreSize(ShuffleVTy->getElementType());
-    Value *Data = SVI->getOperand(0);
-    Data = Builder.CreateExtractVector(VTy, Data, uint64_t(0));
-    Value *Stride = ConstantInt::get(XLenTy, Factor * ScalarSizeInBytes);
-    Value *Offset = ConstantInt::get(XLenTy, Index * ScalarSizeInBytes);
-    Value *BasePtr = Builder.CreatePtrAdd(Ptr, Offset);
-    // Note: Same VL as above, but i32 not xlen due to signature of
-    // vp.strided.store
-    VL = Builder.CreateElementCount(Builder.getInt32Ty(),
-                                    VTy->getElementCount());
-
-    CallInst *CI =
-        Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_store,
-                                {VTy, BasePtr->getType(), Stride->getType()},
-                                {Data, BasePtr, Stride, LaneMask, VL});
-    Alignment = commonAlignment(Alignment, Index * ScalarSizeInBytes);
-    CI->addParamAttr(1,
-                     Attribute::getWithAlignment(CI->getContext(), Alignment));
-    return true;
-  }
 
   Function *VssegNFunc = Intrinsic::getOrInsertDeclaration(
       Store->getModule(), FixedVssegIntrIds[Factor - 2], {VTy, PtrTy, XLenTy});
