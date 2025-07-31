@@ -40,9 +40,6 @@ const SCEV *getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE);
 /// Returns true if \p VPV is a single scalar, either because it produces the
 /// same value for all lanes or only has its first lane used.
 inline bool isSingleScalar(const VPValue *VPV) {
-  if (onlyFirstLaneUsed(VPV))
-    return true;
-
   auto PreservesUniformity = [](unsigned Opcode) -> bool {
     if (Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode))
       return true;

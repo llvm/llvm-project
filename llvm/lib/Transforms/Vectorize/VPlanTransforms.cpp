@@ -1218,7 +1218,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       // Skip recipes that aren't single scalars, that don't have users, and
       // that don't have only their scalar results used (this would introduce
       // extra broadcasts).
-      if (!vputils::isSingleScalar(RepOrWidenR) ||
+      if ((!vputils::isSingleScalar(RepOrWidenR) &&
+           !vputils::onlyFirstLaneUsed(RepOrWidenR)) ||
           RepOrWidenR->getNumUsers() == 0 ||
           any_of(RepOrWidenR->users(), [RepOrWidenR](VPUser *U) {
             return !U->usesScalars(RepOrWidenR);
