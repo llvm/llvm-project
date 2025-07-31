@@ -1015,8 +1015,10 @@ class SrcAndDstSelToOpSelXForm<int modifier_idx, bit dest_sel> : SDNodeXForm<tim
   if (}] # modifier_idx # [{ == 0) {
     New = (}] # dest_sel # [{ == 1) ? ((Val & 0x1) ? (SISrcMods::OP_SEL_0 | SISrcMods::DST_OP_SEL) : SISrcMods::DST_OP_SEL)
                                     : ((Val & 0x1) ? SISrcMods::OP_SEL_0 : SISrcMods::NONE);
-  } else if (}] # modifier_idx # [{== 1 || }] # modifier_idx # [{ == 2) {
-      New = (Val & 0x2) ? SISrcMods::OP_SEL_0 : SISrcMods::NONE;
+  } else if (}] # modifier_idx # [{== 1) {
+    New = (Val & 0x2) ? SISrcMods::OP_SEL_0 : SISrcMods::NONE;
+  } if (}] # modifier_idx # [{== 2) {
+    New = (Val & 0x1) ? SISrcMods::OP_SEL_0 : SISrcMods::NONE;
   }
   return CurDAG->getTargetConstant(New, SDLoc(N), MVT::i32);
 }]>;
@@ -1060,7 +1062,7 @@ def gi_SrcSelToOpSelXForm : GICustomOperandRenderer<"renderSrcSelToOpSelXForm">,
 def DstSelToOpSel3XForm : SDNodeXForm<timm, [{
   uint32_t V = N->getZExtValue();
   return CurDAG->getTargetConstant(
-      (V & 0x1) ? SISrcMods::DST_OP_SEL : SISrcMods::NONE,
+      (V & 0x2) ? SISrcMods::DST_OP_SEL : SISrcMods::NONE,
       SDLoc(N), MVT::i32);
 }]>;
 def gi_DstSelToOpSel3XForm : GICustomOperandRenderer<"renderDstSelToOpSel3XFormXForm">,
