@@ -2125,9 +2125,11 @@ private:
 
     llvm::SmallVector<mlir::Value> reduceVars;
     Fortran::lower::omp::ReductionProcessor rp;
-    rp.processReductionArguments<fir::DeclareReductionOp>(
+    bool result = rp.processReductionArguments<fir::DeclareReductionOp>(
         toLocation(), *this, info.reduceOperatorList, reduceVars,
         reduceVarByRef, reductionDeclSymbols, info.reduceSymList);
+    assert(result && "Failed to process `do concurrent` reductions");
+    (void)result;
 
     doConcurrentLoopOp.getReduceVarsMutable().assign(reduceVars);
     doConcurrentLoopOp.setReduceSymsAttr(
@@ -5508,10 +5510,34 @@ private:
   void genFIR(const Fortran::parser::AssignStmt &stmt) {
     const Fortran::semantics::Symbol &symbol =
         *std::get<Fortran::parser::Name>(stmt.t).symbol;
+
     mlir::Location loc = toLocation();
+    mlir::Type symbolType = genType(symbol);
+    mlir::Value addr = getSymbolAddress(symbol);
+
+    // Handle the case where the assigned variable is declared as a pointer
+    if (auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(symbolType)) {
+      if (auto ptrType = mlir::dyn_cast<fir::PointerType>(eleTy)) {
+        symbolType = ptrType.getEleTy();
+      } else {
+        symbolType = eleTy;
+      }
+    } else if (auto ptrType = mlir::dyn_cast<fir::PointerType>(symbolType)) {
+      symbolType = ptrType.getEleTy();
+    }
+
     mlir::Value labelValue = builder->createIntegerConstant(
-        loc, genType(symbol), std::get<Fortran::parser::Label>(stmt.t));
-    builder->create<fir::StoreOp>(loc, labelValue, getSymbolAddress(symbol));
+        loc, symbolType, std::get<Fortran::parser::Label>(stmt.t));
+
+    // If the address points to a boxed pointer, we need to dereference it
+    if (auto refType = mlir::dyn_cast<fir::ReferenceType>(addr.getType())) {
+      if (auto boxType = mlir::dyn_cast<fir::BoxType>(refType.getEleTy())) {
+        mlir::Value boxValue = builder->create<fir::LoadOp>(loc, addr);
+        addr = builder->create<fir::BoxAddrOp>(loc, boxValue);
+      }
+    }
+
+    builder->create<fir::StoreOp>(loc, labelValue, addr);
   }
 
   void genFIR(const Fortran::parser::FormatStmt &) {
@@ -6707,6 +6733,10 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setKindMapping(*module, kindMap);
   fir::setTargetCPU(*module, targetMachine.getTargetCPU());
   fir::setTuneCPU(*module, targetOpts.cpuToTuneFor);
+  fir::setAtomicIgnoreDenormalMode(*module,
+                                   targetOpts.atomicIgnoreDenormalMode);
+  fir::setAtomicFineGrainedMemory(*module, targetOpts.atomicFineGrainedMemory);
+  fir::setAtomicRemoteMemory(*module, targetOpts.atomicRemoteMemory);
   fir::setTargetFeatures(*module, targetMachine.getTargetFeatureString());
   fir::support::setMLIRDataLayout(*module, targetMachine.createDataLayout());
   fir::setIdent(*module, Fortran::common::getFlangFullVersion());

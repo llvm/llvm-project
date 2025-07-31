@@ -1983,6 +1983,16 @@ static inline bool Activate(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+static inline bool ActivateThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
+  if (S.checkingPotentialConstantExpression())
+    return false;
+
+  const Pointer &Ptr = S.Current->getThis();
+  assert(Ptr.atField(I).canBeInitialized());
+  Ptr.atField(I).activate();
+  return true;
+}
+
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool StoreActivate(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
