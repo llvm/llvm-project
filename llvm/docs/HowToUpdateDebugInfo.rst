@@ -169,6 +169,14 @@ See the discussion in the section about
 :ref:`merging locations<WhenToMergeLocation>` for examples of when the rule for
 dropping locations applies.
 
+When to remap a debug location
+------------------------------
+
+When code paths are duplicated, during passes such as loop unrolling or jump
+threading, `DILocation` attachments need to be remapped using `mapAtomInstance`
+and `RemapSourceAtom`. This is to support the Key Instructions debug info feature.
+See :doc:`KeyInstructionsDebugInfo` for information.
+
 .. _NewInstLocations:
 
 Setting locations for new instructions
@@ -496,7 +504,7 @@ as follows:
 
 .. code-block:: bash
 
-  $ llvm-original-di-preservation.py sample.json sample.html
+  $ llvm-original-di-preservation.py sample.json --report-file sample.html
 
 Testing of original debug info preservation can be invoked from front-end level
 as follows:

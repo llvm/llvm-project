@@ -118,9 +118,7 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
     return createM68kTargetCodeGenInfo(CGM);
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
-    if (Triple.getOS() == llvm::Triple::NaCl)
-      return createPNaClTargetCodeGenInfo(CGM);
-    else if (Triple.getOS() == llvm::Triple::Win32)
+    if (Triple.getOS() == llvm::Triple::Win32)
       return createWindowsMIPSTargetCodeGenInfo(CGM, /*IsOS32=*/true);
     return createMIPSTargetCodeGenInfo(CGM, /*IsOS32=*/true);
 
@@ -388,8 +386,7 @@ static void checkDataLayoutConsistency(const TargetInfo &Target,
           llvm::Type::getFloatingPointTy(Context, *Target.LongDoubleFormat),
           Target.LongDoubleAlign);
   }
-  // FIXME: Wasm has a mismatch in f128 alignment between Clang and LLVM.
-  if (Target.hasFloat128Type() && !Triple.isWasm())
+  if (Target.hasFloat128Type())
     Check("__float128", llvm::Type::getFP128Ty(Context), Target.Float128Align);
   if (Target.hasIbm128Type())
     Check("__ibm128", llvm::Type::getPPC_FP128Ty(Context), Target.Ibm128Align);
@@ -4421,8 +4418,9 @@ void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD, llvm::GlobalValue *GV) {
 static void ReplaceUsesOfNonProtoTypeWithRealFunction(llvm::GlobalValue *Old,
                                                       llvm::Function *NewFn);
 
-static uint64_t getFMVPriority(const TargetInfo &TI,
-                               const CodeGenFunction::FMVResolverOption &RO) {
+static llvm::APInt
+getFMVPriority(const TargetInfo &TI,
+               const CodeGenFunction::FMVResolverOption &RO) {
   llvm::SmallVector<StringRef, 8> Features{RO.Features};
   if (RO.Architecture)
     Features.push_back(*RO.Architecture);
@@ -4547,7 +4545,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
     llvm::stable_sort(
         Options, [&TI](const CodeGenFunction::FMVResolverOption &LHS,
                        const CodeGenFunction::FMVResolverOption &RHS) {
-          return getFMVPriority(TI, LHS) > getFMVPriority(TI, RHS);
+          return getFMVPriority(TI, LHS).ugt(getFMVPriority(TI, RHS));
         });
     CodeGenFunction CGF(*this);
     CGF.EmitMultiVersionResolver(ResolverFunc, Options);
@@ -6617,7 +6615,9 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   auto Fields = Builder.beginStruct(STy);
 
   // Class pointer.
-  Fields.add(cast<llvm::Constant>(CFConstantStringClassRef));
+  Fields.addSignedPointer(cast<llvm::Constant>(CFConstantStringClassRef),
+                          getCodeGenOpts().PointerAuth.ObjCIsaPointers,
+                          GlobalDecl(), QualType());
 
   // Flags.
   if (IsSwiftABI) {

@@ -252,6 +252,17 @@ def GPULaneMappingAttr
   }];
 }
 
+def GPUMappingMaskAttr : GPU_Attr<"GPUMappingMask", "mask", [
+  DeclareAttrInterfaceMethods<DeviceMaskingAttrInterface> ] >  {
+  let parameters = (ins "uint64_t":$mask);
+  let assemblyFormat = "`<` params `>`";
+  let description = [{
+    Attribute describing how to filter the processing units that a region is
+    mapped to. The masking is a bitfield that specifies for each processing
+    unit whether it is active or not.
+  }];
+}
+
 def GPUMemorySpaceMappingAttr : GPU_Attr<"GPUMemorySpaceMapping", "memory_space", [
   DeclareAttrInterfaceMethods<DeviceMappingAttrInterface> ] >  {
   let parameters = (ins

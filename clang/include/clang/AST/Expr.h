@@ -57,6 +57,7 @@ namespace clang {
   class StringLiteral;
   class TargetInfo;
   class ValueDecl;
+  class WarnUnusedResultAttr;
 
 /// A simple array of base specifiers.
 typedef SmallVector<CXXBaseSpecifier*, 4> CXXCastPath;
@@ -261,6 +262,12 @@ public:
   bool isUnusedResultAWarning(const Expr *&WarnExpr, SourceLocation &Loc,
                               SourceRange &R1, SourceRange &R2,
                               ASTContext &Ctx) const;
+
+  /// Returns the WarnUnusedResultAttr that is declared on the callee
+  /// or its return type declaration, together with a NamedDecl that
+  /// refers to the declaration the attribute is attached to.
+  static std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
+  getUnusedResultAttrImpl(const Decl *Callee, QualType ReturnType);
 
   /// isLValue - True if this expression is an "l-value" according to
   /// the rules of the current language.  C and C++ give somewhat
@@ -3190,11 +3197,13 @@ public:
   /// type.
   QualType getCallReturnType(const ASTContext &Ctx) const;
 
-  /// Returns the WarnUnusedResultAttr that is either declared on the called
-  /// function, or its return type declaration, together with a NamedDecl that
-  /// refers to the declaration the attribute is attached onto.
-  std::pair<const NamedDecl *, const Attr *>
-  getUnusedResultAttr(const ASTContext &Ctx) const;
+  /// Returns the WarnUnusedResultAttr that is declared on the callee
+  /// or its return type declaration, together with a NamedDecl that
+  /// refers to the declaration the attribute is attached to.
+  std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
+  getUnusedResultAttr(const ASTContext &Ctx) const {
+    return getUnusedResultAttrImpl(getCalleeDecl(), getCallReturnType(Ctx));
+  }
 
   /// Returns true if this call expression should warn on unused results.
   bool hasUnusedResultAttr(const ASTContext &Ctx) const {
@@ -3534,6 +3543,10 @@ class CompoundLiteralExpr : public Expr {
   /// The int part of the pair stores whether this expr is file scope.
   llvm::PointerIntPair<TypeSourceInfo *, 1, bool> TInfoAndScope;
   Stmt *Init;
+
+  /// Value of constant literals with static storage duration.
+  mutable APValue *StaticValue = nullptr;
+
 public:
   CompoundLiteralExpr(SourceLocation lparenloc, TypeSourceInfo *tinfo,
                       QualType T, ExprValueKind VK, Expr *init, bool fileScope)
@@ -3562,6 +3575,10 @@ public:
   void setTypeSourceInfo(TypeSourceInfo *tinfo) {
     TInfoAndScope.setPointer(tinfo);
   }
+
+  bool hasStaticStorage() const { return isFileScope() && isGLValue(); }
+  APValue &getOrCreateStaticValue(ASTContext &Ctx) const;
+  APValue &getStaticValue() const;
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
     // FIXME: Init should never be null.

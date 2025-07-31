@@ -45,13 +45,14 @@ public:
 
   unsigned getRelaxedOpcode(unsigned Op, const MCSubtargetInfo &STI) const;
 
-  bool mayNeedRelaxation(const MCInst &Inst,
+  bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override;
 
   const char *reasonForFixupRelaxation(const MCFixup &Fixup,
                                        uint64_t Value) const;
 
-  bool fixupNeedsRelaxationAdvanced(const MCFixup &, const MCValue &, uint64_t,
+  bool fixupNeedsRelaxationAdvanced(const MCFragment &, const MCFixup &,
+                                    const MCValue &, uint64_t,
                                     bool) const override;
 
   void relaxInstruction(MCInst &Inst,

@@ -65,8 +65,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 DWARFASTParserClang::DWARFASTParserClang(TypeSystemClang &ast)
     : DWARFASTParser(Kind::DWARFASTParserClang), m_ast(ast),
@@ -247,6 +247,14 @@ static unsigned GetCXXMethodCVQuals(const DWARFDIE &subprogram,
     cv_quals |= clang::Qualifiers::Volatile;
 
   return cv_quals;
+}
+
+static std::string MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
+  char const *name = die.GetMangledName(/*substitute_name_allowed*/ false);
+  if (!name)
+    return {};
+
+  return name;
 }
 
 TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
@@ -1231,7 +1239,7 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
 
   clang::CXXMethodDecl *cxx_method_decl = m_ast.AddMethodToCXXRecordType(
       class_opaque_type.GetOpaqueQualType(), attrs.name.GetCString(),
-      attrs.mangled_name, clang_type, accessibility, attrs.is_virtual,
+      MakeLLDBFuncAsmLabel(die), clang_type, accessibility, attrs.is_virtual,
       is_static, attrs.is_inline, attrs.is_explicit, is_attr_used,
       attrs.is_artificial);
 
@@ -1384,7 +1392,7 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
             ignore_containing_context ? m_ast.GetTranslationUnitDecl()
                                       : containing_decl_ctx,
             GetOwningClangModule(die), name, clang_type, attrs.storage,
-            attrs.is_inline);
+            attrs.is_inline, MakeLLDBFuncAsmLabel(die));
         std::free(name_buf);
 
         if (has_template_params) {
@@ -1394,7 +1402,7 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
               ignore_containing_context ? m_ast.GetTranslationUnitDecl()
                                         : containing_decl_ctx,
               GetOwningClangModule(die), attrs.name.GetStringRef(), clang_type,
-              attrs.storage, attrs.is_inline);
+              attrs.storage, attrs.is_inline, /*asm_label=*/{});
           clang::FunctionTemplateDecl *func_template_decl =
               m_ast.CreateFunctionTemplateDecl(
                   containing_decl_ctx, GetOwningClangModule(die),
@@ -1406,20 +1414,6 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
         lldbassert(function_decl);
 
         if (function_decl) {
-          // Attach an asm(<mangled_name>) label to the FunctionDecl.
-          // This ensures that clang::CodeGen emits function calls
-          // using symbols that are mangled according to the DW_AT_linkage_name.
-          // If we didn't do this, the external symbols wouldn't exactly
-          // match the mangled name LLDB knows about and the IRExecutionUnit
-          // would have to fall back to searching object files for
-          // approximately matching function names. The motivating
-          // example is generating calls to ABI-tagged template functions.
-          // This is done separately for member functions in
-          // AddMethodToCXXRecordType.
-          if (attrs.mangled_name)
-            function_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(
-                m_ast.getASTContext(), attrs.mangled_name, /*literal=*/false));
-
           LinkDeclContextToDIE(function_decl, die);
 
           const clang::FunctionProtoType *function_prototype(

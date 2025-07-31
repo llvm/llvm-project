@@ -179,6 +179,13 @@ if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
   endif ()
 endif()
 
+if ("lldb" IN_LIST LLVM_ENABLE_PROJECTS)
+  if (NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(STATUS "Enabling clang as a dependency of lldb")
+    list(APPEND LLVM_ENABLE_PROJECTS "clang")
+  endif()
+endif ()
+
 if ("libc" IN_LIST LLVM_ENABLE_PROJECTS)
   message(WARNING "Using LLVM_ENABLE_PROJECTS=libc is deprecated.  Please use "
     "-DLLVM_ENABLE_RUNTIMES=libc or see the instructions at "
@@ -581,7 +588,7 @@ set(LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING "DISABLED" CACHE STRING
 set_property(CACHE LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING PROPERTY STRINGS DISABLED COVERAGE COVERAGE_AND_ORIGIN)
 
 option(LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS
-  "Add additional fields to DILocations to support Key Instructions" OFF)
+  "Add additional fields to DILocations to support Key Instructions" ON)
 
 set(WINDOWS_PREFER_FORWARD_SLASH_DEFAULT OFF)
 if (MINGW)
@@ -1071,6 +1078,10 @@ if (LLVM_BUILD_LLVM_DYLIB OR LLVM_BUILD_SHARED_LIBS OR LLVM_ENABLE_PLUGINS)
   set(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS ON)
 endif()
 
+# Because LLVM-C is built into the LLVM library, for now export its symbols
+# whenever LLVM symbols are exported.
+set(LLVM_ENABLE_LLVM_C_EXPORT_ANNOTATIONS ${LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS})
+
 set(LLVM_ENABLE_NEW_PASS_MANAGER TRUE CACHE BOOL
   "Enable the new pass manager by default.")
 if(NOT LLVM_ENABLE_NEW_PASS_MANAGER)
@@ -1178,6 +1189,8 @@ set(LLVM_HAVE_TFLITE "" CACHE BOOL "Use tflite")
 if (LLVM_HAVE_TFLITE)
   find_package(tensorflow-lite REQUIRED)
 endif()
+
+set(LLVM_ENABLE_PROFCHECK OFF CACHE BOOL "Enable profile checking in test tools")
 
 # For up-to-date instructions for installing the Tensorflow dependency, refer to
 # the bot setup script: https://github.com/google/ml-compiler-opt/blob/main/buildbot/buildbot_init.sh

@@ -110,7 +110,16 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
 
   // Initialize ltoObj.
   lto::ThinBackend backend;
-  if (ctx.config.thinLTOIndexOnly) {
+  if (!ctx.config.dtltoDistributor.empty()) {
+    backend = lto::createOutOfProcessThinBackend(
+        llvm::hardware_concurrency(ctx.config.thinLTOJobs),
+        /*OnWrite=*/nullptr,
+        /*ShouldEmitIndexFiles=*/false,
+        /*ShouldEmitImportFiles=*/false, ctx.config.outputFile,
+        ctx.config.dtltoDistributor, ctx.config.dtltoDistributorArgs,
+        ctx.config.dtltoCompiler, ctx.config.dtltoCompilerArgs,
+        !ctx.config.saveTempsArgs.empty());
+  } else if (ctx.config.thinLTOIndexOnly) {
     auto OnIndexWrite = [&](StringRef S) { thinIndices.erase(S); };
     backend = lto::createWriteIndexesThinBackend(
         llvm::hardware_concurrency(ctx.config.thinLTOJobs),

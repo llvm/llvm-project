@@ -279,8 +279,8 @@ public:
   void DumpClangAST(Stream &s, llvm::StringRef filter) override;
 
   /// List separate dwo files.
-  bool GetSeparateDebugInfo(StructuredData::Dictionary &d,
-                            bool errors_only) override;
+  bool GetSeparateDebugInfo(StructuredData::Dictionary &d, bool errors_only,
+                            bool load_all_debug_info = false) override;
 
   // Gets a pair of loaded and total dwo file counts.
   // For split-dwarf files, this reports the counts for successfully loaded DWO
@@ -329,6 +329,8 @@ public:
 
   virtual bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
                                       lldb::offset_t &offset,
+                                      RegisterContext *reg_ctx,
+                                      lldb::RegisterKind reg_kind,
                                       std::vector<Value> &stack) const {
     return false;
   }
@@ -556,6 +558,7 @@ protected:
   /// an index that identifies the .DWO or .o file.
   std::optional<uint64_t> m_file_index;
 };
+
 } // namespace dwarf
 } // namespace lldb_private::plugin
 

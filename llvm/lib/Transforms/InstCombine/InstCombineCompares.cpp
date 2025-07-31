@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -21,8 +22,10 @@
 #include "llvm/Analysis/Utils/Local.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
@@ -160,6 +163,11 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     LaterIndices.push_back(IdxVal);
   }
 
+  Value *Idx = GEP->getOperand(2);
+  // If the index type is non-canonical, wait for it to be canonicalized.
+  if (Idx->getType() != DL.getIndexType(GEP->getType()))
+    return nullptr;
+
   enum { Overdefined = -3, Undefined = -2 };
 
   // Variables for our state machines.
@@ -287,17 +295,6 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
 
   // Now that we've scanned the entire array, emit our new comparison(s).  We
   // order the state machines in complexity of the generated code.
-  Value *Idx = GEP->getOperand(2);
-
-  // If the index is larger than the pointer offset size of the target, truncate
-  // the index down like the GEP would do implicitly.  We don't have to do this
-  // for an inbounds GEP because the index can't be out of range.
-  if (!GEP->isInBounds()) {
-    Type *PtrIdxTy = DL.getIndexType(GEP->getType());
-    unsigned OffsetSize = PtrIdxTy->getIntegerBitWidth();
-    if (Idx->getType()->getPrimitiveSizeInBits().getFixedValue() > OffsetSize)
-      Idx = Builder.CreateTrunc(Idx, PtrIdxTy);
-  }
 
   // If inbounds keyword is not present, Idx * ElementSize can overflow.
   // Let's assume that ElementSize is 2 and the wanted value is at offset 0.
@@ -709,7 +706,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
   };
 
   CommonPointerBase Base = CommonPointerBase::compute(GEPLHS, RHS);
-  if (Base.Ptr == RHS && CanFold(Base.LHSNW)) {
+  if (Base.Ptr == RHS && CanFold(Base.LHSNW) && !Base.isExpensive()) {
     // ((gep Ptr, OFFSET) cmp Ptr)   ---> (OFFSET cmp 0).
     Type *IdxTy = DL.getIndexType(GEPLHS->getType());
     Value *Offset =
@@ -752,8 +749,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
 
     // If the base pointers are different, but the indices are the same, just
     // compare the base pointer.
-    Value *PtrBase = GEPLHS->getOperand(0);
-    if (PtrBase != GEPRHS->getOperand(0)) {
+    if (GEPLHS->getOperand(0) != GEPRHS->getOperand(0)) {
       bool IndicesTheSame =
           GEPLHS->getNumOperands() == GEPRHS->getNumOperands() &&
           GEPLHS->getPointerOperand()->getType() ==
@@ -779,7 +775,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       if (GEPLHS->isInBounds() && GEPRHS->isInBounds() &&
           (GEPLHS->hasAllConstantIndices() || GEPLHS->hasOneUse()) &&
           (GEPRHS->hasAllConstantIndices() || GEPRHS->hasOneUse()) &&
-          PtrBase->stripPointerCasts() ==
+          GEPLHS->getOperand(0)->stripPointerCasts() ==
               GEPRHS->getOperand(0)->stripPointerCasts() &&
           !GEPLHS->getType()->isVectorTy()) {
         Value *LOffset = EmitGEPOffset(GEPLHS);
@@ -802,14 +798,10 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
                                         LOffset, ROffset);
         return replaceInstUsesWith(I, Cmp);
       }
-
-      // Otherwise, the base pointers are different and the indices are
-      // different. Try convert this to an indexed compare by looking through
-      // PHIs/casts.
-      return transformToIndexedCompare(GEPLHS, RHS, Cond, DL, *this);
     }
 
-    if (GEPLHS->getNumOperands() == GEPRHS->getNumOperands() &&
+    if (GEPLHS->getOperand(0) == GEPRHS->getOperand(0) &&
+        GEPLHS->getNumOperands() == GEPRHS->getNumOperands() &&
         GEPLHS->getSourceElementType() == GEPRHS->getSourceElementType()) {
       // If the GEPs only differ by one index, compare it.
       unsigned NumDifferences = 0; // Keep track of # differences.
@@ -846,11 +838,14 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       }
     }
 
-    if (CanFold(NW)) {
+    if (Base.Ptr && CanFold(Base.LHSNW & Base.RHSNW) && !Base.isExpensive()) {
       // ((gep Ptr, OFFSET1) cmp (gep Ptr, OFFSET2)  --->  (OFFSET1 cmp OFFSET2)
-      Value *L = EmitGEPOffset(GEPLHS, /*RewriteGEP=*/true);
-      Value *R = EmitGEPOffset(GEPRHS, /*RewriteGEP=*/true);
-      return NewICmp(NW, L, R);
+      Type *IdxTy = DL.getIndexType(GEPLHS->getType());
+      Value *L =
+          EmitGEPOffsets(Base.LHSGEPs, Base.LHSNW, IdxTy, /*RewriteGEP=*/true);
+      Value *R =
+          EmitGEPOffsets(Base.RHSGEPs, Base.RHSNW, IdxTy, /*RewriteGEP=*/true);
+      return NewICmp(Base.LHSNW & Base.RHSNW, L, R);
     }
   }
 
@@ -4305,10 +4300,6 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
     return nullptr;
 
   switch (LHSI->getOpcode()) {
-  case Instruction::PHI:
-    if (Instruction *NV = foldOpIntoPhi(I, cast<PHINode>(LHSI)))
-      return NV;
-    break;
   case Instruction::IntToPtr:
     // icmp pred inttoptr(X), null -> icmp pred X, 0
     if (RHSC->isNullValue() &&
@@ -7699,6 +7690,13 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Instruction *New = foldSignBitTest(I))
     return New;
 
+  if (auto *PN = dyn_cast<PHINode>(Op0))
+    if (Instruction *NV = foldOpIntoPhi(I, PN))
+      return NV;
+  if (auto *PN = dyn_cast<PHINode>(Op1))
+    if (Instruction *NV = foldOpIntoPhi(I, PN))
+      return NV;
+
   if (Instruction *Res = foldICmpInstWithConstantNotInt(I))
     return Res;
 
@@ -8219,6 +8217,98 @@ static Instruction *foldFCmpReciprocalAndZero(FCmpInst &I, Instruction *LHSI,
   return new FCmpInst(Pred, LHSI->getOperand(1), RHSC, "", &I);
 }
 
+// Transform 'fptrunc(x) cmp C' to 'x cmp ext(C)' if possible.
+// Patterns include:
+//    fptrunc(x) <  C  -->  x <  ext(C)
+//    fptrunc(x) <= C  -->  x <= ext(C)
+//    fptrunc(x) >  C  -->  x >  ext(C)
+//    fptrunc(x) >= C  -->  x >= ext(C)
+// where 'ext(C)' is the extension of 'C' to the type of 'x' with a small bias
+// due to precision loss.
+static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
+                                    const Constant &C) {
+  FCmpInst::Predicate Pred = I.getPredicate();
+  bool RoundDown = false;
+
+  if (Pred == FCmpInst::FCMP_OGE || Pred == FCmpInst::FCMP_UGE ||
+      Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_ULT)
+    RoundDown = true;
+  else if (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_UGT ||
+           Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)
+    RoundDown = false;
+  else
+    return nullptr;
+
+  const APFloat *CValue;
+  if (!match(&C, m_APFloat(CValue)))
+    return nullptr;
+
+  if (CValue->isNaN() || CValue->isInfinity())
+    return nullptr;
+
+  auto ConvertFltSema = [](const APFloat &Src, const fltSemantics &Sema) {
+    bool LosesInfo;
+    APFloat Dest = Src;
+    Dest.convert(Sema, APFloat::rmNearestTiesToEven, &LosesInfo);
+    return Dest;
+  };
+
+  auto NextValue = [](const APFloat &Value, bool RoundDown) {
+    APFloat NextValue = Value;
+    NextValue.next(RoundDown);
+    return NextValue;
+  };
+
+  APFloat NextCValue = NextValue(*CValue, RoundDown);
+
+  Type *DestType = FPTrunc.getOperand(0)->getType();
+  const fltSemantics &DestFltSema =
+      DestType->getScalarType()->getFltSemantics();
+
+  APFloat ExtCValue = ConvertFltSema(*CValue, DestFltSema);
+  APFloat ExtNextCValue = ConvertFltSema(NextCValue, DestFltSema);
+
+  // When 'NextCValue' is infinity, use an imaged 'NextCValue' that equals
+  // 'CValue + bias' to avoid the infinity after conversion. The bias is
+  // estimated as 'CValue - PrevCValue', where 'PrevCValue' is the previous
+  // value of 'CValue'.
+  if (NextCValue.isInfinity()) {
+    APFloat PrevCValue = NextValue(*CValue, !RoundDown);
+    APFloat Bias = ConvertFltSema(*CValue - PrevCValue, DestFltSema);
+
+    ExtNextCValue = ExtCValue + Bias;
+  }
+
+  APFloat ExtMidValue =
+      scalbn(ExtCValue + ExtNextCValue, -1, APFloat::rmNearestTiesToEven);
+
+  const fltSemantics &SrcFltSema =
+      C.getType()->getScalarType()->getFltSemantics();
+
+  // 'MidValue' might be rounded to 'NextCValue'. Correct it here.
+  APFloat MidValue = ConvertFltSema(ExtMidValue, SrcFltSema);
+  if (MidValue != *CValue)
+    ExtMidValue.next(!RoundDown);
+
+  // Check whether 'ExtMidValue' is a valid result since the assumption on
+  // imaged 'NextCValue' might not hold for new float types.
+  // ppc_fp128 can't pass here when converting from max float because of
+  // APFloat implementation.
+  if (NextCValue.isInfinity()) {
+    // ExtMidValue --- narrowed ---> Finite
+    if (ConvertFltSema(ExtMidValue, SrcFltSema).isInfinity())
+      return nullptr;
+
+    // NextExtMidValue --- narrowed ---> Infinity
+    APFloat NextExtMidValue = NextValue(ExtMidValue, RoundDown);
+    if (ConvertFltSema(NextExtMidValue, SrcFltSema).isFinite())
+      return nullptr;
+  }
+
+  return new FCmpInst(Pred, FPTrunc.getOperand(0),
+                      ConstantFP::get(DestType, ExtMidValue), "", &I);
+}
+
 /// Optimize fabs(X) compared with zero.
 static Instruction *foldFabsWithFcmpZero(FCmpInst &I, InstCombinerImpl &IC) {
   Value *X;
@@ -8708,6 +8798,10 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
           if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
                   cast<LoadInst>(LHSI), GEP, GV, I))
             return Res;
+      break;
+    case Instruction::FPTrunc:
+      if (Instruction *NV = foldFCmpFpTrunc(I, *LHSI, *RHSC))
+        return NV;
       break;
     }
   }

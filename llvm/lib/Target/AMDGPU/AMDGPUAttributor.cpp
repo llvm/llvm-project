@@ -13,11 +13,8 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/Analysis/CycleAnalysis.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
@@ -233,6 +230,10 @@ public:
   unsigned getMaxWavesPerEU(const Function &F) {
     const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
     return ST.getMaxWavesPerEU();
+  }
+
+  unsigned getMaxAddrSpace() const override {
+    return AMDGPUAS::MAX_AMDGPU_ADDRESS;
   }
 
 private:
@@ -1380,8 +1381,8 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
        &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID,
        &AAAMDMaxNumWorkgroups::ID, &AAAMDWavesPerEU::ID, &AAAMDGPUNoAGPR::ID,
        &AACallEdges::ID, &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
-       &AAUnderlyingObjects::ID, &AAAddressSpace::ID, &AAIndirectCallInfo::ID,
-       &AAInstanceInfo::ID});
+       &AAUnderlyingObjects::ID, &AANoAliasAddrSpace::ID, &AAAddressSpace::ID,
+       &AAIndirectCallInfo::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
@@ -1420,18 +1421,19 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
     }
 
     for (auto &I : instructions(F)) {
-      if (auto *LI = dyn_cast<LoadInst>(&I)) {
-        A.getOrCreateAAFor<AAAddressSpace>(
-            IRPosition::value(*LI->getPointerOperand()));
-      } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
-        A.getOrCreateAAFor<AAAddressSpace>(
-            IRPosition::value(*SI->getPointerOperand()));
-      } else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I)) {
-        A.getOrCreateAAFor<AAAddressSpace>(
-            IRPosition::value(*RMW->getPointerOperand()));
-      } else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(&I)) {
-        A.getOrCreateAAFor<AAAddressSpace>(
-            IRPosition::value(*CmpX->getPointerOperand()));
+      Value *Ptr = nullptr;
+      if (auto *LI = dyn_cast<LoadInst>(&I))
+        Ptr = LI->getPointerOperand();
+      else if (auto *SI = dyn_cast<StoreInst>(&I))
+        Ptr = SI->getPointerOperand();
+      else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I))
+        Ptr = RMW->getPointerOperand();
+      else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(&I))
+        Ptr = CmpX->getPointerOperand();
+
+      if (Ptr) {
+        A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(*Ptr));
+        A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(*Ptr));
       }
     }
   }

@@ -85,6 +85,17 @@ enum VariableTypeDescriptorKind : uint16_t {
 //                        Miscellaneous Helper Methods
 //===--------------------------------------------------------------------===//
 
+static llvm::StringRef GetUBSanTrapForHandler(SanitizerHandler ID) {
+  switch (ID) {
+#define SANITIZER_CHECK(Enum, Name, Version, Msg)                              \
+  case SanitizerHandler::Enum:                                                 \
+    return Msg;
+    LIST_SANITIZER_CHECKS
+#undef SANITIZER_CHECK
+  }
+  llvm_unreachable("unhandled switch case");
+}
+
 /// CreateTempAlloca - This creates a alloca and inserts it into the entry
 /// block.
 RawAddress
@@ -3649,7 +3660,7 @@ struct SanitizerHandlerInfo {
 }
 
 const SanitizerHandlerInfo SanitizerHandlers[] = {
-#define SANITIZER_CHECK(Enum, Name, Version) {#Name, Version},
+#define SANITIZER_CHECK(Enum, Name, Version, Msg) {#Name, Version},
     LIST_SANITIZER_CHECKS
 #undef SANITIZER_CHECK
 };
@@ -3954,6 +3965,8 @@ void CodeGenFunction::EmitCfiCheckFail() {
   StartFunction(GlobalDecl(), CGM.getContext().VoidTy, F, FI, Args,
                 SourceLocation());
 
+  ApplyDebugLocation ADL = ApplyDebugLocation::CreateArtificial(*this);
+
   // This function is not affected by NoSanitizeList. This function does
   // not have a source location, but "src:*" would still apply. Revert any
   // changes to SanOpts made in StartFunction.
@@ -4051,6 +4064,15 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
+  llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
+  llvm::StringRef TrapMessage = GetUBSanTrapForHandler(CheckHandlerID);
+
+  if (getDebugInfo() && !TrapMessage.empty() &&
+      CGM.getCodeGenOpts().SanitizeDebugTrapReasons && TrapLocation) {
+    TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
+        TrapLocation, "Undefined Behavior Sanitizer", TrapMessage);
+  }
+
   NoMerge = NoMerge || !CGM.getCodeGenOpts().OptimizationLevel ||
             (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>());
 
@@ -4059,8 +4081,8 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     auto Call = TrapBB->begin();
     assert(isa<llvm::CallInst>(Call) && "Expected call in trap BB");
 
-    Call->applyMergedLocation(Call->getDebugLoc(),
-                              Builder.getCurrentDebugLocation());
+    Call->applyMergedLocation(Call->getDebugLoc(), TrapLocation);
+
     Builder.CreateCondBr(Checked, Cont, TrapBB,
                          MDHelper.createLikelyBranchWeights());
   } else {
@@ -4068,6 +4090,8 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     Builder.CreateCondBr(Checked, Cont, TrapBB,
                          MDHelper.createLikelyBranchWeights());
     EmitBlock(TrapBB);
+
+    ApplyDebugLocation applyTrapDI(*this, TrapLocation);
 
     llvm::CallInst *TrapCall =
         Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
