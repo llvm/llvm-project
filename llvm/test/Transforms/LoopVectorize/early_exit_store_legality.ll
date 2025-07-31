@@ -405,5 +405,34 @@ exit:
   ret void
 }
 
+define void @loop_contains_store_condition_load_requires_gather(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(512) readonly %pred, ptr align 1 dereferenceable(20) readonly %offsets) {
+; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_condition_load_requires_gather'
+; CHECK:       LV: Not vectorizing: Loop may fault.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
+  %offset.addr = getelementptr inbounds nuw i8, ptr %offsets, i64 %iv
+  %offset = load i8, ptr %offset.addr, align 1
+  %offset.zext = zext i8 %offset to i64
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %offset.zext
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  br i1 %ee.cond, label %exit, label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
 declare void @init_mem(ptr, i64);
 declare i64 @get_an_unknown_offset();
