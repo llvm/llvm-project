@@ -348,10 +348,6 @@ int main(int argc, const char **argv) {
   }
 
   // If we add more % commands, there should be better architecture than this.
-  const char *help_output = "%help\t\tlist clang-repl %commands\n"
-                            "%undo\t\tundo the previous input\n"
-                            "%lib\t<path>\tlink a dynamic library\n"
-                            "%quit\t\texit clang-repl\n";
 
   const char *lib_bad_args =
       "%lib expects 1 argument: the path to a dynamic library\n";
@@ -379,8 +375,12 @@ int main(int argc, const char **argv) {
         if (auto Err = Interp->Undo())
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       } else if (Input == R"(%help)") {
-        auto Err =
-            llvm::make_error<llvm::StringError>(help_output, std::error_code());
+        auto Err = llvm::make_error<llvm::StringError>(
+            "%help\t\tlist clang-repl %commands\n"
+            "%undo\t\tundo the previous input\n"
+            "%lib\t<path>\tlink a dynamic library\n"
+            "%quit\t\texit clang-repl\n",
+            std::error_code());
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "");
       } else if (Input == R"(%lib)") {
         auto Err = llvm::make_error<llvm::StringError>(lib_bad_args,
@@ -389,7 +389,7 @@ int main(int argc, const char **argv) {
       } else if (Input.rfind("%lib ", 0) == 0) {
         if (auto Err = Interp->LoadDynamicLibrary(Input.data() + 5))
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
-      } else if (Input[0] == '%') { // make sure this is evaluated last
+      } else if (Input[0] == '%') {
         auto Err = llvm::make_error<llvm::StringError>(
             llvm::formatv(
                 "Invalid % command \"{0}\", use \"%help\" to list commands\n",
