@@ -633,7 +633,7 @@ public:
     return true;
   }
 
-  /// Return true if the group has no gaps.
+  /// Return true if this group is full, i.e. it has no gaps.
   bool isFull() const { return getNumMembers() == getFactor(); }
 
 private:
