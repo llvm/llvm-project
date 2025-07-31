@@ -16148,6 +16148,7 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
 SDValue
 SITargetLowering::performBuildVectorCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
+  // TODO: legalize for all targets instead of just v_mov_b64 enabled ones.
   const GCNSubtarget *ST = getSubtarget();
   if (DCI.Level < AfterLegalizeDAG || !ST->hasMovB64())
     return SDValue();
@@ -16219,9 +16220,9 @@ SITargetLowering::performBuildVectorCombine(SDNode *N,
 
   // Construct and return build_vector with 64b elements.
   if (!ImmVals.empty()) {
-    SmallVector<SDValue, 8> VectorConsts;
-    for (uint64_t I : ImmVals)
-      VectorConsts.push_back(DAG.getConstant(I, SL, MVT::i64));
+    SmallVector<SDValue, 8> VectorConsts(ImmVals.size());
+    for (unsigned i = 0; i < ImmVals.size(); ++i)
+      VectorConsts[i] = DAG.getConstant(ImmVals[i], SL, MVT::i64);
     unsigned NewNumElts = SizeBits / 64;
     LLVMContext &Ctx = *DAG.getContext();
     EVT NewVT = EVT::getVectorVT(Ctx, MVT::i64, NewNumElts);
