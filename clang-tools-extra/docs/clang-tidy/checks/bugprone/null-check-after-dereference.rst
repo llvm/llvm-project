@@ -7,7 +7,7 @@ bugprone-null-check-after-dereference
 
    This check uses a flow-sensitive static analysis to produce its
    results. Therefore, it may be more resource intensive (RAM, CPU) than the
-   average Clang-tidy check.
+   average Clang-Tidy check.
 
 Identifies redundant pointer null-checks, by finding cases where the pointer
 cannot be null at the location of the null-check.

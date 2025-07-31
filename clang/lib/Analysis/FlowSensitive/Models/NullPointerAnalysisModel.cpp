@@ -616,7 +616,8 @@ void NullPointerAnalysisModel::join(QualType Type, const Value &Val1,
     // Handle special cases.
     if (LHSVar == RHSVar)
       return LHSVar ? *LHSVar : MergedEnv.makeAtomicBoolValue();
-    else if (isa_and_nonnull<TopBoolValue>(LHSVar) || isa_and_nonnull<TopBoolValue>(RHSVar))
+    else if (isa_and_nonnull<TopBoolValue>(LHSVar) ||
+             isa_and_nonnull<TopBoolValue>(RHSVar))
       return MergedEnv.makeTopBoolValue();
 
     if (!LHSVar)
@@ -679,11 +680,11 @@ ComparisonResult NullPointerAnalysisModel::compare(QualType Type,
       case SR::Nullptr:
         return nullptr;
       case SR::Top:
-        return &MergedEnv.makeTopBoolValue();
+        return &Env2.makeTopBoolValue();
       case SR::True:
-        return &MergedEnv.getBoolLiteralValue(true);
+        return &Env2.getBoolLiteralValue(true);
       case SR::False:
-        return &MergedEnv.getBoolLiteralValue(false);
+        return &Env2.getBoolLiteralValue(false);
       case SR::Unknown:
         return VarToSimplify;
       }
@@ -693,7 +694,8 @@ ComparisonResult NullPointerAnalysisModel::compare(QualType Type,
     RHSVar = SimplifyVar(RHSVar, Env2);
 
     // Handle special cases.
-    if (isa_and_nonnull<TopBoolValue>(LHSVar) || isa_and_nonnull<TopBoolValue>(RHSVar))
+    if (isa_and_nonnull<TopBoolValue>(LHSVar) ||
+        isa_and_nonnull<TopBoolValue>(RHSVar))
       return CR::Top;
     else if (LHSVar == RHSVar)
       return LHSVar ? CR::Same : CR::Unknown;
@@ -739,11 +741,11 @@ ComparisonResult compareAndReplace(QualType Type, Value &Val1,
       case SR::Nullptr:
         return nullptr;
       case SR::Top:
-        return &MergedEnv.makeTopBoolValue();
+        return &Env2.makeTopBoolValue();
       case SR::True:
-        return &MergedEnv.getBoolLiteralValue(true);
+        return &Env2.getBoolLiteralValue(true);
       case SR::False:
-        return &MergedEnv.getBoolLiteralValue(false);
+        return &Env2.getBoolLiteralValue(false);
       case SR::Unknown:
         return VarToSimplify;
       }
@@ -753,7 +755,8 @@ ComparisonResult compareAndReplace(QualType Type, Value &Val1,
     RHSVar = SimplifyVar(RHSVar, Env2);
 
     // Handle special cases.
-    if (isa_and_nonnull<TopBoolValue>(LHSVar) || isa_and_nonnull<TopBoolValue>(RHSVar)) {
+    if (isa_and_nonnull<TopBoolValue>(LHSVar) ||
+        isa_and_nonnull<TopBoolValue>(RHSVar)) {
       Val2.setProperty(Name, Env2.makeTopBoolValue());
       return CR::Top;
     } else if (LHSVar == RHSVar)
