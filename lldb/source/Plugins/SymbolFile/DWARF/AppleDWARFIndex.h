@@ -43,13 +43,13 @@ public:
 
   void
   GetGlobalVariables(ConstString basename,
-                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
+                     llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
   void
   GetGlobalVariables(const RegularExpression &regex,
-                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
+                     llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
   void
   GetGlobalVariables(DWARFUnit &cu,
-                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
+                     llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
   void GetObjCMethods(ConstString class_name,
                       llvm::function_ref<bool(DWARFDIE die)> callback) override;
   void GetCompleteObjCClass(
@@ -60,7 +60,7 @@ public:
   void GetTypes(const DWARFDeclContext &context,
                 llvm::function_ref<bool(DWARFDIE die)> callback) override;
   void GetNamespaces(ConstString name,
-                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
+                     llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
   void GetFunctions(
       const Module::LookupInfo &lookup_info, SymbolFileDWARF &dwarf,
       const CompilerDeclContext &parent_decl_ctx,
