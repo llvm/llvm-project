@@ -458,9 +458,9 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
 /// given position in the given MachineBasicBlock, and does NOT take a
 /// destination register.
 inline MachineInstrBuilder BuildMIAfter(MachineBasicBlock &BB,
-                                   MachineBasicBlock::iterator I,
-                                   const MIMetadata &MIMD,
-                                   const MCInstrDesc &MCID) {
+                                        MachineBasicBlock::iterator I,
+                                        const MIMetadata &MIMD,
+                                        const MCInstrDesc &MCID) {
   MachineFunction &MF = *BB.getParent();
   MachineInstr *MI = MF.CreateMachineInstr(MCID, MIMD.getDL());
   BB.insertAfter(I, MI);
