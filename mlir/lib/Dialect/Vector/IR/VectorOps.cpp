@@ -6316,6 +6316,11 @@ std::optional<SmallVector<int64_t, 4>> TransposeOp::getShapeForUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
 }
 
+void TransposeOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                    SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges.front());
+}
+
 namespace {
 
 // Rewrites two back-to-back TransposeOp operations into a single TransposeOp.
