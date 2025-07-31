@@ -160,12 +160,10 @@ void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr,
   for (unsigned I = 0; I < NumFuncs; ++I) {
     auto Hash =
         endian::readNext<stable_hash, endianness::little, unaligned>(Ptr);
-    auto FunctionNameId =
+    [[maybe_unused]] auto FunctionNameId =
         endian::readNext<uint32_t, endianness::little, unaligned>(Ptr);
-    (void)FunctionNameId;
-    auto ModuleNameId =
+    [[maybe_unused]] auto ModuleNameId =
         endian::readNext<uint32_t, endianness::little, unaligned>(Ptr);
-    (void)ModuleNameId;
     // Only validate IDs if we've read the names
     if (ReadStableFunctionMapNames) {
       assert(FunctionMap->getNameForId(FunctionNameId) &&

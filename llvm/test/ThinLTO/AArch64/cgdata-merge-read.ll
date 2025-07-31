@@ -1,5 +1,3 @@
-; REQUIRES: asserts
-
 ; This test demonstrates how similar functions are handled during global outlining.
 ; Currently, we do not attempt to share an merged function for identical sequences.
 ; Instead, each merging instance is created uniquely.
