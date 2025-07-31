@@ -4038,8 +4038,7 @@ SDValue PPCTargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
 
     // Store the nest argument into the enviroment pointer in the trampoline
     // buffer.
-    SDValue EnvPointer =
-        DAG.getNode(ISD::ADD, dl, PtrVT, Trmp, SDEnvPtrOffset);
+    SDValue EnvPointer = DAG.getNode(ISD::ADD, dl, PtrVT, Trmp, SDEnvPtrOffset);
     OutChains[2] =
         DAG.getStore(Chain, dl, Nest, EnvPointer,
                      MachinePointerInfo(TrampolineAddr, EnvPointerOffset));
