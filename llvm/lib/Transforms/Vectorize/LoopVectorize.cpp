@@ -8952,8 +8952,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
       *Plan, Legal->getWidestInductionType(),
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE,
       OrigLoop);
-  VPlanTransforms::handleEarlyExitsAndAddMiddleCheck(*Plan, true, false, false,
-                                                     Range);
+  VPlanTransforms::handleEarlyExitsAndAddMiddleCheck(
+      *Plan, /*RequiresScalarEpilogue*/ true, /*TailFolded*/ false,
+      /*HasUncountableExit*/ false, Range);
   VPlanTransforms::createLoopRegions(*Plan);
 
   for (ElementCount VF : Range)

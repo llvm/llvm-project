@@ -493,7 +493,7 @@ void VPlanTransforms::addInitialSkeleton(VPlan &Plan, Type *InductionTy,
   // vectorizing loops with uncountable early exits.
   const SCEV *BackedgeTakenCountSCEV = PSE.getSymbolicMaxBackedgeTakenCount();
   assert(!isa<SCEVCouldNotCompute>(BackedgeTakenCountSCEV) &&
-         "Invalid loop count");
+         "Invalid backedge-taken count");
   ScalarEvolution &SE = *PSE.getSE();
   const SCEV *TripCount = SE.getTripCountFromExitCount(BackedgeTakenCountSCEV,
                                                        InductionTy, TheLoop);
@@ -554,8 +554,11 @@ void VPlanTransforms::handleEarlyExitsAndAddMiddleCheck(
   // If MiddleVPBB has a single successor then the original loop does not exit
   // via the latch and the single successor must be the scalar preheader.
   // There's no need to add a runtime check to MiddleVPBB.
-  if (MiddleVPBB->getNumSuccessors() == 1)
+  if (MiddleVPBB->getNumSuccessors() == 1) {
+    assert(MiddleVPBB->getSingleSuccessor() == Plan.getScalarPreheader() &&
+           "must have ScalarPH as single successor");
     return;
+  }
 
   assert(MiddleVPBB->getNumSuccessors() == 2 && "must have 2 successors");
 

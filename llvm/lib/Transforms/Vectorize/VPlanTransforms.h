@@ -69,7 +69,7 @@ struct VPlanTransforms {
 
   /// Update \p Plan to account for all early exits. If a check is needed to
   /// guard executing the scalar epilogue loop, it will be added to the middle
-  /// block
+  /// block.
   LLVM_ABI_FOR_TEST static void handleEarlyExitsAndAddMiddleCheck(
       VPlan &Plan, bool RequiresScalarEpilogueCheck, bool TailFolded,
       bool HasUncountableExit, VFRange &Range);
