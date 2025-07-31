@@ -125,7 +125,7 @@ define <16 x i8> @sdiv_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 ; VBITS_GE_256-NEXT:    sunpklo z0.h, z0.b
 ; VBITS_GE_256-NEXT:    sunpklo z2.s, z1.h
 ; VBITS_GE_256-NEXT:    sunpklo z3.s, z0.h
-; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z1.b, #16
+; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    sunpklo z0.s, z0.h
@@ -210,7 +210,7 @@ define void @sdiv_v128i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    sunpklo z2.s, z1.h
 ; CHECK-NEXT:    sunpklo z3.s, z0.h
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #128
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #128
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #128
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
@@ -239,24 +239,24 @@ define void @sdiv_v256i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x1]
 ; CHECK-NEXT:    sunpklo z2.h, z1.b
 ; CHECK-NEXT:    sunpklo z3.h, z0.b
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #128
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #128
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #128
 ; CHECK-NEXT:    sunpklo z1.h, z1.b
 ; CHECK-NEXT:    sunpklo z4.s, z2.h
 ; CHECK-NEXT:    sunpklo z5.s, z3.h
-; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #128
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #128
-; CHECK-NEXT:    sunpklo z0.h, z0.b
+; CHECK-NEXT:    ext z2.b, z2.b, z0.b, #128
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #128
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #128
 ; CHECK-NEXT:    sunpklo z2.s, z2.h
 ; CHECK-NEXT:    sunpklo z3.s, z3.h
+; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    sdivr z4.s, p1/m, z4.s, z5.s
 ; CHECK-NEXT:    sunpklo z5.s, z0.h
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #128
-; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    sdivr z2.s, p1/m, z2.s, z3.s
 ; CHECK-NEXT:    sunpklo z3.s, z1.h
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #128
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #128
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #128
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
+; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    sdivr z3.s, p1/m, z3.s, z5.s
 ; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
 ; CHECK-NEXT:    sdiv z0.s, p1/m, z0.s, z1.s
@@ -398,7 +398,7 @@ define void @sdiv_v16i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    sunpklo z2.s, z1.h
 ; VBITS_GE_256-NEXT:    sunpklo z3.s, z0.h
-; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z1.b, #16
+; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    sunpklo z0.s, z0.h
@@ -476,7 +476,7 @@ define void @sdiv_v128i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; CHECK-NEXT:    sunpklo z2.s, z1.h
 ; CHECK-NEXT:    sunpklo z3.s, z0.h
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #128
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #128
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #128
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
@@ -858,7 +858,7 @@ define <16 x i8> @udiv_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 ; VBITS_GE_256-NEXT:    uunpklo z0.h, z0.b
 ; VBITS_GE_256-NEXT:    uunpklo z2.s, z1.h
 ; VBITS_GE_256-NEXT:    uunpklo z3.s, z0.h
-; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z1.b, #16
+; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    uunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h
@@ -930,12 +930,12 @@ define void @udiv_v128i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x1]
 ; CHECK-NEXT:    ld1b { z1.h }, p0/z, [x0]
 ; CHECK-NEXT:    uunpklo z2.s, z0.h
-; CHECK-NEXT:    uunpklo z3.s, z1.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #128
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #128
+; CHECK-NEXT:    uunpklo z3.s, z1.h
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #128
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    udivr z2.s, p1/m, z2.s, z3.s
+; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    udivr z0.s, p1/m, z0.s, z1.s
 ; CHECK-NEXT:    ptrue p1.h, vl64
 ; CHECK-NEXT:    uzp1 z1.h, z2.h, z2.h
@@ -959,24 +959,24 @@ define void @udiv_v256i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x1]
 ; CHECK-NEXT:    uunpklo z2.h, z1.b
 ; CHECK-NEXT:    uunpklo z3.h, z0.b
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #128
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #128
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #128
 ; CHECK-NEXT:    uunpklo z1.h, z1.b
 ; CHECK-NEXT:    uunpklo z4.s, z2.h
 ; CHECK-NEXT:    uunpklo z5.s, z3.h
-; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #128
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #128
-; CHECK-NEXT:    uunpklo z0.h, z0.b
+; CHECK-NEXT:    ext z2.b, z2.b, z0.b, #128
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #128
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #128
 ; CHECK-NEXT:    uunpklo z2.s, z2.h
 ; CHECK-NEXT:    uunpklo z3.s, z3.h
+; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    udivr z4.s, p1/m, z4.s, z5.s
 ; CHECK-NEXT:    uunpklo z5.s, z0.h
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #128
-; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    udivr z2.s, p1/m, z2.s, z3.s
 ; CHECK-NEXT:    uunpklo z3.s, z1.h
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #128
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #128
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #128
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    udivr z3.s, p1/m, z3.s, z5.s
 ; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
 ; CHECK-NEXT:    udiv z0.s, p1/m, z0.s, z1.s
@@ -1118,7 +1118,7 @@ define void @udiv_v16i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    uunpklo z2.s, z1.h
 ; VBITS_GE_256-NEXT:    uunpklo z3.s, z0.h
-; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z1.b, #16
+; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    uunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h
@@ -1187,7 +1187,7 @@ define void @udiv_v128i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; CHECK-NEXT:    uunpklo z2.s, z1.h
 ; CHECK-NEXT:    uunpklo z3.s, z0.h
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #128
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #128
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #128
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z0.s, z0.h

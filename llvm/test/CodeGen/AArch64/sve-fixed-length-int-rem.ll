@@ -129,8 +129,8 @@ define <16 x i8> @srem_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    sunpklo z4.s, z2.h
 ; VBITS_GE_256-NEXT:    sunpklo z5.s, z3.h
-; VBITS_GE_256-NEXT:    ext z2.b, z2.b, z2.b, #16
-; VBITS_GE_256-NEXT:    ext z3.b, z3.b, z3.b, #16
+; VBITS_GE_256-NEXT:    ext z2.b, z2.b, z0.b, #16
+; VBITS_GE_256-NEXT:    ext z3.b, z3.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    sunpklo z2.s, z2.h
 ; VBITS_GE_256-NEXT:    sunpklo z3.s, z3.h
 ; VBITS_GE_256-NEXT:    sdivr z4.s, p0/m, z4.s, z5.s
@@ -222,8 +222,8 @@ define void @srem_v128i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    sunpklo z3.h, z0.b
 ; CHECK-NEXT:    sunpklo z4.s, z2.h
 ; CHECK-NEXT:    sunpklo z5.s, z3.h
-; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #128
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #128
+; CHECK-NEXT:    ext z2.b, z2.b, z0.b, #128
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #128
 ; CHECK-NEXT:    sunpklo z2.s, z2.h
 ; CHECK-NEXT:    sunpklo z3.s, z3.h
 ; CHECK-NEXT:    sdivr z4.s, p1/m, z4.s, z5.s
@@ -254,8 +254,8 @@ define void @srem_v256i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    sunpklo z3.h, z0.b
 ; CHECK-NEXT:    sunpklo z4.s, z2.h
 ; CHECK-NEXT:    sunpklo z5.s, z3.h
-; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #128
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #128
+; CHECK-NEXT:    ext z2.b, z2.b, z0.b, #128
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #128
 ; CHECK-NEXT:    sunpklo z2.s, z2.h
 ; CHECK-NEXT:    sunpklo z3.s, z3.h
 ; CHECK-NEXT:    sdivr z4.s, p1/m, z4.s, z5.s
@@ -263,15 +263,15 @@ define void @srem_v256i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ext z5.b, z5.b, z0.b, #128
 ; CHECK-NEXT:    sunpklo z5.h, z5.b
 ; CHECK-NEXT:    sunpklo z7.s, z5.h
-; CHECK-NEXT:    ext z5.b, z5.b, z5.b, #128
+; CHECK-NEXT:    ext z5.b, z5.b, z0.b, #128
 ; CHECK-NEXT:    sdivr z2.s, p1/m, z2.s, z3.s
 ; CHECK-NEXT:    mov z3.d, z1.d
 ; CHECK-NEXT:    sunpklo z5.s, z5.h
-; CHECK-NEXT:    ext z3.b, z3.b, z1.b, #128
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #128
 ; CHECK-NEXT:    uzp1 z4.h, z4.h, z4.h
 ; CHECK-NEXT:    sunpklo z3.h, z3.b
 ; CHECK-NEXT:    sunpklo z6.s, z3.h
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #128
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #128
 ; CHECK-NEXT:    sunpklo z3.s, z3.h
 ; CHECK-NEXT:    sdivr z6.s, p1/m, z6.s, z7.s
 ; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
@@ -425,7 +425,7 @@ define void @srem_v16i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    sdivr z2.s, p1/m, z2.s, z3.s
 ; VBITS_GE_256-NEXT:    mov z3.d, z1.d
 ; VBITS_GE_256-NEXT:    sunpklo z4.s, z4.h
-; VBITS_GE_256-NEXT:    ext z3.b, z3.b, z1.b, #16
+; VBITS_GE_256-NEXT:    ext z3.b, z3.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    sunpklo z3.s, z3.h
 ; VBITS_GE_256-NEXT:    sdivr z3.s, p1/m, z3.s, z4.s
 ; VBITS_GE_256-NEXT:    ptrue p1.h, vl8
@@ -512,7 +512,7 @@ define void @srem_v128i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    sdivr z2.s, p1/m, z2.s, z3.s
 ; CHECK-NEXT:    mov z3.d, z1.d
 ; CHECK-NEXT:    sunpklo z4.s, z4.h
-; CHECK-NEXT:    ext z3.b, z3.b, z1.b, #128
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #128
 ; CHECK-NEXT:    sunpklo z3.s, z3.h
 ; CHECK-NEXT:    sdivr z3.s, p1/m, z3.s, z4.s
 ; CHECK-NEXT:    ptrue p1.h, vl64
@@ -947,8 +947,8 @@ define <16 x i8> @urem_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    uunpklo z4.s, z2.h
 ; VBITS_GE_256-NEXT:    uunpklo z5.s, z3.h
-; VBITS_GE_256-NEXT:    ext z2.b, z2.b, z2.b, #16
-; VBITS_GE_256-NEXT:    ext z3.b, z3.b, z3.b, #16
+; VBITS_GE_256-NEXT:    ext z2.b, z2.b, z0.b, #16
+; VBITS_GE_256-NEXT:    ext z3.b, z3.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    uunpklo z2.s, z2.h
 ; VBITS_GE_256-NEXT:    uunpklo z3.s, z3.h
 ; VBITS_GE_256-NEXT:    udivr z4.s, p0/m, z4.s, z5.s
@@ -1040,8 +1040,8 @@ define void @urem_v128i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    uunpklo z3.h, z0.b
 ; CHECK-NEXT:    uunpklo z4.s, z2.h
 ; CHECK-NEXT:    uunpklo z5.s, z3.h
-; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #128
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #128
+; CHECK-NEXT:    ext z2.b, z2.b, z0.b, #128
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #128
 ; CHECK-NEXT:    uunpklo z2.s, z2.h
 ; CHECK-NEXT:    uunpklo z3.s, z3.h
 ; CHECK-NEXT:    udivr z4.s, p1/m, z4.s, z5.s
@@ -1072,8 +1072,8 @@ define void @urem_v256i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    uunpklo z3.h, z0.b
 ; CHECK-NEXT:    uunpklo z4.s, z2.h
 ; CHECK-NEXT:    uunpklo z5.s, z3.h
-; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #128
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #128
+; CHECK-NEXT:    ext z2.b, z2.b, z0.b, #128
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #128
 ; CHECK-NEXT:    uunpklo z2.s, z2.h
 ; CHECK-NEXT:    uunpklo z3.s, z3.h
 ; CHECK-NEXT:    udivr z4.s, p1/m, z4.s, z5.s
@@ -1081,15 +1081,15 @@ define void @urem_v256i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ext z5.b, z5.b, z0.b, #128
 ; CHECK-NEXT:    uunpklo z5.h, z5.b
 ; CHECK-NEXT:    uunpklo z7.s, z5.h
-; CHECK-NEXT:    ext z5.b, z5.b, z5.b, #128
+; CHECK-NEXT:    ext z5.b, z5.b, z0.b, #128
 ; CHECK-NEXT:    udivr z2.s, p1/m, z2.s, z3.s
 ; CHECK-NEXT:    mov z3.d, z1.d
 ; CHECK-NEXT:    uunpklo z5.s, z5.h
-; CHECK-NEXT:    ext z3.b, z3.b, z1.b, #128
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #128
 ; CHECK-NEXT:    uzp1 z4.h, z4.h, z4.h
 ; CHECK-NEXT:    uunpklo z3.h, z3.b
 ; CHECK-NEXT:    uunpklo z6.s, z3.h
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #128
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #128
 ; CHECK-NEXT:    uunpklo z3.s, z3.h
 ; CHECK-NEXT:    udivr z6.s, p1/m, z6.s, z7.s
 ; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
@@ -1243,7 +1243,7 @@ define void @urem_v16i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    udivr z2.s, p1/m, z2.s, z3.s
 ; VBITS_GE_256-NEXT:    mov z3.d, z1.d
 ; VBITS_GE_256-NEXT:    uunpklo z4.s, z4.h
-; VBITS_GE_256-NEXT:    ext z3.b, z3.b, z1.b, #16
+; VBITS_GE_256-NEXT:    ext z3.b, z3.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    uunpklo z3.s, z3.h
 ; VBITS_GE_256-NEXT:    udivr z3.s, p1/m, z3.s, z4.s
 ; VBITS_GE_256-NEXT:    ptrue p1.h, vl8
@@ -1330,7 +1330,7 @@ define void @urem_v128i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    udivr z2.s, p1/m, z2.s, z3.s
 ; CHECK-NEXT:    mov z3.d, z1.d
 ; CHECK-NEXT:    uunpklo z4.s, z4.h
-; CHECK-NEXT:    ext z3.b, z3.b, z1.b, #128
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #128
 ; CHECK-NEXT:    uunpklo z3.s, z3.h
 ; CHECK-NEXT:    udivr z3.s, p1/m, z3.s, z4.s
 ; CHECK-NEXT:    ptrue p1.h, vl64

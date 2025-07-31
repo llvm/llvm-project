@@ -180,7 +180,7 @@ define void @test_fixed_extract(i64 %i, i64 %n) #0 {
 ; CHECK-SVE-NEXT:    mov z1.s, p0/z, #1 // =0x1
 ; CHECK-SVE-NEXT:    fmov s0, w8
 ; CHECK-SVE-NEXT:    mov v0.s[1], v1.s[1]
-; CHECK-SVE-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-SVE-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SVE-NEXT:    // kill: def $d1 killed $d1 killed $z1
 ; CHECK-SVE-NEXT:    b use
@@ -192,7 +192,7 @@ define void @test_fixed_extract(i64 %i, i64 %n) #0 {
 ; CHECK-SVE2p1-NEXT:    mov z1.s, p0/z, #1 // =0x1
 ; CHECK-SVE2p1-NEXT:    fmov s0, w8
 ; CHECK-SVE2p1-NEXT:    mov v0.s[1], v1.s[1]
-; CHECK-SVE2p1-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-SVE2p1-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-SVE2p1-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SVE2p1-NEXT:    // kill: def $d1 killed $d1 killed $z1
 ; CHECK-SVE2p1-NEXT:    b use
@@ -204,10 +204,10 @@ define void @test_fixed_extract(i64 %i, i64 %n) #0 {
 ; CHECK-SME2-NEXT:    mov z1.s, p0/z, #1 // =0x1
 ; CHECK-SME2-NEXT:    fmov s2, w8
 ; CHECK-SME2-NEXT:    mov z0.s, z1.s[1]
-; CHECK-SME2-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-SME2-NEXT:    // kill: def $d1 killed $d1 killed $z1
 ; CHECK-SME2-NEXT:    zip1 z0.s, z2.s, z0.s
+; CHECK-SME2-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-SME2-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SME2-NEXT:    // kill: def $d1 killed $d1 killed $z1
 ; CHECK-SME2-NEXT:    b use
     %r = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 %i, i64 %n)
     %v0 = call <2 x i1> @llvm.vector.extract.v2i1.nxv4i1.i64(<vscale x 4 x i1> %r, i64 0)

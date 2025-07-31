@@ -15544,7 +15544,9 @@ SDValue AArch64TargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
 
     assert(InVT.isScalableVector() && "Unexpected vector type!");
     // Move requested subvector to the start of the vector and try again.
-    SDValue Splice = DAG.getNode(ISD::VECTOR_SPLICE, DL, InVT, Vec, Vec, Idx);
+    // There's no need for a second input to vector_splice, so use undef there.
+    SDValue Splice =
+        DAG.getNode(ISD::VECTOR_SPLICE, DL, InVT, Vec, DAG.getUNDEF(InVT), Idx);
     return convertFromScalableVector(DAG, VT, Splice);
   }
 
