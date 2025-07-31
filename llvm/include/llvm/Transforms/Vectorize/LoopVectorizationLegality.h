@@ -514,7 +514,8 @@ private:
   /// we read and write from memory. This method checks if it is
   /// legal to vectorize the code, considering only memory constrains.
   /// Returns true if the loop is vectorizable
-  bool canVectorizeMemory(std::optional<LoadInst *>);
+  bool canVectorizeMemory(
+      std::optional<LoadInst *> CriticalEarlyExitUncountedConditionLoad);
 
   /// If LAA cannot determine whether all dependences are safe, we may be able
   /// to further analyse some IndirectUnsafe dependences and if they match a
@@ -544,7 +545,8 @@ private:
   /// The list above is not based on theoretical limitations of vectorization,
   /// but simply a statement that more work is needed to support these
   /// additional cases safely.
-  bool isVectorizableEarlyExitLoop(std::optional<LoadInst *> &);
+  bool isVectorizableEarlyExitLoop(
+      std::optional<LoadInst *> &CriticalEarlyExitUncountedConditionLoad);
 
   /// Clears any current early exit data gathered if a check failed.
   void clearEarlyExitData() {
