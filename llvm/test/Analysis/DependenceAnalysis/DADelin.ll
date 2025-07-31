@@ -637,9 +637,10 @@ exit:
 ;   a[k * i] = 42;
 ;   a[k * (i + 1)] = 42;
 ;   i++;
-; } while (i < k);
+; } while (i != k);
 ;
 ; The dependency direction between the two stores depends on the sign of k.
+; Note that the loop guard is omitted intentionally.
 ; FIXME: Each store has loop-carried dependencies on itself if k is zero.
 ;
 define void @coeff_may_negative(ptr %a, i32 %k) {
@@ -675,8 +676,9 @@ exit:
 ;   a[k * i] = 42;
 ;   a[k * (i + 1)] = 42;
 ;   i++;
-; } while (i < k);
+; } while (i != k);
 ;
+; Note that the loop guard is omitted intentionally.
 ; FIXME: In principle, we can infer that the value of k is non-negative from
 ; the nsw flag.
 ;
