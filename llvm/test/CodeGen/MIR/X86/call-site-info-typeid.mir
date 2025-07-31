@@ -1,7 +1,7 @@
 # Test MIR printer and parser for type id field in callSites. It is used
 # for propagating call site type identifiers to emit in the call graph section.
 
-# RUN: llc --call-graph-section %s -run-pass=none -o - | FileCheck --match-full-lines %s
+# RUN: llc -mtriple=x86_64 --call-graph-section %s -run-pass=none -o - | FileCheck --match-full-lines %s
 # CHECK: name: call_foo
 # CHECK: callSites:
 # CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], calleeTypeIds:

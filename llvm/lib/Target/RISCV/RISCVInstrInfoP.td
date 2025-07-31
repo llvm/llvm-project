@@ -123,7 +123,7 @@ class RVPShiftB_ri<bits<3> f, bits<3> funct3, string opcodestr>
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVPUnaryWUF<bits<2> w, bits<5> uf, string opcodestr>
+class RVPUnary_ri<bits<2> w, bits<5> uf, string opcodestr>
     : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd), (ins GPR:$rs1),
                   opcodestr, "$rd, $rs1">  {
   let Inst{31-27} = 0b11100;
@@ -136,6 +136,7 @@ class RVPUnaryWUF<bits<2> w, bits<5> uf, string opcodestr>
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtP] in {
+let IsSignExtendingOpW = 1 in
 def CLS    : Unary_r<0b011000000011, 0b001, "cls">;
 def ABS    : Unary_r<0b011000000111, 0b001, "abs">;
 } // Predicates = [HasStdExtP]
@@ -146,8 +147,10 @@ let Predicates = [HasStdExtP, IsRV64] in {
 def REV16      : Unary_r<0b011010110000, 0b101, "rev16">;
 def REV_RV64   : Unary_r<0b011010111111, 0b101, "rev">;
 
+let IsSignExtendingOpW = 1 in {
 def CLSW  : UnaryW_r<0b011000000011, 0b001, "clsw">;
 def ABSW  : UnaryW_r<0b011000000111, 0b001, "absw">;
+}
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in {
@@ -171,13 +174,13 @@ let Predicates = [HasStdExtP] in
 def PLI_B : PLI_B_i<0b10110100, "pli.b">;
 
 let Predicates = [HasStdExtP] in {
-def PSEXT_H_B : RVPUnaryWUF<0b00, 0b00100, "psext.h.b">;
-def PSABS_H   : RVPUnaryWUF<0b00, 0b00111, "psabs.h">;
-def PSABS_B   : RVPUnaryWUF<0b10, 0b00111, "psabs.b">;
+def PSEXT_H_B : RVPUnary_ri<0b00, 0b00100, "psext.h.b">;
+def PSABS_H   : RVPUnary_ri<0b00, 0b00111, "psabs.h">;
+def PSABS_B   : RVPUnary_ri<0b10, 0b00111, "psabs.b">;
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV64] in {
-def PSEXT_W_B : RVPUnaryWUF<0b01, 0b00100, "psext.w.b">;
-def PSEXT_W_H : RVPUnaryWUF<0b01, 0b00101, "psext.w.h">;
+def PSEXT_W_B : RVPUnary_ri<0b01, 0b00100, "psext.w.b">;
+def PSEXT_W_H : RVPUnary_ri<0b01, 0b00101, "psext.w.h">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in

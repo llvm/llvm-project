@@ -11,7 +11,7 @@ RUN: llvm-profdata show --memory %p/Inputs/pic.memprofraw --profiled-binary %p/I
 
 CHECK:  MemprofProfile:
 CHECK-NEXT:   Summary:
-CHECK-NEXT:     Version: 4
+CHECK-NEXT:     Version: 5
 CHECK-NEXT:     NumSegments: {{[0-9]+}}
 CHECK-NEXT:     NumMibInfo: 2
 CHECK-NEXT:     NumAllocFunctions: 1
