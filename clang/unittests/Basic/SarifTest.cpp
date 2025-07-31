@@ -41,7 +41,8 @@ static std::string serializeSarifDocument(llvm::json::Object &&Doc) {
 class SarifDocumentWriterTest : public ::testing::Test {
 protected:
   SarifDocumentWriterTest()
-      : InMemoryFileSystem(new llvm::vfs::InMemoryFileSystem),
+      : InMemoryFileSystem(
+            llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>()),
         FileMgr(FileSystemOptions(), InMemoryFileSystem),
         DiagID(new DiagnosticIDs()),
         Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
