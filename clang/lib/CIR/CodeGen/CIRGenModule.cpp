@@ -64,7 +64,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
       langOpts(astContext.getLangOpts()), codeGenOpts(cgo),
       theModule{mlir::ModuleOp::create(mlir::UnknownLoc::get(&mlirContext))},
       diags(diags), target(astContext.getTargetInfo()),
-      abi(createCXXABI(*this)), genTypes(*this) {
+      abi(createCXXABI(*this)), genTypes(*this), vtables(*this) {
 
   // Initialize cached types
   VoidTy = cir::VoidType::get(&getMLIRContext());
@@ -75,6 +75,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   SInt64Ty = cir::IntType::get(&getMLIRContext(), 64, /*isSigned=*/true);
   SInt128Ty = cir::IntType::get(&getMLIRContext(), 128, /*isSigned=*/true);
   UInt8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/false);
+  UInt8PtrTy = cir::PointerType::get(UInt8Ty);
   UInt16Ty = cir::IntType::get(&getMLIRContext(), 16, /*isSigned=*/false);
   UInt32Ty = cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/false);
   UInt64Ty = cir::IntType::get(&getMLIRContext(), 64, /*isSigned=*/false);
@@ -944,6 +945,39 @@ void CIRGenModule::applyReplacements() {
       oldF->erase();
     }
   }
+}
+
+cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
+    mlir::Location loc, StringRef name, mlir::Type ty,
+    cir::GlobalLinkageKind linkage, clang::CharUnits alignment) {
+  auto gv = mlir::dyn_cast_or_null<cir::GlobalOp>(
+      mlir::SymbolTable::lookupSymbolIn(theModule, name));
+
+  if (gv) {
+    // There should be handling added here to check the type as assert that
+    // gv was a declaration if the type doesn't match and handling below
+    // to replace the variable if it was a declaration.
+    errorNYI(loc, "createOrReplaceCXXRuntimeVariable: already exists");
+    return gv;
+  }
+
+  // Create a new variable.
+  gv = createGlobalOp(*this, loc, name, ty);
+
+  // Set up extra information and add to the module
+  gv.setLinkageAttr(
+      cir::GlobalLinkageKindAttr::get(&getMLIRContext(), linkage));
+  mlir::SymbolTable::setSymbolVisibility(gv,
+                                         CIRGenModule::getMLIRVisibility(gv));
+
+  if (supportsCOMDAT() && cir::isWeakForLinker(linkage) &&
+      !gv.hasAvailableExternallyLinkage()) {
+    gv.setComdat(true);
+  }
+
+  gv.setAlignmentAttr(getSize(alignment));
+  setDSOLocal(static_cast<mlir::Operation *>(gv));
+  return gv;
 }
 
 // TODO(CIR): this could be a common method between LLVM codegen.
@@ -1938,6 +1972,15 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
       theModule.push_back(func);
   }
   return func;
+}
+
+mlir::SymbolTable::Visibility
+CIRGenModule::getMLIRVisibility(cir::GlobalOp op) {
+  // MLIR doesn't accept public symbols declarations (only
+  // definitions).
+  if (op.isDeclaration())
+    return mlir::SymbolTable::Visibility::Private;
+  return getMLIRVisibilityFromCIRLinkage(op.getLinkage());
 }
 
 mlir::SymbolTable::Visibility

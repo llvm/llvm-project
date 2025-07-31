@@ -80,6 +80,11 @@ public:
                                   bool forVirtualBase, bool delegating,
                                   Address thisAddr, QualType thisTy) = 0;
 
+  /// Checks if ABI requires extra virtual offset for vtable field.
+  virtual bool
+  isVirtualOffsetNeededForVTableField(CIRGenFunction &cgf,
+                                      CIRGenFunction::VPtr vptr) = 0;
+
   /// Returns true if the given destructor type should be emitted as a linkonce
   /// delegating thunk, regardless of whether the dtor is defined in this TU or
   /// not.
@@ -89,6 +94,26 @@ public:
   virtual cir::GlobalLinkageKind
   getCXXDestructorLinkage(GVALinkage linkage, const CXXDestructorDecl *dtor,
                           CXXDtorType dt) const;
+
+  /// Get the address of the vtable for the given record decl which should be
+  /// used for the vptr at the given offset in RD.
+  virtual cir::GlobalOp getAddrOfVTable(const CXXRecordDecl *rd,
+                                        CharUnits vptrOffset) = 0;
+
+  /// Get the address point of the vtable for the given base subobject.
+  virtual mlir::Value
+  getVTableAddressPoint(BaseSubobject base,
+                        const CXXRecordDecl *vtableClass) = 0;
+
+  /// Get the address point of the vtable for the given base subobject while
+  /// building a constructor or a destructor.
+  virtual mlir::Value getVTableAddressPointInStructor(
+      CIRGenFunction &cgf, const CXXRecordDecl *vtableClass, BaseSubobject base,
+      const CXXRecordDecl *nearestVBase) = 0;
+
+  /// Checks if ABI requires to initialize vptrs for given dynamic class.
+  virtual bool
+  doStructorsInitializeVPtrs(const clang::CXXRecordDecl *vtableClass) = 0;
 
   /// Returns true if the given constructor or destructor is one of the kinds
   /// that the ABI says returns 'this' (only applies when called non-virtually
