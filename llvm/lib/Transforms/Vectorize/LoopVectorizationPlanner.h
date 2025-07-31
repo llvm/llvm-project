@@ -256,13 +256,15 @@ public:
         new VPInstruction(VPInstruction::PtrAdd, {Ptr, Offset},
                           GEPNoWrapFlags::none(), DL, Name));
   }
-  VPInstruction *createInBoundsPtrAdd(VPValue *Ptr, VPValue *Offset,
-                                      DebugLoc DL = DebugLoc::getUnknown(),
-                                      const Twine &Name = "") {
-    return tryInsertInstruction(
-        new VPInstruction(VPInstruction::PtrAdd, {Ptr, Offset},
-                          GEPNoWrapFlags::inBounds(), DL, Name));
+
+  VPInstruction *createNoWrapPtrAdd(VPValue *Ptr, VPValue *Offset,
+                                    GEPNoWrapFlags GEPFlags,
+                                    DebugLoc DL = DebugLoc::getUnknown(),
+                                    const Twine &Name = "") {
+    return tryInsertInstruction(new VPInstruction(
+        VPInstruction::PtrAdd, {Ptr, Offset}, GEPFlags, DL, Name));
   }
+
   VPInstruction *createWidePtrAdd(VPValue *Ptr, VPValue *Offset,
                                   DebugLoc DL = DebugLoc::getUnknown(),
                                   const Twine &Name = "") {
