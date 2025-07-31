@@ -2778,12 +2778,28 @@ SDValue LoongArchTargetLowering::lowerCONCAT_VECTORS(SDValue Op,
 SDValue
 LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
                                                  SelectionDAG &DAG) const {
-  EVT VecTy = Op->getOperand(0)->getValueType(0);
+  MVT EltVT = Op.getSimpleValueType();
+  SDValue Vec = Op->getOperand(0);
+  EVT VecTy = Vec->getValueType(0);
   SDValue Idx = Op->getOperand(1);
   unsigned NumElts = VecTy.getVectorNumElements();
+  SDLoc DL(Op);
+
+  assert(VecTy.is256BitVector() && "Unexpected EXTRACT_VECTOR_ELT vector type");
 
   if (isa<ConstantSDNode>(Idx) && Idx->getAsZExtVal() < NumElts)
     return Op;
+
+  // TODO: Deal with other legal 256-bits vector types?
+  if (!isa<ConstantSDNode>(Idx) &&
+      (VecTy == MVT::v8i32 || VecTy == MVT::v8f32)) {
+    SDValue SplatIdx = DAG.getSplatBuildVector(MVT::v8i32, DL, Idx);
+    SDValue SplatValue =
+        DAG.getNode(LoongArchISD::XVPERM, DL, VecTy, Vec, SplatIdx);
+
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, SplatValue,
+                       DAG.getConstant(0, DL, Subtarget.getGRLenVT()));
+  }
 
   return SDValue();
 }
@@ -6967,6 +6983,7 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(VREPLVEI)
     NODE_NAME_CASE(VREPLGR2VR)
     NODE_NAME_CASE(XVPERMI)
+    NODE_NAME_CASE(XVPERM)
     NODE_NAME_CASE(VPICK_SEXT_ELT)
     NODE_NAME_CASE(VPICK_ZEXT_ELT)
     NODE_NAME_CASE(VREPLVE)
