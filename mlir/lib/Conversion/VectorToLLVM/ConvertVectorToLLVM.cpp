@@ -1904,8 +1904,10 @@ struct VectorFromElementsLowering
       return success();
     }
 
-    // Build 1D vectors for the innermost dimension
+    // Build 1D vectors for the innermost dimension.
     int64_t innerDimSize = vectorType.getShape().back();
+    assert(vectorType.getNumElements() % innerDimSize == 0 &&
+           "innerDimSize must divide vectorType.getNumElements()");
     int64_t numInnerVectors = vectorType.getNumElements() / innerDimSize;
 
     SmallVector<Value> innerVectors;
@@ -1915,23 +1917,23 @@ struct VectorFromElementsLowering
         VectorType::get(innerDimSize, vectorType.getElementType());
     Type llvmInnerType = typeConverter->convertType(innerVectorType);
 
-    int64_t elementInVectorIdx = 0;
     Value innerVector;
-    for (auto val : adaptor.getElements()) {
+    for (auto [elemIdx, val] : llvm::enumerate(adaptor.getElements())) {
+      int64_t elementInVectorIdx = elemIdx % innerDimSize;
       if (elementInVectorIdx == 0)
         innerVector = LLVM::PoisonOp::create(rewriter, loc, llvmInnerType);
       auto position = LLVM::ConstantOp::create(rewriter, loc, llvmIndexType,
                                                elementInVectorIdx);
       innerVector = LLVM::InsertElementOp::create(rewriter, loc, llvmInnerType,
                                                   innerVector, val, position);
-      if (++elementInVectorIdx == innerDimSize) {
+      if (elementInVectorIdx == innerDimSize - 1)
         innerVectors.push_back(innerVector);
-        elementInVectorIdx = 0;
-      }
     }
 
     // For 1D vectors, we can just return the first innermost vector.
     if (vectorType.getRank() == 1) {
+      assert(innerVectors.size() == 1 &&
+             "for 1D vectors, innerVectors should have exactly one element");
       rewriter.replaceOp(fromElementsOp, innerVectors.front());
       return success();
     }
@@ -1939,17 +1941,16 @@ struct VectorFromElementsLowering
     // Now build the nested aggregate structure from these 1D vectors.
     result = LLVM::PoisonOp::create(rewriter, loc, llvmType);
 
-    // Use the same iteration approach as VectorBroadcastScalarToNdLowering to
-    // insert the 1D vectors into the aggregate.
-    auto vectorTypeInfo =
-        LLVM::detail::extractNDVectorTypeInfo(vectorType, *getTypeConverter());
-    if (!vectorTypeInfo.llvmNDVectorTy)
-      return failure();
+    // Iterate over each position of the first n-1 dimensions and insert the 1D
+    // vectors into the aggregate.
     int64_t vectorIdx = 0;
-    nDVectorIterate(vectorTypeInfo, rewriter, [&](ArrayRef<int64_t> position) {
-      result = LLVM::InsertValueOp::create(rewriter, loc, result,
-                                           innerVectors[vectorIdx++], position);
-    });
+    if (failed(LLVM::detail::nDVectorIterate(
+            vectorType, *getTypeConverter(), rewriter,
+            [&](ArrayRef<int64_t> position) {
+              result = LLVM::InsertValueOp::create(
+                  rewriter, loc, result, innerVectors[vectorIdx++], position);
+            })))
+      return failure();
 
     rewriter.replaceOp(fromElementsOp, result);
     return success();
