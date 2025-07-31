@@ -1308,10 +1308,6 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
     if (isFMulAddIntrinsic(Cur))
       return true;
 
-    // Recognize a sub reduction. It gets canonicalized to add(sub (0, ...)).
-    if (Cur->getOpcode() == Instruction::Sub && getOpcode() == Instruction::Add)
-      return true;
-
     return Cur->getOpcode() == getOpcode();
   };
 
