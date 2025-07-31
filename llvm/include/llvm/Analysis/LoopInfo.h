@@ -637,9 +637,13 @@ LLVM_ABI std::optional<bool> getOptionalBoolLoopAttribute(const Loop *TheLoop,
 /// Returns true if Name is applied to TheLoop and enabled.
 LLVM_ABI bool getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name);
 
-/// Find named metadata for a loop with an integer value.
-LLVM_ABI std::optional<int> getOptionalIntLoopAttribute(const Loop *TheLoop,
-                                                        StringRef Name);
+/// Find named metadata for a loop with an integer value.  Return
+/// \c std::nullopt if the metadata has no value or is missing altogether.  If
+/// \p Missing, set \c *Missing to indicate whether the metadata is missing
+/// altogether.
+LLVM_ABI std::optional<int>
+getOptionalIntLoopAttribute(const Loop *TheLoop, StringRef Name,
+                            bool *Missing = nullptr);
 
 /// Find named metadata for a loop with an integer value. Return \p Default if
 /// not set.
