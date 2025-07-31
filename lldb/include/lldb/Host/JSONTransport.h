@@ -15,6 +15,7 @@
 
 #include "lldb/Host/MainLoopBase.h"
 #include "lldb/lldb-forward.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -78,7 +79,8 @@ class JSONTransport {
 public:
   using ReadHandleUP = MainLoopBase::ReadHandleUP;
   template <typename T>
-  using Callback = std::function<void(MainLoopBase &, const llvm::Expected<T>)>;
+  using Callback =
+      llvm::unique_function<void(MainLoopBase &, const llvm::Expected<T>)>;
 
   JSONTransport(lldb::IOObjectSP input, lldb::IOObjectSP output);
   virtual ~JSONTransport() = default;
@@ -98,7 +100,7 @@ public:
   /// Registers the transport with the MainLoop.
   template <typename T>
   llvm::Expected<ReadHandleUP> RegisterReadObject(MainLoopBase &loop,
-                                                  const Callback<T> &callback) {
+                                                  Callback<T> callback) {
     Status error;
     ReadHandleUP handle = loop.RegisterReadObject(
         m_input,

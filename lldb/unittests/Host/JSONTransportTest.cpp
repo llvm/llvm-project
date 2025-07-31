@@ -11,6 +11,7 @@
 #include "lldb/Host/File.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -42,22 +43,23 @@ protected:
   Expected<P>
   RunOnce(std::chrono::milliseconds timeout = std::chrono::seconds(1)) {
     std::promise<Expected<P>> promised_message;
+    std::future<Expected<P>> future_message = promised_message.get_future();
     RunUntil<P>(
-        [&](Expected<P> message) {
+        [&](Expected<P> message) -> bool {
           promised_message.set_value(std::move(message));
           return /*keep_going*/ false;
         },
         timeout);
-    return promised_message.get_future().get();
+    return future_message.get();
   }
 
   /// RunUntil runs the event loop until the callback returns `false` or a
   /// timeout has occured.
   template <typename P>
-  void RunUntil(std::function<bool(Expected<P>)> callback,
+  void RunUntil(unique_function<bool(Expected<P>)> callback,
                 std::chrono::milliseconds timeout = std::chrono::seconds(1)) {
     auto handle = transport->RegisterReadObject<P>(
-        loop, [&](MainLoopBase &loop, llvm::Expected<P> message) {
+        loop, [&](MainLoopBase &loop, Expected<P> message) {
           bool keep_going = callback(std::move(message));
           if (!keep_going)
             loop.RequestTermination();
