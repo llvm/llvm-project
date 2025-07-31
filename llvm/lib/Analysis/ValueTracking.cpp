@@ -7570,7 +7570,7 @@ bool llvm::impliesPoison(const Value *ValAssumedPoison, const Value *V) {
 static bool programUndefinedIfUndefOrPoison(const Value *V, bool PoisonOnly);
 
 Use *llvm::canFoldFreezeIntoRecurrence(
-    PHINode *PN, DominatorTree *DT, bool &StartNeedsFreeze,
+    PHINode *PN, const DominatorTree *DT, bool &StartNeedsFreeze,
     SmallVectorImpl<Instruction *> *DropFlags, unsigned Depth) {
   // Detect whether this is a recurrence with a start value and some number of
   // backedge values. We'll check whether we can push the freeze through the
@@ -7722,9 +7722,9 @@ static bool isGuaranteedNotToBeUndefOrPoison(
         return true;
 
       bool StartNeedsFreeze;
-      if (canFoldFreezeIntoRecurrence(
-              const_cast<PHINode *>(PN), const_cast<DominatorTree *>(DT),
-              StartNeedsFreeze, /*DropFlags=*/nullptr, Depth) &&
+      if (canFoldFreezeIntoRecurrence(const_cast<PHINode *>(PN), DT,
+                                      StartNeedsFreeze, /*DropFlags=*/nullptr,
+                                      Depth) &&
           !StartNeedsFreeze)
         return true;
     } else if (!::canCreateUndefOrPoison(Opr, Kind,

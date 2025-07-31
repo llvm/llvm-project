@@ -781,7 +781,7 @@ LLVM_ABI bool impliesPoison(const Value *ValAssumedPoison, const Value *V);
 /// values (possibly dropping poison flags along the way) until we reach the
 /// phi again. In that case, we can move the freeze to the start value.
 LLVM_ABI Use *canFoldFreezeIntoRecurrence(
-    PHINode *PN, DominatorTree *DT, bool &StartNeedsFreeze,
+    PHINode *PN, const DominatorTree *DT, bool &StartNeedsFreeze,
     SmallVectorImpl<Instruction *> *DropFlags = nullptr, unsigned Depth = 0);
 
 /// Return true if this function can prove that V does not have undef bits
