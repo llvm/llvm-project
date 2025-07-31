@@ -111,9 +111,9 @@
               "type": "string"
             }
           },
-          "lldb-dap.verboseLogging": {
+          "lldb-dap.captureSessionLogs": {
             "type": "boolean",
-            "description": "Enable verbose logging to the \"LLDB-DAP\" output channel for the running debug session. Also will write LLDB-DAP session logs to the Extension's log folder if the `lldb-dap.log-path` setting is not explicitly set.",
+            "description": "When enabled, LLDB-DAP session logs will be written to the Extension's log folder if the `lldb-dap.log-path` setting is not explicitly set.",
             "default": false
           }
         }

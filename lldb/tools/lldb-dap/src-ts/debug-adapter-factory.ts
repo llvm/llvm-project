@@ -198,7 +198,7 @@ export async function createDebugAdapterExecutable(
   if (log_path) {
     env["LLDBDAP_LOG"] = log_path;
   } else if (
-    vscode.workspace.getConfiguration("lldb-dap").get("verboseLogging", false)
+    vscode.workspace.getConfiguration("lldb-dap").get("captureSessionLogs", false)
   ) {
     env["LLDBDAP_LOG"] = logFilePath(
       `lldb-dap-session-${formatDate(new Date())}.log`,
