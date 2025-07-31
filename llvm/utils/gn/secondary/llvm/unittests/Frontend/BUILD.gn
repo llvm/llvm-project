@@ -13,6 +13,7 @@ unittest("LLVMFrontendTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "HLSLBindingTest.cpp",
     "HLSLRootSignatureDumpTest.cpp",
     "HLSLRootSignatureRangesTest.cpp",
     "OpenACCTest.cpp",
