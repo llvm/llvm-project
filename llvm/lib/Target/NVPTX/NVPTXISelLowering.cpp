@@ -382,12 +382,16 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
   }
 }
 
+// We return an EVT that can hold N VTs
+// If the VT is a vector, the resulting EVT is a flat vector with the same
+// element type as VT's element type.
 static EVT getVectorizedVT(EVT VT, unsigned N, LLVMContext &C) {
   if (N == 1)
     return VT;
 
-  const unsigned PackingAmt = VT.isVector() ? VT.getVectorNumElements() : 1;
-  return EVT::getVectorVT(C, VT.getScalarType(), N * PackingAmt);
+  return VT.isVector() ? EVT::getVectorVT(C, VT.getScalarType(),
+                                          VT.getVectorNumElements() * N)
+                       : EVT::getVectorVT(C, VT, N);
 }
 
 static SDValue getExtractVectorizedValue(SDValue V, unsigned I, EVT VT,
@@ -407,9 +411,8 @@ static SDValue getExtractVectorizedValue(SDValue V, unsigned I, EVT VT,
 }
 
 template <typename T>
-static inline SDValue getBuildVectorizedValue(T GetElement, unsigned N,
-                                              const SDLoc &dl,
-                                              SelectionDAG &DAG) {
+static inline SDValue getBuildVectorizedValue(unsigned N, const SDLoc &dl,
+                                              SelectionDAG &DAG, T GetElement) {
   if (N == 1)
     return GetElement(0);
 
@@ -1650,9 +1653,10 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                             ? MaybeAlign(std::nullopt)
                                             : commonAlignment(ArgAlign, Offset);
 
-        SDValue Val = getBuildVectorizedValue(
-            [&](unsigned K) { return GetStoredValue(J + K); }, NumElts, dl,
-            DAG);
+        SDValue Val =
+            getBuildVectorizedValue(NumElts, dl, DAG, [&](unsigned K) {
+              return GetStoredValue(J + K);
+            });
 
         SDValue StoreParam =
             DAG.getStore(ArgDeclare, dl, Val, Ptr,
@@ -3416,7 +3420,7 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                         : commonAlignment(RetAlign, Offsets[I]);
 
     SDValue Val = getBuildVectorizedValue(
-        [&](unsigned K) { return GetRetVal(I + K); }, NumElts, dl, DAG);
+        NumElts, dl, DAG, [&](unsigned K) { return GetRetVal(I + K); });
 
     SDValue Ptr =
         DAG.getObjectPtrOffset(dl, RetSymbol, TypeSize::getFixed(Offsets[I]));
