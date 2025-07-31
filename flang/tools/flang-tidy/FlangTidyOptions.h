@@ -50,6 +50,9 @@ struct FlangTidyOptions {
   /// Checks filter.
   std::optional<std::string> Checks;
 
+  /// WarningsAsErrors filter.
+  std::optional<std::string> WarningsAsErrors;
+
   /// Helper structure for storing option value with priority of the value.
   struct FlangTidyValue {
     FlangTidyValue() = default;
@@ -86,10 +89,15 @@ struct FlangTidyOptions {
   // Runtime-only options (not serialized to/from YAML)
   std::vector<std::string> sourcePaths;   // Set by command line
   std::vector<std::string> enabledChecks; // Parsed from Checks string
-  const char *argv0 = nullptr;            // Set by command line
+  std::vector<std::string>
+      enabledWarningsAsErrors; // Parsed from WarningsAsErrors string
+  const char *argv0 = nullptr; // Set by command line
 
   /// Parse the Checks string into enabledChecks vector
   void parseChecksString();
+
+  /// Parse the WarningsAsErrors string into enabledWarningsAsErrors vector
+  void parseWarningsAsErrorsString();
 };
 
 /// Abstract interface for retrieving various FlangTidy options.

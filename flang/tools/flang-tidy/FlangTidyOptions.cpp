@@ -93,6 +93,7 @@ template <>
 struct MappingTraits<FlangTidyOptions> {
   static void mapping(IO &IO, FlangTidyOptions &Options) {
     IO.mapOptional("Checks", Options.Checks);
+    IO.mapOptional("WarningsAsErrors", Options.WarningsAsErrors);
     IO.mapOptional("CheckOptions", Options.CheckOptions);
     IO.mapOptional("ExtraArgs", Options.ExtraArgs);
     IO.mapOptional("ExtraArgsBefore", Options.ExtraArgsBefore);
@@ -115,6 +116,7 @@ const char
 FlangTidyOptions FlangTidyOptions::getDefaults() {
   FlangTidyOptions Options;
   Options.Checks = "*";
+  Options.WarningsAsErrors = "";
   return Options;
 }
 
@@ -140,6 +142,10 @@ FlangTidyOptions &FlangTidyOptions::mergeWith(const FlangTidyOptions &Other,
   // This ensures config file checks override defaults instead of appending
   if (Other.Checks) {
     Checks = Other.Checks;
+  }
+  // Same for WarningsAsErrors. Needs to be consistent with Checks.
+  if (Other.WarningsAsErrors) {
+    WarningsAsErrors = Other.WarningsAsErrors;
   }
 
   mergeVectors(ExtraArgs, Other.ExtraArgs);
@@ -175,6 +181,23 @@ void FlangTidyOptions::parseChecksString() {
     check.erase(check.find_last_not_of(" \t") + 1);
     if (!check.empty()) {
       enabledChecks.push_back(check);
+    }
+  }
+}
+
+void FlangTidyOptions::parseWarningsAsErrorsString() {
+  enabledWarningsAsErrors.clear();
+  if (!WarningsAsErrors || WarningsAsErrors->empty())
+    return;
+
+  std::stringstream ss(*WarningsAsErrors);
+  std::string check;
+  while (std::getline(ss, check, ',')) {
+    // Trim whitespace
+    check.erase(0, check.find_first_not_of(" \t"));
+    check.erase(check.find_last_not_of(" \t") + 1);
+    if (!check.empty()) {
+      enabledWarningsAsErrors.push_back(check);
     }
   }
 }
@@ -390,6 +413,7 @@ parseConfiguration(llvm::MemoryBufferRef Config) {
 
   // Parse the checks string into the enabledChecks vector
   Options.parseChecksString();
+  Options.parseWarningsAsErrorsString();
 
   return Options;
 }

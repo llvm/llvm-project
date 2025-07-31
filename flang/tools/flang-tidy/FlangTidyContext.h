@@ -32,12 +32,16 @@ public:
     for (const auto &CheckName : options.enabledChecks) {
       Checks.insert(CheckName);
     }
+    for (const auto &CheckName : options.enabledWarningsAsErrors) {
+      WarningsAsErrors.insert(CheckName);
+    }
     Context = ctx;
   }
 
-  bool isCheckEnabled(const llvm::StringRef &CheckName) const {
+  bool isEnabled(const llvm::StringRef &CheckName,
+                 llvm::SmallSet<llvm::StringRef, 16> const &Set) const {
     bool enabled = false;
-    for (const auto &Pattern : Checks) {
+    for (const auto &Pattern : Set) {
       if (Pattern.starts_with("-")) {
         llvm::StringRef DisablePrefix = Pattern.drop_front(1);
         if (DisablePrefix.ends_with("*")) {
@@ -60,6 +64,14 @@ public:
     return enabled;
   }
 
+  bool isCheckEnabled(const llvm::StringRef &CheckName) const {
+    return isEnabled(CheckName, Checks);
+  }
+
+  bool isWarningsAsErrorsEnabled(const llvm::StringRef &CheckName) const {
+    return isEnabled(CheckName, WarningsAsErrors);
+  }
+
   semantics::SemanticsContext &getSemanticsContext() const { return *Context; }
 
   /// Get the FlangTidy options
@@ -68,6 +80,8 @@ public:
 public:
   /// List of enabled checks.
   llvm::SmallSet<llvm::StringRef, 16> Checks;
+  /// List of checks for which to turn warnings into errors.
+  llvm::SmallSet<llvm::StringRef, 16> WarningsAsErrors;
   /// The semantics context used for the checks.
   semantics::SemanticsContext *Context;
   FlangTidyOptions Options;

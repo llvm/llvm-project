@@ -48,6 +48,8 @@ public:
   llvm::StringRef name() const { return name_; }
   FlangTidyContext *context() { return context_; }
   bool fixAvailable() const { return fixAvailable_; }
+  bool warningsAsErrors() const { return warningsAsErrors_; }
+  void setWarningsAsErrors(bool toggle) { warningsAsErrors_ = toggle; }
 
   using semantics::BaseChecker::Enter;
   using semantics::BaseChecker::Leave;
@@ -498,6 +500,9 @@ public:
     str.append(" [%s]");
     parser::MessageFixedText newMessage{str.c_str(), str.length(),
                                         message.severity()};
+    if (warningsAsErrors_) {
+      newMessage.set_severity(parser::Severity::Error);
+    }
     return context_->getSemanticsContext().Say(
         at, std::move(newMessage), std::forward<Args>(args)..., name_.str());
   }
@@ -509,6 +514,7 @@ private:
   bool fixAvailable_{false};
   llvm::StringRef name_;
   FlangTidyContext *context_;
+  bool warningsAsErrors_{false};
 };
 
 /// Read a named option from the ``Context`` and parse it as a bool.

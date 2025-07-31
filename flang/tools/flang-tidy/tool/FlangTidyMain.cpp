@@ -70,6 +70,12 @@ static llvm::cl::list<std::string>
               llvm::cl::ZeroOrMore,
               llvm::cl::sub(llvm::cl::SubCommand::getAll()));
 
+static llvm::cl::opt<std::string>
+    WarningsAsErrors("warnings-as-errors",
+                     llvm::cl::desc("Comma-separated list of checks for which "
+                                    "to turn warnings into errors"),
+                     llvm::cl::init(""));
+
 static std::string GetFlangToolCommand() {
   static int Dummy;
   std::string FlangExecutable =
@@ -173,6 +179,10 @@ createOptionsProvider(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
     OverrideOptions.Checks =
         CheckOption; // This completely overrides, not merges
 
+  if (!WarningsAsErrors.empty())
+    OverrideOptions.WarningsAsErrors =
+        WarningsAsErrors; // This completely overrides, not merges
+
   auto LoadConfig =
       [&](llvm::StringRef Configuration,
           llvm::StringRef Source) -> std::unique_ptr<FlangTidyOptionsProvider> {
@@ -251,6 +261,7 @@ extern int flangTidyMain(int &argc, const char **argv) {
   EffectiveOptions.argv0 = argv[0];
 
   EffectiveOptions.parseChecksString();
+  EffectiveOptions.parseWarningsAsErrorsString();
 
   for (const auto &sourcePath : EffectiveOptions.sourcePaths) {
     if (!llvm::sys::fs::exists(sourcePath)) {
