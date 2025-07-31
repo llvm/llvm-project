@@ -446,7 +446,7 @@ public:
   }
 
   /// Replace the current file manager and virtual file system.
-  void setFileManager(FileManager *Value);
+  void setFileManager(IntrusiveRefCntPtr<FileManager> Value);
 
   /// @}
   /// @name Source Manager

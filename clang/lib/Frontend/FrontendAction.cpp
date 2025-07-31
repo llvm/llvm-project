@@ -845,7 +845,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     // Set the shared objects, these are reset when we finish processing the
     // file, otherwise the CompilerInstance will happily destroy them.
-    CI.setFileManager(&AST->getFileManager());
+    CI.setFileManager(AST->getFileManagerPtr());
     CI.createSourceManager(CI.getFileManager());
     CI.getSourceManager().initializeForReplay(AST->getSourceManager());
 
@@ -912,7 +912,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     // Set the shared objects, these are reset when we finish processing the
     // file, otherwise the CompilerInstance will happily destroy them.
-    CI.setFileManager(&AST->getFileManager());
+    CI.setFileManager(AST->getFileManagerPtr());
     CI.setSourceManager(AST->getSourceManagerPtr());
     CI.setPreprocessor(AST->getPreprocessorPtr());
     Preprocessor &PP = CI.getPreprocessor();

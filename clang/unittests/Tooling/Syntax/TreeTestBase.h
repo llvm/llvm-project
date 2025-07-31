@@ -47,7 +47,7 @@ protected:
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS =
       llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   IntrusiveRefCntPtr<FileManager> FileMgr =
-      new FileManager(FileSystemOptions(), FS);
+      llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(), FS);
   IntrusiveRefCntPtr<SourceManager> SourceMgr =
       llvm::makeIntrusiveRefCnt<SourceManager>(*Diags, *FileMgr);
   std::shared_ptr<CompilerInvocation> Invocation;

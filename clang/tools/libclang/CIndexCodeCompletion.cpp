@@ -737,8 +737,8 @@ clang_codeCompleteAt_Impl(CXTranslationUnit TU, const char *complete_filename,
   }
 
   // Parse the resulting source file to find code-completion results.
-  AllocatedCXCodeCompleteResults *Results = new AllocatedCXCodeCompleteResults(
-      &AST->getFileManager());
+  AllocatedCXCodeCompleteResults *Results =
+      new AllocatedCXCodeCompleteResults(AST->getFileManagerPtr());
   Results->Results = nullptr;
   Results->NumResults = 0;
   
@@ -765,7 +765,7 @@ clang_codeCompleteAt_Impl(CXTranslationUnit TU, const char *complete_filename,
                     (options & CXCodeComplete_IncludeCodePatterns),
                     IncludeBriefComments, Capture,
                     CXXIdx->getPCHContainerOperations(), Results->Diag,
-                    Results->LangOpts, Results->SourceMgr, *Results->FileMgr,
+                    Results->LangOpts, Results->SourceMgr, Results->FileMgr,
                     Results->Diagnostics, Results->TemporaryBuffers,
                     /*SyntaxOnlyAction=*/nullptr);
 

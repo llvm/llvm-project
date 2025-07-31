@@ -501,6 +501,7 @@ public:
 
   const FileManager &getFileManager() const { return *FileMgr; }
   FileManager &getFileManager() { return *FileMgr; }
+  IntrusiveRefCntPtr<FileManager> getFileManagerPtr() { return FileMgr; }
 
   const FileSystemOptions &getFileSystemOpts() const { return FileSystemOpts; }
 
@@ -809,8 +810,8 @@ public:
       std::shared_ptr<CompilerInvocation> CI,
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
       std::shared_ptr<DiagnosticOptions> DiagOpts,
-      IntrusiveRefCntPtr<DiagnosticsEngine> Diags, FileManager *FileMgr,
-      bool OnlyLocalDecls = false,
+      IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
+      IntrusiveRefCntPtr<FileManager> FileMgr, bool OnlyLocalDecls = false,
       CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
       unsigned PrecompilePreambleAfterNParses = 0,
       TranslationUnitKind TUKind = TU_Complete,
@@ -930,7 +931,7 @@ public:
                     llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diag,
                     LangOptions &LangOpts,
                     llvm::IntrusiveRefCntPtr<SourceManager> SourceMgr,
-                    FileManager &FileMgr,
+                    llvm::IntrusiveRefCntPtr<FileManager> FileMgr,
                     SmallVectorImpl<StoredDiagnostic> &StoredDiagnostics,
                     SmallVectorImpl<const llvm::MemoryBuffer *> &OwnedBuffers,
                     std::unique_ptr<SyntaxOnlyAction> Act);

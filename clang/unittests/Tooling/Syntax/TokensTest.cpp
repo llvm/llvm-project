@@ -134,7 +134,7 @@ public:
         FileName, llvm::MemoryBuffer::getMemBufferCopy(Code).release());
     CompilerInstance Compiler(std::move(CI));
     Compiler.setDiagnostics(Diags);
-    Compiler.setFileManager(FileMgr.get());
+    Compiler.setFileManager(FileMgr);
     Compiler.setSourceManager(SourceMgr);
 
     this->Buffer = TokenBuffer(*SourceMgr);
@@ -255,7 +255,7 @@ public:
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS =
       llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   llvm::IntrusiveRefCntPtr<FileManager> FileMgr =
-      new FileManager(FileSystemOptions(), FS);
+      llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(), FS);
   llvm::IntrusiveRefCntPtr<SourceManager> SourceMgr =
       llvm::makeIntrusiveRefCnt<SourceManager>(*Diags, *FileMgr);
   /// Contains last result of calling recordTokens().

@@ -166,8 +166,9 @@ CompilerInstance::getVirtualFileSystemPtr() const {
   return getFileManager().getVirtualFileSystemPtr();
 }
 
-void CompilerInstance::setFileManager(FileManager *Value) {
-  FileMgr = Value;
+void CompilerInstance::setFileManager(
+    llvm::IntrusiveRefCntPtr<FileManager> Value) {
+  FileMgr = std::move(Value);
 }
 
 void CompilerInstance::setSourceManager(
@@ -389,7 +390,8 @@ FileManager *CompilerInstance::createFileManager(
   if (getFrontendOpts().ShowStats)
     VFS =
         llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(std::move(VFS));
-  FileMgr = new FileManager(getFileSystemOpts(), std::move(VFS));
+  FileMgr = llvm::makeIntrusiveRefCnt<FileManager>(getFileSystemOpts(),
+                                                   std::move(VFS));
   return FileMgr.get();
 }
 
@@ -1224,7 +1226,7 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   if (ThreadSafeConfig) {
     Instance.createFileManager(ThreadSafeConfig->getVFS());
   } else if (FrontendOpts.ModulesShareFileManager) {
-    Instance.setFileManager(&getFileManager());
+    Instance.setFileManager(getFileManagerPtr());
   } else {
     Instance.createFileManager(getVirtualFileSystemPtr());
   }

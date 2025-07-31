@@ -380,7 +380,7 @@ void ReplCodeCompleter::codeComplete(CompilerInstance *InterpCI,
                    false, consumer,
                    std::make_shared<clang::PCHContainerOperations>(), diag,
                    InterpCI->getLangOpts(), AU->getSourceManagerPtr(),
-                   AU->getFileManager(), sd, tb, std::move(Act));
+                   AU->getFileManagerPtr(), sd, tb, std::move(Act));
 }
 
 } // namespace clang

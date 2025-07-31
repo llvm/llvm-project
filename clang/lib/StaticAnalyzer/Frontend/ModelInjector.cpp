@@ -84,7 +84,7 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
 
   // The instance wants to take ownership, however DisableFree frontend option
   // is set to true to avoid double free issues
-  Instance.setFileManager(&CI.getFileManager());
+  Instance.setFileManager(CI.getFileManagerPtr());
   Instance.setSourceManager(SM);
   Instance.setPreprocessor(CI.getPreprocessorPtr());
   Instance.setASTContext(CI.getASTContextPtr());
