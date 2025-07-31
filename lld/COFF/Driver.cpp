@@ -1318,13 +1318,9 @@ void LinkerDriver::convertResources() {
 }
 
 void LinkerDriver::maybeCreateECExportThunk(StringRef name, Symbol *&sym) {
-  Defined *def;
   if (!sym)
     return;
-  if (auto undef = dyn_cast<Undefined>(sym))
-    def = undef->getDefinedWeakAlias();
-  else
-    def = dyn_cast<Defined>(sym);
+  Defined *def = sym->getDefined();
   if (!def)
     return;
 
@@ -1356,11 +1352,7 @@ void LinkerDriver::createECExportThunks() {
     Symbol *sym = ctx.symtab.find(targetName);
     if (!sym)
       continue;
-    Defined *targetSym;
-    if (auto undef = dyn_cast<Undefined>(sym))
-      targetSym = undef->getDefinedWeakAlias();
-    else
-      targetSym = dyn_cast<Defined>(sym);
+    Defined *targetSym = sym->getDefined();
     if (!targetSym)
       continue;
 
