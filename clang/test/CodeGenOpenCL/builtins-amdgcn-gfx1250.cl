@@ -652,6 +652,60 @@ void test_prefetch(generic void *fptr, global void *gptr) {
   __builtin_amdgcn_global_prefetch(gptr, 8);
 }
 
+// CHECK-LABEL: @test_cvt_pk_fp8_f32_e5m3(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[OLD_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[OLD_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OLD_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[OLD:%.*]], ptr [[OLD_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store float [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store float [[B:%.*]], ptr [[B_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[OLD_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.cvt.pk.fp8.f32.e5m3(float [[TMP0]], float [[TMP1]], i32 [[TMP2]], i1 true)
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_cvt_pk_fp8_f32_e5m3(global int* out, int old, float a, float b)
+{
+  *out = __builtin_amdgcn_cvt_pk_fp8_f32_e5m3(a, b, old, true);
+}
+
+// CHECK-LABEL: @test_cvt_sr_fp8_f32_e5m3(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[OLD_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[OLD_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OLD_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[OLD:%.*]], ptr [[OLD_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store float [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[B:%.*]], ptr [[B_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[OLD_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.cvt.sr.fp8.f32.e5m3(float [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 3)
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_cvt_sr_fp8_f32_e5m3(global int* out, int old, float a, int b)
+{
+  *out = __builtin_amdgcn_cvt_sr_fp8_f32_e5m3(a, b, old, 3);
+}
+
 // CHECK-LABEL: @test_cvt_f32_fp8_e5m3(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
