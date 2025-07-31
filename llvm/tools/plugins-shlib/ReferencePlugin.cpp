@@ -1,10 +1,12 @@
-//===- lib/plugins-shlib/ReferencePlugin.cpp ------------------------------===//
+//===- tools/plugins-shlib/ReferencePlugin.cpp ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
+#include "Instrumentor.h"
 
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
@@ -15,9 +17,6 @@
 #include <string>
 
 using namespace llvm;
-
-static cl::opt<bool> Wave("wave-goodbye", cl::init(false),
-                          cl::desc("wave good bye"));
 
 static std::optional<std::string> getEnv(const std::string &Var) {
   const char *Val = std::getenv(Var.c_str());
@@ -39,107 +38,42 @@ static bool getEnvBool(const std::string &VarName, bool Default = false) {
   return Default;
 }
 
-static std::string getLTOPhaseStr(ThinOrFullLTOPhase P) {
-  switch (P) {
-    case ThinOrFullLTOPhase::None: return "None";
-    case ThinOrFullLTOPhase::ThinLTOPreLink: return "ThinLTOPreLink";
-    case ThinOrFullLTOPhase::ThinLTOPostLink: return "ThinLTOPostLink";
-    case ThinOrFullLTOPhase::FullLTOPreLink: return "FullLTOPreLink";
-    case ThinOrFullLTOPhase::FullLTOPostLink: return "FullLTOPostLink";
-  }
-}
-
-struct TestModulePass : public PassInfoMixin<TestModulePass> {
-  std::string EP;
-  std::string LTOPhase;
-  TestModulePass(StringRef EntryPoint, ThinOrFullLTOPhase Phase = ThinOrFullLTOPhase::None) : EP(EntryPoint.str()), LTOPhase(getLTOPhaseStr(Phase)) {}
-  PreservedAnalyses run(Module &, ModuleAnalysisManager &) {
-    fprintf(stderr, "Entry-point: %s\n", EP.c_str());
-    fprintf(stderr, "LTO-phase: %s\n", LTOPhase.c_str());
-    return PreservedAnalyses::all();
-  }
-};
-
-struct TestFunctionPass : public PassInfoMixin<TestFunctionPass> {
-  std::string EP;
-  TestFunctionPass(StringRef EntryPoint) : EP(EntryPoint.str()) {}
-  PreservedAnalyses run(Function &, FunctionAnalysisManager &) {
-    fprintf(stderr, "Entry-point: %s\n", EP.c_str());
-    return PreservedAnalyses::all();
-  }
-};
-
 static void registerCallbacks(PassBuilder &PB) {
-  printf("Plugin parameter value -wave-goodbye=%s\n", Wave ? "true" : "false");
-
   // Entry-points for module passes
   if (getEnvBool("registerPipelineStartEPCallback"))
     PB.registerPipelineStartEPCallback(
         [](ModulePassManager &MPM, OptimizationLevel Opt) {
-          MPM.addPass(TestModulePass("registerPipelineStartEPCallback"));
+          MPM.addPass(InstrumentorPass());
           return true;
         });
   if (getEnvBool("registerPipelineEarlySimplificationEPCallback", true))
     PB.registerPipelineEarlySimplificationEPCallback(
         [](ModulePassManager &MPM, OptimizationLevel Opt, ThinOrFullLTOPhase Phase) {
-          MPM.addPass(TestModulePass("registerPipelineEarlySimplificationEPCallback", Phase));
+          MPM.addPass(InstrumentorPass());
           return true;
         });
   if (getEnvBool("registerOptimizerEarlyEPCallback"))
     PB.registerOptimizerEarlyEPCallback(
         [](ModulePassManager &MPM, OptimizationLevel Opt, ThinOrFullLTOPhase Phase) {
-          MPM.addPass(TestModulePass("registerOptimizerEarlyEPCallback", Phase));
+          MPM.addPass(InstrumentorPass());
           return true;
         });
   if (getEnvBool("registerOptimizerLastEPCallback"))
     PB.registerOptimizerLastEPCallback(
         [](ModulePassManager &MPM, OptimizationLevel Opt, ThinOrFullLTOPhase Phase) {
-          MPM.addPass(TestModulePass("registerOptimizerLastEPCallback", Phase));
+          MPM.addPass(InstrumentorPass());
           return true;
         });
-  if (getEnvBool("registerFullLinkTimeOptimizationEarlyEPCallback"))
-    PB.registerFullLinkTimeOptimizationEarlyEPCallback(
-        [](ModulePassManager &MPM, OptimizationLevel Opt) {
-          MPM.addPass(TestModulePass("registerFullLinkTimeOptimizationEarlyEPCallback"));
-          return true;
+  if (getEnvBool("registerPipelineParsingCallback"), true)
+    PB.registerPipelineParsingCallback(
+        [](StringRef Name, ModulePassManager &PM,
+           ArrayRef<llvm::PassBuilder::PipelineElement>) {
+          if (Name == "instrumentor") {
+            PM.addPass(InstrumentorPass());
+            return true;
+          }
+          return false;
         });
-  if (getEnvBool("registerFullLinkTimeOptimizationLastEPCallback"))
-    PB.registerFullLinkTimeOptimizationLastEPCallback(
-        [](ModulePassManager &MPM, OptimizationLevel Opt) {
-          MPM.addPass(TestModulePass("registerFullLinkTimeOptimizationLastEPCallback"));
-          return true;
-        });
-
-  // Entry-points for function passes
-  if (getEnvBool("registerPeepholeEPCallback"))
-    PB.registerPeepholeEPCallback(
-        [](FunctionPassManager &FPM, OptimizationLevel Opt) {
-          FPM.addPass(TestFunctionPass("registerPeepholeEPCallback"));
-          return true;
-        });
-  if (getEnvBool("registerScalarOptimizerLateEPCallback"))
-    PB.registerScalarOptimizerLateEPCallback(
-        [](FunctionPassManager &FPM, OptimizationLevel Opt) {
-          FPM.addPass(TestFunctionPass("registerScalarOptimizerLateEPCallback"));
-          return true;
-        });
-  if (getEnvBool("registerVectorizerStartEPCallback"))
-    PB.registerVectorizerStartEPCallback(
-        [](FunctionPassManager &FPM, OptimizationLevel Opt) {
-          FPM.addPass(TestFunctionPass("registerVectorizerStartEPCallback"));
-          return true;
-        });
-
-#if LLVM_VERSION_MAJOR > 20
-  if (getEnvBool("registerVectorizerEndEPCallback"))
-    PB.registerVectorizerEndEPCallback(
-        [](FunctionPassManager &FPM, OptimizationLevel Opt) {
-          FPM.addPass(TestFunctionPass("registerVectorizerEndEPCallback"));
-          return true;
-        });
-#endif
-
-  // TODO: registerLateLoopOptimizationsEPCallback, registerCGSCCOptimizerLateEPCallback
 }
 
 extern "C" ::llvm::PassPluginLibraryInfo LLVM_ATTRIBUTE_WEAK

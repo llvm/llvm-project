@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_INSTRUMENTATION_INSTRUMENTOR_H
-#define LLVM_TRANSFORMS_INSTRUMENTATION_INSTRUMENTOR_H
+#ifndef LLVM_TOOLS_PLUGINS_SHLIB_INSTRUMENTOR_H
+#define LLVM_TOOLS_PLUGINS_SHLIB_INSTRUMENTOR_H
 
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/PassManager.h"
@@ -40,7 +40,7 @@ struct InstrumentorConfig {
   }                                                                            \
   SECTION;
 
-#include "llvm/Transforms/Instrumentation/InstrumentorConfig.def"
+#include "InstrumentorConfig.def"
 };
 
 class InstrumentorPass : public PassInfoMixin<InstrumentorPass> {
@@ -53,4 +53,4 @@ public:
 };
 } // end namespace llvm
 
-#endif // LLVM_TRANSFORMS_INSTRUMENTATION_INSTRUMENTOR_H
+#endif // LLVM_TOOLS_PLUGINS_SHLIB_INSTRUMENTOR_H

@@ -700,3 +700,10 @@ if "system-aix" in config.available_features:
 
 if config.has_logf128:
     config.available_features.add("has_logf128")
+
+# Run tests with opt if the reference pass-plugin exists
+plugin_name = f"{config.llvm_plugin_prefix}ReferencePlugin{config.llvm_plugin_ext}"
+plugin_shlib = os.path.join(config.llvm_shlib_dir, plugin_name)
+if os.path.exists(plugin_shlib):
+    config.available_features.add("pass-plugins")
+    config.substitutions.append(("%pass_plugin_reference", plugin_shlib))

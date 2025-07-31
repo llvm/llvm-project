@@ -12,7 +12,6 @@ add_llvm_component_library(LLVMInstrumentation
   NumericalStabilitySanitizer.cpp
   IndirectCallPromotion.cpp
   InstrProfiling.cpp
-  Instrumentor.cpp
   KCFI.cpp
   LowerAllowCheckPass.cpp
   PGOCtxProfFlattening.cpp

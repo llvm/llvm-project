@@ -1,66 +1,41 @@
 // REQUIRES: pass-plugins
 // UNSUPPORTED: system-windows
 
-// Test default entry-point
+// Default entry-point is Pipeline-EarlySimplification
+//
 // RUN: %clang -O0 -fpass-plugin=%pass_plugin_reference \
 // RUN:        -S -emit-llvm -Xclang -fdebug-pass-manager %s -o /dev/null 2>&1 | \
-// RUN:        FileCheck --check-prefix=EP-EARLY-SIMPL %s
+// RUN:        FileCheck --check-prefix=EP-EARLY %s
 //
 // RUN: %clang -O2 -fpass-plugin=%pass_plugin_reference \
 // RUN:        -S -emit-llvm -Xclang -fdebug-pass-manager %s -o /dev/null 2>&1 | \
-// RUN:        FileCheck --check-prefixes=EP-EARLY-SIMPL,LTO-NONE %s
+// RUN:        FileCheck --check-prefix=EP-EARLY %s
 //
 // RUN: %clang -c -flto=full -O2 -fpass-plugin=%pass_plugin_reference \
 // RUN:        -Xclang -fdebug-pass-manager %s -o /dev/null 2>&1 | \
-// RUN:        FileCheck --check-prefixes=EP-EARLY-SIMPL,LTO-FULL %s
+// RUN:        FileCheck --check-prefix=EP-EARLY %s
 //
 // RUN: %clang -c -flto=thin -O2 -fpass-plugin=%pass_plugin_reference \
 // RUN:        -Xclang -fdebug-pass-manager %s -o /dev/null 2>&1 | \
-// RUN:        FileCheck --check-prefixes=EP-EARLY-SIMPL,LTO-THIN %s
+// RUN:        FileCheck --check-prefix=EP-EARLY %s
 //
-// EP-EARLY-SIMPL: Running pass: TestModulePass
-// EP-EARLY-SIMPL: Entry-point: registerPipelineEarlySimplificationEPCallback
-//
-// LTO-NONE: LTO-phase: None
-// LTO-FULL: LTO-phase: FullLTOPreLink
-// LTO-THIN: LTO-phase: ThinLTOPreLink
+// EP-EARLY: Running pass: InstrumentorPass
+// EP-EARLY: Running pass: AlwaysInlinerPass
 
 // Pass doesn't run if default entry-point is disabled
 // RUN: env registerPipelineEarlySimplificationEPCallback=Off \
-// RUN:     %clang -fpass-plugin=%pass_plugin_reference -S -emit-llvm -Xclang -fdebug-pass-manager %s -o /dev/null 2>&1 | FileCheck %s
+// RUN:     %clang -fpass-plugin=%pass_plugin_reference -S -emit-llvm \
+// RUN:            -Xclang -fdebug-pass-manager %s -o /dev/null 2>&1 | FileCheck %s
 //
-// CHECK-NOT: Running pass: TestModulePass
+// CHECK-NOT: Running pass: InstrumentorPass
 
-// Test pipeline-start entry-point
-// RUN: env registerPipelineStartEPCallback=On \
-// RUN: env registerPipelineEarlySimplificationEPCallback=Off \
-// RUN:     %clang -fpass-plugin=%pass_plugin_reference -S -emit-llvm -Xclang -fdebug-pass-manager %s -o /dev/null 2>&1 | FileCheck --check-prefix=EP-START %s
-//
-// EP-START: Running pass: TestModulePass
-// EP-START: Entry-point: registerPipelineStartEPCallback
-
-// Test optimizer entry-points
+// Pass runs twice if we add entry-point Opt-Early
 // RUN: env registerOptimizerEarlyEPCallback=On \
-// RUN: env registerPipelineEarlySimplificationEPCallback=Off \
-// RUN:     %clang -fpass-plugin=%pass_plugin_reference -O2 -S -emit-llvm -Xclang -fdebug-pass-manager %s -o /dev/null 2>&1 | FileCheck --check-prefix=OPT-EARLY %s
+// RUN:     %clang -fpass-plugin=%pass_plugin_reference -S -emit-llvm \
+// RUN:            -Xclang -fdebug-pass-manager %s -o /dev/null 2>&1 | FileCheck --check-prefix=OPT-EARLY %s
 //
-// OPT-EARLY: Running pass: TestModulePass
-// OPT-EARLY: Entry-point: registerOptimizerEarlyEPCallback
-// OPT-EARLY: Running pass: LowerConstantIntrinsicsPass
-
-#if LLVM_VERSION_MAJOR > 20
-// RUN: env registerOptimizerLastEPCallback=On \
-// RUN: env registerPipelineEarlySimplificationEPCallback=Off \
-// RUN:     %clang -fpass-plugin=%pass_plugin_reference -O2 -S -emit-llvm -Xclang -fdebug-pass-manager %s -o /dev/null 2>&1 | FileCheck --check-prefix=OPT-LAST %s
-//
-// OPT-LAST: Running pass: LowerConstantIntrinsicsPass
-// OPT-LAST: Running pass: TestModulePass on [module]
-// OPT-LAST: Entry-point: registerOptimizerLastEPCallback
-#endif
-
-// TODO: Why is late optimizer entry-point reached in LTO-mode??
-// RUN: env registerOptimizerLastEPCallback=On \
-// RUN: env registerPipelineEarlySimplificationEPCallback=Off \
-// RUN:     %clang -fpass-plugin=%pass_plugin_reference -O2 -flto -c -Xclang -fdebug-pass-manager %s -o /dev/null 2>&1
+// OPT-EARLY: Running pass: InstrumentorPass
+// OPT-EARLY: Running pass: AlwaysInlinerPass
+// OPT-EARLY: Running pass: InstrumentorPass
 
 int main() { return 0; }

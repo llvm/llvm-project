@@ -8,7 +8,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Instrumentation/Instrumentor.h"
+#include "Instrumentor.h"
 
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
@@ -77,7 +77,7 @@ void writeInstrumentorConfig(InstrumentorConfig &IC) {
   J.objectEnd();                                                               \
   J.attributeEnd();
 
-#include "llvm/Transforms/Instrumentation/InstrumentorConfig.def"
+#include "InstrumentorConfig.def"
 
   J.objectEnd();
 }
@@ -128,7 +128,7 @@ bool readInstrumentorConfigFromJSON(InstrumentorConfig &IC) {
 #define CONFIG_INTERNAL(SECTION, TYPE, NAME, DEFAULT_VALUE)
 #define SECTION_END(SECTION)
 
-#include "llvm/Transforms/Instrumentation/InstrumentorConfig.def"
+#include "InstrumentorConfig.def"
 
   return true;
 }
