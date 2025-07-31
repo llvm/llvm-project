@@ -19,10 +19,10 @@ namespace {
 class ClusteredRowsTest : public ::testing::Test {
 protected:
   void SetUp() override {
-    Container = std::make_unique<ClasteredRowsContainer>();
+    Container = std::make_unique<ClusteredRowsContainer>();
   }
 
-  std::unique_ptr<ClasteredRowsContainer> Container;
+  std::unique_ptr<ClusteredRowsContainer> Container;
 };
 
 TEST_F(ClusteredRowsTest, CreateSingleElement) {

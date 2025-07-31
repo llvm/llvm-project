@@ -1502,7 +1502,7 @@ add_instruction:
       }
       if (!Rows.empty()) {
         ClusteredRows *Cluster =
-            BC.ClasteredRows.createClusteredRows(Rows.size());
+            BC.ClusteredRows.createClusteredRows(Rows.size());
         Cluster->populate(Rows);
         Instruction.setLoc(Cluster->toSMLoc());
       }
