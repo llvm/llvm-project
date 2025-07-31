@@ -10,18 +10,15 @@
 auipc a0, 0
 
 # CHECK-RVC-NORELAX: 0000000000000000 <.text>:
-# CHECK-RVC-NORELAX-NEXT: 0: 0000      	unimp
-# CHECK-RVC-NORELAX-NEXT: 2: 0001      	nop
+# CHECK-RVC-NORELAX-NEXT: 0: 00 00 01 00 .word 0x00010000
 # CHECK-RVC-NORELAX-NEXT: 4: 00000517  	auipc	a0, 0x0
 
 # CHECK-RVC-RELAX: 0000000000000000 <.text>:
 # CHECK-RVC-RELAX-NEXT:   0: 0001      	nop
-# CHECK-RVC-RELAX-NEXT:   2: 0100      	addi	s0, sp, 0x80
-# CHECK-RVC-RELAX-NEXT:   4: 1700      	addi	s0, sp, 0x3a0
-# CHECK-RVC-RELAX-NEXT:   6: 0005      	c.nop	0x1
-# CHECK-RVC-RELAX-NEXT:   8: 00        	<unknown>
+# CHECK-RVC-RELAX-NEXT:   2: 00 01      .short 0x0100
+# CHECK-RVC-RELAX-NEXT:   4: 00         .byte 0x00
+# CHECK-RVC-RELAX-NEXT:   5: 00000517  	auipc	a0, 0x0
 
 # CHECK: 0000000000000000 <.text>:
-# CHECK-NEXT: 0: 0000      	<unknown>
-# CHECK-NEXT: 2: 0000      	<unknown>
+# CHECK-NEXT: 0: 00 00 00 00 .word 0x00000000
 # CHECK-NEXT: 4: 00000517  	auipc	a0, 0x0

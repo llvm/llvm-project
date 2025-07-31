@@ -1,0 +1,88 @@
+# RUN: yaml2obj -o - %s \
+# RUN:     | llvm-objdump -d - | FileCheck %s
+
+## This CHECKs objdump's handling of wide instruction encodings, and how it
+## groups the instruction bytes when disassembling.
+##
+## This is written in YAML because using `.byte` emits the wrong mapping
+## symbols.
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_RISCV
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .text.six_byte
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x1
+    Content:         1F0123456789
+    # CHECK: 011f 4523 8967 <unknown>
+  - Name:            .text.eight_byte
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x1
+    Content:         3F0123456789ABCD
+    # CHECK: 4523013f cdab8967 <unknown>
+  - Name:            .text.ten_byte
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x1
+    Content:         7F0023456789ABCDEFFE
+    # CHECK: 007f 4523 8967 cdab feef <unknown>
+  - Name:            .text.twelve_byte
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x1
+    Content:         7F1023456789ABCDEFFEDCBA
+    # CHECK: 4523107f cdab8967 badcfeef <unknown>
+  - Name:            .text.fourteen_byte
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x1
+    Content:         7F2023456789ABCDEFFEDCBA9876
+    # CHECK: 207f 4523 8967 cdab feef badc 7698 <unknown>
+  - Name:            .text.sixteen_byte
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x1
+    Content:         7F3023456789ABCDEFFEDCBA98765432
+    # CHECK: 4523307f cdab8967 badcfeef 32547698 <unknown>
+  - Name:            .text.eighteen_byte
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x1
+    Content:         7F4023456789ABCDEFFEDCBA987654321012
+    # CHECK: 407f 4523 8967 cdab feef badc 7698 3254 1210 <unknown>
+  - Name:            .text.twenty_byte
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x1
+    Content:         7F5023456789ABCDEFFEDCBA9876543210123456
+    # CHECK: 4523507f cdab8967 badcfeef 32547698 56341210 <unknown>
+  - Name:            .text.twentytwo_byte
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x1
+    Content:         7F6023456789ABCDEFFEDCBA9876543210123456789A
+    # CHECK: 607f 4523 8967 cdab feef badc 7698 3254 1210 5634 9a78 <unknown>
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .text.six_byte
+      - Name:            .text.eight_byte
+      - Name:            .text.ten_byte
+      - Name:            .text.twelve_byte
+      - Name:            .text.fourteen_byte
+      - Name:            .text.sixteen_byte
+      - Name:            .text.eighteen_byte
+      - Name:            .text.twenty_byte
+      - Name:            .text.twentytwo_byte
+      - Name:            .symtab
+Symbols:
+  - Name:            '$x'
+    Section:         .text.six_byte
+...
