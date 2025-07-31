@@ -6789,46 +6789,6 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     }
   }
 
-  /// Compute the cost of all exiting conditions of the loop using the legacy
-  /// cost model. This is to match the legacy behavior, which adds the cost of
-  /// all exit conditions. Note that this over-estimates the cost, as there will
-  /// be a single condition to control the vector loop.
-  SmallVector<BasicBlock *> Exiting;
-  CM.TheLoop->getExitingBlocks(Exiting);
-  SetVector<Instruction *> ExitInstrs;
-  // Collect all exit conditions.
-  for (BasicBlock *EB : Exiting) {
-    auto *Term = dyn_cast<BranchInst>(EB->getTerminator());
-    if (!Term || CostCtx.skipCostComputation(Term, VF.isVector()))
-      continue;
-    if (auto *CondI = dyn_cast<Instruction>(Term->getOperand(0))) {
-      ExitInstrs.insert(CondI);
-    }
-  }
-  // Compute the cost of all instructions only feeding the exit conditions.
-  for (unsigned I = 0; I != ExitInstrs.size(); ++I) {
-    Instruction *CondI = ExitInstrs[I];
-    if (!OrigLoop->contains(CondI) ||
-        !CostCtx.SkipCostComputation.insert(CondI).second)
-      continue;
-    InstructionCost CondICost = CostCtx.getLegacyCost(CondI, VF);
-    LLVM_DEBUG({
-      dbgs() << "Cost of " << CondICost << " for VF " << VF
-             << ": exit condition instruction " << *CondI << "\n";
-    });
-    Cost += CondICost;
-    for (Value *Op : CondI->operands()) {
-      auto *OpI = dyn_cast<Instruction>(Op);
-      if (!OpI || CostCtx.skipCostComputation(OpI, VF.isVector()) ||
-          any_of(OpI->users(), [&ExitInstrs, this](User *U) {
-            return OrigLoop->contains(cast<Instruction>(U)->getParent()) &&
-                   !ExitInstrs.contains(cast<Instruction>(U));
-          }))
-        continue;
-      ExitInstrs.insert(OpI);
-    }
-  }
-
   // Pre-compute the costs for branches except for the backedge, as the number
   // of replicate regions in a VPlan may not directly match the number of
   // branches, which would lead to different decisions.
@@ -6977,6 +6937,37 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
     });
   });
 }
+
+static bool planContainsDifferentCompares(VPlan &Plan, VPCostContext &CostCtx,
+                                          Loop *TheLoop, ElementCount VF) {
+  // Count how many compare instructions there are in the legacy cost model.
+  unsigned NumLegacyCompares = 0;
+  for (BasicBlock *BB : TheLoop->blocks()) {
+    for (auto &I : *BB) {
+      if (isa<CmpInst>(I)) {
+        NumLegacyCompares += 1;
+      }
+    }
+  }
+
+  // Count how many compare instructions there are in the VPlan.
+  unsigned NumVPlanCompares = 0;
+  auto Iter = vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
+    for (VPRecipeBase &R : *VPBB) {
+      if (auto *VPI = dyn_cast<VPInstruction>(&R)) {
+        if (VPI->getOpcode() == VPInstruction::BranchOnCount ||
+            VPI->getOpcode() == Instruction::ICmp ||
+            VPI->getOpcode() == Instruction::FCmp)
+          NumVPlanCompares += 1;
+      }
+    }
+  }
+
+  // If we have a different amount, then the legacy cost model and vplan will
+  // disagree.
+  return NumLegacyCompares != NumVPlanCompares;
+}
 #endif
 
 VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
@@ -7085,7 +7076,9 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
                                                 CostCtx, OrigLoop,
                                                 BestFactor.Width) ||
           planContainsAdditionalSimplifications(
-              getPlanFor(LegacyVF.Width), CostCtx, OrigLoop, LegacyVF.Width)) &&
+              getPlanFor(LegacyVF.Width), CostCtx, OrigLoop, LegacyVF.Width) ||
+          planContainsDifferentCompares(BestPlan, CostCtx, OrigLoop,
+                                        BestFactor.Width)) &&
          " VPlan cost model and legacy cost model disagreed");
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
          "when vectorizing, the scalar cost must be computed.");

@@ -28,6 +28,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -40,6 +41,7 @@
 #include <cassert>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 using VectorParts = SmallVector<Value *, 2>;
 
@@ -1116,6 +1118,29 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
     return Ctx.TTI.getIndexedVectorInstrCostFromEnd(Instruction::ExtractElement,
                                                     VecTy, Ctx.CostKind, 0);
+  }
+  case VPInstruction::BranchOnCount: {
+    // If TC <= VF then this is just a branch.
+    // FIXME: Removing the branch happens in simplifyBranchConditionForVFAndUF
+    // where it checks TC <= VF * UF, but we don't know UF yet. This means in
+    // some cases we get a cost that's too high due to counting a cmp that
+    // later gets removed.
+    Value *TC = getParent()->getPlan()->getTripCount()->getUnderlyingValue();
+    uint64_t C0;
+    if (TC && match(TC, m_ConstantInt(C0)) && C0 <= VF.getKnownMinValue())
+      return 0;
+    // Otherwise BranchOnCount generates ICmpEQ followed by a branch.
+    Type *ValTy = Ctx.Types.inferScalarType(getOperand(0));
+    return Ctx.TTI.getCmpSelInstrCost(Instruction::ICmp, ValTy,
+                                      CmpInst::makeCmpResultType(ValTy),
+                                      CmpInst::ICMP_EQ, Ctx.CostKind);
+  }
+  case Instruction::FCmp:
+  case Instruction::ICmp: {
+    Type *ValTy = Ctx.Types.inferScalarType(getOperand(0));
+    return Ctx.TTI.getCmpSelInstrCost(getOpcode(), ValTy,
+                                      CmpInst::makeCmpResultType(ValTy),
+                                      getPredicate(), Ctx.CostKind);
   }
   case VPInstruction::ExtractPenultimateElement:
     if (VF == ElementCount::getScalable(1))

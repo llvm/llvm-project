@@ -335,7 +335,7 @@ define void @multi_exit(ptr %dst, ptr %src.1, ptr %src.2, i64 %A, i64 %B) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i64 [[TMP0]]
 ; CHECK-NEXT:    [[UMIN7:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 [[A:%.*]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i64 [[UMIN7]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP2]], 28
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP2]], 14
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[B]], i64 1)
@@ -856,49 +856,49 @@ define i32 @g(i64 %n) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i64 [[N]], 4294967295
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; CHECK:       vector.main.loop.iter.check:
-; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i32 [[TMP1]], 16
+; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i32 [[TMP1]], 32
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 16
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 32
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[N]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[N]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP16:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
-; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add <4 x i32> [[STEP_ADD]], splat (i32 4)
-; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add <4 x i32> [[STEP_ADD_2]], splat (i32 4)
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i32> [[VEC_IND]] to <4 x i64>
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i32> [[STEP_ADD]] to <4 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i32> [[STEP_ADD_2]] to <4 x i64>
-; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i32> [[STEP_ADD_3]] to <4 x i64>
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i64> [[BROADCAST_SPLAT]], [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <4 x i64> [[BROADCAST_SPLAT]], [[TMP4]]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i64> [[BROADCAST_SPLAT]], [[TMP5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <4 x i64> [[BROADCAST_SPLAT]], [[TMP6]]
-; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP7]], <4 x i32> zeroinitializer, <4 x i32> splat (i32 2)
-; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP8]], <4 x i32> zeroinitializer, <4 x i32> splat (i32 2)
-; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP9]], <4 x i32> zeroinitializer, <4 x i32> splat (i32 2)
-; CHECK-NEXT:    [[TMP14:%.*]] = select <4 x i1> [[TMP10]], <4 x i32> zeroinitializer, <4 x i32> splat (i32 2)
-; CHECK-NEXT:    [[TMP15]] = or <4 x i32> [[TMP11]], [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP16]] = or <4 x i32> [[TMP12]], [[VEC_PHI2]]
-; CHECK-NEXT:    [[TMP17]] = or <4 x i32> [[TMP13]], [[VEC_PHI3]]
-; CHECK-NEXT:    [[TMP18]] = or <4 x i32> [[TMP14]], [[VEC_PHI4]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[STEP_ADD_3]], splat (i32 4)
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP16:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <8 x i32> [[VEC_IND]], splat (i32 8)
+; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add <8 x i32> [[STEP_ADD]], splat (i32 8)
+; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add <8 x i32> [[STEP_ADD_2]], splat (i32 8)
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i32> [[VEC_IND]] to <8 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <8 x i32> [[STEP_ADD]] to <8 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <8 x i32> [[STEP_ADD_2]] to <8 x i64>
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <8 x i32> [[STEP_ADD_3]] to <8 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <8 x i64> [[BROADCAST_SPLAT]], [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <8 x i64> [[BROADCAST_SPLAT]], [[TMP4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <8 x i64> [[BROADCAST_SPLAT]], [[TMP5]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <8 x i64> [[BROADCAST_SPLAT]], [[TMP6]]
+; CHECK-NEXT:    [[TMP11:%.*]] = select <8 x i1> [[TMP7]], <8 x i32> zeroinitializer, <8 x i32> splat (i32 2)
+; CHECK-NEXT:    [[TMP12:%.*]] = select <8 x i1> [[TMP8]], <8 x i32> zeroinitializer, <8 x i32> splat (i32 2)
+; CHECK-NEXT:    [[TMP13:%.*]] = select <8 x i1> [[TMP9]], <8 x i32> zeroinitializer, <8 x i32> splat (i32 2)
+; CHECK-NEXT:    [[TMP14:%.*]] = select <8 x i1> [[TMP10]], <8 x i32> zeroinitializer, <8 x i32> splat (i32 2)
+; CHECK-NEXT:    [[TMP15]] = or <8 x i32> [[TMP11]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP16]] = or <8 x i32> [[TMP12]], [[VEC_PHI2]]
+; CHECK-NEXT:    [[TMP17]] = or <8 x i32> [[TMP13]], [[VEC_PHI3]]
+; CHECK-NEXT:    [[TMP18]] = or <8 x i32> [[TMP14]], [[VEC_PHI4]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 32
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[STEP_ADD_3]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <4 x i32> [[TMP16]], [[TMP15]]
-; CHECK-NEXT:    [[BIN_RDX5:%.*]] = or <4 x i32> [[TMP17]], [[BIN_RDX]]
-; CHECK-NEXT:    [[BIN_RDX6:%.*]] = or <4 x i32> [[TMP18]], [[BIN_RDX5]]
-; CHECK-NEXT:    [[TMP20:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[BIN_RDX6]])
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <8 x i32> [[TMP16]], [[TMP15]]
+; CHECK-NEXT:    [[BIN_RDX5:%.*]] = or <8 x i32> [[TMP17]], [[BIN_RDX]]
+; CHECK-NEXT:    [[BIN_RDX6:%.*]] = or <8 x i32> [[TMP18]], [[BIN_RDX5]]
+; CHECK-NEXT:    [[TMP20:%.*]] = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> [[BIN_RDX6]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
