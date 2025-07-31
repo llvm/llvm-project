@@ -1970,7 +1970,9 @@ def Vector_MaskedStoreOp :
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$valueToStore)> {
+               AnyVectorOfNonZeroRank:$valueToStore,
+               ConfinedAttr<OptionalAttr<I64Attr>,
+                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)> {
 
   let summary = "stores elements from a vector into memory as defined by a mask vector";
 
@@ -2005,6 +2007,12 @@ def Vector_MaskedStoreOp :
     vector.maskedstore %base[%i, %j], %mask, %value
       : memref<?x?xf32>, vector<16xi1>, vector<16xf32>
     ```
+
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    store operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
   }];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -2023,6 +2031,18 @@ def Vector_MaskedStoreOp :
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
+
+  let builders = [
+    OpBuilder<(ins "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$mask,
+                   "Value":$valueToStore,
+                   CArg<"uint64_t", "0">:$alignment), [{
+      return build($_builder, $_state, base, indices, mask, valueToStore,
+                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                                    nullptr);
+    }]>
+  ];
 }
 
 def Vector_GatherOp :
