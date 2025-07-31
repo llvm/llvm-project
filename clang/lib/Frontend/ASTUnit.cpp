@@ -1505,7 +1505,7 @@ void ASTUnit::transferASTDataFromCompilerInstance(CompilerInstance &CI) {
   CI.setSourceManager(nullptr);
   CI.setFileManager(nullptr);
   if (CI.hasTarget())
-    Target = &CI.getTarget();
+    Target = CI.getTargetPtr();
   Reader = CI.getASTReader();
   HadModuleLoaderFatalFailure = CI.hadModuleLoaderFatalFailure();
   if (Invocation != CI.getInvocationPtr()) {
