@@ -1913,14 +1913,6 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
   readVectorSizes.append(sourceShape.begin() + vectorSizes.size(),
                          sourceShape.end());
 
-  ReifiedRankedShapedTypeDims reifiedRetShapes;
-  LogicalResult status =
-      cast<ReifyRankedShapedTypeOpInterface>(unpackOp.getOperation())
-          .reifyResultShapes(rewriter, reifiedRetShapes);
-  if (status.failed()) {
-    LDBG() << "Unable to reify result shapes of " << unpackOp;
-    return failure();
-  }
   Location loc = unpackOp->getLoc();
 
   auto padValue = arith::ConstantOp::create(
@@ -1954,12 +1946,6 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
   vector::ShapeCastOp shapeCastOp = vector::ShapeCastOp::create(
       rewriter, loc, vecCollapsedType, transposeOp->getResult(0));
 
-  // writeVectorSizes had to match the shapecast shape for dynamic sizes,
-  // otherwise the validator complains that the mask size is invalid.
-  SmallVector<int64_t> writeVectorSizes(
-      unpackOp.getDestType().hasStaticShape()
-          ? vectorSizes
-          : shapeCastOp.getResultVectorType().getShape());
   Operation *write = createWriteOrMaskedWrite(
       rewriter, loc, shapeCastOp.getResult(), unpackOp.getDest(),
       /*writeIndices=*/{}, useInBoundsInsteadOfMasking);
