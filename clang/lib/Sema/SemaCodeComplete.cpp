@@ -4034,6 +4034,14 @@ static void AddOverloadParameterChunks(
       return;
     }
 
+    // C++23 introduces an explicit object parameter, a.k.a. "deducing this"
+    // Skip it for autocomplete and treat the next parameter as the first
+    // parameter
+    if (Function && FirstParameter &&
+        Function->getParamDecl(P)->isExplicitObjectParameter()) {
+      continue;
+    }
+
     if (FirstParameter)
       FirstParameter = false;
     else
