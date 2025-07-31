@@ -136,6 +136,7 @@ HMODULE loadSystemModuleSecure(LPCWSTR lpModuleName) {
 } // namespace llvm::sys::windows
 
 SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
+#ifdef THREAD_POWER_THROTTLING_CURRENT_VERSION
   HMODULE kernelM = llvm::sys::windows::loadSystemModuleSecure(L"kernel32.dll");
   if (kernelM) {
     // SetThreadInformation is only available on Windows 8 and later. Since we
@@ -166,6 +167,7 @@ SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
                                : 0);
     }
   }
+#endif
 
   // https://docs.microsoft.com/en-us/windows/desktop/api/processthreadsapi/nf-processthreadsapi-setthreadpriority
   // Begin background processing mode. The system lowers the resource scheduling
