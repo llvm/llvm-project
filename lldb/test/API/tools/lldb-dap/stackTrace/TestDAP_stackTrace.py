@@ -261,8 +261,8 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
             name: info["id"] for name, info in modules.items() if "id" in info
         }
 
-        stackFrames = self.get_stackFrames()
-        for frame in stackFrames:
+        stack_frames = self.get_stackFrames()
+        for frame in stack_frames:
             module_id = frame.get("moduleId")
             source_name = frame.get("source", {}).get("name")
             if module_id is None or source_name is None:
