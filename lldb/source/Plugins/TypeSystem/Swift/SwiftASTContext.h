@@ -17,6 +17,7 @@
 #include "Plugins/TypeSystem/Swift/TypeSystemSwift.h"
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 
+#include "lldb/Core/Progress.h"
 #include "lldb/Core/SwiftForward.h"
 #include "lldb/Core/ThreadSafeDenseSet.h"
 #include "lldb/Expression/DiagnosticManager.h"
@@ -327,6 +328,20 @@ public:
   CreateModule(std::string module_name, swift::ImplicitImportInfo importInfo,
                swift::ModuleDecl::PopulateFilesFn populateFiles);
 
+  /// An RAII object to install a progress report callback.
+  class ModuleImportProgressRAII {
+    lldb::TypeSystemSP m_ts;
+    Progress m_progress;
+
+  public:
+    ModuleImportProgressRAII(SwiftASTContext &ctx, std::string category);
+    ~ModuleImportProgressRAII();
+  };
+
+  /// Install and return a module import RAII object.
+  std::unique_ptr<ModuleImportProgressRAII>
+  GetModuleImportProgressRAII(std::string category);
+
   // This function should only be called when all search paths
   // for all items in a swift::ASTContext have been setup to
   // allow for imports to happen correctly. Use with caution,
@@ -334,6 +349,7 @@ public:
   llvm::Expected<swift::ModuleDecl &> GetModule(const SourceModule &module,
                                                 bool *cached = nullptr);
   llvm::Expected<swift::ModuleDecl &> GetModule(const FileSpec &module_spec);
+  llvm::Expected<swift::ModuleDecl &> ImportStdlib();
 
   void CacheModule(std::string module_name, swift::ModuleDecl *module);
 
