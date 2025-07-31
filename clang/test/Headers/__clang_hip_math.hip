@@ -4981,11 +4981,13 @@ extern "C" __device__ double test_normcdfinv(double x) {
 // DEFAULT-NEXT:    [[ADD_I]] = fadd contract float [[__R_0_I4]], [[MUL_I]]
 // DEFAULT-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 4
 // DEFAULT-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// DEFAULT-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5NORMFIPKF_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP20:![0-9]+]]
+// DEFAULT-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5NORMFIPKF_EXIT_LOOPEXIT:%.*]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP20:![0-9]+]]
+// DEFAULT:       _ZL5normfiPKf.exit.loopexit:
+// DEFAULT-NEXT:    [[TMP1:%.*]] = tail call contract float @llvm.sqrt.f32(float [[ADD_I]])
+// DEFAULT-NEXT:    br label [[_ZL5NORMFIPKF_EXIT]]
 // DEFAULT:       _ZL5normfiPKf.exit:
-// DEFAULT-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
-// DEFAULT-NEXT:    [[TMP1:%.*]] = tail call contract noundef float @llvm.sqrt.f32(float [[__R_0_I_LCSSA]])
-// DEFAULT-NEXT:    ret float [[TMP1]]
+// DEFAULT-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[TMP1]], [[_ZL5NORMFIPKF_EXIT_LOOPEXIT]] ]
+// DEFAULT-NEXT:    ret float [[__R_0_I_LCSSA]]
 //
 // FINITEONLY-LABEL: @test_normf(
 // FINITEONLY-NEXT:  entry:
@@ -5001,11 +5003,13 @@ extern "C" __device__ double test_normcdfinv(double x) {
 // FINITEONLY-NEXT:    [[ADD_I]] = fadd nnan ninf contract float [[__R_0_I4]], [[MUL_I]]
 // FINITEONLY-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 4
 // FINITEONLY-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// FINITEONLY-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5NORMFIPKF_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP20:![0-9]+]]
+// FINITEONLY-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5NORMFIPKF_EXIT_LOOPEXIT:%.*]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP20:![0-9]+]]
+// FINITEONLY:       _ZL5normfiPKf.exit.loopexit:
+// FINITEONLY-NEXT:    [[TMP1:%.*]] = tail call nnan ninf contract float @llvm.sqrt.f32(float [[ADD_I]])
+// FINITEONLY-NEXT:    br label [[_ZL5NORMFIPKF_EXIT]]
 // FINITEONLY:       _ZL5normfiPKf.exit:
-// FINITEONLY-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
-// FINITEONLY-NEXT:    [[TMP1:%.*]] = tail call nnan ninf contract noundef float @llvm.sqrt.f32(float [[__R_0_I_LCSSA]])
-// FINITEONLY-NEXT:    ret float [[TMP1]]
+// FINITEONLY-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[TMP1]], [[_ZL5NORMFIPKF_EXIT_LOOPEXIT]] ]
+// FINITEONLY-NEXT:    ret float [[__R_0_I_LCSSA]]
 //
 // APPROX-LABEL: @test_normf(
 // APPROX-NEXT:  entry:
@@ -5021,11 +5025,13 @@ extern "C" __device__ double test_normcdfinv(double x) {
 // APPROX-NEXT:    [[ADD_I]] = fadd contract float [[__R_0_I4]], [[MUL_I]]
 // APPROX-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 4
 // APPROX-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// APPROX-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5NORMFIPKF_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP20:![0-9]+]]
+// APPROX-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5NORMFIPKF_EXIT_LOOPEXIT:%.*]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP20:![0-9]+]]
+// APPROX:       _ZL5normfiPKf.exit.loopexit:
+// APPROX-NEXT:    [[TMP1:%.*]] = tail call contract float @llvm.sqrt.f32(float [[ADD_I]])
+// APPROX-NEXT:    br label [[_ZL5NORMFIPKF_EXIT]]
 // APPROX:       _ZL5normfiPKf.exit:
-// APPROX-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
-// APPROX-NEXT:    [[TMP1:%.*]] = tail call contract noundef float @llvm.sqrt.f32(float [[__R_0_I_LCSSA]])
-// APPROX-NEXT:    ret float [[TMP1]]
+// APPROX-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[TMP1]], [[_ZL5NORMFIPKF_EXIT_LOOPEXIT]] ]
+// APPROX-NEXT:    ret float [[__R_0_I_LCSSA]]
 //
 // NCRDIV-LABEL: @test_normf(
 // NCRDIV-NEXT:  entry:
@@ -5041,11 +5047,13 @@ extern "C" __device__ double test_normcdfinv(double x) {
 // NCRDIV-NEXT:    [[ADD_I]] = fadd contract float [[__R_0_I4]], [[MUL_I]]
 // NCRDIV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 4
 // NCRDIV-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5NORMFIPKF_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
+// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5NORMFIPKF_EXIT_LOOPEXIT:%.*]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
+// NCRDIV:       _ZL5normfiPKf.exit.loopexit:
+// NCRDIV-NEXT:    [[TMP1:%.*]] = tail call contract float @llvm.sqrt.f32(float [[ADD_I]])
+// NCRDIV-NEXT:    br label [[_ZL5NORMFIPKF_EXIT]]
 // NCRDIV:       _ZL5normfiPKf.exit:
-// NCRDIV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
-// NCRDIV-NEXT:    [[TMP1:%.*]] = tail call contract noundef float @llvm.sqrt.f32(float [[__R_0_I_LCSSA]]), !fpmath [[META22:![0-9]+]]
-// NCRDIV-NEXT:    ret float [[TMP1]]
+// NCRDIV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[TMP1]], [[_ZL5NORMFIPKF_EXIT_LOOPEXIT]] ]
+// NCRDIV-NEXT:    ret float [[__R_0_I_LCSSA]]
 //
 // AMDGCNSPIRV-LABEL: @test_normf(
 // AMDGCNSPIRV-NEXT:  entry:
@@ -5061,11 +5069,13 @@ extern "C" __device__ double test_normcdfinv(double x) {
 // AMDGCNSPIRV-NEXT:    [[ADD_I]] = fadd contract float [[__R_0_I4]], [[MUL_I]]
 // AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__A_ADDR_0_I3]], i64 4
 // AMDGCNSPIRV-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5NORMFIPKF_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5NORMFIPKF_EXIT_LOOPEXIT:%.*]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
+// AMDGCNSPIRV:       _ZL5normfiPKf.exit.loopexit:
+// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = tail call contract addrspace(4) float @llvm.sqrt.f32(float [[ADD_I]])
+// AMDGCNSPIRV-NEXT:    br label [[_ZL5NORMFIPKF_EXIT]]
 // AMDGCNSPIRV:       _ZL5normfiPKf.exit:
-// AMDGCNSPIRV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
-// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = tail call contract noundef addrspace(4) float @llvm.sqrt.f32(float [[__R_0_I_LCSSA]])
-// AMDGCNSPIRV-NEXT:    ret float [[TMP1]]
+// AMDGCNSPIRV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[TMP1]], [[_ZL5NORMFIPKF_EXIT_LOOPEXIT]] ]
+// AMDGCNSPIRV-NEXT:    ret float [[__R_0_I_LCSSA]]
 //
 extern "C" __device__ float test_normf(int x, const float *y) {
   return normf(x, y);
@@ -5085,11 +5095,13 @@ extern "C" __device__ float test_normf(int x, const float *y) {
 // DEFAULT-NEXT:    [[ADD_I]] = fadd contract double [[__R_0_I4]], [[MUL_I]]
 // DEFAULT-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 8
 // DEFAULT-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// DEFAULT-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL4NORMIPKD_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
+// DEFAULT-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL4NORMIPKD_EXIT_LOOPEXIT:%.*]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
+// DEFAULT:       _ZL4normiPKd.exit.loopexit:
+// DEFAULT-NEXT:    [[TMP1:%.*]] = tail call contract double @llvm.sqrt.f64(double [[ADD_I]])
+// DEFAULT-NEXT:    br label [[_ZL4NORMIPKD_EXIT]]
 // DEFAULT:       _ZL4normiPKd.exit:
-// DEFAULT-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
-// DEFAULT-NEXT:    [[TMP1:%.*]] = tail call contract noundef double @llvm.sqrt.f64(double [[__R_0_I_LCSSA]])
-// DEFAULT-NEXT:    ret double [[TMP1]]
+// DEFAULT-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[TMP1]], [[_ZL4NORMIPKD_EXIT_LOOPEXIT]] ]
+// DEFAULT-NEXT:    ret double [[__R_0_I_LCSSA]]
 //
 // FINITEONLY-LABEL: @test_norm(
 // FINITEONLY-NEXT:  entry:
@@ -5105,11 +5117,13 @@ extern "C" __device__ float test_normf(int x, const float *y) {
 // FINITEONLY-NEXT:    [[ADD_I]] = fadd nnan ninf contract double [[__R_0_I4]], [[MUL_I]]
 // FINITEONLY-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 8
 // FINITEONLY-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// FINITEONLY-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL4NORMIPKD_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
+// FINITEONLY-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL4NORMIPKD_EXIT_LOOPEXIT:%.*]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
+// FINITEONLY:       _ZL4normiPKd.exit.loopexit:
+// FINITEONLY-NEXT:    [[TMP1:%.*]] = tail call nnan ninf contract double @llvm.sqrt.f64(double [[ADD_I]])
+// FINITEONLY-NEXT:    br label [[_ZL4NORMIPKD_EXIT]]
 // FINITEONLY:       _ZL4normiPKd.exit:
-// FINITEONLY-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
-// FINITEONLY-NEXT:    [[TMP1:%.*]] = tail call nnan ninf contract noundef double @llvm.sqrt.f64(double [[__R_0_I_LCSSA]])
-// FINITEONLY-NEXT:    ret double [[TMP1]]
+// FINITEONLY-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[TMP1]], [[_ZL4NORMIPKD_EXIT_LOOPEXIT]] ]
+// FINITEONLY-NEXT:    ret double [[__R_0_I_LCSSA]]
 //
 // APPROX-LABEL: @test_norm(
 // APPROX-NEXT:  entry:
@@ -5125,11 +5139,13 @@ extern "C" __device__ float test_normf(int x, const float *y) {
 // APPROX-NEXT:    [[ADD_I]] = fadd contract double [[__R_0_I4]], [[MUL_I]]
 // APPROX-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 8
 // APPROX-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// APPROX-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL4NORMIPKD_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
+// APPROX-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL4NORMIPKD_EXIT_LOOPEXIT:%.*]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
+// APPROX:       _ZL4normiPKd.exit.loopexit:
+// APPROX-NEXT:    [[TMP1:%.*]] = tail call contract double @llvm.sqrt.f64(double [[ADD_I]])
+// APPROX-NEXT:    br label [[_ZL4NORMIPKD_EXIT]]
 // APPROX:       _ZL4normiPKd.exit:
-// APPROX-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
-// APPROX-NEXT:    [[TMP1:%.*]] = tail call contract noundef double @llvm.sqrt.f64(double [[__R_0_I_LCSSA]])
-// APPROX-NEXT:    ret double [[TMP1]]
+// APPROX-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[TMP1]], [[_ZL4NORMIPKD_EXIT_LOOPEXIT]] ]
+// APPROX-NEXT:    ret double [[__R_0_I_LCSSA]]
 //
 // NCRDIV-LABEL: @test_norm(
 // NCRDIV-NEXT:  entry:
@@ -5145,11 +5161,13 @@ extern "C" __device__ float test_normf(int x, const float *y) {
 // NCRDIV-NEXT:    [[ADD_I]] = fadd contract double [[__R_0_I4]], [[MUL_I]]
 // NCRDIV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 8
 // NCRDIV-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL4NORMIPKD_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP23:![0-9]+]]
+// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL4NORMIPKD_EXIT_LOOPEXIT:%.*]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP22:![0-9]+]]
+// NCRDIV:       _ZL4normiPKd.exit.loopexit:
+// NCRDIV-NEXT:    [[TMP1:%.*]] = tail call contract double @llvm.sqrt.f64(double [[ADD_I]])
+// NCRDIV-NEXT:    br label [[_ZL4NORMIPKD_EXIT]]
 // NCRDIV:       _ZL4normiPKd.exit:
-// NCRDIV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
-// NCRDIV-NEXT:    [[TMP1:%.*]] = tail call contract noundef double @llvm.sqrt.f64(double [[__R_0_I_LCSSA]])
-// NCRDIV-NEXT:    ret double [[TMP1]]
+// NCRDIV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[TMP1]], [[_ZL4NORMIPKD_EXIT_LOOPEXIT]] ]
+// NCRDIV-NEXT:    ret double [[__R_0_I_LCSSA]]
 //
 // AMDGCNSPIRV-LABEL: @test_norm(
 // AMDGCNSPIRV-NEXT:  entry:
@@ -5165,11 +5183,13 @@ extern "C" __device__ float test_normf(int x, const float *y) {
 // AMDGCNSPIRV-NEXT:    [[ADD_I]] = fadd contract double [[__R_0_I4]], [[MUL_I]]
 // AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__A_ADDR_0_I3]], i64 8
 // AMDGCNSPIRV-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL4NORMIPKD_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP22:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL4NORMIPKD_EXIT_LOOPEXIT:%.*]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP22:![0-9]+]]
+// AMDGCNSPIRV:       _ZL4normiPKd.exit.loopexit:
+// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = tail call contract addrspace(4) double @llvm.sqrt.f64(double [[ADD_I]])
+// AMDGCNSPIRV-NEXT:    br label [[_ZL4NORMIPKD_EXIT]]
 // AMDGCNSPIRV:       _ZL4normiPKd.exit:
-// AMDGCNSPIRV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
-// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = tail call contract noundef addrspace(4) double @llvm.sqrt.f64(double [[__R_0_I_LCSSA]])
-// AMDGCNSPIRV-NEXT:    ret double [[TMP1]]
+// AMDGCNSPIRV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[TMP1]], [[_ZL4NORMIPKD_EXIT_LOOPEXIT]] ]
+// AMDGCNSPIRV-NEXT:    ret double [[__R_0_I_LCSSA]]
 //
 extern "C" __device__ double test_norm(int x, const double *y) {
   return norm(x, y);
@@ -5707,7 +5727,7 @@ extern "C" __device__ double test_rint(double x) {
 // NCRDIV-NEXT:    [[ADD_I]] = fadd contract float [[__R_0_I4]], [[MUL_I]]
 // NCRDIV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 4
 // NCRDIV-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL6RNORMFIPKF_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP24:![0-9]+]]
+// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL6RNORMFIPKF_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP23:![0-9]+]]
 // NCRDIV:       _ZL6rnormfiPKf.exit:
 // NCRDIV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
 // NCRDIV-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_rsqrt_f32(float noundef [[__R_0_I_LCSSA]]) #[[ATTR15]]
@@ -5811,7 +5831,7 @@ extern "C" __device__ float test_rnormf(int x, const float* y) {
 // NCRDIV-NEXT:    [[ADD_I]] = fadd contract double [[__R_0_I4]], [[MUL_I]]
 // NCRDIV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 8
 // NCRDIV-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5RNORMIPKD_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP25:![0-9]+]]
+// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5RNORMIPKD_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP24:![0-9]+]]
 // NCRDIV:       _ZL5rnormiPKd.exit:
 // NCRDIV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
 // NCRDIV-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_rsqrt_f64(double noundef [[__R_0_I_LCSSA]]) #[[ATTR15]]
@@ -6616,7 +6636,7 @@ extern "C" __device__ double test_sinpi(double x) {
 //
 // NCRDIV-LABEL: @test_sqrtf(
 // NCRDIV-NEXT:  entry:
-// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.sqrt.f32(float [[X:%.*]]), !fpmath [[META22]]
+// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.sqrt.f32(float [[X:%.*]]), !fpmath [[META25:![0-9]+]]
 // NCRDIV-NEXT:    ret float [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: @test_sqrtf(

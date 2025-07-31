@@ -2998,3 +2998,30 @@ join:
   %cmp = icmp eq i32 %phi, 0
   ret i1 %cmp
 }
+
+declare void @may_exit()
+
+define i32 @intrinsic_over_phi_noundef(i1 %c, i1 %c2, i32 %a) {
+; CHECK-LABEL: @intrinsic_over_phi_noundef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.umax.i32(i32 [[A:%.*]], i32 1)
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[TMP0]], [[IF]] ], [ 1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    call void @may_exit()
+; CHECK-NEXT:    ret i32 [[PHI]]
+;
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi i32 [ %a, %if ], [ 0, %entry ]
+  call void @may_exit()
+  %umax = call noundef i32 @llvm.umax(i32 noundef %phi, i32 1)
+  ret i32 %umax
+}
