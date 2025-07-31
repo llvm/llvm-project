@@ -1224,14 +1224,12 @@ bool LoopVectorizationLegality::canVectorizeMemory(
             return (Dep.getDestination(DepChecker) == *CriticalEELoad ||
                     Dep.getSource(DepChecker) == *CriticalEELoad);
           })) {
-        // Refine language a little? This currently only applies when a store
-        // is present in the early exit loop.
         reportVectorizationFailure(
-            "No dependencies allowed for early exit condition load",
-            "Early exit condition loads may not have a dependence with "
-            "another"
-            " memory operation.",
-            "CantVectorizeStoreToLoopInvariantAddress", ORE, TheLoop);
+            "No dependencies allowed for critical early exit condition load "
+            "in a loop with side effects",
+            "Critical Early exit condition loads in a loop with side effects "
+            "may not have a dependence with another memory operation.",
+            "CantVectorizeUnsafeDependencyForEELoopWithSideEffects", ORE, TheLoop);
         return false;
       }
     }
@@ -1239,10 +1237,10 @@ bool LoopVectorizationLegality::canVectorizeMemory(
     if (!hasUncountedExitWithSideEffects())
       return canVectorizeIndirectUnsafeDependences();
     reportVectorizationFailure(
-        "Cannot vectorize unsafe dependencies in state-changing early exit "
-        "loop.",
-        "Unable to vectorize memory in an early exit loop with store",
-        "CantVectorizeUnsafeDependencyForEELoopWithStore", ORE, TheLoop);
+        "Cannot vectorize unsafe dependencies in early exit loop with "
+        "side effects.",
+        "Unable to vectorize memory in an early exit loop with side effects",
+        "CantVectorizeUnsafeDependencyForEELoopWithSideEffects", ORE, TheLoop);
     return false;
   }
 
@@ -1852,9 +1850,6 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop(
     }
   } else {
     // Read-only loop.
-    // FIXME: as with the loops with stores, only the loads contributing to
-    //        the loop condition need to be guaranteed dereferenceable and
-    //        aligned.
     if (!isDereferenceableReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC,
                                        &Predicates)) {
       reportVectorizationFailure(
