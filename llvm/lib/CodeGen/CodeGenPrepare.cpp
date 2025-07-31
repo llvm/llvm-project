@@ -2769,6 +2769,29 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
       return optimizeGatherScatterInst(II, II->getArgOperand(0));
     case Intrinsic::masked_scatter:
       return optimizeGatherScatterInst(II, II->getArgOperand(1));
+    case Intrinsic::masked_load:
+      // Treat v1X masked load as load X type.
+      if (auto *VT = dyn_cast<FixedVectorType>(II->getType())) {
+        if (VT->getNumElements() == 1) {
+          Value *PtrVal = II->getArgOperand(0);
+          unsigned AS = PtrVal->getType()->getPointerAddressSpace();
+          if (optimizeMemoryInst(II, PtrVal, VT->getElementType(), AS))
+            return true;
+        }
+      }
+      return false;
+    case Intrinsic::masked_store:
+      // Treat v1X masked store as store X type.
+      if (auto *VT =
+              dyn_cast<FixedVectorType>(II->getArgOperand(0)->getType())) {
+        if (VT->getNumElements() == 1) {
+          Value *PtrVal = II->getArgOperand(1);
+          unsigned AS = PtrVal->getType()->getPointerAddressSpace();
+          if (optimizeMemoryInst(II, PtrVal, VT->getElementType(), AS))
+            return true;
+        }
+      }
+      return false;
     }
 
     SmallVector<Value *, 2> PtrOps;
