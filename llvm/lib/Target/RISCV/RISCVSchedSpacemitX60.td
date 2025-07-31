@@ -35,17 +35,18 @@ class GetLMULValue<list<int> Values, string LMUL> {
   );
 }
 
-// Returns BaseValue for LMUL values before startMx, Value for startMx,
-// then doubles Value for each subsequent LMUL until targetMx
-// Example: ConstOneUntilLMULThenDoubleBase<"M1", 4, 2, "M8"> returns:
+// Returns BaseValue for LMUL values before startLMUL, Value for startLMUL,
+// then doubles Value for each subsequent LMUL
+// Example: ConstValueUntilLMULThenDoubleBase<"M1", 2, 4, "M8"> returns:
 //   MF8->2, MF4->2, MF2->2, M1->4, M2->8, M4->16, M8->32
 // This is useful for modeling scheduling parameters that scale with LMUL.
-class ConstOneUntilLMULThenDoubleBase<string startMx, int Value, int BaseValue, string targetMx> {
-  int startPos = GetLMULValue<[0, 1, 2, 3, 4, 5, 6], startMx>.c;
-  int targetPos = GetLMULValue<[0, 1, 2, 3, 4, 5, 6], targetMx>.c;
+class ConstValueUntilLMULThenDoubleBase<string startLMUL, int BaseValue, int Value, string currentLMUL> {
+  assert !le(BaseValue, Value), "BaseValue must be le to Value";
+  int startPos = GetLMULValue<[0, 1, 2, 3, 4, 5, 6], startLMUL>.c;
+  int currentPos = GetLMULValue<[0, 1, 2, 3, 4, 5, 6], currentLMUL>.c;
 
   // Calculate the difference in positions
-  int posDiff = !sub(targetPos, startPos);
+  int posDiff = !sub(currentPos, startPos);
 
   // Calculate Value * (2^posDiff) using shift left
   int c = !cond(
@@ -55,24 +56,24 @@ class ConstOneUntilLMULThenDoubleBase<string startMx, int Value, int BaseValue, 
   );
 }
 
-// Same as previous but BaseValue == Value
-class ConstOneUntilLMULThenDouble<string startMx, int Value, string targetMx> {
-  int c = ConstOneUntilLMULThenDoubleBase<startMx, Value, Value, targetMx>.c;
+// Same as the previous function but BaseValue == Value
+class ConstValueUntilLMULThenDouble<string startLMUL, int Value, string currentLMUL> {
+  int c = ConstValueUntilLMULThenDoubleBase<startLMUL, Value, Value, currentLMUL>.c;
 }
 
 // Returns MF8->1, MF4->1, MF2->2, M1->4, M2->8, M4->16, M8->32
 class ConstOneUntilMF4ThenDouble<string mx> {
-  int c = ConstOneUntilLMULThenDouble<"MF4", 1, mx>.c;
+  int c = ConstValueUntilLMULThenDouble<"MF4", 1, mx>.c;
 }
 
 // Returns MF8->1, MF4->1, MF2->1, M1->2, M2->4, M4->8, M8->16
 class ConstOneUntilMF2ThenDouble<string mx> {
-  int c = ConstOneUntilLMULThenDouble<"MF2", 1, mx>.c;
+  int c = ConstValueUntilLMULThenDouble<"MF2", 1, mx>.c;
 }
 
 // Returns MF8->1, MF4->1, MF2->1, M1->1, M2->2, M4->4, M8->8
 class ConstOneUntilM1ThenDouble<string mx> {
-  int c = ConstOneUntilLMULThenDouble<"M1", 1, mx>.c;
+  int c = ConstValueUntilLMULThenDouble<"M1", 1, mx>.c;
 }
 
 //===----------------------------------------------------------------------===//
@@ -412,7 +413,7 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVIMinMaxX", [SMX60_VIEU], mx, IsWorstCase>;
   }
 
-  defvar VIALULat = ConstOneUntilLMULThenDouble<"M2", 4, mx>.c;
+  defvar VIALULat = ConstValueUntilLMULThenDouble<"M2", 4, mx>.c;
   let Latency = VIALULat, ReleaseAtCycles = [4] in {
     // Pattern of vadd, vsub, vrsub: 4/4/5/8
     // Pattern of vand, vor, vxor:   4/4/8/16
@@ -450,7 +451,7 @@ foreach mx = SchedMxList in {
   // Pattern of vmacc, vmadd, vmul, vmulh, etc.: e8/e16 = 4/4/5/8, e32 = 5,5,5,8,
   // e64 = 7,8,16,32. We use the worst-case until we can split the SEW.
   // TODO: change WriteVIMulV, etc to be defined with LMULSEWSchedWrites
-  let Latency = ConstOneUntilLMULThenDoubleBase<"M2", 8, 7, mx>.c, ReleaseAtCycles = [7] in {
+  let Latency = ConstValueUntilLMULThenDoubleBase<"M2", 7, 8, mx>.c, ReleaseAtCycles = [7] in {
     defm "" : LMULWriteResMX<"WriteVIMulV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMulX", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMulAddV", [SMX60_VIEU], mx, IsWorstCase>;
@@ -486,7 +487,7 @@ foreach mx = SchedMxList in {
   foreach sew = SchedSEWSet<mx>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
 
-    defvar VIDivLat = ConstOneUntilLMULThenDouble<"MF2", 12, mx>.c;
+    defvar VIDivLat = ConstValueUntilLMULThenDouble<"MF2", 12, mx>.c;
     let Latency = VIDivLat, ReleaseAtCycles = [12] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVIDivV", [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVIDivX", [SMX60_VIEU], mx, sew, IsWorstCase>;
@@ -498,7 +499,7 @@ foreach mx = SchedMxList in {
 foreach mx = SchedMxListW in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxListW>.c;
 
-  defvar VNarrowingLat = ConstOneUntilLMULThenDouble<"M1", 4, mx>.c;
+  defvar VNarrowingLat = ConstValueUntilLMULThenDouble<"M1", 4, mx>.c;
   let Latency = VNarrowingLat, ReleaseAtCycles = [4] in {
     defm "" : LMULWriteResMX<"WriteVNShiftV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVNShiftX", [SMX60_VIEU], mx, IsWorstCase>;
