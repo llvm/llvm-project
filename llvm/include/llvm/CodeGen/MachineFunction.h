@@ -515,6 +515,15 @@ public:
   struct CallSiteInfo {
     /// Vector of call argument and its forwarding register.
     SmallVector<ArgRegPair, 1> ArgRegPairs;
+    /// Callee type ids.
+    SmallVector<ConstantInt *, 4> CalleeTypeIds;
+
+    CallSiteInfo() = default;
+
+    /// Extracts the numeric type id from the CallBase's callee_type Metadata,
+    /// and sets CalleeTypeIds. This is used as type id for the indirect call in
+    /// the call graph section.
+    CallSiteInfo(const CallBase &CB);
   };
 
   struct CalledGlobalInfo {
@@ -522,11 +531,12 @@ public:
     unsigned TargetFlags;
   };
 
+  using CallSiteInfoMap = DenseMap<const MachineInstr *, CallSiteInfo>;
+
 private:
   Delegate *TheDelegate = nullptr;
   GISelChangeObserver *Observer = nullptr;
 
-  using CallSiteInfoMap = DenseMap<const MachineInstr *, CallSiteInfo>;
   /// Map a call instruction to call site arguments forwarding info.
   CallSiteInfoMap CallSitesInfo;
 

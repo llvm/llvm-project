@@ -826,7 +826,7 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
 
   // Setup a dummy DiagnosticsEngine.
   DiagnosticOptions DummyDiagOpts;
-  DiagnosticsEngine DummyDiags(new DiagnosticIDs(), DummyDiagOpts);
+  DiagnosticsEngine DummyDiags(DiagnosticIDs::create(), DummyDiagOpts);
   DummyDiags.setClient(new TextDiagnosticBuffer());
 
   // Run the first parse on the original arguments with the dummy invocation and
@@ -2685,7 +2685,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   std::optional<DiagnosticsEngine> IgnoringDiags;
   if (!Diags) {
     IgnoringDiagOpts.emplace();
-    IgnoringDiags.emplace(new DiagnosticIDs(), *IgnoringDiagOpts,
+    IgnoringDiags.emplace(DiagnosticIDs::create(), *IgnoringDiagOpts,
                           new IgnoringDiagConsumer());
     Diags = &*IgnoringDiags;
   }

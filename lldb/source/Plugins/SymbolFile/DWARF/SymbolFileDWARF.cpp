@@ -41,6 +41,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfoEntry.h"
+#include "Plugins/SymbolFile/DWARF/SymbolFileWasm.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -73,6 +74,7 @@
 #include "ManualDWARFIndex.h"
 #include "SymbolFileDWARFDebugMap.h"
 #include "SymbolFileDWARFDwo.h"
+#include "lldb/lldb-private-enumerations.h"
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
@@ -327,6 +329,9 @@ llvm::StringRef SymbolFileDWARF::GetPluginDescriptionStatic() {
 }
 
 SymbolFile *SymbolFileDWARF::CreateInstance(ObjectFileSP objfile_sp) {
+  if (objfile_sp->GetArchitecture().GetTriple().isWasm())
+    return new SymbolFileWasm(std::move(objfile_sp),
+                              /*dwo_section_list*/ nullptr);
   return new SymbolFileDWARF(std::move(objfile_sp),
                              /*dwo_section_list*/ nullptr);
 }
@@ -2535,7 +2540,7 @@ void SymbolFileDWARF::FindFunctions(const Module::LookupInfo &lookup_info,
   m_index->GetFunctions(lookup_info, *this, parent_decl_ctx, [&](DWARFDIE die) {
     if (resolved_dies.insert(die.GetDIE()).second)
       ResolveFunction(die, include_inlines, sc_list);
-    return true;
+    return IterationAction::Continue;
   });
   // With -gsimple-template-names, a templated type's DW_AT_name will not
   // contain the template parameters. Try again stripping '<' and anything
@@ -2552,7 +2557,7 @@ void SymbolFileDWARF::FindFunctions(const Module::LookupInfo &lookup_info,
                             [&](DWARFDIE die) {
                               if (resolved_dies.insert(die.GetDIE()).second)
                                 ResolveFunction(die, include_inlines, sc_list);
-                              return true;
+                              return IterationAction::Continue;
                             });
     }
   }
@@ -2588,7 +2593,7 @@ void SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
   m_index->GetFunctions(regex, [&](DWARFDIE die) {
     if (resolved_dies.insert(die.GetDIE()).second)
       ResolveFunction(die, include_inlines, sc_list);
-    return true;
+    return IterationAction::Continue;
   });
 }
 
