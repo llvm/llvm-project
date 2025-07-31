@@ -22,31 +22,67 @@ using namespace llvm;
 
 namespace {
 
+class HeapAllocatedStringRef {
+  std::unique_ptr<char[]> Data;
+  size_t Size;
+
+public:
+  HeapAllocatedStringRef(StringRef S) : Size(S.size()) {
+    Data = std::make_unique<char[]>(Size);
+    std::strncpy(Data.get(), S.data(), Size);
+  }
+  operator StringRef() const { return StringRef(Data.get(), Size); }
+};
+
 TEST(AsmParserTest, NullTerminatedInput) {
   LLVMContext Ctx;
-  StringRef Source = "; Empty module \n";
+  StringRef Source = "; Empty module\n";
   SMDiagnostic Error;
   auto Mod = parseAssemblyString(Source, Error, Ctx);
 
   EXPECT_TRUE(Mod != nullptr);
   EXPECT_TRUE(Error.getMessage().empty());
-}
 
-#ifdef GTEST_HAS_DEATH_TEST
-#ifndef NDEBUG
+  Mod = parseAssemblyString(HeapAllocatedStringRef(Source), Error, Ctx);
+
+  EXPECT_TRUE(Mod != nullptr);
+  EXPECT_TRUE(Error.getMessage().empty());
+}
 
 TEST(AsmParserTest, NonNullTerminatedInput) {
   LLVMContext Ctx;
-  StringRef Source = "; Empty module \n\1\2";
+  StringRef Source = "; Empty module\n\1\2";
   SMDiagnostic Error;
-  std::unique_ptr<Module> Mod;
-  EXPECT_DEATH(Mod = parseAssemblyString(Source.substr(0, Source.size() - 2),
-                                         Error, Ctx),
-               "Buffer is not null terminated!");
+
+  auto Mod = parseAssemblyString(Source.drop_back(2), Error, Ctx);
+
+  EXPECT_TRUE(Mod != nullptr);
+  EXPECT_TRUE(Error.getMessage().empty());
 }
 
-#endif
-#endif
+TEST(AsmParserTest, CommentTerminatedWithEOF) {
+  LLVMContext Ctx;
+  StringRef Source = "; Empty module";
+  SMDiagnostic Error;
+
+  auto Mod = parseAssemblyString(HeapAllocatedStringRef(Source), Error, Ctx);
+
+  EXPECT_TRUE(Mod != nullptr);
+  EXPECT_TRUE(Error.getMessage().empty());
+}
+
+TEST(AsmParserTest, LabelTailTerminatedWithEOF) {
+  LLVMContext Ctx;
+  StringRef Source = R"(
+  define void @main() {
+    .l12)";
+  SMDiagnostic Error;
+
+  auto Mod = parseAssemblyString(HeapAllocatedStringRef(Source), Error, Ctx);
+
+  EXPECT_EQ(Mod, nullptr);
+  EXPECT_EQ(Error.getMessage(), "Invalid token");
+}
 
 TEST(AsmParserTest, SlotMappingTest) {
   LLVMContext Ctx;
@@ -65,6 +101,12 @@ TEST(AsmParserTest, SlotMappingTest) {
   EXPECT_EQ(Mapping.MetadataNodes.count(0), 1u);
   EXPECT_EQ(Mapping.MetadataNodes.count(42), 1u);
   EXPECT_EQ(Mapping.MetadataNodes.count(1), 0u);
+
+  Mod =
+      parseAssemblyString(HeapAllocatedStringRef(Source), Error, Ctx, &Mapping);
+
+  EXPECT_TRUE(Mod != nullptr);
+  EXPECT_TRUE(Error.getMessage().empty());
 }
 
 TEST(AsmParserTest, TypeAndConstantValueParsing) {
