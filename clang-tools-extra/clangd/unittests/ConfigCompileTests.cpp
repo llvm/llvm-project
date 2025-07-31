@@ -299,7 +299,7 @@ TEST_F(ConfigCompileTests, DiagnosticSuppression) {
                                    "typecheck_bool_condition",
                                    "unexpected_friend", "warn_alloca"));
   clang::DiagnosticOptions DiagOpts;
-  clang::DiagnosticsEngine DiagEngine(new DiagnosticIDs, DiagOpts,
+  clang::DiagnosticsEngine DiagEngine(DiagnosticIDs::create(), DiagOpts,
                                       new clang::IgnoringDiagConsumer);
 
   using Diag = clang::Diagnostic;

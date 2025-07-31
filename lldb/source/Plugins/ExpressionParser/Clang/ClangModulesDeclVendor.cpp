@@ -747,7 +747,7 @@ ClangModulesDeclVendor::Create(Target &target) {
 
   // Make sure clang uses the same VFS as LLDB.
   instance->createFileManager(FileSystem::Instance().GetVirtualFileSystem());
-  instance->setDiagnostics(diagnostics_engine.get());
+  instance->setDiagnostics(diagnostics_engine);
 
   std::unique_ptr<clang::FrontendAction> action(new clang::SyntaxOnlyAction);
 

@@ -44,7 +44,7 @@ protected:
     // shouldn't matter.
     RawComment Comment(SourceMgr, CommentRange, EmptyOpts, /*Merged=*/true);
     DiagnosticOptions DiagOpts;
-    DiagnosticsEngine Diags(new DiagnosticIDs, DiagOpts);
+    DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts);
     return Comment.getFormattedText(SourceMgr, Diags);
   }
 };

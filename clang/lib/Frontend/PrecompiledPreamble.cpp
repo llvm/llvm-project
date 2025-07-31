@@ -412,7 +412,7 @@ PrecompiledPreamble::operator=(PrecompiledPreamble &&) = default;
 llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
     const CompilerInvocation &Invocation,
     const llvm::MemoryBuffer *MainFileBuffer, PreambleBounds Bounds,
-    DiagnosticsEngine &Diagnostics,
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diagnostics,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps, bool StoreInMemory,
     StringRef StoragePath, PreambleCallbacks &Callbacks) {
@@ -461,7 +461,7 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
   llvm::CrashRecoveryContextCleanupRegistrar<CompilerInstance> CICleanup(
       Clang.get());
 
-  Clang->setDiagnostics(&Diagnostics);
+  Clang->setDiagnostics(Diagnostics);
 
   // Create the target instance.
   if (!Clang->createTarget())
@@ -476,18 +476,18 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
   }
 
   // Clear out old caches and data.
-  Diagnostics.Reset();
-  ProcessWarningOptions(Diagnostics, Clang->getDiagnosticOpts(), *VFS);
+  Diagnostics->Reset();
+  ProcessWarningOptions(*Diagnostics, Clang->getDiagnosticOpts(), *VFS);
 
-  VFS =
-      createVFSFromCompilerInvocation(Clang->getInvocation(), Diagnostics, VFS);
+  VFS = createVFSFromCompilerInvocation(Clang->getInvocation(), *Diagnostics,
+                                        VFS);
 
   // Create a file manager object to provide access to and cache the filesystem.
   Clang->setFileManager(new FileManager(Clang->getFileSystemOpts(), VFS));
 
   // Create the source manager.
   Clang->setSourceManager(
-      new SourceManager(Diagnostics, Clang->getFileManager()));
+      new SourceManager(*Diagnostics, Clang->getFileManager()));
 
   auto PreambleDepCollector = std::make_shared<PreambleDependencyCollector>();
   Clang->addDependencyCollector(PreambleDepCollector);
