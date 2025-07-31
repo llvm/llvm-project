@@ -114,7 +114,6 @@ AArch64::AArch64(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_AARCH64_COPY;
   relativeRel = R_AARCH64_RELATIVE;
   iRelativeRel = R_AARCH64_IRELATIVE;
-  iRelSymbolicRel = R_AARCH64_FUNCINIT64;
   gotRel = R_AARCH64_GLOB_DAT;
   pltRel = R_AARCH64_JUMP_SLOT;
   symbolicRel = R_AARCH64_ABS64;
@@ -138,7 +137,6 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_ABS16:
   case R_AARCH64_ABS32:
   case R_AARCH64_ABS64:
-  case R_AARCH64_FUNCINIT64:
   case R_AARCH64_ADD_ABS_LO12_NC:
   case R_AARCH64_LDST128_ABS_LO12_NC:
   case R_AARCH64_LDST16_ABS_LO12_NC:
@@ -155,12 +153,6 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_MOVW_UABS_G2:
   case R_AARCH64_MOVW_UABS_G2_NC:
   case R_AARCH64_MOVW_UABS_G3:
-    return R_ABS;
-  case R_AARCH64_PATCHINST:
-    if (!isAbsolute(s))
-      Err(ctx) << getErrorLoc(ctx, loc)
-               << "R_AARCH64_PATCHINST relocation against non-absolute symbol "
-               << &s;
     return R_ABS;
   case R_AARCH64_AUTH_ABS64:
     return RE_AARCH64_AUTH;
@@ -269,8 +261,7 @@ bool AArch64::usesOnlyLowPageBits(RelType type) const {
 }
 
 RelType AArch64::getDynRel(RelType type) const {
-  if (type == R_AARCH64_ABS64 || type == R_AARCH64_AUTH_ABS64 ||
-      type == R_AARCH64_FUNCINIT64)
+  if (type == R_AARCH64_ABS64 || type == R_AARCH64_AUTH_ABS64)
     return type;
   return R_AARCH64_NONE;
 }
@@ -514,12 +505,6 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_PREL32:
     checkIntUInt(ctx, loc, val, 32, rel);
     write32(ctx, loc, val);
-    break;
-  case R_AARCH64_PATCHINST:
-    if (!rel.sym->isUndefined()) {
-      checkUInt(ctx, loc, val, 32, rel);
-      write32le(loc, val);
-    }
     break;
   case R_AARCH64_PLT32:
   case R_AARCH64_GOTPCREL32:

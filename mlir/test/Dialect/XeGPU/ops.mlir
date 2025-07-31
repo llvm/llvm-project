@@ -521,6 +521,16 @@ gpu.func @subgroup_load_4(%src: ui64) {
   gpu.return
 }
 
+// CHECK: gpu.func @subgroup_load_offset_1(%arg0: memref<?xf16>) {
+gpu.func @subgroup_load_offset_1(%src: memref<?xf16>) {
+  %offset = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %mask = arith.constant dense<1>: vector<4xi1>
+  //CHECK: %[[R1:.*]] = xegpu.load %arg0[%cst], %cst_0 <{chunk_size = 2 : i64, l1_hint = #xegpu.cache_hint<cached>}> : memref<?xf16>, vector<4xindex>, vector<4xi1> -> vector<4x2xf16>
+  %val = xegpu.load %src[%offset], %mask <{chunk_size=2, l1_hint = #xegpu.cache_hint<cached>}>
+      : memref<?xf16>, vector<4xindex>, vector<4xi1> -> vector<4x2xf16>
+  gpu.return
+}
+
 // CHECK: gpu.func @subgroup_store(%[[arg0:.*]]: ui64) {
 gpu.func @subgroup_store(%src: ui64) {
   //CHECK: %[[cst:.*]] = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
@@ -626,6 +636,17 @@ gpu.func @subgroup_store_4(%src: ui64) {
   gpu.return
 }
 
+// CHECK: gpu.func @subgroup_store_offset_1(%arg0: memref<?xf16>) {
+gpu.func @subgroup_store_offset_1(%dest: memref<?xf16>) {
+  %val = arith.constant dense<2.9>: vector<4x2xf16>
+  %offset = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %mask = arith.constant dense<1>: vector<4xi1>
+  //CHECK: xegpu.store %[[R0:.*]], %arg0[%cst_0], %cst_1 <{chunk_size = 2 : i64, l1_hint = #xegpu.cache_hint<cached>}> : vector<4x2xf16>, memref<?xf16>, vector<4xindex>, vector<4xi1>
+  xegpu.store %val, %dest[%offset], %mask <{chunk_size=2, l1_hint = #xegpu.cache_hint<cached>}>
+      : vector<4x2xf16>, memref<?xf16>, vector<4xindex>, vector<4xi1>
+  gpu.return
+}
+
 // CHECK: gpu.func @prefetch(%[[arg0:.*]]: ui64) {
 gpu.func @prefetch(%src: ui64) {
   //CHECK: %[[cst:.*]] = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
@@ -637,6 +658,14 @@ gpu.func @prefetch(%src: ui64) {
   gpu.return
 }
 
+// CHECK: gpu.func @prefetch_offset(%[[arg0:.*]]: ui64) {
+gpu.func @prefetch_offset(%src: ui64) {
+  //CHECK: %[[cst:.*]] = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  // CHECK: xegpu.prefetch %[[arg0]][%cst] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : ui64, vector<4xindex>
+  xegpu.prefetch %src[%0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>: ui64, vector<4xindex>
+  gpu.return
+}
 
 // CHECK: gpu.func @create_update_tdesc(%[[arg0:.*]]: ui64) {
 gpu.func @create_update_tdesc(%src: ui64) {

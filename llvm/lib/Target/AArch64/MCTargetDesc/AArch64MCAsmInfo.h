@@ -164,7 +164,6 @@ enum {
   // ELF relocation specifiers in data directives:
   S_PLT          = 0x400,
   S_GOTPCREL,
-  S_FUNCINIT,
 
   // Mach-O @ relocation specifiers:
   S_MACHO_GOT,

@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 load("//mlir:tblgen.bzl", "gentbl_cc_library")
 
 package(
@@ -132,6 +133,7 @@ cc_test(
         "//llvm:AsmParser",
         "//llvm:CodeGen",
         "//llvm:Core",
+        "//llvm:FrontendHLSL",
         "//llvm:Instrumentation",
         "//llvm:Passes",
         "//llvm:Support",
