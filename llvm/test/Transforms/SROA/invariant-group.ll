@@ -155,6 +155,44 @@ define void @partial_promotion_of_alloca() {
   ret void
 }
 
+define void @launder_in_loop() {
+; CHECK-LABEL: @launder_in_loop(
+; CHECK-NEXT:    br label %[[HEADER:.*]]
+;
+  %struct_ptr = alloca %t, i64 1, align 4
+  br label %header
+
+; CHECK:       [[HEADER]]:
+; CHECK-NEXT:    br i1 true, label %[[BODY:.*]], label %[[EXIT:.*]]
+;
+header:
+  br i1 true, label %body, label %exit
+
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[STRUCT:%.*]] = call %t @make_t()
+; CHECK-NEXT:    [[FIRST:%.*]] = extractvalue %t [[STRUCT]], 0
+; CHECK-NEXT:    [[SECOND:%.*]] = extractvalue %t [[STRUCT]], 1
+; CHECK-NEXT:    br label %[[HEADER]]
+;
+body:                                                ; preds = %6
+  %struct_ptr_fresh = call ptr @llvm.launder.invariant.group.p0(ptr %struct_ptr)
+  %struct = call %t @make_t()
+  store %t %struct, ptr %struct_ptr_fresh, align 4, !invariant.group !0
+  %first_ptr = getelementptr %t, ptr %struct_ptr_fresh, i32 0, i32 0
+  %first = load i32, ptr %first_ptr, align 4
+  %second_ptr = getelementptr %t, ptr %struct_ptr_fresh, i32 0, i32 1
+  %second = load i32, ptr %second_ptr, align 4
+  br label %header
+
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+exit:
+  ret void
+}
+
+declare %t @make_t()
+
 declare void @use(ptr)
 
 !0 = !{}
