@@ -4238,14 +4238,14 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
     Builder.SetInsertPoint(LoopBB);
 
     PHINode *Counter = Builder.CreatePHI(Builder.getInt32Ty(), 2);
-    //// size pow2k = 1;
+    // size pow2k = 1;
     PHINode *Pow2K = Builder.CreatePHI(Builder.getInt32Ty(), 2);
     Counter->addIncoming(llvm::ConstantInt::get(Builder.getInt32Ty(), 0),
                          InputBB);
     Pow2K->addIncoming(llvm::ConstantInt::get(Builder.getInt32Ty(), 1),
                        InputBB);
-    //// for (size i = n - 1; i >= 2 ^ k; --i)
-    ////   tmp[i] op= tmp[i-pow2k];
+    // for (size i = n - 1; i >= 2 ^ k; --i)
+    //   tmp[i] op= tmp[i-pow2k];
     llvm::BasicBlock *InnerLoopBB =
         BasicBlock::Create(CurFn->getContext(), "omp.inner.log.scan.body");
     llvm::BasicBlock *InnerExitBB =
@@ -4254,7 +4254,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
     Builder.CreateCondBr(CmpI, InnerLoopBB, InnerExitBB);
     emitBlock(InnerLoopBB, CurFn);
     Builder.SetInsertPoint(InnerLoopBB);
-    auto *IVal = Builder.CreatePHI(Builder.getInt32Ty(), 2);
+    PHINode *IVal = Builder.CreatePHI(Builder.getInt32Ty(), 2);
     IVal->addIncoming(NMin1, LoopBB);
     for (ReductionInfo RedInfo : ReductionInfos) {
       Value *ReductionVal = RedInfo.PrivateVariable;
@@ -4329,9 +4329,9 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveIR(
     //   buffer[i] = red;
     // }
     ScanRedInfo->OMPFirstScanLoop = true;
-    auto Result = InputLoopGen();
-    if (Result)
-      return Result;
+    Error Err = InputLoopGen();
+    if (Err)
+      return Err;
   }
   {
     // Emit loop with scan phase:
@@ -4340,9 +4340,9 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveIR(
     //   <scan phase>;
     // }
     ScanRedInfo->OMPFirstScanLoop = false;
-    auto Result = ScanLoopGen(Builder.saveIP());
-    if (Result)
-      return Result;
+    Error Err = ScanLoopGen(Builder.saveIP());
+    if (Err)
+      return Err;
   }
   return Error::success();
 }
@@ -4499,9 +4499,9 @@ OpenMPIRBuilder::createCanonicalScanLoops(
   };
 
   const auto &&InputLoopGen = [&]() -> Error {
-    auto LoopInfo = createCanonicalLoop(Builder.saveIP(), BodyGen, Start, Stop,
-                                        Step, IsSigned, InclusiveStop,
-                                        ComputeIP, Name, true, ScanRedInfo);
+    Expected<CanonicalLoopInfo *> LoopInfo = createCanonicalLoop(
+        Builder.saveIP(), BodyGen, Start, Stop, Step, IsSigned, InclusiveStop,
+        ComputeIP, Name, true, ScanRedInfo);
     if (!LoopInfo)
       return LoopInfo.takeError();
     Result.push_back(*LoopInfo);
@@ -4509,7 +4509,7 @@ OpenMPIRBuilder::createCanonicalScanLoops(
     return Error::success();
   };
   const auto &&ScanLoopGen = [&](LocationDescription Loc) -> Error {
-    auto LoopInfo =
+    Expected<CanonicalLoopInfo *> LoopInfo =
         createCanonicalLoop(Loc, BodyGen, Start, Stop, Step, IsSigned,
                             InclusiveStop, ComputeIP, Name, true, ScanRedInfo);
     if (!LoopInfo)

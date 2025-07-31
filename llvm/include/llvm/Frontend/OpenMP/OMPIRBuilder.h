@@ -3901,8 +3901,9 @@ public:
 };
 
 /// ScanInfo holds the information to assist in lowering of Scan reduction.
-/// Before lowering, body of the for loop specifying scan reduction is expected
-/// to have the following structure
+/// Before lowering, the body of the for loop specifying scan reduction is
+/// expected to have the following structure
+///
 ///     Loop Body Entry
 ///        |
 ///     Code before the scan directive
@@ -3943,30 +3944,38 @@ public:
 /// Temporary buffer allocations are done in `ScanLoopInit` block before the
 /// lowering of for-loop. The results are copied back to reduction variable in
 /// `ScanLoopFinish` block.
-
 class ScanInfo {
 public:
   /// Dominates the body of the loop before scan directive
   llvm::BasicBlock *OMPBeforeScanBlock = nullptr;
+
   /// Dominates the body of the loop before scan directive
   llvm::BasicBlock *OMPAfterScanBlock = nullptr;
+
   /// Controls the flow to before or after scan blocks
   llvm::BasicBlock *OMPScanDispatch = nullptr;
+
   /// Exit block of loop body
   llvm::BasicBlock *OMPScanLoopExit = nullptr;
+
   /// Block before loop body where scan initializations are done
   llvm::BasicBlock *OMPScanInit = nullptr;
+
   /// Block after loop body where scan finalizations are done
   llvm::BasicBlock *OMPScanFinish = nullptr;
+
   /// If true, it indicates Input phase is lowered; else it indicates
   /// ScanPhase is lowered
   bool OMPFirstScanLoop = false;
+
   /// Maps the private reduction variable to the pointer of the temporary
   /// buffer
   llvm::SmallDenseMap<llvm::Value *, llvm::Value *> *ScanBuffPtrs;
+
   /// Keeps track of value of iteration variable for input/scan loop to be
   /// used for Scan directive lowering
   llvm::Value *IV;
+
   /// Stores the span of canonical loop being lowered to be used for temporary
   /// buffer allocation or Finalization.
   llvm::Value *Span;

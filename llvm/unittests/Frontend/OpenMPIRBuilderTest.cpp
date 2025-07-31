@@ -1,4 +1,3 @@
-
 //===- llvm/unittest/IR/OpenMPIRBuilderTest.cpp - OpenMPIRBuilder tests ---===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -5473,22 +5472,22 @@ TEST_F(OpenMPIRBuilderTest, ScanReduction) {
   unsigned NumLog = 0;
   unsigned NumCeil = 0;
   for (Instruction &I : instructions(F)) {
-    if (isa<CallInst>(I)) {
-      CallInst *Call = dyn_cast<CallInst>(&I);
-      auto Name = Call->getCalledFunction()->getName();
-      if (Name.equals_insensitive("malloc")) {
-        NumMallocs += 1;
-      } else if (Name.equals_insensitive("free")) {
-        NumFrees += 1;
-      } else if (Name.equals_insensitive("__kmpc_masked")) {
-        NumMasked += 1;
-      } else if (Name.equals_insensitive("__kmpc_end_masked")) {
-        NumEndMasked += 1;
-      } else if (Name.equals_insensitive("llvm.log2.f64")) {
-        NumLog += 1;
-      } else if (Name.equals_insensitive("llvm.ceil.f64")) {
-        NumCeil += 1;
-      }
+    if (!isa<CallInst>(I))
+      continue;
+    CallInst *Call = dyn_cast<CallInst>(&I);
+    StringRef Name = Call->getCalledFunction()->getName();
+    if (Name.equals_insensitive("malloc")) {
+      NumMallocs += 1;
+    } else if (Name.equals_insensitive("free")) {
+      NumFrees += 1;
+    } else if (Name.equals_insensitive("__kmpc_masked")) {
+      NumMasked += 1;
+    } else if (Name.equals_insensitive("__kmpc_end_masked")) {
+      NumEndMasked += 1;
+    } else if (Name.equals_insensitive("llvm.log2.f64")) {
+      NumLog += 1;
+    } else if (Name.equals_insensitive("llvm.ceil.f64")) {
+      NumCeil += 1;
     }
   }
   EXPECT_EQ(NumBodiesGenerated, 2U);
