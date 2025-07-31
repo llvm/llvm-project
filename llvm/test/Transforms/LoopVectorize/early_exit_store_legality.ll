@@ -434,5 +434,30 @@ exit:
   ret void
 }
 
+define void @loop_contains_store_uncounted_exit_is_a_switch(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_uncounted_exit_is_a_switch'
+; CHECK:       LV: Not vectorizing: Loop contains an unsupported switch
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  switch i16 %ee.val, label %for.inc [ i16 500, label %exit ]
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
 declare void @init_mem(ptr, i64);
 declare i64 @get_an_unknown_offset();
