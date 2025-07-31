@@ -2544,7 +2544,15 @@ void Writer::writeSections() {
     }
 
     parallelForEach(sec->chunks, [&](Chunk *c) {
-      c->writeTo(secBuf + c->getRVA() - sec->getRVA());
+      uint8_t *buf = secBuf + c->getRVA() - sec->getRVA();
+      c->writeTo(buf);
+
+      // Write the offset to EC entry thunk preceding section contents. The low
+      // bit is always set, so it's effectively an offset from the last byte of
+      // the offset.
+      if (Defined *entryThunk = c->getEntryThunk())
+        write32le(buf - sizeof(uint32_t),
+                  entryThunk->getRVA() - c->getRVA() + 1);
     });
   }
 }
