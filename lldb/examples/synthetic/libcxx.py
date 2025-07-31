@@ -87,6 +87,12 @@ def get_buffer_data(parent):
 
 
 def get_buffer_end(buffer, begin):
+    """
+    Returns a pointer to where the next element would be pushed.
+
+    For libc++'s stable ABI and unstable < LLVM 22, returns `__end_`.
+    For libc++'s unstable ABI, returns `__begin_ + __size_`.
+    """
     map_end = buffer.GetChildMemberWithName("__end_")
     if map_end.IsValid():
         return map_end.GetValueAsUnsigned(0)
@@ -95,6 +101,14 @@ def get_buffer_end(buffer, begin):
 
 
 def get_buffer_endcap(parent, buffer, begin, has_compressed_pair_layout, is_size_based):
+    """
+    Returns a pointer to the end of the buffer.
+
+    For libc++'s stable ABI and unstable < LLVM 22, returns:
+        * `__end_cap_`, if `__compressed_pair` is being used
+        * `__cap_`, otherwise
+    For libc++'s unstable ABI, returns `__begin_ + __cap_`.
+    """
     if has_compressed_pair_layout:
         map_endcap = parent._get_value_of_compressed_pair(
             buffer.GetChildMemberWithName("__end_cap_")
