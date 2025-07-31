@@ -156,9 +156,9 @@ define i32 @early_freeze_test4(i32 %v1) {
 define i32 @assume(i32 %a, i32 %b) {
 ; CHECK-LABEL: @assume(
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i32 [[A:%.*]]) ]
-; CHECK-NEXT:    [[ADD_FR:%.*]] = freeze i32 [[ADD:%.*]]
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A]], [[ADD_FR]]
-; CHECK-NEXT:    ret i32 [[ADD1]]
+; CHECK-NEXT:    [[B_FR:%.*]] = freeze i32 [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A]], [[B_FR]]
+; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   call void @llvm.assume(i1 true) [ "noundef"(i32 %a) ]
   %add = add nsw nuw i32 %a, %b
