@@ -11,7 +11,7 @@ import {
   ModulesDataProvider,
   ModuleProperty,
 } from "./ui/modules-data-provider";
-import { LLDBDAPLogger, LogFilePathProvider } from "./logger";
+import { LogFilePathProvider } from "./types";
 
 /**
  * This class represents the extension and manages its life cycle. Other extensions
@@ -19,7 +19,7 @@ import { LLDBDAPLogger, LogFilePathProvider } from "./logger";
  */
 export class LLDBDapExtension extends DisposableContext {
   constructor(
-    logger: LLDBDAPLogger,
+    logger: vscode.LogOutputChannel,
     logFilePath: LogFilePathProvider,
     outputChannel: vscode.OutputChannel,
   ) {
@@ -63,17 +63,12 @@ export class LLDBDapExtension extends DisposableContext {
  * This is the entry point when initialized by VS Code.
  */
 export async function activate(context: vscode.ExtensionContext) {
-  await vscode.workspace.fs.createDirectory(context.logUri);
-  const outputChannel = vscode.window.createOutputChannel("LLDB-DAP");
-  const logFilePath: LogFilePathProvider = (name) =>
+  const outputChannel = vscode.window.createOutputChannel("LLDB-DAP", { log: true });
+  const logFilePath: LogFilePathProvider = (name: string) =>
     path.join(context.logUri.fsPath, name);
-  const logger = new LLDBDAPLogger(
-    logFilePath("lldb-dap-extension.log"),
-    outputChannel,
-  );
-  logger.info("LLDB-Dap extension activating...");
+  outputChannel.info("LLDB-Dap extension activating...");
   context.subscriptions.push(
-    new LLDBDapExtension(logger, logFilePath, outputChannel),
+    new LLDBDapExtension(outputChannel, logFilePath, outputChannel),
   );
-  logger.info("LLDB-Dap extension activated");
+  outputChannel.info("LLDB-Dap extension activated");
 }

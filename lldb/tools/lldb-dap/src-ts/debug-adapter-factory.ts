@@ -5,7 +5,7 @@ import * as child_process from "child_process";
 import * as fs from "node:fs/promises";
 import { ConfigureButton, OpenSettingsButton } from "./ui/show-error-message";
 import { ErrorWithNotification } from "./ui/error-with-notification";
-import { LogFilePathProvider, Logger } from "./logger";
+import { LogFilePathProvider } from "./types";
 
 const exec = util.promisify(child_process.execFile);
 
@@ -177,7 +177,7 @@ function formatDate(date: Date): string {
  * Creates a new {@link vscode.DebugAdapterExecutable} based on the provided workspace folder and
  * debug configuration. Assumes that the given debug configuration is for a local launch of lldb-dap.
  *
- * @param logger The {@link Logger} to get default session log location
+ * @param logger The {@link vscode.LogOutputChannel} to log setup diagnostics
  * @param logFilePath The {@link LogFilePathProvider} for determining where to put session logs
  * @param workspaceFolder The {@link vscode.WorkspaceFolder} that the debug session will be launched within
  * @param configuration The {@link vscode.DebugConfiguration} that will be launched
@@ -185,7 +185,7 @@ function formatDate(date: Date): string {
  * @returns The {@link vscode.DebugAdapterExecutable} that can be used to launch lldb-dap
  */
 export async function createDebugAdapterExecutable(
-  logger: Logger,
+  logger: vscode.LogOutputChannel,
   logFilePath: LogFilePathProvider,
   workspaceFolder: vscode.WorkspaceFolder | undefined,
   configuration: vscode.DebugConfiguration,
@@ -233,7 +233,7 @@ export class LLDBDapDescriptorFactory
   implements vscode.DebugAdapterDescriptorFactory
 {
   constructor(
-    private readonly logger: Logger,
+    private readonly logger: vscode.LogOutputChannel,
     private logFilePath: LogFilePathProvider,
   ) {}
 
@@ -242,7 +242,7 @@ export class LLDBDapDescriptorFactory
     executable: vscode.DebugAdapterExecutable | undefined,
   ): Promise<vscode.DebugAdapterDescriptor | undefined> {
     this.logger.info(`Creating debug adapter for session "${session.name}"`);
-    this.logger.debug(
+    this.logger.info(
       `Session "${session.name}" debug configuration:\n` +
         JSON.stringify(session.configuration, undefined, 2),
     );

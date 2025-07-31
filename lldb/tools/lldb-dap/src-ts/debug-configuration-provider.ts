@@ -5,7 +5,7 @@ import { LLDBDapServer } from "./lldb-dap-server";
 import { createDebugAdapterExecutable } from "./debug-adapter-factory";
 import { ConfigureButton, showErrorMessage } from "./ui/show-error-message";
 import { ErrorWithNotification } from "./ui/error-with-notification";
-import { LogFilePathProvider, Logger } from "./logger";
+import { LogFilePathProvider } from "./types";
 
 const exec = util.promisify(child_process.execFile);
 
@@ -74,7 +74,7 @@ export class LLDBDapConfigurationProvider
 {
   constructor(
     private readonly server: LLDBDapServer,
-    private readonly logger: Logger,
+    private readonly logger: vscode.LogOutputChannel,
     private readonly logFilePath: LogFilePathProvider,
   ) {}
 
@@ -198,7 +198,7 @@ export class LLDBDapConfigurationProvider
         }
       }
 
-      this.logger.debug(
+      this.logger.info(
         "Resolved debug configuration:\n" +
           JSON.stringify(debugConfiguration, undefined, 2),
       );

@@ -1,6 +1,5 @@
 import { DebugProtocol } from "@vscode/debugprotocol";
 import * as vscode from "vscode";
-import { Logger } from "./logger";
 
 /** A helper type for mapping event types to their corresponding data type. */
 // prettier-ignore
@@ -49,7 +48,7 @@ export class DebugSessionTracker
   onDidChangeModules: vscode.Event<vscode.DebugSession | undefined> =
     this.modulesChanged.event;
 
-  constructor(private logger: Logger) {
+  constructor(private logger: vscode.LogOutputChannel) {
     this.onDidChangeModules(this.moduleChangedListener, this);
     vscode.debug.onDidChangeActiveDebugSession((session) =>
       this.modulesChanged.fire(session),
