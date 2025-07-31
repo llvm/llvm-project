@@ -3891,16 +3891,20 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   }
 
-  // Try to fold intrinsic into select operands. This is legal if:
+  // Try to fold intrinsic into select/phi operands. This is legal if:
   //  * The intrinsic is speculatable.
   //  * The select condition is not a vector, or the intrinsic does not
   //    perform cross-lane operations.
   if (isSafeToSpeculativelyExecuteWithVariableReplaced(&CI) &&
       isNotCrossLaneOperation(II))
-    for (Value *Op : II->args())
+    for (Value *Op : II->args()) {
       if (auto *Sel = dyn_cast<SelectInst>(Op))
         if (Instruction *R = FoldOpIntoSelect(*II, Sel))
           return R;
+      if (auto *Phi = dyn_cast<PHINode>(Op))
+        if (Instruction *R = foldOpIntoPhi(*II, Phi))
+          return R;
+    }
 
   if (Instruction *Shuf = foldShuffledIntrinsicOperands(II))
     return Shuf;
