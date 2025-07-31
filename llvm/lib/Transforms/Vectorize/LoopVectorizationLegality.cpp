@@ -1856,6 +1856,13 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop(
           }
         }
       }
+    } else {
+      reportVectorizationFailure(
+        "Unsupported control flow in early exit loop with side effects",
+        "Cannot find branch instruction for uncounted exit in early exit loop "
+        "with side effects",
+        "UnsupportedUncountedExitTerminator", ORE, TheLoop);
+      return false;
     }
 
     if (!CriticalEELoad) {
