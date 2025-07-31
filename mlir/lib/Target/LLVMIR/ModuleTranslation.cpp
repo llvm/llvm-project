@@ -2278,13 +2278,13 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
 
   if (auto asmAttr = m->getDiscardableAttr(
           LLVM::LLVMDialect::getModuleLevelAsmAttrName())) {
-    auto arr = dyn_cast<ArrayAttr>(asmAttr);
-    if (!arr) {
+    auto asmArrayAttr = dyn_cast<ArrayAttr>(asmAttr);
+    if (!asmArrayAttr) {
       m->emitError("expected an array attribute for a module level asm");
       return nullptr;
     }
 
-    for (auto elt : arr) {
+    for (auto elt : asmArrayAttr) {
       auto asmStrAttr = dyn_cast<StringAttr>(elt);
       if (!asmStrAttr) {
         m->emitError(
