@@ -21,6 +21,9 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/TypeSwitch.h"
 
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/LLVMIR/XeVMDialect.h"
+
 #include <algorithm>
 #include <optional>
 
@@ -155,6 +158,166 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
   return ndDesc;
 }
 
+std::optional<std::string> getXeGPUChipStr(Operation *op) {
+  auto gpuModuleOp = op->getParentOfType<mlir::gpu::GPUModuleOp>();
+  if (gpuModuleOp) {
+    auto targetAttrs = gpuModuleOp.getTargets();
+    if (targetAttrs) {
+      for (auto &attr : *targetAttrs) {
+        auto xevmAttr = llvm::dyn_cast<mlir::xevm::XeVMTargetAttr>(attr);
+        if (xevmAttr)
+          return xevmAttr.getChip().str();
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+// This function lowers vector.transfer_read to XeGPU load operation.
+  // Example:
+  //   %0 = vector.transfer_read %expand_shape[%block_id_y, %c0, %c0, %c0, %c0], 
+  //               %cst {in_bounds = [true, true, true, true]}>} : 
+  //               memref<8x4x2x6x32xbf16>, vector<4x2x6x32xbf16>
+  // 
+  //   %6 = vector.step: vector<4xindex> 
+  //   %7 = vector.step: vector<2xindex> 
+  //   %8 = vector.step: vector<6xindex> 
+  //   %9 = vector.step: vector<32xindex> 
+  //   %10 = arith.mul %6, 384
+  //   %11 = arith.mul %7, 192
+  //   %12 = arith.mul %8, 32
+  //   %13 = arith.mul %9, 1
+  //   %14 = vector.shape_cast %10: vector<4xindex> -> vector<4x1x1x1xbf16>
+  //   %15 = vector.shape_cast %11: vector<2xindex> -> vector<1x2x1x1xbf16>
+  //   %16 = vector.shape_cast %12: vector<6xindex> -> vector<1x1x6x1xbf16>
+  //   %17 = vector.shape_cast %13: vector<32xindex> -> vector<1x1x1x32xbf16>
+  //   %18 = vector.broadcast %14: vector<4x1x1x1xbf16> -> vector<4x2x6x32xindex>  
+  //   %19 = vector.broadcast %15: vector<1x2x1x1xbf16> -> vector<4x2x6x32xindex>  
+  //   %20 = vector.broadcast %16: vector<1x1x6x1xbf16> -> vector<4x2x6x32xindex>  
+  //   %21 = vector.broadcast %17: vector<1x1x1x32xbf16> -> vector<4x2x6x32xindex>  
+  //   %22 = arith.add %18, %19
+  //   %23 = arith.add %20, %21
+  //   %local_offsets = arith.add %22, %23
+  //   %orig_offset = %block_id_y * 4x2x6x32 // consider using affine map
+  //   %offsets =  orig_offset + local_offsets
+  //   %expand_shape1 = memref.view %expand_shape: memref<8x4x2x6x32xbf16> -> memref<?bf16>
+  //   %vec = xegpu.load_gather %expand_shape1[%offsets]:memref<?xbf16>,
+  //                           vector<4x2x6x32xindex> -> vector<4x2x6x32xbf16>
+
+LogicalResult lowerTransferReadToLoadOp(vector::TransferReadOp readOp,
+                                PatternRewriter &rewriter) {
+    Location loc = readOp.getLoc();
+  // Get the source memref and vector type
+  auto memrefType = dyn_cast<MemRefType>(readOp.getShapedType());
+  if (!memrefType) {
+    return rewriter.notifyMatchFailure(readOp, "Expected memref source");
+  }
+  
+  VectorType vectorType = readOp.getVectorType();
+  ArrayRef<int64_t> vectorShape = vectorType.getShape();
+  Type elementType = vectorType.getElementType();
+  
+  // Get memref strides for offset calculation
+  SmallVector<int64_t> strides;
+  int64_t offset;
+  if (failed(memrefType.getStridesAndOffset(strides, offset))) {
+    return rewriter.notifyMatchFailure(readOp, "Failed to get memref strides");
+  }
+  
+  // Step 1: Create vector.step operations for each dimension
+  SmallVector<Value> stepVectors;
+  for (int64_t dim : vectorShape) {
+    auto stepType = VectorType::get({dim}, rewriter.getIndexType());
+    auto stepOp = rewriter.create<vector::StepOp>(loc, stepType);
+    stepVectors.push_back(stepOp);
+  }
+  
+  // Step 2: Multiply step vectors by corresponding strides
+  SmallVector<Value> strideMultiplied;
+  size_t memrefRank = memrefType.getRank();
+  size_t vectorRank = vectorShape.size();
+  
+  for (size_t i = 0; i < vectorRank; ++i) {
+    // Map vector dimension to memref dimension (innermost dimensions)
+    size_t memrefDim = memrefRank - vectorRank + i;
+    int64_t stride = strides[memrefDim];
+    
+    Value strideConstant = rewriter.create<arith::ConstantIndexOp>(loc, stride);
+    
+    // Create element-wise multiplication
+    auto mulType = llvm::cast<VectorType>(stepVectors[i].getType());
+    auto mulOp = rewriter.create<arith::MulIOp>(loc, stepVectors[i], 
+                                               rewriter.create<vector::SplatOp>(loc, strideConstant, mulType));
+    strideMultiplied.push_back(mulOp);
+  }
+  
+  // Step 3: Shape cast each multiplied vector to add singleton dimensions
+  SmallVector<Value> shapeCasted;
+  for (size_t i = 0; i < vectorRank; ++i) {
+    SmallVector<int64_t> newShape(vectorRank, 1);
+    newShape[i] = vectorShape[i];
+    
+    auto newType = VectorType::get(newShape, rewriter.getIndexType());
+    auto castOp = rewriter.create<vector::ShapeCastOp>(loc, newType, strideMultiplied[i]);
+    shapeCasted.push_back(castOp);
+  }
+  
+  // Step 4: Broadcast each shape-casted vector to full vector shape
+  SmallVector<Value> broadcasted;
+  auto fullIndexVectorType = VectorType::get(vectorShape, rewriter.getIndexType());
+  
+  for (Value shapeCastVal : shapeCasted) {
+    auto broadcastOp = rewriter.create<vector::BroadcastOp>(loc, fullIndexVectorType, shapeCastVal);
+    broadcasted.push_back(broadcastOp);
+  }
+  
+  // Step 5: Add all broadcasted vectors together to compute local offsets
+  Value localOffsets = broadcasted[0];
+  for (size_t i = 1; i < broadcasted.size(); ++i) {
+    localOffsets = rewriter.create<arith::AddIOp>(loc, localOffsets, broadcasted[i]);
+  }
+  
+  // Step 6: Compute base offset from transfer read indices
+  Value baseOffset = nullptr;
+  auto indices = readOp.getIndices();
+  
+  if (!indices.empty()) {
+    // Calculate linearized base offset: sum(index[i] * stride[i])
+    baseOffset = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    
+    for (size_t i = 0; i < indices.size(); ++i) {
+      Value strideVal = rewriter.create<arith::ConstantIndexOp>(loc, strides[i]);
+      Value offsetContrib = rewriter.create<arith::MulIOp>(loc, indices[i], strideVal);
+      baseOffset = rewriter.create<arith::AddIOp>(loc, baseOffset, offsetContrib);
+    }
+    
+    // Broadcast base offset to match vector shape
+    Value splatBase = rewriter.create<vector::SplatOp>(loc, baseOffset, fullIndexVectorType);
+    localOffsets = rewriter.create<arith::AddIOp>(loc, splatBase, localOffsets);
+  }
+  
+  // Step 7: Create flattened memref view
+  auto flatMemrefType = MemRefType::get({ShapedType::kDynamic}, elementType);
+  auto viewOp = rewriter.create<memref::ViewOp>(loc, flatMemrefType, 
+                                               readOp.getBase(), 
+                                               rewriter.create<arith::ConstantIndexOp>(loc, 0),
+                                               ValueRange{});
+  
+  // Step 8: Create XeGPU gather load operation
+  auto gatherOp = rewriter.create<xegpu::LoadGatherOp>(loc, vectorType, 
+                                                       viewOp, localOffsets,
+                                                       /*mask=*/Value{},
+                                                       /*l1_hint=*/nullptr,
+                                                       /*l2_hint=*/nullptr,
+                                                       /*l3_hint=*/nullptr);
+  
+  // Replace the original transfer read with gather load
+  rewriter.replaceOp(readOp, gatherOp.getResult());
+  
+  return success();
+}
+
+
 struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
   using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
 
@@ -164,6 +327,12 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
 
     if (failed(transferPreconditions(rewriter, readOp)))
       return failure();
+    
+    auto chip = getXeGPUChipStr(readOp);
+    if ( chip != "pvc" && chip != "bmg") {
+      // calling another function that lower TransferReadOp to regular Loadop
+      return lowerTransferReadToLoadOp(readOp, rewriter);
+    }
 
     bool isOutOfBounds = readOp.hasOutOfBoundsDim();
     if (isOutOfBounds && !isZeroConstant(readOp.getPadding()))
