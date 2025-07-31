@@ -8,12 +8,12 @@
 ; CHECK-NEXT:   a                                - 'A' (Atomic Instructions).
 ; CHECK-NEXT:   add-load-fusion                  - Enable ADD + load macrofusion.
 ; CHECK-NEXT:   add-lw-fusion                    - Enable ADD+LW macrofusion.
-; CHECK-NEXT:   addi-ld-fusion                   - Enable ADDI+LD macrofusion.
-; CHECK-NEXT:   addi-lw-fusion                   - Enable ADDI+LW macrofusion.
-; CHECK-NEXT:   adduw-lw-fusion                  - Enable ADD_UW+LW macrofusion.
+; CHECK-NEXT:   addi-load-fusion                 - Enable ADDI + load macrofusion.
+; CHECK-NEXT:   adduw-load-fusion                - Enable ADD_UW + load macrofusion.
 ; CHECK-NEXT:   andes45                          - Andes 45-Series processors.
 ; CHECK-NEXT:   auipc-addi-fusion                - Enable AUIPC+ADDI macrofusion.
-; CHECK-NEXT:   auipc-ld-fusion                  - Enable AUIPC+LD macrofusion.
+; CHECK-NEXT:   auipc-addiw-fusion               - Enable AUIPC+ADDIW macrofusion.
+; CHECK-NEXT:   auipc-load-fusion                - Enable AUIPC + load macrofusion.
 ; CHECK-NEXT:   b                                - 'B' (the collection of the Zba, Zbb, Zbs extensions).
 ; CHECK-NEXT:   bfext-fusion                     - Enable SLLI+SRLI (bitfield extract) macrofusion.
 ; CHECK-NEXT:   c                                - 'C' (Compressed Instructions).
@@ -69,7 +69,7 @@
 ; CHECK-NEXT:   ld-add-fusion                    - Enable LD+ADD macrofusion.
 ; CHECK-NEXT:   log-vrgather                     - Has vrgather.vv with LMUL*log2(LMUL) latency
 ; CHECK-NEXT:   lui-addi-fusion                  - Enable LUI+ADDI macro fusion.
-; CHECK-NEXT:   lui-ld-fusion                    - Enable LUI+LD macrofusion.
+; CHECK-NEXT:   lui-load-fusion                  - Enable LUI + load macrofusion.
 ; CHECK-NEXT:   m                                - 'M' (Integer Multiplication and Division).
 ; CHECK-NEXT:   mips-p8700                       - MIPS p8700 processor.
 ; CHECK-NEXT:   no-default-unroll                - Disable default unroll preference..
@@ -143,7 +143,7 @@
 ; CHECK-NEXT:   shvstvala                        - 'Shvstvala' (vstval provides all needed values).
 ; CHECK-NEXT:   shvstvecd                        - 'Shvstvecd' (vstvec supports Direct mode).
 ; CHECK-NEXT:   shxadd-load-fusion               - Enable SH(1|2|3)ADD + load macrofusion.
-; CHECK-NEXT:   shxadduw-load-fusion             - Enable SH(1|2|3)ADDUW + load macrofusion.
+; CHECK-NEXT:   shxadduw-load-fusion             - Enable SH(1|2|3)ADD_UW + load macrofusion.
 ; CHECK-NEXT:   sifive7                          - SiFive 7-Series processors.
 ; CHECK-NEXT:   smaia                            - 'Smaia' (Advanced Interrupt Architecture Machine Level).
 ; CHECK-NEXT:   smcdeleg                         - 'Smcdeleg' (Counter Delegation Machine Level).
