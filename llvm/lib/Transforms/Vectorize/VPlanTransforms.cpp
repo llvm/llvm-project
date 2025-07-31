@@ -32,11 +32,11 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/TypeSize.h"
 
 using namespace llvm;
+using namespace VPlanPatternMatch;
 
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlanPtr &Plan,
@@ -528,13 +528,11 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
 
 /// Returns true if \p R is dead and can be removed.
 static bool isDeadRecipe(VPRecipeBase &R) {
-  using namespace llvm::PatternMatch;
   // Do remove conditional assume instructions as their conditions may be
   // flattened.
   auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-  bool IsConditionalAssume =
-      RepR && RepR->isPredicated() &&
-      match(RepR->getUnderlyingInstr(), m_Intrinsic<Intrinsic::assume>());
+  bool IsConditionalAssume = RepR && RepR->isPredicated() &&
+                             match(RepR, m_Intrinsic<Intrinsic::assume>());
   if (IsConditionalAssume)
     return true;
 
@@ -625,7 +623,6 @@ static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
 /// original IV's users. This is an optional optimization to reduce the needs of
 /// vector extracts.
 static void legalizeAndOptimizeInductions(VPlan &Plan) {
-  using namespace llvm::VPlanPatternMatch;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   bool HasOnlyVectorVFs = !Plan.hasScalarVFOnly();
   VPBuilder Builder(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
@@ -727,7 +724,6 @@ static VPWidenInductionRecipe *getOptimizableIVOf(VPValue *VPV) {
     return nullptr;
 
   auto IsWideIVInc = [&]() {
-    using namespace VPlanPatternMatch;
     auto &ID = WideIV->getInductionDescriptor();
 
     // Check if VPV increments the induction by the induction step.
@@ -771,8 +767,6 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
                                                VPTypeAnalysis &TypeInfo,
                                                VPBlockBase *PredVPBB,
                                                VPValue *Op) {
-  using namespace VPlanPatternMatch;
-
   VPValue *Incoming, *Mask;
   if (!match(Op, m_VPInstruction<VPInstruction::ExtractLane>(
                      m_VPInstruction<VPInstruction::FirstActiveLane>(
@@ -827,8 +821,6 @@ static VPValue *
 optimizeLatchExitInductionUser(VPlan &Plan, VPTypeAnalysis &TypeInfo,
                                VPBlockBase *PredVPBB, VPValue *Op,
                                DenseMap<VPValue *, VPValue *> &EndValues) {
-  using namespace VPlanPatternMatch;
-
   VPValue *Incoming;
   if (!match(Op, m_VPInstruction<VPInstruction::ExtractLastElement>(
                      m_VPValue(Incoming))))
@@ -986,7 +978,6 @@ static Value *tryToFoldLiveIns(const VPRecipeBase &R, unsigned Opcode,
 
 /// Try to simplify recipe \p R.
 static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
-  using namespace llvm::VPlanPatternMatch;
   VPlan *Plan = R.getParent()->getPlan();
 
   auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
@@ -1269,7 +1260,6 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
 /// Normalize and simplify VPBlendRecipes. Should be run after simplifyRecipes
 /// to make sure the masks are simplified.
 static void simplifyBlends(VPlan &Plan) {
-  using namespace llvm::VPlanPatternMatch;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
@@ -1393,7 +1383,6 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
 
     // Currently only handle cases where the single user is a header-mask
     // comparison with the backedge-taken-count.
-    using namespace VPlanPatternMatch;
     if (!match(
             *WideIV->user_begin(),
             m_Binary<Instruction::ICmp>(
@@ -1424,7 +1413,6 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
 static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
                                       ElementCount BestVF, unsigned BestUF,
                                       ScalarEvolution &SE) {
-  using namespace llvm::VPlanPatternMatch;
   if (match(Cond, m_Binary<Instruction::Or>(m_VPValue(), m_VPValue())))
     return any_of(Cond->getDefiningRecipe()->operands(), [&Plan, BestVF, BestUF,
                                                           &SE](VPValue *C) {
@@ -1464,7 +1452,6 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   auto *Term = &ExitingVPBB->back();
   VPValue *Cond;
   ScalarEvolution &SE = *PSE.getSE();
-  using namespace llvm::VPlanPatternMatch;
   if (match(Term, m_BranchOnCount(m_VPValue(), m_VPValue())) ||
       match(Term, m_BranchOnCond(
                       m_Not(m_ActiveLaneMask(m_VPValue(), m_VPValue()))))) {
@@ -1847,7 +1834,6 @@ void VPlanTransforms::truncateToMinimalBitwidths(
       if (auto *VPW = dyn_cast<VPRecipeWithIRFlags>(&R))
         VPW->dropPoisonGeneratingFlags();
 
-      using namespace llvm::VPlanPatternMatch;
       if (OldResSizeInBits != NewResSizeInBits &&
           !match(&R, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue()))) {
         // Extend result to original width.
@@ -1897,7 +1883,6 @@ void VPlanTransforms::truncateToMinimalBitwidths(
 }
 
 void VPlanTransforms::removeBranchOnConst(VPlan &Plan) {
-  using namespace llvm::VPlanPatternMatch;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry()))) {
     VPValue *Cond;
@@ -2143,7 +2128,6 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                                        VPRecipeBase &CurRecipe,
                                        VPTypeAnalysis &TypeInfo,
                                        VPValue &AllOneMask, VPValue &EVL) {
-  using namespace llvm::VPlanPatternMatch;
   auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
     assert(OrigMask && "Unmasked recipe when folding tail");
     // HeaderMask will be handled using EVL.
@@ -2223,7 +2207,6 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
              vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
       for (VPRecipeBase &R : *VPBB) {
-        using namespace VPlanPatternMatch;
         VPValue *V1, *V2;
         if (!match(&R,
                    m_VPInstruction<VPInstruction::FirstOrderRecurrenceSplice>(
@@ -2391,7 +2374,6 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
 }
 
 void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
-  using namespace llvm::VPlanPatternMatch;
   // Find EVL loop entries by locating VPEVLBasedIVPHIRecipe.
   // There should be only one EVL PHI in the entire plan.
   VPEVLBasedIVPHIRecipe *EVLPhi = nullptr;
@@ -2480,7 +2462,6 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
       // drop them directly.
       if (auto *RecWithFlags = dyn_cast<VPRecipeWithIRFlags>(CurRec)) {
         VPValue *A, *B;
-        using namespace llvm::VPlanPatternMatch;
         // Dropping disjoint from an OR may yield incorrect results, as some
         // analysis may have converted it to an Add implicitly (e.g. SCEV used
         // for dependence analysis). Instead, replace it with an equivalent Add.
@@ -2774,8 +2755,6 @@ void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
 
 void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
                                                Type &CanonicalIVTy) {
-  using namespace llvm::VPlanPatternMatch;
-
   VPTypeAnalysis TypeInfo(&CanonicalIVTy);
   SmallVector<VPRecipeBase *> ToRemove;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
@@ -2852,8 +2831,6 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
 void VPlanTransforms::handleUncountableEarlyExit(
     VPBasicBlock *EarlyExitingVPBB, VPBasicBlock *EarlyExitVPBB, VPlan &Plan,
     VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB, VFRange &Range) {
-  using namespace llvm::VPlanPatternMatch;
-
   VPBlockBase *MiddleVPBB = LatchVPBB->getSuccessors()[0];
   if (!EarlyExitVPBB->getSinglePredecessor() &&
       EarlyExitVPBB->getPredecessors()[1] == MiddleVPBB) {
@@ -2947,8 +2924,6 @@ void VPlanTransforms::handleUncountableEarlyExit(
 static VPExpressionRecipe *
 tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
                                      VFRange &Range) {
-  using namespace VPlanPatternMatch;
-
   Type *RedTy = Ctx.Types.inferScalarType(Red);
   VPValue *VecOp = Red->getVecOp();
 
@@ -2994,8 +2969,6 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
 static VPExpressionRecipe *
 tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                                           VPCostContext &Ctx, VFRange &Range) {
-  using namespace VPlanPatternMatch;
-
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
   if (Opcode != Instruction::Add)
     return nullptr;
@@ -3256,7 +3229,6 @@ static bool isAlreadyNarrow(VPValue *VPV) {
 
 void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
                                              unsigned VectorRegWidth) {
-  using namespace llvm::VPlanPatternMatch;
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
   if (VF.isScalable() || !VectorLoop)
     return;
