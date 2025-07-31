@@ -131,6 +131,85 @@ define <4 x i64> @interleave2_v4i64(<2 x i64> %vec0, <2 x i64> %vec1) {
   ret <4 x i64> %retval
 }
 
+define <4 x i16> @interleave2_same_const_splat_v4i16() {
+; CHECK-SD-LABEL: interleave2_same_const_splat_v4i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.4h, #3
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: interleave2_same_const_splat_v4i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #3 // =0x3
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v0.h[1], w8
+; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-GI-NEXT:    ret
+  %retval = call <4 x i16> @llvm.vector.interleave2.v4i16(<2 x i16> splat(i16 3), <2 x i16> splat(i16 3))
+  ret <4 x i16> %retval
+}
+
+define <4 x i16> @interleave2_diff_const_splat_v4i16() {
+; CHECK-SD-LABEL: interleave2_diff_const_splat_v4i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    adrp x8, .LCPI11_0
+; CHECK-SD-NEXT:    ldr d0, [x8, :lo12:.LCPI11_0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: interleave2_diff_const_splat_v4i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #3 // =0x3
+; CHECK-GI-NEXT:    mov w9, #4 // =0x4
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    fmov s1, w9
+; CHECK-GI-NEXT:    mov v0.h[1], w8
+; CHECK-GI-NEXT:    mov v1.h[1], w9
+; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    ret
+  %retval = call <4 x i16> @llvm.vector.interleave2.v4i16(<2 x i16> splat(i16 3), <2 x i16> splat(i16 4))
+  ret <4 x i16> %retval
+}
+
+define <4 x i16> @interleave2_same_nonconst_splat_v4i16(i16 %a) {
+; CHECK-SD-LABEL: interleave2_same_nonconst_splat_v4i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    dup v0.4h, w0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: interleave2_same_nonconst_splat_v4i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    dup v0.4h, w0
+; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-GI-NEXT:    ret
+  %ins = insertelement <2 x i16> poison, i16 %a, i32 0
+  %splat = shufflevector <2 x i16> %ins, <2 x i16> poison, <2 x i32> <i32 0, i32 0>
+  %retval = call <4 x i16> @llvm.vector.interleave2.v4i16(<2 x i16> %splat, <2 x i16> %splat)
+  ret <4 x i16> %retval
+}
+
+define <4 x i16> @interleave2_diff_nonconst_splat_v4i16(i16 %a, i16 %b) {
+; CHECK-SD-LABEL: interleave2_diff_nonconst_splat_v4i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov s0, w0
+; CHECK-SD-NEXT:    mov v0.h[1], w0
+; CHECK-SD-NEXT:    mov v0.h[2], w1
+; CHECK-SD-NEXT:    mov v0.h[3], w1
+; CHECK-SD-NEXT:    rev32 v1.4h, v0.4h
+; CHECK-SD-NEXT:    uzp1 v0.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: interleave2_diff_nonconst_splat_v4i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    dup v0.4h, w0
+; CHECK-GI-NEXT:    dup v1.4h, w1
+; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    ret
+  %ins1 = insertelement <2 x i16> poison, i16 %a, i32 0
+  %splat1 = shufflevector <2 x i16> %ins1, <2 x i16> poison, <2 x i32> <i32 0, i32 0>
+  %ins2 = insertelement <2 x i16> poison, i16 %b, i32 0
+  %splat2 = shufflevector <2 x i16> %ins2, <2 x i16> poison, <2 x i32> <i32 0, i32 0>
+  %retval = call <4 x i16> @llvm.vector.interleave2.v4i16(<2 x i16> %splat1, <2 x i16> %splat2)
+  ret <4 x i16> %retval
+}
 
 ; Float declarations
 declare <4 x half> @llvm.vector.interleave2.v4f16(<2 x half>, <2 x half>)
@@ -145,4 +224,5 @@ declare <32 x i8> @llvm.vector.interleave2.v32i8(<16 x i8>, <16 x i8>)
 declare <16 x i16> @llvm.vector.interleave2.v16i16(<8 x i16>, <8 x i16>)
 declare <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32>, <4 x i32>)
 declare <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64>, <2 x i64>)
-
+declare <4 x i16> @llvm.vector.interleave2.v4i16(<2 x i16>, <2 x i16>)
+declare <8 x i16> @llvm.vector.interleave4.v8i16(<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>)

@@ -1636,3 +1636,229 @@ define <8 x half> @vector_interleave8_v8f16_v1f16(<1 x half> %a, <1 x half> %b, 
 	   %res = call <8 x half> @llvm.vector.interleave8.v8f16(<1 x half> %a, <1 x half> %b, <1 x half> %c, <1 x half> %d, <1 x half> %e, <1 x half> %f, <1 x half> %g, <1 x half> %h)
 	   ret <8 x half> %res
 }
+
+define <8 x i16> @interleave4_const_splat_v8i16(<2 x i16> %a) {
+; CHECK-LABEL: interleave4_const_splat_v8i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    sub sp, sp, a0
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 3
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    vmv1r.v v9, v8
+; CHECK-NEXT:    srli a1, a1, 2
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    add a2, a0, a1
+; CHECK-NEXT:    vmv1r.v v11, v8
+; CHECK-NEXT:    vsetvli a3, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vsseg4e16.v v8, (a0)
+; CHECK-NEXT:    add a3, a2, a1
+; CHECK-NEXT:    add a1, a3, a1
+; CHECK-NEXT:    vle16.v v9, (a3)
+; CHECK-NEXT:    vle16.v v10, (a2)
+; CHECK-NEXT:    vle16.v v11, (a1)
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vslideup.vi v9, v11, 2
+; CHECK-NEXT:    vslideup.vi v8, v10, 2
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v9, 4
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+;
+; ZVBB-LABEL: interleave4_const_splat_v8i16:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    addi sp, sp, -16
+; ZVBB-NEXT:    .cfi_def_cfa_offset 16
+; ZVBB-NEXT:    csrr a0, vlenb
+; ZVBB-NEXT:    sub sp, sp, a0
+; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
+; ZVBB-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVBB-NEXT:    vmv.v.i v8, 3
+; ZVBB-NEXT:    addi a0, sp, 16
+; ZVBB-NEXT:    csrr a1, vlenb
+; ZVBB-NEXT:    vmv1r.v v9, v8
+; ZVBB-NEXT:    srli a1, a1, 2
+; ZVBB-NEXT:    vmv1r.v v10, v8
+; ZVBB-NEXT:    add a2, a0, a1
+; ZVBB-NEXT:    vmv1r.v v11, v8
+; ZVBB-NEXT:    vsetvli a3, zero, e16, mf4, ta, ma
+; ZVBB-NEXT:    vsseg4e16.v v8, (a0)
+; ZVBB-NEXT:    add a3, a2, a1
+; ZVBB-NEXT:    add a1, a3, a1
+; ZVBB-NEXT:    vle16.v v9, (a3)
+; ZVBB-NEXT:    vle16.v v10, (a2)
+; ZVBB-NEXT:    vle16.v v11, (a1)
+; ZVBB-NEXT:    vle16.v v8, (a0)
+; ZVBB-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVBB-NEXT:    vslideup.vi v9, v11, 2
+; ZVBB-NEXT:    vslideup.vi v8, v10, 2
+; ZVBB-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVBB-NEXT:    vslideup.vi v8, v9, 4
+; ZVBB-NEXT:    csrr a0, vlenb
+; ZVBB-NEXT:    add sp, sp, a0
+; ZVBB-NEXT:    .cfi_def_cfa sp, 16
+; ZVBB-NEXT:    addi sp, sp, 16
+; ZVBB-NEXT:    .cfi_def_cfa_offset 0
+; ZVBB-NEXT:    ret
+;
+; ZIP-LABEL: interleave4_const_splat_v8i16:
+; ZIP:       # %bb.0:
+; ZIP-NEXT:    addi sp, sp, -16
+; ZIP-NEXT:    .cfi_def_cfa_offset 16
+; ZIP-NEXT:    csrr a0, vlenb
+; ZIP-NEXT:    sub sp, sp, a0
+; ZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
+; ZIP-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZIP-NEXT:    vmv.v.i v8, 3
+; ZIP-NEXT:    addi a0, sp, 16
+; ZIP-NEXT:    csrr a1, vlenb
+; ZIP-NEXT:    vmv1r.v v9, v8
+; ZIP-NEXT:    srli a1, a1, 2
+; ZIP-NEXT:    vmv1r.v v10, v8
+; ZIP-NEXT:    add a2, a0, a1
+; ZIP-NEXT:    vmv1r.v v11, v8
+; ZIP-NEXT:    vsetvli a3, zero, e16, mf4, ta, ma
+; ZIP-NEXT:    vsseg4e16.v v8, (a0)
+; ZIP-NEXT:    add a3, a2, a1
+; ZIP-NEXT:    add a1, a3, a1
+; ZIP-NEXT:    vle16.v v9, (a3)
+; ZIP-NEXT:    vle16.v v10, (a2)
+; ZIP-NEXT:    vle16.v v11, (a1)
+; ZIP-NEXT:    vle16.v v8, (a0)
+; ZIP-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZIP-NEXT:    vslideup.vi v9, v11, 2
+; ZIP-NEXT:    vslideup.vi v8, v10, 2
+; ZIP-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZIP-NEXT:    vslideup.vi v8, v9, 4
+; ZIP-NEXT:    csrr a0, vlenb
+; ZIP-NEXT:    add sp, sp, a0
+; ZIP-NEXT:    .cfi_def_cfa sp, 16
+; ZIP-NEXT:    addi sp, sp, 16
+; ZIP-NEXT:    .cfi_def_cfa_offset 0
+; ZIP-NEXT:    ret
+  %retval = call <8 x i16> @llvm.vector.interleave4.v8i16(<2 x i16> splat(i16 3), <2 x i16> splat(i16 3), <2 x i16> splat(i16 3), <2 x i16> splat(i16 3))
+  ret <8 x i16> %retval
+}
+
+define <8 x i16> @interleave4_same_nonconst_splat_v8i16(i16 %a) {
+; CHECK-LABEL: interleave4_same_nonconst_splat_v8i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    vmv1r.v v9, v8
+; CHECK-NEXT:    srli a1, a1, 2
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    add a2, a0, a1
+; CHECK-NEXT:    vmv1r.v v11, v8
+; CHECK-NEXT:    vsetvli a3, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vsseg4e16.v v8, (a0)
+; CHECK-NEXT:    add a3, a2, a1
+; CHECK-NEXT:    add a1, a3, a1
+; CHECK-NEXT:    vle16.v v9, (a3)
+; CHECK-NEXT:    vle16.v v10, (a2)
+; CHECK-NEXT:    vle16.v v11, (a1)
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vslideup.vi v9, v11, 2
+; CHECK-NEXT:    vslideup.vi v8, v10, 2
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v9, 4
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+;
+; ZVBB-LABEL: interleave4_same_nonconst_splat_v8i16:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    addi sp, sp, -16
+; ZVBB-NEXT:    .cfi_def_cfa_offset 16
+; ZVBB-NEXT:    csrr a1, vlenb
+; ZVBB-NEXT:    sub sp, sp, a1
+; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
+; ZVBB-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVBB-NEXT:    vmv.v.x v8, a0
+; ZVBB-NEXT:    addi a0, sp, 16
+; ZVBB-NEXT:    csrr a1, vlenb
+; ZVBB-NEXT:    vmv1r.v v9, v8
+; ZVBB-NEXT:    srli a1, a1, 2
+; ZVBB-NEXT:    vmv1r.v v10, v8
+; ZVBB-NEXT:    add a2, a0, a1
+; ZVBB-NEXT:    vmv1r.v v11, v8
+; ZVBB-NEXT:    vsetvli a3, zero, e16, mf4, ta, ma
+; ZVBB-NEXT:    vsseg4e16.v v8, (a0)
+; ZVBB-NEXT:    add a3, a2, a1
+; ZVBB-NEXT:    add a1, a3, a1
+; ZVBB-NEXT:    vle16.v v9, (a3)
+; ZVBB-NEXT:    vle16.v v10, (a2)
+; ZVBB-NEXT:    vle16.v v11, (a1)
+; ZVBB-NEXT:    vle16.v v8, (a0)
+; ZVBB-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVBB-NEXT:    vslideup.vi v9, v11, 2
+; ZVBB-NEXT:    vslideup.vi v8, v10, 2
+; ZVBB-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVBB-NEXT:    vslideup.vi v8, v9, 4
+; ZVBB-NEXT:    csrr a0, vlenb
+; ZVBB-NEXT:    add sp, sp, a0
+; ZVBB-NEXT:    .cfi_def_cfa sp, 16
+; ZVBB-NEXT:    addi sp, sp, 16
+; ZVBB-NEXT:    .cfi_def_cfa_offset 0
+; ZVBB-NEXT:    ret
+;
+; ZIP-LABEL: interleave4_same_nonconst_splat_v8i16:
+; ZIP:       # %bb.0:
+; ZIP-NEXT:    addi sp, sp, -16
+; ZIP-NEXT:    .cfi_def_cfa_offset 16
+; ZIP-NEXT:    csrr a1, vlenb
+; ZIP-NEXT:    sub sp, sp, a1
+; ZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
+; ZIP-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZIP-NEXT:    vmv.v.x v8, a0
+; ZIP-NEXT:    addi a0, sp, 16
+; ZIP-NEXT:    csrr a1, vlenb
+; ZIP-NEXT:    vmv1r.v v9, v8
+; ZIP-NEXT:    srli a1, a1, 2
+; ZIP-NEXT:    vmv1r.v v10, v8
+; ZIP-NEXT:    add a2, a0, a1
+; ZIP-NEXT:    vmv1r.v v11, v8
+; ZIP-NEXT:    vsetvli a3, zero, e16, mf4, ta, ma
+; ZIP-NEXT:    vsseg4e16.v v8, (a0)
+; ZIP-NEXT:    add a3, a2, a1
+; ZIP-NEXT:    add a1, a3, a1
+; ZIP-NEXT:    vle16.v v9, (a3)
+; ZIP-NEXT:    vle16.v v10, (a2)
+; ZIP-NEXT:    vle16.v v11, (a1)
+; ZIP-NEXT:    vle16.v v8, (a0)
+; ZIP-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZIP-NEXT:    vslideup.vi v9, v11, 2
+; ZIP-NEXT:    vslideup.vi v8, v10, 2
+; ZIP-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZIP-NEXT:    vslideup.vi v8, v9, 4
+; ZIP-NEXT:    csrr a0, vlenb
+; ZIP-NEXT:    add sp, sp, a0
+; ZIP-NEXT:    .cfi_def_cfa sp, 16
+; ZIP-NEXT:    addi sp, sp, 16
+; ZIP-NEXT:    .cfi_def_cfa_offset 0
+; ZIP-NEXT:    ret
+  %ins = insertelement <2 x i16> poison, i16 %a, i32 0
+  %splat = shufflevector <2 x i16> %ins, <2 x i16> poison, <2 x i32> zeroinitializer
+  %retval = call <8 x i16> @llvm.vector.interleave4.v8i16(<2 x i16> %splat, <2 x i16> %splat, <2 x i16> %splat, <2 x i16> %splat)
+  ret <8 x i16> %retval
+}
