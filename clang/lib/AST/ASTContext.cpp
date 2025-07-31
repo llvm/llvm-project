@@ -3552,6 +3552,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
     case BuiltinType::WasmExternRef:
+    case BuiltinType::WasmNonNullExternRef:
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
       llvm_unreachable("not yet implemented");
@@ -4586,7 +4587,8 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
 QualType ASTContext::getWebAssemblyExternrefType() const {
   if (Target->getTriple().isWasm() && Target->hasFeature("reference-types")) {
 #define WASM_REF_TYPE(Name, MangledName, Id, SingletonId, AS)                  \
-  if (BuiltinType::Id == BuiltinType::WasmExternRef)                           \
+  if (BuiltinType::Id == BuiltinType::WasmExternRef ||                         \
+      BuiltinType::Id == BuiltinType::WasmNonNullExternRef)                    \
     return SingletonId;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
   }

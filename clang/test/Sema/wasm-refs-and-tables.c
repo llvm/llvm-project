@@ -9,6 +9,10 @@ __externref_t r1;
 extern __externref_t r2;
 static __externref_t r3;
 
+__non_null_externref_t nn_r1;
+extern __non_null_externref_t nn_r2;
+static __non_null_externref_t nn_r3;
+
 __externref_t *t1;               // expected-error {{pointer to WebAssembly reference type is not allowed}}
 __externref_t **t2;              // expected-error {{pointer to WebAssembly reference type is not allowed}}
 __externref_t ******t3;          // expected-error {{pointer to WebAssembly reference type is not allowed}}
@@ -19,9 +23,23 @@ __externref_t t7[0];             // expected-error {{WebAssembly table must be s
 static __externref_t t8[0][0];   // expected-error {{multi-dimensional arrays of WebAssembly references are not allowed}}
 static __externref_t (*t9)[0];   // expected-error {{cannot form a pointer to a WebAssembly table}}
 
+__non_null_externref_t *nn_t1;               // expected-error {{pointer to WebAssembly reference type is not allowed}}
+__non_null_externref_t **nn_t2;              // expected-error {{pointer to WebAssembly reference type is not allowed}}
+__non_null_externref_t ******nn_t3;          // expected-error {{pointer to WebAssembly reference type is not allowed}}
+static __non_null_externref_t nn_t4[3];      // expected-error {{only zero-length WebAssembly tables are currently supported}}
+static __non_null_externref_t nn_t5[];       // expected-error {{only zero-length WebAssembly tables are currently supported}}
+static __non_null_externref_t nn_t6[] = {0}; // expected-error {{only zero-length WebAssembly tables are currently supported}}
+__non_null_externref_t nn_t7[0];             // expected-error {{WebAssembly table must be static}}
+static __non_null_externref_t nn_t8[0][0];   // expected-error {{multi-dimensional arrays of WebAssembly references are not allowed}}
+static __non_null_externref_t (*nn_t9)[0];   // expected-error {{cannot form a pointer to a WebAssembly table}}
+
 static __externref_t table[0];
 static __externref_t other_table[0] = {};
 static __externref_t another_table[] = {}; // expected-error {{only zero-length WebAssembly tables are currently supported}}
+
+static __non_null_externref_t nn_table[0];
+static __non_null_externref_t nn_other_table[0] = {};
+static __non_null_externref_t nn_another_table[] = {}; // expected-error {{only zero-length WebAssembly tables are currently supported}}
 
 struct s {
   __externref_t f1;       // expected-error {{field has sizeless type '__externref_t'}}
@@ -31,6 +49,17 @@ struct s {
   __externref_t *f5;      // expected-error {{pointer to WebAssembly reference type is not allowed}}
   __externref_t ****f6;   // expected-error {{pointer to WebAssembly reference type is not allowed}}
   __externref_t (*f7)[0]; // expected-error {{cannot form a pointer to a WebAssembly table}}
+};
+
+
+struct nn_s {
+  __non_null_externref_t nn_f1;       // expected-error {{field has sizeless type '__non_null_externref_t'}}
+  __non_null_externref_t nn_f2[0];    // expected-error {{field has sizeless type '__non_null_externref_t'}}
+  __non_null_externref_t nn_f3[];     // expected-error {{field has sizeless type '__non_null_externref_t'}}
+  __non_null_externref_t nn_f4[0][0]; // expected-error {{multi-dimensional arrays of WebAssembly references are not allowed}}
+  __non_null_externref_t *nn_f5;      // expected-error {{pointer to WebAssembly reference type is not allowed}}
+  __non_null_externref_t ****nn_f6;   // expected-error {{pointer to WebAssembly reference type is not allowed}}
+  __non_null_externref_t (*nn_f7)[0]; // expected-error {{cannot form a pointer to a WebAssembly table}}
 };
 
 union u {
@@ -43,16 +72,38 @@ union u {
   __externref_t (*f7)[0]; // expected-error {{cannot form a pointer to a WebAssembly table}}
 };
 
+
+union nn_u {
+  __non_null_externref_t nn_f1;       // expected-error {{field has sizeless type '__non_null_externref_t'}}
+  __non_null_externref_t nn_f2[0];    // expected-error {{field has sizeless type '__non_null_externref_t'}}
+  __non_null_externref_t nn_f3[];     // expected-error {{field has sizeless type '__non_null_externref_t'}}
+  __non_null_externref_t nn_f4[0][0]; // expected-error {{multi-dimensional arrays of WebAssembly references are not allowed}}
+  __non_null_externref_t *nn_f5;      // expected-error {{pointer to WebAssembly reference type is not allowed}}
+  __non_null_externref_t ****nn_f6;   // expected-error {{pointer to WebAssembly reference type is not allowed}}
+  __non_null_externref_t (*f7)[0]; // expected-error {{cannot form a pointer to a WebAssembly table}}
+};
+
 void illegal_argument_1(__externref_t table[]);     // expected-error {{cannot use WebAssembly table as a function parameter}}
 void illegal_argument_2(__externref_t table[0][0]); // expected-error {{multi-dimensional arrays of WebAssembly references are not allowed}}
 void illegal_argument_3(__externref_t *table);      // expected-error {{pointer to WebAssembly reference type is not allowed}}
 void illegal_argument_4(__externref_t ***table);    // expected-error {{pointer to WebAssembly reference type is not allowed}}
 void illegal_argument_5(__externref_t (*table)[0]); // expected-error {{cannot form a pointer to a WebAssembly table}}
 void illegal_argument_6(__externref_t table[0]);    // expected-error {{cannot use WebAssembly table as a function parameter}}
+                                                    
+void illegal_nn_argument_1(__non_null_externref_t table[]);     // expected-error {{cannot use WebAssembly table as a function parameter}}
+void illegal_nn_argument_2(__non_null_externref_t table[0][0]); // expected-error {{multi-dimensional arrays of WebAssembly references are not allowed}}
+void illegal_nn_argument_3(__non_null_externref_t *table);      // expected-error {{pointer to WebAssembly reference type is not allowed}}
+void illegal_nn_argument_4(__non_null_externref_t ***table);    // expected-error {{pointer to WebAssembly reference type is not allowed}}
+void illegal_nn_argument_5(__non_null_externref_t (*table)[0]); // expected-error {{cannot form a pointer to a WebAssembly table}}
+void illegal_nn_argument_6(__non_null_externref_t table[0]);    // expected-error {{cannot use WebAssembly table as a function parameter}}
 
 __externref_t *illegal_return_1();   // expected-error {{pointer to WebAssembly reference type is not allowed}}
 __externref_t ***illegal_return_2(); // expected-error {{pointer to WebAssembly reference type is not allowed}}
 __externref_t (*illegal_return_3())[0]; // expected-error {{cannot form a pointer to a WebAssembly table}}
+                                        
+__non_null_externref_t *illegal_nn_return_1();   // expected-error {{pointer to WebAssembly reference type is not allowed}}
+__non_null_externref_t ***illegal_nn_return_2(); // expected-error {{pointer to WebAssembly reference type is not allowed}}
+__non_null_externref_t (*illegal_nn_return_3())[0]; // expected-error {{cannot form a pointer to a WebAssembly table}}
 
 void varargs(int, ...);
 typedef void (*__funcref funcref_t)();
@@ -132,4 +183,16 @@ void foo() {
 
 void *ret_void_ptr() {
   return table; // expected-error {{cannot return a WebAssembly table}}
+}
+
+// checks all related assignment from extern ref to non null extern ref and vice versa 
+void externref_assignment(__externref_t er, __non_null_externref_t nn_er) {
+  __externref_t asg_1 = er; 
+  __externref_t asg_2 = nn_er; 
+
+  __non_null_externref_t nn_asg_1 = er; // conly-error {{initializing '__non_null_externref_t' with an expression of incompatible type '__externref_t'}} \
+                                        // cpp-error {{cannot initialize a variable of type '__non_null_externref_t' with an lvalue of type '__externref_t'}}
+  __non_null_externref_t nn_asg_2 = nn_er; 
+
+
 }
