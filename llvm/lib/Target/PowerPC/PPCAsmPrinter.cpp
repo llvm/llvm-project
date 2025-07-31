@@ -2425,8 +2425,7 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
   // Set the 4th byte of the mandatory field.
   FirstHalfOfMandatoryField |= TracebackTable::IsFunctionNamePresentMask;
 
-  const PPCRegisterInfo *RegInfo =
-      static_cast<const PPCRegisterInfo *>(Subtarget->getRegisterInfo());
+  const PPCRegisterInfo *RegInfo = Subtarget->getRegisterInfo();
   Register FrameReg = RegInfo->getFrameRegister(*MF);
   if (FrameReg == (Subtarget->isPPC64() ? PPC::X31 : PPC::R31))
     FirstHalfOfMandatoryField |= TracebackTable::IsAllocaUsedMask;

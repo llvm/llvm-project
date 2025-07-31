@@ -995,7 +995,7 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
     std::vector<std::unique_ptr<ASTConsumer>> Consumers(2);
     Consumers[0] = std::make_unique<ReducedBMIGenerator>(
         CI.getPreprocessor(), CI.getModuleCache(),
-        CI.getFrontendOpts().ModuleOutputPath);
+        CI.getFrontendOpts().ModuleOutputPath, CI.getCodeGenOpts());
     Consumers[1] = std::move(Result);
     return std::make_unique<MultiplexConsumer>(std::move(Consumers));
   }

@@ -654,12 +654,17 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
       } else {
         body.try_emplace("reason", "breakpoint");
       }
-      lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(0);
-      lldb::break_id_t bp_loc_id = thread.GetStopReasonDataAtIndex(1);
-      std::string desc_str =
-          llvm::formatv("breakpoint {0}.{1}", bp_id, bp_loc_id);
-      body.try_emplace("hitBreakpointIds",
-                       llvm::json::Array{llvm::json::Value(bp_id)});
+      std::vector<lldb::break_id_t> bp_ids;
+      std::ostringstream desc_sstream;
+      desc_sstream << "breakpoint";
+      for (size_t idx = 0; idx < thread.GetStopReasonDataCount(); idx += 2) {
+        lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(idx);
+        lldb::break_id_t bp_loc_id = thread.GetStopReasonDataAtIndex(idx + 1);
+        bp_ids.push_back(bp_id);
+        desc_sstream << " " << bp_id << "." << bp_loc_id;
+      }
+      std::string desc_str = desc_sstream.str();
+      body.try_emplace("hitBreakpointIds", llvm::json::Array(bp_ids));
       EmplaceSafeString(body, "description", desc_str);
     }
   } break;
@@ -854,12 +859,16 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit) {
 llvm::json::Object CreateRunInTerminalReverseRequest(
     llvm::StringRef program, const std::vector<std::string> &args,
     const llvm::StringMap<std::string> &env, llvm::StringRef cwd,
-    llvm::StringRef comm_file, lldb::pid_t debugger_pid) {
+    llvm::StringRef comm_file, lldb::pid_t debugger_pid, bool external) {
   llvm::json::Object run_in_terminal_args;
-  // This indicates the IDE to open an embedded terminal, instead of opening
-  // the terminal in a new window.
-  run_in_terminal_args.try_emplace("kind", "integrated");
-
+  if (external) {
+    // This indicates the IDE to open an external terminal window.
+    run_in_terminal_args.try_emplace("kind", "external");
+  } else {
+    // This indicates the IDE to open an embedded terminal, instead of opening
+    // the terminal in a new window.
+    run_in_terminal_args.try_emplace("kind", "integrated");
+  }
   // The program path must be the first entry in the "args" field
   std::vector<std::string> req_args = {DAP::debug_adapter_path.str(),
                                        "--comm-file", comm_file.str()};

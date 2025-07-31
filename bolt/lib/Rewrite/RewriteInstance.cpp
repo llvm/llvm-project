@@ -4260,31 +4260,25 @@ void RewriteInstance::patchELFPHDRTable() {
   const ELFFile<ELF64LE> &Obj = ELF64LEFile->getELFFile();
   raw_fd_ostream &OS = Out->os();
 
-  // Write/re-write program headers.
   Phnum = Obj.getHeader().e_phnum;
-  if (PHDRTableOffset) {
-    // Writing new pheader table and adding one new entry for R+X segment.
-    Phnum += 1;
-    if (NewWritableSegmentSize) {
-      // Adding one more entry for R+W segment.
-      Phnum += 1;
-    }
-  } else {
-    assert(!PHDRTableAddress && "unexpected address for program header table");
-    PHDRTableOffset = Obj.getHeader().e_phoff;
-    if (NewWritableSegmentSize) {
-      BC->errs() << "BOLT-ERROR: unable to add writable segment\n";
-      exit(1);
-    }
-  }
-
-  if (opts::Instrument)
-    Phnum += 2;
 
   if (BC->NewSegments.empty()) {
     BC->outs() << "BOLT-INFO: not adding new segments\n";
     return;
   }
+
+  if (opts::UseGnuStack) {
+    assert(!PHDRTableAddress && "unexpected address for program header table");
+    if (BC->NewSegments.size() > 1) {
+      BC->errs() << "BOLT-ERROR: unable to add writable segment\n";
+      exit(1);
+    }
+  } else {
+    Phnum += BC->NewSegments.size();
+  }
+
+  if (!PHDRTableOffset)
+    PHDRTableOffset = Obj.getHeader().e_phoff;
 
   const uint64_t SavedPos = OS.tell();
   OS.seek(PHDRTableOffset);

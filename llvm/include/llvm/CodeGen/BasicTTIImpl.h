@@ -1369,8 +1369,7 @@ public:
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
     assert(ISD && "Invalid opcode");
 
-    // TODO: Handle other cost kinds.
-    if (CostKind != TTI::TCK_RecipThroughput)
+    if (getTLI()->getValueType(DL, ValTy, true) == MVT::Other)
       return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
                                        Op1Info, Op2Info, I);
 
@@ -1773,6 +1772,39 @@ public:
         }
       }
 
+      if (ICA.getID() == Intrinsic::vp_scatter) {
+        if (ICA.isTypeBasedOnly()) {
+          IntrinsicCostAttributes MaskedScatter(
+              *VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID()),
+              ICA.getReturnType(), ArrayRef(ICA.getArgTypes()).drop_back(1),
+              ICA.getFlags());
+          return getTypeBasedIntrinsicInstrCost(MaskedScatter, CostKind);
+        }
+        Align Alignment;
+        if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
+          Alignment = VPI->getPointerAlignment().valueOrOne();
+        bool VarMask = isa<Constant>(ICA.getArgs()[2]);
+        return thisT()->getGatherScatterOpCost(
+            Instruction::Store, ICA.getArgTypes()[0], ICA.getArgs()[1], VarMask,
+            Alignment, CostKind, nullptr);
+      }
+      if (ICA.getID() == Intrinsic::vp_gather) {
+        if (ICA.isTypeBasedOnly()) {
+          IntrinsicCostAttributes MaskedGather(
+              *VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID()),
+              ICA.getReturnType(), ArrayRef(ICA.getArgTypes()).drop_back(1),
+              ICA.getFlags());
+          return getTypeBasedIntrinsicInstrCost(MaskedGather, CostKind);
+        }
+        Align Alignment;
+        if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
+          Alignment = VPI->getPointerAlignment().valueOrOne();
+        bool VarMask = isa<Constant>(ICA.getArgs()[1]);
+        return thisT()->getGatherScatterOpCost(
+            Instruction::Load, ICA.getReturnType(), ICA.getArgs()[0], VarMask,
+            Alignment, CostKind, nullptr);
+      }
+
       if (ICA.getID() == Intrinsic::vp_select ||
           ICA.getID() == Intrinsic::vp_merge) {
         TTI::OperandValueInfo OpInfoX, OpInfoY;
@@ -1952,11 +1984,6 @@ public:
           TTI::SK_InsertSubvector, cast<VectorType>(RetTy),
           cast<VectorType>(Args[0]->getType()), {}, CostKind, Index,
           cast<VectorType>(Args[1]->getType()));
-    }
-    case Intrinsic::vector_reverse: {
-      return thisT()->getShuffleCost(TTI::SK_Reverse, cast<VectorType>(RetTy),
-                                     cast<VectorType>(Args[0]->getType()), {},
-                                     CostKind, 0, cast<VectorType>(RetTy));
     }
     case Intrinsic::vector_splice: {
       unsigned Index = cast<ConstantInt>(Args[2])->getZExtValue();
@@ -2426,6 +2453,10 @@ public:
           thisT()->getArithmeticInstrCost(BinaryOperator::And, RetTy, CostKind);
       return Cost;
     }
+    case Intrinsic::vector_reverse:
+      return thisT()->getShuffleCost(TTI::SK_Reverse, cast<VectorType>(RetTy),
+                                     cast<VectorType>(ICA.getArgTypes()[0]), {},
+                                     CostKind, 0, cast<VectorType>(RetTy));
     case Intrinsic::get_active_lane_mask: {
       Type *ArgTy = ICA.getArgTypes()[0];
       EVT ResVT = getTLI()->getValueType(DL, RetTy, true);

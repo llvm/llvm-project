@@ -55,6 +55,8 @@ class InstSI <dag outs, dag ins, string asm = "",
   // VINTERP instruction format.
   field bit VINTERP = 0;
 
+  field bit VOPD3 = 0;
+
   // High bits - other information.
   field bit VM_CNT = 0;
   field bit EXP_CNT = 0;
@@ -195,6 +197,7 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   let TSFlags{28} = LDSDIR;
   let TSFlags{29} = VINTERP;
+  let TSFlags{30} = VOPD3;
 
   let TSFlags{32} = VM_CNT;
   let TSFlags{33} = EXP_CNT;
@@ -314,6 +317,8 @@ def CPolBit {
   int SLC = 1;
   int DLC = 2;
   int SCC = 4;
+  int NV = 5;
+  int SCAL = 11;
 }
 
 class VOPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVOPDst">;

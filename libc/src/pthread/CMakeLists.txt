@@ -99,6 +99,7 @@ add_entrypoint_object(
   HDRS
     pthread_attr_setstack.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.pthread
     libc.src.pthread.pthread_attr_setstacksize
     libc.src.errno.errno

@@ -11,7 +11,6 @@
 #include "mlir/Dialect/Arith/Transforms/ShardingInterfaceImpl.h"
 #include "mlir/Dialect/Mesh/Interfaces/ShardingInterface.h"
 #include "mlir/IR/DialectRegistry.h"
-#include "llvm/Support/Debug.h"
 
 using namespace mlir;
 using namespace mlir::arith;
@@ -84,7 +83,7 @@ struct ConstantShardingInterface
           cOp.getType(), getMesh(op, sharding.getMeshAttr(), symbolTable),
           sharding));
       auto newValue = value.resizeSplat(newType);
-      auto newOp = builder.create<ConstantOp>(op->getLoc(), newType, newValue);
+      auto newOp = ConstantOp::create(builder, op->getLoc(), newType, newValue);
       spmdizationMap.map(op->getResult(0), newOp.getResult());
       spmdizationMap.map(op, newOp.getOperation());
     } else {

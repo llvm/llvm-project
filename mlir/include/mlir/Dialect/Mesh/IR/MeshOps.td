@@ -204,7 +204,7 @@ def Mesh_ShardingOp : Mesh_Op<"sharding", [
   let description = [{
     The MeshSharding specifies how a tensor is sharded and distributed across the
     process mesh. It is typically used in a `mesh.shard` operation.
-    The operation has the follwing attributes and operands:
+    The operation has the following attributes and operands:
 
     1. `mesh`: this attribute is a FlatSymbolRefAttr that refers to the device
     mesh where the distributed tensor is placed. The symbol must resolve to a
@@ -215,15 +215,7 @@ def Mesh_ShardingOp : Mesh_Op<"sharding", [
     its value is [x, y], it indicates that the tensor's i-th dimension is splitted
     along the x and y axes of the device mesh.
 
-    3. [Optional] `partial_axes`: if not empty, this signifies that the tensor is partial
-    one along the specified mesh axes. An all-reduce should be applied to obtain
-    the complete tensor, with reduction type being specified by `partial_type`.
-
-    4. [Optional] `partial_type`: indicates the reduction type of the possible all-reduce
-    op. It has 4 possible values:
-    `generic`: is not an allowed value inside a shard attribute.
-
-    5. [Optional] Sizes of halos to be added for each sharded tensor dimension.
+    3. [Optional] Sizes of halos to be added for each sharded tensor dimension.
     `halo_sizes` is provided as a flattened 1d array of i64s, 2 values for each
     sharded dimension. `halo_sizes = [1, 2]` means that the first sharded dimension
     gets an additional halo of size 1 at the start of the first dimension and a halo
@@ -231,7 +223,7 @@ def Mesh_ShardingOp : Mesh_Op<"sharding", [
     sharded dimensions e.g. the first sharded dimension gets `[1,2]` halos and the
     seconds gets `[2,3]` halos. `?` indicates dynamic halo sizes.
     
-    6. [Optional] Offsets for each shard and sharded tensor dimension.
+    4. [Optional] Offsets for each shard and sharded tensor dimension.
     `sharded_dims_offsets` is provided as a flattened 1d array of i64s. For each
     sharded tensor dimension the offsets (starting index) of all shards in that
     dimension and an additional value for the end of the last shard are provided.
@@ -260,14 +252,6 @@ def Mesh_ShardingOp : Mesh_Op<"sharding", [
     // The tensor is sharded on the first dimension along axis 0 of @mesh0
     %sharding1 = mesh.sharding @mesh0 split_axes = [[0]]
 
-    // The tensor is sharded on its first dimension along axis 0 of @mesh0 and
-    // it is also a partial_sum along mesh axis 1.
-    %sharding2 = mesh.sharding @mesh0 split_axes = [[0] split_axes = []] partial = sum[1]
-
-    // The tensor is sharded on its first dimension along axis 0 of @mesh0 and
-    // it is also a partial_max along mesh axis 1.
-    %sharding3 = mesh.sharding @mesh0 split_axes = [[0]] partial = max[1]
-
     // Could be used for a mesh.shard op
     %sharded0 = mesh.shard %arg0 to %sharding3 : tensor<4x8xf32>
 
@@ -287,8 +271,6 @@ def Mesh_ShardingOp : Mesh_Op<"sharding", [
   let arguments = (ins
     FlatSymbolRefAttr:$mesh,
     Mesh_MeshAxesArrayAttr:$split_axes,
-    OptionalAttr<Mesh_MeshAxesAttr>:$partial_axes,
-    OptionalAttr<Mesh_ReductionKindAttr>:$partial_type,
     DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_sharded_dims_offsets,
     Variadic<I64>:$dynamic_sharded_dims_offsets,
     DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_halo_sizes,
@@ -300,7 +282,6 @@ def Mesh_ShardingOp : Mesh_Op<"sharding", [
   let assemblyFormat = [{
     $mesh
     `split_axes` `=` $split_axes
-    (`partial` `=` $partial_type $partial_axes^)?
     (`halo_sizes` `=` custom<DynamicIndexList>($dynamic_halo_sizes, $static_halo_sizes)^)?
     (`sharded_dims_offsets` `=` custom<DynamicIndexList>($dynamic_sharded_dims_offsets, $static_sharded_dims_offsets)^)?
     attr-dict `:` type($result)
@@ -308,12 +289,8 @@ def Mesh_ShardingOp : Mesh_Op<"sharding", [
   let builders = [
     OpBuilder<(ins "FlatSymbolRefAttr":$mesh,
                    "ArrayRef<MeshAxesAttr>":$split_axes,
-                   "ArrayRef<MeshAxis>":$partial_axes,
-                   "mesh::ReductionKind":$partial_type,
                    CArg<"ArrayRef<int64_t>", "{}">:$static_halo_sizes,
                    CArg<"ArrayRef<int64_t>", "{}">:$static_sharded_dims_offsets)>,
-    OpBuilder<(ins "FlatSymbolRefAttr":$mesh,
-                   "ArrayRef<MeshAxesAttr>":$split_axes)>,
     OpBuilder<(ins "FlatSymbolRefAttr":$mesh,
                    "ArrayRef<MeshAxesAttr>":$split_axes,
                    "::mlir::ArrayRef<::mlir::OpFoldResult>":$halo_sizes,

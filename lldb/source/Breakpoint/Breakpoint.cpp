@@ -440,13 +440,13 @@ const char *Breakpoint::GetQueueName() const {
   return m_options.GetThreadSpecNoCreate()->GetQueueName();
 }
 
-void Breakpoint::SetCondition(const char *condition) {
-  m_options.SetCondition(condition);
+void Breakpoint::SetCondition(StopCondition condition) {
+  m_options.SetCondition(std::move(condition));
   SendBreakpointChangedEvent(eBreakpointEventTypeConditionChanged);
 }
 
-const char *Breakpoint::GetConditionText() const {
-  return m_options.GetConditionText();
+const StopCondition &Breakpoint::GetCondition() const {
+  return m_options.GetCondition();
 }
 
 // This function is used when "baton" doesn't need to be freed
