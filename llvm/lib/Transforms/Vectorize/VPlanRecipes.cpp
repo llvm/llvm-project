@@ -84,6 +84,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPWidenIntOrFpInductionSC:
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
+  case VPWidenFFLoadEVLSC:
+  case VPWidenFFLoadSC:
   case VPWidenPHISC:
   case VPWidenSC:
   case VPWidenSelectSC: {
@@ -107,6 +109,8 @@ bool VPRecipeBase::mayReadFromMemory() const {
     return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
+  case VPWidenFFLoadEVLSC:
+  case VPWidenFFLoadSC:
     return true;
   case VPReplicateSC:
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
@@ -184,6 +188,9 @@ bool VPRecipeBase::mayHaveSideEffects() const {
            "underlying instruction has side-effects");
     return false;
   }
+  case VPWidenFFLoadEVLSC:
+  case VPWidenFFLoadSC:
+    return true;
   case VPInterleaveSC:
     return mayWriteToMemory();
   case VPWidenLoadEVLSC:
@@ -960,6 +967,8 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
         Instruction::Or, cast<VectorType>(VecTy), std::nullopt, Ctx.CostKind);
   }
   case VPInstruction::FirstActiveLane: {
+    if (VF.isScalar())
+      return InstructionCost::getInvalid();
     // Calculate the cost of determining the lane index.
     auto *PredTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
     IntrinsicCostAttributes Attrs(Intrinsic::experimental_cttz_elts,
@@ -3151,6 +3160,55 @@ void VPWidenLoadRecipe::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "WIDEN ";
   printAsOperand(O, SlotTracker);
   O << " = load ";
+  printOperands(O, SlotTracker);
+}
+#endif
+
+void VPWidenFFLoadEVLRecipe::execute(VPTransformState &State) {
+  Type *ScalarDataTy = getLoadStoreType(&Ingredient);
+  auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
+  const Align Alignment = getLoadStoreAlignment(&Ingredient);
+
+  auto &Builder = State.Builder;
+  State.setDebugLocFrom(getDebugLoc());
+
+  Value *EVL = State.get(getEVL(), VPLane(0));
+  Value *Addr = State.get(getAddr(), true);
+  Value *Mask = nullptr;
+  if (VPValue *VPMask = getMask())
+    Mask = State.get(VPMask);
+  else
+    Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  CallInst *NewLI =
+      Builder.CreateIntrinsic(Intrinsic::vp_load_ff, {DataTy, Addr->getType()},
+                              {Addr, Mask, EVL}, nullptr, "vp.op.load.ff");
+  NewLI->addParamAttr(
+      0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
+  applyMetadata(*NewLI);
+  Value *V = cast<Instruction>(Builder.CreateExtractValue(NewLI, 0));
+  Value *VL = Builder.CreateExtractValue(NewLI, 1);
+  State.set(getVPValue(0), V);
+  State.set(getVPValue(1), VL, /*NeedsScalar=*/true);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPWidenFFLoadRecipe::print(raw_ostream &O, const Twine &Indent,
+                                VPSlotTracker &SlotTracker) const {
+  O << Indent << "WIDEN ";
+  printAsOperand(O, SlotTracker);
+  O << " = fault-only-first-load ";
+  printOperands(O, SlotTracker);
+}
+#endif
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPWidenFFLoadEVLRecipe::print(raw_ostream &O, const Twine &Indent,
+                                   VPSlotTracker &SlotTracker) const {
+  O << Indent << "WIDEN ";
+  printAsOperand(O, SlotTracker);
+  O << ", ";
+  getVPValue(1)->printAsOperand(O, SlotTracker);
+  O << " = vp.load.ff ";
   printOperands(O, SlotTracker);
 }
 #endif

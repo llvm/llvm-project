@@ -559,6 +559,8 @@ public:
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPInterleaveSC:
     case VPRecipeBase::VPIRInstructionSC:
+    case VPRecipeBase::VPWidenFFLoadEVLSC:
+    case VPRecipeBase::VPWidenFFLoadSC:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
     case VPRecipeBase::VPWidenStoreEVLSC:
@@ -2980,6 +2982,8 @@ public:
   static inline bool classof(const VPRecipeBase *R) {
     return R->getVPDefID() == VPRecipeBase::VPWidenLoadSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenStoreSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenFFLoadSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenFFLoadEVLSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenLoadEVLSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenStoreEVLSC;
   }
@@ -3058,6 +3062,72 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPWidenMemoryRecipe,
     // Widened, consecutive loads operations only demand the first lane of
     // their address.
     return Op == getAddr() && isConsecutive();
+  }
+};
+
+struct VPWidenFFLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
+  VPWidenFFLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
+                      const VPIRMetadata &Metadata, DebugLoc DL)
+      : VPWidenMemoryRecipe(VPDef::VPWidenFFLoadSC, Load, {Addr},
+                            /*Consecutive*/ true, /*Reverse*/ false, Metadata,
+                            DL),
+        VPValue(this, &Load) {
+    setMask(Mask);
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPWidenFFLoadSC);
+
+  void execute(VPTransformState &State) override {
+    llvm_unreachable("cannot execute this recipe, should be replaced by "
+                     "VPWidenFFLoadEVLRecipe");
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return Op == getAddr();
+  }
+};
+
+struct VPWidenFFLoadEVLRecipe final : public VPWidenMemoryRecipe,
+                                      public VPValue {
+  VPWidenFFLoadEVLRecipe(VPWidenFFLoadRecipe &L, VPValue &EVL, VPValue *Mask)
+      : VPWidenMemoryRecipe(VPDef::VPWidenFFLoadEVLSC, L.getIngredient(),
+                            {L.getAddr(), &EVL}, true, false, L,
+                            L.getDebugLoc()),
+        VPValue(this, &getIngredient()) {
+    new VPValue(nullptr, this); // newVL
+    setMask(Mask);
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPWidenFFLoadEVLSC);
+
+  /// Return the EVL operand.
+  VPValue *getEVL() const { return getOperand(1); }
+
+  /// Generate a wide load or gather.
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    // Widened, consecutive loads operations only demand the first lane of
+    // their address.
+    return Op == getEVL() || Op == getAddr();
   }
 };
 

@@ -2047,6 +2047,16 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   // Replace the original terminator with BranchOnCond. We have to invert the
   // mask here because a true condition means jumping to the exit block.
   auto *NotMask = Builder.createNot(ALM, DL);
+  using namespace VPlanPatternMatch;
+  if (VPValue *IsEarlyExitTaken = nullptr; match(
+          OriginalTerminator, m_BranchOnCond(m_BinaryOr(
+                                  m_VPValue(IsEarlyExitTaken), m_VPValue())))) {
+    auto *AnyExitTaken =
+        Builder.createNaryOp(Instruction::Or, {IsEarlyExitTaken, NotMask});
+    OriginalTerminator->setOperand(0, AnyExitTaken);
+    return LaneMaskPhi;
+  }
+
   Builder.createNaryOp(VPInstruction::BranchOnCond, {NotMask}, DL);
   OriginalTerminator->eraseFromParent();
   return LaneMaskPhi;
@@ -2139,8 +2149,7 @@ void VPlanTransforms::addActiveLaneMask(
 /// \p AllOneMask  The vector mask parameter of vector-predication intrinsics.
 /// \p EVL         The explicit vector length parameter of vector-predication
 /// intrinsics.
-static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
-                                       VPRecipeBase &CurRecipe,
+static VPRecipeBase *optimizeMaskToEVL(VPlan &Plan, VPRecipeBase &CurRecipe,
                                        VPTypeAnalysis &TypeInfo,
                                        VPValue &AllOneMask, VPValue &EVL) {
   using namespace llvm::VPlanPatternMatch;
@@ -2148,15 +2157,23 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     assert(OrigMask && "Unmasked recipe when folding tail");
     // HeaderMask will be handled using EVL.
     VPValue *Mask;
-    if (match(OrigMask, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(Mask))))
+    VPValue *HeaderMask;
+    if (match(OrigMask, m_LogicalAnd(m_VPValue(HeaderMask), m_VPValue(Mask))) &&
+        vputils::isHeaderMask(HeaderMask, Plan))
       return Mask;
-    return HeaderMask == OrigMask ? nullptr : OrigMask;
+    if (vputils::isHeaderMask(OrigMask, Plan))
+      return nullptr;
+    return OrigMask;
   };
 
   return TypeSwitch<VPRecipeBase *, VPRecipeBase *>(&CurRecipe)
       .Case<VPWidenLoadRecipe>([&](VPWidenLoadRecipe *L) {
         VPValue *NewMask = GetNewMask(L->getMask());
         return new VPWidenLoadEVLRecipe(*L, EVL, NewMask);
+      })
+      .Case<VPWidenFFLoadRecipe>([&](VPWidenFFLoadRecipe *L) {
+        VPValue *NewMask = GetNewMask(L->getMask());
+        return new VPWidenFFLoadEVLRecipe(*L, EVL, NewMask);
       })
       .Case<VPWidenStoreRecipe>([&](VPWidenStoreRecipe *S) {
         VPValue *NewMask = GetNewMask(S->getMask());
@@ -2172,8 +2189,10 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
         //   select(header_mask, LHS, RHS)
         // into vector predication merge.
         //   vp.merge(all-true, LHS, RHS, EVL)
-        if (!match(VPI, m_Select(m_Specific(HeaderMask), m_VPValue(LHS),
-                                 m_VPValue(RHS))))
+        VPValue *HeaderMask;
+        if (!match(VPI, m_Select(m_VPValue(HeaderMask), m_VPValue(LHS),
+                                 m_VPValue(RHS))) ||
+            !vputils::isHeaderMask(HeaderMask, Plan))
           return nullptr;
         // Use all true as the condition because this transformation is
         // limited to selects whose condition is a header mask.
@@ -2185,7 +2204,7 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
 }
 
 /// Replace recipes with their EVL variants.
-static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
+static VPValue *transformRecipestoEVLRecipes(VPlan &Plan) {
   Type *CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
   VPTypeAnalysis TypeInfo(CanonicalIVType);
   LLVMContext &Ctx = CanonicalIVType->getContext();
@@ -2197,7 +2216,6 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                 IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
                         VPWidenIntOrFpInductionRecipe>) &&
          "User of VF that we can't transform to EVL.");
-  Plan.getVF().replaceAllUsesWith(&EVL);
 
   // Defer erasing recipes till the end so that we don't invalidate the
   // VPTypeAnalysis cache.
@@ -2205,6 +2223,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 
   // Create a scalar phi to track the previous EVL if fixed-order recurrence is
   // contained.
+  VPInstruction *PrevEVL = nullptr;
   bool ContainsFORs =
       any_of(Header->phis(), IsaPred<VPFirstOrderRecurrencePHIRecipe>);
   if (ContainsFORs) {
@@ -2217,79 +2236,97 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                                              DebugLoc());
 
     Builder.setInsertPoint(Header, Header->getFirstNonPhi());
-    VPValue *PrevEVL =
-        Builder.createScalarPhi({MaxEVL, &EVL}, DebugLoc(), "prev.evl");
+    PrevEVL = Builder.createScalarPhi({MaxEVL}, DebugLoc(), "prev.evl");
+  }
 
-    for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-             vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
-      for (VPRecipeBase &R : *VPBB) {
-        using namespace VPlanPatternMatch;
-        VPValue *V1, *V2;
-        if (!match(&R,
-                   m_VPInstruction<VPInstruction::FirstOrderRecurrenceSplice>(
-                       m_VPValue(V1), m_VPValue(V2))))
-          continue;
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getEntry());
+  VPValue *LastEVL = nullptr;
+  VPValue *VF = &Plan.getVF();
+
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    for (VPRecipeBase &CurRecipe : *VPBB) {
+      auto *VPI = dyn_cast<VPInstruction>(&CurRecipe);
+      if (VPI && (VPI->getOpcode() == VPInstruction::ExplicitVectorLength)) {
+        assert((LastEVL == nullptr) && "EVL should be set only once");
+        LastEVL = VPI;
+        continue;
+      }
+      if (!LastEVL)
+        continue;
+      if (isa<VPVectorEndPointerRecipe>(&CurRecipe)) {
+        if (CurRecipe.getOperand(1) == VF)
+          CurRecipe.setOperand(1, LastEVL);
+        continue;
+      }
+      if (isa<VPScalarIVStepsRecipe>(&CurRecipe)) {
+        if (CurRecipe.getOperand(2) == VF)
+          CurRecipe.setOperand(2, LastEVL);
+        continue;
+      }
+      VPValue *V1, *V2;
+      using namespace VPlanPatternMatch;
+      if (match(&CurRecipe,
+                m_VPInstruction<VPInstruction::FirstOrderRecurrenceSplice>(
+                    m_VPValue(V1), m_VPValue(V2)))) {
         VPValue *Imm = Plan.getOrAddLiveIn(
             ConstantInt::getSigned(Type::getInt32Ty(Ctx), -1));
         VPWidenIntrinsicRecipe *VPSplice = new VPWidenIntrinsicRecipe(
             Intrinsic::experimental_vp_splice,
-            {V1, V2, Imm, AllOneMask, PrevEVL, &EVL},
-            TypeInfo.inferScalarType(R.getVPSingleValue()), R.getDebugLoc());
-        VPSplice->insertBefore(&R);
-        R.getVPSingleValue()->replaceAllUsesWith(VPSplice);
-        ToErase.push_back(&R);
+            {V1, V2, Imm, AllOneMask, PrevEVL, LastEVL},
+            TypeInfo.inferScalarType(CurRecipe.getVPSingleValue()),
+            CurRecipe.getDebugLoc());
+        VPSplice->insertBefore(&CurRecipe);
+        CurRecipe.getVPSingleValue()->replaceAllUsesWith(VPSplice);
+        ToErase.push_back(&CurRecipe);
+        continue;
       }
-    }
-  }
-
-  // Try to optimize header mask recipes away to their EVL variants.
-  for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
-    // TODO: Split optimizeMaskToEVL out and move into
-    // VPlanTransforms::optimize. transformRecipestoEVLRecipes should be run in
-    // tryToBuildVPlanWithVPRecipes beforehand.
-    for (VPUser *U : collectUsersRecursively(HeaderMask)) {
-      auto *CurRecipe = cast<VPRecipeBase>(U);
+      // TODO: Split optimizeMaskToEVL out and move into
+      // VPlanTransforms::optimize. transformRecipestoEVLRecipes should be run in
+      // tryToBuildVPlanWithVPRecipes beforehand.
       VPRecipeBase *EVLRecipe =
-          optimizeMaskToEVL(HeaderMask, *CurRecipe, TypeInfo, *AllOneMask, EVL);
+          optimizeMaskToEVL(Plan, CurRecipe, TypeInfo, *AllOneMask, *LastEVL);
       if (!EVLRecipe)
         continue;
 
       [[maybe_unused]] unsigned NumDefVal = EVLRecipe->getNumDefinedValues();
-      assert(NumDefVal == CurRecipe->getNumDefinedValues() &&
-             "New recipe must define the same number of values as the "
-             "original.");
-      assert(
-          NumDefVal <= 1 &&
-          "Only supports recipes with a single definition or without users.");
-      EVLRecipe->insertBefore(CurRecipe);
+      // Check if the recipe updates EVL
+      if (isa<VPWidenFFLoadEVLRecipe>(EVLRecipe)) {
+        VPValue *CurVPV = CurRecipe.getVPSingleValue();
+        CurVPV->replaceAllUsesWith(EVLRecipe->getVPValue(0));
+        LastEVL = EVLRecipe->getVPValue(1);
+      } else {
+        assert(NumDefVal == CurRecipe.getNumDefinedValues() &&
+               "New recipe must define the same number of values as the "
+               "original.");
+        assert(
+            NumDefVal <= 1 &&
+            "Only supports recipes with a single definition or without users.");
+      }
+      EVLRecipe->insertBefore(&CurRecipe);
       if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe>(EVLRecipe)) {
-        VPValue *CurVPV = CurRecipe->getVPSingleValue();
+        VPValue *CurVPV = CurRecipe.getVPSingleValue();
         CurVPV->replaceAllUsesWith(EVLRecipe->getVPSingleValue());
       }
-      ToErase.push_back(CurRecipe);
+      ToErase.push_back(&CurRecipe);
     }
-
-    // Replace header masks with a mask equivalent to predicating by EVL:
-    //
-    // icmp ule widen-canonical-iv backedge-taken-count
-    // ->
-    // icmp ult step-vector, EVL
-    VPRecipeBase *EVLR = EVL.getDefiningRecipe();
-    VPBuilder Builder(EVLR->getParent(), std::next(EVLR->getIterator()));
-    Type *EVLType = TypeInfo.inferScalarType(&EVL);
-    VPValue *EVLMask = Builder.createICmp(
-        CmpInst::ICMP_ULT,
-        Builder.createNaryOp(VPInstruction::StepVector, {}, EVLType), &EVL);
-    HeaderMask->replaceAllUsesWith(EVLMask);
-    ToErase.push_back(HeaderMask->getDefiningRecipe());
   }
-
+  for (VPRecipeBase &CurRecipe : Header->phis()) {
+    if (isa<VPWidenIntOrFpInductionRecipe>(&CurRecipe)) {
+      if (CurRecipe.getOperand(2) == VF)
+        CurRecipe.setOperand(2, LastEVL);
+      continue;
+    }
+  }
+  if (PrevEVL)
+    PrevEVL->addOperand(LastEVL);
   for (VPRecipeBase *R : reverse(ToErase)) {
     SmallVector<VPValue *> PossiblyDead(R->operands());
     R->eraseFromParent();
     for (VPValue *Op : PossiblyDead)
       recursivelyDeleteDeadRecipes(Op);
   }
+  return LastEVL;
 }
 
 /// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
@@ -2360,13 +2397,13 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
     VPValue *Cmp = Builder.createICmp(ICmpInst::ICMP_ULT, AVL, AVLSafe);
     AVL = Builder.createSelect(Cmp, AVL, AVLSafe, DebugLoc(), "safe_avl");
   }
-  auto *VPEVL = Builder.createNaryOp(VPInstruction::ExplicitVectorLength, AVL,
-                                     DebugLoc());
+  Builder.createNaryOp(VPInstruction::ExplicitVectorLength, AVL, DebugLoc());
+
+  VPValue *OpVPEVL = transformRecipestoEVLRecipes(Plan);
 
   auto *CanonicalIVIncrement =
       cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
   Builder.setInsertPoint(CanonicalIVIncrement);
-  VPValue *OpVPEVL = VPEVL;
 
   auto *I32Ty = Type::getInt32Ty(CanIVTy->getContext());
   OpVPEVL = Builder.createScalarZExtOrTrunc(
@@ -2378,8 +2415,6 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
        CanonicalIVIncrement->hasNoSignedWrap()},
       CanonicalIVIncrement->getDebugLoc(), "index.evl.next");
   EVLPhi->addOperand(NextEVLIV);
-
-  transformRecipestoEVLRecipes(Plan, *VPEVL);
 
   // Replace all uses of VPCanonicalIVPHIRecipe by
   // VPEVLBasedIVPHIRecipe except for the canonical IV increment.
@@ -2442,6 +2477,21 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
   // Skip single-iteration loop region
   if (match(LatchExitingBr, m_BranchOnCond(m_True())))
     return;
+
+  // Replace VectorTripCount used in loop with early-exits
+  if (VPValue *VPMainExitCond = nullptr;
+      match(LatchExitingBr, m_BranchOnCond(m_BinaryOr(
+                                m_VPValue(), m_VPValue(VPMainExitCond)))) &&
+      match(VPMainExitCond, m_VPInstruction<Instruction::ICmp>(
+                                m_Specific(EVLIncrement),
+                                m_Specific(&Plan.getVectorTripCount())))) {
+    // Expected pattern here is:
+    //   EMIT vp<%main.exit.cond> = icmp eq vp<%evl.next>, vp<%vtc>
+    //   EMIT vp<%exit.cond> = or vp<%alt.exit.cond>, vp<%main.exit.cond>
+    //   EMIT branch-on-cond vp<%exit.cond>
+    VPMainExitCond->getDefiningRecipe()->setOperand(1, Plan.getTripCount());
+    return;
+  }
   assert(LatchExitingBr &&
          match(LatchExitingBr,
                m_BranchOnCount(m_VPValue(EVLIncrement),

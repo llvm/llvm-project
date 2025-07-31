@@ -1857,6 +1857,9 @@ public:
   /// \returns True if the target supports scalable vectors.
   LLVM_ABI bool supportsScalableVectors() const;
 
+  /// \returns True if the target supports speculative loads.
+  LLVM_ABI bool supportsSpeculativeLoads() const;
+
   /// \return true when scalable vectorization is preferred.
   LLVM_ABI bool enableScalableVectorization() const;
 
