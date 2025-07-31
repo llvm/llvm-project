@@ -46,7 +46,7 @@ STRING_EXTENSION_OUTSIDE(SBThread)
             return frames
 
         def get_stop_description(self):
-            return self.GetStopReasonDescription(1024)
+            return self.GetStopDescription(1024)
 
         def get_stop_reason_data(self):
             return [
