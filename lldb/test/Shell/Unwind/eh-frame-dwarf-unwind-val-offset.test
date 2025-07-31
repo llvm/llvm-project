@@ -29,7 +29,7 @@ continue
 thread backtrace
 # CHECK: frame #0: {{.*}}`bar
 # CHECK: frame #1: {{.*}}`foo + 12
-# CHECK: frame #2: {{.*}}`asm_main + 25
+# CHECK: frame #2: {{.*}}`asm_main + 29
 
 target modules show-unwind -n bar
 # CHECK: eh_frame UnwindPlan:
@@ -37,14 +37,14 @@ target modules show-unwind -n bar
 
 target modules show-unwind -n foo
 # CHECK: eh_frame UnwindPlan:
-# CHECK: row[0]: 0: CFA=rsp +8 => r12=CFA+0 rip=DW_OP_lit8, DW_OP_minus, DW_OP_deref, DW_OP_const1u 0x47, DW_OP_minus
+# CHECK: row[0]: 0: CFA=rsp +8 => r12=CFA+32 rip=DW_OP_lit8, DW_OP_minus, DW_OP_deref, DW_OP_const1u 0x47, DW_OP_minus
 
 target modules show-unwind -n asm_main
 # CHECK: eh_frame UnwindPlan:
 # CHECK: row[0]:  0: CFA=rsp +8 => rip=[CFA-8]
 # CHECK: row[1]:  1: CFA=rsp+16 => rbp=[CFA-16] rip=[CFA-8]
-# CHECK: row[2]:  7: CFA=rbp+16 => rbp=[CFA-16] rip=[CFA-8]
-# CHECK: row[3]: 26: CFA=rsp +8 => rbp=[CFA-16] rip=[CFA-8]
+# CHECK: row[2]: 11: CFA=rbp+16 => rbp=[CFA-16] rip=[CFA-8]
+# CHECK: row[3]: 30: CFA=rsp +8 => rbp=[CFA-16] rip=[CFA-8]
 
 print/x $r12
 # CHECK: (unsigned long) 0x0000000000000456
@@ -55,4 +55,4 @@ print/x $r12
 
 frame select 2
 print/x $r12
-# CHECK: (unsigned long) 0x[[#R12]]
+# CHECK: (unsigned long) 0x[[#R12 + 32]]

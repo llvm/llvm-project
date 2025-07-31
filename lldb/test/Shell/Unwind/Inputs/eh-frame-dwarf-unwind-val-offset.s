@@ -11,7 +11,7 @@ foo:
         .cfi_startproc
         .cfi_escape 0x16, 0x10, 0x06, 0x38, 0x1c, 0x06, 0x08, 0x47, 0x1c
         # Clobber r12 and record that it's reconstructable from CFA
-        .cfi_val_offset %r12, 0
+        .cfi_val_offset %r12, 32
         movq    $0x456, %r12
         call    bar
         addl    $1, %eax
@@ -31,6 +31,7 @@ asm_main:
         .cfi_offset %rbp, -16
         movq    %rsp, %rbp
         movq    %rsp, %r12
+        addq    $32, %r12
         .cfi_def_cfa_register %rbp
         movl    $47, %edi
 
