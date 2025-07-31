@@ -1810,7 +1810,7 @@ bool AArch64InstructionSelector::selectCompareBranchFedByICmp(
 
   // Couldn't optimize. Emit a compare + a Bcc.
   MachineBasicBlock *DestMBB = I.getOperand(1).getMBB();
-  auto PredOp = ICmp.getOperand(1);
+  auto &PredOp = ICmp.getOperand(1);
   emitIntegerCompare(ICmp.getOperand(2), ICmp.getOperand(3), PredOp, MIB);
   const AArch64CC::CondCode CC = changeICMPPredToAArch64CC(
       static_cast<CmpInst::Predicate>(PredOp.getPredicate()));
@@ -2506,12 +2506,12 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
         return false;
     }
     auto &PredOp = Cmp->getOperand(1);
-    auto Pred = static_cast<CmpInst::Predicate>(PredOp.getPredicate());
-    const AArch64CC::CondCode InvCC =
-        changeICMPPredToAArch64CC(CmpInst::getInversePredicate(Pred));
     MIB.setInstrAndDebugLoc(I);
     emitIntegerCompare(/*LHS=*/Cmp->getOperand(2),
                        /*RHS=*/Cmp->getOperand(3), PredOp, MIB);
+    auto Pred = static_cast<CmpInst::Predicate>(PredOp.getPredicate());
+    const AArch64CC::CondCode InvCC =
+        changeICMPPredToAArch64CC(CmpInst::getInversePredicate(Pred));
     emitCSINC(/*Dst=*/AddDst, /*Src =*/AddLHS, /*Src2=*/AddLHS, InvCC, MIB);
     I.eraseFromParent();
     return true;
@@ -3574,10 +3574,11 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       return false;
     }
 
-    auto Pred = static_cast<CmpInst::Predicate>(I.getOperand(1).getPredicate());
+    auto &PredOp = I.getOperand(1);
+    emitIntegerCompare(I.getOperand(2), I.getOperand(3), PredOp, MIB);
+    auto Pred = static_cast<CmpInst::Predicate>(PredOp.getPredicate());
     const AArch64CC::CondCode InvCC =
         changeICMPPredToAArch64CC(CmpInst::getInversePredicate(Pred));
-    emitIntegerCompare(I.getOperand(2), I.getOperand(3), I.getOperand(1), MIB);
     emitCSINC(/*Dst=*/I.getOperand(0).getReg(), /*Src1=*/AArch64::WZR,
               /*Src2=*/AArch64::WZR, InvCC, MIB);
     I.eraseFromParent();
@@ -5096,11 +5097,11 @@ bool AArch64InstructionSelector::tryOptSelect(GSelect &I) {
 
   AArch64CC::CondCode CondCode;
   if (CondOpc == TargetOpcode::G_ICMP) {
-    auto Pred =
-        static_cast<CmpInst::Predicate>(CondDef->getOperand(1).getPredicate());
+    auto &PredOp = CondDef->getOperand(1);
+    emitIntegerCompare(CondDef->getOperand(2), CondDef->getOperand(3), PredOp,
+                       MIB);
+    auto Pred = static_cast<CmpInst::Predicate>(PredOp.getPredicate());
     CondCode = changeICMPPredToAArch64CC(Pred);
-    emitIntegerCompare(CondDef->getOperand(2), CondDef->getOperand(3),
-                       CondDef->getOperand(1), MIB);
   } else {
     // Get the condition code for the select.
     auto Pred =
@@ -5148,19 +5149,7 @@ MachineInstr *AArch64InstructionSelector::tryFoldIntegerCompare(
   MachineInstr *LHSDef = getDefIgnoringCopies(LHS.getReg(), MRI);
   MachineInstr *RHSDef = getDefIgnoringCopies(RHS.getReg(), MRI);
   auto P = static_cast<CmpInst::Predicate>(Predicate.getPredicate());
-  // Given this:
-  //
-  // x = G_SUB 0, y
-  // G_ICMP x, z
-  //
-  // Produce this:
-  //
-  // cmn y, z
-  if (isCMN(LHSDef, P, MRI))
-    return emitCMN(LHSDef->getOperand(2), RHS, MIRBuilder);
 
-  // Same idea here, but with the RHS of the compare instead:
-  //
   // Given this:
   //
   // x = G_SUB 0, y
@@ -5171,6 +5160,26 @@ MachineInstr *AArch64InstructionSelector::tryFoldIntegerCompare(
   // cmn z, y
   if (isCMN(RHSDef, P, MRI))
     return emitCMN(LHS, RHSDef->getOperand(2), MIRBuilder);
+
+  // Same idea here, but with the LHS of the compare instead:
+  //
+  // Given this:
+  //
+  // x = G_SUB 0, y
+  // G_ICMP x, z
+  //
+  // Produce this:
+  //
+  // cmn y, z
+  //
+  // But be careful! We need to swap the predicate!
+  if (isCMN(LHSDef, P, MRI)) {
+    if (!CmpInst::isEquality(P)) {
+      P = CmpInst::getSwappedPredicate(P);
+      Predicate = MachineOperand::CreatePredicate(P);
+    }
+    return emitCMN(LHSDef->getOperand(2), RHS, MIRBuilder);
+  }
 
   // Given this:
   //
