@@ -2679,11 +2679,9 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       case Intrinsic::nvvm_round_ftz_f:
       case Intrinsic::nvvm_round_f:
       case Intrinsic::nvvm_round_d: {
-        // Use APFloat implementation instead of native libm call, as some
-        // implementations (e.g. on PPC) do not preserve the sign of negative 0.
         bool IsFTZ = nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID);
         auto V = IsFTZ ? FTZPreserveSign(APF) : APF;
-        V.roundToIntegral(APFloat::rmNearestTiesToAway);
+        V.roundToIntegral(APFloat::rmNearestTiesToEven);
         return ConstantFP::get(Ty->getContext(), V);
       }
 
