@@ -2115,6 +2115,20 @@ The AMDGPU backend supports the following calling conventions:
                                      ..TODO::
                                      Describe.
 
+     ``amdgpu_gfx_whole_wave``       Used for AMD graphics targets. Functions with this calling convention
+                                     cannot be used as entry points. They must have an i1 as the first argument,
+                                     which will be mapped to the value of EXEC on entry into the function. Other
+                                     arguments will contain poison in their inactive lanes. Similarly, the return
+                                     value for the inactive lanes is poison.
+
+                                     The function will run with all lanes enabled, i.e. EXEC will be set to -1 in the
+                                     prologue and restored to its original value in the epilogue. The inactive lanes
+                                     will be preserved for all the registers used by the function. Active lanes only
+                                     will only be preserved for the callee saved registers.
+
+                                     In all other respects, functions with this calling convention behave like
+                                     ``amdgpu_gfx`` functions.
+
      ``amdgpu_gs``                   Used for Mesa/AMDPAL geometry shaders.
                                      ..TODO::
                                      Describe.
@@ -18985,7 +18999,7 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                   GFX942)
      ``.amdhsa_user_sgpr_private_segment_size``               0                   GFX6-GFX12   Controls ENABLE_SGPR_PRIVATE_SEGMENT_SIZE in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
-     ``.amdhsa_user_sgpr_private_segment_size``               0                   GFX1250+     Controls USES_CU_STORES in
+     ``.amdhsa_uses_cu_stores``                               0                   GFX1250+     Controls USES_CU_STORES in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_wavefront_size32``                             Target              GFX10-GFX12  Controls ENABLE_WAVEFRONT_SIZE32 in
                                                               Feature                          :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.

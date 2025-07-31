@@ -396,6 +396,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.wcstoul
     libc.src.wchar.wcstoull
 
+    # wctype.h entrypoints
+    libc.src.wctype.iswalpha
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev

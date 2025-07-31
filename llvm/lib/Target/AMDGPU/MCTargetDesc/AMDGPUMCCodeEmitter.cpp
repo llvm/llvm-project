@@ -416,9 +416,9 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
   if (((Desc.TSFlags & SIInstrFlags::VOP3P) ||
        Opcode == AMDGPU::V_ACCVGPR_READ_B32_vi ||
        Opcode == AMDGPU::V_ACCVGPR_WRITE_B32_vi) &&
-#if LLPC_BUILD_NPI
       // Matrix B format operand reuses op_sel_hi.
       !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_fmt) &&
+#if LLPC_BUILD_NPI
       // Matrix B scale operand reuses op_sel_hi.
       !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_scale) &&
 #endif /* LLPC_BUILD_NPI */
@@ -610,12 +610,8 @@ static bool needsPCRel(const MCExpr *Expr) {
   case MCExpr::SymbolRef: {
     auto *SE = cast<MCSymbolRefExpr>(Expr);
     auto Spec = AMDGPU::getSpecifier(SE);
-#if LLPC_BUILD_NPI
     return Spec != AMDGPUMCExpr::S_ABS32_LO &&
            Spec != AMDGPUMCExpr::S_ABS32_HI && Spec != AMDGPUMCExpr::S_ABS64;
-#else /* LLPC_BUILD_NPI */
-    return Spec != AMDGPUMCExpr::S_ABS32_LO && Spec != AMDGPUMCExpr::S_ABS32_HI;
-#endif /* LLPC_BUILD_NPI */
   }
   case MCExpr::Binary: {
     auto *BE = cast<MCBinaryExpr>(Expr);
@@ -762,16 +758,12 @@ void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
     const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
     uint32_t Offset = Desc.getSize();
     assert(Offset == 4 || Offset == 8);
-#if LLPC_BUILD_NPI
     auto OpType = Desc.operands()[OpNo].OperandType;
     MCFixupKind Kind = (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
                         OpType == AMDGPU::OPERAND_REG_IMM_INT64)
                            ? FK_Data_8
                            : FK_Data_4;
     addFixup(Fixups, Offset, MO.getExpr(), Kind, PCRel);
-#else /* LLPC_BUILD_NPI */
-    addFixup(Fixups, Offset, MO.getExpr(), FK_Data_4, PCRel);
-#endif /* LLPC_BUILD_NPI */
   }
 
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());

@@ -322,13 +322,15 @@ def CPolBit {
   int SLC = 1;
   int DLC = 2;
   int SCC = 4;
-#ifdef LLPC_BUILD_NPI
   int NV = 5;
+#ifdef LLPC_BUILD_NPI
   int SCAL = 9;
 }
 
 class VOPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVOPDst"> {
   let DecoderMethod = "Decode" # !subst("_STAGING", "", !cast<string>(rc)) # "RegisterClass";
+#else /* LLPC_BUILD_NPI */
+  int SCAL = 11;
 #endif /* LLPC_BUILD_NPI */
 }
 

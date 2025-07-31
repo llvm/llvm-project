@@ -1048,11 +1048,9 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::IsMAI)
     convertMAIInst(MI);
 
-#if LLPC_BUILD_NPI
   if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::IsWMMA)
     convertWMMAInst(MI);
 
-#endif /* LLPC_BUILD_NPI */
   int VDstIn_Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                               AMDGPU::OpName::vdst_in);
   if (VDstIn_Idx != -1) {
@@ -1168,7 +1166,6 @@ static void adjustMFMA_F8F6F4OpRegClass(const MCRegisterInfo &MRI,
     return MO.setReg(
         MRI.getSubReg(MO.getReg(), AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5));
   case 8:
-#if LLPC_BUILD_NPI
     if (MCRegister NewReg = MRI.getSubReg(
             MO.getReg(), AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7)) {
       MO.setReg(NewReg);
@@ -1182,15 +1179,10 @@ static void adjustMFMA_F8F6F4OpRegClass(const MCRegisterInfo &MRI,
     return MO.setReg(NewReg);
   }
   case 16:
-#endif /* LLPC_BUILD_NPI */
     // No-op in cases where one operand is still f8/bf8.
     return;
   default:
-#if LLPC_BUILD_NPI
     llvm_unreachable("Unexpected size for mfma/wmma f8f6f4 operand");
-#else /* LLPC_BUILD_NPI */
-    llvm_unreachable("Unexpected size for mfma f8f6f4 operand");
-#endif /* LLPC_BUILD_NPI */
   }
 }
 
@@ -1228,7 +1220,6 @@ void AMDGPUDisassembler::convertMAIInst(MCInst &MI) const {
                               AdjustedRegClassOpcode->NumRegsSrcB);
 }
 
-#if LLPC_BUILD_NPI
 void AMDGPUDisassembler::convertWMMAInst(MCInst &MI) const {
   int FmtAIdx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::matrix_a_fmt);
@@ -1258,7 +1249,6 @@ void AMDGPUDisassembler::convertWMMAInst(MCInst &MI) const {
                               AdjustedRegClassOpcode->NumRegsSrcB);
 }
 
-#endif /* LLPC_BUILD_NPI */
 struct VOPModifiers {
   unsigned OpSel = 0;
   unsigned OpSelHi = 0;

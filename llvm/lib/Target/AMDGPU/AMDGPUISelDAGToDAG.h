@@ -169,18 +169,24 @@ private:
                          SDValue &VOffset, SDValue &Offset, bool &ScaleOffset,
                          bool NeedIOffset = true,
                          bool NeedScaleOffset = true) const;
+#else /* LLPC_BUILD_NPI */
+                         SDValue &VOffset, SDValue &Offset) const;
+#endif /* LLPC_BUILD_NPI */
   bool SelectGlobalSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
                          SDValue &VOffset, SDValue &Offset,
                          SDValue &CPol) const;
+#if LLPC_BUILD_NPI
   bool SelectGlobalSAddrCPol(SDNode *N, SDValue Addr, SDValue &SAddr,
                              SDValue &VOffset, SDValue &Offset,
                              SDValue &CPol) const;
   bool SelectGlobalSAddrCPolM0(SDNode *N, SDValue Addr, SDValue &SAddr,
                                SDValue &VOffset, SDValue &Offset,
                                SDValue &CPol) const;
+#endif /* LLPC_BUILD_NPI */
   bool SelectGlobalSAddrGLC(SDNode *N, SDValue Addr, SDValue &SAddr,
                             SDValue &VOffset, SDValue &Offset,
                             SDValue &CPol) const;
+#if LLPC_BUILD_NPI
   bool SelectGlobalSAddrNoIOffset(SDNode *N, SDValue Addr, SDValue &SAddr,
                                   SDValue &VOffset, SDValue &CPol) const;
   bool SelectGlobalSAddrNoIOffsetM0(SDNode *N, SDValue Addr, SDValue &SAddr,
@@ -190,8 +196,6 @@ private:
                                       SDValue &CPol) const;
   bool SelectGlobalSAddrNoIOffsetScaleOffset(SDNode *N, SDValue Addr, SDValue &SAddr,
                                   SDValue &VOffset, SDValue &CPol) const;
-#else /* LLPC_BUILD_NPI */
-                         SDValue &VOffset, SDValue &Offset) const;
 #endif /* LLPC_BUILD_NPI */
   bool SelectScratchSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
                           SDValue &Offset) const;
@@ -286,10 +290,8 @@ private:
   bool SelectVOP3PModsDOT(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
   bool SelectVOP3PModsNeg(SDValue In, SDValue &Src) const;
-#if LLPC_BUILD_NPI
   bool SelectVOP3PModsNegs(SDValue In, SDValue &Src) const;
   bool SelectVOP3PModsNegAbs(SDValue In, SDValue &Src) const;
-#endif /* LLPC_BUILD_NPI */
   bool SelectWMMAOpSelVOP3PMods(SDValue In, SDValue &Src) const;
 
   bool SelectWMMAModsF32NegAbs(SDValue In, SDValue &Src,
@@ -301,9 +303,7 @@ private:
 
   bool SelectSWMMACIndex8(SDValue In, SDValue &Src, SDValue &IndexKey) const;
   bool SelectSWMMACIndex16(SDValue In, SDValue &Src, SDValue &IndexKey) const;
-#if LLPC_BUILD_NPI
   bool SelectSWMMACIndex32(SDValue In, SDValue &Src, SDValue &IndexKey) const;
-#endif /* LLPC_BUILD_NPI */
 
   bool SelectVOP3OpSel(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 

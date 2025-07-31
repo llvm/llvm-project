@@ -274,6 +274,10 @@ TYPE_PARSER( //
     construct<OmpTypeSpecifier>(Parser<DeclarationTypeSpec>{}) ||
     construct<OmpTypeSpecifier>(Parser<TypeSpec>{}))
 
+// 2.15.3.6 REDUCTION (reduction-identifier: variable-name-list)
+TYPE_PARSER(construct<OmpReductionIdentifier>(Parser<DefinedOperator>{}) ||
+    construct<OmpReductionIdentifier>(Parser<ProcedureDesignator>{}))
+
 TYPE_PARSER(construct<OmpReductionSpecifier>( //
     Parser<OmpReductionIdentifier>{},
     ":"_tok >> nonemptyList(Parser<OmpTypeSpecifier>{}),
@@ -442,8 +446,17 @@ TYPE_PARSER(construct<OmpAllocatorComplexModifier>(
 
 TYPE_PARSER(construct<OmpAllocatorSimpleModifier>(scalarIntExpr))
 
+TYPE_PARSER(construct<OmpAlwaysModifier>( //
+    "ALWAYS" >> pure(OmpAlwaysModifier::Value::Always)))
+
 TYPE_PARSER(construct<OmpChunkModifier>( //
     "SIMD" >> pure(OmpChunkModifier::Value::Simd)))
+
+TYPE_PARSER(construct<OmpCloseModifier>( //
+    "CLOSE" >> pure(OmpCloseModifier::Value::Close)))
+
+TYPE_PARSER(construct<OmpDeleteModifier>( //
+    "DELETE" >> pure(OmpDeleteModifier::Value::Delete)))
 
 TYPE_PARSER(construct<OmpDependenceType>(
     "SINK" >> pure(OmpDependenceType::Value::Sink) ||
@@ -502,25 +515,15 @@ TYPE_PARSER(construct<OmpLinearModifier>( //
 TYPE_PARSER(construct<OmpMapper>( //
     "MAPPER"_tok >> parenthesized(Parser<ObjectName>{})))
 
-// map-type -> ALLOC | DELETE | FROM | RELEASE | TO | TOFROM
+// map-type -> ALLOC | DELETE | FROM | RELEASE | STORAGE | TO | TOFROM
 TYPE_PARSER(construct<OmpMapType>( //
     "ALLOC" >> pure(OmpMapType::Value::Alloc) ||
-    "DELETE" >> pure(OmpMapType::Value::Delete) ||
+    // Parse "DELETE" as OmpDeleteModifier
     "FROM" >> pure(OmpMapType::Value::From) ||
     "RELEASE" >> pure(OmpMapType::Value::Release) ||
+    "STORAGE" >> pure(OmpMapType::Value::Storage) ||
     "TO"_id >> pure(OmpMapType::Value::To) ||
     "TOFROM" >> pure(OmpMapType::Value::Tofrom)))
-
-// map-type-modifier -> ALWAYS | CLOSE | OMPX_HOLD | PRESENT
-TYPE_PARSER(construct<OmpMapTypeModifier>(
-    "ALWAYS" >> pure(OmpMapTypeModifier::Value::Always) ||
-    "CLOSE" >> pure(OmpMapTypeModifier::Value::Close) ||
-    "OMPX_HOLD" >> pure(OmpMapTypeModifier::Value::Ompx_Hold) ||
-    "PRESENT" >> pure(OmpMapTypeModifier::Value::Present)))
-
-// 2.15.3.6 REDUCTION (reduction-identifier: variable-name-list)
-TYPE_PARSER(construct<OmpReductionIdentifier>(Parser<DefinedOperator>{}) ||
-    construct<OmpReductionIdentifier>(Parser<ProcedureDesignator>{}))
 
 TYPE_PARSER(construct<OmpOrderModifier>(
     "REPRODUCIBLE" >> pure(OmpOrderModifier::Value::Reproducible) ||
@@ -534,10 +537,21 @@ TYPE_PARSER(construct<OmpOrderingModifier>(
 TYPE_PARSER(construct<OmpPrescriptiveness>(
     "STRICT" >> pure(OmpPrescriptiveness::Value::Strict)))
 
+TYPE_PARSER(construct<OmpPresentModifier>( //
+    "PRESENT" >> pure(OmpPresentModifier::Value::Present)))
+
 TYPE_PARSER(construct<OmpReductionModifier>(
     "INSCAN" >> pure(OmpReductionModifier::Value::Inscan) ||
     "TASK" >> pure(OmpReductionModifier::Value::Task) ||
     "DEFAULT" >> pure(OmpReductionModifier::Value::Default)))
+
+TYPE_PARSER(construct<OmpRefModifier>( //
+    "REF_PTEE" >> pure(OmpRefModifier::Value::Ref_Ptee) ||
+    "REF_PTR"_id >> pure(OmpRefModifier::Value::Ref_Ptr) ||
+    "REF_PTR_PTEE" >> pure(OmpRefModifier::Value::Ref_Ptr_Ptee)))
+
+TYPE_PARSER(construct<OmpSelfModifier>( //
+    "SELF" >> pure(OmpSelfModifier::Value::Self)))
 
 TYPE_PARSER(construct<OmpStepComplexModifier>( //
     "STEP" >> parenthesized(scalarIntExpr)))
@@ -558,6 +572,9 @@ TYPE_PARSER(construct<OmpVariableCategory>(
     "ALLOCATABLE" >> pure(OmpVariableCategory::Value::Allocatable) ||
     "POINTER" >> pure(OmpVariableCategory::Value::Pointer) ||
     "SCALAR" >> pure(OmpVariableCategory::Value::Scalar)))
+
+TYPE_PARSER(construct<OmpxHoldModifier>( //
+    "OMPX_HOLD" >> pure(OmpxHoldModifier::Value::Ompx_Hold)))
 
 // This could be auto-generated.
 TYPE_PARSER(
@@ -611,10 +628,16 @@ TYPE_PARSER(sourced(
     construct<OmpLinearClause::Modifier>(Parser<OmpStepSimpleModifier>{})))
 
 TYPE_PARSER(sourced(construct<OmpMapClause::Modifier>(
-    sourced(construct<OmpMapClause::Modifier>(Parser<OmpMapTypeModifier>{}) ||
+    sourced(construct<OmpMapClause::Modifier>(Parser<OmpAlwaysModifier>{}) ||
+        construct<OmpMapClause::Modifier>(Parser<OmpCloseModifier>{}) ||
+        construct<OmpMapClause::Modifier>(Parser<OmpDeleteModifier>{}) ||
+        construct<OmpMapClause::Modifier>(Parser<OmpPresentModifier>{}) ||
+        construct<OmpMapClause::Modifier>(Parser<OmpRefModifier>{}) ||
+        construct<OmpMapClause::Modifier>(Parser<OmpSelfModifier>{}) ||
         construct<OmpMapClause::Modifier>(Parser<OmpMapper>{}) ||
         construct<OmpMapClause::Modifier>(Parser<OmpIterator>{}) ||
-        construct<OmpMapClause::Modifier>(Parser<OmpMapType>{})))))
+        construct<OmpMapClause::Modifier>(Parser<OmpMapType>{}) ||
+        construct<OmpMapClause::Modifier>(Parser<OmpxHoldModifier>{})))))
 
 TYPE_PARSER(
     sourced(construct<OmpOrderClause::Modifier>(Parser<OmpOrderModifier>{})))

@@ -64,36 +64,54 @@ def SemaWaveId : SemaOperand<"sema_wave_id", 1>;
 def SemaIdRefl : SemaOperand<"sema_id_refl">;
 def SemaWaveIdRefl : SemaOperand<"sema_wave_id_refl", 1>;
 
-class VNBR_Pseudo<string opName, dag outs, dag regIns, string asmRegOps> :
-    InstSI<outs, !con(regIns, (ins SemaId:$sema_id, SemaWaveId:$sema_wave_id,
-                                   SemaIdRefl:$sema_id_refl,
-                                   SemaWaveIdRefl:$sema_wave_id_refl,
-                                   WaitVAVDst:$wait_va_dst))>,
-    SIMCInstr<NAME, SIEncodingFamily.NONE> {
+class VNBR_Pseudo<string opName, bit EnableWrite = 0>
+    : InstSI<(outs), (ins)>, SIMCInstr<NAME, SIEncodingFamily.NONE> {
+
+  dag RegIns = !if(EnableWrite, (ins GVGPR_32:$vsrc), (ins));
+  dag BasicIns = (ins SemaId:$sema_id, SemaWaveId:$sema_wave_id,
+      SemaIdRefl:$sema_id_refl, SemaWaveIdRefl:$sema_wave_id_refl,
+      WaitVAVDst:$wait_va_dst);
+  dag RegOuts =
+      !if(EnableWrite, (outs GVGPR_32:$vdst, GVGPR_32:$vdst_refl), (outs));
+
+  let InOperandList = !con(RegIns, BasicIns);
+  let OutOperandList = RegOuts;
   let isPseudo = 1;
   let isCodeGenOnly = 1;
   let Uses = [MODE, EXEC];
   let UseNamedOperandTable = 1;
 
   string Mnemonic = !tolower(opName);
-  string AsmOperands = asmRegOps # "$sema_id$sema_wave_id$"
-                       "sema_id_refl$sema_wave_id_refl$wait_va_dst";
+  string AsmRegOps =
+      !if(EnableWrite, "$vdst, $vdst_refl, $vsrc", " off, off, off");
+  string AsmOperands = AsmRegOps#"$sema_id$sema_wave_id$"
+                                 "sema_id_refl$sema_wave_id_refl$wait_va_dst";
 
   let SubtargetPredicate = HasVNBREncoding;
   let WaveSizePredicate = isWave32;
 }
 
+class VNBR_Send<string opName> : VNBR_Pseudo<opName, 1> {
+  let SchedRW = [Write32Bit, Write32Bit];
+}
+
 // TODO-GFX13: Handle conditional write of vdst_refl with tied input operands
 multiclass VNBR_write_only {
-  def NAME : VNBR_Pseudo<NAME, (outs GVGPR_32:$vdst, GVGPR_32:$vdst_refl),
-                         (ins GVGPR_32:$vsrc), "$vdst, $vdst_refl, $vsrc"> {
-    let SchedRW = [Write32Bit, Write32Bit];
+  def NAME : VNBR_Send<NAME>;
+  def NAME#_LANESHARED : VNBR_Send<NAME#_LANESHARED> {
+    let OutOperandList = (outs);
+    defvar V_STORE_IDX_Ins = (ins VGPR_IDX_IDX_OP:$idx, i32imm:$dyn_offset);
+    defvar V_STORE_IDX_REFL_Ins = (ins VGPR_IDX_IDX_OP:$idx_refl,
+        i32imm:$dyn_offset_refl);
+    let InOperandList =
+        !con(RegIns, BasicIns, V_STORE_IDX_Ins, V_STORE_IDX_REFL_Ins);
+    let mayStore = 1;
   }
 }
 
 multiclass VNBR_Pseudopair {
   defm NAME : VNBR_write_only;
-  def _no_write : VNBR_Pseudo<NAME, (outs), (ins), " off, off, off">;
+  def _no_write : VNBR_Pseudo<NAME>;
 }
 
 let isConvergent = 1 in {

@@ -349,14 +349,9 @@ class VOP3OpSel_gfx9 <bits<10> op, VOPProfile P> : VOP3e_vi <op, P> {
 
 // Special case for v_permlane16_swap_b32/v_permlane32_swap_b32
 // op_sel[0]/op_sel[1] are treated as bound_ctrl and fi dpp operands.
-#ifdef LLPC_BUILD_NPI
 class VOP3OpSelIsDPP_base  {
-#else /* LLPC_BUILD_NPI */
-class VOP3OpSelIsDPP_gfx9 <bits<10> op, VOPProfile P> : VOP3e_vi <op, P> {
-#endif /* LLPC_BUILD_NPI */
   bits<1> fi;
   bits<1> bound_ctrl;
-#ifdef LLPC_BUILD_NPI
 }
 
 class VOP3OpSelIsDPP_gfx9 <bits<10> op, VOPProfile P> : VOP3OpSelIsDPP_base, VOP3e_vi <op, P> {
@@ -365,11 +360,8 @@ class VOP3OpSelIsDPP_gfx9 <bits<10> op, VOPProfile P> : VOP3OpSelIsDPP_base, VOP
   // OPSEL[1] specifies BOUND_CTRL
   let Inst{12} = bound_ctrl;
 }
-#endif /* LLPC_BUILD_NPI */
 
-#ifdef LLPC_BUILD_NPI
 class VOP3OpSelIsDPP_gfx12 <bits<10> op, VOPProfile P> : VOP3OpSelIsDPP_base, VOP3e_gfx11_gfx12 <op, P> {
-#endif /* LLPC_BUILD_NPI */
   // OPSEL[0] specifies FI
   let Inst{11} = fi;
   // OPSEL[1] specifies BOUND_CTRL
@@ -507,9 +499,9 @@ class VOP3Pe_Base {
   bits<2> index_key_8bit;
   bits<1> index_key_16bit;
   bits<1> index_key_32bit;
-#ifdef LLPC_BUILD_NPI
   bits<3> matrix_a_fmt;
   bits<3> matrix_b_fmt;
+#ifdef LLPC_BUILD_NPI
   bits<1> matrix_a_scale;
   bits<1> matrix_b_scale;
   bits<2> matrix_a_scale_fmt;

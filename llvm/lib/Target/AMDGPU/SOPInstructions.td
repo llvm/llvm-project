@@ -165,12 +165,10 @@ class SOP1_1 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
   let has_sdst = 0;
 }
 
-#ifdef LLPC_BUILD_NPI
 class SOP1_1_REGIMM64 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
   opName, (outs), (ins SSrc_b64:$src0), "$src0", pattern> {
   let has_sdst = 0;
 }
-#endif /* LLPC_BUILD_NPI */
 
 class UniformUnaryFrag<SDPatternOperator Op> : PatFrag <
   (ops node:$src0),
@@ -334,11 +332,9 @@ let isTerminator = 1, isBarrier = 1, SchedRW = [WriteBranch] in {
 
 let isBranch = 1, isIndirectBranch = 1 in {
 def S_SETPC_B64 : SOP1_1  <"s_setpc_b64">;
-#ifdef LLPC_BUILD_NPI
 
 let SubtargetPredicate = HasAddPC64Inst in
 def S_ADD_PC_I64 : SOP1_1_REGIMM64 <"s_add_pc_i64">;
-#endif /* LLPC_BUILD_NPI */
 } // End isBranch = 1, isIndirectBranch = 1
 
 let isReturn = 1 in {
@@ -1770,6 +1766,12 @@ let OtherPredicates = [HasImageInsts] in {
   def S_WAIT_KMCNT_soft : SOPP_Pseudo <"s_soft_wait_kmcnt", (ins s16imm:$simm16), "$simm16">;
 }
 
+#ifdef LLPC_BUILD_NPI
+let SubtargetPredicate = HasWaitXcnt in {
+  def S_WAIT_XCNT_soft : SOPP_Pseudo<"s_soft_wait_xcnt", (ins s16imm:$simm16), "$simm16">;
+}
+
+#endif /* LLPC_BUILD_NPI */
 def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i32imm:$simm16), "$simm16",
     [(int_amdgcn_s_sethalt timm:$simm16)]>;
 #ifdef LLPC_BUILD_NPI
@@ -2450,10 +2452,6 @@ defm S_BARRIER_INIT_IMM           : SOP1_IMM_Real_gfx12_gfx13<0x051>;
 defm S_BARRIER_JOIN_IMM           : SOP1_IMM_Real_gfx12_gfx13<0x052>;
 defm S_ALLOC_VGPR                 : SOP1_Real_gfx12_gfx13<0x053>;
 defm S_SLEEP_VAR                  : SOP1_Real_gfx12_gfx13<0x058>;
-
-// GFX1250
-defm S_ADD_PC_I64                 : SOP1_Real_gfx12_gfx13<0x04b>;
-defm S_GET_SHADER_CYCLES_U64      : SOP1_Real_gfx12<0x06>;
 #else /* LLPC_BUILD_NPI */
 defm S_SENDMSG_RTN_B32            : SOP1_Real_gfx11_gfx12<0x04c>;
 defm S_SENDMSG_RTN_B64            : SOP1_Real_gfx11_gfx12<0x04d>;
@@ -2465,6 +2463,14 @@ defm S_BARRIER_SIGNAL_ISFIRST_IMM : SOP1_IMM_Real_gfx12<0x04f>;
 defm S_GET_BARRIER_STATE_IMM      : SOP1_IMM_Real_gfx12<0x050>;
 defm S_ALLOC_VGPR                 : SOP1_Real_gfx12<0x053>;
 defm S_SLEEP_VAR                  : SOP1_Real_gfx12<0x058>;
+#endif /* LLPC_BUILD_NPI */
+
+// GFX1250
+#ifdef LLPC_BUILD_NPI
+defm S_ADD_PC_I64                 : SOP1_Real_gfx12_gfx13<0x04b>;
+defm S_GET_SHADER_CYCLES_U64      : SOP1_Real_gfx12<0x06>;
+#else /* LLPC_BUILD_NPI */
+defm S_ADD_PC_I64                 : SOP1_Real_gfx12<0x04b>;
 #endif /* LLPC_BUILD_NPI */
 
 //===----------------------------------------------------------------------===//
@@ -2662,6 +2668,20 @@ defm S_MOVRELS_B64        : SOP1_Real_gfx6_gfx7_gfx10_gfx13<0x02f>;
 defm S_MOVRELD_B32        : SOP1_Real_gfx6_gfx7_gfx10_gfx13<0x030>;
 defm S_MOVRELD_B64        : SOP1_Real_gfx6_gfx7_gfx10_gfx13<0x031>;
 defm S_ABS_I32            : SOP1_Real_gfx6_gfx7_gfx10_gfx13<0x034>;
+
+//===----------------------------------------------------------------------===//
+// SOP2 - GFX13.
+//===----------------------------------------------------------------------===//
+
+multiclass SOP2_Real_gfx13<bits<7> op, string name = !tolower(NAME)> {
+  defvar ps = !cast<SOP2_Pseudo>(NAME);
+  def _gfx13 : SOP2_Real32<op, ps, name>,
+               Select<GFX13Gen, ps.Mnemonic>;
+  if !ne(ps.Mnemonic, name) then
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
+}
+
+defm S_PACK_HL_B32_B16 : SOP2_Real_gfx13<0x37>;
 #else /* LLPC_BUILD_NPI */
 defm S_FF1_I32_B32        : SOP1_Real_gfx6_gfx7_gfx10<0x013>;
 defm S_FF1_I32_B64        : SOP1_Real_gfx6_gfx7_gfx10<0x014>;
@@ -2698,20 +2718,6 @@ defm S_ABS_I32            : SOP1_Real_gfx6_gfx7_gfx10<0x034>;
 
 //===----------------------------------------------------------------------===//
 #ifdef LLPC_BUILD_NPI
-// SOP2 - GFX13.
-//===----------------------------------------------------------------------===//
-
-multiclass SOP2_Real_gfx13<bits<7> op, string name = !tolower(NAME)> {
-  defvar ps = !cast<SOP2_Pseudo>(NAME);
-  def _gfx13 : SOP2_Real32<op, ps, name>,
-               Select<GFX13Gen, ps.Mnemonic>;
-  if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
-}
-
-defm S_PACK_HL_B32_B16 : SOP2_Real_gfx13<0x37>;
-
-//===----------------------------------------------------------------------===//
 // SOP2 - GFX12.
 #else /* LLPC_BUILD_NPI */
 // SOP2 - GFX12

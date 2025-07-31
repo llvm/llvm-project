@@ -194,18 +194,16 @@ void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
     const int64_t TH = Imm & CPol::TH;
     const int64_t Scope = Imm & CPol::SCOPE;
 
-#if LLPC_BUILD_NPI
     if (Imm & CPol::SCAL)
       O << " scale_offset";
 
-#endif /* LLPC_BUILD_NPI */
     printTH(MI, TH, Scope, O);
     printScope(Scope, O);
 
-#if LLPC_BUILD_NPI
     if (Imm & CPol::NV)
       O << " nv";
 
+#if LLPC_BUILD_NPI
     if (AMDGPU::isGFX13(STI)) {
       const int64_t CFS = Imm & CPol::CFS;
       printCFS(MI, CFS, O);
@@ -1622,7 +1620,6 @@ void AMDGPUInstPrinter::printIndexKey32bit(const MCInst *MI, unsigned OpNo,
   O << " index_key:" << Imm;
 }
 
-#if LLPC_BUILD_NPI
 void AMDGPUInstPrinter::printMatrixFMT(const MCInst *MI, unsigned OpNo,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &O, char AorB) {
@@ -1665,6 +1662,7 @@ void AMDGPUInstPrinter::printMatrixBFMT(const MCInst *MI, unsigned OpNo,
   printMatrixFMT(MI, OpNo, STI, O, 'b');
 }
 
+#if LLPC_BUILD_NPI
 void AMDGPUInstPrinter::printMatrixScale(const MCInst *MI, unsigned OpNo,
                                          const MCSubtargetInfo &STI,
                                          raw_ostream &O, char AorB) {

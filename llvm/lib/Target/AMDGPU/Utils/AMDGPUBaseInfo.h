@@ -122,12 +122,12 @@ struct True16D16Info {
   unsigned LoOp;
 };
 
-#if LLPC_BUILD_NPI
 struct WMMAInstInfo {
   uint16_t Opcode;
   bool is_wmma_xdl;
 };
 
+#if LLPC_BUILD_NPI
 struct FLATInfo {
   uint16_t Opcode;
   bool IsVDDS;
@@ -144,8 +144,8 @@ struct FLATInfo {
 #define GET_isMFMA_F8F6F4Table_DECL
 #define GET_isCvtScaleF32_F32F16ToF8F4Table_DECL
 #define GET_True16D16Table_DECL
-#if LLPC_BUILD_NPI
 #define GET_WMMAInstInfoTable_DECL
+#if LLPC_BUILD_NPI
 #define GET_FLATInfoTable_DECL
 #endif /* LLPC_BUILD_NPI */
 #include "AMDGPUGenSearchableTables.inc"
@@ -630,11 +630,9 @@ bool getMAIIsDGEMM(unsigned Opc);
 LLVM_READONLY
 bool getMAIIsGFX940XDL(unsigned Opc);
 
-#if LLPC_BUILD_NPI
 LLVM_READONLY
 bool getWMMAIsXDL(unsigned Opc);
 
-#endif /* LLPC_BUILD_NPI */
 // Get an equivalent BitOp3 for a binary logical \p Opc.
 // \returns BitOp3 modifier for the logical operation or zero.
 // Used in VOPD3 conversion.
@@ -660,7 +658,6 @@ const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
                                                       unsigned BLGP,
                                                       unsigned F8F8Opcode);
 
-#if LLPC_BUILD_NPI
 LLVM_READNONE
 uint8_t wmmaScaleF8F6F4FormatToNumRegs(unsigned Fmt);
 
@@ -669,7 +666,6 @@ const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
                                                       unsigned FmtB,
                                                       unsigned F8F8Opcode);
 
-#endif /* LLPC_BUILD_NPI */
 LLVM_READONLY
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
                                                   uint8_t NumComponents,
@@ -1523,7 +1519,8 @@ constexpr bool isShader(CallingConv::ID CC) {
 
 LLVM_READNONE
 constexpr bool isGraphics(CallingConv::ID CC) {
-  return isShader(CC) || CC == CallingConv::AMDGPU_Gfx;
+  return isShader(CC) || CC == CallingConv::AMDGPU_Gfx ||
+         CC == CallingConv::AMDGPU_Gfx_WholeWave;
 }
 
 LLVM_READNONE
@@ -1909,10 +1906,10 @@ MCPhysReg getVGPRWithMSBs(MCPhysReg Reg, unsigned MSBs,
 std::pair<const AMDGPU::OpName *, const AMDGPU::OpName *>
 getVGPRLoweringOperandTables(const MCInstrDesc &Desc);
 
+#endif /* LLPC_BUILD_NPI */
 /// \returns true if a memory instruction supports scale_offset modifier.
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);
 
-#endif /* LLPC_BUILD_NPI */
 /// \returns lds block size in terms of dwords. \p
 /// This is used to calculate the lds size encoded for PAL metadata 3.0+ which
 /// must be defined in terms of bytes.

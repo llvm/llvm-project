@@ -25,9 +25,7 @@ const MCAsmInfo::AtSpecifier atSpecifiers[] = {
     {AMDGPUMCExpr::S_REL64, "rel64"},
     {AMDGPUMCExpr::S_ABS32_LO, "abs32@lo"},
     {AMDGPUMCExpr::S_ABS32_HI, "abs32@hi"},
-#if LLPC_BUILD_NPI
     {AMDGPUMCExpr::S_ABS64, "abs64"},
-#endif /* LLPC_BUILD_NPI */
 };
 
 AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,

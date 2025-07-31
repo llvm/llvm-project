@@ -62,7 +62,6 @@ def gi_vop3pmodsneg :
     GIComplexOperandMatcher<s32, "selectVOP3PModsNeg">,
     GIComplexPatternEquiv<VOP3PModsNeg>;
 
-#ifdef LLPC_BUILD_NPI
 def gi_vop3pmodsnegs :
     GIComplexOperandMatcher<s32, "selectVOP3PModsNegs">,
     GIComplexPatternEquiv<VOP3PModsNegs>;
@@ -71,7 +70,6 @@ def gi_dotiuvop3pmodsnegabs :
     GIComplexOperandMatcher<s32, "selectVOP3PModsNegAbs">,
     GIComplexPatternEquiv<VOP3PModsNegAbs>;
 
-#endif /* LLPC_BUILD_NPI */
 def gi_wmmaopselvop3pmods :
     GIComplexOperandMatcher<s32, "selectWMMAOpSelVOP3PMods">,
     GIComplexPatternEquiv<WMMAOpSelVOP3PMods>;
@@ -100,12 +98,10 @@ def gi_swmmacindex16 :
     GIComplexOperandMatcher<s32, "selectSWMMACIndex16">,
     GIComplexPatternEquiv<SWMMACIndex16>;
 
-#ifdef LLPC_BUILD_NPI
 def gi_swmmacindex32 :
     GIComplexOperandMatcher<s64, "selectSWMMACIndex32">,
     GIComplexPatternEquiv<SWMMACIndex32>;
 
-#endif /* LLPC_BUILD_NPI */
 def gi_vop3opselmods :
     GIComplexOperandMatcher<s32, "selectVOP3OpSelMods">,
     GIComplexPatternEquiv<VOP3OpSelMods>;
@@ -158,9 +154,11 @@ def gi_global_saddr_cpol :
 def gi_global_saddr_cpol_m0 :
     GIComplexOperandMatcher<s64, "selectGlobalSAddrCPolM0">,
     GIComplexPatternEquiv<GlobalSAddrCPolM0>;
+#endif /* LLPC_BUILD_NPI */
 def gi_global_saddr_glc :
     GIComplexOperandMatcher<s64, "selectGlobalSAddrGLC">,
     GIComplexPatternEquiv<GlobalSAddrGLC>;
+#ifdef LLPC_BUILD_NPI
 def gi_global_saddr_no_ioffset :
     GIComplexOperandMatcher<s64, "selectGlobalSAddrNoIOffset">,
     GIComplexPatternEquiv<GlobalSAddrNoIOffset>;
@@ -351,6 +349,10 @@ def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_UBYTE, SIsbuffer_load_ubyte>;
 def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_SSHORT, SIsbuffer_load_short>;
 def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_USHORT, SIsbuffer_load_ushort>;
 def : GINodeEquiv<G_AMDGPU_S_BUFFER_PREFETCH, SIsbuffer_prefetch>;
+
+def : GINodeEquiv<G_AMDGPU_WHOLE_WAVE_FUNC_SETUP, AMDGPUwhole_wave_setup>;
+// G_AMDGPU_WHOLE_WAVE_FUNC_RETURN is simpler than AMDGPUwhole_wave_return,
+// so we don't mark it as equivalent.
 
 class GISelSop2Pat <
   SDPatternOperator node,

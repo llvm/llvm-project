@@ -1387,10 +1387,7 @@ void MCStreamer::emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                                    unsigned MaxBytesToEmit) {}
 void MCStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                                    SMLoc Loc) {}
-void MCStreamer::emitBundleAlignMode(Align Alignment) {}
-void MCStreamer::emitBundleLock(bool AlignToEnd) {}
 void MCStreamer::finishImpl() {}
-void MCStreamer::emitBundleUnlock() {}
 
 bool MCStreamer::popSection() {
   if (SectionStack.size() <= 1)
@@ -1459,6 +1456,15 @@ MCSymbol *MCStreamer::endSection(MCSection *Section) {
   switchSection(Section);
   emitLabel(Sym);
   return Sym;
+}
+
+void MCStreamer::addFragment(MCFragment *F) {
+  auto *Sec = CurFrag->getParent();
+  F->setParent(Sec);
+  F->setLayoutOrder(CurFrag->getLayoutOrder() + 1);
+  CurFrag->Next = F;
+  CurFrag = F;
+  Sec->curFragList()->Tail = F;
 }
 
 static VersionTuple

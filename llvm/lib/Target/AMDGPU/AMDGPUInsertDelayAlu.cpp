@@ -25,9 +25,7 @@ namespace {
 
 class AMDGPUInsertDelayAlu {
 public:
-#if LLPC_BUILD_NPI
   const GCNSubtarget *ST;
-#endif /* LLPC_BUILD_NPI */
   const SIInstrInfo *SII;
   const TargetRegisterInfo *TRI;
 
@@ -72,32 +70,25 @@ public:
   enum DelayType { VALU, TRANS, SALU, OTHER };
 #endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
   // Get the delay type for a MachineInstr.
   DelayType getDelayType(const MachineInstr &MI) {
     if (SIInstrInfo::isTRANS(MI))
-#else /* LLPC_BUILD_NPI */
-  // Get the delay type for an instruction with the specified TSFlags.
-  static DelayType getDelayType(uint64_t TSFlags) {
-    if (TSFlags & SIInstrFlags::TRANS)
-#endif /* LLPC_BUILD_NPI */
       return TRANS;
 #if LLPC_BUILD_NPI
     // WMMA XDL ops are treated the same as TRANS on GFX1250.
     if (AMDGPU::isGFX1250Only(*ST) && SII->isXDLWMMA(MI))
+#else /* LLPC_BUILD_NPI */
+    // WMMA XDL ops are treated the same as TRANS.
+    if (AMDGPU::isGFX1250(*ST) && SII->isXDLWMMA(MI))
+#endif /* LLPC_BUILD_NPI */
       return TRANS;
+#if LLPC_BUILD_NPI
     if (AMDGPU::isGFX13(*ST) && SII->isXDL(MI))
       return XDL;
+#endif /* LLPC_BUILD_NPI */
     if (SIInstrInfo::isVALU(MI))
-#else /* LLPC_BUILD_NPI */
-    if (TSFlags & SIInstrFlags::VALU)
-#endif /* LLPC_BUILD_NPI */
       return VALU;
-#if LLPC_BUILD_NPI
     if (SIInstrInfo::isSALU(MI))
-#else /* LLPC_BUILD_NPI */
-    if (TSFlags & SIInstrFlags::SALU)
-#endif /* LLPC_BUILD_NPI */
       return SALU;
     return OTHER;
   }
@@ -467,11 +458,7 @@ public:
         continue;
       }
 
-#if LLPC_BUILD_NPI
       DelayType Type = getDelayType(MI);
-#else /* LLPC_BUILD_NPI */
-      DelayType Type = getDelayType(MI.getDesc().TSFlags);
-#endif /* LLPC_BUILD_NPI */
 
       if (instructionWaitsForSGPRWrites(MI)) {
         auto It = State.find(LastSGPRFromVALU);
@@ -559,22 +546,12 @@ public:
     LLVM_DEBUG(dbgs() << "AMDGPUInsertDelayAlu running on " << MF.getName()
                       << "\n");
 
-#if LLPC_BUILD_NPI
     ST = &MF.getSubtarget<GCNSubtarget>();
     if (!ST->hasDelayAlu())
-#else /* LLPC_BUILD_NPI */
-    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-    if (!ST.hasDelayAlu())
-#endif /* LLPC_BUILD_NPI */
       return false;
 
-#if LLPC_BUILD_NPI
     SII = ST->getInstrInfo();
     TRI = ST->getRegisterInfo();
-#else /* LLPC_BUILD_NPI */
-    SII = ST.getInstrInfo();
-    TRI = ST.getRegisterInfo();
-#endif /* LLPC_BUILD_NPI */
     SchedModel = &SII->getSchedModel();
 
     // Calculate the delay state for each basic block, iterating until we reach

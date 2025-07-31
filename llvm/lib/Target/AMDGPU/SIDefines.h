@@ -419,8 +419,6 @@ enum CPol {
   SCOPE_SE = 1 << SCOPE_SHIFT,
   SCOPE_DEV = 2 << SCOPE_SHIFT,
   SCOPE_SYS = 3 << SCOPE_SHIFT,
-
-  NV = 1 << 5, // Non-volatile bit
 #else /* LLPC_BUILD_NPI */
   SCOPE = 0x3 << 3, // All Scope bits
   SCOPE_CU = 0 << 3,
@@ -428,6 +426,8 @@ enum CPol {
   SCOPE_DEV = 2 << 3,
   SCOPE_SYS = 3 << 3,
 #endif /* LLPC_BUILD_NPI */
+
+  NV = 1 << 5, // Non-volatile bit
 
   SWZ = 1 << 6, // Swizzle bit
 
@@ -440,7 +440,11 @@ enum CPol {
   CFS_128B = 1 << CFS_SHIFT,
   CFS_64B = 2 << CFS_SHIFT,
   CFS_32B = 3 << CFS_SHIFT,
+#else /* LLPC_BUILD_NPI */
+  SCAL = 1 << 11, // Scale offset bit
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
   ALL = TH | SCOPE | NV | CFS,
 
   SCAL = 1 << 9, // Scale offset bit
@@ -1107,7 +1111,6 @@ enum Target : unsigned {
 
 } // namespace Exp
 
-#if LLPC_BUILD_NPI
 namespace WMMA {
 enum MatrixFMT : unsigned {
   MATRIX_FMT_FP8 = 0,
@@ -1116,6 +1119,7 @@ enum MatrixFMT : unsigned {
   MATRIX_FMT_BF6 = 3,
   MATRIX_FMT_FP4 = 4
 };
+#if LLPC_BUILD_NPI
 
 enum MatrixScale : unsigned {
   MATRIX_SCALE_ROW0 = 0,
@@ -1127,9 +1131,9 @@ enum MatrixScaleFmt : unsigned {
   MATRIX_SCALE_FMT_E5M3 = 1,
   MATRIX_SCALE_FMT_E4M3 = 2
 };
+#endif /* LLPC_BUILD_NPI */
 } // namespace WMMA
 
-#endif /* LLPC_BUILD_NPI */
 namespace VOP3PEncoding {
 
 enum OpSel : uint64_t {

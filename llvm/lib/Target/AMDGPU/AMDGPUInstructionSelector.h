@@ -212,12 +212,10 @@ private:
 
   InstructionSelector::ComplexRendererFns
   selectVOP3PModsNeg(MachineOperand &Root) const;
-#if LLPC_BUILD_NPI
   InstructionSelector::ComplexRendererFns
   selectVOP3PModsNegs(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectVOP3PModsNegAbs(MachineOperand &Root) const;
-#endif /* LLPC_BUILD_NPI */
 
   InstructionSelector::ComplexRendererFns
   selectWMMAOpSelVOP3PMods(MachineOperand &Root) const;
@@ -234,10 +232,8 @@ private:
   selectSWMMACIndex8(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectSWMMACIndex16(MachineOperand &Root) const;
-#if LLPC_BUILD_NPI
   InstructionSelector::ComplexRendererFns
   selectSWMMACIndex32(MachineOperand &Root) const;
-#endif /* LLPC_BUILD_NPI */
 
   InstructionSelector::ComplexRendererFns
   selectVOP3OpSelMods(MachineOperand &Root) const;
@@ -280,16 +276,20 @@ private:
 #if LLPC_BUILD_NPI
   selectGlobalSAddr(MachineOperand &Root, unsigned CPolBits,
                     bool NeedIOffset = true, bool NeedScaleOffset = true) const;
-  InstructionSelector::ComplexRendererFns
+#else /* LLPC_BUILD_NPI */
+  selectGlobalSAddr(MachineOperand &Root, unsigned CPolBits) const;
 #endif /* LLPC_BUILD_NPI */
-  selectGlobalSAddr(MachineOperand &Root) const;
-#if LLPC_BUILD_NPI
   InstructionSelector::ComplexRendererFns
+  selectGlobalSAddr(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+#if LLPC_BUILD_NPI
   selectGlobalSAddrCPol(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectGlobalSAddrCPolM0(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
+#endif /* LLPC_BUILD_NPI */
   selectGlobalSAddrGLC(MachineOperand &Root) const;
+#if LLPC_BUILD_NPI
   InstructionSelector::ComplexRendererFns
   selectGlobalSAddrNoIOffset(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
@@ -466,8 +466,8 @@ private:
   // Returns true if TargetOpcode::G_AND MachineInstr `MI`'s masking of the
   // shift amount operand's `ShAmtBits` bits is unneeded.
   bool isUnneededShiftMask(const MachineInstr &MI, unsigned ShAmtBits) const;
-#if LLPC_BUILD_NPI
 
+#if LLPC_BUILD_NPI
   /// Match a zero extend from a 32-bit value to 64-bits.
   Register matchZeroExtendFromS32(Register Reg) const;
   /// Match a sign extend from a 32-bit value to 64-bits.
@@ -481,9 +481,9 @@ private:
   /// Match either sign or zero extend depending on the \p IsSigned from a
   /// 32-bit value to 64-bits, or \p Reg itself if it is 32-bit.
   Register matchExtendFromS32OrS32(Register Reg, bool IsSigned) const;
+#endif /* LLPC_BUILD_NPI */
   /// Match an any extend from a 32-bit value to 64-bit.
   Register matchAnyExtendFromS32(Register Reg) const;
-#endif /* LLPC_BUILD_NPI */
 
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;

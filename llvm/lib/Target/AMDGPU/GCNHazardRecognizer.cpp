@@ -533,13 +533,8 @@ static int getWaitStatesSince(GCNHazardRecognizer::IsHazardFn IsHazard,
                               const MachineInstr *MI, IsExpiredFn IsExpired) {
   DenseSet<const MachineBasicBlock *> Visited;
   return getWaitStatesSince(IsHazard, MI->getParent(),
-#if LLPC_BUILD_NPI
                             std::next(MI->getReverseIterator()), 0, IsExpired,
                             Visited, SIInstrInfo::getNumWaitStates);
-#else /* LLPC_BUILD_NPI */
-                            std::next(MI->getReverseIterator()),
-                            0, IsExpired, Visited);
-#endif /* LLPC_BUILD_NPI */
 }
 
 int GCNHazardRecognizer::getWaitStatesSince(IsHazardFn IsHazard, int Limit) {
@@ -1207,13 +1202,9 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
   }
   fixVALUPartialForwardingHazard(MI);
   fixVALUTransUseHazard(MI);
-#if LLPC_BUILD_NPI
   fixVALUTransCoexecutionHazards(MI);
   fixWMMAHazards(MI); // fall-through if co-execution is enabled.
   fixWMMACoexecutionHazards(MI);
-#else /* LLPC_BUILD_NPI */
-  fixWMMAHazards(MI);
-#endif /* LLPC_BUILD_NPI */
   fixShift64HighRegBug(MI);
   fixVALUMaskWriteHazard(MI);
   fixRequiredExportPriority(MI);
@@ -1851,9 +1842,12 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
   return true;
 }
 
-#if LLPC_BUILD_NPI
 bool GCNHazardRecognizer::fixVALUTransCoexecutionHazards(MachineInstr *MI) {
+#if LLPC_BUILD_NPI
   if (!AMDGPU::isGFX1250Only(ST) || // Coexecution disabled.
+#else /* LLPC_BUILD_NPI */
+  if (!AMDGPU::isGFX1250(ST) || // Coexecution disabled.
+#endif /* LLPC_BUILD_NPI */
       !SIInstrInfo::isVALU(*MI) || SIInstrInfo::isTRANS(*MI))
     return false;
 
@@ -1897,7 +1891,6 @@ bool GCNHazardRecognizer::fixVALUTransCoexecutionHazards(MachineInstr *MI) {
   return true;
 }
 
-#endif /* LLPC_BUILD_NPI */
 bool GCNHazardRecognizer::fixWMMAHazards(MachineInstr *MI) {
   if (!SIInstrInfo::isWMMA(*MI) && !SIInstrInfo::isSWMMAC(*MI))
     return false;
@@ -1956,7 +1949,6 @@ bool GCNHazardRecognizer::fixWMMAHazards(MachineInstr *MI) {
   return true;
 }
 
-#if LLPC_BUILD_NPI
 static bool isCoexecutableVALUInst(const MachineInstr &MI) {
   return SIInstrInfo::isVALU(MI) && !SIInstrInfo::isTRANS(MI) &&
          !SIInstrInfo::isWMMA(MI) && !SIInstrInfo::isSWMMAC(MI); // What else?
@@ -2004,7 +1996,11 @@ static bool IsWMMAHazardInstInCategory(const MachineInstr &MI,
 }
 
 bool GCNHazardRecognizer::fixWMMACoexecutionHazards(MachineInstr *MI) {
+#if LLPC_BUILD_NPI
   if (!AMDGPU::isGFX1250Only(ST))
+#else /* LLPC_BUILD_NPI */
+  if (!AMDGPU::isGFX1250(ST))
+#endif /* LLPC_BUILD_NPI */
     return false;
 
   const SIInstrInfo *TII = ST.getInstrInfo();
@@ -2133,7 +2129,6 @@ bool GCNHazardRecognizer::fixWMMACoexecutionHazards(MachineInstr *MI) {
   return true;
 }
 
-#endif /* LLPC_BUILD_NPI */
 bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {
   if (!ST.hasShift64HighRegBug())
     return false;
@@ -3440,7 +3435,7 @@ bool GCNHazardRecognizer::fixRequiredExportPriority(MachineInstr *MI) {
   // Check entry priority at each export (as there will only be a few).
   // Note: amdgpu_gfx can only be a callee, so defer to caller setprio.
   bool Changed = false;
-  if (CC != CallingConv::AMDGPU_Gfx)
+  if (CC != CallingConv::AMDGPU_Gfx && CC != CallingConv::AMDGPU_Gfx_WholeWave)
     Changed = ensureEntrySetPrio(MF, NormalPriority, TII);
 
   auto NextMI = std::next(It);

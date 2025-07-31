@@ -531,8 +531,8 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["gfx1250-insts"] = true;
       Features["bitop3-insts"] = true;
       Features["prng-inst"] = true;
-#if LLPC_BUILD_NPI
       Features["tanh-insts"] = true;
+#if LLPC_BUILD_NPI
       Features["tensor-cvt-lut-insts"] = true;
 #endif /* LLPC_BUILD_NPI */
       Features["transpose-load-f4f6-insts"] = true;

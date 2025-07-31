@@ -343,6 +343,16 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         Info.RootFlattenedArrayType, Info.RootPointerOperand,
         {ZeroIndex, FlattenedIndex}, GEP.getName(), GEP.getNoWrapFlags());
 
+    // If the pointer operand is a global variable and all indices are 0,
+    // IRBuilder::CreateGEP will return the global variable instead of creating
+    // a GEP instruction or GEP ConstantExpr. In this case we have to create and
+    // insert our own GEP instruction.
+    if (!isa<GEPOperator>(NewGEP))
+      NewGEP = GetElementPtrInst::Create(
+          Info.RootFlattenedArrayType, Info.RootPointerOperand,
+          {ZeroIndex, FlattenedIndex}, GEP.getNoWrapFlags(), GEP.getName(),
+          Builder.GetInsertPoint());
+
     // Replace the current GEP with the new GEP. Store GEPInfo into the map
     // for later use in case this GEP was not the end of the chain
     GEPChainInfoMap.insert({cast<GEPOperator>(NewGEP), std::move(Info)});

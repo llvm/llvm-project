@@ -265,6 +265,7 @@ public:
 #if LLPC_BUILD_NPI
   bool tryFoldDynamicIdxOffset(MachineOperand *Idx, MachineOperand *Offset,
                                MachineInstr *&SMovImmZero);
+  bool tryFoldDynamicIdxMI(MachineInstr &MI, MachineInstr *&SMovImmZero);
 #endif /* LLPC_BUILD_NPI */
 
   bool tryOptimizeAGPRPhis(MachineBasicBlock &MBB);
@@ -1228,35 +1229,24 @@ void SIFoldOperandsImpl::foldOperand(
         return;
     }
 
-#if LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
-    // A frame index will resolve to a positive constant, so it should always be
-    // safe to fold the addressing mode, even pre-GFX9.
-    UseMI->getOperand(UseOpIdx).ChangeToFrameIndex(OpToFold.getFI());
-
-#endif /* LLPC_BUILD_NPI */
     const unsigned Opc = UseMI->getOpcode();
     if (TII->isFLATScratch(*UseMI) &&
         AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vaddr) &&
         !AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::saddr)) {
       unsigned NewOpc = AMDGPU::getFlatScratchInstSSfromSV(Opc);
-#if LLPC_BUILD_NPI
       unsigned CPol =
           TII->getNamedOperand(*UseMI, AMDGPU::OpName::cpol)->getImm();
       if ((CPol & AMDGPU::CPol::SCAL) &&
           !AMDGPU::supportsScaleOffset(*TII, NewOpc))
         return;
 
-#endif /* LLPC_BUILD_NPI */
       UseMI->setDesc(TII->get(NewOpc));
     }
 
-#if LLPC_BUILD_NPI
     // A frame index will resolve to a positive constant, so it should always be
     // safe to fold the addressing mode, even pre-GFX9.
     UseMI->getOperand(UseOpIdx).ChangeToFrameIndex(OpToFold.getFI());
 
-#endif /* LLPC_BUILD_NPI */
     return;
   }
 
@@ -1802,6 +1792,7 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
   for (MachineInstr *Copy : CopiesToReplace)
     Copy->addImplicitDefUseOperands(*MF);
 
+  SetVector<MachineInstr *> ConstantFoldCandidates;
   for (FoldCandidate &Fold : FoldList) {
     assert(!Fold.isReg() || Fold.Def.OpToFold);
     if (Fold.isReg() && Fold.getReg().isVirtual()) {
@@ -1824,14 +1815,19 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
                         << static_cast<int>(Fold.UseOpNo) << " of "
                         << *Fold.UseMI);
 
-      if (Fold.isImm() && tryConstantFoldOp(Fold.UseMI)) {
-        LLVM_DEBUG(dbgs() << "Constant folded " << *Fold.UseMI);
-        Changed = true;
-      }
+      if (Fold.isImm())
+        ConstantFoldCandidates.insert(Fold.UseMI);
 
     } else if (Fold.Commuted) {
       // Restoring instruction's original operand order if fold has failed.
       TII->commuteInstruction(*Fold.UseMI, false);
+    }
+  }
+
+  for (MachineInstr *MI : ConstantFoldCandidates) {
+    if (tryConstantFoldOp(MI)) {
+      LLVM_DEBUG(dbgs() << "Constant folded " << *MI);
+      Changed = true;
     }
   }
   return true;
@@ -2719,6 +2715,28 @@ bool SIFoldOperandsImpl::tryFoldDynamicIdxOffset(MachineOperand *IdxOpnd,
   return false;
 }
 
+bool SIFoldOperandsImpl::tryFoldDynamicIdxMI(MachineInstr &MI,
+                                             MachineInstr *&SMovImmZero) {
+  bool Changed = false;
+  if (SIInstrInfo::isVLdStIdx(MI.getOpcode())) {
+    MachineOperand *IdxOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::idx),
+                   *OffOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::offset);
+    Changed |= tryFoldDynamicIdxOffset(IdxOpnd, OffOpnd, SMovImmZero);
+  }
+  else if (SIInstrInfo::mustHaveLanesharedResult(MI)) {
+    MachineOperand *IdxOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::idx),
+                   *OffOpnd =
+                       TII->getNamedOperand(MI, AMDGPU::OpName::dyn_offset),
+                   *IdxOpndRefl =
+                       TII->getNamedOperand(MI, AMDGPU::OpName::idx_refl),
+                   *OffOpndRefl = TII->getNamedOperand(
+                       MI, AMDGPU::OpName::dyn_offset_refl);
+    Changed |= tryFoldDynamicIdxOffset(IdxOpnd, OffOpnd, SMovImmZero);
+    Changed |= tryFoldDynamicIdxOffset(IdxOpndRefl, OffOpndRefl, SMovImmZero);
+  }
+  return Changed;
+}
+
 #endif /* LLPC_BUILD_NPI */
 // tryFoldPhiAGPR will aggressively try to create AGPR PHIs.
 // For GFX90A and later, this is pretty much always a good thing, but for GFX908
@@ -2856,29 +2874,15 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
       }
 
       if (MI.mayLoad() && tryFoldLoad(MI)) {
+#if LLPC_BUILD_NPI
         Changed = true;
         continue;
-#if LLPC_BUILD_NPI
       }
 
-      if (SIInstrInfo::isVLdStIdx(MI.getOpcode())) {
-        MachineOperand *IdxOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::idx),
-                       *OffOpnd =
-                           TII->getNamedOperand(MI, AMDGPU::OpName::offset);
-        if (tryFoldDynamicIdxOffset(IdxOpnd, OffOpnd, SMovImmZero)) {
-          Changed = true;
-          continue;
-        }
-      }
-      if (SIInstrInfo::mustHaveLanesharedResult(MI)) {
-        MachineOperand *IdxOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::idx),
-                       *OffOpnd =
-                           TII->getNamedOperand(MI, AMDGPU::OpName::dyn_offset);
-        if (tryFoldDynamicIdxOffset(IdxOpnd, OffOpnd, SMovImmZero)) {
-          Changed = true;
-          continue;
-        }
+      if (tryFoldDynamicIdxMI(MI, SMovImmZero)) {
 #endif /* LLPC_BUILD_NPI */
+        Changed = true;
+        continue;
       }
 
       if (TII->isFoldableCopy(MI)) {

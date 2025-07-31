@@ -3,6 +3,27 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+cu-stores < %s | FileCheck --check-prefix=GCN %s
 
 ; TODO: Add global-isel when it can support bf16
+define amdgpu_ps void @llvm_sqrt_bf16_v(ptr addrspace(1) %out, bfloat %src) {
+; GCN-LABEL: llvm_sqrt_bf16_v:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_sqrt_bf16_e32 v2, v2
+; GCN-NEXT:    global_store_b16 v[0:1], v2, off
+; GCN-NEXT:    s_endpgm
+  %sqrt = call bfloat @llvm.sqrt.bf16(bfloat %src)
+  store bfloat %sqrt, ptr addrspace(1) %out, align 2
+  ret void
+}
+
+define amdgpu_ps void @llvm_sqrt_bf16_s(ptr addrspace(1) %out, bfloat inreg %src) {
+; GCN-LABEL: llvm_sqrt_bf16_s:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_sqrt_bf16_e32 v2, s0
+; GCN-NEXT:    global_store_b16 v[0:1], v2, off
+; GCN-NEXT:    s_endpgm
+  %sqrt = call bfloat @llvm.sqrt.bf16(bfloat %src)
+  store bfloat %sqrt, ptr addrspace(1) %out, align 2
+  ret void
+}
 
 define amdgpu_ps void @v_test_add_v2bf16_vv(ptr addrspace(1) %out, <2 x bfloat> %a, <2 x bfloat> %b) {
 ; GCN-LABEL: v_test_add_v2bf16_vv:
@@ -488,28 +509,6 @@ define amdgpu_ps void @v_test_fma_v2bf16_vll(ptr addrspace(1) %out, <2 x bfloat>
 ; GCN-NEXT:    s_endpgm
   %fma = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> %a, <2 x bfloat> <bfloat 1.0, bfloat 100.0>, <2 x bfloat> <bfloat 2.0, bfloat 200.0>)
   store <2 x bfloat> %fma, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_ps void @llvm_sqrt_bf16_v(ptr addrspace(1) %out, bfloat %src) {
-; GCN-LABEL: llvm_sqrt_bf16_v:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_sqrt_bf16_e32 v2, v2
-; GCN-NEXT:    global_store_b16 v[0:1], v2, off
-; GCN-NEXT:    s_endpgm
-  %sqrt = call bfloat @llvm.sqrt.bf16(bfloat %src)
-  store bfloat %sqrt, ptr addrspace(1) %out, align 2
-  ret void
-}
-
-define amdgpu_ps void @llvm_sqrt_bf16_s(ptr addrspace(1) %out, bfloat inreg %src) {
-; GCN-LABEL: llvm_sqrt_bf16_s:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_sqrt_bf16_e32 v2, s0
-; GCN-NEXT:    global_store_b16 v[0:1], v2, off
-; GCN-NEXT:    s_endpgm
-  %sqrt = call bfloat @llvm.sqrt.bf16(bfloat %src)
-  store bfloat %sqrt, ptr addrspace(1) %out, align 2
   ret void
 }
 

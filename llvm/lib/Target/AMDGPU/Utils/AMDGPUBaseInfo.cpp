@@ -312,8 +312,8 @@ unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
 #define GET_MIMGOffsetMappingTable_IMPL
 #define GET_MIMGG16MappingTable_IMPL
 #define GET_MAIInstInfoTable_IMPL
-#if LLPC_BUILD_NPI
 #define GET_WMMAInstInfoTable_IMPL
+#if LLPC_BUILD_NPI
 #define GET_FLATInfoTable_IMPL
 #endif /* LLPC_BUILD_NPI */
 #include "AMDGPUGenSearchableTables.inc"
@@ -630,12 +630,12 @@ bool getMAIIsGFX940XDL(unsigned Opc) {
   return Info && Info->is_gfx940_xdl;
 }
 
-#if LLPC_BUILD_NPI
 bool getWMMAIsXDL(unsigned Opc) {
   const WMMAInstInfo *Info = getWMMAInstInfoHelper(Opc);
   return Info ? Info->is_wmma_xdl : false;
 }
 
+#if LLPC_BUILD_NPI
 bool isVDDS(unsigned Opc) {
   const FLATInfo *Info = isFlatOpcodeHelper(Opc);
   return Info ? Info->IsVDDS : false;
@@ -666,7 +666,6 @@ const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
   return getMFMA_F8F6F4_InstWithNumRegs(SrcANumRegs, SrcBNumRegs, F8F8Opcode);
 }
 
-#if LLPC_BUILD_NPI
 uint8_t wmmaScaleF8F6F4FormatToNumRegs(unsigned Fmt) {
   switch (Fmt) {
   case WMMA::MATRIX_FMT_FP8:
@@ -690,7 +689,6 @@ const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
   return getMFMA_F8F6F4_InstWithNumRegs(SrcANumRegs, SrcBNumRegs, F8F8Opcode);
 }
 
-#endif /* LLPC_BUILD_NPI */
 unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
   if (ST.hasFeature(AMDGPU::FeatureGFX1250Insts))
     return SIEncodingFamily::GFX1250;
@@ -3914,6 +3912,11 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
   }
 
   return {};
+#else /* LLPC_BUILD_NPI */
+  return isGFX11Plus(STI) ? getGfx11PlusBufferFormatInfo(Format)
+         : isGFX10(STI)   ? getGfx10BufferFormatInfo(Format)
+                          : getGfx9BufferFormatInfo(Format);
+#endif /* LLPC_BUILD_NPI */
 }
 
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
@@ -3930,11 +3933,16 @@ bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
 
   // Only GVS mode is supported.
   return hasNamedOperand(Opcode, OpName::vaddr) &&
+#if LLPC_BUILD_NPI
          hasNamedOperand(Opcode, OpName::saddr) && !isVDDS(Opcode);
 
   return false;
 }
+#else /* LLPC_BUILD_NPI */
+         hasNamedOperand(Opcode, OpName::saddr);
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
 bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned Opcode,
                              unsigned DC) {
   if (isGFX13(ST)) {
@@ -3960,12 +3968,8 @@ bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned Opcode,
     return DC >= DPP::ROW_SHARE_FIRST && DC <= DPP::ROW_SHARE_LAST;
   if (isGFX90A(ST))
     return DC >= DPP::ROW_NEWBCAST_FIRST && DC <= DPP::ROW_NEWBCAST_LAST;
-  return false;
-#else /* LLPC_BUILD_NPI */
-  return isGFX11Plus(STI) ? getGfx11PlusBufferFormatInfo(Format)
-         : isGFX10(STI)   ? getGfx10BufferFormatInfo(Format)
-                          : getGfx9BufferFormatInfo(Format);
 #endif /* LLPC_BUILD_NPI */
+  return false;
 }
 
 bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
@@ -4071,9 +4075,8 @@ std::string ClusterDimsAttr::to_string() const {
     OS << Dims[0] << ',' << Dims[1] << ',' << Dims[2];
     return Buffer.c_str();
   }
-  default:
-    llvm_unreachable("Unknown ClusterDimsAttr kind");
   }
+  llvm_unreachable("Unknown ClusterDimsAttr kind");
 }
 
 ClusterDimsAttr ClusterDimsAttr::get(const Function &F) {

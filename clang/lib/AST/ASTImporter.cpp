@@ -2080,6 +2080,11 @@ ExpectedType clang::ASTNodeImporter::VisitDependentBitIntType(
                                                         *ToNumBitsExprOrErr);
 }
 
+ExpectedType clang::ASTNodeImporter::VisitPredefinedSugarType(
+    const clang::PredefinedSugarType *T) {
+  return Importer.getToContext().getPredefinedSugarType(T->getKind());
+}
+
 ExpectedType clang::ASTNodeImporter::VisitDependentSizedMatrixType(
     const clang::DependentSizedMatrixType *T) {
   Error Err = Error::success();
@@ -10063,16 +10068,9 @@ ASTImporter::Import(NestedNameSpecifier *FromNNS) {
   case NestedNameSpecifier::Namespace:
     if (ExpectedDecl NSOrErr = Import(FromNNS->getAsNamespace())) {
       return NestedNameSpecifier::Create(ToContext, Prefix,
-                                         cast<NamespaceDecl>(*NSOrErr));
+                                         cast<NamespaceBaseDecl>(*NSOrErr));
     } else
       return NSOrErr.takeError();
-
-  case NestedNameSpecifier::NamespaceAlias:
-    if (ExpectedDecl NSADOrErr = Import(FromNNS->getAsNamespaceAlias()))
-      return NestedNameSpecifier::Create(ToContext, Prefix,
-                                         cast<NamespaceAliasDecl>(*NSADOrErr));
-    else
-      return NSADOrErr.takeError();
 
   case NestedNameSpecifier::Global:
     return NestedNameSpecifier::GlobalSpecifier(ToContext);
@@ -10137,11 +10135,6 @@ ASTImporter::Import(NestedNameSpecifierLoc FromNNS) {
     case NestedNameSpecifier::Namespace:
       Builder.Extend(getToContext(), Spec->getAsNamespace(), ToLocalBeginLoc,
                      ToLocalEndLoc);
-      break;
-
-    case NestedNameSpecifier::NamespaceAlias:
-      Builder.Extend(getToContext(), Spec->getAsNamespaceAlias(),
-                     ToLocalBeginLoc, ToLocalEndLoc);
       break;
 
     case NestedNameSpecifier::TypeSpec: {

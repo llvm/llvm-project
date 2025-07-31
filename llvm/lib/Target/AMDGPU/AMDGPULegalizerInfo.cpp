@@ -3128,15 +3128,9 @@ bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(Register DstReg, LLT PtrTy,
   Register PCReg = PtrTy.getSizeInBits() != 32 ? DstReg :
     B.getMRI()->createGenericVirtualRegister(ConstPtrTy);
 
-#if LLPC_BUILD_NPI
   if (ST.has64BitLiterals()) {
     assert(GAFlags != SIInstrInfo::MO_NONE);
-#else /* LLPC_BUILD_NPI */
-  MachineInstrBuilder MIB = B.buildInstr(AMDGPU::SI_PC_ADD_REL_OFFSET)
-    .addDef(PCReg);
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
     MachineInstrBuilder MIB =
         B.buildInstr(AMDGPU::SI_PC_ADD_REL_OFFSET64).addDef(PCReg);
     MIB.addGlobalAddress(GV, Offset, GAFlags + 2);
@@ -3150,13 +3144,6 @@ bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(Register DstReg, LLT PtrTy,
     else
       MIB.addGlobalAddress(GV, Offset, GAFlags + 1);
   }
-#else /* LLPC_BUILD_NPI */
-  MIB.addGlobalAddress(GV, Offset, GAFlags);
-  if (GAFlags == SIInstrInfo::MO_NONE)
-    MIB.addImm(0);
-  else
-    MIB.addGlobalAddress(GV, Offset, GAFlags + 1);
-#endif /* LLPC_BUILD_NPI */
 
   if (!B.getMRI()->getRegClassOrNull(PCReg))
     B.getMRI()->setRegClass(PCReg, &AMDGPU::SReg_64RegClass);
@@ -3172,7 +3159,6 @@ void AMDGPULegalizerInfo::buildAbsGlobalAddress(
     MachineRegisterInfo &MRI) const {
   bool RequiresHighHalf = PtrTy.getSizeInBits() != 32;
 
-#if LLPC_BUILD_NPI
   if (RequiresHighHalf && ST.has64BitLiterals()) {
     if (!MRI.getRegClassOrNull(DstReg))
       MRI.setRegClass(DstReg, &AMDGPU::SReg_64RegClass);
@@ -3182,7 +3168,6 @@ void AMDGPULegalizerInfo::buildAbsGlobalAddress(
     return;
   }
 
-#endif /* LLPC_BUILD_NPI */
   LLT S32 = LLT::scalar(32);
 
   // Use the destination directly, if and only if we store the lower address
@@ -8470,7 +8455,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_image_bvh_dual_intersect_ray:
   case Intrinsic::amdgcn_image_bvh8_intersect_ray:
     return legalizeBVHDualOrBVH8IntersectRayIntrinsic(MI, B);
-#if LLPC_BUILD_NPI
   case Intrinsic::amdgcn_swmmac_f32_16x16x128_fp8_fp8:
   case Intrinsic::amdgcn_swmmac_f32_16x16x128_fp8_bf8:
   case Intrinsic::amdgcn_swmmac_f32_16x16x128_bf8_fp8:
@@ -8485,7 +8469,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
       MI.getOperand(5).setReg(B.buildAnyExt(S64, Index).getReg(0));
     return true;
   }
-#endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_swmmac_f16_16x16x32_f16:
   case Intrinsic::amdgcn_swmmac_bf16_16x16x32_bf16:
   case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf16:
@@ -8500,31 +8483,24 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
       MI.getOperand(5).setReg(B.buildAnyExt(S32, Index).getReg(0));
     return true;
   }
-#if LLPC_BUILD_NPI
   case Intrinsic::amdgcn_swmmac_f16_16x16x64_f16:
   case Intrinsic::amdgcn_swmmac_bf16_16x16x64_bf16:
   case Intrinsic::amdgcn_swmmac_f32_16x16x64_bf16:
   case Intrinsic::amdgcn_swmmac_bf16f32_16x16x64_bf16:
   case Intrinsic::amdgcn_swmmac_f32_16x16x64_f16:
   case Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8:
-#endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu4:
   case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu8:
   case Intrinsic::amdgcn_swmmac_i32_16x16x64_iu4: {
     Register Index = MI.getOperand(7).getReg();
-#if LLPC_BUILD_NPI
     LLT IdxTy = IntrID == Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8
                     ? LLT::scalar(64)
                     : LLT::scalar(32);
     if (MRI.getType(Index) != IdxTy)
       MI.getOperand(7).setReg(B.buildAnyExt(IdxTy, Index).getReg(0));
-#else /* LLPC_BUILD_NPI */
-    LLT S32 = LLT::scalar(32);
-    if (MRI.getType(Index) != S32)
-      MI.getOperand(7).setReg(B.buildAnyExt(S32, Index).getReg(0));
-#endif /* LLPC_BUILD_NPI */
     return true;
   }
+
   case Intrinsic::amdgcn_fmed3: {
     GISelChangeObserver &Observer = Helper.Observer;
 

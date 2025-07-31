@@ -494,6 +494,17 @@ inline static bool isValidRoundingMode(unsigned Mode) {
 }
 } // namespace RISCVVXRndMode
 
+namespace RISCVExceptFlags {
+enum ExceptionFlag {
+  NX = 0x01, // Inexact
+  UF = 0x02, // Underflow
+  OF = 0x04, // Overflow
+  DZ = 0x08, // Divide by zero
+  NV = 0x10, // Invalid operation
+  ALL = 0x1F // Mask for all accrued exception flags
+};
+}
+
 //===----------------------------------------------------------------------===//
 // Floating-point Immediates
 //

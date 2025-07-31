@@ -197,9 +197,9 @@ public:
     ImmTyWaitVAVDst,
     ImmTyWaitVMVSrc,
     ImmTyBitOp3,
-#if LLPC_BUILD_NPI
     ImmTyMatrixAFMT,
     ImmTyMatrixBFMT,
+#if LLPC_BUILD_NPI
     ImmTyMatrixAScale,
     ImmTyMatrixBScale,
     ImmTyMatrixAScaleFmt,
@@ -471,9 +471,9 @@ public:
   bool isIndexKey8bit() const { return isImmTy(ImmTyIndexKey8bit); }
   bool isIndexKey16bit() const { return isImmTy(ImmTyIndexKey16bit); }
   bool isIndexKey32bit() const { return isImmTy(ImmTyIndexKey32bit); }
-#if LLPC_BUILD_NPI
   bool isMatrixAFMT() const { return isImmTy(ImmTyMatrixAFMT); }
   bool isMatrixBFMT() const { return isImmTy(ImmTyMatrixBFMT); }
+#if LLPC_BUILD_NPI
   bool isMatrixAScale() const { return isImmTy(ImmTyMatrixAScale); }
   bool isMatrixBScale() const { return isImmTy(ImmTyMatrixBScale); }
   bool isMatrixAScaleFmt() const { return isImmTy(ImmTyMatrixAScaleFmt); }
@@ -524,10 +524,6 @@ public:
 #if LLPC_BUILD_NPI
   bool isSCSrc_bf16() const {
     return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::bf16);
-  }
-
-  bool isSCSrc_f16() const {
-    return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::f16);
 #else /* LLPC_BUILD_NPI */
   bool isSCSrcV2B16() const {
     return isSCSrcB16();
@@ -535,6 +531,10 @@ public:
   }
 
 #if LLPC_BUILD_NPI
+  bool isSCSrc_f16() const {
+    return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::f16);
+  }
+
   bool isSCSrcV2B16() const { return isSCSrc_b16(); }
 
 #endif /* LLPC_BUILD_NPI */
@@ -1321,9 +1321,9 @@ public:
     case ImmTyWaitVAVDst: OS << "WaitVAVDst"; break;
     case ImmTyWaitVMVSrc: OS << "WaitVMVSrc"; break;
     case ImmTyBitOp3: OS << "BitOp3"; break;
-#if LLPC_BUILD_NPI
     case ImmTyMatrixAFMT: OS << "ImmTyMatrixAFMT"; break;
     case ImmTyMatrixBFMT: OS << "ImmTyMatrixBFMT"; break;
+#if LLPC_BUILD_NPI
     case ImmTyMatrixAScale: OS << "ImmTyMatrixAScale"; break;
     case ImmTyMatrixBScale: OS << "ImmTyMatrixBScale"; break;
     case ImmTyMatrixAScaleFmt: OS << "ImmTyMatrixAScaleFmt"; break;
@@ -1917,11 +1917,11 @@ public:
   ParseStatus parseIndexKey8bit(OperandVector &Operands);
   ParseStatus parseIndexKey16bit(OperandVector &Operands);
   ParseStatus parseIndexKey32bit(OperandVector &Operands);
-#if LLPC_BUILD_NPI
   ParseStatus tryParseMatrixFMT(OperandVector &Operands, StringRef Name,
                                 AMDGPUOperand::ImmTy Type);
   ParseStatus parseMatrixAFMT(OperandVector &Operands);
   ParseStatus parseMatrixBFMT(OperandVector &Operands);
+#if LLPC_BUILD_NPI
   ParseStatus tryParseMatrixScale(OperandVector &Operands, StringRef Name,
                                   AMDGPUOperand::ImmTy Type);
   ParseStatus parseMatrixAScale(OperandVector &Operands);
@@ -2085,8 +2085,8 @@ private:
   std::optional<StringRef> validateLdsDirect(const MCInst &Inst);
 #if LLPC_BUILD_NPI
   bool validateRegOperands(const MCInst &Inst, const OperandVector &Operands);
-  bool validateWMMA(const MCInst &Inst, const OperandVector &Operands);
 #endif /* LLPC_BUILD_NPI */
+  bool validateWMMA(const MCInst &Inst, const OperandVector &Operands);
   unsigned getConstantBusLimit(unsigned Opcode) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
   bool isInlineConstant(const MCInst &Inst, unsigned OpIdx) const;
@@ -5668,23 +5668,18 @@ bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
   // is not required VGPRAlignment.
   if ((!FB[AMDGPU::FeatureGFX90AInsts] && !FB[AMDGPU::FeatureGFX1250Insts]) ||
       isGFX13())
+#else /* LLPC_BUILD_NPI */
+  if (!FB[AMDGPU::FeatureGFX90AInsts] && !FB[AMDGPU::FeatureGFX1250Insts])
+#endif /* LLPC_BUILD_NPI */
     return true;
 
-#endif /* LLPC_BUILD_NPI */
   unsigned Opc = Inst.getOpcode();
-#if LLPC_BUILD_NPI
   const MCRegisterInfo *MRI = getMRI();
-#endif /* LLPC_BUILD_NPI */
   // DS_READ_B96_TR_B6 is the only DS instruction in GFX950, that allows
   // unaligned VGPR. All others only allow even aligned VGPRs.
-#if LLPC_BUILD_NPI
   if (FB[AMDGPU::FeatureGFX90AInsts] && Opc == AMDGPU::DS_READ_B96_TR_B6_vi)
-#else /* LLPC_BUILD_NPI */
-  if (!(FB[AMDGPU::FeatureGFX90AInsts]) || Opc == AMDGPU::DS_READ_B96_TR_B6_vi)
-#endif /* LLPC_BUILD_NPI */
     return true;
 
-#if LLPC_BUILD_NPI
   if (FB[AMDGPU::FeatureGFX1250Insts]) {
     switch (Opc) {
     default:
@@ -5695,8 +5690,6 @@ bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
       // allows unaligned VGPR. All others only allow even aligned VGPRs.
       return true;
     case AMDGPU::GLOBAL_LOAD_TR6_B96:
-    case AMDGPU::GLOBAL_LOAD_TR6_B96_SADDR:
-    case AMDGPU::GLOBAL_LOAD_TR6_B96_SADDR_gfx1250:
     case AMDGPU::GLOBAL_LOAD_TR6_B96_gfx1250: {
       // GLOBAL_LOAD_TR6_B96 is the only GLOBAL instruction in GFX1250, that
       // allows unaligned VGPR for vdst, but other operands still only allow
@@ -5710,12 +5703,12 @@ bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
       }
       return true;
     }
+    case AMDGPU::GLOBAL_LOAD_TR6_B96_SADDR:
+    case AMDGPU::GLOBAL_LOAD_TR6_B96_SADDR_gfx1250:
+      return true;
     }
   }
 
-#else /* LLPC_BUILD_NPI */
-  const MCRegisterInfo *MRI = getMRI();
-#endif /* LLPC_BUILD_NPI */
   const MCRegisterClass &VGPR32 = MRI->getRegClass(AMDGPU::VGPR_32RegClassID);
   const MCRegisterClass &AGPR32 = MRI->getRegClass(AMDGPU::AGPR_32RegClassID);
   for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
@@ -5875,6 +5868,9 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
     return false;
 
   if (!isGFX1250Plus()) {
+#else /* LLPC_BUILD_NPI */
+  if (!isGFX1250()) {
+#endif /* LLPC_BUILD_NPI */
     if (CPol & CPol::SCAL) {
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
       StringRef CStr(S.getPointer());
@@ -5896,7 +5892,6 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
     Error(S, "scale_offset is not supported for this instruction");
   }
 
-#endif /* LLPC_BUILD_NPI */
   if (isGFX12Plus())
     return validateTHAndScopeBits(Inst, Operands, CPol);
 
@@ -6067,6 +6062,7 @@ bool AMDGPUAsmParser::validateVOPM(const MCInst &Inst,
   return true;
 }
 
+#endif /* LLPC_BUILD_NPI */
 bool AMDGPUAsmParser::validateWMMA(const MCInst &Inst,
                                    const OperandVector &Operands) {
   unsigned Opc = Inst.getOpcode();
@@ -6098,7 +6094,6 @@ bool AMDGPUAsmParser::validateWMMA(const MCInst &Inst,
          validateFmt(AMDGPU::OpName::matrix_b_fmt, AMDGPU::OpName::src1);
 }
 
-#endif /* LLPC_BUILD_NPI */
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
                                           const SMLoc &IDLoc,
                                           const OperandVector &Operands) {
@@ -6249,9 +6244,11 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateSetVgprMSB(Inst, Operands)) {
     return false;
   }
+#endif /* LLPC_BUILD_NPI */
   if (!validateWMMA(Inst, Operands)) {
     return false;
   }
+#if LLPC_BUILD_NPI
   if (!validateVOPM(Inst, Operands)) {
     return false;
   }
@@ -7797,9 +7794,9 @@ ParseStatus AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
     int64_t CPolVal = 0;
     ParseStatus ResTH = ParseStatus::NoMatch;
     ParseStatus ResScope = ParseStatus::NoMatch;
-#if LLPC_BUILD_NPI
     ParseStatus ResNV = ParseStatus::NoMatch;
     ParseStatus ResScal = ParseStatus::NoMatch;
+#if LLPC_BUILD_NPI
     ParseStatus ResCFS = ParseStatus::NoMatch;
 #endif /* LLPC_BUILD_NPI */
 
@@ -7826,7 +7823,6 @@ ParseStatus AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
         }
       }
 
-#if LLPC_BUILD_NPI
       // NV bit exists on GFX12+, but does something starting from GFX1250.
       // Allow parsing on all GFX12 and fail on validation for better
       // diagnostics.
@@ -7852,6 +7848,7 @@ ParseStatus AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
         }
       }
 
+#if LLPC_BUILD_NPI
       if (ResCFS.isNoMatch()) {
         int64_t CFS;
         ResCFS = parseCFS(Operands, CFS);
@@ -7867,11 +7864,11 @@ ParseStatus AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
       break;
     }
 
-#if LLPC_BUILD_NPI
     if (ResTH.isNoMatch() && ResScope.isNoMatch() && ResNV.isNoMatch() &&
+#if LLPC_BUILD_NPI
         ResScal.isNoMatch() && ResCFS.isNoMatch())
 #else /* LLPC_BUILD_NPI */
-    if (ResTH.isNoMatch() && ResScope.isNoMatch())
+        ResScal.isNoMatch())
 #endif /* LLPC_BUILD_NPI */
       return ParseStatus::NoMatch;
 
@@ -8135,7 +8132,6 @@ ParseStatus AMDGPUAsmParser::parseIndexKey32bit(OperandVector &Operands) {
   return tryParseIndexKey(Operands, AMDGPUOperand::ImmTyIndexKey32bit);
 }
 
-#if LLPC_BUILD_NPI
 ParseStatus AMDGPUAsmParser::tryParseMatrixFMT(OperandVector &Operands,
                                                StringRef Name,
                                                AMDGPUOperand::ImmTy Type) {
@@ -8156,6 +8152,7 @@ ParseStatus AMDGPUAsmParser::parseMatrixBFMT(OperandVector &Operands) {
                            AMDGPUOperand::ImmTyMatrixBFMT);
 }
 
+#if LLPC_BUILD_NPI
 ParseStatus AMDGPUAsmParser::tryParseMatrixScale(OperandVector &Operands,
                                                  StringRef Name,
                                                  AMDGPUOperand::ImmTy Type) {
@@ -10380,7 +10377,6 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
                           DefaultVal);
   }
 
-#if LLPC_BUILD_NPI
   int MatrixAFMTIdx =
       AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::matrix_a_fmt);
   if (MatrixAFMTIdx != -1) {
@@ -10395,6 +10391,7 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
                           AMDGPUOperand::ImmTyMatrixBFMT, 0);
   }
 
+#if LLPC_BUILD_NPI
   int MatrixAScaleIdx =
       AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::matrix_a_scale);
   if (MatrixAScaleIdx != -1) {

@@ -3083,8 +3083,7 @@ static TemplateDeductionResult ConvertDeducedTemplateArguments(
 
     // If there was no default argument, deduction is incomplete.
     if (DefArg.getArgument().isNull()) {
-      Info.Param = makeTemplateParameter(
-          const_cast<NamedDecl *>(TemplateParams->getParam(I)));
+      Info.Param = makeTemplateParameter(TemplateParams->getParam(I));
       Info.reset(
           TemplateArgumentList::CreateCopy(S.Context, CTAI.SugaredConverted),
           TemplateArgumentList::CreateCopy(S.Context, CTAI.CanonicalConverted));
@@ -3100,8 +3099,7 @@ static TemplateDeductionResult ConvertDeducedTemplateArguments(
     if (S.CheckTemplateArgument(
             Param, DefArg, TD, TD->getLocation(), TD->getSourceRange().getEnd(),
             /*ArgumentPackIndex=*/0, CTAI, Sema::CTAK_Specified)) {
-      Info.Param = makeTemplateParameter(
-                         const_cast<NamedDecl *>(TemplateParams->getParam(I)));
+      Info.Param = makeTemplateParameter(TemplateParams->getParam(I));
       // FIXME: These template arguments are temporary. Free them!
       Info.reset(
           TemplateArgumentList::CreateCopy(S.Context, CTAI.SugaredConverted),
@@ -3227,7 +3225,7 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
     if (ParamIdx >= TPL->size())
       ParamIdx = TPL->size() - 1;
 
-    Decl *Param = const_cast<NamedDecl *>(TPL->getParam(ParamIdx));
+    Decl *Param = TPL->getParam(ParamIdx);
     Info.Param = makeTemplateParameter(Param);
     Info.FirstArg = Ps[ArgIdx].getArgument();
     return TemplateDeductionResult::SubstitutionFailure;

@@ -651,6 +651,32 @@ def SI_INIT_WHOLE_WAVE : SPseudoInstSI <
   let isConvergent = 1;
 }
 
+// Sets EXEC to all lanes and returns the previous EXEC.
+def SI_WHOLE_WAVE_FUNC_SETUP : SPseudoInstSI <
+  (outs SReg_1:$dst), (ins), [(set i1:$dst, (AMDGPUwhole_wave_setup))]> {
+  let Defs = [EXEC];
+  let Uses = [EXEC];
+
+  let isConvergent = 1;
+}
+
+// Restores the previous EXEC and otherwise behaves entirely like a SI_RETURN.
+def SI_WHOLE_WAVE_FUNC_RETURN : SPseudoInstSI <
+  (outs), (ins SReg_1:$orig_exec)> {
+  let isTerminator = 1;
+  let isBarrier = 1;
+  let isReturn = 1;
+  let SchedRW = [WriteBranch];
+
+  // We're going to use custom handling to set the $orig_exec to the correct value.
+  let usesCustomInserter = 1;
+}
+
+// Generate a SI_WHOLE_WAVE_FUNC_RETURN pseudo with a placeholder for its
+// argument. It will be filled in by the custom inserter.
+def : GCNPat<
+  (AMDGPUwhole_wave_return), (SI_WHOLE_WAVE_FUNC_RETURN (i1 (IMPLICIT_DEF)))>;
+
 // Return for returning shaders to a shader variant epilog.
 def SI_RETURN_TO_EPILOG : SPseudoInstSI <
   (outs), (ins variable_ops), [(AMDGPUreturn_to_epilog)]> {
@@ -1213,7 +1239,6 @@ def : GCNPat <
   (SI_PC_ADD_REL_OFFSET $ptr_lo, (i32 0))
 >;
 
-#ifdef LLPC_BUILD_NPI
 def SI_PC_ADD_REL_OFFSET64 : SPseudoInstSI <
   (outs SReg_64:$dst),
   (ins si_ga:$ptr),
@@ -1222,7 +1247,6 @@ def SI_PC_ADD_REL_OFFSET64 : SPseudoInstSI <
   let SubtargetPredicate = Has64BitLiterals;
 }
 
-#endif /* LLPC_BUILD_NPI */
 def : GCNPat<
   (AMDGPUtrap timm:$trapid),
   (S_TRAP $trapid)
@@ -2597,57 +2621,44 @@ def : GCNPat <
                    (V_RCP_IFLAG_F32_e32 (V_CVT_F32_U32_e32 $src0))))
 >;
 
-multiclass SI_WATERFALL_Pattern < ValueType dvt, ValueType svt, string VecSize> {
-  def : GCNPat<
-    (i32 (int_amdgcn_waterfall_begin i32:$tok, svt:$idx)),
-    (!cast<Instruction>("SI_WATERFALL_BEGIN_"#VecSize) i32:$tok, svt:$idx)
-  >;
-
-  def : GCNPat<
-    (dvt (int_amdgcn_waterfall_readfirstlane i32:$tok, svt:$src)),
-    (!cast<Instruction>("SI_WATERFALL_READFIRSTLANE_"#VecSize) i32:$tok, svt:$src)
-  >;
-
-  def : GCNPat<
-    (svt (int_amdgcn_waterfall_end i32:$tok, svt:$src)),
-    (!cast<Instruction>("SI_WATERFALL_END_"#VecSize) i32:$tok, svt:$src)
-  >;
+multiclass SI_WATERFALL_Pattern<ValueType dvt, ValueType svt, string VecSize> {
+  def : GCNPat<(dvt(int_amdgcn_waterfall_readfirstlane i32:$tok, svt:$src)),
+               (!cast<Instruction>("SI_WATERFALL_READFIRSTLANE_"#VecSize)
+                       i32:$tok,
+                   svt:$src)>;
 }
 
-multiclass SI_WATERFALL_S_Pattern < ValueType svt, string VecSize> {
-  def : GCNPat<
-    (i32 (int_amdgcn_waterfall_begin i32:$tok, svt:$idx)),
-    (!cast<Instruction>("SI_WATERFALL_BEGIN_"#VecSize) i32:$tok, svt:$idx)
-  >;
+multiclass SI_WATERFALL_S_Pattern<list<ValueType> vts, string VecSize> {
+  foreach vt = vts in {
+    def : GCNPat<(i32(int_amdgcn_waterfall_begin i32:$tok, vt:$idx)),
+                 (!cast<Instruction>("SI_WATERFALL_BEGIN_"#VecSize) i32:$tok,
+                     vt:$idx)>;
 
-  def : GCNPat<
-    (svt (int_amdgcn_waterfall_readfirstlane i32:$tok, svt:$src)),
-    (!cast<Instruction>("SI_WATERFALL_READFIRSTLANE_"#VecSize) i32:$tok, svt:$src)
-  >;
+    def : GCNPat<(vt(int_amdgcn_waterfall_readfirstlane i32:$tok, vt:$src)),
+                 (!cast<Instruction>("SI_WATERFALL_READFIRSTLANE_"#VecSize)
+                         i32:$tok,
+                     vt:$src)>;
 
-  def : GCNPat<
-    (svt (int_amdgcn_waterfall_end i32:$tok, svt:$src)),
-    (!cast<Instruction>("SI_WATERFALL_END_"#VecSize) i32:$tok, svt:$src)
-  >;
+    def : GCNPat<(vt(int_amdgcn_waterfall_end i32:$tok, vt:$src)),
+                 (!cast<Instruction>("SI_WATERFALL_END_"#VecSize) i32:$tok,
+                     vt:$src)>;
 
-  def : GCNPat<
-    (svt (int_amdgcn_waterfall_last_use i32:$tok, svt:$src)),
-    (!cast<Instruction>("SI_WATERFALL_LAST_USE_"#VecSize) i32:$tok, svt:$src)
-  >;
-  def : GCNPat<
-    (svt (int_amdgcn_waterfall_last_use_vgpr i32:$tok, svt:$src)),
-    (!cast<Instruction>("SI_WATERFALL_LAST_USE_"#VecSize#"_V") i32:$tok, svt:$src)
-  >;
+    def : GCNPat<(vt(int_amdgcn_waterfall_last_use i32:$tok, vt:$src)),
+                 (!cast<Instruction>("SI_WATERFALL_LAST_USE_"#VecSize) i32:$tok,
+                     vt:$src)>;
+
+    def : GCNPat<(vt(int_amdgcn_waterfall_last_use_vgpr i32:$tok, vt:$src)),
+                 (!cast<Instruction>("SI_WATERFALL_LAST_USE_"#VecSize#"_V")
+                         i32:$tok,
+                     vt:$src)>;
+  }
 }
 
-defm : SI_WATERFALL_S_Pattern <i16, "V1">;
-defm : SI_WATERFALL_S_Pattern <v2i16, "V1">;
-defm : SI_WATERFALL_S_Pattern <v4i16, "V2">;
-
-defm : SI_WATERFALL_S_Pattern <i32, "V1">;
-defm : SI_WATERFALL_S_Pattern <v2i32, "V2">;
-defm : SI_WATERFALL_S_Pattern <v4i32, "V4">;
-defm : SI_WATERFALL_S_Pattern <v8i32, "V8">;
+defm : SI_WATERFALL_S_Pattern<Reg16Types.types, "V1">;
+defm : SI_WATERFALL_S_Pattern<Reg32Types.types, "V1">;
+defm : SI_WATERFALL_S_Pattern<Reg64Types.types, "V2">;
+defm : SI_WATERFALL_S_Pattern<Reg128Types.types, "V4">;
+defm : SI_WATERFALL_S_Pattern<Reg256Types.types, "V8">;
 
 defm : SI_WATERFALL_Pattern <i16, f16, "V1">;
 defm : SI_WATERFALL_Pattern <v2i16, v2f16, "V1">;
@@ -3749,15 +3760,11 @@ def : GCNPat <
   (S_LSHL_B32 SReg_32:$src1, (i16 16))
 >;
 
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in {
 def : GCNPat <
   (v2i16 (DivergentBinFrag<build_vector> (i16 0), (i16 VGPR_32:$src1))),
   (v2i16 (V_LSHLREV_B32_e64 (i16 16), VGPR_32:$src1))
->;
-
-
-def : GCNPat <
-  (v2i16 (UniformBinFrag<build_vector> (i16 SReg_32:$src1), (i16 0))),
-  (S_AND_B32 (S_MOV_B32 (i32 0xffff)), SReg_32:$src1)
 >;
 
 def : GCNPat <
@@ -3766,13 +3773,19 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (v2f16 (UniformBinFrag<build_vector> (f16 SReg_32:$src1), (f16 FP_ZERO))),
+  (v2f16 (DivergentBinFrag<build_vector> (f16 VGPR_32:$src1), (f16 FP_ZERO))),
+  (v2f16 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), VGPR_32:$src1))
+>;
+}
+
+def : GCNPat <
+  (v2i16 (UniformBinFrag<build_vector> (i16 SReg_32:$src1), (i16 0))),
   (S_AND_B32 (S_MOV_B32 (i32 0xffff)), SReg_32:$src1)
 >;
 
 def : GCNPat <
-  (v2f16 (DivergentBinFrag<build_vector> (f16 VGPR_32:$src1), (f16 FP_ZERO))),
-  (v2f16 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), VGPR_32:$src1))
+  (v2f16 (UniformBinFrag<build_vector> (f16 SReg_32:$src1), (f16 FP_ZERO))),
+  (S_AND_B32 (S_MOV_B32 (i32 0xffff)), SReg_32:$src1)
 >;
 
 foreach vecTy = [v2i16, v2f16, v2bf16] in {
@@ -4638,6 +4651,20 @@ def G_AMDGPU_S_MUL_I64_I32 : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type0:$src1);
   let hasSideEffects = 0;
+}
+
+def G_AMDGPU_WHOLE_WAVE_FUNC_SETUP : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$origExec);
+  let InOperandList = (ins);
+  let isConvergent = 1;
+}
+
+def G_AMDGPU_WHOLE_WAVE_FUNC_RETURN : AMDGPUGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$origExec);
+  let isTerminator = 1;
+  let isBarrier = 1;
+  let isReturn = 1;
 }
 
 // This is equivalent to the G_INTRINSIC*, but the operands may have

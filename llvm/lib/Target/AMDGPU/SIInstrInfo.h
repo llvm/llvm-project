@@ -33,6 +33,7 @@ class LiveVariables;
 class MachineDominatorTree;
 class MachineRegisterInfo;
 class RegScavenger;
+class SIMachineFunctionInfo;
 class TargetRegisterClass;
 class ScheduleHazardRecognizer;
 
@@ -227,40 +228,22 @@ public:
     MO_GOTPCREL32_LO = 2,
     // MO_GOTPCREL32_HI -> symbol@gotpcrel32@hi -> R_AMDGPU_GOTPCREL32_HI.
     MO_GOTPCREL32_HI = 3,
-#if LLPC_BUILD_NPI
     // MO_GOTPCREL64 -> symbol@GOTPCREL -> R_AMDGPU_GOTPCREL.
     MO_GOTPCREL64 = 4,
-#endif /* LLPC_BUILD_NPI */
     // MO_REL32_LO -> symbol@rel32@lo -> R_AMDGPU_REL32_LO.
-#if LLPC_BUILD_NPI
     MO_REL32 = 5,
     MO_REL32_LO = 5,
-#else /* LLPC_BUILD_NPI */
-    MO_REL32 = 4,
-    MO_REL32_LO = 4,
-#endif /* LLPC_BUILD_NPI */
     // MO_REL32_HI -> symbol@rel32@hi -> R_AMDGPU_REL32_HI.
-#if LLPC_BUILD_NPI
     MO_REL32_HI = 6,
     MO_REL64 = 7,
-#else /* LLPC_BUILD_NPI */
-    MO_REL32_HI = 5,
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
     MO_FAR_BRANCH_OFFSET = 8,
-#else /* LLPC_BUILD_NPI */
-    MO_FAR_BRANCH_OFFSET = 6,
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
     MO_ABS32_LO = 9,
     MO_ABS32_HI = 10,
     MO_ABS64 = 11,
+#if LLPC_BUILD_NPI
     MO_NUM_VGPRS = 12,
-#else /* LLPC_BUILD_NPI */
-    MO_ABS32_LO = 8,
-    MO_ABS32_HI = 9,
 #endif /* LLPC_BUILD_NPI */
   };
 
@@ -335,6 +318,16 @@ public:
                               
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
+
+  unsigned getVectorRegSpillSaveOpcode(Register Reg,
+                                       const TargetRegisterClass *RC,
+                                       unsigned Size,
+                                       const SIMachineFunctionInfo &MFI,
+                                       bool NeedsCFI) const;
+  unsigned
+  getVectorRegSpillRestoreOpcode(Register Reg, const TargetRegisterClass *RC,
+                                 unsigned Size,
+                                 const SIMachineFunctionInfo &MFI) const;
 
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
@@ -941,9 +934,9 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::IsDOT;
   }
 
-#if LLPC_BUILD_NPI
   bool isXDLWMMA(const MachineInstr &MI) const;
 
+#if LLPC_BUILD_NPI
   // Instructions for which we care if their destination ends up in a laneshared
   // VGPR.
   // Async multicast to LDS instructions have no issue.
@@ -977,7 +970,9 @@ public:
     case AMDGPU::DDS_LOAD_MCAST_B128_SADDR:
     case AMDGPU::DDS_LOAD_MCAST_B128_LANESHARED_SADDR:
     case AMDGPU::V_SEND_VGPR_NEXT_B32:
+    case AMDGPU::V_SEND_VGPR_NEXT_B32_LANESHARED:
     case AMDGPU::V_SEND_VGPR_PREV_B32:
+    case AMDGPU::V_SEND_VGPR_PREV_B32_LANESHARED:
       return true;
     default:
       return false;
@@ -1159,6 +1154,10 @@ public:
       return AMDGPU::S_WAIT_DSCNT;
     case AMDGPU::S_WAIT_KMCNT_soft:
       return AMDGPU::S_WAIT_KMCNT;
+#if LLPC_BUILD_NPI
+    case AMDGPU::S_WAIT_XCNT_soft:
+      return AMDGPU::S_WAIT_XCNT;
+#endif /* LLPC_BUILD_NPI */
     default:
       return Opcode;
     }
@@ -1235,7 +1234,6 @@ public:
   // that will not require an additional 4-bytes; this function assumes that it
   // will.
   bool isInlineConstant(const MachineOperand &MO, uint8_t OperandType) const {
-    assert(!MO.isReg() && "isInlineConstant called on register operand!");
     if (!MO.isImm())
       return false;
     return isInlineConstant(MO.getImm(), OperandType);
@@ -1337,6 +1335,8 @@ public:
   void restoreExec(MachineFunction &MF, MachineBasicBlock &MBB,
                    MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                    Register Reg, SlotIndexes *Indexes = nullptr) const;
+
+  MachineInstr *getWholeWaveFunctionSetup(MachineFunction &MF) const;
 
   /// Return the correct register class for \p OpNo.  For target-specific
   /// instructions, this will return the register class that has been defined

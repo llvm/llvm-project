@@ -3663,6 +3663,7 @@ AMDGPUInstructionSelector::matchExtendFromS32OrS32(Register Reg,
   return matchZeroExtendFromS32OrS32(Reg);
 }
 
+#endif /* LLPC_BUILD_NPI */
 Register AMDGPUInstructionSelector::matchAnyExtendFromS32(Register Reg) const {
   Register AnyExtSrc;
   if (mi_match(Reg, *MRI, m_GAnyExt(m_Reg(AnyExtSrc))))
@@ -3682,7 +3683,6 @@ Register AMDGPUInstructionSelector::matchAnyExtendFromS32(Register Reg) const {
   return Register();
 }
 
-#endif /* LLPC_BUILD_NPI */
 bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
   if (!Subtarget->hasVMemToLDSLoad())
     return false;
@@ -4320,6 +4320,10 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return true;
   case AMDGPU::G_AMDGPU_WAVE_ADDRESS:
     return selectWaveAddress(I);
+  case AMDGPU::G_AMDGPU_WHOLE_WAVE_FUNC_RETURN: {
+    I.setDesc(TII.get(AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN));
+    return true;
+  }
   case AMDGPU::G_STACKRESTORE:
     return selectStackRestore(I);
   case AMDGPU::G_PHI:
@@ -5093,9 +5097,7 @@ AMDGPUInstructionSelector::selectVOP3PModsDOT(MachineOperand &Root) const {
   return selectVOP3PRetHelper(Root, true);
 }
 
-#if LLPC_BUILD_NPI
 // Select neg_lo from the i1 immediate operand.
-#endif /* LLPC_BUILD_NPI */
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3PModsNeg(MachineOperand &Root) const {
   // Literal i1 value set in intrinsic, represents SrcMods for the next operand.
@@ -5111,7 +5113,6 @@ AMDGPUInstructionSelector::selectVOP3PModsNeg(MachineOperand &Root) const {
   }};
 }
 
-#if LLPC_BUILD_NPI
 // Select both neg_lo and neg_hi from the i1 immediate operand. This is
 // specifically for F16/BF16 operands in WMMA instructions, where neg_lo applies
 // to matrix's even k elements, and neg_hi applies to matrix's odd k elements.
@@ -5156,7 +5157,6 @@ AMDGPUInstructionSelector::selectVOP3PModsNegAbs(MachineOperand &Root) const {
   }};
 }
 
-#endif /* LLPC_BUILD_NPI */
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectWMMAOpSelVOP3PMods(
     MachineOperand &Root) const {
@@ -5388,13 +5388,16 @@ AMDGPUInstructionSelector::selectSWMMACIndex16(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
-#if LLPC_BUILD_NPI
 AMDGPUInstructionSelector::selectSWMMACIndex32(MachineOperand &Root) const {
   Register Src =
       getDefIgnoringCopies(Root.getReg(), *MRI)->getOperand(0).getReg();
   unsigned Key = 0;
 
+#if LLPC_BUILD_NPI
   Register S32 = matchZeroExtendFromS32(Src);
+#else /* LLPC_BUILD_NPI */
+  Register S32 = matchZeroExtendFromS32(*MRI, Src);
+#endif /* LLPC_BUILD_NPI */
   if (!S32)
     S32 = matchAnyExtendFromS32(Src);
 
@@ -5418,7 +5421,6 @@ AMDGPUInstructionSelector::selectSWMMACIndex32(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
-#endif /* LLPC_BUILD_NPI */
 AMDGPUInstructionSelector::selectVOP3OpSelMods(MachineOperand &Root) const {
   Register Src;
   unsigned Mods;
@@ -5779,13 +5781,13 @@ AMDGPUInstructionSelector::selectScratchOffset(MachineOperand &Root) const {
 
 // Match (64-bit SGPR base) + (zext vgpr offset) + sext(imm offset)
 InstructionSelector::ComplexRendererFns
-#if LLPC_BUILD_NPI
 AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
+#if LLPC_BUILD_NPI
                                              unsigned CPolBits,
                                              bool NeedIOffset,
                                              bool NeedScaleOffset) const {
 #else /* LLPC_BUILD_NPI */
-AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
+                                             unsigned CPolBits) const {
 #endif /* LLPC_BUILD_NPI */
   Register Addr = Root.getReg();
   Register PtrBase;
@@ -5862,10 +5864,10 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
                   MIB.addReg(HighBits);
                 }, // voffset
 #if LLPC_BUILD_NPI
-                [=](MachineInstrBuilder &MIB) { MIB.addImm(CPolBits); },
 #else /* LLPC_BUILD_NPI */
                 [=](MachineInstrBuilder &MIB) { MIB.addImm(SplitImmOffset); },
 #endif /* LLPC_BUILD_NPI */
+                [=](MachineInstrBuilder &MIB) { MIB.addImm(CPolBits); },
             }};
           }
         }
@@ -5926,12 +5928,17 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
                    MIB.addReg(VOffset);
                  },
 #if LLPC_BUILD_NPI
-                 [=](MachineInstrBuilder &MIB) { // cpol
-                   MIB.addImm(CPolBits |
-                              (ScaleOffset ? AMDGPU::CPol::SCAL : 0));
 #else /* LLPC_BUILD_NPI */
                  [=](MachineInstrBuilder &MIB) { // offset
                    MIB.addImm(ImmOffset);
+                 },
+#endif /* LLPC_BUILD_NPI */
+                 [=](MachineInstrBuilder &MIB) { // cpol
+#if LLPC_BUILD_NPI
+                   MIB.addImm(CPolBits |
+                              (ScaleOffset ? AMDGPU::CPol::SCAL : 0));
+#else /* LLPC_BUILD_NPI */
+                   MIB.addImm(CPolBits);
 #endif /* LLPC_BUILD_NPI */
                  }}};
       }
@@ -5966,20 +5973,20 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
       [=](MachineInstrBuilder &MIB) { MIB.addReg(AddrDef->Reg); }, // saddr
       [=](MachineInstrBuilder &MIB) { MIB.addReg(VOffset); },      // voffset
 #if LLPC_BUILD_NPI
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(CPolBits); }      // cpol
 #else /* LLPC_BUILD_NPI */
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(ImmOffset); }     // offset
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(ImmOffset); },    // offset
 #endif /* LLPC_BUILD_NPI */
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(CPolBits); }      // cpol
   }};
 }
 
 InstructionSelector::ComplexRendererFns
-#if LLPC_BUILD_NPI
 AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
   return selectGlobalSAddr(Root, 0);
 }
 
 InstructionSelector::ComplexRendererFns
+#if LLPC_BUILD_NPI
 AMDGPUInstructionSelector::selectGlobalSAddrNoScaleOffset(MachineOperand &Root) const {
   return selectGlobalSAddr(Root, 0, true, false);
 }
@@ -6005,11 +6012,13 @@ AMDGPUInstructionSelector::selectGlobalSAddrCPolM0(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
+#endif /* LLPC_BUILD_NPI */
 AMDGPUInstructionSelector::selectGlobalSAddrGLC(MachineOperand &Root) const {
   return selectGlobalSAddr(Root, AMDGPU::CPol::GLC);
 }
 
 InstructionSelector::ComplexRendererFns
+#if LLPC_BUILD_NPI
 AMDGPUInstructionSelector::selectGlobalSAddrNoIOffset(
     MachineOperand &Root) const {
   const MachineInstr &I = *Root.getParent();

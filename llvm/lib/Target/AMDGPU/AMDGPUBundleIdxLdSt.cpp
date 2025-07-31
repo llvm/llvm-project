@@ -684,7 +684,21 @@ void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
   MachineBasicBlock *MBB = MI.getParent();
   MachineFunction *MF = MBB->getParent();
   unsigned Opc = 0;
+  bool Loads = true;
+  unsigned NumStores = 1;
   switch (MI.getOpcode()) {
+  case AMDGPU::V_SEND_VGPR_NEXT_B32_LANESHARED: {
+    Opc = AMDGPU::V_SEND_VGPR_NEXT_B32;
+    NumStores = 2;
+    Loads = false;
+    break;
+  }
+  case AMDGPU::V_SEND_VGPR_PREV_B32_LANESHARED: {
+    Opc = AMDGPU::V_SEND_VGPR_PREV_B32;
+    NumStores = 2;
+    Loads = false;
+    break;
+  }
   case AMDGPU::CLUSTER_LOAD_B32_LANESHARED: {
     Opc = AMDGPU::CLUSTER_LOAD_B32;
     break;
@@ -739,34 +753,47 @@ void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
   }
   }
   const MCInstrDesc &II = STI->get(Opc);
-  Register DataReg = MRI->createVirtualRegister(
-      TRI->getAllocatableClass(TII->getRegClass(II, 0, TRI, *MF)));
-  auto CoreMIB = BuildMI(*MBB, MI, MI.getDebugLoc(), II, DataReg);
-  unsigned OpsToCopy = II.getNumOperands() - 1; // -1 for dst reg;
-  constexpr unsigned NumStoreOps = 2;
+  auto CoreMIB = BuildMI(*MBB, MI, MI.getDebugLoc(), II);
+  SmallVector<Register, 4> DataRegs;
+  for (unsigned I = 0; I < NumStores; I++) {
+    Register DataReg = MRI->createVirtualRegister(
+        TRI->getAllocatableClass(TII->getRegClass(II, 0, TRI, *MF)));
+    CoreMIB.addDef(DataReg);
+    DataRegs.push_back(DataReg);
+  }
+  unsigned OpsToCopy = II.getNumOperands() - NumStores;
+  unsigned NumStoreOps = 2 * NumStores;
   unsigned NumMIOps = MI.getNumExplicitOperands();
   assert(OpsToCopy + NumStoreOps == NumMIOps &&
          "Unexpected number of operands in laneshared pseudo");
   for (unsigned I = 0, E = OpsToCopy; I < E; ++I) {
     CoreMIB.add(MI.getOperand(I));
   }
-  auto *LoadMMO = *MI.memoperands_begin();
-  CoreMIB.addMemOperand(LoadMMO);
+  auto StoreFlags = MachineMemOperand::MOStore;
+  LocationSize Size = LocationSize::precise(4);
+  Align BaseAlign = Align(4);
+  if (Loads) {
+    auto *LoadMMO = *MI.memoperands_begin();
+    CoreMIB.addMemOperand(LoadMMO);
+    StoreFlags |= LoadMMO->getFlags() & ~MachineMemOperand::MOLoad;
+    Size = LoadMMO->getSize();
+    BaseAlign = LoadMMO->getBaseAlign();
+  }
 
-  auto StoreMIB = BuildMI(*MBB, MI, MI.getDebugLoc(),
-                          STI->get(AMDGPU::V_STORE_IDX))
-                      .addReg(DataReg)                   // data
-                      .add(MI.getOperand(NumMIOps - 2))  // idx
-                      .add(MI.getOperand(NumMIOps - 1)); // offset
+  for (unsigned I = 0; I < NumStores; ++I) {
+    // DataRegs is in reverse order of V_STORE_IDXs
+    auto StoreMIB = BuildMI(*MBB, MI, MI.getDebugLoc(),
+                            STI->get(AMDGPU::V_STORE_IDX))
+                        .addReg(DataRegs[NumStores - I - 1])         // data
+                        .add(MI.getOperand(NumMIOps - (2 + 2 * I)))  // idx
+                        .add(MI.getOperand(NumMIOps - (1 + 2 * I))); // offset
 
-  // Synthesize MMO for V_STORE_IDX.
-  MachinePointerInfo StorePtrI = MachinePointerInfo(AMDGPUAS::LANE_SHARED);
-  auto Flags = LoadMMO->getFlags() & ~MachineMemOperand::MOLoad |
-               MachineMemOperand::MOStore;
-  MachineMemOperand *StoreMMO =
-      MF->getMachineMemOperand(StorePtrI, Flags, LoadMMO->getSize(),
-                               LoadMMO->getBaseAlign(), LoadMMO->getAAInfo());
-  StoreMIB.addMemOperand(StoreMMO);
+    // Synthesize MMO for V_STORE_IDX.
+    MachinePointerInfo StorePtrI = MachinePointerInfo(AMDGPUAS::LANE_SHARED);
+    MachineMemOperand *StoreMMO =
+        MF->getMachineMemOperand(StorePtrI, StoreFlags, Size, BaseAlign);
+    StoreMIB.addMemOperand(StoreMMO);
+  }
 
   LLVM_DEBUG(dbgs() << " *** Expanded pseudo: "; MI.print(dbgs()));
   MI.eraseFromParent();

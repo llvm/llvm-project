@@ -348,274 +348,7 @@ InstCounterType eventCounter(const unsigned *masks, WaitEventType E) {
   llvm_unreachable("event type has no associated counter");
 }
 
-// This objects maintains the current score brackets of each wait counter, and
-// a per-register scoreboard for each wait counter.
-//
-// We also maintain the latest score for every event type that can change the
-// waitcnt in order to know if there are multiple types of events within
-// the brackets. When multiple types of event happen in the bracket,
-// wait count may get decreased out of order, therefore we need to put in
-// "s_waitcnt 0" before use.
-class WaitcntBrackets {
-public:
-#if LLPC_BUILD_NPI
-  WaitcntBrackets(const GCNSubtarget *SubTarget,
-                  const AMDGPUIndexingInfo *IndexingInfo,
-                  InstCounterType MaxCounter, HardwareLimits Limits,
-                  unsigned LaneSharedSize, const unsigned *WaitEventMaskForInst,
-#else /* LLPC_BUILD_NPI */
-  WaitcntBrackets(const GCNSubtarget *SubTarget, InstCounterType MaxCounter,
-                  HardwareLimits Limits, const unsigned *WaitEventMaskForInst,
-#endif /* LLPC_BUILD_NPI */
-                  InstCounterType SmemAccessCounter)
-#if LLPC_BUILD_NPI
-      : ST(SubTarget), SII(IndexingInfo), MaxCounter(MaxCounter),
-        Limits(Limits), LaneSharedSize(LaneSharedSize),
-#else /* LLPC_BUILD_NPI */
-      : ST(SubTarget), MaxCounter(MaxCounter), Limits(Limits),
-#endif /* LLPC_BUILD_NPI */
-        WaitEventMaskForInst(WaitEventMaskForInst),
-        SmemAccessCounter(SmemAccessCounter) {}
-
-  unsigned getWaitCountMax(InstCounterType T) const {
-    switch (T) {
-    case LOAD_CNT:
-      return Limits.LoadcntMax;
-    case DS_CNT:
-      return Limits.DscntMax;
-    case EXP_CNT:
-      return Limits.ExpcntMax;
-    case STORE_CNT:
-      return Limits.StorecntMax;
-    case SAMPLE_CNT:
-      return Limits.SamplecntMax;
-    case BVH_CNT:
-      return Limits.BvhcntMax;
-    case KM_CNT:
-      return Limits.KmcntMax;
-    case X_CNT:
-      return Limits.XcntMax;
-#if LLPC_BUILD_NPI
-    case SWC_CNT:
-      return Limits.SwccntMax;
-#endif /* LLPC_BUILD_NPI */
-    case VA_VDST:
-      return Limits.VaVdstMax;
-    case VM_VSRC:
-      return Limits.VmVsrcMax;
-    default:
-      break;
-    }
-    return 0;
-  }
-
-  bool isSmemCounter(InstCounterType T) const {
-    return T == SmemAccessCounter || T == X_CNT;
-  }
-
-  unsigned getSgprScoresIdx(InstCounterType T) const {
-    assert(isSmemCounter(T) && "Invalid SMEM counter");
-    return T == X_CNT ? 1 : 0;
-  }
-
-  unsigned getScoreLB(InstCounterType T) const {
-    assert(T < NUM_INST_CNTS);
-    return ScoreLBs[T];
-  }
-
-  unsigned getScoreUB(InstCounterType T) const {
-    assert(T < NUM_INST_CNTS);
-    return ScoreUBs[T];
-  }
-
-  unsigned getScoreRange(InstCounterType T) const {
-    return getScoreUB(T) - getScoreLB(T);
-  }
-
-  unsigned getRegScore(int GprNo, InstCounterType T) const {
-    if (GprNo < NUM_ALL_VGPRS)
-      return VgprScores[T][GprNo];
-    return SgprScores[getSgprScoresIdx(T)][GprNo - NUM_ALL_VGPRS];
-  }
-
-  bool merge(const WaitcntBrackets &Other);
-
-#if LLPC_BUILD_NPI
-  // Get the vgpr range that v_load/store_idx access
-  RegInterval getRegIndexingInterval(const MachineInstr *MI,
-                                     const MachineRegisterInfo *MRI,
-                                     const SIRegisterInfo *TRI) const;
-
-#endif /* LLPC_BUILD_NPI */
-  RegInterval getRegInterval(const MachineInstr *MI,
-                             const MachineRegisterInfo *MRI,
-                             const SIRegisterInfo *TRI,
-                             const MachineOperand &Op) const;
-
-  bool counterOutOfOrder(InstCounterType T) const;
-  void simplifyWaitcnt(AMDGPU::Waitcnt &Wait) const;
-  void simplifyWaitcnt(InstCounterType T, unsigned &Count) const;
-  void clearRedundantVmVsrcWait(AMDGPU::Waitcnt &Wait);
-
-  void determineWait(InstCounterType T, RegInterval Interval,
-                     AMDGPU::Waitcnt &Wait) const;
-  void determineWait(InstCounterType T, int RegNo,
-                     AMDGPU::Waitcnt &Wait) const {
-    determineWait(T, {RegNo, RegNo + 1}, Wait);
-  }
-
-  void applyWaitcnt(const AMDGPU::Waitcnt &Wait);
-  void applyWaitcnt(InstCounterType T, unsigned Count);
-  void applyXcnt(const AMDGPU::Waitcnt &Wait);
-  void updateByEvent(const SIInstrInfo *TII, const SIRegisterInfo *TRI,
-                     const MachineRegisterInfo *MRI, WaitEventType E,
-                     MachineInstr &MI);
-
-  unsigned hasPendingEvent() const { return PendingEvents; }
-  unsigned hasPendingEvent(WaitEventType E) const {
-    return PendingEvents & (1 << E);
-  }
-  unsigned hasPendingEvent(InstCounterType T) const {
-    unsigned HasPending = PendingEvents & WaitEventMaskForInst[T];
-    assert((HasPending != 0) == (getScoreRange(T) != 0));
-    return HasPending;
-  }
-
-  bool hasMixedPendingEvents(InstCounterType T) const {
-    unsigned Events = hasPendingEvent(T);
-    // Return true if more than one bit is set in Events.
-    return Events & (Events - 1);
-  }
-
-  bool hasPendingFlat() const {
-    return ((LastFlat[DS_CNT] > ScoreLBs[DS_CNT] &&
-             LastFlat[DS_CNT] <= ScoreUBs[DS_CNT]) ||
-            (LastFlat[LOAD_CNT] > ScoreLBs[LOAD_CNT] &&
-             LastFlat[LOAD_CNT] <= ScoreUBs[LOAD_CNT]));
-  }
-
-  void setPendingFlat() {
-    LastFlat[LOAD_CNT] = ScoreUBs[LOAD_CNT];
-    LastFlat[DS_CNT] = ScoreUBs[DS_CNT];
-  }
-
-  bool hasPendingGDS() const {
-    return LastGDS > ScoreLBs[DS_CNT] && LastGDS <= ScoreUBs[DS_CNT];
-  }
-
-  unsigned getPendingGDSWait() const {
-    return std::min(getScoreUB(DS_CNT) - LastGDS, getWaitCountMax(DS_CNT) - 1);
-  }
-
-  void setPendingGDS() { LastGDS = ScoreUBs[DS_CNT]; }
-
-  // Return true if there might be pending writes to the vgpr-interval by VMEM
-  // instructions with types different from V.
-  bool hasOtherPendingVmemTypes(RegInterval Interval, VmemType V) const {
-    for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
-      assert(RegNo < NUM_ALL_VGPRS);
-      if (VgprVmemTypes[RegNo] & ~(1 << V))
-        return true;
-    }
-    return false;
-  }
-
-  void clearVgprVmemTypes(RegInterval Interval) {
-    for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
-      assert(RegNo < NUM_ALL_VGPRS);
-      VgprVmemTypes[RegNo] = 0;
-    }
-  }
-
-  void setStateOnFunctionEntryOrReturn() {
-    setScoreUB(STORE_CNT, getScoreUB(STORE_CNT) + getWaitCountMax(STORE_CNT));
-    PendingEvents |= WaitEventMaskForInst[STORE_CNT];
-  }
-
-  ArrayRef<const MachineInstr *> getLDSDMAStores() const {
-    return LDSDMAStores;
-  }
-
-  bool hasPointSampleAccel(const MachineInstr &MI) const;
-  bool hasPointSamplePendingVmemTypes(const MachineInstr &MI,
-                                      RegInterval Interval) const;
-
-  void print(raw_ostream &) const;
-  void dump() const { print(dbgs()); }
-
-private:
-  struct MergeInfo {
-    unsigned OldLB;
-    unsigned OtherLB;
-    unsigned MyShift;
-    unsigned OtherShift;
-  };
-  static bool mergeScore(const MergeInfo &M, unsigned &Score,
-                         unsigned OtherScore);
-
-  void setScoreLB(InstCounterType T, unsigned Val) {
-    assert(T < NUM_INST_CNTS);
-    ScoreLBs[T] = Val;
-  }
-
-  void setScoreUB(InstCounterType T, unsigned Val) {
-    assert(T < NUM_INST_CNTS);
-    ScoreUBs[T] = Val;
-
-    if (T != EXP_CNT)
-      return;
-
-    if (getScoreRange(EXP_CNT) > getWaitCountMax(EXP_CNT))
-      ScoreLBs[EXP_CNT] = ScoreUBs[EXP_CNT] - getWaitCountMax(EXP_CNT);
-  }
-
-  void setRegScore(int GprNo, InstCounterType T, unsigned Val) {
-    setScoreByInterval({GprNo, GprNo + 1}, T, Val);
-  }
-
-  void setScoreByInterval(RegInterval Interval, InstCounterType CntTy,
-                          unsigned Score);
-
-  void setScoreByOperand(const MachineInstr *MI, const SIRegisterInfo *TRI,
-                         const MachineRegisterInfo *MRI,
-                         const MachineOperand &Op, InstCounterType CntTy,
-                         unsigned Val);
-
-  const GCNSubtarget *ST = nullptr;
-#if LLPC_BUILD_NPI
-  const AMDGPUIndexingInfo *SII = nullptr;
-#endif /* LLPC_BUILD_NPI */
-  InstCounterType MaxCounter = NUM_EXTENDED_INST_CNTS;
-  HardwareLimits Limits = {};
-#if LLPC_BUILD_NPI
-  unsigned LaneSharedSize = 0;
-#endif /* LLPC_BUILD_NPI */
-  const unsigned *WaitEventMaskForInst;
-  InstCounterType SmemAccessCounter;
-  unsigned ScoreLBs[NUM_INST_CNTS] = {0};
-  unsigned ScoreUBs[NUM_INST_CNTS] = {0};
-  unsigned PendingEvents = 0;
-  // Remember the last flat memory operation.
-  unsigned LastFlat[NUM_INST_CNTS] = {0};
-  // Remember the last GDS operation.
-  unsigned LastGDS = 0;
-  // wait_cnt scores for every vgpr.
-  // Keep track of the VgprUB and SgprUB to make merge at join efficient.
-  int VgprUB = -1;
-  int SgprUB = -1;
-  unsigned VgprScores[NUM_INST_CNTS][NUM_ALL_VGPRS] = {{0}};
-  // Wait cnt scores for every sgpr, the DS_CNT (corresponding to LGKMcnt
-  // pre-gfx12) or KM_CNT (gfx12+ only), and X_CNT (gfx1250) are relevant.
-  // Row 0 represents the score for either DS_CNT or KM_CNT and row 1 keeps the
-  // X_CNT score.
-  unsigned SgprScores[2][SQ_MAX_PGM_SGPRS] = {{0}};
-  // Bitmask of the VmemTypes of VMEM instructions that might have a pending
-  // write to each vgpr.
-  unsigned char VgprVmemTypes[NUM_ALL_VGPRS] = {0};
-  // Store representative LDS DMA operations. The only useful info here is
-  // alias info. One store is kept per unique AAInfo.
-  SmallVector<const MachineInstr *, NUM_LDS_VGPRS - 1> LDSDMAStores;
-};
+class WaitcntBrackets;
 
 // This abstracts the logic for generating and updating S_WAIT* instructions
 // away from the analysis that determines where they are needed. This was
@@ -770,8 +503,19 @@ public:
 };
 
 class SIInsertWaitcnts {
+public:
+  const GCNSubtarget *ST;
+  InstCounterType SmemAccessCounter;
+  InstCounterType MaxCounter;
+#if LLPC_BUILD_NPI
+  unsigned LaneSharedSize;
+#endif /* LLPC_BUILD_NPI */
+  const unsigned *WaitEventMaskForInst;
+#if LLPC_BUILD_NPI
+  const AMDGPUIndexingInfo &SII;
+#endif /* LLPC_BUILD_NPI */
+
 private:
-  const GCNSubtarget *ST = nullptr;
   const SIInstrInfo *TII = nullptr;
   const SIRegisterInfo *TRI = nullptr;
   const MachineRegisterInfo *MRI = nullptr;
@@ -781,16 +525,11 @@ private:
   MachineLoopInfo *MLI;
   MachinePostDominatorTree *PDT;
   AliasAnalysis *AA = nullptr;
-#if LLPC_BUILD_NPI
-  const AMDGPUIndexingInfo &SII;
-#endif /* LLPC_BUILD_NPI */
 
   struct BlockInfo {
     std::unique_ptr<WaitcntBrackets> Incoming;
     bool Dirty = true;
   };
-
-  InstCounterType SmemAccessCounter;
 
   MapVector<MachineBasicBlock *, BlockInfo> BlockInfos;
 
@@ -807,13 +546,13 @@ private:
   // S_ENDPGM instructions before which we should deallocate the VGPRs.
   DenseSet<MachineInstr *> ReleaseVGPRInsts;
 
-  InstCounterType MaxCounter = NUM_NORMAL_INST_CNTS;
+  HardwareLimits Limits;
 
 public:
   SIInsertWaitcnts(MachineLoopInfo *MLI, MachinePostDominatorTree *PDT,
 #if LLPC_BUILD_NPI
                    AliasAnalysis *AA, const AMDGPUIndexingInfo &SII)
-      : MLI(MLI), PDT(PDT), AA(AA), SII(SII) {
+      : SII(SII), MLI(MLI), PDT(PDT), AA(AA) {
 #else /* LLPC_BUILD_NPI */
                    AliasAnalysis *AA)
       : MLI(MLI), PDT(PDT), AA(AA) {
@@ -821,6 +560,38 @@ public:
     (void)ForceExpCounter;
     (void)ForceLgkmCounter;
     (void)ForceVMCounter;
+  }
+
+  unsigned getWaitCountMax(InstCounterType T) const {
+    switch (T) {
+    case LOAD_CNT:
+      return Limits.LoadcntMax;
+    case DS_CNT:
+      return Limits.DscntMax;
+    case EXP_CNT:
+      return Limits.ExpcntMax;
+    case STORE_CNT:
+      return Limits.StorecntMax;
+    case SAMPLE_CNT:
+      return Limits.SamplecntMax;
+    case BVH_CNT:
+      return Limits.BvhcntMax;
+    case KM_CNT:
+      return Limits.KmcntMax;
+    case X_CNT:
+      return Limits.XcntMax;
+#if LLPC_BUILD_NPI
+    case SWC_CNT:
+      return Limits.SwccntMax;
+#endif /* LLPC_BUILD_NPI */
+    case VA_VDST:
+      return Limits.VaVdstMax;
+    case VM_VSRC:
+      return Limits.VmVsrcMax;
+    default:
+      break;
+    }
+    return 0;
   }
 
   bool shouldFlushVmCnt(MachineLoop *ML, const WaitcntBrackets &Brackets);
@@ -943,6 +714,219 @@ public:
                          bool ExpertMode) const;
 };
 
+// This objects maintains the current score brackets of each wait counter, and
+// a per-register scoreboard for each wait counter.
+//
+// We also maintain the latest score for every event type that can change the
+// waitcnt in order to know if there are multiple types of events within
+// the brackets. When multiple types of event happen in the bracket,
+// wait count may get decreased out of order, therefore we need to put in
+// "s_waitcnt 0" before use.
+class WaitcntBrackets {
+public:
+  WaitcntBrackets(const SIInsertWaitcnts *Context) : Context(Context) {}
+
+  bool isSmemCounter(InstCounterType T) const {
+    return T == Context->SmemAccessCounter || T == X_CNT;
+  }
+
+  unsigned getSgprScoresIdx(InstCounterType T) const {
+    assert(isSmemCounter(T) && "Invalid SMEM counter");
+    return T == X_CNT ? 1 : 0;
+  }
+
+  unsigned getScoreLB(InstCounterType T) const {
+    assert(T < NUM_INST_CNTS);
+    return ScoreLBs[T];
+  }
+
+  unsigned getScoreUB(InstCounterType T) const {
+    assert(T < NUM_INST_CNTS);
+    return ScoreUBs[T];
+  }
+
+  unsigned getScoreRange(InstCounterType T) const {
+    return getScoreUB(T) - getScoreLB(T);
+  }
+
+  unsigned getRegScore(int GprNo, InstCounterType T) const {
+    if (GprNo < NUM_ALL_VGPRS)
+      return VgprScores[T][GprNo];
+    return SgprScores[getSgprScoresIdx(T)][GprNo - NUM_ALL_VGPRS];
+  }
+
+  bool merge(const WaitcntBrackets &Other);
+
+#if LLPC_BUILD_NPI
+  // Get the vgpr range that v_load/store_idx access
+  RegInterval getRegIndexingInterval(const MachineInstr *MI,
+                                     const MachineRegisterInfo *MRI,
+                                     const SIRegisterInfo *TRI) const;
+
+#endif /* LLPC_BUILD_NPI */
+  RegInterval getRegInterval(const MachineInstr *MI,
+                             const MachineRegisterInfo *MRI,
+                             const SIRegisterInfo *TRI,
+                             const MachineOperand &Op) const;
+
+  bool counterOutOfOrder(InstCounterType T) const;
+  void simplifyWaitcnt(AMDGPU::Waitcnt &Wait) const;
+  void simplifyWaitcnt(InstCounterType T, unsigned &Count) const;
+  void clearRedundantVmVsrcWait(AMDGPU::Waitcnt &Wait);
+
+  void determineWait(InstCounterType T, RegInterval Interval,
+                     AMDGPU::Waitcnt &Wait) const;
+  void determineWait(InstCounterType T, int RegNo,
+                     AMDGPU::Waitcnt &Wait) const {
+    determineWait(T, {RegNo, RegNo + 1}, Wait);
+  }
+
+  void applyWaitcnt(const AMDGPU::Waitcnt &Wait);
+  void applyWaitcnt(InstCounterType T, unsigned Count);
+  void applyXcnt(const AMDGPU::Waitcnt &Wait);
+  void updateByEvent(const SIInstrInfo *TII, const SIRegisterInfo *TRI,
+                     const MachineRegisterInfo *MRI, WaitEventType E,
+                     MachineInstr &MI);
+
+  unsigned hasPendingEvent() const { return PendingEvents; }
+  unsigned hasPendingEvent(WaitEventType E) const {
+    return PendingEvents & (1 << E);
+  }
+  unsigned hasPendingEvent(InstCounterType T) const {
+    unsigned HasPending = PendingEvents & Context->WaitEventMaskForInst[T];
+    assert((HasPending != 0) == (getScoreRange(T) != 0));
+    return HasPending;
+  }
+
+  bool hasMixedPendingEvents(InstCounterType T) const {
+    unsigned Events = hasPendingEvent(T);
+    // Return true if more than one bit is set in Events.
+    return Events & (Events - 1);
+  }
+
+  bool hasPendingFlat() const {
+    return ((LastFlat[DS_CNT] > ScoreLBs[DS_CNT] &&
+             LastFlat[DS_CNT] <= ScoreUBs[DS_CNT]) ||
+            (LastFlat[LOAD_CNT] > ScoreLBs[LOAD_CNT] &&
+             LastFlat[LOAD_CNT] <= ScoreUBs[LOAD_CNT]));
+  }
+
+  void setPendingFlat() {
+    LastFlat[LOAD_CNT] = ScoreUBs[LOAD_CNT];
+    LastFlat[DS_CNT] = ScoreUBs[DS_CNT];
+  }
+
+  bool hasPendingGDS() const {
+    return LastGDS > ScoreLBs[DS_CNT] && LastGDS <= ScoreUBs[DS_CNT];
+  }
+
+  unsigned getPendingGDSWait() const {
+    return std::min(getScoreUB(DS_CNT) - LastGDS,
+                    Context->getWaitCountMax(DS_CNT) - 1);
+  }
+
+  void setPendingGDS() { LastGDS = ScoreUBs[DS_CNT]; }
+
+  // Return true if there might be pending writes to the vgpr-interval by VMEM
+  // instructions with types different from V.
+  bool hasOtherPendingVmemTypes(RegInterval Interval, VmemType V) const {
+    for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
+      assert(RegNo < NUM_ALL_VGPRS);
+      if (VgprVmemTypes[RegNo] & ~(1 << V))
+        return true;
+    }
+    return false;
+  }
+
+  void clearVgprVmemTypes(RegInterval Interval) {
+    for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
+      assert(RegNo < NUM_ALL_VGPRS);
+      VgprVmemTypes[RegNo] = 0;
+    }
+  }
+
+  void setStateOnFunctionEntryOrReturn() {
+    setScoreUB(STORE_CNT,
+               getScoreUB(STORE_CNT) + Context->getWaitCountMax(STORE_CNT));
+    PendingEvents |= Context->WaitEventMaskForInst[STORE_CNT];
+  }
+
+  ArrayRef<const MachineInstr *> getLDSDMAStores() const {
+    return LDSDMAStores;
+  }
+
+  bool hasPointSampleAccel(const MachineInstr &MI) const;
+  bool hasPointSamplePendingVmemTypes(const MachineInstr &MI,
+                                      RegInterval Interval) const;
+
+  void print(raw_ostream &) const;
+  void dump() const { print(dbgs()); }
+
+private:
+  struct MergeInfo {
+    unsigned OldLB;
+    unsigned OtherLB;
+    unsigned MyShift;
+    unsigned OtherShift;
+  };
+  static bool mergeScore(const MergeInfo &M, unsigned &Score,
+                         unsigned OtherScore);
+
+  void setScoreLB(InstCounterType T, unsigned Val) {
+    assert(T < NUM_INST_CNTS);
+    ScoreLBs[T] = Val;
+  }
+
+  void setScoreUB(InstCounterType T, unsigned Val) {
+    assert(T < NUM_INST_CNTS);
+    ScoreUBs[T] = Val;
+
+    if (T != EXP_CNT)
+      return;
+
+    if (getScoreRange(EXP_CNT) > Context->getWaitCountMax(EXP_CNT))
+      ScoreLBs[EXP_CNT] = ScoreUBs[EXP_CNT] - Context->getWaitCountMax(EXP_CNT);
+  }
+
+  void setRegScore(int GprNo, InstCounterType T, unsigned Val) {
+    setScoreByInterval({GprNo, GprNo + 1}, T, Val);
+  }
+
+  void setScoreByInterval(RegInterval Interval, InstCounterType CntTy,
+                          unsigned Score);
+
+  void setScoreByOperand(const MachineInstr *MI, const SIRegisterInfo *TRI,
+                         const MachineRegisterInfo *MRI,
+                         const MachineOperand &Op, InstCounterType CntTy,
+                         unsigned Val);
+
+  const SIInsertWaitcnts *Context;
+
+  unsigned ScoreLBs[NUM_INST_CNTS] = {0};
+  unsigned ScoreUBs[NUM_INST_CNTS] = {0};
+  unsigned PendingEvents = 0;
+  // Remember the last flat memory operation.
+  unsigned LastFlat[NUM_INST_CNTS] = {0};
+  // Remember the last GDS operation.
+  unsigned LastGDS = 0;
+  // wait_cnt scores for every vgpr.
+  // Keep track of the VgprUB and SgprUB to make merge at join efficient.
+  int VgprUB = -1;
+  int SgprUB = -1;
+  unsigned VgprScores[NUM_INST_CNTS][NUM_ALL_VGPRS] = {{0}};
+  // Wait cnt scores for every sgpr, the DS_CNT (corresponding to LGKMcnt
+  // pre-gfx12) or KM_CNT (gfx12+ only), and X_CNT (gfx1250) are relevant.
+  // Row 0 represents the score for either DS_CNT or KM_CNT and row 1 keeps the
+  // X_CNT score.
+  unsigned SgprScores[2][SQ_MAX_PGM_SGPRS] = {{0}};
+  // Bitmask of the VmemTypes of VMEM instructions that might have a pending
+  // write to each vgpr.
+  unsigned char VgprVmemTypes[NUM_ALL_VGPRS] = {0};
+  // Store representative LDS DMA operations. The only useful info here is
+  // alias info. One store is kept per unique AAInfo.
+  SmallVector<const MachineInstr *, NUM_LDS_VGPRS - 1> LDSDMAStores;
+};
+
 class SIInsertWaitcntsLegacy : public MachineFunctionPass {
 public:
   static char ID;
@@ -986,23 +970,24 @@ WaitcntBrackets::getRegIndexingInterval(const MachineInstr *MI,
     }
     return Interval;
   };
-  if (auto Info = SII->getPrivateObjectIdxInfo(MI)) {
+  if (auto Info = Context->SII.getPrivateObjectIdxInfo(MI)) {
     if (auto UsedRegs = Info->get().UsedRegs)
       return CheckBounds(*UsedRegs);
     // we don't know the exact vgprs,
     // so best we can do is use the size of the private object
-    RegInterval Interval = {LaneSharedSize + Info->get().Offset / 4, 0};
+    RegInterval Interval = {Context->LaneSharedSize + Info->get().Offset / 4,
+                            0};
     Interval.second += Interval.first + Info->get().Size / 4;
     return Interval;
   }
-  if (auto Info = SII->getLaneSharedIdxInfo(MI)) {
+  if (auto Info = Context->SII.getLaneSharedIdxInfo(MI)) {
     if (auto UsedRegs = Info->get().UsedRegs)
       return CheckBounds(*UsedRegs);
     // Claim the entire lane-shared range when idx is unknown
     // TODO-GFX13:
     // We want to build an event-queue and apply alias analysis to
     // get more accurate result in this case.
-    return {0, LaneSharedSize};
+    return {0, Context->LaneSharedSize};
   }
   llvm_unreachable("v_load/store_idx without index info");
 }
@@ -1030,7 +1015,7 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
 
   RegInterval Result;
 
-  MCRegister MCReg = AMDGPU::getMCReg(Op.getReg(), *ST);
+  MCRegister MCReg = AMDGPU::getMCReg(Op.getReg(), *Context->ST);
   unsigned RegIdx = TRI->getHWRegIndex(MCReg);
 #if LLPC_BUILD_NPI
 #else /* LLPC_BUILD_NPI */
@@ -1044,8 +1029,8 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
   if (TRI->isVectorRegister(*MRI, Op.getReg())) {
     unsigned Reg = RegIdx << 1 | (AMDGPU::isHi16Reg(MCReg, *TRI) ? 1 : 0);
 #if LLPC_BUILD_NPI
-    assert(!ST->hasMAIInsts() || Reg < AGPR_OFFSET);
-    Result.first = Reg + LaneSharedSize;
+    assert(!Context->ST->hasMAIInsts() || Reg < AGPR_OFFSET);
+    Result.first = Reg + Context->LaneSharedSize;
 #else /* LLPC_BUILD_NPI */
     assert(Reg < AGPR_OFFSET);
     Result.first = Reg;
@@ -1096,7 +1081,7 @@ void WaitcntBrackets::setScoreByOperand(const MachineInstr *MI,
 // this at compile time, so we have to assume it might be applied if the
 // instruction supports it).
 bool WaitcntBrackets::hasPointSampleAccel(const MachineInstr &MI) const {
-  if (!ST->hasPointSampleAccel() || !SIInstrInfo::isMIMG(MI))
+  if (!Context->ST->hasPointSampleAccel() || !SIInstrInfo::isMIMG(MI))
     return false;
 
   const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
@@ -1122,9 +1107,9 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
                                     const SIRegisterInfo *TRI,
                                     const MachineRegisterInfo *MRI,
                                     WaitEventType E, MachineInstr &Inst) {
-  InstCounterType T = eventCounter(WaitEventMaskForInst, E);
+  InstCounterType T = eventCounter(Context->WaitEventMaskForInst, E);
 
-  assert((T != VA_VDST && T != VM_VSRC) || isExpertMode(MaxCounter));
+  assert((T != VA_VDST && T != VM_VSRC) || isExpertMode(Context->MaxCounter));
 
   unsigned UB = getScoreUB(T);
   unsigned CurrScore = UB + 1;
@@ -1327,8 +1312,10 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
 }
 
 void WaitcntBrackets::print(raw_ostream &OS) const {
+  const GCNSubtarget *ST = Context->ST;
+
   OS << '\n';
-  for (auto T : inst_counter_types(MaxCounter)) {
+  for (auto T : inst_counter_types(Context->MaxCounter)) {
     unsigned SR = getScoreRange(T);
 
     switch (T) {
@@ -1476,7 +1463,7 @@ void WaitcntBrackets::determineWait(InstCounterType T, RegInterval Interval,
     // s_waitcnt instruction.
     if ((UB >= ScoreToWait) && (ScoreToWait > LB)) {
       if ((T == LOAD_CNT || T == DS_CNT) && hasPendingFlat() &&
-          !ST->hasFlatLgkmVMemCountInOrder()) {
+          !Context->ST->hasFlatLgkmVMemCountInOrder()) {
         // If there is a pending FLAT operation, and this is a VMem or LGKM
         // waitcnt and the target can report early completion, then we need
         // to force a waitcnt 0.
@@ -1490,7 +1477,7 @@ void WaitcntBrackets::determineWait(InstCounterType T, RegInterval Interval,
         // If a counter has been maxed out avoid overflow by waiting for
         // MAX(CounterType) - 1 instead.
         unsigned NeededWait =
-            std::min(UB - ScoreToWait, getWaitCountMax(T) - 1);
+            std::min(UB - ScoreToWait, Context->getWaitCountMax(T) - 1);
         addWait(Wait, T, NeededWait);
       }
     }
@@ -1523,7 +1510,7 @@ void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {
     setScoreLB(T, std::max(getScoreLB(T), UB - Count));
   } else {
     setScoreLB(T, UB);
-    PendingEvents &= ~WaitEventMaskForInst[T];
+    PendingEvents &= ~Context->WaitEventMaskForInst[T];
   }
 }
 
@@ -1548,7 +1535,7 @@ void WaitcntBrackets::applyXcnt(const AMDGPU::Waitcnt &Wait) {
 // the decrement may go out of order.
 bool WaitcntBrackets::counterOutOfOrder(InstCounterType T) const {
   // Scalar memory read always can go out of order.
-  if ((T == SmemAccessCounter && hasPendingEvent(SMEM_ACCESS)) ||
+  if ((T == Context->SmemAccessCounter && hasPendingEvent(SMEM_ACCESS)) ||
       (T == X_CNT && hasPendingEvent(SMEM_GROUP)))
     return true;
   return hasMixedPendingEvents(T);
@@ -2191,6 +2178,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   //   with knowledge of the called routines.
   if (MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG ||
       MI.getOpcode() == AMDGPU::SI_RETURN ||
+      MI.getOpcode() == AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN ||
       MI.getOpcode() == AMDGPU::S_SETPC_B64_return ||
       (MI.isReturn() && MI.isCall() && !callWaitsOnFunctionEntry(MI))) {
     Wait = Wait.combined(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false));
@@ -2990,8 +2978,9 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
   VgprUB = std::max(VgprUB, Other.VgprUB);
   SgprUB = std::max(SgprUB, Other.SgprUB);
 
-  for (auto T : inst_counter_types(MaxCounter)) {
+  for (auto T : inst_counter_types(Context->MaxCounter)) {
     // Merge event flags for this counter
+    const unsigned *WaitEventMaskForInst = Context->WaitEventMaskForInst;
     const unsigned OldEvents = PendingEvents & WaitEventMaskForInst[T];
     const unsigned OtherEvents = Other.PendingEvents & WaitEventMaskForInst[T];
     if (OtherEvents & ~OldEvents)
@@ -3382,11 +3371,10 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   for (auto T : inst_counter_types())
     ForceEmitWaitcnt[T] = false;
 
-  const unsigned *WaitEventMaskForInst = WCG->getWaitEventMask();
+  WaitEventMaskForInst = WCG->getWaitEventMask();
 
   SmemAccessCounter = eventCounter(WaitEventMaskForInst, SMEM_ACCESS);
 
-  HardwareLimits Limits = {};
   if (ST->hasExtendedWaitCounts()) {
     Limits.LoadcntMax = AMDGPU::getLoadcntBitMask(IV);
     Limits.DscntMax = AMDGPU::getDscntBitMask(IV);
@@ -3413,7 +3401,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   assert(NumSGPRsMax <= SQ_MAX_PGM_SGPRS);
 
 #if LLPC_BUILD_NPI
-  unsigned LaneSharedSize = MFI->getLaneSharedVGPRSize() / 4u;
+  LaneSharedSize = MFI->getLaneSharedVGPRSize() / 4u;
 
 #endif /* LLPC_BUILD_NPI */
   BlockInfos.clear();
@@ -3463,13 +3451,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
       BuildMI(EntryBB, I, DebugLoc(), TII->get(AMDGPU::S_WAITCNT)).addImm(0);
     }
 
-    auto NonKernelInitialState = std::make_unique<WaitcntBrackets>(
-#if LLPC_BUILD_NPI
-        ST, &SII, MaxCounter, Limits, LaneSharedSize, WaitEventMaskForInst,
-        SmemAccessCounter);
-#else /* LLPC_BUILD_NPI */
-        ST, MaxCounter, Limits, WaitEventMaskForInst, SmemAccessCounter);
-#endif /* LLPC_BUILD_NPI */
+    auto NonKernelInitialState = std::make_unique<WaitcntBrackets>(this);
     NonKernelInitialState->setStateOnFunctionEntryOrReturn();
     BlockInfos[&EntryBB].Incoming = std::move(NonKernelInitialState);
 
@@ -3506,26 +3488,13 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
           *Brackets = *BI.Incoming;
       } else {
         if (!Brackets) {
-          Brackets = std::make_unique<WaitcntBrackets>(
-#if LLPC_BUILD_NPI
-              ST, &SII, MaxCounter, Limits, LaneSharedSize,
-              WaitEventMaskForInst, SmemAccessCounter);
-#else /* LLPC_BUILD_NPI */
-              ST, MaxCounter, Limits, WaitEventMaskForInst, SmemAccessCounter);
-#endif /* LLPC_BUILD_NPI */
+          Brackets = std::make_unique<WaitcntBrackets>(this);
         } else {
           // Reinitialize in-place. N.B. do not do this by assigning from a
           // temporary because the WaitcntBrackets class is large and it could
           // cause this function to use an unreasonable amount of stack space.
           Brackets->~WaitcntBrackets();
-#if LLPC_BUILD_NPI
-          new (Brackets.get())
-              WaitcntBrackets(ST, &SII, MaxCounter, Limits, LaneSharedSize,
-                              WaitEventMaskForInst, SmemAccessCounter);
-#else /* LLPC_BUILD_NPI */
-          new (Brackets.get()) WaitcntBrackets(
-              ST, MaxCounter, Limits, WaitEventMaskForInst, SmemAccessCounter);
-#endif /* LLPC_BUILD_NPI */
+          new (Brackets.get()) WaitcntBrackets(this);
         }
       }
 

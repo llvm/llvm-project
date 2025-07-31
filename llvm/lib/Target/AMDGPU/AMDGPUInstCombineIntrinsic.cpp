@@ -1743,10 +1743,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     CallInst *NewII = IC.Builder.CreateIntrinsic(
         IID, {Src0->getType(), Src1->getType()}, Args, &II);
-#if LLPC_BUILD_NPI
     NewII->takeName(&II);
     return IC.replaceInstUsesWith(II, NewII);
   }
+#if LLPC_BUILD_NPI
   case Intrinsic::amdgcn_pdep_b32:
   case Intrinsic::amdgcn_pext_b32: {
     if (auto *Src = dyn_cast<ConstantInt>(II.getArgOperand(0))) {
@@ -1823,6 +1823,9 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::amdgcn_wmma_f32_16x16x128_f8f6f4:
   case Intrinsic::amdgcn_wmma_scale_f32_16x16x128_f8f6f4:
   case Intrinsic::amdgcn_wmma_scale16_f32_16x16x128_f8f6f4: {
+#else /* LLPC_BUILD_NPI */
+  case Intrinsic::amdgcn_wmma_f32_16x16x128_f8f6f4: {
+#endif /* LLPC_BUILD_NPI */
     Value *Src0 = II.getArgOperand(1);
     Value *Src1 = II.getArgOperand(3);
     unsigned FmtA = cast<ConstantInt>(II.getArgOperand(0))->getZExtValue();
@@ -1860,7 +1863,6 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     CallInst *NewII = IC.Builder.CreateIntrinsic(
         IID, {II.getArgOperand(5)->getType(), Src0->getType(), Src1->getType()},
         Args, &II);
-#endif /* LLPC_BUILD_NPI */
     NewII->takeName(&II);
     return IC.replaceInstUsesWith(II, NewII);
   }

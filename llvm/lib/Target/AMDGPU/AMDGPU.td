@@ -93,14 +93,12 @@ def FeatureEnableFlatScratch : SubtargetFeature<"enable-flat-scratch",
   "Use scratch_* flat memory instructions to access scratch"
 >;
 
-#ifdef LLPC_BUILD_NPI
 def FeatureFlatGVSMode : SubtargetFeature<"flat-gvs-mode",
   "FlatGVSMode",
   "true",
   "Have GVS addressing mode with flat_* instructions"
 >;
 
-#endif /* LLPC_BUILD_NPI */
 def FeatureAddNoCarryInsts : SubtargetFeature<"add-no-carry-insts",
   "AddNoCarryInsts",
   "true",
@@ -1222,13 +1220,13 @@ def FeatureBitOp3Insts : SubtargetFeature<"bitop3-insts",
   "Has v_bitop3_b32/v_bitop3_b16 instructions"
 >;
 
-#ifdef LLPC_BUILD_NPI
 def FeatureTanhInsts : SubtargetFeature<"tanh-insts",
   "HasTanhInsts",
   "true",
   "Has v_tanh_f32/f16 instructions"
 >;
 
+#ifdef LLPC_BUILD_NPI
 def FeatureTensorCvtLutInsts : SubtargetFeature<"tensor-cvt-lut-insts",
   "HasTensorCvtLutInsts",
   "true",
@@ -2069,7 +2067,8 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureImageInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
-   FeatureMemoryAtomicFAddF32DenormalSupport]>;
+   FeatureMemoryAtomicFAddF32DenormalSupport,
+   FeatureRealTrue16Insts]>;
 
 // There are few workarounds that need to be added to all targets. This
 // pessimizes codegen a bit on the generic GFX11 target. This generic target
@@ -2093,8 +2092,7 @@ def FeatureISAVersion11_0_Common : FeatureSet<
      FeatureMADIntraFwdBug,
      FeaturePrivEnabledTrap2NopBug,
      FeatureDot5Insts,
-     FeatureWMMA256bInsts,
-     FeatureRealTrue16Insts])>;
+     FeatureWMMA256bInsts])>;
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
@@ -2219,9 +2217,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureShaderCyclesHiLoRegisters,
    FeatureArchitectedFlatScratch,
    FeatureArchitectedSGPRs,
-#ifdef LLPC_BUILD_NPI
    FeatureFlatGVSMode,
-#endif /* LLPC_BUILD_NPI */
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
    FeatureAtomicDsPkAdd16Insts,
@@ -2240,8 +2236,8 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureScalarDwordx3Loads,
    FeatureDPPSrc1SGPR,
    FeatureBitOp3Insts,
-#ifdef LLPC_BUILD_NPI
    FeatureTanhInsts,
+#ifdef LLPC_BUILD_NPI
    FeatureTensorCvtLutInsts,
 #endif /* LLPC_BUILD_NPI */
    FeatureTransposeLoadF4F6Insts,
@@ -2831,11 +2827,9 @@ def HasFlatScratchSTMode : Predicate<"Subtarget->hasFlatScratchSTMode()">,
 def HasFlatScratchSVSMode : Predicate<"Subtarget->hasFlatScratchSVSMode()">,
   AssemblerPredicate<(any_of FeatureGFX940Insts, FeatureGFX11Insts)>;
 
-#ifdef LLPC_BUILD_NPI
 def HasFlatGVSMode : Predicate<"Subtarget->hasFlatGVSMode()">,
   AssemblerPredicate<(all_of FeatureFlatGVSMode)>;
 
-#endif /* LLPC_BUILD_NPI */
 def HasGFX10_AEncoding : Predicate<"Subtarget->hasGFX10_AEncoding()">,
   AssemblerPredicate<(all_of FeatureGFX10_AEncoding)>;
 
@@ -3178,11 +3172,13 @@ def HasDefaultComponentBroadcast
 def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
   AssemblerPredicate<(all_of FeatureDsSrc2Insts)>;
 
-#ifdef LLPC_BUILD_NPI
 def HasAddPC64Inst : Predicate<"Subtarget->hasAddPC64Inst()">,
+#ifdef LLPC_BUILD_NPI
   AssemblerPredicate<(any_of FeatureGFX1250Insts, FeatureGFX13Insts)>;
-
+#else /* LLPC_BUILD_NPI */
+  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
 #endif /* LLPC_BUILD_NPI */
+
 def EnableFlatScratch : Predicate<"Subtarget->enableFlatScratch()">;
 
 def DisableFlatScratch : Predicate<"!Subtarget->enableFlatScratch()">;
@@ -3211,10 +3207,10 @@ def HasPseudoScalarTrans : Predicate<"Subtarget->hasPseudoScalarTrans()">,
 def HasBitOp3Insts : Predicate<"Subtarget->hasBitOp3Insts()">,
   AssemblerPredicate<(all_of FeatureBitOp3Insts)>;
 
-#ifdef LLPC_BUILD_NPI
 def HasTanhInsts : Predicate<"Subtarget->hasTanhInsts()">,
   AssemblerPredicate<(all_of FeatureTanhInsts)>;
 
+#ifdef LLPC_BUILD_NPI
 def HasTensorCvtLutInsts : Predicate<"Subtarget->hasTensorCvtLutInsts()">,
   AssemblerPredicate<(all_of FeatureTensorCvtLutInsts)>;
 

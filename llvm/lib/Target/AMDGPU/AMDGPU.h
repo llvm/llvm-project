@@ -201,6 +201,9 @@ struct AMDGPURankSpecializationPass
 };
 
 #endif /* LLPC_BUILD_NPI */
+void initializeAMDGPUPrepareAGPRAllocLegacyPass(PassRegistry &);
+extern char &AMDGPUPrepareAGPRAllocLegacyID;
+
 void initializeAMDGPUReserveWWMRegsLegacyPass(PassRegistry &);
 extern char &AMDGPUReserveWWMRegsLegacyID;
 

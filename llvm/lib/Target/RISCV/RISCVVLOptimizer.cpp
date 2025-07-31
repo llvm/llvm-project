@@ -33,6 +33,7 @@ namespace {
 class RISCVVLOptimizer : public MachineFunctionPass {
   const MachineRegisterInfo *MRI;
   const MachineDominatorTree *MDT;
+  const TargetInstrInfo *TII;
 
 public:
   static char ID;
@@ -747,6 +748,14 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
     return TwoTimes ? MILog2SEW + 1 : MILog2SEW;
   }
 
+  // Vector Register Gather with 16-bit Index Elements Instruction
+  // Dest and source data EEW=SEW. Index vector EEW=16.
+  case RISCV::VRGATHEREI16_VV: {
+    if (MO.getOperandNo() == 2)
+      return 4;
+    return MILog2SEW;
+  }
+
   default:
     return std::nullopt;
   }
@@ -1058,6 +1067,11 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VSLIDEDOWN_VI:
   case RISCV::VSLIDE1UP_VX:
   case RISCV::VFSLIDE1UP_VF:
+  // Vector Register Gather Instructions
+  case RISCV::VRGATHER_VI:
+  case RISCV::VRGATHER_VV:
+  case RISCV::VRGATHER_VX:
+  case RISCV::VRGATHEREI16_VV:
   // Vector Single-Width Floating-Point Add/Subtract Instructions
   case RISCV::VFADD_VF:
   case RISCV::VFADD_VV:
@@ -1278,7 +1292,8 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
     return false;
   }
 
-  assert(!RISCVII::elementsDependOnVL(RISCV::getRVVMCOpcode(MI.getOpcode())) &&
+  assert(!RISCVII::elementsDependOnVL(
+             TII->get(RISCV::getRVVMCOpcode(MI.getOpcode())).TSFlags) &&
          "Instruction shouldn't be supported if elements depend on VL");
 
   assert(MI.getOperand(0).isReg() &&
@@ -1471,7 +1486,6 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
 }
 
 bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
-  assert(DemandedVLs.size() == 0);
   if (skipFunction(MF.getFunction()))
     return false;
 
@@ -1481,6 +1495,10 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
   if (!ST.hasVInstructions())
     return false;
+
+  TII = ST.getInstrInfo();
+
+  assert(DemandedVLs.empty());
 
   // For each instruction that defines a vector, compute what VL its
   // downstream users demand.

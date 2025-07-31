@@ -68,10 +68,6 @@ private:
       Group.getPointer()->setIsSignature();
   }
 
-  // TODO Delete after we stop supporting generation of GNU-style .zdebug_*
-  // sections.
-  void setSectionName(StringRef Name) { this->Name = Name; }
-
 public:
   /// Decides whether a '.section' directive should be printed before the
   /// section name
@@ -88,7 +84,6 @@ public:
                             raw_ostream &OS,
                             uint32_t Subsection) const override;
   bool useCodeAlign() const override;
-  StringRef getVirtualSectionKind() const override;
 
   bool isUnique() const { return UniqueID != NonUniqueID; }
   unsigned getUniqueID() const { return UniqueID; }

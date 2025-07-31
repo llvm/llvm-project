@@ -111,7 +111,8 @@ public:
 
   size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
                     Status &error, bool force_live_memory = false,
-                    lldb::addr_t *load_addr_ptr = nullptr) /*override*/ {
+                    lldb::addr_t *load_addr_ptr = nullptr,
+                    bool *did_read_live_memory = nullptr) /*override*/ {
     auto expected_memory = this->ReadMemory(addr.GetOffset(), dst_len);
     if (!expected_memory) {
       llvm::consumeError(expected_memory.takeError());

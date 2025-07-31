@@ -25,6 +25,7 @@
 #include "AMDGPUMacroFusion.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUPreloadKernArgProlog.h"
+#include "AMDGPUPrepareAGPRAlloc.h"
 #include "AMDGPURemoveIncompatibleFunctions.h"
 #include "AMDGPUReserveWWMRegs.h"
 #include "AMDGPUResourceUsageAnalysis.h"
@@ -520,6 +521,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeGlobalISel(*PR);
   initializeAMDGPUAsmPrinterPass(*PR);
   initializeAMDGPUDAGToDAGISelLegacyPass(*PR);
+  initializeAMDGPUPrepareAGPRAllocLegacyPass(*PR);
   initializeGCNDPPCombineLegacyPass(*PR);
   initializeSILowerI1CopiesLegacyPass(*PR);
   initializeAMDGPUGlobalISelDivergenceLoweringPass(*PR);
@@ -943,9 +945,9 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       });
 
 #if LLPC_BUILD_NPI
-  PB.registerOptimizerEarlyEPCallback([this](ModulePassManager &MPM,
-                                             OptimizationLevel Level,
-                                             ThinOrFullLTOPhase Phase) {
+  PB.registerOptimizerEarlyEPCallback([](ModulePassManager &MPM,
+                                         OptimizationLevel Level,
+                                         ThinOrFullLTOPhase Phase) {
     MPM.addPass(AMDGPURankSpecializationPass());
   });
 
@@ -1282,6 +1284,9 @@ public:
   bool addRegBankSelect() override;
   void addPreGlobalInstructionSelect() override;
   bool addGlobalInstructionSelect() override;
+#if LLPC_BUILD_NPI
+  void addPreRegAlloc() override;
+#endif /* LLPC_BUILD_NPI */
   void addFastRegAlloc() override;
   void addOptimizedRegAlloc() override;
 
@@ -1293,7 +1298,10 @@ public:
   bool addRegAssignAndRewriteFast() override;
   bool addRegAssignAndRewriteOptimized() override;
 
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
   void addPreRegAlloc() override;
+#endif /* LLPC_BUILD_NPI */
   bool addPreRewrite() override;
   void addPostRegAlloc() override;
   void addPreSched2() override;
@@ -1626,13 +1634,6 @@ bool GCNPassConfig::addGlobalInstructionSelect() {
   return false;
 }
 
-void GCNPassConfig::addPreRegAlloc() {
-#if LLPC_BUILD_NPI
-  addPass(createAMDGPUIdxRegAllocPass());
-#endif /* LLPC_BUILD_NPI */
-  addPass(createSIInsertWaterfallPass());
-}
-
 void GCNPassConfig::addFastRegAlloc() {
   // FIXME: We have to disable the verifier here because of PHIElimination +
   // TwoAddressInstructions disabling it.
@@ -1645,6 +1646,15 @@ void GCNPassConfig::addFastRegAlloc() {
   insertPass(&TwoAddressInstructionPassID, &SIWholeQuadModeID);
 
   TargetPassConfig::addFastRegAlloc();
+}
+
+void GCNPassConfig::addPreRegAlloc() {
+  addPass(createSIInsertWaterfallPass());
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(&AMDGPUPrepareAGPRAllocLegacyID);
+#if LLPC_BUILD_NPI
+  addPass(createAMDGPUIdxRegAllocPass());
+#endif /* LLPC_BUILD_NPI */
 }
 
 void GCNPassConfig::addOptimizedRegAlloc() {
@@ -2361,6 +2371,11 @@ void AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
   Base::addOptimizedRegAlloc(addPass);
 }
 
+void AMDGPUCodeGenPassBuilder::addPreRegAlloc(AddMachinePass &addPass) const {
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(AMDGPUPrepareAGPRAllocPass());
+}
+
 Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
     AddMachinePass &addPass) const {
   // TODO: Check --regalloc-npm option
@@ -2408,6 +2423,12 @@ void AMDGPUCodeGenPassBuilder::addPostRegAlloc(AddMachinePass &addPass) const {
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addPass(SIOptimizeExecMaskingPass());
   Base::addPostRegAlloc(addPass);
+}
+
+void AMDGPUCodeGenPassBuilder::addPreSched2(AddMachinePass &addPass) const {
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addPass(SIShrinkInstructionsPass());
+  addPass(SIPostRABundlerPass());
 }
 
 void AMDGPUCodeGenPassBuilder::addPreEmitPass(AddMachinePass &addPass) const {

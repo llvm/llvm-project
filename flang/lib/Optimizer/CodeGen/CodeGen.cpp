@@ -33,9 +33,11 @@
 #include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ComplexToLLVM/ComplexToLLVM.h"
+#include "mlir/Conversion/ComplexToROCDLLibraryCalls/ComplexToROCDLLibraryCalls.h"
 #include "mlir/Conversion/ComplexToStandard/ComplexToStandard.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
+#include "mlir/Conversion/IndexToLLVM/IndexToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/MathToFuncs/MathToFuncs.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
@@ -1122,6 +1124,16 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
     for (mlir::Value opnd : adaptor.getOperands())
       size = rewriter.create<mlir::LLVM::MulOp>(
           loc, ity, size, integerCast(loc, rewriter, ity, opnd));
+
+    // As the return value of malloc(0) is implementation defined, allocate one
+    // byte to ensure the allocation status being true. This behavior aligns to
+    // what the runtime has.
+    mlir::Value zero = genConstantIndex(loc, ity, rewriter, 0);
+    mlir::Value one = genConstantIndex(loc, ity, rewriter, 1);
+    mlir::Value cmp = rewriter.create<mlir::LLVM::ICmpOp>(
+        loc, mlir::LLVM::ICmpPredicate::sgt, size, zero);
+    size = rewriter.create<mlir::LLVM::SelectOp>(loc, cmp, size, one);
+
     auto mallocTyWidth = lowerTy().getIndexTypeBitwidth();
     auto mallocTy =
         mlir::IntegerType::get(rewriter.getContext(), mallocTyWidth);
@@ -4145,22 +4157,24 @@ public:
     // conversions that affect the ModuleOp, e.g. create new
     // function operations in it. We have to run such conversions
     // as passes here.
-    mlir::OpPassManager mathConvertionPM("builtin.module");
+    mlir::OpPassManager mathConversionPM("builtin.module");
 
     bool isAMDGCN = fir::getTargetTriple(mod).isAMDGCN();
     // If compiling for AMD target some math operations must be lowered to AMD
     // GPU library calls, the rest can be converted to LLVM intrinsics, which
     // is handled in the mathToLLVM conversion. The lowering to libm calls is
     // not needed since all math operations are handled this way.
-    if (isAMDGCN)
-      mathConvertionPM.addPass(mlir::createConvertMathToROCDL());
+    if (isAMDGCN) {
+      mathConversionPM.addPass(mlir::createConvertMathToROCDL());
+      mathConversionPM.addPass(mlir::createConvertComplexToROCDLLibraryCalls());
+    }
 
     // Convert math::FPowI operations to inline implementation
     // only if the exponent's width is greater than 32, otherwise,
     // it will be lowered to LLVM intrinsic operation by a later conversion.
     mlir::ConvertMathToFuncsOptions mathToFuncsOptions{};
     mathToFuncsOptions.minWidthOfFPowIExponent = 33;
-    mathConvertionPM.addPass(
+    mathConversionPM.addPass(
         mlir::createConvertMathToFuncs(mathToFuncsOptions));
 
     mlir::ConvertComplexToStandardPassOptions complexToStandardOptions{};
@@ -4173,15 +4187,15 @@ public:
       complexToStandardOptions.complexRange =
           mlir::complex::ComplexRangeFlags::improved;
     }
-    mathConvertionPM.addPass(
+    mathConversionPM.addPass(
         mlir::createConvertComplexToStandardPass(complexToStandardOptions));
 
     // Convert Math dialect operations into LLVM dialect operations.
     // There is no way to prefer MathToLLVM patterns over MathToLibm
     // patterns (applied below), so we have to run MathToLLVM conversion here.
-    mathConvertionPM.addNestedPass<mlir::func::FuncOp>(
+    mathConversionPM.addNestedPass<mlir::func::FuncOp>(
         mlir::createConvertMathToLLVMPass());
-    if (mlir::failed(runPipeline(mathConvertionPM, mod)))
+    if (mlir::failed(runPipeline(mathConversionPM, mod)))
       return signalPassFailure();
 
     std::optional<mlir::DataLayout> dl =
@@ -4211,6 +4225,7 @@ public:
     if (!isAMDGCN)
       mlir::populateMathToLibmConversionPatterns(pattern);
     mlir::populateComplexToLLVMConversionPatterns(typeConverter, pattern);
+    mlir::index::populateIndexToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateVectorToLLVMConversionPatterns(typeConverter, pattern);
 
     // Flang specific overloads for OpenMP operations, to allow for special

@@ -228,9 +228,7 @@ protected:
   bool FlatInstOffsets = false;
   bool FlatGlobalInsts = false;
   bool FlatScratchInsts = false;
-#if LLPC_BUILD_NPI
   bool FlatGVSMode = false;
-#endif /* LLPC_BUILD_NPI */
   bool ScalarFlatScratchInsts = false;
   bool HasArchitectedFlatScratch = false;
   bool EnableFlatScratch = false;
@@ -257,8 +255,8 @@ protected:
   bool HasVGPRIndexingRegisters = false;
 #endif /* LLPC_BUILD_NPI */
   bool HasBitOp3Insts = false;
-#if LLPC_BUILD_NPI
   bool HasTanhInsts = false;
+#if LLPC_BUILD_NPI
   bool HasTensorCvtLutInsts = false;
 #endif /* LLPC_BUILD_NPI */
   bool HasTransposeLoadF4F6Insts = false;
@@ -1155,7 +1153,7 @@ public:
   }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                           unsigned NumRegionInstrs) const override;
+                           const SchedRegion &Region) const override;
 
   void mirFileLoaded(MachineFunction &MF) const override;
 
@@ -1307,12 +1305,12 @@ public:
 
   bool hasLshlAddU64Inst() const { return HasLshlAddU64Inst; }
 
-#if LLPC_BUILD_NPI
   // Scalar and global loads support scale_offset bit.
   bool hasScaleOffset() const { return GFX1250Insts; }
 
   bool hasFlatGVSMode() const { return FlatGVSMode; }
 
+#if LLPC_BUILD_NPI
   // FLAT GLOBAL VOffset is signed
   bool hasSignedGVSOffset() const { return GFX1250Insts; }
 
@@ -1561,12 +1559,16 @@ public:
 #if LLPC_BUILD_NPI
   bool hasMin3Max3PKF16() const { return HasMin3Max3PKF16; }
 
+#endif /* LLPC_BUILD_NPI */
   bool hasTanhInsts() const { return HasTanhInsts; }
 
+#if LLPC_BUILD_NPI
   bool hasTensorCvtLutInsts() const { return HasTensorCvtLutInsts; }
 
+#endif /* LLPC_BUILD_NPI */
   bool hasAddPC64Inst() const { return GFX1250Insts; }
 
+#if LLPC_BUILD_NPI
   bool has1024AddressableVGPRs() const { return Has1024AddressableVGPRs; }
 
   bool hasVGPRIndexingRegisters() const { return HasVGPRIndexingRegisters; }

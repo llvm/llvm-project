@@ -64,10 +64,8 @@ unsigned AMDGPUELFObjectWriter::getRelocType(const MCFixup &Fixup,
     return ELF::R_AMDGPU_ABS32_LO;
   case AMDGPUMCExpr::S_ABS32_HI:
     return ELF::R_AMDGPU_ABS32_HI;
-#if LLPC_BUILD_NPI
   case AMDGPUMCExpr::S_ABS64:
     return ELF::R_AMDGPU_ABS64;
-#endif /* LLPC_BUILD_NPI */
   }
 
   MCFixupKind Kind = Fixup.getKind();

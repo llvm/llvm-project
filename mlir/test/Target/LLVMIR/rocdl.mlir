@@ -196,6 +196,27 @@ llvm.func @rocdl.s.wait.dscnt() {
   llvm.return
 }
 
+llvm.func @rocdl.s.wait.loadcnt() {
+  // CHECK-LABEL: rocdl.s.wait.loadcnt
+  // CHECK-NEXT: call void @llvm.amdgcn.s.wait.loadcnt(i16 0)
+  rocdl.s.wait.loadcnt 0
+  llvm.return
+}
+
+llvm.func @rocdl.s.wait.storecnt() {
+  // CHECK-LABEL: rocdl.s.wait.storecnt
+  // CHECK-NEXT: call void @llvm.amdgcn.s.wait.storecnt(i16 0)
+  rocdl.s.wait.storecnt 0
+  llvm.return
+}
+
+llvm.func @rocdl.s.wait.expcnt() {
+  // CHECK-LABEL: rocdl.s.wait.expcnt
+  // CHECK-NEXT: call void @llvm.amdgcn.s.wait.expcnt(i16 0)
+  rocdl.s.wait.expcnt 0
+  llvm.return
+}
+
 llvm.func @rocdl.setprio() {
   // CHECK: call void @llvm.amdgcn.s.setprio(i16 0)
   rocdl.s.setprio 0

@@ -161,9 +161,7 @@ public:
   void convertFMAanyK(MCInst &MI) const;
   void convertSDWAInst(MCInst &MI) const;
   void convertMAIInst(MCInst &MI) const;
-#if LLPC_BUILD_NPI
   void convertWMMAInst(MCInst &MI) const;
-#endif /* LLPC_BUILD_NPI */
   void convertDPP8Inst(MCInst &MI) const;
   void convertMIMGInst(MCInst &MI) const;
   void convertVOP3DPPInst(MCInst &MI) const;

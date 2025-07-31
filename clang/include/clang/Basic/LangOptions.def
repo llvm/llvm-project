@@ -98,8 +98,6 @@ LANGOPT(Exceptions        , 1, 0, NotCompatible, "exception handling")
 LANGOPT(ObjCExceptions    , 1, 0, NotCompatible, "Objective-C exceptions")
 LANGOPT(CXXExceptions     , 1, 0, NotCompatible, "C++ exceptions")
 LANGOPT(EHAsynch          , 1, 0, NotCompatible, "C/C++ EH Asynch exceptions")
-ENUM_LANGOPT(ExceptionHandling, ExceptionHandlingKind, 3,
-             ExceptionHandlingKind::None,  NotCompatible, "exception handling")
 LANGOPT(IgnoreExceptions  , 1, 0, NotCompatible, "ignore exceptions")
 LANGOPT(ExternCNoUnwind   , 1, 0, NotCompatible, "Assume extern C functions don't unwind")
 LANGOPT(AssumeNothrowExceptionDtor , 1, 0, NotCompatible, "Assume exception object's destructor is nothrow")
