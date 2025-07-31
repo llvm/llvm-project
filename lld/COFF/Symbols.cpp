@@ -91,6 +91,14 @@ bool Symbol::isLive() const {
   return true;
 }
 
+Defined *Symbol::getDefined() {
+  if (auto d = dyn_cast<Defined>(this))
+    return d;
+  if (auto u = dyn_cast<Undefined>(this))
+    return u->getDefinedWeakAlias();
+  return nullptr;
+}
+
 void Symbol::replaceKeepingName(Symbol *other, size_t size) {
   StringRef origName = getName();
   memcpy(this, other, size);
