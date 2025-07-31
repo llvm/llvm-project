@@ -580,27 +580,27 @@ void NarrowingConversionsCheck::handleImplicitCast(
   switch (Cast.getCastKind()) {
   case CK_BooleanToSignedIntegral:
     handleBooleanToSignedIntegral(Context, SourceLoc, Lhs, Rhs);
-    break;
+    return;
   case CK_IntegralToBoolean:
     handleIntegralToBoolean(Context, SourceLoc, Lhs, Rhs);
-    break;
+    return;
   case CK_IntegralToFloating:
     handleIntegralToFloating(Context, SourceLoc, Lhs, Rhs);
-    break;
+    return;
   case CK_IntegralCast:
     handleIntegralCast(Context, SourceLoc, Lhs, Rhs);
-    break;
+    return;
   case CK_FloatingToBoolean:
     handleFloatingToBoolean(Context, SourceLoc, Lhs, Rhs);
-    break;
+    return;
   case CK_FloatingToIntegral:
     handleFloatingToIntegral(Context, SourceLoc, Lhs, Rhs);
-    break;
+    return;
   case CK_FloatingCast:
     handleFloatingCast(Context, SourceLoc, Lhs, Rhs);
-    break;
+    return;
   default:
-    break;
+    return;
   }
 }
 
@@ -622,7 +622,6 @@ void NarrowingConversionsCheck::check(const MatchFinder::MatchResult &Result) {
     handleBinaryOperator(*Result.Context, *Op);
   else if (const auto *Cast = Result.Nodes.getNodeAs<ImplicitCastExpr>("cast"))
     handleImplicitCast(*Result.Context, *Cast);
-  else
-    llvm_unreachable("must be binary operator or cast expression");
+  llvm_unreachable("must be binary operator or cast expression");
 }
 } // namespace clang::tidy::bugprone
