@@ -12,6 +12,7 @@
 // RUN: rm -rf %t && mkdir -p %t/a/b && cp %s %t/a/b/c.c
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=standalone -I%S -fdebug-prefix-map=%t/a/b=y -fdebug-prefix-map=%t/a=x %t/a/b/c.c -o - | FileCheck %s --check-prefix=CHECK-X
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=standalone -I%S -fdebug-prefix-map=%t/a=x -fdebug-prefix-map=%t/a/b=y %t/a/b/c.c -o - | FileCheck %s --check-prefix=CHECK-Y
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=standalone -I%S -main-file-name %t/a/b/c.c -fdebug-compilation-dir=%t/a -fdebug-prefix-map=%t/a=x -fdebug-prefix-map=%t/a/b=y %t/a/b/c.c -o - | FileCheck %s --check-prefix=CHECK-REMAP-Y
 
 #include "Inputs/stdio.h"
 
@@ -26,9 +27,9 @@ void test_rewrite_includes(void) {
   vprintf("string", argp);
 }
 
-// CHECK-NO-MAIN-FILE-NAME: !DIFile(filename: "{{/|.:\\\\}}UNLIKELY_PATH{{/|\\\\}}empty{{/|\\\\}}<stdin>",
 // CHECK-NO-MAIN-FILE-NAME: !DIFile(filename: "{{/|.:\\\\}}UNLIKELY_PATH{{/|\\\\}}empty{{/|\\\\}}{{.*}}",
 // CHECK-NO-MAIN-FILE-NAME-SAME:    directory: "")
+// CHECK-NO-MAIN-FILE-NAME: !DIFile(filename: "{{/|.:\\\\}}UNLIKELY_PATH{{/|\\\\}}empty{{/|\\\\}}<stdin>",
 // CHECK-NO-MAIN-FILE-NAME: !DIFile(filename: "{{/|.:\\\\}}UNLIKELY_PATH{{/|\\\\}}empty{{/|\\\\}}Inputs{{/|\\\\}}stdio.h",
 // CHECK-NO-MAIN-FILE-NAME-SAME:    directory: "")
 // CHECK-NO-MAIN-FILE-NAME-NOT: !DIFile(filename:
@@ -54,3 +55,5 @@ void test_rewrite_includes(void) {
 
 // CHECK-X: !DIFile(filename: "x{{/|\\\\}}b{{/|\\\\}}c.c", directory: "")
 // CHECK-Y: !DIFile(filename: "y{{/|\\\\}}c.c", directory: "")
+
+// CHECK-REMAP-Y: !DIFile(filename: "y{{/|\\\\}}c.c", directory: "x")

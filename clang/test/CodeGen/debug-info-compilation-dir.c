@@ -7,3 +7,10 @@
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited %s -o - | FileCheck -check-prefix=CHECK-DIR %s
 // CHECK-DIR: CodeGen
 
+/// Test path remapping.
+// RUN: %clang_cc1 -fdebug-compilation-dir=%S -main-file-name %s -emit-llvm -debug-info-kind=limited %s -o - | FileCheck -check-prefix=CHECK-ABS %s
+// CHECK-ABS: DIFile(filename: "{{.*}}debug-info-compilation-dir.c", directory: "{{.*}}CodeGen")
+
+// RUN: %clang_cc1 -main-file-name %s -emit-llvm -debug-info-kind=limited %s -o - | FileCheck -check-prefix=CHECK-NOMAP %s
+// CHECK-NOMAP: DIFile(filename: "{{.*}}debug-info-compilation-dir.c", directory: "")
+
