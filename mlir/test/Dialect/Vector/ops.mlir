@@ -199,22 +199,6 @@ func.func @shuffle_poison_mask(%a: vector<4xf32>, %b: vector<4xf32>) -> vector<4
   return %1 : vector<4xf32>
 }
 
-// CHECK-LABEL: @extract_element_0d
-func.func @extract_element_0d(%a: vector<f32>) -> f32 {
-  // CHECK-NEXT: vector.extractelement %{{.*}}[] : vector<f32>
-  %1 = vector.extractelement %a[] : vector<f32>
-  return %1 : f32
-}
-
-// CHECK-LABEL: @extract_element
-func.func @extract_element(%a: vector<16xf32>) -> f32 {
-  // CHECK:      %[[C15:.*]] = arith.constant 15 : i32
-  %c = arith.constant 15 : i32
-  // CHECK-NEXT: vector.extractelement %{{.*}}[%[[C15]] : i32] : vector<16xf32>
-  %1 = vector.extractelement %a[%c : i32] : vector<16xf32>
-  return %1 : f32
-}
-
 // CHECK-LABEL: @extract_const_idx
 func.func @extract_const_idx(%arg0: vector<4x8x16xf32>)
                              -> (vector<4x8x16xf32>, vector<8x16xf32>, vector<16xf32>, f32) {
@@ -254,22 +238,6 @@ func.func @extract_poison_idx(%a: vector<4x5xf32>) -> f32 {
   // CHECK-NEXT: vector.extract %{{.*}}[-1, 0] : f32 from vector<4x5xf32>
   %0 = vector.extract %a[-1, 0] : f32 from vector<4x5xf32>
   return %0 : f32
-}
-
-// CHECK-LABEL: @insert_element_0d
-func.func @insert_element_0d(%a: f32, %b: vector<f32>) -> vector<f32> {
-  // CHECK-NEXT: vector.insertelement %{{.*}}, %{{.*}}[] : vector<f32>
-  %1 = vector.insertelement %a, %b[] : vector<f32>
-  return %1 : vector<f32>
-}
-
-// CHECK-LABEL: @insert_element
-func.func @insert_element(%a: f32, %b: vector<16xf32>) -> vector<16xf32> {
-  // CHECK:      %[[C15:.*]] = arith.constant 15 : i32
-  %c = arith.constant 15 : i32
-  // CHECK-NEXT: vector.insertelement %{{.*}}, %{{.*}}[%[[C15]] : i32] : vector<16xf32>
-  %1 = vector.insertelement %a, %b[%c : i32] : vector<16xf32>
-  return %1 : vector<16xf32>
 }
 
 // CHECK-LABEL: @insert_const_idx

@@ -1812,10 +1812,7 @@ def note_unsatisfied_trait_reason
            "%DeletedAssign{has a deleted %select{copy|move}1 "
            "assignment operator}|"
            "%UnionWithUserDeclaredSMF{is a union with a user-declared "
-           "%sub{select_special_member_kind}1}|"
-           "%FunctionType{is a function type}|"
-           "%CVVoidType{is a cv void type}|"
-           "%IncompleteArrayType{is an incomplete array type}"
+           "%sub{select_special_member_kind}1}"
            "}0">;
 
 def warn_consteval_if_always_true : Warning<
@@ -7575,6 +7572,8 @@ def err_typecheck_illegal_increment_decrement : Error<
   "cannot %select{decrement|increment}1 value of type %0">;
 def err_typecheck_expect_int : Error<
   "used type %0 where integer is required">;
+def err_typecheck_expect_function_pointer
+    : Error<"used type %0 where function pointer is required">;
 def err_typecheck_expect_hlsl_resource : Error<
   "used type %0 where __hlsl_resource_t is required">;
 def err_typecheck_arithmetic_incomplete_or_sizeless_type : Error<
@@ -9329,8 +9328,28 @@ def err_atomic_builtin_pointer_size : Error<
   "address argument to atomic builtin must be a pointer to 1,2,4,8 or 16 byte "
   "type (%0 invalid)">;
 def err_atomic_exclusive_builtin_pointer_size : Error<
-  "address argument to load or store exclusive builtin must be a pointer to"
-  " 1,2,4 or 8 byte type (%0 invalid)">;
+  "address argument to load or store exclusive builtin must be a pointer to "
+  // Because the range of legal sizes for load/store exclusive varies with the
+  // Arm architecture version, this error message wants to be able to specify
+  // various different subsets of the sizes 1, 2, 4, 8. Rather than make a
+  // separate diagnostic for each subset, I've arranged here that _this_ error
+  // can display any combination of the sizes. For each size there are two
+  // %select parameters: the first chooses whether you need a "," or " or " to
+  // separate the number from a previous one (or neither), and the second
+  // parameter indicates whether to display the number itself.
+  //
+  // (The very first of these parameters isn't really necessary, since you
+  // never want to start with "," or " or " before the first number in the
+  // list, but it keeps it simple to make it look exactly like the other cases,
+  // and also allows a loop constructing this diagnostic to handle every case
+  // exactly the same.)
+  "%select{|,| or }1%select{|1}2"
+  "%select{|,| or }3%select{|2}4"
+  "%select{|,| or }5%select{|4}6"
+  "%select{|,| or }7%select{|8}8"
+  " byte type (%0 invalid)">;
+def err_atomic_exclusive_builtin_pointer_size_none : Error<
+  "load and store exclusive builtins are not available on this architecture">;
 def err_atomic_builtin_ext_int_size : Error<
   "atomic memory operand must have a power-of-two size">;
 def err_atomic_builtin_bit_int_prohibit : Error<
@@ -12389,6 +12408,13 @@ def err_invalid_module_name : Error<"%0 is an invalid name for a module">;
 def err_extern_def_in_header_unit : Error<
   "non-inline external definitions are not permitted in C++ header units">;
 
+def warn_exposure : Warning <
+  "TU local entity %0 is exposed">,
+  InGroup<DiagGroup<"TU-local-entity-exposure">>;
+def warn_reference_tu_local_entity_in_other_tu : Warning <
+  "instantiation of %0 triggers reference to TU-local entity %1 from other TU '%2'">,
+  InGroup<DiagGroup<"reference-tu-local-entity-in-other-tu">>;
+
 def warn_experimental_header_unit : Warning<
   "the implementation of header units is in an experimental phase">,
   InGroup<DiagGroup<"experimental-header-units">>;
@@ -13202,6 +13228,10 @@ def err_wasm_builtin_arg_must_match_table_element_type : Error <
   "%ordinal0 argument must match the element type of the WebAssembly table in the %ordinal1 argument">;
 def err_wasm_builtin_arg_must_be_integer_type : Error <
   "%ordinal0 argument must be an integer">;
+def err_wasm_builtin_test_fp_sig_cannot_include_reference_type
+    : Error<"not supported for "
+            "function pointers with a reference type %select{return "
+            "value|parameter}0">;
 
 // OpenACC diagnostics.
 def warn_acc_routine_unimplemented
@@ -13257,6 +13287,11 @@ def err_acc_not_a_var_ref
 def err_acc_not_a_var_ref_use_device_declare
     : Error<"OpenACC variable %select{in 'use_device' clause|on 'declare' "
             "construct}0 is not a valid variable name or array name">;
+def ext_acc_array_section_use_device_declare
+    : Extension<
+          "sub-array as a variable %select{in 'use_device' clause|on "
+          "'declare' construct}0 is not a valid variable name or array name">,
+      InGroup<DiagGroup<"openacc-extension">>;
 def err_acc_not_a_var_ref_cache
     : Error<"OpenACC variable in 'cache' directive is not a valid sub-array or "
             "array element">;
@@ -13318,8 +13353,9 @@ def err_acc_reduction_num_gangs_conflict
             "appear on a '%2' construct "
             "with a '%3' clause%select{ with more than 1 argument|}0">;
 def err_acc_reduction_type
-    : Error<"OpenACC 'reduction' variable must be of scalar type, sub-array, or a "
-            "composite of scalar types;%select{| sub-array base}1 type is %0">;
+    : Error<"OpenACC 'reduction' variable must be of scalar type, aggregate, "
+            "sub-array, or a composite of scalar types;%select{| sub-array "
+            "base}1 type is %0">;
 def err_acc_reduction_composite_type
     : Error<"OpenACC 'reduction' variable must be a composite of scalar types; "
             "%1 %select{is not a class or struct|is incomplete|is not an "
@@ -13438,13 +13474,13 @@ def note_acc_atomic_mismatch_operand
     : Note<"left hand side of assignment operation(%0) must match one side "
            "of the sub-operation on the right hand side(%1 and %2)">;
 def note_acc_atomic_mismatch_compound_operand
-    : Note<"variable %select{|in unary expression|on right hand side of "
+    : Note<"sub-expression %select{|in unary expression|on right hand side of "
            "assignment|on left hand side of assignment|on left hand side of "
            "compound assignment|on left hand side of assignment}2(%3) must "
-           "match variable used %select{|in unary expression|on right hand "
-           "side of assignment|<not possible>|on left hand side of compound "
-           "assignment|on left hand side of assignment}0(%1) from the first "
-           "statement">;
+           "match sub-expression used %select{|in unary expression|on right "
+           "hand side of assignment|<not possible>|on left hand side of "
+           "compound assignment|on left hand side of assignment}0(%1) from the "
+           "first statement">;
 def err_acc_declare_required_clauses
     : Error<"no valid clauses specified in OpenACC 'declare' directive">;
 def err_acc_declare_clause_at_global
