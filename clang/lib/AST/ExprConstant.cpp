@@ -11633,8 +11633,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
-  case Builtin::BI__builtin_elementwise_clz:
-  case Builtin::BI__builtin_elementwise_ctz: {
+  case Builtin::BI__builtin_elementwise_ctlz:
+  case Builtin::BI__builtin_elementwise_cttz: {
     APValue SourceLHS;
     std::optional<APValue> Fallback;
     if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS))
@@ -11658,19 +11658,19 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         if (!Fallback) {
           Info.FFDiag(E, diag::note_constexpr_countzeroes_zero)
               << /*IsTrailing=*/(E->getBuiltinCallee() ==
-                                 Builtin::BI__builtin_elementwise_ctz);
+                                 Builtin::BI__builtin_elementwise_cttz);
           return false;
         }
         ResultElements.push_back(Fallback->getVectorElt(EltNum));
         continue;
       }
       switch (E->getBuiltinCallee()) {
-      case Builtin::BI__builtin_elementwise_clz:
+      case Builtin::BI__builtin_elementwise_ctlz:
         ResultElements.push_back(APValue(
             APSInt(APInt(Info.Ctx.getIntWidth(DestEltTy), LHS.countl_zero()),
                    DestEltTy->isUnsignedIntegerOrEnumerationType())));
         break;
-      case Builtin::BI__builtin_elementwise_ctz:
+      case Builtin::BI__builtin_elementwise_cttz:
         ResultElements.push_back(APValue(
             APSInt(APInt(Info.Ctx.getIntWidth(DestEltTy), LHS.countr_zero()),
                    DestEltTy->isUnsignedIntegerOrEnumerationType())));
@@ -13232,7 +13232,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_clzll:
   case Builtin::BI__builtin_clzs:
   case Builtin::BI__builtin_clzg:
-  case Builtin::BI__builtin_elementwise_clz:
+  case Builtin::BI__builtin_elementwise_ctlz:
   case Builtin::BI__lzcnt16: // Microsoft variants of count leading-zeroes
   case Builtin::BI__lzcnt:
   case Builtin::BI__lzcnt64: {
@@ -13242,7 +13242,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     std::optional<APSInt> Fallback;
     if ((BuiltinOp == Builtin::BI__builtin_clzg ||
-         BuiltinOp == Builtin::BI__builtin_elementwise_clz) &&
+         BuiltinOp == Builtin::BI__builtin_elementwise_ctlz) &&
         E->getNumArgs() > 1) {
       APSInt FallbackTemp;
       if (!EvaluateInteger(E->getArg(1), FallbackTemp, Info))
@@ -13261,7 +13261,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                              BuiltinOp != Builtin::BI__lzcnt &&
                              BuiltinOp != Builtin::BI__lzcnt64;
 
-      if (BuiltinOp == Builtin::BI__builtin_elementwise_clz) {
+      if (BuiltinOp == Builtin::BI__builtin_elementwise_ctlz) {
         Info.FFDiag(E, diag::note_constexpr_countzeroes_zero)
             << /*IsTrailing=*/false;
       }
@@ -13321,14 +13321,14 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_ctzll:
   case Builtin::BI__builtin_ctzs:
   case Builtin::BI__builtin_ctzg:
-  case Builtin::BI__builtin_elementwise_ctz: {
+  case Builtin::BI__builtin_elementwise_cttz: {
     APSInt Val;
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
 
     std::optional<APSInt> Fallback;
     if ((BuiltinOp == Builtin::BI__builtin_ctzg ||
-         BuiltinOp == Builtin::BI__builtin_elementwise_ctz) &&
+         BuiltinOp == Builtin::BI__builtin_elementwise_cttz) &&
         E->getNumArgs() > 1) {
       APSInt FallbackTemp;
       if (!EvaluateInteger(E->getArg(1), FallbackTemp, Info))
@@ -13340,7 +13340,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       if (Fallback)
         return Success(*Fallback, E);
 
-      if (BuiltinOp == Builtin::BI__builtin_elementwise_ctz) {
+      if (BuiltinOp == Builtin::BI__builtin_elementwise_cttz) {
         Info.FFDiag(E, diag::note_constexpr_countzeroes_zero)
             << /*IsTrailing=*/true;
       }

@@ -1740,7 +1740,7 @@ static bool interp__builtin_elementwise_countzeroes(InterpState &S,
                                                     const CallExpr *Call,
                                                     unsigned BuiltinID) {
   const bool HasZeroArg = Call->getNumArgs() == 2;
-  const bool IsCTZ = BuiltinID == Builtin::BI__builtin_elementwise_ctz;
+  const bool IsCTTZ = BuiltinID == Builtin::BI__builtin_elementwise_cttz;
   assert(Call->getNumArgs() == 1 || HasZeroArg);
   if (Call->getArg(0)->getType()->isIntegerType()) {
     PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
@@ -1760,11 +1760,11 @@ static bool interp__builtin_elementwise_countzeroes(InterpState &S,
       // undefined
       S.FFDiag(S.Current->getSource(OpPC),
                diag::note_constexpr_countzeroes_zero)
-          << /*IsTrailing=*/IsCTZ;
+          << /*IsTrailing=*/IsCTTZ;
       return false;
     }
 
-    if (BuiltinID == Builtin::BI__builtin_elementwise_clz) {
+    if (BuiltinID == Builtin::BI__builtin_elementwise_ctlz) {
       pushInteger(S, Val.countLeadingZeros(), Call->getType());
     } else {
       pushInteger(S, Val.countTrailingZeros(), Call->getType());
@@ -1805,10 +1805,10 @@ static bool interp__builtin_elementwise_countzeroes(InterpState &S,
           // undefined
           S.FFDiag(S.Current->getSource(OpPC),
                    diag::note_constexpr_countzeroes_zero)
-              << /*IsTrailing=*/IsCTZ;
+              << /*IsTrailing=*/IsCTTZ;
           return false;
         }
-      } else if (IsCTZ) {
+      } else if (IsCTTZ) {
         Dst.atIndex(I).deref<T>() = T::from(EltVal.countTrailingZeros());
       } else {
         Dst.atIndex(I).deref<T>() = T::from(EltVal.countLeadingZeros());
@@ -2683,8 +2683,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_ctzg:
     return interp__builtin_ctz(S, OpPC, Frame, Call, BuiltinID);
 
-  case Builtin::BI__builtin_elementwise_clz:
-  case Builtin::BI__builtin_elementwise_ctz:
+  case Builtin::BI__builtin_elementwise_ctlz:
+  case Builtin::BI__builtin_elementwise_cttz:
     return interp__builtin_elementwise_countzeroes(S, OpPC, Frame, Call,
                                                    BuiltinID);
 

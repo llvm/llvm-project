@@ -1514,14 +1514,14 @@ def ElementwiseSubSat : Builtin {
   let Prototype = "void(...)";
 }
 
-def ElementwiseClz : Builtin {
-  let Spellings = ["__builtin_elementwise_clz"];
+def ElementwiseCtlz : Builtin {
+  let Spellings = ["__builtin_elementwise_ctlz"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
-def ElementwiseCtz : Builtin {
-  let Spellings = ["__builtin_elementwise_ctz"];
+def ElementwiseCttz : Builtin {
+  let Spellings = ["__builtin_elementwise_cttz"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
