@@ -88,15 +88,26 @@ void ThreadFinalize(ThreadState *thr) {
 #if !SANITIZER_GO
   if (!ShouldReport(thr, ReportTypeThreadLeak))
     return;
-  ThreadRegistryLock l(&ctx->thread_registry);
   Vector<ThreadLeak> leaks;
-  ctx->thread_registry.RunCallbackForEachThreadLocked(CollectThreadLeaks,
-                                                      &leaks);
+  {
+    ThreadRegistryLock l(&ctx->thread_registry);
+    ctx->thread_registry.RunCallbackForEachThreadLocked(CollectThreadLeaks,
+                                                        &leaks);
+  }
+
+  ScopedReport *_rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
   for (uptr i = 0; i < leaks.Size(); i++) {
-    ScopedReport rep(ReportTypeThreadLeak);
-    rep.AddThread(leaks[i].tctx, true);
-    rep.SetCount(leaks[i].count);
-    OutputReport(thr, rep);
+    {
+      ThreadRegistryLock l(&ctx->thread_registry);
+      new (_rep) ScopedReport(ReportTypeThreadLeak);
+      ScopedReport &rep = *_rep;
+      rep.AddThread(leaks[i].tctx, true);
+      rep.SetCount(leaks[i].count);
+    }  // Close this scope to release the locks
+
+    OutputReport(thr, *_rep);
+    // Need to manually destroy this because we used placement new to allocate
+    _rep->~ScopedReport();
   }
 #endif
 }

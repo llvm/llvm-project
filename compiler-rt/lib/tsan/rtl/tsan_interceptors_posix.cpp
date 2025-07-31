@@ -22,6 +22,7 @@
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_linux.h"
+#include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 #include "sanitizer_common/sanitizer_platform_limits_netbsd.h"
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
@@ -2141,13 +2142,23 @@ static void ReportErrnoSpoiling(ThreadState *thr, uptr pc, int sig) {
   // StackTrace::GetNestInstructionPc(pc) is used because return address is
   // expected, OutputReport() will undo this.
   ObtainCurrentStack(thr, StackTrace::GetNextInstructionPc(pc), &stack);
-  ThreadRegistryLock l(&ctx->thread_registry);
-  ScopedReport rep(ReportTypeErrnoInSignal);
-  rep.SetSigNum(sig);
-  if (!IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack)) {
-    rep.AddStack(stack, true);
-    OutputReport(thr, rep);
-  }
+  ScopedReport *_rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
+  // Take a new scope as Apple platforms require the below locks released
+  // before symbolizing in order to avoid a deadlock
+  {
+    ThreadRegistryLock l(&ctx->thread_registry);
+    new (_rep) ScopedReport(ReportTypeErrnoInSignal);
+    ScopedReport &rep = *_rep;
+    rep.SetSigNum(sig);
+    if (!IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack)) {
+      rep.AddStack(stack, true);
+      OutputReport(thr, rep);
+    }
+  }  // Close this scope to release the locks
+
+  OutputReport(thr, *_rep);
+  // Need to manually destroy this because we used placement new to allocate
+  _rep->~ScopedReport();
 }
 
 static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
