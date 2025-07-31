@@ -3470,8 +3470,7 @@ WRAPPER_CLASS(PauseStmt, std::optional<StopCode>);
 // --- Common definitions
 
 #define INHERITED_TUPLE_CLASS_BOILERPLATE(classname, basename) \
-  template <typename... Ts, typename = common::NoLvalue<Ts...>> \
-  classname(Ts &&...args) : basename(std::move(args)...) {} \
+  using basename::basename; \
   classname(basename &&b) : basename(std::move(b)) {} \
   using TupleTrait = std::true_type; \
   BOILERPLATE(classname)
