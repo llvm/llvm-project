@@ -4620,8 +4620,15 @@ bool Expr::isSameComparisonOperand(const Expr* E1, const Expr* E2) {
       // template parameters.
       const auto *DRE1 = cast<DeclRefExpr>(E1);
       const auto *DRE2 = cast<DeclRefExpr>(E2);
-      return DRE1->isPRValue() && DRE2->isPRValue() &&
-             DRE1->getDecl() == DRE2->getDecl();
+
+      if (DRE1->getDecl() != DRE2->getDecl())
+        return false;
+
+      if ((DRE1->isPRValue() && DRE2->isPRValue()) ||
+          (DRE1->isLValue() && DRE2->isLValue()))
+        return true;
+
+      return false;
     }
     case ImplicitCastExprClass: {
       // Peel off implicit casts.
@@ -4631,7 +4638,8 @@ bool Expr::isSameComparisonOperand(const Expr* E1, const Expr* E2) {
         if (!ICE1 || !ICE2)
           return false;
         if (ICE1->getCastKind() != ICE2->getCastKind())
-          return false;
+          return isSameComparisonOperand(ICE1->IgnoreParenImpCasts(),
+                                         ICE2->IgnoreParenImpCasts());
         E1 = ICE1->getSubExpr()->IgnoreParens();
         E2 = ICE2->getSubExpr()->IgnoreParens();
         // The final cast must be one of these types.
