@@ -63,8 +63,8 @@ public:
   /// Given a constant with the SectionKind, return a section that it should be
   /// placed in.
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
-                                   const Constant *C,
-                                   Align &Alignment, const Function *F) const override;
+                                   const Constant *C, Align &Alignment,
+                                   const Function *F) const override;
 
   /// Similar to the function above, but append \p SectionSuffix to the section
   /// name.
@@ -153,8 +153,8 @@ public:
                                       const TargetMachine &TM) const override;
 
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
-                                   const Constant *C,
-                                   Align &Alignment, const Function *F) const override;
+                                   const Constant *C, Align &Alignment,
+                                   const Function *F) const override;
 
   /// The mach-o version of this method defaults to returning a stub reference.
   const MCExpr *getTTypeGlobalReference(const GlobalValue *GV,
@@ -222,8 +222,8 @@ public:
   /// Given a mergeable constant with the specified size and relocation
   /// information, return a section that it should be placed in.
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
-                                   const Constant *C,
-                                   Align &Alignment, const Function *F) const override;
+                                   const Constant *C, Align &Alignment,
+                                   const Function *F) const override;
 };
 
 class TargetLoweringObjectFileWasm : public TargetLoweringObjectFile {
@@ -284,8 +284,8 @@ public:
   /// Given a constant with the SectionKind, return a section that it should be
   /// placed in.
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
-                                   const Constant *C,
-                                   Align &Alignment, const Function *F) const override;
+                                   const Constant *C, Align &Alignment,
+                                   const Function *F) const override;
 
   static XCOFF::StorageClass getStorageClassForGlobal(const GlobalValue *GV);
 

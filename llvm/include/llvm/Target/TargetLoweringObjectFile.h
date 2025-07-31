@@ -106,7 +106,8 @@ public:
   /// placed in.
   virtual MCSection *getSectionForConstant(const DataLayout &DL,
                                            SectionKind Kind, const Constant *C,
-                                           Align &Alignment, const Function *F) const;
+                                           Align &Alignment,
+                                           const Function *F) const;
 
   /// Similar to the function above, but append \p SectionSuffix to the section
   /// name.

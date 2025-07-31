@@ -114,8 +114,8 @@ bool LanaiTargetObjectFile::isConstantInSmallSection(const DataLayout &DL,
 }
 
 MCSection *LanaiTargetObjectFile::getSectionForConstant(
-    const DataLayout &DL, SectionKind Kind, const Constant *C,
-    Align &Alignment, const Function *F) const {
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    const Function *F) const {
   if (isConstantInSmallSection(DL, C))
     return SmallDataSection;
 

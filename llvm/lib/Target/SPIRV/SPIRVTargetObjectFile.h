@@ -26,8 +26,8 @@ public:
   // sequence of instructions in a specific order. We put all the instructions
   // in the single text section.
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
-                                   const Constant *C,
-                                   Align &Alignment, const Function *F) const override {
+                                   const Constant *C, Align &Alignment,
+                                   const Function *F) const override {
     return TextSection;
   }
   MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,

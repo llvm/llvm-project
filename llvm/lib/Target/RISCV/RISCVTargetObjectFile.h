@@ -41,8 +41,8 @@ public:
   bool isConstantInSmallSection(const DataLayout &DL, const Constant *CN) const;
 
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
-                                   const Constant *C,
-                                   Align &Alignment, const Function *F) const override;
+                                   const Constant *C, Align &Alignment,
+                                   const Function *F) const override;
 
   void getModuleMetadata(Module &M) override;
 
