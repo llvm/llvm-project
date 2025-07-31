@@ -638,17 +638,17 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
   const HeaderSearchOptions &HSOpts =
       PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
-  IntrusiveRefCntPtr<ASTReader> Reader(new ASTReader(
+  auto Reader = llvm::makeIntrusiveRefCnt<ASTReader>(
       PP, ModCache, &Context, PCHContainerRdr, CodeGenOpts, Extensions,
       Sysroot.empty() ? "" : Sysroot.data(), DisableValidation,
       AllowPCHWithCompilerErrors, /*AllowConfigurationMismatch*/ false,
       HSOpts.ModulesValidateSystemHeaders,
       HSOpts.ModulesForceValidateUserHeaders,
-      HSOpts.ValidateASTInputFilesContent, UseGlobalModuleIndex));
+      HSOpts.ValidateASTInputFilesContent, UseGlobalModuleIndex);
 
   // We need the external source to be set up before we read the AST, because
   // eagerly-deserialized declarations may use it.
-  Context.setExternalSource(Reader.get());
+  Context.setExternalSource(Reader);
 
   Reader->setDeserializationListener(
       static_cast<ASTDeserializationListener *>(DeserializationListener),
@@ -755,7 +755,7 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
 
   // Attach the external sema source if there is any.
   if (ExternalSemaSrc) {
-    TheSema->addExternalSource(ExternalSemaSrc.get());
+    TheSema->addExternalSource(ExternalSemaSrc);
     ExternalSemaSrc->InitializeSema(*TheSema);
   }
 
@@ -1750,17 +1750,18 @@ void CompilerInstance::createASTReader() {
   if (timerGroup)
     ReadTimer = std::make_unique<llvm::Timer>("reading_modules",
                                               "Reading modules", *timerGroup);
-  TheASTReader = new ASTReader(
+  TheASTReader = llvm::makeIntrusiveRefCnt<ASTReader>(
       getPreprocessor(), getModuleCache(), &getASTContext(),
       getPCHContainerReader(), getCodeGenOpts(),
       getFrontendOpts().ModuleFileExtensions,
       Sysroot.empty() ? "" : Sysroot.c_str(),
       PPOpts.DisablePCHOrModuleValidation,
       /*AllowASTWithCompilerErrors=*/FEOpts.AllowPCMWithCompilerErrors,
-      /*AllowConfigurationMismatch=*/false, HSOpts.ModulesValidateSystemHeaders,
-      HSOpts.ModulesForceValidateUserHeaders,
-      HSOpts.ValidateASTInputFilesContent,
-      getFrontendOpts().UseGlobalModuleIndex, std::move(ReadTimer));
+      /*AllowConfigurationMismatch=*/false,
+      +HSOpts.ModulesValidateSystemHeaders,
+      +HSOpts.ModulesForceValidateUserHeaders,
+      +HSOpts.ValidateASTInputFilesContent,
+      +getFrontendOpts().UseGlobalModuleIndex, std::move(ReadTimer));
   if (hasASTConsumer()) {
     TheASTReader->setDeserializationListener(
         getASTConsumer().GetASTDeserializationListener());

@@ -238,11 +238,9 @@ public:
 // compiler instance before the super `ExecuteAction` triggers parsing
 void IncrementalSyntaxOnlyAction::ExecuteAction() {
   CompilerInstance &CI = getCompilerInstance();
-  ExternalSource *myExternalSource =
-      new ExternalSource(CI.getASTContext(), CI.getFileManager(),
-                         ParentCI->getASTContext(), ParentCI->getFileManager());
-  llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> astContextExternalSource(
-      myExternalSource);
+  auto astContextExternalSource = llvm::makeIntrusiveRefCnt<ExternalSource>(
+      CI.getASTContext(), CI.getFileManager(), ParentCI->getASTContext(),
+      ParentCI->getFileManager());
   CI.getASTContext().setExternalSource(astContextExternalSource);
   CI.getASTContext().getTranslationUnitDecl()->setHasExternalVisibleStorage(
       true);

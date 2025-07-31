@@ -867,11 +867,11 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
       DisableValidationForModuleKind::None;
   if (::getenv("LIBCLANG_DISABLE_PCH_VALIDATION"))
     disableValid = DisableValidationForModuleKind::All;
-  AST->Reader = new ASTReader(PP, *AST->ModCache, AST->Ctx.get(),
-                              PCHContainerRdr, *AST->CodeGenOpts, {},
-                              /*isysroot=*/"",
-                              /*DisableValidationKind=*/disableValid,
-                              AllowASTWithCompilerErrors);
+  AST->Reader = llvm::makeIntrusiveRefCnt<ASTReader>(
+      PP, *AST->ModCache, AST->Ctx.get(), PCHContainerRdr, *AST->CodeGenOpts,
+      ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
+      /*isysroot=*/"",
+      /*DisableValidationKind=*/disableValid, AllowASTWithCompilerErrors);
 
   unsigned Counter = 0;
   AST->Reader->setListener(std::make_unique<ASTInfoCollector>(
