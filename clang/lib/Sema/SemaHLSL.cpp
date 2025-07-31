@@ -1308,7 +1308,7 @@ bool SemaHLSL::handleRootSignatureElements(
     } else if (const auto *Table =
                    std::get_if<llvm::hlsl::rootsig::DescriptorTable>(&Elem)) {
       assert(UnboundClauses.size() == Table->NumClauses &&
-             "Wrong number of clauses in table?");
+             "Number of unbound elements must match the number of clauses");
       for (const auto &[Clause, ClauseElem] : UnboundClauses) {
         uint32_t LowerBound(Clause->Reg.Number);
         // Relevant error will have already been reported above and needs to be
