@@ -57,11 +57,9 @@ createVFSOverlayForPreamblePCH(StringRef PCHFilename,
                                IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
   // We want only the PCH file from the real filesystem to be available,
   // so we create an in-memory VFS with just that and overlay it on top.
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> PCHFS(
-      new llvm::vfs::InMemoryFileSystem());
+  auto PCHFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   PCHFS->addFile(PCHFilename, 0, std::move(PCHBuffer));
-  IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> Overlay(
-      new llvm::vfs::OverlayFileSystem(VFS));
+  auto Overlay = llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(VFS);
   Overlay->pushOverlay(PCHFS);
   return Overlay;
 }
