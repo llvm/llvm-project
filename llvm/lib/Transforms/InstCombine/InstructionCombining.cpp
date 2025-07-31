@@ -2655,8 +2655,11 @@ static Instruction *canonicalizeGEPOfConstGEPI8(GetElementPtrInst &GEP,
     GEPNoWrapFlags Flags = GEPNoWrapFlags::none();
     if (GEP.hasNoUnsignedWrap() &&
         cast<GEPOperator>(Src)->hasNoUnsignedWrap() &&
-        match(GEP.getOperand(1), m_NUWAddLike(m_Value(), m_Value())))
+        match(GEP.getOperand(1), m_NUWAddLike(m_Value(), m_Value()))) {
       Flags |= GEPNoWrapFlags::noUnsignedWrap();
+      if (GEP.isInBounds() && cast<GEPOperator>(Src)->isInBounds())
+        Flags |= GEPNoWrapFlags::inBounds();
+    }
 
     Value *GEPConst =
         IC.Builder.CreatePtrAdd(Base, IC.Builder.getInt(NewOffset), "", Flags);
