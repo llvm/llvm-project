@@ -2786,32 +2786,12 @@ private:
   PyOperationRef operation;
 };
 
-// copied/borrow from
-// https://github.com/python/pythoncapi-compat/blob/b541b98df1e3e5aabb5def27422a75c876f5a88a/pythoncapi_compat.h#L222
-// bpo-40421 added PyFrame_GetLasti() to Python 3.11.0b1
-#if PY_VERSION_HEX < 0x030b00b1 && !defined(PYPY_VERSION)
-int PyFrame_GetLasti(PyFrameObject *frame) {
-#if PY_VERSION_HEX >= 0x030a00a7
-  // bpo-27129: Since Python 3.10.0a7, f_lasti is an instruction offset,
-  // not a bytes offset anymore. Python uses 16-bit "wordcode" (2 bytes)
-  // instructions.
-  if (frame->f_lasti < 0) {
-    return -1;
-  }
-  return frame->f_lasti * 2;
-#else
-  return frame->f_lasti;
-#endif
-}
-#endif
-
 constexpr size_t kMaxFrames = 512;
 
 MlirLocation tracebackToLocation(MlirContext ctx) {
   size_t framesLimit =
       PyGlobals::get().getTracebackLoc().locTracebackFramesLimit();
-  // We use a thread_local here mostly to avoid requiring a large amount of
-  // space.
+  // Use a thread_local here to avoid requiring a large amount of space.
   thread_local std::array<MlirLocation, kMaxFrames> frames;
   size_t count = 0;
 

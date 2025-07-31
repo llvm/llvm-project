@@ -1,5 +1,5 @@
 # RUN: %PYTHON %s | FileCheck %s
-
+# REQUIRES: python-ge-311
 import gc
 from contextlib import contextmanager
 
