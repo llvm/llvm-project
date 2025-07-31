@@ -10,7 +10,6 @@
 #define BOLT_CORE_MCINSTUTILS_H
 
 #include "bolt/Core/BinaryBasicBlock.h"
-
 #include <map>
 #include <tuple>
 #include <variant>
@@ -46,10 +45,6 @@ class MCInstReference {
     const BinaryBasicBlock *BB;
     BinaryBasicBlock::const_iterator It;
 
-    bool operator<(const RefInBB &Other) const {
-      return std::tie(BB, It) < std::tie(Other.BB, Other.It);
-    }
-
     bool operator==(const RefInBB &Other) const {
       return BB == Other.BB && It == Other.It;
     }
@@ -66,10 +61,6 @@ class MCInstReference {
 
     const BinaryFunction *BF;
     nocfg_const_iterator It;
-
-    bool operator<(const RefInBF &Other) const {
-      return std::tie(BF, It->first) < std::tie(Other.BF, Other.It->first);
-    }
 
     bool operator==(const RefInBF &Other) const {
       return BF == Other.BF && It->first == Other.It->first;
@@ -115,10 +106,6 @@ public:
 
   /// Locates an instruction inside a function and returns a reference.
   static MCInstReference get(const MCInst *Inst, const BinaryFunction &BF);
-
-  bool operator<(const MCInstReference &Other) const {
-    return Reference < Other.Reference;
-  }
 
   bool operator==(const MCInstReference &Other) const {
     return Reference == Other.Reference;

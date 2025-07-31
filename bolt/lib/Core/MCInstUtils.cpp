@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Core/MCInstUtils.h"
-
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
 
