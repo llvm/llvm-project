@@ -500,7 +500,9 @@ void LinkerDriver::parseDirectives(InputFile *file) {
       file->symtab.parseAlternateName(arg->getValue());
       break;
     case OPT_arm64xsameaddress:
-      if (!file->symtab.isEC())
+      if (file->symtab.isEC())
+        parseSameAddress(arg->getValue());
+      else
         Warn(ctx) << arg->getSpelling()
                   << " is not allowed in non-ARM64EC files (" << toString(file)
                   << ")";
@@ -2295,6 +2297,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
        args.filtered(OPT_dependentloadflag, OPT_dependentloadflag_opt))
     parseDependentLoadFlags(arg);
 
+  for (auto *arg : args.filtered(OPT_arm64xsameaddress)) {
+    if (ctx.hybridSymtab)
+      parseSameAddress(arg->getValue());
+    else
+      Warn(ctx) << arg->getSpelling() << " is allowed only on EC targets";
+  }
+
   if (tar) {
     llvm::TimeTraceScope timeScope("Reproducer: response file");
     tar->append(
@@ -2668,11 +2677,45 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     createECExportThunks();
 
   // Resolve remaining undefined symbols and warn about imported locals.
+  std::vector<Undefined *> aliases;
   ctx.forEachSymtab(
-      [&](SymbolTable &symtab) { symtab.resolveRemainingUndefines(); });
+      [&](SymbolTable &symtab) { symtab.resolveRemainingUndefines(aliases); });
 
   if (errorCount())
     return;
+
+  ctx.forEachActiveSymtab([](SymbolTable &symtab) {
+    symtab.initializeECThunks();
+    symtab.initializeLoadConfig();
+  });
+
+  // Identify unreferenced COMDAT sections.
+  if (config->doGC) {
+    if (config->mingw) {
+      // markLive doesn't traverse .eh_frame, but the personality function is
+      // only reached that way. The proper solution would be to parse and
+      // traverse the .eh_frame section, like the ELF linker does.
+      // For now, just manually try to retain the known possible personality
+      // functions. This doesn't bring in more object files, but only marks
+      // functions that already have been included to be retained.
+      ctx.forEachSymtab([&](SymbolTable &symtab) {
+        for (const char *n : {"__gxx_personality_v0", "__gcc_personality_v0",
+                              "rust_eh_personality"}) {
+          Defined *d = dyn_cast_or_null<Defined>(symtab.findUnderscore(n));
+          if (d && !d->isGCRoot) {
+            d->isGCRoot = true;
+            config->gcroot.push_back(d);
+          }
+        }
+      });
+    }
+
+    markLive(ctx);
+  }
+
+  ctx.symtab.initializeSameAddressThunks();
+  for (auto alias : aliases)
+    alias->resolveWeakAlias();
 
   if (config->mingw) {
     // Make sure the crtend.o object is the last object file. This object
@@ -2764,35 +2807,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle /print-symbol-order.
   if (auto *arg = args.getLastArg(OPT_print_symbol_order))
     config->printSymbolOrder = arg->getValue();
-
-  if (ctx.symtab.isEC())
-    ctx.symtab.initializeECThunks();
-  ctx.forEachActiveSymtab(
-      [](SymbolTable &symtab) { symtab.initializeLoadConfig(); });
-
-  // Identify unreferenced COMDAT sections.
-  if (config->doGC) {
-    if (config->mingw) {
-      // markLive doesn't traverse .eh_frame, but the personality function is
-      // only reached that way. The proper solution would be to parse and
-      // traverse the .eh_frame section, like the ELF linker does.
-      // For now, just manually try to retain the known possible personality
-      // functions. This doesn't bring in more object files, but only marks
-      // functions that already have been included to be retained.
-      ctx.forEachSymtab([&](SymbolTable &symtab) {
-        for (const char *n : {"__gxx_personality_v0", "__gcc_personality_v0",
-                              "rust_eh_personality"}) {
-          Defined *d = dyn_cast_or_null<Defined>(symtab.findUnderscore(n));
-          if (d && !d->isGCRoot) {
-            d->isGCRoot = true;
-            config->gcroot.push_back(d);
-          }
-        }
-      });
-    }
-
-    markLive(ctx);
-  }
 
   // Needs to happen after the last call to addFile().
   convertResources();

@@ -214,6 +214,8 @@ private:
   void parsePDBPageSize(StringRef);
   void parseSection(StringRef);
 
+  void parseSameAddress(StringRef);
+
   // Parses a MS-DOS stub file
   void parseDosStub(StringRef path);
 
