@@ -1052,6 +1052,8 @@ public:
 
   mlir::Value emitPromotedScalarExpr(const Expr *e, QualType promotionType);
 
+  mlir::Value emitPromotedValue(mlir::Value result, QualType promotionType);
+
   /// Emit the computation of the specified expression of scalar type.
   mlir::Value emitScalarExpr(const clang::Expr *e);
 

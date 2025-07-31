@@ -626,7 +626,7 @@ mlir::Value ComplexExprEmitter::emitPromoted(const Expr *e,
 
   mlir::Value result = Visit(const_cast<Expr *>(e));
   if (!promotionTy.isNull())
-    cgf.cgm.errorNYI("emitPromoted emitPromotedValue");
+    return cgf.emitPromotedValue(result, promotionTy);
 
   return result;
 }
@@ -662,8 +662,10 @@ LValue ComplexExprEmitter::emitCompoundAssignLValue(
   SourceLocation exprLoc = e->getExprLoc();
   mlir::Location loc = cgf.getLoc(exprLoc);
 
-  if (const AtomicType *atomicTy = lhsTy->getAs<AtomicType>())
-    lhsTy = atomicTy->getValueType();
+  if (lhsTy->getAs<AtomicType>()) {
+    cgf.cgm.errorNYI("emitCompoundAssignLValue AtmoicType");
+    return {};
+  }
 
   BinOpInfo opInfo{loc};
   opInfo.fpFeatures = e->getFPFeaturesInEffect(cgf.getLangOpts());
@@ -683,20 +685,18 @@ LValue ComplexExprEmitter::emitCompoundAssignLValue(
 
   // The RHS should have been converted to the computation type.
   if (e->getRHS()->getType()->isRealFloatingType()) {
-    if (!promotionTypeRHS.isNull())
+    if (!promotionTypeRHS.isNull()) {
       opInfo.rhs = createComplexFromReal(
           cgf.getBuilder(), loc,
           cgf.emitPromotedScalarExpr(e->getRHS(), promotionTypeRHS));
-    else {
+    } else {
       assert(cgf.getContext().hasSameUnqualifiedType(complexElementTy, rhsTy));
       opInfo.rhs = createComplexFromReal(cgf.getBuilder(), loc,
                                          cgf.emitScalarExpr(e->getRHS()));
     }
   } else {
     if (!promotionTypeRHS.isNull()) {
-      opInfo.rhs = createComplexFromReal(
-          cgf.getBuilder(), loc,
-          cgf.emitPromotedComplexExpr(e->getRHS(), promotionTypeRHS));
+      opInfo.rhs = cgf.emitPromotedComplexExpr(e->getRHS(), promotionTypeRHS);
     } else {
       assert(cgf.getContext().hasSameUnqualifiedType(opInfo.ty, rhsTy));
       opInfo.rhs = Visit(e->getRHS());
@@ -830,8 +830,8 @@ mlir::Value CIRGenFunction::emitComplexExpr(const Expr *e) {
 using CompoundFunc =
     mlir::Value (ComplexExprEmitter::*)(const ComplexExprEmitter::BinOpInfo &);
 
-static CompoundFunc getComplexOp(BinaryOperatorKind Op) {
-  switch (Op) {
+static CompoundFunc getComplexOp(BinaryOperatorKind op) {
+  switch (op) {
   case BO_MulAssign:
     llvm_unreachable("getComplexOp: BO_MulAssign");
   case BO_DivAssign:
@@ -895,4 +895,12 @@ void CIRGenFunction::emitStoreOfComplex(mlir::Location loc, mlir::Value v,
 mlir::Value CIRGenFunction::emitPromotedComplexExpr(const Expr *e,
                                                     QualType promotionType) {
   return ComplexExprEmitter(*this).emitPromoted(e, promotionType);
+}
+
+mlir::Value CIRGenFunction::emitPromotedValue(mlir::Value result,
+                                              QualType promotionType) {
+  assert(!mlir::cast<cir::ComplexType>(result.getType()).isIntegerComplex() &&
+         "integral complex will never be promoted");
+  return builder.createCast(cir::CastKind::float_complex, result,
+                            convertType(promotionType));
 }
