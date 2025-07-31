@@ -1222,8 +1222,7 @@ MemRegionManager::getElementRegion(QualType elementType, NonLoc Idx,
   // The address space must be preserved because some target-specific address
   // spaces influence the size of the pointer value which is represented by the
   // element region.
-  LangAS AS = elementType.getAddressSpace();
-  if (AS != LangAS::Default) {
+  if (LangAS AS = elementType.getAddressSpace()) {
     Qualifiers Quals;
     Quals.setAddressSpace(AS);
     T = Ctx.getQualifiedType(T, Quals);
