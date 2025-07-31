@@ -247,6 +247,9 @@ class Test:
         # and will be honored when the test result is supplied.
         self.xfails = []
 
+        # Exclude this test if it's xfail.
+        self.exclude_xfail = False
+
         # If true, ignore all items in self.xfails.
         self.xfail_not = False
 
