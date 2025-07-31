@@ -28,7 +28,10 @@ using namespace mlir;
 using namespace mlir::vector;
 
 namespace {
-/// Progressive lowering of BroadcastOp.
+
+/// Convert a vector.broadcast with a vector operand to a lower rank
+/// vector.broadcast. vector.broadcast with a scalar operand is expected to be
+/// convertible to the lower level target dialect (LLVM, SPIR-V, etc.) directly.
 class BroadcastOpLowering : public OpRewritePattern<vector::BroadcastOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
@@ -40,20 +43,23 @@ public:
     VectorType srcType = dyn_cast<VectorType>(op.getSourceType());
     Type eltType = dstType.getElementType();
 
-    // Scalar to any vector can use splat.
-    if (!srcType) {
-      rewriter.replaceOpWithNewOp<vector::SplatOp>(op, dstType, op.getSource());
-      return success();
-    }
+    // A broadcast from a scalar is considered to be in the lowered form.
+    if (!srcType)
+      return rewriter.notifyMatchFailure(
+          op, "broadcast from scalar already in lowered form");
 
     // Determine rank of source and destination.
     int64_t srcRank = srcType.getRank();
     int64_t dstRank = dstType.getRank();
 
-    // Stretching scalar inside vector (e.g. vector<1xf32>) can use splat.
+    // Here we are broadcasting to a rank-1 vector. Ensure that the source is a
+    // scalar.
     if (srcRank <= 1 && dstRank == 1) {
-      Value ext = vector::ExtractOp::create(rewriter, loc, op.getSource());
-      rewriter.replaceOpWithNewOp<vector::SplatOp>(op, dstType, ext);
+      SmallVector<int64_t> fullRankPosition(srcRank, 0);
+      Value ext = vector::ExtractOp::create(rewriter, loc, op.getSource(),
+                                            fullRankPosition);
+      assert(!isa<VectorType>(ext.getType()) && "expected scalar");
+      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(op, dstType, ext);
       return success();
     }
 
