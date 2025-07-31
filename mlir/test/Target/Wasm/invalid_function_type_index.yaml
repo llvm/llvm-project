@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s | mlir-translate --import-wasm -o - 2>&1 | FileCheck %s
-# CHECK: error: Invalid type index: 2
+# CHECK: error: invalid type index: 2
 
 # FIXME: mlir-translate should not return 0 here.
 

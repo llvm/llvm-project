@@ -1,6 +1,6 @@
 # RUN: not yaml2obj %s -o - | not mlir-translate --import-wasm 2>&1 | FileCheck %s
 
-# CHECK: Source file does not contain valid Wasm header
+# CHECK: source file does not contain valid Wasm header
 
 --- !WASM
 Sections:

@@ -11,18 +11,18 @@
 #include "mlir/Target/Wasm/WasmImporter.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
 
-
 using namespace mlir;
 
 namespace mlir {
 void registerFromWasmTranslation() {
   TranslateToMLIRRegistration registration{
-    "import-wasm", "Translate WASM to MLIR",
-    [](llvm::SourceMgr &sourceMgr, MLIRContext* context) -> OwningOpRef<Operation*> {
-      return wasm::importWebAssemblyToModule(sourceMgr, context);
-    }, [](DialectRegistry& registry) {
-      registry.insert<wasmssa::WasmSSADialect>();
-    }
-  };
+      "import-wasm", "Translate WASM to MLIR",
+      [](llvm::SourceMgr &sourceMgr,
+         MLIRContext *context) -> OwningOpRef<Operation *> {
+        return wasm::importWebAssemblyToModule(sourceMgr, context);
+      },
+      [](DialectRegistry &registry) {
+        registry.insert<wasmssa::WasmSSADialect>();
+      }};
 }
 } // namespace mlir

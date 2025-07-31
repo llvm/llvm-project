@@ -19,8 +19,7 @@
 #include "mlir/IR/OwningOpRef.h"
 #include "llvm/Support/SourceMgr.h"
 
-namespace mlir {
-namespace wasm {
+namespace mlir::wasm {
 
 /// Translates the given operation to C++ code. The operation or operations in
 /// the region of 'op' need almost all be in EmitC dialect. The parameter
@@ -28,8 +27,8 @@ namespace wasm {
 /// arguments are declared at the beginning of the function.
 /// If parameter 'fileId' is non-empty, then body of `emitc.file` ops
 /// with matching id are emitted.
-OwningOpRef<ModuleOp> importWebAssemblyToModule(llvm::SourceMgr &source, MLIRContext* context);
-} // namespace wasm
-} // namespace mlir
+OwningOpRef<ModuleOp> importWebAssemblyToModule(llvm::SourceMgr &source,
+                                                MLIRContext *context);
+} // namespace mlir::wasm
 
 #endif // MLIR_TARGET_WASM_WASMIMPORTER_H

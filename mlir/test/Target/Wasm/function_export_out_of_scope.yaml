@@ -2,7 +2,7 @@
 
 # FIXME: The error code here should be nonzero.
 
-# CHECK: Trying to export function 42 which is undefined in this scope
+# CHECK: trying to export function 42 which is undefined in this scope
 
 --- !WASM
 FileHeader:

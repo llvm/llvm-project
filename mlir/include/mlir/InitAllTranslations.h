@@ -17,6 +17,7 @@
 #include "mlir/Target/IRDLToCpp/TranslationRegistration.h"
 
 namespace mlir {
+
 void registerFromLLVMIRTranslation();
 void registerFromSPIRVTranslation();
 void registerFromWasmTranslation();

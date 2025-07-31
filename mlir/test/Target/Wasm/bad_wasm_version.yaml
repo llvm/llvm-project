@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s -o - | not mlir-translate --import-wasm 2>&1 | FileCheck %s
 
-# CHECK: Unsupported Wasm version
+# CHECK: unsupported Wasm version
 
 --- !WASM
 FileHeader:
