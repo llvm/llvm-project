@@ -121,6 +121,41 @@ ModuleOp transform::detail::getPreloadedTransformModule(MLIRContext *context) {
       ->getLibraryModule();
 }
 
+namespace {
+
+transform::TransformOpInterface
+findTransformEntryPointNonRecursive(Operation *op, StringRef entryPoint) {
+  for (Region &region : op->getRegions()) {
+    for (Block &block : region.getBlocks()) {
+      auto namedSequenceOps = block.getOps<transform::NamedSequenceOp>();
+      for (transform::NamedSequenceOp namedSequenceOp : namedSequenceOps) {
+        if (namedSequenceOp.getSymName() == entryPoint) {
+          return cast<transform::TransformOpInterface>(
+              namedSequenceOp.getOperation());
+        }
+      }
+    }
+  }
+  return nullptr;
+}
+
+transform::TransformOpInterface
+findTransformEntryPointRecursive(Operation *op, StringRef entryPoint) {
+  transform::TransformOpInterface transform = nullptr;
+  op->walk<WalkOrder::PreOrder>(
+      [&](transform::NamedSequenceOp namedSequenceOp) {
+        if (namedSequenceOp.getSymName() == entryPoint) {
+          transform = cast<transform::TransformOpInterface>(
+              namedSequenceOp.getOperation());
+          return WalkResult::interrupt();
+        }
+        return WalkResult::advance();
+      });
+  return transform;
+}
+
+} // namespace
+
 transform::TransformOpInterface
 transform::detail::findTransformEntryPoint(Operation *root, ModuleOp module,
                                            StringRef entryPoint) {
@@ -128,30 +163,10 @@ transform::detail::findTransformEntryPoint(Operation *root, ModuleOp module,
   if (module)
     l.push_back(module);
   for (Operation *op : l) {
-    transform::TransformOpInterface transform = nullptr;
-    for (Region &region : op->getRegions()) {
-      for (Block &block : region.getBlocks()) {
-        auto namedSequenceOps = block.getOps<transform::NamedSequenceOp>();
-        for (transform::NamedSequenceOp namedSequenceOp : namedSequenceOps) {
-          if (namedSequenceOp.getSymName() == entryPoint) {
-            transform = cast<transform::TransformOpInterface>(
-                namedSequenceOp.getOperation());
-            break;
-          }
-        }
-      }
-    }
-    if (!transform) {
-      op->walk<WalkOrder::PreOrder>(
-          [&](transform::NamedSequenceOp namedSequenceOp) {
-            if (namedSequenceOp.getSymName() == entryPoint) {
-              transform = cast<transform::TransformOpInterface>(
-                  namedSequenceOp.getOperation());
-              return WalkResult::interrupt();
-            }
-            return WalkResult::advance();
-          });
-    }
+    TransformOpInterface transform =
+        findTransformEntryPointNonRecursive(op, entryPoint);
+    if (!transform)
+      transform = findTransformEntryPointRecursive(op, entryPoint);
     if (transform)
       return transform;
   }
