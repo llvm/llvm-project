@@ -349,8 +349,6 @@ int main(int argc, const char **argv) {
 
   // If we add more % commands, there should be better architecture than this.
 
-  const char *lib_bad_args =
-      "%lib expects 1 argument: the path to a dynamic library\n";
   if (OptInputs.empty()) {
     llvm::LineEditor LE("clang-repl");
     std::string Input;
@@ -383,8 +381,9 @@ int main(int argc, const char **argv) {
             std::error_code());
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "");
       } else if (Input == R"(%lib)") {
-        auto Err = llvm::make_error<llvm::StringError>(lib_bad_args,
-                                                       std::error_code());
+        auto Err = llvm::make_error<llvm::StringError>(
+            "%lib expects 1 argument: the path to a dynamic library\n",
+            std::error_code());
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       } else if (Input.rfind("%lib ", 0) == 0) {
         if (auto Err = Interp->LoadDynamicLibrary(Input.data() + 5))
