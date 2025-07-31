@@ -9,6 +9,7 @@
 #include "ThreadWasm.h"
 
 #include "ProcessWasm.h"
+#include "RegisterContextWasm.h"
 #include "UnwindWasm.h"
 #include "lldb/Target/Target.h"
 
@@ -31,4 +32,20 @@ llvm::Expected<std::vector<lldb::addr_t>> ThreadWasm::GetWasmCallStack() {
     return wasm_process->GetWasmCallStack(GetID());
   }
   return llvm::createStringError("no process");
+}
+
+lldb::RegisterContextSP
+ThreadWasm::CreateRegisterContextForFrame(StackFrame *frame) {
+  uint32_t concrete_frame_idx = 0;
+  ProcessSP process_sp(GetProcess());
+  ProcessWasm *wasm_process = static_cast<ProcessWasm *>(process_sp.get());
+
+  if (frame)
+    concrete_frame_idx = frame->GetConcreteFrameIndex();
+
+  if (concrete_frame_idx == 0)
+    return std::make_shared<RegisterContextWasm>(
+        *this, concrete_frame_idx, wasm_process->GetRegisterInfo());
+
+  return GetUnwinder().CreateRegisterContextForFrame(frame);
 }
