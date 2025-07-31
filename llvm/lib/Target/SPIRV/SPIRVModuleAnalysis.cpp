@@ -1864,6 +1864,10 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(SPIRV::Capability::TernaryBitwiseFunctionINTEL);
     break;
   }
+  case SPIRV::OpCopyMemorySized: {
+    Reqs.addCapability(SPIRV::Capability::Addresses);
+    // TODO: Add UntypedPointersKHR when implemented.
+  }
 
   default:
     break;
