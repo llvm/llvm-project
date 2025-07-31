@@ -19,7 +19,7 @@ define i1 @test(ptr %p, i32 %n) {
 ; Same test using 64-bit indices.
 define i1 @test64(ptr %p, i64 %n) {
 ; CHECK-LABEL: @test64(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[N:%.*]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i64 [[N:%.*]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -32,7 +32,7 @@ define i1 @test64(ptr %p, i64 %n) {
 ; Here the offset overflows and is treated modulo 2^32. This is UB.
 define i1 @test64_overflow(ptr %p, i64 %n) {
 ; CHECK-LABEL: @test64_overflow(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[N:%.*]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i64 [[N:%.*]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
