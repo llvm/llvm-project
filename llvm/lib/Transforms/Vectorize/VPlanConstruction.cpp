@@ -670,6 +670,80 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
   }
 }
 
+void VPlanTransforms::addMinimumIterationCheck(
+    VPlan &Plan, ElementCount VF, unsigned UF,
+    ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
+    bool TailFolded, bool CheckNeededWithTailFolding, Loop *OrigLoop,
+    const uint32_t *MinItersBypassWeights, DebugLoc DL, ScalarEvolution &SE) {
+  // Generate code to check if the loop's trip count is less than VF * UF, or
+  // equal to it in case a scalar epilogue is required; this implies that the
+  // vector trip count is zero. This check also covers the case where adding one
+  // to the backedge-taken count overflowed leading to an incorrect trip count
+  // of zero. In this case we will also jump to the scalar loop.
+  auto P = RequiresScalarEpilogue ? ICmpInst::ICMP_ULE : ICmpInst::ICMP_ULT;
+  // If tail is to be folded, vector loop takes care of all iterations.
+  const SCEV *Count = vputils::getSCEVExprForVPValue(Plan.getTripCount(), SE);
+  Type *CountTy = Count->getType();
+  auto CreateStep = [&]() -> const SCEV * {
+    const SCEV *VFxUF = SE.getElementCount(CountTy, (VF * UF), SCEV::FlagNUW);
+    // Create step with max(MinProTripCount, UF * VF).
+    if (UF * VF.getKnownMinValue() >= MinProfitableTripCount.getKnownMinValue())
+      return VFxUF;
+
+    const SCEV *MinProfTC =
+        SE.getElementCount(CountTy, MinProfitableTripCount, SCEV::FlagNUW);
+    if (!VF.isScalable())
+      return MinProfTC;
+    return SE.getUMaxExpr(MinProfTC, VFxUF);
+  };
+
+  VPBasicBlock *EntryVPBB = Plan.getEntry();
+  VPBuilder Builder(EntryVPBB);
+  VPValue *CheckMinIters = Plan.getFalse();
+  const SCEV *Step = CreateStep();
+  if (!TailFolded) {
+    // TODO: Emit unconditional branch to vector preheader instead of
+    // conditional branch with known condition.
+    const SCEV *TripCountSCEV = SE.applyLoopGuards(Count, OrigLoop);
+    // Check if the trip count is < the step.
+    if (SE.isKnownPredicate(P, TripCountSCEV, Step)) {
+      // TODO: Ensure step is at most the trip count when determining max VF and
+      // UF, w/o tail folding.
+      CheckMinIters = Plan.getTrue();
+    } else if (!SE.isKnownPredicate(CmpInst::getInversePredicate(P),
+                                    TripCountSCEV, Step)) {
+      // Generate the minimum iteration check only if we cannot prove the
+      // check is known to be true, or known to be false.
+      CheckMinIters = Builder.createICmp(P, Plan.getTripCount(),
+                                         Builder.expandSCEV(Step, SE), DL,
+                                         "min.iters.check");
+    } // else step known to be < trip count, use CheckMinIters preset to false.
+  } else if (CheckNeededWithTailFolding) {
+    // vscale is not necessarily a power-of-2, which means we cannot guarantee
+    // an overflow to zero when updating induction variables and so an
+    // additional overflow check is required before entering the vector loop.
+
+    // Get the maximum unsigned value for the type.
+    VPValue *MaxUIntTripCount = Plan.getOrAddLiveIn(
+        ConstantInt::get(CountTy, cast<IntegerType>(CountTy)->getMask()));
+    VPValue *LHS = Builder.createNaryOp(Instruction::Sub,
+                                        {MaxUIntTripCount, Plan.getTripCount()},
+                                        DebugLoc::getUnknown());
+
+    // Don't execute the vector loop if (UMax - n) < (VF * UF).
+    CheckMinIters = Builder.createICmp(ICmpInst::ICMP_ULT, LHS,
+                                       Builder.expandSCEV(Step, SE), DL);
+  }
+  VPInstruction *Term =
+      Builder.createNaryOp(VPInstruction::BranchOnCond, {CheckMinIters}, DL);
+  if (MinItersBypassWeights) {
+    MDBuilder MDB(Plan.getContext());
+    MDNode *BranchWeights = MDB.createBranchWeights(
+        ArrayRef(MinItersBypassWeights, 2), /*IsExpected=*/false);
+    Term->addMetadata(LLVMContext::MD_prof, BranchWeights);
+  }
+}
+
 bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   auto GetMinMaxCompareValue = [](VPReductionPHIRecipe *RedPhiR) -> VPValue * {
     auto *MinMaxR = dyn_cast<VPRecipeWithIRFlags>(

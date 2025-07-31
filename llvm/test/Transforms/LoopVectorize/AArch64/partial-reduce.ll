@@ -60,8 +60,6 @@ define i32 @zext_add_reduc_i8_i32_sve(ptr %a) #0 {
 ; CHECK-MAXBW-LABEL: define i32 @zext_add_reduc_i8_i32_sve(
 ; CHECK-MAXBW-SAME: ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-MAXBW-NEXT:  entry:
-; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-MAXBW-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-MAXBW:       vector.ph:
 ; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
@@ -244,8 +242,6 @@ define i64 @zext_add_reduc_i8_i64(ptr %a) #0 {
 ; CHECK-MAXBW-LABEL: define i64 @zext_add_reduc_i8_i64(
 ; CHECK-MAXBW-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-MAXBW-NEXT:  entry:
-; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-MAXBW-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-MAXBW:       vector.ph:
 ; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
@@ -340,8 +336,6 @@ define i64 @zext_add_reduc_i16_i64(ptr %a) #0 {
 ; CHECK-MAXBW-LABEL: define i64 @zext_add_reduc_i16_i64(
 ; CHECK-MAXBW-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-MAXBW-NEXT:  entry:
-; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-MAXBW-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-MAXBW:       vector.ph:
 ; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
@@ -436,8 +430,6 @@ define i32 @zext_add_reduc_i8_i32_has_neon_dotprod(ptr %a) #1 {
 ; CHECK-MAXBW-LABEL: define i32 @zext_add_reduc_i8_i32_has_neon_dotprod(
 ; CHECK-MAXBW-SAME: ptr [[A:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-MAXBW-NEXT:  entry:
-; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-MAXBW-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-MAXBW:       vector.ph:
 ; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
@@ -718,8 +710,6 @@ define i32 @zext_sub_reduc_i8_i32_has_neon_dotprod(ptr %a) #1 {
 ; CHECK-MAXBW-LABEL: define i32 @zext_sub_reduc_i8_i32_has_neon_dotprod(
 ; CHECK-MAXBW-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
 ; CHECK-MAXBW-NEXT:  entry:
-; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-MAXBW-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-MAXBW:       vector.ph:
 ; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
@@ -814,8 +804,6 @@ define i32 @sext_add_reduc_i8_i32(ptr %a) #0 {
 ; CHECK-MAXBW-LABEL: define i32 @sext_add_reduc_i8_i32(
 ; CHECK-MAXBW-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-MAXBW-NEXT:  entry:
-; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-MAXBW-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-MAXBW:       vector.ph:
 ; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
@@ -932,7 +920,7 @@ define i32 @add_of_zext_outside_loop(i32 %a, ptr noalias %b, i8 %c, i32 %d) #0 {
 ; CHECK-MAXBW-NEXT:    [[CONV1:%.*]] = zext i8 [[C]] to i32
 ; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = sub i32 1024, [[D]]
 ; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = shl nuw i32 [[TMP1]], 4
+; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[TMP1]], 4
 ; CHECK-MAXBW-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], [[TMP2]]
 ; CHECK-MAXBW-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-MAXBW:       vector.ph:
@@ -1053,7 +1041,7 @@ define i32 @add_of_loop_invariant_zext(i32 %a, ptr %b, i8 %c, i32 %d) #0 {
 ; CHECK-MAXBW-NEXT:  entry:
 ; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = sub i32 1024, [[D]]
 ; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = shl nuw i32 [[TMP1]], 4
+; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[TMP1]], 4
 ; CHECK-MAXBW-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], [[TMP2]]
 ; CHECK-MAXBW-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-MAXBW:       vector.ph:

@@ -334,6 +334,10 @@ public:
         FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags(), DL));
   }
 
+  VPExpandSCEVRecipe *expandSCEV(const SCEV *Expr, ScalarEvolution &SE) {
+    return tryInsertInstruction(new VPExpandSCEVRecipe(Expr, SE));
+  }
+
   //===--------------------------------------------------------------------===//
   // RAII helpers.
   //===--------------------------------------------------------------------===//
@@ -558,6 +562,10 @@ public:
 
   /// Emit remarks for recipes with invalid costs in the available VPlans.
   void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);
+
+  /// Create a check to \p Plan to see if the vector loop should be executed.
+  void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
+                                ElementCount MinProfitableTripCount) const;
 
 protected:
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
