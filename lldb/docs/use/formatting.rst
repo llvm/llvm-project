@@ -344,19 +344,19 @@ E.g., the following setting would reconstruct the entire function name (and is L
 
 ::
 
-    (lldb) settings set plugin.cplusplus.dislpay.function-name-format "${function.return-left}${function.scope}${function.basename}${function.template-arguments}${function.formatted-arguments}${function.qualifiers}${function.return-right}${function.suffix}"
+    (lldb) settings set plugin.cplusplus.display.function-name-format "${function.return-left}${function.scope}${function.basename}${function.template-arguments}${function.formatted-arguments}${function.qualifiers}${function.return-right}${function.suffix}"
 
 If a user wanted to only print the name and arguments of a C++ function one could do:
 
 ::
 
-    (lldb) settings set plugin.cplusplus.dislpay.function-name-format "${function.scope}${function.basename}${function.formatted-arguments}"
+    (lldb) settings set plugin.cplusplus.display.function-name-format "${function.scope}${function.basename}${function.formatted-arguments}"
 
 
 Then the following would highlight just the basename in green:
 
 ::
 
-    (lldb) settings set plugin.cplusplus.dislpay.function-name-format "${function.scope}${ansi.fg.yellow}${function.basename}${ansi.normal}${function.formatted-arguments}"
+    (lldb) settings set plugin.cplusplus.display.function-name-format "${function.scope}${ansi.fg.yellow}${function.basename}${ansi.normal}${function.formatted-arguments}"
 
 The ``${function.name-with-args}`` by default asks the language plugin whether it supports a language-specific ``function-name-format`` (e.g., the ``plugin.cplusplus.display.function-name-format`` for C++), and if it does, uses it. Otherwise it will display the demangled function name.
