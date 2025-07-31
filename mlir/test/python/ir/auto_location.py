@@ -34,24 +34,24 @@ def testInferLocations():
         two = arith.constant(IndexType.get(), 2)
 
         # fmt: off
-        # CHECK: loc(callsite("testInferLocations"("{{.*}}/test/python/ir/auto_location.py":31:13 to :43) at callsite("run"("{{.*}}/test/python/ir/auto_location.py":13:4 to :7) at "<module>"("{{.*}}/test/python/ir/auto_location.py":26:1 to :4))))
+        # CHECK: loc(callsite("testInferLocations"("{{.*}}[[SEP:[/\\]]]test[[SEP]]python[[SEP]]ir[[SEP]]auto_location.py":31:13 to :43) at callsite("run"("{{.*}}[[SEP]]test[[SEP]]python[[SEP]]ir[[SEP]]auto_location.py":13:4 to :7) at "<module>"("{{.*}}[[SEP]]test[[SEP]]python[[SEP]]ir[[SEP]]auto_location.py":26:1 to :4))))
         # fmt: on
         print(op.location)
 
         # fmt: off
-        # CHECK: loc(callsite("ConstantOp.__init__"("{{.*}}/mlir/dialects/arith.py":65:12 to :76) at callsite("constant"("{{.*}}/mlir/dialects/arith.py":110:40 to :81) at callsite("testInferLocations"("{{.*}}/test/python/ir/auto_location.py":32:14 to :48) at callsite("run"("{{.*}}/test/python/ir/auto_location.py":13:4 to :7) at "<module>"("{{.*}}/test/python/ir/auto_location.py":26:1 to :4))))))
+        # CHECK: loc(callsite("ConstantOp.__init__"("{{.*}}[[SEP]]mlir[[SEP]]dialects[[SEP]]arith.py":65:12 to :76) at callsite("constant"("{{.*}}[[SEP]]mlir[[SEP]]dialects[[SEP]]arith.py":110:40 to :81) at callsite("testInferLocations"("{{.*}}[[SEP]]test[[SEP]]python[[SEP]]ir[[SEP]]auto_location.py":32:14 to :48) at callsite("run"("{{.*}}[[SEP]]test[[SEP]]python[[SEP]]ir[[SEP]]auto_location.py":13:4 to :7) at "<module>"("{{.*}}[[SEP]]test[[SEP]]python[[SEP]]ir[[SEP]]auto_location.py":26:1 to :4))))))
         # fmt: on
         print(one.location)
 
         # fmt: off
-        # CHECK: loc(callsite("testInferLocations"("{{.*}}/test/python/ir/auto_location.py":34:14 to :48) at callsite("run"("{{.*}}/test/python/ir/auto_location.py":13:4 to :7) at "<module>"("{{.*}}/test/python/ir/auto_location.py":26:1 to :4))))
+        # CHECK: loc(callsite("testInferLocations"("{{.*}}[[SEP]]test[[SEP]]python[[SEP]]ir[[SEP]]auto_location.py":34:14 to :48) at callsite("run"("{{.*}}[[SEP]]test[[SEP]]python[[SEP]]ir[[SEP]]auto_location.py":13:4 to :7) at "<module>"("{{.*}}[[SEP]]test[[SEP]]python[[SEP]]ir[[SEP]]auto_location.py":26:1 to :4))))
         # fmt: on
         print(two.location)
 
         _cext.globals.register_traceback_file_inclusion(_arith_ops_gen.__file__)
         three = arith.constant(IndexType.get(), 3)
         # fmt: off
-        # CHECK: loc(callsite("ConstantOp.__init__"("{{.*}}/mlir/dialects/_arith_ops_gen.py":405:4 to :218) at callsite("testInferLocations"("{{.*}}/test/python/ir/auto_location.py":52:16 to :50) at callsite("run"("{{.*}}/test/python/ir/auto_location.py":13:4 to :7) at "<module>"("{{.*}}/test/python/ir/auto_location.py":26:1 to :4)))))
+        # CHECK: loc(callsite("ConstantOp.__init__"("{{.*}}[[SEP]]mlir[[SEP]]dialects[[SEP]]_arith_ops_gen.py":405:4 to :218) at callsite("testInferLocations"("{{.*}}[[SEP]]test[[SEP]]python[[SEP]]ir[[SEP]]auto_location.py":52:16 to :50) at callsite("run"("{{.*}}[[SEP]]test[[SEP]]python[[SEP]]ir[[SEP]]auto_location.py":13:4 to :7) at "<module>"("{{.*}}[[SEP]]test[[SEP]]python[[SEP]]ir[[SEP]]auto_location.py":26:1 to :4)))))
         # fmt: on
         print(three.location)
 
@@ -60,13 +60,13 @@ def testInferLocations():
             print(four.location)
 
         # fmt: off
-        # CHECK: loc(callsite("ConstantOp.__init__"("{{.*}}/mlir/dialects/_arith_ops_gen.py":405:4 to :218) at callsite("testInferLocations.<locals>.foo"("{{.*}}/test/python/ir/auto_location.py":59:19 to :53) at callsite("testInferLocations"("{{.*}}/test/python/ir/auto_location.py":65:8 to :13) at callsite("run"("{{.*}}/test/python/ir/auto_location.py":13:4 to :7) at "<module>"("{{.*}}/test/python/ir/auto_location.py":26:1 to :4))))))
+        # CHECK: loc(callsite("ConstantOp.__init__"("{{.*}}[[SEP]]mlir[[SEP]]dialects[[SEP]]_arith_ops_gen.py":405:4 to :218) at callsite("testInferLocations.<locals>.foo"("{{.*}}[[SEP]]test[[SEP]]python[[SEP]]ir[[SEP]]auto_location.py":59:19 to :53) at callsite("testInferLocations"("{{.*}}[[SEP]]test[[SEP]]python[[SEP]]ir[[SEP]]auto_location.py":65:8 to :13) at callsite("run"("{{.*}}[[SEP]]test[[SEP]]python[[SEP]]ir[[SEP]]auto_location.py":13:4 to :7) at "<module>"("{{.*}}[[SEP]]test[[SEP]]python[[SEP]]ir[[SEP]]auto_location.py":26:1 to :4))))))
         # fmt: on
         foo()
 
         _cext.globals.register_traceback_file_exclusion(__file__)
 
         # fmt: off
-        # CHECK: loc("ConstantOp.__init__"("{{.*}}/mlir/dialects/_arith_ops_gen.py":405:4 to :218))
+        # CHECK: loc("ConstantOp.__init__"("{{.*}}[[SEP]]mlir[[SEP]]dialects[[SEP]]_arith_ops_gen.py":405:4 to :218))
         # fmt: on
         foo()

@@ -198,7 +198,8 @@ PyGlobals::lookupOperationClass(llvm::StringRef operationName) {
   return std::nullopt;
 }
 
-bool PyGlobals::TracebackLoc::locTracebacksEnabled() const {
+bool PyGlobals::TracebackLoc::locTracebacksEnabled() {
+  nanobind::ft_lock_guard lock(mutex);
   return locTracebackEnabled_;
 }
 
@@ -207,7 +208,8 @@ void PyGlobals::TracebackLoc::setLocTracebacksEnabled(bool value) {
   locTracebackEnabled_ = value;
 }
 
-size_t PyGlobals::TracebackLoc::locTracebackFramesLimit() const {
+size_t PyGlobals::TracebackLoc::locTracebackFramesLimit() {
+  nanobind::ft_lock_guard lock(mutex);
   return locTracebackFramesLimit_;
 }
 

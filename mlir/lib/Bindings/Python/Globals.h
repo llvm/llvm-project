@@ -120,11 +120,11 @@ public:
 
   class TracebackLoc {
   public:
-    bool locTracebacksEnabled() const;
+    bool locTracebacksEnabled();
 
     void setLocTracebacksEnabled(bool value);
 
-    size_t locTracebackFramesLimit() const;
+    size_t locTracebackFramesLimit();
 
     void setLocTracebackFramesLimit(size_t value);
 
