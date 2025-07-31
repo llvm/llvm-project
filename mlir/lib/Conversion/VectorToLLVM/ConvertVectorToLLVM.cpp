@@ -1894,7 +1894,7 @@ struct VectorFromElementsLowering
     Type llvmIndexType = typeConverter->convertType(rewriter.getIndexType());
 
     Value result;
-    // 0D vectors are converted to legnth-1 1D vectors by LLVMTypeConverter.
+    // 0D vectors are converted to length-1 1D vectors by LLVMTypeConverter.
     if (vectorType.getRank() == 0) {
       result = LLVM::PoisonOp::create(rewriter, loc, llvmType);
       auto index0 = LLVM::ConstantOp::create(rewriter, loc, llvmIndexType, 0);
