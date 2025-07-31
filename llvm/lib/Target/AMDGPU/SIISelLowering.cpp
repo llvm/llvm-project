@@ -7199,7 +7199,7 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
       SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FpToFp16);
       return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);
     }
-    if (getTargetMachine().Options.UnsafeFPMath) {
+    if (Op->getFlags().hasApproximateFuncs()) {
       SDValue Flags = Op.getOperand(1);
       SDValue Src32 = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, Src, Flags);
       return DAG.getNode(ISD::FP_ROUND, DL, MVT::f16, Src32, Flags);
@@ -11294,8 +11294,7 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
   EVT VT = Op.getValueType();
   const SDNodeFlags Flags = Op->getFlags();
 
-  bool AllowInaccurateRcp =
-      Flags.hasApproximateFuncs() || DAG.getTarget().Options.UnsafeFPMath;
+  bool AllowInaccurateRcp = Flags.hasApproximateFuncs();
 
   if (const ConstantFPSDNode *CLHS = dyn_cast<ConstantFPSDNode>(LHS)) {
     // Without !fpmath accuracy information, we can't do more because we don't
@@ -11314,7 +11313,7 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
 
       // 1.0 / sqrt(x) -> rsq(x)
 
-      // XXX - Is UnsafeFPMath sufficient to do this for f64? The maximum ULP
+      // XXX - Is afn sufficient to do this for f64? The maximum ULP
       // error seems really high at 2^29 ULP.
       // 1.0 / x -> rcp(x)
       return DAG.getNode(AMDGPUISD::RCP, SL, VT, RHS);
@@ -11348,8 +11347,7 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV64(SDValue Op,
   EVT VT = Op.getValueType();
   const SDNodeFlags Flags = Op->getFlags();
 
-  bool AllowInaccurateDiv =
-      Flags.hasApproximateFuncs() || DAG.getTarget().Options.UnsafeFPMath;
+  bool AllowInaccurateDiv = Flags.hasApproximateFuncs();
   if (!AllowInaccurateDiv)
     return SDValue();
 
@@ -14601,7 +14599,7 @@ unsigned SITargetLowering::getFusedOpcode(const SelectionDAG &DAG,
     return ISD::FMAD;
 
   const TargetOptions &Options = DAG.getTarget().Options;
-  if ((Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath ||
+  if ((Options.AllowFPOpFusion == FPOpFusion::Fast ||
        (N0->getFlags().hasAllowContract() &&
         N1->getFlags().hasAllowContract())) &&
       isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT)) {
@@ -15724,9 +15722,9 @@ SDValue SITargetLowering::performFMACombine(SDNode *N,
 
   // fdot2_f32_f16 always flushes fp32 denormal operand and output to zero,
   // regardless of the denorm mode setting. Therefore,
-  // unsafe-fp-math/fp-contract is sufficient to allow generating fdot2.
+  // fp-contract is sufficient to allow generating fdot2.
   const TargetOptions &Options = DAG.getTarget().Options;
-  if (Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath ||
+  if (Options.AllowFPOpFusion == FPOpFusion::Fast ||
       (N->getFlags().hasAllowContract() &&
        FMA->getFlags().hasAllowContract())) {
     Op1 = Op1.getOperand(0);
