@@ -9741,10 +9741,19 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_AddressSpaceConversion:
     if (!Visit(SubExpr))
       return false;
-    // Bitcasts to cv void* are static_casts, not reinterpret_casts, so are
-    // permitted in constant expressions in C++11. Bitcasts from cv void* are
-    // also static_casts, but we disallow them as a resolution to DR1312.
-    if (!E->getType()->isVoidPointerType()) {
+    if (E->getType()->isFunctionPointerType() ||
+        SubExpr->getType()->isFunctionPointerType()) {
+      // Casting between two function pointer types, or between a function
+      // pointer and an object pointer, is always a reinterpret_cast.
+      CCEDiag(E, diag::note_constexpr_invalid_cast)
+          << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
+          << Info.Ctx.getLangOpts().CPlusPlus;
+      Result.Designator.setInvalid();
+    } else if (!E->getType()->isVoidPointerType()) {
+      // Bitcasts to cv void* are static_casts, not reinterpret_casts, so are
+      // permitted in constant expressions in C++11. Bitcasts from cv void* are
+      // also static_casts, but we disallow them as a resolution to DR1312.
+      //
       // In some circumstances, we permit casting from void* to cv1 T*, when the
       // actual pointee object is actually a cv2 T.
       bool HasValidResult = !Result.InvalidBase && !Result.Designator.Invalid &&
