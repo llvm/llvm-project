@@ -22,6 +22,9 @@
   %Foo { i32 6, i32 5, i32 9, i32 20 },
   %Foo { i32 12, i32 3, i32 9, i32 8 } ]
 
+declare void @use.i16(i16)
+declare void @use.i32(i32)
+declare void @use.f64(double)
 
 define i1 @test1(i32 %X) {
 ; CHECK-LABEL: @test1(
@@ -34,6 +37,21 @@ define i1 @test1(i32 %X) {
   ret i1 %R
 }
 
+define i1 @test1_multiuse(i32 %X) {
+; CHECK-LABEL: @test1_multiuse(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 [[X:%.*]]
+; CHECK-NEXT:    [[Q:%.*]] = load i16, ptr [[P]], align 2
+; CHECK-NEXT:    call void @use.i16(i16 [[Q]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[X]], 9
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %P = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 %X
+  %Q = load i16, ptr %P
+  call void @use.i16(i16 %Q)
+  %R = icmp eq i16 %Q, 0
+  ret i1 %R
+}
+
 define i1 @test1_noinbounds(i32 %X) {
 ; CHECK-LABEL: @test1_noinbounds(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 2147483647
@@ -42,6 +60,21 @@ define i1 @test1_noinbounds(i32 %X) {
 ;
   %P = getelementptr [10 x i16], ptr @G16, i32 0, i32 %X
   %Q = load i16, ptr %P
+  %R = icmp eq i16 %Q, 0
+  ret i1 %R
+}
+
+define i1 @test1_noinbounds_multiuse(i32 %X) {
+; CHECK-LABEL: @test1_noinbounds_multiuse(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr [10 x i16], ptr @G16, i32 0, i32 [[X:%.*]]
+; CHECK-NEXT:    [[Q:%.*]] = load i16, ptr [[P]], align 2
+; CHECK-NEXT:    call void @use.i16(i16 [[Q]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[Q]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %P = getelementptr [10 x i16], ptr @G16, i32 0, i32 %X
+  %Q = load i16, ptr %P
+  call void @use.i16(i16 %Q)
   %R = icmp eq i16 %Q, 0
   ret i1 %R
 }
@@ -95,6 +128,21 @@ define i1 @test2(i32 %X) {
   ret i1 %R
 }
 
+define i1 @test2_multiuse(i32 %X) {
+; CHECK-LABEL: @test2_multiuse(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 [[X:%.*]]
+; CHECK-NEXT:    [[Q:%.*]] = load i16, ptr [[P]], align 2
+; CHECK-NEXT:    call void @use.i16(i16 [[Q]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[X]], 4
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %P = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 %X
+  %Q = load i16, ptr %P
+  call void @use.i16(i16 %Q)
+  %R = icmp slt i16 %Q, 85
+  ret i1 %R
+}
+
 define i1 @test3(i32 %X) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[X:%.*]], 1
@@ -104,7 +152,21 @@ define i1 @test3(i32 %X) {
   %Q = load double, ptr %P
   %R = fcmp oeq double %Q, 1.0
   ret i1 %R
+}
 
+define i1 @test3_multiuse(i32 %X) {
+; CHECK-LABEL: @test3_multiuse(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [6 x double], ptr @GD, i32 0, i32 [[X:%.*]]
+; CHECK-NEXT:    [[Q:%.*]] = load double, ptr [[P]], align 8
+; CHECK-NEXT:    call void @use.f64(double [[Q]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[X]], 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %P = getelementptr inbounds [6 x double], ptr @GD, i32 0, i32 %X
+  %Q = load double, ptr %P
+  call void @use.f64(double %Q)
+  %R = fcmp oeq double %Q, 1.0
+  ret i1 %R
 }
 
 define i1 @test4(i32 %X) {
@@ -116,6 +178,21 @@ define i1 @test4(i32 %X) {
 ;
   %P = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 %X
   %Q = load i16, ptr %P
+  %R = icmp sle i16 %Q, 73
+  ret i1 %R
+}
+
+define i1 @test4_multiuse(i32 %X) {
+; CHECK-LABEL: @test4_multiuse(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 [[X:%.*]]
+; CHECK-NEXT:    [[Q:%.*]] = load i16, ptr [[P]], align 2
+; CHECK-NEXT:    call void @use.i16(i16 [[Q]])
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i16 [[Q]], 74
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %P = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 %X
+  %Q = load i16, ptr %P
+  call void @use.i16(i16 %Q)
   %R = icmp sle i16 %Q, 73
   ret i1 %R
 }
@@ -147,6 +224,21 @@ define i1 @test5(i32 %X) {
   ret i1 %R
 }
 
+define i1 @test5_multiuse(i32 %X) {
+; CHECK-LABEL: @test5_multiuse(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 [[X:%.*]]
+; CHECK-NEXT:    [[Q:%.*]] = load i16, ptr [[P]], align 2
+; CHECK-NEXT:    call void @use.i16(i16 [[Q]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[Q]], 69
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %P = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 %X
+  %Q = load i16, ptr %P
+  call void @use.i16(i16 %Q)
+  %R = icmp eq i16 %Q, 69
+  ret i1 %R
+}
+
 define i1 @test6(i32 %X) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -1
@@ -155,6 +247,21 @@ define i1 @test6(i32 %X) {
 ;
   %P = getelementptr inbounds [6 x double], ptr @GD, i32 0, i32 %X
   %Q = load double, ptr %P
+  %R = fcmp ogt double %Q, 0.0
+  ret i1 %R
+}
+
+define i1 @test6_multiuse(i32 %X) {
+; CHECK-LABEL: @test6_multiuse(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [6 x double], ptr @GD, i32 0, i32 [[X:%.*]]
+; CHECK-NEXT:    [[Q:%.*]] = load double, ptr [[P]], align 8
+; CHECK-NEXT:    call void @use.f64(double [[Q]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp ogt double [[Q]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %P = getelementptr inbounds [6 x double], ptr @GD, i32 0, i32 %X
+  %Q = load double, ptr %P
+  call void @use.f64(double %Q)
   %R = fcmp ogt double %Q, 0.0
   ret i1 %R
 }
@@ -171,6 +278,21 @@ define i1 @test7(i32 %X) {
   ret i1 %R
 }
 
+define i1 @test7_multiuse(i32 %X) {
+; CHECK-LABEL: @test7_multiuse(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [6 x double], ptr @GD, i32 0, i32 [[X:%.*]]
+; CHECK-NEXT:    [[Q:%.*]] = load double, ptr [[P]], align 8
+; CHECK-NEXT:    call void @use.f64(double [[Q]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp olt double [[Q]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %P = getelementptr inbounds [6 x double], ptr @GD, i32 0, i32 %X
+  %Q = load double, ptr %P
+  call void @use.f64(double %Q)
+  %R = fcmp olt double %Q, 0.0
+  ret i1 %R
+}
+
 define i1 @test8(i32 %X) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -2
@@ -180,6 +302,40 @@ define i1 @test8(i32 %X) {
   %P = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 %X
   %Q = load i16, ptr %P
   %R = and i16 %Q, 3
+  %S = icmp eq i16 %R, 0
+  ret i1 %S
+}
+
+define i1 @test8_multiuse1(i32 %X) {
+; CHECK-LABEL: @test8_multiuse1(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 [[X:%.*]]
+; CHECK-NEXT:    [[Q:%.*]] = load i16, ptr [[P]], align 2
+; CHECK-NEXT:    call void @use.i16(i16 [[Q]])
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[Q]], 3
+; CHECK-NEXT:    [[S:%.*]] = icmp eq i16 [[R]], 0
+; CHECK-NEXT:    ret i1 [[S]]
+;
+  %P = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 %X
+  %Q = load i16, ptr %P
+  call void @use.i16(i16 %Q)
+  %R = and i16 %Q, 3
+  %S = icmp eq i16 %R, 0
+  ret i1 %S
+}
+
+define i1 @test8_multiuse2(i32 %X) {
+; CHECK-LABEL: @test8_multiuse2(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 [[X:%.*]]
+; CHECK-NEXT:    [[Q:%.*]] = load i16, ptr [[P]], align 2
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[Q]], 3
+; CHECK-NEXT:    call void @use.i16(i16 [[R]])
+; CHECK-NEXT:    [[S:%.*]] = icmp eq i16 [[R]], 0
+; CHECK-NEXT:    ret i1 [[S]]
+;
+  %P = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 %X
+  %Q = load i16, ptr %P
+  %R = and i16 %Q, 3
+  call void @use.i16(i16 %R)
   %S = icmp eq i16 %R, 0
   ret i1 %S
 }
@@ -199,6 +355,21 @@ define i1 @test9(i32 %X) {
 ;
   %P = getelementptr inbounds [4 x { i32, i32 } ], ptr @GA, i32 0, i32 %X, i32 1
   %Q = load i32, ptr %P
+  %R = icmp eq i32 %Q, 1
+  ret i1 %R
+}
+
+define i1 @test9_multiuse(i32 %X) {
+; CHECK-LABEL: @test9_multiuse(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [4 x { i32, i32 }], ptr @GA, i32 0, i32 [[X:%.*]], i32 1
+; CHECK-NEXT:    [[Q:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    call void @use.i32(i32 [[Q]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[Q]], 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %P = getelementptr inbounds [4 x { i32, i32 } ], ptr @GA, i32 0, i32 %X, i32 1
+  %Q = load i32, ptr %P
+  call void @use.i32(i32 %Q)
   %R = icmp eq i32 %Q, 1
   ret i1 %R
 }
