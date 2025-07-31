@@ -885,10 +885,12 @@ static void addPltEntry(Ctx &ctx, PltSection &plt, GotPltSection &gotPlt,
                         RelocationBaseSection &rel, RelType type, Symbol &sym) {
   plt.addEntry(sym);
   gotPlt.addEntry(sym);
-  rel.addReloc({type, &gotPlt, sym.getGotPltOffset(ctx),
-                sym.isPreemptible ? DynamicReloc::AgainstSymbol
-                                  : DynamicReloc::AddendOnly,
-                sym, 0, R_ABS});
+  if (sym.isPreemptible)
+    rel.addReloc({type, &gotPlt, sym.getGotPltOffset(ctx),
+                  DynamicReloc::AgainstSymbol, sym, 0, R_ADDEND});
+  else
+    rel.addReloc({type, &gotPlt, sym.getGotPltOffset(ctx),
+                  DynamicReloc::AddendOnly, sym, 0, R_ABS});
 }
 
 void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
@@ -899,7 +901,7 @@ void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
   if (sym.isPreemptible) {
     ctx.mainPart->relaDyn->addReloc({ctx.target->gotRel, ctx.in.got.get(), off,
                                      DynamicReloc::AgainstSymbol, sym, 0,
-                                     R_ABS});
+                                     R_ADDEND});
     return;
   }
 
@@ -921,7 +923,7 @@ static void addGotAuthEntry(Ctx &ctx, Symbol &sym) {
   if (sym.isPreemptible) {
     ctx.mainPart->relaDyn->addReloc({R_AARCH64_AUTH_GLOB_DAT, ctx.in.got.get(),
                                      off, DynamicReloc::AgainstSymbol, sym, 0,
-                                     R_ABS});
+                                     R_ADDEND});
     return;
   }
 
