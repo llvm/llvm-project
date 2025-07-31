@@ -33,7 +33,8 @@ namespace {
 class MacroExpansionContextTest : public ::testing::Test {
 protected:
   MacroExpansionContextTest()
-      : InMemoryFileSystem(new llvm::vfs::InMemoryFileSystem),
+      : InMemoryFileSystem(
+            llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>()),
         FileMgr(FileSystemOptions(), InMemoryFileSystem),
         DiagID(new DiagnosticIDs()),
         Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),

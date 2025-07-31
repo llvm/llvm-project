@@ -119,8 +119,7 @@ TEST_F(ASTUnitTest, GetBufferForFileMemoryMapping) {
 }
 
 TEST_F(ASTUnitTest, ModuleTextualHeader) {
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFs =
-      new llvm::vfs::InMemoryFileSystem();
+  auto InMemoryFs = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   InMemoryFs->addFile("test.cpp", 0, llvm::MemoryBuffer::getMemBuffer(R"cpp(
       #include "Textual.h"
       void foo() {}
