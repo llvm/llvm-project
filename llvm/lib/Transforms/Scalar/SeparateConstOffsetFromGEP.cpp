@@ -831,7 +831,7 @@ APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
   if (BinaryOperator *BO = dyn_cast<BinaryOperator>(BaseOperand)) {
     APInt ConstantOffset = find(BO, /*SignExtended=*/false,
                                 /*ZeroExtended=*/false, /*NonNegative=*/false);
-    if (ConstantOffset.isZero())
+    if (!ConstantOffset.isZero())
       return ConstantOffset;
   }
 
