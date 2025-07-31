@@ -26,7 +26,6 @@ define void @trip_count_max_1024(ptr %p, i64 %tc) vscale_range(2, 1024) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 2
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = sub i64 [[UMAX]], [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
@@ -36,9 +35,8 @@ define void @trip_count_max_1024(ptr %p, i64 %tc) vscale_range(2, 1024) {
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[VP_OP]], ptr align 8 [[TMP11]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP9]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP9]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP13]], [[EVL_BASED_IV]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[UMAX]]
+; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT_LOOPEXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -96,7 +94,6 @@ define void @overflow_at_0(ptr %p, i64 %tc) vscale_range(2, 1024) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 2
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = sub i64 [[TC]], [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
@@ -106,9 +103,8 @@ define void @overflow_at_0(ptr %p, i64 %tc) vscale_range(2, 1024) {
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[VP_OP]], ptr align 8 [[TMP11]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP9]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP9]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP13]], [[EVL_BASED_IV]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[TC]]
+; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT_LOOPEXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -166,7 +162,6 @@ define void @no_overflow_at_0(ptr %p, i64 %tc) vscale_range(2, 1024) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = sub i64 [[TC_ADD]], [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
@@ -176,8 +171,7 @@ define void @no_overflow_at_0(ptr %p, i64 %tc) vscale_range(2, 1024) {
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[VP_OP]], ptr align 8 [[TMP7]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP5]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP9]], [[EVL_BASED_IV]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[TC_ADD]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT_LOOPEXIT:.*]]
