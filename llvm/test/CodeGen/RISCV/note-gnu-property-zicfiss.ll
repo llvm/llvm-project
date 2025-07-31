@@ -10,16 +10,14 @@
 ; ASM32-NEXT:         .p2align        2, 0x0
 ; ASM64-NEXT:         .p2align        3, 0x0
 ; ASM-NEXT:           .word   4
-; ASM-NEXT:           .word   .Ltmp1-.Ltmp0
+; ASM32-NEXT:         .word   12
+; ASM64-NEXT:         .word   16
 ; ASM-NEXT:           .word   5
 ; ASM-NEXT:           .asciz  "GNU"
-; ASM-NEXT:   .Ltmp0:
 ; ASM-NEXT:           .word   3221225472
 ; ASM-NEXT:           .word   4
 ; ASM-NEXT:           .word   2
-; ASM32-NEXT:         .p2align        2, 0x0
-; ASM64-NEXT:         .p2align        3, 0x0
-; ASM-NEXT:   .Ltmp1:
+; ASM64-NEXT:         .word   0
 
 define i32 @f() "hw-shadow-stack" {
 entry:
