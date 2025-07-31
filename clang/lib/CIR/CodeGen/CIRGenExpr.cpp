@@ -584,6 +584,15 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
     return lv;
   }
 
+  if (const auto *bd = dyn_cast<BindingDecl>(nd)) {
+    if (e->refersToEnclosingVariableOrCapture()) {
+      assert(!cir::MissingFeatures::lambdaCaptures());
+      cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: lambda captures");
+      return LValue();
+    }
+    return emitLValue(bd->getBinding());
+  }
+
   cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: unhandled decl type");
   return LValue();
 }
