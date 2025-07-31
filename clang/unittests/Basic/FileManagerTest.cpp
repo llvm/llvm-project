@@ -458,8 +458,7 @@ TEST_F(FileManagerTest, makeAbsoluteUsesVFS) {
                                                        : StringRef("/");
   llvm::sys::path::append(CustomWorkingDir, "some", "weird", "path");
 
-  auto FS = IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem>(
-      new llvm::vfs::InMemoryFileSystem);
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   // setCurrentworkingdirectory must finish without error.
   ASSERT_TRUE(!FS->setCurrentWorkingDirectory(CustomWorkingDir));
 
@@ -479,8 +478,7 @@ TEST_F(FileManagerTest, makeAbsoluteUsesVFS) {
 TEST_F(FileManagerTest, getVirtualFileFillsRealPathName) {
   SmallString<64> CustomWorkingDir = getSystemRoot();
 
-  auto FS = IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem>(
-      new llvm::vfs::InMemoryFileSystem);
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   // setCurrentworkingdirectory must finish without error.
   ASSERT_TRUE(!FS->setCurrentWorkingDirectory(CustomWorkingDir));
 
@@ -505,8 +503,7 @@ TEST_F(FileManagerTest, getVirtualFileFillsRealPathName) {
 TEST_F(FileManagerTest, getFileDontOpenRealPath) {
   SmallString<64> CustomWorkingDir = getSystemRoot();
 
-  auto FS = IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem>(
-      new llvm::vfs::InMemoryFileSystem);
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   // setCurrentworkingdirectory must finish without error.
   ASSERT_TRUE(!FS->setCurrentWorkingDirectory(CustomWorkingDir));
 
@@ -537,8 +534,7 @@ TEST_F(FileManagerTest, getBypassFile) {
   CustomWorkingDir = "/";
 #endif
 
-  auto FS = IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem>(
-      new llvm::vfs::InMemoryFileSystem);
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   // setCurrentworkingdirectory must finish without error.
   ASSERT_TRUE(!FS->setCurrentWorkingDirectory(CustomWorkingDir));
 
