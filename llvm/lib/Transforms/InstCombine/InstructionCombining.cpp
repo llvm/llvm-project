@@ -3184,7 +3184,16 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       // If we are using a wider index than needed for this platform, shrink
       // it to what we need.  If narrower, sign-extend it to what we need.
       // This explicit cast can make subsequent optimizations more obvious.
-      *I = Builder.CreateIntCast(*I, NewIndexType, true);
+      if (IndexTy->getScalarSizeInBits() <
+          NewIndexType->getScalarSizeInBits()) {
+        if (GEP.hasNoUnsignedWrap() && GEP.hasNoUnsignedSignedWrap())
+          *I = Builder.CreateZExt(*I, NewIndexType, "", /*IsNonNeg=*/true);
+        else
+          *I = Builder.CreateSExt(*I, NewIndexType);
+      } else {
+        *I = Builder.CreateTrunc(*I, NewIndexType, "", GEP.hasNoUnsignedWrap(),
+                                 GEP.hasNoUnsignedSignedWrap());
+      }
       MadeChange = true;
     }
   }
