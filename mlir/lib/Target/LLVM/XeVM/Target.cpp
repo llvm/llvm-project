@@ -132,8 +132,6 @@ public:
 private:
   std::optional<std::string> findTool(StringRef tool);
   std::optional<std::string>
-  translateToSPIRVBinary(llvm::Module &llvmModule,
-                         llvm::TargetMachine &targetMachine);
   gpu::TargetOptions targetOptions;
 };
 } // namespace
@@ -188,13 +186,14 @@ SpirSerializer::moduleToObject(llvm::Module &llvmModule) {
 #undef DEBUG_TYPE
 
   // Return SPIRV if the compilation target is `assembly`.
-  if (targetOptions.getCompilationTarget() ==
-      gpu::CompilationTarget::Assembly) {
+//  if (targetOptions.getCompilationTarget() ==
+//      gpu::CompilationTarget::Assembly) {
     // Make sure to include the null terminator.
     StringRef bin(serializedISA->c_str(), serializedISA->size() + 1);
     return SmallVector<char, 0>(bin.begin(), bin.end());
-  }
+//  }
 
+/*
   std::optional<std::string> serializedSPIRVBinary =
       translateToSPIRVBinary(llvmModule, **targetMachine);
   if (!serializedSPIRVBinary) {
@@ -207,6 +206,7 @@ SpirSerializer::moduleToObject(llvm::Module &llvmModule) {
   }
   StringRef bin(serializedSPIRVBinary->c_str(), serializedSPIRVBinary->size());
   return SmallVector<char, 0>(bin.begin(), bin.end());
+*/
 }
 
 std::optional<std::string> SpirSerializer::findTool(StringRef tool) {
@@ -338,25 +338,6 @@ SpirSerializer::compileToBinary(const std::string &asmStr,
    }
   StringRef bin = (*binaryBuffer)->getBuffer();
   return SmallVector<char, 0>(bin.begin(), bin.end());
-}
-
-std::optional<std::string>
-SpirSerializer::translateToSPIRVBinary(llvm::Module &llvmModule,
-                                       llvm::TargetMachine &targetMachine) {
-  std::string targetISA;
-  llvm::raw_string_ostream stream(targetISA);
-
-  { // Drop pstream after this to prevent the ISA from being stuck buffering
-    llvm::buffer_ostream pstream(stream);
-    llvm::legacy::PassManager codegenPasses;
-
-    if (targetMachine.addPassesToEmitFile(codegenPasses, pstream, nullptr,
-                                          llvm::CodeGenFileType::ObjectFile))
-      return std::nullopt;
-
-    codegenPasses.run(llvmModule);
-  }
-  return targetISA;
 }
 
 std::optional<SmallVector<char, 0>>
