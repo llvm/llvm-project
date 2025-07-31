@@ -401,6 +401,8 @@ private:
   bool checkLiteralType(const Expr *E);
   bool maybeEmitDeferredVarInit(const VarDecl *VD);
 
+  bool refersToUnion(const Expr *E);
+
 protected:
   /// Variable to storage mapping.
   llvm::DenseMap<const ValueDecl *, Scope::Local> Locals;

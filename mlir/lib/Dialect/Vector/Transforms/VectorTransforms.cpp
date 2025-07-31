@@ -410,9 +410,8 @@ FailureOr<Value> combineContractAndBroadcast(vector::ContractionOp contractOp,
           oldMaskType.getScalableDims().drop_front(unusedDimsBitVector.count());
       VectorType maskOpType =
           VectorType::get(newShape, rewriter.getI1Type(), newShapeScalableDims);
-      mask = rewriter
-                 .create<vector::ShapeCastOp>(contractOp.getLoc(), maskOpType,
-                                              maskingOp.getMask())
+      mask = vector::ShapeCastOp::create(rewriter, contractOp.getLoc(),
+                                         maskOpType, maskingOp.getMask())
                  .getResult();
     }
 

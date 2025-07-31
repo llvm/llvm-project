@@ -1952,9 +1952,9 @@ class ClampPat<Instruction inst, ValueType vt> : GCNPat <
 >;
 
 def : ClampPat<V_MAX_F32_e64, f32>;
-let SubtargetPredicate = isNotGFX12Plus in
+let SubtargetPredicate = isNotGFX1170Plus in
 def : ClampPat<V_MAX_F64_e64, f64>;
-let SubtargetPredicate = isGFX12Plus in
+let SubtargetPredicate = isGFX1170Plus in
 def : ClampPat<V_MAX_NUM_F64_e64, f64>;
 let SubtargetPredicate = NotHasTrue16BitInsts in
 def : ClampPat<V_MAX_F16_e64, f16>;
@@ -1962,6 +1962,9 @@ let SubtargetPredicate = UseRealTrue16Insts in
 def : ClampPat<V_MAX_F16_t16_e64, f16>;
 let SubtargetPredicate = UseFakeTrue16Insts in
 def : ClampPat<V_MAX_F16_fake16_e64, f16>;
+// FIXME-TRUE16: Pseudo expansion of this won't work with True16.
+let True16Predicate = UseFakeTrue16Insts in
+def : ClampPat<V_MAX_BF16_PSEUDO_e64, bf16>;
 
 let SubtargetPredicate = HasVOP3PInsts in {
 def : GCNPat <
@@ -1971,6 +1974,13 @@ def : GCNPat <
 >;
 }
 
+let SubtargetPredicate = HasBF16PackedInsts in {
+def : GCNPat <
+  (v2bf16 (AMDGPUclamp (VOP3PMods v2bf16:$src0, i32:$src0_modifiers))),
+  (V_PK_MAX_NUM_BF16 $src0_modifiers, $src0,
+                     $src0_modifiers, $src0, DSTCLAMP.ENABLE)
+>;
+} // End SubtargetPredicate = HasBF16PackedInsts
 
 /********** ================================ **********/
 /********** Floating point absolute/negative **********/
@@ -3479,13 +3489,13 @@ multiclass SelectCanonicalizeAsMax<
   def : GCNPat<
     (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
     (V_MAX_F64_e64  $src_mods, $src, $src_mods, $src)> {
-    let OtherPredicates = !listconcat(f64_preds, [isNotGFX12Plus]);
+    let OtherPredicates = !listconcat(f64_preds, [isNotGFX1170Plus]);
   }
 
   def : GCNPat<
     (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
     (V_MAX_NUM_F64_e64  $src_mods, $src, $src_mods, $src)> {
-    let OtherPredicates = !listconcat(f64_preds, [isGFX12Plus]);
+    let OtherPredicates = !listconcat(f64_preds, [isGFX1170Plus]);
   }
 
   def : GCNPat<

@@ -1363,11 +1363,15 @@ public:
                       TTI.hasActiveVectorLength() && !EnableVPlanNativePath;
     if (EVLIsLegal)
       return;
-    // If for some reason EVL mode is unsupported, fallback to
-    // DataWithoutLaneMask to try to vectorize the loop with folded tail
-    // in a generic way.
-    ChosenTailFoldingStyle = {TailFoldingStyle::DataWithoutLaneMask,
-                              TailFoldingStyle::DataWithoutLaneMask};
+    // If for some reason EVL mode is unsupported, fallback to a scalar epilogue
+    // if it's allowed, or DataWithoutLaneMask otherwise.
+    if (ScalarEpilogueStatus == CM_ScalarEpilogueAllowed ||
+        ScalarEpilogueStatus == CM_ScalarEpilogueNotNeededUsePredicate)
+      ChosenTailFoldingStyle = {TailFoldingStyle::None, TailFoldingStyle::None};
+    else
+      ChosenTailFoldingStyle = {TailFoldingStyle::DataWithoutLaneMask,
+                                TailFoldingStyle::DataWithoutLaneMask};
+
     LLVM_DEBUG(
         dbgs() << "LV: Preference for VP intrinsics indicated. Will "
                   "not try to generate VP Intrinsics "
@@ -1505,6 +1509,11 @@ private:
   FixedScalableVFPair computeFeasibleMaxVF(unsigned MaxTripCount,
                                            ElementCount UserVF,
                                            bool FoldTailByMasking);
+
+  /// If \p VF > MaxTripcount, clamps it to the next lower VF that is <=
+  /// MaxTripCount.
+  ElementCount clampVFByMaxTripCount(ElementCount VF, unsigned MaxTripCount,
+                                     bool FoldTailByMasking) const;
 
   /// \return the maximized element count based on the targets vector
   /// registers and the loop trip-count, but limited to a maximum safe VF.
@@ -2016,6 +2025,9 @@ public:
   /// Retrieves the MemCheckCond and MemCheckBlock that were generated as IR
   /// outside VPlan.
   std::pair<Value *, BasicBlock *> getMemRuntimeChecks() {
+    using namespace llvm::PatternMatch;
+    if (MemRuntimeCheckCond && match(MemRuntimeCheckCond, m_ZeroInt()))
+      return {nullptr, nullptr};
     return {MemRuntimeCheckCond, MemCheckBlock};
   }
 
@@ -3855,6 +3867,38 @@ bool LoopVectorizationCostModel::useMaxBandwidth(
                                  Legal->hasVectorCallVariants())));
 }
 
+ElementCount LoopVectorizationCostModel::clampVFByMaxTripCount(
+    ElementCount VF, unsigned MaxTripCount, bool FoldTailByMasking) const {
+  unsigned EstimatedVF = VF.getKnownMinValue();
+  if (VF.isScalable() && TheFunction->hasFnAttribute(Attribute::VScaleRange)) {
+    auto Attr = TheFunction->getFnAttribute(Attribute::VScaleRange);
+    auto Min = Attr.getVScaleRangeMin();
+    EstimatedVF *= Min;
+  }
+
+  // When a scalar epilogue is required, at least one iteration of the scalar
+  // loop has to execute. Adjust MaxTripCount accordingly to avoid picking a
+  // max VF that results in a dead vector loop.
+  if (MaxTripCount > 0 && requiresScalarEpilogue(true))
+    MaxTripCount -= 1;
+
+  if (MaxTripCount && MaxTripCount <= EstimatedVF &&
+      (!FoldTailByMasking || isPowerOf2_32(MaxTripCount))) {
+    // If upper bound loop trip count (TC) is known at compile time there is no
+    // point in choosing VF greater than TC (as done in the loop below). Select
+    // maximum power of two which doesn't exceed TC. If VF is
+    // scalable, we only fall back on a fixed VF when the TC is less than or
+    // equal to the known number of lanes.
+    auto ClampedUpperTripCount = llvm::bit_floor(MaxTripCount);
+    LLVM_DEBUG(dbgs() << "LV: Clamping the MaxVF to maximum power of two not "
+                         "exceeding the constant trip count: "
+                      << ClampedUpperTripCount << "\n");
+    return ElementCount::get(ClampedUpperTripCount,
+                             FoldTailByMasking ? VF.isScalable() : false);
+  }
+  return VF;
+}
+
 ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     unsigned MaxTripCount, unsigned SmallestType, unsigned WidestType,
     ElementCount MaxSafeVF, bool FoldTailByMasking) {
@@ -3886,40 +3930,16 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     return ElementCount::getFixed(1);
   }
 
-  unsigned WidestRegisterMinEC = MaxVectorElementCount.getKnownMinValue();
-  if (MaxVectorElementCount.isScalable() &&
-      TheFunction->hasFnAttribute(Attribute::VScaleRange)) {
-    auto Attr = TheFunction->getFnAttribute(Attribute::VScaleRange);
-    auto Min = Attr.getVScaleRangeMin();
-    WidestRegisterMinEC *= Min;
-  }
-
-  // When a scalar epilogue is required, at least one iteration of the scalar
-  // loop has to execute. Adjust MaxTripCount accordingly to avoid picking a
-  // max VF that results in a dead vector loop.
-  if (MaxTripCount > 0 && requiresScalarEpilogue(true))
-    MaxTripCount -= 1;
-
-  if (MaxTripCount && MaxTripCount <= WidestRegisterMinEC &&
-      (!FoldTailByMasking || isPowerOf2_32(MaxTripCount))) {
-    // If upper bound loop trip count (TC) is known at compile time there is no
-    // point in choosing VF greater than TC (as done in the loop below). Select
-    // maximum power of two which doesn't exceed TC. If MaxVectorElementCount is
-    // scalable, we only fall back on a fixed VF when the TC is less than or
-    // equal to the known number of lanes.
-    auto ClampedUpperTripCount = llvm::bit_floor(MaxTripCount);
-    LLVM_DEBUG(dbgs() << "LV: Clamping the MaxVF to maximum power of two not "
-                         "exceeding the constant trip count: "
-                      << ClampedUpperTripCount << "\n");
-    return ElementCount::get(
-        ClampedUpperTripCount,
-        FoldTailByMasking ? MaxVectorElementCount.isScalable() : false);
-  }
+  ElementCount MaxVF = clampVFByMaxTripCount(MaxVectorElementCount,
+                                             MaxTripCount, FoldTailByMasking);
+  // If the MaxVF was already clamped, there's no point in trying to pick a
+  // larger one.
+  if (MaxVF != MaxVectorElementCount)
+    return MaxVF;
 
   TargetTransformInfo::RegisterKind RegKind =
       ComputeScalableMaxVF ? TargetTransformInfo::RGK_ScalableVector
                            : TargetTransformInfo::RGK_FixedWidthVector;
-  ElementCount MaxVF = MaxVectorElementCount;
 
   if (MaxVF.isScalable())
     MaxPermissibleVFWithoutMaxBW.ScalableVF = MaxVF;
@@ -3941,10 +3961,14 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
       }
     }
 
-    // Invalidate any widening decisions we might have made, in case the loop
-    // requires prediction (decided later), but we have already made some
-    // load/store widening decisions.
-    invalidateCostModelingDecisions();
+    MaxVF = clampVFByMaxTripCount(MaxVF, MaxTripCount, FoldTailByMasking);
+
+    if (MaxVectorElementCount != MaxVF) {
+      // Invalidate any widening decisions we might have made, in case the loop
+      // requires prediction (decided later), but we have already made some
+      // load/store widening decisions.
+      invalidateCostModelingDecisions();
+    }
   }
   return MaxVF;
 }
@@ -4480,19 +4504,17 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
   Type *TCType = Legal->getWidestInductionType();
   const SCEV *RemainingIterations = nullptr;
   unsigned MaxTripCount = 0;
+  const SCEV *TC =
+      vputils::getSCEVExprForVPValue(getPlanFor(MainLoopVF).getTripCount(), SE);
+  assert(!isa<SCEVCouldNotCompute>(TC) && "Trip count SCEV must be computable");
+  RemainingIterations =
+      SE.getURemExpr(TC, SE.getElementCount(TCType, MainLoopVF * IC));
+
+  // No iterations left to process in the epilogue.
+  if (RemainingIterations->isZero())
+    return Result;
+
   if (MainLoopVF.isFixed()) {
-    // TODO: extend to support scalable VFs.
-    const SCEV *TC = vputils::getSCEVExprForVPValue(
-        getPlanFor(MainLoopVF).getTripCount(), SE);
-    assert(!isa<SCEVCouldNotCompute>(TC) &&
-           "Trip count SCEV must be computable");
-    RemainingIterations = SE.getURemExpr(
-        TC, SE.getConstant(TCType, MainLoopVF.getFixedValue() * IC));
-
-    // No iterations left to process in the epilogue.
-    if (RemainingIterations->isZero())
-      return Result;
-
     MaxTripCount = MainLoopVF.getFixedValue() * IC - 1;
     if (SE.isKnownPredicate(CmpInst::ICMP_ULT, RemainingIterations,
                             SE.getConstant(TCType, MaxTripCount))) {
@@ -7259,6 +7281,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPBasicBlock *VectorPH = cast<VPBasicBlock>(BestVPlan.getVectorPreheader());
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
   VPlanTransforms::simplifyRecipes(BestVPlan, *Legal->getWidestInductionType());
+  VPlanTransforms::removeBranchOnConst(BestVPlan);
   VPlanTransforms::narrowInterleaveGroups(
       BestVPlan, BestVF,
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector));
@@ -10055,12 +10078,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Get user vectorization factor and interleave count.
   ElementCount UserVF = Hints.getWidth();
   unsigned UserIC = Hints.getInterleave();
-  if (LVL.hasUncountableEarlyExit() && UserIC != 1) {
-    UserIC = 1;
-    reportVectorizationInfo("Interleaving not supported for loops "
-                            "with uncountable early exits",
-                            "InterleaveEarlyExitDisabled", ORE, L);
-  }
 
   // Plan how to best vectorize.
   LVP.plan(UserVF, UserIC);
@@ -10078,8 +10095,19 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     unsigned SelectedIC = std::max(IC, UserIC);
     //  Optimistically generate runtime checks if they are needed. Drop them if
     //  they turn out to not be profitable.
-    if (VF.Width.isVector() || SelectedIC > 1)
+    if (VF.Width.isVector() || SelectedIC > 1) {
       Checks.create(L, *LVL.getLAI(), PSE.getPredicate(), VF.Width, SelectedIC);
+
+      // Bail out early if either the SCEV or memory runtime checks are known to
+      // fail. In that case, the vector loop would never execute.
+      using namespace llvm::PatternMatch;
+      if (Checks.getSCEVChecks().first &&
+          match(Checks.getSCEVChecks().first, m_One()))
+        return false;
+      if (Checks.getMemRuntimeChecks().first &&
+          match(Checks.getMemRuntimeChecks().first, m_One()))
+        return false;
+    }
 
     // Check if it is profitable to vectorize with runtime checks.
     bool ForceVectorization =
@@ -10211,6 +10239,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
           L, PSE, LI, DT, TLI, TTI, AC, ORE, ElementCount::getFixed(1),
           ElementCount::getFixed(1), IC, &CM, BFI, PSI, Checks, BestPlan);
 
+      // TODO: Move to general VPlan pipeline once epilogue loops are also
+      // supported.
+      VPlanTransforms::runPass(VPlanTransforms::materializeVectorTripCount,
+                               BestPlan, VF.Width, IC, PSE);
+
       LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT, false);
 
       ORE->emit([&]() {
@@ -10278,6 +10311,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width,
                                VF.MinProfitableTripCount, IC, &CM, BFI, PSI,
                                Checks, BestPlan);
+        // TODO: Move to general VPlan pipeline once epilogue loops are also
+        // supported.
+        VPlanTransforms::runPass(VPlanTransforms::materializeVectorTripCount,
+                                 BestPlan, VF.Width, IC, PSE);
+
         LVP.executePlan(VF.Width, IC, BestPlan, LB, DT, false);
         ++LoopsVectorized;
 

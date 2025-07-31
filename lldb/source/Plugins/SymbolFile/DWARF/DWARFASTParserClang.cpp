@@ -65,8 +65,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 DWARFASTParserClang::DWARFASTParserClang(TypeSystemClang &ast)
     : DWARFASTParser(Kind::DWARFASTParserClang), m_ast(ast),

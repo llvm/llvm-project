@@ -3,7 +3,7 @@
 // RUN: cat %s | clang-repl -Xcc -xc  | FileCheck %s
 // RUN: cat %s | clang-repl -Xcc -std=c++11 | FileCheck %s
 
-// UNSUPPORTED: hwasan
+// UNSUPPORTED: hwasan, msan
 
 
 char c = 'a'; c
