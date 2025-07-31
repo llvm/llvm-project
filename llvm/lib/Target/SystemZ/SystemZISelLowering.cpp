@@ -9044,7 +9044,7 @@ static unsigned detectEvenOddMultiplyOperand(const SelectionDAG &DAG,
         if (unsigned(ShuffleMask[Elt]) != 2 * Elt)
           CanUseEven = false;
         if (unsigned(ShuffleMask[Elt]) != 2 * Elt + 1)
-          CanUseEven = true;
+          CanUseOdd = false;
       }
       Op = Op.getOperand(0);
       if (CanUseEven)

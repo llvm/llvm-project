@@ -294,9 +294,11 @@ def parseOptionsAndInitTestdirs():
                 "Custom libc++ requires both --libcxx-include-dir and --libcxx-library-dir"
             )
             sys.exit(-1)
-    configuration.libcxx_include_dir = args.libcxx_include_dir
-    configuration.libcxx_include_target_dir = args.libcxx_include_target_dir
-    configuration.libcxx_library_dir = args.libcxx_library_dir
+        else:
+            configuration.libcxx_include_dir = args.libcxx_include_dir
+            configuration.libcxx_include_target_dir = args.libcxx_include_target_dir
+            configuration.libcxx_library_dir = args.libcxx_library_dir
+
     configuration.cmake_build_type = args.cmake_build_type.lower()
 
     if args.channels:
@@ -319,8 +321,13 @@ def parseOptionsAndInitTestdirs():
             logging.error("No SDK found with the name %s; aborting...", args.apple_sdk)
             sys.exit(-1)
 
+    if args.triple:
+        configuration.triple = args.triple
+
     if args.arch:
         configuration.arch = args.arch
+    elif args.triple:
+        configuration.arch = args.triple.split("-")[0]
     else:
         configuration.arch = platform_machine
 

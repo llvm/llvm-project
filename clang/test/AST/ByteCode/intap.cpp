@@ -292,7 +292,19 @@ constexpr int shifts() { // both-error {{never produces a constant expression}}
   (void)(2 << b); // ref-warning {{shift count is negative}}
   return 1;
 }
-#endif
 
+namespace UnderlyingInt128 {
+  enum F  {
+    a = (__int128)-1
+  };
+
+  constexpr int foo() { // both-error {{never produces a constant expression}}
+    F f = (F)(__int128)10; // both-note 2{{integer value 10 is outside the valid range of values [-1, 0] for the enumeration type 'F'}}
+    return (int)f;
+  }
+  static_assert(foo() == 0, ""); // both-error {{not an integral constant expression}} \
+                                 // both-note {{in call to}}
+}
+#endif
 
 #endif
