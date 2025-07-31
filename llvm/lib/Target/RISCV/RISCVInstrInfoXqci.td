@@ -478,7 +478,7 @@ class QCIBitManipRII<bits<3> funct3, bits<2> funct2,
 }
 
 class QCIBitManipRIITied<bits<3> funct3, bits<2> funct2,
-                     DAGOperand InTyRs1, string opcodestr>
+                         DAGOperand InTyRs1, string opcodestr>
     : RVInstIBase<funct3, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb), (ins GPRNoX0:$rd,
                   InTyRs1:$rs1, uimm5_plus1:$width, uimm5:$shamt),
                   opcodestr, "$rd, $rs1, $width, $shamt"> {
