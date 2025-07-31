@@ -4903,7 +4903,7 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
 // extract the splat value and use it as a uniform base.
 // In all other cases the function returns 'false'.
 static bool getUniformBase(const Value *Ptr, SDValue &Base, SDValue &Index,
-                           ISD::MemIndexType &IndexType, SDValue &Scale,
+                           SDValue &Scale,
                            SelectionDAGBuilder *SDB, const BasicBlock *CurBB,
                            uint64_t ElemSize) {
   SelectionDAG& DAG = SDB->DAG;
@@ -4923,7 +4923,6 @@ static bool getUniformBase(const Value *Ptr, SDValue &Base, SDValue &Index,
     ElementCount NumElts = cast<VectorType>(Ptr->getType())->getElementCount();
     EVT VT = EVT::getVectorVT(*DAG.getContext(), TLI.getPointerTy(DL), NumElts);
     Index = DAG.getConstant(0, SDB->getCurSDLoc(), VT);
-    IndexType = ISD::SIGNED_SCALED;
     Scale = DAG.getTargetConstant(1, SDB->getCurSDLoc(), TLI.getPointerTy(DL));
     return true;
   }
@@ -4953,7 +4952,6 @@ static bool getUniformBase(const Value *Ptr, SDValue &Base, SDValue &Index,
 
   Base = SDB->getValue(BasePtr);
   Index = SDB->getValue(IndexVal);
-  IndexType = ISD::SIGNED_SCALED;
 
   Scale =
       DAG.getTargetConstant(ScaleVal, SDB->getCurSDLoc(), TLI.getPointerTy(DL));
@@ -4975,9 +4973,8 @@ void SelectionDAGBuilder::visitMaskedScatter(const CallInst &I) {
 
   SDValue Base;
   SDValue Index;
-  ISD::MemIndexType IndexType;
   SDValue Scale;
-  bool UniformBase = getUniformBase(Ptr, Base, Index, IndexType, Scale, this,
+  bool UniformBase = getUniformBase(Ptr, Base, Index, Scale, this,
                                     I.getParent(), VT.getScalarStoreSize());
 
   unsigned AS = Ptr->getType()->getScalarType()->getPointerAddressSpace();
@@ -4987,7 +4984,6 @@ void SelectionDAGBuilder::visitMaskedScatter(const CallInst &I) {
   if (!UniformBase) {
     Base = DAG.getConstant(0, sdl, TLI.getPointerTy(DAG.getDataLayout()));
     Index = getValue(Ptr);
-    IndexType = ISD::SIGNED_SCALED;
     Scale = DAG.getTargetConstant(1, sdl, TLI.getPointerTy(DAG.getDataLayout()));
   }
 
@@ -5000,7 +4996,7 @@ void SelectionDAGBuilder::visitMaskedScatter(const CallInst &I) {
 
   SDValue Ops[] = { getMemoryRoot(), Src0, Mask, Base, Index, Scale };
   SDValue Scatter = DAG.getMaskedScatter(DAG.getVTList(MVT::Other), VT, sdl,
-                                         Ops, MMO, IndexType, false);
+                                         Ops, MMO, ISD::SIGNED_SCALED, false);
   DAG.setRoot(Scatter);
   setValue(&I, Scatter);
 }
@@ -5093,9 +5089,8 @@ void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
   SDValue Root = DAG.getRoot();
   SDValue Base;
   SDValue Index;
-  ISD::MemIndexType IndexType;
   SDValue Scale;
-  bool UniformBase = getUniformBase(Ptr, Base, Index, IndexType, Scale, this,
+  bool UniformBase = getUniformBase(Ptr, Base, Index, Scale, this,
                                     I.getParent(), VT.getScalarStoreSize());
   unsigned AS = Ptr->getType()->getScalarType()->getPointerAddressSpace();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
@@ -5106,7 +5101,6 @@ void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
   if (!UniformBase) {
     Base = DAG.getConstant(0, sdl, TLI.getPointerTy(DAG.getDataLayout()));
     Index = getValue(Ptr);
-    IndexType = ISD::SIGNED_SCALED;
     Scale = DAG.getTargetConstant(1, sdl, TLI.getPointerTy(DAG.getDataLayout()));
   }
 
@@ -5119,7 +5113,7 @@ void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
 
   SDValue Ops[] = { Root, Src0, Mask, Base, Index, Scale };
   SDValue Gather = DAG.getMaskedGather(DAG.getVTList(VT, MVT::Other), VT, sdl,
-                                       Ops, MMO, IndexType, ISD::NON_EXTLOAD);
+                                       Ops, MMO, ISD::SIGNED_SCALED, ISD::NON_EXTLOAD);
 
   PendingLoads.push_back(Gather.getValue(1));
   setValue(&I, Gather);
@@ -6432,9 +6426,8 @@ void SelectionDAGBuilder::visitVectorHistogram(const CallInst &I,
   SDValue Root = DAG.getRoot();
   SDValue Base;
   SDValue Index;
-  ISD::MemIndexType IndexType;
   SDValue Scale;
-  bool UniformBase = getUniformBase(Ptr, Base, Index, IndexType, Scale, this,
+  bool UniformBase = getUniformBase(Ptr, Base, Index, Scale, this,
                                     I.getParent(), VT.getScalarStoreSize());
 
   unsigned AS = Ptr->getType()->getScalarType()->getPointerAddressSpace();
@@ -6447,7 +6440,6 @@ void SelectionDAGBuilder::visitVectorHistogram(const CallInst &I,
   if (!UniformBase) {
     Base = DAG.getConstant(0, sdl, TLI.getPointerTy(DAG.getDataLayout()));
     Index = getValue(Ptr);
-    IndexType = ISD::SIGNED_SCALED;
     Scale =
         DAG.getTargetConstant(1, sdl, TLI.getPointerTy(DAG.getDataLayout()));
   }
@@ -6463,7 +6455,7 @@ void SelectionDAGBuilder::visitVectorHistogram(const CallInst &I,
 
   SDValue Ops[] = {Root, Inc, Mask, Base, Index, Scale, ID};
   SDValue Histogram = DAG.getMaskedHistogram(DAG.getVTList(MVT::Other), VT, sdl,
-                                             Ops, MMO, IndexType);
+                                             Ops, MMO, ISD::SIGNED_SCALED);
 
   setValue(&I, Histogram);
   DAG.setRoot(Histogram);
@@ -8458,14 +8450,12 @@ void SelectionDAGBuilder::visitVPGather(
       MachinePointerInfo(AS), MachineMemOperand::MOLoad,
       LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo, Ranges);
   SDValue Base, Index, Scale;
-  ISD::MemIndexType IndexType;
-  bool UniformBase = getUniformBase(PtrOperand, Base, Index, IndexType, Scale,
+  bool UniformBase = getUniformBase(PtrOperand, Base, Index, Scale,
                                     this, VPIntrin.getParent(),
                                     VT.getScalarStoreSize());
   if (!UniformBase) {
     Base = DAG.getConstant(0, DL, TLI.getPointerTy(DAG.getDataLayout()));
     Index = getValue(PtrOperand);
-    IndexType = ISD::SIGNED_SCALED;
     Scale = DAG.getTargetConstant(1, DL, TLI.getPointerTy(DAG.getDataLayout()));
   }
   EVT IdxVT = Index.getValueType();
@@ -8477,7 +8467,7 @@ void SelectionDAGBuilder::visitVPGather(
   LD = DAG.getGatherVP(
       DAG.getVTList(VT, MVT::Other), VT, DL,
       {DAG.getRoot(), Base, Index, Scale, OpValues[1], OpValues[2]}, MMO,
-      IndexType);
+      ISD::SIGNED_SCALED);
   PendingLoads.push_back(LD.getValue(1));
   setValue(&VPIntrin, LD);
 }
@@ -8521,14 +8511,12 @@ void SelectionDAGBuilder::visitVPScatter(
       MachinePointerInfo(AS), MachineMemOperand::MOStore,
       LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo);
   SDValue Base, Index, Scale;
-  ISD::MemIndexType IndexType;
-  bool UniformBase = getUniformBase(PtrOperand, Base, Index, IndexType, Scale,
+  bool UniformBase = getUniformBase(PtrOperand, Base, Index, Scale,
                                     this, VPIntrin.getParent(),
                                     VT.getScalarStoreSize());
   if (!UniformBase) {
     Base = DAG.getConstant(0, DL, TLI.getPointerTy(DAG.getDataLayout()));
     Index = getValue(PtrOperand);
-    IndexType = ISD::SIGNED_SCALED;
     Scale =
       DAG.getTargetConstant(1, DL, TLI.getPointerTy(DAG.getDataLayout()));
   }
@@ -8541,7 +8529,7 @@ void SelectionDAGBuilder::visitVPScatter(
   ST = DAG.getScatterVP(DAG.getVTList(MVT::Other), VT, DL,
                         {getMemoryRoot(), OpValues[0], Base, Index, Scale,
                          OpValues[2], OpValues[3]},
-                        MMO, IndexType);
+                        MMO, ISD::SIGNED_SCALED);
   DAG.setRoot(ST);
   setValue(&VPIntrin, ST);
 }
