@@ -45,15 +45,18 @@ std::pair<tooling::Replacements, unsigned>
 IntegerLiteralSeparatorFixer::process(const Environment &Env,
                                       const FormatStyle &Style) {
   switch (Style.Language) {
-  case FormatStyle::LK_Cpp:
-  case FormatStyle::LK_ObjC:
-    Separator = '\'';
-    break;
   case FormatStyle::LK_CSharp:
   case FormatStyle::LK_Java:
   case FormatStyle::LK_JavaScript:
     Separator = '_';
     break;
+  case FormatStyle::LK_Cpp:
+  case FormatStyle::LK_ObjC:
+    if (Style.Standard >= FormatStyle::LS_Cpp14) {
+      Separator = '\'';
+      break;
+    }
+    [[fallthrough]];
   default:
     return {};
   }
