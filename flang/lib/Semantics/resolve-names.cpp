@@ -1646,7 +1646,8 @@ public:
           populateDeclareTargetNames(linkClause->v);
         } else if (const auto *enterClause{
                        std::get_if<parser::OmpClause::Enter>(&clause.u)}) {
-          populateDeclareTargetNames(enterClause->v);
+          populateDeclareTargetNames(
+              std::get<parser::OmpObjectList>(enterClause->v.t));
         }
       }
     }

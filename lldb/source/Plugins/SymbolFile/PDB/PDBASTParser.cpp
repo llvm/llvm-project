@@ -954,7 +954,8 @@ PDBASTParser::GetDeclForSymbol(const llvm::pdb::PDBSymbol &symbol) {
 
     auto decl = m_ast.CreateFunctionDeclaration(
         decl_context, OptionalClangModuleID(), name,
-        type->GetForwardCompilerType(), storage, func->hasInlineAttribute());
+        type->GetForwardCompilerType(), storage, func->hasInlineAttribute(),
+        /*asm_label=*/{});
 
     std::vector<clang::ParmVarDecl *> params;
     if (std::unique_ptr<PDBSymbolTypeFunctionSig> sig = func->getSignature()) {
@@ -1446,7 +1447,7 @@ PDBASTParser::AddRecordMethod(lldb_private::SymbolFile &symbol_file,
   // TODO: get mangled name for the method.
   return m_ast.AddMethodToCXXRecordType(
       record_type.GetOpaqueQualType(), name.c_str(),
-      /*mangled_name*/ nullptr, method_comp_type, access, method.isVirtual(),
+      /*asm_label=*/{}, method_comp_type, access, method.isVirtual(),
       method.isStatic(), method.hasInlineAttribute(),
       /*is_explicit*/ false, // FIXME: Need this field in CodeView.
       /*is_attr_used*/ false,
