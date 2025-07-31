@@ -380,7 +380,7 @@ void ReplCodeCompleter::codeComplete(CompilerInstance *InterpCI,
   AU->setOwnsRemappedFileBuffers(false);
   AU->CodeComplete(CodeCompletionFileName, 1, Col, RemappedFiles, false, false,
                    false, consumer,
-                   std::make_shared<clang::PCHContainerOperations>(), *diag,
+                   std::make_shared<clang::PCHContainerOperations>(), diag,
                    InterpCI->getLangOpts(), AU->getSourceManager(),
                    AU->getFileManager(), sd, tb, std::move(Act));
 }

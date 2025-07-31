@@ -272,6 +272,11 @@ public:
   DiagnosticIDs();
   ~DiagnosticIDs();
 
+  // Convenience method to construct a new refcounted DiagnosticIDs.
+  static llvm::IntrusiveRefCntPtr<DiagnosticIDs> create() {
+    return llvm::makeIntrusiveRefCnt<DiagnosticIDs>();
+  }
+
   /// Return an ID for a diagnostic with the specified format string and
   /// level.
   ///
