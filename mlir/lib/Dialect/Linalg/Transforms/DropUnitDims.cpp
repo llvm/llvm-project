@@ -637,6 +637,7 @@ struct DropPadUnitDims : public OpRewritePattern<tensor::PadOp> {
     }
 
     ArrayRef<int64_t> sourceShape = padOp.getSourceType().getShape();
+    ArrayRef<int64_t> resultShape = padOp.getResultType().getShape();
     int64_t padRank = sourceShape.size();
 
     auto isStaticZero = [](OpFoldResult f) {
@@ -647,16 +648,18 @@ struct DropPadUnitDims : public OpRewritePattern<tensor::PadOp> {
                                                  allowedUnitDims.end());
     llvm::SmallDenseSet<unsigned> unitDims;
     SmallVector<int64_t> newShape;
+    SmallVector<int64_t> newResultShape;
     SmallVector<OpFoldResult> newLowPad;
     SmallVector<OpFoldResult> newHighPad;
-    for (const auto [dim, size, low, high] :
-         zip_equal(llvm::seq(static_cast<int64_t>(0), padRank), sourceShape,
-                   padOp.getMixedLowPad(), padOp.getMixedHighPad())) {
+    for (const auto [dim, size, outSize, low, high] : zip_equal(
+             llvm::seq(static_cast<int64_t>(0), padRank), sourceShape,
+             resultShape, padOp.getMixedLowPad(), padOp.getMixedHighPad())) {
       if (unitDimsFilter.contains(dim) && size == 1 && isStaticZero(low) &&
           isStaticZero(high)) {
         unitDims.insert(dim);
       } else {
         newShape.push_back(size);
+        newResultShape.push_back(outSize);
         newLowPad.push_back(low);
         newHighPad.push_back(high);
       }
@@ -686,8 +689,10 @@ struct DropPadUnitDims : public OpRewritePattern<tensor::PadOp> {
         collapseValue(rewriter, padOp.getLoc(), padOp.getSource(), newShape,
                       reassociationMap, options.rankReductionStrategy);
 
-    auto newPadOp = tensor::PadOp::create(
-        rewriter, padOp.getLoc(), /*result=*/Type(), collapsedSource, newLowPad,
+    auto newResultType = RankedTensorType::get(
+        newResultShape, padOp.getResultType().getElementType());
+    auto newPadOp = rewriter.create<tensor::PadOp>(
+        padOp.getLoc(), /*result=*/newResultType, collapsedSource, newLowPad,
         newHighPad, paddingVal, padOp.getNofold());
 
     Value dest = padOp.getResult();
