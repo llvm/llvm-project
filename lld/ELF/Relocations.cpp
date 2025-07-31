@@ -176,7 +176,7 @@ static RelType getMipsPairType(RelType type, bool isLocal) {
 
 // True if non-preemptable symbol always has the same value regardless of where
 // the DSO is loaded.
-bool elf::isAbsolute(const Symbol &sym) {
+static bool isAbsolute(const Symbol &sym) {
   if (sym.isUndefined())
     return true;
   if (const auto *dr = dyn_cast<Defined>(&sym))
@@ -885,10 +885,12 @@ static void addPltEntry(Ctx &ctx, PltSection &plt, GotPltSection &gotPlt,
                         RelocationBaseSection &rel, RelType type, Symbol &sym) {
   plt.addEntry(sym);
   gotPlt.addEntry(sym);
-  rel.addReloc({type, &gotPlt, sym.getGotPltOffset(ctx),
-                sym.isPreemptible ? DynamicReloc::AgainstSymbol
-                                  : DynamicReloc::AddendOnlyWithTargetVA,
-                sym, 0, R_ABS});
+  if (sym.isPreemptible)
+    rel.addReloc(
+        {type, &gotPlt, sym.getGotPltOffset(ctx), true, sym, 0, R_ADDEND});
+  else
+    rel.addReloc(
+        {type, &gotPlt, sym.getGotPltOffset(ctx), false, sym, 0, R_ABS});
 }
 
 void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
@@ -897,9 +899,8 @@ void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
 
   // If preemptible, emit a GLOB_DAT relocation.
   if (sym.isPreemptible) {
-    ctx.mainPart->relaDyn->addReloc({ctx.target->gotRel, ctx.in.got.get(), off,
-                                     DynamicReloc::AgainstSymbol, sym, 0,
-                                     R_ABS});
+    ctx.mainPart->relaDyn->addReloc(
+        {ctx.target->gotRel, ctx.in.got.get(), off, true, sym, 0, R_ADDEND});
     return;
   }
 
@@ -920,15 +921,13 @@ static void addGotAuthEntry(Ctx &ctx, Symbol &sym) {
   // If preemptible, emit a GLOB_DAT relocation.
   if (sym.isPreemptible) {
     ctx.mainPart->relaDyn->addReloc({R_AARCH64_AUTH_GLOB_DAT, ctx.in.got.get(),
-                                     off, DynamicReloc::AgainstSymbol, sym, 0,
-                                     R_ABS});
+                                     off, true, sym, 0, R_ADDEND});
     return;
   }
 
   // Signed GOT requires dynamic relocation.
   ctx.in.got->getPartition(ctx).relaDyn->addReloc(
-      {R_AARCH64_AUTH_RELATIVE, ctx.in.got.get(), off,
-       DynamicReloc::AddendOnlyWithTargetVA, sym, 0, R_ABS});
+      {R_AARCH64_AUTH_RELATIVE, ctx.in.got.get(), off, false, sym, 0, R_ABS});
 }
 
 static void addTpOffsetGotEntry(Ctx &ctx, Symbol &sym) {
@@ -990,8 +989,8 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   // only the low bits are used.
   if (e == R_GOT || e == R_PLT)
     return ctx.target->usesOnlyLowPageBits(type) || !ctx.arg.isPic;
-  // R_AARCH64_AUTH_ABS64 and iRelSymbolicRel require a dynamic relocation.
-  if (e == RE_AARCH64_AUTH || type == ctx.target->iRelSymbolicRel)
+  // R_AARCH64_AUTH_ABS64 requires a dynamic relocation.
+  if (e == RE_AARCH64_AUTH)
     return false;
 
   // The behavior of an undefined weak reference is implementation defined.
@@ -1159,29 +1158,10 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
           sec->addReloc({expr, type, offset, addend, &sym});
           part.relrAuthDyn->relocs.push_back({sec, sec->relocs().size() - 1});
         } else {
-          part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset,
-                                  DynamicReloc::AddendOnlyWithTargetVA, sym,
-                                  addend, R_ABS});
+          part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset, false,
+                                  sym, addend, R_ABS});
         }
         return;
-      }
-      if (LLVM_UNLIKELY(type == ctx.target->iRelSymbolicRel)) {
-        if (sym.isPreemptible) {
-          auto diag = Err(ctx);
-          diag << "relocation " << type
-               << " cannot be used against preemptible symbol '" << &sym << "'";
-          printLocation(diag, *sec, sym, offset);
-        } else if (isIfunc) {
-          auto diag = Err(ctx);
-          diag << "relocation " << type
-               << " cannot be used against ifunc symbol '" << &sym << "'";
-          printLocation(diag, *sec, sym, offset);
-        } else {
-          part.relaDyn->addReloc({ctx.target->iRelativeRel, sec, offset,
-                                  DynamicReloc::AddendOnlyWithTargetVA, sym,
-                                  addend, R_ABS});
-          return;
-        }
       }
       part.relaDyn->addSymbolReloc(rel, *sec, offset, sym, addend, type);
 
@@ -1966,13 +1946,12 @@ void elf::postScanRelocations(Ctx &ctx) {
 
   GotSection *got = ctx.in.got.get();
   if (ctx.needsTlsLd.load(std::memory_order_relaxed) && got->addTlsIndex()) {
-    static Undefined dummy(ctx.internalFile, "", STB_LOCAL, 0, 0);
     if (ctx.arg.shared)
       ctx.mainPart->relaDyn->addReloc(
           {ctx.target->tlsModuleIndexRel, got, got->getTlsIndexOff()});
     else
       got->addConstant({R_ADDEND, ctx.target->symbolicRel,
-                        got->getTlsIndexOff(), 1, &dummy});
+                        got->getTlsIndexOff(), 1, ctx.dummySym});
   }
 
   assert(ctx.symAux.size() == 1);

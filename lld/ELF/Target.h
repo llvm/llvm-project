@@ -131,7 +131,6 @@ public:
   RelType relativeRel = 0;
   RelType iRelativeRel = 0;
   RelType symbolicRel = 0;
-  RelType iRelSymbolicRel = 0;
   RelType tlsDescRel = 0;
   RelType tlsGotRel = 0;
   RelType tlsModuleIndexRel = 0;
@@ -215,6 +214,7 @@ void processArmCmseSymbols(Ctx &);
 template <class ELFT> uint32_t calcMipsEFlags(Ctx &);
 uint8_t getMipsFpAbiFlag(Ctx &, InputFile *file, uint8_t oldFlag,
                          uint8_t newFlag);
+uint64_t getMipsPageAddr(uint64_t addr);
 bool isMipsN32Abi(Ctx &, const InputFile &f);
 bool isMicroMips(Ctx &);
 bool isMipsR6(Ctx &);

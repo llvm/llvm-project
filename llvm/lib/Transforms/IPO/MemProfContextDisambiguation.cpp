@@ -97,6 +97,8 @@ STATISTIC(MissingAllocForContextId,
           "Number of missing alloc nodes for context ids");
 STATISTIC(SkippedCallsCloning,
           "Number of calls skipped during cloning due to unexpected operand");
+STATISTIC(MismatchedCloneAssignments,
+          "Number of callsites assigned to call multiple non-matching clones");
 
 static cl::opt<std::string> DotFilePathPrefix(
     "memprof-dot-file-path-prefix", cl::init(""), cl::Hidden,
@@ -730,7 +732,7 @@ private:
   /// of the functions tracked calls to their new versions in the CallMap.
   /// Assigns new clones to clone number CloneNo.
   FuncInfo cloneFunctionForCallsite(
-      FuncInfo &Func, CallInfo &Call, std::map<CallInfo, CallInfo> &CallMap,
+      FuncInfo &Func, CallInfo &Call, DenseMap<CallInfo, CallInfo> &CallMap,
       std::vector<CallInfo> &CallsWithMetadataInFunc, unsigned CloneNo) {
     return static_cast<DerivedCCG *>(this)->cloneFunctionForCallsite(
         Func, Call, CallMap, CallsWithMetadataInFunc, CloneNo);
@@ -897,7 +899,7 @@ private:
   CallsiteContextGraph<ModuleCallsiteContextGraph, Function,
                        Instruction *>::FuncInfo
   cloneFunctionForCallsite(FuncInfo &Func, CallInfo &Call,
-                           std::map<CallInfo, CallInfo> &CallMap,
+                           DenseMap<CallInfo, CallInfo> &CallMap,
                            std::vector<CallInfo> &CallsWithMetadataInFunc,
                            unsigned CloneNo);
   std::string getLabel(const Function *Func, const Instruction *Call,
@@ -989,7 +991,7 @@ private:
   CallsiteContextGraph<IndexCallsiteContextGraph, FunctionSummary,
                        IndexCall>::FuncInfo
   cloneFunctionForCallsite(FuncInfo &Func, CallInfo &Call,
-                           std::map<CallInfo, CallInfo> &CallMap,
+                           DenseMap<CallInfo, CallInfo> &CallMap,
                            std::vector<CallInfo> &CallsWithMetadataInFunc,
                            unsigned CloneNo);
   std::string getLabel(const FunctionSummary *Func, const IndexCall &Call,
@@ -2058,6 +2060,20 @@ static std::string getMemProfFuncName(Twine Base, unsigned CloneNo) {
 
 static bool isMemProfClone(const Function &F) {
   return F.getName().contains(MemProfCloneSuffix);
+}
+
+// Return the clone number of the given function by extracting it from the
+// memprof suffix. Assumes the caller has already confirmed it is a memprof
+// clone.
+static unsigned getMemProfCloneNum(const Function &F) {
+  assert(isMemProfClone(F));
+  auto Pos = F.getName().find_last_of('.');
+  assert(Pos > 0);
+  unsigned CloneNo;
+  bool Err = F.getName().drop_front(Pos + 1).getAsInteger(10, CloneNo);
+  assert(!Err);
+  (void)Err;
+  return CloneNo;
 }
 
 std::string ModuleCallsiteContextGraph::getLabel(const Function *Func,
@@ -3979,7 +3995,22 @@ IndexCallsiteContextGraph::getAllocationCallType(const CallInfo &Call) const {
 
 void ModuleCallsiteContextGraph::updateCall(CallInfo &CallerCall,
                                             FuncInfo CalleeFunc) {
-  if (CalleeFunc.cloneNo() > 0)
+  auto *CurF = cast<CallBase>(CallerCall.call())->getCalledFunction();
+  auto NewCalleeCloneNo = CalleeFunc.cloneNo();
+  if (isMemProfClone(*CurF)) {
+    // If we already assigned this callsite to call a specific non-default
+    // clone (i.e. not the original function which is clone 0), ensure that we
+    // aren't trying to now update it to call a different clone, which is
+    // indicative of a bug in the graph or function assignment.
+    auto CurCalleeCloneNo = getMemProfCloneNum(*CurF);
+    if (CurCalleeCloneNo != NewCalleeCloneNo) {
+      LLVM_DEBUG(dbgs() << "Mismatch in call clone assignment: was "
+                        << CurCalleeCloneNo << " now " << NewCalleeCloneNo
+                        << "\n");
+      MismatchedCloneAssignments++;
+    }
+  }
+  if (NewCalleeCloneNo > 0)
     cast<CallBase>(CallerCall.call())->setCalledFunction(CalleeFunc.func());
   OREGetter(CallerCall.call()->getFunction())
       .emit(OptimizationRemark(DEBUG_TYPE, "MemprofCall", CallerCall.call())
@@ -3995,7 +4026,19 @@ void IndexCallsiteContextGraph::updateCall(CallInfo &CallerCall,
   assert(CI &&
          "Caller cannot be an allocation which should not have profiled calls");
   assert(CI->Clones.size() > CallerCall.cloneNo());
-  CI->Clones[CallerCall.cloneNo()] = CalleeFunc.cloneNo();
+  auto NewCalleeCloneNo = CalleeFunc.cloneNo();
+  auto &CurCalleeCloneNo = CI->Clones[CallerCall.cloneNo()];
+  // If we already assigned this callsite to call a specific non-default
+  // clone (i.e. not the original function which is clone 0), ensure that we
+  // aren't trying to now update it to call a different clone, which is
+  // indicative of a bug in the graph or function assignment.
+  if (CurCalleeCloneNo != 0 && CurCalleeCloneNo != NewCalleeCloneNo) {
+    LLVM_DEBUG(dbgs() << "Mismatch in call clone assignment: was "
+                      << CurCalleeCloneNo << " now " << NewCalleeCloneNo
+                      << "\n");
+    MismatchedCloneAssignments++;
+  }
+  CurCalleeCloneNo = NewCalleeCloneNo;
 }
 
 // Update the debug information attached to NewFunc to use the clone Name. Note
@@ -4019,7 +4062,7 @@ static void updateSubprogramLinkageName(Function *NewFunc, StringRef Name) {
 CallsiteContextGraph<ModuleCallsiteContextGraph, Function,
                      Instruction *>::FuncInfo
 ModuleCallsiteContextGraph::cloneFunctionForCallsite(
-    FuncInfo &Func, CallInfo &Call, std::map<CallInfo, CallInfo> &CallMap,
+    FuncInfo &Func, CallInfo &Call, DenseMap<CallInfo, CallInfo> &CallMap,
     std::vector<CallInfo> &CallsWithMetadataInFunc, unsigned CloneNo) {
   // Use existing LLVM facilities for cloning and obtaining Call in clone
   ValueToValueMapTy VMap;
@@ -4042,7 +4085,7 @@ ModuleCallsiteContextGraph::cloneFunctionForCallsite(
 CallsiteContextGraph<IndexCallsiteContextGraph, FunctionSummary,
                      IndexCall>::FuncInfo
 IndexCallsiteContextGraph::cloneFunctionForCallsite(
-    FuncInfo &Func, CallInfo &Call, std::map<CallInfo, CallInfo> &CallMap,
+    FuncInfo &Func, CallInfo &Call, DenseMap<CallInfo, CallInfo> &CallMap,
     std::vector<CallInfo> &CallsWithMetadataInFunc, unsigned CloneNo) {
   // Check how many clones we have of Call (and therefore function).
   // The next clone number is the current size of versions array.
@@ -4463,7 +4506,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
     FuncInfo FuncClone;
     // Remappings of each call of interest (from original uncloned call to the
     // corresponding cloned call in this function clone).
-    std::map<CallInfo, CallInfo> CallMap;
+    DenseMap<CallInfo, CallInfo> CallMap;
   };
 
   // Walk all functions for which we saw calls with memprof metadata, and handle
@@ -4499,7 +4542,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
         FuncCloneToCurNodeCloneMap[FuncClone] = CallsiteClone;
 
         assert(FuncCloneInfos.size() > FuncClone.cloneNo());
-        std::map<CallInfo, CallInfo> &CallMap =
+        DenseMap<CallInfo, CallInfo> &CallMap =
             FuncCloneInfos[FuncClone.cloneNo()].CallMap;
         CallInfo CallClone(Call);
         if (auto It = CallMap.find(Call); It != CallMap.end())
@@ -4551,7 +4594,8 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
                 }));
             // Initialize with empty call map, assign Clone to original function
             // and its callers, and skip to the next clone.
-            FuncCloneInfos.push_back({OrigFunc, {}});
+            FuncCloneInfos.push_back(
+                {OrigFunc, DenseMap<CallInfo, CallInfo>()});
             AssignCallsiteCloneToFuncClone(
                 OrigFunc, Call, Clone,
                 AllocationCallToContextNodeMap.count(Call));
@@ -4584,7 +4628,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
 
           // Clone function and save it along with the CallInfo map created
           // during cloning in the FuncCloneInfos.
-          std::map<CallInfo, CallInfo> NewCallMap;
+          DenseMap<CallInfo, CallInfo> NewCallMap;
           unsigned CloneNo = FuncCloneInfos.size();
           assert(CloneNo > 0 && "Clone 0 is the original function, which "
                                 "should already exist in the map");
@@ -4691,7 +4735,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
               // CallMap is set up as indexed by original Call at clone 0.
               CallInfo OrigCall(Callee->getOrigNode()->Call);
               OrigCall.setCloneNo(0);
-              std::map<CallInfo, CallInfo> &CallMap =
+              DenseMap<CallInfo, CallInfo> &CallMap =
                   FuncCloneInfos[NewFuncClone.cloneNo()].CallMap;
               assert(CallMap.count(OrigCall));
               CallInfo NewCall(CallMap[OrigCall]);
@@ -4713,6 +4757,19 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
           // function for this callsite clone. This enables handling of cases
           // where the callers were assigned to different clones of a function.
         }
+
+        auto FindFirstAvailFuncClone = [&]() {
+          // Find first function in FuncCloneInfos without an assigned
+          // clone of this callsite Node. We should always have one
+          // available at this point due to the earlier cloning when the
+          // FuncCloneInfos size was smaller than the clone number.
+          for (auto &CF : FuncCloneInfos) {
+            if (!FuncCloneToCurNodeCloneMap.count(CF.FuncClone))
+              return CF.FuncClone;
+          }
+          llvm_unreachable(
+              "Expected an available func clone for this callsite clone");
+        };
 
         // See if we can use existing function clone. Walk through
         // all caller edges to see if any have already been assigned to
@@ -4830,16 +4887,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
             // clone of OrigFunc for another caller during this iteration over
             // its caller edges.
             if (!FuncCloneAssignedToCurCallsiteClone) {
-              // Find first function in FuncCloneInfos without an assigned
-              // clone of this callsite Node. We should always have one
-              // available at this point due to the earlier cloning when the
-              // FuncCloneInfos size was smaller than the clone number.
-              for (auto &CF : FuncCloneInfos) {
-                if (!FuncCloneToCurNodeCloneMap.count(CF.FuncClone)) {
-                  FuncCloneAssignedToCurCallsiteClone = CF.FuncClone;
-                  break;
-                }
-              }
+              FuncCloneAssignedToCurCallsiteClone = FindFirstAvailFuncClone();
               assert(FuncCloneAssignedToCurCallsiteClone);
               // Assign Clone to FuncCloneAssignedToCurCallsiteClone
               AssignCallsiteCloneToFuncClone(
@@ -4852,6 +4900,31 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
             RecordCalleeFuncOfCallsite(Edge->Caller,
                                        FuncCloneAssignedToCurCallsiteClone);
           }
+        }
+        // If we didn't assign a function clone to this callsite clone yet, e.g.
+        // none of its callers has a non-null call, do the assignment here.
+        // We want to ensure that every callsite clone is assigned to some
+        // function clone, so that the call updates below work as expected.
+        // In particular if this is the original callsite, we want to ensure it
+        // is assigned to the original function, otherwise the original function
+        // will appear available for assignment to other callsite clones,
+        // leading to unintended effects. For one, the unknown and not updated
+        // callers will call into cloned paths leading to the wrong hints,
+        // because they still call the original function (clone 0). Also,
+        // because all callsites start out as being clone 0 by default, we can't
+        // easily distinguish between callsites explicitly assigned to clone 0
+        // vs those never assigned, which can lead to multiple updates of the
+        // calls when invoking updateCall below, with mismatched clone values.
+        // TODO: Add a flag to the callsite nodes or some other mechanism to
+        // better distinguish and identify callsite clones that are not getting
+        // assigned to function clones as expected.
+        if (!FuncCloneAssignedToCurCallsiteClone) {
+          FuncCloneAssignedToCurCallsiteClone = FindFirstAvailFuncClone();
+          assert(FuncCloneAssignedToCurCallsiteClone &&
+                 "No available func clone for this callsite clone");
+          AssignCallsiteCloneToFuncClone(
+              FuncCloneAssignedToCurCallsiteClone, Call, Clone,
+              /*IsAlloc=*/AllocationCallToContextNodeMap.contains(Call));
         }
       }
       if (VerifyCCG) {
