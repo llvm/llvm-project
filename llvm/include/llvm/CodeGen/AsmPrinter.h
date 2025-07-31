@@ -190,15 +190,15 @@ private:
   /// Emit comments in assembly output if this is true.
   bool VerboseAsm;
 
-  /// Store symbols and type identifiers used to create call graph section
+  /// Store symbols and type identifiers used to create callgraph section
   /// entries related to a function.
   struct FunctionInfo {
-    /// Numeric type identifier used in call graph section for indirect calls
+    /// Numeric type identifier used in callgraph section for indirect calls
     /// and targets.
     using CGTypeId = uint64_t;
 
     /// Enumeration of function kinds, and their mapping to function kind values
-    /// stored in call graph section entries.
+    /// stored in callgraph section entries.
     /// Must match the enum in llvm/tools/llvm-objdump/llvm-objdump.cpp.
     enum class FunctionKind : uint64_t {
       /// Function cannot be target to indirect calls.
@@ -211,8 +211,8 @@ private:
       INDIRECT_TARGET_KNOWN_TID = 2,
     };
 
-    /// Map type identifiers to callsite labels. Labels are only for indirect
-    /// calls and inclusive of all indirect calls of the function.
+    /// Map type identifiers to callsite labels. Labels are generated for each
+    /// indirect callsite in the function.
     SmallVector<std::pair<CGTypeId, MCSymbol *>> CallSiteLabels;
   };
 
