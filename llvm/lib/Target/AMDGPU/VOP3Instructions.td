@@ -1650,6 +1650,8 @@ def VOP3_CVT_SR_F8_F16_Fake16_Profile : VOP3_Profile_Fake16<VOP3_CVT_SR_F8_F16_P
 
 let SubtargetPredicate = isGFX1250Plus in {
   let ReadsModeReg = 0 in {
+    defm V_CVT_SR_PK_F16_F32 : VOP3Inst<"v_cvt_sr_pk_f16_f32", VOP3_Profile<VOP_V2F16_F32_F32_I32>, int_amdgcn_cvt_sr_pk_f16_f32>;
+
     // These instructions have non-standard use of op_sel. They are using bits 2 and 3 of opsel
     // to select a byte in the vdst. Bits 0 and 1 are unused.
     let Constraints = "$vdst = $vdst_in", DisableEncoding = "$vdst_in" in {
@@ -2067,6 +2069,7 @@ defm V_ASHR_PK_U8_I32                : VOP3Only_Realtriple_gfx1250<0x291>;
 defm V_CVT_PK_BF16_F32               : VOP3Only_Realtriple_gfx1250<0x36d>;
 defm V_CVT_SR_PK_BF16_F32            : VOP3Only_Realtriple_gfx1250<0x36e>;
 defm V_CVT_PK_F16_F32                : VOP3Only_Realtriple_gfx1250<0x36f>;
+defm V_CVT_SR_PK_F16_F32             : VOP3Only_Realtriple_gfx1250<0x370>;
 defm V_CVT_PK_FP8_F16_gfx1250        : VOP3Only_Realtriple_t16_and_fake16_gfx1250<0x372, "v_cvt_pk_fp8_f16">;
 defm V_CVT_PK_BF8_F16_gfx1250        : VOP3Only_Realtriple_t16_and_fake16_gfx1250<0x373, "v_cvt_pk_bf8_f16">;
 defm V_CVT_SR_FP8_F16                : VOP3Only_Realtriple_t16_and_fake16_gfx1250<0x374>;
