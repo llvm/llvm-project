@@ -396,7 +396,7 @@ class OpenACCClauseCIREmitter final
 
     mlir::OpBuilder modBuilder(mod.getBodyRegion());
     auto recipe =
-        modBuilder.create<RecipeTy>(loc, recipeName, mainOp.getType());
+        RecipeTy::create(modBuilder, loc, recipeName, mainOp.getType());
 
     // Magic-up a var-decl so we can use normal init/destruction operations for
     // a variable declaration.
@@ -426,7 +426,7 @@ class OpenACCClauseCIREmitter final
           cgf.emitAutoVarAlloca(tempDecl, builder.saveInsertionPoint());
       cgf.emitAutoVarInit(tempDeclEmission);
 
-      builder.create<mlir::acc::YieldOp>(locEnd);
+      mlir::acc::YieldOp::create(builder, locEnd);
     }
 
     // Copy section.
@@ -454,7 +454,7 @@ class OpenACCClauseCIREmitter final
       cgf.emitDestroy(addr, baseType,
                       cgf.getDestroyer(QualType::DK_cxx_destructor));
 
-      builder.create<mlir::acc::YieldOp>(locEnd);
+      mlir::acc::YieldOp::create(builder, locEnd);
     }
 
     return recipe;
@@ -1083,8 +1083,8 @@ public:
       for (const Expr *var : clause.getVarList()) {
         CIRGenFunction::OpenACCDataOperandInfo opInfo =
             cgf.getOpenACCDataOperandInfo(var);
-        auto privateOp = builder.create<mlir::acc::PrivateOp>(
-            opInfo.beginLoc, opInfo.varValue, /*structured=*/true,
+        auto privateOp = mlir::acc::PrivateOp::create(
+            builder, opInfo.beginLoc, opInfo.varValue, /*structured=*/true,
             /*implicit=*/false, opInfo.name, opInfo.bounds);
         privateOp.setDataClause(mlir::acc::DataClause::acc_private);
 
