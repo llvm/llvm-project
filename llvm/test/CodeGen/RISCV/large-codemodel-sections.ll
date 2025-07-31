@@ -1,9 +1,12 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+f,+zfh -target-abi=lp64f -code-model=large -verify-machineinstrs < %s \
 ; RUN:   -filetype=obj -o - | llvm-readobj -r - \
-; RUN:   | FileCheck %s -check-prefix=RV64I
+; RUN:   | FileCheck %s 
 ; RUN: llc -mtriple=riscv64 -mattr=+zfinx,+zhinx -target-abi=lp64 -code-model=large -verify-machineinstrs < %s \
 ; RUN:   -filetype=obj -o - | llvm-readobj -r - \
-; RUN:   | FileCheck %s -check-prefix=RV64I
+; RUN:   | FileCheck %s 
+; RUN: llc -mtriple=riscv64 -mattr=+f,+zfh -target-abi=lp64f -code-model=large -verify-machineinstrs --function-sections < %s \
+; RUN:   -filetype=obj -o - | llvm-readobj -r - \
+; RUN:   | FileCheck %s --check-prefix=FUNCSEC
 
 
 ;; This tests that we are lowering large code model constants into `.text`
@@ -15,11 +18,25 @@
 ;; `.text` section for these addresses. This is not compatible with PIC,
 ;; just like the rest of the large code model.
 
-; RV64I: Section (3) .rela.text {
-; RV64I-NEXT: R_RISCV_64 G 0x0
-; RV64I-NEXT: R_RISCV_64 addr 0x0
-; RV64I-NEXT: R_RISCV_64 W 0x0
-; RV64I-NEXT: R_RISCV_64 X 0x0
+; CHECK: Section (3) .rela.text {
+; CHECK-NEXT: R_RISCV_64 G 0x0
+; CHECK-NEXT: R_RISCV_64 addr 0x0
+; CHECK-NEXT: R_RISCV_64 W 0x0
+; CHECK-NEXT: R_RISCV_64 X 0x0
+; CHECK-NEXT: }
+
+; FUNCSEC:      Section (4) .rela.text.lower_global {
+; FUNCSEC-NEXT:   0x0 R_RISCV_64 G 0x0
+; FUNCSEC-NEXT: }
+; FUNCSEC:      Section (6) .rela.text.lower_blockaddress {
+; FUNCSEC-NEXT:   0x0 R_RISCV_64 addr 0x0
+; FUNCSEC-NEXT: }
+; FUNCSEC:      Section (10) .rela.text.lower_extern_weak {
+; FUNCSEC-NEXT:   0x0 R_RISCV_64 W 0x0
+; FUNCSEC-NEXT: }
+; FUNCSEC:      Section (12) .rela.text.lower_global_half {
+; FUNCSEC-NEXT:   0x0 R_RISCV_64 X 0x0
+; FUNCSEC-NEXT: }
 
 ; Check lowering of globals
 @G = global i32 0

@@ -64,12 +64,13 @@ public:
   /// placed in.
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
                                    const Constant *C,
-                                   Align &Alignment) const override;
+                                   Align &Alignment, const Function *F) const override;
 
   /// Similar to the function above, but append \p SectionSuffix to the section
   /// name.
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
                                    const Constant *C, Align &Alignment,
+                                   const Function *F,
                                    StringRef SectionSuffix) const override;
 
   MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
@@ -153,7 +154,7 @@ public:
 
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
                                    const Constant *C,
-                                   Align &Alignment) const override;
+                                   Align &Alignment, const Function *F) const override;
 
   /// The mach-o version of this method defaults to returning a stub reference.
   const MCExpr *getTTypeGlobalReference(const GlobalValue *GV,
@@ -222,7 +223,7 @@ public:
   /// information, return a section that it should be placed in.
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
                                    const Constant *C,
-                                   Align &Alignment) const override;
+                                   Align &Alignment, const Function *F) const override;
 };
 
 class TargetLoweringObjectFileWasm : public TargetLoweringObjectFile {
@@ -284,7 +285,7 @@ public:
   /// placed in.
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
                                    const Constant *C,
-                                   Align &Alignment) const override;
+                                   Align &Alignment, const Function *F) const override;
 
   static XCOFF::StorageClass getStorageClassForGlobal(const GlobalValue *GV);
 

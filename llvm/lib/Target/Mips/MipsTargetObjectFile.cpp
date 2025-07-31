@@ -175,13 +175,13 @@ bool MipsTargetObjectFile::IsConstantInSmallSection(
 MCSection *MipsTargetObjectFile::getSectionForConstant(const DataLayout &DL,
                                                        SectionKind Kind,
                                                        const Constant *C,
-                                                       Align &Alignment) const {
+                                                       Align &Alignment, const Function *F) const {
   if (IsConstantInSmallSection(DL, C, *TM))
     return SmallDataSection;
 
   // Otherwise, we work the same as ELF.
   return TargetLoweringObjectFileELF::getSectionForConstant(DL, Kind, C,
-                                                            Alignment);
+                                                            Alignment, F);
 }
 
 const MCExpr *

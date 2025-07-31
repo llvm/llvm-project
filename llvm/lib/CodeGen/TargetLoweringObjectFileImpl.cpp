@@ -1034,7 +1034,7 @@ bool TargetLoweringObjectFileELF::shouldPutJumpTableInFunctionSection(
 /// information, return a section that it should be placed in.
 MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C,
-    Align &Alignment) const {
+    Align &Alignment, const Function *F) const {
   if (Kind.isMergeableConst4() && MergeableConst4Section)
     return MergeableConst4Section;
   if (Kind.isMergeableConst8() && MergeableConst8Section)
@@ -1051,12 +1051,12 @@ MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
 }
 
 MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
-    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment, const Function *F,
     StringRef SectionSuffix) const {
   // TODO: Share code between this function and
   // MCObjectInfo::initELFMCObjectFileInfo.
   if (SectionSuffix.empty())
-    return getSectionForConstant(DL, Kind, C, Alignment);
+    return getSectionForConstant(DL, Kind, C, Alignment, F);
 
   auto &Context = getContext();
   if (Kind.isMergeableConst4() && MergeableConst4Section)
@@ -1470,7 +1470,7 @@ MCSection *TargetLoweringObjectFileMachO::SelectSectionForGlobal(
 
 MCSection *TargetLoweringObjectFileMachO::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C,
-    Align &Alignment) const {
+    Align &Alignment, const Function *F) const {
   // If this constant requires a relocation, we have to put it in the data
   // segment, not in the text segment.
   if (Kind.isData() || Kind.isReadOnlyWithRel())
@@ -2133,7 +2133,7 @@ static std::string scalarConstantToHexString(const Constant *C) {
 
 MCSection *TargetLoweringObjectFileCOFF::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C,
-    Align &Alignment) const {
+    Align &Alignment, const Function *F) const {
   if (Kind.isMergeableConst() && C &&
       getContext().getAsmInfo()->hasCOFFComdatConstants()) {
     // This creates comdat sections with the given symbol name, but unless
@@ -2174,7 +2174,7 @@ MCSection *TargetLoweringObjectFileCOFF::getSectionForConstant(
   }
 
   return TargetLoweringObjectFile::getSectionForConstant(DL, Kind, C,
-                                                         Alignment);
+                                                         Alignment, F);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2596,7 +2596,7 @@ bool TargetLoweringObjectFileXCOFF::shouldPutJumpTableInFunctionSection(
 /// information, return a section that it should be placed in.
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C,
-    Align &Alignment) const {
+    Align &Alignment, const Function *F) const {
   // TODO: Enable emiting constant pool to unique sections when we support it.
   if (Alignment > Align(16))
     report_fatal_error("Alignments greater than 16 not yet supported.");

@@ -142,7 +142,7 @@ MCSection *XCoreTargetObjectFile::SelectSectionForGlobal(
 
 MCSection *XCoreTargetObjectFile::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C,
-    Align &Alignment) const {
+    Align &Alignment, const Function *F) const {
   if (Kind.isMergeableConst4())           return MergeableConst4Section;
   if (Kind.isMergeableConst8())           return MergeableConst8Section;
   if (Kind.isMergeableConst16())          return MergeableConst16Section;

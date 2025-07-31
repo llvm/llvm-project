@@ -40,7 +40,7 @@ class MipsTargetMachine;
 
     MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
                                      const Constant *C,
-                                     Align &Alignment) const override;
+                                     Align &Alignment, const Function *F) const override;
     /// Describe a TLS variable address within debug info.
     const MCExpr *getDebugThreadLocalSymbol(const MCSymbol *Sym) const override;
   };
