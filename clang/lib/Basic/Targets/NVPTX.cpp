@@ -295,16 +295,16 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
         return "1000";
       case OffloadArch::SM_101:
       case OffloadArch::SM_101a:
-         return "1010";
+        return "1010";
       case OffloadArch::SM_103:
       case OffloadArch::SM_103a:
-         return "1030";
+        return "1030";
       case OffloadArch::SM_120:
       case OffloadArch::SM_120a:
-         return "1200";
+        return "1200";
       case OffloadArch::SM_121:
       case OffloadArch::SM_121a:
-         return "1210";
+        return "1210";
       }
       llvm_unreachable("unhandled OffloadArch");
     }();
