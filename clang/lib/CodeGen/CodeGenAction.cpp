@@ -997,7 +997,7 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
         CI.getPreprocessor());
 
   std::unique_ptr<BackendConsumer> Result(new BackendConsumer(
-      CI, BA, &CI.getVirtualFileSystem(),
+      CI, BA, CI.getVirtualFileSystemPtr(),
       CI.getCASOpts(), // MCCAS
       *VMContext, std::move(LinkModules),
       InFile, std::move(OS), CoverageInfo, std::move(CasIDOS)));
@@ -1177,8 +1177,8 @@ void CodeGenAction::ExecuteAction() {
 
   // Set clang diagnostic handler. To do this we need to create a fake
   // BackendConsumer.
-  BackendConsumer Result(CI, BA, &CI.getVirtualFileSystem(), CI.getCASOpts(),
-			 *VMContext,
+  BackendConsumer Result(CI, BA, CI.getVirtualFileSystemPtr(), CI.getCASOpts(),
+                         *VMContext,
                          std::move(LinkModules), "", nullptr, nullptr,
                          nullptr, TheModule.get());
 
