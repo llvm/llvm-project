@@ -581,8 +581,8 @@ llvm::Expected<std::string> applyAllReplacements(StringRef Code,
   if (Replaces.empty())
     return Code.str();
 
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   FileManager Files(FileSystemOptions(), InMemoryFileSystem);
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diagnostics(
