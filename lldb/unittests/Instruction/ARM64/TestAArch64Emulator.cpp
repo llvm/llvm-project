@@ -167,15 +167,15 @@ TEST_F(TestAArch64Emulator, TestOverflow) {
 
 TEST_F(TestAArch64Emulator, TestAutoAdvancePC) {
   Arch64EmulatorTester emu;
-  emu.memory_offset = 0x1234567800;
-  emu.gpr.pc = 0x1234567800;
-  emu.gpr.x[8] = 0x1234567820;
+  emu.memory_offset = 0x123456789abcde00;
+  emu.gpr.pc = 0x123456789abcde00;
+  emu.gpr.x[8] = 0x123456789abcde20;
   memcpy(emu.memory, "\x08\x01\x40\xb9", 4);        // ldr w8, [x8]
   memcpy(emu.memory + 0x20, "\x11\x22\x33\x44", 4); // 0x44332211
   ASSERT_TRUE(emu.ReadInstruction());
   ASSERT_TRUE(
       emu.EvaluateInstruction(eEmulateInstructionOptionAutoAdvancePC |
                               eEmulateInstructionOptionIgnoreConditions));
-  ASSERT_EQ(emu.gpr.pc, 0x1234567804);
+  ASSERT_EQ(emu.gpr.pc, 0x123456789abcde04);
   ASSERT_EQ(emu.gpr.x[8], 0x44332211);
 }
