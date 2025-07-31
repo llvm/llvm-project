@@ -2284,7 +2284,7 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
       return nullptr;
     }
 
-    for (auto elt : asmArrayAttr) {
+    for (Attribute elt : asmArrayAttr) {
       auto asmStrAttr = dyn_cast<StringAttr>(elt);
       if (!asmStrAttr) {
         m->emitError(
