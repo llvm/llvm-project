@@ -2255,38 +2255,35 @@ defm INT_PTX_SATOM_XOR  : ATOM2_bitwise_impl<"xor">;
 
 // Scalar
 
-class LDU_G<string TyStr, NVPTXRegClass regclass>
-  :  NVPTXInst<(outs regclass:$result), (ins ADDR:$src),
-               "ldu.global." # TyStr # " \t$result, [$src];", []>;
+class LDU_G<NVPTXRegClass regclass>
+  :  NVPTXInst<(outs regclass:$result), (ins i32imm:$fromWidth, ADDR:$src),
+               "ldu.global.b$fromWidth \t$result, [$src];", []>;
 
-def LDU_GLOBAL_i8  : LDU_G<"b8",  B16>;
-def LDU_GLOBAL_i16 : LDU_G<"b16", B16>;
-def LDU_GLOBAL_i32 : LDU_G<"b32", B32>;
-def LDU_GLOBAL_i64 : LDU_G<"b64", B64>;
+def LDU_GLOBAL_i16 : LDU_G<B16>;
+def LDU_GLOBAL_i32 : LDU_G<B32>;
+def LDU_GLOBAL_i64 : LDU_G<B64>;
 
 // vector
 
 // Elementized vector ldu
-class VLDU_G_ELE_V2<string TyStr, NVPTXRegClass regclass>
+class VLDU_G_ELE_V2<NVPTXRegClass regclass>
   : NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins ADDR:$src),
-                     "ldu.global.v2." # TyStr # " \t{{$dst1, $dst2}}, [$src];", []>;
+              (ins i32imm:$fromWidth, ADDR:$src),
+              "ldu.global.v2.b$fromWidth \t{{$dst1, $dst2}}, [$src];", []>;
 
 
-class VLDU_G_ELE_V4<string TyStr, NVPTXRegClass regclass>
-  : NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                            regclass:$dst4), (ins ADDR:$src),
-               "ldu.global.v4." # TyStr # " \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", []>;
+class VLDU_G_ELE_V4<NVPTXRegClass regclass>
+  : NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4),
+              (ins i32imm:$fromWidth, ADDR:$src),
+               "ldu.global.v4.b$fromWidth \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", []>;
 
 
-def LDU_GLOBAL_v2i8  : VLDU_G_ELE_V2<"b8",  B16>;
-def LDU_GLOBAL_v2i16 : VLDU_G_ELE_V2<"b16", B16>;
-def LDU_GLOBAL_v2i32 : VLDU_G_ELE_V2<"b32", B32>;
-def LDU_GLOBAL_v2i64 : VLDU_G_ELE_V2<"b64", B64>;
+def LDU_GLOBAL_v2i16 : VLDU_G_ELE_V2<B16>;
+def LDU_GLOBAL_v2i32 : VLDU_G_ELE_V2<B32>;
+def LDU_GLOBAL_v2i64 : VLDU_G_ELE_V2<B64>;
 
-def LDU_GLOBAL_v4i8  : VLDU_G_ELE_V4<"b8",  B16>;
-def LDU_GLOBAL_v4i16 : VLDU_G_ELE_V4<"b16", B16>;
-def LDU_GLOBAL_v4i32 : VLDU_G_ELE_V4<"b32", B32>;
+def LDU_GLOBAL_v4i16 : VLDU_G_ELE_V4<B16>;
+def LDU_GLOBAL_v4i32 : VLDU_G_ELE_V4<B32>;
 
 
 //-----------------------------------
@@ -2327,12 +2324,10 @@ class VLDG_G_ELE_V8<NVPTXRegClass regclass> :
              "ld.global.nc.v8.${Sign:sign}$fromWidth \t{{$dst1, $dst2, $dst3, $dst4, $dst5, $dst6, $dst7, $dst8}}, [$src];", []>;
 
 // FIXME: 8-bit LDG should be fixed once LDG/LDU nodes are made into proper loads.
-def LD_GLOBAL_NC_v2i8  : VLDG_G_ELE_V2<B16>;
 def LD_GLOBAL_NC_v2i16 : VLDG_G_ELE_V2<B16>;
 def LD_GLOBAL_NC_v2i32 : VLDG_G_ELE_V2<B32>;
 def LD_GLOBAL_NC_v2i64 : VLDG_G_ELE_V2<B64>;
 
-def LD_GLOBAL_NC_v4i8  : VLDG_G_ELE_V4<B16>;
 def LD_GLOBAL_NC_v4i16 : VLDG_G_ELE_V4<B16>;
 def LD_GLOBAL_NC_v4i32 : VLDG_G_ELE_V4<B32>;
 

@@ -15,18 +15,7 @@ include "NVPTXInstrFormats.td"
 let OperandType = "OPERAND_IMMEDIATE" in {
   def f16imm : Operand<f16>;
   def bf16imm : Operand<bf16>;
-
 }
-
-// List of vector specific properties
-def isVecLD      : VecInstTypeEnum<1>;
-def isVecST      : VecInstTypeEnum<2>;
-def isVecBuild   : VecInstTypeEnum<3>;
-def isVecShuffle : VecInstTypeEnum<4>;
-def isVecExtract : VecInstTypeEnum<5>;
-def isVecInsert  : VecInstTypeEnum<6>;
-def isVecDest    : VecInstTypeEnum<7>;
-def isVecOther   : VecInstTypeEnum<15>;
 
 //===----------------------------------------------------------------------===//
 // NVPTX Operand Definitions.
@@ -1206,10 +1195,8 @@ def TANH_APPROX_f32 :
 // Template for three-arg bitwise operations.  Takes three args, Creates .b16,
 // .b32, .b64, and .pred (predicate registers -- i.e., i1) versions of OpcStr.
 multiclass BITWISE<string OpcStr, SDNode OpNode> {
-  defm b1 : I3Inst<OpcStr # ".pred", OpNode, I1RT, commutative = true>;
-  defm b16 : I3Inst<OpcStr # ".b16", OpNode, I16RT, commutative = true>;
-  defm b32 : I3Inst<OpcStr # ".b32", OpNode, I32RT, commutative = true>;
-  defm b64 : I3Inst<OpcStr # ".b64", OpNode, I64RT, commutative = true>;
+  foreach t = [I1RT, I16RT, I32RT, I64RT] in
+    defm _ # t.PtxType : I3Inst<OpcStr # "." # t.PtxType, OpNode, t, commutative = true>;
 }
 
 defm OR  : BITWISE<"or", or>;
@@ -1217,48 +1204,40 @@ defm AND : BITWISE<"and", and>;
 defm XOR : BITWISE<"xor", xor>;
 
 // PTX does not support mul on predicates, convert to and instructions
-def : Pat<(mul i1:$a, i1:$b), (ANDb1rr $a, $b)>;
-def : Pat<(mul i1:$a, imm:$b), (ANDb1ri $a, imm:$b)>;
+def : Pat<(mul i1:$a, i1:$b), (AND_predrr $a, $b)>;
+def : Pat<(mul i1:$a, imm:$b), (AND_predri $a, imm:$b)>;
 
 foreach op = [add, sub] in {
-  def : Pat<(op i1:$a, i1:$b), (XORb1rr $a, $b)>;
-  def : Pat<(op i1:$a, imm:$b), (XORb1ri $a, imm:$b)>;
+  def : Pat<(op i1:$a, i1:$b), (XOR_predrr $a, $b)>;
+  def : Pat<(op i1:$a, imm:$b), (XOR_predri $a, imm:$b)>;
 }
 
 // These transformations were once reliably performed by instcombine, but thanks
 // to poison semantics they are no longer safe for LLVM IR, perform them here
 // instead.
-def : Pat<(select i1:$a, i1:$b, 0), (ANDb1rr $a, $b)>;
-def : Pat<(select i1:$a, 1, i1:$b), (ORb1rr $a, $b)>;
+def : Pat<(select i1:$a, i1:$b, 0), (AND_predrr $a, $b)>;
+def : Pat<(select i1:$a, 1, i1:$b), (OR_predrr $a, $b)>;
 
 // Lower logical v2i16/v4i8 ops as bitwise ops on b32.
 foreach vt = [v2i16, v4i8] in {
-  def : Pat<(or vt:$a, vt:$b), (ORb32rr $a, $b)>;
-  def : Pat<(xor vt:$a, vt:$b), (XORb32rr $a, $b)>;
-  def : Pat<(and vt:$a, vt:$b), (ANDb32rr $a, $b)>;
+  def : Pat<(or vt:$a, vt:$b), (OR_b32rr $a, $b)>;
+  def : Pat<(xor vt:$a, vt:$b), (XOR_b32rr $a, $b)>;
+  def : Pat<(and vt:$a, vt:$b), (AND_b32rr $a, $b)>;
 
   // The constants get legalized into a bitcast from i32, so that's what we need
   // to match here.
   def: Pat<(or vt:$a, (vt (bitconvert (i32 imm:$b)))),
-           (ORb32ri $a, imm:$b)>;
+           (OR_b32ri $a, imm:$b)>;
   def: Pat<(xor vt:$a, (vt (bitconvert (i32 imm:$b)))),
-           (XORb32ri $a, imm:$b)>;
+           (XOR_b32ri $a, imm:$b)>;
   def: Pat<(and vt:$a, (vt (bitconvert (i32 imm:$b)))),
-           (ANDb32ri $a, imm:$b)>;
+           (AND_b32ri $a, imm:$b)>;
 }
 
-def NOT1  : BasicNVPTXInst<(outs B1:$dst), (ins B1:$src),
-                      "not.pred",
-                      [(set i1:$dst, (not i1:$src))]>;
-def NOT16 : BasicNVPTXInst<(outs B16:$dst), (ins B16:$src),
-                      "not.b16",
-                      [(set i16:$dst, (not i16:$src))]>;
-def NOT32 : BasicNVPTXInst<(outs B32:$dst), (ins B32:$src),
-                      "not.b32",
-                      [(set i32:$dst, (not i32:$src))]>;
-def NOT64 : BasicNVPTXInst<(outs B64:$dst), (ins B64:$src),
-                       "not.b64",
-                       [(set i64:$dst, (not i64:$src))]>;
+foreach t = [I1RT, I16RT, I32RT, I64RT] in
+  def NOT_ # t.PtxType : BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$src),
+                                        "not." # t.PtxType,
+                                        [(set t.Ty:$dst, (not t.Ty:$src))]>;
 
 // Template for left/right shifts.  Takes three operands,
 //   [dest (reg), src (reg), shift (reg or imm)].
@@ -1562,10 +1541,7 @@ def SETP_bf16x2rr :
 
 def addr : ComplexPattern<pAny, 2, "SelectADDR">;
 
-def ADDR_base : Operand<pAny> {
-  let PrintMethod = "printOperand";
-}
-
+def ADDR_base : Operand<pAny>;
 def ADDR : Operand<pAny> {
   let PrintMethod = "printMemOperand";
   let MIOperandInfo = (ops ADDR_base, i32imm);
@@ -1577,10 +1553,6 @@ def AtomicCode : Operand<i32> {
 
 def MmaCode : Operand<i32> {
   let PrintMethod = "printMmaCode";
-}
-
-def Offseti32imm : Operand<i32> {
-  let PrintMethod = "printOffseti32imm";
 }
 
 // Get pointer to local stack.
@@ -1831,7 +1803,6 @@ class LD<NVPTXRegClass regclass>
     "\t$dst, [$addr];", []>;
 
 let mayLoad=1, hasSideEffects=0 in {
-  def LD_i8  : LD<B16>;
   def LD_i16 : LD<B16>;
   def LD_i32 : LD<B32>;
   def LD_i64 : LD<B64>;
@@ -1847,7 +1818,6 @@ class ST<DAGOperand O>
     " \t[$addr], $src;", []>;
 
 let mayStore=1, hasSideEffects=0 in {
-  def ST_i8  : ST<RI16>;
   def ST_i16 : ST<RI16>;
   def ST_i32 : ST<RI32>;
   def ST_i64 : ST<RI64>;
@@ -1880,7 +1850,6 @@ multiclass LD_VEC<NVPTXRegClass regclass, bit support_v8 = false> {
       "[$addr];", []>;
 }
 let mayLoad=1, hasSideEffects=0 in {
-  defm LDV_i8  : LD_VEC<B16>;
   defm LDV_i16 : LD_VEC<B16>;
   defm LDV_i32 : LD_VEC<B32, support_v8 = true>;
   defm LDV_i64 : LD_VEC<B64>;
@@ -1914,7 +1883,6 @@ multiclass ST_VEC<DAGOperand O, bit support_v8 = false> {
 }
 
 let mayStore=1, hasSideEffects=0 in {
-  defm STV_i8  : ST_VEC<RI16>;
   defm STV_i16 : ST_VEC<RI16>;
   defm STV_i32 : ST_VEC<RI32, support_v8 = true>;
   defm STV_i64 : ST_VEC<RI64>;
@@ -2084,14 +2052,14 @@ def : Pat<(i64 (anyext i32:$a)), (CVT_u64_u32 $a, CvtNONE)>;
 // truncate i64
 def : Pat<(i32 (trunc i64:$a)), (CVT_u32_u64 $a, CvtNONE)>;
 def : Pat<(i16 (trunc i64:$a)), (CVT_u16_u64 $a, CvtNONE)>;
-def : Pat<(i1  (trunc i64:$a)), (SETP_i64ri (ANDb64ri $a, 1), 0, CmpNE)>;
+def : Pat<(i1  (trunc i64:$a)), (SETP_i64ri (AND_b64ri $a, 1), 0, CmpNE)>;
 
 // truncate i32
 def : Pat<(i16 (trunc i32:$a)), (CVT_u16_u32 $a, CvtNONE)>;
-def : Pat<(i1  (trunc i32:$a)), (SETP_i32ri (ANDb32ri $a, 1), 0, CmpNE)>;
+def : Pat<(i1  (trunc i32:$a)), (SETP_i32ri (AND_b32ri $a, 1), 0, CmpNE)>;
 
 // truncate i16
-def : Pat<(i1 (trunc i16:$a)), (SETP_i16ri (ANDb16ri $a, 1), 0, CmpNE)>;
+def : Pat<(i1 (trunc i16:$a)), (SETP_i16ri (AND_b16ri $a, 1), 0, CmpNE)>;
 
 // sext_inreg
 def : Pat<(sext_inreg i16:$a, i8), (CVT_INREG_s16_s8 $a)>;
