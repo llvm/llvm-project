@@ -1793,6 +1793,10 @@ std::string operation::ToString(operation::Operator op) {
   llvm_unreachable("Unhandler operator");
 }
 
+operation::Operator operation::OperationCode(const Relational<SomeType> &op) {
+  return common::visit([](auto &&s) { return OperationCode(s); }, op.u);
+}
+
 operation::Operator operation::OperationCode(const ProcedureDesignator &proc) {
   Operator code{llvm::StringSwitch<Operator>(proc.GetName())
           .Case("associated", Operator::Associated)

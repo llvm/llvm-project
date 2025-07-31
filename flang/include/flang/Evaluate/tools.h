@@ -1418,6 +1418,8 @@ template <int Kind> Operator OperationCode(const LogicalOperation<Kind> &op) {
   return Operator::Unknown;
 }
 
+Operator OperationCode(const Relational<SomeType> &op);
+
 template <typename T> Operator OperationCode(const Relational<T> &op) {
   switch (op.opr) {
   case common::RelationalOperator::LT:
