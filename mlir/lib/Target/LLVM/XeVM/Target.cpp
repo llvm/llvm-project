@@ -28,6 +28,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Target/TargetMachine.h"
 
+#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Config/Targets.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
@@ -38,7 +39,6 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Bitcode/BitcodeWriter.h"
 
 #include <cstdint>
 #include <cstdlib>
@@ -171,30 +171,30 @@ SpirSerializer::moduleToObject(llvm::Module &llvmModule) {
     return std::nullopt;
   }
 
-  std::optional<std::string> serializedISA =
-      translateToISA(llvmModule, **targetMachine);
-  if (!serializedISA) {
-    getOperation().emitError() << "Failed translating the module to ISA."
-                               << triple << ", can't compile with LLVM\n";
-    return std::nullopt;
-  }
-
-#define DEBUG_TYPE "serialize-to-isa"
-  LLVM_DEBUG({
-    llvm::dbgs() << "SPIR-V for module: " << getOperation().getNameAttr() << "\n";
-    llvm::dbgs() << *serializedISA << "\n";
-    llvm::dbgs().flush();
-  });
-#undef DEBUG_TYPE
-
   // Return SPIRV if the compilation target is `assembly`.
   if (targetOptions.getCompilationTarget() ==
       gpu::CompilationTarget::Assembly) {
+    std::optional<std::string> serializedISA =
+        translateToISA(llvmModule, **targetMachine);
+    if (!serializedISA) {
+      getOperation().emitError() << "Failed translating the module to ISA."
+                                 << triple << ", can't compile with LLVM\n";
+      return std::nullopt;
+    }
+
+#define DEBUG_TYPE "serialize-to-isa"
+    LLVM_DEBUG({
+      llvm::dbgs() << "SPIR-V for module: " << getOperation().getNameAttr()
+                   << "\n";
+      llvm::dbgs() << *serializedISA << "\n";
+      llvm::dbgs().flush();
+    });
+#undef DEBUG_TYPE
+
     // Make sure to include the null terminator.
     StringRef bin(serializedISA->c_str(), serializedISA->size() + 1);
     return SmallVector<char, 0>(bin.begin(), bin.end());
   }
-
 
   std::optional<std::string> serializedSPIRVBinary =
       translateToSPIRVBinary(llvmModule, **targetMachine);
@@ -353,8 +353,8 @@ SpirSerializer::compileToBinary(const std::string &asmStr,
   if (!binaryBuffer) {
     emitError(loc) << "Couldn't open the file: `" << binFile->first
                    << "`, error message: " << binaryBuffer.getError().message();
-     return std::nullopt;
-   }
+    return std::nullopt;
+  }
   StringRef bin = (*binaryBuffer)->getBuffer();
   return SmallVector<char, 0>(bin.begin(), bin.end());
 }
@@ -377,8 +377,7 @@ XeVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
     return WalkResult::advance();
   });
 
-  SpirSerializer serializer(
-      *module, cast<XeVMTargetAttr>(attribute), options);
+  SpirSerializer serializer(*module, cast<XeVMTargetAttr>(attribute), options);
   serializer.init();
 
 #if !LLVM_HAS_SPIRV_TARGET
