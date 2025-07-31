@@ -49,7 +49,7 @@ OPTIONS
 .. option:: -passes=<string>
 
  A textual (comma-separated) description of the pass pipeline,
- e.g.,``-passes="sroa,instcombine"``. See
+ e.g., ``-passes="sroa,instcombine"``. See
  `invoking opt <../NewPassManager.html#invoking-opt>`_ for more details on the
  pass pipeline syntax.
 
