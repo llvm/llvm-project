@@ -146,7 +146,7 @@ static llvm::cl::opt<bool>
     deferDescMap("fdefer-desc-map",
                  llvm::cl::desc("disable or enable OpenMP deference of mapping "
                                 "for top-level descriptors"),
-                 llvm::cl::init(false));
+                 llvm::cl::init(true));
 
 static llvm::cl::opt<std::string> enableDoConcurrentToOpenMPConversion(
     "fdo-concurrent-to-openmp",

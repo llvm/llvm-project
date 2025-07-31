@@ -82,6 +82,10 @@ public:
   ///      |                  |
   std::map<mlir::Operation *, mlir::Value> localBoxAllocas;
 
+  // List of deferrable descriptors to process at the end of
+  // the pass.
+  llvm::SmallVector<mlir::Operation *> deferrableDesc;
+
   /// getMemberUserList gathers all users of a particular MapInfoOp that are
   /// other MapInfoOp's and places them into the mapMemberUsers list, which
   /// records the map that the current argument MapInfoOp "op" is part of
@@ -126,6 +130,34 @@ public:
                     });
   }
 
+  // Check if the declaration operation we have refers to a dummy
+  // function argument.
+  bool isDummyArgument(mlir::Operation *op) {
+    if (auto declareOp = mlir::dyn_cast<hlfir::DeclareOp>(op))
+      if (auto dummyScope = declareOp.getDummyScope())
+        return true;
+    return false;
+  }
+
+  // Relevant for OpenMP < 5.2, where attach semantics and rules don't exist.
+  // As descriptors were an unspoken implementation detail in these versions
+  // there's certain cases where the user (and the compiler implementation)
+  // can create data mapping errors by having temporary descriptors stuck
+  // in memory. To avoid this we can defer the descriptor mapping in these
+  // cases until target or target data regions, when we can be sure they
+  // have a clear limited scope on device.
+  bool canDeferDescriptorMapping(mlir::Value descriptor) {
+    if (!fir::isAllocatableType(descriptor.getType()) ||
+        !fir::isPointerType(descriptor.getType())) {
+      if (isDummyArgument(descriptor.getDefiningOp()) &&
+          (fir::isAssumedType(descriptor.getType()) ||
+           fir::isAssumedShape(descriptor.getType()))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /// When provided a MapInfoOp containing a descriptor type that
   /// we must expand into multiple maps this function will extract
   /// the value from it and return it, in certain cases we must
@@ -133,12 +165,15 @@ public:
   /// fir::BoxOffsetOp we utilise to access the descriptor datas
   /// base address can be utilised.
   mlir::Value getDescriptorFromBoxMap(mlir::omp::MapInfoOp boxMap,
-                                      fir::FirOpBuilder &builder) {
+                                      fir::FirOpBuilder &builder,
+                                      bool &canDescBeDeferred) {
     mlir::Value descriptor = boxMap.getVarPtr();
     if (!fir::isTypeWithDescriptor(boxMap.getVarType()))
       if (auto addrOp = mlir::dyn_cast_if_present<fir::BoxAddrOp>(
               boxMap.getVarPtr().getDefiningOp()))
         descriptor = addrOp.getVal();
+
+    canDescBeDeferred = canDeferDescriptorMapping(descriptor);
 
     if (!mlir::isa<fir::BaseBoxType>(descriptor.getType()) &&
         !fir::factory::isOptionalArgument(descriptor.getDefiningOp()))
@@ -291,7 +326,7 @@ public:
     if (llvm::isa_and_nonnull<mlir::omp::TargetExitDataOp,
                               mlir::omp::TargetUpdateOp>(target)) {
       mapFlags flags = mapFlags(mapTypeFlag);
-       if (!IsHasDeviceAddr)
+      if (!IsHasDeviceAddr)
         flags |= mapFlags::OMP_MAP_DESCRIPTOR;
       return llvm::to_underlying(flags);
     }
@@ -415,7 +450,9 @@ public:
 
     // TODO: map the addendum segment of the descriptor, similarly to the
     // base address/data pointer member.
-    mlir::Value descriptor = getDescriptorFromBoxMap(op, builder);
+    bool descCanBeDeferred = false;
+    mlir::Value descriptor =
+        getDescriptorFromBoxMap(op, builder, descCanBeDeferred);
 
     mlir::ArrayAttr newMembersAttr;
     mlir::SmallVector<mlir::Value> newMembers;
@@ -491,6 +528,10 @@ public:
         /*partial_map=*/builder.getBoolAttr(false));
     op.replaceAllUsesWith(newDescParentMapOp.getResult());
     op->erase();
+
+    if (descCanBeDeferred)
+      deferrableDesc.push_back(newDescParentMapOp);
+
     return newDescParentMapOp;
   }
 
@@ -784,6 +825,7 @@ public:
       // clear all local allocations we made for any boxes in any prior
       // iterations from previous function scopes.
       localBoxAllocas.clear();
+      deferrableDesc.clear();
 
       // First, walk `omp.map.info` ops to see if any of them have varPtrs
       // with an underlying type of fir.char<k, ?>, i.e a character
@@ -817,7 +859,7 @@ public:
         op.getBoundsMutable().append(boundsOps);
       });
 
-      // Next, walk `omp.map.info` ops to see if any record members should be
+            // Next, walk `omp.map.info` ops to see if any record members should be
       // implicitly mapped.
       // TODO/FIXME/UPDATE: I believe we need to add implicit capture of
       // allocatable members of arbitrary depths for this before we can
@@ -1059,18 +1101,14 @@ public:
       // data and the runtime should correctly associate the data with the
       // descriptor and bind together and allow clean mapping and execution.
       if (deferDescMapping) {
-        func->walk([&](mlir::omp::MapInfoOp op) {
-          if (fir::isTypeWithDescriptor(op.getVarType()) ||
-              mlir::isa_and_present<fir::BoxAddrOp>(
-                  op.getVarPtr().getDefiningOp())) {
-            mlir::Operation *targetUser = getFirstTargetUser(op);
-            assert(targetUser &&
-                   "expected user of map operation was not found");
-            builder.setInsertionPoint(op);
-            removeTopLevelDescriptor(op, builder, targetUser);
-            addImplictDescriptorMapToTargetDataOp(op, builder, targetUser);
-          }
-        });
+        for (auto *op : deferrableDesc) {
+          auto mapOp = llvm::dyn_cast<mlir::omp::MapInfoOp>(op);
+          mlir::Operation *targetUser = getFirstTargetUser(mapOp);
+          assert(targetUser && "expected user of map operation was not found");
+          builder.setInsertionPoint(mapOp);
+          removeTopLevelDescriptor(mapOp, builder, targetUser);
+          addImplictDescriptorMapToTargetDataOp(mapOp, builder, targetUser);
+        }
       }
 
       // Wait until after we have generated all of our maps to add them onto
