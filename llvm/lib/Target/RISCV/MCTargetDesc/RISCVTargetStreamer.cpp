@@ -83,6 +83,7 @@ void RISCVTargetStreamer::emitNoteGnuPropertySection(
   OutStreamer.switchSection(NoteSection);
 
   // Emit the note header
+  OutStreamer.emitValueToAlignment(NoteAlign);
   OutStreamer.emitIntValue(4, 4); // n_namsz
 
   MCSymbol *const NDescBeginSym = Ctx.createTempSymbol();
@@ -97,7 +98,6 @@ void RISCVTargetStreamer::emitNoteGnuPropertySection(
 
   // Emit n_desc field
   OutStreamer.emitLabel(NDescBeginSym);
-  OutStreamer.emitValueToAlignment(NoteAlign);
 
   // Emit the feature_1_and property
   OutStreamer.emitIntValue(ELF::GNU_PROPERTY_RISCV_FEATURE_1_AND, 4); // pr_type
