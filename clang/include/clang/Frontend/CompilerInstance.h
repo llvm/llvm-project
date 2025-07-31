@@ -361,7 +361,7 @@ public:
   }
 
   /// setDiagnostics - Replace the current diagnostics engine.
-  void setDiagnostics(DiagnosticsEngine *Value);
+  void setDiagnostics(llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Value);
 
   DiagnosticConsumer &getDiagnosticClient() const {
     assert(Diagnostics && Diagnostics->getClient() &&
@@ -420,6 +420,8 @@ public:
   /// @{
 
   llvm::vfs::FileSystem &getVirtualFileSystem() const;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+  getVirtualFileSystemPtr() const;
 
   /// @}
   /// @name File Manager
