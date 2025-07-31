@@ -2066,6 +2066,7 @@ defm V_ASHR_PK_I8_I32                : VOP3Only_Realtriple_gfx1250<0x290>;
 defm V_ASHR_PK_U8_I32                : VOP3Only_Realtriple_gfx1250<0x291>;
 defm V_CVT_PK_BF16_F32               : VOP3Only_Realtriple_gfx1250<0x36d>;
 defm V_CVT_SR_PK_BF16_F32            : VOP3Only_Realtriple_gfx1250<0x36e>;
+defm V_CVT_PK_F16_F32                : VOP3Only_Realtriple_gfx1250<0x36f>;
 defm V_CVT_PK_FP8_F16_gfx1250        : VOP3Only_Realtriple_t16_and_fake16_gfx1250<0x372, "v_cvt_pk_fp8_f16">;
 defm V_CVT_PK_BF8_F16_gfx1250        : VOP3Only_Realtriple_t16_and_fake16_gfx1250<0x373, "v_cvt_pk_bf8_f16">;
 defm V_CVT_SR_FP8_F16                : VOP3Only_Realtriple_t16_and_fake16_gfx1250<0x374>;
