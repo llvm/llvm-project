@@ -68,11 +68,9 @@ else()
   endif()
 
   # Check for flang
-  if (NOT MSVC)
-    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang)
-  else()
-    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang.exe)
-  endif()
+  set(OPENMP_TEST_Fortran_COMPILER ${CMAKE_Fortran_COMPILER} CACHE STRING
+    "FORTRAN compiler to use for testing OpenMP runtime libraries.")
+
 
   # Set fortran test compiler if flang is found
   if (EXISTS "${OPENMP_TEST_Fortran_COMPILER}")
