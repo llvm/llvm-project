@@ -41,9 +41,9 @@ A func() {
 // CHECK-NEXT: call i1 @llvm.coro.end
 // CHECK-NEXT: ptr @_ZNK4coroI1AE13RValueWrappercvOS0_Ev
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64
-// CHECK-NEXT: br i1 %never.suspend, label %promise.free.defer, label %coro.ret
+// CHECK-NEXT: br i1 %never.suspend, label %coro.cleanup.defer, label %coro.ret
 
-// CHECK: promise.free.defer:
+// CHECK: coro.cleanup.defer:
 // CHECK-NEXT: call void @_ZN1AD1Ev
 // CHECK-NEXT: call void @llvm.lifetime.end.p0
 // CHECK-NEXT: call ptr @llvm.coro.free

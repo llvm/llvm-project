@@ -16,6 +16,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtVisitor.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -73,10 +74,8 @@ struct clang::CodeGen::CGCoroData {
   // the address of the coroutine frame of the current coroutine.
   llvm::CallInst *CoroBegin = nullptr;
 
-  // Stores call to promise destruction and the llvm.lifetime.end of promise
-  // alloca We will clone them into deferred promise free block.
-  llvm::CallInst *PromiseDtor = nullptr;
-  llvm::CallInst *PromiseEnd = nullptr;
+  // Stores the cloned cleanup block.
+  BasicBlock *DeferCleanupBB = nullptr;
 
   // Stores the llvm.coro.end that identifies if the coroutine exit without
   // suspend.
@@ -616,44 +615,24 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
   void Emit(CodeGenFunction &CGF, Flags) override {
     bool Sinked = CGF.CurCoro.Data->InResume != nullptr;
     if (!Sinked)
-      sinkPromiseBB(CGF);
+      sinkCleanupBB(CGF);
     EmitCoroFree(CGF);
   }
 
   explicit CallCoroDelete(const CoroutineBodyStmt *S) : S(S) {}
 
-  // Sink promise destructor to separate block
-  void sinkPromiseBB(CodeGenFunction &CGF) {
+  // Check if coroutine complete without suspend before cleanup
+  void sinkCleanupBB(CodeGenFunction &CGF) {
     auto &Builder = CGF.Builder;
     auto &CoroData = *CGF.CurCoro.Data;
-    auto *CleanupBB = Builder.GetInsertBlock()->getSinglePredecessor();
-    auto *Promise = CGF.GetAddrOfLocalVar(S->getPromiseDecl()).getBasePointer();
-    llvm::CallInst *PromiseDtor = nullptr;
-    BasicBlock *PromiseBB = nullptr;
-    for (llvm::User *U : Promise->users()) {
-      auto *I = dyn_cast<llvm::CallInst>(U);
-      if (!I || I->getParent() != CleanupBB)
-        continue;
+    auto *SaveInsertPt = Builder.GetInsertBlock();
+    auto *PreCleanupBB = SaveInsertPt->getSinglePredecessor();
 
-      if (I->isLifetimeStartOrEnd()) {
-        assert(!CoroData.PromiseEnd && "Unexpected multiple lifetime.end");
-        I->moveBefore(CleanupBB->getTerminator()->getIterator());
-        PromiseBB = CleanupBB->splitBasicBlock(I, "promise.free");
-        CoroData.PromiseEnd = I;
-      } else {
-        assert(!PromiseDtor && "Unexpected multiple destructor call");
-        PromiseDtor = I;
-      }
-    }
+    auto *CleanupBB =
+        PreCleanupBB->splitBasicBlock(PreCleanupBB->begin(), "coro.cleanup");
 
-    if (PromiseDtor) {
-      PromiseDtor->moveBefore(CoroData.PromiseEnd->getIterator());
-      CoroData.PromiseDtor = PromiseDtor;
-    }
-
-    BasicBlock *SaveInsertBlock = CGF.Builder.GetInsertBlock();
-    CleanupBB->getTerminator()->eraseFromParent();
-    Builder.SetInsertPoint(CleanupBB);
+    PreCleanupBB->getTerminator()->eraseFromParent();
+    Builder.SetInsertPoint(PreCleanupBB);
 
     llvm::Function *CoroEnd = CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_end);
     auto *NullPtr = llvm::ConstantPointerNull::get(CGF.Int8PtrTy);
@@ -664,8 +643,15 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
         "InResume");
 
     BasicBlock *EndBB = CoroData.CleanupJD.getBlock();
-    Builder.CreateCondBr(CoroData.InResume, PromiseBB, EndBB);
-    Builder.SetInsertPoint(SaveInsertBlock);
+    Builder.CreateCondBr(CoroData.InResume, CleanupBB, EndBB);
+    Builder.SetInsertPoint(SaveInsertPt);
+
+    if (S->getReturnStmt()) {
+      // Clone cleanup block before EmitCoroFree()
+      llvm::ValueToValueMapTy VMap{};
+      CoroData.DeferCleanupBB =
+          llvm::CloneBasicBlock(CleanupBB, VMap, ".defer");
+    }
   }
 
   void EmitCoroFree(CodeGenFunction &CGF, const Twine &NameSuffix = "") {
@@ -1045,21 +1031,15 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     if (PreviousRetValue)
       cast<ReturnStmt>(Ret)->setRetValue(PreviousRetValue);
 
-    // Defer destruction of promise if coroutine completed without suspending
-    auto *DeferPromiseBB = createBasicBlock("promise.free.defer");
+    // Defer destruction of coro state if coroutine completed without suspending
+    auto *DeferCleanupBB = CurCoro.Data->DeferCleanupBB;
     auto *RetBB = EndBB->splitBasicBlock(EndBB->getTerminator(), "coro.ret");
     EndBB->getTerminator()->eraseFromParent();
 
     Builder.SetInsertPoint(EndBB);
-    Builder.CreateCondBr(Phi, DeferPromiseBB, RetBB);
+    Builder.CreateCondBr(Phi, DeferCleanupBB, RetBB);
 
-    EmitBlock(DeferPromiseBB);
-    auto *InsertPt = Builder.CreateBr(RetBB);
-    if (auto *I = CurCoro.Data->PromiseDtor)
-      I->clone()->insertBefore(InsertPt->getIterator());
-    CurCoro.Data->PromiseEnd->clone()->insertBefore(InsertPt->getIterator());
-    InsertPt->eraseFromParent();
-
+    EmitBlock(DeferCleanupBB);
     CallCoroDelete(&S).EmitCoroFree(*this, ".defer");
     Builder.CreateBr(RetBB);
     Builder.ClearInsertionPoint();
