@@ -1,5 +1,6 @@
 add_llvm_component_library(LLVMFrontendHLSL
   CBuffer.cpp
+  HLSLBinding.cpp
   HLSLResource.cpp
   HLSLRootSignature.cpp
   RootSignatureMetadata.cpp
