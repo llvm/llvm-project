@@ -48,22 +48,25 @@ static void registerCallbacks(PassBuilder &PB) {
         });
   if (getEnvBool("registerPipelineEarlySimplificationEPCallback", true))
     PB.registerPipelineEarlySimplificationEPCallback(
-        [](ModulePassManager &MPM, OptimizationLevel Opt, ThinOrFullLTOPhase Phase) {
+        [](ModulePassManager &MPM, OptimizationLevel Opt,
+           ThinOrFullLTOPhase Phase) {
           MPM.addPass(InstrumentorPass());
           return true;
         });
   if (getEnvBool("registerOptimizerEarlyEPCallback"))
-    PB.registerOptimizerEarlyEPCallback(
-        [](ModulePassManager &MPM, OptimizationLevel Opt, ThinOrFullLTOPhase Phase) {
-          MPM.addPass(InstrumentorPass());
-          return true;
-        });
+    PB.registerOptimizerEarlyEPCallback([](ModulePassManager &MPM,
+                                           OptimizationLevel Opt,
+                                           ThinOrFullLTOPhase Phase) {
+      MPM.addPass(InstrumentorPass());
+      return true;
+    });
   if (getEnvBool("registerOptimizerLastEPCallback"))
-    PB.registerOptimizerLastEPCallback(
-        [](ModulePassManager &MPM, OptimizationLevel Opt, ThinOrFullLTOPhase Phase) {
-          MPM.addPass(InstrumentorPass());
-          return true;
-        });
+    PB.registerOptimizerLastEPCallback([](ModulePassManager &MPM,
+                                          OptimizationLevel Opt,
+                                          ThinOrFullLTOPhase Phase) {
+      MPM.addPass(InstrumentorPass());
+      return true;
+    });
   if (getEnvBool("registerPipelineParsingCallback"), true)
     PB.registerPipelineParsingCallback(
         [](StringRef Name, ModulePassManager &PM,
