@@ -29,9 +29,19 @@ template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
   return P.match(V);
 }
 
+template <typename Val, typename Pattern>
+std::function<bool(Val *)> match(const Pattern &P) {
+  return [&P](Val *V) { return P.match(V); };
+}
+
 template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
   auto *R = dyn_cast<VPRecipeBase>(U);
   return R && match(R, P);
+}
+
+template <typename Pattern>
+std::function<bool(VPUser *)> match(const Pattern &P) {
+  return [&P](VPUser *U) { return match(U, P); };
 }
 
 template <typename Class> struct class_match {
