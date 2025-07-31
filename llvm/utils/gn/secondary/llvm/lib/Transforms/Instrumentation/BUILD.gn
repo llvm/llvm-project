@@ -28,7 +28,6 @@ static_library("Instrumentation") {
     "NumericalStabilitySanitizer.cpp",
     "PGOCtxProfFlattening.cpp",
     "PGOCtxProfLowering.cpp",
-    "PGOEstimateTripCounts.cpp",
     "PGOForceFunctionAttrs.cpp",
     "PGOInstrumentation.cpp",
     "PGOMemOPSizeOpt.cpp",
