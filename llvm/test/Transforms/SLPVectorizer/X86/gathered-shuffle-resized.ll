@@ -17,10 +17,14 @@ define ptr @test(ptr %0, ptr %args_gep) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[ARG1]], i64 12
 ; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x i32>, ptr [[TMP6]], align 8, !noalias [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4, !noalias [[META0]]
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i32> [[TMP9]], <2 x i32> poison, <16 x i32> <i32 poison, i32 poison, i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP9]], <16 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <7 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i32> [[TMP9]], <2 x i32> poison, <9 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 poison>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i32> [[TMP9]], <2 x i32> poison, <9 x i32> <i32 poison, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x i32> [[TMP9]], <2 x i32> poison, <9 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <9 x i32> [[TMP11]], <9 x i32> [[TMP18]], <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 10>
+; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <7 x i32> [[TMP10]], <7 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <9 x i32> [[TMP19]], <9 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <16 x i32> [[TMP20]], <16 x i32> [[TMP21]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24>
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq <16 x i32> [[TMP13]], zeroinitializer
 ; CHECK-NEXT:    [[TMP15:%.*]] = zext <16 x i1> [[TMP14]] to <16 x i8>
 ; CHECK-NEXT:    store <16 x i8> [[TMP15]], ptr [[TMP5]], align 1

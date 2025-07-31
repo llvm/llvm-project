@@ -7,10 +7,9 @@ define void @test1(ptr %in, ptr %out) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[IN:%.*]], align 1
 ; CHECK-NEXT:    [[OUT:%.*]] = getelementptr inbounds i64, ptr [[OUT1:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <8 x i32> [[TMP4]] to <8 x i64>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i64> [[TMP5]], <8 x i64> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i64> [[TMP5]], <8 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    store <8 x i64> [[TMP1]], ptr [[OUT]], align 8
 ; CHECK-NEXT:    ret void
@@ -19,10 +18,9 @@ define void @test1(ptr %in, ptr %out) {
 ; COMBINE-NEXT:  entry:
 ; COMBINE-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[IN:%.*]], align 1
 ; COMBINE-NEXT:    [[OUT:%.*]] = getelementptr inbounds i64, ptr [[OUT1:%.*]], i64 0
-; COMBINE-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; COMBINE-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; COMBINE-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; COMBINE-NEXT:    [[TMP5:%.*]] = zext <8 x i32> [[TMP4]] to <8 x i64>
-; COMBINE-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i64> [[TMP5]], <8 x i64> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
 ; COMBINE-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i64> [[TMP5]], <8 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; COMBINE-NEXT:    store <8 x i64> [[TMP1]], ptr [[OUT]], align 8
 ; COMBINE-NEXT:    ret void
@@ -53,10 +51,9 @@ define void @test2(ptr %in, ptr %out) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[IN:%.*]], align 1
 ; CHECK-NEXT:    [[OUT:%.*]] = getelementptr inbounds i64, ptr [[OUT1:%.*]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <8 x i32> [[TMP4]] to <8 x i64>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i64> [[TMP1]], <8 x i64> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i64> [[TMP1]], <8 x i64> poison, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    store <8 x i64> [[TMP2]], ptr [[OUT]], align 8
 ; CHECK-NEXT:    ret void
@@ -65,10 +62,9 @@ define void @test2(ptr %in, ptr %out) {
 ; COMBINE-NEXT:  entry:
 ; COMBINE-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[IN:%.*]], align 1
 ; COMBINE-NEXT:    [[OUT:%.*]] = getelementptr inbounds i64, ptr [[OUT1:%.*]], i64 0
-; COMBINE-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; COMBINE-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; COMBINE-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; COMBINE-NEXT:    [[TMP1:%.*]] = zext <8 x i32> [[TMP4]] to <8 x i64>
-; COMBINE-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i64> [[TMP1]], <8 x i64> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
 ; COMBINE-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i64> [[TMP1]], <8 x i64> poison, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 4, i32 5, i32 6, i32 7>
 ; COMBINE-NEXT:    store <8 x i64> [[TMP2]], ptr [[OUT]], align 8
 ; COMBINE-NEXT:    ret void
@@ -97,7 +93,7 @@ entry:
 define void @test3(<16 x i32> %0, ptr %out) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i32> [[TMP0:%.*]], <16 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i32> [[TMP0:%.*]], <16 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[OUT:%.*]] = getelementptr inbounds i32, ptr [[OUT1:%.*]], i64 0
 ; CHECK-NEXT:    store <16 x i32> [[TMP1]], ptr [[OUT]], align 4
@@ -105,7 +101,7 @@ define void @test3(<16 x i32> %0, ptr %out) {
 ;
 ; COMBINE-LABEL: @test3(
 ; COMBINE-NEXT:  entry:
-; COMBINE-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i32> [[TMP0:%.*]], <16 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; COMBINE-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i32> [[TMP0:%.*]], <16 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; COMBINE-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
 ; COMBINE-NEXT:    [[OUT:%.*]] = getelementptr inbounds i32, ptr [[OUT1:%.*]], i64 0
 ; COMBINE-NEXT:    store <16 x i32> [[TMP1]], ptr [[OUT]], align 4
@@ -132,7 +128,7 @@ define void @test4(ptr %in, ptr %out) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[IN:%.*]], align 4
 ; CHECK-NEXT:    [[OUT:%.*]] = getelementptr inbounds i32, ptr [[OUT1:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    store <16 x i32> [[TMP1]], ptr [[OUT]], align 4
@@ -142,7 +138,7 @@ define void @test4(ptr %in, ptr %out) {
 ; COMBINE-NEXT:  entry:
 ; COMBINE-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[IN:%.*]], align 4
 ; COMBINE-NEXT:    [[OUT:%.*]] = getelementptr inbounds i32, ptr [[OUT1:%.*]], i64 0
-; COMBINE-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; COMBINE-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; COMBINE-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; COMBINE-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; COMBINE-NEXT:    store <16 x i32> [[TMP1]], ptr [[OUT]], align 4
@@ -189,36 +185,29 @@ entry:
 define void @test6(ptr %in0, ptr %in1, ptr %in2) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[IN0:%.*]], i64 32
+; CHECK-NEXT:    [[TMP0:%.*]] = load <12 x float>, ptr [[GEP1:%.*]], align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <12 x float> [[TMP0]], <12 x float> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load <4 x float>, ptr [[GEP1]], align 16
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr [[IN0]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <32 x i8>, ptr [[IN1:%.*]], align 1
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <32 x i8> [[TMP1]], <32 x i8> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <32 x i8> [[TMP1]], <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext <32 x i8> [[TMP8]] to <32 x i16>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <32 x i16> [[TMP9]], <32 x i16> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <32 x i16> [[TMP9]], <32 x i16> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    [[TMP2:%.*]] = uitofp <32 x i16> [[TMP10]] to <32 x float>
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <4 x float> [[LOAD2]], <4 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <16 x float> [[TMP14]], <16 x float> [[TMP19]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <16 x float> [[TMP16]], <16 x float> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <32 x float> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    store <32 x float> [[TMP4]], ptr [[IN2:%.*]], align 16
 ; CHECK-NEXT:    [[GEP10:%.*]] = getelementptr inbounds i8, ptr [[IN1]], i64 32
-; CHECK-NEXT:    [[GEP11:%.*]] = getelementptr inbounds i8, ptr [[IN2:%.*]], i64 128
-; CHECK-NEXT:    [[TMP17:%.*]] = load <8 x float>, ptr [[IN0]], align 16
-; CHECK-NEXT:    store <32 x float> [[TMP4]], ptr [[IN2]], align 16
 ; CHECK-NEXT:    [[LOAD5:%.*]] = load <16 x i8>, ptr [[GEP10]], align 1
-; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <16 x i8> [[LOAD5]], <16 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <32 x float> [[TMP3]], <32 x float> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <32 x float> [[TMP3]], <32 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[GEP11:%.*]] = getelementptr inbounds i8, ptr [[IN2]], i64 128
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <16 x i8> [[LOAD5]], <16 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <16 x i8> [[LOAD5]], <16 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP25:%.*]] = zext <16 x i8> [[TMP15]] to <16 x i16>
-; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <16 x i16> [[TMP25]], <16 x i16> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <16 x i16> [[TMP25]], <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP6:%.*]] = uitofp <16 x i16> [[TMP18]] to <16 x float>
-; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <8 x float> [[TMP17]], <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <4 x float> [[TMP20]], <4 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <16 x float> [[TMP19]], <16 x float> [[TMP21]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 16, i32 17, i32 18, i32 19, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <8 x float> [[TMP17]], <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <4 x float> [[LOAD2]], <4 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <16 x float> [[TMP21]], <16 x float> [[TMP16]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 16, i32 17, i32 18, i32 19, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <4 x float> [[TMP23]], <4 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <16 x float> [[TMP22]], <16 x float> [[TMP24]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <16 x float> [[TMP11]], <16 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 2, i32 3>
@@ -228,36 +217,29 @@ define void @test6(ptr %in0, ptr %in1, ptr %in2) {
 ;
 ; COMBINE-LABEL: @test6(
 ; COMBINE-NEXT:  entry:
-; COMBINE-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[IN0:%.*]], i64 32
+; COMBINE-NEXT:    [[TMP0:%.*]] = load <12 x float>, ptr [[GEP1:%.*]], align 16
+; COMBINE-NEXT:    [[TMP6:%.*]] = shufflevector <12 x float> [[TMP0]], <12 x float> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; COMBINE-NEXT:    [[LOAD2:%.*]] = load <4 x float>, ptr [[GEP1]], align 16
-; COMBINE-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr [[IN0]], align 16
 ; COMBINE-NEXT:    [[TMP1:%.*]] = load <32 x i8>, ptr [[IN1:%.*]], align 1
-; COMBINE-NEXT:    [[TMP10:%.*]] = shufflevector <32 x i8> [[TMP1]], <32 x i8> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; COMBINE-NEXT:    [[TMP11:%.*]] = shufflevector <32 x i8> [[TMP1]], <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; COMBINE-NEXT:    [[TMP4:%.*]] = zext <32 x i8> [[TMP11]] to <32 x i16>
-; COMBINE-NEXT:    [[TMP12:%.*]] = shufflevector <32 x i16> [[TMP4]], <32 x i16> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; COMBINE-NEXT:    [[TMP19:%.*]] = shufflevector <32 x i16> [[TMP4]], <32 x i16> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; COMBINE-NEXT:    [[TMP2:%.*]] = uitofp <32 x i16> [[TMP19]] to <32 x float>
-; COMBINE-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; COMBINE-NEXT:    [[TMP13:%.*]] = shufflevector <4 x float> [[LOAD2]], <4 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; COMBINE-NEXT:    [[TMP5:%.*]] = shufflevector <16 x float> [[TMP3]], <16 x float> [[TMP13]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 12, i32 13, i32 14, i32 15>
-; COMBINE-NEXT:    [[TMP6:%.*]] = shufflevector <16 x float> [[TMP5]], <16 x float> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; COMBINE-NEXT:    [[TMP7:%.*]] = fmul <32 x float> [[TMP6]], [[TMP2]]
+; COMBINE-NEXT:    store <32 x float> [[TMP7]], ptr [[IN2:%.*]], align 16
 ; COMBINE-NEXT:    [[GEP10:%.*]] = getelementptr inbounds i8, ptr [[IN1]], i64 32
-; COMBINE-NEXT:    [[GEP11:%.*]] = getelementptr inbounds i8, ptr [[IN2:%.*]], i64 128
-; COMBINE-NEXT:    [[TMP8:%.*]] = load <8 x float>, ptr [[IN0]], align 16
-; COMBINE-NEXT:    store <32 x float> [[TMP7]], ptr [[IN2]], align 16
 ; COMBINE-NEXT:    [[LOAD5:%.*]] = load <16 x i8>, ptr [[GEP10]], align 1
-; COMBINE-NEXT:    [[TMP14:%.*]] = shufflevector <16 x i8> [[LOAD5]], <16 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; COMBINE-NEXT:    [[TMP20:%.*]] = shufflevector <32 x float> [[TMP6]], <32 x float> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; COMBINE-NEXT:    [[TMP23:%.*]] = shufflevector <32 x float> [[TMP6]], <32 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; COMBINE-NEXT:    [[GEP11:%.*]] = getelementptr inbounds i8, ptr [[IN2]], i64 128
+; COMBINE-NEXT:    [[TMP10:%.*]] = shufflevector <16 x i8> [[LOAD5]], <16 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; COMBINE-NEXT:    [[TMP24:%.*]] = shufflevector <16 x i8> [[LOAD5]], <16 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; COMBINE-NEXT:    [[TMP25:%.*]] = zext <16 x i8> [[TMP24]] to <16 x i16>
-; COMBINE-NEXT:    [[TMP26:%.*]] = shufflevector <16 x i16> [[TMP25]], <16 x i16> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; COMBINE-NEXT:    [[TMP18:%.*]] = shufflevector <16 x i16> [[TMP25]], <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; COMBINE-NEXT:    [[TMP9:%.*]] = uitofp <16 x i16> [[TMP18]] to <16 x float>
-; COMBINE-NEXT:    [[TMP20:%.*]] = shufflevector <8 x float> [[TMP8]], <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; COMBINE-NEXT:    [[TMP21:%.*]] = shufflevector <4 x float> [[TMP20]], <4 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; COMBINE-NEXT:    [[TMP22:%.*]] = shufflevector <16 x float> [[TMP13]], <16 x float> [[TMP21]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 16, i32 17, i32 18, i32 19, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; COMBINE-NEXT:    [[TMP23:%.*]] = shufflevector <8 x float> [[TMP8]], <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; COMBINE-NEXT:    [[TMP26:%.*]] = shufflevector <4 x float> [[LOAD2]], <4 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; COMBINE-NEXT:    [[TMP22:%.*]] = shufflevector <16 x float> [[TMP21]], <16 x float> [[TMP26]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 16, i32 17, i32 18, i32 19, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; COMBINE-NEXT:    [[TMP27:%.*]] = shufflevector <4 x float> [[TMP23]], <4 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; COMBINE-NEXT:    [[TMP15:%.*]] = shufflevector <16 x float> [[TMP22]], <16 x float> [[TMP27]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 12, i32 13, i32 14, i32 15>
 ; COMBINE-NEXT:    [[TMP16:%.*]] = shufflevector <16 x float> [[TMP15]], <16 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 2, i32 3>

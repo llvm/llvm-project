@@ -124,16 +124,16 @@ define <4 x i32> @build_vec_v4i32_reuse_0(<2 x i32> %v0, <2 x i32> %v1) {
 
 define <4 x i32> @build_vec_v4i32_reuse_1(<2 x i32> %v0, <2 x i32> %v1) {
 ; CHECK-LABEL: @build_vec_v4i32_reuse_1(
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[V0:%.*]], <2 x i32> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[V1:%.*]], <2 x i32> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP4:%.*]] = xor <4 x i32> [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[V0]], <2 x i32> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[V1]], <2 x i32> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP11:%.*]] = xor <4 x i32> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> [[TMP11]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[V0:%.*]], <2 x i32> poison, <3 x i32> <i32 0, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[V1:%.*]], <2 x i32> poison, <3 x i32> <i32 0, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <3 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = xor <3 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <3 x i32> [[TMP3]], <3 x i32> [[TMP4]], <4 x i32> <i32 0, i32 0, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[V0]], <2 x i32> poison, <3 x i32> <i32 1, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[V1]], <2 x i32> poison, <3 x i32> <i32 1, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP8:%.*]] = add <3 x i32> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP11:%.*]] = xor <3 x i32> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <3 x i32> [[TMP8]], <3 x i32> [[TMP11]], <4 x i32> <i32 0, i32 0, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub <4 x i32> [[TMP5]], [[TMP10]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP9]]
 ;

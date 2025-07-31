@@ -39,10 +39,10 @@ define i1 @test(ptr %arg, ptr %i233, i64 %i241, ptr %i235, ptr %i237, ptr %i227)
 ; AARCH64-NEXT:    [[TMP2:%.*]] = insertelement <8 x ptr> <ptr poison, ptr null, ptr poison, ptr null, ptr null, ptr null, ptr null, ptr null>, ptr [[I242]], i32 0
 ; AARCH64-NEXT:    [[TMP3:%.*]] = insertelement <8 x ptr> [[TMP2]], ptr [[I250]], i32 2
 ; AARCH64-NEXT:    [[TMP4:%.*]] = icmp ult <8 x ptr> [[TMP3]], [[TMP1]]
-; AARCH64-NEXT:    [[TMP5:%.*]] = shufflevector <8 x ptr> [[TMP3]], <8 x ptr> poison, <4 x i32> <i32 2, i32 0, i32 poison, i32 poison>
-; AARCH64-NEXT:    [[TMP6:%.*]] = insertelement <4 x ptr> [[TMP5]], ptr [[I245]], i32 2
-; AARCH64-NEXT:    [[TMP7:%.*]] = insertelement <4 x ptr> [[TMP6]], ptr [[I248]], i32 3
-; AARCH64-NEXT:    [[TMP8:%.*]] = shufflevector <4 x ptr> [[TMP7]], <4 x ptr> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+; AARCH64-NEXT:    [[TMP5:%.*]] = shufflevector <8 x ptr> [[TMP3]], <8 x ptr> poison, <8 x i32> <i32 2, i32 0, i32 poison, i32 poison, i32 2, i32 0, i32 poison, i32 poison>
+; AARCH64-NEXT:    [[TMP6:%.*]] = insertelement <8 x ptr> [[TMP5]], ptr [[I245]], i32 2
+; AARCH64-NEXT:    [[TMP7:%.*]] = insertelement <8 x ptr> [[TMP6]], ptr [[I248]], i32 3
+; AARCH64-NEXT:    [[TMP8:%.*]] = shufflevector <8 x ptr> [[TMP7]], <8 x ptr> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 2, i32 3>
 ; AARCH64-NEXT:    [[TMP9:%.*]] = shufflevector <8 x ptr> [[TMP1]], <8 x ptr> <ptr poison, ptr null, ptr poison, ptr null, ptr null, ptr null, ptr null, ptr null>, <8 x i32> <i32 1, i32 9, i32 0, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; AARCH64-NEXT:    [[TMP10:%.*]] = icmp ult <8 x ptr> [[TMP8]], [[TMP9]]
 ; AARCH64-NEXT:    [[TMP11:%.*]] = or <8 x i1> [[TMP4]], [[TMP10]]

@@ -643,7 +643,6 @@ define void @gather_load_div(ptr noalias nocapture %0, ptr noalias nocapture rea
 ;
 ; AVX512F-LABEL: @gather_load_div(
 ; AVX512F-NEXT:    [[TMP3:%.*]] = call <45 x float> @llvm.masked.load.v45f32.p0(ptr [[TMP1:%.*]], i32 4, <45 x i1> <i1 true, i1 false, i1 false, i1 true, i1 true, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>, <45 x float> poison), !tbaa [[TBAA0]]
-; AVX512F-NEXT:    [[TMP4:%.*]] = shufflevector <45 x float> [[TMP3]], <45 x float> poison, <16 x i32> <i32 0, i32 3, i32 4, i32 5, i32 8, i32 10, i32 11, i32 13, i32 14, i32 17, i32 20, i32 23, i32 27, i32 30, i32 33, i32 44>
 ; AVX512F-NEXT:    [[TMP7:%.*]] = shufflevector <45 x float> [[TMP3]], <45 x float> poison, <8 x i32> <i32 0, i32 3, i32 5, i32 8, i32 10, i32 14, i32 17, i32 20>
 ; AVX512F-NEXT:    [[TMP8:%.*]] = shufflevector <45 x float> [[TMP3]], <45 x float> poison, <8 x i32> <i32 4, i32 11, i32 27, i32 30, i32 13, i32 44, i32 33, i32 23>
 ; AVX512F-NEXT:    [[TMP9:%.*]] = fdiv <8 x float> [[TMP7]], [[TMP8]]
@@ -653,7 +652,6 @@ define void @gather_load_div(ptr noalias nocapture %0, ptr noalias nocapture rea
 ;
 ; AVX512VL-LABEL: @gather_load_div(
 ; AVX512VL-NEXT:    [[TMP3:%.*]] = call <45 x float> @llvm.masked.load.v45f32.p0(ptr [[TMP1:%.*]], i32 4, <45 x i1> <i1 true, i1 false, i1 false, i1 true, i1 true, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>, <45 x float> poison), !tbaa [[TBAA0]]
-; AVX512VL-NEXT:    [[TMP4:%.*]] = shufflevector <45 x float> [[TMP3]], <45 x float> poison, <16 x i32> <i32 0, i32 3, i32 4, i32 5, i32 8, i32 10, i32 11, i32 13, i32 14, i32 17, i32 20, i32 23, i32 27, i32 30, i32 33, i32 44>
 ; AVX512VL-NEXT:    [[TMP7:%.*]] = shufflevector <45 x float> [[TMP3]], <45 x float> poison, <8 x i32> <i32 0, i32 3, i32 5, i32 8, i32 10, i32 14, i32 17, i32 20>
 ; AVX512VL-NEXT:    [[TMP8:%.*]] = shufflevector <45 x float> [[TMP3]], <45 x float> poison, <8 x i32> <i32 4, i32 11, i32 27, i32 30, i32 13, i32 44, i32 33, i32 23>
 ; AVX512VL-NEXT:    [[TMP9:%.*]] = fdiv <8 x float> [[TMP7]], [[TMP8]]
