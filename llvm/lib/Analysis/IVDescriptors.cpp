@@ -898,9 +898,19 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
   case Instruction::PHI:
     return InstDesc(I, Prev.getRecKind(), Prev.getExactFPMathInst());
   case Instruction::Sub:
-    return InstDesc(Kind == RecurKind::Sub, I);
+    if (Prev.getRecKind() == RecurKind::Add && Kind == RecurKind::Add)
+      return InstDesc(I, Prev.getRecKind());
+    else if (Kind == RecurKind::Sub)
+      return InstDesc(I, Kind);
+    else
+      return InstDesc(false, I);
   case Instruction::Add:
-    return InstDesc(Kind == RecurKind::Add || Kind == RecurKind::Sub, I);
+    if (Prev.getRecKind() == RecurKind::Sub && Kind == RecurKind::Sub)
+      return InstDesc(I, Prev.getRecKind());
+    else if (Kind == RecurKind::Add)
+      return InstDesc(I, Kind);
+    else
+      return InstDesc(false, I);
   case Instruction::Mul:
     return InstDesc(Kind == RecurKind::Mul, I);
   case Instruction::And:
