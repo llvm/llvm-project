@@ -3344,7 +3344,7 @@ static bool allowApproxFunc(const MachineFunction &MF, unsigned Flags) {
   if (Flags & MachineInstr::FmAfn)
     return true;
   const auto &Options = MF.getTarget().Options;
-  return Options.UnsafeFPMath || Options.ApproxFuncFPMath;
+  return Options.ApproxFuncFPMath;
 }
 
 static bool needsDenormHandlingF32(const MachineFunction &MF, Register Src,
@@ -3450,7 +3450,7 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
       static_cast<const AMDGPUTargetMachine &>(MF.getTarget());
 
   if (Ty == F16 || MI.getFlag(MachineInstr::FmAfn) ||
-      TM.Options.ApproxFuncFPMath || TM.Options.UnsafeFPMath) {
+      TM.Options.ApproxFuncFPMath) {
     if (Ty == F16 && !ST.has16BitInsts()) {
       Register LogVal = MRI.createGenericVirtualRegister(F32);
       auto PromoteSrc = B.buildFPExt(F32, X);
@@ -4877,9 +4877,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
   uint16_t Flags = MI.getFlags();
   LLT ResTy = MRI.getType(Res);
 
-  const MachineFunction &MF = B.getMF();
-  bool AllowInaccurateRcp = MI.getFlag(MachineInstr::FmAfn) ||
-                            MF.getTarget().Options.UnsafeFPMath;
+  bool AllowInaccurateRcp = MI.getFlag(MachineInstr::FmAfn);
 
   if (const auto *CLHS = getConstantFPVRegVal(LHS, MRI)) {
     if (!AllowInaccurateRcp && ResTy != LLT::scalar(16))
@@ -4939,9 +4937,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV64(MachineInstr &MI,
   uint16_t Flags = MI.getFlags();
   LLT ResTy = MRI.getType(Res);
 
-  const MachineFunction &MF = B.getMF();
-  bool AllowInaccurateRcp = MF.getTarget().Options.UnsafeFPMath ||
-                            MI.getFlag(MachineInstr::FmAfn);
+  bool AllowInaccurateRcp = MI.getFlag(MachineInstr::FmAfn);
 
   if (!AllowInaccurateRcp)
     return false;
