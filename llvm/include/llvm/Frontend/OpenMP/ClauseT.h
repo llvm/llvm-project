@@ -578,8 +578,9 @@ struct DynamicAllocatorsT {
 template <typename T, typename I, typename E> //
 struct EnterT {
   using List = ObjectListT<I, E>;
-  using WrapperTrait = std::true_type;
-  List v;
+  ENUM(Modifier, Automap);
+  using TupleTrait = std::true_type;
+  std::tuple<OPT(Modifier), List> t;
 };
 
 // V5.2: [5.6.2] `exclusive` clause

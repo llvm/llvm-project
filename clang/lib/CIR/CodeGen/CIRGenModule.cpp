@@ -1298,6 +1298,7 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
              decl->getDeclKindName());
     break;
 
+  case Decl::CXXConversion:
   case Decl::CXXMethod:
   case Decl::Function: {
     auto *fd = cast<FunctionDecl>(decl);
@@ -1307,8 +1308,13 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     break;
   }
 
-  case Decl::Var: {
+  case Decl::Var:
+  case Decl::Decomposition: {
     auto *vd = cast<VarDecl>(decl);
+    if (isa<DecompositionDecl>(decl)) {
+      errorNYI(decl->getSourceRange(), "global variable decompositions");
+      break;
+    }
     emitGlobal(vd);
     break;
   }
@@ -1330,8 +1336,14 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     break;
 
   // No code generation needed.
-  case Decl::UsingShadow:
+  case Decl::ClassTemplate:
+  case Decl::Concept:
+  case Decl::CXXDeductionGuide:
   case Decl::Empty:
+  case Decl::FunctionTemplate:
+  case Decl::StaticAssert:
+  case Decl::TypeAliasTemplate:
+  case Decl::UsingShadow:
     break;
 
   case Decl::CXXConstructor:

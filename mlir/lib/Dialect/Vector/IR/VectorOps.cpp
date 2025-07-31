@@ -6316,6 +6316,11 @@ std::optional<SmallVector<int64_t, 4>> TransposeOp::getShapeForUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
 }
 
+void TransposeOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                    SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges.front());
+}
+
 namespace {
 
 // Rewrites two back-to-back TransposeOp operations into a single TransposeOp.
@@ -7195,6 +7200,23 @@ Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
 
   assert(result && "unknown CombiningKind");
   return selectPassthru(b, mask, result, acc);
+}
+
+//===----------------------------------------------------------------------===//
+// StepOp
+//===----------------------------------------------------------------------===//
+
+void StepOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                               SetIntRangeFn setResultRanges) {
+  auto resultType = cast<VectorType>(getType());
+  if (resultType.isScalable()) {
+    return;
+  }
+  unsigned bitwidth = ConstantIntRanges::getStorageBitwidth(resultType);
+  APInt zero(bitwidth, 0);
+  APInt high(bitwidth, resultType.getDimSize(0) - 1);
+  ConstantIntRanges result = {zero, high, zero, high};
+  setResultRanges(getResult(), result);
 }
 
 //===----------------------------------------------------------------------===//

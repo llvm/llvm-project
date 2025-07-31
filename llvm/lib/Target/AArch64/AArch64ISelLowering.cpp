@@ -8952,6 +8952,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   bool &IsTailCall = CLI.IsTailCall;
   CallingConv::ID &CallConv = CLI.CallConv;
   bool IsVarArg = CLI.IsVarArg;
+  const CallBase *CB = CLI.CB;
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFunction::CallSiteInfo CSInfo;
@@ -8990,6 +8991,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   CCState RetCCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), RVLocs,
                     *DAG.getContext());
   RetCCInfo.AnalyzeCallResult(Ins, RetCC);
+
+  // Set type id for call site info.
+  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
+    CSInfo = MachineFunction::CallSiteInfo(*CB);
 
   // Check callee args/returns for SVE registers and set calling convention
   // accordingly.
@@ -11384,6 +11389,22 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
         Shift = DAG.getNOT(DL, Shift, VT);
 
       return DAG.getNode(ISD::AND, DL, VT, LHS, Shift);
+    }
+
+    // Canonicalise absolute difference patterns:
+    //   select_cc lhs, rhs, sub(lhs, rhs), sub(rhs, lhs), cc ->
+    //   select_cc lhs, rhs, sub(lhs, rhs), neg(sub(lhs, rhs)), cc
+    //
+    //   select_cc lhs, rhs, sub(rhs, lhs), sub(lhs, rhs), cc ->
+    //   select_cc lhs, rhs, neg(sub(lhs, rhs)), sub(lhs, rhs), cc
+    // The second forms can be matched into subs+cneg.
+    if (TVal.getOpcode() == ISD::SUB && FVal.getOpcode() == ISD::SUB) {
+      if (TVal.getOperand(0) == LHS && TVal.getOperand(1) == RHS &&
+          FVal.getOperand(0) == RHS && FVal.getOperand(1) == LHS)
+        FVal = DAG.getNegative(TVal, DL, TVal.getValueType());
+      else if (TVal.getOperand(0) == RHS && TVal.getOperand(1) == LHS &&
+               FVal.getOperand(0) == LHS && FVal.getOperand(1) == RHS)
+        TVal = DAG.getNegative(FVal, DL, FVal.getValueType());
     }
 
     unsigned Opcode = AArch64ISD::CSEL;
@@ -24112,6 +24133,60 @@ static SDValue combineBoolVectorAndTruncateStore(SelectionDAG &DAG,
                       Store->getMemOperand());
 }
 
+// Combine store (fp_to_int X) to use vector semantics around the conversion
+// when NEON is available. This allows us to store the in-vector result directly
+// without transferring the result into a GPR in the process.
+static SDValue combineStoreValueFPToInt(StoreSDNode *ST,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        SelectionDAG &DAG,
+                                        const AArch64Subtarget *Subtarget) {
+  // Limit to post-legalization in order to avoid peeling truncating stores.
+  if (DCI.isBeforeLegalize())
+    return SDValue();
+  if (!Subtarget->isNeonAvailable())
+    return SDValue();
+  // Source operand is already a vector.
+  SDValue Value = ST->getValue();
+  if (Value.getValueType().isVector())
+    return SDValue();
+
+  // Look through potential assertions.
+  while (Value->isAssert())
+    Value = Value.getOperand(0);
+
+  if (Value.getOpcode() != ISD::FP_TO_SINT &&
+      Value.getOpcode() != ISD::FP_TO_UINT)
+    return SDValue();
+  if (!Value->hasOneUse())
+    return SDValue();
+
+  SDValue FPSrc = Value.getOperand(0);
+  EVT SrcVT = FPSrc.getValueType();
+  if (SrcVT != MVT::f32 && SrcVT != MVT::f64)
+    return SDValue();
+
+  // No support for assignments such as i64 = fp_to_sint i32
+  EVT VT = Value.getSimpleValueType();
+  if (VT != SrcVT.changeTypeToInteger())
+    return SDValue();
+
+  // Create a 128-bit element vector to avoid widening. The floating point
+  // conversion is transformed into a single element conversion via a pattern.
+  unsigned NumElements = 128 / SrcVT.getFixedSizeInBits();
+  EVT VecSrcVT = EVT::getVectorVT(*DAG.getContext(), SrcVT, NumElements);
+  EVT VecDstVT = VecSrcVT.changeTypeToInteger();
+  SDLoc DL(ST);
+  SDValue VecFP = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecSrcVT, FPSrc);
+  SDValue VecConv = DAG.getNode(Value.getOpcode(), DL, VecDstVT, VecFP);
+
+  SDValue Zero = DAG.getVectorIdxConstant(0, DL);
+  SDValue Extracted =
+      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, VecConv, Zero);
+
+  DCI.CombineTo(ST->getValue().getNode(), Extracted);
+  return SDValue(ST, 0);
+}
+
 bool isHalvingTruncateOfLegalScalableType(EVT SrcVT, EVT DstVT) {
   return (SrcVT == MVT::nxv8i16 && DstVT == MVT::nxv8i8) ||
          (SrcVT == MVT::nxv4i32 && DstVT == MVT::nxv4i16) ||
@@ -24193,6 +24268,9 @@ static SDValue performSTORECombine(SDNode *N,
   EVT MemVT = ST->getMemoryVT();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc DL(ST);
+
+  if (SDValue Res = combineStoreValueFPToInt(ST, DCI, DAG, Subtarget))
+    return Res;
 
   auto hasValidElementTypeForFPTruncStore = [](EVT VT) {
     EVT EltVT = VT.getVectorElementType();
@@ -26926,6 +27004,23 @@ static SDValue performSHLCombine(SDNode *N,
   return DAG.getNode(ISD::AND, DL, VT, NewShift, NewRHS);
 }
 
+static SDValue performRNDRCombine(SDNode *N, SelectionDAG &DAG) {
+  unsigned IntrinsicID = N->getConstantOperandVal(1);
+  auto Register =
+      (IntrinsicID == Intrinsic::aarch64_rndr ? AArch64SysReg::RNDR
+                                              : AArch64SysReg::RNDRRS);
+  SDLoc DL(N);
+  SDValue A = DAG.getNode(
+      AArch64ISD::MRS, DL, DAG.getVTList(MVT::i64, FlagsVT, MVT::Other),
+      N->getOperand(0), DAG.getConstant(Register, DL, MVT::i32));
+  SDValue B = DAG.getNode(
+      AArch64ISD::CSINC, DL, MVT::i32, DAG.getConstant(0, DL, MVT::i32),
+      DAG.getConstant(0, DL, MVT::i32),
+      DAG.getConstant(AArch64CC::NE, DL, MVT::i32), A.getValue(1));
+  return DAG.getMergeValues(
+      {A, DAG.getZExtOrTrunc(B, DL, MVT::i1), A.getValue(2)}, DL);
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -27241,22 +27336,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     case Intrinsic::aarch64_sve_st1_scatter_scalar_offset:
       return performScatterStoreCombine(N, DAG, AArch64ISD::SST1_IMM_PRED);
     case Intrinsic::aarch64_rndr:
-    case Intrinsic::aarch64_rndrrs: {
-      unsigned IntrinsicID = N->getConstantOperandVal(1);
-      auto Register =
-          (IntrinsicID == Intrinsic::aarch64_rndr ? AArch64SysReg::RNDR
-                                                  : AArch64SysReg::RNDRRS);
-      SDLoc DL(N);
-      SDValue A = DAG.getNode(
-          AArch64ISD::MRS, DL, DAG.getVTList(MVT::i64, FlagsVT, MVT::Other),
-          N->getOperand(0), DAG.getConstant(Register, DL, MVT::i32));
-      SDValue B = DAG.getNode(
-          AArch64ISD::CSINC, DL, MVT::i32, DAG.getConstant(0, DL, MVT::i32),
-          DAG.getConstant(0, DL, MVT::i32),
-          DAG.getConstant(AArch64CC::NE, DL, MVT::i32), A.getValue(1));
-      return DAG.getMergeValues(
-          {A, DAG.getZExtOrTrunc(B, DL, MVT::i1), A.getValue(2)}, DL);
-    }
+    case Intrinsic::aarch64_rndrrs:
+      return performRNDRCombine(N, DAG);
     case Intrinsic::aarch64_sme_ldr_zt:
       return DAG.getNode(AArch64ISD::RESTORE_ZT, SDLoc(N),
                          DAG.getVTList(MVT::Other), N->getOperand(0),
