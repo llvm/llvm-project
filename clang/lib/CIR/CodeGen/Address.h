@@ -101,6 +101,13 @@ public:
   }
 
   clang::CharUnits getAlignment() const { return alignment; }
+
+  /// Get the operation which defines this address.
+  mlir::Operation *getDefiningOp() const {
+    if (!isValid())
+      return nullptr;
+    return getPointer().getDefiningOp();
+  }
 };
 
 } // namespace clang::CIRGen
