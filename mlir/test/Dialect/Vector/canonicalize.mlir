@@ -1330,16 +1330,46 @@ func.func @fold_consecutive_broadcasts(%a : i32) -> vector<4x16xi32> {
 
 // -----
 
-// CHECK-LABEL: shape_cast_constant
+// CHECK-LABEL: shape_cast_splat_constant
 //       CHECK-DAG: %[[CST1:.*]] = arith.constant dense<1> : vector<3x4x2xi32>
 //       CHECK-DAG: %[[CST0:.*]] = arith.constant dense<2.000000e+00> : vector<20x2xf32>
 //       CHECK: return %[[CST0]], %[[CST1]] : vector<20x2xf32>, vector<3x4x2xi32>
-func.func @shape_cast_constant() -> (vector<20x2xf32>, vector<3x4x2xi32>) {
+func.func @shape_cast_splat_constant() -> (vector<20x2xf32>, vector<3x4x2xi32>) {
   %cst = arith.constant dense<2.000000e+00> : vector<5x4x2xf32>
   %cst_1 = arith.constant dense<1> : vector<12x2xi32>
   %0 = vector.shape_cast %cst : vector<5x4x2xf32> to vector<20x2xf32>
   %1 = vector.shape_cast %cst_1 : vector<12x2xi32> to vector<3x4x2xi32>
   return %0, %1 : vector<20x2xf32>, vector<3x4x2xi32>
+}
+
+// -----
+
+// Test of shape_cast's fold method:
+// shape_cast(constant) -> constant.
+//
+// CHECK-LABEL: @shape_cast_dense_int_constant
+//               CHECK: %[[CST:.*]] = arith.constant
+// CHECK-SAME{LITERAL}: dense<[[2, 3, 5], [7, 11, 13]]>
+//               CHECK: return %[[CST]] : vector<2x3xi8>
+func.func @shape_cast_dense_int_constant() -> vector<2x3xi8> {
+  %cst = arith.constant dense<[2, 3, 5, 7, 11, 13]> : vector<6xi8>
+  %0 = vector.shape_cast %cst : vector<6xi8> to vector<2x3xi8>
+  return %0 : vector<2x3xi8>
+}
+
+// -----
+
+// Test of shape_cast fold's method:
+// (shape_cast(const_x), const_x) -> (const_x_folded, const_x)
+//
+// CHECK-LABEL: @shape_cast_dense_float_constant
+//  CHECK-DAG: %[[CST0:.*]] = {{.*}}1.000000e+00, 2.000000e+00{{.*}} vector<1x2xf32>
+//  CHECK-DAG: %[[CST1:.*]] = {{.*}}1.000000e+00, 2.000000e+00{{.*}} vector<2xf32>
+//      CHECK: return %[[CST1]], %[[CST0]] : vector<2xf32>, vector<1x2xf32>
+func.func @shape_cast_dense_float_constant() -> (vector<2xf32>, vector<1x2xf32>){
+  %cst = arith.constant dense<[[1.0, 2.0]]> : vector<1x2xf32>
+  %0 = vector.shape_cast %cst : vector<1x2xf32> to vector<2xf32>
+  return %0, %cst : vector<2xf32>, vector<1x2xf32>
 }
 
 // -----

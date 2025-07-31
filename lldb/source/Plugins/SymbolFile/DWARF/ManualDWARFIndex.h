@@ -50,12 +50,13 @@ public:
                 llvm::function_ref<bool(DWARFDIE die)> callback) override;
   void GetNamespaces(ConstString name,
                      llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void GetFunctions(const Module::LookupInfo &lookup_info,
-                    SymbolFileDWARF &dwarf,
-                    const CompilerDeclContext &parent_decl_ctx,
-                    llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void GetFunctions(const RegularExpression &regex,
-                    llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void GetFunctions(
+      const Module::LookupInfo &lookup_info, SymbolFileDWARF &dwarf,
+      const CompilerDeclContext &parent_decl_ctx,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void GetFunctions(
+      const RegularExpression &regex,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
 
   void Dump(Stream &s) override;
 
