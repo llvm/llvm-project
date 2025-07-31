@@ -1879,19 +1879,12 @@ static VectorType getCollapsedVecType(VectorType type,
   return VectorType::get(newShape, type.getElementType(), newScalableFlags);
 }
 
-/// Vectorize `linalg.unpack` into:
+/// Vectorize `linalg.unpack` as:
 ///   * xfer_read -> vector.transpose -> vector.shape_cast -> xfer_write
 ///
-/// The input-vector-sizes specify both the read and the write vector
-/// sizes and are passed as one array covering both operations, i.e.:
-///
-///  input-vector-sizes = [1, 1, 8, [8],  8, [8]]
-///                        \         /    \    /
-///                        read-sizes   write-sizes
-///
-/// (for brefity, in the diagram,
-///    * input-vector-sizes = `inputVectorSizes` + `inputScalableDims`
-/// )
+/// The input-vector-sizes specify the read vector sizes (i.e. the vector sizes
+/// for the xfer_read operation). This is sufficient to infer the other vector
+/// sizes required here.
 ///
 /// If the vector sizes are not provided:
 ///  * the vector sizes are determined by the operands,
@@ -1914,8 +1907,7 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
                           ArrayRef<bool> inputScalableVecDims,
                           SmallVectorImpl<Value> &newResults) {
   if (!inputVectorSizes.empty()) {
-    assert(inputVectorSizes.size() ==
-               unpackOp.getDestRank() + unpackOp.getSourceRank() &&
+    assert(inputVectorSizes.size() == unpackOp.getSourceRank() &&
            "Invalid number of input vector sizes!");
     assert(inputVectorSizes.size() == inputScalableVecDims.size() &&
            "Incompatible number of vector sizes and vector scalable flags!");
@@ -1935,22 +1927,15 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
 
   // 1. Obtain vector sizes for the read and write operations.
   SmallVector<int64_t> readVectorSizes;
-  SmallVector<int64_t> writeVectorSizes;
   SmallVector<bool> readScalableVectorFlags;
-  SmallVector<bool> writeScalableVectorFlags;
 
   if (!inputVectorSizes.empty()) {
     // CASE 1.1: Vector sizes are user-specified.
     readVectorSizes.assign(inputVectorSizes.begin(),
                            inputVectorSizes.begin() + sourceShape.size());
-    writeVectorSizes.assign(inputVectorSizes.begin() + sourceShape.size(),
-                            inputVectorSizes.end());
     readScalableVectorFlags.assign(inputScalableVecDims.begin(),
                                    inputScalableVecDims.begin() +
                                        sourceShape.size());
-    writeScalableVectorFlags.assign(inputScalableVecDims.begin() +
-                                        sourceShape.size(),
-                                    inputScalableVecDims.end());
   } else {
     // CASE 1.2: Vector sizes are inferred from the static input tensor
     // shapes.
@@ -1959,7 +1944,6 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
       return failure();
 
     readVectorSizes.assign(sourceShape.begin(), sourceShape.end());
-    writeVectorSizes.assign(destShape.begin(), destShape.end());
     useInBoundsInsteadOfMasking = true;
   }
 
@@ -2109,28 +2093,18 @@ vectorizeUnPackOpPrecondition(linalg::UnPackOp unpackOp,
       unpackOp.getSourceType().hasStaticShape())
     return success();
 
-  // The input vector sizes must be equal to:
-  //  * read-vector-rank + write-vector-rank
+  // The number of input vector sizes must be equal to:
+  //  * read-vector-rank
   if (!inputVectorSizes.empty() &&
-      (inputVectorSizes.size() !=
-       unpackOp.getDestRank() + unpackOp.getSourceRank())) {
+      (inputVectorSizes.size() != unpackOp.getSourceRank())) {
     LDBG() << "Incorrect number of input vector sizes";
     return failure();
   }
 
   // Check the vector sizes for the read operation.
   if (failed(vector::isValidMaskedInputVector(
-          unpackOp.getSourceType().getShape(),
-          inputVectorSizes.take_front(unpackOp.getSourceRank())))) {
+          unpackOp.getSourceType().getShape(), inputVectorSizes))) {
     LDBG() << "Invalid vector sizes for the read operation";
-    return failure();
-  }
-
-  // Check the vector sizes for the write operation.
-  if (failed(vector::isValidMaskedInputVector(
-          unpackOp.getDestType().getShape(),
-          inputVectorSizes.take_back(unpackOp.getDestRank())))) {
-    LDBG() << "Invalid vector sizes for the write operation";
     return failure();
   }
 

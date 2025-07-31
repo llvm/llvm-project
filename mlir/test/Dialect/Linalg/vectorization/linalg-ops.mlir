@@ -963,7 +963,7 @@ func.func @test_vectorize_dynamic_shapes_unpack(%dest: tensor<?x?xf32>, %src: te
 module attributes {transform.with_named_sequence} {
  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
    %0 = transform.structured.match ops{["linalg.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-   transform.structured.vectorize %0 vector_sizes [2, 1, 16, 2, 4, 16] : !transform.any_op
+   transform.structured.vectorize %0 vector_sizes [2, 1, 16, 2] : !transform.any_op
    transform.yield
  }
 }
@@ -995,7 +995,7 @@ func.func @test_vectorize_dynamic_shapes_unpack_scalable_vec(%dest: tensor<?x?xf
 module attributes {transform.with_named_sequence} {
  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
    %0 = transform.structured.match ops{["linalg.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-   transform.structured.vectorize %0 vector_sizes [2, 1, [16], 2, 4, [16]] : !transform.any_op
+   transform.structured.vectorize %0 vector_sizes [2, 1, [16], 2] : !transform.any_op
    transform.yield
  }
 }
@@ -1033,7 +1033,7 @@ func.func @test_vectorize_dynamic_shapes_unpack_scalable_vec_and_tile_size(%dest
 module attributes {transform.with_named_sequence} {
  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
    %0 = transform.structured.match ops{["linalg.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-   transform.structured.vectorize %0 vector_sizes [2, 1, [16], 2, 4, [16]] : !transform.any_op
+   transform.structured.vectorize %0 vector_sizes [2, 1, [16], 2] : !transform.any_op
    transform.yield
  }
 }
@@ -1066,7 +1066,7 @@ func.func @test_vectorize_unpack(%source: tensor<8x8x32x16xf32>, %dest: tensor<2
  module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-   transform.structured.vectorize %0 vector_sizes [16, 8, 32, 16, 512, 128] : !transform.any_op
+   transform.structured.vectorize %0 vector_sizes [16, 8, 32, 16] : !transform.any_op
     transform.yield
   }
 }
@@ -1091,7 +1091,7 @@ func.func @test_vectorize_unpack_no_masks(%source: tensor<8x8x32x16xf32>, %dest:
  module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-   transform.structured.vectorize %0 vector_sizes [8, 8, 32, 16, 256, 128] : !transform.any_op
+   transform.structured.vectorize %0 vector_sizes [8, 8, 32, 16] : !transform.any_op
     transform.yield
   }
  }
@@ -1116,7 +1116,7 @@ func.func @test_vectorize_unpack_no_masks(%source: tensor<8x8x32x16xf32>, %dest:
  module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-   transform.structured.vectorize %0 vector_sizes [8, 8, 32, 16, 256, 128] : !transform.any_op
+   transform.structured.vectorize %0 vector_sizes [8, 8, 32, 16] : !transform.any_op
     transform.yield
   }
 }
