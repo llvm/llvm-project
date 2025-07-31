@@ -947,7 +947,7 @@ lldb::addr_t IRExecutionUnit::FindSymbol(lldb_private::ConstString name,
     auto label_or_err = FunctionCallLabel::fromString(name);
     if (!label_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), label_or_err.takeError(),
-                     "failed to create FunctionCallLabel from '{0}': {1}",
+                     "failed to create FunctionCallLabel from '{1}': {0}",
                      name.GetStringRef());
       return LLDB_INVALID_ADDRESS;
     }
