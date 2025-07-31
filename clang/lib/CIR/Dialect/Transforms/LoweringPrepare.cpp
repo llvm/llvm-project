@@ -167,7 +167,7 @@ static mlir::Value buildComplexBinOpLibCall(
 
   cir::FuncType libFuncTy = cir::FuncType::get(libFuncInputTypes, ty);
 
-  // Inserting a declaration for the runtime function to be used in Complex
+  // Insert a declaration for the runtime function to be used in Complex
   // multiplication and division when needed
   cir::FuncOp libFunc;
   {

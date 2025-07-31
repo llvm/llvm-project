@@ -2843,8 +2843,12 @@ def CIR_ComplexMulOp : CIR_Op<"complex.mul", [
     The `cir.complex.mul` operation takes two complex numbers and returns
     their product.
 
-    Range is used to controls the various implementations for complex
-    multiplication.
+    Range is used to select the implementation used when the operation
+    is lowered to the LLVM dialect. For multiplication, 'improved',
+    'promoted', and 'basic' are all handled equivalently, producing the
+    algebraic formula with no special handling for NaN value. If 'full' is
+    used, a runtime-library function is called if one of the intermediate
+    calculations produced a NaN value.
 
     Example:
 
