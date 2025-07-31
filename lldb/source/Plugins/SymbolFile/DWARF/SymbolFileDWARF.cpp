@@ -2494,7 +2494,7 @@ SymbolFileDWARF::ResolveFunctionCallLabel(const FunctionCallLabel &label) {
 
     m_index->GetFunctions(info, *this, {}, [&](DWARFDIE entry) {
       if (entry.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
-        return true;
+        return IterationAction::Continue;
 
       // We don't check whether the specification DIE for this function
       // corresponds to the declaration DIE because the declaration might be in
@@ -2503,7 +2503,7 @@ SymbolFileDWARF::ResolveFunctionCallLabel(const FunctionCallLabel &label) {
       // rely on the mangled name within the module to be enough to find us the
       // unique definition.
       die = entry;
-      return false;
+      return IterationAction::Stop;
     });
 
     if (die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
