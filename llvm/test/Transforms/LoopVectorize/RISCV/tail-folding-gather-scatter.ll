@@ -27,7 +27,7 @@ define void @gather_scatter(ptr noalias %in, ptr noalias %out, ptr noalias %inde
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDEX_EVL_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[INDUCTION]], [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[AVL:%.*]] = sub i64 [[N]], [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], [[ENTRY]] ], [ [[AVL_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP11]] to i64
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = mul i64 1, [[TMP12]]
@@ -41,6 +41,7 @@ define void @gather_scatter(ptr noalias %in, ptr noalias %out, ptr noalias %inde
 ; IF-EVL-NEXT:    call void @llvm.vp.scatter.nxv2f32.nxv2p0(<vscale x 2 x float> [[WIDE_MASKED_GATHER2]], <vscale x 2 x ptr> align 4 [[TMP16]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP11]])
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP11]] to i64
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP17]], [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP17]]
 ; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[N]]
 ; IF-EVL-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

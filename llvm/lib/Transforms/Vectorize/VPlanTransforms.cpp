@@ -1496,11 +1496,11 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   auto *CanIVTy = Plan.getCanonicalIV()->getScalarType();
   if (all_of(Header->phis(),
              IsaPred<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe,
-                     VPFirstOrderRecurrencePHIRecipe>)) {
+                     VPFirstOrderRecurrencePHIRecipe, VPPhi>)) {
     for (VPRecipeBase &HeaderR : make_early_inc_range(Header->phis())) {
-      auto *HeaderPhiR = cast<VPHeaderPHIRecipe>(&HeaderR);
-      HeaderPhiR->replaceAllUsesWith(HeaderPhiR->getStartValue());
-      HeaderPhiR->eraseFromParent();
+      auto *Phi = cast<VPPhiAccessors>(&HeaderR);
+      HeaderR.getVPSingleValue()->replaceAllUsesWith(Phi->getIncomingValue(0));
+      HeaderR.eraseFromParent();
     }
 
     VPBlockBase *Preheader = VectorRegion->getSinglePredecessor();
@@ -2350,9 +2350,11 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
   auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc());
   EVLPhi->insertAfter(CanonicalIVPHI);
   VPBuilder Builder(Header, Header->getFirstNonPhi());
-  // Compute original TC - IV as the AVL (application vector length).
-  VPValue *AVL = Builder.createNaryOp(
-      Instruction::Sub, {Plan.getTripCount(), EVLPhi}, DebugLoc(), "avl");
+  // Create the AVL, starting from TC -> 0 in steps of EVL.
+  VPPhi *AVLPhi =
+      Builder.createScalarPhi({Plan.getTripCount()}, DebugLoc(), "avl");
+  VPValue *AVL = AVLPhi;
+
   if (MaxSafeElements) {
     // Support for MaxSafeDist for correct loop emission.
     VPValue *AVLSafe =
@@ -2378,6 +2380,11 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
        CanonicalIVIncrement->hasNoSignedWrap()},
       CanonicalIVIncrement->getDebugLoc(), "index.evl.next");
   EVLPhi->addOperand(NextEVLIV);
+
+  VPValue *NextAVL = Builder.createOverflowingOp(
+      Instruction::Sub, {AVLPhi, OpVPEVL}, {/*hasNUW=*/true, /*hasNSW=*/false},
+      DebugLoc(), "avl.next");
+  AVLPhi->addOperand(NextAVL);
 
   transformRecipestoEVLRecipes(Plan, *VPEVL);
 
