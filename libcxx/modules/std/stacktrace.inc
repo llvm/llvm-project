@@ -8,7 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-#if 0
+#if _LIBCPP_STD_VER >= 23
+
   // [stacktrace.entry], class stacktrace_­entry
   using std::stacktrace_entry;
 
@@ -31,5 +32,9 @@ export namespace std {
 
   // [stacktrace.basic.hash], hash support
   using std::hash;
-#endif
+
+  // [stacktrace.format], formatting support
+  using std::formatter;
+
+#endif // _LIBCPP_STD_VER >= 23
 } // namespace std
