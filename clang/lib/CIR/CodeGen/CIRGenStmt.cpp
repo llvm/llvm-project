@@ -363,8 +363,8 @@ mlir::LogicalResult CIRGenFunction::emitIfStmt(const IfStmt &s) {
 mlir::LogicalResult CIRGenFunction::emitDeclStmt(const DeclStmt &s) {
   assert(builder.getInsertionBlock() && "expected valid insertion point");
 
-  for (const Decl *I : s.decls())
-    emitDecl(*I);
+  for (const Decl *i : s.decls())
+    emitDecl(*i, /*evaluateConditionDecl=*/true);
 
   return mlir::success();
 }
@@ -875,7 +875,7 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
         return mlir::failure();
 
     if (s.getConditionVariable())
-      emitDecl(*s.getConditionVariable());
+      emitDecl(*s.getConditionVariable(), /*evaluateConditionDecl=*/true);
 
     mlir::Value condV = emitScalarExpr(s.getCond());
 

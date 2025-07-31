@@ -1111,9 +1111,13 @@ bool llvm::getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name) {
 }
 
 std::optional<int> llvm::getOptionalIntLoopAttribute(const Loop *TheLoop,
-                                                     StringRef Name) {
-  const MDOperand *AttrMD =
-      findStringMetadataForLoop(TheLoop, Name).value_or(nullptr);
+                                                     StringRef Name,
+                                                     bool *Missing) {
+  std::optional<const MDOperand *> AttrMDOpt =
+      findStringMetadataForLoop(TheLoop, Name);
+  if (Missing)
+    *Missing = !AttrMDOpt;
+  const MDOperand *AttrMD = AttrMDOpt.value_or(nullptr);
   if (!AttrMD)
     return std::nullopt;
 
