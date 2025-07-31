@@ -30,6 +30,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constants.h"
@@ -1061,6 +1062,19 @@ void ModuleImport::convertTargetTriple() {
   mlirModule->setAttr(
       LLVM::LLVMDialect::getTargetTripleAttrName(),
       builder.getStringAttr(llvmModule->getTargetTriple().str()));
+}
+
+void ModuleImport::convertModuleLevelAsm() {
+  auto str = llvmModule->getModuleInlineAsm();
+  llvm::SmallVector<mlir::Attribute> arr;
+
+  for (auto line : llvm::split(str, '\n'))
+    if (!line.empty())
+      arr.push_back(builder.getStringAttr(line));
+
+  mlirModule->setAttr(
+      LLVM::LLVMDialect::getModuleLevelAsmAttrName(),
+      builder.getArrayAttr(arr));
 }
 
 LogicalResult ModuleImport::convertFunctions() {
@@ -3199,5 +3213,6 @@ OwningOpRef<ModuleOp> mlir::translateLLVMIRToModule(
   if (failed(moduleImport.convertIFuncs()))
     return {};
   moduleImport.convertTargetTriple();
+  moduleImport.convertModuleLevelAsm();
   return module;
 }
