@@ -1138,7 +1138,8 @@ void ARMTargetELFStreamer::finish() {
   MCContext &Ctx = getContext();
   auto &Asm = getStreamer().getAssembler();
   if (any_of(Asm, [](const MCSection &Sec) {
-        return cast<MCSectionELF>(Sec).getFlags() & ELF::SHF_ARM_PURECODE;
+        return static_cast<const MCSectionELF &>(Sec).getFlags() &
+               ELF::SHF_ARM_PURECODE;
       })) {
     auto *Text =
         static_cast<MCSectionELF *>(Ctx.getObjectFileInfo()->getTextSection());
@@ -1283,14 +1284,11 @@ void ARMELFStreamer::emitCantUnwind() { CantUnwind = true; }
 // Add the R_ARM_NONE fixup at the same position
 void ARMELFStreamer::EmitPersonalityFixup(StringRef Name) {
   const MCSymbol *PersonalitySym = getContext().getOrCreateSymbol(Name);
+  visitUsedSymbol(*PersonalitySym);
 
   const MCSymbolRefExpr *PersonalityRef =
       MCSymbolRefExpr::create(PersonalitySym, ARM::S_ARM_NONE, getContext());
-
-  visitUsedExpr(*PersonalityRef);
-  MCFragment *DF = getCurrentFragment();
-  DF->addFixup(
-      MCFixup::create(DF->getContents().size(), PersonalityRef, FK_Data_4));
+  addFixup(PersonalityRef, FK_Data_4);
 }
 
 void ARMELFStreamer::FlushPendingOffset() {
