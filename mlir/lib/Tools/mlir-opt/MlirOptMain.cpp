@@ -15,20 +15,15 @@
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/Debug/CLOptionsSetup.h"
 #include "mlir/Debug/Counter.h"
-#include "mlir/Debug/DebuggerExecutionContextHook.h"
-#include "mlir/Debug/ExecutionContext.h"
-#include "mlir/Debug/Observers/ActionLogging.h"
 #include "mlir/Dialect/IRDL/IR/IRDL.h"
 #include "mlir/Dialect/IRDL/IRDLLoading.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Parser/Parser.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Support/FileUtilities.h"
@@ -39,14 +34,12 @@
 #include "mlir/Tools/Plugins/PassPlugin.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/ToolOutputFile.h"
 
@@ -515,13 +508,20 @@ performActions(raw_ostream &os,
 
 /// Parses the memory buffer.  If successfully, run a series of passes against
 /// it and print the result.
-static LogicalResult processBuffer(raw_ostream &os,
-                                   std::unique_ptr<MemoryBuffer> ownedBuffer,
-                                   const MlirOptMainConfig &config,
-                                   DialectRegistry &registry,
-                                   llvm::ThreadPoolInterface *threadPool) {
+static LogicalResult
+processBuffer(raw_ostream &os, std::unique_ptr<MemoryBuffer> ownedBuffer,
+              llvm::MemoryBufferRef sourceBuffer,
+              const MlirOptMainConfig &config, DialectRegistry &registry,
+              SourceMgrDiagnosticVerifierHandler *verifyHandler,
+              llvm::ThreadPoolInterface *threadPool) {
   // Tell sourceMgr about this buffer, which is what the parser will pick up.
   auto sourceMgr = std::make_shared<SourceMgr>();
+  // Add the original buffer to the source manager to use for determining
+  // locations.
+  sourceMgr->AddNewSourceBuffer(
+      llvm::MemoryBuffer::getMemBuffer(sourceBuffer,
+                                       /*RequiresNullTerminator=*/false),
+      SMLoc());
   sourceMgr->AddNewSourceBuffer(std::move(ownedBuffer), SMLoc());
 
   // Create a context just for the current buffer. Disable threading on creation
@@ -529,6 +529,8 @@ static LogicalResult processBuffer(raw_ostream &os,
   MLIRContext context(registry, MLIRContext::Threading::DISABLED);
   if (threadPool)
     context.setThreadPool(*threadPool);
+  if (verifyHandler)
+    verifyHandler->registerInContext(&context);
 
   StringRef irdlFile = config.getIrdlFile();
   if (!irdlFile.empty() && failed(loadIRDLDialects(irdlFile, context)))
@@ -552,17 +554,12 @@ static LogicalResult processBuffer(raw_ostream &os,
     return performActions(os, sourceMgr, &context, config);
   }
 
-  SourceMgrDiagnosticVerifierHandler sourceMgrHandler(
-      *sourceMgr, &context, config.verifyDiagnosticsLevel());
-
   // Do any processing requested by command line flags.  We don't care whether
   // these actions succeed or fail, we only care what diagnostics they produce
   // and whether they match our expectations.
   (void)performActions(os, sourceMgr, &context, config);
 
-  // Verify the diagnostic handler to make sure that each of the diagnostics
-  // matched.
-  return sourceMgrHandler.verify();
+  return success();
 }
 
 std::pair<std::string, std::string>
@@ -631,14 +628,31 @@ LogicalResult mlir::MlirOptMain(llvm::raw_ostream &outputStream,
   if (threadPoolCtx.isMultithreadingEnabled())
     threadPool = &threadPoolCtx.getThreadPool();
 
+  SourceMgr sourceMgr;
+  sourceMgr.AddNewSourceBuffer(
+      llvm::MemoryBuffer::getMemBuffer(buffer->getMemBufferRef(),
+                                       /*RequiresNullTerminator=*/false),
+      SMLoc());
+  // Note: this creates a verifier handler independent of the the flag set, as
+  // internally if the flag is not set, a new scoped diagnostic handler is
+  // created which would intercept the diagnostics and verify them.
+  SourceMgrDiagnosticVerifierHandler sourceMgrHandler(
+      sourceMgr, &threadPoolCtx, config.verifyDiagnosticsLevel());
   auto chunkFn = [&](std::unique_ptr<MemoryBuffer> chunkBuffer,
-                     raw_ostream &os) {
-    return processBuffer(os, std::move(chunkBuffer), config, registry,
-                         threadPool);
+                     llvm::MemoryBufferRef sourceBuffer, raw_ostream &os) {
+    return processBuffer(
+        os, std::move(chunkBuffer), sourceBuffer, config, registry,
+        config.shouldVerifyDiagnostics() ? &sourceMgrHandler : nullptr,
+        threadPool);
   };
-  return splitAndProcessBuffer(std::move(buffer), chunkFn, outputStream,
-                               config.inputSplitMarker(),
-                               config.outputSplitMarker());
+  LogicalResult status = splitAndProcessBuffer(
+      llvm::MemoryBuffer::getMemBuffer(buffer->getMemBufferRef(),
+                                       /*RequiresNullTerminator=*/false),
+      chunkFn, outputStream, config.inputSplitMarker(),
+      config.outputSplitMarker());
+  if (config.shouldVerifyDiagnostics() && failed(sourceMgrHandler.verify()))
+    status = failure();
+  return status;
 }
 
 LogicalResult mlir::MlirOptMain(int argc, char **argv,

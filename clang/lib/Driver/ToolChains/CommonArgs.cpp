@@ -23,6 +23,7 @@
 #include "Hexagon.h"
 #include "MSP430.h"
 #include "Solaris.h"
+#include "ToolChains/Cuda.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
@@ -294,17 +295,22 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
     Format = A->getValue();
 
   SmallString<128> F;
-  const Arg *A = Args.getLastArg(options::OPT_foptimization_record_file_EQ);
-  if (A)
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_foptimization_record_file_EQ)) {
     F = A->getValue();
-  else if (Output.isFilename())
+    F += ".";
+  } else if (const Arg *A = Args.getLastArg(options::OPT_dumpdir)) {
+    F = A->getValue();
+  } else if (Output.isFilename()) {
     F = Output.getFilename();
+    F += ".";
+  }
 
   assert(!F.empty() && "Cannot determine remarks output name.");
   // Append "opt.ld.<format>" to the end of the file name.
   CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
-                                       "opt-remarks-filename=" + F +
-                                       ".opt.ld." + Format));
+                                       "opt-remarks-filename=" + F + "opt.ld." +
+                                       Format));
 
   if (const Arg *A =
           Args.getLastArg(options::OPT_foptimization_record_passes_EQ))
@@ -547,15 +553,22 @@ const char *tools::getLDMOption(const llvm::Triple &T, const ArgList &Args) {
   case llvm::Triple::aarch64:
     if (T.isOSManagarm())
       return "aarch64managarm";
+    else if (aarch64::isAArch64BareMetal(T))
+      return "aarch64elf";
     return "aarch64linux";
   case llvm::Triple::aarch64_be:
+    if (aarch64::isAArch64BareMetal(T))
+      return "aarch64elfb";
     return "aarch64linuxb";
   case llvm::Triple::arm:
   case llvm::Triple::thumb:
   case llvm::Triple::armeb:
-  case llvm::Triple::thumbeb:
-    return tools::arm::isARMBigEndian(T, Args) ? "armelfb_linux_eabi"
-                                               : "armelf_linux_eabi";
+  case llvm::Triple::thumbeb: {
+    bool IsBigEndian = tools::arm::isARMBigEndian(T, Args);
+    if (arm::isARMEABIBareMetal(T))
+      return IsBigEndian ? "armelfb" : "armelf";
+    return IsBigEndian ? "armelfb_linux_eabi" : "armelf_linux_eabi";
+  }
   case llvm::Triple::m68k:
     return "m68kelf";
   case llvm::Triple::ppc:
@@ -856,7 +869,7 @@ void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
   case llvm::Triple::sparcv9:
-    sparc::getSparcTargetFeatures(D, Args, Features);
+    sparc::getSparcTargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
@@ -1067,9 +1080,17 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     }
   }
 
-  if (Args.hasArg(options::OPT_gsplit_dwarf))
-    CmdArgs.push_back(Args.MakeArgString(
-        Twine(PluginOptPrefix) + "dwo_dir=" + Output.getFilename() + "_dwo"));
+  if (Args.hasArg(options::OPT_gsplit_dwarf)) {
+    SmallString<128> F;
+    if (const Arg *A = Args.getLastArg(options::OPT_dumpdir)) {
+      F = A->getValue();
+    } else {
+      F = Output.getFilename();
+      F += "_";
+    }
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine(PluginOptPrefix) + "dwo_dir=" + F + "dwo"));
+  }
 
   if (IsThinLTO && !IsOSAIX)
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + "thinlto"));
@@ -1320,6 +1341,17 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   if (Args.hasArg(options::OPT_ftime_report))
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-time-passes"));
+
+  if (Arg *A = Args.getLastArg(options::OPT_fthinlto_distributor_EQ)) {
+    CmdArgs.push_back(
+        Args.MakeArgString("--thinlto-distributor=" + Twine(A->getValue())));
+    CmdArgs.push_back(
+        Args.MakeArgString("--thinlto-remote-compiler=" +
+                           Twine(ToolChain.getDriver().getClangProgramPath())));
+
+    for (auto A : Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))
+      CmdArgs.push_back(Args.MakeArgString("--thinlto-distributor-arg=" + A));
+  }
 }
 
 void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,

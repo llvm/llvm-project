@@ -4170,7 +4170,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
   auto OffsetCst = MIRBuilder.buildConstant(LLT::scalar(PtrTy.getSizeInBits()),
                                             LargeSplitSize / 8);
   Register PtrAddReg = MRI.createGenericVirtualRegister(PtrTy);
-  auto SmallPtr = MIRBuilder.buildPtrAdd(PtrAddReg, PtrReg, OffsetCst);
+  auto SmallPtr = MIRBuilder.buildObjectPtrOffset(PtrAddReg, PtrReg, OffsetCst);
   auto SmallLoad = MIRBuilder.buildLoadInstr(LoadMI.getOpcode(), AnyExtTy,
                                              SmallPtr, *SmallMMO);
 
@@ -4277,8 +4277,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerStore(GStore &StoreMI) {
   LLT PtrTy = MRI.getType(PtrReg);
   auto OffsetCst = MIRBuilder.buildConstant(
     LLT::scalar(PtrTy.getSizeInBits()), LargeSplitSize / 8);
-  auto SmallPtr =
-    MIRBuilder.buildPtrAdd(PtrTy, PtrReg, OffsetCst);
+  auto SmallPtr = MIRBuilder.buildObjectPtrOffset(PtrTy, PtrReg, OffsetCst);
 
   MachineMemOperand *LargeMMO =
     MF.getMachineMemOperand(&MMO, 0, LargeSplitSize / 8);
@@ -5349,7 +5348,8 @@ LegalizerHelper::reduceLoadStoreWidth(GLoadStore &LdStMI, unsigned TypeIdx,
       unsigned ByteOffset = Offset / 8;
       Register NewAddrReg;
 
-      MIRBuilder.materializePtrAdd(NewAddrReg, AddrReg, OffsetTy, ByteOffset);
+      MIRBuilder.materializeObjectPtrOffset(NewAddrReg, AddrReg, OffsetTy,
+                                            ByteOffset);
 
       MachineMemOperand *NewMMO =
           MF.getMachineMemOperand(&MMO, ByteOffset, PartTy);
@@ -8004,7 +8004,7 @@ LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
   if (MRI.getType(Src).isVector()) // TODO: Handle vectors directly.
     return UnableToLegalize;
 
-  if (MIRBuilder.getMF().getTarget().Options.UnsafeFPMath) {
+  if (MI.getFlag(MachineInstr::FmAfn)) {
     unsigned Flags = MI.getFlags();
     auto Src32 = MIRBuilder.buildFPTrunc(S32, Src, Flags);
     MIRBuilder.buildFPTrunc(Dst, Src32, Flags);
@@ -9272,7 +9272,7 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
   APInt AllOneMantissa = APFloat::getLargest(Semantics).bitcastToAPInt() & ~Inf;
   APInt QNaNBitMask =
       APInt::getOneBitSet(BitSize, AllOneMantissa.getActiveBits() - 1);
-  APInt InvertionMask = APInt::getAllOnes(DstTy.getScalarSizeInBits());
+  APInt InversionMask = APInt::getAllOnes(DstTy.getScalarSizeInBits());
 
   auto SignBitC = MIRBuilder.buildConstant(IntTy, SignBit);
   auto ValueMaskC = MIRBuilder.buildConstant(IntTy, ValueMask);
@@ -9400,7 +9400,7 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
       NormalRes = MIRBuilder.buildAnd(DstTy, NormalRes, Sign);
     else if (PartialCheck == fcPosNormal) {
       auto PosSign = MIRBuilder.buildXor(
-          DstTy, Sign, MIRBuilder.buildConstant(DstTy, InvertionMask));
+          DstTy, Sign, MIRBuilder.buildConstant(DstTy, InversionMask));
       NormalRes = MIRBuilder.buildAnd(DstTy, NormalRes, PosSign);
     }
     appendToRes(NormalRes);
@@ -9822,7 +9822,7 @@ LegalizerHelper::lowerMemset(MachineInstr &MI, Register Dst, Register Val,
     if (DstOff != 0) {
       auto Offset =
           MIB.buildConstant(LLT::scalar(PtrTy.getSizeInBits()), DstOff);
-      Ptr = MIB.buildPtrAdd(PtrTy, Dst, Offset).getReg(0);
+      Ptr = MIB.buildObjectPtrOffset(PtrTy, Dst, Offset).getReg(0);
     }
 
     MIB.buildStore(Value, Ptr, *StoreMMO);
@@ -9962,7 +9962,7 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
       LLT SrcTy = MRI.getType(Src);
       Offset = MIB.buildConstant(LLT::scalar(SrcTy.getSizeInBits()), CurrOffset)
                    .getReg(0);
-      LoadPtr = MIB.buildPtrAdd(SrcTy, Src, Offset).getReg(0);
+      LoadPtr = MIB.buildObjectPtrOffset(SrcTy, Src, Offset).getReg(0);
     }
     auto LdVal = MIB.buildLoad(CopyTy, LoadPtr, *LoadMMO);
 
@@ -9970,7 +9970,7 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
     Register StorePtr = Dst;
     if (CurrOffset != 0) {
       LLT DstTy = MRI.getType(Dst);
-      StorePtr = MIB.buildPtrAdd(DstTy, Dst, Offset).getReg(0);
+      StorePtr = MIB.buildObjectPtrOffset(DstTy, Dst, Offset).getReg(0);
     }
     MIB.buildStore(LdVal, StorePtr, *StoreMMO);
     CurrOffset += CopyTy.getSizeInBytes();
@@ -10060,7 +10060,7 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
       LLT SrcTy = MRI.getType(Src);
       auto Offset =
           MIB.buildConstant(LLT::scalar(SrcTy.getSizeInBits()), CurrOffset);
-      LoadPtr = MIB.buildPtrAdd(SrcTy, Src, Offset).getReg(0);
+      LoadPtr = MIB.buildObjectPtrOffset(SrcTy, Src, Offset).getReg(0);
     }
     LoadVals.push_back(MIB.buildLoad(CopyTy, LoadPtr, *LoadMMO).getReg(0));
     CurrOffset += CopyTy.getSizeInBytes();
@@ -10078,7 +10078,7 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
       LLT DstTy = MRI.getType(Dst);
       auto Offset =
           MIB.buildConstant(LLT::scalar(DstTy.getSizeInBits()), CurrOffset);
-      StorePtr = MIB.buildPtrAdd(DstTy, Dst, Offset).getReg(0);
+      StorePtr = MIB.buildObjectPtrOffset(DstTy, Dst, Offset).getReg(0);
     }
     MIB.buildStore(LoadVals[I], StorePtr, *StoreMMO);
     CurrOffset += CopyTy.getSizeInBytes();
@@ -10120,14 +10120,10 @@ LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
     return Legalized;
   }
 
-  bool IsVolatile = MemOp->isVolatile();
-  // Don't try to optimize volatile.
-  if (IsVolatile)
-    return UnableToLegalize;
-
   if (MaxLen && KnownLen > MaxLen)
     return UnableToLegalize;
 
+  bool IsVolatile = MemOp->isVolatile();
   if (Opc == TargetOpcode::G_MEMCPY) {
     auto &MF = *MI.getParent()->getParent();
     const auto &TLI = *MF.getSubtarget().getTargetLowering();

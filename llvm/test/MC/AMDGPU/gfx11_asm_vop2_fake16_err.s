@@ -173,6 +173,21 @@ v_mul_f16_e32 v5, v1, v255
 v_mul_f16_e32 v5, v255, v2
 // GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
+v_pk_fmac_f16 v0, v1, v2 quad_perm:[1,2,3,0]
+// GFX11: :[[@LINE-1]]:26: error: not a valid operand.
+
+v_pk_fmac_f16 v0, v1, v2 quad_perm:[1,2,3,0] row_mask:0x0 bank_mask:0x0
+// GFX11: :[[@LINE-1]]:26: error: not a valid operand.
+
+v_pk_fmac_f16 v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:26: error: not a valid operand.
+
+v_pk_fmac_f16_dpp v0, v1, v2 quad_perm:[1,2,3,0]
+// GFX11: :[[@LINE-1]]:1: error: dpp variant of this instruction is not supported
+
+v_pk_fmac_f16_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:1: error: dpp variant of this instruction is not supported
+
 v_sub_f16_dpp v255, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 

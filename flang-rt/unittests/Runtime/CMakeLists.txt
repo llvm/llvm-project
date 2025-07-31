@@ -19,6 +19,7 @@ add_flangrt_unittest(RuntimeTests
   Derived.cpp
   ExternalIOTest.cpp
   Format.cpp
+  InputExtensions.cpp
   Inquiry.cpp
   ListInputTest.cpp
   LogicalFormatTest.cpp

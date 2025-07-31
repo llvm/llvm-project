@@ -1828,16 +1828,8 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     // .umul works for both signed and unsigned
     setOperationAction(ISD::SMUL_LOHI, MVT::i32, Expand);
     setOperationAction(ISD::UMUL_LOHI, MVT::i32, Expand);
-    setLibcallImpl(RTLIB::MUL_I32, RTLIB::sparc_umul);
-
     setOperationAction(ISD::SDIV, MVT::i32, Expand);
-    setLibcallImpl(RTLIB::SDIV_I32, RTLIB::sparc_div);
-
     setOperationAction(ISD::UDIV, MVT::i32, Expand);
-    setLibcallImpl(RTLIB::UDIV_I32, RTLIB::sparc_udiv);
-
-    setLibcallImpl(RTLIB::SREM_I32, RTLIB::sparc_rem);
-    setLibcallImpl(RTLIB::UREM_I32, RTLIB::sparc_urem);
   }
 
   if (Subtarget->is64Bit()) {
@@ -1896,14 +1888,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FNEG, MVT::f128, Custom);
       setOperationAction(ISD::FABS, MVT::f128, Custom);
     }
-
-    if (!Subtarget->is64Bit()) {
-      setLibcallImpl(RTLIB::FPTOSINT_F128_I64, RTLIB::_Q_qtoll);
-      setLibcallImpl(RTLIB::FPTOUINT_F128_I64, RTLIB::_Q_qtoull);
-      setLibcallImpl(RTLIB::SINTTOFP_I64_F128, RTLIB::_Q_lltoq);
-      setLibcallImpl(RTLIB::UINTTOFP_I64_F128, RTLIB::_Q_ulltoq);
-    }
-
   } else {
     // Custom legalize f128 operations.
 
@@ -1948,10 +1932,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
       setLibcallImpl(RTLIB::FPTOUINT_F128_I32, RTLIB::_Q_qtou);
       setLibcallImpl(RTLIB::SINTTOFP_I32_F128, RTLIB::_Q_itoq);
       setLibcallImpl(RTLIB::UINTTOFP_I32_F128, RTLIB::_Q_utoq);
-      setLibcallImpl(RTLIB::FPTOSINT_F128_I64, RTLIB::_Q_qtoll);
-      setLibcallImpl(RTLIB::FPTOUINT_F128_I64, RTLIB::_Q_qtoull);
-      setLibcallImpl(RTLIB::SINTTOFP_I64_F128, RTLIB::_Q_lltoq);
-      setLibcallImpl(RTLIB::UINTTOFP_I64_F128, RTLIB::_Q_ulltoq);
       setLibcallImpl(RTLIB::FPEXT_F32_F128, RTLIB::_Q_stoq);
       setLibcallImpl(RTLIB::FPEXT_F64_F128, RTLIB::_Q_dtoq);
       setLibcallImpl(RTLIB::FPROUND_F128_F32, RTLIB::_Q_qtos);
@@ -2221,7 +2201,7 @@ SDValue SparcTargetLowering::LowerGlobalTLSAddress(SDValue Op,
     SDValue Chain = DAG.getEntryNode();
     SDValue InGlue;
 
-    Chain = DAG.getCALLSEQ_START(Chain, 1, 0, DL);
+    Chain = DAG.getCALLSEQ_START(Chain, 0, 0, DL);
     Chain = DAG.getCopyToReg(Chain, DL, SP::O0, Argument, InGlue);
     InGlue = Chain.getValue(1);
     SDValue Callee = DAG.getTargetExternalSymbol("__tls_get_addr", PtrVT);
@@ -2239,7 +2219,7 @@ SDValue SparcTargetLowering::LowerGlobalTLSAddress(SDValue Op,
                      InGlue};
     Chain = DAG.getNode(SPISD::TLS_CALL, DL, NodeTys, Ops);
     InGlue = Chain.getValue(1);
-    Chain = DAG.getCALLSEQ_END(Chain, 1, 0, InGlue, DL);
+    Chain = DAG.getCALLSEQ_END(Chain, 0, 0, InGlue, DL);
     InGlue = Chain.getValue(1);
     SDValue Ret = DAG.getCopyFromReg(Chain, DL, SP::O0, PtrVT, InGlue);
 

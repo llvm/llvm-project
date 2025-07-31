@@ -135,7 +135,7 @@ rarely have to include this file directly).
       return !L->contains(cast<Instruction>(V)->getParent());
     }
 
-  Note that you should **not** use an ``isa<>`` test followed by a ``cast<>``,
+  Note that you should **not** use an ``isa<>`` test followed by a ``cast<>``;
   for that use the ``dyn_cast<>`` operator.
 
 ``dyn_cast<>``:
@@ -234,8 +234,8 @@ the ``str`` member function.  See ``llvm/ADT/StringRef.h`` (`doxygen
 <https://llvm.org/doxygen/StringRef_8h_source.html>`__) for more
 information.
 
-You should rarely use the ``StringRef`` class directly, because it contains
-pointers to external memory it is not generally safe to store an instance of the
+You should rarely use the ``StringRef`` class directly. Because it contains
+pointers to external memory, it is not generally safe to store an instance of the
 class (unless you know that the external storage will not be freed).
 ``StringRef`` is small and pervasive enough in LLVM that it should always be
 passed by value.
@@ -416,14 +416,14 @@ to abort quickly at the point of failure (providing some basic diagnostic) when
 invariants are broken at runtime.
 
 The fundamental tools for handling programmatic errors are assertions and the
-llvm_unreachable function. Assertions are used to express invariant conditions,
+``llvm_unreachable`` function. Assertions are used to express invariant conditions,
 and should include a message describing the invariant:
 
 .. code-block:: c++
 
   assert(isPhysReg(R) && "All virt regs should have been allocated already.");
 
-The llvm_unreachable function can be used to document areas of control flow
+The ``llvm_unreachable`` function can be used to document areas of control flow
 that should never be entered if the program invariants hold:
 
 .. code-block:: c++
@@ -598,7 +598,7 @@ semantics.  For example:
   }
 
 This third form works with any type that can be assigned to from ``T&&``. This
-can be useful if the ``Expected<T>`` value needs to be stored an already-declared
+can be useful if the ``Expected<T>`` value needs to be stored in an already-declared
 ``std::optional<T>``. For example:
 
 .. code-block:: c++
@@ -619,7 +619,7 @@ can be useful if the ``Expected<T>`` value needs to be stored an already-declare
 
 All ``Error`` instances, whether success or failure, must be either checked or
 moved from (via ``std::move`` or a return) before they are destructed.
-Accidentally discarding an unchecked error will cause a program abort at the
+Accidentally discarding an unchecked error will cause a program to abort at the
 point where the unchecked value's destructor is run, making it easy to identify
 and fix violations of this rule.
 
@@ -661,7 +661,7 @@ a variadic list of "handlers", each of which must be a callable type (a
 function, lambda, or class with a call operator) with one argument. The
 ``handleErrors`` function will visit each handler in the sequence and check its
 argument type against the dynamic type of the error, running the first handler
-that matches. This is the same decision process that is used decide which catch
+that matches. This is the same decision process that is used to decide which catch
 clause to run for a C++ exception.
 
 Since the list of handlers passed to ``handleErrors`` may not cover every error
@@ -869,10 +869,10 @@ T value:
   }
 
 Like the ExitOnError utility, cantFail simplifies control flow. Their treatment
-of error cases is very different however: Where ExitOnError is guaranteed to
+of error cases is very different, however: Where ExitOnError is guaranteed to
 terminate the program on an error input, cantFail simply asserts that the result
 is success. In debug builds this will result in an assertion failure if an error
-is encountered. In release builds the behavior of cantFail for failure values is
+is encountered. In release builds, the behavior of cantFail for failure values is
 undefined. As such, care must be taken in the use of cantFail: clients must be
 certain that a cantFail wrapped call really can not fail with the given
 arguments.
@@ -928,11 +928,11 @@ well-formed Foo or an Error, never an object in an invalid state.
 Propagating and consuming errors based on types
 """""""""""""""""""""""""""""""""""""""""""""""
 
-In some contexts, certain types of error are known to be benign. For example,
+In some contexts, certain types of errors are known to be benign. For example,
 when walking an archive, some clients may be happy to skip over badly formatted
 object files rather than terminating the walk immediately. Skipping badly
 formatted objects could be achieved using an elaborate handler method, but the
-Error.h header provides two utilities that make this idiom much cleaner: the
+``Error.h`` header provides two utilities that make this idiom much cleaner: the
 type inspection method, ``isA``, and the ``consumeError`` function:
 
 .. code-block:: c++
@@ -956,7 +956,7 @@ type inspection method, ``isA``, and the ``consumeError`` function:
 Concatenating Errors with joinErrors
 """"""""""""""""""""""""""""""""""""
 
-In the archive walking example above ``BadFileFormat`` errors are simply
+In the archive walking example above, ``BadFileFormat`` errors are simply
 consumed and ignored. If the client had wanted report these errors after
 completing the walk over the archive they could use the ``joinErrors`` utility:
 
@@ -982,13 +982,13 @@ The ``joinErrors`` routine builds a special error type called ``ErrorList``,
 which holds a list of user defined errors. The ``handleErrors`` routine
 recognizes this type and will attempt to handle each of the contained errors in
 order. If all contained errors can be handled, ``handleErrors`` will return
-``Error::success()``, otherwise ``handleErrors`` will concatenate the remaining
+``Error::success()``; otherwise, ``handleErrors`` will concatenate the remaining
 errors and return the resulting ``ErrorList``.
 
 Building fallible iterators and iterator ranges
 """""""""""""""""""""""""""""""""""""""""""""""
 
-The archive walking examples above retrieve archive members by index, however
+The archive walking examples above retrieve archive members by index; however,
 this requires considerable boiler-plate for iteration and error checking. We can
 clean this up by using the "fallible iterator" pattern, which supports the
 following natural iteration idiom for fallible containers like Archive:
@@ -1039,7 +1039,7 @@ fallible_iterator utility which provides ``operator++`` and ``operator--``,
 returning any errors via a reference passed in to the wrapper at construction
 time. The fallible_iterator wrapper takes care of (a) jumping to the end of the
 range on error, and (b) marking the error as checked whenever an iterator is
-compared to ``end`` and found to be inequal (in particular: this marks the
+compared to ``end`` and found to be inequal (in particular, this marks the
 error as checked throughout the body of a range-based for loop), enabling early
 exit from the loop without redundant error checking.
 
@@ -1068,12 +1068,12 @@ functions. E.g.:
 
 Using the fallible_iterator utility allows for both natural construction of
 fallible iterators (using failing ``inc`` and ``dec`` operations) and
-relatively natural use of c++ iterator/loop idioms.
+relatively natural use of C++ iterator/loop idioms.
 
 .. _function_apis:
 
 More information on Error and its related utilities can be found in the
-Error.h header file.
+``Error.h`` header file.
 
 Passing functions and other callable objects
 --------------------------------------------
@@ -1175,7 +1175,7 @@ Then you can run your pass like this:
   I am here!
 
 Using the ``LLVM_DEBUG()`` macro instead of a home-brewed solution allows you to not
-have to create "yet another" command line option for the debug output for your
+have to create "yet another" command-line option for the debug output for your
 pass.  Note that ``LLVM_DEBUG()`` macros are disabled for non-asserts builds, so they
 do not cause a performance impact at all (for the same reason, they should also
 not contain side-effects!).
@@ -1224,7 +1224,7 @@ Then you can run your pass like this:
 
 Of course, in practice, you should only set ``DEBUG_TYPE`` at the top of a file,
 to specify the debug type for the entire module. Be careful that you only do
-this after including Debug.h and not around any #include of headers. Also, you
+this after including ``Debug.h`` and not around any #include of headers. Also, you
 should use names more meaningful than "foo" and "bar", because there is no
 system in place to ensure that names do not conflict. If two different modules
 use the same string, they will all be turned on when the name is specified.
@@ -1349,7 +1349,7 @@ certain number of times.
 The ``llvm/Support/DebugCounter.h`` (`doxygen
 <https://llvm.org/doxygen/DebugCounter_8h_source.html>`__) file
 provides a class named ``DebugCounter`` that can be used to create
-command line counter options that control execution of parts of your code.
+command-line counter options that control execution of parts of your code.
 
 Define your DebugCounter like this:
 
@@ -1364,7 +1364,7 @@ is specified by the first argument.  The name of the counter
 argument, and the description used in the help is specified by the
 third argument.
 
-Whatever code you want that control, use ``DebugCounter::shouldExecute`` to control it.
+Whatever code you want to control, use ``DebugCounter::shouldExecute`` to control it.
 
 .. code-block:: c++
 
@@ -1579,18 +1579,18 @@ llvm/ADT/SmallVector.h
 ``SmallVector<Type, N>`` is a simple class that looks and smells just like
 ``vector<Type>``: it supports efficient iteration, lays out elements in memory
 order (so you can do pointer arithmetic between elements), supports efficient
-push_back/pop_back operations, supports efficient random access to its elements,
+``push_back``/``pop_back`` operations, supports efficient random access to its elements,
 etc.
 
-The main advantage of SmallVector is that it allocates space for some number of
-elements (N) **in the object itself**.  Because of this, if the SmallVector is
+The main advantage of ``SmallVector`` is that it allocates space for some number of
+elements (N) **in the object itself**.  Because of this, if the ``SmallVector`` is
 dynamically smaller than N, no malloc is performed.  This can be a big win in
 cases where the malloc/free call is far more expensive than the code that
 fiddles around with the elements.
 
 This is good for vectors that are "usually small" (e.g. the number of
 predecessors/successors of a block is usually less than 8).  On the other hand,
-this makes the size of the SmallVector itself large, so you don't want to
+this makes the size of the ``SmallVector`` itself large, so you don't want to
 allocate lots of them (doing so will waste a lot of space).  As such,
 SmallVectors are most useful when on the stack.
 
@@ -1600,21 +1600,21 @@ omitting the ``N``). This will choose a default number of
 inlined elements reasonable for allocation on the stack (for example, trying
 to keep ``sizeof(SmallVector<T>)`` around 64 bytes).
 
-SmallVector also provides a nice portable and efficient replacement for
+``SmallVector`` also provides a nice portable and efficient replacement for
 ``alloca``.
 
-SmallVector has grown a few other minor advantages over std::vector, causing
+``SmallVector`` has grown a few other minor advantages over ``std::vector``, causing
 ``SmallVector<Type, 0>`` to be preferred over ``std::vector<Type>``.
 
-#. std::vector is exception-safe, and some implementations have pessimizations
-   that copy elements when SmallVector would move them.
+#. ``std::vector`` is exception-safe, and some implementations have pessimizations
+   that copy elements when ``SmallVector`` would move them.
 
-#. SmallVector understands ``std::is_trivially_copyable<Type>`` and uses realloc aggressively.
+#. ``SmallVector`` understands ``std::is_trivially_copyable<Type>`` and uses realloc aggressively.
 
-#. Many LLVM APIs take a SmallVectorImpl as an out parameter (see the note
+#. Many LLVM APIs take a ``SmallVectorImpl`` as an out parameter (see the note
    below).
 
-#. SmallVector with N equal to 0 is smaller than std::vector on 64-bit
+#. ``SmallVector`` with N equal to 0 is smaller than ``std::vector`` on 64-bit
    platforms, since it uses ``unsigned`` (instead of ``void*``) for its size
    and capacity.
 
@@ -1698,11 +1698,11 @@ non-ordered manner.
 ^^^^^^^^
 
 ``std::vector<T>`` is well loved and respected.  However, ``SmallVector<T, 0>``
-is often a better option due to the advantages listed above.  std::vector is
+is often a better option due to the advantages listed above.  ``std::vector`` is
 still useful when you need to store more than ``UINT32_MAX`` elements or when
 interfacing with code that expects vectors :).
 
-One worthwhile note about std::vector: avoid code like this:
+One worthwhile note about ``std::vector``: avoid code like this:
 
 .. code-block:: c++
 
@@ -1749,10 +1749,10 @@ extremely high constant factor, particularly for small data types.
 ``std::list`` also only supports bidirectional iteration, not random access
 iteration.
 
-In exchange for this high cost, std::list supports efficient access to both ends
+In exchange for this high cost, ``std::list`` supports efficient access to both ends
 of the list (like ``std::deque``, but unlike ``std::vector`` or
 ``SmallVector``).  In addition, the iterator invalidation characteristics of
-std::list are stronger than that of a vector class: inserting or removing an
+``std::list`` are stronger than that of a vector class: inserting or removing an
 element into the list does not invalidate iterator or pointers to other elements
 in the list.
 
@@ -1895,7 +1895,7 @@ Note that it is generally preferred to *not* pass strings around as ``const
 char*``'s.  These have a number of problems, including the fact that they
 cannot represent embedded nul ("\0") characters, and do not have a length
 available efficiently.  The general replacement for '``const char*``' is
-StringRef.
+``StringRef``.
 
 For more information on choosing string containers for APIs, please see
 :ref:`Passing Strings <string_apis>`.
@@ -1905,41 +1905,41 @@ For more information on choosing string containers for APIs, please see
 llvm/ADT/StringRef.h
 ^^^^^^^^^^^^^^^^^^^^
 
-The StringRef class is a simple value class that contains a pointer to a
+The ``StringRef`` class is a simple value class that contains a pointer to a
 character and a length, and is quite related to the :ref:`ArrayRef
 <dss_arrayref>` class (but specialized for arrays of characters).  Because
-StringRef carries a length with it, it safely handles strings with embedded nul
+``StringRef`` carries a length with it, it safely handles strings with embedded nul
 characters in it, getting the length does not require a strlen call, and it even
 has very convenient APIs for slicing and dicing the character range that it
 represents.
 
-StringRef is ideal for passing simple strings around that are known to be live,
-either because they are C string literals, std::string, a C array, or a
-SmallVector.  Each of these cases has an efficient implicit conversion to
-StringRef, which doesn't result in a dynamic strlen being executed.
+``StringRef`` is ideal for passing simple strings around that are known to be live,
+either because they are C string literals, ``std::string``, a C array, or a
+``SmallVector``.  Each of these cases has an efficient implicit conversion to
+``StringRef``, which doesn't result in a dynamic ``strlen`` being executed.
 
-StringRef has a few major limitations which make more powerful string containers
+``StringRef`` has a few major limitations which make more powerful string containers
 useful:
 
-#. You cannot directly convert a StringRef to a 'const char*' because there is
-   no way to add a trailing nul (unlike the .c_str() method on various stronger
+#. You cannot directly convert a ``StringRef`` to a 'const char*' because there is
+   no way to add a trailing nul (unlike the ``.c_str()`` method on various stronger
    classes).
 
-#. StringRef doesn't own or keep alive the underlying string bytes.
+#. ``StringRef`` doesn't own or keep alive the underlying string bytes.
    As such it can easily lead to dangling pointers, and is not suitable for
-   embedding in datastructures in most cases (instead, use an std::string or
+   embedding in datastructures in most cases (instead, use an ``std::string`` or
    something like that).
 
-#. For the same reason, StringRef cannot be used as the return value of a
-   method if the method "computes" the result string.  Instead, use std::string.
+#. For the same reason, ``StringRef`` cannot be used as the return value of a
+   method if the method "computes" the result string.  Instead, use ``std::string``.
 
-#. StringRef's do not allow you to mutate the pointed-to string bytes and it
+#. ``StringRef``'s do not allow you to mutate the pointed-to string bytes and it
    doesn't allow you to insert or remove bytes from the range.  For editing
    operations like this, it interoperates with the :ref:`Twine <dss_twine>`
    class.
 
 Because of its strengths and limitations, it is very common for a function to
-take a StringRef and for a method on an object to return a StringRef that points
+take a ``StringRef`` and for a method on an object to return a ``StringRef`` that points
 into some string that it owns.
 
 .. _dss_twine:
@@ -1979,25 +1979,25 @@ behavior and will probably crash:
   const Twine &Tmp = X + "." + Twine(i);
   foo(Tmp);
 
-... because the temporaries are destroyed before the call.  That said, Twine's
-are much more efficient than intermediate std::string temporaries, and they work
-really well with StringRef.  Just be aware of their limitations.
+... because the temporaries are destroyed before the call.  That said, ``Twine``'s
+are much more efficient than intermediate ``std::string`` temporaries, and they work
+really well with ``StringRef``.  Just be aware of their limitations.
 
 .. _dss_smallstring:
 
 llvm/ADT/SmallString.h
 ^^^^^^^^^^^^^^^^^^^^^^
 
-SmallString is a subclass of :ref:`SmallVector <dss_smallvector>` that adds some
-convenience APIs like += that takes StringRef's.  SmallString avoids allocating
+``SmallString`` is a subclass of :ref:`SmallVector <dss_smallvector>` that adds some
+convenience APIs like += that takes ``StringRef``'s.  ``SmallString`` avoids allocating
 memory in the case when the preallocated space is enough to hold its data, and
 it calls back to general heap allocation when required.  Since it owns its data,
 it is very safe to use and supports full mutation of the string.
 
-Like SmallVector's, the big downside to SmallString is their sizeof.  While they
+Like ``SmallVector``'s, the big downside to ``SmallString`` is their sizeof.  While they
 are optimized for small strings, they themselves are not particularly small.
 This means that they work great for temporary scratch buffers on the stack, but
-should not generally be put into the heap: it is very rare to see a SmallString
+should not generally be put into the heap: it is very rare to see a ``SmallString``
 as the member of a frequently-allocated heap data structure or returned
 by-value.
 
@@ -2006,18 +2006,18 @@ by-value.
 std::string
 ^^^^^^^^^^^
 
-The standard C++ std::string class is a very general class that (like
-SmallString) owns its underlying data.  sizeof(std::string) is very reasonable
+The standard C++ ``std::string`` class is a very general class that (like
+``SmallString``) owns its underlying data.  sizeof(std::string) is very reasonable
 so it can be embedded into heap data structures and returned by-value.  On the
-other hand, std::string is highly inefficient for inline editing (e.g.
+other hand, ``std::string`` is highly inefficient for inline editing (e.g.
 concatenating a bunch of stuff together) and because it is provided by the
 standard library, its performance characteristics depend a lot of the host
 standard library (e.g. libc++ and MSVC provide a highly optimized string class,
 GCC contains a really slow implementation).
 
-The major disadvantage of std::string is that almost every operation that makes
+The major disadvantage of ``std::string`` is that almost every operation that makes
 them larger can allocate memory, which is slow.  As such, it is better to use
-SmallVector or Twine as a scratch buffer, but then use std::string to persist
+``SmallVector`` or ``Twine`` as a scratch buffer, but then use ``std::string`` to persist
 the result.
 
 .. _ds_set:
@@ -2035,8 +2035,8 @@ A sorted 'vector'
 ^^^^^^^^^^^^^^^^^
 
 If you intend to insert a lot of elements, then do a lot of queries, a great
-approach is to use an std::vector (or other sequential container) with
-std::sort+std::unique to remove duplicates.  This approach works really well if
+approach is to use an ``std::vector`` (or other sequential container) with
+``std::sort``+``std::unique`` to remove duplicates.  This approach works really well if
 your usage pattern has these two distinct phases (insert then query), and can be
 coupled with a good choice of :ref:`sequential container <ds_sequential>`.
 
@@ -2102,11 +2102,11 @@ copy-construction, which :ref:`SmallSet <dss_smallset>` and :ref:`SmallPtrSet
 llvm/ADT/DenseSet.h
 ^^^^^^^^^^^^^^^^^^^
 
-DenseSet is a simple quadratically probed hash table.  It excels at supporting
+``DenseSet`` is a simple quadratically probed hash table.  It excels at supporting
 small values: it uses a single allocation to hold all of the pairs that are
-currently inserted in the set.  DenseSet is a great way to unique small values
+currently inserted in the set.  ``DenseSet`` is a great way to unique small values
 that are not simple pointers (use :ref:`SmallPtrSet <dss_smallptrset>` for
-pointers).  Note that DenseSet has the same requirements for the value type that
+pointers).  Note that ``DenseSet`` has the same requirements for the value type that
 :ref:`DenseMap <dss_densemap>` has.
 
 .. _dss_sparseset:
@@ -2128,12 +2128,12 @@ data structures.
 llvm/ADT/SparseMultiSet.h
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-SparseMultiSet adds multiset behavior to SparseSet, while retaining SparseSet's
-desirable attributes. Like SparseSet, it typically uses a lot of memory, but
+``SparseMultiSet`` adds multiset behavior to ``SparseSet``, while retaining ``SparseSet``'s
+desirable attributes. Like ``SparseSet``, it typically uses a lot of memory, but
 provides operations that are almost as fast as a vector.  Typical keys are
 physical registers, virtual registers, or numbered basic blocks.
 
-SparseMultiSet is useful for algorithms that need very fast
+``SparseMultiSet`` is useful for algorithms that need very fast
 clear/find/insert/erase of the entire collection, and iteration over sets of
 elements sharing a key. It is often a more efficient choice than using composite
 data structures (e.g. vector-of-vectors, map-of-vectors). It is not intended for
@@ -2144,10 +2144,10 @@ building composite data structures.
 llvm/ADT/FoldingSet.h
 ^^^^^^^^^^^^^^^^^^^^^
 
-FoldingSet is an aggregate class that is really good at uniquing
+``FoldingSet`` is an aggregate class that is really good at uniquing
 expensive-to-create or polymorphic objects.  It is a combination of a chained
 hash table with intrusive links (uniqued objects are required to inherit from
-FoldingSetNode) that uses :ref:`SmallVector <dss_smallvector>` as part of its ID
+``FoldingSetNode``) that uses :ref:`SmallVector <dss_smallvector>` as part of its ID
 process.
 
 Consider a case where you want to implement a "getOrCreateFoo" method for a
@@ -2157,14 +2157,14 @@ operands), but we don't want to 'new' a node, then try inserting it into a set
 only to find out it already exists, at which point we would have to delete it
 and return the node that already exists.
 
-To support this style of client, FoldingSet perform a query with a
-FoldingSetNodeID (which wraps SmallVector) that can be used to describe the
+To support this style of client, ``FoldingSet`` perform a query with a
+``FoldingSetNodeID`` (which wraps ``SmallVector``) that can be used to describe the
 element that we want to query for.  The query either returns the element
 matching the ID or it returns an opaque ID that indicates where insertion should
 take place.  Construction of the ID usually does not require heap traffic.
 
-Because FoldingSet uses intrusive links, it can support polymorphic objects in
-the set (for example, you can have SDNode instances mixed with LoadSDNodes).
+Because ``FoldingSet`` uses intrusive links, it can support polymorphic objects in
+the set (for example, you can have ``SDNode`` instances mixed with ``LoadSDNodes``).
 Because the elements are individually allocated, pointers to the elements are
 stable: inserting or removing elements does not invalidate any pointers to other
 elements.
@@ -2175,7 +2175,7 @@ elements.
 ^^^^^
 
 ``std::set`` is a reasonable all-around set class, which is decent at many
-things but great at nothing.  std::set allocates memory for each element
+things but great at nothing.  ``std::set`` allocates memory for each element
 inserted (thus it is very malloc intensive) and typically stores three pointers
 per element in the set (thus adding a large amount of per-element space
 overhead).  It offers guaranteed log(n) performance, which is not particularly
@@ -2183,12 +2183,12 @@ fast from a complexity standpoint (particularly if the elements of the set are
 expensive to compare, like strings), and has extremely high constant factors for
 lookup, insertion and removal.
 
-The advantages of std::set are that its iterators are stable (deleting or
+The advantages of ``std::set`` are that its iterators are stable (deleting or
 inserting an element from the set does not affect iterators or pointers to other
 elements) and that iteration over the set is guaranteed to be in sorted order.
 If the elements in the set are large, then the relative overhead of the pointers
 and malloc traffic is not a big deal, but if the elements of the set are small,
-std::set is almost never a good choice.
+``std::set`` is almost never a good choice.
 
 .. _dss_setvector:
 
@@ -2242,11 +2242,11 @@ produces a lot of malloc traffic.  It should be avoided.
 llvm/ADT/ImmutableSet.h
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-ImmutableSet is an immutable (functional) set implementation based on an AVL
+``ImmutableSet`` is an immutable (functional) set implementation based on an AVL
 tree.  Adding or removing elements is done through a Factory object and results
-in the creation of a new ImmutableSet object.  If an ImmutableSet already exists
+in the creation of a new ``ImmutableSet`` object.  If an ``ImmutableSet`` already exists
 with the given contents, then the existing one is returned; equality is compared
-with a FoldingSetNodeID.  The time and space complexity of add or remove
+with a ``FoldingSetNodeID``.  The time and space complexity of add or remove
 operations is logarithmic in the size of the original set.
 
 There is no method for returning an element of the set, you can only check for
@@ -2257,11 +2257,11 @@ membership.
 Other Set-Like Container Options
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The STL provides several other options, such as std::multiset and
-std::unordered_set.  We never use containers like unordered_set because
+The STL provides several other options, such as ``std::multiset`` and
+``std::unordered_set``.  We never use containers like ``unordered_set`` because
 they are generally very expensive (each insertion requires a malloc).
 
-std::multiset is useful if you're not interested in elimination of duplicates,
+``std::multiset`` is useful if you're not interested in elimination of duplicates,
 but has all the drawbacks of :ref:`std::set <dss_set>`.  A sorted vector
 (where you don't delete duplicate entries) or some other approach is almost
 always better.
@@ -2282,7 +2282,7 @@ A sorted 'vector'
 If your usage pattern follows a strict insert-then-query approach, you can
 trivially use the same approach as :ref:`sorted vectors for set-like containers
 <dss_sortedvectorset>`.  The only difference is that your query function (which
-uses std::lower_bound to get efficient log(n) lookup) should only compare the
+uses ``std::lower_bound`` to get efficient log(n) lookup) should only compare the
 key, not both the key and value.  This yields the same advantages as sorted
 vectors for sets.
 
@@ -2293,11 +2293,11 @@ llvm/ADT/StringMap.h
 
 Strings are commonly used as keys in maps, and they are difficult to support
 efficiently: they are variable length, inefficient to hash and compare when
-long, expensive to copy, etc.  StringMap is a specialized container designed to
+long, expensive to copy, etc.  ``StringMap`` is a specialized container designed to
 cope with these issues.  It supports mapping an arbitrary range of bytes to an
 arbitrary other object.
 
-The StringMap implementation uses a quadratically-probed hash table, where the
+The ``StringMap`` implementation uses a quadratically-probed hash table, where the
 buckets store a pointer to the heap allocated entries (and some other stuff).
 The entries in the map must be heap allocated because the strings are variable
 length.  The string data (key) and the element object (value) are stored in the
@@ -2305,26 +2305,26 @@ same allocation with the string data immediately after the element object.
 This container guarantees the "``(char*)(&Value+1)``" points to the key string
 for a value.
 
-The StringMap is very fast for several reasons: quadratic probing is very cache
+The ``StringMap`` is very fast for several reasons: quadratic probing is very cache
 efficient for lookups, the hash value of strings in buckets is not recomputed
-when looking up an element, StringMap rarely has to touch the memory for
+when looking up an element, ``StringMap`` rarely has to touch the memory for
 unrelated objects when looking up a value (even when hash collisions happen),
 hash table growth does not recompute the hash values for strings already in the
 table, and each pair in the map is store in a single allocation (the string data
 is stored in the same allocation as the Value of a pair).
 
-StringMap also provides query methods that take byte ranges, so it only ever
+``StringMap`` also provides query methods that take byte ranges, so it only ever
 copies a string if a value is inserted into the table.
 
-StringMap iteration order, however, is not guaranteed to be deterministic, so
-any uses which require that should instead use a std::map.
+``StringMap`` iteration order, however, is not guaranteed to be deterministic, so
+any uses which require that should instead use a ``std::map``.
 
 .. _dss_indexmap:
 
 llvm/ADT/IndexedMap.h
 ^^^^^^^^^^^^^^^^^^^^^
 
-IndexedMap is a specialized container for mapping small dense integers (or
+``IndexedMap`` is a specialized container for mapping small dense integers (or
 values that can be mapped to small dense integers) to some other type.  It is
 internally implemented as a vector with a mapping function that maps the keys
 to the dense integer range.
@@ -2338,27 +2338,27 @@ virtual register ID).
 llvm/ADT/DenseMap.h
 ^^^^^^^^^^^^^^^^^^^
 
-DenseMap is a simple quadratically probed hash table.  It excels at supporting
+``DenseMap`` is a simple quadratically probed hash table.  It excels at supporting
 small keys and values: it uses a single allocation to hold all of the pairs
-that are currently inserted in the map.  DenseMap is a great way to map
+that are currently inserted in the map.  ``DenseMap`` is a great way to map
 pointers to pointers, or map other small types to each other.
 
-There are several aspects of DenseMap that you should be aware of, however.
-The iterators in a DenseMap are invalidated whenever an insertion occurs,
-unlike map.  Also, because DenseMap allocates space for a large number of
+There are several aspects of ``DenseMap`` that you should be aware of, however.
+The iterators in a ``DenseMap`` are invalidated whenever an insertion occurs,
+unlike ``map``.  Also, because ``DenseMap`` allocates space for a large number of
 key/value pairs (it starts with 64 by default), it will waste a lot of space if
 your keys or values are large.  Finally, you must implement a partial
-specialization of DenseMapInfo for the key that you want, if it isn't already
-supported.  This is required to tell DenseMap about two special marker values
+specialization of ``DenseMapInfo`` for the key that you want, if it isn't already
+supported.  This is required to tell ``DenseMap`` about two special marker values
 (which can never be inserted into the map) that it needs internally.
 
-DenseMap's find_as() method supports lookup operations using an alternate key
+``DenseMap``'s ``find_as()`` method supports lookup operations using an alternate key
 type.  This is useful in cases where the normal key type is expensive to
-construct, but cheap to compare against.  The DenseMapInfo is responsible for
+construct, but cheap to compare against.  The ``DenseMapInfo`` is responsible for
 defining the appropriate comparison and hashing methods for each alternate key
 type used.
 
-DenseMap.h also contains a SmallDenseMap variant, that similar to
+``DenseMap.h`` also contains a ``SmallDenseMap`` variant, that similar to
 :ref:`SmallVector <dss_smallvector>` performs no heap allocation until the
 number of elements in the template parameter N are exceeded.
 
@@ -2404,12 +2404,12 @@ further additions.
 <map>
 ^^^^^
 
-std::map has similar characteristics to :ref:`std::set <dss_set>`: it uses a
+``std::map`` has similar characteristics to :ref:`std::set <dss_set>`: it uses a
 single allocation per pair inserted into the map, it offers log(n) lookup with
 an extremely large constant factor, imposes a space penalty of 3 pointers per
 pair in the map, etc.
 
-std::map is most useful when your keys or values are very large, if you need to
+``std::map`` is most useful when your keys or values are very large, if you need to
 iterate over the collection in sorted order, or if you need stable iterators
 into the map (i.e. they don't get invalidated if an insertion or deletion of
 another element takes place).
@@ -2419,7 +2419,7 @@ another element takes place).
 llvm/ADT/MapVector.h
 ^^^^^^^^^^^^^^^^^^^^
 
-``MapVector<KeyT,ValueT>`` provides a subset of the DenseMap interface.  The
+``MapVector<KeyT,ValueT>`` provides a subset of the ``DenseMap`` interface.  The
 main difference is that the iteration order is guaranteed to be the insertion
 order, making it an easy (but somewhat expensive) solution for non-deterministic
 iteration over maps of pointers.
@@ -2463,12 +2463,12 @@ operations is logarithmic in the size of the original map.
 Other Map-Like Container Options
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The STL provides several other options, such as std::multimap and
-std::unordered_map.  We never use containers like unordered_map because
+The STL provides several other options, such as ``std::multimap`` and
+``std::unordered_map``.  We never use containers like ``unordered_map`` because
 they are generally very expensive (each insertion requires a malloc).
 
-std::multimap is useful if you want to map a key to multiple values, but has all
-the drawbacks of std::map.  A sorted vector or some other approach is almost
+``std::multimap`` is useful if you want to map a key to multiple values, but has all
+the drawbacks of ``std::map``.  A sorted vector or some other approach is almost
 always better.
 
 .. _ds_bit:

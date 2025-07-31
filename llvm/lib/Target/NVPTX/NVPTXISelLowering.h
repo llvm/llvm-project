@@ -38,7 +38,7 @@ enum NodeType : unsigned {
   /// This node represents a PTX call instruction. It's operands are as follows:
   ///
   /// CALL(Chain, IsConvergent, IsIndirectCall/IsUniform, NumReturns,
-  ///      NumParams, Callee, Proto, InGlue)
+  ///      NumParams, Callee, Proto)
   CALL,
 
   MoveParam,
@@ -50,7 +50,6 @@ enum NodeType : unsigned {
   MUL_WIDE_UNSIGNED,
   SETP_F16X2,
   SETP_BF16X2,
-  BFE,
   BFI,
   PRMT,
 
@@ -85,13 +84,7 @@ enum NodeType : unsigned {
   StoreV2,
   StoreV4,
   StoreV8,
-  LoadParam,
-  LoadParamV2,
-  LoadParamV4,
-  StoreParam,
-  StoreParamV2,
-  StoreParamV4,
-  LAST_MEMORY_OPCODE = StoreParamV4,
+  LAST_MEMORY_OPCODE = StoreV8,
 };
 }
 
@@ -271,6 +264,16 @@ public:
 
   unsigned getPreferredFPToIntOpcode(unsigned Op, EVT FromVT,
                                      EVT ToVT) const override;
+
+  void computeKnownBitsForTargetNode(const SDValue Op, KnownBits &Known,
+                                     const APInt &DemandedElts,
+                                     const SelectionDAG &DAG,
+                                     unsigned Depth = 0) const override;
+  bool SimplifyDemandedBitsForTargetNode(SDValue Op, const APInt &DemandedBits,
+                                         const APInt &DemandedElts,
+                                         KnownBits &Known,
+                                         TargetLoweringOpt &TLO,
+                                         unsigned Depth = 0) const override;
 
 private:
   const NVPTXSubtarget &STI; // cache the subtarget here

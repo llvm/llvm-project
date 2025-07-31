@@ -591,8 +591,7 @@ bool Parser::ParseUsingDeclarator(DeclaratorContext Context,
        NextToken().isRegularKeywordAttribute() ||
        NextToken().is(tok::kw___attribute)) &&
       D.SS.isNotEmpty() && LastII == Tok.getIdentifierInfo() &&
-      !D.SS.getScopeRep()->getAsNamespace() &&
-      !D.SS.getScopeRep()->getAsNamespaceAlias()) {
+      D.SS.getScopeRep()->getKind() != NestedNameSpecifier::Namespace) {
     SourceLocation IdLoc = ConsumeToken();
     ParsedType Type =
         Actions.getInheritingConstructorName(D.SS, IdLoc, *LastII);
@@ -1133,13 +1132,6 @@ void Parser::AnnotateExistingDecltypeSpecifier(const DeclSpec &DS,
   // make sure we have a token we can turn into an annotation token
   if (PP.isBacktrackEnabled()) {
     PP.RevertCachedTokens(1);
-    if (DS.getTypeSpecType() == TST_error) {
-      // We encountered an error in parsing 'decltype(...)' so lets annotate all
-      // the tokens in the backtracking cache - that we likely had to skip over
-      // to get to a token that allows us to resume parsing, such as a
-      // semi-colon.
-      EndLoc = PP.getLastCachedTokenLocation();
-    }
   } else
     PP.EnterToken(Tok, /*IsReinject*/ true);
 
@@ -2252,7 +2244,7 @@ void Parser::ParseBaseClause(Decl *ClassDecl) {
   while (true) {
     // Parse a base-specifier.
     BaseResult Result = ParseBaseSpecifier(ClassDecl);
-    if (Result.isInvalid()) {
+    if (!Result.isUsable()) {
       // Skip the rest of this base specifier, up until the comma or
       // opening brace.
       SkipUntil(tok::comma, tok::l_brace, StopAtSemi | StopBeforeMatch);
@@ -4948,9 +4940,8 @@ void Parser::ParseHLSLRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
   // signature string and construct the in-memory elements
   if (!Found) {
     // Invoke the root signature parser to construct the in-memory constructs
-    SmallVector<llvm::hlsl::rootsig::RootElement> RootElements;
-    hlsl::RootSignatureParser Parser(getLangOpts().HLSLRootSigVer, RootElements,
-                                     Signature, PP);
+    hlsl::RootSignatureParser Parser(getLangOpts().HLSLRootSigVer, Signature,
+                                     PP);
     if (Parser.parse()) {
       T.consumeClose();
       return;
@@ -4958,7 +4949,7 @@ void Parser::ParseHLSLRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
 
     // Construct the declaration.
     Actions.HLSL().ActOnFinishRootSignatureDecl(RootSignatureLoc, DeclIdent,
-                                                RootElements);
+                                                Parser.getElements());
   }
 
   // Create the arg for the ParsedAttr

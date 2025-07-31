@@ -7,7 +7,8 @@ add_libc_unittest(
   SRCS
     affinity_test.cpp
   DEPENDS
-    libc.include.sched
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.pid_t
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
@@ -34,10 +35,23 @@ add_libc_unittest(
   SRCS
     get_priority_test.cpp
   DEPENDS
-    libc.include.sched
+    libc.hdr.sched_macros
     libc.src.errno.errno
     libc.src.sched.sched_get_priority_min
     libc.src.sched.sched_get_priority_max
+)
+
+add_libc_unittest(
+  getcpu_test
+  SUITE
+    libc_sched_unittests
+  SRCS
+    getcpu_test.cpp
+  DEPENDS
+    libc.include.sched
+    libc.src.errno.errno
+    libc.src.sched.getcpu
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_unittest(
@@ -65,7 +79,7 @@ add_libc_unittest(
   SRCS
     sched_rr_get_interval_test.cpp
   DEPENDS
-    libc.include.sched
+    libc.hdr.types.struct_timespec
     libc.src.errno.errno
     libc.src.sched.sched_getscheduler
     libc.src.sched.sched_setscheduler
@@ -81,7 +95,9 @@ add_libc_unittest(
   SRCS
     cpu_count_test.cpp
   DEPENDS
-    libc.include.sched
+    libc.hdr.sched_macros
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.pid_t
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno

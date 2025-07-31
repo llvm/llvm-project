@@ -52,63 +52,58 @@ static bool isIndirectPointerType(QualType Type) {
          Pointee->isMemberPointerType();
 }
 
-/// Apply nullability to the given declaration.
-static void applyNullability(Sema &S, Decl *D, NullabilityKind Nullability,
-                             VersionedInfoMetadata Metadata) {
-  if (!Metadata.IsActive)
+static void applyAPINotesType(Sema &S, Decl *decl, StringRef typeString,
+                              VersionedInfoMetadata metadata) {
+  if (typeString.empty())
+
     return;
 
-  auto GetModified =
-      [&](Decl *D, QualType QT,
-          NullabilityKind Nullability) -> std::optional<QualType> {
-    QualType Original = QT;
-    S.CheckImplicitNullabilityTypeSpecifier(QT, Nullability, D->getLocation(),
-                                            isa<ParmVarDecl>(D),
-                                            /*OverrideExisting=*/true);
-    return (QT.getTypePtr() != Original.getTypePtr()) ? std::optional(QT)
-                                                      : std::nullopt;
-  };
+  // Version-independent APINotes add "type" annotations
+  // with a versioned attribute for the client to select and apply.
+  if (S.captureSwiftVersionIndependentAPINotes()) {
+    auto *typeAttr = SwiftTypeAttr::CreateImplicit(S.Context, typeString);
+    auto *versioned = SwiftVersionedAdditionAttr::CreateImplicit(
+        S.Context, metadata.Version, typeAttr, metadata.IsReplacement);
+    decl->addAttr(versioned);
+  } else {
+    if (!metadata.IsActive)
+      return;
+    S.ApplyAPINotesType(decl, typeString);
+  }
+}
 
-  if (auto Function = dyn_cast<FunctionDecl>(D)) {
-    if (auto Modified =
-            GetModified(D, Function->getReturnType(), Nullability)) {
-      const FunctionType *FnType = Function->getType()->castAs<FunctionType>();
-      if (const FunctionProtoType *proto = dyn_cast<FunctionProtoType>(FnType))
-        Function->setType(S.Context.getFunctionType(
-            *Modified, proto->getParamTypes(), proto->getExtProtoInfo()));
-      else
-        Function->setType(
-            S.Context.getFunctionNoProtoType(*Modified, FnType->getExtInfo()));
+/// Apply nullability to the given declaration.
+static void applyNullability(Sema &S, Decl *decl, NullabilityKind nullability,
+                             VersionedInfoMetadata metadata) {
+  // Version-independent APINotes add "nullability" annotations
+  // with a versioned attribute for the client to select and apply.
+  if (S.captureSwiftVersionIndependentAPINotes()) {
+    SwiftNullabilityAttr::Kind attrNullabilityKind;
+    switch (nullability) {
+    case NullabilityKind::NonNull:
+      attrNullabilityKind = SwiftNullabilityAttr::Kind::NonNull;
+      break;
+    case NullabilityKind::Nullable:
+      attrNullabilityKind = SwiftNullabilityAttr::Kind::Nullable;
+      break;
+    case NullabilityKind::Unspecified:
+      attrNullabilityKind = SwiftNullabilityAttr::Kind::Unspecified;
+      break;
+    case NullabilityKind::NullableResult:
+      attrNullabilityKind = SwiftNullabilityAttr::Kind::NullableResult;
+      break;
     }
-  } else if (auto Method = dyn_cast<ObjCMethodDecl>(D)) {
-    if (auto Modified = GetModified(D, Method->getReturnType(), Nullability)) {
-      Method->setReturnType(*Modified);
+    auto *nullabilityAttr =
+        SwiftNullabilityAttr::CreateImplicit(S.Context, attrNullabilityKind);
+    auto *versioned = SwiftVersionedAdditionAttr::CreateImplicit(
+        S.Context, metadata.Version, nullabilityAttr, metadata.IsReplacement);
+    decl->addAttr(versioned);
+    return;
+  } else {
+    if (!metadata.IsActive)
+      return;
 
-      // Make it a context-sensitive keyword if we can.
-      if (!isIndirectPointerType(*Modified))
-        Method->setObjCDeclQualifier(Decl::ObjCDeclQualifier(
-            Method->getObjCDeclQualifier() | Decl::OBJC_TQ_CSNullability));
-    }
-  } else if (auto Value = dyn_cast<ValueDecl>(D)) {
-    if (auto Modified = GetModified(D, Value->getType(), Nullability)) {
-      Value->setType(*Modified);
-
-      // Make it a context-sensitive keyword if we can.
-      if (auto Parm = dyn_cast<ParmVarDecl>(D)) {
-        if (Parm->isObjCMethodParameter() && !isIndirectPointerType(*Modified))
-          Parm->setObjCDeclQualifier(Decl::ObjCDeclQualifier(
-              Parm->getObjCDeclQualifier() | Decl::OBJC_TQ_CSNullability));
-      }
-    }
-  } else if (auto Property = dyn_cast<ObjCPropertyDecl>(D)) {
-    if (auto Modified = GetModified(D, Property->getType(), Nullability)) {
-      Property->setType(*Modified, Property->getTypeSourceInfo());
-
-      // Make it a property attribute if we can.
-      if (!isIndirectPointerType(*Modified))
-        Property->setPropertyAttributes(
-            ObjCPropertyAttribute::kind_null_resettable);
-    }
+    S.ApplyNullability(decl, nullability);
   }
 }
 
@@ -361,42 +356,99 @@ static bool checkAPINotesReplacementType(Sema &S, SourceLocation Loc,
   return false;
 }
 
+void Sema::ApplyAPINotesType(Decl *D, StringRef TypeString) {
+  if (!TypeString.empty() && ParseTypeFromStringCallback) {
+    auto ParsedType = ParseTypeFromStringCallback(TypeString, "<API Notes>",
+                                                  D->getLocation());
+    if (ParsedType.isUsable()) {
+      QualType Type = Sema::GetTypeFromParser(ParsedType.get());
+      auto TypeInfo = Context.getTrivialTypeSourceInfo(Type, D->getLocation());
+      if (auto Var = dyn_cast<VarDecl>(D)) {
+        // Make adjustments to parameter types.
+        if (isa<ParmVarDecl>(Var)) {
+          Type = ObjC().AdjustParameterTypeForObjCAutoRefCount(
+              Type, D->getLocation(), TypeInfo);
+          Type = Context.getAdjustedParameterType(Type);
+        }
+
+        if (!checkAPINotesReplacementType(*this, Var->getLocation(),
+                                          Var->getType(), Type)) {
+          Var->setType(Type);
+          Var->setTypeSourceInfo(TypeInfo);
+        }
+      } else if (auto property = dyn_cast<ObjCPropertyDecl>(D)) {
+        if (!checkAPINotesReplacementType(*this, property->getLocation(),
+                                          property->getType(), Type)) {
+          property->setType(Type, TypeInfo);
+        }
+      } else {
+        llvm_unreachable("API notes allowed a type on an unknown declaration");
+      }
+    }
+  }
+}
+
+void Sema::ApplyNullability(Decl *D, NullabilityKind Nullability) {
+  auto GetModified =
+      [&](class Decl *D, QualType QT,
+          NullabilityKind Nullability) -> std::optional<QualType> {
+    QualType Original = QT;
+    CheckImplicitNullabilityTypeSpecifier(QT, Nullability, D->getLocation(),
+                                          isa<ParmVarDecl>(D),
+                                          /*OverrideExisting=*/true);
+    return (QT.getTypePtr() != Original.getTypePtr()) ? std::optional(QT)
+                                                      : std::nullopt;
+  };
+
+  if (auto Function = dyn_cast<FunctionDecl>(D)) {
+    if (auto Modified =
+            GetModified(D, Function->getReturnType(), Nullability)) {
+      const FunctionType *FnType = Function->getType()->castAs<FunctionType>();
+      if (const FunctionProtoType *proto = dyn_cast<FunctionProtoType>(FnType))
+        Function->setType(Context.getFunctionType(
+            *Modified, proto->getParamTypes(), proto->getExtProtoInfo()));
+      else
+        Function->setType(
+            Context.getFunctionNoProtoType(*Modified, FnType->getExtInfo()));
+    }
+  } else if (auto Method = dyn_cast<ObjCMethodDecl>(D)) {
+    if (auto Modified = GetModified(D, Method->getReturnType(), Nullability)) {
+      Method->setReturnType(*Modified);
+
+      // Make it a context-sensitive keyword if we can.
+      if (!isIndirectPointerType(*Modified))
+        Method->setObjCDeclQualifier(Decl::ObjCDeclQualifier(
+            Method->getObjCDeclQualifier() | Decl::OBJC_TQ_CSNullability));
+    }
+  } else if (auto Value = dyn_cast<ValueDecl>(D)) {
+    if (auto Modified = GetModified(D, Value->getType(), Nullability)) {
+      Value->setType(*Modified);
+
+      // Make it a context-sensitive keyword if we can.
+      if (auto Parm = dyn_cast<ParmVarDecl>(D)) {
+        if (Parm->isObjCMethodParameter() && !isIndirectPointerType(*Modified))
+          Parm->setObjCDeclQualifier(Decl::ObjCDeclQualifier(
+              Parm->getObjCDeclQualifier() | Decl::OBJC_TQ_CSNullability));
+      }
+    }
+  } else if (auto Property = dyn_cast<ObjCPropertyDecl>(D)) {
+    if (auto Modified = GetModified(D, Property->getType(), Nullability)) {
+      Property->setType(*Modified, Property->getTypeSourceInfo());
+
+      // Make it a property attribute if we can.
+      if (!isIndirectPointerType(*Modified))
+        Property->setPropertyAttributes(
+            ObjCPropertyAttribute::kind_null_resettable);
+    }
+  }
+}
+
 /// Process API notes for a variable or property.
 static void ProcessAPINotes(Sema &S, Decl *D,
                             const api_notes::VariableInfo &Info,
                             VersionedInfoMetadata Metadata) {
   // Type override.
-  if (Metadata.IsActive && !Info.getType().empty() &&
-      S.ParseTypeFromStringCallback) {
-    auto ParsedType = S.ParseTypeFromStringCallback(
-        Info.getType(), "<API Notes>", D->getLocation());
-    if (ParsedType.isUsable()) {
-      QualType Type = Sema::GetTypeFromParser(ParsedType.get());
-      auto TypeInfo =
-          S.Context.getTrivialTypeSourceInfo(Type, D->getLocation());
-
-      if (auto Var = dyn_cast<VarDecl>(D)) {
-        // Make adjustments to parameter types.
-        if (isa<ParmVarDecl>(Var)) {
-          Type = S.ObjC().AdjustParameterTypeForObjCAutoRefCount(
-              Type, D->getLocation(), TypeInfo);
-          Type = S.Context.getAdjustedParameterType(Type);
-        }
-
-        if (!checkAPINotesReplacementType(S, Var->getLocation(), Var->getType(),
-                                          Type)) {
-          Var->setType(Type);
-          Var->setTypeSourceInfo(TypeInfo);
-        }
-      } else if (auto Property = dyn_cast<ObjCPropertyDecl>(D)) {
-        if (!checkAPINotesReplacementType(S, Property->getLocation(),
-                                          Property->getType(), Type))
-          Property->setType(Type, TypeInfo);
-
-      } else
-        llvm_unreachable("API notes allowed a type on an unknown declaration");
-    }
-  }
+  applyAPINotesType(S, D, Info.getType(), Metadata);
 
   // Nullability.
   if (auto Nullability = Info.getNullability())
@@ -814,7 +866,8 @@ static void ProcessVersionedAPINotes(
     Sema &S, SpecificDecl *D,
     const api_notes::APINotesReader::VersionedInfo<SpecificInfo> Info) {
 
-  maybeAttachUnversionedSwiftName(S, D, Info);
+  if (!S.captureSwiftVersionIndependentAPINotes())
+    maybeAttachUnversionedSwiftName(S, D, Info);
 
   unsigned Selected = Info.getSelected().value_or(Info.size());
 
@@ -824,10 +877,18 @@ static void ProcessVersionedAPINotes(
     std::tie(Version, InfoSlice) = Info[i];
     auto Active = (i == Selected) ? IsActive_t::Active : IsActive_t::Inactive;
     auto Replacement = IsSubstitution_t::Original;
-    if (Active == IsActive_t::Inactive && Version.empty()) {
+
+    // When collection all APINotes as version-independent,
+    // capture all as inactive and defer to the client select the
+    // right one.
+    if (S.captureSwiftVersionIndependentAPINotes()) {
+      Active = IsActive_t::Inactive;
+      Replacement = IsSubstitution_t::Original;
+    } else if (Active == IsActive_t::Inactive && Version.empty()) {
       Replacement = IsSubstitution_t::Replacement;
       Version = Info[Selected].first;
     }
+
     ProcessAPINotes(S, D, InfoSlice,
                     VersionedInfoMetadata(Version, Active, Replacement));
   }

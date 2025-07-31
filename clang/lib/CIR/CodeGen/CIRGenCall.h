@@ -116,6 +116,11 @@ public:
     assert(isOrdinary());
     return reinterpret_cast<mlir::Operation *>(kindOrFunctionPtr);
   }
+
+  void setFunctionPointer(mlir::Operation *functionPtr) {
+    assert(isOrdinary());
+    kindOrFunctionPtr = SpecialKind(reinterpret_cast<uintptr_t>(functionPtr));
+  }
 };
 
 /// Type for representing both the decl and type of parameters to a function.

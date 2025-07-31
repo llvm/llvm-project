@@ -57,6 +57,7 @@ namespace clang {
   class StringLiteral;
   class TargetInfo;
   class ValueDecl;
+  class WarnUnusedResultAttr;
 
 /// A simple array of base specifiers.
 typedef SmallVector<CXXBaseSpecifier*, 4> CXXCastPath;
@@ -261,6 +262,12 @@ public:
   bool isUnusedResultAWarning(const Expr *&WarnExpr, SourceLocation &Loc,
                               SourceRange &R1, SourceRange &R2,
                               ASTContext &Ctx) const;
+
+  /// Returns the WarnUnusedResultAttr that is declared on the callee
+  /// or its return type declaration, together with a NamedDecl that
+  /// refers to the declaration the attribute is attached to.
+  static std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
+  getUnusedResultAttrImpl(const Decl *Callee, QualType ReturnType);
 
   /// isLValue - True if this expression is an "l-value" according to
   /// the rules of the current language.  C and C++ give somewhat
@@ -3190,11 +3197,13 @@ public:
   /// type.
   QualType getCallReturnType(const ASTContext &Ctx) const;
 
-  /// Returns the WarnUnusedResultAttr that is either declared on the called
-  /// function, or its return type declaration, together with a NamedDecl that
-  /// refers to the declaration the attribute is attached onto.
-  std::pair<const NamedDecl *, const Attr *>
-  getUnusedResultAttr(const ASTContext &Ctx) const;
+  /// Returns the WarnUnusedResultAttr that is declared on the callee
+  /// or its return type declaration, together with a NamedDecl that
+  /// refers to the declaration the attribute is attached to.
+  std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
+  getUnusedResultAttr(const ASTContext &Ctx) const {
+    return getUnusedResultAttrImpl(getCalleeDecl(), getCallReturnType(Ctx));
+  }
 
   /// Returns true if this call expression should warn on unused results.
   bool hasUnusedResultAttr(const ASTContext &Ctx) const {

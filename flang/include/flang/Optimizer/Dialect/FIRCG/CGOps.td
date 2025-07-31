@@ -60,7 +60,8 @@ def fircg_XEmboxOp : fircg_Op<"ext_embox", [AttrSizedOperandSegments]> {
       Variadic<AnyIntegerType>:$slice,
       Variadic<AnyCoordinateType>:$subcomponent,
       Variadic<AnyIntegerType>:$substr, Variadic<AnyIntegerType>:$lenParams,
-      Optional<fir_ClassType>:$sourceBox, OptionalAttr<I32Attr>:$allocator_idx);
+      Optional<BoxOrClassType>:$sourceBox,
+      OptionalAttr<I32Attr>:$allocator_idx);
   let results = (outs BoxOrClassType);
 
   let assemblyFormat = [{

@@ -327,9 +327,11 @@ private:
     size_t startIndex = 0;
 
     struct PageBlock {
+      Symbol *repSym; // Representative symbol for the OutputSection
       size_t firstIndex;
       size_t count;
-      PageBlock() : firstIndex(0), count(0) {}
+      PageBlock(Symbol *repSym = nullptr)
+          : repSym(repSym), firstIndex(0), count(0) {}
     };
 
     // Map output sections referenced by MIPS GOT relocations
@@ -418,61 +420,31 @@ private:
 
 class DynamicReloc {
 public:
-  enum Kind {
-    /// The resulting dynamic relocation does not reference a symbol (#sym must
-    /// be nullptr) and uses #addend as the result of computeAddend(ctx).
-    AddendOnly,
-    /// The resulting dynamic relocation will not reference a symbol: #sym is
-    /// only used to compute the addend with InputSection::getRelocTargetVA().
-    /// Useful for various relative and TLS relocations (e.g. R_X86_64_TPOFF64).
-    AddendOnlyWithTargetVA,
-    /// The resulting dynamic relocation references symbol #sym from the dynamic
-    /// symbol table and uses #addend as the value of computeAddend(ctx).
-    AgainstSymbol,
-    /// The resulting dynamic relocation references symbol #sym from the dynamic
-    /// symbol table and uses InputSection::getRelocTargetVA() + #addend for the
-    /// final addend. It can be used for relocations that write the symbol VA as
-    // the addend (e.g. R_MIPS_TLS_TPREL64) but still reference the symbol.
-    AgainstSymbolWithTargetVA,
-    /// This is used by the MIPS multi-GOT implementation. It relocates
-    /// addresses of 64kb pages that lie inside the output section.
-    MipsMultiGotPage,
-  };
-  /// This constructor records a relocation against a symbol.
+  /// This constructor records a normal relocation.
   DynamicReloc(RelType type, const InputSectionBase *inputSec,
-               uint64_t offsetInSec, Kind kind, Symbol &sym, int64_t addend,
-               RelExpr expr)
+               uint64_t offsetInSec, bool isAgainstSymbol, Symbol &sym,
+               int64_t addend, RelExpr expr)
       : sym(&sym), inputSec(inputSec), offsetInSec(offsetInSec), type(type),
-        addend(addend), kind(kind), expr(expr) {}
+        addend(addend), isAgainstSymbol(isAgainstSymbol), isFinal(false),
+        expr(expr) {}
   /// This constructor records a relative relocation with no symbol.
   DynamicReloc(RelType type, const InputSectionBase *inputSec,
                uint64_t offsetInSec, int64_t addend = 0)
-      : sym(nullptr), inputSec(inputSec), offsetInSec(offsetInSec), type(type),
-        addend(addend), kind(AddendOnly), expr(R_ADDEND) {}
-  /// This constructor records dynamic relocation settings used by the MIPS
-  /// multi-GOT implementation.
-  DynamicReloc(RelType type, const InputSectionBase *inputSec,
-               uint64_t offsetInSec, const OutputSection *outputSec,
-               int64_t addend)
-      : sym(nullptr), outputSec(outputSec), inputSec(inputSec),
-        offsetInSec(offsetInSec), type(type), addend(addend),
-        kind(MipsMultiGotPage), expr(R_ADDEND) {}
+      : DynamicReloc(type, inputSec, offsetInSec, false,
+                     *inputSec->getCtx().dummySym, addend, R_ADDEND) {}
 
   uint64_t getOffset() const;
   uint32_t getSymIndex(SymbolTableBaseSection *symTab) const;
-  bool needsDynSymIndex() const {
-    return kind == AgainstSymbol || kind == AgainstSymbolWithTargetVA;
-  }
+  bool needsDynSymIndex() const { return isAgainstSymbol; }
 
   /// Computes the addend of the dynamic relocation. Note that this is not the
   /// same as the #addend member variable as it may also include the symbol
   /// address/the address of the corresponding GOT entry/etc.
   int64_t computeAddend(Ctx &) const;
 
-  void computeRaw(Ctx &, SymbolTableBaseSection *symt);
+  void finalize(Ctx &, SymbolTableBaseSection *symt);
 
   Symbol *sym;
-  const OutputSection *outputSec = nullptr;
   const InputSectionBase *inputSec;
   uint64_t offsetInSec;
   uint64_t r_offset;
@@ -483,7 +455,15 @@ public:
   int64_t addend;
 
 private:
-  Kind kind;
+  /// Whether this was constructed with a Kind of AgainstSymbol.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t isAgainstSymbol : 1;
+
+  /// The resulting dynamic relocation has already had its addend computed.
+  /// Calling computeAddend() is an error.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t isFinal : 1;
+
   // The kind of expression used to calculate the added (required e.g. for
   // relative GOT relocations).
   RelExpr expr;
@@ -528,8 +508,8 @@ public:
                         uint64_t offsetInSec, Symbol &sym, int64_t addend,
                         RelType addendRelType, RelExpr expr) {
     assert(expr != R_ADDEND && "expected non-addend relocation expression");
-    addReloc<shard>(DynamicReloc::AddendOnlyWithTargetVA, dynType, isec,
-                    offsetInSec, sym, addend, expr, addendRelType);
+    addReloc<shard>(false, dynType, isec, offsetInSec, sym, addend, expr,
+                    addendRelType);
   }
   /// Add a dynamic relocation using the target address of \p sym as the addend
   /// if \p sym is non-preemptible. Otherwise add a relocation against \p sym.
@@ -538,14 +518,15 @@ public:
                                           uint64_t offsetInSec, Symbol &sym,
                                           RelType addendRelType);
   template <bool shard = false>
-  void addReloc(DynamicReloc::Kind kind, RelType dynType, InputSectionBase &sec,
+  void addReloc(bool isAgainstSymbol, RelType dynType, InputSectionBase &sec,
                 uint64_t offsetInSec, Symbol &sym, int64_t addend, RelExpr expr,
                 RelType addendRelType) {
     // Write the addends to the relocated address if required. We skip
     // it if the written value would be zero.
     if (ctx.arg.writeAddends && (expr != R_ADDEND || addend != 0))
       sec.addReloc({expr, addendRelType, offsetInSec, addend, &sym});
-    addReloc<shard>({dynType, &sec, offsetInSec, kind, sym, addend, expr});
+    addReloc<shard>(
+        {dynType, &sec, offsetInSec, isAgainstSymbol, sym, addend, expr});
   }
   bool isNeeded() const override {
     return !relocs.empty() ||

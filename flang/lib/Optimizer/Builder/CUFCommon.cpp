@@ -25,8 +25,8 @@ mlir::gpu::GPUModuleOp cuf::getOrCreateGPUModule(mlir::ModuleOp mod,
                mlir::UnitAttr::get(ctx));
 
   mlir::OpBuilder builder(ctx);
-  auto gpuMod = builder.create<mlir::gpu::GPUModuleOp>(mod.getLoc(),
-                                                       cudaDeviceModuleName);
+  auto gpuMod = mlir::gpu::GPUModuleOp::create(builder, mod.getLoc(),
+                                               cudaDeviceModuleName);
   mlir::Block::iterator insertPt(mod.getBodyRegion().front().end());
   symTab.insert(gpuMod, insertPt);
   return gpuMod;
@@ -84,8 +84,8 @@ void cuf::genPointerSync(const mlir::Value box, fir::FirOpBuilder &builder) {
       if (auto globalOp =
               mod.lookupSymbol<fir::GlobalOp>(addrOfOp.getSymbol())) {
         if (cuf::isRegisteredDeviceGlobal(globalOp)) {
-          builder.create<cuf::SyncDescriptorOp>(box.getLoc(),
-                                                addrOfOp.getSymbol());
+          cuf::SyncDescriptorOp::create(builder, box.getLoc(),
+                                        addrOfOp.getSymbol());
         }
       }
     }

@@ -19,7 +19,6 @@
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/bit.h"
@@ -319,6 +318,7 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
   case spirv::Decoration::RestrictPointer:
   case spirv::Decoration::NoContraction:
   case spirv::Decoration::Constant:
+  case spirv::Decoration::Block:
     // For unit attributes and decoration attributes, the args list
     // has no values so we do nothing.
     if (isa<UnitAttr, DecorationAttr>(attr))
@@ -406,8 +406,9 @@ LogicalResult Serializer::processMemberDecoration(
   SmallVector<uint32_t, 4> args(
       {structID, memberDecoration.memberIndex,
        static_cast<uint32_t>(memberDecoration.decoration)});
-  if (memberDecoration.hasValue) {
-    args.push_back(memberDecoration.decorationValue);
+  if (memberDecoration.hasValue()) {
+    args.push_back(
+        cast<IntegerAttr>(memberDecoration.decorationValue).getInt());
   }
   encodeInstructionInto(decorations, spirv::Opcode::OpMemberDecorate, args);
   return success();
@@ -446,6 +447,19 @@ LogicalResult Serializer::processType(Location loc, Type type,
 LogicalResult
 Serializer::processTypeImpl(Location loc, Type type, uint32_t &typeID,
                             SetVector<StringRef> &serializationCtx) {
+
+  // Map unsigned integer types to singless integer types.
+  // This is needed otherwise the generated spirv assembly will contain
+  // twice a type declaration (like OpTypeInt 32 0) which is no permitted and
+  // such module fails validation. Indeed at MLIR level the two types are
+  // different and lookup in the cache below misses.
+  // Note: This conversion needs to happen here before the type is looked up in
+  // the cache.
+  if (type.isUnsignedInteger()) {
+    type = IntegerType::get(loc->getContext(), type.getIntOrFloatBitWidth(),
+                            IntegerType::SignednessSemantics::Signless);
+  }
+
   typeID = getTypeID(type);
   if (typeID)
     return success();
@@ -617,11 +631,16 @@ LogicalResult Serializer::prepareBasicType(
     operands.push_back(static_cast<uint32_t>(ptrType.getStorageClass()));
     operands.push_back(pointeeTypeID);
 
+    // TODO: Now struct decorations are supported this code may not be
+    // necessary. However, it is left to support backwards compatibility.
+    // Ideally, Block decorations should be inserted when converting to SPIR-V.
     if (isInterfaceStructPtrType(ptrType)) {
-      if (failed(emitDecoration(getTypeID(pointeeStruct),
-                                spirv::Decoration::Block)))
-        return emitError(loc, "cannot decorate ")
-               << pointeeStruct << " with Block decoration";
+      auto structType = cast<spirv::StructType>(ptrType.getPointeeType());
+      if (!structType.hasDecoration(spirv::Decoration::Block))
+        if (failed(emitDecoration(getTypeID(pointeeStruct),
+                                  spirv::Decoration::Block)))
+          return emitError(loc, "cannot decorate ")
+                 << pointeeStruct << " with Block decoration";
     }
 
     return success();
@@ -666,10 +685,12 @@ LogicalResult Serializer::prepareBasicType(
       }
       operands.push_back(elementTypeID);
       if (hasOffset) {
+        auto intType = IntegerType::get(structType.getContext(), 32);
         // Decorate each struct member with an offset
         spirv::StructType::MemberDecorationInfo offsetDecoration{
-            elementIndex, /*hasValue=*/1, spirv::Decoration::Offset,
-            static_cast<uint32_t>(structType.getMemberOffset(elementIndex))};
+            elementIndex, spirv::Decoration::Offset,
+            IntegerAttr::get(intType,
+                             structType.getMemberOffset(elementIndex))};
         if (failed(processMemberDecoration(resultID, offsetDecoration))) {
           return emitError(loc, "cannot decorate ")
                  << elementIndex << "-th member of " << structType
@@ -686,6 +707,20 @@ LogicalResult Serializer::prepareBasicType(
                << static_cast<uint32_t>(memberDecoration.memberIndex)
                << "-th member of " << structType << " with "
                << stringifyDecoration(memberDecoration.decoration);
+      }
+    }
+
+    SmallVector<spirv::StructType::StructDecorationInfo, 1> structDecorations;
+    structType.getStructDecorations(structDecorations);
+
+    for (spirv::StructType::StructDecorationInfo &structDecoration :
+         structDecorations) {
+      if (failed(processDecorationAttr(loc, resultID,
+                                       structDecoration.decoration,
+                                       structDecoration.decorationValue))) {
+        return emitError(loc, "cannot decorate struct ")
+               << structType << " with "
+               << stringifyDecoration(structDecoration.decoration);
       }
     }
 
@@ -923,6 +958,25 @@ Serializer::prepareDenseElementsConstant(Location loc, Type constType,
     } else {
       return 0;
     }
+  } else if (isa<spirv::TensorArmType>(constType)) {
+    numberOfConstituents = shapedType.getNumElements();
+    operands.reserve(numberOfConstituents + 2);
+    for (int i = 0; i < numberOfConstituents; ++i) {
+      uint32_t elementID = 0;
+      if (auto attr = dyn_cast<DenseIntElementsAttr>(valueAttr)) {
+        elementID =
+            elementType.isInteger(1)
+                ? prepareConstantBool(loc, attr.getValues<BoolAttr>()[i])
+                : prepareConstantInt(loc, attr.getValues<IntegerAttr>()[i]);
+      }
+      if (auto attr = dyn_cast<DenseFPElementsAttr>(valueAttr)) {
+        elementID = prepareConstantFp(loc, attr.getValues<FloatAttr>()[i]);
+      }
+      if (!elementID) {
+        return 0;
+      }
+      operands.push_back(elementID);
+    }
   } else {
     operands.reserve(numberOfConstituents + 2);
     for (int i = 0; i < numberOfConstituents; ++i) {
@@ -1106,6 +1160,55 @@ uint32_t Serializer::prepareConstantFp(Location loc, FloatAttr floatAttr,
   if (!isSpec) {
     constIDMap[floatAttr] = resultID;
   }
+  return resultID;
+}
+
+uint32_t Serializer::prepareConstantCompositeReplicate(Location loc,
+                                                       Type resultType,
+                                                       Attribute valueAttr) {
+  std::pair<Attribute, Type> valueTypePair{valueAttr, resultType};
+  if (uint32_t id = getConstantCompositeReplicateID(valueTypePair)) {
+    return id;
+  }
+
+  uint32_t typeID = 0;
+  if (failed(processType(loc, resultType, typeID))) {
+    return 0;
+  }
+
+  Type valueType;
+  if (auto typedAttr = dyn_cast<TypedAttr>(valueAttr)) {
+    valueType = typedAttr.getType();
+  } else if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
+    auto typedElemAttr = dyn_cast<TypedAttr>(arrayAttr[0]);
+    if (!typedElemAttr)
+      return 0;
+    valueType =
+        spirv::ArrayType::get(typedElemAttr.getType(), arrayAttr.size());
+  } else {
+    return 0;
+  }
+
+  auto compositeType = dyn_cast<CompositeType>(resultType);
+  if (!compositeType)
+    return 0;
+  Type elementType = compositeType.getElementType(0);
+
+  uint32_t constandID;
+  if (elementType == valueType) {
+    constandID = prepareConstant(loc, elementType, valueAttr);
+  } else {
+    constandID = prepareConstantCompositeReplicate(loc, elementType, valueAttr);
+  }
+
+  uint32_t resultID = getNextID();
+  uint32_t operands[] = {typeID, resultID, constandID};
+
+  encodeInstructionInto(typesGlobalValues,
+                        spirv::Opcode::OpConstantCompositeReplicateEXT,
+                        operands);
+
+  constCompositeReplicateIDMap[valueTypePair] = resultID;
   return resultID;
 }
 
@@ -1328,6 +1431,9 @@ LogicalResult Serializer::processOperation(Operation *opInst) {
         return processBranchConditionalOp(op);
       })
       .Case([&](spirv::ConstantOp op) { return processConstantOp(op); })
+      .Case([&](spirv::EXTConstantCompositeReplicateOp op) {
+        return processConstantCompositeReplicateOp(op);
+      })
       .Case([&](spirv::FuncOp op) { return processFuncOp(op); })
       .Case([&](spirv::GlobalVariableOp op) {
         return processGlobalVariableOp(op);
@@ -1338,6 +1444,9 @@ LogicalResult Serializer::processOperation(Operation *opInst) {
       .Case([&](spirv::SpecConstantOp op) { return processSpecConstantOp(op); })
       .Case([&](spirv::SpecConstantCompositeOp op) {
         return processSpecConstantCompositeOp(op);
+      })
+      .Case([&](spirv::EXTSpecConstantCompositeReplicateOp op) {
+        return processSpecConstantCompositeReplicateOp(op);
       })
       .Case([&](spirv::SpecConstantOperationOp op) {
         return processSpecConstantOperationOp(op);

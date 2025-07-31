@@ -199,22 +199,6 @@ func.func @shuffle_poison_mask(%a: vector<4xf32>, %b: vector<4xf32>) -> vector<4
   return %1 : vector<4xf32>
 }
 
-// CHECK-LABEL: @extract_element_0d
-func.func @extract_element_0d(%a: vector<f32>) -> f32 {
-  // CHECK-NEXT: vector.extractelement %{{.*}}[] : vector<f32>
-  %1 = vector.extractelement %a[] : vector<f32>
-  return %1 : f32
-}
-
-// CHECK-LABEL: @extract_element
-func.func @extract_element(%a: vector<16xf32>) -> f32 {
-  // CHECK:      %[[C15:.*]] = arith.constant 15 : i32
-  %c = arith.constant 15 : i32
-  // CHECK-NEXT: vector.extractelement %{{.*}}[%[[C15]] : i32] : vector<16xf32>
-  %1 = vector.extractelement %a[%c : i32] : vector<16xf32>
-  return %1 : f32
-}
-
 // CHECK-LABEL: @extract_const_idx
 func.func @extract_const_idx(%arg0: vector<4x8x16xf32>)
                              -> (vector<4x8x16xf32>, vector<8x16xf32>, vector<16xf32>, f32) {
@@ -254,22 +238,6 @@ func.func @extract_poison_idx(%a: vector<4x5xf32>) -> f32 {
   // CHECK-NEXT: vector.extract %{{.*}}[-1, 0] : f32 from vector<4x5xf32>
   %0 = vector.extract %a[-1, 0] : f32 from vector<4x5xf32>
   return %0 : f32
-}
-
-// CHECK-LABEL: @insert_element_0d
-func.func @insert_element_0d(%a: f32, %b: vector<f32>) -> vector<f32> {
-  // CHECK-NEXT: vector.insertelement %{{.*}}, %{{.*}}[] : vector<f32>
-  %1 = vector.insertelement %a, %b[] : vector<f32>
-  return %1 : vector<f32>
-}
-
-// CHECK-LABEL: @insert_element
-func.func @insert_element(%a: f32, %b: vector<16xf32>) -> vector<16xf32> {
-  // CHECK:      %[[C15:.*]] = arith.constant 15 : i32
-  %c = arith.constant 15 : i32
-  // CHECK-NEXT: vector.insertelement %{{.*}}, %{{.*}}[%[[C15]] : i32] : vector<16xf32>
-  %1 = vector.insertelement %a, %b[%c : i32] : vector<16xf32>
-  return %1 : vector<16xf32>
 }
 
 // CHECK-LABEL: @insert_const_idx
@@ -738,22 +706,6 @@ func.func @transpose_int_0d(%arg0: vector<i32>) -> vector<i32> {
   return %0 : vector<i32>
 }
 
-// CHECK-LABEL: @flat_transpose_fp
-func.func @flat_transpose_fp(%arg0: vector<16xf32>) -> vector<16xf32> {
-  // CHECK: %[[X:.*]] = vector.flat_transpose %{{.*}} {columns = 4 : i32, rows = 4 : i32} : vector<16xf32> -> vector<16xf32>
-  %0 = vector.flat_transpose %arg0 { rows = 4: i32, columns = 4: i32 } : vector<16xf32> -> vector<16xf32>
-  // CHECK: return %[[X]] : vector<16xf32>
-  return %0 : vector<16xf32>
-}
-
-// CHECK-LABEL: @flat_transpose_int
-func.func @flat_transpose_int(%arg0: vector<16xi32>) -> vector<16xi32> {
-  // CHECK: %[[X:.*]] = vector.flat_transpose %{{.*}} {columns = 8 : i32, rows = 2 : i32} : vector<16xi32> -> vector<16xi32>
-  %0 = vector.flat_transpose %arg0 { rows = 2: i32, columns = 8: i32 } : vector<16xi32> -> vector<16xi32>
-  // CHECK: return %[[X]] : vector<16xi32>
-  return %0 : vector<16xi32>
-}
-
 // CHECK-LABEL: @vector_load_and_store_0d_scalar_memref
 func.func @vector_load_and_store_0d_scalar_memref(%memref : memref<200x100xf32>,
                                                   %i : index, %j : index) {
@@ -850,6 +802,16 @@ func.func @vector_load_and_store_2d_vector_memref(%memref : memref<200x100xvecto
   %0 = vector.load %memref[%i, %j] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
   // CHECK: vector.store %[[ld]], %{{.*}}[%{{.*}}] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
   vector.store %0, %memref[%i, %j] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
+  return
+}
+
+// CHECK-LABEL: func @load_store_alignment
+func.func @load_store_alignment(%memref: memref<4xi32>) {
+  %c0 = arith.constant 0 : index
+  // CHECK: vector.load {{.*}} {alignment = 16 : i64}
+  %val = vector.load %memref[%c0] { alignment = 16 } : memref<4xi32>, vector<4xi32>
+  // CHECK: vector.store {{.*}} {alignment = 16 : i64}
+  vector.store %val, %memref[%c0] { alignment = 16 } : memref<4xi32>, vector<4xi32>
   return
 }
 

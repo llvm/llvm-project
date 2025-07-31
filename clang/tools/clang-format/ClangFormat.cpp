@@ -237,8 +237,8 @@ static bool parseLineRange(StringRef Input, unsigned &FromLine,
 
 static bool fillRanges(MemoryBuffer *Code,
                        std::vector<tooling::Range> &Ranges) {
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto InMemoryFileSystem =
+      makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   FileManager Files(FileSystemOptions(), InMemoryFileSystem);
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diagnostics(
@@ -284,7 +284,7 @@ static bool fillRanges(MemoryBuffer *Code,
   if (Offsets.size() == 1 && EmptyLengths) {
     Length = Sources.getFileOffset(Sources.getLocForEndOfFile(ID)) - Offsets[0];
   } else if (Offsets.size() != Lengths.size()) {
-    errs() << "error: number of -offset and -length arguments must match\n";
+    errs() << "error: number of -offset and -length arguments must match.\n";
     return true;
   }
   for (unsigned I = 0, E = Offsets.size(), CodeSize = Code->getBufferSize();
@@ -296,16 +296,12 @@ static bool fillRanges(MemoryBuffer *Code,
     }
     if (!EmptyLengths)
       Length = Lengths[I];
-    if (Length == 0) {
-      errs() << "error: length should be at least 1\n";
-      return true;
-    }
     if (Offset + Length > CodeSize) {
       errs() << "error: invalid length " << Length << ", offset + length ("
-             << Offset + Length << ") is outside the file\n";
+             << Offset + Length << ") is outside the file.\n";
       return true;
     }
-    Ranges.push_back(tooling::Range(Offset, Length - 1));
+    Ranges.push_back(tooling::Range(Offset, Length));
   }
   return false;
 }
@@ -515,8 +511,8 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   if (OutputXML) {
     outputXML(Replaces, FormatChanges, Status, Cursor, CursorPosition);
   } else {
-    IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-        new llvm::vfs::InMemoryFileSystem);
+    auto InMemoryFileSystem =
+        makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
     FileManager Files(FileSystemOptions(), InMemoryFileSystem);
 
     DiagnosticOptions DiagOpts;

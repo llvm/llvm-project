@@ -1409,7 +1409,7 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
       Regs.size() == 1 ? LI.getMetadata(LLVMContext::MD_range) : nullptr;
   for (unsigned i = 0; i < Regs.size(); ++i) {
     Register Addr;
-    MIRBuilder.materializePtrAdd(Addr, Base, OffsetTy, Offsets[i] / 8);
+    MIRBuilder.materializeObjectPtrOffset(Addr, Base, OffsetTy, Offsets[i] / 8);
 
     MachinePointerInfo Ptr(LI.getPointerOperand(), Offsets[i] / 8);
     Align BaseAlign = getMemOpAlign(LI);
@@ -1448,7 +1448,7 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
 
   for (unsigned i = 0; i < Vals.size(); ++i) {
     Register Addr;
-    MIRBuilder.materializePtrAdd(Addr, Base, OffsetTy, Offsets[i] / 8);
+    MIRBuilder.materializeObjectPtrOffset(Addr, Base, OffsetTy, Offsets[i] / 8);
 
     MachinePointerInfo Ptr(SI.getPointerOperand(), Offsets[i] / 8);
     Align BaseAlign = getMemOpAlign(SI);
@@ -2189,23 +2189,11 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     unsigned Op = ID == Intrinsic::lifetime_start ? TargetOpcode::LIFETIME_START
                                                   : TargetOpcode::LIFETIME_END;
 
-    // Get the underlying objects for the location passed on the lifetime
-    // marker.
-    SmallVector<const Value *, 4> Allocas;
-    getUnderlyingObjects(CI.getArgOperand(1), Allocas);
+    const AllocaInst *AI = cast<AllocaInst>(CI.getArgOperand(1));
+    if (!AI->isStaticAlloca())
+      return true;
 
-    // Iterate over each underlying object, creating lifetime markers for each
-    // static alloca. Quit if we find a non-static alloca.
-    for (const Value *V : Allocas) {
-      const AllocaInst *AI = dyn_cast<AllocaInst>(V);
-      if (!AI)
-        continue;
-
-      if (!AI->isStaticAlloca())
-        return true;
-
-      MIRBuilder.buildInstr(Op).addFrameIndex(getOrCreateFrameIndex(*AI));
-    }
+    MIRBuilder.buildInstr(Op).addFrameIndex(getOrCreateFrameIndex(*AI));
     return true;
   }
   case Intrinsic::fake_use: {
@@ -2592,6 +2580,9 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   }
   case Intrinsic::reset_fpmode:
     MIRBuilder.buildResetFPMode();
+    return true;
+  case Intrinsic::get_rounding:
+    MIRBuilder.buildGetRounding(getOrCreateVReg(CI));
     return true;
   case Intrinsic::vscale: {
     MIRBuilder.buildVScale(getOrCreateVReg(CI), 1);

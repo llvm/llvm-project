@@ -9,7 +9,6 @@
 # RUN: llvm-readobj -r -x .got a.64.so | FileCheck --check-prefix=GD64-RELA %s
 # RUN: llvm-objdump --no-show-raw-insn -dr -h a.64.so | FileCheck %s --check-prefix=GD64
 
-## FIXME: IE/LE relaxation have not yet been implemented, --relax/--no-relax obtain the same results.
 ## Transition from TLSDESC to IE/LE. Also check --emit-relocs.
 # RUN: ld.lld -e 0 -z now --emit-relocs a.64.o c.64.o -o a.64.le
 # RUN: llvm-readobj -r -x .got a.64.le 2>&1 | FileCheck --check-prefix=LE64-RELA %s
@@ -73,25 +72,21 @@
 # LE64-RELA: could not find section '.got'
 
 ## a@tprel = 0x8
-# LE64:        20158: nop
+# LE64:        20158: ori     $a0, $zero, 8
 # LE64-NEXT:            R_LARCH_TLS_DESC_PC_HI20 a
 # LE64-NEXT:            R_LARCH_RELAX *ABS*
-# LE64-NEXT:          nop
 # LE64-NEXT:            R_LARCH_TLS_DESC_PC_LO12 a
 # LE64-NEXT:            R_LARCH_RELAX *ABS*
-# LE64-NEXT:          nop
 # LE64-NEXT:            R_LARCH_TLS_DESC_LD a
 # LE64-NEXT:            R_LARCH_RELAX *ABS*
-# LE64-NEXT:          ori     $a0, $zero, 8
 # LE64-NEXT:            R_LARCH_TLS_DESC_CALL a
 # LE64-NEXT:            R_LARCH_RELAX *ABS*
 # LE64-NEXT:          add.d   $a1, $a0, $tp
 
 ## b@tprel = 0x7ff
-# LE64:        2016c: nop
+# LE64:        20160: nop
 # LE64-NEXT:            R_LARCH_TLS_DESC_PC_HI20 b
 # LE64-NEXT:            R_LARCH_RELAX *ABS*
-# LE64-NEXT:          nop
 # LE64-NEXT:            R_LARCH_TLS_DESC_PC_LO12 b
 # LE64-NEXT:          nop
 # LE64-NEXT:            R_LARCH_TLS_DESC_LD b
@@ -101,7 +96,7 @@
 
 ## c@tprel = 0x800
 ## Without R_LARCH_RELAX relocation. No relaxation.
-# LE64:        20180: nop
+# LE64:        20170: nop
 # LE64-NEXT:            R_LARCH_TLS_DESC_PC_HI20 c
 # LE64-NEXT:          addi.d  $t0, $zero, 0
 # LE64-NEXT:          nop
@@ -115,13 +110,11 @@
 # LE64-NEXT:          add.d   $a3, $a0, $tp
 
 ## d@tprel = 0x1000
-# LE64:        201a0: nop
+# LE64:        20190: lu12i.w $a0, 1
 # LE64-NEXT:            R_LARCH_TLS_DESC_PC_HI20 d
 # LE64-NEXT:            R_LARCH_RELAX *ABS*
-# LE64-NEXT:          nop
 # LE64-NEXT:            R_LARCH_TLS_DESC_PC_LO12 d
 # LE64-NEXT:            R_LARCH_RELAX *ABS*
-# LE64-NEXT:          lu12i.w $a0, 1
 # LE64-NEXT:            R_LARCH_TLS_DESC_LD d
 # LE64-NEXT:          ori     $a0, $a0, 0
 # LE64-NEXT:            R_LARCH_TLS_DESC_CALL d
@@ -160,35 +153,31 @@
 # LE64-NORELAX-NEXT:          add.d   $a4, $a0, $tp
 
 # IE64-RELA:      .rela.dyn {
-# IE64-RELA-NEXT:   0x30408 R_LARCH_TLS_TPREL64 c 0x0
-# IE64-RELA-NEXT:   0x30410 R_LARCH_TLS_TPREL64 d 0x0
+# IE64-RELA-NEXT:   0x303F0 R_LARCH_TLS_TPREL64 c 0x0
+# IE64-RELA-NEXT:   0x303F8 R_LARCH_TLS_TPREL64 d 0x0
 # IE64-RELA-NEXT: }
 # IE64-RELA:      Hex dump of section '.got':
-# IE64-RELA-NEXT: 0x00030408 00000000 00000000 00000000 00000000 .
+# IE64-RELA-NEXT: 0x000303f0 00000000 00000000 00000000 00000000 .
 
-# IE64:   .got           00000010 0000000000030408
+# IE64:   .got           00000010 00000000000303f0
 
 ## a and b are optimized to use LE. c and d are optimized to IE.
 ## a@tprel = 0x8
-# IE64:        202c8: nop
+# IE64:        202c8: ori     $a0, $zero, 8
 # IE64-NEXT:            R_LARCH_TLS_DESC_PC_HI20 a
 # IE64-NEXT:            R_LARCH_RELAX *ABS*
-# IE64-NEXT:          nop
 # IE64-NEXT:            R_LARCH_TLS_DESC_PC_LO12 a
 # IE64-NEXT:            R_LARCH_RELAX *ABS*
-# IE64-NEXT:          nop
 # IE64-NEXT:            R_LARCH_TLS_DESC_LD a
 # IE64-NEXT:            R_LARCH_RELAX *ABS*
-# IE64-NEXT:          ori     $a0, $zero, 8
 # IE64-NEXT:            R_LARCH_TLS_DESC_CALL a
 # IE64-NEXT:            R_LARCH_RELAX *ABS*
 # IE64-NEXT:          add.d   $a1, $a0, $tp
 
 ## b@tprel = 0x7ff
-# IE64:        202dc: nop
+# IE64:        202d0: nop
 # IE64-NEXT:            R_LARCH_TLS_DESC_PC_HI20 b
 # IE64-NEXT:            R_LARCH_RELAX *ABS*
-# IE64-NEXT:          nop
 # IE64-NEXT:            R_LARCH_TLS_DESC_PC_LO12 b
 # IE64-NEXT:          nop
 # IE64-NEXT:            R_LARCH_TLS_DESC_LD b
@@ -196,9 +185,9 @@
 # IE64-NEXT:            R_LARCH_TLS_DESC_CALL b
 # IE64-NEXT:          add.d   $a2, $a0, $tp
 
-## &.got[c]-. = 0x30408 - 0x20300: 0x10 pages, page offset 0x408
+## &.got[c]-. = 0x303f0 - 0x202f0: 0x10 pages, page offset 0x3f0
 ## Without R_LARCH_RELAX relocation. No relaxation.
-# IE64:        202f0: nop
+# IE64:        202e0: nop
 # IE64-NEXT:            R_LARCH_TLS_DESC_PC_HI20 c
 # IE64-NEXT:          addi.d  $t0, $zero, 0
 # IE64-NEXT:          nop
@@ -207,20 +196,18 @@
 # IE64-NEXT:          pcalau12i $a0, 16
 # IE64-NEXT:            R_LARCH_TLS_DESC_LD c
 # IE64-NEXT:          addi.d  $t0, $t0, 1
-# IE64-NEXT:          ld.d    $a0, $a0, 1032
+# IE64-NEXT:          ld.d    $a0, $a0, 1008
 # IE64-NEXT:            R_LARCH_TLS_DESC_CALL c
 # IE64-NEXT:          add.d   $a3, $a0, $tp
 
-## &.got[d]-. = 0x30408+8 - 0x20318: 0x10 pages, page offset 0x410
-# IE64:        20310: nop
+## &.got[d]-. = 0x303f0+8 - 0x20300: 0x10 pages, page offset 0x3f8
+# IE64:        20300: pcalau12i $a0, 16
 # IE64-NEXT:            R_LARCH_TLS_DESC_PC_HI20 d
 # IE64-NEXT:            R_LARCH_RELAX *ABS*
-# IE64-NEXT:          nop
 # IE64-NEXT:            R_LARCH_TLS_DESC_PC_LO12 d
 # IE64-NEXT:            R_LARCH_RELAX *ABS*
-# IE64-NEXT:          pcalau12i $a0, 16
 # IE64-NEXT:            R_LARCH_TLS_DESC_LD d
-# IE64-NEXT:          ld.d    $a0, $a0, 1040
+# IE64-NEXT:          ld.d    $a0, $a0, 1016
 # IE64-NEXT:            R_LARCH_TLS_DESC_CALL d
 # IE64-NEXT:          add.d   $a4, $a0, $tp
 

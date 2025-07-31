@@ -41,6 +41,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfoEntry.h"
+#include "Plugins/SymbolFile/DWARF/SymbolFileWasm.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -98,8 +99,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 LLDB_PLUGIN_DEFINE(SymbolFileDWARF)
 
@@ -327,6 +328,9 @@ llvm::StringRef SymbolFileDWARF::GetPluginDescriptionStatic() {
 }
 
 SymbolFile *SymbolFileDWARF::CreateInstance(ObjectFileSP objfile_sp) {
+  if (objfile_sp->GetArchitecture().GetTriple().isWasm())
+    return new SymbolFileWasm(std::move(objfile_sp),
+                              /*dwo_section_list*/ nullptr);
   return new SymbolFileDWARF(std::move(objfile_sp),
                              /*dwo_section_list*/ nullptr);
 }
@@ -4330,13 +4334,16 @@ SymbolFileDWARF::GetContainingDeclContext(const DWARFDIE &die) {
 }
 
 LanguageType SymbolFileDWARF::LanguageTypeFromDWARF(uint64_t val) {
+  if (val <= eLanguageTypeLastStandardLanguage)
+    return static_cast<LanguageType>(val);
+
   // Note: user languages between lo_user and hi_user must be handled
   // explicitly here.
   switch (val) {
   case DW_LANG_Mips_Assembler:
     return eLanguageTypeMipsAssembler;
   default:
-    return static_cast<LanguageType>(val);
+    return eLanguageTypeUnknown;
   }
 }
 

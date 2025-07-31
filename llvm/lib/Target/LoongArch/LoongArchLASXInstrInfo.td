@@ -1282,6 +1282,32 @@ multiclass PatCCXrXrF<CondCode CC, string Inst> {
             (!cast<LAInst>(Inst#"_D") LASX256:$xj, LASX256:$xk)>;
 }
 
+multiclass PairInsertExtractPatV8<ValueType vecty, ValueType elemty> {
+  foreach imm1 = 0...3 in {
+    foreach imm2 = 0...3 in {
+      defvar Imm = !or(!shl(imm2, 4), imm1);
+      def : Pat<(vector_insert (vector_insert vecty:$xd,
+                    (elemty (vector_extract vecty:$xj, imm1)), imm2),
+                    (elemty (vector_extract vecty:$xj, !add(imm1, 4))),
+                    !add(imm2, 4)),
+                (XVEXTRINS_W $xd, $xj, Imm)>;
+    }
+  }
+}
+
+multiclass PairInsertExtractPatV4<ValueType vecty, ValueType elemty> {
+  foreach imm1 = 0...1 in {
+    foreach imm2 = 0...1 in {
+      defvar Imm = !or(!shl(imm2, 4), imm1);
+      def : Pat<(vector_insert (vector_insert vecty:$xd,
+                    (elemty (vector_extract vecty:$xj, imm1)), imm2),
+                    (elemty (vector_extract vecty:$xj, !add(imm1, 2))),
+                    !add(imm2, 2)),
+                (XVEXTRINS_D $xd, $xj, Imm)>;
+    }
+  }
+}
+
 let Predicates = [HasExtLASX] in {
 
 // XVADD_{B/H/W/D}
@@ -1582,6 +1608,38 @@ defm : PatCCXrXrF<SETUNE, "XVFCMP_CUNE">;
 defm : PatCCXrXrF<SETO, "XVFCMP_COR">;
 defm : PatCCXrXrF<SETUO, "XVFCMP_CUN">;
 
+// Insert two elements extracted from vector into vector. (The positions
+// of the two elements must be same in the source or destination vector's
+// front and back 128bits.)
+// 2*XVPICKVE2GR_{W/D} + 2*XVINSGR2VR_{W/D} -> XVEXTRINS_{W/D}
+// XVPERMI_D + 2*XVPICKVE2GR_{B/H} + 2*PseudoXVINSGR2VR_{B/H} -> XVEXTRINS_{W/D}
+foreach imm1 = 0...15 in {
+  foreach imm2 = 0...15 in {
+    defvar Imm = !or(!shl(imm2, 4), imm1);
+    def : Pat<(vector_insert (vector_insert v32i8:$xd,
+                  (GRLenVT (vector_extract v32i8:$xj, imm1)), imm2),
+                  (GRLenVT (vector_extract v32i8:$xj, !add(imm1, 16))),
+                  !add(imm2, 16)),
+              (XVEXTRINS_B $xd, $xj, Imm)>;
+  }
+}
+
+foreach imm1 = 0...7 in {
+  foreach imm2 = 0...7 in {
+    defvar Imm = !or(!shl(imm2, 4), imm1);
+    def : Pat<(vector_insert (vector_insert v16i16:$xd,
+                  (GRLenVT (vector_extract v16i16:$xj, imm1)), imm2),
+                  (GRLenVT (vector_extract v16i16:$xj, !add(imm1, 8))),
+                  !add(imm2, 8)),
+              (XVEXTRINS_H $xd, $xj, Imm)>;
+  }
+}
+
+defm : PairInsertExtractPatV8<v8i32, GRLenVT>;
+defm : PairInsertExtractPatV8<v8f32, f32>;
+defm : PairInsertExtractPatV4<v4i64, GRLenVT>;
+defm : PairInsertExtractPatV4<v4f64, f64>;
+
 // PseudoXVINSGR2VR_{B/H}
 def : Pat<(vector_insert v32i8:$xd, GRLenVT:$rj, uimm5:$imm),
           (PseudoXVINSGR2VR_B v32i8:$xd, GRLenVT:$rj, uimm5:$imm)>;
@@ -1593,11 +1651,20 @@ def : Pat<(vector_insert v8i32:$xd, GRLenVT:$rj, uimm3:$imm),
           (XVINSGR2VR_W v8i32:$xd, GRLenVT:$rj, uimm3:$imm)>;
 def : Pat<(vector_insert v4i64:$xd, GRLenVT:$rj, uimm2:$imm),
           (XVINSGR2VR_D v4i64:$xd, GRLenVT:$rj, uimm2:$imm)>;
+def : Pat<(vector_insert v8f32:$xd, (loongarch_movgr2fr_w_la64 GPR:$rj), uimm3:$imm),
+          (XVINSGR2VR_W $xd, $rj, uimm3:$imm)>;
+def : Pat<(vector_insert v4f64:$xd, (f64 (bitconvert i64:$rj)), uimm2:$imm),
+          (XVINSGR2VR_D $xd, $rj, uimm2:$imm)>;
+def : Pat<(vector_insert v8f32:$xd, (f32 (vector_extract v8f32:$xj, uimm3:$imm1)), uimm3:$imm2),
+          (XVINSGR2VR_W $xd, (XVPICKVE2GR_W v8f32:$xj, uimm3:$imm1), uimm3:$imm2)>;
+def : Pat<(vector_insert v4f64:$xd, (f64 (vector_extract v4f64:$xj, uimm2:$imm1)), uimm2:$imm2),
+          (XVINSGR2VR_D $xd, (XVPICKVE2GR_D v4f64:$xj, uimm2:$imm1), uimm2:$imm2)>;
 
-def : Pat<(vector_insert v8f32:$vd, FPR32:$fj, uimm3:$imm),
-          (XVINSGR2VR_W $vd, (COPY_TO_REGCLASS FPR32:$fj, GPR), uimm3:$imm)>;
-def : Pat<(vector_insert v4f64:$vd, FPR64:$fj, uimm2:$imm),
-          (XVINSGR2VR_D $vd, (COPY_TO_REGCLASS FPR64:$fj, GPR), uimm2:$imm)>;
+// XVINSVE0_{W/D}
+def : Pat<(vector_insert v8f32:$xd, FPR32:$fj, uimm3:$imm),
+          (XVINSVE0_W $xd, (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32), uimm3:$imm)>;
+def : Pat<(vector_insert v4f64:$xd, FPR64:$fj, uimm2:$imm),
+          (XVINSVE0_D $xd, (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), uimm2:$imm)>;
 
 // scalar_to_vector
 def : Pat<(v8f32 (scalar_to_vector FPR32:$fj)),
@@ -1790,7 +1857,25 @@ foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in {
   def  : RegRegStPat<store, XVSTX, LASX256, vt>;
 }
 
+// Bitcast float/double element extracted from vector to integer.
+def : Pat<(loongarch_movfr2gr_s_la64 (f32 (vector_extract v8f32:$xj, uimm3:$imm))),
+          (XVPICKVE2GR_W v8f32:$xj, uimm3:$imm)>;
+def : Pat<(i64 (bitconvert (f64 (vector_extract v4f64:$xj, uimm2:$imm)))),
+          (XVPICKVE2GR_D v4f64:$xj, uimm2:$imm)>;
+
 // Vector extraction with constant index.
+foreach imm = 16...31 in {
+  defvar Imm = !and(imm, 15);
+  def : Pat<(i64 (vector_extract v32i8:$xj, imm)),
+            (VPICKVE2GR_B (EXTRACT_SUBREG (XVPERMI_D v32i8:$xj, 14), sub_128),
+                Imm)>;
+}
+foreach imm = 8...15 in {
+  defvar Imm = !and(imm, 7);
+  def : Pat<(i64 (vector_extract v16i16:$xj, imm)),
+            (VPICKVE2GR_H (EXTRACT_SUBREG (XVPERMI_D v16i16:$xj, 14), sub_128),
+                Imm)>;
+}
 def : Pat<(i64 (vector_extract v32i8:$xj, uimm4:$imm)),
           (VPICKVE2GR_B (EXTRACT_SUBREG v32i8:$xj, sub_128), uimm4:$imm)>;
 def : Pat<(i64 (vector_extract v16i16:$xj, uimm3:$imm)),
@@ -1860,12 +1945,6 @@ def : Pat<(v4i32(fp_to_uint v4f64:$vj)),
                (XVFTINTRZ_LU_D v4f64:$vj)),
               sub_128)>;
 
-// XVPERMI_Q
-foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in
-def : Pat<(vt (concat_vectors LSX128:$vd, LSX128:$vj)),
-          (XVPERMI_Q (SUBREG_TO_REG (i64 0), LSX128:$vd, sub_128),
-                     (SUBREG_TO_REG (i64 0), LSX128:$vj, sub_128), 2)>;
-
 // XVABSD_{B/H/W/D}[U]
 defm : PatXrXr<abds, "XVABSD">;
 defm : PatXrXrU<abdu, "XVABSD">;
@@ -1878,6 +1957,35 @@ def : Pat<(loongarch_xvmskltz (v4i64 LASX256:$vj)), (PseudoXVMSKLTZ_D LASX256:$v
 def : Pat<(loongarch_xvmskgez (v32i8 LASX256:$vj)), (PseudoXVMSKGEZ_B LASX256:$vj)>;
 def : Pat<(loongarch_xvmskeqz (v32i8 LASX256:$vj)), (PseudoXVMSKEQZ_B LASX256:$vj)>;
 def : Pat<(loongarch_xvmsknez (v32i8 LASX256:$vj)), (PseudoXVMSKNEZ_B LASX256:$vj)>;
+
+// Subvector tricks
+// Patterns for insert_subvector/extract_subvector
+multiclass subvector_subreg_lowering<RegisterClass subRC, ValueType subVT,
+                                     RegisterClass RC, ValueType VT,
+                                     int hiIdx, SubRegIndex subIdx> {
+  // A 128-bit subvector extract from the first 256-bit vector position is a
+  // subregister copy that needs no instruction. Likewise, a 128-bit subvector
+  // insert to the first 256-bit vector position is a subregister copy that needs
+  // no instruction.
+  def : Pat<(subVT (extract_subvector (VT RC:$src), (iPTR 0))),
+            (subVT (EXTRACT_SUBREG RC:$src, subIdx))>;
+  def : Pat<(VT (insert_subvector undef_or_freeze_undef, subRC:$src, (iPTR 0))),
+            (VT (INSERT_SUBREG (IMPLICIT_DEF), subRC:$src, subIdx))>;
+
+  def : Pat<(subVT (extract_subvector (VT RC:$src), (iPTR hiIdx))),
+            (subVT (EXTRACT_SUBREG (XVPERMI_Q (IMPLICIT_DEF), RC:$src, 1), subIdx))>;
+  def : Pat<(VT (insert_subvector RC:$vd, subRC:$vj, (iPTR 0))),
+            (VT (XVPERMI_Q RC:$vd, (INSERT_SUBREG (IMPLICIT_DEF), subRC:$vj, subIdx), 48))>;
+  def : Pat<(VT (insert_subvector RC:$vd, subRC:$vj, (iPTR hiIdx))),
+            (VT (XVPERMI_Q RC:$vd, (INSERT_SUBREG (IMPLICIT_DEF), subRC:$vj, subIdx), 2))>;
+}
+
+defm : subvector_subreg_lowering<LSX128, v4i32, LASX256, v8i32,  4,  sub_128>;
+defm : subvector_subreg_lowering<LSX128, v4f32, LASX256, v8f32,  4,  sub_128>;
+defm : subvector_subreg_lowering<LSX128, v2i64, LASX256, v4i64,  2,  sub_128>;
+defm : subvector_subreg_lowering<LSX128, v2f64, LASX256, v4f64,  2,  sub_128>;
+defm : subvector_subreg_lowering<LSX128, v8i16, LASX256, v16i16, 8,  sub_128>;
+defm : subvector_subreg_lowering<LSX128, v16i8, LASX256, v32i8,  16, sub_128>;
 
 } // Predicates = [HasExtLASX]
 

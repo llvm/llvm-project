@@ -57,11 +57,9 @@ createVFSOverlayForPreamblePCH(StringRef PCHFilename,
                                IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
   // We want only the PCH file from the real filesystem to be available,
   // so we create an in-memory VFS with just that and overlay it on top.
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> PCHFS(
-      new llvm::vfs::InMemoryFileSystem());
+  auto PCHFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   PCHFS->addFile(PCHFilename, 0, std::move(PCHBuffer));
-  IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> Overlay(
-      new llvm::vfs::OverlayFileSystem(VFS));
+  auto Overlay = llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(VFS);
   Overlay->pushOverlay(PCHFS);
   return Overlay;
 }
@@ -293,8 +291,9 @@ class PrecompilePreambleConsumer : public PCHGenerator {
 public:
   PrecompilePreambleConsumer(PrecompilePreambleAction &Action, Preprocessor &PP,
                              ModuleCache &ModCache, StringRef isysroot,
-                             std::shared_ptr<PCHBuffer> Buffer)
-      : PCHGenerator(PP, ModCache, "", isysroot, std::move(Buffer),
+                             std::shared_ptr<PCHBuffer> Buffer,
+                             const CodeGenOptions &CodeGenOpts)
+      : PCHGenerator(PP, ModCache, "", isysroot, std::move(Buffer), CodeGenOpts,
                      ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
                      /*AllowASTWithErrors=*/true),
         Action(Action) {}
@@ -337,7 +336,8 @@ PrecompilePreambleAction::CreateASTConsumer(CompilerInstance &CI,
     Sysroot.clear();
 
   return std::make_unique<PrecompilePreambleConsumer>(
-      *this, CI.getPreprocessor(), CI.getModuleCache(), Sysroot, Buffer);
+      *this, CI.getPreprocessor(), CI.getModuleCache(), Sysroot, Buffer,
+      CI.getCodeGenOpts());
 }
 
 template <class T> bool moveOnNoError(llvm::ErrorOr<T> Val, T &Output) {

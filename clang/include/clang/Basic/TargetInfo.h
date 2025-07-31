@@ -289,6 +289,8 @@ protected:
 
   std::optional<llvm::Triple> DarwinTargetVariantTriple;
 
+  bool HasMicrosoftRecordLayout = false;
+
   // TargetInfo Constructor.  Default initializes all fields.
   TargetInfo(const llvm::Triple &T);
 
@@ -334,10 +336,6 @@ public:
     /// __builtin_va_list as defined by the AArch64 ABI
     /// http://infocenter.arm.com/help/topic/com.arm.doc.ihi0055a/IHI0055A_aapcs64.pdf
     AArch64ABIBuiltinVaList,
-
-    /// __builtin_va_list as defined by the PNaCl ABI:
-    /// http://www.chromium.org/nativeclient/pnacl/bitcode-abi#TOC-Machine-Types
-    PNaClABIBuiltinVaList,
 
     /// __builtin_va_list as defined by the Power ABI:
     /// https://www.power.org
@@ -1073,6 +1071,17 @@ public:
   /// as Custom Datapath.
   uint32_t getARMCDECoprocMask() const { return ARMCDECoprocMask; }
 
+  /// For ARM targets returns a mask defining which data sizes are suitable for
+  /// __builtin_arm_ldrex and __builtin_arm_strex.
+  enum {
+    ARM_LDREX_B = (1 << 0), /// byte (8-bit)
+    ARM_LDREX_H = (1 << 1), /// half (16-bit)
+    ARM_LDREX_W = (1 << 2), /// word (32-bit)
+    ARM_LDREX_D = (1 << 3), /// double (64-bit)
+  };
+
+  virtual unsigned getARMLDREXMask() const { return 0; }
+
   /// Returns whether the passed in string is a valid clobber in an
   /// inline asm statement.
   ///
@@ -1331,7 +1340,8 @@ public:
   /// Apply changes to the target information with respect to certain
   /// language options which change the target configuration and adjust
   /// the language based on the target options where applicable.
-  virtual void adjust(DiagnosticsEngine &Diags, LangOptions &Opts);
+  virtual void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+                      const TargetInfo *Aux);
 
   /// Initialize the map with the default set of target features for the
   /// CPU this should include all legal feature strings on the target.
@@ -1552,8 +1562,8 @@ public:
 
   // Return the target-specific priority for features/cpus/vendors so
   // that they can be properly sorted for checking.
-  virtual uint64_t getFMVPriority(ArrayRef<StringRef> Features) const {
-    return 0;
+  virtual llvm::APInt getFMVPriority(ArrayRef<StringRef> Features) const {
+    return llvm::APInt::getZero(32);
   }
 
   // Validate the contents of the __builtin_cpu_is(const char*)
@@ -1699,8 +1709,11 @@ public:
   /// Controls if __arithmetic_fence is supported in the targeted backend.
   virtual bool checkArithmeticFenceSupported() const { return false; }
 
-  /// Gets the default calling convention for the given target and
-  /// declaration context.
+  /// Gets the default calling convention for the given target.
+  ///
+  /// This function does not take into account any user options to override the
+  /// default calling convention. For that, see
+  /// ASTContext::getDefaultCallingConvention().
   virtual CallingConv getDefaultCallingConv() const {
     // Not all targets will specify an explicit calling convention that we can
     // express.  This will always do the right thing, even though it's not
@@ -1845,6 +1858,8 @@ public:
                                     DiagnosticsEngine &Diags) const;
 
   virtual void setAuxTarget(const TargetInfo *Aux) {}
+
+  bool hasMicrosoftRecordLayout() const { return HasMicrosoftRecordLayout; }
 
   /// Whether target allows debuginfo types for decl only variables/functions.
   virtual bool allowDebugInfoForExternalRef() const { return false; }

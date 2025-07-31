@@ -78,8 +78,7 @@ protected:
 private:
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem>
   prepareFS(llvm::ArrayRef<std::string> ExtraFiles) {
-    llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS =
-        new llvm::vfs::InMemoryFileSystem;
+    auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
     FS->addFile(ClangBinary, time_t(), llvm::MemoryBuffer::getMemBuffer(""));
     FS->addFile(InputFile, time_t(), llvm::MemoryBuffer::getMemBuffer(""));
     for (llvm::StringRef F : ExtraFiles)

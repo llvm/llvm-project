@@ -3267,6 +3267,14 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
     if (isa<UsedAttr>(I) || isa<RetainAttr>(I))
       continue;
 
+    if (isa<InferredNoReturnAttr>(I)) {
+      if (auto *FD = dyn_cast<FunctionDecl>(New)) {
+        if (FD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
+          continue; // Don't propagate inferred noreturn attributes to explicit
+                    // specializations.
+      }
+    }
+
     if (mergeDeclAttribute(*this, New, I, LocalAMK))
       foundAny = true;
   }
@@ -8059,7 +8067,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     NewVD->setInvalidDecl();
 
   // Handle GNU asm-label extension (encoded as an attribute).
-  if (Expr *E = (Expr*)D.getAsmLabel()) {
+  if (Expr *E = D.getAsmLabel()) {
     // The parser guarantees this is a string.
     StringLiteral *SE = cast<StringLiteral>(E);
     StringRef Label = SE->getString();
@@ -10333,7 +10341,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                        isFunctionTemplateSpecialization);
 
   // Handle GNU asm-label extension (encoded as an attribute).
-  if (Expr *E = (Expr*) D.getAsmLabel()) {
+  if (Expr *E = D.getAsmLabel()) {
     // The parser guarantees this is a string.
     StringLiteral *SE = cast<StringLiteral>(E);
     NewFD->addAttr(AsmLabelAttr::Create(Context, SE->getString(),
@@ -12578,9 +12586,9 @@ static bool isDefaultStdCall(FunctionDecl *FD, Sema &S) {
   if (FD->getName() == "main" || FD->getName() == "wmain")
     return false;
 
-  // Default calling convention for MinGW is __cdecl
+  // Default calling convention for MinGW and Cygwin is __cdecl
   const llvm::Triple &T = S.Context.getTargetInfo().getTriple();
-  if (T.isWindowsGNUEnvironment())
+  if (T.isOSCygMing())
     return false;
 
   // Default calling convention for WinMain, wWinMain and DllMain
@@ -17155,6 +17163,30 @@ bool Sema::CheckEnumUnderlyingType(TypeSourceInfo *TI) {
   if (T->isDependentType())
     return false;
 
+  // C++0x 7.2p2: The type-specifier-seq of an enum-base shall name an
+  // integral type; any cv-qualification is ignored.
+  // C23 6.7.3.3p5: The underlying type of the enumeration is the unqualified,
+  // non-atomic version of the type specified by the type specifiers in the
+  // specifier qualifier list.
+  // Because of how odd C's rule is, we'll let the user know that operations
+  // involving the enumeration type will be non-atomic.
+  if (T->isAtomicType())
+    Diag(UnderlyingLoc, diag::warn_atomic_stripped_in_enum);
+
+  Qualifiers Q = T.getQualifiers();
+  std::optional<unsigned> QualSelect;
+  if (Q.hasConst() && Q.hasVolatile())
+    QualSelect = diag::CVQualList::Both;
+  else if (Q.hasConst())
+    QualSelect = diag::CVQualList::Const;
+  else if (Q.hasVolatile())
+    QualSelect = diag::CVQualList::Volatile;
+
+  if (QualSelect)
+    Diag(UnderlyingLoc, diag::warn_cv_stripped_in_enum) << *QualSelect;
+
+  T = T.getAtomicUnqualifiedType();
+
   // This doesn't use 'isIntegralType' despite the error message mentioning
   // integral type because isIntegralType would also allow enum types in C.
   if (const BuiltinType *BT = T->getAs<BuiltinType>())
@@ -17551,6 +17583,9 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
     } else if (UnderlyingType.get()) {
       // C++0x 7.2p2: The type-specifier-seq of an enum-base shall name an
       // integral type; any cv-qualification is ignored.
+      // C23 6.7.3.3p5: The underlying type of the enumeration is the
+      // unqualified, non-atomic version of the type specified by the type
+      // specifiers in the specifier qualifier list.
       TypeSourceInfo *TI = nullptr;
       GetTypeFromParser(UnderlyingType.get(), &TI);
       EnumUnderlying = TI;
@@ -17562,6 +17597,18 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
       if (DiagnoseUnexpandedParameterPack(TI->getTypeLoc().getBeginLoc(), TI,
                                           UPPC_FixedUnderlyingType))
         EnumUnderlying = Context.IntTy.getTypePtr();
+
+      // If the underlying type is atomic, we need to adjust the type before
+      // continuing. This only happens in the case we stored a TypeSourceInfo
+      // into EnumUnderlying because the other cases are error recovery up to
+      // this point. But because it's not possible to gin up a TypeSourceInfo
+      // for a non-atomic type from an atomic one, we'll store into the Type
+      // field instead. FIXME: it would be nice to have an easy way to get a
+      // derived TypeSourceInfo which strips qualifiers including the weird
+      // ones like _Atomic where it forms a different type.
+      if (TypeSourceInfo *TI = dyn_cast<TypeSourceInfo *>(EnumUnderlying);
+          TI && TI->getType()->isAtomicType())
+        EnumUnderlying = TI->getType().getAtomicUnqualifiedType().getTypePtr();
 
     } else if (Context.getTargetInfo().getTriple().isWindowsMSVCEnvironment()) {
       // For MSVC ABI compatibility, unfixed enums must use an underlying type
@@ -18436,6 +18483,10 @@ CreateNewDecl:
   // If there's a #pragma GCC visibility in scope, set the visibility of this
   // record.
   AddPushedVisibilityAttribute(New);
+
+  // If this is not a definition, process API notes for it now.
+  if (TUK != TagUseKind::Definition)
+    ProcessAPINotes(New);
 
   if (isMemberSpecialization && !New->isInvalidDecl())
     CompleteMemberSpecialization(New, Previous);
@@ -20530,7 +20581,8 @@ TopLevelStmtDecl *Sema::ActOnStartTopLevelStmtDecl(Scope *S) {
 }
 
 void Sema::ActOnFinishTopLevelStmtDecl(TopLevelStmtDecl *D, Stmt *Statement) {
-  D->setStmt(Statement);
+  if (Statement)
+    D->setStmt(Statement);
   PopCompoundScope();
   PopFunctionScopeInfo();
   PopDeclContext();

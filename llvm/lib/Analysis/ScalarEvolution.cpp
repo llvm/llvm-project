@@ -601,6 +601,9 @@ static int CompareValueComplexity(const LoopInfo *const LI, Value *LV,
   if (const auto *LGV = dyn_cast<GlobalValue>(LV)) {
     const auto *RGV = cast<GlobalValue>(RV);
 
+    if (auto L = LGV->getLinkage() - RGV->getLinkage())
+      return L;
+
     const auto IsGVNameSemantic = [&](const GlobalValue *GV) {
       auto LT = GV->getLinkage();
       return !(GlobalValue::isPrivateLinkage(LT) ||
@@ -2677,6 +2680,20 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
         SmallVector<const SCEV *, 4> NewOps(AddExpr->operands());
         NewOps[0] = getConstant(ConstAdd);
         return getAddExpr(NewOps, PreservedFlags);
+      }
+    }
+
+    // Try to push the constant operand into a ZExt: A + zext (-A + B) -> zext
+    // (B), if trunc (A) + -A + B  does not unsigned-wrap.
+    const SCEVAddExpr *InnerAdd;
+    if (match(B, m_scev_ZExt(m_scev_Add(InnerAdd)))) {
+      const SCEV *NarrowA = getTruncateExpr(A, InnerAdd->getType());
+      if (NarrowA == getNegativeSCEV(InnerAdd->getOperand(0)) &&
+          getZeroExtendExpr(NarrowA, B->getType()) == A &&
+          hasFlags(StrengthenNoWrapFlags(this, scAddExpr, {NarrowA, InnerAdd},
+                                         SCEV::FlagAnyWrap),
+                   SCEV::FlagNUW)) {
+        return getZeroExtendExpr(getAddExpr(NarrowA, InnerAdd), B->getType());
       }
     }
   }
@@ -11415,8 +11432,7 @@ bool ScalarEvolution::isKnownPredicateViaNoOverflow(CmpPredicate Pred,
       XNonConstOp = X;
       XFlagsPresent = ExpectedFlags;
     }
-    if (!isa<SCEVConstant>(XConstOp) ||
-        (XFlagsPresent & ExpectedFlags) != ExpectedFlags)
+    if (!isa<SCEVConstant>(XConstOp))
       return false;
 
     if (!splitBinaryAdd(Y, YConstOp, YNonConstOp, YFlagsPresent)) {
@@ -11425,12 +11441,20 @@ bool ScalarEvolution::isKnownPredicateViaNoOverflow(CmpPredicate Pred,
       YFlagsPresent = ExpectedFlags;
     }
 
-    if (!isa<SCEVConstant>(YConstOp) ||
-        (YFlagsPresent & ExpectedFlags) != ExpectedFlags)
-      return false;
-
     if (YNonConstOp != XNonConstOp)
       return false;
+
+    if (!isa<SCEVConstant>(YConstOp))
+      return false;
+
+    // When matching ADDs with NUW flags (and unsigned predicates), only the
+    // second ADD (with the larger constant) requires NUW.
+    if ((YFlagsPresent & ExpectedFlags) != ExpectedFlags)
+      return false;
+    if (ExpectedFlags != SCEV::FlagNUW &&
+        (XFlagsPresent & ExpectedFlags) != ExpectedFlags) {
+      return false;
+    }
 
     OutC1 = cast<SCEVConstant>(XConstOp)->getAPInt();
     OutC2 = cast<SCEVConstant>(YConstOp)->getAPInt();
@@ -11469,7 +11493,7 @@ bool ScalarEvolution::isKnownPredicateViaNoOverflow(CmpPredicate Pred,
     std::swap(LHS, RHS);
     [[fallthrough]];
   case ICmpInst::ICMP_ULE:
-    // (X + C1)<nuw> u<= (X + C2)<nuw> for C1 u<= C2.
+    // (X + C1) u<= (X + C2)<nuw> for C1 u<= C2.
     if (MatchBinaryAddToConst(LHS, RHS, C1, C2, SCEV::FlagNUW) && C1.ule(C2))
       return true;
 
@@ -11479,7 +11503,7 @@ bool ScalarEvolution::isKnownPredicateViaNoOverflow(CmpPredicate Pred,
     std::swap(LHS, RHS);
     [[fallthrough]];
   case ICmpInst::ICMP_ULT:
-    // (X + C1)<nuw> u< (X + C2)<nuw> if C1 u< C2.
+    // (X + C1) u< (X + C2)<nuw> if C1 u< C2.
     if (MatchBinaryAddToConst(LHS, RHS, C1, C2, SCEV::FlagNUW) && C1.ult(C2))
       return true;
     break;

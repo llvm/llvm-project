@@ -25,7 +25,7 @@ define i64 @test_foldable_live_in_via_scev() {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = mul <2 x i64> [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vector.reduce.mul.v2i64(<2 x i64> [[BIN_RDX]])
-; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 97, %[[MIDDLE_BLOCK]] ], [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ 1, %[[ENTRY]] ]
@@ -36,9 +36,9 @@ define i64 @test_foldable_live_in_via_scev() {
 ; CHECK-NEXT:    [[MUL]] = mul nsw i64 [[RED]], [[ADD]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 100
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RET:%.*]] = phi i64 [ [[MUL]], %[[LOOP]] ], [ [[TMP3]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RET:%.*]] = phi i64 [ [[MUL]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i64 [[RET]]
 ;
 entry:
@@ -95,10 +95,10 @@ define i64 @second_lshr_operand_zero_via_scev() {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <2 x i64> [[TMP11]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[BIN_RDX]])
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOPS:.*]]
 ; CHECK:       [[LOOPS]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOPS]] ]

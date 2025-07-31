@@ -1830,10 +1830,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     bool IntMinIsPoison = cast<Constant>(II->getArgOperand(1))->isOneValue();
 
     // abs(-x) -> abs(x)
-    // TODO: Copy nsw if it was present on the neg?
     Value *X;
-    if (match(IIOperand, m_Neg(m_Value(X))))
+    if (match(IIOperand, m_Neg(m_Value(X)))) {
+      if (cast<Instruction>(IIOperand)->hasNoSignedWrap() || IntMinIsPoison)
+        replaceOperand(*II, 1, Builder.getTrue());
       return replaceOperand(*II, 0, X);
+    }
     if (match(IIOperand, m_c_Select(m_Neg(m_Value(X)), m_Deferred(X))))
       return replaceOperand(*II, 0, X);
 
@@ -3298,7 +3300,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // Remove an assume if it is followed by an identical assume.
     // TODO: Do we need this? Unless there are conflicting assumptions, the
     // computeKnownBits(IIOperand) below here eliminates redundant assumes.
-    Instruction *Next = II->getNextNonDebugInstruction();
+    Instruction *Next = II->getNextNode();
     if (match(Next, m_Intrinsic<Intrinsic::assume>(m_Specific(IIOperand))))
       return RemoveConditionFromAssume(Next);
 
@@ -3471,12 +3473,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // Is this guard followed by another guard?  We scan forward over a small
     // fixed window of instructions to handle common cases with conditions
     // computed between guards.
-    Instruction *NextInst = II->getNextNonDebugInstruction();
+    Instruction *NextInst = II->getNextNode();
     for (unsigned i = 0; i < GuardWideningWindow; i++) {
       // Note: Using context-free form to avoid compile time blow up
       if (!isSafeToSpeculativelyExecute(NextInst))
         break;
-      NextInst = NextInst->getNextNonDebugInstruction();
+      NextInst = NextInst->getNextNode();
     }
     Value *NextCond = nullptr;
     if (match(NextInst,
@@ -3486,10 +3488,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // Remove a guard that it is immediately preceded by an identical guard.
       // Otherwise canonicalize guard(a); guard(b) -> guard(a & b).
       if (CurrCond != NextCond) {
-        Instruction *MoveI = II->getNextNonDebugInstruction();
+        Instruction *MoveI = II->getNextNode();
         while (MoveI != NextInst) {
           auto *Temp = MoveI;
-          MoveI = MoveI->getNextNonDebugInstruction();
+          MoveI = MoveI->getNextNode();
           Temp->moveBefore(II->getIterator());
         }
         replaceOperand(*II, 0, Builder.CreateAnd(CurrCond, NextCond));
@@ -3889,16 +3891,20 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   }
 
-  // Try to fold intrinsic into select operands. This is legal if:
+  // Try to fold intrinsic into select/phi operands. This is legal if:
   //  * The intrinsic is speculatable.
   //  * The select condition is not a vector, or the intrinsic does not
   //    perform cross-lane operations.
   if (isSafeToSpeculativelyExecuteWithVariableReplaced(&CI) &&
       isNotCrossLaneOperation(II))
-    for (Value *Op : II->args())
+    for (Value *Op : II->args()) {
       if (auto *Sel = dyn_cast<SelectInst>(Op))
         if (Instruction *R = FoldOpIntoSelect(*II, Sel))
           return R;
+      if (auto *Phi = dyn_cast<PHINode>(Op))
+        if (Instruction *R = foldOpIntoPhi(*II, Phi))
+          return R;
+    }
 
   if (Instruction *Shuf = foldShuffledIntrinsicOperands(II))
     return Shuf;
@@ -3913,7 +3919,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
 // Fence instruction simplification
 Instruction *InstCombinerImpl::visitFenceInst(FenceInst &FI) {
-  auto *NFI = dyn_cast<FenceInst>(FI.getNextNonDebugInstruction());
+  auto *NFI = dyn_cast<FenceInst>(FI.getNextNode());
   // This check is solely here to handle arbitrary target-dependent syncscopes.
   // TODO: Can remove if does not matter in practice.
   if (NFI && FI.isIdenticalTo(NFI))
@@ -3933,7 +3939,7 @@ Instruction *InstCombinerImpl::visitFenceInst(FenceInst &FI) {
   if (NFI && isIdenticalOrStrongerFence(NFI, &FI))
     return eraseInstFromFunction(FI);
 
-  if (auto *PFI = dyn_cast_or_null<FenceInst>(FI.getPrevNonDebugInstruction()))
+  if (auto *PFI = dyn_cast_or_null<FenceInst>(FI.getPrevNode()))
     if (isIdenticalOrStrongerFence(PFI, &FI))
       return eraseInstFromFunction(FI);
   return nullptr;
@@ -4048,6 +4054,111 @@ static IntrinsicInst *findInitTrampoline(Value *Callee) {
   if (IntrinsicInst *IT = findInitTrampolineFromBB(AdjustTramp, TrampMem))
     return IT;
   return nullptr;
+}
+
+Instruction *InstCombinerImpl::foldPtrAuthIntrinsicCallee(CallBase &Call) {
+  const Value *Callee = Call.getCalledOperand();
+  const auto *IPC = dyn_cast<IntToPtrInst>(Callee);
+  if (!IPC || !IPC->isNoopCast(DL))
+    return nullptr;
+
+  const auto *II = dyn_cast<IntrinsicInst>(IPC->getOperand(0));
+  if (!II)
+    return nullptr;
+
+  Intrinsic::ID IIID = II->getIntrinsicID();
+  if (IIID != Intrinsic::ptrauth_resign && IIID != Intrinsic::ptrauth_sign)
+    return nullptr;
+
+  // Isolate the ptrauth bundle from the others.
+  std::optional<OperandBundleUse> PtrAuthBundleOrNone;
+  SmallVector<OperandBundleDef, 2> NewBundles;
+  for (unsigned BI = 0, BE = Call.getNumOperandBundles(); BI != BE; ++BI) {
+    OperandBundleUse Bundle = Call.getOperandBundleAt(BI);
+    if (Bundle.getTagID() == LLVMContext::OB_ptrauth)
+      PtrAuthBundleOrNone = Bundle;
+    else
+      NewBundles.emplace_back(Bundle);
+  }
+
+  if (!PtrAuthBundleOrNone)
+    return nullptr;
+
+  Value *NewCallee = nullptr;
+  switch (IIID) {
+  // call(ptrauth.resign(p)), ["ptrauth"()] ->  call p, ["ptrauth"()]
+  // assuming the call bundle and the sign operands match.
+  case Intrinsic::ptrauth_resign: {
+    // Resign result key should match bundle.
+    if (II->getOperand(3) != PtrAuthBundleOrNone->Inputs[0])
+      return nullptr;
+    // Resign result discriminator should match bundle.
+    if (II->getOperand(4) != PtrAuthBundleOrNone->Inputs[1])
+      return nullptr;
+
+    // Resign input (auth) key should also match: we can't change the key on
+    // the new call we're generating, because we don't know what keys are valid.
+    if (II->getOperand(1) != PtrAuthBundleOrNone->Inputs[0])
+      return nullptr;
+
+    Value *NewBundleOps[] = {II->getOperand(1), II->getOperand(2)};
+    NewBundles.emplace_back("ptrauth", NewBundleOps);
+    NewCallee = II->getOperand(0);
+    break;
+  }
+
+  // call(ptrauth.sign(p)), ["ptrauth"()] ->  call p
+  // assuming the call bundle and the sign operands match.
+  // Non-ptrauth indirect calls are undesirable, but so is ptrauth.sign.
+  case Intrinsic::ptrauth_sign: {
+    // Sign key should match bundle.
+    if (II->getOperand(1) != PtrAuthBundleOrNone->Inputs[0])
+      return nullptr;
+    // Sign discriminator should match bundle.
+    if (II->getOperand(2) != PtrAuthBundleOrNone->Inputs[1])
+      return nullptr;
+    NewCallee = II->getOperand(0);
+    break;
+  }
+  default:
+    llvm_unreachable("unexpected intrinsic ID");
+  }
+
+  if (!NewCallee)
+    return nullptr;
+
+  NewCallee = Builder.CreateBitOrPointerCast(NewCallee, Callee->getType());
+  CallBase *NewCall = CallBase::Create(&Call, NewBundles);
+  NewCall->setCalledOperand(NewCallee);
+  return NewCall;
+}
+
+Instruction *InstCombinerImpl::foldPtrAuthConstantCallee(CallBase &Call) {
+  auto *CPA = dyn_cast<ConstantPtrAuth>(Call.getCalledOperand());
+  if (!CPA)
+    return nullptr;
+
+  auto *CalleeF = dyn_cast<Function>(CPA->getPointer());
+  // If the ptrauth constant isn't based on a function pointer, bail out.
+  if (!CalleeF)
+    return nullptr;
+
+  // Inspect the call ptrauth bundle to check it matches the ptrauth constant.
+  auto PAB = Call.getOperandBundle(LLVMContext::OB_ptrauth);
+  if (!PAB)
+    return nullptr;
+
+  auto *Key = cast<ConstantInt>(PAB->Inputs[0]);
+  Value *Discriminator = PAB->Inputs[1];
+
+  // If the bundle doesn't match, this is probably going to fail to auth.
+  if (!CPA->isKnownCompatibleWith(Key, Discriminator, DL))
+    return nullptr;
+
+  // If the bundle matches the constant, proceed in making this a direct call.
+  auto *NewCall = CallBase::removeOperandBundle(&Call, LLVMContext::OB_ptrauth);
+  NewCall->setCalledOperand(CalleeF);
+  return NewCall;
 }
 
 bool InstCombinerImpl::annotateAnyAllocSite(CallBase &Call,
@@ -4210,6 +4321,14 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
   if (IntrinsicInst *II = findInitTrampoline(Callee))
     return transformCallThroughTrampoline(Call, *II);
 
+  // Combine calls involving pointer authentication intrinsics.
+  if (Instruction *NewCall = foldPtrAuthIntrinsicCallee(Call))
+    return NewCall;
+
+  // Combine calls to ptrauth constants.
+  if (Instruction *NewCall = foldPtrAuthConstantCallee(Call))
+    return NewCall;
+
   if (isa<InlineAsm>(Callee) && !Call.doesNotThrow()) {
     InlineAsm *IA = cast<InlineAsm>(Callee);
     if (!IA->canThrow()) {
@@ -4238,6 +4357,13 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
         return replaceInstUsesWith(
             Call, Builder.CreateBitOrPointerCast(ReturnedArg, CallTy));
     }
+
+  // Drop unnecessary callee_type metadata from calls that were converted
+  // into direct calls.
+  if (Call.getMetadata(LLVMContext::MD_callee_type) && !Call.isIndirectCall()) {
+    Call.setMetadata(LLVMContext::MD_callee_type, nullptr);
+    Changed = true;
+  }
 
   // Drop unnecessary kcfi operand bundles from calls that were converted
   // into direct calls.

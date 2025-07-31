@@ -1616,6 +1616,8 @@ void Sema::ActOnEndOfTranslationUnit() {
 
   if (!PP.isIncrementalProcessingEnabled())
     TUScope = nullptr;
+
+  checkExposure(Context.getTranslationUnitDecl());
 }
 
 
@@ -2249,16 +2251,15 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
     }
 
     // Don't allow SVE types in functions without a SVE target.
-    if (Ty->isSVESizelessBuiltinType() && FD) {
+    if (Ty->isSVESizelessBuiltinType() && FD && !FD->getType().isNull()) {
       llvm::StringMap<bool> CallerFeatureMap;
       Context.getFunctionFeatureMap(CallerFeatureMap, FD);
       if (!Builtin::evaluateRequiredTargetFeatures("sve", CallerFeatureMap)) {
         if (!Builtin::evaluateRequiredTargetFeatures("sme", CallerFeatureMap))
           Diag(Loc, diag::err_sve_vector_in_non_sve_target) << Ty;
         else if (!IsArmStreamingFunction(FD,
-                                         /*IncludeLocallyStreaming=*/true)) {
+                                         /*IncludeLocallyStreaming=*/true))
           Diag(Loc, diag::err_sve_vector_in_non_streaming_function) << Ty;
-        }
       }
     }
 

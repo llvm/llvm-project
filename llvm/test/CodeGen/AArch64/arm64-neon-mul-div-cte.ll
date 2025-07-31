@@ -15,56 +15,13 @@ define <16 x i8> @div16xi8(<16 x i8> %x) {
 ;
 ; CHECK-GI-LABEL: div16xi8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    smov w9, v0.b[0]
-; CHECK-GI-NEXT:    mov w8, #25 // =0x19
-; CHECK-GI-NEXT:    smov w10, v0.b[1]
-; CHECK-GI-NEXT:    smov w11, v0.b[2]
-; CHECK-GI-NEXT:    smov w12, v0.b[3]
-; CHECK-GI-NEXT:    smov w13, v0.b[4]
-; CHECK-GI-NEXT:    smov w14, v0.b[5]
-; CHECK-GI-NEXT:    smov w15, v0.b[6]
-; CHECK-GI-NEXT:    smov w16, v0.b[7]
-; CHECK-GI-NEXT:    smov w17, v0.b[8]
-; CHECK-GI-NEXT:    smov w18, v0.b[9]
-; CHECK-GI-NEXT:    sdiv w9, w9, w8
-; CHECK-GI-NEXT:    sdiv w10, w10, w8
-; CHECK-GI-NEXT:    fmov s1, w9
-; CHECK-GI-NEXT:    sdiv w11, w11, w8
-; CHECK-GI-NEXT:    mov v1.b[1], w10
-; CHECK-GI-NEXT:    smov w10, v0.b[10]
-; CHECK-GI-NEXT:    sdiv w12, w12, w8
-; CHECK-GI-NEXT:    mov v1.b[2], w11
-; CHECK-GI-NEXT:    smov w11, v0.b[11]
-; CHECK-GI-NEXT:    sdiv w13, w13, w8
-; CHECK-GI-NEXT:    mov v1.b[3], w12
-; CHECK-GI-NEXT:    smov w12, v0.b[12]
-; CHECK-GI-NEXT:    sdiv w14, w14, w8
-; CHECK-GI-NEXT:    mov v1.b[4], w13
-; CHECK-GI-NEXT:    smov w13, v0.b[13]
-; CHECK-GI-NEXT:    sdiv w15, w15, w8
-; CHECK-GI-NEXT:    mov v1.b[5], w14
-; CHECK-GI-NEXT:    sdiv w16, w16, w8
-; CHECK-GI-NEXT:    mov v1.b[6], w15
-; CHECK-GI-NEXT:    sdiv w17, w17, w8
-; CHECK-GI-NEXT:    mov v1.b[7], w16
-; CHECK-GI-NEXT:    sdiv w9, w18, w8
-; CHECK-GI-NEXT:    mov v1.b[8], w17
-; CHECK-GI-NEXT:    sdiv w10, w10, w8
-; CHECK-GI-NEXT:    mov v1.b[9], w9
-; CHECK-GI-NEXT:    smov w9, v0.b[14]
-; CHECK-GI-NEXT:    sdiv w11, w11, w8
-; CHECK-GI-NEXT:    mov v1.b[10], w10
-; CHECK-GI-NEXT:    smov w10, v0.b[15]
-; CHECK-GI-NEXT:    sdiv w12, w12, w8
-; CHECK-GI-NEXT:    mov v1.b[11], w11
-; CHECK-GI-NEXT:    sdiv w13, w13, w8
-; CHECK-GI-NEXT:    mov v1.b[12], w12
-; CHECK-GI-NEXT:    sdiv w9, w9, w8
-; CHECK-GI-NEXT:    mov v1.b[13], w13
-; CHECK-GI-NEXT:    sdiv w8, w10, w8
-; CHECK-GI-NEXT:    mov v1.b[14], w9
-; CHECK-GI-NEXT:    mov v1.b[15], w8
-; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    movi v1.16b, #41
+; CHECK-GI-NEXT:    smull2 v2.8h, v0.16b, v1.16b
+; CHECK-GI-NEXT:    smull v0.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    uzp2 v1.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    sshr v0.16b, v1.16b, #2
+; CHECK-GI-NEXT:    ushr v0.16b, v0.16b, #7
+; CHECK-GI-NEXT:    ssra v0.16b, v1.16b, #2
 ; CHECK-GI-NEXT:    ret
   %div = sdiv <16 x i8> %x, <i8 25, i8 25, i8 25, i8 25, i8 25, i8 25, i8 25, i8 25, i8 25, i8 25, i8 25, i8 25, i8 25, i8 25, i8 25, i8 25>
   ret <16 x i8> %div
@@ -85,32 +42,15 @@ define <8 x i16> @div8xi16(<8 x i16> %x) {
 ;
 ; CHECK-GI-LABEL: div8xi16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    smov w9, v0.h[0]
-; CHECK-GI-NEXT:    mov w8, #6577 // =0x19b1
-; CHECK-GI-NEXT:    smov w10, v0.h[1]
-; CHECK-GI-NEXT:    smov w11, v0.h[2]
-; CHECK-GI-NEXT:    smov w12, v0.h[3]
-; CHECK-GI-NEXT:    smov w13, v0.h[4]
-; CHECK-GI-NEXT:    smov w14, v0.h[5]
-; CHECK-GI-NEXT:    sdiv w9, w9, w8
-; CHECK-GI-NEXT:    sdiv w10, w10, w8
-; CHECK-GI-NEXT:    fmov s1, w9
-; CHECK-GI-NEXT:    sdiv w11, w11, w8
-; CHECK-GI-NEXT:    mov v1.h[1], w10
-; CHECK-GI-NEXT:    smov w10, v0.h[6]
-; CHECK-GI-NEXT:    sdiv w12, w12, w8
-; CHECK-GI-NEXT:    mov v1.h[2], w11
-; CHECK-GI-NEXT:    smov w11, v0.h[7]
-; CHECK-GI-NEXT:    sdiv w13, w13, w8
-; CHECK-GI-NEXT:    mov v1.h[3], w12
-; CHECK-GI-NEXT:    sdiv w9, w14, w8
-; CHECK-GI-NEXT:    mov v1.h[4], w13
-; CHECK-GI-NEXT:    sdiv w10, w10, w8
-; CHECK-GI-NEXT:    mov v1.h[5], w9
-; CHECK-GI-NEXT:    sdiv w8, w11, w8
-; CHECK-GI-NEXT:    mov v1.h[6], w10
-; CHECK-GI-NEXT:    mov v1.h[7], w8
-; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    adrp x8, .LCPI1_0
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
+; CHECK-GI-NEXT:    smull2 v2.4s, v0.8h, v1.8h
+; CHECK-GI-NEXT:    smull v1.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    uzp2 v1.8h, v1.8h, v2.8h
+; CHECK-GI-NEXT:    add v1.8h, v1.8h, v0.8h
+; CHECK-GI-NEXT:    sshr v0.8h, v1.8h, #12
+; CHECK-GI-NEXT:    ushr v0.8h, v0.8h, #15
+; CHECK-GI-NEXT:    ssra v0.8h, v1.8h, #12
 ; CHECK-GI-NEXT:    ret
   %div = sdiv <8 x i16> %x, <i16 6577, i16 6577, i16 6577, i16 6577, i16 6577, i16 6577, i16 6577, i16 6577>
   ret <8 x i16> %div
@@ -131,20 +71,14 @@ define <4 x i32> @div32xi4(<4 x i32> %x) {
 ;
 ; CHECK-GI-LABEL: div32xi4:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov w9, s0
-; CHECK-GI-NEXT:    mov w8, #39957 // =0x9c15
-; CHECK-GI-NEXT:    mov w10, v0.s[1]
-; CHECK-GI-NEXT:    movk w8, #145, lsl #16
-; CHECK-GI-NEXT:    mov w11, v0.s[2]
-; CHECK-GI-NEXT:    mov w12, v0.s[3]
-; CHECK-GI-NEXT:    sdiv w9, w9, w8
-; CHECK-GI-NEXT:    sdiv w10, w10, w8
-; CHECK-GI-NEXT:    fmov s0, w9
-; CHECK-GI-NEXT:    sdiv w11, w11, w8
-; CHECK-GI-NEXT:    mov v0.s[1], w10
-; CHECK-GI-NEXT:    sdiv w8, w12, w8
-; CHECK-GI-NEXT:    mov v0.s[2], w11
-; CHECK-GI-NEXT:    mov v0.s[3], w8
+; CHECK-GI-NEXT:    adrp x8, .LCPI2_0
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI2_0]
+; CHECK-GI-NEXT:    smull2 v2.2d, v0.4s, v1.4s
+; CHECK-GI-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-GI-NEXT:    uzp2 v1.4s, v0.4s, v2.4s
+; CHECK-GI-NEXT:    sshr v0.4s, v1.4s, #22
+; CHECK-GI-NEXT:    ushr v0.4s, v0.4s, #31
+; CHECK-GI-NEXT:    ssra v0.4s, v1.4s, #22
 ; CHECK-GI-NEXT:    ret
   %div = sdiv <4 x i32> %x, <i32 9542677, i32 9542677, i32 9542677, i32 9542677>
   ret <4 x i32> %div
