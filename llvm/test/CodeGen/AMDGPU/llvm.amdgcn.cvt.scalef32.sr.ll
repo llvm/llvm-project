@@ -28,7 +28,7 @@ define amdgpu_ps void @test_cvt_scalef32_sr_bf8_bf16_dst_sel_1(ptr addrspace(1) 
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    global_load_dword v5, v[0:1], off
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-NEXT:    v_cvt_scalef32_sr_bf8_bf16 v5, v2, v3, v4 op_sel:[0,0,0,1]
+; GFX950-NEXT:    v_cvt_scalef32_sr_bf8_bf16 v5, v2, v3, v4 op_sel:[0,0,1,0]
 ; GFX950-NEXT:    global_store_dword v[0:1], v5, off
 ; GFX950-NEXT:    s_endpgm
   %old = load i32, ptr addrspace(1) %out, align 4
@@ -42,7 +42,7 @@ define amdgpu_ps void @test_cvt_scalef32_sr_bf8_bf16_dst_sel_2(ptr addrspace(1) 
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    global_load_dword v5, v[0:1], off
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-NEXT:    v_cvt_scalef32_sr_bf8_bf16 v5, v2, v3, v4 op_sel:[0,0,1,0]
+; GFX950-NEXT:    v_cvt_scalef32_sr_bf8_bf16 v5, v2, v3, v4 op_sel:[0,0,0,1]
 ; GFX950-NEXT:    global_store_dword v[0:1], v5, off
 ; GFX950-NEXT:    s_endpgm
   %old = load i32, ptr addrspace(1) %out, align 4
@@ -84,7 +84,7 @@ define amdgpu_ps void @test_cvt_scalef32_sr_bf8_f16_dst_sel_1(ptr addrspace(1) %
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    global_load_dword v5, v[0:1], off
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-NEXT:    v_cvt_scalef32_sr_bf8_f16 v5, v2, v3, v4 op_sel:[0,0,0,1]
+; GFX950-NEXT:    v_cvt_scalef32_sr_bf8_f16 v5, v2, v3, v4 op_sel:[0,0,1,0]
 ; GFX950-NEXT:    global_store_dword v[0:1], v5, off
 ; GFX950-NEXT:    s_endpgm
   %old = load i32, ptr addrspace(1) %out, align 4
@@ -98,7 +98,7 @@ define amdgpu_ps void @test_cvt_scalef32_sr_bf8_f16_dst_sel_2(ptr addrspace(1) %
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    global_load_dword v5, v[0:1], off
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-NEXT:    v_cvt_scalef32_sr_bf8_f16 v5, v2, v3, v4 op_sel:[0,0,1,0]
+; GFX950-NEXT:    v_cvt_scalef32_sr_bf8_f16 v5, v2, v3, v4 op_sel:[0,0,0,1]
 ; GFX950-NEXT:    global_store_dword v[0:1], v5, off
 ; GFX950-NEXT:    s_endpgm
   %old = load i32, ptr addrspace(1) %out, align 4
@@ -140,7 +140,7 @@ define amdgpu_ps void @test_cvt_scalef32_sr_bf8_f32_dst_sel_1(ptr addrspace(1) %
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    global_load_dword v5, v[0:1], off
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-NEXT:    v_cvt_scalef32_sr_bf8_f32 v5, v2, v3, v4 op_sel:[0,0,0,1]
+; GFX950-NEXT:    v_cvt_scalef32_sr_bf8_f32 v5, v2, v3, v4 op_sel:[0,0,1,0]
 ; GFX950-NEXT:    global_store_dword v[0:1], v5, off
 ; GFX950-NEXT:    s_endpgm
   %old = load i32, ptr addrspace(1) %out, align 4
@@ -154,7 +154,7 @@ define amdgpu_ps void @test_cvt_scalef32_sr_bf8_f32_dst_sel_2(ptr addrspace(1) %
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    global_load_dword v5, v[0:1], off
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-NEXT:    v_cvt_scalef32_sr_bf8_f32 v5, v2, v3, v4 op_sel:[0,0,1,0]
+; GFX950-NEXT:    v_cvt_scalef32_sr_bf8_f32 v5, v2, v3, v4 op_sel:[0,0,0,1]
 ; GFX950-NEXT:    global_store_dword v[0:1], v5, off
 ; GFX950-NEXT:    s_endpgm
   %old = load i32, ptr addrspace(1) %out, align 4
@@ -196,7 +196,7 @@ define amdgpu_ps void @test_cvt_scalef32_sr_fp8_bf16_dst_sel_1(ptr addrspace(1) 
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    global_load_dword v5, v[0:1], off
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-NEXT:    v_cvt_scalef32_sr_fp8_bf16 v5, v2, v3, v4 op_sel:[0,0,0,1]
+; GFX950-NEXT:    v_cvt_scalef32_sr_fp8_bf16 v5, v2, v3, v4 op_sel:[0,0,1,0]
 ; GFX950-NEXT:    global_store_dword v[0:1], v5, off
 ; GFX950-NEXT:    s_endpgm
   %old = load i32, ptr addrspace(1) %out, align 4
@@ -210,7 +210,7 @@ define amdgpu_ps void @test_cvt_scalef32_sr_fp8_bf16_dst_sel_2(ptr addrspace(1) 
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    global_load_dword v5, v[0:1], off
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-NEXT:    v_cvt_scalef32_sr_fp8_bf16 v5, v2, v3, v4 op_sel:[0,0,1,0]
+; GFX950-NEXT:    v_cvt_scalef32_sr_fp8_bf16 v5, v2, v3, v4 op_sel:[0,0,0,1]
 ; GFX950-NEXT:    global_store_dword v[0:1], v5, off
 ; GFX950-NEXT:    s_endpgm
   %old = load i32, ptr addrspace(1) %out, align 4
@@ -252,7 +252,7 @@ define amdgpu_ps void @test_cvt_scalef32_sr_fp8_f16_dst_sel_1(ptr addrspace(1) %
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    global_load_dword v5, v[0:1], off
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-NEXT:    v_cvt_scalef32_sr_fp8_f16 v5, v2, v3, v4 op_sel:[0,0,0,1]
+; GFX950-NEXT:    v_cvt_scalef32_sr_fp8_f16 v5, v2, v3, v4 op_sel:[0,0,1,0]
 ; GFX950-NEXT:    global_store_dword v[0:1], v5, off
 ; GFX950-NEXT:    s_endpgm
   %old = load i32, ptr addrspace(1) %out, align 4
@@ -266,7 +266,7 @@ define amdgpu_ps void @test_cvt_scalef32_sr_fp8_f16_dst_sel_2(ptr addrspace(1) %
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    global_load_dword v5, v[0:1], off
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-NEXT:    v_cvt_scalef32_sr_fp8_f16 v5, v2, v3, v4 op_sel:[0,0,1,0]
+; GFX950-NEXT:    v_cvt_scalef32_sr_fp8_f16 v5, v2, v3, v4 op_sel:[0,0,0,1]
 ; GFX950-NEXT:    global_store_dword v[0:1], v5, off
 ; GFX950-NEXT:    s_endpgm
   %old = load i32, ptr addrspace(1) %out, align 4
@@ -308,7 +308,7 @@ define amdgpu_ps void @test_cvt_scalef32_sr_fp8_f32_dst_sel_1(ptr addrspace(1) %
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    global_load_dword v5, v[0:1], off
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-NEXT:    v_cvt_scalef32_sr_fp8_f32 v5, v2, v3, v4 op_sel:[0,0,0,1]
+; GFX950-NEXT:    v_cvt_scalef32_sr_fp8_f32 v5, v2, v3, v4 op_sel:[0,0,1,0]
 ; GFX950-NEXT:    global_store_dword v[0:1], v5, off
 ; GFX950-NEXT:    s_endpgm
   %old = load i32, ptr addrspace(1) %out, align 4
@@ -322,7 +322,7 @@ define amdgpu_ps void @test_cvt_scalef32_sr_fp8_f32_dst_sel_2(ptr addrspace(1) %
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    global_load_dword v5, v[0:1], off
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-NEXT:    v_cvt_scalef32_sr_fp8_f32 v5, v2, v3, v4 op_sel:[0,0,1,0]
+; GFX950-NEXT:    v_cvt_scalef32_sr_fp8_f32 v5, v2, v3, v4 op_sel:[0,0,0,1]
 ; GFX950-NEXT:    global_store_dword v[0:1], v5, off
 ; GFX950-NEXT:    s_endpgm
   %old = load i32, ptr addrspace(1) %out, align 4
