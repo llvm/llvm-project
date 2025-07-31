@@ -62,3 +62,21 @@ emitc.class @mainClass {
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT: };
+
+emitc.class @reflectionClass {
+  emitc.field @reflectionMap : !emitc.opaque<"const std::map<std::string, std::string>"> = #emitc.opaque<"{ { \22another_feature\22, \22fieldName0\22 } }"> 
+  emitc.func @get_reflectionMap() {
+    %0 = emitc.get_field @reflectionMap : !emitc.opaque<"const std::map<std::string, std::string>">
+    return 
+  }
+}
+
+// CHECK-LABEL: class reflectionClass {
+// CHECK-NEXT: public:
+// CHECK-NEXT:  const std::map<std::string, std::string> reflectionMap = { { "another_feature", "fieldName0" } };
+// CHECK-NEXT:  void get_reflectionMap() {
+// CHECK-NEXT:    return;
+// CHECK-NEXT:  }
+// CHECK-EMPTY:
+// CHECK-NEXT: };
+

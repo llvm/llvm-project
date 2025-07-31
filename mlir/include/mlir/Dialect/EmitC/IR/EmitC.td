@@ -1696,7 +1696,7 @@ def EmitC_GetFieldOp
   }];
 
   let arguments = (ins FlatSymbolRefAttr:$field_name);
-  let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>:$result);
+  let results = (outs EmitCType:$result);
   let assemblyFormat = "$field_name `:` type($result) attr-dict";
 }
 
