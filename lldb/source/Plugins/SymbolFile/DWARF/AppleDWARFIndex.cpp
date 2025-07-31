@@ -13,6 +13,7 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/Function.h"
+#include "lldb/lldb-private-enumerations.h"
 #include "llvm/Support/DJB.h"
 
 using namespace lldb;
@@ -275,7 +276,7 @@ void AppleDWARFIndex::GetNamespaces(
 void AppleDWARFIndex::GetFunctions(
     const Module::LookupInfo &lookup_info, SymbolFileDWARF &dwarf,
     const CompilerDeclContext &parent_decl_ctx,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   if (!m_apple_names_up)
     return;
 
@@ -288,15 +289,16 @@ void AppleDWARFIndex::GetFunctions(
       ReportInvalidDIERef(die_ref, name);
       continue;
     }
-    if (!ProcessFunctionDIE(lookup_info, die, parent_decl_ctx, callback))
+    if (ProcessFunctionDIE(lookup_info, die, parent_decl_ctx, callback) ==
+        IterationAction::Stop)
       return;
   }
 }
 
 void AppleDWARFIndex::GetFunctions(
     const RegularExpression &regex,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
-  return GetGlobalVariables(regex, callback);
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
+  return GetGlobalVariables(regex, IterationActionAdaptor(callback));
 }
 
 void AppleDWARFIndex::Dump(Stream &s) {
