@@ -711,3 +711,29 @@ MinidumpParser::GetMemoryRegionInfo(const MemoryRegionInfos &regions,
   region.SetMapped(MemoryRegionInfo::eNo);
   return region;
 }
+
+std::optional<minidump::Range>
+MinidumpParser::GetClosestPriorRegion(lldb::addr_t load_addr) {
+  if (m_memory_ranges.IsEmpty())
+    PopulateMemoryRanges();
+
+  const MemoryRangeVector::Entry *entry =
+      m_memory_ranges.FindEntryThatContainsOrPrior(load_addr);
+  if (!entry)
+    return std::nullopt;
+
+  return entry->data;
+}
+
+std::optional<minidump::Range>
+MinidumpParser::GetClosestFollowingRegion(lldb::addr_t load_addr) {
+  if (m_memory_ranges.IsEmpty())
+    PopulateMemoryRanges();
+
+  const MemoryRangeVector::Entry *entry =
+      m_memory_ranges.FindEntryThatContainsOrFollows(load_addr);
+  if (!entry)
+    return std::nullopt;
+
+  return entry->data;
+}
