@@ -940,7 +940,6 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       FunctionProtoTypes(this_(), FunctionProtoTypesLog2InitSize),
       DependentTypeOfExprTypes(this_()), DependentDecltypeTypes(this_()),
       DependentPackIndexingTypes(this_()), TemplateSpecializationTypes(this_()),
-      DependentTemplateSpecializationTypes(this_()),
       DependentBitIntTypes(this_()), SubstTemplateTemplateParmPacks(this_()),
       DeducedTemplates(this_()), ArrayParameterTypes(this_()),
       CanonTemplateTemplateParms(this_()), SourceMgr(SM), LangOpts(LOpts),
@@ -2596,6 +2595,9 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     }
   }
   break;
+
+  case Type::PredefinedSugar:
+    return getTypeInfo(cast<PredefinedSugarType>(T)->desugar().getTypePtr());
 
   case Type::Pipe:
     Width = Target->getPointerWidth(LangAS::opencl_global);
@@ -5216,6 +5218,39 @@ QualType ASTContext::getDependentBitIntType(bool IsUnsigned,
   return QualType(New, 0);
 }
 
+QualType
+ASTContext::getPredefinedSugarType(PredefinedSugarType::Kind KD) const {
+  using Kind = PredefinedSugarType::Kind;
+
+  if (auto *Target = PredefinedSugarTypes[llvm::to_underlying(KD)];
+      Target != nullptr)
+    return QualType(Target, 0);
+
+  auto getCanonicalType = [](const ASTContext &Ctx, Kind KDI) -> QualType {
+    switch (KDI) {
+      // size_t (C99TC3 6.5.3.4), signed size_t (C++23 5.13.2) and
+      // ptrdiff_t (C99TC3 6.5.6) Although these types are not built-in, they
+      // are part of the core language and are widely used. Using
+      // PredefinedSugarType makes these types as named sugar types rather than
+      // standard integer types, enabling better hints and diagnostics.
+    case Kind::SizeT:
+      return Ctx.getFromTargetType(Ctx.Target->getSizeType());
+    case Kind::SignedSizeT:
+      return Ctx.getFromTargetType(Ctx.Target->getSignedSizeType());
+    case Kind::PtrdiffT:
+      return Ctx.getFromTargetType(Ctx.Target->getPtrDiffType(LangAS::Default));
+    }
+    llvm_unreachable("unexpected kind");
+  };
+
+  auto *New = new (*this, alignof(PredefinedSugarType))
+      PredefinedSugarType(KD, &Idents.get(PredefinedSugarType::getName(KD)),
+                          getCanonicalType(*this, static_cast<Kind>(KD)));
+  Types.push_back(New);
+  PredefinedSugarTypes[llvm::to_underlying(KD)] = New;
+  return QualType(New, 0);
+}
+
 #ifndef NDEBUG
 static bool NeedsInjectedClassNameType(const RecordDecl *D) {
   if (!isa<CXXRecordDecl>(D)) return false;
@@ -5943,10 +5978,9 @@ QualType ASTContext::getDependentTemplateSpecializationType(
   llvm::FoldingSetNodeID ID;
   DependentTemplateSpecializationType::Profile(ID, *this, Keyword, Name, Args);
 
-  void *InsertPos = nullptr;
-  if (auto *T = DependentTemplateSpecializationTypes.FindNodeOrInsertPos(
-          ID, InsertPos))
-    return QualType(T, 0);
+  if (auto const T_iter = DependentTemplateSpecializationTypes.find(ID);
+      T_iter != DependentTemplateSpecializationTypes.end())
+    return QualType(T_iter->getSecond(), 0);
 
   NestedNameSpecifier *NNS = Name.getQualifier();
 
@@ -5965,11 +5999,6 @@ QualType ASTContext::getDependentTemplateSpecializationType(
           CanonKeyword, {CanonNNS, Name.getName(), /*HasTemplateKeyword=*/true},
           CanonArgs,
           /*IsCanonical=*/true);
-      // Find the insert position again.
-      [[maybe_unused]] auto *Nothing =
-          DependentTemplateSpecializationTypes.FindNodeOrInsertPos(ID,
-                                                                   InsertPos);
-      assert(!Nothing && "canonical type broken");
     }
   } else {
     assert(Keyword == getCanonicalElaboratedTypeKeyword(Keyword));
@@ -5985,8 +6014,13 @@ QualType ASTContext::getDependentTemplateSpecializationType(
                        alignof(DependentTemplateSpecializationType));
   auto *T =
       new (Mem) DependentTemplateSpecializationType(Keyword, Name, Args, Canon);
+#ifndef NDEBUG
+  llvm::FoldingSetNodeID InsertedID;
+  T->Profile(InsertedID, *this);
+  assert(InsertedID == ID && "ID does not match");
+#endif
   Types.push_back(T);
-  DependentTemplateSpecializationTypes.InsertNode(T, InsertPos);
+  DependentTemplateSpecializationTypes.try_emplace(ID, T);
   return QualType(T, 0);
 }
 
@@ -6796,14 +6830,31 @@ QualType ASTContext::getTagDeclType(const TagDecl *Decl) const {
 /// getSizeType - Return the unique type for "size_t" (C99 7.17), the result
 /// of the sizeof operator (C99 6.5.3.4p4). The value is target dependent and
 /// needs to agree with the definition in <stddef.h>.
-CanQualType ASTContext::getSizeType() const {
+QualType ASTContext::getSizeType() const {
+  return getPredefinedSugarType(PredefinedSugarType::Kind::SizeT);
+}
+
+CanQualType ASTContext::getCanonicalSizeType() const {
   return getFromTargetType(Target->getSizeType());
 }
 
 /// Return the unique signed counterpart of the integer type
 /// corresponding to size_t.
-CanQualType ASTContext::getSignedSizeType() const {
-  return getFromTargetType(Target->getSignedSizeType());
+QualType ASTContext::getSignedSizeType() const {
+  return getPredefinedSugarType(PredefinedSugarType::Kind::SignedSizeT);
+}
+
+/// getPointerDiffType - Return the unique type for "ptrdiff_t" (C99 7.17)
+/// defined in <stddef.h>. Pointer - pointer requires this (C99 6.5.6p9).
+QualType ASTContext::getPointerDiffType() const {
+  return getPredefinedSugarType(PredefinedSugarType::Kind::PtrdiffT);
+}
+
+/// Return the unique unsigned counterpart of "ptrdiff_t"
+/// integer type. The standard (C11 7.21.6.1p7) refers to this type
+/// in the definition of %tu format specifier.
+QualType ASTContext::getUnsignedPointerDiffType() const {
+  return getFromTargetType(Target->getUnsignedPtrDiffType(LangAS::Default));
 }
 
 /// getIntMaxType - Return the unique type for "intmax_t" (C99 7.18.1.5).
@@ -6836,19 +6887,6 @@ QualType ASTContext::getIntPtrType() const {
 
 QualType ASTContext::getUIntPtrType() const {
   return getCorrespondingUnsignedType(getIntPtrType());
-}
-
-/// getPointerDiffType - Return the unique type for "ptrdiff_t" (C99 7.17)
-/// defined in <stddef.h>. Pointer - pointer requires this (C99 6.5.6p9).
-QualType ASTContext::getPointerDiffType() const {
-  return getFromTargetType(Target->getPtrDiffType(LangAS::Default));
-}
-
-/// Return the unique unsigned counterpart of "ptrdiff_t"
-/// integer type. The standard (C11 7.21.6.1p7) refers to this type
-/// in the definition of %tu format specifier.
-QualType ASTContext::getUnsignedPointerDiffType() const {
-  return getFromTargetType(Target->getUnsignedPtrDiffType(LangAS::Default));
 }
 
 /// Return the unique type for "pid_t" defined in
@@ -14503,6 +14541,10 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
                                       DX->isCountInBytes(), DX->isOrNull(),
                                       CDX);
   }
+  case Type::PredefinedSugar:
+    assert(cast<PredefinedSugarType>(X)->getKind() !=
+           cast<PredefinedSugarType>(Y)->getKind());
+    return QualType();
   }
   llvm_unreachable("Unhandled Type Class");
 }

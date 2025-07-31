@@ -109,7 +109,7 @@ void bad_news(int *ip)
 #elif __cplusplus <= 201103L
   // expected-error@-4 {{array size expression must have integral or unscoped enumeration type, not 'double'}}
 #else
-  // expected-warning@-6 {{implicit conversion from 'double' to 'unsigned int' changes value from 1.1 to 1}}
+  // expected-warning@-6 {{implicit conversion from 'double' to '__size_t' (aka 'unsigned int') changes value from 1.1 to 1}}
 #endif
 
   (void)new int[1][i];  // expected-note {{read of non-const variable 'i' is not allowed in a constant expression}}

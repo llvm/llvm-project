@@ -86,7 +86,6 @@ GetCC1Arguments(DiagnosticsEngine *Diagnostics,
 static llvm::Expected<std::unique_ptr<CompilerInstance>>
 CreateCI(const llvm::opt::ArgStringList &Argv) {
   std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
 
   // Register the support for object-file-wrapped Clang modules.
   // FIXME: Clang should register these container operations automatically.
@@ -98,7 +97,7 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
   // a well formed diagnostic object.
   DiagnosticOptions DiagOpts;
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
-  DiagnosticsEngine Diags(DiagID, DiagOpts, DiagsBuffer);
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DiagsBuffer);
   bool Success = CompilerInvocation::CreateFromArgs(
       Clang->getInvocation(), llvm::ArrayRef(Argv.begin(), Argv.size()), Diags);
 
@@ -174,11 +173,10 @@ IncrementalCompilerBuilder::create(std::string TT,
 
   // Buffer diagnostics from argument parsing so that we can output them using a
   // well formed diagnostic object.
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
   std::unique_ptr<DiagnosticOptions> DiagOpts =
       CreateAndPopulateDiagOpts(ClangArgv);
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
-  DiagnosticsEngine Diags(DiagID, *DiagOpts, DiagsBuffer);
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), *DiagOpts, DiagsBuffer);
 
   driver::Driver Driver(/*MainBinaryName=*/ClangArgv[0], TT, Diags);
   Driver.setCheckInputsExist(false); // the input comes from mem buffers
@@ -264,7 +262,7 @@ public:
       if (auto *TLSD = llvm::dyn_cast<TopLevelStmtDecl>(D))
         if (TLSD && TLSD->isSemiMissing()) {
           auto ExprOrErr =
-              Interp.ExtractValueFromExpr(cast<Expr>(TLSD->getStmt()));
+              Interp.convertExprToValue(cast<Expr>(TLSD->getStmt()));
           if (llvm::Error E = ExprOrErr.takeError()) {
             llvm::logAllUnhandledErrors(std::move(E), llvm::errs(),
                                         "Value printing failed: ");
@@ -440,11 +438,10 @@ const char *const Runtimes = R"(
     #define __CLANG_REPL__ 1
 #ifdef __cplusplus
     #define EXTERN_C extern "C"
-    void *__clang_Interpreter_SetValueWithAlloc(void*, void*, void*);
     struct __clang_Interpreter_NewTag{} __ci_newtag;
     void* operator new(__SIZE_TYPE__, void* __p, __clang_Interpreter_NewTag) noexcept;
     template <class T, class = T (*)() /*disable for arrays*/>
-    void __clang_Interpreter_SetValueCopyArr(T* Src, void* Placement, unsigned long Size) {
+    void __clang_Interpreter_SetValueCopyArr(const T* Src, void* Placement, unsigned long Size) {
       for (auto Idx = 0; Idx < Size; ++Idx)
         new ((void*)(((T*)Placement) + Idx), __ci_newtag) T(Src[Idx]);
     }
@@ -454,8 +451,12 @@ const char *const Runtimes = R"(
     }
 #else
     #define EXTERN_C extern
+    EXTERN_C void *memcpy(void *restrict dst, const void *restrict src, __SIZE_TYPE__ n);
+    EXTERN_C inline void __clang_Interpreter_SetValueCopyArr(const void* Src, void* Placement, unsigned long Size) {
+      memcpy(Placement, Src, Size);
+    }
 #endif // __cplusplus
-
+  EXTERN_C void *__clang_Interpreter_SetValueWithAlloc(void*, void*, void*);
   EXTERN_C void __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType, ...);
 )";
 
@@ -470,12 +471,12 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI,
 
   // Add runtime code and set a marker to hide it from user code. Undo will not
   // go through that.
-  auto PTU = Interp->Parse(Runtimes);
-  if (!PTU)
-    return PTU.takeError();
+  Err = Interp->ParseAndExecute(Runtimes);
+  if (Err)
+    return std::move(Err);
+
   Interp->markUserCodeStart();
 
-  Interp->ValuePrintingInfo.resize(4);
   return std::move(Interp);
 }
 
@@ -524,11 +525,10 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
   return std::move(Interp);
 }
 
-const CompilerInstance *Interpreter::getCompilerInstance() const {
-  return CI.get();
-}
-
 CompilerInstance *Interpreter::getCompilerInstance() { return CI.get(); }
+const CompilerInstance *Interpreter::getCompilerInstance() const {
+  return const_cast<Interpreter *>(this)->getCompilerInstance();
+}
 
 llvm::Expected<llvm::orc::LLJIT &> Interpreter::getExecutionEngine() {
   if (!IncrExecutor) {
@@ -610,7 +610,14 @@ Interpreter::Parse(llvm::StringRef Code) {
   if (!TuOrErr)
     return TuOrErr.takeError();
 
-  return RegisterPTU(*TuOrErr);
+  PTUs.emplace_back(PartialTranslationUnit());
+  PartialTranslationUnit &LastPTU = PTUs.back();
+  LastPTU.TUPart = *TuOrErr;
+
+  if (std::unique_ptr<llvm::Module> M = GenModule())
+    LastPTU.TheModule = std::move(M);
+
+  return LastPTU;
 }
 
 static llvm::Expected<llvm::orc::JITTargetMachineBuilder>
@@ -752,10 +759,18 @@ Interpreter::getSymbolAddressFromLinkerName(llvm::StringRef Name) const {
 
 llvm::Error Interpreter::Undo(unsigned N) {
 
-  if (N > getEffectivePTUSize())
+  if (getEffectivePTUSize() == 0) {
     return llvm::make_error<llvm::StringError>("Operation failed. "
-                                               "Too many undos",
+                                               "No input left to undo",
                                                std::error_code());
+  } else if (N > getEffectivePTUSize()) {
+    return llvm::make_error<llvm::StringError>(
+        llvm::formatv(
+            "Operation failed. Wanted to undo {0} inputs, only have {1}.", N,
+            getEffectivePTUSize()),
+        std::error_code());
+  }
+
   for (unsigned I = 0; I < N; I++) {
     if (IncrExecutor) {
       if (llvm::Error Err = IncrExecutor->removeModule(PTUs.back()))
@@ -808,10 +823,10 @@ Interpreter::GenModule(IncrementalAction *Action) {
     // sure it always stays empty.
     assert(((!CachedInCodeGenModule ||
              !getCompilerInstance()->getPreprocessorOpts().Includes.empty()) ||
-            (CachedInCodeGenModule->empty() &&
-             CachedInCodeGenModule->global_empty() &&
-             CachedInCodeGenModule->alias_empty() &&
-             CachedInCodeGenModule->ifunc_empty())) &&
+            ((CachedInCodeGenModule->empty() &&
+              CachedInCodeGenModule->global_empty() &&
+              CachedInCodeGenModule->alias_empty() &&
+              CachedInCodeGenModule->ifunc_empty()))) &&
            "CodeGen wrote to a readonly module");
     std::unique_ptr<llvm::Module> M(CG->ReleaseModule());
     CG->StartModule("incr_module_" + std::to_string(ID++), M->getContext());
@@ -828,4 +843,4 @@ CodeGenerator *Interpreter::getCodeGen(IncrementalAction *Action) const {
     return nullptr;
   return static_cast<CodeGenAction *>(WrappedAct)->getCodeGenerator();
 }
-} // namespace clang
+} // end namespace clang

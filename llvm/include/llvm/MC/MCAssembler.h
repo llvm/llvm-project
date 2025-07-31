@@ -36,8 +36,6 @@ class MCCVDefRangeFragment;
 class MCCVInlineLineTableFragment;
 class MCFragment;
 class MCFixup;
-class MCLEBFragment;
-class MCPseudoProbeAddrFragment;
 class MCSymbolRefExpr;
 class raw_ostream;
 class MCAsmBackend;
@@ -123,7 +121,6 @@ private:
   bool relaxCVInlineLineTable(MCCVInlineLineTableFragment &DF);
   bool relaxCVDefRange(MCCVDefRangeFragment &DF);
   bool relaxFill(MCFillFragment &F);
-  bool relaxPseudoProbeAddr(MCPseudoProbeAddrFragment &DF);
 
 public:
   /// Construct a new assembler instance.
@@ -212,7 +209,7 @@ public:
 
   LLVM_ABI bool registerSection(MCSection &Section);
   LLVM_ABI bool registerSymbol(const MCSymbol &Symbol);
-  void addRelocDirective(RelocDirective RD);
+  LLVM_ABI void addRelocDirective(RelocDirective RD);
 
   LLVM_ABI void reportError(SMLoc L, const Twine &Msg) const;
   // Record pending errors during layout iteration, as they may go away once the
