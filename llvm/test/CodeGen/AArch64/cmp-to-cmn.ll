@@ -781,22 +781,36 @@ define i1 @almost_immediate_neg_ugt_64(i64 %x) {
 }
 
 define i1 @cmn_nsw(i32 %a, i32 %b) {
-; CHECK-LABEL: cmn_nsw:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmn w0, w1
-; CHECK-NEXT:    cset w0, gt
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: cmn_nsw:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmn w0, w1
+; CHECK-SD-NEXT:    cset w0, gt
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: cmn_nsw:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    neg w8, w1
+; CHECK-GI-NEXT:    cmp w0, w8
+; CHECK-GI-NEXT:    cset w0, gt
+; CHECK-GI-NEXT:    ret
   %sub = sub nsw i32 0, %b
   %cmp = icmp sgt i32 %a, %sub
   ret i1 %cmp
 }
 
 define i1 @cmn_nsw_64(i64 %a, i64 %b) {
-; CHECK-LABEL: cmn_nsw_64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmn x0, x1
-; CHECK-NEXT:    cset w0, gt
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: cmn_nsw_64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmn x0, x1
+; CHECK-SD-NEXT:    cset w0, gt
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: cmn_nsw_64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    neg x8, x1
+; CHECK-GI-NEXT:    cmp x0, x8
+; CHECK-GI-NEXT:    cset w0, gt
+; CHECK-GI-NEXT:    ret
   %sub = sub nsw i64 0, %b
   %cmp = icmp sgt i64 %a, %sub
   ret i1 %cmp
