@@ -1168,10 +1168,14 @@ TEST_F(TestTypeSystemClang, AsmLabel_CtorDtor) {
                "_ZN1SC1Ev");
   ASSERT_STREQ(m_ast->DeclGetMangledName(dtor_nolabel).GetCString(),
                "_ZN1SD1Ev");
-  ASSERT_STREQ(m_ast->DeclGetMangledName(ctor).GetCString(),
-               "\01$__lldb_func:0x0:0x0:S");
-  ASSERT_STREQ(m_ast->DeclGetMangledName(dtor).GetCString(),
-               "\01$__lldb_func:0x0:0x0:~S");
+  ASSERT_STREQ(llvm::GlobalValue::dropLLVMManglingEscape(
+                   m_ast->DeclGetMangledName(ctor).GetStringRef())
+                   .data(),
+               "$__lldb_func:0x0:0x0:S");
+  ASSERT_STREQ(llvm::GlobalValue::dropLLVMManglingEscape(
+                   m_ast->DeclGetMangledName(dtor).GetStringRef())
+                   .data(),
+               "$__lldb_func:0x0:0x0:~S");
 }
 
 struct AsmLabelTestCase {
