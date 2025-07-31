@@ -156,12 +156,15 @@ public:
 };
 } // namespace
 
+#ifndef NDEBUG
+// Only used in asserts
 static const ComplexType *getComplexType(QualType type) {
   type = type.getCanonicalType();
   if (const ComplexType *comp = dyn_cast<ComplexType>(type))
     return comp;
   return cast<ComplexType>(cast<AtomicType>(type)->getValueType());
 }
+#endif // NDEBUG
 
 LValue ComplexExprEmitter::emitBinAssignLValue(const BinaryOperator *e,
                                                mlir::Value &value) {
