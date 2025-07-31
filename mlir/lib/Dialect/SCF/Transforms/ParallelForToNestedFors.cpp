@@ -28,9 +28,9 @@ mlir::scf::parallelForToNestedFors(RewriterBase &rewriter,
                                    scf::ParallelOp parallelOp) {
 
   if (!parallelOp.getResults().empty()) {
-    parallelOp->emitError("Currently scf.parallel to scf.for conversion "
-                          "doesn't support scf.parallel with results.");
-    return failure();
+    return rewriter.notifyMatchFailure(
+      parallelOp, "Currently scf.parallel to scf.for conversion "
+                  "doesn't support scf.parallel with results.");
   }
 
   rewriter.setInsertionPoint(parallelOp);
