@@ -54,7 +54,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         Test launching a binary with a lldb-dap in server mode on a specific port.
         """
         self.build()
-        (_, connection) = self.start_server(connection="tcp://localhost:0")
+        (_, connection) = self.start_server(connection="listen://localhost:0")
         self.run_debug_session(connection, "Alice")
         self.run_debug_session(connection, "Bob")
 
@@ -72,7 +72,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         self.addTearDownHook(cleanup)
 
         self.build()
-        (_, connection) = self.start_server(connection="unix://" + name)
+        (_, connection) = self.start_server(connection="accept://" + name)
         self.run_debug_session(connection, "Alice")
         self.run_debug_session(connection, "Bob")
 
@@ -82,7 +82,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         Test launching a binary with lldb-dap in server mode and shutting down the server while the debug session is still active.
         """
         self.build()
-        (process, connection) = self.start_server(connection="tcp://localhost:0")
+        (process, connection) = self.start_server(connection="listen://localhost:0")
         self.dap_server = dap_server.DebugAdapterServer(
             connection=connection,
         )
@@ -101,8 +101,10 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         # Interrupt the server which should disconnect all clients.
         process.send_signal(signal.SIGINT)
 
-        self.dap_server.wait_for_terminated()
-        self.assertIsNone(
+        # Wait for both events since they can happen in any order.
+        self.dap_server.wait_for_event(["terminated", "exited"])
+        self.dap_server.wait_for_event(["terminated", "exited"])
+        self.assertIsNotNone(
             self.dap_server.exit_status,
             "Process exited before interrupting lldb-dap server",
         )

@@ -244,8 +244,7 @@ public:
 
   MachineFunctionProperties getSetProperties() const override {
     if (ClearVirtRegs) {
-      return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     return MachineFunctionProperties();
@@ -302,6 +301,8 @@ bool VirtRegRewriterLegacy::runOnMachineFunction(MachineFunction &MF) {
 PreservedAnalyses
 VirtRegRewriterPass::run(MachineFunction &MF,
                          MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+
   VirtRegMap &VRM = MFAM.getResult<VirtRegMapAnalysis>(MF);
   LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
   LiveRegMatrix &LRM = MFAM.getResult<LiveRegMatrixAnalysis>(MF);

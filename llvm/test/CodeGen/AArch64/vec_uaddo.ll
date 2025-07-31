@@ -278,8 +278,8 @@ define <2 x i32> @uaddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; CHECK-NEXT:    fmov s0, w13
 ; CHECK-NEXT:    mov v0.s[1], w10
 ; CHECK-NEXT:    ldr x10, [sp]
-; CHECK-NEXT:    stp x8, x9, [x10, #16]
 ; CHECK-NEXT:    stp x11, x12, [x10]
+; CHECK-NEXT:    stp x8, x9, [x10, #16]
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #31
 ; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
 ; CHECK-NEXT:    ret

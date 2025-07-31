@@ -27,13 +27,11 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
-#include "llvm/Support/Chrono.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include <algorithm>
 #include <cassert>
 #include <memory>
 #include <string>

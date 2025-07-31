@@ -653,6 +653,7 @@ CXString clang_getTypeKindSpelling(enum CXTypeKind K) {
     TKIND(Attributed);
     TKIND(BTFTagAttributed);
     TKIND(HLSLAttributedResource);
+    TKIND(HLSLInlineSpirv);
     TKIND(BFloat16);
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) TKIND(Id);
 #include "clang/Basic/OpenCLImageTypes.def"
@@ -731,8 +732,8 @@ CXCallingConv clang_getFunctionTypeCallingConv(CXType X) {
       TCALLINGCONV(RISCVVLSCall_32768);
       TCALLINGCONV(RISCVVLSCall_65536);
     case CC_SpirFunction: return CXCallingConv_Unexposed;
-    case CC_AMDGPUKernelCall: return CXCallingConv_Unexposed;
-    case CC_OpenCLKernel: return CXCallingConv_Unexposed;
+    case CC_DeviceKernel:
+      return CXCallingConv_Unexposed;
       break;
     }
 #undef TCALLINGCONV

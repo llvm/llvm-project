@@ -25,9 +25,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 

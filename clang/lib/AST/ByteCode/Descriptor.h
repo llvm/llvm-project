@@ -101,6 +101,10 @@ struct InlineDescriptor {
   /// Flag indicating if the field is mutable (if in a record).
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsFieldMutable : 1;
+  /// Flag indicating if this field is a const field nested in
+  /// a mutable parent field.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsConstInMutable : 1;
   /// Flag indicating if the field is an element of a composite array.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsArrayElement : 1;
@@ -160,7 +164,7 @@ public:
   /// The primitive type this descriptor was created for,
   /// or the primitive element type in case this is
   /// a primitive array.
-  const std::optional<PrimType> PrimT = std::nullopt;
+  const OptPrimType PrimT = std::nullopt;
   /// Flag indicating if the block is mutable.
   const bool IsConst = false;
   /// Flag indicating if a field is mutable.
@@ -280,6 +284,9 @@ public:
   bool isUnion() const;
   /// Checks if this is a dummy descriptor.
   bool isDummy() const { return IsDummy; }
+
+  /// Whether variables of this descriptor need their destructor called or not.
+  bool hasTrivialDtor() const;
 
   void dump() const;
   void dump(llvm::raw_ostream &OS) const;

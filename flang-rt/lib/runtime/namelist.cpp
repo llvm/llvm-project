@@ -10,6 +10,7 @@
 #include "descriptor-io.h"
 #include "flang-rt/runtime/emit-encoded.h"
 #include "flang-rt/runtime/io-stmt.h"
+#include "flang-rt/runtime/type-info.h"
 #include "flang/Runtime/io-api.h"
 #include <algorithm>
 #include <cstring>
@@ -26,8 +27,7 @@ RT_VAR_GROUP_END
 RT_OFFLOAD_API_GROUP_BEGIN
 
 static inline RT_API_ATTRS char32_t GetComma(IoStatementState &io) {
-  return io.mutableModes().editingFlags & decimalComma ? char32_t{';'}
-                                                       : char32_t{','};
+  return io.mutableModes().GetSeparatorChar();
 }
 
 bool IODEF(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {

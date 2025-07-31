@@ -273,8 +273,8 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
   std::unique_ptr<llvm::ToolOutputFile> OptRecordFile =
     std::move(*OptRecordFileOrErr);
 
-  if (OptRecordFile &&
-      CodeGenOpts.getProfileUse() != CodeGenOptions::ProfileNone)
+  if (OptRecordFile && CodeGenOpts.getProfileUse() !=
+                           llvm::driver::ProfileInstrKind::ProfileNone)
     Ctx.setDiagnosticsHotnessRequested(true);
 
   if (CodeGenOpts.MisExpect) {
@@ -908,6 +908,8 @@ bool CodeGenAction::loadLinkModules(CompilerInstance &CI) {
 bool CodeGenAction::hasIRSupport() const { return true; }
 
 void CodeGenAction::EndSourceFileAction() {
+  ASTFrontendAction::EndSourceFileAction();
+
   // If the consumer creation failed, do nothing.
   if (!getCompilerInstance().hasASTConsumer())
     return;
@@ -932,7 +934,7 @@ CodeGenerator *CodeGenAction::getCodeGenerator() const {
 bool CodeGenAction::BeginSourceFileAction(CompilerInstance &CI) {
   if (CI.getFrontendOpts().GenReducedBMI)
     CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleInterface);
-  return true;
+  return ASTFrontendAction::BeginSourceFileAction(CI);
 }
 
 static std::unique_ptr<raw_pwrite_stream>
@@ -995,7 +997,7 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
     std::vector<std::unique_ptr<ASTConsumer>> Consumers(2);
     Consumers[0] = std::make_unique<ReducedBMIGenerator>(
         CI.getPreprocessor(), CI.getModuleCache(),
-        CI.getFrontendOpts().ModuleOutputPath);
+        CI.getFrontendOpts().ModuleOutputPath, CI.getCodeGenOpts());
     Consumers[1] = std::move(Result);
     return std::make_unique<MultiplexConsumer>(std::move(Consumers));
   }

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-- -mcpu=tahiti -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=tahiti -mattr=-promote-alloca < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; TODO: Test with flat scratch
 

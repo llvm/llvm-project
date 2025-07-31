@@ -380,7 +380,7 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
   bool Changed = false;
   const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
   for (BasicBlock &BB : *F) {
-    for (Instruction &I : BB) {
+    for (Instruction &I : make_early_inc_range(BB)) {
       auto Call = dyn_cast<CallInst>(&I);
       if (!Call)
         continue;
@@ -405,15 +405,21 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         Changed = true;
         break;
       case Intrinsic::lifetime_start:
-        if (STI.isOpenCLEnv()) {
+        if (!STI.isShader()) {
           Changed |= toSpvOverloadedIntrinsic(
               II, Intrinsic::SPVIntrinsics::spv_lifetime_start, {1});
+        } else {
+          II->eraseFromParent();
+          Changed = true;
         }
         break;
       case Intrinsic::lifetime_end:
-        if (STI.isOpenCLEnv()) {
+        if (!STI.isShader()) {
           Changed |= toSpvOverloadedIntrinsic(
               II, Intrinsic::SPVIntrinsics::spv_lifetime_end, {1});
+        } else {
+          II->eraseFromParent();
+          Changed = true;
         }
         break;
       case Intrinsic::ptr_annotation:
@@ -438,10 +444,9 @@ SPIRVPrepareFunctions::removeAggregateTypesFromSignature(Function *F) {
 
   IRBuilder<> B(F->getContext());
 
-  bool HasAggrArg =
-      std::any_of(F->arg_begin(), F->arg_end(), [](Argument &Arg) {
-        return Arg.getType()->isAggregateType();
-      });
+  bool HasAggrArg = llvm::any_of(F->args(), [](Argument &Arg) {
+    return Arg.getType()->isAggregateType();
+  });
   bool DoClone = IsRetAggr || HasAggrArg;
   if (!DoClone)
     return F;

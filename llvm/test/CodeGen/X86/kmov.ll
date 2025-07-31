@@ -194,7 +194,7 @@ define <8 x i1> @i16_mask_extract_8(i16 %mask) {
 ; X64-AVX512-LABEL: i16_mask_extract_8:
 ; X64-AVX512:       # %bb.0:
 ; X64-AVX512-NEXT:    vpbroadcastw %edi, %xmm0
-; X64-AVX512-NEXT:    vpmovzxbw {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
+; X64-AVX512-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
 ; X64-AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    retq
@@ -203,7 +203,7 @@ define <8 x i1> @i16_mask_extract_8(i16 %mask) {
 ; X64-KNL:       # %bb.0:
 ; X64-KNL-NEXT:    vmovd %edi, %xmm0
 ; X64-KNL-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X64-KNL-NEXT:    vpmovzxbw {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
+; X64-KNL-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
 ; X64-KNL-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X64-KNL-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
 ; X64-KNL-NEXT:    retq

@@ -39,7 +39,7 @@ struct DemangledNameInfo {
   /// \endcode
   std::pair<size_t, size_t> ScopeRange;
 
-  /// Indicates the [start, end) of the function argument lits.
+  /// Indicates the [start, end) of the function argument list.
   /// E.g.,
   /// \code{.cpp}
   ///    int (*getFunc<float>(float, double))(int, int)
@@ -59,11 +59,40 @@ struct DemangledNameInfo {
   /// \endcode
   std::pair<size_t, size_t> QualifiersRange;
 
+  /// Indicates the [start, end) of the function's prefix. This is a
+  /// catch-all range for anything that is not tracked by the rest of
+  /// the pairs.
+  std::pair<size_t, size_t> PrefixRange;
+
+  /// Indicates the [start, end) of the function's suffix. This is a
+  /// catch-all range for anything that is not tracked by the rest of
+  /// the pairs.
+  std::pair<size_t, size_t> SuffixRange;
+
   /// Returns \c true if this object holds a valid basename range.
   bool hasBasename() const {
-    return BasenameRange.second > BasenameRange.first &&
-           BasenameRange.second > 0;
+    // A function always has a name.
+    return BasenameRange.second > BasenameRange.first;
   }
+
+  /// Returns \c true if this object holds a valid scope range.
+  bool hasScope() const { return ScopeRange.second >= ScopeRange.first; }
+
+  /// Returns \c true if this object holds a valid arguments range.
+  bool hasArguments() const {
+    return ArgumentsRange.second >= ArgumentsRange.first;
+  }
+
+  /// Returns \c true if this object holds a valid qualifiers range.
+  bool hasQualifiers() const {
+    return QualifiersRange.second >= QualifiersRange.first;
+  }
+
+  /// Returns \c true if this object holds a valid prefix range.
+  bool hasPrefix() const { return PrefixRange.second >= PrefixRange.first; }
+
+  /// Returns \c true if this object holds a valid suffix range.
+  bool hasSuffix() const { return SuffixRange.second >= SuffixRange.first; }
 };
 
 /// An OutputBuffer which keeps a record of where certain parts of a

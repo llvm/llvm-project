@@ -11,6 +11,7 @@
 // <flat_map>
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <climits>
 #include <deque>
@@ -325,6 +326,24 @@ void test_from_range_compare() {
   }
 }
 
+void test_tuple_like_deduction() {
+  std::vector<std::pair<const int, float>> pair_vec = {{1, 1.1f}, {2, 2.2f}, {3, 3.3f}};
+  std::flat_multimap fmm1(pair_vec.begin(), pair_vec.end());
+  ASSERT_SAME_TYPE(decltype(fmm1), std::flat_multimap<int, float>);
+
+  std::vector<std::tuple<int, double>> tuple_vec = {{10, 1.1}, {20, 2.2}, {30, 3.3}};
+  std::flat_multimap fmm2(tuple_vec.begin(), tuple_vec.end());
+  ASSERT_SAME_TYPE(decltype(fmm2), std::flat_multimap<int, double>);
+
+  std::vector<std::array<long, 2>> array_vec = {{100L, 101L}, {200L, 201L}, {300L, 301L}};
+  std::flat_multimap fmm3(array_vec.begin(), array_vec.end());
+  ASSERT_SAME_TYPE(decltype(fmm3), std::flat_multimap<long, long>);
+
+  std::vector<std::pair<int, char>> non_const_key_pair_vec = {{5, 'a'}, {6, 'b'}};
+  std::flat_multimap fmm4(non_const_key_pair_vec.begin(), non_const_key_pair_vec.end());
+  ASSERT_SAME_TYPE(decltype(fmm4), std::flat_multimap<int, char>);
+}
+
 int main(int, char**) {
   // Each test function also tests the sorted_equivalent-prefixed and allocator-suffixed overloads.
   test_copy();
@@ -336,6 +355,7 @@ int main(int, char**) {
   test_initializer_list_compare();
   test_from_range();
   test_from_range_compare();
+  test_tuple_like_deduction();
 
   AssociativeContainerDeductionGuidesSfinaeAway<std::flat_multimap, std::flat_multimap<int, short>>();
 

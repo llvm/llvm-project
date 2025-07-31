@@ -37,7 +37,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <cassert>
 #include <limits>
@@ -986,6 +985,13 @@ void Mapper::remapInstruction(Instruction *I) {
     else
       assert((Flags & RF_IgnoreMissingLocals) &&
              "Referenced value not in value map!");
+  }
+
+  // Drop callee_type metadata from calls that were remapped
+  // into a direct call from an indirect one.
+  if (auto *CB = dyn_cast<CallBase>(I)) {
+    if (CB->getMetadata(LLVMContext::MD_callee_type) && !CB->isIndirectCall())
+      CB->setMetadata(LLVMContext::MD_callee_type, nullptr);
   }
 
   // Remap phi nodes' incoming blocks.

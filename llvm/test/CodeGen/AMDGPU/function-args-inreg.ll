@@ -1591,7 +1591,7 @@ define void @too_many_args_use_workitem_id_x_inreg(
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v18, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_dual_mov_b32 v15, s21 :: v_dual_mov_b32 v14, s20
+; GFX11-NEXT:    v_dual_mov_b32 v14, s20 :: v_dual_mov_b32 v15, s21
 ; GFX11-NEXT:    v_dual_mov_b32 v16, s22 :: v_dual_mov_b32 v17, s23
 ; GFX11-NEXT:    v_mov_b32_e32 v18, s24
 ; GFX11-NEXT:    global_store_b32 v[0:1], v14, off dlc
@@ -1604,8 +1604,8 @@ define void @too_many_args_use_workitem_id_x_inreg(
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v18, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_dual_mov_b32 v17, s28 :: v_dual_mov_b32 v14, s25
-; GFX11-NEXT:    v_dual_mov_b32 v15, s26 :: v_dual_mov_b32 v16, s27
+; GFX11-NEXT:    v_dual_mov_b32 v14, s25 :: v_dual_mov_b32 v15, s26
+; GFX11-NEXT:    v_dual_mov_b32 v16, s27 :: v_dual_mov_b32 v17, s28
 ; GFX11-NEXT:    v_mov_b32_e32 v18, s29
 ; GFX11-NEXT:    global_store_b32 v[0:1], v14, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0

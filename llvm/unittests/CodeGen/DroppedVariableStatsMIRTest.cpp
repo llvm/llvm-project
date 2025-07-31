@@ -19,10 +19,8 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "gtest/gtest.h"
-#include <gtest/gtest.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Module.h>
 #include <llvm/IR/PassInstrumentation.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/IR/PassTimingInfo.h>
@@ -41,8 +39,7 @@ createTargetMachine(std::string TargetStr, StringRef CPU, StringRef FS) {
     return nullptr;
   TargetOptions Options;
   return std::unique_ptr<TargetMachine>(
-      static_cast<TargetMachine *>(T->createTargetMachine(
-          TT, CPU, FS, Options, std::nullopt, std::nullopt)));
+      T->createTargetMachine(TT, CPU, FS, Options, std::nullopt, std::nullopt));
 }
 
 std::unique_ptr<Module> parseMIR(const TargetMachine &TM, StringRef MIRCode,

@@ -30,6 +30,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Target/RegisterTargetPassConfigCallback.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 using namespace llvm;
@@ -80,6 +81,10 @@ void CodeGenTargetMachineImpl::initAsmInfo() {
 
   TmpAsmInfo->setFullRegisterNames(Options.MCOptions.PPCUseFullRegisterNames);
 
+  assert(TmpAsmInfo->getExceptionHandlingType() ==
+             getTargetTriple().getDefaultExceptionHandling() &&
+         "MCAsmInfo and Triple disagree on default exception handling type");
+
   if (Options.ExceptionModel != ExceptionHandling::None)
     TmpAsmInfo->setExceptionsType(Options.ExceptionModel);
 
@@ -118,6 +123,7 @@ addPassesToGenerateCode(CodeGenTargetMachineImpl &TM, PassManagerBase &PM,
   PassConfig->setDisableVerify(DisableVerify);
   PM.add(PassConfig);
   PM.add(&MMIWP);
+  invokeGlobalTargetPassConfigCallbacks(TM, PM, PassConfig);
 
   if (PassConfig->addISelPasses())
     return nullptr;
@@ -197,7 +203,7 @@ CodeGenTargetMachineImpl::createMCStreamer(raw_pwrite_stream &Out,
       return make_error<StringError>("createMCAsmBackend failed",
                                      inconvertibleErrorCode());
 
-    Triple T(getTargetTriple().str());
+    Triple T(getTargetTriple());
     AsmStreamer.reset(getTarget().createMCObjectStreamer(
         T, Context, std::unique_ptr<MCAsmBackend>(MAB),
         DwoOut ? MAB->createDwoObjectWriter(Out, *DwoOut)

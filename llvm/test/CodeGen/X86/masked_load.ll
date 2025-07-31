@@ -817,7 +817,7 @@ define <2 x float> @load_v2f32_v2i32(<2 x i32> %trigger, ptr %addr, <2 x float> 
 ; SSE42-NEXT:    retq
 ; SSE42-NEXT:  LBB7_1: ## %cond.load
 ; SSE42-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE42-NEXT:    blendps {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
+; SSE42-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
 ; SSE42-NEXT:    testb $2, %al
 ; SSE42-NEXT:    je LBB7_4
 ; SSE42-NEXT:  LBB7_3: ## %cond.load1
@@ -1220,7 +1220,7 @@ define <8 x float> @load_v8f32_v8i1_zero(<8 x i1> %mask, ptr %addr) {
 ; SSE42-NEXT:    je LBB10_10
 ; SSE42-NEXT:  LBB10_9: ## %cond.load10
 ; SSE42-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE42-NEXT:    blendps {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
+; SSE42-NEXT:    movss {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
 ; SSE42-NEXT:    testb $32, %al
 ; SSE42-NEXT:    je LBB10_12
 ; SSE42-NEXT:  LBB10_11: ## %cond.load13
@@ -6424,7 +6424,7 @@ define <4 x i32> @mload_constmask_v4i32(ptr %addr, <4 x i32> %dst) {
 ; AVX1:       ## %bb.0:
 ; AVX1-NEXT:    vmovaps {{.*#+}} xmm1 = [0,4294967295,4294967295,4294967295]
 ; AVX1-NEXT:    vmaskmovps (%rdi), %xmm1, %xmm1
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: mload_constmask_v4i32:
@@ -6512,7 +6512,7 @@ define <8 x float> @mload_constmask_v8f32(ptr %addr, <8 x float> %dst) {
 ; SSE42-LABEL: mload_constmask_v8f32:
 ; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE42-NEXT:    blendps {{.*#+}} xmm0 = xmm2[0,1],xmm0[2,3]
+; SSE42-NEXT:    movsd {{.*#+}} xmm0 = xmm2[0],xmm0[1]
 ; SSE42-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; SSE42-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; SSE42-NEXT:    retq

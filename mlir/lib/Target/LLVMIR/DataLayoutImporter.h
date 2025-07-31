@@ -108,6 +108,14 @@ private:
   /// Adds a stack alignment entry if there is none yet.
   LogicalResult tryToEmplaceStackAlignmentEntry(StringRef token);
 
+  /// Adds a function pointer alignment entry if there is none yet.
+  LogicalResult
+  tryToEmplaceFunctionPointerAlignmentEntry(StringRef fnPtrAlignEntry,
+                                            StringRef token);
+
+  /// Adds legal int widths entry if there is none yet.
+  LogicalResult tryToEmplaceLegalIntWidthsEntry(StringRef token);
+
   std::string layoutStr = {};
   StringRef lastToken = {};
   SmallVector<StringRef> unhandledTokens;

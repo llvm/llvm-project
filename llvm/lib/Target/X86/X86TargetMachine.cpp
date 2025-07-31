@@ -19,6 +19,7 @@
 #include "X86Subtarget.h"
 #include "X86TargetObjectFile.h"
 #include "X86TargetTransformInfo.h"
+#include "llvm-c/Visibility.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -27,7 +28,6 @@
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
@@ -131,7 +131,7 @@ static std::string computeDataLayout(const Triple &TT) {
 
   Ret += DataLayout::getManglingComponent(TT);
   // X86 and x32 have 32 bit pointers.
-  if (!TT.isArch64Bit() || TT.isX32() || TT.isOSNaCl())
+  if (!TT.isArch64Bit() || TT.isX32())
     Ret += "-p:32:32";
 
   // Address spaces for 32 bit signed, 32 bit unsigned, and 64 bit pointers.
@@ -140,7 +140,7 @@ static std::string computeDataLayout(const Triple &TT) {
   // Some ABIs align 64 bit integers and doubles to 64 bits, others to 32.
   // 128 bit integers are not specified in the 32-bit ABIs but are used
   // internally for lowering f128, so we match the alignment to that.
-  if (TT.isArch64Bit() || TT.isOSWindows() || TT.isOSNaCl())
+  if (TT.isArch64Bit() || TT.isOSWindows())
     Ret += "-i64:64-i128:128";
   else if (TT.isOSIAMCU())
     Ret += "-i64:32-f64:32";
@@ -148,7 +148,7 @@ static std::string computeDataLayout(const Triple &TT) {
     Ret += "-i128:128-f64:32:64";
 
   // Some ABIs align long double to 128 bits, others to 32.
-  if (TT.isOSNaCl() || TT.isOSIAMCU())
+  if (TT.isOSIAMCU())
     ; // No f80
   else if (TT.isArch64Bit() || TT.isOSDarwin() || TT.isWindowsMSVCEnvironment())
     Ret += "-f80:128";
@@ -220,7 +220,7 @@ getEffectiveX86CodeModel(const Triple &TT, std::optional<CodeModel::Model> CM,
   bool Is64Bit = TT.getArch() == Triple::x86_64;
   if (CM) {
     if (*CM == CodeModel::Tiny)
-      report_fatal_error("Target does not support the tiny CodeModel", false);
+      reportFatalUsageError("target does not support the tiny CodeModel");
     return *CM;
   }
   if (JIT)
@@ -379,14 +379,14 @@ void X86TargetMachine::reset() { SubtargetMap.clear(); }
 
 ScheduleDAGInstrs *
 X86TargetMachine::createMachineScheduler(MachineSchedContext *C) const {
-  ScheduleDAGMILive *DAG = createGenericSchedLive(C);
+  ScheduleDAGMILive *DAG = createSchedLive(C);
   DAG->addMutation(createX86MacroFusionDAGMutation());
   return DAG;
 }
 
 ScheduleDAGInstrs *
 X86TargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
-  ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
+  ScheduleDAGMI *DAG = createSchedPostRA(C);
   DAG->addMutation(createX86MacroFusionDAGMutation());
   return DAG;
 }
@@ -555,7 +555,6 @@ bool X86PassConfig::addPreISel() {
 void X86PassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(&LiveRangeShrinkID);
-    addPass(createX86WinFixupBufferSecurityCheckPass());
     addPass(createX86FixupSetCC());
     addPass(createX86OptimizeLEAs());
     addPass(createX86CallFrameOptimization());

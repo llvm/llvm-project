@@ -18,10 +18,12 @@
 #endif
 
 REGION_PASS("null", ::llvm::sandboxir::NullPass)
+REGION_PASS("pack-reuse", ::llvm::sandboxir::PackReuse)
 REGION_PASS("print-instruction-count", ::llvm::sandboxir::PrintInstructionCount)
 REGION_PASS("print-region", ::llvm::sandboxir::PrintRegion)
 REGION_PASS("tr-save", ::llvm::sandboxir::TransactionSave)
 REGION_PASS("tr-accept", ::llvm::sandboxir::TransactionAlwaysAccept)
+REGION_PASS("tr-revert", ::llvm::sandboxir::TransactionAlwaysRevert)
 REGION_PASS("tr-accept-or-revert", ::llvm::sandboxir::TransactionAcceptOrRevert)
 REGION_PASS("bottom-up-vec", ::llvm::sandboxir::BottomUpVec)
 

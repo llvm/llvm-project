@@ -12,7 +12,7 @@ class AssertingInferiorTestCase(TestBase):
         oslist=["windows"],
         bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows",
     )
-    @expectedFailureAll(oslist=["linux"], archs=["arm"], bugnumber="llvm.org/pr25338")
+    @expectedFailureAll(oslist=["linux"], archs=["arm$"], bugnumber="llvm.org/pr25338")
     @expectedFailureAll(bugnumber="llvm.org/pr26592", triple="^mips")
     def test_inferior_asserting(self):
         """Test that lldb reliably catches the inferior asserting (command)."""
@@ -35,7 +35,7 @@ class AssertingInferiorTestCase(TestBase):
     )
     @expectedFailureAll(
         oslist=["linux"],
-        archs=["arm"],
+        archs=["arm$"],
         triple=no_match(".*-android"),
         bugnumber="llvm.org/pr25338",
     )
@@ -61,7 +61,7 @@ class AssertingInferiorTestCase(TestBase):
     )
     @expectedFailureAll(
         oslist=["linux"],
-        archs=["arm"],
+        archs=["arm$"],
         triple=no_match(".*-android"),
         bugnumber="llvm.org/pr25338",
     )
@@ -77,7 +77,7 @@ class AssertingInferiorTestCase(TestBase):
     )
     @expectedFailureAll(
         oslist=["linux"],
-        archs=["arm"],
+        archs=["arm$"],
         triple=no_match(".*-android"),
         bugnumber="llvm.org/pr25338",
     )

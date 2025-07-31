@@ -13,6 +13,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
+#include "llvm/ADT/identity.h"
 
 namespace clang {
 
@@ -50,6 +51,7 @@ public:
                       llvm::function_ref<bool(const NamedDecl *ND)> Filter);
   TagDecl *resolveTypeToTagDecl(QualType T);
   QualType simplifyType(QualType Type, const Expr *E, bool UnwrapPointer);
+  FunctionProtoTypeLoc getFunctionProtoTypeLoc(const Expr *Fn);
 
 private:
   ASTContext &Ctx;
@@ -506,6 +508,56 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveDependentMember(
   }
   return {};
 }
+
+FunctionProtoTypeLoc
+HeuristicResolverImpl::getFunctionProtoTypeLoc(const Expr *Fn) {
+  TypeLoc Target;
+  const Expr *NakedFn = Fn->IgnoreParenCasts();
+  if (const auto *T = NakedFn->getType().getTypePtr()->getAs<TypedefType>()) {
+    Target = T->getDecl()->getTypeSourceInfo()->getTypeLoc();
+  } else if (const auto *DR = dyn_cast<DeclRefExpr>(NakedFn)) {
+    const auto *D = DR->getDecl();
+    if (const auto *const VD = dyn_cast<VarDecl>(D)) {
+      Target = VD->getTypeSourceInfo()->getTypeLoc();
+    }
+  } else if (const auto *ME = dyn_cast<MemberExpr>(NakedFn)) {
+    const auto *MD = ME->getMemberDecl();
+    if (const auto *FD = dyn_cast<FieldDecl>(MD)) {
+      Target = FD->getTypeSourceInfo()->getTypeLoc();
+    }
+  }
+
+  if (!Target)
+    return {};
+
+  // Unwrap types that may be wrapping the function type
+  while (true) {
+    if (auto P = Target.getAs<PointerTypeLoc>()) {
+      Target = P.getPointeeLoc();
+      continue;
+    }
+    if (auto A = Target.getAs<AttributedTypeLoc>()) {
+      Target = A.getModifiedLoc();
+      continue;
+    }
+    if (auto P = Target.getAs<ParenTypeLoc>()) {
+      Target = P.getInnerLoc();
+      continue;
+    }
+    break;
+  }
+
+  if (auto F = Target.getAs<FunctionProtoTypeLoc>()) {
+    // In some edge cases the AST can contain a "trivial" FunctionProtoTypeLoc
+    // which has null parameters. Avoid these as they don't contain useful
+    // information.
+    if (llvm::all_of(F.getParams(), llvm::identity<ParmVarDecl *>()))
+      return F;
+  }
+
+  return {};
+}
+
 } // namespace
 
 std::vector<const NamedDecl *> HeuristicResolver::resolveMemberExpr(
@@ -555,6 +607,11 @@ TagDecl *HeuristicResolver::resolveTypeToTagDecl(QualType T) const {
 QualType HeuristicResolver::simplifyType(QualType Type, const Expr *E,
                                          bool UnwrapPointer) {
   return HeuristicResolverImpl(Ctx).simplifyType(Type, E, UnwrapPointer);
+}
+
+FunctionProtoTypeLoc
+HeuristicResolver::getFunctionProtoTypeLoc(const Expr *Fn) const {
+  return HeuristicResolverImpl(Ctx).getFunctionProtoTypeLoc(Fn);
 }
 
 } // namespace clang

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c2x -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c23 -verify %s
 
 // This is the latest version of fallthrough that we support.
 _Static_assert(__has_c_attribute(fallthrough) == 201910L);
@@ -16,17 +16,22 @@ void f(int n) {
     }
   case 2:
     for (int n = 0; n != 10; ++n)
-      [[fallthrough]]; // expected-error {{does not directly precede switch label}}
+      [[fallthrough]]; // expected-error {{does not directly precede switch label}} \
+                       // expected-warning {{ISO C does not allow an attribute list to appear here}}
   case 3:
     while (1)
-      [[fallthrough]]; // expected-error {{does not directly precede switch label}}
+      [[fallthrough]]; // expected-error {{does not directly precede switch label}} \
+      // expected-warning {{ISO C does not allow an attribute list to appear here}}
   case 4:
     while (0)
-      [[fallthrough]]; // expected-error {{does not directly precede switch label}}
+      [[fallthrough]]; // expected-error {{does not directly precede switch label}} \
+      // expected-warning {{ISO C does not allow an attribute list to appear here}}
   case 5:
-    do [[fallthrough]]; while (1); // expected-error {{does not directly precede switch label}}
+    do [[fallthrough]]; while (1); // expected-error {{does not directly precede switch label}} \
+    // expected-warning {{ISO C does not allow an attribute list to appear here}}
   case 6:
-    do [[fallthrough]]; while (0); // expected-error {{does not directly precede switch label}}
+    do [[fallthrough]]; while (0); // expected-error {{does not directly precede switch label}} \
+    // expected-warning {{ISO C does not allow an attribute list to appear here}}
   case 7:
     switch (n) {
     case 0:

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -ast-dump-filter=__is_structured_resource_element_compatible %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -ast-dump-filter=__is_structured_resource_element_compatible %s | FileCheck %s
 
 // CHECK: ConceptDecl {{.*}} __is_structured_resource_element_compatible
 // CHECK: |-TemplateTypeParmDecl {{.*}} referenced typename depth 0 index 0 element_type
@@ -9,7 +9,7 @@
 // CHECK:   |     `-TemplateTypeParm {{.*}} 'element_type'
 // CHECK:   `-BinaryOperator {{.*}} 'bool' lvalue '>='
 // CHECK:     |-UnaryExprOrTypeTraitExpr {{.*}} 'bool' sizeof 'element_type'
-// CHECK:     `-IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK:     `-IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 
 
 StructuredBuffer<float> Buffer;

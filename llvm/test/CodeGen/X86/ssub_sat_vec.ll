@@ -567,7 +567,7 @@ define <16 x i4> @v16i4(<16 x i4> %x, <16 x i4> %y) nounwind {
 ; AVX512BW-NEXT:    vpsubsb %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpsrlw $4, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpbroadcastb {{.*#+}} xmm1 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
-; AVX512BW-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm1 ^ (xmm0 & mem)
+; AVX512BW-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm1 ^ (xmm0 & m32bcst)
 ; AVX512BW-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    retq
   %z = call <16 x i4> @llvm.ssub.sat.v16i4(<16 x i4> %x, <16 x i4> %y)
@@ -601,7 +601,7 @@ define <16 x i1> @v16i1(<16 x i1> %x, <16 x i1> %y) nounwind {
 ;
 ; AVX512BW-LABEL: v16i1:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 & (xmm1 ^ mem)
+; AVX512BW-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 & (xmm1 ^ m32bcst)
 ; AVX512BW-NEXT:    retq
   %z = call <16 x i1> @llvm.ssub.sat.v16i1(<16 x i1> %x, <16 x i1> %y)
   ret <16 x i1> %z

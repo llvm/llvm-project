@@ -13,6 +13,7 @@
 
 namespace llvm {
 class MCSymbolELF : public MCSymbol {
+  friend class MCAsmInfoELF;
   /// An expression describing how to calculate the size of a symbol. If a
   /// symbol has no size this field will be NULL.
   const MCExpr *SymbolSize = nullptr;
@@ -38,8 +39,8 @@ public:
 
   bool isBindingSet() const;
 
-  void setIsWeakrefUsedInReloc() const;
-  bool isWeakrefUsedInReloc() const;
+  void setIsWeakref() const;
+  bool isWeakref() const;
 
   void setIsSignature() const;
   bool isSignature() const;

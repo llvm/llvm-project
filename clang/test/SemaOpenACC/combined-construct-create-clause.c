@@ -99,4 +99,6 @@ void ModList() {
   for(int i = 5; i < 10;++i);
 #pragma acc kernels loop create(zero: V1)
   for(int i = 5; i < 10;++i);
+#pragma acc parallel loop create(capture:V1)
+  for(int i = 5; i < 10;++i);
 }

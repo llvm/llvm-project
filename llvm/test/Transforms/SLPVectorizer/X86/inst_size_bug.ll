@@ -11,7 +11,8 @@ define void @inst_size(ptr %a, <2 x i64> %b) {
 ; CHECK-NEXT:    [[TMPL4:%.*]] = load i64, ptr [[PTR4]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[B:%.*]], <2 x i64> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> [[TMP1]], i64 [[TMPL1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i64> @llvm.vector.insert.v4i64.v2i64(<4 x i64> [[TMP2]], <2 x i64> [[TMP0]], i64 2)
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <4 x i64> zeroinitializer, [[TMP3]]
 ; CHECK-NEXT:    [[T45:%.*]] = icmp sgt i64 0, [[TMPL4]]
 ; CHECK-NEXT:    br label [[BLOCK:%.*]]

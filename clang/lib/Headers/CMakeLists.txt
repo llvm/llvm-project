@@ -18,6 +18,7 @@ set(core_files
   __stdarg_va_list.h
   stdatomic.h
   stdbool.h
+  stdcountof.h
   stdckdint.h
   stddef.h
   __stddef_header_macro.h
@@ -91,6 +92,7 @@ set(hlsl_subdir_files
   hlsl/hlsl_intrinsic_helpers.h
   hlsl/hlsl_intrinsics.h
   hlsl/hlsl_detail.h
+  hlsl/hlsl_spirv.h
   )
 set(hlsl_files
   ${hlsl_h}
@@ -125,9 +127,14 @@ set(riscv_files
   riscv_bitmanip.h
   riscv_corev_alu.h
   riscv_crypto.h
+  riscv_nds.h
   riscv_ntlh.h
   sifive_vector.h
   andes_vector.h
+  )
+
+set(spirv_files
+  __clang_spirv_builtins.h
   )
 
 set(systemz_files
@@ -317,6 +324,7 @@ set(files
   ${ppc_files}
   ${ppc_htm_files}
   ${riscv_files}
+  ${spirv_files}
   ${systemz_files}
   ${ve_files}
   ${x86_files}
@@ -334,9 +342,14 @@ set(cuda_wrapper_files
 )
 
 set(cuda_wrapper_bits_files
+  cuda_wrappers/bits/c++config.h
   cuda_wrappers/bits/shared_ptr_base.h
   cuda_wrappers/bits/basic_string.h
   cuda_wrappers/bits/basic_string.tcc
+)
+
+set(cuda_wrapper_utility_files
+  cuda_wrappers/__utility/declval.h
 )
 
 set(ppc_wrapper_files
@@ -435,8 +448,9 @@ endfunction(clang_generate_header)
 
 # Copy header files from the source directory to the build directory
 foreach( f ${files} ${cuda_wrapper_files} ${cuda_wrapper_bits_files}
-           ${ppc_wrapper_files} ${openmp_wrapper_files} ${zos_wrapper_files} ${hlsl_files}
-	   ${llvm_libc_wrapper_files} ${llvm_offload_wrapper_files})
+           ${cuda_wrapper_utility_files} ${ppc_wrapper_files} ${openmp_wrapper_files}
+           ${zos_wrapper_files} ${hlsl_files} ${llvm_libc_wrapper_files}
+           ${llvm_offload_wrapper_files})
   copy_header_to_output_dir(${CMAKE_CURRENT_SOURCE_DIR} ${f})
 endforeach( f )
 
@@ -527,6 +541,7 @@ add_dependencies("clang-resource-headers"
                  "ppc-resource-headers"
                  "ppc-htm-resource-headers"
                  "riscv-resource-headers"
+                 "spirv-resource-headers"
                  "systemz-resource-headers"
                  "ve-resource-headers"
                  "webassembly-resource-headers"
@@ -544,7 +559,7 @@ add_header_target("arm-common-resource-headers" "${arm_common_files};${arm_commo
 # Architecture/platform specific targets
 add_header_target("arm-resource-headers" "${arm_only_files};${arm_only_generated_files}")
 add_header_target("aarch64-resource-headers" "${aarch64_only_files};${aarch64_only_generated_files}")
-add_header_target("cuda-resource-headers" "${cuda_files};${cuda_wrapper_files};${cuda_wrapper_bits_files}")
+add_header_target("cuda-resource-headers" "${cuda_files};${cuda_wrapper_files};${cuda_wrapper_bits_files};${cuda_wrapper_utility_files}")
 add_header_target("hexagon-resource-headers" "${hexagon_files}")
 add_header_target("hip-resource-headers" "${hip_files}")
 add_header_target("loongarch-resource-headers" "${loongarch_files}")
@@ -560,6 +575,7 @@ add_header_target("gpu-resource-headers" "${gpu_files}")
 
 # Other header groupings
 add_header_target("hlsl-resource-headers" ${hlsl_files})
+add_header_target("spirv-resource-headers" ${spirv_files})
 add_header_target("opencl-resource-headers" ${opencl_files})
 add_header_target("llvm-libc-resource-headers" ${llvm_libc_wrapper_files})
 add_header_target("openmp-resource-headers" ${openmp_wrapper_files})
@@ -588,6 +604,11 @@ install(
 install(
   FILES ${cuda_wrapper_bits_files}
   DESTINATION ${header_install_dir}/cuda_wrappers/bits
+  COMPONENT clang-resource-headers)
+
+install(
+  FILES ${cuda_wrapper_utility_files}
+  DESTINATION ${header_install_dir}/cuda_wrappers/__utility
   COMPONENT clang-resource-headers)
 
 install(
@@ -650,6 +671,12 @@ install(
 install(
   FILES ${cuda_wrapper_bits_files}
   DESTINATION ${header_install_dir}/cuda_wrappers/bits
+  EXCLUDE_FROM_ALL
+  COMPONENT cuda-resource-headers)
+
+install(
+  FILES ${cuda_wrapper_utility_files}
+  DESTINATION ${header_install_dir}/cuda_wrappers/__utility
   EXCLUDE_FROM_ALL
   COMPONENT cuda-resource-headers)
 
@@ -766,6 +793,12 @@ install(
   COMPONENT hlsl-resource-headers)
 
 install(
+  FILES ${spirv_files}
+  DESTINATION ${header_install_dir}
+  EXCLUDE_FROM_ALL
+  COMPONENT spirv-resource-headers)
+
+install(
   FILES ${opencl_files}
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
@@ -834,6 +867,9 @@ if (NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets(install-riscv-resource-headers
                            DEPENDS riscv-resource-headers
                            COMPONENT riscv-resource-headers)
+  add_llvm_install_targets(install-spirv-resource-headers
+                           DEPENDS spirv-resource-headers
+                           COMPONENT spirv-resource-headers)
   add_llvm_install_targets(install-systemz-resource-headers
                            DEPENDS systemz-resource-headers
                            COMPONENT systemz-resource-headers)

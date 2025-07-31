@@ -49,8 +49,6 @@ bool isExprValueStored(const Expr *E, ASTContext &C) {
   return isa<CallExpr, CXXConstructExpr>(ParentE);
 }
 
-} // namespace
-
 AST_MATCHER_P(CXXTryStmt, hasHandlerFor,
               ast_matchers::internal::Matcher<QualType>, InnerMatcher) {
   for (unsigned NH = Node.getNumHandlers(), I = 0; I < NH; ++I) {
@@ -74,6 +72,8 @@ AST_MATCHER(CXXNewExpr, mayThrow) {
   return !OperatorNew->getType()->castAs<FunctionProtoType>()->isNothrow();
 }
 
+} // namespace
+
 void MultipleNewInOneExpressionCheck::registerMatchers(MatchFinder *Finder) {
   auto BadAllocType =
       recordType(hasDeclaration(cxxRecordDecl(hasName("::std::bad_alloc"))));
@@ -95,16 +95,14 @@ void MultipleNewInOneExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       callExpr(
-          hasAnyArgument(
-              expr(HasNewExpr1).bind("arg1")),
+          hasAnyArgument(expr(HasNewExpr1).bind("arg1")),
           hasAnyArgument(
               expr(HasNewExpr2, unless(equalsBoundNode("arg1"))).bind("arg2")),
           hasAncestor(BadAllocCatchingTryBlock)),
       this);
   Finder->addMatcher(
       cxxConstructExpr(
-          hasAnyArgument(
-              expr(HasNewExpr1).bind("arg1")),
+          hasAnyArgument(expr(HasNewExpr1).bind("arg1")),
           hasAnyArgument(
               expr(HasNewExpr2, unless(equalsBoundNode("arg1"))).bind("arg2")),
           unless(isListInitialization()),

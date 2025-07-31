@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
@@ -34,14 +35,16 @@ struct DebugSubsectionHeader {
 
 class DebugSubsectionRecord {
 public:
-  DebugSubsectionRecord();
-  DebugSubsectionRecord(DebugSubsectionKind Kind, BinaryStreamRef Data);
+  LLVM_ABI DebugSubsectionRecord();
+  LLVM_ABI DebugSubsectionRecord(DebugSubsectionKind Kind,
+                                 BinaryStreamRef Data);
 
-  static Error initialize(BinaryStreamRef Stream, DebugSubsectionRecord &Info);
+  LLVM_ABI static Error initialize(BinaryStreamRef Stream,
+                                   DebugSubsectionRecord &Info);
 
-  uint32_t getRecordLength() const;
-  DebugSubsectionKind kind() const;
-  BinaryStreamRef getRecordData() const;
+  LLVM_ABI uint32_t getRecordLength() const;
+  LLVM_ABI DebugSubsectionKind kind() const;
+  LLVM_ABI BinaryStreamRef getRecordData() const;
 
 private:
   DebugSubsectionKind Kind = DebugSubsectionKind::None;
@@ -50,15 +53,17 @@ private:
 
 class DebugSubsectionRecordBuilder {
 public:
+  LLVM_ABI
   DebugSubsectionRecordBuilder(std::shared_ptr<DebugSubsection> Subsection);
 
   /// Use this to copy existing subsections directly from source to destination.
   /// For example, line table subsections in an object file only need to be
   /// relocated before being copied into the PDB.
-  DebugSubsectionRecordBuilder(const DebugSubsectionRecord &Contents);
+  LLVM_ABI DebugSubsectionRecordBuilder(const DebugSubsectionRecord &Contents);
 
-  uint32_t calculateSerializedLength() const;
-  Error commit(BinaryStreamWriter &Writer, CodeViewContainer Container) const;
+  LLVM_ABI uint32_t calculateSerializedLength() const;
+  LLVM_ABI Error commit(BinaryStreamWriter &Writer,
+                        CodeViewContainer Container) const;
 
 private:
   /// The subsection to build. Will be null if Contents is non-empty.

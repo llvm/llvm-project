@@ -9,23 +9,23 @@ module m
   integer(4),  parameter :: i4v(*)  = [ -huge(1_4)  - 1_4,  huge(1_4) ]
   integer(8),  parameter :: i8v(*)  = [ -huge(1_8)  - 1_8,  huge(1_8) ]
   integer(16), parameter :: i16v(*) = [ -huge(1_16) - 1_16, huge(1_16) ]
-  !WARN: warning: division by zero
-  !WARN: warning: invalid argument on division
+  !WARN: warning: division by zero [-Wfolding-exception]
+  !WARN: warning: invalid argument on division [-Wfolding-exception]
   real(2),  parameter :: r2v(*)  = [ -huge(1._2),  huge(1._2),  1._2/0._2,   0._2/0._2 ]
-  !WARN: warning: division by zero
-  !WARN: warning: invalid argument on division
+  !WARN: warning: division by zero [-Wfolding-exception]
+  !WARN: warning: invalid argument on division [-Wfolding-exception]
   real(3),  parameter :: r3v(*)  = [ -huge(1._3),  huge(1._3),  1._3/0._3,   0._3/0._3 ]
-  !WARN: warning: division by zero
-  !WARN: warning: invalid argument on division
+  !WARN: warning: division by zero [-Wfolding-exception]
+  !WARN: warning: invalid argument on division [-Wfolding-exception]
   real(4),  parameter :: r4v(*)  = [ -huge(1._4),  huge(1._4),  1._4/0._4,   0._4/0._4 ]
-  !WARN: warning: division by zero
-  !WARN: warning: invalid argument on division
+  !WARN: warning: division by zero [-Wfolding-exception]
+  !WARN: warning: invalid argument on division [-Wfolding-exception]
   real(8),  parameter :: r8v(*)  = [ -huge(1._8),  huge(1._8),  1._8/0._8,   0._8/0._8 ]
-  !WARN: warning: division by zero
-  !WARN: warning: invalid argument on division
+  !WARN: warning: division by zero [-Wfolding-exception]
+  !WARN: warning: invalid argument on division [-Wfolding-exception]
   real(10), parameter :: r10v(*) = [ -huge(1._10), huge(1._10), 1._10/0._10, 0._10/0._10 ]
-  !WARN: warning: division by zero
-  !WARN: warning: invalid argument on division
+  !WARN: warning: division by zero [-Wfolding-exception]
+  !WARN: warning: invalid argument on division [-Wfolding-exception]
   real(16), parameter :: r16v(*) = [ -huge(1._16), huge(1._16), 1._16/0._16, 0._16/0._16 ]
   logical, parameter :: finites(*) = [ .true., .true., .false., .false. ]
 
@@ -93,7 +93,7 @@ module m
   logical, parameter :: test_r2r10  = .not. any(out_of_range(r2v,  1._10))
   logical, parameter :: test_r2r16  = .not. any(out_of_range(r2v,  1._16))
   logical, parameter :: test_r3r2   =       all(out_of_range(r3v,  1._2) .eqv. finites)
-  !WARN: warning: invalid argument on REAL(2) to REAL(3) conversion
+  !WARN: warning: invalid argument on REAL(2) to REAL(3) conversion [-Wfolding-exception]
   logical, parameter :: test_r3r2b  = .not. any(out_of_range(real(r2v, 3),  1._2))
   logical, parameter :: test_r3r3   = .not. any(out_of_range(r3v,  1._3))
   logical, parameter :: test_r3r4   = .not. any(out_of_range(r3v,  1._4))
@@ -101,55 +101,55 @@ module m
   logical, parameter :: test_r3r10  = .not. any(out_of_range(r3v,  1._10))
   logical, parameter :: test_r3r16  = .not. any(out_of_range(r3v,  1._16))
   logical, parameter :: test_r4r2   =       all(out_of_range(r4v,  1._2) .eqv. finites)
-  !WARN: warning: invalid argument on REAL(2) to REAL(4) conversion
+  !WARN: warning: invalid argument on REAL(2) to REAL(4) conversion [-Wfolding-exception]
   logical, parameter :: test_r4r2b  = .not. any(out_of_range(real(r2v, 4),  1._2))
   logical, parameter :: test_r4r3   =       all(out_of_range(r4v,  1._3) .eqv. finites)
-  !WARN: warning: invalid argument on REAL(3) to REAL(4) conversion
+  !WARN: warning: invalid argument on REAL(3) to REAL(4) conversion [-Wfolding-exception]
   logical, parameter :: test_r4r3b  = .not. any(out_of_range(real(r3v, 4),  1._3))
   logical, parameter :: test_r4r4   = .not. any(out_of_range(r4v,  1._4))
   logical, parameter :: test_r4r8   = .not. any(out_of_range(r4v,  1._8))
   logical, parameter :: test_r4r10  = .not. any(out_of_range(r4v,  1._10))
   logical, parameter :: test_r4r16  = .not. any(out_of_range(r4v,  1._16))
   logical, parameter :: test_r8r2   =       all(out_of_range(r8v,  1._2) .eqv. finites)
-  !WARN: warning: invalid argument on REAL(2) to REAL(8) conversion
+  !WARN: warning: invalid argument on REAL(2) to REAL(8) conversion [-Wfolding-exception]
   logical, parameter :: test_r8r2b  = .not. any(out_of_range(real(r2v, 8),  1._2))
   logical, parameter :: test_r8r3   =       all(out_of_range(r8v,  1._3) .eqv. finites)
-  !WARN: warning: invalid argument on REAL(3) to REAL(8) conversion
+  !WARN: warning: invalid argument on REAL(3) to REAL(8) conversion [-Wfolding-exception]
   logical, parameter :: test_r8r3b  = .not. any(out_of_range(real(r3v, 8),  1._3))
   logical, parameter :: test_r8r4   =       all(out_of_range(r8v,  1._4) .eqv. finites)
-  !WARN: warning: invalid argument on REAL(4) to REAL(8) conversion
+  !WARN: warning: invalid argument on REAL(4) to REAL(8) conversion [-Wfolding-exception]
   logical, parameter :: test_r8r4b  = .not. any(out_of_range(real(r4v, 8),  1._4))
   logical, parameter :: test_r8r8   = .not. any(out_of_range(r8v,  1._8))
   logical, parameter :: test_r8r10  = .not. any(out_of_range(r8v,  1._10))
   logical, parameter :: test_r8r16  = .not. any(out_of_range(r8v,  1._16))
   logical, parameter :: test_r10r2  =       all(out_of_range(r10v, 1._2) .eqv. finites)
-  !WARN: warning: invalid argument on REAL(2) to REAL(10) conversion
+  !WARN: warning: invalid argument on REAL(2) to REAL(10) conversion [-Wfolding-exception]
   logical, parameter :: test_r10r2b = .not. any(out_of_range(real(r2v, 10),  1._2))
   logical, parameter :: test_r10r3  =       all(out_of_range(r10v, 1._3) .eqv. finites)
-  !WARN: warning: invalid argument on REAL(3) to REAL(10) conversion
+  !WARN: warning: invalid argument on REAL(3) to REAL(10) conversion [-Wfolding-exception]
   logical, parameter :: test_r10r3b = .not. any(out_of_range(real(r3v, 10),  1._3))
   logical, parameter :: test_r10r4  =       all(out_of_range(r10v, 1._4) .eqv. finites)
-  !WARN: warning: invalid argument on REAL(4) to REAL(10) conversion
+  !WARN: warning: invalid argument on REAL(4) to REAL(10) conversion [-Wfolding-exception]
   logical, parameter :: test_r10r4b = .not. any(out_of_range(real(r4v, 10),  1._4))
   logical, parameter :: test_r10r8  =       all(out_of_range(r10v, 1._8) .eqv. finites)
-  !WARN: warning: invalid argument on REAL(8) to REAL(10) conversion
+  !WARN: warning: invalid argument on REAL(8) to REAL(10) conversion [-Wfolding-exception]
   logical, parameter :: test_r10r8b = .not. any(out_of_range(real(r8v, 10),  1._8))
   logical, parameter :: test_r10r10 = .not. any(out_of_range(r10v, 1._10))
   logical, parameter :: test_r10r16 = .not. any(out_of_range(r10v, 1._16))
   logical, parameter :: test_r16r2  =       all(out_of_range(r16v, 1._2) .eqv. finites)
-  !WARN: warning: invalid argument on REAL(2) to REAL(16) conversion
+  !WARN: warning: invalid argument on REAL(2) to REAL(16) conversion [-Wfolding-exception]
   logical, parameter :: test_r16r2b = .not. any(out_of_range(real(r2v, 16), 1._2))
   logical, parameter :: test_r16r3  =       all(out_of_range(r16v, 1._3) .eqv. finites)
-  !WARN: warning: invalid argument on REAL(3) to REAL(16) conversion
+  !WARN: warning: invalid argument on REAL(3) to REAL(16) conversion [-Wfolding-exception]
   logical, parameter :: test_r16r3b = .not. any(out_of_range(real(r3v, 16), 1._3))
   logical, parameter :: test_r16r4  =       all(out_of_range(r16v, 1._4) .eqv. finites)
-  !WARN: warning: invalid argument on REAL(4) to REAL(16) conversion
+  !WARN: warning: invalid argument on REAL(4) to REAL(16) conversion [-Wfolding-exception]
   logical, parameter :: test_r16r4b = .not. any(out_of_range(real(r4v, 16), 1._4))
   logical, parameter :: test_r16r8  =       all(out_of_range(r16v, 1._8) .eqv. finites)
-  !WARN: warning: invalid argument on REAL(8) to REAL(16) conversion
+  !WARN: warning: invalid argument on REAL(8) to REAL(16) conversion [-Wfolding-exception]
   logical, parameter :: test_r16r8b = .not. any(out_of_range(real(r8v, 16), 1._8))
   logical, parameter :: test_r16r10 =       all(out_of_range(r16v, 1._10) .eqv. finites)
-  !WARN: warning: invalid argument on REAL(10) to REAL(16) conversion
+  !WARN: warning: invalid argument on REAL(10) to REAL(16) conversion [-Wfolding-exception]
   logical, parameter :: test_r16r10b= .not. any(out_of_range(real(r10v, 16), 1._10))
   logical, parameter :: test_r16r16 = .not. any(out_of_range(r16v, 1._16))
 
@@ -223,29 +223,29 @@ module m
   logical, parameter :: test_r2i2ur   = all(out_of_range(real(i2v,  kind=2)+.5_2, 1_2,  .true.)  .eqv. [.false., .true.])
   logical, parameter :: test_r2i2d    = all(out_of_range(real(i2v,  kind=2)-.5_2, 1_2,  .false.) .eqv. [.false., .true.])
   logical, parameter :: test_r2i2dr   = all(out_of_range(real(i2v,  kind=2)-.5_2, 1_2,  .true.)  .eqv. [.false., .true.])
-  !WARN: warning: overflow on INTEGER(4) to REAL(2) conversion
+  !WARN: warning: overflow on INTEGER(4) to REAL(2) conversion [-Wfolding-exception]
   logical, parameter :: test_r2i4u    = all(out_of_range(real(i4v,  kind=2)+.5_2, 1_4,  .false.) .eqv. [.true.,  .true.])
-  !WARN: warning: overflow on INTEGER(4) to REAL(2) conversion
+  !WARN: warning: overflow on INTEGER(4) to REAL(2) conversion [-Wfolding-exception]
   logical, parameter :: test_r2i4ur   = all(out_of_range(real(i4v,  kind=2)+.5_2, 1_4,  .true.)  .eqv. [.true.,  .true.])
-  !WARN: warning: overflow on INTEGER(4) to REAL(2) conversion
+  !WARN: warning: overflow on INTEGER(4) to REAL(2) conversion [-Wfolding-exception]
   logical, parameter :: test_r2i4d    = all(out_of_range(real(i4v,  kind=2)-.5_2, 1_4,  .false.) .eqv. [.true.,  .true.])
-  !WARN: warning: overflow on INTEGER(4) to REAL(2) conversion
+  !WARN: warning: overflow on INTEGER(4) to REAL(2) conversion [-Wfolding-exception]
   logical, parameter :: test_r2i4dr   = all(out_of_range(real(i4v,  kind=2)-.5_2, 1_4,  .true.)  .eqv. [.true.,  .true.])
-  !WARN: warning: overflow on INTEGER(8) to REAL(2) conversion
+  !WARN: warning: overflow on INTEGER(8) to REAL(2) conversion [-Wfolding-exception]
   logical, parameter :: test_r2i8u    = all(out_of_range(real(i8v,  kind=2)+.5_2, 1_8,  .false.) .eqv. [.true.,  .true.])
-  !WARN: warning: overflow on INTEGER(8) to REAL(2) conversion
+  !WARN: warning: overflow on INTEGER(8) to REAL(2) conversion [-Wfolding-exception]
   logical, parameter :: test_r2i8ur   = all(out_of_range(real(i8v,  kind=2)+.5_2, 1_8,  .true.)  .eqv. [.true.,  .true.])
-  !WARN: warning: overflow on INTEGER(8) to REAL(2) conversion
+  !WARN: warning: overflow on INTEGER(8) to REAL(2) conversion [-Wfolding-exception]
   logical, parameter :: test_r2i8d    = all(out_of_range(real(i8v,  kind=2)-.5_2, 1_8,  .false.) .eqv. [.true.,  .true.])
-  !WARN: warning: overflow on INTEGER(8) to REAL(2) conversion
+  !WARN: warning: overflow on INTEGER(8) to REAL(2) conversion [-Wfolding-exception]
   logical, parameter :: test_r2i8dr   = all(out_of_range(real(i8v,  kind=2)-.5_2, 1_8,  .true.)  .eqv. [.true.,  .true.])
-  !WARN: warning: overflow on INTEGER(16) to REAL(2) conversion
+  !WARN: warning: overflow on INTEGER(16) to REAL(2) conversion [-Wfolding-exception]
   logical, parameter :: test_r2i16u   = all(out_of_range(real(i16v, kind=2)+.5_2, 1_16, .false.) .eqv. [.true.,  .true.])
-  !WARN: warning: overflow on INTEGER(16) to REAL(2) conversion
+  !WARN: warning: overflow on INTEGER(16) to REAL(2) conversion [-Wfolding-exception]
   logical, parameter :: test_r2i16ur  = all(out_of_range(real(i16v, kind=2)+.5_2, 1_16, .true.)  .eqv. [.true.,  .true.])
-  !WARN: warning: overflow on INTEGER(16) to REAL(2) conversion
+  !WARN: warning: overflow on INTEGER(16) to REAL(2) conversion [-Wfolding-exception]
   logical, parameter :: test_r2i16d   = all(out_of_range(real(i16v, kind=2)-.5_2, 1_16, .false.) .eqv. [.true.,  .true.])
-  !WARN: warning: overflow on INTEGER(16) to REAL(2) conversion
+  !WARN: warning: overflow on INTEGER(16) to REAL(2) conversion [-Wfolding-exception]
   logical, parameter :: test_r2i16dr  = all(out_of_range(real(i16v, kind=2)-.5_2, 1_16, .true.)  .eqv. [.true.,  .true.])
 
   logical, parameter :: test_r3i1u    = all(out_of_range(real(i1v,  kind=3)+.5_3, 1_1,  .false.) .eqv. [.false., .false.])
@@ -357,7 +357,7 @@ module m
   subroutine s(x, r)
     real(8), intent(in) :: x
     logical, intent(in), optional :: r
-    !WARN: warning: ROUND= argument to OUT_OF_RANGE() is an optional dummy argument that must be present at execution
+    !WARN: warning: ROUND= argument to OUT_OF_RANGE() is an optional dummy argument that must be present at execution [-Woptional-must-be-present]
     print *, out_of_range(x, 1, round=r)
   end
 end

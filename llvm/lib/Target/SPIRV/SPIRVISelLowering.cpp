@@ -16,7 +16,6 @@
 #include "SPIRVRegisterBankInfo.h"
 #include "SPIRVRegisterInfo.h"
 #include "SPIRVSubtarget.h"
-#include "SPIRVTargetMachine.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"

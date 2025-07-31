@@ -984,6 +984,7 @@ bool MVETPAndVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
         if (MRI->hasOneUse(GPR))
           DeadInstructions.insert(MRI->getVRegDef(GPR));
       }
+      MRI->clearKillFlags(LastVPTReg);
       LLVM_DEBUG(dbgs() << "Adding VPNot: " << *VPNot << "  to replace use at "
                         << Instr);
       VPR = NewVPR;

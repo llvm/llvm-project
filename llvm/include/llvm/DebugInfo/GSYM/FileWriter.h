@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_GSYM_FILEWRITER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 
 #include <stddef.h>
@@ -33,51 +34,51 @@ class FileWriter {
 public:
   FileWriter(llvm::raw_pwrite_stream &S, llvm::endianness B)
       : OS(S), ByteOrder(B) {}
-  ~FileWriter();
+  LLVM_ABI ~FileWriter();
   /// Write a single uint8_t value into the stream at the current file
   /// position.
   ///
   /// \param   Value The value to write into the stream.
-  void writeU8(uint8_t Value);
+  LLVM_ABI void writeU8(uint8_t Value);
 
   /// Write a single uint16_t value into the stream at the current file
   /// position. The value will be byte swapped if needed to match the byte
   /// order specified during construction.
   ///
   /// \param   Value The value to write into the stream.
-  void writeU16(uint16_t Value);
+  LLVM_ABI void writeU16(uint16_t Value);
 
   /// Write a single uint32_t value into the stream at the current file
   /// position. The value will be byte swapped if needed to match the byte
   /// order specified during construction.
   ///
   /// \param   Value The value to write into the stream.
-  void writeU32(uint32_t Value);
+  LLVM_ABI void writeU32(uint32_t Value);
 
   /// Write a single uint64_t value into the stream at the current file
   /// position. The value will be byte swapped if needed to match the byte
   /// order specified during construction.
   ///
   /// \param   Value The value to write into the stream.
-  void writeU64(uint64_t Value);
+  LLVM_ABI void writeU64(uint64_t Value);
 
   /// Write the value into the stream encoded using signed LEB128 at the
   /// current file position.
   ///
   /// \param   Value The value to write into the stream.
-  void writeSLEB(int64_t Value);
+  LLVM_ABI void writeSLEB(int64_t Value);
 
   /// Write the value into the stream encoded using unsigned LEB128 at the
   /// current file position.
   ///
   /// \param   Value The value to write into the stream.
-  void writeULEB(uint64_t Value);
+  LLVM_ABI void writeULEB(uint64_t Value);
 
   /// Write an array of uint8_t values into the stream at the current file
   /// position.
   ///
   /// \param   Data An array of values to write into the stream.
-  void writeData(llvm::ArrayRef<uint8_t> Data);
+  LLVM_ABI void writeData(llvm::ArrayRef<uint8_t> Data);
 
   /// Write a NULL terminated C string into the stream at the current file
   /// position. The entire contents of Str will be written into the steam at
@@ -86,7 +87,7 @@ public:
   /// characters unless the additional NULL characters are desired.
   ///
   /// \param   Str The value to write into the stream.
-  void writeNullTerminated(llvm::StringRef Str);
+  LLVM_ABI void writeNullTerminated(llvm::StringRef Str);
 
   /// Fixup a uint32_t value at the specified offset in the stream. This
   /// function will save the current file position, seek to the specified
@@ -95,20 +96,20 @@ public:
   ///
   /// \param   Value The value to write into the stream.
   /// \param   Offset The offset at which to write the Value within the stream.
-  void fixup32(uint32_t Value, uint64_t Offset);
+  LLVM_ABI void fixup32(uint32_t Value, uint64_t Offset);
 
   /// Pad with zeroes at the current file position until the current file
   /// position matches the specified alignment.
   ///
   /// \param  Align An integer speciying the desired alignment. This does not
   ///         need to be a power of two.
-  void alignTo(size_t Align);
+  LLVM_ABI void alignTo(size_t Align);
 
   /// Return the current offset within the file.
   ///
   /// \return The unsigned offset from the start of the file of the current
   ///         file position.
-  uint64_t tell();
+  LLVM_ABI uint64_t tell();
 
   llvm::raw_pwrite_stream &get_stream() {
     return OS;

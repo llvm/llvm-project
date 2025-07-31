@@ -15,6 +15,7 @@
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamWriter.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <vector>
 
@@ -38,17 +39,17 @@ class ContinuationRecordBuilder {
                              std::optional<TypeIndex> RefersTo);
 
 public:
-  ContinuationRecordBuilder();
-  ~ContinuationRecordBuilder();
+  LLVM_ABI ContinuationRecordBuilder();
+  LLVM_ABI ~ContinuationRecordBuilder();
 
-  void begin(ContinuationRecordKind RecordKind);
+  LLVM_ABI void begin(ContinuationRecordKind RecordKind);
 
   // This template is explicitly instantiated in the implementation file for all
   // supported types.  The method itself is ugly, so inlining it into the header
   // file clutters an otherwise straightforward interface.
   template <typename RecordType> void writeMemberType(RecordType &Record);
 
-  std::vector<CVType> end(TypeIndex Index);
+  LLVM_ABI std::vector<CVType> end(TypeIndex Index);
 };
 } // namespace codeview
 } // namespace llvm

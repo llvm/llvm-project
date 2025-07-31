@@ -1097,7 +1097,7 @@ define <2 x float> @expandload_v2f32_v2i1(ptr %base, <2 x float> %src0, <2 x i32
 ; SSE42-NEXT:    retq
 ; SSE42-NEXT:  LBB4_1: ## %cond.load
 ; SSE42-NEXT:    movss (%rdi), %xmm1 ## xmm1 = mem[0],zero,zero,zero
-; SSE42-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSE42-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSE42-NEXT:    addq $4, %rdi
 ; SSE42-NEXT:    testb $2, %al
 ; SSE42-NEXT:    je LBB4_4
@@ -1120,7 +1120,7 @@ define <2 x float> @expandload_v2f32_v2i1(ptr %base, <2 x float> %src0, <2 x i32
 ; AVX1OR2-NEXT:    retq
 ; AVX1OR2-NEXT:  LBB4_1: ## %cond.load
 ; AVX1OR2-NEXT:    vmovss (%rdi), %xmm1 ## xmm1 = mem[0],zero,zero,zero
-; AVX1OR2-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX1OR2-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX1OR2-NEXT:    addq $4, %rdi
 ; AVX1OR2-NEXT:    testb $2, %al
 ; AVX1OR2-NEXT:    je LBB4_4

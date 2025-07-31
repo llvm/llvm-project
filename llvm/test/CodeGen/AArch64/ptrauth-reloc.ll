@@ -139,38 +139,39 @@
 
 ;--- err-key.ll
 
-; RUN: not --crash llc < err-key.ll -mtriple arm64e-apple-darwin 2>&1 \
+; RUN: not llc < err-key.ll -mtriple arm64e-apple-darwin 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-ERR-KEY
-; RUN: not --crash llc < err-key.ll -mtriple aarch64-elf -mattr=+pauth 2>&1 \
+; RUN: not llc < err-key.ll -mtriple aarch64-elf -mattr=+pauth 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-ERR-KEY
 
-; RUN: not --crash llc < err-key.ll -mtriple arm64e-apple-darwin \
+; RUN: not llc < err-key.ll -mtriple arm64e-apple-darwin \
 ; RUN:   -global-isel -verify-machineinstrs -global-isel-abort=1  2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-ERR-KEY
-; RUN: not --crash llc < err-key.ll -mtriple aarch64-elf -mattr=+pauth \
+; RUN: not llc < err-key.ll -mtriple aarch64-elf -mattr=+pauth \
 ; RUN:   -global-isel -verify-machineinstrs -global-isel-abort=1 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-ERR-KEY
 
-; CHECK-ERR-KEY: LLVM ERROR: AArch64 PAC Key ID '4' out of range [0, 3]
+; CHECK-ERR-KEY: error: AArch64 PAC Key ID '4' out of range [0, 3]
+
 
 @g = external global i32
 @g.ref.4.0 = constant ptr ptrauth (ptr @g, i32 4, i64 0)
 
 ;--- err-disc.ll
 
-; RUN: not --crash llc < err-disc.ll -mtriple arm64e-apple-darwin 2>&1 \
+; RUN: not llc < err-disc.ll -mtriple arm64e-apple-darwin 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-ERR-DISC
-; RUN: not --crash llc < err-disc.ll -mtriple aarch64-elf -mattr=+pauth 2>&1 \
+; RUN: not llc < err-disc.ll -mtriple aarch64-elf -mattr=+pauth 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-ERR-DISC
 
-; RUN: not --crash llc < err-disc.ll -mtriple arm64e-apple-darwin \
+; RUN: not llc < err-disc.ll -mtriple arm64e-apple-darwin \
 ; RUN:   -global-isel -verify-machineinstrs -global-isel-abort=1  2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-ERR-DISC
-; RUN: not --crash llc < err-disc.ll -mtriple aarch64-elf -mattr=+pauth \
+; RUN: not llc < err-disc.ll -mtriple aarch64-elf -mattr=+pauth \
 ; RUN:   -global-isel -verify-machineinstrs -global-isel-abort=1 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-ERR-DISC
 
-; CHECK-ERR-DISC: LLVM ERROR: AArch64 PAC Discriminator '65536' out of range [0, 0xFFFF]
+; CHECK-ERR-DISC: error: AArch64 PAC Discriminator '65536' out of range [0, 0xFFFF]
 
 @g = external global i32
 @g.ref.ia.65536 = constant ptr ptrauth (ptr @g, i32 0, i64 65536)

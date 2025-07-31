@@ -6,9 +6,10 @@
 // CHECK: %__cblayout_CB_1 = type <{ float, <2 x float> }>
 
 // CHECK: @CB.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 176, 16, 168, 88))
-// CHECK: @a = external addrspace(2) global float, align 4
-// CHECK: @b = external addrspace(2) global double, align 8
-// CHECK: @c = external addrspace(2) global <2 x i32>, align 8
+// CHECK: @a = external hidden addrspace(2) global float, align 4
+// CHECK: @b = external hidden addrspace(2) global double, align 8
+// CHECK: @c = external hidden addrspace(2) global <2 x i32>, align 8
+// CHECK: @CB.str = private unnamed_addr constant [3 x i8] c"CB\00", align 1
 
 cbuffer CB : register(b1, space3) {
   float a : packoffset(c1.x);
@@ -17,8 +18,8 @@ cbuffer CB : register(b1, space3) {
 }
 
 // CHECK: @CB.cb.1 = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CB_1, 92, 88, 80))
-// CHECK: @x = external addrspace(2) global float, align 4
-// CHECK: @y = external addrspace(2) global <2 x float>, align 8
+// CHECK: @x = external hidden addrspace(2) global float, align 4
+// CHECK: @y = external hidden addrspace(2) global <2 x float>, align 8
 
 // Missing packoffset annotation will produce a warning.
 // Element x will be placed after the element y that has an explicit packoffset.
@@ -30,7 +31,7 @@ cbuffer CB : register(b0) {
 // CHECK: define internal void @_init_buffer_CB.cb()
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %CB.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 176, 16, 168, 88))
-// CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBs_176_16_168_88tt(i32 3, i32 1, i32 1, i32 0, i1 false)
+// CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBs_176_16_168_88tt(i32 3, i32 1, i32 1, i32 0, i1 false, ptr @CB.str)
 
 float foo() {
   // CHECK: load float, ptr addrspace(2) @a, align 4

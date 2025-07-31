@@ -635,6 +635,41 @@ ObjectFile::GetSymbolTypeFromName(llvm::StringRef name,
   return symbol_type_hint;
 }
 
+lldb::SectionType
+ObjectFile::GetDWARFSectionTypeFromName(llvm::StringRef name) {
+  return llvm::StringSwitch<SectionType>(name)
+      .Case("abbrev", eSectionTypeDWARFDebugAbbrev)
+      .Case("abbrev.dwo", eSectionTypeDWARFDebugAbbrevDwo)
+      .Case("addr", eSectionTypeDWARFDebugAddr)
+      .Case("aranges", eSectionTypeDWARFDebugAranges)
+      .Case("cu_index", eSectionTypeDWARFDebugCuIndex)
+      .Case("frame", eSectionTypeDWARFDebugFrame)
+      .Case("info", eSectionTypeDWARFDebugInfo)
+      .Case("info.dwo", eSectionTypeDWARFDebugInfoDwo)
+      .Cases("line", "line.dwo", eSectionTypeDWARFDebugLine)
+      .Cases("line_str", "line_str.dwo", eSectionTypeDWARFDebugLineStr)
+      .Case("loc", eSectionTypeDWARFDebugLoc)
+      .Case("loc.dwo", eSectionTypeDWARFDebugLocDwo)
+      .Case("loclists", eSectionTypeDWARFDebugLocLists)
+      .Case("loclists.dwo", eSectionTypeDWARFDebugLocListsDwo)
+      .Case("macinfo", eSectionTypeDWARFDebugMacInfo)
+      .Cases("macro", "macro.dwo", eSectionTypeDWARFDebugMacro)
+      .Case("names", eSectionTypeDWARFDebugNames)
+      .Case("pubnames", eSectionTypeDWARFDebugPubNames)
+      .Case("pubtypes", eSectionTypeDWARFDebugPubTypes)
+      .Case("ranges", eSectionTypeDWARFDebugRanges)
+      .Case("rnglists", eSectionTypeDWARFDebugRngLists)
+      .Case("rnglists.dwo", eSectionTypeDWARFDebugRngListsDwo)
+      .Case("str", eSectionTypeDWARFDebugStr)
+      .Case("str.dwo", eSectionTypeDWARFDebugStrDwo)
+      .Case("str_offsets", eSectionTypeDWARFDebugStrOffsets)
+      .Case("str_offsets.dwo", eSectionTypeDWARFDebugStrOffsetsDwo)
+      .Case("tu_index", eSectionTypeDWARFDebugTuIndex)
+      .Case("types", eSectionTypeDWARFDebugTypes)
+      .Case("types.dwo", eSectionTypeDWARFDebugTypesDwo)
+      .Default(eSectionTypeOther);
+}
+
 std::vector<ObjectFile::LoadableData>
 ObjectFile::GetLoadableData(Target &target) {
   std::vector<LoadableData> loadables;

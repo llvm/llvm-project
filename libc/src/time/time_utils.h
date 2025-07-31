@@ -9,17 +9,16 @@
 #ifndef LLVM_LIBC_SRC_TIME_TIME_UTILS_H
 #define LLVM_LIBC_SRC_TIME_TIME_UTILS_H
 
+#include "hdr/stdint_proxy.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/struct_tm.h"
 #include "hdr/types/time_t.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 #include "time_constants.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace time_utils {

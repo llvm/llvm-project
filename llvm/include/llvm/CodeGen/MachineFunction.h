@@ -26,11 +26,14 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/EHPersonalities.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ArrayRecycler.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/Recycler.h"
 #include "llvm/Target/TargetOptions.h"
 #include <bitset>
@@ -75,12 +78,12 @@ struct WasmEHFuncInfo;
 struct WinEHFuncInfo;
 
 template <> struct ilist_alloc_traits<MachineBasicBlock> {
-  void deleteNode(MachineBasicBlock *MBB);
+  LLVM_ABI void deleteNode(MachineBasicBlock *MBB);
 };
 
 template <> struct ilist_callback_traits<MachineBasicBlock> {
-  void addNodeToList(MachineBasicBlock* N);
-  void removeNodeFromList(MachineBasicBlock* N);
+  LLVM_ABI void addNodeToList(MachineBasicBlock *N);
+  LLVM_ABI void removeNodeFromList(MachineBasicBlock *N);
 
   template <class Iterator>
   void transferNodesFromList(ilist_callback_traits &OldList, Iterator, Iterator) {
@@ -101,7 +104,7 @@ enum class MachineFunctionDataHotness {
 /// hold private target-specific information for each MachineFunction.  Objects
 /// of type are accessed/created with MF::getInfo and destroyed when the
 /// MachineFunction is destroyed.
-struct MachineFunctionInfo {
+struct LLVM_ABI MachineFunctionInfo {
   virtual ~MachineFunctionInfo();
 
   /// Factory function: default behavior is to call new using the
@@ -214,6 +217,25 @@ public:
     return *this;
   }
 
+  // Per property has/set/reset accessors.
+#define PPACCESSORS(X)                                                         \
+  bool has##X() const { return hasProperty(Property::X); }                     \
+  MachineFunctionProperties &set##X(void) { return set(Property::X); }         \
+  MachineFunctionProperties &reset##X(void) { return reset(Property::X); }
+
+  PPACCESSORS(IsSSA)
+  PPACCESSORS(NoPHIs)
+  PPACCESSORS(TracksLiveness)
+  PPACCESSORS(NoVRegs)
+  PPACCESSORS(FailedISel)
+  PPACCESSORS(Legalized)
+  PPACCESSORS(RegBankSelected)
+  PPACCESSORS(Selected)
+  PPACCESSORS(TiedOpsRewritten)
+  PPACCESSORS(FailsVerification)
+  PPACCESSORS(FailedRegAlloc)
+  PPACCESSORS(TracksDebugUserValues)
+
   /// Reset all the properties.
   MachineFunctionProperties &reset() {
     Properties.reset();
@@ -237,7 +259,7 @@ public:
   }
 
   /// Print the MachineFunctionProperties in human-readable form.
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
 private:
   std::bitset<static_cast<unsigned>(Property::LastProperty) + 1> Properties;
@@ -466,7 +488,7 @@ public:
     }
   };
 
-  class Delegate {
+  class LLVM_ABI Delegate {
     virtual void anchor();
 
   public:
@@ -496,6 +518,34 @@ public:
   struct CallSiteInfo {
     /// Vector of call argument and its forwarding register.
     SmallVector<ArgRegPair, 1> ArgRegPairs;
+    /// Callee type ids.
+    SmallVector<ConstantInt *, 4> CalleeTypeIds;
+
+    CallSiteInfo() = default;
+
+    /// Extracts the numeric type id from the CallBase's callee_type Metadata,
+    /// and sets CalleeTypeIds. This is used as type id for the indirect call in
+    /// the call graph section.
+    CallSiteInfo(const CallBase &CB) {
+      // Call graph section needs numeric callee_type id only for indirect
+      // calls.
+      if (!CB.isIndirectCall())
+        return;
+
+      MDNode *CalleeTypeList = CB.getMetadata(LLVMContext::MD_callee_type);
+      if (!CalleeTypeList)
+        return;
+
+      for (const MDOperand &Op : CalleeTypeList->operands()) {
+        MDNode *TypeMD = cast<MDNode>(Op);
+        MDString *TypeIdStr = cast<MDString>(TypeMD->getOperand(1));
+        // Compute numeric type id from generalized type id string
+        uint64_t TypeIdVal = MD5Hash(TypeIdStr->getString());
+        IntegerType *Int64Ty = Type::getInt64Ty(CB.getContext());
+        CalleeTypeIds.push_back(
+            ConstantInt::get(Int64Ty, TypeIdVal, /*IsSigned=*/false));
+      }
+    }
   };
 
   struct CalledGlobalInfo {
@@ -1544,8 +1594,8 @@ template <> struct GraphTraits<Inverse<const MachineFunction*>> :
   }
 };
 
-void verifyMachineFunction(const std::string &Banner,
-                           const MachineFunction &MF);
+LLVM_ABI void verifyMachineFunction(const std::string &Banner,
+                                    const MachineFunction &MF);
 
 } // end namespace llvm
 

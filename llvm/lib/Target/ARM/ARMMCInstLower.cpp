@@ -18,7 +18,7 @@
 #include "ARMSubtarget.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
-#include "MCTargetDesc/ARMMCExpr.h"
+#include "MCTargetDesc/ARMMCAsmInfo.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -37,9 +37,9 @@ using namespace llvm;
 
 MCOperand ARMAsmPrinter::GetSymbolRef(const MachineOperand &MO,
                                       const MCSymbol *Symbol) {
-  auto Specifier = ARMMCExpr::VK_None;
+  auto Specifier = ARM::S_None;
   if (MO.getTargetFlags() & ARMII::MO_SBREL)
-    Specifier = ARMMCExpr::VK_SBREL;
+    Specifier = ARM::S_SBREL;
 
   const MCExpr *Expr = MCSymbolRefExpr::create(Symbol, Specifier, OutContext);
   switch (MO.getTargetFlags() & ARMII::MO_OPTION_MASK) {
@@ -49,27 +49,27 @@ MCOperand ARMAsmPrinter::GetSymbolRef(const MachineOperand &MO,
     break;
   case ARMII::MO_LO16:
     Expr = MCSymbolRefExpr::create(Symbol, Specifier, OutContext);
-    Expr = ARMMCExpr::createLower16(Expr, OutContext);
+    Expr = ARM::createLower16(Expr, OutContext);
     break;
   case ARMII::MO_HI16:
     Expr = MCSymbolRefExpr::create(Symbol, Specifier, OutContext);
-    Expr = ARMMCExpr::createUpper16(Expr, OutContext);
+    Expr = ARM::createUpper16(Expr, OutContext);
     break;
   case ARMII::MO_LO_0_7:
     Expr = MCSymbolRefExpr::create(Symbol, Specifier, OutContext);
-    Expr = ARMMCExpr::createLower0_7(Expr, OutContext);
+    Expr = ARM::createLower0_7(Expr, OutContext);
     break;
   case ARMII::MO_LO_8_15:
     Expr = MCSymbolRefExpr::create(Symbol, Specifier, OutContext);
-    Expr = ARMMCExpr::createLower8_15(Expr, OutContext);
+    Expr = ARM::createLower8_15(Expr, OutContext);
     break;
   case ARMII::MO_HI_0_7:
     Expr = MCSymbolRefExpr::create(Symbol, Specifier, OutContext);
-    Expr = ARMMCExpr::createUpper0_7(Expr, OutContext);
+    Expr = ARM::createUpper0_7(Expr, OutContext);
     break;
   case ARMII::MO_HI_8_15:
     Expr = MCSymbolRefExpr::create(Symbol, Specifier, OutContext);
-    Expr = ARMMCExpr::createUpper8_15(Expr, OutContext);
+    Expr = ARM::createUpper8_15(Expr, OutContext);
     break;
   }
 
@@ -183,12 +183,11 @@ void ARMAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind)
   const MachineFunction *MF = MI.getParent()->getParent();
   if (MF->getInfo<ARMFunctionInfo>()->isThumbFunction()) {
     const Function &Fn = MF->getFunction();
-    DiagnosticInfoUnsupported Unsupported(
+    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
         Fn,
-        "An attempt to perform XRay instrumentation for a"
-        " Thumb function (not supported). Detected when emitting a sled.",
-        MI.getDebugLoc());
-    Fn.getContext().diagnose(Unsupported);
+        "An attempt to perform XRay instrumentation for a Thumb function (not "
+        "supported). Detected when emitting a sled.",
+        MI.getDebugLoc()));
     return;
   }
   static const int8_t NoopsInSledCount = 6;

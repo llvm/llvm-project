@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 
-; RUN: opt -mtriple arm64-linux -passes=loop-vectorize -mattr=+sve -debug-only=loop-vectorize -disable-output <%s 2>&1 | FileCheck %s
+; RUN: opt -mtriple arm64-linux -passes=loop-vectorize -mattr=+sve -debug-only=loop-vectorize,vplan -disable-output <%s 2>&1 | FileCheck %s
 
 ; Invariant register usage calculation should take into account if the
 ; invariant would be used in widened instructions. Only in such cases, a vector

@@ -19,8 +19,7 @@ define i64 @select_icmp_const(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 3)
 ; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP3]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 4
@@ -44,19 +43,18 @@ define i64 @select_icmp_const(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = select i1 [[TMP14]], i64 -9223372036854775808, i64 [[BC_MERGE_RDX1]]
 ; CHECK-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC3:%.*]] = sub i64 [[N]], [[N_MOD_VF2]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[BC_RESUME_VAL]], i64 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[BC_MERGE_RDX]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i64> [[DOTSPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> [[DOTSPLAT]], <i64 0, i64 1, i64 2, i64 3>
-; CHECK-NEXT:    [[DOTSPLATINSERT8:%.*]] = insertelement <4 x i64> poison, i64 [[BC_MERGE_RDX]], i64 0
+; CHECK-NEXT:    [[DOTSPLATINSERT8:%.*]] = insertelement <4 x i64> poison, i64 [[BC_RESUME_VAL]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT9:%.*]] = shufflevector <4 x i64> [[DOTSPLATINSERT8]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> [[DOTSPLAT9]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND5:%.*]] = phi <4 x i64> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT6:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI7:%.*]] = phi <4 x i64> [ [[DOTSPLAT9]], %[[VEC_EPILOG_PH]] ], [ [[TMP11:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI7:%.*]] = phi <4 x i64> [ [[DOTSPLAT]], %[[VEC_EPILOG_PH]] ], [ [[TMP11:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[TMP8]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x i64>, ptr [[TMP9]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x i64>, ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD8]], splat (i64 3)
 ; CHECK-NEXT:    [[TMP11]] = select <4 x i1> [[TMP10]], <4 x i64> [[VEC_IND5]], <4 x i64> [[VEC_PHI7]]
 ; CHECK-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[TMP7]], 4
@@ -123,8 +121,7 @@ define i64 @select_fcmp_const_fast(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp fast ueq <4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00)
 ; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP3]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 4
@@ -148,19 +145,18 @@ define i64 @select_fcmp_const_fast(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = select i1 [[TMP14]], i64 -9223372036854775808, i64 [[BC_MERGE_RDX1]]
 ; CHECK-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC3:%.*]] = sub i64 [[N]], [[N_MOD_VF2]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[BC_RESUME_VAL]], i64 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[BC_MERGE_RDX]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i64> [[DOTSPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> [[DOTSPLAT]], <i64 0, i64 1, i64 2, i64 3>
-; CHECK-NEXT:    [[DOTSPLATINSERT8:%.*]] = insertelement <4 x i64> poison, i64 [[BC_MERGE_RDX]], i64 0
+; CHECK-NEXT:    [[DOTSPLATINSERT8:%.*]] = insertelement <4 x i64> poison, i64 [[BC_RESUME_VAL]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT9:%.*]] = shufflevector <4 x i64> [[DOTSPLATINSERT8]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> [[DOTSPLAT9]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND5:%.*]] = phi <4 x i64> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT6:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI7:%.*]] = phi <4 x i64> [ [[DOTSPLAT9]], %[[VEC_EPILOG_PH]] ], [ [[TMP11:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI7:%.*]] = phi <4 x i64> [ [[DOTSPLAT]], %[[VEC_EPILOG_PH]] ], [ [[TMP11:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x float>, ptr [[TMP9]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x float>, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = fcmp fast ueq <4 x float> [[WIDE_LOAD8]], splat (float 3.000000e+00)
 ; CHECK-NEXT:    [[TMP11]] = select <4 x i1> [[TMP10]], <4 x i64> [[VEC_IND5]], <4 x i64> [[VEC_PHI7]]
 ; CHECK-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[TMP7]], 4
@@ -233,8 +229,7 @@ define i8 @select_icmp_var_start(ptr %a, i8 %n, i8 %start) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i8> [ splat (i8 -128), %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[INDEX]] to i8
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[A]], i8 [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], splat (i8 3)
 ; CHECK-NEXT:    [[TMP8]] = select <4 x i1> [[TMP7]], <4 x i8> [[VEC_IND]], <4 x i8> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -261,20 +256,19 @@ define i8 @select_icmp_var_start(ptr %a, i8 %n, i8 %start) {
 ; CHECK-NEXT:    [[N_MOD_VF2:%.*]] = urem i32 [[TMP2]], 4
 ; CHECK-NEXT:    [[N_VEC3:%.*]] = sub i32 [[TMP2]], [[N_MOD_VF2]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = trunc i32 [[N_VEC3]] to i8
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[BC_RESUME_VAL]], i64 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[TMP12]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i8> [[DOTSPLAT]], <i8 0, i8 1, i8 2, i8 3>
-; CHECK-NEXT:    [[DOTSPLATINSERT8:%.*]] = insertelement <4 x i8> poison, i8 [[TMP12]], i64 0
+; CHECK-NEXT:    [[DOTSPLATINSERT8:%.*]] = insertelement <4 x i8> poison, i8 [[BC_RESUME_VAL]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT9:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT8]], <4 x i8> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i8> [[DOTSPLAT9]], <i8 0, i8 1, i8 2, i8 3>
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX4:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND5:%.*]] = phi <4 x i8> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT6:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI7:%.*]] = phi <4 x i8> [ [[DOTSPLAT9]], %[[VEC_EPILOG_PH]] ], [ [[TMP17:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI7:%.*]] = phi <4 x i8> [ [[DOTSPLAT]], %[[VEC_EPILOG_PH]] ], [ [[TMP17:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX4]] to i8
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[A]], i8 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[TMP14]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x i8>, ptr [[TMP15]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x i8>, ptr [[TMP14]], align 8
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD10]], splat (i8 3)
 ; CHECK-NEXT:    [[TMP17]] = select <4 x i1> [[TMP16]], <4 x i8> [[VEC_IND5]], <4 x i8> [[VEC_PHI7]]
 ; CHECK-NEXT:    [[INDEX_NEXT11]] = add nuw i32 [[INDEX4]], 4

@@ -81,9 +81,7 @@ public:
 
   MachineFunctionProperties getClearedProperties() const override {
     // SILowerSGPRSpills introduces new Virtual VGPRs for spilling SGPRs.
-    return MachineFunctionProperties()
-        .set(MachineFunctionProperties::Property::IsSSA)
-        .set(MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setIsSSA().setNoVRegs();
   }
 };
 
@@ -353,6 +351,7 @@ void SILowerSGPRSpills::determineRegsForWWMAllocation(MachineFunction &MF,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   BitVector ReservedRegs = TRI->getReservedRegs(MF);
   BitVector NonWwmAllocMask(TRI->getNumRegs());
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   // FIXME: MaxNumVGPRsForWwmAllocation might need to be adjusted in the future
   // to have a balanced allocation between WWM values and per-thread vector
@@ -361,7 +360,7 @@ void SILowerSGPRSpills::determineRegsForWWMAllocation(MachineFunction &MF,
   NumRegs =
       std::min(static_cast<unsigned>(MFI->getSGPRSpillVGPRs().size()), NumRegs);
 
-  auto [MaxNumVGPRs, MaxNumAGPRs] = TRI->getMaxNumVectorRegs(MF);
+  auto [MaxNumVGPRs, MaxNumAGPRs] = ST.getMaxNumVectorRegs(MF.getFunction());
   // Try to use the highest available registers for now. Later after
   // vgpr-regalloc, they can be shifted to the lowest range.
   unsigned I = 0;
@@ -378,7 +377,7 @@ void SILowerSGPRSpills::determineRegsForWWMAllocation(MachineFunction &MF,
     // Reserve an arbitrary register and report the error.
     TRI->markSuperRegs(RegMask, AMDGPU::VGPR0);
     MF.getFunction().getContext().emitError(
-        "can't find enough VGPRs for wwm-regalloc");
+        "cannot find enough VGPRs for wwm-regalloc");
   }
 }
 

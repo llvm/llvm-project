@@ -246,12 +246,20 @@ emitc.verbatim "typedef float f32;"
 // The value is not interpreted as format string if there are no operands.
 emitc.verbatim "{} {  }"
 
-func.func @test_verbatim(%arg0 : !emitc.ptr<i32>, %arg1 : i32) {
+func.func @test_verbatim(%arg0 : !emitc.ptr<i32>, %arg1 : i32, %arg2: !emitc.array<3x!emitc.ptr<i32>>) {
+  %a = "emitc.variable"() <{value = #emitc.opaque<"1">}> : () -> !emitc.lvalue<i32>
+
+  // Check that the lvalue type can be used by verbatim.
+  emitc.verbatim "++{};" args %a : !emitc.lvalue<i32>
+
+  // Check that the array type can be used by verbatim.
+  emitc.verbatim "*{}[0] = 1;" args %arg2 : !emitc.array<3x!emitc.ptr<i32>>
+
   emitc.verbatim "{} + {};" args %arg0, %arg1 : !emitc.ptr<i32>, i32
 
-  // Check there is no ambiguity whether %a is the argument to the emitc.verbatim op.
-  emitc.verbatim "a"
-  %a = "emitc.constant"(){value = 42 : i32} : () -> i32
+  // Check there is no ambiguity whether %b is the argument to the emitc.verbatim op.
+  emitc.verbatim "b"
+  %b = "emitc.constant"(){value = 42 : i32} : () -> i32
 
   return
 }

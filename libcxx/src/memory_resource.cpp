@@ -20,7 +20,6 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace pmr {
 
@@ -498,5 +497,4 @@ void* monotonic_buffer_resource::do_allocate(size_t bytes, size_t align) {
 
 } // namespace pmr
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

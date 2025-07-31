@@ -12,9 +12,9 @@
 #ifndef FORTRAN_LOWER_DATASHARINGPROCESSOR_H
 #define FORTRAN_LOWER_DATASHARINGPROCESSOR_H
 
-#include "Clauses.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/OpenMP.h"
+#include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/symbol.h"
@@ -36,6 +36,8 @@ private:
   /// at any point in time. This is used to track Symbol definition scopes in
   /// order to tell which OMP scope defined vs. references a certain Symbol.
   struct OMPConstructSymbolVisitor {
+    OMPConstructSymbolVisitor(semantics::SemanticsContext &ctx)
+        : version(ctx.langOptions().OpenMPVersion) {}
     template <typename T>
     bool Pre(const T &) {
       return true;
@@ -45,20 +47,22 @@ private:
 
     bool Pre(const parser::OpenMPConstruct &omp) {
       // Skip constructs that may not have privatizations.
-      if (!std::holds_alternative<parser::OpenMPCriticalConstruct>(omp.u))
-        currentConstruct = &omp;
+      if (isOpenMPPrivatizingConstruct(omp, version))
+        constructs.push_back(&omp);
       return true;
     }
 
     void Post(const parser::OpenMPConstruct &omp) {
-      currentConstruct = nullptr;
+      if (isOpenMPPrivatizingConstruct(omp, version))
+        constructs.pop_back();
     }
 
     void Post(const parser::Name &name) {
-      symDefMap.try_emplace(name.symbol, currentConstruct);
+      auto *current = !constructs.empty() ? constructs.back() : nullptr;
+      symDefMap.try_emplace(name.symbol, current);
     }
 
-    const parser::OpenMPConstruct *currentConstruct = nullptr;
+    llvm::SmallVector<const parser::OpenMPConstruct *> constructs;
     llvm::DenseMap<semantics::Symbol *, const parser::OpenMPConstruct *>
         symDefMap;
 
@@ -66,6 +70,9 @@ private:
     /// construct that defines symbol.
     bool isSymbolDefineBy(const semantics::Symbol *symbol,
                           lower::pft::Evaluation &eval) const;
+
+  private:
+    unsigned version;
   };
 
   mlir::OpBuilder::InsertPoint lastPrivIP;
@@ -77,8 +84,6 @@ private:
   llvm::SetVector<const semantics::Symbol *> preDeterminedSymbols;
   llvm::SetVector<const semantics::Symbol *> allPrivatizedSymbols;
 
-  llvm::DenseMap<const semantics::Symbol *, mlir::omp::PrivateClauseOp>
-      symToPrivatizer;
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;
   fir::FirOpBuilder &firOpBuilder;
@@ -100,13 +105,11 @@ private:
       const omp::ObjectList &objects,
       llvm::SetVector<const semantics::Symbol *> &symbolSet);
   void collectSymbolsForPrivatization();
-  void insertBarrier();
+  void insertBarrier(mlir::omp::PrivateClauseOps *clauseOps);
   void collectDefaultSymbols();
   void collectImplicitSymbols();
   void collectPreDeterminedSymbols();
   void privatize(mlir::omp::PrivateClauseOps *clauseOps);
-  void doPrivatize(const semantics::Symbol *sym,
-                   mlir::omp::PrivateClauseOps *clauseOps);
   void copyLastPrivatize(mlir::Operation *op);
   void insertLastPrivateCompare(mlir::Operation *op);
   void cloneSymbol(const semantics::Symbol *sym);
@@ -117,12 +120,21 @@ private:
                              mlir::OpBuilder::InsertPoint *lastPrivIP);
   void insertDeallocs();
 
+  static bool isOpenMPPrivatizingConstruct(const parser::OpenMPConstruct &omp,
+                                           unsigned version);
+  bool isOpenMPPrivatizingEvaluation(const pft::Evaluation &eval) const;
+
 public:
   DataSharingProcessor(lower::AbstractConverter &converter,
                        semantics::SemanticsContext &semaCtx,
                        const List<Clause> &clauses,
                        lower::pft::Evaluation &eval,
                        bool shouldCollectPreDeterminedSymbols,
+                       bool useDelayedPrivatization, lower::SymMap &symTable);
+
+  DataSharingProcessor(lower::AbstractConverter &converter,
+                       semantics::SemanticsContext &semaCtx,
+                       lower::pft::Evaluation &eval,
                        bool useDelayedPrivatization, lower::SymMap &symTable);
 
   // Privatisation is split into two steps.
@@ -151,6 +163,9 @@ public:
                ? allPrivatizedSymbols.getArrayRef()
                : llvm::ArrayRef<const semantics::Symbol *>();
   }
+
+  void privatizeSymbol(const semantics::Symbol *symToPrivatize,
+                       mlir::omp::PrivateClauseOps *clauseOps);
 };
 
 } // namespace omp

@@ -7,14 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "PropertyDeclarationCheck.h"
-#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Basic/CharInfo.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Regex.h"
-#include <algorithm>
 
 using namespace clang::ast_matchers;
 
@@ -93,7 +88,7 @@ bool prefixedPropertyNameValid(llvm::StringRef PropertyName) {
   auto RegexExp = llvm::Regex(llvm::StringRef(validPropertyNameRegex(false)));
   return RegexExp.match(PropertyName.substr(Start + 1));
 }
-}  // namespace
+} // namespace
 
 void PropertyDeclarationCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(objcPropertyDecl(
@@ -107,7 +102,7 @@ void PropertyDeclarationCheck::registerMatchers(MatchFinder *Finder) {
 void PropertyDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl =
       Result.Nodes.getNodeAs<ObjCPropertyDecl>("property");
-  assert(MatchedDecl->getName().size() > 0);
+  assert(!MatchedDecl->getName().empty());
   auto *DeclContext = MatchedDecl->getDeclContext();
   auto *CategoryDecl = llvm::dyn_cast<ObjCCategoryDecl>(DeclContext);
 

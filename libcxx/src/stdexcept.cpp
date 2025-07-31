@@ -18,7 +18,6 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 void __throw_runtime_error(const char* msg) {
 #if _LIBCPP_HAS_EXCEPTIONS
@@ -28,5 +27,4 @@ void __throw_runtime_error(const char* msg) {
 #endif
 }
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

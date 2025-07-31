@@ -10,7 +10,6 @@
 #include <string>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class _LIBCPP_HIDDEN __future_error_category : public __do_message {
 public:
@@ -195,5 +194,4 @@ shared_future<void>& shared_future<void>::operator=(const shared_future& __rhs) 
   return *this;
 }
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

@@ -14,7 +14,6 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
@@ -58,9 +57,6 @@ void ARMTargetInfo::setABIAAPCS() {
                     "-a:0:32"
                     "-n32"
                     "-S64");
-  } else if (T.isOSNaCl()) {
-    assert(!BigEndian && "NaCl on ARM does not support big endian");
-    resetDataLayout("e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S128");
   } else {
     resetDataLayout(BigEndian
                         ? "E-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
@@ -622,19 +618,21 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       LDREX = 0;
     else if (ArchKind == llvm::ARM::ArchKind::ARMV6K ||
              ArchKind == llvm::ARM::ArchKind::ARMV6KZ)
-      LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
+      LDREX = ARM_LDREX_D | ARM_LDREX_W | ARM_LDREX_H | ARM_LDREX_B;
     else
-      LDREX = LDREX_W;
+      LDREX = ARM_LDREX_W;
     break;
   case 7:
-    if (ArchProfile == llvm::ARM::ProfileKind::M)
-      LDREX = LDREX_W | LDREX_H | LDREX_B;
-    else
-      LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
-    break;
   case 8:
+    if (ArchProfile == llvm::ARM::ProfileKind::M)
+      LDREX = ARM_LDREX_W | ARM_LDREX_H | ARM_LDREX_B;
+    else
+      LDREX = ARM_LDREX_D | ARM_LDREX_W | ARM_LDREX_H | ARM_LDREX_B;
+    break;
   case 9:
-    LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
+    assert(ArchProfile != llvm::ARM::ProfileKind::M &&
+           "No Armv9-M architectures defined");
+    LDREX = ARM_LDREX_D | ARM_LDREX_W | ARM_LDREX_H | ARM_LDREX_B;
   }
 
   if (!(FPU & NeonFPU) && FPMath == FP_Neon) {
@@ -1405,7 +1403,7 @@ ARMTargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_AAPCS_VFP:
   case CC_Swift:
   case CC_SwiftAsync:
-  case CC_OpenCLKernel:
+  case CC_DeviceKernel:
     return CCCR_OK;
   default:
     return CCCR_Warning;
@@ -1480,7 +1478,7 @@ WindowsARMTargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_X86VectorCall:
     return CCCR_Ignore;
   case CC_C:
-  case CC_OpenCLKernel:
+  case CC_DeviceKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
   case CC_Swift:

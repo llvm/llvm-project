@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ForRangeCopyCheck.h"
-#include "../utils/DeclRefExprUtils.h"
 #include "../utils/FixItHintUtils.h"
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"

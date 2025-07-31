@@ -98,8 +98,8 @@ auto hasWantedType(llvm::ArrayRef<StringRef> TypeNames) {
 
 // Matches member call expressions of the named method on the listed container
 // types.
-auto cxxMemberCallExprOnContainer(
-    StringRef MethodName, llvm::ArrayRef<StringRef> ContainerNames) {
+auto cxxMemberCallExprOnContainer(StringRef MethodName,
+                                  llvm::ArrayRef<StringRef> ContainerNames) {
   return cxxMemberCallExpr(
       hasDeclaration(functionDecl(hasName(MethodName))),
       on(hasTypeOrPointeeType(hasWantedType(ContainerNames))));

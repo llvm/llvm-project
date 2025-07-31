@@ -9,7 +9,6 @@
 #include "llvm/Object/DXContainer.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
-#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -273,7 +272,13 @@ Error DirectX::RootSignature::parse() {
   Current += sizeof(uint32_t);
 
   ParametersHeaders.Data = PartData.substr(
-      RootParametersOffset, NumParameters * sizeof(dxbc::RootParameterHeader));
+      RootParametersOffset,
+      NumParameters * sizeof(dxbc::RTS0::v1::RootParameterHeader));
+
+  StaticSamplers.Stride = sizeof(dxbc::RTS0::v1::StaticSampler);
+  StaticSamplers.Data = PartData.substr(
+      StaticSamplersOffset,
+      NumStaticSamplers * sizeof(dxbc::RTS0::v1::StaticSampler));
 
   return Error::success();
 }

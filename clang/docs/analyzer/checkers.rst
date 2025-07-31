@@ -773,7 +773,11 @@ enumerators at all.
 **Limitations**
 
 This checker does not accept the coding pattern where an enum type is used to
-store combinations of flag values:
+store combinations of flag values.
+Such enums should be annotated with the `__attribute__((flag_enum))` or by the
+`[[clang::flag_enum]]` attribute to signal this intent. Refer to the
+`documentation <https://clang.llvm.org/docs/AttributeReference.html#flag-enum>`_
+of this Clang attribute.
 
 .. code-block:: cpp
 
@@ -1099,7 +1103,16 @@ To override this threshold to e.g. 4 bytes, use the
 
 optin.portability.UnixAPI
 """""""""""""""""""""""""
-Finds implementation-defined behavior in UNIX/Posix functions.
+Reports situations where 0 is passed as the "size" argument of various
+allocation functions ( ``calloc``, ``malloc``, ``realloc``, ``reallocf``,
+``alloca``, ``__builtin_alloca``, ``__builtin_alloca_with_align``, ``valloc``).
+
+Note that similar functionality is also supported by :ref:`unix-Malloc` which
+reports code that *uses* memory allocated with size zero.
+
+(The name of this checker is motivated by the fact that it was originally
+introduced with the vague goal that it "Finds implementation-defined behavior
+in UNIX/Posix functions.")
 
 
 optin.taint

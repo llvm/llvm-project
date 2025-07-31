@@ -180,13 +180,14 @@ func.func @negative_not_elementwise() -> vector<2x2xf32> {
 
 // -----
 
-// The source and the result for arith.cmp have different types - not supported
+// The source and the result for arith.cmp have different types
 
-// CHECK-LABEL: func.func @negative_source_and_result_mismatch
-//       CHECK:   %[[BROADCAST:.+]] = vector.broadcast
-//       CHECK:   %[[RETURN:.+]] = arith.cmpf uno, %[[BROADCAST]], %[[BROADCAST]]
-//       CHECK:   return %[[RETURN]]
-func.func @negative_source_and_result_mismatch(%arg0 : f32, %arg1 : vector<1xf32>) -> vector<1xi1> {
+// CHECK-LABEL: func.func @source_and_result_mismatch(
+//  CHECK-SAME: %[[ARG0:.+]]: f32)
+//       CHECK:   %[[COMPARE:.+]] = arith.cmpf uno, %[[ARG0]], %[[ARG0]]
+//       CHECK:   %[[BROADCAST:.+]] = vector.broadcast %[[COMPARE]] : i1 to vector<1xi1>
+//       CHECK:   return %[[BROADCAST]]
+func.func @source_and_result_mismatch(%arg0 : f32) -> vector<1xi1> {
   %0 = vector.broadcast %arg0 : f32 to vector<1xf32>
   %1 = arith.cmpf uno, %0, %0 : vector<1xf32>
   return %1 : vector<1xi1>
@@ -208,6 +209,130 @@ func.func @negative_op_only_supports_vectors(%arg0 : f32) -> vector<1xf32> {
   %0 = vector.broadcast %arg0 : f32 to vector<1xf32>
   %1 = vector.fma %0, %0, %0 : vector<1xf32>
   return %1 : vector<1xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_scalar_and_splat_const(
+// CHECK-SAME:     %[[ARG_0:.*]]: index) -> vector<1x4xindex> {
+// CHECK:           %[[NEW_CST:.*]] = arith.constant 2 : index
+// CHECK:           %[[ADD:.*]] = arith.addi %[[ARG_0]], %[[NEW_CST]] : index
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[ADD]] : index to vector<1x4xindex>
+// CHECK:           return %[[BCAST]] : vector<1x4xindex>
+
+func.func @broadcast_scalar_and_splat_const(%arg0: index) -> vector<1x4xindex> {
+  %0 = vector.broadcast %arg0 : index to vector<1x4xindex>
+  %cst = arith.constant dense<2> : vector<1x4xindex>
+  %2 = arith.addi %0, %cst : vector<1x4xindex>
+  return %2 : vector<1x4xindex>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_scalar_and_splat_const_const_first(
+// CHECK-SAME:     %[[ARG_0:.*]]: index) -> vector<1x4xindex> {
+// CHECK:           %[[NEW_CST:.*]] = arith.constant 2 : index
+// CHECK:           %[[SUB:.*]] = arith.subi %[[NEW_CST]], %[[ARG_0]] : index
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[SUB]] : index to vector<1x4xindex>
+// CHECK:           return %[[BCAST]] : vector<1x4xindex>
+
+func.func @broadcast_scalar_and_splat_const_const_first(%arg0: index) -> vector<1x4xindex> {
+  %0 = vector.broadcast %arg0 : index to vector<1x4xindex>
+  %cst = arith.constant dense<2> : vector<1x4xindex>
+  %2 = arith.subi %cst, %0 : vector<1x4xindex>
+  return %2 : vector<1x4xindex>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_vector_and_splat_const(
+// CHECK-SAME:     %[[ARG_0:.*]]: vector<4xf32>) -> vector<3x4xf32> {
+// CHECK:           %[[NEW_CST:.*]] = arith.constant dense<2.000000e+00> : vector<4xf32>
+// CHECK:           %[[ADD:.*]] = arith.mulf %[[ARG_0]], %[[NEW_CST]] : vector<4xf32>
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[ADD]] : vector<4xf32> to vector<3x4xf32>
+// CHECK:           return %[[BCAST]] : vector<3x4xf32>
+
+func.func @broadcast_vector_and_splat_const(%arg0: vector<4xf32>) -> vector<3x4xf32> {
+  %0 = vector.broadcast %arg0 : vector<4xf32> to vector<3x4xf32>
+  %cst = arith.constant dense<2.000000e+00> : vector<3x4xf32>
+  %2 = arith.mulf %0, %cst : vector<3x4xf32>
+  return %2 : vector<3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @negative_broadcast_with_non_splat_const(
+// CHECK-SAME:     %[[ARG_0:.*]]: index) -> vector<1x4xindex> {
+// CHECK-DAG:       %[[BCAST:.*]] = vector.broadcast %[[ARG_0]] : index to vector<1x4xindex>
+// CHECK-DAG:       %[[CST:.*]] = arith.constant dense<{{\[}}[0, 1, 2, 3]]> : vector<1x4xindex>
+// CHECK:           %[[ADD:.*]] = arith.addi %[[BCAST]], %[[CST]] : vector<1x4xindex>
+// CHECK:           return %[[ADD]] : vector<1x4xindex>
+
+func.func @negative_broadcast_with_non_splat_const(%arg0: index) -> vector<1x4xindex> {
+  %0 = vector.broadcast %arg0 : index to vector<1x4xindex>
+  %cst = arith.constant dense<[[0, 1, 2, 3]]> : vector<1x4xindex>
+  %2 = arith.addi %0, %cst : vector<1x4xindex>
+  return %2 : vector<1x4xindex>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_scalar_mixed_type(
+// CHECK-SAME:     %[[ARG_0:.*]]: f16) -> vector<1x4xf32> {
+// CHECK:           %[[EXTF:.*]] = arith.extf %[[ARG_0]] : f16 to f32
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[EXTF]] : f32 to vector<1x4xf32>
+// CHECK:           return %[[BCAST]] : vector<1x4xf32>
+
+func.func @broadcast_scalar_mixed_type(%arg0: f16) -> vector<1x4xf32> {
+  %0 = vector.broadcast %arg0 : f16 to vector<1x4xf16>
+  %1 = arith.extf %0 : vector<1x4xf16> to vector<1x4xf32>
+  return %1 : vector<1x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_vector_mixed_type(
+// CHECK-SAME:     %[[ARG_0:.*]]: vector<4xf16>) -> vector<3x4xf32> {
+// CHECK:           %[[EXTF:.*]] = arith.extf %[[ARG_0]] : vector<4xf16> to vector<4xf32>
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[EXTF]] : vector<4xf32> to vector<3x4xf32>
+// CHECK:           return %[[BCAST]] : vector<3x4xf32>
+
+func.func @broadcast_vector_mixed_type(%arg0: vector<4xf16>) -> vector<3x4xf32> {
+  %0 = vector.broadcast %arg0 : vector<4xf16> to vector<3x4xf16>
+  %1 = arith.extf %0 : vector<3x4xf16> to vector<3x4xf32>
+  return %1 : vector<3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_scalar_and_splat_const_mixed_type(
+// CHECK-SAME:     %[[ARG_0:.*]]: f32) -> vector<1x4xf32> {
+// CHECK:           %[[NEW_CST:.*]] = arith.constant 3 : i32
+// CHECK:           %[[POW:.*]] = math.fpowi %[[ARG_0]], %[[NEW_CST]] : f32, i32
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[POW]] : f32 to vector<1x4xf32>
+// CHECK:           return %[[BCAST]] : vector<1x4xf32>
+
+func.func @broadcast_scalar_and_splat_const_mixed_type(%arg0: f32) -> vector<1x4xf32> {
+  %0 = vector.broadcast %arg0 : f32 to vector<1x4xf32>
+  %cst = arith.constant dense<3> : vector<1x4xi32>
+  %2 = math.fpowi %0, %cst : vector<1x4xf32>, vector<1x4xi32>
+  return %2 : vector<1x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_vector_and_splat_const_mixed_type(
+// CHECK-SAME:     %[[ARG_0:.*]]: vector<4xf32>) -> vector<3x4xf32> {
+// CHECK:           %[[NEW_CST:.*]] = arith.constant dense<3> : vector<4xi32>
+// CHECK:           %[[POW:.*]] = math.fpowi %[[ARG_0]], %[[NEW_CST]] : vector<4xf32>, vector<4xi32>
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[POW]] : vector<4xf32> to vector<3x4xf32>
+// CHECK:           return %[[BCAST]] : vector<3x4xf32>
+
+func.func @broadcast_vector_and_splat_const_mixed_type(%arg0: vector<4xf32>) -> vector<3x4xf32> {
+  %0 = vector.broadcast %arg0 : vector<4xf32> to vector<3x4xf32>
+  %cst = arith.constant dense<3> : vector<3x4xi32>
+  %2 = math.fpowi %0, %cst : vector<3x4xf32>, vector<3x4xi32>
+  return %2 : vector<3x4xf32>
 }
 
 //===----------------------------------------------------------------------===//
@@ -512,6 +637,18 @@ func.func @negative_extract_vec_fma(%arg0: vector<4xf32>, %arg1: vector<4xf32>, 
   %0 = vector.fma %arg0, %arg1, %arg2: vector<4xf32>
   %1 = vector.extract %0[1] : f32 from vector<4xf32>
   return %1 : f32
+}
+
+// CHECK-LABEL: @negative_extract_dynamic_pos
+func.func @negative_extract_dynamic_pos(%arg0: vector<4xf32>, %arg1 : vector<4xf32>, %idx : vector<4xindex>) -> f32 {
+  // CHECK-NOT: vector.extract
+  // CHECK: arith.addf %{{.*}}, %{{.*}} : vector<4xf32>
+  // CHECK: vector.extract
+  // CHECK: vector.extract
+  %0 = arith.addf %arg0, %arg1 : vector<4xf32>
+  %1 = vector.extract %idx[0] : index from vector<4xindex>
+  %2 = vector.extract %0[%1] : f32 from vector<4xf32>
+  return %2 : f32
 }
 
 //-----------------------------------------------------------------------------

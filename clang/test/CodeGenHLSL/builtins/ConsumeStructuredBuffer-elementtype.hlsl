@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=DXIL
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=DXIL
+// RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=SPV
 
 struct MyStruct {
   float4 a;
@@ -21,7 +22,9 @@ struct MyStruct {
 // DXIL: %"class.hlsl::ConsumeStructuredBuffer.12" = type { target("dx.RawBuffer", %struct.MyStruct, 1, 0)
 // DXIL: %struct.MyStruct = type <{ <4 x float>, <2 x i32> }>
 // DXIL: %"class.hlsl::ConsumeStructuredBuffer.13" = type { target("dx.RawBuffer", i32, 1, 0)
+// SPV: %"class.hlsl::ConsumeStructuredBuffer.13" = type { target("spirv.VulkanBuffer", [0 x i32], 12, 1)
 // DXIL: %"class.hlsl::ConsumeStructuredBuffer.14" = type { target("dx.RawBuffer", <4 x i32>, 1, 0)
+// SPV: %"class.hlsl::ConsumeStructuredBuffer.14" = type { target("spirv.VulkanBuffer", [0 x <4 x i32>], 12, 1)
 
 ConsumeStructuredBuffer<int16_t> BufI16;
 ConsumeStructuredBuffer<uint16_t> BufU16;

@@ -36,8 +36,6 @@
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Scalar/DCE.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include <deque>
-#include <functional>
 
 using namespace llvm;
 
