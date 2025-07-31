@@ -1272,18 +1272,22 @@ SwiftExpressionParser::ParseAndImport(
     SwiftASTContext::ScopedDiagnostics &expr_diagnostics,
     SwiftExpressionParser::SILVariableMap &variable_map, unsigned &buffer_id,
     DiagnosticManager &diagnostic_manager) {
+
   Log *log = GetLog(LLDBLog::Expressions);
   bool repl = m_options.GetREPLEnabled();
   bool playground = m_options.GetPlaygroundTransformEnabled();
+
+  // Install a progress meter.
+  auto progress_raii = m_swift_ast_ctx.GetModuleImportProgressRAII(
+      "Importing modules used in expression");
+
   // If we are using the playground, hand import the necessary
   // modules.
   //
   // FIXME: We won't have to do this once the playground adds import
   //        statements for the things it needs itself.
   if (playground) {
-    SourceModule module_info;
-    module_info.path.emplace_back("Swift");
-    auto module_or_err = m_swift_ast_ctx.GetModule(module_info);
+    auto module_or_err = m_swift_ast_ctx.ImportStdlib();
 
     if (!module_or_err) {
       LLDB_LOG(log, "couldn't load Swift Standard Library");
