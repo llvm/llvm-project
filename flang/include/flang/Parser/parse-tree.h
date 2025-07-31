@@ -3469,6 +3469,12 @@ WRAPPER_CLASS(PauseStmt, std::optional<StopCode>);
 
 // --- Common definitions
 
+#define INHERITED_WRAPPER_CLASS_BOILERPLATE(classname, basename) \
+  BOILERPLATE(classname); \
+  using basename::basename; \
+  classname(basename &&base) : basename(std::move(base)) {} \
+  using WrapperTrait = std::true_type
+
 struct OmpClause;
 struct OmpDirectiveSpecification;
 
@@ -3476,6 +3482,7 @@ struct OmpDirectiveName {
   // No boilerplates: this class should be copyable, movable, etc.
   constexpr OmpDirectiveName() = default;
   constexpr OmpDirectiveName(const OmpDirectiveName &) = default;
+  constexpr OmpDirectiveName(llvm::omp::Directive x) : v(x) {}
   // Construct from an already parsed text. Use Verbatim for this because
   // Verbatim's source corresponds to an actual source location.
   // This allows "construct<OmpDirectiveName>(Verbatim("<name>"))".
@@ -3848,7 +3855,10 @@ struct OmpDeviceModifier {
 // [*] The IF clause is allowed on CANCEL in OpenMP 4.5, but only without
 // the directive-name-modifier. For the sake of uniformity CANCEL can be
 // considered a valid value in 4.5 as well.
-using OmpDirectiveNameModifier = OmpDirectiveName;
+struct OmpDirectiveNameModifier : public OmpDirectiveName {
+  INHERITED_WRAPPER_CLASS_BOILERPLATE(
+      OmpDirectiveNameModifier, OmpDirectiveName);
+};
 
 // Ref: [5.1:205-209], [5.2:166-168]
 //
