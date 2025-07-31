@@ -3505,6 +3505,12 @@ def int_amdgcn_cvt_pk_fp8_f32 : ClangBuiltin<"__builtin_amdgcn_cvt_pk_fp8_f32">,
             [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i1_ty],
             [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
+// llvm.amdgcn.cvt.pk.fp8.f32.e5m3 int vdst, float srcA, float srcB, int old, imm word_sel
+def int_amdgcn_cvt_pk_fp8_f32_e5m3 : ClangBuiltin<"__builtin_amdgcn_cvt_pk_fp8_f32_e5m3">,
+  DefaultAttrsIntrinsic<[llvm_i32_ty],
+            [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i1_ty],
+            [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+
 // llvm.amdgcn.cvt.sr.bf8.f32 int vdst, float srcA, int srcB, int old, imm byte_sel [0..3]
 // byte_sel selects byte to write into vdst.
 def int_amdgcn_cvt_sr_bf8_f32 : ClangBuiltin<"__builtin_amdgcn_cvt_sr_bf8_f32">,
@@ -3514,6 +3520,12 @@ def int_amdgcn_cvt_sr_bf8_f32 : ClangBuiltin<"__builtin_amdgcn_cvt_sr_bf8_f32">,
 
 // llvm.amdgcn.cvt.sr.fp8.f32 int vdst, float srcA, int srcB, int old, imm byte_sel [0..3]
 def int_amdgcn_cvt_sr_fp8_f32 : ClangBuiltin<"__builtin_amdgcn_cvt_sr_fp8_f32">,
+  DefaultAttrsIntrinsic<[llvm_i32_ty],
+            [llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+
+// llvm.amdgcn.cvt.sr.fp8.f32.e5m3 int vdst, float srcA, int srcB, int old, imm byte_sel [0..3]
+def int_amdgcn_cvt_sr_fp8_f32_e5m3 : ClangBuiltin<"__builtin_amdgcn_cvt_sr_fp8_f32_e5m3">,
   DefaultAttrsIntrinsic<[llvm_i32_ty],
             [llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, ImmArg<ArgIndex<3>>]>;
