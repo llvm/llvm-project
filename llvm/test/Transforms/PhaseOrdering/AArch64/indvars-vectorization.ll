@@ -88,7 +88,7 @@ define void @s172(i32 noundef %xa, i32 noundef %xb, ptr noundef %a, ptr noundef 
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP_A]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], [[TMP1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], 32000
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -131,10 +131,9 @@ for.end:
 ; CHECK: [[META2]] = distinct !{[[META2]], !"LVerDomain"}
 ; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
 ; CHECK: [[META4]] = distinct !{[[META4]], [[META2]]}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]], [[META9:![0-9]+]]}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]]}
 ; CHECK: [[META6]] = !{!"llvm.loop.mustprogress"}
-; CHECK: [[META7]] = !{!"llvm.loop.estimated_trip_count"}
-; CHECK: [[META8]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META9]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META6]], [[META7]], [[META8]]}
+; CHECK: [[META7]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META8]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META6]], [[META7]]}
 ;.

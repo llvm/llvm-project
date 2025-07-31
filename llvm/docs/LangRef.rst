@@ -7960,67 +7960,6 @@ The attributes in this metadata is added to all followup loops of the
 loop distribution pass. See
 :ref:`Transformation Metadata <transformation-metadata>` for details.
 
-'``llvm.loop.estimated_trip_count``' Metadata
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This metadata records an estimated trip count for the loop.  The first operand
-is the string ``llvm.loop.estimated_trip_count``.  The second operand is an
-integer constant of type ``i32`` or smaller specifying the count, which might be
-omitted for the reasons described below.  For example:
-
-.. code-block:: llvm
-
-   !0 = !{!"llvm.loop.estimated_trip_count", i32 8}
-   !1 = !{!"llvm.loop.estimated_trip_count"}
-
-Purpose
-"""""""
-
-A loop's estimated trip count is an estimate of the average number of loop
-iterations (specifically, the number of times the loop's header executes) each
-time execution reaches the loop.  It is usually only an estimate based on, for
-example, profile data.  The actual number of iterations might vary widely.
-
-The estimated trip count serves as a parameter for various loop transformations
-and typically helps estimate transformation cost.  For example, it can help
-determine how many iterations to peel or how aggressively to unroll.
-
-Initialization and Maintenance
-""""""""""""""""""""""""""""""
-
-The ``pgo-estimate-trip-counts`` pass typically runs immediately after profile
-ingestion to add this metadata to all loops.  It estimates each loop's trip
-count from the loop's ``branch_weights`` metadata.  This way of initially
-estimating trip counts appears to be useful for the passes that consume them.
-
-As passes transform existing loops and create new loops, they must be free to
-update and create ``branch_weights`` metadata to maintain accurate block
-frequencies.  Trip counts estimated from this new ``branch_weights`` metadata
-are not necessarily useful to the passes that consume them.  In general, when
-passes transform and create loops, they should separately estimate new trip
-counts from previously estimated trip counts, and they should record them by
-creating or updating this metadata.  For this or any other work involving
-estimated trip counts, passes should always call
-``llvm::getLoopEstimatedTripCount`` and ``llvm::setLoopEstimatedTripCount``.
-
-Missing Metadata and Values
-"""""""""""""""""""""""""""
-
-If the current implementation of ``pgo-estimate-trip-counts`` cannot estimate a
-trip count from the loop's ``branch_weights`` metadata due to the loop's form or
-due to missing profile data, it creates this metadata for the loop but omits the
-value.  This situation is currently common (e.g., the LLVM IR loop that Clang
-emits for a simple C ``for`` loop).  A later pass (e.g., ``loop-rotate``) might
-modify the loop's form in a way that enables estimating its trip count even if
-those modifications provably never impact the actual number of loop iterations.
-That later pass should then add an appropriate value to the metadata.
-
-However, not all such passes currently do so.  Thus, if this metadata has no
-value, ``llvm::getLoopEstimatedTripCount`` will disregard it and estimate the
-trip count from the loop's ``branch_weights`` metadata.  It does the same when
-the metadata is missing altogether, perhaps because ``pgo-estimate-trip-counts``
-was not specified in a minimal pass list to a tool like ``opt``.
-
 '``llvm.licm.disable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
