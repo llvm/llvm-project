@@ -22,7 +22,6 @@
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupBoolean.h"
 #include "lldb/Target/DynamicLoader.h"
-#include "lldb/Target/JITLoaderList.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
@@ -599,17 +598,6 @@ bool ProcessMinidump::GetProcessInfo(ProcessInstanceInfo &info) {
                            add_exe_file_as_first_arg);
   }
   return true;
-}
-
-// For minidumps there's no runtime generated code so we don't need JITLoader(s)
-// Avoiding them will also speed up minidump loading since JITLoaders normally
-// try to set up symbolic breakpoints, which in turn may force loading more
-// debug information than needed.
-JITLoaderList &ProcessMinidump::GetJITLoaders() {
-  if (!m_jit_loaders_up) {
-    m_jit_loaders_up = std::make_unique<JITLoaderList>();
-  }
-  return *m_jit_loaders_up;
 }
 
 #define INIT_BOOL(VAR, LONG, SHORT, DESC) \
