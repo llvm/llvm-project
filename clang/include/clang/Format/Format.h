@@ -878,6 +878,12 @@ struct FormatStyle {
   /// \version 3.5
   ShortFunctionStyle AllowShortFunctionsOnASingleLine;
 
+  /// Dependent on the value, function body like ``{ return 0; }`` can be
+  /// put on a single line. Only when AllowShortFunctionsOnASingleLine = None
+  /// and AllowShortBlocksOnASingleLine != Never, the value of this option
+  /// is true.
+  bool AllowShortFunctionBodiesOnASingleLine;
+
   /// Different styles for handling short if statements.
   enum ShortIfStyle : int8_t {
     /// Never put short ifs on the same line.

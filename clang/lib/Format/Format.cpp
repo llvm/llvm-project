@@ -3828,6 +3828,9 @@ reformat(const FormatStyle &Style, StringRef Code,
   default:
     break;
   }
+  Expanded.AllowShortFunctionBodiesOnASingleLine =
+      Expanded.AllowShortFunctionsOnASingleLine == FormatStyle::SFS_None &&
+      Expanded.AllowShortBlocksOnASingleLine != FormatStyle::SBS_Never;
 
   if (Expanded.DisableFormat)
     return {tooling::Replacements(), 0};
