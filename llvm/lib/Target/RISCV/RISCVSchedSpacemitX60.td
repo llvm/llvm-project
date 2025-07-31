@@ -22,7 +22,7 @@
 //   M2 -> Values[4], M4 -> Values[5], M8 -> Values[6]
 // The !ge size checks ensure we don't access beyond the array bounds, for cases
 // where M8 is not set (e.g., widening operations)
-// Returns 0 if LMUL is invalid or if the array is too short
+// TableGen will error if an invalid LMUL is passed or if the array is too short
 class GetLMULValue<list<int> Values, string LMUL> {
   int c = !cond(
     !and(!eq(LMUL, "MF8"), !ge(!size(Values), 1)) : Values[0],
@@ -31,8 +31,7 @@ class GetLMULValue<list<int> Values, string LMUL> {
     !and(!eq(LMUL, "M1"),  !ge(!size(Values), 4)) : Values[3],
     !and(!eq(LMUL, "M2"),  !ge(!size(Values), 5)) : Values[4],
     !and(!eq(LMUL, "M4"),  !ge(!size(Values), 6)) : Values[5],
-    !and(!eq(LMUL, "M8"),  !ge(!size(Values), 7)) : Values[6],
-    true : 0
+    !and(!eq(LMUL, "M8"),  !ge(!size(Values), 7)) : Values[6]
   );
 }
 
