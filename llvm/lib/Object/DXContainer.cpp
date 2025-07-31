@@ -552,7 +552,7 @@ void DXContainerObjectFile::moveSectionNext(DataRefImpl &Sec) const {
   if (It == Parts.end())
     return;
 
-  It++;
+  ++It;
   Sec.p = reinterpret_cast<uintptr_t>(It);
 }
 
