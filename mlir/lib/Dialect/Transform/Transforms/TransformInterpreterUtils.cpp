@@ -154,6 +154,41 @@ findTransformEntryPointRecursive(Operation *op, StringRef entryPoint) {
   return transform;
 }
 
+// Will look for the transform's entry point favouring NamedSequenceOps
+// ops that exist within the operation without the need for nesting.
+// If no operation exists in the blocks owned by op, then it will recursively
+// walk the op in preorder and find the first NamedSequenceOp that matches
+// the entry point's name.
+//
+// This allows for the following two use cases:
+// 1. op is a module annotated with the transform.with_named_sequence attribute
+//    that has an entry point in its block. E.g.,
+//
+//    ```mlir
+//    module {transform.with_named_sequence} {
+//      transform.named_sequence @__transform_main(%arg0 : !transform.any_op) ->
+//      () {
+//        transform.yield
+//      }
+//    }
+//    ```
+//
+// 2. op is a program which contains a nested module annotated with the
+//    transform.with_named_sequence attribute. E.g.,
+//
+//    ```mlir
+//    module {
+//      func.func @foo () {
+//      }
+//
+//      module {transform.with_named_sequence} {
+//        transform.named_sequence @__transform_main(%arg0 : !transform.any_op)
+//        -> () {
+//          transform.yield
+//        }
+//      }
+//    }
+//    ```
 transform::TransformOpInterface
 findTransformEntryPointInOp(Operation *op, StringRef entryPoint) {
   transform::TransformOpInterface transform =
