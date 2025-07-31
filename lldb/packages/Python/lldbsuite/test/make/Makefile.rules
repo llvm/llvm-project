@@ -152,7 +152,7 @@ endif
 # Use LLD when cross compiling on Darwin.
 #----------------------------------------------------------------------
 ifeq "$(HOST_OS)" "Darwin"
-	ifneq (,$(filter $(OS), FreeBSD Linux NetBSD Windows_NT))
+	ifneq (,$(filter $(OS), Android FreeBSD Linux NetBSD Windows_NT))
 		LDFLAGS += -fuse-ld=lld
 	endif
 endif
