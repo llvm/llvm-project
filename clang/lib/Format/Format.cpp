@@ -16,6 +16,7 @@
 #include "DefinitionBlockSeparator.h"
 #include "IntegerLiteralSeparatorFixer.h"
 #include "NamespaceEndCommentsFixer.h"
+#include "NumericLiteralCaseFixer.h"
 #include "ObjCPropertyAttributeOrderFixer.h"
 #include "QualifierAlignmentFixer.h"
 #include "SortJavaScriptImports.h"
@@ -379,6 +380,16 @@ struct ScalarEnumerationTraits<FormatStyle::IndentExternBlockStyle> {
     IO.enumCase(Value, "NoIndent", FormatStyle::IEBS_NoIndent);
     IO.enumCase(Value, "true", FormatStyle::IEBS_Indent);
     IO.enumCase(Value, "false", FormatStyle::IEBS_NoIndent);
+  }
+};
+
+template <> struct MappingTraits<FormatStyle::NumericLiteralCaseStyle> {
+  static void mapping(IO &IO, FormatStyle::NumericLiteralCaseStyle &Base) {
+    IO.mapOptional("PrefixCase", Base.PrefixCase);
+    IO.mapOptional("HexDigitCase", Base.HexDigitCase);
+    IO.mapOptional("FloatExponentSeparatorCase",
+                   Base.FloatExponentSeparatorCase);
+    IO.mapOptional("SuffixCase", Base.SuffixCase);
   }
 };
 
@@ -1093,6 +1104,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("InsertBraces", Style.InsertBraces);
     IO.mapOptional("InsertNewlineAtEOF", Style.InsertNewlineAtEOF);
     IO.mapOptional("InsertTrailingCommas", Style.InsertTrailingCommas);
+    IO.mapOptional("NumericLiteralCase", Style.NumericLiteralCase);
     IO.mapOptional("IntegerLiteralSeparator", Style.IntegerLiteralSeparator);
     IO.mapOptional("JavaImportGroups", Style.JavaImportGroups);
     IO.mapOptional("JavaScriptQuotes", Style.JavaScriptQuotes);
@@ -1618,6 +1630,9 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.InsertBraces = false;
   LLVMStyle.InsertNewlineAtEOF = false;
   LLVMStyle.InsertTrailingCommas = FormatStyle::TCS_None;
+  LLVMStyle.NumericLiteralCase = {/*PrefixCase=*/0, /*HexDigitCase=*/0,
+                                  /*FloatExponentSeparatorCase=*/0,
+                                  /*SuffixCase=*/0};
   LLVMStyle.IntegerLiteralSeparator = {
       /*Binary=*/0,  /*BinaryMinDigits=*/0,
       /*Decimal=*/0, /*DecimalMinDigits=*/0,
@@ -3870,6 +3885,10 @@ reformat(const FormatStyle &Style, StringRef Code,
 
   Passes.emplace_back([&](const Environment &Env) {
     return IntegerLiteralSeparatorFixer().process(Env, Expanded);
+  });
+
+  Passes.emplace_back([&](const Environment &Env) {
+    return NumericLiteralCaseFixer().process(Env, Expanded);
   });
 
   if (Style.isCpp()) {
