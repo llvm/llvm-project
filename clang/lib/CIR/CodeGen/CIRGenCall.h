@@ -137,7 +137,7 @@ private:
 
   /// A data-flow flag to make sure getRValue and/or copyInto are not
   /// called twice for duplicated IR emission.
-  mutable bool isUsed;
+  [[maybe_unused]] mutable bool isUsed;
 
 public:
   clang::QualType ty;

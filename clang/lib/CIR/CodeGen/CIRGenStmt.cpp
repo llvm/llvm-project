@@ -79,14 +79,15 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
 #define EXPR(Type, Base) case Stmt::Type##Class:
 #include "clang/AST/StmtNodes.inc"
     {
-      // Remember the block we came in on.
-      mlir::Block *incoming = builder.getInsertionBlock();
-      assert(incoming && "expression emission must have an insertion point");
+      assert(builder.getInsertionBlock() &&
+             "expression emission must have an insertion point");
 
       emitIgnoredExpr(cast<Expr>(s));
 
-      mlir::Block *outgoing = builder.getInsertionBlock();
-      assert(outgoing && "expression emission cleared block!");
+      // Classic codegen has a check here to see if the emitter created a new
+      // block that isn't used (comparing the incoming and outgoing insertion
+      // points) and deletes the outgoing block if it's not used. In CIR, we
+      // will handle that during the cir.canonicalize pass.
       return mlir::success();
     }
   case Stmt::IfStmtClass:

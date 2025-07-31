@@ -1481,9 +1481,10 @@ Address CIRGenFunction::emitArrayToPointerDecay(const Expr *e) {
   if (e->getType()->isVariableArrayType())
     return addr;
 
-  auto pointeeTy = mlir::cast<cir::ArrayType>(lvalueAddrTy.getPointee());
+  [[maybe_unused]] auto pointeeTy =
+      mlir::cast<cir::ArrayType>(lvalueAddrTy.getPointee());
 
-  mlir::Type arrayTy = convertType(e->getType());
+  [[maybe_unused]] mlir::Type arrayTy = convertType(e->getType());
   assert(mlir::isa<cir::ArrayType>(arrayTy) && "expected array");
   assert(pointeeTy == arrayTy);
 
