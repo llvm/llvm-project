@@ -2278,9 +2278,20 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
 
   if (auto asmAttr = m->getDiscardableAttr(
           LLVM::LLVMDialect::getModuleLevelAsmAttrName())) {
+    if (!isa<ArrayAttr>(asmAttr)) {
+      m->emitError("expected an array attribute for a module level asm");
+      return nullptr;
+    }
+
     auto arr = cast<ArrayAttr>(asmAttr);
-    for (auto elt : arr)
+    for (auto elt : arr) {
+      if (!isa<StringAttr>(elt)) {
+        m->emitError(
+            "expected a string attribute for each entry of a module level asm");
+        return nullptr;
+      }
       llvmModule->appendModuleInlineAsm(cast<StringAttr>(elt).getValue());
+    }
   }
 
   return llvmModule;

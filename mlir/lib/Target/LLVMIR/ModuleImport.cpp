@@ -1072,9 +1072,8 @@ void ModuleImport::convertModuleLevelAsm() {
     if (!line.empty())
       arr.push_back(builder.getStringAttr(line));
 
-  mlirModule->setAttr(
-      LLVM::LLVMDialect::getModuleLevelAsmAttrName(),
-      builder.getArrayAttr(arr));
+  mlirModule->setAttr(LLVM::LLVMDialect::getModuleLevelAsmAttrName(),
+                      builder.getArrayAttr(arr));
 }
 
 LogicalResult ModuleImport::convertFunctions() {
