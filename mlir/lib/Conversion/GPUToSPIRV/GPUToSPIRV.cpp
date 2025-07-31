@@ -387,8 +387,11 @@ LogicalResult GPUModuleConversion::matchAndRewrite(
     spvModule->setAttr(spirv::getTargetEnvAttrName(), attr);
   if (ArrayAttr targets = moduleOp.getTargetsAttr()) {
     for (Attribute targetAttr : targets)
-      if (auto spirvTargetEnvAttr = dyn_cast<spirv::TargetEnvAttr>(targetAttr))
+      if (auto spirvTargetEnvAttr =
+              dyn_cast<spirv::TargetEnvAttr>(targetAttr)) {
         spvModule->setAttr(spirv::getTargetEnvAttrName(), spirvTargetEnvAttr);
+        break;
+      }
   }
 
   rewriter.eraseOp(moduleOp);
