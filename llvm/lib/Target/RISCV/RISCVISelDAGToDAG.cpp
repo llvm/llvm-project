@@ -1845,6 +1845,15 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     CurDAG->RemoveDeadNode(Node);
     return;
   }
+  case RISCVISD::QC_SETWMI: {
+    SDValue Chain = Node->getOperand(0);
+    SDVTList VTs = Node->getVTList();
+    SDValue Ops[] = {Node->getOperand(1), Node->getOperand(2),
+                     Node->getOperand(3), Node->getOperand(4), Chain};
+    MachineSDNode *New = CurDAG->getMachineNode(RISCV::QC_SETWMI, DL, VTs, Ops);
+    ReplaceNode(Node, New);
+    return;
+  }
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IntNo = Node->getConstantOperandVal(0);
     switch (IntNo) {

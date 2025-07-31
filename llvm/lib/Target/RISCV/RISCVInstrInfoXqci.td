@@ -14,6 +14,14 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
+def SDT_StoreMultiple : SDTypeProfile<0, 4, [SDTCisSameAs<0, 1>,
+                                             SDTCisSameAs<1, 3>,
+                                             SDTCisPtrTy<2>,
+                                             SDTCisVT<3, XLenVT>]>;
+
+def qc_setwmi : RVSDNode<"QC_SETWMI", SDT_StoreMultiple,
+                         [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
 def uimm5nonzero : RISCVOp<XLenVT>,
                    ImmLeaf<XLenVT, [{return (Imm != 0) && isUInt<5>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<5, "NonZero">;
