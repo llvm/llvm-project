@@ -14,6 +14,7 @@ add_clang_library(clangFormat
   MatchFilePath.cpp
   NamespaceEndCommentsFixer.cpp
   NumericLiteralInfo.cpp
+  NumericLiteralCaseFixer.cpp
   ObjCPropertyAttributeOrderFixer.cpp
   QualifierAlignmentFixer.cpp
   SortJavaScriptImports.cpp

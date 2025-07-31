@@ -4555,7 +4555,6 @@ the configuration (without a prefix: ``Auto``).
     So inserting a trailing comma counteracts bin-packing.
 
 
-
 .. _IntegerLiteralSeparator:
 
 **IntegerLiteralSeparator** (``IntegerLiteralSeparatorStyle``) :versionbadge:`clang-format 16` :ref:`¶ <IntegerLiteralSeparator>`
@@ -5075,6 +5074,78 @@ the configuration (without a prefix: ``Auto``).
     }
 
   For example: TESTSUITE
+
+.. _NumericLiteralCase:
+
+**NumericLiteralCase** (``NumericLiteralCaseStyle``) :versionbadge:`clang-format 21` :ref:`¶ <NumericLiteralCase>`
+  Controls character case in numeric literals.
+
+  Possible values for each nexted configuration flag:
+
+  * ``0`` (Default) Do not modify characters.
+
+  * ``-1`` Convert characters to lower case.
+
+  * ``1`` Convert characters to upper case.
+
+  .. code-block:: yaml
+
+    # Example of usage:
+    NumericLiteralCaseStyle:
+      PrefixCase: -1
+      HexDigitCase: 1
+      FloatExponentSeparatorCase: 0
+      SuffixCase: -1
+
+  .. code-block:: c++
+
+    // Lower case prefix, upper case hexadecimal digits, lower case suffix
+    unsigned int 0xDEAFBEEFull;
+
+  Nested configuration flags:
+
+  * ``int PrefixCase`` Control numeric constant prefix case.
+
+   .. code-block:: c++
+
+      // PrefixCase: 1
+      int a = 0B101 | 0XF0;
+      // PrefixCase: -1
+      int a = 0b101 | 0xF0;
+      // PrefixCase: 0
+      int c = 0b101 | 0XF0;
+
+  * ``int HexDigitCase`` Control hexadecimal digit case.
+
+    .. code-block:: c++
+
+      // HexDigitCase: 1
+      int a = 0xBEAD;
+      // PrefixCase: -1
+      int b = 0xbead;
+      // PrefixCase: 0
+      int c = 0xBeAd;
+
+  * ``int FloatExponentSeparatorCase`` Control exponent separator case.
+
+    .. code-block:: c++
+
+      // FloatExponentSeparatorCase: 1
+      float a = 6.02E+23;
+      // FloatExponentSeparatorCase: -1
+      float b = 6.02e+23;
+
+  * ``int SuffixCase`` Control suffix case.
+
+    .. code-block:: c++
+
+      // SuffixCase: 1
+      unsigned long long a = 1ULL;
+      // SuffixCase: -1
+      unsigned long long a = 1ull;
+      // SuffixCase: 0
+      unsigned long long c = 1uLL;
+
 
 .. _ObjCBinPackProtocolList:
 

@@ -3100,6 +3100,54 @@ struct FormatStyle {
   /// \version 11
   TrailingCommaStyle InsertTrailingCommas;
 
+  /// Character case format for different components of a numeric literal.
+  ///
+  /// For all options, ``0`` leave the case unchanged, ``-1``
+  /// uses lower case and, ``1`` uses upper case.
+  ///
+  struct NumericLiteralCaseStyle {
+    /// Format numeric constant prefixes.
+    /// \code{.text}
+    ///   /* -1: lower case */ b = 0x01;
+    ///   /*  0: don't care */
+    ///   /*  1: upper case */ b = 0X01;
+    /// \endcode
+    int8_t PrefixCase;
+    /// Format hexadecimal digit case.
+    /// \code{.text}
+    ///   /* -1: lower case */ b = 0xabcdef;
+    ///   /*  0: don't care */
+    ///   /*  1: upper case */ b = 0xABCDEF;
+    /// \endcode
+    int8_t HexDigitCase;
+    /// Format exponent separator character case in floating point literals.
+    /// \code{.text}
+    ///   /* -1: lower case */ b = 6.02e23;
+    ///   /*  0: don't care */
+    ///   /*  1: upper case */ b = 6.02E23;
+    /// \endcode
+    int8_t FloatExponentSeparatorCase;
+    /// Format suffix case. This option excludes case-specific reserved
+    /// suffixes, such as ``min`` in C++.
+    /// \code{.text}
+    ///   /* -1: lower case */ b = 10u;
+    ///   /*  0: don't care */
+    ///   /*  1: upper case */ b = 10U;
+    /// \endcode
+    int8_t SuffixCase;
+
+    bool operator==(const NumericLiteralCaseStyle &R) const {
+      return PrefixCase == R.PrefixCase && HexDigitCase == R.HexDigitCase &&
+             FloatExponentSeparatorCase == R.FloatExponentSeparatorCase &&
+             SuffixCase == R.SuffixCase;
+    }
+  };
+
+  /// Format numeric literals for languages that support flexible character case
+  /// in numeric literal constants.
+  /// \version 22
+  NumericLiteralCaseStyle NumericLiteralCase;
+
   /// Separator format of integer literals of different bases.
   ///
   /// If negative, remove separators. If  ``0``, leave the literal as is. If
@@ -5424,6 +5472,7 @@ struct FormatStyle {
            IndentWrappedFunctionNames == R.IndentWrappedFunctionNames &&
            InsertBraces == R.InsertBraces &&
            InsertNewlineAtEOF == R.InsertNewlineAtEOF &&
+           NumericLiteralCase == R.NumericLiteralCase &&
            IntegerLiteralSeparator == R.IntegerLiteralSeparator &&
            JavaImportGroups == R.JavaImportGroups &&
            JavaScriptQuotes == R.JavaScriptQuotes &&
