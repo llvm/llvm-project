@@ -19,10 +19,6 @@
 // ADDITIONAL_COMPILE_FLAGS(target=armv7-w64-windows-gnu): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(target=arm64ec-w64-windows-gnu): -fsized-deallocation
 
-// Android clang-r536225 identifies as clang-19.0 but it predates the real
-// LLVM 19.0.0, so it also leaves sized deallocation off by default.
-// UNSUPPORTED: android && clang-19.0
-
 // UNSUPPORTED: sanitizer-new-delete
 
 // Sized deallocation was introduced in LLVM 11

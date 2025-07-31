@@ -1953,7 +1953,7 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
           // silently there. For other targets that have ms_struct enabled
           // (most probably via a pragma or attribute), trigger a diagnostic
           // that defaults to an error.
-          if (!Context.getTargetInfo().getTriple().isWindowsGNUEnvironment())
+          if (!Context.getTargetInfo().getTriple().isOSCygMing())
             Diag(D->getLocation(), diag::warn_npot_ms_struct);
         }
         if (TypeSize > FieldAlign &&

@@ -21,6 +21,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/AlwaysTrue.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Memory.h"
@@ -29,19 +30,16 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
-#include <cstdlib>
 
 namespace {
   struct ForceVMCoreLinking {
     ForceVMCoreLinking() {
       // We must reference VMCore in such a way that compilers will not
-      // delete it all as dead code, even with whole program optimization,
-      // yet is effectively a NO-OP. As the compiler isn't smart enough
-      // to know that getenv() never returns -1, this will do the job.
+      // delete it all as dead code, even with whole program optimization.
       // This is so that globals in the translation units where these functions
       // are defined are forced to be initialized, populating various
       // registries.
-      if (std::getenv("bar") != (char*) -1)
+      if (llvm::getNonFoldableAlwaysTrue())
         return;
       llvm::LLVMContext Context;
       (void)new llvm::Module("", Context);
