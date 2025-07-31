@@ -559,6 +559,23 @@ func.func @constant() {
   return
 }
 
+// CHECK-LABEL: @constant_8bit_float
+func.func @constant_8bit_float() {
+  // CHECK: spirv.Constant 56 : i8
+  %cst = arith.constant 1.0 : f8E4M3
+  // CHECK: spirv.Constant 56 : i8
+  %cst_i8 = arith.bitcast %cst : f8E4M3 to i8
+  // CHECK: spirv.Constant dense<56> : vector<4xi8>
+  %cst_vector = arith.constant dense<1.0> : vector<4xf8E4M3>
+  // CHECK: spirv.Constant dense<56> : vector<4xi8>
+  %cst_vector_i8 = arith.bitcast %cst_vector : vector<4xf8E4M3> to vector<4xi8>
+  // CHECK: spirv.Constant dense<60> : tensor<4xi8> : !spirv.array<4 x i8>
+  %cst_tensor = arith.constant dense<1.0> : tensor<4xf8E5M2>
+  // CHECK: spirv.Constant dense<60> : tensor<4xi8> : !spirv.array<4 x i8>
+  %cst_tensor_i8 = arith.bitcast %cst_tensor : tensor<4xf8E5M2> to tensor<4xi8>
+  return
+}
+
 // CHECK-LABEL: @constant_16bit
 func.func @constant_16bit() {
   // CHECK: spirv.Constant 4 : i16

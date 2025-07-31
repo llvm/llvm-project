@@ -32,7 +32,8 @@ public:
   static int disassemble(const Target &T, const std::string &Triple,
                          MCSubtargetInfo &STI, MCStreamer &Streamer,
                          MemoryBuffer &Buffer, SourceMgr &SM, MCContext &Ctx,
-                         const MCTargetOptions &MCOptions, bool HexBytes);
+                         const MCTargetOptions &MCOptions, bool HexBytes,
+                         unsigned NumBenchmarkRuns);
 };
 
 } // namespace llvm

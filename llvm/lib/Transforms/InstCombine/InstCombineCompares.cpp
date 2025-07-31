@@ -163,6 +163,11 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     LaterIndices.push_back(IdxVal);
   }
 
+  Value *Idx = GEP->getOperand(2);
+  // If the index type is non-canonical, wait for it to be canonicalized.
+  if (Idx->getType() != DL.getIndexType(GEP->getType()))
+    return nullptr;
+
   enum { Overdefined = -3, Undefined = -2 };
 
   // Variables for our state machines.
@@ -290,17 +295,6 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
 
   // Now that we've scanned the entire array, emit our new comparison(s).  We
   // order the state machines in complexity of the generated code.
-  Value *Idx = GEP->getOperand(2);
-
-  // If the index is larger than the pointer offset size of the target, truncate
-  // the index down like the GEP would do implicitly.  We don't have to do this
-  // for an inbounds GEP because the index can't be out of range.
-  if (!GEP->isInBounds()) {
-    Type *PtrIdxTy = DL.getIndexType(GEP->getType());
-    unsigned OffsetSize = PtrIdxTy->getIntegerBitWidth();
-    if (Idx->getType()->getPrimitiveSizeInBits().getFixedValue() > OffsetSize)
-      Idx = Builder.CreateTrunc(Idx, PtrIdxTy);
-  }
 
   // If inbounds keyword is not present, Idx * ElementSize can overflow.
   // Let's assume that ElementSize is 2 and the wanted value is at offset 0.

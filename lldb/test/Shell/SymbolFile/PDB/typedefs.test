@@ -1,6 +1,7 @@
 REQUIRES: system-windows, msvc
-RUN: %build --compiler=msvc --arch=32 --nodefaultlib --output=%T/SimpleTypesTest.cpp.typedefs.exe %S/Inputs/SimpleTypesTest.cpp
-RUN: lldb-test symbols %T/SimpleTypesTest.cpp.typedefs.exe | FileCheck %s
+RUN: mkdir -p %t.dir
+RUN: %build --compiler=msvc --arch=32 --nodefaultlib --output=%t.dir/SimpleTypesTest.cpp.typedefs.exe %S/Inputs/SimpleTypesTest.cpp
+RUN: lldb-test symbols %t.dir/SimpleTypesTest.cpp.typedefs.exe | FileCheck %s
 
 ; Generate 32-bit target
 

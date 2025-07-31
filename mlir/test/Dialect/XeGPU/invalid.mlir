@@ -385,6 +385,74 @@ func.func @load_gather_vc_3(%src: ui64) {
 }
 
 // -----
+func.func @prefetch_offset_wi_1(%src: memref<4x4xf32>) {
+  %offsets = arith.constant dense<[0]> : vector<1xindex>
+  // expected-error@+1 {{Expecting the source is a 1D memref or pointer}}
+  xegpu.prefetch %src[%offsets]: memref<4x4xf32>, vector<1xindex>
+  return
+}
+
+// -----
+func.func @load_gather_offset_sg(%src: memref<?xf16>) {
+  %offsets = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %mask = arith.constant dense<1>: vector<8xi1>
+  // expected-error@+1 {{Mask should match value except the chunk size dim}}
+  %2 = xegpu.load %src[%offsets], %mask
+        : memref<?xf16>, vector<4xindex>, vector<8xi1>
+          -> vector<4x2xf16>
+  return
+}
+
+// -----
+func.func @load_gather_offset_wi(%src: ui64) {
+  %mask = arith.constant dense<1>: vector<1xi1>
+  %offsets = arith.constant dense<[0]> : vector<1xindex>
+  // expected-error@+1 {{value elements must match chunk size}}
+  %2 = xegpu.load %src[%offsets], %mask <{chunk_size = 2}> : ui64,  vector<1xindex>, vector<1xi1> -> vector<4xf32>
+  return
+}
+
+// -----
+func.func @store_scatter_offset_wi_1(%src: memref<?xf16>) {
+  %val = arith.constant dense<2.9>: vector<4xf16>
+  %offsets = arith.constant dense<[0]> : vector<1xindex>
+  %mask = arith.constant dense<1>: vector<1xi1>
+  // expected-error@+1 {{value elements must match chunk size}}
+  xegpu.store %val, %src[%offsets], %mask 
+        : vector<4xf16>, memref<?xf16>, vector<1xindex>, vector<1xi1>
+  return
+}
+
+// -----
+func.func @store_scatter_offset_wi_2(%src: memref<4x4xf16>) {
+  %val = arith.constant dense<2.9>: vector<4xf16>
+  %offsets = arith.constant dense<[0]> : vector<1xindex>
+  %mask = arith.constant dense<1>: vector<1xi1>
+  // expected-error@+1 {{Expecting the dest is a 1D memref or pointer}}
+  xegpu.store %val, %src[%offsets], %mask 
+        : vector<4xf16>, memref<4x4xf16>, vector<1xindex>, vector<1xi1>
+  return
+}
+
+// -----
+func.func @load_gather_offset_wi_2(%src: ui64) {
+  %mask = arith.constant dense<1>: vector<1xi1>
+  %offsets = arith.constant dense<[0]> : vector<1xindex>
+  // expected-error@+1 {{value elements must match chunk size}}
+  %2 = xegpu.load %src[%offsets], %mask <{chunk_size = 2}> : ui64,  vector<1xindex>, vector<1xi1> -> vector<4xf16>
+  return
+}
+
+// -----
+func.func @load_gather_offset_wi_1(%src: memref<4x4xf32>) {
+  %mask = arith.constant dense<1>: vector<1xi1>
+  %offsets = arith.constant dense<[0]> : vector<1xindex>
+  // expected-error@+1 {{Expecting the source is a 1D memref or pointer}}
+  %2 = xegpu.load %src[%offsets], %mask <{chunk_size = 2}> : memref<4x4xf32>,  vector<1xindex>, vector<1xi1> -> vector<2xf32>
+  return
+}
+
+// -----
 func.func @store_scatter_vc_1(%src: memref<24x32xf32>) {
   %0 = arith.constant dense<1>: vector<4xi1>
   %1 = arith.constant dense<2.9>: vector<4x2xf32>

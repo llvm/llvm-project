@@ -14,6 +14,7 @@
 #include "SourceCode.h"
 #include "index/Index.h"
 #include "support/Logger.h"
+#include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -389,6 +390,17 @@ private:
       // TemplatedDecl might be null, e.g. concepts.
       if (auto *TD = Templ->getTemplatedDecl())
         D = TD;
+    }
+
+    // FriendDecls don't act as DeclContexts, but they might wrap a function
+    // definition that won't be visible through other means in the AST. Hence
+    // unwrap it here instead.
+    if (auto *Friend = llvm::dyn_cast<FriendDecl>(D)) {
+      if (auto *Func =
+              llvm::dyn_cast_or_null<FunctionDecl>(Friend->getFriendDecl())) {
+        if (Func->isThisDeclarationADefinition())
+          D = Func;
+      }
     }
 
     VisitKind Visit = shouldVisit(D);

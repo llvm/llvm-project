@@ -52,6 +52,8 @@ struct CGPassBuilderOption {
   bool EnableMachineFunctionSplitter = false;
   bool EnableSinkAndFold = false;
   bool EnableTailMerge = true;
+  /// Enable LoopTermFold immediately after LSR.
+  bool EnableLoopTermFold = false;
   bool MISchedPostRA = false;
   bool EarlyLiveIntervals = false;
   bool GCEmptyBlocks = false;

@@ -16,6 +16,7 @@
 #include "Arch/SystemZ.h"
 #include "Hexagon.h"
 #include "PS4CPU.h"
+#include "ToolChains/Cuda.h"
 #include "clang/Basic/CLWarnings.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/HeaderInclude.h"

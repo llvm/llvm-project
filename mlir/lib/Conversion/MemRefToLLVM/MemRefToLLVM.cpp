@@ -24,11 +24,12 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/MathExtras.h"
+
 #include <optional>
 
 #define DEBUG_TYPE "memref-to-llvm"
-#define DBGS() llvm::dbgs() << "[" DEBUG_TYPE "] "
 
 namespace mlir {
 #define GEN_PASS_DEF_FINALIZEMEMREFTOLLVMCONVERSIONPASS
@@ -1848,8 +1849,8 @@ matchSimpleAtomicOp(memref::AtomicRMWOp atomicOp) {
     return LLVM::AtomicBinOp::xchg;
   case arith::AtomicRMWKind::maximumf:
     // TODO: remove this by end of 2025.
-    LLVM_DEBUG(DBGS() << "the lowering of memref.atomicrmw maximumf changed "
-                         "from fmax to fmaximum, expect more NaNs");
+    LDBG() << "the lowering of memref.atomicrmw maximumf changed "
+              "from fmax to fmaximum, expect more NaNs";
     return LLVM::AtomicBinOp::fmaximum;
   case arith::AtomicRMWKind::maxnumf:
     return LLVM::AtomicBinOp::fmax;
@@ -1859,8 +1860,8 @@ matchSimpleAtomicOp(memref::AtomicRMWOp atomicOp) {
     return LLVM::AtomicBinOp::umax;
   case arith::AtomicRMWKind::minimumf:
     // TODO: remove this by end of 2025.
-    LLVM_DEBUG(DBGS() << "the lowering of memref.atomicrmw minimum changed "
-                         "from fmin to fminimum, expect more NaNs");
+    LDBG() << "the lowering of memref.atomicrmw minimum changed "
+              "from fmin to fminimum, expect more NaNs";
     return LLVM::AtomicBinOp::fminimum;
   case arith::AtomicRMWKind::minnumf:
     return LLVM::AtomicBinOp::fmin;

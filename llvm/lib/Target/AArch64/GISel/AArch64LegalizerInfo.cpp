@@ -1650,6 +1650,12 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   };
+  auto LowerTriOp = [&MI, &MIB](unsigned Opcode) {
+    MIB.buildInstr(Opcode, {MI.getOperand(0)},
+                   {MI.getOperand(2), MI.getOperand(3), MI.getOperand(4)});
+    MI.eraseFromParent();
+    return true;
+  };
 
   Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
   switch (IntrinsicID) {
@@ -1828,6 +1834,10 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
       return LowerBinOp(TargetOpcode::G_USUBSAT);
     break;
   }
+  case Intrinsic::aarch64_neon_udot:
+    return LowerTriOp(AArch64::G_UDOT);
+  case Intrinsic::aarch64_neon_sdot:
+    return LowerTriOp(AArch64::G_SDOT);
 
   case Intrinsic::vector_reverse:
     // TODO: Add support for vector_reverse

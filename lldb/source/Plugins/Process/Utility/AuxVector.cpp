@@ -92,6 +92,8 @@ const char *AuxVector::GetEntryName(EntryType type) const {
     case ENTRY_NAME(AUXV_AT_L1D_CACHESHAPE); break;
     case ENTRY_NAME(AUXV_AT_L2_CACHESHAPE);  break;
     case ENTRY_NAME(AUXV_AT_L3_CACHESHAPE);  break;
+    case ENTRY_NAME(AUXV_FREEBSD_AT_HWCAP3);  break;
+    case ENTRY_NAME(AUXV_FREEBSD_AT_HWCAP4);  break;
     }
 #undef ENTRY_NAME
 

@@ -56,9 +56,7 @@ INITIALIZE_PASS(NVPTXDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 NVPTXDAGToDAGISel::NVPTXDAGToDAGISel(NVPTXTargetMachine &tm,
                                      CodeGenOptLevel OptLevel)
-    : SelectionDAGISel(tm, OptLevel), TM(tm) {
-  doMulWide = (OptLevel > CodeGenOptLevel::None);
-}
+    : SelectionDAGISel(tm, OptLevel), TM(tm) {}
 
 bool NVPTXDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<NVPTXSubtarget>();

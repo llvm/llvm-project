@@ -202,10 +202,9 @@ define <3 x i16> @v_uaddsat_v3i16(<3 x i16> %lhs, <3 x i16> %rhs) {
 ; GFX6-NEXT:    v_add_i32_e32 v2, vcc, v2, v5
 ; GFX6-NEXT:    v_min_u32_e32 v0, 0xffff, v0
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX6-NEXT:    v_min_u32_e32 v3, 0xffff, v2
+; GFX6-NEXT:    v_min_u32_e32 v2, 0xffff, v2
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v1
-; GFX6-NEXT:    v_or_b32_e32 v2, 0xffff0000, v3
-; GFX6-NEXT:    v_alignbit_b32 v1, v3, v1, 16
+; GFX6-NEXT:    v_alignbit_b32 v1, v2, v1, 16
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_uaddsat_v3i16:

@@ -211,7 +211,9 @@ MachineIRBuilder::buildPtrAdd(const DstOp &Res, const SrcOp &Op0,
 MachineInstrBuilder MachineIRBuilder::buildObjectPtrOffset(const DstOp &Res,
                                                            const SrcOp &Op0,
                                                            const SrcOp &Op1) {
-  return buildPtrAdd(Res, Op0, Op1, MachineInstr::MIFlag::NoUWrap);
+  return buildPtrAdd(Res, Op0, Op1,
+                     MachineInstr::MIFlag::NoUWrap |
+                         MachineInstr::MIFlag::InBounds);
 }
 
 std::optional<MachineInstrBuilder>
@@ -234,7 +236,8 @@ MachineIRBuilder::materializePtrAdd(Register &Res, Register Op0,
 std::optional<MachineInstrBuilder> MachineIRBuilder::materializeObjectPtrOffset(
     Register &Res, Register Op0, const LLT ValueTy, uint64_t Value) {
   return materializePtrAdd(Res, Op0, ValueTy, Value,
-                           MachineInstr::MIFlag::NoUWrap);
+                           MachineInstr::MIFlag::NoUWrap |
+                               MachineInstr::MIFlag::InBounds);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildMaskLowPtrBits(const DstOp &Res,

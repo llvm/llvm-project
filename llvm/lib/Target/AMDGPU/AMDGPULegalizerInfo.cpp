@@ -2312,8 +2312,8 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
         LLT::scalar(32), commonAlignment(Align(64), Offset));
 
     // Pointer address
-    B.buildPtrAdd(LoadAddr, KernargPtrReg,
-                  B.buildConstant(LLT::scalar(64), Offset).getReg(0));
+    B.buildObjectPtrOffset(LoadAddr, KernargPtrReg,
+                           B.buildConstant(LLT::scalar(64), Offset).getReg(0));
     // Load address
     return B.buildLoad(S32, LoadAddr, *MMO).getReg(0);
   }
@@ -2334,8 +2334,9 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
           MachineMemOperand::MOInvariant,
       LLT::scalar(32), commonAlignment(Align(64), StructOffset));
 
-  B.buildPtrAdd(LoadAddr, QueuePtr,
-                B.buildConstant(LLT::scalar(64), StructOffset).getReg(0));
+  B.buildObjectPtrOffset(
+      LoadAddr, QueuePtr,
+      B.buildConstant(LLT::scalar(64), StructOffset).getReg(0));
   return B.buildLoad(S32, LoadAddr, *MMO).getReg(0);
 }
 
@@ -4517,8 +4518,7 @@ Register AMDGPULegalizerInfo::getKernargParameterPtr(MachineIRBuilder &B,
     llvm_unreachable("failed to find kernarg segment ptr");
 
   auto COffset = B.buildConstant(LLT::scalar(64), Offset);
-  // TODO: Should get nuw
-  return B.buildPtrAdd(PtrTy, KernArgReg, COffset).getReg(0);
+  return B.buildObjectPtrOffset(PtrTy, KernArgReg, COffset).getReg(0);
 }
 
 /// Legalize a value that's loaded from kernel arguments. This is only used by
@@ -5693,8 +5693,8 @@ bool AMDGPULegalizerInfo::getImplicitArgPtr(Register DstReg,
                       AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR))
     return false;
 
-  // FIXME: This should be nuw
-  B.buildPtrAdd(DstReg, KernargPtrReg, B.buildConstant(IdxTy, Offset).getReg(0));
+  B.buildObjectPtrOffset(DstReg, KernargPtrReg,
+                         B.buildConstant(IdxTy, Offset).getReg(0));
   return true;
 }
 
@@ -7036,8 +7036,8 @@ bool AMDGPULegalizerInfo::legalizeTrapHsaQueuePtr(
     // Pointer address
     Register LoadAddr = MRI.createGenericVirtualRegister(
         LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64));
-    B.buildPtrAdd(LoadAddr, KernargPtrReg,
-                  B.buildConstant(LLT::scalar(64), Offset).getReg(0));
+    B.buildObjectPtrOffset(LoadAddr, KernargPtrReg,
+                           B.buildConstant(LLT::scalar(64), Offset).getReg(0));
     // Load address
     Register Temp = B.buildLoad(S64, LoadAddr, *MMO).getReg(0);
     B.buildCopy(SGPR01, Temp);

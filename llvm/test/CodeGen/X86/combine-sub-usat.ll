@@ -73,17 +73,17 @@ define <8 x i16> @combine_constfold_v8i16() {
 define <8 x i16> @combine_constfold_undef_v8i16() {
 ; SSE-LABEL: combine_constfold_undef_v8i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,0,0,0,65534,0,0,0]
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,0,u,0,65534,0,0,0]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_constfold_undef_v8i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,0,0,65534,0,0,0]
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,u,0,65534,0,0,0]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_constfold_undef_v8i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,0,0,65534,0,0,0]
+; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,u,0,65534,0,0,0]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: combine_constfold_undef_v8i16:

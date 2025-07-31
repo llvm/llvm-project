@@ -2,10 +2,10 @@
 # type, but that type is defined in another compile unit in the main object
 # file.
 
-# RUN: llvm-mc %s -o %t --triple=x86_64-pc-linux --filetype=obj --defsym MAIN=0
-# RUN: llvm-mc %s -o %T/dwo-type-in-main-file-cu2.dwo --triple=x86_64-pc-linux --filetype=obj --defsym DWO=0
-# RUN: cd %T
-# RUN: %lldb %t -o "target var a" -b 2>&1 | FileCheck %s
+# RUN: mkdir -p %t.dir
+# RUN: llvm-mc %s -o %t.dir/obj.o --triple=x86_64-pc-linux --filetype=obj --defsym MAIN=0
+# RUN: llvm-mc %s -o %t.dir/dwo-type-in-main-file-cu2.dwo --triple=x86_64-pc-linux --filetype=obj --defsym DWO=0
+# RUN: %lldb %t.dir/obj.o -o "target var a" -b 2>&1 | FileCheck %s
 
 # CHECK: (A) a = (b = 47)
 

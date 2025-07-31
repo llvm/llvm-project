@@ -13,7 +13,7 @@ define void @ZeroInit(ptr noalias sret(%struct.S) %agg.result) {
   ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; MIPS32-NEXT:   G_STORE [[C]](s32), [[COPY1]](p0) :: (store (s32) into %ir.x)
   ; MIPS32-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; MIPS32-NEXT:   %4:_(p0) = nuw nusw G_PTR_ADD [[COPY]], [[C1]](s32)
+  ; MIPS32-NEXT:   %4:_(p0) = nuw nusw inbounds G_PTR_ADD [[COPY]], [[C1]](s32)
   ; MIPS32-NEXT:   G_STORE [[C]](s32), %4(p0) :: (store (s32) into %ir.y)
   ; MIPS32-NEXT:   RetRA
 entry:

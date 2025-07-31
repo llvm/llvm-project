@@ -19,4 +19,12 @@ GlobalValueMap:
   15859245615183425489: # guid("internal")
     - Linkage: 7 # internal
       Live: true
+  1062103744896965210: # guid("alias1")
+    - Linkage: 4 # weak
+      Live: true
+      Aliasee: 16594175687743574550 # guid("external_addrtaken")
+  2510616090736846890: # guid("alias2")
+    - Linkage: 0 # weak
+      Live: true
+      Aliasee: 16594175687743574550 # guid("external_addrtaken")
 ...

@@ -438,6 +438,11 @@ namespace ReinterpretCast {
   struct U {
     int m : (long)(S*)6; // expected-warning {{constant expression}} expected-note {{reinterpret_cast}}
   };
+  void f();
+  constexpr void* fp1 = (void*)f; // expected-error {{constant expression}} expected-note {{reinterpret_cast}}
+  constexpr int* fp2 = (int*)f; // expected-error {{constant expression}} expected-note {{reinterpret_cast}}
+  constexpr int (*fp3)() = (int(*)())f; // expected-error {{constant expression}} expected-note {{reinterpret_cast}}
+  constexpr int (&fp4)() = (int(&)())f; // expected-error {{constant expression}} expected-note {{reinterpret_cast}}
 }
 
 // - a pseudo-destructor call (5.2.4);

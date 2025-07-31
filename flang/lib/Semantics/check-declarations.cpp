@@ -2081,7 +2081,7 @@ static bool ConflictsWithIntrinsicAssignment(const Procedure &proc) {
 }
 
 static bool ConflictsWithIntrinsicOperator(
-    const GenericKind &kind, const Procedure &proc) {
+    const GenericKind &kind, const Procedure &proc, SemanticsContext &context) {
   if (!kind.IsIntrinsicOperator()) {
     return false;
   }
@@ -2167,7 +2167,7 @@ bool CheckHelper::CheckDefinedOperator(SourceName opName, GenericKind kind,
     }
   } else if (!checkDefinedOperatorArgs(opName, specific, proc)) {
     return false; // error was reported
-  } else if (ConflictsWithIntrinsicOperator(kind, proc)) {
+  } else if (ConflictsWithIntrinsicOperator(kind, proc, context_)) {
     msg = "%s function '%s' conflicts with intrinsic operator"_err_en_US;
   }
   if (msg) {

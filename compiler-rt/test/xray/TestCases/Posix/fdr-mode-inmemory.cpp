@@ -1,12 +1,14 @@
 // RUN: %clangxx_xray -g -std=c++11 %s -o %t -fxray-modes=xray-fdr
-// RUN: rm -f fdr-inmemory-test-*
+// RUN: rm -rf %t.dir
+// RUN: mkdir -p %t.dir
+// RUN: cd %t.dir
 // RUN: XRAY_OPTIONS="patch_premain=false xray_logfile_base=fdr-inmemory-test- \
 // RUN:     verbosity=1" \
 // RUN: XRAY_FDR_OPTIONS="no_file_flush=true func_duration_threshold_us=0" \
 // RUN:     %run %t 2>&1 | FileCheck %s
-// RUN: FILES=`find %T -name 'fdr-inmemory-test-*' | wc -l`
+// RUN: FILES=`find %t.dir -name 'fdr-inmemory-test-*' | wc -l`
 // RUN: [ $FILES -eq 0 ]
-// RUN: rm -f fdr-inmemory-test-*
+// RUN: rm -rf %t.dir
 //
 // REQUIRES: built-in-llvm-tree
 

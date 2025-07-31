@@ -161,9 +161,6 @@ public:
     lock_.Take();
 #endif
     A &state{u_.emplace<A>(std::forward<X>(xs)...)};
-    if constexpr (!std::is_same_v<A, OpenStatementState>) {
-      state.mutableModes() = ConnectionState::modes;
-    }
     directAccessRecWasSet_ = false;
     io_.emplace(state);
     return *io_;

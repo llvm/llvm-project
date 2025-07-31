@@ -1758,6 +1758,48 @@ ModuleTranslation::convertParameterAttrs(LLVMFuncOp func, int argIdx,
   return attrBuilder;
 }
 
+LogicalResult ModuleTranslation::convertArgAndResultAttrs(
+    ArgAndResultAttrsOpInterface attrsOp, llvm::CallBase *call,
+    ArrayRef<unsigned> immArgPositions) {
+  // Convert the argument attributes.
+  if (ArrayAttr argAttrsArray = attrsOp.getArgAttrsAttr()) {
+    unsigned argAttrIdx = 0;
+    llvm::SmallDenseSet<unsigned> immArgPositionsSet(immArgPositions.begin(),
+                                                     immArgPositions.end());
+    for (unsigned argIdx : llvm::seq<unsigned>(call->arg_size())) {
+      if (argAttrIdx >= argAttrsArray.size())
+        break;
+      // Skip immediate arguments (they have no entries in argAttrsArray).
+      if (immArgPositionsSet.contains(argIdx))
+        continue;
+      // Skip empty argument attributes.
+      auto argAttrs = cast<DictionaryAttr>(argAttrsArray[argAttrIdx++]);
+      if (argAttrs.empty())
+        continue;
+      // Convert and add attributes to the call instruction.
+      FailureOr<llvm::AttrBuilder> attrBuilder =
+          convertParameterAttrs(attrsOp->getLoc(), argAttrs);
+      if (failed(attrBuilder))
+        return failure();
+      call->addParamAttrs(argIdx, *attrBuilder);
+    }
+  }
+
+  // Convert the result attributes.
+  if (ArrayAttr resAttrsArray = attrsOp.getResAttrsAttr()) {
+    if (!resAttrsArray.empty()) {
+      auto resAttrs = cast<DictionaryAttr>(resAttrsArray[0]);
+      FailureOr<llvm::AttrBuilder> attrBuilder =
+          convertParameterAttrs(attrsOp->getLoc(), resAttrs);
+      if (failed(attrBuilder))
+        return failure();
+      call->addRetAttrs(*attrBuilder);
+    }
+  }
+
+  return success();
+}
+
 FailureOr<llvm::AttrBuilder>
 ModuleTranslation::convertParameterAttrs(Location loc,
                                          DictionaryAttr paramAttrs) {

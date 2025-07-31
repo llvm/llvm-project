@@ -7843,20 +7843,43 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   }
   }
 
-  // Perform trivial constant folding.
-  if (SDValue SV = FoldConstantArithmetic(Opcode, DL, VT, {N1, N2}, Flags))
-    return SV;
+  if (N1.getOpcode() == ISD::POISON || N2.getOpcode() == ISD::POISON) {
+    switch (Opcode) {
+    case ISD::XOR:
+    case ISD::ADD:
+    case ISD::PTRADD:
+    case ISD::SUB:
+    case ISD::SIGN_EXTEND_INREG:
+    case ISD::UDIV:
+    case ISD::SDIV:
+    case ISD::UREM:
+    case ISD::SREM:
+    case ISD::MUL:
+    case ISD::AND:
+    case ISD::SSUBSAT:
+    case ISD::USUBSAT:
+    case ISD::UMIN:
+    case ISD::OR:
+    case ISD::SADDSAT:
+    case ISD::UADDSAT:
+    case ISD::UMAX:
+    case ISD::SMAX:
+    case ISD::SMIN:
+      // fold op(arg1, poison) -> poison, fold op(poison, arg2) -> poison.
+      return N2.getOpcode() == ISD::POISON ? N2 : N1;
+    }
+  }
 
   // Canonicalize an UNDEF to the RHS, even over a constant.
-  if (N1.isUndef()) {
+  if (N1.getOpcode() == ISD::UNDEF && N2.getOpcode() != ISD::UNDEF) {
     if (TLI->isCommutativeBinOp(Opcode)) {
       std::swap(N1, N2);
     } else {
       switch (Opcode) {
       case ISD::PTRADD:
       case ISD::SUB:
-        // fold op(undef, arg2) -> undef, fold op(poison, arg2) ->poison.
-        return N1.getOpcode() == ISD::POISON ? getPOISON(VT) : getUNDEF(VT);
+        // fold op(undef, non_undef_arg2) -> undef.
+        return N1;
       case ISD::SIGN_EXTEND_INREG:
       case ISD::UDIV:
       case ISD::SDIV:
@@ -7864,18 +7887,17 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       case ISD::SREM:
       case ISD::SSUBSAT:
       case ISD::USUBSAT:
-        // fold op(undef, arg2) -> 0, fold op(poison, arg2) -> poison.
-        return N1.getOpcode() == ISD::POISON ? getPOISON(VT)
-                                             : getConstant(0, DL, VT);
+        // fold op(undef, non_undef_arg2) -> 0.
+        return getConstant(0, DL, VT);
       }
     }
   }
 
   // Fold a bunch of operators when the RHS is undef.
-  if (N2.isUndef()) {
+  if (N2.getOpcode() == ISD::UNDEF) {
     switch (Opcode) {
     case ISD::XOR:
-      if (N1.isUndef())
+      if (N1.getOpcode() == ISD::UNDEF)
         // Handle undef ^ undef -> 0 special case. This is a common
         // idiom (misuse).
         return getConstant(0, DL, VT);
@@ -7883,28 +7905,47 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     case ISD::ADD:
     case ISD::PTRADD:
     case ISD::SUB:
+      // fold op(arg1, undef) -> undef.
+      return N2;
     case ISD::UDIV:
     case ISD::SDIV:
     case ISD::UREM:
     case ISD::SREM:
-      // fold op(arg1, undef) -> undef, fold op(arg1, poison) -> poison.
-      return N2.getOpcode() == ISD::POISON ? getPOISON(VT) : getUNDEF(VT);
+      // fold op(arg1, undef) -> poison.
+      return getPOISON(VT);
     case ISD::MUL:
     case ISD::AND:
     case ISD::SSUBSAT:
     case ISD::USUBSAT:
-      // fold op(arg1, undef) -> 0, fold op(arg1, poison) -> poison.
-      return N2.getOpcode() == ISD::POISON ? getPOISON(VT)
-                                           : getConstant(0, DL, VT);
+    case ISD::UMIN:
+      // fold op(undef, undef) -> undef, fold op(arg1, undef) -> 0.
+      return N1.getOpcode() == ISD::UNDEF ? N2 : getConstant(0, DL, VT);
     case ISD::OR:
     case ISD::SADDSAT:
     case ISD::UADDSAT:
-      // fold op(arg1, undef) -> an all-ones constant, fold op(arg1, poison) ->
-      // poison.
-      return N2.getOpcode() == ISD::POISON ? getPOISON(VT)
-                                           : getAllOnesConstant(DL, VT);
+    case ISD::UMAX:
+      // fold op(undef, undef) -> undef, fold op(arg1, undef) -> -1.
+      return N1.getOpcode() == ISD::UNDEF ? N2 : getAllOnesConstant(DL, VT);
+    case ISD::SMAX:
+      // fold op(undef, undef) -> undef, fold op(arg1, undef) -> MAX_INT.
+      return N1.getOpcode() == ISD::UNDEF
+                 ? N2
+                 : getConstant(
+                       APInt::getSignedMaxValue(VT.getScalarSizeInBits()), DL,
+                       VT);
+    case ISD::SMIN:
+      // fold op(undef, undef) -> undef, fold op(arg1, undef) -> MIN_INT.
+      return N1.getOpcode() == ISD::UNDEF
+                 ? N2
+                 : getConstant(
+                       APInt::getSignedMinValue(VT.getScalarSizeInBits()), DL,
+                       VT);
     }
   }
+
+  // Perform trivial constant folding.
+  if (SDValue SV = FoldConstantArithmetic(Opcode, DL, VT, {N1, N2}, Flags))
+    return SV;
 
   // Memoize this node if possible.
   SDNode *N;

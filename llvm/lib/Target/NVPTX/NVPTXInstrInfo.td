@@ -125,8 +125,6 @@ def doF32FTZ : Predicate<"useF32FTZ()">;
 def doNoF32FTZ : Predicate<"!useF32FTZ()">;
 def doRsqrtOpt : Predicate<"doRsqrtOpt()">;
 
-def doMulWide      : Predicate<"doMulWide">;
-
 def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
 def hasDotInstructions : Predicate<"Subtarget->hasDotInstructions()">;
@@ -836,36 +834,28 @@ def MULWIDES64 :
   BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, B32:$b), "mul.wide.s32">;
 def MULWIDES64Imm :
   BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, i32imm:$b), "mul.wide.s32">;
-def MULWIDES64Imm64 :
-  BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, i64imm:$b), "mul.wide.s32">;
 
 def MULWIDEU64 :
   BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, B32:$b), "mul.wide.u32">;
 def MULWIDEU64Imm :
   BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, i32imm:$b), "mul.wide.u32">;
-def MULWIDEU64Imm64 :
-  BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, i64imm:$b), "mul.wide.u32">;
 
 def MULWIDES32 :
   BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B16:$b), "mul.wide.s16">;
 def MULWIDES32Imm :
   BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, i16imm:$b), "mul.wide.s16">;
-def MULWIDES32Imm32 :
-  BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, i32imm:$b), "mul.wide.s16">;
 
 def MULWIDEU32 :
   BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B16:$b), "mul.wide.u16">;
 def MULWIDEU32Imm :
   BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, i16imm:$b), "mul.wide.u16">;
-def MULWIDEU32Imm32 :
-  BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, i32imm:$b), "mul.wide.u16">;
 
-def SDTMulWide : SDTypeProfile<1, 2, [SDTCisSameAs<1, 2>]>;
-def mul_wide_signed : SDNode<"NVPTXISD::MUL_WIDE_SIGNED", SDTMulWide>;
-def mul_wide_unsigned : SDNode<"NVPTXISD::MUL_WIDE_UNSIGNED", SDTMulWide>;
+def SDTMulWide : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>, SDTCisSameAs<1, 2>]>;
+def mul_wide_signed : SDNode<"NVPTXISD::MUL_WIDE_SIGNED", SDTMulWide, [SDNPCommutative]>;
+def mul_wide_unsigned : SDNode<"NVPTXISD::MUL_WIDE_UNSIGNED", SDTMulWide, [SDNPCommutative]>;
 
 // Matchers for signed, unsigned mul.wide ISD nodes.
-let Predicates = [doMulWide] in {
+let Predicates = [hasOptEnabled] in {
   def : Pat<(i32 (mul_wide_signed i16:$a, i16:$b)), (MULWIDES32 $a, $b)>;
   def : Pat<(i32 (mul_wide_signed i16:$a, imm:$b)), (MULWIDES32Imm $a, imm:$b)>;
   def : Pat<(i32 (mul_wide_unsigned i16:$a, i16:$b)), (MULWIDEU32 $a, $b)>;
@@ -875,85 +865,6 @@ let Predicates = [doMulWide] in {
   def : Pat<(i64 (mul_wide_signed i32:$a, imm:$b)), (MULWIDES64Imm $a, imm:$b)>;
   def : Pat<(i64 (mul_wide_unsigned i32:$a, i32:$b)), (MULWIDEU64 $a, $b)>;
   def : Pat<(i64 (mul_wide_unsigned i32:$a, imm:$b)), (MULWIDEU64Imm $a, imm:$b)>;
-}
-
-// Predicates used for converting some patterns to mul.wide.
-def SInt32Const : PatLeaf<(imm), [{
-  const APInt &v = N->getAPIntValue();
-  return v.isSignedIntN(32);
-}]>;
-
-def UInt32Const : PatLeaf<(imm), [{
-  const APInt &v = N->getAPIntValue();
-  return v.isIntN(32);
-}]>;
-
-def SInt16Const : PatLeaf<(imm), [{
-  const APInt &v = N->getAPIntValue();
-  return v.isSignedIntN(16);
-}]>;
-
-def UInt16Const : PatLeaf<(imm), [{
-  const APInt &v = N->getAPIntValue();
-  return v.isIntN(16);
-}]>;
-
-def IntConst_0_30 : PatLeaf<(imm), [{
-  // Check if 0 <= v < 31; only then will the result of (x << v) be an int32.
-  const APInt &v = N->getAPIntValue();
-  return v.sge(0) && v.slt(31);
-}]>;
-
-def IntConst_0_14 : PatLeaf<(imm), [{
-  // Check if 0 <= v < 15; only then will the result of (x << v) be an int16.
-  const APInt &v = N->getAPIntValue();
-  return v.sge(0) && v.slt(15);
-}]>;
-
-def SHL2MUL32 : SDNodeXForm<imm, [{
-  const APInt &v = N->getAPIntValue();
-  APInt temp(32, 1);
-  return CurDAG->getTargetConstant(temp.shl(v), SDLoc(N), MVT::i32);
-}]>;
-
-def SHL2MUL16 : SDNodeXForm<imm, [{
-  const APInt &v = N->getAPIntValue();
-  APInt temp(16, 1);
-  return CurDAG->getTargetConstant(temp.shl(v), SDLoc(N), MVT::i16);
-}]>;
-
-// Convert "sign/zero-extend, then shift left by an immediate" to mul.wide.
-let Predicates = [doMulWide] in {
-  def : Pat<(shl (sext i32:$a), (i32 IntConst_0_30:$b)),
-            (MULWIDES64Imm $a, (SHL2MUL32 $b))>;
-  def : Pat<(shl (zext i32:$a), (i32 IntConst_0_30:$b)),
-            (MULWIDEU64Imm $a, (SHL2MUL32 $b))>;
-
-  def : Pat<(shl (sext i16:$a), (i16 IntConst_0_14:$b)),
-            (MULWIDES32Imm $a, (SHL2MUL16 $b))>;
-  def : Pat<(shl (zext i16:$a), (i16 IntConst_0_14:$b)),
-            (MULWIDEU32Imm $a, (SHL2MUL16 $b))>;
-
-  // Convert "sign/zero-extend then multiply" to mul.wide.
-  def : Pat<(mul (sext i32:$a), (sext i32:$b)),
-            (MULWIDES64 $a, $b)>;
-  def : Pat<(mul (sext i32:$a), (i64 SInt32Const:$b)),
-            (MULWIDES64Imm64 $a, (i64 SInt32Const:$b))>;
-
-  def : Pat<(mul (zext i32:$a), (zext i32:$b)),
-            (MULWIDEU64 $a, $b)>;
-  def : Pat<(mul (zext i32:$a), (i64 UInt32Const:$b)),
-            (MULWIDEU64Imm64 $a, (i64 UInt32Const:$b))>;
-
-  def : Pat<(mul (sext i16:$a), (sext i16:$b)),
-            (MULWIDES32 $a, $b)>;
-  def : Pat<(mul (sext i16:$a), (i32 SInt16Const:$b)),
-            (MULWIDES32Imm32 $a, (i32 SInt16Const:$b))>;
-
-  def : Pat<(mul (zext i16:$a), (zext i16:$b)),
-            (MULWIDEU32 $a, $b)>;
-  def : Pat<(mul (zext i16:$a), (i32 UInt16Const:$b)),
-            (MULWIDEU32Imm32 $a, (i32 UInt16Const:$b))>;
 }
 
 //
@@ -989,6 +900,39 @@ let Predicates = [hasOptEnabled] in {
 defm MAD16 : MAD<"mad.lo.s16", i16, B16, i16imm>;
 defm MAD32 : MAD<"mad.lo.s32", i32, B32, i32imm>;
 defm MAD64 : MAD<"mad.lo.s64", i64, B64, i64imm>;
+}
+
+multiclass MAD_WIDE<string PtxSuffix, OneUse2 Op, RegTyInfo BigT, RegTyInfo SmallT> {
+  def rrr:
+    BasicNVPTXInst<(outs BigT.RC:$dst),
+              (ins SmallT.RC:$a, SmallT.RC:$b, BigT.RC:$c),
+              "mad.wide." # PtxSuffix,
+              [(set BigT.Ty:$dst, (add (Op SmallT.Ty:$a, SmallT.Ty:$b), BigT.Ty:$c))]>;
+  def rri:
+    BasicNVPTXInst<(outs BigT.RC:$dst),
+              (ins SmallT.RC:$a, SmallT.RC:$b, BigT.Imm:$c),
+              "mad.wide." # PtxSuffix,
+              [(set BigT.Ty:$dst, (add (Op SmallT.Ty:$a, SmallT.Ty:$b), imm:$c))]>;
+  def rir:
+    BasicNVPTXInst<(outs BigT.RC:$dst),
+              (ins SmallT.RC:$a, SmallT.Imm:$b, BigT.RC:$c),
+              "mad.wide." # PtxSuffix,
+              [(set BigT.Ty:$dst, (add (Op SmallT.Ty:$a, imm:$b), BigT.Ty:$c))]>;
+  def rii:
+    BasicNVPTXInst<(outs BigT.RC:$dst),
+              (ins SmallT.RC:$a, SmallT.Imm:$b, BigT.Imm:$c),
+              "mad.wide." # PtxSuffix,
+              [(set BigT.Ty:$dst, (add (Op SmallT.Ty:$a, imm:$b), imm:$c))]>;
+}
+
+def mul_wide_unsigned_oneuse : OneUse2<mul_wide_unsigned>;
+def mul_wide_signed_oneuse : OneUse2<mul_wide_signed>;
+
+let Predicates = [hasOptEnabled] in {
+defm MAD_WIDE_U16 : MAD_WIDE<"u16", mul_wide_unsigned_oneuse, I32RT, I16RT>;
+defm MAD_WIDE_S16 : MAD_WIDE<"s16", mul_wide_signed_oneuse, I32RT, I16RT>;
+defm MAD_WIDE_U32 : MAD_WIDE<"u32", mul_wide_unsigned_oneuse, I64RT, I32RT>;
+defm MAD_WIDE_S32 : MAD_WIDE<"s32", mul_wide_signed_oneuse, I64RT, I32RT>;
 }
 
 foreach t = [I16RT, I32RT, I64RT] in {
@@ -1516,20 +1460,19 @@ def : Pat<(i16 (sext_inreg (trunc (prmt i32:$s, 0, byte_extract_prmt:$sel, PrmtN
 
 
 // Byte extraction via shift/trunc/sext
-def : Pat<(i16 (sext_inreg (trunc i32:$s), i8)),
-          (CVT_s8_s32 $s, CvtNONE)>;
-def : Pat<(i16 (sext_inreg (trunc (srl i32:$s,  (i32 imm:$o))), i8)),
+def : Pat<(i16 (sext_inreg (trunc i32:$s), i8)), (CVT_s8_s32 $s, CvtNONE)>;
+def : Pat<(i16 (sext_inreg (trunc i64:$s), i8)), (CVT_s8_s64 $s, CvtNONE)>;
+
+def : Pat<(sext_inreg (srl i32:$s, (i32 imm:$o)), i8), (BFE_S32rii $s, imm:$o, 8)>;
+def : Pat<(sext_inreg (srl i64:$s, (i32 imm:$o)), i8), (BFE_S64rii $s, imm:$o, 8)>;
+
+def : Pat<(i16 (sext_inreg (trunc (srl i32:$s, (i32 imm:$o))), i8)),
           (CVT_s8_s32 (BFE_S32rii $s, imm:$o, 8), CvtNONE)>;
-def : Pat<(sext_inreg (srl i32:$s,  (i32 imm:$o)), i8),
-          (BFE_S32rii $s, imm:$o, 8)>;
+def : Pat<(i16 (sext_inreg (trunc (srl i64:$s, (i32 imm:$o))), i8)),
+          (CVT_s8_s64 (BFE_S64rii $s, imm:$o, 8), CvtNONE)>;
+
 def : Pat<(i16 (sra (i16 (trunc i32:$s)), (i32 8))),
           (CVT_s8_s32 (BFE_S32rii $s, 8, 8), CvtNONE)>;
-def : Pat<(sext_inreg (srl i64:$s,  (i32 imm:$o)), i8),
-          (BFE_S64rii $s, imm:$o, 8)>;
-def : Pat<(i16 (sext_inreg (trunc i64:$s), i8)),
-          (CVT_s8_s64 $s, CvtNONE)>;
-def : Pat<(i16 (sext_inreg (trunc (srl i64:$s,  (i32 imm:$o))), i8)),
-          (CVT_s8_s64 (BFE_S64rii $s, imm:$o, 8), CvtNONE)>;
 
 //-----------------------------------
 // Comparison instructions (setp, set)
@@ -1713,45 +1656,34 @@ def : Pat<(i64 frameindex:$fi), (LEA_ADDRi64 (to_tframeindex $fi), 0)>;
 //-----------------------------------
 // Comparison and Selection
 //-----------------------------------
+// TODO: These patterns seem very specific and brittle. We should try to find
+// a more general solution.
 
 def cond_signed : PatLeaf<(cond), [{
   return isSignedIntSetCC(N->get());
 }]>;
 
-def cond_not_signed : PatLeaf<(cond), [{
-  return !isSignedIntSetCC(N->get());
-}]>;
+// A 16-bit signed comparison of sign-extended byte extracts can be converted
+// to 32-bit comparison if we change the PRMT to sign-extend the extracted
+// bytes.
+def : Pat<(setcc (i16 (sext_inreg (trunc (prmt i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE)), i8)),
+                 (i16 (sext_inreg (trunc (prmt i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE)), i8)),
+                 cond_signed:$cc),
+          (SETP_i32rr (PRMT_B32rii i32:$a, 0, (to_sign_extend_selector $sel_a), PrmtNONE),
+                      (PRMT_B32rii i32:$b, 0, (to_sign_extend_selector $sel_b), PrmtNONE),
+                      (cond2cc $cc))>;
 
-// comparisons of i8 extracted with PRMT as i32
-// It's faster to do comparison directly on i32 extracted by PRMT,
-// instead of the long conversion and sign extending.
-def: Pat<(setcc (i16 (sext_inreg (i16 (trunc (prmt i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE))), i8)),
-                (i16 (sext_inreg (i16 (trunc (prmt i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE))), i8)),
-                cond_signed:$cc),
-         (SETP_i32rr (PRMT_B32rii i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE),
-                     (PRMT_B32rii i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE), 
-                     (cond2cc $cc))>;
+// A 16-bit comparison of truncated byte extracts can be be converted to 32-bit
+// comparison because we know that the truncate is just trancating off zeros
+// and that the most-significant byte is also zeros so the meaning of signed and
+// unsigned comparisons will not be changed.
+def : Pat<(setcc (i16 (trunc (prmt i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE))),
+                 (i16 (trunc (prmt i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE))),
+                 cond:$cc),
+          (SETP_i32rr (PRMT_B32rii i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE),
+                      (PRMT_B32rii i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE),
+                      (cond2cc $cc))>;
 
-def: Pat<(setcc (i16 (sext_inreg (trunc (prmt i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE)), i8)),
-                (i16 (sext_inreg (trunc (prmt i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE)), i8)),
-                cond_signed:$cc),
-         (SETP_i32rr (PRMT_B32rii i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE),
-                     (PRMT_B32rii i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE), 
-                     (cond2cc $cc))>;
-
-def: Pat<(setcc (i16 (trunc (prmt i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE))),
-                (i16 (trunc (prmt i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE))),
-                cond_signed:$cc),
-         (SETP_i32rr (PRMT_B32rii i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE),
-                     (PRMT_B32rii i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE),
-                     (cond2cc $cc))>;
-
-def: Pat<(setcc (i16 (trunc (prmt i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE))),
-                (i16 (trunc (prmt i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE))),
-                cond_not_signed:$cc),
-         (SETP_i32rr (PRMT_B32rii i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE),
-                     (PRMT_B32rii i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE), 
-                     (cond2cc $cc))>;
 
 def SDTDeclareArrayParam :
   SDTypeProfile<0, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisVT<2, i32>]>;
@@ -1830,6 +1762,18 @@ def : Pat<(declare_array_param externalsym:$a, imm:$align, imm:$size),
 def : Pat<(declare_scalar_param externalsym:$a, imm:$size),
           (DECLARE_PARAM_scalar (to_texternsym $a), imm:$size)>;
 
+// Call prototype wrapper, this is a dummy instruction that just prints it's
+// operand which is string defining the prototype.
+def SDTCallPrototype : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
+def CallPrototype :
+  SDNode<"NVPTXISD::CallPrototype", SDTCallPrototype,
+         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
+def ProtoIdent : Operand<i32> { let PrintMethod = "printProtoIdent"; }
+def CALL_PROTOTYPE :
+  NVPTXInst<(outs), (ins ProtoIdent:$ident),
+            "$ident", [(CallPrototype (i32 texternalsym:$ident))]>;
+
+
 foreach t = [I32RT, I64RT] in {
   defvar inst_name = "MOV" # t.Size # "_PARAM";
   def inst_name : BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$src), "mov.b" # t.Size>;
@@ -1848,6 +1792,32 @@ defm ProxyRegB1  : ProxyRegInst<"pred", B1>;
 defm ProxyRegB16 : ProxyRegInst<"b16",  B16>;
 defm ProxyRegB32 : ProxyRegInst<"b32",  B32>;
 defm ProxyRegB64 : ProxyRegInst<"b64",  B64>;
+
+
+// Callseq start and end
+
+// Note: these nodes are marked as SDNPMayStore and SDNPMayLoad because
+// they define the scope in which the declared params may be used. Therefore
+// we add these flags to ensure ld.param and st.param are not sunk or hoisted
+// out of that scope.
+
+def callseq_start : SDNode<"ISD::CALLSEQ_START",
+                           SDCallSeqStart<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>,
+                           [SDNPHasChain, SDNPOutGlue,
+                            SDNPSideEffect, SDNPMayStore, SDNPMayLoad]>;
+def callseq_end   : SDNode<"ISD::CALLSEQ_END",
+                           SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>,
+                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                            SDNPSideEffect, SDNPMayStore, SDNPMayLoad]>;
+
+def Callseq_Start :
+  NVPTXInst<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+            "\\{ // callseq $amt1, $amt2",
+            [(callseq_start timm:$amt1, timm:$amt2)]>;
+def Callseq_End :
+  NVPTXInst<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+            "\\} // callseq $amt1",
+            [(callseq_end timm:$amt1, timm:$amt2)]>;
 
 //
 // Load / Store Handling
@@ -2392,26 +2362,6 @@ def : Pat<(brcond i32:$a, bb:$target),
 def : Pat<(brcond (i1 (setne i1:$a, -1)), bb:$target),
           (CBranchOther $a, bb:$target)>;
 
-// Call
-def SDT_NVPTXCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>,
-                                            SDTCisVT<1, i32>]>;
-def SDT_NVPTXCallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
-
-def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_NVPTXCallSeqStart,
-                           [SDNPHasChain, SDNPOutGlue, SDNPSideEffect]>;
-def callseq_end   : SDNode<"ISD::CALLSEQ_END", SDT_NVPTXCallSeqEnd,
-                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                            SDNPSideEffect]>;
-
-def Callseq_Start :
-  NVPTXInst<(outs), (ins i32imm:$amt1, i32imm:$amt2),
-            "\\{ // callseq $amt1, $amt2",
-            [(callseq_start timm:$amt1, timm:$amt2)]>;
-def Callseq_End :
-  NVPTXInst<(outs), (ins i32imm:$amt1, i32imm:$amt2),
-            "\\} // callseq $amt1",
-            [(callseq_end timm:$amt1, timm:$amt2)]>;
-
 // trap instruction
 def trapinst : BasicNVPTXInst<(outs), (ins), "trap", [(trap)]>, Requires<[noPTXASUnreachableBug]>;
 // Emit an `exit` as well to convey to ptxas that `trap` exits the CFG.
@@ -2419,18 +2369,6 @@ def trapinst : BasicNVPTXInst<(outs), (ins), "trap", [(trap)]>, Requires<[noPTXA
 def trapexitinst : NVPTXInst<(outs), (ins), "trap; exit;", [(trap)]>, Requires<[hasPTXASUnreachableBug]>;
 // brkpt instruction
 def debugtrapinst : BasicNVPTXInst<(outs), (ins), "brkpt", [(debugtrap)]>;
-
-// Call prototype wrapper
-def SDTCallPrototype : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
-def CallPrototype :
-  SDNode<"NVPTXISD::CallPrototype", SDTCallPrototype,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def ProtoIdent : Operand<i32> {
-  let PrintMethod = "printProtoIdent";
-}
-def CALL_PROTOTYPE :
-  NVPTXInst<(outs), (ins ProtoIdent:$ident),
-            "$ident", [(CallPrototype (i32 texternalsym:$ident))]>;
 
 def SDTDynAllocaOp :
   SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>, SDTCisInt<1>, SDTCisVT<2, i32>]>;

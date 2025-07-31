@@ -25,11 +25,10 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "nvvm-to-llvm"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
-#define DBGSNL() (llvm::dbgs() << "\n")
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTNVVMTOLLVMPASS
@@ -52,17 +51,17 @@ struct PtxLowering
   LogicalResult matchAndRewrite(BasicPtxBuilderInterface op,
                                 PatternRewriter &rewriter) const override {
     if (op.hasIntrinsic()) {
-      LLVM_DEBUG(DBGS() << "Ptx Builder does not lower \n\t" << op << "\n");
+      LDBG() << "Ptx Builder does not lower \n\t" << op;
       return failure();
     }
 
     SmallVector<std::pair<Value, PTXRegisterMod>> asmValues;
-    LLVM_DEBUG(DBGS() << op.getPtx() << "\n");
+    LDBG() << op.getPtx();
     PtxBuilder generator(op, rewriter);
 
     op.getAsmValues(rewriter, asmValues);
     for (auto &[asmValue, modifier] : asmValues) {
-      LLVM_DEBUG(DBGSNL() << asmValue << "\t Modifier : " << &modifier);
+      LDBG() << asmValue << "\t Modifier : " << &modifier;
       generator.insertValue(asmValue, modifier);
     }
 

@@ -7,6 +7,7 @@
 typedef unsigned int uint;
 typedef unsigned short int ushort;
 typedef unsigned int __attribute__((ext_vector_type(2))) uint2;
+typedef __bf16 __attribute__((ext_vector_type(2))) bfloat2;
 typedef half __attribute__((ext_vector_type(2))) half2;
 
 // CHECK-LABEL: @test_setprio_inc_wg(
@@ -254,6 +255,33 @@ void test_cos_bf16(global __bf16* out, __bf16 a)
   *out = __builtin_amdgcn_cos_bf16(a);
 }
 
+// CHECK-LABEL: @test_cvt_sr_pk_bf16_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[SR_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B_ADDR]] to ptr
+// CHECK-NEXT:    [[SR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SR_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store float [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store float [[B:%.*]], ptr [[B_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[SR:%.*]], ptr [[SR_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[SR_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = call <2 x bfloat> @llvm.amdgcn.cvt.sr.pk.bf16.f32(float [[TMP0]], float [[TMP1]], i32 [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <2 x bfloat> [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_cvt_sr_pk_bf16_f32(global bfloat2* out, float a, float b, uint sr)
+{
+  *out = __builtin_amdgcn_cvt_sr_pk_bf16_f32(a, b, sr);
+}
+
 // CHECK-LABEL: @test_cvt_f16_fp8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
@@ -368,6 +396,144 @@ void test_cvt_pk_f16_fp8(global half2* out, short a)
 void test_cvt_pk_f16_bf8(global half2* out, short a)
 {
   out[0] = __builtin_amdgcn_cvt_pk_f16_bf8(a);
+}
+
+// CHECK-LABEL: @test_cvt_pk_bf8_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <2 x half>, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <2 x half> [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x half>, ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.amdgcn.cvt.pk.bf8.f16(<2 x half> [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i16 [[TMP1]], ptr addrspace(1) [[TMP2]], align 2
+// CHECK-NEXT:    ret void
+//
+void test_cvt_pk_bf8_f16(global short* out, half2 a)
+{
+  *out = __builtin_amdgcn_cvt_pk_bf8_f16(a);
+}
+
+// CHECK-LABEL: @test_cvt_pk_fp8_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <2 x half>, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <2 x half> [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x half>, ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.amdgcn.cvt.pk.fp8.f16(<2 x half> [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i16 [[TMP1]], ptr addrspace(1) [[TMP2]], align 2
+// CHECK-NEXT:    ret void
+//
+void test_cvt_pk_fp8_f16(global short* out, half2 a)
+{
+  *out = __builtin_amdgcn_cvt_pk_fp8_f16(a);
+}
+
+// CHECK-LABEL: @test_cvt_sr_bf8_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca half, align 2, addrspace(5)
+// CHECK-NEXT:    [[SR_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OLD_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    [[SR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SR_ADDR]] to ptr
+// CHECK-NEXT:    [[OLD_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OLD_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store half [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    store i32 [[SR:%.*]], ptr [[SR_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[OLD:%.*]], ptr [[OLD_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load half, ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SR_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[OLD_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.cvt.sr.bf8.f16(half [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
+// CHECK-NEXT:    [[TMP5:%.*]] = load half, ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[SR_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[OLD_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.cvt.sr.bf8.f16(half [[TMP5]], i32 [[TMP6]], i32 [[TMP7]], i32 1)
+// CHECK-NEXT:    [[TMP9:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP8]], ptr addrspace(1) [[TMP9]], align 4
+// CHECK-NEXT:    [[TMP10:%.*]] = load half, ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[SR_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[OLD_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.amdgcn.cvt.sr.bf8.f16(half [[TMP10]], i32 [[TMP11]], i32 [[TMP12]], i32 2)
+// CHECK-NEXT:    [[TMP14:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP13]], ptr addrspace(1) [[TMP14]], align 4
+// CHECK-NEXT:    [[TMP15:%.*]] = load half, ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[SR_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[OLD_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.amdgcn.cvt.sr.bf8.f16(half [[TMP15]], i32 [[TMP16]], i32 [[TMP17]], i32 3)
+// CHECK-NEXT:    [[TMP19:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP18]], ptr addrspace(1) [[TMP19]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_cvt_sr_bf8_f16(global int* out, half a, uint sr, int old)
+{
+  *out = __builtin_amdgcn_cvt_sr_bf8_f16(a, sr, old, 0);
+  *out = __builtin_amdgcn_cvt_sr_bf8_f16(a, sr, old, 1);
+  *out = __builtin_amdgcn_cvt_sr_bf8_f16(a, sr, old, 2);
+  *out = __builtin_amdgcn_cvt_sr_bf8_f16(a, sr, old, 3);
+}
+
+// CHECK-LABEL: @test_cvt_sr_fp8_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca half, align 2, addrspace(5)
+// CHECK-NEXT:    [[SR_ADDR:%.*]] = alloca i16, align 2, addrspace(5)
+// CHECK-NEXT:    [[OLD_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    [[SR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SR_ADDR]] to ptr
+// CHECK-NEXT:    [[OLD_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OLD_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store half [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    store i16 [[SR:%.*]], ptr [[SR_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    store i32 [[OLD:%.*]], ptr [[OLD_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load half, ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[SR_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP1]] to i32
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[OLD_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.cvt.sr.fp8.f16(half [[TMP0]], i32 [[CONV]], i32 [[TMP2]], i32 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
+// CHECK-NEXT:    [[TMP5:%.*]] = load half, ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP6:%.*]] = load i16, ptr [[SR_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[CONV1:%.*]] = sext i16 [[TMP6]] to i32
+// CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[OLD_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.cvt.sr.fp8.f16(half [[TMP5]], i32 [[CONV1]], i32 [[TMP7]], i32 1)
+// CHECK-NEXT:    [[TMP9:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP8]], ptr addrspace(1) [[TMP9]], align 4
+// CHECK-NEXT:    [[TMP10:%.*]] = load half, ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP11:%.*]] = load i16, ptr [[SR_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[CONV2:%.*]] = sext i16 [[TMP11]] to i32
+// CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[OLD_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.amdgcn.cvt.sr.fp8.f16(half [[TMP10]], i32 [[CONV2]], i32 [[TMP12]], i32 2)
+// CHECK-NEXT:    [[TMP14:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP13]], ptr addrspace(1) [[TMP14]], align 4
+// CHECK-NEXT:    [[TMP15:%.*]] = load half, ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP16:%.*]] = load i16, ptr [[SR_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[CONV3:%.*]] = sext i16 [[TMP16]] to i32
+// CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[OLD_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.amdgcn.cvt.sr.fp8.f16(half [[TMP15]], i32 [[CONV3]], i32 [[TMP17]], i32 3)
+// CHECK-NEXT:    [[TMP19:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP18]], ptr addrspace(1) [[TMP19]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_cvt_sr_fp8_f16(global int* out, half a, short sr, int old)
+{
+  *out = __builtin_amdgcn_cvt_sr_fp8_f16(a, sr, old, 0);
+  *out = __builtin_amdgcn_cvt_sr_fp8_f16(a, sr, old, 1);
+  *out = __builtin_amdgcn_cvt_sr_fp8_f16(a, sr, old, 2);
+  *out = __builtin_amdgcn_cvt_sr_fp8_f16(a, sr, old, 3);
 }
 
 // CHECK-LABEL: @test_sat_pk4_i4_i8(

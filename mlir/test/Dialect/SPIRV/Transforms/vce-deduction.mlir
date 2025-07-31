@@ -178,7 +178,7 @@ spirv.module Logical GLSL450 attributes {
 // Vulkan memory model requires SPV_KHR_vulkan_memory_model, which is enabled
 // implicitly by v1.5.
 
-// CHECK: requires #spirv.vce<v1.0, [VulkanMemoryModel], [SPV_KHR_vulkan_memory_model]>
+// CHECK: requires #spirv.vce<v1.5, [VulkanMemoryModel], [SPV_KHR_vulkan_memory_model]>
 spirv.module Logical Vulkan attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.5, [Shader, VulkanMemoryModel], []>, #spirv.resource_limits<>>

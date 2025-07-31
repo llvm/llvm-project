@@ -98,7 +98,7 @@ class ROCDL_IntrOp<string mnemonic, list<int> overloadedResults,
   LLVM_IntrOpBase<ROCDL_Dialect,  mnemonic,
     "amdgcn_" # !subst(".", "_", mnemonic), overloadedResults,
     overloadedOperands, traits, numResults, requiresAccessGroup,
-    requiresAliasAnalysis, 0, 0, immArgPositions, immArgAttrNames>;
+    requiresAliasAnalysis, 0, 0, 0, immArgPositions, immArgAttrNames>;
 
 // Subclass to save typing and ease readibility when there aren't overloaded
 // operands or memory accesses.
@@ -482,7 +482,7 @@ def ROCDLBufferLDS : LLVM_PointerInAddressSpace<3>;
 class ROCDL_LDS_Read_Tr_IntrOp<string mnemonic> :
   ROCDL_IntrOp<mnemonic, [1], [], [], 1, 0, 1> {
   dag args = (ins Arg<ROCDLBufferLDS, "", [MemRead]>:$ptr);
-  let arguments = !con(args, aliasAttrs);
+  let arguments = !con(args, baseArgs);
   let assemblyFormat = "$ptr attr-dict `:` type($ptr) `->` type($res)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
@@ -507,7 +507,7 @@ def ROCDL_LoadToLDSOp :
                  I32Attr:$size,
                  I32Attr:$offset,
                  I32Attr:$aux);
-  let arguments = !con(args, aliasAttrs);
+  let arguments = !con(args, baseArgs);
   let assemblyFormat = [{
     $globalPtr `,`  $ldsPtr `,` $size `,` $offset `,` $aux
     attr-dict `:` type($globalPtr)
@@ -526,7 +526,7 @@ def ROCDL_GlobalLoadLDSOp :
                  I32Attr:$size,
                  I32Attr:$offset,
                  I32Attr:$aux);
-  let arguments = !con(args, aliasAttrs);
+  let arguments = !con(args, baseArgs);
   let assemblyFormat = [{
     $globalPtr `,`  $ldsPtr `,` $size `,` $offset `,` $aux
     attr-dict
@@ -561,7 +561,7 @@ def ROCDL_RawPtrBufferLoadOp :
                   I32:$offset,
                   I32:$soffset,
                   I32:$aux);
-  let arguments = !con(args, aliasAttrs);
+  let arguments = !con(args, baseArgs);
   let assemblyFormat = "operands attr-dict `:` type($res)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
@@ -579,7 +579,7 @@ def ROCDL_RawPtrBufferLoadLdsOp :
                   I32:$soffset,
                   I32:$offset,
                   I32:$aux);
-  let arguments = !con(args, aliasAttrs);
+  let arguments = !con(args, baseArgs);
   let assemblyFormat = "operands attr-dict";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
@@ -595,7 +595,7 @@ def ROCDL_RawPtrBufferStoreOp :
                   I32:$offset,
                   I32:$soffset,
                   I32:$aux);
-  let arguments = !con(args, aliasAttrs);
+  let arguments = !con(args, baseArgs);
   let assemblyFormat = "operands attr-dict `:` type($vdata)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
@@ -614,7 +614,7 @@ def ROCDL_RawPtrBufferAtomicCmpSwap :
                   I32:$offset,
                   I32:$soffset,
                   I32:$aux);
-  let arguments = !con(args, aliasAttrs);
+  let arguments = !con(args, baseArgs);
   let assemblyFormat = "operands attr-dict `:` type($res)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
@@ -630,7 +630,7 @@ class ROCDL_RawPtrBufferAtomicNoRet<string op> :
                   I32:$offset,
                   I32:$soffset,
                   I32:$aux);
-  let arguments = !con(args, aliasAttrs);
+  let arguments = !con(args, baseArgs);
   let assemblyFormat = "operands attr-dict `:` type($vdata)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {

@@ -26,7 +26,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
 #include <numeric>
@@ -40,7 +40,6 @@ using llvm::divideFloorSigned;
 using llvm::mod;
 
 #define DEBUG_TYPE "affine-ops"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE << "]: ")
 
 #include "mlir/Dialect/Affine/IR/AffineOpsDialect.cpp.inc"
 
@@ -1062,11 +1061,8 @@ static LogicalResult replaceAffineMinBoundingBoxExpression(AffineMinOp minOp,
                                                            AffineMap *map,
                                                            ValueRange dims,
                                                            ValueRange syms) {
+  LDBG() << "replaceAffineMinBoundingBoxExpression: `" << minOp << "`";
   AffineMap affineMinMap = minOp.getAffineMap();
-
-  LLVM_DEBUG({
-    DBGS() << "replaceAffineMinBoundingBoxExpression: `" << minOp << "`\n";
-  });
 
   // Check the value is positive.
   for (unsigned i = 0, e = affineMinMap.getNumResults(); i < e; ++i) {

@@ -888,7 +888,8 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     }
 
     if (MI->isCandidateForAdditionalCallInfo()) {
-      if (DAG->getTarget().Options.EmitCallSiteInfo)
+      if (DAG->getTarget().Options.EmitCallSiteInfo ||
+          DAG->getTarget().Options.EmitCallGraphSection)
         MF.addCallSiteInfo(MI, DAG->getCallSiteInfo(Node));
 
       if (auto CalledGlobal = DAG->getCalledGlobal(Node))
