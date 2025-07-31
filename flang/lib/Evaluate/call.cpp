@@ -249,7 +249,7 @@ ProcedureRef::~ProcedureRef() {}
 void ProcedureRef::Deleter(ProcedureRef *p) { delete p; }
 
 void ProcedureRef::DetermineCopyInOut() {
-  if (!proc().GetSymbol()) {
+  if (!proc_.GetSymbol()) {
     return;
   }
   // Get folding context of the call site owner
