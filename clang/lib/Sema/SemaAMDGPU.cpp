@@ -105,14 +105,10 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_32x4B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_16x8B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_8x16B:
-  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_32x8B:
-  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_16x16B:
     return checkCoopAtomicFunctionCall(TheCall, /*IsStore=*/false);
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_32x4B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_16x8B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_8x16B:
-  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_32x8B:
-  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_16x16B:
     return checkCoopAtomicFunctionCall(TheCall, /*IsStore=*/true);
   default:
     return false;

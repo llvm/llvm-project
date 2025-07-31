@@ -46,26 +46,6 @@ v4i test_amdgcn_cooperative_atomic_load_8x16B_acq_rel(global v4i* gaddr)
   return __builtin_amdgcn_cooperative_atomic_load_8x16B(gaddr, __ATOMIC_ACQ_REL, ""); // expected-warning {{memory order argument to atomic operation is invalid}}
 }
 
-void test_amdgcn_cooperative_atomic_store_32x8B(global v2i* gaddr, v2i val, const char* syncscope)
-{
-  __builtin_amdgcn_cooperative_atomic_store_32x8B(gaddr, val, __ATOMIC_RELAXED, syncscope); // expected-error {{expression is not a string literal}}
-}
-
-v2i test_amdgcn_cooperative_atomic_load_32x8B(global v2i* gaddr, const char* syncscope)
-{
-  return __builtin_amdgcn_cooperative_atomic_load_32x8B(gaddr, __ATOMIC_RELAXED, syncscope); // expected-error {{expression is not a string literal}}
-}
-
-void test_amdgcn_cooperative_atomic_store_16x16B(global v4i* gaddr, v4i val, const char* syncscope)
-{
-  __builtin_amdgcn_cooperative_atomic_store_16x16B(gaddr, val, __ATOMIC_RELAXED, syncscope); // expected-error {{expression is not a string literal}}
-}
-
-v4i test_amdgcn_cooperative_atomic_load_16x16B(global v4i* gaddr, const char* syncscope)
-{
-  return __builtin_amdgcn_cooperative_atomic_load_16x16B(gaddr, __ATOMIC_RELAXED, syncscope); // expected-error {{expression is not a string literal}}
-}
-
 void test_amdgcn_cooperative_atomic_store_32x4B__sharedptr(local int* addr, int val)
 {
   __builtin_amdgcn_cooperative_atomic_store_32x4B(addr, val, __ATOMIC_RELAXED,  ""); // expected-error {{cooperative atomic requires a global or generic pointer}}
@@ -84,9 +64,4 @@ void test_amdgcn_cooperative_atomic_store_32x4B__acquire(int* addr, int ord, int
 void test_amdgcn_cooperative_atomic_store_32x4B__acq_rel(int* addr, int ord, int val)
 {
   __builtin_amdgcn_cooperative_atomic_store_32x4B(addr, val, __ATOMIC_ACQ_REL,  ""); // expected-warning {{memory order argument to atomic operation is invalid}}
-}
-
-void test_amdgcn_cooperative_atomic_store_32x8B_int64(global v2i* gaddr, long val)
-{
-  __builtin_amdgcn_cooperative_atomic_store_32x8B(gaddr, val, __ATOMIC_RELAXED, "agent"); // expected-error {{passing '__private long' to parameter of incompatible type '__attribute__((__vector_size__(2 * sizeof(int)))) int' (vector of 2 'int' values)}}
 }

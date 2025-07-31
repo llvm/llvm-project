@@ -6721,13 +6721,9 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::amdgcn_cooperative_atomic_load_32x4B:
   case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
   case Intrinsic::amdgcn_cooperative_atomic_load_8x16B:
-  case Intrinsic::amdgcn_cooperative_atomic_load_32x8B:
-  case Intrinsic::amdgcn_cooperative_atomic_load_16x16B:
   case Intrinsic::amdgcn_cooperative_atomic_store_32x4B:
   case Intrinsic::amdgcn_cooperative_atomic_store_16x8B:
-  case Intrinsic::amdgcn_cooperative_atomic_store_8x16B:
-  case Intrinsic::amdgcn_cooperative_atomic_store_32x8B:
-  case Intrinsic::amdgcn_cooperative_atomic_store_16x16B: {
+  case Intrinsic::amdgcn_cooperative_atomic_store_8x16B: {
     // Check we only use this intrinsic on the FLAT or GLOBAL address spaces.
     Value *PtrArg = Call.getArgOperand(0);
     const unsigned AS = PtrArg->getType()->getPointerAddressSpace();

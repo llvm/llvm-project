@@ -1591,13 +1591,6 @@ then this intrinsic causes undefined behavior.
 
     ``llvm.amdgcn.cooperative.atomic.load.8x16B``           8           16B          128B
 
-    ``llvm.amdgcn.cooperative.atomic.store.32x8B``          32          8B           256B
-
-    ``llvm.amdgcn.cooperative.atomic.load.32x8B``           32          8B           256B
-
-    ``llvm.amdgcn.cooperative.atomic.store.16x16B``         16          16B          256B
-
-    ``llvm.amdgcn.cooperative.atomic.load.16x16B``          16          16B          256B
     ======================================================= =========== ============ ==========
 
 The intrinsics are available for the global (``.p1`` suffix) and generic (``.p0`` suffix) address spaces.
@@ -16859,8 +16852,7 @@ to the same wave32.
 Only naturally-aligned, contiguous groups of lanes may be used;
 see :ref:`the table below<gfx125x-cooperative-atomic-intrinsics-table>` for the set of
 possible lane groups.
-128B cooperative atomics may be executed by more than one group per wave.
-256B cooperative atomics may be executed by only *one* group per wave.
+Cooperative atomics may be executed by more than one group per wave.
 Using an unsupported lane group, or using more lane groups per wave than the maximum will
 cause undefined behavior.
 
@@ -16894,13 +16886,6 @@ Using the intrinsic also causes undefined behavior if it loads or stores to addr
 
   ``llvm.amdgcn.cooperative.atomic.load.8x16B``           ``0-7``, ``8-15``, ``16-23``, ``24-31``
 
-  ``llvm.amdgcn.cooperative.atomic.store.32x8B``          ``0-31``
-
-  ``llvm.amdgcn.cooperative.atomic.load.32x8B``           ``0-31``
-
-  ``llvm.amdgcn.cooperative.atomic.store.16x16B``         ``0-15`` OR ``16-31``
-
-  ``llvm.amdgcn.cooperative.atomic.load.16x16B``          ``0-15`` OR ``16-31``
   ======================================================= =======================================
 
 .. _amdgpu-amdhsa-trap-handler-abi:

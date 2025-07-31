@@ -3798,10 +3798,6 @@ def int_amdgcn_cooperative_atomic_load_16x8B : AMDGPUCooperativeAtomicLoad<llvm_
 def int_amdgcn_cooperative_atomic_store_16x8B : AMDGPUCooperativeAtomicStore<llvm_v2i32_ty>;
 def int_amdgcn_cooperative_atomic_load_8x16B : AMDGPUCooperativeAtomicLoad<llvm_v4i32_ty>;
 def int_amdgcn_cooperative_atomic_store_8x16B : AMDGPUCooperativeAtomicStore<llvm_v4i32_ty>;
-def int_amdgcn_cooperative_atomic_load_32x8B : AMDGPUCooperativeAtomicLoad<llvm_v2i32_ty>;
-def int_amdgcn_cooperative_atomic_store_32x8B : AMDGPUCooperativeAtomicStore<llvm_v2i32_ty>;
-def int_amdgcn_cooperative_atomic_load_16x16B : AMDGPUCooperativeAtomicLoad<llvm_v4i32_ty>;
-def int_amdgcn_cooperative_atomic_store_16x16B : AMDGPUCooperativeAtomicStore<llvm_v4i32_ty>;
 
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend

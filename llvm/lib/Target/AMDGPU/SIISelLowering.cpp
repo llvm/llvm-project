@@ -1276,17 +1276,13 @@ static unsigned getIntrMemWidth(unsigned IntrID) {
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
   case Intrinsic::amdgcn_global_store_async_from_lds_b64:
   case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
-  case Intrinsic::amdgcn_cooperative_atomic_load_32x8B:
   case Intrinsic::amdgcn_cooperative_atomic_store_16x8B:
-  case Intrinsic::amdgcn_cooperative_atomic_store_32x8B:
     return 64;
   case Intrinsic::amdgcn_global_load_async_to_lds_b128:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b128:
   case Intrinsic::amdgcn_global_store_async_from_lds_b128:
   case Intrinsic::amdgcn_cooperative_atomic_load_8x16B:
   case Intrinsic::amdgcn_cooperative_atomic_store_8x16B:
-  case Intrinsic::amdgcn_cooperative_atomic_load_16x16B:
-  case Intrinsic::amdgcn_cooperative_atomic_store_16x16B:
     return 128;
   default:
     llvm_unreachable("Unknown width");
@@ -1573,9 +1569,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   }
   case Intrinsic::amdgcn_cooperative_atomic_load_32x4B:
   case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
-  case Intrinsic::amdgcn_cooperative_atomic_load_8x16B:
-  case Intrinsic::amdgcn_cooperative_atomic_load_32x8B:
-  case Intrinsic::amdgcn_cooperative_atomic_load_16x16B: {
+  case Intrinsic::amdgcn_cooperative_atomic_load_8x16B: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
     Info.ptrVal = CI.getOperand(0);
@@ -1585,9 +1579,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   }
   case Intrinsic::amdgcn_cooperative_atomic_store_32x4B:
   case Intrinsic::amdgcn_cooperative_atomic_store_16x8B:
-  case Intrinsic::amdgcn_cooperative_atomic_store_8x16B:
-  case Intrinsic::amdgcn_cooperative_atomic_store_32x8B:
-  case Intrinsic::amdgcn_cooperative_atomic_store_16x16B: {
+  case Intrinsic::amdgcn_cooperative_atomic_store_8x16B: {
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
     Info.ptrVal = CI.getArgOperand(0);
@@ -10517,9 +10509,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   }
   case Intrinsic::amdgcn_cooperative_atomic_load_32x4B:
   case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
-  case Intrinsic::amdgcn_cooperative_atomic_load_8x16B:
-  case Intrinsic::amdgcn_cooperative_atomic_load_32x8B:
-  case Intrinsic::amdgcn_cooperative_atomic_load_16x16B: {
+  case Intrinsic::amdgcn_cooperative_atomic_load_8x16B: {
     MemIntrinsicSDNode *MII = cast<MemIntrinsicSDNode>(Op);
     SDValue Chain = Op->getOperand(0);
     SDValue Ptr = Op->getOperand(2);
@@ -11201,9 +11191,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   }
   case Intrinsic::amdgcn_cooperative_atomic_store_32x4B:
   case Intrinsic::amdgcn_cooperative_atomic_store_16x8B:
-  case Intrinsic::amdgcn_cooperative_atomic_store_8x16B:
-  case Intrinsic::amdgcn_cooperative_atomic_store_32x8B:
-  case Intrinsic::amdgcn_cooperative_atomic_store_16x16B: {
+  case Intrinsic::amdgcn_cooperative_atomic_store_8x16B: {
     MemIntrinsicSDNode *MII = cast<MemIntrinsicSDNode>(Op);
     SDValue Chain = Op->getOperand(0);
     SDValue Ptr = Op->getOperand(2);
