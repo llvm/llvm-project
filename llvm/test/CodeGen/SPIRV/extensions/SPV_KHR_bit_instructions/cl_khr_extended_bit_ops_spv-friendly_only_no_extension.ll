@@ -4,29 +4,13 @@
 ; CHECK-NO-EXTENSION-NOT: Capability BitInstructions 
 ; CHECK-NO-EXTENSION-NOT: Extension "SPV_KHR_bit_instructions"
 ; CHECK-NO-EXTENSION: Capability Shader 
-;
-; OpenCL equivalent.
-; kernel void testBitReverse_SPIRVFriendly(long4 b, global long4 *res) {
-;   *res = bit_reverse(b);
-; }
-define spir_kernel void @testBitReverse_SPIRVFriendly(<4 x i64> %b, ptr addrspace(1) nocapture align 32 %res) #3 {
+
+define internal spir_func void @testBitReverse_SPIRVFriendly() #3 {
 entry:
-  %call = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> %b)
-  store <4 x i64> %call, ptr addrspace(1) %res, align 32
+  %call = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> <i64 1, i64 2, i64 3, i64 4>)
   ret void
 }
 
-declare <4 x i64> @llvm.bitreverse.v4i64(<4 x i64>) #4
-
+declare <4 x i64> @llvm.bitreverse.v4i64(<4 x i64>)
 
 attributes #3 = { nounwind "hlsl.shader"="compute" }
-attributes #4 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-
-!llvm.module.flags = !{!0}
-!opencl.ocl.version = !{!1}
-!opencl.spir.version = !{!1}
-!llvm.ident = !{!2}
-
-!0 = !{i32 1, !"wchar_size", i32 4}
-!1 = !{i32 2, i32 0}
-!2 = !{!"clang version 20.0.0git (https://github.com/llvm/llvm-project.git cc61409d353a40f62d3a137f3c7436aa00df779d)"}

@@ -1,4 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s --spirv-ext=+SPV_KHR_bit_instructions -o - | FileCheck %s --check-prefix=CHECK-EXTENSION
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64v1.2-unknown-unknown %s --spirv-ext=+SPV_KHR_bit_instructions -o - -filetype=obj | spirv-val --target-env opencl2.2 %}
 
 ; CHECK-EXTENSION:      OpCapability BitInstructions
 ; CHECK-EXTENSION-NEXT: OpExtension "SPV_KHR_bit_instructions"
