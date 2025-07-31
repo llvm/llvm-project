@@ -106,7 +106,7 @@ exit:
 
 define void @loop_contains_store_safe_dependency(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(96) %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_safe_dependency'
-; CHECK:       LV: Not vectorizing: No dependencies allowed for early exit condition load.
+; CHECK:       LV: Not vectorizing: No dependencies allowed for critical early exit condition load in a loop with side effects.
 entry:
   %pred.plus.8 = getelementptr inbounds nuw i16, ptr %pred, i64 8
   br label %for.body
