@@ -2350,9 +2350,10 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
   auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc());
   EVLPhi->insertAfter(CanonicalIVPHI);
   VPBuilder Builder(Header, Header->getFirstNonPhi());
-  // Create the AVL, starting from TC -> 0 in steps of EVL.
-  VPPhi *AVLPhi =
-      Builder.createScalarPhi({Plan.getTripCount()}, DebugLoc(), "avl");
+  // Create the AVL (application vector length), starting from TC -> 0 in steps
+  // of EVL.
+  VPPhi *AVLPhi = Builder.createScalarPhi(
+      {Plan.getTripCount()}, DebugLoc::getCompilerGenerated(), "avl");
   VPValue *AVL = AVLPhi;
 
   if (MaxSafeElements) {
@@ -2383,7 +2384,7 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
 
   VPValue *NextAVL = Builder.createOverflowingOp(
       Instruction::Sub, {AVLPhi, OpVPEVL}, {/*hasNUW=*/true, /*hasNSW=*/false},
-      DebugLoc(), "avl.next");
+      DebugLoc::getCompilerGenerated(), "avl.next");
   AVLPhi->addOperand(NextAVL);
 
   transformRecipestoEVLRecipes(Plan, *VPEVL);
