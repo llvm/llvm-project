@@ -25468,8 +25468,12 @@ static SDValue performCSELCombine(SDNode *N,
   }
 
   // CSEL a, b, cc, SUBS(SUB(x,y), 0) -> CSEL a, b, cc, SUBS(x,y) if cc doesn't
-  // use overflow flags to avoid the comparison with zero.
-  if (Cond.getOpcode() == AArch64ISD::SUBS &&
+  // use overflow flags, to avoid the comparison with zero. In case of success,
+  // this also replaces the original SUB(x,y) with the newly created SUBS(x,y).
+  // NOTE: Perhaps in the future use performFlagSettingCombine to replace SUB
+  // nodes with their SUBS equivalent as is already done for other flag-setting
+  // operators, in which case doing the replacement here becomes redundant.
+  if (Cond.getOpcode() == AArch64ISD::SUBS && Cond->hasNUsesOfValue(1, 1) &&
       isNullConstant(Cond.getOperand(1))) {
     SDValue Sub = Cond.getOperand(0);
     AArch64CC::CondCode CC =
@@ -25480,8 +25484,9 @@ static SDValue performCSELCombine(SDNode *N,
       SDLoc DL(N);
       SDValue Subs = DAG.getNode(AArch64ISD::SUBS, DL, Cond->getVTList(),
                                  Sub.getOperand(0), Sub.getOperand(1));
-      return DAG.getNode(AArch64ISD::CSEL, DL, N->getVTList(), N->getOperand(0),
-                         N->getOperand(1), N->getOperand(2), Subs.getValue(1));
+      DCI.CombineTo(Sub.getNode(), Subs);
+      DCI.CombineTo(Cond.getNode(), Subs, Subs.getValue(1));
+      return SDValue(N, 0);
     }
   }
 
