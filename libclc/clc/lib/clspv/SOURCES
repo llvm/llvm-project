@@ -1,1 +1,2 @@
 math/clc_sw_fma.cl
+integer/clc_mul_hi.cl

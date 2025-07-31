@@ -36,13 +36,13 @@
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/GenericLoopInfoImpl.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
 // Explicitly instantiate methods in LoopInfoImpl.h for IR-level Loops.
-template class llvm::LoopBase<BasicBlock, Loop>;
-template class llvm::LoopInfoBase<BasicBlock, Loop>;
+template class LLVM_EXPORT_TEMPLATE llvm::LoopBase<BasicBlock, Loop>;
+template class LLVM_EXPORT_TEMPLATE llvm::LoopInfoBase<BasicBlock, Loop>;
 
 // Always verify loopinfo if expensive checking is enabled.
 #ifdef EXPENSIVE_CHECKS
@@ -1210,9 +1210,7 @@ MDNode *llvm::makePostTransformationMetadata(LLVMContext &Context,
 // LoopInfo implementation
 //
 
-LoopInfoWrapperPass::LoopInfoWrapperPass() : FunctionPass(ID) {
-  initializeLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+LoopInfoWrapperPass::LoopInfoWrapperPass() : FunctionPass(ID) {}
 
 char LoopInfoWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopInfoWrapperPass, "loops", "Natural Loop Information",

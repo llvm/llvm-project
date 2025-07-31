@@ -74,8 +74,7 @@ ExprResult SemaObjC::ParseObjCStringLiteral(SourceLocation *AtLocs,
         CAT->getElementType(), llvm::APInt(32, StrBuf.size() + 1), nullptr,
         CAT->getSizeModifier(), CAT->getIndexTypeCVRQualifiers());
     S = StringLiteral::Create(Context, StrBuf, StringLiteralKind::Ordinary,
-                              /*Pascal=*/false, StrTy, &StrLocs[0],
-                              StrLocs.size());
+                              /*Pascal=*/false, StrTy, StrLocs);
   }
 
   return BuildObjCStringLiteral(AtLocs[0], S);
@@ -1894,7 +1893,7 @@ bool SemaObjC::CheckMessageArgumentTypes(
         continue;
 
       ExprResult Arg = SemaRef.DefaultVariadicArgumentPromotion(
-          Args[i], Sema::VariadicMethod, nullptr);
+          Args[i], VariadicCallType::Method, nullptr);
       IsError |= Arg.isInvalid();
       Args[i] = Arg.get();
     }
@@ -1980,6 +1979,7 @@ ExprResult SemaObjC::HandleExprPropertyRefExpr(
     SourceLocation SuperLoc, QualType SuperType, bool Super) {
   ASTContext &Context = getASTContext();
   const ObjCInterfaceType *IFaceT = OPT->getInterfaceType();
+  assert(IFaceT && "Expected an Interface");
   ObjCInterfaceDecl *IFace = IFaceT->getDecl();
 
   if (!MemberName.isIdentifier()) {
@@ -2103,7 +2103,8 @@ ExprResult SemaObjC::HandleExprPropertyRefExpr(
   DeclFilterCCC<ObjCPropertyDecl> CCC{};
   if (TypoCorrection Corrected = SemaRef.CorrectTypo(
           DeclarationNameInfo(MemberName, MemberLoc), Sema::LookupOrdinaryName,
-          nullptr, nullptr, CCC, Sema::CTK_ErrorRecovery, IFace, false, OPT)) {
+          nullptr, nullptr, CCC, CorrectTypoKind::ErrorRecovery, IFace, false,
+          OPT)) {
     DeclarationName TypoResult = Corrected.getCorrection();
     if (TypoResult.isIdentifier() &&
         TypoResult.getAsIdentifierInfo() == Member) {
@@ -2297,7 +2298,7 @@ SemaObjC::getObjCMessageKind(Scope *S, IdentifierInfo *Name,
   SemaRef.LookupName(Result, S);
 
   switch (Result.getResultKind()) {
-  case LookupResult::NotFound:
+  case LookupResultKind::NotFound:
     // Normal name lookup didn't find anything. If we're in an
     // Objective-C method, look for ivars. If we find one, we're done!
     // FIXME: This is a hack. Ivar lookup should be part of normal
@@ -2317,14 +2318,14 @@ SemaObjC::getObjCMessageKind(Scope *S, IdentifierInfo *Name,
     // Break out; we'll perform typo correction below.
     break;
 
-  case LookupResult::NotFoundInCurrentInstantiation:
-  case LookupResult::FoundOverloaded:
-  case LookupResult::FoundUnresolvedValue:
-  case LookupResult::Ambiguous:
+  case LookupResultKind::NotFoundInCurrentInstantiation:
+  case LookupResultKind::FoundOverloaded:
+  case LookupResultKind::FoundUnresolvedValue:
+  case LookupResultKind::Ambiguous:
     Result.suppressDiagnostics();
     return ObjCInstanceMessage;
 
-  case LookupResult::Found: {
+  case LookupResultKind::Found: {
     // If the identifier is a class or not, and there is a trailing dot,
     // it's an instance message.
     if (HasTrailingDot)
@@ -2353,7 +2354,7 @@ SemaObjC::getObjCMessageKind(Scope *S, IdentifierInfo *Name,
   ObjCInterfaceOrSuperCCC CCC(SemaRef.getCurMethodDecl());
   if (TypoCorrection Corrected = SemaRef.CorrectTypo(
           Result.getLookupNameInfo(), Result.getLookupKind(), S, nullptr, CCC,
-          Sema::CTK_ErrorRecovery, nullptr, false, nullptr, false)) {
+          CorrectTypoKind::ErrorRecovery, nullptr, false, nullptr, false)) {
     if (Corrected.isKeyword()) {
       // If we've found the keyword "super" (the only keyword that would be
       // returned by CorrectTypo), this is a send to super.
@@ -4388,7 +4389,7 @@ SemaObjC::ARCConversionResult
 SemaObjC::CheckObjCConversion(SourceRange castRange, QualType castType,
                               Expr *&castExpr, CheckedConversionKind CCK,
                               bool Diagnose, bool DiagnoseCFAudited,
-                              BinaryOperatorKind Opc) {
+                              BinaryOperatorKind Opc, bool IsReinterpretCast) {
   ASTContext &Context = getASTContext();
   QualType castExprType = castExpr->getType();
 
@@ -4448,13 +4449,17 @@ SemaObjC::CheckObjCConversion(SourceRange castRange, QualType castType,
   // must be explicit.
   // Allow conversions between pointers to lifetime types and coreFoundation
   // pointers too, but only when the conversions are explicit.
+  // Allow conversions requested with a reinterpret_cast that converts an
+  // expression of type T* to type U*.
   if (exprACTC == ACTC_indirectRetainable &&
       (castACTC == ACTC_voidPtr ||
-       (castACTC == ACTC_coreFoundation && SemaRef.isCast(CCK))))
+       (castACTC == ACTC_coreFoundation && SemaRef.isCast(CCK)) ||
+       (IsReinterpretCast && effCastType->isAnyPointerType())))
     return ACR_okay;
   if (castACTC == ACTC_indirectRetainable &&
-      (exprACTC == ACTC_voidPtr || exprACTC == ACTC_coreFoundation) &&
-      SemaRef.isCast(CCK))
+      (((exprACTC == ACTC_voidPtr || exprACTC == ACTC_coreFoundation) &&
+        SemaRef.isCast(CCK)) ||
+       (IsReinterpretCast && castExprType->isAnyPointerType())))
     return ACR_okay;
 
   switch (ARCCastChecker(Context, exprACTC, castACTC, false).Visit(castExpr)) {
@@ -5149,7 +5154,8 @@ ExprResult SemaObjC::ActOnObjCAvailabilityCheckExpr(
     SourceLocation RParen) {
   ASTContext &Context = getASTContext();
   auto FindSpecVersion =
-      [&](StringRef Platform) -> std::optional<VersionTuple> {
+      [&](StringRef Platform,
+          const llvm::Triple::OSType &OS) -> std::optional<VersionTuple> {
     auto Spec = llvm::find_if(AvailSpecs, [&](const AvailabilitySpec &Spec) {
       return Spec.getPlatform() == Platform;
     });
@@ -5162,12 +5168,16 @@ ExprResult SemaObjC::ActOnObjCAvailabilityCheckExpr(
     }
     if (Spec == AvailSpecs.end())
       return std::nullopt;
-    return Spec->getVersion();
+
+    return llvm::Triple::getCanonicalVersionForOS(
+        OS, Spec->getVersion(),
+        llvm::Triple::isValidVersionForOS(OS, Spec->getVersion()));
   };
 
   VersionTuple Version;
   if (auto MaybeVersion =
-          FindSpecVersion(Context.getTargetInfo().getPlatformName()))
+          FindSpecVersion(Context.getTargetInfo().getPlatformName(),
+                          Context.getTargetInfo().getTriple().getOS()))
     Version = *MaybeVersion;
 
   // The use of `@available` in the enclosing context should be analyzed to

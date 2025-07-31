@@ -1,6 +1,6 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   func.func @_QQmain() attributes {fir.bindc_name = "mn"} {
     %0 = fir.alloca i32 {bindc_name = "i4", uniq_name = "_QFEi4"}
     %1 = fircg.ext_declare %0 {uniq_name = "_QFEi4"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc1)

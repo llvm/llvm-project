@@ -9,7 +9,7 @@ define dso_local void @t0(ptr %a) {
 
 ; CHECK-LABEL: llvm.func @llvm.aarch64.ldxr.p0(!llvm.ptr)
 ; CHECK-LABEL: llvm.func @t0
-; CHECK:   llvm.call_intrinsic "llvm.aarch64.ldxr.p0"({{.*}}) : (!llvm.ptr) -> i64
+; CHECK:   llvm.call_intrinsic "llvm.aarch64.ldxr.p0"({{.*}}) : (!llvm.ptr {llvm.elementtype = i8}) -> i64
 ; CHECK:   llvm.return
 ; CHECK: }
 
@@ -37,7 +37,7 @@ define dso_local void @t2(<8 x i8> %lhs, <8 x i8> %rhs, ptr %a) {
 }
 
 ; CHECK: llvm.func @t2(%[[A0:.*]]: vector<8xi8>, %[[A1:.*]]: vector<8xi8>, %[[A2:.*]]: !llvm.ptr) {{.*}} {
-; CHECK:   llvm.call_intrinsic "llvm.aarch64.neon.st2.v8i8.p0"(%[[A0]], %[[A1]], %[[A2]]) : (vector<8xi8>, vector<8xi8>, !llvm.ptr) -> !llvm.void
+; CHECK:   llvm.call_intrinsic "llvm.aarch64.neon.st2.v8i8.p0"(%[[A0]], %[[A1]], %[[A2]]) : (vector<8xi8>, vector<8xi8>, !llvm.ptr) -> ()
 ; CHECK:   llvm.return
 ; CHECK: }
 
@@ -51,7 +51,7 @@ define void @gctest() gc "example" {
 }
 
 ; CHECK-LABEL: @gctest
-; CHECK: llvm.call_intrinsic "llvm.gcroot"({{.*}}, {{.*}}) : (!llvm.ptr, !llvm.ptr) -> !llvm.void
+; CHECK: llvm.call_intrinsic "llvm.gcroot"({{.*}}, {{.*}}) : (!llvm.ptr, !llvm.ptr) -> ()
 
 ; // -----
 
@@ -65,4 +65,15 @@ define void @lround_test(float %0, double %1) {
   ; CHECK: llvm.intr.lround(%{{.*}}) : (f32) -> i32
   %3 = call i32 @llvm.lround.i32.f32(float %0)
   ret void
+}
+
+; // -----
+
+declare i32 @llvm.riscv.sha256sig0(i32)
+
+; CHECK-LABEL: test_intrin_arg_attr
+define signext i32 @test_intrin_arg_attr(i32 signext %a) nounwind {
+    ; CHECK: llvm.call_intrinsic "llvm.riscv.sha256sig0"({{.*}}) : (i32 {llvm.signext}) -> i32
+    %val = call i32 @llvm.riscv.sha256sig0(i32 signext %a)
+    ret i32 %val
 }

@@ -37,6 +37,8 @@ void CommandObjectIterateOverThreads::DoExecute(Args &command,
   result.SetStatus(m_success_return);
 
   bool all_threads = false;
+  m_unique_stacks = false;
+
   if (command.GetArgumentCount() == 0) {
     Thread *thread = m_exe_ctx.GetThreadPtr();
     if (thread)

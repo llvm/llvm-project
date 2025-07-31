@@ -276,11 +276,16 @@ public:
 
   void Dump(Stream &s) override;
 
-  void DumpClangAST(Stream &s) override;
+  void DumpClangAST(Stream &s, llvm::StringRef filter) override;
 
   /// List separate dwo files.
-  bool GetSeparateDebugInfo(StructuredData::Dictionary &d,
-                            bool errors_only) override;
+  bool GetSeparateDebugInfo(StructuredData::Dictionary &d, bool errors_only,
+                            bool load_all_debug_info = false) override;
+
+  // Gets a pair of loaded and total dwo file counts.
+  // For split-dwarf files, this reports the counts for successfully loaded DWO
+  // CUs and total DWO CUs. For non-split-dwarf files, this reports 0 for both.
+  std::pair<uint32_t, uint32_t> GetDwoFileCounts() override;
 
   DWARFContext &GetDWARFContext() { return m_context; }
 
@@ -324,6 +329,8 @@ public:
 
   virtual bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
                                       lldb::offset_t &offset,
+                                      RegisterContext *reg_ctx,
+                                      lldb::RegisterKind reg_kind,
                                       std::vector<Value> &stack) const {
     return false;
   }
@@ -391,7 +398,7 @@ protected:
   Function *ParseFunction(CompileUnit &comp_unit, const DWARFDIE &die);
 
   size_t ParseBlocksRecursive(CompileUnit &comp_unit, Block *parent_block,
-                              DWARFDIE die, lldb::addr_t subprogram_low_pc);
+                              DWARFDIE die, lldb::addr_t function_file_addr);
 
   size_t ParseTypes(const SymbolContext &sc, const DWARFDIE &die,
                     bool parse_siblings, bool parse_children);
@@ -551,6 +558,7 @@ protected:
   /// an index that identifies the .DWO or .o file.
   std::optional<uint64_t> m_file_index;
 };
+
 } // namespace dwarf
 } // namespace lldb_private::plugin
 

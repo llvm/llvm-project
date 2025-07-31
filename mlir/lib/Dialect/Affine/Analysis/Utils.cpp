@@ -18,12 +18,9 @@
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/Interfaces/CallInterfaces.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -713,7 +710,7 @@ void MemRefDependenceGraph::clearNodeLoadAndStores(unsigned id) {
 void MemRefDependenceGraph::forEachMemRefInputEdge(
     unsigned id, const std::function<void(Edge)> &callback) {
   if (inEdges.count(id) > 0)
-    forEachMemRefEdge(inEdges[id], callback);
+    forEachMemRefEdge(inEdges.at(id), callback);
 }
 
 // Calls 'callback' for each output edge from node 'id' which carries a
@@ -721,7 +718,7 @@ void MemRefDependenceGraph::forEachMemRefInputEdge(
 void MemRefDependenceGraph::forEachMemRefOutputEdge(
     unsigned id, const std::function<void(Edge)> &callback) {
   if (outEdges.count(id) > 0)
-    forEachMemRefEdge(outEdges[id], callback);
+    forEachMemRefEdge(outEdges.at(id), callback);
 }
 
 // Calls 'callback' for each edge in 'edges' which carries a memref
@@ -733,9 +730,6 @@ void MemRefDependenceGraph::forEachMemRefEdge(
     if (!isa<MemRefType>(edge.value.getType()))
       continue;
     assert(nodes.count(edge.id) > 0);
-    // Skip if 'edge.id' is not a loop nest.
-    if (!isa<AffineForOp>(getNode(edge.id)->op))
-      continue;
     // Visit current input edge 'edge'.
     callback(edge);
   }
@@ -1069,9 +1063,9 @@ unsigned MemRefRegion::getRank() const {
 }
 
 std::optional<int64_t> MemRefRegion::getConstantBoundingSizeAndShape(
-    SmallVectorImpl<int64_t> *shape, std::vector<SmallVector<int64_t, 4>> *lbs,
-    SmallVectorImpl<int64_t> *lbDivisors) const {
+    SmallVectorImpl<int64_t> *shape, SmallVectorImpl<AffineMap> *lbs) const {
   auto memRefType = cast<MemRefType>(memref.getType());
+  MLIRContext *context = memref.getContext();
   unsigned rank = memRefType.getRank();
   if (shape)
     shape->reserve(rank);
@@ -1083,7 +1077,7 @@ std::optional<int64_t> MemRefRegion::getConstantBoundingSizeAndShape(
   // over-approximation from projection or union bounding box. We may not add
   // this on the region itself since they might just be redundant constraints
   // that will need non-trivials means to eliminate.
-  FlatAffineValueConstraints cstWithShapeBounds(cst);
+  FlatLinearValueConstraints cstWithShapeBounds(cst);
   for (unsigned r = 0; r < rank; r++) {
     cstWithShapeBounds.addBound(BoundType::LB, r, 0);
     int64_t dimSize = memRefType.getDimSize(r);
@@ -1092,39 +1086,34 @@ std::optional<int64_t> MemRefRegion::getConstantBoundingSizeAndShape(
     cstWithShapeBounds.addBound(BoundType::UB, r, dimSize - 1);
   }
 
-  // Find a constant upper bound on the extent of this memref region along each
-  // dimension.
+  // Find a constant upper bound on the extent of this memref region along
+  // each dimension.
   int64_t numElements = 1;
   int64_t diffConstant;
-  int64_t lbDivisor;
   for (unsigned d = 0; d < rank; d++) {
-    SmallVector<int64_t, 4> lb;
+    AffineMap lb;
     std::optional<int64_t> diff =
-        cstWithShapeBounds.getConstantBoundOnDimSize64(d, &lb, &lbDivisor);
+        cstWithShapeBounds.getConstantBoundOnDimSize(context, d, &lb);
     if (diff.has_value()) {
       diffConstant = *diff;
-      assert(diffConstant >= 0 && "Dim size bound can't be negative");
-      assert(lbDivisor > 0);
+      assert(diffConstant >= 0 && "dim size bound cannot be negative");
     } else {
       // If no constant bound is found, then it can always be bound by the
       // memref's dim size if the latter has a constant size along this dim.
       auto dimSize = memRefType.getDimSize(d);
-      if (dimSize == ShapedType::kDynamic)
+      if (ShapedType::isDynamic(dimSize))
         return std::nullopt;
       diffConstant = dimSize;
       // Lower bound becomes 0.
-      lb.resize(cstWithShapeBounds.getNumSymbolVars() + 1, 0);
-      lbDivisor = 1;
+      lb = AffineMap::get(/*dimCount=*/0, cstWithShapeBounds.getNumSymbolVars(),
+                          /*result=*/getAffineConstantExpr(0, context));
     }
     numElements *= diffConstant;
-    if (lbs) {
+    // Populate outputs if available.
+    if (lbs)
       lbs->push_back(lb);
-      assert(lbDivisors && "both lbs and lbDivisor or none");
-      lbDivisors->push_back(lbDivisor);
-    }
-    if (shape) {
+    if (shape)
       shape->push_back(diffConstant);
-    }
   }
   return numElements;
 }
@@ -1172,7 +1161,8 @@ LogicalResult MemRefRegion::unionBoundingBox(const MemRefRegion &other) {
 // (dma_start, dma_wait).
 LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
                                     const ComputationSliceState *sliceState,
-                                    bool addMemRefDimBounds) {
+                                    bool addMemRefDimBounds, bool dropLocalVars,
+                                    bool dropOuterIvs) {
   assert((isa<AffineReadOpInterface, AffineWriteOpInterface>(op)) &&
          "affine read/write op expected");
 
@@ -1287,15 +1277,25 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   enclosingIVs.resize(loopDepth);
   SmallVector<Value, 4> vars;
   cst.getValues(cst.getNumDimVars(), cst.getNumDimAndSymbolVars(), &vars);
-  for (Value var : vars) {
-    if ((isAffineInductionVar(var)) && !llvm::is_contained(enclosingIVs, var)) {
-      cst.projectOut(var);
+  for (auto en : llvm::enumerate(vars)) {
+    if ((isAffineInductionVar(en.value())) &&
+        !llvm::is_contained(enclosingIVs, en.value())) {
+      if (dropOuterIvs) {
+        cst.projectOut(en.value());
+      } else {
+        unsigned varPosition;
+        cst.findVar(en.value(), &varPosition);
+        auto varKind = cst.getVarKindAt(varPosition);
+        varPosition -= cst.getNumDimVars();
+        cst.convertToLocal(varKind, varPosition, varPosition + 1);
+      }
     }
   }
 
   // Project out any local variables (these would have been added for any
-  // mod/divs).
-  cst.projectOut(cst.getNumDimAndSymbolVars(), cst.getNumLocalVars());
+  // mod/divs) if specified.
+  if (dropLocalVars)
+    cst.projectOut(cst.getNumDimAndSymbolVars(), cst.getNumLocalVars());
 
   // Constant fold any symbolic variables.
   cst.constantFoldVarRange(/*pos=*/cst.getNumDimVars(),
@@ -1349,12 +1349,6 @@ std::optional<int64_t> MemRefRegion::getRegionSize() {
     LLVM_DEBUG(llvm::dbgs() << "Non-identity layout map not yet supported\n");
     return false;
   }
-
-  // Indices to use for the DmaStart op.
-  // Indices for the original memref being DMAed from/to.
-  SmallVector<Value, 4> memIndices;
-  // Indices for the faster buffer being DMAed into/from.
-  SmallVector<Value, 4> bufIndices;
 
   // Compute the extents of the buffer.
   std::optional<int64_t> numElements = getConstantBoundingSizeAndShape();
@@ -1432,7 +1426,7 @@ LogicalResult mlir::affine::boundCheckLoadOrStoreOp(LoadOrStoreOp loadOrStoreOp,
 
     // Check for a negative index.
     FlatAffineValueConstraints lcst(*region.getConstraints());
-    std::fill(ineq.begin(), ineq.end(), 0);
+    llvm::fill(ineq, 0);
     // d_i <= -1;
     lcst.addBound(BoundType::UB, r, -1);
     outOfBounds = !lcst.isEmpty();
@@ -1553,15 +1547,17 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
   FlatAffineValueConstraints sliceUnionCst;
   assert(sliceUnionCst.getNumDimAndSymbolVars() == 0);
   std::vector<std::pair<Operation *, Operation *>> dependentOpPairs;
-  for (Operation *i : opsA) {
-    MemRefAccess srcAccess(i);
-    for (Operation *j : opsB) {
-      MemRefAccess dstAccess(j);
+  MemRefAccess srcAccess;
+  MemRefAccess dstAccess;
+  for (Operation *a : opsA) {
+    srcAccess = MemRefAccess(a);
+    for (Operation *b : opsB) {
+      dstAccess = MemRefAccess(b);
       if (srcAccess.memref != dstAccess.memref)
         continue;
       // Check if 'loopDepth' exceeds nesting depth of src/dst ops.
-      if ((!isBackwardSlice && loopDepth > getNestingDepth(i)) ||
-          (isBackwardSlice && loopDepth > getNestingDepth(j))) {
+      if ((!isBackwardSlice && loopDepth > getNestingDepth(a)) ||
+          (isBackwardSlice && loopDepth > getNestingDepth(b))) {
         LLVM_DEBUG(llvm::dbgs() << "Invalid loop depth\n");
         return SliceComputationResult::GenericFailure;
       }
@@ -1580,13 +1576,12 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
       }
       if (result.value == DependenceResult::NoDependence)
         continue;
-      dependentOpPairs.emplace_back(i, j);
+      dependentOpPairs.emplace_back(a, b);
 
       // Compute slice bounds for 'srcAccess' and 'dstAccess'.
       ComputationSliceState tmpSliceState;
-      mlir::affine::getComputationSliceState(i, j, dependenceConstraints,
-                                             loopDepth, isBackwardSlice,
-                                             &tmpSliceState);
+      getComputationSliceState(a, b, dependenceConstraints, loopDepth,
+                               isBackwardSlice, &tmpSliceState);
 
       if (sliceUnionCst.getNumDimAndSymbolVars() == 0) {
         // Initialize 'sliceUnionCst' with the bounds computed in previous step.
@@ -1951,16 +1946,16 @@ AffineForOp mlir::affine::insertBackwardComputationSlice(
 
 // Constructs  MemRefAccess populating it with the memref, its indices and
 // opinst from 'loadOrStoreOpInst'.
-MemRefAccess::MemRefAccess(Operation *loadOrStoreOpInst) {
-  if (auto loadOp = dyn_cast<AffineReadOpInterface>(loadOrStoreOpInst)) {
+MemRefAccess::MemRefAccess(Operation *memOp) {
+  if (auto loadOp = dyn_cast<AffineReadOpInterface>(memOp)) {
     memref = loadOp.getMemRef();
-    opInst = loadOrStoreOpInst;
+    opInst = memOp;
     llvm::append_range(indices, loadOp.getMapOperands());
   } else {
-    assert(isa<AffineWriteOpInterface>(loadOrStoreOpInst) &&
+    assert(isa<AffineWriteOpInterface>(memOp) &&
            "Affine read/write op expected");
-    auto storeOp = cast<AffineWriteOpInterface>(loadOrStoreOpInst);
-    opInst = loadOrStoreOpInst;
+    auto storeOp = cast<AffineWriteOpInterface>(memOp);
+    opInst = memOp;
     memref = storeOp.getMemRef();
     llvm::append_range(indices, storeOp.getMapOperands());
   }
@@ -1982,6 +1977,8 @@ unsigned mlir::affine::getNestingDepth(Operation *op) {
   while ((currOp = currOp->getParentOp())) {
     if (isa<AffineForOp>(currOp))
       depth++;
+    if (auto parOp = dyn_cast<AffineParallelOp>(currOp))
+      depth += parOp.getNumDims();
   }
   return depth;
 }
@@ -2301,8 +2298,8 @@ FailureOr<AffineValueMap> mlir::affine::simplifyConstrainedMinMaxOp(
 
 Block *mlir::affine::findInnermostCommonBlockInScope(Operation *a,
                                                      Operation *b) {
-  Region *aScope = mlir::affine::getAffineScope(a);
-  Region *bScope = mlir::affine::getAffineScope(b);
+  Region *aScope = getAffineAnalysisScope(a);
+  Region *bScope = getAffineAnalysisScope(b);
   if (aScope != bScope)
     return nullptr;
 

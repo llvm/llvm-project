@@ -10,7 +10,7 @@ define ptr @test1(ptr %p) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test1_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test1_param_0];
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
 ; CHECK-NEXT:    ret;
   %a = addrspacecast ptr %p to ptr addrspace(5)
@@ -24,7 +24,7 @@ define ptr addrspace(1) @test2(ptr addrspace(5) %p) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test2_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test2_param_0];
 ; CHECK-NEXT:    cvta.local.u64 %rd2, %rd1;
 ; CHECK-NEXT:    cvta.to.global.u64 %rd3, %rd2;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;

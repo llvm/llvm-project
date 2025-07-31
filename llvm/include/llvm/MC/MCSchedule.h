@@ -15,7 +15,9 @@
 #define LLVM_MC_MCSCHEDULE_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <optional>
@@ -123,7 +125,7 @@ struct MCSchedClassDesc {
   static const unsigned short VariantNumMicroOps = InvalidNumMicroOps - 1;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  const char* Name;
+  uint32_t NameOff;
 #endif
   uint16_t NumMicroOps : 13;
   uint16_t BeginGroup : 1;
@@ -323,6 +325,7 @@ struct MCSchedModel {
   const MCSchedClassDesc *SchedClassTable;
   unsigned NumProcResourceKinds;
   unsigned NumSchedClasses;
+  const StringTable *SchedClassNames;
   // Instruction itinerary tables used by InstrItineraryData.
   friend class InstrItineraryData;
   const InstrItinerary *InstrItineraries;
@@ -367,14 +370,24 @@ struct MCSchedModel {
     return &SchedClassTable[SchedClassIdx];
   }
 
+  StringRef getSchedClassName(unsigned SchedClassIdx) const {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    return (*SchedClassNames)[SchedClassTable[SchedClassIdx].NameOff];
+#else
+    return "<unknown>";
+#endif
+  }
+
   /// Returns the latency value for the scheduling class.
-  static int computeInstrLatency(const MCSubtargetInfo &STI,
-                                 const MCSchedClassDesc &SCDesc);
+  LLVM_ABI static int computeInstrLatency(const MCSubtargetInfo &STI,
+                                          const MCSchedClassDesc &SCDesc);
 
-  int computeInstrLatency(const MCSubtargetInfo &STI, unsigned SClass) const;
+  LLVM_ABI int computeInstrLatency(const MCSubtargetInfo &STI,
+                                   unsigned SClass) const;
 
-  int computeInstrLatency(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
-                          const MCInst &Inst) const;
+  LLVM_ABI int computeInstrLatency(const MCSubtargetInfo &STI,
+                                   const MCInstrInfo &MCII,
+                                   const MCInst &Inst) const;
 
   template <typename MCSubtargetInfo, typename MCInstrInfo,
             typename InstrItineraryData, typename MCInstOrMachineInstr>
@@ -386,24 +399,29 @@ struct MCSchedModel {
               [](const MCSchedClassDesc *SCDesc) { return SCDesc; }) const;
 
   // Returns the reciprocal throughput information from a MCSchedClassDesc.
-  static double
+  LLVM_ABI static double
   getReciprocalThroughput(const MCSubtargetInfo &STI,
                           const MCSchedClassDesc &SCDesc);
 
-  static double
-  getReciprocalThroughput(unsigned SchedClass, const InstrItineraryData &IID);
+  LLVM_ABI static double getReciprocalThroughput(unsigned SchedClass,
+                                                 const InstrItineraryData &IID);
 
-  double
-  getReciprocalThroughput(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
-                          const MCInst &Inst) const;
+  LLVM_ABI double getReciprocalThroughput(const MCSubtargetInfo &STI,
+                                          const MCInstrInfo &MCII,
+                                          const MCInst &Inst) const;
 
   /// Returns the maximum forwarding delay for register reads dependent on
   /// writes of scheduling class WriteResourceIdx.
-  static unsigned getForwardingDelayCycles(ArrayRef<MCReadAdvanceEntry> Entries,
-                                           unsigned WriteResourceIdx = 0);
+  LLVM_ABI static unsigned
+  getForwardingDelayCycles(ArrayRef<MCReadAdvanceEntry> Entries,
+                           unsigned WriteResourceIdx = 0);
+
+  /// Returns the bypass delay cycle for the maximum latency write cycle
+  LLVM_ABI static unsigned getBypassDelayCycles(const MCSubtargetInfo &STI,
+                                                const MCSchedClassDesc &SCDesc);
 
   /// Returns the default initialized model.
-  static const MCSchedModel Default;
+  LLVM_ABI static const MCSchedModel Default;
 };
 
 // The first three are only template'd arguments so we can get away with leaving

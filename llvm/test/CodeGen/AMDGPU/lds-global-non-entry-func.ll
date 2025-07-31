@@ -15,10 +15,10 @@
 ; we emit a trap. The s_endpgm needs to be emitted in a terminator
 ; position.
 
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -verify-machineinstrs < %s 2> %t | FileCheck -check-prefixes=CHECK,SDAG %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s 2> %t | FileCheck -check-prefixes=CHECK,SDAG %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t
 
-; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -verify-machineinstrs < %s 2> %t | FileCheck -check-prefixes=CHECK,GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s 2> %t | FileCheck -check-prefixes=CHECK,GISEL %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t
 
 
@@ -133,11 +133,10 @@ define void @func_uses_lds_multi(i1 %cond) {
 ; GFX8-SDAG:       ; %bb.0: ; %entry
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX8-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GFX8-SDAG-NEXT:    s_xor_b64 s[4:5], vcc, -1
+; GFX8-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v0
 ; GFX8-SDAG-NEXT:    s_mov_b32 m0, -1
-; GFX8-SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; GFX8-SDAG-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
+; GFX8-SDAG-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GFX8-SDAG-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX8-SDAG-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX8-SDAG-NEXT:  ; %bb.1: ; %bb1
 ; GFX8-SDAG-NEXT:    v_mov_b32_e32 v0, 1
@@ -210,10 +209,9 @@ define void @func_uses_lds_multi(i1 %cond) {
 ; GFX9-SDAG:       ; %bb.0: ; %entry
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GFX9-SDAG-NEXT:    s_xor_b64 s[4:5], vcc, -1
-; GFX9-SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; GFX9-SDAG-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
+; GFX9-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v0
+; GFX9-SDAG-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GFX9-SDAG-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-SDAG-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX9-SDAG-NEXT:  ; %bb.1: ; %bb1
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, 1
@@ -266,10 +264,9 @@ define void @func_uses_lds_multi(i1 %cond) {
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
-; SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; SDAG-NEXT:    s_xor_b64 s[4:5], vcc, -1
-; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; SDAG-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
+; SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v0
+; SDAG-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; SDAG-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; SDAG-NEXT:    s_cbranch_execz .LBB2_2
 ; SDAG-NEXT:  ; %bb.1: ; %bb1
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 1

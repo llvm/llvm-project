@@ -39,6 +39,20 @@ public:
     AGVK_Occupancy
   };
 
+  // Relocation specifiers.
+  enum Specifier {
+    S_None,
+    S_GOTPCREL,      // symbol@gotpcrel
+    S_GOTPCREL32_LO, // symbol@gotpcrel32@lo
+    S_GOTPCREL32_HI, // symbol@gotpcrel32@hi
+    S_REL32_LO,      // symbol@rel32@lo
+    S_REL32_HI,      // symbol@rel32@hi
+    S_REL64,         // symbol@rel64
+    S_ABS32_LO,      // symbol@abs32@lo
+    S_ABS32_HI,      // symbol@abs32@hi
+    S_ABS64,         // symbol@abs64
+  };
+
 private:
   VariantKind Kind;
   MCContext &Ctx;
@@ -48,14 +62,10 @@ private:
   AMDGPUMCExpr(VariantKind Kind, ArrayRef<const MCExpr *> Args, MCContext &Ctx);
   ~AMDGPUMCExpr();
 
-  bool evaluateExtraSGPRs(MCValue &Res, const MCAssembler *Asm,
-                          const MCFixup *Fixup) const;
-  bool evaluateTotalNumVGPR(MCValue &Res, const MCAssembler *Asm,
-                            const MCFixup *Fixup) const;
-  bool evaluateAlignTo(MCValue &Res, const MCAssembler *Asm,
-                       const MCFixup *Fixup) const;
-  bool evaluateOccupancy(MCValue &Res, const MCAssembler *Asm,
-                         const MCFixup *Fixup) const;
+  bool evaluateExtraSGPRs(MCValue &Res, const MCAssembler *Asm) const;
+  bool evaluateTotalNumVGPR(MCValue &Res, const MCAssembler *Asm) const;
+  bool evaluateAlignTo(MCValue &Res, const MCAssembler *Asm) const;
+  bool evaluateOccupancy(MCValue &Res, const MCAssembler *Asm) const;
 
 public:
   static const AMDGPUMCExpr *
@@ -84,27 +94,25 @@ public:
     return create(VariantKind::AGVK_AlignTo, {Value, Align}, Ctx);
   }
 
-  static const AMDGPUMCExpr *createOccupancy(unsigned InitOcc,
-                                             const MCExpr *NumSGPRs,
-                                             const MCExpr *NumVGPRs,
-                                             const GCNSubtarget &STM,
-                                             MCContext &Ctx);
+  static const AMDGPUMCExpr *
+  createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
+                  const MCExpr *NumVGPRs, unsigned DynamicVGPRBlockSize,
+                  const GCNSubtarget &STM, MCContext &Ctx);
 
   ArrayRef<const MCExpr *> getArgs() const { return Args; }
   VariantKind getKind() const { return Kind; }
   const MCExpr *getSubExpr(size_t Index) const;
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCFixup *Fixup) const override;
-  bool isSymbolUsedInExpression(const MCSymbol *Sym) const override;
+  bool evaluateAsRelocatableImpl(MCValue &Res,
+                                 const MCAssembler *Asm) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override;
-  void fixELFSymbolsInTLSFixups(MCAssembler &) const override{};
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }
+  static bool isSymbolUsedInExpression(const MCSymbol *Sym, const MCExpr *E);
 };
 
 namespace AMDGPU {
@@ -118,6 +126,9 @@ void printAMDGPUMCExpr(const MCExpr *Expr, raw_ostream &OS,
 
 const MCExpr *foldAMDGPUMCExpr(const MCExpr *Expr, MCContext &Ctx);
 
+static inline AMDGPUMCExpr::Specifier getSpecifier(const MCSymbolRefExpr *SRE) {
+  return AMDGPUMCExpr::Specifier(SRE->getKind());
+}
 } // end namespace AMDGPU
 } // end namespace llvm
 

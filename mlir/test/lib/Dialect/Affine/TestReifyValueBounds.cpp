@@ -25,7 +25,6 @@
 
 using namespace mlir;
 using namespace mlir::affine;
-using mlir::presburger::BoundType;
 
 namespace {
 
@@ -84,6 +83,27 @@ static LogicalResult testReifyValueBounds(FunctionOpInterface funcOp,
     auto boundType = op.getBoundType();
     Value value = op.getVar();
     std::optional<int64_t> dim = op.getDim();
+    auto shapedType = dyn_cast<ShapedType>(value.getType());
+    if (!shapedType && dim.has_value()) {
+      op->emitOpError("dim specified for non-shaped type");
+      return WalkResult::interrupt();
+    }
+    if (shapedType && !dim.has_value()) {
+      op->emitOpError("dim not specified for shaped type");
+      return WalkResult::interrupt();
+    }
+    if (shapedType && shapedType.hasRank() && dim.has_value()) {
+      if (dim.value() < 0) {
+        op->emitOpError("dim must be non-negative");
+        return WalkResult::interrupt();
+      }
+
+      if (dim.value() >= shapedType.getRank()) {
+        op->emitOpError("invalid dim for shaped type rank");
+        return WalkResult::interrupt();
+      }
+    }
+
     bool constant = op.getConstant();
     bool scalable = op.getScalable();
 
@@ -125,7 +145,7 @@ static LogicalResult testReifyValueBounds(FunctionOpInterface funcOp,
         if (reifiedScalable->map.getNumInputs() == 1) {
           // The only possible input to the bound is vscale.
           vscaleOperand.push_back(std::make_pair(
-              rewriter.create<vector::VectorScaleOp>(loc), std::nullopt));
+              vector::VectorScaleOp::create(rewriter, loc), std::nullopt));
         }
         reified = affine::materializeComputedBound(
             rewriter, loc, reifiedScalable->map, vscaleOperand);
@@ -149,8 +169,9 @@ static LogicalResult testReifyValueBounds(FunctionOpInterface funcOp,
       rewriter.replaceOp(op, val);
       return WalkResult::skip();
     }
-    Value constOp = rewriter.create<arith::ConstantIndexOp>(
-        op->getLoc(), cast<IntegerAttr>(cast<Attribute>(*reified)).getInt());
+    Value constOp = arith::ConstantIndexOp::create(
+        rewriter, op->getLoc(),
+        cast<IntegerAttr>(cast<Attribute>(*reified)).getInt());
     rewriter.replaceOp(op, constOp);
     return WalkResult::skip();
   });

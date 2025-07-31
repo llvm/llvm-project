@@ -215,7 +215,7 @@ void llvm::emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
                                         const Triple &TT, Mangler &Mangler) {
   if (GV->hasDLLExportStorageClass() && !GV->isDeclaration()) {
 
-    if (TT.isWindowsMSVCEnvironment())
+    if (TT.isWindowsMSVCEnvironment() || TT.isUEFI())
       OS << " /EXPORT:";
     else
       OS << " -export:";
@@ -249,7 +249,7 @@ void llvm::emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
       OS << "\"";
 
     if (!GV->getValueType()->isFunctionTy()) {
-      if (TT.isWindowsMSVCEnvironment())
+      if (TT.isWindowsMSVCEnvironment() || TT.isUEFI())
         OS << ",DATA";
       else
         OS << ",data";

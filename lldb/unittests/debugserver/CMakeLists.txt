@@ -9,12 +9,12 @@ add_lldb_unittest(debugserverTests
   RNBSocketTest.cpp
   debugserver_LogCallback.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbDebugserverCommon
     lldbHost
     LLVMTestingSupport
-  LINK_COMPONENTS
-    Support
   )
 
 target_include_directories(debugserverTests PRIVATE
@@ -33,10 +33,10 @@ if(APPLE_EMBEDDED)
     RNBSocketTest.cpp
     debugserver_LogCallback.cpp
 
+    LINK_COMPONENTS
+      Support
     LINK_LIBS
       lldbDebugserverCommon_NonUI
       lldbHost
-    LINK_COMPONENTS
-      Support
     )
 endif()

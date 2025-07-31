@@ -22,8 +22,7 @@ namespace clang {
 namespace tooling {
 
 static StringRef getDriverMode(const CommandLineArguments &Args) {
-  for (const auto &Arg : Args) {
-    StringRef ArgRef = Arg;
+  for (StringRef ArgRef : Args) {
     if (ArgRef.consume_front("--driver-mode=")) {
       return ArgRef;
     }

@@ -6,11 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "BinaryOpSingleOutputDiff.h"
-
+#include "PerfTest.h"
+#include "src/__support/macros/properties/types.h"
 #include "src/math/fmodf128.h"
 
 #include <math.h>
 
-BINARY_OP_SINGLE_OUTPUT_PERF(float, LIBC_NAMESPACE::fmodf128, ::fmodf128,
-                             "fmodf128_perf.log")
+int main() {
+  BINARY_INPUT_SINGLE_OUTPUT_PERF(float128, float128, LIBC_NAMESPACE::fmodf128,
+                                  ::fmodf128, "fmodf128_perf.log")
+  return 0;
+}

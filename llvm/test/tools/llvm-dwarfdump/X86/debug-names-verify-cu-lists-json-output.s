@@ -2,7 +2,7 @@
 # RUN:   not llvm-dwarfdump -verify -verify-json=%t.json -
 # RUN: FileCheck %s --input-file %t.json
 
-# CHECK: {"error-categories":{"Duplicate Name Index":{"count":1},"Name Index doesn't index any CU":{"count":1},"Name Index references non-existing CU":{"count":1}},"error-count":3}
+# CHECK: {"error-categories":{"Duplicate Name Index":{"count":1,"details":{}},"Name Index doesn't index any CU":{"count":1,"details":{}},"Name Index references non-existing CU":{"count":1,"details":{}}},"error-count":3}
 # CHECK-NOT : error: Name Index @ 0x58 references a CU @ 0x0, but this CU is already indexed by Name Index @ 0x28
 # CHECK-NOT: warning: CU @ 0x13 not covered by any Name Index
 

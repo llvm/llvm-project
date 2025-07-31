@@ -40,11 +40,11 @@ protected:
   syntax::Node *nodeByRange(llvm::Annotations::Range R, syntax::Node *Root);
 
   // Data fields.
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  DiagnosticOptions DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      new DiagnosticsEngine(new DiagnosticIDs, DiagOpts.get());
+      new DiagnosticsEngine(new DiagnosticIDs, DiagOpts);
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS =
-      new llvm::vfs::InMemoryFileSystem;
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   IntrusiveRefCntPtr<FileManager> FileMgr =
       new FileManager(FileSystemOptions(), FS);
   IntrusiveRefCntPtr<SourceManager> SourceMgr =

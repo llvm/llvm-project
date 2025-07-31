@@ -19,9 +19,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormattedStream.h"
 
 using namespace llvm;
 using namespace llvm::SPIRV;
@@ -114,6 +112,8 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     recordOpExtInstImport(MI);
   } else if (OpCode == SPIRV::OpExtInst) {
     printOpExtInst(MI, OS);
+  } else if (OpCode == SPIRV::UNKNOWN_type) {
+    printUnknownType(MI, OS);
   } else {
     // Print any extra operands for variadic instructions.
     const MCInstrDesc &MCDesc = MII.get(OpCode);
@@ -142,6 +142,9 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
           printRemainingVariableOps(MI, NumFixedOps, OS, false, true);
           break;
         }
+        case SPIRV::OpMemberDecorate:
+          printRemainingVariableOps(MI, NumFixedOps, OS);
+          break;
         case SPIRV::OpExecutionMode:
         case SPIRV::OpExecutionModeId:
         case SPIRV::OpLoopMerge: {
@@ -237,6 +240,34 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
           }
           break;
         }
+        case SPIRV::OpSubgroupMatrixMultiplyAccumulateINTEL: {
+          const unsigned NumOps = MI->getNumOperands();
+          if (NumFixedOps >= NumOps)
+            break;
+          OS << ' ';
+          const unsigned Flags = MI->getOperand(NumOps - 1).getImm();
+          if (Flags == 0) {
+            printSymbolicOperand<
+                OperandCategory::MatrixMultiplyAccumulateOperandsOperand>(
+                MI, NumOps - 1, OS);
+          } else {
+            std::string Buffer;
+            for (unsigned Mask = 0x1;
+                 Mask <= SPIRV::MatrixMultiplyAccumulateOperands::
+                             MatrixBPackedBFloat16INTEL;
+                 Mask <<= 1) {
+              if (Flags & Mask) {
+                if (!Buffer.empty())
+                  Buffer += '|';
+                Buffer += getSymbolicOperandMnemonic(
+                    OperandCategory::MatrixMultiplyAccumulateOperandsOperand,
+                    Mask);
+              }
+            }
+            OS << Buffer;
+          }
+          break;
+        }
         default:
           printRemainingVariableOps(MI, NumFixedOps, OS);
           break;
@@ -312,25 +343,33 @@ void SPIRVInstPrinter::printOpDecorate(const MCInst *MI, raw_ostream &O) {
   }
 }
 
-static void printExpr(const MCExpr *Expr, raw_ostream &O) {
-#ifndef NDEBUG
-  const MCSymbolRefExpr *SRE;
+void SPIRVInstPrinter::printUnknownType(const MCInst *MI, raw_ostream &O) {
+  const auto EnumOperand = MI->getOperand(1);
+  assert(EnumOperand.isImm() &&
+         "second operand of UNKNOWN_type must be opcode!");
 
-  if (const MCBinaryExpr *BE = dyn_cast<MCBinaryExpr>(Expr))
-    SRE = cast<MCSymbolRefExpr>(BE->getLHS());
-  else
-    SRE = cast<MCSymbolRefExpr>(Expr);
+  const auto Enumerant = EnumOperand.getImm();
+  const auto NumOps = MI->getNumOperands();
 
-  MCSymbolRefExpr::VariantKind Kind = SRE->getKind();
+  // Print the opcode using the spirv-as unknown opcode syntax
+  O << "OpUnknown(" << Enumerant << ", " << NumOps << ") ";
 
-  assert(Kind == MCSymbolRefExpr::VK_None);
-#endif
-  O << *Expr;
+  // The result ID must be printed after the opcode when using this syntax
+  printOperand(MI, 0, O);
+
+  O << " ";
+
+  const MCInstrDesc &MCDesc = MII.get(MI->getOpcode());
+  unsigned NumFixedOps = MCDesc.getNumOperands();
+  if (NumOps == NumFixedOps)
+    return;
+
+  // Print the rest of the operands
+  printRemainingVariableOps(MI, NumFixedOps, O, true);
 }
 
 void SPIRVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                    raw_ostream &O, const char *Modifier) {
-  assert((Modifier == 0 || Modifier[0] == 0) && "No modifiers supported");
+                                    raw_ostream &O) {
   if (OpNo < MI->getNumOperands()) {
     const MCOperand &Op = MI->getOperand(OpNo);
     if (Op.isReg())
@@ -340,7 +379,7 @@ void SPIRVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     else if (Op.isDFPImm())
       O << formatImm((double)Op.getDFPImm());
     else if (Op.isExpr())
-      printExpr(Op.getExpr(), O);
+      MAI.printExpr(O, *Op.getExpr());
     else
       llvm_unreachable("Unexpected operand type");
   }

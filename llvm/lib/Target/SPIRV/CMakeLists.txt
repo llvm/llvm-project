@@ -27,6 +27,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVInstrInfo.cpp
   SPIRVInstructionSelector.cpp
   SPIRVStripConvergentIntrinsics.cpp
+  SPIRVLegalizePointerCast.cpp
   SPIRVMergeRegionExitTargets.cpp
   SPIRVISelLowering.cpp
   SPIRVLegalizerInfo.cpp
@@ -43,6 +44,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVRegularizer.cpp
   SPIRVSubtarget.cpp
   SPIRVTargetMachine.cpp
+  SPIRVTargetTransformInfo.cpp
   SPIRVUtils.cpp
   SPIRVEmitNonSemanticDI.cpp
 

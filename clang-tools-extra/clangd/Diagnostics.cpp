@@ -800,7 +800,7 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
           M << "'";
         }
         // Don't allow source code to inject newlines into diagnostics.
-        std::replace(Message.begin(), Message.end(), '\n', ' ');
+        llvm::replace(Message, '\n', ' ');
       }
     }
     if (Message.empty()) // either !SyntheticMessage, or we failed to make one.

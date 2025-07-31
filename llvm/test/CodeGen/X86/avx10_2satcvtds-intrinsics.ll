@@ -90,7 +90,7 @@ define <4 x i32> @test_int_x86_mask_vcvtt_pd2dqs_256(<4 x double> %x0, <4 x i32>
 ; X86-NEXT:    vmovaps %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc1]
 ; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <4 x i32> @llvm.x86.avx10.mask.vcvttpd2dqs.round.256( <4 x double> %x0, <4 x i32> %src, i8 %mask, i32 4)
+  %res = call <4 x i32> @llvm.x86.avx10.mask.vcvttpd2dqs.256( <4 x double> %x0, <4 x i32> %src, i8 %mask)
   ret <4 x i32> %res
 }
 
@@ -108,7 +108,7 @@ define <4 x i32> @test_int_x86_maskz_vcvtt_pd2dqs_256_z(<4 x double> %x0, i8 %ma
 ; X86-NEXT:    vcvttpd2dqs %ymm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf5,0xfc,0xa9,0x6d,0xc0]
 ; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <4 x i32> @llvm.x86.avx10.mask.vcvttpd2dqs.round.256( <4 x double> %x0, <4 x i32> zeroinitializer, i8 %mask, i32 4)
+  %res = call <4 x i32> @llvm.x86.avx10.mask.vcvttpd2dqs.256( <4 x double> %x0, <4 x i32> zeroinitializer, i8 %mask)
   ret <4 x i32> %res
 }
 
@@ -126,7 +126,7 @@ define <4 x i32> @test_int_x86_mask_vcvtt_pd2dqs_256_undef(<4 x double> %x0, i8 
 ; X86-NEXT:    vcvttpd2dqs %ymm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf5,0xfc,0xa9,0x6d,0xc0]
 ; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <4 x i32> @llvm.x86.avx10.mask.vcvttpd2dqs.round.256( <4 x double> %x0, <4 x i32> undef, i8 %mask, i32 4)
+  %res = call <4 x i32> @llvm.x86.avx10.mask.vcvttpd2dqs.256( <4 x double> %x0, <4 x i32> undef, i8 %mask)
   ret <4 x i32> %res
 }
 
@@ -142,10 +142,10 @@ define <4 x i32> @test_int_x86_mask_vcvtt_pd2dqs_256_default(<4 x double>* %xptr
 ; X86-NEXT:    vcvttpd2dqsy (%eax), %xmm0 # encoding: [0x62,0xf5,0xfc,0x28,0x6d,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %x0 = load <4 x double>, <4 x double> * %xptr
-  %res = call <4 x i32> @llvm.x86.avx10.mask.vcvttpd2dqs.round.256( <4 x double> %x0, <4 x i32> undef, i8 -1, i32 4)
+  %res = call <4 x i32> @llvm.x86.avx10.mask.vcvttpd2dqs.256( <4 x double> %x0, <4 x i32> undef, i8 -1)
   ret <4 x i32> %res
 }
-declare <4 x i32> @llvm.x86.avx10.mask.vcvttpd2dqs.round.256(<4 x double>, <4 x i32>, i8 , i32)
+declare <4 x i32> @llvm.x86.avx10.mask.vcvttpd2dqs.256(<4 x double>, <4 x i32>, i8 )
 
 define <4 x i32> @test_int_x86_mask_vcvtt_pd2udqs_256(<4 x double> %x0, <4 x i32> %src, i8 %mask) {
 ; X64-LABEL: test_int_x86_mask_vcvtt_pd2udqs_256:
@@ -163,7 +163,7 @@ define <4 x i32> @test_int_x86_mask_vcvtt_pd2udqs_256(<4 x double> %x0, <4 x i32
 ; X86-NEXT:    vmovaps %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc1]
 ; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <4 x i32> @llvm.x86.avx10.mask.vcvttpd2udqs.round.256( <4 x double> %x0, <4 x i32> %src, i8 %mask, i32 4)
+  %res = call <4 x i32> @llvm.x86.avx10.mask.vcvttpd2udqs.256( <4 x double> %x0, <4 x i32> %src, i8 %mask)
   ret <4 x i32> %res
 }
 
@@ -181,7 +181,7 @@ define <4 x i32> @test_int_x86_maskz_vcvtt_pd2udqs_256_z(<4 x double> %x0, i8 %m
 ; X86-NEXT:    vcvttpd2udqs %ymm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf5,0xfc,0xa9,0x6c,0xc0]
 ; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <4 x i32> @llvm.x86.avx10.mask.vcvttpd2udqs.round.256( <4 x double> %x0, <4 x i32> zeroinitializer, i8 %mask, i32 4)
+  %res = call <4 x i32> @llvm.x86.avx10.mask.vcvttpd2udqs.256( <4 x double> %x0, <4 x i32> zeroinitializer, i8 %mask)
   ret <4 x i32> %res
 }
 
@@ -199,7 +199,7 @@ define <4 x i32> @test_int_x86_mask_vcvtt_pd2udqs_256_undef(<4 x double> %x0, i8
 ; X86-NEXT:    vcvttpd2udqs %ymm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf5,0xfc,0xa9,0x6c,0xc0]
 ; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <4 x i32> @llvm.x86.avx10.mask.vcvttpd2udqs.round.256( <4 x double> %x0, <4 x i32> undef, i8 %mask, i32 4)
+  %res = call <4 x i32> @llvm.x86.avx10.mask.vcvttpd2udqs.256( <4 x double> %x0, <4 x i32> undef, i8 %mask)
   ret <4 x i32> %res
 }
 
@@ -216,10 +216,10 @@ define <4 x i32> @test_int_x86_mask_vcvtt_pd2udqs_256_default(<4 x double>* %x0)
 ; X86-NEXT:    vcvttpd2udqsy (%eax), %xmm0 # encoding: [0x62,0xf5,0xfc,0x28,0x6c,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %x10 = load <4 x double>, <4 x double> * %x0
-  %res = call <4 x i32> @llvm.x86.avx10.mask.vcvttpd2udqs.round.256( <4 x double> %x10, <4 x i32> undef, i8 -1, i32 4)
+  %res = call <4 x i32> @llvm.x86.avx10.mask.vcvttpd2udqs.256( <4 x double> %x10, <4 x i32> undef, i8 -1)
   ret <4 x i32> %res
 }
-declare <4 x i32> @llvm.x86.avx10.mask.vcvttpd2udqs.round.256(<4 x double>, <4 x i32>, i8 , i32)
+declare <4 x i32> @llvm.x86.avx10.mask.vcvttpd2udqs.256(<4 x double>, <4 x i32>, i8 )
 
 define <4 x i64> @test_int_x86_mask_vcvtt_pd2qqs_256(<4 x double> %x0, <4 x i64> %src, i8 %mask) {
 ; X64-LABEL: test_int_x86_mask_vcvtt_pd2qqs_256:
@@ -235,7 +235,7 @@ define <4 x i64> @test_int_x86_mask_vcvtt_pd2qqs_256(<4 x double> %x0, <4 x i64>
 ; X86-NEXT:    vcvttpd2qqs %ymm0, %ymm1 {%k1} # encoding: [0x62,0xf5,0xfd,0x29,0x6d,0xc8]
 ; X86-NEXT:    vmovaps %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x28,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttpd2qqs.round.256( <4 x double> %x0, <4 x i64> %src, i8 %mask, i32 4)
+  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttpd2qqs.256( <4 x double> %x0, <4 x i64> %src, i8 %mask)
   ret <4 x i64> %res
 }
 
@@ -251,7 +251,7 @@ define <4 x i64> @test_int_x86_maskz_vcvtt_pd2qqs_256_z(<4 x double> %x0, i8 %ma
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vcvttpd2qqs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0xfd,0xa9,0x6d,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttpd2qqs.round.256( <4 x double> %x0, <4 x i64> zeroinitializer, i8 %mask, i32 4)
+  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttpd2qqs.256( <4 x double> %x0, <4 x i64> zeroinitializer, i8 %mask)
   ret <4 x i64> %res
 }
 
@@ -267,7 +267,7 @@ define <4 x i64> @test_int_x86_mask_vcvtt_pd2qqs_256_undef(<4 x double> %x0, i8 
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vcvttpd2qqs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0xfd,0xa9,0x6d,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttpd2qqs.round.256( <4 x double> %x0, <4 x i64> undef, i8 %mask, i32 4)
+  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttpd2qqs.256( <4 x double> %x0, <4 x i64> undef, i8 %mask)
   ret <4 x i64> %res
 }
 
@@ -284,10 +284,10 @@ define <4 x i64> @test_int_x86_mask_vcvtt_pd2qqs_256_default(<4 x double>* %x0) 
 ; X86-NEXT:    vcvttpd2qqs (%eax), %ymm0 # encoding: [0x62,0xf5,0xfd,0x28,0x6d,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %x10 =  load <4 x double>, <4 x double>* %x0
-  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttpd2qqs.round.256( <4 x double> %x10, <4 x i64> undef, i8 -1, i32 4)
+  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttpd2qqs.256( <4 x double> %x10, <4 x i64> undef, i8 -1)
   ret <4 x i64> %res
 }
-declare <4 x i64> @llvm.x86.avx10.mask.vcvttpd2qqs.round.256(<4 x double>, <4 x i64>, i8 , i32)
+declare <4 x i64> @llvm.x86.avx10.mask.vcvttpd2qqs.256(<4 x double>, <4 x i64>, i8 )
 
 define <4 x i64> @test_int_x86_mask_vcvtt_pd2uqqs_256(<4 x double> %x0, <4 x i64> %src, i8 %mask) {
 ; X64-LABEL: test_int_x86_mask_vcvtt_pd2uqqs_256:
@@ -303,7 +303,7 @@ define <4 x i64> @test_int_x86_mask_vcvtt_pd2uqqs_256(<4 x double> %x0, <4 x i64
 ; X86-NEXT:    vcvttpd2uqqs %ymm0, %ymm1 {%k1} # encoding: [0x62,0xf5,0xfd,0x29,0x6c,0xc8]
 ; X86-NEXT:    vmovaps %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x28,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttpd2uqqs.round.256( <4 x double> %x0, <4 x i64> %src, i8 %mask, i32 4)
+  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttpd2uqqs.256( <4 x double> %x0, <4 x i64> %src, i8 %mask)
   ret <4 x i64> %res
 }
 
@@ -319,7 +319,7 @@ define <4 x i64> @test_int_x86_maskz_vcvtt_pd2uqqs_256_z(<4 x double> %x0, i8 %m
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vcvttpd2uqqs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0xfd,0xa9,0x6c,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttpd2uqqs.round.256( <4 x double> %x0, <4 x i64> zeroinitializer, i8 %mask, i32 4)
+  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttpd2uqqs.256( <4 x double> %x0, <4 x i64> zeroinitializer, i8 %mask)
   ret <4 x i64> %res
 }
 
@@ -335,7 +335,7 @@ define <4 x i64> @test_int_x86_mask_vcvtt_pd2uqqs_256_undef(<4 x double> %x0, i8
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vcvttpd2uqqs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0xfd,0xa9,0x6c,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttpd2uqqs.round.256( <4 x double> %x0, <4 x i64> undef, i8 %mask, i32 4)
+  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttpd2uqqs.256( <4 x double> %x0, <4 x i64> undef, i8 %mask)
   ret <4 x i64> %res
 }
 
@@ -352,10 +352,10 @@ define <4 x i64> @test_int_x86_mask_vcvtt_pd2uqqs_256_default(<4 x double>* %x0)
 ; X86-NEXT:    vcvttpd2uqqs (%eax), %ymm0 # encoding: [0x62,0xf5,0xfd,0x28,0x6c,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %x10 =  load <4 x double>, <4 x double>* %x0
-  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttpd2uqqs.round.256( <4 x double> %x10, <4 x i64> undef, i8 -1, i32 4)
+  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttpd2uqqs.256( <4 x double> %x10, <4 x i64> undef, i8 -1)
   ret <4 x i64> %res
 }
-declare <4 x i64> @llvm.x86.avx10.mask.vcvttpd2uqqs.round.256(<4 x double>, <4 x i64>, i8 , i32)
+declare <4 x i64> @llvm.x86.avx10.mask.vcvttpd2uqqs.256(<4 x double>, <4 x i64>, i8 )
 
 define <8 x i32> @test_int_x86_mask_vcvtt_ps2dqs_256(<8 x float> %x0, <8 x i32> %src, i8 %mask) {
 ; X64-LABEL: test_int_x86_mask_vcvtt_ps2dqs_256:
@@ -371,7 +371,7 @@ define <8 x i32> @test_int_x86_mask_vcvtt_ps2dqs_256(<8 x float> %x0, <8 x i32> 
 ; X86-NEXT:    vcvttps2dqs %ymm0, %ymm1 {%k1} # encoding: [0x62,0xf5,0x7c,0x29,0x6d,0xc8]
 ; X86-NEXT:    vmovaps %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x28,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <8 x i32> @llvm.x86.avx10.mask.vcvttps2dqs.round.256( <8 x float> %x0, <8 x i32> %src, i8 %mask, i32 4)
+  %res = call <8 x i32> @llvm.x86.avx10.mask.vcvttps2dqs.256( <8 x float> %x0, <8 x i32> %src, i8 %mask)
   ret <8 x i32> %res
 }
 
@@ -387,7 +387,7 @@ define <8 x i32> @test_int_x86_maskz_vcvtt_ps2dqs_256_z(<8 x float> %x0, i8 %mas
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vcvttps2dqs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7c,0xa9,0x6d,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <8 x i32> @llvm.x86.avx10.mask.vcvttps2dqs.round.256( <8 x float> %x0, <8 x i32> zeroinitializer, i8 %mask, i32 4)
+  %res = call <8 x i32> @llvm.x86.avx10.mask.vcvttps2dqs.256( <8 x float> %x0, <8 x i32> zeroinitializer, i8 %mask)
   ret <8 x i32> %res
 }
 
@@ -403,7 +403,7 @@ define <8 x i32> @test_int_x86_mask_vcvtt_ps2dqs_256_undef(<8 x float> %x0, i8 %
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vcvttps2dqs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7c,0xa9,0x6d,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <8 x i32> @llvm.x86.avx10.mask.vcvttps2dqs.round.256( <8 x float> %x0, <8 x i32> undef, i8 %mask, i32 4)
+  %res = call <8 x i32> @llvm.x86.avx10.mask.vcvttps2dqs.256( <8 x float> %x0, <8 x i32> undef, i8 %mask)
   ret <8 x i32> %res
 }
 
@@ -419,10 +419,10 @@ define <8 x i32> @test_int_x86_mask_vcvtt_ps2dqs_256_default(<8 x float>* %x0) {
 ; X86-NEXT:    vcvttps2dqs (%eax), %ymm0 # encoding: [0x62,0xf5,0x7c,0x28,0x6d,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %x10 =  load <8 x float>, <8 x float>* %x0
-  %res = call <8 x i32> @llvm.x86.avx10.mask.vcvttps2dqs.round.256( <8 x float> %x10, <8 x i32> undef, i8 -1, i32 4)
+  %res = call <8 x i32> @llvm.x86.avx10.mask.vcvttps2dqs.256( <8 x float> %x10, <8 x i32> undef, i8 -1)
   ret <8 x i32> %res
 }
-declare <8 x i32> @llvm.x86.avx10.mask.vcvttps2dqs.round.256(<8 x float>, <8 x i32>, i8 , i32)
+declare <8 x i32> @llvm.x86.avx10.mask.vcvttps2dqs.256(<8 x float>, <8 x i32>, i8 )
 
 define <8 x i32> @test_int_x86_mask_vcvtt_ps2udqs_256(<8 x float> %x0, <8 x i32> %src, i8 %mask) {
 ; X64-LABEL: test_int_x86_mask_vcvtt_ps2udqs_256:
@@ -438,7 +438,7 @@ define <8 x i32> @test_int_x86_mask_vcvtt_ps2udqs_256(<8 x float> %x0, <8 x i32>
 ; X86-NEXT:    vcvttps2udqs %ymm0, %ymm1 {%k1} # encoding: [0x62,0xf5,0x7c,0x29,0x6c,0xc8]
 ; X86-NEXT:    vmovaps %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x28,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <8 x i32> @llvm.x86.avx10.mask.vcvttps2udqs.round.256( <8 x float> %x0, <8 x i32> %src, i8 %mask, i32 4)
+  %res = call <8 x i32> @llvm.x86.avx10.mask.vcvttps2udqs.256( <8 x float> %x0, <8 x i32> %src, i8 %mask)
   ret <8 x i32> %res
 }
 
@@ -454,7 +454,7 @@ define <8 x i32> @test_int_x86_maskz_vcvtt_ps2udqs_256_z(<8 x float> %x0, i8 %ma
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vcvttps2udqs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7c,0xa9,0x6c,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <8 x i32> @llvm.x86.avx10.mask.vcvttps2udqs.round.256( <8 x float> %x0, <8 x i32> zeroinitializer, i8 %mask, i32 4)
+  %res = call <8 x i32> @llvm.x86.avx10.mask.vcvttps2udqs.256( <8 x float> %x0, <8 x i32> zeroinitializer, i8 %mask)
   ret <8 x i32> %res
 }
 
@@ -470,7 +470,7 @@ define <8 x i32> @test_int_x86_mask_vcvtt_ps2udqs_256_undef(<8 x float> %x0, i8 
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vcvttps2udqs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7c,0xa9,0x6c,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <8 x i32> @llvm.x86.avx10.mask.vcvttps2udqs.round.256( <8 x float> %x0, <8 x i32> undef, i8 %mask, i32 4)
+  %res = call <8 x i32> @llvm.x86.avx10.mask.vcvttps2udqs.256( <8 x float> %x0, <8 x i32> undef, i8 %mask)
   ret <8 x i32> %res
 }
 
@@ -487,10 +487,10 @@ define <8 x i32> @test_int_x86_mask_vcvtt_ps2udqs_256_default(<8 x float>* %x0) 
 ; X86-NEXT:    vcvttps2udqs (%eax), %ymm0 # encoding: [0x62,0xf5,0x7c,0x28,0x6c,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %x10 =  load <8 x float>, <8 x float>* %x0
-  %res = call <8 x i32> @llvm.x86.avx10.mask.vcvttps2udqs.round.256( <8 x float> %x10, <8 x i32> undef, i8 -1, i32 4)
+  %res = call <8 x i32> @llvm.x86.avx10.mask.vcvttps2udqs.256( <8 x float> %x10, <8 x i32> undef, i8 -1)
   ret <8 x i32> %res
 }
-declare <8 x i32> @llvm.x86.avx10.mask.vcvttps2udqs.round.256(<8 x float>, <8 x i32>, i8 , i32)
+declare <8 x i32> @llvm.x86.avx10.mask.vcvttps2udqs.256(<8 x float>, <8 x i32>, i8 )
 
 define <4 x i64> @test_int_x86_maskz_vcvtt_ps2qqs_256_z(<4 x float> %x0, i8 %mask) {
 ; X64-LABEL: test_int_x86_maskz_vcvtt_ps2qqs_256_z:
@@ -504,7 +504,7 @@ define <4 x i64> @test_int_x86_maskz_vcvtt_ps2qqs_256_z(<4 x float> %x0, i8 %mas
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vcvttps2qqs %xmm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7d,0xa9,0x6d,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttps2qqs.round.256( <4 x float> %x0, <4 x i64> zeroinitializer, i8 %mask, i32 4)
+  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttps2qqs.256( <4 x float> %x0, <4 x i64> zeroinitializer, i8 %mask)
   ret <4 x i64> %res
 }
 
@@ -520,10 +520,10 @@ define <4 x i64> @test_int_x86_mask_vcvtt_ps2qqs_256_undef(<4 x float> %x0, i8 %
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vcvttps2qqs %xmm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7d,0xa9,0x6d,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttps2qqs.round.256( <4 x float> %x0, <4 x i64> undef, i8 %mask, i32 4)
+  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttps2qqs.256( <4 x float> %x0, <4 x i64> undef, i8 %mask)
   ret <4 x i64> %res
 }
-declare <4 x i64> @llvm.x86.avx10.mask.vcvttps2qqs.round.256(<4 x float>, <4 x i64>, i8 , i32)
+declare <4 x i64> @llvm.x86.avx10.mask.vcvttps2qqs.256(<4 x float>, <4 x i64>, i8 )
 
 define <4 x i64> @test_int_x86_mask_vcvtt_ps2uqqs_256(<4 x float> %x0, <4 x i64> %src, i8 %mask) {
 ; X64-LABEL: test_int_x86_mask_vcvtt_ps2uqqs_256:
@@ -539,7 +539,7 @@ define <4 x i64> @test_int_x86_mask_vcvtt_ps2uqqs_256(<4 x float> %x0, <4 x i64>
 ; X86-NEXT:    vcvttps2uqqs %xmm0, %ymm1 {%k1} # encoding: [0x62,0xf5,0x7d,0x29,0x6c,0xc8]
 ; X86-NEXT:    vmovaps %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x28,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttps2uqqs.round.256( <4 x float> %x0, <4 x i64> %src, i8 %mask, i32 4)
+  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttps2uqqs.256( <4 x float> %x0, <4 x i64> %src, i8 %mask)
   ret <4 x i64> %res
 }
 
@@ -555,7 +555,7 @@ define <4 x i64> @test_int_x86_maskz_vcvtt_ps2uqqs_256_z(<4 x float> %x0, i8 %ma
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vcvttps2uqqs %xmm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7d,0xa9,0x6c,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttps2uqqs.round.256( <4 x float> %x0, <4 x i64> zeroinitializer, i8 %mask, i32 4)
+  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttps2uqqs.256( <4 x float> %x0, <4 x i64> zeroinitializer, i8 %mask)
   ret <4 x i64> %res
 }
 
@@ -571,7 +571,7 @@ define <4 x i64> @test_int_x86_mask_vcvtt_ps2uqqs_256_undef(<4 x float> %x0, i8 
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vcvttps2uqqs %xmm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7d,0xa9,0x6c,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttps2uqqs.round.256( <4 x float> %x0, <4 x i64> undef, i8 %mask, i32 4)
+  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttps2uqqs.256( <4 x float> %x0, <4 x i64> undef, i8 %mask)
   ret <4 x i64> %res
 }
 
@@ -581,11 +581,11 @@ define <4 x i64> @test_int_x86_mask_vcvtt_ps2uqqs_256_default(<4 x float> %x0) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttps2uqqs %xmm0, %ymm0 # encoding: [0x62,0xf5,0x7d,0x28,0x6c,0xc0]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttps2uqqs.round.256( <4 x float> %x0, <4 x i64> undef, i8 -1, i32 4)
+  %res = call <4 x i64> @llvm.x86.avx10.mask.vcvttps2uqqs.256( <4 x float> %x0, <4 x i64> undef, i8 -1)
   ret <4 x i64> %res
 }
 
-declare <4 x i64> @llvm.x86.avx10.mask.vcvttps2uqqs.round.256(<4 x float>, <4 x i64>, i8 , i32)
+declare <4 x i64> @llvm.x86.avx10.mask.vcvttps2uqqs.256(<4 x float>, <4 x i64>, i8 )
 
 define <4 x i32> @test_int_x86_mask_vcvtt_pd2dqs_128(<2 x double> %x0, <4 x i32> %src, i8 %mask) {
 ; X64-LABEL: test_int_x86_mask_vcvtt_pd2dqs_128:

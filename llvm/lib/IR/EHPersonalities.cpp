@@ -27,7 +27,7 @@ EHPersonality llvm::classifyEHPersonality(const Value *Pers) {
     return EHPersonality::Unknown;
 
   StringRef Name = F->getName();
-  if (Triple(F->getParent()->getTargetTriple()).isWindowsArm64EC()) {
+  if (F->getParent()->getTargetTriple().isWindowsArm64EC()) {
     // ARM64EC function symbols are mangled by prefixing them with "#".
     // Demangle them by skipping this prefix.
     Name.consume_front("#");

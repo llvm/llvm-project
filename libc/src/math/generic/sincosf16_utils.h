@@ -40,7 +40,7 @@ constexpr float SIN_K_PI_OVER_32[64] = {
 
 LIBC_INLINE int32_t range_reduction_sincospif16(float x, float &y) {
   float kf = fputil::nearest_integer(x * 32);
-  y = fputil::multiply_add<float>(x, 32.0, -kf);
+  y = fputil::multiply_add(x, 32.0f, -kf);
 
   return static_cast<int32_t>(kf);
 }

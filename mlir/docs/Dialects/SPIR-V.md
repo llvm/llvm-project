@@ -528,7 +528,7 @@ MLIR system.
 We introduce a `spirv.mlir.selection` and `spirv.mlir.loop` op for structured selections and
 loops, respectively. The merge targets are the next ops following them. Inside
 their regions, a special terminator, `spirv.mlir.merge` is introduced for branching to
-the merge target.
+the merge target and yielding values.
 
 ### Selection
 
@@ -603,7 +603,43 @@ func.func @selection(%cond: i1) -> () {
 
   // ...
 }
+```
 
+The selection can return values by yielding them with `spirv.mlir.merge`. This
+mechanism allows values defined within the selection region to be used outside of it.
+Without this, values that were sunk into the selection region, but used outside, would
+not be able to escape it.
+
+For example
+
+```mlir
+func.func @selection(%cond: i1) -> () {
+  %zero = spirv.Constant 0: i32
+  %var1 = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+  %var2 = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+
+  %yield:2 = spirv.mlir.selection -> i32, i32 {
+    spirv.BranchConditional %cond, ^then, ^else
+
+  ^then:
+    %one = spirv.Constant 1: i32
+    %three = spirv.Constant 3: i32
+    spirv.Branch ^merge(%one, %three : i32, i32)
+
+  ^else:
+    %two = spirv.Constant 2: i32
+    %four = spirv.Constant 4 : i32
+    spirv.Branch ^merge(%two, %four : i32, i32)
+
+  ^merge(%merged_1_2: i32, %merged_3_4: i32):
+    spirv.mlir.merge %merged_1_2, %merged_3_4 : i32, i32
+  }
+
+  spirv.Store "Function" %var1, %yield#0 : i32
+  spirv.Store "Function" %var2, %yield#1 : i32
+
+  spirv.Return
+}
 ```
 
 ### Loop
@@ -695,6 +731,18 @@ func.func @loop(%count : i32) -> () {
     spirv.mlir.merge
   }
   return
+}
+```
+
+Similarly to selection, loops can also yield values using `spirv.mlir.merge`. This
+mechanism allows values defined within the loop region to be used outside of it.
+
+For example
+
+```mlir
+%yielded = spirv.mlir.loop -> i32 {
+  // ...
+  spirv.mlir.merge %to_yield : i32
 }
 ```
 

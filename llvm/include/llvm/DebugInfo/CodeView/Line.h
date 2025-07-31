@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_LINE_H
 #define LLVM_DEBUGINFO_CODEVIEW_LINE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include <cinttypes>
 
@@ -32,7 +33,7 @@ public:
     StatementFlag = 0x80000000u
   };
 
-  LineInfo(uint32_t StartLine, uint32_t EndLine, bool IsStatement);
+  LLVM_ABI LineInfo(uint32_t StartLine, uint32_t EndLine, bool IsStatement);
   LineInfo(uint32_t LineData) : LineData(LineData) {}
 
   uint32_t getStartLine() const { return LineData & StartLineMask; }

@@ -21,21 +21,16 @@
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <functional>
 #include <memory>
-#include <numeric>
 #include <optional>
-#include <sstream>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -45,7 +40,6 @@ using namespace mlir;
 using namespace presburger;
 
 using llvm::SmallDenseMap;
-using llvm::SmallDenseSet;
 
 std::unique_ptr<IntegerRelation> IntegerRelation::clone() const {
   return std::make_unique<IntegerRelation>(*this);
@@ -1521,25 +1515,19 @@ void IntegerRelation::addLocalFloorDiv(ArrayRef<DynamicAPInt> dividend,
       getDivUpperBound(dividendCopy, divisor, dividendCopy.size() - 2));
 }
 
-/// Finds an equality that equates the specified variable to a constant.
-/// Returns the position of the equality row. If 'symbolic' is set to true,
-/// symbols are also treated like a constant, i.e., an affine function of the
-/// symbols is also treated like a constant. Returns -1 if such an equality
-/// could not be found.
-static int findEqualityToConstant(const IntegerRelation &cst, unsigned pos,
-                                  bool symbolic = false) {
-  assert(pos < cst.getNumVars() && "invalid position");
-  for (unsigned r = 0, e = cst.getNumEqualities(); r < e; r++) {
-    DynamicAPInt v = cst.atEq(r, pos);
+int IntegerRelation::findEqualityToConstant(unsigned pos, bool symbolic) const {
+  assert(pos < getNumVars() && "invalid position");
+  for (unsigned r = 0, e = getNumEqualities(); r < e; r++) {
+    DynamicAPInt v = atEq(r, pos);
     if (v * v != 1)
       continue;
     unsigned c;
-    unsigned f = symbolic ? cst.getNumDimVars() : cst.getNumVars();
+    unsigned f = symbolic ? getNumDimVars() : getNumVars();
     // This checks for zeros in all positions other than 'pos' in [0, f)
     for (c = 0; c < f; c++) {
       if (c == pos)
         continue;
-      if (cst.atEq(r, c) != 0) {
+      if (atEq(r, c) != 0) {
         // Dependent on another variable.
         break;
       }
@@ -1554,7 +1542,7 @@ static int findEqualityToConstant(const IntegerRelation &cst, unsigned pos,
 LogicalResult IntegerRelation::constantFoldVar(unsigned pos) {
   assert(pos < getNumVars() && "invalid position");
   int rowIdx;
-  if ((rowIdx = findEqualityToConstant(*this, pos)) == -1)
+  if ((rowIdx = findEqualityToConstant(pos)) == -1)
     return failure();
 
   // atEq(rowIdx, pos) is either -1 or 1.
@@ -1593,12 +1581,13 @@ std::optional<DynamicAPInt> IntegerRelation::getConstantBoundOnDimSize(
 
   // Find an equality for 'pos'^th variable that equates it to some function
   // of the symbolic variables (+ constant).
-  int eqPos = findEqualityToConstant(*this, pos, /*symbolic=*/true);
+  int eqPos = findEqualityToConstant(pos, /*symbolic=*/true);
   if (eqPos != -1) {
     auto eq = getEquality(eqPos);
-    // If the equality involves a local var, punt for now.
-    // TODO: this can be handled in the future by using the explicit
-    // representation of the local vars.
+    // If the equality involves a local var, we do not handle it.
+    // FlatLinearConstraints can instead be used to detect the local variable as
+    // an affine function (potentially div/mod) of other variables and use
+    // affine expressions/maps to represent output.
     if (!std::all_of(eq.begin() + getNumDimAndSymbolVars(), eq.end() - 1,
                      [](const DynamicAPInt &coeff) { return coeff == 0; }))
       return std::nullopt;
@@ -1719,7 +1708,7 @@ IntegerRelation::computeConstantLowerOrUpperBound(unsigned pos) {
   projectOut(0, pos);
   projectOut(1, getNumVars() - 1);
   // Check if there's an equality equating the '0'^th variable to a constant.
-  int eqRowIdx = findEqualityToConstant(*this, 0, /*symbolic=*/false);
+  int eqRowIdx = findEqualityToConstant(/*pos=*/0, /*symbolic=*/false);
   if (eqRowIdx != -1)
     // atEq(rowIdx, 0) is either -1 or 1.
     return -atEq(eqRowIdx, getNumCols() - 1) / atEq(eqRowIdx, 0);
@@ -1829,8 +1818,6 @@ void IntegerRelation::removeTrivialRedundancy() {
   // for a given row.
   SmallDenseMap<ArrayRef<DynamicAPInt>, std::pair<unsigned, DynamicAPInt>>
       rowsWithoutConstTerm;
-  // To unique rows.
-  SmallDenseSet<ArrayRef<DynamicAPInt>, 8> rowSet;
 
   // Check if constraint is of the form <non-negative-constant> >= 0.
   auto isTriviallyValid = [&](unsigned r) -> bool {
@@ -1845,8 +1832,7 @@ void IntegerRelation::removeTrivialRedundancy() {
   SmallVector<bool, 256> redunIneq(getNumInequalities(), false);
   for (unsigned r = 0, e = getNumInequalities(); r < e; r++) {
     DynamicAPInt *rowStart = &inequalities(r, 0);
-    auto row = ArrayRef<DynamicAPInt>(rowStart, getNumCols());
-    if (isTriviallyValid(r) || !rowSet.insert(row).second) {
+    if (isTriviallyValid(r)) {
       redunIneq[r] = true;
       continue;
     }
@@ -2228,7 +2214,7 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
       auto constOtherLb = otherCst.getConstantBound(BoundType::LB, d);
       if (!constLb.has_value() || !constOtherLb.has_value())
         return failure();
-      std::fill(minLb.begin(), minLb.end(), 0);
+      llvm::fill(minLb, 0);
       minLb.back() = std::min(*constLb, *constOtherLb);
     }
 
@@ -2244,12 +2230,12 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
       auto constOtherUb = otherCst.getConstantBound(BoundType::UB, d);
       if (!constUb.has_value() || !constOtherUb.has_value())
         return failure();
-      std::fill(maxUb.begin(), maxUb.end(), 0);
+      llvm::fill(maxUb, 0);
       maxUb.back() = std::max(*constUb, *constOtherUb);
     }
 
-    std::fill(newLb.begin(), newLb.end(), 0);
-    std::fill(newUb.begin(), newUb.end(), 0);
+    llvm::fill(newLb, 0);
+    llvm::fill(newUb, 0);
 
     // The divisor for lb, ub, otherLb, otherUb at this point is lbDivisor,
     // and so it's the divisor for newLb and newUb as well.
@@ -2403,8 +2389,9 @@ bool IntegerRelation::removeDuplicateConstraints() {
       addEquality(getInequality(k));
       removeInequality(k);
       removeInequality(l);
-    } else
+    } else {
       *this = getEmpty(getSpace());
+    }
     break;
   }
 
@@ -2493,6 +2480,44 @@ void IntegerRelation::applyDomain(const IntegerRelation &rel) {
 }
 
 void IntegerRelation::applyRange(const IntegerRelation &rel) { compose(rel); }
+
+IntegerRelation IntegerRelation::rangeProduct(const IntegerRelation &rel) {
+  /// R1: (i, j) -> k : f(i, j, k) = 0
+  /// R2: (i, j) -> l : g(i, j, l) = 0
+  /// R1.rangeProduct(R2): (i, j) -> (k, l) : f(i, j, k) = 0 and g(i, j, l) = 0
+  assert(getNumDomainVars() == rel.getNumDomainVars() &&
+         "Range product is only defined for relations with equal domains");
+
+  // explicit copy of `this`
+  IntegerRelation result = *this;
+  unsigned relRangeVarStart = rel.getVarKindOffset(VarKind::Range);
+  unsigned numThisRangeVars = getNumRangeVars();
+  unsigned numNewSymbolVars = result.getNumSymbolVars() - getNumSymbolVars();
+
+  result.appendVar(VarKind::Range, rel.getNumRangeVars());
+
+  // Copy each equality from `rel` and update the copy to account for range
+  // variables from `this`. The `rel` equality is a list of coefficients of the
+  // variables from `rel`, and so the range variables need to be shifted right
+  // by the number of `this` range variables and symbols.
+  for (unsigned i = 0; i < rel.getNumEqualities(); ++i) {
+    SmallVector<DynamicAPInt> copy =
+        SmallVector<DynamicAPInt>(rel.getEquality(i));
+    copy.insert(copy.begin() + relRangeVarStart,
+                numThisRangeVars + numNewSymbolVars, DynamicAPInt(0));
+    result.addEquality(copy);
+  }
+
+  for (unsigned i = 0; i < rel.getNumInequalities(); ++i) {
+    SmallVector<DynamicAPInt> copy =
+        SmallVector<DynamicAPInt>(rel.getInequality(i));
+    copy.insert(copy.begin() + relRangeVarStart,
+                numThisRangeVars + numNewSymbolVars, DynamicAPInt(0));
+    result.addInequality(copy);
+  }
+
+  return result;
+}
 
 void IntegerRelation::printSpace(raw_ostream &os) const {
   space.print(os);

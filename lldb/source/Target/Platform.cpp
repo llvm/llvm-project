@@ -492,7 +492,6 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
       // the platform's working directory
       if (!fixed_dst.GetDirectory()) {
         FileSpec relative_spec;
-        std::string path;
         if (working_dir) {
           relative_spec = working_dir;
           relative_spec.AppendPathComponent(dst.GetPath());
@@ -2075,6 +2074,13 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
                                                  0x00}; // break 0x5
     trap_opcode = g_loongarch_opcode;
     trap_opcode_size = sizeof(g_loongarch_opcode);
+  } break;
+
+  case llvm::Triple::wasm32: {
+    // Unreachable (0x00) triggers an unconditional trap.
+    static const uint8_t g_wasm_opcode[] = {0x00};
+    trap_opcode = g_wasm_opcode;
+    trap_opcode_size = sizeof(g_wasm_opcode);
   } break;
 
   default:

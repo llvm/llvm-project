@@ -40,16 +40,16 @@ int main() {
 // CHECK-SAME: task_id=[[IMPLICIT_TASK_ID:[0-9]+]]
 
 // CHECK: {{^}}[[MASTER_ID]]: task level 0: parallel_id=[[PARALLEL_ID]],
-// CHECK-SAME: task_id=[[IMPLICIT_TASK_ID]], exit_frame=[[EXIT:0x[0-f]+]],
+// CHECK-SAME: task_id=[[IMPLICIT_TASK_ID]], exit_frame=[[EXIT:(0x)?[0-f]+]],
 // CHECK-SAME: reenter_frame=[[NULL]]
 
-// CHECK: {{^}}[[MASTER_ID]]: address of x: [[ADDRX:0x[0-f]+]]
+// CHECK: {{^}}[[MASTER_ID]]: address of x: [[ADDRX:(0x)?[0-f]+]]
 
 // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create:
 // CHECK-SAME: parent_task_id={{[0-9]+}}, parent_task_frame.exit=[[EXIT]],
-// CHECK-SAME: parent_task_frame.reenter={{0x[0-f]+}},
+// CHECK-SAME: parent_task_frame.reenter={{(0x)?[0-f]+}},
 // CHECK-SAME: new_task_id=[[FIRST_TASK:[0-f]+]],
-// CHECK-SAME: codeptr_ra=[[RETURN_ADDRESS:0x[0-f]+]]{{[0-f][0-f]}},
+// CHECK-SAME: codeptr_ra=[[RETURN_ADDRESS:(0x)?[0-f]+]]{{[0-f][0-f]}},
 // CHECK-SAME: task_type=ompt_task_explicit=4, has_dependences=yes
 
 // CHECK: {{^}}[[MASTER_ID]]: ompt_event_dependences:
@@ -60,9 +60,9 @@ int main() {
 
 // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create:
 // CHECK-SAME: parent_task_id={{[0-9]+}}, parent_task_frame.exit=[[EXIT]],
-// CHECK-SAME: parent_task_frame.reenter={{0x[0-f]+}},
+// CHECK-SAME: parent_task_frame.reenter={{(0x)?[0-f]+}},
 // CHECK-SAME: new_task_id=[[SECOND_TASK:[0-f]+]],
-// CHECK-SAME: codeptr_ra=[[RETURN_ADDRESS:0x[0-f]+]]{{[0-f][0-f]}},
+// CHECK-SAME: codeptr_ra=[[RETURN_ADDRESS:(0x)?[0-f]+]]{{[0-f][0-f]}},
 // CHECK-SAME: task_type=ompt_task_taskwait|ompt_task_undeferred|
 // CHECK-SAME: ompt_task_mergeable=1207959568, has_dependences=yes
 

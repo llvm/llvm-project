@@ -77,31 +77,6 @@ std::string toString(wasm::Symbol::Kind kind) {
 }
 
 namespace wasm {
-DefinedFunction *WasmSym::callCtors;
-DefinedFunction *WasmSym::callDtors;
-DefinedFunction *WasmSym::initMemory;
-DefinedFunction *WasmSym::applyGlobalRelocs;
-DefinedFunction *WasmSym::applyTLSRelocs;
-DefinedFunction *WasmSym::applyGlobalTLSRelocs;
-DefinedFunction *WasmSym::initTLS;
-DefinedFunction *WasmSym::startFunction;
-DefinedData *WasmSym::dsoHandle;
-DefinedData *WasmSym::dataEnd;
-DefinedData *WasmSym::globalBase;
-DefinedData *WasmSym::heapBase;
-DefinedData *WasmSym::heapEnd;
-DefinedData *WasmSym::initMemoryFlag;
-GlobalSymbol *WasmSym::stackPointer;
-DefinedData *WasmSym::stackLow;
-DefinedData *WasmSym::stackHigh;
-GlobalSymbol *WasmSym::tlsBase;
-GlobalSymbol *WasmSym::tlsSize;
-GlobalSymbol *WasmSym::tlsAlign;
-UndefinedGlobal *WasmSym::tableBase;
-DefinedData *WasmSym::definedTableBase;
-UndefinedGlobal *WasmSym::memoryBase;
-DefinedData *WasmSym::definedMemoryBase;
-TableSymbol *WasmSym::indirectFunctionTable;
 
 WasmSymbolType Symbol::getWasmType() const {
   if (isa<FunctionSymbol>(this))
@@ -183,7 +158,7 @@ void Symbol::markLive() {
 }
 
 uint32_t Symbol::getOutputSymbolIndex() const {
-  assert(outputSymbolIndex != INVALID_INDEX);
+  assert(outputSymbolIndex != INVALID_INDEX || !isLive());
   return outputSymbolIndex;
 }
 

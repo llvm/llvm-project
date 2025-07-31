@@ -16,6 +16,7 @@
 
 #include "Shared/Utils.h"
 
+#include "llvm/ProfileData/InstrProfData.inc"
 #include "llvm/Support/Error.h"
 
 #include <cstring>
@@ -25,13 +26,20 @@ using namespace llvm;
 using namespace omp;
 using namespace target;
 using namespace plugin;
+using namespace error;
 
 Expected<std::unique_ptr<ObjectFile>>
 GenericGlobalHandlerTy::getELFObjectFile(DeviceImageTy &Image) {
   assert(utils::elf::isELF(Image.getMemoryBuffer().getBuffer()) &&
          "Input is not an ELF file");
 
-  return ELFObjectFileBase::createELFObjectFile(Image.getMemoryBuffer());
+  auto Expected =
+      ELFObjectFileBase::createELFObjectFile(Image.getMemoryBuffer());
+  if (!Expected) {
+    return Plugin::error(ErrorCode::INVALID_BINARY, Expected.takeError(),
+                         "error parsing binary");
+  }
+  return Expected;
 }
 
 Error GenericGlobalHandlerTy::moveGlobalBetweenDeviceAndHost(
@@ -111,20 +119,21 @@ Error GenericGlobalHandlerTy::getGlobalMetadataFromImage(
   // Search the ELF symbol using the symbol name.
   auto SymOrErr = utils::elf::getSymbol(**ELFObj, ImageGlobal.getName());
   if (!SymOrErr)
-    return Plugin::error("Failed ELF lookup of global '%s': %s",
-                         ImageGlobal.getName().data(),
-                         toString(SymOrErr.takeError()).data());
+    return Plugin::error(
+        ErrorCode::NOT_FOUND, "failed ELF lookup of global '%s': %s",
+        ImageGlobal.getName().data(), toString(SymOrErr.takeError()).data());
 
   if (!SymOrErr->has_value())
-    return Plugin::error("Failed to find global symbol '%s' in the ELF image",
+    return Plugin::error(ErrorCode::NOT_FOUND,
+                         "failed to find global symbol '%s' in the ELF image",
                          ImageGlobal.getName().data());
 
   auto AddrOrErr = utils::elf::getSymbolAddress(**SymOrErr);
   // Get the section to which the symbol belongs.
   if (!AddrOrErr)
-    return Plugin::error("Failed to get ELF symbol from global '%s': %s",
-                         ImageGlobal.getName().data(),
-                         toString(AddrOrErr.takeError()).data());
+    return Plugin::error(
+        ErrorCode::NOT_FOUND, "failed to get ELF symbol from global '%s': %s",
+        ImageGlobal.getName().data(), toString(AddrOrErr.takeError()).data());
 
   // Setup the global symbol's address and size.
   ImageGlobal.setPtr(const_cast<void *>(*AddrOrErr));
@@ -142,7 +151,8 @@ Error GenericGlobalHandlerTy::readGlobalFromImage(GenericDeviceTy &Device,
     return Err;
 
   if (ImageGlobal.getSize() != HostGlobal.getSize())
-    return Plugin::error("Transfer failed because global symbol '%s' has "
+    return Plugin::error(ErrorCode::INVALID_BINARY,
+                         "transfer failed because global symbol '%s' has "
                          "%u bytes in the ELF image but %u bytes on the host",
                          HostGlobal.getName().data(), ImageGlobal.getSize(),
                          HostGlobal.getSize());
@@ -161,16 +171,6 @@ Error GenericGlobalHandlerTy::readGlobalFromImage(GenericDeviceTy &Device,
   std::memcpy(HostGlobal.getPtr(), ImageGlobal.getPtr(), HostGlobal.getSize());
 
   return Plugin::success();
-}
-
-bool GenericGlobalHandlerTy::hasProfilingGlobals(GenericDeviceTy &Device,
-                                                 DeviceImageTy &Image) {
-  GlobalTy global(getInstrProfNamesVarName().str(), 0);
-  if (auto Err = getGlobalMetadataFromImage(Device, Image, global)) {
-    consumeError(std::move(Err));
-    return false;
-  }
-  return true;
 }
 
 Expected<GPUProfGlobals>
@@ -194,12 +194,17 @@ GenericGlobalHandlerTy::readProfilingGlobals(GenericDeviceTy &Device,
     // Check if given current global is a profiling global based
     // on name
     if (*NameOrErr == getInstrProfNamesVarName()) {
-      // Read in profiled function names
-      DeviceProfileData.NamesData = SmallVector<uint8_t>(Sym.getSize(), 0);
-      GlobalTy NamesGlobal(NameOrErr->str(), Sym.getSize(),
-                           DeviceProfileData.NamesData.data());
-      if (auto Err = readGlobalFromDevice(Device, Image, NamesGlobal))
-        return Err;
+      // Read in profiled function names from ELF
+      auto SectionOrErr = Sym.getSection();
+      if (!SectionOrErr)
+        return SectionOrErr.takeError();
+
+      auto ContentsOrErr = (*SectionOrErr)->getContents();
+      if (!ContentsOrErr)
+        return ContentsOrErr.takeError();
+
+      SmallVector<uint8_t> NameBytes(ContentsOrErr->bytes());
+      DeviceProfileData.NamesData = NameBytes;
     } else if (NameOrErr->starts_with(getInstrProfCountersVarPrefix())) {
       // Read global variable profiling counts
       SmallVector<int64_t> Counts(Sym.getSize() / sizeof(int64_t), 0);
@@ -214,6 +219,13 @@ GenericGlobalHandlerTy::readProfilingGlobals(GenericDeviceTy &Device,
       if (auto Err = readGlobalFromDevice(Device, Image, DataGlobal))
         return Err;
       DeviceProfileData.Data.push_back(std::move(Data));
+    } else if (*NameOrErr == INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR)) {
+      uint64_t RawVersionData;
+      GlobalTy RawVersionGlobal(NameOrErr->str(), Sym.getSize(),
+                                &RawVersionData);
+      if (auto Err = readGlobalFromDevice(Device, Image, RawVersionGlobal))
+        return Err;
+      DeviceProfileData.Version = RawVersionData;
     }
   }
   return DeviceProfileData;
@@ -266,7 +278,8 @@ void GPUProfGlobals::dump() const {
 
 Error GPUProfGlobals::write() const {
   if (!__llvm_write_custom_profile)
-    return Plugin::error("Could not find symbol __llvm_write_custom_profile. "
+    return Plugin::error(ErrorCode::INVALID_BINARY,
+                         "could not find symbol __llvm_write_custom_profile. "
                          "The compiler-rt profiling library must be linked for "
                          "GPU PGO to work.");
 
@@ -295,11 +308,16 @@ Error GPUProfGlobals::write() const {
   memcpy(NamesBegin, NamesData.data(), NamesData.size());
 
   // Invoke compiler-rt entrypoint
-  int result = __llvm_write_custom_profile(TargetTriple.str().c_str(),
-                                           DataBegin, DataEnd, CountersBegin,
-                                           CountersEnd, NamesBegin, NamesEnd);
+  int result = __llvm_write_custom_profile(
+      TargetTriple.str().c_str(), DataBegin, DataEnd, CountersBegin,
+      CountersEnd, NamesBegin, NamesEnd, &Version);
   if (result != 0)
-    return Plugin::error("Error writing GPU PGO data to file");
+    return Plugin::error(ErrorCode::HOST_IO,
+                         "error writing GPU PGO data to file");
 
   return Plugin::success();
+}
+
+bool GPUProfGlobals::empty() const {
+  return Counts.empty() && Data.empty() && NamesData.empty();
 }

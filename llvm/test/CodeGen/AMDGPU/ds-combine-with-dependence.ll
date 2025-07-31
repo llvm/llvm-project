@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=GCN %s
 
 
 ; There is no dependence between the store and the two loads. So we can combine
@@ -15,7 +15,7 @@ define amdgpu_kernel void @ds_combine_nodep(ptr addrspace(1) %out, ptr addrspace
   %load0 = load <3 x float>, ptr addrspace(3) %addr0, align 4
   %v0 = extractelement <3 x float> %load0, i32 2
 
-  %tmp1 = insertelement <2 x float> undef, float 1.0, i32 0
+  %tmp1 = insertelement <2 x float> poison, float 1.0, i32 0
   %data = insertelement <2 x float> %tmp1, float 2.0, i32 1
 
   %tmp2 = getelementptr float, ptr addrspace(3) %inptr, i32 26
@@ -43,7 +43,7 @@ define amdgpu_kernel void @ds_combine_WAR(ptr addrspace(1) %out, ptr addrspace(3
   %load0 = load <3 x float>, ptr addrspace(3) %addr0, align 4
   %v0 = extractelement <3 x float> %load0, i32 2
 
-  %tmp1 = insertelement <2 x float> undef, float 1.0, i32 0
+  %tmp1 = insertelement <2 x float> poison, float 1.0, i32 0
   %data = insertelement <2 x float> %tmp1, float 2.0, i32 1
 
   %tmp2 = getelementptr float, ptr addrspace(3) %inptr, i32 26
@@ -73,7 +73,7 @@ define amdgpu_kernel void @ds_combine_RAW(ptr addrspace(1) %out, ptr addrspace(3
   %load0 = load <3 x float>, ptr addrspace(3) %addr0, align 4
   %v0 = extractelement <3 x float> %load0, i32 2
 
-  %tmp1 = insertelement <2 x float> undef, float 1.0, i32 0
+  %tmp1 = insertelement <2 x float> poison, float 1.0, i32 0
   %data = insertelement <2 x float> %tmp1, float 2.0, i32 1
 
   %tmp2 = getelementptr float, ptr addrspace(3) %inptr, i32 26
@@ -102,7 +102,7 @@ define amdgpu_kernel void @ds_combine_WAR_RAW(ptr addrspace(1) %out, ptr addrspa
   %load0 = load <3 x float>, ptr addrspace(3) %addr0, align 4
   %v0 = extractelement <3 x float> %load0, i32 2
 
-  %tmp1 = insertelement <2 x float> undef, float 1.0, i32 0
+  %tmp1 = insertelement <2 x float> poison, float 1.0, i32 0
   %data = insertelement <2 x float> %tmp1, float 2.0, i32 1
 
   %tmp2 = getelementptr float, ptr addrspace(3) %inptr, i32 26

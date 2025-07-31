@@ -14,6 +14,7 @@
 #include "clang/Lex/Lexer.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -53,7 +54,6 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeTypedef.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
 
-#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
 #include "Plugins/SymbolFile/NativePDB/SymbolFileNativePDB.h"
 
@@ -1279,7 +1279,7 @@ void SymbolFilePDB::CacheFunctionNames() {
       if (name.empty())
         continue;
 
-      if (CPlusPlusLanguage::IsCPPMangledName(name.c_str())) {
+      if (Mangled::IsMangledName(name.c_str())) {
         // PDB public symbol has mangled name for its associated function.
         if (auto vm_addr = pub_sym_up->getVirtualAddress()) {
           if (auto it = addr_ids.find(vm_addr); it != addr_ids.end())
@@ -1431,7 +1431,7 @@ void SymbolFilePDB::AddSymbols(lldb_private::Symtab &symtab) {
   symtab.Finalize();
 }
 
-void SymbolFilePDB::DumpClangAST(Stream &s) {
+void SymbolFilePDB::DumpClangAST(Stream &s, llvm::StringRef filter) {
   auto type_system_or_err =
       GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   if (auto err = type_system_or_err.takeError()) {
@@ -1445,7 +1445,7 @@ void SymbolFilePDB::DumpClangAST(Stream &s) {
       llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
   if (!clang_type_system)
     return;
-  clang_type_system->Dump(s.AsRawOstream());
+  clang_type_system->Dump(s.AsRawOstream(), filter);
 }
 
 void SymbolFilePDB::FindTypesByRegex(

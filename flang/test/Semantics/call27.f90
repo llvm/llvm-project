@@ -4,18 +4,17 @@ program test
   real, allocatable :: a
   !ERROR: NULL() actual argument 'NULL()' may not be associated with allocatable dummy argument dummy argument 'a=' that is INTENT(OUT) or INTENT(IN OUT)
   call foo0(null())
-  !WARNING: NULL() actual argument 'NULL()' should not be associated with allocatable dummy argument dummy argument 'a=' without INTENT(IN)
+  !WARNING: NULL() actual argument 'NULL()' should not be associated with allocatable dummy argument dummy argument 'a=' without INTENT(IN) [-Wnull-actual-for-default-intent-allocatable]
   call foo1(null())
-  !PORTABILITY: Allocatable dummy argument 'a=' is associated with NULL()
+  !PORTABILITY: Allocatable dummy argument 'a=' is associated with NULL() [-Wnull-actual-for-allocatable]
   call foo2(null())
   call foo3(null()) ! ok
   !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'a=' is not definable
   !BECAUSE: 'null(mold=a)' is a null pointer
   call foo0(null(mold=a))
-  !WARNING: A null pointer should not be associated with allocatable dummy argument 'a=' without INTENT(IN)
+  !WARNING: A null allocatable should not be associated with allocatable dummy argument 'a=' without INTENT(IN)
   call foo1(null(mold=a))
-  !PORTABILITY: Allocatable dummy argument 'a=' is associated with a null pointer
-  call foo2(null(mold=a))
+  call foo2(null(mold=a)) ! ok
   call foo3(null(mold=a)) ! ok
  contains
   subroutine foo0(a)

@@ -180,6 +180,9 @@ Decl *SemaObjC::ActOnProperty(Scope *S, SourceLocation AtLoc,
                            0);
   TypeSourceInfo *TSI = SemaRef.GetTypeForDeclarator(FD.D);
   QualType T = TSI->getType();
+  if (T.getPointerAuth().isPresent()) {
+    Diag(AtLoc, diag::err_ptrauth_qualifier_invalid) << T << 2;
+  }
   if (!getOwnershipRule(Attributes)) {
     Attributes |= deducePropertyOwnershipFromType(SemaRef, T);
   }
@@ -307,7 +310,7 @@ static bool LocPropertyAttribute( ASTContext &Context, const char *attrName,
     return false;
 
   SourceManager &SM = Context.getSourceManager();
-  std::pair<FileID, unsigned> locInfo = SM.getDecomposedLoc(LParenLoc);
+  FileIDAndOffset locInfo = SM.getDecomposedLoc(LParenLoc);
   // Try to load the file buffer.
   bool invalidTemp = false;
   StringRef file = SM.getBufferData(locInfo.first, &invalidTemp);
@@ -1295,6 +1298,15 @@ Decl *SemaObjC::ActOnPropertyImplDecl(
         }
       }
 
+      if (Context.getLangOpts().PointerAuthObjcInterfaceSel &&
+          !PropertyIvarType.getPointerAuth()) {
+        if (Context.isObjCSelType(QualType(PropertyIvarType.getTypePtr(), 0))) {
+          if (auto PAQ = Context.getObjCMemberSelTypePtrAuth())
+            PropertyIvarType =
+                Context.getPointerAuthType(PropertyIvarType, PAQ);
+        }
+      }
+
       Ivar = ObjCIvarDecl::Create(Context, ClassImpDecl,
                                   PropertyIvarLoc,PropertyIvarLoc, PropertyIvar,
                                   PropertyIvarType, /*TInfo=*/nullptr,
@@ -1346,9 +1358,9 @@ Decl *SemaObjC::ActOnPropertyImplDecl(
             PropertyIvarType->castAs<ObjCObjectPointerType>(),
             IvarType->castAs<ObjCObjectPointerType>());
       else {
-        compat = (SemaRef.CheckAssignmentConstraints(
-                      PropertyIvarLoc, PropertyIvarType, IvarType) ==
-                  Sema::Compatible);
+        compat = SemaRef.IsAssignConvertCompatible(
+            SemaRef.CheckAssignmentConstraints(PropertyIvarLoc,
+                                               PropertyIvarType, IvarType));
       }
       if (!compat) {
         Diag(PropertyDiagLoc, diag::err_property_ivar_type)
@@ -1699,8 +1711,9 @@ bool SemaObjC::DiagnosePropertyAccessorMismatch(ObjCPropertyDecl *property,
              PropertyRValueType->getAs<ObjCObjectPointerType>()) &&
         (getterObjCPtr = GetterType->getAs<ObjCObjectPointerType>()))
       compat = Context.canAssignObjCInterfaces(getterObjCPtr, propertyObjCPtr);
-    else if (SemaRef.CheckAssignmentConstraints(
-                 Loc, GetterType, PropertyRValueType) != Sema::Compatible) {
+    else if (!SemaRef.IsAssignConvertCompatible(
+                 SemaRef.CheckAssignmentConstraints(Loc, GetterType,
+                                                    PropertyRValueType))) {
       Diag(Loc, diag::err_property_accessor_type)
           << property->getDeclName() << PropertyRValueType
           << GetterMethod->getSelector() << GetterType;
@@ -2075,10 +2088,9 @@ void SemaObjC::DiagnoseUnimplementedProperties(Scope *S, ObjCImplDecl *IMPDecl,
   for (const auto *I : IMPDecl->property_impls())
     PropImplMap.insert(I->getPropertyDecl());
 
-  llvm::SmallPtrSet<const ObjCMethodDecl *, 8> InsMap;
   // Collect property accessors implemented in current implementation.
-  for (const auto *I : IMPDecl->methods())
-    InsMap.insert(I);
+  llvm::SmallPtrSet<const ObjCMethodDecl *, 8> InsMap(llvm::from_range,
+                                                      IMPDecl->methods());
 
   ObjCCategoryDecl *C = dyn_cast<ObjCCategoryDecl>(CDecl);
   ObjCInterfaceDecl *PrimaryClass = nullptr;
@@ -2089,8 +2101,7 @@ void SemaObjC::DiagnoseUnimplementedProperties(Scope *S, ObjCImplDecl *IMPDecl,
         // When reporting on missing setter/getters, do not report when
         // setter/getter is implemented in category's primary class
         // implementation.
-        for (const auto *I : IMP->methods())
-          InsMap.insert(I);
+        InsMap.insert_range(IMP->methods());
       }
 
   for (ObjCContainerDecl::PropertyMap::iterator

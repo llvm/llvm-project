@@ -386,7 +386,7 @@ PDLDocument::PDLDocument(const lsp::URIForFile &uri, StringRef contents,
   llvm::SmallString<32> uriDirectory(uri.file());
   llvm::sys::path::remove_filename(uriDirectory);
   includeDirs.push_back(uriDirectory.str().str());
-  includeDirs.insert(includeDirs.end(), extraDirs.begin(), extraDirs.end());
+  llvm::append_range(includeDirs, extraDirs);
 
   sourceMgr.setIncludeDirs(includeDirs);
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
@@ -1044,7 +1044,8 @@ public:
     const ods::Operation *odsOp =
         opName ? odsContext.lookupOperation(*opName) : nullptr;
     codeCompleteOperationOperandOrResultSignature(
-        opName, odsOp, odsOp ? odsOp->getOperands() : std::nullopt,
+        opName, odsOp,
+        odsOp ? odsOp->getOperands() : ArrayRef<ods::OperandOrResult>(),
         currentNumOperands, "operand", "Value");
   }
 
@@ -1053,7 +1054,8 @@ public:
     const ods::Operation *odsOp =
         opName ? odsContext.lookupOperation(*opName) : nullptr;
     codeCompleteOperationOperandOrResultSignature(
-        opName, odsOp, odsOp ? odsOp->getResults() : std::nullopt,
+        opName, odsOp,
+        odsOp ? odsOp->getResults() : ArrayRef<ods::OperandOrResult>(),
         currentNumResults, "result", "Type");
   }
 

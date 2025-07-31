@@ -67,6 +67,14 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
+- New ``Override pure virtual methods`` code action. When invoked on a class
+  definition, this action automatically generates C++ ``override`` declarations
+  for all pure virtual methods inherited from its base classes that have not yet
+  been implemented. The generated method stubs prompts the user for the actual
+  implementation. The overrides are intelligently grouped under their original
+  access specifiers (e.g., ``public``, ``protected``), creating new access
+  specifier blocks if necessary.
+
 Signature help
 ^^^^^^^^^^^^^^
 
@@ -85,17 +93,32 @@ Improvements to clang-doc
 Improvements to clang-query
 ---------------------------
 
+- Matcher queries interpreted by clang-query are now support trailing comma (,)
+  in matcher arguments. Note that C++ still doesn't allow this in function
+  arguments. So when porting a query to C++, remove all instances of trailing
+  comma (otherwise C++ compiler will just complain about "expected expression").
+
 Improvements to clang-tidy
 --------------------------
+
+- The :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` scripts
+  now run checks in parallel by default using all available hardware threads.
+  Both scripts display the number of threads being used in their output.
 
 New checks
 ^^^^^^^^^^
 
-- New :doc:`bugprone-unintended-char-ostream-output
-  <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.
+- New :doc:`bugprone-invalid-enum-default-initialization
+  <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` check.
 
-  Finds unintended character output from ``unsigned char`` and ``signed char`` to an
-  ``ostream``.
+  Detects default initialization (to 0) of variables with ``enum`` type where
+  the enum has no enumerator with value of 0.
+
+- New :doc:`llvm-mlir-op-builder
+  <clang-tidy/checks/llvm/use-new-mlir-op-builder>` check.
+
+  Checks for uses of MLIR's old/to be deprecated ``OpBuilder::create<T>`` form
+  and suggests using ``T::create`` instead.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
@@ -103,44 +126,43 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Improved :doc:`bugprone-string-constructor
-  <clang-tidy/checks/bugprone/string-constructor>` check to find suspicious
-  calls of ``std::string`` constructor with char pointer, start position and
-  length parameters.
+- Improved :doc:`bugprone-infinite-loop
+  <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
+  variables introduced by structured bindings.
 
-- Improved :doc:`bugprone-unchecked-optional-access
-  <clang-tidy/checks/bugprone/unchecked-optional-access>` fixing false
-  positives from smart pointer accessors repeated in checking ``has_value``
-  and accessing ``value``. The option `IgnoreSmartPointerDereference` should
-  no longer be needed and will be removed. Also fixing false positive from 
-  const reference accessors to objects containing optional member.
+- Improved :doc:`bugprone-signed-char-misuse
+  <clang-tidy/checks/bugprone/signed-char-misuse>` check by fixing
+  false positives on C23 enums with the fixed underlying type of signed char.
 
-- Improved :doc:`bugprone-unsafe-functions
-  <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
-  additional C++ member functions to match.
+- Improved :doc:`bugprone-unhandled-self-assignment
+  <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
+  an additional matcher that generalizes the copy-and-swap idiom pattern
+  detection.
 
-- Improved :doc:`misc-const-correctness
-  <clang-tidy/checks/misc/const-correctness>` check by adding the option
-  `AllowedTypes`, that excludes specified types from const-correctness
-  checking and fixing false positives when modifying variant by ``operator[]``
-  with template in parameters.
+- Improved :doc:`misc-header-include-cycle
+  <clang-tidy/checks/misc/header-include-cycle>` check performance.
 
-- Improved :doc:`misc-redundant-expression
-  <clang-tidy/checks/misc/redundant-expression>` check by providing additional
-  examples and fixing some macro related false positives.
+- Improved :doc:`modernize-use-designated-initializers
+  <clang-tidy/checks/modernize/use-designated-initializers>` check to
+  suggest using designated initializers for aliased aggregate types.
 
-- Improved :doc:`performance/unnecessary-value-param
-  <clang-tidy/checks/performance/unnecessary-value-param>` check performance by
-  tolerating fix-it breaking compilation when functions is used as pointers 
-  to avoid matching usage of functions within the current compilation unit.
+- Improved :doc:`modernize-use-std-format
+  <clang-tidy/checks/modernize/use-std-format>` check to correctly match
+  when the format string is converted to a different type by an implicit
+  constructor call.
 
-- Improved :doc:`performance-move-const-arg
-  <clang-tidy/checks/performance/move-const-arg>` check by fixing false negatives
-  on ternary operators calling ``std::move``.
+- Improved :doc:`modernize-use-std-print
+  <clang-tidy/checks/modernize/use-std-print>` check to correctly match
+  when the format string is converted to a different type by an implicit
+  constructor call.
 
-- Improved :doc:`misc-unused-using-decls
-  <clang-tidy/checks/misc/unused-using-decls>` check by fixing false positives
-  on ``operator""`` with template parameters.
+- Improved :doc:`portability-template-virtual-member-function
+  <clang-tidy/checks/portability/template-virtual-member-function>` check to
+  avoid false positives on pure virtual member functions.
+
+- Improved :doc:`readability-qualified-auto
+  <clang-tidy/checks/readability/qualified-auto>` check by adding the option
+  `IgnoreAliasing`, that allows not looking at underlying types of type aliases.
 
 Removed checks
 ^^^^^^^^^^^^^^

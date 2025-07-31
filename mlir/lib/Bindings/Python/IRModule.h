@@ -11,6 +11,7 @@
 #define MLIR_BINDINGS_PYTHON_IRMODULES_H
 
 #include <optional>
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -22,9 +23,10 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/IntegerSet.h"
 #include "mlir-c/Transforms.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/ThreadPool.h"
 
 namespace mlir {
 namespace python {
@@ -156,6 +158,29 @@ private:
   nanobind::object location;
   // The kind of push that was performed.
   FrameKind frameKind;
+};
+
+/// Wrapper around MlirLlvmThreadPool
+/// Python object owns the C++ thread pool
+class PyThreadPool {
+public:
+  PyThreadPool() {
+    ownedThreadPool = std::make_unique<llvm::DefaultThreadPool>();
+  }
+  PyThreadPool(const PyThreadPool &) = delete;
+  PyThreadPool(PyThreadPool &&) = delete;
+
+  int getMaxConcurrency() const { return ownedThreadPool->getMaxConcurrency(); }
+  MlirLlvmThreadPool get() { return wrap(ownedThreadPool.get()); }
+
+  std::string _mlir_thread_pool_ptr() const {
+    std::stringstream ss;
+    ss << ownedThreadPool.get();
+    return ss.str();
+  }
+
+private:
+  std::unique_ptr<llvm::ThreadPoolInterface> ownedThreadPool;
 };
 
 /// Wrapper around MlirContext.
@@ -574,17 +599,18 @@ class PyOperationBase {
 public:
   virtual ~PyOperationBase() = default;
   /// Implements the bound 'print' method and helps with others.
-  void print(std::optional<int64_t> largeElementsLimit, bool enableDebugInfo,
+  void print(std::optional<int64_t> largeElementsLimit,
+             std::optional<int64_t> largeResourceLimit, bool enableDebugInfo,
              bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope,
-             bool assumeVerified, nanobind::object fileObject, bool binary,
-             bool skipRegions);
+             bool useNameLocAsPrefix, bool assumeVerified,
+             nanobind::object fileObject, bool binary, bool skipRegions);
   void print(PyAsmState &state, nanobind::object fileObject, bool binary);
 
-  nanobind::object getAsm(bool binary,
-                          std::optional<int64_t> largeElementsLimit,
-                          bool enableDebugInfo, bool prettyDebugInfo,
-                          bool printGenericOpForm, bool useLocalScope,
-                          bool assumeVerified, bool skipRegions);
+  nanobind::object
+  getAsm(bool binary, std::optional<int64_t> largeElementsLimit,
+         std::optional<int64_t> largeResourceLimit, bool enableDebugInfo,
+         bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope,
+         bool useNameLocAsPrefix, bool assumeVerified, bool skipRegions);
 
   // Implement the bound 'writeBytecode' method.
   void writeBytecode(const nanobind::object &fileObject,
@@ -597,6 +623,13 @@ public:
   /// Moves the operation before or after the other operation.
   void moveAfter(PyOperationBase &other);
   void moveBefore(PyOperationBase &other);
+
+  /// Given an operation 'other' that is within the same parent block, return
+  /// whether the current operation is before 'other' in the operation list
+  /// of the parent block.
+  /// Note: This function has an average complexity of O(1), but worst case may
+  /// take O(N) where N is the number of operations within the parent block.
+  bool isBeforeInBlock(PyOperationBase &other);
 
   /// Verify the operation. Throws `MLIRError` if verification fails, and
   /// returns `true` otherwise.

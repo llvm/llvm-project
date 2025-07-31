@@ -11,14 +11,11 @@ define <4 x i8> @test_varidx_extract_v8s8(<8 x i8> %x, i32 %idx) {
 ; CHECK-SDAG-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SDAG-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SDAG-NEXT:    str d0, [sp, #8]
-; CHECK-SDAG-NEXT:    umov w9, v0.b[1]
 ; CHECK-SDAG-NEXT:    bfxil x8, x0, #0, #3
 ; CHECK-SDAG-NEXT:    ld1 { v1.b }[0], [x8]
-; CHECK-SDAG-NEXT:    umov w8, v0.b[2]
-; CHECK-SDAG-NEXT:    mov v1.h[1], w9
-; CHECK-SDAG-NEXT:    umov w9, v0.b[3]
-; CHECK-SDAG-NEXT:    mov v1.h[2], w8
-; CHECK-SDAG-NEXT:    mov v1.h[3], w9
+; CHECK-SDAG-NEXT:    mov v1.b[2], v0.b[1]
+; CHECK-SDAG-NEXT:    mov v1.b[4], v0.b[2]
+; CHECK-SDAG-NEXT:    mov v1.b[6], v0.b[3]
 ; CHECK-SDAG-NEXT:    fmov d0, d1
 ; CHECK-SDAG-NEXT:    add sp, sp, #16
 ; CHECK-SDAG-NEXT:    ret
@@ -88,24 +85,16 @@ define <8 x i8> @test_varidx_extract_v16s8(<16 x i8> %x, i32 %idx) {
 ; CHECK-GISEL-NEXT:    mov x8, sp
 ; CHECK-GISEL-NEXT:    str q0, [sp]
 ; CHECK-GISEL-NEXT:    and x9, x9, #0xf
-; CHECK-GISEL-NEXT:    mov b2, v0.b[1]
-; CHECK-GISEL-NEXT:    mov b3, v0.b[2]
 ; CHECK-GISEL-NEXT:    lsl x10, x9, #1
 ; CHECK-GISEL-NEXT:    sub x9, x10, x9
 ; CHECK-GISEL-NEXT:    ldr b1, [x8, x9]
-; CHECK-GISEL-NEXT:    mov v1.b[0], v1.b[0]
-; CHECK-GISEL-NEXT:    mov v1.b[1], v2.b[0]
-; CHECK-GISEL-NEXT:    mov b2, v0.b[3]
-; CHECK-GISEL-NEXT:    mov v1.b[2], v3.b[0]
-; CHECK-GISEL-NEXT:    mov b3, v0.b[4]
-; CHECK-GISEL-NEXT:    mov v1.b[3], v2.b[0]
-; CHECK-GISEL-NEXT:    mov b2, v0.b[5]
-; CHECK-GISEL-NEXT:    mov v1.b[4], v3.b[0]
-; CHECK-GISEL-NEXT:    mov b3, v0.b[6]
-; CHECK-GISEL-NEXT:    mov b0, v0.b[7]
-; CHECK-GISEL-NEXT:    mov v1.b[5], v2.b[0]
-; CHECK-GISEL-NEXT:    mov v1.b[6], v3.b[0]
-; CHECK-GISEL-NEXT:    mov v1.b[7], v0.b[0]
+; CHECK-GISEL-NEXT:    mov v1.b[1], v0.b[1]
+; CHECK-GISEL-NEXT:    mov v1.b[2], v0.b[2]
+; CHECK-GISEL-NEXT:    mov v1.b[3], v0.b[3]
+; CHECK-GISEL-NEXT:    mov v1.b[4], v0.b[4]
+; CHECK-GISEL-NEXT:    mov v1.b[5], v0.b[5]
+; CHECK-GISEL-NEXT:    mov v1.b[6], v0.b[6]
+; CHECK-GISEL-NEXT:    mov v1.b[7], v0.b[7]
 ; CHECK-GISEL-NEXT:    fmov d0, d1
 ; CHECK-GISEL-NEXT:    add sp, sp, #16
 ; CHECK-GISEL-NEXT:    ret
@@ -168,11 +157,10 @@ define <2 x i16> @test_varidx_extract_v4s16(<4 x i16> %x, i32 %idx) {
 ; CHECK-SDAG-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SDAG-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SDAG-NEXT:    str d0, [sp, #8]
-; CHECK-SDAG-NEXT:    umov w9, v0.h[1]
 ; CHECK-SDAG-NEXT:    bfi x8, x0, #1, #2
-; CHECK-SDAG-NEXT:    ld1 { v0.h }[0], [x8]
-; CHECK-SDAG-NEXT:    mov v0.s[1], w9
-; CHECK-SDAG-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SDAG-NEXT:    ld1 { v1.h }[0], [x8]
+; CHECK-SDAG-NEXT:    mov v1.h[2], v0.h[1]
+; CHECK-SDAG-NEXT:    fmov d0, d1
 ; CHECK-SDAG-NEXT:    add sp, sp, #16
 ; CHECK-SDAG-NEXT:    ret
 ;
@@ -186,7 +174,7 @@ define <2 x i16> @test_varidx_extract_v4s16(<4 x i16> %x, i32 %idx) {
 ; CHECK-GISEL-NEXT:    and x9, x9, #0x3
 ; CHECK-GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GISEL-NEXT:    str d0, [sp, #8]
-; CHECK-GISEL-NEXT:    madd x8, x9, x8, x10
+; CHECK-GISEL-NEXT:    umaddl x8, w9, w8, x10
 ; CHECK-GISEL-NEXT:    umov w9, v0.h[1]
 ; CHECK-GISEL-NEXT:    ld1 { v0.h }[0], [x8]
 ; CHECK-GISEL-NEXT:    mov v0.s[1], w9

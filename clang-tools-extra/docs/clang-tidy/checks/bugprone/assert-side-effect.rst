@@ -15,6 +15,7 @@ Options
 .. option:: AssertMacros
 
    A comma-separated list of the names of assert macros to be checked.
+   Default is `assert,NSAssert,NSCAssert`.
 
 .. option:: CheckFunctionCalls
 

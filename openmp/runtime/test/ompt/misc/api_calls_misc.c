@@ -57,7 +57,7 @@ int main() {
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
   // CHECK: {{^}}[[THREAD_ID:[0-9]+]]: &on_ompt_callback_thread_begin
-  // CHECK-SAME: =[[FUNCTION_POINTER:0x[0-f]+]]
+  // CHECK-SAME: =[[FUNCTION_POINTER:(0x)?[0-f]+]]
   // CHECK: {{^}}[[THREAD_ID]]: ompt_get_callback() result=[[FUNCTION_POINTER]]
 
   // CHECK: {{^}}[[THREAD_ID]]: ompt_get_state()=1

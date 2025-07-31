@@ -165,6 +165,12 @@ def AOp : NS_Op<"a_op", []> {
 // DEF:        ::llvm::ArrayRef<::mlir::NamedAttribute> attributes
 // DEF:      odsState.addAttributes(attributes);
 
+// DEF:      void AOp::build(
+// DEF-SAME:   const Properties &properties,
+// DEF-SAME:   ::llvm::ArrayRef<::mlir::NamedAttribute> discardableAttributes
+// DEF:      odsState.useProperties(const_cast<Properties&>(properties));
+// DEF:      odsState.addAttributes(discardableAttributes);
+
 // DEF:      void AOp::populateDefaultProperties
 
 // Test the above but with prefix.
@@ -278,6 +284,12 @@ def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
 // DEF:      void AgetOp::build(
 // DEF:        ::llvm::ArrayRef<::mlir::NamedAttribute> attributes
 // DEF:      odsState.addAttributes(attributes);
+
+// DEF:      void AgetOp::build(
+// DEF-SAME:   const Properties &properties
+// DEF-SAME:   ::llvm::ArrayRef<::mlir::NamedAttribute> discardableAttributes
+// DEF:      odsState.useProperties(const_cast<Properties&>(properties));
+// DEF:      odsState.addAttributes(discardableAttributes);
 
 // Test the above but using properties.
 def ApropOp : NS_Op<"a_prop_op", []> {

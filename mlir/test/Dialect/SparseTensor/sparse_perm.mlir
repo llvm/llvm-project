@@ -24,7 +24,7 @@
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 1 : index
 // CHECK:           %[[DEMAP:.*]] = sparse_tensor.reinterpret_map %[[VAL_0]]
 // CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.values %[[DEMAP]] : tensor<30x10x20xf32, #sparse{{[0-9]*}}>
-// CHECK-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : tensor<20x30x10xf32> to memref<20x30x10xf32>
+// CHECK-DAG:       %[[VAL_9:.*]] = bufferization.to_buffer %[[VAL_1]] : tensor<20x30x10xf32> to memref<20x30x10xf32>
 // CHECK:           linalg.fill ins(%[[ZERO]] : f32) outs(%[[VAL_9]] : memref<20x30x10xf32>)
 // CHECK:           scf.for %[[VAL_10:.*]] = %[[VAL_5]] to %[[VAL_3]] step %[[VAL_6]] {
 // CHECK:             %[[VAL_12:.*]] = arith.muli %[[VAL_10]], %[[VAL_4]] : index
@@ -64,7 +64,7 @@ func.func @sparse_static_dims(%arga: tensor<10x20x30xf32, #X>,
 // CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.lvl %[[DEMAP]], %[[VAL_2]] : tensor<?x?x?xf32, #sparse{{[0-9]*}}>
 // CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.lvl %[[DEMAP]], %[[VAL_3]] : tensor<?x?x?xf32, #sparse{{[0-9]*}}>
 // CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.lvl %[[DEMAP]], %[[VAL_4]] : tensor<?x?x?xf32, #sparse{{[0-9]*}}>
-// CHECK-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_1]] : tensor<?x?x?xf32> to memref<?x?x?xf32>
+// CHECK-DAG:       %[[VAL_10:.*]] = bufferization.to_buffer %[[VAL_1]] : tensor<?x?x?xf32> to memref<?x?x?xf32>
 // CHECK-DAG:       linalg.fill ins(%[[ZERO]] : f32) outs(%[[VAL_10]] : memref<?x?x?xf32>)
 // CHECK:           scf.for %[[VAL_11:.*]] = %[[VAL_3]] to %[[VAL_7]] step %[[VAL_4]] {
 // CHECK:             %[[VAL_13:.*]] = arith.muli %[[VAL_11]], %[[VAL_8]] : index

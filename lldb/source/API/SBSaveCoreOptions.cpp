@@ -81,6 +81,11 @@ SBError SBSaveCoreOptions::SetProcess(lldb::SBProcess process) {
   return m_opaque_up->SetProcess(process.GetSP());
 }
 
+SBProcess SBSaveCoreOptions::GetProcess() {
+  LLDB_INSTRUMENT_VA(this);
+  return SBProcess(m_opaque_up->GetProcess());
+}
+
 SBError SBSaveCoreOptions::AddThread(lldb::SBThread thread) {
   LLDB_INSTRUMENT_VA(this, thread);
   return m_opaque_up->AddThread(thread.GetSP());
@@ -114,6 +119,40 @@ void SBSaveCoreOptions::Clear() {
   m_opaque_up->Clear();
 }
 
+uint64_t SBSaveCoreOptions::GetCurrentSizeInBytes(SBError &error) {
+  LLDB_INSTRUMENT_VA(this, error);
+  llvm::Expected<uint64_t> expected_bytes =
+      m_opaque_up->GetCurrentSizeInBytes();
+  if (!expected_bytes) {
+    error =
+        SBError(lldb_private::Status::FromError(expected_bytes.takeError()));
+    return 0;
+  }
+  // Clear the error, so if the clearer uses it we set it to success.
+  error.Clear();
+  return *expected_bytes;
+}
+
+lldb::SBMemoryRegionInfoList SBSaveCoreOptions::GetMemoryRegionsToSave() {
+  LLDB_INSTRUMENT_VA(this);
+  llvm::Expected<lldb_private::CoreFileMemoryRanges> memory_ranges =
+      m_opaque_up->GetMemoryRegionsToSave();
+  if (!memory_ranges) {
+    llvm::consumeError(memory_ranges.takeError());
+    return SBMemoryRegionInfoList();
+  }
+
+  SBMemoryRegionInfoList memory_region_infos;
+  for (const auto &range : *memory_ranges) {
+    SBMemoryRegionInfo region_info(
+        nullptr, range.GetRangeBase(), range.GetRangeEnd(),
+        range.data.lldb_permissions, /*mapped=*/true);
+    memory_region_infos.Append(region_info);
+  }
+
+  return memory_region_infos;
+}
+
 lldb_private::SaveCoreOptions &SBSaveCoreOptions::ref() const {
-  return *m_opaque_up.get();
+  return *m_opaque_up;
 }

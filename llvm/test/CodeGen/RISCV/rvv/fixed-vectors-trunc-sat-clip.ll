@@ -268,7 +268,7 @@ define void @trunc_sat_i32i64_notopt(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    lui a0, 524288
-; CHECK-NEXT:    addiw a0, a0, 1
+; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    vmax.vx v8, v8, a0
 ; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    slli a0, a0, 31
@@ -627,7 +627,7 @@ define void @trunc_sat_u16u64_notopt(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    lui a0, 8
-; CHECK-NEXT:    addiw a0, a0, -1
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vminu.vx v8, v8, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v10, v8, 0

@@ -177,7 +177,7 @@ define i32 @test_load_cast_combine_noalias_addrspace(ptr %ptr) {
 ; Ensure (cast (load (...))) -> (load (cast (...))) preserves TBAA.
 ; CHECK-LABEL: @test_load_cast_combine_noalias_addrspace(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[PTR:%.*]], align 4, !noalias.addrspace [[META10:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[L1]]
 ;
 entry:

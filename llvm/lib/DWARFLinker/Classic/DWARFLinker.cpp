@@ -23,10 +23,10 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
@@ -1447,6 +1447,18 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
         ->sizeOf(Unit.getOrigUnit().getFormParams());
   }
 
+  if (AttrSpec.Attr == dwarf::DW_AT_LLVM_stmt_sequence) {
+    // If needed, we'll patch this sec_offset later with the correct offset.
+    auto Patch = Die.addValue(DIEAlloc, dwarf::Attribute(AttrSpec.Attr),
+                              dwarf::DW_FORM_sec_offset,
+                              DIEInteger(*Val.getAsSectionOffset()));
+
+    // Record this patch location so that it can be fixed up later.
+    Unit.noteStmtSeqListAttribute(Patch);
+
+    return Unit.getOrigUnit().getFormParams().getDwarfOffsetByteSize();
+  }
+
   if (LLVM_UNLIKELY(Linker.Options.Update)) {
     if (auto OptionalValue = Val.getAsUnsignedConstant())
       Value = *OptionalValue;
@@ -2081,29 +2093,43 @@ void DWARFLinker::DIECloner::emitDebugAddrSection(
   Emitter->emitDwarfDebugAddrsFooter(Unit, EndLabel);
 }
 
+/// A helper struct to help keep track of the association between the input and
+/// output rows during line table rewriting. This is used to patch
+/// DW_AT_LLVM_stmt_sequence attributes, which reference a particular line table
+/// row.
+struct TrackedRow {
+  DWARFDebugLine::Row Row;
+  size_t OriginalRowIndex;
+  bool isStartSeqInOutput;
+};
+
 /// Insert the new line info sequence \p Seq into the current
 /// set of already linked line info \p Rows.
-static void insertLineSequence(std::vector<DWARFDebugLine::Row> &Seq,
-                               std::vector<DWARFDebugLine::Row> &Rows) {
+static void insertLineSequence(std::vector<TrackedRow> &Seq,
+                               std::vector<TrackedRow> &Rows) {
   if (Seq.empty())
     return;
 
-  if (!Rows.empty() && Rows.back().Address < Seq.front().Address) {
+  // Mark the first row in Seq to indicate it is the start of a sequence
+  // in the output line table.
+  Seq.front().isStartSeqInOutput = true;
+
+  if (!Rows.empty() && Rows.back().Row.Address < Seq.front().Row.Address) {
     llvm::append_range(Rows, Seq);
     Seq.clear();
     return;
   }
 
-  object::SectionedAddress Front = Seq.front().Address;
+  object::SectionedAddress Front = Seq.front().Row.Address;
   auto InsertPoint = partition_point(
-      Rows, [=](const DWARFDebugLine::Row &O) { return O.Address < Front; });
+      Rows, [=](const TrackedRow &O) { return O.Row.Address < Front; });
 
   // FIXME: this only removes the unneeded end_sequence if the
   // sequences have been inserted in order. Using a global sort like
-  // described in generateLineTableForUnit() and delaying the end_sequene
+  // described in generateLineTableForUnit() and delaying the end_sequence
   // elimination to emitLineTableForUnit() we can get rid of all of them.
-  if (InsertPoint != Rows.end() && InsertPoint->Address == Front &&
-      InsertPoint->EndSequence) {
+  if (InsertPoint != Rows.end() && InsertPoint->Row.Address == Front &&
+      InsertPoint->Row.EndSequence) {
     *InsertPoint = Seq.front();
     Rows.insert(InsertPoint + 1, Seq.begin() + 1, Seq.end());
   } else {
@@ -2171,22 +2197,32 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
         LineTable.Rows.clear();
 
       LineTable.Sequences = LT->Sequences;
+
+      Emitter->emitLineTableForUnit(LineTable, Unit, DebugStrPool,
+                                    DebugLineStrPool);
     } else {
-      // This vector is the output line table.
-      std::vector<DWARFDebugLine::Row> NewRows;
-      NewRows.reserve(LT->Rows.size());
+      // Create TrackedRow objects for all input rows.
+      std::vector<TrackedRow> InputRows;
+      InputRows.reserve(LT->Rows.size());
+      for (size_t i = 0; i < LT->Rows.size(); i++)
+        InputRows.emplace_back(TrackedRow{LT->Rows[i], i, false});
+
+      // This vector is the output line table (still in TrackedRow form).
+      std::vector<TrackedRow> OutputRows;
+      OutputRows.reserve(InputRows.size());
 
       // Current sequence of rows being extracted, before being inserted
-      // in NewRows.
-      std::vector<DWARFDebugLine::Row> Seq;
+      // in OutputRows.
+      std::vector<TrackedRow> Seq;
+      Seq.reserve(InputRows.size());
 
       const auto &FunctionRanges = Unit.getFunctionRanges();
       std::optional<AddressRangeValuePair> CurrRange;
 
       // FIXME: This logic is meant to generate exactly the same output as
       // Darwin's classic dsymutil. There is a nicer way to implement this
-      // by simply putting all the relocated line info in NewRows and simply
-      // sorting NewRows before passing it to emitLineTableForUnit. This
+      // by simply putting all the relocated line info in OutputRows and simply
+      // sorting OutputRows before passing it to emitLineTableForUnit. This
       // should be correct as sequences for a function should stay
       // together in the sorted output. There are a few corner cases that
       // look suspicious though, and that required to implement the logic
@@ -2194,29 +2230,32 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
 
       // Iterate over the object file line info and extract the sequences
       // that correspond to linked functions.
-      for (DWARFDebugLine::Row Row : LT->Rows) {
+      for (size_t i = 0; i < InputRows.size(); i++) {
+        TrackedRow TR = InputRows[i];
+
         // Check whether we stepped out of the range. The range is
-        // half-open, but consider accept the end address of the range if
+        // half-open, but consider accepting the end address of the range if
         // it is marked as end_sequence in the input (because in that
         // case, the relocation offset is accurate and that entry won't
         // serve as the start of another function).
-        if (!CurrRange || !CurrRange->Range.contains(Row.Address.Address)) {
-          // We just stepped out of a known range. Insert a end_sequence
+        if (!CurrRange || !CurrRange->Range.contains(TR.Row.Address.Address)) {
+          // We just stepped out of a known range. Insert an end_sequence
           // corresponding to the end of the range.
           uint64_t StopAddress =
               CurrRange ? CurrRange->Range.end() + CurrRange->Value : -1ULL;
-          CurrRange = FunctionRanges.getRangeThatContains(Row.Address.Address);
+          CurrRange =
+              FunctionRanges.getRangeThatContains(TR.Row.Address.Address);
           if (StopAddress != -1ULL && !Seq.empty()) {
             // Insert end sequence row with the computed end address, but
             // the same line as the previous one.
             auto NextLine = Seq.back();
-            NextLine.Address.Address = StopAddress;
-            NextLine.EndSequence = 1;
-            NextLine.PrologueEnd = 0;
-            NextLine.BasicBlock = 0;
-            NextLine.EpilogueBegin = 0;
+            NextLine.Row.Address.Address = StopAddress;
+            NextLine.Row.EndSequence = 1;
+            NextLine.Row.PrologueEnd = 0;
+            NextLine.Row.BasicBlock = 0;
+            NextLine.Row.EpilogueBegin = 0;
             Seq.push_back(NextLine);
-            insertLineSequence(Seq, NewRows);
+            insertLineSequence(Seq, OutputRows);
           }
 
           if (!CurrRange)
@@ -2224,22 +2263,83 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
         }
 
         // Ignore empty sequences.
-        if (Row.EndSequence && Seq.empty())
+        if (TR.Row.EndSequence && Seq.empty())
           continue;
 
         // Relocate row address and add it to the current sequence.
-        Row.Address.Address += CurrRange->Value;
-        Seq.emplace_back(Row);
+        TR.Row.Address.Address += CurrRange->Value;
+        Seq.push_back(TR);
 
-        if (Row.EndSequence)
-          insertLineSequence(Seq, NewRows);
+        if (TR.Row.EndSequence)
+          insertLineSequence(Seq, OutputRows);
       }
 
-      LineTable.Rows = std::move(NewRows);
+      // Materialize the tracked rows into final DWARFDebugLine::Row objects.
+      LineTable.Rows.clear();
+      LineTable.Rows.reserve(OutputRows.size());
+      for (auto &TR : OutputRows)
+        LineTable.Rows.push_back(TR.Row);
+
+      // Use OutputRowOffsets to store the offsets of each line table row in the
+      // output .debug_line section.
+      std::vector<uint64_t> OutputRowOffsets;
+
+      // The unit might not have any DW_AT_LLVM_stmt_sequence attributes, so use
+      // hasStmtSeq to skip the patching logic.
+      bool hasStmtSeq = Unit.getStmtSeqListAttributes().size() > 0;
+      Emitter->emitLineTableForUnit(LineTable, Unit, DebugStrPool,
+                                    DebugLineStrPool,
+                                    hasStmtSeq ? &OutputRowOffsets : nullptr);
+
+      if (hasStmtSeq) {
+        assert(OutputRowOffsets.size() == OutputRows.size() &&
+               "must have an offset for each row");
+
+        // Create a map of stmt sequence offsets to original row indices.
+        DenseMap<uint64_t, unsigned> SeqOffToOrigRow;
+        for (const DWARFDebugLine::Sequence &Seq : LT->Sequences)
+          SeqOffToOrigRow[Seq.StmtSeqOffset] = Seq.FirstRowIndex;
+
+        // Create a map of original row indices to new row indices.
+        DenseMap<size_t, size_t> OrigRowToNewRow;
+        for (size_t i = 0; i < OutputRows.size(); ++i)
+          OrigRowToNewRow[OutputRows[i].OriginalRowIndex] = i;
+
+        // Patch DW_AT_LLVM_stmt_sequence attributes in the compile unit DIE
+        // with the correct offset into the .debug_line section.
+        for (const auto &StmtSeq : Unit.getStmtSeqListAttributes()) {
+          uint64_t OrigStmtSeq = StmtSeq.get();
+          // 1. Get the original row index from the stmt list offset.
+          auto OrigRowIter = SeqOffToOrigRow.find(OrigStmtSeq);
+          // Check whether we have an output sequence for the StmtSeq offset.
+          // Some sequences are discarded by the DWARFLinker if they are invalid
+          // (empty).
+          if (OrigRowIter == SeqOffToOrigRow.end()) {
+            StmtSeq.set(UINT64_MAX);
+            continue;
+          }
+          size_t OrigRowIndex = OrigRowIter->second;
+
+          // 2. Get the new row index from the original row index.
+          auto NewRowIter = OrigRowToNewRow.find(OrigRowIndex);
+          if (NewRowIter == OrigRowToNewRow.end()) {
+            // If the original row index is not found in the map, update the
+            // stmt_sequence attribute to the 'invalid offset' magic value.
+            StmtSeq.set(UINT64_MAX);
+            continue;
+          }
+
+          // 3. Get the offset of the new row in the output .debug_line section.
+          assert(NewRowIter->second < OutputRowOffsets.size() &&
+                 "New row index out of bounds");
+          uint64_t NewStmtSeqOffset = OutputRowOffsets[NewRowIter->second];
+
+          // 4. Patch the stmt_list attribute with the new offset.
+          StmtSeq.set(NewStmtSeqOffset);
+        }
+      }
     }
 
-    Emitter->emitLineTableForUnit(LineTable, Unit, DebugStrPool,
-                                  DebugLineStrPool);
   } else
     Linker.reportWarning("Cann't load line table.", ObjFile);
 }

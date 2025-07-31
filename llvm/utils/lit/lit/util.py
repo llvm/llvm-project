@@ -182,7 +182,7 @@ def mkdir_p(path):
     mkdir(path)
 
 
-def listdir_files(dirname, suffixes=None, exclude_filenames=None):
+def listdir_files(dirname, suffixes=None, exclude_filenames=None, prefixes=None):
     """Yields files in a directory.
 
     Filenames that are not excluded by rules below are yielded one at a time, as
@@ -214,12 +214,15 @@ def listdir_files(dirname, suffixes=None, exclude_filenames=None):
         exclude_filenames = set()
     if suffixes is None:
         suffixes = {""}
+    if prefixes is None:
+        prefixes = {""}
     for filename in os.listdir(dirname):
         if (
             os.path.isdir(os.path.join(dirname, filename))
             or filename.startswith(".")
             or filename in exclude_filenames
             or not any(filename.endswith(sfx) for sfx in suffixes)
+            or not any(filename.startswith(pfx) for pfx in prefixes)
         ):
             continue
         yield filename

@@ -1,4 +1,5 @@
 // RUN: mlir-opt -split-input-file -convert-arith-to-emitc %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -convert-to-emitc="filter-dialects=arith" %s | FileCheck %s
 
 // CHECK-LABEL: arith_constants
 func.func @arith_constants() {

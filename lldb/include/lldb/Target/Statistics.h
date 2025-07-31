@@ -90,6 +90,26 @@ public:
   }
 };
 
+/// A class to count time for plugins
+class StatisticsMap {
+public:
+  void add(llvm::StringRef key, double value) {
+    if (key.empty())
+      return;
+    auto it = map.find(key);
+    if (it == map.end())
+      map.try_emplace(key, value);
+    else
+      it->second += value;
+  }
+  void merge(StatisticsMap map_to_merge) {
+    for (const auto &entry : map_to_merge.map) {
+      add(entry.first(), entry.second);
+    }
+  }
+  llvm::StringMap<double> map;
+};
+
 /// A class to count success/fail statistics.
 struct StatsSuccessFail {
   StatsSuccessFail(llvm::StringRef n) : name(n.str()) {}
@@ -118,8 +138,10 @@ struct ModuleStats {
   // track down all of the stats that contribute to this module.
   std::vector<intptr_t> symfile_modules;
   llvm::StringMap<llvm::json::Value> type_system_stats;
+  StatisticsMap symbol_locator_time;
   double symtab_parse_time = 0.0;
   double symtab_index_time = 0.0;
+  uint32_t symtab_symbol_count = 0;
   double debug_parse_time = 0.0;
   double debug_index_time = 0.0;
   uint64_t debug_info_size = 0;
@@ -131,6 +153,8 @@ struct ModuleStats {
   bool symtab_stripped = false;
   bool debug_info_had_variable_errors = false;
   bool debug_info_had_incomplete_types = false;
+  uint32_t dwo_file_count = 0;
+  uint32_t loaded_dwo_file_count = 0;
 };
 
 struct ConstStringStats {
@@ -167,11 +191,15 @@ public:
 
   void SetIncludeTranscript(bool value) { m_include_transcript = value; }
   bool GetIncludeTranscript() const {
-    if (m_include_transcript.has_value())
-      return m_include_transcript.value();
-    // `m_include_transcript` has no value set, so return a value based on
-    // `m_summary_only`.
-    return !GetSummaryOnly();
+    return m_include_transcript.value_or(false);
+  }
+
+  void SetIncludePlugins(bool value) { m_include_plugins = value; }
+  bool GetIncludePlugins() const {
+    if (m_include_plugins.has_value())
+      return m_include_plugins.value();
+    // Default to true in both default mode and summary mode.
+    return true;
   }
 
 private:
@@ -180,6 +208,7 @@ private:
   std::optional<bool> m_include_targets;
   std::optional<bool> m_include_modules;
   std::optional<bool> m_include_transcript;
+  std::optional<bool> m_include_plugins;
 };
 
 /// A class that represents statistics about a TypeSummaryProviders invocations

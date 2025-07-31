@@ -17,6 +17,7 @@ module asm "classical GAS"
 @arr = linkonce_odr global [5 x i8] [ i8 2, i8 3, i8 5, i8 7, i8 11 ]
 @str = private unnamed_addr constant [13 x i8] c"hello world\0A\00"
 @locStr = private local_unnamed_addr constant [13 x i8] c"hello world\0A\00"
+@caLarge = private constant [2 x i128] [ i128 12345, i128 67890 ]
 @hidden = hidden global i32 7
 @protected = protected global i32 23
 @section = global i32 27, section ".custom"
@@ -414,6 +415,14 @@ define ptr @test_gep_no_wrap_flags(ptr %0) {
   %gep.nuw.inbounds = getelementptr inbounds nuw i8, ptr %0, i32 4
   %gep.nusw = getelementptr nusw i8, ptr %0, i32 4
   ret ptr %gep.nusw
+}
+
+define void @test_icmp_same_sign(i32 %a, i32 %b) {
+  %icmp.1 = icmp eq i32 %a, %b
+  %icmp.2 = icmp slt i32 %a, %b
+  %icmp.3 = icmp samesign eq i32 %a, %b
+  %icmp.4 = icmp samesign slt i32 %a, %b
+  ret void
 }
 
 !llvm.dbg.cu = !{!0, !2}

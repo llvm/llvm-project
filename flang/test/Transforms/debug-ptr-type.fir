@@ -1,6 +1,6 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   fir.global @_QMhelperEpar : !fir.box<!fir.ptr<!fir.array<?x?xf32>>> {
     %0 = fir.zero_bits !fir.ptr<!fir.array<?x?xf32>>
     %c0 = arith.constant 0 : index

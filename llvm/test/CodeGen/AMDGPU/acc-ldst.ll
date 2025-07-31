@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs -early-live-intervals < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -early-live-intervals < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
 
 declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32, i32, i32)
 declare <4 x i32> @llvm.amdgcn.mfma.i32.4x4x4i8(i32, i32, <4 x i32>, i32, i32, i32)
@@ -190,11 +190,11 @@ bb:
 
 ; NB: for atomics both vdata and vdst shall be either VGPR or AGPR
 ; GCN-LABEL: {{^}}test_atomic_mfma_4xi32_atomic_store:
+; GCN: v_accvgpr_write_b32 [[A_ZERO:a[0-9]+]], 0
 ; GCN:     global_atomic_sub [[IN:v[0-9]+]], v{{[0-9:]+}}, v{{[0-9]+}}, s[{{[0-9:]+}}] glc
+; GCN-DAG: v_accvgpr_mov_b32 a{{[0-9]+}}, [[A_ZERO]]
+; GCN-DAG: v_accvgpr_mov_b32 a{{[0-9]+}}, [[A_ZERO]]
 ; GCN-DAG: v_accvgpr_write_b32 a{{[0-9]+}}, [[IN]]
-; GCN-DAG: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
 ; GCN:     v_mfma_i32_4x4x4i8 a[[[N:[0-9]+]]:
 ; GCN:     v_accvgpr_read_b32 [[V:v[0-9]+]], a[[N]]{{$}}
 ; GCN:     global_atomic_add v{{[0-9]+}}, v{{[0-9:]+}}, [[V]], s[{{[0-9:]+}}] glc
@@ -217,7 +217,10 @@ bb:
 
 ; GCN-LABEL: {{^}}test_atomic_mfma_4xi32_atomic64_store:
 ; GCN:         global_atomic_sub_x2 v[{{[0-9:]+}}], v{{[0-9:]+}}, v[{{[0-9:]+}}], s[{{[0-9:]+}}] glc
-; GCN-COUNT-4: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN: v_accvgpr_write_b32 [[A_ZERO:a[0-9]+]], 0
+; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, [[A_ZERO]]
+; GCN: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
 ; GCN:         v_mfma_i32_4x4x4i8 a[[[N:[0-9]+]]:
 ; GCN:         v_accvgpr_read_b32 v{{[0-9]+}}, a{{[0-9]+}}
 ; GCN:         v_accvgpr_read_b32 v{{[0-9]+}}, a{{[0-9]+}}

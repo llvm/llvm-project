@@ -133,6 +133,8 @@ public:
 
   bool GetCorefileThreadExtraInfos(std::vector<lldb::tid_t> &tids) override;
 
+  lldb_private::StructuredData::ObjectSP GetCorefileProcessMetadata() override;
+
   bool LoadCoreFileImages(lldb_private::Process &process) override;
 
   lldb::RegisterContextSP
@@ -286,6 +288,7 @@ protected:
   static lldb_private::ConstString GetSegmentNameDWARF();
   static lldb_private::ConstString GetSegmentNameLLVM_COV();
   static lldb_private::ConstString GetSectionNameEHFrame();
+  static lldb_private::ConstString GetSectionNameLLDBNoNlist();
 
   llvm::MachO::dysymtab_command m_dysymtab;
   std::vector<llvm::MachO::section_64> m_mach_sections;

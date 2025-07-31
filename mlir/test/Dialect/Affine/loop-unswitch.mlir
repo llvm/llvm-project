@@ -254,3 +254,31 @@ func.func @multiple_if(%N : index) {
 // CHECK-NEXT: return
 
 func.func private @external()
+
+// Check to ensure affine.parallel ops are handled as well.
+
+#set = affine_set<(d0) : (-d0 + 3 >= 0)>
+// CHECK-LABEL: affine_parallel
+func.func @affine_parallel(%arg0: memref<35xf32>) -> memref<35xf32> {
+  %0 = llvm.mlir.constant(1.000000e+00 : f32) : f32
+  %alloc = memref.alloc() {alignment = 64 : i64} : memref<35xf32>
+  // CHECK: affine.parallel
+  affine.parallel (%arg1) = (0) to (35) step (32) {
+    // This can't be hoisted further.
+    // CHECK-NEXT: affine.if
+    affine.if #set(%arg1) {
+      affine.parallel (%arg2) = (%arg1) to (%arg1 + 32) {
+        %1 = affine.load %arg0[%arg2] : memref<35xf32>
+        %2 = llvm.fdiv %0, %1 : f32
+        affine.store %2, %alloc[%arg2] : memref<35xf32>
+      }
+    } else {
+      affine.parallel (%arg2) = (%arg1) to (min(%arg1 + 32, 35)) {
+        %1 = affine.load %arg0[%arg2] : memref<35xf32>
+        %2 = llvm.fdiv %0, %1 : f32
+        affine.store %2, %alloc[%arg2] : memref<35xf32>
+      }
+    }
+  }
+  return %alloc : memref<35xf32>
+}

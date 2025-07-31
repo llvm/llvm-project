@@ -125,12 +125,12 @@ struct S {
 
 // flatten and truncate from a struct
 // CHECK-LABEL: define void {{.*}}call7
-// CHECK: [[s:%.*]] = alloca %struct.S, align 4
+// CHECK: [[s:%.*]] = alloca %struct.S, align 1
 // CHECK-NEXT: [[A:%.*]] = alloca [1 x i32], align 4
-// CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.S, align 4
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[s]], ptr align 4 {{.*}}, i32 8, i1 false)
+// CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.S, align 1
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[s]], ptr align 1 {{.*}}, i32 8, i1 false)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[A]], ptr align 4 {{.*}}, i32 4, i1 false)
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[s]], i32 8, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[Tmp]], ptr align 1 [[s]], i32 8, i1 false)
 // CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [1 x i32], ptr [[A]], i32 0, i32 0
 // CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[Tmp]], i32 0, i32 0
 // CHECK-NEXT: [[G3:%.*]] = getelementptr inbounds %struct.S, ptr [[Tmp]], i32 0, i32 1
@@ -141,4 +141,3 @@ export void call7() {
   int A[1] = {1};
   A = (int[1])s;
 }
-

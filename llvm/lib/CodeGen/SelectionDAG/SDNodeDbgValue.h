@@ -165,8 +165,8 @@ public:
         IsVariadic(IsVariadic) {
     assert(IsVariadic || L.size() == 1);
     assert(!(IsVariadic && IsIndirect));
-    std::copy(L.begin(), L.end(), LocationOps);
-    std::copy(Dependencies.begin(), Dependencies.end(), AdditionalDependencies);
+    llvm::copy(L, LocationOps);
+    llvm::copy(Dependencies, AdditionalDependencies);
   }
 
   // We allocate arrays with the BumpPtrAllocator and never free or copy them,
@@ -197,8 +197,7 @@ public:
     for (const SDDbgOperand &DbgOp : getLocationOps())
       if (DbgOp.getKind() == SDDbgOperand::SDNODE)
         Dependencies.push_back(DbgOp.getSDNode());
-    for (SDNode *Node : getAdditionalDependencies())
-      Dependencies.push_back(Node);
+    llvm::append_range(Dependencies, getAdditionalDependencies());
     return Dependencies;
   }
 

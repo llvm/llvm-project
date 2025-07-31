@@ -325,7 +325,6 @@ private:
                                           FunctionAnalysisManager &FAM) const;
   void initializeModule();
   void createHwasanCtorComdat();
-  void removeFnAttributes(Function *F);
 
   void initializeCallbacks(Module &M);
 
@@ -364,10 +363,10 @@ private:
   void tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag, size_t Size);
   Value *tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong, Value *Tag);
   Value *untagPointer(IRBuilder<> &IRB, Value *PtrLong);
-  bool instrumentStack(memtag::StackInfo &Info, Value *StackTag, Value *UARTag,
+  void instrumentStack(memtag::StackInfo &Info, Value *StackTag, Value *UARTag,
                        const DominatorTree &DT, const PostDominatorTree &PDT,
                        const LoopInfo &LI);
-  bool instrumentLandingPads(SmallVectorImpl<Instruction *> &RetVec);
+  void instrumentLandingPads(SmallVectorImpl<Instruction *> &RetVec);
   Value *getNextTagWithCall(IRBuilder<> &IRB);
   Value *getStackBaseTag(IRBuilder<> &IRB);
   Value *getAllocaTag(IRBuilder<> &IRB, Value *StackTag, unsigned AllocaNo);
@@ -420,7 +419,8 @@ private:
     }
 
   public:
-    void init(Triple &TargetTriple, bool InstrumentWithCalls);
+    void init(Triple &TargetTriple, bool InstrumentWithCalls,
+              bool CompileKernel);
     Align getObjectAlignment() const { return Align(1ULL << Scale); }
     bool isInGlobal() const { return Kind == OffsetKind::kGlobal; }
     bool isInIfunc() const { return Kind == OffsetKind::kIfunc; }
@@ -489,7 +489,7 @@ PreservedAnalyses HWAddressSanitizerPass::run(Module &M,
   if (checkIfAlreadyInstrumented(M, "nosanitize_hwaddress"))
     return PreservedAnalyses::all();
   const StackSafetyGlobalInfo *SSI = nullptr;
-  auto TargetTriple = llvm::Triple(M.getTargetTriple());
+  const Triple &TargetTriple = M.getTargetTriple();
   if (shouldUseStackSafetyAnalysis(TargetTriple, Options.DisableOptimization))
     SSI = &MAM.getResult<StackSafetyGlobalAnalysis>(M);
 
@@ -620,55 +620,17 @@ void HWAddressSanitizer::createHwasanCtorComdat() {
   appendToCompilerUsed(M, Dummy);
 }
 
-void HWAddressSanitizer::removeFnAttributes(Function *F) {
-  // Remove memory attributes that are invalid with HWASan.
-  // HWASan checks read from shadow, which invalidates memory(argmem: *)
-  // Short granule checks on function arguments read from the argument memory
-  // (last byte of the granule), which invalidates writeonly.
-  //
-  // This is not only true for sanitized functions, because AttrInfer can
-  // infer those attributes on libc functions, which is not true if those
-  // are instrumented (Android) or intercepted.
-  //
-  // We might want to model HWASan shadow memory more opaquely to get rid of
-  // this problem altogether, by hiding the shadow memory write in an
-  // intrinsic, essentially like in the AArch64StackTagging pass. But that's
-  // for another day.
-
-  // The API is weird. `onlyReadsMemory` actually means "does not write", and
-  // `onlyWritesMemory` actually means "does not read". So we reconstruct
-  // "accesses memory" && "does not read" <=> "writes".
-  bool Changed = false;
-  if (!F->doesNotAccessMemory()) {
-    bool WritesMemory = !F->onlyReadsMemory();
-    bool ReadsMemory = !F->onlyWritesMemory();
-    if ((WritesMemory && !ReadsMemory) || F->onlyAccessesArgMemory()) {
-      F->removeFnAttr(Attribute::Memory);
-      Changed = true;
-    }
-  }
-  for (Argument &A : F->args()) {
-    if (A.hasAttribute(Attribute::WriteOnly)) {
-      A.removeAttr(Attribute::WriteOnly);
-      Changed = true;
-    }
-  }
-  if (Changed) {
-    // nobuiltin makes sure later passes don't restore assumptions about
-    // the function.
-    F->addFnAttr(Attribute::NoBuiltin);
-  }
-}
-
 /// Module-level initialization.
 ///
 /// inserts a call to __hwasan_init to the module's constructor list.
 void HWAddressSanitizer::initializeModule() {
   LLVM_DEBUG(dbgs() << "Init " << M.getName() << "\n");
-  TargetTriple = Triple(M.getTargetTriple());
+  TargetTriple = M.getTargetTriple();
 
+  // HWASan may do short granule checks on function arguments read from the
+  // argument memory (last byte of the granule), which invalidates writeonly.
   for (Function &F : M.functions())
-    removeFnAttributes(&F);
+    removeASanIncompatibleFnAttributes(F, /*ReadsArgMem=*/true);
 
   // x86_64 currently has two modes:
   // - Intel LAM (default)
@@ -681,7 +643,7 @@ void HWAddressSanitizer::initializeModule() {
   PointerTagShift = IsX86_64 ? 57 : 56;
   TagMaskByte = IsX86_64 ? 0x3F : 0xFF;
 
-  Mapping.init(TargetTriple, InstrumentWithCalls);
+  Mapping.init(TargetTriple, InstrumentWithCalls, CompileKernel);
 
   C = &(M.getContext());
   IRBuilder<> IRB(*C);
@@ -731,7 +693,7 @@ void HWAddressSanitizer::initializeModule() {
   }
 
   if (!TargetTriple.isAndroid()) {
-    Constant *C = M.getOrInsertGlobal("__hwasan_tls", IntptrTy, [&] {
+    ThreadPtrGlobal = M.getOrInsertGlobal("__hwasan_tls", IntptrTy, [&] {
       auto *GV = new GlobalVariable(M, IntptrTy, /*isConstant=*/false,
                                     GlobalValue::ExternalLinkage, nullptr,
                                     "__hwasan_tls", nullptr,
@@ -739,7 +701,6 @@ void HWAddressSanitizer::initializeModule() {
       appendToCompilerUsed(M, GV);
       return GV;
     });
-    ThreadPtrGlobal = cast<GlobalVariable>(C);
   }
 }
 
@@ -1046,14 +1007,13 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
         UseShortGranules
             ? Intrinsic::hwasan_check_memaccess_shortgranules_fixedshadow
             : Intrinsic::hwasan_check_memaccess_fixedshadow,
-        {},
         {Ptr, ConstantInt::get(Int32Ty, AccessInfo),
          ConstantInt::get(Int64Ty, Mapping.offset())});
   } else {
     IRB.CreateIntrinsic(
         UseShortGranules ? Intrinsic::hwasan_check_memaccess_shortgranules
                          : Intrinsic::hwasan_check_memaccess,
-        {}, {ShadowBase, Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
+        {ShadowBase, Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
   }
 }
 
@@ -1458,19 +1418,18 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
   }
 }
 
-bool HWAddressSanitizer::instrumentLandingPads(
+void HWAddressSanitizer::instrumentLandingPads(
     SmallVectorImpl<Instruction *> &LandingPadVec) {
   for (auto *LP : LandingPadVec) {
-    IRBuilder<> IRB(LP->getNextNonDebugInstruction());
+    IRBuilder<> IRB(LP->getNextNode());
     IRB.CreateCall(
         HwasanHandleVfork,
         {memtag::readRegister(
             IRB, (TargetTriple.getArch() == Triple::x86_64) ? "rsp" : "sp")});
   }
-  return true;
 }
 
-bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
+void HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
                                          Value *StackTag, Value *UARTag,
                                          const DominatorTree &DT,
                                          const PostDominatorTree &PDT,
@@ -1486,7 +1445,7 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     auto N = I++;
     auto *AI = KV.first;
     memtag::AllocaInfo &Info = KV.second;
-    IRBuilder<> IRB(AI->getNextNonDebugInstruction());
+    IRBuilder<> IRB(AI->getNextNode());
 
     // Replace uses of the alloca with tagged address.
     Value *Tag = getAllocaTag(IRB, StackTag, N);
@@ -1500,8 +1459,6 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     size_t Size = memtag::getAllocaSizeInBytes(*AI);
     size_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
 
-    Value *AICast = IRB.CreatePointerCast(AI, PtrTy);
-
     auto HandleLifetime = [&](IntrinsicInst *II) {
       // Set the lifetime intrinsic to cover the whole alloca. This reduces the
       // set of assumptions we need to make about the lifetime. Without this we
@@ -1514,14 +1471,13 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
       // one set of start / end in any execution (i.e. the ends are not
       // reachable from each other), so this will not cause any problems.
       II->setArgOperand(0, ConstantInt::get(Int64Ty, AlignedSize));
-      II->setArgOperand(1, AICast);
     };
     llvm::for_each(Info.LifetimeStart, HandleLifetime);
     llvm::for_each(Info.LifetimeEnd, HandleLifetime);
 
-    AI->replaceUsesWithIf(Replacement, [AICast, AILong](const Use &U) {
+    AI->replaceUsesWithIf(Replacement, [AILong](const Use &U) {
       auto *User = U.getUser();
-      return User != AILong && User != AICast && !isa<LifetimeIntrinsic>(User);
+      return User != AILong && !isa<LifetimeIntrinsic>(User);
     });
 
     memtag::annotateDebugRecords(Info, retagMask(N));
@@ -1540,7 +1496,6 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     // statement if return_twice functions are called.
     bool StandardLifetime =
         !SInfo.CallsReturnTwice &&
-        SInfo.UnrecognizedLifetimes.empty() &&
         memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, &DT,
                                    &LI, ClMaxLifetimes);
     if (DetectUseAfterScope && StandardLifetime) {
@@ -1565,9 +1520,6 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     }
     memtag::alignAndPadAlloca(Info, Mapping.getObjectAlignment());
   }
-  for (auto &I : SInfo.UnrecognizedLifetimes)
-    I->eraseFromParent();
-  return true;
 }
 
 static void emitRemark(const Function &F, OptimizationRemarkEmitter &ORE,
@@ -1887,6 +1839,12 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
                                      IsLocal ? GlobalValue::InternalLinkage
                                              : GlobalValue::LinkOnceODRLinkage,
                                      ThunkName, &M);
+    // TODO: think about other attributes as well.
+    if (any_of(P.second, [](const Function *F) {
+          return F->hasFnAttribute("branch-target-enforcement");
+        })) {
+      ThunkFn->addFnAttr("branch-target-enforcement");
+    }
     if (!IsLocal) {
       ThunkFn->setVisibility(GlobalValue::HiddenVisibility);
       ThunkFn->setComdat(M.getOrInsertComdat(ThunkName));
@@ -1909,7 +1867,8 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
 }
 
 void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
-                                             bool InstrumentWithCalls) {
+                                             bool InstrumentWithCalls,
+                                             bool CompileKernel) {
   // Start with defaults.
   Scale = kDefaultShadowScale;
   Kind = OffsetKind::kTls;
@@ -1920,7 +1879,7 @@ void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
     // Fuchsia is always PIE, which means that the beginning of the address
     // space is always available.
     SetFixed(0);
-  } else if (ClEnableKhwasan || InstrumentWithCalls) {
+  } else if (CompileKernel || InstrumentWithCalls) {
     SetFixed(0);
     WithFrameRecord = false;
   }

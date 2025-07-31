@@ -24,18 +24,6 @@ struct _LIBCPP_TEMPLATE_VIS __libcpp_is_bounded_array : false_type {};
 template <class _Tp, size_t _Np>
 struct _LIBCPP_TEMPLATE_VIS __libcpp_is_bounded_array<_Tp[_Np]> : true_type {};
 
-#if _LIBCPP_STD_VER >= 20
-
-template <class>
-struct _LIBCPP_TEMPLATE_VIS is_bounded_array : false_type {};
-template <class _Tp, size_t _Np>
-struct _LIBCPP_TEMPLATE_VIS is_bounded_array<_Tp[_Np]> : true_type {};
-
-template <class _Tp>
-inline constexpr bool is_bounded_array_v = is_bounded_array<_Tp>::value;
-
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_BOUNDED_ARRAY_H

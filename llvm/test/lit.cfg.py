@@ -63,7 +63,7 @@ llvm_config.with_environment("OCAMLRUNPARAM", "b")
 def get_asan_rtlib():
     if (
         not "Address" in config.llvm_use_sanitizer
-        or not "Darwin" in config.host_os
+        or not "Darwin" in config.target_os
         or not "x86" in config.host_triple
     ):
         return ""
@@ -91,7 +91,15 @@ config.substitutions.append(("%llvmshlibdir", config.llvm_shlib_dir))
 config.substitutions.append(("%shlibext", config.llvm_shlib_ext))
 config.substitutions.append(("%pluginext", config.llvm_plugin_ext))
 config.substitutions.append(("%exeext", config.llvm_exe_ext))
+config.substitutions.append(("%llvm_src_root", config.llvm_src_root))
 
+# Add IR2Vec test vocabulary path substitution
+config.substitutions.append(
+    (
+        "%ir2vec_test_vocab_dir",
+        os.path.join(config.test_source_root, "Analysis", "IR2Vec", "Inputs"),
+    )
+)
 
 lli_args = []
 # The target triple used by default by lli is the process target triple (some
@@ -196,6 +204,7 @@ tools.extend(
         "llvm-dlltool",
         "llvm-exegesis",
         "llvm-extract",
+        "llvm-ir2vec",
         "llvm-isel-fuzzer",
         "llvm-ifs",
         "llvm-install-name-tool",
@@ -382,6 +391,13 @@ if sys.platform in ["win32"]:
 else:
     # Others/can-execute.txt
     config.available_features.add("can-execute")
+
+# Detect Windows Subsystem for Linux (WSL)
+uname_r = platform.uname().release
+if uname_r.endswith("-Microsoft"):
+    config.available_features.add("wsl1")
+elif uname_r.endswith("microsoft-standard-WSL2"):
+    config.available_features.add("wsl2")
 
 # Loadable module
 if config.has_plugins:

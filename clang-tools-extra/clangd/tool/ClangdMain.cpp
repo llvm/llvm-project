@@ -251,19 +251,19 @@ opt<std::string> EnableFunctionArgSnippets{
     init("-1"),
 };
 
-opt<CodeCompleteOptions::IncludeInsertion> HeaderInsertion{
+opt<Config::HeaderInsertionPolicy> HeaderInsertion{
     "header-insertion",
     cat(Features),
     desc("Add #include directives when accepting code completions"),
     init(CodeCompleteOptions().InsertIncludes),
     values(
-        clEnumValN(CodeCompleteOptions::IWYU, "iwyu",
+        clEnumValN(Config::HeaderInsertionPolicy::IWYU, "iwyu",
                    "Include what you use. "
                    "Insert the owning header for top-level symbols, unless the "
                    "header is already directly included or the symbol is "
                    "forward-declared"),
         clEnumValN(
-            CodeCompleteOptions::NeverInsert, "never",
+            Config::HeaderInsertionPolicy::NeverInsert, "never",
             "Never insert #include directives as part of code completion")),
 };
 
@@ -726,6 +726,8 @@ public:
         C.Index.Background = *BGPolicy;
       if (ArgumentLists)
         C.Completion.ArgumentLists = *ArgumentLists;
+      if (HeaderInsertion.getNumOccurrences())
+        C.Completion.HeaderInsertion = HeaderInsertion;
       if (AllScopesCompletion.getNumOccurrences())
         C.Completion.AllScopes = AllScopesCompletion;
 
@@ -905,7 +907,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   if (!ResourceDir.empty())
     Opts.ResourceDir = ResourceDir;
   Opts.BuildDynamicSymbolIndex = true;
-  std::vector<std::unique_ptr<SymbolIndex>> IdxStack;
 #if CLANGD_ENABLE_REMOTE
   if (RemoteIndexAddress.empty() != ProjectRoot.empty()) {
     llvm::errs() << "remote-index-address and project-path have to be "

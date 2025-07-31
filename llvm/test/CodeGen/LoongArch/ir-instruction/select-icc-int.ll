@@ -7,11 +7,11 @@
 define i32 @select_eq(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 ; LA32-LABEL: select_eq:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    xor $a0, $a0, $a1
-; LA32-NEXT:    sltui $a0, $a0, 1
-; LA32-NEXT:    masknez $a1, $a3, $a0
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    beq $a0, $a1, .LBB0_2
+; LA32-NEXT:  # %bb.1:
+; LA32-NEXT:    move $a2, $a3
+; LA32-NEXT:  .LBB0_2:
+; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_eq:
@@ -30,11 +30,11 @@ define i32 @select_eq(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 define i32 @select_ne(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 ; LA32-LABEL: select_ne:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    xor $a0, $a0, $a1
-; LA32-NEXT:    sltu $a0, $zero, $a0
-; LA32-NEXT:    masknez $a1, $a3, $a0
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    bne $a0, $a1, .LBB1_2
+; LA32-NEXT:  # %bb.1:
+; LA32-NEXT:    move $a2, $a3
+; LA32-NEXT:  .LBB1_2:
+; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_ne:
@@ -53,10 +53,11 @@ define i32 @select_ne(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 define i32 @select_ugt(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 ; LA32-LABEL: select_ugt:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    sltu $a0, $a1, $a0
-; LA32-NEXT:    masknez $a1, $a3, $a0
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    bltu $a1, $a0, .LBB2_2
+; LA32-NEXT:  # %bb.1:
+; LA32-NEXT:    move $a2, $a3
+; LA32-NEXT:  .LBB2_2:
+; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_ugt:
@@ -74,11 +75,11 @@ define i32 @select_ugt(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 define i32 @select_uge(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 ; LA32-LABEL: select_uge:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    sltu $a0, $a0, $a1
-; LA32-NEXT:    xori $a0, $a0, 1
-; LA32-NEXT:    masknez $a1, $a3, $a0
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    bgeu $a0, $a1, .LBB3_2
+; LA32-NEXT:  # %bb.1:
+; LA32-NEXT:    move $a2, $a3
+; LA32-NEXT:  .LBB3_2:
+; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_uge:
@@ -97,10 +98,11 @@ define i32 @select_uge(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 define i32 @select_ult(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 ; LA32-LABEL: select_ult:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    sltu $a0, $a0, $a1
-; LA32-NEXT:    masknez $a1, $a3, $a0
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    bltu $a0, $a1, .LBB4_2
+; LA32-NEXT:  # %bb.1:
+; LA32-NEXT:    move $a2, $a3
+; LA32-NEXT:  .LBB4_2:
+; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_ult:
@@ -118,11 +120,11 @@ define i32 @select_ult(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 define i32 @select_ule(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 ; LA32-LABEL: select_ule:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    sltu $a0, $a1, $a0
-; LA32-NEXT:    xori $a0, $a0, 1
-; LA32-NEXT:    masknez $a1, $a3, $a0
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    bgeu $a1, $a0, .LBB5_2
+; LA32-NEXT:  # %bb.1:
+; LA32-NEXT:    move $a2, $a3
+; LA32-NEXT:  .LBB5_2:
+; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_ule:
@@ -141,10 +143,11 @@ define i32 @select_ule(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 define i32 @select_sgt(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 ; LA32-LABEL: select_sgt:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    slt $a0, $a1, $a0
-; LA32-NEXT:    masknez $a1, $a3, $a0
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    blt $a1, $a0, .LBB6_2
+; LA32-NEXT:  # %bb.1:
+; LA32-NEXT:    move $a2, $a3
+; LA32-NEXT:  .LBB6_2:
+; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_sgt:
@@ -162,11 +165,11 @@ define i32 @select_sgt(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 define i32 @select_sge(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 ; LA32-LABEL: select_sge:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    slt $a0, $a0, $a1
-; LA32-NEXT:    xori $a0, $a0, 1
-; LA32-NEXT:    masknez $a1, $a3, $a0
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    bge $a0, $a1, .LBB7_2
+; LA32-NEXT:  # %bb.1:
+; LA32-NEXT:    move $a2, $a3
+; LA32-NEXT:  .LBB7_2:
+; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_sge:
@@ -185,10 +188,11 @@ define i32 @select_sge(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 define i32 @select_slt(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 ; LA32-LABEL: select_slt:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    slt $a0, $a0, $a1
-; LA32-NEXT:    masknez $a1, $a3, $a0
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    blt $a0, $a1, .LBB8_2
+; LA32-NEXT:  # %bb.1:
+; LA32-NEXT:    move $a2, $a3
+; LA32-NEXT:  .LBB8_2:
+; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_slt:
@@ -206,11 +210,11 @@ define i32 @select_slt(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 define i32 @select_sle(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 ; LA32-LABEL: select_sle:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    slt $a0, $a1, $a0
-; LA32-NEXT:    xori $a0, $a0, 1
-; LA32-NEXT:    masknez $a1, $a3, $a0
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    bge $a1, $a0, .LBB9_2
+; LA32-NEXT:  # %bb.1:
+; LA32-NEXT:    move $a2, $a3
+; LA32-NEXT:  .LBB9_2:
+; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_sle:

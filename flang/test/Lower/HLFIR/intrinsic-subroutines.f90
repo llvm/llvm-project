@@ -11,7 +11,7 @@ end subroutine
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %{{.*}}
 ! CHECK:  %[[VAL_2:.*]] = fir.call @_FortranACpuTime() fastmath<contract> : () -> f64
 ! CHECK:  %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (f64) -> f32
-! CHECK:  fir.store %[[VAL_3]] to %[[VAL_1]]#1 : !fir.ref<f32>
+! CHECK:  fir.store %[[VAL_3]] to %[[VAL_1]]#0 : !fir.ref<f32>
 
 ! test elemental subroutine calls
 program main
@@ -24,7 +24,7 @@ program main
   call mvbits(from, 2, 2, to, 0)
   if (any(to /= 5)) STOP 1
 end program
-! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "main"} {
+! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "MAIN"} {
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<3xi32> {bindc_name = "from", uniq_name = "_QFEfrom"}
 ! CHECK:           %[[VAL_2:.*]] = fir.shape %[[VAL_0]] : (index) -> !fir.shape<1>

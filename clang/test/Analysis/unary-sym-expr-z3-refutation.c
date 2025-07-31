@@ -29,5 +29,5 @@ void k(long L) {
   int h = g + 1;
   int j;
   j += -h < 0; // should not crash
-  // expected-warning@-1{{garbage}}
+  // expected-warning@-1{{The left expression of the compound assignment uses uninitialized memory [core.uninitialized.Assign]}}
 }

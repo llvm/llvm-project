@@ -10,23 +10,24 @@
 // extensions that will eventually be implemented in Fortran.
 
 #include "flang/Runtime/extensions.h"
+#include "unit.h"
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
 #include "flang/Runtime/command.h"
 #include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/io-api.h"
+#include "flang/Runtime/iostat-consts.h"
 #include <chrono>
+#include <cstdio>
 #include <cstring>
 #include <ctime>
 #include <signal.h>
+#include <stdlib.h>
 #include <thread>
 
 #ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
-
+#include "flang/Common/windows-include.h"
 #include <synchapi.h>
 
 inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
@@ -260,7 +261,81 @@ int RTNAME(Chdir)(const char *name) {
 #endif
 }
 
+int FORTRAN_PROCEDURE_NAME(hostnm)(char *hn, int length) {
+  std::int32_t status{0};
+
+  if (!hn || length < 0) {
+    return EINVAL;
+  }
+
+#ifdef _WIN32
+  DWORD dwSize{static_cast<DWORD>(length)};
+
+  // Note: Winsock has gethostname(), but use Win32 API GetComputerNameEx(),
+  // in order to avoid adding dependency on Winsock.
+  if (!GetComputerNameExA(ComputerNameDnsHostname, hn, &dwSize)) {
+    status = GetLastError();
+  }
+#else
+  if (gethostname(hn, length) < 0) {
+    status = errno;
+  }
+#endif
+
+  if (status == 0) {
+    // Find zero terminator and fill the string from the
+    // zero terminator to the end with spaces
+    char *str_end{hn + length};
+    char *str_zero{std::find(hn, str_end, '\0')};
+    std::fill(str_zero, str_end, ' ');
+  }
+
+  return status;
+}
+
 int FORTRAN_PROCEDURE_NAME(ierrno)() { return errno; }
+
+void FORTRAN_PROCEDURE_NAME(qsort)(int *array, int *len, int *isize,
+    int (*compar)(const void *, const void *)) {
+  qsort(array, *len, *isize, compar);
+}
+
+// PERROR(STRING)
+void RTNAME(Perror)(const char *str) { perror(str); }
+
+// GNU extension function TIME()
+std::int64_t RTNAME(time)() { return time(nullptr); }
+
+// MCLOCK: returns accumulated CPU time in ticks
+std::int32_t FORTRAN_PROCEDURE_NAME(mclock)() { return std::clock(); }
+
+// Extension procedures related to I/O
+
+namespace io {
+std::int32_t RTNAME(Fseek)(int unitNumber, std::int64_t zeroBasedPos,
+    int whence, const char *sourceFileName, int lineNumber) {
+  if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
+    Terminator terminator{sourceFileName, lineNumber};
+    IoErrorHandler handler{terminator};
+    if (unit->Fseek(
+            zeroBasedPos, static_cast<enum FseekWhence>(whence), handler)) {
+      return IostatOk;
+    } else {
+      return IostatCannotReposition;
+    }
+  } else {
+    return IostatBadUnitNumber;
+  }
+}
+
+std::int64_t RTNAME(Ftell)(int unitNumber) {
+  if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
+    return unit->InquirePos() - 1; // zero-based result
+  } else {
+    return -1;
+  }
+}
+} // namespace io
 
 } // namespace Fortran::runtime
 } // extern "C"

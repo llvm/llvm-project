@@ -12,6 +12,7 @@
 #include "src/__support/integer_to_string.h"
 #include "src/string/memory_utils/inline_memcmp.h"
 #include "src/string/memory_utils/inline_memcpy.h"
+#include "src/string/memory_utils/inline_memset.h"
 #include "src/string/string_utils.h"
 #include "test/IntegrationTest/test.h"
 
@@ -81,7 +82,7 @@ static void test_divergent() {
   LIBC_NAMESPACE::rpc::Client::Port port =
       LIBC_NAMESPACE::rpc::client.open<RPC_TEST_STREAM>();
   port.send_n(buffer, offset);
-  inline_memset(buffer, offset, 0);
+  inline_memset(buffer, 0, offset);
   port.recv_n(&recv_ptr, &recv_size, [&](uint64_t) { return buffer; });
   port.close();
 

@@ -666,8 +666,7 @@ Error Instrumentation::runOnFunctions(BinaryContext &BC) {
       auto IsLEA = [&BC](const MCInst &Inst) { return BC.MIB->isLEA64r(Inst); };
       const auto LEA = std::find_if(
           std::next(llvm::find_if(reverse(BB), IsLEA)), BB.rend(), IsLEA);
-      LEA->getOperand(4).setExpr(
-          MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *BC.Ctx));
+      LEA->getOperand(4).setExpr(MCSymbolRefExpr::create(Target, *BC.Ctx));
     } else {
       BC.errs() << "BOLT-WARNING: ___GLOBAL_init_65535 not found\n";
     }

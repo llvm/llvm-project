@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+// REQUIRES: std-at-least-c++26
 
 // <functional>
 
@@ -23,16 +23,13 @@
 #include "test_comparisons.h"
 #include "test_macros.h"
 
-#include "helper_concepts.h"
-#include "helper_types.h"
-
 // Test SFINAE.
 
-static_assert(std::equality_comparable_with<std::reference_wrapper<EqualityComparable>,
-                                            std::reference_wrapper<const EqualityComparable>>);
+static_assert(
+    HasOperatorEqual<std::reference_wrapper<EqualityComparable>, std::reference_wrapper<const EqualityComparable>>);
 
-static_assert(!std::equality_comparable_with<std::reference_wrapper<EqualityComparable>,
-                                             std::reference_wrapper<const NonComparable>>);
+static_assert(
+    !HasOperatorEqual<std::reference_wrapper<EqualityComparable>, std::reference_wrapper<const NonComparable>>);
 
 // Test equality.
 

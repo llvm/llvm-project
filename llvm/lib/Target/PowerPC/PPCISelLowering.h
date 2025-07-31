@@ -161,6 +161,12 @@ namespace llvm {
     SRA,
     SHL,
 
+    /// These nodes represent PPC arithmetic operations with carry.
+    ADDC,
+    ADDE,
+    SUBC,
+    SUBE,
+
     /// FNMSUB - Negated multiply-subtract instruction.
     FNMSUB,
 
@@ -921,6 +927,12 @@ namespace llvm {
       return true;
     }
 
+    Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy, Value *Addr,
+                          AtomicOrdering Ord) const override;
+
+    Value *emitStoreConditional(IRBuilderBase &Builder, Value *Val, Value *Addr,
+                                AtomicOrdering Ord) const override;
+
     Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
                                   AtomicOrdering Ord) const override;
     Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
@@ -1076,7 +1088,7 @@ namespace llvm {
 
     /// It returns EVT::Other if the type should be determined using generic
     /// target-independent logic.
-    EVT getOptimalMemOpType(const MemOp &Op,
+    EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
 
     /// Is unaligned memory access allowed for the given type, and is it fast
@@ -1280,7 +1292,6 @@ namespace llvm {
     SDValue LowerGlobalTLSAddressLinux(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerUaddo(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSSUBO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
@@ -1316,6 +1327,8 @@ namespace llvm {
     SDValue LowerBSWAP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerADDSUBO(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerToLibCall(const char *LibCallName, SDValue Op,
                            SelectionDAG &DAG) const;
     SDValue lowerLibCallBasedOnType(const char *LibCallFloatName,
@@ -1434,6 +1447,7 @@ namespace llvm {
     SDValue combineStoreFPToInt(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineFPToIntToFP(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineSHL(SDNode *N, DAGCombinerInfo &DCI) const;
+    SDValue combineVectorShift(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineSRA(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineSRL(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineMUL(SDNode *N, DAGCombinerInfo &DCI) const;

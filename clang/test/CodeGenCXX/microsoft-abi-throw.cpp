@@ -14,7 +14,7 @@
 // CHECK-DAG: @"_TI5?AUY@@" = linkonce_odr unnamed_addr constant %eh.ThrowInfo { i32 0, ptr @"??_DY@@QAEXXZ", ptr null, ptr @"_CTA5?AUY@@" }, section ".xdata", comdat
 // CHECK-DAG: @"_CT??_R0?AUDefault@@@8??_ODefault@@QAEXAAU0@@Z1" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 0, ptr @"??_R0?AUDefault@@@8", i32 0, i32 -1, i32 0, i32 1, ptr @"??_ODefault@@QAEXAAU0@@Z" }, section ".xdata", comdat
 // CHECK-DAG: @"_CT??_R0?AUDeletedCopy@@@81" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 0, ptr @"??_R0?AUDeletedCopy@@@8", i32 0, i32 -1, i32 0, i32 1, ptr null }, section ".xdata", comdat
-// CHECk-DAG: @"_CT??_R0?AUMoveOnly@@@84" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 0, ptr @"??_R0?AUMoveOnly@@@8", i32 0, i321-1, i32 0, i32 4, ptr null }, section ".xdata", comda
+// CHECK-DAG: @"_CT??_R0?AUMoveOnly@@@84" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 0, ptr @"??_R0?AUMoveOnly@@@8", i32 0, i32 -1, i32 0, i32 4, ptr null }, section ".xdata", comdat
 // CHECK-DAG: @"_CT??_R0?AUVariadic@@@8??_OVariadic@@QAEXAAU0@@Z1" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 0, ptr @"??_R0?AUVariadic@@@8", i32 0, i32 -1, i32 0, i32 1, ptr @"??_OVariadic@@QAEXAAU0@@Z" }, section ".xdata", comdat
 // CHECK-DAG: @"_CT??_R0?AUTemplateWithDefault@@@8??$?_OH@TemplateWithDefault@@QAEXAAU0@@Z1" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 0, ptr @"??_R0?AUTemplateWithDefault@@@8", i32 0, i32 -1, i32 0, i32 1, ptr @"??$?_OH@TemplateWithDefault@@QAEXAAU0@@Z" }, section ".xdata", comdat
 // CHECK-DAG: @"_CTA2$$T" = linkonce_odr unnamed_addr constant %eh.CatchableTypeArray.2 { i32 2, [2 x ptr] [ptr @"_CT??_R0$$T@84", ptr @"_CT??_R0PAX@84"] }, section ".xdata", comdat

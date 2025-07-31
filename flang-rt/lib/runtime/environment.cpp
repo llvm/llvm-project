@@ -143,6 +143,10 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     }
   }
 
+  if (auto *x{std::getenv("FLANG_RT_DEBUG")}) {
+    internalDebugging = std::strtol(x, nullptr, 10);
+  }
+
   if (auto *x{std::getenv("ACC_OFFLOAD_STACK_SIZE")}) {
     char *end;
     auto n{std::strtoul(x, &end, 10)};
@@ -151,6 +155,19 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     } else {
       std::fprintf(stderr,
           "Fortran runtime: ACC_OFFLOAD_STACK_SIZE=%s is invalid; ignored\n",
+          x);
+    }
+  }
+
+  if (auto *x{std::getenv("NV_CUDAFOR_DEVICE_IS_MANAGED")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      cudaDeviceIsManaged = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: NV_CUDAFOR_DEVICE_IS_MANAGED=%s is invalid; "
+          "ignored\n",
           x);
     }
   }
@@ -168,4 +185,68 @@ const char *ExecutionEnvironment::GetEnv(
 
   return std::getenv(cStyleName.get());
 }
+
+std::int32_t ExecutionEnvironment::SetEnv(const char *name,
+    std::size_t name_length, const char *value, std::size_t value_length,
+    const Terminator &terminator) {
+
+  RUNTIME_CHECK(terminator, name && name_length && value && value_length);
+
+  OwningPtr<char> cStyleName{
+      SaveDefaultCharacter(name, name_length, terminator)};
+  RUNTIME_CHECK(terminator, cStyleName);
+
+  OwningPtr<char> cStyleValue{
+      SaveDefaultCharacter(value, value_length, terminator)};
+  RUNTIME_CHECK(terminator, cStyleValue);
+
+  std::int32_t status{0};
+
+#ifdef _WIN32
+
+  status = _putenv_s(cStyleName.get(), cStyleValue.get());
+
+#else
+
+  constexpr int overwrite = 1;
+  status = setenv(cStyleName.get(), cStyleValue.get(), overwrite);
+
+#endif
+
+  if (status != 0) {
+    status = errno;
+  }
+
+  return status;
+}
+
+std::int32_t ExecutionEnvironment::UnsetEnv(
+    const char *name, std::size_t name_length, const Terminator &terminator) {
+
+  RUNTIME_CHECK(terminator, name && name_length);
+
+  OwningPtr<char> cStyleName{
+      SaveDefaultCharacter(name, name_length, terminator)};
+  RUNTIME_CHECK(terminator, cStyleName);
+
+  std::int32_t status{0};
+
+#ifdef _WIN32
+
+  // Passing empty string as value will unset the variable
+  status = _putenv_s(cStyleName.get(), "");
+
+#else
+
+  status = unsetenv(cStyleName.get());
+
+#endif
+
+  if (status != 0) {
+    status = errno;
+  }
+
+  return status;
+}
+
 } // namespace Fortran::runtime

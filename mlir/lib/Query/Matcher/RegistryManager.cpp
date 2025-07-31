@@ -19,16 +19,15 @@
 namespace mlir::query::matcher {
 namespace {
 
-// This is needed because these matchers are defined as overloaded functions.
-using IsConstantOp = detail::constant_op_matcher();
-using HasOpAttrName = detail::AttrOpMatcher(llvm::StringRef);
-using HasOpName = detail::NameOpMatcher(llvm::StringRef);
-
 // Enum to string for autocomplete.
 static std::string asArgString(ArgKind kind) {
   switch (kind) {
+  case ArgKind::Boolean:
+    return "Boolean";
   case ArgKind::Matcher:
     return "Matcher";
+  case ArgKind::Signed:
+    return "Signed";
   case ArgKind::String:
     return "String";
   }
@@ -65,7 +64,7 @@ std::vector<ArgKind> RegistryManager::getAcceptedCompletionTypes(
     unsigned argNumber = ctxEntry.second;
     std::vector<ArgKind> nextTypeSet;
 
-    if (argNumber < ctor->getNumArgs())
+    if (ctor->isVariadic() || argNumber < ctor->getNumArgs())
       ctor->getArgKinds(argNumber, nextTypeSet);
 
     typeSet.insert(nextTypeSet.begin(), nextTypeSet.end());
@@ -84,7 +83,7 @@ RegistryManager::getMatcherCompletions(llvm::ArrayRef<ArgKind> acceptedTypes,
     const internal::MatcherDescriptor &matcher = *m.getValue();
     llvm::StringRef name = m.getKey();
 
-    unsigned numArgs = matcher.getNumArgs();
+    unsigned numArgs = matcher.isVariadic() ? 1 : matcher.getNumArgs();
     std::vector<std::vector<ArgKind>> argKinds(numArgs);
 
     for (const ArgKind &kind : acceptedTypes) {
@@ -115,6 +114,9 @@ RegistryManager::getMatcherCompletions(llvm::ArrayRef<ArgKind> acceptedTypes,
         os << asArgString(argKind);
       }
     }
+
+    if (matcher.isVariadic())
+      os << ",...";
 
     os << ")";
     typedText += "(";

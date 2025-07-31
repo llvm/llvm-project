@@ -70,7 +70,6 @@ static void cleanInitialValue(DiagnosticBuilder &Diag,
     return;
   Diag << FixItHint::CreateRemoval(EqualLoc)
        << FixItHint::CreateRemoval(InitExprRange);
-  return;
 }
 
 namespace {

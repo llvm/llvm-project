@@ -1,7 +1,7 @@
 # REQUIRES: riscv
 
-# RUN: llvm-mc -filetype=obj -triple=riscv32-unknown-elf -mattr=-relax -riscv-asm-relax-branches=0 %s -o %t.rv32.o
-# RUN: llvm-mc -filetype=obj -triple=riscv64-unknown-elf -mattr=-relax -riscv-asm-relax-branches=0 %s -o %t.rv64.o
+# RUN: llvm-mc -filetype=obj -triple=riscv32-unknown-elf %s -o %t.rv32.o
+# RUN: llvm-mc -filetype=obj -triple=riscv64-unknown-elf %s -o %t.rv64.o
 
 # RUN: ld.lld %t.rv32.o --defsym foo=_start+4 --defsym bar=_start -o %t.rv32
 # RUN: ld.lld %t.rv64.o --defsym foo=_start+4 --defsym bar=_start -o %t.rv64
@@ -29,6 +29,8 @@
 # RUN: not ld.lld %t.rv32.o --defsym foo=_start+1 --defsym bar=_start-1 -o /dev/null 2>&1 | FileCheck --check-prefix=ERROR-ALIGN %s
 # RUN: not ld.lld %t.rv64.o --defsym foo=_start+1 --defsym bar=_start-1 -o /dev/null 2>&1 | FileCheck --check-prefix=ERROR-ALIGN %s
 # ERROR-ALIGN: improper alignment for relocation R_RISCV_BRANCH: 0x1 is not aligned to 2 bytes
+
+.option exact
 
 .global _start
 _start:

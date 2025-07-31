@@ -25,6 +25,8 @@ class Descriptor;
 
 namespace Fortran::runtime::io {
 
+RT_OFFLOAD_API_GROUP_BEGIN
+
 class IoStatementState;
 
 enum EditingFlags {
@@ -34,6 +36,14 @@ enum EditingFlags {
 };
 
 struct MutableModes {
+  // Handle DC or DECIMAL='COMMA' and determine the active separator character
+  constexpr RT_API_ATTRS char32_t GetSeparatorChar() const {
+    return editingFlags & decimalComma ? char32_t{';'} : char32_t{','};
+  }
+  constexpr RT_API_ATTRS char32_t GetRadixPointChar() const {
+    return editingFlags & decimalComma ? char32_t{','} : char32_t{'.'};
+  }
+
   std::uint8_t editingFlags{0}; // BN, DP, SS
   enum decimal::FortranRounding round{
       executionEnvironment
@@ -200,5 +210,8 @@ private:
   // must be last, may be incomplete
   Iteration stack_[maxMaxHeight];
 };
+
+RT_OFFLOAD_API_GROUP_END
+
 } // namespace Fortran::runtime::io
 #endif // FLANG_RT_RUNTIME_FORMAT_H_

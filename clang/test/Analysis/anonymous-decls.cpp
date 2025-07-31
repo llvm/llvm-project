@@ -74,13 +74,13 @@ int main() {
 // CHECK-NEXT:   4: * [B3.3] (OperatorCall)
 // CHECK-NEXT:   5: auto &;
 // CHECK-NEXT:   6: get<0UL>
-// CHECK-NEXT:   7: [B3.6] (ImplicitCastExpr, FunctionToPointerDecay, typename tuple_element<0L, pair<int, int> >::type (*)(pair<int, int> &))
+// CHECK-NEXT:   7: [B3.6] (ImplicitCastExpr, FunctionToPointerDecay, tuple_element<0L, pair<int, int> >::type (*)(pair<int, int> &))
 // CHECK-NEXT:   8: decomposition-a-b
 // CHECK-NEXT:   9: [B3.7]([B3.8])
 // CHECK-NEXT:  10: [B3.9]
 // CHECK-NEXT:  11: std::tuple_element<0, std::pair<int, int>>::type a = get<0UL>(decomposition-a-b);
 // CHECK-NEXT:  12: get<1UL>
-// CHECK-NEXT:  13: [B3.12] (ImplicitCastExpr, FunctionToPointerDecay, typename tuple_element<1L, pair<int, int> >::type (*)(pair<int, int> &))
+// CHECK-NEXT:  13: [B3.12] (ImplicitCastExpr, FunctionToPointerDecay, tuple_element<1L, pair<int, int> >::type (*)(pair<int, int> &))
 // CHECK-NEXT:  14: decomposition-a-b
 // CHECK-NEXT:  15: [B3.13]([B3.14])
 // CHECK-NEXT:  16: [B3.15]

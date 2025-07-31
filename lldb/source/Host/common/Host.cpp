@@ -17,11 +17,10 @@
 #include <grp.h>
 #include <netdb.h>
 #include <pwd.h>
+#include <spawn.h>
 #include <sys/stat.h>
-#include <sys/syscall.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <spawn.h>
 #endif
 
 #if defined(__APPLE__)
@@ -83,10 +82,11 @@ int __pthread_fchdir(int fildes);
 using namespace lldb;
 using namespace lldb_private;
 
-#if !defined(__APPLE__)
-// The system log is currently only meaningful on Darwin, where this means
-// os_log. The meaning of a "system log" isn't as clear on other platforms, and
-// therefore we don't providate a default implementation. Vendors are free to
+#if !defined(__APPLE__) && !defined(_WIN32)
+// The system log is currently only meaningful on Darwin and Windows.
+// On Darwin, this means os_log. On Windows this means Events Viewer.
+// The meaning of a "system log" isn't as clear on other platforms, and
+// therefore we don't providate a default implementation. Vendors are free
 // to implement this function if they have a use for it.
 void Host::SystemLog(Severity severity, llvm::StringRef message) {}
 #endif
@@ -194,8 +194,8 @@ MonitorChildProcessThreadFunction(::pid_t pid,
 
     const ::pid_t wait_pid = ::waitpid(pid, &status, 0);
 
-    LLDB_LOG(log, "::waitpid({0}, &status, 0) => pid = {1}, status = {2:x}", pid,
-             wait_pid, status);
+    LLDB_LOG(log, "::waitpid({0}, &status, 0) => pid = {1}, status = {2:x}",
+             pid, wait_pid, status);
 
     if (CheckForMonitorCancellation())
       return nullptr;
@@ -612,7 +612,7 @@ void llvm::format_provider<WaitStatus>::format(const WaitStatus &WS,
 
   assert(Options.empty());
   const char *desc;
-  switch(WS.type) {
+  switch (WS.type) {
   case WaitStatus::Exit:
     desc = "Exited with status";
     break;

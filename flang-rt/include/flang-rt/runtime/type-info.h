@@ -68,7 +68,9 @@ public:
   RT_API_ATTRS std::uint64_t offset() const { return offset_; }
   RT_API_ATTRS const Value &characterLen() const { return characterLen_; }
   RT_API_ATTRS const DerivedType *derivedType() const {
-    return derivedType_.descriptor().OffsetElement<const DerivedType>();
+    return category() == TypeCategory::Derived
+        ? derivedType_.descriptor().OffsetElement<const DerivedType>()
+        : nullptr;
   }
   RT_API_ATTRS const Value *lenValue() const {
     return lenValue_.descriptor().OffsetElement<const Value>();
@@ -141,9 +143,9 @@ public:
   // I/O procedures that are not type-bound.
   RT_API_ATTRS SpecialBinding(Which which, ProcedurePointer proc,
       std::uint8_t isArgDescSet, std::uint8_t isTypeBound,
-      std::uint8_t isArgContiguousSet)
+      std::uint8_t specialCaseFlag)
       : which_{which}, isArgDescriptorSet_{isArgDescSet},
-        isTypeBound_{isTypeBound}, isArgContiguousSet_{isArgContiguousSet},
+        isTypeBound_{isTypeBound}, specialCaseFlag_{specialCaseFlag},
         proc_{proc} {}
 
   static constexpr RT_API_ATTRS Which RankFinal(int rank) {
@@ -151,15 +153,18 @@ public:
   }
 
   RT_API_ATTRS Which which() const { return which_; }
+  RT_API_ATTRS bool specialCaseFlag() const { return specialCaseFlag_; }
   RT_API_ATTRS bool IsArgDescriptor(int zeroBasedArg) const {
     return (isArgDescriptorSet_ >> zeroBasedArg) & 1;
   }
-  RT_API_ATTRS bool isTypeBound() const { return isTypeBound_; }
-  RT_API_ATTRS bool IsArgContiguous(int zeroBasedArg) const {
-    return (isArgContiguousSet_ >> zeroBasedArg) & 1;
-  }
-  template <typename PROC> RT_API_ATTRS PROC GetProc() const {
-    return reinterpret_cast<PROC>(proc_);
+  RT_API_ATTRS bool IsTypeBound() const { return isTypeBound_ != 0; }
+  template <typename PROC>
+  RT_API_ATTRS PROC GetProc(const Binding *bindings = nullptr) const {
+    if (bindings && isTypeBound_ > 0) {
+      return reinterpret_cast<PROC>(bindings[isTypeBound_ - 1].proc);
+    } else {
+      return reinterpret_cast<PROC>(proc_);
+    }
   }
 
   FILE *Dump(FILE *) const;
@@ -193,11 +198,13 @@ private:
   //     When false, the defined I/O subroutine must have been
   //     called via a generic interface, not a generic TBP.
   std::uint8_t isArgDescriptorSet_{0};
+  // When a special binding is type-bound, this is its binding's index (plus 1,
+  // so that 0 signifies that it's not type-bound).
   std::uint8_t isTypeBound_{0};
-  // True when a FINAL subroutine has a dummy argument that is an array that
-  // is CONTIGUOUS or neither assumed-rank nor assumed-shape.
-  std::uint8_t isArgContiguousSet_{0};
-
+  // For a FINAL subroutine, set when it has a dummy argument that is an array
+  // that is CONTIGUOUS or neither assumed-rank nor assumed-shape.
+  // For a defined I/O subroutine, set when UNIT= and IOSTAT= are INTEGER(8).
+  std::uint8_t specialCaseFlag_{0};
   ProcedurePointer proc_{nullptr};
 };
 
@@ -210,8 +217,12 @@ public:
   }
   RT_API_ATTRS const Descriptor &name() const { return name_.descriptor(); }
   RT_API_ATTRS std::uint64_t sizeInBytes() const { return sizeInBytes_; }
-  RT_API_ATTRS const Descriptor &uninstatiated() const {
+  RT_API_ATTRS const Descriptor &uninstantiated() const {
     return uninstantiated_.descriptor();
+  }
+  RT_API_ATTRS const DerivedType *uninstantiatedType() const {
+    return reinterpret_cast<const DerivedType *>(
+        uninstantiated().raw().base_addr);
   }
   RT_API_ATTRS const Descriptor &kindParameter() const {
     return kindParameter_.descriptor();
@@ -236,6 +247,7 @@ public:
   RT_API_ATTRS bool noFinalizationNeeded() const {
     return noFinalizationNeeded_;
   }
+  RT_API_ATTRS bool noDefinedAssignment() const { return noDefinedAssignment_; }
 
   RT_API_ATTRS std::size_t LenParameters() const {
     return lenParameterKind().Elements();
@@ -318,6 +330,7 @@ private:
   bool noInitializationNeeded_{false};
   bool noDestructionNeeded_{false};
   bool noFinalizationNeeded_{false};
+  bool noDefinedAssignment_{false};
 };
 
 } // namespace Fortran::runtime::typeInfo

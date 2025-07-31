@@ -17,4 +17,6 @@ add_libc_unittest(
     libc.src.sys.resource.setrlimit
     libc.src.unistd.close
     libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )

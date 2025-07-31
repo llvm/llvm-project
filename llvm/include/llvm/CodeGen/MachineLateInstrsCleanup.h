@@ -19,8 +19,7 @@ public:
                         MachineFunctionAnalysisManager &MachineFunctionAM);
 
   MachineFunctionProperties getRequiredProperties() const {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 };
 

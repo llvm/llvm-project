@@ -20,14 +20,14 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 static constexpr unsigned SPLIT = fputil::DefaultSplit<double>::VALUE;
 #else
 // When there is no-FMA instructions, in order to have exact product of 2 double
 // precision with directional roundings, we need to lower the precision of the
 // constants by at least 1 bit, and use a different splitting constant.
 static constexpr unsigned SPLIT = 28;
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 using LIBC_NAMESPACE::fputil::DoubleDouble;
 using Float128 = LIBC_NAMESPACE::fputil::DyadicFloat<128>;
@@ -278,7 +278,7 @@ private:
 };
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-static Float128 range_reduction_small_f128(double x) {
+LIBC_INLINE static Float128 range_reduction_small_f128(double x) {
   constexpr Float128 PI_OVER_128_F128 = {
       Sign::POS, -133, 0xc90f'daa2'2168'c234'c4c6'628b'80dc'1cd1_u128};
   constexpr double ONE_TWENTY_EIGHT_OVER_PI_D = 0x1.45f306dc9c883p5;

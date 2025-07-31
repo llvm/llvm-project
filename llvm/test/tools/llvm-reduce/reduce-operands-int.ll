@@ -22,7 +22,7 @@
 ; CHECK-INTERESTINGNESS: = add <2 x i32>
 ; CHECK-INTERESTINGNESS: = add <2 x i32>
 
-; CHECK-LABEL: define void @foo(
+; CHECK-LABEL: define {{(void|<2 x i32>)}} @foo(
 
 
 ; ONE: %add0 = add i32 %arg0, 1

@@ -74,20 +74,51 @@ func.func @inline_with_multi_return() -> i32 {
 }
 
 // Check that location information is updated for inlined instructions.
-func.func @func_with_locations(%c : i32) -> i32 {
+
+#inline_stack1 = loc(callsite("mysource1.cc":10:8 at callsite("mysource2.cc":13:6 at "mysource3.cc":16:2)))
+#inline_stack2 = loc(callsite("mysource4.cc":55:4 at callsite("mysource5.cc":25:8 at "mysource6.cc":32:4)))
+
+// INLINE-LOC-LABEL: func @func_with_file_locations
+func.func @func_with_file_locations(%c : i32) -> i32 {
   %b = arith.addi %c, %c : i32 loc("mysource.cc":10:8)
   return %b : i32 loc("mysource.cc":11:2)
 }
 
-// INLINE-LOC-LABEL: func @inline_with_locations
-func.func @inline_with_locations(%arg0 : i32) -> i32 {
-  // INLINE-LOC-NEXT: arith.addi %{{.*}}, %{{.*}} : i32 loc(callsite("mysource.cc":10:8 at "mysource.cc":55:14))
-  // INLINE-LOC-NEXT: return
-
-  %0 = call @func_with_locations(%arg0) : (i32) -> i32 loc("mysource.cc":55:14)
-  return %0 : i32
+// INLINE-LOC-LABEL: func @func_with_callsite_locations
+func.func @func_with_callsite_locations(%c : i32) -> i32 {
+  %b = arith.addi %c, %c : i32 loc(#inline_stack1)
+  return %b : i32 loc(#inline_stack1)
 }
 
+// INLINE-LOC-LABEL: func @inline_func_with_file_locations
+func.func @inline_func_with_file_locations(%arg0 : i32) -> i32 {
+  // INLINE-LOC-NEXT: arith.addi %{{.*}}, %{{.*}} : i32 loc(callsite("mysource.cc":10:8 at "mysource.cc":55:14))
+  %0 = call @func_with_file_locations(%arg0) : (i32) -> i32 loc("mysource.cc":55:14)
+
+  // INLINE-LOC-NEXT: arith.addi %{{.*}}, %{{.*}} : i32
+  // INLINE-LOC-SAME: loc(callsite("mysource.cc":10:8 at callsite("mysource1.cc":10:8 at callsite("mysource2.cc":13:6
+  // INLINE-LOC-SAME: at "mysource3.cc":16:2))))
+  %1 = call @func_with_file_locations(%0) : (i32) -> i32 loc(#inline_stack1)
+
+  // INLINE-LOC-NEXT: return
+  return %1 : i32
+}
+
+// INLINE-LOC-LABEL: func @inline_func_with_callsite_locations
+func.func @inline_func_with_callsite_locations(%arg0 : i32) -> i32 {
+  // INLINE-LOC-NEXT: arith.addi %{{.*}}, %{{.*}} : i32
+  // INLINE-LOC-SAME: loc(callsite("mysource1.cc":10:8 at callsite("mysource2.cc":13:6 at callsite("mysource3.cc":16:2
+  // INLINE-LOC-SAME: at "mysource.cc":10:8))))
+  %0 = call @func_with_callsite_locations(%arg0) : (i32) -> i32 loc("mysource.cc":10:8)
+
+  // INLINE-LOC-NEXT: arith.addi %{{.*}}, %{{.*}} : i32
+  // INLINE-LOC-SAME: loc(callsite("mysource1.cc":10:8 at callsite("mysource2.cc":13:6 at callsite("mysource3.cc":16:2
+  // INLINE-LOC-SAME: at callsite("mysource4.cc":55:4 at callsite("mysource5.cc":25:8 at "mysource6.cc":32:4))))))
+  %1 = call @func_with_callsite_locations(%0) : (i32) -> i32 loc(#inline_stack2)
+
+  // INLINE-LOC-NEXT: return
+  return %1 : i32
+}
 
 // Check that external function declarations are not inlined.
 func.func private @func_external()

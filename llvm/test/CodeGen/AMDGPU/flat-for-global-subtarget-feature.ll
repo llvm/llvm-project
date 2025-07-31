@@ -22,11 +22,13 @@
 ; NOHSA-DEFAULT: buffer_store_dword
 ; NOHSA-NODEFAULT: flat_store_dword
 ; NOHSA-NOADDR64: flat_store_dword
-define amdgpu_kernel void @test(ptr addrspace(1) %out) {
+define amdgpu_kernel void @test(ptr addrspace(1) %out) #0 {
 entry:
   store i32 0, ptr addrspace(1) %out
   ret void
 }
+
+; ALL-LABEL: {{^}}test_addr64:
 
 ; HSA-DEFAULT: flat_store_dword
 ; HSA-NODEFAULT: buffer_store_dword
@@ -35,7 +37,7 @@ entry:
 ; NOHSA-DEFAULT: buffer_store_dword
 ; NOHSA-NODEFAULT: flat_store_dword
 ; NOHSA-NOADDR64: flat_store_dword
-define amdgpu_kernel void @test_addr64(ptr addrspace(1) %out) {
+define amdgpu_kernel void @test_addr64(ptr addrspace(1) %out) #0 {
 entry:
   %out.addr = alloca ptr addrspace(1), align 4, addrspace(5)
 
@@ -50,6 +52,8 @@ entry:
 
   ret void
 }
+
+attributes #0 = { "amdgpu-no-flat-scratch-init" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

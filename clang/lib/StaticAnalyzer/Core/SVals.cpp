@@ -25,7 +25,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValVisitor.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -249,9 +248,9 @@ bool SVal::isConstant() const {
 
 bool SVal::isConstant(int I) const {
   if (std::optional<loc::ConcreteInt> LV = getAs<loc::ConcreteInt>())
-    return *LV->getValue().get() == I;
+    return *LV->getValue() == I;
   if (std::optional<nonloc::ConcreteInt> NV = getAs<nonloc::ConcreteInt>())
-    return *NV->getValue().get() == I;
+    return *NV->getValue() == I;
   return false;
 }
 

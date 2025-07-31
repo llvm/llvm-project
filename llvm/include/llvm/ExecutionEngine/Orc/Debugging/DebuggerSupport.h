@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_DEBUGGERSUPPORT_H
 #define LLVM_EXECUTIONENGINE_ORC_DEBUGGERSUPPORT_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -20,7 +21,7 @@ namespace orc {
 
 class LLJIT;
 
-Error enableDebuggerSupport(LLJIT &J);
+LLVM_ABI Error enableDebuggerSupport(LLJIT &J);
 
 } // namespace orc
 } // namespace llvm

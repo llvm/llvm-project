@@ -292,6 +292,20 @@ def create_parser():
         metavar="platform-working-dir",
         help="The directory to use on the remote platform.",
     )
+    group.add_argument(
+        "--platform-available-ports",
+        dest="lldb_platform_available_ports",
+        nargs="*",
+        type=int,
+        metavar="platform-available-ports",
+        help="Ports available for connection to a lldb server on the remote platform",
+    )
+    group.add_argument(
+        "--cmake-build-type",
+        dest="cmake_build_type",
+        metavar="cmake-build-type",
+        help="Specifies the build type on single-configuration",
+    )
 
     # Test-suite behaviour
     group = parser.add_argument_group("Runtime behaviour options")

@@ -14,7 +14,6 @@ foo:
 ; CHECK: ldi r27, 92                  ; encoding: [0xbc,0xe5]
 
 ; CHECK: ldi r21, SYMBOL+3            ; encoding: [0x50'A',0xe0]
-; CHECK:                              ;   fixup A - offset: 0, value: SYMBOL+3, kind: fixup_ldi
 
 ; CHECK-INST: ldi r16, 241
 ; CHECK-INST: ldi r29, 190

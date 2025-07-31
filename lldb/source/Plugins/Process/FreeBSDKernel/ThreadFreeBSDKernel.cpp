@@ -18,7 +18,6 @@
 #include "RegisterContextFreeBSDKernel_arm64.h"
 #include "RegisterContextFreeBSDKernel_i386.h"
 #include "RegisterContextFreeBSDKernel_x86_64.h"
-#include "ThreadFreeBSDKernel.h"
 
 using namespace lldb;
 using namespace lldb_private;

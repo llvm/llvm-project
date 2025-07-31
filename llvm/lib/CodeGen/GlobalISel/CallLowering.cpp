@@ -354,7 +354,7 @@ mergeVectorRegsToResultRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   int NumDst = LCMTy.getSizeInBits() / LLTy.getSizeInBits();
 
   SmallVector<Register, 8> PadDstRegs(NumDst);
-  std::copy(DstRegs.begin(), DstRegs.end(), PadDstRegs.begin());
+  llvm::copy(DstRegs, PadDstRegs.begin());
 
   // Create the excess dead defs for the unmerge.
   for (int I = DstRegs.size(); I != NumDst; ++I)
@@ -1009,7 +1009,8 @@ void CallLowering::insertSRetLoads(MachineIRBuilder &MIRBuilder, Type *RetTy,
 
   for (unsigned I = 0; I < NumValues; ++I) {
     Register Addr;
-    MIRBuilder.materializePtrAdd(Addr, DemoteReg, OffsetLLTy, Offsets[I]);
+    MIRBuilder.materializeObjectPtrOffset(Addr, DemoteReg, OffsetLLTy,
+                                          Offsets[I]);
     auto *MMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad,
                                         MRI.getType(VRegs[I]),
                                         commonAlignment(BaseAlign, Offsets[I]));
@@ -1039,7 +1040,8 @@ void CallLowering::insertSRetStores(MachineIRBuilder &MIRBuilder, Type *RetTy,
 
   for (unsigned I = 0; I < NumValues; ++I) {
     Register Addr;
-    MIRBuilder.materializePtrAdd(Addr, DemoteReg, OffsetLLTy, Offsets[I]);
+    MIRBuilder.materializeObjectPtrOffset(Addr, DemoteReg, OffsetLLTy,
+                                          Offsets[I]);
     auto *MMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
                                         MRI.getType(VRegs[I]),
                                         commonAlignment(BaseAlign, Offsets[I]));

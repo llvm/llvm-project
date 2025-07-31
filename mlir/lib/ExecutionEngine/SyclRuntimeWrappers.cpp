@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <CL/sycl.hpp>
 #include <level_zero/ze_api.h>
 #include <sycl/ext/oneapi/backend/level_zero.hpp>
+#include <sycl/sycl.hpp>
 
 #ifdef _WIN32
 #define SYCL_RUNTIME_EXPORT __declspec(dllexport)
@@ -65,8 +65,9 @@ static sycl::device getDefaultDevice() {
       return syclDevice;
     }
     throw std::runtime_error("getDefaultDevice failed");
-  } else
+  } else {
     return syclDevice;
+  }
 }
 
 static sycl::context getDefaultContext() {
@@ -80,8 +81,7 @@ static void *allocDeviceMemory(sycl::queue *queue, size_t size, bool isShared) {
     memPtr = sycl::aligned_alloc_shared(64, size, getDefaultDevice(),
                                         getDefaultContext());
   } else {
-    memPtr = sycl::aligned_alloc_device(64, size, getDefaultDevice(),
-                                        getDefaultContext());
+    memPtr = sycl::aligned_alloc_device(64, size, *queue);
   }
   if (memPtr == nullptr) {
     throw std::runtime_error("mem allocation failed!");
@@ -206,4 +206,9 @@ extern "C" SYCL_RUNTIME_EXPORT void
 mgpuModuleUnload(ze_module_handle_t module) {
 
   catchAll([&]() { L0_SAFE_CALL(zeModuleDestroy(module)); });
+}
+
+extern "C" SYCL_RUNTIME_EXPORT void
+mgpuMemcpy(void *dst, void *src, size_t sizeBytes, sycl::queue *queue) {
+  catchAll([&]() { queue->memcpy(dst, src, sizeBytes).wait(); });
 }

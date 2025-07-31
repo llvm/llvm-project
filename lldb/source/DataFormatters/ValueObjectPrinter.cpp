@@ -16,6 +16,7 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "llvm/Support/MathExtras.h"
 #include <cstdint>
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -62,10 +63,9 @@ void ValueObjectPrinter::Init(
   m_summary.assign("");
   m_error.assign("");
   m_val_summary_ok = false;
-  m_printed_instance_pointers =
-      printed_instance_pointers
-          ? printed_instance_pointers
-          : InstancePointersSetSP(new InstancePointersSet());
+  m_printed_instance_pointers = printed_instance_pointers
+                                    ? printed_instance_pointers
+                                    : std::make_shared<InstancePointersSet>();
   SetupMostSpecializedValue();
 }
 
@@ -542,17 +542,18 @@ bool ValueObjectPrinter::ShouldPrintChildren(
   if (is_ptr || is_ref) {
     // We have a pointer or reference whose value is an address. Make sure
     // that address is not NULL
-    AddressType ptr_address_type;
-    if (valobj.GetPointerValue(&ptr_address_type) == 0)
+    if (valobj.GetPointerValue().address == 0)
       return false;
 
     const bool is_root_level = m_curr_depth == 0;
+    const bool is_expanded_ptr =
+        is_ptr && m_type_flags.Test(m_options.m_expand_ptr_type_flags);
 
-    if (is_ref && is_root_level && print_children) {
-      // If this is the root object (depth is zero) that we are showing and
-      // it is a reference, and no pointer depth has been supplied print out
-      // what it references. Don't do this at deeper depths otherwise we can
-      // end up with infinite recursion...
+    if ((is_ref || is_expanded_ptr) && is_root_level && print_children) {
+      // If this is the root object (depth is zero) that we are showing and it
+      // is either a reference or a preferred type of pointer, then print it.
+      // Don't do this at deeper depths otherwise we can end up with infinite
+      // recursion...
       return true;
     }
 
@@ -853,7 +854,7 @@ llvm::Error ValueObjectPrinter::PrintChildrenIfNeeded(bool value_printed,
       PrintChildren(value_printed, summary_printed, curr_ptr_depth);
   } else if (HasReachedMaximumDepth() && IsAggregate() &&
              ShouldPrintValueObject()) {
-    m_stream->PutCString("{...}\n");
+    m_stream->PutCString(" {...}\n");
     // The maximum child depth has been reached. If `m_max_depth` is the default
     // (i.e. the user has _not_ customized it), then lldb presents a warning to
     // the user. The warning tells the user that the limit has been reached, but

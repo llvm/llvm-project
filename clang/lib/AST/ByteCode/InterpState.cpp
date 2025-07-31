@@ -52,7 +52,7 @@ void InterpState::cleanup() {
   // As a last resort, make sure all pointers still pointing to a dead block
   // don't point to it anymore.
   for (DeadBlock *DB = DeadBlocks; DB; DB = DB->Next) {
-    for (Pointer *P = DB->B.Pointers; P; P = P->Next) {
+    for (Pointer *P = DB->B.Pointers; P; P = P->asBlockPointer().Next) {
       P->PointeeStorage.BS.Pointee = nullptr;
     }
   }
@@ -113,5 +113,37 @@ bool InterpState::maybeDiagnoseDanglingAllocations() {
           << (It.second.size() - 1) << Source->getSourceRange();
     }
   }
-  return NoAllocationsLeft;
+  // Keep evaluating before C++20, since the CXXNewExpr wasn't valid there
+  // in the first place.
+  return NoAllocationsLeft || !getLangOpts().CPlusPlus20;
+}
+
+StdAllocatorCaller InterpState::getStdAllocatorCaller(StringRef Name) const {
+  for (const InterpFrame *F = Current; F; F = F->Caller) {
+    const Function *Func = F->getFunction();
+    if (!Func)
+      continue;
+    const auto *MD = dyn_cast_if_present<CXXMethodDecl>(Func->getDecl());
+    if (!MD)
+      continue;
+    const IdentifierInfo *FnII = MD->getIdentifier();
+    if (!FnII || !FnII->isStr(Name))
+      continue;
+
+    const auto *CTSD =
+        dyn_cast<ClassTemplateSpecializationDecl>(MD->getParent());
+    if (!CTSD)
+      continue;
+
+    const IdentifierInfo *ClassII = CTSD->getIdentifier();
+    const TemplateArgumentList &TAL = CTSD->getTemplateArgs();
+    if (CTSD->isInStdNamespace() && ClassII && ClassII->isStr("allocator") &&
+        TAL.size() >= 1 && TAL[0].getKind() == TemplateArgument::Type) {
+      QualType ElemType = TAL[0].getAsType();
+      const auto *NewCall = cast<CallExpr>(F->Caller->getExpr(F->getRetPC()));
+      return {NewCall, ElemType};
+    }
+  }
+
+  return {};
 }

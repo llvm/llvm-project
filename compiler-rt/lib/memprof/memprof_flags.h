@@ -18,7 +18,7 @@
 #include "sanitizer_common/sanitizer_internal_defs.h"
 
 // Default MemProf flags are defined in memprof_flags.inc and sancov_flags.inc.
-// These values can be overridded in a number of ways, each option overrides the
+// These values can be overridden in a number of ways, each option overrides the
 // prior one:
 //  1) by setting MEMPROF_DEFAULT_OPTIONS during the compilation of the MemProf
 //     runtime

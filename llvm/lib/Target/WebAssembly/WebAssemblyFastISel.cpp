@@ -35,10 +35,8 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
-#include "llvm/IR/PatternMatch.h"
 
 using namespace llvm;
-using namespace PatternMatch;
 
 #define DEBUG_TYPE "wasm-fastisel"
 
@@ -174,8 +172,8 @@ private:
   unsigned copyValue(unsigned Reg);
 
   // Backend specific FastISel code.
-  unsigned fastMaterializeAlloca(const AllocaInst *AI) override;
-  unsigned fastMaterializeConstant(const Constant *C) override;
+  Register fastMaterializeAlloca(const AllocaInst *AI) override;
+  Register fastMaterializeConstant(const Constant *C) override;
   bool fastLowerArguments() override;
 
   // Selection routines.
@@ -610,7 +608,7 @@ unsigned WebAssemblyFastISel::copyValue(unsigned Reg) {
   return ResultReg;
 }
 
-unsigned WebAssemblyFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
+Register WebAssemblyFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
   DenseMap<const AllocaInst *, int>::iterator SI =
       FuncInfo.StaticAllocaMap.find(AI);
 
@@ -625,15 +623,15 @@ unsigned WebAssemblyFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
     return ResultReg;
   }
 
-  return 0;
+  return Register();
 }
 
-unsigned WebAssemblyFastISel::fastMaterializeConstant(const Constant *C) {
+Register WebAssemblyFastISel::fastMaterializeConstant(const Constant *C) {
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(C)) {
     if (TLI.isPositionIndependent())
-      return 0;
+      return Register();
     if (GV->isThreadLocal())
-      return 0;
+      return Register();
     Register ResultReg =
         createResultReg(Subtarget->hasAddr64() ? &WebAssembly::I64RegClass
                                                : &WebAssembly::I32RegClass);
@@ -645,7 +643,7 @@ unsigned WebAssemblyFastISel::fastMaterializeConstant(const Constant *C) {
   }
 
   // Let target-independent code handle it.
-  return 0;
+  return Register();
 }
 
 bool WebAssemblyFastISel::fastLowerArguments() {
@@ -992,7 +990,10 @@ bool WebAssemblyFastISel::selectTrunc(const Instruction *I) {
   if (Reg == 0)
     return false;
 
-  if (Trunc->getOperand(0)->getType()->isIntegerTy(64)) {
+  unsigned FromBitWidth = Trunc->getOperand(0)->getType()->getIntegerBitWidth();
+  unsigned ToBitWidth = Trunc->getType()->getIntegerBitWidth();
+
+  if (ToBitWidth <= 32 && (32 < FromBitWidth && FromBitWidth <= 64)) {
     Register Result = createResultReg(&WebAssembly::I32RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(WebAssembly::I32_WRAP_I64), Result)

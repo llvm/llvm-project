@@ -178,7 +178,7 @@ spirv.module Logical GLSL450 attributes {
 // Vulkan memory model requires SPV_KHR_vulkan_memory_model, which is enabled
 // implicitly by v1.5.
 
-// CHECK: requires #spirv.vce<v1.0, [VulkanMemoryModel], [SPV_KHR_vulkan_memory_model]>
+// CHECK: requires #spirv.vce<v1.5, [VulkanMemoryModel], [SPV_KHR_vulkan_memory_model]>
 spirv.module Logical Vulkan attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.5, [Shader, VulkanMemoryModel], []>, #spirv.resource_limits<>>
@@ -216,4 +216,18 @@ spirv.module Logical GLSL450 attributes {
 } {
   spirv.GlobalVariable @data : !spirv.ptr<!spirv.struct<(i8 [0], f16 [2], i64 [4])>, Uniform>
   spirv.GlobalVariable @img  : !spirv.ptr<!spirv.image<f32, Buffer, NoDepth, NonArrayed, SingleSampled, SamplerUnknown, Rg32f>, UniformConstant>
+}
+
+// Using bfloat16 requires BFloat16TypeKHR capability and SPV_KHR_bfloat16 extension.
+// CHECK: requires #spirv.vce<v1.0, [StorageBuffer16BitAccess, Shader, BFloat16TypeKHR], [SPV_KHR_bfloat16, SPV_KHR_16bit_storage, SPV_KHR_storage_buffer_storage_class]>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Shader, StorageBuffer16BitAccess, BFloat16TypeKHR], [SPV_KHR_bfloat16, SPV_KHR_16bit_storage, SPV_KHR_storage_buffer_storage_class]>,
+    #spirv.resource_limits<>
+  >
+} {
+  spirv.func @load_bf16(%ptr : !spirv.ptr<bf16, StorageBuffer>) -> bf16 "None" {
+    %val = spirv.Load "StorageBuffer" %ptr : bf16
+    spirv.ReturnValue %val : bf16
+  }
 }

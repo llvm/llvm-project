@@ -20,7 +20,7 @@ if:
   br label %end
 
 end:
-  %c2 = phi float [ undef, %if ], [ %c, %entry ]
+  %c2 = phi float [ poison, %if ], [ %c, %entry ]
   ret float %c2
 }
 
@@ -61,7 +61,7 @@ bb4:
   br label %end
 
 end:
-  %c2 = phi float [ undef, %bb2 ], [ %c, %bb3 ], [ undef, %bb4 ], [ %c, %entry ]
+  %c2 = phi float [ poison, %bb2 ], [ %c, %bb3 ], [ poison, %bb4 ], [ %c, %entry ]
   ret float %c2
 }
 
@@ -72,7 +72,7 @@ define amdgpu_ps float @exclude_backedge(float inreg %c, i32 %x) #0 {
 ; OPT-NEXT:    br i1 [[CC]], label [[END:%.*]], label [[LOOP:%.*]]
 ; OPT:       loop:
 ; OPT-NEXT:    [[IND:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[LOOP]] ]
-; OPT-NEXT:    [[C2:%.*]] = phi float [ [[C:%.*]], [[ENTRY]] ], [ undef, [[LOOP]] ]
+; OPT-NEXT:    [[C2:%.*]] = phi float [ [[C:%.*]], [[ENTRY]] ], [ poison, [[LOOP]] ]
 ; OPT-NEXT:    [[INC]] = add i32 [[IND]], 1
 ; OPT-NEXT:    [[LOOP_CC:%.*]] = icmp slt i32 [[INC]], 5
 ; OPT-NEXT:    br i1 [[LOOP_CC]], label [[LOOP]], label [[LOOP_END:%.*]]
@@ -88,7 +88,7 @@ entry:
 
 loop:
   %ind = phi i32 [ 0, %entry ], [ %inc, %loop ]
-  %c2 = phi float [ %c, %entry ], [ undef, %loop ]
+  %c2 = phi float [ %c, %entry ], [ poison, %loop ]
   %inc = add i32 %ind, 1
   %loop_cc = icmp slt i32 %inc, 5
   br i1 %loop_cc, label %loop, label %loop_end

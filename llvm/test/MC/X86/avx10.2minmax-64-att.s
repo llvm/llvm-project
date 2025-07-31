@@ -140,17 +140,9 @@
 // CHECK: encoding: [0x62,0x83,0xc5,0x20,0x52,0xf0,0x7b]
           vminmaxpd $123, %ymm24, %ymm23, %ymm22
 
-// CHECK: vminmaxpd $123, {sae}, %ymm24, %ymm23, %ymm22
-// CHECK: encoding: [0x62,0x83,0xc1,0x10,0x52,0xf0,0x7b]
-          vminmaxpd $123, {sae}, %ymm24, %ymm23, %ymm22
-
 // CHECK: vminmaxpd $123, %ymm24, %ymm23, %ymm22 {%k7}
 // CHECK: encoding: [0x62,0x83,0xc5,0x27,0x52,0xf0,0x7b]
           vminmaxpd $123, %ymm24, %ymm23, %ymm22 {%k7}
-
-// CHECK: vminmaxpd $123, {sae}, %ymm24, %ymm23, %ymm22 {%k7} {z}
-// CHECK: encoding: [0x62,0x83,0xc1,0x97,0x52,0xf0,0x7b]
-          vminmaxpd $123, {sae}, %ymm24, %ymm23, %ymm22 {%k7} {z}
 
 // CHECK: vminmaxpd  $123, 268435456(%rbp,%r14,8), %ymm23, %ymm22
 // CHECK: encoding: [0x62,0xa3,0xc5,0x20,0x52,0xb4,0xf5,0x00,0x00,0x00,0x10,0x7b]
@@ -256,17 +248,9 @@
 // CHECK: encoding: [0x62,0x83,0x44,0x20,0x52,0xf0,0x7b]
           vminmaxph $123, %ymm24, %ymm23, %ymm22
 
-// CHECK: vminmaxph $123, {sae}, %ymm24, %ymm23, %ymm22
-// CHECK: encoding: [0x62,0x83,0x40,0x10,0x52,0xf0,0x7b]
-          vminmaxph $123, {sae}, %ymm24, %ymm23, %ymm22
-
 // CHECK: vminmaxph $123, %ymm24, %ymm23, %ymm22 {%k7}
 // CHECK: encoding: [0x62,0x83,0x44,0x27,0x52,0xf0,0x7b]
           vminmaxph $123, %ymm24, %ymm23, %ymm22 {%k7}
-
-// CHECK: vminmaxph $123, {sae}, %ymm24, %ymm23, %ymm22 {%k7} {z}
-// CHECK: encoding: [0x62,0x83,0x40,0x97,0x52,0xf0,0x7b]
-          vminmaxph $123, {sae}, %ymm24, %ymm23, %ymm22 {%k7} {z}
 
 // CHECK: vminmaxph  $123, 268435456(%rbp,%r14,8), %ymm23, %ymm22
 // CHECK: encoding: [0x62,0xa3,0x44,0x20,0x52,0xb4,0xf5,0x00,0x00,0x00,0x10,0x7b]
@@ -372,17 +356,9 @@
 // CHECK: encoding: [0x62,0x83,0x45,0x20,0x52,0xf0,0x7b]
           vminmaxps $123, %ymm24, %ymm23, %ymm22
 
-// CHECK: vminmaxps $123, {sae}, %ymm24, %ymm23, %ymm22
-// CHECK: encoding: [0x62,0x83,0x41,0x10,0x52,0xf0,0x7b]
-          vminmaxps $123, {sae}, %ymm24, %ymm23, %ymm22
-
 // CHECK: vminmaxps $123, %ymm24, %ymm23, %ymm22 {%k7}
 // CHECK: encoding: [0x62,0x83,0x45,0x27,0x52,0xf0,0x7b]
           vminmaxps $123, %ymm24, %ymm23, %ymm22 {%k7}
-
-// CHECK: vminmaxps $123, {sae}, %ymm24, %ymm23, %ymm22 {%k7} {z}
-// CHECK: encoding: [0x62,0x83,0x41,0x97,0x52,0xf0,0x7b]
-          vminmaxps $123, {sae}, %ymm24, %ymm23, %ymm22 {%k7} {z}
 
 // CHECK: vminmaxps  $123, 268435456(%rbp,%r14,8), %ymm23, %ymm22
 // CHECK: encoding: [0x62,0xa3,0x45,0x20,0x52,0xb4,0xf5,0x00,0x00,0x00,0x10,0x7b]

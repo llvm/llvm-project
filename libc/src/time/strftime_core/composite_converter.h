@@ -42,7 +42,8 @@ get_specific_int_format(const tm *timeptr, const FormatSection &base_to_conv,
   return result;
 }
 
-LIBC_INLINE int convert_date_us(printf_core::Writer *writer,
+template <printf_core::WriteMode write_mode>
+LIBC_INLINE int convert_date_us(printf_core::Writer<write_mode> *writer,
                                 const FormatSection &to_conv,
                                 const tm *timeptr) {
   // format is %m/%d/%y (month/day/year)
@@ -66,7 +67,8 @@ LIBC_INLINE int convert_date_us(printf_core::Writer *writer,
   return WRITE_OK;
 }
 
-LIBC_INLINE int convert_date_iso(printf_core::Writer *writer,
+template <printf_core::WriteMode write_mode>
+LIBC_INLINE int convert_date_iso(printf_core::Writer<write_mode> *writer,
                                  const FormatSection &to_conv,
                                  const tm *timeptr) {
   // format is "%Y-%m-%d" (year-month-day)
@@ -90,7 +92,8 @@ LIBC_INLINE int convert_date_iso(printf_core::Writer *writer,
   return WRITE_OK;
 }
 
-LIBC_INLINE int convert_time_am_pm(printf_core::Writer *writer,
+template <printf_core::WriteMode write_mode>
+LIBC_INLINE int convert_time_am_pm(printf_core::Writer<write_mode> *writer,
                                    const FormatSection &to_conv,
                                    const tm *timeptr) {
   // format is "%I:%M:%S %p" (hour:minute:second AM/PM)
@@ -119,7 +122,8 @@ LIBC_INLINE int convert_time_am_pm(printf_core::Writer *writer,
   return WRITE_OK;
 }
 
-LIBC_INLINE int convert_time_minute(printf_core::Writer *writer,
+template <printf_core::WriteMode write_mode>
+LIBC_INLINE int convert_time_minute(printf_core::Writer<write_mode> *writer,
                                     const FormatSection &to_conv,
                                     const tm *timeptr) {
   // format is "%H:%M" (hour:minute)
@@ -139,7 +143,8 @@ LIBC_INLINE int convert_time_minute(printf_core::Writer *writer,
   return WRITE_OK;
 }
 
-LIBC_INLINE int convert_time_second(printf_core::Writer *writer,
+template <printf_core::WriteMode write_mode>
+LIBC_INLINE int convert_time_second(printf_core::Writer<write_mode> *writer,
                                     const FormatSection &to_conv,
                                     const tm *timeptr) {
   // format is "%H:%M:%S" (hour:minute:second)
@@ -163,7 +168,8 @@ LIBC_INLINE int convert_time_second(printf_core::Writer *writer,
   return WRITE_OK;
 }
 
-LIBC_INLINE int convert_full_date_time(printf_core::Writer *writer,
+template <printf_core::WriteMode write_mode>
+LIBC_INLINE int convert_full_date_time(printf_core::Writer<write_mode> *writer,
                                        const FormatSection &to_conv,
                                        const tm *timeptr) {
   const time_utils::TMReader time_reader(timeptr);
@@ -204,7 +210,8 @@ LIBC_INLINE int convert_full_date_time(printf_core::Writer *writer,
   return WRITE_OK;
 }
 
-LIBC_INLINE int convert_composite(printf_core::Writer *writer,
+template <printf_core::WriteMode write_mode>
+LIBC_INLINE int convert_composite(printf_core::Writer<write_mode> *writer,
                                   const FormatSection &to_conv,
                                   const tm *timeptr) {
   switch (to_conv.conv_name) {

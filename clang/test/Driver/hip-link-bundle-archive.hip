@@ -68,10 +68,10 @@
 // RUN:   -nogpuinc -nogpulib %s -fgpu-rdc %t/hipBundled2.lib \
 // RUN:   2>&1 | FileCheck -check-prefix=MSVC %s
 
-// GNU1: "{{.*}}clang-offload-bundler" "-unbundle" "-type=a" "-input={{.*}}[[LIB:libhipBundled\.a]]" "-targets=hip-amdgcn-amd-amdhsa-gfx1030" "-output=[[A1030:.*\.a]]" "-allow-missing-bundles"
-// GNU2: "{{.*}}clang-offload-bundler" "-unbundle" "-type=a" "-input={{.*}}[[LIB:libhipBundled\.a\.5\.2]]" "-targets=hip-amdgcn-amd-amdhsa-gfx1030" "-output=[[A1030:.*\.a]]" "-allow-missing-bundles"
+// GNU1: "{{.*}}clang-offload-bundler" "-unbundle" "-type=a" "-input={{.*}}[[LIB:libhipBundled\.a]]" "-targets=hip-amdgcn-amd-amdhsa-unknown-gfx1030" "-output=[[A1030:.*\.a]]" "-allow-missing-bundles"
+// GNU2: "{{.*}}clang-offload-bundler" "-unbundle" "-type=a" "-input={{.*}}[[LIB:libhipBundled\.a\.5\.2]]" "-targets=hip-amdgcn-amd-amdhsa-unknown-gfx1030" "-output=[[A1030:.*\.a]]" "-allow-missing-bundles"
 // GNU: "{{.*}}lld{{.*}}" {{.*}}"-plugin-opt=mcpu=gfx1030" {{.*}} "[[A1030]]"
-// GNU: "{{.*}}clang-offload-bundler" "-unbundle" "-type=a" "-input={{.*}}[[LIB]]" "-targets=hip-amdgcn-amd-amdhsa-gfx906" "-output=[[A906:.*\.a]]" "-allow-missing-bundles"
+// GNU: "{{.*}}clang-offload-bundler" "-unbundle" "-type=a" "-input={{.*}}[[LIB]]" "-targets=hip-amdgcn-amd-amdhsa-unknown-gfx906" "-output=[[A906:.*\.a]]" "-allow-missing-bundles"
 // GNU: "{{.*}}lld{{.*}}" {{.*}}"-plugin-opt=mcpu=gfx906" {{.*}} "[[A906]]"
 // GNU-L: "{{.*}}ld{{.*}}" {{.*}}"-o" "a.out" {{.*}}"-lhipBundled"
 // GNU-LA: "{{.*}}ld{{.*}}" {{.*}}"-o" "a.out" {{.*}}"-l:libhipBundled.a"
@@ -79,8 +79,8 @@
 // NONARCHIVE-NOT: "{{.*}}clang-offload-bundler" "-unbundle" "-type=a" "-input={{.*libNonArchive\.a}}"
 // NONE-NOT: "{{.*}}clang-offload-bundler" "-unbundle" "-type=a" "-input={{.*NoneExist\.a}}"
 
-// MSVC: "{{.*}}clang-offload-bundler" "-unbundle" "-type=a" "-input={{.*}}hipBundled2.lib" "-targets=hip-amdgcn-amd-amdhsa-gfx1030" "-output=[[A1030:.*\.a]]" "-allow-missing-bundles"
+// MSVC: "{{.*}}clang-offload-bundler" "-unbundle" "-type=a" "-input={{.*}}hipBundled2.lib" "-targets=hip-amdgcn-amd-amdhsa-unknown-gfx1030" "-output=[[A1030:.*\.a]]" "-allow-missing-bundles"
 // MSVC: "{{.*}}lld{{.*}}" {{.*}}"-plugin-opt=mcpu=gfx1030" {{.*}} "[[A1030]]"
-// MSVC: "{{.*}}clang-offload-bundler" "-unbundle" "-type=a" "-input={{.*}}hipBundled2.lib" "-targets=hip-amdgcn-amd-amdhsa-gfx906" "-output=[[A906:.*\.a]]" "-allow-missing-bundles"
+// MSVC: "{{.*}}clang-offload-bundler" "-unbundle" "-type=a" "-input={{.*}}hipBundled2.lib" "-targets=hip-amdgcn-amd-amdhsa-unknown-gfx906" "-output=[[A906:.*\.a]]" "-allow-missing-bundles"
 // MSVC: "{{.*}}lld{{.*}}" {{.*}}"-plugin-opt=mcpu=gfx906" {{.*}} "[[A906]]"
 // MSVC: "{{.*}}link{{.*}}" {{.*}}"-out:a.exe" {{.*}}hipBundled2.lib"

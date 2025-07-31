@@ -8,9 +8,7 @@
 
 #include "RedundantExpressionCheck.h"
 #include "../utils/Matchers.h"
-#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ExprConcepts.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
@@ -20,14 +18,12 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <optional>
 #include <string>
-#include <vector>
 
 using namespace clang::ast_matchers;
 using namespace clang::tidy::matchers;
@@ -914,9 +910,9 @@ static bool areExprsSameMacroOrLiteral(const BinaryOperator *BinOp,
     if (Rsr.getBegin().isMacroID()) {
       // Both sides are macros so they are same macro or literal
       const llvm::StringRef L = Lexer::getSourceText(
-          CharSourceRange::getTokenRange(Lsr), SM, Context->getLangOpts(), 0);
+          CharSourceRange::getTokenRange(Lsr), SM, Context->getLangOpts());
       const llvm::StringRef R = Lexer::getSourceText(
-          CharSourceRange::getTokenRange(Rsr), SM, Context->getLangOpts(), 0);
+          CharSourceRange::getTokenRange(Rsr), SM, Context->getLangOpts());
       return areStringsSameIgnoreSpaces(L, R);
     }
     // Left is macro but right is not so they are not same macro or literal
@@ -926,18 +922,6 @@ static bool areExprsSameMacroOrLiteral(const BinaryOperator *BinOp,
   const auto *Ril = dyn_cast<IntegerLiteral>(Rhs);
   if (Lil && Ril)
     return Lil->getValue() == Ril->getValue();
-
-  const auto *LStrl = dyn_cast<StringLiteral>(Lhs);
-  const auto *RStrl = dyn_cast<StringLiteral>(Rhs);
-  if (Lil && Ril) {
-    const llvm::StringRef L = Lexer::getSourceText(
-        CharSourceRange::getTokenRange(LStrl->getBeginLoc()), SM,
-        Context->getLangOpts(), 0);
-    const llvm::StringRef R = Lexer::getSourceText(
-        CharSourceRange::getTokenRange(RStrl->getBeginLoc()), SM,
-        Context->getLangOpts(), 0);
-    return L.compare(R) == 0;
-  }
 
   const auto *Lbl = dyn_cast<CXXBoolLiteralExpr>(Lhs);
   const auto *Rbl = dyn_cast<CXXBoolLiteralExpr>(Rhs);

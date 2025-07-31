@@ -7,119 +7,93 @@ define void @test(ptr %p, i40 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i40> poison, i40 [[A]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <16 x i40> [[BROADCAST_SPLATINSERT1]], <16 x i40> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <16 x i40> [[BROADCAST_SPLAT2]], splat (i40 24)
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr <16 x i40> [[TMP1]], splat (i40 28)
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc <16 x i40> [[TMP2]] to <16 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <16 x i32> [[TMP3]] to <16 x i1>
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <16 x i1> [[TMP4]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult <16 x i1> zeroinitializer, [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or <16 x i1> [[TMP6]], splat (i1 true)
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt <16 x i1> [[TMP7]], zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <16 x i1> [[TMP8]], i32 0
-; CHECK-NEXT:    store i1 [[TMP10]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
 ; CHECK:       pred.store.if1:
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <16 x i1> [[TMP8]], i32 1
-; CHECK-NEXT:    store i1 [[TMP9]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.continue2:
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
 ; CHECK:       pred.store.if3:
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <16 x i1> [[TMP8]], i32 2
-; CHECK-NEXT:    store i1 [[TMP12]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
 ; CHECK:       pred.store.continue4:
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6:%.*]]
 ; CHECK:       pred.store.if5:
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <16 x i1> [[TMP8]], i32 3
-; CHECK-NEXT:    store i1 [[TMP14]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE6]]
 ; CHECK:       pred.store.continue6:
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF7:%.*]], label [[PRED_STORE_CONTINUE8:%.*]]
 ; CHECK:       pred.store.if7:
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <16 x i1> [[TMP8]], i32 4
-; CHECK-NEXT:    store i1 [[TMP16]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE8]]
 ; CHECK:       pred.store.continue8:
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF9:%.*]], label [[PRED_STORE_CONTINUE10:%.*]]
 ; CHECK:       pred.store.if9:
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <16 x i1> [[TMP8]], i32 5
-; CHECK-NEXT:    store i1 [[TMP18]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE10]]
 ; CHECK:       pred.store.continue10:
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF11:%.*]], label [[PRED_STORE_CONTINUE12:%.*]]
 ; CHECK:       pred.store.if11:
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <16 x i1> [[TMP8]], i32 6
-; CHECK-NEXT:    store i1 [[TMP20]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE12]]
 ; CHECK:       pred.store.continue12:
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF13:%.*]], label [[PRED_STORE_CONTINUE14:%.*]]
 ; CHECK:       pred.store.if13:
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <16 x i1> [[TMP8]], i32 7
-; CHECK-NEXT:    store i1 [[TMP22]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE14]]
 ; CHECK:       pred.store.continue14:
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF15:%.*]], label [[PRED_STORE_CONTINUE16:%.*]]
 ; CHECK:       pred.store.if15:
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <16 x i1> [[TMP8]], i32 8
-; CHECK-NEXT:    store i1 [[TMP24]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE16]]
 ; CHECK:       pred.store.continue16:
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF17:%.*]], label [[PRED_STORE_CONTINUE18:%.*]]
 ; CHECK:       pred.store.if17:
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <16 x i1> [[TMP8]], i32 9
-; CHECK-NEXT:    store i1 [[TMP26]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE18]]
 ; CHECK:       pred.store.continue18:
 ; CHECK-NEXT:    br i1 false, label [[PRED_STORE_IF19:%.*]], label [[PRED_STORE_CONTINUE20:%.*]]
 ; CHECK:       pred.store.if19:
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <16 x i1> [[TMP8]], i32 10
-; CHECK-NEXT:    store i1 [[TMP28]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE20]]
 ; CHECK:       pred.store.continue20:
 ; CHECK-NEXT:    br i1 false, label [[PRED_STORE_IF21:%.*]], label [[PRED_STORE_CONTINUE22:%.*]]
 ; CHECK:       pred.store.if21:
-; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <16 x i1> [[TMP8]], i32 11
-; CHECK-NEXT:    store i1 [[TMP30]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE22]]
 ; CHECK:       pred.store.continue22:
 ; CHECK-NEXT:    br i1 false, label [[PRED_STORE_IF23:%.*]], label [[PRED_STORE_CONTINUE24:%.*]]
 ; CHECK:       pred.store.if23:
-; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <16 x i1> [[TMP8]], i32 12
-; CHECK-NEXT:    store i1 [[TMP32]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE24]]
 ; CHECK:       pred.store.continue24:
 ; CHECK-NEXT:    br i1 false, label [[PRED_STORE_IF25:%.*]], label [[PRED_STORE_CONTINUE26:%.*]]
 ; CHECK:       pred.store.if25:
-; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <16 x i1> [[TMP8]], i32 13
-; CHECK-NEXT:    store i1 [[TMP34]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE26]]
 ; CHECK:       pred.store.continue26:
 ; CHECK-NEXT:    br i1 false, label [[PRED_STORE_IF27:%.*]], label [[PRED_STORE_CONTINUE28:%.*]]
 ; CHECK:       pred.store.if27:
-; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <16 x i1> [[TMP8]], i32 14
-; CHECK-NEXT:    store i1 [[TMP36]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE28]]
 ; CHECK:       pred.store.continue28:
 ; CHECK-NEXT:    br i1 false, label [[PRED_STORE_IF29:%.*]], label [[PRED_STORE_CONTINUE30:%.*]]
 ; CHECK:       pred.store.if29:
-; CHECK-NEXT:    [[TMP38:%.*]] = extractelement <16 x i1> [[TMP8]], i32 15
-; CHECK-NEXT:    store i1 [[TMP38]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE30]]
 ; CHECK:       pred.store.continue30:
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 16, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]

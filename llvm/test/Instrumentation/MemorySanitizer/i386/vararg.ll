@@ -9,29 +9,29 @@ target triple = "i386-unknown-linux-gnu"
 define void @VaStart(ptr %s, ...) {
 ; CHECK-LABEL: define void @VaStart(
 ; CHECK-SAME: ptr [[S:%.*]], ...) {
-; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = alloca i8, i64 [[TMP6]], align 8
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP4]], i8 0, i64 [[TMP6]], i1 false)
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP6]], i64 800)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP4]], ptr align 8 @__msan_va_arg_tls, i64 [[TMP3]], i1 false)
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = alloca i8, i32 [[TMP4]], align 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 8 [[TMP5]], i8 0, i32 [[TMP4]], i1 false)
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP4]], i32 800)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[TMP5]], ptr align 8 @__msan_va_arg_tls, i32 [[TMP3]], i1 false)
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[VL:%.*]] = alloca ptr, align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[VL]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 2147483647
 ; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i32 [[TMP1]] to ptr
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 4 [[TMP2]], i8 0, i32 4, i1 false)
-; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[VL]] to i32
-; CHECK-NEXT:    [[TMP10:%.*]] = and i32 [[TMP9]], 2147483647
-; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP10]] to ptr
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP11]], i8 0, i64 4, i1 false)
+; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[VL]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 2147483647
+; CHECK-NEXT:    [[TMP9:%.*]] = inttoptr i32 [[TMP8]] to ptr
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP9]], i8 0, i64 4, i1 false)
 ; CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[VL]])
-; CHECK-NEXT:    [[TMP12:%.*]] = ptrtoint ptr [[VL]] to i32
-; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr i32 [[TMP12]] to ptr
-; CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[TMP13]], align 4
-; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[TMP14]] to i32
-; CHECK-NEXT:    [[TMP16:%.*]] = and i32 [[TMP15]], 2147483647
-; CHECK-NEXT:    [[TMP17:%.*]] = inttoptr i32 [[TMP16]] to ptr
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP17]], ptr align 4 [[TMP4]], i64 [[TMP6]], i1 false)
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[VL]] to i32
+; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP10]] to ptr
+; CHECK-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP11]], align 4
+; CHECK-NEXT:    [[TMP13:%.*]] = ptrtoint ptr [[TMP12]] to i32
+; CHECK-NEXT:    [[TMP14:%.*]] = and i32 [[TMP13]], 2147483647
+; CHECK-NEXT:    [[TMP15:%.*]] = inttoptr i32 [[TMP14]] to ptr
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP15]], ptr align 4 [[TMP5]], i32 [[TMP4]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
 ; KERNEL-LABEL: define void @VaStart(
@@ -44,26 +44,26 @@ define void @VaStart(ptr %s, ...) {
 ; KERNEL-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
 ; KERNEL-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
 ; KERNEL-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
-; KERNEL-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
-; KERNEL-NEXT:    [[TMP3:%.*]] = alloca i8, i64 [[TMP2]], align 8
-; KERNEL-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP3]], i8 0, i64 [[TMP2]], i1 false)
-; KERNEL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP2]], i64 800)
-; KERNEL-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP3]], ptr align 8 [[VA_ARG_SHADOW]], i64 [[TMP4]], i1 false)
+; KERNEL-NEXT:    [[TMP2:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
+; KERNEL-NEXT:    [[TMP3:%.*]] = alloca i8, i32 [[TMP2]], align 8
+; KERNEL-NEXT:    call void @llvm.memset.p0.i32(ptr align 8 [[TMP3]], i8 0, i32 [[TMP2]], i1 false)
+; KERNEL-NEXT:    [[TMP4:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP2]], i32 800)
+; KERNEL-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[TMP3]], ptr align 8 [[VA_ARG_SHADOW]], i32 [[TMP4]], i1 false)
 ; KERNEL-NEXT:    call void @llvm.donothing()
 ; KERNEL-NEXT:    [[VL:%.*]] = alloca ptr, align 4
 ; KERNEL-NEXT:    call void @__msan_unpoison_alloca(ptr [[VL]], i32 4)
-; KERNEL-NEXT:    [[TMP7:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_1(ptr [[VL]])
-; KERNEL-NEXT:    [[TMP8:%.*]] = extractvalue { ptr, ptr } [[TMP7]], 0
-; KERNEL-NEXT:    [[TMP9:%.*]] = extractvalue { ptr, ptr } [[TMP7]], 1
-; KERNEL-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP8]], i8 0, i64 4, i1 false)
+; KERNEL-NEXT:    [[TMP5:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_1(ptr [[VL]])
+; KERNEL-NEXT:    [[TMP6:%.*]] = extractvalue { ptr, ptr } [[TMP5]], 0
+; KERNEL-NEXT:    [[TMP7:%.*]] = extractvalue { ptr, ptr } [[TMP5]], 1
+; KERNEL-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP6]], i8 0, i64 4, i1 false)
 ; KERNEL-NEXT:    call void @llvm.va_start.p0(ptr [[VL]])
-; KERNEL-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[VL]] to i32
-; KERNEL-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP10]] to ptr
-; KERNEL-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP11]], align 4
-; KERNEL-NEXT:    [[TMP13:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_1(ptr [[TMP12]])
-; KERNEL-NEXT:    [[TMP14:%.*]] = extractvalue { ptr, ptr } [[TMP13]], 0
-; KERNEL-NEXT:    [[TMP15:%.*]] = extractvalue { ptr, ptr } [[TMP13]], 1
-; KERNEL-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP14]], ptr align 4 [[TMP3]], i64 [[TMP2]], i1 false)
+; KERNEL-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[VL]] to i32
+; KERNEL-NEXT:    [[TMP9:%.*]] = inttoptr i32 [[TMP8]] to ptr
+; KERNEL-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[TMP9]], align 4
+; KERNEL-NEXT:    [[TMP11:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_1(ptr [[TMP10]])
+; KERNEL-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, ptr } [[TMP11]], 0
+; KERNEL-NEXT:    [[TMP13:%.*]] = extractvalue { ptr, ptr } [[TMP11]], 1
+; KERNEL-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP12]], ptr align 4 [[TMP3]], i32 [[TMP2]], i1 false)
 ; KERNEL-NEXT:    ret void
 ;
   %vl = alloca ptr, align 4

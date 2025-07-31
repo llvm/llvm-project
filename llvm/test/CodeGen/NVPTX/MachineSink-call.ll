@@ -10,7 +10,7 @@ declare void @foo()
 ; the call may modify memory.
 define i32 @f(i32 %x, ptr %ptr, i1 %cond) {
 Start:
-  ; CHECK: ld.u32
+  ; CHECK: ld.b32
   %ptr_val = load i32, ptr %ptr
   ; CHECK: call.uni
   call void @foo()

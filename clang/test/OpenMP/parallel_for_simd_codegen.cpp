@@ -796,7 +796,7 @@ for (int i = 0; i < 10; ++i);
 // OMP50-LABEL: define internal void @_Z20parallel_simd_atomici.omp_outlined
 // OMP50: call void @__kmpc_for_static_init_4
 // OMP50: omp.inner.for.body:
-// OMP50: %{{[0-9]+}} = atomicrmw add ptr %{{[0-9]+}}, i32 1 monotonic, align 4, !llvm.access.group !47
+// OMP50: %{{[0-9]+}} = atomicrmw add ptr %{{[0-9]+}}, i32 1 monotonic, align 4, !llvm.access.group !{{[0-9]+}}
 
 // OMP45-NOT: !{!"llvm.loop.vectorize.enable", i1 false}
 // OMP45-DAG: ![[VECT]] = distinct !{![[VECT]], ![[PA:.+]], ![[VM:.+]]}

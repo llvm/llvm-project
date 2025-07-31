@@ -2,17 +2,17 @@
 
 template<typename T>
 void TemplUses() {
-#pragma acc parallel loop device_type(I)
+#pragma acc parallel loop device_type(default)
   for(int i = 0; i < 5; ++i);
 #pragma acc serial loop dtype(*)
   for(int i = 0; i < 5; ++i);
-#pragma acc kernels loop device_type(class)
+#pragma acc kernels loop device_type(nvidia)
   for(int i = 0; i < 5; ++i);
-#pragma acc parallel loop device_type(private)
+#pragma acc parallel loop device_type(radeon)
   for(int i = 0; i < 5; ++i);
-#pragma acc serial loop device_type(bool)
+#pragma acc serial loop device_type(host)
   for(int i = 0; i < 5; ++i);
-#pragma acc kernels loop dtype(true) device_type(false)
+#pragma acc kernels loop dtype(multicore) device_type(host)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{expected ','}}
   // expected-error@+1{{expected identifier}}

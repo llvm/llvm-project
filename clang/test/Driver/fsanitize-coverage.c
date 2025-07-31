@@ -17,6 +17,7 @@
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=dataflow -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=thread -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fsanitize-coverage=func,trace-pc -flto -fvisibility=default -fno-sanitize-ignorelist -resource-dir=/dev/null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
 // RUN: %clang --target=%itanium_abi_triple -fsanitize=float-divide-by-zero -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
 // RUN: %clang --target=x86_64-linux-gnu                     -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
 // CHECK-SANITIZE-COVERAGE-FUNC: fsanitize-coverage-type=1
@@ -91,6 +92,20 @@
 // CHECK-STACK-DEPTH-PC-GUARD: -fsanitize-coverage-type=3
 // CHECK-STACK-DEPTH-PC-GUARD: -fsanitize-coverage-trace-pc-guard
 // CHECK-STACK-DEPTH-PC-GUARD: -fsanitize-coverage-stack-depth
+
+// RUN: %clang --target=x86_64-linux-gnu \
+// RUN:     -fsanitize-coverage-stack-depth-callback-min=100 %s -### 2>&1 | \
+// RUN:     FileCheck %s --check-prefix=CHECK-STACK-DEPTH-CALLBACK
+// RUN: %clang --target=x86_64-linux-gnu \
+// RUN:     -fsanitize-coverage-stack-depth-callback-min=0 %s -### 2>&1 | \
+// RUN:     FileCheck %s --check-prefix=CHECK-STACK-DEPTH-CALLBACK-ZERO
+// RUN: not %clang --target=x86_64-linux-gnu \
+// RUN:     -fsanitize-coverage-stack-depth-callback-min=-10 %s -### 2>&1 | \
+// RUN:     FileCheck %s --check-prefix=CHECK-STACK-DEPTH-CALLBACK-NEGATIVE
+// CHECK-STACK-DEPTH-CALLBACK-NOT: error:
+// CHECK-STACK-DEPTH-CALLBACK: -fsanitize-coverage-stack-depth-callback-min=100
+// CHECK-STACK-DEPTH-CALLBACK-ZERO-NOT: -fsanitize-coverage-stack-depth-callback-min=0
+// CHECK-STACK-DEPTH-CALLBACK-NEGATIVE: error: invalid value '-10' in '-fsanitize-coverage-stack-depth-callback-min=-10'
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=trace-cmp,indirect-calls %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-TYPE-NECESSARY
 // CHECK-NO-TYPE-NECESSARY-NOT: error:

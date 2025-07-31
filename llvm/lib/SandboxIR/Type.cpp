@@ -36,6 +36,9 @@ Type *Type::getDoubleTy(Context &Ctx) {
 Type *Type::getFloatTy(Context &Ctx) {
   return Ctx.getType(llvm::Type::getFloatTy(Ctx.LLVMCtx));
 }
+Type *Type::getHalfTy(Context &Ctx) {
+  return Ctx.getType(llvm::Type::getHalfTy(Ctx.LLVMCtx));
+}
 
 #ifndef NDEBUG
 void Type::dumpOS(raw_ostream &OS) { LLVMTy->print(OS); }

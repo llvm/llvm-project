@@ -568,7 +568,7 @@ class CK807<string n, SchedMachineModel m, list<SubtargetFeature> f,
 def : CK807<"ck807", NoSchedModel, []>;
 def : CK807<"c807", NoSchedModel, []>;
 def : CK807<"r807", NoSchedModel, []>;
-def : CK807<"ck807e", NoSchedModel, [FeatureDSP, HasDSP1E2, HasDSPE60]>;
+def : CK807<"ck807e", NoSchedModel, []>;
 def : CK807<"ck807f", NoSchedModel,
             [FeatureFPUV2_SF, FeatureFPUV2_DF, FeatureFdivdu,
              HasFLOATE1, HasFLOAT1E2, HasFLOAT1E3, HasFLOAT3E4]>;
@@ -579,7 +579,7 @@ def : CK807<"r807f", NoSchedModel,
             [FeatureFPUV2_SF, FeatureFPUV2_DF, FeatureFdivdu,
              HasFLOATE1, HasFLOAT1E2, HasFLOAT1E3, HasFLOAT3E4]>;
 def : CK807<"ck807ef", NoSchedModel, [
-  FeatureDSP, HasDSP1E2, HasDSPE60, FeatureFPUV2_SF, FeatureFPUV2_DF,
+  FeatureFPUV2_SF, FeatureFPUV2_DF,
   FeatureFdivdu, HasFLOATE1, HasFLOAT1E2, HasFLOAT1E3, HasFLOAT3E4]>;
 
 // CK810 series

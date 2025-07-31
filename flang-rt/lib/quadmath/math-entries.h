@@ -112,7 +112,7 @@ DEFINE_FALLBACK_F128(Yn)
 
 #if HAS_QUADMATHLIB
 // Define wrapper callers for libquadmath.
-#include "quadmath.h"
+#include "quadmath_wrapper.h"
 DEFINE_SIMPLE_ALIAS(Abs, fabsq)
 DEFINE_SIMPLE_ALIAS(Acos, acosq)
 DEFINE_SIMPLE_ALIAS(Acosh, acoshq)

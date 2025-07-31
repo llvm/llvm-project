@@ -113,11 +113,11 @@ define void @fp2si_v8f32_v8i64(ptr %x, ptr %y) {
 ; CHECK-LABEL: fp2si_v8f32_v8i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vmfne.vv v0, v8, v8
-; CHECK-NEXT:    vfwcvt.rtz.x.f.v v12, v8
+; CHECK-NEXT:    vle32.v v12, (a0)
+; CHECK-NEXT:    vmfne.vv v0, v12, v12
+; CHECK-NEXT:    vfwcvt.rtz.x.f.v v8, v12
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vmerge.vim v8, v12, 0, v0
+; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x float>, ptr %x
@@ -132,11 +132,11 @@ define void @fp2ui_v8f32_v8i64(ptr %x, ptr %y) {
 ; CHECK-LABEL: fp2ui_v8f32_v8i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vmfne.vv v0, v8, v8
-; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v12, v8
+; CHECK-NEXT:    vle32.v v12, (a0)
+; CHECK-NEXT:    vmfne.vv v0, v12, v12
+; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v8, v12
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vmerge.vim v8, v12, 0, v0
+; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x float>, ptr %x
