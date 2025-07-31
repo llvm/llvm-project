@@ -50,10 +50,9 @@ define ptr @partialConstant2(ptr %p, i64 %a, i64 %b) {
 ; result = ((ptr) p + a) + 3
 define ptr @merge(ptr %p, i64 %a) {
 ; CHECK-LABEL: @merge(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 [[A:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 8
-; CHECK-NEXT:    ret ptr [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 12
+; CHECK-NEXT:    ret ptr [[TMP2]]
 ;
   %1 = getelementptr inbounds i32, ptr %p, i64 1
   %2 = getelementptr inbounds i32, ptr %1, i64 %a
@@ -67,13 +66,11 @@ define ptr @merge(ptr %p, i64 %a) {
 ; result = (ptr) ((ptr) ((ptr) ptr + a) + (a * b)) + 9
 define ptr @nested(ptr %p, i64 %a, i64 %b) {
 ; CHECK-LABEL: @nested(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 16
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[A:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[A]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 128
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, ptr [[TMP4]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP5]], i64 16
-; CHECK-NEXT:    ret ptr [[TMP6]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i16, ptr [[TMP1]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP3]], i64 160
+; CHECK-NEXT:    ret ptr [[TMP4]]
 ;
   %1 = getelementptr inbounds <3 x i32>, ptr %p, i64 1
   %2 = getelementptr inbounds i8, ptr %1, i64 %a
