@@ -233,15 +233,11 @@ def UndefResultChecker : Checker<"UndefinedBinaryOperatorResult">,
   HelpText<"Check for undefined results of binary operators">,
   Documentation<HasDocumentation>;
 
-def StackAddrEscapeBase : Checker<"StackAddrEscapeBase">,
-  HelpText<"Generate information about stack address escapes.">,
-  Documentation<NotDocumented>,
-  Hidden;
-
-def StackAddrEscapeChecker : Checker<"StackAddressEscape">,
-  HelpText<"Check that addresses to stack memory do not escape the function">,
-  Dependencies<[StackAddrEscapeBase]>,
-  Documentation<HasDocumentation>;
+def StackAddrEscapeChecker
+    : Checker<"StackAddressEscape">,
+      HelpText<
+          "Check that addresses to stack memory do not escape the function">,
+      Documentation<HasDocumentation>;
 
 def DynamicTypePropagation : Checker<"DynamicTypePropagation">,
   HelpText<"Generate dynamic type information">,
@@ -295,10 +291,11 @@ def DynamicTypeChecker
       Dependencies<[DynamicTypePropagation]>,
       Documentation<HasDocumentation>;
 
-def StackAddrAsyncEscapeChecker : Checker<"StackAddressAsyncEscape">,
-  HelpText<"Check that addresses to stack memory do not escape the function">,
-  Dependencies<[StackAddrEscapeBase]>,
-  Documentation<HasDocumentation>;
+def StackAddrAsyncEscapeChecker
+    : Checker<"StackAddressAsyncEscape">,
+      HelpText<
+          "Check that addresses to stack memory do not escape the function">,
+      Documentation<HasDocumentation>;
 
 def PthreadLockBase : Checker<"PthreadLockBase">,
   HelpText<"Helper registering multiple checks.">,
@@ -1047,11 +1044,6 @@ def RetainCountBase : Checker<"RetainCountBase">,
 
 let ParentPackage = OSX in {
 
-def NSOrCFErrorDerefChecker : Checker<"NSOrCFErrorDerefChecker">,
-  HelpText<"Implementation checker for NSErrorChecker and CFErrorChecker">,
-  Documentation<NotDocumented>,
-  Hidden;
-
 def NumberObjectConversionChecker : Checker<"NumberObjectConversion">,
   HelpText<"Check for erroneous conversions of objects representing numbers "
            "into numbers">,
@@ -1149,9 +1141,8 @@ def ObjCSuperCallChecker : Checker<"MissingSuperCall">,
   Documentation<NotDocumented>;
 
 def NSErrorChecker : Checker<"NSError">,
-  HelpText<"Check usage of NSError** parameters">,
-  Dependencies<[NSOrCFErrorDerefChecker]>,
-  Documentation<HasDocumentation>;
+                     HelpText<"Check usage of NSError** parameters">,
+                     Documentation<HasDocumentation>;
 
 def RetainCountChecker : Checker<"RetainCount">,
   HelpText<"Check for leaks and improper reference count management">,
@@ -1253,9 +1244,8 @@ def CFRetainReleaseChecker : Checker<"CFRetainRelease">,
   Documentation<HasDocumentation>;
 
 def CFErrorChecker : Checker<"CFError">,
-  HelpText<"Check usage of CFErrorRef* parameters">,
-  Dependencies<[NSOrCFErrorDerefChecker]>,
-  Documentation<HasDocumentation>;
+                     HelpText<"Check usage of CFErrorRef* parameters">,
+                     Documentation<HasDocumentation>;
 
 } // end "osx.coreFoundation"
 

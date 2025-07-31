@@ -28982,13 +28982,100 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
   return SDValue();
 }
 
+static SDValue matchMergedBFX(SDValue Root, SelectionDAG &DAG,
+                              const TargetLowering &TLI) {
+  // Match a pattern such as:
+  //  (X | (X >> C0) | (X >> C1) | ...) & Mask
+  // This extracts contiguous parts of X and ORs them together before comparing.
+  // We can optimize this so that we directly check (X & SomeMask) instead,
+  // eliminating the shifts.
+
+  EVT VT = Root.getValueType();
+
+  // TODO: Support vectors?
+  if (!VT.isScalarInteger() || Root.getOpcode() != ISD::AND)
+    return SDValue();
+
+  SDValue N0 = Root.getOperand(0);
+  SDValue N1 = Root.getOperand(1);
+
+  if (N0.getOpcode() != ISD::OR || !isa<ConstantSDNode>(N1))
+    return SDValue();
+
+  APInt RootMask = cast<ConstantSDNode>(N1)->getAsAPIntVal();
+
+  SDValue Src;
+  const auto IsSrc = [&](SDValue V) {
+    if (!Src) {
+      Src = V;
+      return true;
+    }
+
+    return Src == V;
+  };
+
+  SmallVector<SDValue> Worklist = {N0};
+  APInt PartsMask(VT.getSizeInBits(), 0);
+  while (!Worklist.empty()) {
+    SDValue V = Worklist.pop_back_val();
+    if (!V.hasOneUse() && (Src && Src != V))
+      return SDValue();
+
+    if (V.getOpcode() == ISD::OR) {
+      Worklist.push_back(V.getOperand(0));
+      Worklist.push_back(V.getOperand(1));
+      continue;
+    }
+
+    if (V.getOpcode() == ISD::SRL) {
+      SDValue ShiftSrc = V.getOperand(0);
+      SDValue ShiftAmt = V.getOperand(1);
+
+      if (!IsSrc(ShiftSrc) || !isa<ConstantSDNode>(ShiftAmt))
+        return SDValue();
+
+      auto ShiftAmtVal = cast<ConstantSDNode>(ShiftAmt)->getAsZExtVal();
+      if (ShiftAmtVal > RootMask.getBitWidth())
+        return SDValue();
+
+      PartsMask |= (RootMask << ShiftAmtVal);
+      continue;
+    }
+
+    if (IsSrc(V)) {
+      PartsMask |= RootMask;
+      continue;
+    }
+
+    return SDValue();
+  }
+
+  if (!Src)
+    return SDValue();
+
+  SDLoc DL(Root);
+  return DAG.getNode(ISD::AND, DL, VT,
+                     {Src, DAG.getConstant(PartsMask, DL, VT)});
+}
+
 /// This is a stub for TargetLowering::SimplifySetCC.
 SDValue DAGCombiner::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
                                    ISD::CondCode Cond, const SDLoc &DL,
                                    bool foldBooleans) {
   TargetLowering::DAGCombinerInfo
     DagCombineInfo(DAG, Level, false, this);
-  return TLI.SimplifySetCC(VT, N0, N1, Cond, foldBooleans, DagCombineInfo, DL);
+  if (SDValue C =
+          TLI.SimplifySetCC(VT, N0, N1, Cond, foldBooleans, DagCombineInfo, DL))
+    return C;
+
+  if (ISD::isIntEqualitySetCC(Cond) && N0.getOpcode() == ISD::AND &&
+      isNullConstant(N1)) {
+
+    if (SDValue Res = matchMergedBFX(N0, DAG, TLI))
+      return DAG.getSetCC(DL, VT, Res, N1, Cond);
+  }
+
+  return SDValue();
 }
 
 /// Given an ISD::SDIV node expressing a divide by constant, return
