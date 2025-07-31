@@ -22,7 +22,7 @@ define i1 @vf(ptr %this) #0 !dbg !7 {
   ret i1 true
 }
 
-; This should NOT be devietualized because during non-lto empty functions
+; This should NOT be devirtualized because during non-lto empty functions
 ; are skipped.
 define void @vf_empty(ptr %this) !dbg !11 {
   ret void
