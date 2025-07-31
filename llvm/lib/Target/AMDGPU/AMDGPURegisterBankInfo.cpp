@@ -4009,10 +4009,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_SADDE:
   case AMDGPU::G_USUBE:
   case AMDGPU::G_SSUBE:
-  case AMDGPU::G_SMIN:
-  case AMDGPU::G_SMAX:
-  case AMDGPU::G_UMIN:
-  case AMDGPU::G_UMAX:
   case AMDGPU::G_ABS:
   case AMDGPU::G_SHUFFLE_VECTOR:
   case AMDGPU::G_SBFX:
@@ -4021,6 +4017,18 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_AMDGPU_S_MUL_U64_U32:
     if (isSALUMapping(MI))
       return getDefaultMappingSOP(MI);
+    return getDefaultMappingVOP(MI);
+  case AMDGPU::G_SMIN:
+  case AMDGPU::G_SMAX:
+  case AMDGPU::G_UMIN:
+  case AMDGPU::G_UMAX:
+    if (isSALUMapping(MI)) {
+      // There are no scalar 64-bit min and max, use vector instruction instead.
+      if (MRI.getType(MI.getOperand(0).getReg()).getSizeInBits() == 64 &&
+          Subtarget.hasIntMinMax64())
+        return getDefaultMappingVOP(MI);
+      return getDefaultMappingSOP(MI);
+    }
     return getDefaultMappingVOP(MI);
   case AMDGPU::G_FADD:
   case AMDGPU::G_FSUB:
@@ -4566,8 +4574,13 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_cvt_pknorm_u16:
     case Intrinsic::amdgcn_cvt_pk_i16:
     case Intrinsic::amdgcn_cvt_pk_u16:
+    case Intrinsic::amdgcn_cvt_sr_pk_bf16_f32:
     case Intrinsic::amdgcn_cvt_pk_f16_fp8:
     case Intrinsic::amdgcn_cvt_pk_f16_bf8:
+    case Intrinsic::amdgcn_cvt_pk_fp8_f16:
+    case Intrinsic::amdgcn_cvt_pk_bf8_f16:
+    case Intrinsic::amdgcn_cvt_sr_fp8_f16:
+    case Intrinsic::amdgcn_cvt_sr_bf8_f16:
     case Intrinsic::amdgcn_sat_pk4_i4_i8:
     case Intrinsic::amdgcn_sat_pk4_u4_u8:
     case Intrinsic::amdgcn_fmed3:
@@ -5364,6 +5377,14 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[1] = AMDGPU::getValueMapping(Bank, 32);
       break;
     }
+    case Intrinsic::amdgcn_global_store_async_from_lds_b8:
+    case Intrinsic::amdgcn_global_store_async_from_lds_b32:
+    case Intrinsic::amdgcn_global_store_async_from_lds_b64:
+    case Intrinsic::amdgcn_global_store_async_from_lds_b128:
+    case Intrinsic::amdgcn_global_load_async_to_lds_b8:
+    case Intrinsic::amdgcn_global_load_async_to_lds_b32:
+    case Intrinsic::amdgcn_global_load_async_to_lds_b64:
+    case Intrinsic::amdgcn_global_load_async_to_lds_b128:
     case Intrinsic::amdgcn_load_to_lds:
     case Intrinsic::amdgcn_global_load_lds: {
       OpdsMapping[1] = getVGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);

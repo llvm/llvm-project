@@ -108,6 +108,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-invalid-enum-default-initialization
+  <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` check.
+
+  Detects default initialization (to 0) of variables with ``enum`` type where
+  the enum has no enumerator with value of 0.
+
 - New :doc:`llvm-mlir-op-builder
   <clang-tidy/checks/llvm/use-new-mlir-op-builder>` check.
 
@@ -153,6 +159,10 @@ Changes in existing checks
 - Improved :doc:`portability-template-virtual-member-function
   <clang-tidy/checks/portability/template-virtual-member-function>` check to
   avoid false positives on pure virtual member functions.
+
+- Improved :doc:`readability-qualified-auto
+  <clang-tidy/checks/readability/qualified-auto>` check by adding the option
+  `IgnoreAliasing`, that allows not looking at underlying types of type aliases.
 
 Removed checks
 ^^^^^^^^^^^^^^
