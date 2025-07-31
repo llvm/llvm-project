@@ -3064,7 +3064,7 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
       // the semantic effects of the attribute having been applied.
       S.Diag(NewAttribute->getLocation(),
              diag::err_sycl_entry_point_after_definition)
-                 << NewAttribute;
+          << NewAttribute;
       S.Diag(Def->getLocation(), diag::note_previous_definition);
       cast<SYCLKernelEntryPointAttr>(NewAttribute)->setInvalidAttr();
       ++I;

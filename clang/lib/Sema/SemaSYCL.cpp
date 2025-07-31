@@ -268,7 +268,7 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
     } else {
       Diag(SAI->getLocation(),
            diag::warn_sycl_entry_point_redundant_declaration)
-               << SAI;
+          << SAI;
       Diag(SKEPAttr->getLocation(), diag::note_previous_attribute);
     }
   }
@@ -341,7 +341,7 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
   if (FD->getReturnType()->isUndeducedType()) {
     Diag(SKEPAttr->getLocation(),
          diag::err_sycl_entry_point_deduced_return_type)
-             << SKEPAttr;
+        << SKEPAttr;
     SKEPAttr->setInvalidAttr();
   } else if (!FD->getReturnType()->isDependentType() &&
              !FD->getReturnType()->isVoidType()) {
