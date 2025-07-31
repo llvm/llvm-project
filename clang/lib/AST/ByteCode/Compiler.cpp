@@ -1758,6 +1758,9 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     if (Inits.size() == 1 && E->getType() == Inits[0]->getType())
       return this->delegate(Inits[0]);
 
+    if (!R)
+      return false;
+
     auto initPrimitiveField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init, PrimType T,
                                   bool Activate = false) -> bool {
