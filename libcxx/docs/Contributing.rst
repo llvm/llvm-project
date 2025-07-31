@@ -270,7 +270,7 @@ Updating the CI testing container images
 
 The libcxx linux premerge testing can run on one of three sets of runner
 groups. The three runner group names are "llvm-premerge-libcxx-runners",
-"llvm-premerge-libcxx-release-runners" or "llvm-premerge-libcxx-next-runners".
+"llvm-premerge-libcxx-release-runners" and "llvm-premerge-libcxx-next-runners".
 Which runner set to use is controlled by the contents of
 https://github.com/llvm/llvm-project/blob/main/.github/workflows/libcxx-build-and-test.yaml.
 By default, it uses "llvm-premerge-libcxx-runners". To switch to one of the
@@ -326,7 +326,7 @@ Lastly you need to create a PR in the llvm-zorg repository,
 updating the the value of the appropriate libcxx runner variable in
 the variables.tf file mentioned above to the name of your newly created
 image (see above paragraph about finding the image name). Once that change
-has been merged, the LLVM premerge maintainer (a Google employee) must use
+has been merged, an LLVM premerge maintainer (a Google employee) must use
 terraform to apply the change to the running GKE cluster.
 
 
