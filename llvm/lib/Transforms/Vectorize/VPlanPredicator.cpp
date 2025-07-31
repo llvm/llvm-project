@@ -271,11 +271,13 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
       }
 
       // If all incoming blocks share a common edge, remove it from the mask.
-      using namespace llvm::VPlanPatternMatch;
-      VPValue *X;
-      if (match(EdgeMask,
-                m_LogicalAnd(m_Specific(CommonEdgeMask), m_VPValue(X))))
-        EdgeMask = X;
+      if (CommonEdgeMask) {
+        using namespace llvm::VPlanPatternMatch;
+        VPValue *X;
+        if (match(EdgeMask,
+                  m_LogicalAnd(m_Specific(CommonEdgeMask), m_VPValue(X))))
+          EdgeMask = X;
+      }
 
       OperandsWithMask.push_back(EdgeMask);
     }
