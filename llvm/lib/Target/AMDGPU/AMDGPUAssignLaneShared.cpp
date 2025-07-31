@@ -270,18 +270,18 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
     if (!F.isDeclaration() && FunctionMakesUnknownCall(&F))
       set_union(Func2GVs[&F], FuzzyUsedGVs);
   }
-  // For each GV, find the set of wavegroup kernel that uses it directly or
+  // For each GV, find the set of wavegroup kernels that use it directly or
   // indirectly.
   VariableFunctionMap GV2Kernels;
   for (Function *Kernel : WavegroupKernels) {
-    DenseSet<Function *> Seen; // catches cycles
+
+    DenseSet<Function *> Seen;
     SmallVector<Function *, 4> WorkList = {Kernel};
     while (!WorkList.empty()) {
       Function *F = WorkList.pop_back_val();
-      for (GlobalVariable *GV : Func2GVs[F]) {
+      for (GlobalVariable *GV : Func2GVs[F])
         GV2Kernels[GV].insert(Kernel);
-      }
-
+      
       for (const CallGraphNode::CallRecord &R : *CG[F]) {
         if (Function *Ith = R.second->getFunction()) {
           if (!Seen.contains(Ith)) {

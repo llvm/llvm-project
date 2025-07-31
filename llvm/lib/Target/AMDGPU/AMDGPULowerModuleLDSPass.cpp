@@ -1044,6 +1044,27 @@ public:
     return Changed;
   }
 
+  // Search the CallGraph for each function in the set looking for calls to
+  // wavegroup rank functions, and return the discovered mapping.
+  static DenseMap<Function *, SmallDenseSet<Function *>>
+  getEntryFunctionToRankSpecializationMap(
+      const CallGraph &CG,
+      const DenseMap<Function *, LDSVariableReplacement> &KernelToReplacement) {
+
+    DenseMap<Function *, SmallDenseSet<Function *>> RankFuncMap;
+    for (Function *Func : KernelToReplacement.keys()) {
+      if (Func->isDeclaration() || !isKernelLDS(Func))
+        continue;
+      for (const CallGraphNode::CallRecord &R : *CG[Func]) {
+        Function *Ith = R.second->getFunction();
+        if (Ith && getWavegroupRankFunction(*Ith))
+          RankFuncMap[Func].insert(Ith);
+      }
+      
+    }
+    return RankFuncMap;
+  }
+
   bool runOnModule(Module &M) {
     CallGraph CG = CallGraph(M);
     bool Changed = superAlignLDSGlobals(M);
@@ -1153,6 +1174,14 @@ public:
       for (Function *F : *KernelSet)
         removeFnAttrFromReachable(CG, F, {"amdgpu-no-lds-kernel-id"});
 
+    // This pass treats rank specialization groups (entry kernel + all
+    // specializations) as one logical kernel with respect to LDS GV lowering,
+    // treating each specialization similarly to how the pass treats function
+    // calls. Here we collect the mapping of entry kernels to rank
+    // specializations.
+    DenseMap<Function *, SmallDenseSet<Function *>> RankFuncMap =
+        getEntryFunctionToRankSpecializationMap(CG, KernelToReplacement);
+
     // All kernel frames have been allocated. Calculate and record the
     // addresses.
     {
@@ -1225,6 +1254,11 @@ public:
             SS << format(",%u", Offset);
 
           Func.addFnAttr("amdgpu-lds-size", Buffer);
+
+          // If Func is a rank specialization group entry kernel, propogate LDS
+          // size to its group.
+          for (auto &F : RankFuncMap[&Func])
+            F->addFnAttr("amdgpu-lds-size", Buffer);
         }
       }
     }
