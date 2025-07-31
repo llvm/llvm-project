@@ -1525,7 +1525,7 @@ class Base(unittest.TestCase):
         testname = self.getBuildDirBasename()
 
         module = builder_module()
-        command = builder_module().getBuildCommand(
+        command = module.getBuildCommand(
             debug_info,
             architecture,
             compiler,
