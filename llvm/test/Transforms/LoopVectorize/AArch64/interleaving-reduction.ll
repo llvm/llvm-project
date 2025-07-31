@@ -145,8 +145,6 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 16
 ; INTERLEAVE-4-VLA-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
 ; INTERLEAVE-4-VLA-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; INTERLEAVE-4-VLA-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; INTERLEAVE-4-VLA-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 16
 ; INTERLEAVE-4-VLA-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; INTERLEAVE-4-VLA:       vector.body:
 ; INTERLEAVE-4-VLA-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -172,7 +170,7 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP17]] = add <vscale x 4 x i32> [[VEC_PHI1]], [[WIDE_LOAD4]]
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP18]] = add <vscale x 4 x i32> [[VEC_PHI2]], [[WIDE_LOAD5]]
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP19]] = add <vscale x 4 x i32> [[VEC_PHI3]], [[WIDE_LOAD6]]
-; INTERLEAVE-4-VLA-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; INTERLEAVE-4-VLA-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; INTERLEAVE-4-VLA-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; INTERLEAVE-4-VLA:       middle.block:

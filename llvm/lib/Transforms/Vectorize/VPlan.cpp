@@ -951,15 +951,9 @@ VPlan::~VPlan() {
     delete BackedgeTakenCount;
 }
 
-void VPlan::prepareToExecute(Value *VectorTripCountV, VPTransformState &State) {
-  if (!VectorTripCount.getUnderlyingValue())
-    VectorTripCount.setUnderlyingValue(VectorTripCountV);
-  else
-    assert(VectorTripCount.getUnderlyingValue() == VectorTripCountV &&
-           "VectorTripCount set earlier must much VectorTripCountV");
-
+void VPlan::prepareToExecute(VPTransformState &State) {
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
-  Type *TCTy = VectorTripCountV->getType();
+  Type *TCTy = VPTypeAnalysis(*this).inferScalarType(getTripCount());
   // FIXME: Model VF * UF computation completely in VPlan.
   unsigned UF = getUF();
   if (VF.getNumUsers()) {
@@ -1023,6 +1017,16 @@ void VPlan::execute(VPTransformState *State) {
     Block->execute(State);
 
   State->CFG.DTU.flush();
+  auto *ScalarPH = getScalarPreheader();
+
+  // Set the underlying value of the vector trip count VPValue to the generated
+  // vector trip count by accessing the incoming value from the resume phi.
+  // TODO: This is needed, as the epilogue skeleton generation code needs to
+  // access the IR value. Remove once skeleton is modeled completely in VPlan.
+  if (!getVectorTripCount().getLiveInIRValue() &&
+      ScalarPH->getNumPredecessors() > 0)
+    getVectorTripCount().setUnderlyingValue(
+        State->get(cast<VPPhi>(&*ScalarPH->begin())->getOperand(0), true));
 
   VPBasicBlock *Header = vputils::getFirstLoopHeader(*this, State->VPDT);
   if (!Header)

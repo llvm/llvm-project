@@ -7,7 +7,6 @@
 ; In this example, `<vscale x 4 x float> @llvm.minimumnum` has an invalid cost,
 ; and hence should not be produced by LoopVectorize.
 
-; CHECK: LV: Found an estimated cost of Invalid for VF vscale x 4 For instruction:   %res = tail call float @llvm.minimumnum.f32(float %arg, float 0.000000e+00)
 define void @cost_hoisted_vector_code(ptr %p, float %arg) {
 ; CHECK-LABEL: define void @cost_hoisted_vector_code(
 ; CHECK-SAME: ptr [[P:%.*]], float [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -20,8 +19,6 @@ define void @cost_hoisted_vector_code(ptr %p, float %arg) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 8
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 -1, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 -1, [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 8
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x float> poison, float [[ARG]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x float> [[BROADCAST_SPLATINSERT]], <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 1, [[N_VEC]]
@@ -36,7 +33,7 @@ define void @cost_hoisted_vector_code(ptr %p, float %arg) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr float, ptr [[TMP8]], i64 [[TMP10]]
 ; CHECK-NEXT:    store <vscale x 4 x float> [[TMP7]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    store <vscale x 4 x float> [[TMP7]], ptr [[TMP11]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX1]], [[TMP5]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
