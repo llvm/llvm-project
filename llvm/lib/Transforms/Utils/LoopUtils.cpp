@@ -815,14 +815,11 @@ struct DbgLoop {
   const Loop *L;
   explicit DbgLoop(const Loop *L) : L(L) {}
 };
-
-#ifndef NDEBUG
 static inline raw_ostream &operator<<(raw_ostream &OS, DbgLoop D) {
   OS << "function ";
   D.L->getHeader()->getParent()->printAsOperand(OS, /*PrintType=*/false);
   return OS << " " << *D.L;
 }
-#endif // NDEBUG
 
 static std::optional<unsigned> estimateLoopTripCount(Loop *L) {
   // Currently we take the estimate exit count only from the loop latch,
