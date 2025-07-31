@@ -155,8 +155,10 @@ TEST(HLSLBindingTest, TestExactOverlap) {
 
   // Since the bindings overlap exactly we need sigil values to differentiate
   // them.
-  char ID1;
-  char ID2;
+  // Note: We initialize these to 0 to suppress a -Wuninitialized-const-pointer,
+  // but we really are just using the stack addresses here.
+  char ID1 = 0;
+  char ID2 = 0;
 
   // StructuredBuffer<float> A  : register(t5);
   // StructuredBuffer<float> B  : register(t5);
