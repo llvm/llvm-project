@@ -199,6 +199,8 @@ struct CppEmitter {
   /// Return the existing or a new label of a Block.
   StringRef getOrCreateName(Block &block);
 
+  LogicalResult emitInlinedExpression(Value value);
+
   /// Whether to map an mlir integer to a unsigned integer in C++.
   bool shouldMapToUnsigned(IntegerType::SignednessSemantics val);
 
@@ -256,7 +258,7 @@ struct CppEmitter {
   }
 
   /// Get expression currently being emitted.
-  ExpressionOp getEmittedExpression() { return emittedExpression; }
+  Operation *getEmittedExpression() { return emittedExpression; }
 
   /// Determine whether given value is part of the expression potentially being
   /// emitted.
@@ -266,7 +268,8 @@ struct CppEmitter {
     Operation *def = value.getDefiningOp();
     if (!def)
       return false;
-    auto operandExpression = dyn_cast<ExpressionOp>(def->getParentOp());
+
+    Operation *operandExpression = def->getParentOp();
     return operandExpression == emittedExpression;
   };
 
@@ -314,7 +317,7 @@ private:
   unsigned int valueCount{0};
 
   /// State of the current expression being emitted.
-  ExpressionOp emittedExpression;
+  Operation *emittedExpression = nullptr;
   SmallVector<int> emittedExpressionPrecedence;
 
   void pushExpressionPrecedence(int precedence) {
@@ -541,6 +544,55 @@ static LogicalResult printOperation(CppEmitter &emitter,
     return failure();
 
   os.unindent() << "}\n}";
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::WhileOp whileOp) {
+  raw_indented_ostream &os = emitter.ostream();
+
+  os << "while (";
+
+  Block &condBlock = whileOp.getConditionRegion().front();
+  auto condYield = cast<emitc::YieldOp>(condBlock.back());
+  if (failed(emitter.emitExpression(
+          cast<emitc::ExpressionOp>(condYield.getOperand(0).getDefiningOp()))))
+    return failure();
+
+  os << ") {\n";
+  os.indent();
+
+  Block &bodyBlock = whileOp.getBodyRegion().front();
+  for (Operation &op : bodyBlock) {
+    if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/true)))
+      return failure();
+  }
+
+  os.unindent() << "}";
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter, emitc::DoOp doOp) {
+  raw_indented_ostream &os = emitter.ostream();
+
+  os << "do {\n";
+  os.indent();
+
+  Block &bodyBlock = doOp.getBodyRegion().front();
+  for (Operation &op : bodyBlock) {
+    if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/true)))
+      return failure();
+  }
+
+  os.unindent() << "} while (";
+
+  Block &condBlock = doOp.getConditionRegion().front();
+  auto condYield = cast<emitc::YieldOp>(condBlock.back());
+  if (failed(emitter.emitExpression(
+          cast<emitc::ExpressionOp>(condYield.getOperand(0).getDefiningOp()))))
+    return failure();
+
+  os << ");";
   return success();
 }
 
@@ -1698,14 +1750,14 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::BitwiseRightShiftOp, emitc::BitwiseXorOp, emitc::CallOp,
                 emitc::CallOpaqueOp, emitc::CastOp, emitc::ClassOp,
                 emitc::CmpOp, emitc::ConditionalOp, emitc::ConstantOp,
-                emitc::DeclareFuncOp, emitc::DivOp, emitc::ExpressionOp,
-                emitc::FieldOp, emitc::FileOp, emitc::ForOp, emitc::FuncOp,
-                emitc::GetFieldOp, emitc::GlobalOp, emitc::IfOp,
-                emitc::IncludeOp, emitc::LoadOp, emitc::LogicalAndOp,
-                emitc::LogicalNotOp, emitc::LogicalOrOp, emitc::MulOp,
-                emitc::RemOp, emitc::ReturnOp, emitc::SubOp, emitc::SwitchOp,
-                emitc::UnaryMinusOp, emitc::UnaryPlusOp, emitc::VariableOp,
-                emitc::VerbatimOp>(
+                emitc::DeclareFuncOp, emitc::DivOp, emitc::DoOp,
+                emitc::ExpressionOp, emitc::FieldOp, emitc::FileOp,
+                emitc::ForOp, emitc::FuncOp, emitc::GetFieldOp, emitc::GlobalOp,
+                emitc::IfOp, emitc::IncludeOp, emitc::LoadOp,
+                emitc::LogicalAndOp, emitc::LogicalNotOp, emitc::LogicalOrOp,
+                emitc::MulOp, emitc::RemOp, emitc::ReturnOp, emitc::SubOp,
+                emitc::SwitchOp, emitc::UnaryMinusOp, emitc::UnaryPlusOp,
+                emitc::VariableOp, emitc::VerbatimOp, emitc::WhileOp>(
 
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
@@ -1749,9 +1801,9 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
   // Never emit a semicolon for some operations, especially if endening with
   // `}`.
   trailingSemicolon &=
-      !isa<cf::CondBranchOp, emitc::DeclareFuncOp, emitc::FileOp, emitc::ForOp,
-           emitc::IfOp, emitc::IncludeOp, emitc::SwitchOp, emitc::VerbatimOp>(
-          op);
+      !isa<cf::CondBranchOp, emitc::DeclareFuncOp, emitc::DoOp, emitc::FileOp,
+           emitc::ForOp, emitc::IfOp, emitc::IncludeOp, emitc::SwitchOp,
+           emitc::VerbatimOp, emitc::WhileOp>(op);
 
   os << (trailingSemicolon ? ";\n" : "\n");
 
