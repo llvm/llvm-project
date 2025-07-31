@@ -3365,13 +3365,14 @@ public:
                                  pendingInsertValues))) {
       if (auto srcVectorType =
               llvm::dyn_cast<VectorType>(valueToStore.getType())) {
-        SmallVector<int64_t> strides = computeStrides(srcVectorType.getShape());
+        SmallVector<Type> elementToInsertTypes(insertSize,
+                                               srcVectorType.getElementType());
+        auto elementsToInsert = rewriter.create<vector::ToElementsOp>(
+            op.getLoc(), elementToInsertTypes, valueToStore);
         // Get all elements from the vector in row-major order.
         for (int64_t linearIdx = 0; linearIdx < insertSize; linearIdx++) {
-          SmallVector<int64_t> position = delinearize(linearIdx, strides);
-          Value extractedElement = rewriter.create<vector::ExtractOp>(
-              op.getLoc(), valueToStore, position);
-          elements[insertBeginPosition + linearIdx] = extractedElement;
+          elements[insertBeginPosition + linearIdx] =
+              elementsToInsert.getResult(linearIdx);
         }
       } else {
         elements[insertBeginPosition] = valueToStore;

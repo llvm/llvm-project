@@ -2539,39 +2539,45 @@ func.func @insert_2d_constant() -> (vector<2x3xi32>, vector<2x3xi32>, vector<2x3
 
 // -----
 
+// Test InsertChainFullyInitialized pattern with scalar insertions.
+// This pattern should fire when all vector elements are overwritten by vector.insert
+// at static positions, replacing the insert chain with vector.from_elements.
 // CHECK-LABEL: func.func @fully_insert_scalar_to_vector(
-//  CHECK-SAME: %[[ARG0:.+]]: vector<2xi64>)
-//       CHECK: %[[CST10:.+]] = arith.constant 10 : i64
-//       CHECK: %[[CST20:.+]] = arith.constant 20 : i64
-//       CHECK: %[[RES:.+]] = vector.from_elements %[[CST10]], %[[CST20]] : vector<2xi64>
+//  CHECK-SAME: %[[ARG0:.+]]: vector<2xi64>, %[[ARG1:.+]]: i64, %[[ARG2:.+]]: i64)
+//       CHECK: %[[RES:.+]] = vector.from_elements %arg1, %arg2 : vector<2xi64>
 //  CHECK-NEXT: return %[[RES]]
-func.func @fully_insert_scalar_to_vector(%arg0 : vector<2xi64>) -> vector<2xi64> {
-  %c0 = arith.constant 0 : index
-  %c1 = arith.constant 1 : index
-  %e0 = arith.constant 10 : i64
-  %e1 = arith.constant 20 : i64
-  %v1 = vector.insert %e0, %arg0[%c0] : i64 into vector<2xi64>
-  %v2 = vector.insert %e1, %v1[%c1] : i64 into vector<2xi64>
+func.func @fully_insert_scalar_to_vector(%arg0 : vector<2xi64>, %arg1 : i64, %arg2 : i64) -> vector<2xi64> {
+  %v1 = vector.insert %arg1, %arg0[0] : i64 into vector<2xi64>
+  %v2 = vector.insert %arg2, %v1[1] : i64 into vector<2xi64>
   return %v2 : vector<2xi64>
 }
 
 // -----
 
+// Same as the above test, but with vector insertions.
 // CHECK-LABEL: func.func @fully_insert_vector_to_vector(
-//  CHECK-SAME: %[[ARG0:.+]]: vector<2x2xi64>
-//       CHECK: %[[CST1:.+]] = arith.constant 1 : i64
-//       CHECK: %[[CST2:.+]] = arith.constant 2 : i64
-//       CHECK: %[[CST3:.+]] = arith.constant 3 : i64
-//       CHECK: %[[CST4:.+]] = arith.constant 4 : i64
-//       CHECK: %[[RES:.+]] = vector.from_elements %[[CST1]], %[[CST2]], %[[CST3]], %[[CST4]] : vector<2x2xi64>
+//  CHECK-SAME: %[[ARG0:.+]]: vector<2x2xi64>, %[[ARG1:.+]]: vector<2xi64>, %[[ARG2:.+]]: vector<2xi64>)
+//       CHECK: %[[ELE1:.+]]:2 = vector.to_elements %arg1 : vector<2xi64>
+//       CHECK: %[[ELE2:.+]]:2 = vector.to_elements %arg2 : vector<2xi64>
+//       CHECK: %[[RES:.+]] = vector.from_elements %[[ELE1]]#0, %[[ELE1]]#1, %[[ELE2]]#0, %[[ELE2]]#1 : vector<2x2xi64>
 //  CHECK-NEXT: return %[[RES]]
-func.func @fully_insert_vector_to_vector(%arg0 : vector<2x2xi64>) -> vector<2x2xi64> {
-  %cv0 = arith.constant dense<[1, 2]> : vector<2xi64>
-  %cv1 = arith.constant dense<[3, 4]> : vector<2xi64>
-  %c0 = arith.constant 0 : index
-  %c1 = arith.constant 1 : index
-  %v1 = vector.insert %cv0, %arg0[%c0] : vector<2xi64> into vector<2x2xi64>
-  %v2 = vector.insert %cv1, %v1[%c1] : vector<2xi64> into vector<2x2xi64>
+func.func @fully_insert_vector_to_vector(%arg0 : vector<2x2xi64>, %arg1 : vector<2xi64>, %arg2 : vector<2xi64>) -> vector<2x2xi64> {
+  %v1 = vector.insert %arg1, %arg0[0] : vector<2xi64> into vector<2x2xi64>
+  %v2 = vector.insert %arg2, %v1[1] : vector<2xi64> into vector<2x2xi64>
+  return %v2 : vector<2x2xi64>
+}
+
+// -----
+
+// Negative test for InsertChainFullyInitialized pattern when only some elements are overwritten.
+// CHECK-LABEL: func.func @partially_insert_vector_to_vector(
+//  CHECK-SAME: %[[ARG0:.+]]: vector<2x2xi64>, %[[ARG1:.+]]: vector<2xi64>, %[[ARG2:.+]]: i64)
+//       CHECK: %[[V0:.+]] = vector.insert %[[ARG1]], %[[ARG0]] [0] : vector<2xi64> into vector<2x2xi64>
+//       CHECK: %[[V1:.+]] = vector.insert %[[ARG2]], %[[V0]] [0, 0] : i64 into vector<2x2xi64>
+//       CHECK: return %[[V1]]
+func.func @partially_insert_vector_to_vector(%arg0 : vector<2x2xi64>, %arg1 : vector<2xi64>, %arg2 : i64) -> vector<2x2xi64> {
+  %v1 = vector.insert %arg1, %arg0[0] : vector<2xi64> into vector<2x2xi64>
+  %v2 = vector.insert %arg2, %v1[0, 0] : i64 into vector<2x2xi64>
   return %v2 : vector<2x2xi64>
 }
 
