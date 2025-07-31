@@ -683,8 +683,8 @@ class VectorType;
 
     bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                               ArrayRef<ShuffleVectorInst *> Shuffles,
-                              ArrayRef<unsigned> Indices,
-                              unsigned Factor) const override;
+                              ArrayRef<unsigned> Indices, unsigned Factor,
+                              unsigned MaskFactor) const override;
     bool lowerInterleavedStore(Instruction *Store, Value *Mask,
                                ShuffleVectorInst *SVI,
                                unsigned Factor) const override;

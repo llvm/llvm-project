@@ -268,13 +268,19 @@ static Value *getMaskOperand(IntrinsicInst *II) {
   }
 }
 
-// Return the corresponded deinterleaved mask, or nullptr if there is no valid
-// mask.
-static Value *getMask(Value *WideMask, unsigned Factor,
-                      ElementCount LeafValueEC);
+// Return a pair of
+//  (1) The corresponded deinterleaved mask, or nullptr if there is no valid
+//  mask.
+//  (2) Some mask effectively skips a certain field, this element contains
+//  the factor after taking such contraction into consideration. Note that
+//  currently we only support skipping trailing fields. So if the "nominal"
+//  factor was 5, you cannot only skip field 1 and 2, but you can skip field 3
+//  and 4.
+static std::pair<Value *, unsigned> getMask(Value *WideMask, unsigned Factor,
+                                            ElementCount LeafValueEC);
 
-static Value *getMask(Value *WideMask, unsigned Factor,
-                      VectorType *LeafValueTy) {
+static std::pair<Value *, unsigned> getMask(Value *WideMask, unsigned Factor,
+                                            VectorType *LeafValueTy) {
   return getMask(WideMask, Factor, LeafValueTy->getElementCount());
 }
 
@@ -379,22 +385,25 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
       replaceBinOpShuffles(BinOpShuffles.getArrayRef(), Shuffles, Load);
 
   Value *Mask = nullptr;
+  unsigned MaskFactor = Factor;
   if (LI) {
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved load: " << *Load << "\n");
   } else {
     // Check mask operand. Handle both all-true/false and interleaved mask.
-    Mask = getMask(getMaskOperand(II), Factor, VecTy);
+    std::tie(Mask, MaskFactor) = getMask(getMaskOperand(II), Factor, VecTy);
     if (!Mask)
       return false;
 
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.load or masked.load: "
                       << *Load << "\n");
+    LLVM_DEBUG(dbgs() << "IA: With nominal factor " << Factor
+                      << " and mask factor " << MaskFactor << "\n");
   }
 
   // Try to create target specific intrinsics to replace the load and
   // shuffles.
   if (!TLI->lowerInterleavedLoad(cast<Instruction>(Load), Mask, Shuffles,
-                                 Indices, Factor))
+                                 Indices, Factor, MaskFactor))
     // If Extracts is not empty, tryReplaceExtracts made changes earlier.
     return !Extracts.empty() || BinOpShuffleChanged;
 
@@ -536,8 +545,8 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
   } else {
     // Check mask operand. Handle both all-true/false and interleaved mask.
     unsigned LaneMaskLen = NumStoredElements / Factor;
-    Mask = getMask(getMaskOperand(II), Factor,
-                   ElementCount::getFixed(LaneMaskLen));
+    std::tie(Mask, std::ignore) = getMask(getMaskOperand(II), Factor,
+                                          ElementCount::getFixed(LaneMaskLen));
     if (!Mask)
       return false;
 
@@ -556,34 +565,57 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
   return true;
 }
 
-static Value *getMask(Value *WideMask, unsigned Factor,
-                      ElementCount LeafValueEC) {
+static std::pair<Value *, unsigned> getMask(Value *WideMask, unsigned Factor,
+                                            ElementCount LeafValueEC) {
   if (auto *IMI = dyn_cast<IntrinsicInst>(WideMask)) {
     if (unsigned F = getInterleaveIntrinsicFactor(IMI->getIntrinsicID());
         F && F == Factor && llvm::all_equal(IMI->args())) {
-      return IMI->getArgOperand(0);
+      return {IMI->getArgOperand(0), Factor};
     }
   }
 
   if (auto *ConstMask = dyn_cast<Constant>(WideMask)) {
     if (auto *Splat = ConstMask->getSplatValue())
       // All-ones or all-zeros mask.
-      return ConstantVector::getSplat(LeafValueEC, Splat);
+      return {ConstantVector::getSplat(LeafValueEC, Splat), Factor};
 
     if (LeafValueEC.isFixed()) {
       unsigned LeafMaskLen = LeafValueEC.getFixedValue();
+      // First, check if the mask completely skips some of the factors / fields.
+      APInt FactorMask(Factor, 0);
+      FactorMask.setAllBits();
+      for (unsigned F = 0U; F < Factor; ++F) {
+        unsigned Idx;
+        for (Idx = 0U; Idx < LeafMaskLen; ++Idx) {
+          Constant *C = ConstMask->getAggregateElement(F + Idx * Factor);
+          if (!C->isZeroValue())
+            break;
+        }
+        // All mask bits on this field are zero, skipping it.
+        if (Idx >= LeafMaskLen)
+          FactorMask.clearBit(F);
+      }
+      // We currently only support skipping "trailing" factors / fields. So
+      // given the original factor being 4, we can skip fields 2 and 3, but we
+      // cannot only skip fields 1 and 2. If FactorMask does not match such
+      // pattern, reset it.
+      if (!FactorMask.isMask())
+        FactorMask.setAllBits();
+
       SmallVector<Constant *, 8> LeafMask(LeafMaskLen, nullptr);
       // If this is a fixed-length constant mask, each lane / leaf has to
       // use the same mask. This is done by checking if every group with Factor
       // number of elements in the interleaved mask has homogeneous values.
       for (unsigned Idx = 0U; Idx < LeafMaskLen * Factor; ++Idx) {
+        if (!FactorMask[Idx % Factor])
+          continue;
         Constant *C = ConstMask->getAggregateElement(Idx);
         if (LeafMask[Idx / Factor] && LeafMask[Idx / Factor] != C)
-          return nullptr;
+          return {nullptr, Factor};
         LeafMask[Idx / Factor] = C;
       }
 
-      return ConstantVector::get(LeafMask);
+      return {ConstantVector::get(LeafMask), FactorMask.popcount()};
     }
   }
 
@@ -603,12 +635,13 @@ static Value *getMask(Value *WideMask, unsigned Factor,
       auto *LeafMaskTy =
           VectorType::get(Type::getInt1Ty(SVI->getContext()), LeafValueEC);
       IRBuilder<> Builder(SVI);
-      return Builder.CreateExtractVector(LeafMaskTy, SVI->getOperand(0),
-                                         uint64_t(0));
+      return {Builder.CreateExtractVector(LeafMaskTy, SVI->getOperand(0),
+                                          uint64_t(0)),
+              Factor};
     }
   }
 
-  return nullptr;
+  return {nullptr, Factor};
 }
 
 bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
@@ -639,7 +672,8 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
       return false;
 
     // Check mask operand. Handle both all-true/false and interleaved mask.
-    Mask = getMask(getMaskOperand(II), Factor, getDeinterleavedVectorType(DI));
+    std::tie(Mask, std::ignore) =
+        getMask(getMaskOperand(II), Factor, getDeinterleavedVectorType(DI));
     if (!Mask)
       return false;
 
@@ -680,8 +714,9 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
         II->getIntrinsicID() != Intrinsic::vp_store)
       return false;
     // Check mask operand. Handle both all-true/false and interleaved mask.
-    Mask = getMask(getMaskOperand(II), Factor,
-                   cast<VectorType>(InterleaveValues[0]->getType()));
+    std::tie(Mask, std::ignore) =
+        getMask(getMaskOperand(II), Factor,
+                cast<VectorType>(InterleaveValues[0]->getType()));
     if (!Mask)
       return false;
 
