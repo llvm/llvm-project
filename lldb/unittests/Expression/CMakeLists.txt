@@ -9,6 +9,8 @@ add_lldb_unittest(ExpressionTests
   LINK_LIBS
     lldbCore
     lldbPluginObjectFileELF
+    lldbPluginObjectFileWasm
+    lldbPluginSymbolVendorWasm
     lldbPluginPlatformLinux
     lldbPluginExpressionParserClang
     lldbPluginTypeSystemClang
