@@ -99,20 +99,22 @@ void GCNRegPressure::inc(unsigned Reg,
 bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
                           unsigned MaxOccupancy) const {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  unsigned ArchVGPRThreshold = ST.getMaxNumVectorRegs(MF.getFunction()).first;
   unsigned DynamicVGPRBlockSize =
       MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
 
   const auto SGPROcc = std::min(MaxOccupancy,
                                 ST.getOccupancyWithNumSGPRs(getSGPRNum()));
   const auto VGPROcc = std::min(
-      MaxOccupancy, ST.getOccupancyWithNumVGPRs(getVGPRNum(ST.hasGFX90AInsts()),
-                                                DynamicVGPRBlockSize));
+      MaxOccupancy, ST.getOccupancyWithNumVGPRs(
+                        getVGPRNum(ST.hasGFX90AInsts(), ArchVGPRThreshold),
+                        DynamicVGPRBlockSize));
   const auto OtherSGPROcc = std::min(MaxOccupancy,
                                 ST.getOccupancyWithNumSGPRs(O.getSGPRNum()));
-  const auto OtherVGPROcc =
-      std::min(MaxOccupancy,
-               ST.getOccupancyWithNumVGPRs(O.getVGPRNum(ST.hasGFX90AInsts()),
-                                           DynamicVGPRBlockSize));
+  const auto OtherVGPROcc = std::min(
+      MaxOccupancy, ST.getOccupancyWithNumVGPRs(
+                        O.getVGPRNum(ST.hasGFX90AInsts(), ArchVGPRThreshold),
+                        DynamicVGPRBlockSize));
 
   const auto Occ = std::min(SGPROcc, VGPROcc);
   const auto OtherOcc = std::min(OtherSGPROcc, OtherVGPROcc);
@@ -135,35 +137,39 @@ bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
   unsigned OtherVGPRForSGPRSpills =
       (OtherExcessSGPR + (WaveSize - 1)) / WaveSize;
 
-  unsigned MaxArchVGPRs = ST.getAddressableNumArchVGPRs();
-
   // Unified excess pressure conditions, accounting for VGPRs used for SGPR
   // spills
-  unsigned ExcessVGPR =
-      std::max(static_cast<int>(getVGPRNum(ST.hasGFX90AInsts()) +
-                                VGPRForSGPRSpills - MaxVGPRs),
-               0);
-  unsigned OtherExcessVGPR =
-      std::max(static_cast<int>(O.getVGPRNum(ST.hasGFX90AInsts()) +
-                                OtherVGPRForSGPRSpills - MaxVGPRs),
-               0);
+  unsigned ExcessVGPR = std::max(
+      static_cast<int>(getVGPRNum(ST.hasGFX90AInsts(), ArchVGPRThreshold) +
+                       VGPRForSGPRSpills - MaxVGPRs),
+      0);
+  unsigned OtherExcessVGPR = std::max(
+      static_cast<int>(O.getVGPRNum(ST.hasGFX90AInsts(), ArchVGPRThreshold) +
+                       OtherVGPRForSGPRSpills - MaxVGPRs),
+      0);
   // Arch VGPR excess pressure conditions, accounting for VGPRs used for SGPR
   // spills
-  unsigned ExcessArchVGPR = std::max(
-      static_cast<int>(getVGPRNum(false) + VGPRForSGPRSpills - MaxArchVGPRs),
-      0);
+  unsigned AddressableArchVGPRs = ST.getAddressableNumArchVGPRs();
+  unsigned ExcessArchVGPR =
+      std::max(static_cast<int>(getVGPRNum(false, ArchVGPRThreshold) +
+                                VGPRForSGPRSpills - AddressableArchVGPRs),
+               0);
   unsigned OtherExcessArchVGPR =
-      std::max(static_cast<int>(O.getVGPRNum(false) + OtherVGPRForSGPRSpills -
-                                MaxArchVGPRs),
+      std::max(static_cast<int>(O.getVGPRNum(false, ArchVGPRThreshold) +
+                                OtherVGPRForSGPRSpills - AddressableArchVGPRs),
                0);
   // AGPR excess pressure conditions
-  unsigned ExcessAGPR = std::max(
-      static_cast<int>(ST.hasGFX90AInsts() ? (getAGPRNum() - MaxArchVGPRs)
-                                           : (getAGPRNum() - MaxVGPRs)),
-      0);
+  unsigned ExcessAGPR =
+      std::max(static_cast<int>(
+                   ST.hasGFX90AInsts()
+                       ? (getAGPRNum(ArchVGPRThreshold) - AddressableArchVGPRs)
+                       : (getAGPRNum(ArchVGPRThreshold) - MaxVGPRs)),
+               0);
   unsigned OtherExcessAGPR = std::max(
-      static_cast<int>(ST.hasGFX90AInsts() ? (O.getAGPRNum() - MaxArchVGPRs)
-                                           : (O.getAGPRNum() - MaxVGPRs)),
+      static_cast<int>(
+          ST.hasGFX90AInsts()
+              ? (O.getAGPRNum(ArchVGPRThreshold) - AddressableArchVGPRs)
+              : (O.getAGPRNum(ArchVGPRThreshold) - MaxVGPRs)),
       0);
 
   bool ExcessRP = ExcessSGPR || ExcessVGPR || ExcessArchVGPR || ExcessAGPR;
@@ -184,14 +190,21 @@ bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
       return VGPRDiff > 0;
     if (SGPRDiff != 0) {
       unsigned PureExcessVGPR =
-          std::max(static_cast<int>(getVGPRNum(ST.hasGFX90AInsts()) - MaxVGPRs),
+          std::max(static_cast<int>(
+                       getVGPRNum(ST.hasGFX90AInsts(), ArchVGPRThreshold) -
+                       MaxVGPRs),
                    0) +
-          std::max(static_cast<int>(getVGPRNum(false) - MaxArchVGPRs), 0);
+          std::max(static_cast<int>(getVGPRNum(false, ArchVGPRThreshold) -
+                                    AddressableArchVGPRs),
+                   0);
       unsigned OtherPureExcessVGPR =
-          std::max(
-              static_cast<int>(O.getVGPRNum(ST.hasGFX90AInsts()) - MaxVGPRs),
-              0) +
-          std::max(static_cast<int>(O.getVGPRNum(false) - MaxArchVGPRs), 0);
+          std::max(static_cast<int>(
+                       O.getVGPRNum(ST.hasGFX90AInsts(), ArchVGPRThreshold) -
+                       MaxVGPRs),
+                   0) +
+          std::max(static_cast<int>(O.getVGPRNum(false, ArchVGPRThreshold) -
+                                    AddressableArchVGPRs),
+                   0);
 
       // If we have a special case where there is a tie in excess VGPR, but one
       // of the pressures has VGPR usage from SGPR spills, prefer the pressure
@@ -221,38 +234,45 @@ bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
       if (SW != OtherSW)
         return SW < OtherSW;
     } else {
-      auto VW = getVGPRTuplesWeight();
-      auto OtherVW = O.getVGPRTuplesWeight();
+      auto VW = getVGPRTuplesWeight(ArchVGPRThreshold);
+      auto OtherVW = O.getVGPRTuplesWeight(ArchVGPRThreshold);
       if (VW != OtherVW)
         return VW < OtherVW;
     }
   }
 
   // Give final precedence to lower general RP.
-  return SGPRImportant ? (getSGPRNum() < O.getSGPRNum()):
-                         (getVGPRNum(ST.hasGFX90AInsts()) <
-                          O.getVGPRNum(ST.hasGFX90AInsts()));
+  return SGPRImportant ? (getSGPRNum() < O.getSGPRNum())
+                       : (getVGPRNum(ST.hasGFX90AInsts(), ArchVGPRThreshold) <
+                          O.getVGPRNum(ST.hasGFX90AInsts(), ArchVGPRThreshold));
 }
 
 Printable llvm::print(const GCNRegPressure &RP, const GCNSubtarget *ST,
-                      unsigned DynamicVGPRBlockSize) {
-  return Printable([&RP, ST, DynamicVGPRBlockSize](raw_ostream &OS) {
-    OS << "VGPRs: " << RP.getArchVGPRNum() << ' '
-       << "AGPRs: " << RP.getAGPRNum();
-    if (ST)
-      OS << "(O"
-         << ST->getOccupancyWithNumVGPRs(RP.getVGPRNum(ST->hasGFX90AInsts()),
-                                         DynamicVGPRBlockSize)
-         << ')';
-    OS << ", SGPRs: " << RP.getSGPRNum();
-    if (ST)
-      OS << "(O" << ST->getOccupancyWithNumSGPRs(RP.getSGPRNum()) << ')';
-    OS << ", LVGPR WT: " << RP.getVGPRTuplesWeight()
-       << ", LSGPR WT: " << RP.getSGPRTuplesWeight();
-    if (ST)
-      OS << " -> Occ: " << RP.getOccupancy(*ST, DynamicVGPRBlockSize);
-    OS << '\n';
-  });
+                      unsigned DynamicVGPRBlockSize,
+                      const MachineFunction *MF) {
+  unsigned ArchVGPRThreshold = std::numeric_limits<unsigned int>::max();
+  if (ST && MF)
+    ArchVGPRThreshold = ST->getMaxNumVectorRegs(MF->getFunction()).first;
+
+  return Printable(
+      [&RP, ST, DynamicVGPRBlockSize, ArchVGPRThreshold, MF](raw_ostream &OS) {
+        OS << "VGPRs: " << RP.getArchVGPRNum(ArchVGPRThreshold) << ' '
+           << "AGPRs: " << RP.getAGPRNum(ArchVGPRThreshold);
+        if (ST)
+          OS << "(O"
+             << ST->getOccupancyWithNumVGPRs(
+                    RP.getVGPRNum(ST->hasGFX90AInsts(), ArchVGPRThreshold),
+                    DynamicVGPRBlockSize)
+             << ')';
+        OS << ", SGPRs: " << RP.getSGPRNum();
+        if (ST)
+          OS << "(O" << ST->getOccupancyWithNumSGPRs(RP.getSGPRNum()) << ')';
+        OS << ", LVGPR WT: " << RP.getVGPRTuplesWeight(ArchVGPRThreshold)
+           << ", LSGPR WT: " << RP.getSGPRTuplesWeight();
+        if (ST)
+          OS << " -> Occ: " << RP.getOccupancy(*MF);
+        OS << '\n';
+      });
 }
 
 static LaneBitmask getDefRegMask(const MachineOperand &MO,
@@ -398,8 +418,9 @@ void GCNRPTarget::setRegLimits(unsigned NumSGPRs, unsigned NumVGPRs,
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   unsigned DynamicVGPRBlockSize =
       MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
+  AddressableNumArchVGPRs = ST.getAddressableNumArchVGPRs();
   MaxSGPRs = std::min(ST.getAddressableNumSGPRs(), NumSGPRs);
-  MaxVGPRs = std::min(ST.getAddressableNumArchVGPRs(), NumVGPRs);
+  MaxVGPRs = std::min(AddressableNumArchVGPRs, NumVGPRs);
   MaxUnifiedVGPRs =
       ST.hasGFX90AInsts()
           ? std::min(ST.getAddressableNumVGPRs(DynamicVGPRBlockSize), NumVGPRs)
@@ -414,15 +435,21 @@ bool GCNRPTarget::isSaveBeneficial(Register Reg,
 
   if (SRI->isSGPRClass(RC))
     return RP.getSGPRNum() > MaxSGPRs;
-  unsigned NumVGPRs =
-      SRI->isAGPRClass(RC) ? RP.getAGPRNum() : RP.getArchVGPRNum();
+
+  bool ShouldUseAGPR =
+      SRI->isAGPRClass(RC) ||
+      (SRI->isVectorSuperClass(RC) &&
+       RP.getArchVGPRNum(AddressableNumArchVGPRs) >= AddressableNumArchVGPRs);
+  unsigned NumVGPRs = ShouldUseAGPR
+                          ? RP.getAGPRNum(AddressableNumArchVGPRs)
+                          : RP.getArchVGPRNum(AddressableNumArchVGPRs);
   return isVGPRBankSaveBeneficial(NumVGPRs);
 }
 
 bool GCNRPTarget::satisfied() const {
   if (RP.getSGPRNum() > MaxSGPRs)
     return false;
-  if (RP.getVGPRNum(false) > MaxVGPRs &&
+  if (RP.getVGPRNum(false, AddressableNumArchVGPRs) > MaxVGPRs &&
       (!CombineVGPRSavings || !satisifiesVGPRBanksTarget()))
     return false;
   return satisfiesUnifiedTarget();
@@ -876,10 +903,13 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
 
   OS << "---\nname: " << MF.getName() << "\nbody:             |\n";
 
-  auto printRP = [](const GCNRegPressure &RP) {
-    return Printable([&RP](raw_ostream &OS) {
+  auto printRP = [&MF](const GCNRegPressure &RP) {
+    return Printable([&RP, &MF](raw_ostream &OS) {
       OS << format(PFX "  %-5d", RP.getSGPRNum())
-         << format(" %-5d", RP.getVGPRNum(false));
+         << format(" %-5d", RP.getVGPRNum(false, MF.getSubtarget<GCNSubtarget>()
+                                                     .getMaxNumVectorRegs(
+                                                         MF.getFunction())
+                                                     .first));
     });
   };
 
