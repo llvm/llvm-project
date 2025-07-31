@@ -229,8 +229,7 @@ def hasChattyStderr(test_case):
 
 
 def builder_module():
-    """Return the builder for the target platform."""
-    return get_builder(getPlatform())
+    return get_builder(sys.platform)
 
 
 def getArchitecture():
