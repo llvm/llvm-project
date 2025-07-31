@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -convert-math-to-spirv -verify-diagnostics %s -o - | FileCheck %s
+// RUN: mlir-opt --convert-math-to-spirv %s | FileCheck %s
 
 module attributes {
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Shader], []>, #spirv.resource_limits<>>
