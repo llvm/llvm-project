@@ -39,7 +39,8 @@ struct S {
 constexpr S s = { 5 };
 constexpr const int *p = &s.m + 1;
 
-constexpr const int *np2 = &(*(int(*)[4])nullptr)[0]; // ok
+constexpr const int *np2 = &(*(int(*)[4])nullptr)[0]; // both-error {{constexpr variable 'np2' must be initialized by a constant expression}} \
+                                                      // both-note  {{dereferencing a null pointer is not allowed in a constant expression}}
 
 constexpr int preDec(int x) { // both-error {{never produces a constant expression}}
   return --x;                 // both-note {{subexpression}}

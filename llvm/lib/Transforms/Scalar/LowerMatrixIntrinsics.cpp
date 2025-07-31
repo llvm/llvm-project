@@ -2382,7 +2382,7 @@ public:
       llvm::copy(C.vectors(), std::back_inserter(CondV));
     } else {
       CondV.resize(A.getNumVectors());
-      std::fill(CondV.begin(), CondV.end(), Cond);
+      llvm::fill(CondV, Cond);
     }
 
     for (auto [CV, AV, BV] : llvm::zip_equal(CondV, A.vectors(), B.vectors()))

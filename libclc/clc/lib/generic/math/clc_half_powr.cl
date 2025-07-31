@@ -10,7 +10,7 @@
 
 #define __FLOAT_ONLY
 #define FUNCTION __clc_half_powr
-#define __CLC_FUNCTION(x) __clc_powr
+#define __IMPL_FUNCTION(x) __clc_powr
 #define __CLC_BODY <clc/shared/binary_def.inc>
 
 #include <clc/math/gentype.inc>

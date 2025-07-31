@@ -315,18 +315,11 @@ calculateFragment(DILocalVariable *Variable,
   return UseFrag;
 }
 
-static DebugVariable getAggregateVariable(DbgVariableIntrinsic *DVI) {
-  return DebugVariable(DVI->getVariable(), std::nullopt,
-                       DVI->getDebugLoc().getInlinedAt());
-}
 static DebugVariable getAggregateVariable(DbgVariableRecord *DVR) {
   return DebugVariable(DVR->getVariable(), std::nullopt,
                        DVR->getDebugLoc().getInlinedAt());
 }
 
-/// Helpers for handling new and old debug info modes in migrateDebugInfo.
-/// These overloads unwrap a DbgInstPtr {Instruction* | DbgRecord*} union based
-/// on the \p Unused parameter type.
 DbgVariableRecord *UnwrapDbgInstPtr(DbgInstPtr P, DbgVariableRecord *Unused) {
   (void)Unused;
   return static_cast<DbgVariableRecord *>(cast<DbgRecord *>(P));
@@ -376,9 +369,6 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
   /// Map of aggregate variables to their fragment associated with OldAlloca.
   DenseMap<DebugVariable, std::optional<DIExpression::FragmentInfo>>
       BaseFragments;
-  for (auto *DAI : at::getAssignmentMarkers(OldAlloca))
-    BaseFragments[getAggregateVariable(DAI)] =
-        DAI->getExpression()->getFragmentInfo();
   for (auto *DVR : at::getDVRAssignmentMarkers(OldAlloca))
     BaseFragments[getAggregateVariable(DVR)] =
         DVR->getExpression()->getFragmentInfo();
@@ -391,7 +381,7 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
   DIBuilder DIB(*OldInst->getModule(), /*AllowUnresolved*/ false);
   assert(OldAlloca->isStaticAlloca());
 
-  auto MigrateDbgAssign = [&](auto *DbgAssign) {
+  auto MigrateDbgAssign = [&](DbgVariableRecord *DbgAssign) {
     LLVM_DEBUG(dbgs() << "      existing dbg.assign is: " << *DbgAssign
                       << "\n");
     auto *Expr = DbgAssign->getExpression();
@@ -486,7 +476,6 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     LLVM_DEBUG(dbgs() << "Created new assign: " << *NewAssign << "\n");
   };
 
-  for_each(MarkerRange, MigrateDbgAssign);
   for_each(DVRAssignMarkerRange, MigrateDbgAssign);
 }
 
@@ -4070,18 +4059,27 @@ private:
   //   => select cond, gep(ptr1, idx), gep(ptr2, idx)
   // and  gep ptr, (select cond, idx1, idx2)
   //   => select cond, gep(ptr, idx1), gep(ptr, idx2)
+  // We also allow for i1 zext indices, which are equivalent to selects.
   bool unfoldGEPSelect(GetElementPtrInst &GEPI) {
     // Check whether the GEP has exactly one select operand and all indices
     // will become constant after the transform.
-    SelectInst *Sel = dyn_cast<SelectInst>(GEPI.getPointerOperand());
+    Instruction *Sel = dyn_cast<SelectInst>(GEPI.getPointerOperand());
     for (Value *Op : GEPI.indices()) {
       if (auto *SI = dyn_cast<SelectInst>(Op)) {
         if (Sel)
           return false;
 
         Sel = SI;
-        if (!isa<ConstantInt>(Sel->getTrueValue()) ||
-            !isa<ConstantInt>(Sel->getFalseValue()))
+        if (!isa<ConstantInt>(SI->getTrueValue()) ||
+            !isa<ConstantInt>(SI->getFalseValue()))
+          return false;
+        continue;
+      }
+      if (auto *ZI = dyn_cast<ZExtInst>(Op)) {
+        if (Sel)
+          return false;
+        Sel = ZI;
+        if (!ZI->getSrcTy()->isIntegerTy(1))
           return false;
         continue;
       }
@@ -4107,8 +4105,16 @@ private:
       return NewOps;
     };
 
-    Value *True = Sel->getTrueValue();
-    Value *False = Sel->getFalseValue();
+    Value *Cond, *True, *False;
+    if (auto *SI = dyn_cast<SelectInst>(Sel)) {
+      Cond = SI->getCondition();
+      True = SI->getTrueValue();
+      False = SI->getFalseValue();
+    } else {
+      Cond = Sel->getOperand(0);
+      True = ConstantInt::get(Sel->getType(), 1);
+      False = ConstantInt::get(Sel->getType(), 0);
+    }
     SmallVector<Value *> TrueOps = GetNewOps(True);
     SmallVector<Value *> FalseOps = GetNewOps(False);
 
@@ -4123,8 +4129,8 @@ private:
         IRB.CreateGEP(Ty, FalseOps[0], ArrayRef(FalseOps).drop_front(),
                       False->getName() + ".sroa.gep", NW);
 
-    Value *NSel = IRB.CreateSelect(Sel->getCondition(), NTrue, NFalse,
-                                   Sel->getName() + ".sroa.sel");
+    Value *NSel =
+        IRB.CreateSelect(Cond, NTrue, NFalse, Sel->getName() + ".sroa.sel");
     Visited.erase(&GEPI);
     GEPI.replaceAllUsesWith(NSel);
     GEPI.eraseFromParent();
@@ -5102,34 +5108,11 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
 }
 
 // There isn't a shared interface to get the "address" parts out of a
-// dbg.declare and dbg.assign, so provide some wrappers now for
-// both debug intrinsics and records.
-const Value *getAddress(const DbgVariableIntrinsic *DVI) {
-  if (const auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
-    return DAI->getAddress();
-  return cast<DbgDeclareInst>(DVI)->getAddress();
-}
-
-const Value *getAddress(const DbgVariableRecord *DVR) {
-  return DVR->getAddress();
-}
-
-bool isKillAddress(const DbgVariableIntrinsic *DVI) {
-  if (const auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
-    return DAI->isKillAddress();
-  return cast<DbgDeclareInst>(DVI)->isKillLocation();
-}
-
+// dbg.declare and dbg.assign, so provide some wrappers.
 bool isKillAddress(const DbgVariableRecord *DVR) {
   if (DVR->getType() == DbgVariableRecord::LocationType::Assign)
     return DVR->isKillAddress();
   return DVR->isKillLocation();
-}
-
-const DIExpression *getAddressExpression(const DbgVariableIntrinsic *DVI) {
-  if (const auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
-    return DAI->getAddressExpression();
-  return cast<DbgDeclareInst>(DVI)->getExpression();
 }
 
 const DIExpression *getAddressExpression(const DbgVariableRecord *DVR) {
@@ -5217,66 +5200,6 @@ static DIExpression *createOrReplaceFragment(const DIExpression *Expr,
     Ops.push_back(Frag.SizeInBits);
   }
   return DIExpression::get(Expr->getContext(), Ops);
-}
-
-/// Insert a new dbg.declare.
-/// \p Orig Original to copy debug loc and variable from.
-/// \p NewAddr Location's new base address.
-/// \p NewAddrExpr New expression to apply to address.
-/// \p BeforeInst Insert position.
-/// \p NewFragment New fragment (absolute, non-relative).
-/// \p BitExtractAdjustment Offset to apply to any extract_bits op.
-static void
-insertNewDbgInst(DIBuilder &DIB, DbgDeclareInst *Orig, AllocaInst *NewAddr,
-                 DIExpression *NewAddrExpr, Instruction *BeforeInst,
-                 std::optional<DIExpression::FragmentInfo> NewFragment,
-                 int64_t BitExtractAdjustment) {
-  if (NewFragment)
-    NewAddrExpr = createOrReplaceFragment(NewAddrExpr, *NewFragment,
-                                          BitExtractAdjustment);
-  if (!NewAddrExpr)
-    return;
-
-  DIB.insertDeclare(NewAddr, Orig->getVariable(), NewAddrExpr,
-                    Orig->getDebugLoc(), BeforeInst->getIterator());
-}
-
-/// Insert a new dbg.assign.
-/// \p Orig Original to copy debug loc, variable, value and value expression
-///    from.
-/// \p NewAddr Location's new base address.
-/// \p NewAddrExpr New expression to apply to address.
-/// \p BeforeInst Insert position.
-/// \p NewFragment New fragment (absolute, non-relative).
-/// \p BitExtractAdjustment Offset to apply to any extract_bits op.
-static void
-insertNewDbgInst(DIBuilder &DIB, DbgAssignIntrinsic *Orig, AllocaInst *NewAddr,
-                 DIExpression *NewAddrExpr, Instruction *BeforeInst,
-                 std::optional<DIExpression::FragmentInfo> NewFragment,
-                 int64_t BitExtractAdjustment) {
-  // DIBuilder::insertDbgAssign will insert the #dbg_assign after NewAddr.
-  (void)BeforeInst;
-
-  // A dbg.assign puts fragment info in the value expression only. The address
-  // expression has already been built: NewAddrExpr.
-  DIExpression *NewFragmentExpr = Orig->getExpression();
-  if (NewFragment)
-    NewFragmentExpr = createOrReplaceFragment(NewFragmentExpr, *NewFragment,
-                                              BitExtractAdjustment);
-  if (!NewFragmentExpr)
-    return;
-
-  // Apply a DIAssignID to the store if it doesn't already have it.
-  if (!NewAddr->hasMetadata(LLVMContext::MD_DIAssignID)) {
-    NewAddr->setMetadata(LLVMContext::MD_DIAssignID,
-                         DIAssignID::getDistinct(NewAddr->getContext()));
-  }
-
-  Instruction *NewAssign = cast<Instruction *>(DIB.insertDbgAssign(
-      NewAddr, Orig->getValue(), Orig->getVariable(), NewFragmentExpr, NewAddr,
-      NewAddrExpr, Orig->getDebugLoc()));
-  LLVM_DEBUG(dbgs() << "Created new assign intrinsic: " << *NewAssign << "\n");
-  (void)NewAssign;
 }
 
 /// Insert a new DbgRecord.
@@ -5440,12 +5363,12 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 
   // Migrate debug information from the old alloca to the new alloca(s)
   // and the individual partitions.
-  auto MigrateOne = [&](auto *DbgVariable) {
+  auto MigrateOne = [&](DbgVariableRecord *DbgVariable) {
     // Can't overlap with undef memory.
     if (isKillAddress(DbgVariable))
       return;
 
-    const Value *DbgPtr = getAddress(DbgVariable);
+    const Value *DbgPtr = DbgVariable->getAddress();
     DIExpression::FragmentInfo VarFrag =
         DbgVariable->getFragmentOrEntireVariable();
     // Get the address expression constant offset if one exists and the ops
@@ -5526,7 +5449,6 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
         if (SameVariableFragment(OldDII, DbgVariable))
           OldDII->eraseFromParent();
       };
-      for_each(findDbgDeclares(Fragment.Alloca), RemoveOne);
       for_each(findDVRDeclares(Fragment.Alloca), RemoveOne);
       for_each(findDVRValues(Fragment.Alloca), RemoveOne);
       insertNewDbgInst(DIB, DbgVariable, Fragment.Alloca, NewExpr, &AI,
@@ -5536,10 +5458,8 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 
   // Migrate debug information from the old alloca to the new alloca(s)
   // and the individual partitions.
-  for_each(findDbgDeclares(&AI), MigrateOne);
   for_each(findDVRDeclares(&AI), MigrateOne);
   for_each(findDVRValues(&AI), MigrateOne);
-  for_each(at::getAssignmentMarkers(&AI), MigrateOne);
   for_each(at::getDVRAssignmentMarkers(&AI), MigrateOne);
 
   return Changed;
@@ -5760,8 +5680,6 @@ bool SROA::deleteDeadInstructions(
     // not be able to find it.
     if (AllocaInst *AI = dyn_cast<AllocaInst>(I)) {
       DeletedAllocas.insert(AI);
-      for (DbgDeclareInst *OldDII : findDbgDeclares(AI))
-        OldDII->eraseFromParent();
       for (DbgVariableRecord *OldDII : findDVRDeclares(AI))
         OldDII->eraseFromParent();
     }

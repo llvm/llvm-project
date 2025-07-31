@@ -14,12 +14,12 @@ using namespace llvm;
 using namespace lldb_private;
 
 namespace {
-template <typename T> class JSONTransportTest : public PipeTest {
+template <typename T> class JSONTransportTest : public PipePairTest {
 protected:
   std::unique_ptr<JSONTransport> transport;
 
   void SetUp() override {
-    PipeTest::SetUp();
+    PipePairTest::SetUp();
     transport = std::make_unique<T>(
         std::make_shared<NativeFile>(input.GetReadFileDescriptor(),
                                      File::eOpenOptionReadOnly,

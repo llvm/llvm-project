@@ -166,7 +166,7 @@ public:
   /// constructed for. If valid, the attributes applied to this decl may
   /// contribute to the function attributes and calling convention.
   void constructAttributeList(CIRGenCalleeInfo calleeInfo,
-                              cir::SideEffect &sideEffect);
+                              mlir::NamedAttrList &attrs);
 
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
@@ -251,6 +251,11 @@ public:
   mlir::Operation *
   getAddrOfGlobal(clang::GlobalDecl gd,
                   ForDefinition_t isForDefinition = NotForDefinition);
+
+  /// Emit type info if type of an expression is a variably modified
+  /// type. Also emit proper debug info for cast types.
+  void emitExplicitCastExprType(const ExplicitCastExpr *e,
+                                CIRGenFunction *cgf = nullptr);
 
   /// Emit code for a single global function or variable declaration. Forward
   /// declarations are emitted lazily.

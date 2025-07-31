@@ -314,7 +314,7 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
 
   for (unsigned i = Start; i != End; ++i) {
     auto &CurrentChange = Changes[i];
-    if (ScopeStack.size() != 0 &&
+    if (!ScopeStack.empty() &&
         CurrentChange.indentAndNestingLevel() <
             Changes[ScopeStack.back()].indentAndNestingLevel()) {
       ScopeStack.pop_back();
@@ -332,7 +332,7 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
       ScopeStack.push_back(i);
     }
 
-    bool InsideNestedScope = ScopeStack.size() != 0;
+    bool InsideNestedScope = !ScopeStack.empty();
     bool ContinuedStringLiteral = i > Start &&
                                   CurrentChange.Tok->is(tok::string_literal) &&
                                   Changes[i - 1].Tok->is(tok::string_literal);
@@ -1048,7 +1048,7 @@ void WhitespaceManager::alignChainedConditionals() {
           return C.Tok->is(TT_ConditionalExpr) &&
                  ((C.Tok->is(tok::question) && !C.NewlinesBefore) ||
                   (C.Tok->is(tok::colon) && C.Tok->Next &&
-                   (C.Tok->Next->FakeLParens.size() == 0 ||
+                   (C.Tok->Next->FakeLParens.empty() ||
                     C.Tok->Next->FakeLParens.back() != prec::Conditional)));
         },
         Changes, /*StartAt=*/0);
@@ -1057,7 +1057,7 @@ void WhitespaceManager::alignChainedConditionals() {
       FormatToken *Previous = C.Tok->getPreviousNonComment();
       return C.NewlinesBefore && Previous && Previous->is(TT_ConditionalExpr) &&
              (Previous->is(tok::colon) &&
-              (C.Tok->FakeLParens.size() == 0 ||
+              (C.Tok->FakeLParens.empty() ||
                C.Tok->FakeLParens.back() != prec::Conditional));
     };
     // Ensure we keep alignment of wrapped operands with non-wrapped operands

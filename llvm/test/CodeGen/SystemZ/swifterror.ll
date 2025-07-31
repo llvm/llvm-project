@@ -162,8 +162,8 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-O0: je
 ; CHECK-O0: lghi %r2, 16
 ; CHECK-O0: brasl %r14, malloc
-; CHECK-O0: lgr %r{{[0-9]+}}, %r2
-; CHECK-O0: mvi 8(%r2), 1
+; CHECK-O0: lgr %r[[REG1:[0-9]+]], %r2
+; CHECK-O0: mvi 8(%r[[REG1]]), 1
 ; CHECK-O0: jnh
 ; reload from stack
 ; CHECK-O0: lg %r9, [[OFFS:[0-9]+]](%r15)

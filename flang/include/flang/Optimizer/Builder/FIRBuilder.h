@@ -609,6 +609,17 @@ public:
     return integerOverflowFlags;
   }
 
+  /// Set ComplexDivisionToRuntimeFlag value. If set to true, complex number
+  /// division is lowered to a runtime function by this builder.
+  void setComplexDivisionToRuntimeFlag(bool flag) {
+    complexDivisionToRuntimeFlag = flag;
+  }
+
+  /// Get current ComplexDivisionToRuntimeFlag value.
+  bool getComplexDivisionToRuntimeFlag() const {
+    return complexDivisionToRuntimeFlag;
+  }
+
   /// Dump the current function. (debug)
   LLVM_DUMP_METHOD void dumpFunc();
 
@@ -672,6 +683,10 @@ private:
   /// IntegerOverflowFlags that need to be set for operations that support
   /// mlir::arith::IntegerOverflowFlagsAttr.
   mlir::arith::IntegerOverflowFlags integerOverflowFlags{};
+
+  /// Flag to control whether complex number division is lowered to a runtime
+  /// function or to the MLIR complex dialect.
+  bool complexDivisionToRuntimeFlag = true;
 
   /// fir::GlobalOp and func::FuncOp symbol table to speed-up
   /// lookups.
@@ -899,6 +914,10 @@ uint64_t getAllocaAddressSpace(const mlir::DataLayout *dataLayout);
 /// and extents2[j] is not, then result[j] is the MLIR value extents1[j].
 llvm::SmallVector<mlir::Value> deduceOptimalExtents(mlir::ValueRange extents1,
                                                     mlir::ValueRange extents2);
+
+uint64_t getGlobalAddressSpace(mlir::DataLayout *dataLayout);
+
+uint64_t getProgramAddressSpace(mlir::DataLayout *dataLayout);
 
 /// Given array extents generate code that sets them all to zeroes,
 /// if the array is empty, e.g.:

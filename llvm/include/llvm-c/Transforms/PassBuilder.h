@@ -17,6 +17,7 @@
 #include "llvm-c/Error.h"
 #include "llvm-c/TargetMachine.h"
 #include "llvm-c/Types.h"
+#include "llvm-c/Visibility.h"
 
 /**
  * @defgroup LLVMCCoreNewPM New Pass Manager
@@ -46,9 +47,9 @@ typedef struct LLVMOpaquePassBuilderOptions *LLVMPassBuilderOptionsRef;
  * pipelines may also be invoked using `default<O3>` and friends. See opt for
  * full reference of the Passes format.
  */
-LLVMErrorRef LLVMRunPasses(LLVMModuleRef M, const char *Passes,
-                           LLVMTargetMachineRef TM,
-                           LLVMPassBuilderOptionsRef Options);
+LLVM_C_ABI LLVMErrorRef LLVMRunPasses(LLVMModuleRef M, const char *Passes,
+                                      LLVMTargetMachineRef TM,
+                                      LLVMPassBuilderOptionsRef Options);
 
 /**
  * Construct and run a set of passes over a function.
@@ -56,9 +57,9 @@ LLVMErrorRef LLVMRunPasses(LLVMModuleRef M, const char *Passes,
  * This function behaves the same as LLVMRunPasses, but operates on a single
  * function instead of an entire module.
  */
-LLVMErrorRef LLVMRunPassesOnFunction(LLVMValueRef F, const char *Passes,
-                                     LLVMTargetMachineRef TM,
-                                     LLVMPassBuilderOptionsRef Options);
+LLVM_C_ABI LLVMErrorRef LLVMRunPassesOnFunction(
+    LLVMValueRef F, const char *Passes, LLVMTargetMachineRef TM,
+    LLVMPassBuilderOptionsRef Options);
 
 /**
  * Create a new set of options for a PassBuilder
@@ -67,63 +68,75 @@ LLVMErrorRef LLVMRunPassesOnFunction(LLVMValueRef F, const char *Passes,
  * responsible for it. The client should call LLVMDisposePassBuilderOptions
  * to free the pass builder options.
  */
-LLVMPassBuilderOptionsRef LLVMCreatePassBuilderOptions(void);
+LLVM_C_ABI LLVMPassBuilderOptionsRef LLVMCreatePassBuilderOptions(void);
 
 /**
  * Toggle adding the VerifierPass for the PassBuilder, ensuring all functions
  * inside the module is valid.
  */
-void LLVMPassBuilderOptionsSetVerifyEach(LLVMPassBuilderOptionsRef Options,
-                                         LLVMBool VerifyEach);
+LLVM_C_ABI void
+LLVMPassBuilderOptionsSetVerifyEach(LLVMPassBuilderOptionsRef Options,
+                                    LLVMBool VerifyEach);
 
 /**
  * Toggle debug logging when running the PassBuilder
  */
-void LLVMPassBuilderOptionsSetDebugLogging(LLVMPassBuilderOptionsRef Options,
-                                           LLVMBool DebugLogging);
+LLVM_C_ABI void
+LLVMPassBuilderOptionsSetDebugLogging(LLVMPassBuilderOptionsRef Options,
+                                      LLVMBool DebugLogging);
 
 /**
  * Specify a custom alias analysis pipeline for the PassBuilder to be used
  * instead of the default one. The string argument is not copied; the caller
  * is responsible for ensuring it outlives the PassBuilderOptions instance.
  */
-void LLVMPassBuilderOptionsSetAAPipeline(LLVMPassBuilderOptionsRef Options,
-                                         const char *AAPipeline);
+LLVM_C_ABI void
+LLVMPassBuilderOptionsSetAAPipeline(LLVMPassBuilderOptionsRef Options,
+                                    const char *AAPipeline);
 
-void LLVMPassBuilderOptionsSetLoopInterleaving(
-    LLVMPassBuilderOptionsRef Options, LLVMBool LoopInterleaving);
+LLVM_C_ABI void
+LLVMPassBuilderOptionsSetLoopInterleaving(LLVMPassBuilderOptionsRef Options,
+                                          LLVMBool LoopInterleaving);
 
-void LLVMPassBuilderOptionsSetLoopVectorization(
-    LLVMPassBuilderOptionsRef Options, LLVMBool LoopVectorization);
+LLVM_C_ABI void
+LLVMPassBuilderOptionsSetLoopVectorization(LLVMPassBuilderOptionsRef Options,
+                                           LLVMBool LoopVectorization);
 
-void LLVMPassBuilderOptionsSetSLPVectorization(
-    LLVMPassBuilderOptionsRef Options, LLVMBool SLPVectorization);
+LLVM_C_ABI void
+LLVMPassBuilderOptionsSetSLPVectorization(LLVMPassBuilderOptionsRef Options,
+                                          LLVMBool SLPVectorization);
 
-void LLVMPassBuilderOptionsSetLoopUnrolling(LLVMPassBuilderOptionsRef Options,
-                                            LLVMBool LoopUnrolling);
+LLVM_C_ABI void
+LLVMPassBuilderOptionsSetLoopUnrolling(LLVMPassBuilderOptionsRef Options,
+                                       LLVMBool LoopUnrolling);
 
-void LLVMPassBuilderOptionsSetForgetAllSCEVInLoopUnroll(
+LLVM_C_ABI void LLVMPassBuilderOptionsSetForgetAllSCEVInLoopUnroll(
     LLVMPassBuilderOptionsRef Options, LLVMBool ForgetAllSCEVInLoopUnroll);
 
-void LLVMPassBuilderOptionsSetLicmMssaOptCap(LLVMPassBuilderOptionsRef Options,
-                                             unsigned LicmMssaOptCap);
+LLVM_C_ABI void
+LLVMPassBuilderOptionsSetLicmMssaOptCap(LLVMPassBuilderOptionsRef Options,
+                                        unsigned LicmMssaOptCap);
 
-void LLVMPassBuilderOptionsSetLicmMssaNoAccForPromotionCap(
+LLVM_C_ABI void LLVMPassBuilderOptionsSetLicmMssaNoAccForPromotionCap(
     LLVMPassBuilderOptionsRef Options, unsigned LicmMssaNoAccForPromotionCap);
 
-void LLVMPassBuilderOptionsSetCallGraphProfile(
-    LLVMPassBuilderOptionsRef Options, LLVMBool CallGraphProfile);
+LLVM_C_ABI void
+LLVMPassBuilderOptionsSetCallGraphProfile(LLVMPassBuilderOptionsRef Options,
+                                          LLVMBool CallGraphProfile);
 
-void LLVMPassBuilderOptionsSetMergeFunctions(LLVMPassBuilderOptionsRef Options,
-                                             LLVMBool MergeFunctions);
+LLVM_C_ABI void
+LLVMPassBuilderOptionsSetMergeFunctions(LLVMPassBuilderOptionsRef Options,
+                                        LLVMBool MergeFunctions);
 
-void LLVMPassBuilderOptionsSetInlinerThreshold(
-    LLVMPassBuilderOptionsRef Options, int Threshold);
+LLVM_C_ABI void
+LLVMPassBuilderOptionsSetInlinerThreshold(LLVMPassBuilderOptionsRef Options,
+                                          int Threshold);
 
 /**
  * Dispose of a heap-allocated PassBuilderOptions instance
  */
-void LLVMDisposePassBuilderOptions(LLVMPassBuilderOptionsRef Options);
+LLVM_C_ABI void
+LLVMDisposePassBuilderOptions(LLVMPassBuilderOptionsRef Options);
 
 /**
  * @}
