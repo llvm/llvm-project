@@ -217,7 +217,7 @@ ValueObjectConstResult::ValueObjectConstResult(
   m_error = m_value.GetValueAsData(&exe_ctx, m_data, module);
   SetIsConstant();
   SetValueIsValid(true);
-  SetAddressTypeOfChildren(eAddressTypeInvalid);
+  SetAddressTypeOfChildren(eAddressTypeLoad);
 }
 
 ValueObjectConstResult::~ValueObjectConstResult() = default;
