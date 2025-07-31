@@ -516,7 +516,7 @@ public:
   }
 
   /// setASTContext - Replace the current AST context.
-  void setASTContext(ASTContext *Value);
+  void setASTContext(llvm::IntrusiveRefCntPtr<ASTContext> Value);
 
   /// Replace the current Sema; the compiler instance takes ownership
   /// of S.

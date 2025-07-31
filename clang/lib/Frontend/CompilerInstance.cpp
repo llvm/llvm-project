@@ -178,8 +178,9 @@ void CompilerInstance::setPreprocessor(std::shared_ptr<Preprocessor> Value) {
   PP = std::move(Value);
 }
 
-void CompilerInstance::setASTContext(ASTContext *Value) {
-  Context = Value;
+void CompilerInstance::setASTContext(
+    llvm::IntrusiveRefCntPtr<ASTContext> Value) {
+  Context = std::move(Value);
 
   if (Context && Consumer)
     getASTConsumer().Initialize(getASTContext());
@@ -554,11 +555,11 @@ std::string CompilerInstance::getSpecificModuleCachePath(StringRef ModuleHash) {
 
 void CompilerInstance::createASTContext() {
   Preprocessor &PP = getPreprocessor();
-  auto *Context = new ASTContext(getLangOpts(), PP.getSourceManager(),
-                                 PP.getIdentifierTable(), PP.getSelectorTable(),
-                                 PP.getBuiltinInfo(), PP.TUKind);
+  auto Context = llvm::makeIntrusiveRefCnt<ASTContext>(
+      getLangOpts(), PP.getSourceManager(), PP.getIdentifierTable(),
+      PP.getSelectorTable(), PP.getBuiltinInfo(), PP.TUKind);
   Context->InitBuiltinTypes(getTarget(), getAuxTarget());
-  setASTContext(Context);
+  setASTContext(std::move(Context));
 }
 
 // ExternalASTSource

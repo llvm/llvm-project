@@ -858,10 +858,10 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   Preprocessor &PP = *AST->PP;
 
   if (ToLoad >= LoadASTOnly)
-    AST->Ctx = new ASTContext(*AST->LangOpts, AST->getSourceManager(),
-                              PP.getIdentifierTable(), PP.getSelectorTable(),
-                              PP.getBuiltinInfo(),
-                              AST->getTranslationUnitKind());
+    AST->Ctx = llvm::makeIntrusiveRefCnt<ASTContext>(
+        *AST->LangOpts, AST->getSourceManager(), PP.getIdentifierTable(),
+        PP.getSelectorTable(), PP.getBuiltinInfo(),
+        AST->getTranslationUnitKind());
 
   DisableValidationForModuleKind disableValid =
       DisableValidationForModuleKind::None;
@@ -1499,7 +1499,7 @@ void ASTUnit::transferASTDataFromCompilerInstance(CompilerInstance &CI) {
   TheSema = CI.takeSema();
   Consumer = CI.takeASTConsumer();
   if (CI.hasASTContext())
-    Ctx = &CI.getASTContext();
+    Ctx = CI.getASTContextPtr();
   if (CI.hasPreprocessor())
     PP = CI.getPreprocessorPtr();
   CI.setSourceManager(nullptr);

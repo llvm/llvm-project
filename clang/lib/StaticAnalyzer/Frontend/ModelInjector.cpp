@@ -87,7 +87,7 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
   Instance.setFileManager(&CI.getFileManager());
   Instance.setSourceManager(&SM);
   Instance.setPreprocessor(CI.getPreprocessorPtr());
-  Instance.setASTContext(&CI.getASTContext());
+  Instance.setASTContext(CI.getASTContextPtr());
 
   Instance.getPreprocessor().InitializeForModelFile();
 

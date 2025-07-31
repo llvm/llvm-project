@@ -458,8 +458,11 @@ public:
 
   const ASTContext &getASTContext() const { return *Ctx; }
   ASTContext &getASTContext() { return *Ctx; }
+  llvm::IntrusiveRefCntPtr<ASTContext> getASTContextPtr() { return Ctx; }
 
-  void setASTContext(ASTContext *ctx) { Ctx = ctx; }
+  void setASTContext(llvm::IntrusiveRefCntPtr<ASTContext> ctx) {
+    Ctx = std::move(ctx);
+  }
   void setPreprocessor(std::shared_ptr<Preprocessor> pp);
 
   /// Enable source-range based diagnostic messages.

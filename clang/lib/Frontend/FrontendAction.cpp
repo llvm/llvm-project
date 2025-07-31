@@ -918,7 +918,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     Preprocessor &PP = CI.getPreprocessor();
     PP.getBuiltinInfo().initializeBuiltins(PP.getIdentifierTable(),
                                            PP.getLangOpts());
-    CI.setASTContext(&AST->getASTContext());
+    CI.setASTContext(AST->getASTContextPtr());
 
     setCurrentInput(Input, std::move(AST));
 
