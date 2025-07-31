@@ -286,8 +286,10 @@ void ProcessProperties::SetDisableLangRuntimeUnwindPlans(bool disable) {
 void ProcessProperties::DisableLanguageRuntimeUnwindPlansCallback() {
   if (!m_process)
     return;
-  for (auto thread_sp : m_process->Threads())
+  for (auto thread_sp : m_process->Threads()) {
     thread_sp->ClearStackFrames();
+    thread_sp->DiscardThreadPlans(/*force*/ true);
+  }
 }
 
 bool ProcessProperties::GetDetachKeepsStopped() const {
