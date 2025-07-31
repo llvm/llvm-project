@@ -2250,6 +2250,11 @@ public:
     Walk(std::get<OmpObjectList>(x.t));
     Walk(": ", std::get<std::optional<std::list<Modifier>>>(x.t));
   }
+  void Unparse(const OmpEnterClause &x) {
+    using Modifier = OmpEnterClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
+    Walk(std::get<OmpObjectList>(x.t));
+  }
   void Unparse(const OmpFromClause &x) {
     using Modifier = OmpFromClause::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
@@ -2986,6 +2991,7 @@ public:
   WALK_NESTED_ENUM(UseStmt, ModuleNature) // R1410
   WALK_NESTED_ENUM(OmpAdjustArgsClause::OmpAdjustOp, Value) // OMP adjustop
   WALK_NESTED_ENUM(OmpAtClause, ActionTime) // OMP at
+  WALK_NESTED_ENUM(OmpAutomapModifier, Value) // OMP automap-modifier
   WALK_NESTED_ENUM(OmpBindClause, Binding) // OMP bind
   WALK_NESTED_ENUM(OmpProcBindClause, AffinityPolicy) // OMP proc_bind
   WALK_NESTED_ENUM(OmpDefaultClause, DataSharingAttribute) // OMP default

@@ -3776,6 +3776,16 @@ struct OmpAlwaysModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpAlwaysModifier, Value);
 };
 
+// Ref: [6.0:289-290]
+//
+// automap-modifier ->
+//    automap                                       // since 6.0
+//
+struct OmpAutomapModifier {
+  ENUM_CLASS(Value, Automap);
+  WRAPPER_CLASS_BOILERPLATE(OmpAutomapModifier, Value);
+};
+
 // Ref: [5.2:252-254]
 //
 // chunk-modifier ->
@@ -4358,6 +4368,17 @@ struct OmpDeviceClause {
 struct OmpDeviceTypeClause {
   ENUM_CLASS(DeviceTypeDescription, Any, Host, Nohost)
   WRAPPER_CLASS_BOILERPLATE(OmpDeviceTypeClause, DeviceTypeDescription);
+};
+
+// Ref: [5.2:158-159], [6.0:289-290]
+//
+// enter-clause ->
+//    ENTER(locator-list) |
+//    ENTER(automap-modifier: locator-list) |         // since 6.0
+struct OmpEnterClause {
+  TUPLE_CLASS_BOILERPLATE(OmpEnterClause);
+  MODIFIER_BOILERPLATE(OmpAutomapModifier);
+  std::tuple<MODIFIERS(), OmpObjectList> t;
 };
 
 // OMP 5.2 15.8.3 extended-atomic, fail-clause ->

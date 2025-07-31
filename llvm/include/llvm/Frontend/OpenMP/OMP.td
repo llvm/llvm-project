@@ -179,7 +179,7 @@ def OMPC_DynamicAllocators : Clause<[Spelling<"dynamic_allocators">]> {
   let clangClass = "OMPDynamicAllocatorsClause";
 }
 def OMPC_Enter : Clause<[Spelling<"enter">]> {
-  let flangClass = "OmpObjectList";
+  let flangClass = "OmpEnterClause";
 }
 def OMPC_Exclusive : Clause<[Spelling<"exclusive">]> {
   let clangClass = "OMPExclusiveClause";
