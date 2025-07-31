@@ -1773,7 +1773,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCompilerInvocation(
 
   if (AST->LoadFromCompilerInvocation(std::move(PCHContainerOps),
                                       PrecompilePreambleAfterNParses,
-                                      &AST->FileMgr->getVirtualFileSystem()))
+                                      AST->FileMgr->getVirtualFileSystemPtr()))
     return nullptr;
   return AST;
 }
@@ -1895,7 +1895,7 @@ bool ASTUnit::Reparse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
 
   if (!VFS) {
     assert(FileMgr && "FileMgr is null on Reparse call");
-    VFS = &FileMgr->getVirtualFileSystem();
+    VFS = FileMgr->getVirtualFileSystemPtr();
   }
 
   clearFileLevelDecls();
@@ -2321,7 +2321,8 @@ void ASTUnit::CodeComplete(
   std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer;
   if (Preamble && Line > 1 && hasSameUniqueID(File, OriginalSourceFile)) {
     OverrideMainBuffer = getMainBufferWithPrecompiledPreamble(
-        PCHContainerOps, Inv, &FileMgr.getVirtualFileSystem(), false, Line - 1);
+        PCHContainerOps, Inv, FileMgr.getVirtualFileSystemPtr(), false,
+        Line - 1);
   }
 
   // If the main file has been overridden due to the use of a preamble,
@@ -2331,7 +2332,7 @@ void ASTUnit::CodeComplete(
            "No preamble was built, but OverrideMainBuffer is not null");
 
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
-        &FileMgr.getVirtualFileSystem();
+        FileMgr.getVirtualFileSystemPtr();
     Preamble->AddImplicitPreamble(Clang->getInvocation(), VFS,
                                   OverrideMainBuffer.get());
     // FIXME: there is no way to update VFS if it was changed by

@@ -420,6 +420,8 @@ public:
   /// @{
 
   llvm::vfs::FileSystem &getVirtualFileSystem() const;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+  getVirtualFileSystemPtr() const;
 
   /// @}
   /// @name File Manager

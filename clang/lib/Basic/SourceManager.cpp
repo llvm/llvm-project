@@ -2366,18 +2366,16 @@ size_t SourceManager::getDataStructureSizes() const {
 
 SourceManagerForFile::SourceManagerForFile(StringRef FileName,
                                            StringRef Content) {
-  // This is referenced by `FileMgr` and will be released by `FileMgr` when it
-  // is deleted.
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   InMemoryFileSystem->addFile(
       FileName, 0,
       llvm::MemoryBuffer::getMemBuffer(Content, FileName,
                                        /*RequiresNullTerminator=*/false));
   // This is passed to `SM` as reference, so the pointer has to be referenced
   // in `Environment` so that `FileMgr` can out-live this function scope.
-  FileMgr =
-      std::make_unique<FileManager>(FileSystemOptions(), InMemoryFileSystem);
+  FileMgr = std::make_unique<FileManager>(FileSystemOptions(),
+                                          std::move(InMemoryFileSystem));
   DiagOpts = std::make_unique<DiagnosticOptions>();
   // This is passed to `SM` as reference, so the pointer has to be referenced
   // by `Environment` due to the same reason above.
