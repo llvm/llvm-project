@@ -1248,16 +1248,14 @@ bool checkErrorIfCondIf(Operation *op) {
   // })
   //
   // Simplified:
-  // %0 = tosa.cond_if %arg2 {
-  //   tosa.yield %arg0
+  // %0 = tosa.cond_if %arg2 (%arg3 = %arg0, %arg4 = %arg1) {
+  //   ^bb0(%arg3, %arg4):
+  //   tosa.yield %arg3
   // } else {
-  //   tosa.yield %arg1
+  //   ^bb0(%arg3, %arg4):
+  //   tosa.yield %arg4
   // }
-  //
-  // Unfortunately, the simplified syntax does not encapsulate values
-  // used in then/else regions (see 'simplified' example above), so it
-  // must be rewritten to use the generic syntax in order to be conformant
-  // to the specification.
+
   return failed(checkIsolatedRegion(op, ifOp.getThenGraph(), "then")) ||
          failed(checkIsolatedRegion(op, ifOp.getElseGraph(), "else"));
 }

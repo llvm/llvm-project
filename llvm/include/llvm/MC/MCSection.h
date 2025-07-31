@@ -150,23 +150,6 @@ public:
   MCFragment(const MCFragment &) = delete;
   MCFragment &operator=(const MCFragment &) = delete;
 
-  bool isEncoded() const {
-    MCFragment::FragmentType Kind = getKind();
-    switch (Kind) {
-    default:
-      return false;
-    case MCFragment::FT_Relaxable:
-    case MCFragment::FT_Data:
-    case MCFragment::FT_Align:
-    case MCFragment::FT_Dwarf:
-    case MCFragment::FT_DwarfFrame:
-    case MCFragment::FT_LEB:
-    case MCFragment::FT_CVInlineLines:
-    case MCFragment::FT_CVDefRange:
-      return true;
-    }
-  }
-
   MCFragment *getNext() const { return Next; }
 
   FragmentType getKind() const { return Kind; }
@@ -220,7 +203,7 @@ public:
   MutableArrayRef<char> getContents();
   ArrayRef<char> getContents() const;
 
-  void setVarContents(ArrayRef<char> Contents);
+  LLVM_ABI void setVarContents(ArrayRef<char> Contents);
   void clearVarContents() { setVarContents({}); }
   MutableArrayRef<char> getVarContents();
   ArrayRef<char> getVarContents() const;
@@ -241,7 +224,7 @@ public:
 
   // Source fixup offsets are relative to the variable part's start.
   // Stored fixup offsets are relative to the fixed part's start.
-  void setVarFixups(ArrayRef<MCFixup> Fixups);
+  LLVM_ABI void setVarFixups(ArrayRef<MCFixup> Fixups);
   void clearVarFixups() { setVarFixups({}); }
   MutableArrayRef<MCFixup> getVarFixups();
   ArrayRef<MCFixup> getVarFixups() const;
@@ -540,17 +523,6 @@ public:
   friend class MCFragment;
   static constexpr unsigned NonUniqueID = ~0U;
 
-  enum SectionVariant {
-    SV_COFF = 0,
-    SV_ELF,
-    SV_GOFF,
-    SV_MachO,
-    SV_Wasm,
-    SV_XCOFF,
-    SV_SPIRV,
-    SV_DXContainer,
-  };
-
   struct iterator {
     MCFragment *F = nullptr;
     iterator() = default;
@@ -570,6 +542,8 @@ private:
   // At parse time, this holds the fragment list of the current subsection. At
   // layout time, this holds the concatenated fragment lists of all subsections.
   FragList *CurFragList;
+  // In many object file formats, this denotes the section symbol. In Mach-O,
+  // this denotes an optional temporary label at the section start.
   MCSymbol *Begin;
   MCSymbol *End = nullptr;
   /// The alignment requirement of this section.
@@ -589,6 +563,8 @@ private:
   /// offset between two locations may not be fully resolved.
   bool LinkerRelaxable : 1;
 
+  MCFragment DummyFragment;
+
   // Mapping from subsection number to fragment list. At layout time, the
   // subsection 0 list is replaced with concatenated fragments from all
   // subsections.
@@ -602,12 +578,8 @@ private:
 protected:
   // TODO Make Name private when possible.
   StringRef Name;
-  SectionVariant Variant;
 
-  MCSection(SectionVariant V, StringRef Name, bool IsText, bool IsBss,
-            MCSymbol *Begin);
-  // Protected non-virtual dtor prevents destroy through a base class pointer.
-  ~MCSection() {}
+  MCSection(StringRef Name, bool IsText, bool IsBss, MCSymbol *Begin);
 
 public:
   MCSection(const MCSection &) = delete;
@@ -615,8 +587,6 @@ public:
 
   StringRef getName() const { return Name; }
   bool isText() const { return IsText; }
-
-  SectionVariant getVariant() const { return Variant; }
 
   MCSymbol *getBeginSymbol() { return Begin; }
   const MCSymbol *getBeginSymbol() const {
@@ -650,7 +620,7 @@ public:
   bool isLinkerRelaxable() const { return LinkerRelaxable; }
   void setLinkerRelaxable() { LinkerRelaxable = true; }
 
-  MCFragment &getDummyFragment() { return *Subsections[0].second.Head; }
+  MCFragment &getDummyFragment() { return DummyFragment; }
 
   FragList *curFragList() const { return CurFragList; }
   iterator begin() const { return iterator(CurFragList->Head); }
@@ -658,14 +628,6 @@ public:
 
   void dump(DenseMap<const MCFragment *, SmallVector<const MCSymbol *, 0>>
                 *FragToSyms = nullptr) const;
-
-  virtual void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
-                                    raw_ostream &OS,
-                                    uint32_t Subsection) const = 0;
-
-  /// Return true if a .align directive should use "optimized nops" to fill
-  /// instead of 0s.
-  virtual bool useCodeAlign() const = 0;
 
   /// Check whether this section is "virtual", that is has no actual object
   /// file contents.
