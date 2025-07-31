@@ -86,7 +86,6 @@ GetCC1Arguments(DiagnosticsEngine *Diagnostics,
 static llvm::Expected<std::unique_ptr<CompilerInstance>>
 CreateCI(const llvm::opt::ArgStringList &Argv) {
   std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
 
   // Register the support for object-file-wrapped Clang modules.
   // FIXME: Clang should register these container operations automatically.
@@ -98,7 +97,7 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
   // a well formed diagnostic object.
   DiagnosticOptions DiagOpts;
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
-  DiagnosticsEngine Diags(DiagID, DiagOpts, DiagsBuffer);
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DiagsBuffer);
   bool Success = CompilerInvocation::CreateFromArgs(
       Clang->getInvocation(), llvm::ArrayRef(Argv.begin(), Argv.size()), Diags);
 
@@ -174,11 +173,10 @@ IncrementalCompilerBuilder::create(std::string TT,
 
   // Buffer diagnostics from argument parsing so that we can output them using a
   // well formed diagnostic object.
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
   std::unique_ptr<DiagnosticOptions> DiagOpts =
       CreateAndPopulateDiagOpts(ClangArgv);
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
-  DiagnosticsEngine Diags(DiagID, *DiagOpts, DiagsBuffer);
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), *DiagOpts, DiagsBuffer);
 
   driver::Driver Driver(/*MainBinaryName=*/ClangArgv[0], TT, Diags);
   Driver.setCheckInputsExist(false); // the input comes from mem buffers

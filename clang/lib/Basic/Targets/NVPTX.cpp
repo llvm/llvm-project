@@ -295,10 +295,16 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
         return "1000";
       case OffloadArch::SM_101:
       case OffloadArch::SM_101a:
-         return "1010";
+        return "1010";
+      case OffloadArch::SM_103:
+      case OffloadArch::SM_103a:
+        return "1030";
       case OffloadArch::SM_120:
       case OffloadArch::SM_120a:
-         return "1200";
+        return "1200";
+      case OffloadArch::SM_121:
+      case OffloadArch::SM_121a:
+        return "1210";
       }
       llvm_unreachable("unhandled OffloadArch");
     }();
@@ -307,7 +313,9 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::SM_90a:
       case OffloadArch::SM_100a:
       case OffloadArch::SM_101a:
+      case OffloadArch::SM_103a:
       case OffloadArch::SM_120a:
+      case OffloadArch::SM_121a:
         Builder.defineMacro("__CUDA_ARCH_FEAT_SM" + CUDAArchCode.drop_back() + "_ALL", "1");
         break;
       default:

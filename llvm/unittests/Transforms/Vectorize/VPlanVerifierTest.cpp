@@ -312,9 +312,14 @@ TEST_F(VPVerifierTest, NonHeaderPHIInHeader) {
 #endif
   EXPECT_FALSE(verifyVPlanIsValid(Plan));
 #if GTEST_HAS_STREAM_REDIRECTION
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   EXPECT_STREQ(
       "Found non-header PHI recipe in header VPBB: IR   <badref> = phi i32 \n",
       ::testing::internal::GetCapturedStderr().c_str());
+#else
+  EXPECT_STREQ("Found non-header PHI recipe in header VPBB",
+               ::testing::internal::GetCapturedStderr().c_str());
+#endif
 #endif
 }
 
