@@ -8952,6 +8952,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   bool &IsTailCall = CLI.IsTailCall;
   CallingConv::ID &CallConv = CLI.CallConv;
   bool IsVarArg = CLI.IsVarArg;
+  const CallBase *CB = CLI.CB;
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFunction::CallSiteInfo CSInfo;
@@ -8990,6 +8991,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   CCState RetCCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), RVLocs,
                     *DAG.getContext());
   RetCCInfo.AnalyzeCallResult(Ins, RetCC);
+
+  // Set type id for call site info.
+  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
+    CSInfo = MachineFunction::CallSiteInfo(*CB);
 
   // Check callee args/returns for SVE registers and set calling convention
   // accordingly.
@@ -24173,13 +24178,6 @@ static SDValue combineStoreValueFPToInt(StoreSDNode *ST,
   SDLoc DL(ST);
   SDValue VecFP = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecSrcVT, FPSrc);
   SDValue VecConv = DAG.getNode(Value.getOpcode(), DL, VecDstVT, VecFP);
-
-  if (ST->isTruncatingStore()) {
-    EVT NewVecDstVT = EVT::getVectorVT(
-        *DAG.getContext(), ST->getMemoryVT(),
-        VecDstVT.getFixedSizeInBits() / ST->getMemoryVT().getFixedSizeInBits());
-    VecConv = DAG.getNode(AArch64ISD::NVCAST, DL, NewVecDstVT, VecConv);
-  }
 
   SDValue Zero = DAG.getVectorIdxConstant(0, DL);
   SDValue Extracted =
