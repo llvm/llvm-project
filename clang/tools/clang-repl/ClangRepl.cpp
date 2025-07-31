@@ -185,7 +185,7 @@ struct ReplListCompleter {
   clang::Interpreter &MainInterp;
   ReplListCompleter(clang::IncrementalCompilerBuilder &CB,
                     clang::Interpreter &Interp)
-      : CB(CB), MainInterp(Interp) {};
+      : CB(CB), MainInterp(Interp){};
 
   std::vector<llvm::LineEditor::Completion> operator()(llvm::StringRef Buffer,
                                                        size_t Pos) const;
