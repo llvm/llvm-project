@@ -1111,9 +1111,9 @@ bool DependenceInfo::isKnownPredicate(ICmpInst::Predicate Pred, const SCEV *X,
   }
 }
 
-/// Compare to see if S is less than Size, using isKnownNegative(S - max(Size, 1))
-/// with some extra checking if S is an AddRec and we can prove less-than using
-/// the loop bounds.
+/// Compare to see if S is less than Size, using isKnownNegative(S - Size) with
+/// some extra checking if S is an AddRec and we can prove less-than using the
+/// loop bounds.
 bool DependenceInfo::isKnownLessThan(const SCEV *S, const SCEV *Size) const {
   // First unify to the same type
   auto *SType = dyn_cast<IntegerType>(S->getType());
@@ -1154,8 +1154,7 @@ bool DependenceInfo::isKnownLessThan(const SCEV *S, const SCEV *Size) const {
     }
 
   // Check using normal isKnownNegative
-  const SCEV *LimitedBound =
-      SE->getMinusSCEV(S, SE->getSMaxExpr(Size, SE->getOne(Size->getType())));
+  const SCEV *LimitedBound = SE->getMinusSCEV(S, Size);
   return SE->isKnownNegative(LimitedBound);
 }
 

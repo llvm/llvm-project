@@ -647,7 +647,7 @@ define void @coeff_may_negative(ptr %a, i32 %k) {
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.0, align 1
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
-; CHECK-NEXT:    da analyze - consistent output [-1]!
+; CHECK-NEXT:    da analyze - output [*|<]!
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.1, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
 ; CHECK-NEXT:    da analyze - none!
 ;
@@ -677,14 +677,15 @@ exit:
 ;   i++;
 ; } while (i < k);
 ;
-; We can infer that the value of k is non-negative from the nsw flag.
+; FIXME: In principle, we can infer that the value of k is non-negative from
+; the nsw flag.
 ;
 define void @coeff_positive(ptr %a, i32 %k) {
 ; CHECK-LABEL: 'coeff_positive'
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.0, align 1
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
-; CHECK-NEXT:    da analyze - consistent output [-1]!
+; CHECK-NEXT:    da analyze - output [*|<]!
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.1, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
 ; CHECK-NEXT:    da analyze - none!
 ;
