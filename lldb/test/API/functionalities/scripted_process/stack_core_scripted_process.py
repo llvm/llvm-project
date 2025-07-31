@@ -206,7 +206,7 @@ class StackCoreScriptedThread(ScriptedThread):
                     stop_reason["type"] = lldb.eStopReasonException
                     stop_reason["data"][
                         "desc"
-                    ] = self.corefile_thread.GetStopDescription(100)
+                    ] = self.corefile_thread.stop_description
                 elif self.scripted_process.arch == "x86_64":
                     stop_reason["type"] = lldb.eStopReasonSignal
                     stop_reason["data"]["signal"] = signal.SIGTRAP
