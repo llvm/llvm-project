@@ -1127,8 +1127,7 @@ bool DependenceInfo::isKnownLessThan(const SCEV *S, const SCEV *Size) const {
 
   // Special check for addrecs using BE taken count
   if (const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(S))
-    if (AddRec->isAffine() && AddRec->hasNoSignedWrap() &&
-        AddRec->hasNoUnsignedWrap()) {
+    if (AddRec->isAffine() && AddRec->hasNoSignedWrap()) {
       const SCEV *BECount = SE->getBackedgeTakenCount(AddRec->getLoop());
       const SCEV *Start = AddRec->getStart();
       const SCEV *Step = AddRec->getStepRecurrence(*SE);
