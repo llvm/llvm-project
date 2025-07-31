@@ -943,6 +943,7 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
     case Type::HLSLInlineSpirv:
     case Type::PredefinedSugar:
       cgm.errorNYI("CIRGenFunction::emitVariablyModifiedType");
+      break;
 
 #define TYPE(Class, Base)
 #define ABSTRACT_TYPE(Class, Base)
