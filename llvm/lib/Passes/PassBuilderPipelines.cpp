@@ -207,7 +207,7 @@ static cl::opt<bool>
 
 static cl::opt<bool> EnableLoopFusion("enable-loopfusion", cl::init(false),
                                       cl::Hidden,
-                                      cl::desc("Enable the LoopFusion Pass"));
+                                      cl::desc("Enable the LoopFuse Pass"));
 
 static cl::opt<bool> EnableUnrollAndJam("enable-unroll-and-jam",
                                         cl::init(false), cl::Hidden,
@@ -644,6 +644,8 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   if (EnableConstraintElimination)
     FPM.addPass(ConstraintEliminationPass());
 
+  // FIXME: This may not be the right place in the pipeline.
+  // We need to have the data to support the right place.
   if (PTO.LoopFusion)
     FPM.addPass(LoopFusePass());
 
