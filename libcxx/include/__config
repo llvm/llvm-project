@@ -64,9 +64,21 @@
 
 // HARDENING {
 
-// TODO: Remove in LLVM 21. We're making this an error to catch folks who might not have migrated.
-#  ifdef _LIBCPP_ENABLE_ASSERTIONS
-#    error "_LIBCPP_ENABLE_ASSERTIONS has been removed, please use _LIBCPP_HARDENING_MODE instead"
+// TODO(LLVM 23): Remove this. We're making these an error to catch folks who might not have migrated.
+//       Since hardening went through several changes (many of which impacted user-facing macros),
+//       we're keeping these checks around for a bit longer than usual. Failure to properly configure
+//       hardening results in checks being dropped silently, which is a pretty big deal.
+#  if defined(_LIBCPP_ENABLE_ASSERTIONS)
+#    error "_LIBCPP_ENABLE_ASSERTIONS has been removed, please use _LIBCPP_HARDENING_MODE=<mode> instead (see docs)"
+#  endif
+#  if defined(_LIBCPP_ENABLE_HARDENED_MODE)
+#    error "_LIBCPP_ENABLE_HARDENED_MODE has been removed, please use _LIBCPP_HARDENING_MODE=<mode> instead (see docs)"
+#  endif
+#  if defined(_LIBCPP_ENABLE_SAFE_MODE)
+#    error "_LIBCPP_ENABLE_SAFE_MODE has been removed, please use _LIBCPP_HARDENING_MODE=<mode> instead (see docs)"
+#  endif
+#  if defined(_LIBCPP_ENABLE_DEBUG_MODE)
+#    error "_LIBCPP_ENABLE_DEBUG_MODE has been removed, please use _LIBCPP_HARDENING_MODE=<mode> instead (see docs)"
 #  endif
 
 // The library provides the macro `_LIBCPP_HARDENING_MODE` which can be set to one of the following values:
