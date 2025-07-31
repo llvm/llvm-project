@@ -328,6 +328,22 @@ void LinkerDriver::parseSwaprun(StringRef arg) {
   } while (!arg.empty());
 }
 
+void LinkerDriver::parseSameAddress(StringRef arg) {
+  auto mangledName = getArm64ECMangledFunctionName(arg);
+  Symbol *sym = ctx.symtab.addUndefined(mangledName ? *mangledName : arg);
+
+  // MSVC appears to generate thunks even for non-hybrid ARM64EC images.
+  // As a side effect, the native symbol is pulled in. Since this is used
+  // in the CRT for thread-local constructors, it results in the image
+  // containing unnecessary native code. As these thunks don't appear to
+  // be useful, we limit this behavior to actual hybrid targets. This may
+  // change if compatibility becomes necessary.
+  if (ctx.config.machine != ARM64X)
+    return;
+  Symbol *nativeSym = ctx.hybridSymtab->addUndefined(arg);
+  ctx.config.sameAddresses.emplace_back(sym, nativeSym);
+}
+
 // An RAII temporary file class that automatically removes a temporary file.
 namespace {
 class TemporaryFile {
