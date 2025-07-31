@@ -3013,6 +3013,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_maxnum:
   case Builtin::BI__builtin_elementwise_minimum:
   case Builtin::BI__builtin_elementwise_maximum:
+  case Builtin::BI__builtin_elementwise_minimumnum:
+  case Builtin::BI__builtin_elementwise_maximumnum:
   case Builtin::BI__builtin_elementwise_atan2:
   case Builtin::BI__builtin_elementwise_fmod:
   case Builtin::BI__builtin_elementwise_pow:
@@ -15891,9 +15893,7 @@ ExprResult Sema::BuiltinMatrixTranspose(CallExpr *TheCall,
 // Get and verify the matrix dimensions.
 static std::optional<unsigned>
 getAndVerifyMatrixDimension(Expr *Expr, StringRef Name, Sema &S) {
-  SourceLocation ErrorPos;
-  std::optional<llvm::APSInt> Value =
-      Expr->getIntegerConstantExpr(S.Context, &ErrorPos);
+  std::optional<llvm::APSInt> Value = Expr->getIntegerConstantExpr(S.Context);
   if (!Value) {
     S.Diag(Expr->getBeginLoc(), diag::err_builtin_matrix_scalar_unsigned_arg)
         << Name;

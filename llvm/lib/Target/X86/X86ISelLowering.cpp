@@ -5001,8 +5001,11 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
 
   EVT VT = Op.getValueType();
   unsigned SizeInBits = VT.getSizeInBits();
-  assert((SizeInBits % EltSizeInBits) == 0 && "Can't split constant!");
   unsigned NumElts = SizeInBits / EltSizeInBits;
+
+  // Can't split constant.
+  if ((SizeInBits % EltSizeInBits) != 0)
+    return false;
 
   // Bitcast a source array of element bits to the target size.
   auto CastBitData = [&](APInt &UndefSrcElts, ArrayRef<APInt> SrcEltBits) {
@@ -45059,6 +45062,10 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   unsigned NumElts = DemandedElts.getBitWidth();
 
   switch (Op.getOpcode()) {
+  case X86ISD::GlobalBaseReg:
+  case X86ISD::Wrapper:
+  case X86ISD::WrapperRIP:
+    return true;
   case X86ISD::BLENDI:
   case X86ISD::PSHUFD:
   case X86ISD::UNPCKL:
@@ -45098,27 +45105,34 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
     bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
 
   switch (Op.getOpcode()) {
+  // SSE vector insert/extracts use modulo indices.
+  case X86ISD::PINSRB:
+  case X86ISD::PINSRW:
+  case X86ISD::PEXTRB:
+  case X86ISD::PEXTRW:
+    return false;
   // SSE vector multiplies are either inbounds or saturate.
   case X86ISD::VPMADDUBSW:
   case X86ISD::VPMADDWD:
+    return false;
   // SSE vector shifts handle out of bounds shift amounts.
   case X86ISD::VSHLI:
   case X86ISD::VSRLI:
   case X86ISD::VSRAI:
     return false;
-    // SSE blends.
+  // SSE blends.
   case X86ISD::BLENDI:
   case X86ISD::BLENDV:
     return false;
-    // SSE target shuffles.
+  // SSE target shuffles.
   case X86ISD::PSHUFD:
   case X86ISD::UNPCKL:
   case X86ISD::UNPCKH:
   case X86ISD::VPERMILPI:
   case X86ISD::VPERMV3:
     return false;
-    // SSE comparisons handle all icmp/fcmp cases.
-    // TODO: Add CMPM/MM with test coverage.
+  // SSE comparisons handle all icmp/fcmp cases.
+  // TODO: Add CMPM/MM with test coverage.
   case X86ISD::CMPP:
   case X86ISD::PCMPEQ:
   case X86ISD::PCMPGT:
@@ -58057,14 +58071,24 @@ static SDValue combineX86CloadCstore(SDNode *N, SelectionDAG &DAG) {
     Ops[3] = Op1.getOperand(0);
     Ops[4] = Op1.getOperand(1);
   } else if (Op1.getOpcode() == ISD::AND && Sub.getValue(0).use_empty()) {
+    SDValue Src = Op1;
+    SDValue Op10 = Op1.getOperand(0);
+    if (Op10.getOpcode() == ISD::XOR && isAllOnesConstant(Op10.getOperand(1))) {
+      // res, flags2 = sub 0, (and (xor X, -1), Y)
+      // cload/cstore ..., cond_ne, flag2
+      // ->
+      // res, flags2 = sub 0, (and X, Y)
+      // cload/cstore ..., cond_e, flag2
+      Src = DAG.getNode(ISD::AND, DL, Op1.getValueType(), Op10.getOperand(0),
+                        Op1.getOperand(1));
+      Ops[3] = DAG.getTargetConstant(X86::COND_E, DL, MVT::i8);
+    }
     // res, flags2 = sub 0, (and X, Y)
-    // cload/cstore ..., cond_ne, flag2
+    // cload/cstore ..., cc, flag2
     // ->
-    // res, flags2 = and X, Y
-    // cload/cstore ..., cond_ne, flag2
-    Ops[4] = DAG.getNode(X86ISD::AND, DL, Sub->getVTList(), Op1.getOperand(0),
-                         Op1.getOperand(1))
-                 .getValue(1);
+    // res, flags2 = cmp (and X, Y), 0
+    // cload/cstore ..., cc, flag2
+    Ops[4] = DAG.getNode(X86ISD::CMP, DL, MVT::i32, Src, Sub.getOperand(0));
   } else {
     return SDValue();
   }

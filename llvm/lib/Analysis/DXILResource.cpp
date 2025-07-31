@@ -995,18 +995,7 @@ SmallVector<dxil::ResourceInfo *> DXILResourceMap::findByUse(const Value *Key) {
 //===----------------------------------------------------------------------===//
 
 void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
-  struct Binding {
-    ResourceClass RC;
-    uint32_t Space;
-    uint32_t LowerBound;
-    uint32_t UpperBound;
-    Value *Name;
-    Binding(ResourceClass RC, uint32_t Space, uint32_t LowerBound,
-            uint32_t UpperBound, Value *Name)
-        : RC(RC), Space(Space), LowerBound(LowerBound), UpperBound(UpperBound),
-          Name(Name) {}
-  };
-  SmallVector<Binding> Bindings;
+  hlsl::BindingInfoBuilder Builder;
 
   // collect all of the llvm.dx.resource.handlefrombinding calls;
   // make a note if there is llvm.dx.resource.handlefromimplicitbinding
@@ -1036,132 +1025,20 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
           assert((Size < 0 || (unsigned)LowerBound + Size - 1 <= UINT32_MAX) &&
                  "upper bound register overflow");
           uint32_t UpperBound = Size < 0 ? UINT32_MAX : LowerBound + Size - 1;
-          Bindings.emplace_back(RTI.getResourceClass(), Space, LowerBound,
-                                UpperBound, Name);
+          Builder.trackBinding(RTI.getResourceClass(), Space, LowerBound,
+                               UpperBound, Name);
         }
       break;
     }
     case Intrinsic::dx_resource_handlefromimplicitbinding: {
-      ImplicitBinding = true;
+      HasImplicitBinding = true;
       break;
     }
     }
   }
 
-  // sort all the collected bindings
-  llvm::stable_sort(Bindings, [](auto &LHS, auto &RHS) {
-    return std::tie(LHS.RC, LHS.Space, LHS.LowerBound) <
-           std::tie(RHS.RC, RHS.Space, RHS.LowerBound);
-  });
-
-  // remove duplicates
-  Binding *NewEnd = llvm::unique(Bindings, [](auto &LHS, auto &RHS) {
-    return std::tie(LHS.RC, LHS.Space, LHS.LowerBound, LHS.UpperBound,
-                    LHS.Name) == std::tie(RHS.RC, RHS.Space, RHS.LowerBound,
-                                          RHS.UpperBound, RHS.Name);
-  });
-  if (NewEnd != Bindings.end())
-    Bindings.erase(NewEnd);
-
-  // Go over the sorted bindings and build up lists of free register ranges
-  // for each binding type and used spaces. Bindings are sorted by resource
-  // class, space, and lower bound register slot.
-  BindingSpaces *BS = &SRVSpaces;
-  for (const Binding &B : Bindings) {
-    if (BS->RC != B.RC)
-      // move to the next resource class spaces
-      BS = &getBindingSpaces(B.RC);
-
-    RegisterSpace *S = BS->Spaces.empty() ? &BS->Spaces.emplace_back(B.Space)
-                                          : &BS->Spaces.back();
-    assert(S->Space <= B.Space && "bindings not sorted correctly?");
-    if (B.Space != S->Space)
-      // add new space
-      S = &BS->Spaces.emplace_back(B.Space);
-
-    // the space is full - set flag to report overlapping binding later
-    if (S->FreeRanges.empty()) {
-      OverlappingBinding = true;
-      continue;
-    }
-
-    // adjust the last free range lower bound, split it in two, or remove it
-    BindingRange &LastFreeRange = S->FreeRanges.back();
-    assert(LastFreeRange.UpperBound == UINT32_MAX);
-    if (LastFreeRange.LowerBound == B.LowerBound) {
-      if (B.UpperBound < UINT32_MAX)
-        LastFreeRange.LowerBound = B.UpperBound + 1;
-      else
-        S->FreeRanges.pop_back();
-    } else if (LastFreeRange.LowerBound < B.LowerBound) {
-      LastFreeRange.UpperBound = B.LowerBound - 1;
-      if (B.UpperBound < UINT32_MAX)
-        S->FreeRanges.emplace_back(B.UpperBound + 1, UINT32_MAX);
-    } else {
-      OverlappingBinding = true;
-      if (B.UpperBound < UINT32_MAX)
-        LastFreeRange.LowerBound =
-            std::max(LastFreeRange.LowerBound, B.UpperBound + 1);
-      else
-        S->FreeRanges.pop_back();
-    }
-  }
-}
-
-// returns std::nulopt if binding could not be found in given space
-std::optional<uint32_t>
-DXILResourceBindingInfo::findAvailableBinding(dxil::ResourceClass RC,
-                                              uint32_t Space, int32_t Size) {
-  BindingSpaces &BS = getBindingSpaces(RC);
-  RegisterSpace &RS = BS.getOrInsertSpace(Space);
-  return RS.findAvailableBinding(Size);
-}
-
-DXILResourceBindingInfo::RegisterSpace &
-DXILResourceBindingInfo::BindingSpaces::getOrInsertSpace(uint32_t Space) {
-  for (auto *I = Spaces.begin(); I != Spaces.end(); ++I) {
-    if (I->Space == Space)
-      return *I;
-    if (I->Space < Space)
-      continue;
-    return *Spaces.insert(I, Space);
-  }
-  return Spaces.emplace_back(Space);
-}
-
-std::optional<uint32_t>
-DXILResourceBindingInfo::RegisterSpace::findAvailableBinding(int32_t Size) {
-  assert((Size == -1 || Size > 0) && "invalid size");
-
-  if (FreeRanges.empty())
-    return std::nullopt;
-
-  // unbounded array
-  if (Size == -1) {
-    BindingRange &Last = FreeRanges.back();
-    if (Last.UpperBound != UINT32_MAX)
-      // this space is already occupied by an unbounded array
-      return std::nullopt;
-    uint32_t RegSlot = Last.LowerBound;
-    FreeRanges.pop_back();
-    return RegSlot;
-  }
-
-  // single resource or fixed-size array
-  for (BindingRange &R : FreeRanges) {
-    // compare the size as uint64_t to prevent overflow for range (0,
-    // UINT32_MAX)
-    if ((uint64_t)R.UpperBound - R.LowerBound + 1 < (uint64_t)Size)
-      continue;
-    uint32_t RegSlot = R.LowerBound;
-    // This might create a range where (LowerBound == UpperBound + 1). When
-    // that happens, the next time this function is called the range will
-    // skipped over by the check above (at this point Size is always > 0).
-    R.LowerBound += Size;
-    return RegSlot;
-  }
-
-  return std::nullopt;
+  Bindings = Builder.calculateBindingInfo(
+      [this](auto, auto) { this->HasOverlappingBinding = true; });
 }
 
 //===----------------------------------------------------------------------===//
