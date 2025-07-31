@@ -1732,7 +1732,13 @@ private:
     Fortran::lower::SymbolBox resultSymBox = lookupSymbol(resultSym);
     mlir::Location loc = toLocation();
     if (!resultSymBox) {
-      mlir::emitError(loc, "internal error when processing function return");
+      // Create a dummy undefined value of the expected return type.
+      // This prevents improper cleanup of StatementContext, which would lead
+      // to a crash due to a block with no terminator. See issue #126452.
+      mlir::FunctionType funcType = builder->getFunction().getFunctionType();
+      mlir::Type resultType = funcType.getResult(0);
+      mlir::Value undefResult = builder->create<fir::UndefOp>(loc, resultType);
+      genExitRoutine(false, undefResult);
       return;
     }
     mlir::Value resultVal = resultSymBox.match(
