@@ -6,6 +6,21 @@ CHECK:      Format: COFF-i386
 CHECK-NEXT: Arch: i386
 CHECK-NEXT: AddressSize: 32bit
 CHECK-NEXT: PseudoReloc [
+CHECK-NEXT:  Entry {
+CHECK-NEXT:   Symbol: 0x{{[0-9A-Z]+}}
+CHECK-NEXT:   Target: 0x{{[0-9A-Z]+}}
+CHECK-NEXT:   BitWidth: {{[0-9]+}}
+CHECK-NEXT:  }
+CHECK-NEXT:  Entry {
+CHECK-NEXT:   Symbol: 0x{{[0-9A-Z]+}}
+CHECK-NEXT:   Target: 0x{{[0-9A-Z]+}}
+CHECK-NEXT:   BitWidth: {{[0-9]+}}
+CHECK-NEXT:  }
+CHECK-NEXT:  Entry {
+CHECK-NEXT:   Symbol: 0x{{[0-9A-Z]+}}
+CHECK-NEXT:   Target: 0x{{[0-9A-Z]+}}
+CHECK-NEXT:   BitWidth: {{[0-9]+}}
+CHECK-NEXT:  }
 CHECK-NEXT: ]
 
 NOSYM-NOT: PseudoReloc

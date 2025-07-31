@@ -2021,17 +2021,64 @@ void COFFDumper::printCOFFPseudoReloc() {
     if (Sym.takeError())
       continue;
     auto Name = Obj->getSymbolName(*Sym);
-    if (*Name == RelocBeginName)
-      RelocBegin = *Sym;
-    else if (*Name == RelocEndName)
-      RelocEnd = *Sym;
+    if (Name.takeError())
+      continue;
+    if (*Name == RelocBeginName) {
+      if (Sym->getSectionNumber() > 0)
+        RelocBegin = *Sym;
+    } else if (*Name == RelocEndName) {
+      if (Sym->getSectionNumber() > 0)
+        RelocEnd = *Sym;
+    }
   }
   if (!RelocBegin.getRawPtr() || !RelocEnd.getRawPtr()) {
     W.startLine()
         << "The symbols for runtime pseudo-relocation are not found\n";
     return;
   }
+
+  ArrayRef<uint8_t> Data;
+  auto Section = Obj->getSection(RelocBegin.getSectionNumber());
+  if (auto E = Section.takeError()) {
+    reportError(std::move(E), Obj->getFileName());
+    return;
+  }
+  if (auto E = Obj->getSectionContents(*Section, Data)) {
+    reportError(std::move(E), Obj->getFileName());
+    return;
+  }
+  ArrayRef<uint8_t> RawRelocs =
+      Data.take_front(RelocEnd.getValue()).drop_front(RelocBegin.getValue());
+  struct alignas(4) PseudoRelocationHeader {
+    uint32_t Zero1;
+    uint32_t Zero2;
+    uint32_t Signature;
+  };
+  static const PseudoRelocationHeader HeaderV2 = {0, 0, 1};
+  if (RawRelocs.size() < sizeof(HeaderV2) ||
+      (memcmp(RawRelocs.data(), &HeaderV2, sizeof(HeaderV2)) != 0)) {
+    reportWarning(
+        createStringError("Invalid runtime pseudo-relocation records"),
+        Obj->getFileName());
+    return;
+  }
+  struct alignas(4) PseudoRelocationRecord {
+    uint32_t Symbol;
+    uint32_t Target;
+    uint32_t BitSize;
+  };
+  ArrayRef<PseudoRelocationRecord> RelocRecords(
+      reinterpret_cast<const PseudoRelocationRecord *>(
+          RawRelocs.data() + sizeof(PseudoRelocationHeader)),
+      (RawRelocs.size() - sizeof(PseudoRelocationHeader)) /
+          sizeof(PseudoRelocationRecord));
   ListScope D(W, "PseudoReloc");
+  for (const auto &Reloc : RelocRecords) {
+    DictScope Entry(W, "Entry");
+    W.printHex("Symbol", Reloc.Symbol);
+    W.printHex("Target", Reloc.Target);
+    W.printNumber("BitWidth", Reloc.BitSize);
+  }
 }
 
 void COFFDumper::printCOFFResources() {
