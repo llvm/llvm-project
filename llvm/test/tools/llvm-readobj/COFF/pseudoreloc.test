@@ -8,16 +8,19 @@ CHECK-NEXT: AddressSize: 32bit
 CHECK-NEXT: PseudoReloc [
 CHECK-NEXT:  Entry {
 CHECK-NEXT:   Symbol: 0x{{[0-9A-Z]+}}
+CHECK-NEXT:   SymbolName: sym1
 CHECK-NEXT:   Target: 0x{{[0-9A-Z]+}}
 CHECK-NEXT:   BitWidth: {{[0-9]+}}
 CHECK-NEXT:  }
 CHECK-NEXT:  Entry {
 CHECK-NEXT:   Symbol: 0x{{[0-9A-Z]+}}
+CHECK-NEXT:   SymbolName: sym2
 CHECK-NEXT:   Target: 0x{{[0-9A-Z]+}}
 CHECK-NEXT:   BitWidth: {{[0-9]+}}
 CHECK-NEXT:  }
 CHECK-NEXT:  Entry {
 CHECK-NEXT:   Symbol: 0x{{[0-9A-Z]+}}
+CHECK-NEXT:   SymbolName: sym1
 CHECK-NEXT:   Target: 0x{{[0-9A-Z]+}}
 CHECK-NEXT:   BitWidth: {{[0-9]+}}
 CHECK-NEXT:  }

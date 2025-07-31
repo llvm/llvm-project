@@ -2072,10 +2072,38 @@ void COFFDumper::printCOFFPseudoReloc() {
           RawRelocs.data() + sizeof(PseudoRelocationHeader)),
       (RawRelocs.size() - sizeof(PseudoRelocationHeader)) /
           sizeof(PseudoRelocationRecord));
+
+  // Cache of symbol searched at least once in IAT
+  DenseMap<uint32_t, StringRef> ImportedSymbols;
+
   ListScope D(W, "PseudoReloc");
   for (const auto &Reloc : RelocRecords) {
     DictScope Entry(W, "Entry");
     W.printHex("Symbol", Reloc.Symbol);
+
+    // find and print the pointed symbol from IAT
+    [&]() {
+      for (auto D : Obj->import_directories()) {
+        uint32_t RVA;
+        if (auto E = D.getImportAddressTableRVA(RVA))
+          reportError(std::move(E), Obj->getFileName());
+        if (Reloc.Symbol < RVA)
+          continue;
+        for (auto S : D.imported_symbols()) {
+          if (RVA == Reloc.Symbol) {
+            if (auto E = S.getSymbolName(ImportedSymbols[RVA]))
+              reportError(std::move(E), Obj->getFileName());
+            return;
+          }
+          RVA += Obj->is64() ? 8 : 4;
+        }
+      }
+    }();
+    if (auto Ite = ImportedSymbols.find(Reloc.Symbol);
+        Ite != ImportedSymbols.end()) {
+      W.printString("SymbolName", Ite->second);
+    }
+
     W.printHex("Target", Reloc.Target);
     W.printNumber("BitWidth", Reloc.BitSize);
   }
