@@ -291,10 +291,12 @@ public:
                             SmallVectorImpl<Value> &valuesOut,
                             SmallVectorImpl<NamedAttribute> &attrsOut);
 
-  /// Converts the parameter and result attributes in `argsAttr` and `resAttr`
-  /// and add them to the `callOp`.
-  void convertParameterAttributes(llvm::CallBase *call, ArrayAttr &argsAttr,
-                                  ArrayAttr &resAttr, OpBuilder &builder);
+  /// Converts the argument and result attributes attached to `call` and adds
+  /// them to `attrsOp`. For intrinsic calls, filters out attributes
+  /// corresponding to immediate arguments specified by `immArgPositions`.
+  void convertArgAndResultAttrs(llvm::CallBase *call,
+                                ArgAndResultAttrsOpInterface attrsOp,
+                                ArrayRef<unsigned> immArgPositions = {});
 
   /// Whether the importer should try to convert all intrinsics to
   /// llvm.call_intrinsic instead of dialect supported operations.
@@ -378,19 +380,12 @@ private:
                                                   bool &isIncompatibleCall);
   /// Returns the callee name, or an empty symbol if the call is not direct.
   FlatSymbolRefAttr convertCalleeName(llvm::CallBase *callInst);
-  /// Converts the parameter and result attributes attached to `func` and adds
+  /// Converts the argument and result attributes attached to `func` and adds
   /// them to the `funcOp`.
-  void convertParameterAttributes(llvm::Function *func, LLVMFuncOp funcOp,
-                                  OpBuilder &builder);
-  /// Converts the AttributeSet of one parameter in LLVM IR to a corresponding
-  /// DictionaryAttr for the LLVM dialect.
-  DictionaryAttr convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
-                                           OpBuilder &builder);
-  /// Converts the parameter and result attributes attached to `call` and adds
-  /// them to the `callOp`. Implemented in terms of the the public definition of
-  /// convertParameterAttributes.
-  void convertParameterAttributes(llvm::CallBase *call, CallOpInterface callOp,
-                                  OpBuilder &builder);
+  void convertArgAndResultAttrs(llvm::Function *func, LLVMFuncOp funcOp);
+  /// Converts the argument or result attributes in `llvmAttrSet` to a
+  /// corresponding MLIR LLVM dialect attribute dictionary.
+  DictionaryAttr convertArgOrResultAttrSet(llvm::AttributeSet llvmAttrSet);
   /// Converts the attributes attached to `inst` and adds them to the `op`.
   LogicalResult convertCallAttributes(llvm::CallInst *inst, CallOp op);
   /// Converts the attributes attached to `inst` and adds them to the `op`.
