@@ -2309,10 +2309,12 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 /// ...
 /// %EVLPhi = EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI [ %StartV, %vector.ph ],
 ///                                               [ %NextEVLIV, %vector.body ]
-/// %AVL = sub original TC, %EVLPhi
+/// %AVL = phi [ trip-count, %vector.ph ], [ %NextAVL, %vector.body ]
 /// %VPEVL = EXPLICIT-VECTOR-LENGTH %AVL
 /// ...
-/// %NextEVLIV = add IVSize (cast i32 %VPEVVL to IVSize), %EVLPhi
+/// %OpEVL = cast i32 %VPEVL to IVSize
+/// %NextEVLIV = add IVSize %OpEVL, %EVLPhi
+/// %NextAVL = sub IVSize nuw %AVL, %OpEVL
 /// ...
 ///
 /// If MaxSafeElements is provided, the function adds the following recipes:
@@ -2323,12 +2325,14 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 /// ...
 /// %EVLPhi = EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI [ %StartV, %vector.ph ],
 ///                                               [ %NextEVLIV, %vector.body ]
-/// %AVL = sub original TC, %EVLPhi
+/// %AVL = phi [ trip-count, %vector.ph ], [ %NextAVL, %vector.body ]
 /// %cmp = cmp ult %AVL, MaxSafeElements
 /// %SAFE_AVL = select %cmp, %AVL, MaxSafeElements
 /// %VPEVL = EXPLICIT-VECTOR-LENGTH %SAFE_AVL
 /// ...
-/// %NextEVLIV = add IVSize (cast i32 %VPEVL to IVSize), %EVLPhi
+/// %OpEVL = cast i32 %VPEVL to IVSize
+/// %NextEVLIV = add IVSize %OpEVL, %EVLPhi
+/// %NextAVL = sub IVSize nuw %AVL, %OpEVL
 /// ...
 ///
 bool VPlanTransforms::tryAddExplicitVectorLength(
