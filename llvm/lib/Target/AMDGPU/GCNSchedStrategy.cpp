@@ -896,15 +896,10 @@ GCNScheduleDAGMILive::getRegionLiveInMap() const {
   assert(!Regions.empty());
   std::vector<MachineInstr *> RegionFirstMIs;
   RegionFirstMIs.reserve(Regions.size());
-  auto I = Regions.rbegin(), E = Regions.rend();
-  do {
-    const MachineBasicBlock *MBB = I->first->getParent();
-    auto *MI = &*skipDebugInstructionsForward(I->first, I->second);
-    RegionFirstMIs.push_back(MI);
-    do {
-      ++I;
-    } while (I != E && I->first->getParent() == MBB);
-  } while (I != E);
+  for (auto &[RegionBegin, RegionEnd] : reverse(Regions))
+    RegionFirstMIs.push_back(
+        &*skipDebugInstructionsForward(RegionBegin, RegionEnd));
+
   return getLiveRegMap(RegionFirstMIs, /*After=*/false, *LIS);
 }
 
