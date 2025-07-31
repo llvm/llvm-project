@@ -1827,6 +1827,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop(
             SingleUncountableExitingBlock->getTerminator())) {
       // FIXME: Handle exit conditions with multiple users, more complex exit
       //        conditions than br(icmp(load, loop_inv)).
+      // FIXME: Don't rely on operand ordering for the comparison.
       ICmpInst *Cmp = dyn_cast<ICmpInst>(Br->getCondition());
       if (Cmp && Cmp->hasOneUse() &&
           TheLoop->isLoopInvariant(Cmp->getOperand(1))) {
