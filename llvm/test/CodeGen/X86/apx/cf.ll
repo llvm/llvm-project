@@ -201,7 +201,8 @@ define void @sink_gep(ptr %p, i1 %cond) {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb $1, %sil
 ; CHECK-NEXT:    cfcmovnel %eax, 112(%rdi)
-; CHECK-NEXT:    movl $0, (%rdi)
+; CHECK-NEXT:    cfcmovnel 112(%rdi), %eax
+; CHECK-NEXT:    movl %eax, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
   %0 = getelementptr i8, ptr %p, i64 112
@@ -210,6 +211,7 @@ entry:
 next:
   %1 = bitcast i1 %cond to <1 x i1>
   call void @llvm.masked.store.v1i32.p0(<1 x i32> zeroinitializer, ptr %0, i32 1, <1 x i1> %1)
-  store i32 0, ptr %p, align 4
+  %2 = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr %0, i32 1, <1 x i1> %1, <1 x i32> zeroinitializer)
+  store <1 x i32> %2, ptr %p, align 4
   ret void
 }
