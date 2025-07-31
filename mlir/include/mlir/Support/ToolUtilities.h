@@ -21,10 +21,16 @@
 
 namespace llvm {
 class MemoryBuffer;
+class MemoryBufferRef;
 } // namespace llvm
 
 namespace mlir {
+// A function that processes a chunk of a buffer and writes the result to an
+// output stream.
 using ChunkBufferHandler = function_ref<LogicalResult(
+    std::unique_ptr<llvm::MemoryBuffer> chunkBuffer,
+    const llvm::MemoryBufferRef &sourceBuffer, raw_ostream &os)>;
+using NoSourceChunkBufferHandler = function_ref<LogicalResult(
     std::unique_ptr<llvm::MemoryBuffer> chunkBuffer, raw_ostream &os)>;
 
 extern inline const char *const kDefaultSplitMarker = "// -----";
@@ -43,6 +49,15 @@ extern inline const char *const kDefaultSplitMarker = "// -----";
 LogicalResult
 splitAndProcessBuffer(std::unique_ptr<llvm::MemoryBuffer> originalBuffer,
                       ChunkBufferHandler processChunkBuffer, raw_ostream &os,
+                      llvm::StringRef inputSplitMarker = kDefaultSplitMarker,
+                      llvm::StringRef outputSplitMarker = "");
+
+/// Same as above, but for case where the original buffer is not used while
+/// processing the chunk.
+LogicalResult
+splitAndProcessBuffer(std::unique_ptr<llvm::MemoryBuffer> originalBuffer,
+                      NoSourceChunkBufferHandler processChunkBuffer,
+                      raw_ostream &os,
                       llvm::StringRef inputSplitMarker = kDefaultSplitMarker,
                       llvm::StringRef outputSplitMarker = "");
 } // namespace mlir
