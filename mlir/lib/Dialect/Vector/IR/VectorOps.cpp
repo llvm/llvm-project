@@ -5916,14 +5916,13 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
   }
 
   // shape_cast(constant) -> constant
-  if (auto splatAttr =
-          llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource()))
-    return splatAttr.reshape(getType());
+  if (auto denseAttr =
+          dyn_cast_if_present<DenseElementsAttr>(adaptor.getSource()))
+    return denseAttr.reshape(getType());
 
   // shape_cast(poison) -> poison
-  if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getSource())) {
+  if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getSource()))
     return ub::PoisonAttr::get(getContext());
-  }
 
   return {};
 }
@@ -6314,6 +6313,11 @@ LogicalResult vector::TransposeOp::verify() {
 
 std::optional<SmallVector<int64_t, 4>> TransposeOp::getShapeForUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
+}
+
+void TransposeOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                    SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges.front());
 }
 
 namespace {
@@ -7195,6 +7199,23 @@ Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
 
   assert(result && "unknown CombiningKind");
   return selectPassthru(b, mask, result, acc);
+}
+
+//===----------------------------------------------------------------------===//
+// StepOp
+//===----------------------------------------------------------------------===//
+
+void StepOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                               SetIntRangeFn setResultRanges) {
+  auto resultType = cast<VectorType>(getType());
+  if (resultType.isScalable()) {
+    return;
+  }
+  unsigned bitwidth = ConstantIntRanges::getStorageBitwidth(resultType);
+  APInt zero(bitwidth, 0);
+  APInt high(bitwidth, resultType.getDimSize(0) - 1);
+  ConstantIntRanges result = {zero, high, zero, high};
+  setResultRanges(getResult(), result);
 }
 
 //===----------------------------------------------------------------------===//
