@@ -569,20 +569,24 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
       Function.addCFIInstruction(
           Offset, MCCFIInstruction::createRememberState(nullptr));
 
-      if (Function.getBinaryContext().isAArch64())
+      if (Function.getBinaryContext().isAArch64()) {
         // Support for pointer authentication:
         // We need to annotate instructions that modify the RA State, to work
         // out the state of each instruction in MarkRAStates Pass.
-        Function.setInstModifiesRAState(DW_CFA_remember_state, Offset);
+        if (Offset != 0)
+          Function.setInstModifiesRAState(DW_CFA_remember_state, Offset);
+      }
       break;
     case DW_CFA_restore_state:
       Function.addCFIInstruction(Offset,
                                  MCCFIInstruction::createRestoreState(nullptr));
-      if (Function.getBinaryContext().isAArch64())
+      if (Function.getBinaryContext().isAArch64()) {
         // Support for pointer authentication:
         // We need to annotate instructions that modify the RA State, to work
         // out the state of each instruction in MarkRAStates Pass.
-        Function.setInstModifiesRAState(DW_CFA_restore_state, Offset);
+        if (Offset != 0)
+          Function.setInstModifiesRAState(DW_CFA_restore_state, Offset);
+      }
       break;
     case DW_CFA_def_cfa:
       Function.addCFIInstruction(
@@ -649,7 +653,14 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
         // is added to the instruction, to mark that the instruction modifies
         // the RA State. The actual state for instructions are worked out in
         // MarkRAStates based on these annotations.
-        Function.setInstModifiesRAState(DW_CFA_AARCH64_negate_ra_state, Offset);
+        if (Offset != 0)
+          Function.setInstModifiesRAState(DW_CFA_AARCH64_negate_ra_state,
+                                          Offset);
+        else
+          // We cannot Annotate an instruction at Offset == 0.
+          // Instead, we save the initial (Signed) state, and push it to
+          // MarkRAStates' RAStateStack.
+          Function.setInitialRAState(true);
         break;
       }
       if (opts::Verbosity >= 1)
