@@ -6,16 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "hdr/stdint_proxy.h"
+#include "startup/baremetal/fini.h"
+
 #include "src/__support/macros/config.h"
 #include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
-
-extern "C" {
-extern uintptr_t __fini_array_start[];
-extern uintptr_t __fini_array_end[];
-}
 
 using FiniCallback = void(void);
 

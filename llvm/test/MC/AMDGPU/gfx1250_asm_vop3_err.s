@@ -96,3 +96,28 @@ v_ashr_pk_u8_i32 v1, v2, v3, v4 clamp
 // GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // GFX125X-ERR-NEXT:{{^}}v_ashr_pk_u8_i32 v1, v2, v3, v4 clamp
 // GFX125X-ERR-NEXT:{{^}}                                ^
+
+v_cvt_sr_bf8_f16 v1, v2, v3 clamp
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_bf8_f16 v1, v2, v3 clamp
+// GFX125X-ERR-NEXT:{{^}}                            ^
+
+v_cvt_sr_bf8_f16 v1, v2, v3 mul:2
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_bf8_f16 v1, v2, v3 mul:2
+// GFX125X-ERR-NEXT:{{^}}                            ^
+
+v_cvt_sr_fp8_f16 v1, v2, v3 clamp
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_fp8_f16 v1, v2, v3 clamp
+// GFX125X-ERR-NEXT:{{^}}                            ^
+
+v_cvt_sr_fp8_f16 v1, v2, v3 mul:2
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_fp8_f16 v1, v2, v3 mul:2
+// GFX125X-ERR-NEXT:{{^}}                            ^
+
+v_cvt_sr_bf8_f16 v1, v2, v3 byte_sel:4
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid byte_sel value.
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_bf8_f16 v1, v2, v3 byte_sel:4
+// GFX125X-ERR-NEXT:{{^}}                            ^

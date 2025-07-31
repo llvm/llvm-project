@@ -646,8 +646,7 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
   if (!Src || Src->hasUnmodeledSideEffects() ||
       Src->getParent() != MI.getParent() ||
       !RISCVII::isFirstDefTiedToFirstUse(Src->getDesc()) ||
-      !RISCVII::hasVLOp(Src->getDesc().TSFlags) ||
-      !RISCVII::hasVecPolicyOp(Src->getDesc().TSFlags))
+      !RISCVII::hasVLOp(Src->getDesc().TSFlags))
     return false;
 
   // Src's dest needs to have the same EEW as MI's input.
@@ -681,12 +680,14 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
                                               *Src->getParent()->getParent()));
   }
 
-  // If MI was tail agnostic and the VL didn't increase, preserve it.
-  int64_t Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
-  if ((MI.getOperand(5).getImm() & RISCVVType::TAIL_AGNOSTIC) &&
-      RISCV::isVLKnownLE(MI.getOperand(3), SrcVL))
-    Policy |= RISCVVType::TAIL_AGNOSTIC;
-  Src->getOperand(RISCVII::getVecPolicyOpNum(Src->getDesc())).setImm(Policy);
+  if (RISCVII::hasVecPolicyOp(Src->getDesc().TSFlags)) {
+    // If MI was tail agnostic and the VL didn't increase, preserve it.
+    int64_t Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
+    if ((MI.getOperand(5).getImm() & RISCVVType::TAIL_AGNOSTIC) &&
+        RISCV::isVLKnownLE(MI.getOperand(3), SrcVL))
+      Policy |= RISCVVType::TAIL_AGNOSTIC;
+    Src->getOperand(RISCVII::getVecPolicyOpNum(Src->getDesc())).setImm(Policy);
+  }
 
   MRI->constrainRegClass(Src->getOperand(0).getReg(),
                          MRI->getRegClass(MI.getOperand(0).getReg()));

@@ -12,7 +12,7 @@
 namespace hlsl {
 namespace __detail {
 
-constexpr vector<uint, 4> d3d_color_to_ubyte4_impl(vector<float, 4> V) {
+constexpr int4 d3d_color_to_ubyte4_impl(float4 V) {
   // Use the same scaling factor used by FXC, and DXC for DXIL
   // (i.e., 255.001953)
   // https://github.com/microsoft/DirectXShaderCompiler/blob/070d0d5a2beacef9eeb51037a9b04665716fd6f3/lib/HLSL/HLOperationLower.cpp#L666C1-L697C2

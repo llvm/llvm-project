@@ -182,7 +182,7 @@ public:
     return SDValue(Node, R);
   }
 
-  /// Return true if this node is an operand of N.
+  /// Return true if the referenced return value is an operand of N.
   LLVM_ABI bool isOperandOf(const SDNode *N) const;
 
   /// Return the ValueType of the referenced return value.

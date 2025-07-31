@@ -341,6 +341,9 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
     return AMDGPU::getInlineEncodingV2BF16(static_cast<uint32_t>(Imm))
         .value_or(255);
 
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+    return 255;
+
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
   case AMDGPU::OPERAND_KIMM64:

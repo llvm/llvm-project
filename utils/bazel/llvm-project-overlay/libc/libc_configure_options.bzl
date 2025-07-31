@@ -46,4 +46,7 @@ LIBC_CONFIGURE_OPTIONS = [
 
     # Documentation in libc/src/__support/libc_assert.h
     # "LIBC_COPT_USE_C_ASSERT",
+
+    # Documentation in libc/docs/configure.rst
+    "LIBC_THREAD_MODE=LIBC_THREAD_MODE_PLATFORM",
 ]

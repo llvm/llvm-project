@@ -118,6 +118,7 @@ public:
 
   mlir::Value emitBinAdd(const BinOpInfo &op);
   mlir::Value emitBinSub(const BinOpInfo &op);
+  mlir::Value emitBinMul(const BinOpInfo &op);
 
   QualType getPromotionType(QualType ty, bool isDivOpCode = false) {
     if (auto *complexTy = ty->getAs<ComplexType>()) {
@@ -150,16 +151,20 @@ public:
 
   HANDLEBINOP(Add)
   HANDLEBINOP(Sub)
+  HANDLEBINOP(Mul)
 #undef HANDLEBINOP
 };
 } // namespace
 
+#ifndef NDEBUG
+// Only used in asserts
 static const ComplexType *getComplexType(QualType type) {
   type = type.getCanonicalType();
   if (const ComplexType *comp = dyn_cast<ComplexType>(type))
     return comp;
   return cast<ComplexType>(cast<AtomicType>(type)->getValueType());
 }
+#endif // NDEBUG
 
 LValue ComplexExprEmitter::emitBinAssignLValue(const BinaryOperator *e,
                                                mlir::Value &value) {
@@ -577,6 +582,7 @@ mlir::Value ComplexExprEmitter::emitPromoted(const Expr *e,
     return emitBin##OP(emitBinOps(bo, promotionTy));
       HANDLE_BINOP(Add)
       HANDLE_BINOP(Sub)
+      HANDLE_BINOP(Mul)
 #undef HANDLE_BINOP
     default:
       break;
@@ -634,6 +640,31 @@ mlir::Value ComplexExprEmitter::emitBinSub(const BinOpInfo &op) {
   assert(!cir::MissingFeatures::fastMathFlags());
   assert(!cir::MissingFeatures::cgFPOptionsRAII());
   return builder.create<cir::ComplexSubOp>(op.loc, op.lhs, op.rhs);
+}
+
+static cir::ComplexRangeKind
+getComplexRangeAttr(LangOptions::ComplexRangeKind range) {
+  switch (range) {
+  case LangOptions::CX_Full:
+    return cir::ComplexRangeKind::Full;
+  case LangOptions::CX_Improved:
+    return cir::ComplexRangeKind::Improved;
+  case LangOptions::CX_Promoted:
+    return cir::ComplexRangeKind::Promoted;
+  case LangOptions::CX_Basic:
+    return cir::ComplexRangeKind::Basic;
+  case LangOptions::CX_None:
+    // The default value for ComplexRangeKind is Full is no option is selected
+    return cir::ComplexRangeKind::Full;
+  }
+}
+
+mlir::Value ComplexExprEmitter::emitBinMul(const BinOpInfo &op) {
+  assert(!cir::MissingFeatures::fastMathFlags());
+  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+  cir::ComplexRangeKind rangeKind =
+      getComplexRangeAttr(op.fpFeatures.getComplexRange());
+  return builder.create<cir::ComplexMulOp>(op.loc, op.lhs, op.rhs, rangeKind);
 }
 
 LValue CIRGenFunction::emitComplexAssignmentLValue(const BinaryOperator *e) {

@@ -4917,7 +4917,6 @@ combineUnpackingMovIntoLoad(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     return SDValue();
 
   auto *LD = cast<MemSDNode>(N);
-  EVT MemVT = LD->getMemoryVT();
   SDLoc DL(LD);
 
   // the new opcode after we double the number of operands
@@ -4958,9 +4957,9 @@ combineUnpackingMovIntoLoad(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   NewVTs.append(LD->value_begin() + OldNumOutputs, LD->value_end());
 
   // Create the new load
-  SDValue NewLoad =
-      DCI.DAG.getMemIntrinsicNode(Opcode, DL, DCI.DAG.getVTList(NewVTs),
-                                  Operands, MemVT, LD->getMemOperand());
+  SDValue NewLoad = DCI.DAG.getMemIntrinsicNode(
+      Opcode, DL, DCI.DAG.getVTList(NewVTs), Operands, LD->getMemoryVT(),
+      LD->getMemOperand());
 
   // Now we use a combination of BUILD_VECTORs and a MERGE_VALUES node to keep
   // the outputs the same. These nodes will be optimized away in later
@@ -5002,7 +5001,6 @@ static SDValue combinePackingMovIntoStore(SDNode *N,
     return SDValue();
 
   auto *ST = cast<MemSDNode>(N);
-  EVT MemVT = ElementVT.getVectorElementType();
 
   // The new opcode after we double the number of operands.
   NVPTXISD::NodeType Opcode;
@@ -5011,11 +5009,9 @@ static SDValue combinePackingMovIntoStore(SDNode *N,
     // Any packed type is legal, so the legalizer will not have lowered
     // ISD::STORE -> NVPTXISD::Store (unless it's under-aligned). We have to do
     // it here.
-    MemVT = ST->getMemoryVT();
     Opcode = NVPTXISD::StoreV2;
     break;
   case NVPTXISD::StoreV2:
-    MemVT = ST->getMemoryVT();
     Opcode = NVPTXISD::StoreV4;
     break;
   case NVPTXISD::StoreV4:
@@ -5066,7 +5062,7 @@ static SDValue combinePackingMovIntoStore(SDNode *N,
 
   // Now we replace the store
   return DCI.DAG.getMemIntrinsicNode(Opcode, SDLoc(N), N->getVTList(), Operands,
-                                     MemVT, ST->getMemOperand());
+                                     ST->getMemoryVT(), ST->getMemOperand());
 }
 
 static SDValue PerformStoreCombine(SDNode *N,
