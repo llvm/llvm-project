@@ -607,10 +607,6 @@ TYPE_PARSER(
 TYPE_PARSER(
     sourced(construct<OmpEnterClause::Modifier>(Parser<OmpAutomapModifier>{})))
 
-TYPE_PARSER(construct<OmpEnterClause>(
-    maybe(nonemptyList(Parser<OmpEnterClause::Modifier>{}) / ":"),
-    Parser<OmpObjectList>{}))
-
 TYPE_PARSER(sourced(construct<OmpFromClause::Modifier>(
     sourced(construct<OmpFromClause::Modifier>(Parser<OmpExpectation>{}) ||
         construct<OmpFromClause::Modifier>(Parser<OmpMapper>{}) ||
@@ -744,6 +740,10 @@ TYPE_PARSER(construct<OmpDefaultClause>(
     construct<OmpDefaultClause>(
         Parser<OmpDefaultClause::DataSharingAttribute>{}) ||
     construct<OmpDefaultClause>(indirect(Parser<OmpDirectiveSpecification>{}))))
+
+TYPE_PARSER(construct<OmpEnterClause>(
+    maybe(nonemptyList(Parser<OmpEnterClause::Modifier>{}) / ":"),
+    Parser<OmpObjectList>{}))
 
 TYPE_PARSER(construct<OmpFailClause>(
     "ACQ_REL" >> pure(common::OmpMemoryOrderType::Acq_Rel) ||
