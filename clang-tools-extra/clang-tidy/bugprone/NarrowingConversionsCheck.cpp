@@ -622,6 +622,7 @@ void NarrowingConversionsCheck::check(const MatchFinder::MatchResult &Result) {
     handleBinaryOperator(*Result.Context, *Op);
   else if (const auto *Cast = Result.Nodes.getNodeAs<ImplicitCastExpr>("cast"))
     handleImplicitCast(*Result.Context, *Cast);
-  llvm_unreachable("must be binary operator or cast expression");
+  else
+    llvm_unreachable("must be binary operator or cast expression");
 }
 } // namespace clang::tidy::bugprone
