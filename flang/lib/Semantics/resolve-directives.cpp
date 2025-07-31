@@ -2168,7 +2168,8 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareTargetConstruct &x) {
         ResolveOmpObjectList(linkClause->v, Symbol::Flag::OmpDeclareTarget);
       } else if (const auto *enterClause{
                      std::get_if<parser::OmpClause::Enter>(&clause.u)}) {
-        ResolveOmpObjectList(enterClause->v, Symbol::Flag::OmpDeclareTarget);
+        ResolveOmpObjectList(std::get<parser::OmpObjectList>(enterClause->v.t),
+            Symbol::Flag::OmpDeclareTarget);
       }
     }
   }
