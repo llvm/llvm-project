@@ -122,6 +122,38 @@ v_bitop3_b16_e64_dpp v5, v1, v2, v3 bitop3:102 op_sel:[1,1,1,1] dpp8:[0,0,0,0,0,
 // GFX1250: v_bitop3_b16_e64_dpp v5, v1, v2, v3 bitop3:0x66 op_sel:[1,1,1,1] dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0x05,0x7c,0x33,0xd6,0xe9,0x04,0x0e,0xcc,0x01,0x00,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
 
+v_add_min_i32 v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0]
+// GFX1250: v_add_min_i32_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x60,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x77,0x39,0x05]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_add_min_i32 v5, v1, 42, s3 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX1250: v_add_min_i32_e64_dpp v5, v1, 42, s3 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x00,0x60,0xd6,0xea,0x54,0x0d,0x00,0x01,0x77,0x39,0x05]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_add_max_i32 v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0]
+// GFX1250: v_add_max_i32_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5e,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x77,0x39,0x05]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_add_max_i32 v5, v1, 42, s3 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX1250: v_add_max_i32_e64_dpp v5, v1, 42, s3 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x00,0x5e,0xd6,0xea,0x54,0x0d,0x00,0x01,0x77,0x39,0x05]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_add_min_u32 v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0]
+// GFX1250: v_add_min_u32_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x61,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x77,0x39,0x05]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_add_min_u32 v5, v1, 42, s3 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX1250: v_add_min_u32_e64_dpp v5, v1, 42, s3 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x00,0x61,0xd6,0xea,0x54,0x0d,0x00,0x01,0x77,0x39,0x05]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_add_max_u32 v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0]
+// GFX1250: v_add_max_u32_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5f,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x77,0x39,0x05]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_add_max_u32 v5, v1, 42, s3 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX1250: v_add_max_u32_e64_dpp v5, v1, 42, s3 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x00,0x5f,0xd6,0xea,0x54,0x0d,0x00,0x01,0x77,0x39,0x05]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
 v_cvt_pk_bf16_f32_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX1250: v_cvt_pk_bf16_f32_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6d,0xd7,0xe9,0x04,0x02,0x00,0x01,0x77,0x39,0x05]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
