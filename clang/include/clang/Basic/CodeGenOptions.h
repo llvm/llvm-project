@@ -231,6 +231,9 @@ public:
   /// The string to embed in coverage mapping as the current working directory.
   std::string CoverageCompilationDir;
 
+  /// No compilation directory, ignore debug/coverage compilation directory.
+  bool NoCompilationDir;
+
   /// The string to embed in the debug information for the compile unit, if
   /// non-empty.
   std::string DwarfDebugFlags;
