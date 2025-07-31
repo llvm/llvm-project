@@ -326,6 +326,8 @@ Changes to LLDB
   RISC-V code with `disassemble`'s `--byte` option.
 * LLDB added native support for the Model Context Protocol  (MCP). An MCP
   server can be started with the `protocol-server start MCP` command.
+* LLDB can now set breakpoints, show backtraces, and display variables when
+  debugging Wasm with supported runtimes (WAMR and V8).
 
 
 ### Changes to lldb-dap
