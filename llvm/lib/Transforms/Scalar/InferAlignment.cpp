@@ -57,6 +57,43 @@ bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
     }
   }
 
+  // Compute alignment from known bits.
+  auto InferFromKnownBits = [&](Instruction &I, Value *PtrOp) {
+    KnownBits Known = computeKnownBits(PtrOp, DL, &AC, &I, &DT);
+    unsigned TrailZ =
+        std::min(Known.countMinTrailingZeros(), +Value::MaxAlignmentExponent);
+    return Align(1ull << std::min(Known.getBitWidth() - 1, TrailZ));
+  };
+
+  // Propagate alignment between loads and stores that originate from the
+  // same base pointer.
+  DenseMap<Value *, Align> BestBasePointerAligns;
+  auto InferFromBasePointer = [&](Value *PtrOp, Align LoadStoreAlign) {
+    APInt OffsetFromBase =
+        APInt(DL.getIndexTypeSizeInBits(PtrOp->getType()), 0);
+    PtrOp = PtrOp->stripAndAccumulateConstantOffsets(DL, OffsetFromBase, true);
+    // Derive the base pointer alignment from the load/store alignment
+    // and the offset from the base pointer.
+    Align BasePointerAlign =
+        commonAlignment(LoadStoreAlign, OffsetFromBase.getLimitedValue());
+
+    auto [It, Inserted] =
+        BestBasePointerAligns.try_emplace(PtrOp, BasePointerAlign);
+    if (!Inserted) {
+      // If the stored base pointer alignment is better than the
+      // base pointer alignment we derived, we may be able to use it
+      // to improve the load/store alignment. If not, store the
+      // improved base pointer alignment for future iterations.
+      if (It->second > BasePointerAlign) {
+        Align BetterLoadStoreAlign =
+            commonAlignment(It->second, OffsetFromBase.getLimitedValue());
+        return BetterLoadStoreAlign;
+      }
+      It->second = BasePointerAlign;
+    }
+    return LoadStoreAlign;
+  };
+
   for (BasicBlock &BB : F) {
     // We need to reset the map for each block because alignment information
     // can't be propagated across blocks. This is because control flow could
@@ -64,46 +101,13 @@ bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
     // within one block not true in another. Some sort of dominator tree
     // approach could be better, but restricting within a basic block is correct
     // too.
-    DenseMap<Value *, Align> BestBasePointerAligns;
+    BestBasePointerAligns.clear();
 
     for (Instruction &I : BB) {
-      // Compute alignment from known bits.
       Changed |= tryToImproveAlign(
           DL, &I, [&](Value *PtrOp, Align OldAlign, Align PrefAlign) {
-            KnownBits Known = computeKnownBits(PtrOp, DL, &AC, &I, &DT);
-            unsigned TrailZ = std::min(Known.countMinTrailingZeros(),
-                                       +Value::MaxAlignmentExponent);
-            return Align(1ull << std::min(Known.getBitWidth() - 1, TrailZ));
-          });
-
-      // Propagate alignment between loads and stores that originate from the
-      // same base pointer.
-      Changed |= tryToImproveAlign(
-          DL, &I, [&](Value *PtrOp, Align LoadStoreAlign, Align PrefAlign) {
-            APInt OffsetFromBase =
-                APInt(DL.getIndexTypeSizeInBits(PtrOp->getType()), 0);
-            PtrOp = PtrOp->stripAndAccumulateConstantOffsets(DL, OffsetFromBase,
-                                                             true);
-            // Derive the base pointer alignment from the load/store alignment
-            // and the offset from the base pointer.
-            Align BasePointerAlign = commonAlignment(
-                LoadStoreAlign, OffsetFromBase.getLimitedValue());
-
-            auto [It, Inserted] =
-                BestBasePointerAligns.try_emplace(PtrOp, BasePointerAlign);
-            if (!Inserted) {
-              // If the stored base pointer alignment is better than the
-              // base pointer alignment we derived, we may be able to use it
-              // to improve the load/store alignment. If not, store the
-              // improved base pointer alignment for future iterations.
-              if (It->second > BasePointerAlign) {
-                Align BetterLoadStoreAlign = commonAlignment(
-                    It->second, OffsetFromBase.getLimitedValue());
-                return BetterLoadStoreAlign;
-              }
-              It->second = BasePointerAlign;
-            }
-            return LoadStoreAlign;
+            return std::max(InferFromKnownBits(I, PtrOp),
+                            InferFromBasePointer(PtrOp, OldAlign));
           });
     }
   }
