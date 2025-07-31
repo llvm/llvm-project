@@ -40,12 +40,12 @@ status of all important Fortran 2023 features. The table entries are based on th
 | Conditional expressions and arguments                      | N      | |
 | More use of boz constants                                  | P      | All usages other than enum are supported |
 | Intrinsics for extracting tokens from a string             | N      | |
-| Intrinsics for Trig functions that work in degrees         | N      | |
-| Intrinsics for Trig functions that work in half revolutions| N      | |
+| Intrinsics for Trig functions that work in degrees         | Y      | |
+| Intrinsics for Trig functions that work in half revolutions| Y      | |
 | Changes to system_clock                                    | N      | |
 | Changes for conformance with the new IEEE standard         | Y      | |
 | Additional named constants to specify kinds                | Y      | |
-| Extensions for c_f_pointer intrinsic                       | N      | |
+| Extensions for c_f_pointer intrinsic                       | Y      | |
 | Procedures for converting between fortran and c strings    | N      | |
 | The at edit descriptor                                     | N      | |
 | Control over leading zeros in output of real values        | N      | |

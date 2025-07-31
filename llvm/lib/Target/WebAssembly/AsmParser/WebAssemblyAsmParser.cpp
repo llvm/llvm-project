@@ -900,7 +900,8 @@ public:
 
   bool checkDataSection() {
     if (CurrentState != DataSection) {
-      auto *WS = cast<MCSectionWasm>(getStreamer().getCurrentSectionOnly());
+      auto *WS = static_cast<const MCSectionWasm *>(
+          getStreamer().getCurrentSectionOnly());
       if (WS && WS->isText())
         return error("data directive must occur in a data segment: ",
                      Lexer.getTok());
@@ -1218,7 +1219,8 @@ public:
 
   void doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) override {
     // Code below only applies to labels in text sections.
-    auto *CWS = cast<MCSectionWasm>(getStreamer().getCurrentSectionOnly());
+    auto *CWS = static_cast<const MCSectionWasm *>(
+        getStreamer().getCurrentSectionOnly());
     if (!CWS->isText())
       return;
 

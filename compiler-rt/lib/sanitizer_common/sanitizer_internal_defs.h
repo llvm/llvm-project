@@ -209,7 +209,7 @@ typedef long ssize;
 typedef sptr ssize;
 #endif
 
-typedef u64 tid_t;
+typedef u64 ThreadID;
 
 // ----------- ATTENTION -------------
 // This header should NOT include any other headers to avoid portability issues.

@@ -2648,6 +2648,8 @@ void CGDebugInfo::emitVTableSymbol(llvm::GlobalVariable *VTable,
                                    const CXXRecordDecl *RD) {
   if (!CGM.getTarget().getCXXABI().isItaniumFamily())
     return;
+  if (DebugKind <= llvm::codegenoptions::DebugLineTablesOnly)
+    return;
 
   ASTContext &Context = CGM.getContext();
   StringRef SymbolName = "_vtable$";
@@ -6442,7 +6444,7 @@ CodeGenFunction::LexicalScope::~LexicalScope() {
 static std::string SanitizerHandlerToCheckLabel(SanitizerHandler Handler) {
   std::string Label;
   switch (Handler) {
-#define SANITIZER_CHECK(Enum, Name, Version)                                   \
+#define SANITIZER_CHECK(Enum, Name, Version, Msg)                              \
   case Enum:                                                                   \
     Label = "__ubsan_check_" #Name;                                            \
     break;

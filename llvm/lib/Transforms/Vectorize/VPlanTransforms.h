@@ -209,6 +209,18 @@ struct VPlanTransforms {
   /// Replace loop regions with explicit CFG.
   static void dissolveLoopRegions(VPlan &Plan);
 
+  /// Transform EVL loops to use variable-length stepping after region
+  /// dissolution.
+  ///
+  /// Once loop regions are replaced with explicit CFG, EVL loops can step with
+  /// variable vector lengths instead of fixed lengths. This transformation:
+  ///  * Makes EVL-Phi concrete.
+  //   * Removes CanonicalIV and increment.
+  ///  * Replaces fixed-length stepping (branch-on-cond CanonicalIVInc,
+  ///    VectorTripCount) with variable-length stepping (branch-on-cond
+  ///    EVLIVInc, TripCount).
+  static void canonicalizeEVLLoops(VPlan &Plan);
+
   /// Lower abstract recipes to concrete ones, that can be codegen'd. Use \p
   /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
   static void convertToConcreteRecipes(VPlan &Plan, Type &CanonicalIVTy);
@@ -224,6 +236,10 @@ struct VPlanTransforms {
   /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
   static void simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy);
 
+  /// Remove BranchOnCond recipes with true or false conditions together with
+  /// removing dead edges to their successors.
+  static void removeBranchOnConst(VPlan &Plan);
+
   /// If there's a single exit block, optimize its phi recipes that use exiting
   /// IV values by feeding them precomputed end values instead, possibly taken
   /// one step backwards.
@@ -233,6 +249,12 @@ struct VPlanTransforms {
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
+
+  // Materialize vector trip counts for constants early if it can simply be
+  // computed as (Original TC / VF * UF) * VF * UF.
+  static void materializeVectorTripCount(VPlan &Plan, ElementCount BestVF,
+                                         unsigned BestUF,
+                                         PredicatedScalarEvolution &PSE);
 
   /// Try to convert a plan with interleave groups with VF elements to a plan
   /// with the interleave groups replaced by wide loads and stores processing VF
