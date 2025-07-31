@@ -1874,10 +1874,6 @@ class OMPMessageClause final : public OMPClause {
   // Expression of the 'message' clause.
   Stmt *MessageString = nullptr;
 
-  // The message as a StringLiteral in case it is as string literal. This might
-  // be needed during compile time.
-  StringLiteral *MessageStringLiteral = nullptr;
-
   /// Set message string of the clause.
   void setMessageString(Expr *MS) { MessageString = MS; }
 
@@ -1891,14 +1887,10 @@ public:
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
-  /// \param MessageStringLiteral The message as a StringLiteral in case it is
-  /// as string literal. This might be needed during compile time.
   OMPMessageClause(Expr *MS, SourceLocation StartLoc, SourceLocation LParenLoc,
-                   SourceLocation EndLoc,
-                   StringLiteral *MessageStringLiteral = nullptr)
+                   SourceLocation EndLoc)
       : OMPClause(llvm::omp::OMPC_message, StartLoc, EndLoc),
-        LParenLoc(LParenLoc), MessageString(MS),
-        MessageStringLiteral(MessageStringLiteral) {}
+        LParenLoc(LParenLoc), MessageString(MS) {}
 
   /// Build an empty clause.
   OMPMessageClause()
@@ -1911,9 +1903,12 @@ public:
   /// Returns message string of the clause.
   Expr *getMessageString() const { return cast_or_null<Expr>(MessageString); }
 
-  // Returns the source message as a string literal in case it has been a string
-  // literal. Otherwise, return null.
-  StringLiteral *getAsStringLiteral() const { return MessageStringLiteral; }
+  /// Try to evaluate the message string at compile time.
+  std::optional<std::string> tryEvaluateString(ASTContext &Ctx) const {
+    if (Expr *MessageExpr = getMessageString())
+      return MessageExpr->tryEvaluateString(Ctx);
+    return std::nullopt;
+  }
 
   child_range children() {
     return child_range(&MessageString, &MessageString + 1);

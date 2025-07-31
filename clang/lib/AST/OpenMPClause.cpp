@@ -1964,7 +1964,7 @@ void OMPClausePrinter::VisitOMPSeverityClause(OMPSeverityClause *Node) {
 
 void OMPClausePrinter::VisitOMPMessageClause(OMPMessageClause *Node) {
   OS << "message(";
-  if (StringLiteral *SL = Node->getAsStringLiteral())
+  if (StringLiteral *SL = dyn_cast<StringLiteral>(Node->getMessageString()))
     OS << "\"" << SL->getString() << "\"";
   else if (Expr *E = Node->getMessageString())
     E->printPretty(OS, nullptr, Policy);
