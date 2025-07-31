@@ -481,7 +481,7 @@ static void constructSeqOffsettoOrigRowMapping(
     auto StmtAttrSmallerThanNext = [N = NextSeqOff](const PatchLocation &SA) {
       return SA.get() < N;
     };
-    auto SeqStartSmallerThanNext = [N = NextRow](const size_t &Row) {
+    auto SeqStartSmallerThanNext = [N = NextRow](const uint64_t &Row) {
       return Row < N;
     };
     // If both StmtAttrs and SeqStartRows points to value not in
