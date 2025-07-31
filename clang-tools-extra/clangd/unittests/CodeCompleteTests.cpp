@@ -3312,7 +3312,7 @@ TEST(SignatureHelpTest, SkipExplicitObjectParameter) {
                                       *Preamble, Inputs, MarkupKind::PlainText);
     // TODO: We expect 1 signature here, with this signature
     EXPECT_EQ(0U, Result.signatures.size());
-    // EXPECT_THAT(Result.signatures[0], AllOf(sig("([[A&&]], [[int]]) ->
+    // EXPECT_THAT(Result.signatures[0], AllOf(sig("([[auto&&]], [[int]]) ->
     // void")));
   }
 }
@@ -4432,8 +4432,8 @@ TEST(CompletionTest, SkipExplicitObjectParameter) {
 
   // TODO: llvm/llvm-project/146649
   // This is incorrect behavior. Correct Result should be a variant of,
-  // c2: signature = (A&& self, int arg)
-  //     snippet = (${1: A&& self}, ${2: int arg})
+  // c2: signature = (auto&& self, int arg)
+  //     snippet = (${1: auto&& self}, ${2: int arg})
   // c3: signature = (A self, int arg)
   //     snippet = (${1: A self}, ${2: int arg})
 
