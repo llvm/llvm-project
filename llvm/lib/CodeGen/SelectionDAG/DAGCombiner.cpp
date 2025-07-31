@@ -25504,11 +25504,10 @@ SDValue DAGCombiner::visitVECTOR_INTERLEAVE(SDNode *N) {
     return SDValue();
 
   // Check to see if the identical operand is a splat.
-  SDValue Splat = DAG.getSplatValue(N->getOperand(0));
-  if (!Splat)
+  if (!DAG.isSplatValue(N->getOperand(0)))
     return SDValue();
 
-  // Simply replace all results with the first operand.
+  // interleave splat(X), splat(X).... --> splat(X), splat(X)....
   SmallVector<SDValue, 4> Ops;
   Ops.append(N->op_values().begin(), N->op_values().end());
   return CombineTo(N, &Ops);
