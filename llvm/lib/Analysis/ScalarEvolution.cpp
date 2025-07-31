@@ -2685,16 +2685,15 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
 
     // Try to push the constant operand into a ZExt: A + zext (-A + B) -> zext
     // (B), if trunc (A) + -A + B  does not unsigned-wrap.
-    if (auto *ZExt = dyn_cast<SCEVZeroExtendExpr>(Ops[1])) {
-      const SCEV *B = ZExt->getOperand(0);
-      const SCEV *NarrowA = getTruncateExpr(A, B->getType());
-      if (isa<SCEVAddExpr>(B) &&
-          NarrowA == getNegativeSCEV(cast<SCEVAddExpr>(B)->getOperand(0)) &&
-          getZeroExtendExpr(NarrowA, ZExt->getType()) == A &&
-          hasFlags(StrengthenNoWrapFlags(this, scAddExpr, {NarrowA, B},
+    const SCEVAddExpr *InnerAdd;
+    if (match(B, m_scev_ZExt(m_scev_Add(InnerAdd)))) {
+      const SCEV *NarrowA = getTruncateExpr(A, InnerAdd->getType());
+      if (NarrowA == getNegativeSCEV(InnerAdd->getOperand(0)) &&
+          getZeroExtendExpr(NarrowA, B->getType()) == A &&
+          hasFlags(StrengthenNoWrapFlags(this, scAddExpr, {NarrowA, InnerAdd},
                                          SCEV::FlagAnyWrap),
                    SCEV::FlagNUW)) {
-        return getZeroExtendExpr(getAddExpr(NarrowA, B), ZExt->getType());
+        return getZeroExtendExpr(getAddExpr(NarrowA, InnerAdd), B->getType());
       }
     }
   }
