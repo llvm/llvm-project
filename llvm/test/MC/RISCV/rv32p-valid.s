@@ -76,3 +76,58 @@ plui.h gp, 32
 # CHECK-ASM-AND-OBJ: plui.h gp, -412
 # CHECK-ASM: encoding: [0x9b,0x21,0x99,0xf0]
 plui.h gp, 612
+# CHECK-ASM-AND-OBJ: psll.hs a0, a1, a2
+# CHECK-ASM: encoding: [0x1b,0xa5,0xc5,0x88]
+psll.hs a0, a1, a2
+# CHECK-ASM-AND-OBJ: psll.bs a3, a4, a5
+# CHECK-ASM: encoding: [0x9b,0x26,0xf7,0x8c]
+psll.bs a3, a4, a5
+# CHECK-ASM-AND-OBJ: padd.hs t0, t1, t2
+# CHECK-ASM: encoding: [0x9b,0x22,0x73,0x98]
+padd.hs t0, t1, t2
+# CHECK-ASM-AND-OBJ: padd.bs ra, a1, a2
+# CHECK-ASM: encoding: [0x9b,0xa0,0xc5,0x9c]
+padd.bs ra, a1, a2
+# CHECK-ASM-AND-OBJ: pssha.hs a3, a4, a5
+# CHECK-ASM: encoding: [0x9b,0x26,0xf7,0xe8]
+pssha.hs a3, a4, a5
+# CHECK-ASM-AND-OBJ: ssha gp, a4, a5
+# CHECK-ASM: encoding: [0x9b,0x21,0xf7,0xea]
+ssha gp, a4, a5
+# CHECK-ASM-AND-OBJ: psshar.hs a6, a7, a0
+# CHECK-ASM: encoding: [0x1b,0xa8,0xa8,0xf8]
+psshar.hs a6, a7, a0
+# CHECK-ASM-AND-OBJ: sshar t1, a7, a0
+# CHECK-ASM: encoding: [0x1b,0xa3,0xa8,0xfa]
+sshar t1, a7, a0
+# CHECK-ASM-AND-OBJ: psrli.b a1, a2, 0
+# CHECK-ASM: encoding: [0x9b,0x45,0x86,0x80]
+psrli.b a1, a2, 0
+# CHECK-ASM-AND-OBJ: psrli.h a0, a1, 1
+# CHECK-ASM: encoding: [0x1b,0xc5,0x15,0x81]
+psrli.h a0, a1, 1
+# CHECK-ASM-AND-OBJ: pusati.h a2, t1, 4
+# CHECK-ASM: encoding: [0x1b,0x46,0x43,0xa1]
+pusati.h a2, t1, 4
+# CHECK-ASM-AND-OBJ: usati a3, t2, 5
+# CHECK-ASM: encoding: [0x9b,0xc6,0x53,0xa2]
+usati a3, t2, 5
+# CHECK-ASM-AND-OBJ: psrai.b a4, a5, 0
+# CHECK-ASM: encoding: [0x1b,0xc7,0x87,0xc0]
+psrai.b a4, a5, 0
+# CHECK-ASM-AND-OBJ: psrai.h a6, a7, 2
+# CHECK-ASM: encoding: [0x1b,0xc8,0x28,0xc1]
+psrai.h a6, a7, 2
+# CHECK-ASM-AND-OBJ: psrari.h a0, a1, 1
+# CHECK-ASM: encoding: [0x1b,0xc5,0x15,0xd1]
+psrari.h a0, a1, 1
+# CHECK-ASM-AND-OBJ: srari a2, a3, 1
+# CHECK-ASM: encoding: [0x1b,0xc6,0x16,0xd2]
+srari a2, a3, 1
+# CHECK-ASM-AND-OBJ: psati.h a4, t0, 8
+# CHECK-ASM: encoding: [0x1b,0xc7,0x82,0xe1]
+psati.h a4, t0, 8
+# CHECK-ASM-AND-OBJ: sati a5, t1, 8
+# CHECK-ASM: encoding: [0x9b,0x47,0x83,0xe2]
+sati a5, t1, 8
+
