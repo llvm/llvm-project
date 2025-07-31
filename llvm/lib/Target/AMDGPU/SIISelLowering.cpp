@@ -5469,10 +5469,6 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
                   MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
               Register DestSub1 =
                   MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-              Register Op1H_Op0L_Reg =
-                  MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-              Register CarryReg =
-                  MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
 
               const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
               const TargetRegisterClass *SrcSubRC =
@@ -5487,18 +5483,9 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
                   .add(Op1L)
                   .addReg(ParityRegister);
 
-              BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), Op1H_Op0L_Reg)
+              BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DestSub1)
                   .add(Op1H)
                   .addReg(ParityRegister);
-
-              BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_HI_U32), CarryReg)
-                  .add(Op1L)
-                  .addReg(ParityRegister);
-
-              BuildMI(BB, MI, DL, TII->get(AMDGPU::S_ADD_U32), DestSub1)
-                  .addReg(CarryReg)
-                  .addReg(Op1H_Op0L_Reg)
-                  .setOperandDead(3); // Dead scc
 
               BuildMI(BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), DstReg)
                   .addReg(DestSub0)
