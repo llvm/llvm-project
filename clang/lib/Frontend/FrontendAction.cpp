@@ -892,11 +892,11 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // If we're replaying the build of an AST file, import it and set up
   // the initial state from its build.
   if (ReplayASTFile) {
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags(&CI.getDiagnostics());
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags = CI.getDiagnosticsPtr();
 
     // The AST unit populates its own diagnostics engine rather than ours.
-    IntrusiveRefCntPtr<DiagnosticsEngine> ASTDiags(new DiagnosticsEngine(
-        Diags->getDiagnosticIDs(), Diags->getDiagnosticOptions()));
+    auto ASTDiags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(
+        Diags->getDiagnosticIDs(), Diags->getDiagnosticOptions());
     ASTDiags->setClient(Diags->getClient(), /*OwnsClient*/false);
 
     // FIXME: What if the input is a memory buffer?
@@ -964,7 +964,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     assert(hasASTFileSupport() &&
            "This action does not have AST file support!");
 
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags(&CI.getDiagnostics());
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags = CI.getDiagnosticsPtr();
 
     // FIXME: What if the input is a memory buffer?
     StringRef InputFile = Input.getFile();

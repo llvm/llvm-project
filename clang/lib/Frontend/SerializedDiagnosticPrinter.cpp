@@ -781,10 +781,9 @@ DiagnosticsEngine *SDiagsWriter::getMetaDiags() {
   //    to be distinct from the engine the writer was being added to and would
   //    normally not be used.
   if (!State->MetaDiagnostics) {
-    IntrusiveRefCntPtr<DiagnosticIDs> IDs(new DiagnosticIDs());
     auto Client = new TextDiagnosticPrinter(llvm::errs(), State->DiagOpts);
-    State->MetaDiagnostics =
-        std::make_unique<DiagnosticsEngine>(IDs, State->DiagOpts, Client);
+    State->MetaDiagnostics = std::make_unique<DiagnosticsEngine>(
+        DiagnosticIDs::create(), State->DiagOpts, Client);
   }
   return State->MetaDiagnostics.get();
 }
