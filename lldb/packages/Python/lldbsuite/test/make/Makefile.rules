@@ -149,6 +149,16 @@ else
 endif
 
 #----------------------------------------------------------------------
+# Use LLD when cross compiling on Darwin.
+#----------------------------------------------------------------------
+ifeq "$(HOST_OS)" "Darwin"
+	ifneq (,$(filter $(OS), Android FreeBSD Linux NetBSD Windows_NT))
+		LDFLAGS += -fuse-ld=lld
+	endif
+endif
+
+
+#----------------------------------------------------------------------
 # ARCHFLAG is the flag used to tell the compiler which architecture
 # to compile for. The default is the flag that clang accepts.
 #----------------------------------------------------------------------
