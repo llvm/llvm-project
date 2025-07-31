@@ -115,7 +115,7 @@ SDValue RISCVSelectionDAGInfo::EmitTargetCodeForMemset(
   // second for the remainder:
   //
   // QC_SETWMI reg1, 16, 0(reg2)
-  // QC_SETWMI reg1, 32-N, 64(reg2)
+  // QC_SETWMI reg1, N, 64(reg2)
   //
   // For 33-48 words, we would like to use (16, 16, n), but that means the last
   // QC_SETWMI needs an offset of 128 which the instruction doesnt support.
