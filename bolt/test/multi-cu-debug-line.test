@@ -1,16 +1,16 @@
 ## Test that BOLT correctly handles debug line information for functions
 ## that belong to multiple compilation units (e.g., inline functions in
 ## common header files). The test covers two scenarios:
-## 1. Normal processing: .debug_line section shows lines for the function 
+## 1. Normal processing: .debug_line section shows lines for the function
 ##    in all CUs where it was compiled, with no duplicate rows within CUs
-## 2. Functions not processed: When BOLT doesn't process functions (using 
+## 2. Functions not processed: When BOLT doesn't process functions (using
 ##    --funcs with nonexistent function), original debug info is preserved
 
 # REQUIRES: system-linux
 
 ## Compile test files with debug info
-# RUN: %clang %cflags -O0 -g %S/../Inputs/multi-cu-file1.c %S/../Inputs/multi-cu-file2.c \
-# RUN:   -I%S/../Inputs -o %t.exe -Wl,-q
+# RUN: %clang %cflags -O0 -g %S/Inputs/multi-cu-file1.c %S/Inputs/multi-cu-file2.c \
+# RUN:   -I%S/Inputs -o %t.exe -Wl,-q
 
 ## Test 1: Normal BOLT processing (functions are processed/optimized)
 # RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
@@ -26,7 +26,7 @@
 # BASIC: name: "{{.*}}multi-cu-file2.c"
 
 ## Use our helper script to create a normalized table without addresses
-# RUN: %S/../Inputs/process-debug-line.sh %t.debug-line.txt > %t.normalized-debug-line.txt
+# RUN: process-debug-line %t.debug-line.txt > %t.normalized-debug-line.txt
 # RUN: FileCheck %s --check-prefix=NORMALIZED --input-file %t.normalized-debug-line.txt
 
 ## Check that we have line entries for the inline function (lines 5, 6, 7) from multi-cu-common.h
@@ -72,7 +72,7 @@
 # PRESERVED-BASIC: name: "{{.*}}multi-cu-file2.c"
 
 ## Create normalized output for the not-emitted case
-# RUN: %S/../Inputs/process-debug-line.sh %t.not-emitted.debug-line.txt > %t.not-emitted.normalized.txt
+# RUN: process-debug-line %t.not-emitted.debug-line.txt > %t.not-emitted.normalized.txt
 # RUN: FileCheck %s --check-prefix=PRESERVED-NORMALIZED --input-file %t.not-emitted.normalized.txt
 
 ## Check that we have line entries for the inline function (lines 5, 6, 7) from multi-cu-common.h

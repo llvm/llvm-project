@@ -10,8 +10,7 @@ import lit.formats
 import lit.util
 
 from lit.llvm import llvm_config
-from lit.llvm.subst import ToolSubst
-from lit.llvm.subst import FindTool
+from lit.llvm.subst import FindTool, ToolSubst
 
 # Configuration file for the 'lit' test runner.
 
@@ -138,6 +137,7 @@ tools = [
         unresolved="fatal",
         extra_args=[link_fdata_cmd],
     ),
+    ToolSubst("process-debug-line", unresolved="fatal"),
     ToolSubst("merge-fdata", unresolved="fatal"),
     ToolSubst("llvm-readobj", unresolved="fatal"),
     ToolSubst("llvm-dwp", unresolved="fatal"),
