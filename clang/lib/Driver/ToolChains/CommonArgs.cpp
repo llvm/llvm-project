@@ -1269,8 +1269,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-stack-size-section"));
 
-  if (Args.hasFlag(options::OPT_fcall_graph_section,
-                   options::OPT_fno_call_graph_section, false))
+  if (Args.hasFlag(options::OPT_fexperimental_call_graph_section,
+                   options::OPT_fno_experimental_call_graph_section, false))
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-call-graph-section"));
 
