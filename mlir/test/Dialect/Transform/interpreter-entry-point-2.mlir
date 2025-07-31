@@ -1,5 +1,4 @@
-// RUN: mlir-opt %s -transform-interpreter \
-// RUN:   -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter | FileCheck %s
 
 module @td_module_4 attributes {transform.with_named_sequence} {
   module @foo_module attributes {transform.with_named_sequence} {
