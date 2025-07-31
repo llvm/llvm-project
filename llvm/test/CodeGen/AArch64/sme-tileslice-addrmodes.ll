@@ -7,13 +7,11 @@ define void @sme_tileslice_addrmode_zero_base_plus_constant_offset(i32 %slice, <
 ; CHECK-LABEL: sme_tileslice_addrmode_zero_base_plus_constant_offset:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    mov w9, #1 // =0x1
+; CHECK-NEXT:    mov w9, #8 // =0x8
 ; CHECK-NEXT:    fdot za.s[w8, 0, vgx4], { z0.h - z3.h }, z4.h[0]
-; CHECK-NEXT:    mov w8, #7 // =0x7
+; CHECK-NEXT:    fdot za.s[w8, 1, vgx4], { z0.h - z3.h }, z4.h[0]
+; CHECK-NEXT:    fdot za.s[w8, 7, vgx4], { z0.h - z3.h }, z4.h[0]
 ; CHECK-NEXT:    fdot za.s[w9, 0, vgx4], { z0.h - z3.h }, z4.h[0]
-; CHECK-NEXT:    fdot za.s[w8, 0, vgx4], { z0.h - z3.h }, z4.h[0]
-; CHECK-NEXT:    mov w8, #8 // =0x8
-; CHECK-NEXT:    fdot za.s[w8, 0, vgx4], { z0.h - z3.h }, z4.h[0]
 ; CHECK-NEXT:    ret
   tail call void @llvm.aarch64.sme.fdot.lane.za32.vg1x4.nxv8f16(i32 0, <vscale x 8 x half> %0, <vscale x 8 x half> %1, <vscale x 8 x half> %2, <vscale x 8 x half> %3, <vscale x 8 x half> %4, i32 0)
   tail call void @llvm.aarch64.sme.fdot.lane.za32.vg1x4.nxv8f16(i32 1, <vscale x 8 x half> %0, <vscale x 8 x half> %1, <vscale x 8 x half> %2, <vscale x 8 x half> %3, <vscale x 8 x half> %4, i32 0)
