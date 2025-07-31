@@ -237,9 +237,9 @@ bool InstrumentorImpl::instrument(AllocaInst &I) {
   if (IC.Alloca.CB && !IC.Alloca.CB(I))
     return false;
 
-  Instruction *IP = I.getNextNonDebugInstruction();
+  Instruction *IP = I.getNextNode();
   while (isa<AllocaInst>(IP))
-    IP = IP->getNextNonDebugInstruction();
+    IP = IP->getNextNode();
   IRB.SetInsertPoint(IP);
 
   SmallVector<Type *> RTArgTypes;
