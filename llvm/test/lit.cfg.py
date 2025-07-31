@@ -706,9 +706,6 @@ if config.expensive_checks:
 if config.have_ondisk_cas:
     config.available_features.add('ondisk_cas')
 
-if config.have_mccas:
-    config.available_features.add('mccas')
-
 if "MemoryWithOrigins" in config.llvm_use_sanitizer:
     config.available_features.add("use_msan_with_origins")
 

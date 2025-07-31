@@ -18,9 +18,7 @@
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/CASOutputBackend.h"
 #include "llvm/CASUtil/Utils.h"
-#if LLVM_ENABLE_MCCAS
 #include "llvm/MCCAS/MCCASObjectV1.h"
-#endif
 #include "llvm/RemoteCachingService/Client.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/Path.h"
@@ -824,7 +822,6 @@ Expected<std::optional<int>> ObjectStoreCachingOutputs::replayCachedResult(
       if (WriteOutputAsCASID)
         llvm::cas::writeCASIDBuffer(CAS.getID(O.Object), *Output);
       else if (UseCASBackend) {
-#if LLVM_ENABLE_MCCAS
         // Replay by write out object file.
         // When the environmental variable is set, save the backend CASID for
         // analysis later.
@@ -841,9 +838,6 @@ Expected<std::optional<int>> ObjectStoreCachingOutputs::replayCachedResult(
         auto Schema = std::make_unique<llvm::mccasformats::v1::MCSchema>(CAS);
         if (auto E = Schema->serializeObjectFile(*Obj, *Output))
           return E;
-#else
-        llvm_unreachable("MCCAS disabled");
-#endif
       }
       return Output->keep();
     }

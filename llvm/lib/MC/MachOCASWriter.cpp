@@ -23,6 +23,8 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/MCCAS/MCCASFormatSchemaBase.h"
+#include "llvm/MCCAS/MCCASObjectV1.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
@@ -30,10 +32,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
-
-#if LLVM_ENABLE_MCCAS
-#include "llvm/MCCAS/MCCASFormatSchemaBase.h"
-#include "llvm/MCCAS/MCCASObjectV1.h"
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -124,19 +122,3 @@ std::unique_ptr<MCObjectWriter> llvm::createMachOCASWriter(
       std::move(MOTW), TT, CAS, Mode, OS, IsLittleEndian, CreateFromMcAssembler,
       SerializeObjectFile, ResultCallBack, CasIDOS);
 }
-#else
-std::unique_ptr<llvm::MCObjectWriter> llvm::createMachOCASWriter(
-    std::unique_ptr<MCMachObjectTargetWriter> MOTW, const Triple &TT,
-    cas::ObjectStore &CAS, CASBackendMode Mode, raw_pwrite_stream &OS,
-    bool IsLittleEndian,
-    std::function<const cas::ObjectProxy(llvm::MachOCASWriter &,
-                                         llvm::MCAssembler &,
-                                         cas::ObjectStore &, raw_ostream *)>
-        CreateFromMcAssembler,
-    std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
-        SerializeObjectFile,
-    std::optional<MCTargetOptions::ResultCallBackTy> ResultCallBack,
-    raw_pwrite_stream *CasIDOS) {
-  llvm_unreachable("unsupported");
-}
-#endif

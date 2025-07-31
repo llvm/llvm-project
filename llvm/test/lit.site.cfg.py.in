@@ -63,7 +63,6 @@ config.reverse_iteration = @LLVM_ENABLE_REVERSE_ITERATION@
 config.dxil_tests = @LLVM_INCLUDE_DXIL_TESTS@
 config.have_ondisk_cas = @LLVM_ENABLE_ONDISK_CAS@
 config.enable_remote_cache = @LLVM_CAS_ENABLE_REMOTE_CACHE@
-config.have_mccas = @LLVM_ENABLE_MCCAS@
 config.have_llvm_driver = @LLVM_TOOL_LLVM_DRIVER_BUILD@
 config.spirv_tools_tests = @LLVM_INCLUDE_SPIRV_TOOLS_TESTS@
 config.have_vc_rev = @LLVM_APPEND_VC_REV@

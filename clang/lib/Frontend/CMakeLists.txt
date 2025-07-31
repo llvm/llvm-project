@@ -1,18 +1,11 @@
 add_subdirectory(Rewrite)
 
-if (LLVM_ENABLE_MCCAS)
-  add_definitions(-DLLVM_ENABLE_MCCAS=1)
-  set(MCCAS_DEPS
-    MCCAS
-  )
-endif()
-
 set(LLVM_LINK_COMPONENTS
   BitReader
   BitstreamReader
   CAS
   CASUtil
-  ${MCCAS_DEPS}
+  MCCAS
   Option
   ProfileData
   RemoteCachingService

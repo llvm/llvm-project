@@ -1,4 +1,3 @@
-// REQUIRES: mccas
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: llvm-cas --cas %t/cas --ingest %s > %t/casid
 //

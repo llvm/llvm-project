@@ -23,20 +23,18 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCMachOCASWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/MCCAS/MCCASObjectV1.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Target/RegisterTargetPassConfigCallback.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
-#if LLVM_ENABLE_MCCAS
-#include "llvm/MC/MCMachOCASWriter.h"
-#include "llvm/MCCAS/MCCASObjectV1.h"
-#endif
 using namespace llvm;
 
 static cl::opt<bool>
@@ -210,9 +208,7 @@ CodeGenTargetMachineImpl::createMCStreamer(raw_pwrite_stream &Out,
                                      inconvertibleErrorCode());
 
     Triple T(getTargetTriple());
-#if LLVM_ENABLE_MCCAS
     // BEGIN MCCAS
-    bool UseCASBackend = Options.UseCASBackend;
     std::unique_ptr<MCObjectWriter> CASBackendWriter;
     if (Options.UseCASBackend) {
       std::function<const cas::ObjectProxy(llvm::MachOCASWriter &,
@@ -237,14 +233,10 @@ CodeGenTargetMachineImpl::createMCStreamer(raw_pwrite_stream &Out,
           Options.MCOptions.CASObjMode, CreateFromMcAssembler,
           SerializeObjectFile, CasIDOS);
     }
-#else
-    bool UseCASBackend = false;
-    std::unique_ptr<MCObjectWriter> CASBackendWriter;
-#endif
     // END MCCAS
     AsmStreamer.reset(getTarget().createMCObjectStreamer(
         T, Context, std::unique_ptr<MCAsmBackend>(MAB),
-        UseCASBackend ? std::move(CASBackendWriter) // MCCAS
+        Options.UseCASBackend ? std::move(CASBackendWriter) // MCCAS
         : DwoOut ? MAB->createDwoObjectWriter(Out, *DwoOut)
                : MAB->createObjectWriter(Out),
         std::unique_ptr<MCCodeEmitter>(MCE), STI));

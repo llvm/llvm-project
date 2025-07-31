@@ -1,4 +1,3 @@
-// REQUIRES: mccas
 // RUN: %clang -cc1depscan -o - -cc1-args -cc1 -triple \
 // RUN:        x86_64-apple-darwin10 -debug-info-kind=standalone -dwarf-version=4 \
 // RUN:        -debugger-tuning=lldb -emit-obj -fcas-backend -fcas-path %t/cas \

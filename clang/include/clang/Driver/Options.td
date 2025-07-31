@@ -9092,15 +9092,10 @@ defm include_tree_preserve_pch_path : BoolFOption<"include-tree-preserve-pch-pat
     NegFlag<SetFalse>>;
 
 /// BEGIN MCCAS
-#ifdef LLVM_EMABLE_MCCAS
 defm cas_backend : BoolFOption<"cas-backend",
     CodeGenOpts<"UseCASBackend">, DefaultFalse,
     PosFlag<SetTrue, [], [ClangOption], "Enable using CASBackend for object file output">,
     NegFlag<SetFalse>>;
-#else
-def cas_backend : Flag<["-"], "fcas-backend">, Group<clang_ignored_legacy_options_Group>;
-def no_cas_backend : Flag<["-"], "fno-cas-backend">, Group<clang_ignored_legacy_options_Group>;
-#endif
 
 defm cas_emit_casid_file : BoolFOption<"cas-emit-casid-file",
     CodeGenOpts<"EmitCASIDFile">, DefaultFalse,

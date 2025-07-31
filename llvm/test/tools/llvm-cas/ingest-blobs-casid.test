@@ -1,4 +1,4 @@
-; REQUIRES: aarch64-registered-target && mccas
+; REQUIRES: aarch64-registered-target
 ; RUN: rm -rf %t && mkdir -p %t
 ; RUN: split-file %s %t
 
