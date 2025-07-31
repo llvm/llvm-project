@@ -3383,14 +3383,70 @@ static SDValue TryMatchTrue(SDNode *N, EVT VecVT, SelectionDAG &DAG) {
   return DAG.getZExtOrTrunc(Ret, DL, N->getValueType(0));
 }
 
+static SDValue
+combineVectorSizedSetCCEquality(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                                const WebAssemblySubtarget *Subtarget) {
+
+  SDLoc DL(N);
+  SDValue X = N->getOperand(0);
+  SDValue Y = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  EVT OpVT = X.getValueType();
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  SelectionDAG &DAG = DCI.DAG;
+  // We're looking for an oversized integer equality comparison.
+  if (!OpVT.isScalarInteger() || !OpVT.isByteSized() || OpVT != MVT::i128 ||
+      !Subtarget->hasSIMD128())
+    return SDValue();
+
+  // Don't perform this combine if constructing the vector will be expensive.
+  auto IsVectorBitCastCheap = [](SDValue X) {
+    X = peekThroughBitcasts(X);
+    return isa<ConstantSDNode>(X) || X.getOpcode() == ISD::LOAD;
+  };
+
+  if (!IsVectorBitCastCheap(X) || !IsVectorBitCastCheap(Y))
+    return SDValue();
+
+  // TODO: Not sure what's the purpose of this? I'm keeping here since RISCV has
+  // it
+  if (DCI.DAG.getMachineFunction().getFunction().hasFnAttribute(
+          Attribute::NoImplicitFloat))
+    return SDValue();
+
+  unsigned OpSize = OpVT.getSizeInBits();
+  unsigned VecSize = OpSize / 8;
+
+  EVT VecVT = EVT::getVectorVT(*DCI.DAG.getContext(), MVT::i8, VecSize);
+  EVT CmpVT = EVT::getVectorVT(*DCI.DAG.getContext(), MVT::i8, VecSize);
+
+  SDValue VecX = DAG.getBitcast(VecVT, X);
+  SDValue VecY = DAG.getBitcast(VecVT, Y);
+
+  SDValue Cmp = DAG.getSetCC(DL, CmpVT, VecX, VecY, CC);
+
+  SDValue AllTrue = DAG.getZExtOrTrunc(
+      DAG.getNode(
+          ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+          {DAG.getConstant(Intrinsic::wasm_alltrue, DL, MVT::i32), Cmp}),
+      DL, MVT::i1);
+
+  return DAG.getSetCC(DL, VT, AllTrue, DAG.getConstant(0, DL, MVT::i1), CC);
+}
+
 static SDValue performSETCCCombine(SDNode *N,
-                                   TargetLowering::DAGCombinerInfo &DCI) {
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   const WebAssemblySubtarget *Subtarget) {
   if (!DCI.isBeforeLegalize())
     return SDValue();
 
   EVT VT = N->getValueType(0);
   if (!VT.isScalarInteger())
     return SDValue();
+
+  if (SDValue V = combineVectorSizedSetCCEquality(N, DCI, Subtarget))
+    return V;
 
   SDValue LHS = N->getOperand(0);
   if (LHS->getOpcode() != ISD::BITCAST)
@@ -3532,7 +3588,7 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::BITCAST:
     return performBitcastCombine(N, DCI);
   case ISD::SETCC:
-    return performSETCCCombine(N, DCI);
+    return performSETCCCombine(N, DCI, Subtarget);
   case ISD::VECTOR_SHUFFLE:
     return performVECTOR_SHUFFLECombine(N, DCI);
   case ISD::SIGN_EXTEND:
