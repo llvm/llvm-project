@@ -46,12 +46,12 @@ entry:
   br label %for.body
 
 for.body:
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %0 = shl nsw i64 %indvars.iv, 1
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %0 = shl nsw i64 %iv, 1
   %arrayidx = getelementptr inbounds i64, ptr %a, i64 %0
-  store i64 %indvars.iv, ptr %arrayidx, align 8
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, %n
+  store i64 %iv, ptr %arrayidx, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %exit, label %for.body
 
 exit:
