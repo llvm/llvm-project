@@ -452,3 +452,49 @@ entry:
   %conv6 = zext i8 %1 to i32
   ret i32 %conv6
 }
+
+; Same as ctz1 but the table and load is very large
+@ctz7i128.table = internal unnamed_addr constant [32 x i128] [i128 0, i128 1, i128 28, i128 2, i128 29, i128 14, i128 24, i128 3, i128 30, i128 22, i128 20, i128 15, i128 25, i128 17, i128 4, i128 8, i128 31, i128 27, i128 13, i128 23, i128 21, i128 19, i128 16, i128 7, i128 26, i128 12, i128 18, i128 6, i128 11, i128 5, i128 10, i128 9], align 16
+define i128 @ctz1_i128(i32 %x) {
+; CHECK-LABEL: @ctz1_i128(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 0, i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i128
+; CHECK-NEXT:    ret i128 [[TMP3]]
+;
+entry:
+  %sub = sub i32 0, %x
+  %and = and i32 %sub, %x
+  %mul = mul i32 %and, 125613361
+  %shr = lshr i32 %mul, 27
+  %idxprom = zext i32 %shr to i64
+  %arrayidx = getelementptr inbounds [32 x i128], ptr @ctz7i128.table, i64 0, i64 %idxprom
+  %l = load i128, ptr %arrayidx, align 1
+  ret i128 %l
+}
+
+; This is roughly the same as ctz1 but using i128.
+@table.i128 = internal unnamed_addr constant [128 x i8] c"\00\01e\02tf<\03|ug^R=!\04}yvWoh_5ZSE>0\22\14\05~rzPwmX.pkiI`K6\1Ab[TBMF?'81*#\1C\15\0E\06\7Fds;{]Q xVn4YD/\13qOl-jHJ\19aAL&7)\1B\0Dc:\\\1FU3C\12N,G\18@%(\0C9\1E2\11+\17$\0B\1D\10\16\0A\0F\09\08\07", align 1
+define i32 @src(i128 noundef %x) {
+; CHECK-LABEL: @src(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i128 @llvm.cttz.i128(i128 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i128 [[X]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i128 0, i128 [[TMP3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i128 [[TMP2]] to i8
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP0]] to i32
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %sub = sub i128 0, %x
+  %and = and i128 %x, %sub
+  %mul = mul i128 %and, 2647824804797170443043024478319300753
+  %shr = lshr i128 %mul, 121
+  %idxprom = trunc i128 %shr to i64
+  %arrayidx = getelementptr inbounds nuw i8, ptr @table.i128, i64 %idxprom
+  %0 = load i8, ptr %arrayidx, align 1
+  %conv = zext i8 %0 to i32
+  ret i32 %conv
+}
