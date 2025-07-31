@@ -1127,8 +1127,11 @@ public:
 
   static ProtocolMethodLists get(const ObjCProtocolDecl *PD) {
     ProtocolMethodLists result;
+    ASTContext &Ctx = PD->getASTContext();
 
     for (auto *MD : PD->methods()) {
+      if (Ctx.hasUnavailableFeature(MD))
+        continue;
       size_t index =
           (2 * size_t(MD->isOptional())) + (size_t(MD->isClassMethod()));
       result.Methods[index].push_back(MD);
@@ -3240,6 +3243,7 @@ llvm::Constant *CGObjCCommonMac::EmitProtocolMethodTypes(
   };
 */
 void CGObjCMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
+  ASTContext &Ctx = CGM.getContext();
   unsigned Size = CGM.getDataLayout().getTypeAllocSize(ObjCTypes.CategoryTy);
 
   // FIXME: This is poor design, the OCD should have a pointer to the category
@@ -3260,6 +3264,8 @@ void CGObjCMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
   enum { InstanceMethods, ClassMethods, NumMethodLists };
   SmallVector<const ObjCMethodDecl *, 16> Methods[NumMethodLists];
   for (const auto *MD : OCD->methods()) {
+    if (Ctx.hasUnavailableFeature(MD))
+      continue;
     if (!MD->isDirectMethod())
       Methods[unsigned(MD->isClassMethod())].push_back(MD);
   }
@@ -3408,6 +3414,7 @@ static bool hasMRCWeakIvars(CodeGenModule &CGM,
   See EmitClassExtension();
 */
 void CGObjCMac::GenerateClass(const ObjCImplementationDecl *ID) {
+  ASTContext &Ctx = CGM.getContext();
   IdentifierInfo *RuntimeName =
       &CGM.getContext().Idents.get(ID->getObjCRuntimeNameAsString());
   DefinedSymbols.insert(RuntimeName);
@@ -3442,6 +3449,8 @@ void CGObjCMac::GenerateClass(const ObjCImplementationDecl *ID) {
   enum { InstanceMethods, ClassMethods, NumMethodLists };
   SmallVector<const ObjCMethodDecl *, 16> Methods[NumMethodLists];
   for (const auto *MD : ID->methods()) {
+    if (Ctx.hasUnavailableFeature(MD))
+      continue;
     if (!MD->isDirectMethod())
       Methods[unsigned(MD->isClassMethod())].push_back(MD);
   }
@@ -6213,6 +6222,7 @@ llvm::GlobalVariable *CGObjCNonFragileABIMac::BuildClassRoTInitializer(
   CharUnits beginInstance = CharUnits::fromQuantity(InstanceStart);
   CharUnits endInstance = CharUnits::fromQuantity(InstanceSize);
 
+  ASTContext &Ctx = CGM.getContext();
   bool hasMRCWeak = false;
   if (CGM.getLangOpts().ObjCAutoRefCount)
     flags |= NonFragileABI_Class_CompiledByARC;
@@ -6233,13 +6243,21 @@ llvm::GlobalVariable *CGObjCNonFragileABIMac::BuildClassRoTInitializer(
   // const struct _method_list_t * const baseMethods;
   SmallVector<const ObjCMethodDecl *, 16> methods;
   if (flags & NonFragileABI_Class_Meta) {
-    for (const auto *MD : ID->class_methods())
-      if (!MD->isDirectMethod())
-        methods.push_back(MD);
+    for (const auto *MD : ID->class_methods()) {
+      if (Ctx.hasUnavailableFeature(MD))
+        continue;
+      if (MD->isDirectMethod())
+        continue;
+      methods.push_back(MD);
+    }
   } else {
-    for (const auto *MD : ID->instance_methods())
-      if (!MD->isDirectMethod())
-        methods.push_back(MD);
+    for (const auto *MD : ID->instance_methods()) {
+      if (Ctx.hasUnavailableFeature(MD))
+        continue;
+      if (MD->isDirectMethod())
+        continue;
+      methods.push_back(MD);
+    }
   }
 
   llvm::Constant *MethListPtr = emitMethodList(
@@ -6550,6 +6568,7 @@ void CGObjCNonFragileABIMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
   const ObjCInterfaceDecl *Interface = OCD->getClassInterface();
   const char *Prefix = "_OBJC_$_CATEGORY_";
 
+  ASTContext &Ctx = CGM.getContext();
   llvm::SmallString<64> ExtCatName(Prefix);
   ExtCatName += Interface->getObjCRuntimeNameAsString();
   ExtCatName += "_$_";
@@ -6566,6 +6585,8 @@ void CGObjCNonFragileABIMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
   SmallVector<const ObjCMethodDecl *, 16> instanceMethods;
   SmallVector<const ObjCMethodDecl *, 8> classMethods;
   for (const auto *MD : OCD->methods()) {
+    if (Ctx.hasUnavailableFeature(MD))
+      continue;
     if (MD->isDirectMethod())
       continue;
     if (MD->isInstanceMethod()) {
@@ -6663,8 +6684,7 @@ void CGObjCNonFragileABIMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
 void CGObjCNonFragileABIMac::emitMethodConstant(ConstantArrayBuilder &builder,
                                                 const ObjCMethodDecl *MD,
                                                 bool forProtocol) {
-  if (CGM.getContext().hasUnavailableFeature(MD))
-    return;
+  assert(!CGM.getContext().hasUnavailableFeature(MD));
 
   auto method = builder.beginStruct(ObjCTypes.MethodTy);
   method.add(GetMethodVarName(MD->getSelector()));

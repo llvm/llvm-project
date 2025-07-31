@@ -24,7 +24,7 @@ static struct __AvailabilityDomain feature3 __attribute__((availability_domain(f
 // CHECK-NEXT: @OBJC_METH_VAR_TYPE_.3 = private unnamed_addr constant [8 x i8] c"i16@0:8\00", section "__TEXT,__objc_methtype,cstring_literals", align 1
 // CHECK-NEXT: @OBJC_METH_VAR_NAME_.4 = private unnamed_addr constant [10 x i8] c"setProp0:\00", section "__TEXT,__objc_methname,cstring_literals", align 1
 // CHECK-NEXT: @OBJC_METH_VAR_TYPE_.5 = private unnamed_addr constant [11 x i8] c"v20@0:8i16\00", section "__TEXT,__objc_methtype,cstring_literals", align 1
-// CHECK-NEXT: @"_OBJC_$_INSTANCE_METHODS_C0" = internal global { i32, i32, [4 x %struct._objc_method] } { i32 24, i32 7, [4 x %struct._objc_method] [%struct._objc_method { ptr @OBJC_METH_VAR_NAME_, ptr @OBJC_METH_VAR_TYPE_, ptr @"\01-[C0 m0]" }, %struct._objc_method { ptr @OBJC_METH_VAR_NAME_.1, ptr @OBJC_METH_VAR_TYPE_, ptr @"\01-[C0 m1]" }, %struct._objc_method { ptr @OBJC_METH_VAR_NAME_.2, ptr @OBJC_METH_VAR_TYPE_.3, ptr @"\01-[C0 prop0]" }, %struct._objc_method { ptr @OBJC_METH_VAR_NAME_.4, ptr @OBJC_METH_VAR_TYPE_.5, ptr @"\01-[C0 setProp0:]" }] }, section "__DATA, __objc_const", align 8
+// CHECK-NEXT: @"_OBJC_$_INSTANCE_METHODS_C0" = internal global { i32, i32, [4 x %struct._objc_method] } { i32 24, i32 4, [4 x %struct._objc_method] [%struct._objc_method { ptr @OBJC_METH_VAR_NAME_, ptr @OBJC_METH_VAR_TYPE_, ptr @"\01-[C0 m0]" }, %struct._objc_method { ptr @OBJC_METH_VAR_NAME_.1, ptr @OBJC_METH_VAR_TYPE_, ptr @"\01-[C0 m1]" }, %struct._objc_method { ptr @OBJC_METH_VAR_NAME_.2, ptr @OBJC_METH_VAR_TYPE_.3, ptr @"\01-[C0 prop0]" }, %struct._objc_method { ptr @OBJC_METH_VAR_NAME_.4, ptr @OBJC_METH_VAR_TYPE_.5, ptr @"\01-[C0 setProp0:]" }] }, section "__DATA, __objc_const", align 8
 // CHECK-NEXT: @"OBJC_IVAR_$_C0.ivar0" = constant i32 0, section "__DATA, __objc_ivar", align 4
 // CHECK-NEXT: @OBJC_METH_VAR_NAME_.6 = private unnamed_addr constant [6 x i8] c"ivar0\00", section "__TEXT,__objc_methname,cstring_literals", align 1
 // CHECK-NEXT: @OBJC_METH_VAR_TYPE_.7 = private unnamed_addr constant [2 x i8] c"i\00", section "__TEXT,__objc_methtype,cstring_literals", align 1
@@ -49,7 +49,7 @@ static struct __AvailabilityDomain feature3 __attribute__((availability_domain(f
 // CHECK-NEXT: @OBJC_METH_VAR_NAME_.17 = private unnamed_addr constant [10 x i8] c"setIvar3:\00", section "__TEXT,__objc_methname,cstring_literals", align 1
 // CHECK-NEXT: @OBJC_METH_VAR_NAME_.18 = private unnamed_addr constant [6 x i8] c"ivar4\00", section "__TEXT,__objc_methname,cstring_literals", align 1
 // CHECK-NEXT: @OBJC_METH_VAR_NAME_.19 = private unnamed_addr constant [10 x i8] c"setIvar4:\00", section "__TEXT,__objc_methname,cstring_literals", align 1
-// CHECK-NEXT: @"_OBJC_$_INSTANCE_METHODS_C2" = internal global { i32, i32, [6 x %struct._objc_method] } { i32 24, i32 8, [6 x %struct._objc_method] [%struct._objc_method { ptr @OBJC_METH_VAR_NAME_.12, ptr @OBJC_METH_VAR_TYPE_.13, ptr @"\01-[C2 ivar1]" }, %struct._objc_method { ptr @OBJC_METH_VAR_NAME_.14, ptr @OBJC_METH_VAR_TYPE_.15, ptr @"\01-[C2 setIvar1:]" }, %struct._objc_method { ptr @OBJC_METH_VAR_NAME_.16, ptr @OBJC_METH_VAR_TYPE_.13, ptr @"\01-[C2 ivar3]" }, %struct._objc_method { ptr @OBJC_METH_VAR_NAME_.17, ptr @OBJC_METH_VAR_TYPE_.15, ptr @"\01-[C2 setIvar3:]" }, %struct._objc_method { ptr @OBJC_METH_VAR_NAME_.18, ptr @OBJC_METH_VAR_TYPE_.13, ptr @"\01-[C2 ivar4]" }, %struct._objc_method { ptr @OBJC_METH_VAR_NAME_.19, ptr @OBJC_METH_VAR_TYPE_.15, ptr @"\01-[C2 setIvar4:]" }] }, section "__DATA, __objc_const", align 8
+// CHECK-NEXT: @"_OBJC_$_INSTANCE_METHODS_C2" = internal global { i32, i32, [6 x %struct._objc_method] } { i32 24, i32 6, [6 x %struct._objc_method] [%struct._objc_method { ptr @OBJC_METH_VAR_NAME_.12, ptr @OBJC_METH_VAR_TYPE_.13, ptr @"\01-[C2 ivar1]" }, %struct._objc_method { ptr @OBJC_METH_VAR_NAME_.14, ptr @OBJC_METH_VAR_TYPE_.15, ptr @"\01-[C2 setIvar1:]" }, %struct._objc_method { ptr @OBJC_METH_VAR_NAME_.16, ptr @OBJC_METH_VAR_TYPE_.13, ptr @"\01-[C2 ivar3]" }, %struct._objc_method { ptr @OBJC_METH_VAR_NAME_.17, ptr @OBJC_METH_VAR_TYPE_.15, ptr @"\01-[C2 setIvar3:]" }, %struct._objc_method { ptr @OBJC_METH_VAR_NAME_.18, ptr @OBJC_METH_VAR_TYPE_.13, ptr @"\01-[C2 ivar4]" }, %struct._objc_method { ptr @OBJC_METH_VAR_NAME_.19, ptr @OBJC_METH_VAR_TYPE_.15, ptr @"\01-[C2 setIvar4:]" }] }, section "__DATA, __objc_const", align 8
 // CHECK-NEXT: @"OBJC_IVAR_$_C2._ivar1" = hidden constant i32 8, section "__DATA, __objc_ivar", align 4
 // CHECK-NEXT: @OBJC_METH_VAR_NAME_.20 = private unnamed_addr constant [7 x i8] c"_ivar1\00", section "__TEXT,__objc_methname,cstring_literals", align 1
 // CHECK-NEXT: @OBJC_METH_VAR_TYPE_.21 = private unnamed_addr constant [2 x i8] c"@\00", section "__TEXT,__objc_methtype,cstring_literals", align 1
@@ -67,7 +67,26 @@ static struct __AvailabilityDomain feature3 __attribute__((availability_domain(f
 // CHECK-NEXT: @"_OBJC_$_PROP_LIST_C2" = internal global { i32, i32, [3 x %struct._prop_t] } { i32 16, i32 3, [3 x %struct._prop_t] [%struct._prop_t { ptr @OBJC_PROP_NAME_ATTR_.24, ptr @OBJC_PROP_NAME_ATTR_.25 }, %struct._prop_t { ptr @OBJC_PROP_NAME_ATTR_.26, ptr @OBJC_PROP_NAME_ATTR_.27 }, %struct._prop_t { ptr @OBJC_PROP_NAME_ATTR_.28, ptr @OBJC_PROP_NAME_ATTR_.29 }] }, section "__DATA, __objc_const", align 8
 // CHECK-NEXT: @"_OBJC_CLASS_RO_$_C2" = internal global %struct._class_ro_t { i32 0, i32 8, i32 32, ptr null, ptr @OBJC_CLASS_NAME_.11, ptr @"_OBJC_$_INSTANCE_METHODS_C2", ptr null, ptr @"_OBJC_$_INSTANCE_VARIABLES_C2", ptr null, ptr @"_OBJC_$_PROP_LIST_C2" }, section "__DATA, __objc_const", align 8
 // CHECK-NEXT: @"OBJC_CLASS_$_C2" = global %struct._class_t { ptr @"OBJC_METACLASS_$_C2", ptr @"OBJC_CLASS_$_NSObject", ptr @_objc_empty_cache, ptr @_objc_empty_vtable, ptr @"_OBJC_CLASS_RO_$_C2" }, section "__DATA, __objc_data", align 8
-// CHECK: @"OBJC_LABEL_CLASS_$" = private global [3 x ptr] [ptr @"OBJC_CLASS_$_C0", ptr @"OBJC_CLASS_$_C2", ptr @"OBJC_CLASS_$_C3"], section "__DATA,__objc_classlist,regular,no_dead_strip", align 8
+// CHECK-NEXT: @OBJC_CLASS_NAME_.30 = private unnamed_addr constant [3 x i8] c"C3\00", section "__TEXT,__objc_classname,cstring_literals", align 1
+// CHECK-NEXT: @OBJC_METH_VAR_NAME_.31 = private unnamed_addr constant [4 x i8] c"cm0\00", section "__TEXT,__objc_methname,cstring_literals", align 1
+// CHECK-NEXT: @"_OBJC_$_CLASS_METHODS_C3" = internal global { i32, i32, [1 x %struct._objc_method] } { i32 24, i32 1, [1 x %struct._objc_method] [%struct._objc_method { ptr @OBJC_METH_VAR_NAME_.31, ptr @OBJC_METH_VAR_TYPE_, ptr @"\01+[C3 cm0]" }] }, section "__DATA, __objc_const", align 8
+// CHECK-NEXT: @OBJC_CLASS_NAME_.32 = private unnamed_addr constant [3 x i8] c"P1\00", section "__TEXT,__objc_classname,cstring_literals", align 1
+// CHECK-NEXT: @OBJC_METH_VAR_NAME_.33 = private unnamed_addr constant [6 x i8] c"p1_m1\00", section "__TEXT,__objc_methname,cstring_literals", align 1
+// CHECK-NEXT: @"_OBJC_$_PROTOCOL_INSTANCE_METHODS_P1" = internal global { i32, i32, [1 x %struct._objc_method] } { i32 24, i32 1, [1 x %struct._objc_method] [%struct._objc_method { ptr @OBJC_METH_VAR_NAME_.33, ptr @OBJC_METH_VAR_TYPE_, ptr null }] }, section "__DATA, __objc_const", align 8
+// CHECK-NEXT: @"_OBJC_$_PROTOCOL_METHOD_TYPES_P1" = internal global [1 x ptr] [ptr @OBJC_METH_VAR_TYPE_], section "__DATA, __objc_const", align 8
+// CHECK-NEXT: @"_OBJC_PROTOCOL_$_P1" = weak hidden global %struct._protocol_t { ptr null, ptr @OBJC_CLASS_NAME_.32, ptr null, ptr @"_OBJC_$_PROTOCOL_INSTANCE_METHODS_P1", ptr null, ptr null, ptr null, ptr null, i32 96, i32 0, ptr @"_OBJC_$_PROTOCOL_METHOD_TYPES_P1", ptr null, ptr null }, align 8
+// CHECK-NEXT: @"_OBJC_LABEL_PROTOCOL_$_P1" = weak hidden global ptr @"_OBJC_PROTOCOL_$_P1", section "__DATA,__objc_protolist,coalesced,no_dead_strip", align 8
+// CHECK-NEXT: @"_OBJC_CLASS_PROTOCOLS_$_C3" = internal global { i64, [2 x ptr] } { i64 1, [2 x ptr] [ptr @"_OBJC_PROTOCOL_$_P1", ptr null] }, section "__DATA, __objc_const", align 8
+// CHECK-NEXT: @"_OBJC_METACLASS_RO_$_C3" = internal global %struct._class_ro_t { i32 1, i32 40, i32 40, ptr null, ptr @OBJC_CLASS_NAME_.30, ptr @"_OBJC_$_CLASS_METHODS_C3", ptr @"_OBJC_CLASS_PROTOCOLS_$_C3", ptr null, ptr null, ptr null }, section "__DATA, __objc_const", align 8
+// CHECK-NEXT: @"OBJC_METACLASS_$_C3" = global %struct._class_t { ptr @"OBJC_METACLASS_$_NSObject", ptr @"OBJC_METACLASS_$_NSObject", ptr @_objc_empty_cache, ptr @_objc_empty_vtable, ptr @"_OBJC_METACLASS_RO_$_C3" }, section "__DATA, __objc_data", align 8
+// CHECK-NEXT: @"_OBJC_$_INSTANCE_METHODS_C3" = internal global { i32, i32, [1 x %struct._objc_method] } { i32 24, i32 1, [1 x %struct._objc_method] [%struct._objc_method { ptr @OBJC_METH_VAR_NAME_.33, ptr @OBJC_METH_VAR_TYPE_, ptr @"\01-[C3 p1_m1]" }] }, section "__DATA, __objc_const", align 8
+// CHECK-NEXT: @"_OBJC_CLASS_RO_$_C3" = internal global %struct._class_ro_t { i32 0, i32 8, i32 8, ptr null, ptr @OBJC_CLASS_NAME_.30, ptr @"_OBJC_$_INSTANCE_METHODS_C3", ptr @"_OBJC_CLASS_PROTOCOLS_$_C3", ptr null, ptr null, ptr null }, section "__DATA, __objc_const", align 8
+// CHECK-NEXT: @"OBJC_CLASS_$_C3" = global %struct._class_t { ptr @"OBJC_METACLASS_$_C3", ptr @"OBJC_CLASS_$_NSObject", ptr @_objc_empty_cache, ptr @_objc_empty_vtable, ptr @"_OBJC_CLASS_RO_$_C3" }, section "__DATA, __objc_data", align 8
+// CHECK-NEXT: @OBJC_CLASS_NAME_.34 = private unnamed_addr constant [5 x i8] c"cat3\00", section "__TEXT,__objc_classname,cstring_literals", align 1
+// CHECK-NEXT: @"_OBJC_$_CATEGORY_INSTANCE_METHODS_C3_$_cat3" = internal global { i32, i32, [1 x %struct._objc_method] } { i32 24, i32 1, [1 x %struct._objc_method] [%struct._objc_method { ptr @OBJC_METH_VAR_NAME_.1, ptr @OBJC_METH_VAR_TYPE_, ptr @"\01-[C3(cat3) m1]" }] }, section "__DATA, __objc_const", align 8
+// CHECK-NEXT: @"_OBJC_$_CATEGORY_C3_$_cat3" = internal global %struct._category_t { ptr @OBJC_CLASS_NAME_.34, ptr @"OBJC_CLASS_$_C3", ptr @"_OBJC_$_CATEGORY_INSTANCE_METHODS_C3_$_cat3", ptr null, ptr null, ptr null, ptr null, i32 64 }, section "__DATA, __objc_const", align 8
+// CHECK-NEXT: @"OBJC_LABEL_CLASS_$" = private global [3 x ptr] [ptr @"OBJC_CLASS_$_C0", ptr @"OBJC_CLASS_$_C2", ptr @"OBJC_CLASS_$_C3"], section "__DATA,__objc_classlist,regular,no_dead_strip", align 8
+// CHECK-NEXT: @"OBJC_LABEL_CATEGORY_$" = private global [1 x ptr] [ptr @"_OBJC_$_CATEGORY_C3_$_cat3"], section "__DATA,__objc_catlist,regular,no_dead_strip", align 8
 
 @interface NSObject {
   id a;
@@ -171,9 +190,38 @@ __attribute__((availability(domain:feature2, AVAIL)))
 @implementation C2
 @end
 
-@interface C3 : NSObject
+@protocol P1
+-(void)p1_m1;
+-(void)unavailable_p2_m2 __attribute__((availability(domain:feature2, AVAIL)));
+@end
+
+@interface C3 : NSObject <P1>
 @property id prop0 __attribute__((availability(domain:feature2, AVAIL)));
++(void)cm0;
++(void)unavailable_cm1 __attribute__((availability(domain:feature2, AVAIL)));
 @end
 
 @implementation C3
+-(void)p1_m1 {
+}
+-(void)unavailable_p2_m2 {
+  unavailable_func1();
+}
++(void)cm0 {
+}
++(void)unavailable_cm1 {
+  unavailable_func1();
+}
+@end
+
+@interface C3(cat3)
+-(void)unavailable_m0 __attribute__((availability(domain:feature2, AVAIL)));
+-(void)m1;
+@end
+
+@implementation C3(cat3)
+-(void)unavailable_m0 {
+}
+-(void)m1 {
+}
 @end
