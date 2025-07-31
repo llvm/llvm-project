@@ -681,7 +681,6 @@ public:
   NODE_ENUM(OmpChunkModifier, Value)
   NODE(parser, OmpOrderingModifier)
   NODE_ENUM(OmpOrderingModifier, Value)
-  NODE(parser, OmpSectionBlocks)
   NODE(parser, OmpSectionsDirective)
   NODE(parser, OmpToClause)
   NODE(OmpToClause, Modifier)
