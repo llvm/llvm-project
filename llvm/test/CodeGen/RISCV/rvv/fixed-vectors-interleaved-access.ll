@@ -334,78 +334,12 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @vpload_factor3_poison_shufflemask(ptr 
 
 define {<4 x i32>, <4 x i32>, <4 x i32>} @vpload_factor3_skip_fields(ptr %ptr) {
   ; mask = 1111, skip the last field.
-; RV32-LABEL: vpload_factor3_skip_fields:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 1755
-; RV32-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; RV32-NEXT:    vmv.s.x v0, a1
-; RV32-NEXT:    li a1, 73
-; RV32-NEXT:    vmv.v.i v10, 8
-; RV32-NEXT:    vsetivli zero, 12, e32, m4, ta, ma
-; RV32-NEXT:    vle32.v v12, (a0), v0.t
-; RV32-NEXT:    li a0, 36
-; RV32-NEXT:    vmv.s.x v11, a1
-; RV32-NEXT:    lui a1, %hi(.LCPI17_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI17_0)
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vcompress.vm v8, v12, v11
-; RV32-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; RV32-NEXT:    vslidedown.vi v16, v12, 8
-; RV32-NEXT:    vmv1r.v v0, v10
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; RV32-NEXT:    vrgather.vi v8, v16, 1, v0.t
-; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; RV32-NEXT:    vmv.v.i v0, 2
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; RV32-NEXT:    vslidedown.vi v14, v12, 1
-; RV32-NEXT:    vslidedown.vi v14, v12, 3, v0.t
-; RV32-NEXT:    vle16.v v9, (a1)
-; RV32-NEXT:    vmv1r.v v0, v10
-; RV32-NEXT:    vrgather.vi v14, v16, 2, v0.t
-; RV32-NEXT:    vmv.s.x v0, a0
-; RV32-NEXT:    vmerge.vvm v12, v16, v12, v0
-; RV32-NEXT:    vrgatherei16.vv v10, v12, v9
-; RV32-NEXT:    vmv1r.v v9, v14
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vpload_factor3_skip_fields:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 1755
-; RV64-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; RV64-NEXT:    vmv.s.x v0, a1
-; RV64-NEXT:    li a1, 73
-; RV64-NEXT:    vmv.v.i v10, 8
-; RV64-NEXT:    vmv.s.x v11, a1
-; RV64-NEXT:    li a1, 36
-; RV64-NEXT:    vsetivli zero, 12, e32, m4, ta, ma
-; RV64-NEXT:    vle32.v v12, (a0), v0.t
-; RV64-NEXT:    li a0, 3
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    addi a0, a0, 5
-; RV64-NEXT:    slli a0, a0, 16
-; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV64-NEXT:    vcompress.vm v8, v12, v11
-; RV64-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; RV64-NEXT:    vslidedown.vi v16, v12, 8
-; RV64-NEXT:    vmv1r.v v0, v10
-; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; RV64-NEXT:    vrgather.vi v8, v16, 1, v0.t
-; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; RV64-NEXT:    vmv.v.i v0, 2
-; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; RV64-NEXT:    vslidedown.vi v14, v12, 1
-; RV64-NEXT:    vslidedown.vi v14, v12, 3, v0.t
-; RV64-NEXT:    vmv1r.v v0, v10
-; RV64-NEXT:    vrgather.vi v14, v16, 2, v0.t
-; RV64-NEXT:    vmv.s.x v0, a1
-; RV64-NEXT:    addi a0, a0, 2
-; RV64-NEXT:    vmerge.vvm v12, v16, v12, v0
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vmv.v.x v9, a0
-; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV64-NEXT:    vrgatherei16.vv v10, v12, v9
-; RV64-NEXT:    vmv1r.v v9, v14
-; RV64-NEXT:    ret
+; CHECK-LABEL: vpload_factor3_skip_fields:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 12
+; CHECK-NEXT:    vsetivli zero, 6, e32, m1, ta, ma
+; CHECK-NEXT:    vlsseg2e32.v v8, (a0), a1
+; CHECK-NEXT:    ret
   %interleaved.vec = tail call <12 x i32> @llvm.vp.load.v12i32.p0(ptr %ptr, <12 x i1> <i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0>, i32 12)
   %v0 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
   %v1 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 poison, i32 10>
@@ -418,78 +352,13 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @vpload_factor3_skip_fields(ptr %ptr) {
 
 define {<4 x i32>, <4 x i32>, <4 x i32>} @vpload_factor3_mask_skip_fields(ptr %ptr) {
   ; mask = 0101, skip the last field.
-; RV32-LABEL: vpload_factor3_mask_skip_fields:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 1560
-; RV32-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; RV32-NEXT:    vmv.s.x v0, a1
-; RV32-NEXT:    li a1, 73
-; RV32-NEXT:    vmv.v.i v10, 8
-; RV32-NEXT:    vsetivli zero, 12, e32, m4, ta, ma
-; RV32-NEXT:    vle32.v v12, (a0), v0.t
-; RV32-NEXT:    li a0, 36
-; RV32-NEXT:    vmv.s.x v11, a1
-; RV32-NEXT:    lui a1, %hi(.LCPI18_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI18_0)
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vcompress.vm v8, v12, v11
-; RV32-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; RV32-NEXT:    vslidedown.vi v16, v12, 8
-; RV32-NEXT:    vmv1r.v v0, v10
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; RV32-NEXT:    vrgather.vi v8, v16, 1, v0.t
-; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; RV32-NEXT:    vmv.v.i v0, 2
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; RV32-NEXT:    vslidedown.vi v14, v12, 1
-; RV32-NEXT:    vslidedown.vi v14, v12, 3, v0.t
-; RV32-NEXT:    vle16.v v9, (a1)
-; RV32-NEXT:    vmv1r.v v0, v10
-; RV32-NEXT:    vrgather.vi v14, v16, 2, v0.t
-; RV32-NEXT:    vmv.s.x v0, a0
-; RV32-NEXT:    vmerge.vvm v12, v16, v12, v0
-; RV32-NEXT:    vrgatherei16.vv v10, v12, v9
-; RV32-NEXT:    vmv1r.v v9, v14
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vpload_factor3_mask_skip_fields:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 1560
-; RV64-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; RV64-NEXT:    vmv.s.x v0, a1
-; RV64-NEXT:    li a1, 73
-; RV64-NEXT:    vmv.v.i v10, 8
-; RV64-NEXT:    vmv.s.x v11, a1
-; RV64-NEXT:    li a1, 36
-; RV64-NEXT:    vsetivli zero, 12, e32, m4, ta, ma
-; RV64-NEXT:    vle32.v v12, (a0), v0.t
-; RV64-NEXT:    li a0, 3
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    addi a0, a0, 5
-; RV64-NEXT:    slli a0, a0, 16
-; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV64-NEXT:    vcompress.vm v8, v12, v11
-; RV64-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; RV64-NEXT:    vslidedown.vi v16, v12, 8
-; RV64-NEXT:    vmv1r.v v0, v10
-; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; RV64-NEXT:    vrgather.vi v8, v16, 1, v0.t
-; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; RV64-NEXT:    vmv.v.i v0, 2
-; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; RV64-NEXT:    vslidedown.vi v14, v12, 1
-; RV64-NEXT:    vslidedown.vi v14, v12, 3, v0.t
-; RV64-NEXT:    vmv1r.v v0, v10
-; RV64-NEXT:    vrgather.vi v14, v16, 2, v0.t
-; RV64-NEXT:    vmv.s.x v0, a1
-; RV64-NEXT:    addi a0, a0, 2
-; RV64-NEXT:    vmerge.vvm v12, v16, v12, v0
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vmv.v.x v9, a0
-; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV64-NEXT:    vrgatherei16.vv v10, v12, v9
-; RV64-NEXT:    vmv1r.v v9, v14
-; RV64-NEXT:    ret
+; CHECK-LABEL: vpload_factor3_mask_skip_fields:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v0, 10
+; CHECK-NEXT:    li a1, 12
+; CHECK-NEXT:    vlsseg2e32.v v8, (a0), a1, v0.t
+; CHECK-NEXT:    ret
   %interleaved.vec = tail call <12 x i32> @llvm.vp.load.v12i32.p0(ptr %ptr, <12 x i1> <i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0>, i32 12)
   %v0 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
   %v1 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 poison, i32 10>
@@ -2282,72 +2151,12 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor3_mask(ptr %ptr) {
 }
 
 define {<4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor3_skip_field(ptr %ptr) {
-; RV32-LABEL: maskedload_factor3_skip_field:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 1755
-; RV32-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; RV32-NEXT:    vmv.s.x v0, a1
-; RV32-NEXT:    li a1, 73
-; RV32-NEXT:    vmv.v.i v10, 8
-; RV32-NEXT:    vmv.s.x v11, a1
-; RV32-NEXT:    li a1, 146
-; RV32-NEXT:    vsetivli zero, 12, e32, m4, ta, ma
-; RV32-NEXT:    vle32.v v12, (a0), v0.t
-; RV32-NEXT:    li a0, 36
-; RV32-NEXT:    vmv.s.x v20, a1
-; RV32-NEXT:    lui a1, %hi(.LCPI66_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI66_0)
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vle16.v v21, (a1)
-; RV32-NEXT:    vcompress.vm v8, v12, v11
-; RV32-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; RV32-NEXT:    vslidedown.vi v16, v12, 8
-; RV32-NEXT:    vmv1r.v v0, v10
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; RV32-NEXT:    vrgather.vi v8, v16, 1, v0.t
-; RV32-NEXT:    vcompress.vm v14, v12, v20
-; RV32-NEXT:    vrgather.vi v14, v16, 2, v0.t
-; RV32-NEXT:    vmv.s.x v0, a0
-; RV32-NEXT:    vmerge.vvm v12, v16, v12, v0
-; RV32-NEXT:    vrgatherei16.vv v10, v12, v21
-; RV32-NEXT:    vmv1r.v v9, v14
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: maskedload_factor3_skip_field:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 1755
-; RV64-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; RV64-NEXT:    vmv.s.x v0, a1
-; RV64-NEXT:    li a1, 73
-; RV64-NEXT:    vmv.v.i v10, 8
-; RV64-NEXT:    vmv.s.x v11, a1
-; RV64-NEXT:    li a1, 146
-; RV64-NEXT:    vmv.s.x v20, a1
-; RV64-NEXT:    li a1, 36
-; RV64-NEXT:    vsetivli zero, 12, e32, m4, ta, ma
-; RV64-NEXT:    vle32.v v12, (a0), v0.t
-; RV64-NEXT:    li a0, 3
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    addi a0, a0, 5
-; RV64-NEXT:    slli a0, a0, 16
-; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV64-NEXT:    vcompress.vm v8, v12, v11
-; RV64-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; RV64-NEXT:    vslidedown.vi v16, v12, 8
-; RV64-NEXT:    vmv1r.v v0, v10
-; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; RV64-NEXT:    vrgather.vi v8, v16, 1, v0.t
-; RV64-NEXT:    vcompress.vm v14, v12, v20
-; RV64-NEXT:    vrgather.vi v14, v16, 2, v0.t
-; RV64-NEXT:    vmv.s.x v0, a1
-; RV64-NEXT:    addi a0, a0, 2
-; RV64-NEXT:    vmerge.vvm v12, v16, v12, v0
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vmv.v.x v9, a0
-; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV64-NEXT:    vrgatherei16.vv v10, v12, v9
-; RV64-NEXT:    vmv1r.v v9, v14
-; RV64-NEXT:    ret
+; CHECK-LABEL: maskedload_factor3_skip_field:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 12
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vlsseg2e32.v v8, (a0), a1
+; CHECK-NEXT:    ret
   %interleaved.vec = tail call <12 x i32> @llvm.masked.load.v12i32.p0(ptr %ptr, i32 4, <12 x i1> <i1 1,i1 1,i1 0,i1 1,i1 1,i1 0,i1 1,i1 1,i1 0,i1 1,i1 1,i1 0>, <12 x i32> poison)
   ; mask = 1111, skip last field
   %v0 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
@@ -2360,72 +2169,13 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor3_skip_field(ptr %ptr
 }
 
 define {<4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor3_mask_skip_field(ptr %ptr) {
-; RV32-LABEL: maskedload_factor3_mask_skip_field:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 195
-; RV32-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; RV32-NEXT:    vmv.s.x v0, a1
-; RV32-NEXT:    li a1, 73
-; RV32-NEXT:    vmv.v.i v10, 8
-; RV32-NEXT:    vmv.s.x v11, a1
-; RV32-NEXT:    li a1, 146
-; RV32-NEXT:    vsetivli zero, 12, e32, m4, ta, ma
-; RV32-NEXT:    vle32.v v12, (a0), v0.t
-; RV32-NEXT:    li a0, 36
-; RV32-NEXT:    vmv.s.x v20, a1
-; RV32-NEXT:    lui a1, %hi(.LCPI67_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI67_0)
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vle16.v v21, (a1)
-; RV32-NEXT:    vcompress.vm v8, v12, v11
-; RV32-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; RV32-NEXT:    vslidedown.vi v16, v12, 8
-; RV32-NEXT:    vmv1r.v v0, v10
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; RV32-NEXT:    vrgather.vi v8, v16, 1, v0.t
-; RV32-NEXT:    vcompress.vm v14, v12, v20
-; RV32-NEXT:    vrgather.vi v14, v16, 2, v0.t
-; RV32-NEXT:    vmv.s.x v0, a0
-; RV32-NEXT:    vmerge.vvm v12, v16, v12, v0
-; RV32-NEXT:    vrgatherei16.vv v10, v12, v21
-; RV32-NEXT:    vmv1r.v v9, v14
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: maskedload_factor3_mask_skip_field:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 195
-; RV64-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; RV64-NEXT:    vmv.s.x v0, a1
-; RV64-NEXT:    li a1, 73
-; RV64-NEXT:    vmv.v.i v10, 8
-; RV64-NEXT:    vmv.s.x v11, a1
-; RV64-NEXT:    li a1, 146
-; RV64-NEXT:    vmv.s.x v20, a1
-; RV64-NEXT:    li a1, 36
-; RV64-NEXT:    vsetivli zero, 12, e32, m4, ta, ma
-; RV64-NEXT:    vle32.v v12, (a0), v0.t
-; RV64-NEXT:    li a0, 3
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    addi a0, a0, 5
-; RV64-NEXT:    slli a0, a0, 16
-; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV64-NEXT:    vcompress.vm v8, v12, v11
-; RV64-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; RV64-NEXT:    vslidedown.vi v16, v12, 8
-; RV64-NEXT:    vmv1r.v v0, v10
-; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; RV64-NEXT:    vrgather.vi v8, v16, 1, v0.t
-; RV64-NEXT:    vcompress.vm v14, v12, v20
-; RV64-NEXT:    vrgather.vi v14, v16, 2, v0.t
-; RV64-NEXT:    vmv.s.x v0, a1
-; RV64-NEXT:    addi a0, a0, 2
-; RV64-NEXT:    vmerge.vvm v12, v16, v12, v0
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vmv.v.x v9, a0
-; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV64-NEXT:    vrgatherei16.vv v10, v12, v9
-; RV64-NEXT:    vmv1r.v v9, v14
-; RV64-NEXT:    ret
+; CHECK-LABEL: maskedload_factor3_mask_skip_field:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v0, 5
+; CHECK-NEXT:    li a1, 12
+; CHECK-NEXT:    vlsseg2e32.v v8, (a0), a1, v0.t
+; CHECK-NEXT:    ret
   %interleaved.vec = tail call <12 x i32> @llvm.masked.load.v12i32.p0(ptr %ptr, i32 4, <12 x i1> <i1 1,i1 1,i1 0,i1 0,i1 0,i1 0,i1 1,i1 1,i1 0,i1 0,i1 0,i1 0>, <12 x i32> poison)
   ; mask = 1010, skip the last field
   %v0 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
@@ -2521,173 +2271,12 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor3_invalid_skip_field(
 
 define {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor5_skip_fields(ptr %ptr) {
   ; mask = 1111, skip the last two fields.
-; RV32-LABEL: maskedload_factor5_skip_fields:
-; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -256
-; RV32-NEXT:    .cfi_def_cfa_offset 256
-; RV32-NEXT:    sw ra, 252(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 248(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    .cfi_offset s0, -8
-; RV32-NEXT:    addi s0, sp, 256
-; RV32-NEXT:    .cfi_def_cfa s0, 0
-; RV32-NEXT:    andi sp, sp, -128
-; RV32-NEXT:    lui a1, 58
-; RV32-NEXT:    addi a1, a1, -793
-; RV32-NEXT:    vsetivli zero, 20, e32, m8, ta, ma
-; RV32-NEXT:    vmv.s.x v0, a1
-; RV32-NEXT:    li a1, 33
-; RV32-NEXT:    vle32.v v16, (a0), v0.t
-; RV32-NEXT:    li a0, 32
-; RV32-NEXT:    mv a2, sp
-; RV32-NEXT:    vmv.s.x v0, a1
-; RV32-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; RV32-NEXT:    vslidedown.vi v8, v16, 8
-; RV32-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
-; RV32-NEXT:    vslidedown.vi v12, v16, 6
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v13, v16, 1
-; RV32-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; RV32-NEXT:    vse32.v v16, (a2)
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vmerge.vvm v8, v8, v16, v0
-; RV32-NEXT:    vslidedown.vi v10, v16, 7
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v11, v16, 2
-; RV32-NEXT:    vslidedown.vi v18, v16, 3
-; RV32-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
-; RV32-NEXT:    vslidedown.vi v14, v16, 4
-; RV32-NEXT:    vmv.x.s a0, v12
-; RV32-NEXT:    vmv.x.s a1, v13
-; RV32-NEXT:    vmv.x.s a2, v11
-; RV32-NEXT:    vmv.x.s a3, v18
-; RV32-NEXT:    vmv.x.s a4, v14
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.x v11, a1
-; RV32-NEXT:    vmv.v.x v12, a2
-; RV32-NEXT:    vmv.v.x v13, a3
-; RV32-NEXT:    vmv.v.x v14, a4
-; RV32-NEXT:    lw a1, 32(sp)
-; RV32-NEXT:    lw a2, 36(sp)
-; RV32-NEXT:    lw a3, 44(sp)
-; RV32-NEXT:    lw a4, 48(sp)
-; RV32-NEXT:    vslide1down.vx v11, v11, a0
-; RV32-NEXT:    vmv.x.s a0, v10
-; RV32-NEXT:    vslide1down.vx v10, v12, a0
-; RV32-NEXT:    vslide1down.vx v11, v11, a3
-; RV32-NEXT:    vslide1down.vx v10, v10, a4
-; RV32-NEXT:    vslide1down.vx v12, v13, a1
-; RV32-NEXT:    lw a0, 64(sp)
-; RV32-NEXT:    lw a1, 52(sp)
-; RV32-NEXT:    lw a3, 56(sp)
-; RV32-NEXT:    lw a4, 68(sp)
-; RV32-NEXT:    vslide1down.vx v14, v14, a2
-; RV32-NEXT:    vslide1down.vx v13, v11, a0
-; RV32-NEXT:    vmv.v.i v0, 10
-; RV32-NEXT:    vslide1down.vx v10, v10, a4
-; RV32-NEXT:    vslide1down.vx v11, v12, a1
-; RV32-NEXT:    lw a0, 72(sp)
-; RV32-NEXT:    lw a1, 76(sp)
-; RV32-NEXT:    vslide1down.vx v12, v14, a3
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; RV32-NEXT:    vslidedown.vi v8, v8, 4, v0.t
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vslide1down.vx v11, v11, a0
-; RV32-NEXT:    vslide1down.vx v12, v12, a1
-; RV32-NEXT:    vmv1r.v v9, v13
-; RV32-NEXT:    addi sp, s0, -256
-; RV32-NEXT:    .cfi_def_cfa sp, 256
-; RV32-NEXT:    lw ra, 252(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 248(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore ra
-; RV32-NEXT:    .cfi_restore s0
-; RV32-NEXT:    addi sp, sp, 256
-; RV32-NEXT:    .cfi_def_cfa_offset 0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: maskedload_factor5_skip_fields:
-; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -256
-; RV64-NEXT:    .cfi_def_cfa_offset 256
-; RV64-NEXT:    sd ra, 248(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 240(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    .cfi_offset s0, -16
-; RV64-NEXT:    addi s0, sp, 256
-; RV64-NEXT:    .cfi_def_cfa s0, 0
-; RV64-NEXT:    andi sp, sp, -128
-; RV64-NEXT:    lui a1, 58
-; RV64-NEXT:    addi a1, a1, -793
-; RV64-NEXT:    vsetivli zero, 20, e32, m8, ta, ma
-; RV64-NEXT:    vmv.s.x v0, a1
-; RV64-NEXT:    li a1, 33
-; RV64-NEXT:    vle32.v v16, (a0), v0.t
-; RV64-NEXT:    li a0, 32
-; RV64-NEXT:    mv a2, sp
-; RV64-NEXT:    vmv.s.x v0, a1
-; RV64-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v16, 8
-; RV64-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
-; RV64-NEXT:    vslidedown.vi v12, v16, 6
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v13, v16, 1
-; RV64-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; RV64-NEXT:    vse32.v v16, (a2)
-; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV64-NEXT:    vmerge.vvm v8, v8, v16, v0
-; RV64-NEXT:    vslidedown.vi v10, v16, 7
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v11, v16, 2
-; RV64-NEXT:    vslidedown.vi v18, v16, 3
-; RV64-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
-; RV64-NEXT:    vslidedown.vi v14, v16, 4
-; RV64-NEXT:    vmv.x.s a0, v12
-; RV64-NEXT:    vmv.x.s a1, v13
-; RV64-NEXT:    vmv.x.s a2, v11
-; RV64-NEXT:    vmv.x.s a3, v18
-; RV64-NEXT:    vmv.x.s a4, v14
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vmv.v.x v11, a1
-; RV64-NEXT:    vmv.v.x v12, a2
-; RV64-NEXT:    vmv.v.x v13, a3
-; RV64-NEXT:    vmv.v.x v14, a4
-; RV64-NEXT:    lw a1, 32(sp)
-; RV64-NEXT:    lw a2, 36(sp)
-; RV64-NEXT:    lw a3, 44(sp)
-; RV64-NEXT:    lw a4, 48(sp)
-; RV64-NEXT:    vslide1down.vx v11, v11, a0
-; RV64-NEXT:    vmv.x.s a0, v10
-; RV64-NEXT:    vslide1down.vx v10, v12, a0
-; RV64-NEXT:    vslide1down.vx v11, v11, a3
-; RV64-NEXT:    vslide1down.vx v10, v10, a4
-; RV64-NEXT:    vslide1down.vx v12, v13, a1
-; RV64-NEXT:    lw a0, 64(sp)
-; RV64-NEXT:    lw a1, 52(sp)
-; RV64-NEXT:    lw a3, 56(sp)
-; RV64-NEXT:    lw a4, 68(sp)
-; RV64-NEXT:    vslide1down.vx v14, v14, a2
-; RV64-NEXT:    vslide1down.vx v13, v11, a0
-; RV64-NEXT:    vmv.v.i v0, 10
-; RV64-NEXT:    vslide1down.vx v10, v10, a4
-; RV64-NEXT:    vslide1down.vx v11, v12, a1
-; RV64-NEXT:    lw a0, 72(sp)
-; RV64-NEXT:    lw a1, 76(sp)
-; RV64-NEXT:    vslide1down.vx v12, v14, a3
-; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; RV64-NEXT:    vslidedown.vi v8, v8, 4, v0.t
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vslide1down.vx v11, v11, a0
-; RV64-NEXT:    vslide1down.vx v12, v12, a1
-; RV64-NEXT:    vmv1r.v v9, v13
-; RV64-NEXT:    addi sp, s0, -256
-; RV64-NEXT:    .cfi_def_cfa sp, 256
-; RV64-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
-; RV64-NEXT:    .cfi_restore ra
-; RV64-NEXT:    .cfi_restore s0
-; RV64-NEXT:    addi sp, sp, 256
-; RV64-NEXT:    .cfi_def_cfa_offset 0
-; RV64-NEXT:    ret
+; CHECK-LABEL: maskedload_factor5_skip_fields:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 20
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vlsseg3e32.v v8, (a0), a1
+; CHECK-NEXT:    ret
   %interleaved.vec = tail call <20 x i32> @llvm.masked.load(ptr %ptr, i32 4, <20 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0>, <20 x i32> poison)
   %v0 = shufflevector <20 x i32> %interleaved.vec, <20 x i32> poison, <4 x i32> <i32 0, i32 5, i32 10, i32 15>
   %v1 = shufflevector <20 x i32> %interleaved.vec, <20 x i32> poison, <4 x i32> <i32 1, i32 6, i32 11, i32 16>

@@ -1663,8 +1663,8 @@ namespace llvm {
     /// instructions/intrinsics.
     bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                               ArrayRef<ShuffleVectorInst *> Shuffles,
-                              ArrayRef<unsigned> Indices,
-                              unsigned Factor) const override;
+                              ArrayRef<unsigned> Indices, unsigned Factor,
+                              unsigned MaskFactor) const override;
 
     /// Lower interleaved store(s) into target specific
     /// instructions/intrinsics.
