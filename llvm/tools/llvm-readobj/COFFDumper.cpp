@@ -95,6 +95,7 @@ public:
   void printCOFFExports() override;
   void printCOFFDirectives() override;
   void printCOFFBaseReloc() override;
+  void printCOFFPseudoReloc() override;
   void printCOFFDebugDirectory() override;
   void printCOFFTLSDirectory() override;
   void printCOFFResources() override;
@@ -1999,6 +2000,8 @@ void COFFDumper::printCOFFBaseReloc() {
     W.printHex("Address", RVA);
   }
 }
+
+void COFFDumper::printCOFFPseudoReloc() { ListScope D(W, "PseudoReloc"); }
 
 void COFFDumper::printCOFFResources() {
   ListScope ResourcesD(W, "Resources");
