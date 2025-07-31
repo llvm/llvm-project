@@ -69,6 +69,22 @@ static Block *getPhiIncomingBlock(Block *block) {
   return block;
 }
 
+static bool isNull(Attribute attr) {
+  if (auto floatAttr = dyn_cast<FloatAttr>(attr)) {
+    return floatAttr.getValue().isZero();
+  }
+  if (auto boolAttr = dyn_cast<BoolAttr>(attr)) {
+    return !boolAttr.getValue();
+  }
+  if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
+    return intAttr.getValue().isZero();
+  }
+  if (auto denseElemAttr = dyn_cast<DenseElementsAttr>(attr)) {
+    return all_of(denseElemAttr.getValues<Attribute>(), isNull);
+  }
+  return false;
+}
+
 namespace mlir {
 namespace spirv {
 
@@ -959,6 +975,11 @@ Serializer::prepareDenseElementsConstant(Location loc, Type constType,
       return 0;
     }
   } else if (isa<spirv::TensorArmType>(constType)) {
+    if (isNull(valueAttr)) {
+      encodeInstructionInto(typesGlobalValues, spirv::Opcode::OpConstantNull,
+                            {typeID, resultID});
+      return resultID;
+    }
     numberOfConstituents = shapedType.getNumElements();
     operands.reserve(numberOfConstituents + 2);
     for (int i = 0; i < numberOfConstituents; ++i) {
@@ -1202,11 +1223,14 @@ uint32_t Serializer::prepareConstantCompositeReplicate(Location loc,
   }
 
   uint32_t resultID = getNextID();
-  uint32_t operands[] = {typeID, resultID, constandID};
-
-  encodeInstructionInto(typesGlobalValues,
-                        spirv::Opcode::OpConstantCompositeReplicateEXT,
-                        operands);
+  if (dyn_cast<spirv::TensorArmType>(resultType) && isNull(valueAttr)) {
+    encodeInstructionInto(typesGlobalValues, spirv::Opcode::OpConstantNull,
+                          {typeID, resultID});
+  } else {
+    encodeInstructionInto(typesGlobalValues,
+                          spirv::Opcode::OpConstantCompositeReplicateEXT,
+                          {typeID, resultID, constandID});
+  }
 
   constCompositeReplicateIDMap[valueTypePair] = resultID;
   return resultID;
