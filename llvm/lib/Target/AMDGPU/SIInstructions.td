@@ -3552,8 +3552,8 @@ def : GCNPat <
 
 let True16Predicate = UseRealTrue16Insts in
 def : GCNPat <
-  (vecTy (DivergentBinFrag<build_vector> (Ty undef), (Ty VGPR_32:$src1))),
-  (REG_SEQUENCE VGPR_32, (Ty (IMPLICIT_DEF)), lo16, (Ty VGPR_32:$src1), hi16)
+  (vecTy (DivergentBinFrag<build_vector> (Ty undef), (Ty VGPR_16:$src1))),
+  (REG_SEQUENCE VGPR_32, (Ty (IMPLICIT_DEF)), lo16, (Ty VGPR_16:$src1), hi16)
 >;
 
 } // End foreach Ty = ...
