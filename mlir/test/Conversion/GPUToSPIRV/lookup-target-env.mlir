@@ -17,7 +17,8 @@ module attributes {gpu.container_module} {
 }
 
 // -----
-
+// Checks that the `-convert-gpu-to-spirv` pass selects the first
+// `spirv.target_env` from the `targets` array attribute attached to `gpu.module`.
 module attributes {gpu.container_module} {
   // CHECK-LABEL: spirv.module @{{.*}} GLSL450
   // CHECK-SAME: #spirv.target_env<#spirv.vce<v1.4, [Shader], [SPV_KHR_storage_buffer_storage_class]>
