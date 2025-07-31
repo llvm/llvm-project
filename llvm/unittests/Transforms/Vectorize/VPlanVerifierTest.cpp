@@ -291,16 +291,15 @@ TEST_F(VPVerifierTest, NonHeaderPHIInHeader) {
   VPlan &Plan = getPlan();
   VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
-  VPInstruction *BranchOnCond =
-      new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
+  auto *BranchOnCond = new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
-  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("header");
 
   VPBB2->appendRecipe(CanIV);
 
   PHINode *PHINode = PHINode::Create(Type::getInt32Ty(C), 2);
-  VPIRPhi *IRPhi = new VPIRPhi(*PHINode);
+  auto *IRPhi = new VPIRPhi(*PHINode);
   VPBB2->appendRecipe(IRPhi);
   VPBB2->appendRecipe(BranchOnCond);
 
