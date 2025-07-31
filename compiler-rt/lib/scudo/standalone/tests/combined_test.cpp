@@ -1133,7 +1133,7 @@ TEST(ScudoCombinedTest, QuarantineEnabled) {
   }
   EXPECT_GE(Stats.size(), ActualSize);
 
-  // No quarantine stats should exist.
+  // Quarantine stats should be present.
   EXPECT_NE(Stats.find("Stats: Quarantine"), std::string::npos);
 }
 
@@ -1158,6 +1158,6 @@ TEST(ScudoCombinedTest, QuarantineDisabled) {
   }
   EXPECT_GE(Stats.size(), ActualSize);
 
-  // No quarantine stats should exist.
+  // No quarantine stats should not be present.
   EXPECT_EQ(Stats.find("Stats: Quarantine"), std::string::npos);
 }

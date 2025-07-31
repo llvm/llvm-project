@@ -184,10 +184,11 @@ public:
     const s32 ReleaseToOsIntervalMs = getFlags()->release_to_os_interval_ms;
     Primary.init(ReleaseToOsIntervalMs);
     Secondary.init(&Stats, ReleaseToOsIntervalMs);
-    if (!AllocatorConfig::getQuarantineDisabled())
+    if (!AllocatorConfig::getQuarantineDisabled()) {
       Quarantine.init(
           static_cast<uptr>(getFlags()->quarantine_size_kb << 10),
           static_cast<uptr>(getFlags()->thread_local_quarantine_size_kb << 10));
+    }
   }
 
   void enableRingBuffer() NO_THREAD_SAFETY_ANALYSIS {
@@ -277,18 +278,20 @@ public:
   //   the last two items).
   void commitBack(TSD<ThisT> *TSD) {
     TSD->assertLocked(/*BypassCheck=*/true);
-    if (!AllocatorConfig::getQuarantineDisabled())
+    if (!AllocatorConfig::getQuarantineDisabled()) {
       Quarantine.drain(&TSD->getQuarantineCache(),
                        QuarantineCallback(*this, TSD->getSizeClassAllocator()));
+    }
     TSD->getSizeClassAllocator().destroy(&Stats);
   }
 
   void drainCache(TSD<ThisT> *TSD) {
     TSD->assertLocked(/*BypassCheck=*/true);
-    if (!AllocatorConfig::getQuarantineDisabled())
+    if (!AllocatorConfig::getQuarantineDisabled()) {
       Quarantine.drainAndRecycle(
           &TSD->getQuarantineCache(),
           QuarantineCallback(*this, TSD->getSizeClassAllocator()));
+    }
     TSD->getSizeClassAllocator().drain();
   }
   void drainCaches() { TSDRegistry.drainCaches(this); }
