@@ -37,7 +37,7 @@ _CLC_INLINE Scope getCLCScope(memory_scope memory_scope) {
 }
 
 _CLC_INLINE MemorySemantics getCLCMemorySemantics(cl_mem_fence_flags flag) {
-  MemorySemantics semantics = AcquireRelease;
+  MemorySemantics semantics = SequentiallyConsistent;
   if (flag & CLK_GLOBAL_MEM_FENCE)
     semantics |= CrossWorkgroupMemory;
   if (flag & CLK_LOCAL_MEM_FENCE)
