@@ -419,6 +419,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   // If extracting a specified index from the vector, see if we can recursively
   // find a previously computed scalar that was inserted into the vector.
   auto *IndexC = dyn_cast<ConstantInt>(Index);
+  auto *II = dyn_cast<IntrinsicInst>(SrcVec);
   bool HasKnownValidIndex = false;
   if (IndexC) {
     // Canonicalize type of constant indices to i64 to simplify CSE
@@ -429,7 +430,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
     unsigned NumElts = EC.getKnownMinValue();
     HasKnownValidIndex = IndexC->getValue().ult(NumElts);
 
-    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(SrcVec)) {
+    if (II) {
       Intrinsic::ID IID = II->getIntrinsicID();
       // Index needs to be lower than the minimum size of the vector, because
       // for scalable vector, the vector size is known at run time.
@@ -444,11 +445,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
         else
           Idx = PoisonValue::get(Ty);
         return replaceInstUsesWith(EI, Idx);
-      } else if (IID == Intrinsic::vector_extract)
-        // If II is a subvector starting at index 0, extract from the wider
-        // source vector
-        if (cast<ConstantInt>(II->getArgOperand(1))->getZExtValue() == 0)
-          return ExtractElementInst::Create(II->getArgOperand(0), Index);
+      }
     }
 
     // InstSimplify should handle cases where the index is invalid.
@@ -465,6 +462,12 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
       if (Instruction *ScalarPHI = scalarizePHI(EI, Phi))
         return ScalarPHI;
   }
+
+  // If SrcVec is a subvector starting at index 0, extract from the
+  // wider source vector
+  if (II && II->getIntrinsicID() == Intrinsic::vector_extract)
+    if (cast<ConstantInt>(II->getArgOperand(1))->isZero())
+      return ExtractElementInst::Create(II->getArgOperand(0), Index);
 
   // TODO come up with a n-ary matcher that subsumes both unary and
   // binary matchers.
