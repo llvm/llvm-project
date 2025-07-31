@@ -26,14 +26,11 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/EHPersonalities.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ArrayRecycler.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/MD5.h"
 #include "llvm/Support/Recycler.h"
 #include "llvm/Target/TargetOptions.h"
 #include <bitset>
@@ -526,26 +523,7 @@ public:
     /// Extracts the numeric type id from the CallBase's callee_type Metadata,
     /// and sets CalleeTypeIds. This is used as type id for the indirect call in
     /// the call graph section.
-    CallSiteInfo(const CallBase &CB) {
-      // Call graph section needs numeric callee_type id only for indirect
-      // calls.
-      if (!CB.isIndirectCall())
-        return;
-
-      MDNode *CalleeTypeList = CB.getMetadata(LLVMContext::MD_callee_type);
-      if (!CalleeTypeList)
-        return;
-
-      for (const MDOperand &Op : CalleeTypeList->operands()) {
-        MDNode *TypeMD = cast<MDNode>(Op);
-        MDString *TypeIdStr = cast<MDString>(TypeMD->getOperand(1));
-        // Compute numeric type id from generalized type id string
-        uint64_t TypeIdVal = MD5Hash(TypeIdStr->getString());
-        IntegerType *Int64Ty = Type::getInt64Ty(CB.getContext());
-        CalleeTypeIds.push_back(
-            ConstantInt::get(Int64Ty, TypeIdVal, /*IsSigned=*/false));
-      }
-    }
+    CallSiteInfo(const CallBase &CB);
   };
 
   struct CalledGlobalInfo {
