@@ -108,6 +108,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-invalid-enum-default-initialization
+  <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` check.
+
+  Detects default initialization (to 0) of variables with ``enum`` type where
+  the enum has no enumerator with value of 0.
+
 - New :doc:`llvm-mlir-op-builder
   <clang-tidy/checks/llvm/use-new-mlir-op-builder>` check.
 
