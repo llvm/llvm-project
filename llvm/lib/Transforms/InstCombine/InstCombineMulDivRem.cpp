@@ -290,7 +290,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
       auto *Op1C = cast<Constant>(Op1);
       return replaceInstUsesWith(
           I, Builder.CreateMul(NegOp0, ConstantExpr::getNeg(Op1C), "",
-                               /* HasNUW */ false,
+                               /*HasNUW=*/false,
                                HasNSW && Op1C->isNotMinSignedValue()));
     }
 
@@ -1255,8 +1255,8 @@ static Value *foldIDivShl(BinaryOperator &I, InstCombiner::BuilderTy &Builder) {
       // or divisor has nsw and operator is sdiv.
       Value *Dividend = Builder.CreateShl(
           One, Y, "shl.dividend",
-          /*HasNUW*/ true,
-          /*HasNSW*/
+          /*HasNUW=*/true,
+          /*HasNSW=*/
           IsSigned ? (Shl0->hasNoUnsignedWrap() || Shl1->hasNoUnsignedWrap())
                    : Shl0->hasNoSignedWrap());
       return Builder.CreateLShr(Dividend, Z, "", I.isExact());

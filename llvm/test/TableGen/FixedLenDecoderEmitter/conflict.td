@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-disassembler -I %p/../../../include %s -o - 2>%t
+// RUN: not llvm-tblgen -gen-disassembler -I %p/../../../include %s -o - 2>%t
 // RUN: FileCheck %s < %t
 
 include "llvm/Target/Target.td"

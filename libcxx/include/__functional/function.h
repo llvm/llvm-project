@@ -125,31 +125,6 @@ _LIBCPP_HIDE_FROM_ABI bool __not_null(_Rp (^__p)(_Args...)) {
 
 namespace __function {
 
-template <class _Fp, class _FB>
-class __default_alloc_func;
-
-template <class _Fp, class _Rp, class... _ArgTypes>
-class __default_alloc_func<_Fp, _Rp(_ArgTypes...)> {
-  _Fp __f_;
-
-public:
-  using _Target _LIBCPP_NODEBUG = _Fp;
-
-  _LIBCPP_HIDE_FROM_ABI const _Target& __target() const { return __f_; }
-
-  _LIBCPP_HIDE_FROM_ABI explicit __default_alloc_func(_Target&& __f) : __f_(std::move(__f)) {}
-
-  _LIBCPP_HIDE_FROM_ABI explicit __default_alloc_func(const _Target& __f) : __f_(__f) {}
-
-  _LIBCPP_HIDE_FROM_ABI _Rp operator()(_ArgTypes&&... __arg) {
-    return std::__invoke_r<_Rp>(__f_, std::forward<_ArgTypes>(__arg)...);
-  }
-
-  _LIBCPP_HIDE_FROM_ABI __default_alloc_func* __clone() const { return new __default_alloc_func(__f_); }
-
-  _LIBCPP_HIDE_FROM_ABI void destroy() _NOEXCEPT { __f_.~_Target(); }
-};
-
 // __base provides an abstract interface for copyable functors.
 
 template <class _Fp>
@@ -402,7 +377,7 @@ private:
   template <typename _Fun>
   _LIBCPP_HIDE_FROM_ABI static void* __large_clone(const void* __s) {
     const _Fun* __f = static_cast<const _Fun*>(__s);
-    return __f->__clone();
+    return new _Fun(*__f);
   }
 
   template <typename _Fun>
@@ -417,7 +392,7 @@ private:
         std::addressof(__large_destroy<_Fun>),
         false,
 #  if _LIBCPP_HAS_RTTI
-        &typeid(typename _Fun::_Target)
+        &typeid(_Fun)
 #  else
         nullptr
 #  endif
@@ -432,7 +407,7 @@ private:
         nullptr,
         false,
 #  if _LIBCPP_HAS_RTTI
-        &typeid(typename _Fun::_Target)
+        &typeid(_Fun)
 #  else
         nullptr
 #  endif
@@ -446,42 +421,7 @@ private:
 template <typename _Tp>
 using __fast_forward _LIBCPP_NODEBUG = __conditional_t<is_scalar<_Tp>::value, _Tp, _Tp&&>;
 
-// __policy_invoker calls an instance of __default_alloc_func held in __policy_storage.
-
-template <class _Fp>
-struct __policy_invoker;
-
-template <class _Rp, class... _ArgTypes>
-struct __policy_invoker<_Rp(_ArgTypes...)> {
-  typedef _Rp (*__Call)(const __policy_storage*, __fast_forward<_ArgTypes>...);
-
-  __Call __call_;
-
-  // Creates an invoker that throws bad_function_call.
-  _LIBCPP_HIDE_FROM_ABI __policy_invoker() : __call_(&__call_empty) {}
-
-  // Creates an invoker that calls the given instance of __func.
-  template <typename _Fun>
-  _LIBCPP_HIDE_FROM_ABI static __policy_invoker __create() {
-    return __policy_invoker(std::addressof(__call_impl<_Fun>));
-  }
-
-private:
-  _LIBCPP_HIDE_FROM_ABI explicit __policy_invoker(__Call __c) : __call_(__c) {}
-
-  _LIBCPP_HIDE_FROM_ABI static _Rp __call_empty(const __policy_storage*, __fast_forward<_ArgTypes>...) {
-    std::__throw_bad_function_call();
-  }
-
-  template <typename _Fun>
-  _LIBCPP_HIDE_FROM_ABI static _Rp __call_impl(const __policy_storage* __buf, __fast_forward<_ArgTypes>... __args) {
-    _Fun* __f = reinterpret_cast<_Fun*>(__use_small_storage<_Fun>::value ? &__buf->__small : __buf->__large);
-    return (*__f)(std::forward<_ArgTypes>(__args)...);
-  }
-};
-
-// __policy_func uses a __policy and __policy_invoker to create a type-erased,
-// copyable functor.
+// __policy_func uses a __policy to create a type-erased, copyable functor.
 
 template <class _Fp>
 class __policy_func;
@@ -491,45 +431,52 @@ class __policy_func<_Rp(_ArgTypes...)> {
   // Inline storage for small objects.
   __policy_storage __buf_;
 
-  // Calls the value stored in __buf_. This could technically be part of
-  // policy, but storing it here eliminates a level of indirection inside
-  // operator().
-  typedef __function::__policy_invoker<_Rp(_ArgTypes...)> __invoker;
-  __invoker __invoker_;
+  using _ErasedFunc _LIBCPP_NODEBUG = _Rp(const __policy_storage*, __fast_forward<_ArgTypes>...);
+
+  _ErasedFunc* __func_;
 
   // The policy that describes how to move / copy / destroy __buf_. Never
   // null, even if the function is empty.
   const __policy* __policy_;
 
+  _LIBCPP_HIDE_FROM_ABI static _Rp __empty_func(const __policy_storage*, __fast_forward<_ArgTypes>...) {
+    std::__throw_bad_function_call();
+  }
+
+  template <class _Fun>
+  _LIBCPP_HIDE_FROM_ABI static _Rp __call_func(const __policy_storage* __buf, __fast_forward<_ArgTypes>... __args) {
+    _Fun* __func = reinterpret_cast<_Fun*>(__use_small_storage<_Fun>::value ? &__buf->__small : __buf->__large);
+
+    return std::__invoke_r<_Rp>(*__func, std::forward<_ArgTypes>(__args)...);
+  }
+
 public:
-  _LIBCPP_HIDE_FROM_ABI __policy_func() : __policy_(__policy::__create_empty()) {}
+  _LIBCPP_HIDE_FROM_ABI __policy_func() : __func_(__empty_func), __policy_(__policy::__create_empty()) {}
 
   template <class _Fp, __enable_if_t<!is_same<__decay_t<_Fp>, __policy_func>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit __policy_func(_Fp&& __f) : __policy_(__policy::__create_empty()) {
-    typedef __default_alloc_func<_Fp, _Rp(_ArgTypes...)> _Fun;
-
     if (__function::__not_null(__f)) {
-      __invoker_ = __invoker::template __create<_Fun>();
-      __policy_  = __policy::__create<_Fun>();
-      if (__use_small_storage<_Fun>()) {
-        ::new ((void*)&__buf_.__small) _Fun(std::move(__f));
+      __func_   = __call_func<_Fp>;
+      __policy_ = __policy::__create<_Fp>();
+      if (__use_small_storage<_Fp>()) {
+        ::new ((void*)&__buf_.__small) _Fp(std::move(__f));
       } else {
-        __buf_.__large = ::new _Fun(std::move(__f));
+        __buf_.__large = ::new _Fp(std::move(__f));
       }
     }
   }
 
   _LIBCPP_HIDE_FROM_ABI __policy_func(const __policy_func& __f)
-      : __buf_(__f.__buf_), __invoker_(__f.__invoker_), __policy_(__f.__policy_) {
+      : __buf_(__f.__buf_), __func_(__f.__func_), __policy_(__f.__policy_) {
     if (__policy_->__clone)
       __buf_.__large = __policy_->__clone(__f.__buf_.__large);
   }
 
   _LIBCPP_HIDE_FROM_ABI __policy_func(__policy_func&& __f)
-      : __buf_(__f.__buf_), __invoker_(__f.__invoker_), __policy_(__f.__policy_) {
+      : __buf_(__f.__buf_), __func_(__f.__func_), __policy_(__f.__policy_) {
     if (__policy_->__destroy) {
-      __f.__policy_  = __policy::__create_empty();
-      __f.__invoker_ = __invoker();
+      __f.__policy_ = __policy::__create_empty();
+      __f.__func_   = {};
     }
   }
 
@@ -539,30 +486,30 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI __policy_func& operator=(__policy_func&& __f) {
-    *this          = nullptr;
-    __buf_         = __f.__buf_;
-    __invoker_     = __f.__invoker_;
-    __policy_      = __f.__policy_;
-    __f.__policy_  = __policy::__create_empty();
-    __f.__invoker_ = __invoker();
+    *this         = nullptr;
+    __buf_        = __f.__buf_;
+    __func_       = __f.__func_;
+    __policy_     = __f.__policy_;
+    __f.__policy_ = __policy::__create_empty();
+    __f.__func_   = {};
     return *this;
   }
 
   _LIBCPP_HIDE_FROM_ABI __policy_func& operator=(nullptr_t) {
     const __policy* __p = __policy_;
     __policy_           = __policy::__create_empty();
-    __invoker_          = __invoker();
+    __func_             = {};
     if (__p->__destroy)
       __p->__destroy(__buf_.__large);
     return *this;
   }
 
   _LIBCPP_HIDE_FROM_ABI _Rp operator()(_ArgTypes&&... __args) const {
-    return __invoker_.__call_(std::addressof(__buf_), std::forward<_ArgTypes>(__args)...);
+    return __func_(std::addressof(__buf_), std::forward<_ArgTypes>(__args)...);
   }
 
   _LIBCPP_HIDE_FROM_ABI void swap(__policy_func& __f) {
-    std::swap(__invoker_, __f.__invoker_);
+    std::swap(__func_, __f.__func_);
     std::swap(__policy_, __f.__policy_);
     std::swap(__buf_, __f.__buf_);
   }

@@ -326,7 +326,7 @@ define void @scatter_nxv4i16_no_uniform_vals_uniform_ptrs_all_active_mask(ptr %d
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i16>, ptr [[SRC:%.*]], align 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <vscale x 4 x i16> [[WIDE_LOAD]], i32 [[TMP2]]
 ; CHECK-NEXT:    store i16 [[TMP3]], ptr [[DST:%.*]], align 2

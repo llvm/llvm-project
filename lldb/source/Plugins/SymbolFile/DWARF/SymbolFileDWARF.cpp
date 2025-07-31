@@ -41,6 +41,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfoEntry.h"
+#include "Plugins/SymbolFile/DWARF/SymbolFileWasm.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -73,6 +74,7 @@
 #include "ManualDWARFIndex.h"
 #include "SymbolFileDWARFDebugMap.h"
 #include "SymbolFileDWARFDwo.h"
+#include "lldb/lldb-private-enumerations.h"
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
@@ -98,8 +100,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 LLDB_PLUGIN_DEFINE(SymbolFileDWARF)
 
@@ -327,6 +329,9 @@ llvm::StringRef SymbolFileDWARF::GetPluginDescriptionStatic() {
 }
 
 SymbolFile *SymbolFileDWARF::CreateInstance(ObjectFileSP objfile_sp) {
+  if (objfile_sp->GetArchitecture().GetTriple().isWasm())
+    return new SymbolFileWasm(std::move(objfile_sp),
+                              /*dwo_section_list*/ nullptr);
   return new SymbolFileDWARF(std::move(objfile_sp),
                              /*dwo_section_list*/ nullptr);
 }
@@ -2535,7 +2540,7 @@ void SymbolFileDWARF::FindFunctions(const Module::LookupInfo &lookup_info,
   m_index->GetFunctions(lookup_info, *this, parent_decl_ctx, [&](DWARFDIE die) {
     if (resolved_dies.insert(die.GetDIE()).second)
       ResolveFunction(die, include_inlines, sc_list);
-    return true;
+    return IterationAction::Continue;
   });
   // With -gsimple-template-names, a templated type's DW_AT_name will not
   // contain the template parameters. Try again stripping '<' and anything
@@ -2552,7 +2557,7 @@ void SymbolFileDWARF::FindFunctions(const Module::LookupInfo &lookup_info,
                             [&](DWARFDIE die) {
                               if (resolved_dies.insert(die.GetDIE()).second)
                                 ResolveFunction(die, include_inlines, sc_list);
-                              return true;
+                              return IterationAction::Continue;
                             });
     }
   }
@@ -2588,7 +2593,7 @@ void SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
   m_index->GetFunctions(regex, [&](DWARFDIE die) {
     if (resolved_dies.insert(die.GetDIE()).second)
       ResolveFunction(die, include_inlines, sc_list);
-    return true;
+    return IterationAction::Continue;
   });
 }
 
@@ -4139,7 +4144,8 @@ void SymbolFileDWARF::DumpClangAST(Stream &s, llvm::StringRef filter) {
 }
 
 bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d,
-                                           bool errors_only) {
+                                           bool errors_only,
+                                           bool load_all_debug_info) {
   StructuredData::Array separate_debug_info_files;
   DWARFDebugInfo &info = DebugInfo();
   const size_t num_cus = info.GetNumUnits();
@@ -4182,7 +4188,7 @@ bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d,
 
     // If we have a DWO symbol file, that means we were able to successfully
     // load it.
-    SymbolFile *dwo_symfile = dwarf_cu->GetDwoSymbolFile();
+    SymbolFile *dwo_symfile = dwarf_cu->GetDwoSymbolFile(load_all_debug_info);
     if (dwo_symfile) {
       dwo_data->AddStringItem(
           "resolved_dwo_path",
@@ -4329,13 +4335,16 @@ SymbolFileDWARF::GetContainingDeclContext(const DWARFDIE &die) {
 }
 
 LanguageType SymbolFileDWARF::LanguageTypeFromDWARF(uint64_t val) {
+  if (val <= eLanguageTypeLastStandardLanguage)
+    return static_cast<LanguageType>(val);
+
   // Note: user languages between lo_user and hi_user must be handled
   // explicitly here.
   switch (val) {
   case DW_LANG_Mips_Assembler:
     return eLanguageTypeMipsAssembler;
   default:
-    return static_cast<LanguageType>(val);
+    return eLanguageTypeUnknown;
   }
 }
 
@@ -4419,4 +4428,33 @@ void SymbolFileDWARF::GetCompileOptions(
       continue;
     args.insert({comp_unit, Args(flags)});
   }
+}
+
+std::pair<uint32_t, uint32_t> SymbolFileDWARF::GetDwoFileCounts() {
+  uint32_t total_dwo_count = 0;
+  uint32_t loaded_dwo_count = 0;
+
+  DWARFDebugInfo &info = DebugInfo();
+  const size_t num_cus = info.GetNumUnits();
+  for (size_t cu_idx = 0; cu_idx < num_cus; cu_idx++) {
+    DWARFUnit *dwarf_cu = info.GetUnitAtIndex(cu_idx);
+    if (dwarf_cu == nullptr)
+      continue;
+
+    // Check if this is a DWO unit by checking if it has a DWO ID.
+    if (!dwarf_cu->GetDWOId().has_value())
+      continue;
+
+    total_dwo_count++;
+
+    // If we have a DWO symbol file, that means we were able to successfully
+    // load it.
+    SymbolFile *dwo_symfile =
+        dwarf_cu->GetDwoSymbolFile(/*load_all_debug_info=*/false);
+    if (dwo_symfile) {
+      loaded_dwo_count++;
+    }
+  }
+
+  return {loaded_dwo_count, total_dwo_count};
 }

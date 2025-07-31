@@ -30,8 +30,8 @@ class VTypeIOp<int VTypeINum> : RISCVOp {
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
-      return isUInt<VTypeINum>(Imm);
-    return MCOp.isBareSymbolRef();
+      return isUInt<}] # VTypeINum # [{>(Imm);
+    return MCOp.Kind == KindTy::VType;
   }];
 }
 
@@ -138,16 +138,17 @@ class SchedCommon<list<SchedWrite> writes, list<SchedRead> reads,
 }
 
 // Common class of scheduling definitions for n-ary instructions.
-// The scheudling resources are relevant to LMUL and may be relevant to SEW.
+// The scheduling resources are relevant to LMUL and may be relevant to SEW.
 class SchedNary<string write, list<string> reads, string mx, int sew = 0,
                 bit forceMasked = 0, bit forcePassthruRead = 0>
     : SchedCommon<[!cast<SchedWrite>(
-                      !if(sew,
-                          write # "_" # mx # "_E" # sew,
-                          write # "_" # mx))],
+                       !if(sew,
+                           write # "_" # mx # "_E" # sew,
+                           write # "_" # mx))],
                   !foreach(read, reads,
-                           !cast<SchedRead>(!if(sew, read #"_" #mx #"_E" #sew,
-                                                 read #"_" #mx))),
+                           !cast<SchedRead>(!if(sew,
+                                                read # "_" # mx # "_E" #sew,
+                                                read # "_" # mx))),
                   mx, sew, forceMasked, forcePassthruRead>;
 
 // Classes with postfix "MC" are only used in MC layer.
@@ -1641,7 +1642,7 @@ def VFIRST_M : RVInstV<0b010000, 0b10001, OPMVV, (outs GPR:$vd),
 
 def : MnemonicAlias<"vpopc.m", "vcpop.m">;
 
-let Constraints = "@earlyclobber $vd", RVVConstraint = Iota, ElementsDependOn = EltDepsVLMask in {
+let Constraints = "@earlyclobber $vd", RVVConstraint = Iota, ElementsDependOn = EltDepsMask in {
 
 let DestEEW = EEW1 in {
 // vmsbf.m set-before-first mask bit
@@ -1654,7 +1655,7 @@ defm VMSOF_M : VMSFS_MV_V<"vmsof.m", 0b010100, 0b00010>;
 // Vector Iota Instruction
 defm VIOTA_M : VIOTA_MV_V<"viota.m", 0b010100, 0b10000>;
 
-} // Constraints = "@earlyclobber $vd", RVVConstraint = Iota, ElementsDependOn = EltDepsVLMask
+} // Constraints = "@earlyclobber $vd", RVVConstraint = Iota, ElementsDependOn = EltDepsMask
 
 // Vector Element Index Instruction
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {

@@ -2981,7 +2981,7 @@ static Value *simplifyICmpWithZero(CmpPredicate Pred, Value *LHS, Value *RHS,
 }
 
 static Value *simplifyICmpWithConstant(CmpPredicate Pred, Value *LHS,
-                                       Value *RHS, const InstrInfoQuery &IIQ) {
+                                       Value *RHS, const SimplifyQuery &Q) {
   Type *ITy = getCompareTy(RHS); // The return type.
 
   Value *X;
@@ -3007,7 +3007,7 @@ static Value *simplifyICmpWithConstant(CmpPredicate Pred, Value *LHS,
     return ConstantInt::getTrue(ITy);
 
   ConstantRange LHS_CR =
-      computeConstantRange(LHS, CmpInst::isSigned(Pred), IIQ.UseInstrInfo);
+      computeConstantRange(LHS, CmpInst::isSigned(Pred), Q.IIQ.UseInstrInfo);
   if (!LHS_CR.isFullSet()) {
     if (RHS_CR.contains(LHS_CR))
       return ConstantInt::getTrue(ITy);
@@ -3018,12 +3018,15 @@ static Value *simplifyICmpWithConstant(CmpPredicate Pred, Value *LHS,
   // (mul nuw/nsw X, MulC) != C --> true  (if C is not a multiple of MulC)
   // (mul nuw/nsw X, MulC) == C --> false (if C is not a multiple of MulC)
   const APInt *MulC;
-  if (IIQ.UseInstrInfo && ICmpInst::isEquality(Pred) &&
+  if (Q.IIQ.UseInstrInfo && ICmpInst::isEquality(Pred) &&
       ((match(LHS, m_NUWMul(m_Value(), m_APIntAllowPoison(MulC))) &&
         *MulC != 0 && C->urem(*MulC) != 0) ||
        (match(LHS, m_NSWMul(m_Value(), m_APIntAllowPoison(MulC))) &&
         *MulC != 0 && C->srem(*MulC) != 0)))
     return ConstantInt::get(ITy, Pred == ICmpInst::ICMP_NE);
+
+  if (Pred == ICmpInst::ICMP_UGE && C->isOne() && isKnownNonZero(LHS, Q))
+    return ConstantInt::getTrue(ITy);
 
   return nullptr;
 }
@@ -3776,7 +3779,7 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
   if (Value *V = simplifyICmpWithZero(Pred, LHS, RHS, Q))
     return V;
 
-  if (Value *V = simplifyICmpWithConstant(Pred, LHS, RHS, Q.IIQ))
+  if (Value *V = simplifyICmpWithConstant(Pred, LHS, RHS, Q))
     return V;
 
   // If both operands have range metadata, use the metadata
@@ -5363,7 +5366,7 @@ static Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
     Type *MidTy = CI->getType();
     Type *DstTy = Ty;
     if (Src->getType() == Ty) {
-      auto FirstOp = static_cast<Instruction::CastOps>(CI->getOpcode());
+      auto FirstOp = CI->getOpcode();
       auto SecondOp = static_cast<Instruction::CastOps>(CastOpc);
       Type *SrcIntPtrTy =
           SrcTy->isPtrOrPtrVectorTy() ? Q.DL.getIntPtrType(SrcTy) : nullptr;
@@ -6481,9 +6484,6 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     break;
   }
   case Intrinsic::ptrmask: {
-    if (isa<PoisonValue>(Op0) || isa<PoisonValue>(Op1))
-      return PoisonValue::get(Op0->getType());
-
     // NOTE: We can't apply this simplifications based on the value of Op1
     // because we need to preserve provenance.
     if (Q.isUndefValue(Op0) || match(Op0, m_Zero()))
@@ -6529,10 +6529,6 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     // Canonicalize immediate constant operand as Op1.
     if (match(Op0, m_ImmConstant()))
       std::swap(Op0, Op1);
-
-    // Propagate poison.
-    if (isa<PoisonValue>(Op1))
-      return Op1;
 
     // Assume undef is the limit value.
     if (Q.isUndefValue(Op1))
@@ -6693,9 +6689,6 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       return Op1;
     break;
   case Intrinsic::is_fpclass: {
-    if (isa<PoisonValue>(Op0))
-      return PoisonValue::get(ReturnType);
-
     uint64_t Mask = cast<ConstantInt>(Op1)->getZExtValue();
     // If all tests are made, it doesn't matter what the value is.
     if ((Mask & fcAllFlags) == fcAllFlags)
@@ -6790,6 +6783,9 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   Function *F = cast<Function>(Callee);
   Intrinsic::ID IID = F->getIntrinsicID();
 
+  if (IID != Intrinsic::not_intrinsic && intrinsicPropagatesPoison(IID) &&
+      any_of(Args, IsaPred<PoisonValue>))
+    return PoisonValue::get(F->getReturnType());
   // Most of the intrinsics with no operands have some kind of side effect.
   // Don't simplify.
   if (!NumOperands) {

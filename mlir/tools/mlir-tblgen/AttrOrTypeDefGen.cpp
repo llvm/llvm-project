@@ -245,17 +245,15 @@ void DefGen::createParentWithTraits() {
                    ? cast<NativeTrait>(&trait)->getFullyQualifiedTraitName()
                    : cast<InterfaceTrait>(&trait)->getFullyQualifiedTraitName();
       }));
-  llvm::for_each(traitNames, [&](auto &traitName) {
+  for (auto &traitName : traitNames)
     defParent.addTemplateParam(traitName);
-  });
 
   // Add OpAsmInterface::Trait if we automatically generate mnemonic alias
   // method.
   std::string opAsmInterfaceTraitName =
       strfmt("::mlir::OpAsm{0}Interface::Trait", defType);
-  if (def.genMnemonicAlias() && llvm::none_of(traitNames, [&](auto &traitName) {
-        return traitName == opAsmInterfaceTraitName;
-      })) {
+  if (def.genMnemonicAlias() &&
+      !llvm::is_contained(traitNames, opAsmInterfaceTraitName)) {
     defParent.addTemplateParam(opAsmInterfaceTraitName);
   }
   defCls.addParent(std::move(defParent));
@@ -497,7 +495,7 @@ void DefGen::emitCheckedBuilder() {
   MethodBody &body = m->body().indent();
   auto scope = body.scope("return Base::getChecked(emitError, context", ");");
   for (const auto &param : params)
-    body << ", " << param.getName();
+    body << ", std::move(" << param.getName() << ")";
 }
 
 static SmallVector<MethodParameter>
@@ -670,10 +668,10 @@ void DefGen::emitHashKey() {
 }
 
 void DefGen::emitConstruct() {
-  Method *construct = storageCls->addMethod<Method::Inline>(
+  Method *construct = storageCls->addMethod(
       strfmt("{0} *", def.getStorageClassName()), "construct",
       def.hasStorageCustomConstructor() ? Method::StaticDeclaration
-                                        : Method::Static,
+                                        : Method::StaticInline,
       MethodParameter(strfmt("::mlir::{0}StorageAllocator &", valueType),
                       "allocator"),
       MethodParameter("KeyTy &&", "tblgenKey"));

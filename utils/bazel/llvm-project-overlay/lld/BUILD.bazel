@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load(
     "//:vars.bzl",
     "LLVM_VERSION",
@@ -71,9 +72,8 @@ gentbl_cc_library(
 cc_library(
     name = "ELF",
     srcs = glob([
-        "ELF/*.cpp",
-        "ELF/*.h",
-        "ELF/Arch/*.cpp",
+        "ELF/**/*.cpp",
+        "ELF/**/*.h",
     ]),
     includes = ["ELF"],
     textual_hdrs = [

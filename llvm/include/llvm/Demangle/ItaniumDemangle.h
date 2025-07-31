@@ -3049,7 +3049,8 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
   Node *parse(bool ParseParams = true);
 };
 
-const char* parse_discriminator(const char* first, const char* last);
+DEMANGLE_ABI const char *parse_discriminator(const char *first,
+                                             const char *last);
 
 // <name> ::= <nested-name> // N
 //        ::= <local-name> # See Scope Encoding below  // Z
@@ -4468,7 +4469,9 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
         return nullptr;
       if (!consumeIf('_'))
         return nullptr;
-      return make<BitIntType>(Size, Signed);
+      // The front end expects this to be available for Substitution
+      Result = make<BitIntType>(Size, Signed);
+      break;
     }
     //                ::= Di   # char32_t
     case 'i':

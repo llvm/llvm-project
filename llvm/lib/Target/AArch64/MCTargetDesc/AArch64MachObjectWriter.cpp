@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/AArch64FixupKinds.h"
-#include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -17,7 +17,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionMachO.h"
@@ -34,8 +33,8 @@ namespace {
 
 class AArch64MachObjectWriter : public MCMachObjectTargetWriter {
   bool getAArch64FixupKindMachOInfo(const MCFixup &Fixup, unsigned &RelocType,
-                                    AArch64MCExpr::Specifier Spec,
-                                    unsigned &Log2Size, const MCAssembler &Asm);
+                                    AArch64::Specifier Spec, unsigned &Log2Size,
+                                    const MCAssembler &Asm);
 
 public:
   AArch64MachObjectWriter(uint32_t CPUType, uint32_t CPUSubtype, bool IsILP32)
@@ -49,12 +48,12 @@ public:
 } // end anonymous namespace
 
 bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
-    const MCFixup &Fixup, unsigned &RelocType, AArch64MCExpr::Specifier Spec,
+    const MCFixup &Fixup, unsigned &RelocType, AArch64::Specifier Spec,
     unsigned &Log2Size, const MCAssembler &Asm) {
   RelocType = unsigned(MachO::ARM64_RELOC_UNSIGNED);
   Log2Size = ~0U;
 
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     return false;
 
@@ -66,12 +65,12 @@ bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
     return true;
   case FK_Data_4:
     Log2Size = Log2_32(4);
-    if (Spec == AArch64MCExpr::M_GOT)
+    if (Spec == AArch64::S_MACHO_GOT)
       RelocType = unsigned(MachO::ARM64_RELOC_POINTER_TO_GOT);
     return true;
   case FK_Data_8:
     Log2Size = Log2_32(8);
-    if (Spec == AArch64MCExpr::M_GOT)
+    if (Spec == AArch64::S_MACHO_GOT)
       RelocType = unsigned(MachO::ARM64_RELOC_POINTER_TO_GOT);
     return true;
   case AArch64::fixup_aarch64_add_imm12:
@@ -84,13 +83,13 @@ bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
     switch (Spec) {
     default:
       return false;
-    case AArch64MCExpr::M_PAGEOFF:
+    case AArch64::S_MACHO_PAGEOFF:
       RelocType = unsigned(MachO::ARM64_RELOC_PAGEOFF12);
       return true;
-    case AArch64MCExpr::M_GOTPAGEOFF:
+    case AArch64::S_MACHO_GOTPAGEOFF:
       RelocType = unsigned(MachO::ARM64_RELOC_GOT_LOAD_PAGEOFF12);
       return true;
-    case AArch64MCExpr::M_TLVPPAGEOFF:
+    case AArch64::S_MACHO_TLVPPAGEOFF:
       RelocType = unsigned(MachO::ARM64_RELOC_TLVP_LOAD_PAGEOFF12);
       return true;
     }
@@ -101,13 +100,13 @@ bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
     default:
       reportError(Fixup.getLoc(), "ADR/ADRP relocations must be GOT relative");
       return false;
-    case AArch64MCExpr::M_PAGE:
+    case AArch64::S_MACHO_PAGE:
       RelocType = unsigned(MachO::ARM64_RELOC_PAGE21);
       return true;
-    case AArch64MCExpr::M_GOTPAGE:
+    case AArch64::S_MACHO_GOTPAGE:
       RelocType = unsigned(MachO::ARM64_RELOC_GOT_LOAD_PAGE21);
       return true;
-    case AArch64MCExpr::M_TLVPPAGE:
+    case AArch64::S_MACHO_TLVPPAGE:
       RelocType = unsigned(MachO::ARM64_RELOC_TLVP_LOAD_PAGE21);
       return true;
     }
@@ -133,7 +132,8 @@ static bool canUseLocalRelocation(const MCSectionMachO &Section,
   // But only if they don't point to a few forbidden sections.
   if (!Symbol.isInSection())
     return true;
-  const MCSectionMachO &RefSec = cast<MCSectionMachO>(Symbol.getSection());
+  const MCSectionMachO &RefSec =
+      static_cast<MCSectionMachO &>(Symbol.getSection());
   if (RefSec.getType() == MachO::S_CSTRING_LITERALS)
     return false;
 
@@ -148,7 +148,7 @@ static bool canUseLocalRelocation(const MCSectionMachO &Section,
 void AArch64MachObjectWriter::recordRelocation(
     MachObjectWriter *Writer, MCAssembler &Asm, const MCFragment *Fragment,
     const MCFixup &Fixup, MCValue Target, uint64_t &FixedValue) {
-  unsigned IsPCRel = Writer->isFixupKindPCRel(Asm, Fixup.getKind());
+  unsigned IsPCRel = Fixup.isPCRel();
 
   // See <reloc.h>.
   uint32_t FixupOffset = Asm.getFragmentOffset(*Fragment);
@@ -189,9 +189,8 @@ void AArch64MachObjectWriter::recordRelocation(
     return;
   }
 
-  if (!getAArch64FixupKindMachOInfo(
-          Fixup, Type, AArch64MCExpr::Specifier(Target.getSpecifier()),
-          Log2Size, Asm)) {
+  if (!getAArch64FixupKindMachOInfo(Fixup, Type, Target.getSpecifier(),
+                                    Log2Size, Asm)) {
     reportError(Fixup.getLoc(), "unknown AArch64 fixup kind!");
     return;
   }
@@ -218,7 +217,7 @@ void AArch64MachObjectWriter::recordRelocation(
     // Check for "_foo@got - .", which comes through here as:
     // Ltmp0:
     //    ... _foo@got - Ltmp0
-    if (Target.getSpecifier() == AArch64MCExpr::M_GOT &&
+    if (Target.getSpecifier() == AArch64::S_MACHO_GOT &&
         Asm.getSymbolOffset(*B) ==
             Asm.getFragmentOffset(*Fragment) + Fixup.getOffset()) {
       // SymB is the PC, so use a PC-rel pointer-to-GOT relocation.
@@ -229,7 +228,7 @@ void AArch64MachObjectWriter::recordRelocation(
       MRE.r_word1 = (IsPCRel << 24) | (Log2Size << 25) | (Type << 28);
       Writer->addRelocation(A_Base, Fragment->getParent(), MRE);
       return;
-    } else if (Target.getSpecifier() != AArch64MCExpr::None) {
+    } else if (Target.getSpecifier() != AArch64::S_None) {
       // Otherwise, neither symbol can be modified.
       reportError(Fixup.getLoc(), "unsupported relocation of modified symbol");
       return;
@@ -382,8 +381,8 @@ void AArch64MachObjectWriter::recordRelocation(
     Value = 0;
   }
 
-  if (Target.getSpecifier() == AArch64MCExpr::VK_AUTH ||
-      Target.getSpecifier() == AArch64MCExpr::VK_AUTHADDR) {
+  if (Target.getSpecifier() == AArch64::S_AUTH ||
+      Target.getSpecifier() == AArch64::S_AUTHADDR) {
     auto *Expr = cast<AArch64AuthMCExpr>(Fixup.getValue());
 
     assert(Type == MachO::ARM64_RELOC_UNSIGNED);

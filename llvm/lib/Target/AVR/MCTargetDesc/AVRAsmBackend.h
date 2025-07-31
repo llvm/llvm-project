@@ -37,9 +37,6 @@ public:
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
 
-  bool addReloc(const MCFragment &, const MCFixup &, const MCValue &,
-                uint64_t &FixedValue, bool IsResolved) override;
-
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   MutableArrayRef<char> Data, uint64_t Value,
                   bool IsResolved) override;
