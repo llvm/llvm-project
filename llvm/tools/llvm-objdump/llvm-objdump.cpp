@@ -639,7 +639,8 @@ static bool isRISCVElf(const ObjectFile &Obj) {
 }
 
 static bool hasMappingSymbols(const ObjectFile &Obj) {
-  return isArmElf(Obj) || isAArch64Elf(Obj) || isCSKYElf(Obj) || isRISCVElf(Obj);
+  return isArmElf(Obj) || isAArch64Elf(Obj) || isCSKYElf(Obj) ||
+         isRISCVElf(Obj);
 }
 
 static void printRelocation(formatted_raw_ostream &OS, StringRef FileName,
