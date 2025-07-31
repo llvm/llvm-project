@@ -323,13 +323,11 @@ else()
     set(LLDB_CAN_USE_DEBUGSERVER OFF)
 endif()
 
-# In a cross-compile build, we need to skip building the generated
-# lldb-rpc sources in the first phase of host build so that they can
-# get built using the just-built Clang toolchain in the second phase.
 if (NOT DEFINED LLDB_CAN_USE_LLDB_RPC_SERVER)
-  set(LLDB_CAN_USE_LLDB_RPC_SERVER OFF)
-else()
-  if ((CMAKE_CROSSCOMPILING OR LLVM_HOST_TRIPLE MATCHES "${LLVM_DEFAULT_TARGET_TRIPLE}") AND
+  # In a cross-compile build, we don't want to try to build a lldb-rpc-gen, as
+  # as that essentially forces rebuilding a whole separate native copy of clang.
+  # Allow the caller to set this variable manually to opt in/out of it.
+  if (NOT CMAKE_CROSSCOMPILING AND
       CMAKE_SYSTEM_NAME MATCHES "AIX|Android|Darwin|FreeBSD|Linux|NetBSD|OpenBSD|Windows")
     set(LLDB_CAN_USE_LLDB_RPC_SERVER ON)
   else()
@@ -337,16 +335,11 @@ else()
   endif()
 endif()
 
-
-if (NOT DEFINED LLDB_BUILD_LLDBRPC)
-  set(LLDB_BUILD_LLDBRPC OFF)
+if (CMAKE_CROSSCOMPILING)
+  set(LLDB_BUILD_LLDBRPC OFF CACHE BOOL "")
+  get_host_tool_path(lldb-rpc-gen LLDB_RPC_GEN_EXE lldb_rpc_gen_exe lldb_rpc_gen_target)
 else()
-  if (CMAKE_CROSSCOMPILING)
-    set(LLDB_BUILD_LLDBRPC OFF CACHE BOOL "")
-    get_host_tool_path(lldb-rpc-gen LLDB_RPC_GEN_EXE lldb_rpc_gen_exe lldb_rpc_gen_target)
-  else()
-    set(LLDB_BUILD_LLDBRPC ON CACHE BOOL "")
-  endif()
+  set(LLDB_BUILD_LLDBRPC ON CACHE BOOL "")
 endif()
 
 include(LLDBGenerateConfig)
