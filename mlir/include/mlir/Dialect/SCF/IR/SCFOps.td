@@ -87,9 +87,9 @@ def ExecuteRegionOp : SCF_Op<"execute_region", [
     be accessed inside the op. The op's region can have multiple blocks and the
     blocks can have multiple distinct terminators. Values returned from this op's
     region define the op's results.
-    Canonicalizer inlines an ExecuteRegionOp into its parent if it only contains 
-    one block or its parent can contain multiple blocks, 'no_inline' attribute
-    can be set to prevent an ExecuteRegionOp from being inlined.
+    The optional 'no_inline' flag can be set to request the ExecuteRegionOp to be
+    preserved as much as possible and not being inlined in the parent block until
+    an explicit lowering step.
 
     Example:
 
