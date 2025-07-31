@@ -121,6 +121,9 @@ export namespace std {
   using std::rank;
 
   // [meta.rel], type relations
+#if _LIBCPP_STD_VER >= 26
+  using std::is_applicable;
+#endif
   using std::is_base_of;
 #if _LIBCPP_STD_VER >= 26 && __has_builtin(__builtin_is_virtual_base_of)
   using std::is_virtual_base_of;
@@ -134,6 +137,9 @@ export namespace std {
   using std::is_invocable;
   using std::is_invocable_r;
 
+#if _LIBCPP_STD_VER >= 26
+  using std::is_nothrow_applicable;
+#endif
   using std::is_nothrow_invocable;
   using std::is_nothrow_invocable_r;
 
@@ -183,6 +189,9 @@ export namespace std {
   using std::remove_pointer_t;
 
   // [meta.trans.other], other transformations
+#if _LIBCPP_STD_VER >= 26
+  using std::apply_result;
+#endif
   using std::basic_common_reference;
   using std::common_reference;
   using std::common_type;
@@ -196,6 +205,9 @@ export namespace std {
   using std::unwrap_ref_decay;
   using std::unwrap_reference;
 
+#if _LIBCPP_STD_VER >= 26
+  using std::apply_result_t;
+#endif
   using std::common_reference_t;
   using std::common_type_t;
   using std::conditional_t;
@@ -305,6 +317,9 @@ export namespace std {
   using std::rank_v;
 
   // [meta.rel], type relations
+#if _LIBCPP_STD_VER >= 26
+  using std::is_applicable_v;
+#endif
   using std::is_base_of_v;
 #if _LIBCPP_STD_VER >= 26 && __has_builtin(__builtin_is_virtual_base_of)
   using std::is_virtual_base_of_v;
@@ -313,6 +328,9 @@ export namespace std {
   using std::is_invocable_r_v;
   using std::is_invocable_v;
   // using std::is_layout_compatible_v;
+#if _LIBCPP_STD_VER >= 26
+  using std::is_nothrow_applicable_v;
+#endif
   using std::is_nothrow_convertible_v;
   using std::is_nothrow_invocable_r_v;
   using std::is_nothrow_invocable_v;

@@ -38,6 +38,8 @@ What's New in Libc++ 22.0.0?
 Implemented Papers
 ------------------
 
+- P1317R2: Remove return type deduction in ``std::apply`` (`Github <https://github.com/llvm/llvm-project/issues/148183>`__)
+  (Only components in ``<type_traits>`` are implemented.)
 - P2321R2: ``zip`` (`Github <https://github.com/llvm/llvm-project/issues/105169>`__) (The paper is partially implemented. ``zip_transform_view`` is implemented in this release)
 
 Improvements and New Features
