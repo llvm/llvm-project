@@ -697,7 +697,7 @@ raw_fd_ostream::~raw_fd_ostream() {
 // the input is UTF-8 or transcode from the local codepage to UTF-8 before
 // quoting it. If they don't, this may mess up the encoding, but this is still
 // probably the best compromise we can make.
-bool write_console_impl(int FD, StringRef Data) {
+static bool write_console_impl(int FD, StringRef Data) {
   SmallVector<wchar_t, 256> WideText;
 
   // Fall back to ::write if it wasn't valid UTF-8.

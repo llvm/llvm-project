@@ -640,9 +640,8 @@ Status NativeFile::Write(const void *buf, size_t &num_bytes) {
   ssize_t bytes_written = -1;
   if (ValueGuard descriptor_guard = DescriptorIsValid()) {
 #ifdef _WIN32
-    if (is_windows_console &&
-        write_console_impl(m_descriptor,
-                           llvm::StringRef((char *)buf, num_bytes))) {
+    if (is_windows_console) {
+      llvm::raw_fd_ostream(m_descriptor, false).write((char *)buf, num_bytes);
       return error;
     }
 #endif
@@ -658,9 +657,9 @@ Status NativeFile::Write(const void *buf, size_t &num_bytes) {
 
   if (ValueGuard stream_guard = StreamIsValid()) {
 #ifdef _WIN32
-    if (is_windows_console &&
-        write_console_impl(_fileno(m_stream),
-                           llvm::StringRef((char *)buf, num_bytes))) {
+    if (is_windows_console) {
+      llvm::raw_fd_ostream(_fileno(m_stream), false)
+          .write((char *)buf, num_bytes);
       return error;
     }
 #endif

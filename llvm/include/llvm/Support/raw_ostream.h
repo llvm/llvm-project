@@ -853,6 +853,4 @@ raw_ostream &operator<<(raw_ostream &OS, const std::optional<T> &O) {
 
 } // end namespace llvm
 
-bool write_console_impl(int FD, llvm::StringRef Data);
-
 #endif // LLVM_SUPPORT_RAW_OSTREAM_H
