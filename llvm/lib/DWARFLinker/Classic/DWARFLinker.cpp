@@ -415,7 +415,7 @@ static bool isTlsAddressCode(uint8_t DW_OP_Code) {
 
 static void constructSeqOffsettoOrigRowMapping(
     CompileUnit &Unit, const DWARFDebugLine::LineTable &LT,
-    DenseMap<size_t, unsigned> &SeqOffToOrigRow) {
+    DenseMap<uint64_t, unsigned> &SeqOffToOrigRow) {
 
   // Use std::map for ordered iteration.
   std::map<uint64_t, unsigned> LineTableMapping;
@@ -476,13 +476,14 @@ static void constructSeqOffsettoOrigRowMapping(
   LineTableMapping[DummyKey] = DummyVal;
 
   for (auto [NextSeqOff, NextRow] : LineTableMapping) {
-    auto StmtAttrSmallerThanNext = [NextSeqOff](const PatchLocation &SA) {
-      return SA.get() < NextSeqOff;
+    // Explict capture to avoid capturing structured bindings and make C++17
+    // happy.
+    auto StmtAttrSmallerThanNext = [N = NextSeqOff](const PatchLocation &SA) {
+      return SA.get() < N;
     };
-    auto SeqStartSmallerThanNext = [NextRow](const size_t &Row) {
-      return Row < NextRow;
+    auto SeqStartSmallerThanNext = [N = NextRow](const size_t &Row) {
+      return Row < N;
     };
-
     // If both StmtAttrs and SeqStartRows points to value not in
     // the LineTableMapping yet, we do a dummy one to one mapping and
     // move the pointer.
