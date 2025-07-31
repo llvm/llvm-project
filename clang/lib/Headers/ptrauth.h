@@ -199,9 +199,9 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
    Do not pass a null pointer to this function. A null pointer
    will not successfully authenticate. */
 #define ptrauth_auth_load_relative_and_sign(__value, __old_key, __old_data,    \
-                                            __new_key, __new_data, __addend)   \
+                                            __new_key, __new_data, __offset)   \
   __builtin_ptrauth_auth_load_relative_and_sign(                               \
-      __value, __old_key, __old_data, __new_key, __new_data, __addend)
+      __value, __old_key, __old_data, __new_key, __new_data, __offset)
 
 /* Authenticate a pointer using one scheme and resign it as a C
    function pointer.
@@ -389,14 +389,14 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
   })
 
 #define ptrauth_auth_load_relative_and_sign(__value, __old_key, __old_data,    \
-                                            __new_key, __new_data, __addend)   \
+                                            __new_key, __new_data, __offset)   \
   ({                                                                           \
     (void)__old_key;                                                           \
     (void)__old_data;                                                          \
     (void)__new_key;                                                           \
     (void)__new_data;                                                          \
     const char *__value_tmp = (const char *)(__value);                         \
-    (void *)(__value_tmp + *(const int *)(__value_tmp + (__addend)));          \
+    (void *)(__value_tmp + *(const int *)(__value_tmp + (__offset)));          \
   })
 
 #define ptrauth_auth_function(__value, __old_key, __old_data)                  \
@@ -429,6 +429,7 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
     (void)__data;                                                              \
     ((ptrauth_generic_signature_t)0);                                          \
   })
+
 
 #define ptrauth_cxx_vtable_pointer(key, address_discrimination,                \
                                    extra_discrimination...)
