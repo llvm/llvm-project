@@ -587,8 +587,9 @@ StringRef sys::detail::getHostCPUNameForBPF() {
 #endif
 }
 
-#if defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||            \
-    defined(_M_X64)
+#if (defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||           \
+     defined(_M_X64)) &&                                                       \
+    !defined(_M_ARM64EC)
 
 /// getX86CpuIDAndInfo - Execute the specified cpuid and return the 4 values in
 /// the specified arguments.  If we can't run cpuid on the host, return true.
@@ -1853,8 +1854,9 @@ VendorSignatures getVendorSignature(unsigned *MaxLeaf) {
 } // namespace llvm
 #endif
 
-#if defined(__i386__) || defined(_M_IX86) || \
-    defined(__x86_64__) || defined(_M_X64)
+#if (defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||           \
+     defined(_M_X64)) &&                                                       \
+    !defined(_M_ARM64EC)
 StringMap<bool> sys::getHostCPUFeatures() {
   unsigned EAX = 0, EBX = 0, ECX = 0, EDX = 0;
   unsigned MaxLevel;
@@ -2147,7 +2149,8 @@ StringMap<bool> sys::getHostCPUFeatures() {
 
   return Features;
 }
-#elif defined(_WIN32) && (defined(__aarch64__) || defined(_M_ARM64))
+#elif defined(_WIN32) && (defined(__aarch64__) || defined(_M_ARM64) ||         \
+                          defined(__arm64ec__) || defined(_M_ARM64EC))
 StringMap<bool> sys::getHostCPUFeatures() {
   StringMap<bool> Features;
 
