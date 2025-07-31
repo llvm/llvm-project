@@ -20,19 +20,24 @@
 // LMUL values map to array indices as follows:
 //   MF8 -> Values[0], MF4 -> Values[1], MF2 -> Values[2], M1 -> Values[3],
 //   M2 -> Values[4], M4 -> Values[5], M8 -> Values[6]
-// The !ge size checks ensure we don't access beyond the array bounds, for cases
-// where M8 is not set (e.g., widening operations)
-// TableGen will error if an invalid LMUL is passed or if the array is too short
+// Shorter lists are allowed, e.g., widening instructions don't work on M8
 class GetLMULValue<list<int> Values, string LMUL> {
-  int c = !cond(
-    !and(!eq(LMUL, "MF8"), !ge(!size(Values), 1)) : Values[0],
-    !and(!eq(LMUL, "MF4"), !ge(!size(Values), 2)) : Values[1],
-    !and(!eq(LMUL, "MF2"), !ge(!size(Values), 3)) : Values[2],
-    !and(!eq(LMUL, "M1"),  !ge(!size(Values), 4)) : Values[3],
-    !and(!eq(LMUL, "M2"),  !ge(!size(Values), 5)) : Values[4],
-    !and(!eq(LMUL, "M4"),  !ge(!size(Values), 6)) : Values[5],
-    !and(!eq(LMUL, "M8"),  !ge(!size(Values), 7)) : Values[6]
+  int Index = !cond(
+    !eq(LMUL, "MF8"): 0,
+    !eq(LMUL, "MF4"): 1,
+    !eq(LMUL, "MF2"): 2,
+    !eq(LMUL, "M1"):  3,
+    !eq(LMUL, "M2"):  4,
+    !eq(LMUL, "M4"):  5,
+    !eq(LMUL, "M8"):  6,
   );
+
+  assert !lt(Index, !size(Values)),
+    "Missing LMUL value for '" # LMUL # "'. " #
+    "Expected at least " # !add(Index, 1) # " elements, but got " #
+    !size(Values) # ".";
+
+  int c = Values[Index];
 }
 
 // Returns BaseValue for LMUL values before startLMUL, Value for startLMUL,
