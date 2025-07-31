@@ -173,24 +173,78 @@ bool isLegalValidatorVersion(StringRef ValVersionStr, const Driver &D) {
   return true;
 }
 
+std::string getSpirvExtOperand(llvm::StringRef SpvExtensionArg) {
+  // The extensions that are commented out are supported in DXC, but the SPIR-V
+  // backend does not know about them yet.
+  static const std::vector<std::string> DxcSupportedExtensions = {
+      "SPV_KHR_16bit_storage",
+      "SPV_KHR_device_group",
+      "SPV_KHR_fragment_shading_rate",
+      "SPV_KHR_multiview",
+      "SPV_KHR_post_depth_coverage",
+      "SPV_KHR_non_semantic_info",
+      "SPV_KHR_shader_draw_parameters",
+      "SPV_KHR_ray_tracing",
+      "SPV_KHR_shader_clock",
+      "SPV_EXT_demote_to_helper_invocation",
+      "SPV_EXT_descriptor_indexing",
+      "SPV_EXT_fragment_fully_covered",
+      "SPV_EXT_fragment_invocation_density",
+      "SPV_EXT_fragment_shader_interlock",
+      "SPV_EXT_mesh_shader",
+      "SPV_EXT_shader_stencil_export",
+      "SPV_EXT_shader_viewport_index_layer",
+      // "SPV_AMD_shader_early_and_late_fragment_tests",
+      "SPV_GOOGLE_hlsl_functionality1",
+      "SPV_GOOGLE_user_type",
+      "SPV_KHR_ray_query",
+      "SPV_EXT_shader_image_int64",
+      "SPV_KHR_fragment_shader_barycentric",
+      "SPV_KHR_physical_storage_buffer",
+      "SPV_KHR_vulkan_memory_model",
+      // "SPV_KHR_compute_shader_derivatives",
+      // "SPV_KHR_maximal_reconvergence",
+      "SPV_KHR_float_controls",
+      "SPV_NV_shader_subgroup_partitioned",
+      // "SPV_KHR_quad_control"
+  };
+
+  if (SpvExtensionArg.starts_with("SPV_")) {
+    return ("+" + SpvExtensionArg).str();
+  }
+  if (SpvExtensionArg.compare_insensitive("DXC") == 0) {
+    bool first = true;
+    std::string Operand;
+    for (llvm::StringRef E : DxcSupportedExtensions) {
+      if (first) {
+        Operand = (Operand + "+" + E).str();
+        first = false;
+        continue;
+      }
+      Operand = (Operand + ",+" + E).str();
+    }
+    return Operand;
+  }
+  return SpvExtensionArg.str();
+}
+
 std::string getSpirvExtArg(ArrayRef<std::string> SpvExtensionArgs) {
   if (SpvExtensionArgs.empty()) {
     return "-spirv-ext=all";
   }
 
   std::string LlvmOption =
-      (Twine("-spirv-ext=+") + SpvExtensionArgs.front()).str();
+      "-spirv-ext=" + getSpirvExtOperand(SpvExtensionArgs[0]);
   SpvExtensionArgs = SpvExtensionArgs.slice(1);
-  for (auto Extension : SpvExtensionArgs) {
-    if (Extension != "KHR")
-      Extension = (Twine("+") + Extension).str();
-    LlvmOption = (Twine(LlvmOption) + "," + Extension).str();
+  for (llvm::StringRef Extension : SpvExtensionArgs) {
+    LlvmOption =
+        (Twine(LlvmOption) + "," + getSpirvExtOperand(Extension)).str();
   }
   return LlvmOption;
 }
 
 bool isValidSPIRVExtensionName(const std::string &str) {
-  std::regex pattern("KHR|SPV_[a-zA-Z0-9_]+");
+  std::regex pattern("dxc|DXC|KHR|SPV_[a-zA-Z0-9_]+");
   return std::regex_match(str, pattern);
 }
 
