@@ -16,6 +16,7 @@
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Target/Language.h"
+#include "lldb/lldb-private-enumerations.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -23,10 +24,10 @@ using namespace lldb_private::plugin::dwarf;
 
 DWARFIndex::~DWARFIndex() = default;
 
-bool DWARFIndex::ProcessFunctionDIE(
+IterationAction DWARFIndex::ProcessFunctionDIE(
     const Module::LookupInfo &lookup_info, DWARFDIE die,
     const CompilerDeclContext &parent_decl_ctx,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   llvm::StringRef name = lookup_info.GetLookupName().GetStringRef();
   FunctionNameType name_type_mask = lookup_info.GetNameTypeMask();
 
@@ -43,7 +44,7 @@ bool DWARFIndex::ProcessFunctionDIE(
 
     if (!lookup_info.NameMatchesLookupInfo(name_to_match_against,
                                            lookup_info.GetLanguageType()))
-      return true;
+      return IterationAction::Continue;
   }
 
   // Exit early if we're searching exclusively for methods or selectors and
@@ -51,12 +52,12 @@ bool DWARFIndex::ProcessFunctionDIE(
   uint32_t looking_for_nonmethods =
       name_type_mask & ~(eFunctionNameTypeMethod | eFunctionNameTypeSelector);
   if (!looking_for_nonmethods && parent_decl_ctx.IsValid())
-    return true;
+    return IterationAction::Continue;
 
   // Otherwise, we need to also check that the context matches. If it does not
   // match, we do nothing.
   if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
-    return true;
+    return IterationAction::Continue;
 
   // In case of a full match, we just insert everything we find.
   if (name_type_mask & eFunctionNameTypeFull && die.GetMangledName() == name)
@@ -79,7 +80,7 @@ bool DWARFIndex::ProcessFunctionDIE(
       return callback(die);
   }
 
-  return true;
+  return IterationAction::Continue;
 }
 
 DWARFIndex::DIERefCallbackImpl::DIERefCallbackImpl(
