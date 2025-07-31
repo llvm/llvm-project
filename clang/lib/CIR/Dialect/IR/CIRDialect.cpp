@@ -339,7 +339,7 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
   }
 
   if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr,
-                cir::ConstComplexAttr>(attrType))
+                cir::ConstComplexAttr, cir::PoisonAttr>(attrType))
     return success();
 
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
@@ -629,6 +629,11 @@ static Value tryFoldCastChain(cir::CastOp op) {
 }
 
 OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
+  if (mlir::isa_and_present<cir::PoisonAttr>(adaptor.getSrc())) {
+    // Propagate poison value
+    return cir::PoisonAttr::get(getContext(), getType());
+  }
+
   if (getSrc().getType() == getType()) {
     switch (getKind()) {
     case cir::CastKind::integral: {
@@ -1465,9 +1470,13 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   llvm::SMLoc loc = parser.getCurrentLocation();
   mlir::Builder &builder = parser.getBuilder();
 
+  mlir::StringAttr noProtoNameAttr = getNoProtoAttrName(state.name);
   mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
   mlir::StringAttr visibilityNameAttr = getGlobalVisibilityAttrName(state.name);
   mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
+
+  if (parser.parseOptionalKeyword(noProtoNameAttr).succeeded())
+    state.addAttribute(noProtoNameAttr, parser.getBuilder().getUnitAttr());
 
   // Default to external linkage if no keyword is provided.
   state.addAttribute(getLinkageAttrNameString(),
@@ -1573,6 +1582,9 @@ mlir::Region *cir::FuncOp::getCallableRegion() {
 }
 
 void cir::FuncOp::print(OpAsmPrinter &p) {
+  if (getNoProto())
+    p << " no_proto";
+
   if (getComdat())
     p << " comdat";
 
@@ -1783,6 +1795,12 @@ static bool isBoolNot(cir::UnaryOp op) {
 //
 // and the argument of the first one (%0) will be used instead.
 OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
+  if (auto poison =
+          mlir::dyn_cast_if_present<cir::PoisonAttr>(adaptor.getInput())) {
+    // Propagate poison values
+    return poison;
+  }
+
   if (isBoolNot(*this))
     if (auto previous = dyn_cast_or_null<UnaryOp>(getInput().getDefiningOp()))
       if (isBoolNot(previous))
@@ -2239,16 +2257,18 @@ static OpFoldResult
 foldUnaryBitOp(mlir::Attribute inputAttr,
                llvm::function_ref<llvm::APInt(const llvm::APInt &)> func,
                bool poisonZero = false) {
+  if (mlir::isa_and_present<cir::PoisonAttr>(inputAttr)) {
+    // Propagate poison value
+    return inputAttr;
+  }
+
   auto input = mlir::dyn_cast_if_present<IntAttr>(inputAttr);
   if (!input)
     return nullptr;
 
   llvm::APInt inputValue = input.getValue();
-  if (poisonZero && inputValue.isZero()) {
-    // TODO(cir): maybe we should return a poison value here?
-    assert(!MissingFeatures::poisonAttr());
-    return nullptr;
-  }
+  if (poisonZero && inputValue.isZero())
+    return cir::PoisonAttr::get(input.getType());
 
   llvm::APInt resultValue = func(inputValue);
   return IntAttr::get(input.getType(), resultValue);
@@ -2282,6 +2302,15 @@ OpFoldResult BitCtzOp::fold(FoldAdaptor adaptor) {
       getPoisonZero());
 }
 
+OpFoldResult BitFfsOp::fold(FoldAdaptor adaptor) {
+  return foldUnaryBitOp(adaptor.getInput(), [](const llvm::APInt &inputValue) {
+    unsigned trailingZeros = inputValue.countTrailingZeros();
+    unsigned result =
+        trailingZeros == inputValue.getBitWidth() ? 0 : trailingZeros + 1;
+    return llvm::APInt(inputValue.getBitWidth(), result);
+  });
+}
+
 OpFoldResult BitParityOp::fold(FoldAdaptor adaptor) {
   return foldUnaryBitOp(adaptor.getInput(), [](const llvm::APInt &inputValue) {
     return llvm::APInt(inputValue.getBitWidth(), inputValue.popcount() % 2);
@@ -2307,6 +2336,12 @@ OpFoldResult ByteSwapOp::fold(FoldAdaptor adaptor) {
 }
 
 OpFoldResult RotateOp::fold(FoldAdaptor adaptor) {
+  if (mlir::isa_and_present<cir::PoisonAttr>(adaptor.getInput()) ||
+      mlir::isa_and_present<cir::PoisonAttr>(adaptor.getAmount())) {
+    // Propagate poison values
+    return cir::PoisonAttr::get(getType());
+  }
+
   auto input = mlir::dyn_cast_if_present<IntAttr>(adaptor.getInput());
   auto amount = mlir::dyn_cast_if_present<IntAttr>(adaptor.getAmount());
   if (!input && !amount)

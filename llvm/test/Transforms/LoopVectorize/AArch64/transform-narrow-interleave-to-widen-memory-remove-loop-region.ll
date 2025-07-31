@@ -21,9 +21,9 @@ define void @load_store_interleave_group_tc_2(ptr noalias %data) {
 ; VF2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC]], ptr [[DATA]], align 8
 ; VF2-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; VF2-NEXT:    br label %[[EXIT:.*]]
 ; VF2:       [[SCALAR_PH]]:
-; VF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 2, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; VF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF2-NEXT:    br label %[[LOOP:.*]]
 ; VF2:       [[LOOP]]:
 ; VF2-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -251,9 +251,9 @@ define void @test_complex_add_float_tc_4(ptr %res, ptr noalias %A, ptr noalias %
 ; VF2-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4
 ; VF2-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; VF2-NEXT:    br label %[[EXIT:.*]]
 ; VF2:       [[SCALAR_PH]]:
-; VF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; VF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF2-NEXT:    br label %[[LOOP:.*]]
 ; VF2:       [[LOOP]]:
 ; VF2-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -297,9 +297,9 @@ define void @test_complex_add_float_tc_4(ptr %res, ptr noalias %A, ptr noalias %
 ; VF4-NEXT:    store <8 x float> [[INTERLEAVED_VEC]], ptr [[RES]], align 4
 ; VF4-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; VF4:       [[MIDDLE_BLOCK]]:
-; VF4-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; VF4-NEXT:    br label %[[EXIT:.*]]
 ; VF4:       [[SCALAR_PH]]:
-; VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF4-NEXT:    br label %[[LOOP:.*]]
 ; VF4:       [[LOOP]]:
 ; VF4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
