@@ -287,6 +287,37 @@ TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
 #endif
 }
 
+TEST_F(VPVerifierTest, NonHeaderPHIInHeader) {
+  VPlan &Plan = getPlan();
+  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
+  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
+  auto *BranchOnCond = new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
+
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("header");
+
+  VPBB2->appendRecipe(CanIV);
+
+  PHINode *PHINode = PHINode::Create(Type::getInt32Ty(C), 2);
+  auto *IRPhi = new VPIRPhi(*PHINode);
+  VPBB2->appendRecipe(IRPhi);
+  VPBB2->appendRecipe(BranchOnCond);
+
+  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
+  VPBlockUtils::connectBlocks(VPBB1, R1);
+  VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
+
+#if GTEST_HAS_STREAM_REDIRECTION
+  ::testing::internal::CaptureStderr();
+#endif
+  EXPECT_FALSE(verifyVPlanIsValid(Plan));
+#if GTEST_HAS_STREAM_REDIRECTION
+  EXPECT_STREQ(
+      "Found non-header PHI recipe in header VPBB: IR   <badref> = phi i32 \n",
+      ::testing::internal::GetCapturedStderr().c_str());
+#endif
+}
+
 class VPIRVerifierTest : public VPlanTestIRBase {};
 
 TEST_F(VPIRVerifierTest, testVerifyIRPhi) {
