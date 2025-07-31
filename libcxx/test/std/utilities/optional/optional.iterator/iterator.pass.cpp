@@ -21,7 +21,7 @@
 
 template <typename T, T __val>
 constexpr bool test() {
-  constexpr std::optional<T> opt{__val};
+  const std::optional<T> opt{__val};
   std::optional<T> nonconst_opt{__val};
 
   { // Dereferencing an iterator of an engaged optional will return the same value that the optional holds.
@@ -50,22 +50,23 @@ constexpr bool test() {
     assert((std::is_same_v<typename decltype(it2)::reference, T&>));
   }
 
-  { // std::ranges for an engaged optional<T> == 1, unengaged optional<T> == 0
-    constexpr std::optional<T> unengaged{std::nullopt};
-    std::optional<T> unengaged2{std::nullopt};
+  { // std::ranges::size for an engaged optional<T> == 1, disengaged optional<T> == 0
+    const std::optional<T> disengaged{std::nullopt};
+    std::optional<T> disengaged2{std::nullopt};
     assert(std::ranges::size(opt) == 1);
     assert(std::ranges::size(nonconst_opt) == 1);
 
-    assert(std::ranges::size(unengaged) == 0);
-    assert(std::ranges::size(unengaged2) == 0);
+    assert(std::ranges::size(disengaged) == 0);
+    assert(std::ranges::size(disengaged2) == 0);
   }
 
   { // std::ranges::enable_view<optional<T>> == true, and std::format_kind<optional<T>> == true
-    assert(std::ranges::enable_view<std::optional<T>> == true);
-    assert(std::format_kind<std::optional<T>> == std::range_format::disabled);
+    static_assert(std::ranges::enable_view<std::optional<T>> == true);
+    static_assert(std::format_kind<std::optional<T>> == std::range_format::disabled);
   }
 
-  // 8: An optional with value that is reset will have a begin() == end(), then when it is reassigned a value, begin() != end(), and *begin() will contain the new value.
+  // An optional with value that is reset will have a begin() == end(), then when it is reassigned a value,
+  // begin() != end(), and *begin() will contain the new value.
   {
     std::optional<T> val{__val};
     assert(val.begin() != val.end());
@@ -89,7 +90,9 @@ constexpr bool tests() {
   return true;
 }
 
-int main() {
+int main(int, char**) {
   assert(tests());
   static_assert(tests());
+
+  return 0;
 }

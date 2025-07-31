@@ -21,11 +21,11 @@
 template <typename T>
 constexpr bool test() {
   std::optional<T> unengaged{std::nullopt};
-  constexpr std::optional<T> unengaged2{std::nullopt};
+  const std::optional<T> unengaged2{std::nullopt};
 
   { // end() is marked noexcept
-    assert(noexcept(unengaged.end()));
-    assert(noexcept(unengaged2.end()));
+    static_assert(noexcept(unengaged.end()));
+    static_assert(noexcept(unengaged2.end()));
   }
 
   { // end() == begin() and end() == end() if the optional is unengaged
@@ -42,7 +42,7 @@ constexpr bool test() {
   }
 
   std::optional<T> engaged{T{}};
-  constexpr std::optional<T> engaged2{T{}};
+  const std::optional<T> engaged2{T{}};
 
   { // end() != begin() if the optional is engaged
     auto it  = engaged.end();
@@ -67,7 +67,9 @@ constexpr bool tests() {
   return true;
 }
 
-int main() {
+int main(int, char**) {
   assert(tests());
   static_assert(tests());
+
+  return 0;
 }
