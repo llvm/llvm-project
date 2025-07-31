@@ -229,6 +229,22 @@ private:
                                MachineInstr &I, bool IsSigned) const;
   bool selectIToF(Register ResVReg, const SPIRVType *ResType, MachineInstr &I,
                   bool IsSigned, unsigned Opcode) const;
+
+  bool selectStrictSIToF(Register ResVReg, const SPIRVType *ResType,
+                         MachineInstr &I) const;
+
+  bool selectStrictUIToF(Register ResVReg, const SPIRVType *ResType,
+                         MachineInstr &I) const;
+
+  bool selectStrictFPToS(Register ResVReg, const SPIRVType *ResType,
+                         MachineInstr &I) const;
+
+  bool selectStrictFPToU(Register ResVReg, const SPIRVType *ResType,
+                         MachineInstr &I) const;
+
+  bool selectStrictFPEXT(Register ResVReg, const SPIRVType *ResType,
+                         MachineInstr &I) const;
+
   bool selectExt(Register ResVReg, const SPIRVType *ResType, MachineInstr &I,
                  bool IsSigned) const;
 
@@ -691,6 +707,18 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return selectIToF(ResVReg, ResType, I, true, SPIRV::OpConvertSToF);
   case TargetOpcode::G_UITOFP:
     return selectIToF(ResVReg, ResType, I, false, SPIRV::OpConvertUToF);
+
+  case TargetOpcode::G_STRICT_SITOFP:
+    return selectStrictSIToF(ResVReg, ResType, I);
+  case TargetOpcode::G_STRICT_UITOFP:
+    return selectStrictUIToF(ResVReg, ResType, I);
+  case TargetOpcode::G_STRICT_FPTOSI:
+    return selectStrictFPToS(ResVReg, ResType, I);
+  case TargetOpcode::G_STRICT_FPTOUI:
+    return selectStrictFPToU(ResVReg, ResType, I);
+  case TargetOpcode::G_STRICT_FPEXT:
+  case TargetOpcode::G_STRICT_FPTRUNC:
+    return selectStrictFPEXT(ResVReg, ResType, I);
 
   case TargetOpcode::G_CTPOP:
     return selectUnOp(ResVReg, ResType, I, SPIRV::OpBitCount);
@@ -2652,6 +2680,105 @@ bool SPIRVInstructionSelector::selectSelectDefaultArgs(Register ResVReg,
       .addUse(OneReg)
       .addUse(ZeroReg)
       .constrainAllUses(TII, TRI, RBI);
+}
+bool SPIRVInstructionSelector::selectStrictSIToF(Register ResVReg,
+                                                 const SPIRVType *ResType,
+                                                 MachineInstr &I) const {
+  // Convert a signed integer to a floating-point value using OpConvertSToF.
+  // If the source is a boolean, first convert it to an integer of matching bit
+  // width.
+  Register SrcReg = I.getOperand(1).getReg();
+  if (GR.isScalarOrVectorOfType(SrcReg, SPIRV::OpTypeBool)) {
+    unsigned BitWidth = GR.getScalarOrVectorBitWidth(ResType);
+    SPIRVType *TmpType = GR.getOrCreateSPIRVIntegerType(BitWidth, I, TII);
+    if (ResType->getOpcode() == SPIRV::OpTypeVector) {
+      const unsigned NumElts = ResType->getOperand(2).getImm();
+      TmpType = GR.getOrCreateSPIRVVectorType(TmpType, NumElts, I, TII);
+    }
+    SrcReg = createVirtualRegister(TmpType, &GR, MRI, MRI->getMF());
+    selectSelect(SrcReg, TmpType, I, false);
+  }
+  return selectOpWithSrcs(ResVReg, ResType, I, {SrcReg}, SPIRV::OpConvertSToF);
+}
+
+bool SPIRVInstructionSelector::selectStrictUIToF(Register ResVReg,
+                                                 const SPIRVType *ResType,
+                                                 MachineInstr &I) const {
+  // Convert an unsigned integer to a floating-point value using OpConvertUToF.
+  // If the source is a boolean, first convert it to an integer of matching bit
+  // width.
+  Register SrcReg = I.getOperand(1).getReg();
+  if (GR.isScalarOrVectorOfType(SrcReg, SPIRV::OpTypeBool)) {
+    unsigned BitWidth = GR.getScalarOrVectorBitWidth(ResType);
+    SPIRVType *TmpType = GR.getOrCreateSPIRVIntegerType(BitWidth, I, TII);
+    if (ResType->getOpcode() == SPIRV::OpTypeVector) {
+      const unsigned NumElts = ResType->getOperand(2).getImm();
+      TmpType = GR.getOrCreateSPIRVVectorType(TmpType, NumElts, I, TII);
+    }
+    SrcReg = createVirtualRegister(TmpType, &GR, MRI, MRI->getMF());
+    selectSelect(SrcReg, TmpType, I, false);
+  }
+  return selectOpWithSrcs(ResVReg, ResType, I, {SrcReg}, SPIRV::OpConvertUToF);
+}
+
+bool SPIRVInstructionSelector::selectStrictFPToS(Register ResVReg,
+                                                 const SPIRVType *ResType,
+                                                 MachineInstr &I) const {
+  // Convert a floating-point value to a signed integer using OpConvertFToS.
+  // If the source is a boolean, first convert it to a float of matching bit
+  // width.
+  Register SrcReg = I.getOperand(1).getReg();
+  if (GR.isScalarOrVectorOfType(SrcReg, SPIRV::OpTypeBool)) {
+    unsigned BitWidth = GR.getScalarOrVectorBitWidth(ResType);
+    SPIRVType *TmpType = GR.getOrCreateSPIRVFloatType(BitWidth, I, TII);
+    if (ResType->getOpcode() == SPIRV::OpTypeVector) {
+      const unsigned NumElts = ResType->getOperand(2).getImm();
+      TmpType = GR.getOrCreateSPIRVVectorType(TmpType, NumElts, I, TII);
+    }
+    SrcReg = createVirtualRegister(TmpType, &GR, MRI, MRI->getMF());
+    selectSelect(SrcReg, TmpType, I, false);
+  }
+  return selectOpWithSrcs(ResVReg, ResType, I, {SrcReg}, SPIRV::OpConvertFToS);
+}
+
+bool SPIRVInstructionSelector::selectStrictFPToU(Register ResVReg,
+                                                 const SPIRVType *ResType,
+                                                 MachineInstr &I) const {
+  // Convert a floating-point value to an unsigned integer using OpConvertFToU.
+  // If the source is a boolean, first convert it to a float of matching bit
+  // width.
+  Register SrcReg = I.getOperand(1).getReg();
+  if (GR.isScalarOrVectorOfType(SrcReg, SPIRV::OpTypeBool)) {
+    unsigned BitWidth = GR.getScalarOrVectorBitWidth(ResType);
+    SPIRVType *TmpType = GR.getOrCreateSPIRVFloatType(BitWidth, I, TII);
+    if (ResType->getOpcode() == SPIRV::OpTypeVector) {
+      const unsigned NumElts = ResType->getOperand(2).getImm();
+      TmpType = GR.getOrCreateSPIRVVectorType(TmpType, NumElts, I, TII);
+    }
+    SrcReg = createVirtualRegister(TmpType, &GR, MRI, MRI->getMF());
+    selectSelect(SrcReg, TmpType, I, false);
+  }
+  return selectOpWithSrcs(ResVReg, ResType, I, {SrcReg}, SPIRV::OpConvertFToU);
+}
+
+bool SPIRVInstructionSelector::selectStrictFPEXT(Register ResVReg,
+                                                 const SPIRVType *ResType,
+                                                 MachineInstr &I) const {
+  // Extend a floating-point value to a larger floating-point type using
+  // OpFConvert. If the source is a boolean, first convert it to a float of
+  // matching bit width.
+  Register SrcReg = I.getOperand(1).getReg();
+  if (GR.isScalarOrVectorOfType(SrcReg, SPIRV::OpTypeBool)) {
+    unsigned BitWidth = GR.getScalarOrVectorBitWidth(ResType);
+    SPIRVType *TmpType = GR.getOrCreateSPIRVFloatType(BitWidth, I, TII);
+    if (ResType->getOpcode() == SPIRV::OpTypeVector) {
+      const unsigned NumElts = ResType->getOperand(2).getImm();
+      TmpType = GR.getOrCreateSPIRVVectorType(TmpType, NumElts, I, TII);
+    }
+    SrcReg = createVirtualRegister(TmpType, &GR, MRI, MRI->getMF());
+    selectSelect(SrcReg, TmpType, I, false);
+  }
+  return selectOpWithSrcs(ResVReg, ResType, I, {SrcReg}, SPIRV::OpFConvert);
 }
 
 bool SPIRVInstructionSelector::selectIToF(Register ResVReg,

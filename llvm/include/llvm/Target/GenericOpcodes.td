@@ -1716,6 +1716,12 @@ def G_STRICT_FREM : ConstrainedInstruction<G_FREM>;
 def G_STRICT_FMA : ConstrainedInstruction<G_FMA>;
 def G_STRICT_FSQRT : ConstrainedInstruction<G_FSQRT>;
 def G_STRICT_FLDEXP : ConstrainedInstruction<G_FLDEXP>;
+def G_STRICT_SITOFP: ConstrainedInstruction<G_SITOFP>;
+def G_STRICT_UITOFP: ConstrainedInstruction<G_UITOFP>;
+def G_STRICT_FPTOSI: ConstrainedInstruction<G_FPTOSI>;
+def G_STRICT_FPTOUI: ConstrainedInstruction<G_FPTOUI>;
+def G_STRICT_FPEXT: ConstrainedInstruction<G_FPEXT>;
+def G_STRICT_FPTRUNC: ConstrainedInstruction<G_FPTRUNC>;
 
 //------------------------------------------------------------------------------
 // Memory intrinsics

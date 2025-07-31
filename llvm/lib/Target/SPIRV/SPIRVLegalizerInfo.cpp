@@ -60,7 +60,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   const LLT v4s16 = LLT::fixed_vector(4, 16);
   const LLT v4s8 = LLT::fixed_vector(4, 8);
   const LLT v4s1 = LLT::fixed_vector(4, 1);
-
+  
   const LLT v3s64 = LLT::fixed_vector(3, 64);
   const LLT v3s32 = LLT::fixed_vector(3, 32);
   const LLT v3s16 = LLT::fixed_vector(3, 16);
@@ -206,6 +206,17 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
       .legalForCartesianProduct(allIntScalarsAndVectors,
                                 allFloatScalarsAndVectors);
+
+  getActionDefinitionsBuilder({G_STRICT_SITOFP, G_STRICT_UITOFP})
+      .legalForCartesianProduct(allFloatScalarsAndVectors,
+                                allScalarsAndVectors);
+
+  getActionDefinitionsBuilder({G_STRICT_FPTOSI, G_STRICT_FPTOUI})
+      .legalForCartesianProduct(allIntScalarsAndVectors,
+                                allFloatScalarsAndVectors);
+
+  getActionDefinitionsBuilder({G_STRICT_FPEXT, G_STRICT_FPTRUNC})
+      .legalForCartesianProduct(allFloatScalarsAndVectors);
 
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
       .legalForCartesianProduct(allFloatScalarsAndVectors,

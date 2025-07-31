@@ -2080,6 +2080,18 @@ static unsigned getConstrainedOpcode(Intrinsic::ID ID) {
     return TargetOpcode::G_STRICT_FSQRT;
   case Intrinsic::experimental_constrained_ldexp:
     return TargetOpcode::G_STRICT_FLDEXP;
+  case Intrinsic::experimental_constrained_sitofp:
+    return TargetOpcode::G_STRICT_SITOFP;
+  case Intrinsic::experimental_constrained_uitofp:
+    return TargetOpcode::G_STRICT_UITOFP;
+  case Intrinsic::experimental_constrained_fptosi:
+    return TargetOpcode::G_STRICT_FPTOSI;
+  case Intrinsic::experimental_constrained_fptoui:
+    return TargetOpcode::G_STRICT_FPTOUI;
+  case Intrinsic::experimental_constrained_fpext:
+    return TargetOpcode::G_STRICT_FPEXT;
+   case Intrinsic::experimental_constrained_fptrunc:
+    return TargetOpcode::G_STRICT_FPTRUNC;
   default:
     return 0;
   }
