@@ -20822,9 +20822,6 @@ static bool isNegatedInteger(SDValue Op) {
 }
 
 static SDValue getNegatedInteger(SDValue Op, SelectionDAG &DAG) {
-  if (isNegatedInteger(Op))
-    return Op.getOperand(1);
-
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
   SDValue Zero = DAG.getConstant(0, DL, VT);
