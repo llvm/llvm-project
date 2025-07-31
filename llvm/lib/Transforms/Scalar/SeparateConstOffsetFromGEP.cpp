@@ -827,6 +827,14 @@ APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
   if (!match(XorInst, m_Xor(m_Value(BaseOperand), m_ConstantInt(XorConstant))))
     return APInt::getZero(BitWidth);
 
+  // Try to extract constant offset from the base operand recursively.
+  if (BinaryOperator *BO = dyn_cast<BinaryOperator>(BaseOperand)) {
+    APInt ConstantOffset = find(BO, /*SignExtended=*/false,
+                                /*ZeroExtended=*/false, /*NonNegative=*/false);
+    if (ConstantOffset.isZero())
+      return ConstantOffset;
+  }
+
   // Compute known bits for the base operand.
   const SimplifyQuery SQ(DL);
   const KnownBits BaseKnownBits = computeKnownBits(BaseOperand, SQ);
