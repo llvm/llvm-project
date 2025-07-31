@@ -40,6 +40,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "numeric_constant";
   case Kind::period:
     return "period";
+  case Kind::plus:
+    return "plus";
   case Kind::r_paren:
     return "r_paren";
   case Kind::r_square:
@@ -114,10 +116,10 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
     return Token(Token::identifier, maybe_word->str(), position);
 
   constexpr std::pair<Token::Kind, const char *> operators[] = {
-      {Token::amp, "&"},     {Token::arrow, "->"},   {Token::coloncolon, "::"},
-      {Token::l_paren, "("}, {Token::l_square, "["}, {Token::minus, "-"},
-      {Token::period, "."},  {Token::r_paren, ")"},  {Token::r_square, "]"},
-      {Token::star, "*"},
+      {Token::amp, "&"},      {Token::arrow, "->"},   {Token::coloncolon, "::"},
+      {Token::l_paren, "("},  {Token::l_square, "["}, {Token::minus, "-"},
+      {Token::period, "."},   {Token::plus, "+"},     {Token::r_paren, ")"},
+      {Token::r_square, "]"}, {Token::star, "*"},
   };
   for (auto [kind, str] : operators) {
     if (remainder.consume_front(str))
