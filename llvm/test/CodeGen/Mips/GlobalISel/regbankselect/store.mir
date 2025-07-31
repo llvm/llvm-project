@@ -47,7 +47,7 @@ body:             |
     ; MIPS32-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY $a2
     ; MIPS32-NEXT: G_STORE [[COPY]](s32), [[COPY2]](p0) :: (store (s32) into %ir.ptr, align 8)
     ; MIPS32-NEXT: [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
-    ; MIPS32-NEXT: [[PTR_ADD:%[0-9]+]]:gprb(p0) = nuw G_PTR_ADD [[COPY2]], [[C]](s32)
+    ; MIPS32-NEXT: [[PTR_ADD:%[0-9]+]]:gprb(p0) = nuw inbounds G_PTR_ADD [[COPY2]], [[C]](s32)
     ; MIPS32-NEXT: G_STORE [[COPY1]](s32), [[PTR_ADD]](p0) :: (store (s32) into %ir.ptr + 4, basealign 8)
     ; MIPS32-NEXT: RetRA
     %2:_(s32) = COPY $a0

@@ -65,7 +65,7 @@ struct CVTagRecord {
   }
 
   llvm::StringRef name() const {
-    if (m_kind == Struct || m_kind == Union)
+    if (m_kind == Struct || m_kind == Class)
       return cvclass.Name;
     if (m_kind == Enum)
       return cvenum.Name;
