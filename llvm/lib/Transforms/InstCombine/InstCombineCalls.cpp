@@ -1532,8 +1532,8 @@ static Instruction *foldBitOrderCrossLogicOp(Value *V,
   return nullptr;
 }
 
-// Idempotent binary intrinsics, i.e., intrinsics where `f(f(x, c), c) == f(x,
-// c)` holds.
+/// Helper to match idempotent binary intrinsics, namely, intrinsics where
+/// `f(f(x, y), y) == f(x, y)` holds.
 static bool isIdempotentBinaryIntrinsic(Intrinsic::ID IID) {
   switch (IID) {
   case Intrinsic::smax:
@@ -1552,11 +1552,11 @@ static bool isIdempotentBinaryIntrinsic(Intrinsic::ID IID) {
   }
 }
 
-// Attempt to simplify value-accumulating recurrences of kind:
-//   %umax.acc = phi i8 [ %umax, %backedge ], [ %a, %entry ]
-//   %umax = call i8 @llvm.umax.i8(i8 %umax.acc, i8 %b)
-// And let the idempotent binary intrinsic be hoisted, when the operands are
-// known to be loop-invariant.
+/// Attempt to simplify value-accumulating recurrences of kind:
+///   %umax.acc = phi i8 [ %umax, %backedge ], [ %a, %entry ]
+///   %umax = call i8 @llvm.umax.i8(i8 %umax.acc, i8 %b)
+/// And let the idempotent binary intrinsic be hoisted, when the operands are
+/// known to be loop-invariant.
 static Value *foldIdempotentBinaryIntrinsicRecurrence(InstCombinerImpl &IC,
                                                       IntrinsicInst *II) {
   PHINode *PN;
