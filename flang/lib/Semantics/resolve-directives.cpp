@@ -1545,6 +1545,7 @@ void AccAttributeVisitor::Post(const parser::AccDefaultClause &x) {
 void AccAttributeVisitor::Post(const parser::Name &name) {
   auto *symbol{name.symbol};
   if (symbol && !dirContext_.empty() && GetContext().withinConstruct) {
+    symbol = &symbol->GetUltimate();
     if (!symbol->owner().IsDerivedType() && !symbol->has<ProcEntityDetails>() &&
         !symbol->has<SubprogramDetails>() && !IsObjectWithDSA(*symbol)) {
       if (Symbol * found{currScope().FindSymbol(name.source)}) {
@@ -1553,8 +1554,7 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
         } else if (GetContext().defaultDSA == Symbol::Flag::AccNone) {
           // 2.5.14.
           context_.Say(name.source,
-              "The DEFAULT(NONE) clause requires that '%s' must be listed in "
-              "a data-mapping clause"_err_en_US,
+              "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-mapping clause"_err_en_US,
               symbol->name());
         }
       }
