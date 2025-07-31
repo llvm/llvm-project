@@ -834,9 +834,6 @@ public:
 };
 
 /// ClusteredRows represents a collection of debug line table row references.
-/// Since a Binary function can belong to multiple compilation units (CUs),
-/// a single MCInst can have multiple debug line table rows associated with it
-/// from different CUs. This class manages such clustered row references.
 ///
 /// MEMORY LAYOUT AND DESIGN:
 /// This class uses a flexible array member pattern to store all
@@ -846,7 +843,7 @@ public:
 /// +------------------+
 /// | ClusteredRows    |  <- Object header (Size + first element)
 /// | - Size           |
-/// | - Raws (element) |  <- First DebugLineTableRowRef element
+/// | - Rows (element) |  <- First DebugLineTableRowRef element
 /// +------------------+
 /// | element[1]       |  <- Additional DebugLineTableRowRef elements
 /// | element[2]       |     stored immediately after the object
@@ -854,18 +851,7 @@ public:
 /// | element[Size-1]  |
 /// +------------------+
 ///
-/// PERFORMANCE BENEFITS:
-/// - Single memory allocation: All elements are stored in one contiguous block,
-///   eliminating the need for separate heap allocations for the array.
-/// - No extra dereferencing: Elements are accessed directly via pointer
-///   arithmetic (beginPtr() + offset) rather than through an additional
-///   pointer indirection.
-/// - Cache locality: All elements are guaranteed to be adjacent in memory,
-///   improving cache performance during iteration.
-/// - Memory efficiency: No overhead from separate pointer storage or
-///   fragmented allocations.
-///
-/// The 'Raws' member serves as both the first element storage and the base
+/// The 'Rows' member serves as both the first element storage and the base
 /// address for pointer arithmetic to access subsequent elements.
 class ClusteredRows {
 public:
@@ -891,7 +877,7 @@ public:
 
 private:
   uint64_t Size;
-  DebugLineTableRowRef Raws;
+  DebugLineTableRowRef Rows;
 
   ClusteredRows(uint64_t Size) : Size(Size) {}
   static uint64_t getTotalSize(uint64_t Size) {
@@ -899,17 +885,17 @@ private:
     return sizeof(ClusteredRows) + (Size - 1) * sizeof(DebugLineTableRowRef);
   }
   const DebugLineTableRowRef *beginPtrConst() const {
-    return reinterpret_cast<const DebugLineTableRowRef *>(&Raws);
+    return reinterpret_cast<const DebugLineTableRowRef *>(&Rows);
   }
   DebugLineTableRowRef *beginPtr() {
-    return reinterpret_cast<DebugLineTableRowRef *>(&Raws);
+    return reinterpret_cast<DebugLineTableRowRef *>(&Rows);
   }
 
-  friend class ClasteredRowsContainer;
+  friend class ClusteredRowsContainer;
 };
 
-/// ClasteredRowsContainer manages the lifecycle of ClusteredRows objects.
-class ClasteredRowsContainer {
+/// ClusteredRowsContainer manages the lifecycle of ClusteredRows objects.
+class ClusteredRowsContainer {
 public:
   ClusteredRows *createClusteredRows(uint64_t Size) {
     auto *CR = new (std::malloc(ClusteredRows::getTotalSize(Size)))
@@ -917,7 +903,7 @@ public:
     Clusters.push_back(CR);
     return CR;
   }
-  ~ClasteredRowsContainer() {
+  ~ClusteredRowsContainer() {
     for (auto *CR : Clusters)
       std::free(CR);
   }

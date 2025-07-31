@@ -292,7 +292,7 @@ public:
   /// tables associated with instructions. Since binary functions can span
   /// multiple compilation units, instructions may reference debug line
   /// information from multiple CUs.
-  ClasteredRowsContainer ClasteredRows;
+  ClusteredRowsContainer ClusteredRows;
 
   // Setup MCPlus target builder
   void initializeTarget(std::unique_ptr<MCPlusBuilder> TargetBuilder) {
