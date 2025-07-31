@@ -40,21 +40,15 @@ struct Arch64EmulatorTester : public EmulateInstructionARM64 {
                                    RegisterValue &reg_value) {
     auto *tester = static_cast<Arch64EmulatorTester *>(instruction);
     uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
-    if (reg >= gpr_x1_arm64 && reg <= gpr_x28_arm64) {
+    if (reg >= gpr_x0_arm64 && reg <= gpr_x28_arm64) {
       reg_value.SetUInt64(tester->gpr.x[reg - gpr_x0_arm64]);
       return true;
     }
-    if (reg >= gpr_w1_arm64 && reg <= gpr_w28_arm64) {
+    if (reg >= gpr_w0_arm64 && reg <= gpr_w28_arm64) {
       reg_value.SetUInt32(tester->gpr.x[reg - gpr_w0_arm64]);
       return true;
     }
     switch (reg) {
-    case gpr_x0_arm64:
-      reg_value.SetUInt64(0);
-      return true;
-    case gpr_w0_arm64:
-      reg_value.SetUInt32(0);
-      return true;
     case gpr_fp_arm64:
       reg_value.SetUInt64(tester->gpr.fp);
       return true;
@@ -81,11 +75,11 @@ struct Arch64EmulatorTester : public EmulateInstructionARM64 {
                                     const RegisterValue &reg_value) {
     auto *tester = static_cast<Arch64EmulatorTester *>(instruction);
     uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
-    if (reg >= gpr_x1_arm64 && reg <= gpr_x28_arm64) {
+    if (reg >= gpr_x0_arm64 && reg <= gpr_x28_arm64) {
       tester->gpr.x[reg - gpr_x0_arm64] = reg_value.GetAsUInt64();
       return true;
     }
-    if (reg >= gpr_w1_arm64 && reg <= gpr_w28_arm64) {
+    if (reg >= gpr_w0_arm64 && reg <= gpr_w28_arm64) {
       tester->gpr.x[reg - gpr_w0_arm64] = reg_value.GetAsUInt32();
       return true;
     }
