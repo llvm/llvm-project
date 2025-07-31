@@ -1963,8 +1963,12 @@ void OMPClausePrinter::VisitOMPSeverityClause(OMPSeverityClause *Node) {
 }
 
 void OMPClausePrinter::VisitOMPMessageClause(OMPMessageClause *Node) {
-  OS << "message(\""
-     << cast<StringLiteral>(Node->getMessageString())->getString() << "\")";
+  OS << "message(";
+  if (StringLiteral *SL = Node->getAsStringLiteral())
+    OS << "\"" << SL->getString() << "\"";
+  else if (Expr *E = Node->getMessageString())
+    E->printPretty(OS, nullptr, Policy);
+  OS << ")";
 }
 
 void OMPClausePrinter::VisitOMPScheduleClause(OMPScheduleClause *Node) {

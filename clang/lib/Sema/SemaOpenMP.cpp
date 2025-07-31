@@ -11101,15 +11101,19 @@ StmtResult SemaOpenMP::ActOnOpenMPErrorDirective(ArrayRef<OMPClause *> Clauses,
       OMPExecutableDirective::getSingleClause<OMPSeverityClause>(Clauses);
   const OMPMessageClause *MessageC =
       OMPExecutableDirective::getSingleClause<OMPMessageClause>(Clauses);
-  Expr *ME = MessageC ? MessageC->getMessageString() : nullptr;
 
   if (!AtC || AtC->getAtKind() == OMPC_AT_compilation) {
+    StringLiteral *SL = MessageC ? MessageC->getAsStringLiteral() : nullptr;
+    if (MessageC && !SL)
+      Diag(MessageC->getMessageString()->getBeginLoc(),
+           diag::warn_clause_expected_string_literal)
+          << getOpenMPClauseNameForDiag(OMPC_message);
     if (SeverityC && SeverityC->getSeverityKind() == OMPC_SEVERITY_warning)
       Diag(SeverityC->getSeverityKindKwLoc(), diag::warn_diagnose_if_succeeded)
-          << (ME ? cast<StringLiteral>(ME)->getString() : "WARNING");
+          << (SL ? SL->getString() : "WARNING");
     else
       Diag(StartLoc, diag::err_diagnose_if_succeeded)
-          << (ME ? cast<StringLiteral>(ME)->getString() : "ERROR");
+          << (SL ? SL->getString() : "ERROR");
     if (!SeverityC || SeverityC->getSeverityKind() != OMPC_SEVERITY_warning)
       return StmtError();
   }
@@ -16464,13 +16468,28 @@ OMPClause *SemaOpenMP::ActOnOpenMPMessageClause(Expr *ME,
                                                 SourceLocation LParenLoc,
                                                 SourceLocation EndLoc) {
   assert(ME && "NULL expr in Message clause");
-  if (!isa<StringLiteral>(ME)) {
+  QualType Type = ME->getType();
+  if ((!Type->isPointerType() && !Type->isArrayType()) ||
+      !Type->getPointeeOrArrayElementType()->isAnyCharacterType()) {
     Diag(ME->getBeginLoc(), diag::warn_clause_expected_string)
         << getOpenMPClauseNameForDiag(OMPC_message);
     return nullptr;
   }
+
+  // If the string is a string literal, save it in case it is later needed
+  // during compile time.  Also consider a const char pointer to a string
+  // literal. This is necessary for template instantiations where the string
+  // literal is not passed directly and we only get a const char pointer to it.
+  StringLiteral *SL = dyn_cast<StringLiteral>(
+      isa<ImplicitCastExpr>(ME) ? cast<ImplicitCastExpr>(ME)->getSubExpr()
+                                : ME);
+
+  // Convert array type to pointer type if needed.
+  if (Type->isArrayType())
+    ME = SemaRef.DefaultFunctionArrayConversion(ME).get();
+
   return new (getASTContext())
-      OMPMessageClause(ME, StartLoc, LParenLoc, EndLoc);
+      OMPMessageClause(ME, StartLoc, LParenLoc, EndLoc, SL);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPOrderClause(

@@ -2372,9 +2372,8 @@ void CGOpenMPRuntime::emitBarrierCall(CodeGenFunction &CGF, SourceLocation Loc,
 
 void CGOpenMPRuntime::emitErrorCall(CodeGenFunction &CGF, SourceLocation Loc,
                                     Expr *ME, bool IsFatal) {
-  llvm::Value *MVL =
-      ME ? CGF.EmitStringLiteralLValue(cast<StringLiteral>(ME)).getPointer(CGF)
-         : llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
+  llvm::Value *MVL = ME ? CGF.EmitScalarExpr(ME)
+                        : llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
   // Build call void __kmpc_error(ident_t *loc, int severity, const char
   // *message)
   llvm::Value *Args[] = {
@@ -2718,14 +2717,10 @@ void CGOpenMPRuntime::emitNumThreadsClause(
     // as if sev-level is fatal."
     Args.push_back(llvm::ConstantInt::get(
         CGM.Int32Ty, Severity == OMPC_SEVERITY_warning ? 1 : 2));
-    if (Message) {
-      if (const StringLiteral *Msg = dyn_cast<StringLiteral>(Message))
-        Args.push_back(CGF.EmitStringLiteralLValue(Msg).getPointer(CGF));
-      else
-        Args.push_back(CGF.EmitScalarExpr(Message));
-    } else {
+    if (Message)
+      Args.push_back(CGF.EmitScalarExpr(Message));
+    else
       Args.push_back(llvm::ConstantPointerNull::get(CGF.VoidPtrTy));
-    }
   }
   CGF.EmitRuntimeCall(
       OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(), FnID), Args);
