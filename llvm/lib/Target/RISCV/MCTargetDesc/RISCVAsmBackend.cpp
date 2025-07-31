@@ -309,10 +309,10 @@ bool RISCVAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
   // Use default handling unless linker relaxation is enabled and the alignment
   // is larger than the nop size.
   const MCSubtargetInfo *STI = F.getSubtargetInfo();
-  if (!hasRelaxEver(F.getParent()) && !STI->hasFeature(RISCV::FeatureRelax))
+  if (!STI->hasFeature(RISCV::FeatureRelax) && !hasRelaxEver(F.getParent()))
     return false;
   unsigned MinNopLen =
-      hasRelaxEver(F.getParent()) || STI->hasFeature(RISCV::FeatureStdExtZca)
+      hasRVCEver(F.getParent()) || STI->hasFeature(RISCV::FeatureStdExtZca)
           ? 2
           : 4;
   if (F.getAlignment() <= MinNopLen)

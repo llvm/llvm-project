@@ -35,20 +35,20 @@ class RISCVAsmBackend : public MCAsmBackend {
 
   StringMap<MCSymbol *> VendorSymbols;
 
-  SmallPtrSet<MCSection *, 8> RelaxEverSections;
-  SmallPtrSet<MCSection *, 8> RVCEverSections;
+  SmallPtrSet<const MCSection *, 8> RelaxEverSections;
+  SmallPtrSet<const MCSection *, 8> RVCEverSections;
 
 public:
   RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
                   const MCTargetOptions &Options);
   ~RISCVAsmBackend() override = default;
 
-  void setRVCEver(MCSection *Sec) { RVCEverSections.insert(Sec); }
-  bool hasRVCEver(MCSection *Sec) const {
+  void setRVCEver(const MCSection *Sec) { RVCEverSections.insert(Sec); }
+  bool hasRVCEver(const MCSection *Sec) const {
     return RVCEverSections.contains(Sec);
   }
-  void setRelaxEver(MCSection *Sec) { RelaxEverSections.insert(Sec); }
-  bool hasRelaxEver(MCSection *Sec) const {
+  void setRelaxEver(const MCSection *Sec) { RelaxEverSections.insert(Sec); }
+  bool hasRelaxEver(const MCSection *Sec) const {
     return RelaxEverSections.contains(Sec);
   }
 

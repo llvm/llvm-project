@@ -3182,8 +3182,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
     auto *Section = Streamer.getCurrentSectionOnly();
     // Update RVCEver status only if any instruction emitted.
     if (Section->hasInstructions() && Assembler != nullptr &&
-        (getSTI().hasFeature(RISCV::FeatureStdExtC) ||
-         getSTI().hasFeature(RISCV::FeatureStdExtZca))) {
+        getSTI().hasFeature(RISCV::FeatureStdExtZca)) {
       RISCVAsmBackend &MAB =
           static_cast<RISCVAsmBackend &>(Assembler->getBackend());
       MAB.setRVCEver(Section);
