@@ -3009,6 +3009,21 @@ bool SwingSchedulerDAG::mayOverlapInLaterIter(
   if (OffsetBIsScalable || OffsetOIsScalable)
     return true;
 
+  // Check if the definitions of the two MIs have a chance of
+  // having the same value, but not from the same parent instruction.
+  // This is possible if the values come via phi nodes. So check
+  // for the parents of phi nodes.
+  auto doesOverlap = [&](MachineInstr* MI, MachineInstr* MI2) {
+    if (MI->isPHI()) {
+      for (auto MO : MI->operands()) {
+        if (!MO.isReg()) continue;
+        if (MI2 == MRI.getVRegDef(MO.getReg()))
+          return true;
+      }
+    }
+    return false;
+  };
+
   if (!BaseOpB->isIdenticalTo(*BaseOpO)) {
     // Pass cases with different base operands but same initial values.
     // Typically for when pre/post increment is used.
@@ -3034,7 +3049,8 @@ bool SwingSchedulerDAG::mayOverlapInLaterIter(
     MachineInstr *InitDefO = MRI.getVRegDef(InitValO);
 
     if (!InitDefB->isIdenticalTo(*InitDefO))
-      return true;
+      if (!doesOverlap(InitDefB, InitDefO) && !doesOverlap(InitDefO, InitDefB))
+        return true;
   }
 
   LocationSize AccessSizeB = (*BaseMI->memoperands_begin())->getSize();
