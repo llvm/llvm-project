@@ -2801,16 +2801,16 @@ public:
       break;
     }
   }
-  void Unparse(const OmpSectionBlocks &x) {
-    for (const auto &y : x.v) {
+  void Unparse(const OpenMPSectionConstruct &x) {
+    if (auto &&dirSpec{
+            std::get<std::optional<OmpDirectiveSpecification>>(x.t)}) {
       BeginOpenMP();
-      Word("!$OMP SECTION");
+      Word("!$OMP ");
+      Walk(*dirSpec);
       Put("\n");
       EndOpenMP();
-      // y.u is an OpenMPSectionConstruct
-      // (y.u).v is Block
-      Walk(std::get<OpenMPSectionConstruct>(y.u).v, "");
     }
+    Walk(std::get<Block>(x.t), "");
   }
   void Unparse(const OpenMPSectionsConstruct &x) {
     BeginOpenMP();
@@ -2818,7 +2818,7 @@ public:
     Walk(std::get<OmpBeginSectionsDirective>(x.t));
     Put("\n");
     EndOpenMP();
-    Walk(std::get<OmpSectionBlocks>(x.t));
+    Walk(std::get<std::list<OpenMPConstruct>>(x.t), "");
     BeginOpenMP();
     Word("!$OMP END ");
     Walk(std::get<OmpEndSectionsDirective>(x.t));

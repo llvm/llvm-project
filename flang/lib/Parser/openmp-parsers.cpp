@@ -34,6 +34,39 @@ namespace Fortran::parser {
 constexpr auto startOmpLine = skipStuffBeforeStatement >> "!$OMP "_sptok;
 constexpr auto endOmpLine = space >> endOfLine;
 
+// Given a parser for a single element, and a parser for a list of elements
+// of the same type, create a parser that constructs the entire list by having
+// the single element be the head of the list, and the rest be the tail.
+template <typename ParserH, typename ParserT> struct ConsParser {
+  static_assert(std::is_same_v<std::list<typename ParserH::resultType>,
+      typename ParserT::resultType>);
+
+  using resultType = typename ParserT::resultType;
+  constexpr ConsParser(ParserH h, ParserT t) : head_(h), tail_(t) {}
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    if (auto &&first{head_.Parse(state)}) {
+      if (auto rest{tail_.Parse(state)}) {
+        rest->push_front(std::move(*first));
+        return std::move(*rest);
+      }
+    }
+    return std::nullopt;
+  }
+
+private:
+  const ParserH head_;
+  const ParserT tail_;
+};
+
+template <typename ParserH, typename ParserT,
+    typename ValueH = typename ParserH::resultType,
+    typename ValueT = typename ParserT::resultType,
+    typename = std::enable_if_t<std::is_same_v<std::list<ValueH>, ValueT>>>
+constexpr auto cons(ParserH head, ParserT tail) {
+  return ConsParser<ParserH, ParserT>(head, tail);
+}
+
 // Given a parser P for a wrapper class, invoke P, and if it succeeds return
 // the wrapped object.
 template <typename Parser> struct UnwrapParser {
@@ -1831,19 +1864,20 @@ TYPE_PARSER(
                         sourced("END"_tok >> Parser<OmpSectionsDirective>{}),
                         Parser<OmpClauseList>{})))
 
-// OMP SECTION-BLOCK
-
-TYPE_PARSER(construct<OpenMPSectionConstruct>(block))
-
-TYPE_PARSER(maybe(startOmpLine >> "SECTION"_tok / endOmpLine) >>
-    construct<OmpSectionBlocks>(nonemptySeparated(
-        construct<OpenMPConstruct>(sourced(Parser<OpenMPSectionConstruct>{})),
-        startOmpLine >> "SECTION"_tok / endOmpLine)))
+static constexpr auto sectionDir{
+    startOmpLine >> (predicated(OmpDirectiveNameParser{},
+                         IsDirective(llvm::omp::Directive::OMPD_section)) >=
+                        Parser<OmpDirectiveSpecification>{})};
 
 // OMP SECTIONS (OpenMP 5.0 - 2.8.1), PARALLEL SECTIONS (OpenMP 5.0 - 2.13.3)
-TYPE_PARSER(construct<OpenMPSectionsConstruct>(
+TYPE_PARSER(sourced(construct<OpenMPSectionsConstruct>(
     Parser<OmpBeginSectionsDirective>{} / endOmpLine,
-    Parser<OmpSectionBlocks>{}, Parser<OmpEndSectionsDirective>{} / endOmpLine))
+    cons( //
+        construct<OpenMPConstruct>(sourced(
+            construct<OpenMPSectionConstruct>(maybe(sectionDir), block))),
+        many(construct<OpenMPConstruct>(
+            sourced(construct<OpenMPSectionConstruct>(sectionDir, block))))),
+    Parser<OmpEndSectionsDirective>{} / endOmpLine)))
 
 static bool IsExecutionPart(const OmpDirectiveName &name) {
   return name.IsExecutionPart();
