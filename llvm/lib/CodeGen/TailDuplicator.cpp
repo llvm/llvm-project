@@ -604,7 +604,7 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   bool HasComputedGoto = false;
   if (!TailBB.empty()) {
     HasIndirectbr = TailBB.back().isIndirectBranch();
-    HasComputedGoto = TailBB.terminatorIsComputedGoto();
+    HasComputedGoto = TailBB.terminatorIsComputedGotoWithSuccessors();
   }
 
   if (HasIndirectbr && PreRegAlloc)
