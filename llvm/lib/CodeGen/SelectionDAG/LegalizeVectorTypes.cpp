@@ -2237,7 +2237,7 @@ void DAGTypeLegalizer::SplitVecRes_VP_LOAD_FF(VPLoadFFSDNode *LD, SDValue &Lo,
 
   SDValue Ch = LD->getChain();
   SDValue Ptr = LD->getBasePtr();
-  Align Alignment = LD->getOriginalAlign();
+  Align Alignment = LD->getBaseAlign();
   SDValue Mask = LD->getMask();
   SDValue EVL = LD->getVectorLength();
 
