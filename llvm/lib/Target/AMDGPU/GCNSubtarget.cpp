@@ -52,11 +52,6 @@ static cl::opt<unsigned>
                  cl::desc("Number of addresses from which to enable MIMG NSA."),
                  cl::init(2), cl::Hidden);
 
-static cl::opt<std::string>
-    AMDGPUPostRADirection("amdgpu-post-ra-direction",
-                          cl::desc("Select custom AMDGPU postRA direction."),
-                          cl::Hidden, cl::init(""));
-
 GCNSubtarget::~GCNSubtarget() = default;
 
 GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
