@@ -154,6 +154,15 @@ findTransformEntryPointRecursive(Operation *op, StringRef entryPoint) {
   return transform;
 }
 
+transform::TransformOpInterface
+findTransformEntryPointInOp(Operation *op, StringRef entryPoint) {
+  transform::TransformOpInterface transform =
+      findTransformEntryPointNonRecursive(op, entryPoint);
+  if (!transform)
+    transform = findTransformEntryPointRecursive(op, entryPoint);
+  return transform;
+}
+
 } // namespace
 
 transform::TransformOpInterface
@@ -164,9 +173,7 @@ transform::detail::findTransformEntryPoint(Operation *root, ModuleOp module,
     l.push_back(module);
   for (Operation *op : l) {
     TransformOpInterface transform =
-        findTransformEntryPointNonRecursive(op, entryPoint);
-    if (!transform)
-      transform = findTransformEntryPointRecursive(op, entryPoint);
+        findTransformEntryPointInOp(op, entryPoint);
     if (transform)
       return transform;
   }
