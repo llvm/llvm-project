@@ -66,8 +66,8 @@ createDiagnostics(unsigned int argc, char **argv) {
   Args.push_back("diagtool");
   Args.append(argv, argv + argc);
   CreateInvocationOptions CIOpts;
-  CIOpts.Diags =
-      new DiagnosticsEngine(DiagnosticIDs::create(), DiagOpts, DiagsBuffer);
+  CIOpts.Diags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(
+      DiagnosticIDs::create(), DiagOpts, DiagsBuffer);
   std::unique_ptr<CompilerInvocation> Invocation =
       createInvocation(Args, CIOpts);
   if (!Invocation)

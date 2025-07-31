@@ -42,7 +42,8 @@ protected:
   // Data fields.
   DiagnosticOptions DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      new DiagnosticsEngine(DiagnosticIDs::create(), DiagOpts);
+      llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(DiagnosticIDs::create(),
+                                                   DiagOpts);
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS =
       llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   IntrusiveRefCntPtr<FileManager> FileMgr =

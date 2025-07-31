@@ -233,8 +233,8 @@ clang::IntrusiveRefCntPtr<clang::DiagnosticsEngine>
 CompilerInstance::createDiagnostics(clang::DiagnosticOptions &opts,
                                     clang::DiagnosticConsumer *client,
                                     bool shouldOwnClient) {
-  clang::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diags(
-      new clang::DiagnosticsEngine(clang::DiagnosticIDs::create(), opts));
+  auto diags = llvm::makeIntrusiveRefCnt<clang::DiagnosticsEngine>(
+      clang::DiagnosticIDs::create(), opts);
 
   // Create the diagnostic client for reporting errors or for
   // implementing -verify.

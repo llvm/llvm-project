@@ -445,6 +445,9 @@ public:
 
   const DiagnosticsEngine &getDiagnostics() const { return *Diagnostics; }
   DiagnosticsEngine &getDiagnostics() { return *Diagnostics; }
+  llvm::IntrusiveRefCntPtr<DiagnosticsEngine> getDiagnosticsPtr() {
+    return Diagnostics;
+  }
 
   const SourceManager &getSourceManager() const { return *SourceMgr; }
   SourceManager &getSourceManager() { return *SourceMgr; }
@@ -918,8 +921,9 @@ public:
                     bool IncludeCodePatterns, bool IncludeBriefComments,
                     CodeCompleteConsumer &Consumer,
                     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-                    DiagnosticsEngine &Diag, LangOptions &LangOpts,
-                    SourceManager &SourceMgr, FileManager &FileMgr,
+                    llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diag,
+                    LangOptions &LangOpts, SourceManager &SourceMgr,
+                    FileManager &FileMgr,
                     SmallVectorImpl<StoredDiagnostic> &StoredDiagnostics,
                     SmallVectorImpl<const llvm::MemoryBuffer *> &OwnedBuffers,
                     std::unique_ptr<SyntaxOnlyAction> Act);

@@ -87,8 +87,9 @@ bool CompilerInstance::shouldBuildGlobalModuleIndex() const {
          !DisableGeneratingGlobalModuleIndex;
 }
 
-void CompilerInstance::setDiagnostics(DiagnosticsEngine *Value) {
-  Diagnostics = Value;
+void CompilerInstance::setDiagnostics(
+    llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Value) {
+  Diagnostics = std::move(Value);
 }
 
 void CompilerInstance::setVerboseOutputStream(raw_ostream &Value) {
@@ -345,8 +346,8 @@ IntrusiveRefCntPtr<DiagnosticsEngine> CompilerInstance::createDiagnostics(
     llvm::vfs::FileSystem &VFS, DiagnosticOptions &Opts,
     DiagnosticConsumer *Client, bool ShouldOwnClient,
     const CodeGenOptions *CodeGenOpts) {
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-      new DiagnosticsEngine(DiagnosticIDs::create(), Opts));
+  auto Diags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(
+      DiagnosticIDs::create(), Opts);
 
   // Create the diagnostic client for reporting errors or for
   // implementing -verify.

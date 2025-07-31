@@ -135,8 +135,8 @@ GetDiagnosticsEngine(DiagnosticOptions &DiagOpts) {
       new TextDiagnosticPrinter(llvm::errs(), DiagOpts);
   DiagClient->setPrefix("clang-extdef-mappping");
 
-  IntrusiveRefCntPtr<DiagnosticsEngine> DiagEngine(
-      new DiagnosticsEngine(DiagnosticIDs::create(), DiagOpts, DiagClient));
+  auto DiagEngine = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(
+      DiagnosticIDs::create(), DiagOpts, DiagClient);
   Diags.swap(DiagEngine);
 
   // Retain this one time so it's not destroyed by ASTUnit::LoadFromASTFile
