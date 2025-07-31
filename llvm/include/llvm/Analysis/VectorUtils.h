@@ -177,12 +177,6 @@ LLVM_ABI bool isVectorIntrinsicWithStructReturnOverloadAtField(
 LLVM_ABI Intrinsic::ID
 getVectorIntrinsicIDForCall(const CallInst *CI, const TargetLibraryInfo *TLI);
 
-/// Returns the corresponding llvm.vector.interleaveN intrinsic for factor N.
-LLVM_ABI Intrinsic::ID getInterleaveIntrinsicID(unsigned Factor);
-
-/// Returns the corresponding llvm.vector.deinterleaveN intrinsic for factor N.
-LLVM_ABI Intrinsic::ID getDeinterleaveIntrinsicID(unsigned Factor);
-
 /// Returns the corresponding factor of llvm.vector.interleaveN intrinsics.
 LLVM_ABI unsigned getInterleaveIntrinsicFactor(Intrinsic::ID ID);
 
@@ -638,6 +632,9 @@ public:
     // This is a group of loads, with gaps, and without a last-member
     return true;
   }
+
+  /// Return true if this group is full, i.e. it has no gaps.
+  bool isFull() const { return getNumMembers() == getFactor(); }
 
 private:
   uint32_t Factor; // Interleave Factor.

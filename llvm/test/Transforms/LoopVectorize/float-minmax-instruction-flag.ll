@@ -58,8 +58,7 @@ define float @minloopattr(ptr nocapture readonly %arg) #0 {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ [[MINMAX_IDENT_SPLAT]], [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[ARG]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp olt <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP3]], <4 x float> [[VEC_PHI]], <4 x float> [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -67,10 +66,10 @@ define float @minloopattr(ptr nocapture readonly %arg) #0 {
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[TMP4]])
-; CHECK-NEXT:    br i1 true, label [[OUT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[OUT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 65537, [[MIDDLE_BLOCK]] ], [ 1, [[TOP:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP6]], [[MIDDLE_BLOCK]] ], [ [[T]], [[TOP]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1, [[TOP:%.*]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[T]], [[TOP]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[T1:%.*]] = phi i64 [ [[T7:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]

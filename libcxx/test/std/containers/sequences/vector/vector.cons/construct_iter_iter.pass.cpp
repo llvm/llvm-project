@@ -127,9 +127,9 @@ TEST_CONSTEXPR_CXX20 void emplaceable_concept_tests() {
 }
 
 void test_ctor_under_alloc() {
-#if TEST_STD_VER >= 11
   int arr1[] = {42};
   int arr2[] = {1, 101, 42};
+#if TEST_STD_VER >= 11
   {
     using C  = TCT::vector<>;
     using It = forward_iterator<int*>;
@@ -155,6 +155,35 @@ void test_ctor_under_alloc() {
     }
   }
 #endif
+  // FIXME: This is mostly the same test as above, just worse. They should be merged.
+  {
+    typedef std::vector<int, cpp03_allocator<int> > C;
+    typedef C::allocator_type Alloc;
+    {
+      Alloc::construct_called = false;
+      C v(arr1, arr1 + 1);
+      assert(Alloc::construct_called);
+    }
+    {
+      Alloc::construct_called = false;
+      C v(arr2, arr2 + 3);
+      assert(Alloc::construct_called);
+    }
+  }
+  {
+    typedef std::vector<int, cpp03_overload_allocator<int> > C;
+    typedef C::allocator_type Alloc;
+    {
+      Alloc::construct_called = false;
+      C v(arr1, arr1 + 1);
+      assert(Alloc::construct_called);
+    }
+    {
+      Alloc::construct_called = false;
+      C v(arr2, arr2 + 3);
+      assert(Alloc::construct_called);
+    }
+  }
 }
 
 // In C++03, you can't instantiate a template with a local type.
