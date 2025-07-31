@@ -1586,8 +1586,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
               if (isInt<32>(reloc.sym->getVA(ctx, reloc.addend)))
                 return false;
               part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, elem.inputSec,
-                                      reloc.offset,
-                                      DynamicReloc::AddendOnlyWithTargetVA,
+                                      reloc.offset, DynamicReloc::AddendOnly,
                                       *reloc.sym, reloc.addend, R_ABS});
               return true;
             });
