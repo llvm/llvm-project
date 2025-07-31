@@ -1,6 +1,9 @@
-; RUN: llc -mtriple=amdgcn--amdpal < %s | FileCheck -check-prefix=GCN -check-prefix=SI -enable-var-scope %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga < %s | FileCheck -check-prefix=GCN -check-prefix=VI -enable-var-scope %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -enable-var-scope %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn--amdpal < %s | FileCheck -check-prefix=GCN -check-prefix=SI -enable-var-scope %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn--amdpal -mcpu=tonga < %s | FileCheck -check-prefix=GCN -check-prefix=VI -enable-var-scope %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn--amdpal -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -enable-var-scope %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn--amdpal < %s | FileCheck -check-prefix=GCN -check-prefix=SI -enable-var-scope %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn--amdpal -mcpu=tonga < %s | FileCheck -check-prefix=GCN -check-prefix=VI -enable-var-scope %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn--amdpal -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -enable-var-scope %s
 
 ; This compute shader has input args that claim that it has 17 sgprs and 5 vgprs
 ; in wave dispatch. Ensure that the sgpr and vgpr counts in COMPUTE_PGM_RSRC1

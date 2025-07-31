@@ -743,6 +743,15 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   if (!determineAssignments(Assigner, SplitArgs, CCInfo))
     return false;
 
+  if (IsEntryFunc) {
+    // This assumes the registers are allocated by CCInfo in ascending order
+    // with no gaps.
+    Info->setNumWaveDispatchSGPRs(
+        CCInfo.getFirstUnallocated(AMDGPU::SGPR_32RegClass.getRegisters()));
+    Info->setNumWaveDispatchVGPRs(
+        CCInfo.getFirstUnallocated(AMDGPU::VGPR_32RegClass.getRegisters()));
+  }
+
   FormalArgHandler Handler(B, MRI);
   if (!handleAssignments(Handler, SplitArgs, CCInfo, ArgLocs, B))
     return false;
