@@ -571,7 +571,7 @@ func.func @tensor.pad(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
   // CHECK-DAG: %[[c1:.*]] = arith.constant 1 : index
   // CHECK-DAG: %[[dim0:.*]] = memref.dim %[[m1]], %[[c0]]
   // CHECK-DAG: %[[dim1:.*]] = memref.dim %[[m1]], %[[c1]]
-  // CHECK-DAG: %[[size0:.*]] = affine.apply #[[$sum_map_1]]()[%[[h1]], %[[dim0]]]
+  // CHECK-DAG: %[[size0:.*]] = affine.apply #[[$sum_map_1]]()[%[[dim0]], %[[h1]]]
   // CHECK-DAG: %[[size1:.*]] = affine.apply #[[$sum_map_2]]()[%[[l2]], %[[h2]]]
   // CHECK:     %[[alloc:.*]] = memref.alloc(%[[size0]], %[[size1]]) {{.*}} : memref<?x?xindex>
   // CHECK:     %[[alloc_t:.*]] = bufferization.to_tensor %[[alloc]]
@@ -611,6 +611,21 @@ func.func @tensor.pad(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
 func.func @tensor.splat(%f: f32) -> tensor<10x2x4xf32> {
   %t = tensor.splat %f : tensor<10x2x4xf32>
   return %t : tensor<10x2x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func @tensor.splat_other(
+// CHECK-SAME:        %[[F:.*]]: !test.memref_element)
+// CHECK-DAG:       %[[ALLOC:.*]] = memref.alloc() {{.*}} : memref<10x2x4x!test.memref_element>
+// CHECK:           %[[ALLOC_T:.*]] = bufferization.to_tensor %[[ALLOC]]
+// CHECK:           %[[MAPPED:.*]] = linalg.map
+// CHECK:                 outs(%[[ALLOC_T]] : tensor<10x2x4x!test.memref_element>)
+// CHECK:             linalg.yield %[[F]]
+// CHECK:           return %[[MAPPED]] : tensor<10x2x4x!test.memref_element>
+func.func @tensor.splat_other(%f: !test.memref_element) -> tensor<10x2x4x!test.memref_element> {
+  %t = tensor.splat %f : tensor<10x2x4x!test.memref_element>
+  return %t : tensor<10x2x4x!test.memref_element>
 }
 
 // -----

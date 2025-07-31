@@ -172,11 +172,11 @@ void VariantValue::setSigned(int64_t newValue) {
 // Boolean
 bool VariantValue::isBoolean() const { return type == ValueType::Boolean; }
 
-bool VariantValue::getBoolean() const { return value.Signed; }
+bool VariantValue::getBoolean() const { return value.Boolean; }
 
 void VariantValue::setBoolean(bool newValue) {
   type = ValueType::Boolean;
-  value.Signed = newValue;
+  value.Boolean = newValue;
 }
 
 bool VariantValue::isString() const { return type == ValueType::String; }

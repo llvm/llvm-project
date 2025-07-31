@@ -13,7 +13,7 @@
 
 using namespace llvm;
 
-const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
+const MCAsmInfo::AtSpecifier atSpecifiers[] = {
     {SystemZ::S_DTPOFF, "DTPOFF"}, {SystemZ::S_GOT, "GOT"},
     {SystemZ::S_GOTENT, "GOTENT"}, {SystemZ::S_INDNTPOFF, "INDNTPOFF"},
     {SystemZ::S_NTPOFF, "NTPOFF"}, {SystemZ::S_PLT, "PLT"},
@@ -33,7 +33,7 @@ SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT) {
   UsesELFSectionDirectiveForBSS = true;
   ZeroDirective = "\t.space\t";
 
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT) {
@@ -52,7 +52,7 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT) {
   MaxInstLength = 6;
   SupportsDebugInformation = true;
 
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 bool SystemZMCAsmInfoGOFF::isAcceptableChar(char C) const {

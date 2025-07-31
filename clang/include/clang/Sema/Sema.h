@@ -834,6 +834,15 @@ enum class CCEKind {
                            ///< message.
 };
 
+/// Enums for the diagnostics of target, target_version and target_clones.
+namespace DiagAttrParams {
+enum DiagType { Unsupported, Duplicate, Unknown };
+enum Specifier { None, CPU, Tune };
+enum AttrName { Target, TargetClones, TargetVersion };
+} // end namespace DiagAttrParams
+
+void inferNoReturnAttr(Sema &S, const Decl *D);
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -1612,7 +1621,17 @@ public:
   ///
   /// Triggered by declaration-attribute processing.
   void ProcessAPINotes(Decl *D);
+  /// Apply the 'Nullability:' annotation to the specified declaration
+  void ApplyNullability(Decl *D, NullabilityKind Nullability);
+  /// Apply the 'Type:' annotation to the specified declaration
+  void ApplyAPINotesType(Decl *D, StringRef TypeString);
 
+  /// Whether APINotes should be gathered for all applicable Swift language
+  /// versions, without being applied. Leaving clients of the current module
+  /// to select and apply the correct version.
+  bool captureSwiftVersionIndependentAPINotes() {
+    return APINotes.captureVersionIndependentSwift();
+  }
   ///@}
 
   //
@@ -4910,13 +4929,6 @@ public:
   // handled later in the process, once we know how many exist.
   bool checkTargetAttr(SourceLocation LiteralLoc, StringRef Str);
 
-  /// Check Target Version attrs
-  bool checkTargetVersionAttr(SourceLocation Loc, Decl *D, StringRef Str);
-  bool checkTargetClonesAttrString(
-      SourceLocation LiteralLoc, StringRef Str, const StringLiteral *Literal,
-      Decl *D, bool &HasDefault, bool &HasCommas, bool &HasNotDefault,
-      SmallVectorImpl<SmallString<64>> &StringsBuffer);
-
   ErrorAttr *mergeErrorAttr(Decl *D, const AttributeCommonInfo &CI,
                             StringRef NewUserDiagnostic);
   FormatAttr *mergeFormatAttr(Decl *D, const AttributeCommonInfo &CI,
@@ -6759,6 +6771,7 @@ public:
       EK_Decltype,
       EK_TemplateArgument,
       EK_AttrArgument,
+      EK_VariableInit,
       EK_Other
     } ExprContext;
 
@@ -7721,12 +7734,12 @@ public:
 
   class ConditionResult {
     Decl *ConditionVar;
-    FullExprArg Condition;
+    ExprResult Condition;
     bool Invalid;
     std::optional<bool> KnownValue;
 
     friend class Sema;
-    ConditionResult(Sema &S, Decl *ConditionVar, FullExprArg Condition,
+    ConditionResult(Sema &S, Decl *ConditionVar, ExprResult Condition,
                     bool IsConstexpr)
         : ConditionVar(ConditionVar), Condition(Condition), Invalid(false) {
       if (IsConstexpr && Condition.get()) {
@@ -7737,7 +7750,7 @@ public:
       }
     }
     explicit ConditionResult(bool Invalid)
-        : ConditionVar(nullptr), Condition(nullptr), Invalid(Invalid),
+        : ConditionVar(nullptr), Condition(Invalid), Invalid(Invalid),
           KnownValue(std::nullopt) {}
 
   public:
@@ -9822,7 +9835,8 @@ public:
   DeclGroupPtrTy ActOnModuleDecl(SourceLocation StartLoc,
                                  SourceLocation ModuleLoc, ModuleDeclKind MDK,
                                  ModuleIdPath Path, ModuleIdPath Partition,
-                                 ModuleImportState &ImportState);
+                                 ModuleImportState &ImportState,
+                                 bool IntroducerIsFirstPPToken);
 
   /// The parser has processed a global-module-fragment declaration that begins
   /// the definition of the global module fragment of the current module unit.
@@ -9930,6 +9944,20 @@ private:
   void PopImplicitGlobalModuleFragment();
 
   VisibleModuleSet VisibleModules;
+
+  /// Whether we had imported any named modules.
+  bool HadImportedNamedModules = false;
+  /// The set of instantiations we need to check if they references TU-local
+  /// entity from TUs. This only makes sense if we imported any named modules.
+  llvm::SmallVector<std::pair<FunctionDecl *, SourceLocation>>
+      PendingCheckReferenceForTULocal;
+  /// Implement [basic.link]p18, which requires that we can't use TU-local
+  /// entities from other TUs (ignoring header units).
+  void checkReferenceToTULocalFromOtherTU(FunctionDecl *FD,
+                                          SourceLocation PointOfInstantiation);
+  /// Implement [basic.link]p17, which diagnose for non TU local exposure in
+  /// module interface or module partition.
+  void checkExposure(const TranslationUnitDecl *TU);
 
   ///@}
 
@@ -12497,6 +12525,7 @@ public:
       sema::TemplateDeductionInfo &Info,
       SmallVectorImpl<OriginalCallArg> const *OriginalCallArgs,
       bool PartialOverloading, bool PartialOrdering,
+      bool ForOverloadSetAddressResolution,
       llvm::function_ref<bool(bool)> CheckNonDependent =
           [](bool /*OnlyInitializeNonUserDefinedConversions*/) {
             return false;
@@ -13314,18 +13343,6 @@ public:
   /// \param ForDefaultArgumentSubstitution indicates we should continue looking
   /// when encountering a specialized member function template, rather than
   /// returning immediately.
-  void getTemplateInstantiationArgs(
-      MultiLevelTemplateArgumentList &Result, const NamedDecl *D,
-      const DeclContext *DC = nullptr, bool Final = false,
-      std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
-      bool RelativeToPrimary = false, const FunctionDecl *Pattern = nullptr,
-      bool ForConstraintInstantiation = false,
-      bool SkipForSpecialization = false,
-      bool ForDefaultArgumentSubstitution = false);
-
-  /// This creates a new \p MultiLevelTemplateArgumentList and invokes the other
-  /// overload with it as the first parameter. Prefer this overload in most
-  /// situations.
   MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
       const NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
       std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
@@ -15189,10 +15206,17 @@ public:
                                SourceLocation Loc);
   QualType BuiltinRemoveReference(QualType BaseType, UTTKind UKind,
                                   SourceLocation Loc);
+
+  QualType BuiltinRemoveCVRef(QualType BaseType, SourceLocation Loc) {
+    return BuiltinRemoveReference(BaseType, UTTKind::RemoveCVRef, Loc);
+  }
+
   QualType BuiltinChangeCVRQualifiers(QualType BaseType, UTTKind UKind,
                                       SourceLocation Loc);
   QualType BuiltinChangeSignedness(QualType BaseType, UTTKind UKind,
                                    SourceLocation Loc);
+
+  bool BuiltinIsBaseOf(SourceLocation RhsTLoc, QualType LhsT, QualType RhsT);
 
   /// Ensure that the type T is a literal type.
   ///

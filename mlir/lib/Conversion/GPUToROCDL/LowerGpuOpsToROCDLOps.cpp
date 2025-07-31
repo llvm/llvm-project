@@ -15,7 +15,6 @@
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Transforms/Passes.h"
 
 #include "mlir/Conversion/AMDGPUToROCDL/AMDGPUToROCDL.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
@@ -34,14 +33,12 @@
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
-#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/Support/FormatVariadic.h"
 
 #include "../GPUCommon/GPUOpsLowering.h"
 #include "../GPUCommon/IndexIntrinsicsOpLowering.h"
@@ -64,10 +61,10 @@ static Value truncOrExtToLLVMType(ConversionPatternRewriter &rewriter,
       IntegerType::get(rewriter.getContext(), converter.getIndexTypeBitwidth());
   // TODO: use <=> in C++20.
   if (indexBitwidth > intWidth) {
-    return rewriter.create<LLVM::SExtOp>(loc, indexBitwidthType, value);
+    return LLVM::SExtOp::create(rewriter, loc, indexBitwidthType, value);
   }
   if (indexBitwidth < intWidth) {
-    return rewriter.create<LLVM::TruncOp>(loc, indexBitwidthType, value);
+    return LLVM::TruncOp::create(rewriter, loc, indexBitwidthType, value);
   }
   return value;
 }
@@ -85,12 +82,12 @@ static bool canBeCalledWithBarePointers(gpu::GPUFuncOp func) {
 static Value getLaneId(ConversionPatternRewriter &rewriter, Location loc,
                        const unsigned indexBitwidth) {
   auto int32Type = IntegerType::get(rewriter.getContext(), 32);
-  Value zero = rewriter.create<arith::ConstantIntOp>(loc, 0, 32);
-  Value minus1 = rewriter.create<arith::ConstantIntOp>(loc, -1, 32);
-  Value mbcntLo = rewriter.create<ROCDL::MbcntLoOp>(loc, int32Type,
-                                                    ValueRange{minus1, zero});
-  Value laneId = rewriter.create<ROCDL::MbcntHiOp>(loc, int32Type,
-                                                   ValueRange{minus1, mbcntLo});
+  Value zero = arith::ConstantIntOp::create(rewriter, loc, 0, 32);
+  Value minus1 = arith::ConstantIntOp::create(rewriter, loc, -1, 32);
+  Value mbcntLo = ROCDL::MbcntLoOp::create(rewriter, loc, int32Type,
+                                           ValueRange{minus1, zero});
+  Value laneId = ROCDL::MbcntHiOp::create(rewriter, loc, int32Type,
+                                          ValueRange{minus1, mbcntLo});
   return laneId;
 }
 static constexpr StringLiteral amdgcnDataLayout =
@@ -113,21 +110,21 @@ struct GPULaneIdOpToROCDL : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
     // followed by: %lid = call @llvm.amdgcn.mbcnt.hi(-1, %mlo)
 
     Type intTy = IntegerType::get(context, 32);
-    Value zero = rewriter.create<arith::ConstantIntOp>(loc, 0, 32);
-    Value minus1 = rewriter.create<arith::ConstantIntOp>(loc, -1, 32);
-    Value mbcntLo =
-        rewriter.create<ROCDL::MbcntLoOp>(loc, intTy, ValueRange{minus1, zero});
-    Value laneId = rewriter.create<ROCDL::MbcntHiOp>(
-        loc, intTy, ValueRange{minus1, mbcntLo});
+    Value zero = arith::ConstantIntOp::create(rewriter, loc, 0, 32);
+    Value minus1 = arith::ConstantIntOp::create(rewriter, loc, -1, 32);
+    Value mbcntLo = ROCDL::MbcntLoOp::create(rewriter, loc, intTy,
+                                             ValueRange{minus1, zero});
+    Value laneId = ROCDL::MbcntHiOp::create(rewriter, loc, intTy,
+                                            ValueRange{minus1, mbcntLo});
     // Truncate or extend the result depending on the index bitwidth specified
     // by the LLVMTypeConverter options.
     const unsigned indexBitwidth = getTypeConverter()->getIndexTypeBitwidth();
     if (indexBitwidth > 32) {
-      laneId = rewriter.create<LLVM::SExtOp>(
-          loc, IntegerType::get(context, indexBitwidth), laneId);
+      laneId = LLVM::SExtOp::create(
+          rewriter, loc, IntegerType::get(context, indexBitwidth), laneId);
     } else if (indexBitwidth < 32) {
-      laneId = rewriter.create<LLVM::TruncOp>(
-          loc, IntegerType::get(context, indexBitwidth), laneId);
+      laneId = LLVM::TruncOp::create(
+          rewriter, loc, IntegerType::get(context, indexBitwidth), laneId);
     }
     rewriter.replaceOp(op, {laneId});
     return success();
@@ -152,8 +149,8 @@ struct GPUSubgroupSizeOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp> {
           /*bitWidth=*/32, /*lower=*/isBeforeGfx10 ? 64 : 32,
           /*upper=*/op.getUpperBoundAttr().getInt() + 1);
     }
-    Value wavefrontOp = rewriter.create<ROCDL::WavefrontSizeOp>(
-        op.getLoc(), rewriter.getI32Type(), bounds);
+    Value wavefrontOp = ROCDL::WavefrontSizeOp::create(
+        rewriter, op.getLoc(), rewriter.getI32Type(), bounds);
     wavefrontOp = truncOrExtToLLVMType(rewriter, op.getLoc(), wavefrontOp,
                                        *getTypeConverter());
     rewriter.replaceOp(op, {wavefrontOp});
@@ -193,44 +190,44 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
 
     auto int32Type = IntegerType::get(rewriter.getContext(), 32);
     Value width = adaptor.getWidth();
-    Value zero = rewriter.create<LLVM::ConstantOp>(loc, int32Type, 0);
-    Value negwidth = rewriter.create<LLVM::SubOp>(loc, int32Type, zero, width);
-    Value add = rewriter.create<LLVM::AddOp>(loc, int32Type, srcLaneId, width);
+    Value zero = LLVM::ConstantOp::create(rewriter, loc, int32Type, 0);
+    Value negwidth = LLVM::SubOp::create(rewriter, loc, int32Type, zero, width);
+    Value add = LLVM::AddOp::create(rewriter, loc, int32Type, srcLaneId, width);
     Value widthOrZeroIfOutside =
-        rewriter.create<LLVM::AndOp>(loc, int32Type, add, negwidth);
+        LLVM::AndOp::create(rewriter, loc, int32Type, add, negwidth);
     Value dstLane;
 
     switch (op.getMode()) {
     case gpu::ShuffleMode::UP:
-      dstLane = rewriter.create<LLVM::SubOp>(loc, int32Type, srcLaneId,
-                                             adaptor.getOffset());
+      dstLane = LLVM::SubOp::create(rewriter, loc, int32Type, srcLaneId,
+                                    adaptor.getOffset());
       break;
     case gpu::ShuffleMode::DOWN:
-      dstLane = rewriter.create<LLVM::AddOp>(loc, int32Type, srcLaneId,
-                                             adaptor.getOffset());
+      dstLane = LLVM::AddOp::create(rewriter, loc, int32Type, srcLaneId,
+                                    adaptor.getOffset());
       break;
     case gpu::ShuffleMode::XOR:
-      dstLane = rewriter.create<LLVM::XOrOp>(loc, int32Type, srcLaneId,
-                                             adaptor.getOffset());
+      dstLane = LLVM::XOrOp::create(rewriter, loc, int32Type, srcLaneId,
+                                    adaptor.getOffset());
       break;
     case gpu::ShuffleMode::IDX:
       dstLane = adaptor.getOffset();
       break;
     }
-    Value isActiveSrcLane = rewriter.create<LLVM::ICmpOp>(
-        loc, LLVM::ICmpPredicate::slt, dstLane, widthOrZeroIfOutside);
-    Value selectDstLane = rewriter.create<LLVM::SelectOp>(loc, isActiveSrcLane,
-                                                          dstLane, srcLaneId);
-    Value two = rewriter.create<LLVM::ConstantOp>(loc, int32Type, 2);
+    Value isActiveSrcLane = LLVM::ICmpOp::create(
+        rewriter, loc, LLVM::ICmpPredicate::slt, dstLane, widthOrZeroIfOutside);
+    Value selectDstLane = LLVM::SelectOp::create(rewriter, loc, isActiveSrcLane,
+                                                 dstLane, srcLaneId);
+    Value two = LLVM::ConstantOp::create(rewriter, loc, int32Type, 2);
     Value dwordAlignedDstLane =
-        rewriter.create<LLVM::ShlOp>(loc, int32Type, selectDstLane, two);
+        LLVM::ShlOp::create(rewriter, loc, int32Type, selectDstLane, two);
 
     SmallVector<Value> decomposed =
         LLVM::decomposeValue(rewriter, loc, initShflValue, int32Type);
     SmallVector<Value> swizzled;
     for (Value v : decomposed) {
-      Value res = rewriter.create<ROCDL::DsBpermuteOp>(loc, int32Type,
-                                                       dwordAlignedDstLane, v);
+      Value res = ROCDL::DsBpermuteOp::create(rewriter, loc, int32Type,
+                                              dwordAlignedDstLane, v);
       swizzled.emplace_back(res);
     }
     Value shflValue =

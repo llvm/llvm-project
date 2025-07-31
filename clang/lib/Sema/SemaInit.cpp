@@ -260,29 +260,37 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
              diag::ext_initializer_string_for_char_array_too_long)
           << Str->getSourceRange();
     else if (StrLength - 1 == ArrayLen) {
-      // If the entity being initialized has the nonstring attribute, then
-      // silence the "missing nonstring" diagnostic. If there's no entity,
-      // check whether we're initializing an array of arrays; if so, walk the
-      // parents to find an entity.
-      auto FindCorrectEntity =
-          [](const InitializedEntity *Entity) -> const ValueDecl * {
-        while (Entity) {
-          if (const ValueDecl *VD = Entity->getDecl())
-            return VD;
-          if (!Entity->getType()->isArrayType())
-            return nullptr;
-          Entity = Entity->getParent();
-        }
+      // In C, if the string literal is null-terminated explicitly, e.g., `char
+      // a[4] = "ABC\0"`, there should be no warning:
+      const auto *SL = dyn_cast<StringLiteral>(Str->IgnoreParens());
+      bool IsSLSafe = SL && SL->getLength() > 0 &&
+                      SL->getCodeUnit(SL->getLength() - 1) == 0;
 
-        return nullptr;
-      };
-      if (const ValueDecl *D = FindCorrectEntity(&Entity);
-          !D || !D->hasAttr<NonStringAttr>())
-        S.Diag(
-            Str->getBeginLoc(),
-            diag::warn_initializer_string_for_char_array_too_long_no_nonstring)
-            << ArrayLen << StrLength << Str->getSourceRange();
+      if (!IsSLSafe) {
+        // If the entity being initialized has the nonstring attribute, then
+        // silence the "missing nonstring" diagnostic. If there's no entity,
+        // check whether we're initializing an array of arrays; if so, walk the
+        // parents to find an entity.
+        auto FindCorrectEntity =
+            [](const InitializedEntity *Entity) -> const ValueDecl * {
+          while (Entity) {
+            if (const ValueDecl *VD = Entity->getDecl())
+              return VD;
+            if (!Entity->getType()->isArrayType())
+              return nullptr;
+            Entity = Entity->getParent();
+          }
 
+          return nullptr;
+        };
+        if (const ValueDecl *D = FindCorrectEntity(&Entity);
+            !D || !D->hasAttr<NonStringAttr>())
+          S.Diag(
+              Str->getBeginLoc(),
+              diag::
+                  warn_initializer_string_for_char_array_too_long_no_nonstring)
+              << ArrayLen << StrLength << Str->getSourceRange();
+      }
       // Always emit the C++ compatibility diagnostic.
       S.Diag(Str->getBeginLoc(),
              diag::warn_initializer_string_for_char_array_too_long_for_cpp)
@@ -782,7 +790,8 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
       return;
     }
 
-    if (!VerifyOnly && Field->hasAttr<ExplicitInitAttr>()) {
+    if (!VerifyOnly && Field->hasAttr<ExplicitInitAttr>() &&
+        !SemaRef.isUnevaluatedContext()) {
       SemaRef.Diag(ILE->getExprLoc(), diag::warn_field_requires_explicit_init)
           << /* Var-in-Record */ 0 << Field;
       SemaRef.Diag(Field->getLocation(), diag::note_entity_declared_at)
@@ -3563,7 +3572,7 @@ ExprResult Sema::ActOnDesignatedInitializer(Designation &Desig,
       Designators.push_back(ASTDesignator::CreateFieldDesignator(
           D.getFieldDecl(), D.getDotLoc(), D.getFieldLoc()));
     } else if (D.isArrayDesignator()) {
-      Expr *Index = static_cast<Expr *>(D.getArrayIndex());
+      Expr *Index = D.getArrayIndex();
       llvm::APSInt IndexValue;
       if (!Index->isTypeDependent() && !Index->isValueDependent())
         Index = CheckArrayDesignatorExpr(*this, Index, IndexValue).get();
@@ -3575,8 +3584,8 @@ ExprResult Sema::ActOnDesignatedInitializer(Designation &Desig,
         InitExpressions.push_back(Index);
       }
     } else if (D.isArrayRangeDesignator()) {
-      Expr *StartIndex = static_cast<Expr *>(D.getArrayRangeStart());
-      Expr *EndIndex = static_cast<Expr *>(D.getArrayRangeEnd());
+      Expr *StartIndex = D.getArrayRangeStart();
+      Expr *EndIndex = D.getArrayRangeEnd();
       llvm::APSInt StartValue;
       llvm::APSInt EndValue;
       bool StartDependent = StartIndex->isTypeDependent() ||
@@ -4623,7 +4632,8 @@ static void TryConstructorInitialization(Sema &S,
          Kind.getKind() == InitializationKind::IK_Direct) &&
         !(CtorDecl->isCopyOrMoveConstructor() && CtorDecl->isImplicit()) &&
         DestRecordDecl->isAggregate() &&
-        DestRecordDecl->hasUninitializedExplicitInitFields()) {
+        DestRecordDecl->hasUninitializedExplicitInitFields() &&
+        !S.isUnevaluatedContext()) {
       S.Diag(Kind.getLocation(), diag::warn_field_requires_explicit_init)
           << /* Var-in-Record */ 1 << DestRecordDecl;
       emitUninitializedExplicitInitFields(S, DestRecordDecl);
@@ -5987,7 +5997,8 @@ static void TryOrBuildParenListInitialization(
       } else {
         // We've processed all of the args, but there are still members that
         // have to be initialized.
-        if (!VerifyOnly && FD->hasAttr<ExplicitInitAttr>()) {
+        if (!VerifyOnly && FD->hasAttr<ExplicitInitAttr>() &&
+            !S.isUnevaluatedContext()) {
           S.Diag(Kind.getLocation(), diag::warn_field_requires_explicit_init)
               << /* Var-in-Record */ 0 << FD;
           S.Diag(FD->getLocation(), diag::note_entity_declared_at) << FD;
@@ -6609,7 +6620,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
     if (RecordDecl *Rec = DestType->getAsRecordDecl()) {
       VarDecl *Var = dyn_cast_or_null<VarDecl>(Entity.getDecl());
       if (Rec->hasUninitializedExplicitInitFields()) {
-        if (Var && !Initializer) {
+        if (Var && !Initializer && !S.isUnevaluatedContext()) {
           S.Diag(Var->getLocation(), diag::warn_field_requires_explicit_init)
               << /* Var-in-Record */ 1 << Rec;
           emitUninitializedExplicitInitFields(S, Rec);
@@ -7473,7 +7484,8 @@ PerformConstructorInitialization(Sema &S,
       if (RD && RD->isAggregate() && RD->hasUninitializedExplicitInitFields()) {
         unsigned I = 0;
         for (const FieldDecl *FD : RD->fields()) {
-          if (I >= ConstructorArgs.size() && FD->hasAttr<ExplicitInitAttr>()) {
+          if (I >= ConstructorArgs.size() && FD->hasAttr<ExplicitInitAttr>() &&
+              !S.isUnevaluatedContext()) {
             S.Diag(Loc, diag::warn_field_requires_explicit_init)
                 << /* Var-in-Record */ 0 << FD;
             S.Diag(FD->getLocation(), diag::note_entity_declared_at) << FD;

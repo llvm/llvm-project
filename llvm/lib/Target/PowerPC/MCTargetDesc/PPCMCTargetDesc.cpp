@@ -14,7 +14,7 @@
 #include "MCTargetDesc/PPCInstPrinter.h"
 #include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "PPCELFStreamer.h"
-#include "PPCMCExpr.h"
+#include "PPCMCAsmInfo.h"
 #include "PPCTargetStreamer.h"
 #include "PPCXCOFFStreamer.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
@@ -213,7 +213,7 @@ public:
   void emitTCEntry(const MCSymbol &S, PPCMCExpr::Specifier Kind) override {
     if (const MCSymbolXCOFF *XSym = dyn_cast<MCSymbolXCOFF>(&S)) {
       MCSymbolXCOFF *TCSym =
-          cast<MCSectionXCOFF>(Streamer.getCurrentSectionOnly())
+          static_cast<const MCSectionXCOFF *>(Streamer.getCurrentSectionOnly())
               ->getQualNameSymbol();
       // On AIX, we have TLS variable offsets (symbol@({gd|ie|le|ld}) depending
       // on the TLS access method (or model). For the general-dynamic access
@@ -399,10 +399,8 @@ public:
     const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
     const unsigned PointerSize = MAI->getCodePointerSize();
     Streamer.emitValueToAlignment(Align(PointerSize));
-    Streamer.emitValue(
-        MCSymbolRefExpr::create(&S, MCSymbolRefExpr::VariantKind(Kind),
-                                Streamer.getContext()),
-        PointerSize);
+    Streamer.emitValue(MCSymbolRefExpr::create(&S, Kind, Streamer.getContext()),
+                       PointerSize);
   }
 
   void emitMachine(StringRef CPU) override {

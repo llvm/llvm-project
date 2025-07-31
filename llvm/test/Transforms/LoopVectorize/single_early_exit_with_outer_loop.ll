@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -passes='loop-vectorize,verify<loops>,print<loops>' -disable-output -enable-early-exit-vectorization 2>&1 | FileCheck %s
+; RUN: opt -S < %s -passes='loop-vectorize,verify<loops>,print<loops>' -disable-output 2>&1 | FileCheck %s
 
 declare void @init_mem(ptr, i64);
 
@@ -92,7 +92,7 @@ loop.outer.latch:
 
 define i32 @early_exit_branch_to_outer_header() {
 ; CHECK-LABEL: Loop info for function 'early_exit_branch_to_outer_header':
-; CHECK-NEXT:  Loop at depth 1 containing: %outer.header<header>,%loop.header,%loop.latch<exiting>,%outer.header.loopexit<latch>,%scalar.ph,%vector.ph,%vector.body,%middle.split,%middle.block<exiting>,%vector.early.exit
+; CHECK-NEXT:  Loop at depth 1 containing: %outer.header<header>,%loop.header,%loop.latch<exiting>,%outer.header.loopexit<latch>,%scalar.ph,%vector.ph,%vector.body,%middle.split<exiting>,%vector.early.exit
 ; CHECK-NEXT:    Loop at depth 2 containing: %loop.header<header><exiting>,%loop.latch<latch><exiting>
 ; CHECK-NEXT:    Loop at depth 2 containing: %vector.body<header><latch><exiting>
 entry:

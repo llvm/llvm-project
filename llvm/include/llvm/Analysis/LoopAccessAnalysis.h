@@ -236,8 +236,8 @@ public:
 
   /// In same cases when the dependency check fails we can still
   /// vectorize the loop with a dynamic array access check.
-  bool shouldRetryWithRuntimeCheck() const {
-    return FoundNonConstantDistanceDependence &&
+  bool shouldRetryWithRuntimeChecks() const {
+    return ShouldRetryWithRuntimeChecks &&
            Status == VectorizationSafetyStatus::PossiblySafeWithRtChecks;
   }
 
@@ -327,9 +327,9 @@ private:
   uint64_t MaxStoreLoadForwardSafeDistanceInBits =
       std::numeric_limits<uint64_t>::max();
 
-  /// If we see a non-constant dependence distance we can still try to
-  /// vectorize this loop with runtime checks.
-  bool FoundNonConstantDistanceDependence = false;
+  /// Whether we should try to vectorize the loop with runtime checks, if the
+  /// dependencies are not safe.
+  bool ShouldRetryWithRuntimeChecks = false;
 
   /// Result of the dependence checks, indicating whether the checked
   /// dependences are safe for vectorization, require RT checks or are known to
@@ -396,8 +396,6 @@ private:
     uint64_t MaxStride;
     std::optional<uint64_t> CommonStride;
 
-    bool ShouldRetryWithRuntimeCheck;
-
     /// TypeByteSize is either the common store size of both accesses, or 0 when
     /// store sizes mismatch.
     uint64_t TypeByteSize;
@@ -407,11 +405,9 @@ private:
 
     DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t MaxStride,
                                  std::optional<uint64_t> CommonStride,
-                                 bool ShouldRetryWithRuntimeCheck,
                                  uint64_t TypeByteSize, bool AIsWrite,
                                  bool BIsWrite)
         : Dist(Dist), MaxStride(MaxStride), CommonStride(CommonStride),
-          ShouldRetryWithRuntimeCheck(ShouldRetryWithRuntimeCheck),
           TypeByteSize(TypeByteSize), AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
   };
 
@@ -427,6 +423,11 @@ private:
   getDependenceDistanceStrideAndSize(const MemAccessInfo &A, Instruction *AInst,
                                      const MemAccessInfo &B,
                                      Instruction *BInst);
+
+  // Return true if we can prove that \p Sink only accesses memory after \p
+  // Src's end or vice versa.
+  bool areAccessesCompletelyBeforeOrAfter(const SCEV *Src, Type *SrcTy,
+                                          const SCEV *Sink, Type *SinkTy);
 };
 
 class RuntimePointerChecking;
@@ -901,7 +902,10 @@ LLVM_ABI bool sortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
 LLVM_ABI bool isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
                                   ScalarEvolution &SE, bool CheckType = true);
 
-/// Calculate Start and End points of memory access.
+/// Calculate Start and End points of memory access using exact backedge taken
+/// count \p BTC if computable or maximum backedge taken count \p MaxBTC
+/// otherwise.
+///
 /// Let's assume A is the first access and B is a memory access on N-th loop
 /// iteration. Then B is calculated as:
 ///   B = A + Step*N .
@@ -915,8 +919,8 @@ LLVM_ABI bool isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
 /// There is no conflict when the intervals are disjoint:
 /// NoConflict = (P2.Start >= P1.End) || (P1.Start >= P2.End)
 LLVM_ABI std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
-    const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *MaxBECount,
-    ScalarEvolution *SE,
+    const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *BTC,
+    const SCEV *MaxBTC, ScalarEvolution *SE,
     DenseMap<std::pair<const SCEV *, Type *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds);
 

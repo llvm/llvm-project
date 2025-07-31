@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fopenacc -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
 
 extern "C" void acc_combined(int N, int cond) {
-  // CHECK: cir.func @acc_combined(%[[ARG_N:.*]]: !s32i loc{{.*}}, %[[ARG_COND:.*]]: !s32i loc{{.*}}) {
+  // CHECK: cir.func{{.*}} @acc_combined(%[[ARG_N:.*]]: !s32i loc{{.*}}, %[[ARG_COND:.*]]: !s32i loc{{.*}}) {
   // CHECK-NEXT: %[[ALLOCA_N:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["N", init]
   // CHECK-NEXT: %[[COND:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["cond", init]
   // CHECK-NEXT: cir.store %[[ARG_N]], %[[ALLOCA_N]] : !s32i, !cir.ptr<!s32i>
@@ -1012,7 +1012,7 @@ extern "C" void acc_combined(int N, int cond) {
   // CHECK-NEXT: } loc
 }
 extern "C" void acc_combined_data_clauses(int *arg1, int *arg2) {
-  // CHECK: cir.func @acc_combined_data_clauses(%[[ARG1_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}, %[[ARG2_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}) {
+  // CHECK: cir.func{{.*}} @acc_combined_data_clauses(%[[ARG1_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}, %[[ARG2_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}) {
   // CHECK-NEXT: %[[ARG1:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg1", init]
   // CHECK-NEXT: %[[ARG2:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg2", init]
   // CHECK-NEXT: cir.store %[[ARG1_PARAM]], %[[ARG1]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>

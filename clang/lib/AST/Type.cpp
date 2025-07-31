@@ -3981,10 +3981,9 @@ CountAttributedType::CountAttributedType(
   CountAttributedTypeBits.NumCoupledDecls = CoupledDecls.size();
   CountAttributedTypeBits.CountInBytes = CountInBytes;
   CountAttributedTypeBits.OrNull = OrNull;
-  auto *DeclSlot = getTrailingObjects<TypeCoupledDeclRefInfo>();
+  auto *DeclSlot = getTrailingObjects();
+  llvm::copy(CoupledDecls, DeclSlot);
   Decls = llvm::ArrayRef(DeclSlot, CoupledDecls.size());
-  for (unsigned i = 0; i != CoupledDecls.size(); ++i)
-    DeclSlot[i] = CoupledDecls[i];
 }
 
 StringRef CountAttributedType::getAttributeName(bool WithMacroPrefix) const {
@@ -4871,15 +4870,6 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
                                       ->getCanonicalTypeInternal());
   case Type::HLSLInlineSpirv:
     return LinkageInfo::external();
-    {
-      const auto *ST = cast<HLSLInlineSpirvType>(T);
-      LinkageInfo LV = LinkageInfo::external();
-      for (auto &Operand : ST->getOperands()) {
-        if (Operand.isConstant() || Operand.isType())
-          LV.merge(computeTypeLinkageInfo(Operand.getResultType()));
-      }
-      return LV;
-    }
   }
 
   llvm_unreachable("unhandled type class");
@@ -5622,4 +5612,16 @@ HLSLAttributedResourceType::findHandleTypeOnResource(const Type *RT) {
     }
   }
   return nullptr;
+}
+
+StringRef PredefinedSugarType::getName(Kind KD) {
+  switch (KD) {
+  case Kind::SizeT:
+    return "__size_t";
+  case Kind::SignedSizeT:
+    return "__signed_size_t";
+  case Kind::PtrdiffT:
+    return "__ptrdiff_t";
+  }
+  llvm_unreachable("unexpected kind");
 }

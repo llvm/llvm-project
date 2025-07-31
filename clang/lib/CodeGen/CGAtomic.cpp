@@ -411,7 +411,9 @@ static void emitAtomicCmpXchg(CodeGenFunction &CGF, AtomicExpr *E, bool IsWeak,
 
   CGF.Builder.SetInsertPoint(StoreExpectedBB);
   // Update the memory at Expected with Old's value.
-  CGF.Builder.CreateStore(Old, Val1);
+  auto *I = CGF.Builder.CreateStore(Old, Val1);
+  CGF.addInstToCurrentSourceAtom(I, Old);
+
   // Finally, branch to the exit point.
   CGF.Builder.CreateBr(ContinueBB);
 
@@ -591,7 +593,8 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
     Load->setAtomic(Order, Scope);
     Load->setVolatile(E->isVolatile());
     CGF.maybeAttachRangeForLoad(Load, E->getValueType(), E->getExprLoc());
-    CGF.Builder.CreateStore(Load, Dest);
+    auto *I = CGF.Builder.CreateStore(Load, Dest);
+    CGF.addInstToCurrentSourceAtom(I, Load);
     return;
   }
 
@@ -606,6 +609,7 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
     llvm::StoreInst *Store = CGF.Builder.CreateStore(LoadVal1, Ptr);
     Store->setAtomic(Order, Scope);
     Store->setVolatile(E->isVolatile());
+    CGF.addInstToCurrentSourceAtom(Store, LoadVal1);
     return;
   }
 
@@ -731,7 +735,8 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
                               CGF.Builder.getInt8(1), Order, Scope, E);
     RMWI->setVolatile(E->isVolatile());
     llvm::Value *Result = CGF.Builder.CreateIsNotNull(RMWI, "tobool");
-    CGF.Builder.CreateStore(Result, Dest);
+    auto *I = CGF.Builder.CreateStore(Result, Dest);
+    CGF.addInstToCurrentSourceAtom(I, Result);
     return;
   }
 
@@ -740,6 +745,7 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
         CGF.Builder.CreateStore(CGF.Builder.getInt8(0), Ptr);
     Store->setAtomic(Order, Scope);
     Store->setVolatile(E->isVolatile());
+    CGF.addInstToCurrentSourceAtom(Store, nullptr);
     return;
   }
   }
@@ -762,7 +768,8 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
   if (E->getOp() == AtomicExpr::AO__atomic_nand_fetch ||
       E->getOp() == AtomicExpr::AO__scoped_atomic_nand_fetch)
     Result = CGF.Builder.CreateNot(Result);
-  CGF.Builder.CreateStore(Result, Dest);
+  auto *I = CGF.Builder.CreateStore(Result, Dest);
+  CGF.addInstToCurrentSourceAtom(I, Result);
 }
 
 // This function emits any expression (scalar, complex, or aggregate)
@@ -845,6 +852,8 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *Expr, Address Dest,
 }
 
 RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
+  ApplyAtomGroup Grp(getDebugInfo());
+
   QualType AtomicTy = E->getPtr()->getType()->getPointeeType();
   QualType MemTy = AtomicTy;
   if (const AtomicType *AT = AtomicTy->getAs<AtomicType>())

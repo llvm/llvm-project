@@ -22,13 +22,13 @@ class Emplaceable {
   double double_;
 
 public:
-  TEST_CONSTEXPR Emplaceable() : int_(0), double_(0) {}
-  TEST_CONSTEXPR Emplaceable(int i, double d) : int_(i), double_(d) {}
-  TEST_CONSTEXPR_CXX14 Emplaceable(Emplaceable&& x) : int_(x.int_), double_(x.double_) {
+  TEST_CONSTEXPR_CXX20 Emplaceable() : int_(0), double_(0) {}
+  TEST_CONSTEXPR_CXX20 Emplaceable(int i, double d) : int_(i), double_(d) {}
+  TEST_CONSTEXPR_CXX20 Emplaceable(Emplaceable&& x) : int_(x.int_), double_(x.double_) {
     x.int_    = 0;
     x.double_ = 0;
   }
-  TEST_CONSTEXPR_CXX14 Emplaceable& operator=(Emplaceable&& x) {
+  TEST_CONSTEXPR_CXX20 Emplaceable& operator=(Emplaceable&& x) {
     int_      = x.int_;
     x.int_    = 0;
     double_   = x.double_;
@@ -36,12 +36,12 @@ public:
     return *this;
   }
 
-  TEST_CONSTEXPR bool operator==(const Emplaceable& x) const { return int_ == x.int_ && double_ == x.double_; }
-  TEST_CONSTEXPR bool operator<(const Emplaceable& x) const {
+  TEST_CONSTEXPR_CXX20 bool operator==(const Emplaceable& x) const { return int_ == x.int_ && double_ == x.double_; }
+  TEST_CONSTEXPR_CXX20 bool operator<(const Emplaceable& x) const {
     return int_ < x.int_ || (int_ == x.int_ && double_ < x.double_);
   }
 
-  TEST_CONSTEXPR int get() const { return int_; }
+  TEST_CONSTEXPR_CXX20 int get() const { return int_; }
 };
 
 template <>
@@ -49,7 +49,7 @@ struct std::hash<Emplaceable> {
   typedef Emplaceable argument_type;
   typedef std::size_t result_type;
 
-  TEST_CONSTEXPR std::size_t operator()(const Emplaceable& x) const { return static_cast<std::size_t>(x.get()); }
+  TEST_CONSTEXPR_CXX20 std::size_t operator()(const Emplaceable& x) const { return static_cast<std::size_t>(x.get()); }
 };
 
 #endif // TEST_STD_VER >= 11

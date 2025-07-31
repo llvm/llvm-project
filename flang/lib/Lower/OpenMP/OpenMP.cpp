@@ -12,17 +12,17 @@
 
 #include "flang/Lower/OpenMP.h"
 
+#include "Atomic.h"
 #include "ClauseProcessor.h"
-#include "Clauses.h"
 #include "DataSharingProcessor.h"
 #include "Decomposer.h"
-#include "ReductionProcessor.h"
 #include "Utils.h"
 #include "flang/Common/idioms.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/DirectivesCommon.h"
+#include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
@@ -31,6 +31,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Parser/characters.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/tools.h"
@@ -38,15 +39,13 @@
 #include "flang/Support/OpenMP-utils.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Support/StateStack.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
-
-static llvm::cl::opt<bool> DumpAtomicAnalysis("fdebug-dump-atomic-analysis");
 
 //===----------------------------------------------------------------------===//
 // Code generation helper functions
@@ -200,9 +199,41 @@ private:
 /// the handling of the outer region by keeping a stack of information
 /// structures, but it will probably still require some further work to support
 /// reverse offloading.
-static llvm::SmallVector<HostEvalInfo, 0> hostEvalInfo;
-static llvm::SmallVector<const parser::OpenMPSectionsConstruct *, 0>
-    sectionsStack;
+class HostEvalInfoStackFrame
+    : public mlir::StateStackFrameBase<HostEvalInfoStackFrame> {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(HostEvalInfoStackFrame)
+
+  HostEvalInfo info;
+};
+
+static HostEvalInfo *
+getHostEvalInfoStackTop(lower::AbstractConverter &converter) {
+  HostEvalInfoStackFrame *frame =
+      converter.getStateStack().getStackTop<HostEvalInfoStackFrame>();
+  return frame ? &frame->info : nullptr;
+}
+
+/// Stack frame for storing the OpenMPSectionsConstruct currently being
+/// processed so that it can be referred to when lowering the construct.
+class SectionsConstructStackFrame
+    : public mlir::StateStackFrameBase<SectionsConstructStackFrame> {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SectionsConstructStackFrame)
+
+  explicit SectionsConstructStackFrame(
+      const parser::OpenMPSectionsConstruct &sectionsConstruct)
+      : sectionsConstruct{sectionsConstruct} {}
+
+  const parser::OpenMPSectionsConstruct &sectionsConstruct;
+};
+
+static const parser::OpenMPSectionsConstruct *
+getSectionsConstructStackTop(lower::AbstractConverter &converter) {
+  SectionsConstructStackFrame *frame =
+      converter.getStateStack().getStackTop<SectionsConstructStackFrame>();
+  return frame ? &frame->sectionsConstruct : nullptr;
+}
 
 /// Bind symbols to their corresponding entry block arguments.
 ///
@@ -342,90 +373,6 @@ extractMappedBaseValues(llvm::ArrayRef<mlir::Value> vars,
   });
 }
 
-/// Get the directive enumeration value corresponding to the given OpenMP
-/// construct PFT node.
-llvm::omp::Directive
-extractOmpDirective(const parser::OpenMPConstruct &ompConstruct) {
-  return common::visit(
-      common::visitors{
-          [](const parser::OpenMPAllocatorsConstruct &c) {
-            return llvm::omp::OMPD_allocators;
-          },
-          [](const parser::OpenMPAssumeConstruct &c) {
-            return llvm::omp::OMPD_assume;
-          },
-          [](const parser::OpenMPAtomicConstruct &c) {
-            return llvm::omp::OMPD_atomic;
-          },
-          [](const parser::OpenMPBlockConstruct &c) {
-            return std::get<parser::OmpBlockDirective>(
-                       std::get<parser::OmpBeginBlockDirective>(c.t).t)
-                .v;
-          },
-          [](const parser::OpenMPCriticalConstruct &c) {
-            return llvm::omp::OMPD_critical;
-          },
-          [](const parser::OpenMPDeclarativeAllocate &c) {
-            return llvm::omp::OMPD_allocate;
-          },
-          [](const parser::OpenMPDispatchConstruct &c) {
-            return llvm::omp::OMPD_dispatch;
-          },
-          [](const parser::OpenMPExecutableAllocate &c) {
-            return llvm::omp::OMPD_allocate;
-          },
-          [](const parser::OpenMPLoopConstruct &c) {
-            return std::get<parser::OmpLoopDirective>(
-                       std::get<parser::OmpBeginLoopDirective>(c.t).t)
-                .v;
-          },
-          [](const parser::OpenMPSectionConstruct &c) {
-            return llvm::omp::OMPD_section;
-          },
-          [](const parser::OpenMPSectionsConstruct &c) {
-            return std::get<parser::OmpSectionsDirective>(
-                       std::get<parser::OmpBeginSectionsDirective>(c.t).t)
-                .v;
-          },
-          [](const parser::OpenMPStandaloneConstruct &c) {
-            return common::visit(
-                common::visitors{
-                    [](const parser::OpenMPSimpleStandaloneConstruct &c) {
-                      return c.v.DirId();
-                    },
-                    [](const parser::OpenMPFlushConstruct &c) {
-                      return llvm::omp::OMPD_flush;
-                    },
-                    [](const parser::OpenMPCancelConstruct &c) {
-                      return llvm::omp::OMPD_cancel;
-                    },
-                    [](const parser::OpenMPCancellationPointConstruct &c) {
-                      return llvm::omp::OMPD_cancellation_point;
-                    },
-                    [](const parser::OmpMetadirectiveDirective &c) {
-                      return llvm::omp::OMPD_metadirective;
-                    },
-                    [](const parser::OpenMPDepobjConstruct &c) {
-                      return llvm::omp::OMPD_depobj;
-                    },
-                    [](const parser::OpenMPInteropConstruct &c) {
-                      return llvm::omp::OMPD_interop;
-                    }},
-                c.u);
-          },
-          [](const parser::OpenMPUtilityConstruct &c) {
-            return common::visit(
-                common::visitors{[](const parser::OmpErrorDirective &c) {
-                                   return llvm::omp::OMPD_error;
-                                 },
-                                 [](const parser::OmpNothingDirective &c) {
-                                   return llvm::omp::OMPD_nothing;
-                                 }},
-                c.u);
-          }},
-      ompConstruct.u);
-}
-
 /// Populate the global \see hostEvalInfo after processing clauses for the given
 /// \p eval OpenMP target construct, or nested constructs, if these must be
 /// evaluated outside of the target region per the spec.
@@ -464,8 +411,12 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
                   std::get<parser::OmpBeginBlockDirective>(ompConstruct.t);
               beginClauseList =
                   &std::get<parser::OmpClauseList>(beginDirective.t);
-              endClauseList = &std::get<parser::OmpClauseList>(
-                  std::get<parser::OmpEndBlockDirective>(ompConstruct.t).t);
+              if (auto &endDirective =
+                      std::get<std::optional<parser::OmpEndBlockDirective>>(
+                          ompConstruct.t)) {
+                endClauseList =
+                    &std::get<parser::OmpClauseList>(endDirective->t);
+              }
             },
             [&](const parser::OpenMPLoopConstruct &ompConstruct) {
               const auto &beginDirective =
@@ -475,9 +426,10 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
 
               if (auto &endDirective =
                       std::get<std::optional<parser::OmpEndLoopDirective>>(
-                          ompConstruct.t))
+                          ompConstruct.t)) {
                 endClauseList =
                     &std::get<parser::OmpClauseList>(endDirective->t);
+              }
             },
             [&](const auto &) {}},
         ompEval->u);
@@ -500,7 +452,7 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
     llvm::omp::Directive dir;
     auto &nested = parent.getFirstNestedEvaluation();
     if (const auto *ompEval = nested.getIf<parser::OpenMPConstruct>())
-      dir = extractOmpDirective(*ompEval);
+      dir = parser::omp::GetOmpDirectiveName(*ompEval).v;
     else
       return std::nullopt;
 
@@ -537,31 +489,32 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
     if (!ompEval)
       return;
 
-    HostEvalInfo &hostInfo = hostEvalInfo.back();
+    HostEvalInfo *hostInfo = getHostEvalInfoStackTop(converter);
+    assert(hostInfo && "expected HOST_EVAL info structure");
 
-    switch (extractOmpDirective(*ompEval)) {
+    switch (parser::omp::GetOmpDirectiveName(*ompEval).v) {
     case OMPD_teams_distribute_parallel_do:
     case OMPD_teams_distribute_parallel_do_simd:
-      cp.processThreadLimit(stmtCtx, hostInfo.ops);
+      cp.processThreadLimit(stmtCtx, hostInfo->ops);
       [[fallthrough]];
     case OMPD_target_teams_distribute_parallel_do:
     case OMPD_target_teams_distribute_parallel_do_simd:
-      cp.processNumTeams(stmtCtx, hostInfo.ops);
+      cp.processNumTeams(stmtCtx, hostInfo->ops);
       [[fallthrough]];
     case OMPD_distribute_parallel_do:
     case OMPD_distribute_parallel_do_simd:
-      cp.processNumThreads(stmtCtx, hostInfo.ops);
+      cp.processNumThreads(stmtCtx, hostInfo->ops);
       [[fallthrough]];
     case OMPD_distribute:
     case OMPD_distribute_simd:
-      cp.processCollapse(loc, eval, hostInfo.ops, hostInfo.iv);
+      cp.processCollapse(loc, eval, hostInfo->ops, hostInfo->iv);
       break;
 
     case OMPD_teams:
-      cp.processThreadLimit(stmtCtx, hostInfo.ops);
+      cp.processThreadLimit(stmtCtx, hostInfo->ops);
       [[fallthrough]];
     case OMPD_target_teams:
-      cp.processNumTeams(stmtCtx, hostInfo.ops);
+      cp.processNumTeams(stmtCtx, hostInfo->ops);
       processSingleNestedIf([](Directive nestedDir) {
         return topDistributeSet.test(nestedDir) || topLoopSet.test(nestedDir);
       });
@@ -569,22 +522,22 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
 
     case OMPD_teams_distribute:
     case OMPD_teams_distribute_simd:
-      cp.processThreadLimit(stmtCtx, hostInfo.ops);
+      cp.processThreadLimit(stmtCtx, hostInfo->ops);
       [[fallthrough]];
     case OMPD_target_teams_distribute:
     case OMPD_target_teams_distribute_simd:
-      cp.processCollapse(loc, eval, hostInfo.ops, hostInfo.iv);
-      cp.processNumTeams(stmtCtx, hostInfo.ops);
+      cp.processCollapse(loc, eval, hostInfo->ops, hostInfo->iv);
+      cp.processNumTeams(stmtCtx, hostInfo->ops);
       break;
 
     case OMPD_teams_loop:
-      cp.processThreadLimit(stmtCtx, hostInfo.ops);
+      cp.processThreadLimit(stmtCtx, hostInfo->ops);
       [[fallthrough]];
     case OMPD_target_teams_loop:
-      cp.processNumTeams(stmtCtx, hostInfo.ops);
+      cp.processNumTeams(stmtCtx, hostInfo->ops);
       [[fallthrough]];
     case OMPD_loop:
-      cp.processCollapse(loc, eval, hostInfo.ops, hostInfo.iv);
+      cp.processCollapse(loc, eval, hostInfo->ops, hostInfo->iv);
       break;
 
     // Standalone 'target' case.
@@ -598,11 +551,10 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
     }
   };
 
-  assert(!hostEvalInfo.empty() && "expected HOST_EVAL info structure");
-
   const auto *ompEval = eval.getIf<parser::OpenMPConstruct>();
   assert(ompEval &&
-         llvm::omp::allTargetSet.test(extractOmpDirective(*ompEval)) &&
+         llvm::omp::allTargetSet.test(
+             parser::omp::GetOmpDirectiveName(*ompEval).v) &&
          "expected TARGET construct evaluation");
   (void)ompEval;
 
@@ -697,8 +649,8 @@ static void threadPrivatizeVars(lower::AbstractConverter &converter,
       op = declOp.getMemref().getDefiningOp();
     if (mlir::isa<mlir::omp::ThreadprivateOp>(op))
       symValue = mlir::dyn_cast<mlir::omp::ThreadprivateOp>(op).getSymAddr();
-    return firOpBuilder.create<mlir::omp::ThreadprivateOp>(
-        currentLocation, symValue.getType(), symValue);
+    return mlir::omp::ThreadprivateOp::create(firOpBuilder, currentLocation,
+                                              symValue.getType(), symValue);
   };
 
   llvm::SetVector<const semantics::Symbol *> threadprivateSyms;
@@ -745,28 +697,33 @@ static void threadPrivatizeVars(lower::AbstractConverter &converter,
   }
 }
 
-static mlir::Operation *
-createAndSetPrivatizedLoopVar(lower::AbstractConverter &converter,
-                              mlir::Location loc, mlir::Value indexVal,
-                              const semantics::Symbol *sym) {
+static mlir::Operation *setLoopVar(lower::AbstractConverter &converter,
+                                   mlir::Location loc, mlir::Value indexVal,
+                                   const semantics::Symbol *sym) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
   mlir::OpBuilder::InsertPoint insPt = firOpBuilder.saveInsertionPoint();
   firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
-
   mlir::Type tempTy = converter.genType(*sym);
-
-  assert(converter.isPresentShallowLookup(*sym) &&
-         "Expected symbol to be in symbol table.");
-
   firOpBuilder.restoreInsertionPoint(insPt);
+
   mlir::Value cvtVal = firOpBuilder.createConvert(loc, tempTy, indexVal);
   hlfir::Entity lhs{converter.getSymbolAddress(*sym)};
 
   lhs = hlfir::derefPointersAndAllocatables(loc, firOpBuilder, lhs);
 
   mlir::Operation *storeOp =
-      firOpBuilder.create<hlfir::AssignOp>(loc, cvtVal, lhs);
+      hlfir::AssignOp::create(firOpBuilder, loc, cvtVal, lhs);
   return storeOp;
+}
+
+static mlir::Operation *
+createAndSetPrivatizedLoopVar(lower::AbstractConverter &converter,
+                              mlir::Location loc, mlir::Value indexVal,
+                              const semantics::Symbol *sym) {
+  assert(converter.isPresentShallowLookup(*sym) &&
+         "Expected symbol to be in symbol table.");
+  return setLoopVar(converter, loc, indexVal, sym);
 }
 
 // This helper function implements the functionality of "promoting" non-CPTR
@@ -1127,16 +1084,6 @@ markDeclareTarget(mlir::Operation *op, lower::AbstractConverter &converter,
   declareTargetOp.setDeclareTarget(deviceType, captureClause);
 }
 
-static bool isPointerAssignment(const evaluate::Assignment &assign) {
-  return common::visit(
-      common::visitors{
-          [](const evaluate::Assignment::BoundsSpec &) { return true; },
-          [](const evaluate::Assignment::BoundsRemapping &) { return true; },
-          [](const auto &) { return false; },
-      },
-      assign.u);
-}
-
 //===----------------------------------------------------------------------===//
 // Op body generation helper structures and functions
 //===----------------------------------------------------------------------===//
@@ -1181,6 +1128,11 @@ struct OpWithBodyGenInfo {
     return *this;
   }
 
+  OpWithBodyGenInfo &setPrivatize(bool value) {
+    privatize = value;
+    return *this;
+  }
+
   /// [inout] converter to use for the clauses.
   lower::AbstractConverter &converter;
   /// [in] Symbol table
@@ -1207,6 +1159,8 @@ struct OpWithBodyGenInfo {
   /// [in] if set to `true`, skip generating nested evaluations and dispatching
   /// any further leaf constructs.
   bool genSkeletonOnly = false;
+  /// [in] enables handling of privatized variable unless set to `false`.
+  bool privatize = true;
 };
 
 /// Create the body (block) for an OpenMP Operation.
@@ -1221,8 +1175,8 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
   fir::FirOpBuilder &firOpBuilder = info.converter.getFirOpBuilder();
 
   auto insertMarker = [](fir::FirOpBuilder &builder) {
-    mlir::Value undef = builder.create<fir::UndefOp>(builder.getUnknownLoc(),
-                                                     builder.getIndexType());
+    mlir::Value undef = fir::UndefOp::create(builder, builder.getUnknownLoc(),
+                                             builder.getIndexType());
     return undef.getDefiningOp();
   };
 
@@ -1267,7 +1221,7 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
   // code will use the right symbols.
   bool isLoop = llvm::omp::getDirectiveAssociation(info.dir) ==
                 llvm::omp::Association::Loop;
-  bool privatize = info.clauses;
+  bool privatize = info.clauses && info.privatize;
 
   firOpBuilder.setInsertionPoint(marker);
   std::optional<DataSharingProcessor> tempDsp;
@@ -1336,7 +1290,7 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
     mlir::Block *exit = firOpBuilder.createBlock(&region);
     for (mlir::Block *b : exits) {
       firOpBuilder.setInsertionPointToEnd(b);
-      firOpBuilder.create<mlir::cf::BranchOp>(info.loc, exit);
+      mlir::cf::BranchOp::create(firOpBuilder, info.loc, exit);
     }
     return exit;
   };
@@ -1397,8 +1351,8 @@ static void genBodyOfTargetDataOp(
   // Remembering the position for further insertion is important since
   // there are hlfir.declares inserted above while setting block arguments
   // and new code from the body should be inserted after that.
-  mlir::Value undefMarker = firOpBuilder.create<fir::UndefOp>(
-      dataOp.getLoc(), firOpBuilder.getIndexType());
+  mlir::Value undefMarker = fir::UndefOp::create(firOpBuilder, dataOp.getLoc(),
+                                                 firOpBuilder.getIndexType());
 
   // Create blocks for unstructured regions. This has to be done since
   // blocks are initially allocated with the function as the parent region.
@@ -1407,7 +1361,7 @@ static void genBodyOfTargetDataOp(
         firOpBuilder, eval.getNestedEvaluations());
   }
 
-  firOpBuilder.create<mlir::omp::TerminatorOp>(currentLocation);
+  mlir::omp::TerminatorOp::create(firOpBuilder, currentLocation);
 
   // Set the insertion point after the marker.
   firOpBuilder.setInsertionPointAfter(undefMarker.getDefiningOp());
@@ -1468,8 +1422,8 @@ static void genBodyOfTargetOp(
   mlir::Region &region = targetOp.getRegion();
   mlir::Block *entryBlock = genEntryBlock(firOpBuilder, args, region);
   bindEntryBlockArgs(converter, targetOp, args);
-  if (!hostEvalInfo.empty())
-    hostEvalInfo.back().bindOperands(argIface.getHostEvalBlockArgs());
+  if (HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter))
+    hostEvalInfo->bindOperands(argIface.getHostEvalBlockArgs());
 
   // Check if cloning the bounds introduced any dependency on the outer region.
   // If so, then either clone them as well if they are MemoryEffectFree, or else
@@ -1561,8 +1515,8 @@ static void genBodyOfTargetOp(
             insertIndex, copyVal.getType(), copyVal.getLoc());
 
         firOpBuilder.setInsertionPointToStart(entryBlock);
-        auto loadOp = firOpBuilder.create<fir::LoadOp>(clonedValArg.getLoc(),
-                                                       clonedValArg);
+        auto loadOp = fir::LoadOp::create(firOpBuilder, clonedValArg.getLoc(),
+                                          clonedValArg);
         val.replaceUsesWithIf(loadOp->getResult(0),
                               [entryBlock](mlir::OpOperand &use) {
                                 return use.getOwner()->getBlock() == entryBlock;
@@ -1578,8 +1532,8 @@ static void genBodyOfTargetOp(
   // marker will be deleted since there are not uses.
   // In the HLFIR flow there are hlfir.declares inserted above while
   // setting block arguments.
-  mlir::Value undefMarker = firOpBuilder.create<fir::UndefOp>(
-      targetOp.getLoc(), firOpBuilder.getIndexType());
+  mlir::Value undefMarker = fir::UndefOp::create(
+      firOpBuilder, targetOp.getLoc(), firOpBuilder.getIndexType());
 
   // Create blocks for unstructured regions. This has to be done since
   // blocks are initially allocated with the function as the parent region.
@@ -1589,7 +1543,7 @@ static void genBodyOfTargetOp(
         firOpBuilder, eval.getNestedEvaluations());
   }
 
-  firOpBuilder.create<mlir::omp::TerminatorOp>(currentLocation);
+  mlir::omp::TerminatorOp::create(firOpBuilder, currentLocation);
 
   // Create the insertion point after the marker.
   firOpBuilder.setInsertionPointAfter(undefMarker.getDefiningOp());
@@ -1635,7 +1589,7 @@ static OpTy genWrapperOp(lower::AbstractConverter &converter,
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   // Create wrapper.
-  auto op = firOpBuilder.create<OpTy>(loc, clauseOps);
+  auto op = OpTy::create(firOpBuilder, loc, clauseOps);
 
   // Create entry block with arguments.
   genEntryBlock(firOpBuilder, args, op.getRegion());
@@ -1708,7 +1662,8 @@ genLoopNestClauses(lower::AbstractConverter &converter,
                    llvm::SmallVectorImpl<const semantics::Symbol *> &iv) {
   ClauseProcessor cp(converter, semaCtx, clauses);
 
-  if (hostEvalInfo.empty() || !hostEvalInfo.back().apply(clauseOps, iv))
+  HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter);
+  if (!hostEvalInfo || !hostEvalInfo->apply(clauseOps, iv))
     cp.processCollapse(loc, eval, clauseOps, iv);
 
   clauseOps.loopInclusive = converter.getFirOpBuilder().getUnitAttr();
@@ -1753,7 +1708,8 @@ static void genParallelClauses(
   cp.processAllocate(clauseOps);
   cp.processIf(llvm::omp::Directive::OMPD_parallel, clauseOps);
 
-  if (hostEvalInfo.empty() || !hostEvalInfo.back().apply(clauseOps))
+  HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter);
+  if (!hostEvalInfo || !hostEvalInfo->apply(clauseOps))
     cp.processNumThreads(stmtCtx, clauseOps);
 
   cp.processProcBind(clauseOps);
@@ -1824,10 +1780,10 @@ static void genTargetClauses(
   cp.processDepend(symTable, stmtCtx, clauseOps);
   cp.processDevice(stmtCtx, clauseOps);
   cp.processHasDeviceAddr(stmtCtx, clauseOps, hasDeviceAddrSyms);
-  if (!hostEvalInfo.empty()) {
+  if (HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter)) {
     // Only process host_eval if compiling for the host device.
     processHostEvalClauses(converter, semaCtx, stmtCtx, eval, loc);
-    hostEvalInfo.back().collectValues(clauseOps.hostEvalVars);
+    hostEvalInfo->collectValues(clauseOps.hostEvalVars);
   }
   cp.processIf(llvm::omp::Directive::OMPD_target, clauseOps);
   cp.processIsDevicePtr(clauseOps, isDevicePtrSyms);
@@ -1964,7 +1920,8 @@ static void genTeamsClauses(
   cp.processAllocate(clauseOps);
   cp.processIf(llvm::omp::Directive::OMPD_teams, clauseOps);
 
-  if (hostEvalInfo.empty() || !hostEvalInfo.back().apply(clauseOps)) {
+  HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter);
+  if (!hostEvalInfo || !hostEvalInfo->apply(clauseOps)) {
     cp.processNumTeams(stmtCtx, clauseOps);
     cp.processThreadLimit(stmtCtx, clauseOps);
   }
@@ -1980,13 +1937,13 @@ static void genWsloopClauses(
     llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processNowait(clauseOps);
-  cp.processLinear(clauseOps);
   cp.processOrder(clauseOps);
   cp.processOrdered(clauseOps);
   cp.processReduction(loc, clauseOps, reductionSyms);
   cp.processSchedule(stmtCtx, clauseOps);
 
-  cp.processTODO<clause::Allocate>(loc, llvm::omp::Directive::OMPD_do);
+  cp.processTODO<clause::Allocate, clause::Linear>(
+      loc, llvm::omp::Directive::OMPD_do);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2045,7 +2002,7 @@ genCriticalOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                                 clauseOps, nameStr);
 
       mlir::OpBuilder modBuilder(mod.getBodyRegion());
-      global = modBuilder.create<mlir::omp::CriticalDeclareOp>(loc, clauseOps);
+      global = mlir::omp::CriticalDeclareOp::create(modBuilder, loc, clauseOps);
     }
     nameAttr = mlir::FlatSymbolRefAttr::get(firOpBuilder.getContext(),
                                             global.getSymName());
@@ -2129,6 +2086,154 @@ genLoopOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                 loopNestClauseOps, iv, {{loopOp, loopArgs}},
                 llvm::omp::Directive::OMPD_loop, dsp);
   return loopOp;
+}
+
+static mlir::omp::CanonicalLoopOp
+genCanonicalLoopOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval, mlir::Location loc,
+                   const ConstructQueue &queue,
+                   ConstructQueue::const_iterator item,
+                   llvm::ArrayRef<const semantics::Symbol *> ivs,
+                   llvm::omp::Directive directive) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
+  assert(ivs.size() == 1 && "Nested loops not yet implemented");
+  const semantics::Symbol *iv = ivs[0];
+
+  auto &nestedEval = eval.getFirstNestedEvaluation();
+  if (nestedEval.getIf<parser::DoConstruct>()->IsDoConcurrent()) {
+    // OpenMP specifies DO CONCURRENT only with the `!omp loop` construct. Will
+    // need to add special cases for this combination.
+    TODO(loc, "DO CONCURRENT as canonical loop not supported");
+  }
+
+  // Get the loop bounds (and increment)
+  auto &doLoopEval = nestedEval.getFirstNestedEvaluation();
+  auto *doStmt = doLoopEval.getIf<parser::NonLabelDoStmt>();
+  assert(doStmt && "Expected do loop to be in the nested evaluation");
+  auto &loopControl = std::get<std::optional<parser::LoopControl>>(doStmt->t);
+  assert(loopControl.has_value());
+  auto *bounds = std::get_if<parser::LoopControl::Bounds>(&loopControl->u);
+  assert(bounds && "Expected bounds for canonical loop");
+  lower::StatementContext stmtCtx;
+  mlir::Value loopLBVar = fir::getBase(
+      converter.genExprValue(*semantics::GetExpr(bounds->lower), stmtCtx));
+  mlir::Value loopUBVar = fir::getBase(
+      converter.genExprValue(*semantics::GetExpr(bounds->upper), stmtCtx));
+  mlir::Value loopStepVar = [&]() {
+    if (bounds->step) {
+      return fir::getBase(
+          converter.genExprValue(*semantics::GetExpr(bounds->step), stmtCtx));
+    }
+
+    // If `step` is not present, assume it is `1`.
+    return firOpBuilder.createIntegerConstant(loc, firOpBuilder.getI32Type(),
+                                              1);
+  }();
+
+  // Get the integer kind for the loop variable and cast the loop bounds
+  size_t loopVarTypeSize = bounds->name.thing.symbol->GetUltimate().size();
+  mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
+  loopLBVar = firOpBuilder.createConvert(loc, loopVarType, loopLBVar);
+  loopUBVar = firOpBuilder.createConvert(loc, loopVarType, loopUBVar);
+  loopStepVar = firOpBuilder.createConvert(loc, loopVarType, loopStepVar);
+
+  // Start lowering
+  mlir::Value zero = firOpBuilder.createIntegerConstant(loc, loopVarType, 0);
+  mlir::Value one = firOpBuilder.createIntegerConstant(loc, loopVarType, 1);
+  mlir::Value isDownwards = firOpBuilder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::slt, loopStepVar, zero);
+
+  // Ensure we are counting upwards. If not, negate step and swap lb and ub.
+  mlir::Value negStep =
+      firOpBuilder.create<mlir::arith::SubIOp>(loc, zero, loopStepVar);
+  mlir::Value incr = firOpBuilder.create<mlir::arith::SelectOp>(
+      loc, isDownwards, negStep, loopStepVar);
+  mlir::Value lb = firOpBuilder.create<mlir::arith::SelectOp>(
+      loc, isDownwards, loopUBVar, loopLBVar);
+  mlir::Value ub = firOpBuilder.create<mlir::arith::SelectOp>(
+      loc, isDownwards, loopLBVar, loopUBVar);
+
+  // Compute the trip count assuming lb <= ub. This guarantees that the result
+  // is non-negative and we can use unsigned arithmetic.
+  mlir::Value span = firOpBuilder.create<mlir::arith::SubIOp>(
+      loc, ub, lb, ::mlir::arith::IntegerOverflowFlags::nuw);
+  mlir::Value tcMinusOne =
+      firOpBuilder.create<mlir::arith::DivUIOp>(loc, span, incr);
+  mlir::Value tcIfLooping = firOpBuilder.create<mlir::arith::AddIOp>(
+      loc, tcMinusOne, one, ::mlir::arith::IntegerOverflowFlags::nuw);
+
+  // Fall back to 0 if lb > ub
+  mlir::Value isZeroTC = firOpBuilder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::slt, ub, lb);
+  mlir::Value tripcount = firOpBuilder.create<mlir::arith::SelectOp>(
+      loc, isZeroTC, zero, tcIfLooping);
+
+  // Create the CLI handle.
+  auto newcli = firOpBuilder.create<mlir::omp::NewCliOp>(loc);
+  mlir::Value cli = newcli.getResult();
+
+  auto ivCallback = [&](mlir::Operation *op)
+      -> llvm::SmallVector<const Fortran::semantics::Symbol *> {
+    mlir::Region &region = op->getRegion(0);
+
+    // Create the op's region skeleton (BB taking the iv as argument)
+    firOpBuilder.createBlock(&region, {}, {loopVarType}, {loc});
+
+    // Compute the value of the loop variable from the logical iteration number.
+    mlir::Value natIterNum = fir::getBase(region.front().getArgument(0));
+    mlir::Value scaled =
+        firOpBuilder.create<mlir::arith::MulIOp>(loc, natIterNum, loopStepVar);
+    mlir::Value userVal =
+        firOpBuilder.create<mlir::arith::AddIOp>(loc, loopLBVar, scaled);
+
+    // Write loop value to loop variable
+    mlir::Operation *storeOp = setLoopVar(converter, loc, userVal, iv);
+
+    firOpBuilder.setInsertionPointAfter(storeOp);
+    return {iv};
+  };
+
+  // Create the omp.canonical_loop operation
+  auto canonLoop = genOpWithBody<mlir::omp::CanonicalLoopOp>(
+      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, nestedEval,
+                        directive)
+          .setClauses(&item->clauses)
+          .setPrivatize(false)
+          .setGenRegionEntryCb(ivCallback),
+      queue, item, tripcount, cli);
+
+  firOpBuilder.setInsertionPointAfter(canonLoop);
+  return canonLoop;
+}
+
+static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
+                        Fortran::lower::SymMap &symTable,
+                        lower::StatementContext &stmtCtx,
+                        Fortran::semantics::SemanticsContext &semaCtx,
+                        Fortran::lower::pft::Evaluation &eval,
+                        mlir::Location loc, const ConstructQueue &queue,
+                        ConstructQueue::const_iterator item) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
+  mlir::omp::LoopRelatedClauseOps loopInfo;
+  llvm::SmallVector<const semantics::Symbol *> iv;
+  collectLoopRelatedInfo(converter, loc, eval, item->clauses, loopInfo, iv);
+
+  // Clauses for unrolling not yet implemnted
+  ClauseProcessor cp(converter, semaCtx, item->clauses);
+  cp.processTODO<clause::Partial, clause::Full>(
+      loc, llvm::omp::Directive::OMPD_unroll);
+
+  // Emit the associated loop
+  auto canonLoop =
+      genCanonicalLoopOp(converter, symTable, semaCtx, eval, loc, queue, item,
+                         iv, llvm::omp::Directive::OMPD_unroll);
+
+  // Apply unrolling to it
+  auto cli = canonLoop.getCli();
+  firOpBuilder.create<mlir::omp::UnrollHeuristicOp>(loc, cli);
 }
 
 static mlir::omp::MaskedOp
@@ -2216,19 +2321,18 @@ genScanOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       converter.getCurrentLocation(), clauseOps);
 }
 
-/// This breaks the normal prototype of the gen*Op functions: adding the
-/// sectionBlocks argument so that the enclosed section constructs can be
-/// lowered here with correct reduction symbol remapping.
 static mlir::omp::SectionsOp
 genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
               semantics::SemanticsContext &semaCtx,
               lower::pft::Evaluation &eval, mlir::Location loc,
               const ConstructQueue &queue,
               ConstructQueue::const_iterator item) {
-  assert(!sectionsStack.empty());
+  const parser::OpenMPSectionsConstruct *sectionsConstruct =
+      getSectionsConstructStackTop(converter);
+  assert(sectionsConstruct && "Missing additional parsing information");
+
   const auto &sectionBlocks =
-      std::get<parser::OmpSectionBlocks>(sectionsStack.back()->t);
-  sectionsStack.pop_back();
+      std::get<std::list<parser::OpenMPConstruct>>(sectionsConstruct->t);
   mlir::omp::SectionsOperands clauseOps;
   llvm::SmallVector<const semantics::Symbol *> reductionSyms;
   genSectionsClauses(converter, semaCtx, item->clauses, loc, clauseOps,
@@ -2264,7 +2368,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   }
 
   // SECTIONS construct.
-  auto sectionsOp = builder.create<mlir::omp::SectionsOp>(loc, clauseOps);
+  auto sectionsOp = mlir::omp::SectionsOp::create(builder, loc, clauseOps);
 
   // Create entry block with reduction variables as arguments.
   EntryBlockArgs args;
@@ -2281,7 +2385,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   // because we need to run genReductionVars on each omp.section so that the
   // reduction variable gets mapped to the private version
   for (auto [construct, nestedEval] :
-       llvm::zip(sectionBlocks.v, eval.getNestedEvaluations())) {
+       llvm::zip(sectionBlocks, eval.getNestedEvaluations())) {
     const auto *sectionConstruct =
         std::get_if<parser::OpenMPSectionConstruct>(&construct.u);
     if (!sectionConstruct) {
@@ -2340,7 +2444,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   // races on post-update of lastprivate variables when `nowait`
   // clause is present.
   if (clauseOps.nowait && !lastprivates.empty())
-    builder.create<mlir::omp::BarrierOp>(loc);
+    mlir::omp::BarrierOp::create(builder, loc);
 
   return sectionsOp;
 }
@@ -2382,7 +2486,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   // Introduce a new host_eval information structure for this target region.
   if (!isTargetDevice)
-    hostEvalInfo.emplace_back();
+    converter.getStateStack().stackPush<HostEvalInfoStackFrame>();
 
   mlir::omp::TargetOperands clauseOps;
   DefaultMapsTy defaultMaps;
@@ -2405,6 +2509,10 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   // clauses).
   auto captureImplicitMap = [&](const semantics::Symbol &sym) {
     if (dsp.getAllSymbolsToPrivatize().contains(&sym))
+      return;
+
+    // Skip parameters/constants as they do not need to be mapped.
+    if (semantics::IsNamedConstant(sym))
       return;
 
     // These symbols are mapped individually in processHasDeviceAddr.
@@ -2488,7 +2596,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   };
   lower::pft::visitAllSymbols(eval, captureImplicitMap);
 
-  auto targetOp = firOpBuilder.create<mlir::omp::TargetOp>(loc, clauseOps);
+  auto targetOp = mlir::omp::TargetOp::create(firOpBuilder, loc, clauseOps);
 
   llvm::SmallVector<mlir::Value> hasDeviceAddrBaseValues, mapBaseValues;
   extractMappedBaseValues(clauseOps.hasDeviceAddrVars, hasDeviceAddrBaseValues);
@@ -2509,7 +2617,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   // Remove the host_eval information structure created for this target region.
   if (!isTargetDevice)
-    hostEvalInfo.pop_back();
+    converter.getStateStack().stackPop();
   return targetOp;
 }
 
@@ -2568,7 +2676,7 @@ static OpTy genTargetEnterExitUpdateDataOp(
   genTargetEnterExitUpdateDataClauses(converter, semaCtx, symTable, stmtCtx,
                                       item->clauses, loc, directive, clauseOps);
 
-  return firOpBuilder.create<OpTy>(loc, clauseOps);
+  return OpTy::create(firOpBuilder, loc, clauseOps);
 }
 
 static mlir::omp::TaskOp
@@ -2692,307 +2800,6 @@ genTeamsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           .setClauses(&item->clauses)
           .setEntryBlockArgs(&args),
       queue, item, clauseOps);
-}
-
-//===----------------------------------------------------------------------===//
-// Code generation for atomic operations
-//===----------------------------------------------------------------------===//
-static fir::FirOpBuilder::InsertPoint
-getInsertionPointBefore(mlir::Operation *op) {
-  return fir::FirOpBuilder::InsertPoint(op->getBlock(),
-                                        mlir::Block::iterator(op));
-}
-
-static fir::FirOpBuilder::InsertPoint
-getInsertionPointAfter(mlir::Operation *op) {
-  return fir::FirOpBuilder::InsertPoint(op->getBlock(),
-                                        ++mlir::Block::iterator(op));
-}
-
-static mlir::IntegerAttr getAtomicHint(lower::AbstractConverter &converter,
-                                       const List<Clause> &clauses) {
-  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  for (const Clause &clause : clauses) {
-    if (clause.id != llvm::omp::Clause::OMPC_hint)
-      continue;
-    auto &hint = std::get<clause::Hint>(clause.u);
-    auto maybeVal = evaluate::ToInt64(hint.v);
-    CHECK(maybeVal);
-    return builder.getI64IntegerAttr(*maybeVal);
-  }
-  return nullptr;
-}
-
-static mlir::omp::ClauseMemoryOrderKind
-getMemoryOrderKind(common::OmpMemoryOrderType kind) {
-  switch (kind) {
-  case common::OmpMemoryOrderType::Acq_Rel:
-    return mlir::omp::ClauseMemoryOrderKind::Acq_rel;
-  case common::OmpMemoryOrderType::Acquire:
-    return mlir::omp::ClauseMemoryOrderKind::Acquire;
-  case common::OmpMemoryOrderType::Relaxed:
-    return mlir::omp::ClauseMemoryOrderKind::Relaxed;
-  case common::OmpMemoryOrderType::Release:
-    return mlir::omp::ClauseMemoryOrderKind::Release;
-  case common::OmpMemoryOrderType::Seq_Cst:
-    return mlir::omp::ClauseMemoryOrderKind::Seq_cst;
-  }
-  llvm_unreachable("Unexpected kind");
-}
-
-static std::optional<mlir::omp::ClauseMemoryOrderKind>
-getMemoryOrderKind(llvm::omp::Clause clauseId) {
-  switch (clauseId) {
-  case llvm::omp::Clause::OMPC_acq_rel:
-    return mlir::omp::ClauseMemoryOrderKind::Acq_rel;
-  case llvm::omp::Clause::OMPC_acquire:
-    return mlir::omp::ClauseMemoryOrderKind::Acquire;
-  case llvm::omp::Clause::OMPC_relaxed:
-    return mlir::omp::ClauseMemoryOrderKind::Relaxed;
-  case llvm::omp::Clause::OMPC_release:
-    return mlir::omp::ClauseMemoryOrderKind::Release;
-  case llvm::omp::Clause::OMPC_seq_cst:
-    return mlir::omp::ClauseMemoryOrderKind::Seq_cst;
-  default:
-    return std::nullopt;
-  }
-}
-
-static std::optional<mlir::omp::ClauseMemoryOrderKind>
-getMemoryOrderFromRequires(const semantics::Scope &scope) {
-  // The REQUIRES construct is only allowed in the main program scope
-  // and module scope, but seems like we also accept it in a subprogram
-  // scope.
-  // For safety, traverse all enclosing scopes and check if their symbol
-  // contains REQUIRES.
-  for (const auto *sc{&scope}; sc->kind() != semantics::Scope::Kind::Global;
-       sc = &sc->parent()) {
-    const semantics::Symbol *sym = sc->symbol();
-    if (!sym)
-      continue;
-
-    const common::OmpMemoryOrderType *admo = common::visit(
-        [](auto &&s) {
-          using WithOmpDeclarative = semantics::WithOmpDeclarative;
-          if constexpr (std::is_convertible_v<decltype(s),
-                                              const WithOmpDeclarative &>) {
-            return s.ompAtomicDefaultMemOrder();
-          }
-          return static_cast<const common::OmpMemoryOrderType *>(nullptr);
-        },
-        sym->details());
-    if (admo)
-      return getMemoryOrderKind(*admo);
-  }
-
-  return std::nullopt;
-}
-
-static std::optional<mlir::omp::ClauseMemoryOrderKind>
-getDefaultAtomicMemOrder(semantics::SemanticsContext &semaCtx) {
-  unsigned version = semaCtx.langOptions().OpenMPVersion;
-  if (version > 50)
-    return mlir::omp::ClauseMemoryOrderKind::Relaxed;
-  return std::nullopt;
-}
-
-static std::optional<mlir::omp::ClauseMemoryOrderKind>
-getAtomicMemoryOrder(semantics::SemanticsContext &semaCtx,
-                     const List<Clause> &clauses,
-                     const semantics::Scope &scope) {
-  for (const Clause &clause : clauses) {
-    if (auto maybeKind = getMemoryOrderKind(clause.id))
-      return *maybeKind;
-  }
-
-  if (auto maybeKind = getMemoryOrderFromRequires(scope))
-    return *maybeKind;
-
-  return getDefaultAtomicMemOrder(semaCtx);
-}
-
-static mlir::omp::ClauseMemoryOrderKindAttr
-makeMemOrderAttr(lower::AbstractConverter &converter,
-                 std::optional<mlir::omp::ClauseMemoryOrderKind> maybeKind) {
-  if (maybeKind) {
-    return mlir::omp::ClauseMemoryOrderKindAttr::get(
-        converter.getFirOpBuilder().getContext(), *maybeKind);
-  }
-  return nullptr;
-}
-
-static mlir::Operation * //
-genAtomicRead(lower::AbstractConverter &converter,
-              semantics::SemanticsContext &semaCtx, mlir::Location loc,
-              lower::StatementContext &stmtCtx, mlir::Value atomAddr,
-              const semantics::SomeExpr &atom,
-              const evaluate::Assignment &assign, mlir::IntegerAttr hint,
-              std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder,
-              fir::FirOpBuilder::InsertPoint preAt,
-              fir::FirOpBuilder::InsertPoint atomicAt,
-              fir::FirOpBuilder::InsertPoint postAt) {
-  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  builder.restoreInsertionPoint(preAt);
-
-  // If the atomic clause is read then the memory-order clause must
-  // not be release.
-  if (memOrder) {
-    if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Release) {
-      // Reset it back to the default.
-      memOrder = getDefaultAtomicMemOrder(semaCtx);
-    } else if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel) {
-      // The MLIR verifier doesn't like acq_rel either.
-      memOrder = mlir::omp::ClauseMemoryOrderKind::Acquire;
-    }
-  }
-
-  mlir::Value storeAddr =
-      fir::getBase(converter.genExprAddr(assign.lhs, stmtCtx, &loc));
-  mlir::Type atomType = fir::unwrapRefType(atomAddr.getType());
-  mlir::Type storeType = fir::unwrapRefType(storeAddr.getType());
-
-  mlir::Value toAddr = [&]() {
-    if (atomType == storeType)
-      return storeAddr;
-    return builder.createTemporary(loc, atomType, ".tmp.atomval");
-  }();
-
-  builder.restoreInsertionPoint(atomicAt);
-  mlir::Operation *op = builder.create<mlir::omp::AtomicReadOp>(
-      loc, atomAddr, toAddr, mlir::TypeAttr::get(atomType), hint,
-      makeMemOrderAttr(converter, memOrder));
-
-  if (atomType != storeType) {
-    lower::ExprToValueMap overrides;
-    // The READ operation could be a part of UPDATE CAPTURE, so make sure
-    // we don't emit extra code into the body of the atomic op.
-    builder.restoreInsertionPoint(postAt);
-    mlir::Value load = builder.create<fir::LoadOp>(loc, toAddr);
-    overrides.try_emplace(&atom, load);
-
-    converter.overrideExprValues(&overrides);
-    mlir::Value value =
-        fir::getBase(converter.genExprValue(assign.rhs, stmtCtx, &loc));
-    converter.resetExprOverrides();
-
-    builder.create<fir::StoreOp>(loc, value, storeAddr);
-  }
-  return op;
-}
-
-static mlir::Operation * //
-genAtomicWrite(lower::AbstractConverter &converter,
-               semantics::SemanticsContext &semaCtx, mlir::Location loc,
-               lower::StatementContext &stmtCtx, mlir::Value atomAddr,
-               const semantics::SomeExpr &atom,
-               const evaluate::Assignment &assign, mlir::IntegerAttr hint,
-               std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder,
-               fir::FirOpBuilder::InsertPoint preAt,
-               fir::FirOpBuilder::InsertPoint atomicAt,
-               fir::FirOpBuilder::InsertPoint postAt) {
-  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  builder.restoreInsertionPoint(preAt);
-
-  // If the atomic clause is write then the memory-order clause must
-  // not be acquire.
-  if (memOrder) {
-    if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acquire) {
-      // Reset it back to the default.
-      memOrder = getDefaultAtomicMemOrder(semaCtx);
-    } else if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel) {
-      // The MLIR verifier doesn't like acq_rel either.
-      memOrder = mlir::omp::ClauseMemoryOrderKind::Release;
-    }
-  }
-
-  mlir::Value value =
-      fir::getBase(converter.genExprValue(assign.rhs, stmtCtx, &loc));
-  mlir::Type atomType = fir::unwrapRefType(atomAddr.getType());
-  mlir::Value converted = builder.createConvert(loc, atomType, value);
-
-  builder.restoreInsertionPoint(atomicAt);
-  mlir::Operation *op = builder.create<mlir::omp::AtomicWriteOp>(
-      loc, atomAddr, converted, hint, makeMemOrderAttr(converter, memOrder));
-  return op;
-}
-
-static mlir::Operation *
-genAtomicUpdate(lower::AbstractConverter &converter,
-                semantics::SemanticsContext &semaCtx, mlir::Location loc,
-                lower::StatementContext &stmtCtx, mlir::Value atomAddr,
-                const semantics::SomeExpr &atom,
-                const evaluate::Assignment &assign, mlir::IntegerAttr hint,
-                std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder,
-                fir::FirOpBuilder::InsertPoint preAt,
-                fir::FirOpBuilder::InsertPoint atomicAt,
-                fir::FirOpBuilder::InsertPoint postAt) {
-  lower::ExprToValueMap overrides;
-  lower::StatementContext naCtx;
-  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  builder.restoreInsertionPoint(preAt);
-
-  mlir::Type atomType = fir::unwrapRefType(atomAddr.getType());
-
-  // This must exist by now.
-  SomeExpr input = *semantics::GetConvertInput(assign.rhs);
-  std::vector<SomeExpr> args{semantics::GetTopLevelOperation(input).second};
-  assert(!args.empty() && "Update operation without arguments");
-  for (auto &arg : args) {
-    if (!semantics::IsSameOrConvertOf(arg, atom)) {
-      mlir::Value val = fir::getBase(converter.genExprValue(arg, naCtx, &loc));
-      overrides.try_emplace(&arg, val);
-    }
-  }
-
-  builder.restoreInsertionPoint(atomicAt);
-  auto updateOp = builder.create<mlir::omp::AtomicUpdateOp>(
-      loc, atomAddr, hint, makeMemOrderAttr(converter, memOrder));
-
-  mlir::Region &region = updateOp->getRegion(0);
-  mlir::Block *block = builder.createBlock(&region, {}, {atomType}, {loc});
-  mlir::Value localAtom = fir::getBase(block->getArgument(0));
-  overrides.try_emplace(&atom, localAtom);
-
-  converter.overrideExprValues(&overrides);
-  mlir::Value updated =
-      fir::getBase(converter.genExprValue(assign.rhs, stmtCtx, &loc));
-  mlir::Value converted = builder.createConvert(loc, atomType, updated);
-  builder.create<mlir::omp::YieldOp>(loc, converted);
-  converter.resetExprOverrides();
-
-  builder.restoreInsertionPoint(postAt); // For naCtx cleanups
-  return updateOp;
-}
-
-static mlir::Operation *
-genAtomicOperation(lower::AbstractConverter &converter,
-                   semantics::SemanticsContext &semaCtx, mlir::Location loc,
-                   lower::StatementContext &stmtCtx, int action,
-                   mlir::Value atomAddr, const semantics::SomeExpr &atom,
-                   const evaluate::Assignment &assign, mlir::IntegerAttr hint,
-                   std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder,
-                   fir::FirOpBuilder::InsertPoint preAt,
-                   fir::FirOpBuilder::InsertPoint atomicAt,
-                   fir::FirOpBuilder::InsertPoint postAt) {
-  if (isPointerAssignment(assign)) {
-    TODO(loc, "Code generation for pointer assignment is not implemented yet");
-  }
-
-  // This function and the functions called here do not preserve the
-  // builder's insertion point, or set it to anything specific.
-  switch (action) {
-  case parser::OpenMPAtomicConstruct::Analysis::Read:
-    return genAtomicRead(converter, semaCtx, loc, stmtCtx, atomAddr, atom,
-                         assign, hint, memOrder, preAt, atomicAt, postAt);
-  case parser::OpenMPAtomicConstruct::Analysis::Write:
-    return genAtomicWrite(converter, semaCtx, loc, stmtCtx, atomAddr, atom,
-                          assign, hint, memOrder, preAt, atomicAt, postAt);
-  case parser::OpenMPAtomicConstruct::Analysis::Update:
-    return genAtomicUpdate(converter, semaCtx, loc, stmtCtx, atomAddr, atom,
-                           assign, hint, memOrder, preAt, atomicAt, postAt);
-  default:
-    return nullptr;
-  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -3609,12 +3416,14 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     newOp = genTeamsOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue,
                        item);
     break;
-  case llvm::omp::Directive::OMPD_tile:
-  case llvm::omp::Directive::OMPD_unroll: {
+  case llvm::omp::Directive::OMPD_tile: {
     unsigned version = semaCtx.langOptions().OpenMPVersion;
     TODO(loc, "Unhandled loop directive (" +
                   llvm::omp::getOpenMPDirectiveName(dir, version) + ")");
   }
+  case llvm::omp::Directive::OMPD_unroll:
+    genUnrollOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue, item);
+    break;
   // case llvm::omp::Directive::OMPD_workdistribute:
   case llvm::omp::Directive::OMPD_workshare:
     newOp = genWorkshareOp(converter, symTable, stmtCtx, semaCtx, eval, loc,
@@ -3702,8 +3511,8 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   firOpBuilder.setInsertionPointToStart(converter.getModuleOp().getBody());
   auto mlirType = converter.genType(varType.declTypeSpec->derivedTypeSpec());
-  auto declMapperOp = firOpBuilder.create<mlir::omp::DeclareMapperOp>(
-      loc, mapperNameStr, mlirType);
+  auto declMapperOp = mlir::omp::DeclareMapperOp::create(
+      firOpBuilder, loc, mapperNameStr, mlirType);
   auto &region = declMapperOp.getRegion();
   firOpBuilder.createBlock(&region);
   auto varVal = region.addArgument(firOpBuilder.getRefType(mlirType), loc);
@@ -3716,7 +3525,7 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   List<Clause> clauses = makeClauses(*clauseList, semaCtx);
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processMap(loc, stmtCtx, clauseOps);
-  firOpBuilder.create<mlir::omp::DeclareMapperInfoOp>(loc, clauseOps.mapVars);
+  mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseOps.mapVars);
 }
 
 static void
@@ -3899,163 +3708,11 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 // OpenMPConstruct visitors
 //===----------------------------------------------------------------------===//
 
-[[maybe_unused]] static void
-dumpAtomicAnalysis(const parser::OpenMPAtomicConstruct::Analysis &analysis) {
-  auto whatStr = [](int k) {
-    std::string txt = "?";
-    switch (k & parser::OpenMPAtomicConstruct::Analysis::Action) {
-    case parser::OpenMPAtomicConstruct::Analysis::None:
-      txt = "None";
-      break;
-    case parser::OpenMPAtomicConstruct::Analysis::Read:
-      txt = "Read";
-      break;
-    case parser::OpenMPAtomicConstruct::Analysis::Write:
-      txt = "Write";
-      break;
-    case parser::OpenMPAtomicConstruct::Analysis::Update:
-      txt = "Update";
-      break;
-    }
-    switch (k & parser::OpenMPAtomicConstruct::Analysis::Condition) {
-    case parser::OpenMPAtomicConstruct::Analysis::IfTrue:
-      txt += " | IfTrue";
-      break;
-    case parser::OpenMPAtomicConstruct::Analysis::IfFalse:
-      txt += " | IfFalse";
-      break;
-    }
-    return txt;
-  };
-
-  auto exprStr = [&](const parser::TypedExpr &expr) {
-    if (auto *maybe = expr.get()) {
-      if (maybe->v)
-        return maybe->v->AsFortran();
-    }
-    return "<null>"s;
-  };
-  auto assignStr = [&](const parser::AssignmentStmt::TypedAssignment &assign) {
-    if (auto *maybe = assign.get(); maybe && maybe->v) {
-      std::string str;
-      llvm::raw_string_ostream os(str);
-      maybe->v->AsFortran(os);
-      return str;
-    }
-    return "<null>"s;
-  };
-
-  const SomeExpr &atom = *analysis.atom.get()->v;
-
-  llvm::errs() << "Analysis {\n";
-  llvm::errs() << "  atom: " << atom.AsFortran() << "\n";
-  llvm::errs() << "  cond: " << exprStr(analysis.cond) << "\n";
-  llvm::errs() << "  op0 {\n";
-  llvm::errs() << "    what: " << whatStr(analysis.op0.what) << "\n";
-  llvm::errs() << "    assign: " << assignStr(analysis.op0.assign) << "\n";
-  llvm::errs() << "  }\n";
-  llvm::errs() << "  op1 {\n";
-  llvm::errs() << "    what: " << whatStr(analysis.op1.what) << "\n";
-  llvm::errs() << "    assign: " << assignStr(analysis.op1.assign) << "\n";
-  llvm::errs() << "  }\n";
-  llvm::errs() << "}\n";
-}
-
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPAtomicConstruct &construct) {
-  auto get = [](auto &&typedWrapper) -> decltype(&*typedWrapper.get()->v) {
-    if (auto *maybe = typedWrapper.get(); maybe && maybe->v) {
-      return &*maybe->v;
-    } else {
-      return nullptr;
-    }
-  };
-
-  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  auto &dirSpec = std::get<parser::OmpDirectiveSpecification>(construct.t);
-  List<Clause> clauses = makeClauses(dirSpec.Clauses(), semaCtx);
-  lower::StatementContext stmtCtx;
-
-  const parser::OpenMPAtomicConstruct::Analysis &analysis = construct.analysis;
-  if (DumpAtomicAnalysis)
-    dumpAtomicAnalysis(analysis);
-
-  const semantics::SomeExpr &atom = *get(analysis.atom);
-  mlir::Location loc = converter.genLocation(construct.source);
-  mlir::Value atomAddr =
-      fir::getBase(converter.genExprAddr(atom, stmtCtx, &loc));
-  mlir::IntegerAttr hint = getAtomicHint(converter, clauses);
-  std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder =
-      getAtomicMemoryOrder(semaCtx, clauses,
-                           semaCtx.FindScope(construct.source));
-
-  if (auto *cond = get(analysis.cond)) {
-    (void)cond;
-    TODO(loc, "OpenMP ATOMIC COMPARE");
-  } else {
-    int action0 = analysis.op0.what & analysis.Action;
-    int action1 = analysis.op1.what & analysis.Action;
-    mlir::Operation *captureOp = nullptr;
-    fir::FirOpBuilder::InsertPoint preAt = builder.saveInsertionPoint();
-    fir::FirOpBuilder::InsertPoint atomicAt, postAt;
-
-    if (construct.IsCapture()) {
-      // Capturing operation.
-      assert(action0 != analysis.None && action1 != analysis.None &&
-             "Expexcing two actions");
-      (void)action0;
-      (void)action1;
-      captureOp = builder.create<mlir::omp::AtomicCaptureOp>(
-          loc, hint, makeMemOrderAttr(converter, memOrder));
-      // Set the non-atomic insertion point to before the atomic.capture.
-      preAt = getInsertionPointBefore(captureOp);
-
-      mlir::Block *block = builder.createBlock(&captureOp->getRegion(0));
-      builder.setInsertionPointToEnd(block);
-      // Set the atomic insertion point to before the terminator inside
-      // atomic.capture.
-      mlir::Operation *term = builder.create<mlir::omp::TerminatorOp>(loc);
-      atomicAt = getInsertionPointBefore(term);
-      postAt = getInsertionPointAfter(captureOp);
-      hint = nullptr;
-      memOrder = std::nullopt;
-    } else {
-      // Non-capturing operation.
-      assert(action0 != analysis.None && action1 == analysis.None &&
-             "Expexcing single action");
-      assert(!(analysis.op0.what & analysis.Condition));
-      postAt = atomicAt = preAt;
-    }
-
-    // The builder's insertion point needs to be specifically set before
-    // each call to `genAtomicOperation`.
-    mlir::Operation *firstOp = genAtomicOperation(
-        converter, semaCtx, loc, stmtCtx, analysis.op0.what, atomAddr, atom,
-        *get(analysis.op0.assign), hint, memOrder, preAt, atomicAt, postAt);
-    assert(firstOp && "Should have created an atomic operation");
-    atomicAt = getInsertionPointAfter(firstOp);
-
-    mlir::Operation *secondOp = nullptr;
-    if (analysis.op1.what != analysis.None) {
-      secondOp = genAtomicOperation(
-          converter, semaCtx, loc, stmtCtx, analysis.op1.what, atomAddr, atom,
-          *get(analysis.op1.assign), hint, memOrder, preAt, atomicAt, postAt);
-    }
-
-    if (construct.IsCapture()) {
-      // If this is a capture operation, the first/second ops will be inside
-      // of it. Set the insertion point to past the capture op itself.
-      builder.restoreInsertionPoint(postAt);
-    } else {
-      if (secondOp) {
-        builder.setInsertionPointAfter(secondOp);
-      } else {
-        builder.setInsertionPointAfter(firstOp);
-      }
-    }
-  }
+  lowerAtomic(converter, symTable, semaCtx, eval, construct);
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -4064,16 +3721,19 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    const parser::OpenMPBlockConstruct &blockConstruct) {
   const auto &beginBlockDirective =
       std::get<parser::OmpBeginBlockDirective>(blockConstruct.t);
-  const auto &endBlockDirective =
-      std::get<parser::OmpEndBlockDirective>(blockConstruct.t);
   mlir::Location currentLocation =
       converter.genLocation(beginBlockDirective.source);
   const auto origDirective =
       std::get<parser::OmpBlockDirective>(beginBlockDirective.t).v;
   List<Clause> clauses = makeClauses(
       std::get<parser::OmpClauseList>(beginBlockDirective.t), semaCtx);
-  clauses.append(makeClauses(
-      std::get<parser::OmpClauseList>(endBlockDirective.t), semaCtx));
+
+  if (const auto &endBlockDirective =
+          std::get<std::optional<parser::OmpEndBlockDirective>>(
+              blockConstruct.t)) {
+    clauses.append(makeClauses(
+        std::get<parser::OmpClauseList>(endBlockDirective->t), semaCtx));
+  }
 
   assert(llvm::omp::blockConstructSet.test(origDirective) &&
          "Expected block construct");
@@ -4196,8 +3856,32 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   mlir::Location currentLocation =
       converter.genLocation(beginLoopDirective.source);
 
+  auto &optLoopCons =
+      std::get<std::optional<parser::NestedConstruct>>(loopConstruct.t);
+  if (optLoopCons.has_value()) {
+    if (auto *ompNestedLoopCons{
+            std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
+                &*optLoopCons)}) {
+      llvm::omp::Directive nestedDirective =
+          parser::omp::GetOmpDirectiveName(*ompNestedLoopCons).v;
+      switch (nestedDirective) {
+      case llvm::omp::Directive::OMPD_tile:
+        // Emit the omp.loop_nest with annotation for tiling
+        genOMP(converter, symTable, semaCtx, eval, ompNestedLoopCons->value());
+        break;
+      default: {
+        unsigned version = semaCtx.langOptions().OpenMPVersion;
+        TODO(currentLocation,
+             "Applying a loop-associated on the loop generated by the " +
+                 llvm::omp::getOpenMPDirectiveName(nestedDirective, version) +
+                 " construct");
+      }
+      }
+    }
+  }
+
   llvm::omp::Directive directive =
-      std::get<parser::OmpLoopDirective>(beginLoopDirective.t).v;
+      parser::omp::GetOmpDirectiveName(beginLoopDirective).v;
   const parser::CharBlock &source =
       std::get<parser::OmpLoopDirective>(beginLoopDirective.t).source;
   ConstructQueue queue{
@@ -4236,7 +3920,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
                           eval, source, directive, clauses)};
 
-  sectionsStack.push_back(&sectionsConstruct);
+  mlir::SaveStateStack<SectionsConstructStackFrame> saveStateStack{
+      converter.getStateStack(), sectionsConstruct};
   genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
                  queue.begin());
 }
@@ -4259,8 +3944,8 @@ mlir::Operation *Fortran::lower::genOpenMPTerminator(fir::FirOpBuilder &builder,
                                                      mlir::Location loc) {
   if (mlir::isa<mlir::omp::AtomicUpdateOp, mlir::omp::DeclareReductionOp,
                 mlir::omp::LoopNestOp>(op))
-    return builder.create<mlir::omp::YieldOp>(loc);
-  return builder.create<mlir::omp::TerminatorOp>(loc);
+    return mlir::omp::YieldOp::create(builder, loc);
+  return mlir::omp::TerminatorOp::create(builder, loc);
 }
 
 void Fortran::lower::genOpenMPConstruct(lower::AbstractConverter &converter,
@@ -4320,9 +4005,8 @@ void Fortran::lower::genThreadprivateOp(lower::AbstractConverter &converter,
       return;
     }
     // Generate ThreadprivateOp and rebind the common block.
-    mlir::Value commonThreadprivateValue =
-        firOpBuilder.create<mlir::omp::ThreadprivateOp>(
-            currentLocation, commonValue.getType(), commonValue);
+    mlir::Value commonThreadprivateValue = mlir::omp::ThreadprivateOp::create(
+        firOpBuilder, currentLocation, commonValue.getType(), commonValue);
     converter.bindSymbol(*common, commonThreadprivateValue);
     // Generate the threadprivate value for the common block member.
     symThreadprivateValue = genCommonBlockMember(converter, currentLocation,
@@ -4342,10 +4026,10 @@ void Fortran::lower::genThreadprivateOp(lower::AbstractConverter &converter,
       global = globalInitialization(converter, firOpBuilder, sym, var,
                                     currentLocation);
 
-    mlir::Value symValue = firOpBuilder.create<fir::AddrOfOp>(
-        currentLocation, global.resultType(), global.getSymbol());
-    symThreadprivateValue = firOpBuilder.create<mlir::omp::ThreadprivateOp>(
-        currentLocation, symValue.getType(), symValue);
+    mlir::Value symValue = fir::AddrOfOp::create(
+        firOpBuilder, currentLocation, global.resultType(), global.getSymbol());
+    symThreadprivateValue = mlir::omp::ThreadprivateOp::create(
+        firOpBuilder, currentLocation, symValue.getType(), symValue);
   } else {
     mlir::Value symValue = converter.getSymbolAddress(sym);
 
@@ -4360,8 +4044,8 @@ void Fortran::lower::genThreadprivateOp(lower::AbstractConverter &converter,
     if (mlir::isa<mlir::omp::ThreadprivateOp>(op))
       return;
 
-    symThreadprivateValue = firOpBuilder.create<mlir::omp::ThreadprivateOp>(
-        currentLocation, symValue.getType(), symValue);
+    symThreadprivateValue = mlir::omp::ThreadprivateOp::create(
+        firOpBuilder, currentLocation, symValue.getType(), symValue);
   }
 
   fir::ExtendedValue sexv = converter.getSymbolExtendedValue(sym);

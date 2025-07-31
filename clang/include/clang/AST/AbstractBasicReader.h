@@ -143,8 +143,7 @@ public:
   // structure into a single data stream.
   Impl &readObject() { return asImpl(); }
 
-  template <class T>
-  llvm::ArrayRef<T> readArray(llvm::SmallVectorImpl<T> &buffer) {
+  template <class T> ArrayRef<T> readArray(llvm::SmallVectorImpl<T> &buffer) {
     assert(buffer.empty());
 
     uint32_t size = asImpl().readUInt32();
@@ -270,12 +269,7 @@ public:
 
       case NestedNameSpecifier::Namespace:
         cur = NestedNameSpecifier::Create(ctx, cur,
-                                          asImpl().readNamespaceDeclRef());
-        continue;
-
-      case NestedNameSpecifier::NamespaceAlias:
-        cur = NestedNameSpecifier::Create(ctx, cur,
-                                     asImpl().readNamespaceAliasDeclRef());
+                                          asImpl().readNamespaceBaseDeclRef());
         continue;
 
       case NestedNameSpecifier::TypeSpec:

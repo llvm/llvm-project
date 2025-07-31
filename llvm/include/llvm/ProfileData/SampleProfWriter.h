@@ -193,7 +193,7 @@ private:
   /// cannot be skipped.
   bool MarkFlatProfiles = false;
 
-  LLVM_ABI_FRIEND friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
+  LLVM_ABI friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
   SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
                               SampleProfileFormat Format);
 };
@@ -225,7 +225,7 @@ protected:
   void addNames(const FunctionSamples &S);
 
 private:
-  LLVM_ABI_FRIEND friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
+  LLVM_ABI friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
   SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
                               SampleProfileFormat Format);
 };

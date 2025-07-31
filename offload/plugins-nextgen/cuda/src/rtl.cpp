@@ -160,6 +160,9 @@ struct CUDAKernelTy : public GenericKernelTy {
 private:
   /// The CUDA kernel function to execute.
   CUfunction Func;
+  /// The maximum amount of dynamic shared memory per thread group. By default,
+  /// this is set to 48 KB.
+  mutable uint32_t MaxDynCGroupMemLimit = 49152;
 };
 
 /// Class wrapping a CUDA stream reference. These are the objects handled by the
@@ -358,6 +361,19 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
+  Error unloadBinaryImpl(DeviceImageTy *Image) override {
+    assert(Context && "Invalid CUDA context");
+
+    // Each image has its own module.
+    CUDADeviceImageTy &CUDAImage = static_cast<CUDADeviceImageTy &>(*Image);
+
+    // Unload the module of the image.
+    if (auto Err = CUDAImage.unloadModule())
+      return Err;
+
+    return Plugin::success();
+  }
+
   /// Deinitialize the device and release its resources.
   Error deinitImpl() override {
     if (Context) {
@@ -371,20 +387,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     if (auto Err = CUDAEventManager.deinit())
       return Err;
-
-    // Close modules if necessary.
-    if (!LoadedImages.empty()) {
-      assert(Context && "Invalid CUDA context");
-
-      // Each image has its own module.
-      for (DeviceImageTy *Image : LoadedImages) {
-        CUDADeviceImageTy &CUDAImage = static_cast<CUDADeviceImageTy &>(*Image);
-
-        // Unload the module of the image.
-        if (auto Err = CUDAImage.unloadModule())
-          return Err;
-      }
-    }
 
     if (Context) {
       CUresult Res = cuDevicePrimaryCtxRelease(Device);
@@ -931,13 +933,18 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     CUresult Res = cuDriverGetVersion(&TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("CUDA Driver Version", TmpInt);
+      // For consistency with other drivers, store the version as a string
+      // rather than an integer
+      Info.add("CUDA Driver Version", std::to_string(TmpInt), "",
+               DeviceInfo::DRIVER_VERSION);
 
     Info.add("CUDA OpenMP Device Number", DeviceId);
 
     Res = cuDeviceGetName(TmpChar, 1000, Device);
     if (Res == CUDA_SUCCESS)
-      Info.add("Device Name", TmpChar);
+      Info.add("Device Name", TmpChar, "", DeviceInfo::NAME);
+
+    Info.add("Vendor Name", "NVIDIA", "", DeviceInfo::VENDOR);
 
     Res = cuDeviceTotalMem(&TmpSt, Device);
     if (Res == CUDA_SUCCESS)
@@ -972,7 +979,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (Res == CUDA_SUCCESS)
       Info.add("Maximum Threads per Block", TmpInt);
 
-    auto &MaxBlock = *Info.add("Maximum Block Dimensions", "");
+    auto &MaxBlock = *Info.add("Maximum Block Dimensions", std::monostate{}, "",
+                               DeviceInfo::MAX_WORK_GROUP_SIZE);
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X, TmpInt);
     if (Res == CUDA_SUCCESS)
       MaxBlock.add("x", TmpInt);
@@ -1301,6 +1309,16 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (GenericDevice.getRPCServer())
     GenericDevice.Plugin.getRPCServer().Thread->notify();
 
+  // In case we require more memory than the current limit.
+  if (MaxDynCGroupMem >= MaxDynCGroupMemLimit) {
+    CUresult AttrResult = cuFuncSetAttribute(
+        Func, CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, MaxDynCGroupMem);
+    return Plugin::check(
+        AttrResult,
+        "Error in cuLaunchKernel while setting the memory limits: %s");
+    MaxDynCGroupMemLimit = MaxDynCGroupMem;
+  }
+
   CUresult Res = cuLaunchKernel(Func, NumBlocks[0], NumBlocks[1], NumBlocks[2],
                                 NumThreads[0], NumThreads[1], NumThreads[2],
                                 MaxDynCGroupMem, Stream, nullptr, Config);
@@ -1339,13 +1357,15 @@ public:
                                  GlobalName))
       return Err;
 
-    if (CUSize != DeviceGlobal.getSize())
+    if (DeviceGlobal.getSize() && CUSize != DeviceGlobal.getSize())
       return Plugin::error(
           ErrorCode::INVALID_BINARY,
           "failed to load global '%s' due to size mismatch (%zu != %zu)",
           GlobalName, CUSize, (size_t)DeviceGlobal.getSize());
 
     DeviceGlobal.setPtr(reinterpret_cast<void *>(CUPtr));
+    DeviceGlobal.setSize(CUSize);
+
     return Plugin::success();
   }
 };
@@ -1424,7 +1444,11 @@ struct CUDAPluginTy final : public GenericPluginTy {
       return ElfOrErr.takeError();
 
     // Get the numeric value for the image's `sm_` value.
-    auto SM = ElfOrErr->getPlatformFlags() & ELF::EF_CUDA_SM;
+    const auto Header = ElfOrErr->getELFFile().getHeader();
+    unsigned SM =
+        Header.e_ident[ELF::EI_ABIVERSION] == ELF::ELFABIVERSION_CUDA_V1
+            ? Header.e_flags & ELF::EF_CUDA_SM
+            : (Header.e_flags & ELF::EF_CUDA_SM_MASK) >> 8;
 
     CUdevice Device;
     CUresult Res = cuDeviceGet(&Device, DeviceId);

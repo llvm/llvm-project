@@ -62,6 +62,7 @@ class ASTContext;
 class ASTDeserializationListener;
 class ASTMutationListener;
 class ASTReader;
+class CodeGenOptions;
 class CompilerInstance;
 class CompilerInvocation;
 class Decl;
@@ -107,6 +108,7 @@ public:
 
 private:
   std::unique_ptr<LangOptions> LangOpts;
+  std::unique_ptr<CodeGenOptions> CodeGenOpts;
   // FIXME: The documentation on \c LoadFrom* member functions states that the
   // DiagnosticsEngine (and therefore DiagnosticOptions) must outlive the
   // returned ASTUnit. This is not the case. Enfore it by storing non-owning
@@ -443,6 +445,9 @@ public:
 
   const DiagnosticsEngine &getDiagnostics() const { return *Diagnostics; }
   DiagnosticsEngine &getDiagnostics() { return *Diagnostics; }
+  llvm::IntrusiveRefCntPtr<DiagnosticsEngine> getDiagnosticsPtr() {
+    return Diagnostics;
+  }
 
   const SourceManager &getSourceManager() const { return *SourceMgr; }
   SourceManager &getSourceManager() { return *SourceMgr; }
@@ -916,8 +921,9 @@ public:
                     bool IncludeCodePatterns, bool IncludeBriefComments,
                     CodeCompleteConsumer &Consumer,
                     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-                    DiagnosticsEngine &Diag, LangOptions &LangOpts,
-                    SourceManager &SourceMgr, FileManager &FileMgr,
+                    llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diag,
+                    LangOptions &LangOpts, SourceManager &SourceMgr,
+                    FileManager &FileMgr,
                     SmallVectorImpl<StoredDiagnostic> &StoredDiagnostics,
                     SmallVectorImpl<const llvm::MemoryBuffer *> &OwnedBuffers,
                     std::unique_ptr<SyntaxOnlyAction> Act);

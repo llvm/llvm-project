@@ -35,6 +35,7 @@ class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
 class MCValue;
+class Triple;
 class raw_ostream;
 
 namespace WinEH {
@@ -76,7 +77,6 @@ public:
     uint32_t Kind;
     StringRef Name;
   };
-  using VariantKindDesc = AtSpecifier;
 
 protected:
   //===------------------------------------------------------------------===//
@@ -427,9 +427,9 @@ protected:
   // If true, use Motorola-style integers in Assembly (ex. $0ac).
   bool UseMotorolaIntegers = false;
 
-  llvm::DenseMap<uint32_t, StringRef> SpecifierToName;
-  llvm::StringMap<uint32_t> NameToSpecifier;
-  void initializeVariantKinds(ArrayRef<VariantKindDesc> Descs);
+  llvm::DenseMap<uint32_t, StringRef> AtSpecifierToName;
+  llvm::StringMap<uint32_t> NameToAtSpecifier;
+  void initializeAtSpecifiers(ArrayRef<AtSpecifier>);
 
 public:
   explicit MCAsmInfo();
@@ -486,6 +486,9 @@ public:
   /// syntactically correct.
   virtual bool isValidUnquotedName(StringRef Name) const;
 
+  virtual void printSwitchToSection(const MCSection &, uint32_t Subsection,
+                                    const Triple &, raw_ostream &) const {}
+
   /// Return true if the .section directive should be omitted when
   /// emitting \p SectionName.  For example:
   ///
@@ -494,6 +497,10 @@ public:
   /// returns false => .section .text,#alloc,#execinstr
   /// returns true  => .text
   virtual bool shouldOmitSectionDirective(StringRef SectionName) const;
+
+  // Return true if a .align directive should use "optimized nops" to fill
+  // instead of 0s.
+  virtual bool useCodeAlign(const MCSection &Sec) const { return false; }
 
   bool usesSunStyleELFSectionSwitchSyntax() const {
     return SunStyleELFSectionSwitchSyntax;

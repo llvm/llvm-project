@@ -49,6 +49,7 @@ namespace clang {
 class ASTContext;
 class ASTReader;
 class Attr;
+class CodeGenOptions;
 class CXXRecordDecl;
 class FileEntry;
 class FPOptionsOverride;
@@ -115,8 +116,6 @@ private:
   using TypeIdxMap = llvm::DenseMap<QualType, serialization::TypeIdx,
                                     serialization::UnsafeQualTypeDenseMapInfo>;
 
-  using LocSeq = SourceLocationSequence;
-
   /// The bitstream writer used to emit this precompiled header.
   llvm::BitstreamWriter &Stream;
 
@@ -125,6 +124,8 @@ private:
 
   /// The PCM manager which manages memory buffers for pcm files.
   ModuleCache &ModCache;
+
+  const CodeGenOptions &CodeGenOpts;
 
   /// The preprocessor we're writing.
   Preprocessor *PP = nullptr;
@@ -378,6 +379,7 @@ private:
   /// Only meaningful for standard C++ named modules. See the comments in
   /// createSignatureForNamedModule() for details.
   llvm::SetVector<Module *> TouchedTopLevelModules;
+  llvm::SetVector<serialization::ModuleFile *> TouchedModuleFiles;
 
   /// An update to a Decl.
   class DeclUpdate {
@@ -687,13 +689,14 @@ public:
   /// Create a new precompiled header writer that outputs to
   /// the given bitstream.
   ASTWriter(llvm::BitstreamWriter &Stream, SmallVectorImpl<char> &Buffer,
-            ModuleCache &ModCache,
+            ModuleCache &ModCache, const CodeGenOptions &CodeGenOpts,
             ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
             bool IncludeTimestamps = true, bool BuildingImplicitModule = false,
             bool GeneratingReducedBMI = false);
   ~ASTWriter() override;
 
   const LangOptions &getLangOpts() const;
+  const CodeGenOptions &getCodeGenOpts() const { return CodeGenOpts; }
 
   /// Get a timestamp for output into the AST file. The actual timestamp
   /// of the specified file may be ignored if we have been instructed to not
@@ -733,16 +736,14 @@ public:
   void AddFileID(FileID FID, RecordDataImpl &Record);
 
   /// Emit a source location.
-  void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
-                         LocSeq *Seq = nullptr);
+  void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record);
 
   /// Return the raw encodings for source locations.
   SourceLocationEncoding::RawLocEncoding
-  getRawSourceLocationEncoding(SourceLocation Loc, LocSeq *Seq = nullptr);
+  getRawSourceLocationEncoding(SourceLocation Loc);
 
   /// Emit a source range.
-  void AddSourceRange(SourceRange Range, RecordDataImpl &Record,
-                      LocSeq *Seq = nullptr);
+  void AddSourceRange(SourceRange Range, RecordDataImpl &Record);
 
   /// Emit a reference to an identifier.
   void AddIdentifierRef(const IdentifierInfo *II, RecordDataImpl &Record);
@@ -917,6 +918,8 @@ public:
 
   void handleVTable(CXXRecordDecl *RD);
 
+  void addTouchedModuleFile(serialization::ModuleFile *);
+
 private:
   // ASTDeserializationListener implementation
   void ReaderInitialized(ASTReader *Reader) override;
@@ -1000,6 +1003,7 @@ protected:
 public:
   PCHGenerator(Preprocessor &PP, ModuleCache &ModCache, StringRef OutputFile,
                StringRef isysroot, std::shared_ptr<PCHBuffer> Buffer,
+               const CodeGenOptions &CodeGenOpts,
                ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                bool AllowASTWithErrors = false, bool IncludeTimestamps = true,
                bool BuildingImplicitModule = false,
@@ -1022,13 +1026,14 @@ protected:
   virtual Module *getEmittingModule(ASTContext &Ctx) override;
 
   CXX20ModulesGenerator(Preprocessor &PP, ModuleCache &ModCache,
-                        StringRef OutputFile, bool GeneratingReducedBMI,
-                        bool AllowASTWithErrors);
+                        StringRef OutputFile, const CodeGenOptions &CodeGenOpts,
+                        bool GeneratingReducedBMI, bool AllowASTWithErrors);
 
 public:
   CXX20ModulesGenerator(Preprocessor &PP, ModuleCache &ModCache,
-                        StringRef OutputFile, bool AllowASTWithErrors = false)
-      : CXX20ModulesGenerator(PP, ModCache, OutputFile,
+                        StringRef OutputFile, const CodeGenOptions &CodeGenOpts,
+                        bool AllowASTWithErrors = false)
+      : CXX20ModulesGenerator(PP, ModCache, OutputFile, CodeGenOpts,
                               /*GeneratingReducedBMI=*/false,
                               AllowASTWithErrors) {}
 
@@ -1040,8 +1045,9 @@ class ReducedBMIGenerator : public CXX20ModulesGenerator {
 
 public:
   ReducedBMIGenerator(Preprocessor &PP, ModuleCache &ModCache,
-                      StringRef OutputFile, bool AllowASTWithErrors = false)
-      : CXX20ModulesGenerator(PP, ModCache, OutputFile,
+                      StringRef OutputFile, const CodeGenOptions &CodeGenOpts,
+                      bool AllowASTWithErrors = false)
+      : CXX20ModulesGenerator(PP, ModCache, OutputFile, CodeGenOpts,
                               /*GeneratingReducedBMI=*/true,
                               AllowASTWithErrors) {}
 };
