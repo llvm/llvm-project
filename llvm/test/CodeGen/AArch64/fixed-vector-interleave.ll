@@ -211,18 +211,3 @@ define <4 x i16> @interleave2_diff_nonconst_splat_v4i16(i16 %a, i16 %b) {
   ret <4 x i16> %retval
 }
 
-; Float declarations
-declare <4 x half> @llvm.vector.interleave2.v4f16(<2 x half>, <2 x half>)
-declare <8 x half> @llvm.vector.interleave2.v8f16(<4 x half>, <4 x half>)
-declare <16 x half> @llvm.vector.interleave2.v16f16(<8 x half>, <8 x half>)
-declare <4 x float> @llvm.vector.interleave2.v4f32(<2 x float>, <2 x float>)
-declare <8 x float> @llvm.vector.interleave2.v8f32(<4 x float>, <4 x float>)
-declare <4 x double> @llvm.vector.interleave2.v4f64(<2 x double>, <2 x double>)
-
-; Integer declarations
-declare <32 x i8> @llvm.vector.interleave2.v32i8(<16 x i8>, <16 x i8>)
-declare <16 x i16> @llvm.vector.interleave2.v16i16(<8 x i16>, <8 x i16>)
-declare <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32>, <4 x i32>)
-declare <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64>, <2 x i64>)
-declare <4 x i16> @llvm.vector.interleave2.v4i16(<2 x i16>, <2 x i16>)
-declare <8 x i16> @llvm.vector.interleave4.v8i16(<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>)
