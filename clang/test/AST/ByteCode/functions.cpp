@@ -5,6 +5,8 @@
 // RUN: %clang_cc1 -pedantic -std=c++14 -verify=ref,both %s
 // RUN: %clang_cc1 -pedantic -std=c++20 -verify=ref,both %s
 
+#define fold(x) (__builtin_constant_p(0) ? (x) : (x))
+
 constexpr void doNothing() {}
 constexpr int gimme5() {
   doNothing();
@@ -654,14 +656,26 @@ namespace {
 }
 
 namespace FunctionCast {
-  // When folding, we allow functions to be cast to different types. Such
-  // cast functions cannot be called, even if they're constexpr.
+  // When folding, we allow functions to be cast to different types. We only
+  // allow calls if the dynamic type of the pointer matches the type of the
+  // call.
   constexpr int f() { return 1; }
+  constexpr void* f2() { return nullptr; }
+  constexpr int f3(int a) { return a; }
   typedef double (*DoubleFn)();
   typedef int (*IntFn)();
-  int a[(int)DoubleFn(f)()]; // both-error {{variable length array}} \
-                             // both-warning {{are a Clang extension}}
-  int b[(int)IntFn(f)()];    // ok
+  typedef int* (*IntPtrFn)();
+  constexpr int test1 = (int)DoubleFn(f)(); // both-error {{constant expression}} both-note {{reinterpret_cast}}
+  // FIXME: We should print a note explaining the error.
+  constexpr int test2 = (int)fold(DoubleFn(f))(); // both-error {{constant expression}}
+  constexpr int test3 = (int)IntFn(f)();    // no-op cast
+  constexpr int test4 = fold(IntFn(DoubleFn(f)))();
+  constexpr int test5 = IntFn(fold(DoubleFn(f)))(); // both-error {{constant expression}} \
+                                                    // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+  // FIXME: Interpreter is less strict here.
+  constexpr int test6 = fold(IntPtrFn(f2))() == nullptr; // ref-error {{constant expression}}
+  // FIXME: The following crashes interpreter
+  // constexpr int test6 = fold(IntFn(f3)());
 }
 
 #if __cplusplus >= 202002L

@@ -457,13 +457,17 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     assert(isPtrType(*FromT));
     assert(isPtrType(*ToT));
     if (FromT == ToT) {
-      if (CE->getType()->isVoidPointerType())
+      if (CE->getType()->isVoidPointerType() &&
+          !SubExprTy->isFunctionPointerType()) {
         return this->delegate(SubExpr);
+      }
 
       if (!this->visit(SubExpr))
         return false;
-      if (CE->getType()->isFunctionPointerType())
-        return true;
+      if (CE->getType()->isFunctionPointerType() ||
+          SubExprTy->isFunctionPointerType()) {
+        return this->emitFnPtrCast(CE);
+      }
       if (FromT == PT_Ptr)
         return this->emitPtrPtrCast(SubExprTy->isVoidPointerType(), CE);
       return true;
