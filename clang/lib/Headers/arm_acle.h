@@ -67,13 +67,10 @@ __swp(uint32_t __x, volatile uint32_t *__p) {
    * use it if there's no other option. */
   __asm__("swp %0, %1, [%2]" : "=r"(__v) : "r"(__x), "r"(__p) : "memory");
 #else
-  /* Armv6-M doesn't have either of LDREX or SWP. ACLE suggests this
-   * implementation, which Clang lowers to the 'cmpxchg' operation in LLVM IR.
-   * On Armv6-M, LLVM turns that into a libcall to __atomic_compare_exchange_4,
-   * so the runtime will need to implement that. */
-  do
-    __v = *__p;
-  while (__sync_bool_compare_and_swap(__p, __v, __x));
+  /* Armv6-M doesn't have either of LDREX or SWP. LLVM turns the following
+   * builtin into a libcall to __atomic_exchange_4, so the runtime will need to
+   * implement that. */
+  __v = __atomic_exchange_n(__p, __x, __ATOMIC_RELAXED);
 #endif
   return __v;
 }
