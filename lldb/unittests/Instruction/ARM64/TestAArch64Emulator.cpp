@@ -123,6 +123,7 @@ struct Arch64EmulatorTester : public EmulateInstructionARM64 {
                                     addr_t addr, const void *dst,
                                     size_t length) {
     // TODO: implement when required
+    assert(false);
     return 0;
   };
 
