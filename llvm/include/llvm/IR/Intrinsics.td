@@ -1932,7 +1932,7 @@ def int_vp_load  : DefaultAttrsIntrinsic<[ llvm_anyvector_ty],
                                llvm_i32_ty],
                              [ NoCapture<ArgIndex<0>>, IntrReadMem, IntrArgMemOnly ]>;
 
-def int_experimental_vp_load_ff : DefaultAttrsIntrinsic<[ llvm_anyvector_ty, llvm_i32_ty ],
+def int_vp_load_ff : DefaultAttrsIntrinsic<[ llvm_anyvector_ty, llvm_i32_ty ],
                              [ llvm_anyptr_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty],

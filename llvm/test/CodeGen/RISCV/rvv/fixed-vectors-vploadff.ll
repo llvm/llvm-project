@@ -15,7 +15,7 @@ define { <2 x i8>, i32 } @vploadff_v2i8(ptr %ptr, <2 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    vle8ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <2 x i8>, i32 } @llvm.experimental.vp.load.ff.v2i8.p0(ptr %ptr, <2 x i1> %m, i32 %evl)
+  %load = call { <2 x i8>, i32 } @llvm.vp.load.ff.v2i8.p0(ptr %ptr, <2 x i1> %m, i32 %evl)
   ret { <2 x i8>, i32 } %load
 }
 
@@ -26,7 +26,7 @@ define { <2 x i8>, i32 } @vploadff_v2i8_allones_mask(ptr %ptr, i32 zeroext %evl)
 ; CHECK-NEXT:    vle8ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <2 x i8>, i32 } @llvm.experimental.vp.load.ff.v2i8.p0(ptr %ptr, <2 x i1> splat (i1 true), i32 %evl)
+  %load = call { <2 x i8>, i32 } @llvm.vp.load.ff.v2i8.p0(ptr %ptr, <2 x i1> splat (i1 true), i32 %evl)
   ret { <2 x i8>, i32 } %load
 }
 
@@ -37,7 +37,7 @@ define { <4 x i8>, i32 } @vploadff_v4i8(ptr %ptr, <4 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    vle8ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <4 x i8>, i32 } @llvm.experimental.vp.load.ff.v4i8.p0(ptr %ptr, <4 x i1> %m, i32 %evl)
+  %load = call { <4 x i8>, i32 } @llvm.vp.load.ff.v4i8.p0(ptr %ptr, <4 x i1> %m, i32 %evl)
   ret { <4 x i8>, i32 } %load
 }
 
@@ -48,7 +48,7 @@ define { <4 x i8>, i32 } @vploadff_v4i8_allones_mask(ptr %ptr, i32 zeroext %evl)
 ; CHECK-NEXT:    vle8ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <4 x i8>, i32 } @llvm.experimental.vp.load.ff.v4i8.p0(ptr %ptr, <4 x i1> splat (i1 true), i32 %evl)
+  %load = call { <4 x i8>, i32 } @llvm.vp.load.ff.v4i8.p0(ptr %ptr, <4 x i1> splat (i1 true), i32 %evl)
   ret { <4 x i8>, i32 } %load
 }
 
@@ -59,7 +59,7 @@ define { <8 x i8>, i32 } @vploadff_v8i8(ptr %ptr, <8 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    vle8ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <8 x i8>, i32 } @llvm.experimental.vp.load.ff.v8i8.p0(ptr %ptr, <8 x i1> %m, i32 %evl)
+  %load = call { <8 x i8>, i32 } @llvm.vp.load.ff.v8i8.p0(ptr %ptr, <8 x i1> %m, i32 %evl)
   ret { <8 x i8>, i32 } %load
 }
 
@@ -70,7 +70,7 @@ define { <8 x i8>, i32 } @vploadff_v8i8_allones_mask(ptr %ptr, i32 zeroext %evl)
 ; CHECK-NEXT:    vle8ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <8 x i8>, i32 } @llvm.experimental.vp.load.ff.v8i8.p0(ptr %ptr, <8 x i1> splat (i1 true), i32 %evl)
+  %load = call { <8 x i8>, i32 } @llvm.vp.load.ff.v8i8.p0(ptr %ptr, <8 x i1> splat (i1 true), i32 %evl)
   ret { <8 x i8>, i32 } %load
 }
 
@@ -81,7 +81,7 @@ define { <2 x i16>, i32 } @vploadff_v2i16(ptr %ptr, <2 x i1> %m, i32 zeroext %ev
 ; CHECK-NEXT:    vle16ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <2 x i16>, i32 } @llvm.experimental.vp.load.ff.v2i16.p0(ptr %ptr, <2 x i1> %m, i32 %evl)
+  %load = call { <2 x i16>, i32 } @llvm.vp.load.ff.v2i16.p0(ptr %ptr, <2 x i1> %m, i32 %evl)
   ret { <2 x i16>, i32 } %load
 }
 
@@ -92,7 +92,7 @@ define { <2 x i16>, i32 } @vploadff_v2i16_allones_mask(ptr %ptr, i32 zeroext %ev
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <2 x i16>, i32 } @llvm.experimental.vp.load.ff.v2i16.p0(ptr %ptr, <2 x i1> splat (i1 true), i32 %evl)
+  %load = call { <2 x i16>, i32 } @llvm.vp.load.ff.v2i16.p0(ptr %ptr, <2 x i1> splat (i1 true), i32 %evl)
   ret { <2 x i16>, i32 } %load
 }
 
@@ -103,7 +103,7 @@ define { <4 x i16>, i32 } @vploadff_v4i16(ptr %ptr, <4 x i1> %m, i32 zeroext %ev
 ; CHECK-NEXT:    vle16ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <4 x i16>, i32 } @llvm.experimental.vp.load.ff.v4i16.p0(ptr %ptr, <4 x i1> %m, i32 %evl)
+  %load = call { <4 x i16>, i32 } @llvm.vp.load.ff.v4i16.p0(ptr %ptr, <4 x i1> %m, i32 %evl)
   ret { <4 x i16>, i32 } %load
 }
 
@@ -114,7 +114,7 @@ define { <4 x i16>, i32 } @vploadff_v4i16_allones_mask(ptr %ptr, i32 zeroext %ev
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <4 x i16>, i32 } @llvm.experimental.vp.load.ff.v4i16.p0(ptr %ptr, <4 x i1> splat (i1 true), i32 %evl)
+  %load = call { <4 x i16>, i32 } @llvm.vp.load.ff.v4i16.p0(ptr %ptr, <4 x i1> splat (i1 true), i32 %evl)
   ret { <4 x i16>, i32 } %load
 }
 
@@ -125,7 +125,7 @@ define { <8 x i16>, i32 } @vploadff_v8i16(ptr %ptr, <8 x i1> %m, i32 zeroext %ev
 ; CHECK-NEXT:    vle16ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <8 x i16>, i32 } @llvm.experimental.vp.load.ff.v8i16.p0(ptr %ptr, <8 x i1> %m, i32 %evl)
+  %load = call { <8 x i16>, i32 } @llvm.vp.load.ff.v8i16.p0(ptr %ptr, <8 x i1> %m, i32 %evl)
   ret { <8 x i16>, i32 } %load
 }
 
@@ -136,7 +136,7 @@ define { <8 x i16>, i32 } @vploadff_v8i16_allones_mask(ptr %ptr, i32 zeroext %ev
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <8 x i16>, i32 } @llvm.experimental.vp.load.ff.v8i16.p0(ptr %ptr, <8 x i1> splat (i1 true), i32 %evl)
+  %load = call { <8 x i16>, i32 } @llvm.vp.load.ff.v8i16.p0(ptr %ptr, <8 x i1> splat (i1 true), i32 %evl)
   ret { <8 x i16>, i32 } %load
 }
 
@@ -147,7 +147,7 @@ define { <2 x i32>, i32 } @vploadff_v2i32(ptr %ptr, <2 x i1> %m, i32 zeroext %ev
 ; CHECK-NEXT:    vle32ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <2 x i32>, i32 } @llvm.experimental.vp.load.ff.v2i32.p0(ptr %ptr, <2 x i1> %m, i32 %evl)
+  %load = call { <2 x i32>, i32 } @llvm.vp.load.ff.v2i32.p0(ptr %ptr, <2 x i1> %m, i32 %evl)
   ret { <2 x i32>, i32 } %load
 }
 
@@ -158,7 +158,7 @@ define { <2 x i32>, i32 } @vploadff_v2i32_allones_mask(ptr %ptr, i32 zeroext %ev
 ; CHECK-NEXT:    vle32ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <2 x i32>, i32 } @llvm.experimental.vp.load.ff.v2i32.p0(ptr %ptr, <2 x i1> splat (i1 true), i32 %evl)
+  %load = call { <2 x i32>, i32 } @llvm.vp.load.ff.v2i32.p0(ptr %ptr, <2 x i1> splat (i1 true), i32 %evl)
   ret { <2 x i32>, i32 } %load
 }
 
@@ -169,7 +169,7 @@ define { <4 x i32>, i32 } @vploadff_v4i32(ptr %ptr, <4 x i1> %m, i32 zeroext %ev
 ; CHECK-NEXT:    vle32ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <4 x i32>, i32 } @llvm.experimental.vp.load.ff.v4i32.p0(ptr %ptr, <4 x i1> %m, i32 %evl)
+  %load = call { <4 x i32>, i32 } @llvm.vp.load.ff.v4i32.p0(ptr %ptr, <4 x i1> %m, i32 %evl)
   ret { <4 x i32>, i32 } %load
 }
 
@@ -180,7 +180,7 @@ define { <4 x i32>, i32 } @vploadff_v4i32_allones_mask(ptr %ptr, i32 zeroext %ev
 ; CHECK-NEXT:    vle32ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <4 x i32>, i32 } @llvm.experimental.vp.load.ff.v4i32.p0(ptr %ptr, <4 x i1> splat (i1 true), i32 %evl)
+  %load = call { <4 x i32>, i32 } @llvm.vp.load.ff.v4i32.p0(ptr %ptr, <4 x i1> splat (i1 true), i32 %evl)
   ret { <4 x i32>, i32 } %load
 }
 
@@ -191,7 +191,7 @@ define { <8 x i32>, i32 } @vploadff_v8i32(ptr %ptr, <8 x i1> %m, i32 zeroext %ev
 ; CHECK-NEXT:    vle32ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <8 x i32>, i32 } @llvm.experimental.vp.load.ff.v8i32.p0(ptr %ptr, <8 x i1> %m, i32 %evl)
+  %load = call { <8 x i32>, i32 } @llvm.vp.load.ff.v8i32.p0(ptr %ptr, <8 x i1> %m, i32 %evl)
   ret { <8 x i32>, i32 } %load
 }
 
@@ -202,7 +202,7 @@ define { <8 x i32>, i32 } @vploadff_v8i32_allones_mask(ptr %ptr, i32 zeroext %ev
 ; CHECK-NEXT:    vle32ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <8 x i32>, i32 } @llvm.experimental.vp.load.ff.v8i32.p0(ptr %ptr, <8 x i1> splat (i1 true), i32 %evl)
+  %load = call { <8 x i32>, i32 } @llvm.vp.load.ff.v8i32.p0(ptr %ptr, <8 x i1> splat (i1 true), i32 %evl)
   ret { <8 x i32>, i32 } %load
 }
 
@@ -213,7 +213,7 @@ define { <2 x i64>, i32 } @vploadff_v2i64(ptr %ptr, <2 x i1> %m, i32 zeroext %ev
 ; CHECK-NEXT:    vle64ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <2 x i64>, i32 } @llvm.experimental.vp.load.ff.v2i64.p0(ptr %ptr, <2 x i1> %m, i32 %evl)
+  %load = call { <2 x i64>, i32 } @llvm.vp.load.ff.v2i64.p0(ptr %ptr, <2 x i1> %m, i32 %evl)
   ret { <2 x i64>, i32 } %load
 }
 
@@ -224,7 +224,7 @@ define { <2 x i64>, i32 } @vploadff_v2i64_allones_mask(ptr %ptr, i32 zeroext %ev
 ; CHECK-NEXT:    vle64ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <2 x i64>, i32 } @llvm.experimental.vp.load.ff.v2i64.p0(ptr %ptr, <2 x i1> splat (i1 true), i32 %evl)
+  %load = call { <2 x i64>, i32 } @llvm.vp.load.ff.v2i64.p0(ptr %ptr, <2 x i1> splat (i1 true), i32 %evl)
   ret { <2 x i64>, i32 } %load
 }
 
@@ -235,7 +235,7 @@ define { <4 x i64>, i32 } @vploadff_v4i64(ptr %ptr, <4 x i1> %m, i32 zeroext %ev
 ; CHECK-NEXT:    vle64ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <4 x i64>, i32 } @llvm.experimental.vp.load.ff.v4i64.p0(ptr %ptr, <4 x i1> %m, i32 %evl)
+  %load = call { <4 x i64>, i32 } @llvm.vp.load.ff.v4i64.p0(ptr %ptr, <4 x i1> %m, i32 %evl)
   ret { <4 x i64>, i32 } %load
 }
 
@@ -246,7 +246,7 @@ define { <4 x i64>, i32 } @vploadff_v4i64_allones_mask(ptr %ptr, i32 zeroext %ev
 ; CHECK-NEXT:    vle64ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <4 x i64>, i32 } @llvm.experimental.vp.load.ff.v4i64.p0(ptr %ptr, <4 x i1> splat (i1 true), i32 %evl)
+  %load = call { <4 x i64>, i32 } @llvm.vp.load.ff.v4i64.p0(ptr %ptr, <4 x i1> splat (i1 true), i32 %evl)
   ret { <4 x i64>, i32 } %load
 }
 
@@ -257,7 +257,7 @@ define { <8 x i64>, i32 } @vploadff_v8i64(ptr %ptr, <8 x i1> %m, i32 zeroext %ev
 ; CHECK-NEXT:    vle64ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <8 x i64>, i32 } @llvm.experimental.vp.load.ff.v8i64.p0(ptr %ptr, <8 x i1> %m, i32 %evl)
+  %load = call { <8 x i64>, i32 } @llvm.vp.load.ff.v8i64.p0(ptr %ptr, <8 x i1> %m, i32 %evl)
   ret { <8 x i64>, i32 } %load
 }
 
@@ -268,7 +268,7 @@ define { <8 x i64>, i32 } @vploadff_v8i64_allones_mask(ptr %ptr, i32 zeroext %ev
 ; CHECK-NEXT:    vle64ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <8 x i64>, i32 } @llvm.experimental.vp.load.ff.v8i64.p0(ptr %ptr, <8 x i1> splat (i1 true), i32 %evl)
+  %load = call { <8 x i64>, i32 } @llvm.vp.load.ff.v8i64.p0(ptr %ptr, <8 x i1> splat (i1 true), i32 %evl)
   ret { <8 x i64>, i32 } %load
 }
 
@@ -287,7 +287,7 @@ define { <32 x i64>, i32 } @vploadff_v32i64(ptr %ptr, <32 x i1> %m, i32 zeroext 
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %load = call { <32 x i64>, i32 } @llvm.experimental.vp.load.ff.v32i64.p0(ptr %ptr, <32 x i1> %m, i32 %evl)
+  %load = call { <32 x i64>, i32 } @llvm.vp.load.ff.v32i64.p0(ptr %ptr, <32 x i1> %m, i32 %evl)
   ret { <32 x i64>, i32 } %load
 }
 
@@ -306,7 +306,7 @@ define { <32 x i64>, i32 } @vploadff_v32i64_allones_mask(ptr %ptr, i32 zeroext %
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %load = call { <32 x i64>, i32 } @llvm.experimental.vp.load.ff.v32i64.p0(ptr %ptr, <32 x i1> splat (i1 true), i32 %evl)
+  %load = call { <32 x i64>, i32 } @llvm.vp.load.ff.v32i64.p0(ptr %ptr, <32 x i1> splat (i1 true), i32 %evl)
   ret { <32 x i64>, i32 } %load
 }
 
@@ -317,7 +317,7 @@ define { <2 x half>, i32 } @vploadff_v2f16(ptr %ptr, <2 x i1> %m, i32 zeroext %e
 ; CHECK-NEXT:    vle16ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <2 x half>, i32 } @llvm.experimental.vp.load.ff.v2f16.p0(ptr %ptr, <2 x i1> %m, i32 %evl)
+  %load = call { <2 x half>, i32 } @llvm.vp.load.ff.v2f16.p0(ptr %ptr, <2 x i1> %m, i32 %evl)
   ret { <2 x half>, i32 } %load
 }
 
@@ -328,7 +328,7 @@ define { <2 x half>, i32 } @vploadff_v2f16_allones_mask(ptr %ptr, i32 zeroext %e
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <2 x half>, i32 } @llvm.experimental.vp.load.ff.v2f16.p0(ptr %ptr, <2 x i1> splat (i1 true), i32 %evl)
+  %load = call { <2 x half>, i32 } @llvm.vp.load.ff.v2f16.p0(ptr %ptr, <2 x i1> splat (i1 true), i32 %evl)
   ret { <2 x half>, i32 } %load
 }
 
@@ -339,7 +339,7 @@ define { <4 x half>, i32 } @vploadff_v4f16(ptr %ptr, <4 x i1> %m, i32 zeroext %e
 ; CHECK-NEXT:    vle16ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <4 x half>, i32 } @llvm.experimental.vp.load.ff.v4f16.p0(ptr %ptr, <4 x i1> %m, i32 %evl)
+  %load = call { <4 x half>, i32 } @llvm.vp.load.ff.v4f16.p0(ptr %ptr, <4 x i1> %m, i32 %evl)
   ret { <4 x half>, i32 } %load
 }
 
@@ -350,7 +350,7 @@ define { <4 x half>, i32 } @vploadff_v4f16_allones_mask(ptr %ptr, i32 zeroext %e
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <4 x half>, i32 } @llvm.experimental.vp.load.ff.v4f16.p0(ptr %ptr, <4 x i1> splat (i1 true), i32 %evl)
+  %load = call { <4 x half>, i32 } @llvm.vp.load.ff.v4f16.p0(ptr %ptr, <4 x i1> splat (i1 true), i32 %evl)
   ret { <4 x half>, i32 } %load
 }
 
@@ -361,7 +361,7 @@ define { <8 x half>, i32 } @vploadff_v8f16(ptr %ptr, <8 x i1> %m, i32 zeroext %e
 ; CHECK-NEXT:    vle16ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <8 x half>, i32 } @llvm.experimental.vp.load.ff.v8f16.p0(ptr %ptr, <8 x i1> %m, i32 %evl)
+  %load = call { <8 x half>, i32 } @llvm.vp.load.ff.v8f16.p0(ptr %ptr, <8 x i1> %m, i32 %evl)
   ret { <8 x half>, i32 } %load
 }
 
@@ -372,7 +372,7 @@ define { <8 x half>, i32 } @vploadff_v8f16_allones_mask(ptr %ptr, i32 zeroext %e
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <8 x half>, i32 } @llvm.experimental.vp.load.ff.v8f16.p0(ptr %ptr, <8 x i1> splat (i1 true), i32 %evl)
+  %load = call { <8 x half>, i32 } @llvm.vp.load.ff.v8f16.p0(ptr %ptr, <8 x i1> splat (i1 true), i32 %evl)
   ret { <8 x half>, i32 } %load
 }
 
@@ -383,7 +383,7 @@ define { <2 x float>, i32 } @vploadff_v2f32(ptr %ptr, <2 x i1> %m, i32 zeroext %
 ; CHECK-NEXT:    vle32ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <2 x float>, i32 } @llvm.experimental.vp.load.ff.v2f32.p0(ptr %ptr, <2 x i1> %m, i32 %evl)
+  %load = call { <2 x float>, i32 } @llvm.vp.load.ff.v2f32.p0(ptr %ptr, <2 x i1> %m, i32 %evl)
   ret { <2 x float>, i32 } %load
 }
 
@@ -394,7 +394,7 @@ define { <2 x float>, i32 } @vploadff_v2f32_allones_mask(ptr %ptr, i32 zeroext %
 ; CHECK-NEXT:    vle32ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <2 x float>, i32 } @llvm.experimental.vp.load.ff.v2f32.p0(ptr %ptr, <2 x i1> splat (i1 true), i32 %evl)
+  %load = call { <2 x float>, i32 } @llvm.vp.load.ff.v2f32.p0(ptr %ptr, <2 x i1> splat (i1 true), i32 %evl)
   ret { <2 x float>, i32 } %load
 }
 
@@ -405,7 +405,7 @@ define { <4 x float>, i32 } @vploadff_v4f32(ptr %ptr, <4 x i1> %m, i32 zeroext %
 ; CHECK-NEXT:    vle32ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <4 x float>, i32 } @llvm.experimental.vp.load.ff.v4f32.p0(ptr %ptr, <4 x i1> %m, i32 %evl)
+  %load = call { <4 x float>, i32 } @llvm.vp.load.ff.v4f32.p0(ptr %ptr, <4 x i1> %m, i32 %evl)
   ret { <4 x float>, i32 } %load
 }
 
@@ -416,7 +416,7 @@ define { <4 x float>, i32 } @vploadff_v4f32_allones_mask(ptr %ptr, i32 zeroext %
 ; CHECK-NEXT:    vle32ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <4 x float>, i32 } @llvm.experimental.vp.load.ff.v4f32.p0(ptr %ptr, <4 x i1> splat (i1 true), i32 %evl)
+  %load = call { <4 x float>, i32 } @llvm.vp.load.ff.v4f32.p0(ptr %ptr, <4 x i1> splat (i1 true), i32 %evl)
   ret { <4 x float>, i32 } %load
 }
 
@@ -427,7 +427,7 @@ define { <8 x float>, i32 } @vploadff_v8f32(ptr %ptr, <8 x i1> %m, i32 zeroext %
 ; CHECK-NEXT:    vle32ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <8 x float>, i32 } @llvm.experimental.vp.load.ff.v8f32.p0(ptr %ptr, <8 x i1> %m, i32 %evl)
+  %load = call { <8 x float>, i32 } @llvm.vp.load.ff.v8f32.p0(ptr %ptr, <8 x i1> %m, i32 %evl)
   ret { <8 x float>, i32 } %load
 }
 
@@ -438,7 +438,7 @@ define { <8 x float>, i32 } @vploadff_v8f32_allones_mask(ptr %ptr, i32 zeroext %
 ; CHECK-NEXT:    vle32ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <8 x float>, i32 } @llvm.experimental.vp.load.ff.v8f32.p0(ptr %ptr, <8 x i1> splat (i1 true), i32 %evl)
+  %load = call { <8 x float>, i32 } @llvm.vp.load.ff.v8f32.p0(ptr %ptr, <8 x i1> splat (i1 true), i32 %evl)
   ret { <8 x float>, i32 } %load
 }
 
@@ -449,7 +449,7 @@ define { <2 x double>, i32 } @vploadff_v2f64(ptr %ptr, <2 x i1> %m, i32 zeroext 
 ; CHECK-NEXT:    vle64ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <2 x double>, i32 } @llvm.experimental.vp.load.ff.v2f64.p0(ptr %ptr, <2 x i1> %m, i32 %evl)
+  %load = call { <2 x double>, i32 } @llvm.vp.load.ff.v2f64.p0(ptr %ptr, <2 x i1> %m, i32 %evl)
   ret { <2 x double>, i32 } %load
 }
 
@@ -460,7 +460,7 @@ define { <2 x double>, i32 } @vploadff_v2f64_allones_mask(ptr %ptr, i32 zeroext 
 ; CHECK-NEXT:    vle64ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <2 x double>, i32 } @llvm.experimental.vp.load.ff.v2f64.p0(ptr %ptr, <2 x i1> splat (i1 true), i32 %evl)
+  %load = call { <2 x double>, i32 } @llvm.vp.load.ff.v2f64.p0(ptr %ptr, <2 x i1> splat (i1 true), i32 %evl)
   ret { <2 x double>, i32 } %load
 }
 
@@ -471,7 +471,7 @@ define { <4 x double>, i32 } @vploadff_v4f64(ptr %ptr, <4 x i1> %m, i32 zeroext 
 ; CHECK-NEXT:    vle64ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <4 x double>, i32 } @llvm.experimental.vp.load.ff.v4f64.p0(ptr %ptr, <4 x i1> %m, i32 %evl)
+  %load = call { <4 x double>, i32 } @llvm.vp.load.ff.v4f64.p0(ptr %ptr, <4 x i1> %m, i32 %evl)
   ret { <4 x double>, i32 } %load
 }
 
@@ -482,7 +482,7 @@ define { <4 x double>, i32 } @vploadff_v4f64_allones_mask(ptr %ptr, i32 zeroext 
 ; CHECK-NEXT:    vle64ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <4 x double>, i32 } @llvm.experimental.vp.load.ff.v4f64.p0(ptr %ptr, <4 x i1> splat (i1 true), i32 %evl)
+  %load = call { <4 x double>, i32 } @llvm.vp.load.ff.v4f64.p0(ptr %ptr, <4 x i1> splat (i1 true), i32 %evl)
   ret { <4 x double>, i32 } %load
 }
 
@@ -493,7 +493,7 @@ define { <8 x double>, i32 } @vploadff_v8f64(ptr %ptr, <8 x i1> %m, i32 zeroext 
 ; CHECK-NEXT:    vle64ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <8 x double>, i32 } @llvm.experimental.vp.load.ff.v8f64.p0(ptr %ptr, <8 x i1> %m, i32 %evl)
+  %load = call { <8 x double>, i32 } @llvm.vp.load.ff.v8f64.p0(ptr %ptr, <8 x i1> %m, i32 %evl)
   ret { <8 x double>, i32 } %load
 }
 
@@ -504,7 +504,7 @@ define { <8 x double>, i32 } @vploadff_v8f64_allones_mask(ptr %ptr, i32 zeroext 
 ; CHECK-NEXT:    vle64ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <8 x double>, i32 } @llvm.experimental.vp.load.ff.v8f64.p0(ptr %ptr, <8 x i1> splat (i1 true), i32 %evl)
+  %load = call { <8 x double>, i32 } @llvm.vp.load.ff.v8f64.p0(ptr %ptr, <8 x i1> splat (i1 true), i32 %evl)
   ret { <8 x double>, i32 } %load
 }
 
@@ -515,7 +515,7 @@ define { <2 x bfloat>, i32 } @vploadff_v2bf16(ptr %ptr, <2 x i1> %m, i32 zeroext
 ; CHECK-NEXT:    vle16ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <2 x bfloat>, i32 } @llvm.experimental.vp.load.ff.v2bf16.p0(ptr %ptr, <2 x i1> %m, i32 %evl)
+  %load = call { <2 x bfloat>, i32 } @llvm.vp.load.ff.v2bf16.p0(ptr %ptr, <2 x i1> %m, i32 %evl)
   ret { <2 x bfloat>, i32 } %load
 }
 
@@ -526,7 +526,7 @@ define { <2 x bfloat>, i32 } @vploadff_v2bf16_allones_mask(ptr %ptr, i32 zeroext
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <2 x bfloat>, i32 } @llvm.experimental.vp.load.ff.v2bf16.p0(ptr %ptr, <2 x i1> splat (i1 true), i32 %evl)
+  %load = call { <2 x bfloat>, i32 } @llvm.vp.load.ff.v2bf16.p0(ptr %ptr, <2 x i1> splat (i1 true), i32 %evl)
   ret { <2 x bfloat>, i32 } %load
 }
 
@@ -537,7 +537,7 @@ define { <4 x bfloat>, i32 } @vploadff_v4bf16(ptr %ptr, <4 x i1> %m, i32 zeroext
 ; CHECK-NEXT:    vle16ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <4 x bfloat>, i32 } @llvm.experimental.vp.load.ff.v4bf16.p0(ptr %ptr, <4 x i1> %m, i32 %evl)
+  %load = call { <4 x bfloat>, i32 } @llvm.vp.load.ff.v4bf16.p0(ptr %ptr, <4 x i1> %m, i32 %evl)
   ret { <4 x bfloat>, i32 } %load
 }
 
@@ -548,7 +548,7 @@ define { <4 x bfloat>, i32 } @vploadff_v4bf16_allones_mask(ptr %ptr, i32 zeroext
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <4 x bfloat>, i32 } @llvm.experimental.vp.load.ff.v4bf16.p0(ptr %ptr, <4 x i1> splat (i1 true), i32 %evl)
+  %load = call { <4 x bfloat>, i32 } @llvm.vp.load.ff.v4bf16.p0(ptr %ptr, <4 x i1> splat (i1 true), i32 %evl)
   ret { <4 x bfloat>, i32 } %load
 }
 
@@ -559,7 +559,7 @@ define { <8 x bfloat>, i32 } @vploadff_v8bf16(ptr %ptr, <8 x i1> %m, i32 zeroext
 ; CHECK-NEXT:    vle16ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <8 x bfloat>, i32 } @llvm.experimental.vp.load.ff.v8bf16.p0(ptr %ptr, <8 x i1> %m, i32 %evl)
+  %load = call { <8 x bfloat>, i32 } @llvm.vp.load.ff.v8bf16.p0(ptr %ptr, <8 x i1> %m, i32 %evl)
   ret { <8 x bfloat>, i32 } %load
 }
 
@@ -570,7 +570,7 @@ define { <8 x bfloat>, i32 } @vploadff_v8bf16_allones_mask(ptr %ptr, i32 zeroext
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <8 x bfloat>, i32 } @llvm.experimental.vp.load.ff.v8bf16.p0(ptr %ptr, <8 x i1> splat (i1 true), i32 %evl)
+  %load = call { <8 x bfloat>, i32 } @llvm.vp.load.ff.v8bf16.p0(ptr %ptr, <8 x i1> splat (i1 true), i32 %evl)
   ret { <8 x bfloat>, i32 } %load
 }
 
@@ -581,6 +581,6 @@ define { <7 x i8>, i32 } @vploadff_v7i8(ptr %ptr, <7 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    vle8ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %load = call { <7 x i8>, i32 } @llvm.experimental.vp.load.ff.v7i8.p0(ptr %ptr, <7 x i1> %m, i32 %evl)
+  %load = call { <7 x i8>, i32 } @llvm.vp.load.ff.v7i8.p0(ptr %ptr, <7 x i1> %m, i32 %evl)
   ret { <7 x i8>, i32 } %load
 }
