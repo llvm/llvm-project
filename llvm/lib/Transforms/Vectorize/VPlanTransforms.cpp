@@ -3209,9 +3209,7 @@ static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
     return !W->getMask() && WideMember0->getOperand(OpIdx) == OpV;
 
   if (auto *IR = dyn_cast<VPInterleaveRecipe>(DefR))
-    return IR->getInterleaveGroup()->getFactor() ==
-               IR->getInterleaveGroup()->getNumMembers() &&
-           IR->getVPValue(Idx) == OpV;
+    return IR->getInterleaveGroup()->isFull() && IR->getVPValue(Idx) == OpV;
   return false;
 }
 
@@ -3328,9 +3326,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
           if (!DefR)
             return false;
           auto *IR = dyn_cast<VPInterleaveRecipe>(DefR);
-          return IR &&
-                 IR->getInterleaveGroup()->getFactor() ==
-                     IR->getInterleaveGroup()->getNumMembers() &&
+          return IR && IR->getInterleaveGroup()->isFull() &&
                  IR->getVPValue(Op.index()) == Op.value();
         })) {
       StoreGroups.push_back(InterleaveR);

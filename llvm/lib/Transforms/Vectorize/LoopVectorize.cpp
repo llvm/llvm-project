@@ -3150,7 +3150,7 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
       isa<LoadInst>(I) && Group->requiresScalarEpilogue() &&
       !isScalarEpilogueAllowed();
   bool StoreAccessWithGapsRequiresMasking =
-      isa<StoreInst>(I) && (Group->getNumMembers() < Group->getFactor());
+      isa<StoreInst>(I) && !Group->isFull();
   if (!PredicatedAccessRequiresMasking &&
       !LoadAccessWithGapsRequiresEpilogMasking &&
       !StoreAccessWithGapsRequiresMasking)
@@ -5372,7 +5372,7 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
   // Calculate the cost of the whole interleaved group.
   bool UseMaskForGaps =
       (Group->requiresScalarEpilogue() && !isScalarEpilogueAllowed()) ||
-      (isa<StoreInst>(I) && (Group->getNumMembers() < Group->getFactor()));
+      (isa<StoreInst>(I) && !Group->isFull());
   InstructionCost Cost = TTI.getInterleavedMemoryOpCost(
       InsertPos->getOpcode(), WideVecTy, Group->getFactor(), Indices,
       Group->getAlign(), AS, CostKind, Legal->isMaskRequired(I),
