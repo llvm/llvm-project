@@ -605,6 +605,30 @@ def int_amdgcn_cvt_pk_f16_bf8 : DefaultAttrsIntrinsic<
   [llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrSpeculatable]
 >, ClangBuiltin<"__builtin_amdgcn_cvt_pk_f16_bf8">;
 
+def int_amdgcn_cvt_pk_fp8_f16
+    : DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty],
+                            [IntrNoMem, IntrSpeculatable]>,
+      ClangBuiltin<"__builtin_amdgcn_cvt_pk_fp8_f16">;
+
+def int_amdgcn_cvt_pk_bf8_f16
+    : DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty],
+                            [IntrNoMem, IntrSpeculatable]>,
+      ClangBuiltin<"__builtin_amdgcn_cvt_pk_bf8_f16">;
+
+// llvm.amdgcn.cvt.sr.fp8.f16 i32 vdst, half src, i32 seed, i32 old, imm byte_sel [0..3]
+// byte_sel selects byte to write in vdst.
+def int_amdgcn_cvt_sr_fp8_f16 : DefaultAttrsIntrinsic<
+  [llvm_i32_ty], [llvm_half_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+  [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]
+>, ClangBuiltin<"__builtin_amdgcn_cvt_sr_fp8_f16">;
+
+// llvm.amdgcn.cvt.sr.bf8.f16 i32 vdst, half src, i32 seed, i32 old, imm byte_sel [0..3]
+// byte_sel selects byte to write in vdst.
+def int_amdgcn_cvt_sr_bf8_f16 : DefaultAttrsIntrinsic<
+  [llvm_i32_ty], [llvm_half_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+  [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]
+>, ClangBuiltin<"__builtin_amdgcn_cvt_sr_bf8_f16">;
+
 class AMDGPUCvtScaleF32Intrinsic<LLVMType DstTy, LLVMType Src0Ty, string name> : DefaultAttrsIntrinsic<
   [DstTy], [Src0Ty, llvm_float_ty], [IntrNoMem, IntrSpeculatable]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
