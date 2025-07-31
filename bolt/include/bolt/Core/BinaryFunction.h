@@ -148,6 +148,9 @@ public:
     PF_MEMEVENT = 4, /// Profile has mem events.
   };
 
+  void setInitialRAState(bool State) { InitialRAState = State; }
+  bool getInitialRAState() { return InitialRAState; }
+
   /// Struct for tracking exception handling ranges.
   struct CallSite {
     const MCSymbol *Start;
@@ -220,6 +223,8 @@ public:
 private:
   /// Current state of the function.
   State CurrentState{State::Empty};
+
+  bool InitialRAState{false};
 
   /// A list of symbols associated with the function entry point.
   ///

@@ -62,8 +62,9 @@ void MarkRAStates::runOnFunction(BinaryFunction &BF) {
     }
   }
 
-  bool RAState = false;
+  bool RAState = BF.getInitialRAState();
   std::stack<bool> RAStateStack;
+  RAStateStack.push(RAState);
 
   for (BinaryBasicBlock &BB : BF) {
     for (auto It = BB.begin(); It != BB.end(); ++It) {
