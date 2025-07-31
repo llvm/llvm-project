@@ -9,7 +9,7 @@
 #include "src/math/atan2l.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/properties/types.h"
-#include "src/math/atan2.h"
+#include "src/__support/math/atan2.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
