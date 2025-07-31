@@ -3106,6 +3106,8 @@ SDValue SITargetLowering::LowerFormalArguments(
         CCInfo.getFirstUnallocated(AMDGPU::SGPR_32RegClass.getRegisters()));
     Info->setNumWaveDispatchVGPRs(
         CCInfo.getFirstUnallocated(AMDGPU::VGPR_32RegClass.getRegisters()));
+  } else if (Info->getNumKernargPreloadedSGPRs()) {
+    Info->setNumWaveDispatchSGPRs(Info->getNumUserSGPRs());
   }
 
   SmallVector<SDValue, 16> Chains;

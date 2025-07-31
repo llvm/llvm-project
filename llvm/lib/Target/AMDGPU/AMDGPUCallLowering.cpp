@@ -580,6 +580,9 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
     ++i;
   }
 
+  if (Info->getNumKernargPreloadedSGPRs())
+    Info->setNumWaveDispatchSGPRs(Info->getNumUserSGPRs());
+
   TLI.allocateSpecialEntryInputVGPRs(CCInfo, MF, *TRI, *Info);
   TLI.allocateSystemSGPRs(CCInfo, MF, *Info, F.getCallingConv(), false);
   return true;
