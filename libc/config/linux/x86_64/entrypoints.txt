@@ -36,6 +36,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.poll.poll
 
     # sched.h entrypoints
+    libc.src.sched.getcpu
     libc.src.sched.sched_get_priority_max
     libc.src.sched.sched_get_priority_min
     libc.src.sched.sched_getaffinity

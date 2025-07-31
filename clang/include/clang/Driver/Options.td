@@ -5312,6 +5312,8 @@ def mextended_const : Flag<["-"], "mextended-const">, Group<m_wasm_Features_Grou
 def mno_extended_const : Flag<["-"], "mno-extended-const">, Group<m_wasm_Features_Group>;
 def mfp16 : Flag<["-"], "mfp16">, Group<m_wasm_Features_Group>;
 def mno_fp16 : Flag<["-"], "mno-fp16">, Group<m_wasm_Features_Group>;
+def mgc : Flag<["-"], "mgc">, Group<m_wasm_Features_Group>;
+def mno_gc : Flag<["-"], "mno-gc">, Group<m_wasm_Features_Group>;
 def mmultimemory : Flag<["-"], "mmultimemory">, Group<m_wasm_Features_Group>;
 def mno_multimemory : Flag<["-"], "mno-multimemory">, Group<m_wasm_Features_Group>;
 def mmultivalue : Flag<["-"], "mmultivalue">, Group<m_wasm_Features_Group>;
