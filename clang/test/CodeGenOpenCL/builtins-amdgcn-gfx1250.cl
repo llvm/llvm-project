@@ -282,6 +282,33 @@ void test_cvt_sr_pk_bf16_f32(global bfloat2* out, float a, float b, uint sr)
   *out = __builtin_amdgcn_cvt_sr_pk_bf16_f32(a, b, sr);
 }
 
+// CHECK-LABEL: @test_cvt_sr_pk_f16_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[SR_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B_ADDR]] to ptr
+// CHECK-NEXT:    [[SR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SR_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store float [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store float [[B:%.*]], ptr [[B_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[SR:%.*]], ptr [[SR_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[SR_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = call <2 x half> @llvm.amdgcn.cvt.sr.pk.f16.f32(float [[TMP0]], float [[TMP1]], i32 [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <2 x half> [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_cvt_sr_pk_f16_f32(global half2* out, float a, float b, uint sr)
+{
+  *out = __builtin_amdgcn_cvt_sr_pk_f16_f32(a, b, sr);
+}
+
 // CHECK-LABEL: @test_cvt_f16_fp8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
