@@ -11,6 +11,7 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -514,4 +515,158 @@ uint8_t DirectX::PSVRuntimeInfo::getSigPatchOrPrimCount() const {
   if (const auto *P = std::get_if<dxbc::PSV::v1::RuntimeInfo>(&BasicInfo))
     return P->SigPatchOrPrimElements;
   return 0;
+}
+
+class DXNotSupportedError : public ErrorInfo<DXNotSupportedError> {
+public:
+  static char ID;
+
+  DXNotSupportedError(StringRef S) : FeatureString(S) {}
+
+  void log(raw_ostream &OS) const override {
+    OS << "DXContainer does not support " << FeatureString;
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return inconvertibleErrorCode();
+  }
+
+private:
+  StringRef FeatureString;
+};
+
+char DXNotSupportedError::ID = 0;
+
+Expected<section_iterator>
+DXContainerObjectFile::getSymbolSection(DataRefImpl Symb) const {
+  return make_error<DXNotSupportedError>("Symbol sections");
+}
+
+Expected<uint64_t>
+DXContainerObjectFile::getSymbolAddress(DataRefImpl Symb) const {
+  return make_error<DXNotSupportedError>("Symbol addresses");
+}
+
+void DXContainerObjectFile::moveSectionNext(DataRefImpl &Sec) const {
+  PartIterator It = reinterpret_cast<PartIterator>(Sec.p);
+  if (It == Parts.end())
+    return;
+
+  It++;
+  Sec.p = reinterpret_cast<uintptr_t>(It);
+}
+
+Expected<StringRef>
+DXContainerObjectFile::getSectionName(DataRefImpl Sec) const {
+  PartIterator It = reinterpret_cast<PartIterator>(Sec.p);
+  return StringRef(It->Part.getName());
+}
+
+uint64_t DXContainerObjectFile::getSectionAddress(DataRefImpl Sec) const {
+  PartIterator It = reinterpret_cast<PartIterator>(Sec.p);
+  return It->Offset;
+}
+
+uint64_t DXContainerObjectFile::getSectionIndex(DataRefImpl Sec) const {
+  return (Sec.p - reinterpret_cast<uintptr_t>(Parts.begin())) /
+         sizeof(PartIterator);
+}
+
+uint64_t DXContainerObjectFile::getSectionSize(DataRefImpl Sec) const {
+  PartIterator It = reinterpret_cast<PartIterator>(Sec.p);
+  return It->Data.size();
+}
+Expected<ArrayRef<uint8_t>>
+DXContainerObjectFile::getSectionContents(DataRefImpl Sec) const {
+  PartIterator It = reinterpret_cast<PartIterator>(Sec.p);
+  return ArrayRef<uint8_t>(It->Data.bytes_begin(), It->Data.size());
+}
+
+uint64_t DXContainerObjectFile::getSectionAlignment(DataRefImpl Sec) const {
+  return 1;
+}
+
+bool DXContainerObjectFile::isSectionCompressed(DataRefImpl Sec) const {
+  return false;
+}
+
+bool DXContainerObjectFile::isSectionText(DataRefImpl Sec) const {
+  return false;
+}
+
+bool DXContainerObjectFile::isSectionData(DataRefImpl Sec) const {
+  return false;
+}
+
+bool DXContainerObjectFile::isSectionBSS(DataRefImpl Sec) const {
+  return false;
+}
+
+bool DXContainerObjectFile::isSectionVirtual(DataRefImpl Sec) const {
+  return false;
+}
+
+relocation_iterator
+DXContainerObjectFile::section_rel_begin(DataRefImpl Sec) const {
+  return relocation_iterator(RelocationRef());
+}
+
+relocation_iterator
+DXContainerObjectFile::section_rel_end(DataRefImpl Sec) const {
+  return relocation_iterator(RelocationRef());
+}
+
+void DXContainerObjectFile::moveRelocationNext(DataRefImpl &Rel) const {}
+
+uint64_t DXContainerObjectFile::getRelocationOffset(DataRefImpl Rel) const {
+  return 0;
+}
+
+symbol_iterator
+DXContainerObjectFile::getRelocationSymbol(DataRefImpl Rel) const {
+  return symbol_iterator(SymbolRef());
+}
+
+uint64_t DXContainerObjectFile::getRelocationType(DataRefImpl Rel) const {
+  return 0;
+}
+
+void DXContainerObjectFile::getRelocationTypeName(
+    DataRefImpl Rel, SmallVectorImpl<char> &Result) const {}
+
+section_iterator DXContainerObjectFile::section_begin() const {
+  DataRefImpl Sec;
+  Sec.p = reinterpret_cast<uintptr_t>(Parts.begin());
+  return section_iterator(SectionRef(Sec, this));
+}
+section_iterator DXContainerObjectFile::section_end() const {
+  DataRefImpl Sec;
+  Sec.p = reinterpret_cast<uintptr_t>(Parts.end());
+  return section_iterator(SectionRef(Sec, this));
+}
+
+uint8_t DXContainerObjectFile::getBytesInAddress() const { return 4; }
+
+StringRef DXContainerObjectFile::getFileFormatName() const {
+  return "DirectX Container";
+}
+
+Triple::ArchType DXContainerObjectFile::getArch() const { return Triple::dxil; }
+
+Expected<SubtargetFeatures> DXContainerObjectFile::getFeatures() const {
+  return SubtargetFeatures();
+}
+
+Error DXContainerObjectFile::printSymbolName(raw_ostream &OS,
+                                             DataRefImpl Symb) const {
+  return make_error<DXNotSupportedError>("Symbol names");
+}
+
+Expected<std::unique_ptr<DXContainerObjectFile>>
+ObjectFile::createDXContainerObjectFile(MemoryBufferRef Object) {
+  auto ExC = DXContainer::create(Object);
+  if (!ExC)
+    return ExC.takeError();
+  std::unique_ptr<DXContainerObjectFile> Obj(new DXContainerObjectFile(*ExC));
+  return std::move(Obj);
 }
