@@ -189,7 +189,7 @@ define void @relax_jal_spill_64() {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    beq t5, t6, .LBB2_1
 ; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    sd s11, 0(sp)
+; CHECK-NEXT:    sd s11, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    jump .LBB2_4, s11
 ; CHECK-NEXT:  .LBB2_1: # %branch_1
 ; CHECK-NEXT:    #APP
@@ -197,7 +197,7 @@ define void @relax_jal_spill_64() {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    j .LBB2_2
 ; CHECK-NEXT:  .LBB2_4: # %branch_2
-; CHECK-NEXT:    ld s11, 0(sp)
+; CHECK-NEXT:    ld s11, 0(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:  .LBB2_2: # %branch_2
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # reg use ra
@@ -419,7 +419,7 @@ define void @relax_jal_spill_64_adjust_spill_slot() {
 ; CHECK-NEXT:    addi s0, sp, 2032
 ; CHECK-NEXT:    .cfi_def_cfa s0, 0
 ; CHECK-NEXT:    lui a0, 2
-; CHECK-NEXT:    addiw a0, a0, -2032
+; CHECK-NEXT:    addi a0, a0, -2032
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    srli a0, sp, 12
 ; CHECK-NEXT:    slli sp, a0, 12
@@ -509,7 +509,7 @@ define void @relax_jal_spill_64_adjust_spill_slot() {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    beq t5, t6, .LBB3_1
 ; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    sd s11, 0(sp)
+; CHECK-NEXT:    sd s11, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    jump .LBB3_4, s11
 ; CHECK-NEXT:  .LBB3_1: # %branch_1
 ; CHECK-NEXT:    #APP
@@ -517,7 +517,7 @@ define void @relax_jal_spill_64_adjust_spill_slot() {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    j .LBB3_2
 ; CHECK-NEXT:  .LBB3_4: # %branch_2
-; CHECK-NEXT:    ld s11, 0(sp)
+; CHECK-NEXT:    ld s11, 0(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:  .LBB3_2: # %branch_2
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # reg use ra
@@ -825,7 +825,7 @@ define void @relax_jal_spill_64_restore_block_correspondence() {
 ; CHECK-NEXT:    bne t5, t6, .LBB4_2
 ; CHECK-NEXT:    j .LBB4_1
 ; CHECK-NEXT:  .LBB4_8: # %dest_1
-; CHECK-NEXT:    ld s11, 0(sp)
+; CHECK-NEXT:    ld s11, 0(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:  .LBB4_1: # %dest_1
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # dest 1
@@ -962,7 +962,7 @@ define void @relax_jal_spill_64_restore_block_correspondence() {
 ; CHECK-NEXT:    .zero 1048576
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.7: # %space
-; CHECK-NEXT:    sd s11, 0(sp)
+; CHECK-NEXT:    sd s11, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    jump .LBB4_8, s11
 entry:
   %ra = call i64 asm sideeffect "addi ra, x0, 1", "={ra}"()

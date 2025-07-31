@@ -181,6 +181,8 @@ namespace llvm {
     /// case of a huge region that gets reduced).
     SUnit *BarrierChain = nullptr;
 
+    SmallVector<ClusterInfo> Clusters;
+
   public:
     /// A list of SUnits, used in Value2SUsMap, during DAG construction.
     /// Note: to gain speed it might be worth investigating an optimized
@@ -383,6 +385,14 @@ namespace llvm {
     /// \returns true if the edge may be added without creating a cycle OR if an
     /// equivalent edge already existed (false indicates failure).
     bool addEdge(SUnit *SuccSU, const SDep &PredDep);
+
+    /// Returns the array of the clusters.
+    SmallVector<ClusterInfo> &getClusters() { return Clusters; }
+
+    /// Get the specific cluster, return nullptr for InvalidClusterId.
+    ClusterInfo *getCluster(unsigned Idx) {
+      return Idx != InvalidClusterId ? &Clusters[Idx] : nullptr;
+    }
 
   protected:
     void initSUnits();

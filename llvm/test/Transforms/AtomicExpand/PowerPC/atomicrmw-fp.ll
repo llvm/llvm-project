@@ -7,19 +7,51 @@ define float @test_atomicrmw_fadd_f32(ptr %ptr, float %value) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
-; CHECK-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; CHECK-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; CHECK-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; CHECK-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    %loaded = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], %cmpxchg.end ]
+; CHECK-NEXT:    %new = fadd float %loaded, %value
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float %new to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float %loaded to i32
+; CHECK-NEXT:    br label %cmpxchg.start
+; CHECK-EMPTY:
+; CHECK-NEXT:  cmpxchg.start:                                    ; preds = %cmpxchg.trystore, %atomicrmw.start
+; CHECK-NEXT:    %larx = call i32 @llvm.ppc.lwarx(ptr %ptr)
+; CHECK-NEXT:    %should_store = icmp eq i32 %larx, [[TMP3]]
+; CHECK-NEXT:    br i1 %should_store, label %cmpxchg.fencedstore, label %cmpxchg.nostore
+; CHECK-EMPTY:
+; CHECK-NEXT:  cmpxchg.fencedstore:                              ; preds = %cmpxchg.start
+; CHECK-NEXT:    br label %cmpxchg.trystore
+; CHECK-EMPTY:
+; CHECK-NEXT:  cmpxchg.trystore:                                 ; preds = %cmpxchg.fencedstore
+; CHECK-NEXT:    %loaded.trystore = phi i32 [ %larx, %cmpxchg.fencedstore ]
+; CHECK-NEXT:    %stcx = call i32 @llvm.ppc.stwcx(ptr %ptr, i32 [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 %stcx, 1
+; CHECK-NEXT:    %success1 = icmp eq i32 [[TMP4]], 0
+; CHECK-NEXT:    br i1 %success1, label %cmpxchg.success, label %cmpxchg.start
+; CHECK-EMPTY:
+; CHECK-NEXT:  cmpxchg.releasedload:                             ; No predecessors!
+; CHECK-NEXT:    unreachable
+; CHECK-EMPTY:
+; CHECK-NEXT:  cmpxchg.success:                                  ; preds = %cmpxchg.trystore
+; CHECK-NEXT:    br label %cmpxchg.end
+; CHECK-EMPTY:
+; CHECK-NEXT:  cmpxchg.nostore:                                  ; preds = %cmpxchg.start
+; CHECK-NEXT:    %loaded.nostore = phi i32 [ %larx, %cmpxchg.start ]
+; CHECK-NEXT:    br label %cmpxchg.failure
+; CHECK-EMPTY:
+; CHECK-NEXT:  cmpxchg.failure:                                  ; preds = %cmpxchg.nostore
+; CHECK-NEXT:    %loaded.failure = phi i32 [ %loaded.nostore, %cmpxchg.nostore ]
+; CHECK-NEXT:    br label %cmpxchg.end
+; CHECK-EMPTY:
+; CHECK-NEXT:  cmpxchg.end:                                      ; preds = %cmpxchg.failure, %cmpxchg.success
+; CHECK-NEXT:    %loaded.exit = phi i32 [ %loaded.trystore, %cmpxchg.success ], [ %loaded.failure, %cmpxchg.failure ]
+; CHECK-NEXT:    %success2 = phi i1 [ true, %cmpxchg.success ], [ false, %cmpxchg.failure ]
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 %loaded.exit to float
+; CHECK-NEXT:    br i1 %success2, label %atomicrmw.end, label %atomicrmw.start
+; CHECK-EMPTY:
+; CHECK-NEXT:  atomicrmw.end:                                    ; preds = %cmpxchg.end
 ; CHECK-NEXT:    call void @llvm.ppc.lwsync()
 ; CHECK-NEXT:    ret float [[TMP5]]
-;
+; CHECK-NEXT:  }
   %res = atomicrmw fadd ptr %ptr, float %value seq_cst
   ret float %res
 }
@@ -28,22 +60,56 @@ define float @test_atomicrmw_fsub_f32(ptr %ptr, float %value) {
 ; CHECK-LABEL: @test_atomicrmw_fsub_f32(
 ; CHECK-NEXT:    call void @llvm.ppc.sync()
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; CHECK:       atomicrmw.start:
-; CHECK-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; CHECK-NEXT:    [[NEW:%.*]] = fsub float [[LOADED]], [[VALUE:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; CHECK-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; CHECK-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    br label %atomicrmw.start 
+; CHECK-EMPTY:
+; CHECK-NEXT:  atomicrmw.start:
+; CHECK-NEXT:    %loaded = phi float [ [[TMP1]], %0 ], [ [[TMP5:%.*]], %cmpxchg.end ]
+; CHECK-NEXT:    %new = fsub float %loaded, %value
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float %new to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float %loaded to i32
+; CHECK-NEXT:    br label %cmpxchg.start
+; CHECK-EMPTY:
+; CHECK-NEXT:  cmpxchg.start:
+; CHECK-NEXT:    %larx = call i32 @llvm.ppc.lwarx(ptr %ptr)
+; CHECK-NEXT:    %should_store = icmp eq i32 %larx, [[TMP3]]
+; CHECK-NEXT:    br i1 %should_store, label %cmpxchg.fencedstore, label %cmpxchg.nostore
+; CHECK-EMPTY:
+; CHECK-NEXT:  cmpxchg.fencedstore:                              ; preds = %cmpxchg.start
+; CHECK-NEXT:    br label %cmpxchg.trystore
+; CHECK-EMPTY:
+; CHECK-NEXT:  cmpxchg.trystore:                                 ; preds = %cmpxchg.fencedstore
+; CHECK-NEXT:    %loaded.trystore = phi i32 [ %larx, %cmpxchg.fencedstore ]
+; CHECK-NEXT:    %stcx = call i32 @llvm.ppc.stwcx(ptr %ptr, i32 %2)
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 %stcx, 1
+; CHECK-NEXT:    %success1 = icmp eq i32 [[TMP4]], 0
+; CHECK-NEXT:    br i1 %success1, label %cmpxchg.success, label %cmpxchg.start
+; CHECK-EMPTY:
+; CHECK-NEXT:  cmpxchg.releasedload:                             ; No predecessors!
+; CHECK-NEXT:    unreachable
+; CHECK-EMPTY:
+; CHECK-NEXT:  cmpxchg.success:                                  ; preds = %cmpxchg.trystore
+; CHECK-NEXT:    br label %cmpxchg.end
+; CHECK-EMPTY:
+; CHECK-NEXT:  cmpxchg.nostore:                                  ; preds = %cmpxchg.start
+; CHECK-NEXT:    %loaded.nostore = phi i32 [ %larx, %cmpxchg.start ]
+; CHECK-NEXT:    br label %cmpxchg.failure
+; CHECK-EMPTY:
+; CHECK-NEXT:  cmpxchg.failure:                                  ; preds = %cmpxchg.nostore
+; CHECK-NEXT:    %loaded.failure = phi i32 [ %loaded.nostore, %cmpxchg.nostore ]
+; CHECK-NEXT:    br label %cmpxchg.end
+; CHECK-EMPTY:
+; CHECK-NEXT:  cmpxchg.end:                                      ; preds = %cmpxchg.failure, %cmpxchg.success
+; CHECK-NEXT:    %loaded.exit = phi i32 [ %loaded.trystore, %cmpxchg.success ], [ %loaded.failure, %cmpxchg.failure ]
+; CHECK-NEXT:    %success2 = phi i1 [ true, %cmpxchg.success ], [ false, %cmpxchg.failure ]
+; CHECK-NEXT:    [[TMP5]] = bitcast i32 %loaded.exit to float
+; CHECK-NEXT:    br i1 %success2, label %atomicrmw.end, label %atomicrmw.start
+; CHECK-EMPTY:
+; CHECK-NEXT:  atomicrmw.end:                                    ; preds = %cmpxchg.end
 ; CHECK-NEXT:    call void @llvm.ppc.lwsync()
 ; CHECK-NEXT:    ret float [[TMP5]]
-;
-  %res = atomicrmw fsub ptr %ptr, float %value seq_cst
+; CHECK-NEXT:  }
+
+%res = atomicrmw fsub ptr %ptr, float %value seq_cst
   ret float %res
 }
 

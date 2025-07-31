@@ -13,8 +13,15 @@
 #include "flang/Lower/Support/Utils.h"
 
 #include "flang/Common/indirection.h"
+#include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/IterationSpace.h"
+#include "flang/Lower/Support/PrivateReductionUtils.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
+#include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Semantics/tools.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include <cstdint>
 #include <optional>
 #include <type_traits>
@@ -645,17 +652,24 @@ void copyFirstPrivateSymbol(lower::AbstractConverter &converter,
 template <typename OpType, typename OperandsStructType>
 void privatizeSymbol(
     lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
-    lower::SymMap &symTable, std::function<void(OpType, mlir::Type)> initGen,
+    lower::SymMap &symTable,
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
+    llvm::SmallSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize, OperandsStructType *clauseOps) {
-  const semantics::Symbol *sym = symToPrivatize->HasLocalLocality()
-                                     ? &symToPrivatize->GetUltimate()
-                                     : symToPrivatize;
-  lower::SymbolBox hsb = symToPrivatize->HasLocalLocality()
-                             ? converter.shallowLookupSymbol(*sym)
-                             : converter.lookupOneLevelUpSymbol(*sym);
+  constexpr bool isDoConcurrent =
+      std::is_same_v<OpType, fir::LocalitySpecifierOp>;
+  mlir::OpBuilder::InsertPoint dcIP;
+
+  if (isDoConcurrent) {
+    dcIP = firOpBuilder.saveInsertionPoint();
+    firOpBuilder.setInsertionPoint(
+        firOpBuilder.getRegion().getParentOfType<fir::DoConcurrentOp>());
+  }
+
+  const semantics::Symbol *sym =
+      isDoConcurrent ? &symToPrivatize->GetUltimate() : symToPrivatize;
+  const lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*sym);
   assert(hsb && "Host symbol box not found");
-  hlfir::Entity entity{hsb.getAddr()};
 
   mlir::Location symLoc = hsb.getAddr().getLoc();
   std::string privatizerName = sym->name().ToString() + ".privatizer";
@@ -678,6 +692,7 @@ void privatizeSymbol(
   // an alloca for a fir.array type there. Get around this by boxing all
   // arrays.
   if (mlir::isa<fir::SequenceType>(allocType)) {
+    hlfir::Entity entity{hsb.getAddr()};
     entity = genVariableBox(symLoc, firOpBuilder, entity);
     privVal = entity.getBase();
     allocType = privVal.getType();
@@ -687,9 +702,10 @@ void privatizeSymbol(
     // Boxes should be passed by reference into nested regions:
     auto oldIP = firOpBuilder.saveInsertionPoint();
     firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
-    auto alloca = firOpBuilder.create<fir::AllocaOp>(symLoc, privVal.getType());
+    auto alloca =
+        fir::AllocaOp::create(firOpBuilder, symLoc, privVal.getType());
     firOpBuilder.restoreInsertionPoint(oldIP);
-    firOpBuilder.create<fir::StoreOp>(symLoc, privVal, alloca);
+    fir::StoreOp::create(firOpBuilder, symLoc, privVal, alloca);
     privVal = alloca;
   }
 
@@ -711,15 +727,15 @@ void privatizeSymbol(
     OpType result;
 
     if constexpr (std::is_same_v<OpType, mlir::omp::PrivateClauseOp>) {
-      result = firOpBuilder.create<OpType>(
-          symLoc, uniquePrivatizerName, allocType,
+      result = OpType::create(
+          firOpBuilder, symLoc, uniquePrivatizerName, allocType,
           emitCopyRegion ? mlir::omp::DataSharingClauseType::FirstPrivate
                          : mlir::omp::DataSharingClauseType::Private);
     } else {
-      result = firOpBuilder.create<OpType>(
-          symLoc, uniquePrivatizerName, allocType,
-          emitCopyRegion ? fir::LocalitySpecifierType::LocalInit
-                         : fir::LocalitySpecifierType::Local);
+      result =
+          OpType::create(firOpBuilder, symLoc, uniquePrivatizerName, allocType,
+                         emitCopyRegion ? fir::LocalitySpecifierType::LocalInit
+                                        : fir::LocalitySpecifierType::Local);
     }
 
     fir::ExtendedValue symExV = converter.getSymbolExtendedValue(*sym);
@@ -738,7 +754,35 @@ void privatizeSymbol(
         mlir::isa<fir::BaseBoxType>(allocType) ||
         mlir::isa<fir::BoxCharType>(allocType);
     if (needsInitialization) {
-      initGen(result, argType);
+      lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(
+          isDoConcurrent ? symToPrivatize->GetUltimate() : *symToPrivatize);
+
+      assert(hsb && "Host symbol box not found");
+      hlfir::Entity entity{hsb.getAddr()};
+      bool cannotHaveNonDefaultLowerBounds =
+          !entity.mayHaveNonDefaultLowerBounds();
+
+      mlir::Region &initRegion = result.getInitRegion();
+      mlir::Location symLoc = hsb.getAddr().getLoc();
+      mlir::Block *initBlock = firOpBuilder.createBlock(
+          &initRegion, /*insertPt=*/{}, {argType, argType}, {symLoc, symLoc});
+
+      bool emitCopyRegion =
+          symToPrivatize->test(semantics::Symbol::Flag::OmpFirstPrivate) ||
+          symToPrivatize->test(
+              Fortran::semantics::Symbol::Flag::LocalityLocalInit);
+
+      populateByRefInitAndCleanupRegions(
+          converter, symLoc, argType, /*scalarInitValue=*/nullptr, initBlock,
+          result.getInitPrivateArg(), result.getInitMoldArg(),
+          result.getDeallocRegion(),
+          emitCopyRegion ? DeclOperationKind::FirstPrivateOrLocalInit
+                         : DeclOperationKind::PrivateOrLocal,
+          symToPrivatize, cannotHaveNonDefaultLowerBounds, isDoConcurrent);
+      // TODO: currently there are false positives from dead uses of the mold
+      // arg
+      if (result.initReadsFromMold())
+        mightHaveReadHostSym.insert(symToPrivatize);
     }
 
     // Populate the `copy` region if this is a `firstprivate`.
@@ -772,12 +816,12 @@ void privatizeSymbol(
       copyFirstPrivateSymbol(converter, symToPrivatize, &ip);
 
       if constexpr (std::is_same_v<OpType, mlir::omp::PrivateClauseOp>) {
-        firOpBuilder.create<mlir::omp::YieldOp>(
-            hsb.getAddr().getLoc(),
+        mlir::omp::YieldOp::create(
+            firOpBuilder, hsb.getAddr().getLoc(),
             symTable.shallowLookupSymbol(*symToPrivatize).getAddr());
       } else {
-        firOpBuilder.create<fir::YieldOp>(
-            hsb.getAddr().getLoc(),
+        fir::YieldOp::create(
+            firOpBuilder, hsb.getAddr().getLoc(),
             symTable.shallowLookupSymbol(*symToPrivatize).getAddr());
       }
     }
@@ -790,16 +834,19 @@ void privatizeSymbol(
     clauseOps->privateVars.push_back(privVal);
   }
 
-  if (symToPrivatize->HasLocalLocality())
+  if (isDoConcurrent)
     allPrivatizedSymbols.insert(symToPrivatize);
+
+  if (isDoConcurrent)
+    firOpBuilder.restoreInsertionPoint(dcIP);
 }
 
 template void
 privatizeSymbol<mlir::omp::PrivateClauseOp, mlir::omp::PrivateClauseOps>(
     lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
     lower::SymMap &symTable,
-    std::function<void(mlir::omp::PrivateClauseOp, mlir::Type)> initGen,
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
+    llvm::SmallSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize,
     mlir::omp::PrivateClauseOps *clauseOps);
 
@@ -807,8 +854,8 @@ template void
 privatizeSymbol<fir::LocalitySpecifierOp, fir::LocalitySpecifierOperands>(
     lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
     lower::SymMap &symTable,
-    std::function<void(fir::LocalitySpecifierOp, mlir::Type)> initGen,
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
+    llvm::SmallSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize,
     fir::LocalitySpecifierOperands *clauseOps);
 

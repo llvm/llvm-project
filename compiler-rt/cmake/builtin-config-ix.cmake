@@ -26,6 +26,7 @@ builtin_check_c_compiler_flag("-Xclang -mcode-object-version=none" COMPILER_RT_H
 builtin_check_c_compiler_flag(-Wbuiltin-declaration-mismatch COMPILER_RT_HAS_WBUILTIN_DECLARATION_MISMATCH_FLAG)
 builtin_check_c_compiler_flag(/Zl COMPILER_RT_HAS_ZL_FLAG)
 builtin_check_c_compiler_flag(-fcf-protection=full COMPILER_RT_HAS_FCF_PROTECTION_FLAG)
+builtin_check_c_compiler_flag(-nostdinc++          COMPILER_RT_HAS_NOSTDINCXX_FLAG)
 
 builtin_check_c_compiler_source(COMPILER_RT_HAS_ATOMIC_KEYWORD
 "
@@ -47,6 +48,24 @@ void foo(void)  __arm_streaming_compatible {
   asm(\".arch armv9-a+sme2\\n\"
       \"smstart\\n\"
       \"ldr zt0, [sp]\");
+}
+")
+
+builtin_check_c_compiler_source(COMPILER_RT_HAS_ARM_UNALIGNED
+"
+void foo() {
+#ifndef __ARM_FEATURE_UNALIGNED
+#error \"Unaligned accesses unsupported\"
+#endif
+}
+")
+
+builtin_check_c_compiler_source(COMPILER_RT_HAS_ARM_FP
+"
+void foo() {
+#ifndef __ARM_FP
+#error \"No floating-point support\"
+#endif
 }
 ")
 

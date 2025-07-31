@@ -43,13 +43,13 @@ jobs:
       - name: Checkout OffloadTest
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
-          repository: llvm-beanz/offload-test-suite
+          repository: llvm/offload-test-suite
           ref: main
           path: OffloadTest
       - name: Checkout Golden Images
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
-          repository: llvm-beanz/offload-golden-images
+          repository: llvm/offload-golden-images
           ref: main
           path: golden-images
       - name: Setup Windows

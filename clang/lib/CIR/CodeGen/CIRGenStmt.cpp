@@ -363,8 +363,8 @@ mlir::LogicalResult CIRGenFunction::emitIfStmt(const IfStmt &s) {
 mlir::LogicalResult CIRGenFunction::emitDeclStmt(const DeclStmt &s) {
   assert(builder.getInsertionBlock() && "expected valid insertion point");
 
-  for (const Decl *I : s.decls())
-    emitDecl(*I);
+  for (const Decl *i : s.decls())
+    emitDecl(*i, /*evaluateConditionDecl=*/true);
 
   return mlir::success();
 }
@@ -391,8 +391,7 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
     // If this function returns a reference, take the address of the
     // expression rather than the value.
     RValue result = emitReferenceBindingToExpr(rv);
-    builder.CIRBaseBuilderTy::createStore(loc, result.getScalarVal(),
-                                          *fnRetAlloca);
+    builder.CIRBaseBuilderTy::createStore(loc, result.getValue(), *fnRetAlloca);
   } else {
     mlir::Value value = nullptr;
     switch (CIRGenFunction::getEvaluationKind(rv->getType())) {
@@ -410,7 +409,10 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   }
 
   auto *retBlock = curLexScope->getOrCreateRetBlock(*this, loc);
+  // This should emit a branch through the cleanup block if one exists.
   builder.create<cir::BrOp>(loc, retBlock);
+  if (ehStack.getStackDepth() != currentCleanupStackDepth)
+    cgm.errorNYI(s.getSourceRange(), "return with cleanup stack");
   builder.createBlock(builder.getBlock()->getParent());
 
   return mlir::success();
@@ -873,7 +875,7 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
         return mlir::failure();
 
     if (s.getConditionVariable())
-      emitDecl(*s.getConditionVariable());
+      emitDecl(*s.getConditionVariable(), /*evaluateConditionDecl=*/true);
 
     mlir::Value condV = emitScalarExpr(s.getCond());
 

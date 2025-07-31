@@ -14,6 +14,8 @@
 #include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBLineEntry.h"
+#include "lldb/API/SBTarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -170,6 +172,18 @@ GetEnvironmentFromArguments(const llvm::json::Object &arguments);
 /// \return
 ///     The file path as a string.
 std::string GetSBFileSpecPath(const lldb::SBFileSpec &file_spec);
+
+/// Gets the line entry for a given address.
+/// \param[in] target
+///     The target that has the address.
+///
+/// \param[in] address
+///     The address for which to get the line entry.
+///
+/// \return
+///     The line entry for the given address.
+lldb::SBLineEntry GetLineEntryForAddress(lldb::SBTarget &target,
+                                         const lldb::SBAddress &address);
 
 /// Helper for sending telemetry to lldb server, if client-telemetry is enabled.
 class TelemetryDispatcher {

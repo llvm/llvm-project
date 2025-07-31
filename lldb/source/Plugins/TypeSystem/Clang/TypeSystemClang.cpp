@@ -10,6 +10,7 @@
 
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Frontend/ASTConsumers.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -86,8 +87,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 using namespace clang;
 using llvm::StringSwitch;
 
@@ -473,20 +474,6 @@ static void ParseLangArgs(LangOptions &Opts, ArchSpec arch) {
   // specified, or -std is set to a conforming mode.
   Opts.Trigraphs = !Opts.GNUMode;
   Opts.CharIsSigned = arch.CharIsSignedByDefault();
-  Opts.OptimizeSize = 0;
-
-  // FIXME: Eliminate this dependency.
-  //    unsigned Opt =
-  //    Args.hasArg(OPT_Os) ? 2 : getLastArgIntValue(Args, OPT_O, 0, Diags);
-  //    Opts.Optimize = Opt != 0;
-  unsigned Opt = 0;
-
-  // This is the __NO_INLINE__ define, which just depends on things like the
-  // optimization level and -fno-inline, not actually whether the backend has
-  // inlining enabled.
-  //
-  // FIXME: This is affected by other options (-fno-inline).
-  Opts.NoInlineDefine = !Opt;
 
   // This is needed to allocate the extra space for the owning module
   // on each decl.
@@ -2150,7 +2137,7 @@ std::string TypeSystemClang::GetTypeNameForDecl(const NamedDecl *named_decl,
 FunctionDecl *TypeSystemClang::CreateFunctionDeclaration(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
     llvm::StringRef name, const CompilerType &function_clang_type,
-    clang::StorageClass storage, bool is_inline) {
+    clang::StorageClass storage, bool is_inline, llvm::StringRef asm_label) {
   FunctionDecl *func_decl = nullptr;
   ASTContext &ast = getASTContext();
   if (!decl_ctx)
@@ -2171,6 +2158,21 @@ FunctionDecl *TypeSystemClang::CreateFunctionDeclaration(
   func_decl->setConstexprKind(isConstexprSpecified
                                   ? ConstexprSpecKind::Constexpr
                                   : ConstexprSpecKind::Unspecified);
+
+  // Attach an asm(<mangled_name>) label to the FunctionDecl.
+  // This ensures that clang::CodeGen emits function calls
+  // using symbols that are mangled according to the DW_AT_linkage_name.
+  // If we didn't do this, the external symbols wouldn't exactly
+  // match the mangled name LLDB knows about and the IRExecutionUnit
+  // would have to fall back to searching object files for
+  // approximately matching function names. The motivating
+  // example is generating calls to ABI-tagged template functions.
+  // This is done separately for member functions in
+  // AddMethodToCXXRecordType.
+  if (!asm_label.empty())
+    func_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(ast, asm_label,
+                                                           /*literal=*/true));
+
   SetOwningModule(func_decl, owning_module);
   decl_ctx->addDecl(func_decl);
 
@@ -2180,25 +2182,22 @@ FunctionDecl *TypeSystemClang::CreateFunctionDeclaration(
 }
 
 CompilerType TypeSystemClang::CreateFunctionType(
-    const CompilerType &result_type, const CompilerType *args,
-    unsigned num_args, bool is_variadic, unsigned type_quals,
-    clang::CallingConv cc, clang::RefQualifierKind ref_qual) {
+    const CompilerType &result_type, llvm::ArrayRef<CompilerType> args,
+    bool is_variadic, unsigned type_quals, clang::CallingConv cc,
+    clang::RefQualifierKind ref_qual) {
   if (!result_type || !ClangUtil::IsClangType(result_type))
     return CompilerType(); // invalid return type
 
   std::vector<QualType> qual_type_args;
-  if (num_args > 0 && args == nullptr)
-    return CompilerType(); // invalid argument array passed in
-
   // Verify that all arguments are valid and the right type
-  for (unsigned i = 0; i < num_args; ++i) {
-    if (args[i]) {
+  for (const auto &arg : args) {
+    if (arg) {
       // Make sure we have a clang type in args[i] and not a type from another
       // language whose name might match
-      const bool is_clang_type = ClangUtil::IsClangType(args[i]);
+      const bool is_clang_type = ClangUtil::IsClangType(arg);
       lldbassert(is_clang_type);
       if (is_clang_type)
-        qual_type_args.push_back(ClangUtil::GetQualType(args[i]));
+        qual_type_args.push_back(ClangUtil::GetQualType(arg));
       else
         return CompilerType(); //  invalid argument type (must be a clang type)
     } else
@@ -2422,9 +2421,12 @@ void TypeSystemClang::DumpDeclHiearchy(clang::Decl *decl) {
 
   clang::RecordDecl *record_decl = llvm::dyn_cast<clang::RecordDecl>(decl);
   if (record_decl) {
+    bool is_injected_class_name =
+        llvm::isa<clang::CXXRecordDecl>(record_decl) &&
+        llvm::cast<CXXRecordDecl>(record_decl)->isInjectedClassName();
     printf("%20s: %s%s\n", decl->getDeclKindName(),
            record_decl->getDeclName().getAsString().c_str(),
-           record_decl->isInjectedClassName() ? " (injected class name)" : "");
+           is_injected_class_name ? " (injected class name)" : "");
 
   } else {
     clang::NamedDecl *named_decl = llvm::dyn_cast<clang::NamedDecl>(decl);
@@ -2568,6 +2570,7 @@ RemoveWrappingTypes(QualType type, ArrayRef<clang::Type::TypeClass> mask = {}) {
     case clang::Type::TypeOf:
     case clang::Type::TypeOfExpr:
     case clang::Type::Using:
+    case clang::Type::PredefinedSugar:
       type = type->getLocallyUnqualifiedSingleStepDesugaredType();
       break;
     default:
@@ -4143,6 +4146,7 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   case clang::Type::TypeOf:
   case clang::Type::TypeOfExpr:
   case clang::Type::Using:
+  case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
   case clang::Type::UnaryTransform:
     break;
@@ -4853,6 +4857,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   case clang::Type::TypeOf:
   case clang::Type::TypeOfExpr:
   case clang::Type::Using:
+  case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
 
   case clang::Type::UnaryTransform:
@@ -5026,6 +5031,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     // PowerPC -- Matrix Multiply Assist
     case clang::BuiltinType::VectorPair:
     case clang::BuiltinType::VectorQuad:
+    case clang::BuiltinType::DMR1024:
       break;
 
     // ARM -- Scalable Vector Extension
@@ -5153,6 +5159,7 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::TypeOf:
   case clang::Type::TypeOfExpr:
   case clang::Type::Using:
+  case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
   case clang::Type::UnaryTransform:
     break;
@@ -5302,16 +5309,12 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   return lldb::eFormatBytes;
 }
 
-static bool ObjCDeclHasIVars(clang::ObjCInterfaceDecl *class_interface_decl,
-                             bool check_superclass) {
+static bool ObjCDeclHasIVars(clang::ObjCInterfaceDecl *class_interface_decl) {
   while (class_interface_decl) {
     if (class_interface_decl->ivar_size() > 0)
       return true;
 
-    if (check_superclass)
-      class_interface_decl = class_interface_decl->getSuperClass();
-    else
-      break;
+    class_interface_decl = class_interface_decl->getSuperClass();
   }
   return false;
 }
@@ -5386,7 +5389,7 @@ TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
               class_interface_decl->getSuperClass();
           if (superclass_interface_decl) {
             if (omit_empty_base_classes) {
-              if (ObjCDeclHasIVars(superclass_interface_decl, true))
+              if (ObjCDeclHasIVars(superclass_interface_decl))
                 ++num_children;
             } else
               ++num_children;
@@ -5472,7 +5475,7 @@ CompilerType TypeSystemClang::GetBuiltinTypeByName(ConstString name) {
 lldb::BasicType
 TypeSystemClang::GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) {
   if (type) {
-    clang::QualType qual_type(GetQualType(type));
+    clang::QualType qual_type(GetCanonicalQualType(type));
     const clang::Type::TypeClass type_class = qual_type->getTypeClass();
     if (type_class == clang::Type::Builtin) {
       switch (llvm::cast<clang::BuiltinType>(qual_type)->getKind()) {
@@ -6840,7 +6843,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
               if (ivar_decl->getName() == name_sref) {
                 if ((!omit_empty_base_classes && superclass_interface_decl) ||
                     (omit_empty_base_classes &&
-                     ObjCDeclHasIVars(superclass_interface_decl, true)))
+                     ObjCDeclHasIVars(superclass_interface_decl)))
                   ++child_idx;
 
                 child_indexes.push_back(child_idx);
@@ -6996,7 +6999,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
               if (ivar_decl->getName() == name) {
                 if ((!omit_empty_base_classes && superclass_interface_decl) ||
                     (omit_empty_base_classes &&
-                     ObjCDeclHasIVars(superclass_interface_decl, true)))
+                     ObjCDeclHasIVars(superclass_interface_decl)))
                   ++child_idx;
 
                 return child_idx;
@@ -7663,7 +7666,7 @@ TypeSystemClang::CreateParameterDeclarations(
 
 clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
     lldb::opaque_compiler_type_t type, llvm::StringRef name,
-    const char *mangled_name, const CompilerType &method_clang_type,
+    llvm::StringRef asm_label, const CompilerType &method_clang_type,
     lldb::AccessType access, bool is_virtual, bool is_static, bool is_inline,
     bool is_explicit, bool is_attr_used, bool is_artificial) {
   if (!type || !method_clang_type.IsValid() || name.empty())
@@ -7796,10 +7799,9 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
   if (is_attr_used)
     cxx_method_decl->addAttr(clang::UsedAttr::CreateImplicit(getASTContext()));
 
-  if (mangled_name != nullptr) {
+  if (!asm_label.empty())
     cxx_method_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(
-        getASTContext(), mangled_name, /*literal=*/false));
-  }
+        getASTContext(), asm_label, /*literal=*/true));
 
   // Parameters on member function declarations in DWARF generally don't
   // have names, so we omit them when creating the ParmVarDecls.
@@ -8115,14 +8117,6 @@ bool TypeSystemClang::AddObjCClassProperty(
   }
 
   return true;
-}
-
-bool TypeSystemClang::IsObjCClassTypeAndHasIVars(const CompilerType &type,
-                                                 bool check_superclass) {
-  clang::ObjCInterfaceDecl *class_interface_decl = GetAsObjCInterfaceDecl(type);
-  if (class_interface_decl)
-    return ObjCDeclHasIVars(class_interface_decl, check_superclass);
-  return false;
 }
 
 clang::ObjCMethodDecl *TypeSystemClang::AddMethodToObjCObjectType(
@@ -8511,8 +8505,16 @@ TypeSystemClang::dump(lldb::opaque_compiler_type_t type) const {
 }
 #endif
 
-void TypeSystemClang::Dump(llvm::raw_ostream &output) {
-  GetTranslationUnitDecl()->dump(output);
+void TypeSystemClang::Dump(llvm::raw_ostream &output, llvm::StringRef filter) {
+  auto consumer =
+      clang::CreateASTDumper(output, filter,
+                             /*DumpDecls=*/true,
+                             /*Deserialize=*/false,
+                             /*DumpLookups=*/false,
+                             /*DumpDeclTypes=*/false, clang::ADOF_Default);
+  assert(consumer);
+  assert(m_ast_up);
+  consumer->HandleTranslationUnit(*m_ast_up);
 }
 
 void TypeSystemClang::DumpFromSymbolFile(Stream &s,
@@ -9637,10 +9639,11 @@ GetNameForIsolatedASTKind(ScratchTypeSystemClang::IsolatedASTKind kind) {
   llvm_unreachable("Unimplemented IsolatedASTKind?");
 }
 
-void ScratchTypeSystemClang::Dump(llvm::raw_ostream &output) {
+void ScratchTypeSystemClang::Dump(llvm::raw_ostream &output,
+                                  llvm::StringRef filter) {
   // First dump the main scratch AST.
   output << "State of scratch Clang type system:\n";
-  TypeSystemClang::Dump(output);
+  TypeSystemClang::Dump(output, filter);
 
   // Now sort the isolated sub-ASTs.
   typedef std::pair<IsolatedASTKey, TypeSystem *> KeyAndTS;
@@ -9655,7 +9658,7 @@ void ScratchTypeSystemClang::Dump(llvm::raw_ostream &output) {
         static_cast<ScratchTypeSystemClang::IsolatedASTKind>(a.first);
     output << "State of scratch Clang type subsystem "
            << GetNameForIsolatedASTKind(kind) << ":\n";
-    a.second->Dump(output);
+    a.second->Dump(output, filter);
   }
 }
 

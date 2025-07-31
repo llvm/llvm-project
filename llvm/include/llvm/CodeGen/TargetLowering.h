@@ -254,20 +254,20 @@ public:
   /// support for these atomic instructions, and also have different options
   /// w.r.t. what they should expand to.
   enum class AtomicExpansionKind {
-    None,    // Don't expand the instruction.
-    CastToInteger,    // Cast the atomic instruction to another type, e.g. from
-                      // floating-point to integer type.
+    None,          // Don't expand the instruction.
+    CastToInteger, // Cast the atomic instruction to another type, e.g. from
+                   // floating-point to integer type.
     LLSC,    // Expand the instruction into loadlinked/storeconditional; used
-             // by ARM/AArch64.
+             // by ARM/AArch64/PowerPC.
     LLOnly,  // Expand the (load) instruction into just a load-linked, which has
              // greater atomic guarantees than a normal load.
     CmpXChg, // Expand the instruction into cmpxchg; used by at least X86.
-    MaskedIntrinsic,  // Use a target-specific intrinsic for the LL/SC loop.
-    BitTestIntrinsic, // Use a target-specific intrinsic for special bit
-                      // operations; used by X86.
-    CmpArithIntrinsic,// Use a target-specific intrinsic for special compare
-                      // operations; used by X86.
-    Expand,           // Generic expansion in terms of other atomic operations.
+    MaskedIntrinsic,   // Use a target-specific intrinsic for the LL/SC loop.
+    BitTestIntrinsic,  // Use a target-specific intrinsic for special bit
+                       // operations; used by X86.
+    CmpArithIntrinsic, // Use a target-specific intrinsic for special compare
+                       // operations; used by X86.
+    Expand,            // Generic expansion in terms of other atomic operations.
 
     // Rewrite to a non-atomic form for use in a known non-preemptible
     // environment.
@@ -1116,10 +1116,7 @@ public:
     LegalizeTypeAction ValueTypeActions[MVT::VALUETYPE_SIZE];
 
   public:
-    ValueTypeActionImpl() {
-      std::fill(std::begin(ValueTypeActions), std::end(ValueTypeActions),
-                TypeLegal);
-    }
+    ValueTypeActionImpl() { llvm::fill(ValueTypeActions, TypeLegal); }
 
     LegalizeTypeAction getTypeAction(MVT VT) const {
       return ValueTypeActions[VT.SimpleTy];
@@ -1661,7 +1658,8 @@ public:
   /// target has a custom expander for it.
   LegalizeAction getPartialReduceMLAAction(unsigned Opc, EVT AccVT,
                                            EVT InputVT) const {
-    assert(Opc == ISD::PARTIAL_REDUCE_SMLA || Opc == ISD::PARTIAL_REDUCE_UMLA);
+    assert(Opc == ISD::PARTIAL_REDUCE_SMLA || Opc == ISD::PARTIAL_REDUCE_UMLA ||
+           Opc == ISD::PARTIAL_REDUCE_SUMLA);
     PartialReduceActionTypes Key = {Opc, AccVT.getSimpleVT().SimpleTy,
                                     InputVT.getSimpleVT().SimpleTy};
     auto It = PartialReduceMLAActions.find(Key);
@@ -2019,7 +2017,7 @@ public:
   /// It returns EVT::Other if the type should be determined using generic
   /// target-independent logic.
   virtual EVT
-  getOptimalMemOpType(const MemOp &Op,
+  getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                       const AttributeList & /*FuncAttributes*/) const {
     return MVT::Other;
   }
@@ -2759,7 +2757,8 @@ protected:
   /// sequence, or the target has a custom expander for it.
   void setPartialReduceMLAAction(unsigned Opc, MVT AccVT, MVT InputVT,
                                  LegalizeAction Action) {
-    assert(Opc == ISD::PARTIAL_REDUCE_SMLA || Opc == ISD::PARTIAL_REDUCE_UMLA);
+    assert(Opc == ISD::PARTIAL_REDUCE_SMLA || Opc == ISD::PARTIAL_REDUCE_UMLA ||
+           Opc == ISD::PARTIAL_REDUCE_SUMLA);
     assert(AccVT.isValid() && InputVT.isValid() &&
            "setPartialReduceMLAAction types aren't valid");
     PartialReduceActionTypes Key = {Opc, AccVT.SimpleTy, InputVT.SimpleTy};
@@ -3202,11 +3201,15 @@ public:
   /// Lower an interleaved load to target specific intrinsics. Return
   /// true on success.
   ///
-  /// \p LI is the vector load instruction.
+  /// \p Load is the vector load instruction. Can be either a plain load
+  /// instruction or a vp.load intrinsic.
+  /// \p Mask is a per-segment (i.e. number of lanes equal to that of one
+  /// component being interwoven) mask.  Can be nullptr, in which case the
+  /// result is uncondiitional.
   /// \p Shuffles is the shufflevector list to DE-interleave the loaded vector.
   /// \p Indices is the corresponding indices for each shufflevector.
   /// \p Factor is the interleave factor.
-  virtual bool lowerInterleavedLoad(LoadInst *LI,
+  virtual bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                                     ArrayRef<ShuffleVectorInst *> Shuffles,
                                     ArrayRef<unsigned> Indices,
                                     unsigned Factor) const {
@@ -3216,33 +3219,16 @@ public:
   /// Lower an interleaved store to target specific intrinsics. Return
   /// true on success.
   ///
-  /// \p SI is the vector store instruction.
+  /// \p SI is the vector store instruction.  Can be either a plain store
+  /// or a vp.store.
+  /// \p Mask is a per-segment (i.e. number of lanes equal to that of one
+  /// component being interwoven) mask.  Can be nullptr, in which case the
+  /// result is unconditional.
   /// \p SVI is the shufflevector to RE-interleave the stored vector.
   /// \p Factor is the interleave factor.
-  virtual bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
+  virtual bool lowerInterleavedStore(Instruction *Store, Value *Mask,
+                                     ShuffleVectorInst *SVI,
                                      unsigned Factor) const {
-    return false;
-  }
-
-  /// Lower an interleaved load to target specific intrinsics. Return
-  /// true on success.
-  ///
-  /// \p Load is a vp.load instruction.
-  /// \p Mask is a mask value
-  /// \p DeinterleaveRes is a list of deinterleaved results.
-  virtual bool lowerInterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
-                                      ArrayRef<Value *> DeinterleaveRes) const {
-    return false;
-  }
-
-  /// Lower an interleaved store to target specific intrinsics. Return
-  /// true on success.
-  ///
-  /// \p Store is the vp.store instruction.
-  /// \p Mask is a mask value
-  /// \p InterleaveOps is a list of values being interleaved.
-  virtual bool lowerInterleavedVPStore(VPIntrinsic *Store, Value *Mask,
-                                       ArrayRef<Value *> InterleaveOps) const {
     return false;
   }
 
@@ -3250,11 +3236,11 @@ public:
   /// Return true on success. Currently only supports
   /// llvm.vector.deinterleave{2,3,5,7}
   ///
-  /// \p LI is the accompanying load instruction.
-  /// \p DeinterleaveValues contains the deinterleaved values.
-  virtual bool
-  lowerDeinterleaveIntrinsicToLoad(LoadInst *LI,
-                                   ArrayRef<Value *> DeinterleaveValues) const {
+  /// \p Load is the accompanying load instruction.  Can be either a plain load
+  /// instruction or a vp.load intrinsic.
+  /// \p DI represents the deinterleaveN intrinsic.
+  virtual bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
+                                                IntrinsicInst *DI) const {
     return false;
   }
 
@@ -3262,10 +3248,14 @@ public:
   /// Return true on success. Currently only supports
   /// llvm.vector.interleave{2,3,5,7}
   ///
-  /// \p SI is the accompanying store instruction
+  /// \p Store is the accompanying store instruction.  Can be either a plain
+  /// store or a vp.store intrinsic.
+  /// \p Mask is a per-segment (i.e. number of lanes equal to that of one
+  /// component being interwoven) mask.  Can be nullptr, in which case the
+  /// result is uncondiitional.
   /// \p InterleaveValues contains the interleaved values.
   virtual bool
-  lowerInterleaveIntrinsicToStore(StoreInst *SI,
+  lowerInterleaveIntrinsicToStore(Instruction *Store, Value *Mask,
                                   ArrayRef<Value *> InterleaveValues) const {
     return false;
   }
@@ -3556,13 +3546,13 @@ public:
     return nullptr;
   }
 
-  /// Rename the default libcall routine name for the specified libcall.
-  void setLibcallName(RTLIB::Libcall Call, const char *Name) {
-    Libcalls.setLibcallName(Call, Name);
+  void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
+    Libcalls.setLibcallImpl(Call, Impl);
   }
 
-  void setLibcallName(ArrayRef<RTLIB::Libcall> Calls, const char *Name) {
-    Libcalls.setLibcallName(Calls, Name);
+  /// Get the libcall impl routine name for the specified libcall.
+  RTLIB::LibcallImpl getLibcallImpl(RTLIB::Libcall Call) const {
+    return Libcalls.getLibcallImpl(Call);
   }
 
   /// Get the libcall routine name for the specified libcall.
@@ -3570,28 +3560,26 @@ public:
     return Libcalls.getLibcallName(Call);
   }
 
-  /// Override the default CondCode to be used to test the result of the
-  /// comparison libcall against zero.
-  /// FIXME: This can't be merged with 'RuntimeLibcallsInfo' because of the ISD.
-  void setCmpLibcallCC(RTLIB::Libcall Call, ISD::CondCode CC) {
-    CmpLibcallCCs[Call] = CC;
-  }
+  const char *getMemcpyName() const { return Libcalls.getMemcpyName(); }
 
-
-  /// Get the CondCode that's to be used to test the result of the comparison
-  /// libcall against zero.
-  /// FIXME: This can't be merged with 'RuntimeLibcallsInfo' because of the ISD.
-  ISD::CondCode getCmpLibcallCC(RTLIB::Libcall Call) const {
-    return CmpLibcallCCs[Call];
-  }
-
+  /// Get the comparison predicate that's to be used to test the result of the
+  /// comparison libcall against zero. This should only be used with
+  /// floating-point compare libcalls.
+  ISD::CondCode getSoftFloatCmpLibcallPredicate(RTLIB::LibcallImpl Call) const;
 
   /// Set the CallingConv that should be used for the specified libcall.
-  void setLibcallCallingConv(RTLIB::Libcall Call, CallingConv::ID CC) {
-    Libcalls.setLibcallCallingConv(Call, CC);
+  void setLibcallImplCallingConv(RTLIB::LibcallImpl Call, CallingConv::ID CC) {
+    Libcalls.setLibcallImplCallingConv(Call, CC);
+  }
+
+  /// Get the CallingConv that should be used for the specified libcall
+  /// implementation.
+  CallingConv::ID getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
+    return Libcalls.getLibcallImplCallingConv(Call);
   }
 
   /// Get the CallingConv that should be used for the specified libcall.
+  // FIXME: Remove this wrapper and directly use the used LibcallImpl
   CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
     return Libcalls.getLibcallCallingConv(Call);
   }
@@ -4112,8 +4100,9 @@ public:
   /// It returns the types of the sequence of memory ops to perform
   /// memset / memcpy by reference.
   virtual bool
-  findOptimalMemOpLowering(std::vector<EVT> &MemOps, unsigned Limit,
-                           const MemOp &Op, unsigned DstAS, unsigned SrcAS,
+  findOptimalMemOpLowering(LLVMContext &Context, std::vector<EVT> &MemOps,
+                           unsigned Limit, const MemOp &Op, unsigned DstAS,
+                           unsigned SrcAS,
                            const AttributeList &FuncAttributes) const;
 
   /// Check to see if the specified operand of the specified instruction is a
@@ -4372,6 +4361,11 @@ public:
     return Op.getOpcode() == ISD::SPLAT_VECTOR ||
            Op.getOpcode() == ISD::SPLAT_VECTOR_PARTS;
   }
+
+  /// Return true if the given select/vselect should be considered canonical and
+  /// not be transformed. Currently only used for "vselect (not Cond), N1, N2 ->
+  /// vselect Cond, N2, N1".
+  virtual bool isTargetCanonicalSelect(SDNode *N) const { return false; }
 
   struct DAGCombinerInfo {
     void *DC;  // The DAG Combiner object.
@@ -5089,9 +5083,6 @@ public:
     return nullptr;
   }
 
-  bool verifyReturnAddressArgumentIsConstant(SDValue Op,
-                                             SelectionDAG &DAG) const;
-
   //===--------------------------------------------------------------------===//
   // Inline Asm Support hooks
   //
@@ -5798,6 +5789,8 @@ public:
 private:
   SDValue foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
                            const SDLoc &DL, DAGCombinerInfo &DCI) const;
+  SDValue foldSetCCWithOr(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
+                          const SDLoc &DL, DAGCombinerInfo &DCI) const;
   SDValue foldSetCCWithBinOp(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
                              const SDLoc &DL, DAGCombinerInfo &DCI) const;
 

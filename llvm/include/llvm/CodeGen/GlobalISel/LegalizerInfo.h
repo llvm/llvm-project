@@ -935,6 +935,16 @@ public:
                                      Types2);
   }
 
+  /// The instruction is custom when the predicate is true and type indexes 0
+  /// and 1 are all in their respective lists.
+  LegalizeRuleSet &
+  customForCartesianProduct(bool Pred, std::initializer_list<LLT> Types0,
+                            std::initializer_list<LLT> Types1) {
+    if (!Pred)
+      return *this;
+    return actionForCartesianProduct(LegalizeAction::Custom, Types0, Types1);
+  }
+
   /// Unconditionally custom lower.
   LegalizeRuleSet &custom() {
     return customIf(always);

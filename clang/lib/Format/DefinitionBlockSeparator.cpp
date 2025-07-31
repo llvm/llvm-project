@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "DefinitionBlockSeparator.h"
-#include "llvm/Support/Debug.h"
 #define DEBUG_TYPE "definition-block-separator"
 
 namespace clang {

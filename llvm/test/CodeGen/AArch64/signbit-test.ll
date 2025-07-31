@@ -4,9 +4,9 @@
 define i64 @test_clear_mask_i64_i32(i64 %x) nounwind {
 ; CHECK-LABEL: test_clear_mask_i64_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #42
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    csel x0, x8, x0, ge
+; CHECK-NEXT:    mov w8, #42 // =0x2a
+; CHECK-NEXT:    cmn w0, #1
+; CHECK-NEXT:    csel x0, x8, x0, gt
 ; CHECK-NEXT:    ret
 entry:
   %a = and i64 %x, 2147483648
@@ -22,7 +22,7 @@ f:
 define i64 @test_set_mask_i64_i32(i64 %x) nounwind {
 ; CHECK-LABEL: test_set_mask_i64_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    mov w8, #42 // =0x2a
 ; CHECK-NEXT:    tst x0, #0x80000000
 ; CHECK-NEXT:    csel x0, x8, x0, ne
 ; CHECK-NEXT:    ret
@@ -40,7 +40,7 @@ f:
 define i64 @test_clear_mask_i64_i16(i64 %x) nounwind {
 ; CHECK-LABEL: test_clear_mask_i64_i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    mov w8, #42 // =0x2a
 ; CHECK-NEXT:    tst x0, #0x8000
 ; CHECK-NEXT:    csel x0, x8, x0, eq
 ; CHECK-NEXT:    ret
@@ -58,7 +58,7 @@ f:
 define i64 @test_set_mask_i64_i16(i64 %x) nounwind {
 ; CHECK-LABEL: test_set_mask_i64_i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    mov w8, #42 // =0x2a
 ; CHECK-NEXT:    tst x0, #0x8000
 ; CHECK-NEXT:    csel x0, x8, x0, ne
 ; CHECK-NEXT:    ret
@@ -76,7 +76,7 @@ f:
 define i64 @test_clear_mask_i64_i8(i64 %x) nounwind {
 ; CHECK-LABEL: test_clear_mask_i64_i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    mov w8, #42 // =0x2a
 ; CHECK-NEXT:    tst x0, #0x80
 ; CHECK-NEXT:    csel x0, x8, x0, eq
 ; CHECK-NEXT:    ret
@@ -94,7 +94,7 @@ f:
 define i64 @test_set_mask_i64_i8(i64 %x) nounwind {
 ; CHECK-LABEL: test_set_mask_i64_i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    mov w8, #42 // =0x2a
 ; CHECK-NEXT:    tst x0, #0x80
 ; CHECK-NEXT:    csel x0, x8, x0, ne
 ; CHECK-NEXT:    ret
@@ -112,7 +112,7 @@ f:
 define i32 @test_clear_mask_i32_i16(i32 %x) nounwind {
 ; CHECK-LABEL: test_clear_mask_i32_i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    mov w8, #42 // =0x2a
 ; CHECK-NEXT:    tst w0, #0x8000
 ; CHECK-NEXT:    csel w0, w8, w0, eq
 ; CHECK-NEXT:    ret
@@ -130,7 +130,7 @@ f:
 define i32 @test_set_mask_i32_i16(i32 %x) nounwind {
 ; CHECK-LABEL: test_set_mask_i32_i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    mov w8, #42 // =0x2a
 ; CHECK-NEXT:    tst w0, #0x8000
 ; CHECK-NEXT:    csel w0, w8, w0, ne
 ; CHECK-NEXT:    ret
@@ -148,7 +148,7 @@ f:
 define i32 @test_clear_mask_i32_i8(i32 %x) nounwind {
 ; CHECK-LABEL: test_clear_mask_i32_i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    mov w8, #42 // =0x2a
 ; CHECK-NEXT:    tst w0, #0x80
 ; CHECK-NEXT:    csel w0, w8, w0, eq
 ; CHECK-NEXT:    ret
@@ -166,7 +166,7 @@ f:
 define i32 @test_set_mask_i32_i8(i32 %x) nounwind {
 ; CHECK-LABEL: test_set_mask_i32_i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    mov w8, #42 // =0x2a
 ; CHECK-NEXT:    tst w0, #0x80
 ; CHECK-NEXT:    csel w0, w8, w0, ne
 ; CHECK-NEXT:    ret
@@ -184,7 +184,7 @@ f:
 define i16 @test_clear_mask_i16_i8(i16 %x) nounwind {
 ; CHECK-LABEL: test_clear_mask_i16_i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    mov w8, #42 // =0x2a
 ; CHECK-NEXT:    tst w0, #0x80
 ; CHECK-NEXT:    csel w0, w8, w0, eq
 ; CHECK-NEXT:    ret
@@ -202,7 +202,7 @@ f:
 define i16 @test_set_mask_i16_i8(i16 %x) nounwind {
 ; CHECK-LABEL: test_set_mask_i16_i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    mov w8, #42 // =0x2a
 ; CHECK-NEXT:    tst w0, #0x80
 ; CHECK-NEXT:    csel w0, w8, w0, ne
 ; CHECK-NEXT:    ret
@@ -220,7 +220,7 @@ f:
 define i16 @test_set_mask_i16_i7(i16 %x) nounwind {
 ; CHECK-LABEL: test_set_mask_i16_i7:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    mov w8, #42 // =0x2a
 ; CHECK-NEXT:    tst w0, #0x40
 ; CHECK-NEXT:    csel w0, w8, w0, ne
 ; CHECK-NEXT:    ret

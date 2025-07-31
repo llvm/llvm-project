@@ -27,7 +27,6 @@
 #include <array>
 #include <cassert>
 #include <cstdint>
-#include <span> // dynamic_extent
 #include <type_traits>
 
 #include "test_macros.h"

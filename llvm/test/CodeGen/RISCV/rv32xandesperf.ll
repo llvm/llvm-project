@@ -2,6 +2,174 @@
 ; RUN: llc -O0 -mtriple=riscv32 -mattr=+xandesperf -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s
 
+; NDS.BBC
+
+define i32 @bbc(i32 %a) nounwind {
+; CHECK-LABEL: bbc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bbc a0, 16, .LBB0_2
+; CHECK-NEXT:    j .LBB0_1
+; CHECK-NEXT:  .LBB0_1: # %f
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB0_2: # %t
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    ret
+  %and = and i32 %a, 65536
+  %tst = icmp eq i32 %and, 0
+  br i1 %tst, label %t, label %f
+f:
+  ret i32 0
+t:
+  ret i32 1
+}
+
+define i32 @select_bbc(i32 %a, i32 %b, i32 %c) nounwind {
+; CHECK-LABEL: select_bbc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sw a2, 8(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    nds.bbc a0, 16, .LBB1_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %and = and i32 %a, 65536
+  %tst = icmp eq i32 %and, 0
+  %ret = select i1 %tst, i32 %b, i32 %c
+  ret i32 %ret
+}
+
+; NDS.BBS
+
+define i32 @bbs(i32 %a) nounwind {
+; CHECK-LABEL: bbs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bbs a0, 16, .LBB2_2
+; CHECK-NEXT:    j .LBB2_1
+; CHECK-NEXT:  .LBB2_1: # %f
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB2_2: # %t
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    ret
+  %and = and i32 %a, 65536
+  %tst = icmp ne i32 %and, 0
+  br i1 %tst, label %t, label %f
+f:
+  ret i32 0
+t:
+  ret i32 1
+}
+
+define i32 @select_bbs(i32 %a, i32 %b, i32 %c) nounwind {
+; CHECK-LABEL: select_bbs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sw a2, 8(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    nds.bbs a0, 16, .LBB3_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:  .LBB3_2:
+; CHECK-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %and = and i32 %a, 65536
+  %tst = icmp ne i32 %and, 0
+  %ret = select i1 %tst, i32 %b, i32 %c
+  ret i32 %ret
+}
+
+; NDS.BEQC
+
+define i32 @beqc(i32 %a) nounwind {
+; CHECK-LABEL: beqc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.beqc a0, 5, .LBB4_2
+; CHECK-NEXT:    j .LBB4_1
+; CHECK-NEXT:  .LBB4_1: # %f
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB4_2: # %t
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    ret
+  %tst = icmp eq i32 %a, 5
+  br i1 %tst, label %t, label %f
+f:
+  ret i32 0
+t:
+  ret i32 1
+}
+
+define i32 @select_beqc(i32 %a, i32 %b, i32 %c) nounwind {
+; CHECK-LABEL: select_beqc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sw a2, 8(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    nds.beqc a0, 5, .LBB5_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:  .LBB5_2:
+; CHECK-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %tst = icmp eq i32 %a, 5
+  %ret = select i1 %tst, i32 %b, i32 %c
+  ret i32 %ret
+}
+
+; NDS.BNEC
+
+define i32 @bnec(i32 %a) nounwind {
+; CHECK-LABEL: bnec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bnec a0, 5, .LBB6_2
+; CHECK-NEXT:    j .LBB6_1
+; CHECK-NEXT:  .LBB6_1: # %f
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB6_2: # %t
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    ret
+  %tst = icmp ne i32 %a, 5
+  br i1 %tst, label %t, label %f
+f:
+  ret i32 0
+t:
+  ret i32 1
+}
+
+define i32 @select_bnec(i32 %a, i32 %b, i32 %c) nounwind {
+; CHECK-LABEL: select_bnec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sw a2, 8(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    nds.bnec a0, 5, .LBB7_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:  .LBB7_2:
+; CHECK-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %tst = icmp ne i32 %a, 5
+  %ret = select i1 %tst, i32 %b, i32 %c
+  ret i32 %ret
+}
+
+; NDS.BFOZ
+
+; MSB >= LSB
+
 define i32 @bfoz_from_and_i32(i32 %x) {
 ; CHECK-LABEL: bfoz_from_and_i32:
 ; CHECK:       # %bb.0:
@@ -69,6 +237,112 @@ define i64 @bfoz_from_lshr_and_i64(i64 %x) {
   %shifted = lshr i64 %masked, 24
   ret i64 %shifted
 }
+
+; MSB = 0
+
+define i32 @bfoz_from_and_shl_with_msb_zero_i32(i32 %x) {
+; CHECK-LABEL: bfoz_from_and_shl_with_msb_zero_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfoz a0, a0, 0, 15
+; CHECK-NEXT:    ret
+  %shifted = shl i32 %x, 15
+  %masked = and i32 %shifted, 32768
+  ret i32 %masked
+}
+
+define i32 @bfoz_from_lshr_shl_with_msb_zero_i32(i32 %x) {
+; CHECK-LABEL: bfoz_from_lshr_shl_with_msb_zero_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfoz a0, a0, 0, 18
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 31
+  %lshr = lshr i32 %shl, 13
+  ret i32 %lshr
+}
+
+; MSB < LSB
+
+define i32 @bfoz_from_and_shl_i32(i32 %x) {
+; CHECK-LABEL: bfoz_from_and_shl_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfoz a0, a0, 12, 23
+; CHECK-NEXT:    ret
+  %shifted = shl i32 %x, 12
+  %masked = and i32 %shifted, 16773120
+  ret i32 %masked
+}
+
+define i32 @bfoz_from_lshr_shl_i32(i32 %x) {
+; CHECK-LABEL: bfoz_from_lshr_shl_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfoz a0, a0, 19, 24
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 26
+  %lshr = lshr i32 %shl, 7
+  ret i32 %lshr
+}
+
+; NDS.BFOS
+
+; MSB >= LSB
+
+define i32 @bfos_from_ashr_shl_i32(i32 %x) {
+; CHECK-LABEL: bfos_from_ashr_shl_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfos a0, a0, 23, 16
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 8
+  %ashr = ashr i32 %shl, 24
+  ret i32 %ashr
+}
+
+define i32 @bfos_from_ashr_sexti8_i32(i8 %x) {
+; CHECK-LABEL: bfos_from_ashr_sexti8_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $x11 killed $x10
+; CHECK-NEXT:    nds.bfos a0, a0, 7, 5
+; CHECK-NEXT:    ret
+  %sext = sext i8 %x to i32
+  %ashr = ashr i32 %sext, 5
+  ret i32 %ashr
+}
+
+define i32 @bfos_from_ashr_sexti16_i32(i16 %x) {
+; CHECK-LABEL: bfos_from_ashr_sexti16_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $x11 killed $x10
+; CHECK-NEXT:    nds.bfos a0, a0, 15, 11
+; CHECK-NEXT:    ret
+  %sext = sext i16 %x to i32
+  %ashr = ashr i32 %sext, 11
+  ret i32 %ashr
+}
+
+; MSB = 0
+
+define i32 @bfos_from_ashr_shl_with_msb_zero_insert_i32(i32 %x) {
+; CHECK-LABEL: bfos_from_ashr_shl_with_msb_zero_insert_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfos a0, a0, 0, 14
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 31
+  %lshr = ashr i32 %shl, 17
+  ret i32 %lshr
+}
+
+; MSB < LSB
+
+define i32 @bfos_from_ashr_shl_insert_i32(i32 %x) {
+; CHECK-LABEL: bfos_from_ashr_shl_insert_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfos a0, a0, 18, 20
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 29
+  %lshr = ashr i32 %shl, 11
+  ret i32 %lshr
+}
+
+; sext
 
 define i32 @sexti1_i32(i32 %a) {
 ; CHECK-LABEL: sexti1_i32:

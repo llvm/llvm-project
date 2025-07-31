@@ -30,7 +30,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
@@ -140,7 +139,7 @@ GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;
   Consumers.push_back(std::make_unique<PCHGenerator>(
       CI.getPreprocessor(), CI.getModuleCache(), OutputFile, Sysroot, Buffer,
-      FrontendOpts.ModuleFileExtensions,
+      CI.getCodeGenOpts(), FrontendOpts.ModuleFileExtensions,
       CI.getPreprocessorOpts().AllowPCHWithCompilerErrors,
       FrontendOpts.IncludeTimestamps, FrontendOpts.BuildingImplicitModule,
       +CI.getLangOpts().CacheGeneratedPCH));
@@ -182,7 +181,7 @@ bool GeneratePCHAction::shouldEraseOutputFiles() {
 
 bool GeneratePCHAction::BeginSourceFileAction(CompilerInstance &CI) {
   CI.getLangOpts().CompilingPCH = true;
-  return true;
+  return ASTFrontendAction::BeginSourceFileAction(CI);
 }
 
 std::vector<std::unique_ptr<ASTConsumer>>
@@ -200,7 +199,7 @@ GenerateModuleAction::CreateMultiplexConsumer(CompilerInstance &CI,
 
   Consumers.push_back(std::make_unique<PCHGenerator>(
       CI.getPreprocessor(), CI.getModuleCache(), OutputFile, Sysroot, Buffer,
-      CI.getFrontendOpts().ModuleFileExtensions,
+      CI.getCodeGenOpts(), CI.getFrontendOpts().ModuleFileExtensions,
       /*AllowASTWithErrors=*/
       +CI.getFrontendOpts().AllowPCMWithCompilerErrors,
       /*IncludeTimestamps=*/
@@ -293,13 +292,13 @@ GenerateModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
       !CI.getFrontendOpts().ModuleOutputPath.empty()) {
     Consumers.push_back(std::make_unique<ReducedBMIGenerator>(
         CI.getPreprocessor(), CI.getModuleCache(),
-        CI.getFrontendOpts().ModuleOutputPath,
+        CI.getFrontendOpts().ModuleOutputPath, CI.getCodeGenOpts(),
         +CI.getFrontendOpts().AllowPCMWithCompilerErrors));
   }
 
   Consumers.push_back(std::make_unique<CXX20ModulesGenerator>(
       CI.getPreprocessor(), CI.getModuleCache(),
-      CI.getFrontendOpts().OutputFile,
+      CI.getFrontendOpts().OutputFile, CI.getCodeGenOpts(),
       +CI.getFrontendOpts().AllowPCMWithCompilerErrors));
 
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));
@@ -314,9 +313,9 @@ GenerateModuleInterfaceAction::CreateOutputFile(CompilerInstance &CI,
 std::unique_ptr<ASTConsumer>
 GenerateReducedModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
                                                         StringRef InFile) {
-  return std::make_unique<ReducedBMIGenerator>(CI.getPreprocessor(),
-                                               CI.getModuleCache(),
-                                               CI.getFrontendOpts().OutputFile);
+  return std::make_unique<ReducedBMIGenerator>(
+      CI.getPreprocessor(), CI.getModuleCache(),
+      CI.getFrontendOpts().OutputFile, CI.getCodeGenOpts());
 }
 
 bool GenerateHeaderUnitAction::BeginSourceFileAction(CompilerInstance &CI) {
@@ -359,7 +358,8 @@ void VerifyPCHAction::ExecuteAction() {
   const std::string &Sysroot = CI.getHeaderSearchOpts().Sysroot;
   std::unique_ptr<ASTReader> Reader(new ASTReader(
       CI.getPreprocessor(), CI.getModuleCache(), &CI.getASTContext(),
-      CI.getPCHContainerReader(), CI.getFrontendOpts().ModuleFileExtensions,
+      CI.getPCHContainerReader(), CI.getCodeGenOpts(),
+      CI.getFrontendOpts().ModuleFileExtensions,
       Sysroot.empty() ? "" : Sysroot.c_str(),
       DisableValidationForModuleKind::None,
       /*AllowASTWithCompilerErrors*/ false,
@@ -644,16 +644,20 @@ namespace {
     bool ReadLanguageOptions(const LangOptions &LangOpts,
                              StringRef ModuleFilename, bool Complain,
                              bool AllowCompatibleDifferences) override {
+      // FIXME: Replace with C++20 `using enum LangOptions::CompatibilityKind`.
+      using CK = LangOptions::CompatibilityKind;
+
       Out.indent(2) << "Language options:\n";
-#define LANGOPT(Name, Bits, Default, Description) \
+#define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
+    if constexpr (CK::Compatibility != CK::Benign)                             \
       DUMP_BOOLEAN(LangOpts.Name, Description);
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
-      Out.indent(4) << Description << ": "                   \
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
+    if constexpr (CK::Compatibility != CK::Benign)                             \
+      Out.indent(4) << Description << ": "                                     \
                     << static_cast<unsigned>(LangOpts.get##Name()) << "\n";
-#define VALUE_LANGOPT(Name, Bits, Default, Description) \
+#define VALUE_LANGOPT(Name, Bits, Default, Compatibility, Description)         \
+    if constexpr (CK::Compatibility != CK::Benign)                             \
       Out.indent(4) << Description << ": " << LangOpts.Name << "\n";
-#define BENIGN_LANGOPT(Name, Bits, Default, Description)
-#define BENIGN_ENUM_LANGOPT(Name, Type, Bits, Default, Description)
 #include "clang/Basic/LangOptions.def"
 
       if (!LangOpts.ModuleFeatures.empty()) {

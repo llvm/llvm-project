@@ -248,3 +248,67 @@ llvm.func @nvvm_cvt_bf16x2_to_f8x2_invalid_rounding(%src : vector<2xbf16>) {
   %res = nvvm.convert.bf16x2.to.f8x2 <ue8m0> %src {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xbf16> -> i16
   llvm.return
 }
+
+// -----
+
+llvm.func @nvvm_prefetch_L1_with_evict_priority(%global_ptr: !llvm.ptr<1>) {
+  // expected-error @below {{cache eviction priority supported only for cache level L2}}
+  nvvm.prefetch level = L1, %global_ptr, evict_priority = evict_last : !llvm.ptr<1>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_L2_with_evict_last_invalid_addr_space(%local_ptr: !llvm.ptr<5>) {
+  // expected-error @below {{cache eviction priority requires a global pointer}}
+  nvvm.prefetch level = L2, %local_ptr, evict_priority = evict_last : !llvm.ptr<5>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_L2_with_evict_normal_invalid_addr_space(%local_ptr: !llvm.ptr<5>) {
+  // expected-error @below {{cache eviction priority requires a global pointer}}
+  nvvm.prefetch level = L2, %local_ptr, evict_priority = evict_normal : !llvm.ptr<5>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_L2_with_invalid_evict_first(%global_ptr: !llvm.ptr<1>) {
+  // expected-error @below {{unsupported cache eviction priority, only evict_last and evict_normal are supported}}
+  nvvm.prefetch level = L2, %global_ptr, evict_priority = evict_first : !llvm.ptr<1>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_L2_with_invalid_evict_unchanged(%global_ptr: !llvm.ptr<1>) {
+  // expected-error @below {{unsupported cache eviction priority, only evict_last and evict_normal are supported}}
+  nvvm.prefetch level = L2, %global_ptr, evict_priority = evict_unchanged : !llvm.ptr<1>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_L2_with_invalid_no_allocate(%global_ptr: !llvm.ptr<1>) {
+  // expected-error @below {{unsupported cache eviction priority, only evict_last and evict_normal are supported}}
+  nvvm.prefetch level = L2, %global_ptr, evict_priority = no_allocate : !llvm.ptr<1>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_uniform_with_L2(%gen_ptr: !llvm.ptr) {
+  // expected-error @below {{unsupported cache level, the only supported uniform cache level is L1}}
+  nvvm.prefetch level = L2 uniform, %gen_ptr : !llvm.ptr
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_uniform_with_invalid_addr_space(%global_ptr: !llvm.ptr<1>) {
+  // expected-error @below {{prefetch to uniform cache requires a generic pointer}}
+  nvvm.prefetch level = L1 uniform, %global_ptr : !llvm.ptr<1>
+  llvm.return
+}

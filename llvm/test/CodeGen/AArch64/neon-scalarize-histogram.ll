@@ -112,3 +112,357 @@ define void @histogram_i32_literal_alltruemask(ptr %base, <4 x i32> %indices) {
   call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
   ret void
 }
+
+define void @histogram_uadd_sat_i64(<2 x ptr> %buckets, i64 %inc, <2 x i1> %mask) {
+; CHECK-LABEL: histogram_uadd_sat_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    tbnz w8, #0, .LBB3_3
+; CHECK-NEXT:  // %bb.1: // %else
+; CHECK-NEXT:    mov w8, v1.s[1]
+; CHECK-NEXT:    tbnz w8, #0, .LBB3_4
+; CHECK-NEXT:  .LBB3_2: // %else2
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB3_3: // %cond.histogram.update
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    ldr x9, [x8]
+; CHECK-NEXT:    adds x9, x9, x0
+; CHECK-NEXT:    csinv x9, x9, xzr, lo
+; CHECK-NEXT:    str x9, [x8]
+; CHECK-NEXT:    mov w8, v1.s[1]
+; CHECK-NEXT:    tbz w8, #0, .LBB3_2
+; CHECK-NEXT:  .LBB3_4: // %cond.histogram.update1
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    ldr x9, [x8]
+; CHECK-NEXT:    adds x9, x9, x0
+; CHECK-NEXT:    csinv x9, x9, xzr, lo
+; CHECK-NEXT:    str x9, [x8]
+; CHECK-NEXT:    ret
+  call void @llvm.experimental.vector.histogram.uadd.sat.nxv2p0.i64(<2 x ptr> %buckets, i64 %inc, <2 x i1> %mask)
+  ret void
+}
+
+define void @histogram_uadd_sat_i32_literal(ptr %base, <4 x i32> %indices, <4 x i1> %mask) {
+; CHECK-LABEL: histogram_uadd_sat_i32_literal:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v2.2d, x0
+; CHECK-NEXT:    sshll v3.2d, v0.2s, #2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    umov w8, v1.h[0]
+; CHECK-NEXT:    add v3.2d, v2.2d, v3.2d
+; CHECK-NEXT:    tbz w8, #0, .LBB4_2
+; CHECK-NEXT:  // %bb.1: // %cond.histogram.update
+; CHECK-NEXT:    fmov x8, d3
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    adds w9, w9, #1
+; CHECK-NEXT:    csinv w9, w9, wzr, lo
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:  .LBB4_2: // %else
+; CHECK-NEXT:    umov w8, v1.h[1]
+; CHECK-NEXT:    sshll2 v0.2d, v0.4s, #2
+; CHECK-NEXT:    tbz w8, #0, .LBB4_4
+; CHECK-NEXT:  // %bb.3: // %cond.histogram.update1
+; CHECK-NEXT:    mov x8, v3.d[1]
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    adds w9, w9, #1
+; CHECK-NEXT:    csinv w9, w9, wzr, lo
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:  .LBB4_4: // %else2
+; CHECK-NEXT:    umov w8, v1.h[2]
+; CHECK-NEXT:    add v0.2d, v2.2d, v0.2d
+; CHECK-NEXT:    tbnz w8, #0, .LBB4_7
+; CHECK-NEXT:  // %bb.5: // %else4
+; CHECK-NEXT:    umov w8, v1.h[3]
+; CHECK-NEXT:    tbnz w8, #0, .LBB4_8
+; CHECK-NEXT:  .LBB4_6: // %else6
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB4_7: // %cond.histogram.update3
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    adds w9, w9, #1
+; CHECK-NEXT:    csinv w9, w9, wzr, lo
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    umov w8, v1.h[3]
+; CHECK-NEXT:    tbz w8, #0, .LBB4_6
+; CHECK-NEXT:  .LBB4_8: // %cond.histogram.update5
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    adds w9, w9, #1
+; CHECK-NEXT:    csinv w9, w9, wzr, lo
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    ret
+  %buckets = getelementptr i32, ptr %base, <4 x i32> %indices
+  call void @llvm.experimental.vector.histogram.uadd.sat.nxv4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
+  ret void
+}
+
+define void @histogram_uadd_sat_i32_literal_alltruemask(ptr %base, <4 x i32> %indices) {
+; CHECK-LABEL: histogram_uadd_sat_i32_literal_alltruemask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v1.2d, x0
+; CHECK-NEXT:    sshll v2.2d, v0.2s, #2
+; CHECK-NEXT:    sshll2 v0.2d, v0.4s, #2
+; CHECK-NEXT:    add v2.2d, v1.2d, v2.2d
+; CHECK-NEXT:    add v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    fmov x8, d2
+; CHECK-NEXT:    mov x10, v2.d[1]
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    adds w9, w9, #1
+; CHECK-NEXT:    csinv w9, w9, wzr, lo
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    ldr w8, [x10]
+; CHECK-NEXT:    adds w8, w8, #1
+; CHECK-NEXT:    csinv w8, w8, wzr, lo
+; CHECK-NEXT:    str w8, [x10]
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    mov x10, v0.d[1]
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    adds w9, w9, #1
+; CHECK-NEXT:    csinv w9, w9, wzr, lo
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    ldr w8, [x10]
+; CHECK-NEXT:    adds w8, w8, #1
+; CHECK-NEXT:    csinv w8, w8, wzr, lo
+; CHECK-NEXT:    str w8, [x10]
+; CHECK-NEXT:    ret
+  %buckets = getelementptr i32, ptr %base, <4 x i32> %indices
+  call void @llvm.experimental.vector.histogram.uadd.sat.nxv4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  ret void
+}
+
+define void @histogram_umax_i64(<2 x ptr> %buckets, i64 %inc, <2 x i1> %mask) {
+; CHECK-LABEL: histogram_umax_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    tbnz w8, #0, .LBB6_3
+; CHECK-NEXT:  // %bb.1: // %else
+; CHECK-NEXT:    mov w8, v1.s[1]
+; CHECK-NEXT:    tbnz w8, #0, .LBB6_4
+; CHECK-NEXT:  .LBB6_2: // %else2
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB6_3: // %cond.histogram.update
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    ldr x9, [x8]
+; CHECK-NEXT:    cmp x9, x0
+; CHECK-NEXT:    csel x9, x9, x0, hi
+; CHECK-NEXT:    str x9, [x8]
+; CHECK-NEXT:    mov w8, v1.s[1]
+; CHECK-NEXT:    tbz w8, #0, .LBB6_2
+; CHECK-NEXT:  .LBB6_4: // %cond.histogram.update1
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    ldr x9, [x8]
+; CHECK-NEXT:    cmp x9, x0
+; CHECK-NEXT:    csel x9, x9, x0, hi
+; CHECK-NEXT:    str x9, [x8]
+; CHECK-NEXT:    ret
+  call void @llvm.experimental.vector.histogram.umax.nxv2p0.i64(<2 x ptr> %buckets, i64 %inc, <2 x i1> %mask)
+  ret void
+}
+
+define void @histogram_umax_i32_literal(ptr %base, <4 x i32> %indices, <4 x i1> %mask) {
+; CHECK-LABEL: histogram_umax_i32_literal:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v2.2d, x0
+; CHECK-NEXT:    sshll v3.2d, v0.2s, #2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    umov w8, v1.h[0]
+; CHECK-NEXT:    add v3.2d, v2.2d, v3.2d
+; CHECK-NEXT:    tbz w8, #0, .LBB7_2
+; CHECK-NEXT:  // %bb.1: // %cond.histogram.update
+; CHECK-NEXT:    fmov x8, d3
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    cmp w9, #1
+; CHECK-NEXT:    csinc w9, w9, wzr, hi
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:  .LBB7_2: // %else
+; CHECK-NEXT:    umov w8, v1.h[1]
+; CHECK-NEXT:    sshll2 v0.2d, v0.4s, #2
+; CHECK-NEXT:    tbz w8, #0, .LBB7_4
+; CHECK-NEXT:  // %bb.3: // %cond.histogram.update1
+; CHECK-NEXT:    mov x8, v3.d[1]
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    cmp w9, #1
+; CHECK-NEXT:    csinc w9, w9, wzr, hi
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:  .LBB7_4: // %else2
+; CHECK-NEXT:    umov w8, v1.h[2]
+; CHECK-NEXT:    add v0.2d, v2.2d, v0.2d
+; CHECK-NEXT:    tbnz w8, #0, .LBB7_7
+; CHECK-NEXT:  // %bb.5: // %else4
+; CHECK-NEXT:    umov w8, v1.h[3]
+; CHECK-NEXT:    tbnz w8, #0, .LBB7_8
+; CHECK-NEXT:  .LBB7_6: // %else6
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB7_7: // %cond.histogram.update3
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    cmp w9, #1
+; CHECK-NEXT:    csinc w9, w9, wzr, hi
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    umov w8, v1.h[3]
+; CHECK-NEXT:    tbz w8, #0, .LBB7_6
+; CHECK-NEXT:  .LBB7_8: // %cond.histogram.update5
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    cmp w9, #1
+; CHECK-NEXT:    csinc w9, w9, wzr, hi
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    ret
+  %buckets = getelementptr i32, ptr %base, <4 x i32> %indices
+  call void @llvm.experimental.vector.histogram.umax.nxv4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
+  ret void
+}
+
+define void @histogram_umax_i32_literal_alltruemask(ptr %base, <4 x i32> %indices) {
+; CHECK-LABEL: histogram_umax_i32_literal_alltruemask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v1.2d, x0
+; CHECK-NEXT:    sshll v2.2d, v0.2s, #2
+; CHECK-NEXT:    sshll2 v0.2d, v0.4s, #2
+; CHECK-NEXT:    add v2.2d, v1.2d, v2.2d
+; CHECK-NEXT:    add v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    fmov x8, d2
+; CHECK-NEXT:    mov x10, v2.d[1]
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    cmp w9, #1
+; CHECK-NEXT:    csinc w9, w9, wzr, hi
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    ldr w8, [x10]
+; CHECK-NEXT:    cmp w8, #1
+; CHECK-NEXT:    csinc w8, w8, wzr, hi
+; CHECK-NEXT:    str w8, [x10]
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    mov x10, v0.d[1]
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    cmp w9, #1
+; CHECK-NEXT:    csinc w9, w9, wzr, hi
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    ldr w8, [x10]
+; CHECK-NEXT:    cmp w8, #1
+; CHECK-NEXT:    csinc w8, w8, wzr, hi
+; CHECK-NEXT:    str w8, [x10]
+; CHECK-NEXT:    ret
+  %buckets = getelementptr i32, ptr %base, <4 x i32> %indices
+  call void @llvm.experimental.vector.histogram.umax.nxv4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  ret void
+}
+
+define void @histogram_umin_i64(<2 x ptr> %buckets, i64 %inc, <2 x i1> %mask) {
+; CHECK-LABEL: histogram_umin_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    tbnz w8, #0, .LBB9_3
+; CHECK-NEXT:  // %bb.1: // %else
+; CHECK-NEXT:    mov w8, v1.s[1]
+; CHECK-NEXT:    tbnz w8, #0, .LBB9_4
+; CHECK-NEXT:  .LBB9_2: // %else2
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB9_3: // %cond.histogram.update
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    ldr x9, [x8]
+; CHECK-NEXT:    cmp x9, x0
+; CHECK-NEXT:    csel x9, x9, x0, lo
+; CHECK-NEXT:    str x9, [x8]
+; CHECK-NEXT:    mov w8, v1.s[1]
+; CHECK-NEXT:    tbz w8, #0, .LBB9_2
+; CHECK-NEXT:  .LBB9_4: // %cond.histogram.update1
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    ldr x9, [x8]
+; CHECK-NEXT:    cmp x9, x0
+; CHECK-NEXT:    csel x9, x9, x0, lo
+; CHECK-NEXT:    str x9, [x8]
+; CHECK-NEXT:    ret
+  call void @llvm.experimental.vector.histogram.umin.nxv2p0.i64(<2 x ptr> %buckets, i64 %inc, <2 x i1> %mask)
+  ret void
+}
+
+define void @histogram_umin_i32_literal(ptr %base, <4 x i32> %indices, <4 x i1> %mask) {
+; CHECK-LABEL: histogram_umin_i32_literal:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v2.2d, x0
+; CHECK-NEXT:    sshll v3.2d, v0.2s, #2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    umov w8, v1.h[0]
+; CHECK-NEXT:    add v3.2d, v2.2d, v3.2d
+; CHECK-NEXT:    tbz w8, #0, .LBB10_2
+; CHECK-NEXT:  // %bb.1: // %cond.histogram.update
+; CHECK-NEXT:    fmov x8, d3
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    cmp w9, #1
+; CHECK-NEXT:    csinc w9, w9, wzr, lo
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:  .LBB10_2: // %else
+; CHECK-NEXT:    umov w8, v1.h[1]
+; CHECK-NEXT:    sshll2 v0.2d, v0.4s, #2
+; CHECK-NEXT:    tbz w8, #0, .LBB10_4
+; CHECK-NEXT:  // %bb.3: // %cond.histogram.update1
+; CHECK-NEXT:    mov x8, v3.d[1]
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    cmp w9, #1
+; CHECK-NEXT:    csinc w9, w9, wzr, lo
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:  .LBB10_4: // %else2
+; CHECK-NEXT:    umov w8, v1.h[2]
+; CHECK-NEXT:    add v0.2d, v2.2d, v0.2d
+; CHECK-NEXT:    tbnz w8, #0, .LBB10_7
+; CHECK-NEXT:  // %bb.5: // %else4
+; CHECK-NEXT:    umov w8, v1.h[3]
+; CHECK-NEXT:    tbnz w8, #0, .LBB10_8
+; CHECK-NEXT:  .LBB10_6: // %else6
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB10_7: // %cond.histogram.update3
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    cmp w9, #1
+; CHECK-NEXT:    csinc w9, w9, wzr, lo
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    umov w8, v1.h[3]
+; CHECK-NEXT:    tbz w8, #0, .LBB10_6
+; CHECK-NEXT:  .LBB10_8: // %cond.histogram.update5
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    cmp w9, #1
+; CHECK-NEXT:    csinc w9, w9, wzr, lo
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    ret
+  %buckets = getelementptr i32, ptr %base, <4 x i32> %indices
+  call void @llvm.experimental.vector.histogram.umin.nxv4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
+  ret void
+}
+
+define void @histogram_umin_i32_literal_alltruemask(ptr %base, <4 x i32> %indices) {
+; CHECK-LABEL: histogram_umin_i32_literal_alltruemask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v1.2d, x0
+; CHECK-NEXT:    sshll v2.2d, v0.2s, #2
+; CHECK-NEXT:    sshll2 v0.2d, v0.4s, #2
+; CHECK-NEXT:    add v2.2d, v1.2d, v2.2d
+; CHECK-NEXT:    add v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    fmov x8, d2
+; CHECK-NEXT:    mov x10, v2.d[1]
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    cmp w9, #1
+; CHECK-NEXT:    csinc w9, w9, wzr, lo
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    ldr w8, [x10]
+; CHECK-NEXT:    cmp w8, #1
+; CHECK-NEXT:    csinc w8, w8, wzr, lo
+; CHECK-NEXT:    str w8, [x10]
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    mov x10, v0.d[1]
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    cmp w9, #1
+; CHECK-NEXT:    csinc w9, w9, wzr, lo
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    ldr w8, [x10]
+; CHECK-NEXT:    cmp w8, #1
+; CHECK-NEXT:    csinc w8, w8, wzr, lo
+; CHECK-NEXT:    str w8, [x10]
+; CHECK-NEXT:    ret
+  %buckets = getelementptr i32, ptr %base, <4 x i32> %indices
+  call void @llvm.experimental.vector.histogram.umin.nxv4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  ret void
+}

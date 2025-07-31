@@ -271,19 +271,12 @@ define i1 @bittest_constant_by_var_shr_i32(i32 signext %b) nounwind {
 ; RV64I-NEXT:    andi a0, a0, 1
 ; RV64I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: bittest_constant_by_var_shr_i32:
-; RV32ZBS:       # %bb.0:
-; RV32ZBS-NEXT:    lui a1, 301408
-; RV32ZBS-NEXT:    addi a1, a1, 722
-; RV32ZBS-NEXT:    bext a0, a1, a0
-; RV32ZBS-NEXT:    ret
-;
-; RV64ZBS-LABEL: bittest_constant_by_var_shr_i32:
-; RV64ZBS:       # %bb.0:
-; RV64ZBS-NEXT:    lui a1, 301408
-; RV64ZBS-NEXT:    addiw a1, a1, 722
-; RV64ZBS-NEXT:    bext a0, a1, a0
-; RV64ZBS-NEXT:    ret
+; ZBS-LABEL: bittest_constant_by_var_shr_i32:
+; ZBS:       # %bb.0:
+; ZBS-NEXT:    lui a1, 301408
+; ZBS-NEXT:    addi a1, a1, 722
+; ZBS-NEXT:    bext a0, a1, a0
+; ZBS-NEXT:    ret
 ;
 ; RV32XTHEADBS-LABEL: bittest_constant_by_var_shr_i32:
 ; RV32XTHEADBS:       # %bb.0:
@@ -324,19 +317,12 @@ define i1 @bittest_constant_by_var_shl_i32(i32 signext %b) nounwind {
 ; RV64I-NEXT:    andi a0, a0, 1
 ; RV64I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: bittest_constant_by_var_shl_i32:
-; RV32ZBS:       # %bb.0:
-; RV32ZBS-NEXT:    lui a1, 301408
-; RV32ZBS-NEXT:    addi a1, a1, 722
-; RV32ZBS-NEXT:    bext a0, a1, a0
-; RV32ZBS-NEXT:    ret
-;
-; RV64ZBS-LABEL: bittest_constant_by_var_shl_i32:
-; RV64ZBS:       # %bb.0:
-; RV64ZBS-NEXT:    lui a1, 301408
-; RV64ZBS-NEXT:    addiw a1, a1, 722
-; RV64ZBS-NEXT:    bext a0, a1, a0
-; RV64ZBS-NEXT:    ret
+; ZBS-LABEL: bittest_constant_by_var_shl_i32:
+; ZBS:       # %bb.0:
+; ZBS-NEXT:    lui a1, 301408
+; ZBS-NEXT:    addi a1, a1, 722
+; ZBS-NEXT:    bext a0, a1, a0
+; ZBS-NEXT:    ret
 ;
 ; RV32XTHEADBS-LABEL: bittest_constant_by_var_shl_i32:
 ; RV32XTHEADBS:       # %bb.0:
@@ -374,7 +360,7 @@ define i1 @bittest_constant_by_var_shr_i64(i64 %b) nounwind {
 ; RV64I-LABEL: bittest_constant_by_var_shr_i64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 301408
-; RV64I-NEXT:    addiw a1, a1, 722
+; RV64I-NEXT:    addi a1, a1, 722
 ; RV64I-NEXT:    srl a0, a1, a0
 ; RV64I-NEXT:    andi a0, a0, 1
 ; RV64I-NEXT:    ret
@@ -382,14 +368,14 @@ define i1 @bittest_constant_by_var_shr_i64(i64 %b) nounwind {
 ; RV64ZBS-LABEL: bittest_constant_by_var_shr_i64:
 ; RV64ZBS:       # %bb.0:
 ; RV64ZBS-NEXT:    lui a1, 301408
-; RV64ZBS-NEXT:    addiw a1, a1, 722
+; RV64ZBS-NEXT:    addi a1, a1, 722
 ; RV64ZBS-NEXT:    bext a0, a1, a0
 ; RV64ZBS-NEXT:    ret
 ;
 ; RV64XTHEADBS-LABEL: bittest_constant_by_var_shr_i64:
 ; RV64XTHEADBS:       # %bb.0:
 ; RV64XTHEADBS-NEXT:    lui a1, 301408
-; RV64XTHEADBS-NEXT:    addiw a1, a1, 722
+; RV64XTHEADBS-NEXT:    addi a1, a1, 722
 ; RV64XTHEADBS-NEXT:    srl a0, a1, a0
 ; RV64XTHEADBS-NEXT:    andi a0, a0, 1
 ; RV64XTHEADBS-NEXT:    ret
@@ -414,7 +400,7 @@ define i1 @bittest_constant_by_var_shl_i64(i64 %b) nounwind {
 ; RV64I-LABEL: bittest_constant_by_var_shl_i64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 301408
-; RV64I-NEXT:    addiw a1, a1, 722
+; RV64I-NEXT:    addi a1, a1, 722
 ; RV64I-NEXT:    srl a0, a1, a0
 ; RV64I-NEXT:    andi a0, a0, 1
 ; RV64I-NEXT:    ret
@@ -422,14 +408,14 @@ define i1 @bittest_constant_by_var_shl_i64(i64 %b) nounwind {
 ; RV64ZBS-LABEL: bittest_constant_by_var_shl_i64:
 ; RV64ZBS:       # %bb.0:
 ; RV64ZBS-NEXT:    lui a1, 301408
-; RV64ZBS-NEXT:    addiw a1, a1, 722
+; RV64ZBS-NEXT:    addi a1, a1, 722
 ; RV64ZBS-NEXT:    bext a0, a1, a0
 ; RV64ZBS-NEXT:    ret
 ;
 ; RV64XTHEADBS-LABEL: bittest_constant_by_var_shl_i64:
 ; RV64XTHEADBS:       # %bb.0:
 ; RV64XTHEADBS-NEXT:    lui a1, 301408
-; RV64XTHEADBS-NEXT:    addiw a1, a1, 722
+; RV64XTHEADBS-NEXT:    addi a1, a1, 722
 ; RV64XTHEADBS-NEXT:    srl a0, a1, a0
 ; RV64XTHEADBS-NEXT:    andi a0, a0, 1
 ; RV64XTHEADBS-NEXT:    ret
@@ -462,7 +448,7 @@ define void @bittest_switch(i32 signext %0) {
 ; RV64I-NEXT:    bltu a1, a0, .LBB14_3
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    lui a1, 2048
-; RV64I-NEXT:    addiw a1, a1, 51
+; RV64I-NEXT:    addi a1, a1, 51
 ; RV64I-NEXT:    slli a1, a1, 8
 ; RV64I-NEXT:    srl a0, a1, a0
 ; RV64I-NEXT:    andi a0, a0, 1
@@ -492,7 +478,7 @@ define void @bittest_switch(i32 signext %0) {
 ; RV64ZBS-NEXT:    bltu a1, a0, .LBB14_3
 ; RV64ZBS-NEXT:  # %bb.1:
 ; RV64ZBS-NEXT:    lui a1, 2048
-; RV64ZBS-NEXT:    addiw a1, a1, 51
+; RV64ZBS-NEXT:    addi a1, a1, 51
 ; RV64ZBS-NEXT:    slli a1, a1, 8
 ; RV64ZBS-NEXT:    bext a0, a1, a0
 ; RV64ZBS-NEXT:    beqz a0, .LBB14_3
@@ -522,7 +508,7 @@ define void @bittest_switch(i32 signext %0) {
 ; RV64XTHEADBS-NEXT:    bltu a1, a0, .LBB14_3
 ; RV64XTHEADBS-NEXT:  # %bb.1:
 ; RV64XTHEADBS-NEXT:    lui a1, 2048
-; RV64XTHEADBS-NEXT:    addiw a1, a1, 51
+; RV64XTHEADBS-NEXT:    addi a1, a1, 51
 ; RV64XTHEADBS-NEXT:    slli a1, a1, 8
 ; RV64XTHEADBS-NEXT:    srl a0, a1, a0
 ; RV64XTHEADBS-NEXT:    andi a0, a0, 1

@@ -111,10 +111,11 @@ AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningFunctionCall) {
   // an alias to one of its arguments and the arguments need to be checked
   // for const use as well.
   return callExpr(argumentCountIs(0),
-                  callee(functionDecl(returns(hasCanonicalType(matchers::isReferenceToConst())),
+                  callee(functionDecl(returns(hasCanonicalType(
+                                          matchers::isReferenceToConst())),
                                       unless(cxxMethodDecl(unless(isStatic()))))
-                         .bind(FunctionDeclId)))
-         .bind(InitFunctionCallId);
+                             .bind(FunctionDeclId)))
+      .bind(InitFunctionCallId);
 }
 
 AST_MATCHER_FUNCTION_P(StatementMatcher, initializerReturnsReferenceToConst,
@@ -234,12 +235,14 @@ UnnecessaryCopyInitialization::UnnecessaryCopyInitialization(
           Options.get("ExcludedContainerTypes", ""))) {}
 
 void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
-  auto LocalVarCopiedFrom = [this](const ast_matchers::internal::Matcher<Expr> &CopyCtorArg) {
-    return compoundStmt(
-               forEachDescendant(
-                   declStmt(
-                       unless(has(decompositionDecl())),
-                       has(varDecl(hasLocalStorage(),
+  auto LocalVarCopiedFrom =
+      [this](const ast_matchers::internal::Matcher<Expr> &CopyCtorArg) {
+        return compoundStmt(
+                   forEachDescendant(
+                       declStmt(
+                           unless(has(decompositionDecl())),
+                           has(varDecl(
+                                   hasLocalStorage(),
                                    hasType(qualType(
                                        hasCanonicalType(allOf(
                                            matchers::isExpensiveToCopy(),
@@ -256,10 +259,10 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
                                                isCopyConstructor())),
                                            hasArgument(0, CopyCtorArg))
                                            .bind("ctorCall"))))
-                               .bind("newVarDecl")))
-                       .bind("declStmt")))
-        .bind("blockStmt");
-  };
+                                   .bind("newVarDecl")))
+                           .bind("declStmt")))
+            .bind("blockStmt");
+      };
 
   Finder->addMatcher(
       LocalVarCopiedFrom(anyOf(

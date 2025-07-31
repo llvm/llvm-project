@@ -8,6 +8,7 @@
 
 #include "TestDialect.h"
 #include "TestOps.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
@@ -15,6 +16,32 @@
 
 using namespace mlir;
 using namespace test;
+
+//===----------------------------------------------------------------------===//
+// OverridenSymbolVisibilityOp
+//===----------------------------------------------------------------------===//
+
+SymbolTable::Visibility OverriddenSymbolVisibilityOp::getVisibility() {
+  return SymbolTable::Visibility::Private;
+}
+
+static StringLiteral getVisibilityString(SymbolTable::Visibility visibility) {
+  switch (visibility) {
+  case SymbolTable::Visibility::Private:
+    return "private";
+  case SymbolTable::Visibility::Nested:
+    return "nested";
+  case SymbolTable::Visibility::Public:
+    return "public";
+  }
+}
+
+void OverriddenSymbolVisibilityOp::setVisibility(
+    SymbolTable::Visibility visibility) {
+
+  emitOpError("cannot change visibility of symbol to ")
+      << getVisibilityString(visibility);
+}
 
 //===----------------------------------------------------------------------===//
 // TestBranchOp
@@ -285,9 +312,9 @@ LogicalResult OpWithResultShapeInterfaceOp::reifyReturnTypeShapes(
         llvm::map_range(llvm::seq<int64_t>(0, rank), [&](int64_t dim) -> Value {
           return builder.createOrFold<tensor::DimOp>(loc, operand, dim);
         }));
-    shapes.push_back(builder.create<tensor::FromElementsOp>(
-        getLoc(), RankedTensorType::get({rank}, builder.getIndexType()),
-        currShape));
+    shapes.push_back(tensor::FromElementsOp::create(
+        builder, getLoc(),
+        RankedTensorType::get({rank}, builder.getIndexType()), currShape));
   }
   return success();
 }
@@ -836,6 +863,16 @@ void ConversionFuncOp::print(OpAsmPrinter &p) {
 }
 
 //===----------------------------------------------------------------------===//
+// TestValueWithBoundsOp
+//===----------------------------------------------------------------------===//
+
+void TestValueWithBoundsOp::populateBoundsForIndexValue(
+    Value v, ValueBoundsConstraintSet &cstr) {
+  cstr.bound(v) >= getMin().getSExtValue();
+  cstr.bound(v) <= getMax().getSExtValue();
+}
+
+//===----------------------------------------------------------------------===//
 // ReifyBoundOp
 //===----------------------------------------------------------------------===//
 
@@ -1291,8 +1328,8 @@ llvm::SmallVector<MemorySlot> TestMultiSlotAlloca::getPromotableSlots() {
 
 Value TestMultiSlotAlloca::getDefaultValue(const MemorySlot &slot,
                                            OpBuilder &builder) {
-  return builder.create<TestOpConstant>(getLoc(), slot.elemType,
-                                        builder.getI32IntegerAttr(42));
+  return TestOpConstant::create(builder, getLoc(), slot.elemType,
+                                builder.getI32IntegerAttr(42));
 }
 
 void TestMultiSlotAlloca::handleBlockArgument(const MemorySlot &slot,
@@ -1324,7 +1361,7 @@ createNewMultiAllocaWithoutSlot(const MemorySlot &slot, OpBuilder &builder,
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPoint(oldOp);
   auto replacement =
-      builder.create<TestMultiSlotAlloca>(oldOp->getLoc(), newTypes);
+      TestMultiSlotAlloca::create(builder, oldOp->getLoc(), newTypes);
   for (auto [oldResult, newResult] :
        llvm::zip_equal(remainingValues, replacement.getResults()))
     oldResult.replaceAllUsesWith(newResult);
@@ -1373,7 +1410,7 @@ DenseMap<Attribute, MemorySlot> TestMultiSlotAlloca::destructure(
   for (Attribute usedIndex : usedIndices) {
     Type elemType = slot.subelementTypes.lookup(usedIndex);
     MemRefType elemPtr = MemRefType::get({}, elemType);
-    auto subAlloca = builder.create<TestMultiSlotAlloca>(getLoc(), elemPtr);
+    auto subAlloca = TestMultiSlotAlloca::create(builder, getLoc(), elemPtr);
     newAllocators.push_back(subAlloca);
     slotMap.try_emplace<MemorySlot>(usedIndex,
                                     {subAlloca.getResult(0), elemType});
@@ -1386,4 +1423,60 @@ std::optional<DestructurableAllocationOpInterface>
 TestMultiSlotAlloca::handleDestructuringComplete(
     const DestructurableMemorySlot &slot, OpBuilder &builder) {
   return createNewMultiAllocaWithoutSlot(slot, builder, *this);
+}
+
+::mlir::LogicalResult test::TestDummyTensorOp::bufferize(
+    ::mlir::RewriterBase &rewriter,
+    const ::mlir::bufferization::BufferizationOptions &options,
+    ::mlir::bufferization::BufferizationState &state) {
+  auto buffer =
+      mlir::bufferization::getBuffer(rewriter, getInput(), options, state);
+  if (mlir::failed(buffer))
+    return failure();
+
+  const auto outType = getOutput().getType();
+  const auto bufferizedOutType = test::TestMemrefType::get(
+      getContext(), outType.getShape(), outType.getElementType(), nullptr);
+  // replace op with memref analogy
+  auto dummyMemrefOp = test::TestDummyMemrefOp::create(
+      rewriter, getLoc(), bufferizedOutType, *buffer);
+
+  mlir::bufferization::replaceOpWithBufferizedValues(rewriter, getOperation(),
+                                                     dummyMemrefOp.getResult());
+
+  return mlir::success();
+}
+
+::mlir::LogicalResult test::TestCreateTensorOp::bufferize(
+    ::mlir::RewriterBase &rewriter,
+    const ::mlir::bufferization::BufferizationOptions &options,
+    ::mlir::bufferization::BufferizationState &state) {
+  // Note: mlir::bufferization::getBufferType() would internally call
+  // TestCreateTensorOp::getBufferType()
+  const auto bufferizedOutType =
+      mlir::bufferization::getBufferType(getOutput(), options, state);
+  if (mlir::failed(bufferizedOutType))
+    return failure();
+
+  // replace op with memref analogy
+  auto createMemrefOp =
+      test::TestCreateMemrefOp::create(rewriter, getLoc(), *bufferizedOutType);
+
+  mlir::bufferization::replaceOpWithBufferizedValues(
+      rewriter, getOperation(), createMemrefOp.getResult());
+
+  return mlir::success();
+}
+
+mlir::FailureOr<mlir::bufferization::BufferLikeType>
+test::TestCreateTensorOp::getBufferType(
+    mlir::Value value, const mlir::bufferization::BufferizationOptions &,
+    const mlir::bufferization::BufferizationState &,
+    llvm::SmallVector<::mlir::Value> &) {
+  const auto type = dyn_cast<test::TestTensorType>(value.getType());
+  if (type == nullptr)
+    return failure();
+
+  return cast<mlir::bufferization::BufferLikeType>(test::TestMemrefType::get(
+      getContext(), type.getShape(), type.getElementType(), nullptr));
 }

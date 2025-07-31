@@ -31,6 +31,7 @@
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstddef>
 #include <cstdint>
@@ -214,11 +215,6 @@ private:
 /// @name Constructors
 /// @{
 public:
-  /// Is this Module using intrinsics to record the position of debugging
-  /// information, or non-intrinsic records? See IsNewDbgInfoFormat in
-  /// \ref BasicBlock.
-  bool IsNewDbgInfoFormat;
-
   /// Used when printing this module in the new debug info format; removes all
   /// declarations of debug intrinsics that are replaced by non-intrinsic
   /// records in the new format.
@@ -229,7 +225,6 @@ public:
     for (auto &F : *this) {
       F.convertToNewDbgValues();
     }
-    IsNewDbgInfoFormat = true;
   }
 
   /// \see BasicBlock::convertFromNewDbgValues.
@@ -237,20 +232,6 @@ public:
     for (auto &F : *this) {
       F.convertFromNewDbgValues();
     }
-    IsNewDbgInfoFormat = false;
-  }
-
-  void setIsNewDbgInfoFormat(bool UseNewFormat) {
-    if (UseNewFormat && !IsNewDbgInfoFormat)
-      convertToNewDbgValues();
-    else if (!UseNewFormat && IsNewDbgInfoFormat)
-      convertFromNewDbgValues();
-  }
-  void setNewDbgInfoFormatFlag(bool NewFlag) {
-    for (auto &F : *this) {
-      F.setNewDbgInfoFormatFlag(NewFlag);
-    }
-    IsNewDbgInfoFormat = NewFlag;
   }
 
   /// The Module constructor. Note that there is no default constructor. You
@@ -608,9 +589,6 @@ private:
   static GlobalListType Module::*getSublistAccess(GlobalVariable*) {
     return &Module::GlobalList;
   }
-  static size_t getSublistOffset(GlobalVariable *) {
-    return offsetof(Module, GlobalList);
-  }
   friend class llvm::SymbolTableListTraits<llvm::GlobalVariable>;
 
 public:
@@ -620,9 +598,6 @@ public:
   FunctionListType       &getFunctionList()           { return FunctionList; }
   static FunctionListType Module::*getSublistAccess(Function*) {
     return &Module::FunctionList;
-  }
-  static size_t getSublistOffset(Function *) {
-    return offsetof(Module, FunctionList);
   }
 
   /// Detach \p Alias from the list but don't delete it.
@@ -663,9 +638,6 @@ private: // Please use functions like insertAlias(), removeAlias() etc.
   static AliasListType Module::*getSublistAccess(GlobalAlias*) {
     return &Module::AliasList;
   }
-  static size_t getSublistOffset(GlobalAlias *) {
-    return offsetof(Module, AliasList);
-  }
   friend class llvm::SymbolTableListTraits<llvm::GlobalAlias>;
 
   /// Get the Module's list of ifuncs (constant).
@@ -675,9 +647,6 @@ private: // Please use functions like insertAlias(), removeAlias() etc.
 
   static IFuncListType Module::*getSublistAccess(GlobalIFunc*) {
     return &Module::IFuncList;
-  }
-  static size_t getSublistOffset(GlobalIFunc *) {
-    return offsetof(Module, IFuncList);
   }
   friend class llvm::SymbolTableListTraits<llvm::GlobalIFunc>;
 
@@ -829,7 +798,7 @@ public:
     NamedMDNode *CUs;
     unsigned Idx;
 
-    void SkipNoDebugCUs();
+    LLVM_ABI void SkipNoDebugCUs();
 
   public:
     using iterator_category = std::input_iterator_tag;
@@ -863,8 +832,8 @@ public:
       return Idx != I.Idx;
     }
 
-    DICompileUnit *operator*() const;
-    DICompileUnit *operator->() const;
+    LLVM_ABI DICompileUnit *operator*() const;
+    LLVM_ABI DICompileUnit *operator->() const;
   };
 
   debug_compile_units_iterator debug_compile_units_begin() const {
@@ -1072,14 +1041,18 @@ public:
 
   /// Returns target-abi from MDString, null if target-abi is absent.
   StringRef getTargetABIFromMD();
+
+  /// Get how unwind v2 (epilog) information should be generated for x64
+  /// Windows.
+  WinX64EHUnwindV2Mode getWinX64EHUnwindV2Mode() const;
 };
 
 /// Given "llvm.used" or "llvm.compiler.used" as a global name, collect the
 /// initializer elements of that global in a SmallVector and return the global
 /// itself.
-GlobalVariable *collectUsedGlobalVariables(const Module &M,
-                                           SmallVectorImpl<GlobalValue *> &Vec,
-                                           bool CompilerUsed);
+LLVM_ABI GlobalVariable *
+collectUsedGlobalVariables(const Module &M, SmallVectorImpl<GlobalValue *> &Vec,
+                           bool CompilerUsed);
 
 /// An raw_ostream inserter for modules.
 inline raw_ostream &operator<<(raw_ostream &O, const Module &M) {

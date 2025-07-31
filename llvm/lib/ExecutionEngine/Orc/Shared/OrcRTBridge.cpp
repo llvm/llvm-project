@@ -47,10 +47,25 @@ const char *MemoryWriteUInt32sWrapperName =
     "__llvm_orc_bootstrap_mem_write_uint32s_wrapper";
 const char *MemoryWriteUInt64sWrapperName =
     "__llvm_orc_bootstrap_mem_write_uint64s_wrapper";
-const char *MemoryWriteBuffersWrapperName =
-    "__llvm_orc_bootstrap_mem_write_buffers_wrapper";
 const char *MemoryWritePointersWrapperName =
     "__llvm_orc_bootstrap_mem_write_pointers_wrapper";
+const char *MemoryWriteBuffersWrapperName =
+    "__llvm_orc_bootstrap_mem_write_buffers_wrapper";
+
+const char *MemoryReadUInt8sWrapperName =
+    "__llvm_orc_bootstrap_mem_read_uint8s_wrapper";
+const char *MemoryReadUInt16sWrapperName =
+    "__llvm_orc_bootstrap_mem_read_uint16s_wrapper";
+const char *MemoryReadUInt32sWrapperName =
+    "__llvm_orc_bootstrap_mem_read_uint32s_wrapper";
+const char *MemoryReadUInt64sWrapperName =
+    "__llvm_orc_bootstrap_mem_read_uint64s_wrapper";
+const char *MemoryReadPointersWrapperName =
+    "__llvm_orc_bootstrap_mem_read_pointers_wrapper";
+const char *MemoryReadBuffersWrapperName =
+    "__llvm_orc_bootstrap_mem_read_buffers_wrapper";
+const char *MemoryReadStringsWrapperName =
+    "__llvm_orc_bootstrap_mem_read_strings_wrapper";
 
 const char *RegisterEHFrameSectionAllocActionName =
     "llvm_orc_registerEHFrameAllocAction";

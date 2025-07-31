@@ -18,9 +18,9 @@ void InaccurateEraseCheck::registerMatchers(MatchFinder *Finder) {
   const auto EndCall =
       callExpr(
           callee(functionDecl(hasAnyName("remove", "remove_if", "unique"))),
-          hasArgument(
-              1, optionally(cxxMemberCallExpr(callee(cxxMethodDecl(hasName("end"))))
-                           .bind("end"))))
+          hasArgument(1, optionally(cxxMemberCallExpr(
+                                        callee(cxxMethodDecl(hasName("end"))))
+                                        .bind("end"))))
           .bind("alg");
 
   const auto DeclInStd = type(hasUnqualifiedDesugaredType(
@@ -35,10 +35,8 @@ void InaccurateEraseCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void InaccurateEraseCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *MemberCall =
-      Result.Nodes.getNodeAs<CXXMemberCallExpr>("erase");
-  const auto *EndExpr =
-      Result.Nodes.getNodeAs<CXXMemberCallExpr>("end");
+  const auto *MemberCall = Result.Nodes.getNodeAs<CXXMemberCallExpr>("erase");
+  const auto *EndExpr = Result.Nodes.getNodeAs<CXXMemberCallExpr>("end");
   const SourceLocation Loc = MemberCall->getBeginLoc();
 
   FixItHint Hint;

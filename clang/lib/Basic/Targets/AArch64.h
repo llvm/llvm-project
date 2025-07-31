@@ -47,6 +47,7 @@ static const unsigned ARM64AddrSpaceMap[] = {
     0, // hlsl_constant
     0, // hlsl_private
     0, // hlsl_device
+    0, // hlsl_input
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -65,6 +66,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
 
   unsigned FPU = FPUMode;
   bool HasCRC = false;
+  bool HasCSSC = false;
   bool HasAES = false;
   bool HasSHA2 = false;
   bool HasSHA3 = false;
@@ -150,13 +152,11 @@ public:
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
   bool setCPU(const std::string &Name) override;
 
-  uint64_t getFMVPriority(ArrayRef<StringRef> Features) const override;
+  llvm::APInt getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   bool useFP16ConversionIntrinsics() const override {
     return false;
   }
-
-  void setArchFeatures();
 
   void getTargetDefinesARMV81A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
@@ -196,7 +196,7 @@ public:
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   std::optional<std::pair<unsigned, unsigned>>
-  getVScaleRange(const LangOptions &LangOpts, bool IsArmStreamingFunction,
+  getVScaleRange(const LangOptions &LangOpts, ArmStreamingKind Mode,
                  llvm::StringMap<bool> *FeatureMap = nullptr) const override;
   bool doesFeatureAffectCodeGen(StringRef Name) const override;
   bool validateCpuSupports(StringRef FeatureStr) const override;

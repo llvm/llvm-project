@@ -10,11 +10,11 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #1 {
 ; WIDE-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; WIDE:       vector.ph:
 ; WIDE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; WIDE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; WIDE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; WIDE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
 ; WIDE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; WIDE-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; WIDE-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 4
+; WIDE-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 4
 ; WIDE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; WIDE:       vector.body:
 ; WIDE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -68,7 +68,7 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #1 {
 ; NARROW-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; NARROW-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; NARROW:       middle.block:
-; NARROW-NEXT:    br i1 false, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
+; NARROW-NEXT:    br label [[SCALAR_PH]]
 ; NARROW:       scalar.ph:
 ; NARROW-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; NARROW-NEXT:    br label [[FOR_BODY:%.*]]
@@ -82,7 +82,7 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #1 {
 ; NARROW-NEXT:    store float [[CALL]], ptr [[ARRAYIDX]], align 4
 ; NARROW-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; NARROW-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1025
-; NARROW-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; NARROW-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; NARROW:       for.cond.cleanup:
 ; NARROW-NEXT:    ret void
 ;

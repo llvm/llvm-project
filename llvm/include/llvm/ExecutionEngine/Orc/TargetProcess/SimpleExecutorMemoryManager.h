@@ -20,6 +20,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorBootstrapService.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 #include <mutex>
@@ -29,7 +30,7 @@ namespace orc {
 namespace rt_bootstrap {
 
 /// Simple page-based allocator.
-class SimpleExecutorMemoryManager : public ExecutorBootstrapService {
+class LLVM_ABI SimpleExecutorMemoryManager : public ExecutorBootstrapService {
 public:
   virtual ~SimpleExecutorMemoryManager();
 

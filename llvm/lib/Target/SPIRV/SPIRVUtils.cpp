@@ -80,6 +80,16 @@ std::string getStringImm(const MachineInstr &MI, unsigned StartIndex) {
   return getSPIRVStringOperand(MI, StartIndex);
 }
 
+std::string getStringValueFromReg(Register Reg, MachineRegisterInfo &MRI) {
+  MachineInstr *Def = getVRegDef(MRI, Reg);
+  assert(Def && Def->getOpcode() == TargetOpcode::G_GLOBAL_VALUE &&
+         "Expected G_GLOBAL_VALUE");
+  const GlobalValue *GV = Def->getOperand(1).getGlobal();
+  Value *V = GV->getOperand(0);
+  const ConstantDataArray *CDA = cast<ConstantDataArray>(V);
+  return CDA->getAsCString().str();
+}
+
 void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
   const auto Bitwidth = Imm.getBitWidth();
   if (Bitwidth == 1)
@@ -983,6 +993,29 @@ int64_t foldImm(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
 unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
                                 const MachineInstr *ResType) {
   return foldImm(ResType->getOperand(2), MRI);
+}
+
+MachineBasicBlock::iterator
+getFirstValidInstructionInsertPoint(MachineBasicBlock &BB) {
+  // Find the position to insert the OpVariable instruction.
+  // We will insert it after the last OpFunctionParameter, if any, or
+  // after OpFunction otherwise.
+  MachineBasicBlock::iterator VarPos = BB.begin();
+  while (VarPos != BB.end() && VarPos->getOpcode() != SPIRV::OpFunction) {
+    ++VarPos;
+  }
+  // Advance VarPos to the next instruction after OpFunction, it will either
+  // be an OpFunctionParameter, so that we can start the next loop, or the
+  // position to insert the OpVariable instruction.
+  ++VarPos;
+  while (VarPos != BB.end() &&
+         VarPos->getOpcode() == SPIRV::OpFunctionParameter) {
+    ++VarPos;
+  }
+  // VarPos is now pointing at after the last OpFunctionParameter, if any,
+  // or after OpFunction, if no parameters.
+  return VarPos != BB.end() && VarPos->getOpcode() == SPIRV::OpLabel ? ++VarPos
+                                                                     : VarPos;
 }
 
 } // namespace llvm

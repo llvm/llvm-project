@@ -1112,13 +1112,13 @@ bool opts::irmemorymap::evalMalloc(StringRef Line,
   // Issue the malloc in the target process with "-rw" permissions.
   const uint32_t Permissions = 0x3;
   const bool ZeroMemory = false;
-  Status ST;
-  addr_t Addr =
-      State.Map.Malloc(Size, Alignment, Permissions, AP, ZeroMemory, ST);
-  if (ST.Fail()) {
-    outs() << formatv("Malloc error: {0}\n", ST);
+  auto AddrOrErr =
+      State.Map.Malloc(Size, Alignment, Permissions, AP, ZeroMemory);
+  if (!AddrOrErr) {
+    outs() << formatv("Malloc error: {0}\n", toString(AddrOrErr.takeError()));
     return true;
   }
+  addr_t Addr = *AddrOrErr;
 
   // Print the result of the allocation before checking its validity.
   outs() << formatv("Malloc: address = {0:x}\n", Addr);

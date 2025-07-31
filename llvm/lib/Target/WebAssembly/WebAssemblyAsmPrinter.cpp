@@ -14,7 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyAsmPrinter.h"
-#include "MCTargetDesc/WebAssemblyMCExpr.h"
+#include "MCTargetDesc/WebAssemblyMCAsmInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
@@ -24,6 +24,7 @@
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyRegisterInfo.h"
 #include "WebAssemblyRuntimeLibcallSignatures.h"
+#include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
@@ -46,6 +47,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -154,9 +156,11 @@ static std::string getEmscriptenInvokeSymbolName(wasm::WasmSignature *Sig) {
 //===----------------------------------------------------------------------===//
 
 MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
-    const Function *F, bool EnableEmEH, wasm::WasmSignature *Sig,
-    bool &InvokeDetected) {
+    const Function *F, wasm::WasmSignature *Sig, bool &InvokeDetected) {
   MCSymbolWasm *WasmSym = nullptr;
+
+  const bool EnableEmEH =
+      WebAssembly::WasmEnableEmEH || WebAssembly::WasmEnableEmSjLj;
   if (EnableEmEH && isEmscriptenInvokeName(F->getName())) {
     assert(Sig);
     InvokeDetected = true;
@@ -343,9 +347,7 @@ void WebAssemblyAsmPrinter::emitDecls(const Module &M) {
     // will discard it later if it turns out not to be necessary.
     auto Signature = signatureFromMVTs(OutContext, Results, Params);
     bool InvokeDetected = false;
-    auto *Sym = getMCSymbolForFunction(
-        &F, WebAssembly::WasmEnableEmEH || WebAssembly::WasmEnableEmSjLj,
-        Signature, InvokeDetected);
+    auto *Sym = getMCSymbolForFunction(&F, Signature, InvokeDetected);
 
     // Multiple functions can be mapped to the same invoke symbol. For
     // example, two IR functions '__invoke_void_i8*' and '__invoke_void_i32'
@@ -403,7 +405,7 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
     if (!F.isIntrinsic() && F.hasAddressTaken()) {
       MCSymbolWasm *FunctionTable =
           WebAssembly::getOrCreateFunctionTableSymbol(OutContext, Subtarget);
-      OutStreamer->emitSymbolAttribute(FunctionTable, MCSA_NoDeadStrip);    
+      OutStreamer->emitSymbolAttribute(FunctionTable, MCSA_NoDeadStrip);
       break;
     }
   }
@@ -759,7 +761,8 @@ INITIALIZE_PASS(WebAssemblyAsmPrinter, "webassembly-asm-printer",
                 "WebAssembly Assmebly Printer", false, false)
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeWebAssemblyAsmPrinter() {
   RegisterAsmPrinter<WebAssemblyAsmPrinter> X(getTheWebAssemblyTarget32());
   RegisterAsmPrinter<WebAssemblyAsmPrinter> Y(getTheWebAssemblyTarget64());
 }

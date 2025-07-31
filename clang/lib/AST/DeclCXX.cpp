@@ -1828,7 +1828,7 @@ CXXRecordDecl::getLambdaExplicitTemplateParameters() const {
 
   const auto ExplicitEnd = llvm::partition_point(
       *List, [](const NamedDecl *D) { return !D->isImplicit(); });
-  return llvm::ArrayRef(List->begin(), ExplicitEnd);
+  return ArrayRef(List->begin(), ExplicitEnd);
 }
 
 Decl *CXXRecordDecl::getLambdaContextDecl() const {
@@ -2146,6 +2146,16 @@ CXXDestructorDecl *CXXRecordDecl::getDestructor() const {
 bool CXXRecordDecl::hasDeletedDestructor() const {
   if (const CXXDestructorDecl *D = getDestructor())
     return D->isDeleted();
+  return false;
+}
+
+bool CXXRecordDecl::isInjectedClassName() const {
+  if (!isImplicit() || !getDeclName())
+    return false;
+
+  if (const auto *RD = dyn_cast<CXXRecordDecl>(getDeclContext()))
+    return RD->getDeclName() == getDeclName();
+
   return false;
 }
 
@@ -3201,6 +3211,12 @@ UsingDirectiveDecl *UsingDirectiveDecl::CreateDeserialized(ASTContext &C,
                                         SourceLocation(), nullptr, nullptr);
 }
 
+NamespaceDecl *NamespaceBaseDecl::getNamespace() {
+  if (auto *Alias = dyn_cast<NamespaceAliasDecl>(this))
+    return Alias->getNamespace();
+  return cast<NamespaceDecl>(this);
+}
+
 NamespaceDecl *UsingDirectiveDecl::getNominatedNamespace() {
   if (auto *NA = dyn_cast_or_null<NamespaceAliasDecl>(NominatedNamespace))
     return NA->getNamespace();
@@ -3211,7 +3227,7 @@ NamespaceDecl::NamespaceDecl(ASTContext &C, DeclContext *DC, bool Inline,
                              SourceLocation StartLoc, SourceLocation IdLoc,
                              IdentifierInfo *Id, NamespaceDecl *PrevDecl,
                              bool Nested)
-    : NamedDecl(Namespace, DC, IdLoc, Id), DeclContext(Namespace),
+    : NamespaceBaseDecl(Namespace, DC, IdLoc, Id), DeclContext(Namespace),
       redeclarable_base(C), LocStart(StartLoc) {
   setInline(Inline);
   setNested(Nested);
@@ -3258,13 +3274,11 @@ NamespaceAliasDecl *NamespaceAliasDecl::getMostRecentDeclImpl() {
   return getMostRecentDecl();
 }
 
-NamespaceAliasDecl *NamespaceAliasDecl::Create(ASTContext &C, DeclContext *DC,
-                                               SourceLocation UsingLoc,
-                                               SourceLocation AliasLoc,
-                                               IdentifierInfo *Alias,
-                                           NestedNameSpecifierLoc QualifierLoc,
-                                               SourceLocation IdentLoc,
-                                               NamedDecl *Namespace) {
+NamespaceAliasDecl *NamespaceAliasDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation UsingLoc,
+    SourceLocation AliasLoc, IdentifierInfo *Alias,
+    NestedNameSpecifierLoc QualifierLoc, SourceLocation IdentLoc,
+    NamespaceBaseDecl *Namespace) {
   // FIXME: Preserve the aliased namespace as written.
   if (auto *NS = dyn_cast_or_null<NamespaceDecl>(Namespace))
     Namespace = NS->getFirstDecl();
@@ -3578,13 +3592,13 @@ VarDecl *BindingDecl::getHoldingVar() const {
   return VD;
 }
 
-llvm::ArrayRef<BindingDecl *> BindingDecl::getBindingPackDecls() const {
+ArrayRef<BindingDecl *> BindingDecl::getBindingPackDecls() const {
   assert(Binding && "expecting a pack expr");
   auto *FP = cast<FunctionParmPackExpr>(Binding);
   ValueDecl *const *First = FP->getNumExpansions() > 0 ? FP->begin() : nullptr;
   assert((!First || isa<BindingDecl>(*First)) && "expecting a BindingDecl");
-  return llvm::ArrayRef<BindingDecl *>(
-      reinterpret_cast<BindingDecl *const *>(First), FP->getNumExpansions());
+  return ArrayRef<BindingDecl *>(reinterpret_cast<BindingDecl *const *>(First),
+                                 FP->getNumExpansions());
 }
 
 void DecompositionDecl::anchor() {}

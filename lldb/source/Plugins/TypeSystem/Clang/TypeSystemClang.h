@@ -477,12 +477,12 @@ public:
   clang::FunctionDecl *CreateFunctionDeclaration(
       clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
       llvm::StringRef name, const CompilerType &function_Type,
-      clang::StorageClass storage, bool is_inline);
+      clang::StorageClass storage, bool is_inline, llvm::StringRef asm_label);
 
   CompilerType
-  CreateFunctionType(const CompilerType &result_type, const CompilerType *args,
-                     unsigned num_args, bool is_variadic, unsigned type_quals,
-                     clang::CallingConv cc = clang::CC_C,
+  CreateFunctionType(const CompilerType &result_type,
+                     llvm::ArrayRef<CompilerType> args, bool is_variadic,
+                     unsigned type_quals, clang::CallingConv cc = clang::CC_C,
                      clang::RefQualifierKind ref_qual = clang::RQ_None);
 
   clang::ParmVarDecl *
@@ -686,9 +686,6 @@ public:
   bool IsScopedEnumerationType(lldb::opaque_compiler_type_t type) override;
 
   static bool IsObjCClassType(const CompilerType &type);
-
-  static bool IsObjCClassTypeAndHasIVars(const CompilerType &type,
-                                         bool check_superclass);
 
   static bool IsObjCObjectOrInterfaceType(const CompilerType &type);
 
@@ -1004,7 +1001,7 @@ public:
 
   clang::CXXMethodDecl *AddMethodToCXXRecordType(
       lldb::opaque_compiler_type_t type, llvm::StringRef name,
-      const char *mangled_name, const CompilerType &method_type,
+      llvm::StringRef asm_label, const CompilerType &method_type,
       lldb::AccessType access, bool is_virtual, bool is_static, bool is_inline,
       bool is_explicit, bool is_attr_used, bool is_artificial);
 
@@ -1077,7 +1074,7 @@ public:
 #endif
 
   /// \see lldb_private::TypeSystem::Dump
-  void Dump(llvm::raw_ostream &output) override;
+  void Dump(llvm::raw_ostream &output, llvm::StringRef filter) override;
 
   /// Dump clang AST types from the symbol file.
   ///
@@ -1321,7 +1318,7 @@ public:
   }
 
   /// \see lldb_private::TypeSystem::Dump
-  void Dump(llvm::raw_ostream &output) override;
+  void Dump(llvm::raw_ostream &output, llvm::StringRef filter) override;
 
   UserExpression *GetUserExpression(llvm::StringRef expr,
                                     llvm::StringRef prefix,

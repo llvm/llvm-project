@@ -13,7 +13,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/LogicalResult.h"
 
 using namespace mlir;
@@ -77,8 +76,8 @@ struct FoldUnPaddingCollapseIntoExtract
       return rewriter.notifyMatchFailure(collapseShapeOp,
                                          "expected unpadding collapse");
 
-    Value unPaddedExtractSlice = rewriter.create<tensor::ExtractSliceOp>(
-        extractSliceOp.getLoc(), collapseShapeOp.getResultType(),
+    Value unPaddedExtractSlice = tensor::ExtractSliceOp::create(
+        rewriter, extractSliceOp.getLoc(), collapseShapeOp.getResultType(),
         extractSliceOp.getSource(), extractSliceOp.getMixedOffsets(),
         extractSliceOp.getMixedSizes(), extractSliceOp.getMixedStrides());
     rewriter.replaceOp(collapseShapeOp, unPaddedExtractSlice);
@@ -185,13 +184,11 @@ struct BubbleUpExpandThroughParallelCollapse
         ArrayRef<int64_t> collapsedStaticShapes = staticSourceSize.slice(
             collapseReassociation.front(), collapseReassociation.size());
         int64_t numCollapsedDynamic =
-            llvm::count_if(collapsedStaticShapes,
-                           [](int64_t d) { return ShapedType::isDynamic(d); });
+            llvm::count_if(collapsedStaticShapes, ShapedType::isDynamic);
         ArrayRef<int64_t> expandedStaticShapes = staticResultSize.slice(
             expandReassociation.front(), expandReassociation.size());
         int64_t numExpandedDynamic =
-            llvm::count_if(expandedStaticShapes,
-                           [](int64_t d) { return ShapedType::isDynamic(d); });
+            llvm::count_if(expandedStaticShapes, ShapedType::isDynamic);
         if (numCollapsedDynamic > 1 || numExpandedDynamic > 1 ||
             collapsedStaticShapes != expandedStaticShapes) {
           return failure();
@@ -273,8 +270,8 @@ struct BubbleUpExpandThroughParallelCollapse
     // matches the number of dimensions of the result, then the expand_shape
     // is a no-op.
     if (newExpandReInds.size() != newExpandSizes.size()) {
-      newCollapseSrc = rewriter.create<tensor::ExpandShapeOp>(
-          loc, expandResultType, newCollapseSrc, newExpandReInds,
+      newCollapseSrc = tensor::ExpandShapeOp::create(
+          rewriter, loc, expandResultType, newCollapseSrc, newExpandReInds,
           newExpandSizes);
     }
 
@@ -283,8 +280,8 @@ struct BubbleUpExpandThroughParallelCollapse
     // is a no-op.
     Value replacement = newCollapseSrc;
     if (newCollapseReInds.size() != newExpandSizes.size()) {
-      replacement = rewriter.create<tensor::CollapseShapeOp>(
-          loc, newCollapseSrc, newCollapseReInds);
+      replacement = tensor::CollapseShapeOp::create(
+          rewriter, loc, newCollapseSrc, newCollapseReInds);
     }
     rewriter.replaceOp(expandOp, replacement);
     return success();
@@ -388,10 +385,9 @@ struct BubbleUpExpandShapeThroughExtractSlice
             return getValueOrCreateConstantIndexOp(rewriter, loc, ofr);
           });
       OpFoldResult collapsedOffset =
-          rewriter
-              .create<affine::AffineLinearizeIndexOp>(loc, offsetVals,
-                                                      reassocGroupSizes,
-                                                      /*disjoint=*/true)
+          affine::AffineLinearizeIndexOp::create(rewriter, loc, offsetVals,
+                                                 reassocGroupSizes,
+                                                 /*disjoint=*/true)
               .getResult();
       collapsedOffsets.push_back(collapsedOffset);
       collapsedSizes.push_back(collapsedSize);
@@ -408,8 +404,8 @@ struct BubbleUpExpandShapeThroughExtractSlice
         shape, expandShapeOp.getResultType().getElementType());
 
     // Create a new ExtractSliceOp and ExpandShapeOp.
-    Value newSliceOp = rewriter.create<tensor::ExtractSliceOp>(
-        loc, expandShapeOp.getSrc(), collapsedOffsets, collapsedSizes,
+    Value newSliceOp = tensor::ExtractSliceOp::create(
+        rewriter, loc, expandShapeOp.getSrc(), collapsedOffsets, collapsedSizes,
         collapsedStrides);
     rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(
         sliceOp, resultType, newSliceOp,
@@ -738,9 +734,9 @@ struct BubbleUpCollapseShapeThroughExtractSlice
                              groupExpandedOffsets.rend());
     }
 
-    Value newSliceOp = rewriter.create<tensor::ExtractSliceOp>(
-        collapseShapeOp->getLoc(), collapseShapeOp.getSrc(), expandedOffsets,
-        expandedSizes, expandedStrides);
+    Value newSliceOp = tensor::ExtractSliceOp::create(
+        rewriter, collapseShapeOp->getLoc(), collapseShapeOp.getSrc(),
+        expandedOffsets, expandedSizes, expandedStrides);
     rewriter.replaceOpWithNewOp<tensor::CollapseShapeOp>(
         sliceOp, sliceOp.getResultType(), newSliceOp,
         collapseShapeOp.getReassociationIndices());

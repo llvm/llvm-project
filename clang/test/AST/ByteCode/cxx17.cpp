@@ -141,3 +141,11 @@ template <int x> constexpr auto c() {
 }
 
 auto y = c<1>(); // both-note {{in instantiation of function template specialization 'c<1>' requested here}}
+
+namespace NonConstexprStructuredBinding {
+  void f1() {
+    int arr[2] = {};
+    auto [a, b] = arr;
+    static_assert(&a != &b);
+  }
+}

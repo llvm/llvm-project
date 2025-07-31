@@ -421,10 +421,12 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     // * We can't modify SEW here since the slide amount is in units of SEW.
     // * VL=1 is special only because we have existing support for zero vs
     //   non-zero VL.  We could generalize this if we had a VL > C predicate.
-    // * The LMUL1 restriction is for machines whose latency may depend on VL.
+    // * The LMUL1 restriction is for machines whose latency may depend on LMUL.
     // * As above, this is only legal for tail "undefined" not "agnostic".
+    // * We avoid increasing vl if the subtarget has +vl-dependent-latency
     if (RISCVInstrInfo::isVSlideInstr(MI) && VLOp.isImm() &&
-        VLOp.getImm() == 1 && hasUndefinedPassthru(MI)) {
+        VLOp.getImm() == 1 && hasUndefinedPassthru(MI) &&
+        !ST->hasVLDependentLatency()) {
       Res.VLAny = false;
       Res.VLZeroness = true;
       Res.LMUL = DemandedFields::LMULLessThanOrEqualToM1;
@@ -438,7 +440,8 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     // careful to not increase the number of active vector registers (unlike for
     // vmv.s.x.)
     if (RISCVInstrInfo::isScalarSplatInstr(MI) && VLOp.isImm() &&
-        VLOp.getImm() == 1 && hasUndefinedPassthru(MI)) {
+        VLOp.getImm() == 1 && hasUndefinedPassthru(MI) &&
+        !ST->hasVLDependentLatency()) {
       Res.LMUL = DemandedFields::LMULLessThanOrEqualToM1;
       Res.SEWLMULRatio = false;
       Res.VLAny = false;
@@ -1119,25 +1122,26 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
     LIS->InsertMachineInstrInMaps(*MI);
     LiveInterval &LI = LIS->getInterval(AVLReg);
     SlotIndex SI = LIS->getInstructionIndex(*MI).getRegSlot();
+    const VNInfo *CurVNI = Info.getAVLVNInfo();
     // If the AVL value isn't live at MI, do a quick check to see if it's easily
     // extendable. Otherwise, we need to copy it.
-    if (LI.getVNInfoBefore(SI) != Info.getAVLVNInfo()) {
+    if (LI.getVNInfoBefore(SI) != CurVNI) {
       if (!LI.liveAt(SI) && LI.containsOneValue())
         LIS->extendToIndices(LI, SI);
       else {
         Register AVLCopyReg =
             MRI->createVirtualRegister(&RISCV::GPRNoX0RegClass);
+        MachineBasicBlock *MBB = LIS->getMBBFromIndex(CurVNI->def);
         MachineBasicBlock::iterator II;
-        if (Info.getAVLVNInfo()->isPHIDef())
-          II = LIS->getMBBFromIndex(Info.getAVLVNInfo()->def)->getFirstNonPHI();
+        if (CurVNI->isPHIDef())
+          II = MBB->getFirstNonPHI();
         else {
-          II = LIS->getInstructionFromIndex(Info.getAVLVNInfo()->def);
+          II = LIS->getInstructionFromIndex(CurVNI->def);
           II = std::next(II);
         }
         assert(II.isValid());
-        auto AVLCopy =
-            BuildMI(*II->getParent(), II, DL, TII->get(RISCV::COPY), AVLCopyReg)
-                .addReg(AVLReg);
+        auto AVLCopy = BuildMI(*MBB, II, DL, TII->get(RISCV::COPY), AVLCopyReg)
+                           .addReg(AVLReg);
         LIS->InsertMachineInstrInMaps(*AVLCopy);
         MI->getOperand(1).setReg(AVLCopyReg);
         LIS->createAndComputeVirtRegInterval(AVLCopyReg);
@@ -1253,7 +1257,7 @@ void RISCVInsertVSETVLI::transferAfter(VSETVLIInfo &Info,
     return;
   }
 
-  if (RISCV::isFaultFirstLoad(MI)) {
+  if (RISCVInstrInfo::isFaultOnlyFirstLoad(MI)) {
     // Update AVL to vl-output of the fault first load.
     assert(MI.getOperand(1).getReg().isVirtual());
     if (LIS) {
@@ -1698,13 +1702,24 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
           MI.getOperand(0).setReg(DefReg);
           MI.getOperand(0).setIsDead(false);
 
+          // Move the AVL from NextMI to MI
+          dropAVLUse(MI.getOperand(1));
+          if (NextMI->getOperand(1).isImm())
+            MI.getOperand(1).ChangeToImmediate(NextMI->getOperand(1).getImm());
+          else
+            MI.getOperand(1).ChangeToRegister(NextMI->getOperand(1).getReg(),
+                                              false);
+          dropAVLUse(NextMI->getOperand(1));
+
           // The def of DefReg moved to MI, so extend the LiveInterval up to
           // it.
           if (DefReg.isVirtual() && LIS) {
             LiveInterval &DefLI = LIS->getInterval(DefReg);
             SlotIndex MISlot = LIS->getInstructionIndex(MI).getRegSlot();
-            VNInfo *DefVNI = DefLI.getVNInfoAt(DefLI.beginIndex());
-            LiveInterval::Segment S(MISlot, DefLI.beginIndex(), DefVNI);
+            SlotIndex NextMISlot =
+                LIS->getInstructionIndex(*NextMI).getRegSlot();
+            VNInfo *DefVNI = DefLI.getVNInfoAt(NextMISlot);
+            LiveInterval::Segment S(MISlot, NextMISlot, DefVNI);
             DefLI.addSegment(S);
             DefVNI->def = MISlot;
             // Mark DefLI as spillable if it was previously unspillable
@@ -1714,13 +1729,6 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
             // the LiveInterval up to MI.
             LIS->shrinkToUses(&DefLI);
           }
-
-          dropAVLUse(MI.getOperand(1));
-          if (NextMI->getOperand(1).isImm())
-            MI.getOperand(1).ChangeToImmediate(NextMI->getOperand(1).getImm());
-          else
-            MI.getOperand(1).ChangeToRegister(NextMI->getOperand(1).getReg(),
-                                              false);
 
           MI.setDesc(NextMI->getDesc());
         }
@@ -1752,7 +1760,7 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
 void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
   for (auto I = MBB.begin(), E = MBB.end(); I != E;) {
     MachineInstr &MI = *I++;
-    if (RISCV::isFaultFirstLoad(MI)) {
+    if (RISCVInstrInfo::isFaultOnlyFirstLoad(MI)) {
       Register VLOutput = MI.getOperand(1).getReg();
       assert(VLOutput.isVirtual());
       if (!MI.getOperand(1).isDead()) {
@@ -1763,13 +1771,15 @@ void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
           SlotIndex NewDefSI =
               LIS->InsertMachineInstrInMaps(*ReadVLMI).getRegSlot();
           LiveInterval &DefLI = LIS->getInterval(VLOutput);
-          VNInfo *DefVNI = DefLI.getVNInfoAt(DefLI.beginIndex());
-          DefLI.removeSegment(DefLI.beginIndex(), NewDefSI);
+          LiveRange::Segment *DefSeg = DefLI.getSegmentContaining(NewDefSI);
+          VNInfo *DefVNI = DefLI.getVNInfoAt(DefSeg->start);
+          DefLI.removeSegment(DefSeg->start, NewDefSI);
           DefVNI->def = NewDefSI;
         }
       }
       // We don't use the vl output of the VLEFF/VLSEGFF anymore.
       MI.getOperand(1).setReg(RISCV::X0);
+      MI.addRegisterDefined(RISCV::VL, MRI->getTargetRegisterInfo());
     }
   }
 }

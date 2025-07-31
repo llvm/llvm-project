@@ -10,11 +10,11 @@ module real_tests
 
   real(4), parameter :: r4_pmax = 3.4028235E38
   real(4), parameter :: r4_nmax = -3.4028235E38
-  !WARN: warning: invalid argument on division
+  !WARN: warning: invalid argument on division [-Wfolding-exception]
   real(4), parameter :: r4_nan = 0._4/0._4
-  !WARN: warning: division by zero
+  !WARN: warning: division by zero [-Wfolding-exception]
   real(4), parameter :: r4_pinf = 1._4/0._4
-  !WARN: warning: division by zero
+  !WARN: warning: division by zero [-Wfolding-exception]
   real(4), parameter :: r4_ninf = -1._4/0._4
 
   !WARN: warning: argument is out of range [-1., 1.]
@@ -37,7 +37,7 @@ module real_tests
   TEST_ISNAN(nan_r8_dasin1)
   !WARN: warning: complex argument must be different from zero
   complex(4), parameter :: c4_clog1 = clog((0., 0.))
-  !WARN: warning: MOD: P argument is zero
+  !WARN: warning: MOD: P argument is zero [-Wfolding-avoids-runtime-crash]
   real(4), parameter :: nan_r4_mod = mod(3.5, 0.)
   TEST_ISNAN(nan_r4_mod)
   real(4), parameter :: ok_r4_gamma = gamma(-1.1)
@@ -53,17 +53,17 @@ module real_tests
   !WARN: warning: 'x' and 'y' arguments must not be both zero
   real(4), parameter :: r4_atan2 = atan2(0., 0.)
 
-  !WARN: warning: overflow on evaluation of intrinsic function or operation
+  !WARN: warning: overflow on evaluation of intrinsic function or operation [-Wfolding-exception]
   logical, parameter :: test_exp_overflow = exp(256._4).EQ.r4_pinf
  contains
   subroutine s1(a,j)
-    !WARN: warning: MOD: P argument is zero
+    !WARN: warning: MOD: P argument is zero [-Wfolding-avoids-runtime-crash]
     print *, mod(a, 0.)
-    !WARN: warning: MODULO: P argument is zero
+    !WARN: warning: MODULO: P argument is zero [-Wfolding-avoids-runtime-crash]
     print *, modulo(a, 0.)
-    !WARN: warning: MOD: P argument is zero
+    !WARN: warning: MOD: P argument is zero [-Wfolding-avoids-runtime-crash]
     print *, mod(j, 0.)
-    !WARN: warning: MODULO: P argument is zero
+    !WARN: warning: MODULO: P argument is zero [-Wfolding-avoids-runtime-crash]
     print *, modulo(j, 0.)
   end
 end module
@@ -86,13 +86,13 @@ module specific_extremums
   ! specified for f18 (converting the result).
   integer(8), parameter :: max_i32_8 = 2_8**31-1
   integer, parameter :: expected_min0 = int(min(max_i32_8, 2_8*max_i32_8), 4)
-  !WARN: portability: Argument types do not match specific intrinsic 'min0' requirements; using 'min' generic instead and converting the result to INTEGER(4) if needed
+  !WARN: portability: Argument types do not match specific intrinsic 'min0' requirements; using 'min' generic instead and converting the result to INTEGER(4) if needed [-Wuse-generic-intrinsic-when-specific-doesnt-match]
   integer, parameter :: result_min0 =  min0(max_i32_8, 2_8*max_i32_8)
   ! result_min0 would be -2  if arguments were converted to default integer.
   logical, parameter :: test_min0 = expected_min0 .EQ. result_min0
 
   real, parameter :: expected_amax0 = real(max(max_i32_8, 2_8*max_i32_8), 4)
-  !WARN: portability: Argument types do not match specific intrinsic 'amax0' requirements; using 'max' generic instead and converting the result to REAL(4) if needed
+  !WARN: portability: Argument types do not match specific intrinsic 'amax0' requirements; using 'max' generic instead and converting the result to REAL(4) if needed [-Wuse-generic-intrinsic-when-specific-doesnt-match]
   real, parameter :: result_amax0 = amax0(max_i32_8, 2_8*max_i32_8)
   ! result_amax0 would be 2.1474836E+09 if arguments were converted to default integer first.
   logical, parameter :: test_amax0 = expected_amax0 .EQ. result_amax0

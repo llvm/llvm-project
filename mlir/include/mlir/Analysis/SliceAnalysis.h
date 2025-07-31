@@ -65,8 +65,9 @@ using ForwardSliceOptions = SliceOptions;
 ///
 /// The implementation traverses the use chains in postorder traversal for
 /// efficiency reasons: if an operation is already in `forwardSlice`, no
-/// need to traverse its uses again. Since use-def chains form a DAG, this
-/// terminates.
+/// need to traverse its uses again. In the presence of use-def cycles in a
+/// graph region, the traversal stops at the first operation that was already
+/// visited (which is not added to the slice anymore).
 ///
 /// Upon return to the root call, `forwardSlice` is filled with a
 /// postorder list of uses (i.e. a reverse topological order). To get a proper
@@ -114,8 +115,9 @@ void getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
 ///
 /// The implementation traverses the def chains in postorder traversal for
 /// efficiency reasons: if an operation is already in `backwardSlice`, no
-/// need to traverse its definitions again. Since useuse-def chains form a DAG,
-/// this terminates.
+/// need to traverse its definitions again. In the presence of use-def cycles
+/// in a graph region, the traversal stops at the first operation that was
+/// already visited (which is not added to the slice anymore).
 ///
 /// Upon return to the root call, `backwardSlice` is filled with a
 /// postorder list of defs. This happens to be a topological order, from the

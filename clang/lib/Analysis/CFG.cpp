@@ -46,7 +46,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -899,8 +898,7 @@ private:
       return;
     }
 
-    B->appendStmt(const_cast<ObjCMessageExpr *>(ME),
-                  cfg->getBumpVectorContext());
+    B->appendStmt(ME, cfg->getBumpVectorContext());
   }
 
   void appendTemporaryDtor(CFGBlock *B, CXXBindTemporaryExpr *E) {
@@ -1262,6 +1260,28 @@ private:
         L2Result.Val.getKind() == APValue::Float) {
       llvm::APFloat L1 = L1Result.Val.getFloat();
       llvm::APFloat L2 = L2Result.Val.getFloat();
+      // Note that L1 and L2 do not necessarily have the same type.  For example
+      // `x != 0 || x != 1.0`, if `x` is a float16, the two literals `0` and
+      // `1.0` are float16 and double respectively.  In this case, we should do
+      // a conversion before comparing L1 and L2.  Their types must be
+      // compatible since they are comparing with the same DRE.
+      int Order = Context->getFloatingTypeSemanticOrder(NumExpr1->getType(),
+                                                        NumExpr2->getType());
+      bool Ignored = false;
+
+      if (Order > 0) {
+        // type rank L1 > L2:
+        if (llvm::APFloat::opOK !=
+            L2.convert(L1.getSemantics(), llvm::APFloat::rmNearestTiesToEven,
+                       &Ignored))
+          return {};
+      } else if (Order < 0)
+        // type rank L1 < L2:
+        if (llvm::APFloat::opOK !=
+            L1.convert(L2.getSemantics(), llvm::APFloat::rmNearestTiesToEven,
+                       &Ignored))
+          return {};
+
       llvm::APFloat MidValue = L1;
       MidValue.add(L2, llvm::APFloat::rmNearestTiesToEven);
       MidValue.divide(llvm::APFloat(MidValue.getSemantics(), "2.0"),
@@ -1733,10 +1753,9 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
 
   // Add successors to the Indirect Goto Dispatch block (if we have one).
   if (CFGBlock *B = cfg->getIndirectGotoBlock())
-    for (LabelSetTy::iterator I = AddressTakenLabels.begin(),
-                              E = AddressTakenLabels.end(); I != E; ++I ) {
+    for (LabelDecl *LD : AddressTakenLabels) {
       // Lookup the target block.
-      LabelMapTy::iterator LI = LabelMap.find(*I);
+      LabelMapTy::iterator LI = LabelMap.find(LD);
 
       // If there is no target block that contains label, then we are looking
       // at an incomplete AST.  Handle this by not registering a successor.

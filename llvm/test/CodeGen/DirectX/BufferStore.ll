@@ -161,3 +161,44 @@ define void @store_scalarized_floats(float %data0, float %data1, float %data2, f
 
   ret void
 }
+
+define void @storef64(<2 x i32> %0) {
+  ; CHECK: [[B1:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217,
+  ; CHECK: [[BA:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[B1]]
+  
+  %buffer = tail call target("dx.TypedBuffer", double, 1, 0, 0)
+      @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f64_1_0_0t(
+          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+
+  ; The temporary casts should all have been cleaned up
+  ; CHECK-NOT: %dx.resource.casthandle
+
+  ; CHECK: [[D0:%.*]] = extractelement <2 x i32> %0, i32 0
+  ; CHECK: [[D1:%.*]] = extractelement <2 x i32> %0, i32 1
+  ; CHECK: call void @dx.op.bufferStore.i32(i32 69, %dx.types.Handle [[BA]], i32 0, i32 undef, i32 %2, i32 %3, i32 %2, i32 %2, i8 15)
+  call void @llvm.dx.resource.store.typedbuffer(
+      target("dx.TypedBuffer", double, 1, 0, 0) %buffer, i32 0, <2 x i32> %0)
+  ret void
+}
+
+define void @storev2f64(<4 x i32> %0) {
+  ; CHECK: [[B1:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217,
+  ; CHECK: [[BA:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[B1]]
+  
+  %buffer = tail call target("dx.TypedBuffer", <2 x double>, 1, 0, 0)
+      @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v2f64_1_0_0t(
+          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+
+  ; The temporary casts should all have been cleaned up
+  ; CHECK-NOT: %dx.resource.casthandle
+
+  ; CHECK: [[D0:%.*]] = extractelement <4 x i32> %0, i32 0
+  ; CHECK: [[D1:%.*]] = extractelement <4 x i32> %0, i32 1
+  ; CHECK: [[D2:%.*]] = extractelement <4 x i32> %0, i32 2
+  ; CHECK: [[D3:%.*]] = extractelement <4 x i32> %0, i32 3
+  ; CHECK: call void @dx.op.bufferStore.i32(i32 69, %dx.types.Handle [[BA]], i32 0, i32 undef, i32 [[D0]], i32 [[D1]], i32 [[D2]], i32 [[D3]], i8 15)
+  call void @llvm.dx.resource.store.typedbuffer(
+      target("dx.TypedBuffer", <2 x double>, 1, 0, 0) %buffer, i32 0,
+      <4 x i32> %0)
+  ret void
+}

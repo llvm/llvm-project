@@ -49,6 +49,9 @@ add_lldb_tool(lldb-server
     LLDBServerUtilities.cpp
     SystemInitializerLLGS.cpp
 
+    LINK_COMPONENTS
+      Option
+      Support
     LINK_LIBS
       lldbHost
       lldbInitialization
@@ -60,10 +63,6 @@ add_lldb_tool(lldb-server
       lldbPluginInstructionMIPS64
       lldbPluginInstructionRISCV
       ${LLDB_SYSTEM_LIBS}
-
-    LINK_COMPONENTS
-      Option
-      Support
 )
 
 add_dependencies(lldb-server

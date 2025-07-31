@@ -11,14 +11,15 @@ import lldbdap_testcase
 
 class TestDAP_cancel(lldbdap_testcase.DAPTestCaseBase):
     def send_async_req(self, command: str, arguments={}) -> int:
-        return self.dap_server.send_packet(
+        seq = self.dap_server.sequence
+        self.dap_server.send_packet(
             {
                 "type": "request",
-                "seq": 0,
                 "command": command,
                 "arguments": arguments,
             }
         )
+        return seq
 
     def async_blocking_request(self, duration: float) -> int:
         """
@@ -53,17 +54,21 @@ class TestDAP_cancel(lldbdap_testcase.DAPTestCaseBase):
         pending_seq = self.async_blocking_request(duration=self.DEFAULT_TIMEOUT / 2)
         cancel_seq = self.async_cancel(requestId=pending_seq)
 
-        blocking_resp = self.dap_server.receive_response(blocking_seq)
-        self.assertResponseSuccess(blocking_resp)
+        blocking_resp = self.dap_server.recv_packet(filter_type=["response"])
+        self.assertEqual(blocking_resp["request_seq"], blocking_seq)
+        self.assertEqual(blocking_resp["command"], "evaluate")
+        self.assertEqual(blocking_resp["success"], True)
 
-        pending_resp = self.dap_server.receive_response(pending_seq)
+        pending_resp = self.dap_server.recv_packet(filter_type=["response"])
         self.assertEqual(pending_resp["request_seq"], pending_seq)
         self.assertEqual(pending_resp["command"], "evaluate")
         self.assertEqual(pending_resp["success"], False)
         self.assertEqual(pending_resp["message"], "cancelled")
 
-        cancel_resp = self.dap_server.receive_response(cancel_seq)
-        self.assertResponseSuccess(cancel_resp)
+        cancel_resp = self.dap_server.recv_packet(filter_type=["response"])
+        self.assertEqual(cancel_resp["request_seq"], cancel_seq)
+        self.assertEqual(cancel_resp["command"], "cancel")
+        self.assertEqual(cancel_resp["success"], True)
         self.continue_to_exit()
 
     def test_inflight_request(self):
@@ -81,12 +86,14 @@ class TestDAP_cancel(lldbdap_testcase.DAPTestCaseBase):
         )
         cancel_seq = self.async_cancel(requestId=blocking_seq)
 
-        blocking_resp = self.dap_server.receive_response(blocking_seq)
+        blocking_resp = self.dap_server.recv_packet(filter_type=["response"])
         self.assertEqual(blocking_resp["request_seq"], blocking_seq)
         self.assertEqual(blocking_resp["command"], "evaluate")
         self.assertEqual(blocking_resp["success"], False)
         self.assertEqual(blocking_resp["message"], "cancelled")
 
-        cancel_resp = self.dap_server.receive_response(cancel_seq)
-        self.assertResponseSuccess(cancel_resp)
+        cancel_resp = self.dap_server.recv_packet(filter_type=["response"])
+        self.assertEqual(cancel_resp["request_seq"], cancel_seq)
+        self.assertEqual(cancel_resp["command"], "cancel")
+        self.assertEqual(cancel_resp["success"], True)
         self.continue_to_exit()

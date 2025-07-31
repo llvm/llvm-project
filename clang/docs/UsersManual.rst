@@ -319,7 +319,7 @@ output format of the diagnostics that it generates.
 
    This option, which defaults to "none", controls whether or not Clang
    prints the category associated with a diagnostic when emitting it.
-   Each diagnostic may or many not have an associated category, if it
+   Each diagnostic may or may not have an associated category, if it
    has one, it is listed in the diagnostic categorization field of the
    diagnostic line (in the []'s).
 
@@ -737,7 +737,7 @@ control the crash diagnostics.
    crash diagnostics files, but with lower precedence than the option.
 
 Clang is also capable of generating preprocessed source file(s) and associated
-run script(s) even without a crash. This is specially useful when trying to
+run script(s) even without a crash. This is especially useful when trying to
 generate a reproducer for warnings or errors while using modules.
 
 .. option:: -gen-reproducer
@@ -1061,7 +1061,7 @@ In this way, the user may only need to specify a root configuration file with
 
 Usually, config file options are placed before command-line options, regardless
 of the actual operation to be performed. The exception is being made for the
-options prefixed with the ``$`` character. These will be used only when linker
+options prefixed with the ``$`` character. These will be used only when the linker
 is being invoked, and added after all of the command-line specified linker
 inputs. Here is some example of ``$``-prefixed options:
 
@@ -1222,7 +1222,7 @@ existed.
 The push and pop pragmas will save and restore the full diagnostic state
 of the compiler, regardless of how it was set. It should be noted that while Clang
 supports the GCC pragma, Clang and GCC do not support the exact same set
-of warnings, so even when using GCC compatible #pragmas there is no
+of warnings, so even when using GCC-compatible #pragmas there is no
 guarantee that they will have identical behaviour on both compilers.
 
 Clang also doesn't yet support GCC behavior for ``#pragma diagnostic pop``
@@ -1458,6 +1458,19 @@ will be processed from the PCH file. Otherwise, Clang will report an error.
   ``test.h`` since ``test.h`` was included directly in the source file and not
   specified on the command line using ``-include-pch``.
 
+Ignoring a PCH File
+^^^^^^^^^^^^^^^^^^^
+
+To ignore PCH options, a `-ignore-pch` option is passed to ``clang``:
+
+.. code-block:: console
+
+  $ clang -x c-header test.h -Xclang -ignore-pch -o test.h.pch
+  $ clang -include-pch test.h.pch -Xclang -ignore-pch test.c -o test
+
+This option disables precompiled headers, overrides -emit-pch and -include-pch.
+test.h.pch is not generated and not used as a prefix header.
+
 Relocatable PCH Files
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -1668,7 +1681,7 @@ for more details.
    * ``preserve-sign`` - the sign of a flushed-to-zero number is preserved in the sign of 0
    * ``positive-zero`` - denormals are flushed to positive zero
 
-   The default value depends on the target. For most targets, defaults to
+   The default value depends on the target. For most targets, it defaults to
    ``ieee``.
 
 .. option:: -f[no-]strict-float-cast-overflow
@@ -1717,7 +1730,7 @@ for more details.
    the C and C++ standards but can be enabled using ``-ffp-contract=fast``.
 
    Fusion can be controlled with the ``FP_CONTRACT`` and ``clang fp contract``
-   pragmas. Please note that pragmas will be ingored with
+   pragmas. Please note that pragmas will be ignored with
    ``-ffp-contract=fast``, and refer to the pragma documentation for a
    description of how the pragmas interact with the different ``-ffp-contract``
    option values.
@@ -1971,11 +1984,11 @@ for more details.
      call to runtime library functions (generally the case, but the BE might
      sometimes replace the library call if it knows enough about the potential
      range of the inputs). Overflow and non-finite values are handled by the
-     library implementation. For the case of multiplication overflow will occur in
+     library implementation. For the case of multiplication, overflow will occur in
      accordance with normal floating-point rules. This is the default value.
    * ``promoted`` Implementation of complex division using algebraic formulas at
      higher precision. Overflow is handled. Non-finite values are handled in some
-     cases. If the target does not have native support for a higher precision
+     cases. If the target does not have native support for a higher-precision
      data type, the implementation for the complex operation using the Smith
      algorithm will be used. Overflow may still occur in some cases. NaN and
      infinite values are not handled.
@@ -2300,12 +2313,14 @@ are listed below.
 .. option:: -f[no-]unique-source-file-names
 
    When enabled, allows the compiler to assume that each object file
-   passed to the linker has been compiled using a unique source file
-   path. This is useful for reducing link times when doing ThinLTO
-   in combination with whole-program devirtualization or CFI.
+   passed to the linker has a unique identifier. The identifier for
+   an object file is either the source file path or the value of the
+   argument `-funique-source-file-identifier` if specified. This is
+   useful for reducing link times when doing ThinLTO in combination with
+   whole-program devirtualization or CFI.
 
-   The full source path passed to the compiler must be unique. This
-   means that, for example, the following is a usage error:
+   The full source path or identifier passed to the compiler must be
+   unique. This means that, for example, the following is a usage error:
 
    .. code-block:: console
 
@@ -2326,6 +2341,11 @@ are listed below.
 
    A misuse of this flag may result in a duplicate symbol error at
    link time.
+
+.. option:: -funique-source-file-identifier=IDENTIFIER
+
+   Used with `-funique-source-file-names` to specify a source file
+   identifier.
 
 .. option:: -fforce-emit-vtables
 
@@ -3742,6 +3762,35 @@ Doxygen-style comments and ignores ordinary comments starting with ``//`` and
   It is also possible to use ``-fcomment-block-commands`` several times; e.g.
   ``-fcomment-block-commands=foo -fcomment-block-commands=bar`` does the same
   as above.
+
+.. _ccc-override-options:
+
+CCC_OVERRIDE_OPTIONS
+--------------------
+The environment variable ``CCC_OVERRIDE_OPTIONS`` can be used to edit clang's
+command line arguments. The value of this variable is a space-separated list of
+edits to perform. The edits are applied in the order in which they appear in
+``CCC_OVERRIDE_OPTIONS``. Each edit should be one of the following forms:
+
+- ``#``: Silence information about the changes to the command line arguments.
+
+- ``^FOO``: Add ``FOO`` as a new argument at the beginning of the command line
+  right after the name of the compiler executable.
+
+- ``+FOO``: Add ``FOO`` as a new argument at the end of the command line.
+
+- ``s/XXX/YYY/``: Substitute the regular expression ``XXX`` with ``YYY`` in the
+  command line.
+
+- ``xOPTION``: Removes all instances of the literal argument ``OPTION``.
+
+- ``XOPTION``: Removes all instances of the literal argument ``OPTION``, and the
+  following argument.
+
+- ``Ox``: Removes all flags matching ``O`` or ``O[sz0-9]`` and adds ``Ox`` at
+  the end of the command line.
+
+This environment variable does not affect the options added by the config files.
 
 .. _c:
 

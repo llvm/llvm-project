@@ -1579,7 +1579,7 @@ define <2 x i64> @mul_v2i64_0_1(<2 x i64> %a0) nounwind {
 ; SSE4-LABEL: mul_v2i64_0_1:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    xorps %xmm1, %xmm1
-; SSE4-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; SSE4-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE4-NEXT:    ret{{[l|q]}}
 ;
 ; X64-AVX-LABEL: mul_v2i64_0_1:
