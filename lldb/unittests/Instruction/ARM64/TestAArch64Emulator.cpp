@@ -175,7 +175,7 @@ TEST_F(TestAArch64Emulator, TestAutoAdvancePC) {
   emu.memory_offset = 0x1234567800;
   emu.gpr.pc = 0x1234567800;
   emu.gpr.x[8] = 0x1234567820;
-  memcpy(emu.memory, "\x08\x01\x40\xb9", 4); // ldr w8, [x8]
+  memcpy(emu.memory, "\x08\x01\x40\xb9", 4);        // ldr w8, [x8]
   memcpy(emu.memory + 0x20, "\x11\x22\x33\x44", 4); // 0x44332211
   ASSERT_TRUE(emu.ReadInstruction());
   ASSERT_TRUE(
