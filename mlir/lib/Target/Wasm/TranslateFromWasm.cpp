@@ -16,15 +16,16 @@
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Target/Wasm/WasmBinaryEncoding.h"
 #include "mlir/Target/Wasm/WasmImporter.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/LogicalResult.h"
 
-#include <climits>
+#include <cstddef>
 #include <cstdint>
 #include <variant>
 
@@ -148,22 +149,22 @@ struct WasmModuleSymbolTables {
   }
 
   std::string getNewFuncSymbolName() const {
-    auto id = funcSymbols.size();
+    size_t id = funcSymbols.size();
     return getNewSymbolName("func_", id);
   }
 
   std::string getNewGlobalSymbolName() const {
-    auto id = globalSymbols.size();
+    size_t id = globalSymbols.size();
     return getNewSymbolName("global_", id);
   }
 
   std::string getNewMemorySymbolName() const {
-    auto id = memSymbols.size();
+    size_t id = memSymbols.size();
     return getNewSymbolName("mem_", id);
   }
 
   std::string getNewTableSymbolName() const {
-    auto id = tableSymbols.size();
+    size_t id = tableSymbols.size();
     return getNewSymbolName("table_", id);
   }
 };
@@ -342,7 +343,7 @@ public:
   }
 
   FailureOr<std::byte> consumeByte() {
-    auto res = consumeNBytes(1);
+    FailureOr<StringRef> res = consumeNBytes(1);
     if (failed(res))
       return failure();
     return std::byte{*res->bytes_begin()};
@@ -502,7 +503,7 @@ public:
     FileLineColLoc importLoc = getLocation();
     FailureOr<std::byte> importType = consumeByte();
     auto packager = [](auto parseResult) -> FailureOr<ImportDesc> {
-      if (llvm::failed(parseResult))
+      if (failed(parseResult))
         return failure();
       return {*parseResult};
     };
@@ -530,11 +531,11 @@ public:
     return eParser.parse(builder);
   }
 
-  llvm::LogicalResult parseCodeFor(FuncOp func,
-                                   WasmModuleSymbolTables const &symbols) {
-    llvm::SmallVector<local_val_t> locals{};
+  LogicalResult parseCodeFor(FuncOp func,
+                             WasmModuleSymbolTables const &symbols) {
+    SmallVector<local_val_t> locals{};
     // Populating locals with function argument
-    auto &block = func.getBody().front();
+    Block &block = func.getBody().front();
     // Delete temporary return argument which was only created for IR validity
     assert(func.getBody().getBlocks().size() == 1 &&
            "Function should only have its default created block at this point");
@@ -543,29 +544,29 @@ public:
     auto returnOp = cast<ReturnOp>(&block.back());
     assert(returnOp);
 
-    auto codeSizeInBytes = parseUI32();
+    FailureOr<uint32_t> codeSizeInBytes = parseUI32();
     if (failed(codeSizeInBytes))
       return failure();
-    auto codeContent = consumeNBytes(*codeSizeInBytes);
+    FailureOr<StringRef> codeContent = consumeNBytes(*codeSizeInBytes);
     if (failed(codeContent))
       return failure();
     auto name = StringAttr::get(func->getContext(),
                                 locName.str() + "::" + func.getSymName());
     auto cParser = ParserHead{*codeContent, name};
-    auto localVecSize = cParser.parseVectorSize();
+    FailureOr<uint32_t> localVecSize = cParser.parseVectorSize();
     if (failed(localVecSize))
       return failure();
     OpBuilder builder{&func.getBody().front().back()};
     for (auto arg : block.getArguments())
       locals.push_back(cast<TypedValue<LocalRefType>>(arg));
     // Declare the local ops
-    auto nVarVec = *localVecSize;
+    uint32_t nVarVec = *localVecSize;
     for (size_t i = 0; i < nVarVec; ++i) {
-      auto varLoc = cParser.getLocation();
-      auto nSubVar = cParser.parseUI32();
+      FileLineColLoc varLoc = cParser.getLocation();
+      FailureOr<uint32_t> nSubVar = cParser.parseUI32();
       if (failed(nSubVar))
         return failure();
-      auto varT = cParser.parseValueType(func->getContext());
+      FailureOr<Type> varT = cParser.parseValueType(func->getContext());
       if (failed(varT))
         return failure();
       for (size_t j = 0; j < *nSubVar; ++j) {
@@ -573,12 +574,12 @@ public:
         locals.push_back(local.getResult());
       }
     }
-    auto res = cParser.parseExpression(builder, symbols, locals);
+    parsed_inst_t res = cParser.parseExpression(builder, symbols, locals);
     if (failed(res))
       return failure();
     if (!cParser.end())
       return emitError(cParser.getLocation(),
-                       "Unparsed garbage remaining at end of code block");
+                       "unparsed garbage remaining at end of code block");
     builder.create<ReturnOp>(func->getLoc(), *res);
     returnOp->erase();
     return success();
@@ -609,7 +610,7 @@ private:
 
 template <>
 FailureOr<float> ParserHead::parseLiteral<float>() {
-  auto bytes = consumeNBytes(4);
+  FailureOr<StringRef> bytes = consumeNBytes(4);
   if (failed(bytes))
     return failure();
   float result;
@@ -619,7 +620,7 @@ FailureOr<float> ParserHead::parseLiteral<float>() {
 
 template <>
 FailureOr<double> ParserHead::parseLiteral<double>() {
-  auto bytes = consumeNBytes(8);
+  FailureOr<StringRef> bytes = consumeNBytes(8);
   if (failed(bytes))
     return failure();
   double result;
@@ -724,7 +725,7 @@ parsed_inst_t ValueStack::popOperands(TypeRange operandTypes, Location *opLoc) {
          << "  Current stack size: " << values.size();
   if (operandTypes.size() > values.size())
     return emitError(*opLoc,
-                     "stack doesn't contain enough values. Trying to get ")
+                     "stack doesn't contain enough values. trying to get ")
            << operandTypes.size() << " operands on a stack containing only "
            << values.size() << " values.";
   size_t stackIdxOffset = values.size() - operandTypes.size();
@@ -734,7 +735,7 @@ parsed_inst_t ValueStack::popOperands(TypeRange operandTypes, Location *opLoc) {
     Value operand = values[i + stackIdxOffset];
     Type stackType = operand.getType();
     if (stackType != operandTypes[i])
-      return emitError(*opLoc, "invalid operand type on stack. Expecting ")
+      return emitError(*opLoc, "invalid operand type on stack. expecting ")
              << operandTypes[i] << ", value on stack is of type " << stackType
              << ".";
     LDBG() << "    POP: " << operand;
@@ -795,12 +796,12 @@ ExpressionParser::parse(OpBuilder &builder,
 template <>
 inline parsed_inst_t ExpressionParser::parseSpecificInstruction<
     WasmBinaryEncoding::OpCode::localGet>(OpBuilder &builder) {
-  auto id = parser.parseLiteral<uint32_t>();
-  auto instLoc = *currentOpLoc;
+  FailureOr<uint32_t> id = parser.parseLiteral<uint32_t>();
+  Location instLoc = *currentOpLoc;
   if (failed(id))
     return failure();
   if (*id >= locals.size())
-    return emitError(instLoc, "Invalid local index. Function has ")
+    return emitError(instLoc, "invalid local index. function has ")
            << locals.size() << " accessible locals, received index " << *id;
   return {{builder.create<LocalGetOp>(instLoc, locals[*id]).getResult()}};
 }
@@ -808,15 +809,15 @@ inline parsed_inst_t ExpressionParser::parseSpecificInstruction<
 template <>
 inline parsed_inst_t ExpressionParser::parseSpecificInstruction<
     WasmBinaryEncoding::OpCode::globalGet>(OpBuilder &builder) {
-  auto id = parser.parseLiteral<uint32_t>();
-  auto instLoc = *currentOpLoc;
+  FailureOr<uint32_t> id = parser.parseLiteral<uint32_t>();
+  Location instLoc = *currentOpLoc;
   if (failed(id))
     return failure();
   if (*id >= symbols.globalSymbols.size())
-    return emitError(instLoc, "Invalid global index. Function has ")
+    return emitError(instLoc, "invalid global index. function has ")
            << symbols.globalSymbols.size()
            << " accessible globals, received index " << *id;
-  auto globalVar = symbols.globalSymbols[*id];
+  GlobalSymbolRefContainer globalVar = symbols.globalSymbols[*id];
   auto globalOp = builder.create<GlobalGetOp>(instLoc, globalVar.globalType,
                                               globalVar.symbol);
 
@@ -825,16 +826,16 @@ inline parsed_inst_t ExpressionParser::parseSpecificInstruction<
 
 template <typename OpToCreate>
 parsed_inst_t ExpressionParser::parseSetOrTee(OpBuilder &builder) {
-  auto id = parser.parseLiteral<uint32_t>();
+  FailureOr<uint32_t> id = parser.parseLiteral<uint32_t>();
   if (failed(id))
     return failure();
   if (*id >= locals.size())
-    return emitError(*currentOpLoc, "Invalid local index. Function has ")
+    return emitError(*currentOpLoc, "invalid local index. function has ")
            << locals.size() << " accessible locals, received index " << *id;
   if (valueStack.empty())
     return emitError(
         *currentOpLoc,
-        "Invalid stack access, trying to access a value on an empty stack.");
+        "invalid stack access, trying to access a value on an empty stack.");
 
   parsed_inst_t poppedOp = popOperands(locals[*id].getType().getElementType());
   if (failed(poppedOp))
@@ -953,7 +954,7 @@ inline parsed_inst_t ExpressionParser::buildNumericOp(
   auto ty = buildLiteralType<valueType>(builder);
   LLVM_DEBUG(llvm::dbgs() << "*** buildNumericOp: numOperands = " << numOperands
                           << ", type = " << ty << " ***\n");
-  auto tysToPop = llvm::SmallVector<Type, numOperands>();
+  auto tysToPop = SmallVector<Type, numOperands>();
   tysToPop.resize(numOperands);
   std::fill(tysToPop.begin(), tysToPop.end(), ty);
   auto operands = popOperands(tysToPop);
@@ -1133,7 +1134,7 @@ private:
     if (failed(nElemsParsed))
       return failure();
     uint32_t nElems = *nElemsParsed;
-    LDBG() << "Starting to parse " << nElems << " items for section "
+    LDBG() << "starting to parse " << nElems << " items for section "
            << secName;
     for (size_t i = 0; i < nElems; ++i) {
       if (failed(parseSectionItem<section>(ph, i)))
@@ -1232,7 +1233,7 @@ public:
       return;
     if (version->compare(expectedVersionString)) {
       emitError(versionLoc,
-                "unsupported Wasm version. Only version 1 is supported.");
+                "unsupported Wasm version. only version 1 is supported");
       return;
     }
     LogicalResult fillRegistry = registry.populateFromBody(parser.copy());
@@ -1263,11 +1264,11 @@ public:
     if (failed(parsingMems))
       return;
 
-    auto parsingGlobals = parseSection<WasmSectionType::GLOBAL>();
+    LogicalResult parsingGlobals = parseSection<WasmSectionType::GLOBAL>();
     if (failed(parsingGlobals))
       return;
 
-    auto parsingCode = parseSection<WasmSectionType::CODE>();
+    LogicalResult parsingCode = parseSection<WasmSectionType::CODE>();
     if (failed(parsingCode))
       return;
 
@@ -1469,21 +1470,21 @@ template <>
 LogicalResult
 WasmBinaryParser::parseSectionItem<WasmSectionType::GLOBAL>(ParserHead &ph,
                                                             size_t) {
-  auto globalLocation = ph.getLocation();
+  FileLineColLoc globalLocation = ph.getLocation();
   auto globalTypeParsed = ph.parseGlobalType(ctx);
   if (failed(globalTypeParsed))
     return failure();
 
-  auto globalType = *globalTypeParsed;
+  GlobalTypeRecord globalType = *globalTypeParsed;
   auto symbol = builder.getStringAttr(symbols.getNewGlobalSymbolName());
   auto globalOp = builder.create<wasmssa::GlobalOp>(
       globalLocation, symbol, globalType.type, globalType.isMutable);
   symbols.globalSymbols.push_back(
       {{FlatSymbolRefAttr::get(globalOp)}, globalOp.getType()});
   auto ip = builder.saveInsertionPoint();
-  auto *block = builder.createBlock(&globalOp.getInitializer());
+  Block *block = builder.createBlock(&globalOp.getInitializer());
   builder.setInsertionPointToStart(block);
-  auto expr = ph.parseExpression(builder, symbols);
+  parsed_inst_t expr = ph.parseExpression(builder, symbols);
   if (failed(expr))
     return failure();
   if (block->empty())
@@ -1500,10 +1501,10 @@ WasmBinaryParser::parseSectionItem<WasmSectionType::GLOBAL>(ParserHead &ph,
 template <>
 LogicalResult WasmBinaryParser::parseSectionItem<WasmSectionType::CODE>(
     ParserHead &ph, size_t innerFunctionId) {
-  auto funcId = innerFunctionId + firstInternalFuncID;
-  auto symRef = symbols.funcSymbols[funcId];
+  unsigned long funcId = innerFunctionId + firstInternalFuncID;
+  FunctionSymbolRefContainer symRef = symbols.funcSymbols[funcId];
   auto funcOp =
-      llvm::dyn_cast<FuncOp>(SymbolTable::lookupSymbolIn(mOp, symRef.symbol));
+      dyn_cast<FuncOp>(SymbolTable::lookupSymbolIn(mOp, symRef.symbol));
   assert(funcOp);
   if (failed(ph.parseCodeFor(funcOp, symbols)))
     return failure();
