@@ -9603,7 +9603,8 @@ bool isValidMtVsrBmi(APInt &BitMask, BuildVectorSDNode &BVN,
 
     if (!CN)
       return false;
-
+    // The elements in a vector register are ordered in reverse byte order
+    // between little-endian and big-endian modes.
     ConstValue.insertBits(CN->getAPIntValue().zextOrTrunc(EltWidth),
                           IsLittleEndian ? BitPos : VTSize - EltWidth - BitPos);
     BitPos += EltWidth;
