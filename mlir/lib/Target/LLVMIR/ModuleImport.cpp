@@ -1065,15 +1065,15 @@ void ModuleImport::convertTargetTriple() {
 }
 
 void ModuleImport::convertModuleLevelAsm() {
-  auto str = llvmModule->getModuleInlineAsm();
-  llvm::SmallVector<mlir::Attribute> arr;
+  llvm::StringRef asmStr = llvmModule->getModuleInlineAsm();
+  llvm::SmallVector<mlir::Attribute> asmArrayAttr;
 
-  for (auto line : llvm::split(str, '\n'))
+  for (llvm::StringRef line : llvm::split(asmStr, '\n'))
     if (!line.empty())
-      arr.push_back(builder.getStringAttr(line));
+      asmArrayAttr.push_back(builder.getStringAttr(line));
 
   mlirModule->setAttr(LLVM::LLVMDialect::getModuleLevelAsmAttrName(),
-                      builder.getArrayAttr(arr));
+                      builder.getArrayAttr(asmArrayAttr));
 }
 
 LogicalResult ModuleImport::convertFunctions() {
