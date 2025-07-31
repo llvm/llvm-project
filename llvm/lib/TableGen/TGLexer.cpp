@@ -174,129 +174,174 @@ int TGLexer::peekNextChar(int Index) const {
 }
 
 tgtok::TokKind TGLexer::LexToken(bool FileOrLineStart) {
-  TokStart = CurPtr;
-  // This always consumes at least one character.
-  int CurChar = getNextChar();
+  while (true) {
+    TokStart = CurPtr;
+    // This always consumes at least one character.
+    int CurChar = getNextChar();
 
-  switch (CurChar) {
-  default:
-    // Handle letters: [a-zA-Z_]
-    if (isValidIDChar(CurChar, /*First=*/true))
-      return LexIdentifier();
+    switch (CurChar) {
+    default:
+      // Handle letters: [a-zA-Z_]
+      if (isValidIDChar(CurChar, /*First=*/true))
+        return LexIdentifier();
 
-    // Unknown character, emit an error.
-    return ReturnError(TokStart, "unexpected character");
-  case EOF:
-    // Lex next token, if we just left an include file.
-    // Note that leaving an include file means that the next
-    // symbol is located at the end of the 'include "..."'
-    // construct, so LexToken() is called with default
-    // false parameter.
-    if (processEOF())
-      return LexToken();
-
-    // Return EOF denoting the end of lexing.
-    return tgtok::Eof;
-
-  case ':': return tgtok::colon;
-  case ';': return tgtok::semi;
-  case ',': return tgtok::comma;
-  case '<': return tgtok::less;
-  case '>': return tgtok::greater;
-  case ']': return tgtok::r_square;
-  case '{': return tgtok::l_brace;
-  case '}': return tgtok::r_brace;
-  case '(': return tgtok::l_paren;
-  case ')': return tgtok::r_paren;
-  case '=': return tgtok::equal;
-  case '?': return tgtok::question;
-  case '#':
-    if (FileOrLineStart) {
-      tgtok::TokKind Kind = prepIsDirective();
-      if (Kind != tgtok::Error)
-        return lexPreprocessor(Kind);
-    }
-
-    return tgtok::paste;
-
-  // The period is a separate case so we can recognize the "..."
-  // range punctuator.
-  case '.':
-    if (peekNextChar(0) == '.') {
-      ++CurPtr; // Eat second dot.
-      if (peekNextChar(0) == '.') {
-        ++CurPtr; // Eat third dot.
-        return tgtok::dotdotdot;
-      }
-      return ReturnError(TokStart, "invalid '..' punctuation");
-    }
-    return tgtok::dot;
-
-  case '\r':
-    llvm_unreachable("getNextChar() must never return '\r'");
-
-  case ' ':
-  case '\t':
-    // Ignore whitespace.
-    return LexToken(FileOrLineStart);
-  case '\n':
-    // Ignore whitespace, and identify the new line.
-    return LexToken(true);
-  case '/':
-    // If this is the start of a // comment, skip until the end of the line or
-    // the end of the buffer.
-    if (*CurPtr == '/')
-      SkipBCPLComment();
-    else if (*CurPtr == '*') {
-      if (SkipCComment())
-        return tgtok::Error;
-    } else // Otherwise, this is an error.
+      // Unknown character, emit an error.
       return ReturnError(TokStart, "unexpected character");
-    return LexToken(FileOrLineStart);
-  case '-': case '+':
-  case '0': case '1': case '2': case '3': case '4': case '5': case '6':
-  case '7': case '8': case '9': {
-    int NextChar = 0;
-    if (isDigit(CurChar)) {
-      // Allow identifiers to start with a number if it is followed by
-      // an identifier. This can happen with paste operations like
-      // foo#8i.
-      int i = 0;
-      do {
-        NextChar = peekNextChar(i++);
-      } while (isDigit(NextChar));
+    case EOF:
+      // Lex next token, if we just left an include file.
+      if (processEOF()) {
+        // Leaving an include file means that the next symbol is located at the
+        // end of the 'include "..."' construct.
+        FileOrLineStart = false;
+        break;
+      }
 
-      if (NextChar == 'x' || NextChar == 'b') {
-        // If this is [0-9]b[01] or [0-9]x[0-9A-fa-f] this is most
-        // likely a number.
-        int NextNextChar = peekNextChar(i);
-        switch (NextNextChar) {
-        default:
-          break;
-        case '0': case '1':
-          if (NextChar == 'b')
-            return LexNumber();
-          [[fallthrough]];
-        case '2': case '3': case '4': case '5':
-        case '6': case '7': case '8': case '9':
-        case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
-        case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
-          if (NextChar == 'x')
-            return LexNumber();
-          break;
+      // Return EOF denoting the end of lexing.
+      return tgtok::Eof;
+
+    case ':':
+      return tgtok::colon;
+    case ';':
+      return tgtok::semi;
+    case ',':
+      return tgtok::comma;
+    case '<':
+      return tgtok::less;
+    case '>':
+      return tgtok::greater;
+    case ']':
+      return tgtok::r_square;
+    case '{':
+      return tgtok::l_brace;
+    case '}':
+      return tgtok::r_brace;
+    case '(':
+      return tgtok::l_paren;
+    case ')':
+      return tgtok::r_paren;
+    case '=':
+      return tgtok::equal;
+    case '?':
+      return tgtok::question;
+    case '#':
+      if (FileOrLineStart) {
+        tgtok::TokKind Kind = prepIsDirective();
+        if (Kind != tgtok::Error)
+          return lexPreprocessor(Kind);
+      }
+
+      return tgtok::paste;
+
+      // The period is a separate case so we can recognize the "..."
+      // range punctuator.
+    case '.':
+      if (peekNextChar(0) == '.') {
+        ++CurPtr; // Eat second dot.
+        if (peekNextChar(0) == '.') {
+          ++CurPtr; // Eat third dot.
+          return tgtok::dotdotdot;
+        }
+        return ReturnError(TokStart, "invalid '..' punctuation");
+      }
+      return tgtok::dot;
+
+    case '\r':
+      llvm_unreachable("getNextChar() must never return '\r'");
+
+    case ' ':
+    case '\t':
+      // Ignore whitespace.
+      break;
+    case '\n':
+      // Ignore whitespace, and identify the new line.
+      FileOrLineStart = true;
+      break;
+    case '/':
+      // If this is the start of a // comment, skip until the end of the line or
+      // the end of the buffer.
+      if (*CurPtr == '/')
+        SkipBCPLComment();
+      else if (*CurPtr == '*') {
+        if (SkipCComment())
+          return tgtok::Error;
+      } else // Otherwise, this is an error.
+        return ReturnError(TokStart, "unexpected character");
+      break;
+    case '-':
+    case '+':
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9': {
+      int NextChar = 0;
+      if (isDigit(CurChar)) {
+        // Allow identifiers to start with a number if it is followed by
+        // an identifier.  This can happen with paste operations like
+        // foo#8i.
+        int i = 0;
+        do {
+          NextChar = peekNextChar(i++);
+        } while (isDigit(NextChar));
+
+        if (NextChar == 'x' || NextChar == 'b') {
+          // If this is [0-9]b[01] or [0-9]x[0-9A-fa-f] this is most
+          // likely a number.
+          int NextNextChar = peekNextChar(i);
+          switch (NextNextChar) {
+          default:
+            break;
+          case '0':
+          case '1':
+            if (NextChar == 'b')
+              return LexNumber();
+            [[fallthrough]];
+          case '2':
+          case '3':
+          case '4':
+          case '5':
+          case '6':
+          case '7':
+          case '8':
+          case '9':
+          case 'a':
+          case 'b':
+          case 'c':
+          case 'd':
+          case 'e':
+          case 'f':
+          case 'A':
+          case 'B':
+          case 'C':
+          case 'D':
+          case 'E':
+          case 'F':
+            if (NextChar == 'x')
+              return LexNumber();
+            break;
+          }
         }
       }
+
+      if (isValidIDChar(NextChar, /*First=*/true))
+        return LexIdentifier();
+
+      return LexNumber();
     }
-
-    if (isValidIDChar(NextChar, /*First=*/true))
-      return LexIdentifier();
-
-    return LexNumber();
-  }
-  case '"': return LexString();
-  case '$': return LexVarName();
-  case '[': return LexBracket();
-  case '!': return LexExclaim();
+    case '"':
+      return LexString();
+    case '$':
+      return LexVarName();
+    case '[':
+      return LexBracket();
+    case '!':
+      return LexExclaim();
+    }
   }
 }
 
@@ -635,6 +680,8 @@ tgtok::TokKind TGLexer::LexExclaim() {
           .Case("find", tgtok::XFind)
           .Cases("setdagop", "setop", tgtok::XSetDagOp) // !setop is deprecated.
           .Cases("getdagop", "getop", tgtok::XGetDagOp) // !getop is deprecated.
+          .Case("setdagopname", tgtok::XSetDagOpName)
+          .Case("getdagopname", tgtok::XGetDagOpName)
           .Case("getdagarg", tgtok::XGetDagArg)
           .Case("getdagname", tgtok::XGetDagName)
           .Case("setdagarg", tgtok::XSetDagArg)

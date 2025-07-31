@@ -252,7 +252,7 @@ void IntrinsicEmitter::EmitIntrinsicToNameTable(
 
 )";
 
-  Table.EmitStringTableDef(OS, "IntrinsicNameTable", /*Indent=*/"");
+  Table.EmitStringTableDef(OS, "IntrinsicNameTable");
 
   OS << R"(
 static constexpr unsigned IntrinsicNameOffsetTable[] = {

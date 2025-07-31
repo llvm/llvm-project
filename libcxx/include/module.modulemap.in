@@ -1338,6 +1338,7 @@ module std [system] {
     module enable_insertable                  { header "__format/enable_insertable.h" }
     module escaped_output_table               { header "__format/escaped_output_table.h" }
     module extended_grapheme_cluster_table    { header "__format/extended_grapheme_cluster_table.h" }
+    module fmt_pair_like                      { header "__format/fmt_pair_like.h" }
     module format_arg                         { header "__format/format_arg.h" }
     module format_arg_store                   { header "__format/format_arg_store.h" }
     module format_args                        { header "__format/format_args.h" }
@@ -1369,6 +1370,7 @@ module std [system] {
     module indic_conjunct_break_table         { header "__format/indic_conjunct_break_table.h" }
     module parser_std_format_spec             { header "__format/parser_std_format_spec.h" }
     module range_default_formatter            { header "__format/range_default_formatter.h" }
+    module range_format                       { header "__format/range_format.h" }
     module range_formatter                    { header "__format/range_formatter.h" }
     module unicode                            { header "__format/unicode.h" }
     module width_estimation_table             { header "__format/width_estimation_table.h" }
@@ -1590,7 +1592,6 @@ module std [system] {
     }
 
     module locale_base_api {
-      textual header "__locale_dir/locale_base_api/android.h"
       textual header "__locale_dir/locale_base_api/bsd_locale_fallbacks.h"
       textual header "__locale_dir/locale_base_api/ibm.h"
       textual header "__locale_dir/locale_base_api/musl.h"
@@ -1943,6 +1944,9 @@ module std [system] {
       header "__ranges/zip_view.h"
       export std.utility.pair
     }
+    module zip_transform_view {
+      header "__ranges/zip_transform_view.h"
+    }
 
     header "ranges"
     export *
@@ -2110,7 +2114,6 @@ module std [system] {
     module make_tuple_types         { header "__tuple/make_tuple_types.h" }
     module sfinae_helpers           { header "__tuple/sfinae_helpers.h" }
     module tuple_element            { header "__tuple/tuple_element.h" }
-    module tuple_indices            { header "__tuple/tuple_indices.h" }
     module tuple_like_ext           { header "__tuple/tuple_like_ext.h" }
     module tuple_like_no_subrange   { header "__tuple/tuple_like_no_subrange.h" }
     module tuple_like               { header "__tuple/tuple_like.h" }
@@ -2353,8 +2356,14 @@ module std [system] {
     header "__std_mbstate_t.h"
     export *
   }
+  module log_hardening_failure {
+    header "__log_hardening_failure"
+  }
   module verbose_abort {
     header "__verbose_abort"
+  }
+  module verbose_trap {
+    header "__verbose_trap"
   }
   module internal_assert {
     header "__assert"

@@ -2450,7 +2450,8 @@ bool VarDecl::hasInitWithSideEffects() const {
     ES->HasSideEffects =
         E->HasSideEffects(getASTContext()) &&
         // We can get a value-dependent initializer during error recovery.
-        (E->isValueDependent() || !evaluateValue());
+        (E->isValueDependent() || getType()->isDependentType() ||
+         !evaluateValue());
     ES->CheckedForSideEffects = true;
   }
   return ES->HasSideEffects;
@@ -4676,11 +4677,14 @@ void FieldDecl::setLazyInClassInitializer(LazyDeclStmtPtr NewInit) {
     Init = NewInit;
 }
 
+bool FieldDecl::hasConstantIntegerBitWidth() const {
+  const auto *CE = dyn_cast_if_present<ConstantExpr>(getBitWidth());
+  return CE && CE->getAPValueResult().isInt();
+}
+
 unsigned FieldDecl::getBitWidthValue() const {
   assert(isBitField() && "not a bitfield");
-  assert(isa<ConstantExpr>(getBitWidth()));
-  assert(cast<ConstantExpr>(getBitWidth())->hasAPValueResult());
-  assert(cast<ConstantExpr>(getBitWidth())->getAPValueResult().isInt());
+  assert(hasConstantIntegerBitWidth());
   return cast<ConstantExpr>(getBitWidth())
       ->getAPValueResult()
       .getInt()
@@ -5133,11 +5137,6 @@ RecordDecl *RecordDecl::CreateDeserialized(const ASTContext &C,
                  SourceLocation(), nullptr, nullptr);
   R->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
   return R;
-}
-
-bool RecordDecl::isInjectedClassName() const {
-  return isImplicit() && getDeclName() && getDeclContext()->isRecord() &&
-    cast<RecordDecl>(getDeclContext())->getDeclName() == getDeclName();
 }
 
 bool RecordDecl::isLambda() const {
@@ -5989,11 +5988,10 @@ bool clang::IsArmStreamingFunction(const FunctionDecl *FD,
     if (FD->hasAttr<ArmLocallyStreamingAttr>())
       return true;
 
-  if (const Type *Ty = FD->getType().getTypePtrOrNull())
-    if (const auto *FPT = Ty->getAs<FunctionProtoType>())
-      if (FPT->getAArch64SMEAttributes() &
-          FunctionType::SME_PStateSMEnabledMask)
-        return true;
+  assert(!FD->getType().isNull() && "Expected a valid FunctionDecl");
+  if (const auto *FPT = FD->getType()->getAs<FunctionProtoType>())
+    if (FPT->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask)
+      return true;
 
   return false;
 }

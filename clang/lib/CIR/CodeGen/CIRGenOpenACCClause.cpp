@@ -80,18 +80,7 @@ class OpenACCClauseCIREmitter final
   }
 
   mlir::Value emitIntExpr(const Expr *intExpr) {
-    mlir::Value expr = cgf.emitScalarExpr(intExpr);
-    mlir::Location exprLoc = cgf.cgm.getLoc(intExpr->getBeginLoc());
-
-    mlir::IntegerType targetType = mlir::IntegerType::get(
-        &cgf.getMLIRContext(), cgf.getContext().getIntWidth(intExpr->getType()),
-        intExpr->getType()->isSignedIntegerOrEnumerationType()
-            ? mlir::IntegerType::SignednessSemantics::Signed
-            : mlir::IntegerType::SignednessSemantics::Unsigned);
-
-    auto conversionOp = builder.create<mlir::UnrealizedConversionCastOp>(
-        exprLoc, targetType, expr);
-    return conversionOp.getResult(0);
+    return cgf.emitOpenACCIntExpr(intExpr);
   }
 
   // 'condition' as an OpenACC grammar production is used for 'if' and (some
@@ -111,6 +100,7 @@ class OpenACCClauseCIREmitter final
 
   mlir::Value createConstantInt(mlir::Location loc, unsigned width,
                                 int64_t value) {
+    return cgf.createOpenACCConstantInt(loc, width, value);
     mlir::IntegerType ty = mlir::IntegerType::get(
         &cgf.getMLIRContext(), width,
         mlir::IntegerType::SignednessSemantics::Signless);
@@ -184,105 +174,6 @@ class OpenACCClauseCIREmitter final
     dataOperands.append(computeEmitter.dataOperands);
   }
 
-  struct DataOperandInfo {
-    mlir::Location beginLoc;
-    mlir::Value varValue;
-    std::string name;
-    llvm::SmallVector<mlir::Value> bounds;
-  };
-
-  mlir::Value createBound(mlir::Location boundLoc, mlir::Value lowerBound,
-                          mlir::Value upperBound, mlir::Value extent) {
-    // Arrays always have a start-idx of 0.
-    mlir::Value startIdx = createConstantInt(boundLoc, 64, 0);
-    // Stride is always 1 in C/C++.
-    mlir::Value stride = createConstantInt(boundLoc, 64, 1);
-
-    auto bound = builder.create<mlir::acc::DataBoundsOp>(boundLoc, lowerBound,
-                                                         upperBound);
-    bound.getStartIdxMutable().assign(startIdx);
-    if (extent)
-      bound.getExtentMutable().assign(extent);
-    bound.getStrideMutable().assign(stride);
-
-    return bound;
-  }
-
-  // A helper function that gets the information from an operand to a data
-  // clause, so that it can be used to emit the data operations.
-  DataOperandInfo getDataOperandInfo(OpenACCDirectiveKind dk, const Expr *e) {
-    // TODO: OpenACC: Cache was different enough as to need a separate
-    // `ActOnCacheVar`, so we are going to need to do some investigations here
-    // when it comes to implement this for cache.
-    if (dk == OpenACCDirectiveKind::Cache) {
-      cgf.cgm.errorNYI(e->getSourceRange(),
-                       "OpenACC data operand for 'cache' directive");
-      return {cgf.cgm.getLoc(e->getBeginLoc()), {}, {}, {}};
-    }
-
-    const Expr *curVarExpr = e->IgnoreParenImpCasts();
-
-    mlir::Location exprLoc = cgf.cgm.getLoc(curVarExpr->getBeginLoc());
-    llvm::SmallVector<mlir::Value> bounds;
-
-    std::string exprString;
-    llvm::raw_string_ostream os(exprString);
-    e->printPretty(os, nullptr, cgf.getContext().getPrintingPolicy());
-
-    // Assemble the list of bounds.
-    while (isa<ArraySectionExpr, ArraySubscriptExpr>(curVarExpr)) {
-      mlir::Location boundLoc = cgf.cgm.getLoc(curVarExpr->getBeginLoc());
-      mlir::Value lowerBound;
-      mlir::Value upperBound;
-      mlir::Value extent;
-
-      if (const auto *section = dyn_cast<ArraySectionExpr>(curVarExpr)) {
-        if (const Expr *lb = section->getLowerBound())
-          lowerBound = emitIntExpr(lb);
-        else
-          lowerBound = createConstantInt(boundLoc, 64, 0);
-
-        if (const Expr *len = section->getLength()) {
-          extent = emitIntExpr(len);
-        } else {
-          QualType baseTy = ArraySectionExpr::getBaseOriginalType(
-              section->getBase()->IgnoreParenImpCasts());
-          // We know this is the case as implicit lengths are only allowed for
-          // array types with a constant size, or a dependent size.  AND since
-          // we are codegen we know we're not dependent.
-          auto *arrayTy = cgf.getContext().getAsConstantArrayType(baseTy);
-          // Rather than trying to calculate the extent based on the
-          // lower-bound, we can just emit this as an upper bound.
-          upperBound =
-              createConstantInt(boundLoc, 64, arrayTy->getLimitedSize() - 1);
-        }
-
-        curVarExpr = section->getBase()->IgnoreParenImpCasts();
-      } else {
-        const auto *subscript = cast<ArraySubscriptExpr>(curVarExpr);
-
-        lowerBound = emitIntExpr(subscript->getIdx());
-        // Length of an array index is always 1.
-        extent = createConstantInt(boundLoc, 64, 1);
-        curVarExpr = subscript->getBase()->IgnoreParenImpCasts();
-      }
-
-      bounds.push_back(createBound(boundLoc, lowerBound, upperBound, extent));
-    }
-
-    if (const auto *memExpr = dyn_cast<MemberExpr>(curVarExpr))
-      return {exprLoc, cgf.emitMemberExpr(memExpr).getPointer(), exprString,
-              std::move(bounds)};
-
-    // Sema has made sure that only 4 types of things can get here, array
-    // subscript, array section, member expr, or DRE to a var decl (or the
-    // former 3 wrapping a var-decl), so we should be able to assume this is
-    // right.
-    const auto *dre = cast<DeclRefExpr>(curVarExpr);
-    return {exprLoc, cgf.emitDeclRefLValue(dre).getPointer(), exprString,
-            std::move(bounds)};
-  }
-
   mlir::acc::DataClauseModifier
   convertModifiers(OpenACCModifierKind modifiers) {
     using namespace mlir::acc;
@@ -314,7 +205,8 @@ class OpenACCClauseCIREmitter final
   void addDataOperand(const Expr *varOperand, mlir::acc::DataClause dataClause,
                       OpenACCModifierKind modifiers, bool structured,
                       bool implicit) {
-    DataOperandInfo opInfo = getDataOperandInfo(dirKind, varOperand);
+    CIRGenFunction::OpenACCDataOperandInfo opInfo =
+        cgf.getOpenACCDataOperandInfo(varOperand);
 
     auto beforeOp =
         builder.create<BeforeOpTy>(opInfo.beginLoc, opInfo.varValue, structured,
@@ -355,7 +247,8 @@ class OpenACCClauseCIREmitter final
   void addDataOperand(const Expr *varOperand, mlir::acc::DataClause dataClause,
                       OpenACCModifierKind modifiers, bool structured,
                       bool implicit) {
-    DataOperandInfo opInfo = getDataOperandInfo(dirKind, varOperand);
+    CIRGenFunction::OpenACCDataOperandInfo opInfo =
+        cgf.getOpenACCDataOperandInfo(varOperand);
     auto beforeOp =
         builder.create<BeforeOpTy>(opInfo.beginLoc, opInfo.varValue, structured,
                                    implicit, opInfo.name, opInfo.bounds);

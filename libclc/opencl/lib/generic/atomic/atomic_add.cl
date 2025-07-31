@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/atomic/atomic_add.h>
 
 #define IMPL(TYPE, AS)                                                         \
   _CLC_OVERLOAD _CLC_DEF TYPE atomic_add(volatile AS TYPE *p, TYPE val) {      \

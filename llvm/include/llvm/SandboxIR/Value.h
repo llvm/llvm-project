@@ -33,6 +33,7 @@ class IntrinsicInst;
 class Operator;
 class OverflowingBinaryOperator;
 class FPMathOperator;
+class Region;
 
 /// Iterator for the `Use` edges of a Value's users.
 /// \Returns a `Use` when dereferenced.

@@ -29,8 +29,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 extern int g_verbose;
 
@@ -736,9 +736,11 @@ DWARFUnit::GetVendorDWARFOpcodeSize(const DataExtractor &data,
 
 bool DWARFUnit::ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
                                        lldb::offset_t &offset,
+                                       RegisterContext *reg_ctx,
+                                       lldb::RegisterKind reg_kind,
                                        std::vector<Value> &stack) const {
   return GetSymbolFileDWARF().ParseVendorDWARFOpcode(op, opcodes, offset,
-                                                     stack);
+                                                     reg_ctx, reg_kind, stack);
 }
 
 bool DWARFUnit::ParseDWARFLocationList(
@@ -1077,8 +1079,10 @@ uint32_t DWARFUnit::GetHeaderByteSize() const { return m_header.getSize(); }
 
 std::optional<uint64_t>
 DWARFUnit::GetStringOffsetSectionItem(uint32_t index) const {
-  lldb::offset_t offset = GetStrOffsetsBase() + index * 4;
-  return m_dwarf.GetDWARFContext().getOrLoadStrOffsetsData().GetU32(&offset);
+  lldb::offset_t offset =
+      GetStrOffsetsBase() + index * m_header.getDwarfOffsetByteSize();
+  return m_dwarf.GetDWARFContext().getOrLoadStrOffsetsData().GetMaxU64(
+      &offset, m_header.getDwarfOffsetByteSize());
 }
 
 llvm::Expected<llvm::DWARFAddressRangesVector>

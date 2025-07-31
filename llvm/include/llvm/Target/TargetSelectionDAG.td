@@ -1136,9 +1136,37 @@ def immAllOnesV  : SDPatternOperator; // ISD::isConstantSplatVectorAllOnes
 def immAllZerosV : SDPatternOperator; // ISD::isConstantSplatVectorAllZeros
 
 // Other helper fragments.
+
+// An 'fmul' node which has contract flag
+def fmul_contract : PatFrag<(ops node:$a, node:$b), (fmul node:$a, node:$b),[{
+  return N->getFlags().hasAllowContract();
+}]>;
+
+// An 'fadd' node which can be contracted with fmul_contract into a fma or other relaxed instruction
+def fadd_contract : PatFrag<(ops node:$a, node:$b), (fadd node:$a, node:$b),[{
+  return N->getFlags().hasAllowContract();
+}]>;
+
+def fsub_contract : PatFrag<(ops node:$a, node:$b), (fsub node:$a, node:$b),[{
+  return N->getFlags().hasAllowContract();
+}]>;
+
 def not  : PatFrag<(ops node:$in), (xor node:$in, -1)>;
 def vnot : PatFrag<(ops node:$in), (xor node:$in, immAllOnesV)>;
 def ineg : PatFrag<(ops node:$in), (sub 0, node:$in)>;
+
+def or_disjoint : PatFrag<(ops node:$lhs, node:$rhs),
+                          (or node:$lhs, node:$rhs), [{
+  return N->getFlags().hasDisjoint();
+}]> {
+  let GISelPredicateCode = [{
+    return MI.getFlag(MachineInstr::Disjoint);
+  }];
+}
+
+def xor_like : PatFrags<(ops node:$lhs, node:$rhs),
+                        [(xor node:$lhs, node:$rhs),
+                         (or_disjoint node:$lhs, node:$rhs)]>;
 
 def zanyext : PatFrags<(ops node:$op),
                        [(zext node:$op),

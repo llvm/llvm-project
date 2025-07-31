@@ -39,6 +39,10 @@ struct BlockPointer {
   Block *Pointee;
   /// Start of the current subfield.
   unsigned Base;
+  /// Previous link in the pointer chain.
+  Pointer *Prev;
+  /// Next link in the pointer chain.
+  Pointer *Next;
 };
 
 struct IntPointer {
@@ -120,8 +124,8 @@ public:
   Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
   ~Pointer();
 
-  void operator=(const Pointer &P);
-  void operator=(Pointer &&P);
+  Pointer &operator=(const Pointer &P);
+  Pointer &operator=(Pointer &&P);
 
   /// Equality operators are just for tests.
   bool operator==(const Pointer &P) const {
@@ -576,6 +580,11 @@ public:
       return true;
     return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
   }
+  bool isConstInMutable() const {
+    if (!isBlockPointer())
+      return false;
+    return isRoot() ? false : getInlineDesc()->IsConstInMutable;
+  }
 
   /// Checks if an object or a subfield is volatile.
   bool isVolatile() const {
@@ -688,6 +697,25 @@ public:
     return *reinterpret_cast<T *>(asBlockPointer().Pointee->rawData() + Offset);
   }
 
+  /// Dereferences the element at index \p I.
+  /// This is equivalent to atIndex(I).deref<T>().
+  template <typename T> T &elem(unsigned I) const {
+    assert(isLive() && "Invalid pointer");
+    assert(isBlockPointer());
+    assert(asBlockPointer().Pointee);
+    assert(isDereferencable());
+    assert(getFieldDesc()->isPrimitiveArray());
+
+    unsigned ElemByteOffset = I * getFieldDesc()->getElemSize();
+    if (isArrayRoot())
+      return *reinterpret_cast<T *>(asBlockPointer().Pointee->rawData() +
+                                    asBlockPointer().Base + sizeof(InitMapPtr) +
+                                    ElemByteOffset);
+
+    return *reinterpret_cast<T *>(asBlockPointer().Pointee->rawData() + Offset +
+                                  ElemByteOffset);
+  }
+
   /// Whether this block can be read from at all. This is only true for
   /// block pointers that point to a valid location inside that block.
   bool isDereferencable() const {
@@ -701,6 +729,10 @@ public:
 
   /// Initializes a field.
   void initialize() const;
+  /// Initialize all elements of a primitive array at once. This can be
+  /// used in situations where we *know* we have initialized *all* elements
+  /// of a primtive array.
+  void initializeAllElements() const;
   /// Activats a field.
   void activate() const;
   /// Deactivates an entire strurcutre.
@@ -737,7 +769,7 @@ public:
 
     if (Offset < Other.Offset)
       return ComparisonCategoryResult::Less;
-    else if (Offset > Other.Offset)
+    if (Offset > Other.Offset)
       return ComparisonCategoryResult::Greater;
 
     return ComparisonCategoryResult::Equal;
@@ -804,18 +836,13 @@ private:
   /// Offset into the storage.
   uint64_t Offset = 0;
 
-  /// Previous link in the pointer chain.
-  Pointer *Prev = nullptr;
-  /// Next link in the pointer chain.
-  Pointer *Next = nullptr;
-
+  Storage StorageKind = Storage::Int;
   union {
-    BlockPointer BS;
     IntPointer Int;
+    BlockPointer BS;
     FunctionPointer Fn;
     TypeidPointer Typeid;
   } PointeeStorage;
-  Storage StorageKind = Storage::Int;
 };
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
