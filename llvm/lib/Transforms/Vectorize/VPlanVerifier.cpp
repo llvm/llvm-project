@@ -80,8 +80,8 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
       NumActiveLaneMaskPhiRecipes++;
 
     if (IsHeaderVPBB && !isa<VPHeaderPHIRecipe, VPWidenPHIRecipe>(*RecipeI) &&
-        !isa<VPInstruction>(*RecipeI) &&
-        cast<VPInstruction>(RecipeI)->getOpcode() == Instruction::PHI) {
+        !(isa<VPInstruction>(*RecipeI) &&
+          cast<VPInstruction>(RecipeI)->getOpcode() == Instruction::PHI)) {
       errs() << "Found non-header PHI recipe in header VPBB";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       errs() << ": ";
