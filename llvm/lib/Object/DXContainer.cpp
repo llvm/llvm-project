@@ -542,9 +542,26 @@ DXContainerObjectFile::getSymbolSection(DataRefImpl Symb) const {
   return make_error<DXNotSupportedError>("Symbol sections");
 }
 
+Expected<StringRef> DXContainerObjectFile::getSymbolName(DataRefImpl) const {
+  return make_error<DXNotSupportedError>("Symbol names");
+}
+
 Expected<uint64_t>
 DXContainerObjectFile::getSymbolAddress(DataRefImpl Symb) const {
   return make_error<DXNotSupportedError>("Symbol addresses");
+}
+
+uint64_t DXContainerObjectFile::getSymbolValueImpl(DataRefImpl Symb) const {
+  llvm_unreachable("DXContainer does not support symbols");
+}
+uint64_t
+DXContainerObjectFile::getCommonSymbolSizeImpl(DataRefImpl Symb) const {
+  llvm_unreachable("DXContainer does not support symbols");
+}
+
+Expected<SymbolRef::Type>
+DXContainerObjectFile::getSymbolType(DataRefImpl Symb) const {
+  return make_error<DXNotSupportedError>("Symbol types");
 }
 
 void DXContainerObjectFile::moveSectionNext(DataRefImpl &Sec) const {
@@ -616,10 +633,12 @@ DXContainerObjectFile::section_rel_end(DataRefImpl Sec) const {
   return relocation_iterator(RelocationRef());
 }
 
-void DXContainerObjectFile::moveRelocationNext(DataRefImpl &Rel) const {}
+void DXContainerObjectFile::moveRelocationNext(DataRefImpl &Rel) const {
+  llvm_unreachable("DXContainer does not support relocations");
+}
 
 uint64_t DXContainerObjectFile::getRelocationOffset(DataRefImpl Rel) const {
-  return 0;
+  llvm_unreachable("DXContainer does not support relocations");
 }
 
 symbol_iterator
@@ -628,11 +647,13 @@ DXContainerObjectFile::getRelocationSymbol(DataRefImpl Rel) const {
 }
 
 uint64_t DXContainerObjectFile::getRelocationType(DataRefImpl Rel) const {
-  return 0;
+  llvm_unreachable("DXContainer does not support relocations");
 }
 
 void DXContainerObjectFile::getRelocationTypeName(
-    DataRefImpl Rel, SmallVectorImpl<char> &Result) const {}
+    DataRefImpl Rel, SmallVectorImpl<char> &Result) const {
+  llvm_unreachable("DXContainer does not support relocations");
+}
 
 section_iterator DXContainerObjectFile::section_begin() const {
   DataRefImpl Sec;
@@ -660,6 +681,11 @@ Expected<SubtargetFeatures> DXContainerObjectFile::getFeatures() const {
 Error DXContainerObjectFile::printSymbolName(raw_ostream &OS,
                                              DataRefImpl Symb) const {
   return make_error<DXNotSupportedError>("Symbol names");
+}
+
+Expected<uint32_t>
+DXContainerObjectFile::getSymbolFlags(DataRefImpl Symb) const {
+  return make_error<DXNotSupportedError>("Symbol flags");
 }
 
 Expected<std::unique_ptr<DXContainerObjectFile>>

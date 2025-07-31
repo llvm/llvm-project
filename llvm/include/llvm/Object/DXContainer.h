@@ -605,16 +605,12 @@ private:
 public:
   static bool classof(const Binary *v) { return v->isDXContainer(); }
 
-  Expected<StringRef> getSymbolName(DataRefImpl) const override { return ""; }
+  Expected<StringRef> getSymbolName(DataRefImpl) const override;
   Expected<uint64_t> getSymbolAddress(DataRefImpl Symb) const override;
-  uint64_t getSymbolValueImpl(DataRefImpl Symb) const override { return 0; }
-  uint64_t getCommonSymbolSizeImpl(DataRefImpl Symb) const override {
-    return 0;
-  }
-  Expected<SymbolRef::Type> getSymbolType(DataRefImpl Symb) const override {
-    return SymbolRef::Type::ST_Unknown;
-  }
+  uint64_t getSymbolValueImpl(DataRefImpl Symb) const override;
+  uint64_t getCommonSymbolSizeImpl(DataRefImpl Symb) const override;
 
+  Expected<SymbolRef::Type> getSymbolType(DataRefImpl Symb) const override;
   Expected<section_iterator> getSymbolSection(DataRefImpl Symb) const override;
   void moveSectionNext(DataRefImpl &Sec) const override;
   Expected<StringRef> getSectionName(DataRefImpl Sec) const override;
@@ -651,16 +647,14 @@ public:
 
   void moveSymbolNext(DataRefImpl &Symb) const override {}
   Error printSymbolName(raw_ostream &OS, DataRefImpl Symb) const override;
-  Expected<uint32_t> getSymbolFlags(DataRefImpl Symb) const override {
-    return 0;
-  }
+  Expected<uint32_t> getSymbolFlags(DataRefImpl Symb) const override;
   basic_symbol_iterator symbol_begin() const override {
     return basic_symbol_iterator(SymbolRef());
   }
   basic_symbol_iterator symbol_end() const override {
     return basic_symbol_iterator(SymbolRef());
   }
-  bool is64Bit() const override { return 0; }
+  bool is64Bit() const override { return false; }
 
   bool isRelocatableObject() const override { return false; }
 };
