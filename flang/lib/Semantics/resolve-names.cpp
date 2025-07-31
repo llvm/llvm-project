@@ -9248,7 +9248,12 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
   if (std::holds_alternative<parser::CompilerDirective::VectorAlways>(x.u)) {
     return;
   }
-  if (const auto *tkr{
+  if (const auto *err{std::get_if<parser::CompilerDirective::Error>(&x.u)}) {
+    Say(err->v, "%s"_err_en_US);
+  }
+  else if (const auto *warn{std::get_if<parser::CompilerDirective::Warning>(&x.u)}) {
+    Say(warn->v, "%s"_warn_en_US);
+  } else if (const auto *tkr{
           std::get_if<std::list<parser::CompilerDirective::IgnoreTKR>>(&x.u)}) {
     if (currScope().IsTopLevel() ||
         GetProgramUnitContaining(currScope()).kind() !=

@@ -1294,6 +1294,8 @@ TYPE_PARSER(construct<StatOrErrmsg>("STAT =" >> statVariable) ||
 // !DIR$ LOOP COUNT (n1[, n2]...)
 // !DIR$ name[=value] [, name[=value]]...
 // !DIR$ <anything else>
+// !DIR$ ERROR  error-string
+// !DIR$ WARNING warning-string
 constexpr auto ignore_tkr{
     "IGNORE_TKR" >> optionalList(construct<CompilerDirective::IgnoreTKR>(
                         maybe(parenthesized(many(letter))), name))};
@@ -1305,11 +1307,17 @@ constexpr auto assumeAligned{"ASSUME_ALIGNED" >>
         indirect(designator), ":"_tok >> digitString64))};
 constexpr auto vectorAlways{
     "VECTOR ALWAYS" >> construct<CompilerDirective::VectorAlways>()};
+constexpr auto error{"ERROR" >>
+    construct<CompilerDirective::Error>(charLiteralConstantWithoutKind)};
+constexpr auto warning{"WARNING" >>
+    construct<CompilerDirective::Warning>(charLiteralConstantWithoutKind)};
 TYPE_PARSER(beginDirective >> "DIR$ "_tok >>
     sourced((construct<CompilerDirective>(ignore_tkr) ||
                 construct<CompilerDirective>(loopCount) ||
                 construct<CompilerDirective>(assumeAligned) ||
                 construct<CompilerDirective>(vectorAlways) ||
+                construct<CompilerDirective>(error) ||
+                construct<CompilerDirective>(warning) ||
                 construct<CompilerDirective>(
                     many(construct<CompilerDirective::NameValue>(
                         name, maybe(("="_tok || ":"_tok) >> digitString64))))) /
