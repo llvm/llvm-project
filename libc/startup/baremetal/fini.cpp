@@ -8,9 +8,6 @@
 
 #include "startup/baremetal/fini.h"
 
-#include "startup/baremetal/fini.h"
-
-#include "hdr/stdint_proxy.h"
 #include "src/__support/macros/config.h"
 #include <stddef.h>
 

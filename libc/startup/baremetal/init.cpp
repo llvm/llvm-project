@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "hdr/stdint_proxy.h"
 #include "startup/baremetal/init.h"
 
 #include "src/__support/macros/config.h"

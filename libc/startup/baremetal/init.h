@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stdint.h>
+#include "hdr/stdint_proxy.h"
 
 extern "C" {
 extern uintptr_t __preinit_array_start[];
