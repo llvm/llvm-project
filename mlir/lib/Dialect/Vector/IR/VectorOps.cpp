@@ -2476,11 +2476,11 @@ OpFoldResult FromElementsOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
-/// Rewrite a vector.from_elements into a vector.splat if all elements are the
-/// same SSA value. E.g.:
-///
-/// %0 = vector.from_elements %a, %a, %a : vector<3xf32>
-/// ==> rewrite to vector.splat %a : vector<3xf32>
+/// Rewrite vector.from_elements as vector.broadcast if the elements are the
+/// same. Example:
+///    %0 = vector.from_elements %a, %a, %a : vector<3xf32>
+/// =>
+///    %0 = vector.broadcast %a : f32 to vector<3xf32>
 static LogicalResult
 rewriteFromElementsAsBroadcast(FromElementsOp fromElementsOp,
                                PatternRewriter &rewriter) {
@@ -3060,6 +3060,38 @@ struct Canonicalize0DShuffleOp : public OpRewritePattern<ShuffleOp> {
   }
 };
 
+/// Consider the defining operation `defOp` of `value`. If `defOp` is a
+/// vector.splat or a vector.broadcast with a scalar operand, return the scalar
+/// value that is splatted. Otherwise return null.
+///
+/// Examples:
+///
+/// scalar_source --> vector.splat --> value     - return scalar_source
+/// scalar_source --> vector.broadcast --> value - return scalar_source
+static Value getScalarSplatSource(Value value) {
+  // Block argument:
+  Operation *defOp = value.getDefiningOp();
+  if (!defOp)
+    return {};
+
+  // Splat:
+  if (auto splat = dyn_cast<vector::SplatOp>(defOp))
+    return splat.getInput();
+
+  auto broadcast = dyn_cast<vector::BroadcastOp>(defOp);
+
+  // Not broadcast (and not splat):
+  if (!broadcast)
+    return {};
+
+  // Broadcast of a vector:
+  if (isa<VectorType>(broadcast.getSourceType()))
+    return {};
+
+  // Broadcast of a scalar:
+  return broadcast.getSource();
+}
+
 /// Pattern to rewrite shuffle(splat-like(v), splat-like(v)) as broadcast(v)
 class ShuffleSplat final : public OpRewritePattern<ShuffleOp> {
 public:
@@ -3067,8 +3099,8 @@ public:
 
   LogicalResult matchAndRewrite(ShuffleOp op,
                                 PatternRewriter &rewriter) const override {
-    Value splat = getSplatSource(op.getV1());
-    if (!splat || getSplatSource(op.getV2()) != splat)
+    Value splat = getScalarSplatSource(op.getV1());
+    if (!splat || getScalarSplatSource(op.getV2()) != splat)
       return failure();
 
     rewriter.replaceOpWithNewOp<BroadcastOp>(op, op.getType(), splat);
@@ -3235,8 +3267,8 @@ public:
   LogicalResult matchAndRewrite(InsertOp op,
                                 PatternRewriter &rewriter) const override {
 
-    Value splat = getSplatSource(op.getValueToStore());
-    if (!splat || getSplatSource(op.getDest()) != splat)
+    Value splat = getScalarSplatSource(op.getValueToStore());
+    if (!splat || getScalarSplatSource(op.getDest()) != splat)
       return failure();
 
     rewriter.replaceOpWithNewOp<BroadcastOp>(op, op.getType(), splat);
@@ -3517,8 +3549,8 @@ public:
                                 PatternRewriter &rewriter) const override {
 
     auto dst = insertStridedSliceOp.getDest();
-    auto splat = getSplatSource(insertStridedSliceOp.getValueToStore());
-    if (!splat || getSplatSource(dst) != splat)
+    auto splat = getScalarSplatSource(insertStridedSliceOp.getValueToStore());
+    if (!splat || getScalarSplatSource(dst) != splat)
       return failure();
 
     rewriter.replaceOp(insertStridedSliceOp, dst);
@@ -4184,7 +4216,7 @@ public:
   LogicalResult matchAndRewrite(ExtractStridedSliceOp op,
                                 PatternRewriter &rewriter) const override {
 
-    Value splat = getSplatSource(op.getVector());
+    Value splat = getScalarSplatSource(op.getVector());
     if (!splat)
       return failure();
     rewriter.replaceOpWithNewOp<BroadcastOp>(op, op.getType(), splat);
@@ -6345,7 +6377,7 @@ public:
 
   LogicalResult matchAndRewrite(TransposeOp transposeOp,
                                 PatternRewriter &rewriter) const override {
-    Value splat = getSplatSource(transposeOp.getVector());
+    Value splat = getScalarSplatSource(transposeOp.getVector());
     if (!splat)
       return failure();
 

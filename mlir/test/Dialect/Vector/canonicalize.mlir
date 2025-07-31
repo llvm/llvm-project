@@ -2324,13 +2324,13 @@ func.func @extract_extract_strided2(%A: vector<2x4xf32>)
 // -----
 
 // CHECK-LABEL: func @splatlike_fold
+//  CHECK-NEXT: [[V:%.*]] = arith.constant dense<1.000000e+00> : vector<4xf32>
+//  CHECK-NEXT: return [[V]] : vector<4xf32>
 func.func @splatlike_fold() -> vector<4xf32> {
   %c = arith.constant 1.0 : f32
   %v = vector.broadcast %c : f32 to vector<4xf32>
   return %v : vector<4xf32>
 
-  // CHECK-NEXT: [[V:%.*]] = arith.constant dense<1.000000e+00> : vector<4xf32>
-  // CHECK-NEXT: return [[V]] : vector<4xf32>
 }
 
 // -----
@@ -2481,10 +2481,10 @@ func.func @transpose_splatlike_constant() -> vector<8x4xf32> {
 // -----
 
 // CHECK-LABEL:   func @transpose_splatlike2(
-// CHECK-SAME:                           %[[VAL_0:.*]]: f32) -> vector<3x4xf32> {
-  // CHECK:           %[[VAL_1:.*]] = vector.broadcast %[[VAL_0]] : f32 to vector<3x4xf32>
-// CHECK:           return %[[VAL_1]] : vector<3x4xf32>
-// CHECK:         }
+//  CHECK-SAME:     %[[VAL_0:.*]]: f32) -> vector<3x4xf32> {
+//       CHECK:     %[[VAL_1:.*]] = vector.broadcast %[[VAL_0]] : f32 to vector<3x4xf32>
+//       CHECK:     return %[[VAL_1]] : vector<3x4xf32>
+//       CHECK:     }
 func.func @transpose_splatlike2(%arg : f32) -> vector<3x4xf32> {
   %splat = vector.broadcast %arg : f32 to vector<4x3xf32>
   %0 = vector.transpose %splat, [1, 0] : vector<4x3xf32> to vector<3x4xf32>
