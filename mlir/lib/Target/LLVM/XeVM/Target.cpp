@@ -1,12 +1,12 @@
-//===-- Target.cpp - MLIR LLVM XeVM target compilation ----------*- C++ -*-===//
+//===- Target.cpp - MLIR LLVM XeVM target compilation -----------*- C++ -*-===//
 //
-// This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines XeVM target related functions including registration
+// This files defines XeVM target related functions including registration
 // calls for the `#xevm.target` compilation attribute.
 //
 //===----------------------------------------------------------------------===//
@@ -15,41 +15,36 @@
 
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
-#include "mlir/IR/ExtensibleDialect.h"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
+#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/Target/LLVM/XeVM/Utils.h"
 #include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
-
-#include "llvm/Config/Targets.h"
+#include "mlir/Target/LLVMIR/Dialect/XeVM/XeVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Export.h"
 #include "llvm/IR/LegacyPassManager.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 
-#include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
+#include "llvm/Config/Targets.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
+#include "llvm/Support/Program.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
 
-// FIXME: One of the headers uses `.inc` file from the build directory, this
-// does not work for installation (i.e., DCMAKE_INSTALL_PREFIX) caching as build
-// directory will not be cached. Since float atomics are not yet supported by
-// the backend anyway, we can afford to temporarily comment this section.
-
-// #if LLVM_HAS_SPIRV_TARGET
-// #pragma GCC diagnostic push
-// #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
-// #include "SPIRVTargetMachine.h"
-// #pragma GCC diagnostic pop
-
-// #include "SPIRVCommandLine.h"
-// #endif // LLVM_HAS_SPIRV_TARGET
-
-#include <set>
+#include <cstdint>
+#include <cstdlib>
 
 using namespace mlir;
+using namespace mlir::xevm;
 
 namespace {
 // XeVM implementation of the gpu:TargetAttrInterface.
@@ -68,10 +63,9 @@ public:
 
 void mlir::xevm::registerXeVMTargetInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(
-      +[](MLIRContext *ctx, mlir::xevm::XeVMDialect *dialect) {
-        mlir::xevm::XeVMTargetAttr::attachInterface<XeVMTargetAttrImpl>(*ctx);
-      });
+  registry.addExtension(+[](MLIRContext *ctx, XeVMDialect *dialect) {
+    XeVMTargetAttr::attachInterface<XeVMTargetAttrImpl>(*ctx);
+  });
 }
 
 void mlir::xevm::registerXeVMTargetInterfaceExternalModels(
@@ -81,13 +75,17 @@ void mlir::xevm::registerXeVMTargetInterfaceExternalModels(
   context.appendDialectRegistry(registry);
 }
 
-mlir::xevm::SerializeGPUModuleBase::SerializeGPUModuleBase(
-    Operation &module, mlir::xevm::XeVMTargetAttr target,
+SerializeGPUModuleBase::SerializeGPUModuleBase(
+    Operation &module, XeVMTargetAttr target,
     const gpu::TargetOptions &targetOptions)
     : ModuleToObject(module, target.getTriple(), "", {}, target.getO()),
-      target(target) {}
+      target(target), librariesToLink(targetOptions.getLibrariesToLink()) {
+  if (target.getLinkFiles())
+    librariesToLink.append(target.getLinkFiles().begin(),
+                           target.getLinkFiles().end());
+}
 
-void mlir::xevm::SerializeGPUModuleBase::init() {
+void SerializeGPUModuleBase::init() {
   static llvm::once_flag initializeBackendOnce;
   llvm::call_once(initializeBackendOnce, []() {
 #if LLVM_HAS_SPIRV_TARGET
@@ -99,24 +97,40 @@ void mlir::xevm::SerializeGPUModuleBase::init() {
   });
 }
 
-mlir::xevm::XeVMTargetAttr
-mlir::xevm::SerializeGPUModuleBase::getTarget() const {
-  return target;
+XeVMTargetAttr SerializeGPUModuleBase::getTarget() const { return target; }
+
+std::optional<SmallVector<std::unique_ptr<llvm::Module>>>
+SerializeGPUModuleBase::loadBitcodeFiles(llvm::Module &module) {
+  if (librariesToLink.empty())
+    return SmallVector<std::unique_ptr<llvm::Module>>();
+  SmallVector<std::unique_ptr<llvm::Module>> bcFiles;
+  if (failed(loadBitcodeFilesFromList(module.getContext(), librariesToLink,
+                                      bcFiles)))
+    return std::nullopt;
+  return std::move(bcFiles);
 }
 
 namespace {
-class SpirSerializer : public mlir::xevm::SerializeGPUModuleBase {
+class SpirSerializer : public SerializeGPUModuleBase {
 public:
-  SpirSerializer(Operation &module, mlir::xevm::XeVMTargetAttr target,
+  SpirSerializer(Operation &module, XeVMTargetAttr target,
                  const gpu::TargetOptions &targetOptions)
-      : mlir::xevm::SerializeGPUModuleBase(module, target, targetOptions) {}
+      : SerializeGPUModuleBase(module, target, targetOptions),
+        targetOptions(targetOptions) {}
 
   gpu::GPUModuleOp getOperation();
 
+  /// Serializes the LLVM module to an object format, depending on the
+  /// compilation target selected in target options.
   std::optional<SmallVector<char, 0>>
   moduleToObject(llvm::Module &llvmModule) override;
 
+  /// Compiles to native code using `ocloc`.
+  std::optional<SmallVector<char, 0>> compileToBinary(const std::string &asmStr,
+                                                      StringRef inputFormat);
+
 private:
+  std::optional<std::string> findTool(StringRef tool);
   std::optional<std::string>
   translateToSPIRVBinary(llvm::Module &llvmModule,
                          llvm::TargetMachine &targetMachine);
@@ -125,19 +139,27 @@ private:
 } // namespace
 
 gpu::GPUModuleOp SpirSerializer::getOperation() {
-  return dyn_cast<gpu::GPUModuleOp>(
-      &mlir::xevm::SerializeGPUModuleBase::getOperation());
+  return dyn_cast<gpu::GPUModuleOp>(&SerializeGPUModuleBase::getOperation());
 }
 
 std::optional<SmallVector<char, 0>>
 SpirSerializer::moduleToObject(llvm::Module &llvmModule) {
+#define DEBUG_TYPE "serialize-to-llvm"
+  LLVM_DEBUG({
+    llvm::dbgs() << "LLVM IR for module: " << getOperation().getNameAttr()
+                 << "\n";
+    llvm::dbgs() << llvmModule << "\n";
+    llvm::dbgs().flush();
+  });
+#undef DEBUG_TYPE
+
   // Return LLVM IR if the compilation target is `offload`.
   if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Offload)
-    return mlir::xevm::SerializeGPUModuleBase::moduleToObject(llvmModule);
+    return SerializeGPUModuleBase::moduleToObject(llvmModule);
 
 #if !LLVM_HAS_SPIRV_TARGET
-  getOperation()->emitError(
-      "The `SPIRV` target was not built. Please enable it when building LLVM.");
+  getOperation()->emitError("The `SPIRV` target was not built. Please enable "
+                            "it when building LLVM.");
   return std::nullopt;
 #endif // LLVM_HAS_SPIRV_TARGET
 
@@ -145,36 +167,29 @@ SpirSerializer::moduleToObject(llvm::Module &llvmModule) {
       getOrCreateTargetMachine();
   if (!targetMachine) {
     getOperation().emitError() << "Target Machine unavailable for triple "
+                               << triple << ", can't optimize with LLVM\n";
+    return std::nullopt;
+  }
+
+  std::optional<std::string> serializedISA =
+      translateToISA(llvmModule, **targetMachine);
+  if (!serializedISA) {
+    getOperation().emitError() << "Failed translating the module to ISA."
                                << triple << ", can't compile with LLVM\n";
     return std::nullopt;
   }
 
-  //===----------------------------------------------------------------------===//
-  // Workaround to enable spirv extensions that are not added to target machine
-  // by default.
-
-  // FIXME: see fixme comment above SPIRV headers.
-  // #if LLVM_HAS_SPIRV_TARGET
-  //   std::set<llvm::SPIRV::Extension::Extension> AllowedExtIds{
-  //       llvm::SPIRV::Extension::Extension::SPV_EXT_shader_atomic_float_add,
-  //       llvm::SPIRV::Extension::Extension::SPV_EXT_shader_atomic_float16_add};
-  //   llvm::SPIRVTargetMachine *STM =
-  //       static_cast<llvm::SPIRVTargetMachine *>(targetMachine.value());
-  //   const_cast<llvm::SPIRVSubtarget *>(STM->getSubtargetImpl())
-  //       ->initAvailableExtensions(AllowedExtIds);
-  // #endif // LLVM_HAS_SPIRV_TARGET
-
-  //===----------------------------------------------------------------------===//
+#define DEBUG_TYPE "serialize-to-isa"
+  LLVM_DEBUG({
+    llvm::dbgs() << "SPIR-V for module: " << getOperation().getNameAttr() << "\n";
+    llvm::dbgs() << *serializedISA << "\n";
+    llvm::dbgs().flush();
+  });
+#undef DEBUG_TYPE
 
   // Return SPIRV if the compilation target is `assembly`.
   if (targetOptions.getCompilationTarget() ==
       gpu::CompilationTarget::Assembly) {
-    std::optional<std::string> serializedISA =
-        translateToISA(llvmModule, **targetMachine);
-    if (!serializedISA) {
-      getOperation().emitError() << "Failed translating the module to ISA.";
-      return std::nullopt;
-    }
     // Make sure to include the null terminator.
     StringRef bin(serializedISA->c_str(), serializedISA->size() + 1);
     return SmallVector<char, 0>(bin.begin(), bin.end());
@@ -191,6 +206,137 @@ SpirSerializer::moduleToObject(llvm::Module &llvmModule) {
     return std::nullopt;
   }
   StringRef bin(serializedSPIRVBinary->c_str(), serializedSPIRVBinary->size());
+  return SmallVector<char, 0>(bin.begin(), bin.end());
+}
+
+std::optional<std::string> SpirSerializer::findTool(StringRef tool) {
+  // 1. Check the toolkit path given in the command line.
+  StringRef pathRef = targetOptions.getToolkitPath();
+  SmallVector<char, 256> path;
+  if (!pathRef.empty()) {
+    path.insert(path.begin(), pathRef.begin(), pathRef.end());
+    llvm::sys::path::append(path, "bin", tool);
+    if (llvm::sys::fs::can_execute(path))
+      return StringRef(path.data(), path.size()).str();
+  }
+  // 2. Check PATH.
+  if (std::optional<std::string> toolPath =
+          llvm::sys::Process::FindInEnvPath("PATH", tool))
+    return *toolPath;
+
+  getOperation().emitError()
+      << "Couldn't find the `" << tool
+      << "` binary. Please specify the toolkit "
+         "path via GpuModuleToBinaryPass or add the compiler to $PATH`.";
+  return std::nullopt;
+}
+
+// There is 1 way to finalize SPIR-V to native code: IGC
+// There are 2 ways to access IGC: AOT (ocloc) and JIT (L0 runtime).
+// - L0 runtime consumes SPIR-V and is external to MLIR codebase (rt wrappers).
+// - `ocloc` tool can be "queried" from within MLIR.
+std::optional<SmallVector<char, 0>>
+SpirSerializer::compileToBinary(const std::string &asmStr,
+                                StringRef inputFormat) {
+  using TmpFile = std::pair<llvm::SmallString<128>, llvm::FileRemover>;
+  // Find the `ocloc` tool.
+  std::optional<std::string> oclocCompiler = findTool("ocloc");
+  if (!oclocCompiler)
+    return std::nullopt;
+  Location loc = getOperation().getLoc();
+  std::string basename =
+      llvm::formatv("mlir-{0}-{1}-{2}", getOperation().getNameAttr().getValue(),
+                    getTarget().getTriple(), getTarget().getChip());
+
+  auto createTemp = [&](StringRef name,
+                        StringRef suffix) -> std::optional<TmpFile> {
+    llvm::SmallString<128> filePath;
+    if (auto ec = llvm::sys::fs::createTemporaryFile(name, suffix, filePath)) {
+      getOperation().emitError()
+          << "Couldn't create the temp file: `" << filePath
+          << "`, error message: " << ec.message();
+      return std::nullopt;
+    }
+    return TmpFile(filePath, llvm::FileRemover(filePath.c_str()));
+  };
+  // Create temp file
+  std::optional<TmpFile> asmFile = createTemp(basename, "asm");
+  std::optional<TmpFile> binFile = createTemp(basename, "");
+  std::optional<TmpFile> logFile = createTemp(basename, "log");
+  if (!logFile || !asmFile || !binFile)
+    return std::nullopt;
+  // Dump the assembly to a temp file
+  std::error_code ec;
+  {
+    llvm::raw_fd_ostream asmStream(asmFile->first, ec);
+    if (ec) {
+      emitError(loc) << "Couldn't open the file: `" << asmFile->first
+                     << "`, error message: " << ec.message();
+      return std::nullopt;
+    }
+    asmStream << asmStr;
+    if (asmStream.has_error()) {
+      emitError(loc) << "An error occurred while writing the assembly to: `"
+                     << asmFile->first << "`.";
+      return std::nullopt;
+    }
+    asmStream.flush();
+  }
+  // Set cmd options
+  std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>> cmdOpts =
+      targetOptions.tokenizeCmdOptions();
+  // Example: --gpu-module-to-binary="opts='opt1 opt2'"
+  const std::string cmdOptsStr = "\"" + llvm::join(cmdOpts.second, " ") + "\"";
+  SmallVector<StringRef, 12> oclocArgs(
+      {"ocloc", "compile", "-file", asmFile->first, inputFormat, "-device",
+       getTarget().getChip(), "-output", binFile->first, "-output_no_suffix",
+       "-options", cmdOptsStr});
+
+// Dump tool invocation commands.
+#define DEBUG_TYPE "serialize-to-binary"
+  LLVM_DEBUG({
+    llvm::dbgs() << "Tool invocation for module: "
+                 << getOperation().getNameAttr() << "\n";
+    llvm::interleave(oclocArgs, llvm::dbgs(), " ");
+    llvm::dbgs() << "\n";
+  });
+#undef DEBUG_TYPE
+  // Helper function for printing tool error logs.
+  std::string message;
+  auto emitLogError =
+      [&](StringRef toolName) -> std::optional<SmallVector<char, 0>> {
+    if (message.empty()) {
+      llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> toolStderr =
+          llvm::MemoryBuffer::getFile(logFile->first);
+      if (toolStderr)
+        emitError(loc) << toolName << " invocation failed. Log:\n"
+                       << toolStderr->get()->getBuffer();
+      else
+        emitError(loc) << toolName << " invocation failed.";
+      return std::nullopt;
+    }
+    emitError(loc) << toolName
+                   << " invocation failed, error message: " << message;
+    return std::nullopt;
+  };
+  std::optional<StringRef> redirects[] = {
+      std::nullopt,
+      logFile->first,
+      logFile->first,
+  };
+  // Invoke ocloc.
+  if (llvm::sys::ExecuteAndWait(oclocCompiler.value(), oclocArgs, std::nullopt,
+                                redirects, 0, 0, &message))
+    return emitLogError("`ocloc`");
+  binFile->first.append(".bin");
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> binaryBuffer =
+      llvm::MemoryBuffer::getFile(binFile->first);
+  if (!binaryBuffer) {
+    emitError(loc) << "Couldn't open the file: `" << binFile->first
+                   << "`, error message: " << binaryBuffer.getError().message();
+     return std::nullopt;
+   }
+  StringRef bin = (*binaryBuffer)->getBuffer();
   return SmallVector<char, 0>(bin.begin(), bin.end());
 }
 
@@ -232,7 +378,7 @@ XeVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
   });
 
   SpirSerializer serializer(
-      *module, cast<mlir::xevm::XeVMTargetAttr>(attribute), options);
+      *module, cast<XeVMTargetAttr>(attribute), options);
   serializer.init();
 
 #if !LLVM_HAS_SPIRV_TARGET
@@ -247,9 +393,18 @@ Attribute
 XeVMTargetAttrImpl::createObject(Attribute attribute, Operation *module,
                                  const SmallVector<char, 0> &object,
                                  const gpu::TargetOptions &options) const {
-  gpu::CompilationTarget format = options.getCompilationTarget();
-  DictionaryAttr objectProps;
   Builder builder(attribute.getContext());
+  gpu::CompilationTarget format = options.getCompilationTarget();
+  auto target = cast<XeVMTargetAttr>(attribute);
+  SmallVector<NamedAttribute, 2> properties;
+  if (format == gpu::CompilationTarget::Assembly)
+    properties.push_back(
+        builder.getNamedAttr("O", builder.getI32IntegerAttr(target.getO())));
+
+  DictionaryAttr objectProps;
+  if (!properties.empty())
+    objectProps = builder.getDictionaryAttr(properties);
+
   return builder.getAttr<gpu::ObjectAttr>(
       attribute, format,
       builder.getStringAttr(StringRef(object.data(), object.size())),

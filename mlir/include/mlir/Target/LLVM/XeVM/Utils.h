@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/Target/LLVM/ModuleToObject.h"
 
 namespace mlir {
@@ -22,16 +23,24 @@ namespace xevm {
 
 /// Base class for all XeVM serializations from GPU modules into binary strings.
 /// By default this class serializes into LLVM bitcode.
-class SerializeGPUModuleBase : public mlir::LLVM::ModuleToObject {
+class SerializeGPUModuleBase : public LLVM::ModuleToObject {
 public:
-  SerializeGPUModuleBase(mlir::Operation &module, XeVMTargetAttr target,
-                         const mlir::gpu::TargetOptions &targetOptions = {});
+  SerializeGPUModuleBase(Operation &module, XeVMTargetAttr target,
+                         const gpu::TargetOptions &targetOptions = {});
 
   static void init();
   XeVMTargetAttr getTarget() const;
 
+  /// Loads the bitcode files in `librariesToLink`.
+  std::optional<SmallVector<std::unique_ptr<llvm::Module>>>
+  loadBitcodeFiles(llvm::Module &module) override;
+
 protected:
   XeVMTargetAttr target;
+  /// List of LLVM bitcode to link into after translation to LLVM IR.
+  /// The attributes can be StringAttr pointing to a file path, or
+  /// a Resource blob pointing to the LLVM bitcode in-memory.
+  SmallVector<Attribute> librariesToLink;
 };
 } // namespace xevm
 } // namespace mlir
