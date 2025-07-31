@@ -2492,6 +2492,8 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
 
 static void convertToEVLReverse(VPlan &Plan, VPTypeAnalysis &TypeInfo,
                                 VPValue &AllOneMask, VPValue &EVL) {
+  SmallVector<VPRecipeBase *> ToRemove;
+
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
@@ -2506,9 +2508,12 @@ static void convertToEVLReverse(VPlan &Plan, VPTypeAnalysis &TypeInfo,
           TypeInfo.inferScalarType(VPI), VPI->getDebugLoc());
       NewReverse->insertBefore(VPI);
       VPI->replaceAllUsesWith(NewReverse);
-      VPI->eraseFromParent();
+      ToRemove.push_back(VPI);
     }
   }
+
+  for (VPRecipeBase *R : ToRemove)
+    R->eraseFromParent();
 }
 
 /// Replace recipes with their EVL variants.
