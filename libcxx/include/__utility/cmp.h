@@ -26,16 +26,18 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
 
+template <typename _Tp, typename _Ip>
+concept __comparison_can_promote_to =
+    sizeof(_Tp) < sizeof(_Ip) || (sizeof(_Tp) == sizeof(_Ip) && __signed_integer<_Tp>);
+
 template <__signed_or_unsigned_integer _Tp, __signed_or_unsigned_integer _Up>
 _LIBCPP_HIDE_FROM_ABI constexpr bool cmp_equal(_Tp __t, _Up __u) noexcept {
-  if constexpr (sizeof(_Tp) < sizeof(int) && sizeof(_Up) < sizeof(int)) {
-    __builtin_assume(__t < numeric_limits<int>::max() && __u < numeric_limits<int>::max());
-    return static_cast<int>(__t) == static_cast<int>(__u);
-  } else if constexpr (sizeof(_Tp) < sizeof(long long) && sizeof(_Up) < sizeof(long long)) {
-    __builtin_assume(__t < numeric_limits<long long>::max() && __u < numeric_limits<long long>::max());
-    return static_cast<long long>(__t) == static_cast<long long>(__u);
-  } else if constexpr (is_signed_v<_Tp> == is_signed_v<_Up>)
+  if constexpr (is_signed_v<_Tp> == is_signed_v<_Up>)
     return __t == __u;
+  else if constexpr (__comparison_can_promote_to<_Tp, int> && __comparison_can_promote_to<_Up, int>)
+    return static_cast<int>(__t) == static_cast<int>(__u);
+  else if constexpr (__comparison_can_promote_to<_Tp, long long> && __comparison_can_promote_to<_Up, long long>)
+    return static_cast<long long>(__t) == static_cast<long long>(__u);
   else if constexpr (is_signed_v<_Tp>)
     return __t < 0 ? false : make_unsigned_t<_Tp>(__t) == __u;
   else
@@ -49,14 +51,12 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool cmp_not_equal(_Tp __t, _Up __u) noexcept {
 
 template <__signed_or_unsigned_integer _Tp, __signed_or_unsigned_integer _Up>
 _LIBCPP_HIDE_FROM_ABI constexpr bool cmp_less(_Tp __t, _Up __u) noexcept {
-  if constexpr (sizeof(_Tp) < sizeof(int) && sizeof(_Up) < sizeof(int)) {
-    __builtin_assume(__t < numeric_limits<int>::max() && __u < numeric_limits<int>::max());
-    return static_cast<int>(__t) < static_cast<int>(__u);
-  } else if constexpr (sizeof(_Tp) < sizeof(long long) && sizeof(_Up) < sizeof(long long)) {
-    __builtin_assume(__t < numeric_limits<long long>::max() && __u < numeric_limits<long long>::max());
-    return static_cast<long long>(__t) < static_cast<long long>(__u);
-  } else if constexpr (is_signed_v<_Tp> == is_signed_v<_Up>)
+  if constexpr (is_signed_v<_Tp> == is_signed_v<_Up>)
     return __t < __u;
+  else if constexpr (__comparison_can_promote_to<_Tp, int> && __comparison_can_promote_to<_Up, int>)
+    return static_cast<int>(__t) < static_cast<int>(__u);
+  else if constexpr (__comparison_can_promote_to<_Tp, long long> && __comparison_can_promote_to<_Up, long long>)
+    return static_cast<long long>(__t) < static_cast<long long>(__u);
   else if constexpr (is_signed_v<_Tp>)
     return __t < 0 ? true : make_unsigned_t<_Tp>(__t) < __u;
   else
