@@ -1851,6 +1851,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     SDValue Ops[] = {Node->getOperand(1), Node->getOperand(2),
                      Node->getOperand(3), Node->getOperand(4), Chain};
     MachineSDNode *New = CurDAG->getMachineNode(RISCV::QC_SETWMI, DL, VTs, Ops);
+    CurDAG->setNodeMemRefs(New, {cast<MemSDNode>(Node)->getMemOperand()});
     ReplaceNode(Node, New);
     return;
   }

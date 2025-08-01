@@ -86,21 +86,24 @@ SDValue RISCVSelectionDAGInfo::EmitTargetCodeForMemset(
     return SDValue();
 
   SmallVector<SDValue, 8> OutChains;
-  SDValue SizeWords, OffsetSetwmi;
   SDValue SrcValueReplicated = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, Src);
   int NumberOfWords = NumberOfBytesToWrite / 4;
+  MachineFunction &MF = DAG.getMachineFunction();
 
   // Helper for constructing the QC_SETWMI instruction
-  auto getSetwmiNode = [&](SDValue SizeWords, SDValue OffsetSetwmi) -> SDValue {
-    SDValue Ops[] = {Chain, SrcValueReplicated, Dst, SizeWords, OffsetSetwmi};
-    return DAG.getNode(RISCVISD::QC_SETWMI, dl, MVT::Other, Ops);
+  auto getSetwmiNode = [&](uint8_t SizeWords, uint8_t OffsetSetwmi) -> SDValue {
+    SDValue Ops[] = {Chain, SrcValueReplicated, Dst,
+                     DAG.getTargetConstant(SizeWords, dl, MVT::i32),
+                     DAG.getTargetConstant(OffsetSetwmi, dl, MVT::i32)};
+    MachineMemOperand *BaseMemOperand = MF.getMachineMemOperand(
+        DstPtrInfo, MachineMemOperand::MOStore, SizeWords * 4, Align(4));
+    return DAG.getMemIntrinsicNode(RISCVISD::QC_SETWMI, dl,
+                                   DAG.getVTList(MVT::Other), Ops, MVT::i32,
+                                   BaseMemOperand);
   };
 
-  bool IsZeroVal =
-      isa<ConstantSDNode>(Src) && cast<ConstantSDNode>(Src)->isZero();
-
   // If i8 type and constant non-zero value.
-  if ((Src.getValueType() == MVT::i8) && !IsZeroVal)
+  if ((Src.getValueType() == MVT::i8) && !isNullConstant(Src))
     // Replicate byte to word by multiplication with 0x01010101.
     SrcValueReplicated =
         DAG.getNode(ISD::MUL, dl, MVT::i32, SrcValueReplicated,
@@ -133,33 +136,19 @@ SDValue RISCVSelectionDAGInfo::EmitTargetCodeForMemset(
 
   if (NumberOfWords <= 16) {
     // 1 - 16 words
-    SizeWords = DAG.getTargetConstant(NumberOfWords, dl, MVT::i32);
-    SDValue OffsetSetwmi = DAG.getTargetConstant(0, dl, MVT::i32);
-    return getSetwmiNode(SizeWords, OffsetSetwmi);
+    return getSetwmiNode(NumberOfWords, 0);
   }
 
   if (NumberOfWords <= 32) {
     // 17 - 32 words
-    SizeWords = DAG.getTargetConstant(NumberOfWords - 16, dl, MVT::i32);
-    OffsetSetwmi = DAG.getTargetConstant(64, dl, MVT::i32);
-    OutChains.push_back(getSetwmiNode(SizeWords, OffsetSetwmi));
-
-    SizeWords = DAG.getTargetConstant(16, dl, MVT::i32);
-    OffsetSetwmi = DAG.getTargetConstant(0, dl, MVT::i32);
-    OutChains.push_back(getSetwmiNode(SizeWords, OffsetSetwmi));
+    OutChains.push_back(getSetwmiNode(NumberOfWords - 16, 64));
+    OutChains.push_back(getSetwmiNode(16, 0));
   } else {
     // 33 - 47 words
-    SizeWords = DAG.getTargetConstant(NumberOfWords - 31, dl, MVT::i32);
-    OffsetSetwmi = DAG.getTargetConstant(124, dl, MVT::i32);
-    OutChains.push_back(getSetwmiNode(SizeWords, OffsetSetwmi));
-
-    SizeWords = DAG.getTargetConstant(15, dl, MVT::i32);
-    OffsetSetwmi = DAG.getTargetConstant(64, dl, MVT::i32);
-    OutChains.push_back(getSetwmiNode(SizeWords, OffsetSetwmi));
-
-    SizeWords = DAG.getTargetConstant(16, dl, MVT::i32);
-    OffsetSetwmi = DAG.getTargetConstant(0, dl, MVT::i32);
-    OutChains.push_back(getSetwmiNode(SizeWords, OffsetSetwmi));
+    OutChains.push_back(getSetwmiNode(NumberOfWords - 31, 124));
+    OutChains.push_back(getSetwmiNode(15, 64));
+    OutChains.push_back(getSetwmiNode(16, 0));
   }
+
   return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
 }
