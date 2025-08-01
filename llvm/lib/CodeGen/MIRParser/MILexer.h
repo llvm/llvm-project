@@ -136,6 +136,7 @@ struct MIToken {
     kw_heap_alloc_marker,
     kw_pcsections,
     kw_cfi_type,
+    kw_deactivation_symbol,
     kw_bbsections,
     kw_bb_id,
     kw_unknown_size,

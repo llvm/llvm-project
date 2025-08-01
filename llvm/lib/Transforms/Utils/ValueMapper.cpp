@@ -526,8 +526,9 @@ Value *Mapper::mapValue(const Value *V) {
   if (isa<ConstantVector>(C))
     return getVM()[V] = ConstantVector::get(Ops);
   if (isa<ConstantPtrAuth>(C))
-    return getVM()[V] = ConstantPtrAuth::get(Ops[0], cast<ConstantInt>(Ops[1]),
-                                             cast<ConstantInt>(Ops[2]), Ops[3]);
+    return getVM()[V] =
+               ConstantPtrAuth::get(Ops[0], cast<ConstantInt>(Ops[1]),
+                                    cast<ConstantInt>(Ops[2]), Ops[3], Ops[4]);
   // If this is a no-operand constant, it must be because the type was remapped.
   if (isa<PoisonValue>(C))
     return getVM()[V] = PoisonValue::get(NewTy);
