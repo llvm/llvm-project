@@ -69,6 +69,25 @@ static Block *getPhiIncomingBlock(Block *block) {
   return block;
 }
 
+static bool isZeroValue(Attribute attr) {
+  if (auto floatAttr = dyn_cast<FloatAttr>(attr)) {
+    return floatAttr.getValue().isZero();
+  }
+  if (auto boolAttr = dyn_cast<BoolAttr>(attr)) {
+    return !boolAttr.getValue();
+  }
+  if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
+    return intAttr.getValue().isZero();
+  }
+  if (auto splatElemAttr = dyn_cast<SplatElementsAttr>(attr)) {
+    return isZeroValue(splatElemAttr.getSplatValue<Attribute>());
+  }
+  if (auto denseElemAttr = dyn_cast<DenseElementsAttr>(attr)) {
+    return all_of(denseElemAttr.getValues<Attribute>(), isZeroValue);
+  }
+  return false;
+}
+
 namespace mlir {
 namespace spirv {
 
@@ -959,6 +978,11 @@ Serializer::prepareDenseElementsConstant(Location loc, Type constType,
       return 0;
     }
   } else if (isa<spirv::TensorArmType>(constType)) {
+    if (isZeroValue(valueAttr)) {
+      encodeInstructionInto(typesGlobalValues, spirv::Opcode::OpConstantNull,
+                            {typeID, resultID});
+      return resultID;
+    }
     numberOfConstituents = shapedType.getNumElements();
     operands.reserve(numberOfConstituents + 2);
     for (int i = 0; i < numberOfConstituents; ++i) {
@@ -1202,11 +1226,14 @@ uint32_t Serializer::prepareConstantCompositeReplicate(Location loc,
   }
 
   uint32_t resultID = getNextID();
-  uint32_t operands[] = {typeID, resultID, constandID};
-
-  encodeInstructionInto(typesGlobalValues,
-                        spirv::Opcode::OpConstantCompositeReplicateEXT,
-                        operands);
+  if (dyn_cast<spirv::TensorArmType>(resultType) && isZeroValue(valueAttr)) {
+    encodeInstructionInto(typesGlobalValues, spirv::Opcode::OpConstantNull,
+                          {typeID, resultID});
+  } else {
+    encodeInstructionInto(typesGlobalValues,
+                          spirv::Opcode::OpConstantCompositeReplicateEXT,
+                          {typeID, resultID, constandID});
+  }
 
   constCompositeReplicateIDMap[valueTypePair] = resultID;
   return resultID;

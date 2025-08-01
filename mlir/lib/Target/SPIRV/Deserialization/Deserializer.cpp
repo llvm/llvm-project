@@ -1779,7 +1779,7 @@ LogicalResult
 spirv::Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
   if (operands.size() != 2) {
     return emitError(unknownLoc,
-                     "OpConstantNull must have type <id> and result <id>");
+                     "OpConstantNull must only have type <id> and result <id>");
   }
 
   Type resultType = getType(operands[0]);
@@ -1789,8 +1789,15 @@ spirv::Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
   }
 
   auto resultID = operands[1];
+  Attribute attr;
   if (resultType.isIntOrFloat() || isa<VectorType>(resultType)) {
-    auto attr = opBuilder.getZeroAttr(resultType);
+    attr = opBuilder.getZeroAttr(resultType);
+  } else if (auto tensorType = dyn_cast<TensorArmType>(resultType)) {
+    if (auto element = opBuilder.getZeroAttr(tensorType.getElementType()))
+      attr = DenseElementsAttr::get(tensorType, element);
+  }
+
+  if (attr) {
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.
     constantMap.try_emplace(resultID, attr, resultType);
