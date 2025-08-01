@@ -4250,24 +4250,6 @@ bool SIInstrInfo::isAlwaysGDS(uint16_t Opcode) const {
          Opcode == AMDGPU::DS_SUB_GS_REG_RTN || isGWS(Opcode);
 }
 
-static bool hasNoAliasAddrSpaceScratch(const MachineMemOperand *MemOp) {
-  const MDNode *MD = MemOp->getAAInfo().NoAliasAddrSpace;
-  if (!MD)
-    return false;
-
-  // This MD is structured in ranges [A, B)
-  // Check if PRIVATE is included in any of them.
-  for (unsigned I = 0, E = MD->getNumOperands() / 2; I != E; ++I) {
-    auto *Low = mdconst::extract<ConstantInt>(MD->getOperand(2 * I + 0));
-    auto *High = mdconst::extract<ConstantInt>(MD->getOperand(2 * I + 1));
-    if (Low->getValue().ule(AMDGPUAS::PRIVATE_ADDRESS) &&
-        High->getValue().ugt(AMDGPUAS::PRIVATE_ADDRESS))
-      return true;
-  }
-
-  return false;
-}
-
 bool SIInstrInfo::mayAccessScratchThroughFlat(const MachineInstr &MI) const {
   if (!isFLAT(MI) || isFLATGlobal(MI))
     return false;
@@ -4285,13 +4267,12 @@ bool SIInstrInfo::mayAccessScratchThroughFlat(const MachineInstr &MI) const {
   if (MI.memoperands_empty())
     return true;
 
-  // TODO (?): Does this need to be taught how to read noalias.addrspace ?
-
   // See if any memory operand specifies an address space that involves scratch.
   return any_of(MI.memoperands(), [](const MachineMemOperand *Memop) {
     unsigned AS = Memop->getAddrSpace();
     if (AS == AMDGPUAS::FLAT_ADDRESS)
-      return !hasNoAliasAddrSpaceScratch(Memop);
+      return !AMDGPU::hasValueInRange(Memop->getAAInfo().NoAliasAddrSpace,
+                                      AMDGPUAS::PRIVATE_ADDRESS);
     return AS == AMDGPUAS::PRIVATE_ADDRESS;
   });
 }

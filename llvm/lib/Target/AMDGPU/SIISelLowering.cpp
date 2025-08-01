@@ -17795,21 +17795,8 @@ atomicSupportedIfLegalIntType(const AtomicRMWInst *RMW) {
 static bool flatInstrMayAccessPrivate(const Instruction *I) {
   const MDNode *NoaliasAddrSpaceMD =
       I->getMetadata(LLVMContext::MD_noalias_addrspace);
-  if (!NoaliasAddrSpaceMD)
-    return true;
-
-  for (unsigned I = 0, E = NoaliasAddrSpaceMD->getNumOperands() / 2; I != E;
-       ++I) {
-    auto *Low = mdconst::extract<ConstantInt>(
-        NoaliasAddrSpaceMD->getOperand(2 * I + 0));
-    if (Low->getValue().uge(AMDGPUAS::PRIVATE_ADDRESS)) {
-      auto *High = mdconst::extract<ConstantInt>(
-          NoaliasAddrSpaceMD->getOperand(2 * I + 1));
-      return High->getValue().ule(AMDGPUAS::PRIVATE_ADDRESS);
-    }
-  }
-
-  return true;
+  return !AMDGPU::hasValueInRange(NoaliasAddrSpaceMD,
+                                  AMDGPUAS::PRIVATE_ADDRESS);
 }
 
 TargetLowering::AtomicExpansionKind
