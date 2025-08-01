@@ -180,10 +180,12 @@ public:
                         const SmallVectorImpl<Instruction *> &Instrs) const;
   };
 
-  MemoryDepChecker(PredicatedScalarEvolution &PSE, const Loop *L,
+  MemoryDepChecker(PredicatedScalarEvolution &PSE, AssumptionCache *AC,
+                   DominatorTree *DT, const Loop *L,
                    const DenseMap<Value *, const SCEV *> &SymbolicStrides,
                    unsigned MaxTargetVectorWidthInBits)
-      : PSE(PSE), InnermostLoop(L), SymbolicStrides(SymbolicStrides),
+      : PSE(PSE), AC(AC), DT(DT), InnermostLoop(L),
+        SymbolicStrides(SymbolicStrides),
         MaxTargetVectorWidthInBits(MaxTargetVectorWidthInBits) {}
 
   /// Register the location (instructions are given increasing numbers)
@@ -288,6 +290,15 @@ public:
     return PointerBounds;
   }
 
+  DominatorTree *getDT() const {
+    assert(DT && "requested DT, but it is not available");
+    return DT;
+  }
+  AssumptionCache *getAC() const {
+    assert(AC && "requested AC, but it is not available");
+    return AC;
+  }
+
 private:
   /// A wrapper around ScalarEvolution, used to add runtime SCEV checks, and
   /// applies dynamic knowledge to simplify SCEV expressions and convert them
@@ -296,6 +307,10 @@ private:
   /// example we might assume a unit stride for a pointer in order to prove
   /// that a memory access is strided and doesn't wrap.
   PredicatedScalarEvolution &PSE;
+
+  AssumptionCache *AC;
+  DominatorTree *DT;
+
   const Loop *InnermostLoop;
 
   /// Reference to map of pointer values to
@@ -670,7 +685,7 @@ public:
   LLVM_ABI LoopAccessInfo(Loop *L, ScalarEvolution *SE,
                           const TargetTransformInfo *TTI,
                           const TargetLibraryInfo *TLI, AAResults *AA,
-                          DominatorTree *DT, LoopInfo *LI,
+                          DominatorTree *DT, LoopInfo *LI, AssumptionCache *AC,
                           bool AllowPartial = false);
 
   /// Return true we can analyze the memory accesses in the loop and there are
@@ -922,7 +937,8 @@ LLVM_ABI std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
     const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *BTC,
     const SCEV *MaxBTC, ScalarEvolution *SE,
     DenseMap<std::pair<const SCEV *, Type *>,
-             std::pair<const SCEV *, const SCEV *>> *PointerBounds);
+             std::pair<const SCEV *, const SCEV *>> *PointerBounds,
+    DominatorTree *DT, AssumptionCache *AC);
 
 class LoopAccessInfoManager {
   /// The cache.
@@ -935,12 +951,13 @@ class LoopAccessInfoManager {
   LoopInfo &LI;
   TargetTransformInfo *TTI;
   const TargetLibraryInfo *TLI = nullptr;
+  AssumptionCache *AC;
 
 public:
   LoopAccessInfoManager(ScalarEvolution &SE, AAResults &AA, DominatorTree &DT,
                         LoopInfo &LI, TargetTransformInfo *TTI,
-                        const TargetLibraryInfo *TLI)
-      : SE(SE), AA(AA), DT(DT), LI(LI), TTI(TTI), TLI(TLI) {}
+                        const TargetLibraryInfo *TLI, AssumptionCache *AC)
+      : SE(SE), AA(AA), DT(DT), LI(LI), TTI(TTI), TLI(TLI), AC(AC) {}
 
   LLVM_ABI const LoopAccessInfo &getInfo(Loop &L, bool AllowPartial = false);
 
