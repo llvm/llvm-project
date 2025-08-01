@@ -486,6 +486,10 @@ public:
   /// all profitable VFs in ProfitableVFs.
   VectorizationFactor computeBestVF();
 
+  /// \return The desired interleave count.
+  /// If interleave count has been specified by metadata it will be returned.
+  /// Otherwise, the interleave count is computed and returned. VF and LoopCost
+  /// are the selected vectorization factor and the cost of the selected VF.
   unsigned selectInterleaveCount(VPlan &Plan, ElementCount VF,
                                  InstructionCost LoopCost);
 
