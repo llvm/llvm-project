@@ -26,6 +26,7 @@
 ; CHECK-NEXT: %C = add i32 %v2, 1, !dbg [[G1R2:!.*]]
 ; CHECK-NEXT: store i32 %C, ptr %p, align 4, !dbg [[G1R1:!.*]]
 
+; CHECK: distinct !DISubprogram(name: "test1", {{.*}}keyInstructions: true)
 ; CHECK: [[G2R2]] = !DILocation(line: 8, column: 1, scope: ![[#]], atomGroup: 2, atomRank: 2)
 ; CHECK: [[G2R1]] = !DILocation(line: 8, column: 1, scope: ![[#]], atomGroup: 2, atomRank: 1)
 ; CHECK: [[G1R2]] = !DILocation(line: 8, column: 1, scope: ![[#]], atomGroup: 1, atomRank: 2)
@@ -70,7 +71,7 @@ declare void @f3()
 !2 = !{i32 12}
 !3 = !{i32 0}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = distinct !DISubprogram(name: "test1", linkageName: "test1", scope: null, file: !1, line: 1, type: !6, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!5 = distinct !DISubprogram(name: "test1", linkageName: "test1", scope: null, file: !1, line: 1, type: !6, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, keyInstructions: true)
 !6 = !DISubroutineType(types: !7)
 !7 = !{}
 !8 = !DILocation(line: 8, column: 1, scope: !5, atomGroup: 1, atomRank: 2)

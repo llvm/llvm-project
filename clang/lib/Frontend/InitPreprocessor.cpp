@@ -639,16 +639,8 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     }
   }
 
-  if (LangOpts.OpenACC) {
-    // FIXME: When we have full support for OpenACC, we should set this to the
-    // version we support. Until then, set as '1' by default, but provide a
-    // temporary mechanism for users to override this so real-world examples can
-    // be tested against.
-    if (!LangOpts.OpenACCMacroOverride.empty())
-      Builder.defineMacro("_OPENACC", LangOpts.OpenACCMacroOverride);
-    else
-      Builder.defineMacro("_OPENACC", "1");
-  }
+  if (LangOpts.OpenACC)
+    Builder.defineMacro("_OPENACC", "202506");
 }
 
 /// Initialize the predefined C++ language feature test macros defined in
@@ -779,9 +771,6 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   if (LangOpts.Char8)
     Builder.defineMacro("__cpp_char8_t", "202207L");
   Builder.defineMacro("__cpp_impl_destroying_delete", "201806L");
-
-  // TODO: Final number?
-  Builder.defineMacro("__cpp_type_aware_allocators", "202500L");
 }
 
 /// InitializeOpenCLFeatureTestMacros - Define OpenCL macros based on target
@@ -865,6 +854,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
                                        const LangOptions &LangOpts,
                                        const FrontendOptions &FEOpts,
                                        const PreprocessorOptions &PPOpts,
+                                       const CodeGenOptions &CGOpts,
                                        MacroBuilder &Builder) {
   // Compiler version introspection macros.
   Builder.defineMacro("__llvm__");  // LLVM Backend
@@ -955,8 +945,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (LangOpts.GNUCVersion && LangOpts.CPlusPlus11)
     Builder.defineMacro("__GXX_EXPERIMENTAL_CXX0X__");
 
-  if (TI.getTriple().isWindowsGNUEnvironment()) {
-    // Set ABI defining macros for libstdc++ for MinGW, where the
+  if (TI.getTriple().isOSCygMing()) {
+    // Set ABI defining macros for libstdc++ for MinGW and Cygwin, where the
     // default in libstdc++ differs from the defaults for this target.
     Builder.defineMacro("__GXX_TYPEINFO_EQUALITY_INLINE", "0");
   }
@@ -1034,14 +1024,14 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (LangOpts.GNUCVersion && LangOpts.RTTI)
     Builder.defineMacro("__GXX_RTTI");
 
-  if (LangOpts.hasSjLjExceptions())
+  if (CGOpts.hasSjLjExceptions())
     Builder.defineMacro("__USING_SJLJ_EXCEPTIONS__");
-  else if (LangOpts.hasSEHExceptions())
+  else if (CGOpts.hasSEHExceptions())
     Builder.defineMacro("__SEH__");
-  else if (LangOpts.hasDWARFExceptions() &&
+  else if (CGOpts.hasDWARFExceptions() &&
            (TI.getTriple().isThumb() || TI.getTriple().isARM()))
     Builder.defineMacro("__ARM_DWARF_EH__");
-  else if (LangOpts.hasWasmExceptions() && TI.getTriple().isWasm())
+  else if (CGOpts.hasWasmExceptions() && TI.getTriple().isWasm())
     Builder.defineMacro("__WASM_EXCEPTIONS__");
 
   if (LangOpts.Deprecated)
@@ -1073,9 +1063,9 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__clang_wide_literal_encoding__", "\"UTF-16\"");
   }
 
-  if (LangOpts.Optimize)
+  if (CGOpts.OptimizationLevel != 0)
     Builder.defineMacro("__OPTIMIZE__");
-  if (LangOpts.OptimizeSize)
+  if (CGOpts.OptimizeSize != 0)
     Builder.defineMacro("__OPTIMIZE_SIZE__");
 
   if (LangOpts.FastMath)
@@ -1396,7 +1386,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (LangOpts.GNUCVersion)
     addLockFreeMacros("__GCC_ATOMIC_");
 
-  if (LangOpts.NoInlineDefine)
+  if (CGOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining)
     Builder.defineMacro("__NO_INLINE__");
 
   if (unsigned PICLevel = LangOpts.PICLevel) {
@@ -1575,10 +1565,11 @@ void clang::InitializePreprocessor(Preprocessor &PP,
     // macros. This is not the right way to handle this.
     if ((LangOpts.CUDA || LangOpts.isTargetDevice()) && PP.getAuxTargetInfo())
       InitializePredefinedMacros(*PP.getAuxTargetInfo(), LangOpts, FEOpts,
-                                 PP.getPreprocessorOpts(), Builder);
+                                 PP.getPreprocessorOpts(), CodeGenOpts,
+                                 Builder);
 
     InitializePredefinedMacros(PP.getTargetInfo(), LangOpts, FEOpts,
-                               PP.getPreprocessorOpts(), Builder);
+                               PP.getPreprocessorOpts(), CodeGenOpts, Builder);
 
     // Install definitions to make Objective-C++ ARC work well with various
     // C++ Standard Library implementations.

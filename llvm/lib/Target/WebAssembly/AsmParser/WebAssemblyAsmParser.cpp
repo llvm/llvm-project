@@ -14,7 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AsmParser/WebAssemblyAsmTypeCheck.h"
-#include "MCTargetDesc/WebAssemblyMCExpr.h"
+#include "MCTargetDesc/WebAssemblyMCAsmInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
@@ -180,7 +180,7 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
     }
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case Token:
       OS << "Tok:" << Tok.Tok;
@@ -669,6 +669,10 @@ public:
       if (parseFunctionTableOperand(&FunctionTable))
         return true;
       ExpectFuncType = true;
+    } else if (Name == "ref.test") {
+      // When we get support for wasm-gc types, this should become
+      // ExpectRefType.
+      ExpectFuncType = true;
     }
 
     // Returns true if the next tokens are a catch clause
@@ -896,7 +900,8 @@ public:
 
   bool checkDataSection() {
     if (CurrentState != DataSection) {
-      auto *WS = cast<MCSectionWasm>(getStreamer().getCurrentSectionOnly());
+      auto *WS = static_cast<const MCSectionWasm *>(
+          getStreamer().getCurrentSectionOnly());
       if (WS && WS->isText())
         return error("data directive must occur in a data segment: ",
                      Lexer.getTok());
@@ -1214,7 +1219,8 @@ public:
 
   void doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) override {
     // Code below only applies to labels in text sections.
-    auto *CWS = cast<MCSectionWasm>(getStreamer().getCurrentSectionOnly());
+    auto *CWS = static_cast<const MCSectionWasm *>(
+        getStreamer().getCurrentSectionOnly());
     if (!CWS->isText())
       return;
 

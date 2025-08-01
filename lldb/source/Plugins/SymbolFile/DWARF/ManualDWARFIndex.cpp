@@ -21,6 +21,7 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/lldb-private-enumerations.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ThreadPool.h"
 #include <atomic>
@@ -28,8 +29,8 @@
 
 using namespace lldb_private;
 using namespace lldb;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 void ManualDWARFIndex::Index() {
   if (m_indexed)
@@ -471,60 +472,62 @@ void ManualDWARFIndex::GetNamespaces(
 void ManualDWARFIndex::GetFunctions(
     const Module::LookupInfo &lookup_info, SymbolFileDWARF &dwarf,
     const CompilerDeclContext &parent_decl_ctx,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
   ConstString name = lookup_info.GetLookupName();
   FunctionNameType name_type_mask = lookup_info.GetNameTypeMask();
 
   if (name_type_mask & eFunctionNameTypeFull) {
     if (!m_set.function_fullnames.Find(
-            name, DIERefCallback(
-                      [&](DWARFDIE die) {
-                        if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx,
-                                                               die))
-                          return true;
-                        return callback(die);
-                      },
-                      name.GetStringRef())))
+            name, DIERefCallback(IterationActionAdaptor([&](DWARFDIE die) {
+                                   if (!SymbolFileDWARF::DIEInDeclContext(
+                                           parent_decl_ctx, die))
+                                     return IterationAction::Continue;
+                                   return callback(die);
+                                 }),
+                                 name.GetStringRef())))
       return;
   }
   if (name_type_mask & eFunctionNameTypeBase) {
     if (!m_set.function_basenames.Find(
-            name, DIERefCallback(
-                      [&](DWARFDIE die) {
-                        if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx,
-                                                               die))
-                          return true;
-                        return callback(die);
-                      },
-                      name.GetStringRef())))
+            name, DIERefCallback(IterationActionAdaptor([&](DWARFDIE die) {
+                                   if (!SymbolFileDWARF::DIEInDeclContext(
+                                           parent_decl_ctx, die))
+                                     return IterationAction::Continue;
+                                   return callback(die);
+                                 }),
+                                 name.GetStringRef())))
       return;
   }
 
   if (name_type_mask & eFunctionNameTypeMethod && !parent_decl_ctx.IsValid()) {
     if (!m_set.function_methods.Find(
-            name, DIERefCallback(callback, name.GetStringRef())))
+            name, DIERefCallback(IterationActionAdaptor(callback),
+                                 name.GetStringRef())))
       return;
   }
 
   if (name_type_mask & eFunctionNameTypeSelector &&
       !parent_decl_ctx.IsValid()) {
     if (!m_set.function_selectors.Find(
-            name, DIERefCallback(callback, name.GetStringRef())))
+            name, DIERefCallback(IterationActionAdaptor(callback),
+                                 name.GetStringRef())))
       return;
   }
 }
 
 void ManualDWARFIndex::GetFunctions(
     const RegularExpression &regex,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
 
-  if (!m_set.function_basenames.Find(regex,
-                                     DIERefCallback(callback, regex.GetText())))
+  if (!m_set.function_basenames.Find(
+          regex,
+          DIERefCallback(IterationActionAdaptor(callback), regex.GetText())))
     return;
-  if (!m_set.function_fullnames.Find(regex,
-                                     DIERefCallback(callback, regex.GetText())))
+  if (!m_set.function_fullnames.Find(
+          regex,
+          DIERefCallback(IterationActionAdaptor(callback), regex.GetText())))
     return;
 }
 

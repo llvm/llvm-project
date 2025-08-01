@@ -23,7 +23,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Frontend/HLSL/HLSLRootSignatureUtils.h"
+#include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -393,17 +393,27 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
     return B.CreateCall(FunctionCallee(GroupIndex));
   }
   if (D.hasAttr<HLSLSV_DispatchThreadIDAttr>()) {
+    llvm::Intrinsic::ID IntrinID = getThreadIdIntrinsic();
     llvm::Function *ThreadIDIntrinsic =
-        CGM.getIntrinsic(getThreadIdIntrinsic());
+        llvm::Intrinsic::isOverloaded(IntrinID)
+            ? CGM.getIntrinsic(IntrinID, {CGM.Int32Ty})
+            : CGM.getIntrinsic(IntrinID);
     return buildVectorInput(B, ThreadIDIntrinsic, Ty);
   }
   if (D.hasAttr<HLSLSV_GroupThreadIDAttr>()) {
+    llvm::Intrinsic::ID IntrinID = getGroupThreadIdIntrinsic();
     llvm::Function *GroupThreadIDIntrinsic =
-        CGM.getIntrinsic(getGroupThreadIdIntrinsic());
+        llvm::Intrinsic::isOverloaded(IntrinID)
+            ? CGM.getIntrinsic(IntrinID, {CGM.Int32Ty})
+            : CGM.getIntrinsic(IntrinID);
     return buildVectorInput(B, GroupThreadIDIntrinsic, Ty);
   }
   if (D.hasAttr<HLSLSV_GroupIDAttr>()) {
-    llvm::Function *GroupIDIntrinsic = CGM.getIntrinsic(getGroupIdIntrinsic());
+    llvm::Intrinsic::ID IntrinID = getGroupIdIntrinsic();
+    llvm::Function *GroupIDIntrinsic =
+        llvm::Intrinsic::isOverloaded(IntrinID)
+            ? CGM.getIntrinsic(IntrinID, {CGM.Int32Ty})
+            : CGM.getIntrinsic(IntrinID);
     return buildVectorInput(B, GroupIDIntrinsic, Ty);
   }
   if (D.hasAttr<HLSLSV_PositionAttr>()) {
@@ -586,12 +596,12 @@ static void initializeBuffer(CodeGenModule &CGM, llvm::GlobalVariable *GV,
 void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
                                                 llvm::GlobalVariable *GV,
                                                 HLSLResourceBindingAttr *RBA) {
+  assert(RBA && "expect a nonnull binding attribute");
   llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
   auto *NonUniform = llvm::ConstantInt::get(Int1Ty, false);
   auto *Index = llvm::ConstantInt::get(CGM.IntTy, 0);
   auto *RangeSize = llvm::ConstantInt::get(CGM.IntTy, 1);
-  auto *Space =
-      llvm::ConstantInt::get(CGM.IntTy, RBA ? RBA->getSpaceNumber() : 0);
+  auto *Space = llvm::ConstantInt::get(CGM.IntTy, RBA->getSpaceNumber());
   Value *Name = nullptr;
 
   llvm::Intrinsic::ID IntrinsicID =

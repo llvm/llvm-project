@@ -542,6 +542,14 @@ Entity gen1DSection(mlir::Location loc, fir::FirOpBuilder &builder,
 /// contiguous.
 bool designatePreservesContinuity(hlfir::DesignateOp op);
 
+/// Return true iff the given \p base desribes an object
+/// that is contiguous. If \p checkWhole is true, then
+/// the object must be contiguous in all dimensions,
+/// otherwise, it must be contiguous in the innermost dimension.
+/// This function is an extension of hlfir::Entity::isSimplyContiguous(),
+/// and it can be used on pure FIR representation as well as on HLFIR.
+bool isSimplyContiguous(mlir::Value base, bool checkWhole = true);
+
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_HLFIRTOOLS_H

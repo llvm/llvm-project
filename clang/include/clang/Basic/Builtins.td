@@ -1334,6 +1334,18 @@ def ElementwiseMinimum : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwiseMaximumNum : Builtin {
+  let Spellings = ["__builtin_elementwise_maximumnum"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseMinimumNum : Builtin {
+  let Spellings = ["__builtin_elementwise_minimumnum"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ElementwiseCeil : Builtin {
   let Spellings = ["__builtin_elementwise_ceil"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
@@ -2588,6 +2600,24 @@ def InterlockedBittestAndReset_rel : MSLangBuiltin {
   let Prototype = "unsigned char(msint32_t volatile*, msint32_t)";
 }
 
+def InterlockedBittestAndReset64_acq : MSLangBuiltin {
+  let Spellings = ["_interlockedbittestandreset64_acq"];
+  let Attributes = [NoThrow];
+  let Prototype = "unsigned char(int64_t volatile*, int64_t)";
+}
+
+def InterlockedBittestAndReset64_nf : MSLangBuiltin {
+  let Spellings = ["_interlockedbittestandreset64_nf"];
+  let Attributes = [NoThrow];
+  let Prototype = "unsigned char(int64_t volatile*, int64_t)";
+}
+
+def InterlockedBittestAndReset64_rel : MSLangBuiltin {
+  let Spellings = ["_interlockedbittestandreset64_rel"];
+  let Attributes = [NoThrow];
+  let Prototype = "unsigned char(int64_t volatile*, int64_t)";
+}
+
 def InterlockedBittestAndSet : MSLangBuiltin, MSInt32_64Template {
   let Spellings = ["_interlockedbittestandset"];
   let Attributes = [NoThrow];
@@ -2610,6 +2640,24 @@ def InterlockedBittestAndSet_rel : MSLangBuiltin {
   let Spellings = ["_interlockedbittestandset_rel"];
   let Attributes = [NoThrow];
   let Prototype = "unsigned char(msint32_t volatile*, msint32_t)";
+}
+
+def InterlockedBittestAndSet64_acq : MSLangBuiltin {
+  let Spellings = ["_interlockedbittestandset64_acq"];
+  let Attributes = [NoThrow];
+  let Prototype = "unsigned char(int64_t volatile*, int64_t)";
+}
+
+def InterlockedBittestAndSet64_nf : MSLangBuiltin {
+  let Spellings = ["_interlockedbittestandset64_nf"];
+  let Attributes = [NoThrow];
+  let Prototype = "unsigned char(int64_t volatile*, int64_t)";
+}
+
+def InterlockedBittestAndSet64_rel : MSLangBuiltin {
+  let Spellings = ["_interlockedbittestandset64_rel"];
+  let Attributes = [NoThrow];
+  let Prototype = "unsigned char(int64_t volatile*, int64_t)";
 }
 
 def IsoVolatileLoad : MSLangBuiltin, Int8_16_32_64Template {
@@ -4276,6 +4324,12 @@ def MoveIfNsoexcept : CxxLibBuiltin<"utility"> {
                     Constexpr];
   let Prototype = "void&(void&)";
   let Namespace = "std";
+}
+
+def Invoke : Builtin {
+  let Spellings = ["__builtin_invoke"];
+  let Attributes = [CustomTypeChecking, Constexpr];
+  let Prototype = "void(...)";
 }
 
 def Annotation : Builtin {

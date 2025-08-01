@@ -9,6 +9,7 @@
 #include "CommandObjectStats.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
@@ -147,9 +148,18 @@ protected:
     if (!m_options.m_all_targets)
       target = m_exe_ctx.GetTargetPtr();
 
+    // Check if transcript is requested but transcript saving is disabled
+    const StatisticsOptions &stats_options = m_options.GetStatisticsOptions();
+    if (stats_options.GetIncludeTranscript() &&
+        !GetDebugger().GetCommandInterpreter().GetSaveTranscript()) {
+      result.AppendWarning(
+          "transcript requested but none was saved. Enable with "
+          "'settings set interpreter.save-transcript true'");
+    }
+
     result.AppendMessageWithFormatv(
-        "{0:2}", DebuggerStats::ReportStatistics(
-                     GetDebugger(), target, m_options.GetStatisticsOptions()));
+        "{0:2}",
+        DebuggerStats::ReportStatistics(GetDebugger(), target, stats_options));
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 

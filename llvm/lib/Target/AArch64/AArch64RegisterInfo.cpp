@@ -441,7 +441,7 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   markSuperRegs(Reserved, AArch64::WSP);
   markSuperRegs(Reserved, AArch64::WZR);
 
-  if (TFI->hasFP(MF) || TT.isOSDarwin())
+  if (TFI->isFPReserved(MF))
     markSuperRegs(Reserved, AArch64::W29);
 
   if (MF.getSubtarget<AArch64Subtarget>().isWindowsArm64EC()) {
@@ -1369,4 +1369,9 @@ bool AArch64RegisterInfo::shouldCoalesce(
 bool AArch64RegisterInfo::shouldAnalyzePhysregInMachineLoopInfo(
     MCRegister R) const {
   return R == AArch64::VG;
+}
+
+bool AArch64RegisterInfo::isIgnoredCVReg(MCRegister LLVMReg) const {
+  return (LLVMReg >= AArch64::Z0 && LLVMReg <= AArch64::Z31) ||
+         (LLVMReg >= AArch64::P0 && LLVMReg <= AArch64::P15);
 }

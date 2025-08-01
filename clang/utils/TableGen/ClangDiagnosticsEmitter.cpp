@@ -1657,8 +1657,7 @@ void clang::EmitClangDiagsEnums(const RecordKeeper &Records, raw_ostream &OS,
 
       llvm::SmallVector<std::string> EnumeratorNames;
       for (auto &Enumerator : Enumeration.second) {
-        if (llvm::find(EnumeratorNames, Enumerator.second) !=
-            EnumeratorNames.end())
+        if (llvm::is_contained(EnumeratorNames, Enumerator.second))
           PrintError(&R,
                      "Duplicate enumerator name '" + Enumerator.second + "'");
         EnumeratorNames.push_back(Enumerator.second);

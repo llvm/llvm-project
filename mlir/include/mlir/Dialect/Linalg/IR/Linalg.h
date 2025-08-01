@@ -10,12 +10,14 @@
 #define MLIR_DIALECT_LINALG_IR_LINALG_H
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -26,6 +28,9 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+
+#include "llvm/ADT/STLFunctionalExtras.h"
+
 #include <optional>
 
 namespace mlir {
@@ -139,5 +144,18 @@ std::pair<int64_t, int64_t> getFmrFromWinogradConv2DFmr(WinogradConv2DFmr fmr);
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Linalg/IR/LinalgRelayoutOps.h.inc"
+
+namespace mlir {
+namespace linalg {
+
+/// Returns the outer shape in the packed domain before applying the
+/// transposition.
+template <typename OpTy,
+          typename = std::enable_if_t<std::is_same_v<OpTy, linalg::PackOp> ||
+                                      std::is_same_v<OpTy, linalg::UnPackOp>>>
+SmallVector<int64_t> getPackedOuterShapeWithoutTransposition(OpTy packOrUnPack);
+
+} // namespace linalg
+} // namespace mlir
 
 #endif // MLIR_DIALECT_LINALG_IR_LINALG_H

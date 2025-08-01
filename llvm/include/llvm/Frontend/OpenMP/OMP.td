@@ -179,7 +179,7 @@ def OMPC_DynamicAllocators : Clause<[Spelling<"dynamic_allocators">]> {
   let clangClass = "OMPDynamicAllocatorsClause";
 }
 def OMPC_Enter : Clause<[Spelling<"enter">]> {
-  let flangClass = "OmpObjectList";
+  let flangClass = "OmpEnterClause";
 }
 def OMPC_Exclusive : Clause<[Spelling<"exclusive">]> {
   let clangClass = "OMPExclusiveClause";
@@ -955,11 +955,12 @@ def OMP_Parallel : Directive<[Spelling<"parallel">]> {
     VersionedClause<OMPC_Reduction>,
     VersionedClause<OMPC_Shared>,
   ];
-  let allowedOnceClauses = [
-    VersionedClause<OMPC_Default>,
-    VersionedClause<OMPC_If>,
-    VersionedClause<OMPC_NumThreads>,
-    VersionedClause<OMPC_ProcBind>,
+  let allowedOnceClauses = [VersionedClause<OMPC_Default>,
+                            VersionedClause<OMPC_If>,
+                            VersionedClause<OMPC_NumThreads>,
+                            VersionedClause<OMPC_ProcBind>,
+                            VersionedClause<OMPC_Message, 60>,
+                            VersionedClause<OMPC_Severity, 60>,
   ];
   let association = AS_Block;
   let category = CA_Executable;
