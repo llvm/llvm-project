@@ -68,7 +68,10 @@ bool skipProblematicFlag(IteratorTy &It, const IteratorTy &End) {
   // Clang always appends the debug compilation dir,
   // even without debug info (in comgr it matches the current directory). We
   // only consider it if the user specified debug information
-  bool IsFlagWithSingleArg = Arg.starts_with("-fdebug-compilation-dir=");
+  const char *FlagsWithEqArg[] = {"-fcoverage-compilation-dir=",
+                                  "-fdebug-compilation-dir="};
+  bool IsFlagWithSingleArg = any_of(
+      FlagsWithEqArg, [&](const char *Flag) { return Arg.starts_with(Flag); });
   if (IsFlagWithSingleArg) {
     return true;
   }
