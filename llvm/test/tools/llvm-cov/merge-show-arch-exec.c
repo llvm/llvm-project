@@ -16,6 +16,7 @@
 //
 // RUN: llvm-cov show -instr-profile=%t.profdata --object=%t.toggle --object=%t.notoggle --merge-binary-coverage --show-arch-executables | FileCheck %s
 
+// CHECK:       |    1|      2|int main() {
 // CHECK:       |    2|      2|int a = 1;
 // CHECK:       |    3|      2|int b = 2;
 // CHECK:       |    4|      2|int res = 0;
