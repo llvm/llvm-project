@@ -1,6 +1,5 @@
 // RUN: mkdir -p %t.dir
 // RUN: %clangxx -S -ftime-trace -ftime-trace-granularity=0 -o %t.dir/check-time-trace-ParseDeclarationOrFunctionDefinition %s
-// RUN: cp %t.dir/check-time-trace-ParseDeclarationOrFunctionDefinition.json /tmp/test5
 // RUN: cat %t.dir/check-time-trace-ParseDeclarationOrFunctionDefinition.json \
 // RUN:   | %python -c 'import json, sys; json.dump(json.loads(sys.stdin.read()), sys.stdout, sort_keys=True, indent=2)' \
 // RUN:   | FileCheck %s
