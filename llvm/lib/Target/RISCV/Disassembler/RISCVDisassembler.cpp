@@ -344,6 +344,17 @@ static DecodeStatus DecodeVMV0RegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeVREvenRegisterClass(MCInst &Inst, uint32_t RegNo,
+                                              uint64_t Address,
+                                              const MCDisassembler *Decoder) {
+  if (RegNo >= 32 || RegNo % 2)
+    return MCDisassembler::Fail;
+
+  MCRegister Reg = RISCV::V0 + RegNo;
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus DecodeTRRegisterClass(MCInst &Inst, uint32_t RegNo,
                                           uint64_t Address,
                                           const MCDisassembler *Decoder) {
@@ -672,6 +683,8 @@ static constexpr FeatureBitset XAndesGroup = {
     RISCV::FeatureVendorXAndesVSIntLoad, RISCV::FeatureVendorXAndesVPackFPH,
     RISCV::FeatureVendorXAndesVDot};
 
+static constexpr FeatureBitset XSMTGroup = {RISCV::FeatureVendorXSMTVDot};
+
 static constexpr DecoderListEntry DecoderList32[]{
     // Vendor Extensions
     {DecoderTableXCV32, XCVFeatureGroup, "CORE-V extensions"},
@@ -692,6 +705,7 @@ static constexpr DecoderListEntry DecoderList32[]{
      {RISCV::FeatureVendorXMIPSCBOP},
      "MIPS mips.pref"},
     {DecoderTableXAndes32, XAndesGroup, "Andes extensions"},
+    {DecoderTableXSMT32, XSMTGroup, "SpacemiT extensions"},
     // Standard Extensions
     {DecoderTable32, {}, "standard 32-bit instructions"},
     {DecoderTableRV32Only32, {}, "RV32-only standard 32-bit instructions"},
