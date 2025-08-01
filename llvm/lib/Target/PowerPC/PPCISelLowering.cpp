@@ -3993,7 +3993,7 @@ SDValue PPCTargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
   if (Subtarget.isAIXABI()) {
     // On AIX we create a trampoline descriptor by combining the
     // entry point and TOC from the global descriptor (FPtr) with the
-    // nest argument as the environement pointer.
+    // nest argument as the environment pointer.
     uint64_t PointerSize = Subtarget.isPPC64() ? 8 : 4;
     MaybeAlign PointerAlign(PointerSize);
     auto MMOFlags = Subtarget.hasInvariantFunctionDescriptors()
@@ -4036,7 +4036,7 @@ SDValue PPCTargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
         DAG.getStore(TOCLoadChain, dl, TOCReg, TrampolineTOCPointer,
                      MachinePointerInfo(TrampolineAddr, TOCPointerOffset));
 
-    // Store the nest argument into the enviroment pointer in the trampoline
+    // Store the nest argument into the environment pointer in the trampoline
     // buffer.
     SDValue EnvPointer = DAG.getNode(ISD::ADD, dl, PtrVT, Trmp, SDEnvPtrOffset);
     OutChains[2] =
