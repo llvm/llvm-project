@@ -451,39 +451,42 @@ RT_API_ATTRS int DescriptorIoTicket<DIR>::Begin(WorkQueue &workQueue) {
     if (const typeInfo::DerivedType *type{
             addendum ? addendum->derivedType() : nullptr}) {
       // derived type unformatted I/O
-      if (table_) {
-        if (const auto *definedIo{table_->Find(*type,
-                DIR == Direction::Input
-                    ? common::DefinedIo::ReadUnformatted
-                    : common::DefinedIo::WriteUnformatted)}) {
-          if (definedIo->subroutine) {
-            typeInfo::SpecialBinding special{DIR == Direction::Input
-                    ? typeInfo::SpecialBinding::Which::ReadUnformatted
-                    : typeInfo::SpecialBinding::Which::WriteUnformatted,
-                definedIo->subroutine, definedIo->isDtvArgPolymorphic, false,
-                false};
-            if (DefinedUnformattedIo(io_, instance_, *type, special)) {
-              anyIoTookPlace_ = true;
-              return StatOk;
+      if (DIR == Direction::Input || !io_.get_if<InquireIOLengthState>()) {
+        if (table_) {
+          if (const auto *definedIo{table_->Find(*type,
+                  DIR == Direction::Input
+                      ? common::DefinedIo::ReadUnformatted
+                      : common::DefinedIo::WriteUnformatted)}) {
+            if (definedIo->subroutine) {
+              typeInfo::SpecialBinding special{DIR == Direction::Input
+                      ? typeInfo::SpecialBinding::Which::ReadUnformatted
+                      : typeInfo::SpecialBinding::Which::WriteUnformatted,
+                  definedIo->subroutine, definedIo->isDtvArgPolymorphic, false,
+                  false};
+              if (DefinedUnformattedIo(io_, instance_, *type, special)) {
+                anyIoTookPlace_ = true;
+                return StatOk;
+              }
+            } else {
+              int status{workQueue.BeginDerivedIo<DIR>(
+                  io_, instance_, *type, table_, anyIoTookPlace_)};
+              return status == StatContinue ? StatOk : status; // done here
             }
-          } else {
-            int status{workQueue.BeginDerivedIo<DIR>(
-                io_, instance_, *type, table_, anyIoTookPlace_)};
-            return status == StatContinue ? StatOk : status; // done here
           }
         }
-      }
-      if (const typeInfo::SpecialBinding *special{
-              type->FindSpecialBinding(DIR == Direction::Input
-                      ? typeInfo::SpecialBinding::Which::ReadUnformatted
-                      : typeInfo::SpecialBinding::Which::WriteUnformatted)}) {
-        if (!table_ || !table_->ignoreNonTbpEntries || special->IsTypeBound()) {
-          // defined derived type unformatted I/O
-          if (DefinedUnformattedIo(io_, instance_, *type, *special)) {
-            anyIoTookPlace_ = true;
-            return StatOk;
-          } else {
-            return IostatEnd;
+        if (const typeInfo::SpecialBinding *special{
+                type->FindSpecialBinding(DIR == Direction::Input
+                        ? typeInfo::SpecialBinding::Which::ReadUnformatted
+                        : typeInfo::SpecialBinding::Which::WriteUnformatted)}) {
+          if (!table_ || !table_->ignoreNonTbpEntries ||
+              special->IsTypeBound()) {
+            // defined derived type unformatted I/O
+            if (DefinedUnformattedIo(io_, instance_, *type, *special)) {
+              anyIoTookPlace_ = true;
+              return StatOk;
+            } else {
+              return IostatEnd;
+            }
           }
         }
       }

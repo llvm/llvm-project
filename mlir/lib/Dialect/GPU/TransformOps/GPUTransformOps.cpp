@@ -313,11 +313,14 @@ checkMappingAttributeTypes(std::optional<TransformOpInterface> transformOp,
                                      llvm::IsaPred<GPUWarpMappingAttr>);
   bool hasThreadMapping = llvm::any_of(forallOp.getMapping().value(),
                                        llvm::IsaPred<GPUThreadMappingAttr>);
+  bool hasLaneMapping = llvm::any_of(forallOp.getMapping().value(),
+                                     llvm::IsaPred<GPULaneMappingAttr>);
   int64_t countMappingTypes = 0;
   countMappingTypes += hasBlockMapping ? 1 : 0;
   countMappingTypes += hasWarpgroupMapping ? 1 : 0;
   countMappingTypes += hasWarpMapping ? 1 : 0;
   countMappingTypes += hasThreadMapping ? 1 : 0;
+  countMappingTypes += hasLaneMapping ? 1 : 0;
   if (countMappingTypes > 1) {
     return definiteFailureHelper(
         transformOp, forallOp,
@@ -330,7 +333,8 @@ checkMappingAttributeTypes(std::optional<TransformOpInterface> transformOp,
         "scf.forall op requires a mapping attribute of kind 'block'");
   }
   if (std::is_same<MappingKindType, ThreadMappingKind>::value &&
-      !hasThreadMapping && !hasWarpMapping && !hasWarpgroupMapping) {
+      !hasLaneMapping && !hasThreadMapping && !hasWarpMapping &&
+      !hasWarpgroupMapping) {
     return definiteFailureHelper(transformOp, forallOp,
                                  "scf.forall op requires a mapping attribute "
                                  "of kind 'thread' or 'warp'");
@@ -473,13 +477,24 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
   SmallVector<int64_t> originalBasis(availableMappingSizes);
   bool originalBasisWasProvided = !originalBasis.empty();
   if (!originalBasisWasProvided) {
+    LDBG("----originalBasis was not provided, deriving it and there will be no "
+         "predication");
     originalBasis = forallMappingSizes;
     while (originalBasis.size() < 3)
       originalBasis.push_back(1);
+  } else {
+    LDBG("----originalBasis was provided, using it, there will be predication");
   }
+  LLVM_DEBUG(
+      llvm::interleaveComma(originalBasis, DBGS() << "------originalBasis: ");
+      llvm::dbgs() << "\n");
 
   IdBuilderResult builderResult =
       gpuIdBuilder.idBuilder(rewriter, loc, forallMappingSizes, originalBasis);
+  if (!builderResult.errorMsg.empty())
+    return definiteFailureHelper(transformOp, forallOp, builderResult.errorMsg);
+
+  LLVM_DEBUG(DBGS() << builderResult);
 
   // Step 4. Map the induction variables to the mappingIdOps, this may involve
   // a permutation.
@@ -490,6 +505,7 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
            forallMappingAttrs.getArrayRef().take_front(forallOp.getRank()))) {
     auto mappingAttr = cast<DeviceMappingAttrInterface>(dim);
     Value peIdOp = mappingIdOps[mappingAttr.getRelativeIndex()];
+    LDBG("----map: " << iv << " to " << peIdOp);
     bvm.map(iv, peIdOp);
   }
 
@@ -498,32 +514,7 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
   // originalBasis and no predication occurs.
   Value predicate;
   if (originalBasisWasProvided) {
-    SmallVector<int64_t> activeMappingSizes = builderResult.activeMappingSizes;
-    SmallVector<int64_t> availableMappingSizes =
-        builderResult.availableMappingSizes;
-    SmallVector<Value> activeIdOps = builderResult.activeIdOps;
-    LDBG("----activeMappingSizes: " << llvm::interleaved(activeMappingSizes));
-    LDBG("----availableMappingSizes: "
-         << llvm::interleaved(availableMappingSizes));
-    LDBG("----activeIdOps: " << llvm::interleaved(activeIdOps));
-    for (auto [activeId, activeMappingSize, availableMappingSize] :
-         llvm::zip_equal(activeIdOps, activeMappingSizes,
-                         availableMappingSizes)) {
-      if (activeMappingSize > availableMappingSize) {
-        return definiteFailureHelper(
-            transformOp, forallOp,
-            "Trying to map to fewer GPU threads than loop iterations but "
-            "overprovisioning is not yet supported. "
-            "Try additional tiling of the before mapping or map to more "
-            "threads.");
-      }
-      if (activeMappingSize == availableMappingSize)
-        continue;
-      Value idx =
-          rewriter.create<arith::ConstantIndexOp>(loc, activeMappingSize);
-      Value tmpPredicate = rewriter.create<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::ult, activeId, idx);
-      LDBG("----predicate: " << tmpPredicate);
+    for (Value tmpPredicate : builderResult.predicateOps) {
       predicate = predicate ? rewriter.create<arith::AndIOp>(loc, predicate,
                                                              tmpPredicate)
                             : tmpPredicate;
@@ -789,6 +780,9 @@ getThreadIdBuilder(std::optional<TransformOpInterface> transformOp,
           })
           .Case([&](GPUThreadMappingAttr) {
             return GpuThreadIdBuilder(ctx, useLinearMapping);
+          })
+          .Case([&](GPULaneMappingAttr) {
+            return GpuLaneIdBuilder(ctx, warpSize, useLinearMapping);
           })
           .Default([&](DeviceMappingAttrInterface) -> GpuIdBuilder {
             llvm_unreachable("unknown mapping attribute");

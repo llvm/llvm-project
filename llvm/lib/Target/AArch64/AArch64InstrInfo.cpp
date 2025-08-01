@@ -5037,7 +5037,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
     if (DestReg == AArch64::WSP || SrcReg == AArch64::WSP) {
       // If either operand is WSP, expand to ADD #0.
-      if (Subtarget.hasZeroCycleRegMove()) {
+      if (Subtarget.hasZeroCycleRegMoveGPR64() &&
+          !Subtarget.hasZeroCycleRegMoveGPR32()) {
         // Cyclone recognizes "ADD Xd, Xn, #0" as a zero-cycle register move.
         MCRegister DestRegX = TRI->getMatchingSuperReg(
             DestReg, AArch64::sub_32, &AArch64::GPR64spRegClass);
@@ -5063,7 +5064,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           .addImm(0)
           .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
     } else {
-      if (Subtarget.hasZeroCycleRegMove()) {
+      if (Subtarget.hasZeroCycleRegMoveGPR64() &&
+          !Subtarget.hasZeroCycleRegMoveGPR32()) {
         // Cyclone recognizes "ORR Xd, XZR, Xm" as a zero-cycle register move.
         MCRegister DestRegX = TRI->getMatchingSuperReg(
             DestReg, AArch64::sub_32, &AArch64::GPR64spRegClass);
@@ -5302,30 +5304,78 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (AArch64::FPR32RegClass.contains(DestReg) &&
       AArch64::FPR32RegClass.contains(SrcReg)) {
-    BuildMI(MBB, I, DL, get(AArch64::FMOVSr), DestReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
+    if (Subtarget.hasZeroCycleRegMoveFPR64() &&
+        !Subtarget.hasZeroCycleRegMoveFPR32()) {
+      const TargetRegisterInfo *TRI = &getRegisterInfo();
+      MCRegister DestRegD = TRI->getMatchingSuperReg(DestReg, AArch64::ssub,
+                                                     &AArch64::FPR64RegClass);
+      MCRegister SrcRegD = TRI->getMatchingSuperReg(SrcReg, AArch64::ssub,
+                                                    &AArch64::FPR64RegClass);
+      // This instruction is reading and writing D registers. This may upset
+      // the register scavenger and machine verifier, so we need to indicate
+      // that we are reading an undefined value from SrcRegD, but a proper
+      // value from SrcReg.
+      BuildMI(MBB, I, DL, get(AArch64::FMOVDr), DestRegD)
+          .addReg(SrcRegD, RegState::Undef)
+          .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
+    } else {
+      BuildMI(MBB, I, DL, get(AArch64::FMOVSr), DestReg)
+          .addReg(SrcReg, getKillRegState(KillSrc));
+    }
     return;
   }
 
   if (AArch64::FPR16RegClass.contains(DestReg) &&
       AArch64::FPR16RegClass.contains(SrcReg)) {
-    DestReg =
-        RI.getMatchingSuperReg(DestReg, AArch64::hsub, &AArch64::FPR32RegClass);
-    SrcReg =
-        RI.getMatchingSuperReg(SrcReg, AArch64::hsub, &AArch64::FPR32RegClass);
-    BuildMI(MBB, I, DL, get(AArch64::FMOVSr), DestReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
+    if (Subtarget.hasZeroCycleRegMoveFPR64() &&
+        !Subtarget.hasZeroCycleRegMoveFPR32()) {
+      const TargetRegisterInfo *TRI = &getRegisterInfo();
+      MCRegister DestRegD = TRI->getMatchingSuperReg(DestReg, AArch64::hsub,
+                                                     &AArch64::FPR64RegClass);
+      MCRegister SrcRegD = TRI->getMatchingSuperReg(SrcReg, AArch64::hsub,
+                                                    &AArch64::FPR64RegClass);
+      // This instruction is reading and writing D registers. This may upset
+      // the register scavenger and machine verifier, so we need to indicate
+      // that we are reading an undefined value from SrcRegD, but a proper
+      // value from SrcReg.
+      BuildMI(MBB, I, DL, get(AArch64::FMOVDr), DestRegD)
+          .addReg(SrcRegD, RegState::Undef)
+          .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
+    } else {
+      DestReg = RI.getMatchingSuperReg(DestReg, AArch64::hsub,
+                                       &AArch64::FPR32RegClass);
+      SrcReg = RI.getMatchingSuperReg(SrcReg, AArch64::hsub,
+                                      &AArch64::FPR32RegClass);
+      BuildMI(MBB, I, DL, get(AArch64::FMOVSr), DestReg)
+          .addReg(SrcReg, getKillRegState(KillSrc));
+    }
     return;
   }
 
   if (AArch64::FPR8RegClass.contains(DestReg) &&
       AArch64::FPR8RegClass.contains(SrcReg)) {
-    DestReg =
-        RI.getMatchingSuperReg(DestReg, AArch64::bsub, &AArch64::FPR32RegClass);
-    SrcReg =
-        RI.getMatchingSuperReg(SrcReg, AArch64::bsub, &AArch64::FPR32RegClass);
-    BuildMI(MBB, I, DL, get(AArch64::FMOVSr), DestReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
+    if (Subtarget.hasZeroCycleRegMoveFPR64() &&
+        !Subtarget.hasZeroCycleRegMoveFPR32()) {
+      const TargetRegisterInfo *TRI = &getRegisterInfo();
+      MCRegister DestRegD = TRI->getMatchingSuperReg(DestReg, AArch64::bsub,
+                                                     &AArch64::FPR64RegClass);
+      MCRegister SrcRegD = TRI->getMatchingSuperReg(SrcReg, AArch64::bsub,
+                                                    &AArch64::FPR64RegClass);
+      // This instruction is reading and writing D registers. This may upset
+      // the register scavenger and machine verifier, so we need to indicate
+      // that we are reading an undefined value from SrcRegD, but a proper
+      // value from SrcReg.
+      BuildMI(MBB, I, DL, get(AArch64::FMOVDr), DestRegD)
+          .addReg(SrcRegD, RegState::Undef)
+          .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
+    } else {
+      DestReg = RI.getMatchingSuperReg(DestReg, AArch64::bsub,
+                                       &AArch64::FPR32RegClass);
+      SrcReg = RI.getMatchingSuperReg(SrcReg, AArch64::bsub,
+                                      &AArch64::FPR32RegClass);
+      BuildMI(MBB, I, DL, get(AArch64::FMOVSr), DestReg)
+          .addReg(SrcReg, getKillRegState(KillSrc));
+    }
     return;
   }
 
@@ -9646,9 +9696,6 @@ AArch64InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
                                        MachineBasicBlock::iterator &MIT,
                                        unsigned Flags) const {
   MachineInstr &MI = *MIT;
-  MachineBasicBlock *MBB = MI.getParent();
-  MachineFunction *MF = MBB->getParent();
-  AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
 
   // Don't outline anything used for return address signing. The outlined
   // function will get signed later if needed
@@ -9675,10 +9722,6 @@ AArch64InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
   case AArch64::PAUTH_EPILOGUE:
     return outliner::InstrType::Illegal;
   }
-
-  // Don't outline LOHs.
-  if (FuncInfo->getLOHRelated().count(&MI))
-    return outliner::InstrType::Illegal;
 
   // We can only outline these if we will tail call the outlined function, or
   // fix up the CFI offsets. Currently, CFI instructions are outlined only if

@@ -11,7 +11,7 @@
 
 #define __FLOAT_ONLY
 #define FUNCTION fma
-#define __CLC_FUNCTION(x) __clc_sw_fma
+#define __IMPL_FUNCTION(x) __clc_sw_fma
 #define __CLC_BODY <clc/shared/ternary_def.inc>
 
 #include <clc/math/gentype.inc>

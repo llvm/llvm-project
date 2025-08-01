@@ -1753,4 +1753,12 @@ namespace I128Mul {
 }
 #endif
 
+namespace InitParam {
+  constexpr int foo(int a) {
+      __builtin_mul_overflow(20, 10, &a);
+      return a;
+  }
+  static_assert(foo(10) == 200);
+}
+
 #endif

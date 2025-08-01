@@ -2888,8 +2888,7 @@ void PPCIntrinsicLibrary::genVecStore(llvm::ArrayRef<fir::ExtendedValue> args) {
     llvm_unreachable("invalid vector operation for generator");
   }
 
-  auto funcType{
-      mlir::FunctionType::get(context, {stTy, addr.getType()}, std::nullopt)};
+  auto funcType{mlir::FunctionType::get(context, {stTy, addr.getType()}, {})};
   mlir::func::FuncOp funcOp = builder.createFunction(loc, fname, funcType);
 
   llvm::SmallVector<mlir::Value, 4> biArgs;

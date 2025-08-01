@@ -1062,20 +1062,32 @@ LLVMErrorRef LLVMOrcCreateStaticLibrarySearchGeneratorForPath(
     const char *FileName);
 
 /**
- * Create a ThreadSafeContext containing a new LLVMContext.
+ * Create a ThreadSafeContextRef containing a new LLVMContext.
  *
  * Ownership of the underlying ThreadSafeContext data is shared: Clients
- * can and should dispose of their ThreadSafeContext as soon as they no longer
- * need to refer to it directly. Other references (e.g. from ThreadSafeModules)
- * will keep the data alive as long as it is needed.
+ * can and should dispose of their ThreadSafeContextRef as soon as they no
+ * longer need to refer to it directly. Other references (e.g. from
+ * ThreadSafeModules) will keep the underlying data alive as long as it is
+ * needed.
  */
 LLVMOrcThreadSafeContextRef LLVMOrcCreateNewThreadSafeContext(void);
 
 /**
- * Get a reference to the wrapped LLVMContext.
+ * Create a ThreadSafeContextRef from a given LLVMContext, which must not be
+ * associated with any existing ThreadSafeContext.
+ *
+ * The underlying ThreadSafeContext will take ownership of the LLVMContext
+ * object, so clients should not free the LLVMContext passed to this
+ * function.
+ *
+ * Ownership of the underlying ThreadSafeContext data is shared: Clients
+ * can and should dispose of their ThreadSafeContextRef as soon as they no
+ * longer need to refer to it directly. Other references (e.g. from
+ * ThreadSafeModules) will keep the underlying data alive as long as it is
+ * needed.
  */
-LLVMContextRef
-LLVMOrcThreadSafeContextGetContext(LLVMOrcThreadSafeContextRef TSCtx);
+LLVMOrcThreadSafeContextRef
+LLVMOrcCreateNewThreadSafeContextFromLLVMContext(LLVMContextRef Ctx);
 
 /**
  * Dispose of a ThreadSafeContext.

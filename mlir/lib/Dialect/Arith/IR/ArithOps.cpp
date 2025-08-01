@@ -262,6 +262,12 @@ void arith::ConstantIntOp::build(OpBuilder &builder, OperationState &result,
                            builder.getIntegerAttr(type, value));
 }
 
+void arith::ConstantIntOp::build(OpBuilder &builder, OperationState &result,
+                                 Type type, const APInt &value) {
+  arith::ConstantOp::build(builder, result, type,
+                           builder.getIntegerAttr(type, value));
+}
+
 bool arith::ConstantIntOp::classof(Operation *op) {
   if (auto constOp = dyn_cast_or_null<arith::ConstantOp>(op))
     return constOp.getType().isSignlessInteger();
@@ -290,6 +296,16 @@ bool arith::ConstantIndexOp::classof(Operation *op) {
   if (auto constOp = dyn_cast_or_null<arith::ConstantOp>(op))
     return constOp.getType().isIndex();
   return false;
+}
+
+Value mlir::arith::getZeroConstant(OpBuilder &builder, Location loc,
+                                   Type type) {
+  // TODO: Incorporate this check to `FloatAttr::get*`.
+  assert(!isa<Float8E8M0FNUType>(getElementTypeOrSelf(type)) &&
+         "type doesn't have a zero representation");
+  TypedAttr zeroAttr = builder.getZeroAttr(type);
+  assert(zeroAttr && "unsupported type for zero attribute");
+  return builder.create<arith::ConstantOp>(loc, zeroAttr);
 }
 
 //===----------------------------------------------------------------------===//

@@ -1528,7 +1528,7 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   // Calculate shared structure offset including padding after kmp_task_t struct
   // to align pointers in shared struct
   shareds_offset = sizeof(kmp_taskdata_t) + sizeof_kmp_task_t;
-  shareds_offset = __kmp_round_up_to_val(shareds_offset, sizeof(void *));
+  shareds_offset = __kmp_round_up_to_val(shareds_offset, sizeof(kmp_uint64));
 
   // Allocate a kmp_taskdata_t block and a kmp_task_t block.
   KA_TRACE(30, ("__kmp_task_alloc: T#%d First malloc size: %ld\n", gtid,

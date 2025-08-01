@@ -1432,7 +1432,7 @@ LogicalResult mlir::affine::boundCheckLoadOrStoreOp(LoadOrStoreOp loadOrStoreOp,
 
     // Check for a negative index.
     FlatAffineValueConstraints lcst(*region.getConstraints());
-    std::fill(ineq.begin(), ineq.end(), 0);
+    llvm::fill(ineq, 0);
     // d_i <= -1;
     lcst.addBound(BoundType::UB, r, -1);
     outOfBounds = !lcst.isEmpty();

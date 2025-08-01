@@ -57,12 +57,14 @@ IRExecutionUnit::IRExecutionUnit(std::unique_ptr<llvm::LLVMContext> &context_up,
 lldb::addr_t IRExecutionUnit::WriteNow(const uint8_t *bytes, size_t size,
                                        Status &error) {
   const bool zero_memory = false;
-  lldb::addr_t allocation_process_addr =
+  auto address_or_error =
       Malloc(size, 8, lldb::ePermissionsWritable | lldb::ePermissionsReadable,
-             eAllocationPolicyMirror, zero_memory, error);
-
-  if (!error.Success())
+             eAllocationPolicyMirror, zero_memory);
+  if (!address_or_error) {
+    error = Status::FromError(address_or_error.takeError());
     return LLDB_INVALID_ADDRESS;
+  }
+  lldb::addr_t allocation_process_addr = *address_or_error;
 
   WriteMemory(allocation_process_addr, bytes, size, error);
 
@@ -1102,9 +1104,12 @@ bool IRExecutionUnit::CommitOneAllocation(lldb::ProcessSP &process_sp,
     break;
   default:
     const bool zero_memory = false;
-    record.m_process_address =
-        Malloc(record.m_size, record.m_alignment, record.m_permissions,
-               eAllocationPolicyProcessOnly, zero_memory, error);
+    if (auto address_or_error =
+            Malloc(record.m_size, record.m_alignment, record.m_permissions,
+                   eAllocationPolicyProcessOnly, zero_memory))
+      record.m_process_address = *address_or_error;
+    else
+      error = Status::FromError(address_or_error.takeError());
     break;
   }
 

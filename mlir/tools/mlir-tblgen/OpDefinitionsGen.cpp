@@ -2223,6 +2223,17 @@ generateNamedOperandGetters(const Operator &op, Class &opClass,
                     "'SameVariadicOperandSize' traits");
   }
 
+  // Print the ods names so they don't need to be hardcoded in the source.
+  for (int i = 0; i != numOperands; ++i) {
+    const auto &operand = op.getOperand(i);
+    if (operand.name.empty())
+      continue;
+
+    opClass.declare<Field>("static constexpr int", Twine("odsIndex_") +
+                                                       operand.name + " = " +
+                                                       Twine(i));
+  }
+
   // First emit a few "sink" getter methods upon which we layer all nicer named
   // getter methods.
   // If generating for an adaptor, the method is put into the non-templated

@@ -94,27 +94,27 @@ define i32 @test_select_i1_basic(i32 %v1, i32 %v2, i32 %v3, i32 %true, i32 %fals
 define i32 @test_select_i1_basic_folding(i32 %v1, i32 %v2, i32 %v3, i32 %true, i32 %false) {
 ; CHECK-LABEL: test_select_i1_basic_folding(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<13>;
-; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .pred %p<12>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_select_i1_basic_folding_param_0];
 ; CHECK-NEXT:    setp.eq.s32 %p1, %r1, 0;
-; CHECK-NEXT:    ld.param.b32 %r2, [test_select_i1_basic_folding_param_1];
-; CHECK-NEXT:    setp.ne.s32 %p2, %r2, 0;
-; CHECK-NEXT:    setp.eq.s32 %p3, %r2, 0;
-; CHECK-NEXT:    ld.param.b32 %r3, [test_select_i1_basic_folding_param_2];
-; CHECK-NEXT:    setp.eq.s32 %p4, %r3, 0;
-; CHECK-NEXT:    ld.param.b32 %r4, [test_select_i1_basic_folding_param_3];
+; CHECK-NEXT:    ld.param.b32 %r3, [test_select_i1_basic_folding_param_1];
+; CHECK-NEXT:    setp.ne.s32 %p2, %r3, 0;
+; CHECK-NEXT:    setp.eq.s32 %p3, %r3, 0;
+; CHECK-NEXT:    ld.param.b32 %r5, [test_select_i1_basic_folding_param_2];
+; CHECK-NEXT:    setp.eq.s32 %p4, %r5, 0;
+; CHECK-NEXT:    ld.param.b32 %r6, [test_select_i1_basic_folding_param_3];
 ; CHECK-NEXT:    xor.pred %p6, %p1, %p3;
-; CHECK-NEXT:    ld.param.b32 %r5, [test_select_i1_basic_folding_param_4];
+; CHECK-NEXT:    ld.param.b32 %r7, [test_select_i1_basic_folding_param_4];
 ; CHECK-NEXT:    and.pred %p7, %p6, %p4;
-; CHECK-NEXT:    and.pred %p9, %p2, %p4;
-; CHECK-NEXT:    and.pred %p10, %p3, %p7;
-; CHECK-NEXT:    or.pred %p11, %p10, %p9;
-; CHECK-NEXT:    xor.pred %p12, %p11, %p3;
-; CHECK-NEXT:    selp.b32 %r6, %r4, %r5, %p12;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
+; CHECK-NEXT:    and.pred %p8, %p2, %p4;
+; CHECK-NEXT:    and.pred %p9, %p3, %p7;
+; CHECK-NEXT:    or.pred %p10, %p9, %p8;
+; CHECK-NEXT:    xor.pred %p11, %p10, %p3;
+; CHECK-NEXT:    selp.b32 %r8, %r6, %r7, %p11;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
 ; CHECK-NEXT:    ret;
   %b1 = icmp eq i32 %v1, 0
   %b2 = icmp eq i32 %v2, 0

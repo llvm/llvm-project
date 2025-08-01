@@ -20,7 +20,7 @@ import sys
 
 # Main header regexes
 INCLUDE_FILENAME_REGEX = re.compile(
-    r'#include "lldb/API/(?P<include_filename>.*){0,1}"'
+    r'#include "lldb/(API/)?(?P<include_filename>.*){0,1}"'
 )
 
 # RPC header regexes
@@ -70,7 +70,7 @@ def modify_main_includes(input_file_path, output_file_path):
                     r"#include <LLDB/" + match.group("include_filename") + ">",
                     file_buffer,
                 )
-                output_file.write(file_buffer)
+            output_file.write(file_buffer)
 
 
 def remove_guards(output_file_path, unifdef_path, unifdef_guards):
@@ -112,6 +112,10 @@ def main():
     # but passing them in with dashes for this script causes argparse to think that they're
     # arguments in and of themself, so they need to passed in without dashes.
     unifdef_guards = ["-" + guard for guard in args.unifdef_guards]
+
+    # Create the framework's header dir if it doesn't already exist
+    if not os.path.exists(os.path.dirname(output_file_path)):
+        os.makedirs(os.path.dirname(output_file_path))
 
     if framework_version == "lldb_main":
         modify_main_includes(input_file_path, output_file_path)

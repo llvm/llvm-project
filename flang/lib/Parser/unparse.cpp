@@ -2094,7 +2094,7 @@ public:
   }
   void Unparse(const OmpMapperSpecifier &x) {
     const auto &mapperName{std::get<std::string>(x.t)};
-    if (mapperName.find("omp.default.mapper") == std::string::npos) {
+    if (mapperName.find(llvm::omp::OmpDefaultMapperName) == std::string::npos) {
       Walk(mapperName);
       Put(":");
     }
@@ -2740,7 +2740,7 @@ public:
     Word("!$OMP DECLARE MAPPER (");
     const auto &spec{std::get<OmpMapperSpecifier>(z.t)};
     const auto &mapperName{std::get<std::string>(spec.t)};
-    if (mapperName.find("omp.default.mapper") == std::string::npos) {
+    if (mapperName.find(llvm::omp::OmpDefaultMapperName) == std::string::npos) {
       Walk(mapperName);
       Put(":");
     }
@@ -2926,7 +2926,8 @@ public:
     Walk(std::get<OmpBeginLoopDirective>(x.t));
     Put("\n");
     EndOpenMP();
-    Walk(std::get<std::optional<DoConstruct>>(x.t));
+    Walk(std::get<std::optional<std::variant<DoConstruct,
+            common::Indirection<parser::OpenMPLoopConstruct>>>>(x.t));
     Walk(std::get<std::optional<OmpEndLoopDirective>>(x.t));
   }
   void Unparse(const BasedPointer &x) {

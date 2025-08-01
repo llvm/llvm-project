@@ -1305,9 +1305,9 @@ LogicalResult mlir::affine::replaceAllMemRefUsesWith(
 LogicalResult mlir::affine::replaceAllMemRefUsesWith(
     Value oldMemRef, Value newMemRef, ArrayRef<Value> extraIndices,
     AffineMap indexRemap, ArrayRef<Value> extraOperands,
-    ArrayRef<Value> symbolOperands, Operation *domOpFilter,
-    Operation *postDomOpFilter, bool allowNonDereferencingOps,
-    bool replaceInDeallocOp) {
+    ArrayRef<Value> symbolOperands,
+    llvm::function_ref<bool(Operation *)> userFilterFn,
+    bool allowNonDereferencingOps, bool replaceInDeallocOp) {
   unsigned newMemRefRank = cast<MemRefType>(newMemRef.getType()).getRank();
   (void)newMemRefRank; // unused in opt mode
   unsigned oldMemRefRank = cast<MemRefType>(oldMemRef.getType()).getRank();
@@ -1328,61 +1328,52 @@ LogicalResult mlir::affine::replaceAllMemRefUsesWith(
 
   std::unique_ptr<DominanceInfo> domInfo;
   std::unique_ptr<PostDominanceInfo> postDomInfo;
-  if (domOpFilter)
-    domInfo = std::make_unique<DominanceInfo>(
-        domOpFilter->getParentOfType<FunctionOpInterface>());
-
-  if (postDomOpFilter)
-    postDomInfo = std::make_unique<PostDominanceInfo>(
-        postDomOpFilter->getParentOfType<FunctionOpInterface>());
 
   // Walk all uses of old memref; collect ops to perform replacement. We use a
   // DenseSet since an operation could potentially have multiple uses of a
   // memref (although rare), and the replacement later is going to erase ops.
   DenseSet<Operation *> opsToReplace;
-  for (auto *op : oldMemRef.getUsers()) {
-    // Skip this use if it's not dominated by domOpFilter.
-    if (domOpFilter && !domInfo->dominates(domOpFilter, op))
-      continue;
-
-    // Skip this use if it's not post-dominated by postDomOpFilter.
-    if (postDomOpFilter && !postDomInfo->postDominates(postDomOpFilter, op))
+  for (auto *user : oldMemRef.getUsers()) {
+    // Check if this user doesn't pass the filter.
+    if (userFilterFn && !userFilterFn(user))
       continue;
 
     // Skip dealloc's - no replacement is necessary, and a memref replacement
     // at other uses doesn't hurt these dealloc's.
-    if (hasSingleEffect<MemoryEffects::Free>(op, oldMemRef) &&
+    if (hasSingleEffect<MemoryEffects::Free>(user, oldMemRef) &&
         !replaceInDeallocOp)
       continue;
 
     // Check if the memref was used in a non-dereferencing context. It is fine
     // for the memref to be used in a non-dereferencing way outside of the
     // region where this replacement is happening.
-    if (!isa<AffineMapAccessInterface>(*op)) {
+    if (!isa<AffineMapAccessInterface>(*user)) {
       if (!allowNonDereferencingOps) {
-        LLVM_DEBUG(llvm::dbgs()
-                   << "Memref replacement failed: non-deferencing memref op: \n"
-                   << *op << '\n');
+        LLVM_DEBUG(
+            llvm::dbgs()
+            << "Memref replacement failed: non-deferencing memref user: \n"
+            << *user << '\n');
         return failure();
       }
       // Non-dereferencing ops with the MemRefsNormalizable trait are
       // supported for replacement.
-      if (!op->hasTrait<OpTrait::MemRefsNormalizable>()) {
+      if (!user->hasTrait<OpTrait::MemRefsNormalizable>()) {
         LLVM_DEBUG(llvm::dbgs() << "Memref replacement failed: use without a "
                                    "memrefs normalizable trait: \n"
-                                << *op << '\n');
+                                << *user << '\n');
         return failure();
       }
     }
 
-    // We'll first collect and then replace --- since replacement erases the op
-    // that has the use, and that op could be postDomFilter or domFilter itself!
-    opsToReplace.insert(op);
+    // We'll first collect and then replace --- since replacement erases the
+    // user that has the use, and that user could be postDomFilter or domFilter
+    // itself!
+    opsToReplace.insert(user);
   }
 
-  for (auto *op : opsToReplace) {
+  for (auto *user : opsToReplace) {
     if (failed(replaceAllMemRefUsesWith(
-            oldMemRef, newMemRef, op, extraIndices, indexRemap, extraOperands,
+            oldMemRef, newMemRef, user, extraIndices, indexRemap, extraOperands,
             symbolOperands, allowNonDereferencingOps)))
       llvm_unreachable("memref replacement guaranteed to succeed here");
   }
@@ -1763,8 +1754,7 @@ LogicalResult mlir::affine::normalizeMemRef(AllocLikeOp allocOp) {
                                       /*indexRemap=*/layoutMap,
                                       /*extraOperands=*/{},
                                       /*symbolOperands=*/symbolOperands,
-                                      /*domOpFilter=*/nullptr,
-                                      /*postDomOpFilter=*/nullptr,
+                                      /*userFilterFn=*/nullptr,
                                       /*allowNonDereferencingOps=*/true))) {
     // If it failed (due to escapes for example), bail out.
     newAlloc.erase();
@@ -1854,8 +1844,7 @@ mlir::affine::normalizeMemRef(memref::ReinterpretCastOp reinterpretCastOp) {
                                       /*indexRemap=*/oldLayoutMap,
                                       /*extraOperands=*/{},
                                       /*symbolOperands=*/oldStrides,
-                                      /*domOpFilter=*/nullptr,
-                                      /*postDomOpFilter=*/nullptr,
+                                      /*userFilterFn=*/nullptr,
                                       /*allowNonDereferencingOps=*/true))) {
     // If it failed (due to escapes for example), bail out.
     newReinterpretCast.erase();

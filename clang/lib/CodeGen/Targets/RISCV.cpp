@@ -544,7 +544,7 @@ ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty, unsigned ABIVLen) const {
   assert(VT->getElementType()->isBuiltinType() && "expected builtin type!");
 
   auto VScale = getContext().getTargetInfo().getVScaleRange(
-      getContext().getLangOpts(), false);
+      getContext().getLangOpts(), TargetInfo::ArmStreamingKind::NotStreaming);
 
   unsigned NumElts = VT->getNumElements();
   llvm::Type *EltType = llvm::Type::getInt1Ty(getVMContext());

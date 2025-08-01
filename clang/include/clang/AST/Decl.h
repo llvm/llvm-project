@@ -888,13 +888,17 @@ struct EvaluatedStmt {
   bool HasICEInit : 1;
   bool CheckedForICEInit : 1;
 
+  bool HasSideEffects : 1;
+  bool CheckedForSideEffects : 1;
+
   LazyDeclStmtPtr Value;
   APValue Evaluated;
 
   EvaluatedStmt()
       : WasEvaluated(false), IsEvaluating(false),
         HasConstantInitialization(false), HasConstantDestruction(false),
-        HasICEInit(false), CheckedForICEInit(false) {}
+        HasICEInit(false), CheckedForICEInit(false), HasSideEffects(false),
+        CheckedForSideEffects(false) {}
 };
 
 /// Represents a variable declaration or definition.
@@ -1353,9 +1357,11 @@ public:
     return const_cast<VarDecl *>(this)->getInitializingDeclaration();
   }
 
-  /// Checks whether this declaration has an initializer with side effects,
-  /// without triggering deserialization if the initializer is not yet
-  /// deserialized.
+  /// Checks whether this declaration has an initializer with side effects.
+  /// The result is cached. If the result hasn't been computed this can trigger
+  /// deserialization and constant evaluation. By running this during
+  /// serialization and serializing the result all clients can safely call this
+  /// without triggering further deserialization.
   bool hasInitWithSideEffects() const;
 
   /// Determine whether this variable's value might be usable in a

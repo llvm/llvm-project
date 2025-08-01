@@ -46,9 +46,12 @@ Type ConvertToLLVMPattern::getVoidType() const {
   return LLVM::LLVMVoidType::get(&getTypeConverter()->getContext());
 }
 
-Type ConvertToLLVMPattern::getVoidPtrType() const {
-  return LLVM::LLVMPointerType::get(&getTypeConverter()->getContext());
+Type ConvertToLLVMPattern::getPtrType(unsigned addressSpace) const {
+  return LLVM::LLVMPointerType::get(&getTypeConverter()->getContext(),
+                                    addressSpace);
 }
+
+Type ConvertToLLVMPattern::getVoidPtrType() const { return getPtrType(); }
 
 Value ConvertToLLVMPattern::createIndexAttrConstant(OpBuilder &builder,
                                                     Location loc,
@@ -273,7 +276,7 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
             ? builder
                   .create<LLVM::CallOp>(loc, mallocFunc.value(), allocationSize)
                   .getResult()
-            : builder.create<LLVM::AllocaOp>(loc, getVoidPtrType(),
+            : builder.create<LLVM::AllocaOp>(loc, getPtrType(),
                                              IntegerType::get(getContext(), 8),
                                              allocationSize,
                                              /*alignment=*/0);

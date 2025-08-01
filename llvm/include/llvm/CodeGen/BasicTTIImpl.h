@@ -2243,6 +2243,9 @@ public:
     case Intrinsic::log2:
       ISD = ISD::FLOG2;
       break;
+    case Intrinsic::ldexp:
+      ISD = ISD::FLDEXP;
+      break;
     case Intrinsic::fabs:
       ISD = ISD::FABS;
       break;
@@ -2296,6 +2299,12 @@ public:
       break;
     case Intrinsic::roundeven:
       ISD = ISD::FROUNDEVEN;
+      break;
+    case Intrinsic::lround:
+      ISD = ISD::LROUND;
+      break;
+    case Intrinsic::llround:
+      ISD = ISD::LLROUND;
       break;
     case Intrinsic::pow:
       ISD = ISD::FPOW;

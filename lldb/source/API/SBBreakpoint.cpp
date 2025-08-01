@@ -781,6 +781,18 @@ bool SBBreakpoint::IsHardware() const {
   return false;
 }
 
+lldb::SBError SBBreakpoint::SetIsHardware(bool is_hardware) {
+  LLDB_INSTRUMENT_VA(this, is_hardware);
+
+  BreakpointSP bkpt_sp = GetSP();
+  if (bkpt_sp) {
+    std::lock_guard<std::recursive_mutex> guard(
+        bkpt_sp->GetTarget().GetAPIMutex());
+    return SBError(Status::FromError(bkpt_sp->SetIsHardware(is_hardware)));
+  }
+  return SBError();
+}
+
 BreakpointSP SBBreakpoint::GetSP() const { return m_opaque_wp.lock(); }
 
 // This is simple collection of breakpoint id's and their target.

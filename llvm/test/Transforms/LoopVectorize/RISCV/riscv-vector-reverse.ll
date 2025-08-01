@@ -334,22 +334,24 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    %22 = zext i32 %21 to i64
 ; CHECK-NEXT:    %23 = getelementptr inbounds i32, ptr %B, i64 %22
 ; CHECK-NEXT:    %24 = mul i64 0, %18
-; CHECK-NEXT:    %25 = sub i64 1, %18
-; CHECK-NEXT:    %26 = getelementptr inbounds i32, ptr %23, i64 %24
-; CHECK-NEXT:    %27 = getelementptr inbounds i32, ptr %26, i64 %25
-; CHECK-NEXT:    %wide.load = load <vscale x 4 x i32>, ptr %27, align 4
+; CHECK-NEXT:    %25 = sub i64 %18, 1
+; CHECK-NEXT:    %26 = mul i64 -1, %25
+; CHECK-NEXT:    %27 = getelementptr inbounds i32, ptr %23, i64 %24
+; CHECK-NEXT:    %28 = getelementptr inbounds i32, ptr %27, i64 %26
+; CHECK-NEXT:    %wide.load = load <vscale x 4 x i32>, ptr %28, align 4
 ; CHECK-NEXT:    %reverse = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> %wide.load)
-; CHECK-NEXT:    %28 = add <vscale x 4 x i32> %reverse, splat (i32 1)
-; CHECK-NEXT:    %29 = getelementptr inbounds i32, ptr %A, i64 %22
-; CHECK-NEXT:    %30 = mul i64 0, %18
-; CHECK-NEXT:    %31 = sub i64 1, %18
-; CHECK-NEXT:    %32 = getelementptr inbounds i32, ptr %29, i64 %30
-; CHECK-NEXT:    %33 = getelementptr inbounds i32, ptr %32, i64 %31
-; CHECK-NEXT:    %reverse4 = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> %28)
-; CHECK-NEXT:    store <vscale x 4 x i32> %reverse4, ptr %33, align 4
+; CHECK-NEXT:    %29 = add <vscale x 4 x i32> %reverse, splat (i32 1)
+; CHECK-NEXT:    %30 = getelementptr inbounds i32, ptr %A, i64 %22
+; CHECK-NEXT:    %31 = mul i64 0, %18
+; CHECK-NEXT:    %32 = sub i64 %18, 1
+; CHECK-NEXT:    %33 = mul i64 -1, %32
+; CHECK-NEXT:    %34 = getelementptr inbounds i32, ptr %30, i64 %31
+; CHECK-NEXT:    %35 = getelementptr inbounds i32, ptr %34, i64 %33
+; CHECK-NEXT:    %reverse4 = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> %29)
+; CHECK-NEXT:    store <vscale x 4 x i32> %reverse4, ptr %35, align 4
 ; CHECK-NEXT:    %index.next = add nuw i64 %index, %18
-; CHECK-NEXT:    %34 = icmp eq i64 %index.next, %n.vec
-; CHECK-NEXT:    br i1 %34, <null operand!>, label %vector.body
+; CHECK-NEXT:    %36 = icmp eq i64 %index.next, %n.vec
+; CHECK-NEXT:    br i1 %36, <null operand!>, label %vector.body
 ; CHECK-NEXT:  LV: created middle.block
 ; CHECK-NEXT:  LV: draw edge from vector.body
 ; CHECK-NEXT:  LV: vectorizing VPBB: middle.block in BB: middle.block
@@ -380,8 +382,8 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    %i.0 = add nsw i32 %i.0.in8, -1
 ; CHECK-NEXT:    %idxprom = zext i32 %i.0 to i64
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds i32, ptr %B, i64 %idxprom
-; CHECK-NEXT:    %35 = load i32, ptr %arrayidx, align 4
-; CHECK-NEXT:    %add9 = add i32 %35, 1
+; CHECK-NEXT:    %37 = load i32, ptr %arrayidx, align 4
+; CHECK-NEXT:    %add9 = add i32 %37, 1
 ; CHECK-NEXT:    %arrayidx3 = getelementptr inbounds i32, ptr %A, i64 %idxprom
 ; CHECK-NEXT:    store i32 %add9, ptr %arrayidx3, align 4
 ; CHECK-NEXT:    %cmp = icmp ugt i64 %indvars.iv, 1
@@ -743,22 +745,24 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    %22 = zext i32 %21 to i64
 ; CHECK-NEXT:    %23 = getelementptr inbounds float, ptr %B, i64 %22
 ; CHECK-NEXT:    %24 = mul i64 0, %18
-; CHECK-NEXT:    %25 = sub i64 1, %18
-; CHECK-NEXT:    %26 = getelementptr inbounds float, ptr %23, i64 %24
-; CHECK-NEXT:    %27 = getelementptr inbounds float, ptr %26, i64 %25
-; CHECK-NEXT:    %wide.load = load <vscale x 4 x float>, ptr %27, align 4
+; CHECK-NEXT:    %25 = sub i64 %18, 1
+; CHECK-NEXT:    %26 = mul i64 -1, %25
+; CHECK-NEXT:    %27 = getelementptr inbounds float, ptr %23, i64 %24
+; CHECK-NEXT:    %28 = getelementptr inbounds float, ptr %27, i64 %26
+; CHECK-NEXT:    %wide.load = load <vscale x 4 x float>, ptr %28, align 4
 ; CHECK-NEXT:    %reverse = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> %wide.load)
-; CHECK-NEXT:    %28 = fadd <vscale x 4 x float> %reverse, splat (float 1.000000e+00)
-; CHECK-NEXT:    %29 = getelementptr inbounds float, ptr %A, i64 %22
-; CHECK-NEXT:    %30 = mul i64 0, %18
-; CHECK-NEXT:    %31 = sub i64 1, %18
-; CHECK-NEXT:    %32 = getelementptr inbounds float, ptr %29, i64 %30
-; CHECK-NEXT:    %33 = getelementptr inbounds float, ptr %32, i64 %31
-; CHECK-NEXT:    %reverse4 = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> %28)
-; CHECK-NEXT:    store <vscale x 4 x float> %reverse4, ptr %33, align 4
+; CHECK-NEXT:    %29 = fadd <vscale x 4 x float> %reverse, splat (float 1.000000e+00)
+; CHECK-NEXT:    %30 = getelementptr inbounds float, ptr %A, i64 %22
+; CHECK-NEXT:    %31 = mul i64 0, %18
+; CHECK-NEXT:    %32 = sub i64 %18, 1
+; CHECK-NEXT:    %33 = mul i64 -1, %32
+; CHECK-NEXT:    %34 = getelementptr inbounds float, ptr %30, i64 %31
+; CHECK-NEXT:    %35 = getelementptr inbounds float, ptr %34, i64 %33
+; CHECK-NEXT:    %reverse4 = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> %29)
+; CHECK-NEXT:    store <vscale x 4 x float> %reverse4, ptr %35, align 4
 ; CHECK-NEXT:    %index.next = add nuw i64 %index, %18
-; CHECK-NEXT:    %34 = icmp eq i64 %index.next, %n.vec
-; CHECK-NEXT:    br i1 %34, <null operand!>, label %vector.body
+; CHECK-NEXT:    %36 = icmp eq i64 %index.next, %n.vec
+; CHECK-NEXT:    br i1 %36, <null operand!>, label %vector.body
 ; CHECK-NEXT:  LV: created middle.block
 ; CHECK-NEXT:  LV: draw edge from vector.body
 ; CHECK-NEXT:  LV: vectorizing VPBB: middle.block in BB: middle.block
@@ -789,8 +793,8 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    %i.0 = add nsw i32 %i.0.in8, -1
 ; CHECK-NEXT:    %idxprom = zext i32 %i.0 to i64
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds float, ptr %B, i64 %idxprom
-; CHECK-NEXT:    %35 = load float, ptr %arrayidx, align 4
-; CHECK-NEXT:    %conv1 = fadd float %35, 1.000000e+00
+; CHECK-NEXT:    %37 = load float, ptr %arrayidx, align 4
+; CHECK-NEXT:    %conv1 = fadd float %37, 1.000000e+00
 ; CHECK-NEXT:    %arrayidx3 = getelementptr inbounds float, ptr %A, i64 %idxprom
 ; CHECK-NEXT:    store float %conv1, ptr %arrayidx3, align 4
 ; CHECK-NEXT:    %cmp = icmp ugt i64 %indvars.iv, 1

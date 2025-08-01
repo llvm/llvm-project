@@ -21,7 +21,6 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
@@ -449,11 +448,14 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
   // Emit instruction directly into data fragment.
   size_t FixupStartIndex = DF->getFixups().size();
   size_t CodeOffset = DF->getContents().size();
-  Assembler.getEmitter().encodeInstruction(Inst, DF->getContents(),
-                                           DF->getFixups(), STI);
+  SmallVector<MCFixup, 1> Fixups;
+  Assembler.getEmitter().encodeInstruction(Inst, DF->getContentsForAppending(),
+                                           Fixups, STI);
+  DF->doneAppending();
+  if (!Fixups.empty())
+    DF->appendFixups(Fixups);
 
-  auto Fixups = MutableArrayRef(DF->getFixups()).slice(FixupStartIndex);
-  for (auto &Fixup : Fixups) {
+  for (auto &Fixup : MutableArrayRef(DF->getFixups()).slice(FixupStartIndex)) {
     Fixup.setOffset(Fixup.getOffset() + CodeOffset);
     if (Fixup.isLinkerRelaxable()) {
       DF->setLinkerRelaxable();

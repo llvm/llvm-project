@@ -985,8 +985,7 @@ ast::Decl *Parser::createODSNativePDLLConstraintDecl(
   // Build the native constraint.
   auto *constraintDecl = ast::UserConstraintDecl::createNative(
       ctx, ast::Name::create(ctx, name, loc), paramVar,
-      /*results=*/std::nullopt, codeBlock, ast::TupleType::get(ctx),
-      nativeType);
+      /*results=*/{}, codeBlock, ast::TupleType::get(ctx), nativeType);
   constraintDecl->setDocComment(ctx, docString);
   curDeclScope->add(constraintDecl);
   return constraintDecl;
@@ -1782,7 +1781,7 @@ Parser::parseConstraint(std::optional<SMRange> &typeConstraint,
 
 FailureOr<ast::ConstraintRef> Parser::parseArgOrResultConstraint() {
   std::optional<SMRange> typeConstraint;
-  return parseConstraint(typeConstraint, /*existingConstraints=*/std::nullopt,
+  return parseConstraint(typeConstraint, /*existingConstraints=*/{},
                          /*allowInlineTypeConstraints=*/false);
 }
 
@@ -2995,8 +2994,8 @@ LogicalResult Parser::validateOperationOperandsOrResults(
       // Otherwise, create dummy values for each of the entries so that we
       // adhere to the ODS signature.
       for (unsigned i = 0, e = odsValues.size(); i < e; ++i) {
-        values.push_back(ast::RangeExpr::create(
-            ctx, loc, /*elements=*/std::nullopt, rangeTy));
+        values.push_back(
+            ast::RangeExpr::create(ctx, loc, /*elements=*/{}, rangeTy));
       }
       return success();
     }

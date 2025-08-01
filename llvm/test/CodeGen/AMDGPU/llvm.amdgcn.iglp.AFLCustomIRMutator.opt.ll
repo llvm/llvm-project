@@ -5,18 +5,19 @@ define amdgpu_kernel void @test_iglp_opt_rev_mfma_gemm(<1 x i64> %L1) {
 ; GCN-LABEL: test_iglp_opt_rev_mfma_gemm:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    v_mov_b32_e32 v32, 0
+; GCN-NEXT:    ds_read_b128 v[0:3], v32
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GCN-NEXT:    ds_read_b128 v[28:31], v32 offset:112
 ; GCN-NEXT:    ds_read_b128 v[24:27], v32 offset:96
 ; GCN-NEXT:    ds_read_b128 v[20:23], v32 offset:80
 ; GCN-NEXT:    ds_read_b128 v[16:19], v32 offset:64
-; GCN-NEXT:    ds_read_b128 v[0:3], v32
 ; GCN-NEXT:    ds_read_b128 v[4:7], v32 offset:16
 ; GCN-NEXT:    ds_read_b128 v[8:11], v32 offset:32
 ; GCN-NEXT:    ds_read_b128 v[12:15], v32 offset:48
-; GCN-NEXT:    v_mov_b32_e32 v34, 0
-; GCN-NEXT:    v_mov_b32_e32 v35, v34
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    ds_write_b128 v32, v[0:3]
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v1, v0
 ; GCN-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GCN-NEXT:    ; iglp_opt mask(0x00000001)
 ; GCN-NEXT:    ds_write_b128 v32, v[28:31] offset:112
@@ -26,8 +27,7 @@ define amdgpu_kernel void @test_iglp_opt_rev_mfma_gemm(<1 x i64> %L1) {
 ; GCN-NEXT:    ds_write_b128 v32, v[12:15] offset:48
 ; GCN-NEXT:    ds_write_b128 v32, v[8:11] offset:32
 ; GCN-NEXT:    ds_write_b128 v32, v[4:7] offset:16
-; GCN-NEXT:    ds_write_b128 v32, v[0:3]
-; GCN-NEXT:    ds_write_b64 v32, v[34:35]
+; GCN-NEXT:    ds_write_b64 v32, v[0:1]
 ; GCN-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.iglp.opt(i32 1)

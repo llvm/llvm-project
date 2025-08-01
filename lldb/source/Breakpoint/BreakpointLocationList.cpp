@@ -32,7 +32,7 @@ BreakpointLocationList::Create(const Address &addr,
   lldb::break_id_t bp_loc_id = ++m_next_id;
   BreakpointLocationSP bp_loc_sp(
       new BreakpointLocation(bp_loc_id, m_owner, addr, LLDB_INVALID_THREAD_ID,
-                             m_owner.IsHardware(), resolve_indirect_symbols));
+                             resolve_indirect_symbols));
   m_locations.push_back(bp_loc_sp);
   m_address_to_location[addr] = bp_loc_sp;
   return bp_loc_sp;
@@ -72,8 +72,7 @@ BreakpointLocationList::FindByID(lldb::break_id_t break_id) const {
       llvm::lower_bound(m_locations, break_id, Compare);
   if (pos != end && (*pos)->GetID() == break_id)
     return *(pos);
-  else
-    return BreakpointLocationSP();
+  return BreakpointLocationSP();
 }
 
 size_t BreakpointLocationList::FindInModule(

@@ -6092,6 +6092,13 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
       }
 
       if (!ResultIndex) {
+        auto PtrInst = dyn_cast<Instruction>(ResultPtr);
+        // We know that we have a pointer without any offsets. If this pointer
+        // originates from a different basic block than the current one, we
+        // must be able to recreate it in the current basic block.
+        // We do not support the recreation of any instructions yet.
+        if (PtrInst && PtrInst->getParent() != MemoryInst->getParent())
+          return Modified;
         SunkAddr = ResultPtr;
       } else {
         if (ResultPtr->getType() != I8PtrTy)

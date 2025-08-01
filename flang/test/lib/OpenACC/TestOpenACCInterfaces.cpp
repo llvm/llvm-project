@@ -6,11 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
+#include "flang/Optimizer/Dialect/FIRDialect.h"
+#include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 
 using namespace mlir;
@@ -24,6 +28,11 @@ struct TestFIROpenACCInterfaces
   StringRef getArgument() const final { return "test-fir-openacc-interfaces"; }
   StringRef getDescription() const final {
     return "Test FIR implementation of the OpenACC interfaces.";
+  }
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<fir::FIROpsDialect, hlfir::hlfirDialect,
+        mlir::arith::ArithDialect, mlir::acc::OpenACCDialect,
+        mlir::DLTIDialect>();
   }
   void runOnOperation() override {
     mlir::ModuleOp mod = getOperation();

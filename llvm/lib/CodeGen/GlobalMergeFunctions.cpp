@@ -15,6 +15,7 @@
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/CGData/CodeGenData.h"
 #include "llvm/CGData/CodeGenDataWriter.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/StructuralHash.h"
 #include "llvm/InitializePasses.h"

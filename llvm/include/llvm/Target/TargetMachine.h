@@ -38,6 +38,7 @@ using ModulePassManager = PassManager<Module>;
 
 class Function;
 class GlobalValue;
+class MachineInstr;
 class MachineModuleInfoWrapperPass;
 struct MachineSchedContext;
 class Mangler;
@@ -519,6 +520,15 @@ public:
 
   // MachineRegisterInfo callback function
   virtual void registerMachineRegisterInfoCallback(MachineFunction &MF) const {}
+
+  /// Remove all Linker Optimization Hints (LOH) associated with instructions in
+  /// \p MIs and \return the number of hints removed. This is useful in
+  /// transformations that cause these hints to be illegal, like in the machine
+  /// outliner.
+  virtual size_t clearLinkerOptimizationHints(
+      const SmallPtrSetImpl<MachineInstr *> &MIs) const {
+    return 0;
+  }
 };
 
 } // end namespace llvm

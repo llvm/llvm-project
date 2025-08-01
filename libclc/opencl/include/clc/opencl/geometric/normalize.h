@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_FUNCTION normalize
+#define FUNCTION normalize
 #define __CLC_GEOMETRIC_RET_GENTYPE
 #define __CLC_BODY <clc/geometric/unary_decl.inc>
 
 #include <clc/math/gentype.inc>
 
 #undef __CLC_GEOMETRIC_RET_GENTYPE
-#undef __CLC_FUNCTION
+#undef FUNCTION

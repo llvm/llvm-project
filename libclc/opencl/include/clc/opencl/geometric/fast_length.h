@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #define __FLOAT_ONLY
-#define __CLC_FUNCTION fast_length
+#define FUNCTION fast_length
 #define __CLC_BODY <clc/geometric/unary_decl.inc>
 
 #include <clc/math/gentype.inc>
 
-#undef __FLOAT_ONLY
-#undef __CLC_FUNCTION
+#undef FUNCTION

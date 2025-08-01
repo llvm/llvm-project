@@ -211,6 +211,11 @@ multiclass VOP2Inst_e64_t16<string opName,
                         string revOp = opName> {
   let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
     defm NAME : VOP2Inst<opName, P, node, revOp>;
+    let SubtargetPredicate = isGFX10Only in {
+      // V_MAX_I16 etc use VOP3 encoding and allow OP_SEL
+      def _opsel_e64 : VOP3InstBase <opName#"_vop3", VOP3_Profile<P, VOP3_OPSEL>, node, 1>,
+                       Commutable_REV<revOp#"_vop3_e64", !eq(revOp, opName)>;
+    }
   }
   let SubtargetPredicate = UseRealTrue16Insts in {
     defm _t16 : VOP2Inst_e64<opName#"_t16", VOPProfile_True16<P>, node, revOp#"_t16">;

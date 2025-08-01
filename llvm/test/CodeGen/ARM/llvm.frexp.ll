@@ -141,6 +141,43 @@ define <2 x i32> @test_frexp_v2f16_v2i32_only_use_exp(<2 x half> %a) {
   ret <2 x i32> %result.1
 }
 
+define { <3 x float>, <3 x i32> } @test_frexp_v3f16_v3i32(<3 x float> %a) {
+; CHECK-LABEL: test_frexp_v3f16_v3i32:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    sub sp, #8
+; CHECK-NEXT:    mov r8, sp
+; CHECK-NEXT:    vldr d9, [sp, #48]
+; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    mov r1, r8
+; CHECK-NEXT:    mov r5, r3
+; CHECK-NEXT:    vmov d8, r2, r3
+; CHECK-NEXT:    bl frexpf
+; CHECK-NEXT:    add r6, sp, #4
+; CHECK-NEXT:    mov r7, r0
+; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    mov r1, r6
+; CHECK-NEXT:    bl frexpf
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    vld1.32 {d16[0]}, [r8:32]
+; CHECK-NEXT:    add.w r1, r4, #16
+; CHECK-NEXT:    vld1.32 {d16[1]}, [r6:32]
+; CHECK-NEXT:    vst1.32 {d16}, [r1:64]!
+; CHECK-NEXT:    bl frexpf
+; CHECK-NEXT:    vmov s1, r5
+; CHECK-NEXT:    vmov s0, r7
+; CHECK-NEXT:    vst1.32 {d0}, [r4:64]!
+; CHECK-NEXT:    str r0, [r4]
+; CHECK-NEXT:    add sp, #8
+; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
+  %result = call { <3 x float>, <3 x i32> } @llvm.frexp.v3float.v3i32(<3 x float> %a)
+  ret { <3 x float>, <3 x i32> } %result
+}
+
 define { float, i32 } @test_frexp_f32_i32(float %a) {
 ; CHECK-LABEL: test_frexp_f32_i32:
 ; CHECK:       @ %bb.0:

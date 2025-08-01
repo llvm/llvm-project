@@ -13,6 +13,7 @@ add_object_library(
   SRCS 
     character_converter.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.types.char8_t
     libc.hdr.types.char32_t
     libc.src.__support.error_or
@@ -27,6 +28,7 @@ add_object_library(
   SRCS 
     wcrtomb.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.types.char32_t
     libc.hdr.types.size_t
     libc.hdr.types.wchar_t
@@ -43,6 +45,7 @@ add_object_library(
   SRCS
     mbrtowc.cpp
   DEPENDS
+  libc.hdr.errno_macros
   libc.hdr.types.wchar_t
   libc.hdr.types.size_t
   libc.src.__support.common
