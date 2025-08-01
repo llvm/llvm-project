@@ -1166,15 +1166,23 @@ TEST_F(TestTypeSystemClang, AsmLabel_CtorDtor) {
   ASSERT_TRUE(ctor);
   ASSERT_TRUE(dtor);
 
-  ASSERT_STREQ(m_ast->DeclGetMangledName(ctor_nolabel).GetCString(),
+#ifdef _WIN32
+  EXPECT_STREQ(m_ast->DeclGetMangledName(ctor_nolabel).GetCString(),
+               "??0S@@QEAA@XZ");
+  EXPECT_STREQ(m_ast->DeclGetMangledName(dtor_nolabel).GetCString(),
+               "??1S@@QEAA@XZ");
+#else
+  EXPECT_STREQ(m_ast->DeclGetMangledName(ctor_nolabel).GetCString(),
                "_ZN1SC1Ev");
-  ASSERT_STREQ(m_ast->DeclGetMangledName(dtor_nolabel).GetCString(),
+  EXPECT_STREQ(m_ast->DeclGetMangledName(dtor_nolabel).GetCString(),
                "_ZN1SD1Ev");
-  ASSERT_STREQ(llvm::GlobalValue::dropLLVMManglingEscape(
+#endif
+
+  EXPECT_STREQ(llvm::GlobalValue::dropLLVMManglingEscape(
                    m_ast->DeclGetMangledName(ctor).GetStringRef())
                    .data(),
                "$__lldb_func:0x0:0x0:S");
-  ASSERT_STREQ(llvm::GlobalValue::dropLLVMManglingEscape(
+  EXPECT_STREQ(llvm::GlobalValue::dropLLVMManglingEscape(
                    m_ast->DeclGetMangledName(dtor).GetStringRef())
                    .data(),
                "$__lldb_func:0x0:0x0:~S");
