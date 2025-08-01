@@ -7,7 +7,6 @@
 ; and hence should not be produced by LoopVectorize. Unfortunately, what is
 ; actually costed is `<4 x float> @llvm.minimumnum`.
 
-; CHECK: LV: Found an estimated cost of 3 for VF 1 For instruction:   %res = tail call float @llvm.minimumnum.f32(float %arg, float 0.000000e+00)
 define void @cost_hoisted_vector_code(ptr %p, float %arg) {
 ; CHECK-LABEL: define void @cost_hoisted_vector_code(
 ; CHECK-SAME: ptr [[P:%.*]], float [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -28,14 +27,15 @@ define void @cost_hoisted_vector_code(ptr %p, float %arg) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x float> @llvm.minimumnum.nxv4f32(<vscale x 4 x float> [[BROADCAST_SPLAT]], <vscale x 4 x float> zeroinitializer)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = add i64 1, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr float, ptr [[P]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr float, ptr [[TMP8]], i64 [[TMP10]]
 ; CHECK-NEXT:    store <vscale x 4 x float> [[TMP7]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    store <vscale x 4 x float> [[TMP7]], ptr [[TMP11]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX1]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -48,11 +48,9 @@ entry:
 
 loop:                                              ; preds = %loop, %entry
   %iv = phi i64 [ 1, %entry ], [ %iv.next, %loop ]
-  %idx = phi i64 [ 0, %entry ], [ %idx.next, %loop ]
   %res = tail call float @llvm.minimumnum.f32(float %arg, float 0.0)
-  %gep.p.red = getelementptr float, ptr %p, i64 %idx
+  %gep.p.red = getelementptr float, ptr %p, i64 %iv
   store float %res, ptr %gep.p.red, align 4
-  %idx.next = add i64 %idx, 1
   %iv.next = add i64 %iv, 1
   %exit.cond = icmp eq i64 %iv.next, 0
   br i1 %exit.cond, label %exit, label %loop
