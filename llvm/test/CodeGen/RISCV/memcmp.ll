@@ -3161,7 +3161,7 @@ define i1 @bcmp_lt_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-NEXT:    call bcmp
-; CHECK-ALIGNED-RV64-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV64-NEXT:    srli a0, a0, 63
 ; CHECK-ALIGNED-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-NEXT:    addi sp, sp, 16
 ; CHECK-ALIGNED-RV64-NEXT:    ret
@@ -3183,7 +3183,7 @@ define i1 @bcmp_lt_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    call bcmp
-; CHECK-ALIGNED-RV64-ZBB-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV64-ZBB-NEXT:    srli a0, a0, 63
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    addi sp, sp, 16
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    ret
@@ -3205,7 +3205,7 @@ define i1 @bcmp_lt_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    call bcmp
-; CHECK-ALIGNED-RV64-ZBKB-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV64-ZBKB-NEXT:    srli a0, a0, 63
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    ret
@@ -3227,7 +3227,7 @@ define i1 @bcmp_lt_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV64-V-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-V-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-V-NEXT:    call bcmp
-; CHECK-ALIGNED-RV64-V-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV64-V-NEXT:    srli a0, a0, 63
 ; CHECK-ALIGNED-RV64-V-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-V-NEXT:    addi sp, sp, 16
 ; CHECK-ALIGNED-RV64-V-NEXT:    ret
@@ -3454,7 +3454,7 @@ define i1 @bcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK-ALIGNED-RV32-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV32-NEXT:    call bcmp
-; CHECK-ALIGNED-RV32-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV32-NEXT:    srli a0, a0, 31
 ; CHECK-ALIGNED-RV32-NEXT:    xori a0, a0, 1
 ; CHECK-ALIGNED-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, 16
@@ -3466,7 +3466,7 @@ define i1 @bcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-NEXT:    call bcmp
-; CHECK-ALIGNED-RV64-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV64-NEXT:    srli a0, a0, 63
 ; CHECK-ALIGNED-RV64-NEXT:    xori a0, a0, 1
 ; CHECK-ALIGNED-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-NEXT:    addi sp, sp, 16
@@ -3478,7 +3478,7 @@ define i1 @bcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV32-ZBB-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK-ALIGNED-RV32-ZBB-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV32-ZBB-NEXT:    call bcmp
-; CHECK-ALIGNED-RV32-ZBB-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV32-ZBB-NEXT:    srli a0, a0, 31
 ; CHECK-ALIGNED-RV32-ZBB-NEXT:    xori a0, a0, 1
 ; CHECK-ALIGNED-RV32-ZBB-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-ALIGNED-RV32-ZBB-NEXT:    addi sp, sp, 16
@@ -3490,7 +3490,7 @@ define i1 @bcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    call bcmp
-; CHECK-ALIGNED-RV64-ZBB-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV64-ZBB-NEXT:    srli a0, a0, 63
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    xori a0, a0, 1
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    addi sp, sp, 16
@@ -3502,7 +3502,7 @@ define i1 @bcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV32-ZBKB-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK-ALIGNED-RV32-ZBKB-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV32-ZBKB-NEXT:    call bcmp
-; CHECK-ALIGNED-RV32-ZBKB-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV32-ZBKB-NEXT:    srli a0, a0, 31
 ; CHECK-ALIGNED-RV32-ZBKB-NEXT:    xori a0, a0, 1
 ; CHECK-ALIGNED-RV32-ZBKB-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-ALIGNED-RV32-ZBKB-NEXT:    addi sp, sp, 16
@@ -3514,7 +3514,7 @@ define i1 @bcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    call bcmp
-; CHECK-ALIGNED-RV64-ZBKB-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV64-ZBKB-NEXT:    srli a0, a0, 63
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    xori a0, a0, 1
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
@@ -3526,7 +3526,7 @@ define i1 @bcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV32-V-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK-ALIGNED-RV32-V-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV32-V-NEXT:    call bcmp
-; CHECK-ALIGNED-RV32-V-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV32-V-NEXT:    srli a0, a0, 31
 ; CHECK-ALIGNED-RV32-V-NEXT:    xori a0, a0, 1
 ; CHECK-ALIGNED-RV32-V-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-ALIGNED-RV32-V-NEXT:    addi sp, sp, 16
@@ -3538,7 +3538,7 @@ define i1 @bcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV64-V-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-V-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-V-NEXT:    call bcmp
-; CHECK-ALIGNED-RV64-V-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV64-V-NEXT:    srli a0, a0, 63
 ; CHECK-ALIGNED-RV64-V-NEXT:    xori a0, a0, 1
 ; CHECK-ALIGNED-RV64-V-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-V-NEXT:    addi sp, sp, 16
@@ -6839,7 +6839,7 @@ define i1 @memcmp_lt_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-NEXT:    call memcmp
-; CHECK-ALIGNED-RV64-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV64-NEXT:    srli a0, a0, 63
 ; CHECK-ALIGNED-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-NEXT:    addi sp, sp, 16
 ; CHECK-ALIGNED-RV64-NEXT:    ret
@@ -6861,7 +6861,7 @@ define i1 @memcmp_lt_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    call memcmp
-; CHECK-ALIGNED-RV64-ZBB-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV64-ZBB-NEXT:    srli a0, a0, 63
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    addi sp, sp, 16
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    ret
@@ -6883,7 +6883,7 @@ define i1 @memcmp_lt_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    call memcmp
-; CHECK-ALIGNED-RV64-ZBKB-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV64-ZBKB-NEXT:    srli a0, a0, 63
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    ret
@@ -6905,7 +6905,7 @@ define i1 @memcmp_lt_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV64-V-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-V-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-V-NEXT:    call memcmp
-; CHECK-ALIGNED-RV64-V-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV64-V-NEXT:    srli a0, a0, 63
 ; CHECK-ALIGNED-RV64-V-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-V-NEXT:    addi sp, sp, 16
 ; CHECK-ALIGNED-RV64-V-NEXT:    ret
@@ -6927,7 +6927,7 @@ define i1 @memcmp_lt_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-UNALIGNED-RV64-NEXT:    li a2, 4
 ; CHECK-UNALIGNED-RV64-NEXT:    call memcmp
-; CHECK-UNALIGNED-RV64-NEXT:    slti a0, a0, 0
+; CHECK-UNALIGNED-RV64-NEXT:    srli a0, a0, 63
 ; CHECK-UNALIGNED-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-UNALIGNED-RV64-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-NEXT:    ret
@@ -6989,7 +6989,7 @@ define i1 @memcmp_lt_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV64-V-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-UNALIGNED-RV64-V-NEXT:    li a2, 4
 ; CHECK-UNALIGNED-RV64-V-NEXT:    call memcmp
-; CHECK-UNALIGNED-RV64-V-NEXT:    slti a0, a0, 0
+; CHECK-UNALIGNED-RV64-V-NEXT:    srli a0, a0, 63
 ; CHECK-UNALIGNED-RV64-V-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-UNALIGNED-RV64-V-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-V-NEXT:    ret
@@ -7366,7 +7366,7 @@ define i1 @memcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK-ALIGNED-RV32-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV32-NEXT:    call memcmp
-; CHECK-ALIGNED-RV32-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV32-NEXT:    srli a0, a0, 31
 ; CHECK-ALIGNED-RV32-NEXT:    xori a0, a0, 1
 ; CHECK-ALIGNED-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-ALIGNED-RV32-NEXT:    addi sp, sp, 16
@@ -7378,7 +7378,7 @@ define i1 @memcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-NEXT:    call memcmp
-; CHECK-ALIGNED-RV64-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV64-NEXT:    srli a0, a0, 63
 ; CHECK-ALIGNED-RV64-NEXT:    xori a0, a0, 1
 ; CHECK-ALIGNED-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-NEXT:    addi sp, sp, 16
@@ -7390,7 +7390,7 @@ define i1 @memcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV32-ZBB-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK-ALIGNED-RV32-ZBB-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV32-ZBB-NEXT:    call memcmp
-; CHECK-ALIGNED-RV32-ZBB-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV32-ZBB-NEXT:    srli a0, a0, 31
 ; CHECK-ALIGNED-RV32-ZBB-NEXT:    xori a0, a0, 1
 ; CHECK-ALIGNED-RV32-ZBB-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-ALIGNED-RV32-ZBB-NEXT:    addi sp, sp, 16
@@ -7402,7 +7402,7 @@ define i1 @memcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    call memcmp
-; CHECK-ALIGNED-RV64-ZBB-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV64-ZBB-NEXT:    srli a0, a0, 63
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    xori a0, a0, 1
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    addi sp, sp, 16
@@ -7414,7 +7414,7 @@ define i1 @memcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV32-ZBKB-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK-ALIGNED-RV32-ZBKB-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV32-ZBKB-NEXT:    call memcmp
-; CHECK-ALIGNED-RV32-ZBKB-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV32-ZBKB-NEXT:    srli a0, a0, 31
 ; CHECK-ALIGNED-RV32-ZBKB-NEXT:    xori a0, a0, 1
 ; CHECK-ALIGNED-RV32-ZBKB-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-ALIGNED-RV32-ZBKB-NEXT:    addi sp, sp, 16
@@ -7426,7 +7426,7 @@ define i1 @memcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    call memcmp
-; CHECK-ALIGNED-RV64-ZBKB-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV64-ZBKB-NEXT:    srli a0, a0, 63
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    xori a0, a0, 1
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
@@ -7438,7 +7438,7 @@ define i1 @memcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV32-V-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK-ALIGNED-RV32-V-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV32-V-NEXT:    call memcmp
-; CHECK-ALIGNED-RV32-V-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV32-V-NEXT:    srli a0, a0, 31
 ; CHECK-ALIGNED-RV32-V-NEXT:    xori a0, a0, 1
 ; CHECK-ALIGNED-RV32-V-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-ALIGNED-RV32-V-NEXT:    addi sp, sp, 16
@@ -7450,7 +7450,7 @@ define i1 @memcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV64-V-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-V-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-V-NEXT:    call memcmp
-; CHECK-ALIGNED-RV64-V-NEXT:    slti a0, a0, 0
+; CHECK-ALIGNED-RV64-V-NEXT:    srli a0, a0, 63
 ; CHECK-ALIGNED-RV64-V-NEXT:    xori a0, a0, 1
 ; CHECK-ALIGNED-RV64-V-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-V-NEXT:    addi sp, sp, 16
@@ -7462,7 +7462,7 @@ define i1 @memcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK-UNALIGNED-RV32-NEXT:    li a2, 4
 ; CHECK-UNALIGNED-RV32-NEXT:    call memcmp
-; CHECK-UNALIGNED-RV32-NEXT:    slti a0, a0, 0
+; CHECK-UNALIGNED-RV32-NEXT:    srli a0, a0, 31
 ; CHECK-UNALIGNED-RV32-NEXT:    xori a0, a0, 1
 ; CHECK-UNALIGNED-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-UNALIGNED-RV32-NEXT:    addi sp, sp, 16
@@ -7474,7 +7474,7 @@ define i1 @memcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-UNALIGNED-RV64-NEXT:    li a2, 4
 ; CHECK-UNALIGNED-RV64-NEXT:    call memcmp
-; CHECK-UNALIGNED-RV64-NEXT:    slti a0, a0, 0
+; CHECK-UNALIGNED-RV64-NEXT:    srli a0, a0, 63
 ; CHECK-UNALIGNED-RV64-NEXT:    xori a0, a0, 1
 ; CHECK-UNALIGNED-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-UNALIGNED-RV64-NEXT:    addi sp, sp, 16
@@ -7530,7 +7530,7 @@ define i1 @memcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV32-V-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK-UNALIGNED-RV32-V-NEXT:    li a2, 4
 ; CHECK-UNALIGNED-RV32-V-NEXT:    call memcmp
-; CHECK-UNALIGNED-RV32-V-NEXT:    slti a0, a0, 0
+; CHECK-UNALIGNED-RV32-V-NEXT:    srli a0, a0, 31
 ; CHECK-UNALIGNED-RV32-V-NEXT:    xori a0, a0, 1
 ; CHECK-UNALIGNED-RV32-V-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-UNALIGNED-RV32-V-NEXT:    addi sp, sp, 16
@@ -7542,7 +7542,7 @@ define i1 @memcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV64-V-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-UNALIGNED-RV64-V-NEXT:    li a2, 4
 ; CHECK-UNALIGNED-RV64-V-NEXT:    call memcmp
-; CHECK-UNALIGNED-RV64-V-NEXT:    slti a0, a0, 0
+; CHECK-UNALIGNED-RV64-V-NEXT:    srli a0, a0, 63
 ; CHECK-UNALIGNED-RV64-V-NEXT:    xori a0, a0, 1
 ; CHECK-UNALIGNED-RV64-V-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-UNALIGNED-RV64-V-NEXT:    addi sp, sp, 16

@@ -405,7 +405,7 @@ define i32 @fcvt_wu_d_sat(double %a) nounwind {
 ; RV32I-NEXT:    li a2, 0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    call __gedf2
-; RV32I-NEXT:    slti a0, a0, 0
+; RV32I-NEXT:    srli a0, a0, 31
 ; RV32I-NEXT:    addi s3, a0, -1
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    mv a1, s0
@@ -446,8 +446,8 @@ define i32 @fcvt_wu_d_sat(double %a) nounwind {
 ; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    j .LBB6_3
 ; RV64I-NEXT:  .LBB6_2:
-; RV64I-NEXT:    slti a0, s0, 0
-; RV64I-NEXT:    addi a0, a0, -1
+; RV64I-NEXT:    srli s0, s0, 63
+; RV64I-NEXT:    addi a0, s0, -1
 ; RV64I-NEXT:    and a0, a0, s1
 ; RV64I-NEXT:  .LBB6_3: # %start
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -819,7 +819,7 @@ define i64 @fcvt_l_d_sat(double %a) nounwind {
 ; RV32I-NEXT:    mv a3, s0
 ; RV32I-NEXT:    call __unorddf2
 ; RV32I-NEXT:    snez a0, a0
-; RV32I-NEXT:    slti a1, s4, 0
+; RV32I-NEXT:    srli a1, s4, 31
 ; RV32I-NEXT:    sgtz a2, s2
 ; RV32I-NEXT:    addi a0, a0, -1
 ; RV32I-NEXT:    addi a3, a1, -1
@@ -1029,7 +1029,7 @@ define i64 @fcvt_lu_d_sat(double %a) nounwind {
 ; RV32I-NEXT:    li a2, 0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    call __gedf2
-; RV32I-NEXT:    slti a0, a0, 0
+; RV32I-NEXT:    srli a0, a0, 31
 ; RV32I-NEXT:    addi s3, a0, -1
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    mv a1, s0
@@ -1055,7 +1055,7 @@ define i64 @fcvt_lu_d_sat(double %a) nounwind {
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __gedf2
-; RV64I-NEXT:    slti a0, a0, 0
+; RV64I-NEXT:    srli a0, a0, 63
 ; RV64I-NEXT:    addi s1, a0, -1
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    call __fixunsdfdi
@@ -1898,9 +1898,9 @@ define zeroext i16 @fcvt_wu_s_sat_i16(double %a) nounwind {
 ; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:    j .LBB28_3
 ; RV32I-NEXT:  .LBB28_2:
-; RV32I-NEXT:    slti a2, s0, 0
-; RV32I-NEXT:    addi a2, a2, -1
-; RV32I-NEXT:    and a0, a2, a0
+; RV32I-NEXT:    srli s0, s0, 31
+; RV32I-NEXT:    addi s0, s0, -1
+; RV32I-NEXT:    and a0, s0, a0
 ; RV32I-NEXT:  .LBB28_3: # %start
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -1937,8 +1937,8 @@ define zeroext i16 @fcvt_wu_s_sat_i16(double %a) nounwind {
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    j .LBB28_3
 ; RV64I-NEXT:  .LBB28_2:
-; RV64I-NEXT:    slti a0, s0, 0
-; RV64I-NEXT:    addi a0, a0, -1
+; RV64I-NEXT:    srli s0, s0, 63
+; RV64I-NEXT:    addi a0, s0, -1
 ; RV64I-NEXT:    and a0, a0, s1
 ; RV64I-NEXT:  .LBB28_3: # %start
 ; RV64I-NEXT:    and a0, a0, a1
@@ -2271,9 +2271,9 @@ define zeroext i8 @fcvt_wu_s_sat_i8(double %a) nounwind {
 ; RV32I-NEXT:    li a0, 255
 ; RV32I-NEXT:    j .LBB32_3
 ; RV32I-NEXT:  .LBB32_2:
-; RV32I-NEXT:    slti a1, s0, 0
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a1, a0
+; RV32I-NEXT:    srli s0, s0, 31
+; RV32I-NEXT:    addi s0, s0, -1
+; RV32I-NEXT:    and a0, s0, a0
 ; RV32I-NEXT:  .LBB32_3: # %start
 ; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -2307,8 +2307,8 @@ define zeroext i8 @fcvt_wu_s_sat_i8(double %a) nounwind {
 ; RV64I-NEXT:    li a0, 255
 ; RV64I-NEXT:    j .LBB32_3
 ; RV64I-NEXT:  .LBB32_2:
-; RV64I-NEXT:    slti a0, s0, 0
-; RV64I-NEXT:    addi a0, a0, -1
+; RV64I-NEXT:    srli s0, s0, 63
+; RV64I-NEXT:    addi a0, s0, -1
 ; RV64I-NEXT:    and a0, a0, s1
 ; RV64I-NEXT:  .LBB32_3: # %start
 ; RV64I-NEXT:    zext.b a0, a0
@@ -2386,7 +2386,7 @@ define zeroext i32 @fcvt_wu_d_sat_zext(double %a) nounwind {
 ; RV32I-NEXT:    li a2, 0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    call __gedf2
-; RV32I-NEXT:    slti a0, a0, 0
+; RV32I-NEXT:    srli a0, a0, 31
 ; RV32I-NEXT:    addi s3, a0, -1
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    mv a1, s0
@@ -2427,8 +2427,8 @@ define zeroext i32 @fcvt_wu_d_sat_zext(double %a) nounwind {
 ; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    j .LBB33_3
 ; RV64I-NEXT:  .LBB33_2:
-; RV64I-NEXT:    slti a0, s0, 0
-; RV64I-NEXT:    addi a0, a0, -1
+; RV64I-NEXT:    srli s0, s0, 63
+; RV64I-NEXT:    addi a0, s0, -1
 ; RV64I-NEXT:    and a0, a0, s1
 ; RV64I-NEXT:  .LBB33_3: # %start
 ; RV64I-NEXT:    slli a0, a0, 32
