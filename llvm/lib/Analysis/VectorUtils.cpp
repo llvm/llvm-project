@@ -240,28 +240,55 @@ Intrinsic::ID llvm::getVectorIntrinsicIDForCall(const CallInst *CI,
   return Intrinsic::not_intrinsic;
 }
 
-struct InterleaveIntrinsic {
-  Intrinsic::ID Interleave, Deinterleave;
-};
-
-static InterleaveIntrinsic InterleaveIntrinsics[] = {
-    {Intrinsic::vector_interleave2, Intrinsic::vector_deinterleave2},
-    {Intrinsic::vector_interleave3, Intrinsic::vector_deinterleave3},
-    {Intrinsic::vector_interleave4, Intrinsic::vector_deinterleave4},
-    {Intrinsic::vector_interleave5, Intrinsic::vector_deinterleave5},
-    {Intrinsic::vector_interleave6, Intrinsic::vector_deinterleave6},
-    {Intrinsic::vector_interleave7, Intrinsic::vector_deinterleave7},
-    {Intrinsic::vector_interleave8, Intrinsic::vector_deinterleave8},
-};
-
-Intrinsic::ID llvm::getInterleaveIntrinsicID(unsigned Factor) {
-  assert(Factor >= 2 && Factor <= 8 && "Unexpected factor");
-  return InterleaveIntrinsics[Factor - 2].Interleave;
+unsigned llvm::getInterleaveIntrinsicFactor(Intrinsic::ID ID) {
+  switch (ID) {
+  case Intrinsic::vector_interleave2:
+    return 2;
+  case Intrinsic::vector_interleave3:
+    return 3;
+  case Intrinsic::vector_interleave4:
+    return 4;
+  case Intrinsic::vector_interleave5:
+    return 5;
+  case Intrinsic::vector_interleave6:
+    return 6;
+  case Intrinsic::vector_interleave7:
+    return 7;
+  case Intrinsic::vector_interleave8:
+    return 8;
+  default:
+    return 0;
+  }
 }
 
-Intrinsic::ID llvm::getDeinterleaveIntrinsicID(unsigned Factor) {
-  assert(Factor >= 2 && Factor <= 8 && "Unexpected factor");
-  return InterleaveIntrinsics[Factor - 2].Deinterleave;
+unsigned llvm::getDeinterleaveIntrinsicFactor(Intrinsic::ID ID) {
+  switch (ID) {
+  case Intrinsic::vector_deinterleave2:
+    return 2;
+  case Intrinsic::vector_deinterleave3:
+    return 3;
+  case Intrinsic::vector_deinterleave4:
+    return 4;
+  case Intrinsic::vector_deinterleave5:
+    return 5;
+  case Intrinsic::vector_deinterleave6:
+    return 6;
+  case Intrinsic::vector_deinterleave7:
+    return 7;
+  case Intrinsic::vector_deinterleave8:
+    return 8;
+  default:
+    return 0;
+  }
+}
+
+VectorType *llvm::getDeinterleavedVectorType(IntrinsicInst *DI) {
+  [[maybe_unused]] unsigned Factor =
+      getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
+  ArrayRef<Type *> DISubtypes = DI->getType()->subtypes();
+  assert(Factor && Factor == DISubtypes.size() &&
+         "unexpected deinterleave factor or result type");
+  return cast<VectorType>(DISubtypes[0]);
 }
 
 /// Given a vector and an element number, see if the scalar value is
@@ -1090,7 +1117,7 @@ Constant *
 llvm::createBitMaskForGaps(IRBuilderBase &Builder, unsigned VF,
                            const InterleaveGroup<Instruction> &Group) {
   // All 1's means mask is not needed.
-  if (Group.getNumMembers() == Group.getFactor())
+  if (Group.isFull())
     return nullptr;
 
   // TODO: support reversed access.
@@ -1636,7 +1663,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
     // Case 1: A full group. Can Skip the checks; For full groups, if the wide
     // load would wrap around the address space we would do a memory access at
     // nullptr even without the transformation.
-    if (Group->getNumMembers() == Group->getFactor())
+    if (Group->isFull())
       continue;
 
     // Case 2: If first and last members of the group don't wrap this implies
@@ -1671,7 +1698,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
     // Case 1: A full group. Can Skip the checks; For full groups, if the wide
     // store would wrap around the address space we would do a memory access at
     // nullptr even without the transformation.
-    if (Group->getNumMembers() == Group->getFactor())
+    if (Group->isFull())
       continue;
 
     // Interleave-store-group with gaps is implemented using masked wide store.

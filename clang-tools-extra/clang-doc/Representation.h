@@ -46,7 +46,8 @@ enum class InfoType {
   IT_enum,
   IT_typedef,
   IT_concept,
-  IT_variable
+  IT_variable,
+  IT_friend
 };
 
 enum class CommentKind {
@@ -120,6 +121,10 @@ struct Reference {
   Reference(SymbolID USR, StringRef Name, InfoType IT, StringRef QualName,
             StringRef Path = StringRef())
       : USR(USR), Name(Name), QualName(QualName), RefType(IT), Path(Path) {}
+  Reference(SymbolID USR, StringRef Name, InfoType IT, StringRef QualName,
+            StringRef Path, SmallString<16> DocumentationFileName)
+      : USR(USR), Name(Name), QualName(QualName), RefType(IT), Path(Path),
+        DocumentationFileName(DocumentationFileName) {}
 
   bool operator==(const Reference &Other) const {
     return std::tie(USR, Name, QualName, RefType) ==
@@ -154,6 +159,7 @@ struct Reference {
   // Path of directory where the clang-doc generated file will be saved
   // (possibly unresolved)
   llvm::SmallString<128> Path;
+  SmallString<16> DocumentationFileName;
 };
 
 // Holds the children of a record or namespace.
@@ -330,6 +336,11 @@ struct Info {
   llvm::SmallString<128> Path;          // Path of directory where the clang-doc
                                         // generated file will be saved
 
+  // The name used for the file that this info is documented in.
+  // In the JSON generator, infos are documented in files with mangled names.
+  // Thus, we keep track of the physical filename for linking purposes.
+  SmallString<16> DocumentationFileName;
+
   void mergeBase(Info &&I);
   bool mergeable(const Info &Other);
 
@@ -376,7 +387,24 @@ struct SymbolInfo : public Info {
 
   std::optional<Location> DefLoc;     // Location where this decl is defined.
   llvm::SmallVector<Location, 2> Loc; // Locations where this decl is declared.
+  SmallString<16> MangledName;
   bool IsStatic = false;
+};
+
+struct FriendInfo : SymbolInfo {
+  FriendInfo() : SymbolInfo(InfoType::IT_friend) {}
+  FriendInfo(SymbolID USR) : SymbolInfo(InfoType::IT_friend, USR) {}
+  FriendInfo(const InfoType IT, const SymbolID &USR,
+             const StringRef Name = StringRef())
+      : SymbolInfo(IT, USR, Name) {}
+  bool mergeable(const FriendInfo &Other);
+  void merge(FriendInfo &&Other);
+
+  Reference Ref;
+  std::optional<TemplateInfo> Template;
+  std::optional<TypeInfo> ReturnType;
+  std::optional<SmallVector<FieldTypeInfo, 4>> Params;
+  bool IsClass = false;
 };
 
 struct VarInfo : SymbolInfo {
@@ -453,6 +481,8 @@ struct RecordInfo : public SymbolInfo {
   std::vector<BaseRecordInfo>
       Bases; // List of base/parent records; this includes inherited methods and
              // attributes
+
+  std::vector<FriendInfo> Friends;
 
   ScopeChildren Children;
 };

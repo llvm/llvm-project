@@ -2250,7 +2250,6 @@ define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) {
 ; GFX9-SDAG-NEXT:    s_mov_b32 s32, s34
 ; GFX9-SDAG-NEXT:    s_mov_b32 s34, s12
 ; GFX9-SDAG-NEXT:    s_mov_b32 s33, s11
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-GISEL-LABEL: test_dynamic_stackalloc_device_control_flow:
@@ -2317,7 +2316,6 @@ define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) {
 ; GFX9-GISEL-NEXT:    s_mov_b32 s32, s34
 ; GFX9-GISEL-NEXT:    s_mov_b32 s34, s12
 ; GFX9-GISEL-NEXT:    s_mov_b32 s33, s11
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-LABEL: test_dynamic_stackalloc_device_control_flow:

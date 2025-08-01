@@ -53,6 +53,8 @@ def FeatureFP16 :
       SubtargetFeature<"fp16", "HasFP16", "true",
                        "Enable FP16 instructions">;
 
+def FeatureGC : SubtargetFeature<"gc", "HasGC", "true", "Enable wasm gc">;
+
 def FeatureMultiMemory :
       SubtargetFeature<"multimemory", "HasMultiMemory", "true",
                        "Enable multiple memories">;
@@ -142,7 +144,7 @@ def : ProcessorModel<"lime1", NoSchedModel,
 def : ProcessorModel<"bleeding-edge", NoSchedModel,
                       [FeatureAtomics, FeatureBranchHinting, FeatureBulkMemory,
                        FeatureBulkMemoryOpt, FeatureCallIndirectOverlong,
-                       FeatureExceptionHandling, FeatureExtendedConst, FeatureFP16,
+                       FeatureExceptionHandling, FeatureExtendedConst, FeatureFP16, FeatureGC,
                        FeatureMultiMemory, FeatureMultivalue, FeatureMutableGlobals,
                        FeatureNontrappingFPToInt, FeatureRelaxedSIMD,
                        FeatureReferenceTypes, FeatureSIMD128, FeatureSignExt,
