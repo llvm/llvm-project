@@ -51,6 +51,15 @@ func.func @vector_shape_cast() -> vector<4x4xindex> {
   func.return %2 : vector<4x4xindex>
 }
 
+// CHECK-LABEL: func @vector_transpose
+// CHECK: test.reflect_bounds {smax = 8 : index, smin = 7 : index, umax = 8 : index, umin = 7 : index}
+func.func @vector_transpose() -> vector<2x4xindex> {
+  %0 = test.with_bounds { smax = 8 : index, smin = 7 : index, umax = 8 : index, umin = 7 : index } : vector<4x2xindex>
+  %1 = vector.transpose %0, [1, 0] : vector<4x2xindex> to vector<2x4xindex>
+  %2 = test.reflect_bounds %1 : vector<2x4xindex>
+  func.return %2 : vector<2x4xindex>
+}
+
 // CHECK-LABEL: func @vector_extract
 // CHECK: test.reflect_bounds {smax = 6 : index, smin = 5 : index, umax = 6 : index, umin = 5 : index}
 func.func @vector_extract() -> index {
