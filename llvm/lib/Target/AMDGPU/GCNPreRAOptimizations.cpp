@@ -28,6 +28,12 @@
 /// and a VGPR_16. If we use the VGPR_16 that corresponds to the lo16 bits of
 /// the VGPR_32, the COPY can be completely eliminated.
 ///
+/// Additionally, this pass also unpacks packed instructions (V_PK_MUL_F32 and V_PK_ADD_F32) 
+/// adjacent to MFMAs such that they can be co-issued.
+/// This helps with overlapping MFMA and certain vector instructions in machine schedules
+/// and is expected to improve performance.
+/// Only those packed instructions are unpacked that are overlapped by the MFMA latency.
+/// Rest should remain untouched.
 //===----------------------------------------------------------------------===//
 
 #include "GCNPreRAOptimizations.h"
@@ -38,12 +44,10 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
-
+#include "llvm/ADT/DenseSet.h"
 #include "SIInstrInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/InitializePasses.h"
-#include <unordered_set>
-
 #include "GCNSchedStrategy.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineScheduler.h"
@@ -61,11 +65,10 @@ private:
   LiveIntervals *LIS;
 
   bool processReg(Register Reg);
-  bool unpackInsts(MachineFunction &MF);
-  bool createListOfPackedInstr(MachineInstr &BeginMI, std::unordered_set<MachineInstr *> &seen);
-  bool isNeverCoissue(MachineInstr &MI, MachineFunction *MF) const;
+  bool createListOfPackedInstr(MachineInstr &BeginMI, DenseSet<MachineInstr *> &instrsToUnpack);
   bool isUnpackingSupportedInstr(MachineInstr &MI) const;
   void insertMI(MachineInstr &I);
+  uint16_t mapToUnpackedOpcode(MachineInstr &I);
   SmallVector<MachineInstr *, 2> copyToVregAndInsertMI(MachineInstr &I,
                                                        unsigned SGPRSrcPos);
   SmallVector<MachineInstr *, 2>
@@ -244,80 +247,28 @@ bool GCNPreRAOptimizationsImpl::processReg(Register Reg) {
   return true;
 }
 
-bool GCNPreRAOptimizationsImpl::isNeverCoissue(MachineInstr &MI, MachineFunction *MF) const {
-  const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-  // bool IsGFX942Only = ST.hasGFX940Insts() && !ST.hasGFX950Insts();
-  // if (!IsGFX942Only)
-  //   return false;
-
-  if (!SIInstrInfo::isVALU(MI)){
-    return false;
-  }
-
-
-  // V_COS, V_EXP, V_RCP, etc.
-  if (SIInstrInfo::isTRANS(MI))
-    return true;
-
-  // DOT2, DOT2C, DOT4, etc.
-  if (SIInstrInfo::isDOT(MI))
-    return true;
-
-  // MFMA, SMFMA
-  if (SIInstrInfo::isMFMA(MI))
-    return true;
-
+bool GCNPreRAOptimizationsImpl::isUnpackingSupportedInstr(MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
   switch (Opcode) {
-  case AMDGPU::V_CVT_PK_BF8_F32_e64:
-  case AMDGPU::V_CVT_PK_FP8_F32_e64:
-  case AMDGPU::V_MQSAD_PK_U16_U8_e64:
-  case AMDGPU::V_MQSAD_U32_U8_e64:
-  case AMDGPU::V_PK_ADD_F16:
-  case AMDGPU::V_PK_ADD_F32:
-  case AMDGPU::V_PK_ADD_I16:
-  case AMDGPU::V_PK_ADD_U16:
-  case AMDGPU::V_PK_ASHRREV_I16:
-  case AMDGPU::V_PK_FMA_F16:
-  case AMDGPU::V_PK_FMA_F32:
-  case AMDGPU::V_PK_FMAC_F16_e32:
-  case AMDGPU::V_PK_FMAC_F16_e64:
-  case AMDGPU::V_PK_LSHLREV_B16:
-  case AMDGPU::V_PK_LSHRREV_B16:
-  case AMDGPU::V_PK_MAD_I16:
-  case AMDGPU::V_PK_MAD_U16:
-  case AMDGPU::V_PK_MAX_F16:
-  case AMDGPU::V_PK_MAX_I16:
-  case AMDGPU::V_PK_MAX_U16:
-  case AMDGPU::V_PK_MIN_F16:
-  case AMDGPU::V_PK_MIN_I16:
-  case AMDGPU::V_PK_MIN_U16:
-  case AMDGPU::V_PK_MOV_B32:
-  case AMDGPU::V_PK_MUL_F16:
-  case AMDGPU::V_PK_MUL_F32:
-  case AMDGPU::V_PK_MUL_LO_U16:
-  case AMDGPU::V_PK_SUB_I16:
-  case AMDGPU::V_PK_SUB_U16:
-  case AMDGPU::V_QSAD_PK_U16_U8_e64:
-    return true;
+    case AMDGPU::V_PK_ADD_F32:
+    case AMDGPU::V_PK_MUL_F32:
+      return true;
 
-  default:
-    return false;
+    default:
+      return false;
 
   }
 }
 
-bool GCNPreRAOptimizationsImpl::isUnpackingSupportedInstr(MachineInstr &MI) const {
-  unsigned Opcode = MI.getOpcode();
+uint16_t GCNPreRAOptimizationsImpl::mapToUnpackedOpcode(MachineInstr &I) {
+  unsigned Opcode = I.getOpcode();
   switch (Opcode) {
-  case AMDGPU::V_PK_ADD_F16:
-  case AMDGPU::V_PK_ADD_F32:
-  case AMDGPU::V_PK_MUL_F16:
-  case AMDGPU::V_PK_MUL_F32:
-    return true;
-
-  default:
-    return false;
+    case AMDGPU::V_PK_ADD_F32:
+      return AMDGPU::V_ADD_F32_e64;
+    case AMDGPU::V_PK_MUL_F32:
+      return AMDGPU::V_MUL_F32_e64;
+    default:
+      return std::numeric_limits<uint16_t>::max();
 
   }
 }
@@ -358,7 +309,7 @@ GCNPreRAOptimizationsImpl::copyToVregAndInsertMI(MachineInstr &I,
 }
 
 bool GCNPreRAOptimizationsImpl::createListOfPackedInstr(
-    MachineInstr &BeginMI, std::unordered_set<MachineInstr *> &seen) {
+    MachineInstr &BeginMI, DenseSet<MachineInstr *> &instrsToUnpack) {
   auto *BB = BeginMI.getParent();
   auto *MF = BB->getParent();
   int NumInst = 0;
@@ -377,13 +328,13 @@ bool GCNPreRAOptimizationsImpl::createListOfPackedInstr(
 
     if (Instr.isTerminator())
       return false;
-
+    
     if (totalCyclesBetweenCandidates > NumMFMACycles)
       return false;
 
-    if ((Instr.getOpcode() == AMDGPU::V_PK_MUL_F32) && isNeverCoissue(Instr, Instr.getParent()->getParent())) {
+    if ((isUnpackingSupportedInstr(Instr)) && TII->isNeverCoissue(Instr)) {
       totalCyclesBetweenCandidates += 1;
-      seen.insert(&Instr);
+      instrsToUnpack.insert(&Instr);
     }
   }
   return true;
@@ -420,8 +371,8 @@ SmallVector<MachineInstr *, 2> GCNPreRAOptimizationsImpl::insertUnpackedMI(
   //don't worry about abs values. Packed instructions (VOP3P) do not support them
   unsigned Lo_src0_mods = 0;
   unsigned Lo_src1_mods = 0;
-
-  MachineInstrBuilder Op0L_Op1L = BuildMI(MBB, I, DL, TII->get(AMDGPU::V_MUL_F32_e64));
+  uint16_t unpackedOpcode = mapToUnpackedOpcode(I);
+  MachineInstrBuilder Op0L_Op1L = BuildMI(MBB, I, DL, TII->get(unpackedOpcode));
   Op0L_Op1L.addDef(DstReg, 0, DestSubIdx); //vdst
   if (src0_Mods & SISrcMods::OP_SEL_0) {
     if (src0_Mods & SISrcMods::NEG) {
@@ -476,7 +427,7 @@ SmallVector<MachineInstr *, 2> GCNPreRAOptimizationsImpl::insertUnpackedMI(
   unsigned Hi_src0_mods = 0;
   unsigned Hi_src1_mods = 0;
 
-  MachineInstrBuilder Op0H_Op1H = BuildMI(MBB, I, DL, TII->get(AMDGPU::V_MUL_F32_e64));
+  MachineInstrBuilder Op0H_Op1H = BuildMI(MBB, I, DL, TII->get(unpackedOpcode));
   Op0H_Op1H.addDef(DstReg, 0, DestSubIdx); //vdst
   if (src0_Mods & SISrcMods::OP_SEL_1) {
     if (src0_Mods & SISrcMods::NEG_HI) {
@@ -600,29 +551,6 @@ void GCNPreRAOptimizationsImpl::insertMI(MachineInstr &I) {
   return;
 }
 
-bool GCNPreRAOptimizationsImpl::unpackInsts(MachineFunction &MF) {
-
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  TII = ST.getInstrInfo();
-  TRI = &TII->getRegisterInfo();
-
-  auto schedModel = TII->getSchedModel();
-  for (MachineBasicBlock &MBB : MF) {
-    std::unordered_set<MachineInstr *> seen;
-    for (MachineInstr &MI : MBB) {
-      if (SIInstrInfo::isMFMA(MI)){
-        createListOfPackedInstr(MI, seen);
-      }
-
-    }
-    if (!seen.empty()) {
-      for (MachineInstr *MI : seen) 
-        insertMI(*MI);
-    }
-  }
-  return true;
-}
-
 bool GCNPreRAOptimizationsLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -646,7 +574,6 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
 
   bool Changed = false;
 
-  Changed = unpackInsts(MF);
   for (unsigned I = 0, E = MRI->getNumVirtRegs(); I != E; ++I) {
     Register Reg = Register::index2VirtReg(I);
     if (!LIS->hasInterval(Reg))
@@ -659,38 +586,46 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
     Changed |= processReg(Reg);
   }
 
-  if (!ST.useRealTrue16Insts())
-    return Changed;
-
   // Add RA hints to improve True16 COPY elimination.
-  for (const MachineBasicBlock &MBB : MF) {
-    for (const MachineInstr &MI : MBB) {
-      if (MI.getOpcode() != AMDGPU::COPY)
-        continue;
-      Register Dst = MI.getOperand(0).getReg();
-      Register Src = MI.getOperand(1).getReg();
-      if (Dst.isVirtual() &&
-          MRI->getRegClass(Dst) == &AMDGPU::VGPR_16RegClass &&
-          Src.isPhysical() &&
-          TRI->getRegClassForReg(*MRI, Src) == &AMDGPU::VGPR_32RegClass)
-        MRI->setRegAllocationHint(Dst, 0, TRI->getSubReg(Src, AMDGPU::lo16));
-      if (Src.isVirtual() &&
-          MRI->getRegClass(Src) == &AMDGPU::VGPR_16RegClass &&
-          Dst.isPhysical() &&
-          TRI->getRegClassForReg(*MRI, Dst) == &AMDGPU::VGPR_32RegClass)
-        MRI->setRegAllocationHint(Src, 0, TRI->getSubReg(Dst, AMDGPU::lo16));
-      if (!Dst.isVirtual() || !Src.isVirtual())
-        continue;
-      if (MRI->getRegClass(Dst) == &AMDGPU::VGPR_32RegClass &&
-          MRI->getRegClass(Src) == &AMDGPU::VGPR_16RegClass) {
-        MRI->setRegAllocationHint(Dst, AMDGPURI::Size32, Src);
-        MRI->setRegAllocationHint(Src, AMDGPURI::Size16, Dst);
+  // Unpack packed instructions to overlap MFMAs. This allows the compiler to co-issue unpacked instructions with MFMA
+  for (MachineBasicBlock &MBB : MF) {
+    DenseSet<MachineInstr *> instrsToUnpack;
+    for (MachineInstr &MI : MBB) {
+      if (SIInstrInfo::isMFMA(MI)){
+        createListOfPackedInstr(MI, instrsToUnpack);
       }
-      if (MRI->getRegClass(Dst) == &AMDGPU::VGPR_16RegClass &&
-          MRI->getRegClass(Src) == &AMDGPU::VGPR_32RegClass)
-        MRI->setRegAllocationHint(Dst, AMDGPURI::Size16, Src);
+      if (ST.useRealTrue16Insts()){
+        if (MI.getOpcode() != AMDGPU::COPY)
+          continue;
+        Register Dst = MI.getOperand(0).getReg();
+        Register Src = MI.getOperand(1).getReg();
+        if (Dst.isVirtual() &&
+            MRI->getRegClass(Dst) == &AMDGPU::VGPR_16RegClass &&
+            Src.isPhysical() &&
+            TRI->getRegClassForReg(*MRI, Src) == &AMDGPU::VGPR_32RegClass)
+          MRI->setRegAllocationHint(Dst, 0, TRI->getSubReg(Src, AMDGPU::lo16));
+        if (Src.isVirtual() &&
+            MRI->getRegClass(Src) == &AMDGPU::VGPR_16RegClass &&
+            Dst.isPhysical() &&
+            TRI->getRegClassForReg(*MRI, Dst) == &AMDGPU::VGPR_32RegClass)
+          MRI->setRegAllocationHint(Src, 0, TRI->getSubReg(Dst, AMDGPU::lo16));
+        if (!Dst.isVirtual() || !Src.isVirtual())
+          continue;
+        if (MRI->getRegClass(Dst) == &AMDGPU::VGPR_32RegClass &&
+            MRI->getRegClass(Src) == &AMDGPU::VGPR_16RegClass) {
+          MRI->setRegAllocationHint(Dst, AMDGPURI::Size32, Src);
+          MRI->setRegAllocationHint(Src, AMDGPURI::Size16, Dst);
+        }
+        if (MRI->getRegClass(Dst) == &AMDGPU::VGPR_16RegClass &&
+            MRI->getRegClass(Src) == &AMDGPU::VGPR_32RegClass)
+          MRI->setRegAllocationHint(Dst, AMDGPURI::Size16, Src);
+      }
+    }
+    
+    if (!instrsToUnpack.empty()) {
+      for (MachineInstr *MI : instrsToUnpack) 
+        insertMI(*MI);
     }
   }
-
   return Changed;
 }
