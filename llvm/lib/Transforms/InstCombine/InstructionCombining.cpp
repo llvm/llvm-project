@@ -2997,29 +2997,64 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
   return nullptr;
 }
 
-/// Return true if we should lower multi-dimensional geps
-static bool ismultiDimGep(GetElementPtrInst &GEP) {
-  // Limit handling to only 3D and 4D arrays with integer types.
-  // getelementptr [9 x [9 x [9 x i32]]], ptr @arr, i64 0, i64 %i, i64 2, i64 3
-  unsigned NumOps = GEP.getNumOperands();
+/// Accumulate constant indices from GEPs with all-constant indices, then
+/// check if the outermost GEP (with one variable index) is flattenable.
+/// Matches and returns true for multi-dimensional array geps with only one
+/// variable index. The pointer could also be another gep with all constant
+/// indices. For ex:
+/// -getelementptr [9 x [9 x [9 x i32]]], ptr @arr, i64 0, i64 %i, i64 2, i64 3
+/// -getelementptr [9 x [9 x [9 x i32]]],
+///                <another gep>, i64 0, i64 %i, i64 2, i64 3
+static bool ismultiDimGepFlattenable(const GetElementPtrInst &GEP) {
+  // Collect all indices, outermost last
+  SmallVector<const GEPOperator *, 4> GEPChain;
+  const Value *Base = &GEP;
 
-  // First index must be constant zero (array base)
-  if (!isa<ConstantInt>(GEP.getOperand(1)) ||
-      !cast<ConstantInt>(GEP.getOperand(1))->isZero())
+  // Go over GEPs with all constant indices
+  while (auto *CurGep = dyn_cast<GEPOperator>(Base)) {
+    bool AllConst = true;
+    for (unsigned I = 1; I < CurGep->getNumOperands(); ++I)
+      if (!isa<ConstantInt>(CurGep->getOperand(I)))
+        AllConst = false;
+    if (!AllConst)
+      break;
+    GEPChain.push_back(CurGep);
+    Base = CurGep->getOperand(0)->stripPointerCasts();
+  }
+
+  // Accumulate all indices from innermost to outermost
+  SmallVector<Value *, 8> Indices;
+  for (int I = GEPChain.size() - 1; I >= 0; --I) {
+    const GEPOperator *GO = GEPChain[I];
+    for (unsigned J = 1; J < GO->getNumOperands(); ++J)
+      Indices.push_back(GO->getOperand(J));
+  }
+
+  // Add indices from the main GEP (skip pointer operand)
+  for (unsigned J = 1; J < GEP.getNumOperands(); ++J)
+    Indices.push_back(GEP.getOperand(J));
+
+  if (Indices.empty())
     return false;
 
+  // First index must be constant zero (array base)
+  if (!isa<ConstantInt>(Indices[0]) || !cast<ConstantInt>(Indices[0])->isZero())
+    return false;
+
+  unsigned NumDims = Indices.size() - 1;
+
   // Limit lowering for arrays with 3 or more dimensions
-  if (NumOps < 5)
+  if (NumDims < 3)
     return false;
 
   // Check that it's arrays all the way
   Type *CurTy = GEP.getSourceElementType();
   unsigned NumVar = 0;
-  for (unsigned I = 2; I < NumOps; ++I) {
+  for (unsigned I = 1; I < Indices.size(); ++I) {
     auto *ArrTy = dyn_cast<ArrayType>(CurTy);
     if (!ArrTy)
       return false;
-    if (!isa<ConstantInt>(GEP.getOperand(I)))
+    if (!isa<ConstantInt>(Indices[I]))
       ++NumVar;
     CurTy = ArrTy->getElementType();
   }
@@ -3054,7 +3089,7 @@ static bool shouldCanonicalizeGEPToPtrAdd(GetElementPtrInst &GEP) {
                                  m_Shl(m_Value(), m_ConstantInt())))))
     return true;
 
-  if (ismultiDimGep(GEP))
+  if (ismultiDimGepFlattenable(GEP))
     return true;
 
   // gep (gep %p, C1), %x, C2 is expanded so the two constants can
