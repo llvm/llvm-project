@@ -45,37 +45,53 @@ T tmain(T argc, S **argv) {
 
 #ifdef OMP60
   // Valid uses of strict modifier
-  #pragma omp parallel num_threads(strict: 4)
-  #pragma omp parallel num_threads(strict: argc+z)
+  #pragma omp target parallel num_threads(strict: 4)
+  foo();
+  #pragma omp target parallel num_threads(strict: argc+z)
+  foo();
 
   // Invalid: missing expression after strict:
-  #pragma omp parallel num_threads(strict: ) // omp60-error {{expected expression}}
-  #pragma omp parallel num_threads(strict:) // omp60-error {{expected expression}}
-  #pragma omp parallel num_threads(strict: // omp60-error {{expected expression}} omp60-error {{expected ')'}} omp60-note {{to match this '('}}
+  #pragma omp target parallel num_threads(strict: ) // omp60-error {{expected expression}}
+  foo();
+  #pragma omp target parallel num_threads(strict:) // omp60-error {{expected expression}}
+  foo();
+  #pragma omp target parallel num_threads(strict: // omp60-error {{expected expression}} omp60-error {{expected ')'}} omp60-note {{to match this '('}}
+  foo();
 
   // Invalid: unknown/missing modifier
-  #pragma omp parallel num_threads(foo: 4) // omp60-error {{expected 'strict' in OpenMP clause 'num_threads'}}
-  #pragma omp parallel num_threads(: 4) // omp60-error {{expected expression}} omp60-error {{expected ')'}} omp60-note {{to match this '('}}
-  #pragma omp parallel num_threads(:)// omp60-error {{expected expression}} omp60-error {{expected ')'}} omp60-note {{to match this '('}}
+  #pragma omp target parallel num_threads(foo: 4) // omp60-error {{expected 'strict' in OpenMP clause 'num_threads'}}
+  foo();
+  #pragma omp target parallel num_threads(: 4) // omp60-error {{expected expression}} omp60-error {{expected ')'}} omp60-note {{to match this '('}}
+  foo();
+  #pragma omp target parallel num_threads(:)// omp60-error {{expected expression}} omp60-error {{expected ')'}} omp60-note {{to match this '('}}
+  foo();
 
   // Invalid: missing colon after modifier
-  #pragma omp parallel num_threads(strict 4) // omp60-error {{missing ':' after strict modifier}}
+  #pragma omp target parallel num_threads(strict 4) // omp60-error {{missing ':' after strict modifier}}
+  foo();
 
   // Invalid: negative, zero, or non-integral
-  #pragma omp parallel num_threads(strict: -1) // omp60-error {{argument to 'num_threads' clause must be a strictly positive integer value}}
-  #pragma omp parallel num_threads(strict: 0) // omp60-error {{argument to 'num_threads' clause must be a strictly positive integer value}}
-  #pragma omp parallel num_threads(strict: (argc > 0) ? argv[1] : argv[2]) // omp60-error 2 {{expression must have integral or unscoped enumeration type, not 'char *'}}
-  #pragma omp parallel num_threads(strict: S) // omp60-error {{'S' does not refer to a value}}
-  #pragma omp parallel num_threads(strict: argv[1]=2) // omp60-error {{expected ')'}} omp60-note {{to match this '('}} omp60-error 2 {{expression must have integral or unscoped enumeration type, not 'char *'}}
-  #pragma omp parallel num_threads(strict: N) // omp60-error {{argument to 'num_threads' clause must be a strictly positive integer value}}
+  #pragma omp target parallel num_threads(strict: -1) // omp60-error {{argument to 'num_threads' clause must be a strictly positive integer value}}
+  foo();
+  #pragma omp target parallel num_threads(strict: 0) // omp60-error {{argument to 'num_threads' clause must be a strictly positive integer value}}
+  foo();
+  #pragma omp target parallel num_threads(strict: (argc > 0) ? argv[1] : argv[2]) // omp60-error 2 {{expression must have integral or unscoped enumeration type, not 'char *'}}
+  foo();
+  #pragma omp target parallel num_threads(strict: S) // omp60-error {{'S' does not refer to a value}}
+  foo();
+  #pragma omp target parallel num_threads(strict: argv[1]=2) // omp60-error {{expected ')'}} omp60-note {{to match this '('}} omp60-error 2 {{expression must have integral or unscoped enumeration type, not 'char *'}}
+  foo();
+  #pragma omp target parallel num_threads(strict: N) // omp60-error {{argument to 'num_threads' clause must be a strictly positive integer value}}
+  foo();
 
   // Invalid: multiple strict modifiers or mixed with non-strict
-  #pragma omp parallel num_threads(strict: 4, strict: 5) // omp60-error {{expected ')'}} expected-note {{to match this '('}}
-  #pragma omp parallel num_threads(strict: 4), num_threads(5) // omp60-error {{directive '#pragma omp parallel' cannot contain more than one 'num_threads' clause}}
-  #pragma omp parallel num_threads(4), num_threads(strict: 5)  // omp60-error {{directive '#pragma omp parallel' cannot contain more than one 'num_threads' clause}}
-#endif // OMP60
-
+  #pragma omp target parallel num_threads(strict: 4, strict: 5) // omp60-error {{expected ')'}} expected-note {{to match this '('}}
   foo();
+  #pragma omp target parallel num_threads(strict: 4), num_threads(5) // omp60-error {{directive '#pragma omp target parallel' cannot contain more than one 'num_threads' clause}}
+  foo();
+  #pragma omp target parallel num_threads(4), num_threads(strict: 5)  // omp60-error {{directive '#pragma omp target parallel' cannot contain more than one 'num_threads' clause}}
+  foo();
+#endif // OMP60
 
   return argc;
 }
@@ -107,36 +123,51 @@ int main(int argc, char **argv) {
 
 #ifdef OMP60
   // Valid uses of strict modifier
-  #pragma omp parallel num_threads(strict: 4)
-  #pragma omp parallel num_threads(strict: argc+z)
+  #pragma omp target parallel num_threads(strict: 4)
+  foo();
+  #pragma omp target parallel num_threads(strict: argc+z)
+  foo();
 
   // Invalid: missing expression after strict:
-  #pragma omp parallel num_threads(strict: ) // omp60-error {{expected expression}}
-  #pragma omp parallel num_threads(strict:) // omp60-error {{expected expression}}
-  #pragma omp parallel num_threads(strict: // omp60-error {{expected expression}} omp60-error {{expected ')'}} omp60-note {{to match this '('}}
+  #pragma omp target parallel num_threads(strict: ) // omp60-error {{expected expression}}
+  foo();
+  #pragma omp target parallel num_threads(strict:) // omp60-error {{expected expression}}
+  foo();
+  #pragma omp target parallel num_threads(strict: // omp60-error {{expected expression}} omp60-error {{expected ')'}} omp60-note {{to match this '('}}
+  foo();
 
   // Invalid: unknown/missing modifier
-  #pragma omp parallel num_threads(foo: 4) // omp60-error {{expected 'strict' in OpenMP clause 'num_threads'}}
-  #pragma omp parallel num_threads(: 4) // omp60-error {{expected expression}} omp60-error {{expected ')'}} omp60-note {{to match this '('}}
-  #pragma omp parallel num_threads(:) // omp60-error {{expected expression}} omp60-error {{expected ')'}} omp60-note {{to match this '('}}
+  #pragma omp target parallel num_threads(foo: 4) // omp60-error {{expected 'strict' in OpenMP clause 'num_threads'}}
+  foo();
+  #pragma omp target parallel num_threads(: 4) // omp60-error {{expected expression}} omp60-error {{expected ')'}} omp60-note {{to match this '('}}
+  foo();
+  #pragma omp target parallel num_threads(:) // omp60-error {{expected expression}} omp60-error {{expected ')'}} omp60-note {{to match this '('}}
+  foo();
 
   // Invalid: missing colon after modifier
-  #pragma omp parallel num_threads(strict 4) // omp60-error {{missing ':' after strict modifier}}
+  #pragma omp target parallel num_threads(strict 4) // omp60-error {{missing ':' after strict modifier}}
+  foo();
 
   // Invalid: negative, zero, or non-integral
-  #pragma omp parallel num_threads(strict: -1) // omp60-error {{argument to 'num_threads' clause must be a strictly positive integer value}}
-  #pragma omp parallel num_threads(strict: 0) // omp60-error {{argument to 'num_threads' clause must be a strictly positive integer value}}
-  #pragma omp parallel num_threads(strict: (argc > 0) ? argv[1] : argv[2]) // omp60-error {{expression must have integral or unscoped enumeration type, not 'char *'}}
-  #pragma omp parallel num_threads(strict: S1) // omp60-error {{'S1' does not refer to a value}}
-  #pragma omp parallel num_threads(strict: argv[1]=2) // omp60-error {{expected ')'}} omp60-note {{to match this '('}} omp60-error {{expression must have integral or unscoped enumeration type, not 'char *'}}
+  #pragma omp target parallel num_threads(strict: -1) // omp60-error {{argument to 'num_threads' clause must be a strictly positive integer value}}
+  foo();
+  #pragma omp target parallel num_threads(strict: 0) // omp60-error {{argument to 'num_threads' clause must be a strictly positive integer value}}
+  foo();
+  #pragma omp target parallel num_threads(strict: (argc > 0) ? argv[1] : argv[2]) // omp60-error {{expression must have integral or unscoped enumeration type, not 'char *'}}
+  foo();
+  #pragma omp target parallel num_threads(strict: S1) // omp60-error {{'S1' does not refer to a value}}
+  foo();
+  #pragma omp target parallel num_threads(strict: argv[1]=2) // omp60-error {{expected ')'}} omp60-note {{to match this '('}} omp60-error {{expression must have integral or unscoped enumeration type, not 'char *'}}
+  foo();
 
   // Invalid: multiple strict modifiers or mixed with non-strict
-  #pragma omp parallel num_threads(strict: 4, strict: 5) // omp60-error {{expected ')'}} expected-note {{to match this '('}}
-  #pragma omp parallel num_threads(strict: 4), num_threads(5) // omp60-error {{directive '#pragma omp parallel' cannot contain more than one 'num_threads' clause}}
-  #pragma omp parallel num_threads(4), num_threads(strict: 5) // omp60-error {{directive '#pragma omp parallel' cannot contain more than one 'num_threads' clause}}
-#endif // OMP60
-
+  #pragma omp target parallel num_threads(strict: 4, strict: 5) // omp60-error {{expected ')'}} expected-note {{to match this '('}}
   foo();
+  #pragma omp target parallel num_threads(strict: 4), num_threads(5) // omp60-error {{directive '#pragma omp target parallel' cannot contain more than one 'num_threads' clause}}
+  foo();
+  #pragma omp target parallel num_threads(4), num_threads(strict: 5) // omp60-error {{directive '#pragma omp target parallel' cannot contain more than one 'num_threads' clause}}
+  foo();
+#endif // OMP60
 
   return tmain<int, char, 3>(argc, argv); // expected-note {{in instantiation of function template specialization 'tmain<int, char, 3>' requested here}}
 }

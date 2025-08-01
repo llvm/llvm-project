@@ -1048,6 +1048,15 @@ public:
                                    Address IL, Address LB,
                                    Address UB, Address ST);
 
+  virtual llvm::Value *emitMessageClause(CodeGenFunction &CGF,
+                                         const Expr *Message);
+  virtual llvm::Value *emitMessageClause(CodeGenFunction &CGF,
+                                         const OMPMessageClause *MessageClause);
+
+  virtual llvm::Value *emitSeverityClause(OpenMPSeverityClauseKind Severity);
+  virtual llvm::Value *
+  emitSeverityClause(const OMPSeverityClause *SeverityClause);
+
   /// Emits call to void __kmpc_push_num_threads(ident_t *loc, kmp_int32
   /// global_tid, kmp_int32 num_threads) to generate code for 'num_threads'
   /// clause.

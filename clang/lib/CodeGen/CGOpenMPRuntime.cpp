@@ -2698,6 +2698,34 @@ llvm::Value *CGOpenMPRuntime::emitForNext(CodeGenFunction &CGF,
       CGF.getContext().BoolTy, Loc);
 }
 
+llvm::Value *CGOpenMPRuntime::emitMessageClause(CodeGenFunction &CGF,
+                                                const Expr *Message) {
+  if (!Message)
+    return llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
+  return CGF.EmitScalarExpr(Message);
+}
+
+llvm::Value *
+CGOpenMPRuntime::emitMessageClause(CodeGenFunction &CGF,
+                                   const OMPMessageClause *MessageClause) {
+  return emitMessageClause(
+      CGF, MessageClause ? MessageClause->getMessageString() : nullptr);
+}
+
+llvm::Value *
+CGOpenMPRuntime::emitSeverityClause(OpenMPSeverityClauseKind Severity) {
+  // OpenMP 6.0, 10.4: "If no severity clause is specified then the effect is
+  // as if sev-level is fatal."
+  return llvm::ConstantInt::get(CGM.Int32Ty,
+                                Severity == OMPC_SEVERITY_warning ? 1 : 2);
+}
+
+llvm::Value *
+CGOpenMPRuntime::emitSeverityClause(const OMPSeverityClause *SeverityClause) {
+  return emitSeverityClause(SeverityClause ? SeverityClause->getSeverityKind()
+                                           : OMPC_SEVERITY_unknown);
+}
+
 void CGOpenMPRuntime::emitNumThreadsClause(
     CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
     OpenMPNumThreadsClauseModifier Modifier, OpenMPSeverityClauseKind Severity,
@@ -2713,14 +2741,8 @@ void CGOpenMPRuntime::emitNumThreadsClause(
   RuntimeFunction FnID = OMPRTL___kmpc_push_num_threads;
   if (Modifier == OMPC_NUMTHREADS_strict) {
     FnID = OMPRTL___kmpc_push_num_threads_strict;
-    // OpenMP 6.0, 10.4: "If no severity clause is specified then the effect is
-    // as if sev-level is fatal."
-    Args.push_back(llvm::ConstantInt::get(
-        CGM.Int32Ty, Severity == OMPC_SEVERITY_warning ? 1 : 2));
-    if (Message)
-      Args.push_back(CGF.EmitScalarExpr(Message));
-    else
-      Args.push_back(llvm::ConstantPointerNull::get(CGF.VoidPtrTy));
+    Args.push_back(emitSeverityClause(Severity));
+    Args.push_back(emitMessageClause(CGF, Message));
   }
   CGF.EmitRuntimeCall(
       OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(), FnID), Args);
