@@ -148,6 +148,7 @@ struct OverlappingRanges {
 ///      B: Check for overlap with any overlapping Visibility ResourceRange
 LLVM_ABI llvm::SmallVector<OverlappingRanges>
 findOverlappingRanges(ArrayRef<RangeInfo> Infos);
+
 } // namespace rootsig
 } // namespace hlsl
 } // namespace llvm

@@ -8,7 +8,6 @@
 
 #include "llvm/Frontend/HLSL/HLSLBinding.h"
 #include "llvm/ADT/STLExtras.h"
-#include <cstdint>
 
 using namespace llvm;
 using namespace hlsl;
