@@ -18,7 +18,17 @@ from lit.llvm.subst import ToolSubst
 config.name = "LLVM"
 
 # testFormat: The test format to use to interpret tests.
-config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
+extra_substitutions = extra_substitutions = (
+    [
+        (r"\| not FileCheck .*", "> /dev/null"),
+        (r"\| FileCheck .*", "> /dev/null"),
+    ]
+    if config.enable_profcheck
+    else []
+)
+config.test_format = lit.formats.ShTest(
+    not llvm_config.use_lit_shell, extra_substitutions
+)
 
 # suffixes: A list of file extensions to treat as test files. This is overriden
 # by individual lit.local.cfg files in the test subdirectories.
