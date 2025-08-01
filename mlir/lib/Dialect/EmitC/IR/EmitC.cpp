@@ -889,9 +889,9 @@ LogicalResult SubOp::verify() {
 // VariableOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult emitc::VariableOp::verify() {
-  return verifyInitializationAttribute(getOperation(), getValueAttr());
-}
+// LogicalResult emitc::VariableOp::verify() {
+//   return verifyInitializationAttribute(getOperation(), getValueAttr());
+// }
 
 //===----------------------------------------------------------------------===//
 // YieldOp

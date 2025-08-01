@@ -1191,10 +1191,10 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
   }];
 
   let arguments = (ins EmitC_OpaqueOrTypedAttr:$value);
-  let results = (outs Res<AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>, "",
-                          [MemAlloc<DefaultResource, 0, FullEffect>]>);
+  let results = (outs Res<AnyTypeOf<[EmitCType]>,
+                          "", [MemAlloc<DefaultResource, 0, FullEffect>]>);
 
-  let hasVerifier = 1;
+  // let hasVerifier = 1;
 }
 
 def EmitC_GlobalOp : EmitC_Op<"global", [Symbol]> {

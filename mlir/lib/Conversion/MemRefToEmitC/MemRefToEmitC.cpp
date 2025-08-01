@@ -316,13 +316,15 @@ struct ConvertExtractStridedMetadata final
     auto baseptr =
         cast<MemRefType>(extractStridedMetadataOp.getBaseBuffer().getType());
     auto emitcType = convertMemRefType(baseptr, getTypeConverter());
-
+    auto arrT = emitc::ArrayType::get(memrefType.getShape(), emitcType);
+    auto valVar = rewriter.create<emitc::VariableOp>(
+        loc, arrT, emitc::OpaqueAttr::get(rewriter.getContext(), ""));
     auto [strides, offset] = memrefType.getStridesAndOffset();
     Value offsetValue = rewriter.create<emitc::ConstantOp>(
         loc, rewriter.getIndexType(), rewriter.getIndexAttr(offset));
 
     SmallVector<Value> results;
-    results.push_back(extractStridedMetadataOp.getBaseBuffer());
+    results.push_back(valVar);
     results.push_back(offsetValue);
 
     for (unsigned i = 0, e = memrefType.getRank(); i < e; ++i) {
