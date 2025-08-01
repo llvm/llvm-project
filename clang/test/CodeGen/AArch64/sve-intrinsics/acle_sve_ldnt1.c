@@ -442,3 +442,39 @@ svmfloat8_t test_svldnt1_vnum_mf8(svbool_t pg, const mfloat8_t *base, int64_t vn
 {
   return SVE_ACLE_FUNC(svldnt1_vnum,_mf8,,)(pg, base, vnum);
 }
+
+// CHECK-LABEL: @test_svldnt1_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.ldnt1.nxv8bf16(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]])
+// CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
+//
+// CPP-CHECK-LABEL: @_Z17test_svldnt1_bf16u10__SVBool_tPKu6__bf16(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.ldnt1.nxv8bf16(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]])
+// CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
+//
+svbfloat16_t test_svldnt1_bf16(svbool_t pg, const bfloat16_t *base) MODE_ATTR
+{
+  return SVE_ACLE_FUNC(svldnt1,_bf16,,)(pg, base);
+}
+
+// CHECK-LABEL: @test_svldnt1_vnum_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <vscale x 8 x bfloat>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.ldnt1.nxv8bf16(<vscale x 8 x i1> [[TMP0]], ptr [[TMP1]])
+// CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP2]]
+//
+// CPP-CHECK-LABEL: @_Z22test_svldnt1_vnum_bf16u10__SVBool_tPKu6__bf16l(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <vscale x 8 x bfloat>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.ldnt1.nxv8bf16(<vscale x 8 x i1> [[TMP0]], ptr [[TMP1]])
+// CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP2]]
+//
+svbfloat16_t test_svldnt1_vnum_bf16(svbool_t pg, const bfloat16_t *base, int64_t vnum) MODE_ATTR
+{
+  return SVE_ACLE_FUNC(svldnt1_vnum,_bf16,,)(pg, base, vnum);
+}

@@ -2829,7 +2829,7 @@ static void checkReductionClauses(Sema &S, DSAStackTy *Stack,
         continue;
       }
       for (Expr *Ref : RC->varlist()) {
-        assert(Ref && "NULL expr in OpenMP nontemporal clause.");
+        assert(Ref && "NULL expr in OpenMP reduction clause.");
         SourceLocation ELoc;
         SourceRange ERange;
         Expr *SimpleRefExpr = Ref;
@@ -6620,6 +6620,8 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
       case OMPC_affinity:
       case OMPC_bind:
       case OMPC_filter:
+      case OMPC_severity:
+      case OMPC_message:
         continue;
       case OMPC_allocator:
       case OMPC_flush:
@@ -6637,8 +6639,6 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
       case OMPC_match:
       case OMPC_when:
       case OMPC_at:
-      case OMPC_severity:
-      case OMPC_message:
       default:
         llvm_unreachable("Unexpected clause");
       }
@@ -7610,6 +7610,23 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
     // Anything that is not a function parameter is an error.
     Diag(E->getExprLoc(), diag::err_omp_param_or_this_in_clause) << FD << 0;
     return;
+  }
+
+  // OpenMP 6.0 [9.6.2 (page 332, line 31-33, adjust_args clause, Restrictions]
+  // If the `need_device_addr` adjust-op modifier is present, each list item
+  // that appears in the clause must refer to an argument in the declaration of
+  // the function variant that has a reference type
+  if (getLangOpts().OpenMP >= 60) {
+    for (Expr *E : AdjustArgsNeedDeviceAddr) {
+      E = E->IgnoreParenImpCasts();
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+        if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+          if (!VD->getType()->isReferenceType())
+            Diag(E->getExprLoc(),
+                 diag::err_omp_non_by_ref_need_device_addr_modifier_argument);
+        }
+      }
+    }
   }
 
   auto *NewAttr = OMPDeclareVariantAttr::CreateImplicit(
@@ -18344,7 +18361,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPSharedClause(ArrayRef<Expr *> VarList,
                                                SourceLocation EndLoc) {
   SmallVector<Expr *, 8> Vars;
   for (Expr *RefExpr : VarList) {
-    assert(RefExpr && "NULL expr in OpenMP lastprivate clause.");
+    assert(RefExpr && "NULL expr in OpenMP shared clause.");
     SourceLocation ELoc;
     SourceRange ERange;
     Expr *SimpleRefExpr = RefExpr;
@@ -19991,7 +20008,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPAlignedClause(
     SourceLocation LParenLoc, SourceLocation ColonLoc, SourceLocation EndLoc) {
   SmallVector<Expr *, 8> Vars;
   for (Expr *RefExpr : VarList) {
-    assert(RefExpr && "NULL expr in OpenMP linear clause.");
+    assert(RefExpr && "NULL expr in OpenMP aligned clause.");
     SourceLocation ELoc;
     SourceRange ERange;
     Expr *SimpleRefExpr = RefExpr;
@@ -20167,7 +20184,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPCopyprivateClause(ArrayRef<Expr *> VarList,
   SmallVector<Expr *, 8> DstExprs;
   SmallVector<Expr *, 8> AssignmentOps;
   for (Expr *RefExpr : VarList) {
-    assert(RefExpr && "NULL expr in OpenMP linear clause.");
+    assert(RefExpr && "NULL expr in OpenMP copyprivate clause.");
     SourceLocation ELoc;
     SourceRange ERange;
     Expr *SimpleRefExpr = RefExpr;
@@ -20526,7 +20543,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPDependClause(
     TotalDepCount = VarOffset.TotalDepCount;
   } else {
     for (Expr *RefExpr : VarList) {
-      assert(RefExpr && "NULL expr in OpenMP shared clause.");
+      assert(RefExpr && "NULL expr in OpenMP depend clause.");
       if (isa<DependentScopeDeclRefExpr>(RefExpr)) {
         // It will be analyzed later.
         Vars.push_back(RefExpr);
@@ -23737,7 +23754,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPAllocateClause(
   // Analyze and build list of variables.
   SmallVector<Expr *, 8> Vars;
   for (Expr *RefExpr : VarList) {
-    assert(RefExpr && "NULL expr in OpenMP private clause.");
+    assert(RefExpr && "NULL expr in OpenMP allocate clause.");
     SourceLocation ELoc;
     SourceRange ERange;
     Expr *SimpleRefExpr = RefExpr;
@@ -23829,7 +23846,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPInclusiveClause(ArrayRef<Expr *> VarList,
                                                   SourceLocation EndLoc) {
   SmallVector<Expr *, 8> Vars;
   for (Expr *RefExpr : VarList) {
-    assert(RefExpr && "NULL expr in OpenMP nontemporal clause.");
+    assert(RefExpr && "NULL expr in OpenMP inclusive clause.");
     SourceLocation ELoc;
     SourceRange ERange;
     Expr *SimpleRefExpr = RefExpr;
@@ -23870,7 +23887,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPExclusiveClause(ArrayRef<Expr *> VarList,
                                                   SourceLocation EndLoc) {
   SmallVector<Expr *, 8> Vars;
   for (Expr *RefExpr : VarList) {
-    assert(RefExpr && "NULL expr in OpenMP nontemporal clause.");
+    assert(RefExpr && "NULL expr in OpenMP exclusive clause.");
     SourceLocation ELoc;
     SourceRange ERange;
     Expr *SimpleRefExpr = RefExpr;
@@ -24063,7 +24080,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPAffinityClause(
     SourceLocation EndLoc, Expr *Modifier, ArrayRef<Expr *> Locators) {
   SmallVector<Expr *, 8> Vars;
   for (Expr *RefExpr : Locators) {
-    assert(RefExpr && "NULL expr in OpenMP shared clause.");
+    assert(RefExpr && "NULL expr in OpenMP affinity clause.");
     if (isa<DependentScopeDeclRefExpr>(RefExpr) || RefExpr->isTypeDependent()) {
       // It will be analyzed later.
       Vars.push_back(RefExpr);
@@ -24375,7 +24392,7 @@ ExprResult SemaOpenMP::ActOnOMPArraySectionExpr(
         return ExprError();
       }
     }
-  } else if (ColonLocFirst.isValid() &&
+  } else if (SemaRef.getLangOpts().OpenMP < 60 && ColonLocFirst.isValid() &&
              (OriginalTy.isNull() || (!OriginalTy->isConstantArrayType() &&
                                       !OriginalTy->isVariableArrayType()))) {
     // OpenMP 5.0, [2.1.5 Array Sections]

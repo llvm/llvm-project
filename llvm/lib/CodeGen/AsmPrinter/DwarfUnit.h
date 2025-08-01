@@ -216,7 +216,8 @@ public:
                 DIEBlock *Block);
 
   /// Add location information to specified debug information entry.
-  void addSourceLine(DIE &Die, unsigned Line, const DIFile *File);
+  void addSourceLine(DIE &Die, unsigned Line, unsigned Column,
+                     const DIFile *File);
   void addSourceLine(DIE &Die, const DILocalVariable *V);
   void addSourceLine(DIE &Die, const DIGlobalVariable *G);
   void addSourceLine(DIE &Die, const DISubprogram *SP);

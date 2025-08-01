@@ -552,6 +552,7 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
   MCContext &Ctx = MF.getContext();
   uint16_t KernelCodeProperties = 0;
   const GCNUserSGPRUsageInfo &UserSGPRInfo = MFI.getUserSGPRInfo();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   if (UserSGPRInfo.hasPrivateSegmentBuffer()) {
     KernelCodeProperties |=
@@ -581,9 +582,12 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE;
   }
-  if (MF.getSubtarget<GCNSubtarget>().isWave32()) {
+  if (ST.isWave32()) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
+  }
+  if (isGFX1250(ST) && ST.hasCUStores()) {
+    KernelCodeProperties |= amdhsa::KERNEL_CODE_PROPERTY_USES_CU_STORES;
   }
 
   // CurrentProgramInfo.DynamicCallStack is a MCExpr and could be
@@ -646,7 +650,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   if (!IsTargetStreamerInitialized)
     initTargetStreamer(*MF.getFunction().getParent());
 
-  ResourceUsage = &getAnalysis<AMDGPUResourceUsageAnalysis>();
+  ResourceUsage =
+      &getAnalysis<AMDGPUResourceUsageAnalysisWrapperPass>().getResourceInfo();
   CurrentProgramInfo.reset(MF);
 
   const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
@@ -668,9 +673,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     OutStreamer->switchSection(ConfigSection);
   }
 
-  const AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo &Info =
-      ResourceUsage->getResourceInfo();
-  RI.gatherResourceInfo(MF, Info, OutContext);
+  RI.gatherResourceInfo(MF, *ResourceUsage, OutContext);
 
   if (MFI->isModuleEntryFunction()) {
     getSIProgramInfo(CurrentProgramInfo, MF);
@@ -1416,6 +1419,7 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
 
   MD->setHwStage(CC, ".wgp_mode", (bool)CurrentProgramInfo.WgpMode);
   MD->setHwStage(CC, ".mem_ordered", (bool)CurrentProgramInfo.MemOrdered);
+  MD->setHwStage(CC, ".forward_progress", (bool)CurrentProgramInfo.FwdProgress);
 
   if (AMDGPU::isCompute(CC)) {
     MD->setHwStage(CC, ".trap_present",
@@ -1677,8 +1681,8 @@ bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 }
 
 void AMDGPUAsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<AMDGPUResourceUsageAnalysis>();
-  AU.addPreserved<AMDGPUResourceUsageAnalysis>();
+  AU.addRequired<AMDGPUResourceUsageAnalysisWrapperPass>();
+  AU.addPreserved<AMDGPUResourceUsageAnalysisWrapperPass>();
   AU.addRequired<MachineModuleInfoWrapperPass>();
   AU.addPreserved<MachineModuleInfoWrapperPass>();
   AsmPrinter::getAnalysisUsage(AU);

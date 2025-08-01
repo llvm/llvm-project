@@ -201,11 +201,8 @@ if config.clang_staticanalyzer:
 
     if config.clang_staticanalyzer_z3:
         config.available_features.add("z3")
-        if config.clang_staticanalyzer_z3_devel:
-            config.available_features.add("z3-devel")
-            config.substitutions.append(
-                ("%z3_include_dir", config.clang_staticanalyzer_z3_include_dir)
-            )
+        if config.clang_staticanalyzer_z3_mock:
+            config.available_features.add("z3-mock")
     else:
         config.available_features.add("no-z3")
 
@@ -250,9 +247,6 @@ config.substitutions.append(
         ),
     )
 )
-
-config.substitutions.append(("%host_cc", config.host_cc))
-config.substitutions.append(("%host_cxx", config.host_cxx))
 
 # Determine whether the test target is compatible with execution on the host.
 if "aarch64" in config.host_arch:

@@ -416,7 +416,6 @@ def BBSI : RRI8_Inst<0x07, (outs),
 }
 
 def : Pat<(brcond AR:$s, bb:$target), (BNEZ AR:$s, bb:$target)>;
-
 //===----------------------------------------------------------------------===//
 // Call and jump instructions
 //===----------------------------------------------------------------------===//
@@ -576,7 +575,7 @@ def WUR : RRR_Inst<0x00, 0x03, 0x0F, (outs UR:$ur), (ins AR:$t),
 }
 
 def RUR : RRR_Inst<0x00, 0x03, 0x0E, (outs AR:$r), (ins UR:$ur),
-                  "rur\t$r, $ur", []> {
+                  "rur\t$r, $ur", [(set AR:$r, (Xtensa_rur UR:$ur))]> {
   bits<8> ur;
 
   let s = ur{7-4};
@@ -1309,6 +1308,34 @@ def WFR : RRR_Inst<0x00, 0x0A, 0x0f, (outs FPR:$r), (ins AR:$s),
 let AddedComplexity = 10 in
 def : Pat<(f32 (load (Xtensa_pcrel_wrapper tconstpool:$in))),
           (WFR (L32R tconstpool:$in))>;
+
+//===----------------------------------------------------------------------===//
+// SelectCC and BranchCC instructions with FP operands
+//===----------------------------------------------------------------------===//
+
+let usesCustomInserter = 1, Predicates = [HasSingleFloat] in {
+  def SELECT_CC_INT_FP : Pseudo<(outs FPR:$dst), (ins AR:$lhs, AR:$rhs, FPR:$t, FPR:$f, i32imm:$cond),
+                                "!select_cc_int_fp $dst, $lhs, $rhs, $t, $f, $cond",
+                                [(set FPR:$dst, (Xtensa_select_cc AR:$lhs, AR:$rhs, FPR:$t, FPR:$f, imm:$cond))]>;
+  def SELECT_CC_FP_INT : Pseudo<(outs AR:$dst), (ins FPR:$lhs, FPR:$rhs, AR:$t, AR:$f, i32imm:$cond, i32imm:$brkind),
+                                "!select_cc_fp_int $dst, $lhs, $rhs, $t, $f, $cond, $brkind",
+                                [(set AR:$dst, (Xtensa_select_cc_fp FPR:$lhs, FPR:$rhs, AR:$t, AR:$f, imm:$cond, imm:$brkind))]>;
+  def SELECT_CC_FP_FP : Pseudo<(outs FPR:$dst), (ins FPR:$lhs, FPR:$rhs, FPR:$t, FPR:$f, i32imm:$cond, i32imm:$brkind),
+                               "!select_cc_fp_fp $dst, $lhs, $rhs, $t, $f, $cond, $brkind",
+                               [(set FPR:$dst, (Xtensa_select_cc_fp FPR:$lhs, FPR:$rhs, FPR:$t, FPR:$f, imm:$cond, imm:$brkind))]>;
+}
+
+let usesCustomInserter = 1, isBranch = 1, isTerminator = 1, isBarrier = 1, Predicates = [HasSingleFloat] in {
+  def BRCC_FP : Pseudo<(outs), (ins i32imm:$cond, FPR:$lhs, FPR:$rhs, brtarget:$target),
+                       "!brcc_fp $cond, $lhs, $rhs, $target", []>;
+}
+
+def cond_as_i32imm : SDNodeXForm<cond, [{
+  return CurDAG->getTargetConstant(N->get(), SDLoc(N), MVT::i32);
+}]>;
+
+def : Pat<(brcc cond:$cond, FPR:$s, FPR:$t,  bb:$target),
+          (BRCC_FP (cond_as_i32imm $cond), FPR:$s, FPR:$t, bb:$target)>;
 
 //===----------------------------------------------------------------------===//
 // Region Protection feature instructions

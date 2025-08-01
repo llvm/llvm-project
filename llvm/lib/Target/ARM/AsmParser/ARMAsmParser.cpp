@@ -3629,7 +3629,7 @@ public:
     Inst.addOperand(MCOperand::createImm(Imm == 48 ? 1 : 0));
   }
 
-  void print(raw_ostream &OS) const override;
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override;
 
   static std::unique_ptr<ARMOperand> CreateITMask(unsigned Mask, SMLoc S,
                                                   ARMAsmParser &Parser) {
@@ -3979,7 +3979,7 @@ public:
 
 } // end anonymous namespace.
 
-void ARMOperand::print(raw_ostream &OS) const {
+void ARMOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   auto RegName = [](MCRegister Reg) {
     if (Reg)
       return ARMInstPrinter::getRegisterName(Reg);
@@ -4024,7 +4024,7 @@ void ARMOperand::print(raw_ostream &OS) const {
     OS << "<banked reg: " << getBankedReg() << ">";
     break;
   case k_Immediate:
-    MCAsmInfo().printExpr(OS, *getImm());
+    MAI.printExpr(OS, *getImm());
     break;
   case k_MemBarrierOpt:
     OS << "<ARM_MB::" << MemBOptToString(getMemBarrierOpt(), false) << ">";
@@ -4041,7 +4041,7 @@ void ARMOperand::print(raw_ostream &OS) const {
       OS << " base:" << RegName(Memory.BaseRegNum);
     if (Memory.OffsetImm) {
       OS << " offset-imm:";
-      MCAsmInfo().printExpr(OS, *Memory.OffsetImm);
+      MAI.printExpr(OS, *Memory.OffsetImm);
     }
     if (Memory.OffsetRegNum)
       OS << " offset-reg:" << (Memory.isNegative ? "-" : "")
@@ -4097,7 +4097,7 @@ void ARMOperand::print(raw_ostream &OS) const {
     break;
   case k_ConstantPoolImmediate:
     OS << "<constant_pool_imm #";
-    MCAsmInfo().printExpr(OS, *getConstantPoolImm());
+    MAI.printExpr(OS, *getConstantPoolImm());
     break;
   case k_BitfieldDescriptor:
     OS << "<bitfield " << "lsb: " << Bitfield.LSB
@@ -6436,7 +6436,7 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
       return true;
 
     const auto *ExprVal =
-        MCSpecifierExpr::create(SubExprVal, Spec, getContext());
+        MCSpecifierExpr::create(SubExprVal, Spec, getContext(), S);
     E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
     Operands.push_back(ARMOperand::CreateImm(ExprVal, S, E, *this));
     return false;
@@ -12327,7 +12327,7 @@ bool ARMAsmParser::parseDirectiveEven(SMLoc L) {
   }
 
   assert(Section && "must have section to emit alignment");
-  if (Section->useCodeAlign())
+  if (getContext().getAsmInfo()->useCodeAlign(*Section))
     getStreamer().emitCodeAlignment(Align(2), &getSTI());
   else
     getStreamer().emitValueToAlignment(Align(2));
@@ -12525,7 +12525,7 @@ bool ARMAsmParser::parseDirectiveAlign(SMLoc L) {
     // '.align' is target specifically handled to mean 2**2 byte alignment.
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
     assert(Section && "must have section to emit alignment");
-    if (Section->useCodeAlign())
+    if (getContext().getAsmInfo()->useCodeAlign(*Section))
       getStreamer().emitCodeAlignment(Align(4), &getSTI(), 0);
     else
       getStreamer().emitValueToAlignment(Align(4), 0, 1, 0);

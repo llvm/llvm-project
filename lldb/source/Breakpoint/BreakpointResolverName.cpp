@@ -124,14 +124,14 @@ BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
     return std::make_shared<BreakpointResolverName>(
         nullptr, RegularExpression(regex_text), language, offset,
         skip_prologue);
-  } else {
-    StructuredData::Array *names_array;
-    success = options_dict.GetValueForKeyAsArray(
-        GetKey(OptionNames::SymbolNameArray), names_array);
-    if (!success) {
-      error = Status::FromErrorString("BRN::CFSD: Missing symbol names entry.");
-      return nullptr;
-    }
+  }
+  StructuredData::Array *names_array;
+  success = options_dict.GetValueForKeyAsArray(
+      GetKey(OptionNames::SymbolNameArray), names_array);
+  if (!success) {
+    error = Status::FromErrorString("BRN::CFSD: Missing symbol names entry.");
+    return nullptr;
+  }
     StructuredData::Array *names_mask_array;
     success = options_dict.GetValueForKeyAsArray(
         GetKey(OptionNames::NameMaskArray), names_mask_array);
@@ -182,7 +182,6 @@ BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
       resolver_sp->AddNameLookup(ConstString(names[i]), name_masks[i]);
     }
     return resolver_sp;
-  }
 }
 
 StructuredData::ObjectSP BreakpointResolverName::SerializeToStructuredData() {
@@ -196,10 +195,10 @@ StructuredData::ObjectSP BreakpointResolverName::SerializeToStructuredData() {
     StructuredData::ArraySP names_sp(new StructuredData::Array());
     StructuredData::ArraySP name_masks_sp(new StructuredData::Array());
     for (auto lookup : m_lookups) {
-      names_sp->AddItem(StructuredData::StringSP(
-          new StructuredData::String(lookup.GetName().GetStringRef())));
-      name_masks_sp->AddItem(StructuredData::UnsignedIntegerSP(
-          new StructuredData::UnsignedInteger(lookup.GetNameTypeMask())));
+      names_sp->AddItem(std::make_shared<StructuredData::String>(
+          lookup.GetName().GetStringRef()));
+      name_masks_sp->AddItem(std::make_shared<StructuredData::UnsignedInteger>(
+          lookup.GetNameTypeMask()));
     }
     options_dict_sp->AddItem(GetKey(OptionNames::SymbolNameArray), names_sp);
     options_dict_sp->AddItem(GetKey(OptionNames::NameMaskArray), name_masks_sp);

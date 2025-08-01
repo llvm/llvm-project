@@ -14,6 +14,7 @@ static_library("Rewrite") {
     "//llvm/lib/DWARFLinker/Classic",
     "//llvm/lib/DWP",
     "//llvm/lib/DebugInfo/DWARF",
+    "//llvm/lib/DebugInfo/DWARF/LowLevel",
     "//llvm/lib/ExecutionEngine/JITLink",
     "//llvm/lib/MC",
     "//llvm/lib/Object",
