@@ -175,6 +175,76 @@ define void @partial_promotion_of_alloca() {
   ret void
 }
 
+define void @memcpy_after_laundering_alloca(ptr %ptr) {
+; CHECK-LABEL: @memcpy_after_laundering_alloca(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca { i64, i64 }, align 8
+; CHECK-NEXT:    [[LAUNDER:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[ALLOCA]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[LAUNDER]], ptr [[PTR:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca { i64, i64 }, align 8
+  %launder = call ptr @llvm.launder.invariant.group.p0(ptr %alloca)
+  call void @llvm.memcpy.p0.p0.i64(ptr %launder, ptr %ptr, i64 16, i1 false)
+  ret void
+}
+
+define void @memcpy_after_laundering_alloca_slices(ptr %ptr) {
+; CHECK-LABEL: @memcpy_after_laundering_alloca_slices(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca { [16 x i8], i64, [16 x i8] }, align 8
+; CHECK-NEXT:    [[LAUNDER:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[ALLOCA]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[LAUNDER]], i64 16
+; CHECK-NEXT:    store i64 0, ptr [[GEP]], align 4
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[LAUNDER]], ptr [[PTR:%.*]], i64 40, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca { [16 x i8], i64, [16 x i8] }, align 8
+  %launder = call ptr @llvm.launder.invariant.group.p0(ptr %alloca)
+  %gep = getelementptr i8, ptr %launder, i64 16
+  store i64 0, ptr %gep
+  call void @llvm.memcpy.p0.p0.i64(ptr %launder, ptr %ptr, i64 40, i1 false)
+  ret void
+}
+
+define void @launder_in_loop() {
+; CHECK-LABEL: @launder_in_loop(
+; CHECK-NEXT:    [[STRUCT_PTR:%.*]] = alloca [[T:%.*]], i64 1, align 4
+; CHECK-NEXT:    br label [[HEADER:%.*]]
+; CHECK:       header:
+; CHECK-NEXT:    br i1 true, label [[BODY:%.*]], label [[EXIT:%.*]]
+; CHECK:       body:
+; CHECK-NEXT:    [[STRUCT_PTR_FRESH:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[STRUCT_PTR]])
+; CHECK-NEXT:    [[STRUCT:%.*]] = call [[T]] @[[MAKE_T:[a-zA-Z0-9_$\"\\.-]*[a-zA-Z_$\"\\.-][a-zA-Z0-9_$\"\\.-]*]]()
+; CHECK-NEXT:    store [[T]] [[STRUCT]], ptr [[STRUCT_PTR_FRESH]], align 4, !invariant.group [[META0]]
+; CHECK-NEXT:    [[FIRST_PTR:%.*]] = getelementptr [[T]], ptr [[STRUCT_PTR_FRESH]], i32 0, i32 0
+; CHECK-NEXT:    [[FIRST:%.*]] = load i32, ptr [[FIRST_PTR]], align 4
+; CHECK-NEXT:    [[SECOND_PTR:%.*]] = getelementptr [[T]], ptr [[STRUCT_PTR_FRESH]], i32 0, i32 1
+; CHECK-NEXT:    [[SECOND:%.*]] = load i32, ptr [[SECOND_PTR]], align 4
+; CHECK-NEXT:    br label [[HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+  %struct_ptr = alloca %t, i64 1, align 4
+  br label %header
+
+header:
+  br i1 true, label %body, label %exit
+
+body:                                                ; preds = %6
+  %struct_ptr_fresh = call ptr @llvm.launder.invariant.group.p0(ptr %struct_ptr)
+  %struct = call %t @make_t()
+  store %t %struct, ptr %struct_ptr_fresh, align 4, !invariant.group !0
+  %first_ptr = getelementptr %t, ptr %struct_ptr_fresh, i32 0, i32 0
+  %first = load i32, ptr %first_ptr, align 4
+  %second_ptr = getelementptr %t, ptr %struct_ptr_fresh, i32 0, i32 1
+  %second = load i32, ptr %second_ptr, align 4
+  br label %header
+
+exit:
+  ret void
+}
+
+declare %t @make_t()
+
 declare void @use(ptr)
 
 !0 = !{}
