@@ -174,6 +174,21 @@ void UpdateVCEPass::runOnOperation() {
   if (walkResult.wasInterrupted())
     return signalPassFailure();
 
+  // Update min version requirement for capabilities after deducing them.
+  for (spirv::Capability cap : deducedCapabilities) {
+    if (std::optional<spirv::Version> minVersion = spirv::getMinVersion(cap)) {
+      deducedVersion = std::max(deducedVersion, *minVersion);
+      if (deducedVersion > allowedVersion) {
+        module.emitError("Capability '")
+            << spirv::stringifyCapability(cap) << "' requires min version "
+            << spirv::stringifyVersion(deducedVersion)
+            << " but target environment allows up to "
+            << spirv::stringifyVersion(allowedVersion);
+        return signalPassFailure();
+      }
+    }
+  }
+
   // TODO: verify that the deduced version is consistent with
   // SPIR-V ops' maximal version requirements.
 

@@ -1401,14 +1401,12 @@ void Intrinsic::emitBodyAsBuiltinCall() {
       if (LocalCK == ClassB || (T.isHalf() && !T.isScalarForMangling())) {
         CastToType.makeInteger(8, true);
         Arg = "__builtin_bit_cast(" + CastToType.str() + ", " + Arg + ")";
-      } else if (LocalCK == ClassI) {
-        if (CastToType.isInteger()) {
-          CastToType.makeSigned();
-          Arg = "__builtin_bit_cast(" + CastToType.str() + ", " + Arg + ")";
-        }
+      } else if (LocalCK == ClassI &&
+                 (CastToType.isInteger() || CastToType.isPoly())) {
+        CastToType.makeSigned();
+        Arg = "__builtin_bit_cast(" + CastToType.str() + ", " + Arg + ")";
       }
     }
-
     S += Arg + ", ";
   }
 
