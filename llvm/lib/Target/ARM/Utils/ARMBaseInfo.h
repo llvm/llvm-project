@@ -47,7 +47,9 @@ enum CondCodes { // Meaning (integer)          Meaning (floating-point)
 
 inline static CondCodes getOppositeCondition(CondCodes CC) {
   // To reverse a condition it's necessary to only invert the low bit:
-
+  // Note that unlike in AArch64, flipping the bottom bit for AL is not a valid
+  // predicate.
+  assert(CC != AL && "AL has no opposite condition");
   return static_cast<CondCodes>(static_cast<unsigned>(CC) ^ 0x1);
 }
 
