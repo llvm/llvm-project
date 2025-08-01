@@ -156,7 +156,7 @@ static inline constexpr uint32_t get_start_index(uint32_t chunk_size) {
 
 // Returns the id of the lane below this one that acts as its leader.
 static inline uint32_t get_leader_id(uint64_t ballot, uint32_t id) {
-  uint64_t mask = id < BITS_IN_DWORD ? ~0ull << (id + 1) : 0;
+  uint64_t mask = id < BITS_IN_DWORD - 1 ? ~0ull << (id + 1) : 0;
   return BITS_IN_DWORD - cpp::countl_zero(ballot & ~mask) - 1;
 }
 
