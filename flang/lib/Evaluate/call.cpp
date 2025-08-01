@@ -248,6 +248,23 @@ ProcedureRef::~ProcedureRef() {}
 
 void ProcedureRef::Deleter(ProcedureRef *p) { delete p; }
 
+// We don't know the dummy argument info (e.g., procedure with implicit
+// interface
+static void DetermineCopyInOutArgument(
+    const characteristics::Procedure &procInfo, ActualArgument &actual) {
+
+  // Only check that actual argument is contiguous
+  // For non-contiguous, do copy-in
+}
+
+static void DetermineCopyInOutArgument(
+    const characteristics::Procedure &procInfo,
+    ActualArgument &actual, characteristics::DummyArgument &dummy) {
+
+  // TODO: assert? procInfo.HasExplicitInterface()
+
+}
+
 void ProcedureRef::DetermineCopyInOut() {
   if (!proc_.GetSymbol()) {
     return;
@@ -261,6 +278,50 @@ void ProcedureRef::DetermineCopyInOut() {
   }
   // TODO: at this point have dummy arguments as procInfo->dummyArguments
   // and have actual arguments via arguments_
+
+  // TODO: implicitly declared procedure may not have any information about
+  // its dummy args. Handle this case.
+
+  // Don't change anything about actual or dummy arguments, except for
+  // computing copy-in/copy-out information. If detect something wrong with
+  // the arguments, stop processing and let semantic analysis generate the
+  // error messages.
+  size_t index{0};
+  std::set<std::string> processedKeywords;
+  bool seenKeyword{false};
+  for (auto &actual : arguments_) {
+    if (!actual) {
+      continue;
+    }
+    if (index >= procInfo->dummyArguments.size()) {
+      // More actual arguments than dummy arguments. Semantic analysis will
+      // deal with the error.
+      return;
+    }
+    if (actual->keyword()) {
+      seenKeyword = true;
+      auto actualName = actual->keyword()->ToString();
+      if (processedKeywords.find(actualName) != processedKeywords.end()) {
+        // Actual arguments with duplicate keywords. Semantic analysis will
+        // deal with the error.
+        return;
+      }
+      else {
+        processedKeywords.insert(actualName);
+
+      }
+    }
+    else if (seenKeyword) {
+      // Non-keyword actual argument after have seen at least one keyword
+      // actual argument. Semantic analysis will deal with the error.
+      return;
+    }
+    else {
+      // Positional argument processing
+    }
+
+    ++index;
+  }
 }
 
 } // namespace Fortran::evaluate
