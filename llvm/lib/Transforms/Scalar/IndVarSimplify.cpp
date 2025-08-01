@@ -155,9 +155,9 @@ class IndVarSimplify {
   bool rewriteFirstIterationLoopExitValues(Loop *L);
 
   bool linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
-                                 const SCEV *ExitCount, PHINode *IndVar,
-                                 Instruction *IncVar, const SCEV *IVLimit,
-                                 bool UsePostInc, SCEVExpander &Rewriter);
+                                 PHINode *IndVar, Instruction *IncVar,
+                                 const SCEV *IVLimit, bool UsePostInc,
+                                 SCEVExpander &Rewriter);
 
   bool sinkUnusedInvariants(Loop *L);
 
@@ -928,9 +928,8 @@ static const SCEV *getIVLimit(PHINode *IndVar, const SCEV *ExitCount,
 /// determine a loop-invariant trip count of the loop, which is actually a much
 /// broader range than just linear tests.
 bool IndVarSimplify::linearFunctionTestReplace(
-    Loop *L, BasicBlock *ExitingBB, const SCEV *ExitCount, PHINode *IndVar,
-    Instruction *IncVar, const SCEV *IVLimit, bool UsePostInc,
-    SCEVExpander &Rewriter) {
+    Loop *L, BasicBlock *ExitingBB, PHINode *IndVar, Instruction *IncVar,
+    const SCEV *IVLimit, bool UsePostInc, SCEVExpander &Rewriter) {
   assert(isLoopCounter(IndVar, L, SE));
 
   Value *CmpIndVar = UsePostInc ? IncVar : IndVar;
@@ -955,7 +954,6 @@ bool IndVarSimplify::linearFunctionTestReplace(
       BO->setHasNoSignedWrap(AR->hasNoSignedWrap());
   }
 
-  assert(ExitCount->getType()->isIntegerTy() && "exit count must be integer");
   assert(SE->isLoopInvariant(IVLimit, L) &&
          "Computed iteration count is not loop invariant!");
   Value *ExitCnt = Rewriter.expandCodeFor(IVLimit, IVLimit->getType(),
@@ -1027,7 +1025,7 @@ bool IndVarSimplify::linearFunctionTestReplace(
                     << "       op:\t" << (P == ICmpInst::ICMP_NE ? "!=" : "==")
                     << "\n"
                     << "      RHS:\t" << *ExitCnt << "\n"
-                    << "ExitCount:\t" << *ExitCount << "\n"
+                    << "ExitCount:\t" << *ExitCnt << "\n"
                     << "  was: " << *BI->getCondition() << "\n");
 
   Value *Cond = Builder.CreateICmp(P, CmpIndVar, ExitCnt, "exitcond");
@@ -1985,9 +1983,8 @@ bool IndVarSimplify::run(Loop *L) {
       if (!Rewriter.isSafeToExpand(IVLimit))
         continue;
 
-      Changed |=
-          linearFunctionTestReplace(L, ExitingBB, ExitCount, IndVar, IncVar,
-                                    IVLimit, UsePostInc, Rewriter);
+      Changed |= linearFunctionTestReplace(L, ExitingBB, IndVar, IncVar,
+                                           IVLimit, UsePostInc, Rewriter);
     }
   }
   // Clear the rewriter cache, because values that are in the rewriter's cache
