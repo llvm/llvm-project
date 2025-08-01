@@ -646,55 +646,6 @@ def Vector_DeinterleaveOp :
       }];
     }
 
-def Vector_ExtractElementOp :
-  Vector_Op<"extractelement", [Pure,
-     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
-     TypesMatchWith<"result type matches element type of vector operand",
-                    "vector", "result",
-                    "::llvm::cast<VectorType>($_self).getElementType()">]>,
-    Arguments<(ins AnyVectorOfAnyRank:$vector,
-                   Optional<AnySignlessIntegerOrIndex>:$position)>,
-    Results<(outs AnyType:$result)> {
-  let summary = "extractelement operation";
-  let description = [{
-    Note: This operation is deprecated. Please use vector.extract insert.
-
-    Takes a 0-D or 1-D vector and a optional dynamic index position and
-    extracts the scalar at that position.
-
-    Note that this instruction resembles vector.extract, but is restricted to
-    0-D and 1-D vectors.
-    If the vector is 0-D, the position must be std::nullopt.
-
-
-    It is meant to be closer to LLVM's version:
-    https://llvm.org/docs/LangRef.html#extractelement-instruction
-
-    Example:
-
-    ```mlir
-    %c = arith.constant 15 : i32
-    %1 = vector.extractelement %0[%c : i32]: vector<16xf32>
-    %2 = vector.extractelement %z[]: vector<f32>
-    ```
-  }];
-  let assemblyFormat = [{
-    $vector `[` ($position^ `:` type($position))? `]` attr-dict `:` type($vector)
-  }];
-
-  let builders = [
-    // 0-D builder.
-    OpBuilder<(ins "Value":$source)>,
-  ];
-  let extraClassDeclaration = [{
-    VectorType getSourceVectorType() {
-      return ::llvm::cast<VectorType>(getVector().getType());
-    }
-  }];
-  let hasVerifier = 1;
-  let hasFolder = 1;
-}
-
 def Vector_ExtractOp :
   Vector_Op<"extract", [Pure,
      DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
@@ -888,57 +839,6 @@ def Vector_FromElementsOp : Vector_Op<"from_elements", [
   let assemblyFormat = "$elements attr-dict `:` type($dest)";
   let hasFolder = 1;
   let hasCanonicalizer = 1;
-}
-
-def Vector_InsertElementOp :
-  Vector_Op<"insertelement", [Pure,
-     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
-     TypesMatchWith<"source operand type matches element type of result",
-                    "result", "source",
-                    "::llvm::cast<VectorType>($_self).getElementType()">,
-     AllTypesMatch<["dest", "result"]>]>,
-     Arguments<(ins AnyType:$source, AnyVectorOfAnyRank:$dest,
-                    Optional<AnySignlessIntegerOrIndex>:$position)>,
-     Results<(outs AnyVectorOfAnyRank:$result)> {
-  let summary = "insertelement operation";
-  let description = [{
-    Note: This operation is deprecated. Please use vector.insert instead.
-
-    Takes a scalar source, a 0-D or 1-D destination vector and a dynamic index
-    position and inserts the source into the destination at the proper position.
-
-    Note that this instruction resembles vector.insert, but is restricted to 0-D
-    and 1-D vectors.
-
-    It is meant to be closer to LLVM's version:
-    https://llvm.org/docs/LangRef.html#insertelement-instruction
-
-    Example:
-
-    ```mlir
-    %c = arith.constant 15 : i32
-    %f = arith.constant 0.0f : f32
-    %1 = vector.insertelement %f, %0[%c : i32]: vector<16xf32>
-    %2 = vector.insertelement %f, %z[]: vector<f32>
-    ```
-  }];
-  let assemblyFormat = [{
-    $source `,` $dest `[` ($position^ `:` type($position))? `]`  attr-dict `:`
-    type($result)
-  }];
-
-  let builders = [
-    // 0-D builder.
-    OpBuilder<(ins "Value":$source, "Value":$dest)>,
-  ];
-  let extraClassDeclaration = [{
-    Type getSourceType() { return getSource().getType(); }
-    VectorType getDestVectorType() {
-      return ::llvm::cast<VectorType>(getDest().getType());
-    }
-  }];
-  let hasVerifier = 1;
-  let hasFolder = 1;
 }
 
 def Vector_InsertOp :
@@ -1809,12 +1709,42 @@ def Vector_LoadOp : Vector_Op<"load", [
     ```mlir
     %result = vector.load %memref[%c0] : memref<7xf32>, vector<8xf32>
     ```
+
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    load operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
   }];
 
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
       [MemRead]>:$base,
       Variadic<Index>:$indices,
-      DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal);
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
+      ConfinedAttr<OptionalAttr<I64Attr>,
+                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment);
+
+  let builders = [
+    OpBuilder<(ins "VectorType":$resultType,
+                   "Value":$base,
+                   "ValueRange":$indices,
+                   CArg<"bool", "false">:$nontemporal,
+                   CArg<"uint64_t", "0">:$alignment), [{
+      return build($_builder, $_state, resultType, base, indices, nontemporal,
+                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                                    nullptr);
+    }]>,
+    OpBuilder<(ins "TypeRange":$resultTypes,
+                   "Value":$base,
+                   "ValueRange":$indices,
+                   CArg<"bool", "false">:$nontemporal,
+                   CArg<"uint64_t", "0">:$alignment), [{
+      return build($_builder, $_state, resultTypes, base, indices, nontemporal,
+                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                                    nullptr);
+    }]>
+  ];
+
   let results = (outs AnyVectorOfAnyRank:$result);
 
   let extraClassDeclaration = [{
@@ -1895,6 +1825,12 @@ def Vector_StoreOp : Vector_Op<"store", [
     ```mlir
     vector.store %valueToStore, %memref[%c0] : memref<7xf32>, vector<8xf32>
     ```
+
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    store operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
   }];
 
   let arguments = (ins
@@ -1902,8 +1838,21 @@ def Vector_StoreOp : Vector_Op<"store", [
       Arg<AnyMemRef, "the reference to store to",
       [MemWrite]>:$base,
       Variadic<Index>:$indices,
-      DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal
-  );
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
+      ConfinedAttr<OptionalAttr<I64Attr>,
+                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment);
+
+  let builders = [
+    OpBuilder<(ins "Value":$valueToStore,
+                   "Value":$base,
+                   "ValueRange":$indices,
+                   CArg<"bool", "false">:$nontemporal,
+                   CArg<"uint64_t", "0">:$alignment), [{
+      return build($_builder, $_state, valueToStore, base, indices, nontemporal,
+                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                                    nullptr);
+    }]>
+  ];
 
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -2646,6 +2595,7 @@ def Vector_MaskOp : Vector_Op<"mask", [
 
 def Vector_TransposeOp :
   Vector_Op<"transpose", [Pure,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
     PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]> {
@@ -2789,124 +2739,6 @@ def Vector_PrintOp :
 }
 
 //===----------------------------------------------------------------------===//
-// Ops used for supporting progressive lowering and conversion type changes.
-// The Ops are typically not used directly by higher level dialects, but are
-// used by intra-dialect rewriting rules to bring vector operations closer
-// to the hardware ISA.
-//===----------------------------------------------------------------------===//
-
-/// Vector dialect matrix multiplication op that operates on flattened 1-D
-/// MLIR vectors. This is the counterpart of llvm.matrix.multiply in MLIR.
-/// This may seem redundant with vector.contract but it serves the purposes of
-/// more progressive lowering and localized type conversion on the path:
-///   `vector<...x...xf32> -> vector<...xf32> -> !llvm<... x float>`.
-def Vector_MatmulOp : Vector_Op<"matrix_multiply", [Pure,
-        PredOpTrait<"lhs operand and result have same element type",
-                    TCresVTEtIsSameAsOpBase<0, 0>>,
-        PredOpTrait<"rhs operand and result have same element type",
-                    TCresVTEtIsSameAsOpBase<0, 1>>]>,
-      Arguments<(
-        // TODO: tighten vector element types that make sense.
-        ins FixedVectorOfRankAndType<[1],
-              [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$lhs,
-            FixedVectorOfRankAndType<[1],
-              [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$rhs,
-            I32Attr:$lhs_rows, I32Attr:$lhs_columns, I32Attr:$rhs_columns)>,
-      Results<(
-        outs FixedVectorOfRankAndType<[1],
-               [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$res)>
-{
-  let summary = "Vector matrix multiplication op that operates on flattened 1-D"
-    " MLIR vectors";
-  let description = [{
-    This is the counterpart of llvm.matrix.multiply in MLIR. It serves the
-    purposes of more progressive lowering and localized type conversion.
-    Higher levels typically lower matrix multiplications into 'vector.contract'
-    operations. Subsequent rewriting rule progressively lower these operations
-    into 'vector.matrix_multiply' operations to bring the operations closer
-    to the hardware ISA.
-
-    The ‘vector.matrix_multiply’ op treats `lhs` as matrix with <lhs_rows> rows
-    and <lhs_columns> columns, `rhs` as matrix with <lhs_columns> rows and
-    <rhs_columns> and multiplies them. The result matrix is returned embedded in
-    the result vector.
-
-    Note, the corresponding LLVM intrinsic, `@llvm.matrix.multiply.*`, does not
-    support scalable vectors. Hence, this Op is only available for fixed-width
-    vectors. Also see:
-
-    http://llvm.org/docs/LangRef.html#llvm-matrix-multiply-intrinsic
-
-    Example:
-
-    ```mlir
-    %C = vector.matrix_multiply %A, %B
-      { lhs_rows = 4: i32, lhs_columns = 16: i32 , rhs_columns = 3: i32 } :
-      (vector<64xf64>, vector<48xf64>) -> vector<12xf64>
-    ```
-  }];
-  let builders = [
-   OpBuilder<(ins "Value":$lhs, "Value":$rhs, "unsigned":$lhsRows,
-     "unsigned":$lhsColumns, "unsigned":$rhsColumns),
-   [{
-     $_state.addOperands({lhs, rhs});
-     $_state.addAttribute("lhs_rows",$_builder.getI32IntegerAttr(lhsRows));
-     $_state.addAttribute("lhs_columns",$_builder.getI32IntegerAttr(lhsColumns));
-     $_state.addAttribute("rhs_columns",$_builder.getI32IntegerAttr(rhsColumns));
-     $_state.addTypes(VectorType::get(lhsRows * rhsColumns,
-       ::llvm::cast<VectorType>(lhs.getType()).getElementType()));
-   }]>,
-  ];
-  let assemblyFormat = "$lhs `,` $rhs attr-dict "
-    "`:` `(` type($lhs) `,` type($rhs) `)` `->` type($res)";
-}
-
-/// Vector dialect matrix transposition op that operates on flattened 1-D
-/// MLIR vectors. This is the counterpart of llvm.matrix.transpose in MLIR.
-/// This may seem redundant with vector.transpose but it serves the purposes of
-/// more progressive lowering and localized type conversion on the path:
-///   `vector<...x...xf32> -> vector<...xf32> -> !llvm<... x float>`.
-def Vector_FlatTransposeOp : Vector_Op<"flat_transpose", [Pure,
-  PredOpTrait<"source operand and result have same element type",
-                 TCresVTEtIsSameAsOpBase<0, 0>>]>,
-    Arguments<(
-      // TODO: tighten vector element types that make sense.
-      ins FixedVectorOfRankAndType<[1],
-            [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$matrix,
-          I32Attr:$rows, I32Attr:$columns)>,
-    Results<(
-      outs FixedVectorOfRankAndType<[1],
-             [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$res)> {
-  let summary = "Vector matrix transposition on flattened 1-D MLIR vectors";
-  let description = [{
-    This is the counterpart of llvm.matrix.transpose in MLIR. It serves
-    the purposes of more progressive lowering and localized type conversion.
-    Higher levels typically lower matrix transpositions into 'vector.transpose'
-    operations. Subsequent rewriting rule progressively lower these operations
-    into 'vector.flat_transpose' operations to bring the operations closer
-    to the hardware ISA.
-
-    The `vector.flat_transpose` op treats the 1-D input `matrix` as
-    a 2-D matrix with <rows> rows and <columns> columns, and returns the
-    transposed matrix in flattened form in 'res'.
-
-    Note, the corresponding LLVM intrinsic, `@llvm.matrix.transpose.*`, does not
-    support scalable vectors. Hence, this Op is only available for fixed-width
-    vectors. Also see:
-
-    http://llvm.org/docs/LangRef.html#llvm-matrix-transpose-intrinsic
-
-    Example:
-
-    ```mlir
-    %1 = vector.flat_transpose %0 {columns = 4 : i32, rows = 4 : i32}
-       : vector<16xf32> -> vector<16xf32>
-    ```
-  }];
-  let assemblyFormat = "$matrix attr-dict `:` type($matrix) `->` type($res)";
-}
-
-//===----------------------------------------------------------------------===//
 // SplatOp
 //===----------------------------------------------------------------------===//
 
@@ -2919,6 +2751,8 @@ def Vector_SplatOp : Vector_Op<"splat", [
   ]> {
   let summary = "vector splat or broadcast operation";
   let description = [{
+    Note: This operation is deprecated. Please use vector.broadcast.
+
     Broadcast the operand to all elements of the result vector. The type of the
     operand must match the element type of the vector type.
 
@@ -2927,6 +2761,13 @@ def Vector_SplatOp : Vector_Op<"splat", [
     ```mlir
     %s = arith.constant 10.1 : f32
     %t = vector.splat %s : vector<8x16xf32>
+    ```
+
+    This operation is deprecated, the preferred representation of the above is:
+
+    ```mlir
+    %s = arith.constant 10.1 : f32
+    %t = vector.broadcast %s : f32 to vector<8x16xf32>
     ```
   }];
 
@@ -3036,7 +2877,10 @@ def Vector_ScanOp :
 // VectorStepOp
 //===----------------------------------------------------------------------===//
 
-def Vector_StepOp : Vector_Op<"step", [Pure]> {
+def Vector_StepOp : Vector_Op<"step", [
+    Pure,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>
+  ]> {
   let summary = "A linear sequence of values from 0 to N";
   let description = [{
     A `step` operation produces an index vector, i.e. a 1-D vector of values of

@@ -62,6 +62,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -315,18 +316,11 @@ calculateFragment(DILocalVariable *Variable,
   return UseFrag;
 }
 
-static DebugVariable getAggregateVariable(DbgVariableIntrinsic *DVI) {
-  return DebugVariable(DVI->getVariable(), std::nullopt,
-                       DVI->getDebugLoc().getInlinedAt());
-}
 static DebugVariable getAggregateVariable(DbgVariableRecord *DVR) {
   return DebugVariable(DVR->getVariable(), std::nullopt,
                        DVR->getDebugLoc().getInlinedAt());
 }
 
-/// Helpers for handling new and old debug info modes in migrateDebugInfo.
-/// These overloads unwrap a DbgInstPtr {Instruction* | DbgRecord*} union based
-/// on the \p Unused parameter type.
 DbgVariableRecord *UnwrapDbgInstPtr(DbgInstPtr P, DbgVariableRecord *Unused) {
   (void)Unused;
   return static_cast<DbgVariableRecord *>(cast<DbgRecord *>(P));
@@ -376,9 +370,6 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
   /// Map of aggregate variables to their fragment associated with OldAlloca.
   DenseMap<DebugVariable, std::optional<DIExpression::FragmentInfo>>
       BaseFragments;
-  for (auto *DAI : at::getAssignmentMarkers(OldAlloca))
-    BaseFragments[getAggregateVariable(DAI)] =
-        DAI->getExpression()->getFragmentInfo();
   for (auto *DVR : at::getDVRAssignmentMarkers(OldAlloca))
     BaseFragments[getAggregateVariable(DVR)] =
         DVR->getExpression()->getFragmentInfo();
@@ -391,7 +382,7 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
   DIBuilder DIB(*OldInst->getModule(), /*AllowUnresolved*/ false);
   assert(OldAlloca->isStaticAlloca());
 
-  auto MigrateDbgAssign = [&](auto *DbgAssign) {
+  auto MigrateDbgAssign = [&](DbgVariableRecord *DbgAssign) {
     LLVM_DEBUG(dbgs() << "      existing dbg.assign is: " << *DbgAssign
                       << "\n");
     auto *Expr = DbgAssign->getExpression();
@@ -486,7 +477,6 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     LLVM_DEBUG(dbgs() << "Created new assign: " << *NewAssign << "\n");
   };
 
-  for_each(MarkerRange, MigrateDbgAssign);
   for_each(DVRAssignMarkerRange, MigrateDbgAssign);
 }
 
@@ -534,9 +524,10 @@ class Slice {
 public:
   Slice() = default;
 
-  Slice(uint64_t BeginOffset, uint64_t EndOffset, Use *U, bool IsSplittable)
+  Slice(uint64_t BeginOffset, uint64_t EndOffset, Use *U, bool IsSplittable,
+        Value *ProtectedFieldDisc)
       : BeginOffset(BeginOffset), EndOffset(EndOffset),
-        UseAndIsSplittable(U, IsSplittable) {}
+        UseAndIsSplittable(U, IsSplittable), ProtectedFieldDisc(ProtectedFieldDisc) {}
 
   uint64_t beginOffset() const { return BeginOffset; }
   uint64_t endOffset() const { return EndOffset; }
@@ -548,6 +539,10 @@ public:
 
   bool isDead() const { return getUse() == nullptr; }
   void kill() { UseAndIsSplittable.setPointer(nullptr); }
+
+  // When this access is via an llvm.protected.field.ptr intrinsic, contains
+  // the second argument to the intrinsic, the discriminator.
+  Value *ProtectedFieldDisc;
 
   /// Support for ordering ranges.
   ///
@@ -642,6 +637,9 @@ public:
   /// Access the dead users for this alloca.
   ArrayRef<Instruction *> getDeadUsers() const { return DeadUsers; }
 
+  /// Access the PFP users for this alloca.
+  ArrayRef<IntrinsicInst *> getPFPUsers() const { return PFPUsers; }
+
   /// Access Uses that should be dropped if the alloca is promotable.
   ArrayRef<Use *> getDeadUsesIfPromotable() const {
     return DeadUseIfPromotable;
@@ -701,6 +699,10 @@ private:
   /// all these instructions can simply be removed and replaced with poison as
   /// they come from outside of the allocated space.
   SmallVector<Instruction *, 8> DeadUsers;
+
+  /// Users that are llvm.protected.field.ptr intrinsics. These will be RAUW'd
+  /// to their first argument if we rewrite the alloca.
+  SmallVector<IntrinsicInst *, 0> PFPUsers;
 
   /// Uses which will become dead if can promote the alloca.
   SmallVector<Use *, 8> DeadUseIfPromotable;
@@ -1075,7 +1077,8 @@ private:
       EndOffset = AllocSize;
     }
 
-    AS.Slices.push_back(Slice(BeginOffset, EndOffset, U, IsSplittable));
+    AS.Slices.push_back(
+        Slice(BeginOffset, EndOffset, U, IsSplittable, ProtectedFieldDisc));
   }
 
   void visitBitCastInst(BitCastInst &BC) {
@@ -1284,6 +1287,9 @@ private:
       enqueueUsers(II);
       return;
     }
+
+    if (II.getIntrinsicID() == Intrinsic::protected_field_ptr)
+      AS.PFPUsers.push_back(&II);
 
     Base::visitIntrinsicInst(II);
   }
@@ -4693,7 +4699,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
       NewSlices.push_back(
           Slice(BaseOffset + PartOffset, BaseOffset + PartOffset + PartSize,
                 &PLoad->getOperandUse(PLoad->getPointerOperandIndex()),
-                /*IsSplittable*/ false));
+                /*IsSplittable*/ false, nullptr));
       LLVM_DEBUG(dbgs() << "    new slice [" << NewSlices.back().beginOffset()
                         << ", " << NewSlices.back().endOffset()
                         << "): " << *PLoad << "\n");
@@ -4849,10 +4855,12 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
                                  LLVMContext::MD_access_group});
 
       // Now build a new slice for the alloca.
+      // ProtectedFieldDisc==nullptr is a lie, but it doesn't matter because we
+      // already determined that all accesses are consistent.
       NewSlices.push_back(
           Slice(BaseOffset + PartOffset, BaseOffset + PartOffset + PartSize,
                 &PStore->getOperandUse(PStore->getPointerOperandIndex()),
-                /*IsSplittable*/ false));
+                /*IsSplittable*/ false, nullptr));
       LLVM_DEBUG(dbgs() << "    new slice [" << NewSlices.back().beginOffset()
                         << ", " << NewSlices.back().endOffset()
                         << "): " << *PStore << "\n");
@@ -5119,34 +5127,11 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
 }
 
 // There isn't a shared interface to get the "address" parts out of a
-// dbg.declare and dbg.assign, so provide some wrappers now for
-// both debug intrinsics and records.
-const Value *getAddress(const DbgVariableIntrinsic *DVI) {
-  if (const auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
-    return DAI->getAddress();
-  return cast<DbgDeclareInst>(DVI)->getAddress();
-}
-
-const Value *getAddress(const DbgVariableRecord *DVR) {
-  return DVR->getAddress();
-}
-
-bool isKillAddress(const DbgVariableIntrinsic *DVI) {
-  if (const auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
-    return DAI->isKillAddress();
-  return cast<DbgDeclareInst>(DVI)->isKillLocation();
-}
-
+// dbg.declare and dbg.assign, so provide some wrappers.
 bool isKillAddress(const DbgVariableRecord *DVR) {
   if (DVR->getType() == DbgVariableRecord::LocationType::Assign)
     return DVR->isKillAddress();
   return DVR->isKillLocation();
-}
-
-const DIExpression *getAddressExpression(const DbgVariableIntrinsic *DVI) {
-  if (const auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
-    return DAI->getAddressExpression();
-  return cast<DbgDeclareInst>(DVI)->getExpression();
 }
 
 const DIExpression *getAddressExpression(const DbgVariableRecord *DVR) {
@@ -5234,66 +5219,6 @@ static DIExpression *createOrReplaceFragment(const DIExpression *Expr,
     Ops.push_back(Frag.SizeInBits);
   }
   return DIExpression::get(Expr->getContext(), Ops);
-}
-
-/// Insert a new dbg.declare.
-/// \p Orig Original to copy debug loc and variable from.
-/// \p NewAddr Location's new base address.
-/// \p NewAddrExpr New expression to apply to address.
-/// \p BeforeInst Insert position.
-/// \p NewFragment New fragment (absolute, non-relative).
-/// \p BitExtractAdjustment Offset to apply to any extract_bits op.
-static void
-insertNewDbgInst(DIBuilder &DIB, DbgDeclareInst *Orig, AllocaInst *NewAddr,
-                 DIExpression *NewAddrExpr, Instruction *BeforeInst,
-                 std::optional<DIExpression::FragmentInfo> NewFragment,
-                 int64_t BitExtractAdjustment) {
-  if (NewFragment)
-    NewAddrExpr = createOrReplaceFragment(NewAddrExpr, *NewFragment,
-                                          BitExtractAdjustment);
-  if (!NewAddrExpr)
-    return;
-
-  DIB.insertDeclare(NewAddr, Orig->getVariable(), NewAddrExpr,
-                    Orig->getDebugLoc(), BeforeInst->getIterator());
-}
-
-/// Insert a new dbg.assign.
-/// \p Orig Original to copy debug loc, variable, value and value expression
-///    from.
-/// \p NewAddr Location's new base address.
-/// \p NewAddrExpr New expression to apply to address.
-/// \p BeforeInst Insert position.
-/// \p NewFragment New fragment (absolute, non-relative).
-/// \p BitExtractAdjustment Offset to apply to any extract_bits op.
-static void
-insertNewDbgInst(DIBuilder &DIB, DbgAssignIntrinsic *Orig, AllocaInst *NewAddr,
-                 DIExpression *NewAddrExpr, Instruction *BeforeInst,
-                 std::optional<DIExpression::FragmentInfo> NewFragment,
-                 int64_t BitExtractAdjustment) {
-  // DIBuilder::insertDbgAssign will insert the #dbg_assign after NewAddr.
-  (void)BeforeInst;
-
-  // A dbg.assign puts fragment info in the value expression only. The address
-  // expression has already been built: NewAddrExpr.
-  DIExpression *NewFragmentExpr = Orig->getExpression();
-  if (NewFragment)
-    NewFragmentExpr = createOrReplaceFragment(NewFragmentExpr, *NewFragment,
-                                              BitExtractAdjustment);
-  if (!NewFragmentExpr)
-    return;
-
-  // Apply a DIAssignID to the store if it doesn't already have it.
-  if (!NewAddr->hasMetadata(LLVMContext::MD_DIAssignID)) {
-    NewAddr->setMetadata(LLVMContext::MD_DIAssignID,
-                         DIAssignID::getDistinct(NewAddr->getContext()));
-  }
-
-  Instruction *NewAssign = cast<Instruction *>(DIB.insertDbgAssign(
-      NewAddr, Orig->getValue(), Orig->getVariable(), NewFragmentExpr, NewAddr,
-      NewAddrExpr, Orig->getDebugLoc()));
-  LLVM_DEBUG(dbgs() << "Created new assign intrinsic: " << *NewAssign << "\n");
-  (void)NewAssign;
 }
 
 /// Insert a new DbgRecord.
@@ -5457,12 +5382,12 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 
   // Migrate debug information from the old alloca to the new alloca(s)
   // and the individual partitions.
-  auto MigrateOne = [&](auto *DbgVariable) {
+  auto MigrateOne = [&](DbgVariableRecord *DbgVariable) {
     // Can't overlap with undef memory.
     if (isKillAddress(DbgVariable))
       return;
 
-    const Value *DbgPtr = getAddress(DbgVariable);
+    const Value *DbgPtr = DbgVariable->getAddress();
     DIExpression::FragmentInfo VarFrag =
         DbgVariable->getFragmentOrEntireVariable();
     // Get the address expression constant offset if one exists and the ops
@@ -5543,7 +5468,6 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
         if (SameVariableFragment(OldDII, DbgVariable))
           OldDII->eraseFromParent();
       };
-      for_each(findDbgDeclares(Fragment.Alloca), RemoveOne);
       for_each(findDVRDeclares(Fragment.Alloca), RemoveOne);
       for_each(findDVRValues(Fragment.Alloca), RemoveOne);
       insertNewDbgInst(DIB, DbgVariable, Fragment.Alloca, NewExpr, &AI,
@@ -5553,10 +5477,8 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 
   // Migrate debug information from the old alloca to the new alloca(s)
   // and the individual partitions.
-  for_each(findDbgDeclares(&AI), MigrateOne);
   for_each(findDVRDeclares(&AI), MigrateOne);
   for_each(findDVRValues(&AI), MigrateOne);
-  for_each(at::getAssignmentMarkers(&AI), MigrateOne);
   for_each(at::getDVRAssignmentMarkers(&AI), MigrateOne);
 
   return Changed;
@@ -5715,6 +5637,32 @@ SROA::runOnAlloca(AllocaInst &AI) {
     return {Changed, CFGChanged};
   }
 
+  for (auto &P : AS.partitions()) {
+    std::optional<Value *> ProtectedFieldDisc;
+    // For now, we can't split if a field is accessed both via protected
+    // field and not.
+    for (Slice &S : P) {
+      if (auto *II = dyn_cast<IntrinsicInst>(S.getUse()->getUser()))
+        if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
+            II->getIntrinsicID() == Intrinsic::lifetime_end)
+          continue;
+      if (!ProtectedFieldDisc)
+        ProtectedFieldDisc = S.ProtectedFieldDisc;
+      if (*ProtectedFieldDisc != S.ProtectedFieldDisc)
+        return {Changed, CFGChanged};
+    }
+    for (Slice *S : P.splitSliceTails()) {
+      if (auto *II = dyn_cast<IntrinsicInst>(S->getUse()->getUser()))
+        if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
+            II->getIntrinsicID() == Intrinsic::lifetime_end)
+          continue;
+      if (!ProtectedFieldDisc)
+        ProtectedFieldDisc = S->ProtectedFieldDisc;
+      if (*ProtectedFieldDisc != S->ProtectedFieldDisc)
+        return {Changed, CFGChanged};
+    }
+  }
+
   // Delete all the dead users of this alloca before splitting and rewriting it.
   for (Instruction *DeadUser : AS.getDeadUsers()) {
     // Free up everything used by this instruction.
@@ -5730,6 +5678,12 @@ SROA::runOnAlloca(AllocaInst &AI) {
   }
   for (Use *DeadOp : AS.getDeadOperands()) {
     clobberUse(*DeadOp);
+    Changed = true;
+  }
+  for (IntrinsicInst *PFPUser : AS.getPFPUsers()) {
+    PFPUser->replaceAllUsesWith(PFPUser->getArgOperand(0));
+
+    DeadInsts.push_back(PFPUser);
     Changed = true;
   }
 
@@ -5777,8 +5731,6 @@ bool SROA::deleteDeadInstructions(
     // not be able to find it.
     if (AllocaInst *AI = dyn_cast<AllocaInst>(I)) {
       DeletedAllocas.insert(AI);
-      for (DbgDeclareInst *OldDII : findDbgDeclares(AI))
-        OldDII->eraseFromParent();
       for (DbgVariableRecord *OldDII : findDVRDeclares(AI))
         OldDII->eraseFromParent();
     }

@@ -16,7 +16,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/EndianStream.h"
@@ -276,7 +276,7 @@ public:
                                uint64_t SectionDataSize, uint32_t MaxProt,
                                uint32_t InitProt);
 
-  void writeSection(const MCAssembler &Asm, const MCSection &Sec,
+  void writeSection(const MCAssembler &Asm, const MCSectionMachO &Sec,
                     uint64_t VMAddr, uint64_t FileOffset, unsigned Flags,
                     uint64_t RelocationsStart, unsigned NumRelocations);
 

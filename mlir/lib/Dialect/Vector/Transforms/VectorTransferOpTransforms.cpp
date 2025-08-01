@@ -25,11 +25,9 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 
 #define DEBUG_TYPE "vector-transfer-opt"
-
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
 
 using namespace mlir;
 
@@ -88,8 +86,7 @@ bool TransferOptimization::isReachable(Operation *start, Operation *dest) {
 /// transfer_write is dead if all reads that can be reached from the potentially
 /// dead transfer_write are dominated by the overwriting transfer_write.
 void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
-  LLVM_DEBUG(DBGS() << "Candidate for dead store: " << *write.getOperation()
-                    << "\n");
+  LDBG() << "Candidate for dead store: " << *write.getOperation();
   llvm::SmallVector<Operation *, 8> blockingAccesses;
   Operation *firstOverwriteCandidate = nullptr;
   Value source = memref::skipViewLikeOps(cast<MemrefValue>(write.getBase()));
@@ -150,13 +147,12 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
         !isReachable(writeAncestor, accessAncestor))
       continue;
     if (!dominators.dominates(firstOverwriteCandidate, accessAncestor)) {
-      LLVM_DEBUG(DBGS() << "Store may not be dead due to op: "
-                        << *accessAncestor << "\n");
+      LDBG() << "Store may not be dead due to op: " << *accessAncestor;
       return;
     }
   }
-  LLVM_DEBUG(DBGS() << "Found dead store: " << *write.getOperation()
-                    << " overwritten by: " << *firstOverwriteCandidate << "\n");
+  LDBG() << "Found dead store: " << *write.getOperation()
+         << " overwritten by: " << *firstOverwriteCandidate;
   opToErase.push_back(write.getOperation());
 }
 
@@ -174,8 +170,7 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
 void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
   if (read.hasOutOfBoundsDim())
     return;
-  LLVM_DEBUG(DBGS() << "Candidate for Forwarding: " << *read.getOperation()
-                    << "\n");
+  LDBG() << "Candidate for Forwarding: " << *read.getOperation();
   SmallVector<Operation *, 8> blockingWrites;
   vector::TransferWriteOp lastwrite = nullptr;
   Value source = memref::skipViewLikeOps(cast<MemrefValue>(read.getBase()));
@@ -230,14 +225,13 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
     if (writeAncestor == nullptr || !isReachable(writeAncestor, readAncestor))
       continue;
     if (!postDominators.postDominates(lastwrite, write)) {
-      LLVM_DEBUG(DBGS() << "Fail to do write to read forwarding due to op: "
-                        << *write << "\n");
+      LDBG() << "Fail to do write to read forwarding due to op: " << *write;
       return;
     }
   }
 
-  LLVM_DEBUG(DBGS() << "Forward value from " << *lastwrite.getOperation()
-                    << " to: " << *read.getOperation() << "\n");
+  LDBG() << "Forward value from " << *lastwrite.getOperation()
+         << " to: " << *read.getOperation();
   read.replaceAllUsesWith(lastwrite.getVector());
   opToErase.push_back(read.getOperation());
 }
@@ -286,8 +280,8 @@ static Value rankReducingSubviewDroppingUnitDims(PatternRewriter &rewriter,
   if (resultType.canonicalizeStridedLayout() ==
       inputType.canonicalizeStridedLayout())
     return input;
-  return rewriter.create<memref::SubViewOp>(loc, resultType, input, offsets,
-                                            sizes, strides);
+  return memref::SubViewOp::create(rewriter, loc, resultType, input, offsets,
+                                   sizes, strides);
 }
 
 /// Returns the number of dims that aren't unit dims.
@@ -330,8 +324,8 @@ createMaskDropNonScalableUnitDims(PatternRewriter &rewriter, Location loc,
     }
     reducedOperands.push_back(operand);
   }
-  return rewriter
-      .create<vector::CreateMaskOp>(loc, reducedType, reducedOperands)
+  return vector::CreateMaskOp::create(rewriter, loc, reducedType,
+                                      reducedOperands)
       .getResult();
 }
 
@@ -395,13 +389,13 @@ class TransferReadDropUnitDimsPattern
 
     Value reducedShapeSource =
         rankReducingSubviewDroppingUnitDims(rewriter, loc, source);
-    Value c0 = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
     SmallVector<Value> zeros(reducedRank, c0);
     auto identityMap = rewriter.getMultiDimIdentityMap(reducedRank);
     SmallVector<bool> inBounds(reducedVectorType.getRank(), true);
-    Operation *newTransferReadOp = rewriter.create<vector::TransferReadOp>(
-        loc, reducedVectorType, reducedShapeSource, zeros, identityMap,
-        transferReadOp.getPadding(), maskOp,
+    Operation *newTransferReadOp = vector::TransferReadOp::create(
+        rewriter, loc, reducedVectorType, reducedShapeSource, zeros,
+        identityMap, transferReadOp.getPadding(), maskOp,
         rewriter.getBoolArrayAttr(inBounds));
 
     if (maskingOp) {
@@ -477,15 +471,15 @@ class TransferWriteDropUnitDimsPattern
     }
     Value reducedShapeSource =
         rankReducingSubviewDroppingUnitDims(rewriter, loc, source);
-    Value c0 = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
     SmallVector<Value> zeros(reducedRank, c0);
     auto identityMap = rewriter.getMultiDimIdentityMap(reducedRank);
     SmallVector<bool> inBounds(reducedVectorType.getRank(), true);
     auto shapeCastSrc = rewriter.createOrFold<vector::ShapeCastOp>(
         loc, reducedVectorType, vector);
-    Operation *newXferWrite = rewriter.create<vector::TransferWriteOp>(
-        loc, Type(), shapeCastSrc, reducedShapeSource, zeros, identityMap,
-        maskOp, rewriter.getBoolArrayAttr(inBounds));
+    Operation *newXferWrite = vector::TransferWriteOp::create(
+        rewriter, loc, Type(), shapeCastSrc, reducedShapeSource, zeros,
+        identityMap, maskOp, rewriter.getBoolArrayAttr(inBounds));
 
     if (maskingOp) {
       auto shapeCastMask = rewriter.createOrFold<vector::ShapeCastOp>(
@@ -520,7 +514,7 @@ static Value collapseInnerDims(PatternRewriter &rewriter, mlir::Location loc,
   for (int64_t i = firstDimToCollapse; i < inputType.getRank(); ++i)
     collapsedIndices.push_back(i);
   reassociation.push_back(collapsedIndices);
-  return rewriter.create<memref::CollapseShapeOp>(loc, input, reassociation);
+  return memref::CollapseShapeOp::create(rewriter, loc, input, reassociation);
 }
 
 /// Returns the new indices that collapses the inner dimensions starting from
@@ -559,7 +553,7 @@ static SmallVector<Value> getCollapsedIndices(RewriterBase &rewriter,
   // one would get the following offset:
   //    %offset = %arg0 * 43
   OpFoldResult collapsedOffset =
-      rewriter.create<arith::ConstantIndexOp>(loc, 0).getResult();
+      arith::ConstantIndexOp::create(rewriter, loc, 0).getResult();
 
   auto collapsedStrides = computeSuffixProduct(
       ArrayRef<int64_t>(shape.begin() + firstDimToCollapse, shape.end()));
@@ -573,8 +567,8 @@ static SmallVector<Value> getCollapsedIndices(RewriterBase &rewriter,
   if (auto value = dyn_cast<Value>(collapsedOffset)) {
     indicesAfterCollapsing.push_back(value);
   } else {
-    indicesAfterCollapsing.push_back(rewriter.create<arith::ConstantIndexOp>(
-        loc, *getConstantIntValue(collapsedOffset)));
+    indicesAfterCollapsing.push_back(arith::ConstantIndexOp::create(
+        rewriter, loc, *getConstantIntValue(collapsedOffset)));
   }
 
   return indicesAfterCollapsing;
@@ -659,8 +653,8 @@ public:
     // 3. Create new vector.transfer_read that reads from the collapsed memref
     VectorType flatVectorType = VectorType::get({vectorType.getNumElements()},
                                                 vectorType.getElementType());
-    vector::TransferReadOp flatRead = rewriter.create<vector::TransferReadOp>(
-        loc, flatVectorType, collapsedSource, collapsedIndices,
+    vector::TransferReadOp flatRead = vector::TransferReadOp::create(
+        rewriter, loc, flatVectorType, collapsedSource, collapsedIndices,
         transferReadOp.getPadding(), collapsedMap);
     flatRead.setInBoundsAttr(rewriter.getBoolArrayAttr({true}));
 
@@ -757,10 +751,10 @@ public:
     VectorType flatVectorType = VectorType::get({vectorType.getNumElements()},
                                                 vectorType.getElementType());
     Value flatVector =
-        rewriter.create<vector::ShapeCastOp>(loc, flatVectorType, vector);
-    vector::TransferWriteOp flatWrite =
-        rewriter.create<vector::TransferWriteOp>(
-            loc, flatVector, collapsedSource, collapsedIndices, collapsedMap);
+        vector::ShapeCastOp::create(rewriter, loc, flatVectorType, vector);
+    vector::TransferWriteOp flatWrite = vector::TransferWriteOp::create(
+        rewriter, loc, flatVector, collapsedSource, collapsedIndices,
+        collapsedMap);
     flatWrite.setInBoundsAttr(rewriter.getBoolArrayAttr({true}));
 
     // 4. Replace the old transfer_write with the new one writing the
@@ -846,8 +840,8 @@ public:
       if (auto value = dyn_cast<Value>(composedIdx)) {
         newIndices[idx] = value;
       } else {
-        newIndices[idx] = rewriter.create<arith::ConstantIndexOp>(
-            extractOp.getLoc(), *getConstantIntValue(composedIdx));
+        newIndices[idx] = arith::ConstantIndexOp::create(
+            rewriter, extractOp.getLoc(), *getConstantIntValue(composedIdx));
       }
     }
     if (isa<MemRefType>(xferOp.getBase().getType())) {
@@ -883,8 +877,8 @@ class RewriteScalarWrite : public OpRewritePattern<vector::TransferWriteOp> {
     if (!xferOp.getPermutationMap().isMinorIdentity())
       return failure();
     // Only float and integer element types are supported.
-    Value scalar =
-        rewriter.create<vector::ExtractOp>(xferOp.getLoc(), xferOp.getVector());
+    Value scalar = vector::ExtractOp::create(rewriter, xferOp.getLoc(),
+                                             xferOp.getVector());
     // Construct a scalar store.
     if (isa<MemRefType>(xferOp.getBase().getType())) {
       rewriter.replaceOpWithNewOp<memref::StoreOp>(

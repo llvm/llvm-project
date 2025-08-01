@@ -5299,7 +5299,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     }
     case Intrinsic::aarch64_sve_ld1_pn_x2: {
       if (VT == MVT::nxv16i8) {
-        if (Subtarget->hasSME2())
+        if (Subtarget->hasSME2() && Subtarget->isStreaming())
           SelectContiguousMultiVectorLoad(
               Node, 2, 0, AArch64::LD1B_2Z_IMM_PSEUDO, AArch64::LD1B_2Z_PSEUDO);
         else if (Subtarget->hasSVE2p1())
@@ -5310,7 +5310,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         return;
       } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
                  VT == MVT::nxv8bf16) {
-        if (Subtarget->hasSME2())
+        if (Subtarget->hasSME2() && Subtarget->isStreaming())
           SelectContiguousMultiVectorLoad(
               Node, 2, 1, AArch64::LD1H_2Z_IMM_PSEUDO, AArch64::LD1H_2Z_PSEUDO);
         else if (Subtarget->hasSVE2p1())
@@ -5320,7 +5320,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
           break;
         return;
       } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
-        if (Subtarget->hasSME2())
+        if (Subtarget->hasSME2() && Subtarget->isStreaming())
           SelectContiguousMultiVectorLoad(
               Node, 2, 2, AArch64::LD1W_2Z_IMM_PSEUDO, AArch64::LD1W_2Z_PSEUDO);
         else if (Subtarget->hasSVE2p1())
@@ -5330,7 +5330,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
           break;
         return;
       } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
-        if (Subtarget->hasSME2())
+        if (Subtarget->hasSME2() && Subtarget->isStreaming())
           SelectContiguousMultiVectorLoad(
               Node, 2, 3, AArch64::LD1D_2Z_IMM_PSEUDO, AArch64::LD1D_2Z_PSEUDO);
         else if (Subtarget->hasSVE2p1())
@@ -5344,7 +5344,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     }
     case Intrinsic::aarch64_sve_ld1_pn_x4: {
       if (VT == MVT::nxv16i8) {
-        if (Subtarget->hasSME2())
+        if (Subtarget->hasSME2() && Subtarget->isStreaming())
           SelectContiguousMultiVectorLoad(
               Node, 4, 0, AArch64::LD1B_4Z_IMM_PSEUDO, AArch64::LD1B_4Z_PSEUDO);
         else if (Subtarget->hasSVE2p1())
@@ -5355,7 +5355,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         return;
       } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
                  VT == MVT::nxv8bf16) {
-        if (Subtarget->hasSME2())
+        if (Subtarget->hasSME2() && Subtarget->isStreaming())
           SelectContiguousMultiVectorLoad(
               Node, 4, 1, AArch64::LD1H_4Z_IMM_PSEUDO, AArch64::LD1H_4Z_PSEUDO);
         else if (Subtarget->hasSVE2p1())
@@ -5365,7 +5365,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
           break;
         return;
       } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
-        if (Subtarget->hasSME2())
+        if (Subtarget->hasSME2() && Subtarget->isStreaming())
           SelectContiguousMultiVectorLoad(
               Node, 4, 2, AArch64::LD1W_4Z_IMM_PSEUDO, AArch64::LD1W_4Z_PSEUDO);
         else if (Subtarget->hasSVE2p1())
@@ -5375,7 +5375,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
           break;
         return;
       } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
-        if (Subtarget->hasSME2())
+        if (Subtarget->hasSME2() && Subtarget->isStreaming())
           SelectContiguousMultiVectorLoad(
               Node, 4, 3, AArch64::LD1D_4Z_IMM_PSEUDO, AArch64::LD1D_4Z_PSEUDO);
         else if (Subtarget->hasSVE2p1())
@@ -5389,7 +5389,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     }
     case Intrinsic::aarch64_sve_ldnt1_pn_x2: {
       if (VT == MVT::nxv16i8) {
-        if (Subtarget->hasSME2())
+        if (Subtarget->hasSME2() && Subtarget->isStreaming())
           SelectContiguousMultiVectorLoad(Node, 2, 0,
                                           AArch64::LDNT1B_2Z_IMM_PSEUDO,
                                           AArch64::LDNT1B_2Z_PSEUDO);
@@ -5401,7 +5401,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         return;
       } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
                  VT == MVT::nxv8bf16) {
-        if (Subtarget->hasSME2())
+        if (Subtarget->hasSME2() && Subtarget->isStreaming())
           SelectContiguousMultiVectorLoad(Node, 2, 1,
                                           AArch64::LDNT1H_2Z_IMM_PSEUDO,
                                           AArch64::LDNT1H_2Z_PSEUDO);
@@ -5412,7 +5412,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
           break;
         return;
       } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
-        if (Subtarget->hasSME2())
+        if (Subtarget->hasSME2() && Subtarget->isStreaming())
           SelectContiguousMultiVectorLoad(Node, 2, 2,
                                           AArch64::LDNT1W_2Z_IMM_PSEUDO,
                                           AArch64::LDNT1W_2Z_PSEUDO);
@@ -5423,7 +5423,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
           break;
         return;
       } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
-        if (Subtarget->hasSME2())
+        if (Subtarget->hasSME2() && Subtarget->isStreaming())
           SelectContiguousMultiVectorLoad(Node, 2, 3,
                                           AArch64::LDNT1D_2Z_IMM_PSEUDO,
                                           AArch64::LDNT1D_2Z_PSEUDO);
@@ -5438,7 +5438,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     }
     case Intrinsic::aarch64_sve_ldnt1_pn_x4: {
       if (VT == MVT::nxv16i8) {
-        if (Subtarget->hasSME2())
+        if (Subtarget->hasSME2() && Subtarget->isStreaming())
           SelectContiguousMultiVectorLoad(Node, 4, 0,
                                           AArch64::LDNT1B_4Z_IMM_PSEUDO,
                                           AArch64::LDNT1B_4Z_PSEUDO);
@@ -5450,7 +5450,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         return;
       } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
                  VT == MVT::nxv8bf16) {
-        if (Subtarget->hasSME2())
+        if (Subtarget->hasSME2() && Subtarget->isStreaming())
           SelectContiguousMultiVectorLoad(Node, 4, 1,
                                           AArch64::LDNT1H_4Z_IMM_PSEUDO,
                                           AArch64::LDNT1H_4Z_PSEUDO);
@@ -5461,7 +5461,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
           break;
         return;
       } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
-        if (Subtarget->hasSME2())
+        if (Subtarget->hasSME2() && Subtarget->isStreaming())
           SelectContiguousMultiVectorLoad(Node, 4, 2,
                                           AArch64::LDNT1W_4Z_IMM_PSEUDO,
                                           AArch64::LDNT1W_4Z_PSEUDO);
@@ -5472,7 +5472,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
           break;
         return;
       } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
-        if (Subtarget->hasSME2())
+        if (Subtarget->hasSME2() && Subtarget->isStreaming())
           SelectContiguousMultiVectorLoad(Node, 4, 3,
                                           AArch64::LDNT1D_4Z_IMM_PSEUDO,
                                           AArch64::LDNT1D_4Z_PSEUDO);

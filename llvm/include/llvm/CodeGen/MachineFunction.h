@@ -515,6 +515,15 @@ public:
   struct CallSiteInfo {
     /// Vector of call argument and its forwarding register.
     SmallVector<ArgRegPair, 1> ArgRegPairs;
+    /// Callee type ids.
+    SmallVector<ConstantInt *, 4> CalleeTypeIds;
+
+    CallSiteInfo() = default;
+
+    /// Extracts the numeric type id from the CallBase's callee_type Metadata,
+    /// and sets CalleeTypeIds. This is used as type id for the indirect call in
+    /// the call graph section.
+    CallSiteInfo(const CallBase &CB);
   };
 
   struct CalledGlobalInfo {
@@ -522,11 +531,12 @@ public:
     unsigned TargetFlags;
   };
 
+  using CallSiteInfoMap = DenseMap<const MachineInstr *, CallSiteInfo>;
+
 private:
   Delegate *TheDelegate = nullptr;
   GISelChangeObserver *Observer = nullptr;
 
-  using CallSiteInfoMap = DenseMap<const MachineInstr *, CallSiteInfo>;
   /// Map a call instruction to call site arguments forwarding info.
   CallSiteInfoMap CallSitesInfo;
 
@@ -1197,7 +1207,7 @@ public:
       ArrayRef<MachineMemOperand *> MMOs, MCSymbol *PreInstrSymbol = nullptr,
       MCSymbol *PostInstrSymbol = nullptr, MDNode *HeapAllocMarker = nullptr,
       MDNode *PCSections = nullptr, uint32_t CFIType = 0,
-      MDNode *MMRAs = nullptr);
+      MDNode *MMRAs = nullptr, Value *DS = nullptr);
 
   /// Allocate a string and populate it with the given external symbol name.
   const char *createExternalSymbolName(StringRef Name);

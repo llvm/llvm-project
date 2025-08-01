@@ -18,6 +18,7 @@
 #include "CIRGenModule.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenValue.h"
+#include "EHScopeStack.h"
 
 #include "Address.h"
 
@@ -60,6 +61,9 @@ public:
 
   /// The compiler-generated variable that holds the return value.
   std::optional<mlir::Value> fnRetAlloca;
+
+  /// Tracks function scope overall cleanup handling.
+  EHScopeStack ehStack;
 
   /// CXXThisDecl - When generating code for a C++ member function,
   /// this will hold the implicit 'this' declaration.
@@ -562,6 +566,19 @@ public:
   }
   Address loadCXXThisAddress();
 
+  /// Convert the given pointer to a complete class to the given direct base.
+  Address getAddressOfDirectBaseInCompleteClass(mlir::Location loc,
+                                                Address value,
+                                                const CXXRecordDecl *derived,
+                                                const CXXRecordDecl *base,
+                                                bool baseIsVirtual);
+
+  /// Determine whether a base class initialization may overlap some other
+  /// object.
+  AggValueSlot::Overlap_t getOverlapForBaseInit(const CXXRecordDecl *rd,
+                                                const CXXRecordDecl *baseRD,
+                                                bool isVirtual);
+
   /// Get an appropriate 'undef' rvalue for the given type.
   /// TODO: What's the equivalent for MLIR? Currently we're only using this for
   /// void types so it just returns RValue::get(nullptr) but it'll need
@@ -582,14 +599,65 @@ public:
                      FunctionArgList args, clang::SourceLocation loc,
                      clang::SourceLocation startLoc);
 
+  /// Takes the old cleanup stack size and emits the cleanup blocks
+  /// that have been added.
+  void popCleanupBlocks(size_t oldCleanupStackDepth);
+  void popCleanupBlock();
+
+  /// Enters a new scope for capturing cleanups, all of which
+  /// will be executed once the scope is exited.
+  class RunCleanupsScope {
+    size_t cleanupStackDepth, oldCleanupStackDepth;
+
+  protected:
+    bool performCleanup;
+
+  private:
+    RunCleanupsScope(const RunCleanupsScope &) = delete;
+    void operator=(const RunCleanupsScope &) = delete;
+
+  protected:
+    CIRGenFunction &cgf;
+
+    /// Enter a new cleanup scope.
+    explicit RunCleanupsScope(CIRGenFunction &cgf)
+        : performCleanup(true), cgf(cgf) {
+      cleanupStackDepth = cgf.ehStack.getStackDepth();
+      oldCleanupStackDepth = cgf.currentCleanupStackDepth;
+      cgf.currentCleanupStackDepth = cleanupStackDepth;
+    }
+
+    /// Exit this cleanup scope, emitting any accumulated cleanups.
+    ~RunCleanupsScope() {
+      if (performCleanup)
+        forceCleanup();
+    }
+
+    /// Force the emission of cleanups now, instead of waiting
+    /// until this object is destroyed.
+    void forceCleanup() {
+      assert(performCleanup && "Already forced cleanup");
+      {
+        mlir::OpBuilder::InsertionGuard guard(cgf.getBuilder());
+        cgf.popCleanupBlocks(cleanupStackDepth);
+        performCleanup = false;
+        cgf.currentCleanupStackDepth = oldCleanupStackDepth;
+      }
+    }
+  };
+
+  // Cleanup stack depth of the RunCleanupsScope that was pushed most recently.
+  size_t currentCleanupStackDepth;
+
+public:
   /// Represents a scope, including function bodies, compound statements, and
   /// the substatements of if/while/do/for/switch/try statements.  This class
   /// handles any automatic cleanup, along with the return value.
-  struct LexicalScope {
+  struct LexicalScope : public RunCleanupsScope {
   private:
-    // TODO(CIR): This will live in the base class RunCleanupScope once that
-    // class is upstreamed.
-    CIRGenFunction &cgf;
+    // Block containing cleanup code for things initialized in this
+    // lexical context (scope).
+    mlir::Block *cleanupBlock = nullptr;
 
     // Points to the scope entry block. This is useful, for instance, for
     // helping to insert allocas before finalizing any recursive CodeGen from
@@ -619,8 +687,8 @@ public:
     unsigned depth = 0;
 
     LexicalScope(CIRGenFunction &cgf, mlir::Location loc, mlir::Block *eb)
-        : cgf(cgf), entryBlock(eb), parentScope(cgf.curLexScope), beginLoc(loc),
-          endLoc(loc) {
+        : RunCleanupsScope(cgf), entryBlock(eb), parentScope(cgf.curLexScope),
+          beginLoc(loc), endLoc(loc) {
 
       assert(entryBlock && "LexicalScope requires an entry block");
       cgf.curLexScope = this;
@@ -657,6 +725,27 @@ public:
     void setAsGlobalInit() { scopeKind = Kind::GlobalInit; }
     void setAsSwitch() { scopeKind = Kind::Switch; }
     void setAsTernary() { scopeKind = Kind::Ternary; }
+
+    // Lazy create cleanup block or return what's available.
+    mlir::Block *getOrCreateCleanupBlock(mlir::OpBuilder &builder) {
+      if (cleanupBlock)
+        return cleanupBlock;
+      cleanupBlock = createCleanupBlock(builder);
+      return cleanupBlock;
+    }
+
+    mlir::Block *getCleanupBlock(mlir::OpBuilder &builder) {
+      return cleanupBlock;
+    }
+
+    mlir::Block *createCleanupBlock(mlir::OpBuilder &builder) {
+      // Create the cleanup block but dont hook it up around just yet.
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      mlir::Region *r = builder.getBlock() ? builder.getBlock()->getParent()
+                                           : &cgf.curFn->getRegion(0);
+      cleanupBlock = builder.createBlock(r);
+      return cleanupBlock;
+    }
 
     // ---
     // Return handling.
@@ -708,6 +797,12 @@ public:
 
   LexicalScope *curLexScope = nullptr;
 
+  typedef void Destroyer(CIRGenFunction &cgf, Address addr, QualType ty);
+
+  static Destroyer destroyCXXObject;
+
+  Destroyer *getDestroyer(clang::QualType::DestructionKind kind);
+
   /// ----------------------
   /// CIR emit functions
   /// ----------------------
@@ -744,10 +839,21 @@ public:
   RValue emitAnyExpr(const clang::Expr *e,
                      AggValueSlot aggSlot = AggValueSlot::ignored());
 
+  /// Emits the code necessary to evaluate an arbitrary expression into the
+  /// given memory location.
+  void emitAnyExprToMem(const Expr *e, Address location, Qualifiers quals,
+                        bool isInitializer);
+
   /// Similarly to emitAnyExpr(), however, the result will always be accessible
   /// even if no aggregate location is provided.
   RValue emitAnyExprToTemp(const clang::Expr *e);
 
+  void emitArrayDestroy(mlir::Value begin, mlir::Value end,
+                        QualType elementType, CharUnits elementAlign,
+                        Destroyer *destroyer);
+
+  mlir::Value emitArrayLength(const clang::ArrayType *arrayType,
+                              QualType &baseType, Address &addr);
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
 
   Address emitArrayToPointerDecay(const Expr *array);
@@ -761,6 +867,13 @@ public:
 
   void emitAutoVarCleanups(const AutoVarEmission &emission);
   void emitAutoVarInit(const AutoVarEmission &emission);
+  void emitAutoVarTypeCleanup(const AutoVarEmission &emission,
+                              clang::QualType::DestructionKind dtorKind);
+
+  void maybeEmitDeferredVarDeclInit(const VarDecl *vd);
+
+  void emitBaseInitializer(mlir::Location loc, const CXXRecordDecl *classDecl,
+                           CXXCtorInitializer *baseInit);
 
   LValue emitBinaryOperatorLValue(const BinaryOperator *e);
 
@@ -812,14 +925,29 @@ public:
   mlir::Value emitCheckedArgForAssume(const Expr *e);
 
   LValue emitCompoundAssignmentLValue(const clang::CompoundAssignOperator *e);
+  LValue emitCompoundLiteralLValue(const CompoundLiteralExpr *e);
 
   void emitConstructorBody(FunctionArgList &args);
+
+  void emitDestroy(Address addr, QualType type, Destroyer *destroyer);
+
+  void emitDestructorBody(FunctionArgList &args);
 
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
 
   void emitCXXConstructExpr(const clang::CXXConstructExpr *e,
                             AggValueSlot dest);
 
+  void emitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
+                                  const clang::ArrayType *arrayType,
+                                  Address arrayBegin, const CXXConstructExpr *e,
+                                  bool newPointerIsChecked,
+                                  bool zeroInitialize = false);
+  void emitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
+                                  mlir::Value numElements, Address arrayBase,
+                                  const CXXConstructExpr *e,
+                                  bool newPointerIsChecked,
+                                  bool zeroInitialize);
   void emitCXXConstructorCall(const clang::CXXConstructorDecl *d,
                               clang::CXXCtorType type, bool forVirtualBase,
                               bool delegating, AggValueSlot thisAVS,
@@ -829,6 +957,15 @@ public:
                               clang::CXXCtorType type, bool forVirtualBase,
                               bool delegating, Address thisAddr,
                               CallArgList &args, clang::SourceLocation loc);
+
+  void emitCXXDestructorCall(const CXXDestructorDecl *dd, CXXDtorType type,
+                             bool forVirtualBase, bool delegating,
+                             Address thisAddr, QualType thisTy);
+
+  RValue emitCXXDestructorCall(GlobalDecl dtor, const CIRGenCallee &callee,
+                               mlir::Value thisVal, QualType thisTy,
+                               mlir::Value implicitParam,
+                               QualType implicitParamTy, const CallExpr *e);
 
   mlir::LogicalResult emitCXXForRangeStmt(const CXXForRangeStmt &s,
                                           llvm::ArrayRef<const Attr *> attrs);
@@ -886,13 +1023,15 @@ public:
   void emitInitializerForField(clang::FieldDecl *field, LValue lhs,
                                clang::Expr *init);
 
+  mlir::Value emitPromotedComplexExpr(const Expr *e, QualType promotionType);
+
   mlir::Value emitPromotedScalarExpr(const Expr *e, QualType promotionType);
 
   /// Emit the computation of the specified expression of scalar type.
   mlir::Value emitScalarExpr(const clang::Expr *e);
 
   mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv,
-                                      bool isInc, bool isPre);
+                                      cir::UnaryOpKind kind, bool isPre);
 
   /// Build a debug stoppoint if we are emitting debug info.
   void emitStopPoint(const Stmt *s);
@@ -911,13 +1050,18 @@ public:
   /// returning the result.
   mlir::Value emitComplexExpr(const Expr *e);
 
+  void emitComplexExprIntoLValue(const Expr *e, LValue dest, bool isInit);
+
+  mlir::Value emitComplexPrePostIncDec(const UnaryOperator *e, LValue lv,
+                                       cir::UnaryOpKind op, bool isPre);
+
   LValue emitComplexAssignmentLValue(const BinaryOperator *e);
 
   void emitCompoundStmt(const clang::CompoundStmt &s);
 
   void emitCompoundStmtWithoutScope(const clang::CompoundStmt &s);
 
-  void emitDecl(const clang::Decl &d);
+  void emitDecl(const clang::Decl &d, bool evaluateConditionDecl = false);
   mlir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
   LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
 
@@ -960,6 +1104,9 @@ public:
   void emitIgnoredExpr(const clang::Expr *e);
 
   RValue emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc);
+
+  /// Load a complex number from the specified l-value.
+  mlir::Value emitLoadOfComplex(LValue src, SourceLocation loc);
 
   /// Given an expression that represents a value lvalue, this method emits
   /// the address of the lvalue, then loads the result as an rvalue,
@@ -1011,6 +1158,8 @@ public:
 
   mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
 
+  RValue emitRotate(const CallExpr *e, bool isRotateLeft);
+
   mlir::Value emitScalarConstant(const ConstantEmission &constant, Expr *e);
 
   /// Emit a conversion from the specified type to the specified destination
@@ -1057,6 +1206,8 @@ public:
   /// This method handles emission of any variable declaration
   /// inside a function, including static vars etc.
   void emitVarDecl(const clang::VarDecl &d);
+
+  void emitVariablyModifiedType(QualType ty);
 
   mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
 

@@ -14,6 +14,7 @@
 #include <__config>
 #include <__cstddef/nullptr_t.h>
 #include <__exception/exception.h>
+#include <__force_nonstandard_layout>
 #include <__functional/binary_function.h>
 #include <__functional/invoke.h>
 #include <__functional/unary_function.h>
@@ -427,7 +428,7 @@ template <class _Fp>
 class __policy_func;
 
 template <class _Rp, class... _ArgTypes>
-class __policy_func<_Rp(_ArgTypes...)> {
+class __policy_func<_Rp(_ArgTypes...)> _LIBCPP_MAYBE_FORCE_NONSTANDARD_LAYOUT {
   // Inline storage for small objects.
   __policy_storage __buf_;
 

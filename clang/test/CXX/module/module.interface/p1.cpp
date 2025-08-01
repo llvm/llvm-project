@@ -1,28 +1,19 @@
-// RUN: %clang_cc1 -std=c++2a %s -DERRORS -verify
-// RUN: %clang_cc1 -std=c++2a %s -emit-module-interface -o %t.pcm
-// RUN: %clang_cc1 -std=c++2a %s -fmodule-file=M=%t.pcm -DIMPLEMENTATION -verify -Db=b2 -Dc=c2
+// RUN: rm -rf %t
+// RUN: split-file %s %t
 
+// RUN: %clang_cc1 -std=c++2a %t/errors.cpp -verify
+// RUN: %clang_cc1 -std=c++2a %t/M.cppm -emit-module-interface -o %t/M.pcm
+// RUN: %clang_cc1 -std=c++2a %t/impl.cpp -fmodule-file=M=%t/M.pcm -verify
+
+//--- errors.cpp
 module;
-
-#ifdef ERRORS
-export int a; // expected-error {{export declaration can only be used within a module purview}}
-#endif
-
-#ifndef IMPLEMENTATION
-export
-#else
-// expected-error@#1 {{export declaration can only be used within a module purview}}
-// expected-error@#2 {{export declaration can only be used within a module purview}}
-// expected-note@+2 1+{{add 'export'}}
-#endif
-module M;
-
+export int a; // expected-error {{export declaration can only be used within a module interface}}
+export module M;
 export int b; // #1
 namespace N {
   export int c; // #2
 }
 
-#ifdef ERRORS
 namespace { // expected-note 2{{anonymous namespace begins here}}
   export int d1; // expected-error {{export declaration appears within anonymous namespace}}
   namespace X {
@@ -35,4 +26,19 @@ export { export int f; } // expected-error {{within another export declaration}}
 
 module :private; // expected-note {{private module fragment begins here}}
 export int priv; // expected-error {{export declaration cannot be used in a private module fragment}}
-#endif
+
+//--- M.cppm
+export module M;
+export int b;
+namespace N {
+  export int c;
+}
+
+//--- impl.cpp
+module M; // #M
+
+export int b2; // expected-error {{export declaration can only be used within a module interface}}
+namespace N {
+  export int c2; // expected-error {{export declaration can only be used within a module interface}}
+}
+// expected-note@#M 2+{{add 'export'}}

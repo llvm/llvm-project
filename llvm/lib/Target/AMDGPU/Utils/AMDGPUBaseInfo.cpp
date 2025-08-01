@@ -296,6 +296,7 @@ unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
 #define GET_MIMGOffsetMappingTable_IMPL
 #define GET_MIMGG16MappingTable_IMPL
 #define GET_MAIInstInfoTable_IMPL
+#define GET_WMMAInstInfoTable_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
@@ -392,6 +393,7 @@ struct VOPDComponentInfo {
   uint16_t BaseVOP;
   uint16_t VOPDOp;
   bool CanBeVOPDX;
+  bool CanBeVOPD3X;
 };
 
 struct VOPDInfo {
@@ -399,6 +401,7 @@ struct VOPDInfo {
   uint16_t OpX;
   uint16_t OpY;
   uint16_t Subtarget;
+  bool VOPD3;
 };
 
 struct VOPTrue16Info {
@@ -566,6 +569,11 @@ bool getMAIIsGFX940XDL(unsigned Opc) {
   return Info && Info->is_gfx940_xdl;
 }
 
+bool getWMMAIsXDL(unsigned Opc) {
+  const WMMAInstInfo *Info = getWMMAInstInfoHelper(Opc);
+  return Info ? Info->is_wmma_xdl : false;
+}
+
 uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal) {
   switch (EncodingVal) {
   case MFMAScaleFormats::FP6_E2M3:
@@ -590,7 +598,32 @@ const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
   return getMFMA_F8F6F4_InstWithNumRegs(SrcANumRegs, SrcBNumRegs, F8F8Opcode);
 }
 
+uint8_t wmmaScaleF8F6F4FormatToNumRegs(unsigned Fmt) {
+  switch (Fmt) {
+  case WMMA::MATRIX_FMT_FP8:
+  case WMMA::MATRIX_FMT_BF8:
+    return 16;
+  case WMMA::MATRIX_FMT_FP6:
+  case WMMA::MATRIX_FMT_BF6:
+    return 12;
+  case WMMA::MATRIX_FMT_FP4:
+    return 8;
+  }
+
+  llvm_unreachable("covered switch over wmma scale formats");
+}
+
+const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
+                                                      unsigned FmtB,
+                                                      unsigned F8F8Opcode) {
+  uint8_t SrcANumRegs = wmmaScaleF8F6F4FormatToNumRegs(FmtA);
+  uint8_t SrcBNumRegs = wmmaScaleF8F6F4FormatToNumRegs(FmtB);
+  return getMFMA_F8F6F4_InstWithNumRegs(SrcANumRegs, SrcBNumRegs, F8F8Opcode);
+}
+
 unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
+  if (ST.hasFeature(AMDGPU::FeatureGFX1250Insts))
+    return SIEncodingFamily::GFX1250;
   if (ST.hasFeature(AMDGPU::FeatureGFX12Insts))
     return SIEncodingFamily::GFX12;
   if (ST.hasFeature(AMDGPU::FeatureGFX11Insts))
@@ -598,14 +631,27 @@ unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
   llvm_unreachable("Subtarget generation does not support VOPD!");
 }
 
-CanBeVOPD getCanBeVOPD(unsigned Opc) {
+CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
+  bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(Opc) : 0;
+  Opc = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : Opc;
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
-  if (Info)
-    return {Info->CanBeVOPDX, true};
+  if (Info) {
+    // Check that Opc can be used as VOPDY for this encoding. V_MOV_B32 as a
+    // VOPDX is just a placeholder here, it is supported on all encodings.
+    // TODO: This can be optimized by creating tables of supported VOPDY
+    // opcodes per encoding.
+    unsigned VOPDMov = AMDGPU::getVOPDOpcode(AMDGPU::V_MOV_B32_e32, VOPD3);
+    bool CanBeVOPDY = getVOPDFull(VOPDMov, AMDGPU::getVOPDOpcode(Opc, VOPD3),
+                                  EncodingFamily, VOPD3) != -1;
+    return {VOPD3 ? Info->CanBeVOPD3X : Info->CanBeVOPDX, CanBeVOPDY};
+  }
+
   return {false, false};
 }
 
-unsigned getVOPDOpcode(unsigned Opc) {
+unsigned getVOPDOpcode(unsigned Opc, bool VOPD3) {
+  bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(Opc) : 0;
+  Opc = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : Opc;
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   return Info ? Info->VOPDOp : ~0u;
 }
@@ -622,6 +668,7 @@ bool isMAC(unsigned Opc) {
          Opc == AMDGPU::V_MAC_LEGACY_F32_e64_gfx10 ||
          Opc == AMDGPU::V_MAC_F16_e64_vi ||
          Opc == AMDGPU::V_FMAC_F64_e64_gfx90a ||
+         Opc == AMDGPU::V_FMAC_F64_e64_gfx12 ||
          Opc == AMDGPU::V_FMAC_F32_e64_gfx10 ||
          Opc == AMDGPU::V_FMAC_F32_e64_gfx11 ||
          Opc == AMDGPU::V_FMAC_F32_e64_gfx12 ||
@@ -685,7 +732,14 @@ bool isGenericAtomic(unsigned Opc) {
 }
 
 bool isAsyncStore(unsigned Opc) {
-  return false; // placeholder before async store implementation.
+  return Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_gfx1250 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_gfx1250 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_gfx1250 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_gfx1250 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR_gfx1250 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_SADDR_gfx1250 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_SADDR_gfx1250 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR_gfx1250;
 }
 
 bool isTensorStore(unsigned Opc) {
@@ -742,9 +796,27 @@ int getMCOpcode(uint16_t Opcode, unsigned Gen) {
   return getMCOpcodeGen(Opcode, static_cast<Subtarget>(Gen));
 }
 
-int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily) {
+unsigned getBitOp2(unsigned Opc) {
+  switch (Opc) {
+  default:
+    return 0;
+  case AMDGPU::V_AND_B32_e32:
+    return 0x40;
+  case AMDGPU::V_OR_B32_e32:
+    return 0x54;
+  case AMDGPU::V_XOR_B32_e32:
+    return 0x14;
+  case AMDGPU::V_XNOR_B32_e32:
+    return 0x41;
+  }
+}
+
+int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily,
+                bool VOPD3) {
+  bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(OpY) : 0;
+  OpY = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : OpY;
   const VOPDInfo *Info =
-      getVOPDInfoFromComponentOpcodes(OpX, OpY, EncodingFamily);
+      getVOPDInfoFromComponentOpcodes(OpX, OpY, EncodingFamily, VOPD3);
   return Info ? Info->Opcode : -1;
 }
 
@@ -759,7 +831,7 @@ std::pair<unsigned, unsigned> getVOPDComponents(unsigned VOPDOpcode) {
 
 namespace VOPD {
 
-ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
+ComponentProps::ComponentProps(const MCInstrDesc &OpDesc, bool VOP3Layout) {
   assert(OpDesc.getNumDefs() == Component::DST_NUM);
 
   assert(OpDesc.getOperandConstraint(Component::SRC0, MCOI::TIED_TO) == -1);
@@ -767,9 +839,33 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
   auto TiedIdx = OpDesc.getOperandConstraint(Component::SRC2, MCOI::TIED_TO);
   assert(TiedIdx == -1 || TiedIdx == Component::DST);
   HasSrc2Acc = TiedIdx != -1;
+  Opcode = OpDesc.getOpcode();
 
-  SrcOperandsNum = OpDesc.getNumOperands() - OpDesc.getNumDefs();
+  IsVOP3 = VOP3Layout || (OpDesc.TSFlags & SIInstrFlags::VOP3);
+  SrcOperandsNum = AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src2)   ? 3
+                   : AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::imm)  ? 3
+                   : AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src1) ? 2
+                                                                           : 1;
   assert(SrcOperandsNum <= Component::MAX_SRC_NUM);
+
+  if (Opcode == AMDGPU::V_CNDMASK_B32_e32 ||
+      Opcode == AMDGPU::V_CNDMASK_B32_e64) {
+    // CNDMASK is an awkward exception, it has FP modifiers, but not FP
+    // operands.
+    NumVOPD3Mods = 2;
+    if (IsVOP3)
+      SrcOperandsNum = 3;
+  } else if (isSISrcFPOperand(OpDesc,
+                              getNamedOperandIdx(Opcode, OpName::src0))) {
+    // All FP VOPD instructions have Neg modifiers for all operands except
+    // for tied src2.
+    NumVOPD3Mods = SrcOperandsNum;
+    if (HasSrc2Acc)
+      --NumVOPD3Mods;
+  }
+
+  if (OpDesc.TSFlags & SIInstrFlags::VOP3)
+    return;
 
   auto OperandsNum = OpDesc.getNumOperands();
   unsigned CompOprIdx;
@@ -779,6 +875,10 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
       break;
     }
   }
+}
+
+int ComponentProps::getBitOp3OperandIdx() const {
+  return getNamedOperandIdx(Opcode, OpName::bitop3);
 }
 
 unsigned ComponentInfo::getIndexInParsedOperands(unsigned CompOprIdx) const {
@@ -796,19 +896,58 @@ unsigned ComponentInfo::getIndexInParsedOperands(unsigned CompOprIdx) const {
 }
 
 std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
-    std::function<unsigned(unsigned, unsigned)> GetRegIdx, bool SkipSrc) const {
+    std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+    const MCRegisterInfo &MRI, bool SkipSrc, bool AllowSameVGPR,
+    bool VOPD3) const {
 
-  auto OpXRegs = getRegIndices(ComponentIndex::X, GetRegIdx);
-  auto OpYRegs = getRegIndices(ComponentIndex::Y, GetRegIdx);
+  auto OpXRegs = getRegIndices(ComponentIndex::X, GetRegIdx,
+                               CompInfo[ComponentIndex::X].isVOP3());
+  auto OpYRegs = getRegIndices(ComponentIndex::Y, GetRegIdx,
+                               CompInfo[ComponentIndex::Y].isVOP3());
 
-  const unsigned CompOprNum =
-      SkipSrc ? Component::DST_NUM : Component::MAX_OPR_NUM;
+  const auto banksOverlap = [&MRI](MCRegister X, MCRegister Y,
+                                   unsigned BanksMask) -> bool {
+    MCRegister BaseX = MRI.getSubReg(X, AMDGPU::sub0);
+    MCRegister BaseY = MRI.getSubReg(Y, AMDGPU::sub0);
+    if (!BaseX)
+      BaseX = X;
+    if (!BaseY)
+      BaseY = Y;
+    if ((BaseX & BanksMask) == (BaseY & BanksMask))
+      return true;
+    if (BaseX != X /* This is 64-bit register */ &&
+        ((BaseX + 1) & BanksMask) == (BaseY & BanksMask))
+      return true;
+    if (BaseY != Y && (BaseX & BanksMask) == ((BaseY + 1) & BanksMask))
+      return true;
+
+    // If both are 64-bit bank conflict will be detected yet while checking
+    // the first subreg.
+    return false;
+  };
+
   unsigned CompOprIdx;
-  for (CompOprIdx = 0; CompOprIdx < CompOprNum; ++CompOprIdx) {
-    unsigned BanksMasks = VOPD_VGPR_BANK_MASKS[CompOprIdx];
-    if (OpXRegs[CompOprIdx] && OpYRegs[CompOprIdx] &&
-        ((OpXRegs[CompOprIdx] & BanksMasks) ==
-         (OpYRegs[CompOprIdx] & BanksMasks)))
+  for (CompOprIdx = 0; CompOprIdx < Component::MAX_OPR_NUM; ++CompOprIdx) {
+    unsigned BanksMasks = VOPD3 ? VOPD3_VGPR_BANK_MASKS[CompOprIdx]
+                                : VOPD_VGPR_BANK_MASKS[CompOprIdx];
+    if (!OpXRegs[CompOprIdx] || !OpYRegs[CompOprIdx])
+      continue;
+
+    if (SkipSrc && CompOprIdx >= Component::DST_NUM)
+      continue;
+
+    if (CompOprIdx < Component::DST_NUM) {
+      // Even if we do not check vdst parity, vdst operands still shall not
+      // overlap.
+      if (MRI.regsOverlap(OpXRegs[CompOprIdx], OpYRegs[CompOprIdx]))
+        return CompOprIdx;
+      if (VOPD3) // No need to check dst parity.
+        continue;
+    }
+
+    if (banksOverlap(OpXRegs[CompOprIdx], OpYRegs[CompOprIdx], BanksMasks) &&
+        (!AllowSameVGPR || CompOprIdx < Component::DST_NUM ||
+         OpXRegs[CompOprIdx] != OpYRegs[CompOprIdx]))
       return CompOprIdx;
   }
 
@@ -822,9 +961,10 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
 // GetRegIdx(Component, MCOperandIdx) must return a VGPR register index
 // for the specified component and MC operand. The callback must return 0
 // if the operand is not a register or not a VGPR.
-InstInfo::RegIndices InstInfo::getRegIndices(
-    unsigned CompIdx,
-    std::function<unsigned(unsigned, unsigned)> GetRegIdx) const {
+InstInfo::RegIndices
+InstInfo::getRegIndices(unsigned CompIdx,
+                        std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+                        bool VOPD3) const {
   assert(CompIdx < COMPONENTS_NUM);
 
   const auto &Comp = CompInfo[CompIdx];
@@ -836,7 +976,8 @@ InstInfo::RegIndices InstInfo::getRegIndices(
     unsigned CompSrcIdx = CompOprIdx - DST_NUM;
     RegIndices[CompOprIdx] =
         Comp.hasRegSrcOperand(CompSrcIdx)
-            ? GetRegIdx(CompIdx, Comp.getIndexOfSrcInMCOperands(CompSrcIdx))
+            ? GetRegIdx(CompIdx,
+                        Comp.getIndexOfSrcInMCOperands(CompSrcIdx, VOPD3))
             : 0;
   }
   return RegIndices;
@@ -853,8 +994,9 @@ VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
   auto [OpX, OpY] = getVOPDComponents(VOPDOpcode);
   const auto &OpXDesc = InstrInfo->get(OpX);
   const auto &OpYDesc = InstrInfo->get(OpY);
-  VOPD::ComponentInfo OpXInfo(OpXDesc, VOPD::ComponentKind::COMPONENT_X);
-  VOPD::ComponentInfo OpYInfo(OpYDesc, OpXInfo);
+  bool VOPD3 = InstrInfo->get(VOPDOpcode).TSFlags & SIInstrFlags::VOPD3;
+  VOPD::ComponentInfo OpXInfo(OpXDesc, VOPD::ComponentKind::COMPONENT_X, VOPD3);
+  VOPD::ComponentInfo OpYInfo(OpYDesc, OpXInfo, VOPD3);
   return VOPD::InstInfo(OpXInfo, OpYInfo);
 }
 
@@ -2517,6 +2659,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP32:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
@@ -2881,6 +3024,8 @@ bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType) {
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     return isInlinableLiteralV2BF16(Literal);
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+    return false;
   default:
     llvm_unreachable("bad packed operand type");
   }
@@ -2903,7 +3048,7 @@ bool isInlinableLiteralV2F16(uint32_t Literal) {
 
 bool isValid32BitLiteral(uint64_t Val, bool IsFP64) {
   if (IsFP64)
-    return !(Val & 0xffffffffu);
+    return !Lo_32(Val);
 
   return isUInt<32>(Val) || isInt<32>(Val);
 }
@@ -3091,6 +3236,25 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
   return isGFX11Plus(STI) ? getGfx11PlusBufferFormatInfo(Format)
          : isGFX10(STI)   ? getGfx10BufferFormatInfo(Format)
                           : getGfx9BufferFormatInfo(Format);
+}
+
+bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
+  uint64_t TSFlags = MII.get(Opcode).TSFlags;
+
+  if (TSFlags & SIInstrFlags::SMRD)
+    return !getSMEMIsBuffer(Opcode);
+  if (!(TSFlags & SIInstrFlags::FLAT))
+    return false;
+
+  // Only SV and SVS modes are supported.
+  if (TSFlags & SIInstrFlags::FlatScratch)
+    return hasNamedOperand(Opcode, OpName::vaddr);
+
+  // Only GVS mode is supported.
+  return hasNamedOperand(Opcode, OpName::vaddr) &&
+         hasNamedOperand(Opcode, OpName::saddr);
+
+  return false;
 }
 
 bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {

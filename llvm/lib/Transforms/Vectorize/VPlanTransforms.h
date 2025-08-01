@@ -17,6 +17,7 @@
 #include "VPlanVerifier.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -53,7 +54,8 @@ struct VPlanTransforms {
       verifyVPlanIsValid(Plan);
   }
 
-  static std::unique_ptr<VPlan> buildPlainCFG(Loop *TheLoop, LoopInfo &LI);
+  LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan> buildPlainCFG(Loop *TheLoop,
+                                                                LoopInfo &LI);
 
   /// Prepare the plan for vectorization. It will introduce a dedicated
   /// VPBasicBlock for the vector pre-header as well as a VPBasicBlock as exit
@@ -63,16 +65,18 @@ struct VPlanTransforms {
   /// blocks. \p InductionTy is the type of the canonical induction and used for
   /// related values, like the trip count expression.  It also creates a VPValue
   /// expression for the original trip count.
-  static void prepareForVectorization(VPlan &Plan, Type *InductionTy,
-                                      PredicatedScalarEvolution &PSE,
-                                      bool RequiresScalarEpilogueCheck,
-                                      bool TailFolded, Loop *TheLoop,
-                                      DebugLoc IVDL, bool HasUncountableExit,
-                                      VFRange &Range);
+  LLVM_ABI_FOR_TEST static void prepareForVectorization(
+      VPlan &Plan, Type *InductionTy, PredicatedScalarEvolution &PSE,
+      bool RequiresScalarEpilogueCheck, bool TailFolded, Loop *TheLoop,
+      DebugLoc IVDL, bool HasUncountableExit, VFRange &Range);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
   /// flat CFG into a hierarchical CFG.
-  static void createLoopRegions(VPlan &Plan);
+  LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan);
+
+  /// Creates extracts for values in \p Plan defined in a loop region and used
+  /// outside a loop region.
+  LLVM_ABI_FOR_TEST static void createExtractsForLiveOuts(VPlan &Plan);
 
   /// Wrap runtime check block \p CheckBlock in a VPIRBB and \p Cond in a
   /// VPValue and connect the block to \p Plan, using the VPValue as branch
@@ -83,7 +87,7 @@ struct VPlanTransforms {
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
   /// to a wide recipe if needed.
-  static bool tryToConvertVPInstructionsToVPRecipes(
+  LLVM_ABI_FOR_TEST static bool tryToConvertVPInstructionsToVPRecipes(
       VPlanPtr &Plan,
       function_ref<const InductionDescriptor *(PHINode *)>
           GetIntOrFpInductionDescriptor,
@@ -98,6 +102,12 @@ struct VPlanTransforms {
   /// as needed or false if it is not possible. In the latter case, \p Plan is
   /// not valid.
   static bool adjustFixedOrderRecurrences(VPlan &Plan, VPBuilder &Builder);
+
+  /// Check if \p Plan contains any FMaxNum or FMinNum reductions. If they do,
+  /// try to update the vector loop to exit early if any input is NaN and resume
+  /// executing in the scalar loop to handle the NaNs there. Return false if
+  /// this attempt was unsuccessful.
+  static bool handleMaxMinNumReductions(VPlan &Plan);
 
   /// Clear NSW/NUW flags from reduction instructions if necessary.
   static void clearReductionWrapFlags(VPlan &Plan);
@@ -199,6 +209,18 @@ struct VPlanTransforms {
   /// Replace loop regions with explicit CFG.
   static void dissolveLoopRegions(VPlan &Plan);
 
+  /// Transform EVL loops to use variable-length stepping after region
+  /// dissolution.
+  ///
+  /// Once loop regions are replaced with explicit CFG, EVL loops can step with
+  /// variable vector lengths instead of fixed lengths. This transformation:
+  ///  * Makes EVL-Phi concrete.
+  //   * Removes CanonicalIV and increment.
+  ///  * Replaces fixed-length stepping (branch-on-cond CanonicalIVInc,
+  ///    VectorTripCount) with variable-length stepping (branch-on-cond
+  ///    EVLIVInc, TripCount).
+  static void canonicalizeEVLLoops(VPlan &Plan);
+
   /// Lower abstract recipes to concrete ones, that can be codegen'd. Use \p
   /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
   static void convertToConcreteRecipes(VPlan &Plan, Type &CanonicalIVTy);
@@ -214,6 +236,10 @@ struct VPlanTransforms {
   /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
   static void simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy);
 
+  /// Remove BranchOnCond recipes with true or false conditions together with
+  /// removing dead edges to their successors.
+  static void removeBranchOnConst(VPlan &Plan);
+
   /// If there's a single exit block, optimize its phi recipes that use exiting
   /// IV values by feeding them precomputed end values instead, possibly taken
   /// one step backwards.
@@ -223,6 +249,12 @@ struct VPlanTransforms {
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
+
+  // Materialize vector trip counts for constants early if it can simply be
+  // computed as (Original TC / VF * UF) * VF * UF.
+  static void materializeVectorTripCount(VPlan &Plan, ElementCount BestVF,
+                                         unsigned BestUF,
+                                         PredicatedScalarEvolution &PSE);
 
   /// Try to convert a plan with interleave groups with VF elements to a plan
   /// with the interleave groups replaced by wide loads and stores processing VF

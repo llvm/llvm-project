@@ -39,6 +39,26 @@
 // RANGE-NEXT:            "line": 15,
 // RANGE-NEXT:            "column": 2
 // RANGE-NEXT:          }
+// RANGE-NEXT:        },
+// RANGE-NEXT:        {
+// RANGE-NEXT:          "from": {
+// RANGE-NEXT:            "line": 19,
+// RANGE-NEXT:            "column": 1
+// RANGE-NEXT:          },
+// RANGE-NEXT:          "to": {
+// RANGE-NEXT:            "line": 19,
+// RANGE-NEXT:            "column": 41
+// RANGE-NEXT:          }
+// RANGE-NEXT:        },
+// RANGE-NEXT:        {
+// RANGE-NEXT:          "from": {
+// RANGE-NEXT:            "line": 20,
+// RANGE-NEXT:            "column": 1
+// RANGE-NEXT:          },
+// RANGE-NEXT:          "to": {
+// RANGE-NEXT:            "line": 23,
+// RANGE-NEXT:            "column": 2
+// RANGE-NEXT:          }
 // RANGE-NEXT:        }
 // RANGE-NEXT:      ]
 // RANGE-NEXT:    }
@@ -68,6 +88,16 @@ int multiply(int a, int b) {
     return a * b;
 }
 
+inline int unused_by_foo() {} // line 17
+
+inline void recursively_used_by_foo() {} // line 19
+inline int used_by_foo() { // line 20
+  recursively_used_by_foo();
+  return 1;
+}
+
+struct UnusedByFoo {};
+
 //--- foo.cpp
 #include "foo.h"
 int global_value = 5;
@@ -76,4 +106,6 @@ int main() {
   int current_value = data.getValue();
   int doubled_value = multiply(current_value, 2);
   int final_result = doubled_value + global_value;
+
+  return used_by_foo();
 }
