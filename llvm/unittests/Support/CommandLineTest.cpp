@@ -28,6 +28,9 @@
 #include <fstream>
 #include <stdlib.h>
 #include <string>
+#if HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 
 using namespace llvm;
 using llvm::unittest::TempDir;
@@ -834,14 +837,23 @@ TEST(CommandLineTest, DefaultOptions) {
 }
 
 TEST(CommandLineTest, ArgumentLimit) {
-  std::string args(32 * 4096, 'a');
-  EXPECT_FALSE(llvm::sys::commandLineFitsWithinSystemLimits("cl", args.data()));
+#if HAVE_UNISTD_H && defined(_SC_ARG_MAX)
+  if (sysconf(_SC_ARG_MAX) != -1) {
+#endif
+    std::string args(32 * 4096, 'a');
+    EXPECT_FALSE(
+        llvm::sys::commandLineFitsWithinSystemLimits("cl", args.data()));
+#if HAVE_UNISTD_H && defined(_SC_ARG_MAX)
+  }
+#endif
   std::string args2(256, 'a');
   EXPECT_TRUE(llvm::sys::commandLineFitsWithinSystemLimits("cl", args2.data()));
 }
 
 TEST(CommandLineTest, ArgumentLimitWindows) {
-  if (!Triple(sys::getProcessTriple()).isOSWindows())
+  Triple processTriple(sys::getProcessTriple());
+  if (!processTriple.isOSWindows() ||
+      processTriple.isWindowsCygwinEnvironment())
     GTEST_SKIP();
   // We use 32000 as a limit for command line length. Program name ('cl'),
   // separating spaces and termination null character occupy 5 symbols.
@@ -854,7 +866,9 @@ TEST(CommandLineTest, ArgumentLimitWindows) {
 }
 
 TEST(CommandLineTest, ResponseFileWindows) {
-  if (!Triple(sys::getProcessTriple()).isOSWindows())
+  Triple processTriple(sys::getProcessTriple());
+  if (!processTriple.isOSWindows() ||
+      processTriple.isWindowsCygwinEnvironment())
     GTEST_SKIP();
 
   StackOption<std::string, cl::list<std::string>> InputFilenames(
