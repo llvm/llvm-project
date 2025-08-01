@@ -4,10 +4,8 @@
 define i1 @src(i64 %x) {
 ; CHECK-LABEL: src:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srli a0, a0, 30
-; CHECK-NEXT:    lui a1, 524288
-; CHECK-NEXT:    srli a1, a1, 30
-; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    srai a0, a0, 30
+; CHECK-NEXT:    addi a0, a0, 2
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = and i64 %x, -1073741824
