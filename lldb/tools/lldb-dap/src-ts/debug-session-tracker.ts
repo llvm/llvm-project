@@ -66,7 +66,7 @@ export class DebugSessionTracker
     this.logger.info(`Starting debug session "${session.name}"`);
     let stopping = false;
     return {
-      onError: (error) => !stopping && this.logger.error(error), // Can throw benign read errors when shutting down
+      onError: (error) => !stopping && this.logger.error(error), // Can throw benign read errors when shutting down.
       onDidSendMessage: (message) => this.onDidSendMessage(session, message),
       onWillStopSession: () => (stopping = true),
       onExit: () => this.onExit(session),
