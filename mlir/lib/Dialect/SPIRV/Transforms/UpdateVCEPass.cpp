@@ -95,19 +95,16 @@ static LogicalResult checkAndUpdateCapabilityRequirements(
   return success();
 }
 
-static SetVector<spirv::Capability>
-addAllImpliedCapabilities(SetVector<spirv::Capability> &caps) {
-  SetVector<spirv::Capability> allCaps;
-  while (!caps.empty()) {
-    spirv::Capability cap = caps.pop_back_val();
-    allCaps.insert(cap);
-    ArrayRef<spirv::Capability> impliedCaps = getDirectImpliedCapabilities(cap);
-    for (spirv::Capability impliedCap : impliedCaps) {
-      if (!allCaps.contains(impliedCap))
-        caps.insert(impliedCap);
-    }
+static void addAllImpliedCapabilities(SetVector<spirv::Capability> &caps) {
+  size_t old_size{0};
+  while (caps.size() > old_size) {
+    old_size = caps.size();
+    SetVector<spirv::Capability> tmp;
+    for (spirv::Capability cap : caps)
+      tmp.insert_range(getDirectImpliedCapabilities(cap));
+
+    caps.insert_range(tmp);
   }
-  return allCaps;
 }
 
 void UpdateVCEPass::runOnOperation() {
@@ -189,7 +186,7 @@ void UpdateVCEPass::runOnOperation() {
   if (walkResult.wasInterrupted())
     return signalPassFailure();
 
-  deducedCapabilities = addAllImpliedCapabilities(deducedCapabilities);
+  addAllImpliedCapabilities(deducedCapabilities);
 
   // Update min version requirement for capabilities after deducing them.
   for (spirv::Capability cap : deducedCapabilities) {
