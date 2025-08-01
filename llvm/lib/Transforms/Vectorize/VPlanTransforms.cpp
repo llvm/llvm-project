@@ -2282,8 +2282,8 @@ static VPValue *transformRecipestoEVLRecipes(VPlan &Plan) {
         continue;
       }
       // TODO: Split optimizeMaskToEVL out and move into
-      // VPlanTransforms::optimize. transformRecipestoEVLRecipes should be run in
-      // tryToBuildVPlanWithVPRecipes beforehand.
+      // VPlanTransforms::optimize. transformRecipestoEVLRecipes should be run
+      // in tryToBuildVPlanWithVPRecipes beforehand.
       VPRecipeBase *EVLRecipe =
           optimizeMaskToEVL(Plan, CurRecipe, TypeInfo, *AllOneMask, *LastEVL);
       if (!EVLRecipe)
