@@ -3092,6 +3092,12 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     return AdjustCost(
         BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 
+  // For the moment we do not have lowering for SVE1-only fptrunc f64->bf16 as
+  // we use fcvtx undef SVE2. Give them invalid costs.
+  if (!ST->hasSVE2() && ISD == ISD::FP_ROUND && SrcTy.isScalableVector() &&
+      DstTy.getScalarType() == MVT::bf16 && SrcTy.getScalarType() == MVT::f64)
+    return InstructionCost::getInvalid();
+
   static const TypeConversionCostTblEntry BF16Tbl[] = {
       {ISD::FP_ROUND, MVT::bf16, MVT::f32, 1},     // bfcvt
       {ISD::FP_ROUND, MVT::bf16, MVT::f64, 1},     // bfcvt
@@ -3542,7 +3548,7 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       // Extend from nxvmbf16 to nxvmf32.
       {ISD::FP_EXTEND, MVT::nxv2f32, MVT::nxv2bf16, 1}, // lsl
       {ISD::FP_EXTEND, MVT::nxv4f32, MVT::nxv4bf16, 1}, // lsl
-      {ISD::FP_EXTEND, MVT::nxv8f32, MVT::nxv8bf16, 2}, // unpck+unpck+lsl+lsl
+      {ISD::FP_EXTEND, MVT::nxv8f32, MVT::nxv8bf16, 4}, // unpck+unpck+lsl+lsl
 
       // Extend from nxvmf16 to nxvmf64.
       {ISD::FP_EXTEND, MVT::nxv2f64, MVT::nxv2f16, 1},
@@ -3551,8 +3557,7 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 
       // Extend from nxvmbf16 to nxvmf64.
       {ISD::FP_EXTEND, MVT::nxv2f64, MVT::nxv2bf16, 2},  // lsl+fcvt
-      {ISD::FP_EXTEND, MVT::nxv4f64, MVT::nxv4bf16, 6},  // unpck+unpck+lsl+lsl
-                                                         // + fcvt+fcvt
+      {ISD::FP_EXTEND, MVT::nxv4f64, MVT::nxv4bf16, 6},  // 2*unpck+2*lsl+2*fcvt
       {ISD::FP_EXTEND, MVT::nxv8f64, MVT::nxv8bf16, 14}, // 6*unpck+4*lsl+4*fcvt
 
       // Extend from nxvmf32 to nxvmf64.
