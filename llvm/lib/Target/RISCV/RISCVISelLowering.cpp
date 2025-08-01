@@ -10967,9 +10967,9 @@ static inline SDValue getVCIXISDNodeVOID(SDValue &Op, SelectionDAG &DAG,
 }
 
 static SDValue
-convertFixedVectorSegLoadIntrinsics(unsigned IntNo, SDValue Op,
-                                    const RISCVSubtarget &Subtarget,
-                                    SelectionDAG &DAG) {
+lowerFixedVectorSegLoadIntrinsics(unsigned IntNo, SDValue Op,
+                                  const RISCVSubtarget &Subtarget,
+                                  SelectionDAG &DAG) {
   bool IsStrided;
   switch (IntNo) {
   case Intrinsic::riscv_seg2_load_mask:
@@ -11077,7 +11077,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::riscv_sseg6_load_mask:
   case Intrinsic::riscv_sseg7_load_mask:
   case Intrinsic::riscv_sseg8_load_mask:
-    return convertFixedVectorSegLoadIntrinsics(IntNo, Op, Subtarget, DAG);
+    return lowerFixedVectorSegLoadIntrinsics(IntNo, Op, Subtarget, DAG);
 
   case Intrinsic::riscv_sf_vc_v_x_se:
     return getVCIXISDNodeWCHAIN(Op, DAG, RISCVISD::SF_VC_V_X_SE);
