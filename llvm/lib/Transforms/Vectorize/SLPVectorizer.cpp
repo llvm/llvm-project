@@ -22344,6 +22344,7 @@ class HorizontalReduction {
       return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
                                  Name);
     }
+    case RecurKind::Sub:
     case RecurKind::Add:
     case RecurKind::Mul:
     case RecurKind::Xor:
@@ -23505,6 +23506,7 @@ private:
     // vector with full register use).
     bool DoesRequireReductionOp = !AllConsts && VectorValuesAndScales.empty();
     switch (RdxKind) {
+    case RecurKind::Sub:
     case RecurKind::Add:
     case RecurKind::Mul:
     case RecurKind::Or:
@@ -23641,6 +23643,7 @@ private:
       if (Cnt > 1) {
         ElementCount EC = cast<VectorType>(Vec->getType())->getElementCount();
         switch (RdxKind) {
+        case RecurKind::Sub:
         case RecurKind::Add: {
           if (ScalarTy == Builder.getInt1Ty() && ScalarTy != DestTy) {
             unsigned VF = getNumElements(Vec->getType());
@@ -23661,7 +23664,7 @@ private:
                 IsSigned);
           Value *Scale = ConstantVector::getSplat(
               EC, ConstantInt::get(DestTy->getScalarType(), Cnt));
-          LLVM_DEBUG(dbgs() << "SLP: Add (to-mul) " << Cnt << "of " << Vec
+          LLVM_DEBUG(dbgs() << "SLP: " << (RdxKind == RecurKind::Add ? "Add" : "Sub") << " (to-mul) " << Cnt << "of " << Vec
                             << ". (HorRdx)\n");
           ++NumVectorInstructions;
           Vec = Builder.CreateMul(Vec, Scale);
@@ -23802,10 +23805,11 @@ private:
     if (Cnt == 1)
       return VectorizedValue;
     switch (RdxKind) {
+    case RecurKind::Sub:
     case RecurKind::Add: {
       // res = mul vv, n
       Value *Scale = ConstantInt::get(VectorizedValue->getType(), Cnt);
-      LLVM_DEBUG(dbgs() << "SLP: Add (to-mul) " << Cnt << "of "
+      LLVM_DEBUG(dbgs() << "SLP: " << (RdxKind == RecurKind::Add ? "Add" : "Sub") << " (to-mul) " << Cnt << "of "
                         << VectorizedValue << ". (HorRdx)\n");
       return Builder.CreateMul(VectorizedValue, Scale);
     }
@@ -23872,6 +23876,7 @@ private:
           R.isSignedMinBitwidthRootNode());
     }
     switch (RdxKind) {
+    case RecurKind::Sub:
     case RecurKind::Add: {
       // root = mul prev_root, <1, 1, n, 1>
       SmallVector<Constant *> Vals;
@@ -23880,7 +23885,7 @@ private:
         Vals.push_back(ConstantInt::get(V->getType(), Cnt, /*IsSigned=*/false));
       }
       auto *Scale = ConstantVector::get(Vals);
-      LLVM_DEBUG(dbgs() << "SLP: Add (to-mul) " << Scale << "of "
+      LLVM_DEBUG(dbgs() << "SLP: " << (RdxKind == RecurKind::Add ? "Add" : "Sub") << " (to-mul) " << Scale << "of "
                         << VectorizedValue << ". (HorRdx)\n");
       return Builder.CreateMul(VectorizedValue, Scale);
     }
@@ -24331,6 +24336,7 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
         TTI.getInstructionCost(Inst, CostKind);
     InstructionCost RedCost;
     switch (::getRdxKind(Inst)) {
+    case RecurKind::Sub:
     case RecurKind::Add:
     case RecurKind::Mul:
     case RecurKind::Or:
