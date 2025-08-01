@@ -31,6 +31,10 @@ You will need:
  * The ``qemu-arm`` user mode emulator.
  * An ``arm-linux-gnueabihf`` sysroot.
 
+.. note::
+  An existing sysroot is required because some of the builtins include C library
+  headers and a sysroot is the easiest way to get those.
+
 In this example we will be using ``ninja`` as the build tool.
 
 See https://compiler-rt.llvm.org/ for information about the dependencies
@@ -238,7 +242,7 @@ but more difficult. The main problems are:
 
 * There is not a ``qemu-arm`` user-mode emulator for bare-metal systems.
   ``qemu-system-arm`` can be used but this is significantly more difficult
-  to setup.
+  to setup. This document does not explain how to do this.
 * The targets to compile compiler-rt have the suffix ``-none-eabi``. This uses
   the BareMetal driver in clang and by default will not find the libraries
   needed to pass the cmake compiler check.
@@ -251,6 +255,12 @@ Armv6-M, Armv7-M or Armv7E-M. This will test that the builtins can be linked
 into a binary and execute the tests correctly but it will not catch if the
 builtins use instructions that are supported on Armv7-A but not Armv6-M,
 Armv7-M and Armv7E-M.
+
+This requires a second ``arm-none-eabi`` toolchain for building the builtins.
+Using a bare-metal toolchain ensures that the target and C library details are
+specific to bare-metal instead of using Linux settings. This means that some
+tests may behave differently compared to real hardware, but at least the content
+of the builtins library is correct.
 
 Below is an example that builds the builtins for Armv7-M, but runs the tests
 as Armv7-A. It is presented in full, but is very similar to the earlier
