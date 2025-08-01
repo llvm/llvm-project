@@ -33,7 +33,7 @@ define spir_func void @foo(ptr noundef byval(%tprange) align 8 %_arg_UserRange) 
   %RoundedRangeKernel = alloca %tprange, align 8
   call void @llvm.lifetime.start.p0(i64 72, ptr nonnull %RoundedRangeKernel)
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %RoundedRangeKernel, ptr align 8 %_arg_UserRange, i64 16, i1 false)
-  %KernelFunc = getelementptr inbounds i8, ptr %RoundedRangeKernel, i64 16
+  %KernelFunc = getelementptr inbounds i8, ptr %RoundedRangeKernel, i64 8
   call void @llvm.lifetime.end.p0(i64 72, ptr nonnull %RoundedRangeKernel)
   ret void
 }
@@ -55,7 +55,7 @@ define spir_func void @bar(ptr noundef byval(%tprange) align 8 %_arg_UserRange) 
   %RoundedRangeKernel = alloca %tprange, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr nonnull %RoundedRangeKernel)
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %RoundedRangeKernel, ptr align 8 %_arg_UserRange, i64 16, i1 false)
-  %KernelFunc = getelementptr inbounds i8, ptr %RoundedRangeKernel, i64 16
+  %KernelFunc = getelementptr inbounds i8, ptr %RoundedRangeKernel, i64 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr nonnull %RoundedRangeKernel)
   ret void
 }
