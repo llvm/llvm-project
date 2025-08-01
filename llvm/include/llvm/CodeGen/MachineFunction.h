@@ -531,11 +531,12 @@ public:
     unsigned TargetFlags;
   };
 
+  using CallSiteInfoMap = DenseMap<const MachineInstr *, CallSiteInfo>;
+
 private:
   Delegate *TheDelegate = nullptr;
   GISelChangeObserver *Observer = nullptr;
 
-  using CallSiteInfoMap = DenseMap<const MachineInstr *, CallSiteInfo>;
   /// Map a call instruction to call site arguments forwarding info.
   CallSiteInfoMap CallSitesInfo;
 
