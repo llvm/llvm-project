@@ -85,7 +85,7 @@ public:
 
   bool WasPlanDiscarded(ThreadPlan *plan) const;
 
-  ThreadPlan *GetPreviousPlan(ThreadPlan *current_plan) const;
+  lldb::ThreadPlanSP GetPreviousPlan(ThreadPlan *current_plan) const;
 
   ThreadPlan *GetInnermostExpression() const;
 
