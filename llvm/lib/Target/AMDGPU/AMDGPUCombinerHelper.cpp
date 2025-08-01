@@ -9,6 +9,7 @@
 #include "AMDGPUCombinerHelper.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -515,4 +516,10 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
   };
 
   return true;
+}
+
+bool AMDGPUCombinerHelper::matchConstantIs32BitMask(Register Reg) const {
+  const KnownBits &Known = VT->getKnownBits(Reg);
+  return Known.One.extractBits(32, 0).isAllOnes() ||
+         Known.One.extractBits(32, 32).isAllOnes();
 }
