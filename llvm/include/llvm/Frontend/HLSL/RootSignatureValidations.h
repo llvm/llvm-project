@@ -148,51 +148,6 @@ struct OverlappingRanges {
 ///      B: Check for overlap with any overlapping Visibility ResourceRange
 LLVM_ABI llvm::SmallVector<OverlappingRanges>
 findOverlappingRanges(ArrayRef<RangeInfo> Infos);
-
-class RootSignatureBindingValidation {
-private:
-  llvm::SmallVector<RangeInfo, 16> Bindings;
-  struct TypeRange {
-    uint32_t Start;
-    uint32_t End;
-  };
-  std::unordered_map<dxil::ResourceClass, TypeRange> Ranges;
-
-public:
-  void addBinding(dxil::ResourceClass Type, const RangeInfo &Binding) {
-    auto It = Ranges.find(Type);
-
-    if (It == Ranges.end()) {
-      uint32_t InsertPos = Bindings.size();
-      Bindings.push_back(Binding);
-      Ranges[Type] = {InsertPos, InsertPos + 1};
-      return;
-    } 
-    uint32_t InsertPos = It->second.End;
-    Bindings.insert(Bindings.begin() + InsertPos, Binding);
-
-    It->second.End++;
-
-    for (auto &[Type, Range] : Ranges) {
-      if (Range.Start > InsertPos) {
-        Range.Start++;
-        Range.End++;
-      }
-    }
-  }
-
-  llvm::ArrayRef<RangeInfo>
-  getBindingsOfType(const dxil::ResourceClass &Type) const {
-    auto It = Ranges.find(Type);
-    if (It == Ranges.end()) 
-      return {};
-    return llvm::ArrayRef<RangeInfo>(Bindings.data() + It->second.Start,
-                                     It->second.End - It->second.Start);
-  }
-};
-llvm::SmallVector<RangeInfo>
-findUnboundRanges(const llvm::ArrayRef<RangeInfo> &Ranges,
-                  const llvm::ArrayRef<RangeInfo> &Bindings);
 } // namespace rootsig
 } // namespace hlsl
 } // namespace llvm

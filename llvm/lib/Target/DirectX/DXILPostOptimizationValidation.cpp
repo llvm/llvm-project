@@ -14,12 +14,16 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
+#include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Frontend/HLSL/HLSLBinding.h"
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/DXILABI.h"
+#include <utility>
 
 #define DEBUG_TYPE "dxil-post-optimization-validation"
 
@@ -116,11 +120,12 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
   }
 }
 
-static void reportRegNotBound(Module &M,
-                              llvm::hlsl::rootsig::RangeInfo Unbound) {
+static void
+reportRegNotBound(Module &M, ResourceClass Class,
+                  llvm::dxil::ResourceInfo::ResourceBinding Unbound) {
   SmallString<128> Message;
   raw_svector_ostream OS(Message);
-  OS << "register " << getResourceClassName(Unbound.Class)
+  OS << "register " << getResourceClassName(Class)
      << " (space=" << Unbound.Space << ", register=" << Unbound.LowerBound
      << ")"
      << " does not have a binding in the Root Signature";
@@ -155,12 +160,9 @@ tripleToVisibility(llvm::Triple::EnvironmentType ET) {
   }
 }
 
-static hlsl::rootsig::RootSignatureBindingValidation
-initRSBindingValidation(const mcdxbc::RootSignatureDesc &RSD,
-                        dxbc::ShaderVisibility Visibility) {
-
-  hlsl::rootsig::RootSignatureBindingValidation Validation;
-
+static void trackRootSigDescBinding(hlsl::BindingInfoBuilder &Builder,
+                                    const mcdxbc::RootSignatureDesc &RSD,
+                                    dxbc::ShaderVisibility Visibility) {
   for (size_t I = 0; I < RSD.ParametersContainer.size(); I++) {
     const auto &[Type, Loc] =
         RSD.ParametersContainer.getTypeAndLocForParameter(I);
@@ -175,15 +177,10 @@ initRSBindingValidation(const mcdxbc::RootSignatureDesc &RSD,
     case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
       dxbc::RTS0::v1::RootConstants Const =
           RSD.ParametersContainer.getConstant(Loc);
-
-      hlsl::rootsig::RangeInfo Binding;
-      Binding.LowerBound = Const.ShaderRegister;
-      Binding.Space = Const.RegisterSpace;
-      Binding.UpperBound = Binding.LowerBound;
-
-      // Root Constants Bind to CBuffers
-      Validation.addBinding(ResourceClass::CBuffer, Binding);
-
+      Builder.trackBinding(dxil::ResourceClass::CBuffer, Const.RegisterSpace,
+                           Const.ShaderRegister,
+                           Const.ShaderRegister + Const.Num32BitValues,
+                           nullptr);
       break;
     }
 
@@ -192,13 +189,9 @@ initRSBindingValidation(const mcdxbc::RootSignatureDesc &RSD,
     case llvm::to_underlying(dxbc::RootParameterType::CBV): {
       dxbc::RTS0::v2::RootDescriptor Desc =
           RSD.ParametersContainer.getRootDescriptor(Loc);
+      Builder.trackBinding(ParameterToResourceClass(Type), Desc.RegisterSpace,
+                           Desc.ShaderRegister, Desc.ShaderRegister, nullptr);
 
-      hlsl::rootsig::RangeInfo Binding;
-      Binding.LowerBound = Desc.ShaderRegister;
-      Binding.Space = Desc.RegisterSpace;
-      Binding.UpperBound = Binding.LowerBound;
-
-      Validation.addBinding(ParameterToResourceClass(Type), Binding);
       break;
     }
     case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
@@ -206,18 +199,15 @@ initRSBindingValidation(const mcdxbc::RootSignatureDesc &RSD,
           RSD.ParametersContainer.getDescriptorTable(Loc);
 
       for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
-        hlsl::rootsig::RangeInfo Binding;
-        Binding.LowerBound = Range.BaseShaderRegister;
-        Binding.Space = Range.RegisterSpace;
-        Binding.UpperBound = Binding.LowerBound + Range.NumDescriptors - 1;
-        Validation.addBinding(RangeToResourceClass(Range.RangeType), Binding);
+        Builder.trackBinding(RangeToResourceClass(Range.RangeType),
+                             Range.RegisterSpace, Range.BaseShaderRegister,
+                             Range.BaseShaderRegister + Range.NumDescriptors,
+                             nullptr);
       }
       break;
     }
     }
   }
-
-  return Validation;
 }
 
 std::optional<mcdxbc::RootSignatureDesc>
@@ -230,30 +220,6 @@ getRootSignature(RootSignatureBindingInfo &RSBI,
   if (!RootSigDesc)
     return std::nullopt;
   return RootSigDesc;
-}
-
-static void reportUnboundRegisters(
-    Module &M,
-    const llvm::hlsl::rootsig::RootSignatureBindingValidation &Validation,
-    ResourceClass Class,
-    const iterator_range<SmallVectorImpl<dxil::ResourceInfo>::iterator>
-        &Resources) {
-  SmallVector<hlsl::rootsig::RangeInfo> Ranges;
-  for (auto Res = Resources.begin(), End = Resources.end(); Res != End; Res++) {
-    ResourceInfo::ResourceBinding ResBinding = Res->getBinding();
-    hlsl::rootsig::RangeInfo Range;
-    Range.Space = ResBinding.Space;
-    Range.LowerBound = ResBinding.LowerBound;
-    Range.UpperBound = Range.LowerBound + ResBinding.Size - 1;
-    Range.Class = Class;
-    Ranges.push_back(Range);
-  }
-
-  SmallVector<hlsl::rootsig::RangeInfo> Unbounds =
-      hlsl::rootsig::findUnboundRanges(Ranges,
-                                       Validation.getBindingsOfType(Class));
-  for (const auto &Unbound : Unbounds)
-    reportRegNotBound(M, Unbound);
 }
 
 static void reportErrors(Module &M, DXILResourceMap &DRM,
@@ -271,15 +237,29 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
 
   if (auto RSD = getRootSignature(RSBI, MMI)) {
 
-    llvm::hlsl::rootsig::RootSignatureBindingValidation Validation =
-        initRSBindingValidation(*RSD, tripleToVisibility(MMI.ShaderProfile));
+    hlsl::BindingInfoBuilder Builder;
+    dxbc::ShaderVisibility Visibility = tripleToVisibility(MMI.ShaderProfile);
+    trackRootSigDescBinding(Builder, *RSD, Visibility);
 
-    reportUnboundRegisters(M, Validation, ResourceClass::CBuffer,
-                           DRM.cbuffers());
-    reportUnboundRegisters(M, Validation, ResourceClass::UAV, DRM.uavs());
-    reportUnboundRegisters(M, Validation, ResourceClass::Sampler,
-                           DRM.samplers());
-    reportUnboundRegisters(M, Validation, ResourceClass::SRV, DRM.srvs());
+    bool HasOverlap;
+    hlsl::BindingInfo Info = Builder.calculateBindingInfo(HasOverlap);
+
+    for (const auto &ResList :
+         {std::make_pair(ResourceClass::SRV, DRM.srvs()),
+          std::make_pair(ResourceClass::UAV, DRM.uavs()),
+          std::make_pair(ResourceClass::CBuffer, DRM.cbuffers()),
+          std::make_pair(ResourceClass::Sampler, DRM.samplers())}) {
+      for (auto Res : ResList.second) {
+        llvm::dxil::ResourceInfo::ResourceBinding ResBinding = Res.getBinding();
+        llvm::hlsl::BindingInfo::BindingRange ResRange(
+            ResBinding.LowerBound, ResBinding.LowerBound + ResBinding.Size);
+
+        auto IsBound = Info.isBound(ResList.first, ResBinding.Space, ResRange);
+        if (!IsBound) {
+          reportRegNotBound(M, ResList.first, ResBinding);
+        }
+      }
+    }
   }
 }
 } // namespace

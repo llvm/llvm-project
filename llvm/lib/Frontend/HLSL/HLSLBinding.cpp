@@ -8,6 +8,7 @@
 
 #include "llvm/Frontend/HLSL/HLSLBinding.h"
 #include "llvm/ADT/STLExtras.h"
+#include <cstdint>
 
 using namespace llvm;
 using namespace hlsl;
@@ -64,6 +65,22 @@ BindingInfo::RegisterSpace::findAvailableBinding(int32_t Size) {
   }
 
   return std::nullopt;
+}
+
+bool BindingInfo::RegisterSpace::isBound(BindingRange B) {
+  for (BindingRange &R : FreeRanges) {
+    if (B.LowerBound >= R.LowerBound && B.LowerBound < R.UpperBound &&
+        B.UpperBound > R.LowerBound && B.UpperBound <= R.UpperBound)
+      return false;
+  }
+  return true;
+}
+
+bool BindingInfo::isBound(dxil::ResourceClass RC, uint32_t Space,
+                          BindingRange B) {
+  BindingSpaces &BS = getBindingSpaces(RC);
+  RegisterSpace &RS = BS.getOrInsertSpace(Space);
+  return RS.isBound(B);
 }
 
 BindingInfo BindingInfoBuilder::calculateBindingInfo(

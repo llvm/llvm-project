@@ -1,6 +1,6 @@
 ; RUN: not opt -S -passes='dxil-post-optimization-validation' -mtriple=dxil-pc-shadermodel6.6-compute %s 2>&1 | FileCheck %s
 
-; CHECK: error: register UAV (space=0, register=4294967295) does not have a binding in the Root Signature
+; CHECK: error: register UAV (space=0, register=4294967294) does not have a binding in the Root Signature
 
 ; Root Signature(
 ;   CBV(b3, space=666, visibility=SHADER_VISIBILITY_ALL)
@@ -12,8 +12,8 @@
 
 define void @CSMain() "hlsl.shader"="compute" {
 entry:
-; RWBuffer<float> UAV : register(u4294967295);
-  %RWB = tail call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0_0t(i32 0, i32 -1, i32 1, i32 0, i1 false, ptr nonnull @RWB.str)
+; RWBuffer<float> UAV : register(4294967294);
+  %RWB = tail call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0_0t(i32 0, i32 4294967294, i32 1, i32 0, i1 false, ptr nonnull @RWB.str)
   ret void
 }
 
@@ -27,4 +27,4 @@ entry:
 !5 = !{!"DescriptorTable", i32 0, !6}
 !6 = !{!"Sampler", i32 2, i32 0, i32 0, i32 -1, i32 0}
 !7 = !{!"DescriptorTable", i32 0, !8}
-!8 = !{!"UAV", i32 -1, i32 0, i32 0, i32 -1, i32 2}
+!8 = !{!"UAV", i32 10, i32 0, i32 0, i32 -1, i32 2}

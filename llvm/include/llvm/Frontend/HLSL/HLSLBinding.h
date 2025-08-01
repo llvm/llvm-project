@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cstdint>
 
 namespace llvm {
 namespace hlsl {
@@ -57,6 +58,7 @@ public:
     }
     // Size == -1 means unbounded array
     LLVM_ABI std::optional<uint32_t> findAvailableBinding(int32_t Size);
+    LLVM_ABI bool isBound(BindingRange B);
   };
 
   struct BindingSpaces {
@@ -94,6 +96,8 @@ public:
   // Size == -1 means unbounded array
   LLVM_ABI std::optional<uint32_t>
   findAvailableBinding(dxil::ResourceClass RC, uint32_t Space, int32_t Size);
+
+  LLVM_ABI bool isBound(dxil::ResourceClass RC, uint32_t Space, BindingRange B);
 
   friend class BindingInfoBuilder;
 };
