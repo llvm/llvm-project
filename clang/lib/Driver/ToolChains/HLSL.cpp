@@ -242,7 +242,7 @@ SmallString<1024> getSpirvExtArg(ArrayRef<std::string> SpvExtensionArgs) {
   getSpirvExtOperand(SpvExtensionArgs[0], out);
 
   SpvExtensionArgs = SpvExtensionArgs.slice(1);
-  for (llvm::StringRef Extension : SpvExtensionArgs) {
+  for (StringRef Extension : SpvExtensionArgs) {
     out << ",";
     getSpirvExtOperand(Extension, out);
   }
