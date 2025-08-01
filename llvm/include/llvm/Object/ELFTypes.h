@@ -18,6 +18,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/UniqueBBID.h"
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -925,6 +926,8 @@ struct BBAddrMap {
             SmallVector<uint32_t, 1> CallsiteOffsets)
         : ID(ID), Offset(Offset), Size(Size), MD(MD),
           CallsiteOffsets(std::move(CallsiteOffsets)) {}
+
+    UniqueBBID getID() const { return {ID, 0}; }
 
     bool operator==(const BBEntry &Other) const {
       return ID == Other.ID && Offset == Other.Offset && Size == Other.Size &&

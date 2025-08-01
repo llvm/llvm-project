@@ -90,7 +90,7 @@ static void reportOutOfRangeError(MCContext &Ctx, SMLoc Loc, unsigned N) {
 
 static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
                                  MCContext &Ctx) {
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     llvm_unreachable("Unknown fixup kind");
   case FK_Data_1:
@@ -157,7 +157,7 @@ void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   MCContext &Ctx = getContext();
 
   // Fixup leb128 separately.
-  if (Fixup.getTargetKind() == FK_Data_leb128)
+  if (Fixup.getKind() == FK_Data_leb128)
     return fixupLeb128(Ctx, Fixup, Data, Value);
 
   // Apply any target-specific value adjustments.
@@ -177,77 +177,9 @@ void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   }
 }
 
-// Linker relaxation may change code size. We have to insert Nops
-// for .align directive when linker relaxation enabled. So then Linker
-// could satisfy alignment by removing Nops.
-// The function returns the total Nops Size we need to insert.
-bool LoongArchAsmBackend::shouldInsertExtraNopBytesForCodeAlign(
-    const MCAlignFragment &AF, unsigned &Size) {
-  // Calculate Nops Size only when linker relaxation enabled.
-  if (!AF.getSubtargetInfo()->hasFeature(LoongArch::FeatureRelax))
-    return false;
-
-  // Ignore alignment if MaxBytesToEmit is less than the minimum Nop size.
-  const unsigned MinNopLen = 4;
-  if (AF.getMaxBytesToEmit() < MinNopLen)
-    return false;
-  Size = AF.getAlignment().value() - MinNopLen;
-  return AF.getAlignment() > MinNopLen;
-}
-
-// We need to insert R_LARCH_ALIGN relocation type to indicate the
-// position of Nops and the total bytes of the Nops have been inserted
-// when linker relaxation enabled.
-// The function inserts fixup_loongarch_align fixup which eventually will
-// transfer to R_LARCH_ALIGN relocation type.
-// The improved R_LARCH_ALIGN requires symbol index. The lowest 8 bits of
-// addend represent alignment and the other bits of addend represent the
-// maximum number of bytes to emit. The maximum number of bytes is zero
-// means ignore the emit limit.
-bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
-                                                        MCAlignFragment &AF) {
-  // Insert the fixup only when linker relaxation enabled.
-  if (!AF.getSubtargetInfo()->hasFeature(LoongArch::FeatureRelax))
-    return false;
-
-  // Calculate total Nops we need to insert. If there are none to insert
-  // then simply return.
-  unsigned InsertedNopBytes;
-  if (!shouldInsertExtraNopBytesForCodeAlign(AF, InsertedNopBytes))
-    return false;
-
-  MCSection *Sec = AF.getParent();
-  MCContext &Ctx = getContext();
-  const MCExpr *Dummy = MCConstantExpr::create(0, Ctx);
-  MCFixup Fixup = MCFixup::create(0, Dummy, ELF::R_LARCH_ALIGN);
-  unsigned MaxBytesToEmit = AF.getMaxBytesToEmit();
-
-  auto createExtendedValue = [&]() {
-    const MCSymbolRefExpr *MCSym = getSecToAlignSym()[Sec];
-    if (MCSym == nullptr) {
-      // Define a marker symbol at the section with an offset of 0.
-      MCSymbol *Sym = Ctx.createNamedTempSymbol("la-relax-align");
-      Sym->setFragment(&*Sec->getBeginSymbol()->getFragment());
-      Asm.registerSymbol(*Sym);
-      MCSym = MCSymbolRefExpr::create(Sym, Ctx);
-      getSecToAlignSym()[Sec] = MCSym;
-    }
-    return MCValue::get(&MCSym->getSymbol(), nullptr,
-                        MaxBytesToEmit << 8 | Log2(AF.getAlignment()));
-  };
-
-  uint64_t FixedValue = 0;
-  MCValue Value = MaxBytesToEmit >= InsertedNopBytes
-                      ? MCValue::get(InsertedNopBytes)
-                      : createExtendedValue();
-  Asm.getWriter().recordRelocation(AF, Fixup, Value, FixedValue);
-
-  return true;
-}
-
 bool LoongArchAsmBackend::shouldForceRelocation(const MCFixup &Fixup,
                                                 const MCValue &Target) {
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     return STI.hasFeature(LoongArch::FeatureRelax);
   case FK_Data_1:
@@ -279,23 +211,71 @@ getRelocPairForSize(unsigned Size) {
   }
 }
 
-std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(MCLEBFragment &LF,
+// Check if an R_LARCH_ALIGN relocation is needed for an alignment directive.
+// If conditions are met, compute the padding size and create a fixup encoding
+// the padding size in the addend. If MaxBytesToEmit is smaller than the padding
+// size, the fixup encodes MaxBytesToEmit in the higher bits and references a
+// per-section marker symbol.
+bool LoongArchAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
+  // Use default handling unless linker relaxation is enabled and the
+  // MaxBytesToEmit >= the nop size.
+  if (!F.getSubtargetInfo()->hasFeature(LoongArch::FeatureRelax))
+    return false;
+  const unsigned MinNopLen = 4;
+  unsigned MaxBytesToEmit = F.getAlignMaxBytesToEmit();
+  if (MaxBytesToEmit < MinNopLen)
+    return false;
+
+  Size = F.getAlignment().value() - MinNopLen;
+  if (F.getAlignment() <= MinNopLen)
+    return false;
+
+  MCContext &Ctx = getContext();
+  const MCExpr *Expr = nullptr;
+  if (MaxBytesToEmit >= Size) {
+    Expr = MCConstantExpr::create(Size, getContext());
+  } else {
+    MCSection *Sec = F.getParent();
+    const MCSymbolRefExpr *SymRef = getSecToAlignSym()[Sec];
+    if (SymRef == nullptr) {
+      // Define a marker symbol at the section with an offset of 0.
+      MCSymbol *Sym = Ctx.createNamedTempSymbol("la-relax-align");
+      Sym->setFragment(&*Sec->getBeginSymbol()->getFragment());
+      Asm->registerSymbol(*Sym);
+      SymRef = MCSymbolRefExpr::create(Sym, Ctx);
+      getSecToAlignSym()[Sec] = SymRef;
+    }
+    Expr = MCBinaryExpr::createAdd(
+        SymRef,
+        MCConstantExpr::create((MaxBytesToEmit << 8) | Log2(F.getAlignment()),
+                               Ctx),
+        Ctx);
+  }
+  MCFixup Fixup =
+      MCFixup::create(0, Expr, FirstLiteralRelocationKind + ELF::R_LARCH_ALIGN);
+  F.setVarFixups({Fixup});
+  F.setLinkerRelaxable();
+  F.getParent()->setLinkerRelaxable();
+  return true;
+}
+
+std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(MCFragment &F,
                                                        int64_t &Value) const {
-  const MCExpr &Expr = LF.getValue();
-  if (LF.isSigned() || !Expr.evaluateKnownAbsolute(Value, *Asm))
+  const MCExpr &Expr = F.getLEBValue();
+  if (F.isLEBSigned() || !Expr.evaluateKnownAbsolute(Value, *Asm))
     return std::make_pair(false, false);
-  LF.addFixup(MCFixup::create(0, &Expr, FK_Data_leb128));
+  F.setVarFixups({MCFixup::create(0, &Expr, FK_Data_leb128)});
   return std::make_pair(true, true);
 }
 
-bool LoongArchAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
+bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F,
                                              bool &WasRelaxed) const {
   MCContext &C = getContext();
 
-  int64_t LineDelta = DF.getLineDelta();
-  const MCExpr &AddrDelta = DF.getAddrDelta();
+  int64_t LineDelta = F.getDwarfLineDelta();
+  const MCExpr &AddrDelta = F.getDwarfAddrDelta();
   SmallVector<MCFixup, 1> Fixups;
-  size_t OldSize = DF.getContents().size();
+  size_t OldSize = F.getVarSize();
 
   int64_t Value;
   if (AddrDelta.evaluateAsAbsolute(Value, *Asm))
@@ -349,17 +329,16 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
     OS << uint8_t(dwarf::DW_LNS_copy);
   }
 
-  DF.setContents(Data);
-  DF.setFixups(Fixups);
+  F.setVarContents(Data);
+  F.setVarFixups(Fixups);
   WasRelaxed = OldSize != Data.size();
   return true;
 }
 
-bool LoongArchAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
-                                        bool &WasRelaxed) const {
-  const MCExpr &AddrDelta = DF.getAddrDelta();
+bool LoongArchAsmBackend::relaxDwarfCFA(MCFragment &F, bool &WasRelaxed) const {
+  const MCExpr &AddrDelta = F.getDwarfAddrDelta();
   SmallVector<MCFixup, 2> Fixups;
-  size_t OldSize = DF.getContents().size();
+  size_t OldSize = F.getVarContents().size();
 
   int64_t Value;
   if (AddrDelta.evaluateAsAbsolute(Value, *Asm))
@@ -371,9 +350,9 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
   assert(getContext().getAsmInfo()->getMinInstAlignment() == 1 &&
          "expected 1-byte alignment");
   if (Value == 0) {
-    DF.clearContents();
-    DF.clearFixups();
-    WasRelaxed = OldSize != DF.getContents().size();
+    F.clearVarContents();
+    F.clearVarFixups();
+    WasRelaxed = OldSize != 0;
     return true;
   }
 
@@ -405,8 +384,8 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
   } else {
     llvm_unreachable("unsupported CFA encoding");
   }
-  DF.setContents(Data);
-  DF.setFixups(Fixups);
+  F.setVarContents(Data);
+  F.setVarFixups(Fixups);
 
   WasRelaxed = OldSize != Data.size();
   return true;
@@ -435,7 +414,7 @@ bool LoongArchAsmBackend::isPCRelFixupResolved(const MCSymbol *SymA,
 
   // Otherwise, check if the offset between the symbol and fragment is fully
   // resolved, unaffected by linker-relaxable fragments (e.g. instructions or
-  // offset-affected MCAlignFragment). Complements the generic
+  // offset-affected FT_Align fragments). Complements the generic
   // isSymbolRefDifferenceFullyResolvedImpl.
   if (!PCRelTemp)
     PCRelTemp = getContext().createTempSymbol();

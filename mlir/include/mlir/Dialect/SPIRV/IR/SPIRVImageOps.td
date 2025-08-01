@@ -541,4 +541,50 @@ def SPIRV_ImageSampleProjDrefImplicitLodOp : SPIRV_Op<"ImageSampleProjDrefImplic
 
 // -----
 
+def SPIRV_ImageFetchOp : SPIRV_Op<"ImageFetch",
+    [SPIRV_DimIsNot<"image", ["Cube"]>,
+     SPIRV_SampledOperandIs<"image", ["NeedSampler"]>,
+     SPIRV_NoneOrElementMatchImage<"result", "image">]> {
+  let summary = "Fetch a single texel from an image whose Sampled operand is 1. ";
+
+  let description = [{
+    Result Type must be a vector of four components of floating-point type or
+    integer type. Its components must be the same as Sampled Type of the underlying
+    OpTypeImage (unless that underlying Sampled Type is OpTypeVoid).
+
+    Image must be an object whose type is OpTypeImage. Its Dim operand must not be
+    Cube, and its Sampled operand must be 1.
+
+    Coordinate must be a scalar or vector of integer type. It contains (u[, v] … [,
+    array layer]) as needed by the definition of Sampled Image.
+
+    Image Operands encodes what operands follow, as per Image Operands.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.ImageFetch %1, %2 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, R32f>, vector<2xsi32> -> vector<4xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_AnyImage:$image,
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$coordinate,
+    OptionalAttr<SPIRV_ImageOperandsAttr>:$image_operands,
+    Variadic<SPIRV_Type>:$operand_arguments
+  );
+
+  let results = (outs
+    AnyTypeOf<[SPIRV_Vec4<SPIRV_Float>, SPIRV_Vec4<SPIRV_Integer>]>:$result
+  );
+
+  let assemblyFormat = [{
+    $image `,` $coordinate custom<ImageOperands>($image_operands) ( `,` $operand_arguments^ )? attr-dict
+    `:` type($image) `,` type($coordinate) ( `,` type($operand_arguments)^ )?
+    `->` type($result)
+  }];
+}
+
 #endif // MLIR_DIALECT_SPIRV_IR_IMAGE_OPS

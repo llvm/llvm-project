@@ -47,42 +47,11 @@ static bool operator!=(const evaluate::Expr<T> &e, const evaluate::Expr<U> &f) {
   return !(e == f);
 }
 
-// There is no consistent way to get the source of a given ActionStmt, so
-// extract the source information from Statement<ActionStmt> when we can,
-// and keep it around for error reporting in further analyses.
-struct SourcedActionStmt {
-  const parser::ActionStmt *stmt{nullptr};
-  parser::CharBlock source;
-
-  operator bool() const { return stmt != nullptr; }
-};
-
 struct AnalyzedCondStmt {
   SomeExpr cond{evaluate::NullPointer{}}; // Default ctor is deleted
   parser::CharBlock source;
   SourcedActionStmt ift, iff;
 };
-
-static SourcedActionStmt GetActionStmt(
-    const parser::ExecutionPartConstruct *x) {
-  if (x == nullptr) {
-    return SourcedActionStmt{};
-  }
-  if (auto *exec{std::get_if<parser::ExecutableConstruct>(&x->u)}) {
-    using ActionStmt = parser::Statement<parser::ActionStmt>;
-    if (auto *stmt{std::get_if<ActionStmt>(&exec->u)}) {
-      return SourcedActionStmt{&stmt->statement, stmt->source};
-    }
-  }
-  return SourcedActionStmt{};
-}
-
-static SourcedActionStmt GetActionStmt(const parser::Block &block) {
-  if (block.size() == 1) {
-    return GetActionStmt(&block.front());
-  }
-  return SourcedActionStmt{};
-}
 
 // Compute the `evaluate::Assignment` from parser::ActionStmt. The assumption
 // is that the ActionStmt will be either an assignment or a pointer-assignment,
@@ -228,7 +197,8 @@ static std::pair<parser::CharBlock, parser::CharBlock> SplitAssignmentSource(
 }
 
 static bool IsCheckForAssociated(const SomeExpr &cond) {
-  return GetTopLevelOperation(cond).first == operation::Operator::Associated;
+  return GetTopLevelOperationIgnoreResizing(cond).first ==
+      operation::Operator::Associated;
 }
 
 static bool IsMaybeAtomicWrite(const evaluate::Assignment &assign) {
@@ -430,8 +400,8 @@ OmpStructureChecker::CheckUpdateCapture(
   //    subexpression of the right-hand side.
   // 2. An assignment could be a capture (cbc) if the right-hand side is
   //    a variable (or a function ref), with potential type conversions.
-  bool cbu1{IsSubexpressionOf(as1.lhs, as1.rhs)}; // Can as1 be an update?
-  bool cbu2{IsSubexpressionOf(as2.lhs, as2.rhs)}; // Can as2 be an update?
+  bool cbu1{IsVarSubexpressionOf(as1.lhs, as1.rhs)}; // Can as1 be an update?
+  bool cbu2{IsVarSubexpressionOf(as2.lhs, as2.rhs)}; // Can as2 be an update?
   bool cbc1{IsVarOrFunctionRef(GetConvertInput(as1.rhs))}; // Can 1 be capture?
   bool cbc2{IsVarOrFunctionRef(GetConvertInput(as2.rhs))}; // Can 2 be capture?
 
@@ -638,7 +608,7 @@ void OmpStructureChecker::CheckAtomicUpdateAssignment(
   std::pair<operation::Operator, std::vector<SomeExpr>> top{
       operation::Operator::Unknown, {}};
   if (auto &&maybeInput{GetConvertInput(update.rhs)}) {
-    top = GetTopLevelOperation(*maybeInput);
+    top = GetTopLevelOperationIgnoreResizing(*maybeInput);
   }
   switch (top.first) {
   case operation::Operator::Add:
@@ -688,7 +658,7 @@ void OmpStructureChecker::CheckAtomicUpdateAssignment(
       if (IsSameOrConvertOf(arg, atom)) {
         ++count;
       } else {
-        if (!subExpr && IsSubexpressionOf(atom, arg)) {
+        if (!subExpr && evaluate::IsVarSubexpressionOf(atom, arg)) {
           subExpr = arg;
         }
         nonAtom.push_back(arg);
@@ -746,7 +716,7 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateAssignment(
 
   CheckAtomicVariable(atom, alsrc);
 
-  auto top{GetTopLevelOperation(cond)};
+  auto top{GetTopLevelOperationIgnoreResizing(cond)};
   // Missing arguments to operations would have been diagnosed by now.
 
   switch (top.first) {

@@ -1342,13 +1342,30 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0);
 
     if (ST.hasVOP3PInsts()) {
-      getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS})
-        .legalFor({S32, S16, V2S16})
-        .clampMaxNumElements(0, S16, 2)
-        .minScalar(0, S16)
-        .widenScalarToNextPow2(0)
-        .scalarize(0)
-        .lower();
+      getActionDefinitionsBuilder(G_ABS)
+          .legalFor({S32, S16, V2S16})
+          .clampMaxNumElements(0, S16, 2)
+          .minScalar(0, S16)
+          .widenScalarToNextPow2(0)
+          .scalarize(0)
+          .lower();
+      if (ST.hasIntMinMax64()) {
+        getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
+            .legalFor({S32, S16, S64, V2S16})
+            .clampMaxNumElements(0, S16, 2)
+            .minScalar(0, S16)
+            .widenScalarToNextPow2(0)
+            .scalarize(0)
+            .lower();
+      } else {
+        getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
+            .legalFor({S32, S16, V2S16})
+            .clampMaxNumElements(0, S16, 2)
+            .minScalar(0, S16)
+            .widenScalarToNextPow2(0)
+            .scalarize(0)
+            .lower();
+      }
     } else {
       getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS})
         .legalFor({S32, S16})
@@ -1682,7 +1699,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.hasFlatAtomicFaddF32Inst())
     Atomic.legalFor({{S32, FlatPtr}});
 
-  if (ST.hasGFX90AInsts()) {
+  if (ST.hasGFX90AInsts() || ST.hasGFX1250Insts()) {
     // These are legal with some caveats, and should have undergone expansion in
     // the IR in most situations
     // TODO: Move atomic expansion into legalizer
@@ -2295,8 +2312,8 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
         LLT::scalar(32), commonAlignment(Align(64), Offset));
 
     // Pointer address
-    B.buildPtrAdd(LoadAddr, KernargPtrReg,
-                  B.buildConstant(LLT::scalar(64), Offset).getReg(0));
+    B.buildObjectPtrOffset(LoadAddr, KernargPtrReg,
+                           B.buildConstant(LLT::scalar(64), Offset).getReg(0));
     // Load address
     return B.buildLoad(S32, LoadAddr, *MMO).getReg(0);
   }
@@ -2317,8 +2334,9 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
           MachineMemOperand::MOInvariant,
       LLT::scalar(32), commonAlignment(Align(64), StructOffset));
 
-  B.buildPtrAdd(LoadAddr, QueuePtr,
-                B.buildConstant(LLT::scalar(64), StructOffset).getReg(0));
+  B.buildObjectPtrOffset(
+      LoadAddr, QueuePtr,
+      B.buildConstant(LLT::scalar(64), StructOffset).getReg(0));
   return B.buildLoad(S32, LoadAddr, *MMO).getReg(0);
 }
 
@@ -2932,14 +2950,22 @@ bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(Register DstReg, LLT PtrTy,
   Register PCReg = PtrTy.getSizeInBits() != 32 ? DstReg :
     B.getMRI()->createGenericVirtualRegister(ConstPtrTy);
 
-  MachineInstrBuilder MIB = B.buildInstr(AMDGPU::SI_PC_ADD_REL_OFFSET)
-    .addDef(PCReg);
+  if (ST.has64BitLiterals()) {
+    assert(GAFlags != SIInstrInfo::MO_NONE);
 
-  MIB.addGlobalAddress(GV, Offset, GAFlags);
-  if (GAFlags == SIInstrInfo::MO_NONE)
-    MIB.addImm(0);
-  else
-    MIB.addGlobalAddress(GV, Offset, GAFlags + 1);
+    MachineInstrBuilder MIB =
+        B.buildInstr(AMDGPU::SI_PC_ADD_REL_OFFSET64).addDef(PCReg);
+    MIB.addGlobalAddress(GV, Offset, GAFlags + 2);
+  } else {
+    MachineInstrBuilder MIB =
+        B.buildInstr(AMDGPU::SI_PC_ADD_REL_OFFSET).addDef(PCReg);
+
+    MIB.addGlobalAddress(GV, Offset, GAFlags);
+    if (GAFlags == SIInstrInfo::MO_NONE)
+      MIB.addImm(0);
+    else
+      MIB.addGlobalAddress(GV, Offset, GAFlags + 1);
+  }
 
   if (!B.getMRI()->getRegClassOrNull(PCReg))
     B.getMRI()->setRegClass(PCReg, &AMDGPU::SReg_64RegClass);
@@ -2954,6 +2980,15 @@ void AMDGPULegalizerInfo::buildAbsGlobalAddress(
     Register DstReg, LLT PtrTy, MachineIRBuilder &B, const GlobalValue *GV,
     MachineRegisterInfo &MRI) const {
   bool RequiresHighHalf = PtrTy.getSizeInBits() != 32;
+
+  if (RequiresHighHalf && ST.has64BitLiterals()) {
+    if (!MRI.getRegClassOrNull(DstReg))
+      MRI.setRegClass(DstReg, &AMDGPU::SReg_64RegClass);
+    B.buildInstr(AMDGPU::S_MOV_B64)
+        .addDef(DstReg)
+        .addGlobalAddress(GV, 0, SIInstrInfo::MO_ABS64);
+    return;
+  }
 
   LLT S32 = LLT::scalar(32);
 
@@ -3309,7 +3344,7 @@ static bool allowApproxFunc(const MachineFunction &MF, unsigned Flags) {
   if (Flags & MachineInstr::FmAfn)
     return true;
   const auto &Options = MF.getTarget().Options;
-  return Options.UnsafeFPMath || Options.ApproxFuncFPMath;
+  return Options.ApproxFuncFPMath;
 }
 
 static bool needsDenormHandlingF32(const MachineFunction &MF, Register Src,
@@ -3415,7 +3450,7 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
       static_cast<const AMDGPUTargetMachine &>(MF.getTarget());
 
   if (Ty == F16 || MI.getFlag(MachineInstr::FmAfn) ||
-      TM.Options.ApproxFuncFPMath || TM.Options.UnsafeFPMath) {
+      TM.Options.ApproxFuncFPMath) {
     if (Ty == F16 && !ST.has16BitInsts()) {
       Register LogVal = MRI.createGenericVirtualRegister(F32);
       auto PromoteSrc = B.buildFPExt(F32, X);
@@ -4191,6 +4226,9 @@ bool AMDGPULegalizerInfo::legalizeMul(LegalizerHelper &Helper,
   assert(Ty.isScalar());
 
   unsigned Size = Ty.getSizeInBits();
+  if (ST.hasVectorMulU64() && Size == 64)
+    return true;
+
   unsigned NumParts = Size / 32;
   assert((Size % 32) == 0);
   assert(NumParts >= 2);
@@ -4480,8 +4518,7 @@ Register AMDGPULegalizerInfo::getKernargParameterPtr(MachineIRBuilder &B,
     llvm_unreachable("failed to find kernarg segment ptr");
 
   auto COffset = B.buildConstant(LLT::scalar(64), Offset);
-  // TODO: Should get nuw
-  return B.buildPtrAdd(PtrTy, KernArgReg, COffset).getReg(0);
+  return B.buildObjectPtrOffset(PtrTy, KernArgReg, COffset).getReg(0);
 }
 
 /// Legalize a value that's loaded from kernel arguments. This is only used by
@@ -4840,9 +4877,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
   uint16_t Flags = MI.getFlags();
   LLT ResTy = MRI.getType(Res);
 
-  const MachineFunction &MF = B.getMF();
-  bool AllowInaccurateRcp = MI.getFlag(MachineInstr::FmAfn) ||
-                            MF.getTarget().Options.UnsafeFPMath;
+  bool AllowInaccurateRcp = MI.getFlag(MachineInstr::FmAfn);
 
   if (const auto *CLHS = getConstantFPVRegVal(LHS, MRI)) {
     if (!AllowInaccurateRcp && ResTy != LLT::scalar(16))
@@ -4902,9 +4937,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV64(MachineInstr &MI,
   uint16_t Flags = MI.getFlags();
   LLT ResTy = MRI.getType(Res);
 
-  const MachineFunction &MF = B.getMF();
-  bool AllowInaccurateRcp = MF.getTarget().Options.UnsafeFPMath ||
-                            MI.getFlag(MachineInstr::FmAfn);
+  bool AllowInaccurateRcp = MI.getFlag(MachineInstr::FmAfn);
 
   if (!AllowInaccurateRcp)
     return false;
@@ -5656,8 +5689,8 @@ bool AMDGPULegalizerInfo::getImplicitArgPtr(Register DstReg,
                       AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR))
     return false;
 
-  // FIXME: This should be nuw
-  B.buildPtrAdd(DstReg, KernargPtrReg, B.buildConstant(IdxTy, Offset).getReg(0));
+  B.buildObjectPtrOffset(DstReg, KernargPtrReg,
+                         B.buildConstant(IdxTy, Offset).getReg(0));
   return true;
 }
 
@@ -6999,8 +7032,8 @@ bool AMDGPULegalizerInfo::legalizeTrapHsaQueuePtr(
     // Pointer address
     Register LoadAddr = MRI.createGenericVirtualRegister(
         LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64));
-    B.buildPtrAdd(LoadAddr, KernargPtrReg,
-                  B.buildConstant(LLT::scalar(64), Offset).getReg(0));
+    B.buildObjectPtrOffset(LoadAddr, KernargPtrReg,
+                           B.buildConstant(LLT::scalar(64), Offset).getReg(0));
     // Load address
     Register Temp = B.buildLoad(S64, LoadAddr, *MMO).getReg(0);
     B.buildCopy(SGPR01, Temp);
@@ -7622,6 +7655,20 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_image_bvh_dual_intersect_ray:
   case Intrinsic::amdgcn_image_bvh8_intersect_ray:
     return legalizeBVHDualOrBVH8IntersectRayIntrinsic(MI, B);
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_fp8_fp8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_fp8_bf8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_bf8_fp8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_bf8_bf8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_fp8_fp8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_fp8_bf8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_fp8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_bf8: {
+    Register Index = MI.getOperand(5).getReg();
+    LLT S64 = LLT::scalar(64);
+    if (MRI.getType(Index) != S64)
+      MI.getOperand(5).setReg(B.buildAnyExt(S64, Index).getReg(0));
+    return true;
+  }
   case Intrinsic::amdgcn_swmmac_f16_16x16x32_f16:
   case Intrinsic::amdgcn_swmmac_bf16_16x16x32_bf16:
   case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf16:
@@ -7636,15 +7683,24 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
       MI.getOperand(5).setReg(B.buildAnyExt(S32, Index).getReg(0));
     return true;
   }
+  case Intrinsic::amdgcn_swmmac_f16_16x16x64_f16:
+  case Intrinsic::amdgcn_swmmac_bf16_16x16x64_bf16:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x64_bf16:
+  case Intrinsic::amdgcn_swmmac_bf16f32_16x16x64_bf16:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x64_f16:
+  case Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8:
   case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu4:
   case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu8:
   case Intrinsic::amdgcn_swmmac_i32_16x16x64_iu4: {
     Register Index = MI.getOperand(7).getReg();
-    LLT S32 = LLT::scalar(32);
-    if (MRI.getType(Index) != S32)
-      MI.getOperand(7).setReg(B.buildAnyExt(S32, Index).getReg(0));
+    LLT IdxTy = IntrID == Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8
+                    ? LLT::scalar(64)
+                    : LLT::scalar(32);
+    if (MRI.getType(Index) != IdxTy)
+      MI.getOperand(7).setReg(B.buildAnyExt(IdxTy, Index).getReg(0));
     return true;
   }
+
   case Intrinsic::amdgcn_fmed3: {
     GISelChangeObserver &Observer = Helper.Observer;
 

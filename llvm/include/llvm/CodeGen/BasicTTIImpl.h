@@ -1369,8 +1369,7 @@ public:
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
     assert(ISD && "Invalid opcode");
 
-    // TODO: Handle other cost kinds.
-    if (CostKind != TTI::TCK_RecipThroughput)
+    if (getTLI()->getValueType(DL, ValTy, true) == MVT::Other)
       return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
                                        Op1Info, Op2Info, I);
 
@@ -1773,14 +1772,68 @@ public:
         }
       }
 
+      if (ICA.getID() == Intrinsic::vp_scatter) {
+        if (ICA.isTypeBasedOnly()) {
+          IntrinsicCostAttributes MaskedScatter(
+              *VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID()),
+              ICA.getReturnType(), ArrayRef(ICA.getArgTypes()).drop_back(1),
+              ICA.getFlags());
+          return getTypeBasedIntrinsicInstrCost(MaskedScatter, CostKind);
+        }
+        Align Alignment;
+        if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
+          Alignment = VPI->getPointerAlignment().valueOrOne();
+        bool VarMask = isa<Constant>(ICA.getArgs()[2]);
+        return thisT()->getGatherScatterOpCost(
+            Instruction::Store, ICA.getArgTypes()[0], ICA.getArgs()[1], VarMask,
+            Alignment, CostKind, nullptr);
+      }
+      if (ICA.getID() == Intrinsic::vp_gather) {
+        if (ICA.isTypeBasedOnly()) {
+          IntrinsicCostAttributes MaskedGather(
+              *VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID()),
+              ICA.getReturnType(), ArrayRef(ICA.getArgTypes()).drop_back(1),
+              ICA.getFlags());
+          return getTypeBasedIntrinsicInstrCost(MaskedGather, CostKind);
+        }
+        Align Alignment;
+        if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
+          Alignment = VPI->getPointerAlignment().valueOrOne();
+        bool VarMask = isa<Constant>(ICA.getArgs()[1]);
+        return thisT()->getGatherScatterOpCost(
+            Instruction::Load, ICA.getReturnType(), ICA.getArgs()[0], VarMask,
+            Alignment, CostKind, nullptr);
+      }
+
+      if (ICA.getID() == Intrinsic::vp_select ||
+          ICA.getID() == Intrinsic::vp_merge) {
+        TTI::OperandValueInfo OpInfoX, OpInfoY;
+        if (!ICA.isTypeBasedOnly()) {
+          OpInfoX = TTI::getOperandInfo(ICA.getArgs()[0]);
+          OpInfoY = TTI::getOperandInfo(ICA.getArgs()[1]);
+        }
+        return getCmpSelInstrCost(
+            Instruction::Select, ICA.getReturnType(), ICA.getArgTypes()[0],
+            CmpInst::BAD_ICMP_PREDICATE, CostKind, OpInfoX, OpInfoY);
+      }
+
       std::optional<Intrinsic::ID> FID =
           VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID());
+
+      // Not functionally equivalent but close enough for cost modelling.
+      if (ICA.getID() == Intrinsic::experimental_vp_reverse)
+        FID = Intrinsic::vector_reverse;
+
       if (FID) {
         // Non-vp version will have same arg types except mask and vector
         // length.
         assert(ICA.getArgTypes().size() >= 2 &&
                "Expected VPIntrinsic to have Mask and Vector Length args and "
                "types");
+
+        ArrayRef<const Value *> NewArgs = ArrayRef(ICA.getArgs());
+        if (!ICA.isTypeBasedOnly())
+          NewArgs = NewArgs.drop_back(2);
         ArrayRef<Type *> NewTys = ArrayRef(ICA.getArgTypes()).drop_back(2);
 
         // VPReduction intrinsics have a start value argument that their non-vp
@@ -1788,11 +1841,14 @@ public:
         // counterpart.
         if (VPReductionIntrinsic::isVPReduction(ICA.getID()) &&
             *FID != Intrinsic::vector_reduce_fadd &&
-            *FID != Intrinsic::vector_reduce_fmul)
+            *FID != Intrinsic::vector_reduce_fmul) {
+          if (!ICA.isTypeBasedOnly())
+            NewArgs = NewArgs.drop_front();
           NewTys = NewTys.drop_front();
+        }
 
-        IntrinsicCostAttributes NewICA(*FID, ICA.getReturnType(), NewTys,
-                                       ICA.getFlags());
+        IntrinsicCostAttributes NewICA(*FID, ICA.getReturnType(), NewArgs,
+                                       NewTys, ICA.getFlags());
         return thisT()->getIntrinsicInstrCost(NewICA, CostKind);
       }
     }
@@ -1928,11 +1984,6 @@ public:
           TTI::SK_InsertSubvector, cast<VectorType>(RetTy),
           cast<VectorType>(Args[0]->getType()), {}, CostKind, Index,
           cast<VectorType>(Args[1]->getType()));
-    }
-    case Intrinsic::vector_reverse: {
-      return thisT()->getShuffleCost(TTI::SK_Reverse, cast<VectorType>(RetTy),
-                                     cast<VectorType>(Args[0]->getType()), {},
-                                     CostKind, 0, cast<VectorType>(RetTy));
     }
     case Intrinsic::vector_splice: {
       unsigned Index = cast<ConstantInt>(Args[2])->getZExtValue();
@@ -2402,6 +2453,10 @@ public:
           thisT()->getArithmeticInstrCost(BinaryOperator::And, RetTy, CostKind);
       return Cost;
     }
+    case Intrinsic::vector_reverse:
+      return thisT()->getShuffleCost(TTI::SK_Reverse, cast<VectorType>(RetTy),
+                                     cast<VectorType>(ICA.getArgTypes()[0]), {},
+                                     CostKind, 0, cast<VectorType>(RetTy));
     case Intrinsic::get_active_lane_mask: {
       Type *ArgTy = ICA.getArgTypes()[0];
       EVT ResVT = getTLI()->getValueType(DL, RetTy, true);
@@ -2486,11 +2541,18 @@ public:
       ISD = ISD::UMULO;
       break;
     case Intrinsic::fptosi_sat:
-      ISD = ISD::FP_TO_SINT_SAT;
+    case Intrinsic::fptoui_sat: {
+      std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(Tys[0]);
+      std::pair<InstructionCost, MVT> RetLT = getTypeLegalizationCost(RetTy);
+
+      // For cast instructions, types are different between source and
+      // destination. Also need to check if the source type can be legalize.
+      if (!SrcLT.first.isValid() || !RetLT.first.isValid())
+        return InstructionCost::getInvalid();
+      ISD = IID == Intrinsic::fptosi_sat ? ISD::FP_TO_SINT_SAT
+                                         : ISD::FP_TO_UINT_SAT;
       break;
-    case Intrinsic::fptoui_sat:
-      ISD = ISD::FP_TO_UINT_SAT;
-      break;
+    }
     case Intrinsic::ctpop:
       ISD = ISD::CTPOP;
       // In case of legalization use TCC_Expensive. This is cheaper than a

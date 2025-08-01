@@ -10,6 +10,7 @@
 #define FORTRAN_EVALUATE_TOOLS_H_
 
 #include "traverse.h"
+#include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/template.h"
 #include "flang/Common/unwrap.h"
@@ -1359,24 +1360,7 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
 
 /// Check if the expression is a mix of host and device variables that require
 /// implicit data transfer.
-inline bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
-  unsigned hostSymbols{0};
-  unsigned deviceSymbols{0};
-  for (const Symbol &sym : CollectCudaSymbols(expr)) {
-    if (IsCUDADeviceSymbol(sym)) {
-      ++deviceSymbols;
-    } else {
-      if (sym.owner().IsDerivedType()) {
-        if (IsCUDADeviceSymbol(sym.owner().GetSymbol()->GetUltimate())) {
-          ++deviceSymbols;
-        }
-      }
-      ++hostSymbols;
-    }
-  }
-  bool hasConstant{HasConstant(expr)};
-  return (hasConstant || (hostSymbols > 0)) && deviceSymbols > 0;
-}
+bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr);
 
 // Checks whether the symbol on the LHS is present in the RHS expression.
 bool CheckForSymbolMatch(const Expr<SomeType> *lhs, const Expr<SomeType> *rhs);
@@ -1413,6 +1397,8 @@ enum class Operator {
   Sub,
   True,
 };
+
+using OperatorSet = common::EnumSet<Operator, 32>;
 
 std::string ToString(Operator op);
 
@@ -1526,8 +1512,17 @@ Operator OperationCode(const evaluate::ProcedureDesignator &proc);
 std::pair<operation::Operator, std::vector<Expr<SomeType>>>
 GetTopLevelOperation(const Expr<SomeType> &expr);
 
+// Return information about the top-level operation (ignoring parentheses, and
+// resizing converts)
+std::pair<operation::Operator, std::vector<Expr<SomeType>>>
+GetTopLevelOperationIgnoreResizing(const Expr<SomeType> &expr);
+
 // Check if expr is same as x, or a sequence of Convert operations on x.
 bool IsSameOrConvertOf(const Expr<SomeType> &expr, const Expr<SomeType> &x);
+
+// Check if the Variable appears as a subexpression of the expression.
+bool IsVarSubexpressionOf(
+    const Expr<SomeType> &var, const Expr<SomeType> &super);
 
 // Strip away any top-level Convert operations (if any exist) and return
 // the input value. A ComplexConstructor(x, 0) is also considered as a

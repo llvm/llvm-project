@@ -217,9 +217,13 @@ declare void @g.f1()
 ; CHECK: @g.sanitize_address_dyninit = global i32 0, sanitize_address_dyninit
 ; CHECK: @g.sanitize_multiple = global i32 0, sanitize_memtag, sanitize_address_dyninit
 
+@ds = external global i32
+
 ; ptrauth constant
 @auth_var = global ptr ptrauth (ptr @g1, i32 0, i64 65535, ptr null)
 ; CHECK: @auth_var = global ptr ptrauth (ptr @g1, i32 0, i64 65535)
+@auth_var.ds = global ptr ptrauth (ptr @g1, i32 0, i64 65535, ptr null, ptr @ds)
+; CHECK: @auth_var.ds = global ptr ptrauth (ptr @g1, i32 0, i64 65535, ptr null, ptr @ds)
 
 ;; Aliases
 ; Format: @<Name> = [Linkage] [Visibility] [DLLStorageClass] [ThreadLocal]
@@ -564,6 +568,10 @@ declare riscv_vls_cc(32768) void @riscv_vls_cc_32768()
 ; CHECK: declare riscv_vls_cc(32768) void @riscv_vls_cc_32768()
 declare riscv_vls_cc(65536) void @riscv_vls_cc_65536()
 ; CHECK: declare riscv_vls_cc(65536) void @riscv_vls_cc_65536()
+declare cc124 void @f.cc124(i1)
+; CHECK: declare amdgpu_gfx_whole_wave void @f.cc124(i1)
+declare amdgpu_gfx_whole_wave void @f.amdgpu_gfx_whole_wave(i1)
+; CHECK: declare amdgpu_gfx_whole_wave void @f.amdgpu_gfx_whole_wave(i1)
 declare cc1023 void @f.cc1023()
 ; CHECK: declare cc1023 void @f.cc1023()
 

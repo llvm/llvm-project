@@ -215,8 +215,8 @@ struct ASTUnit::ASTWriterData {
   llvm::BitstreamWriter Stream;
   ASTWriter Writer;
 
-  ASTWriterData(ModuleCache &ModCache)
-      : Stream(Buffer), Writer(Stream, Buffer, ModCache, {}) {}
+  ASTWriterData(ModuleCache &ModCache, const CodeGenOptions &CGOpts)
+      : Stream(Buffer), Writer(Stream, Buffer, ModCache, CGOpts, {}) {}
 };
 
 void ASTUnit::clearFileLevelDecls() {
@@ -235,7 +235,8 @@ const unsigned DefaultPreambleRebuildInterval = 5;
 static std::atomic<unsigned> ActiveASTUnitObjects;
 
 ASTUnit::ASTUnit(bool _MainFileIsAST)
-    : MainFileIsAST(_MainFileIsAST), WantTiming(getenv("LIBCLANG_TIMING")),
+    : CodeGenOpts(std::make_unique<CodeGenOptions>()),
+      MainFileIsAST(_MainFileIsAST), WantTiming(getenv("LIBCLANG_TIMING")),
       ShouldCacheCodeCompletionResults(false),
       IncludeBriefCommentsInCodeCompletion(false), UserFilesAreVolatile(false),
       UnsafeToFree(false) {
@@ -516,6 +517,7 @@ class ASTInfoCollector : public ASTReaderListener {
   HeaderSearchOptions &HSOpts;
   PreprocessorOptions &PPOpts;
   LangOptions &LangOpt;
+  CodeGenOptions &CodeGenOpts;
   std::shared_ptr<TargetOptions> &TargetOpts;
   IntrusiveRefCntPtr<TargetInfo> &Target;
   unsigned &Counter;
@@ -525,12 +527,12 @@ class ASTInfoCollector : public ASTReaderListener {
 public:
   ASTInfoCollector(Preprocessor &PP, ASTContext *Context,
                    HeaderSearchOptions &HSOpts, PreprocessorOptions &PPOpts,
-                   LangOptions &LangOpt,
+                   LangOptions &LangOpt, CodeGenOptions &CodeGenOpts,
                    std::shared_ptr<TargetOptions> &TargetOpts,
                    IntrusiveRefCntPtr<TargetInfo> &Target, unsigned &Counter)
       : PP(PP), Context(Context), HSOpts(HSOpts), PPOpts(PPOpts),
-        LangOpt(LangOpt), TargetOpts(TargetOpts), Target(Target),
-        Counter(Counter) {}
+        LangOpt(LangOpt), CodeGenOpts(CodeGenOpts), TargetOpts(TargetOpts),
+        Target(Target), Counter(Counter) {}
 
   bool ReadLanguageOptions(const LangOptions &LangOpts,
                            StringRef ModuleFilename, bool Complain,
@@ -552,6 +554,13 @@ public:
     InitializedLanguage = true;
 
     updated();
+    return false;
+  }
+
+  bool ReadCodeGenOptions(const CodeGenOptions &CGOpts,
+                          StringRef ModuleFilename, bool Complain,
+                          bool AllowCompatibleDifferences) override {
+    this->CodeGenOpts = CGOpts;
     return false;
   }
 
@@ -858,14 +867,16 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
       DisableValidationForModuleKind::None;
   if (::getenv("LIBCLANG_DISABLE_PCH_VALIDATION"))
     disableValid = DisableValidationForModuleKind::All;
-  AST->Reader = new ASTReader(
-      PP, *AST->ModCache, AST->Ctx.get(), PCHContainerRdr, {}, /*isysroot=*/"",
-      /*DisableValidationKind=*/disableValid, AllowASTWithCompilerErrors);
+  AST->Reader = new ASTReader(PP, *AST->ModCache, AST->Ctx.get(),
+                              PCHContainerRdr, *AST->CodeGenOpts, {},
+                              /*isysroot=*/"",
+                              /*DisableValidationKind=*/disableValid,
+                              AllowASTWithCompilerErrors);
 
   unsigned Counter = 0;
   AST->Reader->setListener(std::make_unique<ASTInfoCollector>(
       *AST->PP, AST->Ctx.get(), *AST->HSOpts, *AST->PPOpts, *AST->LangOpts,
-      AST->TargetOpts, AST->Target, Counter));
+      *AST->CodeGenOpts, AST->TargetOpts, AST->Target, Counter));
 
   // Attach the AST reader to the AST context as an external AST
   // source, so that declarations will be deserialized from the
@@ -1193,7 +1204,7 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
 
   // Set up diagnostics, capturing any diagnostics that would
   // otherwise be dropped.
-  Clang->setDiagnostics(&getDiagnostics());
+  Clang->setDiagnostics(getDiagnosticsPtr());
 
   // Create the target instance.
   if (!Clang->createTarget())
@@ -1413,7 +1424,7 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
       PreambleInvocationIn.getFrontendOpts().SkipFunctionBodies = true;
 
     llvm::ErrorOr<PrecompiledPreamble> NewPreamble = PrecompiledPreamble::Build(
-        PreambleInvocationIn, MainFileBuffer.get(), Bounds, *Diagnostics, VFS,
+        PreambleInvocationIn, MainFileBuffer.get(), Bounds, Diagnostics, VFS,
         PCHContainerOps, StorePreamblesInMemory, PreambleStoragePath,
         Callbacks);
 
@@ -1613,7 +1624,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
 
   // Set up diagnostics, capturing any diagnostics that would
   // otherwise be dropped.
-  Clang->setDiagnostics(&AST->getDiagnostics());
+  Clang->setDiagnostics(AST->getDiagnosticsPtr());
 
   // Create the target instance.
   if (!Clang->createTarget())
@@ -1762,7 +1773,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCompilerInvocation(
 
   if (AST->LoadFromCompilerInvocation(std::move(PCHContainerOps),
                                       PrecompilePreambleAfterNParses,
-                                      &AST->FileMgr->getVirtualFileSystem()))
+                                      AST->FileMgr->getVirtualFileSystemPtr()))
     return nullptr;
   return AST;
 }
@@ -1836,6 +1847,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCommandLine(
   AST->DiagOpts = DiagOpts;
   AST->Diagnostics = Diags;
   AST->FileSystemOpts = CI->getFileSystemOpts();
+  AST->CodeGenOpts = std::make_unique<CodeGenOptions>(CI->getCodeGenOpts());
   VFS = createVFSFromCompilerInvocation(*CI, *Diags, VFS);
   AST->FileMgr = new FileManager(AST->FileSystemOpts, VFS);
   AST->StorePreamblesInMemory = StorePreamblesInMemory;
@@ -1851,7 +1863,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCommandLine(
   AST->Invocation = CI;
   AST->SkipFunctionBodies = SkipFunctionBodies;
   if (ForSerialization)
-    AST->WriterData.reset(new ASTWriterData(*AST->ModCache));
+    AST->WriterData.reset(new ASTWriterData(*AST->ModCache, *AST->CodeGenOpts));
   // Zero out now to ease cleanup during crash recovery.
   CI = nullptr;
   Diags = nullptr;
@@ -1883,7 +1895,7 @@ bool ASTUnit::Reparse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
 
   if (!VFS) {
     assert(FileMgr && "FileMgr is null on Reparse call");
-    VFS = &FileMgr->getVirtualFileSystem();
+    VFS = FileMgr->getVirtualFileSystemPtr();
   }
 
   clearFileLevelDecls();
@@ -2197,8 +2209,9 @@ void ASTUnit::CodeComplete(
     bool IncludeCodePatterns, bool IncludeBriefComments,
     CodeCompleteConsumer &Consumer,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-    DiagnosticsEngine &Diag, LangOptions &LangOpts, SourceManager &SourceMgr,
-    FileManager &FileMgr, SmallVectorImpl<StoredDiagnostic> &StoredDiagnostics,
+    llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diag, LangOptions &LangOpts,
+    SourceManager &SourceMgr, FileManager &FileMgr,
+    SmallVectorImpl<StoredDiagnostic> &StoredDiagnostics,
     SmallVectorImpl<const llvm::MemoryBuffer *> &OwnedBuffers,
     std::unique_ptr<SyntaxOnlyAction> Act) {
   if (!Invocation)
@@ -2247,11 +2260,11 @@ void ASTUnit::CodeComplete(
       std::string(Clang->getFrontendOpts().Inputs[0].getFile());
 
   // Set up diagnostics, capturing any diagnostics produced.
-  Clang->setDiagnostics(&Diag);
+  Clang->setDiagnostics(Diag);
   CaptureDroppedDiagnostics Capture(CaptureDiagsKind::All,
                                     Clang->getDiagnostics(),
                                     &StoredDiagnostics, nullptr);
-  ProcessWarningOptions(Diag, Inv.getDiagnosticOpts(),
+  ProcessWarningOptions(*Diag, Inv.getDiagnosticOpts(),
                         FileMgr.getVirtualFileSystem());
 
   // Create the target instance.
@@ -2309,7 +2322,8 @@ void ASTUnit::CodeComplete(
   std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer;
   if (Preamble && Line > 1 && hasSameUniqueID(File, OriginalSourceFile)) {
     OverrideMainBuffer = getMainBufferWithPrecompiledPreamble(
-        PCHContainerOps, Inv, &FileMgr.getVirtualFileSystem(), false, Line - 1);
+        PCHContainerOps, Inv, FileMgr.getVirtualFileSystemPtr(), false,
+        Line - 1);
   }
 
   // If the main file has been overridden due to the use of a preamble,
@@ -2319,7 +2333,7 @@ void ASTUnit::CodeComplete(
            "No preamble was built, but OverrideMainBuffer is not null");
 
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
-        &FileMgr.getVirtualFileSystem();
+        FileMgr.getVirtualFileSystemPtr();
     Preamble->AddImplicitPreamble(Clang->getInvocation(), VFS,
                                   OverrideMainBuffer.get());
     // FIXME: there is no way to update VFS if it was changed by
@@ -2385,7 +2399,7 @@ bool ASTUnit::serialize(raw_ostream &OS) {
   SmallString<128> Buffer;
   llvm::BitstreamWriter Stream(Buffer);
   IntrusiveRefCntPtr<ModuleCache> ModCache = createCrossProcessModuleCache();
-  ASTWriter Writer(Stream, Buffer, *ModCache, {});
+  ASTWriter Writer(Stream, Buffer, *ModCache, *CodeGenOpts, {});
   return serializeUnit(Writer, Buffer, getSema(), OS);
 }
 

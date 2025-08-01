@@ -84,7 +84,20 @@ struct ol_program_impl_t {
         DeviceImage(DeviceImage) {}
   plugin::DeviceImageTy *Image;
   std::unique_ptr<llvm::MemoryBuffer> ImageData;
+  std::mutex SymbolListMutex;
   __tgt_device_image DeviceImage;
+  llvm::StringMap<std::unique_ptr<ol_symbol_impl_t>> KernelSymbols;
+  llvm::StringMap<std::unique_ptr<ol_symbol_impl_t>> GlobalSymbols;
+};
+
+struct ol_symbol_impl_t {
+  ol_symbol_impl_t(const char *Name, GenericKernelTy *Kernel)
+      : PluginImpl(Kernel), Kind(OL_SYMBOL_KIND_KERNEL), Name(Name) {}
+  ol_symbol_impl_t(const char *Name, GlobalTy &&Global)
+      : PluginImpl(Global), Kind(OL_SYMBOL_KIND_GLOBAL_VARIABLE), Name(Name) {}
+  std::variant<GenericKernelTy *, GlobalTy> PluginImpl;
+  ol_symbol_kind_t Kind;
+  llvm::StringRef Name;
 };
 
 namespace llvm {
@@ -221,7 +234,7 @@ Error olShutDown_impl() {
 
   for (auto &P : OldContext->Platforms) {
     // Host plugin is nullptr and has no deinit
-    if (!P.Plugin)
+    if (!P.Plugin || !P.Plugin->is_initialized())
       continue;
 
     if (auto Res = P.Plugin->deinit())
@@ -286,78 +299,62 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
     return Plugin::error(ErrorCode::UNIMPLEMENTED, ErrBuffer.c_str());
   };
 
-  // Find the info if it exists under any of the given names
-  auto getInfoString =
-      [&](std::vector<std::string> Names) -> llvm::Expected<const char *> {
-    for (auto &Name : Names) {
-      if (auto Entry = Device->Info.get(Name)) {
-        if (!std::holds_alternative<std::string>((*Entry)->Value))
-          return makeError(ErrorCode::BACKEND_FAILURE,
-                           "plugin returned incorrect type");
-        return std::get<std::string>((*Entry)->Value).c_str();
-      }
-    }
-
-    return makeError(ErrorCode::UNIMPLEMENTED,
-                     "plugin did not provide a response for this information");
-  };
-
-  auto getInfoXyz =
-      [&](std::vector<std::string> Names) -> llvm::Expected<ol_dimensions_t> {
-    for (auto &Name : Names) {
-      if (auto Entry = Device->Info.get(Name)) {
-        auto Node = *Entry;
-        ol_dimensions_t Out{0, 0, 0};
-
-        auto getField = [&](StringRef Name, uint32_t &Dest) {
-          if (auto F = Node->get(Name)) {
-            if (!std::holds_alternative<size_t>((*F)->Value))
-              return makeError(
-                  ErrorCode::BACKEND_FAILURE,
-                  "plugin returned incorrect type for dimensions element");
-            Dest = std::get<size_t>((*F)->Value);
-          } else
-            return makeError(ErrorCode::BACKEND_FAILURE,
-                             "plugin didn't provide all values for dimensions");
-          return Plugin::success();
-        };
-
-        if (auto Res = getField("x", Out.x))
-          return Res;
-        if (auto Res = getField("y", Out.y))
-          return Res;
-        if (auto Res = getField("z", Out.z))
-          return Res;
-
-        return Out;
-      }
-    }
-
-    return makeError(ErrorCode::UNIMPLEMENTED,
-                     "plugin did not provide a response for this information");
-  };
-
-  switch (PropName) {
-  case OL_DEVICE_INFO_PLATFORM:
+  // These are not implemented by the plugin interface
+  if (PropName == OL_DEVICE_INFO_PLATFORM)
     return Info.write<void *>(Device->Platform);
-  case OL_DEVICE_INFO_TYPE:
+  if (PropName == OL_DEVICE_INFO_TYPE)
     return Info.write<ol_device_type_t>(OL_DEVICE_TYPE_GPU);
-  case OL_DEVICE_INFO_NAME:
-    return Info.writeString(getInfoString({"Device Name"}));
-  case OL_DEVICE_INFO_VENDOR:
-    return Info.writeString(getInfoString({"Vendor Name"}));
-  case OL_DEVICE_INFO_DRIVER_VERSION:
-    return Info.writeString(
-        getInfoString({"CUDA Driver Version", "HSA Runtime Version"}));
-  case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE:
-    return Info.write(getInfoXyz({"Workgroup Max Size per Dimension" /*AMD*/,
-                                  "Maximum Block Dimensions" /*CUDA*/}));
-  default:
+  if (PropName >= OL_DEVICE_INFO_LAST)
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getDeviceInfo enum '%i' is invalid", PropName);
+
+  auto EntryOpt = Device->Info.get(static_cast<DeviceInfo>(PropName));
+  if (!EntryOpt)
+    return makeError(ErrorCode::UNIMPLEMENTED,
+                     "plugin did not provide a response for this information");
+  auto Entry = *EntryOpt;
+
+  switch (PropName) {
+  case OL_DEVICE_INFO_NAME:
+  case OL_DEVICE_INFO_VENDOR:
+  case OL_DEVICE_INFO_DRIVER_VERSION: {
+    // String values
+    if (!std::holds_alternative<std::string>(Entry->Value))
+      return makeError(ErrorCode::BACKEND_FAILURE,
+                       "plugin returned incorrect type");
+    return Info.writeString(std::get<std::string>(Entry->Value).c_str());
   }
 
-  return Error::success();
+  case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE: {
+    // {x, y, z} triples
+    ol_dimensions_t Out{0, 0, 0};
+
+    auto getField = [&](StringRef Name, uint32_t &Dest) {
+      if (auto F = Entry->get(Name)) {
+        if (!std::holds_alternative<size_t>((*F)->Value))
+          return makeError(
+              ErrorCode::BACKEND_FAILURE,
+              "plugin returned incorrect type for dimensions element");
+        Dest = std::get<size_t>((*F)->Value);
+      } else
+        return makeError(ErrorCode::BACKEND_FAILURE,
+                         "plugin didn't provide all values for dimensions");
+      return Plugin::success();
+    };
+
+    if (auto Res = getField("x", Out.x))
+      return Res;
+    if (auto Res = getField("y", Out.y))
+      return Res;
+    if (auto Res = getField("z", Out.z))
+      return Res;
+
+    return Info.write(Out);
+  }
+
+  default:
+    llvm_unreachable("Unimplemented device info");
+  }
 }
 
 Error olGetDeviceInfoImplDetailHost(ol_device_handle_t Device,
@@ -470,7 +467,7 @@ Error olCreateQueue_impl(ol_device_handle_t Device, ol_queue_handle_t *Queue) {
 
 Error olDestroyQueue_impl(ol_queue_handle_t Queue) { return olDestroy(Queue); }
 
-Error olWaitQueue_impl(ol_queue_handle_t Queue) {
+Error olSyncQueue_impl(ol_queue_handle_t Queue) {
   // Host plugin doesn't have a queue set so it's not safe to call synchronize
   // on it, but we have nothing to synchronize in that situation anyway.
   if (Queue->AsyncInfo->Queue) {
@@ -483,6 +480,28 @@ Error olWaitQueue_impl(ol_queue_handle_t Queue) {
   // it to begin with.
   if (auto Res = Queue->Device->Device->initAsyncInfo(&Queue->AsyncInfo))
     return Res;
+
+  return Error::success();
+}
+
+Error olWaitEvents_impl(ol_queue_handle_t Queue, ol_event_handle_t *Events,
+                        size_t NumEvents) {
+  auto *Device = Queue->Device->Device;
+
+  for (size_t I = 0; I < NumEvents; I++) {
+    auto *Event = Events[I];
+
+    if (!Event)
+      return Plugin::error(ErrorCode::INVALID_NULL_HANDLE,
+                           "olWaitEvents asked to wait on a NULL event");
+
+    // Do nothing if the event is for this queue
+    if (Event->Queue == Queue)
+      continue;
+
+    if (auto Err = Device->waitEvent(Event->EventInfo, Queue->AsyncInfo))
+      return Err;
+  }
 
   return Error::success();
 }
@@ -514,7 +533,7 @@ Error olGetQueueInfoSize_impl(ol_queue_handle_t Queue, ol_queue_info_t PropName,
   return olGetQueueInfoImplDetail(Queue, PropName, 0, nullptr, PropSizeRet);
 }
 
-Error olWaitEvent_impl(ol_event_handle_t Event) {
+Error olSyncEvent_impl(ol_event_handle_t Event) {
   if (auto Res = Event->Queue->Device->Device->syncEvent(Event->EventInfo))
     return Res;
 
@@ -556,26 +575,21 @@ Error olGetEventInfoSize_impl(ol_event_handle_t Event, ol_event_info_t PropName,
   return olGetEventInfoImplDetail(Event, PropName, 0, nullptr, PropSizeRet);
 }
 
-ol_event_handle_t makeEvent(ol_queue_handle_t Queue) {
-  auto EventImpl = std::make_unique<ol_event_impl_t>(nullptr, Queue);
-  if (auto Res = Queue->Device->Device->createEvent(&EventImpl->EventInfo)) {
-    llvm::consumeError(std::move(Res));
-    return nullptr;
-  }
+Error olCreateEvent_impl(ol_queue_handle_t Queue, ol_event_handle_t *EventOut) {
+  *EventOut = new ol_event_impl_t(nullptr, Queue);
+  if (auto Res = Queue->Device->Device->createEvent(&(*EventOut)->EventInfo))
+    return Res;
 
-  if (auto Res = Queue->Device->Device->recordEvent(EventImpl->EventInfo,
-                                                    Queue->AsyncInfo)) {
-    llvm::consumeError(std::move(Res));
-    return nullptr;
-  }
+  if (auto Res = Queue->Device->Device->recordEvent((*EventOut)->EventInfo,
+                                                    Queue->AsyncInfo))
+    return Res;
 
-  return EventImpl.release();
+  return Plugin::success();
 }
 
 Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
                     ol_device_handle_t DstDevice, const void *SrcPtr,
-                    ol_device_handle_t SrcDevice, size_t Size,
-                    ol_event_handle_t *EventOut) {
+                    ol_device_handle_t SrcDevice, size_t Size) {
   auto Host = OffloadContext::get().HostDevice();
   if (DstDevice == Host && SrcDevice == Host) {
     if (!Queue) {
@@ -605,9 +619,6 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
                                                    DstPtr, Size, QueueImpl))
       return Res;
   }
-
-  if (EventOut)
-    *EventOut = makeEvent(Queue);
 
   return Error::success();
 }
@@ -652,33 +663,20 @@ Error olDestroyProgram_impl(ol_program_handle_t Program) {
   return olDestroy(Program);
 }
 
-Error olGetKernel_impl(ol_program_handle_t Program, const char *KernelName,
-                       ol_kernel_handle_t *Kernel) {
-
-  auto &Device = Program->Image->getDevice();
-  auto KernelImpl = Device.constructKernel(KernelName);
-  if (!KernelImpl)
-    return KernelImpl.takeError();
-
-  if (auto Err = KernelImpl->init(Device, *Program->Image))
-    return Err;
-
-  *Kernel = &*KernelImpl;
-
-  return Error::success();
-}
-
 Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
-                          ol_kernel_handle_t Kernel, const void *ArgumentsData,
+                          ol_symbol_handle_t Kernel, const void *ArgumentsData,
                           size_t ArgumentsSize,
-                          const ol_kernel_launch_size_args_t *LaunchSizeArgs,
-                          ol_event_handle_t *EventOut) {
+                          const ol_kernel_launch_size_args_t *LaunchSizeArgs) {
   auto *DeviceImpl = Device->Device;
   if (Queue && Device != Queue->Device) {
     return createOffloadError(
         ErrorCode::INVALID_DEVICE,
         "device specified does not match the device of the given queue");
   }
+
+  if (Kernel->Kind != OL_SYMBOL_KIND_KERNEL)
+    return createOffloadError(ErrorCode::SYMBOL_KIND,
+                              "provided symbol is not a kernel");
 
   auto *QueueImpl = Queue ? Queue->AsyncInfo : nullptr;
   AsyncInfoWrapperTy AsyncInfoWrapper(*DeviceImpl, QueueImpl);
@@ -698,7 +696,7 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   // Don't do anything with pointer indirection; use arg data as-is
   LaunchArgs.Flags.IsCUDA = true;
 
-  auto *KernelImpl = reinterpret_cast<GenericKernelTy *>(Kernel);
+  auto *KernelImpl = std::get<GenericKernelTy *>(Kernel->PluginImpl);
   auto Err = KernelImpl->launch(*DeviceImpl, LaunchArgs.ArgPtrs, nullptr,
                                 LaunchArgs, AsyncInfoWrapper);
 
@@ -706,10 +704,100 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   if (Err)
     return Err;
 
-  if (EventOut)
-    *EventOut = makeEvent(Queue);
+  return Error::success();
+}
+
+Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
+                       ol_symbol_kind_t Kind, ol_symbol_handle_t *Symbol) {
+  auto &Device = Program->Image->getDevice();
+
+  std::lock_guard<std::mutex> Lock{Program->SymbolListMutex};
+
+  switch (Kind) {
+  case OL_SYMBOL_KIND_KERNEL: {
+    auto &Kernel = Program->KernelSymbols[Name];
+    if (!Kernel) {
+      auto KernelImpl = Device.constructKernel(Name);
+      if (!KernelImpl)
+        return KernelImpl.takeError();
+
+      if (auto Err = KernelImpl->init(Device, *Program->Image))
+        return Err;
+
+      Kernel = std::make_unique<ol_symbol_impl_t>(KernelImpl->getName(),
+                                                  &*KernelImpl);
+    }
+
+    *Symbol = Kernel.get();
+    return Error::success();
+  }
+  case OL_SYMBOL_KIND_GLOBAL_VARIABLE: {
+    auto &Global = Program->KernelSymbols[Name];
+    if (!Global) {
+      GlobalTy GlobalObj{Name};
+      if (auto Res =
+              Device.Plugin.getGlobalHandler().getGlobalMetadataFromDevice(
+                  Device, *Program->Image, GlobalObj))
+        return Res;
+
+      Global = std::make_unique<ol_symbol_impl_t>(GlobalObj.getName().c_str(),
+                                                  std::move(GlobalObj));
+    }
+
+    *Symbol = Global.get();
+    return Error::success();
+  }
+  default:
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "getSymbol kind enum '%i' is invalid", Kind);
+  }
+}
+
+Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
+                                ol_symbol_info_t PropName, size_t PropSize,
+                                void *PropValue, size_t *PropSizeRet) {
+  InfoWriter Info(PropSize, PropValue, PropSizeRet);
+
+  auto CheckKind = [&](ol_symbol_kind_t Required) {
+    if (Symbol->Kind != Required) {
+      std::string ErrBuffer;
+      llvm::raw_string_ostream(ErrBuffer)
+          << PropName << ": Expected a symbol of Kind " << Required
+          << " but given a symbol of Kind " << Symbol->Kind;
+      return Plugin::error(ErrorCode::SYMBOL_KIND, ErrBuffer.c_str());
+    }
+    return Plugin::success();
+  };
+
+  switch (PropName) {
+  case OL_SYMBOL_INFO_KIND:
+    return Info.write<ol_symbol_kind_t>(Symbol->Kind);
+  case OL_SYMBOL_INFO_GLOBAL_VARIABLE_ADDRESS:
+    if (auto Err = CheckKind(OL_SYMBOL_KIND_GLOBAL_VARIABLE))
+      return Err;
+    return Info.write<void *>(std::get<GlobalTy>(Symbol->PluginImpl).getPtr());
+  case OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE:
+    if (auto Err = CheckKind(OL_SYMBOL_KIND_GLOBAL_VARIABLE))
+      return Err;
+    return Info.write<size_t>(std::get<GlobalTy>(Symbol->PluginImpl).getSize());
+  default:
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "olGetSymbolInfo enum '%i' is invalid", PropName);
+  }
 
   return Error::success();
+}
+
+Error olGetSymbolInfo_impl(ol_symbol_handle_t Symbol, ol_symbol_info_t PropName,
+                           size_t PropSize, void *PropValue) {
+
+  return olGetSymbolInfoImplDetail(Symbol, PropName, PropSize, PropValue,
+                                   nullptr);
+}
+
+Error olGetSymbolInfoSize_impl(ol_symbol_handle_t Symbol,
+                               ol_symbol_info_t PropName, size_t *PropSizeRet) {
+  return olGetSymbolInfoImplDetail(Symbol, PropName, 0, nullptr, PropSizeRet);
 }
 
 } // namespace offload

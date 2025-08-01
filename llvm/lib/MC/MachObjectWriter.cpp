@@ -126,12 +126,13 @@ uint64_t MachObjectWriter::getSymbolAddress(const MCSymbol &S) const {
 uint64_t MachObjectWriter::getPaddingSize(const MCAssembler &Asm,
                                           const MCSection *Sec) const {
   uint64_t EndAddr = getSectionAddress(Sec) + Asm.getSectionAddressSize(*Sec);
-  unsigned Next = cast<MCSectionMachO>(Sec)->getLayoutOrder() + 1;
+  unsigned Next =
+      static_cast<const MCSectionMachO *>(Sec)->getLayoutOrder() + 1;
   if (Next >= SectionOrder.size())
     return 0;
 
   const MCSection &NextSec = *SectionOrder[Next];
-  if (NextSec.isVirtualSection())
+  if (NextSec.isBssSection())
     return 0;
   return offsetToAlignment(EndAddr, NextSec.getAlign());
 }
@@ -259,15 +260,12 @@ void MachObjectWriter::writeSegmentLoadCommand(
 }
 
 void MachObjectWriter::writeSection(const MCAssembler &Asm,
-                                    const MCSection &Sec, uint64_t VMAddr,
+                                    const MCSectionMachO &Sec, uint64_t VMAddr,
                                     uint64_t FileOffset, unsigned Flags,
                                     uint64_t RelocationsStart,
                                     unsigned NumRelocations) {
-  uint64_t SectionSize = Asm.getSectionAddressSize(Sec);
-  const MCSectionMachO &Section = cast<MCSectionMachO>(Sec);
-
   // The offset is unused for virtual sections.
-  if (Section.isVirtualSection()) {
+  if (Sec.isBssSection()) {
     assert(Asm.getSectionFileSize(Sec) == 0 && "Invalid file size!");
     FileOffset = 0;
   }
@@ -275,11 +273,11 @@ void MachObjectWriter::writeSection(const MCAssembler &Asm,
   // struct section (68 bytes) or
   // struct section_64 (80 bytes)
 
+  uint64_t SectionSize = Asm.getSectionAddressSize(Sec);
   uint64_t Start = W.OS.tell();
   (void) Start;
-
-  writeWithPadding(Section.getName(), 16);
-  writeWithPadding(Section.getSegmentName(), 16);
+  writeWithPadding(Sec.getName(), 16);
+  writeWithPadding(Sec.getSegmentName(), 16);
   if (is64Bit()) {
     W.write<uint64_t>(VMAddr);      // address
     W.write<uint64_t>(SectionSize); // size
@@ -290,14 +288,14 @@ void MachObjectWriter::writeSection(const MCAssembler &Asm,
   assert(isUInt<32>(FileOffset) && "Cannot encode offset of section");
   W.write<uint32_t>(FileOffset);
 
-  W.write<uint32_t>(Log2(Section.getAlign()));
+  W.write<uint32_t>(Log2(Sec.getAlign()));
   assert((!NumRelocations || isUInt<32>(RelocationsStart)) &&
          "Cannot encode offset of relocations");
   W.write<uint32_t>(NumRelocations ? RelocationsStart : 0);
   W.write<uint32_t>(NumRelocations);
   W.write<uint32_t>(Flags);
   W.write<uint32_t>(IndirectSymBase.lookup(&Sec)); // reserved1
-  W.write<uint32_t>(Section.getStubSize()); // reserved2
+  W.write<uint32_t>(Sec.getStubSize());            // reserved2
   if (is64Bit())
     W.write<uint32_t>(0); // reserved3
 
@@ -531,7 +529,7 @@ void MachObjectWriter::bindIndirectSymbols(MCAssembler &Asm) {
   // Report errors for use of .indirect_symbol not in a symbol pointer section
   // or stub section.
   for (IndirectSymbolData &ISD : IndirectSymbols) {
-    const MCSectionMachO &Section = cast<MCSectionMachO>(*ISD.Section);
+    const MCSectionMachO &Section = static_cast<MCSectionMachO &>(*ISD.Section);
 
     if (Section.getType() != MachO::S_NON_LAZY_SYMBOL_POINTERS &&
         Section.getType() != MachO::S_LAZY_SYMBOL_POINTERS &&
@@ -545,7 +543,7 @@ void MachObjectWriter::bindIndirectSymbols(MCAssembler &Asm) {
 
   // Bind non-lazy symbol pointers first.
   for (auto [IndirectIndex, ISD] : enumerate(IndirectSymbols)) {
-    const auto &Section = cast<MCSectionMachO>(*ISD.Section);
+    const auto &Section = static_cast<MCSectionMachO &>(*ISD.Section);
 
     if (Section.getType() != MachO::S_NON_LAZY_SYMBOL_POINTERS &&
         Section.getType() !=  MachO::S_THREAD_LOCAL_VARIABLE_POINTERS)
@@ -559,7 +557,7 @@ void MachObjectWriter::bindIndirectSymbols(MCAssembler &Asm) {
 
   // Then lazy symbol pointers and symbol stubs.
   for (auto [IndirectIndex, ISD] : enumerate(IndirectSymbols)) {
-    const auto &Section = cast<MCSectionMachO>(*ISD.Section);
+    const auto &Section = static_cast<MCSectionMachO &>(*ISD.Section);
 
     if (Section.getType() != MachO::S_LAZY_SYMBOL_POINTERS &&
         Section.getType() != MachO::S_SYMBOL_STUBS)
@@ -682,15 +680,15 @@ void MachObjectWriter::computeSectionAddresses(const MCAssembler &Asm) {
   unsigned i = 0;
   // Compute the section layout order. Virtual sections must go last.
   for (MCSection &Sec : Asm) {
-    if (!Sec.isVirtualSection()) {
+    if (!Sec.isBssSection()) {
       SectionOrder.push_back(&Sec);
-      cast<MCSectionMachO>(Sec).setLayoutOrder(i++);
+      static_cast<MCSectionMachO &>(Sec).setLayoutOrder(i++);
     }
   }
   for (MCSection &Sec : Asm) {
-    if (Sec.isVirtualSection()) {
+    if (Sec.isBssSection()) {
       SectionOrder.push_back(&Sec);
-      cast<MCSectionMachO>(Sec).setLayoutOrder(i++);
+      static_cast<MCSectionMachO &>(Sec).setLayoutOrder(i++);
     }
   }
 
@@ -797,11 +795,8 @@ uint64_t MachObjectWriter::writeObject() {
                      UndefinedSymbolData);
 
   if (!CGProfile.empty()) {
-    MCSection *CGProfileSection = getContext().getMachOSection(
-        "__LLVM", "__cg_profile", 0, SectionKind::getMetadata());
-    auto &Frag = cast<MCDataFragment>(*CGProfileSection->begin());
-    Frag.clearContents();
-    raw_svector_ostream OS(Frag.getContentsForAppending());
+    SmallString<0> Content;
+    raw_svector_ostream OS(Content);
     for (const MCObjectWriter::CGProfileEntry &CGPE : CGProfile) {
       uint32_t FromIndex = CGPE.From->getSymbol().getIndex();
       uint32_t ToIndex = CGPE.To->getSymbol().getIndex();
@@ -809,7 +804,9 @@ uint64_t MachObjectWriter::writeObject() {
       support::endian::write(OS, ToIndex, W.Endian);
       support::endian::write(OS, CGPE.Count, W.Endian);
     }
-    Frag.doneAppending();
+    MCSection *Sec = getContext().getMachOSection("__LLVM", "__cg_profile", 0,
+                                                  SectionKind::getMetadata());
+    llvm::copy(OS.str(), Sec->curFragList()->Head->getVarContents().data());
   }
 
   unsigned NumSections = Asm.end() - Asm.begin();
@@ -883,7 +880,7 @@ uint64_t MachObjectWriter::writeObject() {
 
     VMSize = std::max(VMSize, Address + Size);
 
-    if (Sec.isVirtualSection())
+    if (Sec.isBssSection())
       continue;
 
     SectionDataSize = std::max(SectionDataSize, Address + Size);
@@ -908,14 +905,14 @@ uint64_t MachObjectWriter::writeObject() {
   // ... and then the section headers.
   uint64_t RelocTableEnd = SectionDataStart + SectionDataFileSize;
   for (const MCSection &Section : Asm) {
-    const auto &Sec = cast<MCSectionMachO>(Section);
+    const auto &Sec = static_cast<const MCSectionMachO &>(Section);
     std::vector<RelAndSymbol> &Relocs = Relocations[&Sec];
     unsigned NumRelocs = Relocs.size();
     uint64_t SectionStart = SectionDataStart + getSectionAddress(&Sec);
     unsigned Flags = Sec.getTypeAndAttributes();
     if (Sec.hasInstructions())
       Flags |= MachO::S_ATTR_SOME_INSTRUCTIONS;
-    if (!cast<MCSectionMachO>(Sec).isVirtualSection() &&
+    if (!cast<MCSectionMachO>(Sec).isBssSection() &&
         !isUInt<32>(SectionStart)) {
       getContext().reportError(
           SMLoc(), "cannot encode offset of section; object file too large");

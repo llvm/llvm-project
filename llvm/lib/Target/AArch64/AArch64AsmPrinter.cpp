@@ -184,6 +184,9 @@ public:
   // defined in the current module so this function emitted a NOP instead.
   bool emitDeactivationSymbolRelocation(Value *DS);
 
+  // Emit the sequence for PAC.
+  void emitPtrauthSign(const MachineInstr *MI);
+
   // Emit the sequence to compute the discriminator.
   //
   // The returned register is either unmodified AddrDisc or ScratchReg.
@@ -2084,21 +2087,22 @@ void AArch64AsmPrinter::emitPtrauthTailCallHardening(const MachineInstr *TC) {
 }
 
 bool AArch64AsmPrinter::emitDeactivationSymbolRelocation(Value *DS) {
-  if (DS) {
-    if (isa<GlobalAlias>(DS)) {
-      // Just emit the nop directly.
-      EmitToStreamer(MCInstBuilder(AArch64::HINT).addImm(0));
-      return true;
-    }
-    MCSymbol *Dot = OutContext.createTempSymbol();
-    OutStreamer->emitLabel(Dot);
-    const MCExpr *DeactDotExpr = MCSymbolRefExpr::create(Dot, OutContext);
+  if (!DS)
+    return false;
 
-    const MCExpr *DSExpr = MCSymbolRefExpr::create(
-        OutContext.getOrCreateSymbol(DS->getName()), OutContext);
-    OutStreamer->emitRelocDirective(*DeactDotExpr, "R_AARCH64_PATCHINST",
-                                    DSExpr, SMLoc(), *TM.getMCSubtargetInfo());
+  if (isa<GlobalAlias>(DS)) {
+    // Just emit the nop directly.
+    EmitToStreamer(MCInstBuilder(AArch64::HINT).addImm(0));
+    return true;
   }
+  MCSymbol *Dot = OutContext.createTempSymbol();
+  OutStreamer->emitLabel(Dot);
+  const MCExpr *DeactDotExpr = MCSymbolRefExpr::create(Dot, OutContext);
+
+  const MCExpr *DSExpr = MCSymbolRefExpr::create(
+      OutContext.getOrCreateSymbol(DS->getName()), OutContext);
+  OutStreamer->emitRelocDirective(*DeactDotExpr, "R_AARCH64_PATCHINST", DSExpr,
+                                  SMLoc());
   return false;
 }
 
@@ -2206,6 +2210,40 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
   //  Lend:
   if (EndSym)
     OutStreamer->emitLabel(EndSym);
+}
+
+void AArch64AsmPrinter::emitPtrauthSign(const MachineInstr *MI) {
+  Register Val = MI->getOperand(1).getReg();
+  auto Key = (AArch64PACKey::ID)MI->getOperand(2).getImm();
+  uint64_t Disc = MI->getOperand(3).getImm();
+  Register AddrDisc = MI->getOperand(4).getReg();
+  bool AddrDiscKilled = MI->getOperand(4).isKill();
+
+  // As long as at least one of Val and AddrDisc is in GPR64noip, a scratch
+  // register is available.
+  Register ScratchReg = Val == AArch64::X16 ? AArch64::X17 : AArch64::X16;
+  assert(ScratchReg != AddrDisc &&
+         "Neither X16 nor X17 is available as a scratch register");
+
+  // Compute pac discriminator
+  assert(isUInt<16>(Disc));
+  Register DiscReg = emitPtrauthDiscriminator(
+      Disc, AddrDisc, ScratchReg, /*MayUseAddrAsScratch=*/AddrDiscKilled);
+  bool IsZeroDisc = DiscReg == AArch64::XZR;
+  unsigned Opc = getPACOpcodeForKey(Key, IsZeroDisc);
+
+  if (emitDeactivationSymbolRelocation(MI->getDeactivationSymbol()))
+    return;
+
+  //  paciza x16      ; if  IsZeroDisc
+  //  pacia x16, x17  ; if !IsZeroDisc
+  MCInst PACInst;
+  PACInst.setOpcode(Opc);
+  PACInst.addOperand(MCOperand::createReg(Val));
+  PACInst.addOperand(MCOperand::createReg(Val));
+  if (!IsZeroDisc)
+    PACInst.addOperand(MCOperand::createReg(DiscReg));
+  EmitToStreamer(*OutStreamer, PACInst);
 }
 
 void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
@@ -2381,8 +2419,15 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
     emitMOVZ(AArch64::X1, Disc, 0);
   }
 
-  MCSymbol *PrePACInst = OutStreamer->getContext().createTempSymbol();
-  OutStreamer->emitLabel(PrePACInst);
+  if (DSExpr) {
+    MCSymbol *PrePACInst = OutStreamer->getContext().createTempSymbol();
+    OutStreamer->emitLabel(PrePACInst);
+
+    auto *PrePACInstExpr =
+        MCSymbolRefExpr::create(PrePACInst, OutStreamer->getContext());
+    OutStreamer->emitRelocDirective(*PrePACInstExpr, "R_AARCH64_PATCHINST",
+                                    DSExpr, SMLoc());
+  }
 
   // We don't know the subtarget because this is being emitted for a global
   // initializer. Because the performance of IFUNC resolvers is unimportant, we
@@ -2395,20 +2440,14 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
   OutStreamer->emitInstruction(MCInstBuilder(AArch64::B).addExpr(EmuPACRef),
                                *STI);
 
-  if (DSExpr) {
-    auto *PrePACInstExpr =
-        MCSymbolRefExpr::create(PrePACInst, OutStreamer->getContext());
-    OutStreamer->emitRelocDirective(*PrePACInstExpr, "R_AARCH64_PATCHINST", DSExpr,
-                                    SMLoc(), *STI);
-  }
-
   // We need a RET despite the above tail call because the deactivation symbol
   // may replace it with a NOP.
-  OutStreamer->emitInstruction(MCInstBuilder(AArch64::RET).addReg(AArch64::LR),
-                               *STI);
+  if (DSExpr)
+    OutStreamer->emitInstruction(
+        MCInstBuilder(AArch64::RET).addReg(AArch64::LR), *STI);
   OutStreamer->popSection();
 
-  return MCSpecifierExpr::create(IRelativeSym, AArch64::S_FUNCINIT,
+  return MCSymbolRefExpr::create(IRelativeSym, AArch64::S_FUNCINIT,
                                  OutStreamer->getContext());
 }
 
@@ -2960,9 +2999,6 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     OutStreamer->emitLabel(LOHLabel);
   }
 
-  if (emitDeactivationSymbolRelocation(MI->getDeactivationSymbol()))
-    return;
-
   AArch64TargetStreamer *TS =
     static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
   // Do any manual lowerings.
@@ -3094,6 +3130,10 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
         (AArch64PACKey::ID)MI->getOperand(3).getImm(),
         MI->getOperand(4).getImm(), MI->getOperand(5).getReg(),
         MI->getDeactivationSymbol());
+    return;
+
+  case AArch64::PAC:
+    emitPtrauthSign(MI);
     return;
 
   case AArch64::LOADauthptrstatic:
@@ -3544,6 +3584,9 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     emitCBPseudoExpansion(MI);
     return;
   }
+
+  if (emitDeactivationSymbolRelocation(MI->getDeactivationSymbol()))
+    return;
 
   // Finally, do the automated lowerings for everything else.
   MCInst TmpInst;
