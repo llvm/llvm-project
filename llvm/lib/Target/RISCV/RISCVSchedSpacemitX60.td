@@ -22,7 +22,7 @@
 //   M2 -> Values[4], M4 -> Values[5], M8 -> Values[6]
 // Shorter lists are allowed, e.g., widening instructions don't work on M8
 class GetLMULValue<list<int> Values, string LMUL> {
-  int Index = !cond(
+  defvar Index = !cond(
     !eq(LMUL, "MF8"): 0,
     !eq(LMUL, "MF4"): 1,
     !eq(LMUL, "MF2"): 2,
@@ -47,11 +47,11 @@ class GetLMULValue<list<int> Values, string LMUL> {
 // This is useful for modeling scheduling parameters that scale with LMUL.
 class ConstValueUntilLMULThenDoubleBase<string startLMUL, int BaseValue, int Value, string currentLMUL> {
   assert !le(BaseValue, Value), "BaseValue must be le to Value";
-  int startPos = GetLMULValue<[0, 1, 2, 3, 4, 5, 6], startLMUL>.c;
-  int currentPos = GetLMULValue<[0, 1, 2, 3, 4, 5, 6], currentLMUL>.c;
+  defvar startPos = GetLMULValue<[0, 1, 2, 3, 4, 5, 6], startLMUL>.c;
+  defvar currentPos = GetLMULValue<[0, 1, 2, 3, 4, 5, 6], currentLMUL>.c;
 
   // Calculate the difference in positions
-  int posDiff = !sub(currentPos, startPos);
+  defvar posDiff = !sub(currentPos, startPos);
 
   // Calculate Value * (2^posDiff) using shift left
   int c = !cond(
