@@ -17,6 +17,7 @@
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -1197,7 +1198,8 @@ bool LoopVectorizationLegality::canVectorizeIndirectUnsafeDependences() {
   return findHistogram(LI, SI, TheLoop, LAI->getPSE(), Histograms);
 }
 
-bool LoopVectorizationLegality::canVectorizeMemory() {
+bool LoopVectorizationLegality::canVectorizeMemory(
+    std::optional<LoadInst *> CriticalEELoad) {
   LAI = &LAIs.getInfo(*TheLoop);
   const OptimizationRemarkAnalysis *LAR = LAI->getReport();
   if (LAR) {
@@ -1207,8 +1209,42 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
     });
   }
 
-  if (!LAI->canVectorizeMemory())
-    return canVectorizeIndirectUnsafeDependences();
+  if (LAI->canVectorizeMemory()) {
+    // FIXME: Remove or reduce this restriction. We're in a bit of an odd spot
+    //        since we're (potentially) doing the load out of its normal order
+    //        in the loop and that may throw off dependency checking.
+    //        A forward dependency should be fine, but a backwards dep may not
+    //        be even if LAA thinks it is due to performing the load for the
+    //        vector iteration i+1 in vector iteration i.
+    if (CriticalEELoad) {
+      const MemoryDepChecker &DepChecker = LAI->getDepChecker();
+      const auto *Deps = DepChecker.getDependences();
+
+      if (any_of(*Deps, [&](const MemoryDepChecker::Dependence &Dep) {
+            return (Dep.getDestination(DepChecker) == *CriticalEELoad ||
+                    Dep.getSource(DepChecker) == *CriticalEELoad);
+          })) {
+        // Refine language a little? This currently only applies when a store
+        // is present in the early exit loop.
+        reportVectorizationFailure(
+            "No dependencies allowed for early exit condition load",
+            "Early exit condition loads may not have a dependence with "
+            "another"
+            " memory operation.",
+            "CantVectorizeStoreToLoopInvariantAddress", ORE, TheLoop);
+        return false;
+      }
+    }
+  } else {
+    if (!hasUncountedExitWithSideEffects())
+      return canVectorizeIndirectUnsafeDependences();
+    reportVectorizationFailure(
+        "Cannot vectorize unsafe dependencies in state-changing early exit "
+        "loop.",
+        "Unable to vectorize memory in an early exit loop with store",
+        "CantVectorizeUnsafeDependencyForEELoopWithStore", ORE, TheLoop);
+    return false;
+  }
 
   if (LAI->hasLoadStoreDependenceInvolvingLoopInvariantAddress()) {
     reportVectorizationFailure("We don't allow storing to uniform addresses",
@@ -1643,7 +1679,8 @@ bool LoopVectorizationLegality::canVectorizeLoopNestCFG(
   return Result;
 }
 
-bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
+bool LoopVectorizationLegality::isVectorizableEarlyExitLoop(
+    std::optional<LoadInst *> &CriticalEELoad) {
   BasicBlock *LatchBB = TheLoop->getLoopLatch();
   if (!LatchBB) {
     reportVectorizationFailure("Loop does not have a latch",
@@ -1750,13 +1787,20 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   for (auto *BB : TheLoop->blocks())
     for (auto &I : *BB) {
       if (I.mayWriteToMemory()) {
+        if (isa<StoreInst>(&I) && cast<StoreInst>(&I)->isSimple()) {
+          UncountedExitWithSideEffects = true;
+          continue;
+        }
+
         // We don't support writes to memory.
         reportVectorizationFailure(
-            "Writes to memory unsupported in early exit loops",
-            "Cannot vectorize early exit loop with writes to memory",
+            "Complex writes to memory unsupported in early exit loops",
+            "Cannot vectorize early exit loop with complex writes to memory",
             "WritesInEarlyExitLoop", ORE, TheLoop);
         return false;
-      } else if (!IsSafeOperation(&I)) {
+      }
+
+      if (!IsSafeOperation(&I)) {
         reportVectorizationFailure("Early exit loop contains operations that "
                                    "cannot be speculatively executed",
                                    "UnsafeOperationsEarlyExitLoop", ORE,
@@ -1771,13 +1815,63 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
 
   // TODO: Handle loops that may fault.
   Predicates.clear();
-  if (!isDereferenceableReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC,
-                                     &Predicates)) {
-    reportVectorizationFailure(
-        "Loop may fault",
-        "Cannot vectorize potentially faulting early exit loop",
-        "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
-    return false;
+  if (UncountedExitWithSideEffects) {
+    // Record load for analysis by isDereferenceableAndAlignedInLoop
+    // and later by dependence analysis.
+    if (BranchInst *Br = dyn_cast<BranchInst>(
+            SingleUncountableEdge->first->getTerminator())) {
+      // FIXME: Handle exit conditions with multiple users, more complex exit
+      //        conditions than br(icmp(load, loop_inv)).
+      ICmpInst *Cmp = dyn_cast<ICmpInst>(Br->getCondition());
+      if (Cmp && Cmp->hasOneUse() &&
+          TheLoop->isLoopInvariant(Cmp->getOperand(1))) {
+        LoadInst *Load = dyn_cast<LoadInst>(Cmp->getOperand(0));
+        if (Load && Load->hasOneUse() && !TheLoop->isLoopInvariant(Load)) {
+          if (isDereferenceableAndAlignedInLoop(Load, TheLoop, *PSE.getSE(),
+                                                *DT, AC, &Predicates)) {
+            ICFLoopSafetyInfo SafetyInfo;
+            SafetyInfo.computeLoopSafetyInfo(TheLoop);
+            // FIXME: We may have multiple levels of conditional loads, so will
+            //        need to improve on outright rejection at some point.
+            if (SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop))
+              CriticalEELoad = Load;
+            else
+              reportVectorizationFailure(
+                  "Early exit condition load not guaranteed to execute",
+                  "Cannot vectorize early exit loop when condition load is not "
+                  "guaranteed to execute",
+                  "EarlyExitLoadNotGuaranteed", ORE, TheLoop);
+          } else {
+            reportVectorizationFailure(
+                "Loop may fault",
+                "Cannot vectorize potentially faulting early exit loop",
+                "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
+            return false;
+          }
+        }
+      }
+    }
+
+    if (!CriticalEELoad) {
+      reportVectorizationFailure(
+          "Early exit loop with store but no condition load",
+          "Cannot vectorize early exit loop with store but no condition load",
+          "NoConditionLoadForEarlyExitLoop", ORE, TheLoop);
+      return false;
+    }
+  } else {
+    // Read-only loop.
+    // FIXME: as with the loops with stores, only the loads contributing to
+    //        the loop condition need to be guaranteed dereferenceable and
+    //        aligned.
+    if (!isDereferenceableReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC,
+                                       &Predicates)) {
+      reportVectorizationFailure(
+          "Loop may fault",
+          "Cannot vectorize potentially faulting early exit loop",
+          "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
+      return false;
+    }
   }
 
   [[maybe_unused]] const SCEV *SymbolicMaxBTC =
@@ -1851,6 +1945,7 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
+  std::optional<LoadInst *> CriticalEarlyExitUncountedConditionLoad;
   if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount())) {
     if (TheLoop->getExitingBlock()) {
       reportVectorizationFailure("Cannot vectorize uncountable loop",
@@ -1860,8 +1955,10 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       else
         return false;
     } else {
-      if (!isVectorizableEarlyExitLoop()) {
-        UncountableEdge = std::nullopt;
+      if (!isVectorizableEarlyExitLoop(
+              CriticalEarlyExitUncountedConditionLoad)) {
+        clearEarlyExitData();
+        CriticalEarlyExitUncountedConditionLoad.reset();
         if (DoExtraAnalysis)
           Result = false;
         else
@@ -1871,12 +1968,21 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
   }
 
   // Go over each instruction and look at memory deps.
-  if (!canVectorizeMemory()) {
+  if (!canVectorizeMemory(CriticalEarlyExitUncountedConditionLoad)) {
     LLVM_DEBUG(dbgs() << "LV: Can't vectorize due to memory conflicts\n");
     if (DoExtraAnalysis)
       Result = false;
     else
       return false;
+  }
+
+  // Bail out for state-changing EE loops for now.
+  if (UncountedExitWithSideEffects) {
+    reportVectorizationFailure(
+        "Writes to memory unsupported in early exit loops",
+        "Cannot vectorize early exit loop with writes to memory",
+        "WritesInEarlyExitLoop", ORE, TheLoop);
+    return false;
   }
 
   if (Result) {
