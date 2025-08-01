@@ -4256,12 +4256,14 @@ void GenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
   if (IsTopNode) {
     SU->TopReadyCycle = std::max(SU->TopReadyCycle, Top.getCurrCycle());
     TopClusterID = SU->ParentClusterIdx;
-    LLVM_DEBUG(if (TopClusterID != InvalidClusterId) {
-      ClusterInfo *TopCluster = DAG->getCluster(TopClusterID);
-      dbgs() << "  Top Cluster: ";
-      for (auto *N : *TopCluster)
-        dbgs() << N->NodeNum << '\t';
-      dbgs() << '\n';
+    LLVM_DEBUG({
+      if (TopClusterID != InvalidClusterId) {
+        ClusterInfo *TopCluster = DAG->getCluster(TopClusterID);
+        dbgs() << "  Top Cluster: ";
+        for (auto *N : *TopCluster)
+          dbgs() << N->NodeNum << '\t';
+        dbgs() << '\n';
+      }
     });
     Top.bumpNode(SU);
     if (SU->hasPhysRegUses)
@@ -4269,12 +4271,14 @@ void GenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
   } else {
     SU->BotReadyCycle = std::max(SU->BotReadyCycle, Bot.getCurrCycle());
     BotClusterID = SU->ParentClusterIdx;
-    LLVM_DEBUG(if (BotClusterID != InvalidClusterId) {
-      ClusterInfo *BotCluster = DAG->getCluster(BotClusterID);
-      dbgs() << "  Bot Cluster: ";
-      for (auto *N : *BotCluster)
-        dbgs() << N->NodeNum << '\t';
-      dbgs() << '\n';
+    LLVM_DEBUG({
+      if (BotClusterID != InvalidClusterId) {
+        ClusterInfo *BotCluster = DAG->getCluster(BotClusterID);
+        dbgs() << "  Bot Cluster: ";
+        for (auto *N : *BotCluster)
+          dbgs() << N->NodeNum << '\t';
+        dbgs() << '\n';
+      }
     });
     Bot.bumpNode(SU);
     if (SU->hasPhysRegDefs)
