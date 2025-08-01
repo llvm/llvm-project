@@ -256,11 +256,18 @@ Below is an example that builds the builtins for Armv7-M, but runs the tests
 as Armv7-A. It is presented in full, but is very similar to the earlier
 command for Armv7-A build and test::
 
-  LLVM_TOOLCHAIN=<path-to-llvm-install>/
+  LLVM_TOOLCHAIN=<path to llvm install>/
+
+  # For the builtins.
   TARGET_TRIPLE=arm-none-eabi
-  GCC_TOOLCHAIN=<path-to-gcc-toolchain>
+  GCC_TOOLCHAIN=<path to arm-none-eabi toolchain>/
   SYSROOT=${GCC_TOOLCHAIN}/${TARGET_TRIPLE}/libc
   COMPILE_FLAGS="-march=armv7-m -mfpu=vfpv2"
+
+  # For the test cases.
+  A_PROFILE_TARGET_TRIPLE=arm-none-linux-gnueabihf
+  A_PROFILE_GCC_TOOLCHAIN=<path to arm-none-linux-gnueabihf toolchain>/
+  A_PROFILE_SYSROOT=${A_PROFILE_GCC_TOOLCHAIN}/${A_PROFILE_TARGET_TRIPLE}/libc
 
   cmake ../llvm-project/compiler-rt \
     -G Ninja \
@@ -290,10 +297,10 @@ command for Armv7-A build and test::
     -DCOMPILER_RT_BUILD_ORC=OFF \
     -DCOMPILER_RT_BUILD_CRT=OFF \
     -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON \
-    -DCOMPILER_RT_EMULATOR="qemu-arm -L <path to arm-none-linux-gnueabihf toolchain>/arm-none-linux-gnueabihf/libc" \
+    -DCOMPILER_RT_EMULATOR="qemu-arm -L ${A_PROFILE_SYSROOT}" \
     -DCOMPILER_RT_INCLUDE_TESTS=ON \
     -DCOMPILER_RT_TEST_COMPILER=${LLVM_TOOLCHAIN}/bin/clang \
-    -DCOMPILER_RT_TEST_COMPILER_CFLAGS="--target=arm-none-linux-gnueabihf -march=armv7-a --gcc-toolchain=<path to arm-none-linux-gnueabihf toolchain> --sysroot=<path to arm-none-linux-gnueabihf toolchain>/arm-none-linux-gnueabihf/libc -fuse-ld=lld" \
+    -DCOMPILER_RT_TEST_COMPILER_CFLAGS="--target=${A_PROFILE_TARGET_TRIPLE} -march=armv7-a --gcc-toolchain=${A_PROFILE_GCC_TOOLCHAIN} --sysroot=${A_PROFILE_SYSROOT} -fuse-ld=lld" \
     -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
     -DCOMPILER_RT_OS_DIR="baremetal" \
     -DCOMPILER_RT_BAREMETAL_BUILD=ON
