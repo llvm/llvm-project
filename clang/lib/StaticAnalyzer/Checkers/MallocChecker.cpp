@@ -2693,7 +2693,7 @@ void MallocChecker::HandleUseAfterFree(CheckerContext &C, SourceRange Range,
         Frontend->UseFreeBug,
         AF.Kind == AF_InnerBuffer
             ? "Inner pointer of container used after re/deallocation"
-            : "Use of memory after it is freed",
+            : "Use of memory after it is released",
         N);
 
     R->markInteresting(Sym);
@@ -2721,8 +2721,8 @@ void MallocChecker::HandleDoubleFree(CheckerContext &C, SourceRange Range,
   if (ExplodedNode *N = C.generateErrorNode()) {
     auto R = std::make_unique<PathSensitiveBugReport>(
         Frontend->DoubleFreeBug,
-        (Released ? "Attempt to free released memory"
-                  : "Attempt to free non-owned memory"),
+        (Released ? "Attempt to release already released memory"
+                  : "Attempt to release non-owned memory"),
         N);
     if (Range.isValid())
       R->addRange(Range);
@@ -3730,13 +3730,15 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
           return nullptr;
         }
 
-        // Save the first destructor/function as release point.
-        assert(!ReleaseFunctionLC && "There should be only one release point");
+        // Record the stack frame that is _responsible_ for this memory release
+        // event. This will be used by the false positive suppression heuristics
+        // that recognize the release points of reference-counted objects.
+        //
+        // Usually (e.g. in C) we say that the _responsible_ stack frame is the
+        // current innermost stack frame:
         ReleaseFunctionLC = CurrentLC->getStackFrame();
-
-        // See if we're releasing memory while inlining a destructor that
-        // decrement reference counters (or one of its callees).
-        // This turns on various common false positive suppressions.
+        // ...but if the stack contains a destructor call, then we say that the
+        // outermost destructor stack frame is the _responsible_ one:
         for (const LocationContext *LC = CurrentLC; LC; LC = LC->getParent()) {
           if (const auto *DD = dyn_cast<CXXDestructorDecl>(LC->getDecl())) {
             if (isReferenceCountingPointerDestructor(DD)) {

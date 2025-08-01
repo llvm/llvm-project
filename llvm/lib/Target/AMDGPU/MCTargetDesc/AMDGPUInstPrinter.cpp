@@ -157,6 +157,9 @@ void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
     const int64_t TH = Imm & CPol::TH;
     const int64_t Scope = Imm & CPol::SCOPE;
 
+    if (Imm & CPol::SCAL)
+      O << " scale_offset";
+
     printTH(MI, TH, Scope, O);
     printScope(Scope, O);
 
@@ -537,6 +540,8 @@ void AMDGPUInstPrinter::printImmediateV216(uint32_t Imm, uint8_t OpType,
         printImmediateBFloat16(static_cast<uint16_t>(Imm), STI, O))
       return;
     break;
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+    break;
   default:
     llvm_unreachable("bad operand type");
   }
@@ -767,6 +772,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     case AMDGPU::OPERAND_REG_IMM_V2INT16:
     case AMDGPU::OPERAND_REG_IMM_V2BF16:
     case AMDGPU::OPERAND_REG_IMM_V2FP16:
+    case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
@@ -1345,6 +1351,48 @@ void AMDGPUInstPrinter::printIndexKey32bit(const MCInst *MI, unsigned OpNo,
   O << " index_key:" << Imm;
 }
 
+void AMDGPUInstPrinter::printMatrixFMT(const MCInst *MI, unsigned OpNo,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O, char AorB) {
+  auto Imm = MI->getOperand(OpNo).getImm() & 0x7;
+  if (Imm == 0)
+    return;
+
+  O << " matrix_" << AorB << "_fmt:";
+  switch (Imm) {
+  default:
+    O << Imm;
+    break;
+  case WMMA::MatrixFMT::MATRIX_FMT_FP8:
+    O << "MATRIX_FMT_FP8";
+    break;
+  case WMMA::MatrixFMT::MATRIX_FMT_BF8:
+    O << "MATRIX_FMT_BF8";
+    break;
+  case WMMA::MatrixFMT::MATRIX_FMT_FP6:
+    O << "MATRIX_FMT_FP6";
+    break;
+  case WMMA::MatrixFMT::MATRIX_FMT_BF6:
+    O << "MATRIX_FMT_BF6";
+    break;
+  case WMMA::MatrixFMT::MATRIX_FMT_FP4:
+    O << "MATRIX_FMT_FP4";
+    break;
+  }
+}
+
+void AMDGPUInstPrinter::printMatrixAFMT(const MCInst *MI, unsigned OpNo,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  printMatrixFMT(MI, OpNo, STI, O, 'a');
+}
+
+void AMDGPUInstPrinter::printMatrixBFMT(const MCInst *MI, unsigned OpNo,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  printMatrixFMT(MI, OpNo, STI, O, 'b');
+}
+
 void AMDGPUInstPrinter::printInterpSlot(const MCInst *MI, unsigned OpNum,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
@@ -1743,6 +1791,16 @@ void AMDGPUInstPrinter::printBitOp3(const MCInst *MI, unsigned OpNo,
     O << formatDec(Imm);
   else
     O << formatHex(static_cast<uint64_t>(Imm));
+}
+
+void AMDGPUInstPrinter::printScaleSel(const MCInst *MI, unsigned OpNo,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
+  uint8_t Imm = MI->getOperand(OpNo).getImm();
+  if (!Imm)
+    return;
+
+  O << " scale_sel:" << formatDec(Imm);
 }
 
 #include "AMDGPUGenAsmWriter.inc"

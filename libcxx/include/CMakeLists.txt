@@ -381,6 +381,7 @@ set(files
   __format/enable_insertable.h
   __format/escaped_output_table.h
   __format/extended_grapheme_cluster_table.h
+  __format/fmt_pair_like.h
   __format/format_arg.h
   __format/format_arg_store.h
   __format/format_args.h
@@ -535,6 +536,7 @@ set(files
   __locale_dir/time.h
   __locale_dir/wbuffer_convert.h
   __locale_dir/wstring_convert.h
+  __log_hardening_failure
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h
@@ -737,6 +739,7 @@ set(files
   __ranges/transform_view.h
   __ranges/view_interface.h
   __ranges/views.h
+  __ranges/zip_transform_view.h
   __ranges/zip_view.h
   __split_buffer
   __std_mbstate_t.h
@@ -780,7 +783,6 @@ set(files
   __tuple/make_tuple_types.h
   __tuple/sfinae_helpers.h
   __tuple/tuple_element.h
-  __tuple/tuple_indices.h
   __tuple/tuple_like.h
   __tuple/tuple_like_ext.h
   __tuple/tuple_like_no_subrange.h

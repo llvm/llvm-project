@@ -53,7 +53,7 @@ static APSInt popToAPSInt(InterpStack &Stk, PrimType T) {
 static void pushInteger(InterpState &S, const APSInt &Val, QualType QT) {
   assert(QT->isSignedIntegerOrEnumerationType() ||
          QT->isUnsignedIntegerOrEnumerationType());
-  std::optional<PrimType> T = S.getContext().classify(QT);
+  OptPrimType T = S.getContext().classify(QT);
   assert(T);
 
   unsigned BitWidth = S.getASTContext().getTypeSize(QT);
@@ -240,9 +240,9 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
         T CB = PB.deref<T>();
         if (CA > CB)
           return returnResult(1);
-        else if (CA < CB)
+        if (CA < CB)
           return returnResult(-1);
-        else if (CA.isZero() || CB.isZero())
+        if (CA.isZero() || CB.isZero())
           return returnResult(0);
       });
       continue;
@@ -253,7 +253,7 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
 
     if (CA > CB)
       return returnResult(1);
-    else if (CA < CB)
+    if (CA < CB)
       return returnResult(-1);
     if (CA == 0 || CB == 0)
       return returnResult(0);
@@ -1048,7 +1048,7 @@ static bool interp__builtin_atomic_lock_free(InterpState &S, CodePtr OpPC,
           PtrArg = ICE->getSubExpr();
       }
 
-      if (auto PtrTy = PtrArg->getType()->getAs<PointerType>()) {
+      if (const auto *PtrTy = PtrArg->getType()->getAs<PointerType>()) {
         QualType PointeeType = PtrTy->getPointeeType();
         if (!PointeeType->isIncompleteType() &&
             S.getASTContext().getTypeAlignInChars(PointeeType) >= Size) {
@@ -1098,11 +1098,9 @@ static bool interp__builtin_complex(InterpState &S, CodePtr OpPC,
   const Floating &Arg1 = S.Stk.pop<Floating>();
   Pointer &Result = S.Stk.peek<Pointer>();
 
-  Result.atIndex(0).deref<Floating>() = Arg1;
-  Result.atIndex(0).initialize();
-  Result.atIndex(1).deref<Floating>() = Arg2;
-  Result.atIndex(1).initialize();
-  Result.initialize();
+  Result.elem<Floating>(0) = Arg1;
+  Result.elem<Floating>(1) = Arg2;
+  Result.initializeAllElements();
 
   return true;
 }
@@ -1530,7 +1528,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
     return false;
 
   bool IsArray = NumElems.ugt(1);
-  std::optional<PrimType> ElemT = S.getContext().classify(ElemType);
+  OptPrimType ElemT = S.getContext().classify(ElemType);
   DynamicAllocator &Allocator = S.getAllocator();
   if (ElemT) {
     Block *B =
@@ -1644,10 +1642,10 @@ static bool interp__builtin_vector_reduce(InterpState &S, CodePtr OpPC,
   unsigned NumElems = Arg.getNumElems();
 
   INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-    T Result = Arg.atIndex(0).deref<T>();
+    T Result = Arg.elem<T>(0);
     unsigned BitWidth = Result.bitWidth();
     for (unsigned I = 1; I != NumElems; ++I) {
-      T Elem = Arg.atIndex(I).deref<T>();
+      T Elem = Arg.elem<T>(I);
       T PrevResult = Result;
 
       if (ID == Builtin::BI__builtin_reduce_add) {
@@ -1723,15 +1721,14 @@ static bool interp__builtin_elementwise_popcount(InterpState &S, CodePtr OpPC,
   for (unsigned I = 0; I != NumElems; ++I) {
     INT_TYPE_SWITCH_NO_BOOL(ElemT, {
       if (BuiltinID == Builtin::BI__builtin_elementwise_popcount) {
-        Dst.atIndex(I).deref<T>() =
-            T::from(Arg.atIndex(I).deref<T>().toAPSInt().popcount());
+        Dst.elem<T>(I) = T::from(Arg.elem<T>(I).toAPSInt().popcount());
       } else {
-        Dst.atIndex(I).deref<T>() = T::from(
-            Arg.atIndex(I).deref<T>().toAPSInt().reverseBits().getZExtValue());
+        Dst.elem<T>(I) =
+            T::from(Arg.elem<T>(I).toAPSInt().reverseBits().getZExtValue());
       }
-      Dst.atIndex(I).initialize();
     });
   }
+  Dst.initializeAllElements();
 
   return true;
 }
@@ -1968,7 +1965,8 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
         if (A < B) {
           pushInteger(S, -1, Call->getType());
           return true;
-        } else if (A > B) {
+        }
+        if (A > B) {
           pushInteger(S, 1, Call->getType());
           return true;
         }
@@ -1980,7 +1978,8 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
       if (A < B) {
         pushInteger(S, -1, Call->getType());
         return true;
-      } else if (A > B) {
+      }
+      if (A > B) {
         pushInteger(S, 1, Call->getType());
         return true;
       }
@@ -2296,8 +2295,8 @@ static bool interp__builtin_elementwise_sat(InterpState &S, CodePtr OpPC,
     APSInt Elem1;
     APSInt Elem2;
     INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-      Elem1 = LHS.atIndex(I).deref<T>().toAPSInt();
-      Elem2 = RHS.atIndex(I).deref<T>().toAPSInt();
+      Elem1 = LHS.elem<T>(I).toAPSInt();
+      Elem2 = RHS.elem<T>(I).toAPSInt();
     });
 
     APSInt Result;
@@ -2313,12 +2312,10 @@ static bool interp__builtin_elementwise_sat(InterpState &S, CodePtr OpPC,
       llvm_unreachable("Wrong builtin ID");
     }
 
-    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-      const Pointer &E = Dst.atIndex(I);
-      E.deref<T>() = static_cast<T>(Result);
-      E.initialize();
-    });
+    INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                            { Dst.elem<T>(I) = static_cast<T>(Result); });
   }
+  Dst.initializeAllElements();
 
   return true;
 }
@@ -2880,7 +2877,7 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, const Pointer &Src,
 
   auto copyField = [&](const Record::Field &F, bool Activate) -> bool {
     Pointer DestField = Dest.atField(F.Offset);
-    if (std::optional<PrimType> FT = S.Ctx.classify(F.Decl->getType())) {
+    if (OptPrimType FT = S.Ctx.classify(F.Decl->getType())) {
       TYPE_SWITCH(*FT, {
         DestField.deref<T>() = Src.atField(F.Offset).deref<T>();
         if (Src.atField(F.Offset).isInitialized())
@@ -2942,7 +2939,7 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
     for (unsigned I = 0, N = DestDesc->getNumElems(); I != N; ++I) {
       Pointer DestElem = Dest.atIndex(I);
       TYPE_SWITCH(ET, {
-        DestElem.deref<T>() = Src.atIndex(I).deref<T>();
+        DestElem.deref<T>() = Src.elem<T>(I);
         DestElem.initialize();
       });
     }
