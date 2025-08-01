@@ -377,6 +377,66 @@ define void @maximum() {
   ret void
 }
 
+define void @minimumnum() {
+; CHECK-LABEL: 'minimumnum'
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %1 = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> poison, <2 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %2 = call <4 x float> @llvm.minimumnum.v4f32(<4 x float> poison, <4 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 10 for: %3 = call <8 x float> @llvm.minimumnum.v8f32(<8 x float> poison, <8 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 20 for: %4 = call <16 x float> @llvm.minimumnum.v16f32(<16 x float> poison, <16 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %5 = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> poison, <2 x double> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 10 for: %6 = call <4 x double> @llvm.minimumnum.v4f64(<4 x double> poison, <4 x double> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 20 for: %7 = call <8 x double> @llvm.minimumnum.v8f64(<8 x double> poison, <8 x double> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 40 for: %8 = call <16 x double> @llvm.minimumnum.v16f64(<16 x double> poison, <16 x double> poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  call <2 x float> @llvm.minimumnum.v2f32(<2 x float> poison, <2 x float> poison)
+  call <4 x float> @llvm.minimumnum.v4f32(<4 x float> poison, <4 x float> poison)
+  call <8 x float> @llvm.minimumnum.v8f32(<8 x float> poison, <8 x float> poison)
+  call <16 x float> @llvm.minimumnum.v16f32(<16 x float> poison, <16 x float> poison)
+  call <2 x double> @llvm.minimumnum.v2f64(<2 x double> poison, <2 x double> poison)
+  call <4 x double> @llvm.minimumnum.v4f64(<4 x double> poison, <4 x double> poison)
+  call <8 x double> @llvm.minimumnum.v8f64(<8 x double> poison, <8 x double> poison)
+  call <16 x double> @llvm.minimumnum.v16f64(<16 x double> poison, <16 x double> poison)
+  ret void
+}
+
+define void @minimumnum_fp16() {
+; CHECK-NOF16-LABEL: 'minimumnum_fp16'
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:4 for: %1 = call <2 x half> @llvm.minimumnum.v2f16(<2 x half> poison, <2 x half> poison)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:7 Lat:10 SizeLat:10 for: %2 = call <4 x half> @llvm.minimumnum.v4f16(<4 x half> poison, <4 x half> poison)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:15 Lat:22 SizeLat:22 for: %3 = call <8 x half> @llvm.minimumnum.v8f16(<8 x half> poison, <8 x half> poison)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:30 Lat:44 SizeLat:44 for: %4 = call <16 x half> @llvm.minimumnum.v16f16(<16 x half> poison, <16 x half> poison)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; CHECK-F16-LABEL: 'minimumnum_fp16'
+; CHECK-F16-NEXT:  Cost Model: Found costs of 3 for: %1 = call <2 x half> @llvm.minimumnum.v2f16(<2 x half> poison, <2 x half> poison)
+; CHECK-F16-NEXT:  Cost Model: Found costs of 3 for: %2 = call <4 x half> @llvm.minimumnum.v4f16(<4 x half> poison, <4 x half> poison)
+; CHECK-F16-NEXT:  Cost Model: Found costs of 3 for: %3 = call <8 x half> @llvm.minimumnum.v8f16(<8 x half> poison, <8 x half> poison)
+; CHECK-F16-NEXT:  Cost Model: Found costs of 10 for: %4 = call <16 x half> @llvm.minimumnum.v16f16(<16 x half> poison, <16 x half> poison)
+; CHECK-F16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  call <2 x half> @llvm.minimumnum.v2f16(<2 x half> poison, <2 x half> poison)
+  call <4 x half> @llvm.minimumnum.v4f16(<4 x half> poison, <4 x half> poison)
+  call <8 x half> @llvm.minimumnum.v8f16(<8 x half> poison, <8 x half> poison)
+  call <16 x half> @llvm.minimumnum.v16f16(<16 x half> poison, <16 x half> poison)
+  ret void
+}
+
+define void @minimumnum_bf16() {
+; CHECK-LABEL: 'minimumnum_bf16'
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:4 for: %1 = call <2 x bfloat> @llvm.minimumnum.v2bf16(<2 x bfloat> poison, <2 x bfloat> poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:7 Lat:10 SizeLat:10 for: %2 = call <4 x bfloat> @llvm.minimumnum.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:15 Lat:22 SizeLat:22 for: %3 = call <8 x bfloat> @llvm.minimumnum.v8bf16(<8 x bfloat> poison, <8 x bfloat> poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:30 Lat:44 SizeLat:44 for: %4 = call <16 x bfloat> @llvm.minimumnum.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  call <2 x bfloat> @llvm.minimumnum.v2fb16(<2 x bfloat> poison, <2 x bfloat> poison)
+  call <4 x bfloat> @llvm.minimumnum.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison)
+  call <8 x bfloat> @llvm.minimumnum.v8bf16(<8 x bfloat> poison, <8 x bfloat> poison)
+  call <16 x bfloat> @llvm.minimumnum.v6bf16(<16 x bfloat> poison, <16 x bfloat> poison)
+  ret void
+}
+
 declare i8 @llvm.umin.i8(i8, i8)
 declare i16 @llvm.umin.i16(i16, i16)
 declare i32 @llvm.umin.i32(i32, i32)
@@ -512,3 +572,20 @@ declare <4 x float> @llvm.maximum.v4f32(<4 x float>, <4 x float>)
 declare <8 x float> @llvm.maximum.v8f32(<8 x float>, <8 x float>)
 declare <2 x double> @llvm.maximum.v2f64(<2 x double>, <2 x double>)
 declare <4 x double> @llvm.maximum.v4f64(<4 x double>, <4 x double>)
+
+declare <2 x half> @llvm.minimumnum.v2f16(<2 x half>, <2 x half>)
+declare <4 x half> @llvm.minimumnum.v4f16(<4 x half>, <4 x half>)
+declare <8 x half> @llvm.minimumnum.v8f16(<8 x half>, <8 x half>)
+declare <16 x half> @llvm.minimumnum.v16f16(<16 x half>, <16 x half>)
+declare <2 x bfloat> @llvm.minimumnum.2bf16(<2 x bfloat>, <2 x bfloat>)
+declare <4 x bfloat> @llvm.minimumnum.4bf16(<4 x bfloat>, <4 x bfloat>)
+declare <8 x bfloat> @llvm.minimumnum.v8bf16(<8 x bfloat>, <8 x bfloat>)
+declare <16 x bfloat> @llvm.minimumnum.v16bf16(<16 x bfloat>, <16 x bfloat>)
+declare <2 x float> @llvm.minimumnum.v2f32(<2 x float>, <2 x float>)
+declare <4 x float> @llvm.minimumnum.v4f32(<4 x float>, <4 x float>)
+declare <8 x float> @llvm.minimumnum.v8f32(<8 x float>, <8 x float>)
+declare <16 x float> @llvm.minimumnum.v16f32(<16 x float>, <16 x float>)
+declare <2 x double> @llvm.minimumnum.v2f64(<2 x double>, <2 x double>)
+declare <4 x double> @llvm.minimumnum.v4f64(<4 x double>, <4 x double>)
+declare <8 x double> @llvm.minimumnum.nxv8f64(<8 x double>, <8 x double>)
+declare <16 x double> @llvm.minimumnum.nxv16f64(<16 x double>, <16 x double>)
