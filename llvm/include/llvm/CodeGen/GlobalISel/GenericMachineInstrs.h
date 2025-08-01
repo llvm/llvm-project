@@ -874,6 +874,9 @@ public:
     case TargetOpcode::G_SEXT:
     case TargetOpcode::G_SITOFP:
     case TargetOpcode::G_TRUNC:
+    case TargetOpcode::G_TRUNC_SSAT_S:
+    case TargetOpcode::G_TRUNC_SSAT_U:
+    case TargetOpcode::G_TRUNC_USAT_U:
     case TargetOpcode::G_UITOFP:
     case TargetOpcode::G_ZEXT:
     case TargetOpcode::G_ANYEXT:
@@ -913,6 +916,30 @@ class GTrunc : public GCastOp {
 public:
   static bool classof(const MachineInstr *MI) {
     return MI->getOpcode() == TargetOpcode::G_TRUNC;
+  };
+};
+
+/// Represents a saturated trunc from a signed input to a signed result.
+class GTruncSSatS : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_TRUNC_SSAT_S;
+  };
+};
+
+/// Represents a saturated trunc from a signed input to an unsigned result.
+class GTruncSSatU : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_TRUNC_SSAT_U;
+  };
+};
+
+/// Represents a saturated trunc from an unsigned input to an unsigned result.
+class GTruncUSatU : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_TRUNC_USAT_U;
   };
 };
 
