@@ -870,6 +870,8 @@ public:
   void emitAutoVarTypeCleanup(const AutoVarEmission &emission,
                               clang::QualType::DestructionKind dtorKind);
 
+  void maybeEmitDeferredVarDeclInit(const VarDecl *vd);
+
   void emitBaseInitializer(mlir::Location loc, const CXXRecordDecl *classDecl,
                            CXXCtorInitializer *baseInit);
 
@@ -1059,7 +1061,7 @@ public:
 
   void emitCompoundStmtWithoutScope(const clang::CompoundStmt &s);
 
-  void emitDecl(const clang::Decl &d);
+  void emitDecl(const clang::Decl &d, bool evaluateConditionDecl = false);
   mlir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
   LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
 
