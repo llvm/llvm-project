@@ -137,7 +137,7 @@ func.func @bitwise_or_all_ones_vector(%arg: vector<3xi8>) -> vector<3xi8> {
 // -----
 
 func.func @bitwise_or_float(%arg0: f16, %arg1: f16) -> f16 {
-  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or vector of 8/16/32/64-bit integer values of length 2/3/4}}
+  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4}}
   %0 = spirv.BitwiseOr %arg0, %arg1 : f16
   return %0 : f16
 }
@@ -165,7 +165,7 @@ func.func @bitwise_xor_vector(%arg: vector<4xi32>) -> vector<4xi32> {
 // -----
 
 func.func @bitwise_xor_float(%arg0: f16, %arg1: f16) -> f16 {
-  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or vector of 8/16/32/64-bit integer values of length 2/3/4}}
+  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4}}
   %0 = spirv.BitwiseXor %arg0, %arg1 : f16
   return %0 : f16
 }
@@ -274,7 +274,7 @@ func.func @bitwise_and_zext_vector(%arg: vector<2xi8>) -> vector<2xi32> {
 // -----
 
 func.func @bitwise_and_float(%arg0: f16, %arg1: f16) -> f16 {
-  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or vector of 8/16/32/64-bit integer values of length 2/3/4}}
+  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4}}
   %0 = spirv.BitwiseAnd %arg0, %arg1 : f16
   return %0 : f16
 }
