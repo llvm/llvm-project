@@ -431,7 +431,7 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
     std::vector<std::string> SpvExtensionArgs =
         Args.getAllArgValues(options::OPT_fspv_extension_EQ);
     if (checkExtensionArgsAreValid(SpvExtensionArgs, getDriver())) {
-      llvm::SmallString<1024> LlvmOption = getSpirvExtArg(SpvExtensionArgs);
+     SmallString<1024> LlvmOption = getSpirvExtArg(SpvExtensionArgs);
       DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_mllvm),
                           LlvmOption);
     }
