@@ -57,7 +57,11 @@ void (*fp2)(int) = func2;
 void func3(int) __cfi_salt("pepper"); // ok
 void func3(int a) __cfi_salt("pepper") { } // ok
 void (* __cfi_salt("pepper") fp3)(int) = func3; // ok
+void (*fp3_noattr)(int) = func3;
+    // expected-error@-1{{incompatible function pointer types initializing 'void (*)(int)' with an expression of type 'void (int)'}}
 
 void func4(int) [[clang::cfi_salt("test")]]; // ok
 void func4(int a) [[clang::cfi_salt("test")]] { } // ok
 void (* [[clang::cfi_salt("test")]] fp4)(int) = func4; // ok
+void (*fp4_noattr)(int) = func4;
+    // expected-error@-1{{incompatible function pointer types initializing 'void (*)(int)' with an expression of type 'void (int)'}}
