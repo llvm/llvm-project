@@ -133,8 +133,8 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-NEXT:  Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.if:
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     REPLICATE ir<%rem> = srem vp<[[SPLICE]]>, ir<%x>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE ir<%add> = add ir<%rem>, ir<%recur.next>
 ; CHECK-NEXT:     REPLICATE store ir<%add>, ir<%gep>
@@ -292,8 +292,8 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, ptr 
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK:        pred.store.if:
-; CHECK-NEXT:     REPLICATE ir<%lv.2> = load ir<%gep>
 ; CHECK-NEXT:     REPLICATE ir<%rem> = srem vp<[[SPLICE]]>, ir<%x>
+; CHECK-NEXT:     REPLICATE ir<%lv.2> = load ir<%gep>
 ; CHECK-NEXT:     REPLICATE ir<%conv.lv.2> = sext ir<%lv.2>
 ; CHECK-NEXT:     REPLICATE ir<%add.1> = add ir<%conv>, ir<%rem>
 ; CHECK-NEXT:     REPLICATE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[STEPS]]>
