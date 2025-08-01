@@ -11441,19 +11441,25 @@ void TargetLowering::expandSADDSUBO(
 
   SDValue Zero = DAG.getConstant(0, dl, LHS.getValueType());
 
-  // For an addition, the result should be less than one of the operands (LHS)
-  // if and only if the other operand (RHS) is negative, otherwise there will
-  // be overflow.
-  // For a subtraction, the result should be less than one of the operands
-  // (LHS) if and only if the other operand (RHS) is (non-zero) positive,
-  // otherwise there will be overflow.
-  SDValue ResultLowerThanLHS = DAG.getSetCC(dl, OType, Result, LHS, ISD::SETLT);
-  SDValue ConditionRHS =
-      DAG.getSetCC(dl, OType, RHS, Zero, IsAdd ? ISD::SETLT : ISD::SETGT);
-
-  Overflow = DAG.getBoolExtOrTrunc(
-      DAG.getNode(ISD::XOR, dl, OType, ConditionRHS, ResultLowerThanLHS), dl,
-      ResultType, ResultType);
+  if (IsAdd) {
+    // For addition, the result should be less than one of the operands (LHS)
+    // if and only if the other operand (RHS) is negative, otherwise there will
+    // be overflow.
+    SDValue ResultLowerThanLHS =
+        DAG.getSetCC(dl, OType, Result, LHS, ISD::SETLT);
+    SDValue ConditionRHS = DAG.getSetCC(dl, OType, RHS, Zero, ISD::SETLT);
+    Overflow = DAG.getBoolExtOrTrunc(
+        DAG.getNode(ISD::XOR, dl, OType, ConditionRHS, ResultLowerThanLHS), dl,
+        ResultType, ResultType);
+  } else {
+    // For subtraction, overflow occurs when the signed comparison of operands
+    // doesn't match the sign of the result
+    SDValue LHSLessThanRHS = DAG.getSetCC(dl, OType, LHS, RHS, ISD::SETLT);
+    SDValue ResultNegative = DAG.getSetCC(dl, OType, Result, Zero, ISD::SETLT);
+    Overflow = DAG.getBoolExtOrTrunc(
+        DAG.getNode(ISD::XOR, dl, OType, LHSLessThanRHS, ResultNegative), dl,
+        ResultType, ResultType);
+  }
 }
 
 bool TargetLowering::expandMULO(SDNode *Node, SDValue &Result,

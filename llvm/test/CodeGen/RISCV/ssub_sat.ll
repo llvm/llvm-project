@@ -13,11 +13,10 @@ declare i64 @llvm.ssub.sat.i64(i64, i64)
 define signext i32 @func(i32 signext %x, i32 signext %y) nounwind {
 ; RV32-LABEL: func:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    mv a2, a0
-; RV32-NEXT:    sgtz a3, a1
+; RV32-NEXT:    slt a2, a0, a1
 ; RV32-NEXT:    sub a0, a0, a1
-; RV32-NEXT:    slt a1, a0, a2
-; RV32-NEXT:    beq a3, a1, .LBB0_2
+; RV32-NEXT:    slti a1, a0, 0
+; RV32-NEXT:    beq a2, a1, .LBB0_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    lui a1, 524288
@@ -73,11 +72,10 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ;
 ; RV64-LABEL: func2:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    mv a2, a0
-; RV64-NEXT:    sgtz a3, a1
+; RV64-NEXT:    slt a2, a0, a1
 ; RV64-NEXT:    sub a0, a0, a1
-; RV64-NEXT:    slt a1, a0, a2
-; RV64-NEXT:    beq a3, a1, .LBB1_2
+; RV64-NEXT:    slti a1, a0, 0
+; RV64-NEXT:    beq a2, a1, .LBB1_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    li a1, -1
