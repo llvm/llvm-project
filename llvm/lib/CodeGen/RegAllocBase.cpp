@@ -178,10 +178,8 @@ void RegAllocBase::cleanupFailedVReg(Register FailedReg, MCRegister PhysReg,
     for (MCRegAliasIterator Aliases(PhysReg, TRI, true); Aliases.isValid();
          ++Aliases) {
       for (MachineOperand &MO : MRI->reg_operands(*Aliases)) {
-        if (MO.readsReg()) {
+        if (MO.readsReg())
           MO.setIsUndef(true);
-          LIS->removeAllRegUnitsForPhysReg(MO.getReg());
-        }
       }
     }
   }
