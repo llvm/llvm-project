@@ -63,4 +63,3 @@ end subroutine TestOfCharacter
 !CHECK:    %[[UNBOXED_TGT_A0:.*]]:2 = fir.unboxchar %[[TGT_A0_BC_LD]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 !CHECK:    %[[TGT_A0_DECL:.*]]:2 = hlfir.declare %[[TGT_A0]] typeparams %[[UNBOXED_TGT_A0]]#1 {{.*}} -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 !CHECK:    %[[TGT_A1_DECL:.*]]:2 = hlfir.declare %[[TGT_A1]] typeparams %[[UNBOXED_TGT_A1]]#1 {{.*}} -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-
