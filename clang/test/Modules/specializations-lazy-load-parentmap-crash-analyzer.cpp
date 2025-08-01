@@ -5,13 +5,13 @@
 // RUN: split-file --leading-lines %s %t
 //
 // Prepare the BMIs.
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-module-interface -o %t/mod_a-part1.pcm %t/mod_a-part1.cppm
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-module-interface -o %t/mod_a-part2.pcm %t/mod_a-part2.cppm
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-module-interface -o %t/mod_a.pcm %t/mod_a.cppm -fmodule-file=mod_a:part2=%t/mod_a-part2.pcm -fmodule-file=mod_a:part1=%t/mod_a-part1.pcm
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-module-interface -o %t/mod_b.pcm %t/mod_b.cppm -fmodule-file=mod_a:part2=%t/mod_a-part2.pcm -fmodule-file=mod_a=%t/mod_a.pcm -fmodule-file=mod_a:part1=%t/mod_a-part1.pcm
+// RUN: %clang_cc1 -std=c++20 -emit-module-interface -o %t/mod_a-part1.pcm %t/mod_a-part1.cppm
+// RUN: %clang_cc1 -std=c++20 -emit-module-interface -o %t/mod_a-part2.pcm %t/mod_a-part2.cppm
+// RUN: %clang_cc1 -std=c++20 -emit-module-interface -o %t/mod_a.pcm %t/mod_a.cppm -fmodule-file=mod_a:part2=%t/mod_a-part2.pcm -fmodule-file=mod_a:part1=%t/mod_a-part1.pcm
+// RUN: %clang_cc1 -std=c++20 -emit-module-interface -o %t/mod_b.pcm %t/mod_b.cppm -fmodule-file=mod_a:part2=%t/mod_a-part2.pcm -fmodule-file=mod_a=%t/mod_a.pcm -fmodule-file=mod_a:part1=%t/mod_a-part1.pcm
 
 // Trigger the construction of the parent map (which is necessary to trigger the bug this regression test is for) using ArrayBoundV2 checker:
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -analyze -analyzer-checker=security,alpha.security -analyzer-output=text %t/test-array-bound-v2.cpp -fmodule-file=mod_a:part2=%t/mod_a-part2.pcm -fmodule-file=mod_a=%t/mod_a.pcm -fmodule-file=mod_a:part1=%t/mod_a-part1.pcm -fmodule-file=mod_b=%t/mod_b.pcm
+// RUN: %clang_cc1 -std=c++20 -analyze -analyzer-checker=security,alpha.security -analyzer-output=text %t/test-array-bound-v2.cpp -fmodule-file=mod_a:part2=%t/mod_a-part2.pcm -fmodule-file=mod_a=%t/mod_a.pcm -fmodule-file=mod_a:part1=%t/mod_a-part1.pcm -fmodule-file=mod_b=%t/mod_b.pcm
 
 //--- mod_a-part1.cppm
 module;
