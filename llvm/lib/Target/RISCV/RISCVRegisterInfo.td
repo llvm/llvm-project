@@ -45,6 +45,13 @@ class RISCVReg64<RISCVReg32 subreg>
   let SubRegIndices = [sub_32];
 }
 
+def sub_64 : SubRegIndex<64>;
+class RISCVReg128<RISCVReg64 subreg>
+    : RISCVRegWithSubRegs<subreg.HWEncoding{4-0}, subreg.AsmName, [subreg],
+                          subreg.AltNames> {
+  let SubRegIndices = [sub_64];
+}
+
 let FallbackRegAltNameIndex = NoRegAltName in
 def ABIRegAltName : RegAltNameIndex;
 
@@ -261,6 +268,11 @@ def GPRNoX0 : GPRRegisterClass<(sub GPR, X0)> {
   let DiagnosticString = "register must be a GPR excluding zero (x0)";
 }
 
+def GPRNoX2 : GPRRegisterClass<(sub GPR, X2)> {
+  let DiagnosticType = "InvalidRegClassGPRNoX2";
+  let DiagnosticString = "register must be a GPR excluding sp (x2)";
+}
+
 def GPRNoX0X2 : GPRRegisterClass<(sub GPR, X0, X2)> {
   let DiagnosticType = "InvalidRegClassGPRNoX0X2";
   let DiagnosticString = "register must be a GPR excluding zero (x0) and sp (x2)";
@@ -412,6 +424,11 @@ let RegAltNameIndices = [ABIRegAltName] in {
     def F#Index#_D : RISCVReg64<!cast<RISCVReg32>("F"#Index#"_F")>,
       DwarfRegAlias<!cast<Register>("F"#Index#"_H")>;
   }
+
+  foreach Index = 0-31 in {
+    def F#Index#_Q : RISCVReg128<!cast<RISCVReg64>("F"#Index#"_D")>,
+      DwarfRegAlias<!cast<Register>("F"#Index#"_H")>;
+  }
 }
 
 // The order of registers represents the preferred allocation sequence,
@@ -460,6 +477,15 @@ def FPR64 : RISCVRegisterClass<[f64], 64, (add
 def FPR64C : RISCVRegisterClass<[f64], 64, (add
   (sequence "F%u_D", 15, 10),
   (sequence "F%u_D", 8, 9)
+)>;
+
+def FPR128 : RISCVRegisterClass<[f128], 128, (add
+    (sequence "F%u_Q", 15, 10),
+    (sequence "F%u_Q", 0, 7),
+    (sequence "F%u_Q", 16, 17),
+    (sequence "F%u_Q", 28, 31),
+    (sequence "F%u_Q", 8, 9),
+    (sequence "F%u_Q", 18, 27)
 )>;
 
 //===----------------------------------------------------------------------===//
@@ -825,6 +851,7 @@ foreach m = LMULList in {
 
 def FFLAGS : RISCVReg<0, "fflags">;
 def FRM    : RISCVReg<0, "frm">;
+def FCSR   : RISCVReg<0, "fcsr">;
 
 // Shadow Stack register
 def SSP    : RISCVReg<0, "ssp">;
@@ -834,4 +861,17 @@ def SF_VCIX_STATE : RISCVReg<0, "sf.vcix_state">;
 def : RISCVRegisterClass<[XLenVT], 32, (add SF_VCIX_STATE)> {
   let RegInfos = XLenRI;
   let isAllocatable = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// XSfmmbase tiles
+//===----------------------------------------------------------------------===//
+foreach Index = 0-15 in
+  def T#Index : RISCVReg<Index, "mt"#Index, []>,
+                DwarfRegNum<[!add(Index, 3072)]>;
+
+let RegInfos = XLenRI in {
+  def TR   : RISCVRegisterClass<[untyped], 32, (add (sequence "T%u", 0, 15))>;
+  def TRM2 : RISCVRegisterClass<[untyped], 32, (add (decimate TR, 2))>;
+  def TRM4 : RISCVRegisterClass<[untyped], 32, (add (decimate TR, 4))>;
 }

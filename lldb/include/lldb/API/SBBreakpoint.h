@@ -148,6 +148,11 @@ public:
 
   bool IsHardware() const;
 
+  /// Make this breakpoint a hardware breakpoint. This will replace all existing
+  /// breakpoint locations with hardware breakpoints. Returns an error if this
+  /// fails, e.g. when there aren't enough hardware resources available.
+  lldb::SBError SetIsHardware(bool is_hardware);
+
   // Can only be called from a ScriptedBreakpointResolver...
   SBError
   AddLocation(SBAddress &address);

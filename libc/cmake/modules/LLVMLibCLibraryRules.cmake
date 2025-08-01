@@ -19,8 +19,7 @@ function(collect_object_file_deps target result)
     return()
   endif()
 
-  if(${target_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE} OR
-     ${target_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})
+  if(${target_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE})
     set(entrypoint_target ${target})
     get_target_property(is_alias ${entrypoint_target} "IS_ALIAS")
     if(is_alias)
@@ -55,8 +54,7 @@ function(get_all_object_file_deps result fq_deps_list)
   foreach(dep ${fq_deps_list})
     get_target_property(dep_type ${dep} "TARGET_TYPE")
     if(NOT ((${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE}) OR
-            (${dep_type} STREQUAL ${ENTRYPOINT_EXT_TARGET_TYPE}) OR
-            (${dep_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})))
+            (${dep_type} STREQUAL ${ENTRYPOINT_EXT_TARGET_TYPE})))
       message(FATAL_ERROR "Dependency '${dep}' of 'add_entrypoint_collection' is "
                           "not an 'add_entrypoint_object' or 'add_entrypoint_external' target.")
     endif()
@@ -64,8 +62,7 @@ function(get_all_object_file_deps result fq_deps_list)
     list(APPEND all_deps ${recursive_deps})
     # Add the entrypoint object target explicitly as collect_object_file_deps
     # only collects object files from non-entrypoint targets.
-    if(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE} OR
-       ${dep_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})
+    if(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE})
       set(entrypoint_target ${dep})
       get_target_property(is_alias ${entrypoint_target} "IS_ALIAS")
       if(is_alias)
@@ -112,7 +109,7 @@ function(add_bitcode_entrypoint_library target_name base_target_name)
   endforeach()
 
   add_executable(${target_name} ${objects})
-  target_link_options(${target_name} PRIVATE
+  target_link_options(${target_name} PRIVATE "${LIBC_COMPILE_OPTIONS_DEFAULT}"
                       "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")
 endfunction(add_bitcode_entrypoint_library)
 

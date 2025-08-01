@@ -1,5 +1,8 @@
-// RUN: not llvm-mc -triple aarch64-elf -filetype=obj %s -o /dev/null 2>&1 | FileCheck %s
+// RUN: rm -rf %t && split-file %s %t && cd %t
+// RUN: not llvm-mc -triple aarch64-elf -filetype=obj a.s -o /dev/null 2>&1 | FileCheck a.s
+// RUN: not llvm-mc -triple aarch64-elf -filetype=obj b.s -o /dev/null 2>&1 | FileCheck b.s
 
+//--- a.s
   .data
 b:
   .fill 300
@@ -9,6 +12,7 @@ e:
   // CHECK-NEXT: .byte e - b
   // CHECK-NEXT:       ^
 
+//--- b.s
   .section sec_x
 start:
   .space 5000

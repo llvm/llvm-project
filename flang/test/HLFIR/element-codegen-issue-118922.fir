@@ -36,8 +36,8 @@ func.func @_QMmPbug(%val: !fir.char<1>, %var: !fir.ref<!fir.array<10x!fir.char<1
 // CHECK:             fir.store %[[VAL_0]] to %[[VAL_11]] : !fir.heap<!fir.char<1>>
 // CHECK:             %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.heap<!fir.char<1>>) -> !fir.ref<!fir.char<1>>
 // CHECK:             %[[VAL_13:.*]] = arith.constant 1 : index
-// CHECK:             %[[VAL_14:.*]] = arith.constant false
 // CHECK:             %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_2]] typeparams %[[VAL_13]] {uniq_name = ".tmp"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+// CHECK:             %[[VAL_14:.*]] = arith.constant false
 // CHECK:             hlfir.assign %[[VAL_12]] to %[[VAL_15]]#0 temporary_lhs : !fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>
 // CHECK:             %[[VAL_16:.*]] = fir.undefined tuple<!fir.ref<!fir.char<1>>, i1>
 // CHECK:             %[[VAL_17:.*]] = fir.insert_value %[[VAL_16]], %[[VAL_14]], [1 : index] : (tuple<!fir.ref<!fir.char<1>>, i1>, i1) -> tuple<!fir.ref<!fir.char<1>>, i1>

@@ -94,21 +94,6 @@ entry:
   ret void
 }
 
-define i8 @test6(ptr %ptr, ptr noalias %ptr.1) {
-; CHECK-LABEL: @test6(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr [[PTR:%.*]])
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[PTR]], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[PTR]], ptr [[PTR_1:%.*]], i64 24, i1 false)
-; CHECK-NEXT:    ret i8 [[TMP0]]
-;
-entry:
-  call void @llvm.lifetime.start.p0(i64 24, ptr %ptr)
-  %0 = load i8, ptr %ptr, align 8
-  call void @llvm.memmove.p0.p0.i64(ptr %ptr, ptr %ptr.1, i64 24, i1 false)
-  ret i8 %0
-}
-
 define void @test7(ptr %ptr) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:

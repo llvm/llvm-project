@@ -1,0 +1,5 @@
+RUN: not %lldb -b -o 'break set -n foo -c bar -Y bogus' 2>&1 | FileCheck %s --check-prefix INVALID
+INVALID: error: Invalid value ('bogus') for -Y (condition-language): invalid language
+
+RUN: not %lldb -b -o 'break set -n foo -c bar -Y python' 2>&1 | FileCheck %s --check-prefix NOEXPRSUPPORT
+NOEXPRSUPPORT: error: Invalid value ('python') for -Y (condition-language): no expression support for language

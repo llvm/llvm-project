@@ -780,8 +780,8 @@ ExprResult ObjCPropertyOpBuilder::buildSet(Expr *op, SourceLocation opcLoc,
                              ObjCSubstitutionContext::Parameter);
     if (!S.getLangOpts().CPlusPlus || !paramType->isRecordType()) {
       ExprResult opResult = op;
-      Sema::AssignConvertType assignResult
-        = S.CheckSingleAssignmentConstraints(paramType, opResult);
+      AssignConvertType assignResult =
+          S.CheckSingleAssignmentConstraints(paramType, opResult);
       if (opResult.isInvalid() ||
           S.DiagnoseAssignmentResult(assignResult, opcLoc, paramType,
                                      op->getType(), opResult.get(),

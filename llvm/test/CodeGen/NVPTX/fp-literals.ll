@@ -8,14 +8,14 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; double-precision FP literals.
 
 ; CHECK: myaddf
-; CHECK: add.f32 %f{{[0-9]+}}, %f{{[0-9]+}}, 0f3F800000
+; CHECK: add.f32 %r{{[0-9]+}}, %r{{[0-9]+}}, 0f3F800000
 define float @myaddf(float %a) {
   %ret = fadd float %a, 1.0
   ret float %ret
 }
 
 ; CHECK: myaddd
-; CHECK: add.f64 %fd{{[0-9]+}}, %fd{{[0-9]+}}, 0d3FF0000000000000
+; CHECK: add.f64 %rd{{[0-9]+}}, %rd{{[0-9]+}}, 0d3FF0000000000000
 define double @myaddd(double %a) {
   %ret = fadd double %a, 1.0
   ret double %ret

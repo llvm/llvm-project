@@ -80,5 +80,15 @@ int main(int, char**) {
     assert(*std::next(mo.begin(), 2) == 3);
   }
 
+  { // Test with std::pair, since we have some special handling for pairs inside __tree
+    std::pair<int, int> arr[] = {
+        std::make_pair(1, 2), std::make_pair(2, 3), std::make_pair(3, 4), std::make_pair(4, 5)};
+    std::set<std::pair<int, int> > a(arr, arr + 4);
+    std::set<std::pair<int, int> > b;
+
+    b = a;
+    assert(a == b);
+  }
+
   return 0;
 }

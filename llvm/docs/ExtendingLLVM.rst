@@ -127,7 +127,7 @@ complicated behavior in a single node (rotate).
    Add a case for your node in ``ExpandOp`` to teach the legalizer how to
    perform the action represented by the new node on a value that has been split
    into high and low halves.  This case will be used to support your node with a
-   64 bit operand on a 32 bit target.
+   64-bit operand on a 32-bit target.
 
 #. ``lib/CodeGen/SelectionDAG/DAGCombiner.cpp``:
 

@@ -1,5 +1,14 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
+// CHECK-LABEL: @tma_bulk_prefetch
+llvm.func @tma_bulk_prefetch(%src : !llvm.ptr<1>, %size : i32, %ch : i64) {
+  // CHECK: call void @llvm.nvvm.cp.async.bulk.prefetch.L2(ptr addrspace(1) %{{.*}}, i32 %{{.*}}, i64 0, i1 false)
+  // CHECK: call void @llvm.nvvm.cp.async.bulk.prefetch.L2(ptr addrspace(1) %{{.*}}, i32 %{{.*}}, i64 %{{.*}}, i1 true)
+  nvvm.cp.async.bulk.prefetch %src, %size : !llvm.ptr<1>
+  nvvm.cp.async.bulk.prefetch %src, %size l2_cache_hint = %ch : !llvm.ptr<1>
+  llvm.return
+}
+
 // CHECK-LABEL: @tma_prefetch_1d
 llvm.func @tma_prefetch_1d(%tma_desc : !llvm.ptr, %d0 : i32, %ch : i64) {
   // CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.1d(ptr %0, i32 %{{.*}}, i64 0, i1 false)

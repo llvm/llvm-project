@@ -564,6 +564,10 @@ declare riscv_vls_cc(32768) void @riscv_vls_cc_32768()
 ; CHECK: declare riscv_vls_cc(32768) void @riscv_vls_cc_32768()
 declare riscv_vls_cc(65536) void @riscv_vls_cc_65536()
 ; CHECK: declare riscv_vls_cc(65536) void @riscv_vls_cc_65536()
+declare cc124 void @f.cc124(i1)
+; CHECK: declare amdgpu_gfx_whole_wave void @f.cc124(i1)
+declare amdgpu_gfx_whole_wave void @f.amdgpu_gfx_whole_wave(i1)
+; CHECK: declare amdgpu_gfx_whole_wave void @f.amdgpu_gfx_whole_wave(i1)
 declare cc1023 void @f.cc1023()
 ; CHECK: declare cc1023 void @f.cc1023()
 
@@ -922,6 +926,12 @@ define void @fp_atomics(ptr %word) {
 
 ; CHECK: %atomicrmw.fmin = atomicrmw fmin ptr %word, float 1.000000e+00 monotonic
   %atomicrmw.fmin = atomicrmw fmin ptr %word, float 1.0 monotonic
+
+; CHECK: %atomicrmw.fmaximum = atomicrmw fmaximum ptr %word, float 1.000000e+00 monotonic
+  %atomicrmw.fmaximum = atomicrmw fmaximum ptr %word, float 1.0 monotonic
+
+; CHECK: %atomicrmw.fminimum = atomicrmw fminimum ptr %word, float 1.000000e+00 monotonic
+  %atomicrmw.fminimum = atomicrmw fminimum ptr %word, float 1.0 monotonic
 
   ret void
 }

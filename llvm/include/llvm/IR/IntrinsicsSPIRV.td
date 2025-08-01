@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+def generic_ptr_ty : LLVMQualPointerType<4>;
+
 let TargetPrefix = "spv" in {
   def int_spv_assign_type : Intrinsic<[], [llvm_any_ty, llvm_metadata_ty]>;
   def int_spv_assign_ptr_type : Intrinsic<[], [llvm_any_ty, llvm_metadata_ty, llvm_i32_ty], [ImmArg<ArgIndex<2>>]>;
@@ -57,10 +59,24 @@ let TargetPrefix = "spv" in {
                                 NoCapture<ArgIndex<1>>,
                                 ImmArg<ArgIndex<0>>]>;
 
-  // The following intrinsic(s) are mirrored from IntrinsicsDirectX.td for HLSL support.
-  def int_spv_thread_id : Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
-  def int_spv_group_id : Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
-  def int_spv_thread_id_in_group : Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
+  // Ideally we should use the SPIR-V terminology for SPIR-V intrinsics.
+  def int_spv_thread_id : Intrinsic<[llvm_anyint_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
+  def int_spv_group_id : Intrinsic<[llvm_anyint_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
+  def int_spv_thread_id_in_group : Intrinsic<[llvm_anyint_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
+  def int_spv_workgroup_size : Intrinsic<[llvm_anyint_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
+  def int_spv_global_size : Intrinsic<[llvm_anyint_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
+  def int_spv_global_offset : Intrinsic<[llvm_anyint_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
+  def int_spv_num_workgroups : Intrinsic<[llvm_anyint_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
+  def int_spv_subgroup_size : ClangBuiltin<"__builtin_spirv_subgroup_size">,
+                          Intrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrWillReturn]>;
+  def int_spv_num_subgroups : ClangBuiltin<"__builtin_spirv_num_subgroups">,
+                          Intrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrWillReturn]>;
+  def int_spv_subgroup_id : ClangBuiltin<"__builtin_spirv_subgroup_id">,
+                          Intrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrWillReturn]>;
+  def int_spv_subgroup_local_invocation_id : ClangBuiltin<"__builtin_spirv_subgroup_local_invocation_id">,
+                          Intrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrWillReturn]>;
+  def int_spv_subgroup_max_size : ClangBuiltin<"__builtin_spirv_subgroup_max_size">,
+                          Intrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrWillReturn]>;
   def int_spv_flattened_thread_id_in_group : Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrWillReturn]>;
   def int_spv_all : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty], [IntrNoMem]>;
   def int_spv_any : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty], [IntrNoMem]>;
@@ -74,7 +90,12 @@ let TargetPrefix = "spv" in {
   def int_spv_length : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>], [llvm_anyfloat_ty], [IntrNoMem]>;
   def int_spv_normalize : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty], [IntrNoMem]>;
   def int_spv_reflect : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty, LLVMMatchType<0>], [IntrNoMem]>;
-  def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty], [IntrNoMem]>;
+  def int_spv_refract
+      : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
+                              [llvm_anyfloat_ty, LLVMMatchType<0>,
+                              llvm_anyfloat_ty],
+                              [IntrNoMem]>;
+def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty], [IntrNoMem]>;
   def int_spv_saturate : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
   def int_spv_smoothstep : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty, LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
   def int_spv_step : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [LLVMMatchType<0>, llvm_anyfloat_ty], [IntrNoMem]>;
@@ -100,6 +121,8 @@ let TargetPrefix = "spv" in {
   def int_spv_wave_reduce_sum : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
   def int_spv_wave_is_first_lane : DefaultAttrsIntrinsic<[llvm_i1_ty], [], [IntrConvergent]>;
   def int_spv_wave_readlane : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
+  def int_spv_wave_get_lane_count
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrConvergent]>;
   def int_spv_sign : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_any_ty], [IntrNoMem]>;
   def int_spv_radians : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty], [IntrNoMem]>;
   def int_spv_group_memory_barrier_with_group_sync : DefaultAttrsIntrinsic<[], [], []>;
@@ -113,10 +136,15 @@ let TargetPrefix = "spv" in {
   // array size of the binding, as well as an index and an indicator
   // whether that index may be non-uniform.
   def int_spv_resource_handlefrombinding
-      : DefaultAttrsIntrinsic<
-            [llvm_any_ty],
-            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty],
-            [IntrNoMem]>;
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i1_ty, llvm_ptr_ty],
+                              [IntrNoMem]>;
+  def int_spv_resource_handlefromimplicitbinding
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i1_ty, llvm_ptr_ty],
+                              [IntrNoMem]>;
 
   def int_spv_firstbituhigh : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_anyint_ty], [IntrNoMem]>;
   def int_spv_firstbitshigh : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_anyint_ty], [IntrNoMem]>;
@@ -146,4 +174,9 @@ let TargetPrefix = "spv" in {
 
   // FPMaxErrorDecorationINTEL
   def int_spv_assign_fpmaxerror_decoration: Intrinsic<[], [llvm_any_ty, llvm_metadata_ty]>;
+
+  // Convert between the generic storage class and a concrete one.
+  def int_spv_generic_cast_to_ptr_explicit
+    : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [generic_ptr_ty],
+       [IntrNoMem, NoUndef<RetIndex>]>;
 }

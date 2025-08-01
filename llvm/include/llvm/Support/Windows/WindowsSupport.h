@@ -55,18 +55,18 @@ namespace llvm {
 /// reimplements one of the helpers in the Windows 8.1 SDK, which are intended
 /// to supercede raw calls to GetVersionEx. Old SDKs, Cygwin, and MinGW don't
 /// yet have VersionHelpers.h, so we have our own helper.
-bool RunningWindows8OrGreater();
+LLVM_ABI bool RunningWindows8OrGreater();
 
 /// Determines if the program is running on Windows 11 or Windows Server 2022.
-bool RunningWindows11OrGreater();
+LLVM_ABI bool RunningWindows11OrGreater();
 
 /// Returns the Windows version as Major.Minor.0.BuildNumber. Uses
 /// RtlGetVersion or GetVersionEx under the hood depending on what is available.
 /// GetVersionEx is deprecated, but this API exposes the build number which can
 /// be useful for working around certain kernel bugs.
-llvm::VersionTuple GetWindowsOSVersion();
+LLVM_ABI llvm::VersionTuple GetWindowsOSVersion();
 
-bool MakeErrMsg(std::string *ErrMsg, const std::string &prefix);
+LLVM_ABI bool MakeErrMsg(std::string *ErrMsg, const std::string &prefix);
 
 // Include GetLastError() in a fatal error message.
 [[noreturn]] inline void ReportLastErrorFatal(const char *Msg) {
@@ -235,14 +235,20 @@ namespace windows {
 // Returns command line arguments. Unlike arguments given to main(),
 // this function guarantees that the returned arguments are encoded in
 // UTF-8 regardless of the current code page setting.
-std::error_code GetCommandLineArguments(SmallVectorImpl<const char *> &Args,
-                                        BumpPtrAllocator &Alloc);
+LLVM_ABI std::error_code
+GetCommandLineArguments(SmallVectorImpl<const char *> &Args,
+                        BumpPtrAllocator &Alloc);
 
 /// Convert UTF-8 path to a suitable UTF-16 path for use with the Win32 Unicode
 /// File API.
-std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
-                          size_t MaxPathLen = MAX_PATH);
+LLVM_ABI std::error_code widenPath(const Twine &Path8,
+                                   SmallVectorImpl<wchar_t> &Path16,
+                                   size_t MaxPathLen = MAX_PATH);
 
+/// Retrieves the handle to a in-memory system module such as ntdll.dll, while
+/// ensuring we're not retrieving a malicious injected module but a module
+/// loaded from the system path.
+LLVM_ABI HMODULE loadSystemModuleSecure(LPCWSTR lpModuleName);
 } // end namespace windows
 } // end namespace sys
 } // end namespace llvm.

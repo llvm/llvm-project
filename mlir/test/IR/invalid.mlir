@@ -642,6 +642,16 @@ func.func @invalid_region_dominance_with_dominance_free_regions() {
 
 // -----
 
+// expected-error @below {{expected bare identifier or keyword}}
+test.parse_custom_operation_name_api(@foo) {}
+
+// -----
+
+// expected-error @below {{expected bare identifier or keyword}}
+test.parse_custom_operation_name_api(42) {}
+
+// -----
+
 // This makes sure we emit an error at the end of the correct line, the : is
 // expected at the end of foo, not on the return line.
 func.func @error_at_end_of_line() {

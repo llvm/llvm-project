@@ -10,9 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/MemProf.h"
+#include "llvm/ProfileData/MemProfRadixTree.h"
+#include "llvm/ProfileData/MemProfSummary.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/OnDiskHashTable.h"
 
@@ -214,27 +217,25 @@ static Error writeMemProfV2(ProfOStream &OS,
   return Error::success();
 }
 
-// Write out MemProf Version3 as follows:
-// uint64_t Version
-// uint64_t CallStackPayloadOffset = Offset for the call stack payload
-// uint64_t RecordPayloadOffset = Offset for the record payload
-// uint64_t RecordTableOffset = RecordTableGenerator.Emit
-// uint64_t Num schema entries
-// uint64_t Schema entry 0
-// uint64_t Schema entry 1
-// ....
-// uint64_t Schema entry N - 1
-// Frames serialized one after another
-// Call stacks encoded as a radix tree
-// OnDiskChainedHashTable MemProfRecordData
-static Error writeMemProfV3(ProfOStream &OS,
-                            memprof::IndexedMemProfData &MemProfData,
-                            bool MemProfFullSchema) {
-  OS.write(memprof::Version3);
+static Error writeMemProfRadixTreeBased(
+    ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
+    memprof::IndexedVersion Version, bool MemProfFullSchema,
+    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData =
+        nullptr,
+    std::unique_ptr<memprof::MemProfSummary> MemProfSum = nullptr) {
+  assert((Version == memprof::Version3 || Version == memprof::Version4) &&
+         "Unsupported version for radix tree format");
+
+  OS.write(Version); // Write the specific version (V3 or V4)
   uint64_t HeaderUpdatePos = OS.tell();
   OS.write(0ULL); // Reserve space for the memprof call stack payload offset.
   OS.write(0ULL); // Reserve space for the memprof record payload offset.
   OS.write(0ULL); // Reserve space for the memprof record table offset.
+  if (Version >= memprof::Version4) {
+    OS.write(0ULL); // Reserve space for the data access profile offset.
+
+    MemProfSum->write(OS);
+  }
 
   auto Schema = memprof::getHotColdSchema();
   if (MemProfFullSchema)
@@ -258,36 +259,71 @@ static Error writeMemProfV3(ProfOStream &OS,
                                      NumElements);
 
   uint64_t RecordPayloadOffset = OS.tell();
-  uint64_t RecordTableOffset =
-      writeMemProfRecords(OS, MemProfData.Records, &Schema, memprof::Version3,
-                          &MemProfCallStackIndexes);
+  uint64_t RecordTableOffset = writeMemProfRecords(
+      OS, MemProfData.Records, &Schema, Version, &MemProfCallStackIndexes);
 
-  // IndexedMemProfReader::deserializeV3 computes the number of elements in the
-  // call stack array from the difference between CallStackPayloadOffset and
-  // RecordPayloadOffset.  Verify that the computation works.
+  uint64_t DataAccessProfOffset = 0;
+  if (DataAccessProfileData != nullptr) {
+    assert(Version >= memprof::Version4 &&
+           "Data access profiles are added starting from v4");
+    DataAccessProfOffset = OS.tell();
+    if (Error E = DataAccessProfileData->serialize(OS))
+      return E;
+  }
+
+  // Verify that the computation for the number of elements in the call stack
+  // array works.
   assert(CallStackPayloadOffset +
              NumElements * sizeof(memprof::LinearFrameId) ==
          RecordPayloadOffset);
 
-  uint64_t Header[] = {
+  SmallVector<uint64_t, 4> Header = {
       CallStackPayloadOffset,
       RecordPayloadOffset,
       RecordTableOffset,
   };
+  if (Version >= memprof::Version4)
+    Header.push_back(DataAccessProfOffset);
+
   OS.patch({{HeaderUpdatePos, Header}});
 
   return Error::success();
 }
 
+// Write out MemProf Version3
+static Error writeMemProfV3(ProfOStream &OS,
+                            memprof::IndexedMemProfData &MemProfData,
+                            bool MemProfFullSchema) {
+  return writeMemProfRadixTreeBased(OS, MemProfData, memprof::Version3,
+                                    MemProfFullSchema);
+}
+
+// Write out MemProf Version4
+static Error writeMemProfV4(
+    ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
+    bool MemProfFullSchema,
+    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData,
+    std::unique_ptr<memprof::MemProfSummary> MemProfSum) {
+  return writeMemProfRadixTreeBased(
+      OS, MemProfData, memprof::Version4, MemProfFullSchema,
+      std::move(DataAccessProfileData), std::move(MemProfSum));
+}
+
 // Write out the MemProf data in a requested version.
-Error writeMemProf(ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
-                   memprof::IndexedVersion MemProfVersionRequested,
-                   bool MemProfFullSchema) {
+Error writeMemProf(
+    ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
+    memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema,
+    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData,
+    std::unique_ptr<memprof::MemProfSummary> MemProfSum) {
   switch (MemProfVersionRequested) {
   case memprof::Version2:
     return writeMemProfV2(OS, MemProfData, MemProfFullSchema);
   case memprof::Version3:
     return writeMemProfV3(OS, MemProfData, MemProfFullSchema);
+  case memprof::Version4:
+    return writeMemProfV4(OS, MemProfData, MemProfFullSchema,
+                          std::move(DataAccessProfileData),
+                          std::move(MemProfSum));
   }
 
   return make_error<InstrProfError>(
@@ -350,8 +386,11 @@ Error IndexedMemProfReader::deserializeV2(const unsigned char *Start,
   return Error::success();
 }
 
-Error IndexedMemProfReader::deserializeV3(const unsigned char *Start,
-                                          const unsigned char *Ptr) {
+Error IndexedMemProfReader::deserializeRadixTreeBased(
+    const unsigned char *Start, const unsigned char *Ptr,
+    memprof::IndexedVersion Version) {
+  assert((Version == memprof::Version3 || Version == memprof::Version4) &&
+         "Unsupported version for radix tree format");
   // The offset in the stream right before invoking
   // CallStackTableGenerator.Emit.
   const uint64_t CallStackPayloadOffset =
@@ -362,6 +401,13 @@ Error IndexedMemProfReader::deserializeV3(const unsigned char *Start,
   // The value returned from RecordTableGenerator.Emit.
   const uint64_t RecordTableOffset =
       support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+
+  uint64_t DataAccessProfOffset = 0;
+  if (Version >= memprof::Version4) {
+    DataAccessProfOffset =
+        support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+    MemProfSum = memprof::MemProfSummary::deserialize(Ptr);
+  }
 
   // Read the schema.
   auto SchemaOr = memprof::readMemProfSchema(Ptr);
@@ -382,7 +428,16 @@ Error IndexedMemProfReader::deserializeV3(const unsigned char *Start,
   MemProfRecordTable.reset(MemProfRecordHashTable::Create(
       /*Buckets=*/Start + RecordTableOffset,
       /*Payload=*/Start + RecordPayloadOffset,
-      /*Base=*/Start, memprof::RecordLookupTrait(memprof::Version3, Schema)));
+      /*Base=*/Start, memprof::RecordLookupTrait(Version, Schema)));
+
+  assert((!DataAccessProfOffset || DataAccessProfOffset > RecordTableOffset) &&
+         "Data access profile is either empty or after the record table");
+  if (DataAccessProfOffset > RecordTableOffset) {
+    DataAccessProfileData = std::make_unique<memprof::DataAccessProfData>();
+    const unsigned char *DAPPtr = Start + DataAccessProfOffset;
+    if (Error E = DataAccessProfileData->deserialize(DAPPtr))
+      return E;
+  }
 
   return Error::success();
 }
@@ -395,8 +450,10 @@ Error IndexedMemProfReader::deserialize(const unsigned char *Start,
   const uint64_t FirstWord =
       support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
-  if (FirstWord == memprof::Version2 || FirstWord == memprof::Version3) {
-    // Everything is good.  We can proceed to deserialize the rest.
+  // Check if the version is supported
+  if (FirstWord >= memprof::MinimumSupportedVersion &&
+      FirstWord <= memprof::MaximumSupportedVersion) {
+    // Everything is good. We can proceed to deserialize the rest.
     Version = static_cast<memprof::IndexedVersion>(FirstWord);
   } else {
     return make_error<InstrProfError>(
@@ -413,12 +470,13 @@ Error IndexedMemProfReader::deserialize(const unsigned char *Start,
       return E;
     break;
   case memprof::Version3:
-    if (Error E = deserializeV3(Start, Ptr))
+  case memprof::Version4:
+    // V3 and V4 share the same high-level structure (radix tree, linear IDs).
+    if (Error E = deserializeRadixTreeBased(Start, Ptr, Version))
       return E;
     break;
   }
 
   return Error::success();
 }
-
 } // namespace llvm

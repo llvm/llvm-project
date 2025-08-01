@@ -35,6 +35,7 @@
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
@@ -877,7 +878,8 @@ static void exitOnLazyCallThroughFailure() { exit(1); }
 Expected<orc::ThreadSafeModule>
 loadModule(StringRef Path, orc::ThreadSafeContext TSCtx) {
   SMDiagnostic Err;
-  auto M = parseIRFile(Path, Err, *TSCtx.getContext());
+  auto M = TSCtx.withContextDo(
+      [&](LLVMContext *Ctx) { return parseIRFile(Path, Err, *Ctx); });
   if (!M) {
     std::string ErrMsg;
     {

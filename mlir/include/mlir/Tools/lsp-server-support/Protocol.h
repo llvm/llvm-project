@@ -158,6 +158,12 @@ struct ClientCapabilities {
   /// Client supports CodeAction return value for textDocument/codeAction.
   /// textDocument.codeAction.codeActionLiteralSupport.
   bool codeActionStructure = false;
+
+  /// Client supports server-initiated progress via the
+  /// window/workDoneProgress/create method.
+  ///
+  /// window.workDoneProgress
+  bool workDoneProgress = false;
 };
 
 /// Add support for JSON serialization.

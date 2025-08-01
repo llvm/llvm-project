@@ -123,17 +123,17 @@ define void @sdiv_uniform() {
 ; CHECK-LABEL: 'sdiv_uniform'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2i64_s = shufflevector <2 x i64> poison, <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = sdiv <2 x i64> undef, %V2i64_s
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V4i64_s = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V4i64_s = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = sdiv <4 x i64> undef, %V4i64_s
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V8i64_s = shufflevector <8 x i64> poison, <8 x i64> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V8i64_s = shufflevector <8 x i64> poison, <8 x i64> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:88 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = sdiv <8 x i64> undef, %V8i64_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2i32_s = shufflevector <2 x i32> poison, <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:4 Lat:4 SizeLat:4 for: %V2i32 = sdiv <2 x i32> undef, %V2i32_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V4i32_s = shufflevector <4 x i32> poison, <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = sdiv <4 x i32> undef, %V4i32_s
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V8i32_s = shufflevector <8 x i32> poison, <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V8i32_s = shufflevector <8 x i32> poison, <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:88 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = sdiv <8 x i32> undef, %V8i32_s
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V16i32_s = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V16i32_s = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:168 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = sdiv <16 x i32> undef, %V16i32_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2i16_s = shufflevector <2 x i16> poison, <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:4 Lat:4 SizeLat:4 for: %V2i16 = sdiv <2 x i16> undef, %V2i16_s
@@ -141,9 +141,9 @@ define void @sdiv_uniform() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:4 Lat:4 SizeLat:4 for: %V4i16 = sdiv <4 x i16> undef, %V4i16_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V8i16_s = shufflevector <8 x i16> poison, <8 x i16> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:88 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = sdiv <8 x i16> undef, %V8i16_s
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V16i16_s = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V16i16_s = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:168 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = sdiv <16 x i16> undef, %V16i16_s
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V32i16_s = shufflevector <32 x i16> poison, <32 x i16> poison, <32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V32i16_s = shufflevector <32 x i16> poison, <32 x i16> poison, <32 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:328 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = sdiv <32 x i16> undef, %V32i16_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2i8_s = shufflevector <2 x i8> poison, <2 x i8> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:4 Lat:4 SizeLat:4 for: %V2i8 = sdiv <2 x i8> undef, %V2i8_s
@@ -153,9 +153,9 @@ define void @sdiv_uniform() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:88 CodeSize:4 Lat:4 SizeLat:4 for: %V8i8 = sdiv <8 x i8> undef, %V8i8_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V16i8_s = shufflevector <16 x i8> poison, <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:168 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = sdiv <16 x i8> undef, %V16i8_s
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V32i8_s = shufflevector <32 x i8> poison, <32 x i8> poison, <32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V32i8_s = shufflevector <32 x i8> poison, <32 x i8> poison, <32 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:328 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = sdiv <32 x i8> undef, %V32i8_s
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V64i8_s = shufflevector <64 x i8> poison, <64 x i8> poison, <64 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V64i8_s = shufflevector <64 x i8> poison, <64 x i8> poison, <64 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:648 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = sdiv <64 x i8> undef, %V64i8_s
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
@@ -206,17 +206,17 @@ define void @udiv_uniform() {
 ; CHECK-LABEL: 'udiv_uniform'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2i64_s = shufflevector <2 x i64> poison, <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = udiv <2 x i64> undef, %V2i64_s
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V4i64_s = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V4i64_s = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, %V4i64_s
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V8i64_s = shufflevector <8 x i64> poison, <8 x i64> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V8i64_s = shufflevector <8 x i64> poison, <8 x i64> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:88 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, %V8i64_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2i32_s = shufflevector <2 x i32> poison, <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:4 Lat:4 SizeLat:4 for: %V2i32 = udiv <2 x i32> undef, %V2i32_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V4i32_s = shufflevector <4 x i32> poison, <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = udiv <4 x i32> undef, %V4i32_s
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V8i32_s = shufflevector <8 x i32> poison, <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V8i32_s = shufflevector <8 x i32> poison, <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:88 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = udiv <8 x i32> undef, %V8i32_s
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V16i32_s = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V16i32_s = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:168 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = udiv <16 x i32> undef, %V16i32_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2i16_s = shufflevector <2 x i16> poison, <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:4 Lat:4 SizeLat:4 for: %V2i16 = udiv <2 x i16> undef, %V2i16_s
@@ -224,9 +224,9 @@ define void @udiv_uniform() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:4 Lat:4 SizeLat:4 for: %V4i16 = udiv <4 x i16> undef, %V4i16_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V8i16_s = shufflevector <8 x i16> poison, <8 x i16> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:88 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = udiv <8 x i16> undef, %V8i16_s
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V16i16_s = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V16i16_s = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:168 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = udiv <16 x i16> undef, %V16i16_s
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V32i16_s = shufflevector <32 x i16> poison, <32 x i16> poison, <32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V32i16_s = shufflevector <32 x i16> poison, <32 x i16> poison, <32 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:328 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = udiv <32 x i16> undef, %V32i16_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2i8_s = shufflevector <2 x i8> poison, <2 x i8> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:4 Lat:4 SizeLat:4 for: %V2i8 = udiv <2 x i8> undef, %V2i8_s
@@ -236,9 +236,9 @@ define void @udiv_uniform() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:88 CodeSize:4 Lat:4 SizeLat:4 for: %V8i8 = udiv <8 x i8> undef, %V8i8_s
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V16i8_s = shufflevector <16 x i8> poison, <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:168 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = udiv <16 x i8> undef, %V16i8_s
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V32i8_s = shufflevector <32 x i8> poison, <32 x i8> poison, <32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V32i8_s = shufflevector <32 x i8> poison, <32 x i8> poison, <32 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:328 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = udiv <32 x i8> undef, %V32i8_s
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V64i8_s = shufflevector <64 x i8> poison, <64 x i8> poison, <64 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V64i8_s = shufflevector <64 x i8> poison, <64 x i8> poison, <64 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:648 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = udiv <64 x i8> undef, %V64i8_s
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
@@ -870,27 +870,27 @@ define void @sdiv_uniformconstnegpow2() {
 ; CHECK-LABEL: 'sdiv_uniformconstnegpow2'
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %I128 = sdiv i128 undef, -16
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I64 = sdiv i64 undef, -16
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = sdiv <2 x i64> undef, splat (i64 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = sdiv <4 x i64> undef, splat (i64 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = sdiv <8 x i64> undef, splat (i64 -16)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V2i64 = sdiv <2 x i64> undef, splat (i64 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = sdiv <4 x i64> undef, splat (i64 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = sdiv <8 x i64> undef, splat (i64 -16)
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I32 = sdiv i32 undef, -16
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V2i32 = sdiv <2 x i32> undef, splat (i32 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = sdiv <4 x i32> undef, splat (i32 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = sdiv <8 x i32> undef, splat (i32 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = sdiv <16 x i32> undef, splat (i32 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V2i32 = sdiv <2 x i32> undef, splat (i32 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = sdiv <4 x i32> undef, splat (i32 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = sdiv <8 x i32> undef, splat (i32 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = sdiv <16 x i32> undef, splat (i32 -16)
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I16 = sdiv i16 undef, -16
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V2i16 = sdiv <2 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V4i16 = sdiv <4 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = sdiv <8 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = sdiv <16 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = sdiv <32 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V2i16 = sdiv <2 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V4i16 = sdiv <4 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = sdiv <8 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = sdiv <16 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = sdiv <32 x i16> undef, splat (i16 -16)
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I8 = sdiv i8 undef, -16
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V2i8 = sdiv <2 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V4i8 = sdiv <4 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V8i8 = sdiv <8 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = sdiv <16 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = sdiv <32 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = sdiv <64 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V2i8 = sdiv <2 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V4i8 = sdiv <4 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V8i8 = sdiv <8 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = sdiv <16 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = sdiv <32 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = sdiv <64 x i8> undef, splat (i8 -16)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %I128 = sdiv i128 undef, -16

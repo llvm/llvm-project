@@ -584,6 +584,20 @@ ModuleSP ModuleList::FindModule(const UUID &uuid) const {
   return module_sp;
 }
 
+ModuleSP ModuleList::FindModule(lldb::user_id_t uid) const {
+  ModuleSP module_sp;
+  ForEach([&](const ModuleSP &m) {
+    if (m->GetID() == uid) {
+      module_sp = m;
+      return IterationAction::Stop;
+    }
+
+    return IterationAction::Continue;
+  });
+
+  return module_sp;
+}
+
 void ModuleList::FindTypes(Module *search_first, const TypeQuery &query,
                            TypeResults &results) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
@@ -1046,8 +1060,14 @@ bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
                                                 bool continue_on_error) {
   if (!target)
     return false;
-  std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
-  for (auto module : m_modules) {
+  m_modules_mutex.lock();
+  // Don't hold the module list mutex while loading the scripting resources,
+  // The initializer might do any amount of work, and having that happen while
+  // the module list is held is asking for A/B locking problems.
+  const ModuleList tmp_module_list(*this);
+  m_modules_mutex.unlock();
+
+  for (auto module : tmp_module_list.ModulesNoLocking()) {
     if (module) {
       Status error;
       if (!module->LoadScriptingResourceInTarget(target, error,
@@ -1071,12 +1091,12 @@ bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
 }
 
 void ModuleList::ForEach(
-    std::function<bool(const ModuleSP &module_sp)> const &callback) const {
+    std::function<IterationAction(const ModuleSP &module_sp)> const &callback)
+    const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   for (const auto &module_sp : m_modules) {
     assert(module_sp != nullptr);
-    // If the callback returns false, then stop iterating and break out
-    if (!callback(module_sp))
+    if (callback(module_sp) == IterationAction::Stop)
       break;
   }
 }
