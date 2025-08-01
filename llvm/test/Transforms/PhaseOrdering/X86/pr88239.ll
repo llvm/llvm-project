@@ -8,12 +8,12 @@ define void @foo(ptr noalias noundef %0, ptr noalias noundef %1) optsize {
 ; CHECK-LABEL: define void @foo(
 ; CHECK-SAME: ptr noalias noundef readonly captures(none) [[TMP0:%.*]], ptr noalias noundef writeonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -28
 ; CHECK-NEXT:    br label [[TMP4:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[TMP2:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[TMP4]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub nuw nsw i64 255, [[INDVARS_IV]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[INVARIANT_GEP]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP0]], i64 [[TMP3]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 -28
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = load <8 x i32>, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <8 x i32> [[WIDE_MASKED_GATHER]], splat (i32 5)
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[TMP5]], <8 x i32> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>

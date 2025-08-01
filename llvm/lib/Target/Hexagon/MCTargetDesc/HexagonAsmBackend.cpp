@@ -669,7 +669,7 @@ void HexagonAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   // to a real offset before we can use it.
   uint32_t Offset = Fixup.getOffset();
   unsigned NumBytes = getFixupKindNumBytes(Kind);
-  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
+  assert(Offset + NumBytes <= F.getSize() && "Invalid fixup offset!");
   char *InstAddr = Data.data() + Offset;
 
   Value = adjustFixupValue(Kind, FixupValue);

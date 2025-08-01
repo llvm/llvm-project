@@ -1125,7 +1125,7 @@ void ARMAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   const unsigned NumBytes = getFixupKindNumBytes(Kind);
 
   unsigned Offset = Fixup.getOffset();
-  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
+  assert(Offset + NumBytes <= F.getSize() && "Invalid fixup offset!");
 
   // Used to point to big endian bytes.
   unsigned FullSizeBytes;

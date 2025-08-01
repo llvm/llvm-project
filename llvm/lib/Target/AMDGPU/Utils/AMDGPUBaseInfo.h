@@ -1012,6 +1012,12 @@ bool isReadOnlySegment(const GlobalValue *GV);
 /// target triple \p TT, false otherwise.
 bool shouldEmitConstantsToTextSection(const Triple &TT);
 
+/// Returns a valid charcode or 0 in the first entry if this is a valid physical
+/// register constraint. Followed by the start register number, and the register
+/// width. Does not validate the number of registers exists in the class.
+std::tuple<char, unsigned, unsigned>
+parseAsmConstraintPhysReg(StringRef Constraint);
+
 /// \returns Integer value requested using \p F's \p Name attribute.
 ///
 /// \returns \p Default if attribute is not present.
