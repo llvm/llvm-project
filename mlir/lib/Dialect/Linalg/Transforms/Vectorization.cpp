@@ -2496,7 +2496,7 @@ vectorizePadOpPrecondition(tensor::PadOp padOp,
 ///
 /// For Ops implementing the LinalgOp interface, this is quite restrictive - it
 /// models the fact that in practice we would only make selected dimensions
-/// scalable. For other Ops (e.g. `linalg.unpack`), this will succed
+/// scalable. For other Ops (e.g. `linalg.unpack`), this will succeed
 /// unconditionally - we are yet to identify meaningful conditions.
 static LogicalResult
 vectorizeScalableVectorPrecondition(Operation *op,
