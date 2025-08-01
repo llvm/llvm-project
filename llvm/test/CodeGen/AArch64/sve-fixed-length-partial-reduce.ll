@@ -109,14 +109,13 @@ define <16 x i16> @two_way_i8_i16_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
 ; SME-LABEL: two_way_i8_i16_vl256:
 ; SME:       // %bb.0:
 ; SME-NEXT:    ldr z0, [x0]
-; SME-NEXT:    ldr z1, [x1]
-; SME-NEXT:    ldr z2, [x2]
-; SME-NEXT:    umlalb z0.h, z2.b, z1.b
-; SME-NEXT:    umlalt z0.h, z2.b, z1.b
-; SME-NEXT:    mov z1.d, z0.d
-; SME-NEXT:    ext z1.b, z1.b, z0.b, #16
-; SME-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; SME-NEXT:    // kill: def $q1 killed $q1 killed $z1
+; SME-NEXT:    ldr z2, [x1]
+; SME-NEXT:    ldr z3, [x2]
+; SME-NEXT:    umlalb z0.h, z3.b, z2.b
+; SME-NEXT:    umlalt z0.h, z3.b, z2.b
+; SME-NEXT:    ext z2.b, { z0.b, z1.b }, #16
+; SME-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1
+; SME-NEXT:    mov z1.d, z2.d
 ; SME-NEXT:    ret
   %acc = load <16 x i16>, ptr %accptr
   %u = load <32 x i8>, ptr %uptr
@@ -232,14 +231,13 @@ define <8 x i32> @two_way_i16_i32_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
 ; SME-LABEL: two_way_i16_i32_vl256:
 ; SME:       // %bb.0:
 ; SME-NEXT:    ldr z0, [x0]
-; SME-NEXT:    ldr z1, [x1]
-; SME-NEXT:    ldr z2, [x2]
-; SME-NEXT:    umlalb z0.s, z2.h, z1.h
-; SME-NEXT:    umlalt z0.s, z2.h, z1.h
-; SME-NEXT:    mov z1.d, z0.d
-; SME-NEXT:    ext z1.b, z1.b, z0.b, #16
-; SME-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; SME-NEXT:    // kill: def $q1 killed $q1 killed $z1
+; SME-NEXT:    ldr z2, [x1]
+; SME-NEXT:    ldr z3, [x2]
+; SME-NEXT:    umlalb z0.s, z3.h, z2.h
+; SME-NEXT:    umlalt z0.s, z3.h, z2.h
+; SME-NEXT:    ext z2.b, { z0.b, z1.b }, #16
+; SME-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1
+; SME-NEXT:    mov z1.d, z2.d
 ; SME-NEXT:    ret
   %acc = load <8 x i32>, ptr %accptr
   %u = load <16 x i16>, ptr %uptr
@@ -355,14 +353,13 @@ define <4 x i64> @two_way_i32_i64_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
 ; SME-LABEL: two_way_i32_i64_vl256:
 ; SME:       // %bb.0:
 ; SME-NEXT:    ldr z0, [x0]
-; SME-NEXT:    ldr z1, [x1]
-; SME-NEXT:    ldr z2, [x2]
-; SME-NEXT:    umlalb z0.d, z2.s, z1.s
-; SME-NEXT:    umlalt z0.d, z2.s, z1.s
-; SME-NEXT:    mov z1.d, z0.d
-; SME-NEXT:    ext z1.b, z1.b, z0.b, #16
-; SME-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; SME-NEXT:    // kill: def $q1 killed $q1 killed $z1
+; SME-NEXT:    ldr z2, [x1]
+; SME-NEXT:    ldr z3, [x2]
+; SME-NEXT:    umlalb z0.d, z3.s, z2.s
+; SME-NEXT:    umlalt z0.d, z3.s, z2.s
+; SME-NEXT:    ext z2.b, { z0.b, z1.b }, #16
+; SME-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1
+; SME-NEXT:    mov z1.d, z2.d
 ; SME-NEXT:    ret
   %acc = load <4 x i64>, ptr %accptr
   %u = load <8 x i32>, ptr %uptr
@@ -644,13 +641,12 @@ define <8 x i32> @four_way_i8_i32_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
 ; SME-LABEL: four_way_i8_i32_vl256:
 ; SME:       // %bb.0:
 ; SME-NEXT:    ldr z0, [x0]
-; SME-NEXT:    ldr z1, [x1]
-; SME-NEXT:    ldr z2, [x2]
-; SME-NEXT:    udot z0.s, z2.b, z1.b
-; SME-NEXT:    mov z1.d, z0.d
-; SME-NEXT:    ext z1.b, z1.b, z0.b, #16
-; SME-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; SME-NEXT:    // kill: def $q1 killed $q1 killed $z1
+; SME-NEXT:    ldr z2, [x1]
+; SME-NEXT:    ldr z3, [x2]
+; SME-NEXT:    udot z0.s, z3.b, z2.b
+; SME-NEXT:    ext z2.b, { z0.b, z1.b }, #16
+; SME-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1
+; SME-NEXT:    mov z1.d, z2.d
 ; SME-NEXT:    ret
   %acc = load <8 x i32>, ptr %accptr
   %u = load <32 x i8>, ptr %uptr
@@ -689,13 +685,12 @@ define <8 x i32> @four_way_i8_i32_vl256_usdot(ptr %accptr, ptr %uptr, ptr %sptr)
 ; SME-LABEL: four_way_i8_i32_vl256_usdot:
 ; SME:       // %bb.0:
 ; SME-NEXT:    ldr z0, [x0]
-; SME-NEXT:    ldr z1, [x1]
-; SME-NEXT:    ldr z2, [x2]
-; SME-NEXT:    usdot z0.s, z1.b, z2.b
-; SME-NEXT:    mov z1.d, z0.d
-; SME-NEXT:    ext z1.b, z1.b, z0.b, #16
-; SME-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; SME-NEXT:    // kill: def $q1 killed $q1 killed $z1
+; SME-NEXT:    ldr z2, [x1]
+; SME-NEXT:    ldr z3, [x2]
+; SME-NEXT:    usdot z0.s, z2.b, z3.b
+; SME-NEXT:    ext z2.b, { z0.b, z1.b }, #16
+; SME-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1
+; SME-NEXT:    mov z1.d, z2.d
 ; SME-NEXT:    ret
   %acc = load <8 x i32>, ptr %accptr
   %u = load <32 x i8>, ptr %uptr
@@ -822,13 +817,12 @@ define <4 x i64> @four_way_i16_i64_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vsca
 ; SME-LABEL: four_way_i16_i64_vl256:
 ; SME:       // %bb.0:
 ; SME-NEXT:    ldr z0, [x0]
-; SME-NEXT:    ldr z1, [x1]
-; SME-NEXT:    ldr z2, [x2]
-; SME-NEXT:    udot z0.d, z2.h, z1.h
-; SME-NEXT:    mov z1.d, z0.d
-; SME-NEXT:    ext z1.b, z1.b, z0.b, #16
-; SME-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; SME-NEXT:    // kill: def $q1 killed $q1 killed $z1
+; SME-NEXT:    ldr z2, [x1]
+; SME-NEXT:    ldr z3, [x2]
+; SME-NEXT:    udot z0.d, z3.h, z2.h
+; SME-NEXT:    ext z2.b, { z0.b, z1.b }, #16
+; SME-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1
+; SME-NEXT:    mov z1.d, z2.d
 ; SME-NEXT:    ret
   %acc = load <4 x i64>, ptr %accptr
   %u = load <16 x i16>, ptr %uptr
@@ -999,10 +993,9 @@ define <4 x i64> @four_way_i8_i64_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
 ; SME-NEXT:    ldr z0, [x0]
 ; SME-NEXT:    uaddwb z0.d, z0.d, z2.s
 ; SME-NEXT:    uaddwt z0.d, z0.d, z2.s
-; SME-NEXT:    mov z1.d, z0.d
-; SME-NEXT:    ext z1.b, z1.b, z0.b, #16
-; SME-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; SME-NEXT:    // kill: def $q1 killed $q1 killed $z1
+; SME-NEXT:    ext z2.b, { z0.b, z1.b }, #16
+; SME-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1
+; SME-NEXT:    mov z1.d, z2.d
 ; SME-NEXT:    ret
   %acc = load <4 x i64>, ptr %accptr
   %u = load <32 x i8>, ptr %uptr
