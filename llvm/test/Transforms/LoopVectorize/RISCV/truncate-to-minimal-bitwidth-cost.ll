@@ -166,10 +166,11 @@ define void @truncate_to_i1_used_by_branch(i8 %x, ptr %dst) #0 {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[AVL:%.*]] = sub i32 9, [[EVL_BASED_IV]]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ 9, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv4i8.nxv4p0(<vscale x 4 x i8> zeroinitializer, <vscale x 4 x ptr> align 1 [[BROADCAST_SPLAT2]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP6]])
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i32 [[TMP6]], [[EVL_BASED_IV]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_EVL_NEXT]], 9
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
