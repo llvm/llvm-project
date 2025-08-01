@@ -1,8 +1,19 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++11 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -Wno-c++17-extensions  %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++14 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -Wno-c++17-extensions  %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++17 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted  %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++20 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted  %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify=expected,expected-noncl -std=gnu++11 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -Wno-c++17-extensions  %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify=expected,expected-noncl -std=gnu++14 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -Wno-c++17-extensions  %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify=expected,expected-noncl -std=gnu++17 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted  %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify=expected,expected-noncl -std=gnu++20 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted  %s
+// RUN: %clang_cc1 -triple spirv64-none-none -fsyntax-only -fno-rtti -verify=expected,expected-cl -cl-std=clc++2021 -Wno-deprecated-builtins -Wno-defaulted-function-deleted -cl-ext=+__cl_clang_variadic_functions,+__cl_clang_function_pointers,+__cl_clang_bitfields -DVANILLAOPENCLCPLUSPLUS %s
+// RUN: %clang_cc1 -triple spirv64-none-none -fsyntax-only -fno-rtti -verify=expected,expected-cl -cl-std=clc++2021 -Wno-deprecated-builtins -Wno-defaulted-function-deleted -cl-ext=+__cl_clang_variadic_functions,+__cl_clang_function_pointers,+__cl_clang_bitfields -DEXTOPENCLCPLUSPLUS %s
 
+#if defined(EXTOPENCLCPLUSPLUS)
+#pragma OPENCL EXTENSION __cl_clang_variadic_functions : enable
+#pragma OPENCL EXTENSION __cl_clang_function_pointers : enable
+#pragma OPENCL EXTENSION __cl_clang_bitfields : enable
+#endif
+
+#if defined(EXTOPENCLCPLUSPLUS) || defined(VANILLAOPENCLCPLUSPLUS)
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
 
 struct NonPOD { NonPOD(int); };
 typedef NonPOD NonPODAr[10];
@@ -111,9 +122,16 @@ class  HasProt { protected: int prot; };
 struct HasRef { int i; int& ref; HasRef() : i(0), ref(i) {} };
 struct HasRefAggregate { int i; int& ref; };
 struct HasNonPOD { NonPOD np; };
+#if !defined(VANILLAOPENCLCPLUSPLUS)
 struct HasVirt { virtual void Virt() {}; };
+#else
+struct HasVirt { virtual void Virt() {}; };
+//expected-error@-1 {{virtual functions are not supported in C++ for OpenCL}}
+#endif
 typedef NonPOD NonPODAr[10];
+#if !defined(VANILLAOPENCLCPLUSPLUS)
 typedef HasVirt VirtAr[10];
+#endif
 typedef NonPOD NonPODArNB[];
 union NonPODUnion { int i; Derives n; };
 struct DerivesHasCons : HasCons {};
@@ -123,7 +141,9 @@ struct DerivesHasDest : HasDest {};
 struct DerivesHasPriv : HasPriv {};
 struct DerivesHasProt : HasProt {};
 struct DerivesHasRef : HasRef {};
+#if !defined(VANILLAOPENCLCPLUSPLUS)
 struct DerivesHasVirt : HasVirt {};
+#endif
 struct DerivesHasMoveCtor : HasMoveCtor {};
 
 struct HasNoThrowCopyAssign {
@@ -161,9 +181,14 @@ struct HasMultipleNoThrowCopy {
   HasMultipleNoThrowCopy(volatile HasMultipleNoThrowCopy&) throw();
 };
 
+#if defined(VANILLAOPENCLCPLUSPLUS)
+struct HasVirtDest { virtual ~HasVirtDest(); };
+//expected-error@-1 {{virtual functions are not supported in C++ for OpenCL}}
+#else
 struct HasVirtDest { virtual ~HasVirtDest(); };
 struct DerivedVirtDest : HasVirtDest {};
 typedef HasVirtDest VirtDestAr[1];
+#endif
 
 class AllPrivate {
   AllPrivate() throw();
@@ -244,13 +269,17 @@ void is_pod()
   static_assert(!__is_pod(HasMoveAssign));
   static_assert(!__is_pod(HasDest));
   static_assert(!__is_pod(HasRef));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__is_pod(HasVirt));
+#endif
   static_assert(!__is_pod(DerivesHasCons));
   static_assert(!__is_pod(DerivesHasCopyAssign));
   static_assert(!__is_pod(DerivesHasMoveAssign));
   static_assert(!__is_pod(DerivesHasDest));
   static_assert(!__is_pod(DerivesHasRef));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__is_pod(DerivesHasVirt));
+#endif
   static_assert(!__is_pod(NonPOD));
   static_assert(!__is_pod(HasNonPOD));
   static_assert(!__is_pod(NonPODAr));
@@ -266,11 +295,13 @@ void is_pod()
 }
 
 typedef Empty EmptyAr[10];
+#if !defined(VANILLAOPENCLCPLUSPLUS)
 struct Bit0 { int : 0; };
 struct Bit0Cons { int : 0; Bit0Cons(); };
 struct AnonBitOnly { int : 3; };
 struct BitOnly { int x : 3; };
 struct DerivesVirt : virtual POD {};
+#endif
 
 void is_empty()
 {
@@ -284,8 +315,10 @@ void is_empty()
   static_assert(__is_empty(HasOp));
   static_assert(__is_empty(HasConv));
   static_assert(__is_empty(HasAssign));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_empty(Bit0));
   static_assert(__is_empty(Bit0Cons));
+#endif
 
   static_assert(!__is_empty(Int));
   static_assert(!__is_empty(POD));
@@ -293,9 +326,11 @@ void is_empty()
   static_assert(!__is_empty(IncompleteUnion));
   static_assert(!__is_empty(EmptyAr));
   static_assert(!__is_empty(HasRef));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__is_empty(HasVirt));
   static_assert(!__is_empty(AnonBitOnly));
   static_assert(!__is_empty(BitOnly));
+#endif
   static_assert(!__is_empty(void));
   static_assert(!__is_empty(IntArNB));
   static_assert(!__is_empty(HasAnonymousUnion));
@@ -442,13 +477,17 @@ void is_final()
 }
 
 
+#if !defined(VANILLAOPENCLCPLUSPLUS)
 typedef HasVirt Polymorph;
 struct InheritPolymorph : Polymorph {};
+#endif
 
 void is_polymorphic()
 {
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_polymorphic(Polymorph));
   static_assert(__is_polymorphic(InheritPolymorph));
+#endif
 
   static_assert(!__is_polymorphic(int));
   static_assert(!__is_polymorphic(Union));
@@ -590,8 +629,10 @@ void is_aggregate()
   static_assert(!__is_aggregate(HasProt));
   static_assert(__is_aggregate(HasRefAggregate));
   static_assert(__is_aggregate(HasNonPOD));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__is_aggregate(HasVirt));
   static_assert(__is_aggregate(VirtAr));
+#endif
   static_assert(__is_aggregate(HasInClassInit) == TrueAfterCpp11);
   static_assert(!__is_aggregate(HasPrivateBase));
   static_assert(!__is_aggregate(HasProtectedBase));
@@ -747,8 +788,10 @@ void is_bounded_array(int n) {
   static_assert(!__is_bounded_array(void *));
   static_assert(!__is_bounded_array(cvoid *));
 
+#if !defined(VANILLAOPENCLCPLUSPLUS) && !defined(EXTOPENCLCPLUSPLUS)
   int t32[n];
   (void)__is_bounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported in '__is_bounded_array'}}
+#endif
 }
 
 void is_unbounded_array(int n) {
@@ -780,8 +823,10 @@ void is_unbounded_array(int n) {
   static_assert(!__is_unbounded_array(void *));
   static_assert(!__is_unbounded_array(cvoid *));
 
+#if !defined(VANILLAOPENCLCPLUSPLUS) && !defined(EXTOPENCLCPLUSPLUS)
   int t32[n];
   (void)__is_unbounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported in '__is_unbounded_array'}}
+#endif
 }
 
 template <typename T> void tmpl_func(T&) {}
@@ -794,10 +839,15 @@ template <typename T> struct type_wrapper {
 
 void is_function()
 {
+#if !defined(VANILLAOPENCLCPLUSPLUS)&& !defined(EXTOPENCLCPLUSPLUS)
+  // Requires RTTI
   static_assert(__is_function(type_wrapper<void(void)>::type));
   static_assert(__is_function(typeof(tmpl_func<int>)));
+#endif
 
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   typedef void (*ptr_to_func_type)(void);
+#endif
 
   static_assert(!__is_function(void));
   static_assert(!__is_function(cvoid));
@@ -821,10 +871,12 @@ void is_function()
   static_assert(!__is_function(Enum));
   static_assert(!__is_function(void*));
   static_assert(!__is_function(cvoid*));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__is_function(void(*)()));
   static_assert(!__is_function(ptr_to_func_type));
   static_assert(!__is_function(type_wrapper<void(void)>::ptrtype));
   static_assert(!__is_function(type_wrapper<void(void)>::reftype));
+#endif
 }
 
 void is_reference()
@@ -908,7 +960,9 @@ void is_object()
   static_assert(__is_object(ClassType));
   static_assert(__is_object(Enum));
 
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__is_object(type_wrapper<void(void)>::type));
+#endif
   static_assert(!__is_object(int&));
   static_assert(!__is_object(void));
 }
@@ -951,9 +1005,11 @@ void is_compound()
 {
   static_assert(__is_compound(void*));
   static_assert(__is_compound(cvoid*));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_compound(void (*)()));
   static_assert(__is_compound(int StructWithMembers::*));
   static_assert(__is_compound(void (StructWithMembers::*)()));
+#endif
   static_assert(__is_compound(int&));
   static_assert(__is_compound(Union));
   static_assert(__is_compound(UnionAr));
@@ -997,7 +1053,10 @@ void is_pointer()
   static_assert(__is_pointer(Union*));
   static_assert(__is_pointer(UnionAr*));
   static_assert(__is_pointer(StructWithMembers*));
+
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_pointer(void (*)()));
+#endif
 
   static_assert(!__is_pointer(void));
   static_assert(!__is_pointer(cvoid));
@@ -1013,7 +1072,9 @@ void is_pointer()
   static_assert(!__is_pointer(UnionAr));
   static_assert(!__is_pointer(StructWithMembers));
   static_assert(!__is_pointer(int StructWithMembers::*));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__is_pointer(void (StructWithMembers::*) ()));
+#endif
 }
 
 void is_member_object_pointer()
@@ -1022,7 +1083,9 @@ void is_member_object_pointer()
 
   static_assert(__is_member_object_pointer(int StructWithMembers::*));
 
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__is_member_object_pointer(void (StructWithMembers::*) ()));
+#endif
   static_assert(!__is_member_object_pointer(void*));
   static_assert(!__is_member_object_pointer(cvoid*));
   static_assert(!__is_member_object_pointer(cvoid*));
@@ -1049,14 +1112,18 @@ void is_member_object_pointer()
   static_assert(!__is_member_object_pointer(Union));
   static_assert(!__is_member_object_pointer(UnionAr));
   static_assert(!__is_member_object_pointer(StructWithMembers));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__is_member_object_pointer(void (*)()));
+#endif
 }
 
 void is_member_function_pointer()
 {
   StructWithMembers x;
 
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_member_function_pointer(void (StructWithMembers::*) ()));
+#endif
 
   static_assert(!__is_member_function_pointer(int StructWithMembers::*));
   static_assert(!__is_member_function_pointer(void*));
@@ -1085,7 +1152,9 @@ void is_member_function_pointer()
   static_assert(!__is_member_function_pointer(Union));
   static_assert(!__is_member_function_pointer(UnionAr));
   static_assert(!__is_member_function_pointer(StructWithMembers));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__is_member_function_pointer(void (*)()));
+#endif
 }
 
 void is_member_pointer()
@@ -1093,7 +1162,9 @@ void is_member_pointer()
   StructWithMembers x;
 
   static_assert(__is_member_pointer(int StructWithMembers::*));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_member_pointer(void (StructWithMembers::*) ()));
+#endif
 
   static_assert(!__is_member_pointer(void*));
   static_assert(!__is_member_pointer(cvoid*));
@@ -1121,7 +1192,9 @@ void is_member_pointer()
   static_assert(!__is_member_pointer(Union));
   static_assert(!__is_member_pointer(UnionAr));
   static_assert(!__is_member_pointer(StructWithMembers));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__is_member_pointer(void (*)()));
+#endif
 }
 
 void is_const()
@@ -1392,12 +1465,14 @@ struct CppStructNonStandardByBase : CStruct {
   int three;
   int four;
 };
+#if !defined(VANILLAOPENCLCPLUSPLUS)
 struct CppStructNonStandardByVirt : CStruct {
   virtual void method() {}
 };
 struct CppStructNonStandardByMemb : CStruct {
   CppStructNonStandardByVirt member;
 };
+#endif
 struct CppStructNonStandardByProt : CStruct {
   int five;
 protected:
@@ -1429,8 +1504,10 @@ void is_standard_layout()
 
   typedef CppStructNonStandardByBase CppStructNonStandardByBaseAr[4];
 
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__is_standard_layout(CppStructNonStandardByVirt));
   static_assert(!__is_standard_layout(CppStructNonStandardByMemb));
+#endif
   static_assert(!__is_standard_layout(CppStructNonStandardByProt));
   static_assert(!__is_standard_layout(CppStructNonStandardByVirtBase));
   static_assert(!__is_standard_layout(CppStructNonStandardByBase));
@@ -1445,6 +1522,7 @@ void is_standard_layout()
   static_assert(!__is_standard_layout(void));
   static_assert(!__is_standard_layout(const volatile void));
 
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   struct HasAnonEmptyBitfield { int : 0; };
   struct HasAnonBitfield { int : 4; };
   struct DerivesFromBitfield : HasAnonBitfield {};
@@ -1456,6 +1534,7 @@ void is_standard_layout()
   static_assert(__is_standard_layout(DerivesFromBitfield));
   static_assert(!__is_standard_layout(DerivesFromBitfieldWithBitfield));
   static_assert(!__is_standard_layout(DerivesFromBitfieldTwice));
+#endif
 
   struct Empty {};
   struct HasEmptyBase : Empty {};
@@ -1467,7 +1546,9 @@ void is_standard_layout()
   struct HasEmptyBaseAsSubobjectOfMember3 : Empty { HoldsEmptyBase e[2]; };
   struct HasEmptyIndirectBaseAsMember : HasEmptyBase { Empty e; };
   struct HasEmptyIndirectBaseAsSecondMember : HasEmptyBase { int n; Empty e; };
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   struct HasEmptyIndirectBaseAfterBitfield : HasEmptyBase { int : 4; Empty e; };
+#endif
 
   static_assert(__is_standard_layout(Empty));
   static_assert(__is_standard_layout(HasEmptyBase));
@@ -1478,7 +1559,9 @@ void is_standard_layout()
   static_assert(!__is_standard_layout(HasEmptyBaseAsSubobjectOfMember3));
   static_assert(!__is_standard_layout(HasEmptyIndirectBaseAsMember));
   static_assert(__is_standard_layout(HasEmptyIndirectBaseAsSecondMember));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__is_standard_layout(HasEmptyIndirectBaseAfterBitfield)); // FIXME: standard bug?
+#endif
 
   struct StructWithEmptyFields {
     int n;
@@ -1515,12 +1598,14 @@ struct CppStructNonStandardByBase2 : CStruct2 {
   int three;
   int four;
 };
+#if !defined(VANILLAOPENCLCPLUSPLUS)
 struct CppStructNonStandardByVirt2 : CStruct2 {
   virtual void method() {}
 };
 struct CppStructNonStandardByMemb2 : CStruct2 {
   CppStructNonStandardByVirt member;
 };
+#endif
 struct CppStructNonStandardByProt2 : CStruct2 {
   int five;
 protected:
@@ -1579,6 +1664,7 @@ struct CStructNested2 {
   int b2;
 };
 
+#if !defined(VANILLAOPENCLCPLUSPLUS)
 struct CStructWithBitfelds {
   int a : 5;
   int : 0;
@@ -1598,6 +1684,7 @@ struct CStructWithBitfelds4 {
   EnumLayout a : 5;
   int : 0;
 };
+#endif
 
 union UnionLayout {
   int a;
@@ -1694,22 +1781,29 @@ void is_layout_compatible(int n)
   static_assert(__is_layout_compatible(int, volatile int));
   static_assert(__is_layout_compatible(const int, volatile int));
   static_assert(__is_layout_compatible(int *, int * __restrict));
+#if !defined(VANILLAOPENCLCPLUSPLUS) && !defined(EXTOPENCLCPLUSPLUS)
   // Note: atomic qualification matters for layout compatibility.
+  // Note: OpenCL no _Atomic
   static_assert(!__is_layout_compatible(int, _Atomic int));
   static_assert(__is_layout_compatible(_Atomic(int), _Atomic int));
+#endif
   static_assert(!__is_layout_compatible(int, unsigned int));
   static_assert(!__is_layout_compatible(char, unsigned char));
   static_assert(!__is_layout_compatible(char, signed char));
   static_assert(!__is_layout_compatible(unsigned char, signed char));
   static_assert(__is_layout_compatible(int[], int[]));
   static_assert(__is_layout_compatible(int[2], int[2]));
+  // OpenCLCPP: No VLA
+#if !defined(VANILLAOPENCLCPLUSPLUS) && !defined(EXTOPENCLCPLUSPLUS)
   static_assert(!__is_layout_compatible(int[n], int[2]));
   // expected-error@-1 {{variable length arrays are not supported in '__is_layout_compatible'}}
   static_assert(!__is_layout_compatible(int[n], int[n]));
   // expected-error@-1 {{variable length arrays are not supported in '__is_layout_compatible'}}
   // expected-error@-2 {{variable length arrays are not supported in '__is_layout_compatible'}}
+#endif
   static_assert(__is_layout_compatible(int&, int&));
   static_assert(!__is_layout_compatible(int&, char&));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_layout_compatible(void(int), void(int)));
   static_assert(!__is_layout_compatible(void(int), void(char)));
   static_assert(__is_layout_compatible(void(&)(int), void(&)(int)));
@@ -1725,7 +1819,9 @@ void is_layout_compatible(int n)
   // expected-warning@-1 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
   static_assert(!__is_layout_compatible(const function_type, const function_type2));
   // expected-warning@-1 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
-  // expected-warning@-2 {{'const' qualifier on function type 'function_type2' (aka 'void (char)') has no effect}}
+  // expected-noncl-warning@-2 {{'const' qualifier on function type 'function_type2' (aka 'void (char)') has no effect}}
+  // expected-cl-warning@-3 {{'const' qualifier on function type 'function_type2' (aka 'void (__private char)') has no effect}}
+#endif
   static_assert(__is_layout_compatible(CStruct, CStruct2));
   static_assert(__is_layout_compatible(CStruct, const CStruct2));
   static_assert(__is_layout_compatible(CStruct, volatile CStruct2));
@@ -1734,26 +1830,34 @@ void is_layout_compatible(int n)
   static_assert(__is_layout_compatible(CppEmptyStruct, CppEmptyStruct2));
   static_assert(__is_layout_compatible(CppStructStandard, CppStructStandard2));
   static_assert(!__is_layout_compatible(CppStructNonStandardByBase, CppStructNonStandardByBase2));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__is_layout_compatible(CppStructNonStandardByVirt, CppStructNonStandardByVirt2));
   static_assert(!__is_layout_compatible(CppStructNonStandardByMemb, CppStructNonStandardByMemb2));
+#endif
   static_assert(!__is_layout_compatible(CppStructNonStandardByProt, CppStructNonStandardByProt2));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__is_layout_compatible(CppStructNonStandardByVirtBase, CppStructNonStandardByVirtBase2));
   static_assert(!__is_layout_compatible(CppStructNonStandardBySameBase, CppStructNonStandardBySameBase2));
   static_assert(!__is_layout_compatible(CppStructNonStandardBy2ndVirtBase, CppStructNonStandardBy2ndVirtBase2));
+#endif
   static_assert(__is_layout_compatible(CStruct, CStructWithQualifiers));
   static_assert(__is_layout_compatible(CStruct, CStructNoUniqueAddress) != bool(__has_cpp_attribute(no_unique_address)));
   static_assert(__is_layout_compatible(CStructNoUniqueAddress, CStructNoUniqueAddress2) != bool(__has_cpp_attribute(no_unique_address)));
   static_assert(__is_layout_compatible(CStruct, CStructAlignment));
   static_assert(!__is_layout_compatible(CStruct, CStructAlignedMembers));
   static_assert(__is_layout_compatible(UnionNoOveralignedMembers, UnionWithOveralignedMembers));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds));
   static_assert(__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds2));
   static_assert(!__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds3));
   static_assert(!__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds4));
+#endif
   static_assert(__is_layout_compatible(int CStruct2::*, int CStruct2::*));
   static_assert(!__is_layout_compatible(int CStruct2::*, char CStruct2::*));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_layout_compatible(void(CStruct2::*)(int), void(CStruct2::*)(int)));
   static_assert(!__is_layout_compatible(void(CStruct2::*)(int), void(CStruct2::*)(char)));
+#endif
   static_assert(__is_layout_compatible(CStructNested, CStructNested2));
   static_assert(__is_layout_compatible(UnionLayout, UnionLayout));
   static_assert(!__is_layout_compatible(UnionLayout, UnionLayout2));
@@ -1844,12 +1948,15 @@ void is_pointer_interconvertible_base_of(int n)
   static_assert(!__is_pointer_interconvertible_base_of(int, volatile int));
   static_assert(!__is_pointer_interconvertible_base_of(const int, volatile int));
   static_assert(!__is_pointer_interconvertible_base_of(int *, int * __restrict));
+#if !defined(VANILLAOPENCLCPLUSPLUS) && !defined(EXTOPENCLCPLUSPLUS)
   static_assert(!__is_pointer_interconvertible_base_of(int, _Atomic int));
   static_assert(!__is_pointer_interconvertible_base_of(_Atomic(int), _Atomic int));
+#endif
   static_assert(!__is_pointer_interconvertible_base_of(int, unsigned int));
   static_assert(!__is_pointer_interconvertible_base_of(char, unsigned char));
   static_assert(!__is_pointer_interconvertible_base_of(char, signed char));
   static_assert(!__is_pointer_interconvertible_base_of(unsigned char, signed char));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   using function_type = void();
   using function_type2 = void(char);
   static_assert(!__is_pointer_interconvertible_base_of(const function_type, const function_type));
@@ -1859,27 +1966,36 @@ void is_pointer_interconvertible_base_of(int n)
   // expected-warning@-1 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
   static_assert(!__is_pointer_interconvertible_base_of(const function_type, const function_type2));
   // expected-warning@-1 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
-  // expected-warning@-2 {{'const' qualifier on function type 'function_type2' (aka 'void (char)') has no effect}}
+  // expected-noncl-warning@-2 {{'const' qualifier on function type 'function_type2' (aka 'void (char)') has no effect}}
+  // expected-cl-warning@-3 {{'const' qualifier on function type 'function_type2' (aka 'void (__private char)') has no effect}}
+#endif
   static_assert(!__is_pointer_interconvertible_base_of(int CStruct2::*, int CStruct2::*));
   static_assert(!__is_pointer_interconvertible_base_of(int CStruct2::*, char CStruct2::*));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__is_pointer_interconvertible_base_of(void(CStruct2::*)(int), void(CStruct2::*)(int)));
   static_assert(!__is_pointer_interconvertible_base_of(void(CStruct2::*)(int), void(CStruct2::*)(char)));
+#endif
   static_assert(!__is_pointer_interconvertible_base_of(int[], int[]));
   static_assert(!__is_pointer_interconvertible_base_of(int[], double[]));
   static_assert(!__is_pointer_interconvertible_base_of(int[2], int[2]));
+  // OpenCLCPP: No VLA
+#if !defined(VANILLAOPENCLCPLUSPLUS) && !defined(EXTOPENCLCPLUSPLUS)
   static_assert(!__is_pointer_interconvertible_base_of(int[n], int[2]));
   // expected-error@-1 {{variable length arrays are not supported in '__is_pointer_interconvertible_base_of'}}
   static_assert(!__is_pointer_interconvertible_base_of(int[n], int[n]));
   // expected-error@-1 {{variable length arrays are not supported in '__is_pointer_interconvertible_base_of'}}
   // expected-error@-2 {{variable length arrays are not supported in '__is_pointer_interconvertible_base_of'}}
+#endif
   static_assert(!__is_pointer_interconvertible_base_of(int&, int&));
   static_assert(!__is_pointer_interconvertible_base_of(int&, char&));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__is_pointer_interconvertible_base_of(void(int), void(int)));
   static_assert(!__is_pointer_interconvertible_base_of(void(int), void(char)));
   static_assert(!__is_pointer_interconvertible_base_of(void(&)(int), void(&)(int)));
   static_assert(!__is_pointer_interconvertible_base_of(void(&)(int), void(&)(char)));
   static_assert(!__is_pointer_interconvertible_base_of(void(*)(int), void(*)(int)));
   static_assert(!__is_pointer_interconvertible_base_of(void(*)(int), void(*)(char)));
+#endif
 }
 }
 
@@ -1925,13 +2041,17 @@ struct UserDeletedDestructorInAggregate {
   ~UserDeletedDestructorInAggregate() = delete;
 };
 
+#if !defined(VANILLAOPENCLCPLUSPLUS)
 struct UserDeletedDestructorInNonAggregate {
   virtual void NonAggregate();
   ~UserDeletedDestructorInNonAggregate() = delete;
 };
+#endif
 
 struct DeletedDestructorViaBaseInAggregate : UserDeletedDestructorInAggregate {};
+#if !defined(VANILLAOPENCLCPLUSPLUS)
 struct DeletedDestructorViaBaseInNonAggregate : UserDeletedDestructorInNonAggregate {};
+#endif
 
 #if __cplusplus >= 202002L
 template<bool B>
@@ -1975,10 +2095,13 @@ void is_implicit_lifetime(int n) {
   static_assert(__builtin_is_implicit_lifetime(int*));
   static_assert(__builtin_is_implicit_lifetime(int[]));
   static_assert(__builtin_is_implicit_lifetime(int[5]));
+#if !defined(VANILLAOPENCLCPLUSPLUS) && !defined(EXTOPENCLCPLUSPLUS)
   static_assert(__builtin_is_implicit_lifetime(int[n]));
   // expected-error@-1 {{variable length arrays are not supported in '__builtin_is_implicit_lifetime'}}
+#endif
   static_assert(__builtin_is_implicit_lifetime(Enum));
   static_assert(__builtin_is_implicit_lifetime(EnumClass));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__builtin_is_implicit_lifetime(void()));
   static_assert(!__builtin_is_implicit_lifetime(void() &));
   static_assert(!__builtin_is_implicit_lifetime(void() const));
@@ -1990,6 +2113,7 @@ void is_implicit_lifetime(int n) {
   static_assert(__builtin_is_implicit_lifetime(int (UserDeclaredDestructor::*)() const));
   static_assert(__builtin_is_implicit_lifetime(int (UserDeclaredDestructor::*)() &));
   static_assert(__builtin_is_implicit_lifetime(int (UserDeclaredDestructor::*)() &&));
+#endif
   static_assert(!__builtin_is_implicit_lifetime(IncompleteStruct));
   // expected-error@-1 {{incomplete type 'IncompleteStruct' used in type trait expression}}
   static_assert(__builtin_is_implicit_lifetime(IncompleteStruct[]));
@@ -2005,9 +2129,13 @@ void is_implicit_lifetime(int n) {
   static_assert(__builtin_is_implicit_lifetime(InheritedOnlyDefaultConstructorIsTrivial));
   static_assert(__builtin_is_implicit_lifetime(InheritedAllContstructorsAreTrivial));
   static_assert(__builtin_is_implicit_lifetime(UserDeletedDestructorInAggregate));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__builtin_is_implicit_lifetime(UserDeletedDestructorInNonAggregate));
+#endif
   static_assert(__builtin_is_implicit_lifetime(DeletedDestructorViaBaseInAggregate) == __cplusplus >= 201703L);
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__builtin_is_implicit_lifetime(DeletedDestructorViaBaseInNonAggregate));
+#endif
 #if __cplusplus >= 202002L
   static_assert(__builtin_is_implicit_lifetime(ConstrainedUserDeclaredDefaultConstructor<true>));
   static_assert(!__builtin_is_implicit_lifetime(ConstrainedUserDeclaredDefaultConstructor<false>));
@@ -2015,14 +2143,18 @@ void is_implicit_lifetime(int n) {
   static_assert(__builtin_is_implicit_lifetime(ConstrainedUserProvidedDestructor<false>));
 #endif
 
+#if !defined(VANILLAOPENCLCPLUSPLUS) && !defined(EXTOPENCLCPLUSPLUS)
   static_assert(__builtin_is_implicit_lifetime(__int128));
+#endif
   static_assert(__builtin_is_implicit_lifetime(_BitInt(8)));
   static_assert(__builtin_is_implicit_lifetime(_BitInt(128)));
   static_assert(__builtin_is_implicit_lifetime(int[0]));
   static_assert(__builtin_is_implicit_lifetime(StructWithFAM));
   static_assert(__builtin_is_implicit_lifetime(StructWithZeroSizedArray));
   static_assert(__builtin_is_implicit_lifetime(__fp16));
+#if !defined(VANILLAOPENCLCPLUSPLUS) && !defined(EXTOPENCLCPLUSPLUS)
   static_assert(__builtin_is_implicit_lifetime(__bf16));
+#endif
   static_assert(__builtin_is_implicit_lifetime(_Complex double));
   static_assert(__builtin_is_implicit_lifetime(float4));
   static_assert(__builtin_is_implicit_lifetime(align_value_int));
@@ -2033,8 +2165,10 @@ void is_implicit_lifetime(int n) {
   static_assert(__builtin_is_implicit_lifetime(int * _Nonnull));
   static_assert(__builtin_is_implicit_lifetime(int * _Null_unspecified));
   static_assert(__builtin_is_implicit_lifetime(int * _Nullable));
+#if !defined(VANILLAOPENCLCPLUSPLUS) && !defined(EXTOPENCLCPLUSPLUS)
   static_assert(!__builtin_is_implicit_lifetime(_Atomic int));
   // expected-error@-1 {{atomic types are not supported in '__builtin_is_implicit_lifetime'}}
+#endif
   static_assert(__builtin_is_implicit_lifetime(int * __restrict));
 }
 
@@ -2110,12 +2244,14 @@ struct HasMove {
   HasMove(HasMove&& cp);
 };
 
+#if !defined(VANILLAOPENCLCPLUSPLUS)
 struct HasTemplateCons {
   HasVirt Annoying;
 
   template <typename T>
   HasTemplateCons(const T&);
 };
+#endif
 
 void has_trivial_default_constructor() {
   static_assert(__has_trivial_constructor(Int));
@@ -2141,10 +2277,14 @@ void has_trivial_default_constructor() {
   static_assert(!__has_trivial_constructor(HasRef));
   static_assert(!__has_trivial_constructor(HasCopy));
   static_assert(!__has_trivial_constructor(IntRef));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__has_trivial_constructor(VirtAr));
+#endif
   static_assert(!__has_trivial_constructor(void));
   static_assert(!__has_trivial_constructor(cvoid));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__has_trivial_constructor(HasTemplateCons));
+#endif
   static_assert(!__has_trivial_constructor(AllPrivate));
   static_assert(!__has_trivial_constructor(ExtDefaulted));
 }
@@ -2170,8 +2310,10 @@ void has_trivial_move_constructor() {
   static_assert(__has_trivial_move_constructor(ACompleteType[]));
 
   static_assert(!__has_trivial_move_constructor(AnIncompleteType[])); // expected-error {{incomplete type}}
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__has_trivial_move_constructor(HasVirt));
   static_assert(!__has_trivial_move_constructor(DerivesVirt));
+#endif
   static_assert(!__has_trivial_move_constructor(HasMoveCtor));
   static_assert(!__has_trivial_move_constructor(DerivesHasMoveCtor));
   static_assert(!__has_trivial_move_constructor(HasMemberMoveCtor));
@@ -2203,8 +2345,10 @@ void has_trivial_copy_constructor() {
 
   static_assert(!__has_trivial_copy(AnIncompleteType[])); // expected-error {{incomplete type}}
   static_assert(!__has_trivial_copy(HasCopy));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__has_trivial_copy(HasTemplateCons));
   static_assert(!__has_trivial_copy(VirtAr));
+#endif
   static_assert(!__has_trivial_copy(void));
   static_assert(!__has_trivial_copy(cvoid));
   static_assert(!__has_trivial_copy(AllPrivate));
@@ -2237,7 +2381,9 @@ void has_trivial_copy_assignment() {
   static_assert(!__has_trivial_assign(const Int));
   static_assert(!__has_trivial_assign(ConstIntAr));
   static_assert(!__has_trivial_assign(ConstIntArAr));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__has_trivial_assign(VirtAr));
+#endif
   static_assert(!__has_trivial_assign(void));
   static_assert(!__has_trivial_assign(cvoid));
   static_assert(!__has_trivial_assign(AllPrivate));
@@ -2263,7 +2409,9 @@ void has_trivial_destructor() {
   static_assert(__has_trivial_destructor(HasMoveAssign));
   static_assert(__has_trivial_destructor(const Int));
   static_assert(__has_trivial_destructor(DerivesAr));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__has_trivial_destructor(VirtAr));
+#endif
   static_assert(__has_trivial_destructor(AllDefaulted));
   static_assert(__has_trivial_destructor(AllDeleted));
   static_assert(__has_trivial_destructor(DerivesHasRef));
@@ -2331,7 +2479,9 @@ void has_nothrow_assign() {
   static_assert(!__has_nothrow_assign(const Int));
   static_assert(!__has_nothrow_assign(ConstIntAr));
   static_assert(!__has_nothrow_assign(ConstIntArAr));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__has_nothrow_assign(VirtAr));
+#endif
   static_assert(!__has_nothrow_assign(void));
   static_assert(!__has_nothrow_assign(cvoid));
   static_assert(!__has_nothrow_assign(PR11110));
@@ -2386,8 +2536,10 @@ void has_trivial_move_assign() {
   static_assert(__has_trivial_move_assign(ACompleteType[]));
 
   static_assert(!__has_trivial_move_assign(AnIncompleteType[])); // expected-error {{incomplete type}}
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__has_trivial_move_assign(HasVirt));
   static_assert(!__has_trivial_move_assign(DerivesVirt));
+#endif
   static_assert(!__has_trivial_move_assign(HasMoveAssign));
   static_assert(!__has_trivial_move_assign(DerivesHasMoveAssign));
   static_assert(!__has_trivial_move_assign(HasMemberMoveAssign));
@@ -2415,8 +2567,10 @@ void has_nothrow_copy() {
   static_assert(__has_nothrow_copy(HasMoveAssign));
   static_assert(__has_nothrow_copy(HasNoThrowCopy));
   static_assert(__has_nothrow_copy(HasMultipleNoThrowCopy));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__has_nothrow_copy(HasVirtDest));
   static_assert(__has_nothrow_copy(HasTemplateCons));
+#endif
   static_assert(__has_nothrow_copy(AllPrivate));
   static_assert(__has_nothrow_copy(DerivesAr));
   static_assert(__has_nothrow_copy(ACompleteType[]));
@@ -2424,7 +2578,9 @@ void has_nothrow_copy() {
   static_assert(!__has_nothrow_copy(AnIncompleteType[])); // expected-error {{incomplete type}}
   static_assert(!__has_nothrow_copy(HasCopy));
   static_assert(!__has_nothrow_copy(HasMultipleCopy));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__has_nothrow_copy(VirtAr));
+#endif
   static_assert(!__has_nothrow_copy(void));
   static_assert(!__has_nothrow_copy(cvoid));
 }
@@ -2458,7 +2614,9 @@ void has_nothrow_constructor() {
   static_assert(!__has_nothrow_constructor(IntRef));
   static_assert(!__has_nothrow_constructor(void));
   static_assert(!__has_nothrow_constructor(cvoid));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__has_nothrow_constructor(HasTemplateCons));
+#endif
 
   static_assert(!__has_nothrow_constructor(HasMultipleDefaultConstructor1));
   static_assert(!__has_nothrow_constructor(HasMultipleDefaultConstructor2));
@@ -2484,13 +2642,17 @@ void has_virtual_destructor() {
   static_assert(!__has_virtual_destructor(HasCopyAssign));
   static_assert(!__has_virtual_destructor(HasMoveAssign));
   static_assert(!__has_virtual_destructor(IntRef));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__has_virtual_destructor(VirtAr));
+#endif
   static_assert(!__has_virtual_destructor(ACompleteType[]));
 
   static_assert(!__has_virtual_destructor(AnIncompleteType[])); // expected-error {{incomplete type}}
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__has_virtual_destructor(HasVirtDest));
   static_assert(__has_virtual_destructor(DerivedVirtDest));
   static_assert(!__has_virtual_destructor(VirtDestAr));
+#endif
   static_assert(!__has_virtual_destructor(void));
   static_assert(!__has_virtual_destructor(cvoid));
   static_assert(!__has_virtual_destructor(AllPrivate));
@@ -2594,7 +2756,9 @@ void is_virtual_base_of(int n) {
   static_assert(!__builtin_is_virtual_base_of(class_forward, Empty));
   static_assert(!__builtin_is_virtual_base_of(Base&, Derived&));
   static_assert(!__builtin_is_virtual_base_of(Base[10], Derived[10]));
+#if !defined(VANILLAOPENCLCPLUSPLUS) && !defined(EXTOPENCLCPLUSPLUS)
   static_assert(!__builtin_is_virtual_base_of(Base[n], Derived[n])); // expected-error 2 {{variable length arrays are not supported in '__builtin_is_virtual_base_of'}}
+#endif
   static_assert(!__builtin_is_virtual_base_of(int, int));
   static_assert(!__builtin_is_virtual_base_of(int[], int[]));
   static_assert(!__builtin_is_virtual_base_of(long, int));
@@ -2629,7 +2793,9 @@ void is_virtual_base_of(int n) {
   static_assert(!__builtin_is_virtual_base_of(Union, Empty));
   static_assert(!__builtin_is_virtual_base_of(int, Empty));
   static_assert(!__builtin_is_virtual_base_of(Union, int));
+#if !defined(VANILLAOPENCLCPLUSPLUS) && !defined(EXTOPENCLCPLUSPLUS)
   static_assert(!__builtin_is_virtual_base_of(IncompleteStruct, IncompleteStruct[n])); // expected-error {{variable length arrays are not supported in '__builtin_is_virtual_base_of'}}
+#endif
 }
 
 template<class T, class U>
@@ -2752,7 +2918,9 @@ struct X0 {
   template<typename U> X0(const X0<U>&);
 };
 
+#if !defined(VANILLAOPENCLCPLUSPLUS)
 struct Abstract { virtual void f() = 0; };
+#endif
 
 void is_convertible_to() {
   static_assert(__is_convertible_to(Int, Int));
@@ -2778,7 +2946,9 @@ void is_convertible_to() {
   static_assert(!__is_convertible_to(Function, Function));
   static_assert(!__is_convertible_to(PrivateCopy, PrivateCopy));
   static_assert(__is_convertible_to(X0<int>, X0<float>));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__is_convertible_to(Abstract, Abstract));
+#endif
 }
 
 namespace is_convertible_to_instantiate {
@@ -2821,13 +2991,17 @@ void is_trivial()
   static_assert(!__is_trivial(HasDest));
   static_assert(!__is_trivial(HasRef));
   static_assert(!__is_trivial(HasNonPOD));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__is_trivial(HasVirt));
+#endif
   static_assert(!__is_trivial(DerivesHasCons));
   static_assert(!__is_trivial(DerivesHasCopyAssign));
   static_assert(!__is_trivial(DerivesHasMoveAssign));
   static_assert(!__is_trivial(DerivesHasDest));
   static_assert(!__is_trivial(DerivesHasRef));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__is_trivial(DerivesHasVirt));
+#endif
   static_assert(!__is_trivial(void));
   static_assert(!__is_trivial(cvoid));
 }
@@ -2876,11 +3050,15 @@ void trivial_checks()
   static_assert(!__is_trivially_copyable(HasCopyAssign));
   static_assert(!__is_trivially_copyable(HasMoveAssign));
   static_assert(!__is_trivially_copyable(HasDest));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__is_trivially_copyable(HasVirt));
+#endif
   static_assert(!__is_trivially_copyable(DerivesHasCopyAssign));
   static_assert(!__is_trivially_copyable(DerivesHasMoveAssign));
   static_assert(!__is_trivially_copyable(DerivesHasDest));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__is_trivially_copyable(DerivesHasVirt));
+#endif
   static_assert(!__is_trivially_copyable(void));
   static_assert(!__is_trivially_copyable(cvoid));
 
@@ -3035,9 +3213,11 @@ void constructible_checks() {
   static_assert(__is_constructible(NonPOD, int));
   static_assert(!__is_nothrow_constructible(NonPOD, int));
 
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   // PR19178
   static_assert(!__is_constructible(Abstract));
   static_assert(!__is_nothrow_constructible(Abstract));
+#endif
 
   // PR20228
   static_assert(__is_constructible(VariadicCtor,
@@ -3086,7 +3266,9 @@ void is_trivially_constructible_test() {
   static_assert(!(is_trivially_constructible<int, int*>::value));
   static_assert(!(is_trivially_constructible<NonTrivialDefault>::value));
   static_assert(!(is_trivially_constructible<ThreeArgCtor, int*, char*, int&>::value));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!(is_trivially_constructible<Abstract>::value)); // PR19178
+#endif
 
   static_assert(__is_trivially_constructible(ACompleteType));
   static_assert(!__is_trivially_constructible(AnIncompleteType)); // expected-error {{incomplete type}}
@@ -3145,8 +3327,10 @@ void reference_binds_to_temporary_checks() {
   static_assert((__reference_binds_to_temporary(const int &, long)));
 
   // Test that function references are never considered bound to temporaries.
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__reference_binds_to_temporary(void(&)(), void()));
   static_assert(!__reference_binds_to_temporary(void(&&)(), void()));
+#endif
 }
 
 
@@ -3206,8 +3390,10 @@ void reference_constructs_from_temporary_checks() {
   static_assert(__reference_constructs_from_temporary(const int &, long));
 
   // Test that function references are never considered bound to temporaries.
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(!__reference_constructs_from_temporary(void(&&)(), void()));
   static_assert(!__reference_constructs_from_temporary(void(&)(), void()));
+#endif
 
   // LWG3819: reference_meows_from_temporary should not use is_meowible
   static_assert(__reference_constructs_from_temporary(ConvertsFromNonMovable&&, NonMovable) == __cplusplus >= 201703L);
@@ -3272,9 +3458,11 @@ void reference_converts_from_temporary_checks() {
 
   static_assert(__reference_converts_from_temporary(const int &, long));
 
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   // Test that function references are never considered bound to temporaries.
   static_assert(!__reference_converts_from_temporary(void(&)(), void()));
   static_assert(!__reference_converts_from_temporary(void(&&)(), void()));
+#endif
 
   // LWG3819: reference_meows_from_temporary should not use is_meowible
   static_assert(__reference_converts_from_temporary(ConvertsFromNonMovable&&, NonMovable) == __cplusplus >= 201703L);
@@ -3399,19 +3587,25 @@ static_assert(__has_unique_object_representations(volatile int *), "as are point
 static_assert(__has_unique_object_representations(const volatile int *), "as are pointers");
 
 class C {};
+#if !defined(VANILLAOPENCLCPLUSPLUS)
 using FP = int (*)(int);
 using PMF = int (C::*)(int);
+#endif
 using PMD = int C::*;
 
+#if !defined(VANILLAOPENCLCPLUSPLUS)
 static_assert(__has_unique_object_representations(FP), "even function pointers");
 static_assert(__has_unique_object_representations(const FP), "even function pointers");
 static_assert(__has_unique_object_representations(volatile FP), "even function pointers");
 static_assert(__has_unique_object_representations(const volatile FP), "even function pointers");
+#endif
 
+#if !defined(VANILLAOPENCLCPLUSPLUS)
 static_assert(__has_unique_object_representations(PMF), "and pointer to members");
 static_assert(__has_unique_object_representations(const PMF), "and pointer to members");
 static_assert(__has_unique_object_representations(volatile PMF), "and pointer to members");
 static_assert(__has_unique_object_representations(const volatile PMF), "and pointer to members");
+#endif
 
 static_assert(__has_unique_object_representations(PMD), "and pointer to members");
 static_assert(__has_unique_object_representations(const PMD), "and pointer to members");
@@ -3428,8 +3622,10 @@ static_assert(__has_unique_object_representations(int), "yes, all integral types
 static_assert(__has_unique_object_representations(unsigned int), "yes, all integral types");
 static_assert(__has_unique_object_representations(long), "yes, all integral types");
 static_assert(__has_unique_object_representations(unsigned long), "yes, all integral types");
+#if !defined(VANILLAOPENCLCPLUSPLUS)
 static_assert(__has_unique_object_representations(long long), "yes, all integral types");
 static_assert(__has_unique_object_representations(unsigned long long), "yes, all integral types");
+#endif
 static_assert(__has_unique_object_representations(wchar_t), "yes, all integral types");
 static_assert(__has_unique_object_representations(char16_t), "yes, all integral types");
 static_assert(__has_unique_object_representations(char32_t), "yes, all integral types");
@@ -3565,6 +3761,7 @@ class EmptyInheritor : Compressed {};
 
 static_assert(__has_unique_object_representations(EmptyInheritor), "As long as the base has items, empty is ok");
 
+#if !defined(VANILLAOPENCLCPLUSPLUS)
 class Dynamic {
   virtual void A();
   int i;
@@ -3577,6 +3774,7 @@ class InheritsDynamic : Dynamic {
 };
 
 static_assert(!__has_unique_object_representations(InheritsDynamic), "Dynamic types are not valid");
+#endif
 
 static_assert(__has_unique_object_representations(int[42]), "Arrays are fine, as long as their value type is");
 static_assert(__has_unique_object_representations(int[]), "Arrays are fine, as long as their value type is");
@@ -3619,6 +3817,7 @@ static_assert(!__has_unique_object_representations(int(int) const &&), "Function
 static_assert(!__has_unique_object_representations(int(int) volatile &&), "Functions are not unique");
 static_assert(!__has_unique_object_representations(int(int) const volatile &&), "Functions are not unique");
 
+#if !defined(VANILLAOPENCLCPLUSPLUS)
 static_assert(!__has_unique_object_representations(int(int, ...)), "Functions are not unique");
 static_assert(!__has_unique_object_representations(int(int, ...) const), "Functions are not unique");
 static_assert(!__has_unique_object_representations(int(int, ...) volatile), "Functions are not unique");
@@ -3631,6 +3830,7 @@ static_assert(!__has_unique_object_representations(int(int, ...) &&), "Functions
 static_assert(!__has_unique_object_representations(int(int, ...) const &&), "Functions are not unique");
 static_assert(!__has_unique_object_representations(int(int, ...) volatile &&), "Functions are not unique");
 static_assert(!__has_unique_object_representations(int(int, ...) const volatile &&), "Functions are not unique");
+#endif
 
 void foo(){
   static auto lambda = []() {};
@@ -3640,6 +3840,7 @@ void foo(){
   static_assert(__has_unique_object_representations(decltype(lambda2)), "Lambdas follow struct rules");
 }
 
+#if !defined(VANILLAOPENCLCPLUSPLUS)
 struct PaddedBitfield {
   char c : 6;
   char d : 1;
@@ -3705,6 +3906,7 @@ struct GreaterSizeBitfield {
 
 static_assert(sizeof(GreaterSizeBitfield) == 128, "Bitfield Size");
 static_assert(!__has_unique_object_representations(GreaterSizeBitfield), "Bitfield padding");
+#endif
 
 struct StructWithRef {
   int &I;
@@ -4051,6 +4253,7 @@ struct NotTriviallyEqualityComparableTriviallyEqualityComparableBases
 };
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableTriviallyEqualityComparableBases));
 
+#if !defined(VANILLAOPENCLCPLUSPLUS)
 struct NotTriviallyEqualityComparableBitfield {
   int i : 1;
 
@@ -4065,6 +4268,7 @@ struct NotTriviallyEqualityComparableBitfieldFilled {
   bool operator==(const NotTriviallyEqualityComparableBitfieldFilled&) const = default;
 };
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableBitfield));
+#endif
 
 union U {
   int i;
@@ -4304,6 +4508,7 @@ struct NotTriviallyEqualityComparableTriviallyEqualityComparableBases
 };
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableTriviallyEqualityComparableBases));
 
+#if !defined(VANILLAOPENCLCPLUSPLUS)
 struct NotTriviallyEqualityComparableBitfield {
   int i : 1;
 
@@ -4318,6 +4523,7 @@ struct NotTriviallyEqualityComparableBitfieldFilled {
   friend bool operator==(const NotTriviallyEqualityComparableBitfieldFilled&, const NotTriviallyEqualityComparableBitfieldFilled&) = default;
 };
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableBitfield));
+#endif
 
 union U {
   int i;
@@ -4433,9 +4639,11 @@ void check_remove_const() {
   static_assert(__is_same(remove_const_t<int const &>, int const &));
   static_assert(__is_same(remove_const_t<int &&>, int &&));
   static_assert(__is_same(remove_const_t<int const &&>, int const &&));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_same(remove_const_t<int()>, int()));
   static_assert(__is_same(remove_const_t<int (*const)()>, int (*)()));
   static_assert(__is_same(remove_const_t<int (&)()>, int (&)()));
+#endif
 
   static_assert(__is_same(remove_const_t<S>, S));
   static_assert(__is_same(remove_const_t<const S>, S));
@@ -4444,7 +4652,9 @@ void check_remove_const() {
   static_assert(__is_same(remove_const_t<const volatile S>, volatile S));
   static_assert(__is_same(remove_const_t<S *const volatile __restrict>, S *volatile __restrict));
   static_assert(__is_same(remove_const_t<int S::*const>, int S::*));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_same(remove_const_t<int (S::*const)()>, int(S::*)()));
+#endif
 }
 
 template <class T> using remove_restrict_t = __remove_restrict(T);
@@ -4462,9 +4672,11 @@ void check_remove_restrict() {
   static_assert(__is_same(remove_restrict_t<int &__restrict>, int &));
   static_assert(__is_same(remove_restrict_t<int &&>, int &&));
   static_assert(__is_same(remove_restrict_t<int &&__restrict>, int &&));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_same(remove_restrict_t<int()>, int()));
   static_assert(__is_same(remove_restrict_t<int (*const volatile)()>, int (*const volatile)()));
   static_assert(__is_same(remove_restrict_t<int (&)()>, int (&)()));
+#endif
 
   static_assert(__is_same(remove_restrict_t<S>, S));
   static_assert(__is_same(remove_restrict_t<const S>, const S));
@@ -4472,7 +4684,9 @@ void check_remove_restrict() {
   static_assert(__is_same(remove_restrict_t<S *__restrict>, S *));
   static_assert(__is_same(remove_restrict_t<S *const volatile __restrict>, S *const volatile));
   static_assert(__is_same(remove_restrict_t<int S::*__restrict>, int S::*));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_same(remove_restrict_t<int (S::*const volatile)()>, int(S::*const volatile)()));
+#endif
 }
 
 template <class T> using remove_volatile_t = __remove_volatile(T);
@@ -4493,16 +4707,20 @@ void check_remove_volatile() {
   static_assert(__is_same(remove_volatile_t<int volatile &>, int volatile &));
   static_assert(__is_same(remove_volatile_t<int &&>, int &&));
   static_assert(__is_same(remove_volatile_t<int volatile &&>, int volatile &&));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_same(remove_volatile_t<int()>, int()));
   static_assert(__is_same(remove_volatile_t<int (*volatile)()>, int (*)()));
   static_assert(__is_same(remove_volatile_t<int (&)()>, int (&)()));
+#endif
 
   static_assert(__is_same(remove_volatile_t<S>, S));
   static_assert(__is_same(remove_volatile_t<const S>, const S));
   static_assert(__is_same(remove_volatile_t<volatile S>, S));
   static_assert(__is_same(remove_volatile_t<const volatile S>, const S));
   static_assert(__is_same(remove_volatile_t<int S::*volatile>, int S::*));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_same(remove_volatile_t<int (S::*volatile)()>, int(S::*)()));
+#endif
 }
 
 template <class T> using remove_cv_t = __remove_cv(T);
@@ -4523,16 +4741,20 @@ void check_remove_cv() {
   static_assert(__is_same(remove_cv_t<int const volatile &>, int const volatile &));
   static_assert(__is_same(remove_cv_t<int &&>, int &&));
   static_assert(__is_same(remove_cv_t<int const volatile &&>, int const volatile &&));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_same(remove_cv_t<int()>, int()));
   static_assert(__is_same(remove_cv_t<int (*const volatile)()>, int (*)()));
   static_assert(__is_same(remove_cv_t<int (&)()>, int (&)()));
+#endif
 
   static_assert(__is_same(remove_cv_t<S>, S));
   static_assert(__is_same(remove_cv_t<const S>, S));
   static_assert(__is_same(remove_cv_t<volatile S>, S));
   static_assert(__is_same(remove_cv_t<const volatile S>, S));
   static_assert(__is_same(remove_cv_t<int S::*const volatile>, int S::*));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_same(remove_cv_t<int (S::*const volatile)()>, int(S::*)()));
+#endif
 }
 
 template <class T> using add_pointer_t = __add_pointer(T);
@@ -4549,16 +4771,20 @@ void add_pointer() {
   static_assert(__is_same(add_pointer_t<int *>, int **));
   static_assert(__is_same(add_pointer_t<int &>, int *));
   static_assert(__is_same(add_pointer_t<int &&>, int *));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_same(add_pointer_t<int()>, int (*)()));
   static_assert(__is_same(add_pointer_t<int (*)()>, int (**)()));
   static_assert(__is_same(add_pointer_t<int (&)()>, int (*)()));
+#endif
 
   static_assert(__is_same(add_pointer_t<S>, S *));
   static_assert(__is_same(add_pointer_t<const S>, const S *));
   static_assert(__is_same(add_pointer_t<volatile S>, volatile S *));
   static_assert(__is_same(add_pointer_t<const volatile S>, const volatile S *));
   static_assert(__is_same(add_pointer_t<int S::*>, int S::**));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_same(add_pointer_t<int (S::*)()>, int(S::**)()));
+#endif
 
   static_assert(__is_same(add_pointer_t<int __attribute__((address_space(1)))>, int __attribute__((address_space(1))) *));
   static_assert(__is_same(add_pointer_t<S __attribute__((address_space(2)))>, S __attribute__((address_space(2))) *));
@@ -4566,7 +4792,7 @@ void add_pointer() {
 
 template <class T> using remove_pointer_t = __remove_pointer(T);
 
-void remove_pointer() {
+void remove_pointer_common() {
   static_assert(__is_same(remove_pointer_t<void>, void));
   static_assert(__is_same(remove_pointer_t<const void>, const void));
   static_assert(__is_same(remove_pointer_t<volatile void>, volatile void));
@@ -4575,6 +4801,21 @@ void remove_pointer() {
   static_assert(__is_same(remove_pointer_t<const int>, const int));
   static_assert(__is_same(remove_pointer_t<volatile int>, volatile int));
   static_assert(__is_same(remove_pointer_t<const volatile int>, const volatile int));
+
+  static_assert(__is_same(remove_pointer_t<S>, S));
+  static_assert(__is_same(remove_pointer_t<const S>, const S));
+  static_assert(__is_same(remove_pointer_t<volatile S>, volatile S));
+  static_assert(__is_same(remove_pointer_t<const volatile S>, const volatile S));
+  static_assert(__is_same(remove_pointer_t<int S::*>, int S::*));
+
+  static_assert(__is_same(remove_pointer_t<int __attribute__((address_space(1))) *>, int __attribute__((address_space(1)))));
+  static_assert(__is_same(remove_pointer_t<S __attribute__((address_space(2))) *>, S  __attribute__((address_space(2)))));
+
+}
+
+#if !defined(VANILLAOPENCLCPLUSPLUS) && !defined(EXTOPENCLCPLUSPLUS)
+
+void remove_pointer_cpp() {
   static_assert(__is_same(remove_pointer_t<int *>, int));
   static_assert(__is_same(remove_pointer_t<const int *>, const int));
   static_assert(__is_same(remove_pointer_t<volatile int *>, volatile int));
@@ -4584,22 +4825,36 @@ void remove_pointer() {
   static_assert(__is_same(remove_pointer_t<int *const volatile>, int));
   static_assert(__is_same(remove_pointer_t<int &>, int &));
   static_assert(__is_same(remove_pointer_t<int &&>, int &&));
-  static_assert(__is_same(remove_pointer_t<int()>, int()));
-  static_assert(__is_same(remove_pointer_t<int (*)()>, int()));
-  static_assert(__is_same(remove_pointer_t<int (&)()>, int (&)()));
-
-  static_assert(__is_same(remove_pointer_t<S>, S));
-  static_assert(__is_same(remove_pointer_t<const S>, const S));
-  static_assert(__is_same(remove_pointer_t<volatile S>, volatile S));
-  static_assert(__is_same(remove_pointer_t<const volatile S>, const volatile S));
-  static_assert(__is_same(remove_pointer_t<int S::*>, int S::*));
-  static_assert(__is_same(remove_pointer_t<int (S::*)()>, int(S::*)()));
-
-  static_assert(__is_same(remove_pointer_t<int __attribute__((address_space(1))) *>, int __attribute__((address_space(1)))));
-  static_assert(__is_same(remove_pointer_t<S __attribute__((address_space(2))) *>, S  __attribute__((address_space(2)))));
-
-  static_assert(__is_same(remove_pointer_t<int (^)(char)>, int (^)(char)));
 }
+
+#else
+
+void remove_pointer_clcpp() {
+  static_assert(__is_same(remove_pointer_t<int *>, __generic int));
+  static_assert(__is_same(remove_pointer_t<const int *>, __generic const int));
+  static_assert(__is_same(remove_pointer_t<volatile int *>, __generic volatile int));
+  static_assert(__is_same(remove_pointer_t<const volatile int *>, __generic const volatile int));
+  static_assert(__is_same(remove_pointer_t<int *const>, __generic int));
+  static_assert(__is_same(remove_pointer_t<int *volatile>, __generic int));
+  static_assert(__is_same(remove_pointer_t<int *const volatile>, __generic int));
+  static_assert(__is_same(remove_pointer_t<int &>, __generic int &));
+  static_assert(__is_same(remove_pointer_t<int &&>, __generic int &&));
+
+#if !defined(VANILLAOPENCLCPLUSPLUS)
+  static_assert(__is_same(remove_pointer_t<int()>, int()));
+  // It is impossible to specify such type
+  static_assert(__is_same(remove_pointer_t<int (*)()>, int ()));
+  static_assert(__is_same(remove_pointer_t<int (&)()>, int (&)()));
+#endif
+#if !defined(VANILLAOPENCLCPLUSPLUS)
+  static_assert(__is_same(remove_pointer_t<int (S::*)()>, int(S::*)()));
+#endif
+
+#if !defined(VANILLAOPENCLCPLUSPLUS)
+  static_assert(__is_same(remove_pointer_t<int (^)(char)>, int (^)(char)));
+#endif
+}
+#endif
 
 template <class T> using add_lvalue_reference_t = __add_lvalue_reference(T);
 
@@ -4615,16 +4870,20 @@ void add_lvalue_reference() {
   static_assert(__is_same(add_lvalue_reference_t<int *>, int *&));
   static_assert(__is_same(add_lvalue_reference_t<int &>, int &));
   static_assert(__is_same(add_lvalue_reference_t<int &&>, int &)); // reference collapsing
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_same(add_lvalue_reference_t<int()>, int (&)()));
   static_assert(__is_same(add_lvalue_reference_t<int (*)()>, int (*&)()));
   static_assert(__is_same(add_lvalue_reference_t<int (&)()>, int (&)()));
+#endif
 
   static_assert(__is_same(add_lvalue_reference_t<S>, S &));
   static_assert(__is_same(add_lvalue_reference_t<const S>, const S &));
   static_assert(__is_same(add_lvalue_reference_t<volatile S>, volatile S &));
   static_assert(__is_same(add_lvalue_reference_t<const volatile S>, const volatile S &));
   static_assert(__is_same(add_lvalue_reference_t<int S::*>, int S::*&));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_same(add_lvalue_reference_t<int (S::*)()>, int(S::*&)()));
+#endif
 }
 
 template <class T> using add_rvalue_reference_t = __add_rvalue_reference(T);
@@ -4641,27 +4900,35 @@ void add_rvalue_reference() {
   static_assert(__is_same(add_rvalue_reference_t<int *>, int *&&));
   static_assert(__is_same(add_rvalue_reference_t<int &>, int &)); // reference collapsing
   static_assert(__is_same(add_rvalue_reference_t<int &&>, int &&));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_same(add_rvalue_reference_t<int()>, int(&&)()));
   static_assert(__is_same(add_rvalue_reference_t<int (*)()>, int (*&&)()));
   static_assert(__is_same(add_rvalue_reference_t<int (&)()>, int (&)())); // reference collapsing
+#endif
 
   static_assert(__is_same(add_rvalue_reference_t<S>, S &&));
   static_assert(__is_same(add_rvalue_reference_t<const S>, const S &&));
   static_assert(__is_same(add_rvalue_reference_t<volatile S>, volatile S &&));
   static_assert(__is_same(add_rvalue_reference_t<const volatile S>, const volatile S &&));
   static_assert(__is_same(add_rvalue_reference_t<int S::*>, int S::*&&));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_same(add_rvalue_reference_t<int (S::*)()>, int(S::* &&)()));
+#endif
 }
 
 template <class T> using remove_reference_t = __remove_reference_t(T);
 
-void check_remove_reference() {
+void check_remove_reference_common() {
   static_assert(__is_same(remove_reference_t<void>, void));
   static_assert(__is_same(remove_reference_t<const volatile void>, const volatile void));
   static_assert(__is_same(remove_reference_t<int>, int));
   static_assert(__is_same(remove_reference_t<const int>, const int));
   static_assert(__is_same(remove_reference_t<volatile int>, volatile int));
-  static_assert(__is_same(remove_reference_t<const volatile int>, const volatile int));
+}
+
+#if !defined(VANILLAOPENCLCPLUSPLUS) && !defined(EXTOPENCLCPLUSPLUS)
+
+void check_remove_reference_cpp() {
   static_assert(__is_same(remove_reference_t<int *>, int *));
   static_assert(__is_same(remove_reference_t<int *const volatile>, int *const volatile));
   static_assert(__is_same(remove_reference_t<int const *const volatile>, int const *const volatile));
@@ -4690,15 +4957,57 @@ void check_remove_reference() {
   static_assert(__is_same(remove_reference_t<int (S::*const volatile &&)() &>, int(S::*const volatile)() &));
 }
 
+#else
+
+void check_remove_reference_clcpp() {
+  static_assert(__is_same(remove_reference_t<int *>, __generic int *));
+  static_assert(__is_same(remove_reference_t<int *const volatile>, __generic int *const volatile));
+  static_assert(__is_same(remove_reference_t<int const *const volatile>, __generic int const *const volatile));
+  static_assert(__is_same(remove_reference_t<int &>, __generic int));
+  static_assert(__is_same(remove_reference_t<int const volatile &>, __generic int const volatile));
+  static_assert(__is_same(remove_reference_t<int &&>, __generic int));
+  static_assert(__is_same(remove_reference_t<int const volatile &&>, __generic int const volatile));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
+  static_assert(__is_same(remove_reference_t<int()>, int()));
+  static_assert(__is_same(remove_reference_t<int (*const volatile)()>, int (*const volatile)()));
+  static_assert(__is_same(remove_reference_t<int (&)()>, int ()));
+#endif
+
+  static_assert(__is_same(remove_reference_t<S>, S));
+  static_assert(__is_same(remove_reference_t<S &>, __generic S));
+  static_assert(__is_same(remove_reference_t<S &&>, __generic S));
+  static_assert(__is_same(remove_reference_t<const S>, const S));
+  static_assert(__is_same(remove_reference_t<const S &>, __generic const S));
+  static_assert(__is_same(remove_reference_t<const S &&>, __generic const S));
+  static_assert(__is_same(remove_reference_t<volatile S>, volatile S));
+  static_assert(__is_same(remove_reference_t<volatile S &>, __generic volatile S));
+  static_assert(__is_same(remove_reference_t<volatile S &&>, __generic volatile S));
+  static_assert(__is_same(remove_reference_t<const volatile S>, const volatile S));
+  static_assert(__is_same(remove_reference_t<const volatile S &>, __generic const volatile S));
+  static_assert(__is_same(remove_reference_t<const volatile S &&>, __generic const volatile S));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
+  static_assert(__is_same(remove_reference_t<int S::*const volatile &>, int S::*__generic const volatile));
+  static_assert(__is_same(remove_reference_t<int (S::*const volatile &)()>, int(S::*__generic const volatile)()));
+  static_assert(__is_same(remove_reference_t<int (S::*const volatile &&)() &>, int(S::*__generic const volatile)() &));
+#endif
+}
+
+#endif
+
 template <class T> using remove_cvref_t = __remove_cvref(T);
 
-void check_remove_cvref() {
+void check_remove_cvref_common() {
   static_assert(__is_same(remove_cvref_t<void>, void));
   static_assert(__is_same(remove_cvref_t<const volatile void>, void));
   static_assert(__is_same(remove_cvref_t<int>, int));
   static_assert(__is_same(remove_cvref_t<const int>, int));
   static_assert(__is_same(remove_cvref_t<volatile int>, int));
   static_assert(__is_same(remove_cvref_t<const volatile int>, int));
+}
+
+#if !defined(VANILLAOPENCLCPLUSPLUS) && !defined(EXTOPENCLCPLUSPLUS)
+
+void check_remove_cvref_cpp() {
   static_assert(__is_same(remove_cvref_t<int *>, int *));
   static_assert(__is_same(remove_cvref_t<int *const volatile>, int *));
   static_assert(__is_same(remove_cvref_t<int const *const volatile>, int const *));
@@ -4729,16 +5038,59 @@ void check_remove_cvref() {
   static_assert(__is_same(remove_cvref_t<int (S::*const volatile)() &>, int(S::*)() &));
   static_assert(__is_same(remove_cvref_t<int (S::*const volatile)() &&>, int(S::*)() &&));
 }
+#else
+void check_remove_cvref_clcpp() {
+  static_assert(__is_same(remove_cvref_t<int *>, __generic int *));
+  static_assert(__is_same(remove_cvref_t<int *const volatile>, __generic int *));
+  static_assert(__is_same(remove_cvref_t<int const *const volatile>, __generic int const *));
+  static_assert(__is_same(remove_cvref_t<int const *const volatile __restrict>, __generic int const *__restrict));
+  static_assert(__is_same(remove_cvref_t<int const *const volatile _Nonnull>, __generic int const *_Nonnull));
+  static_assert(__is_same(remove_cvref_t<int &>, __generic int));
+  static_assert(__is_same(remove_cvref_t<int const volatile &>, __generic int));
+  static_assert(__is_same(remove_cvref_t<int &&>, __generic int));
+  static_assert(__is_same(remove_cvref_t<int const volatile &&>, __generic int));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
+  static_assert(__is_same(remove_cvref_t<int()>, int()));
+  static_assert(__is_same(remove_cvref_t<int (*const volatile)()>, int (*)()));
+  static_assert(__is_same(remove_cvref_t<int (&)()>, int ()));
+#endif
+
+  static_assert(__is_same(remove_cvref_t<S>, S));
+  static_assert(__is_same(remove_cvref_t<S &>, __generic S));
+  static_assert(__is_same(remove_cvref_t<S &&>, __generic S));
+  static_assert(__is_same(remove_cvref_t<const S>, S));
+  static_assert(__is_same(remove_cvref_t<const S &>, __generic S));
+  static_assert(__is_same(remove_cvref_t<const S &&>, __generic S));
+  static_assert(__is_same(remove_cvref_t<volatile S>, S));
+  static_assert(__is_same(remove_cvref_t<volatile S &>, __generic S));
+  static_assert(__is_same(remove_cvref_t<volatile S &&>, __generic S));
+  static_assert(__is_same(remove_cvref_t<const volatile S>, S));
+  static_assert(__is_same(remove_cvref_t<const volatile S &>, __generic S));
+  static_assert(__is_same(remove_cvref_t<const volatile S &&>, __generic S));
+  static_assert(__is_same(remove_cvref_t<int S::*const volatile>, int S::*));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
+  // TODO: Behaviour of those is most likely incorrect
+  static_assert(__is_same(remove_cvref_t<int (S::*const volatile)()>, int(S::*)()));
+  static_assert(__is_same(remove_cvref_t<int (S::*const volatile)() &>, int(S::*)() &));
+  static_assert(__is_same(remove_cvref_t<int (S::*const volatile)() &&>, int(S::*)() &&));
+#endif
+}
+#endif
 
 template <class T> using decay_t = __decay(T);
 
-void check_decay() {
+void check_decay_common() {
   static_assert(__is_same(decay_t<void>, void));
   static_assert(__is_same(decay_t<const volatile void>, void));
   static_assert(__is_same(decay_t<int>, int));
   static_assert(__is_same(decay_t<const int>, int));
   static_assert(__is_same(decay_t<volatile int>, int));
   static_assert(__is_same(decay_t<const volatile int>, int));
+}
+
+#if !defined(VANILLAOPENCLCPLUSPLUS) && !defined(EXTOPENCLCPLUSPLUS)
+
+void check_decay_cpp() {
   static_assert(__is_same(decay_t<int *>, int *));
   static_assert(__is_same(decay_t<int *const volatile>, int *));
   static_assert(__is_same(decay_t<int *const volatile __restrict>, int *));
@@ -4775,6 +5127,55 @@ void check_decay() {
   static_assert(__is_same(decay_t<int (S::*const volatile &)()>, int(S::*)()));
   static_assert(__is_same(decay_t<int S::*const volatile &&>, int S::*));
 }
+#else
+
+typedef __generic int GenInt;
+typedef GenInt GenIntAr[10];
+typedef GenInt GenIntArNB[];
+
+void check_decay_clcpp() {
+  static_assert(__is_same(decay_t<__generic int *>, int *));
+  static_assert(__is_same(decay_t<int *const volatile>, int *));
+  static_assert(__is_same(decay_t<int *const volatile __restrict>, int *));
+  static_assert(__is_same(decay_t<int const *const volatile>, int const *));
+  static_assert(__is_same(decay_t<int const *const volatile _Nonnull>, int const *));
+  static_assert(__is_same(decay_t<int &>, __generic int));
+  static_assert(__is_same(decay_t<int const volatile &>, __generic int));
+  static_assert(__is_same(decay_t<int &&>, __generic int));
+  static_assert(__is_same(decay_t<int const volatile &&>, __generic int));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
+  static_assert(__is_same(decay_t<int()>, int (*)()));
+  static_assert(__is_same(decay_t<int (*)()>, int (*)()));
+  static_assert(__is_same(decay_t<int (*const)()>, int (*)()));
+  static_assert(__is_same(decay_t<int (*volatile)()>, int (*)()));
+  static_assert(__is_same(decay_t<int (*const volatile)()>, int (*)()));
+  static_assert(__is_same(decay_t<int (&)()>, int (*)()));
+#endif
+  static_assert(__is_same(decay_t<GenIntAr>, int *));
+  static_assert(__is_same(decay_t<GenIntArNB>, int *));
+
+  static_assert(__is_same(decay_t<S &>, __generic S));
+  static_assert(__is_same(decay_t<S &&>, __generic S));
+  static_assert(__is_same(decay_t<const S>, S));
+  static_assert(__is_same(decay_t<const S &>, __generic S));
+  static_assert(__is_same(decay_t<const S &&>, __generic S));
+  static_assert(__is_same(decay_t<volatile S>, S));
+  static_assert(__is_same(decay_t<volatile S &>, __generic S));
+  static_assert(__is_same(decay_t<volatile S &&>, __generic S));
+  static_assert(__is_same(decay_t<const volatile S>, S));
+  static_assert(__is_same(decay_t<const volatile S &>, __generic S));
+  static_assert(__is_same(decay_t<const volatile S &&>, __generic S));
+  static_assert(__is_same(decay_t<int S::*const volatile>, int S::*));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
+  static_assert(__is_same(decay_t<int (S::*const volatile)()>, int(S::*)()));
+#endif
+  static_assert(__is_same(decay_t<int S::*const volatile &>, int S::*__generic));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
+  static_assert(__is_same(decay_t<int (S::*const volatile &)()>, int(S::*__generic)()));
+#endif
+  static_assert(__is_same(decay_t<int S::*const volatile &&>, int S::*__generic));
+}
+#endif
 
 template <class T> struct CheckAbominableFunction {};
 template <class M>
@@ -4793,6 +5194,7 @@ struct CheckAbominableFunction<M S::*> {
   }
 };
 
+#if !defined(VANILLAOPENCLCPLUSPLUS)
 void check_abominable_function() {
   { CheckAbominableFunction<int (S::*)() &> x; }
   { CheckAbominableFunction<int (S::*)() &&> x; }
@@ -4806,6 +5208,7 @@ void check_abominable_function() {
   { CheckAbominableFunction<int (S::*)() const volatile &> x; }
   { CheckAbominableFunction<int (S::*)() const volatile &&> x; }
 }
+#endif
 
 template <class T> using make_signed_t = __make_signed(T);
 template <class T, class Expected>
@@ -4836,10 +5239,12 @@ enum UnscopedLongLong : long long {};
 enum UnscopedULongLong : unsigned long long {};
 enum class ScopedLongLong : long long {};
 enum class ScopedULongLong : unsigned long long {};
+#if !defined(VANILLAOPENCLCPLUSPLUS) && !defined(EXTOPENCLCPLUSPLUS)
 enum class UnscopedInt128 : __int128 {};
 enum class ScopedInt128 : __int128 {};
 enum class UnscopedUInt128 : unsigned __int128 {};
 enum class ScopedUInt128 : unsigned __int128 {};
+#endif
 
 void make_signed() {
   check_make_signed<char, signed char>();
@@ -4853,8 +5258,10 @@ void make_signed() {
   check_make_signed<unsigned long, long>();
   check_make_signed<long long, long long>();
   check_make_signed<unsigned long long, long long>();
+#if !defined(VANILLAOPENCLCPLUSPLUS) && !defined(EXTOPENCLCPLUSPLUS)
   check_make_signed<__int128, __int128>();
   check_make_signed<__uint128_t, __int128>();
+#endif
   check_make_signed<_BitInt(65), _BitInt(65)>();
   check_make_signed<unsigned _BitInt(65), _BitInt(65)>();
 
@@ -4872,6 +5279,7 @@ void make_signed() {
   check_make_signed<UnscopedUChar, signed char>();
   check_make_signed<ScopedUChar, signed char>();
 
+#if !defined(VANILLAOPENCLCPLUSPLUS) && !defined(EXTOPENCLCPLUSPLUS)
   check_make_signed<UnscopedLongLong, Int64>();
   check_make_signed<UnscopedULongLong, Int64>();
   check_make_signed<ScopedLongLong, Int64>();
@@ -4881,6 +5289,7 @@ void make_signed() {
   check_make_signed<ScopedInt128, __int128>();
   check_make_signed<UnscopedUInt128, __int128>();
   check_make_signed<ScopedUInt128, __int128>();
+#endif
 
   { using ExpectedError = __make_signed(bool); }
   // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'bool'}}
@@ -4897,11 +5306,14 @@ void make_signed() {
   { using ExpectedError = __make_signed(void); }
   // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'void'}}
   { using ExpectedError = __make_signed(int *); }
-  // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'int *'}}
+  // expected-noncl-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'int *'}}
+  // expected-cl-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given '__generic int *'}}
   { using ExpectedError = __make_signed(int &); }
-  // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'int &'}}
+  // expected-noncl-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'int &'}}
+  // expected-cl-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given '__generic int &'}}
   { using ExpectedError = __make_signed(int &&); }
-  // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'int &&'}}
+  // expected-noncl-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'int &&'}}
+  // expected-cl-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given '__generic int &&'}}
   { using ExpectedError = __make_signed(float); }
   // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'float'}}
   { using ExpectedError = __make_signed(double); }
@@ -4911,11 +5323,14 @@ void make_signed() {
   { using ExpectedError = __make_signed(S); }
   // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'S'}}
   { using ExpectedError = __make_signed(S *); }
-  // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'S *'}}
+  // expected-noncl-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'S *'}}
+  // expected-cl-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given '__generic S *'}}
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   { using ExpectedError = __make_signed(int S::*); }
   // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'int S::*'}}
   { using ExpectedError = __make_signed(int(S::*)()); }
   // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'int (S::*)()'}}
+#endif
 }
 
 template <class T>
@@ -4941,8 +5356,10 @@ void make_unsigned() {
   check_make_unsigned<unsigned long, unsigned long>();
   check_make_unsigned<long long, unsigned long long>();
   check_make_unsigned<unsigned long long, unsigned long long>();
+#if !defined(VANILLAOPENCLCPLUSPLUS) && !defined(EXTOPENCLCPLUSPLUS)
   check_make_unsigned<__int128, __uint128_t>();
   check_make_unsigned<__uint128_t, __uint128_t>();
+#endif
   check_make_unsigned<_BitInt(65), unsigned _BitInt(65)>();
   check_make_unsigned<unsigned _BitInt(65), unsigned _BitInt(65)>();
 
@@ -4960,6 +5377,7 @@ void make_unsigned() {
   check_make_unsigned<UnscopedUChar, unsigned char>();
   check_make_unsigned<ScopedUChar, unsigned char>();
 
+#if !defined(VANILLAOPENCLCPLUSPLUS) && !defined(EXTOPENCLCPLUSPLUS)
   check_make_unsigned<UnscopedLongLong, UInt64>();
   check_make_unsigned<UnscopedULongLong, UInt64>();
   check_make_unsigned<ScopedLongLong, UInt64>();
@@ -4969,6 +5387,7 @@ void make_unsigned() {
   check_make_unsigned<ScopedInt128, unsigned __int128>();
   check_make_unsigned<UnscopedUInt128, unsigned __int128>();
   check_make_unsigned<ScopedUInt128, unsigned __int128>();
+#endif
 
   { using ExpectedError = __make_unsigned(bool); }
   // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'bool'}}
@@ -4985,11 +5404,14 @@ void make_unsigned() {
   { using ExpectedError = __make_unsigned(void); }
   // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'void'}}
   { using ExpectedError = __make_unsigned(int *); }
-  // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'int *'}}
+  // expected-noncl-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'int *'}}
+  // expected-cl-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given '__generic int *'}}
   { using ExpectedError = __make_unsigned(int &); }
-  // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'int &'}}
+  // expected-noncl-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'int &'}}
+  // expected-cl-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given '__generic int &'}}
   { using ExpectedError = __make_unsigned(int &&); }
-  // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'int &&'}}
+  // expected-noncl-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'int &&'}}
+  // expected-cl-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given '__generic int &&'}}
   { using ExpectedError = __make_unsigned(float); }
   // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'float'}}
   { using ExpectedError = __make_unsigned(double); }
@@ -4999,11 +5421,14 @@ void make_unsigned() {
   { using ExpectedError = __make_unsigned(S); }
   // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'S'}}
   { using ExpectedError = __make_unsigned(S *); }
-  // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'S *'}}
+  // expected-noncl-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'S *'}}
+  // expected-cl-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given '__generic S *'}}
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   { using ExpectedError = __make_unsigned(int S::*); }
   // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'int S::*'}}
   { using ExpectedError = __make_unsigned(int(S::*)()); }
   // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'int (S::*)()'}}
+#endif
 }
 
 template <class T> using remove_extent_t = __remove_extent(T);
@@ -5030,13 +5455,17 @@ void remove_extent() {
   static_assert(__is_same(remove_extent_t<int *>, int *));
   static_assert(__is_same(remove_extent_t<int &>, int &));
   static_assert(__is_same(remove_extent_t<int &&>, int &&));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_same(remove_extent_t<int()>, int()));
   static_assert(__is_same(remove_extent_t<int (*)()>, int (*)()));
   static_assert(__is_same(remove_extent_t<int (&)()>, int (&)()));
+#endif
 
   static_assert(__is_same(remove_extent_t<S>, S));
   static_assert(__is_same(remove_extent_t<int S::*>, int S::*));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_same(remove_extent_t<int (S::*)()>, int(S::*)()));
+#endif
 
   using SomeArray = int[1][2];
   static_assert(__is_same(remove_extent_t<const SomeArray>, const int[2]));
@@ -5069,13 +5498,17 @@ void remove_all_extents() {
   static_assert(__is_same(remove_all_extents_t<int *>, int *));
   static_assert(__is_same(remove_all_extents_t<int &>, int &));
   static_assert(__is_same(remove_all_extents_t<int &&>, int &&));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_same(remove_all_extents_t<int()>, int()));
   static_assert(__is_same(remove_all_extents_t<int (*)()>, int (*)()));
   static_assert(__is_same(remove_all_extents_t<int (&)()>, int (&)()));
+#endif
 
   static_assert(__is_same(remove_all_extents_t<S>, S));
   static_assert(__is_same(remove_all_extents_t<int S::*>, int S::*));
+#if !defined(VANILLAOPENCLCPLUSPLUS)
   static_assert(__is_same(remove_all_extents_t<int (S::*)()>, int(S::*)()));
+#endif
 
   using SomeArray = int[1][2];
   static_assert(__is_same(remove_all_extents_t<const SomeArray>, const int));
