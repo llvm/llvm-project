@@ -1110,12 +1110,10 @@ static Address createReferenceTemporary(CIRGenFunction &cgf,
     // The temporary memory should be created in the same scope as the extending
     // declaration of the temporary materialization expression.
     cir::AllocaOp extDeclAlloca;
-    if (const clang::ValueDecl *extDecl = m->getExtendingDecl()) {
+    if (const ValueDecl *extDecl = m->getExtendingDecl()) {
       auto extDeclAddrIter = cgf.localDeclMap.find(extDecl);
-      if (extDeclAddrIter != cgf.localDeclMap.end()) {
-        extDeclAlloca = mlir::dyn_cast_if_present<cir::AllocaOp>(
-            extDeclAddrIter->second.getDefiningOp());
-      }
+      if (extDeclAddrIter != cgf.localDeclMap.end())
+        extDeclAlloca = extDeclAddrIter->second.getDefiningOp<cir::AllocaOp>();
     }
     mlir::OpBuilder::InsertPoint ip;
     if (extDeclAlloca)
@@ -1151,12 +1149,12 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
     return;
   }
 
-  clang::CXXDestructorDecl *referenceTemporaryDtor = nullptr;
+  CXXDestructorDecl *referenceTemporaryDtor = nullptr;
   if (const clang::RecordType *rt = e->getType()
                                         ->getBaseElementTypeUnsafe()
                                         ->getAs<clang::RecordType>()) {
     // Get the destructor for the reference temporary.
-    auto *classDecl = cast<clang::CXXRecordDecl>(rt->getDecl());
+    auto *classDecl = cast<CXXRecordDecl>(rt->getDecl());
     if (!classDecl->hasTrivialDestructor())
       referenceTemporaryDtor = classDecl->getDestructor();
   }
@@ -1221,8 +1219,7 @@ LValue CIRGenFunction::emitMaterializeTemporaryExpr(
   // Create and initialize the reference temporary.
   Address object = createReferenceTemporary(*this, m, e);
 
-  if (auto var =
-          mlir::dyn_cast<cir::GlobalOp>(object.getPointer().getDefiningOp())) {
+  if (auto var = object.getPointer().getDefiningOp<cir::GlobalOp>()) {
     // TODO(cir): add something akin to stripPointerCasts() to ptr above
     cgm.errorNYI(e->getSourceRange(), "emitMaterializeTemporaryExpr: GlobalOp");
     return {};

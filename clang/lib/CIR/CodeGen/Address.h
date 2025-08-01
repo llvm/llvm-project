@@ -108,6 +108,10 @@ public:
       return nullptr;
     return getPointer().getDefiningOp();
   }
+
+  template <typename OpTy> OpTy getDefiningOp() const {
+    return mlir::dyn_cast_or_null<OpTy>(getDefiningOp());
+  }
 };
 
 } // namespace clang::CIRGen
