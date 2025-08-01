@@ -28,6 +28,7 @@
 #include "llvm/Support/ManagedStatic.h" // llvm_shutdown
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include <optional>
 
@@ -347,11 +348,10 @@ int main(int argc, const char **argv) {
     }
   }
 
-  // If we add more % commands, there should be better architecture than this.
-
   if (OptInputs.empty()) {
     llvm::LineEditor LE("clang-repl");
     std::string Input;
+    llvm::raw_ostream &OS = llvm::outs();
     LE.setListCompleter(ReplListCompleter(CB, *Interp));
     while (std::optional<std::string> Line = LE.readLine()) {
       llvm::StringRef L = *Line;
@@ -366,6 +366,8 @@ int main(int argc, const char **argv) {
       }
 
       Input += L;
+      // If we add more % commands, there should be better architecture than
+      // this.
       if (Input == R"(%quit)") {
         break;
       }
@@ -373,13 +375,10 @@ int main(int argc, const char **argv) {
         if (auto Err = Interp->Undo())
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       } else if (Input == R"(%help)") {
-        auto Err = llvm::make_error<llvm::StringError>(
-            "%help\t\tlist clang-repl %commands\n"
-            "%undo\t\tundo the previous input\n"
-            "%lib\t<path>\tlink a dynamic library\n"
-            "%quit\t\texit clang-repl\n",
-            std::error_code());
-        llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "");
+        OS << "%help\t\tlist clang-repl %commands\n"
+           << "%undo\t\tundo the previous input\n"
+           << "%lib\t<path>\tlink a dynamic library\n"
+           << "%quit\t\texit clang-repl\n";
       } else if (Input == R"(%lib)") {
         auto Err = llvm::make_error<llvm::StringError>(
             "%lib expects 1 argument: the path to a dynamic library\n",
