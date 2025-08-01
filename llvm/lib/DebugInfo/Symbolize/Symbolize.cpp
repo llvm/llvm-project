@@ -616,7 +616,8 @@ Expected<ObjectFile *> LLVMSymbolizer::getOrCreateObjectFromArchive(
         RequestedTriple.setArch(Triple::getArchTypeForLLVMName(ArchName));
         if (ObjArch != RequestedTriple.getArch())
           continue;
-        ArchiveCacheKey CacheKey{ArchivePath.str(), MemberName.str(), ArchName.str()};
+        ArchiveCacheKey CacheKey{ArchivePath.str(), MemberName.str(),
+                                 ArchName.str()};
         auto I = ObjectForArchivePathAndArch.find(CacheKey);
         if (I != ObjectForArchivePathAndArch.end())
           return I->second.get();
