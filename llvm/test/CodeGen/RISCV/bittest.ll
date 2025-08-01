@@ -3507,3 +3507,119 @@ define void @bit_64_1_nz_branch_i64(i64 %0) {
 5:
   ret void
 }
+
+define i32 @bittest_31_andeq0_i64(i64 %x) {
+; RV32I-LABEL: bittest_31_andeq0_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 524288
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: bittest_31_andeq0_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srliw a0, a0, 31
+; RV64I-NEXT:    slli a0, a0, 31
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    ret
+;
+; ZBS-LABEL: bittest_31_andeq0_i64:
+; ZBS:       # %bb.0:
+; ZBS-NEXT:    not a0, a0
+; ZBS-NEXT:    bexti a0, a0, 31
+; ZBS-NEXT:    ret
+;
+; XTHEADBS-LABEL: bittest_31_andeq0_i64:
+; XTHEADBS:       # %bb.0:
+; XTHEADBS-NEXT:    not a0, a0
+; XTHEADBS-NEXT:    th.tst a0, a0, 31
+; XTHEADBS-NEXT:    ret
+  %and = and i64 %x, 2147483648
+  %cmp = icmp eq i64 %and, 0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @bittest_63_andeq0_i64(i64 %x) {
+; RV32I-LABEL: bittest_63_andeq0_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a0, 524288
+; RV32I-NEXT:    and a0, a1, a0
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: bittest_63_andeq0_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srli a0, a0, 63
+; RV64I-NEXT:    slli a0, a0, 63
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    ret
+;
+; RV32ZBS-LABEL: bittest_63_andeq0_i64:
+; RV32ZBS:       # %bb.0:
+; RV32ZBS-NEXT:    not a0, a1
+; RV32ZBS-NEXT:    bexti a0, a0, 31
+; RV32ZBS-NEXT:    ret
+;
+; RV64ZBS-LABEL: bittest_63_andeq0_i64:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    not a0, a0
+; RV64ZBS-NEXT:    bexti a0, a0, 63
+; RV64ZBS-NEXT:    ret
+;
+; RV32XTHEADBS-LABEL: bittest_63_andeq0_i64:
+; RV32XTHEADBS:       # %bb.0:
+; RV32XTHEADBS-NEXT:    not a0, a1
+; RV32XTHEADBS-NEXT:    th.tst a0, a0, 31
+; RV32XTHEADBS-NEXT:    ret
+;
+; RV64XTHEADBS-LABEL: bittest_63_andeq0_i64:
+; RV64XTHEADBS:       # %bb.0:
+; RV64XTHEADBS-NEXT:    not a0, a0
+; RV64XTHEADBS-NEXT:    th.tst a0, a0, 63
+; RV64XTHEADBS-NEXT:    ret
+  %and = and i64 %x, 9223372036854775808
+  %cmp = icmp eq i64 %and, 0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @bittest_31_slt0_i32(i32 %x, i1 %y) {
+; RV32-LABEL: bittest_31_slt0_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slti a0, a0, 0
+; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bittest_31_slt0_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    slti a0, a0, 0
+; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    ret
+  %cmp = icmp slt i32 %x, 0
+  %and = and i1 %cmp, %y
+  %ext = zext i1 %and to i32
+  ret i32 %ext
+}
+
+define i32 @bittest_63_slt0_i64(i32 %x, i1 %y) {
+; RV32-LABEL: bittest_63_slt0_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srai a0, a0, 31
+; RV32-NEXT:    slti a0, a0, 0
+; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bittest_63_slt0_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    slti a0, a0, 0
+; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    ret
+  %ext = sext i32 %x to i64
+  %cmp = icmp slt i64 %ext, 0
+  %and = and i1 %cmp, %y
+  %cond = zext i1 %and to i32
+  ret i32 %cond
+}
