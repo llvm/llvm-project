@@ -21,7 +21,7 @@ spirv.module Logical GLSL450 attributes {
 // Test deducing minimal version.
 // spirv.GroupNonUniformBallot is available since v1.3.
 
-// CHECK: requires #spirv.vce<v1.3, [Shader, Matrix, GroupNonUniform, GroupNonUniformBallot], []>
+// CHECK: requires #spirv.vce<v1.3, [Shader, Matrix, GroupNonUniformBallot, GroupNonUniform], []>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.5, [Shader, GroupNonUniformBallot], []>, #spirv.resource_limits<>>
@@ -95,7 +95,7 @@ spirv.module Logical GLSL450 attributes {
 // * GroupNonUniformArithmetic
 // * GroupNonUniformBallot
 
-// CHECK: requires #spirv.vce<v1.3, [Shader, Matrix, GroupNonUniform, GroupNonUniformArithmetic], []>
+// CHECK: requires #spirv.vce<v1.3, [Shader, Matrix, GroupNonUniformArithmetic, GroupNonUniform], []>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.3, [Shader, GroupNonUniformArithmetic], []>, #spirv.resource_limits<>>
@@ -106,7 +106,7 @@ spirv.module Logical GLSL450 attributes {
   }
 }
 
-// CHECK: requires #spirv.vce<v1.3, [Shader, Matrix, GroupNonUniformClustered, GroupNonUniform, GroupNonUniformBallot], []>
+// CHECK: requires #spirv.vce<v1.3, [Shader, Matrix, GroupNonUniformBallot, GroupNonUniform, GroupNonUniformClustered], []>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.3, [Shader, GroupNonUniformClustered, GroupNonUniformBallot], []>, #spirv.resource_limits<>>
@@ -144,7 +144,7 @@ spirv.module Logical GLSL450 attributes {
 }
 
 // Using 16-element vectors requires Vector16.
-// CHECK: requires #spirv.vce<v1.0, [Shader, Matrix, Kernel, Vector16], []>
+// CHECK: requires #spirv.vce<v1.0, [Shader, Matrix, Vector16, Kernel], []>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.3, [Shader, Vector16], []>, #spirv.resource_limits<>>
@@ -208,7 +208,7 @@ spirv.module Logical GLSL450 attributes {
 // Complicated nested types
 // * Buffer requires ImageBuffer or SampledBuffer.
 // * Rg32f requires StorageImageExtendedFormats.
-// CHECK: requires #spirv.vce<v1.0, [Shader, Matrix, Int64, StorageUniform16, StorageBuffer16BitAccess, UniformAndStorageBuffer8BitAccess, StorageBuffer8BitAccess, SampledBuffer, ImageBuffer, StorageImageExtendedFormats], [SPV_KHR_8bit_storage, SPV_KHR_16bit_storage]>
+// CHECK: requires #spirv.vce<v1.0, [StorageImageExtendedFormats, ImageBuffer, SampledBuffer, Shader, Matrix, Int64, StorageUniform16, StorageBuffer16BitAccess, UniformAndStorageBuffer8BitAccess, StorageBuffer8BitAccess], [SPV_KHR_8bit_storage, SPV_KHR_16bit_storage]>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.5, [Shader, UniformAndStorageBuffer8BitAccess, StorageBuffer16BitAccess, StorageUniform16, Int16, Int64, ImageBuffer, StorageImageExtendedFormats], []>,
@@ -219,7 +219,7 @@ spirv.module Logical GLSL450 attributes {
 }
 
 // Using bfloat16 requires BFloat16TypeKHR capability and SPV_KHR_bfloat16 extension.
-// CHECK: requires #spirv.vce<v1.0, [StorageBuffer16BitAccess, Matrix, Shader, BFloat16TypeKHR], [SPV_KHR_bfloat16, SPV_KHR_16bit_storage, SPV_KHR_storage_buffer_storage_class]>
+// CHECK: requires #spirv.vce<v1.0, [BFloat16TypeKHR, Shader, Matrix, StorageBuffer16BitAccess], [SPV_KHR_bfloat16, SPV_KHR_16bit_storage, SPV_KHR_storage_buffer_storage_class]>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.0, [Shader, StorageBuffer16BitAccess, BFloat16TypeKHR], [SPV_KHR_bfloat16, SPV_KHR_16bit_storage, SPV_KHR_storage_buffer_storage_class]>,
