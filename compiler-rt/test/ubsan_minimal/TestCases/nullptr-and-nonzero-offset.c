@@ -1,5 +1,5 @@
-// RUN: %clang   -fsanitize=pointer-overflow %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="pointer-overflow"
-// RUN: %clangxx -x c++ -fsanitize=pointer-overflow %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="pointer-overflow"
+// RUN: %clang_min_runtime   -fsanitize=pointer-overflow %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="pointer-overflow"
+// RUN: %clangxx_min_runtime -x c++ -fsanitize=pointer-overflow %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="pointer-overflow"
 
 #include <stdlib.h>
 

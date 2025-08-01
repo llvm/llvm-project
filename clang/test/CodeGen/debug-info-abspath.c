@@ -2,19 +2,14 @@
 // RUN: cp %s %t/UNIQUEISH_SENTINEL/debug-info-abspath.c
 
 // RUN: %clang_cc1 -debug-info-kind=limited -triple %itanium_abi_triple \
+// RUN:   -fdebug-compilation-dir=%t/UNIQUEISH_SENTINEL/debug-info-abspath.c \
 // RUN:   %t/UNIQUEISH_SENTINEL/debug-info-abspath.c -emit-llvm -o - \
 // RUN:   | FileCheck %s
 
 // RUN: cp %s %t.c
 // RUN: %clang_cc1 -debug-info-kind=limited -triple %itanium_abi_triple \
+// RUN:   -fdebug-compilation-dir=%t \
 // RUN:   %t.c -emit-llvm -o - | FileCheck %s --check-prefix=INTREE
-
-// RUN: cd %t/UNIQUEISH_SENTINEL
-// RUN: %clang_cc1 -debug-info-kind=limited -triple %itanium_abi_triple \
-// RUN:   debug-info-abspath.c -emit-llvm -o - \
-// RUN:   | FileCheck %s --check-prefix=CURDIR
-// RUN: %clang_cc1 -debug-info-kind=limited -triple %itanium_abi_triple \
-// RUN:   %s -emit-llvm -o - | FileCheck %s --check-prefix=CURDIR
 
 void foo(void) {}
 
@@ -28,7 +23,3 @@ void foo(void) {}
 
 // INTREE: = distinct !DISubprogram({{.*}}![[SPFILE:[0-9]+]]
 // INTREE: DIFile({{.*}}directory: "{{.+}}CodeGen{{.*}}")
-
-// CURDIR: = distinct !DICompileUnit({{.*}}file: ![[CUFILE:[0-9]+]]
-// CURDIR: ![[CUFILE]] = !DIFile({{.*}}directory: "{{.+}}UNIQUEISH_SENTINEL")
-

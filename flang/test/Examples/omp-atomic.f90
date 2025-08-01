@@ -31,13 +31,13 @@ end
 ! CHECK-NEXT:    - clause:      read
 ! CHECK-NEXT:      details:     ''
 ! CHECK-NEXT:    - clause:      seq_cst
-! CHECK-NEXT:      details:     'name_modifier=atomic;'
+! CHECK-NEXT:      details:     ''
 ! CHECK-NEXT:- file:            '{{[^"]*}}omp-atomic.f90'
 ! CHECK-NEXT:  line:            12
 ! CHECK-NEXT:  construct:       atomic
 ! CHECK-NEXT:  clauses:
 ! CHECK-NEXT:    - clause:      seq_cst
-! CHECK-NEXT:      details:     'name_modifier=atomic;'
+! CHECK-NEXT:      details:     ''
 ! CHECK-NEXT:    - clause:      write
 ! CHECK-NEXT:      details:     ''
 ! CHECK-NEXT:- file:            '{{[^"]*}}omp-atomic.f90'
@@ -45,7 +45,7 @@ end
 ! CHECK-NEXT:  construct:       atomic
 ! CHECK-NEXT:  clauses:
 ! CHECK-NEXT:    - clause:      capture
-! CHECK-NEXT:      details:     'name_modifier=atomic;name_modifier=atomic;'
+! CHECK-NEXT:      details:     ''
 ! CHECK-NEXT:    - clause:      seq_cst
 ! CHECK-NEXT:      details:     ''
 ! CHECK-NEXT:- file:            '{{[^"]*}}omp-atomic.f90'

@@ -772,8 +772,19 @@ Doacross make(const parser::OmpClause::Doacross &inp,
 
 Enter make(const parser::OmpClause::Enter &inp,
            semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::OmpObjectList
-  return Enter{makeObjects(/*List=*/inp.v, semaCtx)};
+  // inp.v -> parser::OmpEnterClause
+  CLAUSET_ENUM_CONVERT( //
+      convert, parser::OmpAutomapModifier::Value, Enter::Modifier,
+      // clang-format off
+      MS(Automap, Automap)
+      // clang-format on
+  );
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *mod = semantics::OmpGetUniqueModifier<parser::OmpAutomapModifier>(mods);
+  auto &objList = std::get<parser::OmpObjectList>(inp.v.t);
+
+  return Enter{{/*Modifier=*/maybeApplyToV(convert, mod),
+                /*List=*/makeObjects(objList, semaCtx)}};
 }
 
 Exclusive make(const parser::OmpClause::Exclusive &inp,

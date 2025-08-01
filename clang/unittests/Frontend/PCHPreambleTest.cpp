@@ -62,7 +62,7 @@ public:
   void TearDown() override {}
 
   void ResetVFS() {
-    VFS = new ReadCountingInMemoryFileSystem();
+    VFS = llvm::makeIntrusiveRefCnt<ReadCountingInMemoryFileSystem>();
     // We need the working directory to be set to something absolute,
     // otherwise it ends up being inadvertently set to the current
     // working directory in the real file system due to a series of

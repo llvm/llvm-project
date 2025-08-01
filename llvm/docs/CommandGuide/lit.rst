@@ -356,6 +356,11 @@ The timing data is stored in the `test_exec_root` in a file named
   primary purpose is to suppress an ``XPASS`` result without modifying a test
   case that uses the ``XFAIL`` directive.
 
+.. option:: --exclude-xfail
+
+  ``XFAIL`` tests won't be run, unless they are listed in the ``--xfail-not``
+  (or ``LIT_XFAIL_NOT``) lists.
+
 .. option:: --num-shards M
 
  Divide the set of selected tests into ``M`` equal-sized subsets or

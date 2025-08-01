@@ -1294,13 +1294,13 @@ define float @v_sqrt_f32__enough_unsafe_attrs(float %x) #3 {
   ret float %result
 }
 
-define float @v_sqrt_f32__unsafe_attr(float %x) #4 {
+define float @v_sqrt_f32__unsafe_attr(float %x) {
 ; GCN-LABEL: v_sqrt_f32__unsafe_attr:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call nsz float @llvm.sqrt.f32(float %x)
+  %result = call afn nsz float @llvm.sqrt.f32(float %x)
   ret float %result
 }
 
@@ -4763,7 +4763,6 @@ attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memo
 attributes #1 = { convergent nounwind willreturn memory(none) }
 attributes #2 = { "approx-func-fp-math"="true" }
 attributes #3 = { "approx-func-fp-math"="true" "no-nans-fp-math"="true" "no-infs-fp-math"="true" }
-attributes #4 = { "unsafe-fp-math"="true" }
 attributes #5 = { "no-infs-fp-math"="true" }
 
 !0 = !{float 0.5}

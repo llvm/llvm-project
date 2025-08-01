@@ -52,8 +52,8 @@ MatchResult MatchAssertionMessage(const std::string& text, std::string_view expe
   // library.
   std::string assertion_format_string = [&] {
     if (use_marker)
-      return (".*###\\n(.*):(\\d+): assertion (.*) failed: (.*)\\n###");
-    return ("(.*):(\\d+): assertion (.*) failed: (.*)\\n");
+      return (".*###\\n(.*):(\\d+): libc\\+\\+ Hardening assertion (.*) failed: (.*)\\n###");
+    return ("(.*):(\\d+): libc\\+\\+ Hardening assertion (.*) failed: (.*)\\n");
   }();
   std::regex assertion_format(assertion_format_string);
 

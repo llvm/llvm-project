@@ -83,6 +83,9 @@ def LLVM_Dialect : Dialect {
       return "llvm.emit_c_interface";
     }
 
+    /// Name of the module level assembly attribute.
+    static StringRef getModuleLevelAsmAttrName() { return "llvm.module_asm"; }
+
     /// Name of the dependent libraries attribute.
     static StringRef getDependentLibrariesAttrName() {
       return "llvm.dependent_libraries";

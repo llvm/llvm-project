@@ -1,3 +1,5 @@
+# UNSUPPORTED: system-windows
+
 # RUN: %clang_host -g -O0 %S/Inputs/ubsan_add_overflow.c -o %t.out \
 # RUN:  -fsanitize=signed-integer-overflow -fsanitize-trap=signed-integer-overflow
 

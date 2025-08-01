@@ -112,7 +112,7 @@ def main():
     # but passing them in with dashes for this script causes argparse to think that they're
     # arguments in and of themself, so they need to passed in without dashes.
     if args.unifdef_guards:
-        unifdef_guards = ["-" + guard for guard in args.unifdef_guards]
+        unifdef_guards = ["-U" + guard for guard in args.unifdef_guards]
 
     # Create the framework's header dir if it doesn't already exist
     if not os.path.exists(os.path.dirname(output_file_path)):

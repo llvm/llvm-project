@@ -95,6 +95,10 @@ public:
            symbolKind == LazyDLLSymbolKind;
   }
 
+  // Get the Defined symbol associated with this symbol, either itself or its
+  // weak alias.
+  Defined *getDefined();
+
 private:
   void computeName();
 

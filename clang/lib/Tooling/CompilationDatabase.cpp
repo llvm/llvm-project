@@ -241,9 +241,8 @@ static bool stripPositionalArgs(std::vector<const char *> Args,
   llvm::raw_string_ostream Output(ErrorMsg);
   TextDiagnosticPrinter DiagnosticPrinter(Output, DiagOpts);
   UnusedInputDiagConsumer DiagClient(DiagnosticPrinter);
-  DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), DiagOpts,
-      &DiagClient, false);
+  DiagnosticsEngine Diagnostics(DiagnosticIDs::create(), DiagOpts, &DiagClient,
+                                false);
 
   // The clang executable path isn't required since the jobs the driver builds
   // will not be executed.

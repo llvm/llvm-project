@@ -310,7 +310,8 @@ public:
 
   // Exploring the type
 
-  virtual const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size) = 0;
+  virtual const llvm::fltSemantics &
+  GetFloatTypeSemantics(size_t byte_size, lldb::Format format) = 0;
 
   virtual llvm::Expected<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,

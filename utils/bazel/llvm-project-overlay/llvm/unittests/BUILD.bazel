@@ -133,6 +133,7 @@ cc_test(
         "//llvm:AsmParser",
         "//llvm:CodeGen",
         "//llvm:Core",
+        "//llvm:FrontendHLSL",
         "//llvm:Instrumentation",
         "//llvm:Passes",
         "//llvm:Support",

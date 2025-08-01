@@ -439,7 +439,7 @@ public:
       value = builder.getTrue(cgf.getLoc(e->getExprLoc()));
     } else if (type->isIntegerType()) {
       QualType promotedType;
-      bool canPerformLossyDemotionCheck = false;
+      [[maybe_unused]] bool canPerformLossyDemotionCheck = false;
       if (cgf.getContext().isPromotableIntegerType(type)) {
         promotedType = cgf.getContext().getPromotedIntegerType(type);
         assert(promotedType != type && "Shouldn't promote to the same type.");

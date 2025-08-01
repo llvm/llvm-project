@@ -304,6 +304,16 @@ def parse_args():
         default=os.environ.get("LIT_XFAIL_NOT", ""),
     )
     selection_group.add_argument(
+        "--exclude-xfail",
+        help="exclude XFAIL tests (unless they are in the --xfail-not list). "
+        "Note: This option is implemented in "
+        "lit.TestRunner.parseIntegratedTestScript and so will have no effect on "
+        "test formats that do not call that and do not implement the option "
+        "separately.",
+        default=False,
+        action="store_true",
+    )
+    selection_group.add_argument(
         "--num-shards",
         dest="numShards",
         metavar="M",

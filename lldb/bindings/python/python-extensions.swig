@@ -594,6 +594,7 @@ def is_numeric_type(basic_type):
     if basic_type == eBasicTypeFloat: return (True,True)
     if basic_type == eBasicTypeDouble: return (True,True)
     if basic_type == eBasicTypeLongDouble: return (True,True)
+    if basic_type == eBasicTypeFloat128: return (True,True)
     if basic_type == eBasicTypeFloatComplex: return (True,True)
     if basic_type == eBasicTypeDoubleComplex: return (True,True)
     if basic_type == eBasicTypeLongDoubleComplex: return (True,True)

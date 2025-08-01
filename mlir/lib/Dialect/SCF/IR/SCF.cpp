@@ -137,6 +137,9 @@ ParseResult ExecuteRegionOp::parse(OpAsmParser &parser,
   if (parser.parseOptionalArrowTypeList(result.types))
     return failure();
 
+  if (succeeded(parser.parseOptionalKeyword("no_inline")))
+    result.addAttribute("no_inline", parser.getBuilder().getUnitAttr());
+
   // Introduce the body region and parse it.
   Region *body = result.addRegion();
   if (parser.parseRegion(*body, /*arguments=*/{}, /*argTypes=*/{}) ||
@@ -148,8 +151,9 @@ ParseResult ExecuteRegionOp::parse(OpAsmParser &parser,
 
 void ExecuteRegionOp::print(OpAsmPrinter &p) {
   p.printOptionalArrowTypeList(getResultTypes());
-
   p << ' ';
+  if (getNoInline())
+    p << "no_inline ";
   p.printRegion(getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/true);
@@ -184,7 +188,7 @@ struct SingleBlockExecuteInliner : public OpRewritePattern<ExecuteRegionOp> {
 
   LogicalResult matchAndRewrite(ExecuteRegionOp op,
                                 PatternRewriter &rewriter) const override {
-    if (!op.getRegion().hasOneBlock())
+    if (!op.getRegion().hasOneBlock() || op.getNoInline())
       return failure();
     replaceOpWithRegion(rewriter, op, op.getRegion());
     return success();

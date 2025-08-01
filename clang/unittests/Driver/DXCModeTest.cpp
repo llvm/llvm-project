@@ -55,17 +55,15 @@ static void validateTargetProfile(
 }
 
 TEST(DxcModeTest, TargetProfileValidation) {
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
 
   InMemoryFileSystem->addFile("foo.hlsl", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
 
   auto *DiagConsumer = new SimpleDiagnosticConsumer;
   DiagnosticOptions DiagOpts;
-  DiagnosticsEngine Diags(DiagID, DiagOpts, DiagConsumer);
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DiagConsumer);
 
   validateTargetProfile("-Tvs_6_0", "dxilv1.0--shadermodel6.0-vertex",
                         InMemoryFileSystem, Diags);
@@ -105,17 +103,15 @@ TEST(DxcModeTest, TargetProfileValidation) {
 }
 
 TEST(DxcModeTest, ValidatorVersionValidation) {
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
 
   InMemoryFileSystem->addFile("foo.hlsl", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
 
   auto *DiagConsumer = new SimpleDiagnosticConsumer;
   DiagnosticOptions DiagOpts;
-  DiagnosticsEngine Diags(DiagID, DiagOpts, DiagConsumer);
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DiagConsumer);
   Driver TheDriver("/bin/clang", "", Diags, "", InMemoryFileSystem);
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(
       {"clang", "--driver-mode=dxc", "-Tlib_6_7", "foo.hlsl"}));
@@ -210,8 +206,8 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
 }
 
 TEST(DxcModeTest, DefaultEntry) {
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
 
   InMemoryFileSystem->addFile("foo.hlsl", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));

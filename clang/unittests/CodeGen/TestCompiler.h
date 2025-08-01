@@ -58,7 +58,7 @@ struct TestCompiler {
 
     CG.reset(CreateLLVMCodeGen(
         compiler.getDiagnostics(), "main-module",
-        &compiler.getVirtualFileSystem(), compiler.getHeaderSearchOpts(),
+        compiler.getVirtualFileSystemPtr(), compiler.getHeaderSearchOpts(),
         compiler.getPreprocessorOpts(), compiler.getCodeGenOpts(), Context));
   }
 

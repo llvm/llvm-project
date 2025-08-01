@@ -1,5 +1,7 @@
+# RUN: mkdir -p %t.dir/Output
+# RUN: cd %t.dir
 # RUN: modularize -module-map-path=Output/NoProblemsAssistant.txt -root-module=Root -prefix=%S/Input %s
-# RUN: FileCheck --input-file=%T/NoProblemsAssistant.txt %s
+# RUN: FileCheck --input-file=Output/NoProblemsAssistant.txt %s
 
 SomeTypes.h
 SomeDecls.h

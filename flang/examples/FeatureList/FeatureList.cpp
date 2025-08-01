@@ -529,7 +529,6 @@ public:
   READ_FEATURE(OmpChunkModifier::Value)
   READ_FEATURE(OmpOrderingModifier)
   READ_FEATURE(OmpOrderingModifier::Value)
-  READ_FEATURE(OmpSectionBlocks)
   READ_FEATURE(OmpSectionsDirective)
   READ_FEATURE(Only)
   READ_FEATURE(OpenACCAtomicConstruct)

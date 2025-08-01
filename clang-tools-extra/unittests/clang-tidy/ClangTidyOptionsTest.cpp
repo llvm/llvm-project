@@ -318,7 +318,8 @@ TEST(CheckOptionsValidation, MissingOptions) {
       ClangTidyGlobalOptions(), Options));
   ClangTidyDiagnosticConsumer DiagConsumer(Context);
   auto DiagOpts = std::make_unique<DiagnosticOptions>();
-  DiagnosticsEngine DE(new DiagnosticIDs(), *DiagOpts, &DiagConsumer, false);
+  DiagnosticsEngine DE(DiagnosticIDs::create(), *DiagOpts, &DiagConsumer,
+                       false);
   Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
   TestCheck TestCheck(&Context);
   EXPECT_FALSE(TestCheck.getLocal("Opt"));
@@ -348,7 +349,8 @@ TEST(CheckOptionsValidation, ValidIntOptions) {
       ClangTidyGlobalOptions(), Options));
   ClangTidyDiagnosticConsumer DiagConsumer(Context);
   auto DiagOpts = std::make_unique<DiagnosticOptions>();
-  DiagnosticsEngine DE(new DiagnosticIDs(), *DiagOpts, &DiagConsumer, false);
+  DiagnosticsEngine DE(DiagnosticIDs::create(), *DiagOpts, &DiagConsumer,
+                       false);
   Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
   TestCheck TestCheck(&Context);
 
@@ -410,7 +412,8 @@ TEST(ValidConfiguration, ValidEnumOptions) {
       ClangTidyGlobalOptions(), Options));
   ClangTidyDiagnosticConsumer DiagConsumer(Context);
   auto DiagOpts = std::make_unique<DiagnosticOptions>();
-  DiagnosticsEngine DE(new DiagnosticIDs(), *DiagOpts, &DiagConsumer, false);
+  DiagnosticsEngine DE(DiagnosticIDs::create(), *DiagOpts, &DiagConsumer,
+                       false);
   Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
   TestCheck TestCheck(&Context);
 

@@ -215,3 +215,17 @@ next:
   store <1 x i32> %2, ptr %p, align 4
   ret void
 }
+
+define void @xor_cond(ptr %p, i1 %cond) {
+; CHECK-LABEL: xor_cond:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb $1, %sil
+; CHECK-NEXT:    cfcmovel %eax, (%rdi)
+; CHECK-NEXT:    retq
+entry:
+  %0 = xor i1 %cond, true
+  %1 = insertelement <1 x i1> zeroinitializer, i1 %0, i64 0
+  call void @llvm.masked.store.v1i32.p0(<1 x i32> zeroinitializer, ptr %p, i32 1, <1 x i1> %1)
+  ret void
+}

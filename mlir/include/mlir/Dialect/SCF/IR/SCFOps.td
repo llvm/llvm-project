@@ -87,12 +87,23 @@ def ExecuteRegionOp : SCF_Op<"execute_region", [
     be accessed inside the op. The op's region can have multiple blocks and the
     blocks can have multiple distinct terminators. Values returned from this op's
     region define the op's results.
+    The optional 'no_inline' flag can be set to request the ExecuteRegionOp to be
+    preserved as much as possible and not being inlined in the parent block until
+    an explicit lowering step.
 
     Example:
 
     ```mlir
     scf.for %i = 0 to 128 step %c1 {
       %y = scf.execute_region -> i32 {
+        %x = load %A[%i] : memref<128xi32>
+        scf.yield %x : i32
+      }
+    }
+
+    // the same as above but with no_inline attribute
+    scf.for %i = 0 to 128 step %c1 {
+      %y = scf.execute_region -> i32 no_inline {
         %x = load %A[%i] : memref<128xi32>
         scf.yield %x : i32
       }
@@ -118,6 +129,10 @@ def ExecuteRegionOp : SCF_Op<"execute_region", [
     }
     ```
   }];
+
+  let arguments = (ins
+    UnitAttr:$no_inline
+  );
 
   let results = (outs Variadic<AnyType>);
 

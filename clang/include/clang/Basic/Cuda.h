@@ -47,9 +47,10 @@ enum class CudaVersion {
   CUDA_125,
   CUDA_126,
   CUDA_128,
-  FULLY_SUPPORTED = CUDA_123,
+  CUDA_129,
+  FULLY_SUPPORTED = CUDA_128,
   PARTIALLY_SUPPORTED =
-      CUDA_128, // Partially supported. Proceed with a warning.
+      CUDA_129, // Partially supported. Proceed with a warning.
   NEW = 10000,  // Too new. Issue a warning, but allow using it.
 };
 const char *CudaVersionToString(CudaVersion V);

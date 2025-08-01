@@ -289,7 +289,7 @@ define i32 @conditional_and(ptr noalias %A, ptr noalias %B, i32 %cond, i64 nound
 ; CHECK-NEXT:    [[TMP24:%.*]] = phi <4 x i32> [ [[TMP18]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP23]], [[PRED_LOAD_IF5]] ]
 ; CHECK-NEXT:    [[TMP25:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[TMP24]], <4 x i32> splat (i32 -1)
 ; CHECK-NEXT:    [[TMP26:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[TMP25]])
-; CHECK-NEXT:    [[TMP27]] = and i32 [[TMP26]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP27]] = and i32 [[VEC_PHI]], [[TMP26]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP28]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -420,10 +420,10 @@ define i32 @simple_chained_rdx(ptr noalias %a, ptr noalias %b, ptr noalias %cond
 ; CHECK-NEXT:    [[TMP40:%.*]] = phi <4 x i32> [ [[TMP30]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP38]], [[PRED_LOAD_IF5]] ]
 ; CHECK-NEXT:    [[TMP41:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[TMP39]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP42:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP41]])
-; CHECK-NEXT:    [[TMP43:%.*]] = add i32 [[TMP42]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP43:%.*]] = add i32 [[VEC_PHI]], [[TMP42]]
 ; CHECK-NEXT:    [[TMP44:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[TMP40]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP45:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP44]])
-; CHECK-NEXT:    [[TMP46]] = add i32 [[TMP45]], [[TMP43]]
+; CHECK-NEXT:    [[TMP46]] = add i32 [[TMP43]], [[TMP45]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP47:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP47]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]

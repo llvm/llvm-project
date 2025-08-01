@@ -41,7 +41,7 @@ define void @arm_mean_q7(ptr noundef %pSrc, i32 noundef %blockSize, ptr noundef 
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext <16 x i8> [[WIDE_MASKED_LOAD]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i32> [[TMP4]], <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP5]])
-; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], [[SUM_0_LCSSA]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[SUM_0_LCSSA]], [[TMP6]]
 ; CHECK-NEXT:    br label [[WHILE_END5]]
 ; CHECK:       while.end5:
 ; CHECK-NEXT:    [[SUM_1_LCSSA:%.*]] = phi i32 [ [[SUM_0_LCSSA]], [[WHILE_END]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
