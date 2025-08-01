@@ -482,10 +482,14 @@ static void checkOptions(Ctx &ctx) {
     ErrAlways(ctx) << "-z force-ibt may not be used with -z retpolineplt";
 }
 
-static const char *getReproduceOption(opt::InputArgList &args) {
+static std::optional<std::string> getReproduceOption(opt::InputArgList &args) {
   if (auto *arg = args.getLastArg(OPT_reproduce))
     return arg->getValue();
-  return getenv("LLD_REPRODUCE");
+
+  if (const char *env = getenv("LLD_REPRODUCE"))
+    return env;
+
+  return std::nullopt;
 }
 
 static bool hasZOption(opt::InputArgList &args, StringRef key) {
@@ -681,11 +685,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (args.hasArg(OPT_v) || args.hasArg(OPT_version))
     Msg(ctx) << getLLDVersion() << " (compatible with GNU linkers)";
 
-  if (const char *path = getReproduceOption(args)) {
+  if (std::optional<std::string> path = getReproduceOption(args)) {
     // Note that --reproduce is a debug option so you can ignore it
     // if you are trying to understand the whole picture of the code.
     Expected<std::unique_ptr<TarWriter>> errOrWriter =
-        TarWriter::create(path, path::stem(path));
+        TarWriter::create(*path, path::stem(*path));
     if (errOrWriter) {
       ctx.tar = std::move(*errOrWriter);
       ctx.tar->append("response.txt", createResponseFile(args));
