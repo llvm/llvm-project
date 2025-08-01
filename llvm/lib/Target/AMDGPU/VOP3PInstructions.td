@@ -1236,6 +1236,12 @@ let isCommutable = 1, isReMaterializable = 1 in {
     defm V_PK_MIN_NUM_BF16 : VOP3PInst<"v_pk_min_num_bf16", VOP3P_Profile<VOP_V2BF16_V2BF16_V2BF16, VOP3_PACKED>, fminnum_like>;
     defm V_PK_MAX_NUM_BF16 : VOP3PInst<"v_pk_max_num_bf16", VOP3P_Profile<VOP_V2BF16_V2BF16_V2BF16, VOP3_PACKED>, fmaxnum_like>;
     defm V_PK_FMA_BF16     : VOP3PInst<"v_pk_fma_bf16", VOP3P_Profile<VOP_V2BF16_V2BF16_V2BF16_V2BF16, VOP3_PACKED>, any_fma>;
+
+    // Scalar pseudo used to emulate AMDGPUClamp.
+    // Expanded to V_PK_MAX_NUM_BF16 with unused high half.
+    // FIXME-TRUE16: Pseudo expansion of this won't work with True16.
+    let True16Predicate = UseFakeTrue16Insts in
+    defm V_MAX_BF16_PSEUDO : VOP3Inst <"v_max_bf16", VOP_BF16_BF16_BF16>;
   }
 } // End isCommutable = 1, isReMaterializable = 1
 
@@ -2276,6 +2282,9 @@ defm V_PK_MAX3_NUM_F16 : VOP3P_Real_gfx1250<0x39>;
 defm V_FMA_MIX_F32_BF16 : VOP3P_Realtriple<GFX1250Gen, 0x3d>;
 defm V_FMA_MIXLO_BF16   : VOP3P_Realtriple<GFX1250Gen, 0x3e>;
 defm V_FMA_MIXHI_BF16   : VOP3P_Realtriple<GFX1250Gen, 0x3f>;
+
+let AssemblerPredicate = isGFX1250Plus in
+def : AMDGPUMnemonicAlias<"v_fma_mix_f32_f16",  "v_fma_mix_f32">;
 
 defm V_PK_MINIMUM_F16 : VOP3P_Real_gfx12<0x1d>;
 defm V_PK_MAXIMUM_F16 : VOP3P_Real_gfx12<0x1e>;

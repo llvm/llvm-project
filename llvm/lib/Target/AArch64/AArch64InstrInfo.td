@@ -519,10 +519,10 @@ def SDT_AArch64uaddlp : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 
 def SDT_AArch64ldp : SDTypeProfile<2, 1, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64ldiapp : SDTypeProfile<2, 1, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
-def SDT_AArch64ldnp : SDTypeProfile<2, 1, [SDTCisVT<0, v4i32>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
+def SDT_AArch64ldnp : SDTypeProfile<2, 1, [SDTCisVT<0, v2i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64stp : SDTypeProfile<0, 3, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64stilp : SDTypeProfile<0, 3, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
-def SDT_AArch64stnp : SDTypeProfile<0, 3, [SDTCisVT<0, v4i32>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
+def SDT_AArch64stnp : SDTypeProfile<0, 3, [SDTCisVT<0, v2i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 
 // Generates the general dynamic sequences, i.e.
 //  adrp  x0, :tlsdesc:var
@@ -2033,7 +2033,7 @@ let Predicates = [HasPAuth] in {
     def DZB  : SignAuthZero<prefix_z,  0b11, !strconcat(asm, "dzb"), op>;
   }
 
-  defm PAC : SignAuth<0b000, 0b010, "pac", int_ptrauth_sign>;
+  defm PAC : SignAuth<0b000, 0b010, "pac", null_frag>;
   defm AUT : SignAuth<0b001, 0b011, "aut", null_frag>;
 
   def XPACI : ClearAuth<0, "xpaci">;
@@ -2152,6 +2152,26 @@ let Predicates = [HasPAuth] in {
     let Defs = [NZCV];
     let Uses = [];
   }
+
+  // PAC pseudo instruction. In AsmPrinter, it is expanded into an actual PAC*
+  // instruction immediately preceded by the discriminator computation.
+  // This enforces the expected immediate modifier is used for signing, even
+  // if an attacker is able to substitute AddrDisc.
+  def PAC : Pseudo<(outs GPR64:$SignedVal),
+                   (ins GPR64:$Val, i32imm:$Key, i64imm:$Disc, GPR64noip:$AddrDisc),
+                   [], "$SignedVal = $Val">, Sched<[WriteI, ReadI]> {
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 0;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let Size = 12;
+    let Defs = [X16, X17];
+    let usesCustomInserter = 1;
+  }
+
+  // A standalone pattern is used, so that literal 0 can be passed as $Disc.
+  def : Pat<(int_ptrauth_sign GPR64:$Val, timm:$Key, GPR64noip:$AddrDisc),
+            (PAC GPR64:$Val, $Key, 0, GPR64noip:$AddrDisc)>;
 
   // AUT and re-PAC a value, using different keys/data.
   // This directly manipulates x16/x17, which are the only registers that
@@ -6647,6 +6667,15 @@ def : Pat<(f16 (any_sint_to_fp (i32 (any_fp_to_sint f16:$Rn)))),
 def : Pat<(f16 (any_uint_to_fp (i32 (any_fp_to_uint f16:$Rn)))),
           (UCVTFv1i16 (f16 (FCVTZUv1f16 f16:$Rn)))>;
 }
+
+def : Pat<(v4i32 (any_fp_to_sint (v4f32 (scalar_to_vector (f32 FPR32:$src))))),
+          (v4i32 (INSERT_SUBREG (IMPLICIT_DEF), (i32 (FCVTZSv1i32 (f32 FPR32:$src))), ssub))>;
+def : Pat<(v4i32 (any_fp_to_uint (v4f32 (scalar_to_vector (f32 FPR32:$src))))),
+          (v4i32 (INSERT_SUBREG (IMPLICIT_DEF), (i32 (FCVTZUv1i32 (f32 FPR32:$src))), ssub))>;
+def : Pat<(v2i64 (any_fp_to_sint (v2f64 (scalar_to_vector (f64 FPR64:$src))))),
+          (v2i64 (INSERT_SUBREG (IMPLICIT_DEF), (i64 (FCVTZSv1i64 (f64 FPR64:$src))), dsub))>;
+def : Pat<(v2i64 (any_fp_to_uint (v2f64 (scalar_to_vector (f64 FPR64:$src))))),
+          (v2i64 (INSERT_SUBREG (IMPLICIT_DEF), (i64 (FCVTZUv1i64 (f64 FPR64:$src))), dsub))>;
 
 // int -> float conversion of value in lane 0 of simd vector should use
 // correct cvtf variant to avoid costly fpr <-> gpr register transfers.

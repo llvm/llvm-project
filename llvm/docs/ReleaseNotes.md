@@ -68,6 +68,12 @@ Changes to TableGen
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
+Changes to Vectorizers
+----------------------------------------
+
+* Added initial support for copyable elements in SLP, which models copyable
+  elements as add <element>, 0, i.e. uses identity constants for missing lanes.
+
 Changes to the AArch64 Backend
 ------------------------------
 
@@ -149,6 +155,9 @@ Changes to LLDB
   **Simplified configuration:** The core fixes eliminate the need for complex configuration options.
   LLDB now provides optimal performance out-of-the-box with automatic adaptation to network conditions
   while maintaining full debugging functionality and backward compatibility.
+
+* LLDB can now set breakpoints, show backtraces, and display variables when
+  debugging Wasm with supported runtimes (WAMR and V8).
 
 Changes to BOLT
 ---------------------------------
