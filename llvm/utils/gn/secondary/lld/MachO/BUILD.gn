@@ -37,6 +37,7 @@ static_library("MachO") {
     "ICF.cpp",
     "InputFiles.cpp",
     "InputSection.cpp",
+    "LinkerOptimizationHints.cpp",
     "LTO.cpp",
     "MapFile.cpp",
     "MarkLive.cpp",

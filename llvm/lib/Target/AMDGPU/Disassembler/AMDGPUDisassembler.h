@@ -161,6 +161,7 @@ public:
   void convertFMAanyK(MCInst &MI) const;
   void convertSDWAInst(MCInst &MI) const;
   void convertMAIInst(MCInst &MI) const;
+  void convertWMMAInst(MCInst &MI) const;
   void convertDPP8Inst(MCInst &MI) const;
   void convertMIMGInst(MCInst &MI) const;
   void convertVOP3DPPInst(MCInst &MI) const;
@@ -178,7 +179,9 @@ public:
   static MCOperand decodeIntImmed(unsigned Imm);
 
   MCOperand decodeMandatoryLiteralConstant(unsigned Imm) const;
+  MCOperand decodeMandatoryLiteral64Constant(uint64_t Imm) const;
   MCOperand decodeLiteralConstant(bool ExtendFP64) const;
+  MCOperand decodeLiteral64Constant() const;
 
   MCOperand decodeSrcOp(unsigned Width, unsigned Val) const;
 

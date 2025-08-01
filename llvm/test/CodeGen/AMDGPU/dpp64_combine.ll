@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP64,GFX90A
-; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,GFX942
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS,GFX10
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS,GFX11
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck %s -check-prefixes=GCN,DPP64,GFX90A
+; RUN: llc -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,GFX942
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS,GFX10
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS,GFX11
 
 ; GCN-LABEL: {{^}}dpp64_ceil:
 ; GCN:           global_load_{{dwordx2|b64}} [[V:v\[[0-9:]+\]]],

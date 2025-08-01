@@ -1812,10 +1812,7 @@ def note_unsatisfied_trait_reason
            "%DeletedAssign{has a deleted %select{copy|move}1 "
            "assignment operator}|"
            "%UnionWithUserDeclaredSMF{is a union with a user-declared "
-           "%sub{select_special_member_kind}1}|"
-           "%FunctionType{is a function type}|"
-           "%CVVoidType{is a cv void type}|"
-           "%IncompleteArrayType{is an incomplete array type}"
+           "%sub{select_special_member_kind}1}"
            "}0">;
 
 def warn_consteval_if_always_true : Warning<
@@ -2547,6 +2544,10 @@ def err_list_init_in_parens : Error<
 def warn_uninit_const_reference : Warning<
   "variable %0 is uninitialized when passed as a const reference argument "
   "here">, InGroup<UninitializedConstReference>, DefaultIgnore;
+
+def warn_uninit_const_pointer : Warning<
+  "variable %0 is uninitialized when passed as a const pointer argument here">,
+  InGroup<UninitializedConstPointer>, DefaultIgnore;
 
 def warn_unsequenced_mod_mod : Warning<
   "multiple unsequenced modifications to %0">, InGroup<Unsequenced>;
@@ -7571,6 +7572,8 @@ def err_typecheck_illegal_increment_decrement : Error<
   "cannot %select{decrement|increment}1 value of type %0">;
 def err_typecheck_expect_int : Error<
   "used type %0 where integer is required">;
+def err_typecheck_expect_function_pointer
+    : Error<"used type %0 where function pointer is required">;
 def err_typecheck_expect_hlsl_resource : Error<
   "used type %0 where __hlsl_resource_t is required">;
 def err_typecheck_arithmetic_incomplete_or_sizeless_type : Error<
@@ -8308,6 +8311,9 @@ def err_need_header_before_typeid : Error<
 def err_need_header_before_placement_new : Error<
   "no matching %0 function for non-allocating placement new expression; "
   "include <new>">;
+def err_placement_new_into_const_qualified_storage : Error<
+  "placement new expression with a const-qualified argument of type %0 "
+  "is not allowed">;
 def err_ms___leave_not_in___try : Error<
   "'__leave' statement not in __try block">;
 def err_uuidof_without_guid : Error<
@@ -9322,8 +9328,28 @@ def err_atomic_builtin_pointer_size : Error<
   "address argument to atomic builtin must be a pointer to 1,2,4,8 or 16 byte "
   "type (%0 invalid)">;
 def err_atomic_exclusive_builtin_pointer_size : Error<
-  "address argument to load or store exclusive builtin must be a pointer to"
-  " 1,2,4 or 8 byte type (%0 invalid)">;
+  "address argument to load or store exclusive builtin must be a pointer to "
+  // Because the range of legal sizes for load/store exclusive varies with the
+  // Arm architecture version, this error message wants to be able to specify
+  // various different subsets of the sizes 1, 2, 4, 8. Rather than make a
+  // separate diagnostic for each subset, I've arranged here that _this_ error
+  // can display any combination of the sizes. For each size there are two
+  // %select parameters: the first chooses whether you need a "," or " or " to
+  // separate the number from a previous one (or neither), and the second
+  // parameter indicates whether to display the number itself.
+  //
+  // (The very first of these parameters isn't really necessary, since you
+  // never want to start with "," or " or " before the first number in the
+  // list, but it keeps it simple to make it look exactly like the other cases,
+  // and also allows a loop constructing this diagnostic to handle every case
+  // exactly the same.)
+  "%select{|,| or }1%select{|1}2"
+  "%select{|,| or }3%select{|2}4"
+  "%select{|,| or }5%select{|4}6"
+  "%select{|,| or }7%select{|8}8"
+  " byte type (%0 invalid)">;
+def err_atomic_exclusive_builtin_pointer_size_none : Error<
+  "load and store exclusive builtins are not available on this architecture">;
 def err_atomic_builtin_ext_int_size : Error<
   "atomic memory operand must have a power-of-two size">;
 def err_atomic_builtin_bit_int_prohibit : Error<
@@ -9365,6 +9391,16 @@ def warn_atomic_implicit_seq_cst : Warning<
   InGroup<DiagGroup<"atomic-implicit-seq-cst">>, DefaultIgnore;
 def err_atomic_unsupported : Error<
   "atomic types are not supported in '%0'">;
+def warn_cv_stripped_in_enum : Warning<
+  "%enum_select<CVQualList>{"
+    "%Both{'const' and 'volatile' qualifiers}|"
+    "%Const{'const' qualifier}|"
+    "%Volatile{'volatile' qualifier}}0 in enumeration underlying type ignored">,
+  InGroup<DiagGroup<"underlying-cv-qualifier-ignored">>;
+def warn_atomic_stripped_in_enum : Warning<
+  "'_Atomic' qualifier ignored; operations involving the enumeration type will "
+  "be non-atomic">,
+  InGroup<DiagGroup<"underlying-atomic-qualifier-ignored">>, DefaultError;
 
 def err_overflow_builtin_must_be_int : Error<
   "operand argument to %select{overflow builtin|checked integer operation}0 "
@@ -10068,11 +10104,8 @@ def err_destroying_operator_delete_not_usual : Error<
 def err_type_aware_destroying_operator_delete : Error<
   "destroying delete is not permitted to be type aware">;
 
-def ext_cxx26_type_aware_allocators : ExtWarn<
-  "type aware allocators are a C++2c extension">, InGroup<CXX26>;
-def warn_cxx26_type_aware_allocators : Warning<
-  "type aware allocators are incompatible with C++ standards before C++2c">,
-  DefaultIgnore, InGroup<CXXPre26Compat>;
+def warn_ext_type_aware_allocators : ExtWarn<
+  "type aware allocators are a Clang extension">, InGroup<DiagGroup<"ext-cxx-type-aware-allocators">>;
 def err_type_aware_allocator_missing_matching_operator : Error<
   "declaration of type aware %0 in %1 must have matching type aware %2"
 >;
@@ -10626,6 +10659,10 @@ def warn_dangling_reference_captured
 def warn_dangling_reference_captured_by_unknown : Warning<
    "object whose reference is captured will be destroyed at the end of "
    "the full-expression">, InGroup<DanglingCapture>;
+
+def warn_experimental_lifetime_safety_dummy_warning : Warning<
+   "todo: remove this warning after we have atleast one warning based on the lifetime analysis">, 
+   InGroup<LifetimeSafety>, DefaultIgnore;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
@@ -11512,17 +11549,28 @@ def note_in_evaluating_default_argument : Note<
 def warn_invalid_add_func_effects : Warning<
   "attribute '%0' should not be added via type conversion">,
   InGroup<FunctionEffects>, DefaultIgnore;
-def warn_mismatched_func_effect_override : Warning<
-  "attribute '%0' on overriding function does not match base declaration">,
-  InGroup<FunctionEffects>, DefaultIgnore;
-def warn_mismatched_func_effect_redeclaration : Warning<
-  "attribute '%0' on function does not match previous declaration">,
-  InGroup<FunctionEffects>, DefaultIgnore;
+def warn_conflicting_func_effect_override
+    : Warning<"attribute '%0' on overriding function conflicts with base "
+              "declaration">,
+      InGroup<FunctionEffects>,
+      DefaultIgnore;
 def warn_conflicting_func_effects : Warning<
   "effects conflict when merging declarations; kept '%0', discarded '%1'">,
   InGroup<FunctionEffects>, DefaultIgnore;
 def err_func_with_effects_no_prototype : Error<
   "'%0' function must have a prototype">;
+// These are more pedantic: in redeclarations and virtual method overrides,
+// the effect attribute(s) should be restated.
+def warn_mismatched_func_effect_override
+    : Warning<"overriding function is missing '%0' attribute from base "
+              "declaration">,
+      InGroup<FunctionEffectRedeclarations>,
+      DefaultIgnore;
+def warn_mismatched_func_effect_redeclaration
+    : Warning<
+          "redeclaration is missing '%0' attribute from previous declaration">,
+      InGroup<FunctionEffectRedeclarations>,
+      DefaultIgnore;
 
 } // end of sema category
 
@@ -12339,7 +12387,7 @@ def err_export_using_internal : Error<
   "using declaration referring to %1 with %select{internal|module|unknown}0 "
   "linkage cannot be exported">;
 def err_export_not_in_module_interface : Error<
-  "export declaration can only be used within a module purview">;
+  "export declaration can only be used within a module interface">;
 def err_export_inline_not_defined : Error<
   "inline function not defined%select{| before the private module fragment}0">;
 def err_export_partition_impl : Error<
@@ -12359,6 +12407,13 @@ def note_not_module_interface_add_export : Note<
 def err_invalid_module_name : Error<"%0 is an invalid name for a module">;
 def err_extern_def_in_header_unit : Error<
   "non-inline external definitions are not permitted in C++ header units">;
+
+def warn_exposure : Warning <
+  "TU local entity %0 is exposed">,
+  InGroup<DiagGroup<"TU-local-entity-exposure">>;
+def warn_reference_tu_local_entity_in_other_tu : Warning <
+  "instantiation of %0 triggers reference to TU-local entity %1 from other TU '%2'">,
+  InGroup<DiagGroup<"reference-tu-local-entity-in-other-tu">>;
 
 def warn_experimental_header_unit : Warning<
   "the implementation of header units is in an experimental phase">,
@@ -12881,31 +12936,29 @@ def err_sycl_special_type_num_init_method : Error<
 
 // SYCL kernel entry point diagnostics
 def err_sycl_entry_point_invalid : Error<
-  "'sycl_kernel_entry_point' attribute cannot be applied to a"
+  "the %0 attribute cannot be applied to a"
   " %select{non-static member function|variadic function|deleted function|"
            "defaulted function|constexpr function|consteval function|"
            "function declared with the 'noreturn' attribute|coroutine|"
-           "function defined with a function try block}0">;
+           "function defined with a function try block}1">;
 def err_sycl_entry_point_invalid_redeclaration : Error<
-  "'sycl_kernel_entry_point' kernel name argument does not match prior"
-  " declaration%diff{: $ vs $|}0,1">;
+  "the %0 kernel name argument does not match prior"
+  " declaration%diff{: $ vs $|}1,2">;
 def err_sycl_kernel_name_conflict : Error<
-  "'sycl_kernel_entry_point' kernel name argument conflicts with a previous"
-  " declaration">;
+  "the %0 kernel name argument conflicts with a previous declaration">;
 def warn_sycl_kernel_name_not_a_class_type : Warning<
   "%0 is not a valid SYCL kernel name type; a non-union class type is required">,
   InGroup<DiagGroup<"nonportable-sycl">>, DefaultError;
 def warn_sycl_entry_point_redundant_declaration : Warning<
-  "redundant 'sycl_kernel_entry_point' attribute">, InGroup<RedundantAttribute>;
+  "redundant %0 attribute">, InGroup<RedundantAttribute>;
 def err_sycl_entry_point_after_definition : Error<
-  "'sycl_kernel_entry_point' attribute cannot be added to a function after the"
-  " function is defined">;
+  "the %0 attribute cannot be added to a function after the function is"
+  " defined">;
 def err_sycl_entry_point_return_type : Error<
-  "'sycl_kernel_entry_point' attribute only applies to functions with a"
-  " 'void' return type">;
+  "the %0 attribute only applies to functions with a 'void' return type">;
 def err_sycl_entry_point_deduced_return_type : Error<
-  "'sycl_kernel_entry_point' attribute only applies to functions with a"
-  " non-deduced 'void' return type">;
+  "the %0 attribute only applies to functions with a non-deduced 'void' return"
+  " type">;
 
 def warn_cuda_maxclusterrank_sm_90 : Warning<
   "maxclusterrank requires sm_90 or higher, CUDA arch provided: %0, ignoring "
@@ -13077,6 +13130,9 @@ def err_invalid_hlsl_resource_type: Error<
 def err_hlsl_spirv_only: Error<"%0 is only available for the SPIR-V target">;
 def err_hlsl_vk_literal_must_contain_constant: Error<"the argument to vk::Literal must be a vk::integral_constant">;
 
+def err_hlsl_invalid_rootsig_value : Error<"value must be in the range [%0, %1]">;
+def err_hlsl_invalid_rootsig_flag : Error< "invalid flags for version 1.%0">;
+
 def subst_hlsl_format_ranges: TextSubstitution<
   "%select{t|u|b|s}0[%1;%select{%3]|unbounded)}2">;
 
@@ -13084,6 +13140,7 @@ def err_hlsl_resource_range_overlap: Error<
   "resource ranges %sub{subst_hlsl_format_ranges}0,1,2,3 and %sub{subst_hlsl_format_ranges}4,5,6,7 "
   "overlap within space = %8 and visibility = "
   "%select{All|Vertex|Hull|Domain|Geometry|Pixel|Amplification|Mesh}9">;
+def note_hlsl_resource_range_here: Note<"overlapping resource range here">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
@@ -13169,6 +13226,10 @@ def err_wasm_builtin_arg_must_match_table_element_type : Error <
   "%ordinal0 argument must match the element type of the WebAssembly table in the %ordinal1 argument">;
 def err_wasm_builtin_arg_must_be_integer_type : Error <
   "%ordinal0 argument must be an integer">;
+def err_wasm_builtin_test_fp_sig_cannot_include_reference_type
+    : Error<"not supported for "
+            "function pointers with a reference type %select{return "
+            "value|parameter}0">;
 
 // OpenACC diagnostics.
 def warn_acc_routine_unimplemented
@@ -13224,6 +13285,11 @@ def err_acc_not_a_var_ref
 def err_acc_not_a_var_ref_use_device_declare
     : Error<"OpenACC variable %select{in 'use_device' clause|on 'declare' "
             "construct}0 is not a valid variable name or array name">;
+def ext_acc_array_section_use_device_declare
+    : Extension<
+          "sub-array as a variable %select{in 'use_device' clause|on "
+          "'declare' construct}0 is not a valid variable name or array name">,
+      InGroup<DiagGroup<"openacc-extension">>;
 def err_acc_not_a_var_ref_cache
     : Error<"OpenACC variable in 'cache' directive is not a valid sub-array or "
             "array element">;
@@ -13285,8 +13351,9 @@ def err_acc_reduction_num_gangs_conflict
             "appear on a '%2' construct "
             "with a '%3' clause%select{ with more than 1 argument|}0">;
 def err_acc_reduction_type
-    : Error<"OpenACC 'reduction' variable must be of scalar type, sub-array, or a "
-            "composite of scalar types;%select{| sub-array base}1 type is %0">;
+    : Error<"OpenACC 'reduction' variable must be of scalar type, aggregate, "
+            "sub-array, or a composite of scalar types;%select{| sub-array "
+            "base}1 type is %0">;
 def err_acc_reduction_composite_type
     : Error<"OpenACC 'reduction' variable must be a composite of scalar types; "
             "%1 %select{is not a class or struct|is incomplete|is not an "
@@ -13405,13 +13472,13 @@ def note_acc_atomic_mismatch_operand
     : Note<"left hand side of assignment operation(%0) must match one side "
            "of the sub-operation on the right hand side(%1 and %2)">;
 def note_acc_atomic_mismatch_compound_operand
-    : Note<"variable %select{|in unary expression|on right hand side of "
+    : Note<"sub-expression %select{|in unary expression|on right hand side of "
            "assignment|on left hand side of assignment|on left hand side of "
            "compound assignment|on left hand side of assignment}2(%3) must "
-           "match variable used %select{|in unary expression|on right hand "
-           "side of assignment|<not possible>|on left hand side of compound "
-           "assignment|on left hand side of assignment}0(%1) from the first "
-           "statement">;
+           "match sub-expression used %select{|in unary expression|on right "
+           "hand side of assignment|<not possible>|on left hand side of "
+           "compound assignment|on left hand side of assignment}0(%1) from the "
+           "first statement">;
 def err_acc_declare_required_clauses
     : Error<"no valid clauses specified in OpenACC 'declare' directive">;
 def err_acc_declare_clause_at_global
@@ -13456,6 +13523,12 @@ def err_acc_invalid_default_type
 def err_acc_device_type_multiple_archs
     : Error<"OpenACC 'device_type' clause on a 'set' construct only permits "
             "one architecture">;
+def warn_acc_var_referenced_lacks_op
+    : Warning<"variable of type %0 referenced in OpenACC '%1' clause does not "
+              "have a %enum_select<AccVarReferencedReason>{%DefCtor{default "
+              "constructor}|%Dtor{destructor}}2; reference has no effect">,
+      InGroup<DiagGroup<"openacc-var-lacks-operation">>,
+      DefaultError;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
