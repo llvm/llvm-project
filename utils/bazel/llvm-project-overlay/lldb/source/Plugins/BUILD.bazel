@@ -152,6 +152,7 @@ cc_library(
         "//clang:lex",
         "//clang:sema",
         "//lldb:CoreHeaders",
+        "//lldb:ExpressionHeaders",
         "//lldb:Host",
         "//lldb:SymbolHeaders",
         "//lldb:TargetHeaders",
