@@ -56,21 +56,34 @@ __chkfeat(uint64_t __features) {
 static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
 __swp(uint32_t __x, volatile uint32_t *__p) {
   uint32_t __v;
-#if __ARM_FEATURE_LDREX & 4
-  do
-    __v = __builtin_arm_ldrex(__p);
-  while (__builtin_arm_strex(__x, __p));
-#elif !__ARM_ARCH_6M__
-  /* Fall back to the deprecated SWP instruction, on historic architecture
-   * versions without load/store exclusive instructions on 32-bit data. ACLE is
-   * clear that we mustn't use SWP in any _other_ situation, but permits us to
-   * use it if there's no other option. */
-  __asm__("swp %0, %1, [%2]" : "=r"(__v) : "r"(__x), "r"(__p) : "memory");
-#else
-  /* Armv6-M doesn't have either of LDREX or SWP. LLVM turns the following
-   * builtin into a libcall to __atomic_exchange_4, so the runtime will need to
-   * implement that. */
+#if (__ARM_FEATURE_LDREX & 4) || __ARM_ARCH_6M__ || __linux__
+  /*
+   * Using this clang builtin is sensible in most situations. Where
+   * LDREX and STREX are available, it will compile to a loop using
+   * them. Otherwise it will compile to a libcall, requiring the
+   * runtime to provide that library function.
+   *
+   * That's unavoidable on Armv6-M, which has no atomic instructions
+   * at all (not even SWP), so in that situation the user will just
+   * have to provide an implementation of __atomic_exchange_4 (perhaps
+   * it would temporarily disable interrupts, and then do a separate
+   * load and store).
+   *
+   * We also use the libcall strategy on pre-Armv7 Linux targets, on
+   * the theory that Linux's runtime support library _will_ provide a
+   * suitable libcall, and it's better to use that than the SWP
+   * instruction because then when the same binary is run on a later
+   * Linux system the libcall implementation will use LDREX instead.
+   */
   __v = __atomic_exchange_n(__p, __x, __ATOMIC_RELAXED);
+#else
+  /*
+   * But for older Arm architectures when the target is not Linux, we
+   * fall back to using the SWP instruction via inline assembler. ACLE
+   * is clear that we're allowed to do this, but shouldn't do it if we
+   * have a better alternative.
+   */
+  __asm__("swp %0, %1, [%2]" : "=r"(__v) : "r"(__x), "r"(__p) : "memory");
 #endif
   return __v;
 }
