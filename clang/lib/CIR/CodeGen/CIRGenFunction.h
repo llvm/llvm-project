@@ -848,6 +848,10 @@ public:
   /// even if no aggregate location is provided.
   RValue emitAnyExprToTemp(const clang::Expr *e);
 
+  void emitArrayDestroy(mlir::Value begin, mlir::Value end,
+                        QualType elementType, CharUnits elementAlign,
+                        Destroyer *destroyer);
+
   mlir::Value emitArrayLength(const clang::ArrayType *arrayType,
                               QualType &baseType, Address &addr);
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
@@ -865,6 +869,8 @@ public:
   void emitAutoVarInit(const AutoVarEmission &emission);
   void emitAutoVarTypeCleanup(const AutoVarEmission &emission,
                               clang::QualType::DestructionKind dtorKind);
+
+  void maybeEmitDeferredVarDeclInit(const VarDecl *vd);
 
   void emitBaseInitializer(mlir::Location loc, const CXXRecordDecl *classDecl,
                            CXXCtorInitializer *baseInit);
@@ -1055,7 +1061,7 @@ public:
 
   void emitCompoundStmtWithoutScope(const clang::CompoundStmt &s);
 
-  void emitDecl(const clang::Decl &d);
+  void emitDecl(const clang::Decl &d, bool evaluateConditionDecl = false);
   mlir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
   LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
 
@@ -1200,6 +1206,8 @@ public:
   /// This method handles emission of any variable declaration
   /// inside a function, including static vars etc.
   void emitVarDecl(const clang::VarDecl &d);
+
+  void emitVariablyModifiedType(QualType ty);
 
   mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
 
