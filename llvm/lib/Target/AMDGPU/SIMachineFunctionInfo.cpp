@@ -278,11 +278,13 @@ SmallVectorImpl<MCRegister> *SIMachineFunctionInfo::addPreloadedKernArg(
     const SIRegisterInfo &TRI, const TargetRegisterClass *RC,
     unsigned AllocSizeDWord, unsigned PartIdx, unsigned ArgIdx,
     unsigned PaddingSGPRs) {
-  auto [It, Inserted] = ArgInfo.PreloadKernArgs.try_emplace(PartIdx);
-  assert(Inserted && "Preload kernel argument allocated twice.");
-  KernArgPreload::KernArgPreloadDescriptor &PreloadDesc = It->second;
+  ArgInfo.PreloadKernArgs.grow(PartIdx);
+  KernArgPreload::KernArgPreloadDescriptor &PreloadDesc =
+      ArgInfo.PreloadKernArgs[PartIdx];
+  assert(!PreloadDesc.IsValid && "Preload kernel argument allocated twice.");
   PreloadDesc.PartIdx = PartIdx;
   PreloadDesc.OrigArgIdx = ArgIdx;
+  PreloadDesc.IsValid = true;
 
   NumUserSGPRs += PaddingSGPRs;
   // If the available register tuples are aligned with the kernarg to be

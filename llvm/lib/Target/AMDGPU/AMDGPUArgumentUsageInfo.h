@@ -11,6 +11,7 @@
 
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/IndexedMap.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/IR/LLVMContext.h"
@@ -167,6 +168,8 @@ struct KernArgPreloadDescriptor {
   // The registers that the argument is preloaded into. The argument may be
   // split across multiple registers.
   SmallVector<MCRegister, 2> Regs;
+
+  bool IsValid = false;
 };
 
 } // namespace KernArgPreload
@@ -231,9 +234,15 @@ struct AMDGPUFunctionArgInfo {
   ArgDescriptor WorkItemIDY;
   ArgDescriptor WorkItemIDZ;
 
+  struct PreloadArgIndexFunctor {
+    using argument_type = unsigned;
+    unsigned operator()(unsigned Idx) const { return Idx; }
+  };
+
   // Map the index of preloaded kernel arguments to its descriptor.
-  SmallDenseMap<int, KernArgPreload::KernArgPreloadDescriptor>
-      PreloadKernArgs{};
+  IndexedMap<KernArgPreload::KernArgPreloadDescriptor, PreloadArgIndexFunctor>
+      PreloadKernArgs;
+
   // Map hidden argument to the index of it's descriptor.
   SmallDenseMap<KernArgPreload::HiddenArg, int> PreloadHiddenArgsIndexMap{};
   // The first user SGPR allocated for kernarg preloading.
