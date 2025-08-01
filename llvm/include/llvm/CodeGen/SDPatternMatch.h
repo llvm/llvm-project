@@ -578,6 +578,18 @@ m_InsertSubvector(const LHS &Base, const RHS &Sub, const IDX &Idx) {
   return TernaryOpc_match<LHS, RHS, IDX>(ISD::INSERT_SUBVECTOR, Base, Sub, Idx);
 }
 
+template <typename LTy, typename RTy, typename TTy, typename FTy, typename CCTy>
+inline auto m_SelectCC(const LTy &L, const RTy &R, const TTy &T, const FTy &F,
+                       const CCTy &CC) {
+  return m_Node(ISD::SELECT_CC, L, R, T, F, CC);
+}
+
+template <typename LTy, typename RTy, typename TTy, typename FTy, typename CCTy>
+inline auto m_SelectCCLike(const LTy &L, const RTy &R, const TTy &T,
+                           const FTy &F, const CCTy &CC) {
+  return m_AnyOf(m_Select(m_SetCC(L, R, CC), T, F), m_SelectCC(L, R, T, F, CC));
+}
+
 // === Binary operations ===
 template <typename LHS_P, typename RHS_P, bool Commutable = false,
           bool ExcludeChain = false>
@@ -655,6 +667,21 @@ struct MaxMin_match {
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
+    auto MatchMinMax = [&](SDValue L, SDValue R, SDValue TrueValue,
+                           SDValue FalseValue, ISD::CondCode CC) {
+      if ((TrueValue != L || FalseValue != R) &&
+          (TrueValue != R || FalseValue != L))
+        return false;
+
+      ISD::CondCode Cond =
+          TrueValue == L ? CC : getSetCCInverse(CC, L.getValueType());
+      if (!Pred_t::match(Cond))
+        return false;
+
+      return (LHS.match(Ctx, L) && RHS.match(Ctx, R)) ||
+             (Commutable && LHS.match(Ctx, R) && RHS.match(Ctx, L));
+    };
+
     if (sd_context_match(N, Ctx, m_Opc(ISD::SELECT)) ||
         sd_context_match(N, Ctx, m_Opc(ISD::VSELECT))) {
       EffectiveOperands<ExcludeChain> EO_SELECT(N, Ctx);
@@ -670,21 +697,20 @@ struct MaxMin_match {
         SDValue R = Cond->getOperand(EO_SETCC.FirstIndex + 1);
         auto *CondNode =
             cast<CondCodeSDNode>(Cond->getOperand(EO_SETCC.FirstIndex + 2));
-
-        if ((TrueValue != L || FalseValue != R) &&
-            (TrueValue != R || FalseValue != L)) {
-          return false;
-        }
-
-        ISD::CondCode Cond =
-            TrueValue == L ? CondNode->get()
-                           : getSetCCInverse(CondNode->get(), L.getValueType());
-        if (!Pred_t::match(Cond)) {
-          return false;
-        }
-        return (LHS.match(Ctx, L) && RHS.match(Ctx, R)) ||
-               (Commutable && LHS.match(Ctx, R) && RHS.match(Ctx, L));
+        return MatchMinMax(L, R, TrueValue, FalseValue, CondNode->get());
       }
+    }
+
+    if (sd_context_match(N, Ctx, m_Opc(ISD::SELECT_CC))) {
+      EffectiveOperands<ExcludeChain> EO_SELECT(N, Ctx);
+      assert(EO_SELECT.Size == 5);
+      SDValue L = N->getOperand(EO_SELECT.FirstIndex);
+      SDValue R = N->getOperand(EO_SELECT.FirstIndex + 1);
+      SDValue TrueValue = N->getOperand(EO_SELECT.FirstIndex + 2);
+      SDValue FalseValue = N->getOperand(EO_SELECT.FirstIndex + 3);
+      auto *CondNode =
+          cast<CondCodeSDNode>(N->getOperand(EO_SELECT.FirstIndex + 4));
+      return MatchMinMax(L, R, TrueValue, FalseValue, CondNode->get());
     }
 
     return false;

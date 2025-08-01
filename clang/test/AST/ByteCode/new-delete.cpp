@@ -171,6 +171,20 @@ namespace Arrays {
   }
   static_assert(mismatch2() == 6); // both-error {{not an integral constant expression}} \
                                    // both-note {{in call to 'mismatch2()'}}
+
+  constexpr int mismatch3() { // both-error {{never produces a constant expression}}
+    int a = 0;
+    struct S {};
+    struct T : S {};
+    T *p = new T[3]{}; // both-note 2{{heap allocation performed here}}
+    delete (S*)p; // both-note 2{{non-array delete used to delete pointer to array object of type 'T[3]'}}
+
+    return 0;
+
+  }
+  static_assert(mismatch3() == 0); // both-error {{not an integral constant expression}} \
+                                   // both-note {{in call to}}
+
   /// Array of composite elements.
   constexpr int foo() {
     S *ss = new S[12];

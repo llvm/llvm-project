@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_native_cos.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/native_cos.h>
 
 #define __FLOAT_ONLY
 #define FUNCTION native_cos

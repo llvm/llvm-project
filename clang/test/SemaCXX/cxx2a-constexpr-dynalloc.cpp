@@ -3,6 +3,11 @@
 // RUN: %clang_cc1 -std=c++2a -verify=expected,cxx20 %s "-DNEW=::operator new" "-DDELETE=::operator delete"
 // RUN: %clang_cc1 -std=c++2c -verify=expected,cxx26 %s "-DNEW=::operator new" "-DDELETE=::operator delete"
 
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx20 %s -DNEW=__builtin_operator_new -DDELETE=__builtin_operator_delete -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx20 %s "-DNEW=operator new" "-DDELETE=operator delete" -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx20 %s "-DNEW=::operator new" "-DDELETE=::operator delete" -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++2c -verify=expected,cxx26 %s "-DNEW=::operator new" "-DDELETE=::operator delete" -fexperimental-new-constant-interpreter
+
 constexpr bool alloc_from_user_code() {
   void *p = NEW(sizeof(int)); // expected-note {{cannot allocate untyped memory in a constant expression; use 'std::allocator<T>::allocate'}}
   DELETE(p);

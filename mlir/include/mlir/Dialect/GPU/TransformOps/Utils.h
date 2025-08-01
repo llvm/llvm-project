@@ -77,8 +77,10 @@ struct GpuIdBuilder {
 /// used for indexing rewrites as well as 3D sizes for predicate generation.
 /// If `useLinearMapping` is true, the `idBuilder` method returns nD values
 /// used for indexing rewrites as well as 1D sizes for predicate generation.
+/// If `mask` is provided, it will be used to filter the active blocks.
 struct GpuBlockIdBuilder : public GpuIdBuilder {
-  GpuBlockIdBuilder(MLIRContext *ctx, bool useLinearMapping = false);
+  GpuBlockIdBuilder(MLIRContext *ctx, bool useLinearMapping = false,
+                    DeviceMaskingAttrInterface mask = nullptr);
 };
 
 /// Builder for warpgroup ids used to map scf.forall to reindexed warpgroups.
@@ -86,9 +88,11 @@ struct GpuBlockIdBuilder : public GpuIdBuilder {
 /// used for indexing rewrites as well as 3D sizes for predicate generation.
 /// If `useLinearMapping` is true, the `idBuilder` method returns nD values
 /// used for indexing rewrites as well as 1D sizes for predicate generation.
+/// If `mask` is provided, it will be used to filter the active warpgroups.
 struct GpuWarpgroupIdBuilder : public GpuIdBuilder {
   GpuWarpgroupIdBuilder(MLIRContext *ctx, int64_t warpSize,
-                        bool useLinearMapping = false);
+                        bool useLinearMapping = false,
+                        DeviceMaskingAttrInterface mask = nullptr);
   int64_t warpSize = 32;
   /// In the future this may be configured by the transformation.
   static constexpr int64_t kNumWarpsPerGroup = 4;
@@ -99,9 +103,11 @@ struct GpuWarpgroupIdBuilder : public GpuIdBuilder {
 /// used for indexing rewrites as well as 3D sizes for predicate generation.
 /// If `useLinearMapping` is true, the `idBuilder` method returns nD values
 /// used for indexing rewrites as well as 1D sizes for predicate generation.
+/// If `mask` is provided, it will be used to filter the active warps.
 struct GpuWarpIdBuilder : public GpuIdBuilder {
   GpuWarpIdBuilder(MLIRContext *ctx, int64_t warpSize,
-                   bool useLinearMapping = false);
+                   bool useLinearMapping = false,
+                   DeviceMaskingAttrInterface mask = nullptr);
   int64_t warpSize = 32;
 };
 
@@ -110,16 +116,20 @@ struct GpuWarpIdBuilder : public GpuIdBuilder {
 /// used for indexing rewrites as well as 3D sizes for predicate generation.
 /// If `useLinearMapping` is true, the `idBuilder` method returns nD values
 /// used for indexing rewrites as well as 1D sizes for predicate generation.
+/// If `mask` is provided, it will be used to filter the active threads.
 struct GpuThreadIdBuilder : public GpuIdBuilder {
-  GpuThreadIdBuilder(MLIRContext *ctx, bool useLinearMapping = false);
+  GpuThreadIdBuilder(MLIRContext *ctx, bool useLinearMapping = false,
+                     DeviceMaskingAttrInterface mask = nullptr);
 };
 
 /// Builder for lane id.
 /// The `idBuilder` method returns nD values used for indexing rewrites as well
 /// as 1D sizes for predicate generation.
 /// This `useLinearMapping` case is the only supported case.
+/// If `mask` is provided, it will be used to filter the active lanes.
 struct GpuLaneIdBuilder : public GpuIdBuilder {
-  GpuLaneIdBuilder(MLIRContext *ctx, int64_t warpSize, bool unused);
+  GpuLaneIdBuilder(MLIRContext *ctx, int64_t warpSize, bool unused,
+                   DeviceMaskingAttrInterface mask = nullptr);
   int64_t warpSize = 32;
 };
 

@@ -9,6 +9,7 @@
 #ifndef LLVM_MC_MCFIXUP_H
 #define LLVM_MC_MCFIXUP_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SMLoc.h"
@@ -93,7 +94,6 @@ public:
   }
 
   MCFixupKind getKind() const { return Kind; }
-  unsigned getTargetKind() const { return Kind; }
 
   uint32_t getOffset() const { return Offset; }
   void setOffset(uint32_t Value) { Offset = Value; }
@@ -121,7 +121,7 @@ public:
     }
   }
 
-  SMLoc getLoc() const;
+  LLVM_ABI SMLoc getLoc() const;
 };
 
 namespace mc {

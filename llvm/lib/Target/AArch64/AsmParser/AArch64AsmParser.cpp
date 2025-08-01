@@ -3742,7 +3742,8 @@ static const struct Extension {
     {"sve2", {AArch64::FeatureSVE2}},
     {"sve-aes", {AArch64::FeatureSVEAES}},
     {"sve2-aes", {AArch64::FeatureAliasSVE2AES, AArch64::FeatureSVEAES}},
-    {"sve2-sm4", {AArch64::FeatureSVE2SM4}},
+    {"sve-sm4", {AArch64::FeatureSVESM4}},
+    {"sve2-sm4", {AArch64::FeatureAliasSVE2SM4, AArch64::FeatureSVESM4}},
     {"sve-sha3", {AArch64::FeatureSVESHA3}},
     {"sve2-sha3", {AArch64::FeatureAliasSVE2SHA3, AArch64::FeatureSVESHA3}},
     {"sve-bitperm", {AArch64::FeatureSVEBitPerm}},
@@ -7405,7 +7406,7 @@ bool AArch64AsmParser::parseDirectiveLOH(StringRef IDVal, SMLoc Loc) {
   if (parseEOL())
     return true;
 
-  getStreamer().emitLOHDirective((MCLOHType)Kind, Args);
+  getStreamer().emitLOHDirective(Kind, Args);
   return false;
 }
 

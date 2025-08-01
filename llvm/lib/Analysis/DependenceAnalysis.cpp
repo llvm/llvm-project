@@ -187,6 +187,20 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
           OS << "  da analyze - ";
           if (auto D = DA->depends(&*SrcI, &*DstI,
                                    /*UnderRuntimeAssumptions=*/true)) {
+
+#ifndef NDEBUG
+            // Verify that the distance being zero is equivalent to the
+            // direction being EQ.
+            for (unsigned Level = 1; Level <= D->getLevels(); Level++) {
+              const SCEV *Distance = D->getDistance(Level);
+              bool IsDistanceZero = Distance && Distance->isZero();
+              bool IsDirectionEQ =
+                  D->getDirection(Level) == Dependence::DVEntry::EQ;
+              assert(IsDistanceZero == IsDirectionEQ &&
+                     "Inconsistent distance and direction.");
+            }
+#endif
+
             // Normalize negative direction vectors if required by clients.
             if (NormalizeResults && D->normalize(&SE))
                 OS << "normalized - ";
@@ -3369,6 +3383,10 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
                                     SrcSubscripts, DstSubscripts))
     return false;
 
+  assert(isLoopInvariant(SrcBase, SrcLoop) &&
+         isLoopInvariant(DstBase, DstLoop) &&
+         "Expected SrcBase and DstBase to be loop invariant");
+
   int Size = SrcSubscripts.size();
   LLVM_DEBUG({
     dbgs() << "\nSrcSubscripts: ";
@@ -3652,18 +3670,29 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
                                         SCEVUnionPredicate(Assume, *SE));
   }
 
+  // Even if the base pointers are the same, they may not be loop-invariant. It
+  // could lead to incorrect results, as we're analyzing loop-carried
+  // dependencies. Src and Dst can be in different loops, so we need to check
+  // the base pointer is invariant in both loops.
+  Loop *SrcLoop = LI->getLoopFor(Src->getParent());
+  Loop *DstLoop = LI->getLoopFor(Dst->getParent());
+  if (!isLoopInvariant(SrcBase, SrcLoop) ||
+      !isLoopInvariant(DstBase, DstLoop)) {
+    LLVM_DEBUG(dbgs() << "The base pointer is not loop invariant.\n");
+    return std::make_unique<Dependence>(Src, Dst,
+                                        SCEVUnionPredicate(Assume, *SE));
+  }
+
   uint64_t EltSize = SrcLoc.Size.toRaw();
   const SCEV *SrcEv = SE->getMinusSCEV(SrcSCEV, SrcBase);
   const SCEV *DstEv = SE->getMinusSCEV(DstSCEV, DstBase);
 
-  if (Src != Dst) {
-    // Check that memory access offsets are multiples of element sizes.
-    if (!SE->isKnownMultipleOf(SrcEv, EltSize, Assume) ||
-        !SE->isKnownMultipleOf(DstEv, EltSize, Assume)) {
-      LLVM_DEBUG(dbgs() << "can't analyze SCEV with different offsets\n");
-      return std::make_unique<Dependence>(Src, Dst,
-                                          SCEVUnionPredicate(Assume, *SE));
-    }
+  // Check that memory access offsets are multiples of element sizes.
+  if (!SE->isKnownMultipleOf(SrcEv, EltSize, Assume) ||
+      !SE->isKnownMultipleOf(DstEv, EltSize, Assume)) {
+    LLVM_DEBUG(dbgs() << "can't analyze SCEV with different offsets\n");
+    return std::make_unique<Dependence>(Src, Dst,
+                                        SCEVUnionPredicate(Assume, *SE));
   }
 
   if (!Assume.empty()) {
@@ -3990,6 +4019,28 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   for (unsigned II = 1; II <= CommonLevels; ++II)
     if (CompleteLoops[II])
       Result.DV[II - 1].Scalar = false;
+
+  // Set the distance to zero if the direction is EQ.
+  // TODO: Ideally, the distance should be set to 0 immediately simultaneously
+  // with the corresponding direction being set to EQ.
+  for (unsigned II = 1; II <= Result.getLevels(); ++II) {
+    if (Result.getDirection(II) == Dependence::DVEntry::EQ) {
+      if (Result.DV[II - 1].Distance == nullptr)
+        Result.DV[II - 1].Distance = SE->getZero(SrcSCEV->getType());
+      else
+        assert(Result.DV[II - 1].Distance->isZero() &&
+               "Inconsistency between distance and direction");
+    }
+
+#ifndef NDEBUG
+    // Check that the converse (i.e., if the distance is zero, then the
+    // direction is EQ) holds.
+    const SCEV *Distance = Result.getDistance(II);
+    if (Distance && Distance->isZero())
+      assert(Result.getDirection(II) == Dependence::DVEntry::EQ &&
+             "Distance is zero, but direction is not EQ");
+#endif
+  }
 
   if (PossiblyLoopIndependent) {
     // Make sure the LoopIndependent flag is set correctly.

@@ -1,25 +1,21 @@
 ; REQUIRES: asserts
 
 ; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize \
-; RUN: -force-tail-folding-style=data-with-evl \
-; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
+; RUN: -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
 ; RUN: -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -disable-output < %s 2>&1 | FileCheck --check-prefixes=IF-EVL-OUTLOOP,IF-EVL %s
 
 ; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize \
 ; RUN: -prefer-inloop-reductions \
-; RUN: -force-tail-folding-style=data-with-evl \
-; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
+; RUN: -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
 ; RUN: -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -disable-output < %s 2>&1 | FileCheck --check-prefixes=IF-EVL-INLOOP,IF-EVL %s
 
 ; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize \
-; RUN: -force-tail-folding-style=none \
-; RUN: -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
+; RUN: -prefer-predicate-over-epilogue=scalar-epilogue \
 ; RUN: -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -disable-output < %s 2>&1 | FileCheck --check-prefixes=NO-VP-OUTLOOP %s
 
 ; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize \
 ; RUN: -prefer-inloop-reductions \
-; RUN: -force-tail-folding-style=none \
-; RUN: -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
+; RUN: -prefer-predicate-over-epilogue=scalar-epilogue \
 ; RUN: -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -disable-output < %s 2>&1 | FileCheck --check-prefixes=NO-VP-INLOOP %s
 
 
@@ -44,8 +40,8 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT:    EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; IF-EVL-OUTLOOP-NEXT:    EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-OUTLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi vp<[[RDX_START]]>, vp<[[RDX_SELECT:%.+]]>
-; IF-EVL-OUTLOOP-NEXT:    EMIT vp<[[AVL:%.+]]> = sub ir<%n>, vp<[[EVL_PHI]]>
-; IF-EVL-OUTLOOP-NEXT:    EMIT vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
+; IF-EVL-OUTLOOP-NEXT:    EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ ir<%n>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ] 
+; IF-EVL-OUTLOOP-NEXT:    EMIT-SCALAR vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; IF-EVL-OUTLOOP-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>, vp<[[EVL]]>
 ; IF-EVL-OUTLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-OUTLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
@@ -54,6 +50,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT:    WIDEN-INTRINSIC vp<[[RDX_SELECT]]> = call llvm.vp.merge(ir<true>, ir<[[ADD]]>, ir<[[RDX_PHI]]>, vp<[[EVL]]>)
 ; IF-EVL-OUTLOOP-NEXT:    EMIT-SCALAR vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
 ; IF-EVL-OUTLOOP-NEXT:    EMIT vp<[[IV_NEXT]]> = add vp<[[CAST]]>, vp<[[EVL_PHI]]>
+; IF-EVL-OUTLOOP-NEXT:    EMIT vp<[[AVL_NEXT]]> = sub nuw vp<[[AVL]]>, vp<[[CAST]]>
 ; IF-EVL-OUTLOOP-NEXT:    EMIT vp<[[IV_NEXT_EXIT:%.+]]> = add vp<[[IV]]>, vp<[[VFUF]]>
 ; IF-EVL-OUTLOOP-NEXT:    EMIT branch-on-count  vp<[[IV_NEXT_EXIT]]>, vp<[[VTC]]>
 ; IF-EVL-OUTLOOP-NEXT:  No successors
@@ -83,8 +80,8 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT:    EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; IF-EVL-INLOOP-NEXT:    EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-INLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi vp<[[RDX_START]]>, ir<[[RDX_NEXT:%.+]]>
-; IF-EVL-INLOOP-NEXT:    EMIT vp<[[AVL:%.+]]> = sub ir<%n>, vp<[[EVL_PHI]]>
-; IF-EVL-INLOOP-NEXT:    EMIT vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
+; IF-EVL-INLOOP-NEXT:    EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ ir<%n>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
+; IF-EVL-INLOOP-NEXT:    EMIT-SCALAR vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; IF-EVL-INLOOP-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>, vp<[[EVL]]>
 ; IF-EVL-INLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-INLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
@@ -92,6 +89,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT:    REDUCE ir<[[ADD:%.+]]> = ir<[[RDX_PHI]]> + vp.reduce.add (ir<[[LD1]]>, vp<[[EVL]]>)
 ; IF-EVL-INLOOP-NEXT:    EMIT-SCALAR vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
 ; IF-EVL-INLOOP-NEXT:    EMIT vp<[[IV_NEXT]]> = add vp<[[CAST]]>, vp<[[EVL_PHI]]>
+; IF-EVL-INLOOP-NEXT:    EMIT vp<[[AVL_NEXT]]> = sub nuw vp<[[AVL]]>, vp<[[CAST]]>
 ; IF-EVL-INLOOP-NEXT:    EMIT vp<[[IV_NEXT_EXIT:%.+]]> = add vp<[[IV]]>, vp<[[VFUF]]>
 ; IF-EVL-INLOOP-NEXT:    EMIT branch-on-count  vp<[[IV_NEXT_EXIT]]>, vp<[[VTC]]>
 ; IF-EVL-INLOOP-NEXT:  No successors
