@@ -767,7 +767,7 @@ void mlir::spirv::AddressOfOp::getAsmResultNames(
 // spirv.EXTConstantCompositeReplicate
 //===----------------------------------------------------------------------===//
 
-// Returns type of attribute.  In case of a TypedAttr this will simply return
+// Returns type of attribute. In case of a TypedAttr this will simply return
 // the type. But for an ArrayAttr which is untyped and can be multidimensional
 // it creates the ArrayType recursively.
 static Type getValueType(Attribute attr) {
