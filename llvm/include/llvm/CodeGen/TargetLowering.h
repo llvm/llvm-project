@@ -3209,10 +3209,12 @@ public:
   /// \p Shuffles is the shufflevector list to DE-interleave the loaded vector.
   /// \p Indices is the corresponding indices for each shufflevector.
   /// \p Factor is the interleave factor.
+  /// \p MaskFactor is the interleave factor that considers mask, which can
+  /// reduce the original factor.
   virtual bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                                     ArrayRef<ShuffleVectorInst *> Shuffles,
-                                    ArrayRef<unsigned> Indices,
-                                    unsigned Factor) const {
+                                    ArrayRef<unsigned> Indices, unsigned Factor,
+                                    unsigned MaskFactor) const {
     return false;
   }
 
