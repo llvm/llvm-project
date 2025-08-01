@@ -5,7 +5,7 @@ import { LLDBDapServer } from "./lldb-dap-server";
 import { createDebugAdapterExecutable } from "./debug-adapter-factory";
 import { ConfigureButton, showErrorMessage } from "./ui/show-error-message";
 import { ErrorWithNotification } from "./ui/error-with-notification";
-import { LogFilePathProvider } from "./types";
+import { LogFilePathProvider } from "./logging";
 
 const exec = util.promisify(child_process.execFile);
 

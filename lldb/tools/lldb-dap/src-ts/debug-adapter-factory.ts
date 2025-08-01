@@ -5,7 +5,7 @@ import * as child_process from "child_process";
 import * as fs from "node:fs/promises";
 import { ConfigureButton, OpenSettingsButton } from "./ui/show-error-message";
 import { ErrorWithNotification } from "./ui/error-with-notification";
-import { LogFilePathProvider } from "./types";
+import { LogFilePathProvider, LogType } from "./logging";
 
 const exec = util.promisify(child_process.execFile);
 
@@ -158,22 +158,6 @@ async function getDAPArguments(
 }
 
 /**
- * Formats the given date as a string in the form "YYYYMMddTHHMMSS".
- *
- * @param date The date to format as a string.
- * @returns The formatted date.
- */
-function formatDate(date: Date): string {
-  const year = date.getFullYear().toString().padStart(4, "0");
-  const month = (date.getMonth() + 1).toString().padStart(2, "0");
-  const day = date.getDate().toString().padStart(2, "0");
-  const hour = date.getHours().toString().padStart(2, "0");
-  const minute = date.getMinutes().toString().padStart(2, "0");
-  const seconds = date.getSeconds().toString().padStart(2, "0");
-  return `${year}${month}${day}T${hour}${minute}${seconds}`;
-}
-
-/**
  * Creates a new {@link vscode.DebugAdapterExecutable} based on the provided workspace folder and
  * debug configuration. Assumes that the given debug configuration is for a local launch of lldb-dap.
  *
@@ -200,9 +184,7 @@ export async function createDebugAdapterExecutable(
   } else if (
     vscode.workspace.getConfiguration("lldb-dap").get("captureSessionLogs", false)
   ) {
-    env["LLDBDAP_LOG"] = logFilePath(
-      `lldb-dap-session-${formatDate(new Date())}.log`,
-    );
+    env["LLDBDAP_LOG"] = logFilePath.get(LogType.DEBUG_SESSION);
   }
   const configEnvironment =
     config.get<{ [key: string]: string }>("environment") || {};
@@ -220,7 +202,7 @@ export async function createDebugAdapterExecutable(
   logger.info(`lldb-dap path: ${dapPath}`);
   logger.info(`lldb-dap args: ${dbgArgs}`);
   logger.info(`cwd: ${dbgOptions.cwd}`);
-  logger.info(`env: ${JSON.stringify(configEnvironment)}`);
+  logger.info(`env: ${JSON.stringify(dbgOptions.env)}`);
 
   return new vscode.DebugAdapterExecutable(dapPath, dbgArgs, dbgOptions);
 }

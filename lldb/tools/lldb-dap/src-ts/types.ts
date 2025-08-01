@@ -1,1 +1,0 @@
-export type LogFilePathProvider = (name: string) => string;

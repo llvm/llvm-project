@@ -81,10 +81,16 @@
             "description": "The path to the lldb-dap binary, e.g. /usr/local/bin/lldb-dap"
           },
           "lldb-dap.log-path": {
+            "scope": "machine-overridable",
+            "type": "string",
+            "description": "The log path for lldb-dap (if any)",
+            "markdownDeprecationMessage": "Use the `#lldb-dap.logFolder#` setting instead"
+          },
+          "lldb-dap.logFolder": {
             "order": 0,
             "scope": "machine-overridable",
             "type": "string",
-            "description": "The log path for lldb-dap (if any)"
+            "markdownDescription": "The folder to persist lldb-dap logs. If no value is provided, logs will be persisted in the [Extension Logs Folder](command:workbench.action.openExtensionLogsFolder)."
           },
           "lldb-dap.serverMode": {
             "order": 0,
