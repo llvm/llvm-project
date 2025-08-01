@@ -173,7 +173,7 @@ bool isLegalValidatorVersion(StringRef ValVersionStr, const Driver &D) {
   return true;
 }
 
-void getSpirvExtOperand(llvm::StringRef SpvExtensionArg, raw_ostream &out) {
+void getSpirvExtOperand(StringRef SpvExtensionArg, raw_ostream &out) {
   // The extensions that are commented out are supported in DXC, but the SPIR-V
   // backend does not know about them yet.
   static const std::vector<StringRef> DxcSupportedExtensions = {
