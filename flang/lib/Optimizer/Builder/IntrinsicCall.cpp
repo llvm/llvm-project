@@ -864,6 +864,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"back", asValue, handleDynamicOptional},
        {"kind", asValue}}},
      /*isElemental=*/true},
+    {"secnds",
+     &I::genSecnds,
+     {{{"x", asValue}}},
+     /*isElemental=*/false},
     {"second",
      &I::genSecond,
      {{{"time", asAddr}}},
@@ -7811,6 +7815,14 @@ IntrinsicLibrary::genScan(mlir::Type resultType,
 
   // Handle cleanup of allocatable result descriptor and return
   return readAndAddCleanUp(resultMutableBox, resultType, "SCAN");
+}
+
+// SECNDS
+// Lowering is registered, runtime not yet implemented
+fir::ExtendedValue
+IntrinsicLibrary::genSecnds(mlir::Type resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  TODO(loc, "not yet implemented: SECNDS");
 }
 
 // SECOND
