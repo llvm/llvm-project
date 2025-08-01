@@ -4582,6 +4582,15 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_cvt_pk_bf8_f16:
     case Intrinsic::amdgcn_cvt_sr_fp8_f16:
     case Intrinsic::amdgcn_cvt_sr_bf8_f16:
+    case Intrinsic::amdgcn_cvt_scale_pk8_f16_fp8:
+    case Intrinsic::amdgcn_cvt_scale_pk8_bf16_fp8:
+    case Intrinsic::amdgcn_cvt_scale_pk8_f16_bf8:
+    case Intrinsic::amdgcn_cvt_scale_pk8_bf16_bf8:
+    case Intrinsic::amdgcn_cvt_scale_pk8_f16_fp4:
+    case Intrinsic::amdgcn_cvt_scale_pk8_bf16_fp4:
+    case Intrinsic::amdgcn_cvt_scale_pk8_f32_fp8:
+    case Intrinsic::amdgcn_cvt_scale_pk8_f32_bf8:
+    case Intrinsic::amdgcn_cvt_scale_pk8_f32_fp4:
     case Intrinsic::amdgcn_sat_pk4_i4_i8:
     case Intrinsic::amdgcn_sat_pk4_u4_u8:
     case Intrinsic::amdgcn_fmed3:
