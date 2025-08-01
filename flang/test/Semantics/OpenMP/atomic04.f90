@@ -180,7 +180,7 @@ subroutine more_invalid_atomic_update_stmts()
         x = x
 
     !$omp atomic update
-    !ERROR: The atomic variable x should appear as an argument in the update operation
+    !ERROR: This is not a valid ATOMIC UPDATE operation
         x = 1    
 
     !$omp atomic update
