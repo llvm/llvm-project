@@ -653,6 +653,27 @@ void CIRGenFunction::emitNullabilityCheck(LValue lhs, mlir::Value rhs,
   assert(!cir::MissingFeatures::sanitizers());
 }
 
+namespace {
+struct DestroyObject final : EHScopeStack::Cleanup {
+  DestroyObject(Address addr, QualType type,
+                CIRGenFunction::Destroyer *destroyer)
+      : addr(addr), type(type), destroyer(destroyer) {}
+
+  Address addr;
+  QualType type;
+  CIRGenFunction::Destroyer *destroyer;
+
+  void emit(CIRGenFunction &cgf) override {
+    cgf.emitDestroy(addr, type, destroyer);
+  }
+};
+} // namespace
+
+void CIRGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
+                                 QualType type, Destroyer *destroyer) {
+  pushFullExprCleanup<DestroyObject>(cleanupKind, addr, type, destroyer);
+}
+
 /// Destroys all the elements of the given array, beginning from last to first.
 /// The array cannot be zero-length.
 ///
@@ -739,22 +760,6 @@ CIRGenFunction::getDestroyer(QualType::DestructionKind kind) {
   }
   llvm_unreachable("Unknown DestructionKind");
 }
-
-namespace {
-struct DestroyObject final : EHScopeStack::Cleanup {
-  DestroyObject(Address addr, QualType type,
-                CIRGenFunction::Destroyer *destroyer)
-      : addr(addr), type(type), destroyer(destroyer) {}
-
-  Address addr;
-  QualType type;
-  CIRGenFunction::Destroyer *destroyer;
-
-  void emit(CIRGenFunction &cgf) override {
-    cgf.emitDestroy(addr, type, destroyer);
-  }
-};
-} // namespace
 
 /// Enter a destroy cleanup for the given local variable.
 void CIRGenFunction::emitAutoVarTypeCleanup(
