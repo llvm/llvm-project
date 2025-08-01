@@ -197,23 +197,18 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
       report_fatal_error("Expect SPIR-V <Decoration> operand to be the first "
                          "element of the decoration");
 
-    // NoContraction decoration is deprecated by SPV_KHR_float_controls2, and
-    // should be replaced with FPFastMathMode with appropriate flags. However, a
-    // instruction can have both NoContraction and FPFastMathMode decorations,
-    // and there is no guarantee about the order in which we will encounter
-    // them, so we store the information of both and will handle them separately
-    // after the loop so that we can combine them, if needed.
-    if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2) &&
+    // The goal of `spirv.Decorations` metadata is to provide a way to
+    // represent SPIR-V entities that do not map to LLVM in an obvious way.
+    // FP flags do have obvious matches between LLVM IR and SPIR-V.
+    // Additionally, we have no guarantee at this point that the flags passed
+    // through the decoration are not violated already in the optimizer passes.
+    // Therefore, we simply ignore FP flags, including NoContraction, and
+    // FPFastMathMode.
+    if (DecorationId->getZExtValue() ==
+            static_cast<uint32_t>(SPIRV::Decoration::NoContraction) ||
         DecorationId->getZExtValue() ==
-            static_cast<uint32_t>(SPIRV::Decoration::NoContraction)) {
-      NoContractionFound = true;
-      continue; // NoContraction is handled separately.
-    } else if (DecorationId->getZExtValue() ==
-               static_cast<uint32_t>(SPIRV::Decoration::FPFastMathMode)) {
-      FPFastMathModeFound = true;
-      FPFastMathFlags = mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(1))
-                            ->getZExtValue();
-      continue; // FPFastMathMode is handled separately.
+            static_cast<uint32_t>(SPIRV::Decoration::FPFastMathMode)) {
+      continue; // Ignored.
     }
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
                    .addUse(Reg)
@@ -227,20 +222,6 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
       else
         report_fatal_error("Unexpected operand of the decoration");
     }
-  }
-  // If we have NoContraction decoration, we should set the
-  // FPFastMathMode::AllowContract bit to 0. If it has been set to 1 by
-  // FPFastMathMode decoration, we should report an error.
-  if (NoContractionFound &&
-      (FPFastMathFlags & SPIRV::FPFastMathMode::AllowContract))
-    report_fatal_error(
-        "Conflicting FPFastMathFlags: NoContraction and AllowContract");
-
-  if (NoContractionFound || FPFastMathModeFound) {
-    MIRBuilder.buildInstr(SPIRV::OpDecorate)
-        .addUse(Reg)
-        .addImm(static_cast<uint32_t>(SPIRV::Decoration::FPFastMathMode))
-        .addImm(FPFastMathFlags);
   }
 }
 

@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_float_controls2 %s -o - | FileCheck %s
 ; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_float_controls2 %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-DAG: Capability FloatControls2 
+; CHECK-DAG: Capability FloatControls2
 ; CHECK: Extension "SPV_KHR_float_controls2"
 
 ; CHECK: OpName %[[#addRes:]] "addRes"
@@ -33,22 +33,14 @@
 ; CHECK: OpDecorate %[[#remRes]] FPFastMathMode AllowRecip
 ; CHECK: OpDecorate %[[#negRes]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
 ; CHECK: OpDecorate %[[#oeqRes]] FPFastMathMode NotNaN|NotInf
-; CHECK: OpDecorate %[[#oneRes]] FPFastMathMode AllowReassoc|AllowTransform
-; CHECK: OpDecorate %[[#oltRes]] FPFastMathMode NotNaN|AllowReassoc|AllowTransform
-; CHECK: OpDecorate %[[#ogtRes]] FPFastMathMode NotInf|AllowReassoc|AllowTransform
-; CHECK: OpDecorate %[[#oleRes]] FPFastMathMode NSZ|AllowReassoc|AllowTransform
-; CHECK: OpDecorate %[[#ogeRes]] FPFastMathMode AllowRecip|AllowReassoc|AllowTransform
-; CHECK: OpDecorate %[[#ordRes]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform 
-; CHECK: OpDecorate %[[#ueqRes]] FPFastMathMode NotNaN|NotInf|AllowReassoc|AllowTransform 
-; CHECK: OpDecorate %[[#uneRes]] FPFastMathMode AllowReassoc|AllowTransform 
-; CHECK: OpDecorate %[[#ultRes]] FPFastMathMode AllowReassoc|AllowTransform 
-; CHECK: OpDecorate %[[#ugtRes]] FPFastMathMode AllowReassoc|AllowTransform 
-; CHECK: OpDecorate %[[#uleRes]] FPFastMathMode AllowReassoc|AllowTransform 
-; CHECK: OpDecorate %[[#ugeRes]] FPFastMathMode AllowReassoc|AllowTransform 
-; CHECK: OpDecorate %[[#unoRes]] FPFastMathMode AllowReassoc|AllowTransform 
-; CHECK-NOT: OpDecorate %[[#modRes]] FPFastMathMode
-; CHECK: OpDecorate %[[#maxRes]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform 
-; CHECK: OpDecorate %[[#maxCommonRes:]] FPFastMathMode NotNaN|NotInf 
+; CHECK: OpDecorate %[[#oltRes]] FPFastMathMode NotNaN
+; CHECK: OpDecorate %[[#ogtRes]] FPFastMathMode NotInf
+; CHECK: OpDecorate %[[#oleRes]] FPFastMathMode NSZ
+; CHECK: OpDecorate %[[#ogeRes]] FPFastMathMode AllowRecip
+; CHECK: OpDecorate %[[#ordRes]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
+; CHECK: OpDecorate %[[#ueqRes]] FPFastMathMode NotNaN|NotInf
+; CHECK: OpDecorate %[[#maxRes]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
+; CHECK: OpDecorate %[[#maxCommonRes:]] FPFastMathMode NotNaN|NotInf
 
 ; Function Attrs: convergent mustprogress nofree nounwind willreturn memory(none)
 declare spir_func float @_Z4fmodff(float, float)
