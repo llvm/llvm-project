@@ -1620,8 +1620,7 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
     features_str += "+a,+m,";
   }
 
-  llvm::StringRef additional_features =
-      arch.GetDisassemblyFeatures();
+  llvm::StringRef additional_features = arch.GetDisassemblyFeatures();
   // Prepend the additional_features if it's not already in the features_str to
   // avoid duplicates.
   if (!additional_features.empty()) {
