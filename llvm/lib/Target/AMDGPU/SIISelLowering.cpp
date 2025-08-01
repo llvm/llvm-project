@@ -5363,39 +5363,39 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       const TargetRegisterClass *WaveMaskRegClass = TRI->getWaveMaskRegClass();
       const TargetRegisterClass *DstRegClass = MRI.getRegClass(DstReg);
       Register ExecMask = MRI.createVirtualRegister(WaveMaskRegClass);
-      Register ActiveLanes =
+      Register NumActiveLanes =
           MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
 
       bool IsWave32 = ST.isWave32();
       unsigned MovOpc = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
       MCRegister ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
-      unsigned CountReg =
+      unsigned BitCountOpc =
           IsWave32 ? AMDGPU::S_BCNT1_I32_B32 : AMDGPU::S_BCNT1_I32_B64;
 
-          BuildMI(BB, MI, DL, TII->get(MovOpc), ExecMask).addReg(ExecReg);
+      BuildMI(BB, MI, DL, TII->get(MovOpc), ExecMask).addReg(ExecReg);
 
-          auto NewAccumulator =
-              BuildMI(BB, MI, DL, TII->get(CountReg), ActiveLanes)
-                  .addReg(ExecMask);
+      auto NewAccumulator =
+          BuildMI(BB, MI, DL, TII->get(BitCountOpc), NumActiveLanes)
+              .addReg(ExecMask);
 
-          switch (Opc) {
-          case AMDGPU::S_XOR_B32: {
-            // Performing an XOR operation on a uniform value
-            // depends on the parity of the number of active lanes.
-            // For even parity, the result will be 0, for odd
-            // parity the result will be the same as the input value.
-            Register ParityRegister =
-                MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+      switch (Opc) {
+      case AMDGPU::S_XOR_B32: {
+        // Performing an XOR operation on a uniform value
+        // depends on the parity of the number of active lanes.
+        // For even parity, the result will be 0, for odd
+        // parity the result will be the same as the input value.
+        Register ParityRegister =
+            MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
 
-            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_AND_B32), ParityRegister)
-                .addReg(NewAccumulator->getOperand(0).getReg())
-                .addImm(1)
-                .setOperandDead(3); // Dead scc
-            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
-                .addReg(SrcReg)
-                .addReg(ParityRegister);
-            break;
-          }
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_AND_B32), ParityRegister)
+            .addReg(NewAccumulator->getOperand(0).getReg())
+            .addImm(1)
+            .setOperandDead(3); // Dead scc
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
+            .addReg(SrcReg)
+            .addReg(ParityRegister);
+        break;
+      }
       case AMDGPU::S_SUB_I32: {
         Register NegatedVal = MRI.createVirtualRegister(DstRegClass);
 
@@ -5628,8 +5628,8 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
                              .addReg(Accumulator->getOperand(0).getReg());
         break;
       }
-      case ::AMDGPU::S_ADD_U64_PSEUDO:
-      case ::AMDGPU::S_SUB_U64_PSEUDO: {
+      case AMDGPU::S_ADD_U64_PSEUDO:
+      case AMDGPU::S_SUB_U64_PSEUDO: {
         unsigned newOpc1 = Opc == AMDGPU::S_ADD_U64_PSEUDO ? AMDGPU::S_ADD_U32
                                                            : AMDGPU::S_SUB_U32;
         unsigned newOpc2 = Opc == AMDGPU::S_ADD_U64_PSEUDO ? AMDGPU::S_ADDC_U32
