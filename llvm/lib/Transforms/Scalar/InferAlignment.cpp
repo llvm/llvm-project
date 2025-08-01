@@ -69,8 +69,7 @@ bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
   // same base pointer.
   DenseMap<Value *, Align> BestBasePointerAligns;
   auto InferFromBasePointer = [&](Value *PtrOp, Align LoadStoreAlign) {
-    APInt OffsetFromBase =
-        APInt(DL.getIndexTypeSizeInBits(PtrOp->getType()), 0);
+    APInt OffsetFromBase(DL.getIndexTypeSizeInBits(PtrOp->getType()), 0);
     PtrOp = PtrOp->stripAndAccumulateConstantOffsets(DL, OffsetFromBase, true);
     // Derive the base pointer alignment from the load/store alignment
     // and the offset from the base pointer.
