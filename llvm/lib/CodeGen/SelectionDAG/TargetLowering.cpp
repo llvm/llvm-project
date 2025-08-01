@@ -5366,7 +5366,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
               // If using an unsigned shift doesn't yield a legal compare
               // immediate, try using sra instead.
               APInt NewC = C1.lshr(ShiftBits);
-              if (NewC.getSignificantBits() > 64 ||
+              if (NewC.getSignificantBits() <= 64 &&
                   !isLegalICmpImmediate(NewC.getSExtValue())) {
                 APInt SignedC = C1.ashr(ShiftBits);
                 if (SignedC.getSignificantBits() <= 64 &&
