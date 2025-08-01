@@ -29,11 +29,10 @@ define void @cost_store_i8(ptr %dst) #0 {
 ; DEFAULT:       vector.body:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
-; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP9]], i32 0
 ; DEFAULT-NEXT:    [[TMP22:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP23:%.*]] = mul nuw i64 [[TMP22]], 16
 ; DEFAULT-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP9]], i64 [[TMP23]]
-; DEFAULT-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[TMP10]], align 1
+; DEFAULT-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[TMP9]], align 1
 ; DEFAULT-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[TMP24]], align 1
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP7]]
 ; DEFAULT-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -59,8 +58,7 @@ define void @cost_store_i8(ptr %dst) #0 {
 ; DEFAULT:       vec.epilog.vector.body:
 ; DEFAULT-NEXT:    [[INDEX5:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT6:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX5]]
-; DEFAULT-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[TMP19]], i32 0
-; DEFAULT-NEXT:    store <vscale x 8 x i8> zeroinitializer, ptr [[TMP20]], align 1
+; DEFAULT-NEXT:    store <vscale x 8 x i8> zeroinitializer, ptr [[TMP19]], align 1
 ; DEFAULT-NEXT:    [[INDEX_NEXT6]] = add nuw i64 [[INDEX5]], [[TMP17]]
 ; DEFAULT-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT6]], [[N_VEC3]]
 ; DEFAULT-NEXT:    br i1 [[TMP21]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
@@ -104,8 +102,7 @@ define void @cost_store_i8(ptr %dst) #0 {
 ; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; PRED-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
-; PRED-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP13]], i32 0
-; PRED-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> zeroinitializer, ptr [[TMP14]], i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
+; PRED-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> zeroinitializer, ptr [[TMP13]], i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
 ; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX]], i64 [[TMP11]])
 ; PRED-NEXT:    [[TMP15:%.*]] = xor <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], splat (i1 true)
@@ -169,9 +166,8 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = and <16 x i8> [[TMP5]], [[TMP7]]
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = and <16 x i8> [[TMP5]], [[TMP7]]
 ; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
-; DEFAULT-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP10]], i32 0
 ; DEFAULT-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP10]], i32 16
-; DEFAULT-NEXT:    store <16 x i8> [[TMP8]], ptr [[TMP12]], align 1, !alias.scope [[META8:![0-9]+]], !noalias [[META5]]
+; DEFAULT-NEXT:    store <16 x i8> [[TMP8]], ptr [[TMP10]], align 1, !alias.scope [[META8:![0-9]+]], !noalias [[META5]]
 ; DEFAULT-NEXT:    store <16 x i8> [[TMP9]], ptr [[TMP13]], align 1, !alias.scope [[META8]], !noalias [[META5]]
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; DEFAULT-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 992
@@ -194,8 +190,7 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; DEFAULT-NEXT:    [[TMP18:%.*]] = trunc <8 x i64> [[BROADCAST_SPLAT8]] to <8 x i8>
 ; DEFAULT-NEXT:    [[TMP14:%.*]] = and <8 x i8> [[TMP18]], [[TMP15]]
 ; DEFAULT-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX5]]
-; DEFAULT-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[TMP26]], i32 0
-; DEFAULT-NEXT:    store <8 x i8> [[TMP14]], ptr [[TMP27]], align 1, !alias.scope [[META8]], !noalias [[META5]]
+; DEFAULT-NEXT:    store <8 x i8> [[TMP14]], ptr [[TMP26]], align 1, !alias.scope [[META8]], !noalias [[META5]]
 ; DEFAULT-NEXT:    [[INDEX_NEXT8]] = add nuw i64 [[INDEX5]], 8
 ; DEFAULT-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT8]], 1000
 ; DEFAULT-NEXT:    br i1 [[TMP17]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
@@ -252,8 +247,7 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; PRED-NEXT:    [[TMP8:%.*]] = trunc <vscale x 2 x i64> [[BROADCAST_SPLAT3]] to <vscale x 2 x i8>
 ; PRED-NEXT:    [[TMP9:%.*]] = and <vscale x 2 x i8> [[TMP8]], [[TMP11]]
 ; PRED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
-; PRED-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP5]], i32 0
-; PRED-NEXT:    call void @llvm.masked.store.nxv2i8.p0(<vscale x 2 x i8> [[TMP9]], ptr [[TMP6]], i32 1, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]]), !alias.scope [[META7:![0-9]+]], !noalias [[META4]]
+; PRED-NEXT:    call void @llvm.masked.store.nxv2i8.p0(<vscale x 2 x i8> [[TMP9]], ptr [[TMP5]], i32 1, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]]), !alias.scope [[META7:![0-9]+]], !noalias [[META4]]
 ; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 1000)
 ; PRED-NEXT:    [[TMP12:%.*]] = xor <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], splat (i1 true)

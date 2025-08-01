@@ -845,7 +845,7 @@ bool CheckInit(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return true;
 }
 
-bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
+static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
 
   if (F->isVirtual() && !S.getLangOpts().CPlusPlus20) {
     const SourceLocation &Loc = S.Current->getLocation(OpPC);

@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 
 // These compilers don't support __builtin_is_virtual_base_of yet.
-// UNSUPPORTED: clang-18, clang-19, gcc-14, apple-clang-16, apple-clang-17
+// UNSUPPORTED: clang-19, gcc-14, apple-clang-16, apple-clang-17
 
 // <type_traits>
 
