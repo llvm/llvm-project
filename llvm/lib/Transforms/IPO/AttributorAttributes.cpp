@@ -5203,16 +5203,16 @@ static std::optional<Align> getKnownAlignForIntrinsic(Attributor &A,
         const DataLayout &DL = A.getDataLayout();
         unsigned Size =
             DL.getPointerTypeSizeInBits(II->getOperand(0)->getType());
-        uint64_t TrailingZeros = Size;
+        uint64_t TrailingZeros = Size - 1;
         for (const APInt &It : ConstVals->getAssumedSet())
           if (It.countTrailingZeros() < TrailingZeros)
             TrailingZeros = It.countTrailingZeros();
-        if (TrailingZeros < Size) {
-          uint64_t Mask = 1 << TrailingZeros;
-          if (Mask >= AlignAA->getKnownAlign().value()) {
-            return Align(1);
-          }
-        }
+
+        APInt Mask = APInt(Size, 1).shl(TrailingZeros);
+        APInt PtrAlign = APInt(Size, 1).shl(Log2(AlignAA->getKnownAlign()));
+        if (Mask.uge(PtrAlign))
+          return Align(1);
+
         return AlignAA->getKnownAlign();
       }
     } else if (AlignAA) {
@@ -5237,22 +5237,25 @@ getAssumedAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
     const auto *AlignAA =
         A.getAAFor<AAAlign>(QueryingAA, IRPosition::value(*(II->getOperand(0))),
                             DepClassTy::REQUIRED);
-    uint64_t Alignment = 0;
+    Align Alignment;
+    bool NeedRet = false;
     if (ConstVals && ConstVals->isValidState()) {
       const DataLayout &DL = A.getDataLayout();
       unsigned Size = DL.getPointerTypeSizeInBits(II->getOperand(0)->getType());
-      unsigned TrailingZeros = Size;
+      unsigned TrailingZeros = Size - 1;
       for (const APInt &It : ConstVals->getAssumedSet())
         if (It.countTrailingZeros() < TrailingZeros)
           TrailingZeros = It.countTrailingZeros();
-      if (TrailingZeros < Size)
-        Alignment = 1 << TrailingZeros;
+      Alignment = Align(1 << TrailingZeros);
+      NeedRet = true;
     }
-    if (AlignAA && AlignAA->isValidState() &&
-        Alignment < AlignAA->getAssumedAlign().value())
-      Alignment = AlignAA->getAssumedAlign().value();
+    if (AlignAA && AlignAA->isValidState()) {
+      NeedRet = true;
+      if (Alignment < AlignAA->getAssumedAlign())
+        Alignment = AlignAA->getAssumedAlign();
+    }
 
-    if (Alignment != 0)
+    if (NeedRet)
       return Align(Alignment);
     return QueryingAA.getAssumedAlign();
   }
