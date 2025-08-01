@@ -148,8 +148,6 @@ Bug Fixes to Attribute Support
 
 - ``[[nodiscard]]`` is now respected on Objective-C and Objective-C++ methods.
   (#GH141504)
-- Fixed a crash in the static analyzer that when the expression in an 
-  ``[[assume(expr)]]`` attribute was enclosed in parentheses.  (#GH151529)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -249,6 +247,8 @@ New features
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
+- Fixed a crash in the static analyzer that when the expression in an 
+  ``[[assume(expr)]]`` attribute was enclosed in parentheses.  (#GH151529)
 
 Improvements
 ^^^^^^^^^^^^

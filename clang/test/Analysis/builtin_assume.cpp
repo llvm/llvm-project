@@ -62,3 +62,14 @@ int using_builtin_assume_has_no_sideeffects(int y) {
 
   return y;
 }
+
+template <int ...args>
+bool issue151529() {
+  [[assume((true))]]; // no-crash
+  [[assume(((args >= 0) && ...))]]; // no-crash
+  return ((args >= 0) && ...);
+}
+
+void instantiate_issue151529() {
+  issue151529<0>();
+}
