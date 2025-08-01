@@ -12,9 +12,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr2
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY1]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[COPY]], [[ZEXT]]
-    ; CHECK-NEXT: $sgpr0_sgpr1 = COPY [[OR]](s64)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV]], [[COPY1]]
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[OR]](s32), [[UV1]](s32)
+    ; CHECK-NEXT: $sgpr0_sgpr1 = COPY [[MV]](s64)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0_sgpr1
     %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(s32) = COPY $sgpr2
@@ -34,9 +35,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr2
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY1]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[ZEXT]], [[COPY]]
-    ; CHECK-NEXT: $sgpr0_sgpr1 = COPY [[OR]](s64)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV]], [[COPY1]]
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[OR]](s32), [[UV1]](s32)
+    ; CHECK-NEXT: $sgpr0_sgpr1 = COPY [[MV]](s64)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0_sgpr1
     %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(s32) = COPY $sgpr2
@@ -57,12 +59,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr2
-    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[MV]], [[ZEXT]]
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[OR]](s64)
-    ; CHECK-NEXT: $sgpr0 = COPY [[UV]](s32)
-    ; CHECK-NEXT: $sgpr1 = COPY [[UV1]](s32)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[COPY]], [[COPY2]]
+    ; CHECK-NEXT: $sgpr0 = COPY [[OR]](s32)
+    ; CHECK-NEXT: $sgpr1 = COPY [[COPY1]](s32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
