@@ -285,9 +285,9 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
 // CIR_VPtrType
 //===----------------------------------------------------------------------===//
 
-def CIR_VPtrType : CIR_Type<"VPtr", "vptr",
-    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
-
+def CIR_VPtrType : CIR_Type<"VPtr", "vptr", [
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>
+]> {
   let summary = "CIR type that is used for the vptr member of C++ objects";
   let description = [{
     `cir.vptr` is a special type used as the type for the vptr member of a C++

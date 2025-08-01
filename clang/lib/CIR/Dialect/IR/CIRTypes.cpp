@@ -702,15 +702,15 @@ BoolType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 //===----------------------------------------------------------------------===//
 
 llvm::TypeSize
-VPtrType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
-                            ::mlir::DataLayoutEntryListRef params) const {
+VPtrType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                            mlir::DataLayoutEntryListRef params) const {
   // FIXME: consider size differences under different ABIs
   return llvm::TypeSize::getFixed(64);
 }
 
 uint64_t
-VPtrType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
-                          ::mlir::DataLayoutEntryListRef params) const {
+VPtrType::getABIAlignment(const mlir::DataLayout &dataLayout,
+                          mlir::DataLayoutEntryListRef params) const {
   // FIXME: consider alignment differences under different ABIs
   return 8;
 }
