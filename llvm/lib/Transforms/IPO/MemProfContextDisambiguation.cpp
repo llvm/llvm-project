@@ -99,6 +99,9 @@ STATISTIC(SkippedCallsCloning,
           "Number of calls skipped during cloning due to unexpected operand");
 STATISTIC(MismatchedCloneAssignments,
           "Number of callsites assigned to call multiple non-matching clones");
+STATISTIC(TotalMergeInvokes, "Number of merge invocations for nodes");
+STATISTIC(TotalMergeIters, "Number of merge iterations for nodes");
+STATISTIC(MaxMergeIters, "Max merge iterations for nodes");
 
 static cl::opt<std::string> DotFilePathPrefix(
     "memprof-dot-file-path-prefix", cl::init(""), cl::Hidden,
@@ -108,6 +111,11 @@ static cl::opt<std::string> DotFilePathPrefix(
 static cl::opt<bool> ExportToDot("memprof-export-to-dot", cl::init(false),
                                  cl::Hidden,
                                  cl::desc("Export graph to dot files."));
+
+// TODO: Remove this option once new handling is validated more widely.
+static cl::opt<bool> DoMergeIteration(
+    "memprof-merge-iteration", cl::init(true), cl::Hidden,
+    cl::desc("Iteratively apply merging on a node to catch new callers"));
 
 // How much of the graph to export to dot.
 enum DotScope {
@@ -3995,7 +4003,7 @@ IndexCallsiteContextGraph::getAllocationCallType(const CallInfo &Call) const {
 
 void ModuleCallsiteContextGraph::updateCall(CallInfo &CallerCall,
                                             FuncInfo CalleeFunc) {
-  auto *CurF = cast<CallBase>(CallerCall.call())->getCalledFunction();
+  auto *CurF = getCalleeFunc(CallerCall.call());
   auto NewCalleeCloneNo = CalleeFunc.cloneNo();
   if (isMemProfClone(*CurF)) {
     // If we already assigned this callsite to call a specific non-default
@@ -4191,15 +4199,35 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeClones(
   if (!Inserted.second)
     return;
 
-  // Make a copy since the recursive call may move a caller edge to a new
-  // callee, messing up the iterator.
-  auto CallerEdges = Node->CallerEdges;
-  for (auto CallerEdge : CallerEdges) {
-    // Skip any caller edge moved onto a different callee during recursion.
-    if (CallerEdge->Callee != Node)
-      continue;
-    mergeClones(CallerEdge->Caller, Visited, ContextIdToAllocationNode);
+  // Iteratively perform merging on this node to handle new caller nodes created
+  // during the recursive traversal. We could do something more elegant such as
+  // maintain a worklist, but this is a simple approach that doesn't cause a
+  // measureable compile time effect, as most nodes don't have many caller
+  // edges to check.
+  bool FoundUnvisited = true;
+  unsigned Iters = 0;
+  while (FoundUnvisited) {
+    Iters++;
+    FoundUnvisited = false;
+    // Make a copy since the recursive call may move a caller edge to a new
+    // callee, messing up the iterator.
+    auto CallerEdges = Node->CallerEdges;
+    for (auto CallerEdge : CallerEdges) {
+      // Skip any caller edge moved onto a different callee during recursion.
+      if (CallerEdge->Callee != Node)
+        continue;
+      // If we found an unvisited caller, note that we should check the caller
+      // edges again as mergeClones may add or change caller nodes.
+      if (DoMergeIteration && !Visited.contains(CallerEdge->Caller))
+        FoundUnvisited = true;
+      mergeClones(CallerEdge->Caller, Visited, ContextIdToAllocationNode);
+    }
   }
+
+  TotalMergeInvokes++;
+  TotalMergeIters += Iters;
+  if (Iters > MaxMergeIters)
+    MaxMergeIters = Iters;
 
   // Merge for this node after we handle its callers.
   mergeNodeCalleeClones(Node, Visited, ContextIdToAllocationNode);
