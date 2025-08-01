@@ -23,11 +23,9 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; AARCH-NEXT:    and w2, w8, #0x1
 ; AARCH-NEXT:    ret
 ; AARCH-NEXT:  .LBB0_2: // %overflow.no
-; AARCH-NEXT:    umulh x8, x0, x2
-; AARCH-NEXT:    madd x8, x0, x3, x8
+; AARCH-NEXT:    umulh x1, x0, x2
 ; AARCH-NEXT:    mul x0, x0, x2
-; AARCH-NEXT:    madd x1, x1, x2, x8
-; AARCH-NEXT:    and w2, wzr, #0x1
+; AARCH-NEXT:    and w2, w8, #0x1
 ; AARCH-NEXT:    ret
 start:
   %0 = tail call { i128, i1 } @llvm.umul.with.overflow.i128(i128 %l, i128 %r) #2
@@ -54,11 +52,9 @@ define i128 @__muloti4(i128 %0, i128 %1, ptr nocapture nonnull writeonly align 4
 ; AARCH-NEXT:    cmp x3, x8
 ; AARCH-NEXT:    b.ne .LBB1_3
 ; AARCH-NEXT:  // %bb.2: // %overflow.no
-; AARCH-NEXT:    umulh x8, x0, x2
+; AARCH-NEXT:    smulh x8, x0, x2
 ; AARCH-NEXT:    mov w9, wzr
-; AARCH-NEXT:    madd x8, x0, x3, x8
 ; AARCH-NEXT:    mul x0, x0, x2
-; AARCH-NEXT:    madd x8, x1, x2, x8
 ; AARCH-NEXT:    tbnz x1, #63, .LBB1_4
 ; AARCH-NEXT:    b .LBB1_5
 ; AARCH-NEXT:  .LBB1_3: // %overflow

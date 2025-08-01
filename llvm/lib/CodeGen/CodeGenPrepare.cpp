@@ -6459,7 +6459,9 @@ bool CodeGenPrepare::optimizeUMulWithOverflow(Instruction *I) {
   //------------------------------------------------------------------------------
   // BB overflow.no:
   Builder.SetInsertPoint(NoOverflowBB);
-  auto *Mul = Builder.CreateMul(LHS, RHS, "mul.no.overflow");
+  auto *ExtLoLHS = Builder.CreateZExt(LoLHS, Ty, "lo.lhs.ext");
+  auto *ExtLoRHS = Builder.CreateZExt(LoRHS, Ty, "lo.rhs.ext");
+  auto *Mul = Builder.CreateMul(ExtLoLHS, ExtLoRHS, "mul.no.overflow");
   StructType *STy = StructType::get(I->getContext(),
                         {Ty, IntegerType::getInt1Ty(I->getContext())});
   Value *StructValNoOverflow = PoisonValue::get(STy);
@@ -6557,7 +6559,9 @@ bool CodeGenPrepare::optimizeSMulWithOverflow(Instruction *I) {
   //------------------------------------------------------------------------------
   // BB overflow.no:
   Builder.SetInsertPoint(NoOverflowBB);
-  auto *Mul = Builder.CreateMul(LHS, RHS, "mul.no.overflow");
+  auto *ExtLoLHS = Builder.CreateSExt(LoLHS, Ty, "lo.lhs.ext");
+  auto *ExtLoRHS = Builder.CreateSExt(LoRHS, Ty, "lo.rhs.ext");
+  auto *Mul = Builder.CreateMul(ExtLoLHS, ExtLoRHS, "mul.no.overflow");
   StructType * STy = StructType::get(I->getContext(),
                         {Ty, IntegerType::getInt1Ty(I->getContext())});
   Value *StructValNoOverflow = PoisonValue::get(STy);
