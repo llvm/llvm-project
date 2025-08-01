@@ -2020,7 +2020,7 @@ static SDValue lowerVECTOR_SHUFFLE_XVPERM(const SDLoc &DL, ArrayRef<int> Mask,
   // If both the lower and upper 128-bit parts access only one half of the
   // vector (either lower or upper), avoid using xvperm.w. The latency of
   // xvperm.w(3) is higher than using xvshuf(1) and xvori(1).
-  if ((FrontLo && (BackLo || BackHi)) || (FrontHi && (BackLo || BackHi)))
+  if ((FrontLo || FrontHi) && (BackLo || BackHi))
     return SDValue();
 
   SmallVector<SDValue, 8> Masks;
