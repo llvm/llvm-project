@@ -42,6 +42,10 @@ set( LIBCLC_TARGETS_TO_BUILD "all"
 
 option( ENABLE_RUNTIME_SUBNORMAL "Enable runtime linking of subnormal support." OFF )
 
+option(
+  LIBCLC_USE_SPIRV_BACKEND "Build SPIR-V targets with the SPIR-V backend." OFF
+)
+
 # Top level target used to build all Libclc libraries.
 add_custom_target( libclc ALL )
 
@@ -115,14 +119,17 @@ foreach( tool IN ITEMS clang opt llvm-as llvm-link )
   endif()
 endforeach()
 
-# llvm-spirv is an optional dependency, used to build spirv-* targets.
-# It may be provided in-tree or externally.
-if( TARGET llvm-spirv )
-  get_host_tool_path( llvm-spirv LLVM_SPIRV llvm-spirv_exe llvm-spirv_target )
-else()
-  find_program( LLVM_SPIRV llvm-spirv HINTS ${LLVM_TOOLS_BINARY_DIR} )
-  set( llvm-spirv_exe "${LLVM_SPIRV}" )
-  set( llvm-spirv_target )
+if( NOT LIBCLC_USE_SPIRV_BACKEND )
+  # llvm-spirv is an optional dependency, used to build spirv-* targets when
+  # the SPIR-V backend hasn't been requested. It may be provided in-tree or
+  # externally.
+  if( TARGET llvm-spirv )
+    get_host_tool_path( llvm-spirv LLVM_SPIRV llvm-spirv_exe llvm-spirv_target )
+  else()
+    find_program( LLVM_SPIRV llvm-spirv HINTS ${LLVM_TOOLS_BINARY_DIR} )
+    set( llvm-spirv_exe "${LLVM_SPIRV}" )
+    set( llvm-spirv_target )
+  endif()
 endif()
 
 # List of all targets. Note that some are added dynamically below.
@@ -138,22 +145,24 @@ set( LIBCLC_TARGETS_ALL
   nvptx64--nvidiacl
 )
 
-# mesa3d environment is only available since LLVM 4.0
+# The mesa3d environment is only available since LLVM 4.0
 if( LLVM_PACKAGE_VERSION VERSION_GREATER_EQUAL 4.0.0 )
   list( APPEND LIBCLC_TARGETS_ALL amdgcn-mesa-mesa3d )
 endif()
 
-# spirv-mesa3d and spirv64-mesa3d targets can only be built with the (optional)
-# llvm-spirv external tool.
-if( llvm-spirv_exe )
-  list( APPEND LIBCLC_TARGETS_ALL  spirv-mesa3d- spirv64-mesa3d- )
+# The spirv-mesa3d and spirv64-mesa3d targets are optional and can be built
+# with either the LLVM SPIR-V backend or the external llvm-spirv tool.
+if( LIBCLC_USE_SPIRV_BACKEND OR llvm-spirv_exe )
+  list( APPEND LIBCLC_TARGETS_ALL spirv-mesa3d- spirv64-mesa3d- )
 endif()
 
 # Verify that the user hasn't requested mesa3d targets without an available
 # llvm-spirv tool.
-if( "spirv-mesa3d-" IN_LIST LIBCLC_TARGETS_TO_BUILD OR "spirv64-mesa3d-" IN_LIST LIBCLC_TARGETS_TO_BUILD )
-  if( NOT llvm-spirv_exe )
-    message( FATAL_ERROR "SPIR-V targets requested, but spirv-tools is not installed" )
+if( spirv-mesa3d- IN_LIST LIBCLC_TARGETS_TO_BUILD
+    OR spirv64-mesa3d- IN_LIST LIBCLC_TARGETS_TO_BUILD )
+  if( NOT LIBCLC_USE_SPIRV_BACKEND AND NOT llvm-spirv_exe )
+    message( FATAL_ERROR "SPIR-V targets requested, but spirv-tools is not "
+      "installed and the SPIR-V backend has not been requested." )
   endif()
 endif()
 
