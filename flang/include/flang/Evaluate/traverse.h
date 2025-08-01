@@ -146,7 +146,7 @@ public:
     return Combine(x.base(), x.subscript());
   }
   Result operator()(const CoarrayRef &x) const {
-    return Combine(x.base(), x.cosubscript(), x.stat(), x.team());
+    return Combine(x.base(), x.cosubscript(), x.stat(), x.team(), x.notify());
   }
   Result operator()(const DataRef &x) const { return visitor_(x.u); }
   Result operator()(const Substring &x) const {
