@@ -1419,10 +1419,10 @@ static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
     });
 
   auto *CanIV = Plan.getCanonicalIV();
-  if (!match(Cond, m_ICmp(m_Specific(CanIV->getBackedgeValue()),
+  CmpPredicate Pred;
+  if (!match(Cond, m_ICmp(Pred, m_Specific(CanIV->getBackedgeValue()),
                           m_Specific(&Plan.getVectorTripCount()))) ||
-      cast<VPRecipeWithIRFlags>(Cond->getDefiningRecipe())->getPredicate() !=
-          CmpInst::ICMP_EQ)
+      Pred != CmpInst::ICMP_EQ)
     return false;
 
   // The compare checks CanIV + VFxUF == vector trip count. The vector trip
