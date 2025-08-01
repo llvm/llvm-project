@@ -7,7 +7,7 @@
 #include <complex.h>
 #include <stdio.h>
 
-#define RELATIVE_TOLERANCE 1e-4
+#define RELATIVE_TOLERANCE 1e-9
 
 // Returns: the product of a + ib and c + id
 
