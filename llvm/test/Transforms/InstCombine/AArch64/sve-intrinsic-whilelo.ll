@@ -4,8 +4,20 @@
 target triple = "aarch64-unknown-linux-gnu"
 
 
-define <vscale x 4 x float> @const_whilelo_nxv4i32(ptr %0) #0 {
-; CHECK-LABEL: define <vscale x 4 x float> @const_whilelo_nxv4i32(
+define <vscale x 2 x i64> @const_whilelo_nxv2i1.64(ptr %0) #0 {
+; CHECK-LABEL: define <vscale x 2 x i64> @const_whilelo_nxv2i1.64(
+; CHECK-SAME: ptr [[TMP0:%.*]]) {
+; CHECK-NEXT:    [[MASK:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 4)
+; CHECK-NEXT:    [[LOAD:%.*]] = tail call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr nonnull [[TMP0]], i32 1, <vscale x 2 x i1> [[MASK]], <vscale x 2 x i64> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[LOAD]]
+;
+  %mask = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilelo.nxv2i1.i64(i64 0, i64 4)
+  %load = tail call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr nonnull %0, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i64> zeroinitializer)
+  ret <vscale x 2 x i64> %load
+}
+
+define <vscale x 4 x float> @const_whilelo_nxv4i1.i32(ptr %0) #0 {
+; CHECK-LABEL: define <vscale x 4 x float> @const_whilelo_nxv4i1.i32(
 ; CHECK-SAME: ptr [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[MASK:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 4)
 ; CHECK-NEXT:    [[LOAD:%.*]] = tail call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[TMP0]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
@@ -16,8 +28,21 @@ define <vscale x 4 x float> @const_whilelo_nxv4i32(ptr %0) #0 {
   ret <vscale x 4 x float> %load
 }
 
-define <vscale x 8 x float> @const_whilelo_nxv8f32(ptr %0) #0 {
-; CHECK-LABEL: define <vscale x 8 x float> @const_whilelo_nxv8f32(
+define <vscale x 2 x i32> @const_whilelo_nxv2i1.i32(ptr %0) #0 {
+; CHECK-LABEL: define <vscale x 2 x i32> @const_whilelo_nxv2i1.i32(
+; CHECK-SAME: ptr [[TMP0:%.*]]) {
+; CHECK-NEXT:    [[MASK:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i32(i32 0, i32 2)
+; CHECK-NEXT:    [[LOAD:%.*]] = tail call <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0(ptr nonnull [[TMP0]], i32 1, <vscale x 2 x i1> [[MASK]], <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[LOAD]]
+;
+  %mask = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilelo.nxv2i1.i32(i32 0, i32 2)
+  %load = tail call <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0(ptr nonnull %0, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i32> zeroinitializer)
+  ret <vscale x 2 x i32> %load
+}
+
+
+define <vscale x 8 x float> @const_whilelo_nxv8i1.i32_nxv8f32(ptr %0) #0 {
+; CHECK-LABEL: define <vscale x 8 x float> @const_whilelo_nxv8i1.i32_nxv8f32(
 ; CHECK-SAME: ptr [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[MASK:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i32(i32 0, i32 8)
 ; CHECK-NEXT:    [[LOAD:%.*]] = tail call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr nonnull [[TMP0]], i32 1, <vscale x 8 x i1> [[MASK]], <vscale x 8 x float> zeroinitializer)
@@ -28,39 +53,39 @@ define <vscale x 8 x float> @const_whilelo_nxv8f32(ptr %0) #0 {
   ret <vscale x 8 x float> %load
 }
 
-define <vscale x 8 x i16> @const_whilelo_nxv8i16(ptr %0) #0 {
-; CHECK-LABEL: define <vscale x 8 x i16> @const_whilelo_nxv8i16(
+define <vscale x 8 x i16> @const_whilelo_nxv8i1.i32_nxv8i16(ptr %0) #0 {
+; CHECK-LABEL: define <vscale x 8 x i16> @const_whilelo_nxv8i1.i32_nxv8i16(
 ; CHECK-SAME: ptr [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[MASK:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i32(i32 0, i32 8)
 ; CHECK-NEXT:    [[LOAD:%.*]] = tail call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr nonnull [[TMP0]], i32 1, <vscale x 8 x i1> [[MASK]], <vscale x 8 x i16> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[LOAD]]
 ;
-  %mask = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilelo.nxv8i1.i16(i32 0, i32 8)
+  %mask = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilelo.nxv8i1.i32(i32 0, i32 8)
   %load = tail call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr nonnull %0, i32 1, <vscale x 8 x i1> %mask, <vscale x 8 x i16> zeroinitializer)
   ret <vscale x 8 x i16> %load
 }
 
-define <vscale x 16 x i8> @const_whilelo_nxv16i8(ptr %0) #0 {
-; CHECK-LABEL: define <vscale x 16 x i8> @const_whilelo_nxv16i8(
+define <vscale x 16 x i8> @const_whilelo_nxv16i1.i32(ptr %0) #0 {
+; CHECK-LABEL: define <vscale x 16 x i8> @const_whilelo_nxv16i1.i32(
 ; CHECK-SAME: ptr [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[MASK:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 0, i32 16)
 ; CHECK-NEXT:    [[LOAD:%.*]] = tail call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr nonnull [[TMP0]], i32 1, <vscale x 16 x i1> [[MASK]], <vscale x 16 x i8> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[LOAD]]
 ;
-  %mask = tail call <vscale x 16 x i1> @llvm.aarch64.sve.whilelo.nxv16i1.i8(i32 0, i32 16)
+  %mask = tail call <vscale x 16 x i1> @llvm.aarch64.sve.whilelo.nxv16i1.i32(i32 0, i32 16)
   %load = tail call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr nonnull %0, i32 1, <vscale x 16 x i1> %mask, <vscale x 16 x i8> zeroinitializer)
   ret <vscale x 16 x i8> %load
 }
 
 
-define <vscale x 16 x i8> @whilelo_nxv16i8(ptr %0, i32 %a, i32 %b) #0 {
-; CHECK-LABEL: define <vscale x 16 x i8> @whilelo_nxv16i8(
+define <vscale x 16 x i8> @whilelo_nxv16i1.i32(ptr %0, i32 %a, i32 %b) #0 {
+; CHECK-LABEL: define <vscale x 16 x i8> @whilelo_nxv16i1.i32(
 ; CHECK-SAME: ptr [[TMP0:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[MASK:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    [[LOAD:%.*]] = tail call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr nonnull [[TMP0]], i32 1, <vscale x 16 x i1> [[MASK]], <vscale x 16 x i8> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[LOAD]]
 ;
-  %mask = tail call <vscale x 16 x i1> @llvm.aarch64.sve.whilelo.nxv16i1.i8(i32 %a, i32 %b)
+  %mask = tail call <vscale x 16 x i1> @llvm.aarch64.sve.whilelo.nxv16i1.i32(i32 %a, i32 %b)
   %load = tail call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr nonnull %0, i32 1, <vscale x 16 x i1> %mask, <vscale x 16 x i8> zeroinitializer)
   ret <vscale x 16 x i8> %load
 }
