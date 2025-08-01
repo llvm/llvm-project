@@ -51,7 +51,7 @@ public:
     return ABIArgInfo::getDirect();
   }
 
-  ABIArgInfo classifyArgumentType(const Type *ArgTy) const override {
+  ABIArgInfo classifyArgumentType(const Type *ArgTy) const {
     if (isAggregateType(ArgTy)) {
       auto SizeInBits = ArgTy->getSizeInBits().getFixedValue();
       if (SizeInBits == 0)

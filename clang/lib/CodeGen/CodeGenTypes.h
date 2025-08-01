@@ -108,6 +108,8 @@ public:
   const llvm::DataLayout &getDataLayout() const {
     return TheModule.getDataLayout();
   }
+  llvm::abi::TypeBuilder &getTypeBuilder() { return TB; }
+  clang::CodeGen::QualTypeMapper &getMapper() { return Mapper; }
   CodeGenModule &getCGM() const { return CGM; }
   ASTContext &getContext() const { return Context; }
   const TargetInfo &getTarget() const { return Target; }

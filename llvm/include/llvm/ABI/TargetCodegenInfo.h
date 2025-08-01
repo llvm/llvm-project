@@ -1,4 +1,5 @@
 #include "llvm/ABI/ABIInfo.h"
+#include "llvm/TargetParser/Triple.h"
 #include <memory>
 
 #ifndef LLVM_ABI_TARGETCODEGENINFO_H
@@ -28,9 +29,17 @@ createDefaultTargetCodeGenInfo(TypeBuilder &TB);
 
 std::unique_ptr<TargetCodeGenInfo> createBPFTargetCodeGenInfo(TypeBuilder &TB);
 
-std::unique_ptr<TargetCodeGenInfo>
-createX8664TargetCodeGenInfo(TypeBuilder &TB);
+/// The AVX ABI level for X86 targets.
+enum class X86AVXABILevel {
+  None,
+  AVX,
+  AVX512,
+};
 
+std::unique_ptr<TargetCodeGenInfo>
+createX8664TargetCodeGenInfo(TypeBuilder &TB, const Triple &Triple,
+                             X86AVXABILevel AVXLevel, bool Has64BitPointers,
+                             const ABICompatInfo &Compat);
 std::unique_ptr<TargetCodeGenInfo>
 createAArch64TargetCodeGenInfo(TypeBuilder &TB);
 

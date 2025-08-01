@@ -42,11 +42,16 @@ private:
   const llvm::abi::Type *convertRecordType(const clang::RecordType *RT);
   const llvm::abi::Type *convertEnumType(const clang::EnumType *ET);
   const llvm::abi::Type *convertReferenceType(const ReferenceType *RT);
+  const llvm::abi::Type *convertComplexType(const ComplexType *CT);
+  const llvm::abi::Type *
+  convertMemberPointerType(const clang::MemberPointerType *MPT);
+  const llvm::abi::Type *convertMatrixType(const ConstantMatrixType *MT);
 
   const llvm::abi::StructType *convertStructType(const clang::RecordDecl *RD);
   const llvm::abi::UnionType *convertUnionType(const clang::RecordDecl *RD);
   const llvm::abi::Type *createPointerTypeForPointee(QualType PointeeType);
-  const llvm::abi::StructType *convertCXXRecordType(const CXXRecordDecl *RD);
+  const llvm::abi::StructType *convertCXXRecordType(const CXXRecordDecl *RD,
+                                                    bool canPassInRegs);
 
   void computeFieldInfo(const clang::RecordDecl *RD,
                         SmallVectorImpl<llvm::abi::FieldInfo> &Fields,
@@ -54,6 +59,7 @@ private:
 
   llvm::TypeSize getTypeSize(clang::QualType QT) const;
   llvm::Align getTypeAlign(clang::QualType QT) const;
+  llvm::Align getPreferredTypeAlign(QualType QT) const;
   uint64_t getPointerSize() const;
   uint64_t getPointerAlign() const;
 

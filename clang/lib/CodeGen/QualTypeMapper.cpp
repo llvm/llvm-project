@@ -15,6 +15,7 @@
 ///
 //===----------------------------------------------------------------------===//
 #include "clang/CodeGen/QualTypeMapper.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecordLayout.h"
@@ -61,23 +62,38 @@ const llvm::abi::Type *QualTypeMapper::convertType(QualType QT) {
     Result = convertRecordType(RT);
   } else if (const auto *ET = dyn_cast<EnumType>(QT.getTypePtr())) {
     Result = convertEnumType(ET);
+  } else if (const auto *CT = dyn_cast<ComplexType>(QT.getTypePtr())) {
+    Result = convertComplexType(CT);
+  } else if (const auto *AT = dyn_cast<AtomicType>(QT.getTypePtr())) {
+    return convertType(AT->getValueType());
+  } else if (const auto *BPT = dyn_cast<BlockPointerType>(QT.getTypePtr())) {
+    return createPointerTypeForPointee(ASTCtx.VoidPtrTy);
+
+  } else if (const auto *MT = dyn_cast<ConstantMatrixType>(QT.getTypePtr())) {
+    const llvm::abi::Type *ElementType = convertType(MT->getElementType());
+    uint64_t NumElements = MT->getNumRows() * MT->getNumColumns();
+    llvm::Align MatrixAlign = getTypeAlign(QT);
+    return Builder.getVectorType(ElementType, 
+                                llvm::ElementCount::getFixed(NumElements), 
+                                MatrixAlign);
+  } else if (const auto *MPT = dyn_cast<MemberPointerType>(QT.getTypePtr())) {
+    Result = convertMemberPointerType(MPT);
   } else if (const auto *BIT = dyn_cast<BitIntType>(QT.getTypePtr())) {
     // Handle C23 _BitInt(N) types - arbitrary precision integers
     QualType QT(BIT, 0);
     uint64_t NumBits = BIT->getNumBits();
     bool IsSigned = BIT->isSigned();
     llvm::Align TypeAlign = getTypeAlign(QT);
-    return Builder.getIntegerType(NumBits, TypeAlign, IsSigned);
+    return Builder.getIntegerType(NumBits, TypeAlign, IsSigned, false, true);
   } else if (isa<ObjCObjectType>(QT.getTypePtr()) ||
              isa<ObjCObjectPointerType>(QT.getTypePtr())) {
     // Objective-C objects are represented as pointers in the ABI
     auto PointerSize = ASTCtx.getTargetInfo().getPointerWidth(LangAS::Default);
     llvm::Align PointerAlign =
         llvm::Align(ASTCtx.getTargetInfo().getPointerAlign(LangAS::Default));
-    return Builder.getPointerType(PointerSize, PointerAlign);
+    return Builder.getPointerType(PointerSize, llvm::Align(PointerAlign.value()/8),ASTCtx.getTargetInfo().getTargetAddressSpace(QT.getAddressSpace()));
   } else {
     QT.dump();
-    llvm::errs() << "[UNHANDLED TYPE]\n";
   }
   TypeCache[QT] = Result;
   return Result;
@@ -97,7 +113,12 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
   case BuiltinType::Void:
     return Builder.getVoidType();
 
+  case BuiltinType::NullPtr:
+	return createPointerTypeForPointee(QT);
+
   case BuiltinType::Bool:
+    return Builder.getIntegerType(ASTCtx.getTypeSize(QT), getTypeAlign(QT),
+                                  false, true);
   case BuiltinType::Char_S:
   case BuiltinType::Char_U:
   case BuiltinType::SChar:
@@ -165,12 +186,68 @@ QualTypeMapper::convertArrayType(const clang::ArrayType *AT) {
 /// \return LLVM ABI VectorType with element type, count, and alignment
 const llvm::abi::Type *QualTypeMapper::convertVectorType(const VectorType *VT) {
   const llvm::abi::Type *ElementType = convertType(VT->getElementType());
+
+  if (auto *IT = llvm::dyn_cast<llvm::abi::IntegerType>(ElementType)) {
+    unsigned BW = IT->getSizeInBits().getFixedValue();
+
+    if (BW != 1 && (BW & 7)) {                
+      BW = llvm::bit_ceil(BW);                
+      BW = std::clamp(BW, 8u, 64u);           
+      bool Signed = IT->isSigned();
+      ElementType = Builder.getIntegerType(BW, llvm::Align(BW / 8), Signed);
+    } else if (BW < 8 && BW != 1) {       
+      bool Signed = IT->isSigned();
+      ElementType = Builder.getIntegerType(8, llvm::Align(1), Signed);
+    }
+  }
+
+    unsigned NElems = VT->getNumElements();
+  if (!llvm::isPowerOf2_32(NElems))
+    NElems = llvm::bit_ceil(NElems);
   llvm::ElementCount NumElements =
-      llvm::ElementCount::getFixed(VT->getNumElements());
+      llvm::ElementCount::getFixed(NElems);
 
   llvm::Align VectorAlign = getTypeAlign(QualType(VT, 0));
 
-  return Builder.getVectorType(ElementType, NumElements, VectorAlign);
+  return
+      Builder.getVectorType(ElementType, NumElements, VectorAlign);
+}
+
+/// Converts complex types to LLVM ABI complex representations.
+/// Complex types consist of two components of the element type
+/// (real and imaginary parts).
+///
+/// \param CT The ComplexType to convert
+/// \return LLVM ABI ComplexType with element type and alignment
+const llvm::abi::Type *
+QualTypeMapper::convertComplexType(const ComplexType *CT) {
+  const llvm::abi::Type *ElementType = convertType(CT->getElementType());
+  llvm::Align ComplexAlign = getTypeAlign(QualType(CT, 0));
+
+  auto *Result = Builder.getComplexType(ElementType, ComplexAlign);
+
+  return Result;
+  // return Builder.getComplexType(ElementType, ComplexAlign);
+}
+
+/// Converts member pointer types to LLVM ABI representations.
+/// Member pointers have different layouts depending on whether they
+/// point to functions or data members.
+///
+/// \param MPT The MemberPointerType to convert
+/// \return LLVM ABI MemberPointerType
+const llvm::abi::Type *
+QualTypeMapper::convertMemberPointerType(const clang::MemberPointerType *MPT) {
+  QualType QT(MPT, 0);
+  uint64_t Size = ASTCtx.getTypeSize(QT);
+  llvm::Align Align = getTypeAlign(QT);
+
+  bool IsFunctionPointer = MPT->isFunctionType();
+  bool Has64BitPointers =
+      ASTCtx.getTargetInfo().getPointerWidth(LangAS::Default) == 64;
+
+  return Builder.getMemberPointerType(IsFunctionPointer, Has64BitPointers, Size,
+                                      Align);
 }
 
 /// Converts record types (struct/class/union) to LLVM ABI representations.
@@ -181,10 +258,18 @@ const llvm::abi::Type *QualTypeMapper::convertVectorType(const VectorType *VT) {
 /// \return LLVM ABI StructType or UnionType
 const llvm::abi::Type *QualTypeMapper::convertRecordType(const RecordType *RT) {
   const RecordDecl *RD = RT->getDecl()->getDefinition();
+  bool canPassInRegs = false;
+  bool hasFlexibleArrMember = false;
+  if (RD) {
+    canPassInRegs = RT->getDecl()->canPassInRegisters();
+    hasFlexibleArrMember = RD->hasFlexibleArrayMember();
+  }
   if (!RD) {
     SmallVector<llvm::abi::FieldInfo, 0> Fields;
-    return Builder.getStructType(Fields, llvm::TypeSize::getFixed(0),
-                                 llvm::Align(1));
+    return Builder.getStructType(
+        Fields, llvm::TypeSize::getFixed(0), llvm::Align(1),
+        llvm::abi::StructPacking::Default, {}, {}, false, false, false, false,
+        hasFlexibleArrMember, false, canPassInRegs);
   }
 
   if (RD->isUnion())
@@ -193,7 +278,7 @@ const llvm::abi::Type *QualTypeMapper::convertRecordType(const RecordType *RT) {
   // Handle C++ classes with base classes
   auto *const CXXRd = dyn_cast<CXXRecordDecl>(RD);
   if (CXXRd && (CXXRd->getNumBases() > 0 || CXXRd->getNumVBases() > 0)) {
-    return convertCXXRecordType(CXXRd);
+    return convertCXXRecordType(CXXRd, canPassInRegs);
   }
   return convertStructType(RD);
 }
@@ -207,7 +292,8 @@ const llvm::abi::Type *QualTypeMapper::convertRecordType(const RecordType *RT) {
 /// \param RD The C++ record declaration
 /// \return LLVM ABI StructType representing the complete object layout
 const llvm::abi::StructType *
-QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
+QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD,
+                                     bool canPassInRegs) {
   const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(RD);
   SmallVector<llvm::abi::FieldInfo, 16> Fields;
   SmallVector<llvm::abi::FieldInfo, 8> BaseClasses;
@@ -261,7 +347,7 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
 
   bool HasNonTrivialCopy = !RD->hasSimpleCopyConstructor();
   bool HasNonTrivialDtor = !RD->hasSimpleDestructor();
-  bool HasFlexibleArrayMember = false;
+  bool HasFlexibleArrayMember = RD->hasFlexibleArrayMember();
   bool HasUnalignedFields = false;
 
   unsigned FieldIndex = 0;
@@ -278,7 +364,8 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
   return Builder.getStructType(
       Fields, Size, Alignment, llvm::abi::StructPacking::Default, BaseClasses,
       VirtualBaseClasses, true, RD->isPolymorphic(), HasNonTrivialCopy,
-      HasNonTrivialDtor, HasFlexibleArrayMember, HasUnalignedFields);
+      HasNonTrivialDtor, HasFlexibleArrayMember, HasUnalignedFields,
+      canPassInRegs);
 }
 
 /// Converts reference types to pointer representations in the ABI.
@@ -329,6 +416,7 @@ const llvm::abi::StructType *
 QualTypeMapper::convertStructType(const clang::RecordDecl *RD) {
   const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(RD);
 
+  bool IsCXXRecord = isa<CXXRecordDecl>(RD);
   SmallVector<llvm::abi::FieldInfo, 16> Fields;
   computeFieldInfo(RD, Fields, Layout);
 
@@ -336,7 +424,10 @@ QualTypeMapper::convertStructType(const clang::RecordDecl *RD) {
       llvm::TypeSize::getFixed(Layout.getSize().getQuantity() * 8);
   llvm::Align Alignment = llvm::Align(Layout.getAlignment().getQuantity());
 
-  return Builder.getStructType(Fields, Size, Alignment);
+  return Builder.getStructType(
+      Fields, Size, Alignment, llvm::abi::StructPacking::Default, {}, {}, IsCXXRecord,
+      false, false, false, RD->hasFlexibleArrayMember(), false,
+      RD->canPassInRegisters());
 }
 
 /// Converts C union types where all fields occupy the same memory location.
@@ -359,8 +450,13 @@ QualTypeMapper::convertUnionType(const clang::RecordDecl *RD) {
   return Builder.getUnionType(Fields, Size, Alignment);
 }
 
+llvm::Align QualTypeMapper::getPreferredTypeAlign(QualType QT) const {
+  return llvm::Align(ASTCtx.getPreferredTypeAlignInChars(QT).getQuantity());
+}
+
 llvm::Align QualTypeMapper::getTypeAlign(QualType QT) const {
-  return llvm::Align(ASTCtx.getTypeAlign(QT));
+
+  return llvm::Align(ASTCtx.getTypeAlignInChars(QT).getQuantity());
 }
 
 const llvm::abi::Type *
@@ -369,7 +465,7 @@ QualTypeMapper::createPointerTypeForPointee(QualType PointeeType) {
   auto PointerSize = ASTCtx.getTargetInfo().getPointerWidth(AddrSpace);
   llvm::Align Alignment =
       llvm::Align(ASTCtx.getTargetInfo().getPointerAlign(AddrSpace));
-  return Builder.getPointerType(PointerSize, Alignment);
+  return Builder.getPointerType(PointerSize, llvm::Align(Alignment.value()/8),ASTCtx.getTargetInfo().getTargetAddressSpace(AddrSpace));
 }
 
 /// Processes the fields of a record (struct/class/union) and populates
@@ -390,11 +486,14 @@ void QualTypeMapper::computeFieldInfo(
 
     bool IsBitField = FD->isBitField();
     uint64_t BitFieldWidth = 0;
+	bool IsUnnamed = false;
 
-    if (IsBitField)
+    if (IsBitField) {
       BitFieldWidth = FD->getBitWidthValue();
+	  IsUnnamed = FD->isUnnamedBitField();
+	}
 
-    Fields.emplace_back(FieldType, OffsetInBits, IsBitField, BitFieldWidth);
+    Fields.emplace_back(FieldType, OffsetInBits, IsBitField, BitFieldWidth,IsUnnamed);
     ++FieldIndex;
   }
 }

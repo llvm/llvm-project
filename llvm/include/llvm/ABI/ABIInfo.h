@@ -23,6 +23,20 @@
 namespace llvm {
 namespace abi {
 
+enum RecordArgABI {
+  /// Pass it using the normal C aggregate rules for the ABI, potentially
+  /// introducing extra copies and passing some or all of it in registers.
+  RAA_Default = 0,
+
+  /// Pass it on the stack using its defined layout.  The argument must be
+  /// evaluated directly into the correct stack position in the arguments area,
+  /// and the call machinery must not move it or introduce extra copies.
+  RAA_DirectInMemory,
+
+  /// Pass it as a pointer to temporary memory.
+  RAA_Indirect
+};
+
 struct ABICompatInfo {
   unsigned Version = UINT_MAX;
 
@@ -54,14 +68,19 @@ public:
 
   virtual ~ABIInfo() = default;
 
+  RecordArgABI getRecordArgABI(const StructType *ST) const;
   virtual ABIArgInfo classifyReturnType(const Type *RetTy) const = 0;
-  virtual ABIArgInfo classifyArgumentType(const Type *ArgTy) const = 0;
+  // virtual ABIArgInfo classifyArgumentType(const Type *ArgTy) const = 0;
   virtual void computeInfo(ABIFunctionInfo &FI) const = 0;
   virtual bool isPassByRef(const Type *Ty) const { return false; }
   const ABICompatInfo &getABICompatInfo() const { return CompatInfo; }
   ABIArgInfo getNaturalAlignIndirect(const Type *Ty) const;
   bool isAggregateTypeForABI(const Type *Ty) const;
   bool isPromotableIntegerType(const IntegerType *Ty) const;
+bool isZeroSizedType(const Type *Ty) const;
+bool isEmptyRecord(const StructType *ST)const;
+bool isEmptyField(const FieldInfo &FI)const;
+
 
   void setABICompatInfo(const ABICompatInfo &Info) { CompatInfo = Info; }
 };
