@@ -2463,3 +2463,70 @@ omitting them will work fine; these numbers are always base 16.
 
 The length of the payload is not provided.  A reliable, 8-bit clean,
 transport layer is assumed.
+
+## Wasm Packets
+
+The packet below are supported by the
+[WAMR](https://github.com/bytecodealliance/wasm-micro-runtime) and
+[V8](https://v8.dev) Wasm runtimes.
+
+
+### qWasmCallStack
+
+Get the Wasm call stack for the given thread id. This returns a hex-encoded
+list of PC values, one for each frame of the call stack. To match the Wasm
+specification, the addresses are encoded in little endian byte order, even if
+the endian of the Wasm runtime's host is not little endian.
+
+```
+send packet: $qWasmCallStack:202dbe040#08
+read packet: $9c01000000000040e501000000000040fe01000000000040#
+```
+
+**Priority to Implement:** Only required for Wasm support. Necessary to show
+stack traces.
+
+### qWasmGlobal
+
+Get the value of a Wasm global variable for the given frame index at the given
+variable index. The indexes are encoded as base 10. The result is a hex-encoded
+address from where to read the value.
+
+```
+send packet: $qWasmGlobal:0;2#cb
+read packet: $e0030100#b9
+```
+
+**Priority to Implement:** Only required for Wasm support. Necessary to show
+variables.
+
+
+### qWasmLocal
+
+Get the value of a Wasm function argument or local variable for the given frame
+index at the given variable index. The indexes are encoded as base 10. The
+result is a hex-encoded address from where to read the value.
+
+
+```
+send packet: $qWasmLocal:0;2#cb
+read packet: $e0030100#b9
+```
+
+**Priority to Implement:** Only required for Wasm support. Necessary to show
+variables.
+
+
+### qWasmStackValue
+
+Get the value of a Wasm local variable from the Wasm operand stack, for the
+given frame index at the given variable index. The indexes are encoded as base
+10. The result is a hex-encoded address from where to read value.
+
+```
+send packet: $qWasmStackValue:0;2#cb
+read packet: $e0030100#b9
+```
+
+**Priority to Implement:** Only required for Wasm support. Necessary to show
+variables.

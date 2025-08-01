@@ -13,13 +13,11 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
-#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include <cstdint>
-#include <iterator>
 
 using namespace mlir;
 using namespace mlir::spirv;
@@ -96,7 +94,7 @@ bool CompositeType::classof(Type type) {
     return isValid(vectorType);
   return llvm::isa<spirv::ArrayType, spirv::CooperativeMatrixType,
                    spirv::MatrixType, spirv::RuntimeArrayType,
-                   spirv::StructType>(type);
+                   spirv::StructType, spirv::TensorArmType>(type);
 }
 
 bool CompositeType::isValid(VectorType type) {
@@ -107,8 +105,8 @@ bool CompositeType::isValid(VectorType type) {
 
 Type CompositeType::getElementType(unsigned index) const {
   return TypeSwitch<Type, Type>(*this)
-      .Case<ArrayType, CooperativeMatrixType, RuntimeArrayType, VectorType>(
-          [](auto type) { return type.getElementType(); })
+      .Case<ArrayType, CooperativeMatrixType, RuntimeArrayType, VectorType,
+            TensorArmType>([](auto type) { return type.getElementType(); })
       .Case<MatrixType>([](MatrixType type) { return type.getColumnType(); })
       .Case<StructType>(
           [index](StructType type) { return type.getElementType(index); })
@@ -125,6 +123,8 @@ unsigned CompositeType::getNumElements() const {
     return structType.getNumElements();
   if (auto vectorType = llvm::dyn_cast<VectorType>(*this))
     return vectorType.getNumElements();
+  if (auto tensorArmType = dyn_cast<TensorArmType>(*this))
+    return tensorArmType.getNumElements();
   if (llvm::isa<CooperativeMatrixType>(*this)) {
     llvm_unreachable(
         "invalid to query number of elements of spirv Cooperative Matrix type");
@@ -151,6 +151,13 @@ void CompositeType::getExtensions(
         return llvm::cast<ScalarType>(type.getElementType())
             .getExtensions(extensions, storage);
       })
+      .Case<TensorArmType>([&](TensorArmType type) {
+        static constexpr Extension ext{Extension::SPV_ARM_tensors};
+        extensions.push_back(ext);
+        return llvm::cast<ScalarType>(type.getElementType())
+            .getExtensions(extensions, storage);
+      })
+
       .Default([](Type) { llvm_unreachable("invalid composite type"); });
 }
 
@@ -171,6 +178,12 @@ void CompositeType::getCapabilities(
         return llvm::cast<ScalarType>(type.getElementType())
             .getCapabilities(capabilities, storage);
       })
+      .Case<TensorArmType>([&](TensorArmType type) {
+        static constexpr Capability cap{Capability::TensorsARM};
+        capabilities.push_back(cap);
+        return llvm::cast<ScalarType>(type.getElementType())
+            .getCapabilities(capabilities, storage);
+      })
       .Default([](Type) { llvm_unreachable("invalid composite type"); });
 }
 
@@ -185,6 +198,13 @@ std::optional<int64_t> CompositeType::getSizeInBytes() {
     if (!elementSize)
       return std::nullopt;
     return *elementSize * vectorType.getNumElements();
+  }
+  if (auto tensorArmType = llvm::dyn_cast<TensorArmType>(*this)) {
+    std::optional<int64_t> elementSize =
+        llvm::cast<ScalarType>(tensorArmType.getElementType()).getSizeInBytes();
+    if (!elementSize)
+      return std::nullopt;
+    return *elementSize * tensorArmType.getNumElements();
   }
   return std::nullopt;
 }
@@ -691,6 +711,8 @@ bool SPIRVType::classof(Type type) {
     return true;
   if (auto vectorType = llvm::dyn_cast<VectorType>(type))
     return CompositeType::isValid(vectorType);
+  if (auto tensorArmType = llvm::dyn_cast<TensorArmType>(type))
+    return llvm::isa<ScalarType>(tensorArmType.getElementType());
   return false;
 }
 
@@ -712,6 +734,8 @@ void SPIRVType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
     matrixType.getExtensions(extensions, storage);
   } else if (auto ptrType = llvm::dyn_cast<PointerType>(*this)) {
     ptrType.getExtensions(extensions, storage);
+  } else if (auto tensorArmType = llvm::dyn_cast<TensorArmType>(*this)) {
+    tensorArmType.getExtensions(extensions, storage);
   } else {
     llvm_unreachable("invalid SPIR-V Type to getExtensions");
   }
@@ -732,6 +756,8 @@ void SPIRVType::getCapabilities(
     matrixType.getCapabilities(capabilities, storage);
   } else if (auto ptrType = llvm::dyn_cast<PointerType>(*this)) {
     ptrType.getCapabilities(capabilities, storage);
+  } else if (auto tensorArmType = llvm::dyn_cast<TensorArmType>(*this)) {
+    tensorArmType.getCapabilities(capabilities, storage);
   } else {
     llvm_unreachable("invalid SPIR-V Type to getCapabilities");
   }
@@ -809,12 +835,14 @@ void SampledImageType::getCapabilities(
 /// - for literal structs:
 ///   - a list of member types;
 ///   - a list of member offset info;
-///   - a list of member decoration info.
+///   - a list of member decoration info;
+///   - a list of struct decoration info.
 ///
 /// Identified structures only have a mutable component consisting of:
 /// - a list of member types;
 /// - a list of member offset info;
-/// - a list of member decoration info.
+/// - a list of member decoration info;
+/// - a list of struct decoration info.
 struct spirv::detail::StructTypeStorage : public TypeStorage {
   /// Construct a storage object for an identified struct type. A struct type
   /// associated with such storage must call StructType::trySetBody(...) later
@@ -822,6 +850,7 @@ struct spirv::detail::StructTypeStorage : public TypeStorage {
   StructTypeStorage(StringRef identifier)
       : memberTypesAndIsBodySet(nullptr, false), offsetInfo(nullptr),
         numMembers(0), numMemberDecorations(0), memberDecorationsInfo(nullptr),
+        numStructDecorations(0), structDecorationsInfo(nullptr),
         identifier(identifier) {}
 
   /// Construct a storage object for a literal struct type. A struct type
@@ -829,10 +858,14 @@ struct spirv::detail::StructTypeStorage : public TypeStorage {
   StructTypeStorage(
       unsigned numMembers, Type const *memberTypes,
       StructType::OffsetInfo const *layoutInfo, unsigned numMemberDecorations,
-      StructType::MemberDecorationInfo const *memberDecorationsInfo)
+      StructType::MemberDecorationInfo const *memberDecorationsInfo,
+      unsigned numStructDecorations,
+      StructType::StructDecorationInfo const *structDecorationsInfo)
       : memberTypesAndIsBodySet(memberTypes, false), offsetInfo(layoutInfo),
         numMembers(numMembers), numMemberDecorations(numMemberDecorations),
-        memberDecorationsInfo(memberDecorationsInfo) {}
+        memberDecorationsInfo(memberDecorationsInfo),
+        numStructDecorations(numStructDecorations),
+        structDecorationsInfo(structDecorationsInfo) {}
 
   /// A storage key is divided into 2 parts:
   /// - for identified structs:
@@ -841,16 +874,19 @@ struct spirv::detail::StructTypeStorage : public TypeStorage {
   ///   - an ArrayRef<Type> for member types;
   ///   - an ArrayRef<StructType::OffsetInfo> for member offset info;
   ///   - an ArrayRef<StructType::MemberDecorationInfo> for member decoration
+  ///     info;
+  ///   - an ArrayRef<StructType::StructDecorationInfo> for struct decoration
   ///     info.
   ///
   /// An identified struct type is uniqued only by the first part (field 0)
   /// of the key.
   ///
-  /// A literal struct type is uniqued only by the second part (fields 1, 2, and
-  /// 3) of the key. The identifier field (field 0) must be empty.
+  /// A literal struct type is uniqued only by the second part (fields 1, 2, 3
+  /// and 4) of the key. The identifier field (field 0) must be empty.
   using KeyTy =
       std::tuple<StringRef, ArrayRef<Type>, ArrayRef<StructType::OffsetInfo>,
-                 ArrayRef<StructType::MemberDecorationInfo>>;
+                 ArrayRef<StructType::MemberDecorationInfo>,
+                 ArrayRef<StructType::StructDecorationInfo>>;
 
   /// For identified structs, return true if the given key contains the same
   /// identifier.
@@ -864,7 +900,7 @@ struct spirv::detail::StructTypeStorage : public TypeStorage {
     }
 
     return key == KeyTy(StringRef(), getMemberTypes(), getOffsetInfo(),
-                        getMemberDecorationsInfo());
+                        getMemberDecorationsInfo(), getStructDecorationsInfo());
   }
 
   /// If the given key contains a non-empty identifier, this method constructs
@@ -911,9 +947,17 @@ struct spirv::detail::StructTypeStorage : public TypeStorage {
       memberDecorationList = allocator.copyInto(keyMemberDecorations).data();
     }
 
-    return new (allocator.allocate<StructTypeStorage>())
-        StructTypeStorage(keyTypes.size(), typesList, offsetInfoList,
-                          numMemberDecorations, memberDecorationList);
+    const StructType::StructDecorationInfo *structDecorationList = nullptr;
+    unsigned numStructDecorations = 0;
+    if (!std::get<4>(key).empty()) {
+      auto keyStructDecorations = std::get<4>(key);
+      numStructDecorations = keyStructDecorations.size();
+      structDecorationList = allocator.copyInto(keyStructDecorations).data();
+    }
+
+    return new (allocator.allocate<StructTypeStorage>()) StructTypeStorage(
+        keyTypes.size(), typesList, offsetInfoList, numMemberDecorations,
+        memberDecorationList, numStructDecorations, structDecorationList);
   }
 
   ArrayRef<Type> getMemberTypes() const {
@@ -935,6 +979,13 @@ struct spirv::detail::StructTypeStorage : public TypeStorage {
     return {};
   }
 
+  ArrayRef<StructType::StructDecorationInfo> getStructDecorationsInfo() const {
+    if (structDecorationsInfo)
+      return ArrayRef<StructType::StructDecorationInfo>(structDecorationsInfo,
+                                                        numStructDecorations);
+    return {};
+  }
+
   StringRef getIdentifier() const { return identifier; }
 
   bool isIdentified() const { return !identifier.empty(); }
@@ -947,17 +998,19 @@ struct spirv::detail::StructTypeStorage : public TypeStorage {
   /// - If called for an identified struct whose body was set before (through a
   /// call to this method) but with different contents from the passed
   /// arguments.
-  LogicalResult mutate(
-      TypeStorageAllocator &allocator, ArrayRef<Type> structMemberTypes,
-      ArrayRef<StructType::OffsetInfo> structOffsetInfo,
-      ArrayRef<StructType::MemberDecorationInfo> structMemberDecorationInfo) {
+  LogicalResult
+  mutate(TypeStorageAllocator &allocator, ArrayRef<Type> structMemberTypes,
+         ArrayRef<StructType::OffsetInfo> structOffsetInfo,
+         ArrayRef<StructType::MemberDecorationInfo> structMemberDecorationInfo,
+         ArrayRef<StructType::StructDecorationInfo> structDecorationInfo) {
     if (!isIdentified())
       return failure();
 
     if (memberTypesAndIsBodySet.getInt() &&
         (getMemberTypes() != structMemberTypes ||
          getOffsetInfo() != structOffsetInfo ||
-         getMemberDecorationsInfo() != structMemberDecorationInfo))
+         getMemberDecorationsInfo() != structMemberDecorationInfo ||
+         getStructDecorationsInfo() != structDecorationInfo))
       return failure();
 
     memberTypesAndIsBodySet.setInt(true);
@@ -981,6 +1034,11 @@ struct spirv::detail::StructTypeStorage : public TypeStorage {
           allocator.copyInto(structMemberDecorationInfo).data();
     }
 
+    if (!structDecorationInfo.empty()) {
+      numStructDecorations = structDecorationInfo.size();
+      structDecorationsInfo = allocator.copyInto(structDecorationInfo).data();
+    }
+
     return success();
   }
 
@@ -989,21 +1047,30 @@ struct spirv::detail::StructTypeStorage : public TypeStorage {
   unsigned numMembers;
   unsigned numMemberDecorations;
   StructType::MemberDecorationInfo const *memberDecorationsInfo;
+  unsigned numStructDecorations;
+  StructType::StructDecorationInfo const *structDecorationsInfo;
   StringRef identifier;
 };
 
 StructType
 StructType::get(ArrayRef<Type> memberTypes,
                 ArrayRef<StructType::OffsetInfo> offsetInfo,
-                ArrayRef<StructType::MemberDecorationInfo> memberDecorations) {
+                ArrayRef<StructType::MemberDecorationInfo> memberDecorations,
+                ArrayRef<StructType::StructDecorationInfo> structDecorations) {
   assert(!memberTypes.empty() && "Struct needs at least one member type");
   // Sort the decorations.
-  SmallVector<StructType::MemberDecorationInfo, 4> sortedDecorations(
+  SmallVector<StructType::MemberDecorationInfo, 4> sortedMemberDecorations(
       memberDecorations);
-  llvm::array_pod_sort(sortedDecorations.begin(), sortedDecorations.end());
+  llvm::array_pod_sort(sortedMemberDecorations.begin(),
+                       sortedMemberDecorations.end());
+  SmallVector<StructType::StructDecorationInfo, 1> sortedStructDecorations(
+      structDecorations);
+  llvm::array_pod_sort(sortedStructDecorations.begin(),
+                       sortedStructDecorations.end());
+
   return Base::get(memberTypes.vec().front().getContext(),
                    /*identifier=*/StringRef(), memberTypes, offsetInfo,
-                   sortedDecorations);
+                   sortedMemberDecorations, sortedStructDecorations);
 }
 
 StructType StructType::getIdentified(MLIRContext *context,
@@ -1013,18 +1080,21 @@ StructType StructType::getIdentified(MLIRContext *context,
 
   return Base::get(context, identifier, ArrayRef<Type>(),
                    ArrayRef<StructType::OffsetInfo>(),
-                   ArrayRef<StructType::MemberDecorationInfo>());
+                   ArrayRef<StructType::MemberDecorationInfo>(),
+                   ArrayRef<StructType::StructDecorationInfo>());
 }
 
 StructType StructType::getEmpty(MLIRContext *context, StringRef identifier) {
   StructType newStructType = Base::get(
       context, identifier, ArrayRef<Type>(), ArrayRef<StructType::OffsetInfo>(),
-      ArrayRef<StructType::MemberDecorationInfo>());
+      ArrayRef<StructType::MemberDecorationInfo>(),
+      ArrayRef<StructType::StructDecorationInfo>());
   // Set an empty body in case this is a identified struct.
   if (newStructType.isIdentified() &&
       failed(newStructType.trySetBody(
           ArrayRef<Type>(), ArrayRef<StructType::OffsetInfo>(),
-          ArrayRef<StructType::MemberDecorationInfo>())))
+          ArrayRef<StructType::MemberDecorationInfo>(),
+          ArrayRef<StructType::StructDecorationInfo>())))
     return StructType();
 
   return newStructType;
@@ -1047,6 +1117,15 @@ TypeRange StructType::getElementTypes() const {
 }
 
 bool StructType::hasOffset() const { return getImpl()->offsetInfo; }
+
+bool StructType::hasDecoration(spirv::Decoration decoration) const {
+  for (StructType::StructDecorationInfo info :
+       getImpl()->getStructDecorationsInfo())
+    if (info.decoration == decoration)
+      return true;
+
+  return false;
+}
 
 uint64_t StructType::getMemberOffset(unsigned index) const {
   assert(getNumElements() > index && "member index out of range");
@@ -1079,11 +1158,21 @@ void StructType::getMemberDecorations(
   }
 }
 
+void StructType::getStructDecorations(
+    SmallVectorImpl<StructType::StructDecorationInfo> &structDecorations)
+    const {
+  structDecorations.clear();
+  auto implDecorations = getImpl()->getStructDecorationsInfo();
+  structDecorations.append(implDecorations.begin(), implDecorations.end());
+}
+
 LogicalResult
 StructType::trySetBody(ArrayRef<Type> memberTypes,
                        ArrayRef<OffsetInfo> offsetInfo,
-                       ArrayRef<MemberDecorationInfo> memberDecorations) {
-  return Base::mutate(memberTypes, offsetInfo, memberDecorations);
+                       ArrayRef<MemberDecorationInfo> memberDecorations,
+                       ArrayRef<StructDecorationInfo> structDecorations) {
+  return Base::mutate(memberTypes, offsetInfo, memberDecorations,
+                      structDecorations);
 }
 
 void StructType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
@@ -1103,6 +1192,11 @@ llvm::hash_code spirv::hash_value(
     const StructType::MemberDecorationInfo &memberDecorationInfo) {
   return llvm::hash_combine(memberDecorationInfo.memberIndex,
                             memberDecorationInfo.decoration);
+}
+
+llvm::hash_code spirv::hash_value(
+    const StructType::StructDecorationInfo &structDecorationInfo) {
+  return llvm::hash_value(structDecorationInfo.decoration);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1204,10 +1298,84 @@ void MatrixType::getCapabilities(
 }
 
 //===----------------------------------------------------------------------===//
+// TensorArmType
+//===----------------------------------------------------------------------===//
+
+struct spirv::detail::TensorArmTypeStorage final : TypeStorage {
+  using KeyTy = std::tuple<ArrayRef<int64_t>, Type>;
+
+  static TensorArmTypeStorage *construct(TypeStorageAllocator &allocator,
+                                         const KeyTy &key) {
+    auto [shape, elementType] = key;
+    shape = allocator.copyInto(shape);
+    return new (allocator.allocate<TensorArmTypeStorage>())
+        TensorArmTypeStorage(shape, elementType);
+  }
+
+  static llvm::hash_code hashKey(const KeyTy &key) {
+    auto [shape, elementType] = key;
+    return llvm::hash_combine(shape, elementType);
+  }
+
+  bool operator==(const KeyTy &key) const {
+    return key == KeyTy(shape, elementType);
+  }
+
+  TensorArmTypeStorage(ArrayRef<int64_t> shape, Type elementType)
+      : shape(std::move(shape)), elementType(std::move(elementType)) {}
+
+  ArrayRef<int64_t> shape;
+  Type elementType;
+};
+
+TensorArmType TensorArmType::get(ArrayRef<int64_t> shape, Type elementType) {
+  return Base::get(elementType.getContext(), shape, elementType);
+}
+
+TensorArmType TensorArmType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
+                                       Type elementType) const {
+  return TensorArmType::get(shape.value_or(getShape()), elementType);
+}
+
+Type TensorArmType::getElementType() const { return getImpl()->elementType; }
+ArrayRef<int64_t> TensorArmType::getShape() const { return getImpl()->shape; }
+
+void TensorArmType::getExtensions(
+    SPIRVType::ExtensionArrayRefVector &extensions,
+    std::optional<StorageClass> storage) {
+
+  llvm::cast<SPIRVType>(getElementType()).getExtensions(extensions, storage);
+  static constexpr Extension ext{Extension::SPV_ARM_tensors};
+  extensions.push_back(ext);
+}
+
+void TensorArmType::getCapabilities(
+    SPIRVType::CapabilityArrayRefVector &capabilities,
+    std::optional<StorageClass> storage) {
+  llvm::cast<SPIRVType>(getElementType())
+      .getCapabilities(capabilities, storage);
+  static constexpr Capability cap{Capability::TensorsARM};
+  capabilities.push_back(cap);
+}
+
+LogicalResult
+TensorArmType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                                ArrayRef<int64_t> shape, Type elementType) {
+  if (llvm::is_contained(shape, 0))
+    return emitError() << "arm.tensor do not support dimensions = 0";
+  if (llvm::any_of(shape, [](int64_t dim) { return dim < 0; }) &&
+      llvm::any_of(shape, [](int64_t dim) { return dim > 0; }))
+    return emitError()
+           << "arm.tensor shape dimensions must be either fully dynamic or "
+              "completed shaped";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // SPIR-V Dialect
 //===----------------------------------------------------------------------===//
 
 void SPIRVDialect::registerTypes() {
   addTypes<ArrayType, CooperativeMatrixType, ImageType, MatrixType, PointerType,
-           RuntimeArrayType, SampledImageType, StructType>();
+           RuntimeArrayType, SampledImageType, StructType, TensorArmType>();
 }

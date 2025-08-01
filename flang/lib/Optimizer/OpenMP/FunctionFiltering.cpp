@@ -83,7 +83,7 @@ public:
             for (Value res : callOp->getResults()) {
               opBuilder.setInsertionPoint(callOp);
               undefResults.emplace_back(
-                  opBuilder.create<fir::UndefOp>(res.getLoc(), res.getType()));
+                  fir::UndefOp::create(opBuilder, res.getLoc(), res.getType()));
             }
             callOp->replaceAllUsesWith(undefResults);
           }

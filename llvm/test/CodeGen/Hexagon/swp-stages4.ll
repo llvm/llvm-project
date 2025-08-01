@@ -3,8 +3,11 @@
 ; Test that we rename registers correctly for multiple stages when there is a
 ; Phi and depends upon another Phi.
 
-; CHECK: jump
-; CHECK-NEXT: r[[REG0:[0-9]+]] = and(r[[REG1:[0-9]+]],#255)
+; CHECK: = and
+; CHECK: = and
+; CHECK: r[[REGA:[0-9]+]] = memub(r{{[0-9]+}}+#1)
+; CHECK: = and
+; CHECK: r[[REG0:[0-9]+]] = and(r[[REG1:[0-9]+]],#255)
 ; CHECK-NOT: r[[REG0]] = and(r[[REG1]],#255)
 ; CHECK: loop0(.LBB0_[[LOOP:.]],
 ; CHECK: .LBB0_[[LOOP]]:

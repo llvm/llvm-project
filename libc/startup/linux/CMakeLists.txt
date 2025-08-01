@@ -96,6 +96,7 @@ add_object_library(
     do_start.h
   DEPENDS
     libc.config.app_h
+    libc.hdr.stdint_proxy
     libc.include.sys_mman
     libc.include.sys_syscall
     libc.include.llvm-libc-macros.link_macros

@@ -88,7 +88,7 @@ struct CreateMethodDecl : public TypeVisitorCallbacks {
                          MethodOptions::CompilerGenerated;
     function_decl = m_clang.AddMethodToCXXRecordType(
         parent_ty, proc_name,
-        /*mangled_name=*/nullptr, func_ct, /*access=*/access_type,
+        /*asm_label=*/{}, func_ct, /*access=*/access_type,
         /*is_virtual=*/is_virtual, /*is_static=*/is_static,
         /*is_inline=*/false, /*is_explicit=*/false,
         /*is_attr_used=*/false, /*is_artificial=*/is_artificial);
@@ -903,7 +903,7 @@ PdbAstBuilder::CreateFunctionDecl(PdbCompilandSymId func_id,
     if (!function_decl) {
       function_decl = m_clang.AddMethodToCXXRecordType(
           parent_opaque_ty, func_name,
-          /*mangled_name=*/nullptr, func_ct,
+          /*asm_label=*/{}, func_ct,
           /*access=*/lldb::AccessType::eAccessPublic,
           /*is_virtual=*/false, /*is_static=*/false,
           /*is_inline=*/false, /*is_explicit=*/false,
@@ -913,7 +913,7 @@ PdbAstBuilder::CreateFunctionDecl(PdbCompilandSymId func_id,
   } else {
     function_decl = m_clang.CreateFunctionDeclaration(
         parent, OptionalClangModuleID(), func_name, func_ct, func_storage,
-        is_inline);
+        is_inline, /*asm_label=*/{});
     CreateFunctionParameters(func_id, *function_decl, param_count);
   }
   return function_decl;

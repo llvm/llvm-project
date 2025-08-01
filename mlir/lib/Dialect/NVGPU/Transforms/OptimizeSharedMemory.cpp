@@ -13,7 +13,6 @@
 #include "mlir/Dialect/NVGPU/Transforms/Passes.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/NVGPU/Transforms/Transforms.h"
@@ -75,27 +74,28 @@ static Value permuteVectorOffset(OpBuilder &b, Location loc,
   int64_t mask = (1LL << (m - n)) - 1;
   if (permuteEveryN > 1)
     mask = mask << llvm::Log2_64(permuteEveryN);
-  Value srcBits = b.create<arith::ConstantIndexOp>(loc, mask);
-  srcBits = b.create<arith::AndIOp>(loc, src, srcBits);
+  Value srcBits = arith::ConstantIndexOp::create(b, loc, mask);
+  srcBits = arith::AndIOp::create(b, loc, src, srcBits);
 
   // Use the src bits to permute the target bits b[N:M] containing the
   // vector offset.
   if (permuteEveryN > 1) {
     int64_t shlBits = n - llvm::Log2_64(permuteEveryN);
     if (shlBits > 0) {
-      Value finalShiftVal = b.create<arith::ConstantIndexOp>(loc, shlBits);
+      Value finalShiftVal = arith::ConstantIndexOp::create(b, loc, shlBits);
       srcBits = b.createOrFold<arith::ShLIOp>(loc, srcBits, finalShiftVal);
     } else if (shlBits < 0) {
-      Value finalShiftVal = b.create<arith::ConstantIndexOp>(loc, -1 * shlBits);
+      Value finalShiftVal =
+          arith::ConstantIndexOp::create(b, loc, -1 * shlBits);
       srcBits = b.createOrFold<arith::ShRUIOp>(loc, srcBits, finalShiftVal);
     }
   } else {
-    Value finalShiftVal = b.create<arith::ConstantIndexOp>(loc, n);
+    Value finalShiftVal = arith::ConstantIndexOp::create(b, loc, n);
     srcBits = b.createOrFold<arith::ShLIOp>(loc, srcBits, finalShiftVal);
   }
 
   Value permutedVectorIdx =
-      b.create<arith::XOrIOp>(loc, indices[tgtDim], srcBits);
+      arith::XOrIOp::create(b, loc, indices[tgtDim], srcBits);
   return permutedVectorIdx;
 }
 

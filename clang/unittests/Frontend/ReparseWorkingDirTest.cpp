@@ -28,7 +28,9 @@ class ReparseWorkingDirTest : public ::testing::Test {
   std::shared_ptr<PCHContainerOperations> PCHContainerOpts;
 
 public:
-  void SetUp() override { VFS = new vfs::InMemoryFileSystem(); }
+  void SetUp() override {
+    VFS = llvm::makeIntrusiveRefCnt<vfs::InMemoryFileSystem>();
+  }
   void TearDown() override {}
 
   void setWorkingDirectory(StringRef Path) {

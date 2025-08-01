@@ -33,9 +33,9 @@ end subroutine
 
 #endif
 
-! LINKONCE-DAG: @_QMmodule_external_type_definitionEXnXt1 = linkonce_odr constant [2 x i8] c"t1", comdat
+! LINKONCE-DAG: @_QMmodule_external_type_definitionEXnXt1 = linkonce_odr constant [2 x i8] c"t1"
 ! LINKONCE-DAG: @_QMmodule_external_type_definitionEXdtXt1 = linkonce_odr constant {{.*}} {
-! LINKONCE-DAG: @_QMmodule_same_unit_type_definitionEXnXt2 = linkonce_odr constant [2 x i8] c"t2", comdat
+! LINKONCE-DAG: @_QMmodule_same_unit_type_definitionEXnXt2 = linkonce_odr constant [2 x i8] c"t2"
 ! LINKONCE-DAG: @_QMmodule_same_unit_type_definitionEXdtXt2 = linkonce_odr constant {{.*}} {
 
 ! EXTERNAL-NOT: @_QMmodule_external_type_definitionEXnXt1

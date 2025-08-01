@@ -256,40 +256,40 @@ define i32 @non_leaf_sign_non_leaf(i32 %x) "branch-protection-pauth-lr" "sign-re
 define i32 @non_leaf_scs(i32 %x) "branch-protection-pauth-lr" "sign-return-address"="non-leaf" shadowcallstack "target-features"="+v8.3a,+reserve-x18"  {
 ; CHECK-LABEL: non_leaf_scs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [x18], #8
-; CHECK-NEXT:    .cfi_escape 0x16, 0x12, 0x02, 0x82, 0x78 //
 ; CHECK-NEXT:    hint #39
 ; CHECK-NEXT:    .cfi_negate_ra_state_with_pc
 ; CHECK-NEXT:  .Ltmp4:
 ; CHECK-NEXT:    paciasp
+; CHECK-NEXT:    str x30, [x18], #8
+; CHECK-NEXT:    .cfi_escape 0x16, 0x12, 0x02, 0x82, 0x78 //
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl foo
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [x18, #-8]!
 ; CHECK-NEXT:    adrp x16, .Ltmp4
 ; CHECK-NEXT:    add x16, x16, :lo12:.Ltmp4
 ; CHECK-NEXT:    hint #39
 ; CHECK-NEXT:    autiasp
-; CHECK-NEXT:    ldr x30, [x18, #-8]!
 ; CHECK-NEXT:    ret
 ;
 ; PAUTHLR-LABEL: non_leaf_scs:
 ; PAUTHLR:       // %bb.0:
-; PAUTHLR-NEXT:    str x30, [x18], #8
-; PAUTHLR-NEXT:    .cfi_escape 0x16, 0x12, 0x02, 0x82, 0x78 //
 ; PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; PAUTHLR-NEXT:  .Ltmp4:
 ; PAUTHLR-NEXT:    paciasppc
+; PAUTHLR-NEXT:    str x30, [x18], #8
+; PAUTHLR-NEXT:    .cfi_escape 0x16, 0x12, 0x02, 0x82, 0x78 //
 ; PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
 ; PAUTHLR-NEXT:    .cfi_offset w30, -16
 ; PAUTHLR-NEXT:    bl foo
 ; PAUTHLR-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; PAUTHLR-NEXT:    ldr x30, [x18, #-8]!
 ; PAUTHLR-NEXT:    adrp x16, .Ltmp4
 ; PAUTHLR-NEXT:    add x16, x16, :lo12:.Ltmp4
 ; PAUTHLR-NEXT:    autiasppc .Ltmp4
-; PAUTHLR-NEXT:    ldr x30, [x18, #-8]!
 ; PAUTHLR-NEXT:    ret
   %call = call i32 @foo(i32 %x)
   ret i32 %call

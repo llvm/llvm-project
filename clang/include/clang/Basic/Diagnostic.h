@@ -289,6 +289,9 @@ public:
 
     /// Expr *
     ak_expr,
+
+    /// AttributeCommonInfo *
+    ak_attr_info,
   };
 
   /// Represents on argument value, which is a union discriminated
@@ -892,7 +895,10 @@ public:
   /// \param FormatString A fixed diagnostic format string that will be hashed
   /// and mapped to a unique DiagID.
   template <unsigned N>
-  // TODO: Deprecate this once all uses are removed from Clang.
+  // FIXME: this API should almost never be used; custom diagnostics do not
+  // have an associated diagnostic group and thus cannot be controlled by users
+  // like other diagnostics. The number of times this API is used in Clang
+  // should only ever be reduced, not increased.
   // [[deprecated("Use a CustomDiagDesc instead of a Level")]]
   unsigned getCustomDiagID(Level L, const char (&FormatString)[N]) {
     return Diags->getCustomDiagID((DiagnosticIDs::Level)L,

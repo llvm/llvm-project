@@ -144,30 +144,8 @@ static void optimizeDiagnosticOpts(DiagnosticOptions &Opts,
 
 static void optimizeCWD(CowCompilerInvocation &BuildInvocation, StringRef CWD) {
   BuildInvocation.getMutFileSystemOpts().WorkingDir.clear();
-  if (BuildInvocation.getCodeGenOpts().DwarfVersion) {
-    // It is necessary to explicitly set the DebugCompilationDir
-    // to a common directory (e.g. root) if IgnoreCWD is true.
-    // When IgnoreCWD is true, the module's content should not
-    // depend on the current working directory. However, if dwarf
-    // information is needed (when CGOpts.DwarfVersion is
-    // non-zero), then CGOpts.DebugCompilationDir must be
-    // populated, because otherwise the current working directory
-    // will be automatically embedded in the dwarf information in
-    // the pcm, contradicting the assumption that it is safe to
-    // ignore the CWD. Thus in such cases,
-    // CGOpts.DebugCompilationDir is explicitly set to a common
-    // directory.
-    // FIXME: It is still excessive to create a copy of
-    // CodeGenOpts for each module. Since we do not modify the
-    // CodeGenOpts otherwise per module, the following code
-    // ends up generating identical CodeGenOpts for each module
-    // with DebugCompilationDir pointing to the root directory.
-    // We can optimize this away by creating a _single_ copy of
-    // CodeGenOpts whose DebugCompilationDir points to the root
-    // directory and reuse it across modules.
-    BuildInvocation.getMutCodeGenOpts().DebugCompilationDir =
-        llvm::sys::path::root_path(CWD);
-  }
+  BuildInvocation.getMutCodeGenOpts().DebugCompilationDir.clear();
+  BuildInvocation.getMutCodeGenOpts().CoverageCompilationDir.clear();
 }
 
 static std::vector<std::string> splitString(std::string S, char Separator) {
@@ -673,8 +651,10 @@ void ModuleDepCollectorPP::handleImport(const Module *Imported) {
   if (MDC.isPrebuiltModule(TopLevelModule))
     MDC.DirectPrebuiltModularDeps.insert(
         {TopLevelModule, PrebuiltModuleDep{TopLevelModule}});
-  else
+  else {
     MDC.DirectModularDeps.insert(TopLevelModule);
+    MDC.DirectImports.insert(Imported);
+  }
 }
 
 void ModuleDepCollectorPP::EndOfMainFile() {
@@ -706,6 +686,8 @@ void ModuleDepCollectorPP::EndOfMainFile() {
     if (!MDC.isPrebuiltModule(M))
       MDC.DirectModularDeps.insert(M);
 
+  MDC.addVisibleModules();
+
   for (const Module *M : MDC.DirectModularDeps)
     handleTopLevelModule(M);
 
@@ -726,6 +708,9 @@ void ModuleDepCollectorPP::EndOfMainFile() {
     if (It != MDC.ModularDeps.end())
       MDC.Consumer.handleDirectModuleDependency(It->second->ID);
   }
+
+  for (auto &&I : MDC.VisibleModules)
+    MDC.Consumer.handleVisibleModule(std::string(I.getKey()));
 
   for (auto &&I : MDC.FileDeps)
     MDC.Consumer.handleFileDependency(I);
@@ -991,6 +976,29 @@ bool ModuleDepCollector::isPrebuiltModule(const Module *M) {
   assert("Prebuilt module came from the expected AST file" &&
          PrebuiltModuleFileIt->second == M->getASTFile()->getName());
   return true;
+}
+
+void ModuleDepCollector::addVisibleModules() {
+  llvm::DenseSet<const Module *> ImportedModules;
+  auto InsertVisibleModules = [&](const Module *M) {
+    if (ImportedModules.contains(M))
+      return;
+
+    VisibleModules.insert(M->getTopLevelModuleName());
+    SmallVector<Module *> Stack;
+    M->getExportedModules(Stack);
+    while (!Stack.empty()) {
+      const Module *CurrModule = Stack.pop_back_val();
+      if (ImportedModules.contains(CurrModule))
+        continue;
+      ImportedModules.insert(CurrModule);
+      VisibleModules.insert(CurrModule->getTopLevelModuleName());
+      CurrModule->getExportedModules(Stack);
+    }
+  };
+
+  for (const Module *Import : DirectImports)
+    InsertVisibleModules(Import);
 }
 
 static StringRef makeAbsoluteAndPreferred(CompilerInstance &CI, StringRef Path,

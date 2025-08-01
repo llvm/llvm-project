@@ -46,8 +46,7 @@ std::string teardownProfiler() {
 bool compileFromString(StringRef Code, StringRef Standard, StringRef File,
                        llvm::StringMap<std::string> Headers = {}) {
 
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS(
-      new llvm::vfs::InMemoryFileSystem());
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   FS->addFile(File, 0, MemoryBuffer::getMemBuffer(Code));
   for (const auto &Header : Headers) {
     FS->addFile(Header.getKey(), 0,

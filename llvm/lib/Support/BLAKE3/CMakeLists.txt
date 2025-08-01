@@ -26,7 +26,8 @@ endmacro()
 if (CAN_USE_ASSEMBLER)
   if (MSVC)
     check_symbol_exists(_M_X64 "" IS_X64)
-    if (IS_X64)
+    check_symbol_exists(_M_ARM64EC "" IS_ARM64EC)
+    if (IS_X64 AND NOT IS_ARM64EC)
       enable_language(ASM_MASM)
       set(LLVM_BLAKE3_ASM_FILES
         blake3_sse2_x86-64_windows_msvc.asm

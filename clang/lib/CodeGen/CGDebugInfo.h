@@ -158,7 +158,6 @@ class CGDebugInfo {
   /// This is a storage for names that are constructed on demand. For
   /// example, C++ destructors, C++ operators etc..
   llvm::BumpPtrAllocator DebugInfoNames;
-  StringRef CWDName;
 
   llvm::DenseMap<const char *, llvm::TrackingMDRef> DIFileCache;
   llvm::DenseMap<const FunctionDecl *, llvm::TrackingMDRef> SPCache;
@@ -263,9 +262,14 @@ private:
   /// to get a method type which includes \c this pointer.
   llvm::DISubroutineType *getOrCreateMethodType(const CXXMethodDecl *Method,
                                                 llvm::DIFile *F);
+
+  llvm::DISubroutineType *
+  getOrCreateMethodTypeForDestructor(const CXXMethodDecl *Method,
+                                     llvm::DIFile *F, QualType FNType);
+
   llvm::DISubroutineType *
   getOrCreateInstanceMethodType(QualType ThisPtr, const FunctionProtoType *Func,
-                                llvm::DIFile *Unit);
+                                llvm::DIFile *Unit, bool SkipFirst = false);
   llvm::DISubroutineType *
   getOrCreateFunctionType(const Decl *D, QualType FnType, llvm::DIFile *F);
   /// \return debug info descriptor for vtable.

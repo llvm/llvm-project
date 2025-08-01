@@ -15,7 +15,6 @@
 #include "mlir/Dialect/Bufferization/IR/DstBufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/SubsetInsertionOpInterfaceImpl.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -49,7 +48,7 @@ struct CastOpInterface
     return {{op->getResult(0), BufferRelation::Equivalent}};
   }
 
-  FailureOr<BaseMemRefType>
+  FailureOr<BufferLikeType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
                 const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
@@ -68,20 +67,22 @@ struct CastOpInterface
     if (isa<UnrankedTensorType>(castOp.getSource().getType())) {
       // When casting to a ranked tensor, we cannot infer any static offset or
       // strides from the source. Assume fully dynamic.
-      return getMemRefTypeWithFullyDynamicLayout(castOp.getType(), memorySpace);
+      return cast<BufferLikeType>(
+          getMemRefTypeWithFullyDynamicLayout(castOp.getType(), memorySpace));
     }
 
     // Case 2: Casting to an unranked tensor type
     if (isa<UnrankedTensorType>(castOp.getType())) {
-      return getMemRefTypeWithFullyDynamicLayout(castOp.getType(), memorySpace);
+      return cast<BufferLikeType>(
+          getMemRefTypeWithFullyDynamicLayout(castOp.getType(), memorySpace));
     }
 
     // Case 3: Ranked tensor -> ranked tensor. The offsets and strides do not
     // change.
     auto rankedResultType = cast<RankedTensorType>(castOp.getType());
-    return MemRefType::get(
+    return cast<BufferLikeType>(MemRefType::get(
         rankedResultType.getShape(), rankedResultType.getElementType(),
-        llvm::cast<MemRefType>(*maybeSrcBufferType).getLayout(), memorySpace);
+        llvm::cast<MemRefType>(*maybeSrcBufferType).getLayout(), memorySpace));
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -141,7 +142,7 @@ struct CollapseShapeOpInterface
     return {{op->getOpResult(0), BufferRelation::Equivalent}};
   }
 
-  FailureOr<BaseMemRefType>
+  FailureOr<BufferLikeType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
                 const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
@@ -157,12 +158,13 @@ struct CollapseShapeOpInterface
     if (!canBeCollapsed) {
       // If dims cannot be collapsed, this op bufferizes to a new allocation.
       RankedTensorType tensorResultType = collapseShapeOp.getResultType();
-      return bufferization::getMemRefTypeWithStaticIdentityLayout(
-          tensorResultType, srcBufferType.getMemorySpace());
+      return cast<BufferLikeType>(
+          bufferization::getMemRefTypeWithStaticIdentityLayout(
+              tensorResultType, srcBufferType.getMemorySpace()));
     }
 
-    return memref::CollapseShapeOp::computeCollapsedType(
-        srcBufferType, collapseShapeOp.getReassociationIndices());
+    return cast<BufferLikeType>(memref::CollapseShapeOp::computeCollapsedType(
+        srcBufferType, collapseShapeOp.getReassociationIndices()));
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -220,8 +222,8 @@ struct CollapseShapeOpInterface
           MemRefType::get(collapseShapeOp.getSrcType().getShape(),
                           collapseShapeOp.getSrcType().getElementType(),
                           AffineMap(), bufferType.getMemorySpace());
-      buffer = rewriter.create<bufferization::ToBufferOp>(
-          op->getLoc(), memrefType, *tensorAlloc);
+      buffer = bufferization::ToBufferOp::create(rewriter, op->getLoc(),
+                                                 memrefType, *tensorAlloc);
     }
 
     // Result type is inferred by the builder.
@@ -319,7 +321,7 @@ struct ExpandShapeOpInterface
     return {{op->getOpResult(0), BufferRelation::Equivalent}};
   }
 
-  FailureOr<BaseMemRefType>
+  FailureOr<BufferLikeType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
                 const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
@@ -334,7 +336,7 @@ struct ExpandShapeOpInterface
         expandShapeOp.getReassociationIndices());
     if (failed(maybeResultType))
       return failure();
-    return *maybeResultType;
+    return cast<BufferLikeType>(*maybeResultType);
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -347,8 +349,8 @@ struct ExpandShapeOpInterface
     if (failed(buffer))
       return failure();
 
-    auto memrefExpandShape = rewriter.create<memref::ExpandShapeOp>(
-        op->getLoc(), tensorResultType.getShape(), *buffer,
+    auto memrefExpandShape = memref::ExpandShapeOp::create(
+        rewriter, op->getLoc(), tensorResultType.getShape(), *buffer,
         expandShapeOp.getReassociationIndices(),
         expandShapeOp.getMixedOutputShape());
     replaceOpWithBufferizedValues(rewriter, op,
@@ -396,15 +398,15 @@ struct ExtractSliceOpInterface
         extractSliceOp.getResult(), options, state);
     if (failed(resultMemrefType))
       return failure();
-    Value subView = rewriter.create<memref::SubViewOp>(
-        loc, llvm::cast<MemRefType>(*resultMemrefType), *srcMemref,
+    Value subView = memref::SubViewOp::create(
+        rewriter, loc, llvm::cast<MemRefType>(*resultMemrefType), *srcMemref,
         mixedOffsets, mixedSizes, mixedStrides);
 
     replaceOpWithBufferizedValues(rewriter, op, subView);
     return success();
   }
 
-  FailureOr<BaseMemRefType>
+  FailureOr<BufferLikeType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
                 const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
@@ -417,10 +419,10 @@ struct ExtractSliceOpInterface
     SmallVector<OpFoldResult> mixedOffsets = extractSliceOp.getMixedOffsets();
     SmallVector<OpFoldResult> mixedSizes = extractSliceOp.getMixedSizes();
     SmallVector<OpFoldResult> mixedStrides = extractSliceOp.getMixedStrides();
-    return memref::SubViewOp::inferRankReducedResultType(
+    return cast<BufferLikeType>(memref::SubViewOp::inferRankReducedResultType(
         extractSliceOp.getType().getShape(),
         llvm::cast<MemRefType>(*srcMemrefType), mixedOffsets, mixedSizes,
-        mixedStrides);
+        mixedStrides));
   }
 };
 
@@ -467,7 +469,7 @@ static void createStores(RewriterBase &rewriter, Location loc, int dim,
   if (dim == static_cast<int>(shape.size()) - 1) {
     for (int i = 0; i < shape.back(); ++i) {
       indices.back() = constants[i];
-      rewriter.create<memref::StoreOp>(loc, *elementIt, buffer, indices);
+      memref::StoreOp::create(rewriter, loc, *elementIt, buffer, indices);
       ++elementIt;
     }
     return;
@@ -501,12 +503,12 @@ struct FromElementsOpInterface
         /*copy=*/false);
     if (failed(tensorAlloc))
       return failure();
-    FailureOr<BaseMemRefType> memrefType = bufferization::detail::asMemRefType(
-        bufferization::getBufferType(*tensorAlloc, options, state));
+    FailureOr<BufferLikeType> memrefType =
+        bufferization::getBufferType(*tensorAlloc, options, state);
     if (failed(memrefType))
       return failure();
-    Value buffer = rewriter.create<bufferization::ToBufferOp>(
-        op->getLoc(), *memrefType, *tensorAlloc);
+    Value buffer = bufferization::ToBufferOp::create(rewriter, op->getLoc(),
+                                                     *memrefType, *tensorAlloc);
 
     // Case: tensor<0xelem_type>.
     if (fromElementsOp.getElements().empty()) {
@@ -516,8 +518,8 @@ struct FromElementsOpInterface
 
     // Case: tensor<elem_type>.
     if (shape.empty()) {
-      rewriter.create<memref::StoreOp>(
-          loc, fromElementsOp.getElements().front(), buffer);
+      memref::StoreOp::create(rewriter, loc,
+                              fromElementsOp.getElements().front(), buffer);
       replaceOpWithBufferizedValues(rewriter, op, buffer);
       return success();
     }
@@ -527,7 +529,7 @@ struct FromElementsOpInterface
     SmallVector<Value, 2> constants;
     constants.reserve(maxDim);
     for (int i = 0; i < maxDim; ++i)
-      constants.push_back(rewriter.create<arith::ConstantIndexOp>(loc, i));
+      constants.push_back(arith::ConstantIndexOp::create(rewriter, loc, i));
 
     // Traverse all `elements` and create `memref.store` ops.
     auto elementIt = fromElementsOp.getElements().begin();
@@ -574,15 +576,15 @@ static Value lowerGenerateLikeOpBody(RewriterBase &rewriter, Location loc,
   // Create linalg::MapOp.
   OpBuilder::InsertionGuard g(rewriter);
   auto linalgOp =
-      rewriter.create<linalg::MapOp>(loc, tensorType, /*inputs=*/ValueRange(),
-                                     /*init=*/tensorDestination);
+      linalg::MapOp::create(rewriter, loc, tensorType, /*inputs=*/ValueRange(),
+                            /*init=*/tensorDestination);
   Block &linalgBody = linalgOp.getMapper().emplaceBlock();
 
   // Create linalg::IndexOps.
   rewriter.setInsertionPointToStart(&linalgBody);
   SmallVector<Value> indices;
   for (int64_t dim = 0; dim < tensorType.getRank(); ++dim)
-    indices.push_back(rewriter.create<linalg::IndexOp>(loc, dim));
+    indices.push_back(linalg::IndexOp::create(rewriter, loc, dim));
 
   // Move over body.
   rewriter.mergeBlocks(&generateBody.front(), &linalgBody, indices);
@@ -642,8 +644,8 @@ struct InsertOpInterface
         getBuffer(rewriter, insertOp.getDest(), options, state);
     if (failed(destMemref))
       return failure();
-    rewriter.create<memref::StoreOp>(insertOp.getLoc(), insertOp.getScalar(),
-                                     *destMemref, insertOp.getIndices());
+    memref::StoreOp::create(rewriter, insertOp.getLoc(), insertOp.getScalar(),
+                            *destMemref, insertOp.getIndices());
     replaceOpWithBufferizedValues(rewriter, op, *destMemref);
     return success();
   }
@@ -711,9 +713,9 @@ struct InsertSliceOpInterface
         memref::SubViewOp::inferRankReducedResultType(
             insertSliceOp.getSourceType().getShape(), dstMemrefType,
             mixedOffsets, mixedSizes, mixedStrides);
-    Value subView = rewriter.create<memref::SubViewOp>(
-        loc, subviewMemRefType, *dstMemref, mixedOffsets, mixedSizes,
-        mixedStrides);
+    Value subView =
+        memref::SubViewOp::create(rewriter, loc, subviewMemRefType, *dstMemref,
+                                  mixedOffsets, mixedSizes, mixedStrides);
 
     // Copy tensor. If this tensor.insert_slice has a matching
     // tensor.extract_slice, the copy operation will eventually fold away.
@@ -753,7 +755,7 @@ struct PadOpInterface
     return {};
   }
 
-  FailureOr<BaseMemRefType>
+  FailureOr<BufferLikeType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
                 const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
@@ -765,9 +767,10 @@ struct PadOpInterface
     if (failed(maybeSrcBufferType))
       return failure();
     MemRefLayoutAttrInterface layout;
-    return MemRefType::get(padOp.getResultType().getShape(),
-                           padOp.getResultType().getElementType(), layout,
-                           maybeSrcBufferType->getMemorySpace());
+    return cast<BufferLikeType>(
+        MemRefType::get(padOp.getResultType().getShape(),
+                        padOp.getResultType().getElementType(), layout,
+                        maybeSrcBufferType->getMemorySpace()));
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -781,8 +784,8 @@ struct PadOpInterface
     auto toValue = [&](OpFoldResult ofr) {
       if (auto value = dyn_cast<Value>(ofr))
         return value;
-      return rewriter
-          .create<arith::ConstantIndexOp>(loc, *getConstantIntValue(ofr))
+      return arith::ConstantIndexOp::create(rewriter, loc,
+                                            *getConstantIntValue(ofr))
           .getResult();
     };
 
@@ -793,14 +796,14 @@ struct PadOpInterface
     for (int64_t i = 0; i < resultType.getRank(); ++i) {
       if (!resultType.isDynamicDim(i))
         continue;
-      Value srcDim = rewriter.create<tensor::DimOp>(loc, padOp.getSource(), i);
+      Value srcDim = tensor::DimOp::create(rewriter, loc, padOp.getSource(), i);
       Value lowPad = toValue(mixedLowPad[i]);
       Value highPad = toValue(mixedHighPad[i]);
       AffineExpr s0, s1, s2;
       bindSymbols(op->getContext(), s0, s1, s2);
       AffineExpr sumExpr = s0 + s1 + s2;
-      Value sum = rewriter.create<affine::AffineApplyOp>(
-          loc, sumExpr, ValueRange{srcDim, lowPad, highPad});
+      Value sum = affine::AffineApplyOp::create(
+          rewriter, loc, sumExpr, ValueRange{srcDim, lowPad, highPad});
       dynamicSizes.push_back(sum);
     }
 
@@ -916,9 +919,8 @@ struct ReshapeOpInterface
       auto memrefType = MemRefType::get(
           srcType.getShape(), srcType.getElementType(), AffineMap(),
           cast<BaseMemRefType>(srcBuffer->getType()).getMemorySpace());
-      srcBuffer = rewriter
-                      .create<bufferization::ToBufferOp>(
-                          op->getLoc(), memrefType, *tensorAlloc)
+      srcBuffer = bufferization::ToBufferOp::create(rewriter, op->getLoc(),
+                                                    memrefType, *tensorAlloc)
                       .getResult();
     }
 
@@ -927,7 +929,7 @@ struct ReshapeOpInterface
     return success();
   }
 
-  FailureOr<BaseMemRefType>
+  FailureOr<BufferLikeType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
                 const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
@@ -937,9 +939,9 @@ struct ReshapeOpInterface
         reshapeOp.getSource(), options, state, invocationStack);
     if (failed(maybeSourceBufferType))
       return failure();
-    return getMemRefTypeWithStaticIdentityLayout(
+    return cast<BufferLikeType>(getMemRefTypeWithStaticIdentityLayout(
         reshapeOp.getResult().getType(),
-        cast<BaseMemRefType>(maybeSourceBufferType.value()).getMemorySpace());
+        cast<BaseMemRefType>(maybeSourceBufferType.value()).getMemorySpace()));
   }
 };
 
@@ -992,9 +994,9 @@ struct ParallelInsertSliceOpInterface
             parallelInsertSliceOp.getMixedOffsets(),
             parallelInsertSliceOp.getMixedSizes(),
             parallelInsertSliceOp.getMixedStrides());
-    Value subview = rewriter.create<memref::SubViewOp>(
-        parallelInsertSliceOp.getLoc(), subviewMemRefType, *destBuffer,
-        parallelInsertSliceOp.getMixedOffsets(),
+    Value subview = memref::SubViewOp::create(
+        rewriter, parallelInsertSliceOp.getLoc(), subviewMemRefType,
+        *destBuffer, parallelInsertSliceOp.getMixedOffsets(),
         parallelInsertSliceOp.getMixedSizes(),
         parallelInsertSliceOp.getMixedStrides());
 
@@ -1062,14 +1064,14 @@ struct SplatOpInterface
     if (options.defaultMemorySpaceFn(tensorType) != Attribute())
       return op->emitError("memory space not implemented yet");
 
-    auto linalgOp =
-        rewriter.create<linalg::MapOp>(loc, tensorType, /*inputs=*/ValueRange(),
-                                       /*init=*/*tensorAlloc);
+    auto linalgOp = linalg::MapOp::create(rewriter, loc, tensorType,
+                                          /*inputs=*/ValueRange(),
+                                          /*init=*/*tensorAlloc);
     Block &linalgBody = linalgOp.getMapper().emplaceBlock();
 
     // Create linalg::IndexOps.
     rewriter.setInsertionPointToStart(&linalgBody);
-    rewriter.create<linalg::YieldOp>(loc, splatOp.getInput());
+    linalg::YieldOp::create(rewriter, loc, splatOp.getInput());
     rewriter.replaceOp(splatOp, linalgOp.getResult()[0]);
 
     return success();
@@ -1123,8 +1125,8 @@ struct ConcatOpInterface
     MemRefType memrefType =
         MemRefType::get(concatOp.getResultType().getShape(),
                         concatOp.getResultType().getElementType(), layout);
-    Value dstBuffer = rewriter.create<bufferization::ToBufferOp>(
-        op->getLoc(), memrefType, *tensorAlloc);
+    Value dstBuffer = bufferization::ToBufferOp::create(
+        rewriter, op->getLoc(), memrefType, *tensorAlloc);
 
     // Extract the dimension for the concat op
     uint64_t concatDim = concatOp.getDim();
@@ -1139,7 +1141,7 @@ struct ConcatOpInterface
     for (const auto &[dimIdx, dimSize] :
          llvm::enumerate(tensorType.getShape())) {
       if (dimSize == ShapedType::kDynamic) {
-        auto dimOp = rewriter.create<memref::DimOp>(loc, dstBuffer, dimIdx);
+        auto dimOp = memref::DimOp::create(rewriter, loc, dstBuffer, dimIdx);
         sizes.push_back(dimOp.getResult());
         if (dimIdx == concatDim)
           dynamicConcatDim = true;
@@ -1154,7 +1156,7 @@ struct ConcatOpInterface
     if (dynamicConcatDim) {
       // One or more operands have dynamic size, so we must accumulate the
       // offset with arith ops.
-      dynamicOffset = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+      dynamicOffset = arith::ConstantIndexOp::create(rewriter, loc, 0);
     }
 
     for (auto operand : concatOp.getInputs()) {
@@ -1171,8 +1173,9 @@ struct ConcatOpInterface
 
       if (dynamicConcatDim) {
         offsets[concatDim] = dynamicOffset.value();
-        dynamicSize = rewriter.create<memref::DimOp>(loc, *srcBuffer, concatDim)
-                          .getResult();
+        dynamicSize =
+            memref::DimOp::create(rewriter, loc, *srcBuffer, concatDim)
+                .getResult();
         sizes[concatDim] = dynamicSize.value();
       } else {
         sizes[concatDim] = rewriter.getIndexAttr(operandConcatDimSize);
@@ -1185,16 +1188,16 @@ struct ConcatOpInterface
           memref::SubViewOp::inferRankReducedResultType(
               operandTensorType.getShape(), dstMemrefType, offsets, sizes,
               strides);
-      Value subview = rewriter.create<memref::SubViewOp>(
-          loc, subviewMemRefType, dstBuffer, offsets, sizes, strides);
+      Value subview = memref::SubViewOp::create(
+          rewriter, loc, subviewMemRefType, dstBuffer, offsets, sizes, strides);
 
       // Copy the source buffer into the destination subview.
       if (failed(options.createMemCpy(rewriter, loc, *srcBuffer, subview)))
         return failure();
 
       if (dynamicConcatDim) {
-        dynamicOffset = rewriter.create<arith::AddIOp>(
-            loc, dynamicOffset.value(), dynamicSize.value());
+        dynamicOffset = arith::AddIOp::create(
+            rewriter, loc, dynamicOffset.value(), dynamicSize.value());
       } else {
         concatDimOffset += operandConcatDimSize;
       }

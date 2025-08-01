@@ -121,7 +121,7 @@ bool BreakpointLocationCollection::ShouldStop(
   size_t prev_size = GetSize();
   while (i < prev_size) {
     // ShouldStop can remove the breakpoint from the list, or even delete
-    // it, so we should 
+    // it, so we should
     BreakpointLocationSP cur_loc_sp = GetByIndex(i);
     BreakpointSP keep_bkpt_alive_sp = cur_loc_sp->GetBreakpoint().shared_from_this();
     if (cur_loc_sp->ShouldStop(context))

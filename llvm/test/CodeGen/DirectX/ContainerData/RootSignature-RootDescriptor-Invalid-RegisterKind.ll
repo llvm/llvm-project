@@ -3,7 +3,7 @@
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
 
-; CHECK: error:  Invalid Root Signature Element: Invalid 
+; CHECK: error:  Invalid Root Signature Element 
 ; CHECK-NOT: Root Signature Definitions
 define void @main() #0 {
 entry:

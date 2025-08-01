@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/opencl/atomic/atom_add.h>
+#include <clc/opencl/atomic/atomic_add.h>
 
 #ifdef cl_khr_global_int32_base_atomics
 #define __CLC_ATOMIC_OP add

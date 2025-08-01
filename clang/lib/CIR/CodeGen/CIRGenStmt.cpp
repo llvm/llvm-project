@@ -79,14 +79,15 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
 #define EXPR(Type, Base) case Stmt::Type##Class:
 #include "clang/AST/StmtNodes.inc"
     {
-      // Remember the block we came in on.
-      mlir::Block *incoming = builder.getInsertionBlock();
-      assert(incoming && "expression emission must have an insertion point");
+      assert(builder.getInsertionBlock() &&
+             "expression emission must have an insertion point");
 
       emitIgnoredExpr(cast<Expr>(s));
 
-      mlir::Block *outgoing = builder.getInsertionBlock();
-      assert(outgoing && "expression emission cleared block!");
+      // Classic codegen has a check here to see if the emitter created a new
+      // block that isn't used (comparing the incoming and outgoing insertion
+      // points) and deletes the outgoing block if it's not used. In CIR, we
+      // will handle that during the cir.canonicalize pass.
       return mlir::success();
     }
   case Stmt::IfStmtClass:
@@ -363,8 +364,8 @@ mlir::LogicalResult CIRGenFunction::emitIfStmt(const IfStmt &s) {
 mlir::LogicalResult CIRGenFunction::emitDeclStmt(const DeclStmt &s) {
   assert(builder.getInsertionBlock() && "expected valid insertion point");
 
-  for (const Decl *I : s.decls())
-    emitDecl(*I);
+  for (const Decl *i : s.decls())
+    emitDecl(*i, /*evaluateConditionDecl=*/true);
 
   return mlir::success();
 }
@@ -409,7 +410,10 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   }
 
   auto *retBlock = curLexScope->getOrCreateRetBlock(*this, loc);
+  // This should emit a branch through the cleanup block if one exists.
   builder.create<cir::BrOp>(loc, retBlock);
+  if (ehStack.getStackDepth() != currentCleanupStackDepth)
+    cgm.errorNYI(s.getSourceRange(), "return with cleanup stack");
   builder.createBlock(builder.getBlock()->getParent());
 
   return mlir::success();
@@ -872,7 +876,7 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
         return mlir::failure();
 
     if (s.getConditionVariable())
-      emitDecl(*s.getConditionVariable());
+      emitDecl(*s.getConditionVariable(), /*evaluateConditionDecl=*/true);
 
     mlir::Value condV = emitScalarExpr(s.getCond());
 

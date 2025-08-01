@@ -105,6 +105,8 @@ end program
 
 ! ALL-NEXT: PolymorphicOpConversion
 ! ALL-NEXT: AssumedRankOpConversion
+! O2-NEXT:  'func.func' Pipeline
+! O2-NEXT:    OptimizeArrayRepacking
 ! ALL-NEXT: LowerRepackArraysPass
 ! ALL-NEXT: SimplifyFIROperations
 ! O2-NEXT:  AddAliasTags

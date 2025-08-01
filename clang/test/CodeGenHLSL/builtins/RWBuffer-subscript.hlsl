@@ -9,18 +9,18 @@ void main(unsigned GI : SV_GroupIndex) {
   // CHECK: define void @main()
 
   // DXC: %[[INPTR:.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_i32_1_0_1t(target("dx.TypedBuffer", i32, 1, 0, 1) %{{.*}}, i32 %{{.*}})
-  // SPIRV: %[[INPTR:.*]] = call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.Image_i32_5_2_0_0_2_0t(target("spirv.Image", i32, 5, 2, 0, 0, 2, 0) %{{.*}}, i32 %{{.*}})
+  // SPIRV: %[[INPTR:.*]] = call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %{{.*}}, i32 %{{.*}})
   // CHECK: %[[LOAD:.*]] = load i32, ptr {{.*}}%[[INPTR]]
   // DXC: %[[OUTPTR:.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_i32_1_0_1t(target("dx.TypedBuffer", i32, 1, 0, 1) %{{.*}}, i32 %{{.*}})
-  // SPIRV: %[[OUTPTR:.*]] = call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.Image_i32_5_2_0_0_2_0t(target("spirv.Image", i32, 5, 2, 0, 0, 2, 0) %{{.*}}, i32 %{{.*}})
+  // SPIRV: %[[OUTPTR:.*]] = call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %{{.*}}, i32 %{{.*}})
   // CHECK: store i32 %[[LOAD]], ptr {{.*}}%[[OUTPTR]]
   Out[GI] = In[GI];
 
   // DXC: %[[INPTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_i32_1_0_1t(target("dx.TypedBuffer", i32, 1, 0, 1) %{{.*}}, i32 %{{.*}})
-  // SPIRV: %[[INPTR:.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.Image_i32_5_2_0_0_2_0t(target("spirv.Image", i32, 5, 2, 0, 0, 2, 0) %{{.*}}, i32 %{{.*}})
+  // SPIRV: %[[INPTR:.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %{{.*}}, i32 %{{.*}})
   // CHECK: %[[LOAD:.*]] = load i32, ptr {{.*}}%[[INPTR]]
   // DXC: %[[OUTPTR:.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_i32_1_0_1t(target("dx.TypedBuffer", i32, 1, 0, 1) %{{.*}}, i32 %{{.*}})
-  // SPIRV: %[[OUTPTR:.*]] = call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.Image_i32_5_2_0_0_2_0t(target("spirv.Image", i32, 5, 2, 0, 0, 2, 0) %{{.*}}, i32 %{{.*}})
+  // SPIRV: %[[OUTPTR:.*]] = call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %{{.*}}, i32 %{{.*}})
   // CHECK: store i32 %[[LOAD]], ptr {{.*}}%[[OUTPTR]]
   Out[GI] = In.Load(GI);
 }

@@ -368,6 +368,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.wcslen
     libc.src.wchar.wctob
 
+    # wctype.h entrypoints
+    libc.src.wctype.iswalpha
+
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
     libc.src.sys.uio.readv
@@ -635,6 +638,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
+    libc.src.math.tanpif
     libc.src.math.totalorder
     libc.src.math.totalorderf
     libc.src.math.totalorderl
@@ -856,6 +860,11 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.ufromfpxf128
   )
 endif()
+
+list(APPEND TARGET_LIBM_ENTRYPOINTS
+  # bfloat16 entrypoints
+  libc.src.math.fabsbf16
+)
 
 if(LIBC_COMPILER_HAS_FIXED_POINT)
   list(APPEND TARGET_LIBM_ENTRYPOINTS

@@ -547,9 +547,14 @@ Error RewriteInstance::discoverStorage() {
       NextAvailableOffset = std::max(NextAvailableOffset,
                                      Phdr.p_offset + Phdr.p_filesz);
 
-      BC->SegmentMapInfo[Phdr.p_vaddr] = SegmentInfo{
-          Phdr.p_vaddr,  Phdr.p_memsz, Phdr.p_offset,
-          Phdr.p_filesz, Phdr.p_align, ((Phdr.p_flags & ELF::PF_X) != 0)};
+      BC->SegmentMapInfo[Phdr.p_vaddr] =
+          SegmentInfo{Phdr.p_vaddr,
+                      Phdr.p_memsz,
+                      Phdr.p_offset,
+                      Phdr.p_filesz,
+                      Phdr.p_align,
+                      (Phdr.p_flags & ELF::PF_X) != 0,
+                      (Phdr.p_flags & ELF::PF_W) != 0};
       if (BC->TheTriple->getArch() == llvm::Triple::x86_64 &&
           Phdr.p_vaddr >= BinaryContext::KernelStartX86_64)
         BC->IsLinuxKernel = true;
@@ -708,21 +713,6 @@ Error RewriteInstance::run() {
       return E;
 
   preprocessProfileData();
-
-  // Skip disassembling if we have a translation table and we are running an
-  // aggregation job.
-  if (opts::AggregateOnly && BAT->enabledFor(InputFile)) {
-    // YAML profile in BAT mode requires CFG for .bolt.org.text functions
-    if (!opts::SaveProfile.empty() ||
-        opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML) {
-      selectFunctionsToProcess();
-      disassembleFunctions();
-      processMetadataPreCFG();
-      buildFunctionsCFG();
-    }
-    processProfileData();
-    return Error::success();
-  }
 
   selectFunctionsToProcess();
 
@@ -906,6 +896,20 @@ void RewriteInstance::discoverFileObjects() {
         continue;
 
       MarkerSymType MarkerType = BC->getMarkerType(SymInfo.Symbol);
+
+      // Treat ST_Function as code.
+      Expected<object::SymbolRef::Type> TypeOrError = SymInfo.Symbol.getType();
+      consumeError(TypeOrError.takeError());
+      if (TypeOrError && *TypeOrError == SymbolRef::ST_Function) {
+        if (IsData) {
+          Expected<StringRef> NameOrError = SymInfo.Symbol.getName();
+          consumeError(NameOrError.takeError());
+          BC->errs() << "BOLT-WARNING: function symbol " << *NameOrError
+                     << " lacks code marker\n";
+        }
+        MarkerType = MarkerSymType::CODE;
+      }
+
       if (MarkerType != MarkerSymType::NONE) {
         SortedMarkerSymbols.push_back(MarkerSym{SymInfo.Address, MarkerType});
         LastAddr = SymInfo.Address;
@@ -4182,32 +4186,7 @@ void RewriteInstance::updateOutputValues(const BOLTLinker &Linker) {
     Function->updateOutputValues(Linker);
 }
 
-void RewriteInstance::patchELFPHDRTable() {
-  auto ELF64LEFile = cast<ELF64LEObjectFile>(InputFile);
-  const ELFFile<ELF64LE> &Obj = ELF64LEFile->getELFFile();
-  raw_fd_ostream &OS = Out->os();
-
-  // Write/re-write program headers.
-  Phnum = Obj.getHeader().e_phnum;
-  if (PHDRTableOffset) {
-    // Writing new pheader table and adding one new entry for R+X segment.
-    Phnum += 1;
-    if (NewWritableSegmentSize) {
-      // Adding one more entry for R+W segment.
-      Phnum += 1;
-    }
-  } else {
-    assert(!PHDRTableAddress && "unexpected address for program header table");
-    PHDRTableOffset = Obj.getHeader().e_phoff;
-    if (NewWritableSegmentSize) {
-      BC->errs() << "BOLT-ERROR: unable to add writable segment\n";
-      exit(1);
-    }
-  }
-
-  if (opts::Instrument)
-    Phnum += 2;
-
+void RewriteInstance::updateSegmentInfo() {
   // NOTE Currently .eh_frame_hdr appends to the last segment, recalculate
   // last segments size based on the NextAvailableAddress variable.
   if (!NewWritableSegmentSize) {
@@ -4217,28 +4196,16 @@ void RewriteInstance::patchELFPHDRTable() {
     NewWritableSegmentSize = NextAvailableAddress - NewWritableSegmentAddress;
   }
 
-  if (!NewTextSegmentSize && !NewWritableSegmentSize) {
-    BC->outs() << "BOLT-INFO: not adding new segments\n";
-    return;
-  }
-
-  const uint64_t SavedPos = OS.tell();
-  OS.seek(PHDRTableOffset);
-
-  auto createNewPhdrs = [&]() {
-    SmallVector<ELF64LEPhdrTy, 3> NewPhdrs;
-    ELF64LEPhdrTy NewPhdr;
-    NewPhdr.p_type = ELF::PT_LOAD;
-    NewPhdr.p_offset = NewTextSegmentOffset;
-    NewPhdr.p_vaddr = NewTextSegmentAddress;
-    NewPhdr.p_paddr = NewTextSegmentAddress;
-    NewPhdr.p_filesz = NewTextSegmentSize;
-    NewPhdr.p_memsz = NewTextSegmentSize;
-    NewPhdr.p_flags = ELF::PF_X | ELF::PF_R;
-    NewPhdr.p_align = BC->PageAlign;
-
+  if (NewTextSegmentSize) {
+    SegmentInfo TextSegment = {NewTextSegmentAddress,
+                               NewTextSegmentSize,
+                               NewTextSegmentOffset,
+                               NewTextSegmentSize,
+                               BC->PageAlign,
+                               true,
+                               false};
     if (!opts::Instrument) {
-      NewPhdrs.push_back(NewPhdr);
+      BC->NewSegments.push_back(TextSegment);
     } else {
       ErrorOr<BinarySection &> Sec =
           BC->getUniqueSectionByName(".bolt.instr.counters");
@@ -4246,69 +4213,97 @@ void RewriteInstance::patchELFPHDRTable() {
       const uint64_t Addr = Sec->getOutputAddress();
       const uint64_t Offset = Sec->getOutputFileOffset();
       const uint64_t Size = Sec->getOutputSize();
-      assert(Addr > NewPhdr.p_vaddr &&
-             Addr + Size < NewPhdr.p_vaddr + NewPhdr.p_memsz &&
+      assert(Addr > TextSegment.Address &&
+             Addr + Size < TextSegment.Address + TextSegment.Size &&
              "`.bolt.instr.counters` section is expected to be included in the "
-             "new text sgement");
+             "new text segment");
 
       // Set correct size for the previous header since we are breaking the
       // new text segment into three segments.
-      uint64_t Delta = Addr - NewPhdr.p_vaddr;
-      NewPhdr.p_filesz = Delta;
-      NewPhdr.p_memsz = Delta;
-      NewPhdrs.push_back(NewPhdr);
+      uint64_t Delta = Addr - TextSegment.Address;
+      TextSegment.Size = Delta;
+      TextSegment.FileSize = Delta;
+      BC->NewSegments.push_back(TextSegment);
 
-      // Create a program header for a RW segment that includes the
-      // `.bolt.instr.counters` section only.
-      ELF64LEPhdrTy NewPhdrRWSegment;
-      NewPhdrRWSegment.p_type = ELF::PT_LOAD;
-      NewPhdrRWSegment.p_offset = Offset;
-      NewPhdrRWSegment.p_vaddr = Addr;
-      NewPhdrRWSegment.p_paddr = Addr;
-      NewPhdrRWSegment.p_filesz = Size;
-      NewPhdrRWSegment.p_memsz = Size;
-      NewPhdrRWSegment.p_flags = ELF::PF_R | ELF::PF_W;
-      NewPhdrRWSegment.p_align = BC->RegularPageSize;
-      NewPhdrs.push_back(NewPhdrRWSegment);
+      // Create RW segment that includes the `.bolt.instr.counters` section.
+      SegmentInfo RWSegment = {Addr,  Size, Offset, Size, BC->RegularPageSize,
+                               false, true};
+      BC->NewSegments.push_back(RWSegment);
 
-      // Create a program header for a RX segment that includes all the RX
-      // sections from runtime library.
-      ELF64LEPhdrTy NewPhdrRXSegment;
-      NewPhdrRXSegment.p_type = ELF::PT_LOAD;
+      // Create RX segment that includes all RX sections from runtime library.
       const uint64_t AddrRX = alignTo(Addr + Size, BC->RegularPageSize);
       const uint64_t OffsetRX = alignTo(Offset + Size, BC->RegularPageSize);
-      const uint64_t SizeRX = NewTextSegmentSize - (AddrRX - NewPhdr.p_paddr);
-      NewPhdrRXSegment.p_offset = OffsetRX;
-      NewPhdrRXSegment.p_vaddr = AddrRX;
-      NewPhdrRXSegment.p_paddr = AddrRX;
-      NewPhdrRXSegment.p_filesz = SizeRX;
-      NewPhdrRXSegment.p_memsz = SizeRX;
-      NewPhdrRXSegment.p_flags = ELF::PF_X | ELF::PF_R;
-      NewPhdrRXSegment.p_align = BC->RegularPageSize;
-      NewPhdrs.push_back(NewPhdrRXSegment);
+      const uint64_t SizeRX =
+          NewTextSegmentSize - (AddrRX - TextSegment.Address);
+      SegmentInfo RXSegment = {
+          AddrRX, SizeRX, OffsetRX, SizeRX, BC->RegularPageSize, true, false};
+      BC->NewSegments.push_back(RXSegment);
     }
+  }
 
-    return NewPhdrs;
+  if (NewWritableSegmentSize) {
+    SegmentInfo DataSegmentInfo = {
+        NewWritableSegmentAddress,
+        NewWritableSegmentSize,
+        getFileOffsetForAddress(NewWritableSegmentAddress),
+        NewWritableSegmentSize,
+        BC->RegularPageSize,
+        false,
+        true};
+    BC->NewSegments.push_back(DataSegmentInfo);
+  }
+}
+
+void RewriteInstance::patchELFPHDRTable() {
+  auto ELF64LEFile = cast<ELF64LEObjectFile>(InputFile);
+  const ELFFile<ELF64LE> &Obj = ELF64LEFile->getELFFile();
+  raw_fd_ostream &OS = Out->os();
+
+  Phnum = Obj.getHeader().e_phnum;
+
+  if (BC->NewSegments.empty()) {
+    BC->outs() << "BOLT-INFO: not adding new segments\n";
+    return;
+  }
+
+  if (opts::UseGnuStack) {
+    assert(!PHDRTableAddress && "unexpected address for program header table");
+    if (BC->NewSegments.size() > 1) {
+      BC->errs() << "BOLT-ERROR: unable to add writable segment\n";
+      exit(1);
+    }
+  } else {
+    Phnum += BC->NewSegments.size();
+  }
+
+  if (!PHDRTableOffset)
+    PHDRTableOffset = Obj.getHeader().e_phoff;
+
+  const uint64_t SavedPos = OS.tell();
+  OS.seek(PHDRTableOffset);
+
+  auto createPhdr = [](const SegmentInfo &SI) {
+    ELF64LEPhdrTy Phdr;
+    Phdr.p_type = ELF::PT_LOAD;
+    Phdr.p_offset = SI.FileOffset;
+    Phdr.p_vaddr = SI.Address;
+    Phdr.p_paddr = SI.Address;
+    Phdr.p_filesz = SI.FileSize;
+    Phdr.p_memsz = SI.Size;
+    Phdr.p_flags = ELF::PF_R;
+    if (SI.IsExecutable)
+      Phdr.p_flags |= ELF::PF_X;
+    if (SI.IsWritable)
+      Phdr.p_flags |= ELF::PF_W;
+    Phdr.p_align = SI.Alignment;
+
+    return Phdr;
   };
 
   auto writeNewSegmentPhdrs = [&]() {
-    if (NewTextSegmentSize) {
-      SmallVector<ELF64LE::Phdr, 3> NewPhdrs = createNewPhdrs();
-      OS.write(reinterpret_cast<const char *>(NewPhdrs.data()),
-               sizeof(ELF64LE::Phdr) * NewPhdrs.size());
-    }
-
-    if (NewWritableSegmentSize) {
-      ELF64LEPhdrTy NewPhdr;
-      NewPhdr.p_type = ELF::PT_LOAD;
-      NewPhdr.p_offset = getFileOffsetForAddress(NewWritableSegmentAddress);
-      NewPhdr.p_vaddr = NewWritableSegmentAddress;
-      NewPhdr.p_paddr = NewWritableSegmentAddress;
-      NewPhdr.p_filesz = NewWritableSegmentSize;
-      NewPhdr.p_memsz = NewWritableSegmentSize;
-      NewPhdr.p_align = BC->RegularPageSize;
-      NewPhdr.p_flags = ELF::PF_R | ELF::PF_W;
-      OS.write(reinterpret_cast<const char *>(&NewPhdr), sizeof(NewPhdr));
+    for (const SegmentInfo &SI : BC->NewSegments) {
+      ELF64LEPhdrTy Phdr = createPhdr(SI);
+      OS.write(reinterpret_cast<const char *>(&Phdr), sizeof(Phdr));
     }
   };
 
@@ -4344,11 +4339,9 @@ void RewriteInstance::patchELFPHDRTable() {
     case ELF::PT_GNU_STACK:
       if (opts::UseGnuStack) {
         // Overwrite the header with the new segment header.
-        assert(!opts::Instrument);
-        SmallVector<ELF64LE::Phdr, 3> NewPhdrs = createNewPhdrs();
-        assert(NewPhdrs.size() == 1 &&
-               "expect exactly one program header was created");
-        NewPhdr = NewPhdrs[0];
+        assert(BC->NewSegments.size() == 1 &&
+               "Expected exactly one new segment");
+        NewPhdr = createPhdr(BC->NewSegments.front());
         ModdedGnuStack = true;
       }
       break;
@@ -5973,8 +5966,10 @@ void RewriteInstance::rewriteFile() {
     addBATSection();
 
   // Patch program header table.
-  if (!BC->IsLinuxKernel)
+  if (!BC->IsLinuxKernel) {
+    updateSegmentInfo();
     patchELFPHDRTable();
+  }
 
   // Finalize memory image of section string table.
   finalizeSectionStringTable();

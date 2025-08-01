@@ -22,7 +22,7 @@ class UseRangesCheck : public utils::UseRangesCheck {
 public:
   UseRangesCheck(StringRef CheckName, ClangTidyContext *Context);
 
-  void storeOptions(ClangTidyOptions::OptionMap &Options) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
   ReplacerMap getReplacerMap() const override;
 

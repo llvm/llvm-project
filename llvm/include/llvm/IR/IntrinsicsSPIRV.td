@@ -59,10 +59,24 @@ let TargetPrefix = "spv" in {
                                 NoCapture<ArgIndex<1>>,
                                 ImmArg<ArgIndex<0>>]>;
 
-  // The following intrinsic(s) are mirrored from IntrinsicsDirectX.td for HLSL support.
-  def int_spv_thread_id : Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
-  def int_spv_group_id : Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
-  def int_spv_thread_id_in_group : Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
+  // Ideally we should use the SPIR-V terminology for SPIR-V intrinsics.
+  def int_spv_thread_id : Intrinsic<[llvm_anyint_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
+  def int_spv_group_id : Intrinsic<[llvm_anyint_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
+  def int_spv_thread_id_in_group : Intrinsic<[llvm_anyint_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
+  def int_spv_workgroup_size : Intrinsic<[llvm_anyint_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
+  def int_spv_global_size : Intrinsic<[llvm_anyint_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
+  def int_spv_global_offset : Intrinsic<[llvm_anyint_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
+  def int_spv_num_workgroups : Intrinsic<[llvm_anyint_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
+  def int_spv_subgroup_size : ClangBuiltin<"__builtin_spirv_subgroup_size">,
+                          Intrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrWillReturn]>;
+  def int_spv_num_subgroups : ClangBuiltin<"__builtin_spirv_num_subgroups">,
+                          Intrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrWillReturn]>;
+  def int_spv_subgroup_id : ClangBuiltin<"__builtin_spirv_subgroup_id">,
+                          Intrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrWillReturn]>;
+  def int_spv_subgroup_local_invocation_id : ClangBuiltin<"__builtin_spirv_subgroup_local_invocation_id">,
+                          Intrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrWillReturn]>;
+  def int_spv_subgroup_max_size : ClangBuiltin<"__builtin_spirv_subgroup_max_size">,
+                          Intrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrWillReturn]>;
   def int_spv_flattened_thread_id_in_group : Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrWillReturn]>;
   def int_spv_all : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty], [IntrNoMem]>;
   def int_spv_any : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty], [IntrNoMem]>;
@@ -76,7 +90,12 @@ let TargetPrefix = "spv" in {
   def int_spv_length : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>], [llvm_anyfloat_ty], [IntrNoMem]>;
   def int_spv_normalize : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty], [IntrNoMem]>;
   def int_spv_reflect : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty, LLVMMatchType<0>], [IntrNoMem]>;
-  def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty], [IntrNoMem]>;
+  def int_spv_refract
+      : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
+                              [llvm_anyfloat_ty, LLVMMatchType<0>,
+                              llvm_anyfloat_ty],
+                              [IntrNoMem]>;
+def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty], [IntrNoMem]>;
   def int_spv_saturate : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
   def int_spv_smoothstep : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty, LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
   def int_spv_step : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [LLVMMatchType<0>, llvm_anyfloat_ty], [IntrNoMem]>;

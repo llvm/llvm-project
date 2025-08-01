@@ -964,11 +964,15 @@ RISCVCC::CondCode RISCVInstrInfo::getCondFromBranchOpc(unsigned Opc) {
   case RISCV::CV_BEQIMM:
   case RISCV::QC_BEQI:
   case RISCV::QC_E_BEQI:
+  case RISCV::NDS_BBC:
+  case RISCV::NDS_BEQC:
     return RISCVCC::COND_EQ;
   case RISCV::BNE:
   case RISCV::QC_BNEI:
   case RISCV::QC_E_BNEI:
   case RISCV::CV_BNEIMM:
+  case RISCV::NDS_BBS:
+  case RISCV::NDS_BNEC:
     return RISCVCC::COND_NE;
   case RISCV::BLT:
   case RISCV::QC_BLTI:
@@ -1099,6 +1103,26 @@ unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC, unsigned SelectOpc) {
       return RISCV::QC_E_BLTUI;
     case RISCVCC::COND_GEU:
       return RISCV::QC_E_BGEUI;
+    }
+    break;
+  case RISCV::Select_GPR_Using_CC_UImmLog2XLen_NDS:
+    switch (CC) {
+    default:
+      llvm_unreachable("Unexpected condition code!");
+    case RISCVCC::COND_EQ:
+      return RISCV::NDS_BBC;
+    case RISCVCC::COND_NE:
+      return RISCV::NDS_BBS;
+    }
+    break;
+  case RISCV::Select_GPR_Using_CC_UImm7_NDS:
+    switch (CC) {
+    default:
+      llvm_unreachable("Unexpected condition code!");
+    case RISCVCC::COND_EQ:
+      return RISCV::NDS_BEQC;
+    case RISCVCC::COND_NE:
+      return RISCV::NDS_BNEC;
     }
     break;
   }
@@ -1398,6 +1422,18 @@ bool RISCVInstrInfo::reverseBranchCondition(
   case RISCV::QC_E_BLTUI:
     Cond[0].setImm(RISCV::QC_E_BGEUI);
     break;
+  case RISCV::NDS_BBC:
+    Cond[0].setImm(RISCV::NDS_BBS);
+    break;
+  case RISCV::NDS_BBS:
+    Cond[0].setImm(RISCV::NDS_BBC);
+    break;
+  case RISCV::NDS_BEQC:
+    Cond[0].setImm(RISCV::NDS_BNEC);
+    break;
+  case RISCV::NDS_BNEC:
+    Cond[0].setImm(RISCV::NDS_BEQC);
+    break;
   }
 
   return false;
@@ -1570,6 +1606,11 @@ bool RISCVInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   switch (BranchOp) {
   default:
     llvm_unreachable("Unexpected opcode!");
+  case RISCV::NDS_BBC:
+  case RISCV::NDS_BBS:
+  case RISCV::NDS_BEQC:
+  case RISCV::NDS_BNEC:
+    return isInt<11>(BrOffset);
   case RISCV::BEQ:
   case RISCV::BNE:
   case RISCV::BLT:
@@ -1590,12 +1631,12 @@ bool RISCVInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   case RISCV::QC_E_BLTI:
   case RISCV::QC_E_BLTUI:
   case RISCV::QC_E_BGEUI:
-    return isIntN(13, BrOffset);
+    return isInt<13>(BrOffset);
   case RISCV::JAL:
   case RISCV::PseudoBR:
-    return isIntN(21, BrOffset);
+    return isInt<21>(BrOffset);
   case RISCV::PseudoJump:
-    return isIntN(32, SignExtend64(BrOffset + 0x800, XLen));
+    return isInt<32>(SignExtend64(BrOffset + 0x800, XLen));
   }
 }
 
@@ -2764,6 +2805,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_UIMM(6)
         CASE_OPERAND_UIMM(7)
         CASE_OPERAND_UIMM(8)
+        CASE_OPERAND_UIMM(9)
         CASE_OPERAND_UIMM(10)
         CASE_OPERAND_UIMM(12)
         CASE_OPERAND_UIMM(16)
@@ -2780,6 +2822,9 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           break;
         case RISCVOp::OPERAND_UIMM5_NONZERO:
           Ok = isUInt<5>(Imm) && (Imm != 0);
+          break;
+        case RISCVOp::OPERAND_UIMM5_GT3:
+          Ok = isUInt<5>(Imm) && (Imm > 3);
           break;
         case RISCVOp::OPERAND_UIMM5_PLUS1:
           Ok = (isUInt<5>(Imm) && (Imm != 0)) || (Imm == 32);
@@ -2813,9 +2858,6 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           break;
         case RISCVOp::OPERAND_UIMM16_NONZERO:
           Ok = isUInt<16>(Imm) && (Imm != 0);
-          break;
-        case RISCVOp::OPERAND_ZERO:
-          Ok = Imm == 0;
           break;
         case RISCVOp::OPERAND_THREE:
           Ok = Imm == 3;
@@ -4766,6 +4808,8 @@ bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
       LHS.getReg() == RHS.getReg())
     return true;
   if (RHS.isImm() && RHS.getImm() == RISCV::VLMaxSentinel)
+    return true;
+  if (LHS.isImm() && LHS.getImm() == 0)
     return true;
   if (LHS.isImm() && LHS.getImm() == RISCV::VLMaxSentinel)
     return false;

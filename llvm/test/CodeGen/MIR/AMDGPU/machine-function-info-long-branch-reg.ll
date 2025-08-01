@@ -46,6 +46,7 @@
 ; CHECK-NEXT: hasInitWholeWave: false
 ; CHECK-NEXT: dynamicVGPRBlockSize: 0
 ; CHECK-NEXT: scratchReservedForDynamicVGPRs: 0
+; CHECK-NEXT: isWholeWaveFunction: false
 ; CHECK-NEXT: body:
 define amdgpu_kernel void @uniform_long_forward_branch(ptr addrspace(1) %arg, i32 %arg1) #0 {
 bb0:

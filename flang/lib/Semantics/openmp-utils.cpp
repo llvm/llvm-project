@@ -38,6 +38,26 @@
 
 namespace Fortran::semantics::omp {
 
+SourcedActionStmt GetActionStmt(const parser::ExecutionPartConstruct *x) {
+  if (x == nullptr) {
+    return SourcedActionStmt{};
+  }
+  if (auto *exec{std::get_if<parser::ExecutableConstruct>(&x->u)}) {
+    using ActionStmt = parser::Statement<parser::ActionStmt>;
+    if (auto *stmt{std::get_if<ActionStmt>(&exec->u)}) {
+      return SourcedActionStmt{&stmt->statement, stmt->source};
+    }
+  }
+  return SourcedActionStmt{};
+}
+
+SourcedActionStmt GetActionStmt(const parser::Block &block) {
+  if (block.size() == 1) {
+    return GetActionStmt(&block.front());
+  }
+  return SourcedActionStmt{};
+}
+
 std::string ThisVersion(unsigned version) {
   std::string tv{
       std::to_string(version / 10) + "." + std::to_string(version % 10)};
@@ -119,6 +139,31 @@ bool IsVarOrFunctionRef(const MaybeExpr &expr) {
     return evaluate::UnwrapProcedureRef(*expr) != nullptr ||
         evaluate::IsVariable(*expr);
   } else {
+    return false;
+  }
+}
+
+bool IsMapEnteringType(parser::OmpMapType::Value type) {
+  switch (type) {
+  case parser::OmpMapType::Value::Alloc:
+  case parser::OmpMapType::Value::Storage:
+  case parser::OmpMapType::Value::To:
+  case parser::OmpMapType::Value::Tofrom:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool IsMapExitingType(parser::OmpMapType::Value type) {
+  switch (type) {
+  case parser::OmpMapType::Value::Delete:
+  case parser::OmpMapType::Value::From:
+  case parser::OmpMapType::Value::Release:
+  case parser::OmpMapType::Value::Storage:
+  case parser::OmpMapType::Value::Tofrom:
+    return true;
+  default:
     return false;
   }
 }
@@ -225,28 +270,6 @@ struct DesignatorCollector : public evaluate::Traverse<DesignatorCollector,
   }
 };
 
-struct VariableFinder : public evaluate::AnyTraverse<VariableFinder> {
-  using Base = evaluate::AnyTraverse<VariableFinder>;
-  VariableFinder(const SomeExpr &v) : Base(*this), var(v) {}
-
-  using Base::operator();
-
-  template <typename T>
-  bool operator()(const evaluate::Designator<T> &x) const {
-    auto copy{x};
-    return evaluate::AsGenericExpr(std::move(copy)) == var;
-  }
-
-  template <typename T>
-  bool operator()(const evaluate::FunctionRef<T> &x) const {
-    auto copy{x};
-    return evaluate::AsGenericExpr(std::move(copy)) == var;
-  }
-
-private:
-  const SomeExpr &var;
-};
-
 std::vector<SomeExpr> GetAllDesignators(const SomeExpr &expr) {
   return DesignatorCollector{}(expr);
 }
@@ -333,10 +356,6 @@ const SomeExpr *HasStorageOverlap(
     }
   }
   return nullptr;
-}
-
-bool IsSubexpressionOf(const SomeExpr &sub, const SomeExpr &super) {
-  return VariableFinder{sub}(super);
 }
 
 // Check if the ActionStmt is actually a [Pointer]AssignmentStmt. This is

@@ -14,13 +14,14 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/lldb-private-enumerations.h"
 #include "llvm/ADT/Sequence.h"
 #include <optional>
 
-using namespace lldb_private;
 using namespace lldb;
-using namespace lldb_private::dwarf;
+using namespace lldb_private;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 llvm::Expected<std::unique_ptr<DebugNamesDWARFIndex>>
 DebugNamesDWARFIndex::Create(Module &module, DWARFDataExtractor debug_names,
@@ -484,7 +485,7 @@ void DebugNamesDWARFIndex::GetNamespaces(
     ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
-    lldb_private::dwarf::Tag entry_tag = entry.tag();
+    llvm::dwarf::Tag entry_tag = entry.tag();
     if (entry_tag == DW_TAG_namespace ||
         entry_tag == DW_TAG_imported_declaration) {
       if (!ProcessEntry(entry, callback))
@@ -574,7 +575,7 @@ void DebugNamesDWARFIndex::GetNamespacesWithParents(
                [](const CompilerContext &ctx) { return !ctx.name.IsEmpty(); });
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
-    lldb_private::dwarf::Tag entry_tag = entry.tag();
+    llvm::dwarf::Tag entry_tag = entry.tag();
     if (entry_tag == DW_TAG_namespace ||
         entry_tag == DW_TAG_imported_declaration) {
       std::optional<llvm::SmallVector<Entry, 4>> parent_chain =
@@ -607,7 +608,7 @@ void DebugNamesDWARFIndex::GetNamespacesWithParents(
 void DebugNamesDWARFIndex::GetFunctions(
     const Module::LookupInfo &lookup_info, SymbolFileDWARF &dwarf,
     const CompilerDeclContext &parent_decl_ctx,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   ConstString name = lookup_info.GetLookupName();
   std::set<DWARFDebugInfoEntry *> seen;
   for (const DebugNames::Entry &entry :
@@ -617,12 +618,12 @@ void DebugNamesDWARFIndex::GetFunctions(
       continue;
 
     if (DWARFDIE die = GetDIE(entry)) {
-      if (!ProcessFunctionDIE(lookup_info, die, parent_decl_ctx,
-                              [&](DWARFDIE die) {
-                                if (!seen.insert(die.GetDIE()).second)
-                                  return true;
-                                return callback(die);
-                              }))
+      if (ProcessFunctionDIE(lookup_info, die, parent_decl_ctx,
+                             [&](DWARFDIE die) {
+                               if (!seen.insert(die.GetDIE()).second)
+                                 return IterationAction::Continue;
+                               return callback(die);
+                             }) == IterationAction::Stop)
         return;
     }
   }
@@ -632,7 +633,7 @@ void DebugNamesDWARFIndex::GetFunctions(
 
 void DebugNamesDWARFIndex::GetFunctions(
     const RegularExpression &regex,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   for (const DebugNames::NameIndex &ni: *m_debug_names_up) {
     for (DebugNames::NameTableEntry nte: ni) {
       if (!regex.Execute(nte.getString()))
@@ -645,7 +646,7 @@ void DebugNamesDWARFIndex::GetFunctions(
         if (tag != DW_TAG_subprogram && tag != DW_TAG_inlined_subroutine)
           continue;
 
-        if (!ProcessEntry(*entry_or, callback))
+        if (!ProcessEntry(*entry_or, IterationActionAdaptor(callback)))
           return;
       }
       MaybeLogLookupError(entry_or.takeError(), ni, nte.getString());

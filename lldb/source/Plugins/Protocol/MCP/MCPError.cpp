@@ -14,6 +14,7 @@
 namespace lldb_private::mcp {
 
 char MCPError::ID;
+char UnsupportedURI::ID;
 
 MCPError::MCPError(std::string message, int64_t error_code)
     : m_message(message), m_error_code(error_code) {}
@@ -29,6 +30,16 @@ protocol::Error MCPError::toProtcolError() const {
   error.error.code = m_error_code;
   error.error.message = m_message;
   return error;
+}
+
+UnsupportedURI::UnsupportedURI(std::string uri) : m_uri(uri) {}
+
+void UnsupportedURI::log(llvm::raw_ostream &OS) const {
+  OS << "unsupported uri: " << m_uri;
+}
+
+std::error_code UnsupportedURI::convertToErrorCode() const {
+  return llvm::inconvertibleErrorCode();
 }
 
 } // namespace lldb_private::mcp

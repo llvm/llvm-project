@@ -1750,9 +1750,9 @@ to guard against use of uninitialized memory.
 
 Rather, it is intended for use in "parameter-objects", used to simulate,
 for example, the passing of named parameters.
-The attribute generates a warning when explicit initializers for such
-variables are not provided (this occurs regardless of whether any in-class field
-initializers exist):
+Except inside unevaluated contexts, the attribute generates a warning when
+explicit initializers for such variables are not provided (this occurs
+regardless of whether any in-class field initializers exist):
 
 .. code-block:: c++
 
@@ -9417,9 +9417,9 @@ def NonStringDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
 The ``nonstring`` attribute can be applied to the declaration of a variable or
-a field whose type is a character array to specify that the character array is
-not intended to behave like a null-terminated string. This will silence
-diagnostics with code like:
+a field whose type is a character pointer or character array to specify that
+the buffer is not intended to behave like a null-terminated string. This will
+silence diagnostics with code like:
 
 .. code-block:: c
 

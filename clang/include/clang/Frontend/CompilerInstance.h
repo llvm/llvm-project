@@ -361,7 +361,7 @@ public:
   }
 
   /// setDiagnostics - Replace the current diagnostics engine.
-  void setDiagnostics(DiagnosticsEngine *Value);
+  void setDiagnostics(llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Value);
 
   DiagnosticConsumer &getDiagnosticClient() const {
     assert(Diagnostics && Diagnostics->getClient() &&
@@ -420,6 +420,8 @@ public:
   /// @{
 
   llvm::vfs::FileSystem &getVirtualFileSystem() const;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+  getVirtualFileSystemPtr() const;
 
   /// @}
   /// @name File Manager
@@ -720,6 +722,7 @@ public:
       DisableValidationForModuleKind DisableValidation,
       bool AllowPCHWithCompilerErrors, Preprocessor &PP, ModuleCache &ModCache,
       ASTContext &Context, const PCHContainerReader &PCHContainerRdr,
+      const CodeGenOptions &CodeGenOpts,
       ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
       ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
       void *DeserializationListener, bool OwnDeserializationListener,

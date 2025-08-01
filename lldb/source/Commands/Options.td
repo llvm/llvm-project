@@ -13,6 +13,9 @@ let Command = "target modules dump separate debug info" in {
     Desc<"Output the details in JSON format.">;
   def tm_errors_only : Option<"errors-only", "e">, Group<1>,
     Desc<"Filter to show only debug info files with errors.">;
+  def tm_force_load_all_debug_info : Option<"force-load-all-debug-info", "f">,
+                                     Group<1>,
+                                     Desc<"Load all debug info files.">;
 }
 
 let Command = "help" in {
@@ -92,6 +95,12 @@ let Command = "breakpoint modify" in {
   def breakpoint_modify_condition : Option<"condition", "c">, Group<1>,
     Arg<"Expression">, Desc<"The breakpoint stops only if this condition "
     "expression evaluates to true.">;
+  def breakpoint_modify_condition_language
+      : Option<"condition-language", "Y">,
+        Group<1>,
+        Arg<"Language">,
+        Desc<"Specifies the Language to use when executing the breakpoint's "
+             "condition expression.">;
   def breakpoint_modify_auto_continue : Option<"auto-continue", "G">, Group<1>,
     Arg<"Boolean">,
     Desc<"The breakpoint will auto-continue after running its commands.">;

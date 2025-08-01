@@ -300,6 +300,9 @@ private:
     return FUNC(ELF64BE);                                                      \
   }
 
+  /// Update loadable segment information based on new sections.
+  void updateSegmentInfo();
+
   /// Patch ELF book-keeping info.
   void patchELFPHDRTable();
 

@@ -11,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(LLVMFrontendTests
+  HLSLBindingTest.cpp
   HLSLRootSignatureDumpTest.cpp
   HLSLRootSignatureRangesTest.cpp
   OpenACCTest.cpp
@@ -20,6 +21,7 @@ add_llvm_unittest(LLVMFrontendTests
   OpenMPCompositionTest.cpp
   OpenMPDecompositionTest.cpp
   OpenMPDirectiveNameTest.cpp
+  OpenMPDirectiveNameParserTest.cpp
 
   DEPENDS
   acc_gen
