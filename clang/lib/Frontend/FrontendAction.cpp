@@ -39,8 +39,8 @@
 #include "clang/Serialization/ASTDeserializationListener.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -205,7 +205,7 @@ public:
 
 private:
   std::vector<const Decl *> PendingDecls;
-  llvm::DenseSet<const NamespaceDecl *> ProcessedNamespaces;
+  llvm::SmallPtrSet<const NamespaceDecl *, 0> ProcessedNamespaces;
   bool IsCollectingDecls = true;
   const SourceManager &SM;
   std::unique_ptr<llvm::raw_ostream> OS;
