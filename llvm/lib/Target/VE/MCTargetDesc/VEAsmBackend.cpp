@@ -111,9 +111,8 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &,
-                  MutableArrayRef<char>, uint64_t Value,
-                  bool IsResolved) override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &, char *,
+                  uint64_t Value, bool IsResolved) override;
 
   bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override {
@@ -152,8 +151,8 @@ public:
 } // end anonymous namespace
 
 void VEAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                              const MCValue &Target, MutableArrayRef<char> Data,
-                              uint64_t Value, bool IsResolved) {
+                              const MCValue &Target, char *Data, uint64_t Value,
+                              bool IsResolved) {
   switch (Fixup.getKind()) {
   case VE::fixup_ve_tls_gd_hi32:
   case VE::fixup_ve_tls_gd_lo32:
@@ -180,7 +179,7 @@ void VEAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   // appropriate bitfields above.
   for (unsigned i = 0; i != NumBytes; ++i) {
     unsigned Idx = Endian == llvm::endianness::little ? i : (NumBytes - 1) - i;
-    Data[Offset + Idx] |= static_cast<uint8_t>((Value >> (i * 8)) & 0xff);
+    Data[Idx] |= static_cast<uint8_t>((Value >> (i * 8)) & 0xff);
   }
 }
 

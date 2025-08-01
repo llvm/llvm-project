@@ -131,19 +131,18 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
 }
 
-static void fixupLeb128(MCContext &Ctx, const MCFixup &Fixup,
-                        MutableArrayRef<char> Data, uint64_t Value) {
+static void fixupLeb128(MCContext &Ctx, const MCFixup &Fixup, char *Data,
+                        uint64_t Value) {
   unsigned I;
-  for (I = 0; I != Data.size() && Value; ++I, Value >>= 7)
+  for (I = 0; Value; ++I, Value >>= 7)
     Data[I] |= uint8_t(Value & 0x7f);
   if (Value)
     Ctx.reportError(Fixup.getLoc(), "Invalid uleb128 value!");
 }
 
 void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                                     const MCValue &Target,
-                                     MutableArrayRef<char> Data, uint64_t Value,
-                                     bool IsResolved) {
+                                     const MCValue &Target, char *Data,
+                                     uint64_t Value, bool IsResolved) {
   if (IsResolved && shouldForceRelocation(Fixup, Target))
     IsResolved = false;
   IsResolved = addReloc(F, Fixup, Target, Value, IsResolved);
@@ -173,7 +172,7 @@ void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
   for (unsigned I = 0; I != NumBytes; ++I) {
-    Data[Offset + I] |= uint8_t((Value >> (I * 8)) & 0xff);
+    Data[I] |= uint8_t((Value >> (I * 8)) & 0xff);
   }
 }
 

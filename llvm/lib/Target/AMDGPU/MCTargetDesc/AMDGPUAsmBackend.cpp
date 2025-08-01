@@ -33,8 +33,7 @@ public:
   AMDGPUAsmBackend(const Target &T) : MCAsmBackend(llvm::endianness::little) {}
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
-                  MutableArrayRef<char> Data, uint64_t Value,
-                  bool IsResolved) override;
+                  char *Data, uint64_t Value, bool IsResolved) override;
   bool fixupNeedsRelaxation(const MCFixup &Fixup,
                             uint64_t Value) const override;
 
@@ -129,9 +128,8 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
 }
 
 void AMDGPUAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                                  const MCValue &Target,
-                                  MutableArrayRef<char> Data, uint64_t Value,
-                                  bool IsResolved) {
+                                  const MCValue &Target, char *Data,
+                                  uint64_t Value, bool IsResolved) {
   if (Target.getSpecifier())
     IsResolved = false;
   maybeAddReloc(F, Fixup, Target, Value, IsResolved);
@@ -154,7 +152,7 @@ void AMDGPUAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   // For each byte of the fragment that the fixup touches, mask in the bits from
   // the fixup value.
   for (unsigned i = 0; i != NumBytes; ++i)
-    Data[Offset + i] |= static_cast<uint8_t>((Value >> (i * 8)) & 0xff);
+    Data[i] |= static_cast<uint8_t>((Value >> (i * 8)) & 0xff);
 }
 
 std::optional<MCFixupKind>

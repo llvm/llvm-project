@@ -123,8 +123,8 @@ public:
   /// appropriate. Errors (such as an out of range fixup value) should be
   /// reported via \p Ctx.
   virtual void applyFixup(const MCFragment &, const MCFixup &,
-                          const MCValue &Target, MutableArrayRef<char> Data,
-                          uint64_t Value, bool IsResolved) = 0;
+                          const MCValue &Target, char *Data, uint64_t Value,
+                          bool IsResolved) = 0;
 
   /// @}
 
