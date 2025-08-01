@@ -28,8 +28,12 @@ clang_ubsan_cflags = ["-fsanitize-minimal-runtime"] + target_cflags
 clang_ubsan_cxxflags = config.cxx_mode_flags + clang_ubsan_cflags
 
 # Define %clang_min_runtime and %clangxx_min_runtime substitutions to use in test RUN lines.
-config.substitutions.append(("%clang_min_runtime ", build_invocation(clang_ubsan_cflags)))
-config.substitutions.append(("%clangxx_min_runtime ", build_invocation(clang_ubsan_cxxflags)))
+config.substitutions.append(
+    ("%clang_min_runtime ", build_invocation(clang_ubsan_cflags))
+)
+config.substitutions.append(
+    ("%clangxx_min_runtime ", build_invocation(clang_ubsan_cxxflags))
+)
 
 # Default test suffixes.
 config.suffixes = [".c", ".cpp"]
