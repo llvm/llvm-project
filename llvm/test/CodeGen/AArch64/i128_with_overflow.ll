@@ -243,11 +243,8 @@ define i128 @test_umul_i128(i128 noundef %x, i128 noundef %y) {
 ; CHECK-NEXT:    tbnz w8, #0, .LBB4_3
 ; CHECK-NEXT:    b .LBB4_4
 ; CHECK-NEXT:  .LBB4_2: // %overflow.no
-; CHECK-NEXT:    umulh x8, x0, x2
-; CHECK-NEXT:    madd x8, x0, x3, x8
+; CHECK-NEXT:    umulh x1, x0, x2
 ; CHECK-NEXT:    mul x0, x0, x2
-; CHECK-NEXT:    madd x1, x1, x2, x8
-; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    tbz w8, #0, .LBB4_4
 ; CHECK-NEXT:  .LBB4_3: // %if.then
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
@@ -289,11 +286,9 @@ define i128 @test_smul_i128(i128 noundef %x, i128 noundef %y) {
 ; CHECK-NEXT:    cmp x3, x8
 ; CHECK-NEXT:    b.ne .LBB5_3
 ; CHECK-NEXT:  // %bb.2: // %overflow.no
-; CHECK-NEXT:    umulh x8, x0, x2
-; CHECK-NEXT:    madd x8, x0, x3, x8
-; CHECK-NEXT:    mul x0, x0, x2
-; CHECK-NEXT:    madd x1, x1, x2, x8
+; CHECK-NEXT:    smulh x1, x0, x2
 ; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    mul x0, x0, x2
 ; CHECK-NEXT:    tbnz w8, #0, .LBB5_4
 ; CHECK-NEXT:    b .LBB5_5
 ; CHECK-NEXT:  .LBB5_3: // %overflow
