@@ -182,15 +182,11 @@ AMDGPUFunctionArgInfo AMDGPUFunctionArgInfo::fixedABILayout() {
 SmallVector<const KernArgPreloadDescriptor *, 4>
 AMDGPUFunctionArgInfo::getPreloadDescriptorsForArgIdx(unsigned ArgIdx) const {
   SmallVector<const KernArgPreloadDescriptor *, 4> Results;
-  for (const auto &KV : PreloadKernArgs) {
-    if (KV.second.OrigArgIdx == ArgIdx)
-      Results.push_back(&KV.second);
+  for (unsigned PartIdx = 0; PartIdx < PreloadKernArgs.size(); ++PartIdx) {
+    const auto &Desc = PreloadKernArgs[PartIdx];
+    if (Desc.OrigArgIdx == ArgIdx)
+      Results.push_back(&Desc);
   }
-
-  stable_sort(Results, [](const KernArgPreloadDescriptor *A,
-                          const KernArgPreloadDescriptor *B) {
-    return A->PartIdx < B->PartIdx;
-  });
 
   return Results;
 }
@@ -203,11 +199,9 @@ AMDGPUFunctionArgInfo::getHiddenArgPreloadDescriptor(HiddenArg HA) const {
   if (HiddenArgIt == PreloadHiddenArgsIndexMap.end())
     return nullptr;
 
-  auto KernArgIt = PreloadKernArgs.find(HiddenArgIt->second);
-  if (KernArgIt == PreloadKernArgs.end())
-    return nullptr;
-
-  return &KernArgIt->second;
+  const KernArgPreloadDescriptor &Desc = PreloadKernArgs[HiddenArgIt->second];
+  assert(Desc.IsValid && "Hidden argument preload descriptor not valid.");
+  return &Desc;
 }
 
 const AMDGPUFunctionArgInfo &

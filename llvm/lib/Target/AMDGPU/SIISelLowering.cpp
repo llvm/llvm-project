@@ -2745,17 +2745,20 @@ void SITargetLowering::allocatePreloadKernArgSGPRs(
       // Arg is preloaded into the previous SGPR.
       if (ArgLoc.getLocVT().getStoreSize() < 4 && Alignment < 4) {
         assert(InIdx >= 1 && "No previous SGPR");
-        auto [It, Inserted] =
-            Info.getArgInfo().PreloadKernArgs.try_emplace(InIdx);
-        assert(Inserted && "Preload kernel argument allocated twice.");
-        KernArgPreloadDescriptor &PreloadDesc = It->second;
+        auto &PreloadKernArgs = Info.getArgInfo().PreloadKernArgs;
+        PreloadKernArgs.grow(InIdx);
+        KernArgPreloadDescriptor &PreloadDesc = PreloadKernArgs[InIdx];
+        assert(!PreloadDesc.IsValid &&
+               "Preload kernel argument allocated twice.");
 
-        const KernArgPreloadDescriptor &PrevDesc =
-            Info.getArgInfo().PreloadKernArgs[InIdx - 1];
+        const KernArgPreloadDescriptor &PrevDesc = PreloadKernArgs[InIdx - 1];
+        assert(PrevDesc.IsValid &&
+               "Previous preload kernel argument not allocated.");
         PreloadDesc.Regs.push_back(PrevDesc.Regs[0]);
 
         PreloadDesc.OrigArgIdx = Arg.getArgNo();
         PreloadDesc.PartIdx = InIdx;
+        PreloadDesc.IsValid = true;
         if (Arg.hasAttribute("amdgpu-hidden-argument"))
           mapHiddenArgToPreloadIndex(Info.getArgInfo(), ArgOffset,
                                      ImplicitArgOffset, InIdx);
@@ -3183,7 +3186,9 @@ SDValue SITargetLowering::LowerFormalArguments(
       }
 
       SDValue NewArg;
-      if (Arg.isOrigArg() && Info->getArgInfo().PreloadKernArgs.count(i)) {
+      auto &PreloadKernArgs = Info->getArgInfo().PreloadKernArgs;
+      if (Arg.isOrigArg() && PreloadKernArgs.inBounds(i) &&
+          PreloadKernArgs[i].IsValid) {
         if (MemVT.getStoreSize() < 4 && Alignment < 4) {
           // In this case the argument is packed into the previous preload SGPR.
           int64_t AlignDownOffset = alignDown(Offset, 4);
@@ -3193,8 +3198,7 @@ SDValue SITargetLowering::LowerFormalArguments(
           const SIMachineFunctionInfo *Info =
               MF.getInfo<SIMachineFunctionInfo>();
           MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
-          Register Reg =
-              Info->getArgInfo().PreloadKernArgs.find(i)->getSecond().Regs[0];
+          Register Reg = Info->getArgInfo().PreloadKernArgs[i].Regs[0];
 
           assert(Reg);
           Register VReg = MRI.getLiveInVirtReg(Reg);
@@ -3214,7 +3218,7 @@ SDValue SITargetLowering::LowerFormalArguments(
               MF.getInfo<SIMachineFunctionInfo>();
           MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
           const SmallVectorImpl<MCRegister> &PreloadRegs =
-              Info->getArgInfo().PreloadKernArgs.find(i)->getSecond().Regs;
+              Info->getArgInfo().PreloadKernArgs[i].Regs;
 
           SDValue Copy;
           if (PreloadRegs.size() == 1) {

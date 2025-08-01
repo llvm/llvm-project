@@ -793,7 +793,7 @@ void MetadataStreamerMsgPackV6::emitHiddenKernelArg(
       ArgInfo->getHiddenArgPreloadDescriptor(HiddenArg);
   if (PreloadDesc) {
     const SmallVectorImpl<MCRegister> &Regs = PreloadDesc->Regs;
-    for (const auto &Reg : Regs) {
+    for (const auto Reg : Regs) {
       if (!PreloadStr.empty())
         PreloadStr.push_back(' ');
       PreloadStr += AMDGPUInstPrinter::getRegisterName(Reg);
@@ -817,7 +817,7 @@ void MetadataStreamerMsgPackV6::emitKernelArg(const Argument &Arg,
       if (!PreloadRegisters.empty())
         PreloadRegisters.push_back(' ');
 
-      for (const auto &Reg : Desc->Regs) {
+      for (const auto Reg : Desc->Regs) {
         if (!PreloadRegisters.empty())
           PreloadRegisters.push_back(' ');
         PreloadRegisters += AMDGPUInstPrinter::getRegisterName(Reg);
