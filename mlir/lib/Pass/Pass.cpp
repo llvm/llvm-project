@@ -901,7 +901,7 @@ LogicalResult PassManager::run(Operation *op) {
     if (failed(initialize(context, impl->initializationGeneration + 1)))
       return failure();
     initializationKey = newInitKey;
-    pipelineKey = pipelineInitializationKey;
+    pipelineInitializationKey = pipelineKey;
   }
 
   // Construct a top level analysis manager for the pipeline.

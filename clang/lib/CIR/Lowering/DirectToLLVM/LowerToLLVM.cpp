@@ -521,6 +521,32 @@ mlir::LogicalResult CIRToLLVMBitCtzOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
+mlir::LogicalResult CIRToLLVMBitFfsOpLowering::matchAndRewrite(
+    cir::BitFfsOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto resTy = getTypeConverter()->convertType(op.getType());
+  auto ctz = rewriter.create<mlir::LLVM::CountTrailingZerosOp>(
+      op.getLoc(), resTy, adaptor.getInput(), /*is_zero_poison=*/true);
+
+  auto one = rewriter.create<mlir::LLVM::ConstantOp>(op.getLoc(), resTy, 1);
+  auto ctzAddOne = rewriter.create<mlir::LLVM::AddOp>(op.getLoc(), ctz, one);
+
+  auto zeroInputTy = rewriter.create<mlir::LLVM::ConstantOp>(
+      op.getLoc(), adaptor.getInput().getType(), 0);
+  auto isZero = rewriter.create<mlir::LLVM::ICmpOp>(
+      op.getLoc(),
+      mlir::LLVM::ICmpPredicateAttr::get(rewriter.getContext(),
+                                         mlir::LLVM::ICmpPredicate::eq),
+      adaptor.getInput(), zeroInputTy);
+
+  auto zero = rewriter.create<mlir::LLVM::ConstantOp>(op.getLoc(), resTy, 0);
+  auto res = rewriter.create<mlir::LLVM::SelectOp>(op.getLoc(), isZero, zero,
+                                                   ctzAddOne);
+  rewriter.replaceOp(op, res);
+
+  return mlir::LogicalResult::success();
+}
+
 mlir::LogicalResult CIRToLLVMBitParityOpLowering::matchAndRewrite(
     cir::BitParityOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -919,13 +945,45 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
                            memoryEffects, noUnwind, willReturn);
 
   mlir::LLVM::LLVMFunctionType llvmFnTy;
+
+  // Temporary to handle the case where we need to prepend an operand if the
+  // callee is an alias.
+  SmallVector<mlir::Value> adjustedCallOperands;
+
   if (calleeAttr) { // direct call
-    mlir::FunctionOpInterface fn =
-        mlir::SymbolTable::lookupNearestSymbolFrom<mlir::FunctionOpInterface>(
-            op, calleeAttr);
-    assert(fn && "Did not find function for call");
-    llvmFnTy = cast<mlir::LLVM::LLVMFunctionType>(
-        converter->convertType(fn.getFunctionType()));
+    mlir::Operation *callee =
+        mlir::SymbolTable::lookupNearestSymbolFrom(op, calleeAttr);
+    if (auto fn = mlir::dyn_cast<mlir::FunctionOpInterface>(callee)) {
+      llvmFnTy = converter->convertType<mlir::LLVM::LLVMFunctionType>(
+          fn.getFunctionType());
+      assert(llvmFnTy && "Failed to convert function type");
+    } else if (auto alias = mlir::cast<mlir::LLVM::AliasOp>(callee)) {
+      // If the callee was an alias. In that case,
+      // we need to prepend the address of the alias to the operands. The
+      // way aliases work in the LLVM dialect is a little counter-intuitive.
+      // The AliasOp itself is a pseudo-function that returns the address of
+      // the global value being aliased, but when we generate the call we
+      // need to insert an operation that gets the address of the AliasOp.
+      // This all gets sorted out when the LLVM dialect is lowered to LLVM IR.
+      auto symAttr = mlir::cast<mlir::FlatSymbolRefAttr>(calleeAttr);
+      auto addrOfAlias =
+          mlir::LLVM::AddressOfOp::create(
+              rewriter, op->getLoc(),
+              mlir::LLVM::LLVMPointerType::get(rewriter.getContext()), symAttr)
+              .getResult();
+      adjustedCallOperands.push_back(addrOfAlias);
+
+      // Now add the regular operands and assign this to the range value.
+      llvm::append_range(adjustedCallOperands, callOperands);
+      callOperands = adjustedCallOperands;
+
+      // Clear the callee attribute because we're calling an alias.
+      calleeAttr = {};
+      llvmFnTy = mlir::cast<mlir::LLVM::LLVMFunctionType>(alias.getType());
+    } else {
+      // Was this an ifunc?
+      return op->emitError("Unexpected callee type!");
+    }
   } else { // indirect call
     assert(!op->getOperands().empty() &&
            "operands list must no be empty for the indirect call");
@@ -1026,6 +1084,12 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     cir::ConstantOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Attribute attr = op.getValue();
+
+  if (mlir::isa<cir::PoisonAttr>(attr)) {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::PoisonOp>(
+        op, getTypeConverter()->convertType(op.getType()));
+    return mlir::success();
+  }
 
   if (mlir::isa<mlir::IntegerType>(op.getType())) {
     // Verified cir.const operations cannot actually be of these types, but the
@@ -1166,6 +1230,30 @@ void CIRToLLVMFuncOpLowering::lowerFuncAttributes(
   }
 }
 
+mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewriteAlias(
+    cir::FuncOp op, llvm::StringRef aliasee, mlir::Type ty, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  SmallVector<mlir::NamedAttribute, 4> attributes;
+  lowerFuncAttributes(op, /*filterArgAndResAttrs=*/false, attributes);
+
+  mlir::Location loc = op.getLoc();
+  auto aliasOp = rewriter.replaceOpWithNewOp<mlir::LLVM::AliasOp>(
+      op, ty, convertLinkage(op.getLinkage()), op.getName(), op.getDsoLocal(),
+      /*threadLocal=*/false, attributes);
+
+  // Create the alias body
+  mlir::OpBuilder builder(op.getContext());
+  mlir::Block *block = builder.createBlock(&aliasOp.getInitializerRegion());
+  builder.setInsertionPointToStart(block);
+  // The type of AddressOfOp is always a pointer.
+  assert(!cir::MissingFeatures::addressSpace());
+  mlir::Type ptrTy = mlir::LLVM::LLVMPointerType::get(ty.getContext());
+  auto addrOp = mlir::LLVM::AddressOfOp::create(builder, loc, ptrTy, aliasee);
+  mlir::LLVM::ReturnOp::create(builder, loc, addrOp);
+
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
     cir::FuncOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -1190,6 +1278,11 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
       resultType ? resultType : mlir::LLVM::LLVMVoidType::get(getContext()),
       signatureConversion.getConvertedTypes(),
       /*isVarArg=*/fnType.isVarArg());
+
+  // If this is an alias, it needs to be lowered to llvm::AliasOp.
+  if (std::optional<llvm::StringRef> aliasee = op.getAliasee())
+    return matchAndRewriteAlias(op, *aliasee, llvmFnTy, adaptor, rewriter);
+
   // LLVMFuncOp expects a single FileLine Location instead of a fused
   // location.
   mlir::Location loc = op.getLoc();
@@ -2083,6 +2176,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMBitClrsbOpLowering,
                CIRToLLVMBitClzOpLowering,
                CIRToLLVMBitCtzOpLowering,
+               CIRToLLVMBitFfsOpLowering,
                CIRToLLVMBitParityOpLowering,
                CIRToLLVMBitPopcountOpLowering,
                CIRToLLVMBitReverseOpLowering,

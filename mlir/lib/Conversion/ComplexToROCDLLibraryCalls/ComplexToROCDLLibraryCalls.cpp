@@ -64,10 +64,46 @@ void mlir::populateComplexToROCDLLibraryCallsConversionPatterns(
       patterns.getContext(), "__ocml_cabs_f32");
   patterns.add<ComplexOpToROCDLLibraryCalls<complex::AbsOp, Float64Type>>(
       patterns.getContext(), "__ocml_cabs_f64");
+  patterns.add<ComplexOpToROCDLLibraryCalls<complex::AngleOp, Float32Type>>(
+      patterns.getContext(), "__ocml_carg_f32");
+  patterns.add<ComplexOpToROCDLLibraryCalls<complex::AngleOp, Float64Type>>(
+      patterns.getContext(), "__ocml_carg_f64");
+  patterns.add<ComplexOpToROCDLLibraryCalls<complex::ConjOp, Float32Type>>(
+      patterns.getContext(), "__ocml_conj_f32");
+  patterns.add<ComplexOpToROCDLLibraryCalls<complex::ConjOp, Float64Type>>(
+      patterns.getContext(), "__ocml_conj_f64");
+  patterns.add<ComplexOpToROCDLLibraryCalls<complex::CosOp, Float32Type>>(
+      patterns.getContext(), "__ocml_ccos_f32");
+  patterns.add<ComplexOpToROCDLLibraryCalls<complex::CosOp, Float64Type>>(
+      patterns.getContext(), "__ocml_ccos_f64");
   patterns.add<ComplexOpToROCDLLibraryCalls<complex::ExpOp, Float32Type>>(
       patterns.getContext(), "__ocml_cexp_f32");
   patterns.add<ComplexOpToROCDLLibraryCalls<complex::ExpOp, Float64Type>>(
       patterns.getContext(), "__ocml_cexp_f64");
+  patterns.add<ComplexOpToROCDLLibraryCalls<complex::LogOp, Float32Type>>(
+      patterns.getContext(), "__ocml_clog_f32");
+  patterns.add<ComplexOpToROCDLLibraryCalls<complex::LogOp, Float64Type>>(
+      patterns.getContext(), "__ocml_clog_f64");
+  patterns.add<ComplexOpToROCDLLibraryCalls<complex::PowOp, Float32Type>>(
+      patterns.getContext(), "__ocml_cpow_f32");
+  patterns.add<ComplexOpToROCDLLibraryCalls<complex::PowOp, Float64Type>>(
+      patterns.getContext(), "__ocml_cpow_f64");
+  patterns.add<ComplexOpToROCDLLibraryCalls<complex::SinOp, Float32Type>>(
+      patterns.getContext(), "__ocml_csin_f32");
+  patterns.add<ComplexOpToROCDLLibraryCalls<complex::SinOp, Float64Type>>(
+      patterns.getContext(), "__ocml_csin_f64");
+  patterns.add<ComplexOpToROCDLLibraryCalls<complex::SqrtOp, Float32Type>>(
+      patterns.getContext(), "__ocml_csqrt_f32");
+  patterns.add<ComplexOpToROCDLLibraryCalls<complex::SqrtOp, Float64Type>>(
+      patterns.getContext(), "__ocml_csqrt_f64");
+  patterns.add<ComplexOpToROCDLLibraryCalls<complex::TanOp, Float32Type>>(
+      patterns.getContext(), "__ocml_ctan_f32");
+  patterns.add<ComplexOpToROCDLLibraryCalls<complex::TanOp, Float64Type>>(
+      patterns.getContext(), "__ocml_ctan_f64");
+  patterns.add<ComplexOpToROCDLLibraryCalls<complex::TanhOp, Float32Type>>(
+      patterns.getContext(), "__ocml_ctanh_f32");
+  patterns.add<ComplexOpToROCDLLibraryCalls<complex::TanhOp, Float64Type>>(
+      patterns.getContext(), "__ocml_ctanh_f64");
 }
 
 namespace {
@@ -86,7 +122,10 @@ void ConvertComplexToROCDLLibraryCallsPass::runOnOperation() {
 
   ConversionTarget target(getContext());
   target.addLegalDialect<func::FuncDialect>();
-  target.addIllegalOp<complex::AbsOp, complex::ExpOp>();
+  target.addIllegalOp<complex::AbsOp, complex::AngleOp, complex::ConjOp,
+                      complex::CosOp, complex::ExpOp, complex::LogOp,
+                      complex::PowOp, complex::SinOp, complex::SqrtOp,
+                      complex::TanOp, complex::TanhOp>();
   if (failed(applyPartialConversion(op, target, std::move(patterns))))
     signalPassFailure();
 }
