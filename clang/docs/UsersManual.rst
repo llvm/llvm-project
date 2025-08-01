@@ -35,8 +35,8 @@ which includes :ref:`C <c>`, :ref:`Objective-C <objc>`, :ref:`C++ <cxx>`, and
 language-specific information, please see the corresponding language
 specific section:
 
--  :ref:`C Language <c>`: K&R C, ANSI C89, ISO C90, ISO C94 (C89+AMD1), ISO
-   C99 (+TC1, TC2, TC3), C11, C17, C23, and C2y.
+-  :ref:`C Language <c>`: K&R C, ANSI C89, ISO C90, C94 (C89+AMD1), C99 (+TC1,
+   TC2, TC3), C11, C17, C23, and C2y.
 -  :ref:`Objective-C Language <objc>`: ObjC 1, ObjC 2, ObjC 2.1, plus
    variants depending on base language.
 -  :ref:`C++ Language <cxx>`: C++98, C++03, C++11, C++14, C++17, C++20, C++23,
