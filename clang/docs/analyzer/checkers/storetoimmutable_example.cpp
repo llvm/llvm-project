@@ -1,7 +1,5 @@
-// Global const variable
 const int global_const = 42;
 
-// Const struct member
 struct TestStruct {
   const int x;
   int y;
