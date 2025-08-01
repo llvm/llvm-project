@@ -85,7 +85,11 @@ unsigned getNonNDVariant(unsigned Opc);
 
 /// GetOppositeBranchCondition - Return the inverse of the specified cond,
 /// e.g. turning COND_E to COND_NE.
-CondCode GetOppositeBranchCondition(CondCode CC);
+CondCode GetOppositeBranchCondition(CondCode CC) {
+  // To reverse a condition it's necessary to only invert the low bit:
+
+  return static_cast<CondCode>(static_cast<unsigned>(CC) ^ 0x1);
+}
 
 /// Get the VPCMP immediate for the given condition.
 unsigned getVPCMPImmForCond(ISD::CondCode CC);
