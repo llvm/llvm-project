@@ -2318,6 +2318,25 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
     llvmModule->setTargetTriple(
         llvm::Triple(cast<StringAttr>(targetTripleAttr).getValue()));
 
+  if (auto asmAttr = m->getDiscardableAttr(
+          LLVM::LLVMDialect::getModuleLevelAsmAttrName())) {
+    auto asmArrayAttr = dyn_cast<ArrayAttr>(asmAttr);
+    if (!asmArrayAttr) {
+      m->emitError("expected an array attribute for a module level asm");
+      return nullptr;
+    }
+
+    for (Attribute elt : asmArrayAttr) {
+      auto asmStrAttr = dyn_cast<StringAttr>(elt);
+      if (!asmStrAttr) {
+        m->emitError(
+            "expected a string attribute for each entry of a module level asm");
+        return nullptr;
+      }
+      llvmModule->appendModuleInlineAsm(asmStrAttr.getValue());
+    }
+  }
+
   return llvmModule;
 }
 
