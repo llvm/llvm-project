@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-llvm -O3 -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple spirv-vulkan-compute -x hlsl -emit-llvm -O3 -o - %s | FileCheck %s
 
-// All referenced to an unused resource should be removed by optimizations.
+// All references to unused resources should be removed by optimizations.
 RWBuffer<float> Buf : register(u5, space3);
 
 [shader("compute")]

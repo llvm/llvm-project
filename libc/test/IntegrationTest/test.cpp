@@ -5,12 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
 #include "src/__support/CPP/atomic.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include <stddef.h>
-#include <stdint.h>
 
 #ifdef LIBC_TARGET_ARCH_IS_AARCH64
 #include "src/sys/auxv/getauxval.h"

@@ -1,3 +1,6 @@
+# Process architecture-specific subdirectory FIRST to avoid missing targets.
+
+# Then process OS-specific subdirectory
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_object_library(
@@ -26,19 +29,21 @@ add_entrypoint_object(
     .${LIBC_TARGET_ARCHITECTURE}.longjmp
 )
 
-add_entrypoint_object(
-  siglongjmp
-  SRCS
-    siglongjmp.cpp
-  HDRS
-    siglongjmp.h
-  DEPENDS
-    .longjmp
-)
+if (TARGET libc.src.setjmp.sigsetjmp_epilogue)
+  add_entrypoint_object(
+    siglongjmp
+    SRCS
+      siglongjmp.cpp
+    HDRS
+      siglongjmp.h
+    DEPENDS
+      .longjmp
+  )
 
-add_entrypoint_object(
-  sigsetjmp
-  ALIAS
-  DEPENDS
-    .${LIBC_TARGET_ARCHITECTURE}.sigsetjmp
-)
+  add_entrypoint_object(
+    sigsetjmp
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_ARCHITECTURE}.sigsetjmp
+  )
+endif()

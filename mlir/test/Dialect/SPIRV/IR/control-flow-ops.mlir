@@ -426,6 +426,47 @@ func.func @only_entry_and_continue_branch_to_header() -> () {
 
 // -----
 
+func.func @loop_yield(%count : i32) -> () {
+  %zero = spirv.Constant 0: i32
+  %one = spirv.Constant 1: i32
+  %var = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+
+  // CHECK: {{%.*}} = spirv.mlir.loop -> i32 {
+  %final_i = spirv.mlir.loop -> i32 {
+    // CHECK-NEXT: spirv.Branch ^bb1({{%.*}}: i32)
+    spirv.Branch ^header(%zero: i32)
+
+  // CHECK-NEXT: ^bb1({{%.*}}: i32):
+  ^header(%i : i32):
+    %cmp = spirv.SLessThan %i, %count : i32
+    // CHECK: spirv.BranchConditional %{{.*}}, ^bb2, ^bb4
+    spirv.BranchConditional %cmp, ^body, ^merge
+
+  // CHECK-NEXT: ^bb2:
+  ^body:
+    // CHECK-NEXT: spirv.Branch ^bb3
+    spirv.Branch ^continue
+
+  // CHECK-NEXT: ^bb3:
+  ^continue:
+    %new_i = spirv.IAdd %i, %one : i32
+    // CHECK: spirv.Branch ^bb1({{%.*}}: i32)
+    spirv.Branch ^header(%new_i: i32)
+
+  // CHECK-NEXT: ^bb4:
+  ^merge:
+    // CHECK-NEXT: spirv.mlir.merge {{%.*}} : i32
+    spirv.mlir.merge %i : i32
+  }
+
+  // CHECK: spirv.Store "Function" {{%.*}}, {{%.*}} : i32
+  spirv.Store "Function" %var, %final_i : i32
+
+  return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.mlir.merge
 //===----------------------------------------------------------------------===//

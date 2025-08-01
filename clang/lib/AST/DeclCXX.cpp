@@ -1556,7 +1556,6 @@ void CXXRecordDecl::addedEligibleSpecialMemberFunction(const CXXMethodDecl *MD,
     if (DD->isNoReturn())
       data().IsAnyDestructorNoReturn = true;
   }
-
   if (!MD->isImplicit() && !MD->isUserProvided()) {
     // This method is user-declared but not user-provided. We can't work
     // out whether it's trivial yet (not until we get to the end of the
@@ -1696,7 +1695,11 @@ static NamedDecl* getLambdaCallOperatorHelper(const CXXRecordDecl &RD) {
       RD.getASTContext().DeclarationNames.getCXXOperatorName(OO_Call);
 
   DeclContext::lookup_result Calls = RD.lookup(Name);
-  assert(!Calls.empty() && "Missing lambda call operator!");
+
+  // This can happen while building the lambda.
+  if (Calls.empty())
+    return nullptr;
+
   assert(allLookupResultsAreTheSame(Calls) &&
          "More than one lambda call operator!");
 
@@ -1750,6 +1753,7 @@ CXXMethodDecl *CXXRecordDecl::getLambdaCallOperator() const {
 
 CXXMethodDecl* CXXRecordDecl::getLambdaStaticInvoker() const {
   CXXMethodDecl *CallOp = getLambdaCallOperator();
+  assert(CallOp && "null call operator");
   CallingConv CC = CallOp->getType()->castAs<FunctionType>()->getCallConv();
   return getLambdaStaticInvoker(CC);
 }
@@ -1824,7 +1828,7 @@ CXXRecordDecl::getLambdaExplicitTemplateParameters() const {
 
   const auto ExplicitEnd = llvm::partition_point(
       *List, [](const NamedDecl *D) { return !D->isImplicit(); });
-  return llvm::ArrayRef(List->begin(), ExplicitEnd);
+  return ArrayRef(List->begin(), ExplicitEnd);
 }
 
 Decl *CXXRecordDecl::getLambdaContextDecl() const {
@@ -2137,6 +2141,22 @@ CXXDestructorDecl *CXXRecordDecl::getDestructor() const {
       return DD;
   }
   return nullptr;
+}
+
+bool CXXRecordDecl::hasDeletedDestructor() const {
+  if (const CXXDestructorDecl *D = getDestructor())
+    return D->isDeleted();
+  return false;
+}
+
+bool CXXRecordDecl::isInjectedClassName() const {
+  if (!isImplicit() || !getDeclName())
+    return false;
+
+  if (const auto *RD = dyn_cast<CXXRecordDecl>(getDeclContext()))
+    return RD->getDeclName() == getDeclName();
+
+  return false;
 }
 
 static bool isDeclContextInNamespace(const DeclContext *DC) {
@@ -3191,6 +3211,12 @@ UsingDirectiveDecl *UsingDirectiveDecl::CreateDeserialized(ASTContext &C,
                                         SourceLocation(), nullptr, nullptr);
 }
 
+NamespaceDecl *NamespaceBaseDecl::getNamespace() {
+  if (auto *Alias = dyn_cast<NamespaceAliasDecl>(this))
+    return Alias->getNamespace();
+  return cast<NamespaceDecl>(this);
+}
+
 NamespaceDecl *UsingDirectiveDecl::getNominatedNamespace() {
   if (auto *NA = dyn_cast_or_null<NamespaceAliasDecl>(NominatedNamespace))
     return NA->getNamespace();
@@ -3201,7 +3227,7 @@ NamespaceDecl::NamespaceDecl(ASTContext &C, DeclContext *DC, bool Inline,
                              SourceLocation StartLoc, SourceLocation IdLoc,
                              IdentifierInfo *Id, NamespaceDecl *PrevDecl,
                              bool Nested)
-    : NamedDecl(Namespace, DC, IdLoc, Id), DeclContext(Namespace),
+    : NamespaceBaseDecl(Namespace, DC, IdLoc, Id), DeclContext(Namespace),
       redeclarable_base(C), LocStart(StartLoc) {
   setInline(Inline);
   setNested(Nested);
@@ -3248,13 +3274,11 @@ NamespaceAliasDecl *NamespaceAliasDecl::getMostRecentDeclImpl() {
   return getMostRecentDecl();
 }
 
-NamespaceAliasDecl *NamespaceAliasDecl::Create(ASTContext &C, DeclContext *DC,
-                                               SourceLocation UsingLoc,
-                                               SourceLocation AliasLoc,
-                                               IdentifierInfo *Alias,
-                                           NestedNameSpecifierLoc QualifierLoc,
-                                               SourceLocation IdentLoc,
-                                               NamedDecl *Namespace) {
+NamespaceAliasDecl *NamespaceAliasDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation UsingLoc,
+    SourceLocation AliasLoc, IdentifierInfo *Alias,
+    NestedNameSpecifierLoc QualifierLoc, SourceLocation IdentLoc,
+    NamespaceBaseDecl *Namespace) {
   // FIXME: Preserve the aliased namespace as written.
   if (auto *NS = dyn_cast_or_null<NamespaceDecl>(Namespace))
     Namespace = NS->getFirstDecl();
@@ -3439,9 +3463,8 @@ UsingPackDecl *UsingPackDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
   size_t Extra = additionalSizeToAlloc<NamedDecl *>(NumExpansions);
   auto *Result = new (C, ID, Extra) UsingPackDecl(nullptr, nullptr, {});
   Result->NumExpansions = NumExpansions;
-  auto *Trail = Result->getTrailingObjects<NamedDecl *>();
-  for (unsigned I = 0; I != NumExpansions; ++I)
-    new (Trail + I) NamedDecl*(nullptr);
+  auto *Trail = Result->getTrailingObjects();
+  std::uninitialized_fill_n(Trail, NumExpansions, nullptr);
   return Result;
 }
 
@@ -3569,13 +3592,13 @@ VarDecl *BindingDecl::getHoldingVar() const {
   return VD;
 }
 
-llvm::ArrayRef<BindingDecl *> BindingDecl::getBindingPackDecls() const {
+ArrayRef<BindingDecl *> BindingDecl::getBindingPackDecls() const {
   assert(Binding && "expecting a pack expr");
   auto *FP = cast<FunctionParmPackExpr>(Binding);
   ValueDecl *const *First = FP->getNumExpansions() > 0 ? FP->begin() : nullptr;
   assert((!First || isa<BindingDecl>(*First)) && "expecting a BindingDecl");
-  return llvm::ArrayRef<BindingDecl *>(
-      reinterpret_cast<BindingDecl *const *>(First), FP->getNumExpansions());
+  return ArrayRef<BindingDecl *>(reinterpret_cast<BindingDecl *const *>(First),
+                                 FP->getNumExpansions());
 }
 
 void DecompositionDecl::anchor() {}
@@ -3600,9 +3623,8 @@ DecompositionDecl *DecompositionDecl::CreateDeserialized(ASTContext &C,
                         QualType(), nullptr, StorageClass(), {});
   // Set up and clean out the bindings array.
   Result->NumBindings = NumBindings;
-  auto *Trail = Result->getTrailingObjects<BindingDecl *>();
-  for (unsigned I = 0; I != NumBindings; ++I)
-    new (Trail + I) BindingDecl*(nullptr);
+  auto *Trail = Result->getTrailingObjects();
+  std::uninitialized_fill_n(Trail, NumBindings, nullptr);
   return Result;
 }
 

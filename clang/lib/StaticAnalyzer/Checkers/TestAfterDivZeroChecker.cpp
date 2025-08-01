@@ -41,11 +41,8 @@ public:
   }
 
   bool operator<(const ZeroState &X) const {
-    if (BlockID != X.BlockID)
-      return BlockID < X.BlockID;
-    if (SFC != X.SFC)
-      return SFC < X.SFC;
-    return ZeroSymbol < X.ZeroSymbol;
+    return std::tie(BlockID, SFC, ZeroSymbol) <
+           std::tie(X.BlockID, X.SFC, X.ZeroSymbol);
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) const {

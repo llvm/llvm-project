@@ -486,17 +486,14 @@ public:
     return Idx;
   }
 
-  bool hasBody() const { return Body && !Body->getValues().empty(); }
+  bool hasBody() const { return Body && !Body->empty(); }
 
   void setNeededEarly() { NeededEarly = true; }
 
   bool operator<(const Intrinsic &Other) const {
     // Sort lexicographically on a three-tuple (ArchGuard, TargetGuard, Name)
-    if (ArchGuard != Other.ArchGuard)
-      return ArchGuard < Other.ArchGuard;
-    if (TargetGuard != Other.TargetGuard)
-      return TargetGuard < Other.TargetGuard;
-    return Name < Other.Name;
+    return std::tie(ArchGuard, TargetGuard, Name) <
+           std::tie(Other.ArchGuard, Other.TargetGuard, Other.Name);
   }
 
   ClassKind getClassKind(bool UseClassBIfScalar = false) {
@@ -1404,14 +1401,12 @@ void Intrinsic::emitBodyAsBuiltinCall() {
       if (LocalCK == ClassB || (T.isHalf() && !T.isScalarForMangling())) {
         CastToType.makeInteger(8, true);
         Arg = "__builtin_bit_cast(" + CastToType.str() + ", " + Arg + ")";
-      } else if (LocalCK == ClassI) {
-        if (CastToType.isInteger()) {
-          CastToType.makeSigned();
-          Arg = "__builtin_bit_cast(" + CastToType.str() + ", " + Arg + ")";
-        }
+      } else if (LocalCK == ClassI &&
+                 (CastToType.isInteger() || CastToType.isPoly())) {
+        CastToType.makeSigned();
+        Arg = "__builtin_bit_cast(" + CastToType.str() + ", " + Arg + ")";
       }
     }
-
     S += Arg + ", ";
   }
 
@@ -1439,14 +1434,14 @@ void Intrinsic::emitBodyAsBuiltinCall() {
 void Intrinsic::emitBody(StringRef CallPrefix) {
   std::vector<std::string> Lines;
 
-  if (!Body || Body->getValues().empty()) {
+  if (!Body || Body->empty()) {
     // Nothing specific to output - must output a builtin.
     emitBodyAsBuiltinCall();
     return;
   }
 
   // We have a list of "things to output". The last should be returned.
-  for (auto *I : Body->getValues()) {
+  for (auto *I : Body->getElements()) {
     if (const auto *SI = dyn_cast<StringInit>(I)) {
       Lines.push_back(replaceParamsIn(SI->getAsString()));
     } else if (const auto *DI = dyn_cast<DagInit>(I)) {
@@ -2029,8 +2024,8 @@ void NeonEmitter::createIntrinsic(const Record *R,
   std::vector<TypeSpec> TypeSpecs = TypeSpec::fromTypeSpecs(Types);
 
   ClassKind CK = ClassNone;
-  if (R->getSuperClasses().size() >= 2)
-    CK = ClassMap[R->getSuperClasses()[1].first];
+  if (!R->getDirectSuperClasses().empty())
+    CK = ClassMap[R->getDirectSuperClasses()[0].first];
 
   std::vector<std::pair<TypeSpec, TypeSpec>> NewTypeSpecs;
   if (!CartesianProductWith.empty()) {
@@ -2056,8 +2051,20 @@ void NeonEmitter::createIntrinsic(const Record *R,
   auto &Entry = IntrinsicMap[Name];
 
   for (auto &I : NewTypeSpecs) {
+
+    // MFloat8 type is only available on AArch64. If encountered set ArchGuard
+    // correctly.
+    std::string NewArchGuard = ArchGuard;
+    if (Type(I.first, ".").isMFloat8()) {
+      if (NewArchGuard.empty()) {
+        NewArchGuard = "defined(__aarch64__)";
+      } else if (NewArchGuard.find("defined(__aarch64__)") ==
+                 std::string::npos) {
+        NewArchGuard = "defined(__aarch64__) && (" + NewArchGuard + ")";
+      }
+    }
     Entry.emplace_back(R, Name, Proto, I.first, I.second, CK, Body, *this,
-                       ArchGuard, TargetGuard, IsUnavailable, BigEndianSafe);
+                       NewArchGuard, TargetGuard, IsUnavailable, BigEndianSafe);
     Out.push_back(&Entry.back());
   }
 
@@ -2408,7 +2415,11 @@ void NeonEmitter::run(raw_ostream &OS) {
   OS << "#ifndef __ARM_NEON_H\n";
   OS << "#define __ARM_NEON_H\n\n";
 
-  OS << "#ifndef __ARM_FP\n";
+  OS << "#if !defined(__arm__) && !defined(__aarch64__) && "
+        "!defined(__arm64ec__)\n";
+  OS << "#error \"<arm_neon.h> is intended only for ARM and AArch64 "
+        "targets\"\n";
+  OS << "#elif !defined(__ARM_FP)\n";
   OS << "#error \"NEON intrinsics not available with the soft-float ABI. "
         "Please use -mfloat-abi=softfp or -mfloat-abi=hard\"\n";
   OS << "#else\n\n";

@@ -170,14 +170,10 @@ public:
 #include "X86GenSubtargetInfo.inc"
 
   /// Is this x86_64 with the ILP32 programming model (x32 ABI)?
-  bool isTarget64BitILP32() const {
-    return Is64Bit && (TargetTriple.isX32() || TargetTriple.isOSNaCl());
-  }
+  bool isTarget64BitILP32() const { return Is64Bit && (TargetTriple.isX32()); }
 
   /// Is this x86_64 with the LP64 programming model (standard AMD64, no x32)?
-  bool isTarget64BitLP64() const {
-    return Is64Bit && (!TargetTriple.isX32() && !TargetTriple.isOSNaCl());
-  }
+  bool isTarget64BitLP64() const { return Is64Bit && (!TargetTriple.isX32()); }
 
   PICStyles::Style getPICStyle() const { return PICStyle; }
   void setPICStyle(PICStyles::Style Style)  { PICStyle = Style; }
@@ -299,9 +295,6 @@ public:
   bool isTargetKFreeBSD() const { return TargetTriple.isOSKFreeBSD(); }
   bool isTargetGlibc() const { return TargetTriple.isOSGlibc(); }
   bool isTargetAndroid() const { return TargetTriple.isAndroid(); }
-  bool isTargetNaCl() const { return TargetTriple.isOSNaCl(); }
-  bool isTargetNaCl32() const { return isTargetNaCl() && !is64Bit(); }
-  bool isTargetNaCl64() const { return isTargetNaCl() && is64Bit(); }
   bool isTargetMCU() const { return TargetTriple.isOSIAMCU(); }
   bool isTargetFuchsia() const { return TargetTriple.isOSFuchsia(); }
 
@@ -331,8 +324,6 @@ public:
 
   bool isOSWindows() const { return TargetTriple.isOSWindows(); }
 
-  bool isOSWindowsOrUEFI() const { return TargetTriple.isOSWindowsOrUEFI(); }
-
   bool isTargetUEFI64() const { return Is64Bit && isUEFI(); }
 
   bool isTargetWin64() const { return Is64Bit && isOSWindows(); }
@@ -354,6 +345,7 @@ public:
     case CallingConv::C:
     case CallingConv::Fast:
     case CallingConv::Tail:
+      return isTargetWin64() || isTargetUEFI64();
     case CallingConv::Swift:
     case CallingConv::SwiftTail:
     case CallingConv::X86_FastCall:

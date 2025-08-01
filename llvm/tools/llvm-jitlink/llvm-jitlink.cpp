@@ -17,7 +17,6 @@
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX, LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
-#include "llvm/ExecutionEngine/Orc/COFFVCRuntimeSupport.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebugInfoSupport.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
@@ -39,6 +38,7 @@
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/ExecutionEngine/Orc/SectCreate.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderPerf.h"
@@ -448,7 +448,7 @@ static Error applyLibraryLinkModifiers(Session &S, LinkGraph &G) {
   if (!S.HiddenArchives.empty()) {
     StringRef ObjName(G.getName());
     if (ObjName.ends_with(')')) {
-      auto LibName = ObjName.split('(').first;
+      auto LibName = ObjName.split('[').first;
       if (S.HiddenArchives.count(LibName)) {
         for (auto *Sym : G.defined_symbols())
           Sym->setScope(std::max(Sym->getScope(), Scope::Hidden));
@@ -1243,7 +1243,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
       if ((Err = ES.getBootstrapMapValue<bool, bool>("darwin-use-ehframes-only",
                                                      ForceEHFrames)))
         return;
-      bool UseEHFrames = ForceEHFrames ? *ForceEHFrames : false;
+      bool UseEHFrames = ForceEHFrames.value_or(false);
       if (!UseEHFrames)
         ObjLayer.addPlugin(ExitOnErr(UnwindInfoRegistrationPlugin::Create(ES)));
       else
@@ -2279,8 +2279,26 @@ static Error addLibraries(Session &S,
 
     auto &LinkLayer = S.getLinkLayer(LazyLinkIdxs.count(LL.Position));
 
+    std::set<std::string> ImportedDynamicLibraries;
     StaticLibraryDefinitionGenerator::VisitMembersFunction VisitMembers;
-    if (AllLoad)
+
+    // COFF gets special handling due to import libraries.
+    if (S.ES.getTargetTriple().isOSBinFormatCOFF()) {
+      if (AllLoad) {
+        VisitMembers =
+            [ImportScanner = COFFImportFileScanner(ImportedDynamicLibraries),
+             LoadAll =
+                 StaticLibraryDefinitionGenerator::loadAllObjectFileMembers(
+                     LinkLayer, JD)](object::Archive &A,
+                                     MemoryBufferRef MemberBuf,
+                                     size_t Index) mutable -> Expected<bool> {
+          if (!ImportScanner(A, MemberBuf, Index))
+            return false;
+          return LoadAll(A, MemberBuf, Index);
+        };
+      } else
+        VisitMembers = COFFImportFileScanner(ImportedDynamicLibraries);
+    } else if (AllLoad)
       VisitMembers = StaticLibraryDefinitionGenerator::loadAllObjectFileMembers(
           LinkLayer, JD);
     else if (S.ES.getTargetTriple().isOSBinFormatMachO() && ForceLoadObjC)
@@ -2294,7 +2312,7 @@ static Error addLibraries(Session &S,
 
     // Push additional dynamic libraries to search.
     // Note that this mechanism only happens in COFF.
-    for (auto FileName : (*G)->getImportedDynamicLibraries()) {
+    for (auto FileName : ImportedDynamicLibraries) {
       LibraryLoad NewLL;
       auto FileNameRef = StringRef(FileName);
       if (!FileNameRef.ends_with_insensitive(".dll"))

@@ -72,6 +72,8 @@ private:
 
   bool canPrecedeRegexLiteral(FormatToken *Prev);
 
+  void tryParseJavaTextBlock();
+
   // Tries to parse a JavaScript Regex literal starting at the current token,
   // if that begins with a slash and is in a location where JavaScript allows
   // regex literals. Changes the current token to a regex literal and updates
@@ -130,10 +132,11 @@ private:
 
   llvm::SmallMapVector<IdentifierInfo *, TokenType, 8> Macros;
 
-  llvm::SmallPtrSet<IdentifierInfo *, 8> TemplateNames, TypeNames,
-      VariableTemplates;
+  llvm::SmallPtrSet<IdentifierInfo *, 8> MacrosSkippedByRemoveParentheses,
+      TemplateNames, TypeNames, VariableTemplates;
 
   bool FormattingDisabled;
+  llvm::Regex FormatOffRegex; // For one line.
 
   llvm::Regex MacroBlockBeginRegex;
   llvm::Regex MacroBlockEndRegex;

@@ -78,7 +78,7 @@ void ModList() {
   // expected-error@+3{{OpenACC 'alwaysin' modifier not valid on 'create' clause}}
   // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'create' clause}}
   // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'create' clause}}
-#pragma acc data create(always, alwaysin, alwaysout, zero, readonly: V1)
+#pragma acc data create(always, alwaysin, alwaysout, zero, readonly, capture: V1)
   // expected-error@+1{{OpenACC 'always' modifier not valid on 'create' clause}}
 #pragma acc data create(always: V1)
   // expected-error@+1{{OpenACC 'alwaysin' modifier not valid on 'create' clause}}
@@ -88,12 +88,14 @@ void ModList() {
   // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'create' clause}}
 #pragma acc data create(readonly: V1)
 #pragma acc data create(zero: V1)
+#pragma acc data create(zero, capture: V1)
 
-  // expected-error@+4{{OpenACC 'always' modifier not valid on 'create' clause}}
-  // expected-error@+3{{OpenACC 'alwaysin' modifier not valid on 'create' clause}}
-  // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'create' clause}}
-  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'create' clause}}
-#pragma acc enter data create(always, alwaysin, alwaysout, zero, readonly: V1)
+  // expected-error@+5{{OpenACC 'always' modifier not valid on 'create' clause}}
+  // expected-error@+4{{OpenACC 'alwaysin' modifier not valid on 'create' clause}}
+  // expected-error@+3{{OpenACC 'alwaysout' modifier not valid on 'create' clause}}
+  // expected-error@+2{{OpenACC 'readonly' modifier not valid on 'create' clause}}
+  // expected-error@+1{{OpenACC 'capture' modifier not valid on 'create' clause}}
+#pragma acc enter data create(always, alwaysin, alwaysout, zero, readonly, capture: V1)
   // expected-error@+1{{OpenACC 'always' modifier not valid on 'create' clause}}
 #pragma acc enter data create(always: V1)
   // expected-error@+1{{OpenACC 'alwaysin' modifier not valid on 'create' clause}}
@@ -102,5 +104,8 @@ void ModList() {
 #pragma acc enter data create(alwaysout: V1)
   // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'create' clause}}
 #pragma acc enter data create(readonly: V1)
+  // expected-error@+1{{OpenACC 'capture' modifier not valid on 'create' clause}}
+#pragma acc enter data create(capture: V1)
+
 #pragma acc enter data create(zero: V1)
 }

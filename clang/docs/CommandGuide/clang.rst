@@ -146,6 +146,23 @@ Language Selection and Mode Options
 
    ISO C 2017 with GNU extensions
 
+  | ``c23``
+  | ``iso9899:2024``
+
+   ISO C 2023
+
+  | ``gnu23``
+
+   ISO C 2023 with GNU extensions
+
+  | ``c2y``
+
+   ISO C 202y
+
+  | ``gnu2y``
+
+   ISO C 202y with GNU extensions
+
  The default C language standard is ``gnu17``, except on PS4, where it is
  ``gnu99``.
 
@@ -628,7 +645,7 @@ Driver Options
 
   Save internal code generation (LLVM) statistics to a file in the current
   directory (:option:`-save-stats`/"-save-stats=cwd") or the directory
-  of the output file ("-save-state=obj").
+  of the output file ("-save-stats=obj").
 
   You can also use environment variables to control the statistics reporting.
   Setting ``CC_PRINT_INTERNAL_STAT`` to ``1`` enables the feature, the report

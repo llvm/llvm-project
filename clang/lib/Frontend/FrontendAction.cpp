@@ -100,11 +100,7 @@ public:
     unsigned Column;
 
     bool operator<(const Position &other) const {
-      if (Line < other.Line)
-        return true;
-      if (Line > other.Line)
-        return false;
-      return Column < other.Column;
+      return std::tie(Line, Column) < std::tie(other.Line, other.Column);
     }
 
     static Position GetBeginSpelling(const SourceManager &SM,
@@ -185,7 +181,7 @@ public:
         if (MergedRanges.back().second < It->second)
           MergedRanges.back().second = It->second;
       }
-      Result.push_back({Data.Ref->getName(), MergedRanges});
+      Result.push_back({Data.Ref->getName(), std::move(MergedRanges)});
     }
     printJson(Result);
   }
@@ -621,8 +617,8 @@ static bool loadModuleMapForModuleBuild(CompilerInstance &CI, bool IsSystem,
   }
 
   // Load the module map file.
-  if (HS.loadModuleMapFile(*ModuleMap, IsSystem, ModuleMapID, &Offset,
-                           PresumedModuleMapFile))
+  if (HS.parseAndLoadModuleMapFile(*ModuleMap, IsSystem, ModuleMapID, &Offset,
+                                   PresumedModuleMapFile))
     return true;
 
   if (SrcMgr.getBufferOrFake(ModuleMapID).getBufferSize() == Offset)
@@ -767,12 +763,11 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // If we're replaying the build of an AST file, import it and set up
   // the initial state from its build.
   if (ReplayASTFile) {
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags(&CI.getDiagnostics());
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags = CI.getDiagnosticsPtr();
 
     // The AST unit populates its own diagnostics engine rather than ours.
-    IntrusiveRefCntPtr<DiagnosticsEngine> ASTDiags(
-        new DiagnosticsEngine(Diags->getDiagnosticIDs(),
-                              &Diags->getDiagnosticOptions()));
+    auto ASTDiags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(
+        Diags->getDiagnosticIDs(), Diags->getDiagnosticOptions());
     ASTDiags->setClient(Diags->getClient(), /*OwnsClient*/false);
 
     // FIXME: What if the input is a memory buffer?
@@ -780,8 +775,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
         InputFile, CI.getPCHContainerReader(), ASTUnit::LoadPreprocessorOnly,
-        ASTDiags, CI.getFileSystemOpts(),
-        /*HeaderSearchOptions=*/nullptr);
+        nullptr, ASTDiags, CI.getFileSystemOpts(), CI.getHeaderSearchOpts());
     if (!AST)
       return false;
 
@@ -841,15 +835,15 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     assert(hasASTFileSupport() &&
            "This action does not have AST file support!");
 
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags(&CI.getDiagnostics());
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags = CI.getDiagnosticsPtr();
 
     // FIXME: What if the input is a memory buffer?
     StringRef InputFile = Input.getFile();
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
-        InputFile, CI.getPCHContainerReader(), ASTUnit::LoadEverything, Diags,
-        CI.getFileSystemOpts(), CI.getHeaderSearchOptsPtr(),
-        CI.getLangOptsPtr());
+        InputFile, CI.getPCHContainerReader(), ASTUnit::LoadEverything, nullptr,
+        Diags, CI.getFileSystemOpts(), CI.getHeaderSearchOpts(),
+        &CI.getLangOpts());
 
     if (!AST)
       return false;
@@ -953,8 +947,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         if (ASTReader::isAcceptableASTFile(
                 Dir->path(), FileMgr, CI.getModuleCache(),
                 CI.getPCHContainerReader(), CI.getLangOpts(),
-                CI.getTargetOpts(), CI.getPreprocessorOpts(),
-                SpecificModuleCachePath, /*RequireStrictOptionMatches=*/true)) {
+                CI.getCodeGenOpts(), CI.getTargetOpts(),
+                CI.getPreprocessorOpts(), SpecificModuleCachePath,
+                /*RequireStrictOptionMatches=*/true)) {
           PPOpts.ImplicitPCHInclude = std::string(Dir->path());
           Found = true;
           break;
@@ -1079,8 +1074,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // If we were asked to load any module map files, do so now.
   for (const auto &Filename : CI.getFrontendOpts().ModuleMapFiles) {
     if (auto File = CI.getFileManager().getOptionalFileRef(Filename))
-      CI.getPreprocessor().getHeaderSearchInfo().loadModuleMapFile(
-          *File, /*IsSystem*/false);
+      CI.getPreprocessor().getHeaderSearchInfo().parseAndLoadModuleMapFile(
+          *File, /*IsSystem*/ false);
     else
       CI.getDiagnostics().Report(diag::err_module_map_not_found) << Filename;
   }
@@ -1249,12 +1244,14 @@ llvm::Error FrontendAction::Execute() {
 void FrontendAction::EndSourceFile() {
   CompilerInstance &CI = getCompilerInstance();
 
-  // Inform the diagnostic client we are done with this source file.
-  CI.getDiagnosticClient().EndSourceFile();
-
   // Inform the preprocessor we are done.
   if (CI.hasPreprocessor())
     CI.getPreprocessor().EndSourceFile();
+
+  // Inform the diagnostic client we are done with this source file.
+  // Do this after notifying the preprocessor, so that end-of-file preprocessor
+  // callbacks can report diagnostics.
+  CI.getDiagnosticClient().EndSourceFile();
 
   // Finalize the action.
   EndSourceFileAction();

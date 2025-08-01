@@ -229,3 +229,27 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i1, dense<8> : ve
 // CHECK-LABEL: llvm.func @_QMmod1Phost_sub()
 // CHECK: %[[STREAM:.*]] = llvm.alloca %{{.*}} x i64 : (i64) -> !llvm.ptr
 // CHECK: llvm.call @_FortranACUFLaunchCooperativeKernel(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[STREAM]], %{{.*}}, %{{.*}}, %{{.*}}) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> ()
+
+// -----
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.ident = "flang version 20.0.0 (git@github.com:clementval/llvm-project.git 4116c1370ff76adf1e58eb3c39d0a14721794c70)", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+  llvm.func @_FortranACUFLaunchClusterKernel(!llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64, i64, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr) attributes {sym_visibility = "private"}
+  llvm.func @_QMmod1Psub1() attributes {cuf.cluster_dims = #cuf.cluster_dims<x = 2 : i64, y = 2 : i64, z = 1 : i64>} {
+    llvm.return
+  }
+  llvm.func @_QQmain() attributes {fir.bindc_name = "test"} {
+    %0 = llvm.mlir.constant(1 : index) : i64
+    %1 = llvm.mlir.constant(2 : index) : i64
+    %2 = llvm.mlir.constant(0 : i32) : i32
+    %3 = llvm.mlir.constant(10 : index) : i64
+    %stream = llvm.alloca %0 x i64 : (i64) -> !llvm.ptr
+    %token = cuf.stream_cast %stream : !llvm.ptr
+    %4 = gpu.launch_func async [%token] @cuda_device_mod::@_QMmod1Psub1 blocks in (%3, %3, %0) threads in (%3, %3, %0) : i64 dynamic_shared_memory_size %2  {cuf.proc_attr = #cuf.cuda_proc<global>}
+    llvm.return
+  }
+  gpu.binary @cuda_device_mod  [#gpu.object<#nvvm.target, "">]
+}
+
+// CHECK-LABEL: llvm.func @_QQmain()
+// CHECK: %[[STREAM:.*]] = llvm.alloca %{{.*}} x i64 : (i64) -> !llvm.ptr
+// CHECK: llvm.call @_FortranACUFLaunchKernel(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[STREAM]], %{{.*}}, %{{.*}}, %{{.*}})

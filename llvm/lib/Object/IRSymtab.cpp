@@ -8,11 +8,11 @@
 
 #include "llvm/Object/IRSymtab.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Comdat.h"
@@ -48,7 +48,7 @@ static cl::opt<bool> DisableBitcodeVersionUpgrade(
 
 static const char *PreservedSymbols[] = {
     // There are global variables, so put it here instead of in
-    // RuntimeLibcalls.def.
+    // RuntimeLibcalls.td.
     // TODO: Are there similar such variables?
     "__ssp_canary_word",
     "__stack_chk_guard",
@@ -213,14 +213,15 @@ Expected<int> Builder::getComdatIndex(const Comdat *C, const Module *M) {
   return P.first->second;
 }
 
-static DenseSet<StringRef> buildPreservedSymbolsSet(const Triple &TT) {
-  DenseSet<StringRef> PreservedSymbolSet(std::begin(PreservedSymbols),
-                                         std::end(PreservedSymbols));
-
+static StringSet<> buildPreservedSymbolsSet(const Triple &TT) {
+  StringSet<> PreservedSymbolSet;
+  PreservedSymbolSet.insert(std::begin(PreservedSymbols),
+                            std::end(PreservedSymbols));
+  // FIXME: Do we need to pass in ABI fields from TargetOptions?
   RTLIB::RuntimeLibcallsInfo Libcalls(TT);
-  for (const char *Name : Libcalls.getLibcallNames()) {
-    if (Name)
-      PreservedSymbolSet.insert(Name);
+  for (RTLIB::LibcallImpl Impl : Libcalls.getLibcallImpls()) {
+    if (Impl != RTLIB::Unsupported)
+      PreservedSymbolSet.insert(Libcalls.getLibcallImplName(Impl));
   }
   return PreservedSymbolSet;
 }
@@ -280,7 +281,7 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
 
   setStr(Sym.IRName, GV->getName());
 
-  static const DenseSet<StringRef> PreservedSymbolsSet =
+  static const StringSet<> PreservedSymbolsSet =
       buildPreservedSymbolsSet(GV->getParent()->getTargetTriple());
   bool IsPreservedSymbol = PreservedSymbolsSet.contains(GV->getName());
 

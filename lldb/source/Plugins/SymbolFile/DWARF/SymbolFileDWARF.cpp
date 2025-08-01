@@ -41,6 +41,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfoEntry.h"
+#include "Plugins/SymbolFile/DWARF/SymbolFileWasm.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -73,6 +74,7 @@
 #include "ManualDWARFIndex.h"
 #include "SymbolFileDWARFDebugMap.h"
 #include "SymbolFileDWARFDwo.h"
+#include "lldb/lldb-private-enumerations.h"
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
@@ -98,8 +100,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 LLDB_PLUGIN_DEFINE(SymbolFileDWARF)
 
@@ -327,6 +329,9 @@ llvm::StringRef SymbolFileDWARF::GetPluginDescriptionStatic() {
 }
 
 SymbolFile *SymbolFileDWARF::CreateInstance(ObjectFileSP objfile_sp) {
+  if (objfile_sp->GetArchitecture().GetTriple().isWasm())
+    return new SymbolFileWasm(std::move(objfile_sp),
+                              /*dwo_section_list*/ nullptr);
   return new SymbolFileDWARF(std::move(objfile_sp),
                              /*dwo_section_list*/ nullptr);
 }
@@ -1188,6 +1193,8 @@ bool SymbolFileDWARF::ParseImportedModules(
       SourceModule module;
       module.path.push_back(ConstString(name));
 
+      const char *include_path = module_die.GetAttributeValueAsString(
+          DW_AT_LLVM_include_path, nullptr);
       DWARFDIE parent_die = module_die;
       while ((parent_die = parent_die.GetParent())) {
         if (parent_die.Tag() != DW_TAG_module)
@@ -1195,10 +1202,16 @@ bool SymbolFileDWARF::ParseImportedModules(
         if (const char *name =
                 parent_die.GetAttributeValueAsString(DW_AT_name, nullptr))
           module.path.push_back(ConstString(name));
+
+        // Inferred submodule declarations may not have a
+        // DW_AT_LLVM_include_path. Pick the parent (aka umbrella) module's
+        // include path instead.
+        if (!include_path)
+          include_path = parent_die.GetAttributeValueAsString(
+              DW_AT_LLVM_include_path, nullptr);
       }
       std::reverse(module.path.begin(), module.path.end());
-      if (const char *include_path = module_die.GetAttributeValueAsString(
-              DW_AT_LLVM_include_path, nullptr)) {
+      if (include_path) {
         FileSpec include_spec(include_path, dwarf_cu->GetPathStyle());
         MakeAbsoluteAndRemap(include_spec, *dwarf_cu,
                              m_objfile_sp->GetModule());
@@ -1358,15 +1371,15 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(CompileUnit &comp_unit,
         if (decl_file || decl_line || decl_column)
           decl_up = std::make_unique<Declaration>(
               comp_unit.GetSupportFiles().GetFileSpecAtIndex(
-                  decl_file ? *decl_file : 0),
-              decl_line ? *decl_line : 0, decl_column ? *decl_column : 0);
+                  decl_file.value_or(0)),
+              decl_line.value_or(0), decl_column.value_or(0));
 
         std::unique_ptr<Declaration> call_up;
         if (call_file || call_line || call_column)
           call_up = std::make_unique<Declaration>(
               comp_unit.GetSupportFiles().GetFileSpecAtIndex(
-                  call_file ? *call_file : 0),
-              call_line ? *call_line : 0, call_column ? *call_column : 0);
+                  call_file.value_or(0)),
+              call_line.value_or(0), call_column.value_or(0));
 
         block->SetInlinedFunctionInfo(name, mangled_name, decl_up.get(),
                                       call_up.get());
@@ -1538,8 +1551,7 @@ bool SymbolFileDWARF::HasForwardDeclForCompilerType(
           compiler_type_no_qualifiers.GetOpaqueQualType())) {
     return true;
   }
-  auto type_system = compiler_type.GetTypeSystem();
-  auto clang_type_system = type_system.dyn_cast_or_null<TypeSystemClang>();
+  auto clang_type_system = compiler_type.GetTypeSystem<TypeSystemClang>();
   if (!clang_type_system)
     return false;
   DWARFASTParserClang *ast_parser =
@@ -1549,8 +1561,7 @@ bool SymbolFileDWARF::HasForwardDeclForCompilerType(
 
 bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  auto clang_type_system =
-      compiler_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  auto clang_type_system = compiler_type.GetTypeSystem<TypeSystemClang>();
   if (clang_type_system) {
     DWARFASTParserClang *ast_parser =
         static_cast<DWARFASTParserClang *>(clang_type_system->GetDWARFParser());
@@ -2529,7 +2540,7 @@ void SymbolFileDWARF::FindFunctions(const Module::LookupInfo &lookup_info,
   m_index->GetFunctions(lookup_info, *this, parent_decl_ctx, [&](DWARFDIE die) {
     if (resolved_dies.insert(die.GetDIE()).second)
       ResolveFunction(die, include_inlines, sc_list);
-    return true;
+    return IterationAction::Continue;
   });
   // With -gsimple-template-names, a templated type's DW_AT_name will not
   // contain the template parameters. Try again stripping '<' and anything
@@ -2546,7 +2557,7 @@ void SymbolFileDWARF::FindFunctions(const Module::LookupInfo &lookup_info,
                             [&](DWARFDIE die) {
                               if (resolved_dies.insert(die.GetDIE()).second)
                                 ResolveFunction(die, include_inlines, sc_list);
-                              return true;
+                              return IterationAction::Continue;
                             });
     }
   }
@@ -2582,7 +2593,7 @@ void SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
   m_index->GetFunctions(regex, [&](DWARFDIE die) {
     if (resolved_dies.insert(die.GetDIE()).second)
       ResolveFunction(die, include_inlines, sc_list);
-    return true;
+    return IterationAction::Continue;
   });
 }
 
@@ -4121,7 +4132,7 @@ void SymbolFileDWARF::Dump(lldb_private::Stream &s) {
   m_index->Dump(s);
 }
 
-void SymbolFileDWARF::DumpClangAST(Stream &s) {
+void SymbolFileDWARF::DumpClangAST(Stream &s, llvm::StringRef filter) {
   auto ts_or_err = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   if (!ts_or_err)
     return;
@@ -4129,11 +4140,12 @@ void SymbolFileDWARF::DumpClangAST(Stream &s) {
   TypeSystemClang *clang = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
   if (!clang)
     return;
-  clang->Dump(s.AsRawOstream());
+  clang->Dump(s.AsRawOstream(), filter);
 }
 
 bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d,
-                                           bool errors_only) {
+                                           bool errors_only,
+                                           bool load_all_debug_info) {
   StructuredData::Array separate_debug_info_files;
   DWARFDebugInfo &info = DebugInfo();
   const size_t num_cus = info.GetNumUnits();
@@ -4176,7 +4188,7 @@ bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d,
 
     // If we have a DWO symbol file, that means we were able to successfully
     // load it.
-    SymbolFile *dwo_symfile = dwarf_cu->GetDwoSymbolFile();
+    SymbolFile *dwo_symfile = dwarf_cu->GetDwoSymbolFile(load_all_debug_info);
     if (dwo_symfile) {
       dwo_data->AddStringItem(
           "resolved_dwo_path",
@@ -4211,6 +4223,9 @@ SymbolFileDWARFDebugMap *SymbolFileDWARF::GetDebugMapSymfile() {
 
 const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
   llvm::call_once(m_dwp_symfile_once_flag, [this]() {
+    if (m_objfile_sp->GetArchitecture().GetTriple().isAppleMachO())
+      return;
+
     // Create a list of files to try and append .dwp to.
     FileSpecList symfiles;
     // Append the module's object file path.
@@ -4245,8 +4260,9 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
           FileSpec(symfile.GetPath() + ".dwp", symfile.GetPathStyle());
       LLDB_LOG(log, "Searching for DWP using: \"{0}\"",
                module_spec.GetSymbolFileSpec());
-      dwp_filespec =
-          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
+      dwp_filespec = PluginManager::LocateExecutableSymbolFile(
+          module_spec, search_paths,
+          m_objfile_sp->GetModule()->GetSymbolLocatorStatistics());
       if (FileSystem::Instance().Exists(dwp_filespec)) {
         break;
       }
@@ -4257,8 +4273,9 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
       // find the correct DWP file, as the Debuginfod plugin uses *only* this
       // data to correctly match the DWP file with the binary.
       module_spec.GetUUID() = m_objfile_sp->GetUUID();
-      dwp_filespec =
-          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
+      dwp_filespec = PluginManager::LocateExecutableSymbolFile(
+          module_spec, search_paths,
+          m_objfile_sp->GetModule()->GetSymbolLocatorStatistics());
     }
     if (FileSystem::Instance().Exists(dwp_filespec)) {
       LLDB_LOG(log, "Found DWP file: \"{0}\"", dwp_filespec);
@@ -4318,13 +4335,16 @@ SymbolFileDWARF::GetContainingDeclContext(const DWARFDIE &die) {
 }
 
 LanguageType SymbolFileDWARF::LanguageTypeFromDWARF(uint64_t val) {
+  if (val <= eLanguageTypeLastStandardLanguage)
+    return static_cast<LanguageType>(val);
+
   // Note: user languages between lo_user and hi_user must be handled
   // explicitly here.
   switch (val) {
   case DW_LANG_Mips_Assembler:
     return eLanguageTypeMipsAssembler;
   default:
-    return static_cast<LanguageType>(val);
+    return eLanguageTypeUnknown;
   }
 }
 
@@ -4408,4 +4428,33 @@ void SymbolFileDWARF::GetCompileOptions(
       continue;
     args.insert({comp_unit, Args(flags)});
   }
+}
+
+std::pair<uint32_t, uint32_t> SymbolFileDWARF::GetDwoFileCounts() {
+  uint32_t total_dwo_count = 0;
+  uint32_t loaded_dwo_count = 0;
+
+  DWARFDebugInfo &info = DebugInfo();
+  const size_t num_cus = info.GetNumUnits();
+  for (size_t cu_idx = 0; cu_idx < num_cus; cu_idx++) {
+    DWARFUnit *dwarf_cu = info.GetUnitAtIndex(cu_idx);
+    if (dwarf_cu == nullptr)
+      continue;
+
+    // Check if this is a DWO unit by checking if it has a DWO ID.
+    if (!dwarf_cu->GetDWOId().has_value())
+      continue;
+
+    total_dwo_count++;
+
+    // If we have a DWO symbol file, that means we were able to successfully
+    // load it.
+    SymbolFile *dwo_symfile =
+        dwarf_cu->GetDwoSymbolFile(/*load_all_debug_info=*/false);
+    if (dwo_symfile) {
+      loaded_dwo_count++;
+    }
+  }
+
+  return {loaded_dwo_count, total_dwo_count};
 }

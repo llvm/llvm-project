@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CGData/StableFunctionMapRecord.h"
+#include "llvm/CGData/CodeGenDataWriter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -77,7 +78,10 @@ TEST(StableFunctionMapRecordTest, Serialize) {
   // Serialize and deserialize the map.
   SmallVector<char> Out;
   raw_svector_ostream OS(Out);
-  MapRecord1.serialize(OS);
+  std::vector<CGDataPatchItem> PatchItems;
+  MapRecord1.serialize(OS, PatchItems);
+  CGDataOStream COS(OS);
+  COS.patch(PatchItems);
 
   StableFunctionMapRecord MapRecord2;
   const uint8_t *Data = reinterpret_cast<const uint8_t *>(Out.data());

@@ -27,7 +27,7 @@ void DynamicAllocator::cleanup() {
       B->invokeDtor();
       if (B->hasPointers()) {
         while (B->Pointers) {
-          Pointer *Next = B->Pointers->Next;
+          Pointer *Next = B->Pointers->asBlockPointer().Next;
           B->Pointers->PointeeStorage.BS.Pointee = nullptr;
           B->Pointers = Next;
         }
@@ -84,6 +84,13 @@ Block *DynamicAllocator::allocate(const Descriptor *D, unsigned EvalID,
   ID->IsFieldMutable = false;
   ID->IsConst = false;
   ID->IsInitialized = false;
+  ID->IsVolatile = false;
+
+  if (D->isCompositeArray())
+    ID->LifeState = Lifetime::Started;
+  else
+    ID->LifeState =
+        AllocForm == Form::Operator ? Lifetime::Ended : Lifetime::Started;
 
   B->IsDynamic = true;
 

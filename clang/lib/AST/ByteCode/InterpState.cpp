@@ -52,7 +52,7 @@ void InterpState::cleanup() {
   // As a last resort, make sure all pointers still pointing to a dead block
   // don't point to it anymore.
   for (DeadBlock *DB = DeadBlocks; DB; DB = DB->Next) {
-    for (Pointer *P = DB->B.Pointers; P; P = P->Next) {
+    for (Pointer *P = DB->B.Pointers; P; P = P->asBlockPointer().Next) {
       P->PointeeStorage.BS.Pointee = nullptr;
     }
   }
@@ -113,7 +113,9 @@ bool InterpState::maybeDiagnoseDanglingAllocations() {
           << (It.second.size() - 1) << Source->getSourceRange();
     }
   }
-  return NoAllocationsLeft;
+  // Keep evaluating before C++20, since the CXXNewExpr wasn't valid there
+  // in the first place.
+  return NoAllocationsLeft || !getLangOpts().CPlusPlus20;
 }
 
 StdAllocatorCaller InterpState::getStdAllocatorCaller(StringRef Name) const {

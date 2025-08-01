@@ -43,7 +43,7 @@ public:
         m_detail(std::move(detail)) {}
 
   DILDiagnosticError(llvm::StringRef expr, const std::string &message,
-                     uint32_t loc, uint16_t err_len);
+                     uint32_t loc, uint16_t err_len = 1);
 
   std::unique_ptr<CloneableError> Clone() const override {
     return std::make_unique<DILDiagnosticError>(m_detail);
@@ -71,6 +71,10 @@ public:
 
   bool UseSynthetic() { return m_use_synthetic; }
 
+  bool UseFragileIvar() { return m_fragile_ivar; }
+
+  bool CheckPtrVsMember() { return m_check_ptr_vs_member; }
+
   lldb::DynamicValueType UseDynamic() { return m_use_dynamic; }
 
 private:
@@ -83,12 +87,15 @@ private:
   ASTNodeUP Run();
 
   ASTNodeUP ParseExpression();
+  ASTNodeUP ParseUnaryExpression();
+  ASTNodeUP ParsePostfixExpression();
   ASTNodeUP ParsePrimaryExpression();
 
   std::string ParseNestedNameSpecifier();
 
   std::string ParseIdExpression();
   std::string ParseUnqualifiedId();
+  std::optional<int64_t> ParseIntegerConstant();
 
   void BailOut(const std::string &error, uint32_t loc, uint16_t err_len);
 
@@ -116,6 +123,8 @@ private:
 
   lldb::DynamicValueType m_use_dynamic;
   bool m_use_synthetic;
+  bool m_fragile_ivar;
+  bool m_check_ptr_vs_member;
 }; // class DILParser
 
 } // namespace lldb_private::dil

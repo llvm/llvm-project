@@ -103,3 +103,95 @@ define i64 @bug(i32 %x) {
   %b = and i64 %a, 4294967295
   ret i64 %b
 }
+
+define i1 @widen_anyof_rdx(ptr %p, i64 %n) {
+; CHECK-LABEL: @widen_anyof_rdx(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <vscale x 4 x i8> [ zeroinitializer, [[ENTRY]] ], [ [[TMP1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = sub i64 [[N:%.*]], [[IV]]
+; CHECK-NEXT:    [[EVL:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IV]]
+; CHECK-NEXT:    [[X:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[GEP]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <vscale x 4 x i32> [[X]], zeroinitializer
+; CHECK-NEXT:    [[TMP1]] = call <vscale x 4 x i8> @llvm.vp.merge.nxv4i8(<vscale x 4 x i1> [[CMP]], <vscale x 4 x i8> splat (i8 1), <vscale x 4 x i8> [[TMP0]], i32 [[EVL]])
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <vscale x 4 x i8> [[TMP1]] to <vscale x 4 x i1>
+; CHECK-NEXT:    [[EVL_ZEXT:%.*]] = zext i32 [[EVL]] to i64
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], [[EVL_ZEXT]]
+; CHECK-NEXT:    [[DONE:%.*]] = icmp sge i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP4]])
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %phi = phi <vscale x 4 x i1> [ zeroinitializer, %entry ], [ %rec, %loop ]
+  %avl = sub i64 %n, %iv
+  %evl = call i32 @llvm.experimental.get.vector.length(i64 %avl, i32 4, i1 true)
+
+  %gep = getelementptr i32, ptr %p, i64 %iv
+  %x = call <vscale x 4 x i32> @llvm.vp.load(ptr %gep, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %cmp = icmp ne <vscale x 4 x i32> %x, zeroinitializer
+  %rec = call <vscale x 4 x i1> @llvm.vp.merge(<vscale x 4 x i1> %cmp, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> %phi, i32 %evl)
+
+  %evl.zext = zext i32 %evl to i64
+  %iv.next = add i64 %iv, %evl.zext
+  %done = icmp sge i64 %iv.next, %n
+  br i1 %done, label %exit, label %loop
+exit:
+  %res = call i1 @llvm.vector.reduce.or(<vscale x 4 x i1> %rec)
+  ret i1 %res
+}
+
+
+define i1 @widen_anyof_rdx_use_in_loop(ptr %p, i64 %n) {
+; CHECK-LABEL: @widen_anyof_rdx_use_in_loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <vscale x 4 x i8> [ zeroinitializer, [[ENTRY]] ], [ [[TMP1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = sub i64 [[N:%.*]], [[IV]]
+; CHECK-NEXT:    [[EVL:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IV]]
+; CHECK-NEXT:    [[X:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[GEP]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <vscale x 4 x i32> [[X]], zeroinitializer
+; CHECK-NEXT:    [[TMP1]] = call <vscale x 4 x i8> @llvm.vp.merge.nxv4i8(<vscale x 4 x i1> [[CMP]], <vscale x 4 x i8> splat (i8 1), <vscale x 4 x i8> [[TMP0]], i32 [[EVL]])
+; CHECK-NEXT:    [[REC:%.*]] = trunc <vscale x 4 x i8> [[TMP1]] to <vscale x 4 x i1>
+; CHECK-NEXT:    store <vscale x 4 x i1> [[REC]], ptr [[GEP]], align 1
+; CHECK-NEXT:    [[EVL_ZEXT:%.*]] = zext i32 [[EVL]] to i64
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], [[EVL_ZEXT]]
+; CHECK-NEXT:    [[DONE:%.*]] = icmp sge i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[REC]])
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %phi = phi <vscale x 4 x i1> [ zeroinitializer, %entry ], [ %rec, %loop ]
+  %avl = sub i64 %n, %iv
+  %evl = call i32 @llvm.experimental.get.vector.length(i64 %avl, i32 4, i1 true)
+
+  %gep = getelementptr i32, ptr %p, i64 %iv
+  %x = call <vscale x 4 x i32> @llvm.vp.load(ptr %gep, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %cmp = icmp ne <vscale x 4 x i32> %x, zeroinitializer
+  %rec = call <vscale x 4 x i1> @llvm.vp.merge(<vscale x 4 x i1> %cmp, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> %phi, i32 %evl)
+
+  store <vscale x 4 x i1> %rec, ptr %gep
+
+  %evl.zext = zext i32 %evl to i64
+  %iv.next = add i64 %iv, %evl.zext
+  %done = icmp sge i64 %iv.next, %n
+  br i1 %done, label %exit, label %loop
+exit:
+  %res = call i1 @llvm.vector.reduce.or(<vscale x 4 x i1> %rec)
+  ret i1 %res
+}

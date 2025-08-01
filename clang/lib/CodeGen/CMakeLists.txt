@@ -144,7 +144,6 @@ add_clang_library(clangCodeGen
   Targets/MSP430.cpp
   Targets/Mips.cpp
   Targets/NVPTX.cpp
-  Targets/PNaCl.cpp
   Targets/PPC.cpp
   Targets/RISCV.cpp
   Targets/SPIR.cpp
@@ -162,8 +161,7 @@ add_clang_library(clangCodeGen
   intrinsics_gen
   ClangDriverOptions
   # These generated headers are included transitively.
-  ARMTargetParserTableGen
-  AArch64TargetParserTableGen
+  target_parser_gen
 
   LINK_LIBS
   clangAST

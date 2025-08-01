@@ -33,14 +33,14 @@ static Value chooseOperand(Value input1, Value input2, BoolAttr choice) {
 }
 
 static void createOpI(PatternRewriter &rewriter, Location loc, Value input) {
-  rewriter.create<OpI>(loc, input);
+  OpI::create(rewriter, loc, input);
 }
 
 static void handleNoResultOp(PatternRewriter &rewriter,
                              OpSymbolBindingNoResult op) {
   // Turn the no result op to a one-result op.
-  rewriter.create<OpSymbolBindingB>(op.getLoc(), op.getOperand().getType(),
-                                    op.getOperand());
+  OpSymbolBindingB::create(rewriter, op.getLoc(), op.getOperand().getType(),
+                           op.getOperand());
 }
 
 static bool getFirstI32Result(Operation *op, Value &value) {
@@ -120,8 +120,8 @@ public:
       return failure();
     rewriter.setInsertionPointToStart(op->getBlock());
 
-    auto constOp = rewriter.create<arith::ConstantOp>(
-        op.getLoc(), rewriter.getBoolAttr(true));
+    auto constOp = arith::ConstantOp::create(rewriter, op.getLoc(),
+                                             rewriter.getBoolAttr(true));
     rewriter.replaceOpWithNewOp<TestCastOp>(op, rewriter.getI32Type(),
                                             Value(constOp));
     return success();
@@ -139,8 +139,7 @@ public:
 
   LogicalResult matchAndRewrite(TestCommutative2Op op,
                                 PatternRewriter &rewriter) const override {
-    auto operand =
-        dyn_cast_or_null<TestCommutative2Op>(op->getOperand(0).getDefiningOp());
+    auto operand = op->getOperand(0).getDefiningOp<TestCommutative2Op>();
     if (!operand)
       return failure();
     Attribute constInput;
@@ -386,26 +385,26 @@ struct TestGreedyPatternDriver
     patterns.insert<IncrementIntAttribute<3>>(&getContext());
 
     GreedyRewriteConfig config;
-    config.useTopDownTraversal = this->useTopDownTraversal;
-    config.maxIterations = this->maxIterations;
-    config.fold = this->fold;
-    config.cseConstants = this->cseConstants;
+    config.setUseTopDownTraversal(useTopDownTraversal)
+        .setMaxIterations(this->maxIterations)
+        .enableFolding(this->fold)
+        .enableConstantCSE(this->cseConstants);
     (void)applyPatternsGreedily(getOperation(), std::move(patterns), config);
   }
 
   Option<bool> useTopDownTraversal{
       *this, "top-down",
       llvm::cl::desc("Seed the worklist in general top-down order"),
-      llvm::cl::init(GreedyRewriteConfig().useTopDownTraversal)};
+      llvm::cl::init(GreedyRewriteConfig().getUseTopDownTraversal())};
   Option<int> maxIterations{
       *this, "max-iterations",
       llvm::cl::desc("Max. iterations in the GreedyRewriteConfig"),
-      llvm::cl::init(GreedyRewriteConfig().maxIterations)};
+      llvm::cl::init(GreedyRewriteConfig().getMaxIterations())};
   Option<bool> fold{*this, "fold", llvm::cl::desc("Whether to fold"),
-                    llvm::cl::init(GreedyRewriteConfig().fold)};
-  Option<bool> cseConstants{*this, "cse-constants",
-                            llvm::cl::desc("Whether to CSE constants"),
-                            llvm::cl::init(GreedyRewriteConfig().cseConstants)};
+                    llvm::cl::init(GreedyRewriteConfig().isFoldingEnabled())};
+  Option<bool> cseConstants{
+      *this, "cse-constants", llvm::cl::desc("Whether to CSE constants"),
+      llvm::cl::init(GreedyRewriteConfig().isConstantCSEEnabled())};
 };
 
 struct DumpNotifications : public RewriterBase::Listener {
@@ -501,13 +500,13 @@ public:
 
     DumpNotifications dumpNotifications;
     GreedyRewriteConfig config;
-    config.listener = &dumpNotifications;
+    config.setListener(&dumpNotifications);
     if (strictMode == "AnyOp") {
-      config.strictMode = GreedyRewriteStrictness::AnyOp;
+      config.setStrictness(GreedyRewriteStrictness::AnyOp);
     } else if (strictMode == "ExistingAndNewOps") {
-      config.strictMode = GreedyRewriteStrictness::ExistingAndNewOps;
+      config.setStrictness(GreedyRewriteStrictness::ExistingAndNewOps);
     } else if (strictMode == "ExistingOps") {
-      config.strictMode = GreedyRewriteStrictness::ExistingOps;
+      config.setStrictness(GreedyRewriteStrictness::ExistingOps);
     } else {
       llvm_unreachable("invalid strictness option");
     }
@@ -845,8 +844,8 @@ struct TestRegionRewriteUndo : public RewritePattern {
                             rewriter.getUnknownLoc());
 
     // Add an explicitly illegal operation to ensure the conversion fails.
-    rewriter.create<ILLegalOpF>(op->getLoc(), rewriter.getIntegerType(32));
-    rewriter.create<TestValidOp>(op->getLoc(), ArrayRef<Value>());
+    ILLegalOpF::create(rewriter, op->getLoc(), rewriter.getIntegerType(32));
+    TestValidOp::create(rewriter, op->getLoc(), ArrayRef<Value>());
 
     // Drop this operation.
     rewriter.eraseOp(op);
@@ -865,7 +864,7 @@ struct TestCreateBlock : public RewritePattern {
     Type i32Type = rewriter.getIntegerType(32);
     Location loc = op->getLoc();
     rewriter.createBlock(&region, region.end(), {i32Type, i32Type}, {loc, loc});
-    rewriter.create<TerminatorOp>(loc);
+    TerminatorOp::create(rewriter, loc);
     rewriter.eraseOp(op);
     return success();
   }
@@ -884,27 +883,32 @@ struct TestCreateIllegalBlock : public RewritePattern {
     Location loc = op->getLoc();
     rewriter.createBlock(&region, region.end(), {i32Type, i32Type}, {loc, loc});
     // Create an illegal op to ensure the conversion fails.
-    rewriter.create<ILLegalOpF>(loc, i32Type);
-    rewriter.create<TerminatorOp>(loc);
+    ILLegalOpF::create(rewriter, loc, i32Type);
+    TerminatorOp::create(rewriter, loc);
     rewriter.eraseOp(op);
     return success();
   }
 };
 
-/// A simple pattern that tests the undo mechanism when replacing the uses of a
-/// block argument.
-struct TestUndoBlockArgReplace : public ConversionPattern {
-  TestUndoBlockArgReplace(MLIRContext *ctx)
-      : ConversionPattern("test.undo_block_arg_replace", /*benefit=*/1, ctx) {}
+/// A simple pattern that tests the "replaceUsesOfBlockArgument" API.
+struct TestBlockArgReplace : public ConversionPattern {
+  TestBlockArgReplace(MLIRContext *ctx, const TypeConverter &converter)
+      : ConversionPattern(converter, "test.block_arg_replace", /*benefit=*/1,
+                          ctx) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    auto illegalOp =
-        rewriter.create<ILLegalOpF>(op->getLoc(), rewriter.getF32Type());
+    // Replace the first block argument with 2x the second block argument.
+    Value repl = op->getRegion(0).getArgument(1);
     rewriter.replaceUsesOfBlockArgument(op->getRegion(0).getArgument(0),
-                                        illegalOp->getResult(0));
-    rewriter.modifyOpInPlace(op, [] {});
+                                        {repl, repl});
+    rewriter.modifyOpInPlace(op, [&] {
+      // If the "trigger_rollback" attribute is set, keep the op illegal, so
+      // that a rollback is triggered.
+      if (!op->hasAttr("trigger_rollback"))
+        op->setAttr("is_legal", rewriter.getUnitAttr());
+    });
     return success();
   }
 };
@@ -935,7 +939,7 @@ struct TestUndoBlockErase : public ConversionPattern {
                   ConversionPatternRewriter &rewriter) const final {
     Block *secondBlock = &*std::next(op->getRegion(0).begin());
     rewriter.setInsertionPointToStart(secondBlock);
-    rewriter.create<ILLegalOpF>(op->getLoc(), rewriter.getF32Type());
+    ILLegalOpF::create(rewriter, op->getLoc(), rewriter.getF32Type());
     rewriter.eraseBlock(secondBlock);
     rewriter.modifyOpInPlace(op, [] {});
     return success();
@@ -1003,13 +1007,12 @@ struct TestPassthroughInvalidOp : public ConversionPattern {
       // This is a 1:N replacement. Insert a test.cast op. (That's what the
       // argument materialization used to do.)
       flattened.push_back(
-          rewriter
-              .create<TestCastOp>(op->getLoc(),
-                                  op->getOperand(it.index()).getType(), range)
+          TestCastOp::create(rewriter, op->getLoc(),
+                             op->getOperand(it.index()).getType(), range)
               .getResult());
     }
-    rewriter.replaceOpWithNewOp<TestValidOp>(op, std::nullopt, flattened,
-                                             std::nullopt);
+    rewriter.replaceOpWithNewOp<TestValidOp>(op, TypeRange(), flattened,
+                                             ArrayRef<NamedAttribute>());
     return success();
   }
 };
@@ -1024,8 +1027,8 @@ struct TestDropAndReplaceInvalidOp : public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    rewriter.replaceOpWithNewOp<TestValidOp>(op, std::nullopt, ValueRange(),
-                                             std::nullopt);
+    rewriter.replaceOpWithNewOp<TestValidOp>(op, TypeRange(), ValueRange(),
+                                             ArrayRef<NamedAttribute>());
     return success();
   }
 };
@@ -1110,8 +1113,8 @@ struct TestNonRootReplacement : public RewritePattern {
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const final {
     auto resultType = *op->result_type_begin();
-    auto illegalOp = rewriter.create<ILLegalOpF>(op->getLoc(), resultType);
-    auto legalOp = rewriter.create<LegalOpB>(op->getLoc(), resultType);
+    auto illegalOp = ILLegalOpF::create(rewriter, op->getLoc(), resultType);
+    auto legalOp = LegalOpB::create(rewriter, op->getLoc(), resultType);
 
     rewriter.replaceOp(illegalOp, legalOp);
     rewriter.replaceOp(op, illegalOp);
@@ -1177,7 +1180,7 @@ struct TestCreateUnregisteredOp : public OpRewritePattern<ILLegalOpG> {
   LogicalResult matchAndRewrite(ILLegalOpG op,
                                 PatternRewriter &rewriter) const final {
     IntegerAttr attr = rewriter.getI32IntegerAttr(0);
-    Value val = rewriter.create<arith::ConstantOp>(op->getLoc(), attr);
+    Value val = arith::ConstantOp::create(rewriter, op->getLoc(), attr);
     rewriter.replaceOpWithNewOp<LegalOpC>(op, val);
     return success();
   };
@@ -1350,7 +1353,7 @@ struct TestTypeConverter : public TypeConverter {
   /// 1->N type mappings.
   static Value materializeCast(OpBuilder &builder, Type resultType,
                                ValueRange inputs, Location loc) {
-    return builder.create<TestCastOp>(loc, resultType, inputs).getResult();
+    return TestCastOp::create(builder, loc, resultType, inputs).getResult();
   }
 };
 
@@ -1358,14 +1361,16 @@ struct TestLegalizePatternDriver
     : public PassWrapper<TestLegalizePatternDriver, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLegalizePatternDriver)
 
+  TestLegalizePatternDriver() = default;
+  TestLegalizePatternDriver(const TestLegalizePatternDriver &other)
+      : PassWrapper(other) {}
+
   StringRef getArgument() const final { return "test-legalize-patterns"; }
   StringRef getDescription() const final {
     return "Run test dialect legalization patterns";
   }
   /// The mode of conversion to use with the driver.
   enum class ConversionMode { Analysis, Full, Partial };
-
-  TestLegalizePatternDriver(ConversionMode mode) : mode(mode) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<func::FuncDialect, test::TestDialect>();
@@ -1375,20 +1380,19 @@ struct TestLegalizePatternDriver
     TestTypeConverter converter;
     mlir::RewritePatternSet patterns(&getContext());
     populateWithGenerated(patterns);
-    patterns
-        .add<TestRegionRewriteBlockMovement, TestDetachedSignatureConversion,
-             TestRegionRewriteUndo, TestCreateBlock, TestCreateIllegalBlock,
-             TestUndoBlockArgReplace, TestUndoBlockErase, TestSplitReturnType,
-             TestChangeProducerTypeI32ToF32, TestChangeProducerTypeF32ToF64,
-             TestChangeProducerTypeF32ToInvalid, TestUpdateConsumerType,
-             TestNonRootReplacement, TestBoundedRecursiveRewrite,
-             TestNestedOpCreationUndoRewrite, TestReplaceEraseOp,
-             TestCreateUnregisteredOp, TestUndoMoveOpBefore,
-             TestUndoPropertiesModification, TestEraseOp,
-             TestRepetitive1ToNConsumer>(&getContext());
+    patterns.add<
+        TestRegionRewriteBlockMovement, TestDetachedSignatureConversion,
+        TestRegionRewriteUndo, TestCreateBlock, TestCreateIllegalBlock,
+        TestUndoBlockErase, TestSplitReturnType, TestChangeProducerTypeI32ToF32,
+        TestChangeProducerTypeF32ToF64, TestChangeProducerTypeF32ToInvalid,
+        TestUpdateConsumerType, TestNonRootReplacement,
+        TestBoundedRecursiveRewrite, TestNestedOpCreationUndoRewrite,
+        TestReplaceEraseOp, TestCreateUnregisteredOp, TestUndoMoveOpBefore,
+        TestUndoPropertiesModification, TestEraseOp,
+        TestRepetitive1ToNConsumer>(&getContext());
     patterns.add<TestDropOpSignatureConversion, TestDropAndReplaceInvalidOp,
-                 TestPassthroughInvalidOp, TestMultiple1ToNReplacement>(
-        &getContext(), converter);
+                 TestPassthroughInvalidOp, TestMultiple1ToNReplacement,
+                 TestBlockArgReplace>(&getContext(), converter);
     patterns.add<TestConvertBlockArgs>(converter, &getContext());
     mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(patterns,
                                                               converter);
@@ -1413,6 +1417,9 @@ struct TestLegalizePatternDriver
     });
     target.addDynamicallyLegalOp<func::CallOp>(
         [&](func::CallOp op) { return converter.isLegal(op); });
+    target.addDynamicallyLegalOp(
+        OperationName("test.block_arg_replace", &getContext()),
+        [](Operation *op) { return op->hasAttr("is_legal"); });
 
     // TestCreateUnregisteredOp creates `arith.constant` operation,
     // which was not added to target intentionally to test
@@ -1493,23 +1500,18 @@ struct TestLegalizePatternDriver
       op->emitRemark() << "op '" << op->getName() << "' is legalizable";
   }
 
-  /// The mode of conversion to use.
-  ConversionMode mode;
+  Option<ConversionMode> mode{
+      *this, "test-legalize-mode",
+      llvm::cl::desc("The legalization mode to use with the test driver"),
+      llvm::cl::init(ConversionMode::Partial),
+      llvm::cl::values(
+          clEnumValN(ConversionMode::Analysis, "analysis",
+                     "Perform an analysis conversion"),
+          clEnumValN(ConversionMode::Full, "full", "Perform a full conversion"),
+          clEnumValN(ConversionMode::Partial, "partial",
+                     "Perform a partial conversion"))};
 };
 } // namespace
-
-static llvm::cl::opt<TestLegalizePatternDriver::ConversionMode>
-    legalizerConversionMode(
-        "test-legalize-mode",
-        llvm::cl::desc("The legalization mode to use with the test driver"),
-        llvm::cl::init(TestLegalizePatternDriver::ConversionMode::Partial),
-        llvm::cl::values(
-            clEnumValN(TestLegalizePatternDriver::ConversionMode::Analysis,
-                       "analysis", "Perform an analysis conversion"),
-            clEnumValN(TestLegalizePatternDriver::ConversionMode::Full, "full",
-                       "Perform a full conversion"),
-            clEnumValN(TestLegalizePatternDriver::ConversionMode::Partial,
-                       "partial", "Perform a partial conversion")));
 
 //===----------------------------------------------------------------------===//
 // ConversionPatternRewriter::getRemappedValue testing. This method is used
@@ -1910,15 +1912,15 @@ struct TestTypeConversionDriver
       // Allow casting from F64 back to F32.
       if (!resultType.isF16() && inputs.size() == 1 &&
           inputs[0].getType().isF64())
-        return builder.create<TestCastOp>(loc, resultType, inputs).getResult();
+        return TestCastOp::create(builder, loc, resultType, inputs).getResult();
       // Allow producing an i32 or i64 from nothing.
       if ((resultType.isInteger(32) || resultType.isInteger(64)) &&
           inputs.empty())
-        return builder.create<TestTypeProducerOp>(loc, resultType);
+        return TestTypeProducerOp::create(builder, loc, resultType);
       // Allow producing an i64 from an integer.
       if (isa<IntegerType>(resultType) && inputs.size() == 1 &&
           isa<IntegerType>(inputs[0].getType()))
-        return builder.create<TestCastOp>(loc, resultType, inputs).getResult();
+        return TestCastOp::create(builder, loc, resultType, inputs).getResult();
       // Otherwise, fail.
       return nullptr;
     });
@@ -2001,7 +2003,7 @@ struct TestTargetMaterializationWithNoUses
     });
     converter.addTargetMaterialization(
         [](OpBuilder &builder, Type type, ValueRange inputs, Location loc) {
-          return builder.create<TestCastOp>(loc, type, inputs).getResult();
+          return TestCastOp::create(builder, loc, type, inputs).getResult();
         });
 
     ConversionTarget target(getContext());
@@ -2052,7 +2054,7 @@ struct TestUndoBlocksMerge : public ConversionPattern {
     Operation *branchOp = firstBlock.getTerminator();
     Block *secondBlock = &*(std::next(op->getRegion(0).begin()));
     rewriter.setInsertionPointToStart(secondBlock);
-    rewriter.create<ILLegalOpF>(op->getLoc(), rewriter.getF32Type());
+    ILLegalOpF::create(rewriter, op->getLoc(), rewriter.getF32Type());
     auto succOperands = branchOp->getOperands();
     SmallVector<Value, 2> replacements(succOperands);
     rewriter.eraseOp(branchOp);
@@ -2107,7 +2109,7 @@ struct TestMergeBlocksPatternDriver
     /// Expect the op to have a single block after legalization.
     target.addDynamicallyLegalOp<TestMergeBlocksOp>(
         [&](TestMergeBlocksOp op) -> bool {
-          return llvm::hasSingleElement(op.getBody());
+          return op.getBody().hasOneBlock();
         });
 
     /// Only allow `test.br` within test.merge_blocks op.
@@ -2196,9 +2198,7 @@ void registerPatternsTestPass() {
   PassRegistration<TestStrictPatternDriver>();
   PassRegistration<TestWalkPatternDriver>();
 
-  PassRegistration<TestLegalizePatternDriver>([] {
-    return std::make_unique<TestLegalizePatternDriver>(legalizerConversionMode);
-  });
+  PassRegistration<TestLegalizePatternDriver>();
 
   PassRegistration<TestRemappedValue>();
 

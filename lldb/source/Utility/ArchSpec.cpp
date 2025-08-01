@@ -228,9 +228,9 @@ static const CoreDefinition g_core_definitions[] = {
     {eByteOrderLittle, 4, 4, 4, llvm::Triple::hexagon,
      ArchSpec::eCore_hexagon_hexagonv5, "hexagonv5"},
 
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::riscv32, ArchSpec::eCore_riscv32,
+    {eByteOrderLittle, 4, 2, 8, llvm::Triple::riscv32, ArchSpec::eCore_riscv32,
      "riscv32"},
-    {eByteOrderLittle, 8, 2, 4, llvm::Triple::riscv64, ArchSpec::eCore_riscv64,
+    {eByteOrderLittle, 8, 2, 8, llvm::Triple::riscv64, ArchSpec::eCore_riscv64,
      "riscv64"},
 
     {eByteOrderLittle, 4, 4, 4, llvm::Triple::loongarch32,
@@ -1455,7 +1455,6 @@ bool ArchSpec::IsFullySpecifiedTriple() const {
 }
 
 bool ArchSpec::IsAlwaysThumbInstructions() const {
-  std::string Status;
   if (GetTriple().getArch() == llvm::Triple::arm ||
       GetTriple().getArch() == llvm::Triple::thumb) {
     // v. https://en.wikipedia.org/wiki/ARM_Cortex-M
