@@ -232,7 +232,7 @@ void getSpirvExtOperand(StringRef SpvExtensionArg, raw_ostream &out) {
 
 SmallString<1024> getSpirvExtArg(ArrayRef<std::string> SpvExtensionArgs) {
   if (SpvExtensionArgs.empty()) {
-    return llvm::StringRef("-spirv-ext=all");
+    return StringRef("-spirv-ext=all");
   }
 
   llvm::SmallString<1024> LlvmOption;
