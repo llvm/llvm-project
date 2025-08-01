@@ -553,6 +553,10 @@ TEST(VirtualFileSystemTest, PhysicalFileSystemWorkingDirFailure) {
     // Some platforms (e.g. Solaris) disallow removal of the working directory.
     GTEST_SKIP() << "test requires deletion of working directory";
 
+#ifdef __CYGWIN__
+  GTEST_SKIP() << "Cygwin getcwd succeeds with unlinked working directory";
+#endif
+
   // Verify that we still get two separate working directories.
   auto FS1 = vfs::createPhysicalFileSystem();
   auto FS2 = vfs::createPhysicalFileSystem();
