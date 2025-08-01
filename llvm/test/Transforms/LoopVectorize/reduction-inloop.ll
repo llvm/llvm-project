@@ -1091,7 +1091,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret float %result.0.lcssa
 }
 
-; We can create an in-loop reduction for sub-reductions by negating the input
+; We can create an in-loop reduction for sub-reductions with a sub and add-reduction
 define i32 @reduction_sub_lhs(ptr noalias nocapture %A) {
 ; CHECK-LABEL: @reduction_sub_lhs(
 ; CHECK-NEXT:  entry:
@@ -1100,7 +1100,7 @@ define i32 @reduction_sub_lhs(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 3, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[WIDE_LOAD]])
@@ -1125,21 +1125,21 @@ define i32 @reduction_sub_lhs(ptr noalias nocapture %A) {
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVED:       vector.body:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi i32 [ 3, [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI2:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[WIDE_LOAD]])
-; CHECK-INTERLEAVED-NEXT:    [[TMP5]] = sub i32 [[VEC_PHI]], [[TMP4]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP7]] = sub i32 [[VEC_PHI1]], [[TMP4]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[WIDE_LOAD2]])
-; CHECK-INTERLEAVED-NEXT:    [[TMP7]] = sub i32 [[VEC_PHI1]], [[TMP6]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP5]] = sub i32 [[VEC_PHI2]], [[TMP6]]
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
 ; CHECK-INTERLEAVED:       middle.block:
-; CHECK-INTERLEAVED-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP7]], [[TMP5]]
+; CHECK-INTERLEAVED-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP5]], [[TMP7]]
 ; CHECK-INTERLEAVED-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK-INTERLEAVED:       scalar.ph:
 ; CHECK-INTERLEAVED-NEXT:    br label [[FOR_BODY:%.*]]
@@ -1154,7 +1154,7 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %x.05 = phi i32 [ %sub, %for.body ], [ 0, %entry ]
+  %x.05 = phi i32 [ %sub, %for.body ], [ 3, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %l0 = load i32, ptr %arrayidx, align 4
   %sub = sub nsw i32 %x.05, %l0
