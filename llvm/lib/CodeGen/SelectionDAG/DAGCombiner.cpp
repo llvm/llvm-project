@@ -13165,24 +13165,24 @@ static SDValue combineVSelectWithAllOnesOrZeros(SDValue Cond, SDValue TVal,
 
   // select Cond, -1, x → or Cond, x
   if (IsTAllOne) {
-    SDValue X = DAG.getBitcast(CondVT, FVal);
-    SDValue Or = DAG.getNode(ISD::OR, DL, CondVT, Cond, DAG.getFreeze(X));
+    SDValue X = DAG.getBitcast(CondVT, DAG.getFreeze(FVal));
+    SDValue Or = DAG.getNode(ISD::OR, DL, CondVT, Cond, X);
     return DAG.getBitcast(VT, Or);
   }
 
   // select Cond, x, 0 → and Cond, x
   if (IsFAllZero) {
-    SDValue X = DAG.getBitcast(CondVT, TVal);
-    SDValue And = DAG.getNode(ISD::AND, DL, CondVT, Cond, DAG.getFreeze(X));
+    SDValue X = DAG.getBitcast(CondVT, DAG.getFreeze(TVal));
+    SDValue And = DAG.getNode(ISD::AND, DL, CondVT, Cond, X);
     return DAG.getBitcast(VT, And);
   }
 
   // select Cond, 0, x -> and not(Cond), x
   if (IsTAllZero &&
       (isBitwiseNot(peekThroughBitcasts(Cond)) || TLI.hasAndNot(Cond))) {
-    SDValue X = DAG.getBitcast(CondVT, FVal);
-    SDValue And = DAG.getNode(ISD::AND, DL, CondVT,
-                              DAG.getNOT(DL, Cond, CondVT), DAG.getFreeze(X));
+    SDValue X = DAG.getBitcast(CondVT, DAG.getFreeze(FVal));
+    SDValue And =
+        DAG.getNode(ISD::AND, DL, CondVT, DAG.getNOT(DL, Cond, CondVT), X);
     return DAG.getBitcast(VT, And);
   }
 
