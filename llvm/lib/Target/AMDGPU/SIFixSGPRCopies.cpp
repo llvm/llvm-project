@@ -898,12 +898,13 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
               TII->get(AMDGPU::V_READFIRSTLANE_B32), TmpReg)
           .add(MI.getOperand(1));
       MI.getOperand(1).setReg(TmpReg);
+      return true;
     } else if (tryMoveVGPRConstToSGPR(MI.getOperand(1), DstReg, MI.getParent(),
                                       MI, MI.getDebugLoc())) {
       I = std::next(I);
       MI.eraseFromParent();
+      return true;
     }
-    return true;
   }
   if (!SrcReg.isVirtual() || TRI->isAGPR(*MRI, SrcReg)) {
     SIInstrWorklist worklist;
@@ -929,7 +930,9 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
   if (PHISources.contains(MI))
     return;
   Register DstReg = MI->getOperand(0).getReg();
-  const TargetRegisterClass *DstRC = MRI->getRegClass(DstReg);
+  const TargetRegisterClass *DstRC = DstReg.isVirtual()
+                                         ? MRI->getRegClass(DstReg)
+                                         : TRI->getPhysRegBaseClass(DstReg);
 
   V2SCopyInfo Info(getNextVGPRToSGPRCopyId(), MI,
                    TRI->getRegSizeInBits(*DstRC));
