@@ -1128,25 +1128,6 @@ unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC, unsigned SelectOpc) {
   }
 }
 
-RISCVCC::CondCode RISCVCC::getOppositeBranchCondition(RISCVCC::CondCode CC) {
-  switch (CC) {
-  default:
-    llvm_unreachable("Unrecognized conditional branch");
-  case RISCVCC::COND_EQ:
-    return RISCVCC::COND_NE;
-  case RISCVCC::COND_NE:
-    return RISCVCC::COND_EQ;
-  case RISCVCC::COND_LT:
-    return RISCVCC::COND_GE;
-  case RISCVCC::COND_GE:
-    return RISCVCC::COND_LT;
-  case RISCVCC::COND_LTU:
-    return RISCVCC::COND_GEU;
-  case RISCVCC::COND_GEU:
-    return RISCVCC::COND_LTU;
-  }
-}
-
 bool RISCVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                    MachineBasicBlock *&TBB,
                                    MachineBasicBlock *&FBB,

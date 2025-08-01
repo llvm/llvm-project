@@ -44,7 +44,12 @@ enum CondCode {
   COND_INVALID
 };
 
-CondCode getOppositeBranchCondition(CondCode);
+CondCode getOppositeBranchCondition(CondCode CC) {
+  // To reverse a condition it's necessary to only invert the low bit:
+  assert(CC != COND_INVALID && "COND_INVALID has no inverse!");
+  return static_cast<CondCode>(static_cast<unsigned>(CC) ^ 0x1);
+}
+
 unsigned getBrCond(CondCode CC, unsigned SelectOpc = 0);
 
 } // end of namespace RISCVCC
