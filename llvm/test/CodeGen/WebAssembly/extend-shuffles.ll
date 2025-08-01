@@ -10,9 +10,11 @@ define <4 x i32> @sext_high_v4i8(<8 x i8> %in) {
 ; SIMD128:         .functype sext_high_v4i8 (v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    i16x8.extend_low_i8x16_s $push1=, $pop0
-; SIMD128-NEXT:    i32x4.extend_low_i16x8_s $push2=, $pop1
-; SIMD128-NEXT:    return $pop2
+; SIMD128-NEXT:    v128.const $push1=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    i16x8.extend_low_i8x16_s $push3=, $pop2
+; SIMD128-NEXT:    i32x4.extend_low_i16x8_s $push4=, $pop3
+; SIMD128-NEXT:    return $pop4
  %shuffle = shufflevector <8 x i8> %in, <8 x i8> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
  %res = sext <4 x i8> %shuffle to <4 x i32>
  ret <4 x i32> %res
@@ -23,9 +25,11 @@ define <4 x i32> @zext_high_v4i8(<8 x i8> %in) {
 ; SIMD128:         .functype zext_high_v4i8 (v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    i16x8.extend_low_i8x16_u $push1=, $pop0
-; SIMD128-NEXT:    i32x4.extend_low_i16x8_u $push2=, $pop1
-; SIMD128-NEXT:    return $pop2
+; SIMD128-NEXT:    v128.const $push1=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    i16x8.extend_low_i8x16_u $push3=, $pop2
+; SIMD128-NEXT:    i32x4.extend_low_i16x8_u $push4=, $pop3
+; SIMD128-NEXT:    return $pop4
  %shuffle = shufflevector <8 x i8> %in, <8 x i8> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
  %res = zext <4 x i8> %shuffle to <4 x i32>
  ret <4 x i32> %res
@@ -58,8 +62,10 @@ define <2 x i32> @sext_high_v2i16(<4 x i16> %in) {
 ; SIMD128:         .functype sext_high_v2i16 (v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    i32x4.extend_low_i16x8_s $push1=, $pop0
-; SIMD128-NEXT:    return $pop1
+; SIMD128-NEXT:    v128.const $push1=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    i32x4.extend_low_i16x8_s $push3=, $pop2
+; SIMD128-NEXT:    return $pop3
  %shuffle = shufflevector <4 x i16> %in, <4 x i16> poison, <2 x i32> <i32 2, i32 3>
  %res = sext <2 x i16> %shuffle to <2 x i32>
  ret <2 x i32> %res
@@ -70,8 +76,10 @@ define <2 x i32> @zext_high_v2i16(<4 x i16> %in) {
 ; SIMD128:         .functype zext_high_v2i16 (v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    i32x4.extend_low_i16x8_u $push1=, $pop0
-; SIMD128-NEXT:    return $pop1
+; SIMD128-NEXT:    v128.const $push1=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    i32x4.extend_low_i16x8_u $push3=, $pop2
+; SIMD128-NEXT:    return $pop3
  %shuffle = shufflevector <4 x i16> %in, <4 x i16> poison, <2 x i32> <i32 2, i32 3>
  %res = zext <2 x i16> %shuffle to <2 x i32>
  ret <2 x i32> %res

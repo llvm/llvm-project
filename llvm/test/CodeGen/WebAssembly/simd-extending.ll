@@ -171,6 +171,8 @@ define <8 x i16> @extend_lowish_i8x16_s(<16 x i8> %v) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i8x16.shuffle 1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    v128.const -1, 0
+; CHECK-NEXT:    v128.and
 ; CHECK-NEXT:    i16x8.extend_low_i8x16_s
 ; CHECK-NEXT:    # fallthrough-return
   %lowish = shufflevector <16 x i8> %v, <16 x i8> undef,
@@ -186,6 +188,8 @@ define <4 x i32> @extend_lowish_i16x8_s(<8 x i16> %v) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i8x16.shuffle 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK-NEXT:    v128.const -1, 0
+; CHECK-NEXT:    v128.and
 ; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    # fallthrough-return
   %lowish = shufflevector <8 x i16> %v, <8 x i16> undef,
@@ -218,6 +222,8 @@ define <8 x i8> @extend_i1x8_i8(<8 x i1> %v) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i8x16.shuffle 0, 2, 4, 6, 8, 10, 12, 14, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    v128.const -1, 0
+; CHECK-NEXT:    v128.and
 ; CHECK-NEXT:    i32.const 7
 ; CHECK-NEXT:    i8x16.shl
 ; CHECK-NEXT:    i32.const 7
