@@ -93,7 +93,7 @@ spirv.func @f32_to_tf32_vec(%arg0 : vector<2xf32>) "None" {
 // -----
 
 spirv.func @f32_to_tf32_unsupported(%arg0 : f64) "None" {
-  // expected-error @+1 {{op operand #0 must be Float32 or vector of Float32 values of length 2/3/4/8/16, but got 'f64'}}
+  // expected-error @+1 {{op operand #0 must be Float32 or fixed-length vector of Float32 values of length 2/3/4/8/16, but got 'f64'}}
   %0 = spirv.INTEL.RoundFToTF32 %arg0 : f64 to f32
   spirv.Return
 }
