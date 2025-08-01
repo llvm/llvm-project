@@ -1,7 +1,6 @@
 // RUN: %clang_pgogen -o %t %s
-// RUN: env LLVM_PROFILE_FILE="%t.d/%m.profraw"
 // RUN: rm -fr %t.d
-// RUN: %run %t %t.d
+// RUN: env LLVM_PROFILE_FILE="%t.d/%m.profraw" %run %t %t.d
 
 #include <errno.h>
 #include <unistd.h>
