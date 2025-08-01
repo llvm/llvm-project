@@ -222,8 +222,9 @@ private:
         continue; // Depends on the parent.
       return false;
     }
-    llvm_unreachable("DeclConext chain must end with a translation unit");
+    llvm_unreachable("DeclContext chain must end with a translation unit");
   }
+
   llvm::SmallVector<CharSourceRange, 2> getRangesToMark(const Decl *D) {
     if (auto *ED = dyn_cast<ExportDecl>(D)) {
       if (!ED->hasBraces())
