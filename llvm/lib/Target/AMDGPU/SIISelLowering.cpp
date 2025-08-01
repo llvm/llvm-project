@@ -4292,7 +4292,7 @@ SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   Chain = BaseAddr.getValue(1);
   Align StackAlign = TFL->getStackAlign();
   if (Alignment > StackAlign) {
-    uint64_t ScaledAlignment = (uint64_t)Alignment.value()
+    uint64_t ScaledAlignment = Alignment.value()
                                << Subtarget->getWavefrontSizeLog2();
     uint64_t StackAlignMask = ScaledAlignment - 1;
     SDValue TmpAddr = DAG.getNode(ISD::ADD, dl, VT, BaseAddr,
@@ -7199,7 +7199,7 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
       SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FpToFp16);
       return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);
     }
-    if (getTargetMachine().Options.UnsafeFPMath) {
+    if (Op->getFlags().hasApproximateFuncs()) {
       SDValue Flags = Op.getOperand(1);
       SDValue Src32 = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, Src, Flags);
       return DAG.getNode(ISD::FP_ROUND, DL, MVT::f16, Src32, Flags);
@@ -11294,8 +11294,7 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
   EVT VT = Op.getValueType();
   const SDNodeFlags Flags = Op->getFlags();
 
-  bool AllowInaccurateRcp =
-      Flags.hasApproximateFuncs() || DAG.getTarget().Options.UnsafeFPMath;
+  bool AllowInaccurateRcp = Flags.hasApproximateFuncs();
 
   if (const ConstantFPSDNode *CLHS = dyn_cast<ConstantFPSDNode>(LHS)) {
     // Without !fpmath accuracy information, we can't do more because we don't
@@ -11314,7 +11313,7 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
 
       // 1.0 / sqrt(x) -> rsq(x)
 
-      // XXX - Is UnsafeFPMath sufficient to do this for f64? The maximum ULP
+      // XXX - Is afn sufficient to do this for f64? The maximum ULP
       // error seems really high at 2^29 ULP.
       // 1.0 / x -> rcp(x)
       return DAG.getNode(AMDGPUISD::RCP, SL, VT, RHS);
@@ -11348,8 +11347,7 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV64(SDValue Op,
   EVT VT = Op.getValueType();
   const SDNodeFlags Flags = Op->getFlags();
 
-  bool AllowInaccurateDiv =
-      Flags.hasApproximateFuncs() || DAG.getTarget().Options.UnsafeFPMath;
+  bool AllowInaccurateDiv = Flags.hasApproximateFuncs();
   if (!AllowInaccurateDiv)
     return SDValue();
 
@@ -14601,7 +14599,7 @@ unsigned SITargetLowering::getFusedOpcode(const SelectionDAG &DAG,
     return ISD::FMAD;
 
   const TargetOptions &Options = DAG.getTarget().Options;
-  if ((Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath ||
+  if ((Options.AllowFPOpFusion == FPOpFusion::Fast ||
        (N0->getFlags().hasAllowContract() &&
         N1->getFlags().hasAllowContract())) &&
       isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT)) {
@@ -15724,9 +15722,9 @@ SDValue SITargetLowering::performFMACombine(SDNode *N,
 
   // fdot2_f32_f16 always flushes fp32 denormal operand and output to zero,
   // regardless of the denorm mode setting. Therefore,
-  // unsafe-fp-math/fp-contract is sufficient to allow generating fdot2.
+  // fp-contract is sufficient to allow generating fdot2.
   const TargetOptions &Options = DAG.getTarget().Options;
-  if (Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath ||
+  if (Options.AllowFPOpFusion == FPOpFusion::Fast ||
       (N->getFlags().hasAllowContract() &&
        FMA->getFlags().hasAllowContract())) {
     Op1 = Op1.getOperand(0);
@@ -16827,56 +16825,51 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       return std::pair(0U, RC);
   }
 
-  if (Constraint.starts_with("{") && Constraint.ends_with("}")) {
-    StringRef RegName(Constraint.data() + 1, Constraint.size() - 2);
-    if (RegName.consume_front("v")) {
+  auto [Kind, Idx, NumRegs] = AMDGPU::parseAsmConstraintPhysReg(Constraint);
+  if (Kind != '\0') {
+    if (Kind == 'v') {
       RC = &AMDGPU::VGPR_32RegClass;
-    } else if (RegName.consume_front("s")) {
+    } else if (Kind == 's') {
       RC = &AMDGPU::SGPR_32RegClass;
-    } else if (RegName.consume_front("a")) {
+    } else if (Kind == 'a') {
       RC = &AMDGPU::AGPR_32RegClass;
     }
 
     if (RC) {
-      uint32_t Idx;
-      if (RegName.consume_front("[")) {
-        uint32_t End;
-        bool Failed = RegName.consumeInteger(10, Idx);
-        Failed |= !RegName.consume_front(":");
-        Failed |= RegName.consumeInteger(10, End);
-        Failed |= !RegName.consume_back("]");
-        if (!Failed) {
-          uint32_t Width = (End - Idx + 1) * 32;
-          // Prohibit constraints for register ranges with a width that does not
-          // match the required type.
-          if (VT.SimpleTy != MVT::Other && Width != VT.getSizeInBits())
-            return std::pair(0U, nullptr);
-          MCRegister Reg = RC->getRegister(Idx);
-          if (SIRegisterInfo::isVGPRClass(RC))
-            RC = TRI->getVGPRClassForBitWidth(Width);
-          else if (SIRegisterInfo::isSGPRClass(RC))
-            RC = TRI->getSGPRClassForBitWidth(Width);
-          else if (SIRegisterInfo::isAGPRClass(RC))
-            RC = TRI->getAGPRClassForBitWidth(Width);
-          if (RC) {
-            Reg = TRI->getMatchingSuperReg(Reg, AMDGPU::sub0, RC);
-            if (!Reg) {
-              // The register class does not contain the requested register,
-              // e.g., because it is an SGPR pair that would violate alignment
-              // requirements.
-              return std::pair(0U, nullptr);
-            }
-            return std::pair(Reg, RC);
-          }
-        }
-      } else {
-        // Check for lossy scalar/vector conversions.
-        if (VT.isVector() && VT.getSizeInBits() != 32)
+      if (NumRegs > 1) {
+        if (Idx >= RC->getNumRegs() || Idx + NumRegs - 1 > RC->getNumRegs())
           return std::pair(0U, nullptr);
-        bool Failed = RegName.getAsInteger(10, Idx);
-        if (!Failed && Idx < RC->getNumRegs())
-          return std::pair(RC->getRegister(Idx), RC);
+
+        uint32_t Width = NumRegs * 32;
+        // Prohibit constraints for register ranges with a width that does not
+        // match the required type.
+        if (VT.SimpleTy != MVT::Other && Width != VT.getSizeInBits())
+          return std::pair(0U, nullptr);
+
+        MCRegister Reg = RC->getRegister(Idx);
+        if (SIRegisterInfo::isVGPRClass(RC))
+          RC = TRI->getVGPRClassForBitWidth(Width);
+        else if (SIRegisterInfo::isSGPRClass(RC))
+          RC = TRI->getSGPRClassForBitWidth(Width);
+        else if (SIRegisterInfo::isAGPRClass(RC))
+          RC = TRI->getAGPRClassForBitWidth(Width);
+        if (RC) {
+          Reg = TRI->getMatchingSuperReg(Reg, AMDGPU::sub0, RC);
+          if (!Reg) {
+            // The register class does not contain the requested register,
+            // e.g., because it is an SGPR pair that would violate alignment
+            // requirements.
+            return std::pair(0U, nullptr);
+          }
+          return std::pair(Reg, RC);
+        }
       }
+
+      // Check for lossy scalar/vector conversions.
+      if (VT.isVector() && VT.getSizeInBits() != 32)
+        return std::pair(0U, nullptr);
+      if (Idx < RC->getNumRegs())
+        return std::pair(RC->getRegister(Idx), RC);
     }
   }
 

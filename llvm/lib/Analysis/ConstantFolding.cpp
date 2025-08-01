@@ -2631,14 +2631,14 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       case Intrinsic::nvvm_ceil_d:
         return ConstantFoldFP(
             ceil, APF, Ty,
-            nvvm::GetNVVMDenromMode(
+            nvvm::GetNVVMDenormMode(
                 nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       case Intrinsic::nvvm_fabs_ftz:
       case Intrinsic::nvvm_fabs:
         return ConstantFoldFP(
             fabs, APF, Ty,
-            nvvm::GetNVVMDenromMode(
+            nvvm::GetNVVMDenormMode(
                 nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       case Intrinsic::nvvm_floor_ftz_f:
@@ -2646,7 +2646,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       case Intrinsic::nvvm_floor_d:
         return ConstantFoldFP(
             floor, APF, Ty,
-            nvvm::GetNVVMDenromMode(
+            nvvm::GetNVVMDenormMode(
                 nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       case Intrinsic::nvvm_rcp_rm_ftz_f:
@@ -2708,7 +2708,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
           return nullptr;
         return ConstantFoldFP(
             sqrt, APF, Ty,
-            nvvm::GetNVVMDenromMode(
+            nvvm::GetNVVMDenormMode(
                 nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       // AMDGCN Intrinsics:

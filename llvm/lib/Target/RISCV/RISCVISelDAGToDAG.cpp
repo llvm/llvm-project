@@ -2827,6 +2827,8 @@ static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
 static bool isWorthFoldingAdd(SDValue Add) {
   for (auto *User : Add->users()) {
     if (User->getOpcode() != ISD::LOAD && User->getOpcode() != ISD::STORE &&
+        User->getOpcode() != RISCVISD::LD_RV32 &&
+        User->getOpcode() != RISCVISD::SD_RV32 &&
         User->getOpcode() != ISD::ATOMIC_LOAD &&
         User->getOpcode() != ISD::ATOMIC_STORE)
       return false;
@@ -2840,6 +2842,9 @@ static bool isWorthFoldingAdd(SDValue Add) {
       return false;
     if (User->getOpcode() == ISD::ATOMIC_STORE &&
         cast<AtomicSDNode>(User)->getVal() == Add)
+      return false;
+    if (User->getOpcode() == RISCVISD::SD_RV32 &&
+        (User->getOperand(0) == Add || User->getOperand(1) == Add))
       return false;
     if (isStrongerThanMonotonic(cast<MemSDNode>(User)->getSuccessOrdering()))
       return false;
@@ -2942,8 +2947,8 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
 /// Similar to SelectAddrRegImm, except that the offset is restricted to uimm9.
 bool RISCVDAGToDAGISel::SelectAddrRegImm9(SDValue Addr, SDValue &Base,
                                           SDValue &Offset) {
-  // FIXME: Support FrameIndex. Need to teach eliminateFrameIndex that only
-  // a 9-bit immediate can be folded.
+  if (SelectAddrFrameIndex(Addr, Base, Offset))
+    return true;
 
   SDLoc DL(Addr);
   MVT VT = Addr.getSimpleValueType();
@@ -2953,8 +2958,8 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm9(SDValue Addr, SDValue &Base,
     if (isUInt<9>(CVal)) {
       Base = Addr.getOperand(0);
 
-      // FIXME: Support FrameIndex. Need to teach eliminateFrameIndex that only
-      // a 9-bit immediate can be folded.
+      if (auto *FIN = dyn_cast<FrameIndexSDNode>(Base))
+        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), VT);
       Offset = CurDAG->getSignedTargetConstant(CVal, DL, VT);
       return true;
     }
