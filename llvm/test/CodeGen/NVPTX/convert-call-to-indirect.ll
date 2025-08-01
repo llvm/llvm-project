@@ -12,14 +12,14 @@ define %struct.64 @test_return_type_mismatch(ptr %p) {
 ; CHECK-NEXT:    .reg .b64 %rd<40>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd2, [test_return_type_mismatch_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_return_type_mismatch_param_0];
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .b64 param0;
 ; CHECK-NEXT:    .param .align 1 .b8 retval0[8];
-; CHECK-NEXT:    st.param.b64 [param0], %rd2;
+; CHECK-NEXT:    st.param.b64 [param0], %rd1;
 ; CHECK-NEXT:    prototype_0 : .callprototype (.param .align 1 .b8 _[8]) _ (.param .b64 _);
-; CHECK-NEXT:    mov.b64 %rd1, callee;
-; CHECK-NEXT:    call (retval0), %rd1, (param0), prototype_0;
+; CHECK-NEXT:    mov.b64 %rd2, callee;
+; CHECK-NEXT:    call (retval0), %rd2, (param0), prototype_0;
 ; CHECK-NEXT:    ld.param.b8 %rd3, [retval0+7];
 ; CHECK-NEXT:    ld.param.b8 %rd4, [retval0+6];
 ; CHECK-NEXT:    ld.param.b8 %rd5, [retval0+5];
@@ -90,16 +90,16 @@ define i64 @test_param_count_mismatch(ptr %p) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd2, [test_param_count_mismatch_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_param_count_mismatch_param_0];
 ; CHECK-NEXT:    { // callseq 2, 0
 ; CHECK-NEXT:    .param .b64 param0;
 ; CHECK-NEXT:    .param .b64 param1;
 ; CHECK-NEXT:    .param .b64 retval0;
-; CHECK-NEXT:    st.param.b64 [param0], %rd2;
+; CHECK-NEXT:    st.param.b64 [param0], %rd1;
 ; CHECK-NEXT:    prototype_2 : .callprototype (.param .b64 _) _ (.param .b64 _, .param .b64 _);
 ; CHECK-NEXT:    st.param.b64 [param1], 7;
-; CHECK-NEXT:    mov.b64 %rd1, callee;
-; CHECK-NEXT:    call (retval0), %rd1, (param0, param1), prototype_2;
+; CHECK-NEXT:    mov.b64 %rd2, callee;
+; CHECK-NEXT:    call (retval0), %rd2, (param0, param1), prototype_2;
 ; CHECK-NEXT:    ld.param.b64 %rd3, [retval0];
 ; CHECK-NEXT:    } // callseq 2
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
@@ -114,14 +114,14 @@ define %struct.64 @test_return_type_mismatch_variadic(ptr %p) {
 ; CHECK-NEXT:    .reg .b64 %rd<40>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd2, [test_return_type_mismatch_variadic_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_return_type_mismatch_variadic_param_0];
 ; CHECK-NEXT:    { // callseq 3, 0
 ; CHECK-NEXT:    .param .b64 param0;
 ; CHECK-NEXT:    .param .align 1 .b8 retval0[8];
-; CHECK-NEXT:    st.param.b64 [param0], %rd2;
+; CHECK-NEXT:    st.param.b64 [param0], %rd1;
 ; CHECK-NEXT:    prototype_3 : .callprototype (.param .align 1 .b8 _[8]) _ (.param .b64 _);
-; CHECK-NEXT:    mov.b64 %rd1, callee_variadic;
-; CHECK-NEXT:    call (retval0), %rd1, (param0), prototype_3;
+; CHECK-NEXT:    mov.b64 %rd2, callee_variadic;
+; CHECK-NEXT:    call (retval0), %rd2, (param0), prototype_3;
 ; CHECK-NEXT:    ld.param.b8 %rd3, [retval0+7];
 ; CHECK-NEXT:    ld.param.b8 %rd4, [retval0+6];
 ; CHECK-NEXT:    ld.param.b8 %rd5, [retval0+5];
