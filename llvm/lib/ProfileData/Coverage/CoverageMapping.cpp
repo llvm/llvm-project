@@ -32,6 +32,7 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Object/ObjectFile.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -825,6 +826,7 @@ public:
 
 } // namespace
 
+
 Error CoverageMapping::loadFunctionRecord(
     const CoverageMappingRecord &Record,
     const std::optional<std::reference_wrapper<IndexedInstrProfReader>>
@@ -954,13 +956,13 @@ Error CoverageMapping::loadFunctionRecord(
   auto FilenamesHash = hash_combine_range(Record.Filenames);
   std::string HashStr = OrigFuncName.str();
   if(ShowArchExecutables){
-    HashStr += ":" + Arch.str();
+    HashStr += ":" + ObjectFilename.str();
   }else{
     auto LogicalFuncKey = std::make_pair(FilenamesHash, hash_value(OrigFuncName));
     auto It = RecordIndices.find(LogicalFuncKey);
     if (It != RecordIndices.end()) {
       auto &ExistingFunction = Functions[It->second];
-      // Create a map of existing regions for efficient lookup.
+      // Create a map of existing regions for lookup.
       // The key uniquely identifies the source region.
       using RegionKey = std::tuple<unsigned, unsigned, unsigned, unsigned, unsigned>;
       std::map<RegionKey, CountedRegion *> ExistingRegionsMap;
@@ -987,9 +989,7 @@ Error CoverageMapping::loadFunctionRecord(
           ExistingFunction.CountedRegions.push_back(NewRegion);
         }
       }
-      // Since we modified an existing function, we don't add a new one.
-      // We just need to make sure we don't add the new 'Function' object later.
-      // The logic below this block needs to be adjusted to handle this.
+
       return Error::success();
     }
     RecordIndices.insert({LogicalFuncKey, Functions.size()});
@@ -1048,7 +1048,7 @@ Error CoverageMapping::loadFromReaders(
     std::optional<std::reference_wrapper<IndexedInstrProfReader>>
         &ProfileReader,
     CoverageMapping &Coverage, StringRef Arch, StringRef ObjectFilename, bool ShowArchExecutables, bool MergeBinaryCoverage) {
-  
+
   assert(!Coverage.SingleByteCoverage || !ProfileReader ||
          *Coverage.SingleByteCoverage ==
              ProfileReader.value().get().hasSingleByteCoverage());
@@ -1447,16 +1447,16 @@ public:
 
     sortNestedRegions(Regions);
 
-    
-    //check to see if a skipped region from executable A is within a CodeRegion from executable B,
-    //promote to CodeRegion if skipped region does not show up on any other executable.
+    // check to see if a skipped region from executable A is within a CodeRegion
+    // from executable B, promote to CodeRegion if skipped region does not show
+    // up on any other executable.
     for(auto *I = Regions.begin(); I != Regions.end(); ++I){
       bool FoundMatchInOtherBinary = false;
       for(auto *J = I + 1; J != Regions.end(); ++J){
-        if(I->ObjectFilename != J->ObjectFilename &&
-            J->Kind == CounterMappingRegion::SkippedRegion 
-            && I->Kind != CounterMappingRegion::SkippedRegion &&
-            J->startLoc() >= I->startLoc() && J->endLoc() <= I->endLoc()){
+        if (I->ObjectFilename != J->ObjectFilename &&
+            J->Kind == CounterMappingRegion::SkippedRegion &&
+            I->Kind != CounterMappingRegion::SkippedRegion &&
+            J->startLoc() >= I->startLoc() && J->endLoc() <= I->endLoc()) {
           for(auto *K = J + 1; K != Regions.end(); ++K){
             if(K->ObjectFilename == I->ObjectFilename &&
               J->startLoc() == K->startLoc() && J->endLoc() == K->endLoc()){
@@ -1527,7 +1527,7 @@ static SmallBitVector gatherFileIDs(StringRef SourceFile,
 static std::optional<unsigned>
 findMainViewFileID(const FunctionRecord &Function) {
   SmallBitVector IsNotExpandedFile(Function.Filenames.size(), true);
-  for (const auto &CR : Function.CountedRegions){
+  for (const auto &CR : Function.CountedRegions) {
     if (CR.Kind == CounterMappingRegion::ExpansionRegion)
       IsNotExpandedFile[CR.ExpandedFileID] = false;
   }

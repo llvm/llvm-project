@@ -71,6 +71,8 @@ class SourceCoverageViewHTML : public SourceCoverageView {
 
   void renderSourceName(raw_ostream &OS, bool WholeFile) override;
 
+  void renderArchandObj(raw_ostream &OS, StringRef ObjectFilename) override;
+
   void renderLinePrefix(raw_ostream &OS, unsigned ViewDepth) override;
 
   void renderLineSuffix(raw_ostream &OS, unsigned ViewDepth) override;
@@ -94,12 +96,10 @@ class SourceCoverageViewHTML : public SourceCoverageView {
                       unsigned ViewDepth) override;
 
   void renderInstantiationView(raw_ostream &OS, InstantiationView &ISV,
-                               unsigned ViewDepth) override;
+                               unsigned ViewDepth, StringRef ObjectFilenames) override;
 
   void renderLineCoverageColumn(raw_ostream &OS,
                                 const LineCoverageStats &Line) override;
-
-  void renderArchLineCoverageColumn(raw_ostream &OS, const LineCoverageStats &Line, std::vector<std::vector<LineCoverageStats>> LineArchStats) override;
 
   void renderLineNumberColumn(raw_ostream &OS, unsigned LineNo) override;
 
@@ -113,8 +113,8 @@ class SourceCoverageViewHTML : public SourceCoverageView {
 public:
   SourceCoverageViewHTML(StringRef SourceName, const MemoryBuffer &File,
                          const CoverageViewOptions &Options,
-                         coverage::CoverageData &&CoverageInfo)
-      : SourceCoverageView(SourceName, File, Options, std::move(CoverageInfo)) {
+                         coverage::CoverageData &&CoverageInfo, std::vector<StringRef> ObjectFilenames)
+      : SourceCoverageView(SourceName, File, Options, std::move(CoverageInfo), ObjectFilenames) {
   }
 };
 

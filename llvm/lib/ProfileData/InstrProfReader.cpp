@@ -159,8 +159,7 @@ Expected<std::unique_ptr<InstrProfReader>> InstrProfReader::create(
     const InstrProfCorrelator *Correlator,
     const object::BuildIDFetcher *BIDFetcher,
     const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind,
-    std::function<void(Error)> Warn, 
-    StringRef ObjectFilename) {
+    std::function<void(Error)> Warn, StringRef ObjectFilename) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path, FS);
   if (Error E = BufferOrError.takeError())
@@ -196,7 +195,7 @@ Expected<std::unique_ptr<InstrProfReader>> InstrProfReader::create(
 
   // Initialize the reader and return the result.
 
-  //Pass the ObjectFilename to Result
+  // Pass the ObjectFilename to Result
   if(Result){
     Result->setObjectFilename(ObjectFilename);
   }
@@ -536,8 +535,7 @@ bool RawInstrProfReader<IntPtrT>::hasFormat(const MemoryBuffer &DataBuffer) {
          llvm::byteswap(RawInstrProf::getMagic<IntPtrT>()) == Magic;
 }
 
-template <class IntPtrT>
-Error RawInstrProfReader<IntPtrT>::readHeader() {
+template <class IntPtrT> Error RawInstrProfReader<IntPtrT>::readHeader() {
   if (!hasFormat(*DataBuffer))
     return error(instrprof_error::bad_magic);
   if (DataBuffer->getBufferSize() < sizeof(RawInstrProf::Header))

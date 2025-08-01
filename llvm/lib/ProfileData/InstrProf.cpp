@@ -622,7 +622,7 @@ Error InstrProfSymtab::create(StringRef NameStrings) {
 }
 
 Error InstrProfSymtab::create(StringRef FuncNameStrings,
-                              StringRef VTableNameStrings) {                          
+                              StringRef VTableNameStrings) {
   if (Error E = readAndDecodeStrings(FuncNameStrings, std::bind(&InstrProfSymtab::addFuncName, this, std::placeholders::_1)))
     return E;
 

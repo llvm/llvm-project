@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SourceCoverageView.h"
+#include "CoverageViewOptions.h"
 #include "SourceCoverageViewHTML.h"
 #include "SourceCoverageViewText.h"
 #include "llvm/ADT/SmallString.h"
@@ -147,14 +148,14 @@ bool SourceCoverageView::hasSubViews() const {
 std::unique_ptr<SourceCoverageView>
 SourceCoverageView::create(StringRef SourceName, const MemoryBuffer &File,
                            const CoverageViewOptions &Options,
-                           CoverageData &&CoverageInfo) {
+                           CoverageData &&CoverageInfo, std::vector<StringRef> ObjectFilenames) {
   switch (Options.Format) {
   case CoverageViewOptions::OutputFormat::Text:
     return std::make_unique<SourceCoverageViewText>(
-        SourceName, File, Options, std::move(CoverageInfo));
+        SourceName, File, Options, std::move(CoverageInfo), ObjectFilenames);
   case CoverageViewOptions::OutputFormat::HTML:
     return std::make_unique<SourceCoverageViewHTML>(
-        SourceName, File, Options, std::move(CoverageInfo));
+        SourceName, File, Options, std::move(CoverageInfo), ObjectFilenames);
   case CoverageViewOptions::OutputFormat::Lcov:
     // Unreachable because CodeCoverage.cpp should terminate with an error
     // before we get here.
@@ -194,14 +195,19 @@ void SourceCoverageView::addInstantiation(
 
 void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
                                bool ShowSourceName, bool ShowTitle,
-                               unsigned ViewDepth, StringRef SourceFile) {
+                               unsigned ViewDepth, StringRef ObjectFilename) {
   if (ShowTitle)
     renderTitle(OS, "Coverage Report");
 
   renderViewHeader(OS);
 
-  if (ShowSourceName)
+  if (ShowSourceName){
     renderSourceName(OS, WholeFile);
+    if(!ObjectFilename.empty()){
+      renderArchandObj(OS, ObjectFilename);
+    }
+  }
+
 
   renderTableHeader(OS, ViewDepth);
 
@@ -224,25 +230,8 @@ void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
   auto StartSegment = CoverageInfo.begin();
   auto EndSegment = CoverageInfo.end();
   LineCoverageIterator LCI{CoverageInfo, 1};
-  // LineCoverageIterator LCIInit{CoverageInfo, 1};
   LineCoverageIterator LCIEnd = LCI.getEnd();
   unsigned FirstLine = StartSegment != EndSegment ? StartSegment->Line : 0;
-  
-  // // Determine the number of lines in the file
-  // unsigned NumLines = 0;
-  // for (line_iterator LI(File, /*SkipBlanks=*/false); !LI.is_at_eof(); ++LI)
-  //   ++NumLines;
-  // // Resize the outer vector to hold one entry per line
-  // std::vector<std::vector<LineCoverageStats>> LineArchStats;
-  // LineArchStats.resize(CoverageArches.size()); // +1 in case line numbers are 1-based
-  // for (line_iterator LI(File, /*SkipBlanks=*/false); !LI.is_at_eof(); ++LI, ++LCIInit) {
-  //   unsigned LineNo = LCIInit->getLine();
-  //   if (LineNo >= LineArchStats.size()){
-  //     LineArchStats.resize(LineNo + 1); // Ensure enough space
-  //   }
-  //   LineArchStats[LineNo].push_back(*LCIInit); // Store the LineCoverageStats
-  // }
-
   for (line_iterator LI(File, /*SkipBlanks=*/false); !LI.is_at_eof();
        ++LI, ++LCI) {
     // If we aren't rendering the whole file, we need to filter out the prologue
@@ -260,7 +249,6 @@ void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
 
     if (getOptions().ShowLineStats)
       renderLineCoverageColumn(OS, *LCI);
-      // renderArchLineCoverageColumn(OS, *LCI, LineArchStats);
 
     // If there are expansion subviews, we want to highlight the first one.
     unsigned ExpansionColumn = 0;
@@ -294,8 +282,14 @@ void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
       RenderedSubView = true;
     }
     for (; NextISV != EndISV && NextISV->Line == LI.line_number(); ++NextISV) {
+      //ANDRES FIX HERE, ADD MAP FROM STRINGREF TO OBJECT FILE INDEX NEED TO PASS IN ObjectFilenames ARRAY INSTEAD OF ObjectFilename
       renderViewDivider(OS, ViewDepth + 1);
-      renderInstantiationView(OS, *NextISV, ViewDepth + 1);
+      renderInstantiationView(OS, *NextISV, ViewDepth + 1, ObjectFilenames[FunctionNameToObjectFile[NextISV->FunctionName]]);
+      if(FunctionNameToObjectFile.find(NextISV->FunctionName) == FunctionNameToObjectFile.end()){
+        FunctionNameToObjectFile[NextISV->FunctionName] = 0;
+      }else{
+        FunctionNameToObjectFile[NextISV->FunctionName] += (FunctionNameToObjectFile[NextISV->FunctionName] + 1) % ObjectFilenames.size();
+      }
       RenderedSubView = true;
     }
     for (; NextBRV != EndBRV && NextBRV->Line == LI.line_number(); ++NextBRV) {

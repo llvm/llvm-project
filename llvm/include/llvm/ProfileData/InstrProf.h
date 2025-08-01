@@ -646,7 +646,8 @@ public:
 
     uint64_t HashValue = IndexedInstrProf::ComputeHash(SymbolName);
     std::string HashStr(std::to_string(HashValue));
-    //if ObjectFilename is not empty from the --object-aware-hashing flag, add ObjectFilename to hash context
+    // if ObjectFilename is not empty from the --object-aware-hashing flag, add
+    // ObjectFilename to hash context
     if(!ObjectFilename.empty()){
       std::string CombinedStr = HashStr + ":" + ObjectFilename.str();
       StringRef HashRef = CombinedStr;

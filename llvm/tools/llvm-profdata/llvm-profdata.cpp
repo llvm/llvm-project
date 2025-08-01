@@ -712,10 +712,9 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   StringRef ObjectFilename = "";
 
   StringRef FilenameRef = Filename;
-  if(!ObjectAwareHashing.empty()){
+  if (!ObjectAwareHashing.empty()) {
     ObjectFilename = ObjectAwareHashing.data();
   }
-
 
   using ::llvm::memprof::RawMemProfReader;
   if (RawMemProfReader::hasFormat(ProfileFile)) {
@@ -805,8 +804,9 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   const ProfCorrelatorKind CorrelatorKind = BIDFetcherCorrelatorKind
                                                 ? *BIDFetcherCorrelatorKind
                                                 : ProfCorrelatorKind::NONE;
-  auto ReaderOrErr = InstrProfReader::create(ProfileFile, *FS, Correlator,
-                                             BIDFetcher, CorrelatorKind, Warn, ObjectFilename);
+  auto ReaderOrErr =
+      InstrProfReader::create(ProfileFile, *FS, Correlator, BIDFetcher,
+                              CorrelatorKind, Warn, ObjectFilename);
   if (Error E = ReaderOrErr.takeError()) {
     // Skip the empty profiles by returning silently.
     auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
@@ -1064,7 +1064,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
     for (int I = 0; I < int(Inputs.size()); ++I) {
       Pool.async(loadInput, Inputs[I], Remapper, Correlator.get(), ProfiledBinary,
                  Contexts[Ctx].get(), BIDFetcher.get(),
-                 &BIDFetcherCorrelateKind, !ObjectAwareHashing[I].empty() ? ObjectAwareHashing[I] : "");
+                 &BIDFetcherCorrelateKind, !ObjectAwareHashing.empty() ? ObjectAwareHashing[I] : "");
       Ctx = (Ctx + 1) % NumThreads;
     }
     Pool.wait();

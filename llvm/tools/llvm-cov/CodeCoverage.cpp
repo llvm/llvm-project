@@ -116,7 +116,7 @@ private:
 
   /// Create the main source view of a particular source file.
   std::unique_ptr<SourceCoverageView>
-  createSourceFileView(StringRef SourceFile, const CoverageMapping &Coverage, std::vector<StringRef> Arches);
+  createSourceFileView(StringRef SourceFile, const CoverageMapping &Coverage, std::vector<StringRef> Arches, std::vector<StringRef> ObjectFilenames = {});
 
   /// Load the coverage mapping data. Return nullptr if an error occurred.
   std::unique_ptr<CoverageMapping> load();
@@ -131,9 +131,10 @@ private:
   /// If a demangler is available, demangle all symbol names.
   void demangleSymbols(const CoverageMapping &Coverage);
 
-  /// Write out a source file view to the filesystem.
   void writeSourceFileView(StringRef SourceFile, CoverageMapping *Coverage,
-                           CoveragePrinter *Printer, bool ShowFilenames);
+                            CoveragePrinter *Printer, bool ShowFilenames, 
+                            std::vector<StringRef> ObjectFilenames);
+
 
   typedef llvm::function_ref<int(int, const char **)> CommandLineParserType;
 
@@ -393,7 +394,7 @@ CodeCoverageTool::createFunctionView(const FunctionRecord &Function,
 
 std::unique_ptr<SourceCoverageView>
 CodeCoverageTool::createSourceFileView(StringRef SourceFile,
-                                       const CoverageMapping &Coverage, std::vector<StringRef> Arches) {
+                                       const CoverageMapping &Coverage, std::vector<StringRef> Arches, std::vector<StringRef>ObjectFilenames) {
   auto SourceBuffer = getSourceFile(SourceFile);
   if (!SourceBuffer)
     return nullptr;
@@ -405,7 +406,7 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
   auto Expansions = FileCoverage.getExpansions();
   auto MCDCRecords = FileCoverage.getMCDCRecords();
   auto View = SourceCoverageView::create(SourceFile, SourceBuffer.get(),
-                                         ViewOpts, std::move(FileCoverage));
+                                         ViewOpts, std::move(FileCoverage), ObjectFilenames);
   attachExpansionSubViews(*View, Expansions, Coverage);
   attachBranchSubViews(*View, Branches);
   attachMCDCSubViews(*View, MCDCRecords);
@@ -456,27 +457,6 @@ static bool modifiedTimeGT(StringRef LHS, StringRef RHS) {
   return LHSTime > RHSTime;
 }
 
-// void mergeExecutionCounts(CoverageMapping &Coverage){
-//   std::map<std::string, std::vector<const FunctionRecord*>> functionGroups;
-
-//   for(const auto &Function : Coverage.getCoveredFunctions()){
-//     if(Function.CountedRegions.empty()) continue;
-//     const auto &MainRegion = Function.CountedRegions.front();
-//     const std::string Key = Function.Name + ":" + std::to_string(MainRegion.LineStart) + ":" + std::to_string(MainRegion.ColumnStart) + ":" + (Function.Filenames.empty() ? "" : std::string(Function.Filenames[0]));
-//     functionGroups[Key].push_back(&Function);
-//     llvm::errs() << Key << "\n";
-//   }
-
-//   for(auto &Group : functionGroups){
-//     if(Group.second.size() > 1){
-//       uint64_t TotalCount = 0;
-//       for(auto *Func : Group.second){
-//         TotalCount += Func->ExecutionCount;
-//       }
-//     }
-//   }
-// }
-
 std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
   if (PGOFilename) {
     for (StringRef ObjectFilename : ObjectFilenames)
@@ -506,9 +486,6 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
                << '\n';
     }
   }
-
-  // mergeExecutionCounts(*Coverage);
-
   remapPathNames(*Coverage);
 
   if (!SourceFiles.empty())
@@ -658,8 +635,9 @@ void CodeCoverageTool::demangleSymbols(const CoverageMapping &Coverage) {
 void CodeCoverageTool::writeSourceFileView(StringRef SourceFile,
                                            CoverageMapping *Coverage,
                                            CoveragePrinter *Printer,
-                                           bool ShowFilenames) {
-  auto View = createSourceFileView(SourceFile, *Coverage, CoverageArches);
+                                           bool ShowFilenames, 
+                                           std::vector<StringRef> ObjectFilenames) {
+  auto View = createSourceFileView(SourceFile, *Coverage, CoverageArches, ObjectFilenames);
   if (!View) {
     warning("The file '" + SourceFile + "' isn't covered.");
     return;
@@ -674,7 +652,7 @@ void CodeCoverageTool::writeSourceFileView(StringRef SourceFile,
 
   View->print(*OS.get(), /*Wholefile=*/true,
               /*ShowSourceName=*/ShowFilenames,
-              /*ShowTitle=*/ViewOpts.hasOutputDirectory());
+              /*ShowTitle=*/ViewOpts.hasOutputDirectory(), ViewOpts.ShowArchExecutables);
   Printer->closeViewFile(std::move(OS));
 }
 
@@ -1262,13 +1240,13 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   if (!ViewOpts.hasOutputDirectory() || S.ThreadsRequested == 1) {
     for (const std::string &SourceFile : SourceFiles)
       writeSourceFileView(SourceFile, Coverage.get(), Printer.get(),
-                          ShowFilenames);
+                          ShowFilenames, ObjectFilenames);
   } else {
     // In -output-dir mode, it's safe to use multiple threads to print files.
     DefaultThreadPool Pool(S);
     for (const std::string &SourceFile : SourceFiles)
-      Pool.async(&CodeCoverageTool::writeSourceFileView, this, SourceFile,
-                 Coverage.get(), Printer.get(), ShowFilenames);
+      Pool.async(static_cast<void (CodeCoverageTool::*)(StringRef, CoverageMapping *, CoveragePrinter *, bool, std::vector<StringRef>)>(&CodeCoverageTool::writeSourceFileView), this, SourceFile,
+                 Coverage.get(), Printer.get(), ShowFilenames, ObjectFilenames);
     Pool.wait();
   }
 

@@ -162,7 +162,7 @@ public:
   LLVM_ABI void accumulateCounts(CountSumOrPercent &Sum, bool IsCS);
 
 protected:
-  //Storing ObjectFilename Information as a string
+  // Storing ObjectFilename Information as a string
   std::string ObjectFilename;
 
   std::unique_ptr<InstrProfSymtab> Symtab;

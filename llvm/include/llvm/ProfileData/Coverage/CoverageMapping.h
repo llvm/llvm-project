@@ -1018,6 +1018,7 @@ class CoverageMapping {
   DenseMap<std::pair<size_t, hash_code>, unsigned> RecordIndices;
   uint64_t DebugCount = 0;
   std::vector<FunctionRecord> AllFunctionRegions;
+  StringRef ObjectFilename;
 
 
   std::map<std::pair<std::string, std::string>, std::vector<uint64_t>> AggregatedCounts;
@@ -1072,6 +1073,12 @@ public:
   void setArchitecture(StringRef NewArch){
     Arch = StringRef(NewArch);
   }
+
+  void setObjectFilename(StringRef ObjectFilename){
+    this->ObjectFilename = StringRef(ObjectFilename);
+  }
+
+  const StringRef &getObjectFilename() const { return this->ObjectFilename; }
 
   CoverageMapping(const CoverageMapping &) = delete;
   CoverageMapping &operator=(const CoverageMapping &) = delete;

@@ -195,13 +195,11 @@ void InstrProfWriter::overlapRecord(NamedInstrProfRecord &&Other,
   Dest.overlap(Other, Overlap, FuncLevelOverlap, ValueCutoff);
 }
 
-
-
 void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
                                 InstrProfRecord &&I, uint64_t Weight,
                                 function_ref<void(Error)> Warn, StringRef ObjectFilename) {
   auto &ProfileDataMap = FunctionData[Name];
-  //add objectFilename to hash value if --object-aware-hashing is used
+  // add objectFilename to hash value if --object-aware-hashing is used
   if(!ObjectFilename.empty()){
     std::string HashStr = std::to_string(Hash) + ":" + ObjectFilename.str();
     llvm::StringRef HashRef(HashStr);
