@@ -11,7 +11,6 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSPIRVObjectWriter.h"
-#include "llvm/Support/EndianStream.h"
 
 using namespace llvm;
 

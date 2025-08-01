@@ -162,15 +162,18 @@ bool AddressRange::Dump(Stream *s, Target *target, Address::DumpStyle style,
   default:
     break;
   case Address::DumpStyleSectionNameOffset:
-  case Address::DumpStyleSectionPointerOffset:
+  case Address::DumpStyleSectionPointerOffset: {
     s->PutChar('[');
     m_base_addr.Dump(s, target, style, fallback_style);
     s->PutChar('-');
-    DumpAddress(s->AsRawOstream(), m_base_addr.GetOffset() + GetByteSize(),
-                addr_size);
+    addr_t end = m_base_addr.GetOffset() + GetByteSize();
+    if (m_base_addr.GetSection())
+      s->Format("{0}", end);
+    else
+      DumpAddress(s->AsRawOstream(), end, addr_size);
     s->PutChar(')');
     return true;
-    break;
+  }
 
   case Address::DumpStyleModuleWithFileAddress:
     show_module = true;

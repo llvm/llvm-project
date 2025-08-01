@@ -134,7 +134,7 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_VectorCall:                                              \
   case ParsedAttr::AT_AArch64VectorPcs:                                        \
   case ParsedAttr::AT_AArch64SVEPcs:                                           \
-  case ParsedAttr::AT_AMDGPUKernelCall:                                        \
+  case ParsedAttr::AT_DeviceKernel:                                            \
   case ParsedAttr::AT_MSABI:                                                   \
   case ParsedAttr::AT_SysVABI:                                                 \
   case ParsedAttr::AT_Pcs:                                                     \
@@ -155,6 +155,7 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_Blocking:                                                \
   case ParsedAttr::AT_Allocating:                                              \
   case ParsedAttr::AT_Regparm:                                                 \
+  case ParsedAttr::AT_CFIUncheckedCallee:                                      \
   case ParsedAttr::AT_CmseNSCall:                                              \
   case ParsedAttr::AT_ArmStreaming:                                            \
   case ParsedAttr::AT_ArmStreamingCompatible:                                  \
@@ -3754,18 +3755,7 @@ static CallingConv getCCForDeclaratorChunk(
   CallingConv CC = S.Context.getDefaultCallingConvention(FTI.isVariadic,
                                                          IsCXXInstanceMethod);
 
-  // Attribute AT_OpenCLKernel affects the calling convention for SPIR
-  // and AMDGPU targets, hence it cannot be treated as a calling
-  // convention attribute. This is the simplest place to infer
-  // calling convention for OpenCL kernels.
-  if (S.getLangOpts().OpenCL) {
-    for (const ParsedAttr &AL : D.getDeclSpec().getAttributes()) {
-      if (AL.getKind() == ParsedAttr::AT_OpenCLKernel) {
-        CC = CC_OpenCLKernel;
-        break;
-      }
-    }
-  } else if (S.getLangOpts().CUDA) {
+  if (S.getLangOpts().CUDA) {
     // If we're compiling CUDA/HIP code and targeting HIPSPV we need to make
     // sure the kernels will be marked with the right calling convention so that
     // they will be visible by the APIs that ingest SPIR-V. We do not do this
@@ -3774,13 +3764,20 @@ static CallingConv getCCForDeclaratorChunk(
     if (Triple.isSPIRV() && Triple.getVendor() != llvm::Triple::AMD) {
       for (const ParsedAttr &AL : D.getDeclSpec().getAttributes()) {
         if (AL.getKind() == ParsedAttr::AT_CUDAGlobal) {
-          CC = CC_OpenCLKernel;
+          CC = CC_DeviceKernel;
           break;
         }
       }
     }
   }
-
+  if (!S.getLangOpts().isSYCL()) {
+    for (const ParsedAttr &AL : D.getDeclSpec().getAttributes()) {
+      if (AL.getKind() == ParsedAttr::AT_DeviceKernel) {
+        CC = CC_DeviceKernel;
+        break;
+      }
+    }
+  }
   return CC;
 }
 
@@ -4555,7 +4552,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                                           false /*IsRegularKeywordAttribute*/);
       ParsedAttr *nullabilityAttr = Pool.create(
           S.getNullabilityKeyword(*inferNullability), SourceRange(pointerLoc),
-          nullptr, SourceLocation(), nullptr, 0, form);
+          AttributeScopeInfo(), nullptr, 0, form);
 
       attrs.addAtEnd(nullabilityAttr);
 
@@ -4730,7 +4727,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         // Build the type anyway.
       }
       DeclaratorChunk::ArrayTypeInfo &ATI = DeclType.Arr;
-      Expr *ArraySize = static_cast<Expr*>(ATI.NumElts);
+      Expr *ArraySize = ATI.NumElts;
       ArraySizeModifier ASM;
 
       // Microsoft property fields can have multiple sizeless array chunks
@@ -4863,7 +4860,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             S.Diag(First->getBeginLoc(),
                    diag::err_explicit_object_parameter_invalid)
                 << First->getSourceRange();
-
+          // Do let non-member function have explicit parameters
+          // to not break assumptions elsewhere in the code.
+          First->setExplicitObjectParameterLoc(SourceLocation());
           D.setInvalidType();
           AreDeclaratorChunksValid = false;
         }
@@ -5738,10 +5737,10 @@ static void transferARCOwnershipToDeclaratorChunk(TypeProcessingState &state,
 
   // If there wasn't one, add one (with an invalid source location
   // so that we don't make an AttributedType for it).
-  ParsedAttr *attr = D.getAttributePool().create(
-      &S.Context.Idents.get("objc_ownership"), SourceLocation(),
-      /*scope*/ nullptr, SourceLocation(),
-      /*args*/ &Args, 1, ParsedAttr::Form::GNU());
+  ParsedAttr *attr =
+      D.getAttributePool().create(&S.Context.Idents.get("objc_ownership"),
+                                  SourceLocation(), AttributeScopeInfo(),
+                                  /*args*/ &Args, 1, ParsedAttr::Form::GNU());
   chunk.getAttrs().addAtEnd(attr);
   // TODO: mark whether we did this inference?
 }
@@ -5888,6 +5887,7 @@ namespace {
       Visit(TL.getWrappedLoc());
       fillHLSLAttributedResourceTypeLoc(TL, State);
     }
+    void VisitHLSLInlineSpirvTypeLoc(HLSLInlineSpirvTypeLoc TL) {}
     void VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
       Visit(TL.getInnerLoc());
       TL.setExpansionLoc(
@@ -6533,7 +6533,7 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
       return;
     }
 
-    Expr *ASArgExpr = static_cast<Expr *>(Attr.getArgAsExpr(0));
+    Expr *ASArgExpr = Attr.getArgAsExpr(0);
     LangAS ASIdx;
     if (!BuildAddressSpaceIndex(S, ASIdx, ASArgExpr, Attr.getLoc())) {
       Attr.setInvalid();
@@ -7530,8 +7530,8 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     return createSimpleAttr<AArch64SVEPcsAttr>(Ctx, Attr);
   case ParsedAttr::AT_ArmStreaming:
     return createSimpleAttr<ArmStreamingAttr>(Ctx, Attr);
-  case ParsedAttr::AT_AMDGPUKernelCall:
-    return createSimpleAttr<AMDGPUKernelCallAttr>(Ctx, Attr);
+  case ParsedAttr::AT_DeviceKernel:
+    return createSimpleAttr<DeviceKernelAttr>(Ctx, Attr);
   case ParsedAttr::AT_Pcs: {
     // The attribute may have had a fixit applied where we treated an
     // identifier as a string literal.  The contents of the string are valid,
@@ -7810,6 +7810,27 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     // Otherwise we can process right away.
     FunctionType::ExtInfo EI = unwrapped.get()->getExtInfo().withNoReturn(true);
     type = unwrapped.wrap(S, S.Context.adjustFunctionType(unwrapped.get(), EI));
+    return true;
+  }
+
+  if (attr.getKind() == ParsedAttr::AT_CFIUncheckedCallee) {
+    // Delay if this is not a prototyped function type.
+    if (!unwrapped.isFunctionType())
+      return false;
+
+    if (!unwrapped.get()->isFunctionProtoType()) {
+      S.Diag(attr.getLoc(), diag::warn_attribute_wrong_decl_type)
+          << attr << attr.isRegularKeywordAttribute()
+          << ExpectedFunctionWithProtoType;
+      attr.setInvalid();
+      return true;
+    }
+
+    const auto *FPT = unwrapped.get()->getAs<FunctionProtoType>();
+    type = S.Context.getFunctionType(
+        FPT->getReturnType(), FPT->getParamTypes(),
+        FPT->getExtProtoInfo().withCFIUncheckedCallee(true));
+    type = unwrapped.wrap(S, cast<FunctionType>(type.getTypePtr()));
     return true;
   }
 
@@ -8503,8 +8524,8 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
     return;
   }
 
-  auto VScale =
-      S.Context.getTargetInfo().getVScaleRange(S.getLangOpts(), false);
+  auto VScale = S.Context.getTargetInfo().getVScaleRange(
+      S.getLangOpts(), TargetInfo::ArmStreamingKind::NotStreaming);
   if (!VScale || !VScale->first || VScale->first != VScale->second) {
     S.Diag(Attr.getLoc(), diag::err_attribute_riscv_rvv_bits_unsupported)
         << Attr;
@@ -8717,6 +8738,16 @@ static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
       Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_out) {
     State.setParsedHLSLParamMod(true);
   }
+}
+
+static bool isMultiSubjectAttrAllowedOnType(const ParsedAttr &Attr) {
+  // The DeviceKernel attribute is shared for many targets, and
+  // it is only allowed to be a type attribute with the AMDGPU
+  // spelling, so skip processing the attr as a type attr
+  // unless it has that spelling.
+  if (Attr.getKind() != ParsedAttr::AT_DeviceKernel)
+    return true;
+  return DeviceKernelAttr::isAMDGPUSpelling(Attr);
 }
 
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
@@ -8972,6 +9003,9 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
         break;
       [[fallthrough]];
     FUNCTION_TYPE_ATTRS_CASELIST:
+      if (!isMultiSubjectAttrAllowedOnType(attr))
+        break;
+
       attr.setUsedAsTypeAttr();
 
       // Attributes with standard syntax have strict rules for what they

@@ -9,7 +9,6 @@
 #include <chrono>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace chrono {
 
@@ -20,5 +19,4 @@ _LIBCPP_EXPORTED_FROM_ABI ambiguous_local_time::~ambiguous_local_time() = defaul
 
 } // namespace chrono
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

@@ -504,13 +504,21 @@ bool MIRParserImpl::initializeCallSiteInfo(
         return error(Error, ArgRegPair.Reg.SourceRange);
       CSInfo.ArgRegPairs.emplace_back(Reg, ArgRegPair.ArgNo);
     }
+    if (!YamlCSInfo.CalleeTypeIds.empty()) {
+      for (auto CalleeTypeId : YamlCSInfo.CalleeTypeIds) {
+        IntegerType *Int64Ty = Type::getInt64Ty(Context);
+        CSInfo.CalleeTypeIds.push_back(ConstantInt::get(Int64Ty, CalleeTypeId,
+                                                        /*isSigned=*/false));
+      }
+    }
 
-    if (TM.Options.EmitCallSiteInfo)
+    if (TM.Options.EmitCallSiteInfo || TM.Options.EmitCallGraphSection)
       MF.addCallSiteInfo(&*CallI, std::move(CSInfo));
   }
 
-  if (YamlMF.CallSitesInfo.size() && !TM.Options.EmitCallSiteInfo)
-    return error(Twine("Call site info provided but not used"));
+  if (!YamlMF.CallSitesInfo.empty() &&
+      !(TM.Options.EmitCallSiteInfo || TM.Options.EmitCallGraphSection))
+    return error("call site info provided but not used");
   return false;
 }
 
@@ -763,22 +771,25 @@ bool MIRParserImpl::setupRegisterInfo(const PerFunctionMIParsingState &PFS,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
 
-  bool Error = false;
+  SmallVector<std::string> Errors;
+
   // Create VRegs
   auto populateVRegInfo = [&](const VRegInfo &Info, const Twine &Name) {
     Register Reg = Info.VReg;
     switch (Info.Kind) {
     case VRegInfo::UNKNOWN:
-      error(Twine("Cannot determine class/bank of virtual register ") +
-            Name + " in function '" + MF.getName() + "'");
-      Error = true;
+      Errors.push_back(
+          (Twine("Cannot determine class/bank of virtual register ") + Name +
+           " in function '" + MF.getName() + "'")
+              .str());
       break;
     case VRegInfo::NORMAL:
       if (!Info.D.RC->isAllocatable()) {
-        error(Twine("Cannot use non-allocatable class '") +
-              TRI->getRegClassName(Info.D.RC) + "' for virtual register " +
-              Name + " in function '" + MF.getName() + "'");
-        Error = true;
+        Errors.push_back((Twine("Cannot use non-allocatable class '") +
+                          TRI->getRegClassName(Info.D.RC) +
+                          "' for virtual register " + Name + " in function '" +
+                          MF.getName() + "'")
+                             .str());
         break;
       }
 
@@ -820,7 +831,14 @@ bool MIRParserImpl::setupRegisterInfo(const PerFunctionMIParsingState &PFS,
     }
   }
 
-  return Error;
+  if (Errors.empty())
+    return false;
+
+  // Report errors in a deterministic order.
+  sort(Errors);
+  for (auto &E : Errors)
+    error(E);
+  return true;
 }
 
 bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,

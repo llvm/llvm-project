@@ -2,7 +2,7 @@
 ; RUN: opt -S -passes=newgvn < %s | FileCheck %s
 
 
-; FIXME: MemorySSA says that load1 depends on the lifetime start.
+; MemorySSA says that load1 depends on the lifetime start.
 ; That's OK since MemorySSA is may-alias; however, NewGVN should
 ; check whether the lifetime start *actually* defines the loaded pointer
 ; before simplifying to uninitialized memory.
@@ -13,7 +13,8 @@ define void @foo(ptr %arg) {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i8, align 16
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[ALLOCA]])
 ; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[ARG]], align 8
-; CHECK-NEXT:    [[CALL:%.*]] = call ptr undef(ptr [[ALLOCA]])
+; CHECK-NEXT:    [[LOAD1:%.*]] = load ptr, ptr [[LOAD]], align 8
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr [[LOAD1]](ptr [[ALLOCA]])
 ; CHECK-NEXT:    ret void
 ;
 bb:

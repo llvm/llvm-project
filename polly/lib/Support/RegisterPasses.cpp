@@ -541,7 +541,6 @@ static bool
 parseTopLevelPipeline(llvm::ModulePassManager &MPM,
                       PassInstrumentationCallbacks *PIC,
                       ArrayRef<PassBuilder::PipelineElement> Pipeline) {
-  std::vector<PassBuilder::PipelineElement> FullPipeline;
   StringRef FirstName = Pipeline.front().Name;
 
   if (!isScopPassName(FirstName))

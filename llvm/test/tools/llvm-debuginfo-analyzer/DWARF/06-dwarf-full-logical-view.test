@@ -28,6 +28,7 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [0x000000000b][001]              {CompileUnit} 'test.cpp'
 ; ONE-NEXT: [0x000000000b][002]                {Producer} 'clang version 15.0.0 {{.*}}'
+; ONE-NEXT: [0x000000000b][002]                {Language} 'DW_LANG_C_plus_plus_14'
 ; ONE-NEXT:                                    {Directory} '/data/projects/tests/input/general'
 ; ONE-NEXT:                                    {File} 'test.cpp'
 ; ONE-NEXT:                                    {Public} 'foo' [0x0000000000:0x000000003a]

@@ -40,14 +40,12 @@
 
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 
-#include <optional>
 #include <random>
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Dominance.h"
@@ -1379,7 +1377,7 @@ LogicalResult bufferization::runOneShotBufferize(
     // Run One-Shot Analysis and insert buffer copies (on the tensor level)
     // only where needed. This is the default and much more efficient than
     // copy-before-write.
-    if (failed(insertTensorCopies(op, options, statistics)))
+    if (failed(insertTensorCopies(op, options, state, statistics)))
       return failure();
 
     // If test-analysis-only is set, the IR was annotated with RaW conflict

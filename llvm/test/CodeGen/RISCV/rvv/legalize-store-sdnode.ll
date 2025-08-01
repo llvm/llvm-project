@@ -8,9 +8,9 @@ define void @store_nxv3i8(<vscale x 3 x i8> %val, ptr %ptr) {
 ; CHECK-LABEL: store_nxv3i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a1, a1, 3
-; CHECK-NEXT:    slli a2, a1, 1
-; CHECK-NEXT:    add a1, a2, a1
+; CHECK-NEXT:    srli a2, a1, 3
+; CHECK-NEXT:    srli a1, a1, 2
+; CHECK-NEXT:    add a1, a1, a2
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret

@@ -18,6 +18,7 @@
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 
@@ -46,8 +47,8 @@ static MCDisassembler *createSparcDisassembler(const Target &T,
   return new SparcDisassembler(STI, Ctx);
 }
 
-
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSparcDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheSparcTarget(),
                                          createSparcDisassembler);
@@ -261,6 +262,8 @@ DecodeCoprocPairRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
 
 static DecodeStatus DecodeCall(MCInst &Inst, unsigned insn, uint64_t Address,
                                const MCDisassembler *Decoder);
+static DecodeStatus DecodeSIMM5(MCInst &Inst, unsigned insn, uint64_t Address,
+                                const MCDisassembler *Decoder);
 static DecodeStatus DecodeSIMM13(MCInst &Inst, unsigned insn, uint64_t Address,
                                  const MCDisassembler *Decoder);
 template <unsigned N>
@@ -333,6 +336,13 @@ static DecodeStatus DecodeCall(MCInst &MI, unsigned insn, uint64_t Address,
   if (!tryAddingSymbolicOperand(Address + CallOffset, false, Address, 0, 30, MI,
                                 Decoder))
     MI.addOperand(MCOperand::createImm(CallOffset));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeSIMM5(MCInst &MI, unsigned insn, uint64_t Address,
+                                const MCDisassembler *Decoder) {
+  assert(isUInt<5>(insn));
+  MI.addOperand(MCOperand::createImm(SignExtend64<5>(insn)));
   return MCDisassembler::Success;
 }
 

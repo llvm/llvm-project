@@ -138,6 +138,14 @@ let Attributes = [Const, NoThrow, RequiredVectorWidth<256>], Features = "avx" in
   }
 }
 
+let Features = "mmx", Header = "mmintrin.h", Attributes = [NoThrow, Const] in {
+  def _m_prefetch : X86LibBuiltin<"void(void *)">;
+}
+
+// PRFCHW
+let Features = "prfchw", Header = "intrin.h", Attributes = [NoThrow, Const] in {
+  def _m_prefetchw : X86LibBuiltin<"void(void volatile const *)">;
+}
 
 // Mechanically ported builtins from the original `.def` file.
 //
@@ -146,8 +154,8 @@ let Attributes = [Const, NoThrow, RequiredVectorWidth<256>], Features = "avx" in
 // current formulation is based on what was easiest to recognize from the
 // pre-TableGen version.
 
-let Features = "mmx", Attributes = [NoThrow, Const] in {
-  def _mm_prefetch : X86NoPrefixBuiltin<"void(char const *, int)">;
+let Features = "sse", Header = "xmmintrin.h", Attributes = [NoThrow, Const] in {
+  def _mm_prefetch : X86LibBuiltin<"void(char const *, int)">;
 }
 
 let Features = "sse", Attributes = [NoThrow] in {

@@ -682,11 +682,18 @@ m:
 }
 
 define internal void @write_then_barrier0(ptr %p) {
-; CHECK-LABEL: define {{[^@]+}}@write_then_barrier0
-; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
-; CHECK-NEXT:    call void @aligned_barrier()
-; CHECK-NEXT:    ret void
+; MODULE-LABEL: define {{[^@]+}}@write_then_barrier0
+; MODULE-SAME: (ptr [[P:%.*]]) {
+; MODULE-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[P]] to ptr addrspace(1)
+; MODULE-NEXT:    store i32 0, ptr addrspace(1) [[TMP1]], align 4
+; MODULE-NEXT:    call void @aligned_barrier()
+; MODULE-NEXT:    ret void
+;
+; CGSCC-LABEL: define {{[^@]+}}@write_then_barrier0
+; CGSCC-SAME: (ptr [[P:%.*]]) {
+; CGSCC-NEXT:    store i32 0, ptr [[P]], align 4
+; CGSCC-NEXT:    call void @aligned_barrier()
+; CGSCC-NEXT:    ret void
 ;
   store i32 0, ptr %p
   call void @aligned_barrier()
@@ -695,7 +702,8 @@ define internal void @write_then_barrier0(ptr %p) {
 define internal void @barrier_then_write0(ptr %p) {
 ; MODULE-LABEL: define {{[^@]+}}@barrier_then_write0
 ; MODULE-SAME: (ptr [[P:%.*]]) {
-; MODULE-NEXT:    store i32 0, ptr [[P]], align 4
+; MODULE-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[P]] to ptr addrspace(1)
+; MODULE-NEXT:    store i32 0, ptr addrspace(1) [[TMP1]], align 4
 ; MODULE-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@barrier_then_write0
@@ -711,7 +719,8 @@ define internal void @barrier_then_write0(ptr %p) {
 define internal void @barrier_then_write_then_barrier0(ptr %p) {
 ; MODULE-LABEL: define {{[^@]+}}@barrier_then_write_then_barrier0
 ; MODULE-SAME: (ptr [[P:%.*]]) {
-; MODULE-NEXT:    store i32 0, ptr [[P]], align 4
+; MODULE-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[P]] to ptr addrspace(1)
+; MODULE-NEXT:    store i32 0, ptr addrspace(1) [[TMP1]], align 4
 ; MODULE-NEXT:    call void @aligned_barrier()
 ; MODULE-NEXT:    ret void
 ;

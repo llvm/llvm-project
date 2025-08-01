@@ -53,3 +53,8 @@ qc.e.li x10, 4294967295
 # CHECK-NOALIAS: c.li a0, 31
 # CHECK-ENC: encoding: [0x7d,0x45]
 qc.li x10, 31
+
+# CHECK-ALIAS: li a0, 4294
+# CHECK-NOALIAS: qc.li a0, 4294
+# CHECK-ENC: encoding: [0x1b,0x05,0xc6,0x10]
+qc.e.li x10, 4294

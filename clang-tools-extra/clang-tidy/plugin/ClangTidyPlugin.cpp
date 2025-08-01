@@ -41,7 +41,7 @@ public:
         new ClangTidyDiagnosticConsumer(*Context, &Compiler.getDiagnostics());
     auto DiagOpts = std::make_unique<DiagnosticOptions>();
     auto DiagEngine = std::make_unique<DiagnosticsEngine>(
-        new DiagnosticIDs, *DiagOpts, DiagConsumer);
+        DiagnosticIDs::create(), *DiagOpts, DiagConsumer);
     Context->setDiagnosticsEngine(std::move(DiagOpts), DiagEngine.get());
 
     // Create the AST consumer.
@@ -78,6 +78,7 @@ private:
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the clang-tidy plugin.
+// NOLINTNEXTLINE(misc-use-internal-linkage)
 volatile int ClangTidyPluginAnchorSource = 0;
 
 static clang::FrontendPluginRegistry::Add<clang::tidy::ClangTidyPluginAction>

@@ -15,6 +15,8 @@
 
 namespace Fortran::runtime::io {
 
+RT_OFFLOAD_API_GROUP_BEGIN
+
 RT_API_ATTRS bool EditIntegerInput(
     IoStatementState &, const DataEdit &, void *, int kind, bool isSigned);
 
@@ -48,6 +50,8 @@ extern template RT_API_ATTRS bool EditCharacterInput(
     IoStatementState &, const DataEdit &, char16_t *, std::size_t);
 extern template RT_API_ATTRS bool EditCharacterInput(
     IoStatementState &, const DataEdit &, char32_t *, std::size_t);
+
+RT_OFFLOAD_API_GROUP_END
 
 } // namespace Fortran::runtime::io
 #endif // FLANG_RT_RUNTIME_EDIT_INPUT_H_

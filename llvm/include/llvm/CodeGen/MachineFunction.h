@@ -75,12 +75,12 @@ struct WasmEHFuncInfo;
 struct WinEHFuncInfo;
 
 template <> struct ilist_alloc_traits<MachineBasicBlock> {
-  void deleteNode(MachineBasicBlock *MBB);
+  LLVM_ABI void deleteNode(MachineBasicBlock *MBB);
 };
 
 template <> struct ilist_callback_traits<MachineBasicBlock> {
-  void addNodeToList(MachineBasicBlock* N);
-  void removeNodeFromList(MachineBasicBlock* N);
+  LLVM_ABI void addNodeToList(MachineBasicBlock *N);
+  LLVM_ABI void removeNodeFromList(MachineBasicBlock *N);
 
   template <class Iterator>
   void transferNodesFromList(ilist_callback_traits &OldList, Iterator, Iterator) {
@@ -101,7 +101,7 @@ enum class MachineFunctionDataHotness {
 /// hold private target-specific information for each MachineFunction.  Objects
 /// of type are accessed/created with MF::getInfo and destroyed when the
 /// MachineFunction is destroyed.
-struct MachineFunctionInfo {
+struct LLVM_ABI MachineFunctionInfo {
   virtual ~MachineFunctionInfo();
 
   /// Factory function: default behavior is to call new using the
@@ -256,7 +256,7 @@ public:
   }
 
   /// Print the MachineFunctionProperties in human-readable form.
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
 private:
   std::bitset<static_cast<unsigned>(Property::LastProperty) + 1> Properties;
@@ -485,7 +485,7 @@ public:
     }
   };
 
-  class Delegate {
+  class LLVM_ABI Delegate {
     virtual void anchor();
 
   public:
@@ -515,6 +515,15 @@ public:
   struct CallSiteInfo {
     /// Vector of call argument and its forwarding register.
     SmallVector<ArgRegPair, 1> ArgRegPairs;
+    /// Callee type ids.
+    SmallVector<ConstantInt *, 4> CalleeTypeIds;
+
+    CallSiteInfo() = default;
+
+    /// Extracts the numeric type id from the CallBase's callee_type Metadata,
+    /// and sets CalleeTypeIds. This is used as type id for the indirect call in
+    /// the call graph section.
+    CallSiteInfo(const CallBase &CB);
   };
 
   struct CalledGlobalInfo {
@@ -522,11 +531,12 @@ public:
     unsigned TargetFlags;
   };
 
+  using CallSiteInfoMap = DenseMap<const MachineInstr *, CallSiteInfo>;
+
 private:
   Delegate *TheDelegate = nullptr;
   GISelChangeObserver *Observer = nullptr;
 
-  using CallSiteInfoMap = DenseMap<const MachineInstr *, CallSiteInfo>;
   /// Map a call instruction to call site arguments forwarding info.
   CallSiteInfoMap CallSitesInfo;
 
@@ -1563,8 +1573,8 @@ template <> struct GraphTraits<Inverse<const MachineFunction*>> :
   }
 };
 
-void verifyMachineFunction(const std::string &Banner,
-                           const MachineFunction &MF);
+LLVM_ABI void verifyMachineFunction(const std::string &Banner,
+                                    const MachineFunction &MF);
 
 } // end namespace llvm
 

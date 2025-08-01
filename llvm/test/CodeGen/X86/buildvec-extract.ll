@@ -42,7 +42,7 @@ define <2 x i64> @extract0_i32_zext_insert0_i64_zero(<4 x i32> %x) {
 ; AVX-LABEL: extract0_i32_zext_insert0_i64_zero:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
   %e = extractelement <4 x i32> %x, i32 0
   %z = zext i32 %e to i64
@@ -85,7 +85,7 @@ define <2 x i64> @extract1_i32_zext_insert0_i64_zero(<4 x i32> %x) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
   %e = extractelement <4 x i32> %x, i32 1
   %z = zext i32 %e to i64
@@ -130,7 +130,7 @@ define <2 x i64> @extract2_i32_zext_insert0_i64_zero(<4 x i32> %x) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
   %e = extractelement <4 x i32> %x, i32 2
   %z = zext i32 %e to i64
