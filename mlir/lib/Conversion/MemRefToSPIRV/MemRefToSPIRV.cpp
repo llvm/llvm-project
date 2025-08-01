@@ -465,7 +465,8 @@ struct MemoryRequirements {
 /// Given an accessed SPIR-V pointer, calculates its alignment requirements, if
 /// any.
 static FailureOr<MemoryRequirements>
-calculateMemoryRequirements(Value accessedPtr, bool isNontemporal) {
+calculateMemoryRequirements(Value accessedPtr, bool isNontemporal,
+                            uint64_t preferredAlignment) {
   MLIRContext *ctx = accessedPtr.getContext();
 
   auto memoryAccess = spirv::MemoryAccess::None;
@@ -494,7 +495,8 @@ calculateMemoryRequirements(Value accessedPtr, bool isNontemporal) {
 
   memoryAccess = memoryAccess | spirv::MemoryAccess::Aligned;
   auto memAccessAttr = spirv::MemoryAccessAttr::get(ctx, memoryAccess);
-  auto alignment = IntegerAttr::get(IntegerType::get(ctx, 32), *sizeInBytes);
+  auto alignmentValue = preferredAlignment ? preferredAlignment : *sizeInBytes;
+  auto alignment = IntegerAttr::get(IntegerType::get(ctx, 32), alignmentValue);
   return MemoryRequirements{memAccessAttr, alignment};
 }
 
@@ -516,7 +518,8 @@ calculateMemoryRequirements(Value accessedPtr, LoadOrStoreOp loadOrStoreOp) {
     return MemoryRequirements{memrefMemAccess, memrefAlignment};
 
   return calculateMemoryRequirements(accessedPtr,
-                                     loadOrStoreOp.getNontemporal());
+                                     loadOrStoreOp.getNontemporal(),
+                                     loadOrStoreOp.getAlignment().value_or(0));
 }
 
 LogicalResult
