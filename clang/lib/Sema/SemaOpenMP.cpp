@@ -22595,7 +22595,7 @@ void SemaOpenMP::ActOnOpenMPIteratorVarDecl(VarDecl *VD) {
   if (DSAStack->getDeclareMapperVarRef()) {
     SemaRef.Consumer.HandleTopLevelDecl(DeclGroupRef(VD));
     DSAStack->addIteratorVarDecl(VD);
-  } 
+  }
 }
 
 bool SemaOpenMP::isOpenMPDeclareMapperVarDeclAllowed(const VarDecl *VD) const {
