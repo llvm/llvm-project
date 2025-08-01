@@ -1313,6 +1313,10 @@ def MatrixBFMT : CustomOperand<i32, 1, "MatrixBFMT">;
 def MatrixAReuse : NamedBitOperand<"matrix_a_reuse">;
 def MatrixBReuse : NamedBitOperand<"matrix_b_reuse">;
 
+def ScaleSel : NamedIntOperand<"scale_sel"> {
+  let Validator = "isUInt<3>";
+}
+
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
   let OperandNamespace = "AMDGPU";
   let OperandType = "OPERAND_KIMM"#vt.Size;
@@ -2944,6 +2948,13 @@ def VOP_BF16_F32_I32 : VOPProfile<[bf16, f32, i32, untyped]>;
 def VOP_F16_F32_I32 : VOPProfile<[f16, f32, i32, untyped]>;
 def VOP_I32_BF16_I32_F32 : VOPProfile<[i32, bf16, i32, f32]>;
 def VOP_I32_F16_I32_F32 : VOPProfile<[i32, f16, i32, f32]>;
+def VOP_V8F16_V2I32_I32  : VOPProfile<[v8f16, v2i32, i32, untyped]>;
+def VOP_V8BF16_V2I32_I32 : VOPProfile<[v8bf16, v2i32, i32, untyped]>;
+def VOP_V8F16_I32_I32  : VOPProfile<[v8f16, i32, i32, untyped]>;
+def VOP_V8BF16_I32_I32 : VOPProfile<[v8bf16, i32, i32, untyped]>;
+def VOP_V16F32_V3I32_I32 : VOPProfile<[v16f32, v3i32, i32, untyped]>;
+def VOP_V8F32_V2I32_I32 : VOPProfile<[v8f32, v2i32, i32, untyped]>;
+def VOP_V8F32_I32_I32 : VOPProfile<[v8f32, i32, i32, untyped]>;
 def VOP_I32_F32_I32_F32 : VOPProfile<[i32, f32, i32, f32]>;
 
 def VOP_V6I32_V32BF16_I32_F32 : VOPProfile<[v6i32, v32bf16, i32, f32]>;

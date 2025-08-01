@@ -1793,4 +1793,14 @@ void AMDGPUInstPrinter::printBitOp3(const MCInst *MI, unsigned OpNo,
     O << formatHex(static_cast<uint64_t>(Imm));
 }
 
+void AMDGPUInstPrinter::printScaleSel(const MCInst *MI, unsigned OpNo,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
+  uint8_t Imm = MI->getOperand(OpNo).getImm();
+  if (!Imm)
+    return;
+
+  O << " scale_sel:" << formatDec(Imm);
+}
+
 #include "AMDGPUGenAsmWriter.inc"
