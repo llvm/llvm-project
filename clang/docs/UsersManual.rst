@@ -77,6 +77,9 @@ Terminology
   correctness of the source code. The parser will request tokens from the lexer
   and after performing semantic analysis of the production, generates an
   abstract representation of the source called an AST.
+* Sema -- the part of the compiler responsible for determining semantic
+  correctness of the source code. It is closely related to the parser and is
+  where many diagnostics are produced.
 * Diagnostic -- a message to the user about properties of the source code. For
   example, errors or warnings and their associated notes.
 * Undefined behavior -- behavior for which the standard imposes no requirements
@@ -88,10 +91,13 @@ Terminology
   Note, the optimizer assumes the code has no undefined behavior, so if the code
   does contain undefined behavior, it will often behave differently depending on
   which optimization level is enabled.
-* Front end -- the Lexer, Preprocessor, Parser, semantic analysis, and LLVM IR
-  code generation parts of the compiler.
+* Frontend -- the Lexer, Preprocessor, Parser, and Sema parts of the compiler.
+* Middle-end -- converts the AST into LLVM IR, adds debug information, etc.
 * Backend -- the parts of the compiler which run after LLVM IR code generation,
   such as the optimizer.
+
+See the :doc:`InternalsManual` for more details about the internal construction
+of the compiler.
 
 Support
 -------
