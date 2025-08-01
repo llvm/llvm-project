@@ -278,6 +278,7 @@ tools.extend(
     ]
 )
 
+
 # Find (major, minor) version of ptxas
 def ptxas_version(ptxas):
     ptxas_cmd = subprocess.Popen([ptxas, "--version"], stdout=subprocess.PIPE)
@@ -451,7 +452,7 @@ if config.link_llvm_dylib:
             "%llvmdylib",
             "{}/libLLVM{}.{}".format(
                 config.llvm_shlib_dir, config.llvm_shlib_ext, config.llvm_dylib_version
-            )
+            ),
         )
     )
 
@@ -582,6 +583,7 @@ def have_ld64_plugin_support():
 if have_ld64_plugin_support():
     config.available_features.add("ld64_plugin")
 
+
 def host_unwind_supports_jit():
     # Do we expect the host machine to support JIT registration of clang's
     # default unwind info format for the host (e.g. eh-frames, compact-unwind,
@@ -589,7 +591,7 @@ def host_unwind_supports_jit():
 
     # Linux and the BSDs use DWARF eh-frames and all known unwinders support
     # register_frame at minimum.
-    if platform.system() in [ "Linux", "FreeBSD", "NetBSD" ]:
+    if platform.system() in ["Linux", "FreeBSD", "NetBSD"]:
         return True
 
     # Windows does not support frame info without the ORC runtime.
@@ -601,11 +603,7 @@ def host_unwind_supports_jit():
     # compact-unwind only, and JIT'd registration is not available before
     # macOS 14.0.
     if platform.system() == "Darwin":
-
-        assert (
-            "arm64" in config.host_triple
-            or "x86_64" in config.host_triple
-        )
+        assert "arm64" in config.host_triple or "x86_64" in config.host_triple
 
         if "x86_64" in config.host_triple:
             return True
@@ -626,6 +624,7 @@ def host_unwind_supports_jit():
         return False
 
     return False
+
 
 if host_unwind_supports_jit():
     config.available_features.add("host-unwind-supports-jit")
