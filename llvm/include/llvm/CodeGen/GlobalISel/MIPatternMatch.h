@@ -193,7 +193,8 @@ m_GFCstOrSplat(std::optional<FPValueAndVReg> &FPValReg) {
 /// Matcher for a specific constant value.
 struct SpecificConstantMatch {
   APInt RequestedVal;
-  SpecificConstantMatch(const APInt RequestedVal) : RequestedVal(RequestedVal) {}
+  SpecificConstantMatch(const APInt RequestedVal)
+      : RequestedVal(RequestedVal) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     APInt MatchedVal;
     if (mi_match(Reg, MRI, m_ICst(MatchedVal))) {
@@ -220,7 +221,8 @@ inline SpecificConstantMatch m_SpecificICst(int64_t RequestedValue) {
 /// Matcher for a specific constant splat.
 struct SpecificConstantSplatMatch {
   APInt RequestedVal;
-  SpecificConstantSplatMatch(const APInt RequestedVal) : RequestedVal(RequestedVal) {}
+  SpecificConstantSplatMatch(const APInt RequestedVal)
+      : RequestedVal(RequestedVal) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     return isBuildVectorConstantSplat(Reg, MRI, RequestedVal,
                                       /* AllowUndef */ false);
