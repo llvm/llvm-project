@@ -955,9 +955,8 @@ class LoopAccessInfoManager {
 
 public:
   LoopAccessInfoManager(ScalarEvolution &SE, AAResults &AA, DominatorTree &DT,
-                        LoopInfo &LI, TargetTransformInfo *TTI = nullptr,
-                        const TargetLibraryInfo *TLI = nullptr,
-                        AssumptionCache *AC = nullptr)
+                        LoopInfo &LI, TargetTransformInfo *TTI,
+                        const TargetLibraryInfo *TLI, AssumptionCache *AC)
       : SE(SE), AA(AA), DT(DT), LI(LI), TTI(TTI), TLI(TLI), AC(AC) {}
 
   LLVM_ABI const LoopAccessInfo &getInfo(Loop &L, bool AllowPartial = false);
