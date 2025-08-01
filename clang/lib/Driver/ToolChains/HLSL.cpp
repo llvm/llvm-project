@@ -173,10 +173,10 @@ bool isLegalValidatorVersion(StringRef ValVersionStr, const Driver &D) {
   return true;
 }
 
-std::string getSpirvExtOperand(llvm::StringRef SpvExtensionArg) {
+void getSpirvExtOperand(llvm::StringRef SpvExtensionArg, raw_ostream &out) {
   // The extensions that are commented out are supported in DXC, but the SPIR-V
   // backend does not know about them yet.
-  static const std::vector<std::string> DxcSupportedExtensions = {
+  static const std::vector<StringRef> DxcSupportedExtensions = {
       "SPV_KHR_16bit_storage",
       "SPV_KHR_device_group",
       "SPV_KHR_fragment_shading_rate",
@@ -210,35 +210,41 @@ std::string getSpirvExtOperand(llvm::StringRef SpvExtensionArg) {
   };
 
   if (SpvExtensionArg.starts_with("SPV_")) {
-    return ("+" + SpvExtensionArg).str();
+    out << "+" << SpvExtensionArg;
+    return;
   }
+
   if (SpvExtensionArg.compare_insensitive("DXC") == 0) {
     bool first = true;
     std::string Operand;
     for (llvm::StringRef E : DxcSupportedExtensions) {
-      if (first) {
-        Operand = (Operand + "+" + E).str();
+      if (!first)
+        out << ",";
+      else
         first = false;
-        continue;
-      }
-      Operand = (Operand + ",+" + E).str();
+      out << "+" << E;
     }
-    return Operand;
+    return;
   }
-  return SpvExtensionArg.str();
+  out << SpvExtensionArg;
+  return;
 }
 
-std::string getSpirvExtArg(ArrayRef<std::string> SpvExtensionArgs) {
+llvm::SmallString<1024> getSpirvExtArg(ArrayRef<std::string> SpvExtensionArgs) {
   if (SpvExtensionArgs.empty()) {
-    return "-spirv-ext=all";
+    return llvm::StringRef("-spirv-ext=all");
   }
 
-  std::string LlvmOption =
-      "-spirv-ext=" + getSpirvExtOperand(SpvExtensionArgs[0]);
+  llvm::SmallString<1024> LlvmOption;
+  raw_svector_ostream out(LlvmOption);
+
+  out << "-spirv-ext=";
+  getSpirvExtOperand(SpvExtensionArgs[0], out);
+
   SpvExtensionArgs = SpvExtensionArgs.slice(1);
   for (llvm::StringRef Extension : SpvExtensionArgs) {
-    LlvmOption =
-        (Twine(LlvmOption) + "," + getSpirvExtOperand(Extension)).str();
+    out << ",";
+    getSpirvExtOperand(Extension, out);
   }
   return LlvmOption;
 }
@@ -425,7 +431,7 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
     std::vector<std::string> SpvExtensionArgs =
         Args.getAllArgValues(options::OPT_fspv_extension_EQ);
     if (checkExtensionArgsAreValid(SpvExtensionArgs, getDriver())) {
-      std::string LlvmOption = getSpirvExtArg(SpvExtensionArgs);
+      llvm::SmallString<1024> LlvmOption = getSpirvExtArg(SpvExtensionArgs);
       DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_mllvm),
                           LlvmOption);
     }
