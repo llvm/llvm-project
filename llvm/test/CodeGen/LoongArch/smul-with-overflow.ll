@@ -4,13 +4,7 @@
 
 define zeroext i1 @smuloi64(i64 %v1, i64 %v2, ptr %res) {
 ; LA32-LABEL: smuloi64:
-; LA32:       # %bb.0: # %overflow.entry
-; LA32-NEXT:    srai.w $a6, $a0, 31
-; LA32-NEXT:    srai.w $a5, $a2, 31
-; LA32-NEXT:    beq $a1, $a6, .LBB0_3
-; LA32-NEXT:  # %bb.1: # %overflow.lhs
-; LA32-NEXT:    beq $a3, $a5, .LBB0_6
-; LA32-NEXT:  # %bb.2: # %overflow
+; LA32:       # %bb.0:
 ; LA32-NEXT:    mulh.wu $a5, $a0, $a2
 ; LA32-NEXT:    mul.w $a6, $a1, $a2
 ; LA32-NEXT:    add.w $a5, $a6, $a5
@@ -44,138 +38,11 @@ define zeroext i1 @smuloi64(i64 %v1, i64 %v2, ptr %res) {
 ; LA32-NEXT:    xor $a1, $a1, $a6
 ; LA32-NEXT:    xor $a3, $a3, $a6
 ; LA32-NEXT:    or $a1, $a3, $a1
-; LA32-NEXT:    sltu $a6, $zero, $a1
-; LA32-NEXT:    b .LBB0_9
-; LA32-NEXT:  .LBB0_3: # %overflow.no.lhs
-; LA32-NEXT:    beq $a3, $a5, .LBB0_8
-; LA32-NEXT:  # %bb.4: # %overflow.no.lhs.only
-; LA32-NEXT:    bltz $a1, .LBB0_10
-; LA32-NEXT:  # %bb.5: # %overflow.no.lhs.only
-; LA32-NEXT:    move $a5, $a0
-; LA32-NEXT:    move $a6, $a1
-; LA32-NEXT:    bgez $a1, .LBB0_11
-; LA32-NEXT:    b .LBB0_12
-; LA32-NEXT:  .LBB0_6: # %overflow.no.rhs.only
-; LA32-NEXT:    bltz $a3, .LBB0_14
-; LA32-NEXT:  # %bb.7: # %overflow.no.rhs.only
-; LA32-NEXT:    move $a5, $a2
-; LA32-NEXT:    move $a6, $a3
-; LA32-NEXT:    bgez $a3, .LBB0_15
-; LA32-NEXT:    b .LBB0_16
-; LA32-NEXT:  .LBB0_8: # %overflow.no
-; LA32-NEXT:    move $a6, $zero
-; LA32-NEXT:    mulh.wu $a5, $a0, $a2
-; LA32-NEXT:    mul.w $a3, $a0, $a3
-; LA32-NEXT:    add.w $a3, $a5, $a3
-; LA32-NEXT:    mul.w $a1, $a1, $a2
-; LA32-NEXT:    add.w $a5, $a3, $a1
-; LA32-NEXT:  .LBB0_9: # %overflow.res
+; LA32-NEXT:    sltu $a1, $zero, $a1
 ; LA32-NEXT:    mul.w $a0, $a0, $a2
-; LA32-NEXT:    b .LBB0_27
-; LA32-NEXT:  .LBB0_10:
-; LA32-NEXT:    sub.w $a5, $zero, $a0
-; LA32-NEXT:    sltu $a6, $zero, $a0
-; LA32-NEXT:    add.w $a6, $a1, $a6
-; LA32-NEXT:    sub.w $a6, $zero, $a6
-; LA32-NEXT:    bltz $a1, .LBB0_12
-; LA32-NEXT:  .LBB0_11: # %overflow.no.lhs.only
-; LA32-NEXT:    move $a6, $a1
-; LA32-NEXT:    move $a5, $a0
-; LA32-NEXT:  .LBB0_12: # %overflow.no.lhs.only
-; LA32-NEXT:    bltz $a3, .LBB0_18
-; LA32-NEXT:  # %bb.13: # %overflow.no.lhs.only
-; LA32-NEXT:    move $a7, $a2
-; LA32-NEXT:    move $a0, $a3
-; LA32-NEXT:    b .LBB0_19
-; LA32-NEXT:  .LBB0_14:
-; LA32-NEXT:    sub.w $a5, $zero, $a2
-; LA32-NEXT:    sltu $a6, $zero, $a2
-; LA32-NEXT:    add.w $a6, $a3, $a6
-; LA32-NEXT:    sub.w $a6, $zero, $a6
-; LA32-NEXT:    bltz $a3, .LBB0_16
-; LA32-NEXT:  .LBB0_15: # %overflow.no.rhs.only
-; LA32-NEXT:    move $a6, $a3
-; LA32-NEXT:    move $a5, $a2
-; LA32-NEXT:  .LBB0_16: # %overflow.no.rhs.only
-; LA32-NEXT:    bltz $a1, .LBB0_22
-; LA32-NEXT:  # %bb.17: # %overflow.no.rhs.only
-; LA32-NEXT:    move $a7, $a0
-; LA32-NEXT:    move $a2, $a1
-; LA32-NEXT:    b .LBB0_23
-; LA32-NEXT:  .LBB0_18:
-; LA32-NEXT:    sub.w $a7, $zero, $a2
-; LA32-NEXT:    sltu $a0, $zero, $a2
-; LA32-NEXT:    add.w $a0, $a3, $a0
-; LA32-NEXT:    sub.w $a0, $zero, $a0
-; LA32-NEXT:  .LBB0_19: # %overflow.no.lhs.only
-; LA32-NEXT:    slti $a1, $a1, 0
-; LA32-NEXT:    slti $t0, $a3, 0
-; LA32-NEXT:    bltz $a3, .LBB0_21
-; LA32-NEXT:  # %bb.20: # %overflow.no.lhs.only
-; LA32-NEXT:    move $a0, $a3
-; LA32-NEXT:    move $a7, $a2
-; LA32-NEXT:  .LBB0_21: # %overflow.no.lhs.only
-; LA32-NEXT:    mulh.wu $a2, $a5, $a7
-; LA32-NEXT:    mul.w $a3, $a6, $a7
-; LA32-NEXT:    add.w $a2, $a2, $a3
-; LA32-NEXT:    mul.w $a3, $a5, $a7
-; LA32-NEXT:    mul.w $a6, $a6, $a0
-; LA32-NEXT:    mulh.wu $a7, $a5, $a0
-; LA32-NEXT:    add.w $a6, $a7, $a6
-; LA32-NEXT:    mul.w $a0, $a5, $a0
-; LA32-NEXT:    add.w $a5, $a2, $a0
-; LA32-NEXT:    sltu $a0, $a5, $a2
-; LA32-NEXT:    add.w $a2, $a6, $a0
-; LA32-NEXT:    xor $a1, $t0, $a1
-; LA32-NEXT:    sub.w $a6, $zero, $a1
-; LA32-NEXT:    xor $a0, $a3, $a6
-; LA32-NEXT:    add.w $a0, $a0, $a1
-; LA32-NEXT:    sltu $a1, $a0, $a1
-; LA32-NEXT:    xor $a3, $a5, $a6
-; LA32-NEXT:    add.w $a5, $a3, $a1
-; LA32-NEXT:    sltu $a1, $a5, $a1
-; LA32-NEXT:    xor $a2, $a2, $a6
-; LA32-NEXT:    b .LBB0_26
-; LA32-NEXT:  .LBB0_22:
-; LA32-NEXT:    sub.w $a7, $zero, $a0
-; LA32-NEXT:    sltu $a2, $zero, $a0
-; LA32-NEXT:    add.w $a2, $a1, $a2
-; LA32-NEXT:    sub.w $a2, $zero, $a2
-; LA32-NEXT:  .LBB0_23: # %overflow.no.rhs.only
-; LA32-NEXT:    slti $a3, $a3, 0
-; LA32-NEXT:    slti $t0, $a1, 0
-; LA32-NEXT:    bltz $a1, .LBB0_25
-; LA32-NEXT:  # %bb.24: # %overflow.no.rhs.only
-; LA32-NEXT:    move $a2, $a1
-; LA32-NEXT:    move $a7, $a0
-; LA32-NEXT:  .LBB0_25: # %overflow.no.rhs.only
-; LA32-NEXT:    mulh.wu $a0, $a5, $a7
-; LA32-NEXT:    mul.w $a1, $a6, $a7
-; LA32-NEXT:    add.w $a0, $a0, $a1
-; LA32-NEXT:    mul.w $a1, $a5, $a7
-; LA32-NEXT:    mul.w $a6, $a6, $a2
-; LA32-NEXT:    mulh.wu $a7, $a5, $a2
-; LA32-NEXT:    add.w $a6, $a7, $a6
-; LA32-NEXT:    mul.w $a2, $a5, $a2
-; LA32-NEXT:    add.w $a2, $a0, $a2
-; LA32-NEXT:    sltu $a0, $a2, $a0
-; LA32-NEXT:    add.w $a6, $a6, $a0
-; LA32-NEXT:    xor $a3, $a3, $t0
-; LA32-NEXT:    sub.w $a7, $zero, $a3
-; LA32-NEXT:    xor $a0, $a1, $a7
-; LA32-NEXT:    add.w $a0, $a0, $a3
-; LA32-NEXT:    sltu $a1, $a0, $a3
-; LA32-NEXT:    xor $a2, $a2, $a7
-; LA32-NEXT:    add.w $a5, $a2, $a1
-; LA32-NEXT:    sltu $a1, $a5, $a1
-; LA32-NEXT:    xor $a2, $a6, $a7
-; LA32-NEXT:  .LBB0_26: # %overflow.res
-; LA32-NEXT:    add.w $a1, $a2, $a1
-; LA32-NEXT:    sltu $a6, $zero, $a1
-; LA32-NEXT:  .LBB0_27: # %overflow.res
 ; LA32-NEXT:    st.w $a0, $a4, 0
-; LA32-NEXT:    andi $a0, $a6, 1
 ; LA32-NEXT:    st.w $a5, $a4, 4
+; LA32-NEXT:    move $a0, $a1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: smuloi64:
@@ -196,7 +63,7 @@ define zeroext i1 @smuloi64(i64 %v1, i64 %v2, ptr %res) {
 
 define zeroext i1 @smuloi128(i128 %v1, i128 %v2, ptr %res) {
 ; LA32-LABEL: smuloi128:
-; LA32:       # %bb.0: # %overflow.entry
+; LA32:       # %bb.0:
 ; LA32-NEXT:    addi.w $sp, $sp, -48
 ; LA32-NEXT:    .cfi_def_cfa_offset 48
 ; LA32-NEXT:    st.w $ra, $sp, 44 # 4-byte Folded Spill
@@ -221,608 +88,198 @@ define zeroext i1 @smuloi128(i128 %v1, i128 %v2, ptr %res) {
 ; LA32-NEXT:    .cfi_offset 29, -36
 ; LA32-NEXT:    .cfi_offset 30, -40
 ; LA32-NEXT:    .cfi_offset 31, -44
-; LA32-NEXT:    ld.w $a3, $a1, 12
-; LA32-NEXT:    ld.w $a7, $a1, 8
-; LA32-NEXT:    ld.w $a5, $a1, 0
-; LA32-NEXT:    ld.w $a6, $a0, 0
-; LA32-NEXT:    ld.w $t0, $a0, 4
-; LA32-NEXT:    ld.w $a4, $a0, 12
-; LA32-NEXT:    ld.w $a0, $a0, 8
-; LA32-NEXT:    ld.w $a1, $a1, 4
-; LA32-NEXT:    srai.w $t1, $t0, 31
-; LA32-NEXT:    xor $t2, $a4, $t1
-; LA32-NEXT:    xor $t1, $a0, $t1
-; LA32-NEXT:    or $t2, $t1, $t2
-; LA32-NEXT:    srai.w $t1, $a1, 31
-; LA32-NEXT:    beq $t2, $zero, .LBB1_11
-; LA32-NEXT:  # %bb.1: # %overflow.lhs
-; LA32-NEXT:    xor $t2, $a7, $t1
-; LA32-NEXT:    xor $t1, $a3, $t1
-; LA32-NEXT:    or $t1, $t2, $t1
-; LA32-NEXT:    beq $t1, $zero, .LBB1_14
-; LA32-NEXT:  # %bb.2: # %overflow
-; LA32-NEXT:    mulh.wu $t1, $a0, $a5
-; LA32-NEXT:    mul.w $t2, $a4, $a5
-; LA32-NEXT:    add.w $t1, $t2, $t1
-; LA32-NEXT:    sltu $t2, $t1, $t2
-; LA32-NEXT:    mulh.wu $t3, $a4, $a5
-; LA32-NEXT:    add.w $t5, $t3, $t2
-; LA32-NEXT:    mul.w $t3, $a0, $a1
-; LA32-NEXT:    add.w $t2, $t3, $t1
-; LA32-NEXT:    sltu $t1, $t2, $t3
-; LA32-NEXT:    mulh.wu $t3, $a0, $a1
-; LA32-NEXT:    add.w $t1, $t3, $t1
-; LA32-NEXT:    add.w $t1, $t5, $t1
-; LA32-NEXT:    mul.w $t6, $a4, $a1
-; LA32-NEXT:    add.w $t7, $t6, $t1
-; LA32-NEXT:    srai.w $t3, $a4, 31
-; LA32-NEXT:    mul.w $t8, $a5, $t3
-; LA32-NEXT:    add.w $t4, $t7, $t8
-; LA32-NEXT:    sltu $fp, $t4, $t7
+; LA32-NEXT:    ld.w $a5, $a1, 12
+; LA32-NEXT:    ld.w $a6, $a1, 8
+; LA32-NEXT:    ld.w $t1, $a0, 4
+; LA32-NEXT:    ld.w $a3, $a1, 0
+; LA32-NEXT:    ld.w $a7, $a0, 8
+; LA32-NEXT:    ld.w $t0, $a0, 12
+; LA32-NEXT:    ld.w $a4, $a0, 0
+; LA32-NEXT:    ld.w $t4, $a1, 4
+; LA32-NEXT:    mulh.wu $a0, $a7, $a3
+; LA32-NEXT:    mul.w $a1, $t0, $a3
+; LA32-NEXT:    add.w $a0, $a1, $a0
+; LA32-NEXT:    sltu $a1, $a0, $a1
+; LA32-NEXT:    mulh.wu $t2, $t0, $a3
+; LA32-NEXT:    add.w $a1, $t2, $a1
+; LA32-NEXT:    mul.w $t3, $a7, $t4
+; LA32-NEXT:    add.w $t2, $t3, $a0
+; LA32-NEXT:    sltu $a0, $t2, $t3
+; LA32-NEXT:    mulh.wu $t3, $a7, $t4
+; LA32-NEXT:    add.w $a0, $t3, $a0
+; LA32-NEXT:    add.w $t5, $a1, $a0
+; LA32-NEXT:    mul.w $t6, $t0, $t4
+; LA32-NEXT:    add.w $t7, $t6, $t5
+; LA32-NEXT:    srai.w $a0, $t0, 31
+; LA32-NEXT:    mul.w $t8, $a3, $a0
+; LA32-NEXT:    add.w $t3, $t7, $t8
+; LA32-NEXT:    sltu $fp, $t3, $t7
 ; LA32-NEXT:    sltu $t6, $t7, $t6
-; LA32-NEXT:    sltu $t1, $t1, $t5
-; LA32-NEXT:    mulh.wu $t5, $a4, $a1
-; LA32-NEXT:    add.w $t1, $t5, $t1
-; LA32-NEXT:    add.w $t1, $t1, $t6
-; LA32-NEXT:    mulh.wu $t5, $a5, $t3
-; LA32-NEXT:    add.w $t5, $t5, $t8
-; LA32-NEXT:    mul.w $t6, $a1, $t3
-; LA32-NEXT:    add.w $t5, $t5, $t6
-; LA32-NEXT:    add.w $t5, $t1, $t5
-; LA32-NEXT:    mulh.wu $t1, $a6, $a5
-; LA32-NEXT:    mul.w $t6, $t0, $a5
-; LA32-NEXT:    add.w $t1, $t6, $t1
-; LA32-NEXT:    sltu $t6, $t1, $t6
-; LA32-NEXT:    mulh.wu $t7, $t0, $a5
-; LA32-NEXT:    add.w $t6, $t7, $t6
-; LA32-NEXT:    mul.w $t7, $a6, $a1
-; LA32-NEXT:    add.w $t1, $t7, $t1
-; LA32-NEXT:    sltu $t7, $t1, $t7
-; LA32-NEXT:    mulh.wu $t8, $a6, $a1
-; LA32-NEXT:    add.w $t7, $t8, $t7
-; LA32-NEXT:    add.w $t7, $t6, $t7
-; LA32-NEXT:    mul.w $t8, $t0, $a1
-; LA32-NEXT:    sltu $t6, $t7, $t6
-; LA32-NEXT:    add.w $t7, $t8, $t7
-; LA32-NEXT:    sltu $t8, $t7, $t8
-; LA32-NEXT:    mulh.wu $a1, $t0, $a1
+; LA32-NEXT:    sltu $a1, $t5, $a1
+; LA32-NEXT:    mulh.wu $t5, $t0, $t4
+; LA32-NEXT:    add.w $a1, $t5, $a1
 ; LA32-NEXT:    add.w $a1, $a1, $t6
-; LA32-NEXT:    add.w $a1, $a1, $t8
-; LA32-NEXT:    add.w $t8, $t2, $a1
-; LA32-NEXT:    mul.w $t6, $a0, $a5
-; LA32-NEXT:    add.w $a1, $t6, $t7
+; LA32-NEXT:    mulh.wu $t5, $a3, $a0
+; LA32-NEXT:    add.w $t5, $t5, $t8
+; LA32-NEXT:    mul.w $t6, $t4, $a0
+; LA32-NEXT:    add.w $t5, $t5, $t6
+; LA32-NEXT:    add.w $t8, $a1, $t5
+; LA32-NEXT:    mulh.wu $a1, $a4, $a3
+; LA32-NEXT:    mul.w $t5, $t1, $a3
+; LA32-NEXT:    add.w $a1, $t5, $a1
+; LA32-NEXT:    sltu $t5, $a1, $t5
+; LA32-NEXT:    mulh.wu $t6, $t1, $a3
+; LA32-NEXT:    add.w $t5, $t6, $t5
+; LA32-NEXT:    mul.w $t6, $a4, $t4
+; LA32-NEXT:    add.w $a1, $t6, $a1
 ; LA32-NEXT:    sltu $t6, $a1, $t6
-; LA32-NEXT:    add.w $t7, $t8, $t6
-; LA32-NEXT:    add.w $t5, $t5, $fp
-; LA32-NEXT:    beq $t7, $t2, .LBB1_4
-; LA32-NEXT:  # %bb.3: # %overflow
-; LA32-NEXT:    sltu $t6, $t7, $t2
-; LA32-NEXT:  .LBB1_4: # %overflow
-; LA32-NEXT:    add.w $t6, $t4, $t6
-; LA32-NEXT:    sltu $t2, $t6, $t4
-; LA32-NEXT:    add.w $t5, $t5, $t2
-; LA32-NEXT:    mulh.wu $t2, $a6, $a7
-; LA32-NEXT:    mul.w $t4, $t0, $a7
-; LA32-NEXT:    add.w $t2, $t4, $t2
-; LA32-NEXT:    sltu $t4, $t2, $t4
-; LA32-NEXT:    mulh.wu $t8, $t0, $a7
-; LA32-NEXT:    add.w $s0, $t8, $t4
-; LA32-NEXT:    mul.w $t4, $a6, $a3
-; LA32-NEXT:    add.w $t8, $t4, $t2
-; LA32-NEXT:    sltu $t2, $t8, $t4
-; LA32-NEXT:    mulh.wu $t4, $a6, $a3
-; LA32-NEXT:    add.w $t2, $t4, $t2
+; LA32-NEXT:    mulh.wu $t7, $a4, $t4
+; LA32-NEXT:    add.w $t6, $t7, $t6
+; LA32-NEXT:    add.w $t6, $t5, $t6
+; LA32-NEXT:    mul.w $t7, $t1, $t4
+; LA32-NEXT:    sltu $t5, $t6, $t5
+; LA32-NEXT:    add.w $t6, $t7, $t6
+; LA32-NEXT:    sltu $t7, $t6, $t7
+; LA32-NEXT:    mulh.wu $t4, $t1, $t4
+; LA32-NEXT:    add.w $t4, $t4, $t5
+; LA32-NEXT:    add.w $t4, $t4, $t7
+; LA32-NEXT:    add.w $t4, $t2, $t4
+; LA32-NEXT:    mul.w $t5, $a7, $a3
+; LA32-NEXT:    add.w $t6, $t5, $t6
+; LA32-NEXT:    sltu $t5, $t6, $t5
+; LA32-NEXT:    add.w $t7, $t4, $t5
+; LA32-NEXT:    add.w $t4, $t8, $fp
+; LA32-NEXT:    beq $t7, $t2, .LBB1_2
+; LA32-NEXT:  # %bb.1:
+; LA32-NEXT:    sltu $t5, $t7, $t2
+; LA32-NEXT:  .LBB1_2:
+; LA32-NEXT:    add.w $t5, $t3, $t5
+; LA32-NEXT:    sltu $t2, $t5, $t3
+; LA32-NEXT:    add.w $t4, $t4, $t2
+; LA32-NEXT:    mulh.wu $t2, $a4, $a6
+; LA32-NEXT:    mul.w $t3, $t1, $a6
+; LA32-NEXT:    add.w $t2, $t3, $t2
+; LA32-NEXT:    sltu $t3, $t2, $t3
+; LA32-NEXT:    mulh.wu $t8, $t1, $a6
+; LA32-NEXT:    add.w $s0, $t8, $t3
+; LA32-NEXT:    mul.w $t3, $a4, $a5
+; LA32-NEXT:    add.w $t8, $t3, $t2
+; LA32-NEXT:    sltu $t2, $t8, $t3
+; LA32-NEXT:    mulh.wu $t3, $a4, $a5
+; LA32-NEXT:    add.w $t2, $t3, $t2
 ; LA32-NEXT:    add.w $t2, $s0, $t2
-; LA32-NEXT:    mul.w $s1, $t0, $a3
+; LA32-NEXT:    mul.w $s1, $t1, $a5
 ; LA32-NEXT:    add.w $s2, $s1, $t2
-; LA32-NEXT:    srai.w $t4, $a3, 31
-; LA32-NEXT:    mul.w $s3, $t4, $a6
+; LA32-NEXT:    srai.w $t3, $a5, 31
+; LA32-NEXT:    mul.w $s3, $t3, $a4
 ; LA32-NEXT:    add.w $fp, $s2, $s3
 ; LA32-NEXT:    sltu $s4, $fp, $s2
 ; LA32-NEXT:    sltu $s1, $s2, $s1
 ; LA32-NEXT:    sltu $t2, $t2, $s0
-; LA32-NEXT:    mulh.wu $s0, $t0, $a3
+; LA32-NEXT:    mulh.wu $s0, $t1, $a5
 ; LA32-NEXT:    add.w $t2, $s0, $t2
 ; LA32-NEXT:    add.w $t2, $t2, $s1
-; LA32-NEXT:    mul.w $t0, $t4, $t0
-; LA32-NEXT:    mulh.wu $s0, $t4, $a6
-; LA32-NEXT:    add.w $t0, $s0, $t0
-; LA32-NEXT:    add.w $t0, $t0, $s3
-; LA32-NEXT:    add.w $t0, $t2, $t0
-; LA32-NEXT:    add.w $s0, $t8, $t7
-; LA32-NEXT:    mul.w $t7, $a6, $a7
-; LA32-NEXT:    add.w $t2, $t7, $a1
-; LA32-NEXT:    sltu $t7, $t2, $t7
-; LA32-NEXT:    add.w $a1, $s0, $t7
-; LA32-NEXT:    add.w $t0, $t0, $s4
-; LA32-NEXT:    beq $a1, $t8, .LBB1_6
-; LA32-NEXT:  # %bb.5: # %overflow
-; LA32-NEXT:    sltu $t7, $a1, $t8
-; LA32-NEXT:  .LBB1_6: # %overflow
+; LA32-NEXT:    mul.w $t1, $t3, $t1
+; LA32-NEXT:    mulh.wu $s0, $t3, $a4
+; LA32-NEXT:    add.w $t1, $s0, $t1
+; LA32-NEXT:    add.w $t1, $t1, $s3
+; LA32-NEXT:    add.w $s0, $t2, $t1
+; LA32-NEXT:    add.w $t2, $t8, $t7
+; LA32-NEXT:    mul.w $t7, $a4, $a6
+; LA32-NEXT:    add.w $t1, $t7, $t6
+; LA32-NEXT:    sltu $t7, $t1, $t7
+; LA32-NEXT:    add.w $t2, $t2, $t7
+; LA32-NEXT:    add.w $t6, $s0, $s4
+; LA32-NEXT:    beq $t2, $t8, .LBB1_4
+; LA32-NEXT:  # %bb.3:
+; LA32-NEXT:    sltu $t7, $t2, $t8
+; LA32-NEXT:  .LBB1_4:
 ; LA32-NEXT:    add.w $t7, $fp, $t7
 ; LA32-NEXT:    sltu $t8, $t7, $fp
-; LA32-NEXT:    add.w $t8, $t0, $t8
-; LA32-NEXT:    add.w $t0, $t5, $t8
-; LA32-NEXT:    add.w $t7, $t6, $t7
-; LA32-NEXT:    sltu $s0, $t7, $t6
-; LA32-NEXT:    add.w $s4, $t0, $s0
-; LA32-NEXT:    mulh.wu $t0, $a0, $a7
-; LA32-NEXT:    mul.w $s1, $a4, $a7
-; LA32-NEXT:    add.w $s3, $s1, $t0
-; LA32-NEXT:    mul.w $fp, $a0, $a3
+; LA32-NEXT:    add.w $t8, $t6, $t8
+; LA32-NEXT:    add.w $t6, $t4, $t8
+; LA32-NEXT:    add.w $t7, $t5, $t7
+; LA32-NEXT:    sltu $s0, $t7, $t5
+; LA32-NEXT:    add.w $s4, $t6, $s0
+; LA32-NEXT:    mulh.wu $t5, $a7, $a6
+; LA32-NEXT:    mul.w $s1, $t0, $a6
+; LA32-NEXT:    add.w $s3, $s1, $t5
+; LA32-NEXT:    mul.w $fp, $a7, $a5
 ; LA32-NEXT:    add.w $s2, $fp, $s3
 ; LA32-NEXT:    add.w $t6, $s2, $s4
-; LA32-NEXT:    mul.w $s5, $a0, $a7
-; LA32-NEXT:    add.w $t0, $s5, $t7
-; LA32-NEXT:    sltu $t7, $t0, $s5
+; LA32-NEXT:    mul.w $s5, $a7, $a6
+; LA32-NEXT:    add.w $t5, $s5, $t7
+; LA32-NEXT:    sltu $t7, $t5, $s5
 ; LA32-NEXT:    add.w $t6, $t6, $t7
-; LA32-NEXT:    beq $t6, $s2, .LBB1_8
-; LA32-NEXT:  # %bb.7: # %overflow
+; LA32-NEXT:    beq $t6, $s2, .LBB1_6
+; LA32-NEXT:  # %bb.5:
 ; LA32-NEXT:    sltu $t7, $t6, $s2
-; LA32-NEXT:  .LBB1_8: # %overflow
-; LA32-NEXT:    beq $s4, $t5, .LBB1_10
-; LA32-NEXT:  # %bb.9: # %overflow
-; LA32-NEXT:    sltu $s0, $s4, $t5
-; LA32-NEXT:  .LBB1_10: # %overflow
-; LA32-NEXT:    srai.w $t5, $t5, 31
+; LA32-NEXT:  .LBB1_6:
+; LA32-NEXT:    beq $s4, $t4, .LBB1_8
+; LA32-NEXT:  # %bb.7:
+; LA32-NEXT:    sltu $s0, $s4, $t4
+; LA32-NEXT:  .LBB1_8:
+; LA32-NEXT:    srai.w $t4, $t4, 31
 ; LA32-NEXT:    srai.w $t8, $t8, 31
-; LA32-NEXT:    add.w $t8, $t5, $t8
+; LA32-NEXT:    add.w $t8, $t4, $t8
 ; LA32-NEXT:    add.w $s0, $t8, $s0
 ; LA32-NEXT:    sltu $s1, $s3, $s1
-; LA32-NEXT:    mulh.wu $s3, $a4, $a7
+; LA32-NEXT:    mulh.wu $s3, $t0, $a6
 ; LA32-NEXT:    add.w $s1, $s3, $s1
 ; LA32-NEXT:    sltu $fp, $s2, $fp
-; LA32-NEXT:    mulh.wu $s2, $a0, $a3
+; LA32-NEXT:    mulh.wu $s2, $a7, $a5
 ; LA32-NEXT:    add.w $fp, $s2, $fp
 ; LA32-NEXT:    add.w $fp, $s1, $fp
-; LA32-NEXT:    mul.w $s2, $a4, $a3
+; LA32-NEXT:    mul.w $s2, $t0, $a5
 ; LA32-NEXT:    add.w $s3, $s2, $fp
-; LA32-NEXT:    mul.w $s4, $a7, $t3
-; LA32-NEXT:    mul.w $s5, $t4, $a0
+; LA32-NEXT:    mul.w $s4, $a6, $a0
+; LA32-NEXT:    mul.w $s5, $t3, $a7
 ; LA32-NEXT:    add.w $s6, $s5, $s4
 ; LA32-NEXT:    add.w $s7, $s3, $s6
 ; LA32-NEXT:    add.w $s8, $s7, $s0
 ; LA32-NEXT:    add.w $t7, $s8, $t7
 ; LA32-NEXT:    sltu $ra, $t7, $s8
-; LA32-NEXT:    sltu $t5, $t8, $t5
-; LA32-NEXT:    add.w $t5, $t8, $t5
+; LA32-NEXT:    sltu $t4, $t8, $t4
+; LA32-NEXT:    add.w $t4, $t8, $t4
 ; LA32-NEXT:    sltu $t8, $s0, $t8
-; LA32-NEXT:    add.w $t5, $t5, $t8
+; LA32-NEXT:    add.w $t4, $t4, $t8
 ; LA32-NEXT:    sltu $t8, $s7, $s3
 ; LA32-NEXT:    sltu $s0, $s3, $s2
 ; LA32-NEXT:    sltu $fp, $fp, $s1
-; LA32-NEXT:    mulh.wu $s1, $a4, $a3
+; LA32-NEXT:    mulh.wu $s1, $t0, $a5
 ; LA32-NEXT:    add.w $fp, $s1, $fp
 ; LA32-NEXT:    add.w $fp, $fp, $s0
-; LA32-NEXT:    mulh.wu $a7, $a7, $t3
-; LA32-NEXT:    add.w $a7, $a7, $s4
-; LA32-NEXT:    mul.w $a3, $a3, $t3
-; LA32-NEXT:    add.w $a3, $a7, $a3
-; LA32-NEXT:    mul.w $a4, $t4, $a4
-; LA32-NEXT:    mulh.wu $a0, $t4, $a0
-; LA32-NEXT:    add.w $a0, $a0, $a4
-; LA32-NEXT:    add.w $a0, $a0, $s5
-; LA32-NEXT:    add.w $a0, $a0, $a3
-; LA32-NEXT:    sltu $a3, $s6, $s5
-; LA32-NEXT:    add.w $a0, $a0, $a3
+; LA32-NEXT:    mulh.wu $a6, $a6, $a0
+; LA32-NEXT:    add.w $a6, $a6, $s4
+; LA32-NEXT:    mul.w $a0, $a5, $a0
+; LA32-NEXT:    add.w $a0, $a6, $a0
+; LA32-NEXT:    mul.w $a5, $t3, $t0
+; LA32-NEXT:    mulh.wu $a6, $t3, $a7
+; LA32-NEXT:    add.w $a5, $a6, $a5
+; LA32-NEXT:    add.w $a5, $a5, $s5
+; LA32-NEXT:    add.w $a0, $a5, $a0
+; LA32-NEXT:    sltu $a5, $s6, $s5
+; LA32-NEXT:    add.w $a0, $a0, $a5
 ; LA32-NEXT:    add.w $a0, $fp, $a0
 ; LA32-NEXT:    add.w $a0, $a0, $t8
-; LA32-NEXT:    add.w $a0, $a0, $t5
-; LA32-NEXT:    sltu $a3, $s8, $s7
-; LA32-NEXT:    add.w $a0, $a0, $a3
+; LA32-NEXT:    add.w $a0, $a0, $t4
+; LA32-NEXT:    sltu $a5, $s8, $s7
+; LA32-NEXT:    add.w $a0, $a0, $a5
 ; LA32-NEXT:    add.w $a0, $a0, $ra
-; LA32-NEXT:    srai.w $a3, $a1, 31
-; LA32-NEXT:    xor $a0, $a0, $a3
-; LA32-NEXT:    xor $a4, $t6, $a3
-; LA32-NEXT:    or $a0, $a4, $a0
-; LA32-NEXT:    xor $a4, $t7, $a3
-; LA32-NEXT:    xor $a3, $t0, $a3
-; LA32-NEXT:    or $a3, $a3, $a4
-; LA32-NEXT:    or $a0, $a3, $a0
-; LA32-NEXT:    sltu $t3, $zero, $a0
-; LA32-NEXT:    b .LBB1_17
-; LA32-NEXT:  .LBB1_11: # %overflow.no.lhs
-; LA32-NEXT:    xor $t2, $a7, $t1
-; LA32-NEXT:    xor $t1, $a3, $t1
-; LA32-NEXT:    or $t1, $t2, $t1
-; LA32-NEXT:    beq $t1, $zero, .LBB1_16
-; LA32-NEXT:  # %bb.12: # %overflow.no.lhs.only
-; LA32-NEXT:    bltz $a4, .LBB1_18
-; LA32-NEXT:  # %bb.13: # %overflow.no.lhs.only
-; LA32-NEXT:    move $t1, $a0
-; LA32-NEXT:    move $t3, $a4
-; LA32-NEXT:    move $t2, $a6
-; LA32-NEXT:    move $t4, $t0
-; LA32-NEXT:    bgez $a4, .LBB1_19
-; LA32-NEXT:    b .LBB1_20
-; LA32-NEXT:  .LBB1_14: # %overflow.no.rhs.only
-; LA32-NEXT:    bltz $a3, .LBB1_35
-; LA32-NEXT:  # %bb.15: # %overflow.no.rhs.only
-; LA32-NEXT:    move $t1, $a7
-; LA32-NEXT:    move $t3, $a3
-; LA32-NEXT:    move $t2, $a5
-; LA32-NEXT:    move $t4, $a1
-; LA32-NEXT:    bgez $a3, .LBB1_36
-; LA32-NEXT:    b .LBB1_37
-; LA32-NEXT:  .LBB1_16: # %overflow.no
-; LA32-NEXT:    move $t3, $zero
-; LA32-NEXT:    mulh.wu $t1, $a6, $a5
-; LA32-NEXT:    mul.w $t2, $t0, $a5
-; LA32-NEXT:    add.w $t1, $t2, $t1
-; LA32-NEXT:    sltu $t2, $t1, $t2
-; LA32-NEXT:    mulh.wu $t4, $t0, $a5
-; LA32-NEXT:    add.w $t4, $t4, $t2
-; LA32-NEXT:    mul.w $t2, $a6, $a1
-; LA32-NEXT:    add.w $t1, $t2, $t1
-; LA32-NEXT:    sltu $t2, $t1, $t2
-; LA32-NEXT:    mulh.wu $t5, $a6, $a1
-; LA32-NEXT:    add.w $t2, $t5, $t2
-; LA32-NEXT:    add.w $t5, $t4, $t2
-; LA32-NEXT:    mul.w $t6, $t0, $a1
-; LA32-NEXT:    add.w $t7, $t6, $t5
-; LA32-NEXT:    mul.w $t2, $a5, $a0
-; LA32-NEXT:    mul.w $t8, $a7, $a6
-; LA32-NEXT:    add.w $fp, $t8, $t2
-; LA32-NEXT:    add.w $t2, $t7, $fp
-; LA32-NEXT:    sltu $t6, $t7, $t6
-; LA32-NEXT:    sltu $t7, $t2, $t7
-; LA32-NEXT:    sltu $t4, $t5, $t4
-; LA32-NEXT:    mulh.wu $t5, $t0, $a1
-; LA32-NEXT:    add.w $t4, $t5, $t4
-; LA32-NEXT:    add.w $t4, $t4, $t6
-; LA32-NEXT:    mul.w $t0, $a7, $t0
-; LA32-NEXT:    mulh.wu $a7, $a7, $a6
-; LA32-NEXT:    add.w $a7, $a7, $t0
-; LA32-NEXT:    mul.w $a3, $a3, $a6
-; LA32-NEXT:    add.w $a3, $a7, $a3
-; LA32-NEXT:    mulh.wu $a7, $a5, $a0
-; LA32-NEXT:    mul.w $a4, $a5, $a4
-; LA32-NEXT:    add.w $a4, $a7, $a4
-; LA32-NEXT:    mul.w $a0, $a1, $a0
-; LA32-NEXT:    add.w $a0, $a4, $a0
-; LA32-NEXT:    add.w $a0, $a3, $a0
-; LA32-NEXT:    sltu $a1, $fp, $t8
-; LA32-NEXT:    add.w $a0, $a0, $a1
-; LA32-NEXT:    add.w $a0, $t4, $a0
-; LA32-NEXT:    add.w $a1, $a0, $t7
-; LA32-NEXT:  .LBB1_17: # %overflow.res
-; LA32-NEXT:    mul.w $a0, $a6, $a5
-; LA32-NEXT:    b .LBB1_53
-; LA32-NEXT:  .LBB1_18:
-; LA32-NEXT:    sub.w $t2, $zero, $a0
-; LA32-NEXT:    or $t1, $a6, $t0
-; LA32-NEXT:    sltu $t3, $zero, $t1
-; LA32-NEXT:    sub.w $t1, $t2, $t3
-; LA32-NEXT:    sltu $t2, $t2, $t3
-; LA32-NEXT:    sltu $t3, $zero, $a0
-; LA32-NEXT:    add.w $t3, $a4, $t3
-; LA32-NEXT:    add.w $t2, $t3, $t2
-; LA32-NEXT:    sub.w $t3, $zero, $t2
-; LA32-NEXT:    sub.w $t2, $zero, $a6
-; LA32-NEXT:    sltu $t4, $zero, $a6
-; LA32-NEXT:    add.w $t4, $t0, $t4
-; LA32-NEXT:    sub.w $t4, $zero, $t4
-; LA32-NEXT:    bltz $a4, .LBB1_20
-; LA32-NEXT:  .LBB1_19: # %overflow.no.lhs.only
-; LA32-NEXT:    move $t3, $a4
-; LA32-NEXT:    move $t1, $a0
-; LA32-NEXT:  .LBB1_20: # %overflow.no.lhs.only
-; LA32-NEXT:    bltz $a4, .LBB1_24
-; LA32-NEXT:  # %bb.21: # %overflow.no.lhs.only
-; LA32-NEXT:    move $t4, $t0
-; LA32-NEXT:    bgez $a4, .LBB1_25
-; LA32-NEXT:  .LBB1_22: # %overflow.no.lhs.only
-; LA32-NEXT:    bltz $a3, .LBB1_26
-; LA32-NEXT:  .LBB1_23: # %overflow.no.lhs.only
-; LA32-NEXT:    move $a0, $a7
-; LA32-NEXT:    move $a6, $a3
-; LA32-NEXT:    move $t0, $a5
-; LA32-NEXT:    move $t5, $a1
-; LA32-NEXT:    bgez $a3, .LBB1_27
-; LA32-NEXT:    b .LBB1_28
-; LA32-NEXT:  .LBB1_24: # %overflow.no.lhs.only
-; LA32-NEXT:    bltz $a4, .LBB1_22
-; LA32-NEXT:  .LBB1_25: # %overflow.no.lhs.only
-; LA32-NEXT:    move $t2, $a6
-; LA32-NEXT:    bgez $a3, .LBB1_23
-; LA32-NEXT:  .LBB1_26:
-; LA32-NEXT:    sub.w $a6, $zero, $a7
-; LA32-NEXT:    or $a0, $a5, $a1
-; LA32-NEXT:    sltu $t0, $zero, $a0
-; LA32-NEXT:    sub.w $a0, $a6, $t0
-; LA32-NEXT:    sltu $a6, $a6, $t0
-; LA32-NEXT:    sltu $t0, $zero, $a7
-; LA32-NEXT:    add.w $t0, $a3, $t0
-; LA32-NEXT:    add.w $a6, $t0, $a6
-; LA32-NEXT:    sub.w $a6, $zero, $a6
-; LA32-NEXT:    sub.w $t0, $zero, $a5
-; LA32-NEXT:    sltu $t5, $zero, $a5
-; LA32-NEXT:    add.w $t5, $a1, $t5
-; LA32-NEXT:    sub.w $t5, $zero, $t5
-; LA32-NEXT:    bltz $a3, .LBB1_28
-; LA32-NEXT:  .LBB1_27: # %overflow.no.lhs.only
-; LA32-NEXT:    move $a6, $a3
-; LA32-NEXT:    move $a0, $a7
-; LA32-NEXT:  .LBB1_28: # %overflow.no.lhs.only
-; LA32-NEXT:    bltz $a3, .LBB1_30
-; LA32-NEXT:  # %bb.29: # %overflow.no.lhs.only
-; LA32-NEXT:    move $t5, $a1
-; LA32-NEXT:    bgez $a3, .LBB1_31
-; LA32-NEXT:    b .LBB1_32
-; LA32-NEXT:  .LBB1_30: # %overflow.no.lhs.only
-; LA32-NEXT:    bltz $a3, .LBB1_32
-; LA32-NEXT:  .LBB1_31: # %overflow.no.lhs.only
-; LA32-NEXT:    move $t0, $a5
-; LA32-NEXT:  .LBB1_32: # %overflow.no.lhs.only
-; LA32-NEXT:    slti $a1, $a4, 0
-; LA32-NEXT:    slti $a3, $a3, 0
-; LA32-NEXT:    mulh.wu $a4, $t2, $t0
-; LA32-NEXT:    mul.w $a5, $t4, $t0
-; LA32-NEXT:    add.w $a4, $a5, $a4
-; LA32-NEXT:    sltu $a5, $a4, $a5
-; LA32-NEXT:    mulh.wu $a7, $t4, $t0
-; LA32-NEXT:    add.w $a5, $a7, $a5
-; LA32-NEXT:    mul.w $a7, $t2, $t5
-; LA32-NEXT:    add.w $a4, $a7, $a4
-; LA32-NEXT:    sltu $a7, $a4, $a7
-; LA32-NEXT:    mulh.wu $t6, $t2, $t5
-; LA32-NEXT:    add.w $a7, $t6, $a7
-; LA32-NEXT:    add.w $a7, $a5, $a7
-; LA32-NEXT:    mul.w $t6, $t4, $t5
-; LA32-NEXT:    add.w $t7, $t6, $a7
-; LA32-NEXT:    mul.w $t8, $t0, $t1
-; LA32-NEXT:    add.w $t8, $t7, $t8
-; LA32-NEXT:    sltu $fp, $t8, $t7
-; LA32-NEXT:    sltu $t6, $t7, $t6
-; LA32-NEXT:    sltu $a5, $a7, $a5
-; LA32-NEXT:    mulh.wu $a7, $t4, $t5
-; LA32-NEXT:    add.w $a5, $a7, $a5
-; LA32-NEXT:    add.w $a5, $a5, $t6
-; LA32-NEXT:    mulh.wu $a7, $t0, $t1
-; LA32-NEXT:    mul.w $t6, $t0, $t3
-; LA32-NEXT:    add.w $a7, $a7, $t6
-; LA32-NEXT:    mul.w $t5, $t5, $t1
-; LA32-NEXT:    add.w $a7, $a7, $t5
-; LA32-NEXT:    add.w $a5, $a5, $a7
-; LA32-NEXT:    add.w $a7, $a5, $fp
-; LA32-NEXT:    mul.w $a5, $t2, $t0
-; LA32-NEXT:    mulh.wu $t0, $t2, $a0
-; LA32-NEXT:    mul.w $t5, $t4, $a0
-; LA32-NEXT:    add.w $t0, $t5, $t0
-; LA32-NEXT:    sltu $t5, $t0, $t5
-; LA32-NEXT:    mulh.wu $t6, $t4, $a0
-; LA32-NEXT:    add.w $t5, $t6, $t5
-; LA32-NEXT:    mul.w $t6, $t2, $a6
-; LA32-NEXT:    add.w $t7, $t6, $t0
-; LA32-NEXT:    sltu $t0, $t7, $t6
-; LA32-NEXT:    mulh.wu $t6, $t2, $a6
-; LA32-NEXT:    add.w $t0, $t6, $t0
-; LA32-NEXT:    add.w $t6, $t5, $t0
-; LA32-NEXT:    mul.w $fp, $t4, $a6
-; LA32-NEXT:    add.w $s0, $fp, $t6
-; LA32-NEXT:    mul.w $t0, $a0, $t1
-; LA32-NEXT:    add.w $t0, $s0, $t0
-; LA32-NEXT:    sltu $s1, $t0, $s0
-; LA32-NEXT:    sltu $fp, $s0, $fp
-; LA32-NEXT:    sltu $t5, $t6, $t5
-; LA32-NEXT:    mulh.wu $t4, $t4, $a6
-; LA32-NEXT:    add.w $t4, $t4, $t5
-; LA32-NEXT:    add.w $t4, $t4, $fp
-; LA32-NEXT:    mulh.wu $t5, $a0, $t1
-; LA32-NEXT:    mul.w $t3, $a0, $t3
-; LA32-NEXT:    add.w $t3, $t5, $t3
-; LA32-NEXT:    mul.w $a6, $a6, $t1
-; LA32-NEXT:    add.w $a6, $t3, $a6
-; LA32-NEXT:    add.w $t3, $t4, $a6
-; LA32-NEXT:    mul.w $a0, $t2, $a0
-; LA32-NEXT:    add.w $t2, $a7, $t7
-; LA32-NEXT:    add.w $a6, $t8, $a0
-; LA32-NEXT:    sltu $t1, $a6, $t8
-; LA32-NEXT:    add.w $t2, $t2, $t1
-; LA32-NEXT:    add.w $a0, $t3, $s1
-; LA32-NEXT:    beq $t2, $a7, .LBB1_34
-; LA32-NEXT:  # %bb.33: # %overflow.no.lhs.only
-; LA32-NEXT:    sltu $t1, $t2, $a7
-; LA32-NEXT:  .LBB1_34: # %overflow.no.lhs.only
-; LA32-NEXT:    add.w $a7, $t0, $t1
-; LA32-NEXT:    sltu $t0, $a7, $t0
-; LA32-NEXT:    add.w $t0, $a0, $t0
-; LA32-NEXT:    xor $a1, $a3, $a1
-; LA32-NEXT:    sub.w $a3, $zero, $a1
-; LA32-NEXT:    xor $a4, $a4, $a3
-; LA32-NEXT:    xor $a5, $a5, $a3
-; LA32-NEXT:    add.w $a0, $a5, $a1
-; LA32-NEXT:    sltu $a5, $a0, $a5
-; LA32-NEXT:    add.w $t1, $a4, $a5
-; LA32-NEXT:    sltui $a4, $t1, 1
-; LA32-NEXT:    sltu $a1, $a0, $a1
-; LA32-NEXT:    and $a4, $a4, $a1
-; LA32-NEXT:    xor $a1, $t2, $a3
-; LA32-NEXT:    xor $a5, $a6, $a3
-; LA32-NEXT:    add.w $t2, $a5, $a4
-; LA32-NEXT:    sltu $a5, $t2, $a5
-; LA32-NEXT:    add.w $a1, $a1, $a5
-; LA32-NEXT:    sltui $a5, $a1, 1
-; LA32-NEXT:    sltu $a4, $t2, $a4
-; LA32-NEXT:    and $a4, $a5, $a4
-; LA32-NEXT:    xor $a5, $t0, $a3
-; LA32-NEXT:    xor $a3, $a7, $a3
-; LA32-NEXT:    add.w $a4, $a3, $a4
-; LA32-NEXT:    sltu $a3, $a4, $a3
-; LA32-NEXT:    add.w $a3, $a5, $a3
-; LA32-NEXT:    or $a3, $a4, $a3
-; LA32-NEXT:    b .LBB1_52
-; LA32-NEXT:  .LBB1_35:
-; LA32-NEXT:    sub.w $t2, $zero, $a7
-; LA32-NEXT:    or $t1, $a5, $a1
-; LA32-NEXT:    sltu $t3, $zero, $t1
-; LA32-NEXT:    sub.w $t1, $t2, $t3
-; LA32-NEXT:    sltu $t2, $t2, $t3
-; LA32-NEXT:    sltu $t3, $zero, $a7
-; LA32-NEXT:    add.w $t3, $a3, $t3
-; LA32-NEXT:    add.w $t2, $t3, $t2
-; LA32-NEXT:    sub.w $t3, $zero, $t2
-; LA32-NEXT:    sub.w $t2, $zero, $a5
-; LA32-NEXT:    sltu $t4, $zero, $a5
-; LA32-NEXT:    add.w $t4, $a1, $t4
-; LA32-NEXT:    sub.w $t4, $zero, $t4
-; LA32-NEXT:    bltz $a3, .LBB1_37
-; LA32-NEXT:  .LBB1_36: # %overflow.no.rhs.only
-; LA32-NEXT:    move $t3, $a3
-; LA32-NEXT:    move $t1, $a7
-; LA32-NEXT:  .LBB1_37: # %overflow.no.rhs.only
-; LA32-NEXT:    bltz $a3, .LBB1_41
-; LA32-NEXT:  # %bb.38: # %overflow.no.rhs.only
-; LA32-NEXT:    move $t4, $a1
-; LA32-NEXT:    bgez $a3, .LBB1_42
-; LA32-NEXT:  .LBB1_39: # %overflow.no.rhs.only
-; LA32-NEXT:    bltz $a4, .LBB1_43
-; LA32-NEXT:  .LBB1_40: # %overflow.no.rhs.only
-; LA32-NEXT:    move $a1, $a0
-; LA32-NEXT:    move $a5, $a4
-; LA32-NEXT:    move $a7, $a6
-; LA32-NEXT:    move $t5, $t0
-; LA32-NEXT:    bgez $a4, .LBB1_44
-; LA32-NEXT:    b .LBB1_45
-; LA32-NEXT:  .LBB1_41: # %overflow.no.rhs.only
-; LA32-NEXT:    bltz $a3, .LBB1_39
-; LA32-NEXT:  .LBB1_42: # %overflow.no.rhs.only
-; LA32-NEXT:    move $t2, $a5
-; LA32-NEXT:    bgez $a4, .LBB1_40
-; LA32-NEXT:  .LBB1_43:
-; LA32-NEXT:    sub.w $a5, $zero, $a0
-; LA32-NEXT:    or $a1, $a6, $t0
-; LA32-NEXT:    sltu $a7, $zero, $a1
-; LA32-NEXT:    sub.w $a1, $a5, $a7
-; LA32-NEXT:    sltu $a5, $a5, $a7
-; LA32-NEXT:    sltu $a7, $zero, $a0
-; LA32-NEXT:    add.w $a7, $a4, $a7
-; LA32-NEXT:    add.w $a5, $a7, $a5
-; LA32-NEXT:    sub.w $a5, $zero, $a5
-; LA32-NEXT:    sub.w $a7, $zero, $a6
-; LA32-NEXT:    sltu $t5, $zero, $a6
-; LA32-NEXT:    add.w $t5, $t0, $t5
-; LA32-NEXT:    sub.w $t5, $zero, $t5
-; LA32-NEXT:    bltz $a4, .LBB1_45
-; LA32-NEXT:  .LBB1_44: # %overflow.no.rhs.only
-; LA32-NEXT:    move $a5, $a4
-; LA32-NEXT:    move $a1, $a0
-; LA32-NEXT:  .LBB1_45: # %overflow.no.rhs.only
-; LA32-NEXT:    bltz $a4, .LBB1_47
-; LA32-NEXT:  # %bb.46: # %overflow.no.rhs.only
-; LA32-NEXT:    move $t5, $t0
-; LA32-NEXT:    bgez $a4, .LBB1_48
-; LA32-NEXT:    b .LBB1_49
-; LA32-NEXT:  .LBB1_47: # %overflow.no.rhs.only
-; LA32-NEXT:    bltz $a4, .LBB1_49
-; LA32-NEXT:  .LBB1_48: # %overflow.no.rhs.only
-; LA32-NEXT:    move $a7, $a6
-; LA32-NEXT:  .LBB1_49: # %overflow.no.rhs.only
-; LA32-NEXT:    slti $a0, $a3, 0
-; LA32-NEXT:    slti $a3, $a4, 0
-; LA32-NEXT:    mulh.wu $a4, $t2, $a7
-; LA32-NEXT:    mul.w $a6, $t4, $a7
-; LA32-NEXT:    add.w $a4, $a6, $a4
-; LA32-NEXT:    sltu $a6, $a4, $a6
-; LA32-NEXT:    mulh.wu $t0, $t4, $a7
-; LA32-NEXT:    add.w $a6, $t0, $a6
-; LA32-NEXT:    mul.w $t0, $t2, $t5
-; LA32-NEXT:    add.w $a4, $t0, $a4
-; LA32-NEXT:    sltu $t0, $a4, $t0
-; LA32-NEXT:    mulh.wu $t6, $t2, $t5
-; LA32-NEXT:    add.w $t0, $t6, $t0
-; LA32-NEXT:    add.w $t0, $a6, $t0
-; LA32-NEXT:    mul.w $t6, $t4, $t5
-; LA32-NEXT:    add.w $t7, $t6, $t0
-; LA32-NEXT:    mul.w $t8, $a7, $t1
-; LA32-NEXT:    add.w $t8, $t7, $t8
-; LA32-NEXT:    sltu $fp, $t8, $t7
-; LA32-NEXT:    sltu $t6, $t7, $t6
-; LA32-NEXT:    sltu $a6, $t0, $a6
-; LA32-NEXT:    mulh.wu $t0, $t4, $t5
-; LA32-NEXT:    add.w $a6, $t0, $a6
-; LA32-NEXT:    add.w $a6, $a6, $t6
-; LA32-NEXT:    mulh.wu $t0, $a7, $t1
-; LA32-NEXT:    mul.w $t6, $a7, $t3
-; LA32-NEXT:    add.w $t0, $t0, $t6
-; LA32-NEXT:    mul.w $t5, $t5, $t1
-; LA32-NEXT:    add.w $t0, $t0, $t5
-; LA32-NEXT:    add.w $a6, $a6, $t0
-; LA32-NEXT:    add.w $t0, $a6, $fp
-; LA32-NEXT:    mul.w $a6, $t2, $a7
-; LA32-NEXT:    mulh.wu $a7, $t2, $a1
-; LA32-NEXT:    mul.w $t5, $t4, $a1
-; LA32-NEXT:    add.w $a7, $t5, $a7
-; LA32-NEXT:    sltu $t5, $a7, $t5
-; LA32-NEXT:    mulh.wu $t6, $t4, $a1
-; LA32-NEXT:    add.w $t5, $t6, $t5
-; LA32-NEXT:    mul.w $t6, $t2, $a5
-; LA32-NEXT:    add.w $t7, $t6, $a7
-; LA32-NEXT:    sltu $a7, $t7, $t6
-; LA32-NEXT:    mulh.wu $t6, $t2, $a5
-; LA32-NEXT:    add.w $a7, $t6, $a7
-; LA32-NEXT:    add.w $t6, $t5, $a7
-; LA32-NEXT:    mul.w $fp, $t4, $a5
-; LA32-NEXT:    add.w $s0, $fp, $t6
-; LA32-NEXT:    mul.w $a7, $a1, $t1
-; LA32-NEXT:    add.w $a7, $s0, $a7
-; LA32-NEXT:    sltu $s1, $a7, $s0
-; LA32-NEXT:    sltu $fp, $s0, $fp
-; LA32-NEXT:    sltu $t5, $t6, $t5
-; LA32-NEXT:    mulh.wu $t4, $t4, $a5
-; LA32-NEXT:    add.w $t4, $t4, $t5
-; LA32-NEXT:    add.w $t4, $t4, $fp
-; LA32-NEXT:    mulh.wu $t5, $a1, $t1
-; LA32-NEXT:    mul.w $t3, $a1, $t3
-; LA32-NEXT:    add.w $t3, $t5, $t3
-; LA32-NEXT:    mul.w $a5, $a5, $t1
-; LA32-NEXT:    add.w $a5, $t3, $a5
-; LA32-NEXT:    add.w $t1, $t4, $a5
-; LA32-NEXT:    mul.w $a1, $t2, $a1
-; LA32-NEXT:    add.w $a5, $t0, $t7
-; LA32-NEXT:    add.w $a1, $t8, $a1
-; LA32-NEXT:    sltu $t2, $a1, $t8
-; LA32-NEXT:    add.w $a5, $a5, $t2
-; LA32-NEXT:    add.w $t1, $t1, $s1
-; LA32-NEXT:    beq $a5, $t0, .LBB1_51
-; LA32-NEXT:  # %bb.50: # %overflow.no.rhs.only
-; LA32-NEXT:    sltu $t2, $a5, $t0
-; LA32-NEXT:  .LBB1_51: # %overflow.no.rhs.only
-; LA32-NEXT:    add.w $t0, $a7, $t2
-; LA32-NEXT:    sltu $a7, $t0, $a7
-; LA32-NEXT:    add.w $a7, $t1, $a7
-; LA32-NEXT:    xor $a3, $a0, $a3
-; LA32-NEXT:    sub.w $t3, $zero, $a3
-; LA32-NEXT:    xor $a4, $a4, $t3
-; LA32-NEXT:    xor $a6, $a6, $t3
-; LA32-NEXT:    add.w $a0, $a6, $a3
-; LA32-NEXT:    sltu $a6, $a0, $a6
-; LA32-NEXT:    add.w $t1, $a4, $a6
-; LA32-NEXT:    sltui $a4, $t1, 1
-; LA32-NEXT:    sltu $a3, $a0, $a3
-; LA32-NEXT:    and $a3, $a4, $a3
-; LA32-NEXT:    xor $a4, $a5, $t3
-; LA32-NEXT:    xor $a1, $a1, $t3
-; LA32-NEXT:    add.w $t2, $a1, $a3
-; LA32-NEXT:    sltu $a1, $t2, $a1
-; LA32-NEXT:    add.w $a1, $a4, $a1
-; LA32-NEXT:    sltui $a4, $a1, 1
-; LA32-NEXT:    sltu $a3, $t2, $a3
-; LA32-NEXT:    and $a3, $a4, $a3
-; LA32-NEXT:    xor $a4, $a7, $t3
-; LA32-NEXT:    xor $a5, $t0, $t3
-; LA32-NEXT:    add.w $a3, $a5, $a3
-; LA32-NEXT:    sltu $a5, $a3, $a5
-; LA32-NEXT:    add.w $a4, $a4, $a5
-; LA32-NEXT:    or $a3, $a3, $a4
-; LA32-NEXT:  .LBB1_52: # %overflow.res
-; LA32-NEXT:    sltu $t3, $zero, $a3
-; LA32-NEXT:  .LBB1_53: # %overflow.res
-; LA32-NEXT:    st.w $a0, $a2, 0
-; LA32-NEXT:    st.w $t1, $a2, 4
-; LA32-NEXT:    st.w $t2, $a2, 8
-; LA32-NEXT:    andi $a0, $t3, 1
-; LA32-NEXT:    st.w $a1, $a2, 12
+; LA32-NEXT:    srai.w $a5, $t2, 31
+; LA32-NEXT:    xor $a0, $a0, $a5
+; LA32-NEXT:    xor $a6, $t6, $a5
+; LA32-NEXT:    or $a0, $a6, $a0
+; LA32-NEXT:    xor $a6, $t7, $a5
+; LA32-NEXT:    xor $a5, $t5, $a5
+; LA32-NEXT:    or $a5, $a5, $a6
+; LA32-NEXT:    or $a0, $a5, $a0
+; LA32-NEXT:    sltu $a0, $zero, $a0
+; LA32-NEXT:    mul.w $a3, $a4, $a3
+; LA32-NEXT:    st.w $a3, $a2, 0
+; LA32-NEXT:    st.w $a1, $a2, 4
+; LA32-NEXT:    st.w $t1, $a2, 8
+; LA32-NEXT:    st.w $t2, $a2, 12
 ; LA32-NEXT:    ld.w $s8, $sp, 4 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $s7, $sp, 8 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $s6, $sp, 12 # 4-byte Folded Reload
@@ -838,13 +295,7 @@ define zeroext i1 @smuloi128(i128 %v1, i128 %v2, ptr %res) {
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: smuloi128:
-; LA64:       # %bb.0: # %overflow.entry
-; LA64-NEXT:    srai.d $a6, $a0, 63
-; LA64-NEXT:    srai.d $a5, $a2, 63
-; LA64-NEXT:    beq $a1, $a6, .LBB1_3
-; LA64-NEXT:  # %bb.1: # %overflow.lhs
-; LA64-NEXT:    beq $a3, $a5, .LBB1_5
-; LA64-NEXT:  # %bb.2: # %overflow
+; LA64:       # %bb.0:
 ; LA64-NEXT:    mulh.du $a5, $a0, $a2
 ; LA64-NEXT:    mul.d $a6, $a1, $a2
 ; LA64-NEXT:    add.d $a5, $a6, $a5
@@ -878,129 +329,11 @@ define zeroext i1 @smuloi128(i128 %v1, i128 %v2, ptr %res) {
 ; LA64-NEXT:    xor $a1, $a1, $a6
 ; LA64-NEXT:    xor $a3, $a3, $a6
 ; LA64-NEXT:    or $a1, $a3, $a1
-; LA64-NEXT:    sltu $a6, $zero, $a1
-; LA64-NEXT:    b .LBB1_8
-; LA64-NEXT:  .LBB1_3: # %overflow.no.lhs
-; LA64-NEXT:    beq $a3, $a5, .LBB1_7
-; LA64-NEXT:  # %bb.4: # %overflow.no.lhs.only
-; LA64-NEXT:    slti $a5, $a1, 0
-; LA64-NEXT:    masknez $a6, $a0, $a5
-; LA64-NEXT:    sub.d $a7, $zero, $a0
-; LA64-NEXT:    maskeqz $a7, $a7, $a5
-; LA64-NEXT:    or $a7, $a7, $a6
-; LA64-NEXT:    masknez $t0, $a1, $a5
-; LA64-NEXT:    sltu $a0, $zero, $a0
-; LA64-NEXT:    add.d $a0, $a1, $a0
-; LA64-NEXT:    sub.d $a0, $zero, $a0
-; LA64-NEXT:    maskeqz $a0, $a0, $a5
-; LA64-NEXT:    or $a0, $a0, $t0
-; LA64-NEXT:    maskeqz $a0, $a0, $a5
-; LA64-NEXT:    or $a0, $a0, $t0
-; LA64-NEXT:    maskeqz $a1, $a7, $a5
-; LA64-NEXT:    or $a1, $a1, $a6
-; LA64-NEXT:    slti $a6, $a3, 0
-; LA64-NEXT:    masknez $a7, $a2, $a6
-; LA64-NEXT:    sub.d $t0, $zero, $a2
-; LA64-NEXT:    maskeqz $t0, $t0, $a6
-; LA64-NEXT:    or $t0, $t0, $a7
-; LA64-NEXT:    masknez $t1, $a3, $a6
-; LA64-NEXT:    sltu $a2, $zero, $a2
-; LA64-NEXT:    add.d $a2, $a3, $a2
-; LA64-NEXT:    sub.d $a2, $zero, $a2
-; LA64-NEXT:    maskeqz $a2, $a2, $a6
-; LA64-NEXT:    or $a2, $a2, $t1
-; LA64-NEXT:    maskeqz $a2, $a2, $a6
-; LA64-NEXT:    or $a2, $a2, $t1
-; LA64-NEXT:    maskeqz $a3, $t0, $a6
-; LA64-NEXT:    or $a3, $a3, $a7
-; LA64-NEXT:    mulh.du $a7, $a1, $a3
-; LA64-NEXT:    mul.d $t0, $a0, $a3
-; LA64-NEXT:    add.d $a7, $a7, $t0
-; LA64-NEXT:    mul.d $a3, $a1, $a3
+; LA64-NEXT:    sltu $a1, $zero, $a1
 ; LA64-NEXT:    mul.d $a0, $a0, $a2
-; LA64-NEXT:    mulh.du $t0, $a1, $a2
-; LA64-NEXT:    add.d $a0, $t0, $a0
-; LA64-NEXT:    mul.d $a1, $a1, $a2
-; LA64-NEXT:    add.d $a1, $a7, $a1
-; LA64-NEXT:    sltu $a2, $a1, $a7
-; LA64-NEXT:    add.d $a2, $a0, $a2
-; LA64-NEXT:    xor $a5, $a6, $a5
-; LA64-NEXT:    sub.d $a6, $zero, $a5
-; LA64-NEXT:    xor $a0, $a3, $a6
-; LA64-NEXT:    add.d $a0, $a0, $a5
-; LA64-NEXT:    sltu $a3, $a0, $a5
-; LA64-NEXT:    xor $a1, $a1, $a6
-; LA64-NEXT:    add.d $a5, $a1, $a3
-; LA64-NEXT:    sltu $a1, $a5, $a3
-; LA64-NEXT:    b .LBB1_6
-; LA64-NEXT:  .LBB1_5: # %overflow.no.rhs.only
-; LA64-NEXT:    slti $a5, $a3, 0
-; LA64-NEXT:    masknez $a6, $a2, $a5
-; LA64-NEXT:    sub.d $a7, $zero, $a2
-; LA64-NEXT:    maskeqz $a7, $a7, $a5
-; LA64-NEXT:    or $a7, $a7, $a6
-; LA64-NEXT:    masknez $t0, $a3, $a5
-; LA64-NEXT:    sltu $a2, $zero, $a2
-; LA64-NEXT:    add.d $a2, $a3, $a2
-; LA64-NEXT:    sub.d $a2, $zero, $a2
-; LA64-NEXT:    maskeqz $a2, $a2, $a5
-; LA64-NEXT:    or $a2, $a2, $t0
-; LA64-NEXT:    maskeqz $a2, $a2, $a5
-; LA64-NEXT:    or $a2, $a2, $t0
-; LA64-NEXT:    maskeqz $a3, $a7, $a5
-; LA64-NEXT:    or $a3, $a3, $a6
-; LA64-NEXT:    slti $a6, $a1, 0
-; LA64-NEXT:    masknez $a7, $a0, $a6
-; LA64-NEXT:    sub.d $t0, $zero, $a0
-; LA64-NEXT:    maskeqz $t0, $t0, $a6
-; LA64-NEXT:    or $t0, $t0, $a7
-; LA64-NEXT:    masknez $t1, $a1, $a6
-; LA64-NEXT:    sltu $a0, $zero, $a0
-; LA64-NEXT:    add.d $a0, $a1, $a0
-; LA64-NEXT:    sub.d $a0, $zero, $a0
-; LA64-NEXT:    maskeqz $a0, $a0, $a6
-; LA64-NEXT:    or $a0, $a0, $t1
-; LA64-NEXT:    maskeqz $a0, $a0, $a6
-; LA64-NEXT:    or $a0, $a0, $t1
-; LA64-NEXT:    maskeqz $a1, $t0, $a6
-; LA64-NEXT:    or $a1, $a1, $a7
-; LA64-NEXT:    mulh.du $a7, $a3, $a1
-; LA64-NEXT:    mul.d $t0, $a2, $a1
-; LA64-NEXT:    add.d $a7, $a7, $t0
-; LA64-NEXT:    mul.d $a1, $a3, $a1
-; LA64-NEXT:    mul.d $a2, $a2, $a0
-; LA64-NEXT:    mulh.du $t0, $a3, $a0
-; LA64-NEXT:    add.d $a2, $t0, $a2
-; LA64-NEXT:    mul.d $a0, $a3, $a0
-; LA64-NEXT:    add.d $a3, $a7, $a0
-; LA64-NEXT:    sltu $a0, $a3, $a7
-; LA64-NEXT:    add.d $a2, $a2, $a0
-; LA64-NEXT:    xor $a5, $a5, $a6
-; LA64-NEXT:    sub.d $a6, $zero, $a5
-; LA64-NEXT:    xor $a0, $a1, $a6
-; LA64-NEXT:    add.d $a0, $a0, $a5
-; LA64-NEXT:    sltu $a1, $a0, $a5
-; LA64-NEXT:    xor $a3, $a3, $a6
-; LA64-NEXT:    add.d $a5, $a3, $a1
-; LA64-NEXT:    sltu $a1, $a5, $a1
-; LA64-NEXT:  .LBB1_6: # %overflow.res
-; LA64-NEXT:    xor $a2, $a2, $a6
-; LA64-NEXT:    add.d $a1, $a2, $a1
-; LA64-NEXT:    sltu $a6, $zero, $a1
-; LA64-NEXT:    b .LBB1_9
-; LA64-NEXT:  .LBB1_7: # %overflow.no
-; LA64-NEXT:    move $a6, $zero
-; LA64-NEXT:    mulh.du $a5, $a0, $a2
-; LA64-NEXT:    mul.d $a3, $a0, $a3
-; LA64-NEXT:    add.d $a3, $a5, $a3
-; LA64-NEXT:    mul.d $a1, $a1, $a2
-; LA64-NEXT:    add.d $a5, $a3, $a1
-; LA64-NEXT:  .LBB1_8: # %overflow.res
-; LA64-NEXT:    mul.d $a0, $a0, $a2
-; LA64-NEXT:  .LBB1_9: # %overflow.res
 ; LA64-NEXT:    st.d $a0, $a4, 0
-; LA64-NEXT:    andi $a0, $a6, 1
 ; LA64-NEXT:    st.d $a5, $a4, 8
+; LA64-NEXT:    move $a0, $a1
 ; LA64-NEXT:    ret
   %t = call {i128, i1} @llvm.smul.with.overflow.i128(i128 %v1, i128 %v2)
   %val = extractvalue {i128, i1} %t, 0

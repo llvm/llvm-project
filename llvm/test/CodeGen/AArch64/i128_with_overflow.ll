@@ -224,10 +224,9 @@ cleanup:
 define i128 @test_umul_i128(i128 noundef %x, i128 noundef %y) {
 ; CHECK-LABEL: test_umul_i128:
 ; CHECK:       // %bb.0: // %overflow.entry
-; CHECK-NEXT:    cbz x1, .LBB4_3
-; CHECK-NEXT:  // %bb.1: // %overflow.lhs
-; CHECK-NEXT:    cbz x3, .LBB4_5
-; CHECK-NEXT:  // %bb.2: // %overflow
+; CHECK-NEXT:    orr x8, x1, x3
+; CHECK-NEXT:    cbz x8, .LBB4_2
+; CHECK-NEXT:  // %bb.1: // %overflow
 ; CHECK-NEXT:    mul x9, x3, x0
 ; CHECK-NEXT:    cmp x1, #0
 ; CHECK-NEXT:    ccmp x3, #0, #4, ne
@@ -241,31 +240,16 @@ define i128 @test_umul_i128(i128 noundef %x, i128 noundef %y) {
 ; CHECK-NEXT:    cset w8, ne
 ; CHECK-NEXT:    adds x1, x11, x9
 ; CHECK-NEXT:    csinc w8, w8, wzr, lo
-; CHECK-NEXT:    tbnz w8, #0, .LBB4_7
-; CHECK-NEXT:    b .LBB4_8
-; CHECK-NEXT:  .LBB4_3: // %overflow.no.lhs
+; CHECK-NEXT:    tbnz w8, #0, .LBB4_3
+; CHECK-NEXT:    b .LBB4_4
+; CHECK-NEXT:  .LBB4_2: // %overflow.no
 ; CHECK-NEXT:    umulh x8, x0, x2
-; CHECK-NEXT:    cbz x3, .LBB4_9
-; CHECK-NEXT:  // %bb.4: // %overflow.no.lhs.only
-; CHECK-NEXT:    madd x8, x1, x2, x8
-; CHECK-NEXT:    umulh x9, x0, x3
-; CHECK-NEXT:    mul x10, x0, x3
-; CHECK-NEXT:    mul x11, x1, x3
+; CHECK-NEXT:    madd x8, x0, x3, x8
 ; CHECK-NEXT:    mul x0, x0, x2
-; CHECK-NEXT:    b .LBB4_6
-; CHECK-NEXT:  .LBB4_5: // %overflow.no.rhs.only
-; CHECK-NEXT:    umulh x8, x2, x0
-; CHECK-NEXT:    umulh x9, x2, x1
-; CHECK-NEXT:    madd x8, x3, x0, x8
-; CHECK-NEXT:    mul x10, x2, x1
-; CHECK-NEXT:    mul x11, x3, x1
-; CHECK-NEXT:    mul x0, x2, x0
-; CHECK-NEXT:  .LBB4_6: // %overflow.res
-; CHECK-NEXT:    adds x1, x8, x10
-; CHECK-NEXT:    adcs xzr, x9, x11
-; CHECK-NEXT:    cset w8, ne
-; CHECK-NEXT:    tbz w8, #0, .LBB4_8
-; CHECK-NEXT:  .LBB4_7: // %if.then
+; CHECK-NEXT:    madd x1, x1, x2, x8
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    tbz w8, #0, .LBB4_4
+; CHECK-NEXT:  .LBB4_3: // %if.then
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
@@ -274,15 +258,8 @@ define i128 @test_umul_i128(i128 noundef %x, i128 noundef %y) {
 ; CHECK-NEXT:    sxtw x0, w0
 ; CHECK-NEXT:    asr x1, x0, #63
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:  .LBB4_8: // %cleanup
+; CHECK-NEXT:  .LBB4_4: // %cleanup
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB4_9: // %overflow.no
-; CHECK-NEXT:    madd x8, x0, x3, x8
-; CHECK-NEXT:    mul x0, x0, x2
-; CHECK-NEXT:    madd x1, x1, x2, x8
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    tbnz w8, #0, .LBB4_7
-; CHECK-NEXT:    b .LBB4_8
 entry:
   %0 = tail call { i128, i1 } @llvm.umul.with.overflow.i128(i128 %x, i128 %y)
   %1 = extractvalue { i128, i1 } %0, 1
@@ -305,13 +282,21 @@ cleanup:
 define i128 @test_smul_i128(i128 noundef %x, i128 noundef %y) {
 ; CHECK-LABEL: test_smul_i128:
 ; CHECK:       // %bb.0: // %overflow.entry
-; CHECK-NEXT:    asr x8, x2, #63
 ; CHECK-NEXT:    cmp x1, x0, asr #63
-; CHECK-NEXT:    b.eq .LBB5_3
-; CHECK-NEXT:  // %bb.1: // %overflow.lhs
+; CHECK-NEXT:    b.ne .LBB5_3
+; CHECK-NEXT:  // %bb.1: // %overflow.entry
+; CHECK-NEXT:    asr x8, x2, #63
 ; CHECK-NEXT:    cmp x3, x8
-; CHECK-NEXT:    b.eq .LBB5_5
-; CHECK-NEXT:  // %bb.2: // %overflow
+; CHECK-NEXT:    b.ne .LBB5_3
+; CHECK-NEXT:  // %bb.2: // %overflow.no
+; CHECK-NEXT:    umulh x8, x0, x2
+; CHECK-NEXT:    madd x8, x0, x3, x8
+; CHECK-NEXT:    mul x0, x0, x2
+; CHECK-NEXT:    madd x1, x1, x2, x8
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    tbnz w8, #0, .LBB5_4
+; CHECK-NEXT:    b .LBB5_5
+; CHECK-NEXT:  .LBB5_3: // %overflow
 ; CHECK-NEXT:    asr x9, x1, #63
 ; CHECK-NEXT:    umulh x10, x0, x2
 ; CHECK-NEXT:    asr x13, x3, #63
@@ -322,97 +307,25 @@ define i128 @test_smul_i128(i128 noundef %x, i128 noundef %y) {
 ; CHECK-NEXT:    mul x14, x0, x3
 ; CHECK-NEXT:    umulh x12, x0, x3
 ; CHECK-NEXT:    adc x8, x8, x9
+; CHECK-NEXT:    mov x9, x1
 ; CHECK-NEXT:    mul x13, x0, x13
 ; CHECK-NEXT:    asr x11, x8, #63
-; CHECK-NEXT:    adds x9, x14, x10
 ; CHECK-NEXT:    mul x15, x1, x3
-; CHECK-NEXT:    smulh x10, x1, x3
-; CHECK-NEXT:    mov x1, x9
-; CHECK-NEXT:    adc x9, x12, x13
-; CHECK-NEXT:    asr x12, x9, #63
+; CHECK-NEXT:    adds x1, x14, x10
+; CHECK-NEXT:    smulh x9, x9, x3
+; CHECK-NEXT:    adc x10, x12, x13
+; CHECK-NEXT:    asr x12, x10, #63
+; CHECK-NEXT:    adds x8, x8, x10
+; CHECK-NEXT:    asr x10, x1, #63
 ; CHECK-NEXT:    mul x0, x0, x2
-; CHECK-NEXT:    adds x8, x8, x9
-; CHECK-NEXT:    asr x9, x1, #63
 ; CHECK-NEXT:    adc x11, x11, x12
 ; CHECK-NEXT:    adds x8, x15, x8
-; CHECK-NEXT:    adc x10, x10, x11
-; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    ccmp x10, x9, #0, eq
-; CHECK-NEXT:    b .LBB5_7
-; CHECK-NEXT:  .LBB5_3: // %overflow.no.lhs
-; CHECK-NEXT:    cmp x3, x8
-; CHECK-NEXT:    b.eq .LBB5_10
-; CHECK-NEXT:  // %bb.4: // %overflow.no.lhs.only
-; CHECK-NEXT:    asr x8, x1, #63
-; CHECK-NEXT:    asr x10, x3, #63
-; CHECK-NEXT:    eor x9, x0, x8
-; CHECK-NEXT:    eor x11, x1, x8
-; CHECK-NEXT:    eor x12, x2, x10
-; CHECK-NEXT:    subs x9, x9, x8
-; CHECK-NEXT:    sbc x8, x11, x8
-; CHECK-NEXT:    cmp x1, #0
-; CHECK-NEXT:    eor x11, x3, x10
-; CHECK-NEXT:    csel x8, x8, x1, lt
-; CHECK-NEXT:    csel x9, x9, x0, lt
-; CHECK-NEXT:    cset w13, lt
-; CHECK-NEXT:    subs x12, x12, x10
-; CHECK-NEXT:    sbc x10, x11, x10
-; CHECK-NEXT:    cmp x3, #0
-; CHECK-NEXT:    csel x11, x12, x2, lt
-; CHECK-NEXT:    csel x10, x10, x3, lt
-; CHECK-NEXT:    umulh x12, x9, x11
-; CHECK-NEXT:    mul x15, x8, x10
-; CHECK-NEXT:    madd x8, x8, x11, x12
-; CHECK-NEXT:    cset w12, lt
-; CHECK-NEXT:    mul x14, x9, x11
-; CHECK-NEXT:    mul x11, x9, x10
-; CHECK-NEXT:    umulh x9, x9, x10
-; CHECK-NEXT:    eor w10, w12, w13
-; CHECK-NEXT:    b .LBB5_6
-; CHECK-NEXT:  .LBB5_5: // %overflow.no.rhs.only
-; CHECK-NEXT:    asr x8, x3, #63
-; CHECK-NEXT:    asr x10, x1, #63
-; CHECK-NEXT:    eor x9, x2, x8
-; CHECK-NEXT:    eor x11, x3, x8
-; CHECK-NEXT:    eor x12, x0, x10
-; CHECK-NEXT:    subs x9, x9, x8
-; CHECK-NEXT:    sbc x8, x11, x8
-; CHECK-NEXT:    cmp x3, #0
-; CHECK-NEXT:    eor x11, x1, x10
-; CHECK-NEXT:    csel x8, x8, x3, lt
-; CHECK-NEXT:    csel x9, x9, x2, lt
-; CHECK-NEXT:    cset w13, lt
-; CHECK-NEXT:    subs x12, x12, x10
-; CHECK-NEXT:    sbc x10, x11, x10
-; CHECK-NEXT:    cmp x1, #0
-; CHECK-NEXT:    csel x11, x12, x0, lt
-; CHECK-NEXT:    csel x10, x10, x1, lt
-; CHECK-NEXT:    umulh x12, x9, x11
-; CHECK-NEXT:    mul x14, x9, x11
-; CHECK-NEXT:    mul x15, x8, x10
-; CHECK-NEXT:    madd x8, x8, x11, x12
-; CHECK-NEXT:    cset w12, lt
-; CHECK-NEXT:    mul x11, x9, x10
-; CHECK-NEXT:    umulh x9, x9, x10
-; CHECK-NEXT:    eor w10, w13, w12
-; CHECK-NEXT:  .LBB5_6: // %overflow.res
-; CHECK-NEXT:    sbfx x12, x10, #0, #1
-; CHECK-NEXT:    adds x8, x8, x11
-; CHECK-NEXT:    adc x9, x9, x15
-; CHECK-NEXT:    eor x13, x14, x12
-; CHECK-NEXT:    eor x8, x8, x12
-; CHECK-NEXT:    add x0, x13, x10
-; CHECK-NEXT:    cmp x0, x10
-; CHECK-NEXT:    cset w10, lo
-; CHECK-NEXT:    cinc x1, x8, lo
-; CHECK-NEXT:    eor x8, x9, x12
-; CHECK-NEXT:    cmp x1, x10
-; CHECK-NEXT:    cinc x8, x8, lo
-; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:  .LBB5_7: // %overflow.res
+; CHECK-NEXT:    adc x9, x9, x11
+; CHECK-NEXT:    cmp x8, x10
+; CHECK-NEXT:    ccmp x9, x10, #0, eq
 ; CHECK-NEXT:    cset w8, ne
-; CHECK-NEXT:    tbz w8, #0, .LBB5_9
-; CHECK-NEXT:  .LBB5_8: // %if.then
+; CHECK-NEXT:    tbz w8, #0, .LBB5_5
+; CHECK-NEXT:  .LBB5_4: // %if.then
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
@@ -421,16 +334,8 @@ define i128 @test_smul_i128(i128 noundef %x, i128 noundef %y) {
 ; CHECK-NEXT:    sxtw x0, w0
 ; CHECK-NEXT:    asr x1, x0, #63
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:  .LBB5_9: // %cleanup
+; CHECK-NEXT:  .LBB5_5: // %cleanup
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB5_10: // %overflow.no
-; CHECK-NEXT:    umulh x8, x0, x2
-; CHECK-NEXT:    madd x8, x0, x3, x8
-; CHECK-NEXT:    mul x0, x0, x2
-; CHECK-NEXT:    madd x1, x1, x2, x8
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    tbnz w8, #0, .LBB5_8
-; CHECK-NEXT:    b .LBB5_9
 entry:
   %0 = tail call { i128, i1 } @llvm.smul.with.overflow.i128(i128 %x, i128 %y)
   %1 = extractvalue { i128, i1 } %0, 1

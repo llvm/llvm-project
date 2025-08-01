@@ -3,211 +3,125 @@
 
 define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; THUMBV7-LABEL: muloti_test:
-; THUMBV7:       @ %bb.0: @ %overflow.entry
+; THUMBV7:       @ %bb.0: @ %start
 ; THUMBV7-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; THUMBV7-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
-; THUMBV7-NEXT:    .pad #12
-; THUMBV7-NEXT:    sub sp, #12
-; THUMBV7-NEXT:    ldrd r11, r6, [sp, #48]
-; THUMBV7-NEXT:    ldrd r10, r5, [sp, #64]
-; THUMBV7-NEXT:    ldrd r9, r12, [sp, #56]
-; THUMBV7-NEXT:    orrs.w r1, r11, r6
-; THUMBV7-NEXT:    beq .LBB0_3
-; THUMBV7-NEXT:  @ %bb.1: @ %overflow.lhs
-; THUMBV7-NEXT:    orr.w r4, r10, r5
-; THUMBV7-NEXT:    cmp r4, #0
-; THUMBV7-NEXT:    beq.w .LBB0_5
-; THUMBV7-NEXT:  @ %bb.2: @ %overflow
-; THUMBV7-NEXT:    it ne
-; THUMBV7-NEXT:    movne r4, #1
-; THUMBV7-NEXT:    cmp r1, #0
-; THUMBV7-NEXT:    it ne
-; THUMBV7-NEXT:    movne r1, #1
-; THUMBV7-NEXT:    and.w lr, r1, r4
-; THUMBV7-NEXT:    umull r7, r4, r6, r9
-; THUMBV7-NEXT:    cmp.w r12, #0
-; THUMBV7-NEXT:    mov r1, r12
-; THUMBV7-NEXT:    it ne
-; THUMBV7-NEXT:    movne r1, #1
-; THUMBV7-NEXT:    cmp r6, #0
-; THUMBV7-NEXT:    it ne
-; THUMBV7-NEXT:    movne r6, #1
-; THUMBV7-NEXT:    ands r1, r6
-; THUMBV7-NEXT:    cmp r4, #0
-; THUMBV7-NEXT:    it ne
-; THUMBV7-NEXT:    movne r4, #1
-; THUMBV7-NEXT:    orrs r1, r4
-; THUMBV7-NEXT:    umull r4, r6, r12, r11
-; THUMBV7-NEXT:    cmp r6, #0
-; THUMBV7-NEXT:    it ne
-; THUMBV7-NEXT:    movne r6, #1
-; THUMBV7-NEXT:    orrs r6, r1
-; THUMBV7-NEXT:    adds r1, r7, r4
-; THUMBV7-NEXT:    umull r11, r4, r11, r9
-; THUMBV7-NEXT:    adds.w r8, r4, r1
-; THUMBV7-NEXT:    mov.w r1, #0
-; THUMBV7-NEXT:    adc r4, r1, #0
-; THUMBV7-NEXT:    cmp r3, #0
-; THUMBV7-NEXT:    orr.w r4, r4, r6
-; THUMBV7-NEXT:    umull r7, r6, r5, r2
-; THUMBV7-NEXT:    orr.w lr, lr, r4
-; THUMBV7-NEXT:    mov r4, r3
-; THUMBV7-NEXT:    it ne
-; THUMBV7-NEXT:    movne r4, #1
-; THUMBV7-NEXT:    cmp r5, #0
-; THUMBV7-NEXT:    it ne
-; THUMBV7-NEXT:    movne r5, #1
-; THUMBV7-NEXT:    ands r4, r5
-; THUMBV7-NEXT:    cmp r6, #0
-; THUMBV7-NEXT:    it ne
-; THUMBV7-NEXT:    movne r6, #1
-; THUMBV7-NEXT:    orrs r4, r6
-; THUMBV7-NEXT:    umull r5, r6, r3, r10
-; THUMBV7-NEXT:    cmp r6, #0
-; THUMBV7-NEXT:    it ne
-; THUMBV7-NEXT:    movne r6, #1
-; THUMBV7-NEXT:    orrs r4, r6
-; THUMBV7-NEXT:    add r5, r7
-; THUMBV7-NEXT:    umull r6, r7, r10, r2
-; THUMBV7-NEXT:    adds r5, r5, r7
-; THUMBV7-NEXT:    adc r7, r1, #0
-; THUMBV7-NEXT:    adds.w r6, r6, r11
-; THUMBV7-NEXT:    orr.w r4, r4, r7
-; THUMBV7-NEXT:    mov.w r7, #0
-; THUMBV7-NEXT:    orr.w lr, lr, r4
-; THUMBV7-NEXT:    umull r11, r4, r2, r9
-; THUMBV7-NEXT:    adc.w r10, r8, r5
-; THUMBV7-NEXT:    umlal r4, r7, r3, r9
-; THUMBV7-NEXT:    umull r2, r5, r2, r12
-; THUMBV7-NEXT:    adds.w r8, r2, r4
-; THUMBV7-NEXT:    adcs.w r2, r7, r5
-; THUMBV7-NEXT:    adc r4, r1, #0
-; THUMBV7-NEXT:    umlal r2, r4, r3, r12
-; THUMBV7-NEXT:    adds r2, r2, r6
-; THUMBV7-NEXT:    adcs.w r3, r4, r10
-; THUMBV7-NEXT:    adc r1, r1, #0
-; THUMBV7-NEXT:    orr.w r1, r1, lr
-; THUMBV7-NEXT:    b .LBB0_8
-; THUMBV7-NEXT:  .LBB0_3: @ %overflow.no.lhs
-; THUMBV7-NEXT:    orrs.w r1, r10, r5
-; THUMBV7-NEXT:    beq.w .LBB0_7
-; THUMBV7-NEXT:  @ %bb.4: @ %overflow.no.lhs.only
-; THUMBV7-NEXT:    umull r1, lr, r2, r10
-; THUMBV7-NEXT:    movs r7, #0
-; THUMBV7-NEXT:    umlal lr, r7, r3, r10
-; THUMBV7-NEXT:    str r1, [sp, #8] @ 4-byte Spill
-; THUMBV7-NEXT:    umull r4, r8, r2, r5
-; THUMBV7-NEXT:    adds.w r1, r4, lr
-; THUMBV7-NEXT:    str r1, [sp, #4] @ 4-byte Spill
-; THUMBV7-NEXT:    adcs.w r7, r7, r8
-; THUMBV7-NEXT:    mov.w r1, #0
-; THUMBV7-NEXT:    adc lr, r1, #0
-; THUMBV7-NEXT:    umull r8, r1, r10, r11
-; THUMBV7-NEXT:    mla r1, r10, r6, r1
-; THUMBV7-NEXT:    umlal r7, lr, r3, r5
-; THUMBV7-NEXT:    mla r1, r5, r11, r1
-; THUMBV7-NEXT:    adds.w r5, r7, r8
-; THUMBV7-NEXT:    umull r4, r7, r2, r9
-; THUMBV7-NEXT:    adc.w r10, lr, r1
-; THUMBV7-NEXT:    movs r1, #0
-; THUMBV7-NEXT:    umlal r7, r1, r3, r9
-; THUMBV7-NEXT:    umull r2, lr, r2, r12
-; THUMBV7-NEXT:    adds.w r8, r2, r7
+; THUMBV7-NEXT:    .pad #44
+; THUMBV7-NEXT:    sub sp, #44
+; THUMBV7-NEXT:    ldr.w r8, [sp, #88]
+; THUMBV7-NEXT:    mov r9, r0
+; THUMBV7-NEXT:    ldr r7, [sp, #96]
+; THUMBV7-NEXT:    ldr.w lr, [sp, #100]
+; THUMBV7-NEXT:    umull r0, r5, r2, r8
+; THUMBV7-NEXT:    ldr r4, [sp, #80]
+; THUMBV7-NEXT:    str r0, [sp, #32] @ 4-byte Spill
+; THUMBV7-NEXT:    umull r1, r0, r3, r7
+; THUMBV7-NEXT:    str r0, [sp, #4] @ 4-byte Spill
+; THUMBV7-NEXT:    umull r0, r11, lr, r2
+; THUMBV7-NEXT:    str r1, [sp, #20] @ 4-byte Spill
+; THUMBV7-NEXT:    ldr r1, [sp, #92]
+; THUMBV7-NEXT:    str r0, [sp] @ 4-byte Spill
+; THUMBV7-NEXT:    umull r0, r10, r7, r2
+; THUMBV7-NEXT:    mov r7, r1
+; THUMBV7-NEXT:    umull r6, r12, r1, r4
+; THUMBV7-NEXT:    str r0, [sp, #40] @ 4-byte Spill
+; THUMBV7-NEXT:    ldr r0, [sp, #84]
+; THUMBV7-NEXT:    str r6, [sp, #24] @ 4-byte Spill
+; THUMBV7-NEXT:    umull r6, r1, r0, r8
+; THUMBV7-NEXT:    str r6, [sp, #16] @ 4-byte Spill
+; THUMBV7-NEXT:    umull r6, r2, r2, r7
+; THUMBV7-NEXT:    mov r7, r4
+; THUMBV7-NEXT:    strd r6, r2, [sp, #8] @ 8-byte Folded Spill
+; THUMBV7-NEXT:    umull r2, r6, r4, r8
+; THUMBV7-NEXT:    str r2, [sp, #36] @ 4-byte Spill
+; THUMBV7-NEXT:    ldr r2, [sp, #32] @ 4-byte Reload
+; THUMBV7-NEXT:    str r6, [sp, #28] @ 4-byte Spill
+; THUMBV7-NEXT:    movs r6, #0
+; THUMBV7-NEXT:    str.w r2, [r9]
+; THUMBV7-NEXT:    umlal r5, r6, r3, r8
+; THUMBV7-NEXT:    ldr r2, [sp, #20] @ 4-byte Reload
+; THUMBV7-NEXT:    ldr r4, [sp] @ 4-byte Reload
+; THUMBV7-NEXT:    add r4, r2
+; THUMBV7-NEXT:    adds.w r2, r10, r4
+; THUMBV7-NEXT:    str r2, [sp, #20] @ 4-byte Spill
 ; THUMBV7-NEXT:    mov.w r2, #0
-; THUMBV7-NEXT:    adcs.w r1, r1, lr
 ; THUMBV7-NEXT:    adc r2, r2, #0
-; THUMBV7-NEXT:    umlal r1, r2, r3, r12
-; THUMBV7-NEXT:    umull r3, r7, r9, r11
-; THUMBV7-NEXT:    mla r7, r9, r6, r7
-; THUMBV7-NEXT:    adds r1, r1, r3
-; THUMBV7-NEXT:    mla r7, r12, r11, r7
-; THUMBV7-NEXT:    mov r11, r4
-; THUMBV7-NEXT:    adc.w r3, r2, r7
-; THUMBV7-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
-; THUMBV7-NEXT:    adds r2, r2, r1
-; THUMBV7-NEXT:    ldr r1, [sp, #4] @ 4-byte Reload
-; THUMBV7-NEXT:    adcs r3, r1
-; THUMBV7-NEXT:    adcs r1, r5, #0
-; THUMBV7-NEXT:    adc r7, r10, #0
-; THUMBV7-NEXT:    b .LBB0_6
-; THUMBV7-NEXT:  .LBB0_5: @ %overflow.no.rhs.only
-; THUMBV7-NEXT:    umull r1, r4, r9, r11
-; THUMBV7-NEXT:    movs r7, #0
-; THUMBV7-NEXT:    mov.w r8, #0
-; THUMBV7-NEXT:    umlal r4, r7, r12, r11
-; THUMBV7-NEXT:    str r1, [sp, #8] @ 4-byte Spill
-; THUMBV7-NEXT:    umull r1, lr, r9, r6
-; THUMBV7-NEXT:    adds r1, r1, r4
-; THUMBV7-NEXT:    str r1, [sp, #4] @ 4-byte Spill
-; THUMBV7-NEXT:    adcs.w r7, r7, lr
-; THUMBV7-NEXT:    umull lr, r1, r11, r10
-; THUMBV7-NEXT:    adc r4, r8, #0
-; THUMBV7-NEXT:    mla r1, r11, r5, r1
-; THUMBV7-NEXT:    umlal r7, r4, r12, r6
-; THUMBV7-NEXT:    mla r1, r6, r10, r1
-; THUMBV7-NEXT:    adds.w r7, r7, lr
-; THUMBV7-NEXT:    str r7, [sp] @ 4-byte Spill
-; THUMBV7-NEXT:    mov.w r7, #0
-; THUMBV7-NEXT:    adc.w r11, r4, r1
-; THUMBV7-NEXT:    umull lr, r4, r9, r2
-; THUMBV7-NEXT:    umlal r4, r7, r12, r2
-; THUMBV7-NEXT:    umull r1, r9, r9, r3
-; THUMBV7-NEXT:    adds.w r8, r1, r4
-; THUMBV7-NEXT:    mov.w r4, #0
-; THUMBV7-NEXT:    adcs.w r1, r7, r9
-; THUMBV7-NEXT:    umull r7, r6, r2, r10
-; THUMBV7-NEXT:    adc r4, r4, #0
-; THUMBV7-NEXT:    mla r2, r2, r5, r6
-; THUMBV7-NEXT:    umlal r1, r4, r12, r3
-; THUMBV7-NEXT:    mla r2, r3, r10, r2
-; THUMBV7-NEXT:    adds r1, r1, r7
-; THUMBV7-NEXT:    adc.w r3, r4, r2
-; THUMBV7-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
-; THUMBV7-NEXT:    adds r2, r2, r1
-; THUMBV7-NEXT:    ldr r1, [sp, #4] @ 4-byte Reload
-; THUMBV7-NEXT:    adcs r3, r1
-; THUMBV7-NEXT:    ldr r1, [sp] @ 4-byte Reload
-; THUMBV7-NEXT:    adcs r1, r1, #0
-; THUMBV7-NEXT:    adc r7, r11, #0
-; THUMBV7-NEXT:    mov r11, lr
-; THUMBV7-NEXT:  .LBB0_6: @ %overflow.res
-; THUMBV7-NEXT:    orrs r1, r7
+; THUMBV7-NEXT:    cmp.w r12, #0
+; THUMBV7-NEXT:    str r2, [sp, #32] @ 4-byte Spill
+; THUMBV7-NEXT:    it ne
+; THUMBV7-NEXT:    movne.w r12, #1
+; THUMBV7-NEXT:    cmp r1, #0
+; THUMBV7-NEXT:    ldr r2, [sp, #96]
 ; THUMBV7-NEXT:    it ne
 ; THUMBV7-NEXT:    movne r1, #1
-; THUMBV7-NEXT:    b .LBB0_8
-; THUMBV7-NEXT:  .LBB0_7: @ %overflow.no
-; THUMBV7-NEXT:    umull r1, lr, r2, r9
+; THUMBV7-NEXT:    orrs.w r10, r7, r0
+; THUMBV7-NEXT:    it ne
+; THUMBV7-NEXT:    movne.w r10, #1
+; THUMBV7-NEXT:    orrs.w r7, r2, lr
+; THUMBV7-NEXT:    ldr r2, [sp, #92]
+; THUMBV7-NEXT:    it ne
+; THUMBV7-NEXT:    movne r7, #1
+; THUMBV7-NEXT:    cmp r0, #0
+; THUMBV7-NEXT:    it ne
+; THUMBV7-NEXT:    movne r0, #1
+; THUMBV7-NEXT:    cmp r2, #0
+; THUMBV7-NEXT:    mov r4, r2
+; THUMBV7-NEXT:    mov r8, r2
+; THUMBV7-NEXT:    it ne
+; THUMBV7-NEXT:    movne r4, #1
+; THUMBV7-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
+; THUMBV7-NEXT:    ands r0, r4
 ; THUMBV7-NEXT:    movs r4, #0
-; THUMBV7-NEXT:    umlal lr, r4, r3, r9
-; THUMBV7-NEXT:    str r1, [sp, #8] @ 4-byte Spill
-; THUMBV7-NEXT:    movs r1, #0
-; THUMBV7-NEXT:    umull r7, r8, r2, r12
-; THUMBV7-NEXT:    adds.w r7, r7, lr
-; THUMBV7-NEXT:    str r7, [sp] @ 4-byte Spill
-; THUMBV7-NEXT:    adcs.w r7, r4, r8
-; THUMBV7-NEXT:    ldr r4, [sp, #60]
-; THUMBV7-NEXT:    adc r8, r1, #0
-; THUMBV7-NEXT:    umlal r7, r8, r3, r12
-; THUMBV7-NEXT:    umull r12, lr, r9, r11
-; THUMBV7-NEXT:    mla r6, r9, r6, lr
-; THUMBV7-NEXT:    str.w r12, [sp, #4] @ 4-byte Spill
-; THUMBV7-NEXT:    mla r12, r4, r11, r6
-; THUMBV7-NEXT:    ldr.w r11, [sp, #8] @ 4-byte Reload
-; THUMBV7-NEXT:    umull lr, r6, r10, r2
-; THUMBV7-NEXT:    mla r3, r10, r3, r6
-; THUMBV7-NEXT:    mla r2, r5, r2, r3
-; THUMBV7-NEXT:    ldr r3, [sp, #4] @ 4-byte Reload
-; THUMBV7-NEXT:    adds.w r3, r3, lr
-; THUMBV7-NEXT:    adc.w r6, r2, r12
-; THUMBV7-NEXT:    adds r2, r7, r3
-; THUMBV7-NEXT:    adc.w r3, r8, r6
-; THUMBV7-NEXT:    ldr.w r8, [sp] @ 4-byte Reload
-; THUMBV7-NEXT:  .LBB0_8: @ %overflow.res
-; THUMBV7-NEXT:    strd r11, r8, [r0]
-; THUMBV7-NEXT:    and r1, r1, #1
-; THUMBV7-NEXT:    strd r2, r3, [r0, #8]
-; THUMBV7-NEXT:    strb r1, [r0, #16]
-; THUMBV7-NEXT:    add sp, #12
+; THUMBV7-NEXT:    adds r5, r5, r2
+; THUMBV7-NEXT:    str.w r5, [r9, #4]
+; THUMBV7-NEXT:    orr.w r0, r0, r1
+; THUMBV7-NEXT:    ldr r1, [sp, #24] @ 4-byte Reload
+; THUMBV7-NEXT:    ldr r2, [sp, #16] @ 4-byte Reload
+; THUMBV7-NEXT:    and.w r5, r10, r7
+; THUMBV7-NEXT:    orr.w r0, r0, r12
+; THUMBV7-NEXT:    mov.w r12, #0
+; THUMBV7-NEXT:    add r1, r2
+; THUMBV7-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
+; THUMBV7-NEXT:    adcs r2, r6
+; THUMBV7-NEXT:    ldr r6, [sp, #28] @ 4-byte Reload
+; THUMBV7-NEXT:    adc r7, r4, #0
+; THUMBV7-NEXT:    adds r1, r1, r6
+; THUMBV7-NEXT:    umlal r2, r7, r3, r8
+; THUMBV7-NEXT:    adc r4, r4, #0
+; THUMBV7-NEXT:    orrs r0, r4
+; THUMBV7-NEXT:    orrs r0, r5
+; THUMBV7-NEXT:    ldrd r5, r4, [sp, #36] @ 8-byte Folded Reload
+; THUMBV7-NEXT:    adds r5, r5, r4
+; THUMBV7-NEXT:    ldr r4, [sp, #20] @ 4-byte Reload
+; THUMBV7-NEXT:    adcs r1, r4
+; THUMBV7-NEXT:    ldr r4, [sp, #4] @ 4-byte Reload
+; THUMBV7-NEXT:    cmp r4, #0
+; THUMBV7-NEXT:    it ne
+; THUMBV7-NEXT:    movne r4, #1
+; THUMBV7-NEXT:    cmp r3, #0
+; THUMBV7-NEXT:    it ne
+; THUMBV7-NEXT:    movne r3, #1
+; THUMBV7-NEXT:    cmp.w lr, #0
+; THUMBV7-NEXT:    it ne
+; THUMBV7-NEXT:    movne.w lr, #1
+; THUMBV7-NEXT:    cmp.w r11, #0
+; THUMBV7-NEXT:    it ne
+; THUMBV7-NEXT:    movne.w r11, #1
+; THUMBV7-NEXT:    adds r2, r2, r5
+; THUMBV7-NEXT:    and.w r3, r3, lr
+; THUMBV7-NEXT:    str.w r2, [r9, #8]
+; THUMBV7-NEXT:    adcs r1, r7
+; THUMBV7-NEXT:    str.w r1, [r9, #12]
+; THUMBV7-NEXT:    orr.w r1, r3, r11
+; THUMBV7-NEXT:    ldr r2, [sp, #32] @ 4-byte Reload
+; THUMBV7-NEXT:    orr.w r1, r1, r4
+; THUMBV7-NEXT:    orr.w r1, r1, r2
+; THUMBV7-NEXT:    orr.w r0, r0, r1
+; THUMBV7-NEXT:    adc r1, r12, #0
+; THUMBV7-NEXT:    orrs r0, r1
+; THUMBV7-NEXT:    and r0, r0, #1
+; THUMBV7-NEXT:    strb.w r0, [r9, #16]
+; THUMBV7-NEXT:    add sp, #44
 ; THUMBV7-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 start:
   %0 = tail call { i128, i1 } @llvm.umul.with.overflow.i128(i128 %l, i128 %r) #2
