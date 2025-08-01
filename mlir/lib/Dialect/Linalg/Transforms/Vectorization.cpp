@@ -1887,7 +1887,7 @@ static VectorType getCollapsedVecType(VectorType type,
 /// sizes required here.
 ///
 /// If the vector sizes are not provided:
-///  * the vector sizes are determined by the operands,
+///  * the vector sizes are determined from the input tensor static shape.
 ///  * the inBounds attribute is used instead of masking.
 ///
 /// EXAMPLE (no vector sizes):
@@ -1899,7 +1899,14 @@ static VectorType getCollapsedVecType(VectorType type,
 /// ```
 /// is vectorized as:
 /// ```
-///   vector.transfer_write %sc into %dest : vector<8x8xf32>, tensor<8x8xf32>
+///   %read = vector.transfer_read %src
+///     : tensor<1x1x8x8xf32>, vector<1x1x8x8xf32>
+///   %tr = vector.transpose %read, [0, 2, 1, 3]
+///     : vector<1x1x8x8xf32> to vector<1x8x1x8xf32>
+///   %sc = vector.shape_cast %tr
+///     : vector<1x8x1x8xf32> to vector<8x8xf32>
+///   %vector = vector.transfer_write %sc into %dest
+///     : vector<8x8xf32>, tensor<8x8xf32>
 /// ```
 static LogicalResult
 vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
@@ -1920,49 +1927,39 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
   RankedTensorType unpackTensorType = unpackOp.getSourceType();
 
   ArrayRef<int64_t> sourceShape = unpackTensorType.getShape();
-  ArrayRef<int64_t> destShape = unpackOp.getDestType().getShape();
   bool useInBoundsInsteadOfMasking = false;
 
   Location loc = unpackOp->getLoc();
 
-  // 1. Obtain vector sizes for the read and write operations.
-  SmallVector<int64_t> readVectorSizes;
-  SmallVector<bool> readScalableVectorFlags;
+  // Obtain vector sizes for the read operation.
+  SmallVector<int64_t> readVectorSizes(inputVectorSizes);
+  SmallVector<bool> readScalableVectorFlags(inputScalableVecDims);
 
-  if (!inputVectorSizes.empty()) {
-    // CASE 1.1: Vector sizes are user-specified.
-    readVectorSizes.assign(inputVectorSizes.begin(),
-                           inputVectorSizes.begin() + sourceShape.size());
-    readScalableVectorFlags.assign(inputScalableVecDims.begin(),
-                                   inputScalableVecDims.begin() +
-                                       sourceShape.size());
-  } else {
-    // CASE 1.2: Vector sizes are inferred from the static input tensor
-    // shapes.
-    if (ShapedType::isDynamicShape(destShape) ||
-        ShapedType::isDynamicShape(sourceShape))
+  // In the absence of input-vector-sizes, use the _static_ input tensor shape.
+  if (inputVectorSizes.empty()) {
+    if (ShapedType::isDynamicShape(sourceShape))
       return failure();
 
     readVectorSizes.assign(sourceShape.begin(), sourceShape.end());
     useInBoundsInsteadOfMasking = true;
   }
 
-  // 2. Generate the read operation.
+  // -- Generate the read operation --
   auto padValue = arith::ConstantOp::create(
       rewriter, loc,
       rewriter.getZeroAttr(unpackOp.getSourceType().getElementType()));
   Value readResult = vector::createReadOrMaskedRead(
       rewriter, loc, unpackOp.getSource(), readVectorSizes, padValue,
-      /*useInBoundsInsteadOfMasking=*/false, readScalableVectorFlags);
+      useInBoundsInsteadOfMasking, readScalableVectorFlags);
 
-  // 3. Generate the transpose operation.
+  // -- Generate the transpose operation --
   PackingMetadata packMetadata;
   SmallVector<int64_t> lastDimToInsertPosPerm =
       getUnPackInverseSrcPerm(unpackOp, packMetadata);
   vector::TransposeOp transposeOp = vector::TransposeOp::create(
       rewriter, loc, readResult, lastDimToInsertPosPerm);
 
-  // 3. Generate the shape_cast operation.
+  // -- Generate the shape_cast operation --
   VectorType collapsedVecType = getCollapsedVecType(
       transposeOp.getType(),
       getSymbolLessAffineMaps(convertReassociationIndicesToExprs(
@@ -1970,10 +1967,11 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
   vector::ShapeCastOp shapeCastOp = vector::ShapeCastOp::create(
       rewriter, loc, collapsedVecType, transposeOp->getResult(0));
 
-  // 4. Generate the write operation.
+  // -- Generate the write operation --
   Operation *write = createWriteOrMaskedWrite(
       rewriter, loc, shapeCastOp.getResult(), unpackOp.getDest(),
       /*writeIndices=*/{}, useInBoundsInsteadOfMasking);
+
   newResults.push_back(write->getResult(0));
   return success();
 }
