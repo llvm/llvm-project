@@ -96,15 +96,10 @@ static LogicalResult checkAndUpdateCapabilityRequirements(
 }
 
 static void addAllImpliedCapabilities(SetVector<spirv::Capability> &caps) {
-  size_t old_size{0};
-  while (caps.size() > old_size) {
-    old_size = caps.size();
-    SetVector<spirv::Capability> tmp;
-    for (spirv::Capability cap : caps)
-      tmp.insert_range(getDirectImpliedCapabilities(cap));
-
-    caps.insert_range(tmp);
-  }
+  SetVector<spirv::Capability> tmp;
+  for (spirv::Capability cap : caps)
+    tmp.insert_range(getRecursiveImpliedCapabilities(cap));
+  caps.insert_range(tmp);
 }
 
 void UpdateVCEPass::runOnOperation() {
