@@ -249,7 +249,7 @@ static bool hasPossibleIncompatibleOps(const Function *F) {
   return false;
 }
 
-uint64_t AArch64TTIImpl::getFeatureMask(const Function &F) const {
+APInt AArch64TTIImpl::getFeatureMask(const Function &F) const {
   StringRef AttributeStr =
       isMultiversionedFunction(F) ? "fmv-features" : "target-features";
   StringRef FeatureStr = F.getFnAttribute(AttributeStr).getValueAsString();
@@ -269,6 +269,13 @@ const FeatureBitset AArch64TTIImpl::InlineInverseFeatures = {
 bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
   SMECallAttrs CallAttrs(*Caller, *Callee);
+
+  // Never inline a function explicitly marked as being streaming,
+  // into a non-streaming function. Assume it was marked as streaming
+  // for a reason.
+  if (CallAttrs.caller().hasNonStreamingInterfaceAndBody() &&
+      CallAttrs.callee().hasStreamingInterfaceOrBody())
+    return false;
 
   // When inlining, we should consider the body of the function, not the
   // interface.
@@ -4905,14 +4912,17 @@ void AArch64TTIImpl::getUnrollingPreferences(
   // Disable partial & runtime unrolling on -Os.
   UP.PartialOptSizeThreshold = 0;
 
-  // No need to unroll auto-vectorized loops
-  if (findStringMetadataForLoop(L, "llvm.loop.isvectorized"))
-    return;
-
   // Scan the loop: don't unroll loops with calls as this could prevent
-  // inlining.
+  // inlining. Don't unroll auto-vectorized loops either, though do allow
+  // unrolling of the scalar remainder.
+  bool IsVectorized = getBooleanLoopAttribute(L, "llvm.loop.isvectorized");
   for (auto *BB : L->getBlocks()) {
     for (auto &I : *BB) {
+      // Both auto-vectorized loops and the scalar remainder have the
+      // isvectorized attribute, so differentiate between them by the presence
+      // of vector instructions.
+      if (IsVectorized && I.getType()->isVectorTy())
+        return;
       if (isa<CallBase>(I)) {
         if (isa<CallInst>(I) || isa<InvokeInst>(I))
           if (const Function *F = cast<CallBase>(I).getCalledFunction())
@@ -5211,34 +5221,34 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
   // XOR: llvm/test/CodeGen/AArch64/reduce-xor.ll
   // AND: llvm/test/CodeGen/AArch64/reduce-and.ll
   static const CostTblEntry CostTblNoPairwise[]{
-      {ISD::ADD, MVT::v8i8,   2},
-      {ISD::ADD, MVT::v16i8,  2},
-      {ISD::ADD, MVT::v4i16,  2},
-      {ISD::ADD, MVT::v8i16,  2},
-      {ISD::ADD, MVT::v2i32,  2},
-      {ISD::ADD, MVT::v4i32,  2},
-      {ISD::ADD, MVT::v2i64,  2},
-      {ISD::OR,  MVT::v8i8,  15},
-      {ISD::OR,  MVT::v16i8, 17},
-      {ISD::OR,  MVT::v4i16,  7},
-      {ISD::OR,  MVT::v8i16,  9},
-      {ISD::OR,  MVT::v2i32,  3},
-      {ISD::OR,  MVT::v4i32,  5},
-      {ISD::OR,  MVT::v2i64,  3},
-      {ISD::XOR, MVT::v8i8,  15},
-      {ISD::XOR, MVT::v16i8, 17},
-      {ISD::XOR, MVT::v4i16,  7},
-      {ISD::XOR, MVT::v8i16,  9},
-      {ISD::XOR, MVT::v2i32,  3},
-      {ISD::XOR, MVT::v4i32,  5},
-      {ISD::XOR, MVT::v2i64,  3},
-      {ISD::AND, MVT::v8i8,  15},
-      {ISD::AND, MVT::v16i8, 17},
-      {ISD::AND, MVT::v4i16,  7},
-      {ISD::AND, MVT::v8i16,  9},
-      {ISD::AND, MVT::v2i32,  3},
-      {ISD::AND, MVT::v4i32,  5},
-      {ISD::AND, MVT::v2i64,  3},
+      {ISD::ADD, MVT::v8i8, 2},
+      {ISD::ADD, MVT::v16i8, 2},
+      {ISD::ADD, MVT::v4i16, 2},
+      {ISD::ADD, MVT::v8i16, 2},
+      {ISD::ADD, MVT::v2i32, 2},
+      {ISD::ADD, MVT::v4i32, 2},
+      {ISD::ADD, MVT::v2i64, 2},
+      {ISD::OR, MVT::v8i8, 5},  // fmov + orr_lsr + orr_lsr + lsr + orr
+      {ISD::OR, MVT::v16i8, 7}, // ext + orr + same as v8i8
+      {ISD::OR, MVT::v4i16, 4}, // fmov + orr_lsr + lsr + orr
+      {ISD::OR, MVT::v8i16, 6}, // ext + orr + same as v4i16
+      {ISD::OR, MVT::v2i32, 3}, // fmov + lsr + orr
+      {ISD::OR, MVT::v4i32, 5}, // ext + orr + same as v2i32
+      {ISD::OR, MVT::v2i64, 3}, // ext + orr + fmov
+      {ISD::XOR, MVT::v8i8, 5}, // Same as above for or...
+      {ISD::XOR, MVT::v16i8, 7},
+      {ISD::XOR, MVT::v4i16, 4},
+      {ISD::XOR, MVT::v8i16, 6},
+      {ISD::XOR, MVT::v2i32, 3},
+      {ISD::XOR, MVT::v4i32, 5},
+      {ISD::XOR, MVT::v2i64, 3},
+      {ISD::AND, MVT::v8i8, 5}, // Same as above for or...
+      {ISD::AND, MVT::v16i8, 7},
+      {ISD::AND, MVT::v4i16, 4},
+      {ISD::AND, MVT::v8i16, 6},
+      {ISD::AND, MVT::v2i32, 3},
+      {ISD::AND, MVT::v4i32, 5},
+      {ISD::AND, MVT::v2i64, 3},
   };
   switch (ISD) {
   default:

@@ -88,6 +88,8 @@ CudaVersion getCudaVersion(uint32_t raw_version) {
     return CudaVersion::CUDA_126;
   if (raw_version < 12090)
     return CudaVersion::CUDA_128;
+  if (raw_version < 13000)
+    return CudaVersion::CUDA_129;
   return CudaVersion::NEW;
 }
 
@@ -683,6 +685,7 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case CudaVersion::CUDA_##CUDA_VER:                                           \
     PtxFeature = "+ptx" #PTX_VER;                                              \
     break;
+    CASE_CUDA_VERSION(129, 88);
     CASE_CUDA_VERSION(128, 87);
     CASE_CUDA_VERSION(126, 85);
     CASE_CUDA_VERSION(125, 85);
@@ -815,7 +818,7 @@ NVPTXToolChain::getSystemGPUArchs(const ArgList &Args) const {
   else
     Program = GetProgramPath("nvptx-arch");
 
-  auto StdoutOrErr = executeToolChainProgram(Program);
+  auto StdoutOrErr = getDriver().executeProgram({Program});
   if (!StdoutOrErr)
     return StdoutOrErr.takeError();
 
