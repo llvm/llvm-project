@@ -498,9 +498,7 @@ PythonInteger::CreateStructuredSignedInteger() const {
 
 // PythonBoolean
 
-PythonBoolean::PythonBoolean(bool value) {
-  SetValue(value);
-}
+PythonBoolean::PythonBoolean(bool value) { SetValue(value); }
 
 bool PythonBoolean::Check(PyObject *py_obj) {
   return py_obj ? PyBool_Check(py_obj) : false;
@@ -856,15 +854,15 @@ PythonObject PythonCallable::operator()() {
   return PythonObject(PyRefType::Owned, PyObject_CallObject(m_py_obj, nullptr));
 }
 
-PythonObject PythonCallable::
-operator()(std::initializer_list<PyObject *> args) {
+PythonObject
+PythonCallable::operator()(std::initializer_list<PyObject *> args) {
   PythonTuple arg_tuple(args);
   return PythonObject(PyRefType::Owned,
                       PyObject_CallObject(m_py_obj, arg_tuple.get()));
 }
 
-PythonObject PythonCallable::
-operator()(std::initializer_list<PythonObject> args) {
+PythonObject
+PythonCallable::operator()(std::initializer_list<PythonObject> args) {
   PythonTuple arg_tuple(args);
   return PythonObject(PyRefType::Owned,
                       PyObject_CallObject(m_py_obj, arg_tuple.get()));
@@ -1424,8 +1422,7 @@ Error PythonScript::Init() {
   auto builtins = PythonModule::BuiltinsModule();
   if (Error error = globals.SetItem("__builtins__", builtins))
     return error;
-  PyObject *o =
-      PyRun_String(script, Py_file_input, globals.get(), globals.get());
+  PyObject *o = RunString(script, Py_file_input, globals.get(), globals.get());
   if (!o)
     return exception();
   Take<PythonObject>(o);
@@ -1469,11 +1466,33 @@ python::runStringMultiLine(const llvm::Twine &string,
                            const PythonDictionary &locals) {
   if (!globals.IsValid() || !locals.IsValid())
     return nullDeref();
-  PyObject *result = PyRun_String(NullTerminated(string), Py_file_input,
-                                  globals.get(), locals.get());
+  PyObject *result = RunString(NullTerminated(string), Py_file_input,
+                               globals.get(), locals.get());
   if (!result)
     return exception();
   return Take<PythonObject>(result);
 }
+
+namespace lldb_private {
+namespace python {
+PyObject *RunString(const char *str, int start, PyObject *globals,
+                    PyObject *locals) {
+  const char *filename = "<string>";
+
+  // Compile the string into a code object.
+  PyObject *code = Py_CompileString(str, filename, start);
+  if (!code)
+    return nullptr;
+
+  // Execute the code object.
+  PyObject *result = PyEval_EvalCode(code, globals, locals);
+
+  // Clean up the code object.
+  Py_DECREF(code);
+
+  return result;
+}
+} // namespace python
+} // namespace lldb_private
 
 #endif

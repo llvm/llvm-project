@@ -194,8 +194,8 @@ template <typename T, char F> struct PassthroughFormat {
 };
 
 template <> struct PythonFormat<char *> : PassthroughFormat<char *, 's'> {};
-template <> struct PythonFormat<const char *> : 
-    PassthroughFormat<const char *, 's'> {};
+template <>
+struct PythonFormat<const char *> : PassthroughFormat<const char *, 's'> {};
 template <> struct PythonFormat<char> : PassthroughFormat<char, 'b'> {};
 template <>
 struct PythonFormat<unsigned char> : PassthroughFormat<unsigned char, 'B'> {};
@@ -779,6 +779,9 @@ private:
   const StructuredPythonObject &
   operator=(const StructuredPythonObject &) = delete;
 };
+
+PyObject *RunString(const char *str, int start, PyObject *globals,
+                    PyObject *locals);
 
 } // namespace python
 } // namespace lldb_private
