@@ -451,3 +451,11 @@ add_proxy_header_library(
     libc.include.llvm-libc-types.ACTION
     libc.include.search
 )
+
+add_proxy_header_library(
+  struct_sched_param
+  HDRS
+    struct_sched_param.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_sched_param
+)
