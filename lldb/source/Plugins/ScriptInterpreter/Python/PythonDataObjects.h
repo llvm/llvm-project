@@ -782,6 +782,7 @@ private:
 
 PyObject *RunString(const char *str, int start, PyObject *globals,
                     PyObject *locals);
+int RunSimpleString(const char *str);
 
 } // namespace python
 } // namespace lldb_private

@@ -1492,6 +1492,22 @@ PyObject *RunString(const char *str, int start, PyObject *globals,
 
   return result;
 }
+
+int RunSimpleString(const char *str) {
+  PyObject *main_module = PyImport_AddModule("__main__");
+  if (!main_module)
+    return -1;
+
+  PyObject *globals = PyModule_GetDict(main_module);
+  if (!globals)
+    return -1;
+
+  PyObject *result = RunString(str, Py_file_input, globals, globals);
+  if (!result)
+    return -1;
+
+  return 0;
+}
 } // namespace python
 } // namespace lldb_private
 
