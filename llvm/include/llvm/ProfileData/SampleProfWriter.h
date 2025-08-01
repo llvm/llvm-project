@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -28,9 +29,9 @@ namespace sampleprof {
 
 enum SectionLayout {
   DefaultLayout,
-  // The layout splits profile with context information from profile without
-  // context information. When Thinlto is enabled, ThinLTO postlink phase only
-  // has to load profile with context information and can skip the other part.
+  // The layout splits profile with inlined functions from profile without
+  // inlined functions. When Thinlto is enabled, ThinLTO postlink phase only
+  // has to load profile with inlined functions and can skip the other part.
   CtxSplitLayout,
   NumOfLayout,
 };
@@ -65,7 +66,7 @@ public:
   virtual void Erase(size_t CurrentOutputSize) = 0;
 };
 
-class DefaultFunctionPruningStrategy : public FunctionPruningStrategy {
+class LLVM_ABI DefaultFunctionPruningStrategy : public FunctionPruningStrategy {
   std::vector<NameFunctionSamples> SortedFunctions;
 
 public:
@@ -86,7 +87,7 @@ public:
 };
 
 /// Sample-based profile writer. Base class.
-class SampleProfileWriter {
+class LLVM_ABI SampleProfileWriter {
 public:
   virtual ~SampleProfileWriter() = default;
 
@@ -128,7 +129,7 @@ public:
   virtual void setToCompressAllSections() {}
   virtual void setUseMD5() {}
   virtual void setPartialProfile() {}
-  virtual void resetSecLayout(SectionLayout SL) {}
+  virtual void setUseCtxSplitLayout() {}
 
 protected:
   SampleProfileWriter(std::unique_ptr<raw_ostream> &OS)
@@ -163,7 +164,7 @@ protected:
 };
 
 /// Sample-based profile writer (text format).
-class SampleProfileWriterText : public SampleProfileWriter {
+class LLVM_ABI SampleProfileWriterText : public SampleProfileWriter {
 public:
   std::error_code writeSample(const FunctionSamples &S) override;
 
@@ -176,19 +177,29 @@ protected:
     return sampleprof_error::success;
   }
 
+  void setUseCtxSplitLayout() override {
+    MarkFlatProfiles = true;
+  }
+
 private:
   /// Indent level to use when writing.
   ///
   /// This is used when printing inlined callees.
   unsigned Indent = 0;
 
-  friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
+  /// If set, writes metadata "!Flat" to functions without inlined functions.
+  /// This flag is for manual inspection only, it has no effect for the profile
+  /// reader because a text sample profile is read sequentially and functions
+  /// cannot be skipped.
+  bool MarkFlatProfiles = false;
+
+  LLVM_ABI friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
   SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
                               SampleProfileFormat Format);
 };
 
 /// Sample-based profile writer (binary format).
-class SampleProfileWriterBinary : public SampleProfileWriter {
+class LLVM_ABI SampleProfileWriterBinary : public SampleProfileWriter {
 public:
   SampleProfileWriterBinary(std::unique_ptr<raw_ostream> &OS)
       : SampleProfileWriter(OS) {}
@@ -214,7 +225,7 @@ protected:
   void addNames(const FunctionSamples &S);
 
 private:
-  friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
+  LLVM_ABI friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
   SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
                               SampleProfileFormat Format);
 };
@@ -242,11 +253,11 @@ const std::array<SmallVector<SecHdrTableEntry, 8>, NumOfLayout>
         // CtxSplitLayout
         SmallVector<SecHdrTableEntry, 8>({{SecProfSummary, 0, 0, 0, 0},
                                           {SecNameTable, 0, 0, 0, 0},
-                                          // profile with context
+                                          // profile with inlined functions
                                           // for next two sections
                                           {SecFuncOffsetTable, 0, 0, 0, 0},
                                           {SecLBRProfile, 0, 0, 0, 0},
-                                          // profile without context
+                                          // profile without inlined functions
                                           // for next two sections
                                           {SecFuncOffsetTable, 0, 0, 0, 0},
                                           {SecLBRProfile, 0, 0, 0, 0},
@@ -254,7 +265,8 @@ const std::array<SmallVector<SecHdrTableEntry, 8>, NumOfLayout>
                                           {SecFuncMetadata, 0, 0, 0, 0}}),
 };
 
-class SampleProfileWriterExtBinaryBase : public SampleProfileWriterBinary {
+class LLVM_ABI SampleProfileWriterExtBinaryBase
+    : public SampleProfileWriterBinary {
   using SampleProfileWriterBinary::SampleProfileWriterBinary;
 public:
   std::error_code write(const SampleProfileMap &ProfileMap) override;
@@ -283,7 +295,11 @@ public:
     ProfSymList = PSL;
   };
 
-  void resetSecLayout(SectionLayout SL) override {
+  void setUseCtxSplitLayout() override {
+    resetSecLayout(SectionLayout::CtxSplitLayout);
+  }
+
+  void resetSecLayout(SectionLayout SL) {
     verifySecLayout(SL);
 #ifndef NDEBUG
     // Make sure resetSecLayout is called before any flag setting.
@@ -393,7 +409,8 @@ private:
   ProfileSymbolList *ProfSymList = nullptr;
 };
 
-class SampleProfileWriterExtBinary : public SampleProfileWriterExtBinaryBase {
+class LLVM_ABI SampleProfileWriterExtBinary
+    : public SampleProfileWriterExtBinaryBase {
 public:
   SampleProfileWriterExtBinary(std::unique_ptr<raw_ostream> &OS)
       : SampleProfileWriterExtBinaryBase(OS) {}

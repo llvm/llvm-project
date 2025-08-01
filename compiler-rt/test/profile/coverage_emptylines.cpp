@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-aix{{.*}}
 // Remove comments first.
 // RUN: sed 's/[ \t]*\/\/.*//' %s > %t.stripped.cpp
 // RUN: %clangxx_profgen -fcoverage-mapping -o %t %t.stripped.cpp

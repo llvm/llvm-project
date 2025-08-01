@@ -14,7 +14,11 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(double, copysign, (double x, double y)) {
+#ifdef __LIBC_MISC_MATH_BASIC_OPS_OPT
+  return __builtin_copysign(x, y);
+#else
   return fputil::copysign(x, y);
+#endif
 }
 
 } // namespace LIBC_NAMESPACE_DECL

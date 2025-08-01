@@ -114,17 +114,19 @@ bool MCPlusBuilder::equals(const MCExpr &A, const MCExpr &B,
            equals(*BinaryA.getRHS(), *BinaryB.getRHS(), Comp);
   }
 
-  case MCExpr::Target: {
-    const auto &TargetExprA = cast<MCTargetExpr>(A);
-    const auto &TargetExprB = cast<MCTargetExpr>(B);
+  case MCExpr::Specifier: {
+    const auto &TargetExprA = cast<MCSpecifierExpr>(A);
+    const auto &TargetExprB = cast<MCSpecifierExpr>(B);
     return equals(TargetExprA, TargetExprB, Comp);
   }
+  case MCExpr::Target:
+    llvm_unreachable("Not implemented");
   }
 
   llvm_unreachable("Invalid expression kind!");
 }
 
-bool MCPlusBuilder::equals(const MCTargetExpr &A, const MCTargetExpr &B,
+bool MCPlusBuilder::equals(const MCSpecifierExpr &A, const MCSpecifierExpr &B,
                            CompFuncTy Comp) const {
   llvm_unreachable("target-specific expressions are unsupported");
 }
@@ -442,10 +444,10 @@ void MCPlusBuilder::getUsedRegs(const MCInst &Inst, BitVector &Regs) const {
   for (MCPhysReg ImplicitUse : InstInfo.implicit_uses())
     Regs |= getAliases(ImplicitUse, /*OnlySmaller=*/true);
 
-  for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
-    if (!Inst.getOperand(I).isReg())
+  for (const MCOperand &Operand : useOperands(Inst)) {
+    if (!Operand.isReg())
       continue;
-    Regs |= getAliases(Inst.getOperand(I).getReg(), /*OnlySmaller=*/true);
+    Regs |= getAliases(Operand.getReg(), /*OnlySmaller=*/true);
   }
 }
 
@@ -551,7 +553,7 @@ void MCPlusBuilder::initSizeMap() {
 bool MCPlusBuilder::setOperandToSymbolRef(MCInst &Inst, int OpNum,
                                           const MCSymbol *Symbol,
                                           int64_t Addend, MCContext *Ctx,
-                                          uint64_t RelType) const {
+                                          uint32_t RelType) const {
   MCOperand Operand;
   if (!Addend) {
     Operand = MCOperand::createExpr(getTargetExprFor(

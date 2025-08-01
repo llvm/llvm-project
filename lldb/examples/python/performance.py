@@ -346,7 +346,7 @@ class MemoryMeasurement(Measurement):
 
     def Measure(self):
         output = subprocess.getoutput(self.command).split("\n")[-1]
-        values = re.split("[-+\s]+", output)
+        values = re.split(r"[-+\s]+", output)
         for idx, stat in enumerate(values):
             multiplier = 1
             if stat:

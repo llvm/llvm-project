@@ -78,7 +78,7 @@ bool X86ReturnThunks::runOnMachineFunction(MachineFunction &MF) {
         Rets.push_back(&Term);
 
   bool IndCS =
-      MF.getMMI().getModule()->getModuleFlag("indirect_branch_cs_prefix");
+      MF.getFunction().getParent()->getModuleFlag("indirect_branch_cs_prefix");
   const MCInstrDesc &CS = ST.getInstrInfo()->get(X86::CS_PREFIX);
   const MCInstrDesc &JMP = ST.getInstrInfo()->get(X86::TAILJMPd);
 

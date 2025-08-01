@@ -256,8 +256,8 @@ struct AllocatedCXCodeCompleteResults : public CXCodeCompleteResults {
   /// Allocated API-exposed wrappters for Diagnostics.
   SmallVector<std::unique_ptr<CXStoredDiagnostic>, 8> DiagnosticsWrappers;
 
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
-  
+  DiagnosticOptions DiagOpts;
+
   /// Diag object
   IntrusiveRefCntPtr<DiagnosticsEngine> Diag;
   
@@ -356,9 +356,9 @@ static std::atomic<unsigned> CodeCompletionResultObjects;
 
 AllocatedCXCodeCompleteResults::AllocatedCXCodeCompleteResults(
     IntrusiveRefCntPtr<FileManager> FileMgr)
-    : CXCodeCompleteResults(), DiagOpts(new DiagnosticOptions),
-      Diag(new DiagnosticsEngine(
-          IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), &*DiagOpts)),
+    : CXCodeCompleteResults(),
+      Diag(llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(DiagnosticIDs::create(),
+                                                        DiagOpts)),
       FileMgr(std::move(FileMgr)),
       SourceMgr(new SourceManager(*Diag, *this->FileMgr)),
       CodeCompletionAllocator(
@@ -369,7 +369,7 @@ AllocatedCXCodeCompleteResults::AllocatedCXCodeCompleteResults(
     fprintf(stderr, "+++ %u completion results\n",
             ++CodeCompletionResultObjects);
 }
-  
+
 AllocatedCXCodeCompleteResults::~AllocatedCXCodeCompleteResults() {
   delete [] Results;
 
@@ -763,7 +763,7 @@ clang_codeCompleteAt_Impl(CXTranslationUnit TU, const char *complete_filename,
                     RemappedFiles, (options & CXCodeComplete_IncludeMacros),
                     (options & CXCodeComplete_IncludeCodePatterns),
                     IncludeBriefComments, Capture,
-                    CXXIdx->getPCHContainerOperations(), *Results->Diag,
+                    CXXIdx->getPCHContainerOperations(), Results->Diag,
                     Results->LangOpts, *Results->SourceMgr, *Results->FileMgr,
                     Results->Diagnostics, Results->TemporaryBuffers,
                     /*SyntaxOnlyAction=*/nullptr);

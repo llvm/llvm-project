@@ -23,14 +23,14 @@ class MipsFrameLowering : public TargetFrameLowering {
 protected:
   const MipsSubtarget &STI;
 
+  bool hasFPImpl(const MachineFunction &MF) const override;
+
 public:
   explicit MipsFrameLowering(const MipsSubtarget &sti, Align Alignment)
       : TargetFrameLowering(StackGrowsDown, Alignment, 0, Alignment), STI(sti) {
   }
 
   static const MipsFrameLowering *create(const MipsSubtarget &ST);
-
-  bool hasFP(const MachineFunction &MF) const override;
 
   bool hasBP(const MachineFunction &MF) const;
 

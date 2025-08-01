@@ -1,5 +1,5 @@
 ! Test lowering of assumed-rank variables
-! RUN: bbc -emit-hlfir %s -allow-assumed-rank -o - | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
 
 module assumed_rank_tests
 interface

@@ -10,7 +10,7 @@ end subroutine
 ! CHECK-SAME:                                      %[[VAL_0:.*]]: !fir.ref<!fir.boxproc<() -> ()>>,
 ! CHECK-SAME:                                      %[[VAL_1:.*]]: !fir.boxproc<() -> ()>) {
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_proc_pointer_1Ep"} : (!fir.ref<!fir.boxproc<() -> ()>>, !fir.dscope) -> (!fir.ref<!fir.boxproc<() -> ()>>, !fir.ref<!fir.boxproc<() -> ()>>)
-! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_2]]#1 : !fir.ref<!fir.boxproc<() -> ()>>
+! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
 ! CHECK:           %[[VAL_4:.*]] = fir.box_addr %[[VAL_3]] : (!fir.boxproc<() -> ()>) -> (() -> ())
 ! CHECK:           %[[VAL_5:.*]] = fir.box_addr %[[VAL_1]] : (!fir.boxproc<() -> ()>) -> (() -> ())
 ! CHECK:           %[[VAL_6:.*]] = fir.convert %[[VAL_4]] : (() -> ()) -> i64
@@ -30,9 +30,9 @@ end subroutine
 ! CHECK-SAME:                                      %[[VAL_1:.*]]: !fir.ref<!fir.boxproc<() -> ()>>) {
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_proc_pointer_2Ep"} : (!fir.ref<!fir.boxproc<() -> ()>>, !fir.dscope) -> (!fir.ref<!fir.boxproc<() -> ()>>, !fir.ref<!fir.boxproc<() -> ()>>)
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_proc_pointer_2Ep_target"} : (!fir.ref<!fir.boxproc<() -> ()>>, !fir.dscope) -> (!fir.ref<!fir.boxproc<() -> ()>>, !fir.ref<!fir.boxproc<() -> ()>>)
-! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_2]]#1 : !fir.ref<!fir.boxproc<() -> ()>>
+! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
 ! CHECK:           %[[VAL_5:.*]] = fir.box_addr %[[VAL_4]] : (!fir.boxproc<() -> ()>) -> (() -> ())
-! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_3]]#1 : !fir.ref<!fir.boxproc<() -> ()>>
+! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
 ! CHECK:           %[[VAL_7:.*]] = fir.box_addr %[[VAL_6]] : (!fir.boxproc<() -> ()>) -> (() -> ())
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_5]] : (() -> ()) -> i64
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_7]] : (() -> ()) -> i64
@@ -51,7 +51,7 @@ end subroutine
 ! CHECK-SAME:                                      %[[VAL_0:.*]]: !fir.ref<!fir.boxproc<() -> ()>>,
 ! CHECK-SAME:                                      %[[VAL_1:.*]]: !fir.boxproc<() -> ()>) {
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_proc_pointer_3Ep"} : (!fir.ref<!fir.boxproc<() -> ()>>, !fir.dscope) -> (!fir.ref<!fir.boxproc<() -> ()>>, !fir.ref<!fir.boxproc<() -> ()>>)
-! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_2]]#1 : !fir.ref<!fir.boxproc<() -> ()>>
+! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
 ! CHECK:           %[[VAL_4:.*]] = fir.box_addr %[[VAL_3]] : (!fir.boxproc<() -> ()>) -> (() -> ())
 ! CHECK:           %[[VAL_5:.*]] = fir.box_addr %[[VAL_1]] : (!fir.boxproc<() -> ()>) -> (() -> ())
 ! CHECK:           %[[VAL_6:.*]] = fir.convert %[[VAL_4]] : (() -> ()) -> i64
@@ -72,7 +72,7 @@ end subroutine
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_proc_pointer_4Ep"} : (!fir.ref<!fir.boxproc<() -> ()>>, !fir.dscope) -> (!fir.ref<!fir.boxproc<() -> ()>>, !fir.ref<!fir.boxproc<() -> ()>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.address_of(@_QPsome_external) : () -> ()
 ! CHECK:           %[[VAL_3:.*]] = fir.emboxproc %[[VAL_2]] : (() -> ()) -> !fir.boxproc<() -> ()>
-! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_1]]#1 : !fir.ref<!fir.boxproc<() -> ()>>
+! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
 ! CHECK:           %[[VAL_5:.*]] = fir.box_addr %[[VAL_4]] : (!fir.boxproc<() -> ()>) -> (() -> ())
 ! CHECK:           %[[VAL_6:.*]] = fir.box_addr %[[VAL_3]] : (!fir.boxproc<() -> ()>) -> (() -> ())
 ! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_5]] : (() -> ()) -> i64
@@ -104,7 +104,7 @@ end subroutine
 ! CHECK:           %[[VAL_8:.*]] = fir.insert_value %[[VAL_7]], %[[VAL_6]], [0 : index] : (tuple<!fir.boxproc<() -> ()>, i64>, !fir.boxproc<() -> ()>) -> tuple<!fir.boxproc<() -> ()>, i64>
 ! CHECK:           %[[VAL_9:.*]] = fir.insert_value %[[VAL_8]], %[[VAL_5]], [1 : index] : (tuple<!fir.boxproc<() -> ()>, i64>, i64) -> tuple<!fir.boxproc<() -> ()>, i64>
 ! CHECK:           %[[VAL_10:.*]] = fir.extract_value %[[VAL_9]], [0 : index] : (tuple<!fir.boxproc<() -> ()>, i64>) -> !fir.boxproc<() -> ()>
-! CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_2]]#1 : !fir.ref<!fir.boxproc<() -> ()>>
+! CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
 ! CHECK:           %[[VAL_12:.*]] = fir.box_addr %[[VAL_11]] : (!fir.boxproc<() -> ()>) -> (() -> ())
 ! CHECK:           %[[VAL_13:.*]] = fir.box_addr %[[VAL_10]] : (!fir.boxproc<() -> ()>) -> (() -> ())
 ! CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_12]] : (() -> ()) -> i64

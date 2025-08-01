@@ -30,11 +30,10 @@
 #include <optional>
 using namespace llvm;
 
-cl::OptionCategory AsCat("llvm-as Options");
+static cl::OptionCategory AsCat("llvm-as Options");
 
-static cl::opt<std::string> InputFilename(cl::Positional,
-                                          cl::desc("<input .llvm file>"),
-                                          cl::init("-"));
+static cl::opt<std::string>
+    InputFilename(cl::Positional, cl::desc("<input .ll file>"), cl::init("-"));
 
 static cl::opt<std::string> OutputFilename("o",
                                            cl::desc("Override output filename"),
@@ -67,8 +66,6 @@ static cl::opt<std::string> ClDataLayout("data-layout",
                                          cl::desc("data layout string to use"),
                                          cl::value_desc("layout-string"),
                                          cl::init(""), cl::cat(AsCat));
-extern cl::opt<bool> UseNewDbgInfoFormat;
-extern bool WriteNewDbgInfoFormatToBitcode;
 
 static void WriteOutputFile(const Module *M, const ModuleSummaryIndex *Index) {
   // Infer the output filename if needed.
@@ -142,11 +139,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // Convert to new debug format if requested.
-  M->setIsNewDbgInfoFormat(UseNewDbgInfoFormat &&
-                           WriteNewDbgInfoFormatToBitcode);
-  if (M->IsNewDbgInfoFormat)
-    M->removeDebugIntrinsicDeclarations();
+  M->removeDebugIntrinsicDeclarations();
 
   std::unique_ptr<ModuleSummaryIndex> Index = std::move(ModuleAndIndex.Index);
 

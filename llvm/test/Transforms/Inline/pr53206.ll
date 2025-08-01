@@ -4,7 +4,7 @@
 ; Check that the exception handling code is fully pruned, and does not
 ; leave behind invalid IR.
 
-define internal void @foo() personality ptr undef {
+define internal void @foo(i1 %arg) personality ptr undef {
 entry:
   br i1 false, label %join, label %split
 
@@ -25,7 +25,7 @@ cleanup1:
   br label %cleanup1.cont
 
 cleanup1.cont:
-  br i1 undef, label %cleanupret, label %invoke2
+  br i1 %arg, label %cleanupret, label %invoke2
 
 invoke2:
   invoke void undef() [ "funclet"(token %pad1) ]
@@ -46,6 +46,6 @@ define void @test() personality ptr undef {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    ret void
 ;
-  call void @foo()
+  call void @foo(i1 1)
   ret void
 }

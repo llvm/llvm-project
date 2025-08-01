@@ -1,8 +1,8 @@
 ; RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s --check-prefix=EG --check-prefix=FUNC
 ; RUN: llc < %s -mtriple=r600 -mcpu=cayman | FileCheck %s --check-prefix=EG --check-prefix=FUNC
-; RUN: llc < %s -mtriple=amdgcn -verify-machineinstrs | FileCheck %s --check-prefix=SI --check-prefix=FUNC --check-prefix=GCN
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=VI --check-prefix=FUNC --check-prefix=GCN --check-prefix=GCN2
-; RUN: llc < %s -mtriple=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=VI --check-prefix=FUNC --check-prefix=GCN --check-prefix=GCN2
+; RUN: llc < %s -mtriple=amdgcn | FileCheck %s --check-prefix=SI --check-prefix=FUNC --check-prefix=GCN
+; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global | FileCheck %s --check-prefix=VI --check-prefix=FUNC --check-prefix=GCN --check-prefix=GCN2
+; RUN: llc < %s -mtriple=amdgcn -mcpu=fiji -mattr=-flat-for-global | FileCheck %s --check-prefix=VI --check-prefix=FUNC --check-prefix=GCN --check-prefix=GCN2
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
@@ -298,7 +298,7 @@ bb19:                                             ; preds = %bb19, %bb
   %tmp39 = mul i32 %tmp38, %tmp
   %tmp40 = add i32 %tmp39, %arg5
   store i32 %tmp40, ptr addrspace(1) %arg7
-  %tmp41 = insertelement <4 x i32> undef, i32 %tmp40, i32 0
+  %tmp41 = insertelement <4 x i32> poison, i32 %tmp40, i32 0
   %tmp42 = and i32 %tmp29, 16777215
   %tmp43 = mul i32 %tmp42, %tmp11
   %tmp44 = add i32 %tmp43, %tmp10

@@ -31,10 +31,8 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -73,10 +71,18 @@ static cl::opt<bool> UserHoistCommonInsts(
     "hoist-common-insts", cl::Hidden, cl::init(false),
     cl::desc("hoist common instructions (default = false)"));
 
+static cl::opt<bool> UserHoistLoadsStoresWithCondFaulting(
+    "hoist-loads-stores-with-cond-faulting", cl::Hidden, cl::init(false),
+    cl::desc("Hoist loads/stores if the target supports conditional faulting "
+             "(default = false)"));
+
 static cl::opt<bool> UserSinkCommonInsts(
     "sink-common-insts", cl::Hidden, cl::init(false),
     cl::desc("Sink common instructions (default = false)"));
 
+static cl::opt<bool> UserSpeculateUnpredictables(
+    "speculate-unpredictables", cl::Hidden, cl::init(false),
+    cl::desc("Speculate unpredictable branches (default = false)"));
 
 STATISTIC(NumSimpl, "Number of blocks simplified");
 
@@ -121,7 +127,7 @@ performBlockTailMerging(Function &F, ArrayRef<BasicBlock *> BBs,
 
   // Now, go through each block (with the current terminator type)
   // we've recorded, and rewrite it to branch to the new common block.
-  DILocation *CommonDebugLoc = nullptr;
+  DebugLoc CommonDebugLoc;
   for (BasicBlock *BB : BBs) {
     auto *Term = BB->getTerminator();
     assert(Term->getOpcode() == CanonicalTerm->getOpcode() &&
@@ -138,7 +144,7 @@ performBlockTailMerging(Function &F, ArrayRef<BasicBlock *> BBs,
       CommonDebugLoc = Term->getDebugLoc();
     else
       CommonDebugLoc =
-          DILocation::getMergedLocation(CommonDebugLoc, Term->getDebugLoc());
+          DebugLoc::getMergedLocation(CommonDebugLoc, Term->getDebugLoc());
 
     // And turn BB into a block that just unconditionally branches
     // to the canonical block.
@@ -188,8 +194,7 @@ static bool tailMergeBlocksWithSimilarFunctionTerminators(Function &F,
     // Calls to experimental_deoptimize must be followed by a return
     // of the value computed by experimental_deoptimize.
     // I.e., we can not change `ret` to `br` for this block.
-    if (auto *CI =
-            dyn_cast_or_null<CallInst>(Term->getPrevNonDebugInstruction())) {
+    if (auto *CI = dyn_cast_or_null<CallInst>(Term->getPrevNode())) {
       if (Function *F = CI->getCalledFunction())
         if (Intrinsic::ID ID = F->getIntrinsicID())
           if (ID == Intrinsic::experimental_deoptimize)
@@ -323,8 +328,13 @@ static void applyCommandLineOverridesToOptions(SimplifyCFGOptions &Options) {
     Options.NeedCanonicalLoop = UserKeepLoops;
   if (UserHoistCommonInsts.getNumOccurrences())
     Options.HoistCommonInsts = UserHoistCommonInsts;
+  if (UserHoistLoadsStoresWithCondFaulting.getNumOccurrences())
+    Options.HoistLoadsStoresWithCondFaulting =
+        UserHoistLoadsStoresWithCondFaulting;
   if (UserSinkCommonInsts.getNumOccurrences())
     Options.SinkCommonInsts = UserSinkCommonInsts;
+  if (UserSpeculateUnpredictables.getNumOccurrences())
+    Options.SpeculateUnpredictables = UserSpeculateUnpredictables;
 }
 
 SimplifyCFGPass::SimplifyCFGPass() {
@@ -349,9 +359,13 @@ void SimplifyCFGPass::printPipeline(
      << "switch-to-lookup;";
   OS << (Options.NeedCanonicalLoop ? "" : "no-") << "keep-loops;";
   OS << (Options.HoistCommonInsts ? "" : "no-") << "hoist-common-insts;";
+  OS << (Options.HoistLoadsStoresWithCondFaulting ? "" : "no-")
+     << "hoist-loads-stores-with-cond-faulting;";
   OS << (Options.SinkCommonInsts ? "" : "no-") << "sink-common-insts;";
   OS << (Options.SpeculateBlocks ? "" : "no-") << "speculate-blocks;";
-  OS << (Options.SimplifyCondBranch ? "" : "no-") << "simplify-cond-branch";
+  OS << (Options.SimplifyCondBranch ? "" : "no-") << "simplify-cond-branch;";
+  OS << (Options.SpeculateUnpredictables ? "" : "no-")
+     << "speculate-unpredictables";
   OS << '>';
 }
 

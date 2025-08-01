@@ -327,7 +327,6 @@ define <2 x double> @nearbyint_v2f64(<2 x double> %vf1, <2 x double> %vf2) stric
 ; P8-NEXT:    nop
 ; P8-NEXT:    xxlor v30, f1, f1
 ; P8-NEXT:    xxswapd vs1, v31
-; P8-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; P8-NEXT:    bl nearbyint
 ; P8-NEXT:    nop
 ; P8-NEXT:    li r3, 144
@@ -358,7 +357,6 @@ define <2 x double> @nearbyint_v2f64(<2 x double> %vf1, <2 x double> %vf2) stric
 ; P9-NEXT:    nop
 ; P9-NEXT:    xscpsgndp v30, f1, f1
 ; P9-NEXT:    xxswapd vs1, v31
-; P9-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; P9-NEXT:    bl nearbyint
 ; P9-NEXT:    nop
 ; P9-NEXT:    # kill: def $f1 killed $f1 def $vsl1

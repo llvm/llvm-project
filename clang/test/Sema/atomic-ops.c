@@ -1,20 +1,20 @@
 // RUN: %clang_cc1 %s -verify=expected,fp80,noi128 -fgnuc-version=4.2.1 -ffreestanding \
-// RUN:   -fsyntax-only -triple=i686-linux-gnu -std=c11
+// RUN:   -Wno-default-const-init-unsafe -fsyntax-only -triple=i686-linux-gnu -std=c11
 // RUN: %clang_cc1 %s -verify=expected,noi128 -fgnuc-version=4.2.1 -ffreestanding \
-// RUN:   -fsyntax-only -triple=i686-linux-android -std=c11
+// RUN:   -Wno-default-const-init-unsafe -fsyntax-only -triple=i686-linux-android -std=c11
 // RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
-// RUN:   -fsyntax-only -triple=powerpc64-linux-gnu -std=c11
+// RUN:   -Wno-default-const-init-unsafe -fsyntax-only -triple=powerpc64-linux-gnu -std=c11
 // RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
-// RUN:   -fsyntax-only -triple=powerpc64-linux-gnu -std=c11 \
+// RUN:   -Wno-default-const-init-unsafe -fsyntax-only -triple=powerpc64-linux-gnu -std=c11 \
 // RUN:   -target-cpu pwr7
 // RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
-// RUN:   -fsyntax-only -triple=powerpc64le-linux-gnu -std=c11 \
+// RUN:   -Wno-default-const-init-unsafe -fsyntax-only -triple=powerpc64le-linux-gnu -std=c11 \
 // RUN:   -target-cpu pwr8 -DPPC64_PWR8
 // RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
-// RUN:   -fsyntax-only -triple=powerpc64-unknown-aix -std=c11 \
+// RUN:   -Wno-default-const-init-unsafe -fsyntax-only -triple=powerpc64-unknown-aix -std=c11 \
 // RUN:   -target-cpu pwr8
 // RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
-// RUN:   -fsyntax-only -triple=powerpc64-unknown-aix -std=c11 \
+// RUN:   -Wno-default-const-init-unsafe -fsyntax-only -triple=powerpc64-unknown-aix -std=c11 \
 // RUN:   -mabi=quadword-atomics -target-cpu pwr8 -DPPC64_PWR8
 
 // Basic parsing/Sema tests for __c11_atomic_*
@@ -123,6 +123,31 @@ _Static_assert(__atomic_always_lock_free(4, &i32), "");
 _Static_assert(__atomic_always_lock_free(4, &i64), "");
 _Static_assert(!__atomic_always_lock_free(8, &i32), "");
 _Static_assert(__atomic_always_lock_free(8, &i64), "");
+
+// Validate use with fake pointers constants. This mechanism is used to allow
+// validating atomicity of a given size and alignment.
+_Static_assert(__atomic_is_lock_free(1, (void*)1), "");
+_Static_assert(__atomic_is_lock_free(1, (void*)-1), "");
+_Static_assert(__atomic_is_lock_free(4, (void*)2), ""); // expected-error {{not an integral constant expression}}
+_Static_assert(__atomic_is_lock_free(4, (void*)-2), ""); // expected-error {{not an integral constant expression}}
+_Static_assert(__atomic_is_lock_free(4, (void*)4), "");
+_Static_assert(__atomic_is_lock_free(4, (void*)-4), "");
+
+_Static_assert(__atomic_always_lock_free(1, (void*)1), "");
+_Static_assert(__atomic_always_lock_free(1, (void*)-1), "");
+_Static_assert(!__atomic_always_lock_free(4, (void*)2), "");
+_Static_assert(!__atomic_always_lock_free(4, (void*)-2), "");
+_Static_assert(__atomic_always_lock_free(4, (void*)4), "");
+_Static_assert(__atomic_always_lock_free(4, (void*)-4), "");
+
+// Ensure that "weird" constants don't cause trouble.
+_Static_assert(__atomic_always_lock_free(1, "string"), "");
+_Static_assert(!__atomic_always_lock_free(2, "string"), "");
+_Static_assert(__atomic_always_lock_free(2, (int[2]){}), "");
+void dummyfn();
+_Static_assert(__atomic_always_lock_free(2, dummyfn) || 1, "");
+
+
 
 #define _AS1 __attribute__((address_space(1)))
 #define _AS2 __attribute__((address_space(2)))
@@ -259,11 +284,29 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
 
   const volatile int flag_k = 0;
   volatile int flag = 0;
-  (void)(int)__atomic_test_and_set(&flag_k, memory_order_seq_cst); // expected-warning {{passing 'const volatile int *' to parameter of type 'volatile void *'}}
+  (void)(int)__atomic_test_and_set(&flag_k, memory_order_seq_cst); // expected-error {{address argument to atomic operation must be a pointer to non-const type ('const volatile int *' invalid)}}
   (void)(int)__atomic_test_and_set(&flag, memory_order_seq_cst);
-  __atomic_clear(&flag_k, memory_order_seq_cst); // expected-warning {{passing 'const volatile int *' to parameter of type 'volatile void *'}}
+  __atomic_clear(&flag_k, memory_order_seq_cst); // expected-error {{address argument to atomic operation must be a pointer to non-const type ('const volatile int *' invalid)}}
   __atomic_clear(&flag, memory_order_seq_cst);
   (int)__atomic_clear(&flag, memory_order_seq_cst); // expected-error {{operand of type 'void'}}
+  __atomic_clear(0x8000, memory_order_seq_cst); // expected-error {{address argument to atomic builtin must be a pointer ('int' invalid)}}
+  __atomic_clear(&flag, memory_order_consume); // expected-warning {{memory order argument to atomic operation is invalid}}
+  __atomic_clear(&flag, memory_order_acquire); // expected-warning {{memory order argument to atomic operation is invalid}}
+  __atomic_clear(&flag, memory_order_acq_rel); // expected-warning {{memory order argument to atomic operation is invalid}}
+  _Bool lock;
+  __atomic_test_and_set(lock, memory_order_acquire); // expected-error {{address argument to atomic builtin must be a pointer}}
+  __atomic_clear(lock, memory_order_release); // expected-error {{address argument to atomic builtin must be a pointer}}
+
+  // These intrinsics accept any non-const pointer type (including
+  // pointer-to-incomplete), and access the first byte.
+  __atomic_test_and_set((void*)0x8000, memory_order_seq_cst);
+  __atomic_test_and_set((char*)0x8000, memory_order_seq_cst);
+  __atomic_test_and_set((int*)0x8000, memory_order_seq_cst);
+  __atomic_test_and_set((struct incomplete*)0x8000, memory_order_seq_cst);
+  __atomic_clear((void*)0x8000, memory_order_seq_cst);
+  __atomic_clear((char*)0x8000, memory_order_seq_cst);
+  __atomic_clear((int*)0x8000, memory_order_seq_cst);
+  __atomic_clear((struct incomplete*)0x8000, memory_order_seq_cst);
 
   __c11_atomic_init(ci, 0); // expected-error {{address argument to atomic operation must be a pointer to non-const _Atomic type ('const _Atomic(int) *' invalid)}}
   __c11_atomic_store(ci, 0, memory_order_release); // expected-error {{address argument to atomic operation must be a pointer to non-const _Atomic type ('const _Atomic(int) *' invalid)}}

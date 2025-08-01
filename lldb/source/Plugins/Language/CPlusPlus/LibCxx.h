@@ -10,10 +10,10 @@
 #ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_LIBCXX_H
 #define LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_LIBCXX_H
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 namespace lldb_private {
 namespace formatters {
@@ -25,7 +25,8 @@ GetChildMemberWithName(ValueObject &obj,
 
 lldb::ValueObjectSP GetFirstValueOfLibCXXCompressedPair(ValueObject &pair);
 lldb::ValueObjectSP GetSecondValueOfLibCXXCompressedPair(ValueObject &pair);
-
+bool isOldCompressedPairLayout(ValueObject &pair_obj);
+bool isStdTemplate(ConstString type_name, llvm::StringRef type);
 
 bool LibcxxStringSummaryProviderASCII(
     ValueObject &valobj, Stream &stream,
@@ -80,9 +81,6 @@ SyntheticChildrenFrontEnd *
 LibcxxVectorBoolSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                          lldb::ValueObjectSP);
 
-bool LibcxxContainerSummaryProvider(ValueObject &valobj, Stream &stream,
-                                    const TypeSummaryOptions &options);
-
 /// Formatter for libc++ std::span<>.
 bool LibcxxSpanSummaryProvider(ValueObject &valobj, Stream &stream,
                                const TypeSummaryOptions &options);
@@ -101,14 +99,13 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
   ~LibcxxSharedPtrSyntheticFrontEnd() override;
 
 private:
   ValueObject *m_cntrl;
+  ValueObject *m_ptr_obj;
 };
 
 class LibcxxUniquePtrSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
@@ -121,9 +118,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
   ~LibcxxUniquePtrSyntheticFrontEnd() override;
 

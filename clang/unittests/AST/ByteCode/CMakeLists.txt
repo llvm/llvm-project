@@ -1,0 +1,18 @@
+add_clang_unittest(InterpTests
+  BitcastBuffer.cpp
+  Descriptor.cpp
+  toAPValue.cpp
+  CLANG_LIBS
+  clangAST
+  clangASTMatchers
+  clangBasic
+  clangFrontend
+  clangSerialization
+  clangTooling
+  LINK_LIBS
+  clangTesting
+  LLVM_COMPONENTS
+  FrontendOpenMP
+  Support
+  TargetParser
+  )

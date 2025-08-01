@@ -132,13 +132,13 @@ if config.default_sysroot:
 tools = [
     ToolSubst(
         "%flang",
-        command=FindTool("flang-new"),
+        command=FindTool("flang"),
         extra_args=isysroot_flag,
         unresolved="fatal",
     ),
     ToolSubst(
         "%flang_fc1",
-        command=FindTool("flang-new"),
+        command=FindTool("flang"),
         extra_args=["-fc1"],
         unresolved="fatal",
     ),
@@ -163,29 +163,6 @@ else:
         ToolSubst("%not_todo_abort_cmd", command=FindTool("not"), unresolved="fatal")
     )
 
-# Define some variables to help us test that the flang runtime doesn't depend on
-# the C++ runtime libraries. For this we need a C compiler. If for some reason
-# we don't have one, we can just disable the test.
-if config.cc:
-    libruntime = os.path.join(config.flang_lib_dir, "libFortranRuntime.a")
-    libdecimal = os.path.join(config.flang_lib_dir, "libFortranDecimal.a")
-    include = os.path.join(config.flang_src_dir, "include")
-
-    if (
-        os.path.isfile(libruntime)
-        and os.path.isfile(libdecimal)
-        and os.path.isdir(include)
-    ):
-        config.available_features.add("c-compiler")
-        tools.append(
-            ToolSubst(
-                "%cc", command=config.cc, extra_args=isysroot_flag, unresolved="fatal"
-            )
-        )
-        tools.append(ToolSubst("%libruntime", command=libruntime, unresolved="fatal"))
-        tools.append(ToolSubst("%libdecimal", command=libdecimal, unresolved="fatal"))
-        tools.append(ToolSubst("%include", command=include, unresolved="fatal"))
-
 # Add all the tools and their substitutions (if applicable). Use the search paths provided for
 # finding the tools.
 if config.flang_standalone_build:
@@ -201,23 +178,22 @@ if result:
     config.environment["LIBPGMATH"] = True
 
 # Determine if OpenMP runtime was built (enable OpenMP tests via REQUIRES in test file)
+openmp_flags_substitution = "-fopenmp"
 if config.have_openmp_rtl:
     config.available_features.add("openmp_runtime")
     # For the enabled OpenMP tests, add a substitution that is needed in the tests to find
     # the omp_lib.{h,mod} files, depending on whether the OpenMP runtime was built as a
     # project or runtime.
     if config.openmp_module_dir:
-        config.substitutions.append(
-            ("%openmp_flags", f"-fopenmp -J {config.openmp_module_dir}")
-        )
-    else:
-        config.substitutions.append(("%openmp_flags", "-fopenmp"))
+        openmp_flags_substitution += f" -J {config.openmp_module_dir}"
+config.substitutions.append(("%openmp_flags", openmp_flags_substitution))
 
 # Add features and substitutions to test F128 math support.
 # %f128-lib substitution may be used to generate check prefixes
 # for LIT tests checking for F128 library support.
-if config.flang_runtime_f128_math_lib:
+if config.flang_runtime_f128_math_lib or config.have_ldbl_mant_dig_113:
     config.available_features.add("flang-supports-f128-math")
+if config.flang_runtime_f128_math_lib:
     config.available_features.add(
         "flang-f128-math-lib-" + config.flang_runtime_f128_math_lib
     )

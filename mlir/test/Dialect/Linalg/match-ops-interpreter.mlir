@@ -842,15 +842,15 @@ module attributes { transform.with_named_sequence } {
     // expected-remark @below {{op result}}
     // expected-note @below {{value handle points to an op result #0}}
     // expected-remark @below {{single user}}
-    linalg.elemwise_unary {fun = #linalg.unary_fn<negf>} ins(%2 : tensor<42x42xf32>) outs(%0 : tensor<42x42xf32>) -> tensor<42x42xf32>
+    linalg.negf ins(%2 : tensor<42x42xf32>) outs(%0 : tensor<42x42xf32>) -> tensor<42x42xf32>
     // expected-remark @below {{matched result value}}
     // expected-remark @below {{op result}}
     // expected-note @below {{value handle points to an op result #0}}
-    linalg.elemwise_unary {fun = #linalg.unary_fn<exp>} ins(%3 : tensor<42x42xf32>) outs(%0 : tensor<42x42xf32>) -> tensor<42x42xf32>
+    linalg.exp ins(%3 : tensor<42x42xf32>) outs(%0 : tensor<42x42xf32>) -> tensor<42x42xf32>
     // expected-remark @below {{matched result value}}
     // expected-remark @below {{op result}}
     // expected-note @below {{value handle points to an op result #0}}
-    linalg.elemwise_unary {fun = #linalg.unary_fn<exp>} ins(%3 : tensor<42x42xf32>) outs(%0 : tensor<42x42xf32>) -> tensor<42x42xf32>
+    linalg.exp ins(%3 : tensor<42x42xf32>) outs(%0 : tensor<42x42xf32>) -> tensor<42x42xf32>
     return
   }
 }
@@ -995,6 +995,21 @@ module attributes { transform.target_tag = "start_here" } {
       linalg.yield %1 : f32
     } -> tensor<40x10x50x15xf32>
     return %result : tensor<40x10x50x15xf32>
+  }
+
+  func.func @generic_min(%arg0: tensor<1x7x4xf32>, %arg1: tensor<4xf32>, %arg2: tensor<1x1x4xf32>) {
+    linalg.generic {
+      indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d1 * 2 + d3 * 2, d2)>, 
+      affine_map<(d0, d1, d2, d3) -> (d3)>, 
+      affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>], 
+      iterator_types = ["parallel", "parallel", "parallel", "reduction"]} 
+      ins(%arg0, %arg1 : tensor<1x7x4xf32>, tensor<4xf32>) 
+      outs(%arg2 : tensor<1x1x4xf32>) {
+    ^bb0(%in: f32, %in_1: f32, %out: f32):
+      %5 = arith.minimumf %out, %in : f32
+      linalg.yield %5 : f32
+    } -> tensor<1x1x4xf32>
+    return
   }
 }
 

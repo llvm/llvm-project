@@ -124,8 +124,6 @@ define <2 x double> @frem2x64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-NEXT:    xscpsgndp 61, 1, 1
 ; CHECK-NEXT:    xxswapd 1, 62
 ; CHECK-NEXT:    xxswapd 2, 63
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
-; CHECK-NEXT:    # kill: def $f2 killed $f2 killed $vsl2
 ; CHECK-NEXT:    bl fmod
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1

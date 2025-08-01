@@ -10,7 +10,8 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_BCMP_H
 
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/properties/architectures.h" // LIBC_TARGET_ARCH_IS_
 
 #include <stddef.h> // size_t
@@ -20,15 +21,13 @@
 #define LIBC_SRC_STRING_MEMORY_UTILS_BCMP inline_bcmp_x86
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #include "src/string/memory_utils/aarch64/inline_bcmp.h"
-#define LIBC_SRC_STRING_MEMORY_UTILS_BCMP inline_bcmp_aarch64
+#define LIBC_SRC_STRING_MEMORY_UTILS_BCMP inline_bcmp_aarch64_dispatch
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #include "src/string/memory_utils/riscv/inline_bcmp.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_BCMP inline_bcmp_riscv
-#elif defined(LIBC_TARGET_ARCH_IS_ARM) || defined(LIBC_TARGET_ARCH_IS_GPU)
+#else
 #include "src/string/memory_utils/generic/byte_per_byte.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_BCMP inline_bcmp_byte_per_byte
-#else
-#error "Unsupported architecture"
 #endif
 
 namespace LIBC_NAMESPACE_DECL {

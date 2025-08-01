@@ -108,6 +108,7 @@ public:
   void printStackMap() const override;
   void printAddrsig() override;
   void printCGProfile() override;
+  void printStringTable() override;
 
 private:
   StringRef getSymbolName(uint32_t Index);
@@ -411,10 +412,19 @@ const EnumEntry<COFF::DLLCharacteristics> PEDLLCharacteristics[] = {
   LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE),
 };
 
+// clang-format off
 static const EnumEntry<COFF::ExtendedDLLCharacteristics>
     PEExtendedDLLCharacteristics[] = {
-        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT                                ),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT_STRICT_MODE                    ),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_EX_CET_SET_CONTEXT_IP_VALIDATION_RELAXED_MODE),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_EX_CET_DYNAMIC_APIS_ALLOW_IN_PROC_ONLY       ),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_EX_CET_RESERVED_1                            ),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_EX_CET_RESERVED_2                            ),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_EX_FORWARD_CFI_COMPAT                        ),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_EX_HOTPATCH_COMPATIBLE                       ),
 };
+// clang-format on
 
 static const EnumEntry<COFF::SectionCharacteristics>
 ImageSectionCharacteristics[] = {
@@ -645,10 +655,11 @@ void COFFDumper::cacheRelocations() {
   for (const SectionRef &S : Obj->sections()) {
     const coff_section *Section = Obj->getCOFFSection(S);
 
-    append_range(RelocMap[Section], S.relocations());
+    auto &RM = RelocMap[Section];
+    append_range(RM, S.relocations());
 
     // Sort relocations by address.
-    llvm::sort(RelocMap[Section], [](RelocationRef L, RelocationRef R) {
+    llvm::sort(RM, [](RelocationRef L, RelocationRef R) {
       return L.getOffset() < R.getOffset();
     });
   }
@@ -930,6 +941,12 @@ void COFFDumper::printCOFFLoadConfig() {
     W.printHex("ExtraRFETableSize", CHPE->ExtraRFETableSize);
     W.printHex("__os_arm64x_dispatch_fptr", CHPE->__os_arm64x_dispatch_fptr);
     W.printHex("AuxiliaryIATCopy", CHPE->AuxiliaryIATCopy);
+
+    if (CHPE->Version >= 2) {
+      W.printHex("AuxiliaryDelayloadIAT", CHPE->AuxiliaryDelayloadIAT);
+      W.printHex("AuxiliaryDelayloadIATCopy", CHPE->AuxiliaryDelayloadIATCopy);
+      W.printHex("HybridImageInfoBitfield", CHPE->HybridImageInfoBitfield);
+    }
   }
 
   if (Tables.SEHTableVA) {
@@ -971,6 +988,43 @@ void COFFDumper::printCOFFLoadConfig() {
     ListScope LS(W, "GuardEHContTable");
     printRVATable(Tables.GuardEHContTableVA, Tables.GuardEHContTableCount,
                   4 + Stride, PrintExtra);
+  }
+
+  if (const coff_dynamic_reloc_table *DynRelocTable =
+          Obj->getDynamicRelocTable()) {
+    ListScope LS(W, "DynamicRelocations");
+    W.printHex("Version", DynRelocTable->Version);
+    for (auto reloc : Obj->dynamic_relocs()) {
+      switch (reloc.getType()) {
+      case COFF::IMAGE_DYNAMIC_RELOCATION_ARM64X: {
+        ListScope TLS(W, "Arm64X");
+        for (auto Arm64XReloc : reloc.arm64x_relocs()) {
+          ListScope ELS(W, "Entry");
+          W.printHex("RVA", Arm64XReloc.getRVA());
+          switch (Arm64XReloc.getType()) {
+          case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL:
+            W.printString("Type", "ZEROFILL");
+            W.printHex("Size", Arm64XReloc.getSize());
+            break;
+          case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE:
+            W.printString("Type", "VALUE");
+            W.printHex("Size", Arm64XReloc.getSize());
+            W.printHex("Value", Arm64XReloc.getValue());
+            break;
+          case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA:
+            W.printString("Type", "DELTA");
+            W.printNumber("Value",
+                          static_cast<int32_t>(Arm64XReloc.getValue()));
+            break;
+          }
+        }
+        break;
+      }
+      default:
+        W.printHex("Type", reloc.getType());
+        break;
+      }
+    }
   }
 }
 
@@ -1227,14 +1281,15 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
         reportError(errorCodeToError(EC), Obj->getFileName());
 
       W.printString("LinkageName", LinkageName);
-      if (FunctionLineTables.count(LinkageName) != 0) {
+      auto [It, Inserted] =
+          FunctionLineTables.try_emplace(LinkageName, Contents);
+      if (!Inserted) {
         // Saw debug info for this function already?
         reportError(errorCodeToError(object_error::parse_failed),
                     Obj->getFileName());
         return;
       }
 
-      FunctionLineTables[LinkageName] = Contents;
       FunctionNames.push_back(LinkageName);
       break;
     }
@@ -2172,6 +2227,17 @@ void COFFDumper::printCGProfile() {
     W.printNumber("To", getSymbolName(ToIndex), ToIndex);
     W.printNumber("Weight", Count);
   }
+}
+
+void COFFDumper::printStringTable() {
+  DictScope DS(W, "StringTable");
+  StringRef StrTable = Obj->getStringTable();
+  uint32_t StrTabSize = StrTable.size();
+  W.printNumber("Length", StrTabSize);
+  // Print strings from the fifth byte, since the first four bytes contain the
+  // length (in bytes) of the string table (including the length field).
+  if (StrTabSize > 4)
+    printAsStringList(StrTable, 4);
 }
 
 StringRef COFFDumper::getSymbolName(uint32_t Index) {

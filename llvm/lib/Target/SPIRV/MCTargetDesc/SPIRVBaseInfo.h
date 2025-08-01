@@ -57,6 +57,11 @@ namespace MemoryModel {
 #include "SPIRVGenTables.inc"
 } // namespace MemoryModel
 
+namespace MatrixMultiplyAccumulateOperands {
+#define GET_MatrixMultiplyAccumulateOperands_DECL
+#include "SPIRVGenTables.inc"
+} // namespace MatrixMultiplyAccumulateOperands
+
 namespace ExecutionMode {
 #define GET_ExecutionMode_DECL
 #include "SPIRVGenTables.inc"
@@ -207,10 +212,30 @@ namespace Opcode {
 #include "SPIRVGenTables.inc"
 } // namespace Opcode
 
+namespace CooperativeMatrixLayout {
+#define GET_CooperativeMatrixLayout_DECL
+#include "SPIRVGenTables.inc"
+} // namespace CooperativeMatrixLayout
+
+namespace CooperativeMatrixOperands {
+#define GET_CooperativeMatrixOperands_DECL
+#include "SPIRVGenTables.inc"
+} // namespace CooperativeMatrixOperands
+
+namespace SpecConstantOpOperands {
+#define GET_SpecConstantOpOperands_DECL
+#include "SPIRVGenTables.inc"
+} // namespace SpecConstantOpOperands
+
 struct ExtendedBuiltin {
   StringRef Name;
   InstructionSet::InstructionSet Set;
   uint32_t Number;
+};
+
+enum InstFlags {
+  // It is a half type
+  INST_PRINTER_WIDTH16 = 1
 };
 } // namespace SPIRV
 

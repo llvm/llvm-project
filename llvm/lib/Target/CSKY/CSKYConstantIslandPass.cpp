@@ -28,7 +28,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
-#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -185,7 +184,8 @@ class CSKYConstantIslands : public MachineFunctionPass {
   struct ImmBranch {
     MachineInstr *MI;
     unsigned MaxDisp : 31;
-    bool IsCond : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsCond : 1;
     int UncondBr;
 
     ImmBranch(MachineInstr *Mi, unsigned Maxdisp, bool Cond, int Ubr)
@@ -217,14 +217,8 @@ public:
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
   void doInitialPlacement(std::vector<MachineInstr *> &CPEMIs);

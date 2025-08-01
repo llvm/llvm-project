@@ -20,7 +20,7 @@ class FoundationTestCaseNSError(TestBase):
 
         # Test_NSString:
         self.runCmd("thread backtrace")
-        self.expect("expression [str length]", patterns=["\(NSUInteger\) \$.* ="])
+        self.expect("expression [str length]", patterns=[r"\(NSUInteger\) \$.* ="])
         self.expect("expression str.length")
         self.expect('expression str = [NSString stringWithCString: "new"]')
         self.expect(

@@ -14,7 +14,11 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, rintf, (float x)) {
+#ifdef __LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC
+  return __builtin_rintf(x);
+#else
   return fputil::round_using_current_rounding_mode(x);
+#endif
 }
 
 } // namespace LIBC_NAMESPACE_DECL

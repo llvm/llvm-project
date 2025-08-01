@@ -14,6 +14,7 @@
 #ifndef LLVM_TARGETPARSER_LOONGARCHTARGETPARSER_H
 #define LLVM_TARGETPARSER_LOONGARCHTARGETPARSER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <vector>
 
@@ -46,6 +47,26 @@ enum FeatureKind : uint32_t {
 
   // Allow memory accesses to be unaligned.
   FK_UAL = 1 << 8,
+
+  // Floating-point approximate reciprocal instructions are available.
+  FK_FRECIPE = 1 << 9,
+
+  // Atomic memory swap and add instructions for byte and half word are
+  // available.
+  FK_LAM_BH = 1 << 10,
+
+  // Atomic memory compare and swap instructions for byte, half word, word and
+  // double word are available.
+  FK_LAMCAS = 1 << 11,
+
+  // Do not generate load-load barrier instructions (dbar 0x700).
+  FK_LD_SEQ_SA = 1 << 12,
+
+  // Assume div.w[u] and mod.w[u] can handle inputs that are not sign-extended.
+  FK_DIV32 = 1 << 13,
+
+  // sc.q is available.
+  FK_SCQ = 1 << 14,
 };
 
 struct FeatureInfo {
@@ -64,11 +85,12 @@ struct ArchInfo {
   uint32_t Features;
 };
 
-bool isValidArchName(StringRef Arch);
-bool getArchFeatures(StringRef Arch, std::vector<StringRef> &Features);
-bool isValidCPUName(StringRef TuneCPU);
-void fillValidCPUList(SmallVectorImpl<StringRef> &Values);
-StringRef getDefaultArch(bool Is64Bit);
+LLVM_ABI bool isValidArchName(StringRef Arch);
+LLVM_ABI bool isValidFeatureName(StringRef Feature);
+LLVM_ABI bool getArchFeatures(StringRef Arch, std::vector<StringRef> &Features);
+LLVM_ABI bool isValidCPUName(StringRef TuneCPU);
+LLVM_ABI void fillValidCPUList(SmallVectorImpl<StringRef> &Values);
+LLVM_ABI StringRef getDefaultArch(bool Is64Bit);
 
 } // namespace LoongArch
 

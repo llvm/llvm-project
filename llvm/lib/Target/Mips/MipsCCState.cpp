@@ -30,8 +30,7 @@ bool MipsCCState::isF128SoftLibCall(const char *CallSym) {
   // Check that LibCalls is sorted alphabetically.
   auto Comp = [](const char *S1, const char *S2) { return strcmp(S1, S2) < 0; };
   assert(llvm::is_sorted(LibCalls, Comp));
-  return std::binary_search(std::begin(LibCalls), std::end(LibCalls), CallSym,
-                            Comp);
+  return llvm::binary_search(LibCalls, CallSym, Comp);
 }
 
 /// This function returns true if Ty is fp128, {f128} or i128 which was
@@ -95,14 +94,13 @@ void MipsCCState::PreAnalyzeCallResultForF128(
 
 /// Identify lowered values that originated from f128 or float arguments and
 /// record this for use by RetCC_MipsN.
-void MipsCCState::PreAnalyzeReturnForF128(
-    const SmallVectorImpl<ISD::OutputArg> &Outs) {
-  const MachineFunction &MF = getMachineFunction();
+void MipsCCState::PreAnalyzeCallReturnForF128(
+    const SmallVectorImpl<ISD::OutputArg> &Outs, const Type *RetTy) {
   for (unsigned i = 0; i < Outs.size(); ++i) {
     OriginalArgWasF128.push_back(
-        originalTypeIsF128(MF.getFunction().getReturnType(), nullptr));
+        originalTypeIsF128(RetTy, nullptr));
     OriginalArgWasFloat.push_back(
-        MF.getFunction().getReturnType()->isFloatingPointTy());
+        RetTy->isFloatingPointTy());
   }
 }
 

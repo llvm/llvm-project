@@ -6,7 +6,8 @@ add_mlir_conversion_library(MLIRGPUToLLVMSPV
 
   LINK_LIBS PUBLIC
   MLIRGPUDialect
+  MLIRGPUToGPURuntimeTransforms
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
-  MLIRSPIRVDialect
+  MLIRSPIRVAttrToLLVMConversion
 )

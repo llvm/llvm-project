@@ -13,7 +13,7 @@ define i1 @tautological_ule(i8 %x) {
 
 define <2 x i1> @tautological_ule_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @tautological_ule_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %cmp = icmp ule <2 x i8> %x, <i8 255, i8 255>
   ret <2 x i1> %cmp
@@ -21,7 +21,7 @@ define <2 x i1> @tautological_ule_vec(<2 x i8> %x) {
 
 define <2 x i1> @tautological_ule_vec_partial_poison(<2 x i8> %x) {
 ; CHECK-LABEL: @tautological_ule_vec_partial_poison(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %cmp = icmp ule <2 x i8> %x, <i8 255, i8 poison>
   ret <2 x i1> %cmp
@@ -63,7 +63,7 @@ define i1 @urem3(i32 %X) {
 
 define <2 x i1> @urem3_vec(<2 x i32> %X) {
 ; CHECK-LABEL: @urem3_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %A = urem <2 x i32> %X, <i32 10, i32 10>
   %B = icmp ult <2 x i32> %A, <i32 15, i32 15>
@@ -72,7 +72,7 @@ define <2 x i1> @urem3_vec(<2 x i32> %X) {
 
 define <2 x i1> @urem3_vec_partial_poison(<2 x i32> %X) {
 ; CHECK-LABEL: @urem3_vec_partial_poison(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %A = urem <2 x i32> %X, <i32 10, i32 10>
   %B = icmp ult <2 x i32> %A, <i32 poison, i32 15>
@@ -138,7 +138,7 @@ define i1 @udiv1(i32 %X) {
 
 define <2 x i1> @udiv1_vec(<2 x i32> %X) {
 ; CHECK-LABEL: @udiv1_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %A = udiv <2 x i32> %X, <i32 1000000, i32 1000000>
   %B = icmp ult <2 x i32> %A, <i32 5000, i32 5000>
@@ -177,7 +177,7 @@ define i1 @sdiv1(i32 %X) {
 
 define <2 x i1> @sdiv1_vec(<2 x i32> %X) {
 ; CHECK-LABEL: @sdiv1_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %A = sdiv <2 x i32> %X, <i32 1000000, i32 1000000>
   %B = icmp slt <2 x i32> %A, <i32 3000, i32 3000>
@@ -196,7 +196,7 @@ define i1 @shl5(i32 %X) {
 
 define <2 x i1> @shl5_vec(<2 x i32> %X) {
 ; CHECK-LABEL: @shl5_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %sub = shl nuw <2 x i32> <i32 4, i32 4>, %X
   %cmp = icmp ugt <2 x i32> %sub, <i32 3, i32 3>
@@ -205,7 +205,7 @@ define <2 x i1> @shl5_vec(<2 x i32> %X) {
 
 define <2 x i1> @shl5_vec_partial_poison(<2 x i32> %X) {
 ; CHECK-LABEL: @shl5_vec_partial_poison(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %sub = shl nuw <2 x i32> <i32 4, i32 4>, %X
   %cmp = icmp ugt <2 x i32> %sub, <i32 poison, i32 3>
@@ -243,7 +243,7 @@ define i1 @shl4(i32 %X) {
 
 define <2 x i1> @shl4_vec(<2 x i32> %X) {
 ; CHECK-LABEL: @shl4_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %sub = shl nsw <2 x i32> <i32 -1, i32 -1>, %X
   %cmp = icmp sle <2 x i32> %sub, <i32 -1, i32 -1>
@@ -262,7 +262,7 @@ define i1 @icmp_shl_nsw_1(i64 %a) {
 
 define <2 x i1> @icmp_shl_nsw_1_vec(<2 x i64> %a) {
 ; CHECK-LABEL: @icmp_shl_nsw_1_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %shl = shl nsw <2 x i64> <i64 1, i64 1>, %a
   %cmp = icmp sge <2 x i64> %shl, zeroinitializer
@@ -605,7 +605,7 @@ define i1 @tautological9(i32 %x) {
 
 define <2 x i1> @tautological9_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @tautological9_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %add = add nuw <2 x i32> %x, <i32 13, i32 13>
   %cmp = icmp ne <2 x i32> %add, <i32 12, i32 12>
@@ -826,7 +826,7 @@ define i1 @add_nsw_pos_const6(i32 %x) {
 
 define <2 x i1> @add_nsw_pos_const5_splat_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @add_nsw_pos_const5_splat_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %add = add nsw <2 x i32> %x, <i32 42, i32 42>
   %cmp = icmp ne <2 x i32> %add, <i32 -2147483607, i32 -2147483607>
@@ -891,7 +891,7 @@ define i1 @mul_nuw_urem_cmp_constant1(i8 %x) {
 
 define <2 x i1> @mul_nuw_urem_cmp_constant_vec_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @mul_nuw_urem_cmp_constant_vec_splat(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %m = mul nuw <2 x i8> %x, <i8 45, i8 45>
   %r = icmp ne <2 x i8> %m, <i8 15, i8 15>
@@ -902,7 +902,7 @@ define <2 x i1> @mul_nuw_urem_cmp_constant_vec_splat(<2 x i8> %x) {
 
 define <2 x i1> @mul_nuw_urem_cmp_constant_vec_splat_poison1(<2 x i8> %x) {
 ; CHECK-LABEL: @mul_nuw_urem_cmp_constant_vec_splat_poison1(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %m = mul nuw <2 x i8> %x, <i8 45, i8 45>
   %r = icmp ne <2 x i8> %m, <i8 15, i8 poison>
@@ -913,7 +913,7 @@ define <2 x i1> @mul_nuw_urem_cmp_constant_vec_splat_poison1(<2 x i8> %x) {
 
 define <2 x i1> @mul_nuw_urem_cmp_constant_vec_splat_poison2(<2 x i8> %x) {
 ; CHECK-LABEL: @mul_nuw_urem_cmp_constant_vec_splat_poison2(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %m = mul nuw <2 x i8> %x, <i8 poison, i8 45>
   %r = icmp ne <2 x i8> %m, <i8 15, i8 15>
@@ -998,7 +998,7 @@ define i1 @mul_nsw_srem_cmp_constant1(i8 %x) {
 
 define <2 x i1> @mul_nsw_srem_cmp_constant_vec_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @mul_nsw_srem_cmp_constant_vec_splat(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %m = mul nsw <2 x i8> %x, <i8 45, i8 45>
   %r = icmp ne <2 x i8> %m, <i8 15, i8 15>
@@ -1009,7 +1009,7 @@ define <2 x i1> @mul_nsw_srem_cmp_constant_vec_splat(<2 x i8> %x) {
 
 define <2 x i1> @mul_nsw_srem_cmp_constant_vec_splat_poison1(<2 x i8> %x) {
 ; CHECK-LABEL: @mul_nsw_srem_cmp_constant_vec_splat_poison1(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %m = mul nsw <2 x i8> %x, <i8 45, i8 45>
   %r = icmp ne <2 x i8> %m, <i8 15, i8 poison>
@@ -1020,7 +1020,7 @@ define <2 x i1> @mul_nsw_srem_cmp_constant_vec_splat_poison1(<2 x i8> %x) {
 
 define <2 x i1> @mul_nsw_srem_cmp_constant_vec_splat_poison2(<2 x i8> %x) {
 ; CHECK-LABEL: @mul_nsw_srem_cmp_constant_vec_splat_poison2(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %m = mul nsw <2 x i8> %x, <i8 poison, i8 45>
   %r = icmp ne <2 x i8> %m, <i8 15, i8 15>
@@ -1215,7 +1215,7 @@ define <2 x i1> @icmp_eq_constant_range_attr_vec(<2 x i8> range(i8 0, 10) %i) {
 
 define <2 x i1> @neg_icmp_eq_constant_range_attr_vec(<2 x i8> range(i8 0, 11) %i) {
 ; CHECK-LABEL: @neg_icmp_eq_constant_range_attr_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[I:%.*]], <i8 10, i8 10>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[I:%.*]], splat (i8 10)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %cmp = icmp eq <2 x i8> %i, <i8 10, i8 10>
@@ -1238,7 +1238,7 @@ define <2 x i1> @icmp_eq_constant_range_return_vec() {
 define <2 x i1> @neg_icmp_eq_constant_range_return_vec() {
 ; CHECK-LABEL: @neg_icmp_eq_constant_range_return_vec(
 ; CHECK-NEXT:    [[I:%.*]] = call <2 x i8> @returns_contain_ten_range_helper_vec()
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[I]], <i8 10, i8 10>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[I]], splat (i8 10)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %i = call <2 x i8> @returns_contain_ten_range_helper_vec()
@@ -1261,7 +1261,7 @@ define <2 x i1> @icmp_eq_constant_range_call_vec() {
 define <2 x i1> @neg_icmp_eq_constant_range_call_vec() {
 ; CHECK-LABEL: @neg_icmp_eq_constant_range_call_vec(
 ; CHECK-NEXT:    [[I:%.*]] = call range(i8 0, 11) <2 x i8> @returns_i8_helper_vec()
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[I]], <i8 10, i8 10>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[I]], splat (i8 10)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %i = call range(i8 0, 11) <2 x i8> @returns_i8_helper_vec()

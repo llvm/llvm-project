@@ -31,8 +31,6 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 
@@ -77,12 +75,12 @@ bool X86LowerTileCopy::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  assert(ST.hasAMXTILE() && "Only supported on AMXTILE targets");
+
   const X86InstrInfo *TII = ST.getInstrInfo();
   const TargetRegisterInfo *TRI = ST.getRegisterInfo();
   BitVector GR64Regs =
       TRI->getAllocatableSet(MF, TRI->getRegClass(X86::GR64RegClassID));
-  BitVector TILERegs =
-      TRI->getAllocatableSet(MF, TRI->getRegClass(X86::TILERegClassID));
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
@@ -140,14 +138,16 @@ bool X86LowerTileCopy::runOnMachineFunction(MachineFunction &MF) {
       MachineInstr *NewMI =
           addFrameReference(BuildMI(MBB, MI, DL, TII->get(Opc)), TileSS)
               .addReg(SrcReg, getKillRegState(SrcMO.isKill()));
-      MachineOperand &MO = NewMI->getOperand(2);
-      MO.setReg(GR64Cand ? GR64Cand : X86::RAX);
-      MO.setIsKill(true);
+      MachineOperand *MO = &NewMI->getOperand(X86::AddrIndexReg);
+      MO->setReg(GR64Cand ? GR64Cand : X86::RAX);
       // tileloadd (%sp, %idx), %tmm
       Opc = GET_EGPR_IF_ENABLED(X86::TILELOADD);
 #undef GET_EGPR_IF_ENABLED
       NewMI = addFrameReference(BuildMI(MBB, MI, DL, TII->get(Opc), DstReg),
                                 TileSS);
+      MO = &NewMI->getOperand(1 + X86::AddrIndexReg);
+      MO->setReg(GR64Cand ? GR64Cand : X86::RAX);
+      MO->setIsKill(true);
       if (!GR64Cand) {
         // restore %rax
         // mov (%sp) %rax

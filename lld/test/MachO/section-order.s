@@ -23,18 +23,20 @@
 # CHECK-12-NEXT: __cstring
 
 # CHECK-21:      __text
+## `foo` always sorts next to `__text` since it's a code section
+## and needs to be adjacent for arm64 thunk calculations
+# CHECK-21-NEXT: foo
 # CHECK-21-NEXT: __cstring
 # CHECK-21-NEXT: bar
-# CHECK-21-NEXT: foo
 
 # CHECK-SYNTHETIC-ORDER:      __text
+# CHECK-SYNTHETIC-ORDER-NEXT: foo
 # CHECK-SYNTHETIC-ORDER-NEXT: __stubs
 # CHECK-SYNTHETIC-ORDER-NEXT: __stub_helper
 # CHECK-SYNTHETIC-ORDER-NEXT: __objc_stubs
 # CHECK-SYNTHETIC-ORDER-NEXT: __init_offsets
 # CHECK-SYNTHETIC-ORDER-NEXT: __cstring
 # CHECK-SYNTHETIC-ORDER-NEXT: bar
-# CHECK-SYNTHETIC-ORDER-NEXT: foo
 # CHECK-SYNTHETIC-ORDER-NEXT: __unwind_info
 # CHECK-SYNTHETIC-ORDER-NEXT: __eh_frame
 # CHECK-SYNTHETIC-ORDER-NEXT: __objc_selrefs
@@ -52,5 +54,5 @@
   .asciz ""
 .section __TEXT,bar
   .space 1
-.section __TEXT,foo
+.section __TEXT,foo,regular,pure_instructions
   .space 1

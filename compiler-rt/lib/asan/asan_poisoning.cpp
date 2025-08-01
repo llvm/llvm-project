@@ -16,13 +16,61 @@
 #include "asan_report.h"
 #include "asan_stack.h"
 #include "sanitizer_common/sanitizer_atomic.h"
+#include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_interface_internal.h"
 #include "sanitizer_common/sanitizer_libc.h"
+#include "sanitizer_common/sanitizer_ring_buffer.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 
 namespace __asan {
 
+using PoisonRecordRingBuffer = RingBuffer<PoisonRecord>;
+
 static atomic_uint8_t can_poison_memory;
+
+static Mutex poison_records_mutex;
+static PoisonRecordRingBuffer *poison_records
+    SANITIZER_GUARDED_BY(poison_records_mutex) = nullptr;
+
+void AddPoisonRecord(const PoisonRecord &new_record) {
+  if (flags()->poison_history_size <= 0)
+    return;
+
+  GenericScopedLock<Mutex> l(&poison_records_mutex);
+
+  if (poison_records == nullptr)
+    poison_records = PoisonRecordRingBuffer::New(flags()->poison_history_size);
+
+  poison_records->push(new_record);
+}
+
+bool FindPoisonRecord(uptr addr, PoisonRecord &match) {
+  if (flags()->poison_history_size <= 0)
+    return false;
+
+  GenericScopedLock<Mutex> l(&poison_records_mutex);
+
+  if (poison_records) {
+    for (unsigned int i = 0; i < poison_records->size(); i++) {
+      PoisonRecord record = (*poison_records)[i];
+      if (record.begin <= addr && addr < record.end) {
+        internal_memcpy(&match, &record, sizeof(record));
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+void SANITIZER_ACQUIRE(poison_records_mutex) AcquirePoisonRecords() {
+  poison_records_mutex.Lock();
+}
+
+void SANITIZER_RELEASE(poison_records_mutex) ReleasePoisonRecords() {
+  poison_records_mutex.Unlock();
+}
 
 void SetCanPoisonMemory(bool value) {
   atomic_store(&can_poison_memory, value, memory_order_release);
@@ -106,6 +154,21 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
   uptr end_addr = beg_addr + size;
   VPrintf(3, "Trying to poison memory region [%p, %p)\n", (void *)beg_addr,
           (void *)end_addr);
+
+  if (flags()->poison_history_size > 0) {
+    GET_STACK_TRACE(/*max_size=*/16, /*fast=*/false);
+    u32 current_tid = GetCurrentTidOrInvalid();
+
+    u32 stack_id = StackDepotPut(stack);
+
+    PoisonRecord record;
+    record.stack_id = stack_id;
+    record.thread_id = current_tid;
+    record.begin = beg_addr;
+    record.end = end_addr;
+    AddPoisonRecord(record);
+  }
+
   ShadowSegmentEndpoint beg(beg_addr);
   ShadowSegmentEndpoint end(end_addr);
   if (beg.chunk == end.chunk) {
@@ -146,6 +209,11 @@ void __asan_unpoison_memory_region(void const volatile *addr, uptr size) {
   uptr end_addr = beg_addr + size;
   VPrintf(3, "Trying to unpoison memory region [%p, %p)\n", (void *)beg_addr,
           (void *)end_addr);
+
+  // Note: we don't need to update the poison tracking here. Since the shadow
+  // memory will be unpoisoned, the poison tracking ring buffer entries will be
+  // ignored.
+
   ShadowSegmentEndpoint beg(beg_addr);
   ShadowSegmentEndpoint end(end_addr);
   if (beg.chunk == end.chunk) {
@@ -410,7 +478,7 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
                                                const void *new_mid_p) {
   if (!flags()->detect_container_overflow)
     return;
-  VPrintf(2, "contiguous_container: %p %p %p %p\n", beg_p, end_p, old_mid_p,
+  VPrintf(3, "contiguous_container: %p %p %p %p\n", beg_p, end_p, old_mid_p,
           new_mid_p);
   uptr storage_beg = reinterpret_cast<uptr>(beg_p);
   uptr storage_end = reinterpret_cast<uptr>(end_p);
@@ -479,7 +547,7 @@ void __sanitizer_annotate_double_ended_contiguous_container(
   if (!flags()->detect_container_overflow)
     return;
 
-  VPrintf(2, "contiguous_container: %p %p %p %p %p %p\n", storage_beg_p,
+  VPrintf(3, "contiguous_container: %p %p %p %p %p %p\n", storage_beg_p,
           storage_end_p, old_container_beg_p, old_container_end_p,
           new_container_beg_p, new_container_end_p);
 
@@ -574,6 +642,185 @@ void __sanitizer_annotate_double_ended_contiguous_container(
       *(u8 *)MemToShadow(a) = static_cast<u8>(new_end - a);
     }
   }
+}
+
+// Marks the specified number of bytes in a granule as accessible or
+// poisones the whole granule with kAsanContiguousContainerOOBMagic value.
+static void SetContainerGranule(uptr ptr, u8 n) {
+  constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
+  u8 s = (n == granularity) ? 0 : (n ? n : kAsanContiguousContainerOOBMagic);
+  *(u8 *)MemToShadow(ptr) = s;
+}
+
+// Performs a byte-by-byte copy of ASan annotations (shadow memory values).
+// Result may be different due to ASan limitations, but result cannot lead
+// to false positives (more memory than requested may get unpoisoned).
+static void SlowCopyContainerAnnotations(uptr src_beg, uptr src_end,
+                                         uptr dst_beg, uptr dst_end) {
+  constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
+  uptr dst_end_down = RoundDownTo(dst_end, granularity);
+  uptr src_ptr = src_beg;
+  uptr dst_ptr = dst_beg;
+
+  while (dst_ptr < dst_end) {
+    uptr granule_beg = RoundDownTo(dst_ptr, granularity);
+    uptr granule_end = granule_beg + granularity;
+    uptr unpoisoned_bytes = 0;
+
+    uptr end = Min(granule_end, dst_end);
+    for (; dst_ptr != end; ++dst_ptr, ++src_ptr)
+      if (!AddressIsPoisoned(src_ptr))
+        unpoisoned_bytes = dst_ptr - granule_beg + 1;
+
+    if (dst_ptr == dst_end && dst_end != dst_end_down &&
+        !AddressIsPoisoned(dst_end))
+      continue;
+
+    if (unpoisoned_bytes != 0 || granule_beg >= dst_beg)
+      SetContainerGranule(granule_beg, unpoisoned_bytes);
+    else if (!AddressIsPoisoned(dst_beg))
+      SetContainerGranule(granule_beg, dst_beg - granule_beg);
+  }
+}
+
+// Performs a byte-by-byte copy of ASan annotations (shadow memory values),
+// going through bytes in reversed order, but not reversing annotations.
+// Result may be different due to ASan limitations, but result cannot lead
+// to false positives (more memory than requested may get unpoisoned).
+static void SlowReversedCopyContainerAnnotations(uptr src_beg, uptr src_end,
+                                                 uptr dst_beg, uptr dst_end) {
+  constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
+  uptr dst_end_down = RoundDownTo(dst_end, granularity);
+  uptr src_ptr = src_end;
+  uptr dst_ptr = dst_end;
+
+  while (dst_ptr > dst_beg) {
+    uptr granule_beg = RoundDownTo(dst_ptr - 1, granularity);
+    uptr unpoisoned_bytes = 0;
+
+    uptr end = Max(granule_beg, dst_beg);
+    for (; dst_ptr != end; --dst_ptr, --src_ptr)
+      if (unpoisoned_bytes == 0 && !AddressIsPoisoned(src_ptr - 1))
+        unpoisoned_bytes = dst_ptr - granule_beg;
+
+    if (dst_ptr >= dst_end_down && !AddressIsPoisoned(dst_end))
+      continue;
+
+    if (granule_beg == dst_ptr || unpoisoned_bytes != 0)
+      SetContainerGranule(granule_beg, unpoisoned_bytes);
+    else if (!AddressIsPoisoned(dst_beg))
+      SetContainerGranule(granule_beg, dst_beg - granule_beg);
+  }
+}
+
+// A helper function for __sanitizer_copy_contiguous_container_annotations,
+// has assumption about begin and end of the container.
+// Should not be used stand alone.
+static void CopyContainerFirstGranuleAnnotation(uptr src_beg, uptr dst_beg) {
+  constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
+  // First granule
+  uptr src_beg_down = RoundDownTo(src_beg, granularity);
+  uptr dst_beg_down = RoundDownTo(dst_beg, granularity);
+  if (dst_beg_down == dst_beg)
+    return;
+  if (!AddressIsPoisoned(src_beg))
+    *(u8 *)MemToShadow(dst_beg_down) = *(u8 *)MemToShadow(src_beg_down);
+  else if (!AddressIsPoisoned(dst_beg))
+    SetContainerGranule(dst_beg_down, dst_beg - dst_beg_down);
+}
+
+// A helper function for __sanitizer_copy_contiguous_container_annotations,
+// has assumption about begin and end of the container.
+// Should not be used stand alone.
+static void CopyContainerLastGranuleAnnotation(uptr src_end, uptr dst_end) {
+  constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
+  // Last granule
+  uptr src_end_down = RoundDownTo(src_end, granularity);
+  uptr dst_end_down = RoundDownTo(dst_end, granularity);
+  if (dst_end_down == dst_end || !AddressIsPoisoned(dst_end))
+    return;
+  if (AddressIsPoisoned(src_end))
+    *(u8 *)MemToShadow(dst_end_down) = *(u8 *)MemToShadow(src_end_down);
+  else
+    SetContainerGranule(dst_end_down, src_end - src_end_down);
+}
+
+// This function copies ASan memory annotations (poisoned/unpoisoned states)
+// from one buffer to another.
+// It's main purpose is to help with relocating trivially relocatable objects,
+// which memory may be poisoned, without calling copy constructor.
+// However, it does not move memory content itself, only annotations.
+// If the buffers aren't aligned (the distance between buffers isn't
+// granule-aligned)
+//     // src_beg % granularity != dst_beg % granularity
+// the function handles this by going byte by byte, slowing down performance.
+// The old buffer annotations are not removed. If necessary,
+// user can unpoison old buffer with __asan_unpoison_memory_region.
+void __sanitizer_copy_contiguous_container_annotations(const void *src_beg_p,
+                                                       const void *src_end_p,
+                                                       const void *dst_beg_p,
+                                                       const void *dst_end_p) {
+  if (!flags()->detect_container_overflow)
+    return;
+
+  VPrintf(3, "contiguous_container_src: %p %p\n", src_beg_p, src_end_p);
+  VPrintf(3, "contiguous_container_dst: %p %p\n", dst_beg_p, dst_end_p);
+
+  uptr src_beg = reinterpret_cast<uptr>(src_beg_p);
+  uptr src_end = reinterpret_cast<uptr>(src_end_p);
+  uptr dst_beg = reinterpret_cast<uptr>(dst_beg_p);
+  uptr dst_end = reinterpret_cast<uptr>(dst_end_p);
+
+  constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
+
+  if (src_beg > src_end || (dst_end - dst_beg) != (src_end - src_beg)) {
+    GET_STACK_TRACE_FATAL_HERE;
+    ReportBadParamsToCopyContiguousContainerAnnotations(
+        src_beg, src_end, dst_beg, dst_end, &stack);
+  }
+
+  if (src_beg == src_end || src_beg == dst_beg)
+    return;
+  // Due to support for overlapping buffers, we may have to copy elements
+  // in reversed order, when destination buffer starts in the middle of
+  // the source buffer (or shares first granule with it).
+  //
+  // When buffers are not granule-aligned (or distance between them,
+  // to be specific), annotatios have to be copied byte by byte.
+  //
+  // The only remaining edge cases involve edge granules,
+  // when the container starts or ends within a granule.
+  uptr src_beg_up = RoundUpTo(src_beg, granularity);
+  uptr src_end_up = RoundUpTo(src_end, granularity);
+  bool copy_in_reversed_order = src_beg < dst_beg && dst_beg <= src_end_up;
+  if (src_beg % granularity != dst_beg % granularity ||
+      RoundDownTo(dst_end - 1, granularity) <= dst_beg) {
+    if (copy_in_reversed_order)
+      SlowReversedCopyContainerAnnotations(src_beg, src_end, dst_beg, dst_end);
+    else
+      SlowCopyContainerAnnotations(src_beg, src_end, dst_beg, dst_end);
+    return;
+  }
+
+  // As buffers are granule-aligned, we can just copy annotations of granules
+  // from the middle.
+  uptr dst_beg_up = RoundUpTo(dst_beg, granularity);
+  uptr dst_end_down = RoundDownTo(dst_end, granularity);
+  if (copy_in_reversed_order)
+    CopyContainerLastGranuleAnnotation(src_end, dst_end);
+  else
+    CopyContainerFirstGranuleAnnotation(src_beg, dst_beg);
+
+  if (dst_beg_up < dst_end_down) {
+    internal_memmove((u8 *)MemToShadow(dst_beg_up),
+                     (u8 *)MemToShadow(src_beg_up),
+                     (dst_end_down - dst_beg_up) / granularity);
+  }
+
+  if (copy_in_reversed_order)
+    CopyContainerFirstGranuleAnnotation(src_beg, dst_beg);
+  else
+    CopyContainerLastGranuleAnnotation(src_end, dst_end);
 }
 
 static const void *FindBadAddress(uptr begin, uptr end, bool poisoned) {

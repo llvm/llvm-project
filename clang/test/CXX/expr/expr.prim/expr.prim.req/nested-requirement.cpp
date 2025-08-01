@@ -41,9 +41,17 @@ namespace std_example {
   template<typename T>
   concept C2 = requires (T a) {
       requires sizeof(a) == 4; // OK
-      requires a == 0; // expected-note{{because 'a == 0' would be invalid: constraint variable 'a' cannot be used in an evaluated context}}
+      requires a == 0; // expected-error{{substitution into constraint expression resulted in a non-constant expression}}
+      // expected-note@-1{{while checking the satisfaction of nested requirement requested here}}
+      // expected-note@-2{{in instantiation of requirement here}}
+      // expected-note@-3{{while checking the satisfaction of nested requirement requested here}}
+      // expected-note@-6{{while substituting template arguments into constraint expression here}}
+      // expected-note@-5{{function parameter 'a' with unknown value cannot be used in a constant expression}}
+      // expected-note@-8{{declared here}}
     };
-  static_assert(C2<int>); // expected-note{{because 'int' does not satisfy 'C2'}} expected-error{{static assertion failed}}
+    static_assert(C2<int>); // expected-error{{static assertion failed}}
+    // expected-note@-1{{while checking the satisfaction of concept 'C2<int>' requested here}}
+    // expected-note@-2{{because 'int' does not satisfy 'C2'}}
 }
 
 template<typename T>
@@ -150,11 +158,11 @@ void func() {
   // expected-note@#bar {{while substituting template arguments into constraint expression here}}
   // expected-note@#bar {{while checking the satisfaction of nested requirement requested here}}
   // expected-note@#bar {{candidate template ignored: constraints not satisfied [with T = False]}}
-  // expected-note@#bar {{because 'X<False>::value' evaluated to false}}
+  // expected-note@#bar {{because 'X<SubstitutionFailureNestedRequires::ErrorExpressions_NotSF::False>::value' evaluated to false}}
 
   bar<int>();
   // expected-note@-1 {{while checking constraint satisfaction for template 'bar<int>' required here}} \
-  // expected-note@-1 {{in instantiation of function template specialization}}
+  // expected-note@-1 {{while substituting deduced template arguments into function template 'bar' [with T = int]}}
   // expected-note@#bar {{in instantiation of static data member}}
   // expected-note@#bar {{in instantiation of requirement here}}
   // expected-note@#bar {{while checking the satisfaction of nested requirement requested here}}

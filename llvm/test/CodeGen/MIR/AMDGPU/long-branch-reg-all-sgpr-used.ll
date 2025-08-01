@@ -29,6 +29,7 @@
 ; CHECK-NEXT:     workItemIDX:     { reg: '$vgpr0' }
 ; CHECK-NEXT:   psInputAddr:     0
 ; CHECK-NEXT:   psInputEnable:   0
+; CHECK-NEXT:   maxMemoryClusterDWords: 8
 ; CHECK-NEXT:   mode:
 ; CHECK-NEXT:     ieee:            true
 ; CHECK-NEXT:     dx10-clamp:      true
@@ -42,6 +43,10 @@
 ; CHECK-NEXT:   vgprForAGPRCopy: ''
 ; CHECK-NEXT:   sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT:   longBranchReservedReg: ''
+; CHECK-NEXT:   hasInitWholeWave: false
+; CHECK-NEXT:   dynamicVGPRBlockSize: 0
+; CHECK-NEXT:   scratchReservedForDynamicVGPRs: 0
+; CHECK-NEXT:   isWholeWaveFunction: false
 ; CHECK-NEXT: body:
   define amdgpu_kernel void @long_branch_used_all_sgprs(ptr addrspace(1) %arg, i32 %cnd) #0 {
   entry:
@@ -294,6 +299,7 @@
 ; CHECK-NEXT:     workItemIDX:     { reg: '$vgpr0' }
 ; CHECK-NEXT:   psInputAddr:     0
 ; CHECK-NEXT:   psInputEnable:   0
+; CHECK-NEXT:   maxMemoryClusterDWords: 8
 ; CHECK-NEXT:   mode:
 ; CHECK-NEXT:     ieee:            true
 ; CHECK-NEXT:     dx10-clamp:      true
@@ -307,6 +313,10 @@
 ; CHECK-NEXT:   vgprForAGPRCopy: ''
 ; CHECK-NEXT:   sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT:   longBranchReservedReg: ''
+; CHECK-NEXT:   hasInitWholeWave: false
+; CHECK-NEXT:   dynamicVGPRBlockSize: 0
+; CHECK-NEXT:   scratchReservedForDynamicVGPRs: 0
+; CHECK-NEXT:   isWholeWaveFunction: false
 ; CHECK-NEXT: body:
   define amdgpu_kernel void @long_branch_high_num_sgprs_used(ptr addrspace(1) %arg, i32 %cnd) #0 {
   entry:

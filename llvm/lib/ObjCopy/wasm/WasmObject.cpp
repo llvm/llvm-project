@@ -8,9 +8,6 @@
 
 #include "WasmObject.h"
 
-#include "llvm/Support/LEB128.h"
-#include "llvm/Support/raw_ostream.h"
-
 namespace llvm {
 namespace objcopy {
 namespace wasm {
@@ -25,8 +22,22 @@ void Object::addSectionWithOwnedContents(
 }
 
 void Object::removeSections(function_ref<bool(const Section &)> ToRemove) {
-  // TODO: remove reloc sections for the removed section, handle symbols, etc.
-  llvm::erase_if(Sections, ToRemove);
+  if (isRelocatableObject) {
+    // For relocatable objects, avoid actually removing any sections,
+    // since that can invalidate the symbol table and relocation sections.
+    // TODO: Allow removal of sections by re-generating symbol table and
+    // relocation sections here instead.
+    for (auto &Sec : Sections) {
+      if (ToRemove(Sec)) {
+        Sec.Name = ".objcopy.removed";
+        Sec.SectionType = wasm::WASM_SEC_CUSTOM;
+        Sec.Contents = {};
+        Sec.HeaderSecSizeEncodingLen = std::nullopt;
+      }
+    }
+  } else {
+    llvm::erase_if(Sections, ToRemove);
+  }
 }
 
 } // end namespace wasm

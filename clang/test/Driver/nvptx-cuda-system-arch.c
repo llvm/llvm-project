@@ -1,5 +1,5 @@
-// REQUIRES: system-linux
 // REQUIRES: shell
+// XFAIL: target={{.*}}-zos{{.*}}
 
 // RUN: mkdir -p %t
 // RUN: cp %S/Inputs/nvptx-arch/nvptx_arch_fail %t/
@@ -16,14 +16,14 @@
 // RUN:   | FileCheck %s --check-prefix=NO-OUTPUT-ERROR
 // RUN:   not %clang -### --target=x86_64-unknown-linux-gnu -nogpulib --offload-new-driver --offload-arch=native --nvptx-arch-tool=%t/nvptx_arch_fail -x cuda %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NO-OUTPUT-ERROR
-// NO-OUTPUT-ERROR: error: cannot determine nvptx64 architecture{{.*}}; consider passing it via '--offload-arch'
+// NO-OUTPUT-ERROR: error: cannot determine cuda architecture{{.*}}; consider passing it via '--offload-arch'
 
 // case when nvptx-arch does not return anything with successful execution
 // RUN:   not %clang -### --target=x86_64-unknown-linux-gnu -nogpulib --offload-arch=native --nvptx-arch-tool=%t/nvptx_arch_empty -x cuda %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=EMPTY-OUTPUT
 // RUN:   not %clang -### --target=x86_64-unknown-linux-gnu -nogpulib --offload-new-driver --offload-arch=native --nvptx-arch-tool=%t/nvptx_arch_empty -x cuda %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=EMPTY-OUTPUT
-// EMPTY-OUTPUT: error: cannot determine nvptx64 architecture: No NVIDIA GPU detected in the system; consider passing it via '--offload-arch'
+// EMPTY-OUTPUT: error: cannot determine cuda architecture: No GPU detected in the system; consider passing it via '--offload-arch'
 
 // case when nvptx-arch does not return anything with successful execution
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib --offload-arch=native --nvptx-arch-tool=%t/nvptx_arch_sm_70 -x cuda --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda %s 2>&1 \
@@ -42,3 +42,11 @@
 // RUN:     --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda %s 2>&1 | FileCheck %s --check-prefix=MARCH-sm_89
 // MARCH-sm_89: warning: multiple nvptx64 architectures are detected: sm_89, sm_80; only the first one is used for '-march' [-Wmulti-gpu]
 // MARCH-sm_89: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-target-cpu" "sm_89"
+
+// case when CLANG_TOOLCHAIN_PROGRAM_TIMEOUT is malformed.
+// RUN: env CLANG_TOOLCHAIN_PROGRAM_TIMEOUT=foo \
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -nogpulib \
+// RUN:     --offload-arch=native --nvptx-arch-tool=%t/nvptx_arch_sm_70 \
+// RUN:     --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda -x cuda %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=BAD-TIMEOUT
+// BAD-TIMEOUT: clang: error: cannot determine cuda architecture: CLANG_TOOLCHAIN_PROGRAM_TIMEOUT expected an integer, got 'foo'; consider passing it via '--offload-arch'; environment variable CLANG_TOOLCHAIN_PROGRAM_TIMEOUT specifies the tool timeout (integer secs, <=0 is infinite)

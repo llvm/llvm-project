@@ -75,7 +75,7 @@ define i1 @scalar_i32_signbit_lshr_and_ne(i32 %x, i32 %y) {
 
 define <4 x i1> @vec_4xi32_signbit_lshr_and_eq(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @vec_4xi32_signbit_lshr_and_eq(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact <4 x i32> <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>, [[Y:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact <4 x i32> splat (i32 -2147483648), [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[LSHR]], [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i32> [[AND]], zeroinitializer
 ; CHECK-NEXT:    ret <4 x i1> [[R]]

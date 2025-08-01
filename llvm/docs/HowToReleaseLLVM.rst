@@ -38,8 +38,8 @@ Releases should be tagged on Tuesdays.
 =============================== =========================
 Release                         Approx. Date
 =============================== =========================
-*release branch: even releases* *4th Tue in January*
-*release branch: odd releases*  *4th Tue in July*
+*release branch: even releases* *2nd Tue in January*
+*release branch: odd releases*  *2nd Tue in July*
 X.1.0-rc1                       3 days after branch.
 X.1.0-rc2                       2 weeks after branch.
 X.1.0-rc3                       4 weeks after branch
@@ -49,7 +49,11 @@ X.1.0-rc3                       4 weeks after branch
 **X.1.3**                       **12 weeks after branch**
 **X.1.4**                       **14 weeks after branch**
 **X.1.5**                       **16 weeks after branch**
-**X.1.6 (if necessary)**        **18 weeks after branch**
+**X.1.6**                       **18 weeks after branch**
+**X.1.7**                       **20 weeks after branch**
+**X.1.8**                       **22 weeks after branch**
+**X.1.9** (If necessary)        **24 weeks after branch**
+**Next release branches**       **~25 weeks after branch**
 =============================== =========================
 
 Release Process Summary
@@ -328,29 +332,28 @@ Release Patch Rules
 Below are the rules regarding patching the release branch:
 
 #. Patches applied to the release branch may only be applied by the release
-   manager, the official release testers or the code owners with approval from
+   manager, the official release testers or the maintainers with approval from
    the release manager.
 
-#. Release managers are encouraged, but not required, to get approval from code
-   owners before approving patches.  If there is no code owner or the code owner
-   is unreachable then release managers can ask approval from patch reviewers or
-   other developers active in that area.
+#. Release managers are encouraged, but not required, to get approval from a
+   maintainer before approving patches.  If there are no reachable maintainers
+   then release managers can ask approval from patch reviewers or other
+   developers active in that area.
 
 #. *Before RC1* Patches should be limited to bug fixes, important optimization
    improvements, or completion of features that were started before the branch
-   was created.  As with all phases, release managers and code owners can reject
+   was created.  As with all phases, release managers and maintainers can reject
    patches that are deemed too invasive.
 
-#. *Before RC2* Patches should be limited to bug fixes or backend specific
+#. *Before RC2/RC3* Patches should be limited to bug fixes or backend specific
    improvements that are determined to be very safe.
 
-#. *Before RC3/Final Major Release* Patches should be limited to critical
+#. *Before Final Major Release* Patches should be limited to critical
    bugs or regressions.
 
 #. *Bug fix releases* Patches should be limited to bug fixes or very safe
    and critical performance improvements.  Patches must maintain both API and
-   ABI compatibility with the previous major release.
-
+   ABI compatibility with the X.1.0 release.
 
 Release Final Tasks
 -------------------

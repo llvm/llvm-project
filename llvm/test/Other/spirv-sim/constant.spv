@@ -1,0 +1,36 @@
+; RUN: %if spirv-tools %{ spirv-as %s -o - | spirv-val - %}
+; RUN: spirv-sim --function=a --wave=1 --expects=2 -i %s
+; RUN: spirv-sim --function=b --wave=1 --expects=1 -i %s
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource HLSL 670
+               OpName %a "a"
+               OpName %b "b"
+               OpName %main "main"
+        %int = OpTypeInt 32 1
+         %s1 = OpTypeStruct %int %int %int
+         %s2 = OpTypeStruct %s1
+      %int_1 = OpConstant %int 1
+      %int_2 = OpConstant %int 2
+     %s1_1_2 = OpConstantComposite %s1 %int_1 %int_2 %int_1
+      %s2_s1 = OpConstantComposite %s2 %s1_1_2
+       %void = OpTypeVoid
+  %main_type = OpTypeFunction %void
+   %simple_type = OpTypeFunction %int
+       %main = OpFunction %void None %main_type
+      %entry = OpLabel
+               OpReturn
+               OpFunctionEnd
+          %a = OpFunction %int None %simple_type
+          %1 = OpLabel
+          %2 = OpCompositeExtract %int %s1_1_2 1
+               OpReturnValue %2
+               OpFunctionEnd
+          %b = OpFunction %int None %simple_type
+          %3 = OpLabel
+          %4 = OpCompositeExtract %int %s2_s1 0 2
+               OpReturnValue %4
+               OpFunctionEnd
+

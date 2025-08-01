@@ -132,24 +132,6 @@ public:
   virtual ~VariadicABIInfo() = default;
 };
 
-// Module implements getFunction() which returns nullptr on missing declaration
-// and getOrInsertFunction which creates one when absent. Intrinsics.h only
-// implements getDeclaration which creates one when missing. Checking whether
-// an intrinsic exists thus inserts it in the module and it then needs to be
-// deleted again to clean up.
-// The right name for the two functions on intrinsics would match Module::,
-// but doing that in a single change would introduce nullptr dereferences
-// where currently there are none. The minimal collateral damage approach
-// would split the change over a release to help downstream branches. As it
-// is unclear what approach will be preferred, implementing the trivial
-// function here in the meantime to decouple from that discussion.
-Function *getPreexistingDeclaration(Module *M, Intrinsic::ID Id,
-                                    ArrayRef<Type *> Tys = {}) {
-  auto *FT = Intrinsic::getType(M->getContext(), Id, Tys);
-  return M->getFunction(Tys.empty() ? Intrinsic::getName(Id)
-                                    : Intrinsic::getName(Id, Tys, M, FT));
-}
-
 class ExpandVariadics : public ModulePass {
 
   // The pass construction sets the default to optimize when called from middle
@@ -200,7 +182,7 @@ public:
     bool Changed = false;
     const DataLayout &DL = M.getDataLayout();
     if (Function *Intrinsic =
-            getPreexistingDeclaration(&M, ID, {IntrinsicArgType})) {
+            Intrinsic::getDeclarationIfExists(&M, ID, {IntrinsicArgType})) {
       for (User *U : make_early_inc_range(Intrinsic->users()))
         if (auto *I = dyn_cast<InstructionType>(U))
           Changed |= expandVAIntrinsicCall(Builder, DL, I);
@@ -238,7 +220,7 @@ public:
 
   FunctionType *inlinableVariadicFunctionType(Module &M, FunctionType *FTy) {
     // The type of "FTy" with the ... removed and a va_list appended
-    SmallVector<Type *> ArgTypes(FTy->param_begin(), FTy->param_end());
+    SmallVector<Type *> ArgTypes(FTy->params());
     ArgTypes.push_back(ABI->vaListParameterType(M));
     return FunctionType::get(FTy->getReturnType(), ArgTypes,
                              /*IsVarArgs=*/false);
@@ -507,7 +489,6 @@ ExpandVariadics::replaceAllUsesWithNewDeclaration(Module &M,
   Function *NF = Function::Create(FTy, F.getLinkage(), F.getAddressSpace());
 
   NF->setName(F.getName() + ".varargs");
-  NF->IsNewDbgInfoFormat = F.IsNewDbgInfoFormat;
 
   F.getParent()->getFunctionList().insert(F.getIterator(), NF);
 
@@ -538,7 +519,7 @@ ExpandVariadics::deriveFixedArityReplacement(Module &M, IRBuilder<> &Builder,
   const bool FunctionIsDefinition = !F.isDeclaration();
 
   FunctionType *FTy = F.getFunctionType();
-  SmallVector<Type *> ArgTypes(FTy->param_begin(), FTy->param_end());
+  SmallVector<Type *> ArgTypes(FTy->params());
   ArgTypes.push_back(ABI->vaListParameterType(M));
 
   FunctionType *NFTy = inlinableVariadicFunctionType(M, FTy);
@@ -549,7 +530,6 @@ ExpandVariadics::deriveFixedArityReplacement(Module &M, IRBuilder<> &Builder,
   NF->setComdat(F.getComdat());
   F.getParent()->getFunctionList().insert(F.getIterator(), NF);
   NF->setName(F.getName() + ".valist");
-  NF->IsNewDbgInfoFormat = F.IsNewDbgInfoFormat;
 
   AttrBuilder ParamAttrs(Ctx);
 
@@ -603,9 +583,7 @@ ExpandVariadics::defineVariadicWrapper(Module &M, IRBuilder<> &Builder,
   Builder.CreateIntrinsic(Intrinsic::vastart, {DL.getAllocaPtrType(Ctx)},
                           {VaListInstance});
 
-  SmallVector<Value *> Args;
-  for (Argument &A : F.args())
-    Args.push_back(&A);
+  SmallVector<Value *> Args(llvm::make_pointer_range(F.args()));
 
   Type *ParameterType = ABI->vaListParameterType(M);
   if (ABI->vaListPassedInSSARegister())
@@ -748,10 +726,10 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   // This is an awkward way to guess whether there is a known stack alignment
   // without hitting an assert in DL.getStackAlignment, 1024 is an arbitrary
   // number likely to be greater than the natural stack alignment.
-  // TODO: DL.getStackAlignment could return a MaybeAlign instead of assert
   Align AllocaAlign = MaxFieldAlign;
-  if (DL.exceedsNaturalStackAlignment(Align(1024)))
-    AllocaAlign = std::max(AllocaAlign, DL.getStackAlignment());
+  if (MaybeAlign StackAlign = DL.getStackAlignment();
+      StackAlign && *StackAlign > AllocaAlign)
+    AllocaAlign = *StackAlign;
 
   // Put the alloca to hold the variadic args in the entry basic block.
   Builder.SetInsertPointPastAllocas(CBF);
@@ -809,7 +787,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
     Value *Dst = NF ? NF : CI->getCalledOperand();
     FunctionType *NFTy = inlinableVariadicFunctionType(M, VarargFunctionType);
 
-    NewCB = CallInst::Create(NFTy, Dst, Args, OpBundles, "", CI);
+    NewCB = CallInst::Create(NFTy, Dst, Args, OpBundles, "", CI->getIterator());
 
     CallInst::TailCallKind TCK = CI->getTailCallKind();
     assert(TCK != CallInst::TCK_MustTail);

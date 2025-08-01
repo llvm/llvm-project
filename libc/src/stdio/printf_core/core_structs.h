@@ -55,8 +55,13 @@ struct FormatSection {
   int min_width = 0;
   int precision = -1;
 
-  // Needs to be large enough to hold a long double.
+  // Needs to be large enough to hold a long double. Special case handling for
+  // the PowerPC double double type because it has no FPBits interface.
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+  UInt128 conv_val_raw;
+#else
   fputil::FPBits<long double>::StorageType conv_val_raw;
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   void *conv_val_ptr;
 
   char conv_name;
@@ -134,7 +139,7 @@ constexpr int FILE_STATUS_ERROR = -2;
 constexpr int NULLPTR_WRITE_ERROR = -3;
 constexpr int INT_CONVERSION_ERROR = -4;
 constexpr int FIXED_POINT_CONVERSION_ERROR = -5;
-
+constexpr int ALLOCATION_ERROR = -6;
 } // namespace printf_core
 } // namespace LIBC_NAMESPACE_DECL
 

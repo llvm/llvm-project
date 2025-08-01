@@ -431,7 +431,7 @@ The ``print`` method
   virtual void print(llvm::raw_ostream &O, const Module *M) const;
 
 The ``print`` method must be implemented by "analyses" in order to print a
-human readable version of the analysis results.  This is useful for debugging
+human-readable version of the analysis results.  This is useful for debugging
 an analysis itself, as well as for other people to figure out how an analysis
 works.  Use the opt ``-analyze`` argument to invoke this method.
 
@@ -441,6 +441,28 @@ program that has been analyzed.  Note however that this pointer may be ``NULL``
 in certain circumstances (such as calling the ``Pass::dump()`` from a
 debugger), so it should only be used to enhance debug output, it should not be
 depended on.
+
+Scheduling a MachineFunctionPass
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Backends create a ``TargetPassConfig`` and use ``addPass`` to schedule
+``MachineFunctionPass``\ es. External plugins can register a callback to modify
+and insert additional passes:
+
+.. code-block:: c++
+
+  RegisterTargetPassConfigCallback X{[](auto &TM, auto &PM, auto *TPC) {
+    TPC->insertPass(/* ... */);
+    TPC->substitutePass(/* ... */);
+  }};
+
+Note that passes still have to be registered:
+
+.. code-block:: c++
+
+  __attribute__((constructor)) static void initCodeGenPlugin() {
+    initializeExamplePass(*PassRegistry::getPassRegistry());
+  }
 
 .. _writing-an-llvm-pass-interaction:
 
@@ -489,7 +511,7 @@ spanning the range from ``DominatorSet`` to ``BreakCriticalEdges``.  Requiring
 edges in the CFG when your pass has been run.
 
 Some analyses chain to other analyses to do their job.  For example, an
-`AliasAnalysis <AliasAnalysis>` implementation is required to :ref:`chain
+`AliasAnalysis <AliasAnalysis.html>`_ implementation is required to :ref:`chain
 <aliasanalysis-chaining>` to other alias analysis passes.  In cases where
 analyses chain, the ``addRequiredTransitive`` method should be used instead of
 the ``addRequired`` method.  This informs the ``PassManager`` that the
@@ -580,124 +602,6 @@ it is active.  For example:
     // A DominatorSet is active.  This code will update it.
   }
 
-Implementing Analysis Groups
-----------------------------
-
-Now that we understand the basics of how passes are defined, how they are used,
-and how they are required from other passes, it's time to get a little bit
-fancier.  All of the pass relationships that we have seen so far are very
-simple: one pass depends on one other specific pass to be run before it can
-run.  For many applications, this is great, for others, more flexibility is
-required.
-
-In particular, some analyses are defined such that there is a single simple
-interface to the analysis results, but multiple ways of calculating them.
-Consider alias analysis for example.  The most trivial alias analysis returns
-"may alias" for any alias query.  The most sophisticated analysis a
-flow-sensitive, context-sensitive interprocedural analysis that can take a
-significant amount of time to execute (and obviously, there is a lot of room
-between these two extremes for other implementations).  To cleanly support
-situations like this, the LLVM Pass Infrastructure supports the notion of
-Analysis Groups.
-
-Analysis Group Concepts
-^^^^^^^^^^^^^^^^^^^^^^^
-
-An Analysis Group is a single simple interface that may be implemented by
-multiple different passes.  Analysis Groups can be given human readable names
-just like passes, but unlike passes, they need not derive from the ``Pass``
-class.  An analysis group may have one or more implementations, one of which is
-the "default" implementation.
-
-Analysis groups are used by client passes just like other passes are: the
-``AnalysisUsage::addRequired()`` and ``Pass::getAnalysis()`` methods.  In order
-to resolve this requirement, the :ref:`PassManager
-<writing-an-llvm-pass-passmanager>` scans the available passes to see if any
-implementations of the analysis group are available.  If none is available, the
-default implementation is created for the pass to use.  All standard rules for
-:ref:`interaction between passes <writing-an-llvm-pass-interaction>` still
-apply.
-
-Although :ref:`Pass Registration <writing-an-llvm-pass-registration>` is
-optional for normal passes, all analysis group implementations must be
-registered, and must use the :ref:`INITIALIZE_AG_PASS
-<writing-an-llvm-pass-RegisterAnalysisGroup>` template to join the
-implementation pool.  Also, a default implementation of the interface **must**
-be registered with :ref:`RegisterAnalysisGroup
-<writing-an-llvm-pass-RegisterAnalysisGroup>`.
-
-As a concrete example of an Analysis Group in action, consider the
-`AliasAnalysis <https://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html>`_
-analysis group.  The default implementation of the alias analysis interface
-(the `basic-aa <https://llvm.org/doxygen/structBasicAliasAnalysis.html>`_ pass)
-just does a few simple checks that don't require significant analysis to
-compute (such as: two different globals can never alias each other, etc).
-Passes that use the `AliasAnalysis
-<https://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html>`_ interface (for
-example the `gvn <https://llvm.org/doxygen/classllvm_1_1GVN.html>`_ pass), do not
-care which implementation of alias analysis is actually provided, they just use
-the designated interface.
-
-From the user's perspective, commands work just like normal.  Issuing the
-command ``opt -gvn ...`` will cause the ``basic-aa`` class to be instantiated
-and added to the pass sequence.  Issuing the command ``opt -somefancyaa -gvn
-...`` will cause the ``gvn`` pass to use the ``somefancyaa`` alias analysis
-(which doesn't actually exist, it's just a hypothetical example) instead.
-
-.. _writing-an-llvm-pass-RegisterAnalysisGroup:
-
-Using ``RegisterAnalysisGroup``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The ``RegisterAnalysisGroup`` template is used to register the analysis group
-itself, while the ``INITIALIZE_AG_PASS`` is used to add pass implementations to
-the analysis group.  First, an analysis group should be registered, with a
-human readable name provided for it.  Unlike registration of passes, there is
-no command line argument to be specified for the Analysis Group Interface
-itself, because it is "abstract":
-
-.. code-block:: c++
-
-  static RegisterAnalysisGroup<AliasAnalysis> A("Alias Analysis");
-
-Once the analysis is registered, passes can declare that they are valid
-implementations of the interface by using the following code:
-
-.. code-block:: c++
-
-  namespace {
-    // Declare that we implement the AliasAnalysis interface
-    INITIALIZE_AG_PASS(FancyAA, AliasAnalysis , "somefancyaa",
-        "A more complex alias analysis implementation",
-        false,  // Is CFG Only?
-        true,   // Is Analysis?
-        false); // Is default Analysis Group implementation?
-  }
-
-This just shows a class ``FancyAA`` that uses the ``INITIALIZE_AG_PASS`` macro
-both to register and to "join" the `AliasAnalysis
-<https://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html>`_ analysis group.
-Every implementation of an analysis group should join using this macro.
-
-.. code-block:: c++
-
-  namespace {
-    // Declare that we implement the AliasAnalysis interface
-    INITIALIZE_AG_PASS(BasicAA, AliasAnalysis, "basic-aa",
-        "Basic Alias Analysis (default AA impl)",
-        false, // Is CFG Only?
-        true,  // Is Analysis?
-        true); // Is default Analysis Group implementation?
-  }
-
-Here we show how the default implementation is specified (using the final
-argument to the ``INITIALIZE_AG_PASS`` template).  There must be exactly one
-default implementation available at all times for an Analysis Group to be used.
-Only default implementation can derive from ``ImmutablePass``.  Here we declare
-that the `BasicAliasAnalysis
-<https://llvm.org/doxygen/structBasicAliasAnalysis.html>`_ pass is the default
-implementation for the interface.
-
 Pass Statistics
 ===============
 
@@ -770,7 +674,7 @@ default optimization pipelines, e.g. (the output has been trimmed):
   Pre-ISel Intrinsic Lowering
   FunctionPass Manager
     Expand large div/rem
-    Expand large fp convert
+    Expand fp
     Expand Atomic instructions
   SVE intrinsics optimizations
     FunctionPass Manager

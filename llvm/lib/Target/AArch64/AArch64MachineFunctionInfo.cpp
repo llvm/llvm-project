@@ -25,7 +25,10 @@ using namespace llvm;
 
 yaml::AArch64FunctionInfo::AArch64FunctionInfo(
     const llvm::AArch64FunctionInfo &MFI)
-    : HasRedZone(MFI.hasRedZone()) {}
+    : HasRedZone(MFI.hasRedZone()),
+      StackSizeSVE(MFI.hasCalculatedStackSizeSVE()
+                       ? std::optional<uint64_t>(MFI.getStackSizeSVE())
+                       : std::nullopt) {}
 
 void yaml::AArch64FunctionInfo::mappingImpl(yaml::IO &YamlIO) {
   MappingTraits<AArch64FunctionInfo>::mapping(YamlIO, *this);
@@ -35,9 +38,13 @@ void AArch64FunctionInfo::initializeBaseYamlFields(
     const yaml::AArch64FunctionInfo &YamlMFI) {
   if (YamlMFI.HasRedZone)
     HasRedZone = YamlMFI.HasRedZone;
+  if (YamlMFI.StackSizeSVE)
+    setStackSizeSVE(*YamlMFI.StackSizeSVE);
 }
 
 static std::pair<bool, bool> GetSignReturnAddress(const Function &F) {
+  if (F.hasFnAttribute("ptrauth-returns"))
+    return {true, false}; // non-leaf
   // The function should be signed in the following situations:
   // - sign-return-address=all
   // - sign-return-address=non-leaf and the functions spills the LR
@@ -56,6 +63,8 @@ static std::pair<bool, bool> GetSignReturnAddress(const Function &F) {
 }
 
 static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
+  if (F.hasFnAttribute("ptrauth-returns"))
+    return true;
   if (!F.hasFnAttribute("sign-return-address-key")) {
     if (STI.getTargetTriple().isOSWindows())
       return true;
@@ -68,6 +77,18 @@ static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
   return Key == "b_key";
 }
 
+static bool hasELFSignedGOTHelper(const Function &F,
+                                  const AArch64Subtarget *STI) {
+  if (!STI->getTargetTriple().isOSBinFormatELF())
+    return false;
+  const Module *M = F.getParent();
+  const auto *Flag = mdconst::extract_or_null<ConstantInt>(
+      M->getModuleFlag("ptrauth-elf-got"));
+  if (Flag && Flag->getZExtValue() == 1)
+    return true;
+  return false;
+}
+
 AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
                                          const AArch64Subtarget *STI) {
   // If we already know that the function doesn't have a redzone, set
@@ -76,12 +97,16 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
     HasRedZone = false;
   std::tie(SignReturnAddress, SignReturnAddressAll) = GetSignReturnAddress(F);
   SignWithBKey = ShouldSignWithBKey(F, *STI);
+  HasELFSignedGOT = hasELFSignedGOTHelper(F, STI);
   // TODO: skip functions that have no instrumented allocas for optimization
   IsMTETagged = F.hasFnAttribute(Attribute::SanitizeMemTag);
 
   // BTI/PAuthLR are set on the function attribute.
   BranchTargetEnforcement = F.hasFnAttribute("branch-target-enforcement");
   BranchProtectionPAuthLR = F.hasFnAttribute("branch-protection-pauth-lr");
+
+  // Parse the SME function attributes.
+  SMEFnAttrs = SMEAttrs(F);
 
   // The default stack probe size is 4096 if the function has no
   // stack-probe-size attribute. This is a safe default because it is the

@@ -512,24 +512,60 @@ namespace LambdaInDefaultMemberInitializer {
 }
 
 #if __cplusplus >= 201703L
-namespace GH35052 {
 
-template <typename F> constexpr int func(F f) {
-  if constexpr (f(1UL)) {
-    return 1;
+// Reduced from https://github.com/llvm/llvm-project/issues/98526
+// This relies on the deferral instantiation of the local lambda, otherwise we would fail in DeduceReturnType().
+namespace local_recursive_lambda {
+
+template <typename F> struct recursive_lambda {
+  template <typename... Args> auto operator()(Args &&...args) const {
+    return fn(*this, args...);
   }
-  return 0;
+  F fn;
+};
+
+template <typename F> recursive_lambda(F) -> recursive_lambda<F>;
+
+void foo() {
+  recursive_lambda{[&](auto &self_fn, int) -> int {
+    return self_fn(0);
+  }}(0);
 }
 
-int main() {
-  auto predicate = [](auto v) /*implicit constexpr*/ -> bool {
-    return v == 1;
-  };
-
-  static_assert(predicate(1));
-  return func(predicate);
-}
-
-} // namespace GH35052
+} // namespace local_recursive_lambda
 
 #endif
+
+namespace PR134038_Regression {
+
+template <class T> class G {
+public:
+  template <class> class Iter {
+  public:
+    Iter();
+    ~Iter();
+
+    operator G<T>();
+  };
+};
+
+template <class ObserverType>
+template <class ContainerType>
+G<ObserverType>::Iter<ContainerType>::Iter() {}
+
+template <class ObserverType>
+template <class ContainerType>
+G<ObserverType>::Iter<ContainerType>::~Iter() {}
+
+template <class ObserverType>
+template <class ContainerType>
+G<ObserverType>::Iter<ContainerType>::operator G<ObserverType>() {
+  return G<ObserverType>{};
+}
+
+void NotifySettingChanged()  {
+  G<int>::Iter<int> Iter;
+  G<int> g = Iter;
+}
+
+}

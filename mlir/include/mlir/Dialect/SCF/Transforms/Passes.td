@@ -11,13 +11,6 @@
 
 include "mlir/Pass/PassBase.td"
 
-def SCFBufferize : Pass<"scf-bufferize"> {
-  let summary = "Bufferize the scf dialect.";
-  let constructor = "mlir::createSCFBufferizePass()";
-  let dependentDialects = ["bufferization::BufferizationDialect",
-                           "memref::MemRefDialect"];
-}
-
 // Note: Making these canonicalization patterns would require a dependency
 // of the SCF dialect on the Affine/Tensor/MemRef dialects or vice versa.
 def SCFForLoopCanonicalization
@@ -48,6 +41,12 @@ def SCFForLoopSpecialization : Pass<"scf-for-loop-specialization"> {
   let constructor = "mlir::createForLoopSpecializationPass()";
 }
 
+def SCFIfConditionPropagation : Pass<"scf-if-condition-propagation"> {
+  let summary = "Replace usages of if condition with true/false constants in "
+                "the conditional regions";
+  let dependentDialects = ["arith::ArithDialect"];
+}
+
 def SCFParallelLoopFusion : Pass<"scf-parallel-loop-fusion"> {
   let summary = "Fuse adjacent parallel loops";
   let constructor = "mlir::createParallelLoopFusionPass()";
@@ -56,6 +55,7 @@ def SCFParallelLoopFusion : Pass<"scf-parallel-loop-fusion"> {
 def TestSCFParallelLoopCollapsing : Pass<"test-scf-parallel-loop-collapsing"> {
   let summary = "Test parallel loops collapsing transformation";
   let constructor = "mlir::createTestSCFParallelLoopCollapsingPass()";
+  let dependentDialects = ["affine::AffineDialect"];
   let description = [{
       This pass is purely for testing the scf::collapseParallelLoops
       transformation. The transformation does not have opinions on how a

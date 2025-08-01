@@ -4,7 +4,7 @@
 // DEFINE:    -convert-vector-to-llvm="enable-arm-sve" -test-lower-to-llvm -o %t
 // DEFINE: %{entry_point} = matmul_f32
 // DEFINE: %{run} = %mcr_aarch64_cmd %t -e %{entry_point} -entry-point-result=void --march=aarch64 --mattr="+sve"\
-// DEFINE:    -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
+// DEFINE:    -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
 
 // RUN: %{compile}
 
@@ -107,6 +107,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_patterns.vector.reduction_to_contract
       transform.apply_patterns.vector.transfer_permutation_patterns
       transform.apply_patterns.vector.lower_masked_transfers
+      transform.apply_patterns.vector.sink_ops
     } : !transform.op<"func.func">
 
     // Step 4: Lower vector.contract to vector.fma

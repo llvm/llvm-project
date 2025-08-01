@@ -375,7 +375,7 @@ public:
 
   /// Parse a shared string from the string section. The shared string is
   /// encoded using an index to a corresponding string in the string section.
-  LogicalResult parseString(EncodingReader &reader, StringRef &result) {
+  LogicalResult parseString(EncodingReader &reader, StringRef &result) const {
     return parseEntry(reader, strings, result, "string");
   }
 
@@ -383,7 +383,7 @@ public:
   /// encoded using an index to a corresponding string in the string section.
   /// This variant parses a flag compressed with the index.
   LogicalResult parseStringWithFlag(EncodingReader &reader, StringRef &result,
-                                    bool &flag) {
+                                    bool &flag) const {
     uint64_t entryIdx;
     if (failed(reader.parseVarIntWithFlag(entryIdx, flag)))
       return failure();
@@ -393,7 +393,7 @@ public:
   /// Parse a shared string from the string section. The shared string is
   /// encoded using an index to a corresponding string in the string section.
   LogicalResult parseStringAtIndex(EncodingReader &reader, uint64_t index,
-                                   StringRef &result) {
+                                   StringRef &result) const {
     return resolveEntry(reader, strings, index, result, "string");
   }
 
@@ -544,7 +544,7 @@ public:
 
   /// Parse a dialect resource handle from the resource section.
   LogicalResult parseResourceHandle(EncodingReader &reader,
-                                    AsmDialectResourceHandle &result) {
+                                    AsmDialectResourceHandle &result) const {
     return parseEntry(reader, dialectResources, result, "resource handle");
   }
 
@@ -800,8 +800,8 @@ class AttrTypeReader {
   using TypeEntry = Entry<Type>;
 
 public:
-  AttrTypeReader(StringSectionReader &stringReader,
-                 ResourceSectionReader &resourceReader,
+  AttrTypeReader(const StringSectionReader &stringReader,
+                 const ResourceSectionReader &resourceReader,
                  const llvm::StringMap<BytecodeDialect *> &dialectsMap,
                  uint64_t &bytecodeVersion, Location fileLoc,
                  const ParserConfig &config)
@@ -881,11 +881,11 @@ private:
 
   /// The string section reader used to resolve string references when parsing
   /// custom encoded attribute/type entries.
-  StringSectionReader &stringReader;
+  const StringSectionReader &stringReader;
 
   /// The resource section reader used to resolve resource references when
   /// parsing custom encoded attribute/type entries.
-  ResourceSectionReader &resourceReader;
+  const ResourceSectionReader &resourceReader;
 
   /// The map of the loaded dialects used to retrieve dialect information, such
   /// as the dialect version.
@@ -908,8 +908,8 @@ private:
 class DialectReader : public DialectBytecodeReader {
 public:
   DialectReader(AttrTypeReader &attrTypeReader,
-                StringSectionReader &stringReader,
-                ResourceSectionReader &resourceReader,
+                const StringSectionReader &stringReader,
+                const ResourceSectionReader &resourceReader,
                 const llvm::StringMap<BytecodeDialect *> &dialectsMap,
                 EncodingReader &reader, uint64_t &bytecodeVersion)
       : attrTypeReader(attrTypeReader), stringReader(stringReader),
@@ -1042,8 +1042,8 @@ public:
 
 private:
   AttrTypeReader &attrTypeReader;
-  StringSectionReader &stringReader;
-  ResourceSectionReader &resourceReader;
+  const StringSectionReader &stringReader;
+  const ResourceSectionReader &resourceReader;
   const llvm::StringMap<BytecodeDialect *> &dialectsMap;
   EncodingReader &reader;
   uint64_t &bytecodeVersion;
@@ -1082,7 +1082,7 @@ public:
   }
 
   LogicalResult read(Location fileLoc, DialectReader &dialectReader,
-                     OperationName *opName, OperationState &opState) {
+                     OperationName *opName, OperationState &opState) const {
     uint64_t propertiesIdx;
     if (failed(dialectReader.readVarInt(propertiesIdx)))
       return failure();
@@ -1733,6 +1733,7 @@ LogicalResult BytecodeReader::Impl::parseVersion(EncodingReader &reader) {
 
 //===----------------------------------------------------------------------===//
 // Dialect Section
+//===----------------------------------------------------------------------===//
 
 LogicalResult BytecodeDialect::load(const DialectReader &reader,
                                     MLIRContext *ctx) {
@@ -1874,6 +1875,7 @@ BytecodeReader::Impl::parseOpName(EncodingReader &reader,
 
 //===----------------------------------------------------------------------===//
 // Resource Section
+//===----------------------------------------------------------------------===//
 
 LogicalResult BytecodeReader::Impl::parseResourceSection(
     EncodingReader &reader, std::optional<ArrayRef<uint8_t>> resourceData,
@@ -1902,6 +1904,7 @@ LogicalResult BytecodeReader::Impl::parseResourceSection(
 
 //===----------------------------------------------------------------------===//
 // UseListOrder Helpers
+//===----------------------------------------------------------------------===//
 
 FailureOr<BytecodeReader::Impl::UseListMapT>
 BytecodeReader::Impl::parseUseListOrderForRange(EncodingReader &reader,
@@ -1981,8 +1984,7 @@ LogicalResult BytecodeReader::Impl::sortUseListOrder(Value value) {
     // If the bytecode file did not contain any custom use-list order, it means
     // that the order was descending useID. Hence, shuffle by the first index
     // of the `currentOrder` pair.
-    SmallVector<unsigned> shuffle = SmallVector<unsigned>(
-        llvm::map_range(currentOrder, [&](auto item) { return item.first; }));
+    SmallVector<unsigned> shuffle(llvm::make_first_range(currentOrder));
     value.shuffleUseList(shuffle);
     return success();
   }
@@ -1991,8 +1993,7 @@ LogicalResult BytecodeReader::Impl::sortUseListOrder(Value value) {
   UseListOrderStorage customOrder =
       valueToUseListMap.at(value.getAsOpaquePointer());
   SmallVector<unsigned, 4> shuffle = std::move(customOrder.indices);
-  uint64_t numUses =
-      std::distance(value.getUses().begin(), value.getUses().end());
+  uint64_t numUses = value.getNumUses();
 
   // If the encoding was a pair of indices `(src, dst)` for every permutation,
   // reconstruct the shuffle vector for every use. Initialize the shuffle vector
@@ -2017,10 +2018,9 @@ LogicalResult BytecodeReader::Impl::sortUseListOrder(Value value) {
   DenseSet<unsigned> set;
   uint64_t accumulator = 0;
   for (const auto &elem : shuffle) {
-    if (set.contains(elem))
+    if (!set.insert(elem).second)
       return failure();
     accumulator += elem;
-    set.insert(elem);
   }
   if (numUses != shuffle.size() ||
       accumulator != (((numUses - 1) * numUses) >> 1))
@@ -2061,6 +2061,7 @@ LogicalResult BytecodeReader::Impl::processUseLists(Operation *topLevelOp) {
 
 //===----------------------------------------------------------------------===//
 // IR Section
+//===----------------------------------------------------------------------===//
 
 LogicalResult
 BytecodeReader::Impl::parseIRSection(ArrayRef<uint8_t> sectionData,
@@ -2461,6 +2462,7 @@ LogicalResult BytecodeReader::Impl::parseBlockArguments(EncodingReader &reader,
 
 //===----------------------------------------------------------------------===//
 // Value Processing
+//===----------------------------------------------------------------------===//
 
 Value BytecodeReader::Impl::parseOperand(EncodingReader &reader) {
   std::vector<Value> &values = valueScopes.back().values;
@@ -2511,7 +2513,7 @@ LogicalResult BytecodeReader::Impl::defineValues(EncodingReader &reader,
 }
 
 Value BytecodeReader::Impl::createForwardRef() {
-  // Check for an avaliable existing operation to use. Otherwise, create a new
+  // Check for an available existing operation to use. Otherwise, create a new
   // fake operation to use for the reference.
   if (!openForwardRefOps.empty()) {
     Operation *op = &openForwardRefOps.back();

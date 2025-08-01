@@ -22,6 +22,10 @@ func.func @ptr_types() {
   emitc.call_opaque "f"() {template_args = [!emitc.ptr<i32>]} : () -> ()
   // CHECK-NEXT: f<int64_t*>();
   emitc.call_opaque "f"() {template_args = [!emitc.ptr<i64>]} : () -> ()
+  // CHECK-NEXT: f<_Float16*>();
+  emitc.call_opaque "f"() {template_args = [!emitc.ptr<f16>]} : () -> ()
+  // CHECK-NEXT: f<__bf16*>();
+  emitc.call_opaque "f"() {template_args = [!emitc.ptr<bf16>]} : () -> ()
   // CHECK-NEXT: f<float*>();
   emitc.call_opaque "f"() {template_args = [!emitc.ptr<f32>]} : () -> ()
   // CHECK-NEXT: f<double*>();

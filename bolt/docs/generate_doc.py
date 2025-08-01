@@ -45,7 +45,7 @@ def parse_bolt_options(output):
         cleaned_line = line.strip()
 
         if cleaned_line.casefold() in map(str.casefold, section_headers):
-            if prev_section != None:  # Save last option from prev section
+            if prev_section is not None:  # Save last option from prev section
                 add_info(sections, current_section, option, description)
                 option, description = None, []
 
@@ -76,7 +76,7 @@ def parse_bolt_options(output):
                 description = [descr]
                 if option.startswith("--print") or option.startswith("--time"):
                     current_section = "BOLT printing options:"
-                elif prev_section != None:
+                elif prev_section is not None:
                     current_section = prev_section
             continue
 

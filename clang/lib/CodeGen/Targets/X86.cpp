@@ -24,22 +24,9 @@ bool IsX86_MMXType(llvm::Type *IRType) {
     IRType->getScalarSizeInBits() != 64;
 }
 
-static llvm::Type* X86AdjustInlineAsmType(CodeGen::CodeGenFunction &CGF,
+static llvm::Type *X86AdjustInlineAsmType(CodeGen::CodeGenFunction &CGF,
                                           StringRef Constraint,
-                                          llvm::Type* Ty) {
-  bool IsMMXCons = llvm::StringSwitch<bool>(Constraint)
-                     .Cases("y", "&y", "^Ym", true)
-                     .Default(false);
-  if (IsMMXCons && Ty->isVectorTy()) {
-    if (cast<llvm::VectorType>(Ty)->getPrimitiveSizeInBits().getFixedValue() !=
-        64) {
-      // Invalid MMX constraint
-      return nullptr;
-    }
-
-    return llvm::Type::getX86_MMXTy(CGF.getLLVMContext());
-  }
-
+                                          llvm::Type *Ty) {
   if (Constraint == "k") {
     llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGF.getLLVMContext());
     return llvm::FixedVectorType::get(Int1Ty, Ty->getScalarSizeInBits());
@@ -297,7 +284,7 @@ static void rewriteInputConstraintReferences(unsigned FirstIn,
       Pos = DigitEnd;
     }
   }
-  AsmString = std::move(OS.str());
+  AsmString = std::move(Buf);
 }
 
 /// Add output constraints for EAX:EDX because they are return registers.
@@ -475,7 +462,9 @@ ABIArgInfo X86_32ABIInfo::getIndirectReturnResult(QualType RetTy, CCState &State
     if (!IsMCUABI)
       return getNaturalAlignIndirectInReg(RetTy);
   }
-  return getNaturalAlignIndirect(RetTy, /*ByVal=*/false);
+  return getNaturalAlignIndirect(
+      RetTy, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+      /*ByVal=*/false);
 }
 
 ABIArgInfo X86_32ABIInfo::classifyReturnType(QualType RetTy,
@@ -612,20 +601,26 @@ ABIArgInfo X86_32ABIInfo::getIndirectResult(QualType Ty, bool ByVal,
       if (!IsMCUABI)
         return getNaturalAlignIndirectInReg(Ty);
     }
-    return getNaturalAlignIndirect(Ty, false);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   false);
   }
 
   // Compute the byval alignment.
   unsigned TypeAlign = getContext().getTypeAlign(Ty) / 8;
   unsigned StackAlign = getTypeStackAlignInBytes(Ty, TypeAlign);
   if (StackAlign == 0)
-    return ABIArgInfo::getIndirect(CharUnits::fromQuantity(4), /*ByVal=*/true);
+    return ABIArgInfo::getIndirect(
+        CharUnits::fromQuantity(4),
+        /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/true);
 
   // If the stack alignment is less than the type alignment, realign the
   // argument.
   bool Realign = TypeAlign > StackAlign;
-  return ABIArgInfo::getIndirect(CharUnits::fromQuantity(StackAlign),
-                                 /*ByVal=*/true, Realign);
+  return ABIArgInfo::getIndirect(
+      CharUnits::fromQuantity(StackAlign),
+      /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(), /*ByVal=*/true,
+      Realign);
 }
 
 X86_32ABIInfo::Class X86_32ABIInfo::classify(QualType Ty) const {
@@ -808,6 +803,10 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
     if (!IsWin32StructABI && isEmptyRecord(getContext(), Ty, true))
       return ABIArgInfo::getIgnore();
 
+    // Ignore 0 sized structs.
+    if (TI.Width == 0)
+      return ABIArgInfo::getIgnore();
+
     llvm::LLVMContext &LLVMContext = getVMContext();
     llvm::IntegerType *Int32 = llvm::Type::getInt32Ty(LLVMContext);
     bool NeedsPadding = false;
@@ -890,8 +889,8 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
 
   if (isPromotableIntegerTypeForABI(Ty)) {
     if (InReg)
-      return ABIArgInfo::getExtendInReg(Ty);
-    return ABIArgInfo::getExtend(Ty);
+      return ABIArgInfo::getExtendInReg(Ty, CGT.ConvertType(Ty));
+    return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
   }
 
   if (const auto *EIT = Ty->getAs<BitIntType>()) {
@@ -1343,6 +1342,15 @@ class X86_64ABIInfo : public ABIInfo {
     return T.isOSLinux() || T.isOSNetBSD();
   }
 
+  bool returnCXXRecordGreaterThan128InMem() const {
+    // Clang <= 20.0 did not do this.
+    if (getContext().getLangOpts().getClangABICompat() <=
+        LangOptions::ClangABI::Ver20)
+      return false;
+
+    return true;
+  }
+
   X86AVXABILevel AVXLevel;
   // Some ABIs (e.g. X32 ABI and Native Client OS) use 32 bit pointers on
   // 64-bit hardware.
@@ -1454,9 +1462,8 @@ public:
     // defines varargs anyway.
     if (fnType->getCallConv() == CC_C) {
       bool HasAVXType = false;
-      for (CallArgList::const_iterator
-             it = args.begin(), ie = args.end(); it != ie; ++it) {
-        if (getABIInfo<X86_64ABIInfo>().isPassedUsingAVXType(it->Ty)) {
+      for (const CallArg &arg : args) {
+        if (getABIInfo<X86_64ABIInfo>().isPassedUsingAVXType(arg.Ty)) {
           HasAVXType = true;
           break;
         }
@@ -2076,6 +2083,13 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
         classify(I.getType(), Offset, FieldLo, FieldHi, isNamedArg);
         Lo = merge(Lo, FieldLo);
         Hi = merge(Hi, FieldHi);
+        if (returnCXXRecordGreaterThan128InMem() &&
+            (Size > 128 && (Size != getContext().getTypeSize(I.getType()) ||
+                            Size > getNativeVectorSizeForAVXABI(AVXLevel)))) {
+          // The only case a 256(or 512)-bit wide vector could be used to return
+          // is when CXX record contains a single 256(or 512)-bit element.
+          Lo = Memory;
+        }
         if (Lo == Memory || Hi == Memory) {
           postMerge(Size, Lo, Hi);
           return;
@@ -2139,7 +2153,7 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       if (BitField) {
         assert(!i->isUnnamedBitField());
         uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
-        uint64_t Size = i->getBitWidthValue(getContext());
+        uint64_t Size = i->getBitWidthValue();
 
         uint64_t EB_Lo = Offset / 64;
         uint64_t EB_Hi = (Offset + Size - 1) / 64;
@@ -2173,13 +2187,13 @@ ABIArgInfo X86_64ABIInfo::getIndirectReturnResult(QualType Ty) const {
       Ty = EnumTy->getDecl()->getIntegerType();
 
     if (Ty->isBitIntType())
-      return getNaturalAlignIndirect(Ty);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
     return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
                                               : ABIArgInfo::getDirect());
   }
 
-  return getNaturalAlignIndirect(Ty);
+  return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 }
 
 bool X86_64ABIInfo::IsIllegalVectorType(QualType Ty) const {
@@ -2219,7 +2233,8 @@ ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
   }
 
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-    return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   RAA == CGCXXABI::RAA_DirectInMemory);
 
   // Compute the byval alignment. We specify the alignment of the byval in all
   // cases so that the mid-level optimizer knows the alignment of the byval.
@@ -2256,7 +2271,8 @@ ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
                                                           Size));
   }
 
-  return ABIArgInfo::getIndirect(CharUnits::fromQuantity(Align));
+  return ABIArgInfo::getIndirect(CharUnits::fromQuantity(Align),
+                                 getDataLayout().getAllocaAddrSpace());
 }
 
 /// The ABI specifies that a value should be passed in a full vector XMM/YMM
@@ -2454,13 +2470,12 @@ GetSSETypeAtOffset(llvm::Type *IRType, unsigned IROffset,
   return llvm::Type::getDoubleTy(getVMContext());
 }
 
-
 /// GetINTEGERTypeAtOffset - The ABI specifies that a value should be passed in
-/// an 8-byte GPR.  This means that we either have a scalar or we are talking
-/// about the high or low part of an up-to-16-byte struct.  This routine picks
-/// the best LLVM IR type to represent this, which may be i64 or may be anything
-/// else that the backend will pass in a GPR that works better (e.g. i8, %foo*,
-/// etc).
+/// one or more 8-byte GPRs.  This means that we either have a scalar or we are
+/// talking about the high and/or low part of an up-to-16-byte struct.  This
+/// routine picks the best LLVM IR type to represent this, which may be i64 or
+/// may be anything else that the backend will pass in GPRs that works better
+/// (e.g. i8, %foo*, etc).
 ///
 /// PrefType is an LLVM IR type that corresponds to (part of) the IR type for
 /// the source type.  IROffset is an offset in bytes into the LLVM IR type that
@@ -2518,6 +2533,13 @@ GetINTEGERTypeAtOffset(llvm::Type *IRType, unsigned IROffset,
                                   SourceOffset);
   }
 
+  // if we have a 128-bit integer, we can pass it safely using an i128
+  // so we return that
+  if (IRType->isIntegerTy(128)) {
+    assert(IROffset == 0);
+    return IRType;
+  }
+
   // Okay, we don't have any better idea of what to pass, so we pass this in an
   // integer register that isn't too big to fit the rest of the struct.
   unsigned TySizeInBytes =
@@ -2556,8 +2578,7 @@ GetX86_64ByValArgumentPair(llvm::Type *Lo, llvm::Type *Hi,
   if (HiStart != 8) {
     // There are usually two sorts of types the ABI generation code can produce
     // for the low part of a pair that aren't 8 bytes in size: half, float or
-    // i8/i16/i32.  This can also include pointers when they are 32-bit (X32 and
-    // NaCl).
+    // i8/i16/i32.  This can also include pointers when they are 32-bit (X32).
     // Promote these to a larger type.
     if (Lo->isHalfTy() || Lo->isFloatTy())
       Lo = llvm::Type::getDoubleTy(Lo->getContext());
@@ -2576,8 +2597,7 @@ GetX86_64ByValArgumentPair(llvm::Type *Lo, llvm::Type *Hi,
   return Result;
 }
 
-ABIArgInfo X86_64ABIInfo::
-classifyReturnType(QualType RetTy) const {
+ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
   // AMD64-ABI 3.2.3p4: Rule 1. Classify the return type with the
   // classification algorithm.
   X86_64ABIInfo::Class Lo, Hi;
@@ -2622,6 +2642,12 @@ classifyReturnType(QualType RetTy) const {
       if (RetTy->isIntegralOrEnumerationType() &&
           isPromotableIntegerTypeForABI(RetTy))
         return ABIArgInfo::getExtend(RetTy);
+    }
+
+    if (ResType->isIntegerTy(128)) {
+      // i128 are passed directly
+      assert(Hi == Integer);
+      return ABIArgInfo::getDirect(ResType);
     }
     break;
 
@@ -2765,9 +2791,14 @@ X86_64ABIInfo::classifyArgumentType(QualType Ty, unsigned freeIntRegs,
 
       if (Ty->isIntegralOrEnumerationType() &&
           isPromotableIntegerTypeForABI(Ty))
-        return ABIArgInfo::getExtend(Ty);
+        return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
     }
 
+    if (ResType->isIntegerTy(128)) {
+      assert(Hi == Integer);
+      ++neededInt;
+      return ABIArgInfo::getDirect(ResType);
+    }
     break;
 
     // AMD64-ABI 3.2.3p3: Rule 3. If the class is SSE, the next
@@ -3133,26 +3164,63 @@ RValue X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     CGF.Builder.CreateStore(V, CGF.Builder.CreateStructGEP(Tmp, 1));
 
     RegAddr = Tmp.withElementType(LTy);
-  } else if (neededInt) {
-    RegAddr = Address(CGF.Builder.CreateGEP(CGF.Int8Ty, RegSaveArea, gp_offset),
-                      LTy, CharUnits::fromQuantity(8));
-
+  } else if (neededInt || neededSSE == 1) {
     // Copy to a temporary if necessary to ensure the appropriate alignment.
     auto TInfo = getContext().getTypeInfoInChars(Ty);
     uint64_t TySize = TInfo.Width.getQuantity();
     CharUnits TyAlign = TInfo.Align;
+    llvm::Type *CoTy = nullptr;
+    if (AI.isDirect())
+      CoTy = AI.getCoerceToType();
 
-    // Copy into a temporary if the type is more aligned than the
-    // register save area.
-    if (TyAlign.getQuantity() > 8) {
+    llvm::Value *GpOrFpOffset = neededInt ? gp_offset : fp_offset;
+    uint64_t Alignment = neededInt ? 8 : 16;
+    uint64_t RegSize = neededInt ? neededInt * 8 : 16;
+    // There are two cases require special handling:
+    // 1)
+    //    ```
+    //    struct {
+    //      struct {} a[8];
+    //      int b;
+    //    };
+    //    ```
+    //    The lower 8 bytes of the structure are not stored,
+    //    so an 8-byte offset is needed when accessing the structure.
+    // 2)
+    //   ```
+    //   struct {
+    //     long long a;
+    //     struct {} b;
+    //   };
+    //   ```
+    //   The stored size of this structure is smaller than its actual size,
+    //   which may lead to reading past the end of the register save area.
+    if (CoTy && (AI.getDirectOffset() == 8 || RegSize < TySize)) {
       Address Tmp = CGF.CreateMemTemp(Ty);
-      CGF.Builder.CreateMemCpy(Tmp, RegAddr, TySize, false);
-      RegAddr = Tmp;
+      llvm::Value *Addr =
+          CGF.Builder.CreateGEP(CGF.Int8Ty, RegSaveArea, GpOrFpOffset);
+      llvm::Value *Src = CGF.Builder.CreateAlignedLoad(CoTy, Addr, TyAlign);
+      llvm::Value *PtrOffset =
+          llvm::ConstantInt::get(CGF.Int32Ty, AI.getDirectOffset());
+      Address Dst = Address(
+          CGF.Builder.CreateGEP(CGF.Int8Ty, Tmp.getBasePointer(), PtrOffset),
+          LTy, TyAlign);
+      CGF.Builder.CreateStore(Src, Dst);
+      RegAddr = Tmp.withElementType(LTy);
+    } else {
+      RegAddr =
+          Address(CGF.Builder.CreateGEP(CGF.Int8Ty, RegSaveArea, GpOrFpOffset),
+                  LTy, CharUnits::fromQuantity(Alignment));
+
+      // Copy into a temporary if the type is more aligned than the
+      // register save area.
+      if (neededInt && TyAlign.getQuantity() > 8) {
+        Address Tmp = CGF.CreateMemTemp(Ty);
+        CGF.Builder.CreateMemCpy(Tmp, RegAddr, TySize, false);
+        RegAddr = Tmp;
+      }
     }
 
-  } else if (neededSSE == 1) {
-    RegAddr = Address(CGF.Builder.CreateGEP(CGF.Int8Ty, RegSaveArea, fp_offset),
-                      LTy, CharUnits::fromQuantity(16));
   } else {
     assert(neededSSE == 2 && "Invalid number of needed registers!");
     // SSE registers are spaced 16 bytes apart in the register save
@@ -3255,12 +3323,13 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
   if (RT) {
     if (!IsReturnType) {
       if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(RT, getCXXABI()))
-        return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+        return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                       RAA == CGCXXABI::RAA_DirectInMemory);
     }
 
     if (RT->getDecl()->hasFlexibleArrayMember())
-      return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
-
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     /*ByVal=*/false);
   }
 
   const Type *Base = nullptr;
@@ -3276,7 +3345,9 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
           return ABIArgInfo::getDirect();
         return ABIArgInfo::getExpand();
       }
-      return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+      return ABIArgInfo::getIndirect(
+          Align, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+          /*ByVal=*/false);
     } else if (IsVectorCall) {
       if (FreeSSERegs >= NumElts &&
           (IsReturnType || Ty->isBuiltinType() || Ty->isVectorType())) {
@@ -3286,7 +3357,9 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
         return ABIArgInfo::getExpand();
       } else if (!Ty->isBuiltinType() && !Ty->isVectorType()) {
         // HVAs are delayed and reclassified in the 2nd step.
-        return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+        return ABIArgInfo::getIndirect(
+            Align, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+            /*ByVal=*/false);
       }
     }
   }
@@ -3303,7 +3376,8 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     // MS x64 ABI requirement: "Any argument that doesn't fit in 8 bytes, or is
     // not 1, 2, 4, or 8 bytes, must be passed by reference."
     if (Width > 64 || !llvm::isPowerOf2_64(Width))
-      return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     /*ByVal=*/false);
 
     // Otherwise, coerce it to a small integer.
     return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), Width));
@@ -3322,20 +3396,29 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
       if (IsMingw64) {
         const llvm::fltSemantics *LDF = &getTarget().getLongDoubleFormat();
         if (LDF == &llvm::APFloat::x87DoubleExtended())
-          return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+          return ABIArgInfo::getIndirect(
+              Align, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+              /*ByVal=*/false);
       }
       break;
 
     case BuiltinType::Int128:
     case BuiltinType::UInt128:
+    case BuiltinType::Float128:
+      // 128-bit float and integer types share the same ABI.
+
       // If it's a parameter type, the normal ABI rule is that arguments larger
       // than 8 bytes are passed indirectly. GCC follows it. We follow it too,
       // even though it isn't particularly efficient.
       if (!IsReturnType)
-        return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+        return ABIArgInfo::getIndirect(
+            Align, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+            /*ByVal=*/false);
 
       // Mingw64 GCC returns i128 in XMM0. Coerce to v2i64 to handle that.
       // Clang matches them for compatibility.
+      // NOTE: GCC actually returns f128 indirectly but will hopefully change.
+      // See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=115054#c8.
       return ABIArgInfo::getDirect(llvm::FixedVectorType::get(
           llvm::Type::getInt64Ty(getVMContext()), 2));
 
@@ -3352,7 +3435,9 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     // the power of 2.
     if (Width <= 64)
       return ABIArgInfo::getDirect();
-    return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+    return ABIArgInfo::getIndirect(
+        Align, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/false);
   }
 
   return ABIArgInfo::getDirect();

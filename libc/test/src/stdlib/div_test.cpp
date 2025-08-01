@@ -8,8 +8,7 @@
 
 #include "DivTest.h"
 
+#include "hdr/types/div_t.h"
 #include "src/stdlib/div.h"
-
-#include <stdlib.h>
 
 LIST_DIV_TESTS(int, div_t, LIBC_NAMESPACE::div)

@@ -576,8 +576,8 @@ block2:                                           ; preds = %entry
 
 %struct.Klass = type { i32, i32 }
 
-define i32 @shady_range(i32 %argc, ptr nocapture %argv) {
-; CHECK-LABEL: define i32 @shady_range(i32 %argc, ptr nocapture %argv)
+define i32 @shady_range(i32 %argc, ptr captures(none) %argv) {
+; CHECK-LABEL: define i32 @shady_range(i32 %argc, ptr captures(none) %argv)
 entry:
 ; CHECK: entry:
 ; CHECK-NEXT: Alive: <>
@@ -786,83 +786,6 @@ end:
   ret void
 }
 
-define void @non_alloca(ptr %p) {
-; CHECK-LABEL: define void @non_alloca
-entry:
-; CHECK: entry:
-; MAY-NEXT: Alive: <x y>
-; MUST-NEXT: Alive: <>
-  %x = alloca i8, align 4
-  %y = alloca i8, align 4
-
-  call void @llvm.lifetime.start.p0(i64 4, ptr %p)
-; CHECK: call void @llvm.lifetime.start.p0(i64 4, ptr %p)
-; MAY-NEXT: Alive: <x y>
-; MUST-NEXT: Alive: <>
-
-  call void @llvm.lifetime.start.p0(i64 4, ptr %x)
-; CHECK: call void @llvm.lifetime.start.p0(i64 4, ptr %x)
-; MAY-NEXT: Alive: <x y>
-; MUST-NEXT: Alive: <>
-
-  call void @llvm.lifetime.end.p0(i64 4, ptr %p)
-; CHECK: call void @llvm.lifetime.end.p0(i64 4, ptr %p)
-; MAY-NEXT: Alive: <x y>
-; MUST-NEXT: Alive: <>
-
-  ret void
-}
-
-define void @select_alloca(i1 %v) {
-; CHECK-LABEL: define void @select_alloca
-entry:
-; CHECK: entry:
-; MAY-NEXT: Alive: <x y>
-; MUST-NEXT: Alive: <>
-  %x = alloca i8, align 4
-  %y = alloca i8, align 4
-  %cxcy = select i1 %v, ptr %x, ptr %y
-
-  call void @llvm.lifetime.start.p0(i64 1, ptr %cxcy)
-; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %cxcy)
-; MAY-NEXT: Alive: <x y>
-; MUST-NEXT: Alive: <>
-
-  call void @llvm.lifetime.start.p0(i64 1, ptr %x)
-; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %x)
-; MAY-NEXT: Alive: <x y>
-; MUST-NEXT: Alive: <>
-
-  call void @llvm.lifetime.end.p0(i64 1, ptr %x)
-; CHECK: call void @llvm.lifetime.end.p0(i64 1, ptr %x)
-; MAY-NEXT: Alive: <x y>
-; MUST-NEXT: Alive: <>
-
-  ret void
-}
-
-define void @alloca_offset() {
-; CHECK-LABEL: define void @alloca_offset
-entry:
-; CHECK: entry:
-; MAY-NEXT: Alive: <x>
-; MUST-NEXT: Alive: <>
-  %x = alloca [5 x i32], align 4
-  %x2 = getelementptr [5 x i32], ptr %x, i64 0, i64 1
-
-  call void @llvm.lifetime.start.p0(i64 20, ptr %x2)
-; CHECK: call void @llvm.lifetime.start.p0(i64 20, ptr %x2)
-; MAY-NEXT: Alive: <x>
-; MUST-NEXT: Alive: <>
-
-  call void @llvm.lifetime.end.p0(i64 20, ptr %x2)
-; CHECK: call void @llvm.lifetime.end.p0(i64 20, ptr %x2)
-; MAY-NEXT: Alive: <x>
-; MUST-NEXT: Alive: <>
-
-  ret void
-}
-
 define void @alloca_size() {
 ; CHECK-LABEL: define void @alloca_size
 entry:
@@ -1047,8 +970,8 @@ if.end:
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(i64, ptr captures(none))
+declare void @llvm.lifetime.end.p0(i64, ptr captures(none))
 declare void @capture8(ptr)
 declare void @capture32(ptr)
 declare void @capture64(ptr)

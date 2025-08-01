@@ -32,6 +32,13 @@ suspend:
   ret ptr %hdl
 }
 
+; Make a safe_elide call to f and CoroSplit should generate the .noalloc variant
+define void @caller() presplitcoroutine {
+entry:
+  %ptr = call ptr @f() #1
+  ret void
+}
+
 ; CHECK-LABEL: @f() !func_sanitize !0 {
 ; CHECK: call ptr @malloc
 ; CHECK: @llvm.coro.begin(token %id, ptr %phi)
@@ -63,6 +70,13 @@ suspend:
 ; CHECK-NOT: call void @free(
 ; CHECK: ret void
 
+; CHECK-LABEL: @f.noalloc(ptr noundef nonnull align 8 dereferenceable(24) %{{.*}})
+; CHECK-NOT: call ptr @malloc
+; CHECK: call void @print(i32 0)
+; CHECK-NOT: call void @print(i32 1)
+; CHECK-NOT: call void @free(
+; CHECK: ret ptr %{{.*}}
+
 declare ptr @llvm.coro.free(token, ptr)
 declare i32 @llvm.coro.size.i32()
 declare i8  @llvm.coro.suspend(token, i1)
@@ -79,3 +93,4 @@ declare void @print(i32)
 declare void @free(ptr) willreturn allockind("free") "alloc-family"="malloc"
 
 !0 = !{i32 846595819, ptr null}
+attributes #1 = { coro_elide_safe }

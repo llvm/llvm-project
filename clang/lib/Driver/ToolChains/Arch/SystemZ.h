@@ -27,7 +27,8 @@ enum class FloatABI {
 
 FloatABI getSystemZFloatABI(const Driver &D, const llvm::opt::ArgList &Args);
 
-std::string getSystemZTargetCPU(const llvm::opt::ArgList &Args);
+std::string getSystemZTargetCPU(const llvm::opt::ArgList &Args,
+                                const llvm::Triple &T);
 
 void getSystemZTargetFeatures(const Driver &D, const llvm::opt::ArgList &Args,
                               std::vector<llvm::StringRef> &Features);

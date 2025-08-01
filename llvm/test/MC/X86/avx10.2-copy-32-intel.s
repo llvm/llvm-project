@@ -1,0 +1,81 @@
+// RUN: llvm-mc -triple i386 -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
+
+// CHECK: vmovd xmm2, dword ptr [esp + 8*esi + 268435456]
+// CHECK: encoding: [0xc5,0xf9,0x6e,0x94,0xf4,0x00,0x00,0x00,0x10]
+          vmovd xmm2, dword ptr [esp + 8*esi + 268435456]
+
+// CHECK: vmovd xmm2, dword ptr [edi + 4*eax + 291]
+// CHECK: encoding: [0xc5,0xf9,0x6e,0x94,0x87,0x23,0x01,0x00,0x00]
+          vmovd xmm2, dword ptr [edi + 4*eax + 291]
+
+// CHECK: vmovd xmm2, dword ptr [eax]
+// CHECK: encoding: [0xc5,0xf9,0x6e,0x10]
+          vmovd xmm2, dword ptr [eax]
+
+// CHECK: vmovd xmm2, dword ptr [2*ebp - 128]
+// CHECK: encoding: [0xc5,0xf9,0x6e,0x14,0x6d,0x80,0xff,0xff,0xff]
+          vmovd xmm2, dword ptr [2*ebp - 128]
+
+// CHECK: vmovd dword ptr [esp + 8*esi + 268435456], xmm3
+// CHECK: encoding: [0xc5,0xf9,0x7e,0x9c,0xf4,0x00,0x00,0x00,0x10]
+          vmovd dword ptr [esp + 8*esi + 268435456], xmm3
+
+// CHECK: vmovd dword ptr [edi + 4*eax + 291], xmm3
+// CHECK: encoding: [0xc5,0xf9,0x7e,0x9c,0x87,0x23,0x01,0x00,0x00]
+          vmovd dword ptr [edi + 4*eax + 291], xmm3
+
+// CHECK: vmovd dword ptr [eax], xmm3
+// CHECK: encoding: [0xc5,0xf9,0x7e,0x18]
+          vmovd dword ptr [eax], xmm3
+
+// CHECK: vmovd dword ptr [2*ebp - 128], xmm3
+// CHECK: encoding: [0xc5,0xf9,0x7e,0x1c,0x6d,0x80,0xff,0xff,0xff]
+          vmovd dword ptr [2*ebp - 128], xmm3
+
+// CHECK: vmovw xmm2, word ptr [esp + 8*esi + 268435456]
+// CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x6e,0x94,0xf4,0x00,0x00,0x00,0x10]
+          vmovw xmm2, word ptr [esp + 8*esi + 268435456]
+
+// CHECK: vmovw xmm2, word ptr [edi + 4*eax + 291]
+// CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x6e,0x94,0x87,0x23,0x01,0x00,0x00]
+          vmovw xmm2, word ptr [edi + 4*eax + 291]
+
+// CHECK: vmovw xmm2, word ptr [eax]
+// CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x6e,0x10]
+          vmovw xmm2, word ptr [eax]
+
+// CHECK: vmovw xmm2, word ptr [2*ebp - 64]
+// CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x6e,0x14,0x6d,0xc0,0xff,0xff,0xff]
+          vmovw xmm2, word ptr [2*ebp - 64]
+
+// CHECK: vmovw xmm2, word ptr [ecx + 254]
+// CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x6e,0x51,0x7f]
+          vmovw xmm2, word ptr [ecx + 254]
+
+// CHECK: vmovw xmm2, word ptr [edx - 256]
+// CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x6e,0x52,0x80]
+          vmovw xmm2, word ptr [edx - 256]
+
+// CHECK: vmovw word ptr [esp + 8*esi + 268435456], xmm3
+// CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x7e,0x9c,0xf4,0x00,0x00,0x00,0x10]
+          vmovw word ptr [esp + 8*esi + 268435456], xmm3
+
+// CHECK: vmovw word ptr [edi + 4*eax + 291], xmm3
+// CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x7e,0x9c,0x87,0x23,0x01,0x00,0x00]
+          vmovw word ptr [edi + 4*eax + 291], xmm3
+
+// CHECK: vmovw word ptr [eax], xmm3
+// CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x7e,0x18]
+          vmovw word ptr [eax], xmm3
+
+// CHECK: vmovw word ptr [2*ebp - 64], xmm3
+// CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x7e,0x1c,0x6d,0xc0,0xff,0xff,0xff]
+          vmovw word ptr [2*ebp - 64], xmm3
+
+// CHECK: vmovw word ptr [ecx + 254], xmm3
+// CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x7e,0x59,0x7f]
+          vmovw word ptr [ecx + 254], xmm3
+
+// CHECK: vmovw word ptr [edx - 256], xmm3
+// CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x7e,0x5a,0x80]
+          vmovw word ptr [edx - 256], xmm3

@@ -16,13 +16,13 @@ entry:
 define void @encode(ptr %m, ptr %ts, ptr %new) nounwind {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse noreturn nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@encode
-; TUNIT-SAME: (ptr nocapture nofree readnone [[M:%.*]], ptr nocapture nofree readnone [[TS:%.*]], ptr nocapture nofree readnone [[NEW:%.*]]) #[[ATTR0:[0-9]+]] {
+; TUNIT-SAME: (ptr nofree readnone captures(none) [[M:%.*]], ptr nofree readnone captures(none) [[TS:%.*]], ptr nofree readnone captures(none) [[NEW:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    unreachable
 ;
 ; CGSCC: Function Attrs: mustprogress nofree noreturn nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@encode
-; CGSCC-SAME: (ptr nocapture nofree readnone [[M:%.*]], ptr nocapture nofree readnone [[TS:%.*]], ptr nocapture nofree readnone [[NEW:%.*]]) #[[ATTR1:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree readnone captures(none) [[M:%.*]], ptr nofree readnone captures(none) [[TS:%.*]], ptr nofree readnone captures(none) [[NEW:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    unreachable
 ;

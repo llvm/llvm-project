@@ -38,6 +38,7 @@ public:
     StringRef ReverseAdaptorName;
     std::optional<StringRef> ReverseHeader;
     ArrayRef<std::pair<StringRef, StringRef>> FreeReverseNames;
+    bool IsPipeSyntax = false;
   };
 
   class Replacer : public llvm::RefCountedBase<Replacer> {
@@ -80,11 +81,11 @@ public:
   void registerMatchers(ast_matchers::MatchFinder *Finder) final;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) final;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override;
-  void storeOptions(ClangTidyOptions::OptionMap &Options) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   std::optional<TraversalKind> getCheckTraversalKind() const override;
 
 private:
-  ReplacerMap Replaces;
+  std::vector<llvm::IntrusiveRefCntPtr<Replacer>> Replacers;
   std::optional<ReverseIteratorDescriptor> ReverseDescriptor;
   IncludeInserter Inserter;
 };

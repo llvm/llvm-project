@@ -9,7 +9,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; congruent IVs.
 
 ; CHECK-LABEL: crash
-define void @crash() {
+define void @crash(i1 %arg) {
 entry:
   br i1 false, label %not_taken, label %pre
 
@@ -26,7 +26,7 @@ loop:
 ; %phi0 and %phi1 are evaluated by SCEV to constant 0.
   %phi0 = phi i32 [ 0, %loop ], [ %phi0.pre, %pre ]
   %phi1 = phi i32 [ 0, %loop ], [ %phi1.pre, %pre ]
-  br i1 undef, label %exit, label %loop
+  br i1 %arg, label %exit, label %loop
 
 exit:
   ret void

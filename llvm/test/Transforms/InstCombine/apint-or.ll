@@ -20,7 +20,7 @@ define i39 @test2(i39 %V, i39 %M) {
 ; CHECK-LABEL: define i39 @test2(
 ; CHECK-SAME: i39 [[V:%.*]], i39 [[M:%.*]]) {
 ; CHECK-NEXT:    [[N:%.*]] = and i39 [[M]], -274877906944
-; CHECK-NEXT:    [[A:%.*]] = add i39 [[N]], [[V]]
+; CHECK-NEXT:    [[A:%.*]] = add i39 [[V]], [[N]]
 ; CHECK-NEXT:    ret i39 [[A]]
 ;
   %C1 = xor i39 274877906943, -1 ;; C2 = 274877906943
@@ -51,7 +51,7 @@ define i399 @test5(i399 %V, i399 %M) {
 ; CHECK-LABEL: define i399 @test5(
 ; CHECK-SAME: i399 [[V:%.*]], i399 [[M:%.*]]) {
 ; CHECK-NEXT:    [[N:%.*]] = and i399 [[M]], 18446742974197923840
-; CHECK-NEXT:    [[A:%.*]] = add i399 [[N]], [[V]]
+; CHECK-NEXT:    [[A:%.*]] = add i399 [[V]], [[N]]
 ; CHECK-NEXT:    ret i399 [[A]]
 ;
   %C1 = xor i399 274877906943, -1 ;; C2 = 274877906943

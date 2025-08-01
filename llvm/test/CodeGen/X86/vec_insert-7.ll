@@ -5,21 +5,20 @@
 ; MMX insertelement is not available; these are promoted to xmm.
 ; (Without SSE they are split to two ints, and the code is much better.)
 
-define x86_mmx @mmx_movzl(x86_mmx %x) nounwind {
+define <1 x i64> @mmx_movzl(<1 x i64> %x) nounwind {
 ; X86-LABEL: mmx_movzl:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    movd %eax, %mm0
+; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mmx_movzl:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    movq %rax, %xmm0
 ; X64-NEXT:    retq
-  %tmp = bitcast x86_mmx %x to <2 x i32>
+  %tmp = bitcast <1 x i64> %x to <2 x i32>
   %tmp3 = insertelement <2 x i32> %tmp, i32 32, i32 0
   %tmp8 = insertelement <2 x i32> %tmp3, i32 0, i32 1
-  %tmp9 = bitcast <2 x i32> %tmp8 to x86_mmx
-  ret x86_mmx %tmp9
+  %tmp9 = bitcast <2 x i32> %tmp8 to <1 x i64>
+  ret <1 x i64> %tmp9
 }

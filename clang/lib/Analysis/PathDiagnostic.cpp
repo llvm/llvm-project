@@ -18,7 +18,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/OperationKinds.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/Stmt.h"
@@ -26,18 +25,14 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/ProgramPoint.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -328,8 +323,8 @@ static bool compareCrossTUSourceLocs(FullSourceLoc XL, FullSourceLoc YL) {
     return true;
   if (XL.isValid() && YL.isInvalid())
     return false;
-  std::pair<FileID, unsigned> XOffs = XL.getDecomposedLoc();
-  std::pair<FileID, unsigned> YOffs = YL.getDecomposedLoc();
+  FileIDAndOffset XOffs = XL.getDecomposedLoc();
+  FileIDAndOffset YOffs = YL.getDecomposedLoc();
   const SourceManager &SM = XL.getManager();
   std::pair<bool, bool> InSameTU = SM.isInTheSameTranslationUnit(XOffs, YOffs);
   if (InSameTU.first)
@@ -484,10 +479,10 @@ SourceLocation PathDiagnosticLocation::getValidSourceLocation(
   // source code, so find an enclosing statement and use its location.
   if (!L.isValid()) {
     AnalysisDeclContext *ADC;
-    if (LAC.is<const LocationContext*>())
-      ADC = LAC.get<const LocationContext*>()->getAnalysisDeclContext();
+    if (auto *LC = dyn_cast<const LocationContext *>(LAC))
+      ADC = LC->getAnalysisDeclContext();
     else
-      ADC = LAC.get<AnalysisDeclContext*>();
+      ADC = cast<AnalysisDeclContext *>(LAC);
 
     ParentMap &PM = ADC->getParentMap();
 
@@ -1151,9 +1146,9 @@ void PathDiagnostic::FullProfile(llvm::FoldingSetNodeID &ID) const {
 
 LLVM_DUMP_METHOD void PathPieces::dump() const {
   unsigned index = 0;
-  for (PathPieces::const_iterator I = begin(), E = end(); I != E; ++I) {
+  for (const PathDiagnosticPieceRef &Piece : *this) {
     llvm::errs() << "[" << index++ << "]  ";
-    (*I)->dump();
+    Piece->dump();
     llvm::errs() << "\n";
   }
 }

@@ -7,7 +7,6 @@
 """Interface for communicating with the Visual Studio debugger via DTE."""
 
 import abc
-import imp
 import os
 import sys
 from enum import IntEnum
@@ -19,15 +18,16 @@ from dex.debugger.DebuggerBase import DebuggerBase, watch_is_active
 from dex.dextIR import FrameIR, LocIR, StepIR, StopReason, ValueIR
 from dex.dextIR import StackFrame, SourceLocation, ProgramState
 from dex.utils.Exceptions import Error, LoadDebuggerException
+from dex.utils.Imports import load_module
 from dex.utils.ReturnCode import ReturnCode
-
 
 def _load_com_module():
     try:
-        module_info = imp.find_module(
-            "ComInterface", [os.path.join(os.path.dirname(__file__), "windows")]
+        return load_module(
+            "ComInterface",
+            os.path.join(os.path.dirname(__file__), "windows"),
+            "ComInterface.py",
         )
-        return imp.load_module("ComInterface", *module_info)
     except ImportError as e:
         raise LoadDebuggerException(e, sys.exc_info())
 
@@ -256,7 +256,7 @@ class VisualStudio(
         for bp in self._debugger.Breakpoints:
             # We're looking at the user-set breakpoints so there should be no
             # Parent.
-            assert bp.Parent == None
+            assert bp.Parent is None
             this_vsbp = VSBreakpoint(
                 PurePath(bp.File), bp.FileLine, bp.FileColumn, bp.Condition
             )

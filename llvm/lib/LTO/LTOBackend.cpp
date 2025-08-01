@@ -20,6 +20,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/CGData/CodeGenData.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
@@ -34,7 +35,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Program.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -42,7 +42,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
-#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
 #include <optional>
@@ -181,27 +180,29 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
 #define HANDLE_EXTENSION(Ext)                                                  \
   llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
 #include "llvm/Support/Extension.def"
+#undef HANDLE_EXTENSION
 
 static void RegisterPassPlugins(ArrayRef<std::string> PassPlugins,
                                 PassBuilder &PB) {
 #define HANDLE_EXTENSION(Ext)                                                  \
   get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
 #include "llvm/Support/Extension.def"
+#undef HANDLE_EXTENSION
 
   // Load requested pass plugins and let them register pass builder callbacks
   for (auto &PluginFN : PassPlugins) {
     auto PassPlugin = PassPlugin::Load(PluginFN);
     if (!PassPlugin)
-      report_fatal_error(PassPlugin.takeError(), /*gen_crash_diag=*/false);
+      reportFatalUsageError(PassPlugin.takeError());
     PassPlugin->registerPassBuilderCallbacks(PB);
   }
 }
 
 static std::unique_ptr<TargetMachine>
 createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
-  StringRef TheTriple = M.getTargetTriple();
+  const Triple &TheTriple = M.getTargetTriple();
   SubtargetFeatures Features;
-  Features.getDefaultSubtargetFeatures(Triple(TheTriple));
+  Features.getDefaultSubtargetFeatures(TheTriple);
   for (const std::string &A : Conf.MAttrs)
     Features.AddFeature(A);
 
@@ -218,8 +219,13 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   else
     CodeModel = M.getCodeModel();
 
+  TargetOptions TargetOpts = Conf.Options;
+  if (TargetOpts.MCOptions.ABIName.empty()) {
+    TargetOpts.MCOptions.ABIName = M.getTargetABIFromMD();
+  }
+
   std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
-      TheTriple, Conf.CPU, Features.getString(), Conf.Options, RelocModel,
+      TheTriple, Conf.CPU, Features.getString(), TargetOpts, RelocModel,
       CodeModel, Conf.CGOptLevel));
 
   assert(TM && "Failed to create target machine");
@@ -273,7 +279,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   RegisterPassPlugins(Conf.PassPlugins, PB);
 
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
-      new TargetLibraryInfoImpl(Triple(TM->getTargetTriple())));
+      new TargetLibraryInfoImpl(TM->getTargetTriple()));
   if (Conf.Freestanding)
     TLII->disableAllFunctions();
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
@@ -335,7 +341,25 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   if (!Conf.DisableVerify)
     MPM.addPass(VerifierPass());
 
+  if (PrintPipelinePasses) {
+    std::string PipelineStr;
+    raw_string_ostream OS(PipelineStr);
+    MPM.printPipeline(OS, [&PIC](StringRef ClassName) {
+      auto PassName = PIC.getPassNameForClassName(ClassName);
+      return PassName.empty() ? ClassName : PassName;
+    });
+    outs() << "pipeline-passes: " << PipelineStr << '\n';
+  }
+
   MPM.run(Mod, MAM);
+}
+
+static bool isEmptyModule(const Module &Mod) {
+  // Module is empty if it has no functions, no globals, no inline asm and no
+  // named metadata (aliases and ifuncs require functions or globals so we
+  // don't need to check those explicitly).
+  return Mod.empty() && Mod.global_empty() && Mod.named_metadata_empty() &&
+         Mod.getModuleInlineAsm().empty();
 }
 
 bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
@@ -359,9 +383,16 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
                                /*EmbedBitcode*/ true, /*EmbedCmdline*/ true,
                                /*Cmdline*/ CmdArgs);
   }
-  // FIXME: Plumb the combined index into the new pass manager.
-  runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
-                 ImportSummary);
+  // No need to run any opt passes if the module is empty.
+  // In theory these passes should take almost no time for an empty
+  // module, however, this guards against doing any unnecessary summary-based
+  // analysis in the case of a ThinLTO build where this might be an empty
+  // regular LTO combined module, with a large combined index from ThinLTO.
+  if (!isEmptyModule(Mod)) {
+    // FIXME: Plumb the combined index into the new pass manager.
+    runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
+                   ImportSummary);
+  }
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
 
@@ -406,21 +437,36 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   std::unique_ptr<CachedFileStream> &Stream = *StreamOrErr;
   TM->Options.ObjectFilenameForDebug = Stream->ObjectPathName;
 
-  legacy::PassManager CodeGenPasses;
-  TargetLibraryInfoImpl TLII(Triple(Mod.getTargetTriple()));
-  CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
-  CodeGenPasses.add(
-      createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
-  if (Conf.PreCodeGenPassesHook)
-    Conf.PreCodeGenPassesHook(CodeGenPasses);
-  if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS,
-                              DwoOut ? &DwoOut->os() : nullptr,
-                              Conf.CGFileType))
-    report_fatal_error("Failed to setup codegen");
-  CodeGenPasses.run(Mod);
+  // Create the codegen pipeline in its own scope so it gets deleted before
+  // Stream->commit() is called. The commit function of CacheStream deletes
+  // the raw stream, which is too early as streamers (e.g. MCAsmStreamer)
+  // keep the pointer and may use it until their destruction. See #138194.
+  {
+    legacy::PassManager CodeGenPasses;
+    TargetLibraryInfoImpl TLII(Mod.getTargetTriple());
+    CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
+    // No need to make index available if the module is empty.
+    // In theory these passes should not use the index for an empty
+    // module, however, this guards against doing any unnecessary summary-based
+    // analysis in the case of a ThinLTO build where this might be an empty
+    // regular LTO combined module, with a large combined index from ThinLTO.
+    if (!isEmptyModule(Mod))
+      CodeGenPasses.add(
+          createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
+    if (Conf.PreCodeGenPassesHook)
+      Conf.PreCodeGenPassesHook(CodeGenPasses);
+    if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS,
+                                DwoOut ? &DwoOut->os() : nullptr,
+                                Conf.CGFileType))
+      report_fatal_error("Failed to setup codegen");
+    CodeGenPasses.run(Mod);
 
-  if (DwoOut)
-    DwoOut->keep();
+    if (DwoOut)
+      DwoOut->keep();
+  }
+
+  if (Error Err = Stream->commit())
+    report_fatal_error(std::move(Err));
 }
 
 static void splitCodeGen(const Config &C, TargetMachine *TM,
@@ -481,9 +527,9 @@ static void splitCodeGen(const Config &C, TargetMachine *TM,
 static Expected<const Target *> initAndLookupTarget(const Config &C,
                                                     Module &Mod) {
   if (!C.OverrideTriple.empty())
-    Mod.setTargetTriple(C.OverrideTriple);
+    Mod.setTargetTriple(Triple(C.OverrideTriple));
   else if (Mod.getTargetTriple().empty())
-    Mod.setTargetTriple(C.DefaultTriple);
+    Mod.setTargetTriple(Triple(C.DefaultTriple));
 
   std::string Msg;
   const Target *T = TargetRegistry::lookupTarget(Mod.getTargetTriple(), Msg);
@@ -555,6 +601,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                        const FunctionImporter::ImportMapTy &ImportList,
                        const GVSummaryMapTy &DefinedGlobals,
                        MapVector<StringRef, BitcodeModule> *ModuleMap,
+                       bool CodeGenOnly, AddStreamFn IRAddStream,
                        const std::vector<uint8_t> &CmdArgs) {
   Expected<const Target *> TOrErr = initAndLookupTarget(Conf, Mod);
   if (!TOrErr)
@@ -576,7 +623,9 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   Mod.setPartialSampleProfileRatio(CombinedIndex);
 
   LLVM_DEBUG(dbgs() << "Running ThinLTO\n");
-  if (Conf.CodeGenOnly) {
+  if (CodeGenOnly) {
+    // If CodeGenOnly is set, we only perform code generation and skip
+    // optimization. This value may differ from Conf.CodeGenOnly.
     codegen(Conf, TM.get(), AddStream, Task, Mod, CombinedIndex);
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
   }
@@ -587,10 +636,18 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   auto OptimizeAndCodegen =
       [&](Module &Mod, TargetMachine *TM,
           std::unique_ptr<ToolOutputFile> DiagnosticOutputFile) {
+        // Perform optimization and code generation for ThinLTO.
         if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
                  /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
                  CmdArgs))
           return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+
+        // Save the current module before the first codegen round.
+        // Note that the second codegen round runs only `codegen()` without
+        // running `opt()`. We're not reaching here as it's bailed out earlier
+        // with `CodeGenOnly` which has been set in `SecondRoundThinBackend`.
+        if (IRAddStream)
+          cgdata::saveModuleForTwoRounds(Mod, Task, IRAddStream);
 
         codegen(Conf, TM, AddStream, Task, Mod, CombinedIndex);
         return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
@@ -716,14 +773,7 @@ bool lto::initImportList(const Module &M,
       if (Summary->modulePath() == M.getModuleIdentifier())
         continue;
       // Add an entry to provoke importing by thinBackend.
-      // Try emplace the entry first. If an entry with the same key already
-      // exists, set the value to 'std::min(existing-value, new-value)' to make
-      // sure a definition takes precedence over a declaration.
-      auto [Iter, Inserted] = ImportList[Summary->modulePath()].try_emplace(
-          GUID, Summary->importType());
-
-      if (!Inserted)
-        Iter->second = std::min(Iter->second, Summary->importType());
+      ImportList.addGUID(Summary->modulePath(), GUID, Summary->importType());
     }
   }
   return true;

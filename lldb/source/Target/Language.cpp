@@ -257,7 +257,7 @@ static uint32_t num_languages =
 LanguageType Language::GetLanguageTypeFromString(llvm::StringRef string) {
   for (const auto &L : language_names) {
     if (string.equals_insensitive(L.name))
-      return static_cast<LanguageType>(L.type);
+      return L.type;
   }
 
   return eLanguageTypeUnknown;
@@ -510,7 +510,7 @@ bool Language::IsNilReference(ValueObject &valobj) { return false; }
 
 bool Language::IsUninitializedReference(ValueObject &valobj) { return false; }
 
-bool Language::GetFunctionDisplayName(const SymbolContext *sc,
+bool Language::GetFunctionDisplayName(const SymbolContext &sc,
                                       const ExecutionContext *exe_ctx,
                                       FunctionNameRepresentation representation,
                                       Stream &s) {
@@ -528,6 +528,14 @@ void Language::GetDefaultExceptionResolverDescription(bool catch_on,
   s.Printf("Exception breakpoint (catch: %s throw: %s)",
            catch_on ? "on" : "off", throw_on ? "on" : "off");
 }
+
+std::optional<bool> Language::GetBooleanFromString(llvm::StringRef str) const {
+  return llvm::StringSwitch<std::optional<bool>>(str)
+      .Case("true", {true})
+      .Case("false", {false})
+      .Default({});
+}
+
 // Constructor
 Language::Language() = default;
 

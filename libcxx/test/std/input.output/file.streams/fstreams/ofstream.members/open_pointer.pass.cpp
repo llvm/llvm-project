@@ -13,6 +13,9 @@
 
 // void open(const char* s, ios_base::openmode mode = ios_base::out);
 
+// In C++23 and later, this test requires support for P2467R1 in the dylib (a3f17ba3febbd546f2342ffc780ac93b694fdc8d)
+// XFAIL: (!c++03 && !c++11 && !c++14 && !c++17 && !c++20) && using-built-library-before-llvm-18
+
 // XFAIL: LIBCXX-AIX-FIXME
 
 #include <fstream>

@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,immediate %s
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-late-parse-attributes -verify=expected,late %s
 
 #define __counted_by_or_null(f)  __attribute__((counted_by_or_null(f)))
 
@@ -82,7 +83,9 @@ struct found_outside_of_struct {
 
 struct self_referrential {
   int bork;
-  struct bar *self[] __counted_by_or_null(self); // expected-error {{use of undeclared identifier 'self'}}
+  // immediate-error@+2{{use of undeclared identifier 'self'}}
+  // late-error@+1{{'counted_by_or_null' only applies to pointers; did you mean to use 'counted_by'?}}
+  struct bar *self[] __counted_by_or_null(self);
 };
 
 struct non_int_count {
@@ -115,12 +118,12 @@ struct annotated_with_anon_struct {
 struct count_unknown;
 struct on_member_ptr_incomplete_ty_ty_pos {
   int count;
-  struct count_unknown * ptr __counted_by_or_null(count); // expected-error {{'counted_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'struct count_unknown' is an incomplete type}}
+  struct count_unknown * ptr __counted_by_or_null(count); // ok
 };
 
 struct on_member_ptr_incomplete_const_ty_ty_pos {
   int count;
-  const struct count_unknown * ptr __counted_by_or_null(count); // expected-error {{'counted_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'const struct count_unknown' is an incomplete type}}
+  const struct count_unknown * ptr __counted_by_or_null(count); // ok
 };
 
 struct on_member_ptr_void_ty_ty_pos {

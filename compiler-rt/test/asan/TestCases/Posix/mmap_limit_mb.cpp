@@ -1,5 +1,8 @@
 // Test the mmap_limit_mb flag.
 //
+// Unstable on watchOS devices under memory pressure.
+// UNSUPPORTED: watchos
+//
 // RUN: %clangxx_asan -O2 %s -o %t
 // RUN: %run %t 20 16
 // RUN: %run %t 30 1000000

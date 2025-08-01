@@ -22,7 +22,7 @@ class UseRangesCheck : public utils::UseRangesCheck {
 public:
   UseRangesCheck(StringRef Name, ClangTidyContext *Context);
 
-  void storeOptions(ClangTidyOptions::OptionMap &Options) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
   ReplacerMap getReplacerMap() const override;
 
@@ -36,6 +36,7 @@ public:
 
 private:
   bool IncludeBoostSystem;
+  bool UseReversePipe;
 };
 
 } // namespace clang::tidy::boost

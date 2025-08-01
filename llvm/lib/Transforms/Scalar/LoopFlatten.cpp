@@ -978,10 +978,10 @@ static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     assert(match(Br->getCondition(), m_Zero()) &&
            "Expected branch condition to be false");
     IRBuilder<> Builder(Br);
-    Function *F = Intrinsic::getDeclaration(M, Intrinsic::umul_with_overflow,
-                                            FI.OuterTripCount->getType());
-    Value *Call = Builder.CreateCall(F, {FI.OuterTripCount, FI.InnerTripCount},
-                                     "flatten.mul");
+    Value *Call = Builder.CreateIntrinsic(
+        Intrinsic::umul_with_overflow, FI.OuterTripCount->getType(),
+        {FI.OuterTripCount, FI.InnerTripCount},
+        /*FMFSource=*/nullptr, "flatten.mul");
     FI.NewTripCount = Builder.CreateExtractValue(Call, 0, "flatten.tripcount");
     Value *Overflow = Builder.CreateExtractValue(Call, 1, "flatten.overflow");
     Br->setCondition(Overflow);
@@ -1009,7 +1009,8 @@ PreservedAnalyses LoopFlattenPass::run(LoopNest &LN, LoopAnalysisManager &LAM,
   // in simplified form, and also needs LCSSA. Running
   // this pass will simplify all loops that contain inner loops,
   // regardless of whether anything ends up being flattened.
-  LoopAccessInfoManager LAIM(AR.SE, AR.AA, AR.DT, AR.LI, &AR.TTI, nullptr);
+  LoopAccessInfoManager LAIM(AR.SE, AR.AA, AR.DT, AR.LI, &AR.TTI, nullptr,
+                             &AR.AC);
   for (Loop *InnerLoop : LN.getLoops()) {
     auto *OuterLoop = InnerLoop->getParentLoop();
     if (!OuterLoop)

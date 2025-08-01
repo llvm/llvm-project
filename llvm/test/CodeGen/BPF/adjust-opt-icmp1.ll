@@ -1,11 +1,11 @@
 ; RUN: opt -O2 -mtriple=bpf-pc-linux %s | llvm-dis > %t1
-; RUN: llc %t1 -o - | FileCheck -check-prefixes=CHECK %s
+; RUN: llc %t1 -mcpu=v1 -o - | FileCheck -check-prefixes=CHECK %s
 ; RUN: opt -passes='default<O2>' -mtriple=bpf-pc-linux %s | llvm-dis > %t1
-; RUN: llc %t1 -o - | FileCheck -check-prefixes=CHECK %s
+; RUN: llc %t1 -mcpu=v1 -o - | FileCheck -check-prefixes=CHECK %s
 ; RUN: opt -O2 -mtriple=bpf-pc-linux -bpf-disable-serialize-icmp %s | llvm-dis > %t1
-; RUN: llc %t1 -o - | FileCheck -check-prefixes=CHECK-DISABLE %s
+; RUN: llc %t1 -mcpu=v1 -o - | FileCheck -check-prefixes=CHECK-DISABLE %s
 ; RUN: opt -passes='default<O2>' -mtriple=bpf-pc-linux -bpf-disable-serialize-icmp %s | llvm-dis > %t1
-; RUN: llc %t1 -o - | FileCheck -check-prefixes=CHECK-DISABLE %s
+; RUN: llc %t1 -mcpu=v1 -o - | FileCheck -check-prefixes=CHECK-DISABLE %s
 ;
 ; Source:
 ;   int foo();

@@ -112,9 +112,18 @@ def MxRet   : SDNode<"M68kISD::RET", MxSDT_Ret,
 def MxTCRet : SDNode<"M68kISD::TC_RETURN", MxSDT_TCRet,
                      [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
 
+def MxGlobalBaseReg : SDNode<"M68kISD::GLOBAL_BASE_REG",
+                             SDTypeProfile<1, 0, [SDTCisVT<0, iPTR>]>>;
+
+// A wrapper node for TargetConstantPool,
+// TargetExternalSymbol, and TargetGlobalAddress.
 def MxWrapper   : SDNode<"M68kISD::Wrapper",   MxSDT_Wrapper>;
+
+// Special wrapper used under M68k PIC mode for PC
+// relative displacements.
 def MxWrapperPC : SDNode<"M68kISD::WrapperPC", MxSDT_Wrapper>;
 
+// Arithmetic operations with CCR results.
 def MxAdd  : SDNode<"M68kISD::ADD",  MxSDT_BiArithCCROut, [SDNPCommutative]>;
 def MxSub  : SDNode<"M68kISD::SUB",  MxSDT_BiArithCCROut>;
 def MxOr   : SDNode<"M68kISD::OR",   MxSDT_BiArithCCROut, [SDNPCommutative]>;
@@ -127,15 +136,37 @@ def MxSubX : SDNode<"M68kISD::SUBX", MxSDT_BiArithCCRInOut>;
 def MxSMul : SDNode<"M68kISD::SMUL", MxSDT_BiArithCCROut, [SDNPCommutative]>;
 def MxUMul : SDNode<"M68kISD::UMUL", MxSDT_BiArithCCROut, [SDNPCommutative]>;
 
+// M68k compare and logical compare instructions. Subtracts the source
+// operand from the destination data register and sets the condition
+// codes according to the result. Immediate always goes first.
 def MxCmp     : SDNode<"M68kISD::CMP", MxSDT_CmpTest>;
+
+// M68k bit-test instructions.
 def MxBtst    : SDNode<"M68kISD::BTST", MxSDT_CmpTest>;
 
+// M68k conditional moves. Operand 0 and operand 1 are the two values
+// to select from. Operand 2 is the condition code, and operand 3 is the
+// flag operand produced by a CMP or TEST instruction. It also writes a
+// flag result.
 def MxCmov    : SDNode<"M68kISD::CMOV",        MxSDT_Cmov>;
+
+// M68k conditional branches. Operand 0 is the chain operand, operand 1
+// is the block to branch if condition is true, operand 2 is the
+// condition code, and operand 3 is the flag operand produced by a CMP
+// or TEST instruction.
 def MxBrCond  : SDNode<"M68kISD::BRCOND",      MxSDT_BrCond, [SDNPHasChain]>;
+
+// M68k SetCC. Operand 0 is condition code, and operand 1 is the CCR
+// operand, usually produced by a CMP instruction.
 def MxSetCC   : SDNode<"M68kISD::SETCC",       MxSDT_SetCC>;
+
+// Same as SETCC except it's materialized with a subx and the value is all
+// one's or all zero's.
 def MxSetCC_C : SDNode<"M68kISD::SETCC_CARRY", MxSDT_SetCC_C>;
 
-
+// For allocating variable amounts of stack space when using
+// segmented stacks. Check if the current stacklet has enough space, and
+// falls back to heap allocation if not.
 def MxSegAlloca : SDNode<"M68kISD::SEG_ALLOCA", MxSDT_SEG_ALLOCA,
                          [SDNPHasChain]>;
 
@@ -407,10 +438,17 @@ def MxBrTarget32 : MxBrTargetOperand<32>;
 
 // Used with MOVEM
 def MxMoveMaskClass : MxOpClass<"MoveMask">;
-def MxMoveMask : MxOp<i16, MxSize16, "m"> {
+class MxMoveMaskOp : MxOp<i16, MxSize16, "m"> {
   let OperandType = "OPERAND_IMMEDIATE";
   let PrintMethod = "printMoveMask";
   let ParserMatchClass = MxMoveMaskClass;
+}
+
+def MxMoveMask : MxMoveMaskOp;
+// The encoding of mask is reversed when the memory operand has an addressing
+// mode of 'e', that is, pre-decrement.
+def MxInverseMoveMask : MxMoveMaskOp {
+  let EncoderMethod = "encodeInverseMoveMask";
 }
 
 //===----------------------------------------------------------------------===//
@@ -466,34 +504,28 @@ def MxCONDle  : PatLeaf<(i8 15)>; // Less or Equal
 
 // NOTE Though this CP is not strictly necessarily it will simplify instruciton
 // definitions
-def MxCP_ARI   : ComplexPattern<iPTR, 1, "SelectARI",
-                                [], [SDNPWantParent]>;
+let WantsParent = true in {
+  def MxCP_ARI   : ComplexPattern<iPTR, 1, "SelectARI">;
 
-def MxCP_ARIPI : ComplexPattern<iPTR, 1, "SelectARIPI",
-                                [], [SDNPWantParent]>;
+  def MxCP_ARIPI : ComplexPattern<iPTR, 1, "SelectARIPI">;
 
-def MxCP_ARIPD : ComplexPattern<iPTR, 1, "SelectARIPD",
-                                [], [SDNPWantParent]>;
+  def MxCP_ARIPD : ComplexPattern<iPTR, 1, "SelectARIPD">;
 
-def MxCP_ARID  : ComplexPattern<iPTR, 2, "SelectARID",
-                                [add, sub, mul, or, shl, frameindex],
-                                [SDNPWantParent]>;
+  def MxCP_ARID  : ComplexPattern<iPTR, 2, "SelectARID",
+                                  [add, sub, mul, or, shl, frameindex]>;
 
-def MxCP_ARII  : ComplexPattern<iPTR, 3, "SelectARII",
-                                [add, sub, mul, or, shl, frameindex],
-                                [SDNPWantParent]>;
+  def MxCP_ARII  : ComplexPattern<iPTR, 3, "SelectARII",
+                                  [add, sub, mul, or, shl, frameindex]>;
 
-def MxCP_AL    : ComplexPattern<iPTR, 1, "SelectAL",
-                                [add, sub, mul, or, shl],
-                                [SDNPWantParent]>;
+  def MxCP_AL    : ComplexPattern<iPTR, 1, "SelectAL",
+                                  [add, sub, mul, or, shl]>;
 
-def MxCP_PCD   : ComplexPattern<iPTR, 1, "SelectPCD",
-                                [add, sub, mul, or, shl],
-                                [SDNPWantParent]>;
+  def MxCP_PCD   : ComplexPattern<iPTR, 1, "SelectPCD",
+                                  [add, sub, mul, or, shl]>;
 
-def MxCP_PCI   : ComplexPattern<iPTR, 2, "SelectPCI",
-                                [add, sub, mul, or, shl], [SDNPWantParent]>;
-
+  def MxCP_PCI   : ComplexPattern<iPTR, 2, "SelectPCI",
+                                  [add, sub, mul, or, shl]>;
+}
 
 //===----------------------------------------------------------------------===//
 // Pattern Fragments

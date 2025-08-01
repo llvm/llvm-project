@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3  < %s | FileCheck %s -check-prefix=BALIGN
+; RUN: llc -mtriple=hexagon -O3 < %s | FileCheck %s -check-prefix=BALIGN
 ; BALIGN: .p2align{{.*}}5
 
 ; The test for checking the alignment of 'for.body4.for.body4_crit_edge' basic block

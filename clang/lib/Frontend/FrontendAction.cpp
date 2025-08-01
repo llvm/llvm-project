@@ -9,13 +9,18 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileEntry.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/Sarif.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Stack.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
@@ -35,6 +40,8 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -49,49 +56,234 @@ LLVM_INSTANTIATE_REGISTRY(FrontendPluginRegistry)
 
 namespace {
 
-class DelegatingDeserializationListener : public ASTDeserializationListener {
-  ASTDeserializationListener *Previous;
-  bool DeletePrevious;
-
+/// DeserializedDeclsLineRangePrinter dumps ranges of deserialized declarations
+/// to aid debugging and bug minimization. It implements ASTConsumer and
+/// ASTDeserializationListener, so that an object of
+/// DeserializedDeclsLineRangePrinter registers as its own listener. The
+/// ASTDeserializationListener interface provides the DeclRead callback that we
+/// use to collect the deserialized Decls. Note that printing or otherwise
+/// processing them as this point is dangerous, since that could trigger
+/// additional deserialization and crash compilation. Therefore, we process the
+/// collected Decls in HandleTranslationUnit method of ASTConsumer. This is a
+/// safe point, since we know that by this point all the Decls needed by the
+/// compiler frontend have been deserialized. In case our processing causes
+/// further deserialization, DeclRead from the listener might be called again.
+/// However, at that point we don't accept any more Decls for processing.
+class DeserializedDeclsSourceRangePrinter : public ASTConsumer,
+                                            ASTDeserializationListener {
 public:
-  explicit DelegatingDeserializationListener(
-      ASTDeserializationListener *Previous, bool DeletePrevious)
-      : Previous(Previous), DeletePrevious(DeletePrevious) {}
-  ~DelegatingDeserializationListener() override {
-    if (DeletePrevious)
-      delete Previous;
+  explicit DeserializedDeclsSourceRangePrinter(
+      SourceManager &SM, std::unique_ptr<llvm::raw_fd_ostream> OS)
+      : ASTDeserializationListener(), SM(SM), OS(std::move(OS)) {}
+
+  ASTDeserializationListener *GetASTDeserializationListener() override {
+    return this;
   }
 
-  DelegatingDeserializationListener(const DelegatingDeserializationListener &) =
-      delete;
-  DelegatingDeserializationListener &
-  operator=(const DelegatingDeserializationListener &) = delete;
-
-  void ReaderInitialized(ASTReader *Reader) override {
-    if (Previous)
-      Previous->ReaderInitialized(Reader);
-  }
-  void IdentifierRead(serialization::IdentifierID ID,
-                      IdentifierInfo *II) override {
-    if (Previous)
-      Previous->IdentifierRead(ID, II);
-  }
-  void TypeRead(serialization::TypeIdx Idx, QualType T) override {
-    if (Previous)
-      Previous->TypeRead(Idx, T);
-  }
   void DeclRead(GlobalDeclID ID, const Decl *D) override {
-    if (Previous)
-      Previous->DeclRead(ID, D);
+    if (!IsCollectingDecls)
+      return;
+    if (!D || isa<TranslationUnitDecl>(D) || isa<LinkageSpecDecl>(D) ||
+        isa<NamespaceDecl>(D)) {
+      // These decls cover a lot of nested declarations that might not be used,
+      // reducing the granularity and making the output less useful.
+      return;
+    }
+    auto *DC = D->getLexicalDeclContext();
+    if (!DC || !DC->isFileContext()) {
+      // We choose to work at namespace level to reduce complexity and the
+      // number of cases we care about.
+      return;
+    }
+
+    PendingDecls.push_back(D);
+    if (auto *NS = dyn_cast<NamespaceDecl>(DC)) {
+      // Add any namespaces we have not seen before.
+      // Note that we filter out namespaces from DeclRead as it includes too
+      // all redeclarations and we only want the ones that had other used
+      // declarations.
+      while (NS && ProcessedNamespaces.insert(NS).second) {
+        PendingDecls.push_back(NS);
+
+        NS = dyn_cast<NamespaceDecl>(NS->getLexicalParent());
+      }
+    }
   }
-  void SelectorRead(serialization::SelectorID ID, Selector Sel) override {
-    if (Previous)
-      Previous->SelectorRead(ID, Sel);
+
+  struct Position {
+    unsigned Line;
+    unsigned Column;
+
+    bool operator<(const Position &other) const {
+      return std::tie(Line, Column) < std::tie(other.Line, other.Column);
+    }
+
+    static Position GetBeginSpelling(const SourceManager &SM,
+                                     const CharSourceRange &R) {
+      SourceLocation Begin = R.getBegin();
+      return {SM.getSpellingLineNumber(Begin),
+              SM.getSpellingColumnNumber(Begin)};
+    }
+
+    static Position GetEndSpelling(const SourceManager &SM,
+                                   const CharSourceRange &Range,
+                                   const LangOptions &LangOpts) {
+      // For token ranges, compute end location for end character of the range.
+      CharSourceRange R = Lexer::getAsCharRange(Range, SM, LangOpts);
+      SourceLocation End = R.getEnd();
+      // Relex the token past the end location of the last token in the source
+      // range. If it's a semicolon, advance the location by one token.
+      Token PossiblySemi;
+      Lexer::getRawToken(End, PossiblySemi, SM, LangOpts, true);
+      if (PossiblySemi.is(tok::semi))
+        End = End.getLocWithOffset(1);
+      // Column number of the returned end position is exclusive.
+      return {SM.getSpellingLineNumber(End), SM.getSpellingColumnNumber(End)};
+    }
+  };
+
+  struct RequiredRanges {
+    StringRef Filename;
+    std::vector<std::pair<Position, Position>> FromTo;
+  };
+  void HandleTranslationUnit(ASTContext &Context) override {
+    assert(IsCollectingDecls && "HandleTranslationUnit called twice?");
+    IsCollectingDecls = false;
+
+    // Merge ranges in each of the files.
+    struct FileData {
+      std::vector<std::pair<Position, Position>> FromTo;
+      OptionalFileEntryRef Ref;
+    };
+    llvm::DenseMap<const FileEntry *, FileData> FileToRanges;
+
+    for (const Decl *D : PendingDecls) {
+      for (CharSourceRange R : getRangesToMark(D)) {
+        if (!R.isValid())
+          continue;
+
+        auto *F = SM.getFileEntryForID(SM.getFileID(R.getBegin()));
+        if (F != SM.getFileEntryForID(SM.getFileID(R.getEnd()))) {
+          // Such cases are rare and difficult to handle.
+          continue;
+        }
+
+        auto &Data = FileToRanges[F];
+        if (!Data.Ref)
+          Data.Ref = SM.getFileEntryRefForID(SM.getFileID(R.getBegin()));
+        Data.FromTo.push_back(
+            {Position::GetBeginSpelling(SM, R),
+             Position::GetEndSpelling(SM, R, D->getLangOpts())});
+      }
+    }
+
+    // To simplify output, merge consecutive and intersecting ranges.
+    std::vector<RequiredRanges> Result;
+    for (auto &[F, Data] : FileToRanges) {
+      auto &FromTo = Data.FromTo;
+      assert(!FromTo.empty());
+
+      if (!Data.Ref)
+        continue;
+
+      llvm::sort(FromTo);
+
+      std::vector<std::pair<Position, Position>> MergedRanges;
+      MergedRanges.push_back(FromTo.front());
+      for (auto It = FromTo.begin() + 1; It < FromTo.end(); ++It) {
+        if (MergedRanges.back().second < It->first) {
+          MergedRanges.push_back(*It);
+          continue;
+        }
+        if (MergedRanges.back().second < It->second)
+          MergedRanges.back().second = It->second;
+      }
+      Result.push_back({Data.Ref->getName(), std::move(MergedRanges)});
+    }
+    printJson(Result);
   }
-  void MacroDefinitionRead(serialization::PreprocessedEntityID PPID,
-                           MacroDefinitionRecord *MD) override {
-    if (Previous)
-      Previous->MacroDefinitionRead(PPID, MD);
+
+private:
+  std::vector<const Decl *> PendingDecls;
+  llvm::SmallPtrSet<const NamespaceDecl *, 0> ProcessedNamespaces;
+  bool IsCollectingDecls = true;
+  const SourceManager &SM;
+  std::unique_ptr<llvm::raw_ostream> OS;
+
+  llvm::SmallVector<CharSourceRange, 2> getRangesToMark(const Decl *D) {
+    auto *NS = dyn_cast<NamespaceDecl>(D);
+    if (!NS)
+      return {SM.getExpansionRange(D->getSourceRange())};
+
+    SourceLocation LBraceLoc;
+    if (NS->isAnonymousNamespace()) {
+      LBraceLoc = NS->getLocation();
+    } else {
+      // Start with the location of the identifier.
+      SourceLocation TokenBeforeLBrace = NS->getLocation();
+      if (NS->hasAttrs()) {
+        for (auto *A : NS->getAttrs()) {
+          // But attributes may go after it.
+          if (SM.isBeforeInTranslationUnit(TokenBeforeLBrace,
+                                           A->getRange().getEnd())) {
+            // Give up, the attributes are often coming from macros and we
+            // cannot skip them reliably.
+            return {};
+          }
+        }
+      }
+      auto &LangOpts = D->getLangOpts();
+      // Now skip one token, the next should be the lbrace.
+      Token Tok;
+      if (Lexer::getRawToken(TokenBeforeLBrace, Tok, SM, LangOpts, true) ||
+          Lexer::getRawToken(Tok.getEndLoc(), Tok, SM, LangOpts, true) ||
+          Tok.getKind() != tok::l_brace) {
+        // On error or if we did not find the token we expected, avoid marking
+        // everything inside the namespace as used.
+        return {};
+      }
+      LBraceLoc = Tok.getLocation();
+    }
+    return {SM.getExpansionRange(SourceRange(NS->getBeginLoc(), LBraceLoc)),
+            SM.getExpansionRange(NS->getRBraceLoc())};
+  }
+
+  void printJson(llvm::ArrayRef<RequiredRanges> Result) {
+    *OS << "{\n";
+    *OS << R"(  "required_ranges": [)" << "\n";
+    for (size_t I = 0; I < Result.size(); ++I) {
+      auto &F = Result[I].Filename;
+      auto &MergedRanges = Result[I].FromTo;
+      *OS << R"(    {)" << "\n";
+      *OS << R"(      "file": ")" << F << "\"," << "\n";
+      *OS << R"(      "range": [)" << "\n";
+      for (size_t J = 0; J < MergedRanges.size(); ++J) {
+        auto &From = MergedRanges[J].first;
+        auto &To = MergedRanges[J].second;
+        *OS << R"(        {)" << "\n";
+        *OS << R"(          "from": {)" << "\n";
+        *OS << R"(            "line": )" << From.Line << ",\n";
+        *OS << R"(            "column": )" << From.Column << "\n"
+            << R"(          },)" << "\n";
+        *OS << R"(          "to": {)" << "\n";
+        *OS << R"(            "line": )" << To.Line << ",\n";
+        *OS << R"(            "column": )" << To.Column << "\n"
+            << R"(          })" << "\n";
+        *OS << R"(        })";
+        if (J < MergedRanges.size() - 1) {
+          *OS << ",";
+        }
+        *OS << "\n";
+      }
+      *OS << "      ]" << "\n" << "    }";
+      if (I < Result.size() - 1)
+        *OS << ",";
+      *OS << "\n";
+    }
+    *OS << "  ]\n";
+    *OS << "}\n";
+
+    OS->flush();
   }
 };
 
@@ -167,6 +359,25 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
   if (!Consumer)
     return nullptr;
 
+  std::vector<std::unique_ptr<ASTConsumer>> Consumers;
+  llvm::StringRef DumpDeserializedDeclarationRangesPath =
+      CI.getFrontendOpts().DumpMinimizationHintsPath;
+  if (!DumpDeserializedDeclarationRangesPath.empty()) {
+    std::error_code ErrorCode;
+    auto FileStream = std::make_unique<llvm::raw_fd_ostream>(
+        DumpDeserializedDeclarationRangesPath, ErrorCode,
+        llvm::sys::fs::OF_TextWithCRLF);
+    if (!ErrorCode) {
+      Consumers.push_back(std::make_unique<DeserializedDeclsSourceRangePrinter>(
+          CI.getSourceManager(), std::move(FileStream)));
+    } else {
+      llvm::errs() << "Failed to create output file for "
+                      "-dump-minimization-hints flag, file path: "
+                   << DumpDeserializedDeclarationRangesPath
+                   << ", error: " << ErrorCode.message() << "\n";
+    }
+  }
+
   // Validate -add-plugin args.
   bool FoundAllPlugins = true;
   for (const std::string &Arg : CI.getFrontendOpts().AddPluginActions) {
@@ -184,17 +395,12 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
   if (!FoundAllPlugins)
     return nullptr;
 
-  // If there are no registered plugins we don't need to wrap the consumer
-  if (FrontendPluginRegistry::begin() == FrontendPluginRegistry::end())
-    return Consumer;
-
   // If this is a code completion run, avoid invoking the plugin consumers
   if (CI.hasCodeCompletionConsumer())
     return Consumer;
 
   // Collect the list of plugins that go before the main action (in Consumers)
   // or after it (in AfterConsumers)
-  std::vector<std::unique_ptr<ASTConsumer>> Consumers;
   std::vector<std::unique_ptr<ASTConsumer>> AfterConsumers;
   for (const FrontendPluginRegistry::entry &Plugin :
        FrontendPluginRegistry::entries()) {
@@ -237,6 +443,9 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
       Consumers.push_back(std::move(C));
   }
 
+  assert(Consumers.size() >= 1 && "should have added the main consumer");
+  if (Consumers.size() == 1)
+    return std::move(Consumers.front());
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
 
@@ -358,7 +567,7 @@ static std::error_code collectModuleHeaderIncludes(
 
   // Add includes for each of these headers.
   for (auto HK : {Module::HK_Normal, Module::HK_Private}) {
-    for (Module::Header &H : Module->Headers[HK]) {
+    for (const Module::Header &H : Module->getHeaders(HK)) {
       Module->addTopHeader(H.Entry);
       // Use the path as specified in the module map file. We'll look for this
       // file relative to the module build directory (the directory containing
@@ -466,8 +675,8 @@ static bool loadModuleMapForModuleBuild(CompilerInstance &CI, bool IsSystem,
   }
 
   // Load the module map file.
-  if (HS.loadModuleMapFile(*ModuleMap, IsSystem, ModuleMapID, &Offset,
-                           PresumedModuleMapFile))
+  if (HS.parseAndLoadModuleMapFile(*ModuleMap, IsSystem, ModuleMapID, &Offset,
+                                   PresumedModuleMapFile))
     return true;
 
   if (SrcMgr.getBufferOrFake(ModuleMapID).getBufferSize() == Offset)
@@ -534,7 +743,6 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
     }
     if (*OriginalModuleMap != CI.getSourceManager().getFileEntryRefForID(
                                   CI.getSourceManager().getMainFileID())) {
-      M->IsInferred = true;
       auto FileCharacter =
           M->IsSystem ? SrcMgr::C_System_ModuleMap : SrcMgr::C_User_ModuleMap;
       FileID OriginalModuleMapFID = CI.getSourceManager().getOrCreateFileID(
@@ -613,21 +821,19 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // If we're replaying the build of an AST file, import it and set up
   // the initial state from its build.
   if (ReplayASTFile) {
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags(&CI.getDiagnostics());
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags = CI.getDiagnosticsPtr();
 
     // The AST unit populates its own diagnostics engine rather than ours.
-    IntrusiveRefCntPtr<DiagnosticsEngine> ASTDiags(
-        new DiagnosticsEngine(Diags->getDiagnosticIDs(),
-                              &Diags->getDiagnosticOptions()));
+    auto ASTDiags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(
+        Diags->getDiagnosticIDs(), Diags->getDiagnosticOptions());
     ASTDiags->setClient(Diags->getClient(), /*OwnsClient*/false);
 
     // FIXME: What if the input is a memory buffer?
     StringRef InputFile = Input.getFile();
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
-        std::string(InputFile), CI.getPCHContainerReader(),
-        ASTUnit::LoadPreprocessorOnly, ASTDiags, CI.getFileSystemOpts(),
-        /*HeaderSearchOptions=*/nullptr);
+        InputFile, CI.getPCHContainerReader(), ASTUnit::LoadPreprocessorOnly,
+        nullptr, ASTDiags, CI.getFileSystemOpts(), CI.getHeaderSearchOpts());
     if (!AST)
       return false;
 
@@ -687,15 +893,15 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     assert(hasASTFileSupport() &&
            "This action does not have AST file support!");
 
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags(&CI.getDiagnostics());
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags = CI.getDiagnosticsPtr();
 
     // FIXME: What if the input is a memory buffer?
     StringRef InputFile = Input.getFile();
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
-        std::string(InputFile), CI.getPCHContainerReader(),
-        ASTUnit::LoadEverything, Diags, CI.getFileSystemOpts(),
-        CI.getHeaderSearchOptsPtr(), CI.getLangOptsPtr());
+        InputFile, CI.getPCHContainerReader(), ASTUnit::LoadEverything, nullptr,
+        Diags, CI.getFileSystemOpts(), CI.getHeaderSearchOpts(),
+        &CI.getLangOpts());
 
     if (!AST)
       return false;
@@ -799,8 +1005,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         if (ASTReader::isAcceptableASTFile(
                 Dir->path(), FileMgr, CI.getModuleCache(),
                 CI.getPCHContainerReader(), CI.getLangOpts(),
-                CI.getTargetOpts(), CI.getPreprocessorOpts(),
-                SpecificModuleCachePath, /*RequireStrictOptionMatches=*/true)) {
+                CI.getCodeGenOpts(), CI.getTargetOpts(),
+                CI.getPreprocessorOpts(), SpecificModuleCachePath,
+                /*RequireStrictOptionMatches=*/true)) {
           PPOpts.ImplicitPCHInclude = std::string(Dir->path());
           Found = true;
           break;
@@ -925,8 +1132,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // If we were asked to load any module map files, do so now.
   for (const auto &Filename : CI.getFrontendOpts().ModuleMapFiles) {
     if (auto File = CI.getFileManager().getOptionalFileRef(Filename))
-      CI.getPreprocessor().getHeaderSearchInfo().loadModuleMapFile(
-          *File, /*IsSystem*/false);
+      CI.getPreprocessor().getHeaderSearchInfo().parseAndLoadModuleMapFile(
+          *File, /*IsSystem*/ false);
     else
       CI.getDiagnostics().Report(diag::err_module_map_not_found) << Filename;
   }
@@ -1070,12 +1277,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
 llvm::Error FrontendAction::Execute() {
   CompilerInstance &CI = getCompilerInstance();
-
-  if (CI.hasFrontendTimer()) {
-    llvm::TimeRegion Timer(CI.getFrontendTimer());
-    ExecuteAction();
-  }
-  else ExecuteAction();
+  ExecuteAction();
 
   // If we are supposed to rebuild the global module index, do so now unless
   // there were any module-build failures.
@@ -1100,12 +1302,14 @@ llvm::Error FrontendAction::Execute() {
 void FrontendAction::EndSourceFile() {
   CompilerInstance &CI = getCompilerInstance();
 
-  // Inform the diagnostic client we are done with this source file.
-  CI.getDiagnosticClient().EndSourceFile();
-
   // Inform the preprocessor we are done.
   if (CI.hasPreprocessor())
     CI.getPreprocessor().EndSourceFile();
+
+  // Inform the diagnostic client we are done with this source file.
+  // Do this after notifying the preprocessor, so that end-of-file preprocessor
+  // callbacks can report diagnostics.
+  CI.getDiagnosticClient().EndSourceFile();
 
   // Finalize the action.
   EndSourceFileAction();
@@ -1126,10 +1330,14 @@ void FrontendAction::EndSourceFile() {
 
   if (CI.getFrontendOpts().ShowStats) {
     llvm::errs() << "\nSTATISTICS FOR '" << getCurrentFileOrBufferName() << "':\n";
-    CI.getPreprocessor().PrintStats();
-    CI.getPreprocessor().getIdentifierTable().PrintStats();
-    CI.getPreprocessor().getHeaderSearchInfo().PrintStats();
-    CI.getSourceManager().PrintStats();
+    if (CI.hasPreprocessor()) {
+      CI.getPreprocessor().PrintStats();
+      CI.getPreprocessor().getIdentifierTable().PrintStats();
+      CI.getPreprocessor().getHeaderSearchInfo().PrintStats();
+    }
+    if (CI.hasSourceManager()) {
+      CI.getSourceManager().PrintStats();
+    }
     llvm::errs() << "\n";
   }
 

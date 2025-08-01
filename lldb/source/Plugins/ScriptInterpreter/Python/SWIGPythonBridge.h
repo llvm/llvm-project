@@ -81,12 +81,15 @@ private:
 class SWIGBridge {
 public:
   static PythonObject ToSWIGWrapper(std::unique_ptr<lldb::SBValue> value_sb);
+  static PythonObject
+  ToSWIGWrapper(std::unique_ptr<lldb::SBCommandReturnObject> result_up);
   static PythonObject ToSWIGWrapper(lldb::ValueObjectSP value_sp);
   static PythonObject ToSWIGWrapper(lldb::TargetSP target_sp);
   static PythonObject ToSWIGWrapper(lldb::ProcessSP process_sp);
+  static PythonObject ToSWIGWrapper(lldb::ModuleSP module_sp);
   static PythonObject ToSWIGWrapper(lldb::ThreadPlanSP thread_plan_sp);
   static PythonObject ToSWIGWrapper(lldb::BreakpointSP breakpoint_sp);
-  static PythonObject ToSWIGWrapper(const Status &status);
+  static PythonObject ToSWIGWrapper(Status &&status);
   static PythonObject ToSWIGWrapper(const StructuredDataImpl &data_impl);
   static PythonObject ToSWIGWrapper(lldb::ThreadSP thread_sp);
   static PythonObject ToSWIGWrapper(lldb::StackFrameSP frame_sp);
@@ -148,25 +151,6 @@ public:
                                     const char *session_dictionary_name,
                                     lldb::DebuggerSP debugger_sp);
 
-  static python::PythonObject LLDBSwigPythonCreateScriptedBreakpointResolver(
-      const char *python_class_name, const char *session_dictionary_name,
-      const StructuredDataImpl &args, const lldb::BreakpointSP &bkpt_sp);
-
-  static unsigned int
-  LLDBSwigPythonCallBreakpointResolver(void *implementor,
-                                       const char *method_name,
-                                       lldb_private::SymbolContext *sym_ctx);
-
-  static python::PythonObject LLDBSwigPythonCreateScriptedStopHook(
-      lldb::TargetSP target_sp, const char *python_class_name,
-      const char *session_dictionary_name, const StructuredDataImpl &args,
-      lldb_private::Status &error);
-
-  static bool
-  LLDBSwigPythonStopHookCallHandleStop(void *implementor,
-                                       lldb::ExecutionContextRefSP exc_ctx,
-                                       lldb::StreamSP stream);
-
   static size_t LLDBSwigPython_CalculateNumChildren(PyObject *implementor,
                                                     uint32_t max);
 
@@ -199,20 +183,33 @@ public:
                                   lldb::DebuggerSP debugger, const char *args,
                                   lldb_private::CommandReturnObject &cmd_retobj,
                                   lldb::ExecutionContextRefSP exe_ctx_ref_sp);
-  static bool
-  LLDBSwigPythonCallParsedCommandObject(PyObject *implementor,
-                                  lldb::DebuggerSP debugger,  
-                                  StructuredDataImpl &args_impl,
-                                  lldb_private::CommandReturnObject &cmd_retobj,
-                                  lldb::ExecutionContextRefSP exe_ctx_ref_sp);
+  static bool LLDBSwigPythonCallParsedCommandObject(
+      PyObject *implementor, lldb::DebuggerSP debugger,
+      StructuredDataImpl &args_impl,
+      lldb_private::CommandReturnObject &cmd_retobj,
+      lldb::ExecutionContextRefSP exe_ctx_ref_sp);
 
   static std::optional<std::string>
   LLDBSwigPythonGetRepeatCommandForScriptedCommand(PyObject *implementor,
                                                    std::string &command);
 
+  static StructuredData::DictionarySP
+  LLDBSwigPythonHandleArgumentCompletionForScriptedCommand(
+      PyObject *implementor, std::vector<llvm::StringRef> &args_impl,
+      size_t args_pos, size_t pos_in_arg);
+
+  static StructuredData::DictionarySP
+  LLDBSwigPythonHandleOptionArgumentCompletionForScriptedCommand(
+      PyObject *implementor, llvm::StringRef &long_option, size_t pos_in_arg);
+
   static bool LLDBSwigPythonCallModuleInit(const char *python_module_name,
                                            const char *session_dictionary_name,
                                            lldb::DebuggerSP debugger);
+
+  static bool
+  LLDBSwigPythonCallModuleNewTarget(const char *python_module_name,
+                                    const char *session_dictionary_name,
+                                    lldb::TargetSP target);
 
   static python::PythonObject
   LLDBSWIGPythonCreateOSPlugin(const char *python_class_name,
@@ -225,6 +222,9 @@ public:
 
   static PyObject *
   LLDBSwigPython_GetRecognizedArguments(PyObject *implementor,
+                                        const lldb::StackFrameSP &frame_sp);
+
+  static bool LLDBSwigPython_ShouldHide(PyObject *implementor,
                                         const lldb::StackFrameSP &frame_sp);
 
   static bool LLDBSWIGPythonRunScriptKeywordProcess(
@@ -261,8 +261,10 @@ void *LLDBSWIGPython_CastPyObjectToSBLaunchInfo(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBError(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBEvent(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBStream(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBSymbolContext(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBValue(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBExecutionContext(PyObject *data);
 } // namespace python
 
 } // namespace lldb_private

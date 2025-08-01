@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=simple-loop-unswitch -verify-memoryssa < %s | FileCheck %s
+; RUN: opt -S -passes="loop-mssa(simple-loop-unswitch)" -verify-memoryssa < %s | FileCheck %s
 target triple = "x86_64-pc-win32"
 
 define void @f(i32 %doit, i1 %x, i1 %y) personality ptr @__CxxFrameHandler3 {

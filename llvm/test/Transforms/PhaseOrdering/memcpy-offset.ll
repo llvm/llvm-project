@@ -10,7 +10,7 @@ define void @memcpy_forward_back_with_offset(ptr %arg) {
 ; CUSTOM-NEXT:    ret void
 ;
 ; O2-LABEL: define void @memcpy_forward_back_with_offset(
-; O2-SAME: ptr nocapture writeonly [[ARG:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; O2-SAME: ptr writeonly captures(none) initializes((0, 1)) [[ARG:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; O2-NEXT:    store i8 1, ptr [[ARG]], align 1
 ; O2-NEXT:    ret void
 ;

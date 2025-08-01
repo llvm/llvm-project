@@ -1,11 +1,11 @@
 // RUN: %clangxx_hwasan -O2 %s -o %t -DTEST=basic_hook_works && not %run %t \
-// RUN:   |& FileCheck %s -check-prefix=CHECK-BASIC
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-BASIC
 // RUN: %clangxx_hwasan -O2 %s -o %t -DTEST=ignore && %run %t \
-// RUN:   |& FileCheck %s -check-prefix=CHECK-IGNORE
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-IGNORE
 // RUN: %clangxx_hwasan -O2 %s -o %t -DTEST=ignore_twice && not %run %t \
-// RUN:   |& FileCheck %s -check-prefix=CHECK-IGNORE-2
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-IGNORE-2
 // RUN: %clangxx_hwasan -O2 %s -o %t -DTEST=double_delete && not %run %t \
-// RUN:   |& FileCheck %s -check-prefix=CHECK-DOUBLE-DELETE
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-DOUBLE-DELETE
 
 #include <sanitizer/hwasan_interface.h>
 #include <stdio.h>

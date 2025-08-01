@@ -19,7 +19,6 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Casting.h"
 #include <cassert>
 #include <optional>
 
@@ -34,9 +33,9 @@ void AbstractSparseLattice::onUpdate(DataFlowSolver *solver) const {
   AnalysisState::onUpdate(solver);
 
   // Push all users of the value to the queue.
-  for (Operation *user : point.get<Value>().getUsers())
+  for (Operation *user : cast<Value>(anchor).getUsers())
     for (DataFlowAnalysis *analysis : useDefSubscribers)
-      solver->enqueue({user, analysis});
+      solver->enqueue({solver->getProgramPointAfter(user), analysis});
 }
 
 //===----------------------------------------------------------------------===//
@@ -46,7 +45,7 @@ void AbstractSparseLattice::onUpdate(DataFlowSolver *solver) const {
 AbstractSparseForwardDataFlowAnalysis::AbstractSparseForwardDataFlowAnalysis(
     DataFlowSolver &solver)
     : DataFlowAnalysis(solver) {
-  registerPointKind<CFGEdge>();
+  registerAnchorKind<CFGEdge>();
 }
 
 LogicalResult
@@ -67,10 +66,13 @@ LogicalResult
 AbstractSparseForwardDataFlowAnalysis::initializeRecursively(Operation *op) {
   // Initialize the analysis by visiting every owner of an SSA value (all
   // operations and blocks).
-  visitOperation(op);
+  if (failed(visitOperation(op)))
+    return failure();
+
   for (Region &region : op->getRegions()) {
     for (Block &block : region) {
-      getOrCreate<Executable>(&block)->blockContentSubscribe(this);
+      getOrCreate<Executable>(getProgramPointBefore(&block))
+          ->blockContentSubscribe(this);
       visitBlock(&block);
       for (Operation &op : block)
         if (failed(initializeRecursively(&op)))
@@ -81,24 +83,24 @@ AbstractSparseForwardDataFlowAnalysis::initializeRecursively(Operation *op) {
   return success();
 }
 
-LogicalResult AbstractSparseForwardDataFlowAnalysis::visit(ProgramPoint point) {
-  if (Operation *op = llvm::dyn_cast_if_present<Operation *>(point))
-    visitOperation(op);
-  else if (Block *block = llvm::dyn_cast_if_present<Block *>(point))
-    visitBlock(block);
-  else
-    return failure();
+LogicalResult
+AbstractSparseForwardDataFlowAnalysis::visit(ProgramPoint *point) {
+  if (!point->isBlockStart())
+    return visitOperation(point->getPrevOp());
+  visitBlock(point->getBlock());
   return success();
 }
 
-void AbstractSparseForwardDataFlowAnalysis::visitOperation(Operation *op) {
+LogicalResult
+AbstractSparseForwardDataFlowAnalysis::visitOperation(Operation *op) {
   // Exit early on operations with no results.
   if (op->getNumResults() == 0)
-    return;
+    return success();
 
   // If the containing block is not executable, bail out.
-  if (!getOrCreate<Executable>(op->getBlock())->isLive())
-    return;
+  if (op->getBlock() != nullptr &&
+      !getOrCreate<Executable>(getProgramPointBefore(op->getBlock()))->isLive())
+    return success();
 
   // Get the result lattices.
   SmallVector<AbstractSparseLattice *> resultLattices;
@@ -110,9 +112,10 @@ void AbstractSparseForwardDataFlowAnalysis::visitOperation(Operation *op) {
 
   // The results of a region branch operation are determined by control-flow.
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
-    return visitRegionSuccessors({branch}, branch,
-                                 /*successor=*/RegionBranchPoint::parent(),
-                                 resultLattices);
+    visitRegionSuccessors(getProgramPointAfter(branch), branch,
+                          /*successor=*/RegionBranchPoint::parent(),
+                          resultLattices);
+    return success();
   }
 
   // Grab the lattice elements of the operands.
@@ -124,31 +127,11 @@ void AbstractSparseForwardDataFlowAnalysis::visitOperation(Operation *op) {
     operandLattices.push_back(operandLattice);
   }
 
-  if (auto call = dyn_cast<CallOpInterface>(op)) {
-    // If the call operation is to an external function, attempt to infer the
-    // results from the call arguments.
-    auto callable =
-        dyn_cast_if_present<CallableOpInterface>(call.resolveCallable());
-    if (!getSolverConfig().isInterprocedural() ||
-        (callable && !callable.getCallableRegion())) {
-      return visitExternalCallImpl(call, operandLattices, resultLattices);
-    }
-
-    // Otherwise, the results of a call operation are determined by the
-    // callgraph.
-    const auto *predecessors = getOrCreateFor<PredecessorState>(op, call);
-    // If not all return sites are known, then conservatively assume we can't
-    // reason about the data-flow.
-    if (!predecessors->allPredecessorsKnown())
-      return setAllToEntryStates(resultLattices);
-    for (Operation *predecessor : predecessors->getKnownPredecessors())
-      for (auto it : llvm::zip(predecessor->getOperands(), resultLattices))
-        join(std::get<1>(it), *getLatticeElementFor(op, std::get<0>(it)));
-    return;
-  }
+  if (auto call = dyn_cast<CallOpInterface>(op))
+    return visitCallOperation(call, operandLattices, resultLattices);
 
   // Invoke the operation transfer function.
-  visitOperationImpl(op, operandLattices, resultLattices);
+  return visitOperationImpl(op, operandLattices, resultLattices);
 }
 
 void AbstractSparseForwardDataFlowAnalysis::visitBlock(Block *block) {
@@ -157,7 +140,7 @@ void AbstractSparseForwardDataFlowAnalysis::visitBlock(Block *block) {
     return;
 
   // If the block is not executable, bail out.
-  if (!getOrCreate<Executable>(block)->isLive())
+  if (!getOrCreate<Executable>(getProgramPointBefore(block))->isLive())
     return;
 
   // Get the argument lattices.
@@ -173,26 +156,13 @@ void AbstractSparseForwardDataFlowAnalysis::visitBlock(Block *block) {
   if (block->isEntryBlock()) {
     // Check if this block is the entry block of a callable region.
     auto callable = dyn_cast<CallableOpInterface>(block->getParentOp());
-    if (callable && callable.getCallableRegion() == block->getParent()) {
-      const auto *callsites = getOrCreateFor<PredecessorState>(block, callable);
-      // If not all callsites are known, conservatively mark all lattices as
-      // having reached their pessimistic fixpoints.
-      if (!callsites->allPredecessorsKnown() ||
-          !getSolverConfig().isInterprocedural()) {
-        return setAllToEntryStates(argLattices);
-      }
-      for (Operation *callsite : callsites->getKnownPredecessors()) {
-        auto call = cast<CallOpInterface>(callsite);
-        for (auto it : llvm::zip(call.getArgOperands(), argLattices))
-          join(std::get<1>(it), *getLatticeElementFor(block, std::get<0>(it)));
-      }
-      return;
-    }
+    if (callable && callable.getCallableRegion() == block->getParent())
+      return visitCallableOperation(callable, argLattices);
 
     // Check if the lattices can be determined from region control flow.
     if (auto branch = dyn_cast<RegionBranchOpInterface>(block->getParentOp())) {
-      return visitRegionSuccessors(block, branch, block->getParent(),
-                                   argLattices);
+      return visitRegionSuccessors(getProgramPointBefore(block), branch,
+                                   block->getParent(), argLattices);
     }
 
     // Otherwise, we can't reason about the data-flow.
@@ -209,7 +179,7 @@ void AbstractSparseForwardDataFlowAnalysis::visitBlock(Block *block) {
     // If the edge from the predecessor block to the current block is not live,
     // bail out.
     auto *edgeExecutable =
-        getOrCreate<Executable>(getProgramPoint<CFGEdge>(predecessor, block));
+        getOrCreate<Executable>(getLatticeAnchor<CFGEdge>(predecessor, block));
     edgeExecutable->blockContentSubscribe(this);
     if (!edgeExecutable->isLive())
       continue;
@@ -221,7 +191,8 @@ void AbstractSparseForwardDataFlowAnalysis::visitBlock(Block *block) {
           branch.getSuccessorOperands(it.getSuccessorIndex());
       for (auto [idx, lattice] : llvm::enumerate(argLattices)) {
         if (Value operand = operands[idx]) {
-          join(lattice, *getLatticeElementFor(block, operand));
+          join(lattice,
+               *getLatticeElementFor(getProgramPointBefore(block), operand));
         } else {
           // Conservatively consider internally produced arguments as entry
           // points.
@@ -234,8 +205,61 @@ void AbstractSparseForwardDataFlowAnalysis::visitBlock(Block *block) {
   }
 }
 
+LogicalResult AbstractSparseForwardDataFlowAnalysis::visitCallOperation(
+    CallOpInterface call,
+    ArrayRef<const AbstractSparseLattice *> operandLattices,
+    ArrayRef<AbstractSparseLattice *> resultLattices) {
+  // If the call operation is to an external function, attempt to infer the
+  // results from the call arguments.
+  auto callable =
+      dyn_cast_if_present<CallableOpInterface>(call.resolveCallable());
+  if (!getSolverConfig().isInterprocedural() ||
+      (callable && !callable.getCallableRegion())) {
+    visitExternalCallImpl(call, operandLattices, resultLattices);
+    return success();
+  }
+
+  // Otherwise, the results of a call operation are determined by the
+  // callgraph.
+  const auto *predecessors = getOrCreateFor<PredecessorState>(
+      getProgramPointAfter(call), getProgramPointAfter(call));
+  // If not all return sites are known, then conservatively assume we can't
+  // reason about the data-flow.
+  if (!predecessors->allPredecessorsKnown()) {
+    setAllToEntryStates(resultLattices);
+    return success();
+  }
+  for (Operation *predecessor : predecessors->getKnownPredecessors())
+    for (auto &&[operand, resLattice] :
+         llvm::zip(predecessor->getOperands(), resultLattices))
+      join(resLattice,
+           *getLatticeElementFor(getProgramPointAfter(call), operand));
+  return success();
+}
+
+void AbstractSparseForwardDataFlowAnalysis::visitCallableOperation(
+    CallableOpInterface callable,
+    ArrayRef<AbstractSparseLattice *> argLattices) {
+  Block *entryBlock = &callable.getCallableRegion()->front();
+  const auto *callsites = getOrCreateFor<PredecessorState>(
+      getProgramPointBefore(entryBlock), getProgramPointAfter(callable));
+  // If not all callsites are known, conservatively mark all lattices as
+  // having reached their pessimistic fixpoints.
+  if (!callsites->allPredecessorsKnown() ||
+      !getSolverConfig().isInterprocedural()) {
+    return setAllToEntryStates(argLattices);
+  }
+  for (Operation *callsite : callsites->getKnownPredecessors()) {
+    auto call = cast<CallOpInterface>(callsite);
+    for (auto it : llvm::zip(call.getArgOperands(), argLattices))
+      join(std::get<1>(it),
+           *getLatticeElementFor(getProgramPointBefore(entryBlock),
+                                 std::get<0>(it)));
+  }
+}
+
 void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
-    ProgramPoint point, RegionBranchOpInterface branch,
+    ProgramPoint *point, RegionBranchOpInterface branch,
     RegionBranchPoint successor, ArrayRef<AbstractSparseLattice *> lattices) {
   const auto *predecessors = getOrCreateFor<PredecessorState>(point, point);
   assert(predecessors->allPredecessorsKnown() &&
@@ -265,7 +289,7 @@ void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
 
     unsigned firstIndex = 0;
     if (inputs.size() != lattices.size()) {
-      if (llvm::dyn_cast_if_present<Operation *>(point)) {
+      if (!point->isBlockStart()) {
         if (!inputs.empty())
           firstIndex = cast<OpResult>(inputs.front()).getResultNumber();
         visitNonControlFlowArgumentsImpl(
@@ -276,7 +300,7 @@ void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
       } else {
         if (!inputs.empty())
           firstIndex = cast<BlockArgument>(inputs.front()).getArgNumber();
-        Region *region = point.get<Block *>()->getParent();
+        Region *region = point->getBlock()->getParent();
         visitNonControlFlowArgumentsImpl(
             branch,
             RegionSuccessor(region, region->getArguments().slice(
@@ -291,7 +315,7 @@ void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
 }
 
 const AbstractSparseLattice *
-AbstractSparseForwardDataFlowAnalysis::getLatticeElementFor(ProgramPoint point,
+AbstractSparseForwardDataFlowAnalysis::getLatticeElementFor(ProgramPoint *point,
                                                             Value value) {
   AbstractSparseLattice *state = getLatticeElement(value);
   addDependency(state, point);
@@ -316,7 +340,7 @@ void AbstractSparseForwardDataFlowAnalysis::join(
 AbstractSparseBackwardDataFlowAnalysis::AbstractSparseBackwardDataFlowAnalysis(
     DataFlowSolver &solver, SymbolTableCollection &symbolTable)
     : DataFlowAnalysis(solver), symbolTable(symbolTable) {
-  registerPointKind<CFGEdge>();
+  registerAnchorKind<CFGEdge>();
 }
 
 LogicalResult
@@ -326,10 +350,13 @@ AbstractSparseBackwardDataFlowAnalysis::initialize(Operation *top) {
 
 LogicalResult
 AbstractSparseBackwardDataFlowAnalysis::initializeRecursively(Operation *op) {
-  visitOperation(op);
+  if (failed(visitOperation(op)))
+    return failure();
+
   for (Region &region : op->getRegions()) {
     for (Block &block : region) {
-      getOrCreate<Executable>(&block)->blockContentSubscribe(this);
+      getOrCreate<Executable>(getProgramPointBefore(&block))
+          ->blockContentSubscribe(this);
       // Initialize ops in reverse order, so we can do as much initial
       // propagation as possible without having to go through the
       // solver queue.
@@ -342,18 +369,14 @@ AbstractSparseBackwardDataFlowAnalysis::initializeRecursively(Operation *op) {
 }
 
 LogicalResult
-AbstractSparseBackwardDataFlowAnalysis::visit(ProgramPoint point) {
-  if (Operation *op = llvm::dyn_cast_if_present<Operation *>(point))
-    visitOperation(op);
-  else if (llvm::dyn_cast_if_present<Block *>(point))
-    // For backward dataflow, we don't have to do any work for the blocks
-    // themselves. CFG edges between blocks are processed by the BranchOp
-    // logic in `visitOperation`, and entry blocks for functions are tied
-    // to the CallOp arguments by visitOperation.
+AbstractSparseBackwardDataFlowAnalysis::visit(ProgramPoint *point) {
+  // For backward dataflow, we don't have to do any work for the blocks
+  // themselves. CFG edges between blocks are processed by the BranchOp
+  // logic in `visitOperation`, and entry blocks for functions are tied
+  // to the CallOp arguments by visitOperation.
+  if (point->isBlockStart())
     return success();
-  else
-    return failure();
-  return success();
+  return visitOperation(point->getPrevOp());
 }
 
 SmallVector<AbstractSparseLattice *>
@@ -369,7 +392,7 @@ AbstractSparseBackwardDataFlowAnalysis::getLatticeElements(ValueRange values) {
 
 SmallVector<const AbstractSparseLattice *>
 AbstractSparseBackwardDataFlowAnalysis::getLatticeElementsFor(
-    ProgramPoint point, ValueRange values) {
+    ProgramPoint *point, ValueRange values) {
   SmallVector<const AbstractSparseLattice *> resultLattices;
   resultLattices.reserve(values.size());
   for (Value result : values) {
@@ -384,21 +407,23 @@ static MutableArrayRef<OpOperand> operandsToOpOperands(OperandRange &operands) {
   return MutableArrayRef<OpOperand>(operands.getBase(), operands.size());
 }
 
-void AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
+LogicalResult
+AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
   // If we're in a dead block, bail out.
-  if (!getOrCreate<Executable>(op->getBlock())->isLive())
-    return;
+  if (op->getBlock() != nullptr &&
+      !getOrCreate<Executable>(getProgramPointBefore(op->getBlock()))->isLive())
+    return success();
 
   SmallVector<AbstractSparseLattice *> operandLattices =
       getLatticeElements(op->getOperands());
   SmallVector<const AbstractSparseLattice *> resultLattices =
-      getLatticeElementsFor(op, op->getResults());
+      getLatticeElementsFor(getProgramPointAfter(op), op->getResults());
 
   // Block arguments of region branch operations flow back into the operands
   // of the parent op
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
     visitRegionSuccessors(branch, operandLattices);
-    return;
+    return success();
   }
 
   if (auto branch = dyn_cast<BranchOpInterface>(op)) {
@@ -421,7 +446,7 @@ void AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
                   detail::getBranchSuccessorArgument(
                       successorOperands, operand.getOperandNumber(), block)) {
             meet(getLatticeElement(operand.get()),
-                 *getLatticeElementFor(op, *blockArg));
+                 *getLatticeElementFor(getProgramPointAfter(op), *blockArg));
           }
         }
       }
@@ -432,13 +457,13 @@ void AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
       OpOperand &operand = op->getOpOperand(index);
       visitBranchOperand(operand);
     }
-    return;
+    return success();
   }
 
   // For function calls, connect the arguments of the entry blocks to the
   // operands of the call op that are forwarded to these arguments.
   if (auto call = dyn_cast<CallOpInterface>(op)) {
-    Operation *callableOp = call.resolveCallable(&symbolTable);
+    Operation *callableOp = call.resolveCallableInTable(&symbolTable);
     if (auto callable = dyn_cast_or_null<CallableOpInterface>(callableOp)) {
       // Not all operands of a call op forward to arguments. Such operands are
       // stored in `unaccounted`.
@@ -451,8 +476,11 @@ void AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
       MutableArrayRef<OpOperand> argOpOperands =
           operandsToOpOperands(argOperands);
       Region *region = callable.getCallableRegion();
-      if (!region || region->empty() || !getSolverConfig().isInterprocedural())
-        return visitExternalCallImpl(call, operandLattices, resultLattices);
+      if (!region || region->empty() ||
+          !getSolverConfig().isInterprocedural()) {
+        visitExternalCallImpl(call, operandLattices, resultLattices);
+        return success();
+      }
 
       // Otherwise, propagate information from the entry point of the function
       // back to operands whenever possible.
@@ -460,7 +488,7 @@ void AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
       for (auto [blockArg, argOpOperand] :
            llvm::zip(block.getArguments(), argOpOperands)) {
         meet(getLatticeElement(argOpOperand.get()),
-             *getLatticeElementFor(op, blockArg));
+             *getLatticeElementFor(getProgramPointAfter(op), blockArg));
         unaccounted.reset(argOpOperand.getOperandNumber());
       }
 
@@ -470,7 +498,7 @@ void AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
         OpOperand &opOperand = op->getOpOperand(index);
         visitCallOperand(opOperand);
       }
-      return;
+      return success();
     }
   }
 
@@ -487,35 +515,39 @@ void AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
   if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op)) {
     if (auto branch = dyn_cast<RegionBranchOpInterface>(op->getParentOp())) {
       visitRegionSuccessorsFromTerminator(terminator, branch);
-      return;
+      return success();
     }
   }
 
   if (op->hasTrait<OpTrait::ReturnLike>()) {
     // Going backwards, the operands of the return are derived from the
     // results of all CallOps calling this CallableOp.
-    if (auto callable = dyn_cast<CallableOpInterface>(op->getParentOp())) {
-      const PredecessorState *callsites =
-          getOrCreateFor<PredecessorState>(op, callable);
-      if (callsites->allPredecessorsKnown()) {
-        for (Operation *call : callsites->getKnownPredecessors()) {
-          SmallVector<const AbstractSparseLattice *> callResultLattices =
-              getLatticeElementsFor(op, call->getResults());
-          for (auto [op, result] :
-               llvm::zip(operandLattices, callResultLattices))
-            meet(op, *result);
-        }
-      } else {
-        // If we don't know all the callers, we can't know where the
-        // returned values go. Note that, in particular, this will trigger
-        // for the return ops of any public functions.
-        setAllToExitStates(operandLattices);
-      }
-      return;
-    }
+    if (auto callable = dyn_cast<CallableOpInterface>(op->getParentOp()))
+      return visitCallableOperation(op, callable, operandLattices);
   }
 
-  visitOperationImpl(op, operandLattices, resultLattices);
+  return visitOperationImpl(op, operandLattices, resultLattices);
+}
+
+LogicalResult AbstractSparseBackwardDataFlowAnalysis::visitCallableOperation(
+    Operation *op, CallableOpInterface callable,
+    ArrayRef<AbstractSparseLattice *> operandLattices) {
+  const PredecessorState *callsites = getOrCreateFor<PredecessorState>(
+      getProgramPointAfter(op), getProgramPointAfter(callable));
+  if (callsites->allPredecessorsKnown()) {
+    for (Operation *call : callsites->getKnownPredecessors()) {
+      SmallVector<const AbstractSparseLattice *> callResultLattices =
+          getLatticeElementsFor(getProgramPointAfter(op), call->getResults());
+      for (auto [op, result] : llvm::zip(operandLattices, callResultLattices))
+        meet(op, *result);
+    }
+  } else {
+    // If we don't know all the callers, we can't know where the
+    // returned values go. Note that, in particular, this will trigger
+    // for the return ops of any public functions.
+    setAllToExitStates(operandLattices);
+  }
+  return success();
 }
 
 void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
@@ -535,7 +567,8 @@ void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
     MutableArrayRef<OpOperand> opoperands = operandsToOpOperands(operands);
     ValueRange inputs = successor.getSuccessorInputs();
     for (auto [operand, input] : llvm::zip(opoperands, inputs)) {
-      meet(getLatticeElement(operand.get()), *getLatticeElementFor(op, input));
+      meet(getLatticeElement(operand.get()),
+           *getLatticeElementFor(getProgramPointAfter(op), input));
       unaccounted.reset(operand.getOperandNumber());
     }
   }
@@ -569,7 +602,7 @@ void AbstractSparseBackwardDataFlowAnalysis::
     MutableArrayRef<OpOperand> opOperands = operandsToOpOperands(operands);
     for (auto [opOperand, input] : llvm::zip(opOperands, inputs)) {
       meet(getLatticeElement(opOperand.get()),
-           *getLatticeElementFor(terminator, input));
+           *getLatticeElementFor(getProgramPointAfter(terminator), input));
       unaccounted.reset(const_cast<OpOperand &>(opOperand).getOperandNumber());
     }
   }
@@ -581,8 +614,8 @@ void AbstractSparseBackwardDataFlowAnalysis::
 }
 
 const AbstractSparseLattice *
-AbstractSparseBackwardDataFlowAnalysis::getLatticeElementFor(ProgramPoint point,
-                                                             Value value) {
+AbstractSparseBackwardDataFlowAnalysis::getLatticeElementFor(
+    ProgramPoint *point, Value value) {
   AbstractSparseLattice *state = getLatticeElement(value);
   addDependency(state, point);
   return state;

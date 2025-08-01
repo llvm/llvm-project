@@ -121,3 +121,28 @@ Sections:
 # ARM-NEXT:     SHF_ARM_PURECODE (0x20000000)
 # ARM-NEXT:     SHF_WRITE (0x1)
 # ARM-NEXT:   ]
+
+# ===== aarch64 =====
+
+# RUN: yaml2obj --docnum=5 %s -o %t-aarch64.o
+# RUN: llvm-objcopy --rename-section=.foo=.bar,alloc %t-aarch64.o
+# RUN: llvm-readobj --sections %t-aarch64.o | FileCheck %s --check-prefix=AARCH64
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_AARCH64
+Sections:
+  - Name:          .foo
+    Type:          SHT_PROGBITS
+    Flags:         [ SHF_AARCH64_PURECODE ]
+
+# AARCH64:        Name: .bar
+# AARCH64-NEXT:   Type: SHT_PROGBITS
+# AARCH64-NEXT:   Flags [
+# AARCH64-NEXT:     SHF_AARCH64_PURECODE (0x20000000)
+# AARCH64-NEXT:     SHF_ALLOC (0x2)
+# AARCH64-NEXT:     SHF_WRITE (0x1)
+# AARCH64-NEXT:   ]

@@ -229,174 +229,6 @@ PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateCommandObject
   return pfunc(SWIGBridge::ToSWIGWrapper(std::move(debugger_sp)), dict);
 }
 
-PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedBreakpointResolver(
-    const char *python_class_name, const char *session_dictionary_name,
-    const StructuredDataImpl &args_impl,
-    const lldb::BreakpointSP &breakpoint_sp) {
-
-  if (python_class_name == NULL || python_class_name[0] == '\0' ||
-      !session_dictionary_name)
-    return PythonObject();
-
-  PyErr_Cleaner py_err_cleaner(true);
-
-  auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(
-      session_dictionary_name);
-  auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(
-      python_class_name, dict);
-
-  if (!pfunc.IsAllocated())
-    return PythonObject();
-
-  PythonObject result =
-      pfunc(SWIGBridge::ToSWIGWrapper(breakpoint_sp), SWIGBridge::ToSWIGWrapper(args_impl), dict);
-  // FIXME: At this point we should check that the class we found supports all
-  // the methods that we need.
-
-  if (result.IsAllocated()) {
-    // Check that __callback__ is defined:
-    auto callback_func = result.ResolveName<PythonCallable>("__callback__");
-    if (callback_func.IsAllocated())
-      return result;
-  }
-  return PythonObject();
-}
-
-unsigned int lldb_private::python::SWIGBridge::LLDBSwigPythonCallBreakpointResolver(
-    void *implementor, const char *method_name,
-    lldb_private::SymbolContext *sym_ctx) {
-  PyErr_Cleaner py_err_cleaner(false);
-  PythonObject self(PyRefType::Borrowed, static_cast<PyObject *>(implementor));
-  auto pfunc = self.ResolveName<PythonCallable>(method_name);
-
-  if (!pfunc.IsAllocated())
-    return 0;
-
-  PythonObject result = sym_ctx ? pfunc(SWIGBridge::ToSWIGWrapper(*sym_ctx)) : pfunc();
-
-  if (PyErr_Occurred()) {
-    PyErr_Print();
-    PyErr_Clear();
-    return 0;
-  }
-
-  // The callback will return a bool, but we're need to also return ints
-  // so we're squirrelling the bool through as an int...  And if you return
-  // nothing, we'll continue.
-  if (strcmp(method_name, "__callback__") == 0) {
-    if (result.get() == Py_False)
-      return 0;
-    else
-      return 1;
-  }
-
-  long long ret_val = unwrapOrSetPythonException(As<long long>(result));
-
-  if (PyErr_Occurred()) {
-    PyErr_Print();
-    PyErr_Clear();
-    return 0;
-  }
-
-  return ret_val;
-}
-
-PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedStopHook(
-    lldb::TargetSP target_sp, const char *python_class_name,
-    const char *session_dictionary_name, const StructuredDataImpl &args_impl,
-    Status &error) {
-  if (python_class_name == NULL || python_class_name[0] == '\0') {
-    error.SetErrorString("Empty class name.");
-    return PythonObject();
-  }
-  if (!session_dictionary_name) {
-    error.SetErrorString("No session dictionary");
-    return PythonObject();
-  }
-
-  PyErr_Cleaner py_err_cleaner(true);
-
-  auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(
-      session_dictionary_name);
-  auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(
-      python_class_name, dict);
-
-  if (!pfunc.IsAllocated()) {
-    error.SetErrorStringWithFormat("Could not find class: %s.",
-                                   python_class_name);
-    return PythonObject();
-  }
-
-  PythonObject result =
-      pfunc(SWIGBridge::ToSWIGWrapper(target_sp), SWIGBridge::ToSWIGWrapper(args_impl), dict);
-
-  if (result.IsAllocated()) {
-    // Check that the handle_stop callback is defined:
-    auto callback_func = result.ResolveName<PythonCallable>("handle_stop");
-    if (callback_func.IsAllocated()) {
-      if (auto args_info = callback_func.GetArgInfo()) {
-        size_t num_args = (*args_info).max_positional_args;
-        if (num_args != 2) {
-          error.SetErrorStringWithFormat(
-              "Wrong number of args for "
-              "handle_stop callback, should be 2 (excluding self), got: %zu",
-              num_args);
-          return PythonObject();
-        } else
-          return result;
-      } else {
-        error.SetErrorString("Couldn't get num arguments for handle_stop "
-                             "callback.");
-        return PythonObject();
-      }
-      return result;
-    } else {
-      error.SetErrorStringWithFormat("Class \"%s\" is missing the required "
-                                     "handle_stop callback.",
-                                     python_class_name);
-    }
-  }
-  return PythonObject();
-}
-
-bool lldb_private::python::SWIGBridge::LLDBSwigPythonStopHookCallHandleStop(
-    void *implementor, lldb::ExecutionContextRefSP exc_ctx_sp,
-    lldb::StreamSP stream) {
-  // handle_stop will return a bool with the meaning "should_stop"...
-  // If you return nothing we'll assume we are going to stop.
-  // Also any errors should return true, since we should stop on error.
-
-  PyErr_Cleaner py_err_cleaner(false);
-  PythonObject self(PyRefType::Borrowed, static_cast<PyObject *>(implementor));
-  auto pfunc = self.ResolveName<PythonCallable>("handle_stop");
-
-  if (!pfunc.IsAllocated())
-    return true;
-
-  std::shared_ptr<lldb::SBStream> sb_stream = std::make_shared<lldb::SBStream>();
-  PythonObject sb_stream_arg = SWIGBridge::ToSWIGWrapper(sb_stream);
-  PythonObject result =
-      pfunc(SWIGBridge::ToSWIGWrapper(std::move(exc_ctx_sp)), sb_stream_arg);
-
-  if (PyErr_Occurred()) {
-    stream->PutCString("Python error occurred handling stop-hook.");
-    PyErr_Print();
-    PyErr_Clear();
-    return true;
-  }
-
-  // Now add the result to the output stream.  SBStream only
-  // makes an internally help StreamString which I can't interpose, so I
-  // have to copy it over here.
-  stream->PutCString(sb_stream->GetData());
-  sb_stream_arg.release();
-
-  if (result.get() == Py_False)
-    return false;
-  else
-    return true;
-}
-
 // wrapper that calls an optional instance member of an object taking no
 // arguments
 static PyObject *LLDBSwigPython_CallOptionalMember(
@@ -650,6 +482,18 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBStream(PyObject * dat
   return sb_ptr;
 }
 
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBSymbolContext(PyObject * data) {
+  lldb::SBSymbolContext *sb_ptr = nullptr;
+
+  int valid_cast =
+      SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBSymbolContext, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
 void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBValue(PyObject * data) {
   lldb::SBValue *sb_ptr = NULL;
 
@@ -668,6 +512,19 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(PyOb
 
   int valid_cast = SWIG_ConvertPtr(data, (void **)&sb_ptr,
                                    SWIGTYPE_p_lldb__SBMemoryRegionInfo, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBExecutionContext(PyObject *
+                                                                    data) {
+  lldb::SBExecutionContext *sb_ptr = NULL;
+
+  int valid_cast = SWIG_ConvertPtr(data, (void **)&sb_ptr,
+                                   SWIGTYPE_p_lldb__SBExecutionContext, 0);
 
   if (valid_cast == -1)
     return NULL;
@@ -750,6 +607,79 @@ lldb_private::python::SWIGBridge::LLDBSwigPythonGetRepeatCommandForScriptedComma
   return result.Str().GetString().str();
 }
 
+StructuredData::DictionarySP
+lldb_private::python::SWIGBridge::LLDBSwigPythonHandleArgumentCompletionForScriptedCommand(PyObject *implementor,
+    std::vector<llvm::StringRef> &args_vec, size_t args_pos, size_t pos_in_arg) {
+
+  PyErr_Cleaner py_err_cleaner(true);
+
+  PythonObject self(PyRefType::Borrowed, implementor);
+  auto pfunc = self.ResolveName<PythonCallable>("handle_argument_completion");
+  // If this isn't implemented, return an empty dict to signal falling back to default completion:
+  if (!pfunc.IsAllocated())
+    return {};
+
+  PythonList args_list(PyInitialValue::Empty);
+  for (auto elem : args_vec)
+    args_list.AppendItem(PythonString(elem));
+
+  PythonObject result = pfunc(args_list, PythonInteger(args_pos), PythonInteger(pos_in_arg));
+  // Returning None means do the ordinary completion
+  if (result.IsNone())
+    return {};
+
+  // Convert the return dictionary to a DictionarySP.
+  StructuredData::ObjectSP result_obj_sp = result.CreateStructuredObject();
+  if (!result_obj_sp)
+    return {};
+
+  StructuredData::DictionarySP dict_sp(new StructuredData::Dictionary(result_obj_sp));
+  if (dict_sp->GetType() == lldb::eStructuredDataTypeInvalid)
+    return {};
+  return dict_sp;
+}
+
+StructuredData::DictionarySP
+lldb_private::python::SWIGBridge::LLDBSwigPythonHandleOptionArgumentCompletionForScriptedCommand(PyObject *implementor,
+    llvm::StringRef &long_option, size_t pos_in_arg) {
+
+  PyErr_Cleaner py_err_cleaner(true);
+
+  PythonObject self(PyRefType::Borrowed, implementor);
+  auto pfunc = self.ResolveName<PythonCallable>("handle_option_argument_completion");
+  // If this isn't implemented, return an empty dict to signal falling back to default completion:
+  if (!pfunc.IsAllocated())
+    return {};
+
+  PythonObject result = pfunc(PythonString(long_option), PythonInteger(pos_in_arg));
+  // Returning None means do the ordinary completion
+  if (result.IsNone())
+    return {};
+
+  // Returning a boolean:
+  // True means the completion was handled, but there were no completions
+  // False means that the completion was not handled, again, do the ordinary completion:
+  if (result.GetObjectType() == PyObjectType::Boolean) {
+    if (!result.IsTrue())
+      return {};
+    // Make up a completion dictionary with the right element:
+    StructuredData::DictionarySP dict_sp(new StructuredData::Dictionary());
+    dict_sp->AddBooleanItem("no-completion", true);
+    return dict_sp;
+  }
+
+
+  // Convert the return dictionary to a DictionarySP.
+  StructuredData::ObjectSP result_obj_sp = result.CreateStructuredObject();
+  if (!result_obj_sp)
+    return {};
+
+  StructuredData::DictionarySP dict_sp(new StructuredData::Dictionary(result_obj_sp));
+  if (dict_sp->GetType() == lldb::eStructuredDataTypeInvalid)
+    return {};
+  return dict_sp;
+}
+
 #include "lldb/Interpreter/CommandReturnObject.h"
 
 bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
@@ -763,7 +693,7 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
   auto pfunc = self.ResolveName<PythonCallable>("__call__");
 
   if (!pfunc.IsAllocated()) {
-    cmd_retobj.AppendError("Could not find '__call__' method in implementation class"); 
+    cmd_retobj.AppendError("Could not find '__call__' method in implementation class");
     return false;
   }
 
@@ -813,7 +743,7 @@ PythonObject lldb_private::python::SWIGBridge::LLDBSWIGPython_CreateFrameRecogni
 }
 
 PyObject *lldb_private::python::SWIGBridge::LLDBSwigPython_GetRecognizedArguments(
-    PyObject * implementor, const lldb::StackFrameSP &frame_sp) {
+    PyObject *implementor, const lldb::StackFrameSP &frame_sp) {
   static char callee_name[] = "get_recognized_arguments";
 
   PythonObject arg = SWIGBridge::ToSWIGWrapper(frame_sp);
@@ -822,6 +752,22 @@ PyObject *lldb_private::python::SWIGBridge::LLDBSwigPython_GetRecognizedArgument
   PyObject *result =
       PyObject_CallMethodObjArgs(implementor, str.get(), arg.get(), NULL);
   return result;
+}
+
+bool lldb_private::python::SWIGBridge::LLDBSwigPython_ShouldHide(
+    PyObject *implementor, const lldb::StackFrameSP &frame_sp) {
+  static char callee_name[] = "should_hide";
+
+  PythonObject arg = SWIGBridge::ToSWIGWrapper(frame_sp);
+
+  PythonString str(callee_name);
+
+  PyObject *result =
+      PyObject_CallMethodObjArgs(implementor, str.get(), arg.get(), NULL);
+  bool ret_val = result ? PyObject_IsTrue(result) : false;
+  Py_XDECREF(result);
+
+  return ret_val;
 }
 
 void *lldb_private::python::SWIGBridge::LLDBSWIGPython_GetDynamicSetting(
@@ -960,6 +906,28 @@ bool lldb_private::python::SWIGBridge::LLDBSWIGPythonRunScriptKeywordValue(
   return true;
 }
 
+bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallModuleNewTarget(
+    const char *python_module_name, const char *session_dictionary_name,
+    lldb::TargetSP target_sp) {
+  std::string python_function_name_string = python_module_name;
+  python_function_name_string += ".__lldb_module_added_to_target";
+  const char *python_function_name = python_function_name_string.c_str();
+
+  PyErr_Cleaner py_err_cleaner(true);
+
+  auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(
+      session_dictionary_name);
+  auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(
+      python_function_name, dict);
+
+  if (!pfunc.IsAllocated())
+    return true;
+
+  pfunc(SWIGBridge::ToSWIGWrapper(std::move(target_sp)), dict);
+
+  return true;
+}
+
 bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallModuleInit(
     const char *python_module_name, const char *session_dictionary_name,
     lldb::DebuggerSP debugger) {
@@ -1004,6 +972,26 @@ static void LLDBSwigPythonCallPythonLogOutputCallback(const char *str,
     Py_XDECREF(result);
     SWIG_PYTHON_THREAD_END_BLOCK;
   }
+}
+
+// For CommandPrintCallback functions
+static CommandReturnObjectCallbackResult LLDBSwigPythonCallPythonCommandPrintCallback(SBCommandReturnObject& result, void *callback_baton) {
+  SWIG_Python_Thread_Block swig_thread_block;
+
+  PyErr_Cleaner py_err_cleaner(true);
+
+  PythonObject result_arg = SWIGBridge::ToSWIGWrapper(
+      std::make_unique<SBCommandReturnObject>(result));
+  PythonCallable callable =
+      Retain<PythonCallable>(reinterpret_cast<PyObject *>(callback_baton));
+
+  if (!callable.IsValid())
+    return eCommandReturnObjectPrintCallbackSkipped;
+
+  PythonObject callback_result = callable(result_arg);
+
+  long long ret_val = unwrapOrSetPythonException(As<long long>(callback_result));
+  return (CommandReturnObjectCallbackResult)ret_val;
 }
 
 // For DebuggerTerminateCallback functions

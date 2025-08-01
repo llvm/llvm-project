@@ -17,9 +17,6 @@
 #include "src/__support/macros/attributes.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
-LIBC_THREAD_LOCAL Thread self;
-
 namespace {
 
 using AtExitCallback = void(void *);
@@ -120,7 +117,9 @@ public:
 
   int add_callback(AtExitCallback *callback, void *obj) {
     cpp::lock_guard lock(mtx);
-    return callback_list.push_back({callback, obj});
+    if (callback_list.push_back({callback, obj}))
+      return 0;
+    return -1;
   }
 
   void call() {

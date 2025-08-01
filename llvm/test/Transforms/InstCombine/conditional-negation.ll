@@ -44,7 +44,7 @@ define i8 @t2(i8 %x, i1 %cond0, i1 %cond1) {
 ; CHECK-LABEL: @t2(
 ; CHECK-NEXT:    [[COND_SPLAT0:%.*]] = sext i1 [[COND0:%.*]] to i8
 ; CHECK-NEXT:    [[COND_SPLAT1:%.*]] = sext i1 [[COND1:%.*]] to i8
-; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[COND_SPLAT0]], [[X:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[X:%.*]], [[COND_SPLAT0]]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[SUB]], [[COND_SPLAT1]]
 ; CHECK-NEXT:    ret i8 [[XOR]]
 ;
@@ -59,7 +59,7 @@ define i8 @t2(i8 %x, i1 %cond0, i1 %cond1) {
 define i8 @t3(i8 %x, i2 %cond) {
 ; CHECK-LABEL: @t3(
 ; CHECK-NEXT:    [[COND_SPLAT:%.*]] = sext i2 [[COND:%.*]] to i8
-; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[COND_SPLAT]], [[X:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[X:%.*]], [[COND_SPLAT]]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[SUB]], [[COND_SPLAT]]
 ; CHECK-NEXT:    ret i8 [[XOR]]
 ;
@@ -71,7 +71,7 @@ define i8 @t3(i8 %x, i2 %cond) {
 define <2 x i8> @t3_vec(<2 x i8> %x, <2 x i2> %cond) {
 ; CHECK-LABEL: @t3_vec(
 ; CHECK-NEXT:    [[COND_SPLAT:%.*]] = sext <2 x i2> [[COND:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[SUB:%.*]] = add <2 x i8> [[COND_SPLAT]], [[X:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = add <2 x i8> [[X:%.*]], [[COND_SPLAT]]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[SUB]], [[COND_SPLAT]]
 ; CHECK-NEXT:    ret <2 x i8> [[XOR]]
 ;
@@ -115,7 +115,7 @@ define i8 @extrause01_v1(i8 %x, i1 %cond) {
 define i8 @extrause10_v1(i8 %x, i1 %cond) {
 ; CHECK-LABEL: @extrause10_v1(
 ; CHECK-NEXT:    [[COND_SPLAT:%.*]] = sext i1 [[COND:%.*]] to i8
-; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[COND_SPLAT]], [[X:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[X:%.*]], [[COND_SPLAT]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[SUB]])
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[SUB]], [[COND_SPLAT]]
 ; CHECK-NEXT:    ret i8 [[XOR]]
@@ -130,7 +130,7 @@ define i8 @extrause11_v1(i8 %x, i1 %cond) {
 ; CHECK-LABEL: @extrause11_v1(
 ; CHECK-NEXT:    [[COND_SPLAT:%.*]] = sext i1 [[COND:%.*]] to i8
 ; CHECK-NEXT:    call void @use.i8(i8 [[COND_SPLAT]])
-; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[COND_SPLAT]], [[X:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[X:%.*]], [[COND_SPLAT]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[SUB]])
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[SUB]], [[COND_SPLAT]]
 ; CHECK-NEXT:    ret i8 [[XOR]]
@@ -195,7 +195,7 @@ define i8 @extrause011_v2(i8 %x, i1 %cond) {
 define i8 @extrause100_v2(i8 %x, i1 %cond) {
 ; CHECK-LABEL: @extrause100_v2(
 ; CHECK-NEXT:    [[COND_SPLAT0:%.*]] = sext i1 [[COND:%.*]] to i8
-; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[COND_SPLAT0]], [[X:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[X:%.*]], [[COND_SPLAT0]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[SUB]])
 ; CHECK-NEXT:    [[X_NEG:%.*]] = sub i8 0, [[X]]
 ; CHECK-NEXT:    [[XOR:%.*]] = select i1 [[COND]], i8 [[X_NEG]], i8 [[X]]
@@ -212,7 +212,7 @@ define i8 @extrause101_v2(i8 %x, i1 %cond) {
 ; CHECK-LABEL: @extrause101_v2(
 ; CHECK-NEXT:    [[COND_SPLAT0:%.*]] = sext i1 [[COND:%.*]] to i8
 ; CHECK-NEXT:    call void @use.i8(i8 [[COND_SPLAT0]])
-; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[COND_SPLAT0]], [[X:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[X:%.*]], [[COND_SPLAT0]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[SUB]])
 ; CHECK-NEXT:    [[X_NEG:%.*]] = sub i8 0, [[X]]
 ; CHECK-NEXT:    [[XOR:%.*]] = select i1 [[COND]], i8 [[X_NEG]], i8 [[X]]
@@ -231,7 +231,7 @@ define i8 @extrause110_v2(i8 %x, i1 %cond) {
 ; CHECK-NEXT:    [[COND_SPLAT0:%.*]] = sext i1 [[COND:%.*]] to i8
 ; CHECK-NEXT:    [[COND_SPLAT1:%.*]] = sext i1 [[COND]] to i8
 ; CHECK-NEXT:    call void @use.i8(i8 [[COND_SPLAT1]])
-; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[COND_SPLAT0]], [[X:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[X:%.*]], [[COND_SPLAT0]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[SUB]])
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[SUB]], [[COND_SPLAT1]]
 ; CHECK-NEXT:    ret i8 [[XOR]]
@@ -250,7 +250,7 @@ define i8 @extrause111_v2(i8 %x, i1 %cond) {
 ; CHECK-NEXT:    call void @use.i8(i8 [[COND_SPLAT0]])
 ; CHECK-NEXT:    [[COND_SPLAT1:%.*]] = sext i1 [[COND]] to i8
 ; CHECK-NEXT:    call void @use.i8(i8 [[COND_SPLAT1]])
-; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[COND_SPLAT0]], [[X:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[X:%.*]], [[COND_SPLAT0]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[SUB]])
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[SUB]], [[COND_SPLAT1]]
 ; CHECK-NEXT:    ret i8 [[XOR]]

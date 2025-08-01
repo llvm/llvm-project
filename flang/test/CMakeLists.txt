@@ -11,6 +11,16 @@ llvm_canonicalize_cmake_booleans(
 
 set(FLANG_TOOLS_DIR ${FLANG_BINARY_DIR}/bin)
 
+# Check if 128-bit float computations can be done via long double
+check_cxx_source_compiles(
+  "#include <cfloat>
+   #if LDBL_MANT_DIG != 113
+   #error LDBL_MANT_DIG != 113
+   #endif
+   int main() { return 0; }
+  "
+  HAVE_LDBL_MANT_DIG_113)
+
 # FIXME In out-of-tree builds, "SHLIBDIR" is undefined and passing it to
 # `configure_lit_site_cfg` leads to a configuration error. This is currently
 # only required by plugins/examples, which are not supported in out-of-tree
@@ -48,23 +58,29 @@ set(FLANG_TEST_PARAMS
   flang_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py)
 
 set(FLANG_TEST_DEPENDS
-  flang-new
-  llvm-config
-  FileCheck
-  count
-  not
+  flang
   module_files
   fir-opt
   tco
   bbc
-  llvm-dis
-  llvm-objdump
-  llvm-readobj
-  split-file
-  FortranRuntime
   FortranDecimal
 )
-if (LLVM_ENABLE_PLUGINS AND NOT WIN32)
+
+if (NOT FLANG_STANDALONE_BUILD)
+  list(APPEND FLANG_TEST_DEPENDS
+    llvm-config
+    FileCheck
+    count
+    not
+    llvm-dis
+    llvm-objdump
+    llvm-profdata
+    llvm-readobj
+    split-file
+  )
+endif ()
+
+if (LLVM_BUILD_EXAMPLES AND LLVM_ENABLE_PLUGINS AND NOT (WIN32 OR CYGWIN) AND NOT FLANG_STANDALONE_BUILD)
   list(APPEND FLANG_TEST_DEPENDS Bye)
 endif()
 
@@ -80,6 +96,10 @@ if (LLVM_BUILD_EXAMPLES)
     flangOmpReport
     flangFeatureList
     )
+endif ()
+
+if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT FLANG_STANDALONE_BUILD)
+  list(APPEND FLANG_TEST_DEPENDS "libomp-mod")
 endif ()
 
 add_custom_target(flang-test-depends DEPENDS ${FLANG_TEST_DEPENDS})

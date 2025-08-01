@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/DarwinSDKInfo.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -62,6 +63,28 @@ DarwinSDKInfo::RelatedTargetVersionMapping::parseJSON(
       Min, Max, MinValue, MaximumDeploymentTarget, std::move(Mapping));
 }
 
+static llvm::Triple::OSType parseOS(const llvm::json::Object &Obj) {
+  // The CanonicalName is the Xcode platform followed by a version, e.g.
+  // macosx16.0.
+  auto CanonicalName = Obj.getString("CanonicalName");
+  if (!CanonicalName)
+    return llvm::Triple::UnknownOS;
+  size_t VersionStart = CanonicalName->find_first_of("0123456789");
+  StringRef XcodePlatform = CanonicalName->slice(0, VersionStart);
+  return llvm::StringSwitch<llvm::Triple::OSType>(XcodePlatform)
+      .Case("macosx", llvm::Triple::MacOSX)
+      .Case("iphoneos", llvm::Triple::IOS)
+      .Case("iphonesimulator", llvm::Triple::IOS)
+      .Case("appletvos", llvm::Triple::TvOS)
+      .Case("appletvsimulator", llvm::Triple::TvOS)
+      .Case("watchos", llvm::Triple::WatchOS)
+      .Case("watchsimulator", llvm::Triple::WatchOS)
+      .Case("xros", llvm::Triple::XROS)
+      .Case("xrsimulator", llvm::Triple::XROS)
+      .Case("driverkit", llvm::Triple::DriverKit)
+      .Default(llvm::Triple::UnknownOS);
+}
+
 static std::optional<VersionTuple> getVersionKey(const llvm::json::Object &Obj,
                                                  StringRef Key) {
   auto Value = Obj.getString(Key);
@@ -82,6 +105,7 @@ DarwinSDKInfo::parseDarwinSDKSettingsJSON(const llvm::json::Object *Obj) {
       getVersionKey(*Obj, "MaximumDeploymentTarget");
   if (!MaximumDeploymentVersion)
     return std::nullopt;
+  llvm::Triple::OSType OS = parseOS(*Obj);
   llvm::DenseMap<OSEnvPair::StorageType,
                  std::optional<RelatedTargetVersionMapping>>
       VersionMappings;
@@ -124,7 +148,7 @@ DarwinSDKInfo::parseDarwinSDKSettingsJSON(const llvm::json::Object *Obj) {
   }
 
   return DarwinSDKInfo(std::move(*Version),
-                       std::move(*MaximumDeploymentVersion),
+                       std::move(*MaximumDeploymentVersion), OS,
                        std::move(VersionMappings));
 }
 

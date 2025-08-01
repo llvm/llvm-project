@@ -79,13 +79,28 @@ TEST(DataExtractorTest, SignedNumbers) {
   EXPECT_EQ(-128, DE.getSigned(&offset, 1));
   EXPECT_EQ(1U, offset);
   offset = 0;
+  EXPECT_EQ(-128, DE.getS8(&offset));
+  EXPECT_EQ(1U, offset);
+
+  offset = 0;
   EXPECT_EQ(-32624, DE.getSigned(&offset, 2));
   EXPECT_EQ(2U, offset);
+  offset = 0;
+  EXPECT_EQ(-32624, DE.getS16(&offset));
+  EXPECT_EQ(2U, offset);
+
   offset = 0;
   EXPECT_EQ(-2137980929, DE.getSigned(&offset, 4));
   EXPECT_EQ(4U, offset);
   offset = 0;
+  EXPECT_EQ(-2137980929, DE.getS32(&offset));
+  EXPECT_EQ(4U, offset);
+
+  offset = 0;
   EXPECT_EQ(-9182558167379214336LL, DE.getSigned(&offset, 8));
+  EXPECT_EQ(8U, offset);
+  offset = 0;
+  EXPECT_EQ(-9182558167379214336LL, DE.getS64(&offset));
   EXPECT_EQ(8U, offset);
 }
 

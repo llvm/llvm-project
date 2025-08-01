@@ -16,13 +16,14 @@
 
 #include <vector>
 
-using namespace __orc_rt;
+using namespace orc_rt;
 
 extern "C" const char *__orc_rt_jit_dlerror();
 extern "C" void *__orc_rt_jit_dlopen(const char *path, int mode);
+extern "C" int __orc_rt_jit_dlupdate(void *dso_handle);
 extern "C" int __orc_rt_jit_dlclose(void *dso_handle);
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_jit_dlerror_wrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSString()>::handle(
              ArgData, ArgSize,
@@ -30,7 +31,7 @@ __orc_rt_jit_dlerror_wrapper(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_jit_dlopen_wrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSExecutorAddr(SPSString, int32_t)>::handle(
              ArgData, ArgSize,
@@ -41,7 +42,19 @@ __orc_rt_jit_dlopen_wrapper(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+#ifndef _WIN32
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
+__orc_rt_jit_dlupdate_wrapper(const char *ArgData, size_t ArgSize) {
+  return WrapperFunction<int32_t(SPSExecutorAddr)>::handle(
+             ArgData, ArgSize,
+             [](ExecutorAddr &DSOHandle) {
+               return __orc_rt_jit_dlupdate(DSOHandle.toPtr<void *>());
+             })
+      .release();
+}
+#endif
+
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_jit_dlclose_wrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<int32_t(SPSExecutorAddr)>::handle(
              ArgData, ArgSize,

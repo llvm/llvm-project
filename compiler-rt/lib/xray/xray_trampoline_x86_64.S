@@ -107,6 +107,16 @@
 	.section __TEXT,__text
 #endif
 
+.macro LOAD_HANDLER_ADDR handler
+#if !defined(XRAY_PIC)
+	movq	ASM_SYMBOL(\handler)(%rip), %rax
+#else
+	movq	ASM_SYMBOL(\handler)@GOTPCREL(%rip), %rax
+	movq	(%rax), %rax
+#endif
+.endm
+
+
 //===----------------------------------------------------------------------===//
 
 	.globl ASM_SYMBOL(__xray_FunctionEntry)
@@ -121,7 +131,7 @@ ASM_SYMBOL(__xray_FunctionEntry):
 
 	// This load has to be atomic, it's concurrent with __xray_patch().
 	// On x86/amd64, a simple (type-aligned) MOV instruction is enough.
-	movq	ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)(%rip), %rax
+	LOAD_HANDLER_ADDR _ZN6__xray19XRayPatchedFunctionE
 	testq	%rax, %rax
 	je	LOCAL_LABEL(tmp0)
 
@@ -159,7 +169,7 @@ ASM_SYMBOL(__xray_FunctionExit):
 	movupd	%xmm1, 16(%rsp)
 	movq	%rax, 8(%rsp)
 	movq	%rdx, 0(%rsp)
-	movq	ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)(%rip), %rax
+	LOAD_HANDLER_ADDR _ZN6__xray19XRayPatchedFunctionE
 	testq %rax,%rax
 	je	LOCAL_LABEL(tmp2)
 
@@ -195,7 +205,7 @@ ASM_SYMBOL(__xray_FunctionTailExit):
 	SAVE_REGISTERS
 	ALIGN_STACK_16B
 
-	movq	ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)(%rip), %rax
+	LOAD_HANDLER_ADDR _ZN6__xray19XRayPatchedFunctionE
 	testq %rax,%rax
 	je	LOCAL_LABEL(tmp4)
 
@@ -224,12 +234,12 @@ ASM_SYMBOL(__xray_ArgLoggerEntry):
 	ALIGN_STACK_16B
 
 	// Again, these function pointer loads must be atomic; MOV is fine.
-	movq	ASM_SYMBOL(_ZN6__xray13XRayArgLoggerE)(%rip), %rax
+	LOAD_HANDLER_ADDR _ZN6__xray13XRayArgLoggerE
 	testq	%rax, %rax
 	jne	LOCAL_LABEL(arg1entryLog)
 
 	// If [arg1 logging handler] not set, defer to no-arg logging.
-	movq	ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)(%rip), %rax
+	LOAD_HANDLER_ADDR _ZN6__xray19XRayPatchedFunctionE
 	testq	%rax, %rax
 	je	LOCAL_LABEL(arg1entryFail)
 
@@ -268,7 +278,7 @@ ASM_SYMBOL(__xray_CustomEvent):
 
 	// We take two arguments to this trampoline, which should be in rdi	and rsi
 	// already.
-	movq ASM_SYMBOL(_ZN6__xray22XRayPatchedCustomEventE)(%rip), %rax
+	LOAD_HANDLER_ADDR _ZN6__xray22XRayPatchedCustomEventE
 	testq %rax,%rax
 	je LOCAL_LABEL(customEventCleanup)
 
@@ -293,7 +303,7 @@ ASM_SYMBOL(__xray_TypedEvent):
 
 	// We pass three arguments to this trampoline, which should be in rdi, rsi
 	// and rdx without our intervention.
-	movq ASM_SYMBOL(_ZN6__xray21XRayPatchedTypedEventE)(%rip), %rax
+	LOAD_HANDLER_ADDR _ZN6__xray21XRayPatchedTypedEventE
 	testq %rax,%rax
 	je LOCAL_LABEL(typedEventCleanup)
 

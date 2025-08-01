@@ -346,8 +346,11 @@ DiagnosedSilenceableFailure mlir::test::TestEmitRemarkAndEraseOperandOp::apply(
     transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
   emitRemark() << getRemark();
-  for (Operation *op : state.getPayloadOps(getTarget()))
+  for (Operation *op : state.getPayloadOps(getTarget())) {
+    if (!op->getUses().empty())
+      return emitSilenceableError() << "cannot erase an op that has uses";
     rewriter.eraseOp(op);
+  }
 
   if (getFailAfterErase())
     return emitSilenceableError() << "silenceable error";
@@ -793,8 +796,8 @@ DiagnosedSilenceableFailure mlir::test::TestProduceInvalidIR::applyToOne(
     transform::TransformState &state) {
   // Provide some IR that does not verify.
   rewriter.setInsertionPointToStart(&target->getRegion(0).front());
-  rewriter.create<TestDummyPayloadOp>(target->getLoc(), TypeRange(),
-                                      ValueRange(), /*failToVerify=*/true);
+  TestDummyPayloadOp::create(rewriter, target->getLoc(), TypeRange(),
+                             ValueRange(), /*failToVerify=*/true);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -802,6 +805,28 @@ void mlir::test::TestProduceInvalidIR::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   transform::onlyReadsHandle(getTargetMutable(), effects);
   transform::modifiesPayload(effects);
+}
+
+DiagnosedSilenceableFailure mlir::test::TestInitializerExtensionOp::apply(
+    transform::TransformRewriter &rewriter,
+    transform::TransformResults &results, transform::TransformState &state) {
+  std::string opName =
+      this->getOperationName().str() + "_" + getTypeAttr().str();
+  TransformStateInitializerExtension *initExt =
+      state.getExtension<TransformStateInitializerExtension>();
+  if (!initExt) {
+    emitRemark() << "\nSpecified extension not found, adding a new one!\n";
+    SmallVector<std::string> opCollection = {opName};
+    state.addExtension<TransformStateInitializerExtension>(1, opCollection);
+  } else {
+    initExt->setNumOp(initExt->getNumOp() + 1);
+    initExt->pushRegisteredOps(opName);
+    InFlightDiagnostic diag = emitRemark()
+                              << "Number of currently registered op: "
+                              << initExt->getNumOp() << "\n"
+                              << initExt->printMessage() << "\n";
+  }
+  return DiagnosedSilenceableFailure::success();
 }
 
 namespace {
@@ -849,10 +874,11 @@ public:
     });
     auto unrealizedCastConverter = [&](OpBuilder &builder, Type resultType,
                                        ValueRange inputs,
-                                       Location loc) -> std::optional<Value> {
+                                       Location loc) -> Value {
       if (inputs.size() != 1)
-        return std::nullopt;
-      return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+        return Value();
+      return UnrealizedConversionCastOp::create(builder, loc, resultType,
+                                                inputs)
           .getResult(0);
     };
     addSourceMaterialization(unrealizedCastConverter);
@@ -874,6 +900,8 @@ class TestTransformDialectExtension
     : public transform::TransformDialectExtension<
           TestTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestTransformDialectExtension)
+
   using Base::Base;
 
   void init() {

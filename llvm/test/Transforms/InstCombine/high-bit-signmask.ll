@@ -40,7 +40,7 @@ define i64 @t3_exact(i64 %x) {
 
 define <2 x i64> @t4(<2 x i64> %x) {
 ; CHECK-LABEL: @t4(
-; CHECK-NEXT:    [[T0_NEG:%.*]] = ashr <2 x i64> [[X:%.*]], <i64 63, i64 63>
+; CHECK-NEXT:    [[T0_NEG:%.*]] = ashr <2 x i64> [[X:%.*]], splat (i64 63)
 ; CHECK-NEXT:    ret <2 x i64> [[T0_NEG]]
 ;
   %t0 = lshr <2 x i64> %x, <i64 63, i64 63>

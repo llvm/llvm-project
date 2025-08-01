@@ -18,6 +18,7 @@
 #ifndef LLVM_TRANSFORMS_INSTCOMBINE_INSTCOMBINER_H
 #define LLVM_TRANSFORMS_INSTCOMBINE_INSTCOMBINER_H
 
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/DomConditionCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetFolder.h"
@@ -48,7 +49,7 @@ class LLVM_LIBRARY_VISIBILITY InstCombiner {
   /// Only used to call target specific intrinsic combining.
   /// It must **NOT** be used for any other purpose, as InstCombine is a
   /// target-independent canonicalization transform.
-  TargetTransformInfo &TTI;
+  TargetTransformInfo &TTIForTargetIntrinsicsOnly;
 
 public:
   /// Maximum size of array considered when transforming.
@@ -80,9 +81,7 @@ protected:
   ProfileSummaryInfo *PSI;
   DomConditionCache DC;
 
-  // Optional analyses. When non-null, these can both be used to do better
-  // combining and will be updated to reflect any changes.
-  LoopInfo *LI;
+  ReversePostOrderTraversal<BasicBlock *> &RPOT;
 
   bool MadeIRChange = false;
 
@@ -92,18 +91,25 @@ protected:
   /// Order of predecessors to canonicalize phi nodes towards.
   SmallDenseMap<BasicBlock *, SmallVector<BasicBlock *>, 8> PredOrder;
 
+  /// Backedges, used to avoid pushing instructions across backedges in cases
+  /// where this may result in infinite combine loops. For irreducible loops
+  /// this picks an arbitrary backedge.
+  SmallDenseSet<std::pair<const BasicBlock *, const BasicBlock *>, 8> BackEdges;
+  bool ComputedBackEdges = false;
+
 public:
   InstCombiner(InstructionWorklist &Worklist, BuilderTy &Builder,
                bool MinimizeSize, AAResults *AA, AssumptionCache &AC,
                TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
                DominatorTree &DT, OptimizationRemarkEmitter &ORE,
                BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
-               ProfileSummaryInfo *PSI, const DataLayout &DL, LoopInfo *LI)
-      : TTI(TTI), Builder(Builder), Worklist(Worklist),
+               ProfileSummaryInfo *PSI, const DataLayout &DL,
+               ReversePostOrderTraversal<BasicBlock *> &RPOT)
+      : TTIForTargetIntrinsicsOnly(TTI), Builder(Builder), Worklist(Worklist),
         MinimizeSize(MinimizeSize), AA(AA), AC(AC), TLI(TLI), DT(DT), DL(DL),
         SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
            /*CanUseUndef*/ true, &DC),
-        ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), LI(LI) {}
+        ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), RPOT(RPOT) {}
 
   virtual ~InstCombiner() = default;
 
@@ -132,21 +138,18 @@ public:
   /// This routine maps IR values to various complexity ranks:
   ///   0 -> undef
   ///   1 -> Constants
-  ///   2 -> Other non-instructions
-  ///   3 -> Arguments
-  ///   4 -> Cast and (f)neg/not instructions
-  ///   5 -> Other instructions
+  ///   2 -> Cast and (f)neg/not instructions
+  ///   3 -> Other instructions and arguments
   static unsigned getComplexity(Value *V) {
-    if (isa<Instruction>(V)) {
-      if (isa<CastInst>(V) || match(V, m_Neg(PatternMatch::m_Value())) ||
-          match(V, m_Not(PatternMatch::m_Value())) ||
-          match(V, m_FNeg(PatternMatch::m_Value())))
-        return 4;
-      return 5;
-    }
-    if (isa<Argument>(V))
-      return 3;
-    return isa<Constant>(V) ? (isa<UndefValue>(V) ? 0 : 1) : 2;
+    if (isa<Constant>(V))
+      return isa<UndefValue>(V) ? 0 : 1;
+
+    if (isa<CastInst>(V) || match(V, m_Neg(PatternMatch::m_Value())) ||
+        match(V, m_Not(PatternMatch::m_Value())) ||
+        match(V, m_FNeg(PatternMatch::m_Value())))
+      return 2;
+
+    return 3;
   }
 
   /// Predicate canonicalization reduces the number of patterns that need to be
@@ -154,7 +157,7 @@ public:
   /// conditional branch or select to create a compare with a canonical
   /// (inverted) predicate which is then more likely to be matched with other
   /// values.
-  static bool isCanonicalPredicate(CmpInst::Predicate Pred) {
+  static bool isCanonicalPredicate(CmpPredicate Pred) {
     switch (Pred) {
     case CmpInst::ICMP_NE:
     case CmpInst::ICMP_ULE:
@@ -180,13 +183,6 @@ public:
   static Constant *SubOne(Constant *C) {
     return ConstantExpr::getSub(C, ConstantInt::get(C->getType(), 1));
   }
-
-  std::optional<std::pair<
-      CmpInst::Predicate,
-      Constant *>> static getFlippedStrictnessPredicateAndConstant(CmpInst::
-                                                                       Predicate
-                                                                           Pred,
-                                                                   Constant *C);
 
   static bool shouldAvoidAbsorbingNotIntoSelect(const SelectInst &SI) {
     // a ? b : false and a ? true : b are the canonical form of logical and/or.
@@ -345,7 +341,6 @@ public:
   }
   BlockFrequencyInfo *getBlockFrequencyInfo() const { return BFI; }
   ProfileSummaryInfo *getProfileSummaryInfo() const { return PSI; }
-  LoopInfo *getLoopInfo() const { return LI; }
 
   // Call target specific combiners
   std::optional<Instruction *> targetInstCombineIntrinsic(IntrinsicInst &II);
@@ -358,6 +353,13 @@ public:
       APInt &UndefElts2, APInt &UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp);
+
+  void computeBackEdges();
+  bool isBackEdge(const BasicBlock *From, const BasicBlock *To) {
+    if (!ComputedBackEdges)
+      computeBackEdges();
+    return BackEdges.contains({From, To});
+  }
 
   /// Inserts an instruction \p New before instruction \p Old
   ///
@@ -428,35 +430,39 @@ public:
   /// methods should return the value returned by this function.
   virtual Instruction *eraseInstFromFunction(Instruction &I) = 0;
 
-  void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
-                        const Instruction *CxtI) const {
-    llvm::computeKnownBits(V, Known, Depth, SQ.getWithInstruction(CxtI));
+  void computeKnownBits(const Value *V, KnownBits &Known,
+                        const Instruction *CxtI, unsigned Depth = 0) const {
+    llvm::computeKnownBits(V, Known, SQ.getWithInstruction(CxtI), Depth);
   }
 
-  KnownBits computeKnownBits(const Value *V, unsigned Depth,
-                             const Instruction *CxtI) const {
-    return llvm::computeKnownBits(V, Depth, SQ.getWithInstruction(CxtI));
+  KnownBits computeKnownBits(const Value *V, const Instruction *CxtI,
+                             unsigned Depth = 0) const {
+    return llvm::computeKnownBits(V, SQ.getWithInstruction(CxtI), Depth);
   }
 
   bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero = false,
-                              unsigned Depth = 0,
-                              const Instruction *CxtI = nullptr) {
-    return llvm::isKnownToBeAPowerOfTwo(V, DL, OrZero, Depth, &AC, CxtI, &DT);
+                              const Instruction *CxtI = nullptr,
+                              unsigned Depth = 0) {
+    return llvm::isKnownToBeAPowerOfTwo(V, OrZero, SQ.getWithInstruction(CxtI),
+                                        Depth);
   }
 
-  bool MaskedValueIsZero(const Value *V, const APInt &Mask, unsigned Depth = 0,
-                         const Instruction *CxtI = nullptr) const {
+  bool MaskedValueIsZero(const Value *V, const APInt &Mask,
+                         const Instruction *CxtI = nullptr,
+                         unsigned Depth = 0) const {
     return llvm::MaskedValueIsZero(V, Mask, SQ.getWithInstruction(CxtI), Depth);
   }
 
-  unsigned ComputeNumSignBits(const Value *Op, unsigned Depth = 0,
-                              const Instruction *CxtI = nullptr) const {
-    return llvm::ComputeNumSignBits(Op, DL, Depth, &AC, CxtI, &DT);
+  unsigned ComputeNumSignBits(const Value *Op,
+                              const Instruction *CxtI = nullptr,
+                              unsigned Depth = 0) const {
+    return llvm::ComputeNumSignBits(Op, DL, &AC, CxtI, &DT, Depth);
   }
 
-  unsigned ComputeMaxSignificantBits(const Value *Op, unsigned Depth = 0,
-                                     const Instruction *CxtI = nullptr) const {
-    return llvm::ComputeMaxSignificantBits(Op, DL, Depth, &AC, CxtI, &DT);
+  unsigned ComputeMaxSignificantBits(const Value *Op,
+                                     const Instruction *CxtI = nullptr,
+                                     unsigned Depth = 0) const {
+    return llvm::ComputeMaxSignificantBits(Op, DL, &AC, CxtI, &DT, Depth);
   }
 
   OverflowResult computeOverflowForUnsignedMul(const Value *LHS,
@@ -504,12 +510,13 @@ public:
 
   virtual bool SimplifyDemandedBits(Instruction *I, unsigned OpNo,
                                     const APInt &DemandedMask, KnownBits &Known,
-                                    unsigned Depth, const SimplifyQuery &Q) = 0;
+                                    const SimplifyQuery &Q,
+                                    unsigned Depth = 0) = 0;
 
   bool SimplifyDemandedBits(Instruction *I, unsigned OpNo,
                             const APInt &DemandedMask, KnownBits &Known) {
     return SimplifyDemandedBits(I, OpNo, DemandedMask, Known,
-                                /*Depth=*/0, SQ.getWithInstruction(I));
+                                SQ.getWithInstruction(I));
   }
 
   virtual Value *

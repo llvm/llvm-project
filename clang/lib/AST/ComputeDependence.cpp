@@ -164,7 +164,7 @@ ExprDependence clang::computeDependence(BinaryOperator *E) {
 ExprDependence clang::computeDependence(ConditionalOperator *E) {
   // The type of the conditional operator depends on the type of the conditional
   // to support the GCC vector conditional extension. Additionally,
-  // [temp.dep.expr] does specify state that this should be dependent on ALL sub
+  // [temp.dep.expr] does specify that this should be dependent on ALL sub
   // expressions.
   return E->getCond()->getDependence() | E->getLHS()->getDependence() |
          E->getRHS()->getDependence();
@@ -252,10 +252,13 @@ ExprDependence clang::computeDependence(ExtVectorElementExpr *E) {
   return E->getBase()->getDependence();
 }
 
-ExprDependence clang::computeDependence(BlockExpr *E) {
+ExprDependence clang::computeDependence(BlockExpr *E,
+                                        bool ContainsUnexpandedParameterPack) {
   auto D = toExprDependenceForImpliedType(E->getType()->getDependence());
   if (E->getBlockDecl()->isDependentContext())
     D |= ExprDependence::Instantiation;
+  if (ContainsUnexpandedParameterPack)
+    D |= ExprDependence::UnexpandedPack;
   return D;
 }
 
@@ -385,11 +388,10 @@ ExprDependence clang::computeDependence(PackIndexingExpr *E) {
          ExprDependence::Instantiation;
 
   ArrayRef<Expr *> Exprs = E->getExpressions();
-  if (Exprs.empty())
+  if (Exprs.empty() || !E->isFullySubstituted())
     D |= PatternDep | ExprDependence::Instantiation;
-
   else if (!E->getIndexExpr()->isInstantiationDependent()) {
-    std::optional<unsigned> Index = E->getSelectedIndex();
+    UnsignedOrNone Index = E->getSelectedIndex();
     assert(Index && *Index < Exprs.size() && "pack index out of bound");
     D |= Exprs[*Index]->getDependence();
   }
@@ -637,12 +639,11 @@ ExprDependence clang::computeDependence(PredefinedExpr *E) {
   return toExprDependenceForImpliedType(E->getType()->getDependence());
 }
 
-ExprDependence clang::computeDependence(CallExpr *E,
-                                        llvm::ArrayRef<Expr *> PreArgs) {
+ExprDependence clang::computeDependence(CallExpr *E, ArrayRef<Expr *> PreArgs) {
   auto D = E->getCallee()->getDependence();
   if (E->getType()->isDependentType())
     D |= ExprDependence::Type;
-  for (auto *A : llvm::ArrayRef(E->getArgs(), E->getNumArgs())) {
+  for (auto *A : ArrayRef(E->getArgs(), E->getNumArgs())) {
     if (A)
       D |= A->getDependence();
   }
@@ -707,7 +708,7 @@ ExprDependence clang::computeDependence(InitListExpr *E) {
 
 ExprDependence clang::computeDependence(ShuffleVectorExpr *E) {
   auto D = toExprDependenceForImpliedType(E->getType()->getDependence());
-  for (auto *C : llvm::ArrayRef(E->getSubExprs(), E->getNumSubExprs()))
+  for (auto *C : ArrayRef(E->getSubExprs(), E->getNumSubExprs()))
     D |= C->getDependence();
   return D;
 }
@@ -756,7 +757,7 @@ ExprDependence clang::computeDependence(PseudoObjectExpr *O) {
 
 ExprDependence clang::computeDependence(AtomicExpr *A) {
   auto D = ExprDependence::None;
-  for (auto *E : llvm::ArrayRef(A->getSubExprs(), A->getNumSubExprs()))
+  for (auto *E : ArrayRef(A->getSubExprs(), A->getNumSubExprs()))
     D |= E->getDependence();
   return D;
 }
@@ -957,4 +958,10 @@ ExprDependence clang::computeDependence(ObjCMessageExpr *E) {
   for (auto *A : E->arguments())
     D |= A->getDependence();
   return D;
+}
+
+ExprDependence clang::computeDependence(OpenACCAsteriskSizeExpr *E) {
+  // This represents a simple asterisk as typed, so cannot be dependent in any
+  // way.
+  return ExprDependence::None;
 }

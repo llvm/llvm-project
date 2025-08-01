@@ -24,7 +24,7 @@ SmallVector<ExprType> computeSuffixProductImpl(ArrayRef<ExprType> sizes,
   if (sizes.empty())
     return {};
   SmallVector<ExprType> strides(sizes.size(), unit);
-  for (int64_t r = strides.size() - 2; r >= 0; --r)
+  for (int64_t r = static_cast<int64_t>(strides.size()) - 2; r >= 0; --r)
     strides[r] = strides[r + 1] * sizes[r + 1];
   return strides;
 }
@@ -69,7 +69,8 @@ SmallVector<ExprType> delinearizeImpl(ExprType linearIndex,
 //===----------------------------------------------------------------------===//
 
 SmallVector<int64_t> mlir::computeSuffixProduct(ArrayRef<int64_t> sizes) {
-  assert(llvm::all_of(sizes, [](int64_t s) { return s >= 0; }) &&
+  assert((sizes.empty() ||
+          llvm::all_of(sizes.drop_front(), [](int64_t s) { return s >= 0; })) &&
          "sizes must be nonnegative");
   int64_t unit = 1;
   return ::computeSuffixProductImpl(sizes, unit);
@@ -220,10 +221,10 @@ bool mlir::isIdentityPermutation(ArrayRef<int64_t> permutation) {
 }
 
 bool mlir::isPermutationVector(ArrayRef<int64_t> interchange) {
-  assert(llvm::all_of(interchange, [](int64_t s) { return s >= 0; }) &&
-         "permutation must be non-negative");
   llvm::SmallDenseSet<int64_t, 4> seenVals;
   for (auto val : interchange) {
+    if (val < 0 || static_cast<uint64_t>(val) >= interchange.size())
+      return false;
     if (seenVals.count(val))
       return false;
     seenVals.insert(val);
@@ -248,6 +249,32 @@ mlir::computePermutationVector(int64_t permSize, ArrayRef<int64_t> positions,
       ++nextPos;
     entry = nextPos;
     ++nextPos;
+  }
+  return res;
+}
+
+SmallVector<int64_t> mlir::dropDims(ArrayRef<int64_t> inputPerm,
+                                    ArrayRef<int64_t> dropPositions) {
+  assert(inputPerm.size() >= dropPositions.size() &&
+         "expect inputPerm size large than position to drop");
+  SmallVector<int64_t> res;
+  unsigned permSize = inputPerm.size();
+  for (unsigned inputIndex = 0; inputIndex < permSize; ++inputIndex) {
+    int64_t targetIndex = inputPerm[inputIndex];
+    bool shouldDrop = false;
+    unsigned dropSize = dropPositions.size();
+    for (unsigned dropIndex = 0; dropIndex < dropSize; dropIndex++) {
+      if (dropPositions[dropIndex] == inputPerm[inputIndex]) {
+        shouldDrop = true;
+        break;
+      }
+      if (dropPositions[dropIndex] < inputPerm[inputIndex]) {
+        targetIndex--;
+      }
+    }
+    if (!shouldDrop) {
+      res.push_back(targetIndex);
+    }
   }
   return res;
 }

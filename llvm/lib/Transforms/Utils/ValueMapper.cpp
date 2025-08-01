@@ -120,12 +120,14 @@ class Mapper {
   SmallVector<WorklistEntry, 4> Worklist;
   SmallVector<DelayedBasicBlock, 1> DelayedBBs;
   SmallVector<Constant *, 16> AppendingInits;
+  const MetadataPredicate *IdentityMD;
 
 public:
   Mapper(ValueToValueMapTy &VM, RemapFlags Flags,
-         ValueMapTypeRemapper *TypeMapper, ValueMaterializer *Materializer)
+         ValueMapTypeRemapper *TypeMapper, ValueMaterializer *Materializer,
+         const MetadataPredicate *IdentityMD)
       : Flags(Flags), TypeMapper(TypeMapper),
-        MCs(1, MappingContext(VM, Materializer)) {}
+        MCs(1, MappingContext(VM, Materializer)), IdentityMD(IdentityMD) {}
 
   /// ValueMapper should explicitly call \a flush() before destruction.
   ~Mapper() { assert(!hasWorkToDo() && "Expected to be flushed"); }
@@ -391,9 +393,8 @@ Value *Mapper::mapValue(const Value *V) {
       // ensures metadata operands only reference defined SSA values.
       return (Flags & RF_IgnoreMissingLocals)
                  ? nullptr
-                 : MetadataAsValue::get(
-                       V->getContext(),
-                       MDTuple::get(V->getContext(), std::nullopt));
+                 : MetadataAsValue::get(V->getContext(),
+                                        MDTuple::get(V->getContext(), {}));
     }
     if (auto *AL = dyn_cast<DIArgList>(MD)) {
       SmallVector<ValueAsMetadata *, 4> MappedArgs;
@@ -411,9 +412,9 @@ Value *Mapper::mapValue(const Value *V) {
         } else if ((Flags & RF_IgnoreMissingLocals) && isa<LocalAsMetadata>(VAM)) {
             MappedArgs.push_back(VAM);
         } else {
-          // If we cannot map the value, set the argument as undef.
+          // If we cannot map the value, set the argument as poison.
           MappedArgs.push_back(ValueAsMetadata::get(
-              UndefValue::get(VAM->getValue()->getType())));
+              PoisonValue::get(VAM->getValue()->getType())));
         }
       }
       return MetadataAsValue::get(V->getContext(),
@@ -524,6 +525,9 @@ Value *Mapper::mapValue(const Value *V) {
     return getVM()[V] = ConstantStruct::get(cast<StructType>(NewTy), Ops);
   if (isa<ConstantVector>(C))
     return getVM()[V] = ConstantVector::get(Ops);
+  if (isa<ConstantPtrAuth>(C))
+    return getVM()[V] = ConstantPtrAuth::get(Ops[0], cast<ConstantInt>(Ops[1]),
+                                             cast<ConstantInt>(Ops[2]), Ops[3]);
   // If this is a no-operand constant, it must be because the type was remapped.
   if (isa<PoisonValue>(C))
     return getVM()[V] = PoisonValue::get(NewTy);
@@ -565,9 +569,8 @@ void Mapper::remapDbgRecord(DbgRecord &DR) {
   }
 
   // Find Value operands and remap those.
-  SmallVector<Value *, 4> Vals, NewVals;
-  for (Value *Val : V.location_ops())
-    Vals.push_back(Val);
+  SmallVector<Value *, 4> Vals(V.location_ops());
+  SmallVector<Value *, 4> NewVals;
   for (Value *Val : Vals)
     NewVals.push_back(mapValue(Val));
 
@@ -576,8 +579,7 @@ void Mapper::remapDbgRecord(DbgRecord &DR) {
     return;
 
   // Otherwise, do some replacement.
-  if (!IgnoreMissingLocals &&
-      llvm::any_of(NewVals, [&](Value *V) { return V == nullptr; })) {
+  if (!IgnoreMissingLocals && llvm::is_contained(NewVals, nullptr)) {
     V.setKillLocation();
   } else {
     // Either we have all non-empty NewVals, or we're permitted to ignore
@@ -770,7 +772,7 @@ MDNode *MDNodeMapper::visitOperands(UniquedGraph &G, MDNode::op_iterator &I,
     MDNode &OpN = *cast<MDNode>(Op);
     assert(OpN.isUniqued() &&
            "Only uniqued operands cannot be mapped immediately");
-    if (G.Info.insert(std::make_pair(&OpN, Data())).second)
+    if (G.Info.try_emplace(&OpN).second)
       return &OpN; // This is a new one.  Return it.
   }
   return nullptr;
@@ -902,6 +904,12 @@ std::optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
     return wrapConstantAsMetadata(*CMD, mapValue(CMD->getValue()));
   }
 
+  // Map metadata matching IdentityMD predicate on first use. We need to add
+  // these nodes to the mapping as otherwise metadata nodes numbering gets
+  // messed up.
+  if (IdentityMD && (*IdentityMD)(MD))
+    return getVM().MD()[MD] = TrackingMDRef(const_cast<Metadata *>(MD));
+
   assert(isa<MDNode>(MD) && "Expected a metadata node");
 
   return std::nullopt;
@@ -979,6 +987,13 @@ void Mapper::remapInstruction(Instruction *I) {
              "Referenced value not in value map!");
   }
 
+  // Drop callee_type metadata from calls that were remapped
+  // into a direct call from an indirect one.
+  if (auto *CB = dyn_cast<CallBase>(I)) {
+    if (CB->getMetadata(LLVMContext::MD_callee_type) && !CB->isIndirectCall())
+      CB->setMetadata(LLVMContext::MD_callee_type, nullptr);
+  }
+
   // Remap phi nodes' incoming blocks.
   if (PHINode *PN = dyn_cast<PHINode>(I)) {
     for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
@@ -1001,6 +1016,10 @@ void Mapper::remapInstruction(Instruction *I) {
     if (New != Old)
       I->setMetadata(MI.first, New);
   }
+
+  // Remap source location atom instance.
+  if (!(Flags & RF_DoNotRemapAtoms))
+    RemapSourceAtom(I, getVM());
 
   if (!TypeMapper)
     return;
@@ -1201,8 +1220,9 @@ public:
 
 ValueMapper::ValueMapper(ValueToValueMapTy &VM, RemapFlags Flags,
                          ValueMapTypeRemapper *TypeMapper,
-                         ValueMaterializer *Materializer)
-    : pImpl(new Mapper(VM, Flags, TypeMapper, Materializer)) {}
+                         ValueMaterializer *Materializer,
+                         const MetadataPredicate *IdentityMD)
+    : pImpl(new Mapper(VM, Flags, TypeMapper, Materializer, IdentityMD)) {}
 
 ValueMapper::~ValueMapper() { delete getAsMapper(pImpl); }
 
@@ -1282,4 +1302,25 @@ void ValueMapper::scheduleMapGlobalIFunc(GlobalIFunc &GI, Constant &Resolver,
 
 void ValueMapper::scheduleRemapFunction(Function &F, unsigned MCID) {
   getAsMapper(pImpl)->scheduleRemapFunction(F, MCID);
+}
+
+void llvm::RemapSourceAtom(Instruction *I, ValueToValueMapTy &VM) {
+  const DebugLoc &DL = I->getDebugLoc();
+  if (!DL)
+    return;
+
+  auto AtomGroup = DL->getAtomGroup();
+  if (!AtomGroup)
+    return;
+
+  auto R = VM.AtomMap.find({DL->getInlinedAt(), AtomGroup});
+  if (R == VM.AtomMap.end())
+    return;
+  AtomGroup = R->second;
+
+  // Remap the atom group and copy all other fields.
+  DILocation *New = DILocation::get(
+      I->getContext(), DL.getLine(), DL.getCol(), DL.getScope(),
+      DL.getInlinedAt(), DL.isImplicitCode(), AtomGroup, DL->getAtomRank());
+  I->setDebugLoc(New);
 }

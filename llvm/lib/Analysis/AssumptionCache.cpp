@@ -50,9 +50,7 @@ AssumptionCache::getOrInsertAffectedValues(Value *V) {
   if (AVI != AffectedValues.end())
     return AVI->second;
 
-  auto AVIP = AffectedValues.insert(
-      {AffectedValueCallbackVH(V, this), SmallVector<ResultElem, 1>()});
-  return AVIP.first->second;
+  return AffectedValues[AffectedValueCallbackVH(V, this)];
 }
 
 static void
@@ -294,9 +292,7 @@ void AssumptionCacheTracker::verifyAnalysis() const {
   }
 }
 
-AssumptionCacheTracker::AssumptionCacheTracker() : ImmutablePass(ID) {
-  initializeAssumptionCacheTrackerPass(*PassRegistry::getPassRegistry());
-}
+AssumptionCacheTracker::AssumptionCacheTracker() : ImmutablePass(ID) {}
 
 AssumptionCacheTracker::~AssumptionCacheTracker() = default;
 

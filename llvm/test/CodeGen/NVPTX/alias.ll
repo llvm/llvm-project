@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_30 -mattr=+ptx64 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_30 -mattr=+ptx64 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_30 -mattr=+ptx64 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_30 -mattr=+ptx64 | %ptxas-verify %}
 
 define i32 @a() { ret i32 0 }
 @b = internal alias i32 (), ptr @a
@@ -56,8 +56,7 @@ attributes #0 = { noreturn }
 ; CHECK-NEXT: .noreturn
 
 ;      CHECK: .visible .func  (.param .b32 func_retval0) z()
-;      CHECK:      call.uni (retval0), 
-; CHECK-NEXT:      b,
+;      CHECK:      call.uni (retval0), b,
 
 
 ; CHECK: .alias b, a;

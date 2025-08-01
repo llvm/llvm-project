@@ -9,8 +9,6 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/Target/Cpp/CppEmitter.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
 #include "llvm/Support/CommandLine.h"
@@ -29,12 +27,17 @@ void registerToCppTranslation() {
       llvm::cl::desc("Declare variables at top when emitting C/C++"),
       llvm::cl::init(false));
 
+  static llvm::cl::opt<std::string> fileId(
+      "file-id", llvm::cl::desc("Emit emitc.file ops with matching id"),
+      llvm::cl::init(""));
+
   TranslateFromMLIRRegistration reg(
       "mlir-to-cpp", "translate from mlir to cpp",
       [](Operation *op, raw_ostream &output) {
         return emitc::translateToCpp(
             op, output,
-            /*declareVariablesAtTop=*/declareVariablesAtTop);
+            /*declareVariablesAtTop=*/declareVariablesAtTop,
+            /*fileId=*/fileId);
       },
       [](DialectRegistry &registry) {
         // clang-format off

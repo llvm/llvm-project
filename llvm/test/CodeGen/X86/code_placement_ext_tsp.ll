@@ -1,5 +1,5 @@
 ;; See also llvm/unittests/Transforms/Utils/CodeLayoutTest.cpp
-; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -enable-ext-tsp-block-placement=1 < %s | FileCheck %s
+; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -verify-machineinstrs -enable-ext-tsp-block-placement < %s | FileCheck %s
 
 define void @func1a()  {
 ; Test that the algorithm positions the most likely successor first

@@ -19,3 +19,9 @@ void mlirFuncSetArgAttr(MlirOperation op, intptr_t pos, MlirStringRef name,
   llvm::cast<mlir::func::FuncOp>(unwrap(op))
       .setArgAttr(pos, unwrap(name), unwrap(attr));
 }
+
+void mlirFuncSetResultAttr(MlirOperation op, intptr_t pos, MlirStringRef name,
+                           MlirAttribute attr) {
+  llvm::cast<mlir::func::FuncOp>(unwrap(op))
+      .setResultAttr(pos, unwrap(name), unwrap(attr));
+}

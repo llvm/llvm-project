@@ -72,9 +72,6 @@ namespace bfi_detail {
 
 struct IrreducibleGraph;
 
-// This is part of a workaround for a GCC 4.7 crash on lambdas.
-template <class BT> struct BlockEdgesAdder;
-
 /// Mass of a block.
 ///
 /// This class implements a sort of fixed-point fraction always between 0.0 and
@@ -843,9 +840,6 @@ void IrreducibleGraph::addEdges(const BlockNode &Node,
 ///         (Running this until fixed point would "solve" the geometric
 ///         series by simulation.)
 template <class BT> class BlockFrequencyInfoImpl : BlockFrequencyInfoImplBase {
-  // This is part of a workaround for a GCC 4.7 crash on lambdas.
-  friend struct bfi_detail::BlockEdgesAdder<BT>;
-
   using BlockT = typename bfi_detail::TypeMap<BT>::BlockT;
   using BlockKeyT = typename bfi_detail::TypeMap<BT>::BlockKeyT;
   using FunctionT = typename bfi_detail::TypeMap<BT>::FunctionT;
@@ -1143,14 +1137,15 @@ void BlockFrequencyInfoImpl<BT>::calculate(const FunctionT &F,
 template <class BT>
 void BlockFrequencyInfoImpl<BT>::setBlockFreq(const BlockT *BB,
                                               BlockFrequency Freq) {
-  if (Nodes.count(BB))
-    BlockFrequencyInfoImplBase::setBlockFreq(getNode(BB), Freq);
+  auto [It, Inserted] = Nodes.try_emplace(BB);
+  if (!Inserted)
+    BlockFrequencyInfoImplBase::setBlockFreq(It->second.first, Freq);
   else {
     // If BB is a newly added block after BFI is done, we need to create a new
     // BlockNode for it assigned with a new index. The index can be determined
     // by the size of Freqs.
     BlockNode NewNode(Freqs.size());
-    Nodes[BB] = {NewNode, BFICallbackVH(BB, this)};
+    It->second = {NewNode, BFICallbackVH(BB, this)};
     Freqs.emplace_back();
     BlockFrequencyInfoImplBase::setBlockFreq(NewNode, Freq);
   }
@@ -1409,11 +1404,10 @@ template <class BT> void BlockFrequencyInfoImpl<BT>::applyIterativeInference() {
     auto Node = getNode(&BB);
     if (!Node.isValid())
       continue;
-    if (BlockIndex.count(&BB)) {
-      Freqs[Node.Index].Scaled = Freq[BlockIndex[&BB]];
-    } else {
+    if (auto It = BlockIndex.find(&BB); It != BlockIndex.end())
+      Freqs[Node.Index].Scaled = Freq[It->second];
+    else
       Freqs[Node.Index].Scaled = Scaled64::getZero();
-    }
   }
 }
 
@@ -1571,7 +1565,8 @@ void BlockFrequencyInfoImpl<BT>::initTransitionProbabilities(
     SmallPtrSet<const BlockT *, 2> UniqueSuccs;
     for (const auto SI : children<const BlockT *>(BB)) {
       // Ignore cold blocks
-      if (!BlockIndex.contains(SI))
+      auto BlockIndexIt = BlockIndex.find(SI);
+      if (BlockIndexIt == BlockIndex.end())
         continue;
       // Ignore parallel edges between BB and SI blocks
       if (!UniqueSuccs.insert(SI).second)
@@ -1583,7 +1578,7 @@ void BlockFrequencyInfoImpl<BT>::initTransitionProbabilities(
 
       auto EdgeProb =
           Scaled64::getFraction(EP.getNumerator(), EP.getDenominator());
-      size_t Dst = BlockIndex.find(SI)->second;
+      size_t Dst = BlockIndexIt->second;
       Succs[Src].push_back(std::make_pair(Dst, EdgeProb));
       SumProb[Src] += EdgeProb;
     }
@@ -1631,29 +1626,6 @@ BlockFrequencyInfoImplBase::Scaled64 BlockFrequencyInfoImpl<BT>::discrepancy(
 }
 #endif
 
-/// \note This should be a lambda, but that crashes GCC 4.7.
-namespace bfi_detail {
-
-template <class BT> struct BlockEdgesAdder {
-  using BlockT = BT;
-  using LoopData = BlockFrequencyInfoImplBase::LoopData;
-  using Successor = GraphTraits<const BlockT *>;
-
-  const BlockFrequencyInfoImpl<BT> &BFI;
-
-  explicit BlockEdgesAdder(const BlockFrequencyInfoImpl<BT> &BFI)
-      : BFI(BFI) {}
-
-  void operator()(IrreducibleGraph &G, IrreducibleGraph::IrrNode &Irr,
-                  const LoopData *OuterLoop) {
-    const BlockT *BB = BFI.RPOT[Irr.Node.Index];
-    for (const auto *Succ : children<const BlockT *>(BB))
-      G.addEdge(Irr, BFI.getNode(Succ), OuterLoop);
-  }
-};
-
-} // end namespace bfi_detail
-
 template <class BT>
 void BlockFrequencyInfoImpl<BT>::computeIrreducibleMass(
     LoopData *OuterLoop, std::list<LoopData>::iterator Insert) {
@@ -1664,9 +1636,12 @@ void BlockFrequencyInfoImpl<BT>::computeIrreducibleMass(
 
   using namespace bfi_detail;
 
-  // Ideally, addBlockEdges() would be declared here as a lambda, but that
-  // crashes GCC 4.7.
-  BlockEdgesAdder<BT> addBlockEdges(*this);
+  auto addBlockEdges = [&](IrreducibleGraph &G, IrreducibleGraph::IrrNode &Irr,
+                           const LoopData *OuterLoop) {
+    const BlockT *BB = RPOT[Irr.Node.Index];
+    for (const auto *Succ : children<const BlockT *>(BB))
+      G.addEdge(Irr, getNode(Succ), OuterLoop);
+  };
   IrreducibleGraph G(*this, OuterLoop, addBlockEdges);
 
   for (auto &L : analyzeIrreducible(G, OuterLoop, Insert))
@@ -1764,8 +1739,8 @@ void BlockFrequencyInfoImpl<BT>::verifyMatch(
     for (auto &Entry : ValidNodes) {
       const BlockT *BB = Entry.first;
       BlockNode Node = Entry.second;
-      if (OtherValidNodes.count(BB)) {
-        BlockNode OtherNode = OtherValidNodes[BB];
+      if (auto It = OtherValidNodes.find(BB); It != OtherValidNodes.end()) {
+        BlockNode OtherNode = It->second;
         const auto &Freq = Freqs[Node.Index];
         const auto &OtherFreq = Other.Freqs[OtherNode.Index];
         if (Freq.Integer != OtherFreq.Integer) {

@@ -1,5 +1,5 @@
-; RUN: llc -march=hexagon -O3 -disable-hexagon-amodeopt < %s | FileCheck %s --check-prefix=CHECK-NO-AMODE
-; RUN: llc -march=hexagon -O3 < %s | FileCheck %s --check-prefix=CHECK-AMODE
+; RUN: llc -mtriple=hexagon -O3 -disable-hexagon-amodeopt < %s | FileCheck %s --check-prefix=CHECK-NO-AMODE
+; RUN: llc -mtriple=hexagon -O3 < %s | FileCheck %s --check-prefix=CHECK-AMODE
 
 ; CHECK-NO-AMODE: [[REG1:(r[0-9]+)]] = add({{r[0-9]+}},#0)
 
@@ -15,15 +15,19 @@
 ; CHECK-NO-AMODE: vmem([[REG5]]+#0) = vtmp.new
 ; CHECK-NO-AMODE: vmem([[REG6]]+#0) = vtmp.new
 
+; Since we added some extra code to modify the addi offsets and bring them into
+; the range of load/store instructions, we cannot guarantee which registers
+; would be preserved, but we know for sure that only one Addi should be present
+; and the other one should be removed followed by vmems with non-zero offset
 
-; CHECK-AMODE: [[REG1:(r[0-9]+)]] = add({{r[0-9]+}},#0)
+; CHECK-AMODE: [[REG1:(r[0-9]+)]] = add({{r[0-9]+}},#{{[0-9]+}})
 ; CHECK-AMODE-NOT: {{r[0-9]+}} = add([[REG1]],{{[0-9]+}})
-; CHECK-AMODE: vmem([[REG1]]+#0) = vtmp.new
-; CHECK-AMODE: vmem([[REG1]]+#1) = vtmp.new
-; CHECK-AMODE: vmem([[REG1]]+#2) = vtmp.new
-; CHECK-AMODE: vmem([[REG1]]+#3) = vtmp.new
-; CHECK-AMODE: vmem([[REG1]]+#4) = vtmp.new
-; CHECK-AMODE: vmem([[REG1]]+#5) = vtmp.new
+; CHECK-AMODE: vmem([[REG1]]+#{{[0-9]}}) = vtmp.new
+; CHECK-AMODE: vmem([[REG2:(r[0-9]+)]]+#{{-?[0-9]}}) = vtmp.new
+; CHECK-AMODE: vmem([[REG2]]+#{{-?[1-9]}}) = vtmp.new
+; CHECK-AMODE: vmem([[REG2]]+#{{-?[1-9]}}) = vtmp.new
+; CHECK-AMODE: vmem([[REG2]]+#{{-?[1-9]}}) = vtmp.new
+; CHECK-AMODE: vmem([[REG2]]+#{{-?[1-9]}}) = vtmp.new
 
 target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
 target triple = "hexagon"

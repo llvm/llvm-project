@@ -20,7 +20,12 @@ set(LIBUNWIND_C_SOURCES
     )
 set_source_files_properties(${LIBUNWIND_C_SOURCES}
                             PROPERTIES
-                              COMPILE_FLAGS "-std=c99")
+                              # We need to set `-fexceptions` here so that key
+                              # unwinding functions, like
+                              # _UNWIND_RaiseException, are not marked as
+                              # `nounwind`, which breaks LTO builds of
+                              # libunwind.  See #56825 and #120657 for context.
+                              COMPILE_FLAGS "-std=c99 -fexceptions")
 
 set(LIBUNWIND_ASM_SOURCES
     UnwindRegistersRestore.S
@@ -31,7 +36,6 @@ set(LIBUNWIND_HEADERS
     AddressSpace.hpp
     assembly.h
     CompactUnwinder.hpp
-    cet_unwind.h
     config.h
     dwarf2.h
     DwarfInstructions.hpp
@@ -41,6 +45,7 @@ set(LIBUNWIND_HEADERS
     libunwind_ext.h
     Registers.hpp
     RWMutex.hpp
+    shadow_stack_unwind.h
     Unwind-EHABI.h
     UnwindCursor.hpp
     ../include/libunwind.h
@@ -66,18 +71,6 @@ set(LIBUNWIND_SOURCES
     ${LIBUNWIND_ASM_SOURCES})
 
 # Generate library list.
-if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
-  add_link_flags_if_supported(-nostdlib++)
-else()
-  if (LIBUNWIND_USE_COMPILER_RT)
-    add_library_flags("${LIBUNWIND_BUILTINS_LIBRARY}")
-  else()
-    add_library_flags_if(LIBUNWIND_HAS_GCC_S_LIB gcc_s)
-    add_library_flags_if(LIBUNWIND_HAS_GCC_LIB gcc)
-  endif()
-  add_library_flags_if(LIBUNWIND_HAS_C_LIB c)
-endif()
-
 if (NOT APPLE)
   add_library_flags_if(LIBUNWIND_HAS_DL_LIB dl)
 endif()
@@ -104,15 +97,6 @@ if (LIBUNWIND_ENABLE_SHARED AND
           "support is disabled.  Building libunwind DSO with runtime dependency "
           "on C++ ABI library is not supported.")
 endif()
-
-if (APPLE)
-  add_compile_flags("-U__STRICT_ANSI__")
-  add_link_flags("-compatibility_version 1" "-install_name /usr/lib/libunwind.1.dylib")
-
-  if (CMAKE_OSX_DEPLOYMENT_TARGET STREQUAL "10.6")
-    add_link_flags("-current_version ${LIBUNWIND_VERSION}" "/usr/lib/libSystem.B.dylib")
-  endif ()
-endif ()
 
 if (HAIKU)
   add_library_flags_if(LIBUNWIND_HAS_ROOT_LIB root)
@@ -148,9 +132,10 @@ if(CMAKE_C_COMPILER_ID STREQUAL MSVC)
 else()
   target_compile_options(unwind_shared_objects PRIVATE -fno-rtti)
 endif()
-target_link_libraries(unwind_shared_objects PRIVATE unwind-headers ${LIBUNWIND_LIBRARIES})
 target_compile_options(unwind_shared_objects PUBLIC "${LIBUNWIND_ADDITIONAL_COMPILE_FLAGS}")
-target_link_libraries(unwind_shared_objects PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}")
+target_link_libraries(unwind_shared_objects
+  PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}"
+  PRIVATE unwind-headers runtimes-libc-headers ${LIBUNWIND_LIBRARIES})
 set_target_properties(unwind_shared_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
@@ -162,22 +147,23 @@ if (CMAKE_POSITION_INDEPENDENT_CODE OR NOT DEFINED CMAKE_POSITION_INDEPENDENT_CO
   set_target_properties(unwind_shared_objects PROPERTIES POSITION_INDEPENDENT_CODE ON) # must set manually because it's an object library
 endif()
 
-if (LIBUNWIND_ENABLE_SHARED)
-  add_library(unwind_shared SHARED)
-  target_link_libraries(unwind_shared PUBLIC unwind_shared_objects)
-  set_target_properties(unwind_shared
-    PROPERTIES
-      LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
-      LINKER_LANGUAGE C
-      OUTPUT_NAME "${LIBUNWIND_SHARED_OUTPUT_NAME}"
-      VERSION "1.0"
-      SOVERSION "1"
-  )
+add_library(unwind_shared SHARED)
+target_link_libraries(unwind_shared PUBLIC unwind_shared_objects runtimes-libc-shared)
+set_target_properties(unwind_shared
+  PROPERTIES
+    EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBUNWIND_ENABLE_SHARED}>,FALSE,TRUE>"
+    LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
+    LINKER_LANGUAGE C
+    OUTPUT_NAME "${LIBUNWIND_SHARED_OUTPUT_NAME}"
+    VERSION     "${LIBUNWIND_LIBRARY_VERSION}"
+    SOVERSION   "1"
+)
 
+if (LIBUNWIND_ENABLE_SHARED)
   list(APPEND LIBUNWIND_BUILD_TARGETS "unwind_shared")
-  if (LIBUNWIND_INSTALL_SHARED_LIBRARY)
-    list(APPEND LIBUNWIND_INSTALL_TARGETS "unwind_shared")
-  endif()
+endif()
+if (LIBUNWIND_INSTALL_SHARED_LIBRARY)
+  list(APPEND LIBUNWIND_INSTALL_TARGETS "unwind_shared")
 endif()
 
 # Build the static library.
@@ -188,9 +174,10 @@ if(CMAKE_C_COMPILER_ID STREQUAL MSVC)
 else()
   target_compile_options(unwind_static_objects PRIVATE -fno-rtti)
 endif()
-target_link_libraries(unwind_static_objects PRIVATE unwind-headers ${LIBUNWIND_LIBRARIES})
 target_compile_options(unwind_static_objects PUBLIC "${LIBUNWIND_ADDITIONAL_COMPILE_FLAGS}")
-target_link_libraries(unwind_static_objects PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}")
+target_link_libraries(unwind_static_objects
+  PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}"
+  PRIVATE unwind-headers runtimes-libc-headers ${LIBUNWIND_LIBRARIES})
 set_target_properties(unwind_static_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
@@ -208,20 +195,21 @@ if(LIBUNWIND_HIDE_SYMBOLS)
   target_compile_definitions(unwind_static_objects PRIVATE _LIBUNWIND_HIDE_SYMBOLS)
 endif()
 
-if (LIBUNWIND_ENABLE_STATIC)
-  add_library(unwind_static STATIC)
-  target_link_libraries(unwind_static PUBLIC unwind_static_objects)
-  set_target_properties(unwind_static
-    PROPERTIES
-      LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
-      LINKER_LANGUAGE C
-      OUTPUT_NAME "${LIBUNWIND_STATIC_OUTPUT_NAME}"
-  )
+add_library(unwind_static STATIC)
+target_link_libraries(unwind_static PUBLIC unwind_static_objects runtimes-libc-static)
+set_target_properties(unwind_static
+  PROPERTIES
+    EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBUNWIND_ENABLE_STATIC}>,FALSE,TRUE>"
+    LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
+    LINKER_LANGUAGE C
+    OUTPUT_NAME "${LIBUNWIND_STATIC_OUTPUT_NAME}"
+)
 
+if (LIBUNWIND_ENABLE_STATIC)
   list(APPEND LIBUNWIND_BUILD_TARGETS "unwind_static")
-  if (LIBUNWIND_INSTALL_STATIC_LIBRARY)
-    list(APPEND LIBUNWIND_INSTALL_TARGETS "unwind_static")
-  endif()
+endif()
+if (LIBUNWIND_INSTALL_STATIC_LIBRARY)
+  list(APPEND LIBUNWIND_INSTALL_TARGETS "unwind_static")
 endif()
 
 # Add a meta-target for both libraries.

@@ -21,8 +21,9 @@
 //     static constexpr result_type default_seed = 1u;
 
 #include <random>
-#include <type_traits>
 #include <cassert>
+#include <climits>
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -116,7 +117,7 @@ int main(int, char**)
     test_ext<unsigned long>();
     test<unsigned long long>();
     // This isn't implemented on platforms without __int128
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     test_ext<unsigned long long>();
 #endif
 

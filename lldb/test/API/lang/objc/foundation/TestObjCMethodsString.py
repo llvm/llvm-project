@@ -21,11 +21,11 @@ class FoundationTestCaseString(TestBase):
 
         # Test_NSString:
         self.runCmd("thread backtrace")
-        self.expect("expression (int)[str length]", patterns=["\(int\) \$.* ="])
-        self.expect("expression (int)[str_id length]", patterns=["\(int\) \$.* ="])
-        self.expect("expression (id)[str description]", patterns=["\(id\) \$.* = 0x"])
+        self.expect("expression (int)[str length]", patterns=[r"\(int\) \$.* ="])
+        self.expect("expression (int)[str_id length]", patterns=[r"\(int\) \$.* ="])
+        self.expect("expression (id)[str description]", patterns=[r"\(id\) \$.* = 0x"])
         self.expect(
-            "expression (id)[str_id description]", patterns=["\(id\) \$.* = 0x"]
+            "expression (id)[str_id description]", patterns=[r"\(id\) \$.* = 0x"]
         )
         self.expect("expression str.length")
         self.expect('expression str = @"new"')
@@ -42,6 +42,6 @@ class FoundationTestCaseString(TestBase):
         )
         self.expect(
             "expression --show-types -- *my",
-            patterns=["\(MyString\) \$.* = ", "\(MyBase\)"],
+            patterns=[r"\(MyString\) \$.* = ", r"\(MyBase\)"],
         )
         self.runCmd("process continue")

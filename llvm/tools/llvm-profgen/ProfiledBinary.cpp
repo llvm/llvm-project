@@ -132,12 +132,13 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
     MCPseudoProbeDecoder &ProbeDecoder) {
   ProbeFrameStack ProbeContext;
   for (const auto &Child : ProbeDecoder.getDummyInlineRoot().getChildren())
-    trackInlineesOptimizedAway(ProbeDecoder, *Child.second, ProbeContext);
+    trackInlineesOptimizedAway(ProbeDecoder, Child, ProbeContext);
 }
 
 void BinarySizeContextTracker::trackInlineesOptimizedAway(
     MCPseudoProbeDecoder &ProbeDecoder,
-    MCDecodedPseudoProbeInlineTree &ProbeNode, ProbeFrameStack &ProbeContext) {
+    const MCDecodedPseudoProbeInlineTree &ProbeNode,
+    ProbeFrameStack &ProbeContext) {
   StringRef FuncName =
       ProbeDecoder.getFuncDescForGUID(ProbeNode.Guid)->FuncName;
   ProbeContext.emplace_back(FuncName, 0);
@@ -159,9 +160,9 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
 
   // DFS down the probe inline tree
   for (const auto &ChildNode : ProbeNode.getChildren()) {
-    InlineSite Location = ChildNode.first;
+    InlineSite Location = ChildNode.getInlineSite();
     ProbeContext.back().second = std::get<1>(Location);
-    trackInlineesOptimizedAway(ProbeDecoder, *ChildNode.second, ProbeContext);
+    trackInlineesOptimizedAway(ProbeDecoder, ChildNode, ProbeContext);
   }
 
   ProbeContext.pop_back();
@@ -241,8 +242,7 @@ void ProfiledBinary::load() {
     loadSymbolsFromDWARF(*cast<ObjectFile>(&ExeBinary));
   }
 
-  DisassembleFunctionSet.insert(DisassembleFunctions.begin(),
-                                DisassembleFunctions.end());
+  DisassembleFunctionSet.insert_range(DisassembleFunctions);
 
   if (auto *ELFObj = dyn_cast<ELFObjectFileBase>(Obj)) {
     checkPseudoProbe(ELFObj);
@@ -409,21 +409,22 @@ void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
       FuncStartAddresses = SymbolStartAddrs;
     } else {
       for (auto &F : DisassembleFunctionSet) {
-        auto GUID = Function::getGUID(F.first());
+        auto GUID = Function::getGUIDAssumingExternalLinkage(F.first());
         if (auto StartAddr = SymbolStartAddrs.lookup(GUID)) {
           FuncStartAddresses[GUID] = StartAddr;
           FuncRange &Range = StartAddrToFuncRangeMap[StartAddr];
-          GuidFilter.insert(Function::getGUID(Range.getFuncName()));
+          GuidFilter.insert(
+              Function::getGUIDAssumingExternalLinkage(Range.getFuncName()));
         }
       }
     }
   } else {
     for (auto *F : ProfiledFunctions) {
-      GuidFilter.insert(Function::getGUID(F->FuncName));
+      GuidFilter.insert(Function::getGUIDAssumingExternalLinkage(F->FuncName));
       for (auto &Range : F->Ranges) {
         auto GUIDs = StartAddrToSymMap.equal_range(Range.first);
-        for (auto I = GUIDs.first; I != GUIDs.second; ++I)
-          FuncStartAddresses[I->second] = I->first;
+        for (const auto &[StartAddr, Func] : make_range(GUIDs))
+          FuncStartAddresses[Func] = StartAddr;
       }
     }
   }
@@ -453,8 +454,8 @@ void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
   // Build TopLevelProbeFrameMap to track size for optimized inlinees when probe
   // is available
   if (TrackFuncContextSize) {
-    for (const auto &Child : ProbeDecoder.getDummyInlineRoot().getChildren()) {
-      auto *Frame = Child.second.get();
+    for (auto &Child : ProbeDecoder.getDummyInlineRoot().getChildren()) {
+      auto *Frame = &Child;
       StringRef FuncName =
           ProbeDecoder.getFuncDescForGUID(Frame->Guid)->FuncName;
       TopLevelProbeFrameMap[FuncName] = Frame;
@@ -774,7 +775,7 @@ void ProfiledBinary::populateElfSymbolAddressList(
   for (const SymbolRef &Symbol : Obj->symbols()) {
     const uint64_t Addr = unwrapOrError(Symbol.getAddress(), FileName);
     const StringRef Name = unwrapOrError(Symbol.getName(), FileName);
-    uint64_t GUID = Function::getGUID(Name);
+    uint64_t GUID = Function::getGUIDAssumingExternalLinkage(Name);
     SymbolStartAddrs[GUID] = Addr;
     StartAddrToSymMap.emplace(Addr, GUID);
   }

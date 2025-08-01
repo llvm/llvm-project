@@ -83,10 +83,10 @@ protected:
 
   using SectionParserFunction = std::function<Error(NormalizedSection &S)>;
 
-  MachOLinkGraphBuilder(const object::MachOObjectFile &Obj, Triple TT,
+  MachOLinkGraphBuilder(const object::MachOObjectFile &Obj,
+                        std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
                         SubtargetFeatures Features,
                         LinkGraph::GetEdgeKindNameFunction GetEdgeKindName);
-
   LinkGraph &getGraph() const { return *G; }
 
   const object::MachOObjectFile &getObject() const { return Obj; }
@@ -234,17 +234,6 @@ private:
 
   DenseMap<uint32_t, NormalizedSymbol *> IndexToSymbol;
   StringMap<SectionParserFunction> CustomSectionParserFunctions;
-};
-
-/// A pass to split up __LD,__compact_unwind sections.
-class CompactUnwindSplitter {
-public:
-  CompactUnwindSplitter(StringRef CompactUnwindSectionName)
-      : CompactUnwindSectionName(CompactUnwindSectionName) {}
-  Error operator()(LinkGraph &G);
-
-private:
-  StringRef CompactUnwindSectionName;
 };
 
 } // end namespace jitlink

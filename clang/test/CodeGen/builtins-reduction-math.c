@@ -138,6 +138,30 @@ void test_builtin_reduce_and(si8 vi1, u4 vu1) {
   unsigned r3 = __builtin_reduce_and(vu1);
 }
 
+void test_builtin_reduce_maximum(float4 vf1) {
+  // CHECK-LABEL: define void @test_builtin_reduce_maximum(
+  // CHECK:      [[VF1:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
+  // CHECK-NEXT: call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> [[VF1]])
+  float r1 = __builtin_reduce_maximum(vf1);
+
+  // CHECK:      [[VF1_AS1:%.+]] = load <4 x float>, ptr addrspace(1) @vf1_as_one, align 16
+  // CHECK-NEXT: [[RDX1:%.+]] = call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> [[VF1_AS1]])
+  // CHECK-NEXT: fpext float [[RDX1]] to double
+  const double r4 = __builtin_reduce_maximum(vf1_as_one);
+}
+
+void test_builtin_reduce_minimum(float4 vf1) {
+  // CHECK-LABEL: define void @test_builtin_reduce_minimum(
+  // CHECK:      [[VF1:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
+  // CHECK-NEXT: call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> [[VF1]])
+  float r1 = __builtin_reduce_minimum(vf1);
+
+  // CHECK:      [[VF1_AS1:%.+]] = load <4 x float>, ptr addrspace(1) @vf1_as_one, align 16
+  // CHECK-NEXT: [[RDX1:%.+]] = call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> [[VF1_AS1]])
+  // CHECK-NEXT: fpext float [[RDX1]] to double
+  const double r4 = __builtin_reduce_minimum(vf1_as_one);
+}
+
 #if defined(__ARM_FEATURE_SVE)
 #include <arm_sve.h>
 

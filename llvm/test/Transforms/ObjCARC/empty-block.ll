@@ -18,9 +18,9 @@ declare ptr @llvm.objc.autoreleaseReturnValue(ptr)
 ; CHECK: @llvm.objc.autoreleaseReturnValue
 ; CHECK-NOT: @llvm.objc.
 ; CHECK: }
-define ptr @test0(ptr %buffer) nounwind {
+define ptr @test0(ptr %buffer, i1 %arg) nounwind {
   %1 = tail call ptr @llvm.objc.retain(ptr %buffer) nounwind
-  br i1 undef, label %.lr.ph, label %._crit_edge
+  br i1 %arg, label %.lr.ph, label %._crit_edge
 
 .lr.ph:                                           ; preds = %.lr.ph, %0
   br i1 false, label %.lr.ph, label %._crit_edge
@@ -37,10 +37,10 @@ define ptr @test0(ptr %buffer) nounwind {
 ; CHECK-LABEL: define ptr @test1(
 ; CHECK-NOT: @objc
 ; CHECK: }
-define ptr @test1() nounwind {
+define ptr @test1(i1 %arg) nounwind {
   %buffer = call ptr @foo()
   %1 = tail call ptr @llvm.objc.retain(ptr %buffer) nounwind
-  br i1 undef, label %.lr.ph, label %._crit_edge
+  br i1 %arg, label %.lr.ph, label %._crit_edge
 
 .lr.ph:                                           ; preds = %.lr.ph, %0
   br i1 false, label %.lr.ph, label %._crit_edge

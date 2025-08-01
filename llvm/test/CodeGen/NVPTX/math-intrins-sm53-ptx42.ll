@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_53 -mattr=+ptx42 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_53 -mattr=+ptx42 | %ptxas-verify -arch=sm_53 %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_53 -mattr=+ptx42 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_53 -mattr=+ptx42 | %ptxas-verify -arch=sm_53 %}
 
 declare half @llvm.nvvm.fma.rn.f16(half, half, half)
 declare half @llvm.nvvm.fma.rn.ftz.f16(half, half, half)

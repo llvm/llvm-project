@@ -14,9 +14,11 @@
 #include "lldb/API/SBData.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBEvent.h"
+#include "lldb/API/SBExecutionContext.h"
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBSymbolContext.h"
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SearchFilter.h"
@@ -28,6 +30,7 @@
 #include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
 #include "lldb/Interpreter/ScriptObject.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
@@ -115,8 +118,12 @@ public:
   ~ScriptInterpreterIORedirect();
 
   lldb::FileSP GetInputFile() const { return m_input_file_sp; }
-  lldb::FileSP GetOutputFile() const { return m_output_file_sp->GetFileSP(); }
-  lldb::FileSP GetErrorFile() const { return m_error_file_sp->GetFileSP(); }
+  lldb::FileSP GetOutputFile() const {
+    return m_output_file_sp->GetUnlockedFileSP();
+  }
+  lldb::FileSP GetErrorFile() const {
+    return m_error_file_sp->GetUnlockedFileSP();
+  }
 
   /// Flush our output and error file handles.
   void Flush();
@@ -127,8 +134,9 @@ private:
   ScriptInterpreterIORedirect(Debugger &debugger, CommandReturnObject *result);
 
   lldb::FileSP m_input_file_sp;
-  lldb::StreamFileSP m_output_file_sp;
-  lldb::StreamFileSP m_error_file_sp;
+  lldb::LockableStreamFileSP m_output_file_sp;
+  lldb::LockableStreamFileSP m_error_file_sp;
+  LockableStreamFile::Mutex m_output_mutex;
   ThreadedCommunication m_communication;
   bool m_disconnect;
 };
@@ -176,25 +184,19 @@ public:
   virtual Status ExecuteMultipleLines(
       const char *in_string,
       const ExecuteScriptOptions &options = ExecuteScriptOptions()) {
-    Status error;
-    error.SetErrorString("not implemented");
-    return error;
+    return Status::FromErrorString("not implemented");
   }
 
   virtual Status
   ExportFunctionDefinitionToInterpreter(StringList &function_def) {
-    Status error;
-    error.SetErrorString("not implemented");
-    return error;
+    return Status::FromErrorString("not implemented");
   }
 
   virtual Status GenerateBreakpointCommandCallbackData(StringList &input,
                                                        std::string &output,
                                                        bool has_extra_args,
                                                        bool is_callback) {
-    Status error;
-    error.SetErrorString("not implemented");
-    return error;
+    return Status::FromErrorString("not implemented");
   }
 
   virtual bool GenerateWatchpointCommandCallbackData(StringList &input,
@@ -252,41 +254,9 @@ public:
     return lldb::ValueObjectListSP();
   }
 
-  virtual StructuredData::GenericSP
-  CreateScriptedBreakpointResolver(const char *class_name,
-                                   const StructuredDataImpl &args_data,
-                                   lldb::BreakpointSP &bkpt_sp) {
-    return StructuredData::GenericSP();
-  }
-
-  virtual bool
-  ScriptedBreakpointResolverSearchCallback(StructuredData::GenericSP implementor_sp,
-                                           SymbolContext *sym_ctx)
-  {
+  virtual bool ShouldHide(const StructuredData::ObjectSP &implementor,
+                          lldb::StackFrameSP frame_sp) {
     return false;
-  }
-
-  virtual lldb::SearchDepth
-  ScriptedBreakpointResolverSearchDepth(StructuredData::GenericSP implementor_sp)
-  {
-    return lldb::eSearchDepthModule;
-  }
-
-  virtual StructuredData::GenericSP
-  CreateScriptedStopHook(lldb::TargetSP target_sp, const char *class_name,
-                         const StructuredDataImpl &args_data, Status &error) {
-    error.SetErrorString("Creating scripted stop-hooks with the current "
-                         "script interpreter is not supported.");
-    return StructuredData::GenericSP();
-  }
-
-  // This dispatches to the handle_stop method of the stop-hook class.  It
-  // returns a "should_stop" bool.
-  virtual bool
-  ScriptedStopHookHandleStop(StructuredData::GenericSP implementor_sp,
-                             ExecutionContext &exc_ctx,
-                             lldb::StreamSP stream_sp) {
-    return true;
   }
 
   virtual StructuredData::ObjectSP
@@ -303,9 +273,7 @@ public:
   virtual Status GenerateFunction(const char *signature,
                                   const StringList &input,
                                   bool is_callback) {
-    Status error;
-    error.SetErrorString("unimplemented");
-    return error;
+    return Status::FromErrorString("not implemented");
   }
 
   virtual void CollectDataForBreakpointCommandCallback(
@@ -324,18 +292,14 @@ public:
   virtual Status SetBreakpointCommandCallback(BreakpointOptions &bp_options,
                                               const char *callback_text,
                                               bool is_callback) {
-    Status error;
-    error.SetErrorString("unimplemented");
-    return error;
+    return Status::FromErrorString("not implemented");
   }
 
   /// This one is for deserialization:
   virtual Status SetBreakpointCommandCallback(
       BreakpointOptions &bp_options,
       std::unique_ptr<BreakpointOptions::CommandData> &data_up) {
-    Status error;
-    error.SetErrorString("unimplemented");
-    return error;
+    return Status::FromErrorString("not implemented");
   }
 
   Status SetBreakpointCommandCallbackFunction(
@@ -347,9 +311,7 @@ public:
   SetBreakpointCommandCallbackFunction(BreakpointOptions &bp_options,
                                        const char *function_name,
                                        StructuredData::ObjectSP extra_args_sp) {
-    Status error;
-    error.SetErrorString("unimplemented");
-    return error;
+    return Status::FromErrorString("not implemented");
   }
 
   /// Set a one-liner as the callback for the watchpoint.
@@ -388,10 +350,10 @@ public:
     return lldb::ValueObjectSP();
   }
 
-  virtual int
+  virtual llvm::Expected<int>
   GetIndexOfChildWithName(const StructuredData::ObjectSP &implementor,
                           const char *child_name) {
-    return UINT32_MAX;
+    return llvm::createStringError("Type has no child named '%s'", child_name);
   }
 
   virtual bool
@@ -445,36 +407,50 @@ public:
     return std::nullopt;
   }
 
+  virtual StructuredData::DictionarySP
+  HandleArgumentCompletionForScriptedCommand(
+      StructuredData::GenericSP impl_obj_sp, std::vector<llvm::StringRef> &args,
+      size_t args_pos, size_t char_in_arg) {
+    return {};
+  }
+
+  virtual StructuredData::DictionarySP
+  HandleOptionArgumentCompletionForScriptedCommand(
+      StructuredData::GenericSP impl_obj_sp, llvm::StringRef &long_name,
+      size_t char_in_arg) {
+    return {};
+  }
+
   virtual bool RunScriptFormatKeyword(const char *impl_function,
                                       Process *process, std::string &output,
                                       Status &error) {
-    error.SetErrorString("unimplemented");
+    error = Status::FromErrorString("unimplemented");
     return false;
   }
 
   virtual bool RunScriptFormatKeyword(const char *impl_function, Thread *thread,
                                       std::string &output, Status &error) {
-    error.SetErrorString("unimplemented");
+    error = Status::FromErrorString("unimplemented");
     return false;
   }
 
   virtual bool RunScriptFormatKeyword(const char *impl_function, Target *target,
                                       std::string &output, Status &error) {
-    error.SetErrorString("unimplemented");
+    error = Status::FromErrorString("unimplemented");
     return false;
   }
 
   virtual bool RunScriptFormatKeyword(const char *impl_function,
                                       StackFrame *frame, std::string &output,
                                       Status &error) {
-    error.SetErrorString("unimplemented");
+    error = Status::FromErrorString("unimplemented");
     return false;
   }
 
   virtual bool RunScriptFormatKeyword(const char *impl_function,
                                       ValueObject *value, std::string &output,
                                       Status &error) {
-    error.SetErrorString("unimplemented");
+    error = Status::FromErrorString("unimplemented");
     return false;
   }
 
@@ -489,7 +465,7 @@ public:
     dest.clear();
     return false;
   }
-  
+
   virtual StructuredData::ObjectSP
   GetOptionsForCommandObject(StructuredData::GenericSP cmd_obj_sp) {
     return {};
@@ -499,17 +475,15 @@ public:
   GetArgumentsForCommandObject(StructuredData::GenericSP cmd_obj_sp) {
     return {};
   }
-  
+
   virtual bool SetOptionValueForCommandObject(
-      StructuredData::GenericSP cmd_obj_sp, ExecutionContext *exe_ctx, 
+      StructuredData::GenericSP cmd_obj_sp, ExecutionContext *exe_ctx,
       llvm::StringRef long_option, llvm::StringRef value) {
     return false;
   }
 
-  virtual void OptionParsingStartedForCommandObject(
-      StructuredData::GenericSP cmd_obj_sp) {
-    return;
-  }
+  virtual void
+  OptionParsingStartedForCommandObject(StructuredData::GenericSP cmd_obj_sp) {}
 
   virtual uint32_t
   GetFlagsForCommandObject(StructuredData::GenericSP cmd_obj_sp) {
@@ -528,7 +502,8 @@ public:
   LoadScriptingModule(const char *filename, const LoadScriptOptions &options,
                       lldb_private::Status &error,
                       StructuredData::ObjectSP *module_sp = nullptr,
-                      FileSpec extra_search_dir = {});
+                      FileSpec extra_search_dir = {},
+                      lldb::TargetSP loaded_into_target_sp = {});
 
   virtual bool IsReservedWord(const char *word) { return false; }
 
@@ -569,6 +544,15 @@ public:
     return {};
   }
 
+  virtual lldb::ScriptedStopHookInterfaceSP CreateScriptedStopHookInterface() {
+    return {};
+  }
+
+  virtual lldb::ScriptedBreakpointInterfaceSP
+  CreateScriptedBreakpointInterface() {
+    return {};
+  }
+
   virtual StructuredData::ObjectSP
   CreateStructuredDataFromScriptObject(ScriptObject obj) {
     return {};
@@ -583,6 +567,9 @@ public:
 
   lldb::StreamSP GetOpaqueTypeFromSBStream(const lldb::SBStream &stream) const;
 
+  SymbolContext
+  GetOpaqueTypeFromSBSymbolContext(const lldb::SBSymbolContext &sym_ctx) const;
+
   lldb::BreakpointSP
   GetOpaqueTypeFromSBBreakpoint(const lldb::SBBreakpoint &breakpoint) const;
 
@@ -594,6 +581,9 @@ public:
 
   std::optional<MemoryRegionInfo> GetOpaqueTypeFromSBMemoryRegionInfo(
       const lldb::SBMemoryRegionInfo &mem_region) const;
+
+  lldb::ExecutionContextRefSP GetOpaqueTypeFromSBExecutionContext(
+      const lldb::SBExecutionContext &exe_ctx) const;
 
 protected:
   Debugger &m_debugger;

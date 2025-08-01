@@ -9,8 +9,8 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 ; CHECK:      [[VEC_PHI_1:%.+]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ [[ADD_5:%.+]], %vector.body ]
 ; CHECK:      [[VEC_PHI_2:%.+]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ [[ADD_3:%.+]], %vector.body ]
 ; CHECK:      icmp ule <4 x i64>
-; CHECK-NEXT: [[ADD_3]] = add <4 x i32> <i32 3, i32 3, i32 3, i32 3>, [[VEC_PHI_2]]
-; CHECK-NEXT: [[ADD_5]] = add <4 x i32> [[VEC_PHI_1]], <i32 5, i32 5, i32 5, i32 5>
+; CHECK-NEXT: [[ADD_3]] = add <4 x i32> splat (i32 3), [[VEC_PHI_2]]
+; CHECK-NEXT: [[ADD_5]] = add <4 x i32> [[VEC_PHI_1]], splat (i32 5)
 ; CHECK:      select <4 x i1> {{.*}}, <4 x i32> [[ADD_5]], <4 x i32>
 ; CHECK-NEXT: select <4 x i1> {{.*}}, <4 x i32> [[ADD_3]], <4 x i32>
 ; CHECK: br i1 {{.*}}, label %middle.block, label %vector.body
@@ -42,13 +42,13 @@ t31:
 ; exercises the path and bails out without performing vectorization.
 ; CHECK-LABEL: quux
 ; CHECK-NOT: fadd <4 x 
-define void @quux() {
+define void @quux(i1 %arg) {
 bb:
   br label %header
 
 latch:                                              ; preds = %header
   %tmp = phi double [ %tmp6, %header ]
-  br i1 undef, label %header, label %bb2
+  br i1 %arg, label %header, label %bb2
 
 bb2:                                              ; preds = %latch
   %tmp3 = phi double [ %tmp, %latch ]

@@ -22,6 +22,11 @@
 // SCP-ll-win64-NOT: attributes {{.*}} "probe-stack"="inline-asm"
 // SCP-ll-win64: argument unused during compilation: '-fstack-clash-protection'
 
+// RUN: %clang -target x86_64-unknown-fuchsia -fstack-clash-protection -### %s 2>&1 | FileCheck %s -check-prefix=SCP-FUCHSIA
+// RUN: %clang -target aarch64-unknown-fuchsia -fstack-clash-protection -### %s 2>&1 | FileCheck %s -check-prefix=SCP-FUCHSIA
+// RUN: %clang -target riscv64-unknown-fuchsia -fstack-clash-protection -### %s 2>&1 | FileCheck %s -check-prefix=SCP-FUCHSIA
+// SCP-FUCHSIA: "-fstack-clash-protection"
+
 int foo(int c) {
   int r;
   __asm__("sub %0, %%rsp"

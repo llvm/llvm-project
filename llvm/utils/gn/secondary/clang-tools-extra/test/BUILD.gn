@@ -83,7 +83,6 @@ group("test") {
     "//clang-tools-extra/unittests",
     "//clang/lib/Headers",
     "//clang/tools/c-index-test",
-    "//clang/tools/clang-rename",
     "//clang/tools/driver:symlinks",
     "//llvm/tools/llvm-bcanalyzer",
     "//llvm/utils/FileCheck",

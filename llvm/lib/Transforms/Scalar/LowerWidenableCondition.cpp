@@ -14,10 +14,8 @@
 #include "llvm/Transforms/Scalar/LowerWidenableCondition.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/Scalar.h"
 
@@ -26,8 +24,8 @@ using namespace llvm;
 static bool lowerWidenableCondition(Function &F) {
   // Check if we can cheaply rule out the possibility of not having any work to
   // do.
-  auto *WCDecl = F.getParent()->getFunction(
-      Intrinsic::getName(Intrinsic::experimental_widenable_condition));
+  auto *WCDecl = Intrinsic::getDeclarationIfExists(
+      F.getParent(), Intrinsic::experimental_widenable_condition);
   if (!WCDecl || WCDecl->use_empty())
     return false;
 

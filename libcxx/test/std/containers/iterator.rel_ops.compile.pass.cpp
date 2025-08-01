@@ -8,6 +8,8 @@
 
 // XFAIL: availability-filesystem-missing
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 // Make sure the various containers' iterators are not broken by the use of `std::rel_ops`.
 
 #include <utility> // for std::rel_ops
@@ -27,73 +29,73 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER >= 17
-#include <string_view>
+#  include <string_view>
 #endif
 
 #if TEST_STD_VER >= 20
-#include <span>
+#  include <span>
 #endif
 
 using namespace std::rel_ops;
 
-template<class It, class ConstIt>
+template <class It, class ConstIt>
 void test_eq(It it, ConstIt cit) {
-    (void)(it == it);
-    (void)(it != it);
-    (void)(it == cit);
-    (void)(it != cit);
-    (void)(cit == it);
-    (void)(cit != it);
-    (void)(cit == cit);
-    (void)(cit != cit);
+  (void)(it == it);
+  (void)(it != it);
+  (void)(it == cit);
+  (void)(it != cit);
+  (void)(cit == it);
+  (void)(cit != it);
+  (void)(cit == cit);
+  (void)(cit != cit);
 }
 
-template<class It, class ConstIt>
+template <class It, class ConstIt>
 void test_lt(It it, ConstIt cit) {
-    (void)(it <  it);
-    (void)(it <= it);
-    (void)(it >  it);
-    (void)(it >= it);
-    (void)(it <  cit);
-    (void)(it <= cit);
-    (void)(it >  cit);
-    (void)(it >= cit);
-    (void)(cit <  it);
-    (void)(cit <= it);
-    (void)(cit >  it);
-    (void)(cit >= it);
-    (void)(cit <  cit);
-    (void)(cit <= cit);
-    (void)(cit >  cit);
-    (void)(cit >= cit);
+  (void)(it < it);
+  (void)(it <= it);
+  (void)(it > it);
+  (void)(it >= it);
+  (void)(it < cit);
+  (void)(it <= cit);
+  (void)(it > cit);
+  (void)(it >= cit);
+  (void)(cit < it);
+  (void)(cit <= it);
+  (void)(cit > it);
+  (void)(cit >= it);
+  (void)(cit < cit);
+  (void)(cit <= cit);
+  (void)(cit > cit);
+  (void)(cit >= cit);
 
-    // Test subtraction too, even though std::rel_ops shouldn't affect it.
+  // Test subtraction too, even though std::rel_ops shouldn't affect it.
 
-    (void)(it - it);
-    (void)(it - cit);
-    (void)(cit - it);
-    (void)(cit - cit);
+  (void)(it - it);
+  (void)(it - cit);
+  (void)(cit - it);
+  (void)(cit - cit);
 }
 
-template<class Container>
+template <class Container>
 void test_forward() {
-    // There is no need to distinguish "forward" from "bidirectional."
-    // libc++ already can't handle `c.rbegin() >= c.rbegin()` in the
-    // presence of std::rel_ops, and neither can Microsoft nor libstdc++.
+  // There is no need to distinguish "forward" from "bidirectional."
+  // libc++ already can't handle `c.rbegin() >= c.rbegin()` in the
+  // presence of std::rel_ops, and neither can Microsoft nor libstdc++.
 
-    Container c;
-    typename Container::iterator it = c.begin();
-    typename Container::const_iterator cit = c.begin();
-    test_eq(it, cit);
+  Container c;
+  typename Container::iterator it        = c.begin();
+  typename Container::const_iterator cit = c.begin();
+  test_eq(it, cit);
 }
 
-template<class Container>
+template <class Container>
 void test_random_access() {
-    Container c;
-    typename Container::iterator it = c.begin();
-    typename Container::const_iterator cit = c.begin();
-    test_eq(it, cit);
-    test_lt(it, cit);
+  Container c;
+  typename Container::iterator it        = c.begin();
+  typename Container::const_iterator cit = c.begin();
+  test_eq(it, cit);
+  test_lt(it, cit);
 }
 
 template void test_random_access<std::array<int, 10> >();
@@ -113,13 +115,13 @@ template void test_random_access<std::vector<int> >();
 
 #if TEST_STD_VER >= 17
 void test_directory_iterators() {
-#ifndef TEST_HAS_NO_FILESYSTEM
-    std::filesystem::directory_iterator it;
-    test_eq(it, it);
+#  ifndef TEST_HAS_NO_FILESYSTEM
+  std::filesystem::directory_iterator it;
+  test_eq(it, it);
 
-    std::filesystem::recursive_directory_iterator rdit;
-    test_eq(rdit, rdit);
-#endif
+  std::filesystem::recursive_directory_iterator rdit;
+  test_eq(rdit, rdit);
+#  endif
 }
 
 template void test_forward<std::filesystem::path>();
@@ -131,9 +133,9 @@ template void test_random_access<std::string_view>();
 
 #if TEST_STD_VER >= 20
 void test_span() {
-    std::span<int> c;
-    std::span<int>::iterator it = c.begin();  // span has no const_iterator
-    test_eq(it, it);
-    test_lt(it, it);
+  std::span<int> c;
+  std::span<int>::iterator it = c.begin(); // span has no const_iterator
+  test_eq(it, it);
+  test_lt(it, it);
 }
 #endif

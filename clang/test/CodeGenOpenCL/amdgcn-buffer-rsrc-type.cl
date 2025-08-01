@@ -22,7 +22,7 @@ __amdgpu_buffer_rsrc_t getBuffer(void *p) {
 }
 
 // CHECK-LABEL: define {{[^@]+}}@consumeBufferPtr
-// CHECK-SAME: (ptr addrspace(5) noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: (ptr addrspace(5) noundef readonly captures(address) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr addrspace(5) [[P]], addrspacecast (ptr null to ptr addrspace(5))
 // CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
@@ -39,15 +39,15 @@ void consumeBufferPtr(__amdgpu_buffer_rsrc_t *p) {
 }
 
 // CHECK-LABEL: define {{[^@]+}}@test
-// CHECK-SAME: (ptr addrspace(5) noundef readonly [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: (ptr addrspace(5) noundef readonly captures(address) [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[A]], align 16, !tbaa [[TBAA8:![0-9]+]]
 // CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
 // CHECK-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq ptr addrspace(5) [[A]], addrspacecast (ptr null to ptr addrspace(5))
-// CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[TOBOOL_NOT_I]], [[TOBOOL_NOT]]
+// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TOBOOL_NOT]], i1 true, i1 [[TOBOOL_NOT_I]]
 // CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_END:%.*]], label [[IF_THEN_I:%.*]]
 // CHECK:       if.then.i:
-// CHECK-NEXT:    [[R:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[A]], i32 16
+// CHECK-NEXT:    [[R:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) [[A]], i32 16
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(8), ptr addrspace(5) [[R]], align 16, !tbaa [[TBAA4]]
 // CHECK-NEXT:    tail call void @consumeBuffer(ptr addrspace(8) [[TMP1]]) #[[ATTR2]]
 // CHECK-NEXT:    br label [[IF_END]]

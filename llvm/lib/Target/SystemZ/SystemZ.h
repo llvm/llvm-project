@@ -198,6 +198,7 @@ FunctionPass *createSystemZCopyPhysRegsPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZPostRewritePass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZTDCPass();
 
+void initializeSystemZAsmPrinterPass(PassRegistry &);
 void initializeSystemZCopyPhysRegsPass(PassRegistry &);
 void initializeSystemZDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeSystemZElimComparePass(PassRegistry &);
@@ -206,6 +207,10 @@ void initializeSystemZLongBranchPass(PassRegistry &);
 void initializeSystemZPostRewritePass(PassRegistry &);
 void initializeSystemZShortenInstPass(PassRegistry &);
 void initializeSystemZTDCPassPass(PassRegistry &);
+
+namespace SYSTEMZAS {
+enum : unsigned { PTR32 = 1 };
+} // namespace SYSTEMZAS
 
 } // end namespace llvm
 

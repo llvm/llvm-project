@@ -64,7 +64,7 @@ struct ConstantOpToArmSMELowering : public OpRewritePattern<arith::ConstantOp> {
       return success();
     }
 
-    // Lower non-zero constants to a loop of 'arm_sme.move_vector_to_tile_slice'
+    // Lower non-zero constants to a loop of 'arm_sme.insert_tile_slice'
     // ops that broadcast the constant to each tile slice.
     auto loc = constantOp.getLoc();
 
@@ -74,15 +74,15 @@ struct ConstantOpToArmSMELowering : public OpRewritePattern<arith::ConstantOp> {
     VectorType tileSliceType = VectorType::Builder(tileType).dropDim(0);
     auto denseAttr1D = DenseElementsAttr::get(
         tileSliceType, denseAttr.getSplatValue<Attribute>());
-    auto constantOp1D = rewriter.create<arith::ConstantOp>(loc, denseAttr1D);
+    auto constantOp1D = arith::ConstantOp::create(rewriter, loc, denseAttr1D);
 
-    auto initTile = rewriter.create<arm_sme::GetTileOp>(loc, tileType);
+    auto initTile = arm_sme::GetTileOp::create(rewriter, loc, tileType);
     auto makeLoopBody = [&](OpBuilder &b, Location loc, Value tileSliceIndex,
                             Value currentTile) {
-      // Create 'arm_sme.move_vector_to_tile_slice' to write vector to tile
+      // Create 'arm_sme.insert_tile_slice' to write vector to tile
       // slice.
-      auto nextTile = b.create<arm_sme::MoveVectorToTileSliceOp>(
-          loc, tileType, constantOp1D, currentTile, tileSliceIndex);
+      auto nextTile = arm_sme::InsertTileSliceOp::create(
+          b, loc, tileType, constantOp1D, currentTile, tileSliceIndex);
       return nextTile.getResult();
     };
     auto forOp = mlir::arm_sme::createLoopOverTileSlices(
@@ -117,8 +117,7 @@ struct ArithToArmSMEConversionPass final
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     arith::populateArithToArmSMEConversionPatterns(patterns);
-    if (failed(
-            applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
 };

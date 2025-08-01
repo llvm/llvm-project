@@ -14,8 +14,8 @@
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
 
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -43,16 +43,16 @@ FileIOResult CookieFile::cookie_write(File *f, const void *data, size_t size) {
   auto cookie_file = reinterpret_cast<CookieFile *>(f);
   if (cookie_file->ops.write == nullptr)
     return 0;
-  return cookie_file->ops.write(cookie_file->cookie,
-                                reinterpret_cast<const char *>(data), size);
+  return static_cast<size_t>(cookie_file->ops.write(
+      cookie_file->cookie, reinterpret_cast<const char *>(data), size));
 }
 
 FileIOResult CookieFile::cookie_read(File *f, void *data, size_t size) {
   auto cookie_file = reinterpret_cast<CookieFile *>(f);
   if (cookie_file->ops.read == nullptr)
     return 0;
-  return cookie_file->ops.read(cookie_file->cookie,
-                               reinterpret_cast<char *>(data), size);
+  return static_cast<size_t>(cookie_file->ops.read(
+      cookie_file->cookie, reinterpret_cast<char *>(data), size));
 }
 
 ErrorOr<off_t> CookieFile::cookie_seek(File *f, off_t offset, int whence) {

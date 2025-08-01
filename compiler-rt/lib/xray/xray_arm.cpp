@@ -128,18 +128,23 @@ inline static bool patchSled(const bool Enable, const uint32_t FuncId,
 
 bool patchFunctionEntry(const bool Enable, const uint32_t FuncId,
                         const XRaySledEntry &Sled,
-                        void (*Trampoline)()) XRAY_NEVER_INSTRUMENT {
+                        const XRayTrampolines &Trampolines,
+                        bool LogArgs) XRAY_NEVER_INSTRUMENT {
+  auto Trampoline =
+      LogArgs ? Trampolines.LogArgsTrampoline : Trampolines.EntryTrampoline;
   return patchSled(Enable, FuncId, Sled, Trampoline);
 }
 
-bool patchFunctionExit(const bool Enable, const uint32_t FuncId,
-                       const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
-  return patchSled(Enable, FuncId, Sled, __xray_FunctionExit);
+bool patchFunctionExit(
+    const bool Enable, const uint32_t FuncId, const XRaySledEntry &Sled,
+    const XRayTrampolines &Trampolines) XRAY_NEVER_INSTRUMENT {
+  return patchSled(Enable, FuncId, Sled, Trampolines.ExitTrampoline);
 }
 
-bool patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
-                           const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
-  return patchSled(Enable, FuncId, Sled, __xray_FunctionTailExit);
+bool patchFunctionTailExit(
+    const bool Enable, const uint32_t FuncId, const XRaySledEntry &Sled,
+    const XRayTrampolines &Trampolines) XRAY_NEVER_INSTRUMENT {
+  return patchSled(Enable, FuncId, Sled, Trampolines.TailExitTrampoline);
 }
 
 bool patchCustomEvent(const bool Enable, const uint32_t FuncId,

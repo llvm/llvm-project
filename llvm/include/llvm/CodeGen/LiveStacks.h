@@ -17,6 +17,7 @@
 
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/PassRegistry.h"
 #include <cassert>
@@ -32,7 +33,7 @@ class raw_ostream;
 class TargetRegisterClass;
 class TargetRegisterInfo;
 
-class LiveStacks : public MachineFunctionPass {
+class LiveStacks {
   const TargetRegisterInfo *TRI = nullptr;
 
   /// Special pool allocator for VNInfo's (LiveInterval val#).
@@ -47,12 +48,6 @@ class LiveStacks : public MachineFunctionPass {
   std::map<int, const TargetRegisterClass *> S2RCMap;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
-
-  LiveStacks() : MachineFunctionPass(ID) {
-    initializeLiveStacksPass(*PassRegistry::getPassRegistry());
-  }
-
   using iterator = SS2IntervalMap::iterator;
   using const_iterator = SS2IntervalMap::const_iterator;
 
@@ -92,6 +87,25 @@ public:
 
   VNInfo::Allocator &getVNInfoAllocator() { return VNInfoAllocator; }
 
+  void releaseMemory();
+  /// init - analysis entry point
+  void init(MachineFunction &MF);
+  void print(raw_ostream &O, const Module *M = nullptr) const;
+};
+
+class LiveStacksWrapperLegacy : public MachineFunctionPass {
+  LiveStacks Impl;
+
+public:
+  static char ID; // Pass identification, replacement for typeid
+
+  LiveStacksWrapperLegacy() : MachineFunctionPass(ID) {
+    initializeLiveStacksWrapperLegacyPass(*PassRegistry::getPassRegistry());
+  }
+
+  LiveStacks &getLS() { return Impl; }
+  const LiveStacks &getLS() const { return Impl; }
+
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   void releaseMemory() override;
 
@@ -102,6 +116,24 @@ public:
   void print(raw_ostream &O, const Module * = nullptr) const override;
 };
 
+class LiveStacksAnalysis : public AnalysisInfoMixin<LiveStacksAnalysis> {
+  static AnalysisKey Key;
+  friend AnalysisInfoMixin<LiveStacksAnalysis>;
+
+public:
+  using Result = LiveStacks;
+
+  LiveStacks run(MachineFunction &MF, MachineFunctionAnalysisManager &);
+};
+
+class LiveStacksPrinterPass : public PassInfoMixin<LiveStacksPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  LiveStacksPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &AM);
+};
 } // end namespace llvm
 
 #endif

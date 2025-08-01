@@ -41,6 +41,7 @@ MCOPT(int, DwarfVersion)
 MCOPT(bool, Dwarf64)
 MCOPT(EmitDwarfUnwindType, EmitDwarfUnwind)
 MCOPT(bool, EmitCompactUnwindNonCanonical)
+MCOPT(bool, EmitSFrameUnwind)
 MCOPT(bool, ShowMCInst)
 MCOPT(bool, FatalWarnings)
 MCOPT(bool, NoWarn)
@@ -48,7 +49,9 @@ MCOPT(bool, NoDeprecatedWarn)
 MCOPT(bool, NoTypeCheck)
 MCOPT(bool, SaveTempLabels)
 MCOPT(bool, Crel)
+MCOPT(bool, ImplicitMapSyms)
 MCOPT(bool, X86RelaxRelocations)
+MCOPT(bool, X86Sse2Avx)
 MCOPT(std::string, ABIName)
 MCOPT(std::string, AsSecureLogFile)
 
@@ -103,6 +106,11 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
           false)); // By default, use DWARF for non-canonical personalities.
   MCBINDOPT(EmitCompactUnwindNonCanonical);
 
+  static cl::opt<bool> EmitSFrameUnwind(
+      "gsframe", cl::desc("Whether to emit .sframe unwind sections."),
+      cl::init(false));
+  MCBINDOPT(EmitSFrameUnwind);
+
   static cl::opt<bool> ShowMCInst(
       "asm-show-inst",
       cl::desc("Emit internal instruction representation to assembly file"));
@@ -133,15 +141,28 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
                             cl::desc("Use CREL relocation format for ELF"));
   MCBINDOPT(Crel);
 
+  static cl::opt<bool> ImplicitMapSyms(
+      "implicit-mapsyms",
+      cl::desc("Allow mapping symbol at section beginning to be implicit, "
+               "lowering number of mapping symbols at the expense of some "
+               "portability. Recommended for projects that can build all their "
+               "object files using this option"));
+  MCBINDOPT(ImplicitMapSyms);
+
   static cl::opt<bool> X86RelaxRelocations(
       "x86-relax-relocations",
-      cl::desc(
-          "Emit GOTPCRELX/REX_GOTPCRELX instead of GOTPCREL on x86-64 ELF"),
+      cl::desc("Emit GOTPCRELX/REX_GOTPCRELX/CODE_4_GOTPCRELX instead of "
+               "GOTPCREL on x86-64 ELF"),
       cl::init(true));
   MCBINDOPT(X86RelaxRelocations);
 
+  static cl::opt<bool> X86Sse2Avx(
+      "x86-sse2avx", cl::desc("Specify that the assembler should encode SSE "
+                              "instructions with VEX prefix"));
+  MCBINDOPT(X86Sse2Avx);
+
   static cl::opt<std::string> ABIName(
-      "target-abi", cl::Hidden,
+      "target-abi",
       cl::desc("The name of the ABI to be targeted from the backend."),
       cl::init(""));
   MCBINDOPT(ABIName);
@@ -168,9 +189,12 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.MCNoTypeCheck = getNoTypeCheck();
   Options.MCSaveTempLabels = getSaveTempLabels();
   Options.Crel = getCrel();
+  Options.ImplicitMapSyms = getImplicitMapSyms();
   Options.X86RelaxRelocations = getX86RelaxRelocations();
+  Options.X86Sse2Avx = getX86Sse2Avx();
   Options.EmitDwarfUnwind = getEmitDwarfUnwind();
   Options.EmitCompactUnwindNonCanonical = getEmitCompactUnwindNonCanonical();
+  Options.EmitSFrameUnwind = getEmitSFrameUnwind();
   Options.AsSecureLogFile = getAsSecureLogFile();
 
   return Options;

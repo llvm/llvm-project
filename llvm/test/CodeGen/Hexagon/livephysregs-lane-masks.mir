@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass if-converter -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass if-converter -verify-machineinstrs -o - %s | FileCheck %s
 
 # CHECK-LABEL: name: foo
 # CHECK: $p0 = C2_cmpeqi $r16, 0

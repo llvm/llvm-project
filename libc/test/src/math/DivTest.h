@@ -47,7 +47,7 @@ public:
       InType x = InFPBits(v).get_val();
       InType y = InFPBits(w).get_val();
       mpfr::BinaryInput<InType> input{x, y};
-      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Div, input, func(x, y),
+      ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Div, input, func(x, y),
                                      0.5);
     }
   }
@@ -60,7 +60,7 @@ public:
       InType x = InFPBits(v).get_val();
       InType y = InFPBits(w).get_val();
       mpfr::BinaryInput<InType> input{x, y};
-      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Div, input, func(x, y),
+      ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Div, input, func(x, y),
                                      0.5);
     }
   }

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr -mcpu=avr5 | FileCheck %s
+; RUN: llc < %s -mtriple=avr -mcpu=avr5 | FileCheck %s
 
 ; The original reason for this failure is that the BranchFolderPass disables liveness
 ; tracking unless you override the trackLivenessAfterRegAlloc function and return true.

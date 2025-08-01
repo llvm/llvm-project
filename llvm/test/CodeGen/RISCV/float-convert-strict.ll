@@ -236,29 +236,17 @@ define float @fcvt_s_wu(i32 %a) nounwind strictfp {
 declare float @llvm.experimental.constrained.uitofp.f32.i32(i32 %a, metadata, metadata)
 
 define float @fcvt_s_wu_load(ptr %p) nounwind strictfp {
-; RV32IF-LABEL: fcvt_s_wu_load:
-; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    lw a0, 0(a0)
-; RV32IF-NEXT:    fcvt.s.wu fa0, a0
-; RV32IF-NEXT:    ret
+; CHECKIF-LABEL: fcvt_s_wu_load:
+; CHECKIF:       # %bb.0:
+; CHECKIF-NEXT:    lw a0, 0(a0)
+; CHECKIF-NEXT:    fcvt.s.wu fa0, a0
+; CHECKIF-NEXT:    ret
 ;
-; RV64IF-LABEL: fcvt_s_wu_load:
-; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    lwu a0, 0(a0)
-; RV64IF-NEXT:    fcvt.s.wu fa0, a0
-; RV64IF-NEXT:    ret
-;
-; RV32IZFINX-LABEL: fcvt_s_wu_load:
-; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lw a0, 0(a0)
-; RV32IZFINX-NEXT:    fcvt.s.wu a0, a0
-; RV32IZFINX-NEXT:    ret
-;
-; RV64IZFINX-LABEL: fcvt_s_wu_load:
-; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    lwu a0, 0(a0)
-; RV64IZFINX-NEXT:    fcvt.s.wu a0, a0
-; RV64IZFINX-NEXT:    ret
+; CHECKIZFINX-LABEL: fcvt_s_wu_load:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    lw a0, 0(a0)
+; CHECKIZFINX-NEXT:    fcvt.s.wu a0, a0
+; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_s_wu_load:
 ; RV32I:       # %bb.0:
@@ -645,11 +633,9 @@ define signext i32 @fcvt_s_w_demanded_bits(i32 signext %0, ptr %1) nounwind stri
 ;
 ; RV64IZFINX-LABEL: fcvt_s_w_demanded_bits:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    addiw a2, a0, 1
-; RV64IZFINX-NEXT:    addi a0, a0, 1
-; RV64IZFINX-NEXT:    fcvt.s.w a0, a0
-; RV64IZFINX-NEXT:    sw a0, 0(a1)
-; RV64IZFINX-NEXT:    mv a0, a2
+; RV64IZFINX-NEXT:    addiw a0, a0, 1
+; RV64IZFINX-NEXT:    fcvt.s.w a2, a0
+; RV64IZFINX-NEXT:    sw a2, 0(a1)
 ; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_s_w_demanded_bits:

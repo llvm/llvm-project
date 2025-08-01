@@ -52,6 +52,7 @@ subroutine sub1()
   end do
   !$omp end target parallel do
 
+  !ERROR: ORDERED clause is not allowed on the TARGET TEAMS DISTRIBUTE PARALLEL DO directive
   !$omp target teams distribute parallel do ordered(1)
   do i = 1, N
     !ERROR: An ORDERED construct with the DEPEND clause must be closely nested in a worksharing-loop (or parallel worksharing-loop) construct with ORDERED clause with a parameter
@@ -98,7 +99,8 @@ subroutine sub1()
 
   !$omp do ordered(1)
   do i = 1, N
-    !ERROR: The number of variables in DEPEND(SINK: vec) clause does not match the parameter specified in ORDERED clause
+    !ERROR: The number of variables in the SINK iteration vector does not match the parameter specified in ORDERED clause
+    !ERROR: The iteration vector element 'j' is not an induction variable within the ORDERED loop nest
     !$omp ordered depend(sink: i - 1) depend(sink: i - 1, j)
     arrayB(i) = bar(i - 1, j)
   end do
@@ -107,7 +109,7 @@ subroutine sub1()
   !$omp do ordered(2)
   do i = 1, N
     do j = 1, N
-      !ERROR: The number of variables in DEPEND(SINK: vec) clause does not match the parameter specified in ORDERED clause
+      !ERROR: The number of variables in the SINK iteration vector does not match the parameter specified in ORDERED clause
       !$omp ordered depend(sink: i - 1) depend(sink: i - 1, j)
       arrayB(i) = foo(i - 1) + bar(i - 1, j)
     end do
@@ -118,5 +120,6 @@ subroutine sub1()
   !$omp ordered depend(source)
 
   !ERROR: An ORDERED construct with the DEPEND clause must be closely nested in a worksharing-loop (or parallel worksharing-loop) construct with ORDERED clause with a parameter
+  !ERROR: The iteration vector element 'i' is not an induction variable within the ORDERED loop nest
   !$omp ordered depend(sink: i - 1)
 end

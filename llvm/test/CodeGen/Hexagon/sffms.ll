@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -fp-contract=fast < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -fp-contract=fast < %s | FileCheck %s
 
 ; Check that "Rx-=sfmpy(Rs,Rt)" is being generated for "fsub(fmul(..))"
 

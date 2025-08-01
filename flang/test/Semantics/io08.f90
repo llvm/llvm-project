@@ -192,8 +192,7 @@
   !ERROR: 'A' edit descriptor 'w' value must be positive
   write(*,'(A0)')
 
-  !ERROR: 'L' edit descriptor 'w' value must be positive
-  write(*,'(L0)')
+  write(*,'(L0)') ! warning, not error
 
   !ERROR: Expected 'G' edit descriptor '.d' value
   write(*,'(G4)')

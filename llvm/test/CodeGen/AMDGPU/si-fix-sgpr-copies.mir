@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgcn -run-pass si-fix-sgpr-copies %s -o - | FileCheck %s -check-prefixes=GCN
+# RUN: llc -mtriple=amdgcn -passes=si-fix-sgpr-copies %s -o - | FileCheck %s -check-prefixes=GCN
 
 ---
 
@@ -86,5 +87,51 @@ body:               |
     %0:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM undef %2:sreg_64, 0, 0 :: (load (s32), addrspace 4)
     %1:vgpr_32 = COPY %0
     S_ENDPGM 0, implicit %1
+
+...
+
+# GCN-LABEL: name: find_debug_loc_end_iterator_regression
+# GCN: %6:vreg_1 = COPY %4
+# GCN: %14:sgpr_32 = S_MOV_B32 0
+
+# GCN: %7:vgpr_32 = PHI %5, %bb.0, %1, %bb.3
+# GCN: %8:sreg_32 = PHI %14, %bb.0, %9, %bb.3
+
+# GCN: %11:sreg_64 = PHI %10, %bb.1, %12, %bb.2
+# GCN: %13:sreg_64 = COPY %6
+---
+name: find_debug_loc_end_iterator_regression
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr2, $vgpr3
+
+    %0:vgpr_32 = COPY $vgpr3
+    %1:vgpr_32 = COPY $vgpr2
+    %2:sreg_64 = V_CMP_EQ_U32_e64 killed %0, 1, implicit $exec
+    %3:sreg_64 = S_MOV_B64 -1
+    %4:sreg_64 = S_XOR_B64 killed %2, killed %3, implicit-def dead $scc
+    %5:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %6:vreg_1 = COPY %4
+
+  bb.1:
+    %7:vgpr_32 = PHI %5, %bb.0, %1, %bb.3
+    %8:sreg_32 = PHI %5, %bb.0, %9, %bb.3
+    %10:sreg_64 = S_MOV_B64 0
+
+  bb.2:
+    %11:sreg_64 = PHI %10, %bb.1, %12, %bb.2
+    %13:sreg_64 = COPY %6
+    %12:sreg_64 = SI_IF_BREAK %13, %11, implicit-def dead $scc
+    SI_LOOP %12, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.3:
+    %9:sreg_32 = S_OR_B32 %8, 1, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
+    S_BRANCH %bb.4
+
+  bb.4:
+    SI_RETURN
 
 ...

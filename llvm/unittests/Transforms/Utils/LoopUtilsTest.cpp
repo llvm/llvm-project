@@ -33,7 +33,7 @@ static void run(Module &M, StringRef FuncName,
                     Test) {
   Function *F = M.getFunction(FuncName);
   DominatorTree DT(*F);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M.getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   AssumptionCache AC(*F);
   LoopInfo LI(DT);
@@ -114,7 +114,7 @@ TEST(LoopUtils, IsKnownPositiveInLoopTest) {
         Loop *L = *LI.begin();
         assert(L && L->getName() == "loop" && "Expecting loop 'loop'");
         auto *Arg = F.getArg(0);
-        auto *ArgSCEV = SE.getSCEV(Arg);
+        const SCEV *ArgSCEV = SE.getSCEV(Arg);
         EXPECT_EQ(isKnownPositiveInLoop(ArgSCEV, L, SE), true);
       });
 }
@@ -138,7 +138,7 @@ TEST(LoopUtils, IsKnownNonPositiveInLoopTest) {
         Loop *L = *LI.begin();
         assert(L && L->getName() == "loop" && "Expecting loop 'loop'");
         auto *Arg = F.getArg(0);
-        auto *ArgSCEV = SE.getSCEV(Arg);
+        const SCEV *ArgSCEV = SE.getSCEV(Arg);
         EXPECT_EQ(isKnownNonPositiveInLoop(ArgSCEV, L, SE), true);
       });
 }

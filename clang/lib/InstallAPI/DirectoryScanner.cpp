@@ -9,7 +9,6 @@
 #include "clang/InstallAPI/DirectoryScanner.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/TextAPI/DylibReader.h"
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -130,7 +129,8 @@ Error DirectoryScanner::scanHeaders(StringRef Path, Library &Lib,
   if (ParentPath.empty())
     ParentPath = Path;
   for (const StringRef Dir : SubDirectories)
-    return scanHeaders(Dir, Lib, Type, BasePath, ParentPath);
+    if (Error Err = scanHeaders(Dir, Lib, Type, BasePath, ParentPath))
+      return Err;
 
   return Error::success();
 }
@@ -276,7 +276,8 @@ llvm::Error DirectoryScanner::scanForFrameworks(StringRef Directory) {
   // Expect a certain directory structure and naming convention to find
   // frameworks.
   static const char *SubDirectories[] = {"System/Library/Frameworks/",
-                                         "System/Library/PrivateFrameworks/"};
+                                         "System/Library/PrivateFrameworks/",
+                                         "System/Library/SubFrameworks"};
 
   // Check if the directory is already a framework.
   if (isFramework(Directory)) {

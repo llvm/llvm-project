@@ -9,7 +9,7 @@ define void @f() {
 ; CHECK-NEXT:    movapd %xmm0, %xmm1
 ; CHECK-NEXT:    mulsd %xmm0, %xmm1
 ; CHECK-NEXT:    subsd %xmm0, %xmm1
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %for.cond
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    imull %eax, %eax

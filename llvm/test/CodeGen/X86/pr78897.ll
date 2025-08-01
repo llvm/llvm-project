@@ -224,8 +224,10 @@ define <16 x i8> @produceShuffleVectorForByte(i8 zeroext %0) nounwind {
 ; X86-AVX512-NEXT:    pushl %edi
 ; X86-AVX512-NEXT:    pushl %esi
 ; X86-AVX512-NEXT:    vpbroadcastb {{[0-9]+}}(%esp), %xmm0
-; X86-AVX512-NEXT:    vptestnmb {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %k1
-; X86-AVX512-NEXT:    vmovdqu8 {{.*#+}} xmm0 {%k1} {z} = [17,17,17,17,17,17,17,17,u,u,u,u,u,u,u,u]
+; X86-AVX512-NEXT:    vmovd %xmm0, %eax
+; X86-AVX512-NEXT:    kmovd %eax, %k1
+; X86-AVX512-NEXT:    knotw %k1, %k2
+; X86-AVX512-NEXT:    vmovdqu8 {{.*#+}} xmm0 {%k2} {z} = [17,17,17,17,17,17,17,17,u,u,u,u,u,u,u,u]
 ; X86-AVX512-NEXT:    vpextrd $1, %xmm0, %eax
 ; X86-AVX512-NEXT:    vmovd %xmm0, %edx
 ; X86-AVX512-NEXT:    movl $286331152, %ecx # imm = 0x11111110
@@ -245,9 +247,9 @@ define <16 x i8> @produceShuffleVectorForByte(i8 zeroext %0) nounwind {
 ; X86-AVX512-NEXT:    addl %edx, %eax
 ; X86-AVX512-NEXT:    vmovd %esi, %xmm1
 ; X86-AVX512-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; X86-AVX512-NEXT:    vmovdqu8 %xmm0, %xmm1 {%k1}
-; X86-AVX512-NEXT:    vpsrlw $4, %xmm1, %xmm0
-; X86-AVX512-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; X86-AVX512-NEXT:    vmovdqu8 %xmm1, %xmm0 {%k1}
+; X86-AVX512-NEXT:    vpsrlw $4, %xmm0, %xmm1
+; X86-AVX512-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; X86-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm0, %xmm0
 ; X86-AVX512-NEXT:    popl %esi
 ; X86-AVX512-NEXT:    popl %edi
@@ -256,9 +258,9 @@ define <16 x i8> @produceShuffleVectorForByte(i8 zeroext %0) nounwind {
 ;
 ; X64-AVX512-LABEL: produceShuffleVectorForByte:
 ; X64-AVX512:       # %bb.0: # %entry
-; X64-AVX512-NEXT:    vpbroadcastb %edi, %xmm0
-; X64-AVX512-NEXT:    vptestnmb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k1
-; X64-AVX512-NEXT:    vmovdqu8 {{.*#+}} xmm0 {%k1} {z} = [17,17,17,17,17,17,17,17,u,u,u,u,u,u,u,u]
+; X64-AVX512-NEXT:    kmovd %edi, %k1
+; X64-AVX512-NEXT:    knotw %k1, %k2
+; X64-AVX512-NEXT:    vmovdqu8 {{.*#+}} xmm0 {%k2} {z} = [17,17,17,17,17,17,17,17,u,u,u,u,u,u,u,u]
 ; X64-AVX512-NEXT:    vmovq %xmm0, %rax
 ; X64-AVX512-NEXT:    movabsq $1229782938247303440, %rcx # imm = 0x1111111111111110
 ; X64-AVX512-NEXT:    movabsq $76861433640456465, %rdx # imm = 0x111111111111111
@@ -267,9 +269,9 @@ define <16 x i8> @produceShuffleVectorForByte(i8 zeroext %0) nounwind {
 ; X64-AVX512-NEXT:    vmovq %rax, %xmm0
 ; X64-AVX512-NEXT:    imulq %rcx, %rdx
 ; X64-AVX512-NEXT:    vmovq %rdx, %xmm1
-; X64-AVX512-NEXT:    vmovdqu8 %xmm0, %xmm1 {%k1}
-; X64-AVX512-NEXT:    vpsrlw $4, %xmm1, %xmm0
-; X64-AVX512-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; X64-AVX512-NEXT:    vmovdqu8 %xmm1, %xmm0 {%k1}
+; X64-AVX512-NEXT:    vpsrlw $4, %xmm0, %xmm1
+; X64-AVX512-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; X64-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    retq
 entry:

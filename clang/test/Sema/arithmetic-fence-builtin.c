@@ -1,8 +1,13 @@
 // RUN: %clang_cc1 -triple i386-pc-linux-gnu -emit-llvm -o - -verify -x c++ %s
+// RUN: %clang_cc1 -triple i386-pc-linux-gnu -emit-llvm -o - -verify -x c++ %s -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -triple ppc64le -DPPC     -emit-llvm -o - -verify -x c++ %s
+// RUN: %clang_cc1 -triple ppc64le -DPPC     -emit-llvm -o - -verify -x c++ %s -fexperimental-new-constant-interpreter
 // RUN: not %clang_cc1 -triple ppc64le -DPPC     -emit-llvm -o - -x c++ %s \
 // RUN:            -fprotect-parens 2>&1 | FileCheck -check-prefix=PPC %s
+// RUN: not %clang_cc1 -triple ppc64le -DPPC     -emit-llvm -o - -x c++ %s -fexperimental-new-constant-interpreter \
+// RUN:            -fprotect-parens 2>&1 | FileCheck -check-prefix=PPC %s
 // RUN: %clang_cc1 -triple spir64 -emit-llvm -o - -verify -x c++ %s
+// RUN: %clang_cc1 -triple spir64 -emit-llvm -o - -verify -x c++ %s -fexperimental-new-constant-interpreter
 #ifndef PPC
 int v;
 template <typename T> T addT(T a, T b) {

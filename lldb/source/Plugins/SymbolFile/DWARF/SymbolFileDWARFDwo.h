@@ -50,7 +50,8 @@ public:
   uint64_t GetDebugInfoSize(bool load_all_debug_info = false) override;
 
   bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
-                              lldb::offset_t &offset,
+                              lldb::offset_t &offset, RegisterContext *reg_ctx,
+                              lldb::RegisterKind reg_kind,
                               std::vector<Value> &stack) const override;
 
   void FindGlobalVariables(ConstString name,
@@ -70,11 +71,12 @@ public:
   SymbolFileDWARF *GetDIERefSymbolFile(const DIERef &die_ref) override;
 
 protected:
-  DIEToTypePtr &GetDIEToType() override;
+  llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> &GetDIEToType() override;
 
   DIEToVariableSP &GetDIEToVariable() override;
 
-  CompilerTypeToDIE &GetForwardDeclCompilerTypeToDIE() override;
+  llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> &
+  GetForwardDeclCompilerTypeToDIE() override;
 
   UniqueDWARFASTTypeMap &GetUniqueDWARFASTTypeMap() override;
 

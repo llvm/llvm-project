@@ -54,8 +54,6 @@ LLVM_13 {
     clang_Cursor_Evaluate;
     clang_Cursor_getArgument;
     clang_Cursor_getBriefCommentText;
-    clang_Cursor_getBinaryOpcode;
-    clang_Cursor_getBinaryOpcodeStr;
     clang_Cursor_getCXXManglings;
     clang_Cursor_getCommentRange;
     clang_Cursor_getMangling;
@@ -428,6 +426,35 @@ LLVM_17 {
     clang_getCursorBinaryOperatorKind;
     clang_getUnaryOperatorKindSpelling;
     clang_getCursorUnaryOperatorKind;
+};
+
+LLVM_19 {
+  global:
+    clang_Cursor_getBinaryOpcode;
+    clang_Cursor_getBinaryOpcodeStr;
+};
+
+LLVM_20 {
+  global:
+    clang_getOffsetOfBase;
+    clang_getTypePrettyPrinted;
+    clang_isBeforeInTranslationUnit;
+    clang_visitCXXBaseClasses;
+};
+
+LLVM_21 {
+  global:
+    clang_getFullyQualifiedName;
+    clang_visitCXXMethods;
+    clang_Cursor_getGCCAssemblyTemplate;
+    clang_Cursor_isGCCAssemblyHasGoto;
+    clang_Cursor_getGCCAssemblyNumOutputs;
+    clang_Cursor_getGCCAssemblyNumInputs;
+    clang_Cursor_getGCCAssemblyInput;
+    clang_Cursor_getGCCAssemblyOutput;
+    clang_Cursor_getGCCAssemblyNumClobbers;
+    clang_Cursor_getGCCAssemblyClobber;
+    clang_Cursor_isGCCAssemblyVolatile;
 };
 
 # Example of how to add a new symbol version entry.  If you do add a new symbol

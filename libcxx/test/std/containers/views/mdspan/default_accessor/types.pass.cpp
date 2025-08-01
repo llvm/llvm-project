@@ -21,7 +21,6 @@
 //
 //  Each specialization of default_accessor is a trivially copyable type that models semiregular.
 
-
 #include <mdspan>
 #include <type_traits>
 #include <concepts>
