@@ -13,6 +13,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -20,6 +21,7 @@
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Expression/Expression.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/ObjectFileJIT.h"
 #include "lldb/Host/HostInfo.h"
@@ -36,6 +38,7 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/lldb-defines.h"
 
 #include <optional>
 
@@ -771,6 +774,40 @@ private:
   lldb::addr_t m_best_internal_load_address = LLDB_INVALID_ADDRESS;
 };
 
+/// Returns address of the function referred to by the special function call
+/// label \c label.
+static llvm::Expected<lldb::addr_t>
+ResolveFunctionCallLabel(const FunctionCallLabel &label,
+                         const lldb_private::SymbolContext &sc,
+                         bool &symbol_was_missing_weak) {
+  symbol_was_missing_weak = false;
+
+  if (!sc.target_sp)
+    return llvm::createStringError("target not available.");
+
+  auto module_sp = sc.target_sp->GetImages().FindModule(label.module_id);
+  if (!module_sp)
+    return llvm::createStringError(
+        llvm::formatv("failed to find module by UID {0}", label.module_id));
+
+  auto *symbol_file = module_sp->GetSymbolFile();
+  if (!symbol_file)
+    return llvm::createStringError(
+        llvm::formatv("no SymbolFile found on module {0:x}.", module_sp.get()));
+
+  auto sc_or_err = symbol_file->ResolveFunctionCallLabel(label);
+  if (!sc_or_err)
+    return llvm::joinErrors(
+        llvm::createStringError("failed to resolve function by UID"),
+        sc_or_err.takeError());
+
+  SymbolContextList sc_list;
+  sc_list.Append(*sc_or_err);
+
+  LoadAddressResolver resolver(*sc.target_sp, symbol_was_missing_weak);
+  return resolver.Resolve(sc_list).value_or(LLDB_INVALID_ADDRESS);
+}
+
 lldb::addr_t
 IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
                                const lldb_private::SymbolContext &sc,
@@ -906,6 +943,34 @@ lldb::addr_t IRExecutionUnit::FindInUserDefinedSymbols(
 
 lldb::addr_t IRExecutionUnit::FindSymbol(lldb_private::ConstString name,
                                          bool &missing_weak) {
+  if (name.GetStringRef().starts_with(FunctionCallLabelPrefix)) {
+    auto label_or_err = FunctionCallLabel::fromString(name);
+    if (!label_or_err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), label_or_err.takeError(),
+                     "failed to create FunctionCallLabel from '{1}': {0}",
+                     name.GetStringRef());
+      return LLDB_INVALID_ADDRESS;
+    }
+
+    if (auto addr_or_err =
+            ResolveFunctionCallLabel(*label_or_err, m_sym_ctx, missing_weak)) {
+      return *addr_or_err;
+    } else {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), addr_or_err.takeError(),
+                     "Failed to resolve function call label '{1}': {0}",
+                     name.GetStringRef());
+
+      // Fall back to lookup by name despite error in resolving the label.
+      // May happen in practice if the definition of a function lives in
+      // a different lldb_private::Module than it's declaration. Meaning
+      // we couldn't pin-point it using the information encoded in the label.
+      name.SetString(label_or_err->lookup_name);
+    }
+  }
+
+  // TODO: now with function call labels, do we still need to
+  // generate alternate manglings?
+
   std::vector<ConstString> candidate_C_names;
   std::vector<ConstString> candidate_CPlusPlus_names;
 

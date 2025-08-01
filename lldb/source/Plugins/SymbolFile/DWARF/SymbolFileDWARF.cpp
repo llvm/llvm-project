@@ -2476,6 +2476,55 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
   return false;
 }
 
+llvm::Expected<SymbolContext>
+SymbolFileDWARF::ResolveFunctionCallLabel(const FunctionCallLabel &label) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+
+  DWARFDIE die = GetDIE(label.symbol_id);
+  if (!die.IsValid())
+    return llvm::createStringError(
+        llvm::formatv("invalid DIE ID in {0}", label));
+
+  // Label was created using a declaration DIE. Need to fetch the definition
+  // to resolve the function call.
+  if (die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0)) {
+    Module::LookupInfo info(ConstString(label.lookup_name),
+                            lldb::eFunctionNameTypeFull,
+                            lldb::eLanguageTypeUnknown);
+
+    m_index->GetFunctions(info, *this, {}, [&](DWARFDIE entry) {
+      if (entry.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
+        return IterationAction::Continue;
+
+      // We don't check whether the specification DIE for this function
+      // corresponds to the declaration DIE because the declaration might be in
+      // a type-unit but the definition in the compile-unit (and it's
+      // specifcation would point to the declaration in the compile-unit). We
+      // rely on the mangled name within the module to be enough to find us the
+      // unique definition.
+      die = entry;
+      return IterationAction::Stop;
+    });
+
+    if (die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
+      return llvm::createStringError(
+          llvm::formatv("failed to find definition DIE for {0}", label));
+  }
+
+  SymbolContextList sc_list;
+  if (!ResolveFunction(die, /*include_inlines=*/false, sc_list))
+    return llvm::createStringError(
+        llvm::formatv("failed to resolve function for {0}", label));
+
+  if (sc_list.IsEmpty())
+    return llvm::createStringError(
+        llvm::formatv("failed to find function for {0}", label));
+
+  assert(sc_list.GetSize() == 1);
+
+  return sc_list[0];
+}
+
 bool SymbolFileDWARF::DIEInDeclContext(const CompilerDeclContext &decl_ctx,
                                        const DWARFDIE &die,
                                        bool only_root_namespaces) {
