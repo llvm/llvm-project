@@ -22,7 +22,6 @@ Checks: >
   -performance-unnecessary-value-param,
   readability-*,
   -readability-avoid-nested-conditional-operator,
-  -readability-avoid-return-with-void-value,
   -readability-braces-around-statements,
   -readability-container-contains,
   -readability-convert-member-functions-to-static,
