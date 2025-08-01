@@ -6,13 +6,10 @@
 ; CHECK-NEXT:   32bit                            - Implements RV32.
 ; CHECK-NEXT:   64bit                            - Implements RV64.
 ; CHECK-NEXT:   a                                - 'A' (Atomic Instructions).
-; CHECK-NEXT:   add-load-fusion                  - Enable ADD + load macrofusion.
-; CHECK-NEXT:   add-lw-fusion                    - Enable ADD+LW macrofusion.
+; CHECK-NEXT:   add-load-fusion                  - Enable ADD(.UW) + load macrofusion.
 ; CHECK-NEXT:   addi-load-fusion                 - Enable ADDI + load macrofusion.
-; CHECK-NEXT:   adduw-load-fusion                - Enable ADD_UW + load macrofusion.
 ; CHECK-NEXT:   andes45                          - Andes 45-Series processors.
 ; CHECK-NEXT:   auipc-addi-fusion                - Enable AUIPC+ADDI macrofusion.
-; CHECK-NEXT:   auipc-addiw-fusion               - Enable AUIPC+ADDIW macrofusion.
 ; CHECK-NEXT:   auipc-load-fusion                - Enable AUIPC + load macrofusion.
 ; CHECK-NEXT:   b                                - 'B' (the collection of the Zba, Zbb, Zbs extensions).
 ; CHECK-NEXT:   bfext-fusion                     - Enable SLLI+SRLI (bitfield extract) macrofusion.
@@ -142,8 +139,7 @@
 ; CHECK-NEXT:   shvsatpa                         - 'Shvsatpa' (vsatp supports all modes supported by satp).
 ; CHECK-NEXT:   shvstvala                        - 'Shvstvala' (vstval provides all needed values).
 ; CHECK-NEXT:   shvstvecd                        - 'Shvstvecd' (vstvec supports Direct mode).
-; CHECK-NEXT:   shxadd-load-fusion               - Enable SH(1|2|3)ADD + load macrofusion.
-; CHECK-NEXT:   shxadduw-load-fusion             - Enable SH(1|2|3)ADD_UW + load macrofusion.
+; CHECK-NEXT:   shxadd-load-fusion               - Enable SH(1|2|3)ADD(.UW) + load macrofusion.
 ; CHECK-NEXT:   sifive7                          - SiFive 7-Series processors.
 ; CHECK-NEXT:   smaia                            - 'Smaia' (Advanced Interrupt Architecture Machine Level).
 ; CHECK-NEXT:   smcdeleg                         - 'Smcdeleg' (Counter Delegation Machine Level).
