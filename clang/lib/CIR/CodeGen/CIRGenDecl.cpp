@@ -24,7 +24,8 @@ using namespace clang;
 using namespace clang::CIRGen;
 
 CIRGenFunction::AutoVarEmission
-CIRGenFunction::emitAutoVarAlloca(const VarDecl &d) {
+CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
+                                  mlir::OpBuilder::InsertPoint ip) {
   QualType ty = d.getType();
   if (ty.getAddressSpace() != LangAS::Default)
     cgm.errorNYI(d.getSourceRange(), "emitAutoVarAlloca: address space");
@@ -50,7 +51,8 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d) {
   // A normal fixed sized variable becomes an alloca in the entry block,
   mlir::Type allocaTy = convertTypeForMem(ty);
   // Create the temp alloca and declare variable using it.
-  address = createTempAlloca(allocaTy, alignment, loc, d.getName());
+  address = createTempAlloca(allocaTy, alignment, loc, d.getName(),
+                             /*arraySize=*/nullptr, /*alloca=*/nullptr, ip);
   declare(address.getPointer(), &d, ty, getLoc(d.getSourceRange()), alignment);
 
   emission.Addr = address;
