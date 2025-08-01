@@ -46,6 +46,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/CRC.h"
+#include "llvm/Support/SipHash.h"
 #include "llvm/Support/xxhash.h"
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
@@ -161,8 +162,7 @@ void CodeGenFunction::CGFPOptionsRAII::ConstructorHelper(FPOptions FPFeatures) {
   llvm::RoundingMode NewRoundingBehavior = FPFeatures.getRoundingMode();
   CGF.Builder.setDefaultConstrainedRounding(NewRoundingBehavior);
   auto NewExceptionBehavior =
-      ToConstrainedExceptMD(static_cast<LangOptions::FPExceptionModeKind>(
-          FPFeatures.getExceptionMode()));
+      ToConstrainedExceptMD(FPFeatures.getExceptionMode());
   CGF.Builder.setDefaultConstrainedExcept(NewExceptionBehavior);
 
   CGF.SetFastMathFlags(FPFeatures);
@@ -721,7 +721,7 @@ static bool matchesStlAllocatorFn(const Decl *D, const ASTContext &Ctx) {
       (MD->getNumParams() != 1 && MD->getNumParams() != 2))
     return false;
 
-  if (MD->parameters()[0]->getType().getCanonicalType() != Ctx.getSizeType())
+  if (!Ctx.hasSameType(MD->parameters()[0]->getType(), Ctx.getSizeType()))
     return false;
 
   if (MD->getNumParams() == 2) {
@@ -2222,26 +2222,39 @@ static void emitNonZeroVLAInit(CodeGenFunction &CGF, QualType baseType,
 Address CodeGenFunction::EmitAddressOfPFPField(Address RecordPtr,
                                                const PFPField &Field) {
   return EmitAddressOfPFPField(
+      RecordPtr,
       Builder.CreateConstInBoundsByteGEP(RecordPtr.withElementType(Int8Ty),
-                                         Field.structOffset),
-      Field.field, Field.offset - Field.structOffset);
+                                         Field.offset),
+      Field.field);
 }
 
 Address CodeGenFunction::EmitAddressOfPFPField(Address RecordPtr,
-                                               const FieldDecl *Field,
-                                               CharUnits Offset) {
+                                               Address PtrPtr,
+                                               const FieldDecl *Field) {
+  llvm::Value *Disc;
+  bool IsPAuthSupported = getContext().getTargetInfo().getTriple().getArch() ==
+                          llvm::Triple::aarch64;
+  if (!IsPAuthSupported ||
+      CGM.getContext().arePFPFieldsTriviallyRelocatable(Field->getParent())) {
+    uint64_t FieldSignature =
+        llvm::getPointerAuthStableSipHash(CGM.getPFPFieldName(Field));
+    if (!IsPAuthSupported)
+      FieldSignature &= 0xff;
+    Disc = llvm::ConstantInt::get(CGM.Int64Ty, FieldSignature);
+  } else {
+    Disc = Builder.CreatePtrToInt(RecordPtr.getBasePointer(), CGM.Int64Ty);
+  }
+
+  llvm::GlobalValue *DS = CGM.getPFPDeactivationSymbol(Field);
+  llvm::OperandBundleDef DSBundle("deactivation-symbol", DS);
+
   return Address(
-      EmitRuntimeCall(
+      Builder.CreateCall(
           CGM.getIntrinsic(llvm::Intrinsic::protected_field_ptr),
-          {RecordPtr.getBasePointer(), Builder.getInt64(Offset.getQuantity()),
-           llvm::MetadataAsValue::get(
-               getLLVMContext(),
-               llvm::MDString::get(getLLVMContext(),
-                                   CGM.getPFPFieldName(Field))),
-           getContext().arePFPFieldsTriviallyRelocatable(Field->getParent())
-               ? Builder.getFalse()
-               : Builder.getTrue()}),
-      VoidPtrTy, RecordPtr.getAlignment().alignmentAtOffset(Offset));
+          {PtrPtr.getBasePointer(), Disc,
+           IsPAuthSupported ? Builder.getTrue() : Builder.getFalse()},
+          DSBundle),
+      VoidPtrTy, PtrPtr.getAlignment());
 }
 
 void
@@ -2526,6 +2539,7 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
     case Type::ObjCObjectPointer:
     case Type::BitInt:
     case Type::HLSLInlineSpirv:
+    case Type::PredefinedSugar:
       llvm_unreachable("type class is never variably-modified!");
 
     case Type::Elaborated:

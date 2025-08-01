@@ -24,7 +24,8 @@ define void @test(ptr %0, i32 %add651) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <2 x i32> [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> poison, i32 [[ADD651]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP2]], i32 1
-; CHECK-NEXT:    [[TMP14:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> [[TMP13]], <2 x i32> [[TMP10]], i64 2)
+; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <2 x i32> [[TMP10]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP13]], <4 x i32> [[TMP19]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP15:%.*]] = lshr <4 x i32> [[TMP14]], splat (i32 1)
 ; CHECK-NEXT:    [[SHR685:%.*]] = lshr i32 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = trunc <4 x i32> [[TMP15]] to <4 x i16>

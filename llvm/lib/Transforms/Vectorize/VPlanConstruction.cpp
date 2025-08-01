@@ -25,6 +25,7 @@
 #define DEBUG_TYPE "vplan"
 
 using namespace llvm;
+using namespace VPlanPatternMatch;
 
 namespace {
 // Class that is used to build the plain CFG for the incoming IR.
@@ -410,7 +411,7 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   // LatchExitVPB, taking care to preserve the original predecessor & successor
   // order of blocks. Set region entry and exiting after both HeaderVPB and
   // LatchVPBB have been disconnected from their predecessors/successors.
-  auto *R = Plan.createVPRegionBlock("", false /*isReplicator*/);
+  auto *R = Plan.createVPRegionBlock();
   VPBlockUtils::insertOnEdge(LatchVPBB, LatchExitVPB, R);
   VPBlockUtils::disconnectBlocks(LatchVPBB, R);
   VPBlockUtils::connectBlocks(PreheaderVPBB, R);
@@ -427,7 +428,6 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
 static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                                   VPBasicBlock *LatchVPBB, Type *IdxTy,
                                   DebugLoc DL) {
-  using namespace VPlanPatternMatch;
   Value *StartIdx = ConstantInt::get(IdxTy, 0);
   auto *StartV = Plan.getOrAddLiveIn(StartIdx);
 
@@ -437,9 +437,12 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
 
   // We are about to replace the branch to exit the region. Remove the original
   // BranchOnCond, if there is any.
+  DebugLoc LatchDL = DL;
   if (!LatchVPBB->empty() &&
-      match(&LatchVPBB->back(), m_BranchOnCond(m_VPValue())))
+      match(&LatchVPBB->back(), m_BranchOnCond(m_VPValue()))) {
+    LatchDL = LatchVPBB->getTerminator()->getDebugLoc();
     LatchVPBB->getTerminator()->eraseFromParent();
+  }
 
   VPBuilder Builder(LatchVPBB);
   // Add a VPInstruction to increment the scalar canonical IV by VF * UF.
@@ -452,7 +455,8 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
 
   // Add the BranchOnCount VPInstruction to the latch.
   Builder.createNaryOp(VPInstruction::BranchOnCount,
-                       {CanonicalIVIncrement, &Plan.getVectorTripCount()}, DL);
+                       {CanonicalIVIncrement, &Plan.getVectorTripCount()},
+                       LatchDL);
 }
 
 void VPlanTransforms::prepareForVectorization(
@@ -462,28 +466,27 @@ void VPlanTransforms::prepareForVectorization(
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
 
-  VPBlockBase *HeaderVPB = Plan.getEntry()->getSingleSuccessor();
-  canonicalHeaderAndLatch(HeaderVPB, VPDT);
-  VPBlockBase *LatchVPB = HeaderVPB->getPredecessors()[1];
+  auto *HeaderVPBB = cast<VPBasicBlock>(Plan.getEntry()->getSingleSuccessor());
+  canonicalHeaderAndLatch(HeaderVPBB, VPDT);
+  auto *LatchVPBB = cast<VPBasicBlock>(HeaderVPBB->getPredecessors()[1]);
 
   VPBasicBlock *VecPreheader = Plan.createVPBasicBlock("vector.ph");
   VPBlockUtils::insertBlockAfter(VecPreheader, Plan.getEntry());
 
   VPBasicBlock *MiddleVPBB = Plan.createVPBasicBlock("middle.block");
-  // The canonical LatchVPB has the header block as last successor. If it has
+  // The canonical LatchVPBB has the header block as last successor. If it has
   // another successor, this successor is an exit block - insert middle block on
   // its edge. Otherwise, add middle block as another successor retaining header
   // as last.
-  if (LatchVPB->getNumSuccessors() == 2) {
-    VPBlockBase *LatchExitVPB = LatchVPB->getSuccessors()[0];
-    VPBlockUtils::insertOnEdge(LatchVPB, LatchExitVPB, MiddleVPBB);
+  if (LatchVPBB->getNumSuccessors() == 2) {
+    VPBlockBase *LatchExitVPB = LatchVPBB->getSuccessors()[0];
+    VPBlockUtils::insertOnEdge(LatchVPBB, LatchExitVPB, MiddleVPBB);
   } else {
-    VPBlockUtils::connectBlocks(LatchVPB, MiddleVPBB);
-    LatchVPB->swapSuccessors();
+    VPBlockUtils::connectBlocks(LatchVPBB, MiddleVPBB);
+    LatchVPBB->swapSuccessors();
   }
 
-  addCanonicalIVRecipes(Plan, cast<VPBasicBlock>(HeaderVPB),
-                        cast<VPBasicBlock>(LatchVPB), InductionTy, IVDL);
+  addCanonicalIVRecipes(Plan, HeaderVPBB, LatchVPBB, InductionTy, IVDL);
 
   [[maybe_unused]] bool HandledUncountableEarlyExit = false;
   // Disconnect all early exits from the loop leaving it with a single exit from
@@ -499,8 +502,7 @@ void VPlanTransforms::prepareForVectorization(
         assert(!HandledUncountableEarlyExit &&
                "can handle exactly one uncountable early exit");
         handleUncountableEarlyExit(cast<VPBasicBlock>(Pred), EB, Plan,
-                                   cast<VPBasicBlock>(HeaderVPB),
-                                   cast<VPBasicBlock>(LatchVPB), Range);
+                                   HeaderVPBB, LatchVPBB, Range);
         HandledUncountableEarlyExit = true;
       } else {
         for (VPRecipeBase &R : EB->phis())
@@ -564,15 +566,15 @@ void VPlanTransforms::prepareForVectorization(
   // the corresponding compare because they may have ended up with different
   // line numbers and we want to avoid awkward line stepping while debugging.
   // E.g., if the compare has got a line number inside the loop.
-  DebugLoc LatchDL = TheLoop->getLoopLatch()->getTerminator()->getDebugLoc();
+  DebugLoc LatchDL = LatchVPBB->getTerminator()->getDebugLoc();
   VPBuilder Builder(MiddleVPBB);
   VPValue *Cmp;
   if (!RequiresScalarEpilogueCheck)
-    Cmp = Plan.getOrAddLiveIn(ConstantInt::getFalse(
-        IntegerType::getInt1Ty(TripCount->getType()->getContext())));
+    Cmp = Plan.getOrAddLiveIn(
+        ConstantInt::getFalse(IntegerType::getInt1Ty(Plan.getContext())));
   else if (TailFolded)
-    Cmp = Plan.getOrAddLiveIn(ConstantInt::getTrue(
-        IntegerType::getInt1Ty(TripCount->getType()->getContext())));
+    Cmp = Plan.getOrAddLiveIn(
+        ConstantInt::getTrue(IntegerType::getInt1Ty(Plan.getContext())));
   else
     Cmp = Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),
                              &Plan.getVectorTripCount(), LatchDL, "cmp.n");
@@ -589,6 +591,30 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   TopRegion->setName("vector loop");
   TopRegion->getEntryBasicBlock()->setName("vector.body");
+}
+
+void VPlanTransforms::createExtractsForLiveOuts(VPlan &Plan) {
+  for (VPBasicBlock *EB : Plan.getExitBlocks()) {
+    VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
+    VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+
+    if (EB->getSinglePredecessor() != Plan.getMiddleBlock())
+      continue;
+
+    for (VPRecipeBase &R : EB->phis()) {
+      auto *ExitIRI = cast<VPIRPhi>(&R);
+      for (unsigned Idx = 0; Idx != ExitIRI->getNumIncoming(); ++Idx) {
+        VPRecipeBase *Inc = ExitIRI->getIncomingValue(Idx)->getDefiningRecipe();
+        if (!Inc || !Inc->getParent()->getParent())
+          continue;
+        assert(ExitIRI->getNumOperands() == 1 &&
+               ExitIRI->getParent()->getSinglePredecessor() == MiddleVPBB &&
+               "exit values from early exits must be fixed when branch to "
+               "early-exit is added");
+        ExitIRI->extractLastLaneOfFirstOperand(B);
+      }
+    }
+  }
 }
 
 // Likelyhood of bypassing the vectorized loop due to a runtime check block,
@@ -622,9 +648,170 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
                    .createNaryOp(VPInstruction::BranchOnCond, {CondVPV},
                                  Plan.getCanonicalIV()->getDebugLoc());
   if (AddBranchWeights) {
-    MDBuilder MDB(Plan.getScalarHeader()->getIRBasicBlock()->getContext());
+    MDBuilder MDB(Plan.getContext());
     MDNode *BranchWeights =
         MDB.createBranchWeights(CheckBypassWeights, /*IsExpected=*/false);
     Term->addMetadata(LLVMContext::MD_prof, BranchWeights);
   }
+}
+
+bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
+  auto GetMinMaxCompareValue = [](VPReductionPHIRecipe *RedPhiR) -> VPValue * {
+    auto *MinMaxR = dyn_cast<VPRecipeWithIRFlags>(
+        RedPhiR->getBackedgeValue()->getDefiningRecipe());
+    if (!MinMaxR)
+      return nullptr;
+
+    auto *RepR = dyn_cast<VPReplicateRecipe>(MinMaxR);
+    if (!isa<VPWidenIntrinsicRecipe>(MinMaxR) &&
+        !(RepR && isa<IntrinsicInst>(RepR->getUnderlyingInstr())))
+      return nullptr;
+
+#ifndef NDEBUG
+    Intrinsic::ID RdxIntrinsicId =
+        RedPhiR->getRecurrenceKind() == RecurKind::FMaxNum ? Intrinsic::maxnum
+                                                           : Intrinsic::minnum;
+    assert((isa<VPWidenIntrinsicRecipe>(MinMaxR) &&
+            cast<VPWidenIntrinsicRecipe>(MinMaxR)->getVectorIntrinsicID() ==
+                RdxIntrinsicId) ||
+           (RepR &&
+            cast<IntrinsicInst>(RepR->getUnderlyingInstr())->getIntrinsicID() ==
+                RdxIntrinsicId) &&
+               "Intrinsic did not match recurrence kind");
+#endif
+
+    if (MinMaxR->getOperand(0) == RedPhiR)
+      return MinMaxR->getOperand(1);
+
+    assert(MinMaxR->getOperand(1) == RedPhiR &&
+           "Reduction phi operand expected");
+    return MinMaxR->getOperand(0);
+  };
+
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPReductionPHIRecipe *RedPhiR = nullptr;
+  bool HasUnsupportedPhi = false;
+  for (auto &R : LoopRegion->getEntryBasicBlock()->phis()) {
+    if (isa<VPCanonicalIVPHIRecipe, VPWidenIntOrFpInductionRecipe>(&R))
+      continue;
+    auto *Cur = dyn_cast<VPReductionPHIRecipe>(&R);
+    if (!Cur) {
+      // TODO: Also support fixed-order recurrence phis.
+      HasUnsupportedPhi = true;
+      continue;
+    }
+    // For now, only a single reduction is supported.
+    // TODO: Support multiple MaxNum/MinNum reductions and other reductions.
+    if (RedPhiR)
+      return false;
+    if (Cur->getRecurrenceKind() != RecurKind::FMaxNum &&
+        Cur->getRecurrenceKind() != RecurKind::FMinNum) {
+      HasUnsupportedPhi = true;
+      continue;
+    }
+    RedPhiR = Cur;
+  }
+
+  if (!RedPhiR)
+    return true;
+
+  // We won't be able to resume execution in the scalar tail, if there are
+  // unsupported header phis or there is no scalar tail at all, due to
+  // tail-folding.
+  if (HasUnsupportedPhi || !Plan.hasScalarTail())
+    return false;
+
+  VPValue *MinMaxOp = GetMinMaxCompareValue(RedPhiR);
+  if (!MinMaxOp)
+    return false;
+
+  RecurKind RedPhiRK = RedPhiR->getRecurrenceKind();
+  assert((RedPhiRK == RecurKind::FMaxNum || RedPhiRK == RecurKind::FMinNum) &&
+         "unsupported reduction");
+  (void)RedPhiRK;
+
+  /// Check if the vector loop of \p Plan can early exit and restart
+  /// execution of last vector iteration in the scalar loop. This requires all
+  /// recipes up to early exit point be side-effect free as they are
+  /// re-executed. Currently we check that the loop is free of any recipe that
+  /// may write to memory. Expected to operate on an early VPlan w/o nested
+  /// regions.
+  for (VPBlockBase *VPB : vp_depth_first_shallow(
+           Plan.getVectorLoopRegion()->getEntryBasicBlock())) {
+    auto *VPBB = cast<VPBasicBlock>(VPB);
+    for (auto &R : *VPBB) {
+      if (R.mayWriteToMemory() &&
+          !match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())))
+        return false;
+    }
+  }
+
+  VPBasicBlock *LatchVPBB = LoopRegion->getExitingBasicBlock();
+  VPBuilder Builder(LatchVPBB->getTerminator());
+  auto *LatchExitingBranch = cast<VPInstruction>(LatchVPBB->getTerminator());
+  assert(LatchExitingBranch->getOpcode() == VPInstruction::BranchOnCount &&
+         "Unexpected terminator");
+  auto *IsLatchExitTaken =
+      Builder.createICmp(CmpInst::ICMP_EQ, LatchExitingBranch->getOperand(0),
+                         LatchExitingBranch->getOperand(1));
+
+  VPValue *IsNaN = Builder.createFCmp(CmpInst::FCMP_UNO, MinMaxOp, MinMaxOp);
+  VPValue *AnyNaN = Builder.createNaryOp(VPInstruction::AnyOf, {IsNaN});
+  auto *AnyExitTaken =
+      Builder.createNaryOp(Instruction::Or, {AnyNaN, IsLatchExitTaken});
+  Builder.createNaryOp(VPInstruction::BranchOnCond, AnyExitTaken);
+  LatchExitingBranch->eraseFromParent();
+
+  // If we exit early due to NaNs, compute the final reduction result based on
+  // the reduction phi at the beginning of the last vector iteration.
+  auto *RdxResult = find_singleton<VPSingleDefRecipe>(
+      RedPhiR->users(), [](VPUser *U, bool) -> VPSingleDefRecipe * {
+        auto *VPI = dyn_cast<VPInstruction>(U);
+        if (VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult)
+          return VPI;
+        return nullptr;
+      });
+
+  auto *MiddleVPBB = Plan.getMiddleBlock();
+  Builder.setInsertPoint(MiddleVPBB, MiddleVPBB->begin());
+  auto *NewSel =
+      Builder.createSelect(AnyNaN, RedPhiR, RdxResult->getOperand(1));
+  RdxResult->setOperand(1, NewSel);
+
+  auto *ScalarPH = Plan.getScalarPreheader();
+  // Update resume phis for inductions in the scalar preheader. If AnyNaN is
+  // true, the resume from the start of the last vector iteration via the
+  // canonical IV, otherwise from the original value.
+  for (auto &R : ScalarPH->phis()) {
+    auto *ResumeR = cast<VPPhi>(&R);
+    VPValue *VecV = ResumeR->getOperand(0);
+    if (VecV == RdxResult)
+      continue;
+    if (auto *DerivedIV = dyn_cast<VPDerivedIVRecipe>(VecV)) {
+      if (DerivedIV->getNumUsers() == 1 &&
+          DerivedIV->getOperand(1) == &Plan.getVectorTripCount()) {
+        auto *NewSel = Builder.createSelect(AnyNaN, Plan.getCanonicalIV(),
+                                            &Plan.getVectorTripCount());
+        DerivedIV->moveAfter(&*Builder.getInsertPoint());
+        DerivedIV->setOperand(1, NewSel);
+        continue;
+      }
+    }
+    // Bail out and abandon the current, partially modified, VPlan if we
+    // encounter resume phi that cannot be updated yet.
+    if (VecV != &Plan.getVectorTripCount()) {
+      LLVM_DEBUG(dbgs() << "Found resume phi we cannot update for VPlan with "
+                           "FMaxNum/FMinNum reduction.\n");
+      return false;
+    }
+    auto *NewSel = Builder.createSelect(AnyNaN, Plan.getCanonicalIV(), VecV);
+    ResumeR->setOperand(0, NewSel);
+  }
+
+  auto *MiddleTerm = MiddleVPBB->getTerminator();
+  Builder.setInsertPoint(MiddleTerm);
+  VPValue *MiddleCond = MiddleTerm->getOperand(0);
+  VPValue *NewCond = Builder.createAnd(MiddleCond, Builder.createNot(AnyNaN));
+  MiddleTerm->setOperand(0, NewCond);
+  return true;
 }

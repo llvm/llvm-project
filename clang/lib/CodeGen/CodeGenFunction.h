@@ -5510,8 +5510,8 @@ public:
                                      ArrayRef<FMVResolverOption> Options);
 
   Address EmitAddressOfPFPField(Address RecordPtr, const PFPField &Field);
-  Address EmitAddressOfPFPField(Address RecordPtr, const FieldDecl *Field,
-                                CharUnits Offset);
+  Address EmitAddressOfPFPField(Address RecordPtr, Address FieldPtr,
+                                const FieldDecl *Field);
 
 private:
   QualType getVarArgType(const Expr *Arg);

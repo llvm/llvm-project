@@ -39,7 +39,7 @@ using namespace mlir::vector;
 namespace {
 
 // Indentation unit for debug output formatting.
-constexpr unsigned kIndScale = 2;
+[[maybe_unused]] constexpr unsigned kIndScale = 2;
 
 /// Represents a closed interval of elements (e.g., [0, 7] = 8 elements).
 using Interval = std::pair<unsigned, unsigned>;
@@ -629,8 +629,8 @@ Value VectorShuffleTreeBuilder::generateShuffleTree(PatternRewriter &rewriter) {
                                                     nextLevelVectorSize);
       }
 
-      Value shuffleVal = rewriter.create<vector::ShuffleOp>(
-          loc, lhsVector, rhsVector, shuffleMask);
+      Value shuffleVal = vector::ShuffleOp::create(rewriter, loc, lhsVector,
+                                                   rhsVector, shuffleMask);
       levelOutputs.push_back(shuffleVal);
     }
 

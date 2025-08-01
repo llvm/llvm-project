@@ -23,7 +23,7 @@ void detail::PtrUseVisitorBase::enqueueUsers(Value &I) {
       UseToVisit NewU = {
         UseToVisit::UseAndIsOffsetKnownPair(&U, IsOffsetKnown),
         Offset,
-        ProtectedField,
+        ProtectedFieldDisc,
       };
       Worklist.push_back(std::move(NewU));
     }

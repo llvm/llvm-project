@@ -96,8 +96,7 @@ public:
                 llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS)
       : Files(FileSystemOptions(), std::move(BaseFS)),
         DiagPrinter(new TextDiagnosticPrinter(llvm::outs(), DiagOpts)),
-        Diags(IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), DiagOpts,
-              DiagPrinter),
+        Diags(DiagnosticIDs::create(), DiagOpts, DiagPrinter),
         SourceMgr(Diags, Files), Context(Context), ApplyFixes(ApplyFixes) {
     DiagOpts.ShowColors = Context.getOptions().UseColor.value_or(
         llvm::sys::Process::StandardOutHasColors());
@@ -505,6 +504,20 @@ getCheckNames(const ClangTidyOptions &Options,
   return Factory.getCheckNames();
 }
 
+void filterCheckOptions(ClangTidyOptions &Options,
+                        const std::vector<std::string> &EnabledChecks) {
+  ClangTidyOptions::OptionMap FilteredOptions;
+  for (const auto &[OptionName, Value] : Options.CheckOptions) {
+    const size_t CheckNameEndPos = OptionName.find('.');
+    if (CheckNameEndPos == StringRef::npos)
+      continue;
+    const StringRef CheckName = OptionName.substr(0, CheckNameEndPos);
+    if (llvm::binary_search(EnabledChecks, CheckName))
+      FilteredOptions[OptionName] = Value;
+  }
+  Options.CheckOptions = std::move(FilteredOptions);
+}
+
 ClangTidyOptions::OptionMap
 getCheckOptions(const ClangTidyOptions &Options,
                 bool AllowEnablingAnalyzerAlphaCheckers) {
@@ -556,7 +569,7 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
 
   ClangTidyDiagnosticConsumer DiagConsumer(Context, nullptr, true, ApplyAnyFix);
   auto DiagOpts = std::make_unique<DiagnosticOptions>();
-  DiagnosticsEngine DE(new DiagnosticIDs(), *DiagOpts, &DiagConsumer,
+  DiagnosticsEngine DE(DiagnosticIDs::create(), *DiagOpts, &DiagConsumer,
                        /*ShouldOwnClient=*/false);
   Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
   Tool.setDiagnosticConsumer(&DiagConsumer);

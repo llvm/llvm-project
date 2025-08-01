@@ -118,7 +118,7 @@ pragmatic solution. The following non-exhaustive list refers to some of the
 projects that influenced Linalg design:
 
 - [ONNX](https://onnx.ai/),
-- [LIFT](https://www.lift-project.org/),
+- [LIFT](https://lift-project.github.io/),
 - [XLA](https://www.tensorflow.org/xla/architecture),
 - [Halide](https://halide-lang.org/) and [TVM](https://tvm.apache.org/),
 - [TACO](http://tensor-compiler.org/),
@@ -171,12 +171,12 @@ Linalg hopes to additionally address the following:
   other, thus simplifying the intermediate representation.
 
 ### Lessons from LIFT<a name="lessonslift"></a>
-[LIFT](https://www.lift-project.org/) is a system to write computational
+[LIFT](https://lift-project.github.io/) is a system to write computational
 kernels based on functional abstractions. Transformations are
 represented by additional nodes in the IR, whose semantics are at the
 level of the algorithm (e.g. `partialReduce`).
 LIFT applies and composes transformations by using [local rewrite
-rules](https://www.lift-project.org/presentations/2015/ICFP-2015.pdf) that
+rules](https://lift-project.github.io/publications/2015/steuwer15generating.pdf) that
 embed these additional nodes directly in the functional abstraction.
 
 Similarly to LIFT, Linalg uses local rewrite rules implemented with the MLIR
@@ -194,9 +194,9 @@ Linalg builds on, and helps separate concerns in the LIFT approach as follows:
 LIFT is expected to further influence the design of Linalg as it evolves. In
 particular, extending the data structure abstractions to support non-dense
 tensors can use the experience of LIFT abstractions for
-[sparse](https://www.lift-project.org/publications/2016/harries16sparse.pdf)
+[sparse](https://lift-project.github.io/publications/2016/harries16sparse.pdf)
 and [position-dependent
-arrays](https://www.lift-project.org/publications/2019/pizzuti19positiondependentarrays.pdf).
+arrays](https://lift-project.github.io/publications/2019/pizzuti19positiondependentarrays.pdf).
 
 ### Lessons from XLA<a name="lessonsxla"></a>
 [XLA](https://www.tensorflow.org/xla/architecture) is one of the first

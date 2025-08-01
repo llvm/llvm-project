@@ -76,6 +76,8 @@ TEST_F(TestTypeSystemClang, TestGetBasicTypeFromEnum) {
                                   context.getComplexType(context.FloatTy)));
   EXPECT_TRUE(
       context.hasSameType(GetBasicQualType(eBasicTypeHalf), context.HalfTy));
+  EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeFloat128),
+                                  context.Float128Ty));
   EXPECT_TRUE(
       context.hasSameType(GetBasicQualType(eBasicTypeInt), context.IntTy));
   EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeInt128),
@@ -245,7 +247,7 @@ TEST_F(TestTypeSystemClang, TestBuiltinTypeForEmptyTriple) {
 
   EXPECT_FALSE(ast.GetBuiltinTypeByName(ConstString("int")).IsValid());
   EXPECT_FALSE(ast.GetBuiltinTypeForDWARFEncodingAndBitSize(
-                      "char", dwarf::DW_ATE_signed_char, 8)
+                      "char", llvm::dwarf::DW_ATE_signed_char, 8)
                    .IsValid());
   EXPECT_FALSE(ast.GetBuiltinTypeForEncodingAndBitSize(lldb::eEncodingUint, 8)
                    .IsValid());
@@ -869,7 +871,7 @@ TEST_F(TestTypeSystemClang, TestFunctionTemplateConstruction) {
   CompilerType clang_type = m_ast->CreateFunctionType(int_type, {}, false, 0U);
   FunctionDecl *func = m_ast->CreateFunctionDeclaration(
       TU, OptionalClangModuleID(), "foo", clang_type, StorageClass::SC_None,
-      false);
+      false, /*asm_label=*/{});
   TypeSystemClang::TemplateParameterInfos empty_params;
 
   // Create the actual function template.
@@ -900,7 +902,7 @@ TEST_F(TestTypeSystemClang, TestFunctionTemplateInRecordConstruction) {
   // 2. It is mirroring the behavior of DWARFASTParserClang::ParseSubroutine.
   FunctionDecl *func = m_ast->CreateFunctionDeclaration(
       TU, OptionalClangModuleID(), "foo", clang_type, StorageClass::SC_None,
-      false);
+      false, /*asm_label=*/{});
   TypeSystemClang::TemplateParameterInfos empty_params;
 
   // Create the actual function template.
@@ -938,7 +940,7 @@ TEST_F(TestTypeSystemClang, TestDeletingImplicitCopyCstrDueToMoveCStr) {
   bool is_attr_used = false;
   bool is_artificial = false;
   m_ast->AddMethodToCXXRecordType(
-      t.GetOpaqueQualType(), class_name, nullptr, function_type,
+      t.GetOpaqueQualType(), class_name, /*asm_label=*/{}, function_type,
       lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
       is_explicit, is_attr_used, is_artificial);
 
@@ -975,7 +977,7 @@ TEST_F(TestTypeSystemClang, TestNotDeletingUserCopyCstrDueToMoveCStr) {
     CompilerType function_type = m_ast->CreateFunctionType(
         return_type, args, /*variadic=*/false, /*quals*/ 0U);
     m_ast->AddMethodToCXXRecordType(
-        t.GetOpaqueQualType(), class_name, nullptr, function_type,
+        t.GetOpaqueQualType(), class_name, /*asm_label=*/{}, function_type,
         lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
         is_explicit, is_attr_used, is_artificial);
   }
@@ -987,7 +989,7 @@ TEST_F(TestTypeSystemClang, TestNotDeletingUserCopyCstrDueToMoveCStr) {
         m_ast->CreateFunctionType(return_type, args,
                                   /*variadic=*/false, /*quals*/ 0U);
     m_ast->AddMethodToCXXRecordType(
-        t.GetOpaqueQualType(), class_name, nullptr, function_type,
+        t.GetOpaqueQualType(), class_name, /*asm_label=*/{}, function_type,
         lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
         is_explicit, is_attr_used, is_artificial);
   }
@@ -1098,7 +1100,7 @@ TEST_F(TestTypeSystemClang, AddMethodToCXXRecordType_ParmVarDecls) {
       m_ast->CreateFunctionType(return_type, param_types,
                                 /*variadic=*/false, /*quals*/ 0U);
   m_ast->AddMethodToCXXRecordType(
-      t.GetOpaqueQualType(), "myFunc", nullptr, function_type,
+      t.GetOpaqueQualType(), "myFunc", /*asm_label=*/{}, function_type,
       lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
       is_explicit, is_attr_used, is_artificial);
 

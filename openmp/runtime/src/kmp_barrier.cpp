@@ -205,6 +205,31 @@ void distributedBarrier::init(size_t nthr) {
     team_icvs = __kmp_allocate(sizeof(kmp_internal_control_t));
 }
 
+void distributedBarrier::deallocate(distributedBarrier *db) {
+  for (int i = 0; i < MAX_ITERS; ++i) {
+    if (db->flags[i])
+      KMP_INTERNAL_FREE(db->flags[i]);
+    db->flags[i] = NULL;
+  }
+  if (db->go) {
+    KMP_INTERNAL_FREE(db->go);
+    db->go = NULL;
+  }
+  if (db->iter) {
+    KMP_INTERNAL_FREE(db->iter);
+    db->iter = NULL;
+  }
+  if (db->sleep) {
+    KMP_INTERNAL_FREE(db->sleep);
+    db->sleep = NULL;
+  }
+  if (db->team_icvs) {
+    __kmp_free(db->team_icvs);
+    db->team_icvs = NULL;
+  }
+  KMP_ALIGNED_FREE(db);
+}
+
 // This function is used only when KMP_BLOCKTIME is not infinite.
 // static
 void __kmp_dist_barrier_wakeup(enum barrier_type bt, kmp_team_t *team,
@@ -1890,8 +1915,6 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
         break;
       }
       case bp_hyper_bar: {
-        // don't set branch bits to 0; use linear
-        KMP_ASSERT(__kmp_barrier_gather_branch_bits[bt]);
         __kmp_hyper_barrier_gather(bt, this_thr, gtid, tid,
                                    reduce USE_ITT_BUILD_ARG(itt_sync_obj));
         break;
@@ -1902,8 +1925,6 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
         break;
       }
       case bp_tree_bar: {
-        // don't set branch bits to 0; use linear
-        KMP_ASSERT(__kmp_barrier_gather_branch_bits[bt]);
         __kmp_tree_barrier_gather(bt, this_thr, gtid, tid,
                                   reduce USE_ITT_BUILD_ARG(itt_sync_obj));
         break;
@@ -2297,7 +2318,6 @@ void __kmp_join_barrier(int gtid) {
     break;
   }
   case bp_hyper_bar: {
-    KMP_ASSERT(__kmp_barrier_gather_branch_bits[bs_forkjoin_barrier]);
     __kmp_hyper_barrier_gather(bs_forkjoin_barrier, this_thr, gtid, tid,
                                NULL USE_ITT_BUILD_ARG(itt_sync_obj));
     break;
@@ -2308,7 +2328,6 @@ void __kmp_join_barrier(int gtid) {
     break;
   }
   case bp_tree_bar: {
-    KMP_ASSERT(__kmp_barrier_gather_branch_bits[bs_forkjoin_barrier]);
     __kmp_tree_barrier_gather(bs_forkjoin_barrier, this_thr, gtid, tid,
                               NULL USE_ITT_BUILD_ARG(itt_sync_obj));
     break;

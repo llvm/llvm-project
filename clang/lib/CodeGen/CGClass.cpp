@@ -2226,22 +2226,6 @@ void CodeGenFunction::EmitCXXConstructorCall(
     EmitTypeCheck(CodeGenFunction::TCK_ConstructorCall, Loc, This,
                   getContext().getRecordType(ClassDecl), CharUnits::Zero());
 
-  // When initializing an object that has pointer field protection and whose
-  // fields are not trivially relocatable we must initialize any pointer fields
-  // to a valid signed pointer (any pointer value will do, but we just use null
-  // pointers). This is because if the object is subsequently copied, its copy
-  // constructor will need to read and authenticate any pointer fields in order
-  // to copy the object to a new address, which will fail if the pointers are
-  // uninitialized.
-  if (!getContext().arePFPFieldsTriviallyRelocatable(D->getParent())) {
-    std::vector<PFPField> PFPFields;
-    getContext().findPFPFields(QualType(ClassDecl->getTypeForDecl(), 0),
-                               CharUnits::Zero(), PFPFields, Type != Ctor_Base);
-    for (auto &Field : PFPFields)
-      Builder.CreateStore(llvm::ConstantPointerNull::get(VoidPtrTy),
-                          EmitAddressOfPFPField(This, Field));
-  }
-
   if (D->isTrivial() && D->isDefaultConstructor()) {
     assert(Args.size() == 1 && "trivial default ctor with args");
     return;

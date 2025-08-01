@@ -31,6 +31,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/Support/SipHash.h"
 #include <optional>
 using namespace clang;
 using namespace CodeGen;
@@ -909,7 +910,7 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
       llvm::Constant *AddrDisc;
       if (CGM.getContext().arePFPFieldsTriviallyRelocatable(RD)) {
         uint64_t FieldSignature =
-            std::hash<std::string>()(CGM.getPFPFieldName(*Field)) & 0xffff;
+            llvm::getPointerAuthStableSipHash(CGM.getPFPFieldName(*Field));
         Disc = llvm::ConstantInt::get(CGM.Int64Ty, FieldSignature);
         AddrDisc = llvm::ConstantPointerNull::get(CGM.VoidPtrTy);
       } else if (Emitter.isAbstract()) {

@@ -27,6 +27,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/InitializePasses.h"
@@ -139,17 +140,22 @@ static CallInst::TailCallKind getOverridingTailCallKind(const Function &F) {
   return CallInst::TCK_None;
 }
 
-static bool lowerObjCCall(Function &F, const char *NewFn,
+static bool lowerObjCCall(Function &F, RTLIB::LibcallImpl NewFn,
                           bool setNonLazyBind = false) {
   assert(IntrinsicInst::mayLowerToFunctionCall(F.getIntrinsicID()) &&
          "Pre-ISel intrinsics do lower into regular function calls");
   if (F.use_empty())
     return false;
 
+  // FIXME: When RuntimeLibcalls is an analysis, check if the function is really
+  // supported, and go through RTLIB::Libcall.
+  const char *NewFnName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(NewFn);
+
   // If we haven't already looked up this function, check to see if the
   // program already contains a function with this name.
   Module *M = F.getParent();
-  FunctionCallee FCache = M->getOrInsertFunction(NewFn, F.getFunctionType());
+  FunctionCallee FCache =
+      M->getOrInsertFunction(NewFnName, F.getFunctionType());
 
   if (Function *Fn = dyn_cast<Function>(FCache.getCallee())) {
     Fn->setLinkage(F.getLinkage());
@@ -469,9 +475,8 @@ enum class PointerEncoding {
 
 bool expandProtectedFieldPtr(Function &Intr) {
   Module &M = *Intr.getParent();
-  bool IsAArch64 = Triple(M.getTargetTriple()).isAArch64();
 
-  std::set<Metadata *> NonPFPFields;
+  std::set<GlobalValue *> DSsToDeactivate;
   std::set<Instruction *> LoadsStores;
 
   Type *Int8Ty = Type::getInt8Ty(M.getContext());
@@ -505,10 +510,16 @@ bool expandProtectedFieldPtr(Function &Intr) {
     return B.CreateCall(EmuAuthIntr, {Val, Disc}, DSBundle);
   };
 
+  auto GetDeactivationSymbol = [&](CallInst *Call) -> GlobalValue * {
+    if (auto Bundle =
+            Call->getOperandBundle(LLVMContext::OB_deactivation_symbol))
+      return cast<GlobalValue>(Bundle->Inputs[0]);
+    return nullptr;
+  };
+
   for (User *U : Intr.users()) {
     auto *Call = cast<CallInst>(U);
-    auto *FieldName = cast<Metadata>(
-        cast<MetadataAsValue>(Call->getArgOperand(2))->getMetadata());
+    auto *DS = GetDeactivationSymbol(Call);
     std::set<PHINode *> VisitedPhis;
 
     std::function<void(Instruction *)> FindLoadsStores;
@@ -542,7 +553,8 @@ bool expandProtectedFieldPtr(Function &Intr) {
             if (Op->isNullValue())
               continue;
         }
-        NonPFPFields.insert(FieldName);
+        if (DS)
+          DSsToDeactivate.insert(DS);
       }
     };
 
@@ -550,21 +562,21 @@ bool expandProtectedFieldPtr(Function &Intr) {
   }
 
   for (Instruction *I : LoadsStores) {
-    std::set<Value *> Offsets;
-    std::set<Metadata *> Fields;
+    std::set<Value *> Pointers;
+    std::set<Value *> Discs;
+    std::set<GlobalValue *> DSs;
     std::set<PHINode *> VisitedPhis;
-    bool IsNonTriviallyCopyable = false;
+    bool UseHWEncoding = false;
 
     std::function<void(Value *)> FindFields;
     FindFields = [&](Value *V) {
       if (auto *Call = dyn_cast<CallInst>(V)) {
         if (Call->getCalledOperand() == &Intr) {
-          Offsets.insert(Call->getArgOperand(1));
-          auto *Field = cast<Metadata>(
-              cast<MetadataAsValue>(Call->getArgOperand(2))->getMetadata());
-          Fields.insert(Field);
-          if (cast<ConstantInt>(Call->getArgOperand(3))->getZExtValue())
-            IsNonTriviallyCopyable = true;
+          Pointers.insert(Call->getArgOperand(0));
+          Discs.insert(Call->getArgOperand(1));
+          if (cast<ConstantInt>(Call->getArgOperand(2))->getZExtValue())
+            UseHWEncoding = true;
+          DSs.insert(GetDeactivationSymbol(Call));
           return;
         }
       }
@@ -574,97 +586,45 @@ bool expandProtectedFieldPtr(Function &Intr) {
             FindFields(V);
         return;
       }
-      Fields.insert(nullptr);
+      Pointers.insert(nullptr);
     };
     FindFields(isa<StoreInst>(I) ? cast<StoreInst>(I)->getPointerOperand()
                                  : cast<LoadInst>(I)->getPointerOperand());
-    if (Fields.size() != 1 || Offsets.size() != 1) {
-      for (Metadata *Field : Fields)
-        if (Field)
-          NonPFPFields.insert(Field);
+    if (Pointers.size() != 1 || Discs.size() != 1 || DSs.size() != 1) {
+      for (GlobalValue *DS : DSs)
+        if (DS)
+          DSsToDeactivate.insert(DS);
       continue;
     }
 
-    std::string FieldName = cast<MDString>(*Fields.begin())->getString().str();
-    uint64_t FieldSignature = std::hash<std::string>()(FieldName);
-
-    std::string DSName = "__pfp_ds_" + FieldName;
-    GlobalValue *DS = M.getNamedValue(DSName);
-    if (!DS) {
-      DS = new GlobalVariable(M, Int8Ty, false,
-                              GlobalVariable::ExternalWeakLinkage, nullptr,
-                              DSName);
-      DS->setVisibility(GlobalValue::HiddenVisibility);
-    }
+    GlobalValue *DS = *DSs.begin();
     OperandBundleDef DSBundle("deactivation-symbol", DS);
 
-    PointerEncoding Encoding;
-    if (!IsAArch64)
-      Encoding = PointerEncoding::Rotate;
-    else if (IsNonTriviallyCopyable)
-      Encoding = PointerEncoding::PACNonCopyable;
-    else
-      Encoding = PointerEncoding::PACCopyable;
-
     if (auto *LI = dyn_cast<LoadInst>(I)) {
-      auto *FieldAddr = LI->getPointerOperand();
       IRBuilder<> B(LI->getNextNode());
       auto *LIInt = cast<Instruction>(B.CreatePtrToInt(LI, B.getInt64Ty()));
       Value *Auth;
-      switch (Encoding) {
-      case PointerEncoding::Rotate:
-        Auth = B.CreateAdd(LIInt, B.getInt64(FieldSignature & 0xff));
-        Auth = B.CreateOr(B.CreateLShr(Auth, 16), B.CreateShl(Auth, 48));
-        break;
-      case PointerEncoding::PACNonCopyable: {
-        Value *Struct;
-        if (auto *Call = dyn_cast<CallInst>(FieldAddr))
-          Struct = Call->getArgOperand(0);
-        else if (cast<ConstantInt>(*Offsets.begin())->getZExtValue() == 0)
-          Struct = FieldAddr;
-        else
-          Struct = B.CreateGEP(B.getInt8Ty(), FieldAddr,
-                               {B.CreateNeg(*Offsets.begin())});
-        auto *StructInt = B.CreatePtrToInt(Struct, B.getInt64Ty());
-        Auth = CreateAuth(B, LIInt, StructInt, DSBundle);
-        break;
-      }
-      case PointerEncoding::PACCopyable:
-        Auth =
-            CreateAuth(B, LIInt, B.getInt64(FieldSignature & 0xffff), DSBundle);
-        break;
+      if (UseHWEncoding) {
+        Auth = CreateAuth(B, LIInt, *Discs.begin(), DSBundle);
+      } else {
+        Auth = B.CreateAdd(LIInt, *Discs.begin());
+        Auth = B.CreateIntrinsic(
+            Auth->getType(), Intrinsic::fshr,
+            {Auth, Auth, ConstantInt::get(Auth->getType(), 16)});
       }
       LI->replaceAllUsesWith(B.CreateIntToPtr(Auth, B.getPtrTy()));
       LIInt->setOperand(0, LI);
     } else if (auto *SI = dyn_cast<StoreInst>(I)) {
       IRBuilder<> B(SI);
-      auto *FieldAddr = SI->getPointerOperand();
       auto *SIValInt =
           B.CreatePtrToInt(SI->getValueOperand(), B.getInt64Ty());
       Value *Sign;
-      switch (Encoding) {
-      case PointerEncoding::Rotate:
-        Sign =
-            B.CreateOr(B.CreateLShr(SIValInt, 48), B.CreateShl(SIValInt, 16));
-        Sign = B.CreateSub(Sign, B.getInt64(FieldSignature & 0xff));
-        break;
-      case PointerEncoding::PACNonCopyable: {
-        Value *Struct;
-        if (auto *Call = dyn_cast<CallInst>(FieldAddr))
-          Struct = Call->getArgOperand(0);
-        else if (cast<ConstantInt>(*Offsets.begin())->getZExtValue() == 0)
-          Struct = FieldAddr;
-        else
-          Struct = B.CreateGEP(B.getInt8Ty(), FieldAddr,
-                               {B.CreateNeg(*Offsets.begin())});
-        auto *StructInt = B.CreatePtrToInt(Struct, B.getInt64Ty());
-        Sign = CreateSign(B, SIValInt, StructInt, DSBundle);
-        break;
-      }
-      case PointerEncoding::PACCopyable:
-        Sign = CreateSign(B, SIValInt, B.getInt64(FieldSignature & 0xffff),
-                          DSBundle);
-        break;
+      if (UseHWEncoding) {
+        Sign = CreateSign(B, SIValInt, *Discs.begin(), DSBundle);
+      } else {
+        Sign = B.CreateIntrinsic(
+            SIValInt->getType(), Intrinsic::fshl,
+            {SIValInt, SIValInt, ConstantInt::get(SIValInt->getType(), 16)});
       }
       SI->setOperand(0, B.CreateIntToPtr(Sign, B.getPtrTy()));
     }
@@ -672,28 +632,18 @@ bool expandProtectedFieldPtr(Function &Intr) {
 
   for (User *U : llvm::make_early_inc_range(Intr.users())) {
     auto *Call = cast<CallInst>(U);
-    auto *Struct = Call->getArgOperand(0);
-    auto *Offset = Call->getArgOperand(1);
+    auto *Pointer = Call->getArgOperand(0);
 
-    IRBuilder<> B(Call);
-    if (cast<ConstantInt>(Offset)->getZExtValue() == 0)
-      Call->replaceAllUsesWith(Struct);
-    else
-      Call->replaceAllUsesWith(B.CreateGEP(B.getInt8Ty(), Struct, {Offset}));
+    Call->replaceAllUsesWith(Pointer);
     Call->eraseFromParent();
   }
 
-  if (!NonPFPFields.empty()) {
+  if (!DSsToDeactivate.empty()) {
     Constant *Nop =
         ConstantExpr::getIntToPtr(ConstantInt::get(Int64Ty, 0xd503201f), PtrTy);
-    std::set<std::string> LocalNonPFPFieldNames;
-    for (auto *Field : NonPFPFields)
-      LocalNonPFPFieldNames.insert(cast<MDString>(Field)->getString().str());
-    for (auto &FieldName : LocalNonPFPFieldNames) {
-      std::string DSName = "__pfp_ds_" + FieldName;
-      GlobalValue *OldDS = M.getNamedValue(DSName);
+    for (GlobalValue *OldDS : DSsToDeactivate) {
       GlobalValue *DS = GlobalAlias::create(
-          Int8Ty, 0, GlobalValue::ExternalLinkage, DSName, Nop, &M);
+          Int8Ty, 0, GlobalValue::ExternalLinkage, OldDS->getName(), Nop, &M);
       DS->setVisibility(GlobalValue::HiddenVisibility);
       if (OldDS) {
         DS->takeName(OldDS);
@@ -753,82 +703,83 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
       });
       break;
     case Intrinsic::objc_autorelease:
-      Changed |= lowerObjCCall(F, "objc_autorelease");
+      Changed |= lowerObjCCall(F, RTLIB::objc_autorelease);
       break;
     case Intrinsic::objc_autoreleasePoolPop:
-      Changed |= lowerObjCCall(F, "objc_autoreleasePoolPop");
+      Changed |= lowerObjCCall(F, RTLIB::objc_autoreleasePoolPop);
       break;
     case Intrinsic::objc_autoreleasePoolPush:
-      Changed |= lowerObjCCall(F, "objc_autoreleasePoolPush");
+      Changed |= lowerObjCCall(F, RTLIB::objc_autoreleasePoolPush);
       break;
     case Intrinsic::objc_autoreleaseReturnValue:
-      Changed |= lowerObjCCall(F, "objc_autoreleaseReturnValue");
+      Changed |= lowerObjCCall(F, RTLIB::objc_autoreleaseReturnValue);
       break;
     case Intrinsic::objc_copyWeak:
-      Changed |= lowerObjCCall(F, "objc_copyWeak");
+      Changed |= lowerObjCCall(F, RTLIB::objc_copyWeak);
       break;
     case Intrinsic::objc_destroyWeak:
-      Changed |= lowerObjCCall(F, "objc_destroyWeak");
+      Changed |= lowerObjCCall(F, RTLIB::objc_destroyWeak);
       break;
     case Intrinsic::objc_initWeak:
-      Changed |= lowerObjCCall(F, "objc_initWeak");
+      Changed |= lowerObjCCall(F, RTLIB::objc_initWeak);
       break;
     case Intrinsic::objc_loadWeak:
-      Changed |= lowerObjCCall(F, "objc_loadWeak");
+      Changed |= lowerObjCCall(F, RTLIB::objc_loadWeak);
       break;
     case Intrinsic::objc_loadWeakRetained:
-      Changed |= lowerObjCCall(F, "objc_loadWeakRetained");
+      Changed |= lowerObjCCall(F, RTLIB::objc_loadWeakRetained);
       break;
     case Intrinsic::objc_moveWeak:
-      Changed |= lowerObjCCall(F, "objc_moveWeak");
+      Changed |= lowerObjCCall(F, RTLIB::objc_moveWeak);
       break;
     case Intrinsic::objc_release:
-      Changed |= lowerObjCCall(F, "objc_release", true);
+      Changed |= lowerObjCCall(F, RTLIB::objc_release, true);
       break;
     case Intrinsic::objc_retain:
-      Changed |= lowerObjCCall(F, "objc_retain", true);
+      Changed |= lowerObjCCall(F, RTLIB::objc_retain, true);
       break;
     case Intrinsic::objc_retainAutorelease:
-      Changed |= lowerObjCCall(F, "objc_retainAutorelease");
+      Changed |= lowerObjCCall(F, RTLIB::objc_retainAutorelease);
       break;
     case Intrinsic::objc_retainAutoreleaseReturnValue:
-      Changed |= lowerObjCCall(F, "objc_retainAutoreleaseReturnValue");
+      Changed |= lowerObjCCall(F, RTLIB::objc_retainAutoreleaseReturnValue);
       break;
     case Intrinsic::objc_retainAutoreleasedReturnValue:
-      Changed |= lowerObjCCall(F, "objc_retainAutoreleasedReturnValue");
+      Changed |= lowerObjCCall(F, RTLIB::objc_retainAutoreleasedReturnValue);
       break;
     case Intrinsic::objc_claimAutoreleasedReturnValue:
-      Changed |= lowerObjCCall(F, "objc_claimAutoreleasedReturnValue");
+      Changed |= lowerObjCCall(F, RTLIB::objc_claimAutoreleasedReturnValue);
       break;
     case Intrinsic::objc_retainBlock:
-      Changed |= lowerObjCCall(F, "objc_retainBlock");
+      Changed |= lowerObjCCall(F, RTLIB::objc_retainBlock);
       break;
     case Intrinsic::objc_storeStrong:
-      Changed |= lowerObjCCall(F, "objc_storeStrong");
+      Changed |= lowerObjCCall(F, RTLIB::objc_storeStrong);
       break;
     case Intrinsic::objc_storeWeak:
-      Changed |= lowerObjCCall(F, "objc_storeWeak");
+      Changed |= lowerObjCCall(F, RTLIB::objc_storeWeak);
       break;
     case Intrinsic::objc_unsafeClaimAutoreleasedReturnValue:
-      Changed |= lowerObjCCall(F, "objc_unsafeClaimAutoreleasedReturnValue");
+      Changed |=
+          lowerObjCCall(F, RTLIB::objc_unsafeClaimAutoreleasedReturnValue);
       break;
     case Intrinsic::objc_retainedObject:
-      Changed |= lowerObjCCall(F, "objc_retainedObject");
+      Changed |= lowerObjCCall(F, RTLIB::objc_retainedObject);
       break;
     case Intrinsic::objc_unretainedObject:
-      Changed |= lowerObjCCall(F, "objc_unretainedObject");
+      Changed |= lowerObjCCall(F, RTLIB::objc_unretainedObject);
       break;
     case Intrinsic::objc_unretainedPointer:
-      Changed |= lowerObjCCall(F, "objc_unretainedPointer");
+      Changed |= lowerObjCCall(F, RTLIB::objc_unretainedPointer);
       break;
     case Intrinsic::objc_retain_autorelease:
-      Changed |= lowerObjCCall(F, "objc_retain_autorelease");
+      Changed |= lowerObjCCall(F, RTLIB::objc_retain_autorelease);
       break;
     case Intrinsic::objc_sync_enter:
-      Changed |= lowerObjCCall(F, "objc_sync_enter");
+      Changed |= lowerObjCCall(F, RTLIB::objc_sync_enter);
       break;
     case Intrinsic::objc_sync_exit:
-      Changed |= lowerObjCCall(F, "objc_sync_exit");
+      Changed |= lowerObjCCall(F, RTLIB::objc_sync_exit);
       break;
     case Intrinsic::exp:
     case Intrinsic::exp2:

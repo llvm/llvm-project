@@ -1825,7 +1825,7 @@ public:
   }
 
   std::string getPFPFieldName(const FieldDecl *FD);
-  llvm::GlobalValue *getPFPDeactivationSymbol(FieldDecl *FD);
+  llvm::GlobalValue *getPFPDeactivationSymbol(const FieldDecl *FD);
 
 private:
   bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;

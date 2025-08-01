@@ -134,7 +134,7 @@ protected:
 
     UseAndIsOffsetKnownPair UseAndIsOffsetKnown;
     APInt Offset;
-    Value *ProtectedField;
+    Value *ProtectedFieldDisc;
   };
 
   /// The worklist of to-visit uses.
@@ -159,7 +159,9 @@ protected:
   /// The constant offset of the use if that is known.
   APInt Offset;
 
-  Value *ProtectedField;
+  // When this access is via an llvm.protected.field.ptr intrinsic, contains
+  // the second argument to the intrinsic, the discriminator.
+  Value *ProtectedFieldDisc;
 
   /// @}
 
@@ -233,7 +235,7 @@ public:
     IntegerType *IntIdxTy = cast<IntegerType>(DL.getIndexType(I.getType()));
     IsOffsetKnown = true;
     Offset = APInt(IntIdxTy->getBitWidth(), 0);
-    ProtectedField = nullptr;
+    ProtectedFieldDisc = nullptr;
     PI.reset();
 
     // Enqueue the uses of this pointer.
@@ -246,7 +248,7 @@ public:
       IsOffsetKnown = ToVisit.UseAndIsOffsetKnown.getInt();
       if (IsOffsetKnown)
         Offset = std::move(ToVisit.Offset);
-      ProtectedField = ToVisit.ProtectedField;
+      ProtectedFieldDisc = ToVisit.ProtectedFieldDisc;
 
       Instruction *I = cast<Instruction>(U->getUser());
       static_cast<DerivedT*>(this)->visit(I);
@@ -307,11 +309,9 @@ protected:
       return; // No-op intrinsics.
 
     case Intrinsic::protected_field_ptr: {
-      auto *OffsetConst = dyn_cast<ConstantInt>(II.getArgOperand(1));
-      if (!IsOffsetKnown || !OffsetConst)
+      if (!IsOffsetKnown)
         return Base::visitIntrinsicInst(II);
-      Offset += OffsetConst->getValue().sextOrTrunc(Offset.getBitWidth());
-      ProtectedField = II.getArgOperand(2);
+      ProtectedFieldDisc = II.getArgOperand(1);
       enqueueUsers(II);
       break;
     }

@@ -214,7 +214,7 @@ static void appendParameterTypes(
   for (unsigned I = 0, E = FPT->getNumParams(); I != E; ++I) {
     prefix.push_back(FPT->getParamType(I));
     if (ExtInfos[I].hasPassObjectSize())
-      prefix.push_back(CGT.getContext().getSizeType());
+      prefix.push_back(CGT.getContext().getCanonicalSizeType());
   }
 
   addExtParameterInfosForCall(paramInfos, FPT.getTypePtr(), PrefixSize,
@@ -1311,6 +1311,61 @@ static llvm::Value *CoerceIntOrPtrToIntOrPtr(llvm::Value *Val, llvm::Type *Ty,
   return Val;
 }
 
+static llvm::Value *CreatePFPCoercedLoad(Address Src, QualType SrcFETy,
+                                         llvm::Type *Ty, CodeGenFunction &CGF) {
+  // Coercion directly through memory does not work if the structure has pointer
+  // field protection because the struct in registers has a different bit
+  // pattern to the struct in memory, so we must read the elements one by one
+  // and use them to form the coerced structure.
+  std::vector<PFPField> PFPFields;
+  CGF.getContext().findPFPFields(SrcFETy, CharUnits::Zero(), PFPFields, true);
+  if (PFPFields.empty())
+    return nullptr;
+
+  auto LoadCoercedField = [&](CharUnits Offset,
+                              llvm::Type *FieldType) -> llvm::Value * {
+    if (!PFPFields.empty() && PFPFields[0].offset == Offset) {
+      auto fieldAddr = CGF.EmitAddressOfPFPField(Src, PFPFields[0]);
+      llvm::Value *FieldVal = CGF.Builder.CreateLoad(fieldAddr);
+      if (isa<llvm::IntegerType>(FieldType))
+        FieldVal = CGF.Builder.CreatePtrToInt(FieldVal, FieldType);
+      PFPFields.erase(PFPFields.begin());
+      return FieldVal;
+    }
+    auto FieldAddr =
+        CGF.Builder
+            .CreateConstInBoundsByteGEP(Src.withElementType(CGF.Int8Ty), Offset)
+            .withElementType(FieldType);
+    return CGF.Builder.CreateLoad(FieldAddr);
+  };
+  if (isa<llvm::IntegerType>(Ty) || isa<llvm::PointerType>(Ty)) {
+    auto Addr = CGF.EmitAddressOfPFPField(Src, PFPFields[0]);
+    llvm::Value *Val = CGF.Builder.CreateLoad(Addr);
+    if (isa<llvm::IntegerType>(Ty))
+      Val = CGF.Builder.CreatePtrToInt(Val, Ty);
+    return Val;
+  }
+  if (auto *AT = dyn_cast<llvm::ArrayType>(Ty)) {
+    auto *ET = AT->getElementType();
+    CharUnits wordSize = CGF.getContext().toCharUnitsFromBits(
+        CGF.CGM.getDataLayout().getTypeSizeInBits(ET));
+    CharUnits Offset = CharUnits::Zero();
+    llvm::Value *Val = llvm::PoisonValue::get(AT);
+    for (unsigned i = 0; i != AT->getNumElements(); ++i, Offset += wordSize)
+      Val = CGF.Builder.CreateInsertValue(Val, LoadCoercedField(Offset, ET), i);
+    return Val;
+  }
+  auto *ST = cast<llvm::StructType>(Ty);
+  llvm::Value *Val = llvm::PoisonValue::get(ST);
+  auto *SL = CGF.CGM.getDataLayout().getStructLayout(ST);
+  for (unsigned i = 0; i != ST->getNumElements(); ++i) {
+    CharUnits Offset = CharUnits::fromQuantity(SL->getElementOffset(i));
+    Val = CGF.Builder.CreateInsertValue(
+        Val, LoadCoercedField(Offset, ST->getElementType(i)), i);
+  }
+  return Val;
+}
+
 /// CreateCoercedLoad - Create a load from \arg SrcPtr interpreted as
 /// a pointer to an object of type \arg Ty, known to be aligned to
 /// \arg SrcAlign bytes.
@@ -1327,56 +1382,8 @@ static llvm::Value *CreateCoercedLoad(Address Src, QualType SrcFETy,
   if (SrcTy == Ty)
     return CGF.Builder.CreateLoad(Src);
 
-  // Coercion directly through memory does not work if the structure has pointer
-  // field protection because the struct in registers has a different bit
-  // pattern to the struct in memory, so we must read the elements one by one
-  // and use them to form the coerced structure.
-  std::vector<PFPField> PFPFields;
-  CGF.getContext().findPFPFields(SrcFETy, CharUnits::Zero(), PFPFields, true);
-  if (!PFPFields.empty()) {
-    auto LoadCoercedField = [&](CharUnits Offset,
-                                llvm::Type *FieldType) -> llvm::Value * {
-      if (!PFPFields.empty() && PFPFields[0].offset == Offset) {
-        auto fieldAddr = CGF.EmitAddressOfPFPField(Src, PFPFields[0]);
-        llvm::Value *FieldVal = CGF.Builder.CreateLoad(fieldAddr);
-        if (isa<llvm::IntegerType>(FieldType))
-          FieldVal = CGF.Builder.CreatePtrToInt(FieldVal, FieldType);
-        PFPFields.erase(PFPFields.begin());
-        return FieldVal;
-      }
-      auto FieldAddr = CGF.Builder
-                           .CreateConstInBoundsByteGEP(
-                               Src.withElementType(CGF.Int8Ty), Offset)
-                           .withElementType(FieldType);
-      return CGF.Builder.CreateLoad(FieldAddr);
-    };
-    if (isa<llvm::IntegerType>(Ty) || isa<llvm::PointerType>(Ty)) {
-      auto Addr = CGF.EmitAddressOfPFPField(Src, PFPFields[0]);
-      llvm::Value *Val = CGF.Builder.CreateLoad(Addr);
-      if (isa<llvm::IntegerType>(Ty))
-        Val = CGF.Builder.CreatePtrToInt(Val, Ty);
-      return Val;
-    }
-    if (auto *AT = dyn_cast<llvm::ArrayType>(Ty)) {
-      auto *ET = AT->getElementType();
-      CharUnits wordSize = CGF.getContext().toCharUnitsFromBits(
-          CGF.CGM.getDataLayout().getTypeSizeInBits(ET));
-      CharUnits Offset = CharUnits::Zero();
-      llvm::Value *Val = llvm::PoisonValue::get(AT);
-      for (unsigned i = 0; i != AT->getNumElements(); ++i, Offset += wordSize)
-        Val = CGF.Builder.CreateInsertValue(Val, LoadCoercedField(Offset, ET), i);
-      return Val;
-    }
-    auto *ST = cast<llvm::StructType>(Ty);
-    llvm::Value *Val = llvm::PoisonValue::get(ST);
-    auto *SL = CGF.CGM.getDataLayout().getStructLayout(ST);
-    for (unsigned i = 0; i != ST->getNumElements(); ++i) {
-      CharUnits Offset = CharUnits::fromQuantity(SL->getElementOffset(i));
-      Val = CGF.Builder.CreateInsertValue(
-          Val, LoadCoercedField(Offset, ST->getElementType(i)), i);
-    }
-    return Val;
-  }
+  if (llvm::Value *V = CreatePFPCoercedLoad(Src, SrcFETy, Ty, CGF))
+    return V;
 
   llvm::TypeSize DstSize = CGF.CGM.getDataLayout().getTypeAllocSize(Ty);
 
@@ -1449,6 +1456,57 @@ static llvm::Value *CreateCoercedLoad(Address Src, QualType SrcFETy,
   return CGF.Builder.CreateLoad(Tmp);
 }
 
+static bool CreatePFPCoercedStore(llvm::Value *Src, QualType SrcFETy,
+                                  Address Dst, CodeGenFunction &CGF) {
+  // Coercion directly through memory does not work if the structure has pointer
+  // field protection because the struct passed by value has a different bit
+  // pattern to the struct in memory, so we must read the elements one by one
+  // and use them to form the coerced structure.
+  std::vector<PFPField> PFPFields;
+  CGF.getContext().findPFPFields(SrcFETy, CharUnits::Zero(), PFPFields, true);
+  if (PFPFields.empty())
+    return false;
+
+  llvm::Type *SrcTy = Src->getType();
+  auto StoreCoercedField = [&](CharUnits Offset, llvm::Value *FieldVal) {
+    if (!PFPFields.empty() && PFPFields[0].offset == Offset) {
+      auto fieldAddr = CGF.EmitAddressOfPFPField(Dst, PFPFields[0]);
+      if (isa<llvm::IntegerType>(FieldVal->getType()))
+        FieldVal = CGF.Builder.CreateIntToPtr(FieldVal, CGF.VoidPtrTy);
+      CGF.Builder.CreateStore(FieldVal, fieldAddr);
+      PFPFields.erase(PFPFields.begin());
+    } else {
+      auto fieldAddr =
+          CGF.Builder
+              .CreateConstInBoundsByteGEP(Dst.withElementType(CGF.Int8Ty), Offset)
+              .withElementType(FieldVal->getType());
+      CGF.Builder.CreateStore(FieldVal, fieldAddr);
+    }
+  };
+
+  if (isa<llvm::IntegerType>(SrcTy) || isa<llvm::PointerType>(SrcTy)) {
+    if (isa<llvm::IntegerType>(SrcTy))
+      Src = CGF.Builder.CreateIntToPtr(Src, CGF.VoidPtrTy);
+    auto Addr = CGF.EmitAddressOfPFPField(Dst, PFPFields[0]);
+    CGF.Builder.CreateStore(Src, Addr);
+  } else if (auto *AT = dyn_cast<llvm::ArrayType>(SrcTy)) {
+    auto *ET = AT->getElementType();
+    CharUnits WordSize = CGF.getContext().toCharUnitsFromBits(
+        CGF.CGM.getDataLayout().getTypeSizeInBits(ET));
+    CharUnits Offset = CharUnits::Zero();
+    for (unsigned i = 0; i != AT->getNumElements(); ++i, Offset += WordSize)
+      StoreCoercedField(Offset, CGF.Builder.CreateExtractValue(Src, i));
+  } else {
+    auto *ST = cast<llvm::StructType>(SrcTy);
+    auto *SL = CGF.CGM.getDataLayout().getStructLayout(ST);
+    for (unsigned i = 0; i != ST->getNumElements(); ++i) {
+      CharUnits Offset = CharUnits::fromQuantity(SL->getElementOffset(i));
+      StoreCoercedField(Offset, CGF.Builder.CreateExtractValue(Src, i));
+    }
+  }
+  return true;
+}
+
 void CodeGenFunction::CreateCoercedStore(llvm::Value *Src,
                                          QualType SrcFETy,
                                          Address Dst,
@@ -1472,51 +1530,8 @@ void CodeGenFunction::CreateCoercedStore(llvm::Value *Src,
     }
   }
 
-  // Coercion directly through memory does not work if the structure has pointer
-  // field protection because the struct passed by value has a different bit
-  // pattern to the struct in memory, so we must read the elements one by one
-  // and use them to form the coerced structure.
-  std::vector<PFPField> PFPFields;
-  getContext().findPFPFields(SrcFETy, CharUnits::Zero(), PFPFields, true);
-  if (!PFPFields.empty()) {
-    auto StoreCoercedField = [&](CharUnits Offset, llvm::Value *FieldVal) {
-      if (!PFPFields.empty() && PFPFields[0].offset == Offset) {
-        auto fieldAddr = EmitAddressOfPFPField(Dst, PFPFields[0]);
-        if (isa<llvm::IntegerType>(FieldVal->getType()))
-          FieldVal = Builder.CreateIntToPtr(FieldVal, VoidPtrTy);
-        Builder.CreateStore(FieldVal, fieldAddr);
-        PFPFields.erase(PFPFields.begin());
-      } else {
-        auto fieldAddr =
-            Builder
-                .CreateConstInBoundsByteGEP(Dst.withElementType(Int8Ty), Offset)
-                .withElementType(FieldVal->getType());
-        Builder.CreateStore(FieldVal, fieldAddr);
-      }
-    };
-
-    if (isa<llvm::IntegerType>(SrcTy) || isa<llvm::PointerType>(SrcTy)) {
-      if (isa<llvm::IntegerType>(SrcTy))
-        Src = Builder.CreateIntToPtr(Src, VoidPtrTy);
-      auto Addr = EmitAddressOfPFPField(Dst, PFPFields[0]);
-      Builder.CreateStore(Src, Addr);
-    } else if (auto *at = dyn_cast<llvm::ArrayType>(SrcTy)) {
-      auto *et = at->getElementType();
-      CharUnits wordSize = getContext().toCharUnitsFromBits(
-          CGM.getDataLayout().getTypeSizeInBits(et));
-      CharUnits Offset = CharUnits::Zero();
-      for (unsigned i = 0; i != at->getNumElements(); ++i, Offset += wordSize)
-        StoreCoercedField(Offset, Builder.CreateExtractValue(Src, i));
-    } else {
-      auto *ST = cast<llvm::StructType>(SrcTy);
-      auto *SL = CGM.getDataLayout().getStructLayout(ST);
-      for (unsigned i = 0; i != ST->getNumElements(); ++i) {
-        CharUnits Offset = CharUnits::fromQuantity(SL->getElementOffset(i));
-        StoreCoercedField(Offset, Builder.CreateExtractValue(Src, i));
-      }
-    }
+  if (CreatePFPCoercedStore(Src, SrcFETy, Dst, *this))
     return;
-  }
 
   if (SrcSize.isScalable() || SrcSize <= DstSize) {
     if (SrcTy->isIntegerTy() && Dst.getElementType()->isPointerTy() &&
@@ -2952,8 +2967,29 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       if (AI.getInReg())
         Attrs.addAttribute(llvm::Attribute::InReg);
 
-      if (AI.getIndirectByVal())
-        Attrs.addByValAttr(getTypes().ConvertTypeForMem(ParamType));
+      // HLSL out and inout parameters must not be marked with ByVal or
+      // DeadOnReturn attributes because stores to these parameters by the
+      // callee are visible to the caller.
+      if (auto ParamABI = FI.getExtParameterInfo(ArgNo).getABI();
+          ParamABI != ParameterABI::HLSLOut &&
+          ParamABI != ParameterABI::HLSLInOut) {
+
+        // Depending on the ABI, this may be either a byval or a dead_on_return
+        // argument.
+        if (AI.getIndirectByVal()) {
+          Attrs.addByValAttr(getTypes().ConvertTypeForMem(ParamType));
+        } else {
+          // Add dead_on_return when the object's lifetime ends in the callee.
+          // This includes trivially-destructible objects, as well as objects
+          // whose destruction / clean-up is carried out within the callee
+          // (e.g., Obj-C ARC-managed structs, MSVC callee-destroyed objects).
+          if (!ParamType.isDestructedType() || !ParamType->isRecordType() ||
+              ParamType->castAs<RecordType>()
+                  ->getDecl()
+                  ->isParamDestroyedInCallee())
+            Attrs.addAttribute(llvm::Attribute::DeadOnReturn);
+        }
+      }
 
       auto *Decl = ParamType->getAsRecordDecl();
       if (CodeGenOpts.PassByValueIsNoAlias && Decl &&
