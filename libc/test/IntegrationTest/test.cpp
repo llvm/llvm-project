@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/atomic.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include <stddef.h>
@@ -65,14 +66,25 @@ int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
 
 static constexpr uint64_t MEMORY_SIZE = 16384;
 static uint8_t memory[MEMORY_SIZE];
-static uint8_t *ptr = memory;
+static LIBC_NAMESPACE::cpp::Atomic<size_t> used = 0;
 
 extern "C" {
 
 void *malloc(size_t s) {
-  void *mem = ptr;
-  ptr += s;
-  return static_cast<uint64_t>(ptr - memory) >= MEMORY_SIZE ? nullptr : mem;
+  constexpr size_t MAX_ALIGNMENT = alignof(long double);
+  if (s > MEMORY_SIZE)
+    return nullptr; // Not enough memory.
+  s = s + MAX_ALIGNMENT -
+      (s % MAX_ALIGNMENT); // Align the size to the max alignment.
+  for (;;) {
+    size_t current_used = used.load();
+    if (current_used + s > MEMORY_SIZE)
+      return nullptr; // Not enough memory.
+
+    // Try to reserve the memory.
+    if (used.compare_exchange_strong(current_used, current_used + s))
+      return &memory[current_used];
+  }
 }
 
 void free(void *) {}

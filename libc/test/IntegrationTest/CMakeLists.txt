@@ -12,5 +12,6 @@ add_object_library(
     test.h
   DEPENDS
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.CPP.atomic
     ${arch_specific_deps}
 )
