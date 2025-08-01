@@ -4058,18 +4058,8 @@ add_entrypoint_object(
     atan2f.cpp
   HDRS
     ../atan2f.h
-    atan2f_float.h
   DEPENDS
-    libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.double_double
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.nearest_integer
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.macros.optimization
-    libc.src.__support.math.inv_trigf_utils
+    libc.src.__support.math.atan2f
 )
 
 add_entrypoint_object(
@@ -4079,13 +4069,7 @@ add_entrypoint_object(
   HDRS
     ../atan2.h
   DEPENDS
-    libc.src.__support.math.atan_utils
-    libc.src.__support.FPUtil.double_double
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.nearest_integer
-    libc.src.__support.macros.optimization
+    libc.src.__support.math.atan2
 )
 
 add_entrypoint_object(
@@ -4095,7 +4079,7 @@ add_entrypoint_object(
   HDRS
     ../atan2l.h
   DEPENDS
-    .atan2
+    libc.src.__support.math.atan2
 )
 
 add_entrypoint_object(

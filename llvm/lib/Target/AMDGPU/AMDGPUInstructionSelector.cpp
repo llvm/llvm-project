@@ -7038,13 +7038,13 @@ void AMDGPUInstructionSelector::renderSrcAndDstSelToOpSelXForm_2_0(
     MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
   assert(OpIdx >= 0 && "expected to match an immediate operand");
   MIB.addImm(
-      (MI.getOperand(OpIdx).getImm() & 0x2) ? (int64_t)SISrcMods::OP_SEL_0 : 0);
+      (MI.getOperand(OpIdx).getImm() & 0x1) ? (int64_t)SISrcMods::OP_SEL_0 : 0);
 }
 
 void AMDGPUInstructionSelector::renderDstSelToOpSel3XFormXForm(
     MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
   assert(OpIdx >= 0 && "expected to match an immediate operand");
-  MIB.addImm((MI.getOperand(OpIdx).getImm() & 0x1)
+  MIB.addImm((MI.getOperand(OpIdx).getImm() & 0x2)
                  ? (int64_t)SISrcMods::DST_OP_SEL
                  : 0);
 }
