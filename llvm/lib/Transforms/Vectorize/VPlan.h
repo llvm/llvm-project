@@ -1243,8 +1243,20 @@ struct LLVM_ABI_FOR_TEST VPPhi : public VPInstruction, public VPPhiAccessors {
     return R && R->getOpcode() == Instruction::PHI;
   }
 
+  static inline bool classof(const VPValue *V) {
+    auto *R = dyn_cast<VPInstruction>(V);
+    return R && R->getOpcode() == Instruction::PHI;
+  }
+
+  static inline bool classof(const VPSingleDefRecipe *R) {
+    auto *VPI = dyn_cast<VPInstruction>(R);
+    return VPI && VPI->getOpcode() == Instruction::PHI;
+  }
+
   VPPhi *clone() override {
-    return new VPPhi(operands(), getDebugLoc(), getName());
+    auto *PhiR = new VPPhi(operands(), getDebugLoc(), getName());
+    PhiR->setUnderlyingValue(getUnderlyingValue());
+    return PhiR;
   }
 
   void execute(VPTransformState &State) override;
