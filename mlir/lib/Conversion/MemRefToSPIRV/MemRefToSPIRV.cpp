@@ -475,7 +475,10 @@ calculateMemoryRequirements(Value accessedPtr, bool isNontemporal,
   }
 
   auto ptrType = cast<spirv::PointerType>(accessedPtr.getType());
-  if (ptrType.getStorageClass() != spirv::StorageClass::PhysicalStorageBuffer) {
+  bool mayOmitAlignment =
+      !preferredAlignment &&
+      ptrType.getStorageClass() != spirv::StorageClass::PhysicalStorageBuffer;
+  if (mayOmitAlignment) {
     if (memoryAccess == spirv::MemoryAccess::None) {
       return MemoryRequirements{spirv::MemoryAccessAttr{}, IntegerAttr{}};
     }
@@ -484,6 +487,7 @@ calculateMemoryRequirements(Value accessedPtr, bool isNontemporal,
   }
 
   // PhysicalStorageBuffers require the `Aligned` attribute.
+  // Other storage types may show an `Aligned` attribute.
   auto pointeeType = dyn_cast<spirv::ScalarType>(ptrType.getPointeeType());
   if (!pointeeType)
     return failure();
@@ -509,13 +513,6 @@ calculateMemoryRequirements(Value accessedPtr, LoadOrStoreOp loadOrStoreOp) {
   static_assert(
       llvm::is_one_of<LoadOrStoreOp, memref::LoadOp, memref::StoreOp>::value,
       "Must be called on either memref::LoadOp or memref::StoreOp");
-
-  Operation *memrefAccessOp = loadOrStoreOp.getOperation();
-  auto memrefMemAccess = memrefAccessOp->getAttrOfType<spirv::MemoryAccessAttr>(
-      spirv::attributeName<spirv::MemoryAccess>());
-  auto memrefAlignment = loadOrStoreOp.getAlignmentAttr();
-  if (memrefMemAccess && memrefAlignment)
-    return MemoryRequirements{memrefMemAccess, memrefAlignment};
 
   return calculateMemoryRequirements(accessedPtr,
                                      loadOrStoreOp.getNontemporal(),
