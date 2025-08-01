@@ -110,8 +110,8 @@ TEST(LlvmLibcOSUtilVDSOTest, RtSigReturn) {
   using namespace testing::ErrnoSetterMatcher;
   // must use struct since there is a function of the same name in the same
   // scope.
-  struct sigaction sa {};
-  struct sigaction old_sa {};
+  struct sigaction sa{};
+  struct sigaction old_sa{};
   sa.sa_handler = sigprof_handler;
   sa.sa_flags = SA_RESTORER;
   vdso::TypedSymbol<vdso::VDSOSym::RTSigReturn> symbol;
@@ -156,6 +156,26 @@ TEST(LlvmLibcOSUtilVDSOTest, RiscvHwProbe) {
     EXPECT_EQ(probe.key, static_cast<decltype(probe.key)>(-1));
     EXPECT_EQ(probe.value, static_cast<decltype(probe.value)>(0));
   }
+}
+
+TEST(LlvmLibcOSUtilVDSOTest, GetRandom) {
+  using namespace testing::ErrnoSetterMatcher;
+  vdso::TypedSymbol<vdso::VDSOSym::GetRandom> symbol;
+  if (!symbol)
+    return;
+  struct VGetrandomOpaqueParams {
+    uint32_t size_of_opaque_states;
+    uint32_t mmap_prot;
+    uint32_t mmap_flags;
+    uint32_t reserved[13];
+  };
+  VGetrandomOpaqueParams param{0, 0, 0, {}};
+  int res = symbol(
+      /*buf=*/nullptr, /*count=*/0, /*flags=*/0,
+      /*opaque_states=*/&param,
+      /*size_of_opaque_states=*/~0);
+  EXPECT_EQ(res, 0);
+  EXPECT_GT(param.size_of_opaque_states, 0u);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
