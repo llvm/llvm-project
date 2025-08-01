@@ -7,10 +7,10 @@
 ; and hence should not be produced by LoopVectorize. Unfortunately, what is
 ; actually costed is `<4 x float> @llvm.minimumnum`.
 
-; CHECK: LV: Found an estimated cost of 3 for VF 1 For instruction:   %res = tail call float @llvm.minimumnum.f32(float 0.000000e+00, float 0.000000e+00)
-define void @cost_hoisted_vector_code(ptr %p) {
+; CHECK: LV: Found an estimated cost of 3 for VF 1 For instruction:   %res = tail call float @llvm.minimumnum.f32(float %arg, float 0.000000e+00)
+define void @cost_hoisted_vector_code(ptr %p, float %arg) {
 ; CHECK-LABEL: define void @cost_hoisted_vector_code(
-; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr [[P:%.*]], float [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 8
@@ -22,8 +22,10 @@ define void @cost_hoisted_vector_code(ptr %p) {
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 -1, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 8
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x float> poison, float [[ARG]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x float> [[BROADCAST_SPLATINSERT]], <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 1, [[N_VEC]]
-; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x float> @llvm.minimumnum.nxv4f32(<vscale x 4 x float> zeroinitializer, <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x float> @llvm.minimumnum.nxv4f32(<vscale x 4 x float> [[BROADCAST_SPLAT]], <vscale x 4 x float> zeroinitializer)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -47,7 +49,7 @@ entry:
 loop:                                              ; preds = %loop, %entry
   %iv = phi i64 [ 1, %entry ], [ %iv.next, %loop ]
   %idx = phi i64 [ 0, %entry ], [ %idx.next, %loop ]
-  %res = tail call float @llvm.minimumnum.f32(float 0.0, float 0.0)
+  %res = tail call float @llvm.minimumnum.f32(float %arg, float 0.0)
   %gep.p.red = getelementptr float, ptr %p, i64 %idx
   store float %res, ptr %gep.p.red, align 4
   %idx.next = add i64 %idx, 1
