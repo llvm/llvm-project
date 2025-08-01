@@ -778,7 +778,7 @@ public:
   }
   void Unparse(const SubstringInquiry &x) {
     Walk(x.v);
-    Put(x.source.end()[-1] == 'n' ? "%LEN" : "%KIND");
+    Put(x.source.back() == 'n' ? "%LEN" : "%KIND");
   }
   void Unparse(const SubstringRange &x) { // R910
     Walk(x.t, ":");
@@ -2250,6 +2250,11 @@ public:
     Walk(std::get<OmpObjectList>(x.t));
     Walk(": ", std::get<std::optional<std::list<Modifier>>>(x.t));
   }
+  void Unparse(const OmpEnterClause &x) {
+    using Modifier = OmpEnterClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
+    Walk(std::get<OmpObjectList>(x.t));
+  }
   void Unparse(const OmpFromClause &x) {
     using Modifier = OmpFromClause::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
@@ -2571,7 +2576,7 @@ public:
     Word(ToUpperCaseLetters(common::EnumToString(x)));
   }
 
-  void Unparse(const OpenMPAtomicConstruct &x) {
+  template <typename Construct> void UnparseBlockConstruct(const Construct &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(std::get<OmpDirectiveSpecification>(x.t));
@@ -2585,6 +2590,10 @@ public:
       Put("\n");
       EndOpenMP();
     }
+  }
+
+  void Unparse(const OpenMPAtomicConstruct &x) { //
+    UnparseBlockConstruct(x);
   }
 
   void Unparse(const OpenMPExecutableAllocate &x) {
@@ -2614,22 +2623,8 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OmpEndAllocators &x) {
-    BeginOpenMP();
-    Word("!$OMP END ALLOCATE");
-    Put("\n");
-    EndOpenMP();
-  }
-  void Unparse(const OpenMPAllocatorsConstruct &x) {
-    BeginOpenMP();
-    Word("!$OMP ALLOCATE");
-    Walk(std::get<OmpClauseList>(x.t));
-    Put("\n");
-    EndOpenMP();
-    Walk(std::get<Statement<AllocateStmt>>(x.t));
-    if (const auto &end = std::get<std::optional<OmpEndAllocators>>(x.t)) {
-      Walk(*end);
-    }
+  void Unparse(const OpenMPAllocatorsConstruct &x) { //
+    UnparseBlockConstruct(x);
   }
   void Unparse(const OmpAssumeDirective &x) {
     BeginOpenMP();
@@ -2768,6 +2763,9 @@ public:
     Put("\n");
     EndOpenMP();
   }
+  void Unparse(const OpenMPDispatchConstruct &x) { //
+    UnparseBlockConstruct(x);
+  }
   void Unparse(const OpenMPRequiresConstruct &y) {
     BeginOpenMP();
     Word("!$OMP REQUIRES ");
@@ -2786,15 +2784,6 @@ public:
   bool Pre(const OmpMessageClause &x) {
     Walk(x.v);
     return false;
-  }
-  void Unparse(const OmpDispatchDirective &x) {
-    Word("!$OMP DISPATCH");
-    Walk(x.t);
-    Put("\n");
-  }
-  void Unparse(const OmpEndDispatchDirective &) {
-    Word("!$OMP END DISPATCH");
-    Put("\n");
   }
   void Unparse(const OmpErrorDirective &x) {
     Word("!$OMP ERROR ");
@@ -2817,16 +2806,16 @@ public:
       break;
     }
   }
-  void Unparse(const OmpSectionBlocks &x) {
-    for (const auto &y : x.v) {
+  void Unparse(const OpenMPSectionConstruct &x) {
+    if (auto &&dirSpec{
+            std::get<std::optional<OmpDirectiveSpecification>>(x.t)}) {
       BeginOpenMP();
-      Word("!$OMP SECTION");
+      Word("!$OMP ");
+      Walk(*dirSpec);
       Put("\n");
       EndOpenMP();
-      // y.u is an OpenMPSectionConstruct
-      // (y.u).v is Block
-      Walk(std::get<OpenMPSectionConstruct>(y.u).v, "");
     }
+    Walk(std::get<Block>(x.t), "");
   }
   void Unparse(const OpenMPSectionsConstruct &x) {
     BeginOpenMP();
@@ -2834,7 +2823,7 @@ public:
     Walk(std::get<OmpBeginSectionsDirective>(x.t));
     Put("\n");
     EndOpenMP();
-    Walk(std::get<OmpSectionBlocks>(x.t));
+    Walk(std::get<std::list<OpenMPConstruct>>(x.t), "");
     BeginOpenMP();
     Word("!$OMP END ");
     Walk(std::get<OmpEndSectionsDirective>(x.t));
@@ -2914,11 +2903,13 @@ public:
     Put("\n");
     EndOpenMP();
     Walk(std::get<Block>(x.t), "");
-    BeginOpenMP();
-    Word("!$OMP END ");
-    Walk(std::get<OmpEndBlockDirective>(x.t));
-    Put("\n");
-    EndOpenMP();
+    if (auto &&end{std::get<std::optional<OmpEndBlockDirective>>(x.t)}) {
+      BeginOpenMP();
+      Word("!$OMP END ");
+      Walk(*end);
+      Put("\n");
+      EndOpenMP();
+    }
   }
   void Unparse(const OpenMPLoopConstruct &x) {
     BeginOpenMP();
@@ -3000,6 +2991,7 @@ public:
   WALK_NESTED_ENUM(UseStmt, ModuleNature) // R1410
   WALK_NESTED_ENUM(OmpAdjustArgsClause::OmpAdjustOp, Value) // OMP adjustop
   WALK_NESTED_ENUM(OmpAtClause, ActionTime) // OMP at
+  WALK_NESTED_ENUM(OmpAutomapModifier, Value) // OMP automap-modifier
   WALK_NESTED_ENUM(OmpBindClause, Binding) // OMP bind
   WALK_NESTED_ENUM(OmpProcBindClause, AffinityPolicy) // OMP proc_bind
   WALK_NESTED_ENUM(OmpDefaultClause, DataSharingAttribute) // OMP default
@@ -3023,8 +3015,15 @@ public:
   WALK_NESTED_ENUM(OmpPrescriptiveness, Value) // OMP prescriptiveness
   WALK_NESTED_ENUM(OmpMapType, Value) // OMP map-type
   WALK_NESTED_ENUM(OmpMapTypeModifier, Value) // OMP map-type-modifier
+  WALK_NESTED_ENUM(OmpAlwaysModifier, Value)
+  WALK_NESTED_ENUM(OmpCloseModifier, Value)
+  WALK_NESTED_ENUM(OmpDeleteModifier, Value)
+  WALK_NESTED_ENUM(OmpPresentModifier, Value)
+  WALK_NESTED_ENUM(OmpRefModifier, Value)
+  WALK_NESTED_ENUM(OmpSelfModifier, Value)
   WALK_NESTED_ENUM(OmpTraitSelectorName, Value)
   WALK_NESTED_ENUM(OmpTraitSetSelectorName, Value)
+  WALK_NESTED_ENUM(OmpxHoldModifier, Value)
 
 #undef WALK_NESTED_ENUM
   void Unparse(const ReductionOperator::Operator x) {

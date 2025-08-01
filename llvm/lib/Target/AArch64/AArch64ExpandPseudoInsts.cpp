@@ -598,6 +598,9 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     llvm_unreachable("Unsupported ElementSize");
   }
 
+  // Preserve undef state until DOP's reg is defined.
+  unsigned DOPRegState = MI.getOperand(DOPIdx).isUndef() ? RegState::Undef : 0;
+
   //
   // Create the destructive operation (if required)
   //
@@ -616,10 +619,11 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     PRFX = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(MovPrfxZero))
                .addReg(DstReg, RegState::Define)
                .addReg(MI.getOperand(PredIdx).getReg())
-               .addReg(MI.getOperand(DOPIdx).getReg());
+               .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState);
 
     // After the movprfx, the destructive operand is same as Dst
     DOPIdx = 0;
+    DOPRegState = 0;
 
     // Create the additional LSL to zero the lanes when the DstReg is not
     // unique. Zeros the lanes in z0 that aren't active in p0 with sequence
@@ -638,8 +642,9 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     assert(DOPRegIsUnique && "The destructive operand should be unique");
     PRFX = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(MovPrfx))
                .addReg(DstReg, RegState::Define)
-               .addReg(MI.getOperand(DOPIdx).getReg());
+               .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState);
     DOPIdx = 0;
+    DOPRegState = 0;
   }
 
   //
@@ -647,10 +652,11 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   //
   DOP = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opcode))
     .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead));
+  DOPRegState = DOPRegState | RegState::Kill;
 
   switch (DType) {
   case AArch64::DestructiveUnaryPassthru:
-    DOP.addReg(MI.getOperand(DOPIdx).getReg(), RegState::Kill)
+    DOP.addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState)
         .add(MI.getOperand(PredIdx))
         .add(MI.getOperand(SrcIdx));
     break;
@@ -659,20 +665,20 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   case AArch64::DestructiveBinaryComm:
   case AArch64::DestructiveBinaryCommWithRev:
     DOP.add(MI.getOperand(PredIdx))
-       .addReg(MI.getOperand(DOPIdx).getReg(), RegState::Kill)
-       .add(MI.getOperand(SrcIdx));
+        .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState)
+        .add(MI.getOperand(SrcIdx));
     break;
   case AArch64::DestructiveTernaryCommWithRev:
     DOP.add(MI.getOperand(PredIdx))
-        .addReg(MI.getOperand(DOPIdx).getReg(), RegState::Kill)
+        .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState)
         .add(MI.getOperand(SrcIdx))
         .add(MI.getOperand(Src2Idx));
     break;
   }
 
   if (PRFX) {
-    finalizeBundle(MBB, PRFX->getIterator(), MBBI->getIterator());
     transferImpOps(MI, PRFX, DOP);
+    finalizeBundle(MBB, PRFX->getIterator(), MBBI->getIterator());
   } else
     transferImpOps(MI, DOP, DOP);
 
@@ -1199,32 +1205,36 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     Register DstReg = MI.getOperand(0).getReg();
     if (DstReg == MI.getOperand(3).getReg()) {
       // Expand to BIT
-      BuildMI(MBB, MBBI, MI.getDebugLoc(),
-              TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BITv8i8
-                                                  : AArch64::BITv16i8))
-          .add(MI.getOperand(0))
-          .add(MI.getOperand(3))
-          .add(MI.getOperand(2))
-          .add(MI.getOperand(1));
+      auto I = BuildMI(MBB, MBBI, MI.getDebugLoc(),
+                       TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BITv8i8
+                                                           : AArch64::BITv16i8))
+                   .add(MI.getOperand(0))
+                   .add(MI.getOperand(3))
+                   .add(MI.getOperand(2))
+                   .add(MI.getOperand(1));
+      transferImpOps(MI, I, I);
     } else if (DstReg == MI.getOperand(2).getReg()) {
       // Expand to BIF
-      BuildMI(MBB, MBBI, MI.getDebugLoc(),
-              TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BIFv8i8
-                                                  : AArch64::BIFv16i8))
-          .add(MI.getOperand(0))
-          .add(MI.getOperand(2))
-          .add(MI.getOperand(3))
-          .add(MI.getOperand(1));
+      auto I = BuildMI(MBB, MBBI, MI.getDebugLoc(),
+                       TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BIFv8i8
+                                                           : AArch64::BIFv16i8))
+                   .add(MI.getOperand(0))
+                   .add(MI.getOperand(2))
+                   .add(MI.getOperand(3))
+                   .add(MI.getOperand(1));
+      transferImpOps(MI, I, I);
     } else {
       // Expand to BSL, use additional move if required
       if (DstReg == MI.getOperand(1).getReg()) {
-        BuildMI(MBB, MBBI, MI.getDebugLoc(),
-                TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BSLv8i8
-                                                    : AArch64::BSLv16i8))
-            .add(MI.getOperand(0))
-            .add(MI.getOperand(1))
-            .add(MI.getOperand(2))
-            .add(MI.getOperand(3));
+        auto I =
+            BuildMI(MBB, MBBI, MI.getDebugLoc(),
+                    TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BSLv8i8
+                                                        : AArch64::BSLv16i8))
+                .add(MI.getOperand(0))
+                .add(MI.getOperand(1))
+                .add(MI.getOperand(2))
+                .add(MI.getOperand(3));
+        transferImpOps(MI, I, I);
       } else {
         BuildMI(MBB, MBBI, MI.getDebugLoc(),
                 TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::ORRv8i8
@@ -1234,15 +1244,17 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
                         getRenamableRegState(MI.getOperand(0).isRenamable()))
             .add(MI.getOperand(1))
             .add(MI.getOperand(1));
-        BuildMI(MBB, MBBI, MI.getDebugLoc(),
-                TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BSLv8i8
-                                                    : AArch64::BSLv16i8))
-            .add(MI.getOperand(0))
-            .addReg(DstReg,
-                    RegState::Kill |
-                        getRenamableRegState(MI.getOperand(0).isRenamable()))
-            .add(MI.getOperand(2))
-            .add(MI.getOperand(3));
+        auto I2 =
+            BuildMI(MBB, MBBI, MI.getDebugLoc(),
+                    TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BSLv8i8
+                                                        : AArch64::BSLv16i8))
+                .add(MI.getOperand(0))
+                .addReg(DstReg,
+                        RegState::Kill | getRenamableRegState(
+                                             MI.getOperand(0).isRenamable()))
+                .add(MI.getOperand(2))
+                .add(MI.getOperand(3));
+        transferImpOps(MI, I2, I2);
       }
     }
     MI.eraseFromParent();
@@ -1591,18 +1603,22 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
          "Non-writeback variants of STGloop / STZGloop should not "
          "survive past PrologEpilogInserter.");
    case AArch64::STR_ZZZZXI:
+   case AArch64::STR_ZZZZXI_STRIDED_CONTIGUOUS:
      return expandSVESpillFill(MBB, MBBI, AArch64::STR_ZXI, 4);
    case AArch64::STR_ZZZXI:
      return expandSVESpillFill(MBB, MBBI, AArch64::STR_ZXI, 3);
    case AArch64::STR_ZZXI:
+   case AArch64::STR_ZZXI_STRIDED_CONTIGUOUS:
      return expandSVESpillFill(MBB, MBBI, AArch64::STR_ZXI, 2);
    case AArch64::STR_PPXI:
      return expandSVESpillFill(MBB, MBBI, AArch64::STR_PXI, 2);
    case AArch64::LDR_ZZZZXI:
+   case AArch64::LDR_ZZZZXI_STRIDED_CONTIGUOUS:
      return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 4);
    case AArch64::LDR_ZZZXI:
      return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 3);
    case AArch64::LDR_ZZXI:
+   case AArch64::LDR_ZZXI_STRIDED_CONTIGUOUS:
      return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 2);
    case AArch64::LDR_PPXI:
      return expandSVESpillFill(MBB, MBBI, AArch64::LDR_PXI, 2);

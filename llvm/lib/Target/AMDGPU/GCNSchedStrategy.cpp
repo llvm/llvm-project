@@ -803,7 +803,8 @@ void GCNScheduleDAGMILive::schedule() {
 GCNRegPressure
 GCNScheduleDAGMILive::getRealRegPressure(unsigned RegionIdx) const {
   GCNDownwardRPTracker RPTracker(*LIS);
-  RPTracker.advance(begin(), end(), &LiveIns[RegionIdx]);
+  RPTracker.advance(Regions[RegionIdx].first, Regions[RegionIdx].second,
+                    &LiveIns[RegionIdx]);
   return RPTracker.moveMaxPressure();
 }
 
@@ -895,15 +896,10 @@ GCNScheduleDAGMILive::getRegionLiveInMap() const {
   assert(!Regions.empty());
   std::vector<MachineInstr *> RegionFirstMIs;
   RegionFirstMIs.reserve(Regions.size());
-  auto I = Regions.rbegin(), E = Regions.rend();
-  do {
-    const MachineBasicBlock *MBB = I->first->getParent();
-    auto *MI = &*skipDebugInstructionsForward(I->first, I->second);
-    RegionFirstMIs.push_back(MI);
-    do {
-      ++I;
-    } while (I != E && I->first->getParent() == MBB);
-  } while (I != E);
+  for (auto &[RegionBegin, RegionEnd] : reverse(Regions))
+    RegionFirstMIs.push_back(
+        &*skipDebugInstructionsForward(RegionBegin, RegionEnd));
+
   return getLiveRegMap(RegionFirstMIs, /*After=*/false, *LIS);
 }
 
@@ -1910,14 +1906,12 @@ void PreRARematStage::rematerialize() {
   for (auto &[DefMI, Remat] : Rematerializations) {
     MachineBasicBlock::iterator InsertPos(Remat.UseMI);
     Register Reg = DefMI->getOperand(0).getReg();
-    unsigned SubReg = DefMI->getOperand(0).getSubReg();
     unsigned DefRegion = MIRegion.at(DefMI);
 
     // Rematerialize DefMI to its use block.
-    TII->reMaterialize(*InsertPos->getParent(), InsertPos, Reg, SubReg, *DefMI,
-                       *DAG.TRI);
+    TII->reMaterialize(*InsertPos->getParent(), InsertPos, Reg,
+                       AMDGPU::NoSubRegister, *DefMI, *DAG.TRI);
     Remat.RematMI = &*std::prev(InsertPos);
-    Remat.RematMI->getOperand(0).setSubReg(SubReg);
     DAG.LIS->InsertMachineInstrInMaps(*Remat.RematMI);
 
     // Update region boundaries in regions we sinked from (remove defining MI)
@@ -2063,14 +2057,13 @@ void PreRARematStage::finalizeGCNSchedStage() {
     MachineBasicBlock::iterator InsertPos(DAG.Regions[DefRegion].second);
     MachineBasicBlock *MBB = RegionBB[DefRegion];
     Register Reg = RematMI.getOperand(0).getReg();
-    unsigned SubReg = RematMI.getOperand(0).getSubReg();
 
     // Re-rematerialize MI at the end of its original region. Note that it may
     // not be rematerialized exactly in the same position as originally within
     // the region, but it should not matter much.
-    TII->reMaterialize(*MBB, InsertPos, Reg, SubReg, RematMI, *DAG.TRI);
+    TII->reMaterialize(*MBB, InsertPos, Reg, AMDGPU::NoSubRegister, RematMI,
+                       *DAG.TRI);
     MachineInstr *NewMI = &*std::prev(InsertPos);
-    NewMI->getOperand(0).setSubReg(SubReg);
     DAG.LIS->InsertMachineInstrInMaps(*NewMI);
 
     auto UseRegion = MIRegion.find(Remat.UseMI);

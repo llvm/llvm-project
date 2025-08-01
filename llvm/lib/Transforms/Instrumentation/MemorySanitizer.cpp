@@ -158,7 +158,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/bit.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -1216,7 +1215,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   };
   SmallVector<ShadowOriginAndInsertPoint, 16> InstrumentationList;
   DenseMap<const DILocation *, int> LazyWarningDebugLocationCount;
-  bool InstrumentLifetimeStart = ClHandleLifetimeIntrinsics;
   SmallSetVector<AllocaInst *, 16> AllocaSet;
   SmallVector<std::pair<IntrinsicInst *, AllocaInst *>, 16> LifetimeStartList;
   SmallVector<StoreInst *, 16> StoreList;
@@ -1623,7 +1621,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // Poison llvm.lifetime.start intrinsics, if we haven't fallen back to
     // instrumenting only allocas.
-    if (InstrumentLifetimeStart) {
+    if (ClHandleLifetimeIntrinsics) {
       for (auto Item : LifetimeStartList) {
         instrumentAlloca(*Item.second, Item.first);
         AllocaSet.remove(Item.second);
@@ -2509,9 +2507,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //
     //    S = (S1 & S2) | (~V1 & S2) | (S1 & ~V2)
     //
-    //  Addendum if the "Or" is "disjoint":
-    //    1|1 => p;
-    //    S = S | (V1 & V2)
+    //  If the "disjoint OR" property is violated, the result is poison, and
+    //  hence the entire shadow is uninitialized:
+    //    S = S | SignExt(V1 & V2 != 0)
     Value *S1 = getShadow(&I, 0);
     Value *S2 = getShadow(&I, 1);
     Value *V1 = I.getOperand(0);
@@ -2532,7 +2530,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     if (ClPreciseDisjointOr && cast<PossiblyDisjointInst>(&I)->isDisjoint()) {
       Value *V1V2 = IRB.CreateAnd(V1, V2);
-      S = IRB.CreateOr(S, V1V2, "_ms_disjoint");
+      Value *DisjointOrShadow = IRB.CreateSExt(
+          IRB.CreateICmpNE(V1V2, getCleanShadow(V1V2)), V1V2->getType());
+      S = IRB.CreateOr(S, DisjointOrShadow, "_ms_disjoint");
     }
 
     setShadow(&I, S);
@@ -3301,9 +3301,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void handleLifetimeStart(IntrinsicInst &I) {
     if (!PoisonStack)
       return;
-    AllocaInst *AI = llvm::findAllocaForValue(I.getArgOperand(1));
-    if (!AI)
-      InstrumentLifetimeStart = false;
+    AllocaInst *AI = cast<AllocaInst>(I.getArgOperand(1));
     LifetimeStartList.push_back(std::make_pair(&I, AI));
   }
 
@@ -4322,8 +4320,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (isa<Constant>(Idx))
       return;
 
+    auto *IdxShadow = getShadow(Idx);
     Value *Truncated = IRB.CreateTrunc(
-        Idx,
+        IdxShadow,
         FixedVectorType::get(Type::getIntNTy(*MS.C, Log2_64(IdxVectorSize)),
                              IdxVectorSize));
     insertCheckShadow(Truncated, getOrigin(Idx), I);
@@ -4569,16 +4568,37 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     SC.Done(&I);
   }
 
-  // Instrument abs intrinsic.
-  // handleUnknownIntrinsic can't handle it because of the last
-  // is_int_min_poison argument which does not match the result type.
+  // Instrument @llvm.abs intrinsic.
+  //
+  // e.g., i32       @llvm.abs.i32  (i32       <Src>, i1 <is_int_min_poison>)
+  //       <4 x i32> @llvm.abs.v4i32(<4 x i32> <Src>, i1 <is_int_min_poison>)
   void handleAbsIntrinsic(IntrinsicInst &I) {
-    assert(I.getType()->isIntOrIntVectorTy());
-    assert(I.getArgOperand(0)->getType() == I.getType());
+    assert(I.arg_size() == 2);
+    Value *Src = I.getArgOperand(0);
+    Value *IsIntMinPoison = I.getArgOperand(1);
 
-    // FIXME: Handle is_int_min_poison.
+    assert(I.getType()->isIntOrIntVectorTy());
+
+    assert(Src->getType() == I.getType());
+
+    assert(IsIntMinPoison->getType()->isIntegerTy());
+    assert(IsIntMinPoison->getType()->getIntegerBitWidth() == 1);
+
     IRBuilder<> IRB(&I);
-    setShadow(&I, getShadow(&I, 0));
+    Value *SrcShadow = getShadow(Src);
+
+    APInt MinVal =
+        APInt::getSignedMinValue(Src->getType()->getScalarSizeInBits());
+    Value *MinValVec = ConstantInt::get(Src->getType(), MinVal);
+    Value *SrcIsMin = IRB.CreateICmp(CmpInst::ICMP_EQ, Src, MinValVec);
+
+    Value *PoisonedShadow = getPoisonedShadow(Src);
+    Value *PoisonedIfIntMinShadow =
+        IRB.CreateSelect(SrcIsMin, PoisonedShadow, SrcShadow);
+    Value *Shadow =
+        IRB.CreateSelect(IsIntMinPoison, PoisonedIfIntMinShadow, SrcShadow);
+
+    setShadow(&I, Shadow);
     setOrigin(&I, getOrigin(&I, 0));
   }
 
@@ -4746,6 +4766,79 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         "_msprop");
 
     setShadow(&I, DstShadow);
+    setOriginForNaryOp(I);
+  }
+
+  // Approximately handle AVX Galois Field Affine Transformation
+  //
+  // e.g.,
+  //     <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8>, <16 x i8>, i8)
+  //     <32 x i8> @llvm.x86.vgf2p8affineqb.256(<32 x i8>, <32 x i8>, i8)
+  //     <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8>, <64 x i8>, i8)
+  //      Out                                    A          x          b
+  // where A and x are packed matrices, b is a vector,
+  //       Out = A * x + b in GF(2)
+  //
+  // Multiplication in GF(2) is equivalent to bitwise AND. However, the matrix
+  // computation also includes a parity calculation.
+  //
+  // For the bitwise AND of bits V1 and V2, the exact shadow is:
+  //     Out_Shadow =   (V1_Shadow & V2_Shadow)
+  //                  | (V1        & V2_Shadow)
+  //                  | (V1_Shadow & V2       )
+  //
+  // We approximate the shadow of gf2p8affineqb using:
+  //     Out_Shadow =   gf2p8affineqb(x_Shadow, A_shadow, 0)
+  //                  | gf2p8affineqb(x,        A_shadow, 0)
+  //                  | gf2p8affineqb(x_Shadow, A,        0)
+  //                  | set1_epi8(b_Shadow)
+  //
+  // This approximation has false negatives: if an intermediate dot-product
+  // contains an even number of 1's, the parity is 0.
+  // It has no false positives.
+  void handleAVXGF2P8Affine(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+
+    assert(I.arg_size() == 3);
+    Value *A = I.getOperand(0);
+    Value *X = I.getOperand(1);
+    Value *B = I.getOperand(2);
+
+    assert(isFixedIntVector(A));
+    assert(cast<VectorType>(A->getType())
+               ->getElementType()
+               ->getScalarSizeInBits() == 8);
+
+    assert(A->getType() == X->getType());
+
+    assert(B->getType()->isIntegerTy());
+    assert(B->getType()->getScalarSizeInBits() == 8);
+
+    assert(I.getType() == A->getType());
+
+    Value *AShadow = getShadow(A);
+    Value *XShadow = getShadow(X);
+    Value *BZeroShadow = getCleanShadow(B);
+
+    CallInst *AShadowXShadow = IRB.CreateIntrinsic(
+        I.getType(), I.getIntrinsicID(), {XShadow, AShadow, BZeroShadow});
+    CallInst *AShadowX = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
+                                             {X, AShadow, BZeroShadow});
+    CallInst *XShadowA = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
+                                             {XShadow, A, BZeroShadow});
+
+    unsigned NumElements = cast<FixedVectorType>(I.getType())->getNumElements();
+    Value *BShadow = getShadow(B);
+    Value *BBroadcastShadow = getCleanShadow(AShadow);
+    // There is no LLVM IR intrinsic for _mm512_set1_epi8.
+    // This loop generates a lot of LLVM IR, which we expect that CodeGen will
+    // lower appropriately (e.g., VPBROADCASTB).
+    // Besides, b is often a constant, in which case it is fully initialized.
+    for (unsigned i = 0; i < NumElements; i++)
+      BBroadcastShadow = IRB.CreateInsertElement(BBroadcastShadow, BShadow, i);
+
+    setShadow(&I, IRB.CreateOr(
+                      {AShadowXShadow, AShadowX, XShadowA, BBroadcastShadow}));
     setOriginForNaryOp(I);
   }
 
@@ -5583,6 +5676,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       visitGenericScalarHalfwordInst(I);
       break;
     }
+
+    // AVX Galois Field New Instructions
+    case Intrinsic::x86_vgf2p8affineqb_128:
+    case Intrinsic::x86_vgf2p8affineqb_256:
+    case Intrinsic::x86_vgf2p8affineqb_512:
+      handleAVXGF2P8Affine(I);
+      break;
 
     case Intrinsic::fshl:
     case Intrinsic::fshr:

@@ -134,6 +134,24 @@ def OpenACC_VariableTypeCategory : I32BitEnumAttr<
   let printBitEnumPrimaryGroups = 1;
 }
 
+// These are parallelism determination modes for `acc loop`.
+// In the enum names, we use the "loop_" prefix because "auto" is
+// a language keyword - and thus for consistency all other cases
+// do the same.
+def OpenACC_LoopSeq : I32EnumAttrCase<"loop_seq", 0>;
+def OpenACC_LoopAuto : I32EnumAttrCase<"loop_auto", 1>;
+def OpenACC_LoopIndependent : I32EnumAttrCase<"loop_independent", 2>;
+
+def OpenACC_LoopParMode : I32EnumAttr<
+    "LoopParMode",
+    "Encodes the options for loop parallelism determination mode",
+    [
+      OpenACC_LoopAuto, OpenACC_LoopIndependent,
+      OpenACC_LoopSeq]> {
+  let cppNamespace = "::mlir::acc";
+  let genSpecializedAttr = 0;
+}
+
 // Type used in operation below.
 def IntOrIndex : AnyTypeOf<[AnyInteger, Index]>;
 
@@ -2373,6 +2391,11 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     // Return whether this LoopOp has a gang, worker, or vector applying to the
     // 'default'/None device-type.
     bool hasDefaultGangWorkerVector();
+
+    // Used to obtain the parallelism mode for the requested device type.
+    // This first checks if the mode is set for the device_type requested.
+    // And if not, it returns the non-device_type mode.
+    LoopParMode getDefaultOrDeviceTypeParallelism(DeviceType);
   }];
 
   let hasCustomAssemblyFormat = 1;
@@ -2404,6 +2427,53 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
   }];
 
   let hasVerifier = 1;
+
+  let builders = [
+    OpBuilder<(ins "::mlir::ValueRange":$lowerbounds,
+                   "::mlir::ValueRange":$upperbounds,
+                   "::mlir::ValueRange":$steps,
+                   "LoopParMode":$parMode), [{
+        auto deviceNoneAttr = mlir::acc::DeviceTypeAttr::get(
+          $_builder.getContext(), mlir::acc::DeviceType::None);
+        auto arrOfDeviceNone = mlir::ArrayAttr::get(
+          $_builder.getContext(), deviceNoneAttr);
+        build($_builder, $_state,
+          /*results=*/{},
+          /*lowerbound=*/lowerbounds,
+          /*upperbound=*/upperbounds,
+          /*step=*/steps,
+          /*inclusiveUpperbound=*/nullptr,
+          /*collapse=*/nullptr,
+          /*collapseDeviceType=*/nullptr,
+          /*gangOperands=*/{},
+          /*gangOperandsArgType=*/nullptr,
+          /*gangOperandsSegments=*/nullptr,
+          /*gangOperandsDeviceType=*/nullptr,
+          /*workerNumOperands=*/{},
+          /*workerNumOperandsDeviceType=*/nullptr,
+          /*vectorOperands=*/{},
+          /*vectorOperandsDeviceType=*/nullptr,
+          /*seq=*/parMode == LoopParMode::loop_seq ?
+            arrOfDeviceNone : nullptr,
+          /*independent=*/parMode == LoopParMode::loop_independent ?
+            arrOfDeviceNone : nullptr,
+          /*auto_=*/parMode == LoopParMode::loop_auto ?
+            arrOfDeviceNone : nullptr,
+          /*gang=*/nullptr,
+          /*worker=*/nullptr,
+          /*vector=*/nullptr,
+          /*tileOperands=*/{},
+          /*tileOperandsSegments=*/nullptr,
+          /*tileOperandsDeviceType=*/nullptr,
+          /*cacheOperands=*/{},
+          /*privateOperands=*/{},
+          /*privatizationRecipes=*/nullptr,
+          /*reductionOperands=*/{},
+          /*reductionRecipes=*/nullptr,
+          /*combined=*/nullptr);
+      }]
+    >
+  ];
 }
 
 // Yield operation for the acc.loop and acc.parallel operations.
@@ -2772,8 +2842,10 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name, SymbolRefAttr:$func_name,
-      OptionalAttr<StrArrayAttr>:$bindName,
-      OptionalAttr<DeviceTypeArrayAttr>:$bindNameDeviceType,
+      OptionalAttr<SymbolRefArrayAttr>:$bindIdName,
+      OptionalAttr<StrArrayAttr>:$bindStrName,
+      OptionalAttr<DeviceTypeArrayAttr>:$bindIdNameDeviceType,
+      OptionalAttr<DeviceTypeArrayAttr>:$bindStrNameDeviceType,
       OptionalAttr<DeviceTypeArrayAttr>:$worker,
       OptionalAttr<DeviceTypeArrayAttr>:$vector,
       OptionalAttr<DeviceTypeArrayAttr>:$seq, UnitAttr:$nohost,
@@ -2815,14 +2887,14 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
     std::optional<int64_t> getGangDimValue();
     std::optional<int64_t> getGangDimValue(mlir::acc::DeviceType deviceType);
 
-    std::optional<llvm::StringRef> getBindNameValue();
-    std::optional<llvm::StringRef> getBindNameValue(mlir::acc::DeviceType deviceType);
+    std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue();
+    std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue(mlir::acc::DeviceType deviceType);
   }];
 
   let assemblyFormat = [{
     $sym_name `func` `(` $func_name `)`
     oilist (
-        `bind` `(` custom<BindName>($bindName, $bindNameDeviceType) `)`
+        `bind` `(` custom<BindName>($bindIdName, $bindStrName ,$bindIdNameDeviceType, $bindStrNameDeviceType) `)`
       | `gang` `` custom<RoutineGangClause>($gang, $gangDim, $gangDimDeviceType)
       | `worker` custom<DeviceTypeArrayAttr>($worker)
       | `vector` custom<DeviceTypeArrayAttr>($vector)

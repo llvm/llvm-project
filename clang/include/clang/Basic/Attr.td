@@ -1642,7 +1642,7 @@ def DeviceKernel : DeclOrTypeAttr {
 }
 
 def SYCLKernelEntryPoint : InheritableAttr {
-  let Spellings = [Clang<"sycl_kernel_entry_point">];
+  let Spellings = [CXX11<"clang", "sycl_kernel_entry_point">];
   let Args = [
     // KernelName is required and specifies the kernel name type.
     TypeArgument<"KernelName">,
@@ -3066,6 +3066,26 @@ def Regparm : TypeAttr {
   let Documentation = [RegparmDocs];
   // Represented as part of the enclosing function type.
   let ASTNode = 0;
+}
+
+def SwiftType : Attr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // from API notes.
+  let Spellings = [];
+  let Args = [StringArgument<"TypeString">];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
+}
+
+def SwiftNullability : Attr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // from API notes.
+  let Spellings = [];
+  let Args = [EnumArgument<"Kind", "Kind", /*is_string=*/false,
+                           ["non_null", "nullable", "unspecified", "nullable_result"],
+                           ["NonNull", "Nullable", "Unspecified", "NullableResult"]>];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
 }
 
 def SwiftAsyncName : InheritableAttr {

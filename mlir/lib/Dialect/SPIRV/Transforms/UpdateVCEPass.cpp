@@ -13,14 +13,11 @@
 
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h"
 
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Visitors.h"
-#include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include <optional>
 
@@ -176,6 +173,21 @@ void UpdateVCEPass::runOnOperation() {
 
   if (walkResult.wasInterrupted())
     return signalPassFailure();
+
+  // Update min version requirement for capabilities after deducing them.
+  for (spirv::Capability cap : deducedCapabilities) {
+    if (std::optional<spirv::Version> minVersion = spirv::getMinVersion(cap)) {
+      deducedVersion = std::max(deducedVersion, *minVersion);
+      if (deducedVersion > allowedVersion) {
+        module.emitError("Capability '")
+            << spirv::stringifyCapability(cap) << "' requires min version "
+            << spirv::stringifyVersion(deducedVersion)
+            << " but target environment allows up to "
+            << spirv::stringifyVersion(allowedVersion);
+        return signalPassFailure();
+      }
+    }
+  }
 
   // TODO: verify that the deduced version is consistent with
   // SPIR-V ops' maximal version requirements.
