@@ -7,7 +7,7 @@
 ; CHECK-DAG: %[[#value:]] = OpConstant %[[#type]] 456
 ; CHECK-DAG:   %[[#var:]] = OpVariable %[[#ptrty]] Private %[[#value]]
 
-define spir_func void @Foo() {
+define hidden spir_func void @Foo() {
   %p = addrspacecast ptr addrspace(10) @PrivInternal to ptr
   %v = load i32, ptr %p, align 4
   ret void
@@ -15,3 +15,9 @@ define spir_func void @Foo() {
 ; CHECK-NEXT: OpLoad %[[#type]] %[[#var]] Aligned 4
 ; CHECK-Next: OpReturn
 }
+
+define void @main() #1 {
+  ret void
+}
+
+attributes #1 = { "hlsl.numthreads"="8,1,1" "hlsl.shader"="compute" }
