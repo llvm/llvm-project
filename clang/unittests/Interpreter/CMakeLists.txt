@@ -29,7 +29,7 @@ add_distinct_clang_unittest(ClangReplInterpreterTests
 
 if(TARGET compiler-rt)
   list(APPEND CLANG_REPL_TEST_SOURCES
-    InterpreterTestOOP.cpp
+    OutOfProcessInterpreterTests.cpp
   )
   add_dependencies(ClangReplInterpreterTests 
     llvm-jitlink-executor 
