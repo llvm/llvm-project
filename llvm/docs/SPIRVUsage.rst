@@ -140,6 +140,7 @@ To enable multiple extensions, list them separated by comma. For example, to ena
 
 To enable all extensions, use the following option:
 ``-spirv-ext=all``
+
 To enable all KHR extensions, use the following option:
 ``-spirv-ext=khr``
 
