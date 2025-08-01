@@ -744,6 +744,132 @@ void test_permlane16_swap(global uint2* out, uint old, uint src) {
   *out = __builtin_amdgcn_permlane16_swap(old, src, false, true);
 }
 
+// CHECK-LABEL: @test_permlane_bcast(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[SRC0_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[SRC2_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC0_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC0_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC1_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC1_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC2_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC2_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[SRC2:%.*]], ptr [[SRC2_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[SRC2_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.permlane.bcast(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_permlane_bcast(global uint* out, uint src0, uint src1, uint src2) {
+  *out = __builtin_amdgcn_permlane_bcast(src0, src1, src2);
+}
+
+// CHECK-LABEL: @test_permlane_down(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[SRC0_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[SRC2_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC0_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC0_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC1_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC1_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC2_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC2_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[SRC2:%.*]], ptr [[SRC2_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[SRC2_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.permlane.down(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_permlane_down(global uint* out, uint src0, uint src1, uint src2) {
+  *out = __builtin_amdgcn_permlane_down(src0, src1, src2);
+}
+
+// CHECK-LABEL: @test_permlane_up(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[SRC0_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[SRC2_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC0_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC0_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC1_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC1_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC2_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC2_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[SRC2:%.*]], ptr [[SRC2_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[SRC2_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.permlane.up(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_permlane_up(global uint* out, uint src0, uint src1, uint src2) {
+  *out = __builtin_amdgcn_permlane_up(src0, src1, src2);
+}
+
+// CHECK-LABEL: @test_permlane_xor(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[SRC0_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[SRC2_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC0_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC0_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC1_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC1_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC2_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC2_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[SRC2:%.*]], ptr [[SRC2_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[SRC2_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.permlane.xor(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_permlane_xor(global uint* out, uint src0, uint src1, uint src2) {
+  *out = __builtin_amdgcn_permlane_xor(src0, src1, src2);
+}
+
+// CHECK-LABEL: @test_permlane_idx_gen(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[SRC0_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC0_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC0_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC1_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC1_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.permlane.idx.gen(i32 [[TMP0]], i32 [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_permlane_idx_gen(global uint* out, uint src0, uint src1) {
+  *out = __builtin_amdgcn_permlane_idx_gen(src0, src1);
+}
+
 // CHECK-LABEL: @test_prefetch(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[FPTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
