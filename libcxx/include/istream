@@ -70,7 +70,7 @@ public:
     basic_istream& getline(char_type* s, streamsize n, char_type delim);
 
     basic_istream& ignore(streamsize n = 1, int_type delim = traits_type::eof());
-    basic_istream& ignore(streamsize n, char_type delim);                         // Since C++26
+    basic_istream& ignore(streamsize n, char_type delim);                         // Since C++26, implemented as a DR
     int_type peek();
     basic_istream& read (char_type* s, streamsize n);
     streamsize readsome(char_type* s, streamsize n);
