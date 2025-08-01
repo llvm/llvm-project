@@ -539,7 +539,7 @@ bool PythonList::Check(PyObject *py_obj) {
 
 uint32_t PythonList::GetSize() const {
   if (IsValid())
-    return PyList_GET_SIZE(m_py_obj);
+    return PyList_Size(m_py_obj);
   return 0;
 }
 
@@ -618,7 +618,7 @@ bool PythonTuple::Check(PyObject *py_obj) {
 
 uint32_t PythonTuple::GetSize() const {
   if (IsValid())
-    return PyTuple_GET_SIZE(m_py_obj);
+    return PyTuple_Size(m_py_obj);
   return 0;
 }
 
@@ -899,7 +899,7 @@ bool PythonFile::Check(PyObject *py_obj) {
 const char *PythonException::toCString() const {
   if (!m_repr_bytes)
     return "unknown exception";
-  return PyBytes_AS_STRING(m_repr_bytes);
+  return PyBytes_AsString(m_repr_bytes);
 }
 
 PythonException::PythonException(const char *caller) {
