@@ -57,7 +57,7 @@ enum CondCode {
 
 static inline M68k::CondCode GetOppositeBranchCondition(M68k::CondCode CC) {
   // To reverse a condition it's necessary to only invert the low bit:
-  assert(CC != COND_INVALID && "COND_INVALID has no inverse!");
+  assert(CC != M86k::COND_INVALID && "COND_INVALID has no inverse!");
   return static_cast<CondCode>(static_cast<unsigned>(CC) ^ 0x1);
 }
 
