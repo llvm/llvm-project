@@ -68,8 +68,6 @@ public:
           funcOp->getLoc(), fieldName, typeAttr, nullptr);
 
       if (argAttrs && idx < argAttrs->size()) {
-        // NamedAttribute argAttrNamed = rewriter.getNamedAttr("attrs",
-        // (*argAttrs)[idx]);
         fieldop->setDiscardableAttrs(funcOp.getArgAttrDict(idx));
       }
     }
