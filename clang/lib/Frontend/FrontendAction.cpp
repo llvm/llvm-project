@@ -226,6 +226,8 @@ private:
     }
     *OS << "  ]\n";
     *OS << "}\n";
+
+    OS->flush();
   }
 };
 
