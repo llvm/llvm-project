@@ -1,4 +1,4 @@
-//===- unittests/Interpreter/InterpreterTestOOP.cpp --- Interpreter tests when
+//===- unittests/Interpreter/OutOfProcessInterpreterTest.cpp --- Interpreter tests when
 // Out-of-Process ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
