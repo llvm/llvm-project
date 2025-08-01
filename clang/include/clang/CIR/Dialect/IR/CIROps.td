@@ -291,6 +291,9 @@ def CIR_ConstantOp : CIR_Op<"const", [
         return ptrAttr.isNullValue();
       return false;
     }
+
+    template <typename T>
+    T getValueAttr() { return mlir::dyn_cast<T>(getValue()); }
   }];
 
   let hasFolder = 1;
