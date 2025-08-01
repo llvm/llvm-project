@@ -24,6 +24,7 @@ add_llvm_component_library(LLVMOrcJIT
   EPCGenericRTDyldMemoryManager.cpp
   EPCIndirectionUtils.cpp
   ExecutionUtils.cpp
+  ExecutorResolutionGenerator.cpp
   ObjectFileInterface.cpp
   GetDylibInterface.cpp
   IndirectionUtils.cpp
