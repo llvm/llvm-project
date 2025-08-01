@@ -4107,18 +4107,17 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   // (sub x, ([v]select (uge x, y), y, 0)) -> (umin x, (sub x, y))
   if (N1.hasOneUse() && hasUMin(VT)) {
     SDValue Y;
-    if (sd_match(N1, m_Select(m_SetCC(m_Specific(N0), m_Value(Y),
-                                      m_SpecificCondCode(ISD::SETULT)),
-                              m_Zero(), m_Deferred(Y))) ||
-        sd_match(N1, m_Select(m_SetCC(m_Specific(N0), m_Value(Y),
-                                      m_SpecificCondCode(ISD::SETUGE)),
-                              m_Deferred(Y), m_Zero())) ||
-        sd_match(N1, m_VSelect(m_SetCC(m_Specific(N0), m_Value(Y),
-                                       m_SpecificCondCode(ISD::SETULT)),
-                               m_Zero(), m_Deferred(Y))) ||
-        sd_match(N1, m_VSelect(m_SetCC(m_Specific(N0), m_Value(Y),
-                                       m_SpecificCondCode(ISD::SETUGE)),
-                               m_Deferred(Y), m_Zero())))
+    auto MS0 = m_Specific(N0);
+    auto MVY = m_Value(Y);
+    auto MZ = m_Zero();
+    auto MCC1 = m_SpecificCondCode(ISD::SETULT);
+    auto MCC2 = m_SpecificCondCode(ISD::SETUGE);
+
+    if (sd_match(N1, m_SelectCCLike(MS0, MVY, MZ, m_Deferred(Y), MCC1)) ||
+        sd_match(N1, m_SelectCCLike(MS0, MVY, m_Deferred(Y), MZ, MCC2)) ||
+        sd_match(N1, m_VSelect(m_SetCC(MS0, MVY, MCC1), MZ, m_Deferred(Y))) ||
+        sd_match(N1, m_VSelect(m_SetCC(MS0, MVY, MCC2), m_Deferred(Y), MZ)))
+
       return DAG.getNode(ISD::UMIN, DL, VT, N0,
                          DAG.getNode(ISD::SUB, DL, VT, N0, Y));
   }
