@@ -85,14 +85,3 @@ void triggerParentMapContextCreationThroughArrayBoundV2() {
   char buf[100];
   someFunc(&buf[0], &buf[100]);
 }
-
-//--- test-sanitized-build.cpp
-import mod_b;
-
-extern void some();
-void triggerParentMapContextCreationThroughSanitizedBuild(unsigned i) {
-  // This code currently causes UBSan to create the ParentMapContext.
-  // UBSan currently excludes the pattern below to avoid noise, and it relies on ParentMapContext to detect it.
-  while (i--)
-    some();
-}

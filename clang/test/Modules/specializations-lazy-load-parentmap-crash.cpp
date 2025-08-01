@@ -74,18 +74,6 @@ void a() {
   mod_a::instantiate2<42>();
 }
 
-//--- test-array-bound-v2.cpp
-import mod_b;
-
-extern void someFunc(char* first, char* last);
-void triggerParentMapContextCreationThroughArrayBoundV2() {
-  // This code currently causes the ArrayBoundV2 checker to create the ParentMapContext.
-  // Once it detects an access to buf[100], the checker looks through the parents to find '&' operator.
-  // (this is needed since taking the address of past-the-end pointer is allowed by the checker)
-  char buf[100];
-  someFunc(&buf[0], &buf[100]);
-}
-
 //--- test-sanitized-build.cpp
 import mod_b;
 
