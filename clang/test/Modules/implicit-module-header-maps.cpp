@@ -7,6 +7,7 @@
 //
 // RUN: %clang -Rmodule-build -fmodules -fimplicit-modules -fimplicit-module-maps -fmodule-map-file=module.modulemap -fsyntax-only -I hmap -fmodules-cache-path=%t test.cpp
 //
+// RUN: cd %T
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: cd %t
