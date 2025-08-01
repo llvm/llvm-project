@@ -1084,7 +1084,6 @@ void RISCV::finalizeRelax(int passes) const {
   llvm::TimeTraceScope timeScope("Finalize RISC-V relaxation");
   Log(ctx) << "relaxation passes: " << passes;
   SmallVector<InputSection *, 0> storage;
-
   for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;

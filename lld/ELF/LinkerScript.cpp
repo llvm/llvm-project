@@ -1230,9 +1230,9 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
   if (sec->firstInOverlay)
     state->overlaySize = 0;
 
-  bool synthesizeAlign =
-      (sec->flags & SHF_EXECINSTR) && ctx.arg.relocatable && ctx.arg.relax &&
-      is_contained({EM_RISCV, EM_LOONGARCH}, ctx.arg.emachine);
+  bool synthesizeAlign = ctx.arg.relocatable && ctx.arg.relax &&
+                         (sec->flags & SHF_EXECINSTR) &&
+                         ctx.arg.emachine == EM_RISCV;
   // We visited SectionsCommands from processSectionCommands to
   // layout sections. Now, we visit SectionsCommands again to fix
   // section offsets.
@@ -1263,6 +1263,8 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
       if (isa<PotentialSpillSection>(isec))
         continue;
       const uint64_t pos = dot;
+      // If synthesized ALIGN may be needed, call maybeSynthesizeAlign and
+      // disable the default handling if the return value is true.
       if (!(synthesizeAlign && ctx.target->maybeSynthesizeAlign(dot, isec)))
         dot = alignToPowerOf2(dot, isec->addralign);
       isec->outSecOff = dot - sec->addr;
