@@ -343,6 +343,37 @@ static LogicalResult createStoreScatter(vector::TransferWriteOp writeOp,
   return success();
 }
 
+static void adjustStridesForPermutation(vector::TransferReadOp readOp,
+                                        PatternRewriter &rewriter,
+                                        MemRefType memrefType,
+                                        SmallVectorImpl<int64_t> &strides) {
+  AffineMap permMap = readOp.getPermutationMap();
+  if (!permMap.isMinorIdentity()) {
+    SmallVector<int64_t> adjustedStrides;
+    unsigned vecRank = readOp.getVectorType().getRank();
+    unsigned memrefRank = memrefType.getRank();
+    // Only adjust the last vecRank strides according to the permutation
+    ArrayRef<int64_t> relevantStrides = ArrayRef<int64_t>(strides).take_back(vecRank);
+    for (AffineExpr expr : permMap.getResults().take_back(vecRank)) {
+      auto dimExpr = dyn_cast<AffineDimExpr>(expr);
+      if (!dimExpr) {
+        rewriter.notifyMatchFailure(readOp, "Unsupported permutation expr");
+        return;
+      }
+      unsigned pos = dimExpr.getPosition();
+      // Map permutation to the relevant strides (innermost dims)
+      if (pos < memrefRank - vecRank) {
+        rewriter.notifyMatchFailure(readOp, "Permutation out of bounds");
+        return;
+      }
+      adjustedStrides.push_back(relevantStrides[pos - (memrefRank - vecRank)]);
+    }
+    // Replace the last vecRank strides with the adjusted ones
+    for (unsigned i = 0; i < vecRank; ++i)
+      strides[memrefRank - vecRank + i] = adjustedStrides[i];
+  }
+}
+
 LogicalResult lowerTransferReadToLoadOp(vector::TransferReadOp readOp,
                                         PatternRewriter &rewriter) {
 
@@ -358,10 +389,15 @@ LogicalResult lowerTransferReadToLoadOp(vector::TransferReadOp readOp,
   if (failed(memrefType.getStridesAndOffset(strides, offset)))
     return rewriter.notifyMatchFailure(readOp, "Failed to get memref strides");
 
+  // Adjust strides according to the permutation map (e.g., for transpose)
+  adjustStridesForPermutation(readOp, rewriter, memrefType, strides);
+
   Value localOffsets =
       computeGatherOffsets(readOp, rewriter, strides, vectorType);
+
   Value flatMemref =
       collapseMemrefTo1D(readOp, rewriter, memrefType, elementType);
+  
   return createLoadGather(readOp, rewriter, flatMemref, localOffsets,
                           vectorType);
 }
@@ -415,7 +451,7 @@ extraCheckForScatteredLoadStore(vector::TransferReadOp readOp,
             readOp, "Vector rank cannot exceed memref rank");
       // Compare the last vectorRank dimensions of memref with vector shape
       for (size_t i = 0; i < vectorRank; ++i) {
-        if (memrefShape[memrefRank - vectorRank + i] != vectorShape[i])
+        if (memrefShape[memrefRank - vectorRank + i] <= vectorShape[i])
           return rewriter.notifyMatchFailure(
               readOp, "Memref lower dimensions must match vector shape");
       }
