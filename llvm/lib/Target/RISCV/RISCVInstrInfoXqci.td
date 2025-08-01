@@ -14,12 +14,12 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def SDT_StoreMultiple : SDTypeProfile<0, 4, [SDTCisSameAs<0, 1>,
-                                             SDTCisSameAs<1, 3>,
-                                             SDTCisPtrTy<2>,
-                                             SDTCisVT<3, XLenVT>]>;
+def SDT_SetMultiple : SDTypeProfile<0, 4, [SDTCisSameAs<0, 1>,
+                                           SDTCisSameAs<1, 3>,
+                                           SDTCisPtrTy<2>,
+                                           SDTCisVT<3, XLenVT>]>;
 
-def qc_setwmi : RVSDNode<"QC_SETWMI", SDT_StoreMultiple,
+def qc_setwmi : RVSDNode<"QC_SETWMI", SDT_SetMultiple,
                          [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def uimm5nonzero : RISCVOp<XLenVT>,

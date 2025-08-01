@@ -299,30 +299,6 @@ entry:
   ret i32 %0
 }
 
-define i32 @test6a() nounwind {
-; RV32I-LABEL: test6a:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw zero, 12(sp)
-; RV32I-NEXT:    lw a0, 12(sp)
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
-;
-; RV32IXQCILSM-LABEL: test6a:
-; RV32IXQCILSM:       # %bb.0:
-; RV32IXQCILSM-NEXT:    addi sp, sp, -16
-; RV32IXQCILSM-NEXT:    sw zero, 12(sp)
-; RV32IXQCILSM-NEXT:    lw a0, 12(sp)
-; RV32IXQCILSM-NEXT:    addi sp, sp, 16
-; RV32IXQCILSM-NEXT:    ret
-  %x = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %x)
-  store i32 0, ptr %x, align 4
-  %x.0.x.0. = load volatile i32, ptr %x, align 4
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %x)
-  ret i32 %x.0.x.0.
-}
-
 define zeroext i8 @test6b_c() nounwind {
 ; RV32I-LABEL: test6b_c:
 ; RV32I:       # %bb.0:
@@ -388,7 +364,6 @@ define i32 @test6b_l() nounwind {
 ; RV32IXQCILSM-NEXT:    lw a0, 12(sp)
 ; RV32IXQCILSM-NEXT:    addi sp, sp, 16
 ; RV32IXQCILSM-NEXT:    ret
-; RV32IXQCISLS-LABEL: test6b_l:
 entry:
   %x = alloca i32, align 4
   call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %x)

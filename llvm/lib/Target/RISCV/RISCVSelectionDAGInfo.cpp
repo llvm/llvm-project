@@ -69,8 +69,7 @@ SDValue RISCVSelectionDAGInfo::EmitTargetCodeForMemset(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
     MachinePointerInfo DstPtrInfo) const {
-  const RISCVSubtarget &Subtarget =
-      DAG.getMachineFunction().getSubtarget<RISCVSubtarget>();
+  const auto &Subtarget = DAG.getSubtarget<RISCVSubtarget>();
   // We currently do this only for Xqcilsm
   if (!Subtarget.hasVendorXqcilsm())
     return SDValue();
@@ -83,7 +82,7 @@ SDValue RISCVSelectionDAGInfo::EmitTargetCodeForMemset(
   uint64_t NumberOfBytesToWrite = ConstantSize->getZExtValue();
 
   // Do this only if it is word aligned and we write multiple of 4 bytes.
-  if (!((Alignment.value() & 3) == 0 && (NumberOfBytesToWrite & 3) == 0))
+  if (!(Alignment.value() >= 4) || !((NumberOfBytesToWrite & 3) == 0))
     return SDValue();
 
   SmallVector<SDValue, 8> OutChains;
@@ -104,7 +103,7 @@ SDValue RISCVSelectionDAGInfo::EmitTargetCodeForMemset(
   if ((Src.getValueType() == MVT::i8) && !IsZeroVal)
     // Replicate byte to word by multiplication with 0x01010101.
     SrcValueReplicated = DAG.getNode(ISD::MUL, dl, MVT::i32, SrcValueReplicated,
-                                     DAG.getConstant(16843009, dl, MVT::i32));
+                                     DAG.getConstant(0x01010101ul, dl, MVT::i32));
 
   // We limit a QC_SETWMI to 16 words or less to improve interruptibility.
   // So for 1-16 words we use a single QC_SETWMI:
@@ -128,38 +127,38 @@ SDValue RISCVSelectionDAGInfo::EmitTargetCodeForMemset(
   // QC_SETWMI R2, R0, N, 124
   //
   // For 48 words or more, call the target independent memset
+  if ( NumberOfWords >= 48)
+    return SDValue();
+
   if (NumberOfWords <= 16) {
     // 1 - 16 words
     SizeWords = DAG.getTargetConstant(NumberOfWords, dl, MVT::i32);
     SDValue OffsetSetwmi = DAG.getTargetConstant(0, dl, MVT::i32);
     return getSetwmiNode(SizeWords, OffsetSetwmi);
-  } else if (NumberOfWords <= 47) {
-    if (NumberOfWords <= 32) {
-      // 17 - 32 words
-      SizeWords = DAG.getTargetConstant(NumberOfWords - 16, dl, MVT::i32);
-      OffsetSetwmi = DAG.getTargetConstant(64, dl, MVT::i32);
-      OutChains.push_back(getSetwmiNode(SizeWords, OffsetSetwmi));
-
-      SizeWords = DAG.getTargetConstant(16, dl, MVT::i32);
-      OffsetSetwmi = DAG.getTargetConstant(0, dl, MVT::i32);
-      OutChains.push_back(getSetwmiNode(SizeWords, OffsetSetwmi));
-    } else {
-      // 33 - 47 words
-      SizeWords = DAG.getTargetConstant(NumberOfWords - 31, dl, MVT::i32);
-      OffsetSetwmi = DAG.getTargetConstant(124, dl, MVT::i32);
-      OutChains.push_back(getSetwmiNode(SizeWords, OffsetSetwmi));
-
-      SizeWords = DAG.getTargetConstant(15, dl, MVT::i32);
-      OffsetSetwmi = DAG.getTargetConstant(64, dl, MVT::i32);
-      OutChains.push_back(getSetwmiNode(SizeWords, OffsetSetwmi));
-
-      SizeWords = DAG.getTargetConstant(16, dl, MVT::i32);
-      OffsetSetwmi = DAG.getTargetConstant(0, dl, MVT::i32);
-      OutChains.push_back(getSetwmiNode(SizeWords, OffsetSetwmi));
-    }
-    return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
   }
 
-  // >= 48 words. Call target independent memset.
-  return SDValue();
+  if (NumberOfWords <= 32) {
+    // 17 - 32 words
+    SizeWords = DAG.getTargetConstant(NumberOfWords - 16, dl, MVT::i32);
+    OffsetSetwmi = DAG.getTargetConstant(64, dl, MVT::i32);
+    OutChains.push_back(getSetwmiNode(SizeWords, OffsetSetwmi));
+
+    SizeWords = DAG.getTargetConstant(16, dl, MVT::i32);
+    OffsetSetwmi = DAG.getTargetConstant(0, dl, MVT::i32);
+    OutChains.push_back(getSetwmiNode(SizeWords, OffsetSetwmi));
+  } else {
+    // 33 - 47 words
+    SizeWords = DAG.getTargetConstant(NumberOfWords - 31, dl, MVT::i32);
+    OffsetSetwmi = DAG.getTargetConstant(124, dl, MVT::i32);
+    OutChains.push_back(getSetwmiNode(SizeWords, OffsetSetwmi));
+
+    SizeWords = DAG.getTargetConstant(15, dl, MVT::i32);
+    OffsetSetwmi = DAG.getTargetConstant(64, dl, MVT::i32);
+    OutChains.push_back(getSetwmiNode(SizeWords, OffsetSetwmi));
+
+    SizeWords = DAG.getTargetConstant(16, dl, MVT::i32);
+    OffsetSetwmi = DAG.getTargetConstant(0, dl, MVT::i32);
+    OutChains.push_back(getSetwmiNode(SizeWords, OffsetSetwmi));
+  }
+  return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
 }
