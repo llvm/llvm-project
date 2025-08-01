@@ -122,7 +122,7 @@ def WasmSSA_FuncOp : WasmSSA_Op<"func", [
     On the other hand, a function type is defined as a pair of tuples of Wasm value types.
     To model this, the wasm.func operation has:
 
-    - A function type that represents the corresponding wasm type (tuples of value types)
+    - A function type that represents the corresponding Wasm type (tuples of value types)
 
     - Arguments of the entry block of type `!wasm<local T>`, with T the corresponding type
      in the function type.
@@ -171,7 +171,7 @@ def WasmSSA_FuncOp : WasmSSA_Op<"func", [
 }
 
 def WasmSSA_FuncCallOp : WasmSSA_Op<"call"> {
-  let summary = "Calling a wasm function";
+  let summary = "Calling a Wasm function";
   let description = [{
      Emits a call to a defined function
 

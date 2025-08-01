@@ -19,7 +19,7 @@ include "mlir/IR/BuiltinAttributes.td"
 def LabelLevelOpInterface : OpInterface<"LabelLevelOpInterface"> {
   let cppNamespace = "::mlir::wasmssa";
   let description = [{
-    Operation that defines one level of nesting for wasm branching.
+    Operation that defines one level of nesting for Wasm branching.
 
     These ops defines Wasm control flow nesting levels (Wasm Labels) that Wasm
     branching operations can target.
@@ -88,7 +88,7 @@ def LabelBranchingOpInterface : OpInterface<"LabelBranchingOpInterface"> {
 def ImportOpInterface : OpInterface<"ImportOpInterface"> {
   let cppNamespace = "::mlir::wasmssa";
   let description = [{
-    Operation that imports a symbol from an external wasm module;
+    Operation that imports a symbol from an external Wasm module;
   }];
 
   let methods = [
@@ -105,7 +105,7 @@ def ImportOpInterface : OpInterface<"ImportOpInterface"> {
       /*args=*/        (ins)
       >,
     InterfaceMethod<
-      /*desc=*/        "Returns the wasm index based symbol of the op",
+      /*desc=*/        "Returns the Wasm index based symbol of the op",
       /*returnType=*/  "::mlir::StringAttr",
       /*methodName=*/  "getSymbolName",
       /*args=*/        (ins),

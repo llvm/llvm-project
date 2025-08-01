@@ -30,15 +30,15 @@
 #include "llvm/Support/LogicalResult.h"
 
 using namespace mlir;
-using namespace mlir::wasmssa;
+using namespace wasmssa;
 
 namespace {
 inline LogicalResult
 inferTeeGetResType(ValueRange operands,
-                   ::llvm::SmallVectorImpl<Type> &inferredReturnTypes) {
+                   SmallVectorImpl<Type> &inferredReturnTypes) {
   if (operands.empty())
     return failure();
-  auto opType = llvm::dyn_cast<LocalRefType>(operands.front().getType());
+  auto opType = dyn_cast<LocalRefType>(operands.front().getType());
   if (!opType)
     return failure();
   inferredReturnTypes.push_back(opType.getElementType());
@@ -116,7 +116,7 @@ LogicalResult ExtendLowBitsSOp::verify() {
 
 Block *FuncOp::addEntryBlock() {
   if (!getBody().empty()) {
-    emitError("adding entry block to a FuncOp which already has one.");
+    emitError("adding entry block to a FuncOp which already has one");
     return &getBody().front();
   }
   Block &block = getBody().emplaceBlock();
@@ -125,19 +125,19 @@ Block *FuncOp::addEntryBlock() {
   return &block;
 }
 
-void FuncOp::build(::mlir::OpBuilder &odsBuilder,
-                   ::mlir::OperationState &odsState, llvm::StringRef symbol,
+void FuncOp::build(OpBuilder &odsBuilder,
+                   OperationState &odsState, StringRef symbol,
                    FunctionType funcType) {
   FuncOp::build(odsBuilder, odsState, symbol, funcType, {}, {}, "nested");
 }
 
-ParseResult FuncOp::parse(::mlir::OpAsmParser &parser,
-                          ::mlir::OperationState &result) {
+ParseResult FuncOp::parse(OpAsmParser &parser,
+                          OperationState &result) {
   auto buildFuncType = [&parser](Builder &builder, ArrayRef<Type> argTypes,
                                  ArrayRef<Type> results,
                                  function_interface_impl::VariadicFlag,
                                  std::string &) {
-    llvm::SmallVector<Type> argTypesWithoutLocal{};
+    SmallVector<Type> argTypesWithoutLocal{};
     argTypesWithoutLocal.reserve(argTypes.size());
     llvm::for_each(argTypes, [&parser, &argTypesWithoutLocal](Type argType) {
       auto refType = dyn_cast<LocalRefType>(argType);
@@ -145,7 +145,7 @@ ParseResult FuncOp::parse(::mlir::OpAsmParser &parser,
       if (!refType) {
         mlir::emitError(loc, "invalid type for wasm.func argument. Expecting "
                              "!wasm<local T>, got ")
-            << argType << ".";
+            << argType;
         return;
       }
       argTypesWithoutLocal.push_back(refType.getElementType());
@@ -168,19 +168,19 @@ LogicalResult FuncOp::verifyBody() {
     return emitError("entry block should have same number of arguments as "
                      "function type. Function type has ")
            << getFunctionType().getNumInputs() << ", entry block has "
-           << entry.getNumArguments() << ".";
+           << entry.getNumArguments();
 
   for (auto [argNo, funcSignatureType, blockType] : llvm::enumerate(
            getFunctionType().getInputs(), entry.getArgumentTypes())) {
     auto blockLocalRefType = dyn_cast<LocalRefType>(blockType);
     if (!blockLocalRefType)
       return emitError("entry block argument type should be LocalRefType, got ")
-             << blockType << " for block argument " << argNo << ".";
+             << blockType << " for block argument " << argNo;
     if (blockLocalRefType.getElementType() != funcSignatureType)
       return emitError("func argument type #")
              << argNo << "(" << funcSignatureType
              << ") doesn't match entry block referenced type ("
-             << blockLocalRefType.getElementType() << ").";
+             << blockLocalRefType.getElementType() << ")";
   }
   return success();
 }
@@ -195,8 +195,8 @@ void FuncOp::print(OpAsmPrinter &p) {
 // FuncImportOp
 //===----------------------------------------------------------------------===//
 
-void FuncImportOp::build(::mlir::OpBuilder &odsBuilder,
-                         ::mlir::OperationState &odsState, StringRef symbol,
+void FuncImportOp::build(OpBuilder &odsBuilder,
+                         OperationState &odsState, StringRef symbol,
                          StringRef moduleName, StringRef importName,
                          FunctionType type) {
   FuncImportOp::build(odsBuilder, odsState, symbol, moduleName, importName,
@@ -207,8 +207,8 @@ void FuncImportOp::build(::mlir::OpBuilder &odsBuilder,
 // GlobalOp
 //===----------------------------------------------------------------------===//
 
-void GlobalOp::build(::mlir::OpBuilder &odsBuilder,
-                     ::mlir::OperationState &odsState, llvm::StringRef symbol,
+void GlobalOp::build(OpBuilder &odsBuilder,
+                     OperationState &odsState, StringRef symbol,
                      Type type, bool isMutable) {
   GlobalOp::build(odsBuilder, odsState, symbol, type, isMutable,
                   odsBuilder.getStringAttr("nested"));
@@ -271,10 +271,10 @@ GlobalGetOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
       symTabOp, StringAttr::get(this->getContext(), referencedSymbol));
   if (!definitionOp)
     return emitError() << "symbol @" << referencedSymbol << " is undefined";
-  auto definitionImport = llvm::dyn_cast<GlobalImportOp>(definitionOp);
+  auto definitionImport = dyn_cast<GlobalImportOp>(definitionOp);
   if (!definitionImport || definitionImport.getIsMutable()) {
     return emitError("global.get op is considered constant if it's referring "
-                     "to a import.global symbol marked non-mutable.");
+                     "to a import.global symbol marked non-mutable");
   }
   return success();
 }
@@ -283,8 +283,8 @@ GlobalGetOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 // GlobalImportOp
 //===----------------------------------------------------------------------===//
 
-void GlobalImportOp::build(::mlir::OpBuilder &odsBuilder,
-                           ::mlir::OperationState &odsState, StringRef symbol,
+void GlobalImportOp::build(OpBuilder &odsBuilder,
+                           OperationState &odsState, StringRef symbol,
                            StringRef moduleName, StringRef importName,
                            Type type, bool isMutable) {
   GlobalImportOp::build(odsBuilder, odsState, symbol, moduleName, importName,
@@ -339,7 +339,7 @@ Block *IfOp::getLabelTarget() { return getTarget(); }
 LogicalResult LocalOp::inferReturnTypes(
     MLIRContext *context, ::std::optional<Location> location,
     ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
-    RegionRange regions, ::llvm::SmallVectorImpl<Type> &inferredReturnTypes) {
+    RegionRange regions, SmallVectorImpl<Type> &inferredReturnTypes) {
   LocalOp::GenericAdaptor<ValueRange> adaptor{operands, attributes, properties,
                                               regions};
   auto type = adaptor.getTypeAttr();
@@ -357,7 +357,7 @@ LogicalResult LocalOp::inferReturnTypes(
 LogicalResult LocalGetOp::inferReturnTypes(
     MLIRContext *context, ::std::optional<Location> location,
     ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
-    RegionRange regions, ::llvm::SmallVectorImpl<Type> &inferredReturnTypes) {
+    RegionRange regions, SmallVectorImpl<Type> &inferredReturnTypes) {
   return inferTeeGetResType(operands, inferredReturnTypes);
 }
 
@@ -368,7 +368,7 @@ LogicalResult LocalGetOp::inferReturnTypes(
 LogicalResult LocalSetOp::verify() {
   if (getLocalVar().getType().getElementType() != getValue().getType())
     return emitError("input type and result type of local.set do not match");
-  return llvm::success();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -378,7 +378,7 @@ LogicalResult LocalSetOp::verify() {
 LogicalResult LocalTeeOp::inferReturnTypes(
     MLIRContext *context, ::std::optional<Location> location,
     ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
-    RegionRange regions, ::llvm::SmallVectorImpl<Type> &inferredReturnTypes) {
+    RegionRange regions, SmallVectorImpl<Type> &inferredReturnTypes) {
   return inferTeeGetResType(operands, inferredReturnTypes);
 }
 
@@ -386,7 +386,7 @@ LogicalResult LocalTeeOp::verify() {
   if (getLocalVar().getType().getElementType() != getValue().getType() ||
       getValue().getType() != getResult().getType())
     return emitError("input type and output type of local.tee do not match");
-  return llvm::success();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -399,8 +399,8 @@ Block *LoopOp::getLabelTarget() { return &getBody().front(); }
 // MemOp
 //===----------------------------------------------------------------------===//
 
-void MemOp::build(::mlir::OpBuilder &odsBuilder,
-                  ::mlir::OperationState &odsState, llvm::StringRef symbol,
+void MemOp::build(OpBuilder &odsBuilder,
+                  OperationState &odsState, StringRef symbol,
                   LimitType limit) {
   MemOp::build(odsBuilder, odsState, symbol, limit,
                odsBuilder.getStringAttr("nested"));
@@ -410,10 +410,10 @@ void MemOp::build(::mlir::OpBuilder &odsBuilder,
 // MemImportOp
 //===----------------------------------------------------------------------===//
 
-void MemImportOp::build(mlir::OpBuilder &odsBuilder,
-                        ::mlir::OperationState &odsState,
-                        llvm::StringRef symbol, llvm::StringRef moduleName,
-                        llvm::StringRef importName, LimitType limits) {
+void MemImportOp::build(OpBuilder &odsBuilder,
+                        OperationState &odsState,
+                        StringRef symbol, StringRef moduleName,
+                        StringRef importName, LimitType limits) {
   MemImportOp::build(odsBuilder, odsState, symbol, moduleName, importName,
                      limits, odsBuilder.getStringAttr("nested"));
 }
@@ -426,10 +426,10 @@ LogicalResult ReinterpretOp::verify() {
   auto inT = getInput().getType();
   auto resT = getResult().getType();
   if (inT == resT)
-    return emitError("reinterpret input and output type should be distinct.");
+    return emitError("reinterpret input and output type should be distinct");
   if (inT.getIntOrFloatBitWidth() != resT.getIntOrFloatBitWidth())
     return emitError() << "input type (" << inT << ") and output type (" << resT
-                       << ") have incompatible bit widths.";
+                       << ") have incompatible bit widths";
   return success();
 }
 
@@ -437,15 +437,15 @@ LogicalResult ReinterpretOp::verify() {
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-void ReturnOp::build(::mlir::OpBuilder &odsBuilder,
-                     ::mlir::OperationState &odsState) {}
+void ReturnOp::build(OpBuilder &odsBuilder,
+                     OperationState &odsState) {}
 
 //===----------------------------------------------------------------------===//
 // TableOp
 //===----------------------------------------------------------------------===//
 
-void TableOp::build(::mlir::OpBuilder &odsBuilder,
-                    ::mlir::OperationState &odsState, llvm::StringRef symbol,
+void TableOp::build(OpBuilder &odsBuilder,
+                    OperationState &odsState, StringRef symbol,
                     TableType type) {
   TableOp::build(odsBuilder, odsState, symbol, type,
                  odsBuilder.getStringAttr("nested"));
@@ -455,10 +455,10 @@ void TableOp::build(::mlir::OpBuilder &odsBuilder,
 // TableImportOp
 //===----------------------------------------------------------------------===//
 
-void TableImportOp::build(mlir::OpBuilder &odsBuilder,
-                          ::mlir::OperationState &odsState,
-                          llvm::StringRef symbol, llvm::StringRef moduleName,
-                          llvm::StringRef importName, TableType type) {
+void TableImportOp::build(OpBuilder &odsBuilder,
+                          OperationState &odsState,
+                          StringRef symbol, StringRef moduleName,
+                          StringRef importName, TableType type) {
   TableImportOp::build(odsBuilder, odsState, symbol, moduleName, importName,
                        type, odsBuilder.getStringAttr("nested"));
 }

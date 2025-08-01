@@ -26,7 +26,7 @@ LogicalResult verifyLabelBranchingOpInterface(Operation *op) {
   llvm::FailureOr<LabelLevelOpInterface> res =
       LabelBranchingOpInterface::getTargetOpFromBlock(
           op->getBlock(), branchInterface.getExitLevel());
-  return success(succeeded(res));
+  return res;
 }
 
 LogicalResult verifyConstantExpressionInterface(Operation *op) {
