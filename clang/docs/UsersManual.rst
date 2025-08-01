@@ -92,8 +92,11 @@ Terminology
   the code behaves. Note, the optimizer assumes the code has no undefined
   behavior, so if the code does contain undefined behavior, it will often behave
   differently depending on which optimization level is enabled.
-* Frontend -- the Lexer, Preprocessor, Parser, and Sema parts of the compiler.
-* Middle-end -- converts the AST into LLVM IR, adds debug information, etc.
+* Frontend -- the Lexer, Preprocessor, Parser, Sema, and LLVM IR code generation
+  parts of the compiler.
+* Middle-end -- a term used for the of the subset of the backend that does
+  (typically not target specific) optimizations prior to assembly code
+  generation.
 * Backend -- the parts of the compiler which run after LLVM IR code generation,
   such as the optimizer and generation of assembly code.
 
