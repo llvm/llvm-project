@@ -6918,6 +6918,11 @@ private:
   /// Map between lambda declarations and their map type.
   llvm::DenseMap<const ValueDecl *, const OMPMapClause *> LambdasMap;
 
+  /// Map from component lists to their attach pointer expressions.
+  mutable llvm::DenseMap<
+      OMPClauseMappableExprCommon::MappableExprComponentListRef, const Expr *>
+      AttachPtrExprMap;
+
   llvm::Value *getExprTypeSize(const Expr *E) const {
     QualType ExprTy = E->getType().getCanonicalType();
 
@@ -6991,6 +6996,18 @@ private:
       return LengthVal;
     }
     return CGF.getTypeSize(ExprTy);
+  }
+
+  /// Get the previously-cached attach pointer for a component list, if-any.
+  const Expr *getAttachPtrExpr(
+      OMPClauseMappableExprCommon::MappableExprComponentListRef Components)
+      const {
+    auto It = AttachPtrExprMap.find(Components);
+    if (It != AttachPtrExprMap.end()) {
+      return It->second;
+    }
+
+    return nullptr;
   }
 
   /// Return the corresponding bits for a given map clause modifier. Add
@@ -7446,8 +7463,8 @@ private:
     const auto *OASE = dyn_cast<ArraySectionExpr>(AssocExpr);
     const auto *OAShE = dyn_cast<OMPArrayShapingExpr>(AssocExpr);
 
-    // Find the pointer-attachment base-pointer for the given list, if any.
-    const Expr *AttachPtrExpr = findAttachPtrExpr(Components);
+    // Get the pointer-attachment base-pointer for the given list, if any.
+    const Expr *AttachPtrExpr = getAttachPtrExpr(Components);
 
     if (isa<MemberExpr>(AssocExpr)) {
       // The base is the 'this' pointer. The content of the pointer is going
@@ -8476,7 +8493,7 @@ private:
           }
         };
 
-    auto &&IsMapInfoExist = [&Info](CodeGenFunction &CGF, const ValueDecl *VD,
+    auto &&IsMapInfoExist = [&Info, this](CodeGenFunction &CGF, const ValueDecl *VD,
                                     const Expr *IE, bool IsDevAddr) -> bool {
       // We potentially have map information for this declaration already.
       // Look for the first set of components that refer to it. If found,
@@ -8507,7 +8524,7 @@ private:
             } else {
               auto PrevCI = std::next(CI->Components.rbegin());
               const auto *VarD = dyn_cast<VarDecl>(VD);
-              const Expr *AttachPtrExpr = findAttachPtrExpr(CI->Components);
+              const Expr *AttachPtrExpr = getAttachPtrExpr(CI->Components);
               if (CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory() ||
                   isa<MemberExpr>(IE) ||
                   !VD->getType().getNonReferenceType()->isPointerType() ||
@@ -8758,6 +8775,34 @@ public:
           LambdasMap.try_emplace(std::get<0>(L), C);
       }
     }
+
+    auto cacheAttachPtrExprsForClauseComponents = [this](const auto *C) {
+      for (auto L : C->component_lists()) {
+        OMPClauseMappableExprCommon::MappableExprComponentListRef Components =
+            std::get<1>(L);
+        if (!Components.empty()) {
+          const Expr *AttachPtrExpr = findAttachPtrExpr(Components);
+          AttachPtrExprMap[Components] = AttachPtrExpr;
+        }
+      }
+    };
+
+    // Populate the AttachPtrExprMap for all component lists from map-related
+    // clauses.
+    for (const auto *C : Dir.getClausesOfKind<OMPMapClause>())
+      cacheAttachPtrExprsForClauseComponents(C);
+    for (const auto *C : Dir.getClausesOfKind<OMPToClause>())
+      cacheAttachPtrExprsForClauseComponents(C);
+    for (const auto *C : Dir.getClausesOfKind<OMPFromClause>())
+      cacheAttachPtrExprsForClauseComponents(C);
+    for (const auto *C : Dir.getClausesOfKind<OMPUseDevicePtrClause>())
+      cacheAttachPtrExprsForClauseComponents(C);
+    for (const auto *C : Dir.getClausesOfKind<OMPUseDeviceAddrClause>())
+      cacheAttachPtrExprsForClauseComponents(C);
+    for (const auto *C : Dir.getClausesOfKind<OMPIsDevicePtrClause>())
+      cacheAttachPtrExprsForClauseComponents(C);
+    for (const auto *C : Dir.getClausesOfKind<OMPHasDeviceAddrClause>())
+      cacheAttachPtrExprsForClauseComponents(C);
   }
 
   /// Constructor for the declare mapper directive.

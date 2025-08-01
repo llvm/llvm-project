@@ -5815,6 +5815,12 @@ public:
     ValueDecl *getAssociatedDeclaration() const {
       return AssociatedDeclaration;
     }
+
+    bool operator==(const MappableComponent &Other) const {
+      return AssociatedExpressionNonContiguousPr ==
+                 Other.AssociatedExpressionNonContiguousPr &&
+             AssociatedDeclaration == Other.AssociatedDeclaration;
+    }
   };
 
   // List of components of an expression. This first one is the whole
@@ -5827,6 +5833,13 @@ public:
   // their component list but the same base declaration 'S'.
   using MappableExprComponentLists = SmallVector<MappableExprComponentList, 8>;
   using MappableExprComponentListsRef = ArrayRef<MappableExprComponentList>;
+
+  // Hash function to allow usage as DenseMap keys.
+  friend llvm::hash_code hash_value(const MappableComponent &MC) {
+    return llvm::hash_combine(MC.getAssociatedExpression(),
+                              MC.getAssociatedDeclaration(),
+                              MC.isNonContiguous());
+  }
 
 protected:
   // Return the total number of elements in a list of component lists.
