@@ -150,6 +150,8 @@ enum TokKind {
   XGt,
   XSetDagOp,
   XGetDagOp,
+  XSetDagOpName,
+  XGetDagOpName,
   XExists,
   XListRemove,
   XToLower,

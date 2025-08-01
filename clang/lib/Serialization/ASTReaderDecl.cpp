@@ -1147,7 +1147,8 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
     const SYCLKernelInfo *SKI = C.findSYCLKernelInfo(SKEPAttr->getKernelName());
     if (SKI) {
       if (!declaresSameEntity(FD, SKI->getKernelEntryPointDecl())) {
-        Reader.Diag(FD->getLocation(), diag::err_sycl_kernel_name_conflict);
+        Reader.Diag(FD->getLocation(), diag::err_sycl_kernel_name_conflict)
+            << SKEPAttr;
         Reader.Diag(SKI->getKernelEntryPointDecl()->getLocation(),
                     diag::note_previous_declaration);
         SKEPAttr->setInvalidAttr();
@@ -1889,7 +1890,7 @@ void ASTDeclReader::VisitNamespaceAliasDecl(NamespaceAliasDecl *D) {
   D->NamespaceLoc = readSourceLocation();
   D->IdentLoc = readSourceLocation();
   D->QualifierLoc = Record.readNestedNameSpecifierLoc();
-  D->Namespace = readDeclAs<NamedDecl>();
+  D->Namespace = readDeclAs<NamespaceBaseDecl>();
   mergeRedeclarable(D, Redecl);
 }
 

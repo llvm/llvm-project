@@ -115,7 +115,7 @@ private:
   bool foldInsExtFNeg(Instruction &I);
   bool foldInsExtBinop(Instruction &I);
   bool foldInsExtVectorToShuffle(Instruction &I);
-  bool foldBitOpOfBitcasts(Instruction &I);
+  bool foldBitOpOfCastops(Instruction &I);
   bool foldBitcastShuffle(Instruction &I);
   bool scalarizeOpOrCmp(Instruction &I);
   bool scalarizeVPIntrinsic(Instruction &I);
@@ -808,48 +808,87 @@ bool VectorCombine::foldInsExtBinop(Instruction &I) {
   return true;
 }
 
-bool VectorCombine::foldBitOpOfBitcasts(Instruction &I) {
-  // Match: bitop(bitcast(x), bitcast(y)) -> bitcast(bitop(x, y))
-  Value *LHSSrc, *RHSSrc;
-  if (!match(&I, m_BitwiseLogic(m_BitCast(m_Value(LHSSrc)),
-                                m_BitCast(m_Value(RHSSrc)))))
+/// Match: bitop(castop(x), castop(y)) -> castop(bitop(x, y))
+/// Supports: bitcast, trunc, sext, zext
+bool VectorCombine::foldBitOpOfCastops(Instruction &I) {
+  // Check if this is a bitwise logic operation
+  auto *BinOp = dyn_cast<BinaryOperator>(&I);
+  if (!BinOp || !BinOp->isBitwiseLogicOp())
     return false;
+
+  // Get the cast instructions
+  auto *LHSCast = dyn_cast<CastInst>(BinOp->getOperand(0));
+  auto *RHSCast = dyn_cast<CastInst>(BinOp->getOperand(1));
+  if (!LHSCast || !RHSCast) {
+    LLVM_DEBUG(dbgs() << "  One or both operands are not cast instructions\n");
+    return false;
+  }
+
+  // Both casts must be the same type
+  Instruction::CastOps CastOpcode = LHSCast->getOpcode();
+  if (CastOpcode != RHSCast->getOpcode())
+    return false;
+
+  // Only handle supported cast operations
+  switch (CastOpcode) {
+  case Instruction::BitCast:
+  case Instruction::Trunc:
+  case Instruction::SExt:
+  case Instruction::ZExt:
+    break;
+  default:
+    return false;
+  }
+
+  Value *LHSSrc = LHSCast->getOperand(0);
+  Value *RHSSrc = RHSCast->getOperand(0);
 
   // Source types must match
   if (LHSSrc->getType() != RHSSrc->getType())
     return false;
-  if (!LHSSrc->getType()->getScalarType()->isIntegerTy())
-    return false;
 
-  // Only handle vector types
+  // Only handle vector types with integer elements
   auto *SrcVecTy = dyn_cast<FixedVectorType>(LHSSrc->getType());
   auto *DstVecTy = dyn_cast<FixedVectorType>(I.getType());
   if (!SrcVecTy || !DstVecTy)
     return false;
 
-  // Same total bit width
-  assert(SrcVecTy->getPrimitiveSizeInBits() ==
-             DstVecTy->getPrimitiveSizeInBits() &&
-         "Bitcast should preserve total bit width");
+  if (!SrcVecTy->getScalarType()->isIntegerTy() ||
+      !DstVecTy->getScalarType()->isIntegerTy())
+    return false;
 
   // Cost Check :
-  // OldCost = bitlogic + 2*bitcasts
-  // NewCost = bitlogic + bitcast
-  auto *BinOp = cast<BinaryOperator>(&I);
-  InstructionCost OldCost =
-      TTI.getArithmeticInstrCost(BinOp->getOpcode(), DstVecTy) +
-      TTI.getCastInstrCost(Instruction::BitCast, DstVecTy, LHSSrc->getType(),
-                           TTI::CastContextHint::None) +
-      TTI.getCastInstrCost(Instruction::BitCast, DstVecTy, RHSSrc->getType(),
-                           TTI::CastContextHint::None);
-  InstructionCost NewCost =
-      TTI.getArithmeticInstrCost(BinOp->getOpcode(), SrcVecTy) +
-      TTI.getCastInstrCost(Instruction::BitCast, DstVecTy, SrcVecTy,
-                           TTI::CastContextHint::None);
+  // OldCost = bitlogic + 2*casts
+  // NewCost = bitlogic + cast
 
-  LLVM_DEBUG(dbgs() << "Found a bitwise logic op of bitcasted values: " << I
-                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
-                    << "\n");
+  // Calculate specific costs for each cast with instruction context
+  InstructionCost LHSCastCost =
+      TTI.getCastInstrCost(CastOpcode, DstVecTy, SrcVecTy,
+                           TTI::CastContextHint::None, CostKind, LHSCast);
+  InstructionCost RHSCastCost =
+      TTI.getCastInstrCost(CastOpcode, DstVecTy, SrcVecTy,
+                           TTI::CastContextHint::None, CostKind, RHSCast);
+
+  InstructionCost OldCost =
+      TTI.getArithmeticInstrCost(BinOp->getOpcode(), DstVecTy, CostKind) +
+      LHSCastCost + RHSCastCost;
+
+  // For new cost, we can't provide an instruction (it doesn't exist yet)
+  InstructionCost GenericCastCost = TTI.getCastInstrCost(
+      CastOpcode, DstVecTy, SrcVecTy, TTI::CastContextHint::None, CostKind);
+
+  InstructionCost NewCost =
+      TTI.getArithmeticInstrCost(BinOp->getOpcode(), SrcVecTy, CostKind) +
+      GenericCastCost;
+
+  // Account for multi-use casts using specific costs
+  if (!LHSCast->hasOneUse())
+    NewCost += LHSCastCost;
+  if (!RHSCast->hasOneUse())
+    NewCost += RHSCastCost;
+
+  LLVM_DEBUG(dbgs() << "foldBitOpOfCastops: OldCost=" << OldCost
+                    << " NewCost=" << NewCost << "\n");
 
   if (NewCost > OldCost)
     return false;
@@ -862,8 +901,16 @@ bool VectorCombine::foldBitOpOfBitcasts(Instruction &I) {
 
   Worklist.pushValue(NewOp);
 
-  // Bitcast the result back
-  Value *Result = Builder.CreateBitCast(NewOp, I.getType());
+  // Create the cast operation directly to ensure we get a new instruction
+  Instruction *NewCast = CastInst::Create(CastOpcode, NewOp, I.getType());
+
+  // Preserve cast instruction flags
+  NewCast->copyIRFlags(LHSCast);
+  NewCast->andIRFlags(RHSCast);
+
+  // Insert the new instruction
+  Value *Result = Builder.Insert(NewCast);
+
   replaceValue(I, *Result);
   return true;
 }
@@ -1617,6 +1664,8 @@ static Align computeAlignmentAfterScalarization(Align VectorAlignment,
 //   %1 = getelementptr inbounds i32, i32* %0, i64 0, i64 1
 //   store i32 %b, i32* %1
 bool VectorCombine::foldSingleElementStore(Instruction &I) {
+  if (!TTI.allowVectorElementIndexingUsingGEP())
+    return false;
   auto *SI = cast<StoreInst>(&I);
   if (!SI->isSimple() || !isa<VectorType>(SI->getValueOperand()->getType()))
     return false;
@@ -1672,6 +1721,9 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
 
 /// Try to scalarize vector loads feeding extractelement instructions.
 bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
+  if (!TTI.allowVectorElementIndexingUsingGEP())
+    return false;
+
   Value *Ptr;
   if (!match(&I, m_Load(m_Value(Ptr))))
     return false;
@@ -1780,6 +1832,8 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
 }
 
 bool VectorCombine::scalarizeExtExtract(Instruction &I) {
+  if (!TTI.allowVectorElementIndexingUsingGEP())
+    return false;
   auto *Ext = dyn_cast<ZExtInst>(&I);
   if (!Ext)
     return false;
@@ -3127,6 +3181,55 @@ bool VectorCombine::foldCastFromReductions(Instruction &I) {
   return true;
 }
 
+/// Returns true if this ShuffleVectorInst eventually feeds into a
+/// vector reduction intrinsic (e.g., vector_reduce_add) by only following
+/// chains of shuffles and binary operators (in any combination/order).
+/// The search does not go deeper than the given Depth.
+static bool feedsIntoVectorReduction(ShuffleVectorInst *SVI) {
+  constexpr unsigned MaxVisited = 32;
+  SmallPtrSet<Instruction *, 8> Visited;
+  SmallVector<Instruction *, 4> WorkList;
+  bool FoundReduction = false;
+
+  WorkList.push_back(SVI);
+  while (!WorkList.empty()) {
+    Instruction *I = WorkList.pop_back_val();
+    for (User *U : I->users()) {
+      auto *UI = cast<Instruction>(U);
+      if (!UI || !Visited.insert(UI).second)
+        continue;
+      if (Visited.size() > MaxVisited)
+        return false;
+      if (auto *II = dyn_cast<IntrinsicInst>(UI)) {
+        // More than one reduction reached
+        if (FoundReduction)
+          return false;
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::vector_reduce_add:
+        case Intrinsic::vector_reduce_mul:
+        case Intrinsic::vector_reduce_and:
+        case Intrinsic::vector_reduce_or:
+        case Intrinsic::vector_reduce_xor:
+        case Intrinsic::vector_reduce_smin:
+        case Intrinsic::vector_reduce_smax:
+        case Intrinsic::vector_reduce_umin:
+        case Intrinsic::vector_reduce_umax:
+          FoundReduction = true;
+          continue;
+        default:
+          return false;
+        }
+      }
+
+      if (!isa<BinaryOperator>(UI) && !isa<ShuffleVectorInst>(UI))
+        return false;
+
+      WorkList.emplace_back(UI);
+    }
+  }
+  return FoundReduction;
+}
+
 /// This method looks for groups of shuffles acting on binops, of the form:
 ///  %x = shuffle ...
 ///  %y = shuffle ...
@@ -3369,6 +3472,65 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
            TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, VT, VT, Mask, CostKind);
   };
 
+  unsigned ElementSize = VT->getElementType()->getPrimitiveSizeInBits();
+  unsigned MaxVectorSize =
+      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector);
+  unsigned MaxElementsInVector = MaxVectorSize / ElementSize;
+  // When there are multiple shufflevector operations on the same input,
+  // especially when the vector length is larger than the register size,
+  // identical shuffle patterns may occur across different groups of elements.
+  // To avoid overestimating the cost by counting these repeated shuffles more
+  // than once, we only account for unique shuffle patterns. This adjustment
+  // prevents inflated costs in the cost model for wide vectors split into
+  // several register-sized groups.
+  std::set<SmallVector<int, 4>> UniqueShuffles;
+  auto AddShuffleMaskAdjustedCost = [&](InstructionCost C, ArrayRef<int> Mask) {
+    // Compute the cost for performing the shuffle over the full vector.
+    auto ShuffleCost =
+        TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, VT, VT, Mask, CostKind);
+    unsigned NumFullVectors = Mask.size() / MaxElementsInVector;
+    if (NumFullVectors < 2)
+      return C + ShuffleCost;
+    SmallVector<int, 4> SubShuffle(MaxElementsInVector);
+    unsigned NumUniqueGroups = 0;
+    unsigned NumGroups = Mask.size() / MaxElementsInVector;
+    // For each group of MaxElementsInVector contiguous elements,
+    // collect their shuffle pattern and insert into the set of unique patterns.
+    for (unsigned I = 0; I < NumFullVectors; ++I) {
+      for (unsigned J = 0; J < MaxElementsInVector; ++J)
+        SubShuffle[J] = Mask[MaxElementsInVector * I + J];
+      if (UniqueShuffles.insert(SubShuffle).second)
+        NumUniqueGroups += 1;
+    }
+    return C + ShuffleCost * NumUniqueGroups / NumGroups;
+  };
+  auto AddShuffleAdjustedCost = [&](InstructionCost C, Instruction *I) {
+    auto *SV = dyn_cast<ShuffleVectorInst>(I);
+    if (!SV)
+      return C;
+    SmallVector<int, 16> Mask;
+    SV->getShuffleMask(Mask);
+    return AddShuffleMaskAdjustedCost(C, Mask);
+  };
+  // Check that input consists of ShuffleVectors applied to the same input
+  auto AllShufflesHaveSameOperands =
+      [](SmallPtrSetImpl<Instruction *> &InputShuffles) {
+        if (InputShuffles.size() < 2)
+          return false;
+        ShuffleVectorInst *FirstSV =
+            dyn_cast<ShuffleVectorInst>(*InputShuffles.begin());
+        if (!FirstSV)
+          return false;
+
+        Value *In0 = FirstSV->getOperand(0), *In1 = FirstSV->getOperand(1);
+        return std::all_of(
+            std::next(InputShuffles.begin()), InputShuffles.end(),
+            [&](Instruction *I) {
+              ShuffleVectorInst *SV = dyn_cast<ShuffleVectorInst>(I);
+              return SV && SV->getOperand(0) == In0 && SV->getOperand(1) == In1;
+            });
+      };
+
   // Get the costs of the shuffles + binops before and after with the new
   // shuffle masks.
   InstructionCost CostBefore =
@@ -3376,8 +3538,14 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
       TTI.getArithmeticInstrCost(Op1->getOpcode(), VT, CostKind);
   CostBefore += std::accumulate(Shuffles.begin(), Shuffles.end(),
                                 InstructionCost(0), AddShuffleCost);
-  CostBefore += std::accumulate(InputShuffles.begin(), InputShuffles.end(),
-                                InstructionCost(0), AddShuffleCost);
+  if (AllShufflesHaveSameOperands(InputShuffles)) {
+    UniqueShuffles.clear();
+    CostBefore += std::accumulate(InputShuffles.begin(), InputShuffles.end(),
+                                  InstructionCost(0), AddShuffleAdjustedCost);
+  } else {
+    CostBefore += std::accumulate(InputShuffles.begin(), InputShuffles.end(),
+                                  InstructionCost(0), AddShuffleCost);
+  }
 
   // The new binops will be unused for lanes past the used shuffle lengths.
   // These types attempt to get the correct cost for that from the target.
@@ -3388,8 +3556,9 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   InstructionCost CostAfter =
       TTI.getArithmeticInstrCost(Op0->getOpcode(), Op0SmallVT, CostKind) +
       TTI.getArithmeticInstrCost(Op1->getOpcode(), Op1SmallVT, CostKind);
+  UniqueShuffles.clear();
   CostAfter += std::accumulate(ReconstructMasks.begin(), ReconstructMasks.end(),
-                               InstructionCost(0), AddShuffleMaskCost);
+                               InstructionCost(0), AddShuffleMaskAdjustedCost);
   std::set<SmallVector<int>> OutputShuffleMasks({V1A, V1B, V2A, V2B});
   CostAfter +=
       std::accumulate(OutputShuffleMasks.begin(), OutputShuffleMasks.end(),
@@ -3398,7 +3567,8 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   LLVM_DEBUG(dbgs() << "Found a binop select shuffle pattern: " << I << "\n");
   LLVM_DEBUG(dbgs() << "  CostBefore: " << CostBefore
                     << " vs CostAfter: " << CostAfter << "\n");
-  if (CostBefore <= CostAfter)
+  if (CostBefore < CostAfter ||
+      (CostBefore == CostAfter && !feedsIntoVectorReduction(SVI)))
     return false;
 
   // The cost model has passed, create the new instructions.
@@ -3773,7 +3943,7 @@ bool VectorCombine::run() {
       case Instruction::And:
       case Instruction::Or:
       case Instruction::Xor:
-        MadeChange |= foldBitOpOfBitcasts(I);
+        MadeChange |= foldBitOpOfCastops(I);
         break;
       default:
         MadeChange |= shrinkType(I);

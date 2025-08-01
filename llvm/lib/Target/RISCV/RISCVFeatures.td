@@ -1272,7 +1272,7 @@ def FeatureVendorXSfmm128t
 def FeatureVendorXSfvqmaccdod
     : RISCVExtension<1, 0,
                      "SiFive Int8 Matrix Multiplication Instructions (2-by-8 and 8-by-2)",
-                     [FeatureStdExtZve32x]>;
+                     [FeatureStdExtZve32x, FeatureStdExtZvl128b]>;
 def HasVendorXSfvqmaccdod
     : Predicate<"Subtarget->hasVendorXSfvqmaccdod()">,
       AssemblerPredicate<(all_of FeatureVendorXSfvqmaccdod),
@@ -1281,7 +1281,7 @@ def HasVendorXSfvqmaccdod
 def FeatureVendorXSfvqmaccqoq
     : RISCVExtension<1, 0,
                      "SiFive Int8 Matrix Multiplication Instructions (4-by-8 and 8-by-4)",
-                     [FeatureStdExtZve32x]>;
+                     [FeatureStdExtZve32x, FeatureStdExtZvl256b]>;
 def HasVendorXSfvqmaccqoq
     : Predicate<"Subtarget->hasVendorXSfvqmaccqoq()">,
       AssemblerPredicate<(all_of FeatureVendorXSfvqmaccqoq),
@@ -1290,7 +1290,7 @@ def HasVendorXSfvqmaccqoq
 def FeatureVendorXSfvfwmaccqqq
     : RISCVExtension<1, 0,
                      "SiFive Matrix Multiply Accumulate Instruction (4-by-4)",
-                     [FeatureStdExtZvfbfmin]>;
+                     [FeatureStdExtZvfbfmin, FeatureStdExtZvl128b]>;
 def HasVendorXSfvfwmaccqqq
     : Predicate<"Subtarget->hasVendorXSfvfwmaccqqq()">,
       AssemblerPredicate<(all_of FeatureVendorXSfvfwmaccqqq),

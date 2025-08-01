@@ -28,7 +28,7 @@ define void @test_add_double_same_const_args_1(ptr %res, ptr noalias %A, ptr noa
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br [[EXIT:label %.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ;
 entry:
@@ -78,7 +78,7 @@ define void @test_add_double_same_const_args_2(ptr %res, ptr noalias %A, ptr noa
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br [[EXIT:label %.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ;
 entry:
@@ -138,7 +138,7 @@ define void @test_add_double_mixed_const_args(ptr %res, ptr noalias %A, ptr noal
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br [[EXIT:label %.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ;
 entry:
@@ -200,7 +200,7 @@ define void @test_add_double_same_var_args_1(ptr %res, ptr noalias %A, ptr noali
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br [[EXIT:label %.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ;
 entry:
@@ -262,7 +262,7 @@ define void @test_add_double_same_var_args_2(ptr %res, ptr noalias %A, ptr noali
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br [[EXIT:label %.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ;
 entry:
@@ -324,7 +324,7 @@ define void @test_add_double_same_var_args_at_different_positions(ptr %res, ptr 
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br [[EXIT:label %.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ;
 entry:
@@ -388,7 +388,7 @@ define void @test_add_double_different_var_args_1(ptr %res, ptr noalias %A, ptr 
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br [[EXIT:label %.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ;
 entry:
@@ -452,7 +452,7 @@ define void @test_add_double_different_var_args_2(ptr %res, ptr noalias %A, ptr 
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br [[EXIT:label %.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ;
 entry:

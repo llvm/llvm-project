@@ -99,6 +99,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.calloc
     libc.src.stdlib.realloc
     libc.src.stdlib.free
+
+    # wctype.h entrypoints
+    libc.src.wctype.iswalpha
 )
 
 if(LLVM_LIBC_FULL_BUILD)
@@ -584,6 +587,11 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.ufromfpxf128
   )
 endif()
+
+list(APPEND TARGET_LIBM_ENTRYPOINTS
+  # bfloat16 entrypoints
+  libc.src.math.fabsbf16
+)
 
 if(LIBC_COMPILER_HAS_FIXED_POINT)
   list(APPEND TARGET_LIBM_ENTRYPOINTS

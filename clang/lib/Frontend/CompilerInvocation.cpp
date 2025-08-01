@@ -826,7 +826,7 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
 
   // Setup a dummy DiagnosticsEngine.
   DiagnosticOptions DummyDiagOpts;
-  DiagnosticsEngine DummyDiags(new DiagnosticIDs(), DummyDiagOpts);
+  DiagnosticsEngine DummyDiags(DiagnosticIDs::create(), DummyDiagOpts);
   DummyDiags.setClient(new TextDiagnosticBuffer());
 
   // Run the first parse on the original arguments with the dummy invocation and
@@ -2013,8 +2013,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
             : llvm::codegenoptions::DebugTemplateNamesKind::Mangled);
   }
 
-  if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ,
-                                     OPT_ftime_report_json)) {
+  if (Args.hasArg(OPT_ftime_report, OPT_ftime_report_EQ, OPT_ftime_report_json,
+                  OPT_stats_file_timers)) {
     Opts.TimePasses = true;
 
     // -ftime-report= is only for new pass manager.
@@ -2026,7 +2026,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
         Opts.TimePassesPerRun = true;
       else
         Diags.Report(diag::err_drv_invalid_value)
-            << A->getAsString(Args) << A->getValue();
+            << EQ->getAsString(Args) << EQ->getValue();
     }
 
     if (Args.getLastArg(OPT_ftime_report_json))
@@ -2685,7 +2685,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   std::optional<DiagnosticsEngine> IgnoringDiags;
   if (!Diags) {
     IgnoringDiagOpts.emplace();
-    IgnoringDiags.emplace(new DiagnosticIDs(), *IgnoringDiagOpts,
+    IgnoringDiags.emplace(DiagnosticIDs::create(), *IgnoringDiagOpts,
                           new IgnoringDiagConsumer());
     Diags = &*IgnoringDiags;
   }
@@ -3913,12 +3913,8 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   if (Opts.OpenMPCUDAMode)
     GenerateArg(Consumer, OPT_fopenmp_cuda_mode);
 
-  if (Opts.OpenACC) {
+  if (Opts.OpenACC)
     GenerateArg(Consumer, OPT_fopenacc);
-    if (!Opts.OpenACCMacroOverride.empty())
-      GenerateArg(Consumer, OPT_openacc_macro_override,
-                  Opts.OpenACCMacroOverride);
-  }
 
   // The arguments used to set Optimize, OptimizeSize and NoInlineDefine are
   // generated from CodeGenOptions.
@@ -4424,12 +4420,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
                         Args.hasArg(options::OPT_fopenmp_cuda_mode);
 
   // OpenACC Configuration.
-  if (Args.hasArg(options::OPT_fopenacc)) {
+  if (Args.hasArg(options::OPT_fopenacc))
     Opts.OpenACC = true;
-
-    if (Arg *A = Args.getLastArg(options::OPT_openacc_macro_override))
-      Opts.OpenACCMacroOverride = A->getValue();
-  }
 
   if (Arg *A = Args.getLastArg(OPT_ffp_contract)) {
     StringRef Val = A->getValue();

@@ -398,7 +398,7 @@ void AVRAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   Value <<= Info.TargetOffset;
 
   unsigned Offset = Fixup.getOffset();
-  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
+  assert(Offset + NumBytes <= F.getSize() && "Invalid fixup offset!");
 
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
@@ -514,19 +514,7 @@ bool AVRAsmBackend::forceRelocation(const MCFragment &F, const MCFixup &Fixup,
     return false;
 
   case AVR::fixup_7_pcrel:
-  case AVR::fixup_13_pcrel: {
-    uint64_t Offset = Target.getConstant();
-    uint64_t Size = AVRAsmBackend::getFixupKindInfo(Fixup.getKind()).TargetSize;
-
-    // If the jump is too large to encode it, fall back to a relocation.
-    //
-    // Note that trying to actually link that relocation *would* fail, but the
-    // hopes are that the module we're currently compiling won't be actually
-    // linked to the final binary.
-    return !adjust::adjustRelativeBranch(Size, Fixup, Offset,
-                                         getContext().getSubtargetInfo());
-  }
-
+  case AVR::fixup_13_pcrel:
   case AVR::fixup_call:
     return true;
   }
