@@ -9332,7 +9332,6 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       PhiR->setOperand(0, StartV);
     }
   }
-
   for (VPRecipeBase *R : ToDelete)
     R->eraseFromParent();
 
