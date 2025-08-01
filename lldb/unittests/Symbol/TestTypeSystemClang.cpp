@@ -1170,7 +1170,7 @@ TEST_F(TestTypeSystemClang, AsmLabel_CtorDtor) {
   EXPECT_STREQ(m_ast->DeclGetMangledName(ctor_nolabel).GetCString(),
                "??0S@@QEAA@XZ");
   EXPECT_STREQ(m_ast->DeclGetMangledName(dtor_nolabel).GetCString(),
-               "??1S@@QEAA@XZ");
+               "??_DS@@QEAAXXZ");
 #else
   EXPECT_STREQ(m_ast->DeclGetMangledName(ctor_nolabel).GetCString(),
                "_ZN1SC1Ev");
