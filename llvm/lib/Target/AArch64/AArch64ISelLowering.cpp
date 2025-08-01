@@ -11364,18 +11364,6 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
     ConstantSDNode *CFVal = dyn_cast<ConstantSDNode>(FVal);
     ConstantSDNode *CTVal = dyn_cast<ConstantSDNode>(TVal);
     ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
-    // Check for sign pattern (SELECT_CC setgt, iN lhs, -1, 1, -1) and transform
-    // into (OR (ASR lhs, N-1), 1), which requires less instructions for the
-    // supported types.
-    if (CC == ISD::SETGT && RHSC && RHSC->isAllOnes() && CTVal && CFVal &&
-        CTVal->isOne() && CFVal->isAllOnes() &&
-        LHS.getValueType() == TVal.getValueType()) {
-      EVT VT = LHS.getValueType();
-      SDValue Shift =
-          DAG.getNode(ISD::SRA, DL, VT, LHS,
-                      DAG.getConstant(VT.getSizeInBits() - 1, DL, VT));
-      return DAG.getNode(ISD::OR, DL, VT, Shift, DAG.getConstant(1, DL, VT));
-    }
 
     // Check for SMAX(lhs, 0) and SMIN(lhs, 0) patterns.
     // (SELECT_CC setgt, lhs, 0, lhs, 0) -> (BIC lhs, (SRA lhs, typesize-1))
