@@ -3112,7 +3112,7 @@ define void @foo(i1 %cond0, i1 %cond2) {
   // Check successors().
   EXPECT_EQ(range_size(Br0->successors()), 2u);
   unsigned SuccIdx = 0;
-  SmallVector<sandboxir::BasicBlock *> ExpectedSuccs({BB1, BB2});
+  SmallVector<sandboxir::BasicBlock *> ExpectedSuccs({BB2, BB1});
   for (sandboxir::BasicBlock *Succ : Br0->successors())
     EXPECT_EQ(Succ, ExpectedSuccs[SuccIdx++]);
 
@@ -3151,7 +3151,7 @@ define void @foo(i1 %cond0, i1 %cond2) {
     EXPECT_TRUE(Br->isConditional());
     EXPECT_EQ(Br->getCondition(), Cond0);
     unsigned SuccIdx = 0;
-    SmallVector<sandboxir::BasicBlock *> ExpectedSuccs({BB2, BB1});
+    SmallVector<sandboxir::BasicBlock *> ExpectedSuccs({BB1, BB2});
     for (sandboxir::BasicBlock *Succ : Br->successors())
       EXPECT_EQ(Succ, ExpectedSuccs[SuccIdx++]);
     EXPECT_EQ(Br->getNextNode(), Ret1);
@@ -3163,7 +3163,7 @@ define void @foo(i1 %cond0, i1 %cond2) {
     EXPECT_TRUE(Br->isConditional());
     EXPECT_EQ(Br->getCondition(), Cond0);
     unsigned SuccIdx = 0;
-    SmallVector<sandboxir::BasicBlock *> ExpectedSuccs({BB2, BB1});
+    SmallVector<sandboxir::BasicBlock *> ExpectedSuccs({BB1, BB2});
     for (sandboxir::BasicBlock *Succ : Br->successors())
       EXPECT_EQ(Succ, ExpectedSuccs[SuccIdx++]);
     EXPECT_EQ(Br->getPrevNode(), Ret2);

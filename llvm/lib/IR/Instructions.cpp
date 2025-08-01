@@ -1208,8 +1208,8 @@ BranchInst::BranchInst(BasicBlock *IfTrue, BasicBlock *IfFalse, Value *Cond,
                   AllocInfo, InsertBefore) {
   // Assign in order of operand index to make use-list order predictable.
   Op<-3>() = Cond;
-  Op<-2>() = IfFalse;
-  Op<-1>() = IfTrue;
+  Op<-2>() = IfTrue;
+  Op<-1>() = IfFalse;
 #ifndef NDEBUG
   AssertOK();
 #endif

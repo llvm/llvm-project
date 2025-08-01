@@ -173,16 +173,16 @@ TEST(InstructionsTest, BranchInst) {
   EXPECT_EQ(One, b1->getCondition());
   ++b;
 
-  // check ELSE
-  EXPECT_EQ(bb1, *b);
-  EXPECT_EQ(bb1, b1->getOperand(1));
-  EXPECT_EQ(bb1, b1->getSuccessor(1));
-  ++b;
-
   // check THEN
   EXPECT_EQ(bb0, *b);
-  EXPECT_EQ(bb0, b1->getOperand(2));
+  EXPECT_EQ(bb0, b1->getOperand(1));
   EXPECT_EQ(bb0, b1->getSuccessor(0));
+  ++b;
+
+  // check ELSE
+  EXPECT_EQ(bb1, *b);
+  EXPECT_EQ(bb1, b1->getOperand(2));
+  EXPECT_EQ(bb1, b1->getSuccessor(1));
   ++b;
 
   EXPECT_EQ(b1->op_end(), b);
