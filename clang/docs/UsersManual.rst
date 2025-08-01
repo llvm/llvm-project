@@ -86,11 +86,11 @@ Terminology
   on how the code behaves. Generally speaking, undefined behavior is a bug in
   the user's code. However, it can also be a place for the compiler to define
   the behavior, called an extension.
-* Optimizer -- the part of the compiler responsible for transforming user code
-  into faster user code, without changing the semantics of how the code behaves.
-  Note, the optimizer assumes the code has no undefined behavior, so if the code
-  does contain undefined behavior, it will often behave differently depending on
-  which optimization level is enabled.
+* Optimizer -- the part of the compiler responsible for transforming code to
+  have better performance characteristics without changing the semantics of how
+  the code behaves. Note, the optimizer assumes the code has no undefined
+  behavior, so if the code does contain undefined behavior, it will often behave
+  differently depending on which optimization level is enabled.
 * Frontend -- the Lexer, Preprocessor, Parser, and Sema parts of the compiler.
 * Middle-end -- converts the AST into LLVM IR, adds debug information, etc.
 * Backend -- the parts of the compiler which run after LLVM IR code generation,
