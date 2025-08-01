@@ -3929,8 +3929,17 @@ SDValue DAGCombiner::foldSubToUSubSat(EVT DstVT, SDNode *N, const SDLoc &DL) {
 // trunc (ABDU/S A, B)) → ABDU/S (trunc A), (trunc B)
 SDValue DAGCombiner::foldAbdToNarrowType(EVT VT, SDNode *N, const SDLoc &DL) {
   SDValue Op = N->getOperand(0);
+
   unsigned Opcode = Op.getOpcode();
   if (Opcode != ISD::ABDU && Opcode != ISD::ABDS)
+    return SDValue();
+
+  SDValue Operand0 = Op.getOperand(0);
+  SDValue Operand1 = Op.getOperand(1);
+
+  // Early exit if either operand is zero.
+  if (ISD::isBuildVectorAllZeros(Operand0.getNode()) ||
+      ISD::isBuildVectorAllZeros(Operand1.getNode()))
     return SDValue();
 
   EVT SrcVT = Op.getValueType();
@@ -3950,8 +3959,8 @@ SDValue DAGCombiner::foldAbdToNarrowType(EVT VT, SDNode *N, const SDLoc &DL) {
   }
 
   if (CanFold) {
-    SDValue NewOp0 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Op.getOperand(0));
-    SDValue NewOp1 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Op.getOperand(1));
+    SDValue NewOp0 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Operand0);
+    SDValue NewOp1 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Operand1);
     return DAG.getNode(Opcode, DL, TruncVT, NewOp0, NewOp1);
   }
 
