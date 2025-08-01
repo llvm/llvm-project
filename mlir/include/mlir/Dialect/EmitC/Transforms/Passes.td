@@ -79,10 +79,7 @@ def AddReflectionMapPass : Pass<"add-reflection-map", "ModuleOp"> {
         emitc.class @MyClass {
           emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = ["another_feature"]}
           emitc.field @fieldName1 : !emitc.array<1xf32> {emitc.field_ref = ["some_feature"]}
-          emitc.func @getFeatures() {
-            %0 = "emitc.constant"() <{value = #emitc.opaque<"{  { \22another_feature\22, reinterpret_cast<char*>(&fieldName0) },  { \22some_feature\22, reinterpret_cast<char*>(&fieldName1) } }">}> : () -> !emitc.opaque<"const std::map<std::string, char*>">
-            return %0 : !emitc.opaque<"const std::map<std::string, char*>">
-          }
+          emitc.field @reflectionMap : !emitc.opaque<"const std::map<std::string, char*>"> = #emitc.opaque<"{ { \22another_feature\22, reinterpret_cast<char*>(&fieldName0) }, { \22some_feature\22, reinterpret_cast<char*>(&fieldName1) }, { \22output_0\22, reinterpret_cast<char*>(&fieldName2) } }">
           emitc.func @execute() { ... }
         }
         ```
