@@ -3297,6 +3297,14 @@ unsigned X86::getNonNDVariant(unsigned Opc) {
   return getNewOpcFromTable(X86ND2NonNDTable, Opc);
 }
 
+/// Return the inverse of the specified condition,
+/// e.g. turning COND_E to COND_NE.
+X86::CondCode X86::GetOppositeBranchCondition(X86::CondCode CC) {
+  // To reverse a condition it's necessary to only invert the low bit:
+  assert(CC != COND_INVALID && "COND_INVALID has no inverse!");
+  return static_cast<CondCode>(static_cast<unsigned>(CC) ^ 0x1);
+}
+
 /// Assuming the flags are set by MI(a,b), return the condition code if we
 /// modify the instructions such that flags are set by MI(b,a).
 static X86::CondCode getSwappedCondition(X86::CondCode CC) {

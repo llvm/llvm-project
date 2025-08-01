@@ -153,7 +153,7 @@ static inline unsigned GetCondBranchFromCond(XCore::CondCode CC)
 static inline XCore::CondCode GetOppositeBranchCondition(XCore::CondCode CC) {
   // To reverse a condition it's necessary to only invert the low bit:
   assert(CC != XCore::COND_INVALID && "COND_INVALID has no inverse!");
-  return static_cast<CondCode>(static_cast<unsigned>(CC) ^ 0x1);
+  return static_cast<XCore::CondCode>(static_cast<unsigned>(CC) ^ 0x1);
 }
 
 /// analyzeBranch - Analyze the branching code at the end of MBB, returning

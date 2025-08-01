@@ -1128,6 +1128,12 @@ unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC, unsigned SelectOpc) {
   }
 }
 
+RISCVCC::CondCode RISCVCC::getOppositeBranchCondition(RISCVCC::CondCode CC) {
+  // To reverse a condition it's necessary to only invert the low bit:
+  assert(CC != RISCVCC::COND_INVALID && "COND_INVALID has no inverse!");
+  return static_cast<RISCVCC::CondCode>(static_cast<unsigned>(CC) ^ 0x1);
+}
+
 bool RISCVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                    MachineBasicBlock *&TBB,
                                    MachineBasicBlock *&FBB,
