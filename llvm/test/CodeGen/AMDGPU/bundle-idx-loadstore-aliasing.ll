@@ -69,7 +69,7 @@ define dso_local amdgpu_kernel void @amdgcn_aa_multibb() "amdgpu-wavegroup-enabl
 ; MULTIBBDBG: BB.2 :: [[V_STORE_IDX_]]:vgpr_32 = V_MOV_B32_e32 5, implicit $exec
 ; MULTIBBDBG-NEXT:  *** Found 1 use(s)
 ; MULTIBBDBG-NEXT:  *** Use is in MI's current block. Leaving a copy in block 2
-; MULTIBBDBG: BB.6 :: [[V_LOAD_IDX_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[V_LOAD_IDX_1:%[0-9]+]]:sreg_32_xm0, 50, implicit $exec :: (load (s32) from %ir.arrayidx2, addrspace 10)
+; MULTIBBDBG: BB.4 :: [[V_LOAD_IDX_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[V_LOAD_IDX_1:%[0-9]+]]:sreg_32_xm0, 50, implicit $exec :: (load (s32) from %ir.arrayidx2, addrspace 10)
 ; MULTIBBDBG-NEXT:  *** Found 1 use(s)
 ; MULTIBBDBG-NEXT:  *** Sinking MI to block [[BLOCK_:[0-9]+]]
 ; MULTIBBDBG: BB.5 :: [[V_ADD_:%[0-9]+]]:vgpr_32 = nsw V_ADD_U32_e64 killed [[V_LOAD_IDX_]]:vgpr_32, killed [[_:%[0-9]+]]:vgpr_32, 0, implicit $exec

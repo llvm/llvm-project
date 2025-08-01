@@ -182,6 +182,8 @@ bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
   default:
     break;
   case AMDGPU::V_READFIRSTLANE_B32:
+  case AMDGPU::V_LOAD_IDX:
+  case AMDGPU::V_STORE_IDX:
     return true;
   }
 
