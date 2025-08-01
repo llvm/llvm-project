@@ -1925,7 +1925,15 @@ public:
     if (!CE || !CE->getDirectCallee())
       return false;
     const auto *FD = dyn_cast<FunctionDecl>(CE->getDirectCallee());
-    if (!FD || isa<CXXMethodDecl>(FD))
+    if (!FD)
+      return false;
+
+    bool IsGlobalAndNotInAnyNamespace =
+        FD->isGlobal() && !FD->getEnclosingNamespaceContext()->isNamespace();
+
+    // A libc function must either be in the std:: namespace or a global
+    // function that is not in any namespace:
+    if (!FD->isInStdNamespace() && !IsGlobalAndNotInAnyNamespace)
       return false;
     auto isSingleStringLiteralArg = false;
     if (CE->getNumArgs() == 1) {
