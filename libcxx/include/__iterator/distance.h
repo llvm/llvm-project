@@ -59,7 +59,7 @@ __distance(_RandIter __first, _RandIter __last) {
 #if _LIBCPP_STD_VER >= 20
 template <class _SegmentedIter,
           __enable_if_t<!__has_random_access_iterator_category<_SegmentedIter>::value &&
-                            __is_segmented_iterator<_SegmentedIter>::value,
+                            __is_segmented_iterator_v<_SegmentedIter>,
                         int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 __iter_distance_t<_SegmentedIter>
 __distance(_SegmentedIter __first, _SegmentedIter __last) {
