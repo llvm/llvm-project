@@ -3648,11 +3648,26 @@ def CFISaltDocs : Documentation {
   let Heading = "cfi_salt";
   let Label = "langext-cfi_salt";
   let Content = [{
-Use ``__attribute__((cfi_salt("<salt>")))`` on a function declaration, function
-definition, or typedef to help distinguish CFI hashes between functions with
-the same type signature. Take, for example, the Linux kernel, where there are
-hundreds of functions with the same type signature that are indirectly
-callable.
+The ``cfi_salt`` attribute allows you to add a salt value to Control Flow 
+Integrity (CFI) type hashes to help distinguish between functions with the 
+same type signature. This attribute can be applied to function declarations, 
+function definitions, and function pointer typedefs.
+
+**Syntax:**
+
+* GNU-style: ``__attribute__((cfi_salt("<salt_string>")))`
+* C++11-style: ``[[clang::cfi_salt("<salt_string>")]]``
+
+**Usage:**
+
+The attribute takes a single string literal argument that serves as the salt.
+Functions or function types with different salt values will have different CFI
+hashes, even if they have identical type signatures.
+
+**Motivation:**
+
+In large codebases like the Linux kernel, there are often hundreds of functions
+with identical type signatures that are called indirectly:
 
 .. code-block::
 
@@ -3660,55 +3675,60 @@ callable.
   1179 functions with int (*)(void)
    ...
 
-Making the CFI value distinct between them allows CFI to be more robust.
+By salting the CFI hashes, you can make CFI more robust by ensuring that
+functions intended for different purposes have distinct CFI identities.
 
-Example use:
+**Type Compatibility:**
+
+* Functions with different salt values are considered to have incompatible types
+* Function pointers with different salt values cannot be assigned to each other
+* All declarations of the same function must use the same salt value
+
+**Example:**
 
 .. code-block:: c
 
-  // .h file:
-  #define __cfi_salt __attribute__((cfi_salt("pepper")))
-
-  // Convenient typedefs to avoid nested declarator syntax.
-  typedef int (*fptr_t)(void); // Non-salted function call.
-  typedef int (*fptr_salted_t)(void) __cfi_salt;
-
-  struct widget_generator {
-    fptr_t init;
-    fptr_salted_t exec;
-    fptr_t teardown;
+  // Header file - define convenience macros
+  #define __cfi_salt(s) __attribute__((cfi_salt(s)))
+  
+  // Typedef for regular function pointers
+  typedef int (*fptr_t)(void);
+  
+  // Typedef for salted function pointers  
+  typedef int (*fptr_salted_t)(void) __cfi_salt("pepper");
+  
+  struct widget_ops {
+    fptr_t init;          // Regular CFI
+    fptr_salted_t exec;   // Salted CFI
+    fptr_t cleanup;       // Regular CFI
   };
-
-  // 1st .c file:
-  static int internal_init(void) { /* ... */ }
-  static int internal_salted_exec(void) __cfi_salt { /* ... */ }
-  static int internal_teardown(void) { /* ... */ }
-
-  static struct widget_generator _generator = {
-    .init = internal_init,
-    .exec = internal_salted_exec,
-    .teardown = internal_teardown,
+  
+  // Function implementations
+  static int widget_init(void) { return 0; }
+  static int widget_exec(void) __cfi_salt("pepper") { return 1; }
+  static int widget_cleanup(void) { return 0; }
+  
+  static struct widget_ops ops = {
+    .init = widget_init,      // OK - compatible types
+    .exec = widget_exec,      // OK - both use "pepper" salt
+    .cleanup = widget_cleanup // OK - compatible types
   };
+  
+  // Using C++11 attribute syntax
+  void secure_callback(void) [[clang::cfi_salt("secure")]];
+  
+  // This would cause a compilation error:
+  // fptr_t bad_ptr = widget_exec;  // Error: incompatible types
 
-  struct widget_generator *widget_gen = &_generator;
+**Notes:**
 
-  // 2nd .c file:
-  int generate_a_widget(void) {
-    int ret;
-
-    // Called with non-salted CFI.
-    ret = widget_gen->init();
-    if (ret)
-      return ret;
-
-    // Called with salted CFI.
-    ret = widget_gen->exec();
-    if (ret)
-      return ret;
-
-    // Called with non-salted CFI.
-    return widget_gen->teardown();
-  }
+* The salt string can contain any characters, including spaces and quotes
+* This attribute only applies to function types; using it on non-function 
+  types will generate a warning
+* All declarations and definitions of the same function must use identical 
+  salt values
+* The attribute affects type compatibility during compilation and CFI hash 
+  generation during code generation
 
   }];
 }
