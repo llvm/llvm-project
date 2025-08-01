@@ -602,10 +602,20 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Custom);
     setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Custom);
 
-    if (!Subtarget->hasVFP2Base())
+    if (!Subtarget->hasVFP2Base()) {
       setAllExpand(MVT::f32);
-    if (!Subtarget->hasFP64())
+    } else {
+      for (auto Op : {ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
+                      ISD::STRICT_FDIV, ISD::STRICT_FMA, ISD::STRICT_FSQRT})
+        setOperationAction(Op, MVT::f32, Legal);
+    }
+    if (!Subtarget->hasFP64()) {
       setAllExpand(MVT::f64);
+    } else {
+      for (auto Op : {ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
+                      ISD::STRICT_FDIV, ISD::STRICT_FMA, ISD::STRICT_FSQRT})
+        setOperationAction(Op, MVT::f64, Legal);
+    }
   }
 
   if (Subtarget->hasFullFP16()) {
@@ -1336,28 +1346,26 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
   // FP16 often need to be promoted to call lib functions
   if (Subtarget->hasFullFP16()) {
-    setOperationAction(ISD::FREM, MVT::f16, Promote);
-    setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
-    setOperationAction(ISD::FSIN, MVT::f16, Promote);
-    setOperationAction(ISD::FCOS, MVT::f16, Promote);
-    setOperationAction(ISD::FTAN, MVT::f16, Promote);
-    setOperationAction(ISD::FSINCOS, MVT::f16, Promote);
-    setOperationAction(ISD::FPOWI, MVT::f16, Promote);
-    setOperationAction(ISD::FPOW, MVT::f16, Promote);
-    setOperationAction(ISD::FEXP, MVT::f16, Promote);
-    setOperationAction(ISD::FEXP2, MVT::f16, Promote);
-    setOperationAction(ISD::FEXP10, MVT::f16, Promote);
-    setOperationAction(ISD::FLOG, MVT::f16, Promote);
-    setOperationAction(ISD::FLOG10, MVT::f16, Promote);
-    setOperationAction(ISD::FLOG2, MVT::f16, Promote);
+    for (auto Op : {ISD::FREM,           ISD::FSIN,             ISD::FCOS,           
+                    ISD::FTAN,           ISD::FSINCOS,          ISD::FPOWI,
+                    ISD::FPOW,           ISD::FEXP,             ISD::FEXP2,
+                    ISD::FEXP10,         ISD::FLOG,             ISD::FLOG10,
+                    ISD::FLOG2,          ISD::STRICT_FREM,      ISD::STRICT_FSIN,
+                    ISD::STRICT_FCOS,    ISD::STRICT_FTAN,      ISD::STRICT_FPOWI,
+                    ISD::STRICT_FPOW,    ISD::STRICT_FEXP,      ISD::STRICT_FEXP2,
+                    ISD::STRICT_FLOG,    ISD::STRICT_FLOG10,    ISD::STRICT_FLOG2}) {
+        setOperationAction(Op, MVT::f16, Promote);
+    }
+  
+    for (auto Op : {ISD::FROUND,         ISD::FROUNDEVEN,        ISD::FTRUNC,
+                    ISD::FNEARBYINT,     ISD::FRINT,             ISD::FFLOOR, 
+                    ISD::FCEIL,          ISD::STRICT_FROUND,     ISD::STRICT_FROUNDEVEN,
+                    ISD::STRICT_FTRUNC,  ISD::STRICT_FNEARBYINT, ISD::STRICT_FRINT, 
+                    ISD::STRICT_FFLOOR,  ISD::STRICT_FCEIL}) {
+      setOperationAction(Op, MVT::f16, Legal);
+    }
 
-    setOperationAction(ISD::FROUND, MVT::f16, Legal);
-    setOperationAction(ISD::FROUNDEVEN, MVT::f16, Legal);
-    setOperationAction(ISD::FTRUNC, MVT::f16, Legal);
-    setOperationAction(ISD::FNEARBYINT, MVT::f16, Legal);
-    setOperationAction(ISD::FRINT, MVT::f16, Legal);
-    setOperationAction(ISD::FFLOOR, MVT::f16, Legal);
-    setOperationAction(ISD::FCEIL, MVT::f16, Legal);
+    setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
   }
 
   if (Subtarget->hasNEON()) {
