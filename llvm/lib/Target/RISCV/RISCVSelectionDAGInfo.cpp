@@ -82,7 +82,7 @@ SDValue RISCVSelectionDAGInfo::EmitTargetCodeForMemset(
   uint64_t NumberOfBytesToWrite = ConstantSize->getZExtValue();
 
   // Do this only if it is word aligned and we write multiple of 4 bytes.
-  if (!(Alignment.value() >= 4) || !((NumberOfBytesToWrite & 3) == 0))
+  if (!(Alignment >= 4) || !((NumberOfBytesToWrite & 3) == 0))
     return SDValue();
 
   SmallVector<SDValue, 8> OutChains;
