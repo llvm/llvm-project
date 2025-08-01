@@ -140,6 +140,8 @@ To enable multiple extensions, list them separated by comma. For example, to ena
 
 To enable all extensions, use the following option:
 ``-spirv-ext=all``
+To enable all KHR extensions, use the following option:
+``-spirv-ext=khr``
 
 To enable all extensions except specified, specify ``all`` followed by a list of disallowed extensions. For example:
 ``-spirv-ext=all,-SPV_INTEL_arbitrary_precision_integers``
