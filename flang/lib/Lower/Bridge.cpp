@@ -475,7 +475,8 @@ public:
         fir::runtime::genMain(*builder, toLocation(),
                               bridge.getEnvironmentDefaults(),
                               getFoldingContext().languageFeatures().IsEnabled(
-                                  Fortran::common::LanguageFeature::CUDA));
+                                  Fortran::common::LanguageFeature::CUDA),
+                              getLoweringOptions().getCoarrayFeature());
       });
 
     finalizeOpenMPLowering(globalOmpRequiresSymbol);
