@@ -107,14 +107,12 @@ enum : uint64_t {
   DisableWQM = UINT64_C(1) << 36,
   Gather4 = UINT64_C(1) << 37,
 
-  // Reserved, must be 0.
-  Reserved0 = UINT64_C(1) << 38,
+  TENSOR_CNT = UINT64_C(1) << 38,
 
   SCALAR_STORE = UINT64_C(1) << 39,
   FIXED_SIZE = UINT64_C(1) << 40,
 
-  // Reserved, must be 0.
-  Reserved1 = UINT64_C(1) << 41,
+  ASYNC_CNT = UINT64_C(1) << 41,
 
   VOP3_OPSEL = UINT64_C(1) << 42,
   maybeAtomic = UINT64_C(1) << 43,

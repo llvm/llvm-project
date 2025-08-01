@@ -22,6 +22,8 @@ public:
   CSKYAsmBackend(const MCSubtargetInfo &STI, const MCTargetOptions &OP)
       : MCAsmBackend(llvm::endianness::little) {}
 
+  std::optional<bool> evaluateFixup(const MCFragment &, MCFixup &, MCValue &,
+                                    uint64_t &) override;
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   MutableArrayRef<char> Data, uint64_t Value,
                   bool IsResolved) override;
@@ -43,8 +45,7 @@ public:
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 
-  bool shouldForceRelocation(const MCFixup &Fixup,
-                             const MCValue &Target) override;
+  bool shouldForceRelocation(const MCFixup &Fixup, const MCValue &Target);
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;

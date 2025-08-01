@@ -1483,16 +1483,13 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     }
 
     if (!Features.OmitBBEntries) {
-      // TODO: Remove this check when version 1 is deprecated.
-      if (BBAddrMapVersion > 1) {
-        OutStreamer->AddComment("BB id");
-        // Emit the BB ID for this basic block.
-        // We only emit BaseID since CloneID is unset for
-        // -basic-block-adress-map.
-        // TODO: Emit the full BBID when labels and sections can be mixed
-        // together.
-        OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
-      }
+      OutStreamer->AddComment("BB id");
+      // Emit the BB ID for this basic block.
+      // We only emit BaseID since CloneID is unset for
+      // -basic-block-adress-map.
+      // TODO: Emit the full BBID when labels and sections can be mixed
+      // together.
+      OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
       // Emit the basic block offset relative to the end of the previous block.
       // This is zero unless the block is padded due to alignment.
       emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);

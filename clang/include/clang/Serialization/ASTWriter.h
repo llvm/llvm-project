@@ -376,6 +376,7 @@ private:
   /// Only meaningful for standard C++ named modules. See the comments in
   /// createSignatureForNamedModule() for details.
   llvm::SetVector<Module *> TouchedTopLevelModules;
+  llvm::SetVector<serialization::ModuleFile *> TouchedModuleFiles;
 
   /// An update to a Decl.
   class DeclUpdate {
@@ -912,6 +913,8 @@ public:
   }
 
   void handleVTable(CXXRecordDecl *RD);
+
+  void addTouchedModuleFile(serialization::ModuleFile *);
 
 private:
   // ASTDeserializationListener implementation

@@ -213,6 +213,11 @@ template <typename T> inline void printTagged(llvm::raw_ostream &os, const void 
                   "enum {0} value);\n",
                   EnumRec{R}.getName());
   }
+  for (auto *R : Records.getAllDerivedDefinitions("Struct")) {
+    OS << formatv("inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, "
+                  "const struct {0} param);\n",
+                  StructRec{R}.getName());
+  }
   OS << "\n";
 
   // Create definitions

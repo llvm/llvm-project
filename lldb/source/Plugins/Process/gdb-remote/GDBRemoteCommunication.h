@@ -134,16 +134,12 @@ public:
 
   std::chrono::seconds GetPacketTimeout() const { return m_packet_timeout; }
 
-  // Get the debugserver path and check that it exist.
-  static FileSpec GetDebugserverPath(Platform *platform);
-
   // Start a debugserver instance on the current host using the
   // supplied connection URL.
-  static Status StartDebugserverProcess(
-      std::variant<llvm::StringRef, shared_fd_t> comm,
-      Platform *platform, // If non nullptr, then check with the platform for
-                          // the GDB server binary if it can't be located
-      ProcessLaunchInfo &launch_info, const Args *inferior_args);
+  static Status
+  StartDebugserverProcess(std::variant<llvm::StringRef, shared_fd_t> comm,
+                          ProcessLaunchInfo &launch_info,
+                          const Args *inferior_args);
 
   void DumpHistory(Stream &strm);
 

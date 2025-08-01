@@ -1,6 +1,10 @@
 ; RUN: opt -passes='print<ir2vec>' -o /dev/null -ir2vec-vocab-path=%S/Inputs/dummy_3D_vocab.json %s 2>&1 | FileCheck %s -check-prefix=3D-CHECK
 ; RUN: opt -passes='print<ir2vec>' -o /dev/null -ir2vec-vocab-path=%S/Inputs/dummy_5D_vocab.json %s 2>&1 | FileCheck %s -check-prefix=5D-CHECK
-
+; RUN: not opt -passes='print<ir2vec>' -o /dev/null -ir2vec-vocab-path=%S/Inputs/incorrect_vocab1.json %s 2>&1 | FileCheck %s -check-prefix=INCORRECT-VOCAB1-CHECK
+; RUN: not opt -passes='print<ir2vec>' -o /dev/null -ir2vec-vocab-path=%S/Inputs/incorrect_vocab2.json %s 2>&1 | FileCheck %s -check-prefix=INCORRECT-VOCAB2-CHECK
+; RUN: not opt -passes='print<ir2vec>' -o /dev/null -ir2vec-vocab-path=%S/Inputs/incorrect_vocab3.json %s 2>&1 | FileCheck %s -check-prefix=INCORRECT-VOCAB3-CHECK
+; RUN: not opt -passes='print<ir2vec>' -o /dev/null -ir2vec-vocab-path=%S/Inputs/incorrect_vocab4.json %s 2>&1 | FileCheck %s -check-prefix=INCORRECT-VOCAB4-CHECK
+ 
 define dso_local i32 @abc(i32 %0, i32 %1) {
 entry:
   %3 = alloca i32, align 4
@@ -48,3 +52,11 @@ entry:
 ; 5D-CHECK-NEXT: Instruction:   %7 = mul nsw i32 %5, %6 [ 12.90  14.80  16.70  2.50  2.95 ]
 ; 5D-CHECK-NEXT: Instruction:   %8 = add nsw i32 %4, %7 [ -0.10  0.70  1.50  13.70  15.25 ]
 ; 5D-CHECK-NEXT: Instruction:   ret i32 %8 [ 5.40  6.80  8.20  9.60  11.00 ]
+
+; INCORRECT-VOCAB1-CHECK: error: Error reading vocabulary: Missing 'Opcodes' section in vocabulary file
+
+; INCORRECT-VOCAB2-CHECK: error: Error reading vocabulary: Missing 'Types' section in vocabulary file
+
+; INCORRECT-VOCAB3-CHECK: error: Error reading vocabulary: Missing 'Arguments' section in vocabulary file
+
+; INCORRECT-VOCAB4-CHECK: error: Error reading vocabulary: Vocabulary sections have different dimensions

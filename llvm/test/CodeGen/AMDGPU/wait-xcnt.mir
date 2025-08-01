@@ -920,3 +920,49 @@ body: |
     GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
     $vgpr2 = V_MOV_B32_e32 1, implicit $exec
 ...
+
+# FIXME: Missing S_WAIT_XCNT before overwriting vgpr0.
+---
+name: wait_kmcnt_with_outstanding_vmem
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $sgpr0_sgpr1
+    ; GCN-LABEL: name: wait_kmcnt_with_outstanding_vmem
+    ; GCN: liveins: $vgpr0_vgpr1, $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+    ; GCN-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: S_WAIT_KMCNT 0
+    ; GCN-NEXT: $sgpr2 = S_MOV_B32 $sgpr2
+    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    $sgpr2 = S_MOV_B32 $sgpr2
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+...
+
+# FIXME: Missing S_WAIT_XCNT before overwriting sgpr0.
+---
+name: wait_loadcnt_with_outstanding_smem
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $sgpr0_sgpr1
+    ; GCN-LABEL: name: wait_loadcnt_with_outstanding_smem
+    ; GCN: liveins: $vgpr0_vgpr1, $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+    ; GCN-NEXT: S_WAIT_LOADCNT 0
+    ; GCN-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr2, implicit $exec
+    ; GCN-NEXT: $sgpr0 = S_MOV_B32 0
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+    $vgpr2 = V_MOV_B32_e32 $vgpr2, implicit $exec
+    $sgpr0 = S_MOV_B32 0
+...

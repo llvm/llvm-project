@@ -50,6 +50,10 @@ operator<<(const DiagnosticBuilder &DB, const RootSignatureToken::Kind Kind) {
   case RootSignatureToken::Kind::X:                                            \
     DB << SPELLING;                                                            \
     break;
+#define PUNCTUATOR(X, SPELLING)                                                \
+  case RootSignatureToken::Kind::pu_##X:                                       \
+    DB << #SPELLING;                                                           \
+    break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   }
   return DB;

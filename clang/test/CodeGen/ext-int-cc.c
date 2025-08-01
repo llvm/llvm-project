@@ -27,8 +27,8 @@
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple arm64_32-apple-ios -O3 -disable-llvm-passes -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=AARCH64
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple arm64_32-apple-ios -target-abi darwinpcs -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=AARCH64DARWIN
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple arm -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=ARM
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple loongarch64 -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=LA64
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple loongarch32 -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=LA32
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple loongarch64 -O3 -disable-llvm-passes -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=LA64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple loongarch32 -O3 -disable-llvm-passes -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=LA32
 
 // Make sure 128 and 64 bit versions are passed like integers.
 void ParamPassing(_BitInt(128) b, _BitInt(64) c) {}
@@ -158,8 +158,8 @@ void ParamPassing4(_BitInt(129) a) {}
 // PPC32-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
 // AARCH64DARWIN-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
 // ARM-NOT: define{{.*}} arm_aapcscc void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
-// LA64-NOT: define{{.*}} void @ParamPassing4(ptr %{{.+}})
-// LA32-NOT: define{{.*}} void @ParamPassing4(ptr %{{.+}})
+// LA64: define{{.*}} void @ParamPassing4(ptr %{{.+}})
+// LA32: define{{.*}} void @ParamPassing4(ptr %{{.+}})
 #endif
 
 _BitInt(63) ReturnPassing(void) { return 0; }
@@ -317,8 +317,8 @@ _BitInt(129) ReturnPassing5(void) { return 0; }
 // PPC32-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 // AARCH64DARWIN-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 // ARM-NOT: define{{.*}} arm_aapcscc void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
-// LA64-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
-// LA32-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// LA64: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// LA32: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 
 // SparcV9 is odd in that it has a return-size limit of 256, not 128 or 64
 // like other platforms, so test to make sure this behavior will still work.

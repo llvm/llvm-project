@@ -123,6 +123,8 @@ using Message = std::variant<Request, Response, Notification, Error>;
 bool fromJSON(const llvm::json::Value &, Message &, llvm::json::Path);
 llvm::json::Value toJSON(const Message &);
 
+using ToolArguments = std::variant<std::monostate, llvm::json::Value>;
+
 } // namespace lldb_private::mcp::protocol
 
 #endif

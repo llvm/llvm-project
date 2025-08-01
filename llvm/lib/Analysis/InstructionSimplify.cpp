@@ -6793,6 +6793,9 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   Function *F = cast<Function>(Callee);
   Intrinsic::ID IID = F->getIntrinsicID();
 
+  if (IID != Intrinsic::not_intrinsic && intrinsicPropagatesPoison(IID) &&
+      any_of(Args, IsaPred<PoisonValue>))
+    return PoisonValue::get(F->getReturnType());
   // Most of the intrinsics with no operands have some kind of side effect.
   // Don't simplify.
   if (!NumOperands) {

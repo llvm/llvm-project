@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_FUNCTION atomic_xchg
+#define FUNCTION atomic_xchg
 
-_CLC_OVERLOAD _CLC_DECL float __CLC_FUNCTION(volatile local float *, float);
-_CLC_OVERLOAD _CLC_DECL float __CLC_FUNCTION(volatile global float *, float);
+_CLC_OVERLOAD _CLC_DECL float FUNCTION(volatile local float *, float);
+_CLC_OVERLOAD _CLC_DECL float FUNCTION(volatile global float *, float);
 #include <clc/opencl/atomic/atomic_decl.inc>

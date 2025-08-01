@@ -1872,9 +1872,9 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
   if (!sourceTy || !resultTy || sourceTy != resultTy)
     return {};
 
-  // If the source and result are both 1D tensors and have the same type, the
-  // reshape has no effect, even if the tensor is dynamically shaped.
-  if (sourceTy.getRank() == 1)
+  // If the source and result are both 0D or 1D tensors and have the same type,
+  // the reshape has no effect, even if the tensor is dynamically shaped.
+  if (sourceTy.getRank() <= 1)
     return source;
 
   if (auto fromElements = getShape().getDefiningOp<tensor::FromElementsOp>()) {
@@ -3792,6 +3792,29 @@ struct FoldConsecutiveConstantPadding : public OpRewritePattern<tensor::PadOp> {
 };
 
 } // namespace
+
+LogicalResult
+PadOp::reifyResultShapes(OpBuilder &b,
+                         ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
+  reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(getType().getRank()));
+  SmallVector<OpFoldResult> lp = getMixedLowPad();
+  SmallVector<OpFoldResult> hp = getMixedHighPad();
+  for (int64_t i = 0; i < getResultType().getRank(); ++i) {
+    if (!getType().isDynamicDim(i)) {
+      reifiedReturnShapes[0][i] = b.getIndexAttr(getType().getDimSize(i));
+      continue;
+    }
+    Location loc = getLoc();
+    Value dim = b.createOrFold<tensor::DimOp>(
+        loc, getSource(), b.create<arith::ConstantIndexOp>(loc, i));
+
+    AffineExpr d0, d1, d2;
+    bindDims(b.getContext(), d0, d1, d2);
+    reifiedReturnShapes[0][i] = affine::makeComposedFoldedAffineApply(
+        b, loc, {d0 + d1 + d2}, {dim, lp[i], hp[i]});
+  }
+  return success();
+}
 
 void PadOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {

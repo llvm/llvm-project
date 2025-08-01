@@ -56,7 +56,7 @@ runtime_targets_needs_reconfig="${5}"
 
 lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests"
 
-echo "--- cmake"
+echo "::group::cmake"
 export PIP_BREAK_SYSTEM_PACKAGES=1
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
@@ -85,38 +85,49 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS=ON \
       -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
 
-echo "--- ninja"
+echo "::endgroup::"
+echo "::group::ninja"
+
 # Targets are not escaped as they are passed as separate arguments.
 ninja -C "${BUILD_DIR}" -k 0 ${targets}
 
+echo "::endgroup::"
+
 if [[ "${runtime_targets}" != "" ]]; then
-  echo "--- ninja runtimes"
+  echo "::group::ninja runtimes"
 
   ninja -C "${BUILD_DIR}" ${runtime_targets}
+
+  echo "::endgroup::"
 fi
 
 # Compiling runtimes with just-built Clang and running their tests
 # as an additional testing for Clang.
 if [[ "${runtime_targets_needs_reconfig}" != "" ]]; then
-  echo "--- cmake runtimes C++26"
+  echo "::group::cmake runtimes C++26"
 
   cmake \
     -D LIBCXX_TEST_PARAMS="std=c++26" \
     -D LIBCXXABI_TEST_PARAMS="std=c++26" \
     "${BUILD_DIR}"
 
-  echo "--- ninja runtimes C++26"
+  echo "::endgroup::"
+  echo "::group::ninja runtimes C++26"
 
   ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig}
 
-  echo "--- cmake runtimes clang modules"
+  echo "::endgroup::"
+  echo "::group::cmake runtimes clang modules"
 
   cmake \
     -D LIBCXX_TEST_PARAMS="enable_modules=clang" \
     -D LIBCXXABI_TEST_PARAMS="enable_modules=clang" \
     "${BUILD_DIR}"
 
-  echo "--- ninja runtimes clang modules"
+  echo "::endgroup::"
+  echo "::group::ninja runtimes clang modules"
 
   ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig}
+
+  echo "::endgroup::"
 fi

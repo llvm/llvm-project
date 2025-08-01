@@ -147,6 +147,8 @@ mergeInfos(std::vector<std::unique_ptr<Info>> &Values) {
     return reduce<ConceptInfo>(Values);
   case InfoType::IT_variable:
     return reduce<VarInfo>(Values);
+  case InfoType::IT_friend:
+    return reduce<FriendInfo>(Values);
   case InfoType::IT_default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "unexpected info type");
@@ -247,6 +249,15 @@ void Reference::merge(Reference &&Other) {
     Path = Other.Path;
 }
 
+bool FriendInfo::mergeable(const FriendInfo &Other) {
+  return Ref.USR == Other.Ref.USR && Ref.Name == Other.Ref.Name;
+}
+
+void FriendInfo::merge(FriendInfo &&Other) {
+  assert(mergeable(Other));
+  Ref.merge(std::move(Other.Ref));
+}
+
 void Info::mergeBase(Info &&Other) {
   assert(mergeable(Other));
   if (USR == EmptySID)
@@ -313,6 +324,8 @@ void RecordInfo::merge(RecordInfo &&Other) {
     Parents = std::move(Other.Parents);
   if (VirtualParents.empty())
     VirtualParents = std::move(Other.VirtualParents);
+  if (Friends.empty())
+    Friends = std::move(Other.Friends);
   // Reduce children if necessary.
   reduceChildren(Children.Records, std::move(Other.Children.Records));
   reduceChildren(Children.Functions, std::move(Other.Children.Functions));
@@ -421,6 +434,9 @@ llvm::SmallString<16> Info::extractName() const {
                                  toHex(llvm::toStringRef(USR)));
   case InfoType::IT_variable:
     return llvm::SmallString<16>("@nonymous_variable_" +
+                                 toHex(llvm::toStringRef(USR)));
+  case InfoType::IT_friend:
+    return llvm::SmallString<16>("@nonymous_friend_" +
                                  toHex(llvm::toStringRef(USR)));
   case InfoType::IT_default:
     return llvm::SmallString<16>("@nonymous_" + toHex(llvm::toStringRef(USR)));

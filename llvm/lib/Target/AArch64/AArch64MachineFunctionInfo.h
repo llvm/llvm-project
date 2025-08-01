@@ -504,6 +504,20 @@ public:
     LOHRelated.insert_range(Args);
   }
 
+  size_t
+  clearLinkerOptimizationHints(const SmallPtrSetImpl<MachineInstr *> &MIs) {
+    size_t InitialSize = LOHContainerSet.size();
+    erase_if(LOHContainerSet, [&](const auto &D) {
+      return any_of(D.getArgs(), [&](auto *Arg) { return MIs.contains(Arg); });
+    });
+    // In theory there could be an LOH with one label in MIs and another label
+    // outside MIs, however we don't know if the label outside MIs is used in
+    // any other LOHs, so we can't remove them from LOHRelated. In that case, we
+    // might produce a few extra labels, but it won't break anything.
+    LOHRelated.remove_if([&](auto *MI) { return MIs.contains(MI); });
+    return InitialSize - LOHContainerSet.size();
+  };
+
   SmallVectorImpl<ForwardedRegister> &getForwardedMustTailRegParms() {
     return ForwardedMustTailRegParms;
   }

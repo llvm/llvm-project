@@ -462,21 +462,23 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
 
     startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
 
-    if (isa<CXXDestructorDecl>(funcDecl))
+    if (isa<CXXDestructorDecl>(funcDecl)) {
       getCIRGenModule().errorNYI(bodyRange, "C++ destructor definition");
-    else if (isa<CXXConstructorDecl>(funcDecl))
+    } else if (isa<CXXConstructorDecl>(funcDecl)) {
       emitConstructorBody(args);
-    else if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice &&
-             funcDecl->hasAttr<CUDAGlobalAttr>())
+    } else if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice &&
+               funcDecl->hasAttr<CUDAGlobalAttr>()) {
       getCIRGenModule().errorNYI(bodyRange, "CUDA kernel");
-    else if (isa<CXXMethodDecl>(funcDecl) &&
-             cast<CXXMethodDecl>(funcDecl)->isLambdaStaticInvoker())
+    } else if (isa<CXXMethodDecl>(funcDecl) &&
+               cast<CXXMethodDecl>(funcDecl)->isLambdaStaticInvoker()) {
       getCIRGenModule().errorNYI(bodyRange, "Lambda static invoker");
-    else if (funcDecl->isDefaulted() && isa<CXXMethodDecl>(funcDecl) &&
-             (cast<CXXMethodDecl>(funcDecl)->isCopyAssignmentOperator() ||
-              cast<CXXMethodDecl>(funcDecl)->isMoveAssignmentOperator()))
-      getCIRGenModule().errorNYI(bodyRange, "Default assignment operator");
-    else if (body) {
+    } else if (funcDecl->isDefaulted() && isa<CXXMethodDecl>(funcDecl) &&
+               (cast<CXXMethodDecl>(funcDecl)->isCopyAssignmentOperator() ||
+                cast<CXXMethodDecl>(funcDecl)->isMoveAssignmentOperator())) {
+      // Implicit copy-assignment gets the same special treatment as implicit
+      // copy-constructors.
+      emitImplicitAssignmentOperatorBody(args);
+    } else if (body) {
       if (mlir::failed(emitFunctionBody(body))) {
         fn.erase();
         return nullptr;

@@ -15,11 +15,13 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"
+#include "mlir/Dialect/OpenMP/OpenMPClauseOperands.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -2639,6 +2641,23 @@ LogicalResult SimdOp::verify() {
   if (isComposite() && !isCompositeChildLeaf)
     return emitError()
            << "'omp.composite' attribute present in non-composite wrapper";
+
+  // Firstprivate is not allowed for SIMD in the standard. Check that none of
+  // the private decls are for firstprivate.
+  std::optional<ArrayAttr> privateSyms = getPrivateSyms();
+  if (privateSyms) {
+    for (const Attribute &sym : *privateSyms) {
+      auto symRef = cast<SymbolRefAttr>(sym);
+      omp::PrivateClauseOp privatizer =
+          SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
+              getOperation(), symRef);
+      if (!privatizer)
+        return emitError() << "Cannot find privatizer '" << symRef << "'";
+      if (privatizer.getDataSharingType() ==
+          DataSharingClauseType::FirstPrivate)
+        return emitError() << "FIRSTPRIVATE cannot be used with SIMD";
+    }
+  }
 
   return success();
 }

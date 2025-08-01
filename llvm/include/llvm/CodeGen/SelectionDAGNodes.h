@@ -1497,6 +1497,14 @@ public:
     MMO->refineAlignment(NewMMO);
   }
 
+  void refineRanges(const MachineMemOperand *NewMMO) {
+    // If this node has range metadata that is different than NewMMO, clear the
+    // range metadata.
+    // FIXME: Union the ranges instead?
+    if (getRanges() && getRanges() != NewMMO->getRanges())
+      MMO->clearRanges();
+  }
+
   const SDValue &getChain() const { return getOperand(0); }
 
   const SDValue &getBasePtr() const {
@@ -1928,6 +1936,16 @@ LLVM_ABI bool isOneOrOneSplat(SDValue V, bool AllowUndefs = false);
 /// constant -1 integer (with no undefs).
 /// Does not permit build vector implicit truncation.
 LLVM_ABI bool isAllOnesOrAllOnesSplat(SDValue V, bool AllowUndefs = false);
+
+/// Return true if the value is a constant 1 integer or a splatted vector of a
+/// constant 1 integer (with no undefs).
+/// Does not permit build vector implicit truncation.
+LLVM_ABI bool isOnesOrOnesSplat(SDValue N, bool AllowUndefs = false);
+
+/// Return true if the value is a constant 0 integer or a splatted vector of a
+/// constant 0 integer (with no undefs).
+/// Does not permit build vector implicit truncation.
+LLVM_ABI bool isZeroOrZeroSplat(SDValue N, bool AllowUndefs = false);
 
 /// Return true if \p V is either a integer or FP constant.
 inline bool isIntOrFPConstant(SDValue V) {

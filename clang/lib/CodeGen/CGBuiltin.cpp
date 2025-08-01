@@ -1589,7 +1589,7 @@ BitTest BitTest::decodeBitTestBuiltin(unsigned BuiltinID) {
   case Builtin::BI_interlockedbittestandset:
     return {Set, Sequential, false};
 
-    // X86-specific 64-bit variants.
+    // 64-bit variants.
   case Builtin::BI_bittest64:
     return {TestOnly, Unlocked, true};
   case Builtin::BI_bittestandcomplement64:
@@ -1616,6 +1616,18 @@ BitTest BitTest::decodeBitTestBuiltin(unsigned BuiltinID) {
     return {Reset, Release, false};
   case Builtin::BI_interlockedbittestandreset_nf:
     return {Reset, NoFence, false};
+  case Builtin::BI_interlockedbittestandreset64_acq:
+    return {Reset, Acquire, false};
+  case Builtin::BI_interlockedbittestandreset64_rel:
+    return {Reset, Release, false};
+  case Builtin::BI_interlockedbittestandreset64_nf:
+    return {Reset, NoFence, false};
+  case Builtin::BI_interlockedbittestandset64_acq:
+    return {Set, Acquire, false};
+  case Builtin::BI_interlockedbittestandset64_rel:
+    return {Set, Release, false};
+  case Builtin::BI_interlockedbittestandset64_nf:
+    return {Set, NoFence, false};
   }
   llvm_unreachable("expected only bittest intrinsics");
 }
@@ -5538,7 +5550,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI_bittestandset:
   case Builtin::BI_interlockedbittestandreset:
   case Builtin::BI_interlockedbittestandreset64:
+  case Builtin::BI_interlockedbittestandreset64_acq:
+  case Builtin::BI_interlockedbittestandreset64_rel:
+  case Builtin::BI_interlockedbittestandreset64_nf:
   case Builtin::BI_interlockedbittestandset64:
+  case Builtin::BI_interlockedbittestandset64_acq:
+  case Builtin::BI_interlockedbittestandset64_rel:
+  case Builtin::BI_interlockedbittestandset64_nf:
   case Builtin::BI_interlockedbittestandset:
   case Builtin::BI_interlockedbittestandset_acq:
   case Builtin::BI_interlockedbittestandset_rel:

@@ -608,7 +608,7 @@ def C_UNIMP : RVInst16<(outs), (ins), "c.unimp", "", [], InstFormatOther>,
 // HINT Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZca, HasRVCHints], hasSideEffects = 0, mayLoad = 0,
+let Predicates = [HasStdExtZca], hasSideEffects = 0, mayLoad = 0,
     mayStore = 0 in {
 
 def C_NOP_HINT : RVInst16CI<0b000, 0b01, (outs), (ins simm6nonzero:$imm),
@@ -691,24 +691,24 @@ def C_SRAI64_HINT : RVInst16CB<0b100, 0b01, (outs GPRC:$rd),
   let Inst{12} = 0;
 }
 
-} // Predicates = [HasStdExtZca, HasRVCHints], hasSideEffects = 0, mayLoad = 0,
+} // Predicates = [HasStdExtZca], hasSideEffects = 0, mayLoad = 0,
   // mayStore = 0
 
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZca, HasRVCHints] in {
+let Predicates = [HasStdExtZca] in {
 // Just a different syntax for the c.nop hint: c.addi x0, simm6 vs c.nop simm6.
 def : InstAlias<"c.addi x0, $imm", (C_NOP_HINT simm6nonzero:$imm), 0>;
 }
 
-let Predicates = [HasStdExtC, HasRVCHints, HasStdExtZihintntl] in {
+let Predicates = [HasStdExtC, HasStdExtZihintntl] in {
 def : InstAlias<"c.ntl.p1", (C_ADD_HINT X0, X2)>;
 def : InstAlias<"c.ntl.pall", (C_ADD_HINT X0, X3)>;
 def : InstAlias<"c.ntl.s1", (C_ADD_HINT X0, X4)>;
 def : InstAlias<"c.ntl.all", (C_ADD_HINT X0, X5)>;
-} // Predicates = [HasStdExtC, HasRVCHints, HasStdExtZihintntl]
+} // Predicates = [HasStdExtC, HasStdExtZihintntl]
 
 let EmitPriority = 0 in {
 let Predicates = [HasStdExtZca] in {

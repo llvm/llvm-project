@@ -929,7 +929,7 @@ std::pair<Operation *, Value> sparse_tensor::genCoIteration(
     ivs.push_back(uniIdx);
 
   // Ensures all operands are valid.
-  assert(llvm::all_of(ivs, [](Value v) { return v != nullptr; }));
+  assert(!llvm::is_contained(ivs, nullptr));
   TypeRange types = ValueRange(ivs).getTypes();
   auto whileOp = builder.create<scf::WhileOp>(loc, types, ivs);
 

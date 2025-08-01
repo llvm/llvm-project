@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_FUNCTION fmod
+#define FUNCTION fmod
 #define __CLC_BODY <clc/shared/binary_decl.inc>
 #include <clc/math/gentype.inc>
-#undef __CLC_FUNCTION
+#undef FUNCTION

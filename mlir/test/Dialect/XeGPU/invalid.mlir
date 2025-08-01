@@ -239,7 +239,7 @@ func.func @create_tdesc_vc_5(%src: memref<?xf32>) {
 func.func @create_tdesc_vc_6(%src: memref<?xf16>) {
   %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %1 = xegpu.create_tdesc %src, %0 : memref<?xf16>, vector<4xindex>
-  // expected-error@+1 {{tensor shape[1] to be a multiple of packing factor 2}}
+  // expected-error@+1 {{tensor shape[1] to be a multiple of chunk alignment factor 2}}
           -> !xegpu.tensor_desc<4x3xf16, #xegpu.scatter_tdesc_attr<chunk_size = 3>>
   return
 }

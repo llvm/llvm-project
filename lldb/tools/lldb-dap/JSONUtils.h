@@ -234,6 +234,9 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name);
 ///   "line" - the source file line number as an integer
 ///   "column" - the source file column number as an integer
 ///
+/// \param[in] dap
+///     The DAP session associated with the stopped thread.
+///
 /// \param[in] frame
 ///     The LLDB stack frame to use when populating out the "StackFrame"
 ///     object.
@@ -245,7 +248,7 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name);
 /// \return
 ///     A "StackFrame" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
-llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
+llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
                                    lldb::SBFormat &format);
 
 /// Create a "StackFrame" label object for a LLDB thread.

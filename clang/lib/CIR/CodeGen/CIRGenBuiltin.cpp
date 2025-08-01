@@ -34,6 +34,29 @@ static RValue emitLibraryCall(CIRGenFunction &cgf, const FunctionDecl *fd,
   return cgf.emitCall(e->getCallee()->getType(), callee, e, ReturnValueSlot());
 }
 
+template <typename Op>
+static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
+                               bool poisonZero = false) {
+  assert(!cir::MissingFeatures::builtinCheckKind());
+
+  mlir::Value arg = cgf.emitScalarExpr(e->getArg(0));
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+
+  Op op;
+  if constexpr (std::is_same_v<Op, cir::BitClzOp> ||
+                std::is_same_v<Op, cir::BitCtzOp>)
+    op = builder.create<Op>(cgf.getLoc(e->getSourceRange()), arg, poisonZero);
+  else
+    op = builder.create<Op>(cgf.getLoc(e->getSourceRange()), arg);
+
+  mlir::Value result = op.getResult();
+  mlir::Type exprTy = cgf.convertType(e->getType());
+  if (exprTy != result.getType())
+    result = builder.createIntCast(result, exprTy);
+
+  return RValue::get(result);
+}
+
 RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                        const CallExpr *e,
                                        ReturnValueSlot returnValue) {
@@ -100,6 +123,47 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value complex = builder.createComplexCreate(loc, real, imag);
     return RValue::get(complex);
   }
+
+  case Builtin::BI__builtin_clrsb:
+  case Builtin::BI__builtin_clrsbl:
+  case Builtin::BI__builtin_clrsbll:
+    return emitBuiltinBitOp<cir::BitClrsbOp>(*this, e);
+
+  case Builtin::BI__builtin_ctzs:
+  case Builtin::BI__builtin_ctz:
+  case Builtin::BI__builtin_ctzl:
+  case Builtin::BI__builtin_ctzll:
+  case Builtin::BI__builtin_ctzg:
+    assert(!cir::MissingFeatures::builtinCheckKind());
+    return emitBuiltinBitOp<cir::BitCtzOp>(*this, e, /*poisonZero=*/true);
+
+  case Builtin::BI__builtin_clzs:
+  case Builtin::BI__builtin_clz:
+  case Builtin::BI__builtin_clzl:
+  case Builtin::BI__builtin_clzll:
+  case Builtin::BI__builtin_clzg:
+    assert(!cir::MissingFeatures::builtinCheckKind());
+    return emitBuiltinBitOp<cir::BitClzOp>(*this, e, /*poisonZero=*/true);
+
+  case Builtin::BI__builtin_parity:
+  case Builtin::BI__builtin_parityl:
+  case Builtin::BI__builtin_parityll:
+    return emitBuiltinBitOp<cir::BitParityOp>(*this, e);
+
+  case Builtin::BI__lzcnt16:
+  case Builtin::BI__lzcnt:
+  case Builtin::BI__lzcnt64:
+    assert(!cir::MissingFeatures::builtinCheckKind());
+    return emitBuiltinBitOp<cir::BitClzOp>(*this, e, /*poisonZero=*/false);
+
+  case Builtin::BI__popcnt16:
+  case Builtin::BI__popcnt:
+  case Builtin::BI__popcnt64:
+  case Builtin::BI__builtin_popcount:
+  case Builtin::BI__builtin_popcountl:
+  case Builtin::BI__builtin_popcountll:
+  case Builtin::BI__builtin_popcountg:
+    return emitBuiltinBitOp<cir::BitPopcountOp>(*this, e);
 
   case Builtin::BI__builtin_expect:
   case Builtin::BI__builtin_expect_with_probability: {

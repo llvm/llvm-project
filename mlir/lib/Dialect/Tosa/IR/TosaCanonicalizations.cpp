@@ -344,7 +344,7 @@ LogicalResult SelectOp::canonicalize(SelectOp op, PatternRewriter &rewriter) {
     return failure();
   rewriter.modifyOpInPlace(op, [&]() {
     op.getOperation()->setOperands(
-        {notOp.getInput1(), op.getInput3(), op.getInput2()});
+        {notOp.getInput1(), op.getOnFalse(), op.getOnTrue()});
   });
   return success();
 }
@@ -1510,8 +1510,8 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
 }
 
 OpFoldResult tosa::SelectOp::fold(FoldAdaptor adaptor) {
-  if (getInput2() == getInput3())
-    return getInput2();
+  if (getOnTrue() == getOnFalse())
+    return getOnTrue();
 
   auto predicate =
       llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getInput1());
@@ -1520,8 +1520,8 @@ OpFoldResult tosa::SelectOp::fold(FoldAdaptor adaptor) {
 
   if (!predicate.isSplat())
     return {};
-  return predicate.getSplatValue<APInt>().getBoolValue() ? getInput2()
-                                                         : getInput3();
+  return predicate.getSplatValue<APInt>().getBoolValue() ? getOnTrue()
+                                                         : getOnFalse();
 }
 
 OpFoldResult TileOp::fold(FoldAdaptor adaptor) {

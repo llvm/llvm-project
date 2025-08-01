@@ -195,6 +195,49 @@ TEST(MetadataTest, DeleteInstUsedByDbgRecord) {
   EXPECT_TRUE(isa<UndefValue>(DVRs[0]->getValue(0)));
 }
 
+TEST(MetadataTest, GlobalConstantMetadataUsedByDbgRecord) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    @x = dso_local global i32 0, align 4
+    declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+
+    define i16 @f(i16 %a) !dbg !6 {
+      %b = add i16 %a, 1, !dbg !11
+      call void @llvm.dbg.declare(metadata ptr @x, metadata !9, metadata !DIExpression()), !dbg !11
+      call void @llvm.dbg.value(metadata ptr @x, metadata !9, metadata !DIExpression()), !dbg !11
+      ret i16 0, !dbg !11
+    }
+
+    attributes #0 = { nounwind readnone speculatable willreturn }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "t.ll", directory: "/")
+    !2 = !{}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !{!9}
+    !9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
+    !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
+    !11 = !DILocation(line: 1, column: 1, scope: !6)
+)");
+
+  // Find the global @x
+  Value *V = M->getNamedValue("x");
+
+  // Find the dbg.value
+  auto DVIs = findDbgDeclares(V);
+  auto DVRs = findDVRDeclares(V);
+  auto DVRVs = findDVRValues(V);
+
+  EXPECT_EQ(DVRs[0]->getNumVariableLocationOps(), 1u);
+  EXPECT_TRUE(DVRVs.size() == 1);
+  EXPECT_FALSE(isa<UndefValue>(DVRs[0]->getValue(0)));
+}
+
 TEST(DbgVariableIntrinsic, EmptyMDIsKillLocation) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M = parseIR(Ctx, R"(
@@ -1299,6 +1342,35 @@ TEST(DIBuilder, CompositeTypes) {
   DICompositeType *Enum = DIB.createEnumerationType(
       CU, "MyEnum", F, 0, 8, 8, {}, nullptr, 0, "EnumUniqueIdentifier");
   EXPECT_EQ(Enum->getTag(), dwarf::DW_TAG_enumeration_type);
+}
+
+TEST(DIBuilder, DynamicOffsetAndSize) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+  DIScope *Scope = DISubprogram::getDistinct(
+      Ctx, nullptr, "", "", nullptr, 0, nullptr, 0, nullptr, 0, 0,
+      DINode::FlagZero, DISubprogram::SPFlagZero, nullptr);
+  DIFile *F = DIB.createFile("main.adb", "/");
+
+  DIVariable *Len = DIB.createAutoVariable(Scope, "length", F, 0, nullptr,
+                                           false, DINode::FlagZero, 0);
+
+  DICompositeType *Struct = DIB.createStructType(
+      Scope, "some_record", F, 18, Len, 8, DINode::FlagZero, nullptr, {});
+  EXPECT_EQ(Struct->getTag(), dwarf::DW_TAG_structure_type);
+
+  SmallVector<uint64_t, 4> ops;
+  ops.push_back(llvm::dwarf::DW_OP_push_object_address);
+  DIExpression::appendOffset(ops, 3);
+  ops.push_back(llvm::dwarf::DW_OP_deref);
+  DIExpression *Expr = DIB.createExpression(ops);
+
+  DIDerivedType *Field = DIB.createMemberType(Scope, "field", F, 23, Len, 0,
+                                              Expr, DINode::FlagZero, Struct);
+
+  EXPECT_EQ(Field->getRawOffsetInBits(), Expr);
+  EXPECT_EQ(Field->getRawSizeInBits(), Len);
 }
 
 } // end namespace

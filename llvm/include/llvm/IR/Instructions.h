@@ -3144,12 +3144,12 @@ public:
 
   BasicBlock *getSuccessor(unsigned i) const {
     assert(i < getNumSuccessors() && "Successor # out of range for Branch!");
-    return cast_or_null<BasicBlock>((&Op<-1>() - i)->get());
+    return cast_or_null<BasicBlock>((&Op<-1>() - isConditional() + i)->get());
   }
 
   void setSuccessor(unsigned idx, BasicBlock *NewSucc) {
     assert(idx < getNumSuccessors() && "Successor # out of range for Branch!");
-    *(&Op<-1>() - idx) = NewSucc;
+    *(&Op<-1>() - isConditional() + idx) = NewSucc;
   }
 
   /// Swap the successors of this branch instruction.

@@ -25,8 +25,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
-#include <numeric>
 #include <optional>
 
 using namespace mlir;

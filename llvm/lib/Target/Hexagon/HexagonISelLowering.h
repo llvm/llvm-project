@@ -342,6 +342,11 @@ public:
   SDValue getPICJumpTableRelocBase(SDValue Table, SelectionDAG &DAG)
                                    const override;
 
+  /// Returns true if it is beneficial to convert a load of a constant
+  /// to just the constant itself.
+  bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
+                                         Type *Ty) const override;
+
   bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
                              std::optional<unsigned> ByteOffset) const override;
 

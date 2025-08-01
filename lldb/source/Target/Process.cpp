@@ -4614,7 +4614,7 @@ public:
         m_process(process),
         m_read_file(GetInputFD(), File::eOpenOptionReadOnly, false),
         m_write_file(write_fd, File::eOpenOptionWriteOnly, false) {
-    m_pipe.CreateNew(false);
+    m_pipe.CreateNew();
   }
 
   ~IOHandlerProcessSTDIO() override = default;

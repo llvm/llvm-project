@@ -12,7 +12,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 
@@ -60,7 +59,7 @@ class MCObjectStreamer : public MCStreamer {
   DenseMap<const MCSymbol *, SmallVector<PendingAssignment, 1>>
       pendingAssignments;
 
-  virtual void emitInstToData(const MCInst &Inst, const MCSubtargetInfo&) = 0;
+  virtual void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &);
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitInstructionImpl(const MCInst &Inst, const MCSubtargetInfo &STI);
@@ -126,7 +125,7 @@ public:
 
   /// Emit an instruction to a special fragment, because this instruction
   /// can change its size during relaxation.
-  virtual void emitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &);
+  void emitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &);
 
   void emitBundleAlignMode(Align Alignment) override;
   void emitBundleLock(bool AlignToEnd) override;

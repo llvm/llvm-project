@@ -34,7 +34,8 @@ static std::string MakeComment(StringRef in) {
     }
     out += std::string("/// ") +
            in.substr(LineStart, LineBreak - LineStart).str() + "\n";
-    LineStart = LineBreak + 1;
+    if (LineBreak != std::string::npos)
+      LineStart = LineBreak + 1;
   }
 
   return out;

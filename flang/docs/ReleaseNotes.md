@@ -34,6 +34,8 @@ page](https://llvm.org/releases/).
 
 * -floop-interchange is now recognized by flang.
 * -floop-interchange is enabled by default at -O2 and above.
+* -fveclib=libmvec is supported for AArch64 (same as Flang/x86 and
+  Clang/AArch64) (requires GLIBC 2.40 or newer)
 
 ## Windows Support
 

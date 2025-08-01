@@ -18,3 +18,7 @@ void bad_root_signature_3() {}
 
 [RootSignature("DescriptorTable(), invalid")] // expected-error {{expected end of stream to denote end of parameters, or, another valid parameter of RootSignature}}
 void bad_root_signature_4() {}
+
+// expected-error@+1 {{expected ')' to denote end of parameters, or, another valid parameter of RootConstants}}
+[RootSignature("RootConstants(b0, num32BitConstants = 1, invalid)")]
+void bad_root_signature_5() {}

@@ -20,6 +20,7 @@
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
@@ -545,7 +546,8 @@ Fortran::lower::genCallOpAndResult(
       caller.getProcedureAttrs(builder.getContext());
 
   if (converter.getLoweringOptions().getCUDARuntimeCheck()) {
-    if (caller.getCallDescription().chevrons().empty()) {
+    if (caller.getCallDescription().chevrons().empty() &&
+        !cuf::isCUDADeviceContext(builder.getRegion())) {
       for (auto [oper, arg] :
            llvm::zip(operands, caller.getPassedArguments())) {
         if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(oper.getType())) {

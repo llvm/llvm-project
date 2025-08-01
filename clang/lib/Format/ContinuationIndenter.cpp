@@ -1929,6 +1929,15 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     return;
   }
 
+  const bool EndsInComma = [](const FormatToken *Tok) {
+    if (!Tok)
+      return false;
+    const auto *Prev = Tok->getPreviousNonComment();
+    if (!Prev)
+      return false;
+    return Prev->is(tok::comma);
+  }(Current.MatchingParen);
+
   unsigned NewIndent;
   unsigned LastSpace = CurrentState.LastSpace;
   bool AvoidBinPacking;
@@ -1948,9 +1957,6 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
       NewIndent = CurrentState.LastSpace + Style.ContinuationIndentWidth;
     }
     const FormatToken *NextNonComment = Current.getNextNonComment();
-    bool EndsInComma = Current.MatchingParen &&
-                       Current.MatchingParen->Previous &&
-                       Current.MatchingParen->Previous->is(tok::comma);
     AvoidBinPacking = EndsInComma || Current.is(TT_DictLiteral) ||
                       Style.isProto() || !Style.BinPackArguments ||
                       (NextNonComment && NextNonComment->isOneOf(
@@ -1983,11 +1989,6 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
       NewIndent = std::max(NewIndent, CurrentState.Indent);
       LastSpace = std::max(LastSpace, CurrentState.Indent);
     }
-
-    bool EndsInComma =
-        Current.MatchingParen &&
-        Current.MatchingParen->getPreviousNonComment() &&
-        Current.MatchingParen->getPreviousNonComment()->is(tok::comma);
 
     // If ObjCBinPackProtocolList is unspecified, fall back to BinPackParameters
     // for backwards compatibility.
