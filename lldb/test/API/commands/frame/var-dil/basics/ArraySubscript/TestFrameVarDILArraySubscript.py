@@ -89,7 +89,7 @@ class TestFrameVarDILArraySubscript(TestBase):
         self.expect(
             "frame var '1[2]'",
             error=True,
-            substrs=["Unexpected token"],
+            substrs=["subscripted value is not an array or pointer"],
         )
 
         # Base should not be a pointer to void

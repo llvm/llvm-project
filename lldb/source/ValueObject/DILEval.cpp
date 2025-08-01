@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/ValueObject/DILEval.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/ValueObject/DILAST.h"
@@ -495,6 +497,32 @@ Interpreter::Visit(const BitFieldExtractionNode *node) {
                                                 node->GetLocation());
   }
   return child_valobj_sp;
+}
+
+static CompilerType GetBasicTypeFromCU(std::shared_ptr<StackFrame> ctx,
+                                       lldb::BasicType basic_type) {
+  SymbolContext symbol_context =
+      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
+  auto language = symbol_context.comp_unit->GetLanguage();
+
+  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
+  auto type_system =
+      symbol_context.module_sp->GetTypeSystemForLanguage(language);
+
+  if (type_system)
+    if (auto compiler_type = type_system.get()->GetBasicTypeFromAST(basic_type))
+      return compiler_type;
+
+  return CompilerType();
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const ScalarLiteralNode *node) {
+  CompilerType result_type =
+      GetBasicTypeFromCU(m_exe_ctx_scope, node->GetType());
+  Scalar value = node->GetValue();
+  return ValueObject::CreateValueObjectFromScalar(m_target, value, result_type,
+                                                  "result");
 }
 
 } // namespace lldb_private::dil

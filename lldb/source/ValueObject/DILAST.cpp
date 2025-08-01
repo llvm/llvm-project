@@ -37,4 +37,9 @@ BitFieldExtractionNode::Accept(Visitor *v) const {
   return v->Visit(this);
 }
 
+llvm::Expected<lldb::ValueObjectSP>
+ScalarLiteralNode::Accept(Visitor *v) const {
+  return v->Visit(this);
+}
+
 } // namespace lldb_private::dil

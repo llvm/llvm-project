@@ -54,6 +54,8 @@ private:
   Visit(const ArraySubscriptNode *node) override;
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const BitFieldExtractionNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP>
+  Visit(const ScalarLiteralNode *node) override;
 
   // Used by the interpreter to create objects, perform casts, etc.
   lldb::TargetSP m_target;

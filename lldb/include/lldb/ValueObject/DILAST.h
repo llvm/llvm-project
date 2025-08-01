@@ -23,6 +23,7 @@ enum class NodeKind {
   eErrorNode,
   eIdentifierNode,
   eMemberOfNode,
+  eScalarLiteralNode,
   eUnaryOpNode,
 };
 
@@ -178,6 +179,26 @@ private:
   int64_t m_last_index;
 };
 
+class ScalarLiteralNode : public ASTNode {
+public:
+  ScalarLiteralNode(uint32_t location, lldb::BasicType type, Scalar value)
+      : ASTNode(location, NodeKind::eScalarLiteralNode), m_type(type),
+        m_value(value) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  lldb::BasicType GetType() const { return m_type; }
+  Scalar GetValue() const & { return m_value; }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eScalarLiteralNode;
+  }
+
+private:
+  lldb::BasicType m_type;
+  Scalar m_value;
+};
+
 /// This class contains one Visit method for each specialized type of
 /// DIL AST node. The Visit methods are used to dispatch a DIL AST node to
 /// the correct function in the DIL expression evaluator for evaluating that
@@ -195,6 +216,8 @@ public:
   Visit(const ArraySubscriptNode *node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const BitFieldExtractionNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const ScalarLiteralNode *node) = 0;
 };
 
 } // namespace lldb_private::dil
