@@ -29,12 +29,6 @@
 #include <utility>
 #include <vector>
 
-#ifdef _AIX
-#define SYMBOLIZE_AIX 1
-#else
-#define SYMBOLIZE_AIX 0
-#endif
-
 namespace llvm {
 namespace object {
 class ELFObjectFileBase;
@@ -210,9 +204,9 @@ private:
 
   /// Return a pointer to object file at specified path, for a specified
   /// architecture that is present inside an archive file
-  Expected<ObjectFile *>
-  getOrCreateObjectFromArchive(StringRef ArchivePath, StringRef MemberName,
-                               StringRef ArchName);
+  Expected<ObjectFile *> getOrCreateObjectFromArchive(StringRef ArchivePath,
+                                                      StringRef MemberName,
+                                                      StringRef ArchName);
 
   /// Update the LRU cache order when a binary is accessed.
   void recordAccess(CachedBinary &Bin);
@@ -252,7 +246,7 @@ private:
 
   std::map<ArchiveCacheKey, std::unique_ptr<ObjectFile>>
       ObjectForArchivePathAndArch;
-  
+
   Options Opts;
 
   std::unique_ptr<BuildIDFetcher> BIDFetcher;

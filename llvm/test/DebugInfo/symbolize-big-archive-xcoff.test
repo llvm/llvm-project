@@ -7,25 +7,12 @@
 // Create archive with same-named members using different modes
 // RUN: rm -f %t.a
 // RUN: cp %t-32.o %t.o
-// RUN: if [ "$(uname)" = "AIX" ]; then \
-          llvm-ar -X32 crv %t.a %t.o; \
-        else \
-          llvm-ar crv %t.a %t.o; \
-        fi
+// RUN: llvm-ar %if system-aix %{-X32%} crv %t.a %t.o
 // RUN: cp %t-64.o %t.o
-// RUN: if [ "$(uname)" = "AIX" ]; then \
-          llvm-ar -X64 rv %t.a %t.o; \
-        else \
-          llvm-ar qv %t.a %t.o; \
-        fi
-
+// RUN: llvm-ar %if system-aix %{-X64 rv%} %else %{qv%} %t.a %t.o
 
 // Verify archive contains two members with same name
-// RUN: if [ "$(uname)" = "AIX" ]; then \
-          llvm-ar tv -X32_64 %t.a | FileCheck %s --check-prefix=CHECK-ARCHIVE; \
-        else \
-          llvm-ar tv %t.a | FileCheck %s --check-prefix=CHECK-ARCHIVE; \
-        fi
+// RUN: llvm-ar tv %if system-aix %{-X32_64%} %t.a | FileCheck %s --check-prefix=CHECK-ARCHIVE
 // CHECK-ARCHIVE: {{.*}}symbolize-big-archive-xcoff.test.tmp.o{{$}}
 // CHECK-ARCHIVE: {{.*}}symbolize-big-archive-xcoff.test.tmp.o{{$}}
 
