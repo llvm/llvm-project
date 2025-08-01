@@ -7625,7 +7625,23 @@ void SIInstrInfo::moveToVALU(SIInstrWorklist &Worklist,
     if (Entry.second == true)
       Entry.first->eraseFromParent();
 }
-
+void SIInstrInfo::getReadFirstLaneFromCopy(MachineRegisterInfo &MRI,
+                                           Register DstReg,
+                                           MachineInstr &Inst) const {
+  if (MRI.constrainRegClass(DstReg, &AMDGPU::SReg_32_XM0RegClass)) {
+    BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
+            get(AMDGPU::V_READFIRSTLANE_B32), DstReg)
+        .add(Inst.getOperand(1));
+  } else {
+    Register NewDst = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+    BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
+            get(AMDGPU::V_READFIRSTLANE_B32), NewDst)
+        .add(Inst.getOperand(1));
+    BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(), get(AMDGPU::COPY),
+            DstReg)
+        .addReg(NewDst);
+  }
+}
 void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
                                  MachineDominatorTree *MDT,
                                  MachineInstr &Inst) const {
@@ -8104,6 +8120,11 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
 
     if (Inst.isCopy() && DstReg.isPhysical() &&
         RI.isVGPR(MRI, Inst.getOperand(1).getReg())) {
+      if (DstReg == AMDGPU::M0) {
+        getReadFirstLaneFromCopy(MRI, DstReg, Inst);
+        Worklist.V2PhySCopiesToErase.try_emplace(&Inst, true);
+        return;
+      }
       const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
       Register SrcReg = Inst.getOperand(1).getReg();
       MachineBasicBlock::iterator I = Inst.getIterator();
@@ -8122,33 +8143,19 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
               V2PhysSCopyInfo &V2SCopyInfo = Worklist.WaterFalls[UseMI];
               V2SCopyInfo.MOs.push_back(MO);
               V2SCopyInfo.SGPRs.push_back(DstReg);
-              Worklist.V2PhySCopiesToErase[&Inst] = true;
+              Worklist.V2PhySCopiesToErase.try_emplace(&Inst, true);
             }
           }
-        } else if ((I->getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG &&
-                    I->getOperand(0).isReg() &&
-                    I->getOperand(0).getReg() == DstReg) ||
-                   DstReg == AMDGPU::M0) {
+        } else if (I->getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG &&
+                   I->getOperand(0).isReg() &&
+                   I->getOperand(0).getReg() == DstReg) {
           // If it's a copy of a VGPR to a physical SGPR, insert a
           // V_READFIRSTLANE and hope for the best.
           // TODO: Only works for 32 bit registers.
-          if (MRI.constrainRegClass(DstReg, &AMDGPU::SReg_32_XM0RegClass)) {
-            BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
-                    get(AMDGPU::V_READFIRSTLANE_B32), DstReg)
-                .add(Inst.getOperand(1));
-          } else {
-            Register NewDst =
-                MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
-            BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
-                    get(AMDGPU::V_READFIRSTLANE_B32), NewDst)
-                .add(Inst.getOperand(1));
-            BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
-                    get(AMDGPU::COPY), DstReg)
-                .addReg(NewDst);
-          }
-          Worklist.V2PhySCopiesToErase[&Inst] = true;
+          getReadFirstLaneFromCopy(MRI, DstReg, Inst);
+          Worklist.V2PhySCopiesToErase.try_emplace(&Inst, true);
         } else if (I->readsRegister(DstReg, TRI))
-          // COPY can be erased if other type of inst uses it.
+          // COPY cannot be erased if other type of inst uses it.
           Worklist.V2PhySCopiesToErase[&Inst] = false;
         if (I->findRegisterDefOperand(DstReg, TRI))
           break;
