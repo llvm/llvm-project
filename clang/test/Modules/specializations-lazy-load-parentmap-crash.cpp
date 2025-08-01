@@ -10,7 +10,7 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-module-interface -o %t/mod_a.pcm %t/mod_a.cppm -fmodule-file=mod_a:part2=%t/mod_a-part2.pcm -fmodule-file=mod_a:part1=%t/mod_a-part1.pcm
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-module-interface -o %t/mod_b.pcm %t/mod_b.cppm -fmodule-file=mod_a:part2=%t/mod_a-part2.pcm -fmodule-file=mod_a=%t/mod_a.pcm -fmodule-file=mod_a:part1=%t/mod_a-part1.pcm
 
-// Trigger the construction of the parent map (which is necessary to trigger the bug this regression test is for) using ArrayBoundV2 checker using a sanitized build:
+// Trigger the construction of the parent map (which is necessary to trigger the bug this regression test is for) using a sanitized build:
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fsanitize=unsigned-integer-overflow -fsanitize-undefined-ignore-overflow-pattern=all -emit-llvm -o %t/ignored %t/test-sanitized-build.cpp -fmodule-file=mod_a:part2=%t/mod_a-part2.pcm -fmodule-file=mod_a=%t/mod_a.pcm -fmodule-file=mod_a:part1=%t/mod_a-part1.pcm -fmodule-file=mod_b=%t/mod_b.pcm
 
 //--- mod_a-part1.cppm
