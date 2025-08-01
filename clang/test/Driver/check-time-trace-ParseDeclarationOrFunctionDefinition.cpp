@@ -5,7 +5,7 @@
 // RUN:   | FileCheck %s
 
 // CHECK-DAG: "name": "ParseDeclarationOrFunctionDefinition"
-// CHECK-DAG: "detail": "{{.*}}check-time-trace-ParseDeclarationOrFunctionDefinition.cpp:17:1"
+// CHECK-DAG: "detail": "{{.*}}check-time-trace-ParseDeclarationOrFunctionDefinition.cpp:16:1"
 // CHECK-DAG: "name": "ParseFunctionDefinition"
 // CHECK-DAG: "detail": "foo"
 // CHECK-DAG: "name": "ParseFunctionDefinition"
