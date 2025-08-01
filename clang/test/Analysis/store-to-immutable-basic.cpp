@@ -46,7 +46,7 @@ void test_ref_to_const_data() {
 struct MultipleLayerStruct {
   MultipleLayerStruct();
   const int data; // expected-note {{Memory region is declared as immutable here}}
-  const int buf[10];
+  const int buf[10]; // expected-note {{Enclosing memory region is declared as immutable here}}
 };
 
 MultipleLayerStruct MLS[10];
@@ -62,12 +62,11 @@ void test_multiple_layer_struct_array_array_member() {
 }
 
 struct StructWithNonConstMember {
-  int x; // expected-note {{Memory region is declared as immutable here}}
-  // FIXME: this note should really appear on the line where the const struct is declared.
+  int x;
 };
 
-const StructWithNonConstMember SWNCM{0};
+const StructWithNonConstMember SWNCM{0}; // expected-note {{Enclosing memory region is declared as immutable here}}
 
 void test_write_to_non_const_member_of_const_struct() {
-  *(int*)&SWNCM.x = 100; // expected-warning {{Trying to write to immutable memory}}
+  *(int*)&SWNCM.x = 100; // expected-warning {{Trying to write to immutable memory in global read-only storage}}
 }

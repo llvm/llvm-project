@@ -27,15 +27,10 @@ class StoreToImmutableChecker : public Checker<check::Bind> {
 
 public:
   void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &C) const;
-
-private:
-  bool isInitializationContext(const Stmt *S, CheckerContext &C) const;
-  bool isEffectivelyConstRegion(const MemRegion *MR, CheckerContext &C) const;
 };
 } // end anonymous namespace
 
-bool StoreToImmutableChecker::isInitializationContext(const Stmt *S,
-                                                      CheckerContext &C) const {
+static bool isInitializationContext(const Stmt *S, CheckerContext &C) {
   // Check if this is a DeclStmt (variable declaration)
   if (isa<DeclStmt>(S))
     return true;
@@ -76,11 +71,8 @@ bool StoreToImmutableChecker::isInitializationContext(const Stmt *S,
   return ConstructExp && ConstructExp->isElidable();
 }
 
-static bool isEffectivelyConstRegionAux(const MemRegion *MR,
-                                        CheckerContext &C) {
-  // Check if the region is in the global immutable space
-  const MemSpaceRegion *MS = MR->getMemorySpace(C.getState());
-  if (isa<GlobalImmutableSpaceRegion>(MS))
+static bool isEffectivelyConstRegion(const MemRegion *MR, CheckerContext &C) {
+  if (isa<GlobalImmutableSpaceRegion>(MR))
     return true;
 
   // Check if this is a TypedRegion with a const-qualified type
@@ -99,22 +91,37 @@ static bool isEffectivelyConstRegionAux(const MemRegion *MR,
       return true;
   }
 
-  // NOTE: The only kind of region that is not checked by the above branches is
-  // AllocaRegion. We do not need to check AllocaRegion, as it models untyped
-  // memory, that is allocated on the stack.
+  // NOTE: The above branches do not cover AllocaRegion. We do not need to check
+  // AllocaRegion, as it models untyped memory, that is allocated on the stack.
 
   return false;
 }
 
-bool StoreToImmutableChecker::isEffectivelyConstRegion(
-    const MemRegion *MR, CheckerContext &C) const {
+static const MemRegion *getInnermostConstRegion(const MemRegion *MR,
+                                                CheckerContext &C) {
   while (true) {
-    if (isEffectivelyConstRegionAux(MR, C))
-      return true;
+    if (isEffectivelyConstRegion(MR, C))
+      return MR;
     if (auto *SR = dyn_cast<SubRegion>(MR))
       MR = SR->getSuperRegion();
     else
-      return false;
+      return nullptr;
+  }
+}
+
+static const DeclRegion *
+getInnermostEnclosingConstDeclRegion(const MemRegion *MR, CheckerContext &C) {
+  while (true) {
+    if (const auto *DR = dyn_cast<DeclRegion>(MR)) {
+      const ValueDecl *D = DR->getDecl();
+      QualType DeclaredType = D->getType();
+      if (DeclaredType.isConstQualified())
+        return DR;
+    }
+    if (auto *SR = dyn_cast<SubRegion>(MR))
+      MR = SR->getSuperRegion();
+    else
+      return nullptr;
   }
 }
 
@@ -132,25 +139,36 @@ void StoreToImmutableChecker::checkBind(SVal Loc, SVal Val, const Stmt *S,
   if (isInitializationContext(S, C))
     return;
 
+  // Check if the region is in the global immutable space
+  const MemSpaceRegion *MS = MR->getMemorySpace(C.getState());
+  const bool IsGlobalImmutableSpace = isa<GlobalImmutableSpaceRegion>(MS);
   // Check if the region corresponds to a const variable
-  if (!isEffectivelyConstRegion(MR, C))
+  const MemRegion *InnermostConstRegion = getInnermostConstRegion(MR, C);
+  if (!IsGlobalImmutableSpace && !InnermostConstRegion)
     return;
+
+  SmallString<64> WarningMessage{"Trying to write to immutable memory"};
+  if (IsGlobalImmutableSpace)
+    WarningMessage += " in global read-only storage";
 
   // Generate the bug report
   ExplodedNode *N = C.generateNonFatalErrorNode();
   if (!N)
     return;
 
-  constexpr llvm::StringLiteral Msg = "Trying to write to immutable memory.";
-
-  auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
+  auto R = std::make_unique<PathSensitiveBugReport>(BT, WarningMessage, N);
   R->addRange(S->getSourceRange());
 
-  // If the location that is being written to has a declaration, place a note.
-  if (const DeclRegion *DR = dyn_cast<DeclRegion>(MR)) {
-    R->addNote(
-        "Memory region is declared as immutable here",
-        PathDiagnosticLocation::create(DR->getDecl(), C.getSourceManager()));
+  // Generate a note if the location that is being written to has a
+  // declaration or if it is a subregion of a const region with a declaration.
+  const DeclRegion *DR =
+      getInnermostEnclosingConstDeclRegion(InnermostConstRegion, C);
+  if (DR) {
+    const char *NoteMessage =
+        (DR != MR) ? "Enclosing memory region is declared as immutable here"
+                   : "Memory region is declared as immutable here";
+    R->addNote(NoteMessage, PathDiagnosticLocation::create(
+                                DR->getDecl(), C.getSourceManager()));
   }
 
   // For this checker, we are only interested in the value being written, no

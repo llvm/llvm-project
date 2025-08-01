@@ -5,14 +5,14 @@
 const int tentative_global_const; // expected-note {{Memory region is declared as immutable here}}
 
 void test_direct_write_to_tentative_const_global() {
-  *(int*)&tentative_global_const = 100; // expected-warning {{Trying to write to immutable memory}}
+  *(int*)&tentative_global_const = 100; // expected-warning {{Trying to write to immutable memory in global read-only storage}}
 }
 
 const int global_const = 42; // expected-note {{Memory region is declared as immutable here}}
 
 void test_direct_write_to_const_global() {
   // This should trigger a warning about writing to immutable memory
-  *(int*)&global_const = 100; // expected-warning {{Trying to write to immutable memory}}
+  *(int*)&global_const = 100; // expected-warning {{Trying to write to immutable memory in global read-only storage}}
 }
 
 void test_write_through_const_pointer() {
@@ -22,7 +22,7 @@ void test_write_through_const_pointer() {
 }
 
 void test_write_to_const_array() {
-  const int arr[5] = {1, 2, 3, 4, 5};
+  const int arr[5] = {1, 2, 3, 4, 5}; // expected-note {{Enclosing memory region is declared as immutable here}}
   int *ptr = (int*)arr;
   ptr[0] = 10; // expected-warning {{Trying to write to immutable memory}}
 }
@@ -38,19 +38,20 @@ void test_write_to_const_struct_member() {
   *ptr = 10; // expected-warning {{Trying to write to immutable memory}}
 }
 
-const int global_array[3] = {1, 2, 3};
+const int global_array[3] = {1, 2, 3}; // expected-note {{Enclosing memory region is declared as immutable here}}
 
 void test_write_to_const_global_array() {
   int *ptr = (int*)global_array;
-  ptr[0] = 10; // expected-warning {{Trying to write to immutable memory}}
+  ptr[0] = 10; // expected-warning {{Trying to write to immutable memory in global read-only storage}}
 }
 
 const struct TestStruct global_struct = {1, 2};
 
 void test_write_to_const_global_struct() {
   int *ptr = (int*)&global_struct.x;
-  *ptr = 10; // expected-warning {{Trying to write to immutable memory}}
+  *ptr = 10; // expected-warning {{Trying to write to immutable memory in global read-only storage}}
 }
+
 
 void test_write_to_const_param(const int param) { // expected-note {{Memory region is declared as immutable here}}
   *(int*)&param = 100; // expected-warning {{Trying to write to immutable memory}}
