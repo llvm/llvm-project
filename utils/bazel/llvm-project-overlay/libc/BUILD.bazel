@@ -2301,6 +2301,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_atan2f128",
+    hdrs = ["src/__support/math/atan2f128.h"],
+    deps = [
+        ":__support_math_atan_utils",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_dyadic_float",
+        ":__support_fputil_nearest_integer",
+        ":__support_integer_literals",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_uint128",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_atanf",
     hdrs = ["src/__support/math/atanf.h"],
     deps = [
@@ -2963,6 +2978,13 @@ libc_math_function(
     name = "atan2f",
     additional_deps = [
         ":__support_math_atan2f",
+    ],
+)
+
+libc_math_function(
+    name = "atan2f128",
+    additional_deps = [
+        ":__support_math_atan2f128",
     ],
 )
 
