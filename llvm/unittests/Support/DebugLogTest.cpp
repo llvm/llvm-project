@@ -121,7 +121,7 @@ TEST(DebugLogTest, StreamPrefix) {
     EXPECT_EQ(os.str(), expected);
   }
   // After destructors, there was a pending newline for stream B.
-  EXPECT_EQ(os.str(), expected + "\nPrefixB \n");
+  EXPECT_EQ(os.str(), expected + "PrefixB ");
 }
 #else
 TEST(DebugLogTest, Basic) {

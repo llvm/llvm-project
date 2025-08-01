@@ -20,6 +20,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -1129,8 +1130,13 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   /// verification.
   SmallPtrSet<Operation *, 1> pendingRootUpdates;
 
+  /// A raw output stream used to prefix the debug log.
+  llvm::impl::raw_ldbg_ostream os{(Twine("[") + DEBUG_TYPE + "] ").str(),
+                                  llvm::dbgs(), /*HasPendingNewline=*/false};
+
   /// A logger used to emit diagnostics during the conversion process.
-  llvm::ScopedPrinter logger{llvm::dbgs()};
+  llvm::ScopedPrinter logger{os};
+  std::string logPrefix;
 #endif
 };
 } // namespace detail

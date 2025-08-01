@@ -13,7 +13,7 @@
 
 #include "mlir/Rewrite/PatternApplicator.h"
 #include "ByteCode.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 
 #ifndef NDEBUG
 #include "llvm/ADT/ScopeExit.h"
@@ -51,9 +51,7 @@ static Operation *getDumpRootOp(Operation *op) {
   return op;
 }
 static void logSucessfulPatternApplication(Operation *op) {
-  llvm::dbgs() << "// *** IR Dump After Pattern Application ***\n";
-  op->dump();
-  llvm::dbgs() << "\n\n";
+  LDBG(2) << "// *** IR Dump After Pattern Application ***\n" << *op << "\n";
 }
 #endif
 
@@ -208,8 +206,8 @@ LogicalResult PatternApplicator::matchAndRewrite(
             result =
                 bytecode->rewrite(rewriter, *pdlMatch, *mutableByteCodeState);
           } else {
-            LLVM_DEBUG(llvm::dbgs() << "Trying to match \""
-                                    << bestPattern->getDebugName() << "\"\n");
+            LDBG() << "Trying to match \"" << bestPattern->getDebugName()
+                   << "\"";
             const auto *pattern =
                 static_cast<const RewritePattern *>(bestPattern);
 
@@ -223,9 +221,8 @@ LogicalResult PatternApplicator::matchAndRewrite(
                 [&] { rewriter.setListener(oldListener); });
 #endif
             result = pattern->matchAndRewrite(op, rewriter);
-            LLVM_DEBUG(llvm::dbgs()
-                       << "\"" << bestPattern->getDebugName() << "\" result "
-                       << succeeded(result) << "\n");
+            LDBG() << " -> matchAndRewrite "
+                   << (succeeded(result) ? "successful" : "failed");
           }
 
           // Process the result of the pattern application.
