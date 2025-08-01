@@ -16730,7 +16730,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
 
   // If we have frozen and unfrozen users of N0, update so everything uses N.
   if (!N0.isUndef() && !N0.hasOneUse()) {
-    SDValue FrozenN0 = SDValue(N, 0);
+    SDValue FrozenN0(N, 0);
     DAG.ReplaceAllUsesOfValueWith(N0, FrozenN0);
     // ReplaceAllUsesOfValueWith will have also updated the use in N, thus
     // creating a cycle in a DAG. Let's undo that by mutating the freeze.
