@@ -721,8 +721,8 @@ static const Expr *getSimpleArrayDecayOperand(const Expr *e) {
 
 static cir::IntAttr getConstantIndexOrNull(mlir::Value idx) {
   // TODO(cir): should we consider using MLIRs IndexType instead of IntegerAttr?
-  if (auto constantOp = dyn_cast<cir::ConstantOp>(idx.getDefiningOp()))
-    return mlir::dyn_cast<cir::IntAttr>(constantOp.getValue());
+  if (auto constantOp = idx.getDefiningOp<cir::ConstantOp>())
+    return constantOp.getValueAttr<cir::IntAttr>();
   return {};
 }
 
@@ -730,8 +730,7 @@ static CharUnits getArrayElementAlign(CharUnits arrayAlign, mlir::Value idx,
                                       CharUnits eltSize) {
   // If we have a constant index, we can use the exact offset of the
   // element we're accessing.
-  const cir::IntAttr constantIdx = getConstantIndexOrNull(idx);
-  if (constantIdx) {
+  if (const cir::IntAttr constantIdx = getConstantIndexOrNull(idx)) {
     const CharUnits offset = constantIdx.getValue().getZExtValue() * eltSize;
     return arrayAlign.alignmentAtOffset(offset);
   }

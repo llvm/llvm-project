@@ -349,12 +349,16 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   // doesn't happen, but it's not clear that it's worth it.
 
   // Optimize for a constant count.
-  auto constantCount = dyn_cast<cir::ConstantOp>(numElements.getDefiningOp());
-  if (constantCount) {
-    auto constIntAttr = mlir::dyn_cast<cir::IntAttr>(constantCount.getValue());
-    // Just skip out if the constant count is zero.
-    if (constIntAttr && constIntAttr.getUInt() == 0)
-      return;
+  if (auto constantCount = numElements.getDefiningOp<cir::ConstantOp>()) {
+    if (auto constIntAttr = constantCount.getValueAttr<cir::IntAttr>()) {
+      // Just skip out if the constant count is zero.
+      if (constIntAttr.getUInt() == 0)
+        return;
+      // Otherwise, emit the check.
+    }
+
+    if (constantCount.use_empty())
+      constantCount.erase();
   } else {
     // Otherwise, emit the check.
     cgm.errorNYI(e->getSourceRange(), "dynamic-length array expression");
@@ -417,9 +421,6 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
           builder.create<cir::YieldOp>(loc);
         });
   }
-
-  if (constantCount.use_empty())
-    constantCount.erase();
 }
 
 void CIRGenFunction::emitDelegateCXXConstructorCall(
