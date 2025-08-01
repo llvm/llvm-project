@@ -8,7 +8,7 @@
 // RANGE:{
 // RANGE-NEXT:"required_ranges": [
 // RANGE-NEXT:  {
-// RANGE-NEXT:    "file": "{{.+}}/foo.cppm",
+// RANGE-NEXT:    "file": "{{.+}}foo.cppm",
 // RANGE-NEXT:    "range": [
 // RANGE-NEXT:      {
 // RANGE-NEXT:        "from": {
@@ -112,6 +112,6 @@ export namespace whole { // line 8
 import foo;
 
 int main() {
-  piecemeal::used(4);  // only of the functions used from each namespace.
+  piecemeal::used(4);  // only one of the functions used from each namespace.
   whole::used(4);
 }
