@@ -1281,6 +1281,7 @@ cc_library(
         ":AnalysisFpExc",
         ":BinaryFormat",
         ":Core",
+        ":FrontendHLSL",
         ":Object",
         ":ProfileData",
         ":Support",

@@ -2332,7 +2332,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   assert(sectionsConstruct && "Missing additional parsing information");
 
   const auto &sectionBlocks =
-      std::get<parser::OmpSectionBlocks>(sectionsConstruct->t);
+      std::get<std::list<parser::OpenMPConstruct>>(sectionsConstruct->t);
   mlir::omp::SectionsOperands clauseOps;
   llvm::SmallVector<const semantics::Symbol *> reductionSyms;
   genSectionsClauses(converter, semaCtx, item->clauses, loc, clauseOps,
@@ -2385,7 +2385,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   // because we need to run genReductionVars on each omp.section so that the
   // reduction variable gets mapped to the private version
   for (auto [construct, nestedEval] :
-       llvm::zip(sectionBlocks.v, eval.getNestedEvaluations())) {
+       llvm::zip(sectionBlocks, eval.getNestedEvaluations())) {
     const auto *sectionConstruct =
         std::get_if<parser::OpenMPSectionConstruct>(&construct.u);
     if (!sectionConstruct) {

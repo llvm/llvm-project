@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_WASM_PROCESSWASM_H
 
 #include "Plugins/Process/gdb-remote/ProcessGDBRemote.h"
+#include "Utility/WasmVirtualRegisters.h"
 
 namespace lldb_private {
 namespace wasm {
@@ -71,12 +72,19 @@ public:
   /// Retrieve the current call stack from the WebAssembly remote process.
   llvm::Expected<std::vector<lldb::addr_t>> GetWasmCallStack(lldb::tid_t tid);
 
+  /// Query the value of a WebAssembly variable from the WebAssembly
+  /// remote process.
+  llvm::Expected<lldb::DataBufferSP>
+  GetWasmVariable(WasmVirtualRegisterKinds kind, int frame_index, int index);
+
 protected:
   std::shared_ptr<process_gdb_remote::ThreadGDBRemote>
   CreateThread(lldb::tid_t tid) override;
 
 private:
   friend class UnwindWasm;
+  friend class ThreadWasm;
+
   process_gdb_remote::GDBRemoteDynamicRegisterInfoSP &GetRegisterInfo() {
     return m_register_info_sp;
   }

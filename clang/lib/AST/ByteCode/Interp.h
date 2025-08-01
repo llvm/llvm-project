@@ -2682,6 +2682,14 @@ static inline bool CastFixedPointIntegral(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+static inline bool FnPtrCast(InterpState &S, CodePtr OpPC) {
+  const SourceInfo &E = S.Current->getSource(OpPC);
+  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
+      << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
+      << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+  return true;
+}
+
 static inline bool PtrPtrCast(InterpState &S, CodePtr OpPC, bool SrcIsVoidPtr) {
   const auto &Ptr = S.Stk.peek<Pointer>();
 

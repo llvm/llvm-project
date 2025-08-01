@@ -91,6 +91,10 @@ inline bind_ty<const SCEVUnknown> m_SCEVUnknown(const SCEVUnknown *&V) {
   return V;
 }
 
+inline bind_ty<const SCEVAddExpr> m_scev_Add(const SCEVAddExpr *&V) {
+  return V;
+}
+
 /// Match a specified const SCEV *.
 struct specificscev_ty {
   const SCEV *Expr;

@@ -520,7 +520,7 @@ void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
   llvm_unreachable("bad evaluation kind");
 }
 
-void CIRGenFunction::emitDecl(const Decl &d) {
+void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
   switch (d.getKind()) {
   case Decl::BuiltinTemplate:
   case Decl::TranslationUnit:
@@ -608,11 +608,14 @@ void CIRGenFunction::emitDecl(const Decl &d) {
   case Decl::UsingDirective: // using namespace X; [C++]
     assert(!cir::MissingFeatures::generateDebugInfo());
     return;
-  case Decl::Var: {
+  case Decl::Var:
+  case Decl::Decomposition: {
     const VarDecl &vd = cast<VarDecl>(d);
     assert(vd.isLocalVarDecl() &&
            "Should not see file-scope variables inside a function!");
     emitVarDecl(vd);
+    if (evaluateConditionDecl)
+      maybeEmitDeferredVarDeclInit(&vd);
     return;
   }
   case Decl::OpenACCDeclare:
@@ -632,7 +635,6 @@ void CIRGenFunction::emitDecl(const Decl &d) {
   case Decl::ImplicitConceptSpecialization:
   case Decl::TopLevelStmt:
   case Decl::UsingPack:
-  case Decl::Decomposition: // This could be moved to join Decl::Var
   case Decl::OMPDeclareReduction:
   case Decl::OMPDeclareMapper:
     cgm.errorNYI(d.getSourceRange(),
@@ -796,4 +798,12 @@ void CIRGenFunction::emitAutoVarTypeCleanup(
 
   assert(!cir::MissingFeatures::ehCleanupFlags());
   ehStack.pushCleanup<DestroyObject>(cleanupKind, addr, type, destroyer);
+}
+
+void CIRGenFunction::maybeEmitDeferredVarDeclInit(const VarDecl *vd) {
+  if (auto *dd = dyn_cast_if_present<DecompositionDecl>(vd)) {
+    for (auto *b : dd->flat_bindings())
+      if (auto *hd = b->getHoldingVar())
+        emitVarDecl(*hd);
+  }
 }
