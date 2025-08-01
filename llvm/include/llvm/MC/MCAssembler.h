@@ -209,7 +209,7 @@ public:
 
   LLVM_ABI bool registerSection(MCSection &Section);
   LLVM_ABI bool registerSymbol(const MCSymbol &Symbol);
-  void addRelocDirective(RelocDirective RD);
+  LLVM_ABI void addRelocDirective(RelocDirective RD);
 
   LLVM_ABI void reportError(SMLoc L, const Twine &Msg) const;
   // Record pending errors during layout iteration, as they may go away once the

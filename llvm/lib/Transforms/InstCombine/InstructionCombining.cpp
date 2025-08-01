@@ -1994,6 +1994,8 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
       }
       Clone = InsertNewInstBefore(Clone, OpBB->getTerminator()->getIterator());
       Clones.insert({OpBB, Clone});
+      // We may have speculated the instruction.
+      Clone->dropUBImplyingAttrsAndMetadata();
     }
 
     NewPhiValues[OpIndex] = Clone;
@@ -2777,6 +2779,12 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
     Indices.append(GEP.idx_begin()+1, GEP.idx_end());
   }
 
+  // Don't create GEPs with more than one variable index.
+  unsigned NumVarIndices =
+      count_if(Indices, [](Value *Idx) { return !isa<Constant>(Idx); });
+  if (NumVarIndices > 1)
+    return nullptr;
+
   if (!Indices.empty())
     return replaceInstUsesWith(
         GEP, Builder.CreateGEP(
@@ -3176,7 +3184,16 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       // If we are using a wider index than needed for this platform, shrink
       // it to what we need.  If narrower, sign-extend it to what we need.
       // This explicit cast can make subsequent optimizations more obvious.
-      *I = Builder.CreateIntCast(*I, NewIndexType, true);
+      if (IndexTy->getScalarSizeInBits() <
+          NewIndexType->getScalarSizeInBits()) {
+        if (GEP.hasNoUnsignedWrap() && GEP.hasNoUnsignedSignedWrap())
+          *I = Builder.CreateZExt(*I, NewIndexType, "", /*IsNonNeg=*/true);
+        else
+          *I = Builder.CreateSExt(*I, NewIndexType);
+      } else {
+        *I = Builder.CreateTrunc(*I, NewIndexType, "", GEP.hasNoUnsignedWrap(),
+                                 GEP.hasNoUnsignedSignedWrap());
+      }
       MadeChange = true;
     }
   }
@@ -3197,6 +3214,14 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     Value *NewGEP =
         Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.getNoWrapFlags());
     return replaceInstUsesWith(GEP, NewGEP);
+  }
+
+  // Strip trailing zero indices.
+  auto *LastIdx = dyn_cast<Constant>(Indices.back());
+  if (LastIdx && LastIdx->isNullValue() && !LastIdx->getType()->isVectorTy()) {
+    return replaceInstUsesWith(
+        GEP, Builder.CreateGEP(GEP.getSourceElementType(), PtrOp,
+                               drop_end(Indices), "", GEP.getNoWrapFlags()));
   }
 
   // Scalarize vector operands; prefer splat-of-gep.as canonical form.
@@ -3223,6 +3248,30 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       Res = Builder.CreateVectorSplat(EC, Res);
     }
     return replaceInstUsesWith(GEP, Res);
+  }
+
+  bool SeenVarIndex = false;
+  for (auto [IdxNum, Idx] : enumerate(Indices)) {
+    if (isa<Constant>(Idx))
+      continue;
+
+    if (!SeenVarIndex) {
+      SeenVarIndex = true;
+      continue;
+    }
+
+    // GEP has multiple variable indices: Split it.
+    ArrayRef<Value *> FrontIndices = ArrayRef(Indices).take_front(IdxNum);
+    Value *FrontGEP =
+        Builder.CreateGEP(GEPEltType, PtrOp, FrontIndices,
+                          GEP.getName() + ".split", GEP.getNoWrapFlags());
+
+    SmallVector<Value *> BackIndices;
+    BackIndices.push_back(Constant::getNullValue(NewScalarIndexTy));
+    append_range(BackIndices, drop_begin(Indices, IdxNum));
+    return GetElementPtrInst::Create(
+        GetElementPtrInst::getIndexedType(GEPEltType, FrontIndices), FrontGEP,
+        BackIndices, GEP.getNoWrapFlags());
   }
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.
