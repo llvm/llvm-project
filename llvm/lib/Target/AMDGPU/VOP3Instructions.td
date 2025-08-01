@@ -1053,6 +1053,14 @@ def VOP3_PERMLANE_VAR_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, untyped
   let HasExtDPP = 0;
 }
 
+class VOP3_PERMLANE_NOOPSEL_Profile<VOPProfile P> : VOP3_Profile<P> {
+  let Ins64 = !con((ins VRegSrc_32:$src0, SSrc_b32:$src1),
+                   !if(P.HasSrc2, (ins SSrc_b32:$src2), (ins)));
+  let HasClamp = 0;
+  let HasExtVOP3DPP = 0;
+  let HasExtDPP = 0;
+}
+
 def opsel_i1timm : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant(
       N->getZExtValue() ? SISrcMods::OP_SEL_0 : SISrcMods::NONE,
@@ -1134,6 +1142,18 @@ class PermlaneVarPat<SDPatternOperator permlane,
             timm:$fi, timm:$bc),
   (inst (opsel_i1timm $fi), VGPR_32:$src0, (opsel_i1timm $bc),
         VGPR_32:$src1, VGPR_32:$vdst_in)
+>;
+
+class PermlaneNoDppPat3Src<SDPatternOperator permlane,
+  Instruction inst> : GCNPat<
+  (permlane i32:$src0, i32:$src1, i32:$src2),
+  (inst VGPR_32:$src0, SCSrc_b32:$src1, SCSrc_b32:$src2)
+>;
+
+class PermlaneNoDppPat2Src<SDPatternOperator permlane,
+  Instruction inst> : GCNPat<
+  (permlane i32:$src0, i32:$src1),
+  (inst VGPR_32:$src0, SCSrc_b32:$src1)
 >;
 
 class VOP3_BITOP3_Profile<VOPProfile pfl, VOP3Features f> : VOP3_Profile<pfl, f> {
@@ -1521,6 +1541,20 @@ let SubtargetPredicate = isGFX12Plus in {
   def : PermlaneVarPat<int_amdgcn_permlanex16_var, V_PERMLANEX16_VAR_B32_e64>;
 
 } // End SubtargetPredicate = isGFX12Plus
+
+let SubtargetPredicate = isGFX1250Plus, WaveSizePredicate = isWave32 in {
+  defm V_PERMLANE_BCAST_B32   : VOP3Inst<"v_permlane_bcast_b32",   VOP3_PERMLANE_NOOPSEL_Profile<VOP_I32_I32_I32_I32>>;
+  defm V_PERMLANE_UP_B32      : VOP3Inst<"v_permlane_up_b32",      VOP3_PERMLANE_NOOPSEL_Profile<VOP_I32_I32_I32_I32>>;
+  defm V_PERMLANE_DOWN_B32    : VOP3Inst<"v_permlane_down_b32",    VOP3_PERMLANE_NOOPSEL_Profile<VOP_I32_I32_I32_I32>>;
+  defm V_PERMLANE_XOR_B32     : VOP3Inst<"v_permlane_xor_b32",     VOP3_PERMLANE_NOOPSEL_Profile<VOP_I32_I32_I32_I32>>;
+  defm V_PERMLANE_IDX_GEN_B32 : VOP3Inst<"v_permlane_idx_gen_b32", VOP3_PERMLANE_NOOPSEL_Profile<VOP_I32_I32_I32>>;
+
+  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_bcast,   V_PERMLANE_BCAST_B32_e64>;
+  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_up,      V_PERMLANE_UP_B32_e64>;
+  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_down,    V_PERMLANE_DOWN_B32_e64>;
+  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_xor,     V_PERMLANE_XOR_B32_e64>;
+  def : PermlaneNoDppPat2Src<int_amdgcn_permlane_idx_gen, V_PERMLANE_IDX_GEN_B32_e64>;
+} // End SubtargetPredicate = isGFX1250Plus, WaveSizePredicate = isWave32
 
 let HasClamp = 0, HasModifiers = 1 in {
 def BitOp3_B16_Profile : VOP3_BITOP3_Profile<VOPProfile <[i16, i16, i16, i16, i32]>, VOP3_OPSEL>;
@@ -1973,6 +2007,11 @@ defm V_ADD_MAX_I32 : VOP3Only_Realtriple_gfx1250<0x25e>;
 defm V_ADD_MAX_U32 : VOP3Only_Realtriple_gfx1250<0x25f>;
 defm V_ADD_MIN_I32 : VOP3Only_Realtriple_gfx1250<0x260>;
 defm V_ADD_MIN_U32 : VOP3Only_Realtriple_gfx1250<0x261>;
+defm V_PERMLANE_BCAST_B32   : VOP3Only_Real_Base_gfx12<0x270>;
+defm V_PERMLANE_UP_B32      : VOP3Only_Real_Base_gfx12<0x271>;
+defm V_PERMLANE_DOWN_B32    : VOP3Only_Real_Base_gfx12<0x272>;
+defm V_PERMLANE_XOR_B32     : VOP3Only_Real_Base_gfx12<0x273>;
+defm V_PERMLANE_IDX_GEN_B32 : VOP3Only_Real_Base_gfx12<0x314>;
 
 //===----------------------------------------------------------------------===//
 // GFX11, GFX12
