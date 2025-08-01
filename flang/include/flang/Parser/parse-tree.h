@@ -3469,6 +3469,12 @@ WRAPPER_CLASS(PauseStmt, std::optional<StopCode>);
 
 // --- Common definitions
 
+#define INHERITED_TUPLE_CLASS_BOILERPLATE(classname, basename) \
+  using basename::basename; \
+  classname(basename &&b) : basename(std::move(b)) {} \
+  using TupleTrait = std::true_type; \
+  BOILERPLATE(classname)
+
 #define INHERITED_WRAPPER_CLASS_BOILERPLATE(classname, basename) \
   BOILERPLATE(classname); \
   using basename::basename; \
@@ -4750,6 +4756,33 @@ struct OmpDirectiveSpecification {
       t;
 };
 
+// OmpBeginDirective and OmpEndDirective are needed for semantic analysis,
+// where some checks are done specifically for either the begin or the end
+// directive. The structure of both is identical, but the diffent types
+// allow to distinguish them in the type-based parse-tree visitor.
+struct OmpBeginDirective : public OmpDirectiveSpecification {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(
+      OmpBeginDirective, OmpDirectiveSpecification);
+};
+
+struct OmpEndDirective : public OmpDirectiveSpecification {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OmpEndDirective, OmpDirectiveSpecification);
+};
+
+// Common base class for block-associated constructs.
+struct OmpBlockConstruct {
+  TUPLE_CLASS_BOILERPLATE(OmpBlockConstruct);
+  const OmpBeginDirective &BeginDir() const {
+    return std::get<OmpBeginDirective>(t);
+  }
+  const std::optional<OmpEndDirective> &EndDir() const {
+    return std::get<std::optional<OmpEndDirective>>(t);
+  }
+
+  CharBlock source;
+  std::tuple<OmpBeginDirective, Block, std::optional<OmpEndDirective>> t;
+};
+
 struct OmpMetadirectiveDirective {
   TUPLE_CLASS_BOILERPLATE(OmpMetadirectiveDirective);
   std::tuple<Verbatim, OmpClauseList> t;
@@ -4852,12 +4885,6 @@ struct OpenMPSectionsConstruct {
   std::tuple<OmpBeginSectionsDirective, std::list<OpenMPConstruct>,
       OmpEndSectionsDirective>
       t;
-};
-
-// OpenMP directive beginning or ending a block
-struct OmpBlockDirective {
-  WRAPPER_CLASS_BOILERPLATE(OmpBlockDirective, llvm::omp::Directive);
-  CharBlock source;
 };
 
 struct OmpDeclareVariantDirective {
@@ -4984,12 +5011,9 @@ struct OpenMPExecutableAllocate {
 //    ALLOCATORS [allocate-clause...]
 //    block
 //    [END ALLOCATORS]
-struct OpenMPAllocatorsConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPAllocatorsConstruct);
-  CharBlock source;
-  std::tuple<OmpDirectiveSpecification, Block,
-      std::optional<OmpDirectiveSpecification>>
-      t;
+struct OpenMPAllocatorsConstruct : public OmpBlockConstruct {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(
+      OpenMPAllocatorsConstruct, OmpBlockConstruct);
 };
 
 // 2.17.7 Atomic construct/2.17.8 Flush construct [OpenMP 5.0]
@@ -5003,15 +5027,11 @@ struct OmpMemoryOrderClause {
   CharBlock source;
 };
 
-struct OpenMPAtomicConstruct {
+struct OpenMPAtomicConstruct : public OmpBlockConstruct {
   llvm::omp::Clause GetKind() const;
   bool IsCapture() const;
   bool IsCompare() const;
-  TUPLE_CLASS_BOILERPLATE(OpenMPAtomicConstruct);
-  CharBlock source;
-  std::tuple<OmpDirectiveSpecification, Block,
-      std::optional<OmpDirectiveSpecification>>
-      t;
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OpenMPAtomicConstruct, OmpBlockConstruct);
 
   // Information filled out during semantic checks to avoid duplication
   // of analyses.
@@ -5075,12 +5095,8 @@ struct OpenMPDepobjConstruct {
 //                    nocontext-clause |
 //                    novariants-clause |
 //                    nowait-clause
-struct OpenMPDispatchConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPDispatchConstruct);
-  CharBlock source;
-  std::tuple<OmpDirectiveSpecification, Block,
-      std::optional<OmpDirectiveSpecification>>
-      t;
+struct OpenMPDispatchConstruct : public OmpBlockConstruct {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OpenMPDispatchConstruct, OmpBlockConstruct);
 };
 
 // [4.5:162-165], [5.0:242-246], [5.1:275-279], [5.2:315-316], [6.0:498-500]
@@ -5135,22 +5151,8 @@ struct OmpEndLoopDirective {
   CharBlock source;
 };
 
-struct OmpBeginBlockDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpBeginBlockDirective);
-  std::tuple<OmpBlockDirective, OmpClauseList> t;
-  CharBlock source;
-};
-
-struct OmpEndBlockDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpEndBlockDirective);
-  std::tuple<OmpBlockDirective, OmpClauseList> t;
-  CharBlock source;
-};
-
-struct OpenMPBlockConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPBlockConstruct);
-  std::tuple<OmpBeginBlockDirective, Block, std::optional<OmpEndBlockDirective>>
-      t;
+struct OpenMPBlockConstruct : public OmpBlockConstruct {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OpenMPBlockConstruct, OmpBlockConstruct);
 };
 
 // OpenMP directives enclosing do loop
