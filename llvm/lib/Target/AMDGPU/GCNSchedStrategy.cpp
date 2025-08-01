@@ -942,11 +942,9 @@ void GCNScheduleDAGMILive::finalizeSchedule() {
   Pressure.resize(Regions.size());
   RegionsWithHighRP.resize(Regions.size());
   RegionsWithExcessRP.resize(Regions.size());
-  RegionsWithMinOcc.resize(Regions.size());
   RegionsWithIGLPInstrs.resize(Regions.size());
   RegionsWithHighRP.reset();
   RegionsWithExcessRP.reset();
-  RegionsWithMinOcc.reset();
   RegionsWithIGLPInstrs.reset();
 
   runSchedStages();
@@ -1096,8 +1094,7 @@ bool PreRARematStage::initGCNSchedStage() {
   // fixed if there is another pass after this pass.
   assert(!S.hasNextStage());
 
-  if (!GCNSchedStage::initGCNSchedStage() || DAG.RegionsWithMinOcc.none() ||
-      DAG.Regions.size() == 1)
+  if (!GCNSchedStage::initGCNSchedStage() || DAG.Regions.size() == 1)
     return false;
 
   // Before performing any IR modification record the parent region of each MI
@@ -1139,11 +1136,6 @@ void UnclusteredHighRPStage::finalizeGCNSchedStage() {
   SavedMutations.swap(DAG.Mutations);
   S.SGPRLimitBias = S.VGPRLimitBias = 0;
   if (DAG.MinOccupancy > InitialOccupancy) {
-    for (unsigned IDX = 0; IDX < DAG.Pressure.size(); ++IDX)
-      DAG.RegionsWithMinOcc[IDX] =
-          DAG.Pressure[IDX].getOccupancy(
-              DAG.ST, DAG.MFI.getDynamicVGPRBlockSize()) == DAG.MinOccupancy;
-
     LLVM_DEBUG(dbgs() << StageID
                       << " stage successfully increased occupancy to "
                       << DAG.MinOccupancy << '\n');
@@ -1215,11 +1207,15 @@ bool GCNSchedStage::initGCNRegion() {
 }
 
 bool UnclusteredHighRPStage::initGCNRegion() {
-  // Only reschedule regions with the minimum occupancy or regions that may have
-  // spilling (excess register pressure).
-  if ((!DAG.RegionsWithMinOcc[RegionIdx] ||
-       DAG.MinOccupancy <= InitialOccupancy) &&
-      !DAG.RegionsWithExcessRP[RegionIdx])
+  // Only reschedule regions that have excess register pressure (i.e. spilling)
+  // or had minimum occupancy at the beginning of the stage (as long as
+  // rescheduling of previous regions did not make occupancy drop back down to
+  // the initial minimum).
+  unsigned DynamicVGPRBlockSize = DAG.MFI.getDynamicVGPRBlockSize();
+  if (!DAG.RegionsWithExcessRP[RegionIdx] &&
+      (DAG.MinOccupancy <= InitialOccupancy ||
+       DAG.Pressure[RegionIdx].getOccupancy(ST, DynamicVGPRBlockSize) !=
+           InitialOccupancy))
     return false;
 
   return GCNSchedStage::initGCNRegion();
@@ -1284,9 +1280,6 @@ void GCNSchedStage::checkScheduling() {
   if (PressureAfter.getSGPRNum() <= S.SGPRCriticalLimit &&
       PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) <= S.VGPRCriticalLimit) {
     DAG.Pressure[RegionIdx] = PressureAfter;
-    DAG.RegionsWithMinOcc[RegionIdx] =
-        PressureAfter.getOccupancy(ST, DynamicVGPRBlockSize) ==
-        DAG.MinOccupancy;
 
     // Early out if we have achieved the occupancy target.
     LLVM_DEBUG(dbgs() << "Pressure in desired limits, done.\n");
@@ -1320,7 +1313,6 @@ void GCNSchedStage::checkScheduling() {
   if (NewOccupancy < DAG.MinOccupancy) {
     DAG.MinOccupancy = NewOccupancy;
     MFI.limitOccupancy(DAG.MinOccupancy);
-    DAG.RegionsWithMinOcc.reset();
     LLVM_DEBUG(dbgs() << "Occupancy lowered for the function to "
                       << DAG.MinOccupancy << ".\n");
   }
@@ -1342,14 +1334,10 @@ void GCNSchedStage::checkScheduling() {
 
   // Revert if this region's schedule would cause a drop in occupancy or
   // spilling.
-  if (shouldRevertScheduling(WavesAfter)) {
+  if (shouldRevertScheduling(WavesAfter))
     revertScheduling();
-  } else {
+  else
     DAG.Pressure[RegionIdx] = PressureAfter;
-    DAG.RegionsWithMinOcc[RegionIdx] =
-        PressureAfter.getOccupancy(ST, DynamicVGPRBlockSize) ==
-        DAG.MinOccupancy;
-  }
 }
 
 unsigned
@@ -1579,9 +1567,6 @@ bool GCNSchedStage::mayCauseSpilling(unsigned WavesAfter) {
 }
 
 void GCNSchedStage::revertScheduling() {
-  DAG.RegionsWithMinOcc[RegionIdx] =
-      PressureBefore.getOccupancy(ST, DAG.MFI.getDynamicVGPRBlockSize()) ==
-      DAG.MinOccupancy;
   LLVM_DEBUG(dbgs() << "Attempting to revert scheduling.\n");
   DAG.RegionEnd = DAG.RegionBegin;
   int SkippedDebugInstr = 0;
