@@ -1840,6 +1840,13 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
 ///
 /// When collapsing scalable flags, conservatively avoids cases with two
 /// scalable dims. We could re-visit this in the future.
+///
+/// EXAMPLE:
+///  type = vector<4x16x[8]x16xf32>
+///  reassociation =  [(d0, d1, d2, d3) -> (d0, d1),
+///                    (d0, d1, d2, d3) -> (d2, d3)]
+///  Result:
+///   vector<64x[128]xf32>
 static VectorType getCollapsedVecType(VectorType type,
                                       ArrayRef<AffineMap> reassociation) {
   assert(type.getNumScalableDims() < 2 &&
