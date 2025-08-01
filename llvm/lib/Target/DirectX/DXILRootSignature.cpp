@@ -175,8 +175,10 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
       OS << "- Parameter Type: " << Type << "\n"
          << "  Shader Visibility: " << Header.ShaderVisibility << "\n";
 
-      switch (Type) {
-      case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
+      assert(dxbc::isValidParameterType(Type) && "Invalid Parameter Type");
+      dxbc::RootParameterType PT = static_cast<dxbc::RootParameterType>(Type);
+      switch (PT) {
+      case dxbc::RootParameterType::Constants32Bit: {
         const dxbc::RTS0::v1::RootConstants &Constants =
             RS.ParametersContainer.getConstant(Loc);
         OS << "  Register Space: " << Constants.RegisterSpace << "\n"
@@ -184,9 +186,9 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
            << "  Num 32 Bit Values: " << Constants.Num32BitValues << "\n";
         break;
       }
-      case llvm::to_underlying(dxbc::RootParameterType::CBV):
-      case llvm::to_underlying(dxbc::RootParameterType::UAV):
-      case llvm::to_underlying(dxbc::RootParameterType::SRV): {
+      case dxbc::RootParameterType::CBV:
+      case dxbc::RootParameterType::UAV:
+      case dxbc::RootParameterType::SRV: {
         const dxbc::RTS0::v2::RootDescriptor &Descriptor =
             RS.ParametersContainer.getRootDescriptor(Loc);
         OS << "  Register Space: " << Descriptor.RegisterSpace << "\n"
@@ -195,7 +197,7 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
           OS << "  Flags: " << Descriptor.Flags << "\n";
         break;
       }
-      case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+      case dxbc::RootParameterType::DescriptorTable: {
         const mcdxbc::DescriptorTable &Table =
             RS.ParametersContainer.getDescriptorTable(Loc);
         OS << "  NumRanges: " << Table.Ranges.size() << "\n";

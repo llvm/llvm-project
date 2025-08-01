@@ -278,8 +278,19 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
         dxbc::RTS0::v1::RootParameterHeader Header{L.Header.Type, L.Header.Visibility,
                                          L.Header.Offset};
 
-        switch (L.Header.Type) {
-        case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
+        if (!dxbc::isValidParameterType(L.Header.Type)) {
+          // Handling invalid parameter type edge case. We intentionally let
+          // obj2yaml/yaml2obj parse and emit invalid dxcontainer data, in order
+          // for that to be used as a testing tool more effectively.
+          RS.ParametersContainer.addInvalidParameter(Header);
+          continue;
+        }
+
+        dxbc::RootParameterType ParameterType =
+            static_cast<dxbc::RootParameterType>(L.Header.Type);
+
+        switch (ParameterType) {
+        case dxbc::RootParameterType::Constants32Bit: {
           const DXContainerYAML::RootConstantsYaml &ConstantYaml =
               P.RootSignature->Parameters.getOrInsertConstants(L);
           dxbc::RTS0::v1::RootConstants Constants;
@@ -289,9 +300,9 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
           RS.ParametersContainer.addParameter(Header, Constants);
           break;
         }
-        case llvm::to_underlying(dxbc::RootParameterType::CBV):
-        case llvm::to_underlying(dxbc::RootParameterType::SRV):
-        case llvm::to_underlying(dxbc::RootParameterType::UAV): {
+        case dxbc::RootParameterType::CBV:
+        case dxbc::RootParameterType::SRV:
+        case dxbc::RootParameterType::UAV: {
           const DXContainerYAML::RootDescriptorYaml &DescriptorYaml =
               P.RootSignature->Parameters.getOrInsertDescriptor(L);
 
@@ -303,7 +314,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
           RS.ParametersContainer.addParameter(Header, Descriptor);
           break;
         }
-        case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+        case dxbc::RootParameterType::DescriptorTable: {
           const DXContainerYAML::DescriptorTableYaml &TableYaml =
               P.RootSignature->Parameters.getOrInsertTable(L);
           mcdxbc::DescriptorTable Table;
@@ -323,11 +334,6 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
           RS.ParametersContainer.addParameter(Header, Table);
           break;
         }
-        default:
-          // Handling invalid parameter type edge case. We intentionally let
-          // obj2yaml/yaml2obj parse and emit invalid dxcontainer data, in order
-          // for that to be used as a testing tool more effectively.
-          RS.ParametersContainer.addInvalidParameter(Header);
         }
       }
 
