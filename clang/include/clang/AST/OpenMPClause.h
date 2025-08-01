@@ -1903,6 +1903,13 @@ public:
   /// Returns message string of the clause.
   Expr *getMessageString() const { return cast_or_null<Expr>(MessageString); }
 
+  /// Try to evaluate the message string at compile time.
+  std::optional<std::string> tryEvaluateString(ASTContext &Ctx) const {
+    if (Expr *MessageExpr = getMessageString())
+      return MessageExpr->tryEvaluateString(Ctx);
+    return std::nullopt;
+  }
+
   child_range children() {
     return child_range(&MessageString, &MessageString + 1);
   }

@@ -11078,22 +11078,27 @@ StmtResult SemaOpenMP::ActOnOpenMPErrorDirective(ArrayRef<OMPClause *> Clauses,
     return StmtError();
   }
 
-  const OMPSeverityClause *SeverityC =
-      OMPExecutableDirective::getSingleClause<OMPSeverityClause>(Clauses);
-  const OMPMessageClause *MessageC =
-      OMPExecutableDirective::getSingleClause<OMPMessageClause>(Clauses);
-  Expr *ME = MessageC ? MessageC->getMessageString() : nullptr;
-
   if (!AtC || AtC->getAtKind() == OMPC_AT_compilation) {
+    const OMPSeverityClause *SeverityC =
+        OMPExecutableDirective::getSingleClause<OMPSeverityClause>(Clauses);
+    const OMPMessageClause *MessageC =
+        OMPExecutableDirective::getSingleClause<OMPMessageClause>(Clauses);
+    std::optional<std::string> SL =
+        MessageC ? MessageC->tryEvaluateString(getASTContext()) : std::nullopt;
+
+    if (MessageC && !SL)
+      Diag(MessageC->getMessageString()->getBeginLoc(),
+           diag::warn_clause_expected_string_literal)
+          << getOpenMPClauseNameForDiag(OMPC_message);
     if (SeverityC && SeverityC->getSeverityKind() == OMPC_SEVERITY_warning)
       Diag(SeverityC->getSeverityKindKwLoc(), diag::warn_diagnose_if_succeeded)
-          << (ME ? cast<StringLiteral>(ME)->getString() : "WARNING");
+          << SL.value_or("WARNING");
     else
-      Diag(StartLoc, diag::err_diagnose_if_succeeded)
-          << (ME ? cast<StringLiteral>(ME)->getString() : "ERROR");
+      Diag(StartLoc, diag::err_diagnose_if_succeeded) << SL.value_or("ERROR");
     if (!SeverityC || SeverityC->getSeverityKind() != OMPC_SEVERITY_warning)
       return StmtError();
   }
+
   return OMPErrorDirective::Create(getASTContext(), StartLoc, EndLoc, Clauses);
 }
 
@@ -16445,11 +16450,17 @@ OMPClause *SemaOpenMP::ActOnOpenMPMessageClause(Expr *ME,
                                                 SourceLocation LParenLoc,
                                                 SourceLocation EndLoc) {
   assert(ME && "NULL expr in Message clause");
-  if (!isa<StringLiteral>(ME)) {
+  QualType Type = ME->getType();
+  if ((!Type->isPointerType() && !Type->isArrayType()) ||
+      !Type->getPointeeOrArrayElementType()->isAnyCharacterType()) {
     Diag(ME->getBeginLoc(), diag::warn_clause_expected_string)
         << getOpenMPClauseNameForDiag(OMPC_message);
     return nullptr;
   }
+
+  // Convert array type to pointer type if needed.
+  ME = SemaRef.DefaultFunctionArrayLvalueConversion(ME).get();
+
   return new (getASTContext())
       OMPMessageClause(ME, StartLoc, LParenLoc, EndLoc);
 }
