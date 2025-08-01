@@ -18,13 +18,13 @@ define void @_Z3foov(i64 %n) {
 ; CHECK-V1-IC1:  [[VECTOR_PH]]:
 ; CHECK-V1-IC1:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-V1-IC1:  [[VECTOR_BODY]]:
-; CHECK-V1-IC1:    br i1 [[TMP8:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF0]], !llvm.loop [[LOOP1:![0-9]+]]
+; CHECK-V1-IC1:    br i1 [[TMP10:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF0]], !llvm.loop [[LOOP1:![0-9]+]]
 ; CHECK-V1-IC1:  [[MIDDLE_BLOCK]]:
-; CHECK-V1-IC1:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]], !prof [[PROF5:![0-9]+]]
+; CHECK-V1-IC1:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]], !prof [[PROF4:![0-9]+]]
 ; CHECK-V1-IC1:  [[SCALAR_PH]]:
 ; CHECK-V1-IC1:    br label %[[FOR_BODY:.*]]
 ; CHECK-V1-IC1:  [[FOR_BODY]]:
-; CHECK-V1-IC1:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF6:![0-9]+]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-V1-IC1:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF5:![0-9]+]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK-V1-IC1:  [[FOR_COND_CLEANUP]]:
 ;
 ; CHECK-V2-IC1-LABEL: define void @_Z3foov(
@@ -34,13 +34,13 @@ define void @_Z3foov(i64 %n) {
 ; CHECK-V2-IC1:  [[VECTOR_PH]]:
 ; CHECK-V2-IC1:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-V2-IC1:  [[VECTOR_BODY]]:
-; CHECK-V2-IC1:    br i1 [[TMP2:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-V2-IC1:    br i1 [[TMP4:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK-V2-IC1:  [[MIDDLE_BLOCK]]:
-; CHECK-V2-IC1:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]], !prof [[PROF6:![0-9]+]]
+; CHECK-V2-IC1:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]], !prof [[PROF5:![0-9]+]]
 ; CHECK-V2-IC1:  [[SCALAR_PH]]:
 ; CHECK-V2-IC1:    br label %[[FOR_BODY:.*]]
 ; CHECK-V2-IC1:  [[FOR_BODY]]:
-; CHECK-V2-IC1:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF7:![0-9]+]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-V2-IC1:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF5:![0-9]+]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK-V2-IC1:  [[FOR_COND_CLEANUP]]:
 ;
 ; CHECK-V2-IC4-LABEL: define void @_Z3foov(
@@ -52,21 +52,21 @@ define void @_Z3foov(i64 %n) {
 ; CHECK-V2-IC4:  [[VECTOR_PH]]:
 ; CHECK-V2-IC4:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-V2-IC4:  [[VECTOR_BODY]]:
-; CHECK-V2-IC4:    br i1 [[TMP8:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[TMP10:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK-V2-IC4:  [[MIDDLE_BLOCK]]:
-; CHECK-V2-IC4:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]], !prof [[PROF6:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]], !prof [[PROF5:![0-9]+]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-V2-IC4:    br i1 [[MIN_EPILOG_ITERS_CHECK:%.*]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF7:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[MIN_EPILOG_ITERS_CHECK:%.*]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF6:![0-9]+]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_PH]]:
 ; CHECK-V2-IC4:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-V2-IC4:    br i1 [[TMP11:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[TMP15:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-V2-IC4:    br i1 [[CMP_N10:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF10:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[CMP_N10:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF8:![0-9]+]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-V2-IC4:    br label %[[FOR_BODY:.*]]
 ; CHECK-V2-IC4:  [[FOR_BODY]]:
-; CHECK-V2-IC4:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF11:![0-9]+]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF9:![0-9]+]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK-V2-IC4:  [[FOR_COND_CLEANUP]]:
 ;
 entry:
@@ -89,37 +89,30 @@ for.cond.cleanup:                                 ; preds = %for.body
 !0 = !{!"branch_weights", i32 1, i32 1023}
 ;.
 ; CHECK-V1-IC1: [[PROF0]] = !{!"branch_weights", i32 1, i32 127}
-; CHECK-V1-IC1: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]], [[META3:![0-9]+]], [[META4:![0-9]+]]}
+; CHECK-V1-IC1: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK-V1-IC1: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK-V1-IC1: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-V1-IC1: [[META4]] = !{!"llvm.loop.estimated_trip_count", i32 128}
-; CHECK-V1-IC1: [[PROF5]] = !{!"branch_weights", i32 1, i32 7}
-; CHECK-V1-IC1: [[PROF6]] = !{!"branch_weights", i32 0, i32 0}
-; CHECK-V1-IC1: [[LOOP7]] = distinct !{[[LOOP7]], [[META8:![0-9]+]], [[META3]], [[META2]]}
-; CHECK-V1-IC1: [[META8]] = !{!"llvm.loop.estimated_trip_count", i32 0}
+; CHECK-V1-IC1: [[PROF4]] = !{!"branch_weights", i32 1, i32 7}
+; CHECK-V1-IC1: [[PROF5]] = !{!"branch_weights", i32 0, i32 0}
+; CHECK-V1-IC1: [[LOOP6]] = distinct !{[[LOOP6]], [[META3]], [[META2]]}
 ;.
 ; CHECK-V2-IC1: [[PROF0]] = !{!"branch_weights", i32 1, i32 127}
 ; CHECK-V2-IC1: [[PROF1]] = !{!"branch_weights", i32 1, i32 255}
-; CHECK-V2-IC1: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]], [[META4:![0-9]+]], [[META5:![0-9]+]]}
+; CHECK-V2-IC1: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]], [[META4:![0-9]+]]}
 ; CHECK-V2-IC1: [[META3]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK-V2-IC1: [[META4]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-V2-IC1: [[META5]] = !{!"llvm.loop.estimated_trip_count", i32 256}
-; CHECK-V2-IC1: [[PROF6]] = !{!"branch_weights", i32 1, i32 3}
-; CHECK-V2-IC1: [[PROF7]] = !{!"branch_weights", i32 0, i32 0}
-; CHECK-V2-IC1: [[LOOP8]] = distinct !{[[LOOP8]], [[META9:![0-9]+]], [[META4]], [[META3]]}
-; CHECK-V2-IC1: [[META9]] = !{!"llvm.loop.estimated_trip_count", i32 0}
+; CHECK-V2-IC1: [[PROF5]] = !{!"branch_weights", i32 0, i32 0}
+; CHECK-V2-IC1: [[LOOP6]] = distinct !{[[LOOP6]], [[META4]], [[META3]]}
 ;.
 ; CHECK-V2-IC4: [[PROF0]] = !{!"branch_weights", i32 1, i32 127}
 ; CHECK-V2-IC4: [[PROF1]] = !{!"branch_weights", i32 1, i32 63}
-; CHECK-V2-IC4: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]], [[META4:![0-9]+]], [[META5:![0-9]+]]}
+; CHECK-V2-IC4: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]], [[META4:![0-9]+]]}
 ; CHECK-V2-IC4: [[META3]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK-V2-IC4: [[META4]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-V2-IC4: [[META5]] = !{!"llvm.loop.estimated_trip_count", i32 64}
-; CHECK-V2-IC4: [[PROF6]] = !{!"branch_weights", i32 1, i32 15}
-; CHECK-V2-IC4: [[PROF7]] = !{!"branch_weights", i32 4, i32 0}
-; CHECK-V2-IC4: [[LOOP8]] = distinct !{[[LOOP8]], [[META9:![0-9]+]], [[META3]], [[META4]]}
-; CHECK-V2-IC4: [[META9]] = !{!"llvm.loop.estimated_trip_count", i32 0}
-; CHECK-V2-IC4: [[PROF10]] = !{!"branch_weights", i32 1, i32 3}
-; CHECK-V2-IC4: [[PROF11]] = !{!"branch_weights", i32 0, i32 0}
-; CHECK-V2-IC4: [[LOOP12]] = distinct !{[[LOOP12]], [[META9]], [[META4]], [[META3]]}
+; CHECK-V2-IC4: [[PROF5]] = !{!"branch_weights", i32 1, i32 15}
+; CHECK-V2-IC4: [[PROF6]] = !{!"branch_weights", i32 4, i32 0}
+; CHECK-V2-IC4: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]], [[META4]]}
+; CHECK-V2-IC4: [[PROF8]] = !{!"branch_weights", i32 1, i32 3}
+; CHECK-V2-IC4: [[PROF9]] = !{!"branch_weights", i32 0, i32 0}
+; CHECK-V2-IC4: [[LOOP10]] = distinct !{[[LOOP10]], [[META4]], [[META3]]}
 ;.
