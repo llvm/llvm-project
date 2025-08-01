@@ -12690,7 +12690,7 @@ SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
 }
 
 SDValue RISCVTargetLowering::lowerLoadFF(SDValue Op, SelectionDAG &DAG) const {
-  assert(Op.getResNo() == 0);
+  assert(Op.getResNo() == 0 && "Unexpected result number");
   SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
 

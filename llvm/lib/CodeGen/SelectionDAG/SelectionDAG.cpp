@@ -838,7 +838,7 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
     break;
   }
   case ISD::VP_LOAD_FF: {
-    const VPLoadFFSDNode *LD = cast<VPLoadFFSDNode>(N);
+    const auto *LD = cast<VPLoadFFSDNode>(N);
     ID.AddInteger(LD->getMemoryVT().getRawBits());
     ID.AddInteger(LD->getRawSubclassData());
     ID.AddInteger(LD->getPointerInfo().getAddrSpace());
