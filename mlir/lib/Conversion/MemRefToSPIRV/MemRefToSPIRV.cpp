@@ -511,8 +511,7 @@ calculateMemoryRequirements(Value accessedPtr, LoadOrStoreOp loadOrStoreOp) {
   Operation *memrefAccessOp = loadOrStoreOp.getOperation();
   auto memrefMemAccess = memrefAccessOp->getAttrOfType<spirv::MemoryAccessAttr>(
       spirv::attributeName<spirv::MemoryAccess>());
-  auto memrefAlignment =
-      memrefAccessOp->getAttrOfType<IntegerAttr>("alignment");
+  auto memrefAlignment = loadOrStoreOp.getAlignmentAttr();
   if (memrefMemAccess && memrefAlignment)
     return MemoryRequirements{memrefMemAccess, memrefAlignment};
 
