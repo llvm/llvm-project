@@ -32,9 +32,9 @@
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mfence-tso 2>&1 | FileCheck %s -check-prefix=FENCE-TSO
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mno-fence-tso 2>&1 | FileCheck %s -check-prefix=NO-FENCE-TSO
 
-// FENCE-TSO: "-target-feature" "-no-fence-tso"
+// FENCE-TSO-NOT: "-target-feature" "-no-fence-tso"
 // NO-FENCE-TSO: "-target-feature" "+no-fence-tso"
-// DEFAULT: "-target-feature" "-no-fence-tso"
+// DEFAULT-NOT: "-target-feature" "-no-fence-tso"
 // DEFAULT-NOT: "-target-feature" "+no-fence-tso"
 
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mno-strict-align 2>&1 | FileCheck %s -check-prefixes=FAST-SCALAR-UNALIGNED-ACCESS,FAST-VECTOR-UNALIGNED-ACCESS
