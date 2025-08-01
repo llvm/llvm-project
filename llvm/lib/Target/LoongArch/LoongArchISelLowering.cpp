@@ -2784,21 +2784,71 @@ LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   SDValue Idx = Op->getOperand(1);
   unsigned NumElts = VecTy.getVectorNumElements();
   SDLoc DL(Op);
+  MVT GRLenVT = Subtarget.getGRLenVT();
 
   assert(VecTy.is256BitVector() && "Unexpected EXTRACT_VECTOR_ELT vector type");
 
   if (isa<ConstantSDNode>(Idx) && Idx->getAsZExtVal() < NumElts)
     return Op;
 
-  // TODO: Deal with other legal 256-bits vector types?
-  if (!isa<ConstantSDNode>(Idx) &&
-      (VecTy == MVT::v8i32 || VecTy == MVT::v8f32)) {
-    SDValue SplatIdx = DAG.getSplatBuildVector(MVT::v8i32, DL, Idx);
-    SDValue SplatValue =
-        DAG.getNode(LoongArchISD::XVPERM, DL, VecTy, Vec, SplatIdx);
+  if (!isa<ConstantSDNode>(Idx)) {
+    switch (VecTy.getSimpleVT().SimpleTy) {
+    default:
+      llvm_unreachable("Unexpected type");
+    case MVT::v32i8:
+    case MVT::v16i16: {
+      SDValue NewVec = DAG.getBitcast(MVT::v8i32, Vec);
+      SDValue NewIdx = DAG.getNode(
+          LoongArchISD::BSTRPICK, DL, GRLenVT, Idx,
+          DAG.getConstant(31, DL, GRLenVT),
+          DAG.getConstant(((VecTy == MVT::v32i8) ? 2 : 1), DL, GRLenVT));
+      SDValue SplatIdx = DAG.getSplatBuildVector(MVT::v8i32, DL, NewIdx);
+      SDValue SplatValue =
+          DAG.getNode(LoongArchISD::XVPERM, DL, MVT::v8i32, NewVec, SplatIdx);
+      SDValue SplatVec = DAG.getBitcast(VecTy, SplatValue);
 
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, SplatValue,
-                       DAG.getConstant(0, DL, Subtarget.getGRLenVT()));
+      SDValue LocalIdx = DAG.getNode(
+          ISD::AND, DL, GRLenVT, Idx,
+          DAG.getConstant(((VecTy == MVT::v32i8) ? 3 : 1), DL, GRLenVT));
+      SDValue ExtractVec =
+          DAG.getNode(LoongArchISD::VREPLVE, DL, VecTy, SplatVec, LocalIdx);
+
+      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, ExtractVec,
+                         DAG.getConstant(0, DL, GRLenVT));
+    }
+    case MVT::v8i32:
+    case MVT::v8f32: {
+      SDValue SplatIdx = DAG.getSplatBuildVector(MVT::v8i32, DL, Idx);
+      SDValue SplatValue =
+          DAG.getNode(LoongArchISD::XVPERM, DL, VecTy, Vec, SplatIdx);
+
+      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, SplatValue,
+                         DAG.getConstant(0, DL, GRLenVT));
+    }
+    case MVT::v4i64:
+    case MVT::v4f64: {
+      SDValue NewVec = DAG.getBitcast(MVT::v8i32, Vec);
+      SDValue SplatIdx = DAG.getSplatBuildVector(MVT::v8i32, DL, Idx);
+      SDValue SplatIdxLo =
+          DAG.getNode(LoongArchISD::VSLLI, DL, MVT::v8i32, SplatIdx,
+                      DAG.getConstant(1, DL, GRLenVT));
+      SDValue SplatIdxHi =
+          DAG.getNode(ISD::ADD, DL, MVT::v8i32, SplatIdxLo,
+                      DAG.getSplatBuildVector(MVT::v8i32, DL,
+                                              DAG.getConstant(1, DL, GRLenVT)));
+
+      SDValue SplatVecLo =
+          DAG.getNode(LoongArchISD::XVPERM, DL, MVT::v8i32, NewVec, SplatIdxLo);
+      SDValue SplatVecHi =
+          DAG.getNode(LoongArchISD::XVPERM, DL, MVT::v8i32, NewVec, SplatIdxHi);
+      SDValue SplatValue = DAG.getNode(LoongArchISD::VILVL, DL, MVT::v8i32,
+                                       SplatVecHi, SplatVecLo);
+      SDValue ExtractVec = DAG.getBitcast(VecTy, SplatValue);
+
+      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, ExtractVec,
+                         DAG.getConstant(0, DL, GRLenVT));
+    }
+    }
   }
 
   return SDValue();
