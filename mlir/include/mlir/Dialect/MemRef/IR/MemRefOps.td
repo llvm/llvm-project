@@ -1351,6 +1351,9 @@ def MemRef_PrefetchOp : MemRef_Op<"prefetch"> {
     instruction cache.
   }];
 
+  // The memref argument is labeled with a MemWrite side effect to enforce a
+  // relative ordering of the prefetch and other memory operations targeting
+  // that memory stream.
   let arguments = (ins Arg<AnyMemRef, "prefetch address", [MemWrite]> :$memref,
                        Variadic<Index>:$indices,
                        BoolAttr:$isWrite,
