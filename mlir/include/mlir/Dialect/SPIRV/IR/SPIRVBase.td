@@ -4277,7 +4277,7 @@ class SPIRV_MatrixOfType<list<Type> allowedTypes> :
     "Matrix">;
 
 class SPIRV_VectorOf<Type type> :
-    VectorOfLengthAndType<[2, 3, 4, 8, 16], [type]>;
+    FixedVectorOfLengthAndType<[2, 3, 4, 8, 16], [type]>;
 
 class SPIRV_ScalarOrVectorOf<Type type> :
     AnyTypeOf<[type, SPIRV_VectorOf<type>]>;
