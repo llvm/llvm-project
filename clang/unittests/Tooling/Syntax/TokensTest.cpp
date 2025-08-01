@@ -133,7 +133,7 @@ public:
     CI->getPreprocessorOpts().addRemappedFile(
         FileName, llvm::MemoryBuffer::getMemBufferCopy(Code).release());
     CompilerInstance Compiler(std::move(CI));
-    Compiler.setDiagnostics(Diags.get());
+    Compiler.setDiagnostics(Diags);
     Compiler.setFileManager(FileMgr.get());
     Compiler.setSourceManager(SourceMgr.get());
 
@@ -250,7 +250,8 @@ public:
   // Data fields.
   DiagnosticOptions DiagOpts;
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      new DiagnosticsEngine(new DiagnosticIDs, DiagOpts);
+      llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(DiagnosticIDs::create(),
+                                                   DiagOpts);
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS =
       llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   llvm::IntrusiveRefCntPtr<FileManager> FileMgr =
