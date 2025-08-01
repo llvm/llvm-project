@@ -1460,7 +1460,7 @@ def OMP_DoSimd : Directive<[Spelling<"do simd">]> {
   ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_Collapse>,
-    VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_If, 50>,
     VersionedClause<OMPC_NoWait>,
     VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_Ordered>,
