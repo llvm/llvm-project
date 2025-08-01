@@ -87,6 +87,7 @@ unsigned getNonNDVariant(unsigned Opc);
 /// e.g. turning COND_E to COND_NE.
 CondCode GetOppositeBranchCondition(CondCode CC) {
   // To reverse a condition it's necessary to only invert the low bit:
+  assert(CC != COND_INVALID && "COND_INVALID has no inverse!");
   return static_cast<CondCode>(static_cast<unsigned>(CC) ^ 0x1);
 }
 
