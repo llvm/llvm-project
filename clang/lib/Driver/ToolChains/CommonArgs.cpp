@@ -3014,12 +3014,12 @@ void tools::addOffloadCompressArgs(const llvm::opt::ArgList &TCArgs,
                                    llvm::opt::ArgStringList &CmdArgs) {
   if (TCArgs.hasFlag(options::OPT_offload_compress,
                      options::OPT_no_offload_compress, false))
-    CmdArgs.push_back("-compress");
+    CmdArgs.push_back("--compress");
   if (TCArgs.hasArg(options::OPT_v))
-    CmdArgs.push_back("-verbose");
+    CmdArgs.push_back("--verbose");
   if (auto *Arg = TCArgs.getLastArg(options::OPT_offload_compression_level_EQ))
     CmdArgs.push_back(
-        TCArgs.MakeArgString(Twine("-compression-level=") + Arg->getValue()));
+        TCArgs.MakeArgString(Twine("--compression-level=") + Arg->getValue()));
 }
 
 void tools::addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
