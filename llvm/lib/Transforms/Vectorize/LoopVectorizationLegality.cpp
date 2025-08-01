@@ -1772,39 +1772,18 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
 
   Predicates.clear();
   SmallVector<LoadInst *, 4> NonDerefLoads;
-  unsigned NumLoad = 0;
-  for (BasicBlock *BB : TheLoop->blocks()) {
-    for (Instruction &I : *BB) {
-      if (auto *LI = dyn_cast<LoadInst>(&I)) {
-        NumLoad++;
-        if (!isDereferenceableAndAlignedInLoop(LI, TheLoop, *PSE.getSE(), *DT,
-                                               AC, &Predicates))
-          NonDerefLoads.push_back(LI);
-      } else if (I.mayReadFromMemory() || I.mayWriteToMemory() ||
-                 I.mayThrow()) {
-        reportVectorizationFailure(
-            "Loop may fault on instructions other than load",
-            "Cannot vectorize potentially faulting early exit loop",
-            "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
-        return false;
-      }
-    }
-  }
-  // Checks if non-dereferencible loads are supported.
-  if (!NonDerefLoads.empty()) {
-    if (!TTI->supportsSpeculativeLoads()) {
-      reportVectorizationFailure(
-          "Loop may fault",
-          "Cannot vectorize potentially faulting early exit loop",
-          "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
-      return false;
-    }
-    // Supports single speculative load for now.
-    if (NumLoad > 1) {
-      reportVectorizationFailure("More than one speculative load",
-                                 "SpeculativeLoadNotSupported", ORE, TheLoop);
-      return false;
-    }
+  bool HasSafeAccess =
+      TTI->supportsSpeculativeLoads()
+          ? isReadOnlyLoopWithSafeOrSpeculativeLoads(
+                TheLoop, PSE.getSE(), DT, AC, &NonDerefLoads, &Predicates)
+          : isDereferenceableReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC,
+                                          &Predicates);
+  if (!HasSafeAccess) {
+    reportVectorizationFailure(
+        "Loop may fault",
+        "Cannot vectorize potentially faulting early exit loop",
+        "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
+    return false;
   }
   // Speculative loads need to be unit-stride.
   for (LoadInst *LI : NonDerefLoads) {

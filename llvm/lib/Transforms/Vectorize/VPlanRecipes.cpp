@@ -967,8 +967,6 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
         Instruction::Or, cast<VectorType>(VecTy), std::nullopt, Ctx.CostKind);
   }
   case VPInstruction::FirstActiveLane: {
-    if (VF.isScalar())
-      return InstructionCost::getInvalid();
     // Calculate the cost of determining the lane index.
     auto *PredTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
     IntrinsicCostAttributes Attrs(Intrinsic::experimental_cttz_elts,

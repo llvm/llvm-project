@@ -7741,7 +7741,6 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
       Reverse || Decision == LoopVectorizationCostModel::CM_Widen;
 
   VPValue *Ptr = isa<LoadInst>(I) ? Operands[0] : Operands[1];
-
   if (Consecutive) {
     auto *GEP = dyn_cast<GetElementPtrInst>(
         Ptr->getUnderlyingValue()->stripPointerCasts());
@@ -7767,7 +7766,7 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
     Ptr = VectorPtr;
   }
   if (Legal->getSpeculativeLoads().contains(I)) {
-    LoadInst *Load = dyn_cast<LoadInst>(I);
+    auto *Load = dyn_cast<LoadInst>(I);
     return new VPWidenFFLoadRecipe(*Load, Ptr, Mask, VPIRMetadata(*Load, LVer),
                                    I->getDebugLoc());
   }
