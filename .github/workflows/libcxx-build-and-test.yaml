@@ -56,10 +56,17 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
-        run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+        run: |
+          echo "::add-matcher::.github/libcxx-problem-matchers.json"
+          libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
+      - if: always()
+        name: Disable  Problem Matchers
+        run: |
+          echo "::remove-matcher owner=lit::"
+          echo "::remove-matcher owner=clang::"
       - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()
         with:
@@ -101,10 +108,17 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: ${{ matrix.config }}
-        run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+        run: |
+          echo "::add-matcher::.github/libcxx-problem-matchers.json"
+          libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
+      - if: always()
+        name: Disable Problem Matchers
+        run: |
+          echo "::remove-matcher owner=lit::"
+          echo "::remove-matcher owner=clang::"
       - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()  # Upload artifacts even if the build or test suite fails
         with:
@@ -165,10 +179,17 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: ${{ matrix.config }}
-        run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+        run: |
+          echo "::add-matcher::.github/libcxx-problem-matchers.json"
+          libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
           CC: clang-21
           CXX: clang++-21
+      - if: always()
+        name: Disable Problem Matchers
+        run: |
+          echo "::remove-matcher owner=lit::"
+          echo "::remove-matcher owner=clang::"
       - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()
         with:
@@ -219,6 +240,7 @@ jobs:
       - uses: seanmiddleditch/gha-setup-ninja@3b1f8f94a2f8254bd26914c4ab9474d4f0015f67 # v6
       - name: Build and test
         run: |
+          echo "::add-matcher::.github/libcxx-problem-matchers.json"
           python3 -m venv .venv
           source .venv/bin/activate
           python -m pip install psutil
