@@ -3,10 +3,10 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji < %s | FileCheck -enable-var-scope -check-prefixes=GFX8,GFX8-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -enable-var-scope -check-prefixes=GFX9,GFX9-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -enable-var-scope -check-prefixes=GFX9,GFX9-GISEL %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-FAKE,GFX11-FAKE16-SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-FAKE,GFX11-FAKE16-GISEL %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-TRUE,GFX11-TRUE16-SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-TRUE,GFX11-TRUE16-GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-FAKE16,GFX11-FAKE16-SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-FAKE16,GFX11-FAKE16-GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-TRUE16,GFX11-TRUE16-SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-TRUE16,GFX11-TRUE16-GISEL %s
 
 define void @undef_lo_v2i16(i16 %arg0) {
 ; GFX8-SDAG-LABEL: undef_lo_v2i16:
@@ -37,23 +37,23 @@ define void @undef_lo_v2i16(i16 %arg0) {
 ; GFX9-NEXT:    ;;#ASMEND
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-FAKE-LABEL: undef_lo_v2i16:
-; GFX11-FAKE:       ; %bb.0:
-; GFX11-FAKE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX11-FAKE-NEXT:    ;;#ASMSTART
-; GFX11-FAKE-NEXT:    ; use v0
-; GFX11-FAKE-NEXT:    ;;#ASMEND
-; GFX11-FAKE-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-FAKE16-LABEL: undef_lo_v2i16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX11-FAKE16-NEXT:    ;;#ASMSTART
+; GFX11-FAKE16-NEXT:    ; use v0
+; GFX11-FAKE16-NEXT:    ;;#ASMEND
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE-LABEL: undef_lo_v2i16:
-; GFX11-TRUE:       ; %bb.0:
-; GFX11-TRUE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE-NEXT:    v_mov_b16_e32 v0.h, v0.l
-; GFX11-TRUE-NEXT:    ;;#ASMSTART
-; GFX11-TRUE-NEXT:    ; use v0
-; GFX11-TRUE-NEXT:    ;;#ASMEND
-; GFX11-TRUE-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: undef_lo_v2i16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v0.l
+; GFX11-TRUE16-NEXT:    ;;#ASMSTART
+; GFX11-TRUE16-NEXT:    ; use v0
+; GFX11-TRUE16-NEXT:    ;;#ASMEND
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
   %undef.lo = insertelement <2 x i16> poison, i16 %arg0, i32 1
   call void asm sideeffect "; use $0", "v"(<2 x i16> %undef.lo);
   ret void
@@ -88,23 +88,23 @@ define void @undef_lo_v2f16(half %arg0) {
 ; GFX9-NEXT:    ;;#ASMEND
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-FAKE-LABEL: undef_lo_v2f16:
-; GFX11-FAKE:       ; %bb.0:
-; GFX11-FAKE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX11-FAKE-NEXT:    ;;#ASMSTART
-; GFX11-FAKE-NEXT:    ; use v0
-; GFX11-FAKE-NEXT:    ;;#ASMEND
-; GFX11-FAKE-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-FAKE16-LABEL: undef_lo_v2f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX11-FAKE16-NEXT:    ;;#ASMSTART
+; GFX11-FAKE16-NEXT:    ; use v0
+; GFX11-FAKE16-NEXT:    ;;#ASMEND
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE-LABEL: undef_lo_v2f16:
-; GFX11-TRUE:       ; %bb.0:
-; GFX11-TRUE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE-NEXT:    v_mov_b16_e32 v0.h, v0.l
-; GFX11-TRUE-NEXT:    ;;#ASMSTART
-; GFX11-TRUE-NEXT:    ; use v0
-; GFX11-TRUE-NEXT:    ;;#ASMEND
-; GFX11-TRUE-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: undef_lo_v2f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v0.l
+; GFX11-TRUE16-NEXT:    ;;#ASMSTART
+; GFX11-TRUE16-NEXT:    ; use v0
+; GFX11-TRUE16-NEXT:    ;;#ASMEND
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
   %undef.lo = insertelement <2 x half> poison, half %arg0, i32 1
   call void asm sideeffect "; use $0", "v"(<2 x half> %undef.lo);
   ret void
@@ -144,27 +144,27 @@ define void @undef_lo_op_v2f16(half %arg0) {
 ; GFX9-NEXT:    ;;#ASMEND
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-FAKE-LABEL: undef_lo_op_v2f16:
-; GFX11-FAKE:       ; %bb.0:
-; GFX11-FAKE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX11-FAKE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-FAKE-NEXT:    v_pk_add_f16 v0, v0, 1.0 op_sel_hi:[1,0]
-; GFX11-FAKE-NEXT:    ;;#ASMSTART
-; GFX11-FAKE-NEXT:    ; use v0
-; GFX11-FAKE-NEXT:    ;;#ASMEND
-; GFX11-FAKE-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-FAKE16-LABEL: undef_lo_op_v2f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    ;;#ASMSTART
+; GFX11-FAKE16-NEXT:    ; use v0
+; GFX11-FAKE16-NEXT:    ;;#ASMEND
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE-LABEL: undef_lo_op_v2f16:
-; GFX11-TRUE:       ; %bb.0:
-; GFX11-TRUE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE-NEXT:    v_mov_b16_e32 v0.h, v0.l
-; GFX11-TRUE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE-NEXT:    v_pk_add_f16 v0, v0, 1.0 op_sel_hi:[1,0]
-; GFX11-TRUE-NEXT:    ;;#ASMSTART
-; GFX11-TRUE-NEXT:    ; use v0
-; GFX11-TRUE-NEXT:    ;;#ASMEND
-; GFX11-TRUE-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: undef_lo_op_v2f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v0.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    ;;#ASMSTART
+; GFX11-TRUE16-NEXT:    ; use v0
+; GFX11-TRUE16-NEXT:    ;;#ASMEND
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
   %undef.lo = insertelement <2 x half> poison, half %arg0, i32 1
   %op = fadd <2 x half> %undef.lo, <half 1.0, half 1.0>
   call void asm sideeffect "; use $0", "v"(<2 x half> %op);
@@ -295,23 +295,23 @@ define void @undef_lo3_v4i16(i16 %arg0) {
 ; GFX9-NEXT:    ;;#ASMEND
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-FAKE-LABEL: undef_lo3_v4i16:
-; GFX11-FAKE:       ; %bb.0:
-; GFX11-FAKE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX11-FAKE-NEXT:    ;;#ASMSTART
-; GFX11-FAKE-NEXT:    ; use v[0:1]
-; GFX11-FAKE-NEXT:    ;;#ASMEND
-; GFX11-FAKE-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-FAKE16-LABEL: undef_lo3_v4i16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX11-FAKE16-NEXT:    ;;#ASMSTART
+; GFX11-FAKE16-NEXT:    ; use v[0:1]
+; GFX11-FAKE16-NEXT:    ;;#ASMEND
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE-LABEL: undef_lo3_v4i16:
-; GFX11-TRUE:       ; %bb.0:
-; GFX11-TRUE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE-NEXT:    v_mov_b16_e32 v0.h, v0.l
-; GFX11-TRUE-NEXT:    ;;#ASMSTART
-; GFX11-TRUE-NEXT:    ; use v[0:1]
-; GFX11-TRUE-NEXT:    ;;#ASMEND
-; GFX11-TRUE-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: undef_lo3_v4i16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v0.l
+; GFX11-TRUE16-NEXT:    ;;#ASMSTART
+; GFX11-TRUE16-NEXT:    ; use v[0:1]
+; GFX11-TRUE16-NEXT:    ;;#ASMEND
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
   %undef.lo = insertelement <4 x i16> poison, i16 %arg0, i32 1
   call void asm sideeffect "; use $0", "v"(<4 x i16> %undef.lo);
   ret void
@@ -347,23 +347,23 @@ define void @undef_lo3_v4f16(half %arg0) {
 ; GFX9-NEXT:    ;;#ASMEND
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-FAKE-LABEL: undef_lo3_v4f16:
-; GFX11-FAKE:       ; %bb.0:
-; GFX11-FAKE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX11-FAKE-NEXT:    ;;#ASMSTART
-; GFX11-FAKE-NEXT:    ; use v[0:1]
-; GFX11-FAKE-NEXT:    ;;#ASMEND
-; GFX11-FAKE-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-FAKE16-LABEL: undef_lo3_v4f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX11-FAKE16-NEXT:    ;;#ASMSTART
+; GFX11-FAKE16-NEXT:    ; use v[0:1]
+; GFX11-FAKE16-NEXT:    ;;#ASMEND
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE-LABEL: undef_lo3_v4f16:
-; GFX11-TRUE:       ; %bb.0:
-; GFX11-TRUE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE-NEXT:    v_mov_b16_e32 v0.h, v0.l
-; GFX11-TRUE-NEXT:    ;;#ASMSTART
-; GFX11-TRUE-NEXT:    ; use v[0:1]
-; GFX11-TRUE-NEXT:    ;;#ASMEND
-; GFX11-TRUE-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: undef_lo3_v4f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v0.l
+; GFX11-TRUE16-NEXT:    ;;#ASMSTART
+; GFX11-TRUE16-NEXT:    ; use v[0:1]
+; GFX11-TRUE16-NEXT:    ;;#ASMEND
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
   %undef.lo = insertelement <4 x half> poison, half %arg0, i32 1
   call void asm sideeffect "; use $0", "v"(<4 x half> %undef.lo);
   ret void
@@ -401,14 +401,14 @@ define void @undef_lo2_v4i16(<2 x i16> %arg0) {
 ; GFX9-NEXT:    ;;#ASMEND
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-FAKE-LABEL: undef_lo2_v4i16:
-; GFX11-FAKE:       ; %bb.0:
-; GFX11-FAKE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE-NEXT:    v_perm_b32 v0, v0, v0, 0x7060302
-; GFX11-FAKE-NEXT:    ;;#ASMSTART
-; GFX11-FAKE-NEXT:    ; use v[0:1]
-; GFX11-FAKE-NEXT:    ;;#ASMEND
-; GFX11-FAKE-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-FAKE16-LABEL: undef_lo2_v4i16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v0, v0, 0x7060302
+; GFX11-FAKE16-NEXT:    ;;#ASMSTART
+; GFX11-FAKE16-NEXT:    ; use v[0:1]
+; GFX11-FAKE16-NEXT:    ;;#ASMEND
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-SDAG-LABEL: undef_lo2_v4i16:
 ; GFX11-TRUE16-SDAG:       ; %bb.0:
@@ -467,14 +467,14 @@ define void @undef_lo2_v4f16(<2 x half> %arg0) {
 ; GFX9-NEXT:    ;;#ASMEND
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-FAKE-LABEL: undef_lo2_v4f16:
-; GFX11-FAKE:       ; %bb.0:
-; GFX11-FAKE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE-NEXT:    v_perm_b32 v0, v0, v0, 0x7060302
-; GFX11-FAKE-NEXT:    ;;#ASMSTART
-; GFX11-FAKE-NEXT:    ; use v[0:1]
-; GFX11-FAKE-NEXT:    ;;#ASMEND
-; GFX11-FAKE-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-FAKE16-LABEL: undef_lo2_v4f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v0, v0, 0x7060302
+; GFX11-FAKE16-NEXT:    ;;#ASMSTART
+; GFX11-FAKE16-NEXT:    ; use v[0:1]
+; GFX11-FAKE16-NEXT:    ;;#ASMEND
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-SDAG-LABEL: undef_lo2_v4f16:
 ; GFX11-TRUE16-SDAG:       ; %bb.0:
