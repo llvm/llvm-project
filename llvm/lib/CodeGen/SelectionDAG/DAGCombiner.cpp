@@ -28965,10 +28965,10 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
       ((N1C->isAllOnes() && CC == ISD::SETGT) ||
        (N1C->isZero() && CC == ISD::SETLT)) &&
       !TLI.shouldAvoidTransformToShift(VT, CmpOpVT.getScalarSizeInBits() - 1)) {
-    SDValue ASR = DAG.getNode(
+    SDValue ASHR = DAG.getNode(
         ISD::SRA, DL, CmpOpVT, N0,
-        DAG.getConstant(CmpOpVT.getScalarSizeInBits() - 1, DL, CmpOpVT));
-    return DAG.getNode(ISD::XOR, DL, VT, DAG.getSExtOrTrunc(ASR, DL, VT),
+        DAG.getShiftAmountConstant(CmpOpVT.getScalarSizeInBits() - 1, CmpOpVT, DL));
+    return DAG.getNode(ISD::XOR, DL, VT, DAG.getSExtOrTrunc(ASHR, DL, VT),
                        DAG.getSExtOrTrunc(CC == ISD::SETLT ? N3 : N2, DL, VT));
   }
 
@@ -28978,10 +28978,10 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
       N2C->isOne() && N3C->isAllOnes() &&
       !TLI.shouldAvoidTransformToShift(CmpOpVT,
                                        CmpOpVT.getScalarSizeInBits() - 1)) {
-    SDValue ASR = DAG.getNode(
+    SDValue ASHR = DAG.getNode(
         ISD::SRA, DL, CmpOpVT, N0,
-        DAG.getConstant(CmpOpVT.getScalarSizeInBits() - 1, DL, CmpOpVT));
-    return DAG.getNode(ISD::OR, DL, VT, DAG.getSExtOrTrunc(ASR, DL, VT),
+        DAG.getShiftAmountConstant(CmpOpVT.getScalarSizeInBits() - 1, CmpOpVT, DL));
+    return DAG.getNode(ISD::OR, DL, VT, DAG.getSExtOrTrunc(ASHR, DL, VT),
                        DAG.getConstant(1, DL, VT));
   }
 
