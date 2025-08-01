@@ -1871,6 +1871,8 @@ matchSimpleAtomicOp(memref::AtomicRMWOp atomicOp) {
     return LLVM::AtomicBinOp::umin;
   case arith::AtomicRMWKind::ori:
     return LLVM::AtomicBinOp::_or;
+  case arith::AtomicRMWKind::xori:
+    return LLVM::AtomicBinOp::_xor;
   case arith::AtomicRMWKind::andi:
     return LLVM::AtomicBinOp::_and;
   default:
