@@ -50,7 +50,8 @@ public:
   uint64_t GetDebugInfoSize(bool load_all_debug_info = false) override;
 
   bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
-                              lldb::offset_t &offset,
+                              lldb::offset_t &offset, RegisterContext *reg_ctx,
+                              lldb::RegisterKind reg_kind,
                               std::vector<Value> &stack) const override;
 
   void FindGlobalVariables(ConstString name,
