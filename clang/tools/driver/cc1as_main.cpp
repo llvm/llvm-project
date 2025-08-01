@@ -682,8 +682,7 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   TextDiagnosticPrinter *DiagClient =
       new TextDiagnosticPrinter(errs(), DiagOpts);
   DiagClient->setPrefix("clang -cc1as");
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-  DiagnosticsEngine Diags(DiagID, DiagOpts, DiagClient);
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DiagClient);
 
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.

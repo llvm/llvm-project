@@ -357,8 +357,8 @@ static std::atomic<unsigned> CodeCompletionResultObjects;
 AllocatedCXCodeCompleteResults::AllocatedCXCodeCompleteResults(
     IntrusiveRefCntPtr<FileManager> FileMgr)
     : CXCodeCompleteResults(),
-      Diag(new DiagnosticsEngine(
-          IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), DiagOpts)),
+      Diag(llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(DiagnosticIDs::create(),
+                                                        DiagOpts)),
       FileMgr(std::move(FileMgr)),
       SourceMgr(new SourceManager(*Diag, *this->FileMgr)),
       CodeCompletionAllocator(
@@ -764,7 +764,7 @@ clang_codeCompleteAt_Impl(CXTranslationUnit TU, const char *complete_filename,
                     RemappedFiles, (options & CXCodeComplete_IncludeMacros),
                     (options & CXCodeComplete_IncludeCodePatterns),
                     IncludeBriefComments, Capture,
-                    CXXIdx->getPCHContainerOperations(), *Results->Diag,
+                    CXXIdx->getPCHContainerOperations(), Results->Diag,
                     Results->LangOpts, *Results->SourceMgr, *Results->FileMgr,
                     Results->Diagnostics, Results->TemporaryBuffers,
                     /*SyntaxOnlyAction=*/nullptr);

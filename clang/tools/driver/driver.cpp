@@ -370,9 +370,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
       new TextDiagnosticPrinter(llvm::errs(), *DiagOpts);
   FixupDiagPrefixExeName(DiagClient, ProgName);
 
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-
-  DiagnosticsEngine Diags(DiagID, *DiagOpts, DiagClient);
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), *DiagOpts, DiagClient);
 
   if (!DiagOpts->DiagnosticSerializationFile.empty()) {
     auto SerializedConsumer =
