@@ -24,3 +24,8 @@ bool ABIInfo::isPromotableIntegerType(const IntegerType *Ty) const {
 ABIArgInfo ABIInfo::getNaturalAlignIndirect(const Type *Ty) const {
   return ABIArgInfo::getIndirect(Ty->getAlignment().value(), /*ByVal=*/true);
 }
+RecordArgABI ABIInfo::getRecordArgABI(const StructType *ST) const {
+  if (!ST->canPassInRegisters())
+    return RAA_Indirect;
+  return RAA_Default;
+}

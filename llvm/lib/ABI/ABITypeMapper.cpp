@@ -60,6 +60,12 @@ Type *ABITypeMapper::convertType(const abi::Type *ABIType) {
   case abi::TypeKind::Void:
     Result = Type::getVoidTy(Context);
     break;
+  case abi::TypeKind::Complex:
+    Result = convertComplexType(cast<abi::ComplexType>(ABIType));
+    break;
+  case abi::TypeKind::MemberPointer:
+    Result = convertMemberPointerType(cast<abi::MemberPointerType>(ABIType));
+    break;
   }
 
   if (Result)
@@ -104,6 +110,48 @@ Type *ABITypeMapper::convertStructType(const abi::StructType *ST) {
 Type *ABITypeMapper::convertUnionType(const abi::UnionType *UT) {
   return createStructFromFields(*UT->getFields(), UT->getNumFields(),
                                 UT->getSizeInBits(), UT->getAlignment(), true);
+}
+
+Type *ABITypeMapper::convertComplexType(const abi::ComplexType *CT) {
+  // Complex types are represented as structs with two elements: {real, imag}
+  Type *ElementType = convertType(CT->getElementType());
+  if (!ElementType)
+    return nullptr;
+  //   // Check if the element type is a float type and is 16 bits (half
+  //   precision)
+  // if (ElementType->isFloatingPointTy() &&
+  // ElementType->getPrimitiveSizeInBits() == 2 /* bytes */ * 8) {
+  //   // Return <2 x half> vector type for complex half
+  //   return VectorType::get(ElementType, ElementCount::getFixed(2));
+  // }
+
+  SmallVector<Type *, 2> Fields = {ElementType, ElementType};
+  return StructType::get(Context, Fields, /*isPacked=*/false);
+}
+
+Type *
+ABITypeMapper::convertMemberPointerType(const abi::MemberPointerType *MPT) {
+
+  if (MPT->isFunctionPointer()) {
+    if (MPT->has64BitPointers()) {
+      // {i64, i64} for function pointer + adjustment
+      Type *I64 = IntegerType::get(Context, 64);
+      SmallVector<Type *, 2> Fields = {I64, I64};
+      return StructType::get(Context, Fields, /*isPacked=*/false);
+    } else {
+      // {i32, i32} for 32-bit systems
+      Type *I32 = IntegerType::get(Context, 32);
+      SmallVector<Type *, 2> Fields = {I32, I32};
+      return StructType::get(Context, Fields, /*isPacked=*/false);
+    }
+  } else {
+    // Data member pointer - single offset value
+    if (MPT->has64BitPointers()) {
+      return IntegerType::get(Context, 64);
+    } else {
+      return IntegerType::get(Context, 32);
+    }
+  }
 }
 
 StructType *

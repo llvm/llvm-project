@@ -47,6 +47,8 @@ private:
 
   Type *convertArrayType(const abi::ArrayType *AT);
 
+  Type *convertMatrixType(const abi::ArrayType *MT);
+
   Type *convertVectorType(const abi::VectorType *VT);
 
   Type *convertStructType(const abi::StructType *ST);
@@ -60,6 +62,9 @@ private:
   StructType *createStructFromFields(ArrayRef<abi::FieldInfo> Fields,
                                      uint32_t NumFields, TypeSize Size,
                                      Align Alignment, bool IsUnion = false);
+  Type *convertComplexType(const abi::ComplexType *CT);
+
+  Type *convertMemberPointerType(const abi::MemberPointerType *MPT);
 };
 
 } // namespace llvm

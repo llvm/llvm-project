@@ -40,25 +40,43 @@ enum class TypeKind {
 };
 
 class Type {
+private:
+  TypeSize getTypeStoreSize() const {
+    TypeSize StoreSizeInBits = getTypeStoreSizeInBits();
+    return {StoreSizeInBits.getKnownMinValue() / 8,
+            StoreSizeInBits.isScalable()};
+  }
+  TypeSize getTypeStoreSizeInBits() const {
+    TypeSize BaseSize = getSizeInBits();
+    uint64_t AlignedSizeInBits =
+        alignToPowerOf2(BaseSize.getKnownMinValue(), 8);
+    return {AlignedSizeInBits, BaseSize.isScalable()};
+  }
+
 protected:
   TypeKind Kind;
   TypeSize SizeInBits;
-  Align Alignment;
+  Align ABIAlignment;
+  Align PreferredAlignment;
   bool IsExplicitlyAligned;
 
   Type(TypeKind K, TypeSize Size, Align Align, bool ExplicitAlign = false)
-      : Kind(K), SizeInBits(Size), Alignment(Align),
+      : Kind(K), SizeInBits(Size), ABIAlignment(Align),
         IsExplicitlyAligned(ExplicitAlign) {}
 
 public:
   TypeKind getKind() const { return Kind; }
   TypeSize getSizeInBits() const { return SizeInBits; }
-  Align getAlignment() const { return Alignment; }
+  Align getAlignment() const { return ABIAlignment; }
+  Align getPrefferedAlign() const { return PreferredAlignment; }
   bool hasExplicitAlignment() const { return IsExplicitlyAligned; }
 
   void setExplicitAlignment(Align Align) {
-    Alignment = Align;
+    ABIAlignment = Align;
     IsExplicitlyAligned = true;
+  }
+  TypeSize getTypeAllocSize() const {
+    return alignTo(getTypeStoreSize(), getAlignment().value());
   }
 
   bool isVoid() const { return Kind == TypeKind::Void; }
@@ -70,7 +88,7 @@ public:
   bool isStruct() const { return Kind == TypeKind::Struct; }
   bool isUnion() const { return Kind == TypeKind::Union; }
   bool isMemberPointer() const { return Kind == TypeKind::MemberPointer; }
-  bool isComplex() const { return Kind == TypeKind::Union; }
+  bool isComplex() const { return Kind == TypeKind::Complex; }
 };
 
 class VoidType : public Type {
@@ -120,13 +138,15 @@ private:
 class IntegerType : public Type {
 private:
   bool IsSigned;
+  bool IsBoolean;
 
 public:
-  IntegerType(uint64_t BitWidth, Align Align, bool Signed)
+  IntegerType(uint64_t BitWidth, Align Align, bool Signed, bool IsBool = false)
       : Type(TypeKind::Integer, TypeSize::getFixed(BitWidth), Align),
-        IsSigned(Signed) {}
+        IsSigned(Signed), IsBoolean(IsBool) {}
 
   bool isSigned() const { return IsSigned; }
+  bool isBool() const { return IsBoolean; }
 
   static bool classof(const Type *T) {
     return T->getKind() == TypeKind::Integer;
@@ -219,6 +239,7 @@ private:
   const FieldInfo *Fields;
   uint32_t NumFields;
   StructPacking Packing;
+  bool CanPassInRegisters;
 
   bool IsCXXRecord;
   bool IsPolymorphic;
@@ -238,10 +259,11 @@ public:
              Align Align, StructPacking Pack = StructPacking::Default,
              bool CXXRecord = false, bool Polymorphic = false,
              bool NonTrivialCopy = false, bool NonTrivialDtor = false,
-             bool FlexibleArray = false, bool UnalignedFields = false)
+             bool FlexibleArray = false, bool UnalignedFields = false,
+             bool CanPassInRegs = false)
       : Type(TypeKind::Struct, Size, Align), Fields(StructFields),
-        NumFields(FieldCount), Packing(Pack), IsCXXRecord(CXXRecord),
-        IsPolymorphic(Polymorphic),
+        NumFields(FieldCount), Packing(Pack), CanPassInRegisters(CanPassInRegs),
+        IsCXXRecord(CXXRecord), IsPolymorphic(Polymorphic),
         HasNonTrivialCopyConstructor(NonTrivialCopy),
         HasNonTrivialDestructor(NonTrivialDtor),
         HasFlexibleArrayMember(FlexibleArray),
@@ -258,6 +280,7 @@ public:
   bool hasNonTrivialCopyConstructor() const {
     return HasNonTrivialCopyConstructor;
   }
+  bool canPassInRegisters() const { return CanPassInRegisters; }
   bool hasNonTrivialDestructor() const { return HasNonTrivialDestructor; }
   bool hasFlexibleArrayMember() const { return HasFlexibleArrayMember; }
   bool hasUnalignedFields() const { return HasUnalignedFields; }
@@ -303,10 +326,10 @@ public:
     return new (Allocator.Allocate<VoidType>()) VoidType();
   }
 
-  const IntegerType *getIntegerType(uint64_t BitWidth, Align Align,
-                                    bool Signed) {
+  const IntegerType *getIntegerType(uint64_t BitWidth, Align Align, bool Signed,
+                                    bool IsBoolean = false) {
     return new (Allocator.Allocate<IntegerType>())
-        IntegerType(BitWidth, Align, Signed);
+        IntegerType(BitWidth, Align, Signed, IsBoolean);
   }
 
   const FloatType *getFloatType(const fltSemantics &Semantics, Align Align) {
@@ -328,6 +351,7 @@ public:
         VectorType(ElementType, NumElements, Align);
   }
 
+  // TODO: clean up this function
   const StructType *
   getStructType(ArrayRef<FieldInfo> Fields, TypeSize Size, Align Align,
                 StructPacking Pack = StructPacking::Default,
@@ -335,7 +359,8 @@ public:
                 ArrayRef<FieldInfo> VirtualBaseClasses = {},
                 bool CXXRecord = false, bool Polymorphic = false,
                 bool NonTrivialCopy = false, bool NonTrivialDtor = false,
-                bool FlexibleArray = false, bool UnalignedFields = false) {
+                bool FlexibleArray = false, bool UnalignedFields = false,
+                bool CanPassInRegister = false) {
     FieldInfo *FieldArray = Allocator.Allocate<FieldInfo>(Fields.size());
     for (size_t I = 0; I < Fields.size(); ++I)
       new (&FieldArray[I]) FieldInfo(Fields[I]);
@@ -354,12 +379,12 @@ public:
         new (&VBaseArray[I]) FieldInfo(VirtualBaseClasses[I]);
     }
 
-    return new (Allocator.Allocate<StructType>())
-        StructType(FieldArray, static_cast<uint32_t>(Fields.size()), BaseArray,
-                   static_cast<uint32_t>(BaseClasses.size()), VBaseArray,
-                   static_cast<uint32_t>(VirtualBaseClasses.size()), Size,
-                   Align, Pack, CXXRecord, Polymorphic, NonTrivialCopy,
-                   NonTrivialDtor, FlexibleArray, UnalignedFields);
+    return new (Allocator.Allocate<StructType>()) StructType(
+        FieldArray, static_cast<uint32_t>(Fields.size()), BaseArray,
+        static_cast<uint32_t>(BaseClasses.size()), VBaseArray,
+        static_cast<uint32_t>(VirtualBaseClasses.size()), Size, Align, Pack,
+        CXXRecord, Polymorphic, NonTrivialCopy, NonTrivialDtor, FlexibleArray,
+        UnalignedFields, CanPassInRegister);
   }
   const UnionType *getUnionType(ArrayRef<FieldInfo> Fields, TypeSize Size,
                                 Align Align,
@@ -372,6 +397,23 @@ public:
 
     return new (Allocator.Allocate<UnionType>()) UnionType(
         FieldArray, static_cast<uint32_t>(Fields.size()), Size, Align, Pack);
+  }
+
+  const ComplexType *getComplexType(const Type *ElementType, Align Align) {
+    // Complex types have two elements (real and imaginary parts)
+    uint64_t ElementSize = ElementType->getSizeInBits().getFixedValue();
+    uint64_t ComplexSize = ElementSize * 2;
+
+    return new (Allocator.Allocate<ComplexType>())
+        ComplexType(ElementType, ComplexSize, Align);
+  }
+
+  const MemberPointerType *getMemberPointerType(bool IsFunctionPointer,
+                                                bool Has64BitPointers,
+                                                uint64_t SizeInBits,
+                                                Align Align) {
+    return new (Allocator.Allocate<MemberPointerType>()) MemberPointerType(
+        IsFunctionPointer, Has64BitPointers, SizeInBits, Align);
   }
 };
 

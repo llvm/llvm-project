@@ -13,22 +13,24 @@
 #include "llvm/ABI/Types.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 
 namespace llvm {
 namespace abi {
 
-enum class AVXABILevel { None, AVX, AVX512 };
-
-static unsigned getNativeVectorSizeForAVXABI(AVXABILevel AVXLevel) {
+static unsigned getNativeVectorSizeForAVXABI(X86AVXABILevel AVXLevel) {
   switch (AVXLevel) {
-  case AVXABILevel::AVX512:
+  case X86AVXABILevel::AVX512:
     return 512;
-  case AVXABILevel::AVX:
+  case X86AVXABILevel::AVX:
     return 256;
-  case AVXABILevel::None:
+  case X86AVXABILevel::None:
     return 128;
   }
   llvm_unreachable("Unknown AVXLevel");
@@ -49,7 +51,7 @@ public:
 
 private:
   TypeBuilder &TB;
-  AVXABILevel AVXLevel;
+  X86AVXABILevel AVXLevel;
   bool Has64BitPointers;
   const llvm::Triple &TargetTriple;
 
@@ -60,9 +62,9 @@ private:
   void classify(const Type *T, uint64_t OffsetBase, Class &Lo, Class &Hi,
                 bool IsNamedArg, bool IsRegCall = false) const;
 
-  llvm::Type *getSseTypeAtOffset(llvm::Type *IRType, unsigned IROffset,
-                                 const Type *SourceTy,
-                                 unsigned SourceOffset) const;
+  // llvm::Type *getSseTypeAtOffset(llvm::Type *IRType, unsigned IROffset,
+  //                                const Type *SourceTy,
+  //                                unsigned SourceOffset) const;
 
   const Type *getIntegerTypeAtOffset(const Type *IRType, unsigned IROffset,
                                      const Type *SourceTy,
@@ -77,6 +79,7 @@ private:
                                  const Type *SourceTy,
                                  unsigned SourceOffset) const;
 
+  void computeInfo(ABIFunctionInfo &FI) const override;
   ABIArgInfo getIndirectReturnResult(const Type *Ty) const;
   const Type *getFPTypeAtOffset(const Type *Ty, unsigned Offset) const;
 
@@ -87,65 +90,67 @@ private:
   ABIArgInfo getIndirectResult(const Type *Ty, unsigned FreeIntRegs) const;
 
   ABIArgInfo classifyReturnType(const Type *RetTy) const override;
+  const char *getClassName(Class C) const;
 
-  ABIArgInfo classifyArgumentType(const Type *Ty, unsigned FreeIntRegs,
-                                  unsigned &NeededInt, unsigned &NeededSse,
-                                  bool IsNamedArg,
-                                  bool IsRegCall = false) const;
+  // ABIArgInfo classifyArgumentType(const Type *Ty, unsigned FreeIntRegs,
+  //                                 unsigned &NeededInt, unsigned &NeededSse,
+  //                                 bool IsNamedArg,
+  //                                 bool IsRegCall = false) const;
 
-  ABIArgInfo classifyRegCallStructType(const Type *Ty, unsigned &NeededInt,
-                                       unsigned &NeededSSE,
-                                       unsigned &MaxVectorWidth) const;
-
-  ABIArgInfo classifyRegCallStructTypeImpl(const Type *Ty, unsigned &NeededInt,
-                                           unsigned &NeededSSE,
-                                           unsigned &MaxVectorWidth) const;
-
-  bool isIllegalVectorType(const Type *Ty) const;
+  // ABIArgInfo classifyRegCallStructType(const Type *Ty, unsigned &NeededInt,
+  //                                      unsigned &NeededSSE,
+  //                                      unsigned &MaxVectorWidth) const;
+  //
+  // ABIArgInfo classifyRegCallStructTypeImpl(const Type *Ty, unsigned
+  // &NeededInt,
+  //                                          unsigned &NeededSSE,
+  //                                          unsigned &MaxVectorWidth) const;
+  //
+  // bool isIllegalVectorType(const Type *Ty) const;
 
   // The Functionality of these methods will be moved to
   // llvm::abi::ABICompatInfo
 
-  bool honorsRevision98() const { return !TargetTriple.isOSDarwin(); }
-
-  bool classifyIntegerMMXAsSSE() const {
-    if (TargetTriple.isOSDarwin() || TargetTriple.isPS() ||
-        TargetTriple.isOSFreeBSD())
-      return false;
-    return true;
-  }
-
-  bool passInt128VectorsInMem() const {
-    // TODO: accept ABICompat info from the frontends
-    return TargetTriple.isOSLinux() || TargetTriple.isOSNetBSD();
-  }
-
-  bool returnCXXRecordGreaterThan128InMem() const {
-    // TODO: accept ABICompat info from the frontends
-    return true;
-  }
+  // bool honorsRevision98() const { return !TargetTriple.isOSDarwin(); }
+  //
+  // bool classifyIntegerMMXAsSSE() const {
+  //   if (TargetTriple.isOSDarwin() || TargetTriple.isPS() ||
+  //       TargetTriple.isOSFreeBSD())
+  //     return false;
+  //   return true;
+  // }
+  //
+  // bool passInt128VectorsInMem() const {
+  //   // TODO: accept ABICompat info from the frontends
+  //   return TargetTriple.isOSLinux() || TargetTriple.isOSNetBSD();
+  // }
+  //
+  // bool returnCXXRecordGreaterThan128InMem() const {
+  //   // TODO: accept ABICompat info from the frontends
+  //   return true;
+  // }
 
 public:
   X86_64ABIInfo(TypeBuilder &TypeBuilder, const Triple &Triple,
-                AVXABILevel AVXABILevel, bool Has64BitPtrs,
+                X86AVXABILevel AVXABILevel, bool Has64BitPtrs,
                 const ABICompatInfo &Compat)
       : ABIInfo(Compat), TB(TypeBuilder), AVXLevel(AVXABILevel),
         Has64BitPointers(Has64BitPtrs), TargetTriple(Triple) {}
 
-  bool isPassedUsingAVXType(const Type *Type) const {
-    unsigned NeededInt, NeededSse;
-    ABIArgInfo Info = classifyArgumentType(Type, 0, NeededInt, NeededSse,
-                                           /*IsNamedArg=*/true);
+  // bool isPassedUsingAVXType(const Type *Type) const {
+  //   unsigned NeededInt, NeededSse;
+  //   ABIArgInfo Info = classifyArgumentType(Type, 0, NeededInt, NeededSse,
+  //                                          /*IsNamedArg=*/true);
+  //
+  //   if (Info.isDirect()) {
+  //     auto *Ty = Info.getCoerceToType();
+  //     if (auto *VectorTy = dyn_cast_or_null<VectorType>(Ty))
+  //       return VectorTy->getSizeInBits().getFixedValue() > 128;
+  //   }
+  //   return false;
+  // }
 
-    if (Info.isDirect()) {
-      auto *Ty = Info.getCoerceToType();
-      if (auto *VectorTy = dyn_cast_or_null<VectorType>(Ty))
-        return VectorTy->getSizeInBits().getFixedValue() > 128;
-    }
-    return false;
-  }
-
-  void computeInfo(ABIFunctionInfo &FI) const override;
+  // void computeInfo(ABIFunctionInfo &FI) const override;
 
   bool has64BitPointers() const { return Has64BitPointers; }
 };
@@ -372,15 +377,16 @@ void X86_64ABIInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
       const auto *FltSem = EFT->getSemantics();
       if (FltSem == &llvm::APFloat::IEEEhalf() ||
           FltSem == &llvm::APFloat::IEEEsingle() ||
-          FltSem == &llvm::APFloat::BFloat()) {
+          FltSem == &llvm::APFloat::BFloat())
         Current = SSE;
-      } else if (FltSem == &llvm::APFloat::IEEEdouble()) {
-        Lo = Hi = SSE;
-      } else if (FltSem == &llvm::APFloat::x87DoubleExtended()) {
-        Current = Complex_X87;
-      } else if (FltSem == &llvm::APFloat::IEEEquad()) {
+      else if (FltSem == &llvm::APFloat::IEEEquad())
         Current = Memory;
-      }
+      else if (FltSem == &llvm::APFloat::x87DoubleExtended())
+        Current = Complex_X87;
+      else if (FltSem == &llvm::APFloat::IEEEdouble())
+        Lo = Hi = SSE;
+      else
+        llvm_unreachable("Unexpected long double representation!");
     }
 
     uint64_t ElementSize = ElementType->getSizeInBits().getFixedValue();
@@ -431,14 +437,13 @@ void X86_64ABIInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
 
     // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger
     // than eight eightbytes, ..., it has class MEMORY.
-    if (Size > 512)
+    if (Size > 128)
       return;
 
     // AMD64-ABI 3.2.3p2: Rule 2. If a C++ object has either a non-trivial
     // copy constructor or a non-trivial destructor, it is passed by invisible
     // reference.
-    if (ST->isCXXRecord() &&
-        (ST->hasNonTrivialCopyConstructor() || ST->hasNonTrivialDestructor())) {
+    if (ST->isCXXRecord() && (getRecordArgABI(ST))) {
       return;
     }
 
@@ -515,7 +520,8 @@ void X86_64ABIInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
         uint64_t EB_Hi = (Offset + BitFieldSize - 1) / 64;
 
         if (EB_Lo) {
-          assert(EB_Hi == EB_Lo && "Invalid classification, type > 16 bytes.");
+          // assert(EB_Hi == EB_Lo && "Invalid classification, type > 16
+          // bytes.");
           FieldLo = NoClass;
           FieldHi = Integer;
         } else {
@@ -537,7 +543,7 @@ void X86_64ABIInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
   if (const auto *UT = dyn_cast<UnionType>(T)) {
     uint64_t Size = UT->getSizeInBits().getFixedValue();
 
-    if (Size > 512)
+    if (Size > 128)
       return;
 
     Current = NoClass;
@@ -547,7 +553,7 @@ void X86_64ABIInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
 
     for (uint32_t I = 0; I < NumFields; ++I) {
       const FieldInfo &Field = Fields[I];
-      uint64_t Offset = OffsetBase + Field.OffsetInBits;
+      uint64_t Offset = OffsetBase;
 
       Class FieldLo, FieldHi;
       classify(Field.FieldType, Offset, FieldLo, FieldHi, IsNamedArg);
@@ -599,15 +605,27 @@ ABIArgInfo X86_64ABIInfo::classifyReturnType(const Type *RetTy) const {
     // available register of the sequence %rax, %rdx is used.
   case Integer:
     ResType = getIntegerTypeAtOffset(RetTy, 0, RetTy, 0);
-
+    if (const auto *IT = dyn_cast<IntegerType>(ResType)) {
+      if (IT->isBool() && RetTy->isInteger() &&
+          cast<IntegerType>(RetTy)->isBool()) {
+        // Convert boolean to i1 for LLVM IR
+        ResType = TB.getIntegerType(1, IT->getAlignment(), false, true);
+        return ABIArgInfo::getExtend(ResType);
+      }
+    }
     // If we have a sign or zero extended integer, make sure to return Extend
     // so that the parameter gets the right LLVM IR attributes.
     if (Hi == NoClass && ResType->isInteger()) {
-      const IntegerType *IntTy = cast<IntegerType>(RetTy);
-      if (IntTy && isPromotableIntegerType(IntTy)) {
-        ABIArgInfo Info = ABIArgInfo::getExtend(ResType);
-        return Info;
+      if (const IntegerType *IntTy = dyn_cast<IntegerType>(RetTy)) {
+        if (IntTy && isPromotableIntegerType(IntTy)) {
+          ABIArgInfo Info = ABIArgInfo::getExtend(RetTy);
+          return Info;
+        }
       }
+    }
+    if (ResType->isInteger() && ResType->getSizeInBits() == 128) {
+      assert(Hi == Integer);
+      return ABIArgInfo::getDirect(ResType);
     }
     break;
 
@@ -654,13 +672,13 @@ ABIArgInfo X86_64ABIInfo::classifyReturnType(const Type *RetTy) const {
   case Integer:
     HighPart = getIntegerTypeAtOffset(RetTy, 8, RetTy, 8);
     if (Lo == NoClass)
-      return ABIArgInfo::getDirect(HighPart);
+      return ABIArgInfo::getDirect(HighPart, 8);
     break;
 
   case SSE:
     HighPart = getSSETypeAtOffset(RetTy, 8, RetTy, 8);
     if (Lo == NoClass)
-      return ABIArgInfo::getDirect(HighPart);
+      return ABIArgInfo::getDirect(HighPart, 8);
     break;
 
     // AMD64-ABI 3.2.3p4: Rule 5. If the class is SSEUP, the eightbyte
@@ -683,7 +701,7 @@ ABIArgInfo X86_64ABIInfo::classifyReturnType(const Type *RetTy) const {
     if (Lo != X87) {
       HighPart = getSSETypeAtOffset(RetTy, 8, RetTy, 8);
       if (Lo == NoClass) // Return HighPart at offset 8 in memory.
-        return ABIArgInfo::getDirect(HighPart);
+        return ABIArgInfo::getDirect(HighPart, 8);
     }
     break;
   }
@@ -708,7 +726,7 @@ const Type *X86_64ABIInfo::createPairType(const Type *Lo,
   // at offset 8.  If the high and low parts we inferred are both 4-byte types
   // (e.g. i32 and i32) then the resultant struct type ({i32,i32}) won't have
   // the second element at offset 8.  Check for this:
-  unsigned LoSize = Lo->getSizeInBits().getFixedValue() / 8;
+  unsigned LoSize = (unsigned)Lo->getTypeAllocSize();
   Align HiAlign = Hi->getAlignment();
   unsigned HiStart = alignTo(LoSize, HiAlign);
 
@@ -728,7 +746,8 @@ const Type *X86_64ABIInfo::createPairType(const Type *Lo,
     if (Lo->isFloat()) {
       const FloatType *FT = cast<FloatType>(Lo);
       if (FT->getSemantics() == &APFloat::IEEEhalf() ||
-          FT->getSemantics() == &APFloat::IEEEsingle()) {
+          FT->getSemantics() == &APFloat::IEEEsingle() ||
+          FT->getSemantics() == &APFloat::BFloat()) {
         AdjustedLo = TB.getFloatType(APFloat::IEEEdouble(), Align(8));
       }
     }
@@ -736,14 +755,17 @@ const Type *X86_64ABIInfo::createPairType(const Type *Lo,
     else if (Lo->isInteger() || Lo->isPointer()) {
       AdjustedLo = TB.getIntegerType(64, Align(8), /*Signed=*/false);
     } else {
-      assert(false && "Invalid/unknown low type in pair");
+      assert((Lo->isInteger() || Lo->isPointer()) &&
+             "Invalid/unknown low type in pair");
     }
+    unsigned AdjustedLoSize = AdjustedLo->getSizeInBits().getFixedValue() / 8;
+    HiStart = alignTo(AdjustedLoSize, HiAlign);
   }
 
   // Create the pair struct
   FieldInfo Fields[] = {
-      FieldInfo(AdjustedLo, 0), // Low part at offset 0
-      FieldInfo(Hi, 8 * 8)      // High part at offset 8 bytes (64 bits)
+      FieldInfo(AdjustedLo, 0),  // Low part at offset 0
+      FieldInfo(Hi, HiStart * 8) // High part at offset 8 bytes (64 bits)
   };
 
   // Verify the high part is at offset 8
@@ -894,8 +916,9 @@ const Type *X86_64ABIInfo::getIntegerTypeAtOffset(const Type *ABIType,
 const Type *X86_64ABIInfo::getFPTypeAtOffset(const Type *Ty,
                                              unsigned Offset) const {
   // Check for direct match at offset 0
-  if (Offset == 0 && Ty->isFloat())
+  if (Offset == 0 && Ty->isFloat()) {
     return Ty;
+  }
 
   // Handle struct types by checking each field
   if (const StructType *ST = dyn_cast<StructType>(Ty)) {
@@ -911,7 +934,6 @@ const Type *X86_64ABIInfo::getFPTypeAtOffset(const Type *Ty,
         return getFPTypeAtOffset(Fields[i].FieldType, Offset - FieldOffset);
       }
     }
-    return nullptr;
   }
 
   // Handle array types
@@ -953,9 +975,12 @@ const Type *X86_64ABIInfo::getSSETypeAtOffset(const Type *ABIType,
 
   // Try to get adjacent FP type
   const Type *T1 = nullptr;
-  unsigned T0Size = T0->getSizeInBits().getFixedValue() / 8;
-  if (SourceSize > T0Size)
+  unsigned T0Size =
+      alignTo(T0->getSizeInBits().getFixedValue(), T0->getAlignment().value()) /
+      8;
+  if (SourceSize > T0Size) {
     T1 = getFPTypeAtOffset(ABIType, ABIOffset + T0Size);
+  }
 
   // Special case for half/bfloat + float combinations
   if (!T1 && isFloatTypeWithSemantics(T0, APFloat::IEEEhalf()) &&
@@ -989,6 +1014,12 @@ const Type *X86_64ABIInfo::getSSETypeAtOffset(const Type *ABIType,
                             ElementCount::getFixed(4), Align(8));
   }
 
+  if (isFloatTypeWithSemantics(T0, APFloat::BFloat()) &&
+      isFloatTypeWithSemantics(T1, APFloat::BFloat())) {
+    return TB.getVectorType(T0, ElementCount::getFixed(2),
+                            Align(4)); // bfloat pairs have 4-byte alignment
+  }
+
   // Default to double
   return TB.getFloatType(APFloat::IEEEdouble(), Align(8));
 }
@@ -1005,7 +1036,8 @@ const Type *X86_64ABIInfo::getByteVectorType(const Type *Ty) const {
   if (const VectorType *VT = dyn_cast<VectorType>(Ty)) {
     // Don't pass vXi128 vectors in their native type, the backend can't
     // legalize them.
-    if (passInt128VectorsInMem() && VT->getElementType()->isInteger() &&
+    if (getABICompatInfo().Flags.PassInt128VectorsInMem &&
+        VT->getElementType()->isInteger() &&
         cast<IntegerType>(VT->getElementType())->getSizeInBits() == 128) {
       unsigned Size = VT->getSizeInBits().getFixedValue();
       return TB.getVectorType(TB.getIntegerType(64, Align(8), /*Signed=*/false),
@@ -1054,5 +1086,24 @@ ABIArgInfo X86_64ABIInfo::getIndirectReturnResult(const Type *Ty) const {
   return getNaturalAlignIndirect(Ty);
 }
 
+void X86_64ABIInfo::computeInfo(ABIFunctionInfo &FI) const {
+  // TODO: Implement proper function info computation
+}
+class X8664TargetCodeGenInfo : public TargetCodeGenInfo {
+public:
+  X8664TargetCodeGenInfo(TypeBuilder &TB, const Triple &Triple,
+                         X86AVXABILevel AVXLevel, bool Has64BitPointers,
+                         const ABICompatInfo &Compat)
+      : TargetCodeGenInfo(std::make_unique<X86_64ABIInfo>(
+            TB, Triple, AVXLevel, Has64BitPointers, Compat)) {}
+};
+
+std::unique_ptr<TargetCodeGenInfo>
+createX8664TargetCodeGenInfo(TypeBuilder &TB, const Triple &Triple,
+                             X86AVXABILevel AVXLevel, bool Has64BitPointers,
+                             const ABICompatInfo &Compat) {
+  return std::make_unique<X8664TargetCodeGenInfo>(TB, Triple, AVXLevel,
+                                                  Has64BitPointers, Compat);
+}
 } // namespace abi
 } // namespace llvm
