@@ -1287,34 +1287,34 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
 
 void ObjectFileELF::ParseRISCVAttributes(DataExtractor &data, uint64_t length,
                                          ArchSpec &arch_spec) {
-  lldb::offset_t Offset = 0;
+  lldb::offset_t offset = 0;
 
-  uint8_t FormatVersion = data.GetU8(&Offset);
-  if (FormatVersion != llvm::ELFAttrs::Format_Version)
+  uint8_t format_version = data.GetU8(&offset);
+  if (format_version != llvm::ELFAttrs::Format_Version)
     return;
 
-  Offset = Offset + sizeof(uint32_t); // Section Length
-  llvm::StringRef VendorName = data.GetCStr(&Offset);
+  offset = offset + sizeof(uint32_t); // Section Length
+  llvm::StringRef vendor_name = data.GetCStr(&offset);
 
-  if (VendorName != "riscv")
+  if (vendor_name != "riscv")
     return;
 
   llvm::StringRef attr = "";
 
-  while (Offset < length) {
-    uint8_t Tag = data.GetU8(&Offset);
-    uint32_t Size = data.GetU32(&Offset);
+  while (offset < length) {
+    uint8_t Tag = data.GetU8(&offset);
+    uint32_t Size = data.GetU32(&offset);
 
     if (Tag != llvm::ELFAttrs::File || Size == 0)
       continue;
 
-    while (Offset < length) {
-      uint64_t Tag = data.GetULEB128(&Offset);
+    while (offset < length) {
+      uint64_t Tag = data.GetULEB128(&offset);
       if (Tag == llvm::RISCVAttrs::ARCH) {
-        attr = data.GetCStr(&Offset);
+        attr = data.GetCStr(&offset);
         break;
       } else {
-        data.GetULEB128(&Offset);
+        data.GetULEB128(&offset);
       }
     }
   }
@@ -1327,8 +1327,8 @@ void ObjectFileELF::ParseRISCVAttributes(DataExtractor &data, uint64_t length,
 
   for (const auto &ext : riscv_extensions) {
     if (!attr.empty() && attr.contains(ext) &&
-        !arch_spec.GetAdditionalDisassemblyFeatureStr().contains(ext)) {
-      arch_spec.SetAdditionalDisassemblyFeatureStr("+" + ext + ",");
+        !arch_spec.GetDisassemblyFeatures().contains(ext)) {
+      arch_spec.SetDisassemblyFeatures("+" + ext + ",");
     }
   }
 }
@@ -1618,8 +1618,10 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
           if (sheader.sh_type == SHT_ARM_ATTRIBUTES && section_size != 0 &&
               data.SetData(object_data, sheader.sh_offset, section_size) == section_size)
             ParseARMAttributes(data, section_size, arch_spec);
-        } else if (arch_spec.GetMachine() == llvm::Triple::riscv32 ||
-                   arch_spec.GetMachine() == llvm::Triple::riscv64) {
+        }
+
+        if (arch_spec.GetMachine() == llvm::Triple::riscv32 ||
+            arch_spec.GetMachine() == llvm::Triple::riscv64) {
           DataExtractor data;
           if (sheader.sh_type == SHT_RISCV_ATTRIBUTES && section_size != 0 &&
               (data.SetData(object_data, sheader.sh_offset, section_size) ==

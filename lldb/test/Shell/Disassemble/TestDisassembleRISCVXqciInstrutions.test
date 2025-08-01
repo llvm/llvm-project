@@ -8,4 +8,3 @@
 # RUN: %lldb -b -o "disassemble -b -n main -Y -xqci,+c" %p/Inputs/riscv_xqci.out | FileCheck --check-prefix=CHECK-NOXQCI %s
 
 # CHECK-NOXQCI: <unknown>
-

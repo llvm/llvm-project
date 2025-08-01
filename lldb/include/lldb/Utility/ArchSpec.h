@@ -537,13 +537,14 @@ public:
 
   void SetFlags(const std::string &elf_abi);
 
-  // Sets the target specific disassembly feature string
-  // for ELF disassembly.
-  void SetAdditionalDisassemblyFeatureStr(llvm::StringRef additional_features);
+  /// Sets the feature string that describes architecture specific capabilities
+  /// for use during instruction decoding.
+  void SetDisassemblyFeatures(std::string additional_features);
 
-  // Get the current target disassembly feature string.
-  llvm::StringRef GetAdditionalDisassemblyFeatureStr() const {
-    return llvm::StringRef(m_additional_disassembly_feature_str);
+  /// Returns the feature string used by the disassembler to decode instructions
+  /// based on target specific features.
+  llvm::StringRef GetDisassemblyFeatures() const {
+    return m_disassembly_feature_str;
   }
 
 protected:
@@ -557,8 +558,11 @@ protected:
   // these are application specific extensions like micromips, mips16 etc.
   uint32_t m_flags = 0;
 
-  // Holds the additional disassembly feature string.
-  std::string m_additional_disassembly_feature_str;
+  /// Feature string containing architecture specific ISA(Instruction set
+  /// architecture) extensions present in the binary (e.g. "xqci" in RISCV).
+  /// This string is passed to the disassembler to enable accurate instruction
+  /// decoding based on the binary's supported ISA features.
+  std::string m_disassembly_feature_str;
 
   // Called when m_def or m_entry are changed.  Fills in all remaining members
   // with default values.

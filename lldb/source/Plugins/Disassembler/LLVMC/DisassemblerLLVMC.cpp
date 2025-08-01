@@ -1451,9 +1451,8 @@ void DisassemblerLLVMC::UpdateFeatureString(llvm::StringRef additional_features,
   // Allow users to override default additional features.
   for (llvm::StringRef flag : llvm::split(additional_features, ",")) {
     flag = flag.trim();
-    if (flag.empty()) {
+    if (flag.empty())
       continue;
-    }
     // Check if disable (-c) is already present before adding default enable
     // (+c), since enable (+c) takes precedence whether disable (-c) appears
     // before or after in the feature string.
@@ -1621,11 +1620,11 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
     features_str += "+a,+m,";
   }
 
-  const char *additional_features =
-      arch.GetAdditionalDisassemblyFeatureStr().data();
+  llvm::StringRef additional_features =
+      arch.GetDisassemblyFeatures();
   // Prepend the additional_features if it's not already in the features_str to
   // avoid duplicates.
-  if (additional_features) {
+  if (!additional_features.empty()) {
     UpdateFeatureString(additional_features, features_str);
   }
 
