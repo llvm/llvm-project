@@ -6707,27 +6707,30 @@ Fortran::lower::LoweringBridge::LoweringBridge(
       loweringOptions{loweringOptions}, envDefaults{envDefaults},
       languageFeatures{languageFeatures} {
   // Register the diagnostic handler.
-  context.getDiagEngine().registerHandler([](mlir::Diagnostic &diag) {
-    llvm::raw_ostream &os = llvm::errs();
-    switch (diag.getSeverity()) {
-    case mlir::DiagnosticSeverity::Error:
-      os << "error: ";
-      break;
-    case mlir::DiagnosticSeverity::Remark:
-      os << "info: ";
-      break;
-    case mlir::DiagnosticSeverity::Warning:
-      os << "warning: ";
-      break;
-    default:
-      break;
-    }
-    if (!mlir::isa<mlir::UnknownLoc>(diag.getLocation()))
-      os << diag.getLocation() << ": ";
-    os << diag << '\n';
-    os.flush();
-    return mlir::success();
-  });
+  if (loweringOptions.getRegisterMLIRDiagnosticsHandler()) {
+    diagHandlerID =
+        context.getDiagEngine().registerHandler([](mlir::Diagnostic &diag) {
+          llvm::raw_ostream &os = llvm::errs();
+          switch (diag.getSeverity()) {
+          case mlir::DiagnosticSeverity::Error:
+            os << "error: ";
+            break;
+          case mlir::DiagnosticSeverity::Remark:
+            os << "info: ";
+            break;
+          case mlir::DiagnosticSeverity::Warning:
+            os << "warning: ";
+            break;
+          default:
+            break;
+          }
+          if (!mlir::isa<mlir::UnknownLoc>(diag.getLocation()))
+            os << diag.getLocation() << ": ";
+          os << diag << '\n';
+          os.flush();
+          return mlir::success();
+        });
+  }
 
   auto getPathLocation = [&semanticsContext, &context]() -> mlir::Location {
     std::optional<std::string> path;
@@ -6767,6 +6770,11 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setIdent(*module, Fortran::common::getFlangFullVersion());
   if (cgOpts.RecordCommandLine)
     fir::setCommandline(*module, *cgOpts.RecordCommandLine);
+}
+
+Fortran::lower::LoweringBridge::~LoweringBridge() {
+  if (diagHandlerID)
+    context.getDiagEngine().eraseHandler(*diagHandlerID);
 }
 
 void Fortran::lower::genCleanUpInRegionIfAny(

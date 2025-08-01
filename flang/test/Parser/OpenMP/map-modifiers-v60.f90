@@ -15,8 +15,8 @@ end
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
 !PARSE-TREE: | | Modifier -> OmpAlwaysModifier -> Value = Always
 !PARSE-TREE: | | Modifier -> OmpCloseModifier -> Value = Close
@@ -38,8 +38,8 @@ end
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
 !PARSE-TREE: | | Modifier -> OmpSelfModifier -> Value = Self
 !PARSE-TREE: | | Modifier -> OmpMapType -> Value = Storage
@@ -60,8 +60,8 @@ end
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
 !PARSE-TREE: | | Modifier -> OmpRefModifier -> Value = Ref_Ptr
 !PARSE-TREE: | | Modifier -> OmpMapType -> Value = To
@@ -82,8 +82,8 @@ end
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
 !PARSE-TREE: | | Modifier -> OmpRefModifier -> Value = Ref_Ptee
 !PARSE-TREE: | | Modifier -> OmpMapType -> Value = To
@@ -104,8 +104,8 @@ end
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
 !PARSE-TREE: | | Modifier -> OmpRefModifier -> Value = Ref_Ptr_Ptee
 !PARSE-TREE: | | Modifier -> OmpMapType -> Value = To
