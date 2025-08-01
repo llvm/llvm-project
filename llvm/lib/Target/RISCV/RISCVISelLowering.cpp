@@ -880,6 +880,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX}, VT,
                          Legal);
 
+      setOperationAction(ISD::SCMP, VT, Custom);
       setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Custom);
 
       // Custom-lower extensions and truncations from/to mask types.
@@ -1361,6 +1362,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(
             {ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX, ISD::ABS}, VT, Custom);
 
+        setOperationAction(ISD::SCMP, VT, Custom);
         setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Custom);
 
         // vXi64 MULHS/MULHU requires the V extension instead of Zve64*.
@@ -8223,6 +8225,40 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::SADDSAT:
   case ISD::SSUBSAT:
     return lowerToScalableOp(Op, DAG);
+  case ISD::SCMP: {
+    SDLoc DL(Op);
+    EVT VT = Op->getValueType(0);
+    EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+
+    SDValue LHS = DAG.getFreeze(Op->getOperand(0));
+    SDValue RHS = DAG.getFreeze(Op->getOperand(1));
+    unsigned SEW = VT.getScalarSizeInBits();
+
+    SDValue Shift = DAG.getConstant(SEW-1, DL, VT);
+    SDValue Zero = DAG.getConstant(0, DL, VT);
+    SDValue One = DAG.getConstant(1, DL, VT);
+    SDValue MinusOne = DAG.getAllOnesConstant(DL, VT);
+
+    if (ISD::isConstantSplatVectorAllZeros(RHS.getNode())) {
+      SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, LHS, Shift);
+      if (SEW <= 32) {
+        // scmp(lhs, 0) -> vor.vv(vsra.vi(lhs,SEW-1), vmin.vx(lhs,1))
+        SDValue Min = DAG.getNode(ISD::SMIN, DL, VT, LHS, One);
+        return DAG.getNode(ISD::OR, DL, VT, Sra, Min);
+      }
+      // scmp(lhs, 0) -> vmerge.vi(vmsgt.vi(rhs,0), vsra.vx(lhs,SEW-1), 1)
+      SDValue Setcc = DAG.getSetCC(DL, CCVT, LHS, Zero, ISD::SETLE);
+      return DAG.getSelect(DL, VT, Setcc, Sra, One);
+    }
+    if (ISD::isConstantSplatVectorAllZeros(LHS.getNode())) {
+      // scmp(0, rhs) -> vmerge.vi(vmsgt.vi(rhs,0), vsrl.vi/vx(rhs,SEW-1), -1)
+      SDValue Srl = DAG.getNode(ISD::SRL, DL, VT, RHS, Shift);
+      SDValue Setcc = DAG.getSetCC(DL, CCVT, RHS, Zero, ISD::SETLE);
+      return DAG.getSelect(DL, VT, Setcc, Srl, MinusOne);
+    }
+
+    return SDValue();
+  }
   case ISD::ABDS:
   case ISD::ABDU: {
     SDLoc dl(Op);

@@ -20,10 +20,11 @@ entry:
 define <vscale x 16 x i8> @scmp_z8i8(<vscale x 16 x i8> %a) {
 ; CHECK-LABEL: scmp_z8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmsgt.vi v0, v8, 0
-; CHECK-NEXT:    vsrl.vi v8, v8, 7
-; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, mu
+; CHECK-NEXT:    vmsle.vi v0, v8, 0
+; CHECK-NEXT:    vmv.v.i v10, -1
+; CHECK-NEXT:    vsrl.vi v10, v8, 7, v0.t
+; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
 entry:
   %c = call <vscale x 16 x i8> @llvm.scmp(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> %a)
@@ -33,12 +34,11 @@ entry:
 define <vscale x 16 x i8> @scmp_i8z8(<vscale x 16 x i8> %a) {
 ; CHECK-LABEL: scmp_i8z8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmsgt.vi v0, v8, 0
-; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
-; CHECK-NEXT:    vmsle.vi v0, v8, -1
-; CHECK-NEXT:    vmerge.vim v8, v10, -1, v0
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vmin.vx v10, v8, a0
+; CHECK-NEXT:    vsra.vi v8, v8, 7
+; CHECK-NEXT:    vor.vv v8, v8, v10
 ; CHECK-NEXT:    ret
 entry:
   %c = call <vscale x 16 x i8> @llvm.scmp(<vscale x 16 x i8> %a, <vscale x 16 x i8> zeroinitializer)
@@ -64,10 +64,11 @@ entry:
 define <vscale x 8 x i16> @scmp_z16i16(<vscale x 8 x i16> %a) {
 ; CHECK-LABEL: scmp_z16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmsgt.vi v0, v8, 0
-; CHECK-NEXT:    vsrl.vi v8, v8, 15
-; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vmsle.vi v0, v8, 0
+; CHECK-NEXT:    vmv.v.i v10, -1
+; CHECK-NEXT:    vsrl.vi v10, v8, 15, v0.t
+; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
 entry:
   %c = call <vscale x 8 x i16> @llvm.scmp(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i16> %a)
@@ -77,12 +78,11 @@ entry:
 define <vscale x 8 x i16> @scmp_i16z16(<vscale x 8 x i16> %a) {
 ; CHECK-LABEL: scmp_i16z16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmsgt.vi v0, v8, 0
-; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
-; CHECK-NEXT:    vmsle.vi v0, v8, -1
-; CHECK-NEXT:    vmerge.vim v8, v10, -1, v0
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vmin.vx v10, v8, a0
+; CHECK-NEXT:    vsra.vi v8, v8, 15
+; CHECK-NEXT:    vor.vv v8, v8, v10
 ; CHECK-NEXT:    ret
 entry:
   %c = call <vscale x 8 x i16> @llvm.scmp(<vscale x 8 x i16> %a, <vscale x 8 x i16> zeroinitializer)
@@ -108,10 +108,11 @@ entry:
 define <vscale x 4 x i32> @scmp_z32i32(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: scmp_z32i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vmsgt.vi v0, v8, 0
-; CHECK-NEXT:    vsrl.vi v8, v8, 31
-; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vmsle.vi v0, v8, 0
+; CHECK-NEXT:    vmv.v.i v10, -1
+; CHECK-NEXT:    vsrl.vi v10, v8, 31, v0.t
+; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
 entry:
   %c = call <vscale x 4 x i32> @llvm.scmp(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> %a)
@@ -119,23 +120,14 @@ entry:
 }
 
 define <vscale x 4 x i32> @scmp_i32z32(<vscale x 4 x i32> %a) {
-; RV32-LABEL: scmp_i32z32:
-; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
-; RV32-NEXT:    vmsgt.vi v0, v8, 0
-; RV32-NEXT:    vsra.vi v8, v8, 31
-; RV32-NEXT:    vor.vi v8, v8, 1, v0.t
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: scmp_i32z32:
-; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; RV64-NEXT:    vmsgt.vi v0, v8, 0
-; RV64-NEXT:    vmv.v.i v10, 0
-; RV64-NEXT:    vmerge.vim v10, v10, 1, v0
-; RV64-NEXT:    vmsle.vi v0, v8, -1
-; RV64-NEXT:    vmerge.vim v8, v10, -1, v0
-; RV64-NEXT:    ret
+; CHECK-LABEL: scmp_i32z32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmin.vx v10, v8, a0
+; CHECK-NEXT:    vsra.vi v8, v8, 31
+; CHECK-NEXT:    vor.vv v8, v8, v10
+; CHECK-NEXT:    ret
 entry:
   %c = call <vscale x 4 x i32> @llvm.scmp(<vscale x 4 x i32> %a, <vscale x 4 x i32> zeroinitializer)
   ret <vscale x 4 x i32> %c
@@ -171,10 +163,11 @@ define <vscale x 2 x i64> @scmp_z64i64(<vscale x 2 x i64> %a) {
 ; RV64-LABEL: scmp_z64i64:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    li a0, 63
-; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
-; RV64-NEXT:    vmsgt.vi v0, v8, 0
-; RV64-NEXT:    vsrl.vx v8, v8, a0
-; RV64-NEXT:    vmerge.vim v8, v8, -1, v0
+; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
+; RV64-NEXT:    vmsle.vi v0, v8, 0
+; RV64-NEXT:    vmv.v.i v10, -1
+; RV64-NEXT:    vsrl.vx v10, v8, a0, v0.t
+; RV64-NEXT:    vmv.v.v v8, v10
 ; RV64-NEXT:    ret
 entry:
   %c = call <vscale x 2 x i64> @llvm.scmp(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i64> %a)
@@ -196,9 +189,10 @@ define <vscale x 2 x i64> @scmp_i64z64(<vscale x 2 x i64> %a) {
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    li a0, 63
 ; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
-; RV64-NEXT:    vmsgt.vi v0, v8, 0
-; RV64-NEXT:    vsra.vx v8, v8, a0
-; RV64-NEXT:    vor.vi v8, v8, 1, v0.t
+; RV64-NEXT:    vmsle.vi v0, v8, 0
+; RV64-NEXT:    vmv.v.i v10, 1
+; RV64-NEXT:    vsra.vx v10, v8, a0, v0.t
+; RV64-NEXT:    vmv.v.v v8, v10
 ; RV64-NEXT:    ret
 entry:
   %c = call <vscale x 2 x i64> @llvm.scmp(<vscale x 2 x i64> %a, <vscale x 2 x i64> zeroinitializer)
