@@ -76,6 +76,8 @@ TEST_F(TestTypeSystemClang, TestGetBasicTypeFromEnum) {
                                   context.getComplexType(context.FloatTy)));
   EXPECT_TRUE(
       context.hasSameType(GetBasicQualType(eBasicTypeHalf), context.HalfTy));
+  EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeFloat128),
+                                  context.Float128Ty));
   EXPECT_TRUE(
       context.hasSameType(GetBasicQualType(eBasicTypeInt), context.IntTy));
   EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeInt128),
