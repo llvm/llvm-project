@@ -88,20 +88,18 @@ public:
     // Collect all field names
     std::vector<std::pair<std::string, std::string>> fieldNames;
     classOp.walk([&](mlir::emitc::FieldOp fieldOp) {
-      if (DictionaryAttr innerDictAttr = dyn_cast<mlir::DictionaryAttr>(
-              fieldOp->getAttrDictionary().get("attrs"))) {
-        ArrayAttr arrayAttr = cast<mlir::ArrayAttr>(
-            innerDictAttr.getNamed(attributeName)->getValue());
+      if (ArrayAttr arrayAttr = cast<mlir::ArrayAttr>(
+              fieldOp->getAttrDictionary().get(attributeName))) {
         StringAttr stringAttr = cast<mlir::StringAttr>(arrayAttr[0]);
         fieldNames.emplace_back(stringAttr.getValue().str(),
                                 fieldOp.getName().str());
 
-      } else
+      } else {
         fieldOp.emitError()
             << "FieldOp must have a dictionary attribute named '"
             << attributeName << "'"
             << "with an array containing a string attribute";
-    
+      }
     });
 
     std::string mapString;
@@ -113,9 +111,8 @@ public:
     }
     mapString += " }";
 
-    emitc::FuncOp executeFunc =
-        classOp.lookupSymbol<mlir::emitc::FuncOp>("execute");
-    if (executeFunc)
+    if (emitc::FuncOp executeFunc =
+            classOp.lookupSymbol<mlir::emitc::FuncOp>("execute"))
       rewriter.setInsertionPoint(executeFunc);
     else {
       classOp.emitError() << "ClassOp must contain a function named 'execute' "
@@ -123,14 +120,9 @@ public:
       return failure();
     }
 
-    // Create the constant map
-    rewriter.create<emitc::ConstantOp>(
-        classOp.getLoc(), mapType, emitc::OpaqueAttr::get(context, mapString));
-
-    // TODO: Ideally, we would create a function that returns a reference to the
-    // buffer map. However, current limitations in EmitC function support make
-    // this difficult to implement at the moment.
-
+    rewriter.create<emitc::FieldOp>(
+        classOp.getLoc(), rewriter.getStringAttr("reflectionMap"),
+        TypeAttr::get(mapType), emitc::OpaqueAttr::get(context, mapString));
     return success();
   }
 
