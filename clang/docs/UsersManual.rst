@@ -40,7 +40,7 @@ specific section:
 -  :ref:`Objective-C Language <objc>`: ObjC 1, ObjC 2, ObjC 2.1, plus
    variants depending on base language.
 -  :ref:`C++ Language <cxx>`: C++98, C++03, C++11, C++14, C++17, C++20, C++23,
-   and C++2c.
+   and C++26.
 -  :ref:`Objective C++ Language <objcxx>`
 -  :ref:`OpenCL Kernel Language <opencl>`: OpenCL C 1.0, 1.1, 1.2, 2.0, 3.0,
    and C++ for OpenCL 1.0 and 2021.
@@ -95,7 +95,7 @@ Terminology
 * Frontend -- the Lexer, Preprocessor, Parser, and Sema parts of the compiler.
 * Middle-end -- converts the AST into LLVM IR, adds debug information, etc.
 * Backend -- the parts of the compiler which run after LLVM IR code generation,
-  such as the optimizer.
+  such as the optimizer and generation of assembly code.
 
 See the :doc:`InternalsManual` for more details about the internal construction
 of the compiler.
