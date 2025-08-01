@@ -3655,7 +3655,7 @@ function definitions, and function pointer typedefs.
 
 **Syntax:**
 
-* GNU-style: ``__attribute__((cfi_salt("<salt_string>")))`
+* GNU-style: ``__attribute__((cfi_salt("<salt_string>")))``
 * C++11-style: ``[[clang::cfi_salt("<salt_string>")]]``
 
 **Usage:**
@@ -3729,7 +3729,6 @@ functions intended for different purposes have distinct CFI identities.
   salt values
 * The attribute affects type compatibility during compilation and CFI hash 
   generation during code generation
-
   }];
 }
 
