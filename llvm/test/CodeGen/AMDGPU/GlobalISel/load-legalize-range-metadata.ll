@@ -77,7 +77,7 @@ define <2 x i64> @global_load_v2i64_align16__rangemd(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[MV]](p1) :: (load (<2 x s64>) from %ir.ptr, !range !3, addrspace 1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[MV]](p1) :: (load (<2 x s64>) from %ir.ptr, !range !2, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s64>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
@@ -119,7 +119,7 @@ define i32 @global_sextload_i8_align1__rangemd(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[MV]](p1) :: (load (s8) from %ir.ptr, !range !1, addrspace 1)
+  ; CHECK-NEXT:   [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[MV]](p1) :: (load (s8) from %ir.ptr, !range !0, addrspace 1)
   ; CHECK-NEXT:   $vgpr0 = COPY [[SEXTLOAD]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %load = load i8, ptr addrspace(1) %ptr, align 1, !range !0, !noundef !1
@@ -135,7 +135,7 @@ define i32 @global_zextload_i8_align1__rangemd(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[MV]](p1) :: (load (s8) from %ir.ptr, !range !5, addrspace 1)
+  ; CHECK-NEXT:   [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[MV]](p1) :: (load (s8) from %ir.ptr, !range !4, addrspace 1)
   ; CHECK-NEXT:   $vgpr0 = COPY [[SEXTLOAD]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %load = load i8, ptr addrspace(1) %ptr, align 1, !range !4, !noundef !1

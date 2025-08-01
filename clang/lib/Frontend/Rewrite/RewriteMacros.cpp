@@ -16,10 +16,7 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Rewrite/Frontend/Rewriters.h"
 #include "llvm/ADT/RewriteBuffer.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cstdio>
-#include <memory>
 
 using namespace clang;
 using llvm::RewriteBuffer;

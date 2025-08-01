@@ -11,7 +11,7 @@ define target("riscv.vector.tuple", <vscale x 8 x i8>, 2)  @test_vlseg_nxv8i8(pt
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY $x11
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[PseudoVLSEG2E8_V_M1_:%[0-9]+]]:vrn2m1 = PseudoVLSEG2E8_V_M1 $noreg, [[COPY1]], [[COPY]], 3 /* e8 */, 2 /* tu, ma */ :: (load unknown-size from %ir.p, align 1)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vrn2m1 = COPY [[PseudoVLSEG2E8_V_M1_]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vrn2m1 = COPY killed [[PseudoVLSEG2E8_V_M1_]]
   ; CHECK-NEXT:   $v8_v9 = COPY [[COPY2]]
   ; CHECK-NEXT:   PseudoRET implicit $v8_v9
 entry:
@@ -27,7 +27,7 @@ define target("riscv.vector.tuple", <vscale x 8 x i8>, 2)  @test_vlseg_nxv4i16(p
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY $x11
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[PseudoVLSEG2E16_V_M1_:%[0-9]+]]:vrn2m1 = PseudoVLSEG2E16_V_M1 $noreg, [[COPY1]], [[COPY]], 4 /* e16 */, 2 /* tu, ma */ :: (load unknown-size from %ir.p, align 2)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vrn2m1 = COPY [[PseudoVLSEG2E16_V_M1_]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vrn2m1 = COPY killed [[PseudoVLSEG2E16_V_M1_]]
   ; CHECK-NEXT:   $v8_v9 = COPY [[COPY2]]
   ; CHECK-NEXT:   PseudoRET implicit $v8_v9
 entry:
@@ -43,7 +43,7 @@ define target("riscv.vector.tuple", <vscale x 8 x i8>, 2)  @test_vlseg_nxv2i32(p
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY $x11
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[PseudoVLSEG2E32_V_M1_:%[0-9]+]]:vrn2m1 = PseudoVLSEG2E32_V_M1 $noreg, [[COPY1]], [[COPY]], 5 /* e32 */, 2 /* tu, ma */ :: (load unknown-size from %ir.p, align 4)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vrn2m1 = COPY [[PseudoVLSEG2E32_V_M1_]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vrn2m1 = COPY killed [[PseudoVLSEG2E32_V_M1_]]
   ; CHECK-NEXT:   $v8_v9 = COPY [[COPY2]]
   ; CHECK-NEXT:   PseudoRET implicit $v8_v9
 entry:
@@ -59,7 +59,7 @@ define target("riscv.vector.tuple", <vscale x 8 x i8>, 2)  @test_vlseg_nxv1i64(p
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY $x11
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[PseudoVLSEG2E64_V_M1_:%[0-9]+]]:vrn2m1 = PseudoVLSEG2E64_V_M1 $noreg, [[COPY1]], [[COPY]], 6 /* e64 */, 2 /* tu, ma */ :: (load unknown-size from %ir.p, align 8)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vrn2m1 = COPY [[PseudoVLSEG2E64_V_M1_]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vrn2m1 = COPY killed [[PseudoVLSEG2E64_V_M1_]]
   ; CHECK-NEXT:   $v8_v9 = COPY [[COPY2]]
   ; CHECK-NEXT:   PseudoRET implicit $v8_v9
 entry:

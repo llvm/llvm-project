@@ -35,6 +35,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm -1234
     ; CHECK-NEXT: $w0 = COPY [[MOVi32imm]]
+    ;
     ; CHECK-TINY-LABEL: name: imm_s32_gpr
     ; CHECK-TINY: liveins: $w0, $w1
     ; CHECK-TINY-NEXT: {{  $}}
@@ -63,6 +64,7 @@ body:             |
     ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1234
     ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
     ; CHECK-NEXT: $x0 = COPY [[SUBREG_TO_REG]]
+    ;
     ; CHECK-TINY-LABEL: name: imm_s64_gpr
     ; CHECK-TINY: liveins: $w0, $w1
     ; CHECK-TINY-NEXT: {{  $}}
@@ -90,16 +92,17 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
     ; CHECK-NEXT: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s64) from constant-pool)
-    ; CHECK-NEXT: %2:fpr64 = nofpexcept FADDDrr [[COPY]], [[LDRDui]]
-    ; CHECK-NEXT: $d0 = COPY %2
+    ; CHECK-NEXT: [[FADDDrr:%[0-9]+]]:fpr64 = nofpexcept FADDDrr [[COPY]], [[LDRDui]], implicit $fpcr
+    ; CHECK-NEXT: $d0 = COPY [[FADDDrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    ;
     ; CHECK-TINY-LABEL: name: test_f64_cp
     ; CHECK-TINY: liveins: $d0
     ; CHECK-TINY-NEXT: {{  $}}
     ; CHECK-TINY-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-TINY-NEXT: [[LDRDl:%[0-9]+]]:fpr64 = LDRDl %const.0 :: (load (s64) from constant-pool)
-    ; CHECK-TINY-NEXT: %2:fpr64 = nofpexcept FADDDrr [[COPY]], [[LDRDl]]
-    ; CHECK-TINY-NEXT: $d0 = COPY %2
+    ; CHECK-TINY-NEXT: [[FADDDrr:%[0-9]+]]:fpr64 = nofpexcept FADDDrr [[COPY]], [[LDRDl]], implicit $fpcr
+    ; CHECK-TINY-NEXT: $d0 = COPY [[FADDDrr]]
     ; CHECK-TINY-NEXT: RET_ReallyLR implicit $d0
     %0:fpr(s64) = COPY $d0
     %1:fpr(s64) = G_FCONSTANT double 0x3FEFF7CED916872B
@@ -125,16 +128,17 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
     ; CHECK-NEXT: [[LDRSui:%[0-9]+]]:fpr32 = LDRSui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s32) from constant-pool)
-    ; CHECK-NEXT: %2:fpr32 = nofpexcept FADDSrr [[COPY]], [[LDRSui]]
-    ; CHECK-NEXT: $s0 = COPY %2
+    ; CHECK-NEXT: [[FADDSrr:%[0-9]+]]:fpr32 = nofpexcept FADDSrr [[COPY]], [[LDRSui]], implicit $fpcr
+    ; CHECK-NEXT: $s0 = COPY [[FADDSrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
+    ;
     ; CHECK-TINY-LABEL: name: test_f32_cp_optsize
     ; CHECK-TINY: liveins: $s0
     ; CHECK-TINY-NEXT: {{  $}}
     ; CHECK-TINY-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-TINY-NEXT: [[LDRSl:%[0-9]+]]:fpr32 = LDRSl %const.0 :: (load (s32) from constant-pool)
-    ; CHECK-TINY-NEXT: %2:fpr32 = nofpexcept FADDSrr [[COPY]], [[LDRSl]]
-    ; CHECK-TINY-NEXT: $s0 = COPY %2
+    ; CHECK-TINY-NEXT: [[FADDSrr:%[0-9]+]]:fpr32 = nofpexcept FADDSrr [[COPY]], [[LDRSl]], implicit $fpcr
+    ; CHECK-TINY-NEXT: $s0 = COPY [[FADDSrr]]
     ; CHECK-TINY-NEXT: RET_ReallyLR implicit $s0
     %0:fpr(s32) = COPY $s0
     %1:fpr(s32) = G_FCONSTANT float 0x3FDB267DE0000000
@@ -160,16 +164,17 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
     ; CHECK-NEXT: [[LDRSui:%[0-9]+]]:fpr32 = LDRSui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s32) from constant-pool)
-    ; CHECK-NEXT: %2:fpr32 = nofpexcept FADDSrr [[COPY]], [[LDRSui]]
-    ; CHECK-NEXT: $s0 = COPY %2
+    ; CHECK-NEXT: [[FADDSrr:%[0-9]+]]:fpr32 = nofpexcept FADDSrr [[COPY]], [[LDRSui]], implicit $fpcr
+    ; CHECK-NEXT: $s0 = COPY [[FADDSrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
+    ;
     ; CHECK-TINY-LABEL: name: test_f32_cp_minsize
     ; CHECK-TINY: liveins: $s0
     ; CHECK-TINY-NEXT: {{  $}}
     ; CHECK-TINY-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-TINY-NEXT: [[LDRSl:%[0-9]+]]:fpr32 = LDRSl %const.0 :: (load (s32) from constant-pool)
-    ; CHECK-TINY-NEXT: %2:fpr32 = nofpexcept FADDSrr [[COPY]], [[LDRSl]]
-    ; CHECK-TINY-NEXT: $s0 = COPY %2
+    ; CHECK-TINY-NEXT: [[FADDSrr:%[0-9]+]]:fpr32 = nofpexcept FADDSrr [[COPY]], [[LDRSl]], implicit $fpcr
+    ; CHECK-TINY-NEXT: $s0 = COPY [[FADDSrr]]
     ; CHECK-TINY-NEXT: RET_ReallyLR implicit $s0
     %0:fpr(s32) = COPY $s0
     %1:fpr(s32) = G_FCONSTANT float 0x3FDB267DE0000000

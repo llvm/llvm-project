@@ -80,7 +80,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
 
 #include <iterator>

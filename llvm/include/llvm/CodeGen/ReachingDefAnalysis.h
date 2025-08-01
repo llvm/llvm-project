@@ -172,9 +172,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs).set(
-          MachineFunctionProperties::Property::TracksLiveness);
+    return MachineFunctionProperties().setNoVRegs().setTracksLiveness();
   }
 
   /// Re-run the analysis.

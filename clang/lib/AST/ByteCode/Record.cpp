@@ -29,7 +29,7 @@ Record::Record(const RecordDecl *Decl, BaseList &&SrcBases,
     VirtualBaseMap[V.Decl] = &V;
 }
 
-const std::string Record::getName() const {
+std::string Record::getName() const {
   std::string Ret;
   llvm::raw_string_ostream OS(Ret);
   Decl->getNameForDiagnostic(OS, Decl->getASTContext().getPrintingPolicy(),

@@ -60,9 +60,9 @@ subroutine acc_serial
   !$acc serial async
   !$acc end serial
 
-! CHECK: acc.serial {
+! CHECK: acc.serial async {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>]} 
+! CHECK-NEXT: }
 
   !$acc serial async(1)
   !$acc end serial

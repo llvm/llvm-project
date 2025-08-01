@@ -37,6 +37,8 @@ public:
   getMnemonic(const MCInst &MI) const override;
   void printInstruction(const MCInst *MI, uint64_t Address,
                         const MCSubtargetInfo &STI, raw_ostream &O);
+  void printCTILabel(const MCInst *MI, uint64_t Address, unsigned OpNum,
+                     const MCSubtargetInfo &STI, raw_ostream &O);
   bool printAliasInstr(const MCInst *MI, uint64_t Address,
                        const MCSubtargetInfo &STI, raw_ostream &O);
   void printCustomAliasOperand(const MCInst *MI, uint64_t Address,

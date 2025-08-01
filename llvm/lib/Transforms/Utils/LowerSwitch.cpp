@@ -406,7 +406,7 @@ void ProcessSwitchInst(SwitchInst *SI,
     //    roughly C icmp's per switch, where C is the number of cases in the
     //    switch, while LowerSwitch only needs to call LVI once per switch.
     const DataLayout &DL = F->getDataLayout();
-    KnownBits Known = computeKnownBits(Val, DL, /*Depth=*/0, AC, SI);
+    KnownBits Known = computeKnownBits(Val, DL, AC, SI);
     // TODO Shouldn't this create a signed range?
     ConstantRange KnownBitsRange =
         ConstantRange::fromKnownBits(Known, /*IsSigned=*/false);

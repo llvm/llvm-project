@@ -25,7 +25,7 @@ namespace clang::tidy::performance {
 class FasterStringFindCheck : public ClangTidyCheck {
 public:
   FasterStringFindCheck(StringRef Name, ClangTidyContext *Context);
-  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override{
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;

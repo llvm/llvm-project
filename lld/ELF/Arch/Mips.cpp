@@ -7,11 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputFiles.h"
-#include "OutputSections.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/ErrorHandler.h"
 #include "llvm/BinaryFormat/ELF.h"
 
 using namespace llvm;
@@ -41,6 +39,10 @@ public:
   bool usesOnlyLowPageBits(RelType type) const override;
 };
 } // namespace
+
+uint64_t elf::getMipsPageAddr(uint64_t addr) {
+  return (addr + 0x8000) & ~0xffff;
+}
 
 template <class ELFT> MIPS<ELFT>::MIPS(Ctx &ctx) : TargetInfo(ctx) {
   gotPltHeaderEntriesNum = 2;

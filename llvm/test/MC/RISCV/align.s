@@ -134,3 +134,61 @@ data2:
 	.option norvc
 	.balign 4
 	add	a0, a0, a1
+
+## Branches crossing the linker-relaxable R_RISCV_ALIGN need relocations.
+# RELAX-RELOC:      .rela.text3 {
+# RELAX-RELOC-NEXT:    0x4 R_RISCV_BRANCH .Ltmp[[#]] 0x0
+# RELAX-RELOC-NEXT:    0x8 R_RISCV_ALIGN - 0x4
+# RELAX-RELOC-NEXT:    0xC R_RISCV_BRANCH .Ltmp[[#]] 0x0
+# RELAX-RELOC-NEXT: }
+# C-OR-ZCA-EXT-RELAX-RELOC:      .rela.text3 {
+# C-OR-ZCA-EXT-RELAX-RELOC-NEXT:    0x4 R_RISCV_BRANCH .Ltmp[[#]] 0x0
+# C-OR-ZCA-EXT-RELAX-RELOC-NEXT:    0x8 R_RISCV_ALIGN - 0x4
+# C-OR-ZCA-EXT-RELAX-RELOC-NEXT:    0xC R_RISCV_BRANCH .Ltmp[[#]] 0x0
+# C-OR-ZCA-EXT-RELAX-RELOC-NEXT: }
+	.section .text3, "ax"
+	bnez t1, 1f
+	bnez t2, 2f
+1:
+	.p2align 3
+2:
+	bnez t1, 1b
+	bnez t1, 2b
+
+## .text3 with a call at the start
+# NORELAX-RELOC:    .rela.text3a
+# C-OR-ZCA-EXT-NORELAX-RELOC: .rela.text3a
+# RELAX-RELOC:      .rela.text3a {
+# RELAX-RELOC-NEXT:    0x0  R_RISCV_CALL_PLT foo 0x0
+# RELAX-RELOC-NEXT:    0x0  R_RISCV_RELAX - 0x0
+# RELAX-RELOC-NEXT:    0xC  R_RISCV_BRANCH .Ltmp[[#]] 0x0
+# RELAX-RELOC-NEXT:    0x10 R_RISCV_ALIGN - 0x4
+# RELAX-RELOC-NEXT:    0x14 R_RISCV_BRANCH .Ltmp[[#]] 0x0
+# RELAX-RELOC-NEXT: }
+.section .text3a, "ax"
+call foo
+bnez t1, 1f
+bnez t2, 2f
+1:
+.p2align 3
+2:
+bnez t1, 1b
+bnez t1, 2b
+
+## .text3 with a call at the end
+# RELAX-RELOC:      .rela.text3b {
+# RELAX-RELOC-NEXT:    0x4  R_RISCV_BRANCH .Ltmp[[#]] 0x0
+# RELAX-RELOC-NEXT:    0x8  R_RISCV_ALIGN - 0x4
+# RELAX-RELOC-NEXT:    0xC  R_RISCV_BRANCH .Ltmp[[#]] 0x0
+# RELAX-RELOC-NEXT:    0x14 R_RISCV_CALL_PLT foo 0x0
+# RELAX-RELOC-NEXT:    0x14 R_RISCV_RELAX - 0x0
+# RELAX-RELOC-NEXT: }
+.section .text3b, "ax"
+bnez t1, 1f
+bnez t2, 2f
+1:
+.p2align 3
+2:
+bnez t1, 1b
+bnez t1, 2b
+call foo

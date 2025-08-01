@@ -62,7 +62,7 @@ createASTReader(CompilerInstance &CI, StringRef pchFile,
   std::unique_ptr<ASTReader> Reader;
   Reader.reset(new ASTReader(
       PP, CI.getModuleCache(), &CI.getASTContext(), CI.getPCHContainerReader(),
-      /*Extensions=*/{},
+      CI.getCodeGenOpts(), /*Extensions=*/{},
       /*isysroot=*/"", DisableValidationForModuleKind::PCH));
   for (unsigned ti = 0; ti < bufNames.size(); ++ti) {
     StringRef sr(bufNames[ti]);
@@ -117,14 +117,13 @@ IntrusiveRefCntPtr<ExternalSemaSource> clang::createChainedIncludesSource(
     CInvok->getFrontendOpts().Inputs.push_back(InputFile);
 
     TextDiagnosticPrinter *DiagClient =
-      new TextDiagnosticPrinter(llvm::errs(), new DiagnosticOptions());
-    IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-        new DiagnosticsEngine(DiagID, &CI.getDiagnosticOpts(), DiagClient));
+        new TextDiagnosticPrinter(llvm::errs(), CI.getDiagnosticOpts());
+    auto Diags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(
+        DiagnosticIDs::create(), CI.getDiagnosticOpts(), DiagClient);
 
     auto Clang = std::make_unique<CompilerInstance>(
         std::move(CInvok), CI.getPCHContainerOperations());
-    Clang->setDiagnostics(Diags.get());
+    Clang->setDiagnostics(Diags);
     Clang->setTarget(TargetInfo::CreateTargetInfo(
         Clang->getDiagnostics(), Clang->getInvocation().getTargetOpts()));
     Clang->createFileManager();
@@ -138,7 +137,8 @@ IntrusiveRefCntPtr<ExternalSemaSource> clang::createChainedIncludesSource(
     ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions;
     auto consumer = std::make_unique<PCHGenerator>(
         Clang->getPreprocessor(), Clang->getModuleCache(), "-", /*isysroot=*/"",
-        Buffer, Extensions, /*AllowASTWithErrors=*/true);
+        Buffer, Clang->getCodeGenOpts(), Extensions,
+        /*AllowASTWithErrors=*/true);
     Clang->getASTContext().setASTMutationListener(
                                             consumer->GetASTMutationListener());
     Clang->setASTConsumer(std::move(consumer));
