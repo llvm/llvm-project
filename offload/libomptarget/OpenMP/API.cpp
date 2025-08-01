@@ -94,8 +94,7 @@ EXTERN int omp_get_device_num(void) {
 EXTERN int omp_get_initial_device(void) {
   TIMESCOPE();
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
-  int NumDevices = omp_get_num_devices();
-  int HostDevice = NumDevices == 0 ? -1 : NumDevices;
+  int HostDevice = omp_get_num_devices();
   DP("Call to omp_get_initial_device returning %d\n", HostDevice);
   return HostDevice;
 }
