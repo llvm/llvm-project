@@ -626,6 +626,7 @@ public:
 
   mlir::Value VisitCXXThisExpr(CXXThisExpr *te) { return cgf.loadCXXThis(); }
 
+  mlir::Value VisitExprWithCleanups(ExprWithCleanups *e);
   mlir::Value VisitCXXNewExpr(const CXXNewExpr *e) {
     return cgf.emitCXXNewExpr(e);
   }
@@ -1215,6 +1216,29 @@ mlir::Value ScalarExprEmitter::emitCompoundAssign(
 
   // Otherwise, reload the value.
   return emitLoadOfLValue(lhs, e->getExprLoc());
+}
+
+mlir::Value ScalarExprEmitter::VisitExprWithCleanups(ExprWithCleanups *e) {
+  mlir::Location scopeLoc = cgf.getLoc(e->getSourceRange());
+  mlir::OpBuilder &builder = cgf.builder;
+
+  auto scope = cir::ScopeOp::create(
+      builder, scopeLoc,
+      /*scopeBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Type &yieldTy, mlir::Location loc) {
+        CIRGenFunction::LexicalScope lexScope{cgf, loc,
+                                              builder.getInsertionBlock()};
+        mlir::Value scopeYieldVal = Visit(e->getSubExpr());
+        if (scopeYieldVal) {
+          // Defend against dominance problems caused by jumps out of expression
+          // evaluation through the shared cleanup block.
+          lexScope.forceCleanup();
+          cir::YieldOp::create(builder, loc, scopeYieldVal);
+          yieldTy = scopeYieldVal.getType();
+        }
+      });
+
+  return scope.getNumResults() > 0 ? scope->getResult(0) : nullptr;
 }
 
 } // namespace
