@@ -48,8 +48,8 @@ struct BinOpInfo {
   /// Check if the binop can result in integer overflow.
   bool mayHaveIntegerOverflow() const {
     // Without constant input, we can't rule out overflow.
-    auto lhsci = dyn_cast<cir::ConstantOp>(lhs.getDefiningOp());
-    auto rhsci = dyn_cast<cir::ConstantOp>(rhs.getDefiningOp());
+    auto lhsci = lhs.getDefiningOp<cir::ConstantOp>();
+    auto rhsci = rhs.getDefiningOp<cir::ConstantOp>();
     if (!lhsci || !rhsci)
       return true;
 
