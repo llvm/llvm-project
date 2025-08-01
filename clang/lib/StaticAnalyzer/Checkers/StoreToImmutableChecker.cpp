@@ -63,10 +63,12 @@ static bool isInitializationContext(const Stmt *S, CheckerContext &C) {
   // ugly hack to detect whether this construction is used to initialize a
   // variable.
   //
-  // FIXME: This should be eliminated once the API of checkBind would allow to
-  // distinguish between initialization and assignment, because this information
-  // is already available in the engine, it is just not passed to the checker
-  // API.
+  // FIXME: This should be eliminated by improving the API of checkBind to
+  // ensure that it consistently passes the `VarDecl` (instead of the
+  // `CXXConstructExpr`) when the constructor call denotes the initialization
+  // of a variable with a lambda, or maybe less preferably, try the more
+  // invasive approach of passing the information forward to the checkers
+  // whether the current bind is an initialization or an assignment.
   const auto *ConstructExp = dyn_cast<CXXConstructExpr>(S);
   return ConstructExp && ConstructExp->isElidable();
 }
