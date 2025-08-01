@@ -3094,16 +3094,11 @@ static mlir::omp::DistributeOp genCompositeDistributeSimd(
   genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
                  simdReductionSyms);
 
-  DataSharingProcessor distributeItemDSP(
-      converter, semaCtx, distributeItem->clauses, eval,
-      /*shouldCollectPreDeterminedSymbols=*/false,
-      /*useDelayedPrivatization=*/true, symTable);
-  distributeItemDSP.processStep1(&distributeClauseOps);
-
-  DataSharingProcessor simdItemDSP(converter, semaCtx, simdItem->clauses, eval,
-                                   /*shouldCollectPreDeterminedSymbols=*/true,
-                                   /*useDelayedPrivatization=*/true, symTable);
-  simdItemDSP.processStep1(&simdClauseOps);
+  // TODO: Support delayed privatization.
+  DataSharingProcessor dsp(converter, semaCtx, simdItem->clauses, eval,
+                           /*shouldCollectPreDeterminedSymbols=*/true,
+                           /*useDelayedPrivatization=*/false, symTable);
+  dsp.processStep1();
 
   // Pass the innermost leaf construct's clauses because that's where COLLAPSE
   // is placed by construct decomposition.
@@ -3114,15 +3109,13 @@ static mlir::omp::DistributeOp genCompositeDistributeSimd(
 
   // Operation creation.
   EntryBlockArgs distributeArgs;
-  distributeArgs.priv.syms = distributeItemDSP.getDelayedPrivSymbols();
-  distributeArgs.priv.vars = distributeClauseOps.privateVars;
+  // TODO: Add private syms and vars.
   auto distributeOp = genWrapperOp<mlir::omp::DistributeOp>(
       converter, loc, distributeClauseOps, distributeArgs);
   distributeOp.setComposite(/*val=*/true);
 
   EntryBlockArgs simdArgs;
-  simdArgs.priv.syms = simdItemDSP.getDelayedPrivSymbols();
-  simdArgs.priv.vars = simdClauseOps.privateVars;
+  // TODO: Add private syms and vars.
   simdArgs.reduction.syms = simdReductionSyms;
   simdArgs.reduction.vars = simdClauseOps.reductionVars;
   auto simdOp =
@@ -3132,7 +3125,7 @@ static mlir::omp::DistributeOp genCompositeDistributeSimd(
   genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, simdItem,
                 loopNestClauseOps, iv,
                 {{distributeOp, distributeArgs}, {simdOp, simdArgs}},
-                llvm::omp::Directive::OMPD_distribute_simd, simdItemDSP);
+                llvm::omp::Directive::OMPD_distribute_simd, dsp);
   return distributeOp;
 }
 
