@@ -43,6 +43,7 @@ from . import lldbtest_config
 from . import test_categories
 from . import test_result
 from ..support import seven
+from ..support import temp_file
 
 
 def is_exe(fpath):
@@ -785,8 +786,8 @@ def canRunLibcxxTests():
         return True, "libc++ always present"
 
     if platform == "linux":
-        with tempfile.NamedTemporaryFile() as f:
-            cmd = [configuration.compiler, "-xc++", "-stdlib=libc++", "-o", f.name, "-"]
+        with temp_file.OnDiskTempFile() as f:
+            cmd = [configuration.compiler, "-xc++", "-stdlib=libc++", "-o", f.path, "-"]
             p = subprocess.Popen(
                 cmd,
                 stdin=subprocess.PIPE,
@@ -845,8 +846,8 @@ def canRunMsvcStlTests():
     if platform != "windows":
         return False, f"Don't know how to build with MSVC's STL on {platform}"
 
-    with tempfile.NamedTemporaryFile() as f:
-        cmd = [configuration.compiler, "-xc++", "-o", f.name, "-E", "-"]
+    with temp_file.OnDiskTempFile() as f:
+        cmd = [configuration.compiler, "-xc++", "-o", f.path, "-E", "-"]
         p = subprocess.Popen(
             cmd,
             stdin=subprocess.PIPE,
