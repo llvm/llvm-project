@@ -595,9 +595,9 @@ Expected<ObjectFile *> LLVMSymbolizer::getOrCreateObjectFromArchive(
     return errorCodeToError(object_error::invalid_file_type);
 
   Error Err = Error::success();
-  
+
   // On AIX, archives can contain multiple members with same name but different
-  // types. We need to check all matches and find one that matches both name and 
+  // types. We need to check all matches and find one that matches both name and
   // architecture.
   for (auto &Child : Archive->children(Err, /*SkipInternal=*/true)) {
     Expected<StringRef> NameOrErr = Child.getName();
@@ -608,17 +608,15 @@ Expected<ObjectFile *> LLVMSymbolizer::getOrCreateObjectFromArchive(
           Child.getAsBinary();
       if (!MemberOrErr)
         continue;
-      
+
       std::unique_ptr<object::Binary> Binary = std::move(*MemberOrErr);
       if (auto *Obj = dyn_cast<object::ObjectFile>(Binary.get())) {
-#ifdef _AIX
         Triple::ArchType ObjArch = Obj->makeTriple().getArch();
         Triple RequestedTriple;
         RequestedTriple.setArch(Triple::getArchTypeForLLVMName(ArchName));
         if (ObjArch != RequestedTriple.getArch())
           continue;
-#endif
-        ArchiveCacheKey CacheKey{ArchivePath.str(), MemberName.str(), ArchName};
+        ArchiveCacheKey CacheKey{ArchivePath.str(), MemberName.str(), ArchName.str()};
         auto I = ObjectForArchivePathAndArch.find(CacheKey);
         if (I != ObjectForArchivePathAndArch.end())
           return I->second.get();
