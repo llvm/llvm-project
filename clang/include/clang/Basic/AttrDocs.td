@@ -3650,7 +3650,17 @@ def CFISaltDocs : Documentation {
   let Content = [{
 Use ``__attribute__((cfi_salt("<salt>")))`` on a function declaration, function
 definition, or typedef to help distinguish CFI hashes between functions with
-the same type signature.
+the same type signature. Take, for example, the Linux kernel, where there are
+hundreds of functions with the same type signature that are indirectly
+callable.
+
+```
+1662 functions with void (*)(void)
+1179 functions with int (*)(void)
+ ...
+```
+
+Making the CFI value distinct between them allows CFI to be more robust.
 
 Example use:
 
