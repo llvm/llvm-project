@@ -659,10 +659,10 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
   auto IsMaterializableInSingleInstruction = [=](uint64_t Imm) {
     SmallVector<AArch64_IMM::ImmInsnModel> Insn;
     AArch64_IMM::expandMOVImm(Imm, 32, Insn);
-    return Insn.size() == 1;
+    return Insn.size();
   };
 
-  if (!IsMaterializableInSingleInstruction(OriginalC) &&
+  if (IsMaterializableInSingleInstruction(OriginalC) >
       IsMaterializableInSingleInstruction(C))
     return {{C, P}};
 
