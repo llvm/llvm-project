@@ -111,7 +111,7 @@ lli_args = []
 # breaks remote tests due to not having a __register_frame function.  The only
 # test that succeeds with cygwin-elf but fails with cygwin is
 # test/ExecutionEngine/MCJIT/stubs-sm-pic.ll so this test is marked as XFAIL
-# for cygwin targets
+# for cygwin targets.
 if re.search(r"windows-gnu|windows-msvc", config.host_triple):
     lli_args = ["-mtriple=" + config.host_triple + "-elf"]
 
