@@ -2679,6 +2679,9 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       case Intrinsic::nvvm_round_ftz_f:
       case Intrinsic::nvvm_round_f:
       case Intrinsic::nvvm_round_d: {
+        // nvvm_round is lowered to PTX cvt.rni, which will round to nearest
+        // integer, choosing even integer if source is equidistant between two
+        // integers, so the semantics are closer to "rint" rather than "round".
         bool IsFTZ = nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID);
         auto V = IsFTZ ? FTZPreserveSign(APF) : APF;
         V.roundToIntegral(APFloat::rmNearestTiesToEven);
