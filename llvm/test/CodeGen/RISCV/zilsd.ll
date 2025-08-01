@@ -117,3 +117,22 @@ entyr:
   store i64 0, ptr @g
   ret void
 }
+
+define void @large_offset(ptr nocapture %p, i64 %d) nounwind {
+; CHECK-LABEL: large_offset:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lui a1, 4
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ld a2, -384(a0)
+; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    seqz a1, a2
+; CHECK-NEXT:    add a3, a3, a1
+; CHECK-NEXT:    sd a2, -384(a0)
+; CHECK-NEXT:    ret
+entry:
+  %add.ptr = getelementptr inbounds i64, ptr %p, i64 2000
+  %a = load i64, ptr %add.ptr, align 8
+  %b = add i64 %a, 1
+  store i64 %b, ptr %add.ptr, align 8
+  ret void
+}
