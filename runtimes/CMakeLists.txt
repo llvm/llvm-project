@@ -44,7 +44,7 @@ if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
 endif()
 include(SortSubset)
 sort_subset("${LLVM_SUPPORTED_RUNTIMES}" "${LLVM_ENABLE_RUNTIMES}" LLVM_ENABLE_RUNTIMES)
-
+set(LLVM_RT_TOOLS_BINARY_DIR ${LLVM_TOOLS_BINARY_DIR} CACHE STRING "runtime path to required test tools")
 foreach(proj ${LLVM_ENABLE_RUNTIMES})
   set(proj_dir "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
   if(IS_DIRECTORY ${proj_dir} AND EXISTS ${proj_dir}/CMakeLists.txt)
@@ -267,7 +267,6 @@ foreach(entry ${runtimes})
   # will be included under here.
   set(HAVE_${canon_name} ON)
 endforeach()
-
 if(LLVM_INCLUDE_TESTS)
   # If built with the runtimes build (rooted at runtimes/CMakeLists.txt), we
   # won't have llvm-lit. If built with the bootstrapping build (rooted at
