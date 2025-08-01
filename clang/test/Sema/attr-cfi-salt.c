@@ -40,11 +40,24 @@ typedef int (*quux_t)(void) __cfi_salt("salt 'n");
 typedef int (*quux_t)(void) __cfi_salt("pepper");
     // expected-error@-1{{typedef redefinition with different type}}
 
-void func(int a) __cfi_salt("pepper");
+void func1(int a) __cfi_salt("pepper");
     // expected-note@-1{{previous declaration is here}}
-void func(int a) { }
-    // expected-error@-1{{conflicting types for 'func'}}
+void func1(int a) { }
+    // expected-error@-1{{conflicting types for 'func1'}}
+void (*fp1)(int) = func1;
+    // expected-error@-1{{incompatible function pointer types initializing 'void (*)(int)' with an expression of type 'void (int)'}}
 
 void func2(int) [[clang::cfi_salt("test")]];
+    // expected-note@-1{{previous declaration is here}}
 void func2(int a) { }
-void (*fp)(int) = func2;
+    // expected-error@-1{{conflicting types for 'func2'}}
+void (*fp2)(int) = func2;
+    // expected-error@-1{{incompatible function pointer types initializing 'void (*)(int)' with an expression of type 'void (int)'}}
+
+void func3(int) __cfi_salt("pepper"); // ok
+void func3(int a) __cfi_salt("pepper") { } // ok
+void (* __cfi_salt("pepper") fp3)(int) = func3; // ok
+
+void func4(int) [[clang::cfi_salt("test")]]; // ok
+void func4(int a) [[clang::cfi_salt("test")]] { } // ok
+void (* [[clang::cfi_salt("test")]] fp4)(int) = func4; // ok
