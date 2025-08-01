@@ -1106,11 +1106,12 @@ void OmpStructureChecker::CheckAtomicRead(
   // of the following forms:
   //   v = x
   //   v => x
+  auto &dirSpec{std::get<parser::OmpDirectiveSpecification>(x.t)};
   auto &block{std::get<parser::Block>(x.t)};
 
   // Read cannot be conditional or have a capture statement.
   if (x.IsCompare() || x.IsCapture()) {
-    context_.Say(x.BeginDir().source,
+    context_.Say(dirSpec.source,
         "ATOMIC READ cannot have COMPARE or CAPTURE clauses"_err_en_US);
     return;
   }
@@ -1141,11 +1142,12 @@ void OmpStructureChecker::CheckAtomicRead(
 
 void OmpStructureChecker::CheckAtomicWrite(
     const parser::OpenMPAtomicConstruct &x) {
+  auto &dirSpec{std::get<parser::OmpDirectiveSpecification>(x.t)};
   auto &block{std::get<parser::Block>(x.t)};
 
   // Write cannot be conditional or have a capture statement.
   if (x.IsCompare() || x.IsCapture()) {
-    context_.Say(x.BeginDir().source,
+    context_.Say(dirSpec.source,
         "ATOMIC WRITE cannot have COMPARE or CAPTURE clauses"_err_en_US);
     return;
   }
@@ -1233,7 +1235,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
     }
   }};
 
-  const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
+  auto &dirSpec{std::get<parser::OmpDirectiveSpecification>(x.t)};
   auto &dir{std::get<parser::OmpDirectiveName>(dirSpec.t)};
   PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_atomic);
   llvm::omp::Clause kind{x.GetKind()};

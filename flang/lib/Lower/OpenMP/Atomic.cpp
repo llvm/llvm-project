@@ -707,7 +707,7 @@ void Fortran::lower::omp::lowerAtomic(
   };
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  const parser::OmpDirectiveSpecification &dirSpec = construct.BeginDir();
+  auto &dirSpec = std::get<parser::OmpDirectiveSpecification>(construct.t);
   omp::List<omp::Clause> clauses = makeClauses(dirSpec.Clauses(), semaCtx);
   lower::StatementContext stmtCtx;
 

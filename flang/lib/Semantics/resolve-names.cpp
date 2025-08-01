@@ -1484,18 +1484,18 @@ public:
   }
   bool Pre(const parser::OpenMPBlockConstruct &);
   void Post(const parser::OpenMPBlockConstruct &);
-  bool Pre(const parser::OmpBeginDirective &x) {
+  bool Pre(const parser::OmpBeginBlockDirective &x) {
     AddOmpSourceRange(x.source);
     return true;
   }
-  void Post(const parser::OmpBeginDirective &) {
+  void Post(const parser::OmpBeginBlockDirective &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
-  bool Pre(const parser::OmpEndDirective &x) {
+  bool Pre(const parser::OmpEndBlockDirective &x) {
     AddOmpSourceRange(x.source);
     return true;
   }
-  void Post(const parser::OmpEndDirective &) {
+  void Post(const parser::OmpEndBlockDirective &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
 
@@ -1725,7 +1725,9 @@ private:
 };
 
 bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
-  switch (x.BeginDir().DirId()) {
+  const auto &beginBlockDir{std::get<parser::OmpBeginBlockDirective>(x.t)};
+  const auto &beginDir{std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
+  switch (beginDir.v) {
   case llvm::omp::Directive::OMPD_master:
   case llvm::omp::Directive::OMPD_ordered:
     return false;
