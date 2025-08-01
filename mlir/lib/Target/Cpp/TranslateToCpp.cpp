@@ -1197,7 +1197,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
   os << ") {\n";
   if (failed(printFunctionBody(emitter, operation, functionOp.getBlocks())))
     return failure();
-  os << "}\n";
+  os << "}";
 
   return success();
 }
@@ -1238,7 +1238,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
   os << ") {\n";
   if (failed(printFunctionBody(emitter, operation, functionOp.getBlocks())))
     return failure();
-  os << "}\n";
+  os << "}";
 
   return success();
 }

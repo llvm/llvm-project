@@ -1449,9 +1449,6 @@ LogicalResult FieldOp::verify() {
   if (!symName || symName.getValue().empty())
     return emitOpError("field must have a non-empty symbol name");
 
-  if (!getAttrs())
-    return success();
-
   return success();
 }
 

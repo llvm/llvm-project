@@ -20,7 +20,6 @@ emitc.class @modelClass {
 // CHECK-NEXT:    size_t v1 = 0;
 // CHECK-NEXT:    return;
 // CHECK-NEXT:  }
-// CHECK-EMPTY:
 // CHECK-NEXT: };
 
 emitc.class final @finalClass {
@@ -43,7 +42,6 @@ emitc.class final @finalClass {
 // CHECK-NEXT:    size_t v1 = 0;
 // CHECK-NEXT:    return;
 // CHECK-NEXT:  }
-// CHECK-EMPTY:
 // CHECK-NEXT: };
 
 emitc.class @mainClass {
@@ -60,7 +58,6 @@ emitc.class @mainClass {
 // CHECK-NEXT:  void get_fieldName0() {
 // CHECK-NEXT:    return;
 // CHECK-NEXT:  }
-// CHECK-EMPTY:
 // CHECK-NEXT: };
 
 emitc.class @reflectionClass {
@@ -77,6 +74,5 @@ emitc.class @reflectionClass {
 // CHECK-NEXT:  void get_reflectionMap() {
 // CHECK-NEXT:    return;
 // CHECK-NEXT:  }
-// CHECK-EMPTY:
 // CHECK-NEXT: };
 

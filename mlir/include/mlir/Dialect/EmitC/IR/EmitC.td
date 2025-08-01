@@ -1668,8 +1668,7 @@ def EmitC_FieldOp : EmitC_Op<"field", [Symbol]> {
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name, TypeAttr:$type,
-      OptionalAttr<EmitC_OpaqueOrTypedAttr>:$initial_value,
-      OptionalAttr<AnyAttr>:$attrs);
+      OptionalAttr<EmitC_OpaqueOrTypedAttr>:$initial_value);
 
   let assemblyFormat = [{
        $sym_name
