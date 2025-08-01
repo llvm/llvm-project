@@ -272,6 +272,11 @@ public:
   DiagnosticIDs();
   ~DiagnosticIDs();
 
+  // Convenience method to construct a new refcounted DiagnosticIDs.
+  static llvm::IntrusiveRefCntPtr<DiagnosticIDs> create() {
+    return llvm::makeIntrusiveRefCnt<DiagnosticIDs>();
+  }
+
   /// Return an ID for a diagnostic with the specified format string and
   /// level.
   ///
@@ -283,7 +288,10 @@ public:
   // writing, nearly all callers of this function were invalid.
   unsigned getCustomDiagID(CustomDiagDesc Diag);
 
-  // TODO: Deprecate this once all uses are removed from LLVM
+  // FIXME: this API should almost never be used; custom diagnostics do not
+  // have an associated diagnostic group and thus cannot be controlled by users
+  // like other diagnostics. The number of times this API is used in Clang
+  // should only ever be reduced, not increased.
   // [[deprecated("Use a CustomDiagDesc instead of a Level")]]
   unsigned getCustomDiagID(Level Level, StringRef Message) {
     return getCustomDiagID([&]() -> CustomDiagDesc {

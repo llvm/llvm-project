@@ -90,11 +90,6 @@ public:
   /// spilling is needed.
   MCRegister reservedPrivateSegmentBufferReg(const MachineFunction &MF) const;
 
-  /// Return a pair of maximum numbers of VGPRs and AGPRs that meet the number
-  /// of waves per execution unit required for the function \p MF.
-  std::pair<unsigned, unsigned>
-  getMaxNumVectorRegs(const MachineFunction &MF) const;
-
   BitVector getReservedRegs(const MachineFunction &MF) const override;
   bool isAsmClobberable(const MachineFunction &MF,
                         MCRegister PhysReg) const override;
@@ -486,9 +481,11 @@ public:
                                      unsigned SubReg) const;
 
   // \returns a number of registers of a given \p RC used in a function.
-  // Does not go inside function calls.
+  // Does not go inside function calls. If \p IncludeCalls is true, it will
+  // include registers that may be clobbered by calls.
   unsigned getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
-                              const TargetRegisterClass &RC) const;
+                              const TargetRegisterClass &RC,
+                              bool IncludeCalls = true) const;
 
   std::optional<uint8_t> getVRegFlagValue(StringRef Name) const override {
     return Name == "WWM_REG" ? AMDGPU::VirtRegFlag::WWM_REG

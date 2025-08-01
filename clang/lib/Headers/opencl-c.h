@@ -17841,6 +17841,72 @@ void        __ovld __conv intel_sub_group_block_write_ul4( __global ulong* p, ul
 void        __ovld __conv intel_sub_group_block_write_ul8( __global ulong* p, ulong8 data);
 #endif // cl_intel_subgroups_long
 
+#if defined(cl_intel_subgroup_local_block_io)
+uint    __ovld __conv intel_sub_group_block_read( const __local uint* p );
+uint2   __ovld __conv intel_sub_group_block_read2( const __local uint* p );
+uint4   __ovld __conv intel_sub_group_block_read4( const __local uint* p );
+uint8   __ovld __conv intel_sub_group_block_read8( const __local uint* p );
+
+void    __ovld __conv intel_sub_group_block_write( __local uint* p, uint data );
+void    __ovld __conv intel_sub_group_block_write2( __local uint* p, uint2 data );
+void    __ovld __conv intel_sub_group_block_write4( __local uint* p, uint4 data );
+void    __ovld __conv intel_sub_group_block_write8( __local uint* p, uint8 data );
+
+#if defined(cl_intel_subgroups_char) || defined(cl_intel_subgroups_short) ||   \
+    defined(cl_intel_subgroups_long)
+uint       __ovld __conv intel_sub_group_block_read_ui( const __local uint* p );
+uint2      __ovld __conv intel_sub_group_block_read_ui2( const __local uint* p );
+uint4      __ovld __conv intel_sub_group_block_read_ui4( const __local uint* p );
+uint8      __ovld __conv intel_sub_group_block_read_ui8( const __local uint* p );
+
+void       __ovld __conv intel_sub_group_block_write_ui( __local uint* p, uint data );
+void       __ovld __conv intel_sub_group_block_write_ui2( __local uint* p, uint2 data );
+void       __ovld __conv intel_sub_group_block_write_ui4( __local uint* p, uint4 data );
+void       __ovld __conv intel_sub_group_block_write_ui8( __local uint* p, uint8 data );
+#endif // defined(cl_intel_subgroups_char) || defined(cl_intel_subgroups_short) ||
+       // defined(cl_intel_subgroups_long)
+
+#if defined(cl_intel_subgroups_char)
+uchar      __ovld __conv intel_sub_group_block_read_uc(   const __local uchar* p );
+uchar2     __ovld __conv intel_sub_group_block_read_uc2(  const __local uchar* p );
+uchar4     __ovld __conv intel_sub_group_block_read_uc4(  const __local uchar* p );
+uchar8     __ovld __conv intel_sub_group_block_read_uc8(  const __local uchar* p );
+uchar16    __ovld __conv intel_sub_group_block_read_uc16( const __local uchar* p );
+
+void        __ovld __conv intel_sub_group_block_write_uc(   __local uchar* p, uchar  data );
+void        __ovld __conv intel_sub_group_block_write_uc2(  __local uchar* p, uchar2 data );
+void        __ovld __conv intel_sub_group_block_write_uc4(  __local uchar* p, uchar4 data );
+void        __ovld __conv intel_sub_group_block_write_uc8(  __local uchar* p, uchar8 data );
+void        __ovld __conv intel_sub_group_block_write_uc16( __local uchar* p, uchar16 data );
+#endif // defined(cl_intel_subgroups_char)
+
+#if defined(cl_intel_subgroups_short)
+ushort      __ovld __conv intel_sub_group_block_read_us(  const __local ushort* p );
+ushort2     __ovld __conv intel_sub_group_block_read_us2( const __local ushort* p );
+ushort4     __ovld __conv intel_sub_group_block_read_us4( const __local ushort* p );
+ushort8     __ovld __conv intel_sub_group_block_read_us8( const __local ushort* p );
+ushort16    __ovld __conv intel_sub_group_block_read_us16( const __local ushort* p );
+
+void        __ovld __conv intel_sub_group_block_write_us(  __local ushort* p, ushort  data );
+void        __ovld __conv intel_sub_group_block_write_us2( __local ushort* p, ushort2 data );
+void        __ovld __conv intel_sub_group_block_write_us4( __local ushort* p, ushort4 data );
+void        __ovld __conv intel_sub_group_block_write_us8( __local ushort* p, ushort8 data );
+void        __ovld __conv intel_sub_group_block_write_us16( __local ushort* p, ushort16 data );
+#endif // defined(cl_intel_subgroups_short)
+
+#if defined(cl_intel_subgroups_long)
+ulong      __ovld __conv intel_sub_group_block_read_ul(  const __local ulong* p );
+ulong2     __ovld __conv intel_sub_group_block_read_ul2( const __local ulong* p );
+ulong4     __ovld __conv intel_sub_group_block_read_ul4( const __local ulong* p );
+ulong8     __ovld __conv intel_sub_group_block_read_ul8( const __local ulong* p );
+
+void        __ovld __conv intel_sub_group_block_write_ul(  __local ulong* p, ulong  data );
+void        __ovld __conv intel_sub_group_block_write_ul2( __local ulong* p, ulong2 data );
+void        __ovld __conv intel_sub_group_block_write_ul4( __local ulong* p, ulong4 data );
+void        __ovld __conv intel_sub_group_block_write_ul8( __local ulong* p, ulong8 data );
+#endif // defined(cl_intel_subgroups_long)
+#endif // cl_intel_subgroup_local_block_io
+
 #ifdef cl_intel_device_side_avc_motion_estimation
 #pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : begin
 
@@ -18343,6 +18409,22 @@ intel_sub_group_avc_mce_convert_to_sic_result(
     intel_sub_group_avc_mce_result_t result);
 #pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : end
 #endif // cl_intel_device_side_avc_motion_estimation
+
+#if defined(cl_intel_bfloat16_conversions)
+ushort __ovld intel_convert_bfloat16_as_ushort(float source);
+ushort2 __ovld intel_convert_bfloat162_as_ushort2(float2 source);
+ushort3 __ovld intel_convert_bfloat163_as_ushort3(float3 source);
+ushort4 __ovld intel_convert_bfloat164_as_ushort4(float4 source);
+ushort8 __ovld intel_convert_bfloat168_as_ushort8(float8 source);
+ushort16 __ovld intel_convert_bfloat1616_as_ushort16(float16 source);
+
+float __ovld intel_convert_as_bfloat16_float(ushort source);
+float2 __ovld intel_convert_as_bfloat162_float2(ushort2 source);
+float3 __ovld intel_convert_as_bfloat163_float3(ushort3 source);
+float4 __ovld intel_convert_as_bfloat164_float4(ushort4 source);
+float8 __ovld intel_convert_as_bfloat168_float8(ushort8 source);
+float16 __ovld intel_convert_as_bfloat1616_float16(ushort16 source);
+#endif // cl_intel_bfloat16_conversions
 
 #ifdef cl_amd_media_ops
 uint __ovld amd_bitalign(uint, uint, uint);

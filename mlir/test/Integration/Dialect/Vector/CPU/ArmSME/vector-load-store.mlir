@@ -72,7 +72,7 @@ func.func @za0_d_f64() -> i32 {
     %row = vector.load %mem2[%vnum, %c0] : memref<?x?xf64>, vector<[2]xf64>
 
     %inner_add_reduce = scf.for %offset = %c0 to %svl_d step %c1_index iter_args(%inner_iter = %init_0_f64) -> (f64) {
-      %t = vector.extractelement %row[%offset : index] : vector<[2]xf64>
+      %t = vector.extract %row[%offset] : f64 from vector<[2]xf64>
       %inner_add_reduce_next = arith.addf %inner_iter, %t : f64
       scf.yield %inner_add_reduce_next : f64
     }
@@ -102,7 +102,7 @@ func.func @za0_d_f64() -> i32 {
     %cmp = arith.cmpf one, %row_1, %row_2 : vector<[2]xf64>
 
     %inner_mul_reduce = scf.for %i = %c0 to %svl_d step %c1_index iter_args(%inner_iter = %init_1) -> (i64) {
-      %t = vector.extractelement %cmp[%i : index] : vector<[2]xi1>
+      %t = vector.extract %cmp[%i] : i1 from vector<[2]xi1>
       %t_i64 = arith.extui %t : i1 to i64
       %inner_mul_reduce_next = arith.muli %inner_iter, %t_i64 : i64
       scf.yield %inner_mul_reduce_next : i64
@@ -125,7 +125,7 @@ func.func @za0_d_f64() -> i32 {
     %cmp = arith.cmpf oeq, %row_1, %row_2 : vector<[2]xf64>
 
     %inner_mul_reduce = scf.for %i = %c0 to %svl_d step %c1_index iter_args(%inner_iter = %init_1) -> (i64) {
-      %t = vector.extractelement %cmp[%i : index] : vector<[2]xi1>
+      %t = vector.extract %cmp[%i] : i1 from vector<[2]xi1>
       %t_i64 = arith.extui %t : i1 to i64
       %inner_mul_reduce_next = arith.muli %inner_iter, %t_i64 : i64
       scf.yield %inner_mul_reduce_next : i64

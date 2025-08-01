@@ -4749,8 +4749,6 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
   EnterExpressionEvaluationContext EECtx{
       *this, ExpressionEvaluationContext::Unevaluated, CSD};
 
-  ContextRAII CurContext(*this, CSD->getDeclContext(),
-                         /*NewThisContext=*/false);
   if (!AreArgsDependent &&
       CheckConstraintSatisfaction(
           NamedConcept, AssociatedConstraint(NamedConcept->getConstraintExpr()),
@@ -6299,7 +6297,6 @@ bool UnnamedLocalNoLinkageFinder::VisitNestedNameSpecifier(
   switch (NNS->getKind()) {
   case NestedNameSpecifier::Identifier:
   case NestedNameSpecifier::Namespace:
-  case NestedNameSpecifier::NamespaceAlias:
   case NestedNameSpecifier::Global:
   case NestedNameSpecifier::Super:
     return false;
@@ -8968,8 +8965,10 @@ Sema::ActOnFinishConceptDefinition(Scope *S, ConceptDecl *C,
                                    Expr *ConstraintExpr,
                                    const ParsedAttributesView &Attrs) {
   assert(!C->hasDefinition() && "Concept already defined");
-  if (DiagnoseUnexpandedParameterPack(ConstraintExpr))
+  if (DiagnoseUnexpandedParameterPack(ConstraintExpr)) {
+    C->setInvalidDecl();
     return nullptr;
+  }
   C->setDefinition(ConstraintExpr);
   ProcessDeclAttributeList(S, C, Attrs);
 

@@ -7,9 +7,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define <vscale x 16 x i8> @abs_nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: abs_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    abs z1.b, p1/m, z1.b
-; CHECK-NEXT:    mov z0.b, p0/m, z1.b
+; CHECK-NEXT:    abs z0.b, p0/m, z1.b
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 16 x i8> @llvm.abs.nxv16i8(<vscale x 16 x i8> %b, i1 0)
   %res = select <vscale x 16 x i1> %pg, <vscale x 16 x i8> %b.op, <vscale x 16 x i8> %a
@@ -19,9 +17,7 @@ define <vscale x 16 x i8> @abs_nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8
 define <vscale x 8 x i16> @abs_nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: abs_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    abs z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    abs z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 8 x i16> @llvm.abs.nxv8i16(<vscale x 8 x i16> %b, i1 0)
   %res = select <vscale x 8 x i1> %pg, <vscale x 8 x i16> %b.op, <vscale x 8 x i16> %a
@@ -31,9 +27,7 @@ define <vscale x 8 x i16> @abs_nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16>
 define <vscale x 4 x i32> @abs_nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: abs_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    abs z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    abs z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x i32> @llvm.abs.nxv4i32(<vscale x 4 x i32> %b, i1 0)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b.op, <vscale x 4 x i32> %a
@@ -43,9 +37,7 @@ define <vscale x 4 x i32> @abs_nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32>
 define <vscale x 2 x i64> @abs_nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: abs_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    abs z1.d, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    abs z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x i64> @llvm.abs.nxv2i64(<vscale x 2 x i64> %b, i1 0)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b.op, <vscale x 2 x i64> %a
@@ -55,9 +47,7 @@ define <vscale x 2 x i64> @abs_nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64>
 define <vscale x 16 x i8> @clz_nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: clz_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    clz z1.b, p1/m, z1.b
-; CHECK-NEXT:    mov z0.b, p0/m, z1.b
+; CHECK-NEXT:    clz z0.b, p0/m, z1.b
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 16 x i8> @llvm.ctlz.nxv16i8(<vscale x 16 x i8> %b)
   %res = select <vscale x 16 x i1> %pg, <vscale x 16 x i8> %b.op, <vscale x 16 x i8> %a
@@ -67,9 +57,7 @@ define <vscale x 16 x i8> @clz_nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8
 define <vscale x 8 x i16> @clz_nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: clz_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    clz z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    clz z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 8 x i16> @llvm.ctlz.nxv8i16(<vscale x 8 x i16> %b)
   %res = select <vscale x 8 x i1> %pg, <vscale x 8 x i16> %b.op, <vscale x 8 x i16> %a
@@ -79,9 +67,7 @@ define <vscale x 8 x i16> @clz_nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16>
 define <vscale x 4 x i32> @clz_nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: clz_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    clz z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    clz z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x i32> @llvm.ctlz.nxv4i32(<vscale x 4 x i32> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b.op, <vscale x 4 x i32> %a
@@ -91,9 +77,7 @@ define <vscale x 4 x i32> @clz_nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32>
 define <vscale x 2 x i64> @clz_nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: clz_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    clz z1.d, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    clz z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x i64> @llvm.ctlz.nxv2i64(<vscale x 2 x i64> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b.op, <vscale x 2 x i64> %a
@@ -103,9 +87,7 @@ define <vscale x 2 x i64> @clz_nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64>
 define <vscale x 16 x i8> @cnt_nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: cnt_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    cnt z1.b, p1/m, z1.b
-; CHECK-NEXT:    mov z0.b, p0/m, z1.b
+; CHECK-NEXT:    cnt z0.b, p0/m, z1.b
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 16 x i8> @llvm.ctpop.nxv16i8(<vscale x 16 x i8> %b)
   %res = select <vscale x 16 x i1> %pg, <vscale x 16 x i8> %b.op, <vscale x 16 x i8> %a
@@ -115,9 +97,7 @@ define <vscale x 16 x i8> @cnt_nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8
 define <vscale x 8 x i16> @cnt_nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: cnt_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    cnt z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    cnt z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 8 x i16> @llvm.ctpop.nxv8i16(<vscale x 8 x i16> %b)
   %res = select <vscale x 8 x i1> %pg, <vscale x 8 x i16> %b.op, <vscale x 8 x i16> %a
@@ -127,9 +107,7 @@ define <vscale x 8 x i16> @cnt_nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16>
 define <vscale x 4 x i32> @cnt_nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: cnt_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    cnt z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    cnt z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x i32> @llvm.ctpop.nxv4i32(<vscale x 4 x i32> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b.op, <vscale x 4 x i32> %a
@@ -139,9 +117,7 @@ define <vscale x 4 x i32> @cnt_nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32>
 define <vscale x 2 x i64> @cnt_nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: cnt_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    cnt z1.d, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    cnt z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x i64> @llvm.ctpop.nxv2i64(<vscale x 2 x i64> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b.op, <vscale x 2 x i64> %a
@@ -151,9 +127,7 @@ define <vscale x 2 x i64> @cnt_nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64>
 define <vscale x 2 x half> @fabs_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x half> %a, <vscale x 2 x half> %b) {
 ; CHECK-LABEL: fabs_nxv2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fabs z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fabs z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x half> @llvm.fabs.nxv2f16(<vscale x 2 x half> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x half> %b.op, <vscale x 2 x half> %a
@@ -163,9 +137,7 @@ define <vscale x 2 x half> @fabs_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x ha
 define <vscale x 4 x half> @fabs_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x half> %a, <vscale x 4 x half> %b) {
 ; CHECK-LABEL: fabs_nxv4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    fabs z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    fabs z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x half> @llvm.fabs.nxv4f16(<vscale x 4 x half> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x half> %b.op, <vscale x 4 x half> %a
@@ -175,9 +147,7 @@ define <vscale x 4 x half> @fabs_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x ha
 define <vscale x 8 x half> @fabs_nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: fabs_nxv8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    fabs z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    fabs z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 8 x half> @llvm.fabs.nxv8f16(<vscale x 8 x half> %b)
   %res = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %b.op, <vscale x 8 x half> %a
@@ -187,9 +157,7 @@ define <vscale x 8 x half> @fabs_nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x ha
 define <vscale x 2 x float> @fabs_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x float> %a, <vscale x 2 x float> %b) {
 ; CHECK-LABEL: fabs_nxv2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fabs z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fabs z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x float> @llvm.fabs.nxv2f32(<vscale x 2 x float> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x float> %b.op, <vscale x 2 x float> %a
@@ -199,9 +167,7 @@ define <vscale x 2 x float> @fabs_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x f
 define <vscale x 4 x float> @fabs_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: fabs_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    fabs z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    fabs z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x float> @llvm.fabs.nxv4f32(<vscale x 4 x float> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %b.op, <vscale x 4 x float> %a
@@ -211,9 +177,7 @@ define <vscale x 4 x float> @fabs_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x f
 define <vscale x 2 x double> @fabs_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: fabs_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fabs z1.d, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fabs z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x double> @llvm.fabs.nxv2f64(<vscale x 2 x double> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %b.op, <vscale x 2 x double> %a
@@ -223,8 +187,7 @@ define <vscale x 2 x double> @fabs_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 x 
 define <vscale x 2 x bfloat> @fabs_nxv2bf16(<vscale x 2 x i1> %pg, <vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b) {
 ; CHECK-LABEL: fabs_nxv2bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and z1.h, z1.h, #0x7fff
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fabs z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x bfloat> @llvm.fabs.nxv2bf16(<vscale x 2 x bfloat> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x bfloat> %b.op, <vscale x 2 x bfloat> %a
@@ -234,8 +197,7 @@ define <vscale x 2 x bfloat> @fabs_nxv2bf16(<vscale x 2 x i1> %pg, <vscale x 2 x
 define <vscale x 4 x bfloat> @fabs_nxv4bf16(<vscale x 4 x i1> %pg, <vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b) {
 ; CHECK-LABEL: fabs_nxv4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and z1.h, z1.h, #0x7fff
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    fabs z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x bfloat> @llvm.fabs.nxv4bf16(<vscale x 4 x bfloat> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x bfloat> %b.op, <vscale x 4 x bfloat> %a
@@ -245,8 +207,7 @@ define <vscale x 4 x bfloat> @fabs_nxv4bf16(<vscale x 4 x i1> %pg, <vscale x 4 x
 define <vscale x 8 x bfloat> @fabs_nxv8bf16(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fabs_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and z1.h, z1.h, #0x7fff
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    fabs z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 8 x bfloat> @llvm.fabs.nxv8bf16(<vscale x 8 x bfloat> %b)
   %res = select <vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %b.op, <vscale x 8 x bfloat> %a
@@ -256,9 +217,7 @@ define <vscale x 8 x bfloat> @fabs_nxv8bf16(<vscale x 8 x i1> %pg, <vscale x 8 x
 define <vscale x 2 x float> @fcvt_nxv2f16_to_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x float> %a, <vscale x 2 x half> %b) {
 ; CHECK-LABEL: fcvt_nxv2f16_to_nxv2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fcvt z1.s, p1/m, z1.h
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fcvt z0.s, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = fpext <vscale x 2 x half> %b to <vscale x 2 x float>
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x float> %b.op, <vscale x 2 x float> %a
@@ -268,9 +227,7 @@ define <vscale x 2 x float> @fcvt_nxv2f16_to_nxv2f32(<vscale x 2 x i1> %pg, <vsc
 define <vscale x 2 x double> @fcvt_nxv2f16_to_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x half> %b) {
 ; CHECK-LABEL: fcvt_nxv2f16_to_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fcvt z1.d, p1/m, z1.h
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fcvt z0.d, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = fpext <vscale x 2 x half> %b to <vscale x 2 x double>
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %b.op, <vscale x 2 x double> %a
@@ -280,9 +237,7 @@ define <vscale x 2 x double> @fcvt_nxv2f16_to_nxv2f64(<vscale x 2 x i1> %pg, <vs
 define <vscale x 4 x float> @fcvt_nxv4f16_to_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x half> %b) {
 ; CHECK-LABEL: fcvt_nxv4f16_to_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    fcvt z1.s, p1/m, z1.h
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    fcvt z0.s, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = fpext <vscale x 4 x half> %b to <vscale x 4 x float>
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %b.op, <vscale x 4 x float> %a
@@ -292,9 +247,7 @@ define <vscale x 4 x float> @fcvt_nxv4f16_to_nxv4f32(<vscale x 4 x i1> %pg, <vsc
 define <vscale x 2 x half> @fcvt_nxv2f32_to_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x half> %a, <vscale x 2 x float> %b) {
 ; CHECK-LABEL: fcvt_nxv2f32_to_nxv2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fcvt z1.h, p1/m, z1.s
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fcvt z0.h, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = fptrunc <vscale x 2 x float> %b to <vscale x 2 x half>
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x half> %b.op, <vscale x 2 x half> %a
@@ -304,9 +257,7 @@ define <vscale x 2 x half> @fcvt_nxv2f32_to_nxv2f16(<vscale x 2 x i1> %pg, <vsca
 define <vscale x 2 x double> @fcvt_nxv2f32_to_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x float> %b) {
 ; CHECK-LABEL: fcvt_nxv2f32_to_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fcvt z1.d, p1/m, z1.s
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fcvt z0.d, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = fpext <vscale x 2 x float> %b to <vscale x 2 x double>
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %b.op, <vscale x 2 x double> %a
@@ -316,9 +267,7 @@ define <vscale x 2 x double> @fcvt_nxv2f32_to_nxv2f64(<vscale x 2 x i1> %pg, <vs
 define <vscale x 2 x bfloat> @fcvt_nxv2f32_to_nxv2bf16(<vscale x 2 x i1> %pg, <vscale x 2 x bfloat> %a, <vscale x 2 x float> %b) {
 ; CHECK-LABEL: fcvt_nxv2f32_to_nxv2bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    bfcvt z1.h, p1/m, z1.s
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    bfcvt z0.h, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = fptrunc <vscale x 2 x float> %b to <vscale x 2 x bfloat>
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x bfloat> %b.op, <vscale x 2 x bfloat> %a
@@ -328,9 +277,7 @@ define <vscale x 2 x bfloat> @fcvt_nxv2f32_to_nxv2bf16(<vscale x 2 x i1> %pg, <v
 define <vscale x 4 x half> @fcvt_nxv4f32_to_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x half> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: fcvt_nxv4f32_to_nxv4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    fcvt z1.h, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    fcvt z0.h, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = fptrunc <vscale x 4 x float> %b to <vscale x 4 x half>
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x half> %b.op, <vscale x 4 x half> %a
@@ -340,9 +287,7 @@ define <vscale x 4 x half> @fcvt_nxv4f32_to_nxv4f16(<vscale x 4 x i1> %pg, <vsca
 define <vscale x 4 x bfloat> @fcvt_nxv4f32_to_nxv4bf16(<vscale x 4 x i1> %pg, <vscale x 4 x bfloat> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: fcvt_nxv4f32_to_nxv4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    bfcvt z1.h, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    bfcvt z0.h, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = fptrunc <vscale x 4 x float> %b to <vscale x 4 x bfloat>
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x bfloat> %b.op, <vscale x 4 x bfloat> %a
@@ -352,9 +297,7 @@ define <vscale x 4 x bfloat> @fcvt_nxv4f32_to_nxv4bf16(<vscale x 4 x i1> %pg, <v
 define <vscale x 2 x half> @fcvt_nxv2f64_to_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x half> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: fcvt_nxv2f64_to_nxv2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fcvt z1.h, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fcvt z0.h, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = fptrunc <vscale x 2 x double> %b to <vscale x 2 x half>
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x half> %b.op, <vscale x 2 x half> %a
@@ -364,9 +307,7 @@ define <vscale x 2 x half> @fcvt_nxv2f64_to_nxv2f16(<vscale x 2 x i1> %pg, <vsca
 define <vscale x 2 x half> @fcvt_nxv2f64_to_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x half> %a, <vscale x 2 x float> %b) {
 ; CHECK-LABEL: fcvt_nxv2f64_to_nxv2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fcvt z1.h, p1/m, z1.s
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fcvt z0.h, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = fptrunc <vscale x 2 x float> %b to <vscale x 2 x half>
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x half> %b.op, <vscale x 2 x half> %a
@@ -378,8 +319,7 @@ define <vscale x 2 x bfloat> @fcvt_nxv2f64_to_nxv2bf16(<vscale x 2 x i1> %pg, <v
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    fcvtx z1.s, p1/m, z1.d
-; CHECK-NEXT:    bfcvt z1.h, p1/m, z1.s
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    bfcvt z0.h, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = fptrunc <vscale x 2 x double> %b to <vscale x 2 x bfloat>
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x bfloat> %b.op, <vscale x 2 x bfloat> %a
@@ -401,9 +341,7 @@ define <vscale x 2 x double> @fcvt_nxv2bf16_to_nxv2f64(<vscale x 2 x i1> %pg, <v
 ; CHECK-LABEL: fcvt_nxv2bf16_to_nxv2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fcvt z1.d, p1/m, z1.s
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fcvt z0.d, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = fpext <vscale x 2 x bfloat> %b to <vscale x 2 x double>
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %b.op, <vscale x 2 x double> %a
@@ -424,9 +362,7 @@ define <vscale x 4 x float> @fcvt_nxv4bf16_to_nxv4f32(<vscale x 4 x i1> %pg, <vs
 define <vscale x 2 x i64> @fcvtsu_nxv2f16_to_nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x half> %b) {
 ; CHECK-LABEL: fcvtsu_nxv2f16_to_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fcvtzs z1.d, p1/m, z1.h
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = fptosi <vscale x 2 x half> %b to <vscale x 2 x i64>
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b.op, <vscale x 2 x i64> %a
@@ -436,9 +372,7 @@ define <vscale x 2 x i64> @fcvtsu_nxv2f16_to_nxv2i64(<vscale x 2 x i1> %pg, <vsc
 define <vscale x 4 x i32> @fcvtsu_nxv4f16_to_nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x half> %b) {
 ; CHECK-LABEL: fcvtsu_nxv4f16_to_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    fcvtzs z1.s, p1/m, z1.h
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    fcvtzs z0.s, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = fptosi <vscale x 4 x half> %b to <vscale x 4 x i32>
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b.op, <vscale x 4 x i32> %a
@@ -448,9 +382,7 @@ define <vscale x 4 x i32> @fcvtsu_nxv4f16_to_nxv4i32(<vscale x 4 x i1> %pg, <vsc
 define <vscale x 8 x i16> @fcvtsu_nxv8f16_to_nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: fcvtsu_nxv8f16_to_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    fcvtzs z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    fcvtzs z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = fptosi <vscale x 8 x half> %b to <vscale x 8 x i16>
   %res = select <vscale x 8 x i1> %pg, <vscale x 8 x i16> %b.op, <vscale x 8 x i16> %a
@@ -460,9 +392,7 @@ define <vscale x 8 x i16> @fcvtsu_nxv8f16_to_nxv8i16(<vscale x 8 x i1> %pg, <vsc
 define <vscale x 2 x i64> @fcvtsu_nxv2f32_to_nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x float> %b) {
 ; CHECK-LABEL: fcvtsu_nxv2f32_to_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fcvtzs z1.d, p1/m, z1.s
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = fptosi <vscale x 2 x float> %b to <vscale x 2 x i64>
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b.op, <vscale x 2 x i64> %a
@@ -472,9 +402,7 @@ define <vscale x 2 x i64> @fcvtsu_nxv2f32_to_nxv2i64(<vscale x 2 x i1> %pg, <vsc
 define <vscale x 4 x i32> @fcvtsu_nxv4f32_to_nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: fcvtsu_nxv4f32_to_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    fcvtzs z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    fcvtzs z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = fptosi <vscale x 4 x float> %b to <vscale x 4 x i32>
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b.op, <vscale x 4 x i32> %a
@@ -484,9 +412,7 @@ define <vscale x 4 x i32> @fcvtsu_nxv4f32_to_nxv4i32(<vscale x 4 x i1> %pg, <vsc
 define <vscale x 2 x i64> @fcvtsu_nxv2f64_to_nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: fcvtsu_nxv2f64_to_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fcvtzs z1.d, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = fptosi <vscale x 2 x double> %b to <vscale x 2 x i64>
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b.op, <vscale x 2 x i64> %a
@@ -496,9 +422,7 @@ define <vscale x 2 x i64> @fcvtsu_nxv2f64_to_nxv2i64(<vscale x 2 x i1> %pg, <vsc
 define <vscale x 2 x i64> @fcvtzu_nxv2f16_to_nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x half> %b) {
 ; CHECK-LABEL: fcvtzu_nxv2f16_to_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fcvtzu z1.d, p1/m, z1.h
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fcvtzu z0.d, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = fptoui <vscale x 2 x half> %b to <vscale x 2 x i64>
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b.op, <vscale x 2 x i64> %a
@@ -508,9 +432,7 @@ define <vscale x 2 x i64> @fcvtzu_nxv2f16_to_nxv2i64(<vscale x 2 x i1> %pg, <vsc
 define <vscale x 4 x i32> @fcvtzu_nxv4f16_to_nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x half> %b) {
 ; CHECK-LABEL: fcvtzu_nxv4f16_to_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    fcvtzu z1.s, p1/m, z1.h
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    fcvtzu z0.s, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = fptoui <vscale x 4 x half> %b to <vscale x 4 x i32>
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b.op, <vscale x 4 x i32> %a
@@ -520,9 +442,7 @@ define <vscale x 4 x i32> @fcvtzu_nxv4f16_to_nxv4i32(<vscale x 4 x i1> %pg, <vsc
 define <vscale x 8 x i16> @fcvtzu_nxv8f16_to_nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: fcvtzu_nxv8f16_to_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    fcvtzu z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    fcvtzu z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = fptoui <vscale x 8 x half> %b to <vscale x 8 x i16>
   %res = select <vscale x 8 x i1> %pg, <vscale x 8 x i16> %b.op, <vscale x 8 x i16> %a
@@ -532,9 +452,7 @@ define <vscale x 8 x i16> @fcvtzu_nxv8f16_to_nxv8i16(<vscale x 8 x i1> %pg, <vsc
 define <vscale x 2 x i64> @fcvtzu_nxv2f32_to_nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x float> %b) {
 ; CHECK-LABEL: fcvtzu_nxv2f32_to_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fcvtzu z1.d, p1/m, z1.s
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fcvtzu z0.d, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = fptoui <vscale x 2 x float> %b to <vscale x 2 x i64>
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b.op, <vscale x 2 x i64> %a
@@ -544,9 +462,7 @@ define <vscale x 2 x i64> @fcvtzu_nxv2f32_to_nxv2i64(<vscale x 2 x i1> %pg, <vsc
 define <vscale x 4 x i32> @fcvtzu_nxv4f32_to_nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: fcvtzu_nxv4f32_to_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    fcvtzu z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    fcvtzu z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = fptoui <vscale x 4 x float> %b to <vscale x 4 x i32>
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b.op, <vscale x 4 x i32> %a
@@ -556,9 +472,7 @@ define <vscale x 4 x i32> @fcvtzu_nxv4f32_to_nxv4i32(<vscale x 4 x i1> %pg, <vsc
 define <vscale x 2 x i64> @fcvtzu_nxv2f64_to_nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: fcvtzu_nxv2f64_to_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fcvtzu z1.d, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fcvtzu z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = fptoui <vscale x 2 x double> %b to <vscale x 2 x i64>
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b.op, <vscale x 2 x i64> %a
@@ -568,9 +482,7 @@ define <vscale x 2 x i64> @fcvtzu_nxv2f64_to_nxv2i64(<vscale x 2 x i1> %pg, <vsc
 define <vscale x 2 x half> @fneg_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x half> %a, <vscale x 2 x half> %b) {
 ; CHECK-LABEL: fneg_nxv2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fneg z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fneg z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = fneg <vscale x 2 x half> %b
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x half> %b.op, <vscale x 2 x half> %a
@@ -580,9 +492,7 @@ define <vscale x 2 x half> @fneg_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x ha
 define <vscale x 4 x half> @fneg_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x half> %a, <vscale x 4 x half> %b) {
 ; CHECK-LABEL: fneg_nxv4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    fneg z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    fneg z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = fneg <vscale x 4 x half> %b
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x half> %b.op, <vscale x 4 x half> %a
@@ -592,9 +502,7 @@ define <vscale x 4 x half> @fneg_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x ha
 define <vscale x 8 x half> @fneg_nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: fneg_nxv8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    fneg z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    fneg z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = fneg <vscale x 8 x half> %b
   %res = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %b.op, <vscale x 8 x half> %a
@@ -604,9 +512,7 @@ define <vscale x 8 x half> @fneg_nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x ha
 define <vscale x 2 x float> @fneg_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x float> %a, <vscale x 2 x float> %b) {
 ; CHECK-LABEL: fneg_nxv2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fneg z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fneg z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = fneg <vscale x 2 x float> %b
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x float> %b.op, <vscale x 2 x float> %a
@@ -616,9 +522,7 @@ define <vscale x 2 x float> @fneg_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x f
 define <vscale x 4 x float> @fneg_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: fneg_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    fneg z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    fneg z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = fneg <vscale x 4 x float> %b
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %b.op, <vscale x 4 x float> %a
@@ -628,9 +532,7 @@ define <vscale x 4 x float> @fneg_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x f
 define <vscale x 2 x double> @fneg_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: fneg_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fneg z1.d, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fneg z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = fneg <vscale x 2 x double> %b
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %b.op, <vscale x 2 x double> %a
@@ -640,8 +542,7 @@ define <vscale x 2 x double> @fneg_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 x 
 define <vscale x 2 x bfloat> @fneg_nxv2bf16(<vscale x 2 x i1> %pg, <vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b) {
 ; CHECK-LABEL: fneg_nxv2bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor z1.h, z1.h, #0x8000
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fneg z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = fneg <vscale x 2 x bfloat> %b
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x bfloat> %b.op, <vscale x 2 x bfloat> %a
@@ -651,8 +552,7 @@ define <vscale x 2 x bfloat> @fneg_nxv2bf16(<vscale x 2 x i1> %pg, <vscale x 2 x
 define <vscale x 4 x bfloat> @fneg_nxv4bf16(<vscale x 4 x i1> %pg, <vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b) {
 ; CHECK-LABEL: fneg_nxv4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor z1.h, z1.h, #0x8000
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    fneg z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = fneg <vscale x 4 x bfloat> %b
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x bfloat> %b.op, <vscale x 4 x bfloat> %a
@@ -662,8 +562,7 @@ define <vscale x 4 x bfloat> @fneg_nxv4bf16(<vscale x 4 x i1> %pg, <vscale x 4 x
 define <vscale x 8 x bfloat> @fneg_nxv8bf16(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fneg_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor z1.h, z1.h, #0x8000
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    fneg z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = fneg <vscale x 8 x bfloat> %b
   %res = select <vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %b.op, <vscale x 8 x bfloat> %a
@@ -673,9 +572,7 @@ define <vscale x 8 x bfloat> @fneg_nxv8bf16(<vscale x 8 x i1> %pg, <vscale x 8 x
 define <vscale x 2 x half> @frinta_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x half> %a, <vscale x 2 x half> %b) {
 ; CHECK-LABEL: frinta_nxv2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    frinta z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    frinta z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x half> @llvm.round.nxv2f16(<vscale x 2 x half> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x half> %b.op, <vscale x 2 x half> %a
@@ -685,9 +582,7 @@ define <vscale x 2 x half> @frinta_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x 
 define <vscale x 4 x half> @frinta_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x half> %a, <vscale x 4 x half> %b) {
 ; CHECK-LABEL: frinta_nxv4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    frinta z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    frinta z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x half> @llvm.round.nxv4f16(<vscale x 4 x half> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x half> %b.op, <vscale x 4 x half> %a
@@ -697,9 +592,7 @@ define <vscale x 4 x half> @frinta_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x 
 define <vscale x 8 x half> @frinta_nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: frinta_nxv8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    frinta z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    frinta z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 8 x half> @llvm.round.nxv8f16(<vscale x 8 x half> %b)
   %res = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %b.op, <vscale x 8 x half> %a
@@ -709,9 +602,7 @@ define <vscale x 8 x half> @frinta_nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x 
 define <vscale x 2 x float> @frinta_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x float> %a, <vscale x 2 x float> %b) {
 ; CHECK-LABEL: frinta_nxv2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    frinta z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    frinta z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x float> @llvm.round.nxv2f32(<vscale x 2 x float> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x float> %b.op, <vscale x 2 x float> %a
@@ -721,9 +612,7 @@ define <vscale x 2 x float> @frinta_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x
 define <vscale x 4 x float> @frinta_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: frinta_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    frinta z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    frinta z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x float> @llvm.round.nxv4f32(<vscale x 4 x float> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %b.op, <vscale x 4 x float> %a
@@ -733,9 +622,7 @@ define <vscale x 4 x float> @frinta_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x
 define <vscale x 2 x double> @frinta_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: frinta_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    frinta z1.d, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    frinta z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x double> @llvm.round.nxv2f64(<vscale x 2 x double> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %b.op, <vscale x 2 x double> %a
@@ -745,9 +632,7 @@ define <vscale x 2 x double> @frinta_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 
 define <vscale x 2 x half> @frinti_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x half> %a, <vscale x 2 x half> %b) {
 ; CHECK-LABEL: frinti_nxv2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    frinti z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    frinti z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x half> @llvm.nearbyint.nxv2f16(<vscale x 2 x half> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x half> %b.op, <vscale x 2 x half> %a
@@ -757,9 +642,7 @@ define <vscale x 2 x half> @frinti_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x 
 define <vscale x 4 x half> @frinti_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x half> %a, <vscale x 4 x half> %b) {
 ; CHECK-LABEL: frinti_nxv4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    frinti z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    frinti z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x half> @llvm.nearbyint.nxv4f16(<vscale x 4 x half> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x half> %b.op, <vscale x 4 x half> %a
@@ -769,9 +652,7 @@ define <vscale x 4 x half> @frinti_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x 
 define <vscale x 8 x half> @frinti_nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: frinti_nxv8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    frinti z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    frinti z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 8 x half> @llvm.nearbyint.nxv8f16(<vscale x 8 x half> %b)
   %res = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %b.op, <vscale x 8 x half> %a
@@ -781,9 +662,7 @@ define <vscale x 8 x half> @frinti_nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x 
 define <vscale x 2 x float> @frinti_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x float> %a, <vscale x 2 x float> %b) {
 ; CHECK-LABEL: frinti_nxv2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    frinti z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    frinti z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x float> @llvm.nearbyint.nxv2f32(<vscale x 2 x float> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x float> %b.op, <vscale x 2 x float> %a
@@ -793,9 +672,7 @@ define <vscale x 2 x float> @frinti_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x
 define <vscale x 4 x float> @frinti_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: frinti_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    frinti z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    frinti z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x float> @llvm.nearbyint.nxv4f32(<vscale x 4 x float> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %b.op, <vscale x 4 x float> %a
@@ -805,9 +682,7 @@ define <vscale x 4 x float> @frinti_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x
 define <vscale x 2 x double> @frinti_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: frinti_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    frinti z1.d, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    frinti z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x double> @llvm.nearbyint.nxv2f64(<vscale x 2 x double> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %b.op, <vscale x 2 x double> %a
@@ -817,9 +692,7 @@ define <vscale x 2 x double> @frinti_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 
 define <vscale x 2 x half> @frintm_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x half> %a, <vscale x 2 x half> %b) {
 ; CHECK-LABEL: frintm_nxv2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    frintm z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    frintm z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x half> @llvm.floor.nxv2f16(<vscale x 2 x half> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x half> %b.op, <vscale x 2 x half> %a
@@ -829,9 +702,7 @@ define <vscale x 2 x half> @frintm_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x 
 define <vscale x 4 x half> @frintm_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x half> %a, <vscale x 4 x half> %b) {
 ; CHECK-LABEL: frintm_nxv4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    frintm z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    frintm z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x half> @llvm.floor.nxv4f16(<vscale x 4 x half> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x half> %b.op, <vscale x 4 x half> %a
@@ -841,9 +712,7 @@ define <vscale x 4 x half> @frintm_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x 
 define <vscale x 8 x half> @frintm_nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: frintm_nxv8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    frintm z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    frintm z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 8 x half> @llvm.floor.nxv8f16(<vscale x 8 x half> %b)
   %res = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %b.op, <vscale x 8 x half> %a
@@ -853,9 +722,7 @@ define <vscale x 8 x half> @frintm_nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x 
 define <vscale x 2 x float> @frintm_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x float> %a, <vscale x 2 x float> %b) {
 ; CHECK-LABEL: frintm_nxv2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    frintm z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    frintm z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x float> @llvm.floor.nxv2f32(<vscale x 2 x float> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x float> %b.op, <vscale x 2 x float> %a
@@ -865,9 +732,7 @@ define <vscale x 2 x float> @frintm_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x
 define <vscale x 4 x float> @frintm_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: frintm_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    frintm z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    frintm z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x float> @llvm.floor.nxv4f32(<vscale x 4 x float> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %b.op, <vscale x 4 x float> %a
@@ -877,9 +742,7 @@ define <vscale x 4 x float> @frintm_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x
 define <vscale x 2 x double> @frintm_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: frintm_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    frintm z1.d, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    frintm z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x double> @llvm.floor.nxv2f64(<vscale x 2 x double> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %b.op, <vscale x 2 x double> %a
@@ -889,9 +752,7 @@ define <vscale x 2 x double> @frintm_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 
 define <vscale x 2 x half> @frintn_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x half> %a, <vscale x 2 x half> %b) {
 ; CHECK-LABEL: frintn_nxv2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    frintn z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    frintn z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x half> @llvm.roundeven.nxv2f16(<vscale x 2 x half> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x half> %b.op, <vscale x 2 x half> %a
@@ -901,9 +762,7 @@ define <vscale x 2 x half> @frintn_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x 
 define <vscale x 4 x half> @frintn_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x half> %a, <vscale x 4 x half> %b) {
 ; CHECK-LABEL: frintn_nxv4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    frintn z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    frintn z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x half> @llvm.roundeven.nxv4f16(<vscale x 4 x half> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x half> %b.op, <vscale x 4 x half> %a
@@ -913,9 +772,7 @@ define <vscale x 4 x half> @frintn_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x 
 define <vscale x 8 x half> @frintn_nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: frintn_nxv8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    frintn z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    frintn z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 8 x half> @llvm.roundeven.nxv8f16(<vscale x 8 x half> %b)
   %res = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %b.op, <vscale x 8 x half> %a
@@ -925,9 +782,7 @@ define <vscale x 8 x half> @frintn_nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x 
 define <vscale x 2 x float> @frintn_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x float> %a, <vscale x 2 x float> %b) {
 ; CHECK-LABEL: frintn_nxv2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    frintn z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    frintn z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x float> @llvm.roundeven.nxv2f32(<vscale x 2 x float> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x float> %b.op, <vscale x 2 x float> %a
@@ -937,9 +792,7 @@ define <vscale x 2 x float> @frintn_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x
 define <vscale x 4 x float> @frintn_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: frintn_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    frintn z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    frintn z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x float> @llvm.roundeven.nxv4f32(<vscale x 4 x float> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %b.op, <vscale x 4 x float> %a
@@ -949,9 +802,7 @@ define <vscale x 4 x float> @frintn_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x
 define <vscale x 2 x double> @frintn_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: frintn_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    frintn z1.d, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    frintn z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x double> @llvm.roundeven.nxv2f64(<vscale x 2 x double> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %b.op, <vscale x 2 x double> %a
@@ -961,9 +812,7 @@ define <vscale x 2 x double> @frintn_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 
 define <vscale x 2 x half> @frintp_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x half> %a, <vscale x 2 x half> %b) {
 ; CHECK-LABEL: frintp_nxv2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    frintp z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    frintp z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x half> @llvm.ceil.nxv2f16(<vscale x 2 x half> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x half> %b.op, <vscale x 2 x half> %a
@@ -973,9 +822,7 @@ define <vscale x 2 x half> @frintp_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x 
 define <vscale x 4 x half> @frintp_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x half> %a, <vscale x 4 x half> %b) {
 ; CHECK-LABEL: frintp_nxv4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    frintp z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    frintp z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x half> @llvm.ceil.nxv4f16(<vscale x 4 x half> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x half> %b.op, <vscale x 4 x half> %a
@@ -985,9 +832,7 @@ define <vscale x 4 x half> @frintp_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x 
 define <vscale x 8 x half> @frintp_nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: frintp_nxv8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    frintp z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    frintp z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 8 x half> @llvm.ceil.nxv8f16(<vscale x 8 x half> %b)
   %res = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %b.op, <vscale x 8 x half> %a
@@ -997,9 +842,7 @@ define <vscale x 8 x half> @frintp_nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x 
 define <vscale x 2 x float> @frintp_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x float> %a, <vscale x 2 x float> %b) {
 ; CHECK-LABEL: frintp_nxv2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    frintp z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    frintp z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x float> @llvm.ceil.nxv2f32(<vscale x 2 x float> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x float> %b.op, <vscale x 2 x float> %a
@@ -1009,9 +852,7 @@ define <vscale x 2 x float> @frintp_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x
 define <vscale x 4 x float> @frintp_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: frintp_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    frintp z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    frintp z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x float> @llvm.ceil.nxv4f32(<vscale x 4 x float> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %b.op, <vscale x 4 x float> %a
@@ -1021,9 +862,7 @@ define <vscale x 4 x float> @frintp_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x
 define <vscale x 2 x double> @frintp_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: frintp_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    frintp z1.d, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    frintp z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x double> @llvm.ceil.nxv2f64(<vscale x 2 x double> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %b.op, <vscale x 2 x double> %a
@@ -1033,9 +872,7 @@ define <vscale x 2 x double> @frintp_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 
 define <vscale x 2 x half> @frintx_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x half> %a, <vscale x 2 x half> %b) {
 ; CHECK-LABEL: frintx_nxv2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    frintx z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    frintx z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x half> @llvm.rint.nxv2f16(<vscale x 2 x half> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x half> %b.op, <vscale x 2 x half> %a
@@ -1045,9 +882,7 @@ define <vscale x 2 x half> @frintx_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x 
 define <vscale x 4 x half> @frintx_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x half> %a, <vscale x 4 x half> %b) {
 ; CHECK-LABEL: frintx_nxv4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    frintx z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    frintx z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x half> @llvm.rint.nxv4f16(<vscale x 4 x half> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x half> %b.op, <vscale x 4 x half> %a
@@ -1057,9 +892,7 @@ define <vscale x 4 x half> @frintx_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x 
 define <vscale x 8 x half> @frintx_nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: frintx_nxv8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    frintx z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    frintx z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 8 x half> @llvm.rint.nxv8f16(<vscale x 8 x half> %b)
   %res = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %b.op, <vscale x 8 x half> %a
@@ -1069,9 +902,7 @@ define <vscale x 8 x half> @frintx_nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x 
 define <vscale x 2 x float> @frintx_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x float> %a, <vscale x 2 x float> %b) {
 ; CHECK-LABEL: frintx_nxv2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    frintx z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    frintx z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x float> @llvm.rint.nxv2f32(<vscale x 2 x float> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x float> %b.op, <vscale x 2 x float> %a
@@ -1081,9 +912,7 @@ define <vscale x 2 x float> @frintx_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x
 define <vscale x 4 x float> @frintx_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: frintx_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    frintx z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    frintx z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x float> @llvm.rint.nxv4f32(<vscale x 4 x float> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %b.op, <vscale x 4 x float> %a
@@ -1093,9 +922,7 @@ define <vscale x 4 x float> @frintx_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x
 define <vscale x 2 x double> @frintx_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: frintx_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    frintx z1.d, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    frintx z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x double> @llvm.rint.nxv2f64(<vscale x 2 x double> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %b.op, <vscale x 2 x double> %a
@@ -1105,9 +932,7 @@ define <vscale x 2 x double> @frintx_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 
 define <vscale x 2 x half> @frintz_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x half> %a, <vscale x 2 x half> %b) {
 ; CHECK-LABEL: frintz_nxv2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    frintz z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    frintz z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x half> @llvm.trunc.nxv2f16(<vscale x 2 x half> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x half> %b.op, <vscale x 2 x half> %a
@@ -1117,9 +942,7 @@ define <vscale x 2 x half> @frintz_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x 
 define <vscale x 4 x half> @frintz_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x half> %a, <vscale x 4 x half> %b) {
 ; CHECK-LABEL: frintz_nxv4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    frintz z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    frintz z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x half> @llvm.trunc.nxv4f16(<vscale x 4 x half> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x half> %b.op, <vscale x 4 x half> %a
@@ -1129,9 +952,7 @@ define <vscale x 4 x half> @frintz_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x 
 define <vscale x 8 x half> @frintz_nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: frintz_nxv8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    frintz z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    frintz z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 8 x half> @llvm.trunc.nxv8f16(<vscale x 8 x half> %b)
   %res = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %b.op, <vscale x 8 x half> %a
@@ -1141,9 +962,7 @@ define <vscale x 8 x half> @frintz_nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x 
 define <vscale x 2 x float> @frintz_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x float> %a, <vscale x 2 x float> %b) {
 ; CHECK-LABEL: frintz_nxv2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    frintz z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    frintz z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x float> @llvm.trunc.nxv2f32(<vscale x 2 x float> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x float> %b.op, <vscale x 2 x float> %a
@@ -1153,9 +972,7 @@ define <vscale x 2 x float> @frintz_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x
 define <vscale x 4 x float> @frintz_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: frintz_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    frintz z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    frintz z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x float> @llvm.trunc.nxv4f32(<vscale x 4 x float> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %b.op, <vscale x 4 x float> %a
@@ -1165,9 +982,7 @@ define <vscale x 4 x float> @frintz_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x
 define <vscale x 2 x double> @frintz_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: frintz_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    frintz z1.d, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    frintz z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x double> @llvm.trunc.nxv2f64(<vscale x 2 x double> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %b.op, <vscale x 2 x double> %a
@@ -1177,9 +992,7 @@ define <vscale x 2 x double> @frintz_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 
 define <vscale x 2 x half> @fsqrt_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x half> %a, <vscale x 2 x half> %b) {
 ; CHECK-LABEL: fsqrt_nxv2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fsqrt z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fsqrt z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x half> @llvm.sqrt.nxv2f16(<vscale x 2 x half> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x half> %b.op, <vscale x 2 x half> %a
@@ -1189,9 +1002,7 @@ define <vscale x 2 x half> @fsqrt_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x h
 define <vscale x 4 x half> @fsqrt_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x half> %a, <vscale x 4 x half> %b) {
 ; CHECK-LABEL: fsqrt_nxv4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    fsqrt z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    fsqrt z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x half> @llvm.sqrt.nxv4f16(<vscale x 4 x half> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x half> %b.op, <vscale x 4 x half> %a
@@ -1201,9 +1012,7 @@ define <vscale x 4 x half> @fsqrt_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x h
 define <vscale x 8 x half> @fsqrt_nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: fsqrt_nxv8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    fsqrt z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    fsqrt z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 8 x half> @llvm.sqrt.nxv8f16(<vscale x 8 x half> %b)
   %res = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %b.op, <vscale x 8 x half> %a
@@ -1213,9 +1022,7 @@ define <vscale x 8 x half> @fsqrt_nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x h
 define <vscale x 2 x float> @fsqrt_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x float> %a, <vscale x 2 x float> %b) {
 ; CHECK-LABEL: fsqrt_nxv2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fsqrt z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fsqrt z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x float> @llvm.sqrt.nxv2f32(<vscale x 2 x float> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x float> %b.op, <vscale x 2 x float> %a
@@ -1225,9 +1032,7 @@ define <vscale x 2 x float> @fsqrt_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x 
 define <vscale x 4 x float> @fsqrt_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: fsqrt_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    fsqrt z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    fsqrt z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %b.op, <vscale x 4 x float> %a
@@ -1237,9 +1042,7 @@ define <vscale x 4 x float> @fsqrt_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x 
 define <vscale x 2 x double> @fsqrt_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: fsqrt_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fsqrt z1.d, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fsqrt z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %b.op, <vscale x 2 x double> %a
@@ -1293,9 +1096,7 @@ define <vscale x 2 x i64> @neg_nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64>
 define <vscale x 16 x i8> @rbit_nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: rbit_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    rbit z1.b, p1/m, z1.b
-; CHECK-NEXT:    mov z0.b, p0/m, z1.b
+; CHECK-NEXT:    rbit z0.b, p0/m, z1.b
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 16 x i8> @llvm.bitreverse.nxv16i8(<vscale x 16 x i8> %b)
   %res = select <vscale x 16 x i1> %pg, <vscale x 16 x i8> %b.op, <vscale x 16 x i8> %a
@@ -1305,9 +1106,7 @@ define <vscale x 16 x i8> @rbit_nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i
 define <vscale x 8 x i16> @rbit_nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: rbit_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    rbit z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    rbit z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 8 x i16> @llvm.bitreverse.nxv8i16(<vscale x 8 x i16> %b)
   %res = select <vscale x 8 x i1> %pg, <vscale x 8 x i16> %b.op, <vscale x 8 x i16> %a
@@ -1317,9 +1116,7 @@ define <vscale x 8 x i16> @rbit_nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16
 define <vscale x 4 x i32> @rbit_nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: rbit_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    rbit z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    rbit z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x i32> @llvm.bitreverse.nxv4i32(<vscale x 4 x i32> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b.op, <vscale x 4 x i32> %a
@@ -1329,9 +1126,7 @@ define <vscale x 4 x i32> @rbit_nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32
 define <vscale x 2 x i64> @rbit_nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: rbit_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    rbit z1.d, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    rbit z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x i64> @llvm.bitreverse.nxv2i64(<vscale x 2 x i64> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b.op, <vscale x 2 x i64> %a
@@ -1341,9 +1136,7 @@ define <vscale x 2 x i64> @rbit_nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64
 define <vscale x 8 x i16> @revb_nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: revb_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    revb z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    revb z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 8 x i16> @llvm.bswap.nxv8i16(<vscale x 8 x i16> %b)
   %res = select <vscale x 8 x i1> %pg, <vscale x 8 x i16> %b.op, <vscale x 8 x i16> %a
@@ -1353,9 +1146,7 @@ define <vscale x 8 x i16> @revb_nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16
 define <vscale x 4 x i32> @revb_nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: revb_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    revb z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    revb z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 4 x i32> @llvm.bswap.nxv4i32(<vscale x 4 x i32> %b)
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b.op, <vscale x 4 x i32> %a
@@ -1365,9 +1156,7 @@ define <vscale x 4 x i32> @revb_nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32
 define <vscale x 2 x i64> @revb_nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: revb_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    revb z1.d, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    revb z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = call <vscale x 2 x i64> @llvm.bswap.nxv2i64(<vscale x 2 x i64> %b)
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b.op, <vscale x 2 x i64> %a
@@ -1377,9 +1166,7 @@ define <vscale x 2 x i64> @revb_nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64
 define <vscale x 8 x half> @scvtf_nxv8i16_to_nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: scvtf_nxv8i16_to_nxv8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    scvtf z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    scvtf z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = sitofp <vscale x 8 x i16> %b to <vscale x 8 x half>
   %res = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %b.op, <vscale x 8 x half> %a
@@ -1389,9 +1176,7 @@ define <vscale x 8 x half> @scvtf_nxv8i16_to_nxv8f16(<vscale x 8 x i1> %pg, <vsc
 define <vscale x 4 x half> @scvtf_nxv4i32_to_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x half> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: scvtf_nxv4i32_to_nxv4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    scvtf z1.h, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    scvtf z0.h, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = sitofp <vscale x 4 x i32> %b to <vscale x 4 x half>
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x half> %b.op, <vscale x 4 x half> %a
@@ -1401,9 +1186,7 @@ define <vscale x 4 x half> @scvtf_nxv4i32_to_nxv4f16(<vscale x 4 x i1> %pg, <vsc
 define <vscale x 4 x float> @scvtf_nxv4i32_to_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: scvtf_nxv4i32_to_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    scvtf z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    scvtf z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = sitofp <vscale x 4 x i32> %b to <vscale x 4 x float>
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %b.op, <vscale x 4 x float> %a
@@ -1413,9 +1196,7 @@ define <vscale x 4 x float> @scvtf_nxv4i32_to_nxv4f32(<vscale x 4 x i1> %pg, <vs
 define <vscale x 2 x half> @scvtf_nxv2i64_to_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x half> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: scvtf_nxv2i64_to_nxv2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    scvtf z1.h, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    scvtf z0.h, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = sitofp <vscale x 2 x i64> %b to <vscale x 2 x half>
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x half> %b.op, <vscale x 2 x half> %a
@@ -1425,9 +1206,7 @@ define <vscale x 2 x half> @scvtf_nxv2i64_to_nxv2f16(<vscale x 2 x i1> %pg, <vsc
 define <vscale x 2 x float> @scvtf_nxv2i64_to_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x float> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: scvtf_nxv2i64_to_nxv2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    scvtf z1.s, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    scvtf z0.s, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = sitofp <vscale x 2 x i64> %b to <vscale x 2 x float>
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x float> %b.op, <vscale x 2 x float> %a
@@ -1437,9 +1216,7 @@ define <vscale x 2 x float> @scvtf_nxv2i64_to_nxv2f32(<vscale x 2 x i1> %pg, <vs
 define <vscale x 2 x double> @scvtf_nxv2i64_to_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: scvtf_nxv2i64_to_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    scvtf z1.d, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    scvtf z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = sitofp <vscale x 2 x i64> %b to <vscale x 2 x double>
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %b.op, <vscale x 2 x double> %a
@@ -1521,9 +1298,7 @@ define <vscale x 2 x i64> @sxtw_nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64
 define <vscale x 8 x half> @ucvtf_nxv8i16_to_nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: ucvtf_nxv8i16_to_nxv8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    ucvtf z1.h, p1/m, z1.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    ucvtf z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b.op = uitofp <vscale x 8 x i16> %b to <vscale x 8 x half>
   %res = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %b.op, <vscale x 8 x half> %a
@@ -1533,9 +1308,7 @@ define <vscale x 8 x half> @ucvtf_nxv8i16_to_nxv8f16(<vscale x 8 x i1> %pg, <vsc
 define <vscale x 4 x half> @ucvtf_nxv4i32_to_nxv4f16(<vscale x 4 x i1> %pg, <vscale x 4 x half> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: ucvtf_nxv4i32_to_nxv4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    ucvtf z1.h, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    ucvtf z0.h, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = uitofp <vscale x 4 x i32> %b to <vscale x 4 x half>
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x half> %b.op, <vscale x 4 x half> %a
@@ -1545,9 +1318,7 @@ define <vscale x 4 x half> @ucvtf_nxv4i32_to_nxv4f16(<vscale x 4 x i1> %pg, <vsc
 define <vscale x 4 x float> @ucvtf_nxv4i32_to_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: ucvtf_nxv4i32_to_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    ucvtf z1.s, p1/m, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    ucvtf z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %b.op = uitofp <vscale x 4 x i32> %b to <vscale x 4 x float>
   %res = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %b.op, <vscale x 4 x float> %a
@@ -1557,9 +1328,7 @@ define <vscale x 4 x float> @ucvtf_nxv4i32_to_nxv4f32(<vscale x 4 x i1> %pg, <vs
 define <vscale x 2 x half> @ucvtf_nxv2i64_to_nxv2f16(<vscale x 2 x i1> %pg, <vscale x 2 x half> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: ucvtf_nxv2i64_to_nxv2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    ucvtf z1.h, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    ucvtf z0.h, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = uitofp <vscale x 2 x i64> %b to <vscale x 2 x half>
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x half> %b.op, <vscale x 2 x half> %a
@@ -1569,9 +1338,7 @@ define <vscale x 2 x half> @ucvtf_nxv2i64_to_nxv2f16(<vscale x 2 x i1> %pg, <vsc
 define <vscale x 2 x float> @ucvtf_nxv2i64_to_nxv2f32(<vscale x 2 x i1> %pg, <vscale x 2 x float> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: ucvtf_nxv2i64_to_nxv2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    ucvtf z1.s, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    ucvtf z0.s, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = uitofp <vscale x 2 x i64> %b to <vscale x 2 x float>
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x float> %b.op, <vscale x 2 x float> %a
@@ -1581,9 +1348,7 @@ define <vscale x 2 x float> @ucvtf_nxv2i64_to_nxv2f32(<vscale x 2 x i1> %pg, <vs
 define <vscale x 2 x double> @ucvtf_nxv2i64_to_nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: ucvtf_nxv2i64_to_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    ucvtf z1.d, p1/m, z1.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %b.op = uitofp <vscale x 2 x i64> %b to <vscale x 2 x double>
   %res = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %b.op, <vscale x 2 x double> %a
@@ -1656,6 +1421,62 @@ define <vscale x 2 x i64> @uxtw_nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64
   ret <vscale x 2 x i64> %res
 }
 
+define <vscale x 16 x i8> @abs_nxv16i8_all_active_predicate(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
+; CHECK-LABEL: abs_nxv16i8_all_active_predicate:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    abs z0.b, p0/m, z1.b
+; CHECK-NEXT:    ret
+  %b.op = call <vscale x 16 x i8> @llvm.aarch64.sve.abs.nxv16i8(<vscale x 16 x i8> %c, <vscale x 16 x i1> splat(i1 true), <vscale x 16 x i8> %b)
+  %res = select <vscale x 16 x i1> %pg, <vscale x 16 x i8> %b.op, <vscale x 16 x i8> %a
+  ret <vscale x 16 x i8> %res
+}
+
+define <vscale x 16 x i8> @abs_nxv16i8_same_predicate(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
+; CHECK-LABEL: abs_nxv16i8_same_predicate:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    abs z0.b, p0/m, z1.b
+; CHECK-NEXT:    ret
+  %b.op = call <vscale x 16 x i8> @llvm.aarch64.sve.abs.nxv16i8(<vscale x 16 x i8> %c, <vscale x 16 x i1> %pg, <vscale x 16 x i8> %b)
+  %res = select <vscale x 16 x i1> %pg, <vscale x 16 x i8> %b.op, <vscale x 16 x i8> %a
+  ret <vscale x 16 x i8> %res
+}
+
+define <vscale x 16 x i8> @abs_nxv16i8_inactive_lanes_are_not_defined(<vscale x 16 x i1> %sel_pg, <vscale x 16 x i1> %op_pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: abs_nxv16i8_inactive_lanes_are_not_defined:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    abs z0.b, p0/m, z1.b
+; CHECK-NEXT:    ret
+  %b.op = call <vscale x 16 x i8> @llvm.aarch64.sve.abs.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i1> %op_pg, <vscale x 16 x i8> %b)
+  %res = select <vscale x 16 x i1> %sel_pg, <vscale x 16 x i8> %b.op, <vscale x 16 x i8> %a
+  ret <vscale x 16 x i8> %res
+}
+
+; Merging op has multiple users.
+declare void @use(<vscale x 16 x i8>,<vscale x 16 x i8>)
+define void @abs_nxv16i8_multi_use(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: abs_nxv16i8_multi_use:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    abs z1.b, p1/m, z1.b
+; CHECK-NEXT:    mov z0.b, p0/m, z1.b
+; CHECK-NEXT:    b use
+  %b.op = tail call <vscale x 16 x i8> @llvm.abs.nxv16i8(<vscale x 16 x i8> %b, i1 0)
+  %res = select <vscale x 16 x i1> %pg, <vscale x 16 x i8> %b.op, <vscale x 16 x i8> %a
+  tail call void @use(<vscale x 16 x i8> %res, <vscale x 16 x i8> %b.op)
+  ret void
+}
+
+; Inactive lanes of the merging op remain live after the select.
+define <vscale x 16 x i8> @abs_nxv16i8_predicate_mismatch(<vscale x 16 x i1> %sel_pg, <vscale x 16 x i1> %op_pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
+; CHECK-LABEL: abs_nxv16i8_predicate_mismatch:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    abs z2.b, p1/m, z1.b
+; CHECK-NEXT:    mov z0.b, p0/m, z2.b
+; CHECK-NEXT:    ret
+  %b.op = call <vscale x 16 x i8> @llvm.aarch64.sve.abs.nxv16i8(<vscale x 16 x i8> %c, <vscale x 16 x i1> %op_pg, <vscale x 16 x i8> %b)
+  %res = select <vscale x 16 x i1> %sel_pg, <vscale x 16 x i8> %b.op, <vscale x 16 x i8> %a
+  ret <vscale x 16 x i8> %res
+}
 
 declare <vscale x 16 x i8> @llvm.abs.nxv16i8(<vscale x 16 x i8>, i1)
 declare <vscale x 8 x i16> @llvm.abs.nxv8i16(<vscale x 8 x i16>, i1)

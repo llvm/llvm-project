@@ -9,15 +9,15 @@
 
 #include <cstdio>
 #include <string.h>
+#include <string>
 
 namespace absl
 {
-// Use const char * for the format since the real type is hard to mock up.
 template <typename... Args>
-int PrintF(const char *format, const Args&... args);
+int PrintF(const std::string_view &format, const Args&... args);
 
 template <typename... Args>
-int FPrintF(FILE* output, const char *format, const Args&... args);
+int FPrintF(FILE* output, const std::string_view &format, const Args&... args);
 }
 
 void printf_simple() {
