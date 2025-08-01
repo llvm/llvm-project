@@ -178,7 +178,8 @@ void DebugNamesDWARFIndex::MaybeLogLookupError(llvm::Error error,
 }
 
 void DebugNamesDWARFIndex::GetGlobalVariables(
-    ConstString basename, llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
+    ConstString basename,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(basename.GetStringRef())) {
     if (entry.tag() != DW_TAG_variable)
@@ -482,7 +483,8 @@ void DebugNamesDWARFIndex::GetTypes(
 }
 
 void DebugNamesDWARFIndex::GetNamespaces(
-    ConstString name, llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
+    ConstString name,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
     llvm::dwarf::Tag entry_tag = entry.tag();
@@ -583,20 +585,21 @@ void DebugNamesDWARFIndex::GetNamespacesWithParents(
       if (!parent_chain) {
         // Fallback: use the base class implementation.
         if (!ProcessEntry(entry, IterationActionAdaptor([&](DWARFDIE die) {
-              return ProcessNamespaceDieMatchParents(parent_decl_ctx, die,
-                                                     callback);
-            })))
+                            return ProcessNamespaceDieMatchParents(
+                                parent_decl_ctx, die, callback);
+                          })))
           return;
         continue;
       }
 
       if (WithinParentChain(parent_named_contexts, *parent_chain)) {
         if (!ProcessEntry(entry, IterationActionAdaptor([&](DWARFDIE die) {
-              // After .debug_names filtering still sending to base class for
-              // further filtering before calling the callback.
-              return ProcessNamespaceDieMatchParents(parent_decl_ctx, die,
-                                                     callback);
-            })))
+                            // After .debug_names filtering still sending to
+                            // base class for further filtering before calling
+                            // the callback.
+                            return ProcessNamespaceDieMatchParents(
+                                parent_decl_ctx, die, callback);
+                          })))
           // If the callback returns false, we're done.
           return;
       }

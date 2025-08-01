@@ -136,7 +136,8 @@ void AppleDWARFIndex::SearchFor(const llvm::AppleAcceleratorTable &table,
 }
 
 void AppleDWARFIndex::GetGlobalVariables(
-    ConstString basename, llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
+    ConstString basename,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   if (!m_apple_names_up)
     return;
   SearchFor(*m_apple_names_up, basename, IterationActionAdaptor(callback));
@@ -148,7 +149,8 @@ void AppleDWARFIndex::GetGlobalVariables(
   if (!m_apple_names_up)
     return;
 
-  DIERefCallbackImpl converted_cb = DIERefCallback(IterationActionAdaptor(callback), regex.GetText());
+  DIERefCallbackImpl converted_cb =
+      DIERefCallback(IterationActionAdaptor(callback), regex.GetText());
 
   for (const auto &entry : m_apple_names_up->entries())
     if (std::optional<llvm::StringRef> name = entry.readName();
@@ -169,7 +171,8 @@ void AppleDWARFIndex::GetGlobalVariables(
     return val.has_value() && *val >= lower_bound && *val < upper_bound;
   };
 
-  DIERefCallbackImpl converted_cb = DIERefCallback(IterationActionAdaptor(callback));
+  DIERefCallbackImpl converted_cb =
+      DIERefCallback(IterationActionAdaptor(callback));
   for (auto entry : m_apple_names_up->entries()) {
     if (is_in_range(entry.BaseEntry.getDIESectionOffset()))
       if (!converted_cb(entry.BaseEntry))
@@ -267,7 +270,8 @@ void AppleDWARFIndex::GetTypes(
 }
 
 void AppleDWARFIndex::GetNamespaces(
-    ConstString name, llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
+    ConstString name,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   if (!m_apple_namespaces_up)
     return;
   SearchFor(*m_apple_namespaces_up, name, IterationActionAdaptor(callback));
