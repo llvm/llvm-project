@@ -23,6 +23,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AliasSetTracker.h"
+#include "llvm/Analysis/AssumeBundleQueries.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -208,28 +210,46 @@ static const SCEV *mulSCEVOverflow(const SCEV *A, const SCEV *B,
 
 /// Return true, if evaluating \p AR at \p MaxBTC cannot wrap, because \p AR at
 /// \p MaxBTC is guaranteed inbounds of the accessed object.
-static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
-                                                 const SCEV *MaxBTC,
-                                                 const SCEV *EltSize,
-                                                 ScalarEvolution &SE,
-                                                 const DataLayout &DL) {
+static bool
+evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
+                                     const SCEV *MaxBTC, const SCEV *EltSize,
+                                     ScalarEvolution &SE, const DataLayout &DL,
+                                     DominatorTree *DT, AssumptionCache *AC) {
   auto *PointerBase = SE.getPointerBase(AR->getStart());
   auto *StartPtr = dyn_cast<SCEVUnknown>(PointerBase);
   if (!StartPtr)
     return false;
+  const Loop *L = AR->getLoop();
   bool CheckForNonNull, CheckForFreed;
-  uint64_t DerefBytes = StartPtr->getValue()->getPointerDereferenceableBytes(
+  Value *StartPtrV = StartPtr->getValue();
+  uint64_t DerefBytes = StartPtrV->getPointerDereferenceableBytes(
       DL, CheckForNonNull, CheckForFreed);
 
-  if (CheckForNonNull || CheckForFreed)
+  if (DerefBytes && (CheckForNonNull || CheckForFreed))
     return false;
 
   const SCEV *Step = AR->getStepRecurrence(SE);
+  Type *WiderTy = SE.getWiderType(MaxBTC->getType(), Step->getType());
+  const SCEV *DerefBytesSCEV = SE.getConstant(WiderTy, DerefBytes);
+
+  // Check if we have a suitable dereferencable assumption we can use.
+  if (!StartPtrV->canBeFreed()) {
+    RetainedKnowledge DerefRK = getKnowledgeValidInContext(
+        StartPtrV, {Attribute::Dereferenceable}, *AC,
+        L->getLoopPredecessor()->getTerminator(), DT);
+    if (DerefRK) {
+      DerefBytesSCEV = SE.getUMaxExpr(
+          DerefBytesSCEV, SE.getConstant(WiderTy, DerefRK.ArgValue));
+    }
+  }
+
+  if (DerefBytesSCEV->isZero())
+    return false;
+
   bool IsKnownNonNegative = SE.isKnownNonNegative(Step);
   if (!IsKnownNonNegative && !SE.isKnownNegative(Step))
     return false;
 
-  Type *WiderTy = SE.getWiderType(MaxBTC->getType(), Step->getType());
   Step = SE.getNoopOrSignExtend(Step, WiderTy);
   MaxBTC = SE.getNoopOrZeroExtend(MaxBTC, WiderTy);
 
@@ -256,8 +276,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
     const SCEV *EndBytes = addSCEVNoOverflow(StartOffset, OffsetEndBytes, SE);
     if (!EndBytes)
       return false;
-    return SE.isKnownPredicate(CmpInst::ICMP_ULE, EndBytes,
-                               SE.getConstant(WiderTy, DerefBytes));
+    return SE.isKnownPredicate(CmpInst::ICMP_ULE, EndBytes, DerefBytesSCEV);
   }
 
   // For negative steps check if
@@ -265,15 +284,15 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
   //  * StartOffset <= DerefBytes.
   assert(SE.isKnownNegative(Step) && "must be known negative");
   return SE.isKnownPredicate(CmpInst::ICMP_SGE, StartOffset, OffsetEndBytes) &&
-         SE.isKnownPredicate(CmpInst::ICMP_ULE, StartOffset,
-                             SE.getConstant(WiderTy, DerefBytes));
+         SE.isKnownPredicate(CmpInst::ICMP_ULE, StartOffset, DerefBytesSCEV);
 }
 
 std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *BTC,
     const SCEV *MaxBTC, ScalarEvolution *SE,
     DenseMap<std::pair<const SCEV *, Type *>,
-             std::pair<const SCEV *, const SCEV *>> *PointerBounds) {
+             std::pair<const SCEV *, const SCEV *>> *PointerBounds,
+    DominatorTree *DT, AssumptionCache *AC) {
   std::pair<const SCEV *, const SCEV *> *PtrBoundsPair;
   if (PointerBounds) {
     auto [Iter, Ins] = PointerBounds->insert(
@@ -308,8 +327,8 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
       // sets ScEnd to the maximum unsigned value for the type. Note that LAA
       // separately checks that accesses cannot not wrap, so unsigned max
       // represents an upper bound.
-      if (evaluatePtrAddRecAtMaxBTCWillNotWrap(AR, MaxBTC, EltSizeSCEV, *SE,
-                                               DL)) {
+      if (evaluatePtrAddRecAtMaxBTCWillNotWrap(AR, MaxBTC, EltSizeSCEV, *SE, DL,
+                                               DT, AC)) {
         ScEnd = AR->evaluateAtIteration(MaxBTC, *SE);
       } else {
         ScEnd = SE->getAddExpr(
@@ -356,9 +375,9 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
                                     bool NeedsFreeze) {
   const SCEV *SymbolicMaxBTC = PSE.getSymbolicMaxBackedgeTakenCount();
   const SCEV *BTC = PSE.getBackedgeTakenCount();
-  const auto &[ScStart, ScEnd] =
-      getStartAndEndForAccess(Lp, PtrExpr, AccessTy, BTC, SymbolicMaxBTC,
-                              PSE.getSE(), &DC.getPointerBounds());
+  const auto &[ScStart, ScEnd] = getStartAndEndForAccess(
+      Lp, PtrExpr, AccessTy, BTC, SymbolicMaxBTC, PSE.getSE(),
+      &DC.getPointerBounds(), DC.getDT(), DC.getAC());
   assert(!isa<SCEVCouldNotCompute>(ScStart) &&
          !isa<SCEVCouldNotCompute>(ScEnd) &&
          "must be able to compute both start and end expressions");
@@ -1961,13 +1980,15 @@ bool MemoryDepChecker::areAccessesCompletelyBeforeOrAfter(const SCEV *Src,
   const SCEV *BTC = PSE.getBackedgeTakenCount();
   const SCEV *SymbolicMaxBTC = PSE.getSymbolicMaxBackedgeTakenCount();
   ScalarEvolution &SE = *PSE.getSE();
-  const auto &[SrcStart_, SrcEnd_] = getStartAndEndForAccess(
-      InnermostLoop, Src, SrcTy, BTC, SymbolicMaxBTC, &SE, &PointerBounds);
+  const auto &[SrcStart_, SrcEnd_] =
+      getStartAndEndForAccess(InnermostLoop, Src, SrcTy, BTC, SymbolicMaxBTC,
+                              &SE, &PointerBounds, DT, AC);
   if (isa<SCEVCouldNotCompute>(SrcStart_) || isa<SCEVCouldNotCompute>(SrcEnd_))
     return false;
 
-  const auto &[SinkStart_, SinkEnd_] = getStartAndEndForAccess(
-      InnermostLoop, Sink, SinkTy, BTC, SymbolicMaxBTC, &SE, &PointerBounds);
+  const auto &[SinkStart_, SinkEnd_] =
+      getStartAndEndForAccess(InnermostLoop, Sink, SinkTy, BTC, SymbolicMaxBTC,
+                              &SE, &PointerBounds, DT, AC);
   if (isa<SCEVCouldNotCompute>(SinkStart_) ||
       isa<SCEVCouldNotCompute>(SinkEnd_))
     return false;
@@ -3002,7 +3023,7 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
                                const TargetTransformInfo *TTI,
                                const TargetLibraryInfo *TLI, AAResults *AA,
                                DominatorTree *DT, LoopInfo *LI,
-                               bool AllowPartial)
+                               AssumptionCache *AC, bool AllowPartial)
     : PSE(std::make_unique<PredicatedScalarEvolution>(*SE, *L)),
       PtrRtChecking(nullptr), TheLoop(L), AllowPartial(AllowPartial) {
   unsigned MaxTargetVectorWidthInBits = std::numeric_limits<unsigned>::max();
@@ -3012,8 +3033,8 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
     MaxTargetVectorWidthInBits =
         TTI->getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector) * 2;
 
-  DepChecker = std::make_unique<MemoryDepChecker>(*PSE, L, SymbolicStrides,
-                                                  MaxTargetVectorWidthInBits);
+  DepChecker = std::make_unique<MemoryDepChecker>(
+      *PSE, AC, DT, L, SymbolicStrides, MaxTargetVectorWidthInBits);
   PtrRtChecking = std::make_unique<RuntimePointerChecking>(*DepChecker, SE);
   if (canAnalyzeLoop())
     CanVecMem = analyzeLoop(AA, LI, TLI, DT);
@@ -3082,7 +3103,7 @@ const LoopAccessInfo &LoopAccessInfoManager::getInfo(Loop &L,
   // or if it was created with a different value of AllowPartial.
   if (Inserted || It->second->hasAllowPartial() != AllowPartial)
     It->second = std::make_unique<LoopAccessInfo>(&L, &SE, TTI, TLI, &AA, &DT,
-                                                  &LI, AllowPartial);
+                                                  &LI, AC, AllowPartial);
 
   return *It->second;
 }
@@ -3125,7 +3146,8 @@ LoopAccessInfoManager LoopAccessAnalysis::run(Function &F,
   auto &LI = FAM.getResult<LoopAnalysis>(F);
   auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
   auto &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
-  return LoopAccessInfoManager(SE, AA, DT, LI, &TTI, &TLI);
+  auto &AC = FAM.getResult<AssumptionAnalysis>(F);
+  return LoopAccessInfoManager(SE, AA, DT, LI, &TTI, &TLI, &AC);
 }
 
 AnalysisKey LoopAccessAnalysis::Key;
