@@ -3776,6 +3776,16 @@ struct OmpAlwaysModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpAlwaysModifier, Value);
 };
 
+// Ref: [6.0:289-290]
+//
+// automap-modifier ->
+//    automap                                       // since 6.0
+//
+struct OmpAutomapModifier {
+  ENUM_CLASS(Value, Automap);
+  WRAPPER_CLASS_BOILERPLATE(OmpAutomapModifier, Value);
+};
+
 // Ref: [5.2:252-254]
 //
 // chunk-modifier ->
@@ -4360,6 +4370,17 @@ struct OmpDeviceTypeClause {
   WRAPPER_CLASS_BOILERPLATE(OmpDeviceTypeClause, DeviceTypeDescription);
 };
 
+// Ref: [5.2:158-159], [6.0:289-290]
+//
+// enter-clause ->
+//    ENTER(locator-list) |
+//    ENTER(automap-modifier: locator-list) |         // since 6.0
+struct OmpEnterClause {
+  TUPLE_CLASS_BOILERPLATE(OmpEnterClause);
+  MODIFIER_BOILERPLATE(OmpAutomapModifier);
+  std::tuple<MODIFIERS(), OmpObjectList> t;
+};
+
 // OMP 5.2 15.8.3 extended-atomic, fail-clause ->
 //    FAIL(memory-order)
 struct OmpFailClause {
@@ -4818,18 +4839,17 @@ struct OmpEndSectionsDirective {
 //    structured-block]
 // ...
 struct OpenMPSectionConstruct {
-  WRAPPER_CLASS_BOILERPLATE(OpenMPSectionConstruct, Block);
+  TUPLE_CLASS_BOILERPLATE(OpenMPSectionConstruct);
+  std::tuple<std::optional<OmpDirectiveSpecification>, Block> t;
   CharBlock source;
 };
 
-// `OmpSectionBlocks` is a list of section constructs. The parser guarentees
-// that the `OpenMPConstruct` here always encapsulates an
-// `OpenMPSectionConstruct` and not any other OpenMP construct.
-WRAPPER_CLASS(OmpSectionBlocks, std::list<OpenMPConstruct>);
-
 struct OpenMPSectionsConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPSectionsConstruct);
-  std::tuple<OmpBeginSectionsDirective, OmpSectionBlocks,
+  CharBlock source;
+  // Each of the OpenMPConstructs in the list below contains an
+  // OpenMPSectionConstruct. This is guaranteed by the parser.
+  std::tuple<OmpBeginSectionsDirective, std::list<OpenMPConstruct>,
       OmpEndSectionsDirective>
       t;
 };

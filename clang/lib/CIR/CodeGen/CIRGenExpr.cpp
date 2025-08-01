@@ -584,6 +584,15 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
     return lv;
   }
 
+  if (const auto *bd = dyn_cast<BindingDecl>(nd)) {
+    if (e->refersToEnclosingVariableOrCapture()) {
+      assert(!cir::MissingFeatures::lambdaCaptures());
+      cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: lambda captures");
+      return LValue();
+    }
+    return emitLValue(bd->getBinding());
+  }
+
   cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: unhandled decl type");
   return LValue();
 }
@@ -1472,9 +1481,10 @@ Address CIRGenFunction::emitArrayToPointerDecay(const Expr *e) {
   if (e->getType()->isVariableArrayType())
     return addr;
 
-  auto pointeeTy = mlir::cast<cir::ArrayType>(lvalueAddrTy.getPointee());
+  [[maybe_unused]] auto pointeeTy =
+      mlir::cast<cir::ArrayType>(lvalueAddrTy.getPointee());
 
-  mlir::Type arrayTy = convertType(e->getType());
+  [[maybe_unused]] mlir::Type arrayTy = convertType(e->getType());
   assert(mlir::isa<cir::ArrayType>(arrayTy) && "expected array");
   assert(pointeeTy == arrayTy);
 
