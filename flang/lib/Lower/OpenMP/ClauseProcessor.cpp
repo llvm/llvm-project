@@ -1216,8 +1216,19 @@ void ClauseProcessor::processMapObjects(
             typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
         if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName))
           mapperIdName = converter.mangleName(mapperIdName, sym->owner());
+        else
+          mapperIdName =
+              converter.mangleName(mapperIdName, *typeSpec->GetScope());
       }
     }
+
+    // Make sure we don't return a mapper to self.
+    llvm::StringRef parentOpName;
+    if (auto declMapOp = mlir::dyn_cast<mlir::omp::DeclareMapperOp>(
+            firOpBuilder.getRegion().getParentOp()))
+      parentOpName = declMapOp.getSymName();
+    if (mapperIdName == parentOpName)
+      mapperIdName = "";
   };
 
   // Create the mapper symbol from its name, if specified.
@@ -1322,7 +1333,7 @@ bool ClauseProcessor::processMap(
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
     std::string mapperIdName = "__implicit_mapper";
     // If the map type is specified, then process it else set the appropriate
-    // default value
+    // default value.
     Map::MapType type;
     if (directive == llvm::omp::Directive::OMPD_target_enter_data &&
         semaCtx.langOptions().OpenMPVersion >= 52)
